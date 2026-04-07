@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a0b">
+  <title>Tower Defense — Ops Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-wrapper">
+
+    <!-- Canvas layer -->
+    <div id="canvas-container">
+      <canvas id="bg-canvas"></canvas>
+      <canvas id="game-canvas"></canvas>
+
+      <!-- Floating toast notification -->
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </div>
+
+    <!-- HUD bar -->
+    <div id="ui-bar">
+      <div id="stats-row">
+        <div class="stat" id="stat-gold">
+          <span class="stat-value"><span class="stat-icon gold-icon">◆</span><span id="gold-value">150</span></span>
+          <span class="stat-label">CREDITS</span>
+        </div>
+        <div class="stat" id="stat-lives">
+          <span class="stat-value"><span class="stat-icon lives-icon">♥</span><span id="lives-value">20</span></span>
+          <span class="stat-label">LIVES</span>
+        </div>
+        <div class="stat" id="stat-wave">
+          <span class="stat-value">#<span id="wave-value">1</span></span>
+          <span class="stat-label">WAVE</span>
+        </div>
+        <div class="stat" id="stat-score">
+          <span class="stat-value mono" id="score-value">0</span>
+          <span class="stat-label">SCORE</span>
+        </div>
+      </div>
+
+      <div id="tower-strip">
+        <button class="tower-btn" data-tower="arrow" title="Arrow Tower — 50 credits">
+          <span class="tower-icon" data-tower="arrow"></span>
+          <span class="tower-name">Arrow</span>
+          <span class="tower-cost mono">50 cr</span>
+        </button>
+        <button class="tower-btn" data-tower="cannon" title="Cannon Tower — 100 credits">
+          <span class="tower-icon" data-tower="cannon"></span>
+          <span class="tower-name">Cannon</span>
+          <span class="tower-cost mono">100 cr</span>
+        </button>
+        <button class="tower-btn" data-tower="frost" title="Frost Tower — 75 credits">
+          <span class="tower-icon" data-tower="frost"></span>
+          <span class="tower-name">Frost</span>
+          <span class="tower-cost mono">75 cr</span>
+        </button>
+        <button class="tower-btn" data-tower="laser" title="Laser Tower — 150 credits">
+          <span class="tower-icon" data-tower="laser"></span>
+          <span class="tower-name">Laser</span>
+          <span class="tower-cost mono">150 cr</span>
+        </button>
+
+        <div class="strip-spacer"></div>
+
+        <button id="start-wave-btn" class="action-btn" disabled>
+          <span id="start-wave-label">Place towers</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="modal-card">
+      <div id="modal-header"></div>
+      <div id="modal-body"></div>
+      <div id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- Gold float container -->
+  <div id="floats" aria-hidden="true"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

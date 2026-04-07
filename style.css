@@ -1,0 +1,461 @@
+/* ============================================================
+   DESIGN TOKENS — mirrors DESIGN.md
+   ============================================================ */
+:root {
+  --bg-base:        #0a0a0b;
+  --bg-surface:     #111113;
+  --bg-elevated:    #1a1a1f;
+  --bg-overlay:     rgba(10, 10, 11, 0.95);
+
+  --border:         #2a2a30;
+  --border-focus:   #3b82f6;
+
+  --text-primary:   #f4f4f5;
+  --text-secondary: #71717a;
+  --text-muted:     #3f3f46;
+
+  --accent-blue:    #3b82f6;
+  --accent-blue-bg: rgba(59, 130, 246, 0.12);
+  --accent-green:   #22c55e;
+  --accent-red:     #ef4444;
+  --accent-amber:   #f59e0b;
+  --accent-purple:  #a855f7;
+
+  --tower-arrow:    #3b82f6;
+  --tower-cannon:   #f59e0b;
+  --tower-frost:    #a855f7;
+  --tower-laser:    #ef4444;
+
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  --ui-bar-height: 88px;
+  --radius: 6px;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+#game-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+#canvas-container {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  background: var(--bg-base);
+}
+
+#bg-canvas,
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#bg-canvas  { z-index: 0; }
+#game-canvas { z-index: 1; }
+
+/* ============================================================
+   HUD BAR
+   ============================================================ */
+#ui-bar {
+  flex: 0 0 var(--ui-bar-height);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  z-index: 10;
+  padding: 0 8px;
+  gap: 0;
+}
+
+/* Stats row */
+#stats-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.stat-icon {
+  margin-right: 3px;
+  font-size: 12px;
+}
+.gold-icon  { color: var(--accent-green); }
+.lives-icon { color: var(--accent-red); }
+
+#stat-score { margin-left: auto; }
+
+/* Tower strip */
+#tower-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#tower-strip::-webkit-scrollbar { display: none; }
+
+.strip-spacer { flex: 1; }
+
+/* Tower buttons */
+.tower-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 52px;
+  padding: 6px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  gap: 2px;
+  transition: border-color 120ms, background 120ms;
+  flex-shrink: 0;
+}
+
+.tower-btn:active {
+  transform: scale(0.95);
+}
+
+.tower-btn.selected {
+  background: var(--accent-blue-bg);
+  border-color: var(--accent-blue);
+}
+
+.tower-btn.unaffordable {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.tower-btn[data-tower="arrow"].selected  { border-color: var(--tower-arrow); background: rgba(59,130,246,0.12); }
+.tower-btn[data-tower="cannon"].selected { border-color: var(--tower-cannon); background: rgba(245,158,11,0.12); }
+.tower-btn[data-tower="frost"].selected  { border-color: var(--tower-frost); background: rgba(168,85,247,0.12); }
+.tower-btn[data-tower="laser"].selected  { border-color: var(--tower-laser); background: rgba(239,68,68,0.12); }
+
+.tower-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: none;
+}
+
+.tower-cost {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  display: none;
+}
+
+/* Tower icon (SVG drawn as inline bg or drawn by JS, fallback is colored square) */
+.tower-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  border-radius: 3px;
+}
+.tower-icon[data-tower="arrow"]  { background: var(--tower-arrow); clip-path: polygon(0% 50%, 60% 0%, 60% 35%, 100% 35%, 100% 65%, 60% 65%, 60% 100%); }
+.tower-icon[data-tower="cannon"] { background: var(--tower-cannon); border-radius: 50%; }
+.tower-icon[data-tower="frost"]  { background: var(--tower-frost); clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.tower-icon[data-tower="laser"]  { background: var(--tower-laser); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+
+/* Action button */
+.action-btn {
+  min-width: 80px;
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: none;
+  flex-shrink: 0;
+  transition: filter 120ms;
+  white-space: nowrap;
+}
+
+.action-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  z-index: 20;
+  transition: opacity 250ms, transform 250ms;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  animation: fadeIn 200ms ease-out;
+}
+
+#modal-overlay.hidden {
+  display: none;
+}
+
+#modal-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  animation: scaleIn 200ms ease-out;
+}
+
+#modal-header {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+#modal-body {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+#modal-body p + p { margin-top: 6px; }
+
+#modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#modal-actions .action-btn {
+  width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+#modal-actions .secondary-btn {
+  width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+/* ============================================================
+   GOLD FLOATS
+   ============================================================ */
+#floats {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.float-text {
+  position: absolute;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-green);
+  pointer-events: none;
+  animation: floatUp 700ms ease-out forwards;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-28px); }
+}
+
+/* ============================================================
+   DESKTOP BREAKPOINT (≥ 768px)
+   ============================================================ */
+@media (min-width: 768px) {
+  :root {
+    --ui-bar-height: 96px;
+  }
+
+  #stats-row {
+    padding: 8px 8px 6px;
+    gap: 8px;
+  }
+
+  .stat {
+    padding: 0 12px;
+  }
+
+  .stat-value {
+    font-size: 16px;
+  }
+
+  .tower-btn {
+    min-width: 70px;
+    min-height: 56px;
+    padding: 8px 10px;
+  }
+
+  .tower-name,
+  .tower-cost {
+    display: block;
+  }
+
+  .tower-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .action-btn {
+    min-width: 100px;
+    font-size: 14px;
+  }
+}
+
+/* ============================================================
+   LARGE SCREEN (≥ 1024px) — side panel option
+   ============================================================ */
+@media (min-width: 1024px) {
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+}
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+.hidden { display: none !important; }
+.mono   { font-family: var(--font-mono); }
