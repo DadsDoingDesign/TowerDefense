@@ -3,16 +3,16 @@
    ============================================================ */
 :root {
   --bg-base:        #09090f;
-  --bg-surface:     #0f0f18;
-  --bg-elevated:    #17172a;
+  --bg-surface:     #13132a;   /* HUD, header, cards — enough lift from base */
+  --bg-elevated:    #1d1d40;   /* Buttons, inputs — clearly distinct from surface */
   --bg-overlay:     rgba(9, 9, 15, 0.96);
 
-  --border:         #252540;
+  --border:         #2e2e58;   /* Borders — visible on all dark surfaces */
   --border-focus:   #6366f1;
 
   --text-primary:   #f1f5f9;
-  --text-secondary: #64748b;
-  --text-muted:     #334155;
+  --text-secondary: #94a3b8;   /* Labels, descriptions — readable on dark */
+  --text-muted:     #4b5583;   /* Decorative only — timestamps, disabled */
 
   /* Brand primary — indigo */
   --primary:        #6366f1;
@@ -117,6 +117,7 @@ button:focus-visible {
   padding: 0 14px 0 12px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
   z-index: 10;
   position: relative;
 }
@@ -218,6 +219,7 @@ button:focus-visible {
   flex-direction: column;
   background: var(--bg-surface);
   border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6);
   z-index: 10;
   padding: 0 8px;
   gap: 0;
@@ -265,7 +267,7 @@ button:focus-visible {
   letter-spacing: 0.04em;
 }
 .speed-btn:hover {
-  border-color: var(--text-muted);
+  border-color: var(--text-secondary);
   color: var(--text-primary);
 }
 .speed-btn.fast {
@@ -319,8 +321,8 @@ button:focus-visible {
 
 .stat-label {
   font-size: 9px;
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: var(--text-secondary);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 1px;
@@ -393,7 +395,7 @@ button:focus-visible {
 .tower-name {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   display: none;
@@ -402,7 +404,7 @@ button:focus-visible {
 .tower-cost {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   display: none;
 }
 
@@ -471,9 +473,10 @@ button:focus-visible {
 
 /* Selected state for map/difficulty choice buttons */
 .secondary-btn.selected {
-  background: var(--primary-dim);
+  background: rgba(99, 102, 241, 0.18);
   border-color: var(--primary);
   color: var(--text-primary);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 /* ============================================================
