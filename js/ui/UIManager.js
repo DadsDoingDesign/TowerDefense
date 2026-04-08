@@ -40,6 +40,8 @@ export class UIManager {
     this._tpUpgradeBtnA = document.getElementById('tp-upgrade-a');
     this._tpUpgradeBtnB = document.getElementById('tp-upgrade-b');
     this._tpUpgradePaths = document.getElementById('tp-upgrade-paths');
+    this._tpOrLabel     = document.getElementById('tp-or-label');
+    this._tpCredits     = document.getElementById('tp-credits');
     this._tpSellBtn     = document.getElementById('tp-sell');
     this._tpCloseBtn    = document.getElementById('tp-close');
 
@@ -261,6 +263,8 @@ export class UIManager {
 
     this._tpName.textContent  = def.displayName;
     this._tpLevel.textContent = tower.level >= 4 ? `LVL ${tower.level} — MAX` : `LVL ${tower.level}`;
+    if (this._tpCredits) this._tpCredits.textContent = `◆ ${this._currentGold} cr`;
+    if (this._tpOrLabel) this._tpOrLabel.style.display = tower.level === 1 ? '' : 'none';
 
     const mechs = [];
     if (tower.multiTarget > 1)     mechs.push(`${tower.multiTarget >= MULTI_TARGET_ALL ? 'ALL' : tower.multiTarget}× target`);

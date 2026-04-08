@@ -780,27 +780,25 @@ button:focus-visible {
 }
 
 /* ============================================================
-   TOWER INFO PANEL (sell / upgrade)
+   TOWER INFO PANEL — full-width bottom sheet
    ============================================================ */
 .tower-panel {
   position: fixed;
-  bottom: calc(var(--ui-bar-height) + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  width: min(360px, calc(100vw - 24px));
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--bg-surface);
-  border: 1px solid var(--border);
   border-top: 2px solid var(--primary);
-  border-radius: var(--radius-lg);
-  z-index: 30;
-  opacity: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  transform: translateY(100%);
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
   pointer-events: none;
-  transition: opacity 180ms, transform 180ms;
 }
 
 .tower-panel:not(.hidden) {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   pointer-events: auto;
 }
 
@@ -821,7 +819,17 @@ button:focus-visible {
   color: var(--text-primary);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  flex: 1;
+}
+
+.tp-header-spacer { flex: 1; }
+
+.tp-credits {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-green);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .tp-level {
@@ -873,14 +881,25 @@ button:focus-visible {
   gap: 8px;
 }
 
-/* Two upgrade paths side-by-side */
+/* Two upgrade paths side-by-side with OR divider */
 .tp-upgrade-paths {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+}
+
+.tp-or-divider {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .tp-btn-upgrade {
   flex: 1;
+  min-width: 0;
   min-height: 40px;
   font-size: 11px;
   letter-spacing: 0.03em;
@@ -891,6 +910,7 @@ button:focus-visible {
 /* Path B: outlined/ghost variant */
 .tp-btn-upgrade-b {
   flex: 1;
+  min-width: 0;
   min-height: 40px;
   font-size: 11px;
   font-weight: 600;
@@ -920,6 +940,8 @@ button:focus-visible {
   font-weight: 700;
   font-size: 11px;
   margin-bottom: 2px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .upgrade-lore {
   display: block;
@@ -928,6 +950,8 @@ button:focus-visible {
   opacity: 0.75;
   line-height: 1.3;
   white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .tp-btn-sell {
