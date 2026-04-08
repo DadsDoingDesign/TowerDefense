@@ -28,57 +28,69 @@ export const MAX_ENEMIES     = 100;
 // Delta-time safety cap (prevents spiral of death on tab switch)
 export const MAX_DELTA = 0.1;
 
+// Animation durations (seconds)
+export const ANIM_TOWER_SPAWN = 0.2;
+export const ANIM_ENEMY_DEATH = 0.25;
+
 // ============================================================
 // TOWER DEFINITIONS
 // ============================================================
 export const TOWERS = {
   arrow: {
-    cost:           50,
-    damage:         18,
-    range:          3.0,    // in tiles
-    fireRate:       1.5,    // shots/sec
-    projectileSpeed: 280,   // px/sec
-    splashRadius:   0,
-    slowFactor:     1.0,    // 1.0 = no slow
-    color:          '#3b82f6',
-    displayName:    'Arrow',
-    description:    'Fast, cheap. Single-target.',
+    cost:            50,
+    damage:          18,
+    range:           3.0,
+    fireRate:        1.5,
+    projectileSpeed: 280,
+    projectileSize:  4,
+    splashRadius:    0,
+    slowFactor:      1.0,
+    slowDuration:    0,
+    color:           '#3b82f6',
+    displayName:     'Arrow',
+    description:     'Fast, cheap. Single-target.',
   },
   cannon: {
-    cost:           100,
-    damage:         55,
-    range:          2.5,
-    fireRate:       0.5,
+    cost:            100,
+    damage:          55,
+    range:           2.5,
+    fireRate:        0.5,
     projectileSpeed: 200,
-    splashRadius:   1.2,    // tiles — AoE
-    slowFactor:     1.0,
-    color:          '#f59e0b',
-    displayName:    'Cannon',
-    description:    'Slow, heavy. Area damage.',
+    projectileSize:  6,
+    splashRadius:    1.2,
+    slowFactor:      1.0,
+    slowDuration:    0,
+    color:           '#f59e0b',
+    displayName:     'Cannon',
+    description:     'Slow, heavy. Area damage.',
   },
   frost: {
-    cost:           75,
-    damage:         8,
-    range:          2.8,
-    fireRate:       1.2,
+    cost:            75,
+    damage:          8,
+    range:           2.8,
+    fireRate:        1.2,
     projectileSpeed: 220,
-    splashRadius:   0,
-    slowFactor:     0.45,   // slows enemies to 45% speed
-    color:          '#a855f7',
-    displayName:    'Frost',
-    description:    'Slows enemies. Low damage.',
+    projectileSize:  4,
+    splashRadius:    0,
+    slowFactor:      0.45,
+    slowDuration:    1.8,
+    color:           '#a855f7',
+    displayName:     'Frost',
+    description:     'Slows enemies. Low damage.',
   },
   laser: {
-    cost:           150,
-    damage:         35,
-    range:          3.5,
-    fireRate:       3.0,
+    cost:            150,
+    damage:          35,
+    range:           3.5,
+    fireRate:        3.0,
     projectileSpeed: 600,
-    splashRadius:   0,
-    slowFactor:     1.0,
-    color:          '#ef4444',
-    displayName:    'Laser',
-    description:    'High DPS. Single-target.',
+    projectileSize:  3,
+    splashRadius:    0,
+    slowFactor:      1.0,
+    slowDuration:    0,
+    color:           '#ef4444',
+    displayName:     'Laser',
+    description:     'High DPS. Single-target.',
   },
 };
 

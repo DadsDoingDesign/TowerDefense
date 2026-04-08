@@ -2,8 +2,7 @@ import { COLORS, TOWERS } from '../constants.js';
 import { Projectile } from '../entities/Projectile.js';
 
 /**
- * Renders the dynamic game layer every frame:
- * towers, enemies, projectiles, hover overlay, range rings.
+ * Renders the dynamic game layer every frame.
  */
 export class GameRenderer {
   constructor(canvas, grid) {
@@ -11,19 +10,18 @@ export class GameRenderer {
     this.ctx    = canvas.getContext('2d');
     this.grid   = grid;
 
-    // Set by main each frame
-    this.hoverCell      = null;  // {col, row} | null
-    this.selectedTower  = null;  // string type | null
-    this.placingTower   = null;  // string type | null (selected in HUD)
+    this.hoverCell     = null;
+    this.placingTower  = null;
+    this.selectedTower = null; // placed tower tapped for sell/upgrade (Batch 2)
   }
 
-  draw(towers, enemies, projectiles) {
+  draw(towers, enemies) {
     const { ctx } = this;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this._drawHoverOverlay();
     this._drawTowers(towers);
-    this._drawProjectiles(projectiles);
+    this._drawProjectiles();
     this._drawEnemies(enemies);
   }
 
@@ -41,12 +39,12 @@ export class GameRenderer {
     ctx.fillStyle = canPlace ? COLORS.tileHover : COLORS.tileInvalid;
     ctx.fillRect(tl.x, tl.y, grid.tileSize, grid.tileSize);
 
-    if (canPlace && this.placingTower) {
-      // Draw range preview ring
+    if (canPlace) {
       const center = grid.gridToScreen(col, row);
-      const range  = TOWERS[this.placingTower].range * grid.tileSize;
+      const def    = TOWERS[this.placingTower];
+      const range  = def.range * grid.tileSize;
       ctx.save();
-      ctx.strokeStyle = TOWERS[this.placingTower].color;
+      ctx.strokeStyle = def.color;
       ctx.globalAlpha = 0.3;
       ctx.lineWidth   = 1.5;
       ctx.setLineDash([4, 4]);
@@ -69,26 +67,24 @@ export class GameRenderer {
 
   _drawTower(tower) {
     const { ctx, grid } = this;
-    const s = tower.scale;
-    const ts = grid.tileSize;
+    const s   = tower.scale;
+    const ts  = grid.tileSize;
     const pad = ts * 0.14;
     const size = (ts - pad * 2) * s;
+    const half = size / 2;
+    const r    = size * 0.18;
 
     ctx.save();
     ctx.translate(tower.x, tower.y);
     ctx.scale(s, s);
 
-    // Tower base (rounded square)
-    const half = size / 2;
-    const r = size * 0.18;
-    ctx.fillStyle = COLORS.bgElevated;
+    ctx.fillStyle   = COLORS.bgElevated;
     ctx.strokeStyle = tower.color;
-    ctx.lineWidth = Math.max(1.5, ts * 0.06);
+    ctx.lineWidth   = Math.max(1.5, ts * 0.06);
     this._roundRect(ctx, -half, -half, size, size, r);
     ctx.fill();
     ctx.stroke();
 
-    // Tower icon
     this._drawTowerIcon(ctx, tower.type, size);
 
     ctx.restore();
@@ -100,8 +96,7 @@ export class GameRenderer {
     ctx.fillStyle = TOWERS[type].color;
 
     switch (type) {
-      case 'arrow': {
-        // Arrow pointing right
+      case 'arrow':
         ctx.beginPath();
         ctx.moveTo(-h * 0.5, -h * 0.28);
         ctx.lineTo( h * 0.1, -h * 0.28);
@@ -113,18 +108,16 @@ export class GameRenderer {
         ctx.closePath();
         ctx.fill();
         break;
-      }
-      case 'cannon': {
-        // Circle body + barrel
+
+      case 'cannon':
         ctx.beginPath();
         ctx.arc(0, 0, h * 0.45, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillRect(h * 0.2, -h * 0.14, h * 0.5, h * 0.28);
         break;
-      }
-      case 'frost': {
-        // Snowflake — 6 lines + dots
-        ctx.lineWidth = Math.max(1.5, h * 0.2);
+
+      case 'frost':
+        ctx.lineWidth   = Math.max(1.5, h * 0.2);
         ctx.strokeStyle = TOWERS[type].color;
         for (let i = 0; i < 6; i++) {
           ctx.save();
@@ -133,7 +126,6 @@ export class GameRenderer {
           ctx.moveTo(0, 0);
           ctx.lineTo(0, -h * 0.55);
           ctx.stroke();
-          // Crossbar
           ctx.beginPath();
           ctx.moveTo(-h * 0.2, -h * 0.35);
           ctx.lineTo( h * 0.2, -h * 0.35);
@@ -144,18 +136,16 @@ export class GameRenderer {
         ctx.arc(0, 0, h * 0.12, 0, Math.PI * 2);
         ctx.fill();
         break;
-      }
-      case 'laser': {
-        // Diamond
+
+      case 'laser':
         ctx.beginPath();
-        ctx.moveTo(0,    -h * 0.6);
-        ctx.lineTo(h * 0.55, 0);
-        ctx.lineTo(0,     h * 0.6);
+        ctx.moveTo(0,        -h * 0.6);
+        ctx.lineTo( h * 0.55, 0);
+        ctx.lineTo(0,         h * 0.6);
         ctx.lineTo(-h * 0.55, 0);
         ctx.closePath();
         ctx.fill();
         break;
-      }
     }
     ctx.restore();
   }
@@ -178,29 +168,22 @@ export class GameRenderer {
 
     const r = enemy.size / 2;
 
-    // Slow/frost tint
     if (enemy.isFrozen) {
-      ctx.save();
       ctx.fillStyle = COLORS.slowTint;
       ctx.beginPath();
       ctx.arc(enemy.x, enemy.y, r * 1.35, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     }
 
-    // Enemy body
-    ctx.fillStyle = enemy.color;
+    ctx.fillStyle   = enemy.color;
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth   = 1;
     ctx.beginPath();
     ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // HP bar
-    if (!enemy.dying) {
-      this._drawHpBar(enemy, r);
-    }
+    if (!enemy.dying) this._drawHpBar(enemy, r);
 
     ctx.restore();
   }
@@ -212,42 +195,39 @@ export class GameRenderer {
     const bx = enemy.x - bw / 2;
     const by = enemy.y - r - bh - 3;
 
-    // Background
     ctx.fillStyle = COLORS.hpBarBg;
     ctx.fillRect(bx, by, bw, bh);
 
-    // Fill — color transitions green→amber→red
     const frac = enemy.hpFraction;
-    const fillColor = frac > 0.6
-      ? COLORS.accentGreen
-      : frac > 0.3
-        ? COLORS.accentAmber
-        : COLORS.accentRed;
-
-    ctx.fillStyle = fillColor;
+    ctx.fillStyle = frac > 0.6 ? COLORS.accentGreen : frac > 0.3 ? COLORS.accentAmber : COLORS.accentRed;
     ctx.fillRect(bx, by, bw * frac, bh);
   }
 
   // ----------------------------------------------------------------
-  // Projectiles
+  // Projectiles — no allocation; iterate pool directly
   // ----------------------------------------------------------------
 
-  _drawProjectiles(projectiles) {
-    for (const p of projectiles) {
-      if (!p.active) continue;
-      this._drawProjectile(p);
-    }
-  }
-
-  _drawProjectile(p) {
+  _drawProjectiles() {
     const { ctx } = this;
+
+    // Two-pass render: glow ring then core dot.
+    // Avoids shadowBlur (GPU compositing — expensive on mobile).
     ctx.save();
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur  = p.size * 2.5;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = 0.25;
+    Projectile.pool.forEachActive(p => {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.globalAlpha = 1;
+    Projectile.pool.forEachActive(p => {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.restore();
   }
 

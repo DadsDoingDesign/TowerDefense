@@ -1,10 +1,5 @@
 import { MAX_PROJECTILES } from '../constants.js';
 
-/**
- * Projectile with object pool.
- * Call Projectile.pool.acquire() to get a projectile.
- * Call p.release() when done.
- */
 export class Projectile {
   constructor() {
     this.active = false;
@@ -12,8 +7,8 @@ export class Projectile {
   }
 
   reset() {
-    this.x      = 0;
-    this.y      = 0;
+    this.x            = 0;
+    this.y            = 0;
     this.targetEnemy  = null;
     this.damage       = 0;
     this.speed        = 0;
@@ -44,9 +39,8 @@ export class Projectile {
   update(dt, enemies, onSplash) {
     if (!this.active) return;
 
-    // If target is gone, just deactivate
     if (!this.targetEnemy || !this.targetEnemy.active) {
-      this.release();
+      this._release();
       return;
     }
 
@@ -58,28 +52,25 @@ export class Projectile {
     const move = this.speed * dt;
 
     if (move >= dist) {
-      // Hit
       this.x = tx;
       this.y = ty;
 
       if (this.splashRadius > 0) {
-        // AoE: damage all enemies within splash radius
         onSplash(this.x, this.y, this.splashRadius, this.damage, this.slowFactor, this.slowDuration);
       } else {
         this.targetEnemy.takeDamage(this.damage, this.slowFactor, this.slowDuration);
       }
 
       this.hit = true;
-      this.release();
+      this._release();
     } else {
       this.x += (dx / dist) * move;
       this.y += (dy / dist) * move;
     }
   }
 
-  release() {
+  _release() {
     this.active = false;
-    Projectile.pool.release(this);
   }
 }
 
@@ -99,18 +90,25 @@ Projectile.pool = {
     for (const p of this._pool) {
       if (!p.active) return p;
     }
-    // Pool exhausted — create overflow (shouldn't happen normally)
+    // Pool exhausted — log warning and grow
+    console.warn('[ProjectilePool] Pool exhausted — growing. Consider raising MAX_PROJECTILES.');
     const p = new Projectile();
     this._pool.push(p);
     return p;
   },
 
-  release(p) {
-    p.reset();
+  /** Iterate active projectiles without allocating an array. */
+  forEachActive(fn) {
+    for (const p of this._pool) {
+      if (p.active) fn(p);
+    }
   },
 
-  get active() {
-    return this._pool.filter(p => p.active);
+  /** Deactivate all projectiles — called on game reset. */
+  resetAll() {
+    for (const p of this._pool) {
+      p.reset();
+    }
   },
 };
 

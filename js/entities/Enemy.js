@@ -1,4 +1,4 @@
-import { ENEMIES, COLORS, WAVE_HP_SCALE, WAVE_SPEED_SCALE } from '../constants.js';
+import { ENEMIES, WAVE_HP_SCALE, WAVE_SPEED_SCALE, ANIM_ENEMY_DEATH } from '../constants.js';
 
 export class Enemy {
   constructor(type, wave, pathPixels, grid) {
@@ -6,42 +6,39 @@ export class Enemy {
 
     this.type    = type;
     this.active  = true;
-    this.reached = false;   // true when enemy exits the map
+    this.reached = false;
 
-    // Stats (scaled per wave)
-    this.maxHp   = def.hp    * Math.pow(WAVE_HP_SCALE,    wave - 1);
-    this.hp      = this.maxHp;
-    this.speed   = def.speed * Math.pow(WAVE_SPEED_SCALE, wave - 1) * grid.tileSize; // px/sec
-    this.reward  = def.reward;
-    this.size    = def.size  * grid.tileSize;  // px radius
-    this.color   = def.color;
+    this.maxHp  = def.hp    * Math.pow(WAVE_HP_SCALE,    wave - 1);
+    this.hp     = this.maxHp;
+    this.speed  = def.speed * Math.pow(WAVE_SPEED_SCALE, wave - 1) * grid.tileSize;
+    this.reward = def.reward;
+    this.size   = def.size  * grid.tileSize;
+    this.color  = def.color;
 
-    // Slow effect
-    this.slowTimer = 0;
+    this.slowTimer  = 0;
     this.slowFactor = 1.0;
 
-    // Path traversal
-    this.pathPixels    = pathPixels;
-    this.pathIndex     = 0;
+    this.pathPixels = pathPixels;
+    this.pathIndex  = 0;
     this.x = pathPixels[0].x;
     this.y = pathPixels[0].y;
 
-    // Visual — death animation
-    this.dying     = false;
-    this.dieTimer  = 0;
-    this.dieDuration = 0.25;
-    this.opacity   = 1.0;
+    this.dying    = false;
+    this.dieTimer = 0;
+    this.opacity  = 1.0;
+
+    // Internal reward tracking — kept here to avoid external mutation
+    this._rewarded = false;
   }
 
   update(dt) {
     if (this.dying) {
       this.dieTimer += dt;
-      this.opacity   = 1.0 - (this.dieTimer / this.dieDuration);
-      if (this.dieTimer >= this.dieDuration) this.active = false;
+      this.opacity   = 1.0 - (this.dieTimer / ANIM_ENEMY_DEATH);
+      if (this.dieTimer >= ANIM_ENEMY_DEATH) this.active = false;
       return;
     }
 
-    // Slow timer
     if (this.slowTimer > 0) {
       this.slowTimer -= dt;
       if (this.slowTimer <= 0) {
@@ -50,8 +47,7 @@ export class Enemy {
       }
     }
 
-    const effectiveSpeed = this.speed * this.slowFactor;
-    let remaining = effectiveSpeed * dt;
+    let remaining = this.speed * this.slowFactor * dt;
 
     while (remaining > 0 && this.pathIndex < this.pathPixels.length - 1) {
       const target = this.pathPixels[this.pathIndex + 1];
@@ -72,7 +68,6 @@ export class Enemy {
       }
     }
 
-    // Reached end of path
     if (this.pathIndex >= this.pathPixels.length - 1) {
       this.reached = true;
       this.active  = false;
@@ -90,11 +85,6 @@ export class Enemy {
       this.hp    = 0;
       this.dying = true;
     }
-  }
-
-  applyFreeze(slowFactor, duration) {
-    this.slowFactor = Math.min(this.slowFactor, slowFactor);
-    this.slowTimer  = Math.max(this.slowTimer, duration);
   }
 
   get hpFraction() {

@@ -9,14 +9,8 @@ import { EconomyManager } from './systems/EconomyManager.js';
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './ui/UIManager.js';
 
-// ----------------------------------------------------------------
-// Total waves before victory
-// ----------------------------------------------------------------
 const TOTAL_WAVES = 15;
 
-// ----------------------------------------------------------------
-// Game state
-// ----------------------------------------------------------------
 const State = {
   START:    'start',
   PLACING:  'placing',
@@ -33,18 +27,18 @@ let gameState = State.START;
 const bgCanvas   = document.getElementById('bg-canvas');
 const gameCanvas = document.getElementById('game-canvas');
 
-const grid        = new Grid();
-const bgRenderer  = new BackgroundRenderer(bgCanvas, grid);
+const grid         = new Grid();
+const bgRenderer   = new BackgroundRenderer(bgCanvas, grid);
 const gameRenderer = new GameRenderer(gameCanvas, grid);
-const waveManager = new WaveManager(grid);
-const economy     = new EconomyManager();
-const ui          = new UIManager();
+const waveManager  = new WaveManager(grid);
+const economy      = new EconomyManager();
+const ui           = new UIManager();
 
-let towers = [];   // Tower[]
+let towers        = [];
 let lastTimestamp = null;
 
 // ----------------------------------------------------------------
-// Resize handler
+// Resize
 // ----------------------------------------------------------------
 
 function resize() {
@@ -52,21 +46,21 @@ function resize() {
   const w = container.clientWidth;
   const h = container.clientHeight;
 
-  for (const canvas of [bgCanvas, gameCanvas]) {
-    canvas.width  = w;
-    canvas.height = h;
-  }
+  bgCanvas.width  = gameCanvas.width  = w;
+  bgCanvas.height = gameCanvas.height = h;
 
   grid.resize(w, h);
   bgRenderer.draw();
-
-  // Update existing tower positions
   for (const t of towers) t.updatePosition();
 }
 
-window.addEventListener('resize', resize);
-// Also handle iOS orientation change
-window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+let _resizeTimer;
+function debouncedResize() {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(resize, 100);
+}
+window.addEventListener('resize', debouncedResize);
+window.addEventListener('orientationchange', debouncedResize);
 
 // ----------------------------------------------------------------
 // Input
@@ -92,7 +86,8 @@ const input = new InputManager(gameCanvas, {
     towers.push(tower);
 
     ui.updateGold(economy.gold);
-    ui.showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} tower deployed.`);
+    const name = type.charAt(0).toUpperCase() + type.slice(1);
+    ui.showToast(`${name} tower deployed.`);
   },
 
   onHover(x, y) {
@@ -124,28 +119,24 @@ ui.onStartWave(() => {
 });
 
 // ----------------------------------------------------------------
-// Game reset / start
+// Game reset
 // ----------------------------------------------------------------
 
 function startGame() {
   economy.reset();
   waveManager.reset();
-  towers = [];
+  Projectile.pool.resetAll();
 
-  // Clear grid towers
+  towers = [];
   for (let r = 0; r < grid.rows; r++) {
     for (let c = 0; c < grid.cols; c++) {
-      const tile = grid.tiles[r][c];
-      if (tile.tower) {
-        grid.removeTower(c, r);
-      }
+      if (grid.tiles[r][c].tower) grid.removeTower(c, r);
     }
   }
 
   gameRenderer.placingTower = null;
   gameRenderer.hoverCell    = null;
   ui.deselectTower();
-
   ui.updateGold(economy.gold);
   ui.updateLives(economy.lives);
   ui.updateWave(0);
@@ -157,22 +148,23 @@ function startGame() {
 }
 
 // ----------------------------------------------------------------
-// Splash damage helper
+// Splash damage
 // ----------------------------------------------------------------
 
 function handleSplash(x, y, radiusPx, damage, slowFactor, slowDuration) {
+  const r2 = radiusPx * radiusPx;
   for (const e of waveManager.enemies) {
     if (!e.active || e.dying) continue;
     const dx = e.x - x;
     const dy = e.y - y;
-    if (dx * dx + dy * dy <= radiusPx * radiusPx) {
+    if (dx * dx + dy * dy <= r2) {
       e.takeDamage(damage, slowFactor, slowDuration);
     }
   }
 }
 
 // ----------------------------------------------------------------
-// Main game loop
+// Game loop
 // ----------------------------------------------------------------
 
 function gameLoop(timestamp) {
@@ -187,60 +179,44 @@ function gameLoop(timestamp) {
     update(dt);
   }
 
-  // Always render
-  const activeProjectiles = Projectile.pool.active;
-  gameRenderer.draw(towers, waveManager.enemies, activeProjectiles);
+  gameRenderer.draw(towers, waveManager.enemies);
 }
 
 function update(dt) {
   if (gameState !== State.WAVE) return;
 
-  // Update towers
-  for (const t of towers) {
-    t.update(dt, waveManager.enemies);
-  }
+  for (const t of towers) t.update(dt, waveManager.enemies);
 
-  // Update projectiles
-  for (const p of Projectile.pool._pool) {
-    if (p.active) {
-      p.update(dt, waveManager.enemies, handleSplash);
+  Projectile.pool.forEachActive(p => p.update(dt, waveManager.enemies, handleSplash));
+
+  // Single-pass: process reached and killed enemies without allocating filter arrays
+  let livesLost  = 0;
+  let goldChanged = false;
+
+  for (const e of waveManager.enemies) {
+    if (e.reached) {
+      economy.loseLife(1);
+      e.active = false;
+      livesLost++;
+    } else if (e.dying && e.hp <= 0 && !e._rewarded) {
+      e._rewarded = true;
+      economy.earnKill(e.reward);
+      ui.showGoldFloat(e.x, e.y - 30, e.reward);
+      goldChanged = true;
     }
   }
 
-  // Drain reached enemies (before waveManager.update cleans them)
-  const reached = waveManager.enemies.filter(e => e.reached);
-  for (const e of reached) {
-    economy.loseLife(1);
-    e.active = false;
-  }
-  if (reached.length > 0) {
-    ui.updateLives(economy.lives);
-  }
+  if (livesLost  > 0) ui.updateLives(economy.lives);
+  if (goldChanged)    { ui.updateGold(economy.gold); ui.updateScore(economy.score); }
 
-  // Drain killed enemies for gold rewards
-  const killed = waveManager.enemies.filter(e => e.dying && e.hp <= 0 && !e._rewarded);
-  for (const e of killed) {
-    e._rewarded = true;
-    economy.earnKill(e.reward);
-    // Show float text near enemy position on screen
-    ui.showGoldFloat(e.x, e.y - 30, e.reward);
-  }
-  if (killed.length > 0) {
-    ui.updateGold(economy.gold);
-    ui.updateScore(economy.score);
-  }
-
-  // Wave manager tick
   waveManager.update(dt);
 
-  // Check game over
   if (economy.isDead) {
     gameState = State.GAMEOVER;
-    ui.showGameOver(waveManager.wave, economy.score, () => startGame());
+    ui.showGameOver(waveManager.wave, economy.score, startGame);
     return;
   }
 
-  // Check wave complete
   if (waveManager.state === WaveState.COMPLETE) {
     const bonus = economy.earnWaveBonus(waveManager.wave);
     ui.updateGold(economy.gold);
@@ -248,13 +224,11 @@ function update(dt) {
 
     if (waveManager.wave >= TOTAL_WAVES) {
       gameState = State.VICTORY;
-      ui.showVictory(economy.score, () => startGame());
+      ui.showVictory(economy.score, startGame);
     } else {
       gameState = State.PLACING;
       ui.setStartButtonState(true, `Start wave ${waveManager.wave + 1}`);
-      ui.showWaveComplete(waveManager.wave, bonus, () => {
-        // Auto-transition; button also works
-      });
+      ui.showWaveComplete(waveManager.wave, bonus, () => {});
     }
   }
 }
@@ -265,7 +239,6 @@ function update(dt) {
 
 function boot() {
   resize();
-
   ui.showStartScreen(() => {
     startGame();
     requestAnimationFrame(gameLoop);
