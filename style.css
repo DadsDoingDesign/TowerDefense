@@ -1,26 +1,34 @@
 /* ============================================================
-   DESIGN TOKENS — mirrors DESIGN.md
+   DESIGN TOKENS — SENTINEL Perimeter Defense Console
    ============================================================ */
 :root {
-  --bg-base:        #0a0a0b;
-  --bg-surface:     #111113;
-  --bg-elevated:    #1a1a1f;
-  --bg-overlay:     rgba(10, 10, 11, 0.95);
+  --bg-base:        #09090f;
+  --bg-surface:     #13132a;   /* HUD, header, cards — enough lift from base */
+  --bg-elevated:    #1d1d40;   /* Buttons, inputs — clearly distinct from surface */
+  --bg-overlay:     rgba(9, 9, 15, 0.96);
 
-  --border:         #2a2a30;
-  --border-focus:   #3b82f6;
+  --border:         #2e2e58;   /* Borders — visible on all dark surfaces */
+  --border-focus:   #6366f1;
 
-  --text-primary:   #f4f4f5;
-  --text-secondary: #71717a;
-  --text-muted:     #3f3f46;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;   /* Labels, descriptions — readable on dark */
+  --text-muted:     #4b5583;   /* Decorative only — timestamps, disabled */
 
-  --accent-blue:    #3b82f6;
-  --accent-blue-bg: rgba(59, 130, 246, 0.12);
-  --accent-green:   #22c55e;
-  --accent-red:     #ef4444;
+  /* Brand primary — indigo */
+  --primary:        #6366f1;
+  --primary-dim:    rgba(99, 102, 241, 0.12);
+  --primary-glow:   rgba(99, 102, 241, 0.35);
+
+  /* Aliases for backward-compat canvas code */
+  --accent-blue:    #6366f1;
+  --accent-blue-bg: rgba(99, 102, 241, 0.12);
+
+  --accent-green:   #10b981;
+  --accent-red:     #f43f5e;
   --accent-amber:   #f59e0b;
-  --accent-purple:  #a855f7;
+  --accent-purple:  #8b5cf6;
 
+  /* Tower type colors (game identity — kept stable) */
   --tower-arrow:    #3b82f6;
   --tower-cannon:   #f59e0b;
   --tower-frost:    #a855f7;
@@ -29,8 +37,10 @@
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
-  --ui-bar-height: 96px;
-  --radius: 6px;
+  --header-height:  44px;
+  --ui-bar-height:  96px;
+  --radius:         6px;
+  --radius-lg:      10px;
 }
 
 /* ============================================================
@@ -97,6 +107,110 @@ button:focus-visible {
 #game-canvas { z-index: 1; }
 
 /* ============================================================
+   SITE HEADER — SENTINEL branding
+   ============================================================ */
+#site-header {
+  flex: 0 0 var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px 0 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  position: relative;
+}
+
+/* Subtle indigo accent line at bottom of header */
+#site-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary) 40%, var(--accent-purple) 70%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Hexagonal shield logo */
+#header-logo {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, var(--primary) 0%, #818cf8 100%);
+  clip-path: polygon(50% 0%, 100% 22%, 100% 68%, 50% 100%, 0% 68%, 0% 22%);
+  flex-shrink: 0;
+}
+
+#header-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#header-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+#header-subtitle {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+#header-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#header-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--accent-green);
+  letter-spacing: 0.06em;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+#header-version {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* Hide subtitle text on very small screens */
+@media (max-width: 360px) {
+  #header-subtitle { display: none; }
+  #header-version  { display: none; }
+}
+
+/* ============================================================
    HUD BAR
    ============================================================ */
 #ui-bar {
@@ -105,9 +219,25 @@ button:focus-visible {
   flex-direction: column;
   background: var(--bg-surface);
   border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6);
   z-index: 10;
   padding: 0 8px;
   gap: 0;
+  position: relative;
+}
+
+/* Gradient accent line on top of HUD — shows active game state */
+#ui-bar::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary) 30%, var(--accent-amber) 65%, transparent);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Stats row */
@@ -133,11 +263,17 @@ button:focus-visible {
   padding: 4px 10px;
   min-height: 28px;
   cursor: pointer;
-  transition: color 120ms, border-color 120ms;
+  transition: color 120ms, border-color 120ms, background 120ms;
+  letter-spacing: 0.04em;
+}
+.speed-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
 }
 .speed-btn.fast {
   color: var(--accent-amber);
   border-color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.08);
 }
 
 /* Wave preview bar */
@@ -150,8 +286,10 @@ button:focus-visible {
 }
 .wave-preview-label {
   color: var(--text-muted);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
   flex-shrink: 0;
 }
 .wave-preview-text {
@@ -178,23 +316,24 @@ button:focus-visible {
   color: var(--text-primary);
   line-height: 1.2;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .stat-label {
-  font-size: 10px;
-  font-weight: 400;
+  font-size: 9px;
+  font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 1px;
 }
 
 .stat-icon {
   margin-right: 3px;
-  font-size: 12px;
+  font-size: 11px;
 }
 .gold-icon  { color: var(--accent-green); }
-.lives-icon { color: var(--accent-red); }
+.lives-icon { color: var(--accent-red);   }
 
 #stat-score { margin-left: auto; }
 
@@ -225,8 +364,13 @@ button:focus-visible {
   border-radius: var(--radius);
   color: var(--text-primary);
   gap: 2px;
-  transition: border-color 120ms, background 120ms;
+  transition: border-color 120ms, background 120ms, transform 100ms;
   flex-shrink: 0;
+}
+
+.tower-btn:hover:not(.unaffordable) {
+  border-color: var(--text-muted);
+  background: #1e1e35;
 }
 
 .tower-btn:active {
@@ -234,64 +378,67 @@ button:focus-visible {
 }
 
 .tower-btn.selected {
-  background: var(--accent-blue-bg);
-  border-color: var(--accent-blue);
+  background: var(--primary-dim);
+  border-color: var(--primary);
 }
 
 .tower-btn.unaffordable {
-  opacity: 0.4;
+  opacity: 0.35;
   pointer-events: none;
 }
 
-.tower-btn[data-tower="arrow"].selected  { border-color: var(--tower-arrow); background: rgba(59,130,246,0.12); }
-.tower-btn[data-tower="cannon"].selected { border-color: var(--tower-cannon); background: rgba(245,158,11,0.12); }
-.tower-btn[data-tower="frost"].selected  { border-color: var(--tower-frost); background: rgba(168,85,247,0.12); }
-.tower-btn[data-tower="laser"].selected  { border-color: var(--tower-laser); background: rgba(239,68,68,0.12); }
+.tower-btn[data-tower="arrow"].selected  { border-color: var(--tower-arrow);  background: rgba(59, 130, 246, 0.12); }
+.tower-btn[data-tower="cannon"].selected { border-color: var(--tower-cannon); background: rgba(245, 158, 11, 0.10); }
+.tower-btn[data-tower="frost"].selected  { border-color: var(--tower-frost);  background: rgba(168, 85, 247, 0.12); }
+.tower-btn[data-tower="laser"].selected  { border-color: var(--tower-laser);  background: rgba(239, 68, 68, 0.10);  }
 
 .tower-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   display: none;
 }
 
 .tower-cost {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   display: none;
 }
 
-/* Tower icon (SVG drawn as inline bg or drawn by JS, fallback is colored square) */
+/* Tower icon shapes */
 .tower-icon {
   width: 24px;
   height: 24px;
   display: block;
   border-radius: 3px;
 }
-.tower-icon[data-tower="arrow"]  { background: var(--tower-arrow); clip-path: polygon(0% 50%, 60% 0%, 60% 35%, 100% 35%, 100% 65%, 60% 65%, 60% 100%); }
+.tower-icon[data-tower="arrow"]  { background: var(--tower-arrow);  clip-path: polygon(0% 50%, 60% 0%, 60% 35%, 100% 35%, 100% 65%, 60% 65%, 60% 100%); }
 .tower-icon[data-tower="cannon"] { background: var(--tower-cannon); border-radius: 50%; }
-.tower-icon[data-tower="frost"]  { background: var(--tower-frost); clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
-.tower-icon[data-tower="laser"]  { background: var(--tower-laser); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.tower-icon[data-tower="frost"]  { background: var(--tower-frost);  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.tower-icon[data-tower="laser"]  { background: var(--tower-laser);  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
 
 /* Action button */
 .action-btn {
   min-width: 80px;
   min-height: 40px;
   padding: 8px 14px;
-  background: var(--accent-blue);
+  background: var(--primary);
   color: #fff;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   border-radius: var(--radius);
   border: none;
   flex-shrink: 0;
-  transition: filter 120ms;
+  transition: filter 120ms, transform 100ms;
   white-space: nowrap;
 }
 
 .action-btn:hover:not(:disabled) {
-  filter: brightness(1.12);
+  filter: brightness(1.14);
 }
 
 .action-btn:active:not(:disabled) {
@@ -299,11 +446,128 @@ button:focus-visible {
 }
 
 .action-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
   background: var(--bg-elevated);
   color: var(--text-muted);
   border: 1px solid var(--border);
+}
+
+/* Secondary button */
+.secondary-btn {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color 120ms, background 120ms, color 120ms;
+}
+
+.secondary-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+/* Selected state for map/difficulty choice buttons */
+.secondary-btn.selected {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: var(--primary);
+  color: var(--text-primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* ============================================================
+   TOGGLE GROUP — segmented control for modal selectors
+   ============================================================ */
+.modal-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.toggle-group {
+  display: flex;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.toggle-opt {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 150ms;
+  gap: 3px;
+  min-width: 0;
+}
+
+.toggle-opt:hover:not(.selected) {
+  background: var(--bg-elevated);
+}
+
+.toggle-opt:active {
+  transform: scale(0.97);
+}
+
+.toggle-opt.selected {
+  background: var(--primary);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.45);
+}
+
+.toggle-opt-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.toggle-opt-sub {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.toggle-opt.selected .toggle-opt-label {
+  color: #fff;
+}
+
+.toggle-opt.selected .toggle-opt-sub {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.toggle-hint {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 7px;
+  line-height: 1.4;
+  min-height: 15px;
+  letter-spacing: 0.01em;
 }
 
 /* ============================================================
@@ -314,11 +578,14 @@ button:focus-visible {
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%) translateY(0);
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
   color: var(--text-primary);
-  font-size: 13px;
-  padding: 8px 16px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  padding: 7px 14px;
   border-radius: var(--radius);
   pointer-events: none;
   opacity: 0;
@@ -354,25 +621,26 @@ button:focus-visible {
 #modal-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-top: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
   padding: 24px;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   animation: scaleIn 200ms ease-out;
 }
 
 #modal-header {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
 }
 
 #modal-body {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.55;
   margin-bottom: 20px;
 }
 
@@ -388,19 +656,13 @@ button:focus-visible {
   width: 100%;
   min-height: 44px;
   font-size: 14px;
+  letter-spacing: 0.04em;
 }
 
 #modal-actions .secondary-btn {
   width: 100%;
   min-height: 44px;
   font-size: 14px;
-  font-weight: 500;
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 20px;
-  cursor: pointer;
 }
 
 /* ============================================================
@@ -415,13 +677,14 @@ button:focus-visible {
 
 .float-text {
   position: absolute;
-  font-size: 13px;
+  font-size: 12px;
   font-family: var(--font-mono);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent-green);
   pointer-events: none;
   animation: floatUp 700ms ease-out forwards;
   white-space: nowrap;
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================
@@ -433,13 +696,18 @@ button:focus-visible {
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes floatUp {
   0%   { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-28px); }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 8px var(--accent-green); }
+  50%       { opacity: 0.4; box-shadow: 0 0 3px var(--accent-green); }
 }
 
 /* ============================================================
@@ -448,6 +716,7 @@ button:focus-visible {
 @media (min-width: 768px) {
   :root {
     --ui-bar-height: 104px;
+    --header-height: 48px;
   }
 
   #stats-row {
@@ -463,8 +732,12 @@ button:focus-visible {
     font-size: 16px;
   }
 
+  .stat-label {
+    font-size: 10px;
+  }
+
   .tower-btn {
-    min-width: 70px;
+    min-width: 72px;
     min-height: 56px;
     padding: 8px 10px;
   }
@@ -483,10 +756,14 @@ button:focus-visible {
     min-width: 100px;
     font-size: 14px;
   }
+
+  #header-title {
+    font-size: 14px;
+  }
 }
 
 /* ============================================================
-   LARGE SCREEN (≥ 1024px) — side panel option
+   LARGE SCREEN (≥ 1024px)
    ============================================================ */
 @media (min-width: 1024px) {
   .stat-value {
@@ -506,10 +783,11 @@ button:focus-visible {
   bottom: calc(var(--ui-bar-height) + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(8px);
-  width: min(340px, calc(100vw - 24px));
+  width: min(360px, calc(100vw - 24px));
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-top: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
   z-index: 30;
   opacity: 0;
   pointer-events: none;
@@ -534,20 +812,24 @@ button:focus-visible {
 }
 
 #tp-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   flex: 1;
 }
 
 .tp-level {
-  font-size: 11px;
+  font-size: 10px;
   font-family: var(--font-mono);
+  font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 2px 6px;
+  letter-spacing: 0.04em;
 }
 
 .tp-close {
@@ -562,18 +844,23 @@ button:focus-visible {
   font-size: 14px;
   cursor: pointer;
   border-radius: 4px;
+  transition: background 120ms, color 120ms;
 }
-.tp-close:hover { background: var(--bg-elevated); }
+.tp-close:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
 
 .tower-panel-stats {
   font-size: 12px;
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  line-height: 1.7;
+  line-height: 1.8;
   margin-bottom: 12px;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   padding: 8px 0;
+  letter-spacing: 0.02em;
 }
 
 .tower-panel-actions {
@@ -584,19 +871,26 @@ button:focus-visible {
 .tp-btn-upgrade {
   flex: 1;
   min-height: 40px;
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .tp-btn-sell {
   flex: 1;
   min-height: 40px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   background: var(--bg-elevated);
   color: var(--accent-red);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+.tp-btn-sell:hover {
+  border-color: var(--accent-red);
+  background: rgba(244, 63, 94, 0.08);
 }
 
 /* ============================================================

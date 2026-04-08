@@ -106,7 +106,7 @@ const input = new InputManager(gameCanvas, {
     towers.push(tower);
 
     ui.updateGold(economy.gold);
-    ui.showToast(`${tower._def.displayName} tower deployed.`);
+    ui.showToast(`${tower._def.displayName} deployed.`);
   },
 
   onHover(x, y) {
@@ -136,7 +136,7 @@ ui.onSellTower(tower => {
   towers = towers.filter(t => t !== tower);
   gameRenderer.selectedTower = null;
   ui.updateGold(economy.gold);
-  ui.showToast(`Tower sold. +${refund} credits.`);
+  ui.showToast(`Defense removed. +${refund} cr returned.`);
 });
 
 ui.onUpgradeTower(tower => {
@@ -148,7 +148,7 @@ ui.onUpgradeTower(tower => {
   economy.gold -= tower.upgradeCost;
   tower.upgrade();
   ui.updateGold(economy.gold);
-  ui.showToast(`${tower._def.displayName} upgraded to level 2.`);
+  ui.showToast(`${tower._def.displayName} upgraded.`);
 });
 
 ui.onStartWave(() => {
@@ -159,10 +159,10 @@ ui.onStartWave(() => {
   waveManager.enemySpdMult = difficulty.enemySpdMult;
   waveManager.startNextWave();
   gameState = State.WAVE;
-  ui.setStartButtonState(false, `Wave ${waveManager.wave} inbound`);
+  ui.setStartButtonState(false, `Wave ${waveManager.wave} active`);
   ui.updateWave(waveManager.wave);
   ui.hideWavePreview();
-  ui.showToast(`Wave ${waveManager.wave} inbound.`);
+  ui.showToast(`Wave ${waveManager.wave}: threat sequence initiated.`);
 });
 
 ui.onSpeedToggle(() => {
@@ -206,7 +206,7 @@ function startGame(chosenDifficulty = DIFFICULTIES.normal, mapIndex = 0) {
   ui.updateLives(economy.lives);
   ui.updateWave(0);
   ui.updateScore(0);
-  ui.setStartButtonState(true, 'Start wave 1');
+  ui.setStartButtonState(true, 'Deploy wave 1');
   ui.hideModal();
 
   gameState = State.PLACING;
@@ -306,7 +306,7 @@ function update(dt) {
       submitAndShowEnd((rank, top) => ui.showVictory(economy.score, rank, top, startGame));
     } else {
       gameState = State.PLACING;
-      ui.setStartButtonState(true, `Start wave ${waveManager.wave + 1}`);
+      ui.setStartButtonState(true, `Deploy wave ${waveManager.wave + 1}`);
       // Show next wave preview
       const preview = waveManager.getNextWavePreview();
       ui.updateWavePreview(preview);

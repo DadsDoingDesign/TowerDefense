@@ -156,11 +156,11 @@ export class UIManager {
   updateWavePreview(counts) {
     if (!this._wavePreviewRow || !this._wavePreviewText) return;
     const parts = [];
-    if (counts.boss)    parts.push(`⚠ ${counts.boss} BOSS`);
-    if (counts.basic)   parts.push(`${counts.basic} basic`);
-    if (counts.fast)    parts.push(`${counts.fast} fast`);
-    if (counts.tank)    parts.push(`${counts.tank} tank`);
-    if (counts.armored) parts.push(`${counts.armored} armored`);
+    if (counts.boss)    parts.push(`⚠ ${counts.boss} zero-day`);
+    if (counts.basic)   parts.push(`${counts.basic} bot`);
+    if (counts.fast)    parts.push(`${counts.fast} script`);
+    if (counts.tank)    parts.push(`${counts.tank} flood`);
+    if (counts.armored) parts.push(`${counts.armored} apt`);
     if (parts.length === 0) {
       this._wavePreviewRow.classList.add('hidden');
     } else {
@@ -299,54 +299,66 @@ export class UIManager {
     let selectedMapIndex = 0;
     let selectedDiff     = 'normal';
 
+    // Build map toggle options — split "Alpha — Gateway" into label + sub
+    const mapToggles = MAPS.map((m, i) => {
+      const parts = m.name.split(' — ');
+      const label = parts[0].trim();
+      const sub   = parts[1] ? parts[1].trim() : '';
+      return `<button class="toggle-opt${i === 0 ? ' selected' : ''}" data-map="${i}">
+        <span class="toggle-opt-label">${label}</span>
+        ${sub ? `<span class="toggle-opt-sub">${sub}</span>` : ''}
+      </button>`;
+    }).join('');
+
+    // Build difficulty toggle options
+    const diffKeys    = Object.keys(DIFFICULTIES);
+    const diffToggles = diffKeys.map(key => {
+      const d = DIFFICULTIES[key];
+      return `<button class="toggle-opt${key === 'normal' ? ' selected' : ''}" data-diff="${key}">
+        <span class="toggle-opt-label">${d.label}</span>
+      </button>`;
+    }).join('');
+
     this.showModal({
-      header: 'Ops Console',
+      header: 'SENTINEL',
       body: `
-        <p>Threats are inbound. Deploy defenses to prevent a breach.</p>
+        <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:18px">
+          Intrusion detected. Configure your defense perimeter to neutralize incoming threat vectors.
+        </p>
 
-        <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Sector</p>
-        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="map-select">
-          ${MAPS.map((m, i) => `
-            <button class="secondary-btn map-btn${i === 0 ? ' selected' : ''}" data-map="${i}"
-              style="text-align:left;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:500;color:var(--text-primary);font-size:13px">${m.name}</span>
-              <span style="font-size:11px;color:var(--text-secondary)">${m.description}</span>
-            </button>
-          `).join('')}
-        </div>
+        <p class="modal-section-label">Network Zone</p>
+        <div class="toggle-group" id="map-select">${mapToggles}</div>
+        <p id="map-desc" class="toggle-hint">${MAPS[0].description}</p>
 
-        <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Threat level</p>
-        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="difficulty-select">
-          ${Object.entries(DIFFICULTIES).map(([key, d]) => `
-            <button class="secondary-btn diff-btn${key === 'normal' ? ' selected' : ''}" data-diff="${key}"
-              style="text-align:left;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:500;color:var(--text-primary);font-size:13px">${d.label}</span>
-              <span style="font-size:11px;color:var(--text-secondary)">${d.description}</span>
-            </button>
-          `).join('')}
-        </div>
+        <p class="modal-section-label" style="margin-top:16px">Threat Level</p>
+        <div class="toggle-group" id="difficulty-select">${diffToggles}</div>
+        <p id="diff-desc" class="toggle-hint">${DIFFICULTIES.normal.description}</p>
       `,
-      actions: [{ label: 'Begin deployment', primary: true, onClick: () => {
+      actions: [{ label: 'Initialize Defense', primary: true, onClick: () => {
         onStart(DIFFICULTIES[selectedDiff], selectedMapIndex);
       }}],
     });
 
     const mapContainer  = document.getElementById('map-select');
     const diffContainer = document.getElementById('difficulty-select');
+    const mapDescEl     = document.getElementById('map-desc');
+    const diffDescEl    = document.getElementById('diff-desc');
 
-    mapContainer?.querySelectorAll('.map-btn').forEach(btn => {
+    mapContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
       btn.addEventListener('click', () => {
         selectedMapIndex = parseInt(btn.dataset.map, 10);
-        mapContainer.querySelectorAll('.map-btn').forEach(b => b.classList.remove('selected'));
+        mapContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        if (mapDescEl) mapDescEl.textContent = MAPS[selectedMapIndex].description;
       });
     });
 
-    diffContainer?.querySelectorAll('.diff-btn').forEach(btn => {
+    diffContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
       btn.addEventListener('click', () => {
         selectedDiff = btn.dataset.diff;
-        diffContainer.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        diffContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        if (diffDescEl) diffDescEl.textContent = DIFFICULTIES[selectedDiff].description;
       });
     });
   }
@@ -354,8 +366,8 @@ export class UIManager {
   showWaveComplete(wave, bonus, onContinue) {
     this.showModal({
       header: `Wave ${wave} cleared`,
-      body: `<p>+${bonus} credits awarded.</p><p>Reinforce your perimeter before the next incursion.</p>`,
-      actions: [{ label: `Start wave ${wave + 1}`, primary: true, onClick: onContinue }],
+      body: `<p>+${bonus} credits allocated to perimeter budget.</p><p>Reinforce your defenses before the next threat sequence.</p>`,
+      actions: [{ label: `Deploy wave ${wave + 1}`, primary: true, onClick: onContinue }],
     });
   }
 
@@ -363,20 +375,20 @@ export class UIManager {
     this.showModal({
       header: 'Connection lost',
       body: `
-        <p>Perimeter breached. 0 lives remaining.</p>
+        <p>Perimeter breached. All nodes offline.</p>
         <p style="margin-top:8px">
           <span style="color:var(--text-secondary)">Survived:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">Wave ${wave}</span>
         </p>
         <p>
-          <span style="color:var(--text-secondary)">Difficulty:</span>
+          <span style="color:var(--text-secondary)">Environment:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${diffLabel}</span>
         </p>
         <p>
           <span style="color:var(--text-secondary)">Final score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
-        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber)">#${rank} on ${diffLabel} leaderboard</p>` : ''}
+        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on ${diffLabel} leaderboard</p>` : ''}
         ${this._renderLeaderboard(topScores)}
       `,
       actions: [{ label: 'Restart deployment', primary: true, onClick: () => this.showStartScreen(onRestart) }],
@@ -387,12 +399,12 @@ export class UIManager {
     this.showModal({
       header: 'Perimeter secured',
       body: `
-        <p>All waves repelled. The network is safe.</p>
+        <p>All threat vectors neutralized. The network is safe.</p>
         <p style="margin-top:8px">
           <span style="color:var(--text-secondary)">Final score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
-        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber)">#${rank} on leaderboard</p>` : ''}
+        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on leaderboard</p>` : ''}
         ${this._renderLeaderboard(topScores)}
       `,
       actions: [{ label: 'Deploy again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
@@ -403,15 +415,15 @@ export class UIManager {
     if (!entries || entries.length === 0) return '';
     const rows = entries.slice(0, 5).map((e, i) => `
       <tr>
-        <td style="color:var(--text-secondary);padding-right:8px">#${i + 1}</td>
-        <td style="font-family:var(--font-mono)">${e.score.toLocaleString()}</td>
-        <td style="color:var(--text-secondary);padding-left:8px">W${e.wave}</td>
-        <td style="color:var(--text-secondary);padding-left:8px;font-size:10px">${e.date}</td>
+        <td style="color:var(--text-muted);padding-right:8px;font-family:var(--font-mono);font-size:10px">#${i + 1}</td>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-primary)">${e.score.toLocaleString()}</td>
+        <td style="color:var(--text-secondary);padding-left:8px;font-family:var(--font-mono);font-size:11px">W${e.wave}</td>
+        <td style="color:var(--text-muted);padding-left:8px;font-size:10px;font-family:var(--font-mono)">${e.date}</td>
       </tr>
     `).join('');
     return `
-      <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Top scores</p>
-      <table style="margin-top:6px;border-collapse:collapse;font-size:12px;width:100%">${rows}</table>
+      <p style="margin-top:14px;font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Leaderboard</p>
+      <table style="margin-top:6px;border-collapse:collapse;width:100%">${rows}</table>
     `;
   }
 }
