@@ -359,7 +359,7 @@ export class UIManager {
     });
   }
 
-  showGameOver(wave, score, diffLabel, onRestart) {
+  showGameOver(wave, score, diffLabel, rank, topScores, onRestart) {
     this.showModal({
       header: 'Connection lost',
       body: `
@@ -376,12 +376,14 @@ export class UIManager {
           <span style="color:var(--text-secondary)">Final score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
+        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber)">#${rank} on ${diffLabel} leaderboard</p>` : ''}
+        ${this._renderLeaderboard(topScores)}
       `,
       actions: [{ label: 'Restart deployment', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
   }
 
-  showVictory(score, onRestart) {
+  showVictory(score, rank, topScores, onRestart) {
     this.showModal({
       header: 'Perimeter secured',
       body: `
@@ -390,8 +392,26 @@ export class UIManager {
           <span style="color:var(--text-secondary)">Final score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
+        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber)">#${rank} on leaderboard</p>` : ''}
+        ${this._renderLeaderboard(topScores)}
       `,
       actions: [{ label: 'Deploy again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
+  }
+
+  _renderLeaderboard(entries) {
+    if (!entries || entries.length === 0) return '';
+    const rows = entries.slice(0, 5).map((e, i) => `
+      <tr>
+        <td style="color:var(--text-secondary);padding-right:8px">#${i + 1}</td>
+        <td style="font-family:var(--font-mono)">${e.score.toLocaleString()}</td>
+        <td style="color:var(--text-secondary);padding-left:8px">W${e.wave}</td>
+        <td style="color:var(--text-secondary);padding-left:8px;font-size:10px">${e.date}</td>
+      </tr>
+    `).join('');
+    return `
+      <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Top scores</p>
+      <table style="margin-top:6px;border-collapse:collapse;font-size:12px;width:100%">${rows}</table>
+    `;
   }
 }

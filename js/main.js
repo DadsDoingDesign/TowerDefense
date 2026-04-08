@@ -8,6 +8,9 @@ import { WaveManager, WaveState } from './systems/WaveManager.js';
 import { EconomyManager } from './systems/EconomyManager.js';
 import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './ui/UIManager.js';
+import { ErrorHandler } from './systems/ErrorHandler.js';
+import { DebugOverlay } from './systems/DebugOverlay.js';
+import { Leaderboard } from './systems/Leaderboard.js';
 
 const TOTAL_WAVES = 15;
 
@@ -36,8 +39,10 @@ const ui           = new UIManager();
 
 let towers        = [];
 let lastTimestamp = null;
-let gameSpeed     = 1;       // multiplier applied to dt
+let gameSpeed     = 1;
 let difficulty    = DIFFICULTIES.normal;
+
+const debugOverlay = new DebugOverlay(gameCanvas);
 
 // ----------------------------------------------------------------
 // Resize
@@ -236,11 +241,24 @@ function gameLoop(timestamp) {
   lastTimestamp = timestamp;
   const dt = rawDt * gameSpeed;
 
+  debugOverlay.tick(dt);
+
   if (gameState === State.PLACING || gameState === State.WAVE) {
     update(dt);
   }
 
   gameRenderer.draw(towers, waveManager.enemies);
+
+  if (debugOverlay.visible) {
+    debugOverlay.draw({
+      towers:     towers.length,
+      enemies:    waveManager.enemies.length,
+      poolSize:   Projectile.pool.size,
+      poolActive: Projectile.pool.countActive(),
+      wave:       waveManager.wave,
+      gameSpeed,
+    });
+  }
 }
 
 function update(dt) {
@@ -274,7 +292,7 @@ function update(dt) {
 
   if (economy.isDead) {
     gameState = State.GAMEOVER;
-    ui.showGameOver(waveManager.wave, economy.score, difficulty.label, startGame);
+    submitAndShowEnd((rank, top) => ui.showGameOver(waveManager.wave, economy.score, difficulty.label, rank, top, startGame));
     return;
   }
 
@@ -285,7 +303,7 @@ function update(dt) {
 
     if (waveManager.wave >= TOTAL_WAVES) {
       gameState = State.VICTORY;
-      ui.showVictory(economy.score, startGame);
+      submitAndShowEnd((rank, top) => ui.showVictory(economy.score, rank, top, startGame));
     } else {
       gameState = State.PLACING;
       ui.setStartButtonState(true, `Start wave ${waveManager.wave + 1}`);
@@ -298,10 +316,20 @@ function update(dt) {
 }
 
 // ----------------------------------------------------------------
+// Leaderboard helper
+// ----------------------------------------------------------------
+
+function submitAndShowEnd(showFn) {
+  const rank = Leaderboard.submit(difficulty.label, economy.score, waveManager.wave);
+  showFn(rank, Leaderboard.getTop(difficulty.label));
+}
+
+// ----------------------------------------------------------------
 // Boot
 // ----------------------------------------------------------------
 
 function boot() {
+  ErrorHandler.init(ui);
   resize();
   ui.showStartScreen((chosenDifficulty, mapIndex) => {
     startGame(chosenDifficulty, mapIndex);

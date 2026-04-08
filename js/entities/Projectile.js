@@ -97,11 +97,20 @@ Projectile.pool = {
     return p;
   },
 
+  get size() { return this._pool.length; },
+
   /** Iterate active projectiles without allocating an array. */
   forEachActive(fn) {
     for (const p of this._pool) {
       if (p.active) fn(p);
     }
+  },
+
+  /** Count active projectiles (used by debug overlay). */
+  countActive() {
+    let n = 0;
+    for (const p of this._pool) { if (p.active) n++; }
+    return n;
   },
 
   /** Deactivate all projectiles — called on game reset. */
