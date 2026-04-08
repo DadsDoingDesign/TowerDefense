@@ -19,6 +19,12 @@ export class Tower {
     this.slowDuration    = this._def.slowDuration;
     this.color           = this._def.color;
 
+    // Mechanical upgrade flags
+    this.multiTarget     = 1;   // how many targets to fire at per cycle
+    this.burstShots      = 1;   // projectiles fired per trigger
+    this.chainDamage     = 0;   // projectile chains to N nearby enemies on hit
+    this.slowSpreadTiles = 0;   // slow spreads to enemies within N tiles on hit
+
     // Pixel-scaled — set by updatePosition()
     this.range        = 0;
     this.splashRadius = 0;
@@ -31,8 +37,10 @@ export class Tower {
     this.scale     = 0;
     this.animTimer = 0;
 
-    // Economy tracking for sell calculation
-    this._totalSpent = this._def.cost;
+    // Economy tracking
+    this._totalSpent    = this._def.cost;
+    this._upgradeRangeX  = 1;
+    this._upgradeSplashX = 1;
 
     this.updatePosition();
   }
@@ -41,48 +49,65 @@ export class Tower {
     const center = this.grid.gridToScreen(this.col, this.row);
     this.x = center.x;
     this.y = center.y;
-    this.range        = this._def.range        * this.grid.tileSize;
-    this.splashRadius = this._def.splashRadius  * this.grid.tileSize;
-    // Re-scale if upgraded
-    if (this._upgradeRangeX) this.range *= this._upgradeRangeX;
-    if (this._upgradeSplashX) this.splashRadius *= this._upgradeSplashX;
+    this.range        = this._def.range       * this.grid.tileSize * this._upgradeRangeX;
+    this.splashRadius = this._def.splashRadius * this.grid.tileSize * this._upgradeSplashX;
   }
 
   upgrade(option = 'a') {
     if (!this.canUpgrade) return false;
-    const up = UPGRADES[this.type][option];
+
+    // Choose the right upgrade block based on current level
+    let key;
+    if (this.level === 1) key = option;      // 'a' or 'b'
+    else if (this.level === 2) key = 'c';
+    else if (this.level === 3) key = 'd';
+    else return false;
+
+    const up = UPGRADES[this.type]?.[key];
     if (!up) return false;
 
-    this.damage    *= up.damageX   ?? 1;
-    this.fireRate  *= up.fireRateX ?? 1;
+    // Stat multipliers
+    if (up.damageX)   this.damage    *= up.damageX;
+    if (up.fireRateX) this.fireRate  *= up.fireRateX;
     if (up.slowFactor   !== undefined) this.slowFactor   = up.slowFactor;
-    if (up.slowDuration !== undefined) this.slowDuration  = up.slowDuration;
+    if (up.slowDuration !== undefined) this.slowDuration = up.slowDuration;
 
-    // Store range multiplier for updatePosition re-apply
-    this._upgradeRangeX = up.rangeX ?? 1;
-    this.range *= this._upgradeRangeX;
-
-    // Splash multiplier (amazon drone fleet)
+    // Range / splash multipliers (cumulative across upgrades)
+    if (up.rangeX) {
+      this._upgradeRangeX *= up.rangeX;
+      this.range = this._def.range * this.grid.tileSize * this._upgradeRangeX;
+    }
     if (up.splashX) {
-      this._upgradeSplashX = up.splashX;
-      this.splashRadius *= up.splashX;
+      this._upgradeSplashX *= up.splashX;
+      this.splashRadius = this._def.splashRadius * this.grid.tileSize * this._upgradeSplashX;
     }
 
-    this._totalSpent    += up.cost;
-    this._chosenUpgrade  = option;
-    this.level = 2;
+    // Mechanical upgrades
+    if (up.multiTarget !== undefined) this.multiTarget     = up.multiTarget;
+    if (up.burstShots  !== undefined) this.burstShots      = up.burstShots;
+    if (up.chainDamage !== undefined) this.chainDamage     = up.chainDamage;
+    if (up.slowSpread  !== undefined) this.slowSpreadTiles = up.slowSpread;
 
-    // Restart placement animation briefly to signal the upgrade
+    this._totalSpent += up.cost;
+    this.level++;
+
+    // Restart spawn animation to signal upgrade
     this.animTimer = 0;
     this.scale     = 0;
     return true;
   }
 
-  get canUpgrade() { return this.level < 2; }
-  upgradeCostFor(option) { return UPGRADES[this.type]?.[option]?.cost ?? 0; }
-  get sellValue()  { return Math.floor(this._totalSpent * SELL_RATE); }
+  get canUpgrade()   { return this.level < 4; }
+  get sellValue()    { return Math.floor(this._totalSpent * SELL_RATE); }
+
+  /** Cost of the next upgrade given the option key ('a','b','c','d'). */
+  nextUpgradeCost(option = 'a') {
+    const key = this.level === 1 ? option : this.level === 2 ? 'c' : 'd';
+    return UPGRADES[this.type]?.[key]?.cost ?? 0;
+  }
 
   update(dt, enemies) {
+    // Spawn animation
     if (this.animTimer < ANIM_TOWER_SPAWN) {
       this.animTimer += dt;
       const t = Math.min(this.animTimer / ANIM_TOWER_SPAWN, 1);
@@ -93,30 +118,36 @@ export class Tower {
 
     if (this.fireCooldown > 0) this.fireCooldown -= dt;
 
+    if (this.fireCooldown <= 0 && enemies.length > 0) {
+      const targets = this._acquireTargets(enemies, this.multiTarget);
+      if (targets.length > 0) {
+        this.target = targets[0];
+        for (const t of targets) {
+          for (let b = 0; b < this.burstShots; b++) {
+            this._fireAt(t);
+          }
+        }
+        this.fireCooldown = 1 / this.fireRate;
+      } else {
+        this.target = null;
+      }
+    }
+
+    // Keep target display valid
     if (this.target && (!this.target.active || !this._inRange(this.target))) {
       this.target = null;
     }
-
-    if (!this.target) this.target = this._acquireTarget(enemies);
-
-    if (this.target && this.fireCooldown <= 0) {
-      this._fire();
-      this.fireCooldown = 1 / this.fireRate;
-    }
   }
 
-  _acquireTarget(enemies) {
-    let best = null;
-    let bestPathIndex = -1;
+  _acquireTargets(enemies, maxCount = 1) {
+    const inRange = [];
     for (const e of enemies) {
       if (!e.active || e.dying) continue;
-      if (!this._inRange(e)) continue;
-      if (e.pathIndex > bestPathIndex) {
-        bestPathIndex = e.pathIndex;
-        best = e;
-      }
+      if (this._inRange(e)) inRange.push(e);
     }
-    return best;
+    // Prioritise furthest along path
+    inRange.sort((a, b) => b.pathIndex - a.pathIndex);
+    return maxCount >= 99 ? inRange : inRange.slice(0, maxCount);
   }
 
   _inRange(enemy) {
@@ -125,11 +156,11 @@ export class Tower {
     return (dx * dx + dy * dy) <= (this.range * this.range);
   }
 
-  _fire() {
+  _fireAt(target) {
     const p = Projectile.pool.acquire();
     p.fire(
       this.x, this.y,
-      this.target,
+      target,
       this.damage,
       this.projectileSpeed,
       this.splashRadius,
@@ -138,6 +169,8 @@ export class Tower {
       this.color,
       this._def.projectileSize,
       this.type,
+      this.chainDamage,
+      this.slowSpreadTiles * this.grid.tileSize,
     );
   }
 }

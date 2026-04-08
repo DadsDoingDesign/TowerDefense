@@ -98,13 +98,17 @@ export class GameRenderer {
       ctx.globalAlpha = 1;
     }
 
-    // Upgrade tier indicator (small dot in corner)
-    if (tower.level === 2) {
-      ctx.fillStyle = COLORS.accentAmber;
-      ctx.globalAlpha = 1;
-      ctx.beginPath();
-      ctx.arc(ts * 0.3, -ts * 0.3, 3, 0, Math.PI * 2);
-      ctx.fill();
+    // Level indicator dots (1 per upgrade level, stacked in corner)
+    if (tower.level > 1) {
+      const dotColors = [COLORS.accentAmber, COLORS.accentGreen, COLORS.accentRed];
+      const dots = tower.level - 1;
+      for (let d = 0; d < dots; d++) {
+        ctx.fillStyle   = dotColors[d] ?? COLORS.accentRed;
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(ts * 0.32, -ts * 0.22 - d * 7, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.scale(s, s);
@@ -211,54 +215,202 @@ export class GameRenderer {
 
     const r = enemy.size / 2;
 
-    // Slow/frost tint
+    // Slow tint halo
     if (enemy.isFrozen) {
       ctx.fillStyle = COLORS.slowTint;
       ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, r * 1.35, 0, Math.PI * 2);
+      ctx.arc(enemy.x, enemy.y, r * 1.4, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Boss: outer pulsing ring
-    if (enemy.isBoss && !enemy.dying) {
-      ctx.strokeStyle = enemy.color;
-      ctx.lineWidth   = 2;
-      ctx.globalAlpha = enemy.opacity * 0.4;
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, r * 1.6, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = enemy.opacity;
-    }
-
-    // Armored: hexagonal shape approximation (6-sided polygon)
-    if (enemy.armor > 0 && !enemy.isBoss) {
-      ctx.fillStyle = enemy.color;
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = (i * Math.PI) / 3 - Math.PI / 6;
-        const px = enemy.x + r * Math.cos(angle);
-        const py = enemy.y + r * Math.sin(angle);
-        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    // Dispatch to themed shape
+    switch (enemy.type) {
+      case 'basic':   this._drawIntern(enemy, r);      break;
+      case 'fast':    this._drawGrowthHacker(enemy, r); break;
+      case 'tank':    this._drawVCMoney(enemy, r);      break;
+      case 'armored': this._drawConsultant(enemy, r);   break;
+      case 'boss':    this._drawDisruptor(enemy, r);    break;
+      default: {
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth   = 1.5;
-      ctx.stroke();
-    } else {
-      // Normal circle
-      ctx.fillStyle   = enemy.color;
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-      ctx.lineWidth   = enemy.isBoss ? 2 : 1;
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
     }
 
     if (!enemy.dying) this._drawHpBar(enemy, r);
+    ctx.restore();
+  }
+
+  // Intern — gray person silhouette (circle head + body + tie)
+  _drawIntern(e, r) {
+    const { ctx } = this;
+    const headR = r * 0.42;
+    const bodyW = r * 0.52;
+    const bodyH = r * 0.72;
+    const bodyY = e.y + headR * 0.5;
+
+    ctx.fillStyle = e.color;
+    // Body
+    this._roundRect(ctx, e.x - bodyW / 2, bodyY - bodyH * 0.05, bodyW, bodyH, bodyW * 0.25);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(e.x, bodyY - headR * 0.9, headR, 0, Math.PI * 2);
+    ctx.fill();
+    // Tiny tie
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.moveTo(e.x, bodyY + r * 0.02);
+    ctx.lineTo(e.x - r * 0.1, bodyY + r * 0.38);
+    ctx.lineTo(e.x, bodyY + r * 0.32);
+    ctx.lineTo(e.x + r * 0.1, bodyY + r * 0.38);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Growth Hacker — green rocket pointing in travel direction
+  _drawGrowthHacker(e, r) {
+    const { ctx } = this;
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(e.angle);
+
+    // Body
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(r * 0.12, -r * 0.44);
+    ctx.lineTo(-r * 0.65, -r * 0.28);
+    ctx.lineTo(-r * 0.65,  r * 0.28);
+    ctx.lineTo(r * 0.12,  r * 0.44);
+    ctx.closePath();
+    ctx.fill();
+    // Exhaust flame
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.65, -r * 0.2);
+    ctx.lineTo(-r * 1.05, 0);
+    ctx.lineTo(-r * 0.65,  r * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    // Window dot
+    ctx.fillStyle = COLORS.bgBase;
+    ctx.beginPath();
+    ctx.arc(r * 0.3, 0, r * 0.14, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
+  }
+
+  // VC Money — red money bag (fat circle + $ sign)
+  _drawVCMoney(e, r) {
+    const { ctx } = this;
+    // Bag body
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y + r * 0.1, r * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    // Bag neck/knot
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y - r * 0.72, r * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    // Tie line
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth   = r * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(e.x - r * 0.25, e.y - r * 0.5);
+    ctx.lineTo(e.x + r * 0.25, e.y - r * 0.5);
+    ctx.stroke();
+    // $ symbol
+    ctx.fillStyle  = 'rgba(255,255,255,0.82)';
+    ctx.font       = `bold ${r * 0.85}px sans-serif`;
+    ctx.textAlign  = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', e.x, e.y + r * 0.12);
+    // Outer stroke
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y + r * 0.1, r * 0.9, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Consultant — armored briefcase shape
+  _drawConsultant(e, r) {
+    const { ctx } = this;
+    const bw = r * 1.55, bh = r * 1.0;
+    const bx = e.x - bw / 2, by = e.y - bh / 2 + r * 0.12;
+    const hh = r * 0.32, hw = bw * 0.38;
+
+    // Handle
+    ctx.strokeStyle = e.color;
+    ctx.lineWidth   = r * 0.22;
+    ctx.beginPath();
+    this._roundRect(ctx, e.x - hw / 2, by - hh, hw, hh, r * 0.1);
+    ctx.stroke();
+    // Case body
+    ctx.fillStyle = e.color;
+    this._roundRect(ctx, bx, by, bw, bh, r * 0.18);
+    ctx.fill();
+    // Centre divider
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth   = r * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(e.x, by + r * 0.14);
+    ctx.lineTo(e.x, by + bh - r * 0.14);
+    ctx.stroke();
+    // Latch dot
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y + r * 0.12, r * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    // Outer accent stroke
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth   = 1.5;
+    this._roundRect(ctx, bx, by, bw, bh, r * 0.18);
+    ctx.stroke();
+  }
+
+  // Disruptor — boss star-burst with pulsing aura
+  _drawDisruptor(e, r) {
+    const { ctx } = this;
+    // Outer pulsing ring
+    ctx.strokeStyle = e.color;
+    ctx.lineWidth   = 2;
+    ctx.globalAlpha = e.opacity * 0.35;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, r * 1.65, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = e.opacity;
+
+    // 8-point star burst
+    const spikes = 8, innerR = r * 0.55;
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+      const angle = (i * Math.PI) / spikes - Math.PI / 2;
+      const rr = i % 2 === 0 ? r : innerR;
+      const px = e.x + rr * Math.cos(angle);
+      const py = e.y + rr * Math.sin(angle);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Core glow
+    ctx.fillStyle = 'rgba(255,80,80,0.55)';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, r * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ⚡ icon hint
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font      = `bold ${r * 0.55}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡', e.x, e.y);
   }
 
   _drawHpBar(enemy, r) {

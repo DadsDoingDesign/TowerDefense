@@ -99,6 +99,7 @@ export const TOWERS = {
 // ============================================================
 export const UPGRADES = {
   meta: {
+    // Level 1 → 2 (choose one)
     a: {
       cost:        40,
       displayName: 'Harvest User Data',
@@ -114,6 +115,21 @@ export const UPGRADES = {
       damageX:     1.1,
       rangeX:      1.4,
       fireRateX:   1.25,
+    },
+    // Level 2 → 3 (mechanical)
+    c: {
+      cost:        100,
+      displayName: 'Behavioral Targeting',
+      lore:        'Fires at 2 targets simultaneously — "We know what you want before you do"',
+      multiTarget: 2,
+    },
+    // Level 3 → 4 (mechanical)
+    d: {
+      cost:        160,
+      displayName: 'Shadow Profile',
+      lore:        'Tracks 3 targets + packets chain on impact — "Your data. Everywhere. Forever."',
+      multiTarget: 3,
+      chainDamage: 1,
     },
   },
   amazon: {
@@ -133,6 +149,19 @@ export const UPGRADES = {
       rangeX:      1.1,
       fireRateX:   1.0,
       splashX:     1.6,
+    },
+    c: {
+      cost:        140,
+      displayName: 'Warehouse Automation',
+      lore:        'Fires 3-box burst per trigger — "The robots replaced them all"',
+      burstShots:  3,
+    },
+    d: {
+      cost:        200,
+      displayName: 'Monopoly Protocol',
+      lore:        'Fires 2-box burst at 2 targets — "Competitors? What competitors?"',
+      multiTarget: 2,
+      burstShots:  2,
     },
   },
   uber: {
@@ -154,6 +183,18 @@ export const UPGRADES = {
       fireRateX:   1.2,
       slowDuration: 3.5,
     },
+    c: {
+      cost:        110,
+      displayName: 'Platform Lock-In',
+      lore:        'Slow spreads to nearby threats on hit — "You can\'t opt out"',
+      slowSpread:  1.8,
+    },
+    d: {
+      cost:        160,
+      displayName: 'Ghost Mode',
+      lore:        'Targets ALL enemies in range simultaneously — "Surge. Everywhere."',
+      multiTarget: 99,
+    },
   },
   tesla: {
     a: {
@@ -171,6 +212,19 @@ export const UPGRADES = {
       damageX:     1.3,
       rangeX:      1.15,
       fireRateX:   1.5,
+    },
+    c: {
+      cost:        180,
+      displayName: 'Chain Lightning',
+      lore:        'Bolts arc to 2 additional targets on impact — "Unlimited power"',
+      chainDamage: 2,
+    },
+    d: {
+      cost:        260,
+      displayName: 'Ludicrous Mode',
+      lore:        'Triple burst + 2-arc chain — "Is this even legal?"',
+      burstShots:  3,
+      chainDamage: 2,
     },
   },
 };

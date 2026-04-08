@@ -408,21 +408,21 @@ button:focus-visible {
   display: none;
 }
 
-/* Tower icon shapes */
+/* Tower icon — SVG logo container */
 .tower-icon {
-  width: 24px;
-  height: 24px;
-  display: block;
-  border-radius: 3px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-/* Meta: infinity / data-loop symbol (two overlapping circles via border-radius trick) */
-.tower-icon[data-tower="meta"]   { background: var(--tower-meta);   border-radius: 50% 50% 0 50% / 50% 50% 50% 0; }
-/* Amazon: box / package silhouette */
-.tower-icon[data-tower="amazon"] { background: var(--tower-amazon); clip-path: polygon(10% 30%, 50% 10%, 90% 30%, 90% 80%, 50% 100%, 10% 80%); }
-/* Uber: car top-down silhouette */
-.tower-icon[data-tower="uber"]   { background: var(--tower-uber);   clip-path: polygon(20% 30%, 35% 10%, 65% 10%, 80% 30%, 90% 40%, 90% 75%, 10% 75%, 10% 40%); }
-/* Tesla: lightning bolt */
-.tower-icon[data-tower="tesla"]  { background: var(--tower-tesla);  clip-path: polygon(60% 0%, 25% 55%, 50% 55%, 40% 100%, 75% 45%, 50% 45%); }
+.tower-icon svg { width: 100%; height: 100%; display: block; }
+
+/* Brand colours via currentColor */
+.tower-icon[data-tower="meta"]   { color: var(--tower-meta);   }
+.tower-icon[data-tower="amazon"] { color: var(--tower-amazon); }
+.tower-icon[data-tower="uber"]   { color: var(--tower-uber);   }
+.tower-icon[data-tower="tesla"]  { color: var(--tower-tesla);  }
 
 /* Action button */
 .action-btn {
@@ -945,6 +945,115 @@ button:focus-visible {
 .tp-btn-sell:hover {
   border-color: var(--accent-red);
   background: rgba(244, 63, 94, 0.08);
+}
+
+/* ============================================================
+   TOWER TOOLTIP (long-press info card)
+   ============================================================ */
+.tower-tooltip {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: 13px 15px 14px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 160ms, transform 160ms;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+.tower-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.tt-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tt-cost {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+.tt-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+.tt-stats {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+.tt-upgrade-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+.tt-upgrades {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-upg {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+}
+.tt-upg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.tt-upg-path {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.tt-upg-cost {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-amber);
+}
+.tt-upg-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.tt-upg-lore {
+  display: block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin-top: 2px;
 }
 
 /* ============================================================

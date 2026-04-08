@@ -28,6 +28,7 @@ export class Enemy {
     this.dying    = false;
     this.dieTimer = 0;
     this.opacity  = 1.0;
+    this.angle    = 0; // direction of travel in radians (for renderer)
 
     // Internal reward tracking — kept here to avoid external mutation
     this._rewarded = false;
@@ -56,6 +57,8 @@ export class Enemy {
       const dx = target.x - this.x;
       const dy = target.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > 0) this.angle = Math.atan2(dy, dx);
 
       if (remaining >= dist) {
         this.x = target.x;

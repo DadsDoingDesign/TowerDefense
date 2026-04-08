@@ -69,23 +69,49 @@
       </div>
 
       <div id="tower-strip">
-        <button class="tower-btn" data-tower="meta" title="Meta — 50 cr | Data harvester. Always watching.">
-          <span class="tower-icon" data-tower="meta"></span>
+        <button class="tower-btn" data-tower="meta">
+          <span class="tower-icon" data-tower="meta">
+            <!-- Meta infinity loop -->
+            <svg viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="17" cy="15" rx="13.5" ry="9" stroke="currentColor" stroke-width="5.5"/>
+              <ellipse cx="43" cy="15" rx="13.5" ry="9" stroke="currentColor" stroke-width="5.5"/>
+            </svg>
+          </span>
           <span class="tower-name">Meta</span>
           <span class="tower-cost mono">50 cr</span>
         </button>
-        <button class="tower-btn" data-tower="amazon" title="Amazon — 100 cr | Ships area damage.">
-          <span class="tower-icon" data-tower="amazon"></span>
+        <button class="tower-btn" data-tower="amazon">
+          <span class="tower-icon" data-tower="amazon">
+            <!-- Amazon a + smile arrow -->
+            <svg viewBox="0 0 80 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M60 43 L60 18 Q58 6 47 6 Q33 6 33 21 Q33 32 52 37 L60 40" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M33 50 Q33 58 47 58 Q62 58 62 47" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              <path d="M15 75 Q40 90 65 75" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+              <path d="M59 68 L68 75 L59 82" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
           <span class="tower-name">Amazon</span>
           <span class="tower-cost mono">100 cr</span>
         </button>
-        <button class="tower-btn" data-tower="uber" title="Uber — 75 cr | Surge pricing enforcer. Slows threats.">
-          <span class="tower-icon" data-tower="uber"></span>
+        <button class="tower-btn" data-tower="uber">
+          <span class="tower-icon" data-tower="uber">
+            <!-- Uber bold U -->
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 12 L18 60 Q18 90 50 90 Q82 90 82 60 L82 12" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>
+            </svg>
+          </span>
           <span class="tower-name">Uber</span>
           <span class="tower-cost mono">75 cr</span>
         </button>
-        <button class="tower-btn" data-tower="tesla" title="Tesla — 150 cr | Visionary disruptor. High DPS.">
-          <span class="tower-icon" data-tower="tesla"></span>
+        <button class="tower-btn" data-tower="tesla">
+          <span class="tower-icon" data-tower="tesla">
+            <!-- Tesla T with curved top connectors -->
+            <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 25 Q30 5 50 8 Q70 5 95 25" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              <path d="M27 25 Q38 13 50 17 Q62 13 73 25" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              <line x1="50" y1="17" x2="50" y2="105" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+            </svg>
+          </span>
           <span class="tower-name">Tesla</span>
           <span class="tower-cost mono">150 cr</span>
         </button>
@@ -129,6 +155,9 @@
 
   <!-- Gold float container -->
   <div id="floats" aria-hidden="true"></div>
+
+  <!-- Tower long-press tooltip -->
+  <div id="tower-tooltip" class="tower-tooltip" aria-hidden="true"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

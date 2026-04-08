@@ -18,11 +18,14 @@ export class Projectile {
     this.color        = '#fff';
     this.size         = 4;
     this.shape        = 'dot';
+    this.chainDamage  = 0;   // chain to N nearby enemies on hit
+    this.slowSpread   = 0;   // spread slow to enemies within this px radius
     this.active       = false;
     this.hit          = false;
   }
 
-  fire(x, y, enemy, damage, speed, splashRadius, slowFactor, slowDuration, color, size, shape = 'dot') {
+  fire(x, y, enemy, damage, speed, splashRadius, slowFactor, slowDuration, color, size,
+       shape = 'dot', chainDamage = 0, slowSpread = 0) {
     this.x            = x;
     this.y            = y;
     this.targetEnemy  = enemy;
@@ -34,6 +37,8 @@ export class Projectile {
     this.color        = color;
     this.size         = size;
     this.shape        = shape;
+    this.chainDamage  = chainDamage;
+    this.slowSpread   = slowSpread;
     this.active       = true;
     this.hit          = false;
   }
@@ -63,11 +68,56 @@ export class Projectile {
         this.targetEnemy.takeDamage(this.damage, this.slowFactor, this.slowDuration);
       }
 
+      // Chain damage — arc to nearest N enemies not already hit
+      if (this.chainDamage > 0) {
+        this._applyChain(enemies, this.chainDamage, this.damage * 0.55);
+      }
+
+      // Slow spread — propagate slow to nearby enemies
+      if (this.slowSpread > 0 && this.slowFactor < 1.0) {
+        this._applySlowSpread(enemies, this.slowSpread);
+      }
+
       this.hit = true;
       this._release();
     } else {
       this.x += (dx / dist) * move;
       this.y += (dy / dist) * move;
+    }
+  }
+
+  _applyChain(enemies, chainsLeft, damage) {
+    const CHAIN_RANGE_SQ = 110 * 110;
+    const hit = new Set([this.targetEnemy]);
+    let src = this.targetEnemy;
+
+    for (let i = 0; i < chainsLeft; i++) {
+      let nearest = null;
+      let nearestDsq = CHAIN_RANGE_SQ;
+      for (const e of enemies) {
+        if (hit.has(e) || !e.active || e.dying) continue;
+        const dx = e.x - src.x;
+        const dy = e.y - src.y;
+        const dsq = dx * dx + dy * dy;
+        if (dsq < nearestDsq) { nearestDsq = dsq; nearest = e; }
+      }
+      if (!nearest) break;
+      nearest.takeDamage(damage, this.slowFactor, this.slowDuration);
+      hit.add(nearest);
+      src = nearest;
+      damage *= 0.55;
+    }
+  }
+
+  _applySlowSpread(enemies, radius) {
+    const r2 = radius * radius;
+    for (const e of enemies) {
+      if (e === this.targetEnemy || !e.active || e.dying) continue;
+      const dx = e.x - this.x;
+      const dy = e.y - this.y;
+      if (dx * dx + dy * dy <= r2) {
+        e.takeDamage(0, this.slowFactor, this.slowDuration);
+      }
     }
   }
 

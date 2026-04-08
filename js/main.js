@@ -141,16 +141,18 @@ ui.onSellTower(tower => {
 
 ui.onUpgradeTower((tower, option = 'a') => {
   if (!tower.canUpgrade) return;
-  const up = UPGRADES[tower.type]?.[option];
+  // Resolve the actual upgrade block (a/b for level 1, c for level 2, d for level 3)
+  const key = tower.level === 1 ? option : tower.level === 2 ? 'c' : 'd';
+  const up  = UPGRADES[tower.type]?.[key];
   if (!up) return;
   if (!economy.canAffordAmount(up.cost)) {
     ui.showToast('Insufficient credits.');
     return;
   }
   economy.gold -= up.cost;
-  tower.upgrade(option);
+  tower.upgrade(option); // Tower.upgrade() resolves level internally
   ui.updateGold(economy.gold);
-  ui.showToast(`${tower._def.displayName}: ${up.displayName} activated.`);
+  ui.showToast(`${tower._def.displayName}: ${up.displayName} online.`);
 });
 
 ui.onStartWave(() => {
