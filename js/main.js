@@ -184,9 +184,10 @@ function startGame(chosenDifficulty = DIFFICULTIES.normal, mapIndex = 0) {
   economy.reset(difficulty);
   waveManager.reset();
 
-  // Load selected map
+  // Load selected map and recompute pixel-space path for enemies
   grid.loadMap(mapIndex);
   if (grid.tileSize > 0) {
+    grid.resize(bgCanvas.width, bgCanvas.height); // re-bake pathPixels for new waypoints
     bgRenderer.draw();
     waveManager.grid = grid; // re-point in case grid ref changed
   }
