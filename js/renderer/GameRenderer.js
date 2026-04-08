@@ -11,8 +11,9 @@ export class GameRenderer {
     this.grid   = grid;
 
     this.hoverCell     = null;
+    this.pendingCell   = null; // touch: cell awaiting second-tap confirmation
     this.placingTower  = null;
-    this.selectedTower = null; // placed tower tapped for sell/upgrade (Batch 2)
+    this.selectedTower = null;
   }
 
   draw(towers, enemies) {
@@ -30,19 +31,28 @@ export class GameRenderer {
   // ----------------------------------------------------------------
 
   _drawHoverOverlay() {
-    if (!this.hoverCell || !this.placingTower) return;
-    const { col, row } = this.hoverCell;
+    if (!this.placingTower) return;
+
+    // Use pendingCell (touch first-tap) or hoverCell (mouse) — pending takes priority
+    const cell = this.pendingCell || this.hoverCell;
+    if (!cell) return;
+
+    const { col, row } = cell;
     const { grid, ctx } = this;
     const canPlace = grid.canPlaceTower(col, row);
+    const isPending = !!this.pendingCell;
 
     const tl = grid.gridToScreenTopLeft(col, row);
-    ctx.fillStyle = canPlace ? COLORS.tileHover : COLORS.tileInvalid;
+    ctx.fillStyle = canPlace
+      ? (isPending ? 'rgba(99,102,241,0.22)' : COLORS.tileHover)
+      : COLORS.tileInvalid;
     ctx.fillRect(tl.x, tl.y, grid.tileSize, grid.tileSize);
 
     if (canPlace) {
       const center = grid.gridToScreen(col, row);
       const def    = TOWERS[this.placingTower];
       const range  = def.range * grid.tileSize;
+
       ctx.save();
       ctx.strokeStyle = def.color;
       ctx.globalAlpha = 0.3;
@@ -51,6 +61,24 @@ export class GameRenderer {
       ctx.beginPath();
       ctx.arc(center.x, center.y, range, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Pending: draw a solid confirm ring + "tap again" label
+      if (isPending) {
+        ctx.strokeStyle = def.color;
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth   = 2.5;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, grid.tileSize * 0.44, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle    = def.color;
+        ctx.globalAlpha  = 0.9;
+        ctx.font         = `bold ${Math.max(9, grid.tileSize * 0.22)}px sans-serif`;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TAP', center.x, center.y - grid.tileSize * 0.55);
+      }
       ctx.restore();
     }
   }
@@ -323,10 +351,11 @@ export class GameRenderer {
     ctx.moveTo(e.x - r * 0.25, e.y - r * 0.5);
     ctx.lineTo(e.x + r * 0.25, e.y - r * 0.5);
     ctx.stroke();
-    // $ symbol
+    // $ symbol — guard font assignment to avoid re-parsing on unchanged value
     ctx.fillStyle  = 'rgba(255,255,255,0.82)';
-    ctx.font       = `bold ${r * 0.85}px sans-serif`;
-    ctx.textAlign  = 'center';
+    const dollarFont = `bold ${(r * 0.85).toFixed(1)}px sans-serif`;
+    if (ctx.font !== dollarFont) ctx.font = dollarFont;
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('$', e.x, e.y + r * 0.12);
     // Outer stroke
@@ -407,8 +436,9 @@ export class GameRenderer {
 
     // ⚡ icon hint
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.font      = `bold ${r * 0.55}px sans-serif`;
-    ctx.textAlign = 'center';
+    const boltFont = `bold ${(r * 0.55).toFixed(1)}px sans-serif`;
+    if (ctx.font !== boltFont) ctx.font = boltFont;
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('⚡', e.x, e.y);
   }

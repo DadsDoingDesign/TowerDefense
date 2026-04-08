@@ -1,4 +1,4 @@
-import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS, UPGRADES } from './constants.js';
+import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS } from './constants.js';
 import { Grid } from './grid.js';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer.js';
 import { GameRenderer } from './renderer/GameRenderer.js';
@@ -41,6 +41,7 @@ let towers        = [];
 let lastTimestamp = null;
 let gameSpeed     = 1;
 let difficulty    = DIFFICULTIES.normal;
+let pendingCell   = null; // two-tap placement: cell awaiting confirmation
 
 const debugOverlay = new DebugOverlay(gameCanvas);
 
@@ -59,7 +60,6 @@ function resize() {
   grid.resize(w, h);
   bgRenderer.draw();
   for (const t of towers) t.updatePosition();
-  ui.setTileSize(grid.tileSize);
 }
 
 let _resizeTimer;
@@ -74,39 +74,50 @@ window.addEventListener('orientationchange', debouncedResize);
 // Input
 // ----------------------------------------------------------------
 
+function clearPendingCell() {
+  pendingCell = null;
+  gameRenderer.pendingCell = null;
+}
+
 const input = new InputManager(gameCanvas, {
   onTap(x, y) {
     if (gameState !== State.PLACING && gameState !== State.WAVE) return;
 
     const cell = grid.screenToGrid(x, y);
-    if (!cell) return;
+    if (!cell) { clearPendingCell(); return; }
     const { col, row } = cell;
 
-    // Tap on existing tower → show info panel
+    // Tap on existing tower → open panel, cancel any pending placement
     const existing = grid.getTower(col, row);
     if (existing) {
+      clearPendingCell();
       gameRenderer.selectedTower = existing;
       gameRenderer.placingTower  = null;
       ui.deselectTower();
-      ui.setTileSize(grid.tileSize);
       ui.showTowerPanel(existing);
       return;
     }
 
-    // Tap on empty cell while placing → place tower
-    if (!gameRenderer.placingTower) return;
-    if (!grid.canPlaceTower(col, row)) return;
-    if (!economy.canAfford(gameRenderer.placingTower)) return;
+    // No tower type selected → just dismiss pending
+    if (!gameRenderer.placingTower) { clearPendingCell(); return; }
+    if (!grid.canPlaceTower(col, row)) { clearPendingCell(); return; }
 
-    const type = gameRenderer.placingTower;
-    economy.spend(type);
-
-    const tower = new Tower(type, col, row, grid);
-    grid.placeTower(col, row, tower);
-    towers.push(tower);
-
-    ui.updateGold(economy.gold);
-    ui.showToast(`${tower._def.displayName} deployed.`);
+    // Two-tap confirmation: first tap = ghost preview, second tap on same cell = place
+    if (pendingCell && pendingCell.col === col && pendingCell.row === row) {
+      if (!economy.canAfford(gameRenderer.placingTower)) return;
+      clearPendingCell();
+      const type = gameRenderer.placingTower;
+      economy.spend(type);
+      const tower = new Tower(type, col, row, grid);
+      grid.placeTower(col, row, tower);
+      towers.push(tower);
+      ui.updateGold(economy.gold);
+      ui.showToast(`${tower._def.displayName} deployed.`);
+    } else {
+      // First tap — show ghost at this cell, wait for confirmation
+      pendingCell = { col, row };
+      gameRenderer.pendingCell = { col, row };
+    }
   },
 
   onHover(x, y) {
@@ -123,6 +134,7 @@ const input = new InputManager(gameCanvas, {
 // ----------------------------------------------------------------
 
 ui.onSelectTower(type => {
+  clearPendingCell();
   gameRenderer.placingTower  = type;
   gameRenderer.selectedTower = null;
   ui.hideTowerPanel();
@@ -141,16 +153,14 @@ ui.onSellTower(tower => {
 
 ui.onUpgradeTower((tower, option = 'a') => {
   if (!tower.canUpgrade) return;
-  // Resolve the actual upgrade block (a/b for level 1, c for level 2, d for level 3)
-  const key = tower.level === 1 ? option : tower.level === 2 ? 'c' : 'd';
-  const up  = UPGRADES[tower.type]?.[key];
+  const up = tower.nextUpgrade(option);
   if (!up) return;
   if (!economy.canAffordAmount(up.cost)) {
     ui.showToast('Insufficient credits.');
     return;
   }
   economy.gold -= up.cost;
-  tower.upgrade(option); // Tower.upgrade() resolves level internally
+  tower.upgrade(option);
   ui.updateGold(economy.gold);
   ui.showToast(`${tower._def.displayName}: ${up.displayName} online.`);
 });
@@ -158,6 +168,7 @@ ui.onUpgradeTower((tower, option = 'a') => {
 ui.onStartWave(() => {
   if (gameState !== State.PLACING && gameState !== State.WAVE) return;
   if (!waveManager.isIdle) return;
+  clearPendingCell();
 
   waveManager.enemyHpMult  = difficulty.enemyHpMult;
   waveManager.enemySpdMult = difficulty.enemySpdMult;
@@ -195,13 +206,10 @@ function startGame(chosenDifficulty = DIFFICULTIES.normal, mapIndex = 0) {
   }
   Projectile.pool.resetAll();
 
+  for (const t of towers) grid.removeTower(t.col, t.row);
   towers = [];
-  for (let r = 0; r < grid.rows; r++) {
-    for (let c = 0; c < grid.cols; c++) {
-      if (grid.tiles[r][c].tower) grid.removeTower(c, r);
-    }
-  }
 
+  clearPendingCell();
   gameRenderer.placingTower  = null;
   gameRenderer.hoverCell     = null;
   gameRenderer.selectedTower = null;

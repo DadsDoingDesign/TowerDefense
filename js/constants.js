@@ -130,7 +130,7 @@ export const UPGRADES = {
       lore:        'Tracks 3 targets + packets chain on impact — "Your data. Everywhere. Forever."',
       multiTarget: 3,
       chainDamage: 1,
-    },
+    }, // multiTarget uses numeric cap, not MULTI_TARGET_ALL
   },
   amazon: {
     a: {
@@ -193,7 +193,7 @@ export const UPGRADES = {
       cost:        160,
       displayName: 'Ghost Mode',
       lore:        'Targets ALL enemies in range simultaneously — "Surge. Everywhere."',
-      multiTarget: 99,
+      multiTarget: 99, // MULTI_TARGET_ALL — imported where needed
     },
   },
   tesla: {
@@ -230,6 +230,7 @@ export const UPGRADES = {
 };
 
 export const SELL_RATE = 0.75;
+export const MULTI_TARGET_ALL = 99; // sentinel: fire at every enemy in range
 
 // ============================================================
 // DIFFICULTY PRESETS — Funding Stage Edition™

@@ -1,4 +1,4 @@
-import { TOWERS, UPGRADES, SELL_RATE, ANIM_TOWER_SPAWN } from '../constants.js';
+import { TOWERS, UPGRADES, SELL_RATE, ANIM_TOWER_SPAWN, MULTI_TARGET_ALL } from '../constants.js';
 import { Projectile } from './Projectile.js';
 
 export class Tower {
@@ -97,13 +97,14 @@ export class Tower {
     return true;
   }
 
-  get canUpgrade()   { return this.level < 4; }
-  get sellValue()    { return Math.floor(this._totalSpent * SELL_RATE); }
+  get canUpgrade()  { return this.level < 4; }
+  get sellValue()   { return Math.floor(this._totalSpent * SELL_RATE); }
+  get rangeTiles()  { return this.range / this.grid.tileSize; }
 
-  /** Cost of the next upgrade given the option key ('a','b','c','d'). */
-  nextUpgradeCost(option = 'a') {
+  /** Cost + def of the next upgrade for the given option key. */
+  nextUpgrade(option = 'a') {
     const key = this.level === 1 ? option : this.level === 2 ? 'c' : 'd';
-    return UPGRADES[this.type]?.[key]?.cost ?? 0;
+    return UPGRADES[this.type]?.[key] ?? null;
   }
 
   update(dt, enemies) {
@@ -145,9 +146,9 @@ export class Tower {
       if (!e.active || e.dying) continue;
       if (this._inRange(e)) inRange.push(e);
     }
-    // Prioritise furthest along path
+    if (inRange.length <= 1) return inRange;
     inRange.sort((a, b) => b.pathIndex - a.pathIndex);
-    return maxCount >= 99 ? inRange : inRange.slice(0, maxCount);
+    return maxCount >= MULTI_TARGET_ALL ? inRange : inRange.slice(0, maxCount);
   }
 
   _inRange(enemy) {

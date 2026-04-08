@@ -1,4 +1,4 @@
-import { TOWERS, UPGRADES, DIFFICULTIES, MAPS } from '../constants.js';
+import { TOWERS, UPGRADES, DIFFICULTIES, MAPS, ENEMIES, MULTI_TARGET_ALL } from '../constants.js';
 
 export class UIManager {
   constructor() {
@@ -130,19 +130,24 @@ export class UIManager {
         }
       });
 
-      // Long-press / hold for tower info tooltip
-      let _pressTimer = null;
-      const show = () => this._showTowerTooltip(btn.dataset.tower, btn);
-      const hide = () => { clearTimeout(_pressTimer); this._hideTowerTooltip(); };
-
-      btn.addEventListener('mousedown',  () => { _pressTimer = setTimeout(show, 420); });
-      btn.addEventListener('mouseup',    hide);
-      btn.addEventListener('mouseleave', hide);
-      btn.addEventListener('touchstart', () => { _pressTimer = setTimeout(show, 420); }, { passive: true });
-      btn.addEventListener('touchend',   hide);
-      btn.addEventListener('touchcancel',hide);
-      btn.addEventListener('touchmove',  hide);
+      this._bindLongPress(btn,
+        () => this._showTowerTooltip(btn.dataset.tower, btn),
+        () => this._hideTowerTooltip(),
+      );
     });
+  }
+
+  _bindLongPress(el, onShow, onHide) {
+    let pressTimer = null;
+    const show = () => onShow();
+    const hide = () => { clearTimeout(pressTimer); onHide(); };
+    el.addEventListener('mousedown',   () => { pressTimer = setTimeout(show, 420); });
+    el.addEventListener('mouseup',     hide);
+    el.addEventListener('mouseleave',  hide);
+    el.addEventListener('touchstart',  () => { pressTimer = setTimeout(show, 420); }, { passive: true });
+    el.addEventListener('touchend',    hide);
+    el.addEventListener('touchcancel', hide);
+    el.addEventListener('touchmove',   hide);
   }
 
   _showTowerTooltip(type, btn) {
@@ -220,11 +225,11 @@ export class UIManager {
   updateWavePreview(counts) {
     if (!this._wavePreviewRow || !this._wavePreviewText) return;
     const parts = [];
-    if (counts.boss)    parts.push(`⚠ ${counts.boss} zero-day`);
-    if (counts.basic)   parts.push(`${counts.basic} bot`);
-    if (counts.fast)    parts.push(`${counts.fast} script`);
-    if (counts.tank)    parts.push(`${counts.tank} flood`);
-    if (counts.armored) parts.push(`${counts.armored} apt`);
+    if (counts.boss)    parts.push(`⚠ ${counts.boss} ${ENEMIES.boss.label}`);
+    if (counts.basic)   parts.push(`${counts.basic} ${ENEMIES.basic.label}`);
+    if (counts.fast)    parts.push(`${counts.fast} ${ENEMIES.fast.label}`);
+    if (counts.tank)    parts.push(`${counts.tank} ${ENEMIES.tank.label}`);
+    if (counts.armored) parts.push(`${counts.armored} ${ENEMIES.armored.label}`);
     if (parts.length === 0) {
       this._wavePreviewRow.classList.add('hidden');
     } else {
@@ -241,6 +246,13 @@ export class UIManager {
   // Tower info panel
   // ----------------------------------------------------------------
 
+  _renderUpgradeBtn(btn, up, key) {
+    btn.innerHTML = `<span class="upgrade-name">${up.displayName} — ${up.cost} cr</span><span class="upgrade-lore">${up.lore}</span>`;
+    btn.disabled  = this._currentGold < up.cost;
+    btn.dataset.upgradeOption = key;
+    btn.style.display = '';
+  }
+
   showTowerPanel(tower) {
     if (!this._towerPanel) return;
 
@@ -250,41 +262,26 @@ export class UIManager {
     this._tpName.textContent  = def.displayName;
     this._tpLevel.textContent = tower.level >= 4 ? `LVL ${tower.level} — MAX` : `LVL ${tower.level}`;
 
-    const dmgFmt = tower.damage.toFixed(0);
-    const frFmt  = tower.fireRate.toFixed(1);
-    const mechs  = [];
-    if (tower.multiTarget > 1)     mechs.push(`${tower.multiTarget === 99 ? 'ALL' : tower.multiTarget}× target`);
+    const mechs = [];
+    if (tower.multiTarget > 1)     mechs.push(`${tower.multiTarget >= MULTI_TARGET_ALL ? 'ALL' : tower.multiTarget}× target`);
     if (tower.burstShots   > 1)    mechs.push(`${tower.burstShots}× burst`);
     if (tower.chainDamage  > 0)    mechs.push(`${tower.chainDamage}-chain`);
     if (tower.slowSpreadTiles > 0) mechs.push(`slow spread`);
 
     this._tpStats.innerHTML = `
-      DMG&nbsp;${dmgFmt}&nbsp;&nbsp;·&nbsp;&nbsp;RNG&nbsp;${(tower._def.range * tower._upgradeRangeX).toFixed(1)}&nbsp;&nbsp;·&nbsp;&nbsp;${frFmt}/s
+      DMG&nbsp;${tower.damage.toFixed(0)}&nbsp;&nbsp;·&nbsp;&nbsp;RNG&nbsp;${tower.rangeTiles.toFixed(1)}&nbsp;&nbsp;·&nbsp;&nbsp;${tower.fireRate.toFixed(1)}/s
       ${tower.type === 'uber' ? `<br>SLOW&nbsp;${(tower.slowFactor*100).toFixed(0)}%&nbsp;&nbsp;·&nbsp;&nbsp;${tower.slowDuration}s` : ''}
       ${mechs.length ? `<br><span style="color:var(--accent-green);font-size:10px">${mechs.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</span>` : ''}
     `.trim();
 
-    // Render upgrade buttons based on current level
     if (tower.canUpgrade) {
       if (tower.level === 1) {
-        // Show A and B branching options
-        const upA = ups.a, upB = ups.b;
-        this._tpUpgradeBtnA.innerHTML = `<span class="upgrade-name">${upA.displayName} — ${upA.cost} cr</span><span class="upgrade-lore">${upA.lore}</span>`;
-        this._tpUpgradeBtnA.disabled  = this._currentGold < upA.cost;
-        this._tpUpgradeBtnA.dataset.upgradeOption = 'a';
-        this._tpUpgradeBtnA.style.display = '';
-
-        this._tpUpgradeBtnB.innerHTML = `<span class="upgrade-name">${upB.displayName} — ${upB.cost} cr</span><span class="upgrade-lore">${upB.lore}</span>`;
-        this._tpUpgradeBtnB.disabled  = this._currentGold < upB.cost;
+        this._renderUpgradeBtn(this._tpUpgradeBtnA, ups.a, 'a');
+        this._renderUpgradeBtn(this._tpUpgradeBtnB, ups.b, 'b');
         this._tpUpgradeBtnB.style.display = '';
       } else {
-        // Levels 2 and 3: single upgrade button (c or d), hide B
         const key = tower.level === 2 ? 'c' : 'd';
-        const up  = ups[key];
-        this._tpUpgradeBtnA.innerHTML = `<span class="upgrade-name">${up.displayName} — ${up.cost} cr</span><span class="upgrade-lore">${up.lore}</span>`;
-        this._tpUpgradeBtnA.disabled  = this._currentGold < up.cost;
-        this._tpUpgradeBtnA.dataset.upgradeOption = key;
-        this._tpUpgradeBtnA.style.display = '';
+        this._renderUpgradeBtn(this._tpUpgradeBtnA, ups[key], key);
         this._tpUpgradeBtnB.style.display = 'none';
       }
       this._tpUpgradePaths.style.display = '';
@@ -301,9 +298,6 @@ export class UIManager {
     this._towerPanel?.classList.add('hidden');
     this._activeTower = null;
   }
-
-  /** Called on resize so stat display has correct tile size */
-  setTileSize(px) { this._lastTileSize = px; }
 
   _bindTowerPanel() {
     this._tpCloseBtn?.addEventListener('click', () => {
