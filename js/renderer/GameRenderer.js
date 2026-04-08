@@ -67,7 +67,8 @@ export class GameRenderer {
 
   _drawTower(tower) {
     const { ctx, grid } = this;
-    const s   = tower.scale;
+    // Guard: scale=0 means update() hasn't ticked yet — draw at full size
+    const s   = tower.scale > 0 ? tower.scale : 1;
     const ts  = grid.tileSize;
     const pad = ts * 0.14;
     const size = (ts - pad * 2) * s;
