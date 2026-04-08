@@ -299,32 +299,40 @@ export class UIManager {
     let selectedMapIndex = 0;
     let selectedDiff     = 'normal';
 
+    // Build map toggle options — split "Alpha — Gateway" into label + sub
+    const mapToggles = MAPS.map((m, i) => {
+      const parts = m.name.split(' — ');
+      const label = parts[0].trim();
+      const sub   = parts[1] ? parts[1].trim() : '';
+      return `<button class="toggle-opt${i === 0 ? ' selected' : ''}" data-map="${i}">
+        <span class="toggle-opt-label">${label}</span>
+        ${sub ? `<span class="toggle-opt-sub">${sub}</span>` : ''}
+      </button>`;
+    }).join('');
+
+    // Build difficulty toggle options
+    const diffKeys    = Object.keys(DIFFICULTIES);
+    const diffToggles = diffKeys.map(key => {
+      const d = DIFFICULTIES[key];
+      return `<button class="toggle-opt${key === 'normal' ? ' selected' : ''}" data-diff="${key}">
+        <span class="toggle-opt-label">${d.label}</span>
+      </button>`;
+    }).join('');
+
     this.showModal({
       header: 'SENTINEL',
       body: `
-        <p style="color:var(--text-secondary);font-size:12px;letter-spacing:0.04em;margin-bottom:14px">Intrusion detected. Configure your defense perimeter to neutralize incoming threat vectors.</p>
+        <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:18px">
+          Intrusion detected. Configure your defense perimeter to neutralize incoming threat vectors.
+        </p>
 
-        <p style="margin-top:12px;font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Network Zone</p>
-        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="map-select">
-          ${MAPS.map((m, i) => `
-            <button class="secondary-btn map-btn${i === 0 ? ' selected' : ''}" data-map="${i}"
-              style="text-align:left;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:600;color:var(--text-primary);font-size:12px;letter-spacing:0.04em;">${m.name}</span>
-              <span style="font-size:10px;color:var(--text-secondary);font-family:var(--font-mono)">${m.description}</span>
-            </button>
-          `).join('')}
-        </div>
+        <p class="modal-section-label">Network Zone</p>
+        <div class="toggle-group" id="map-select">${mapToggles}</div>
+        <p id="map-desc" class="toggle-hint">${MAPS[0].description}</p>
 
-        <p style="margin-top:14px;font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Threat Level</p>
-        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="difficulty-select">
-          ${Object.entries(DIFFICULTIES).map(([key, d]) => `
-            <button class="secondary-btn diff-btn${key === 'normal' ? ' selected' : ''}" data-diff="${key}"
-              style="text-align:left;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:600;color:var(--text-primary);font-size:12px;letter-spacing:0.04em;">${d.label}</span>
-              <span style="font-size:10px;color:var(--text-secondary);font-family:var(--font-mono)">${d.description}</span>
-            </button>
-          `).join('')}
-        </div>
+        <p class="modal-section-label" style="margin-top:16px">Threat Level</p>
+        <div class="toggle-group" id="difficulty-select">${diffToggles}</div>
+        <p id="diff-desc" class="toggle-hint">${DIFFICULTIES.normal.description}</p>
       `,
       actions: [{ label: 'Initialize Defense', primary: true, onClick: () => {
         onStart(DIFFICULTIES[selectedDiff], selectedMapIndex);
@@ -333,20 +341,24 @@ export class UIManager {
 
     const mapContainer  = document.getElementById('map-select');
     const diffContainer = document.getElementById('difficulty-select');
+    const mapDescEl     = document.getElementById('map-desc');
+    const diffDescEl    = document.getElementById('diff-desc');
 
-    mapContainer?.querySelectorAll('.map-btn').forEach(btn => {
+    mapContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
       btn.addEventListener('click', () => {
         selectedMapIndex = parseInt(btn.dataset.map, 10);
-        mapContainer.querySelectorAll('.map-btn').forEach(b => b.classList.remove('selected'));
+        mapContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        if (mapDescEl) mapDescEl.textContent = MAPS[selectedMapIndex].description;
       });
     });
 
-    diffContainer?.querySelectorAll('.diff-btn').forEach(btn => {
+    diffContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
       btn.addEventListener('click', () => {
         selectedDiff = btn.dataset.diff;
-        diffContainer.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        diffContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        if (diffDescEl) diffDescEl.textContent = DIFFICULTIES[selectedDiff].description;
       });
     });
   }
