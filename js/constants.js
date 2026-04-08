@@ -146,11 +146,13 @@ export const SPEED_OPTIONS = [1, 2]; // multipliers (toggles 1× ↔ 2×)
 export const ENEMIES = {
   basic: {
     hp:           60,
-    speed:        1.8,   // tiles/sec
-    reward:       10,    // gold on kill
-    size:         0.45,  // fraction of tile width
+    speed:        1.8,
+    reward:       10,
+    size:         0.45,
     color:        '#71717a',
     label:        'Basic',
+    armor:        0,      // flat damage reduction per hit
+    isBoss:       false,
   },
   fast: {
     hp:           30,
@@ -159,6 +161,8 @@ export const ENEMIES = {
     size:         0.35,
     color:        '#22c55e',
     label:        'Fast',
+    armor:        0,
+    isBoss:       false,
   },
   tank: {
     hp:           240,
@@ -167,22 +171,76 @@ export const ENEMIES = {
     size:         0.60,
     color:        '#ef4444',
     label:        'Tank',
+    armor:        0,
+    isBoss:       false,
+  },
+  armored: {
+    hp:           120,
+    speed:        1.4,
+    reward:       18,
+    size:         0.50,
+    color:        '#94a3b8',  // slate-400 — metallic
+    label:        'Armored',
+    armor:        8,           // reduce each hit by 8 (min 1 dmg)
+    isBoss:       false,
+  },
+  boss: {
+    hp:           800,
+    speed:        0.7,
+    reward:       60,
+    size:         0.75,
+    color:        '#dc2626',  // deep red
+    label:        'Boss',
+    armor:        5,
+    isBoss:       true,
   },
 };
 
 // ============================================================
-// MAP PATH — ordered waypoints [{col, row}, ...]
-// Z-shaped path on a 20×14 grid
-// Entry: left edge row 6, Exit: right edge row 2
+// MAPS — multiple path layouts (all on 20×14 grid)
 // ============================================================
-export const PATH_WAYPOINTS = [
-  { col: 0,  row: 6  },  // entry (left edge)
-  { col: 6,  row: 6  },
-  { col: 6,  row: 11 },
-  { col: 13, row: 11 },
-  { col: 13, row: 2  },
-  { col: 19, row: 2  },  // exit (right edge)
+export const MAPS = [
+  {
+    id:          'alpha',
+    name:        'Alpha — Z-Route',
+    description: 'Z-shaped path. Balanced chokepoints.',
+    waypoints: [
+      { col: 0,  row: 6  },
+      { col: 6,  row: 6  },
+      { col: 6,  row: 11 },
+      { col: 13, row: 11 },
+      { col: 13, row: 2  },
+      { col: 19, row: 2  },
+    ],
+  },
+  {
+    id:          'beta',
+    name:        'Beta — Serpentine',
+    description: 'Long winding path. More time on target.',
+    waypoints: [
+      { col: 0,  row: 1  },
+      { col: 16, row: 1  },
+      { col: 16, row: 6  },
+      { col: 3,  row: 6  },
+      { col: 3,  row: 11 },
+      { col: 19, row: 11 },
+    ],
+  },
+  {
+    id:          'gamma',
+    name:        'Gamma — U-Sweep',
+    description: 'Wide U-turn. Exposed center lane.',
+    waypoints: [
+      { col: 0,  row: 3  },
+      { col: 9,  row: 3  },
+      { col: 9,  row: 10 },
+      { col: 19, row: 10 },
+    ],
+  },
 ];
+
+// Keep legacy export pointing at alpha for code that hasn't migrated
+export const PATH_WAYPOINTS = MAPS[0].waypoints;
 
 // ============================================================
 // COLORS (for canvas rendering — mirrors CSS vars)

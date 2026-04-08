@@ -14,6 +14,8 @@ export class Enemy {
     this.reward = def.reward;
     this.size   = def.size  * grid.tileSize;
     this.color  = def.color;
+    this.armor  = def.armor  ?? 0;
+    this.isBoss = def.isBoss ?? false;
 
     this.slowTimer  = 0;
     this.slowFactor = 1.0;
@@ -76,7 +78,7 @@ export class Enemy {
 
   takeDamage(amount, slow = 1.0, slowDuration = 0) {
     if (this.dying) return;
-    this.hp -= amount;
+    this.hp -= Math.max(1, amount - this.armor);
     if (slow < 1.0) {
       this.slowFactor = Math.min(this.slowFactor, slow);
       this.slowTimer  = Math.max(this.slowTimer, slowDuration);

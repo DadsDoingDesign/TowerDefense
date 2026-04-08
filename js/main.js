@@ -170,12 +170,19 @@ ui.onSpeedToggle(() => {
 // Game reset
 // ----------------------------------------------------------------
 
-function startGame(chosenDifficulty = DIFFICULTIES.normal) {
+function startGame(chosenDifficulty = DIFFICULTIES.normal, mapIndex = 0) {
   difficulty = chosenDifficulty;
   gameSpeed  = 1;
   ui.setSpeed(1);
   economy.reset(difficulty);
   waveManager.reset();
+
+  // Load selected map
+  grid.loadMap(mapIndex);
+  if (grid.tileSize > 0) {
+    bgRenderer.draw();
+    waveManager.grid = grid; // re-point in case grid ref changed
+  }
   Projectile.pool.resetAll();
 
   towers = [];
@@ -296,8 +303,8 @@ function update(dt) {
 
 function boot() {
   resize();
-  ui.showStartScreen((chosenDifficulty) => {
-    startGame(chosenDifficulty);
+  ui.showStartScreen((chosenDifficulty, mapIndex) => {
+    startGame(chosenDifficulty, mapIndex);
     requestAnimationFrame(gameLoop);
   });
 }

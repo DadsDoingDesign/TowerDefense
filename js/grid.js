@@ -1,4 +1,4 @@
-import { GRID_COLS, GRID_ROWS, PATH_WAYPOINTS } from './constants.js';
+import { GRID_COLS, GRID_ROWS, MAPS } from './constants.js';
 
 // Tile types
 export const TILE = {
@@ -9,18 +9,22 @@ export const TILE = {
 };
 
 export class Grid {
-  constructor() {
+  constructor(mapIndex = 0) {
     this.cols = GRID_COLS;
     this.rows = GRID_ROWS;
-    this.tileSize = 0;        // set by resize()
-    this.offsetX  = 0;        // canvas x offset to center grid
-    this.offsetY  = 0;        // canvas y offset to center grid
+    this.tileSize = 0;
+    this.offsetX  = 0;
+    this.offsetY  = 0;
 
-    // 2D array of tile objects
-    this.tiles = [];
-    // Pre-computed pixel center-points for each path segment (for enemy movement)
+    this.tiles      = [];
     this.pathPixels = [];
 
+    this.loadMap(mapIndex);
+  }
+
+  loadMap(mapIndex) {
+    this._mapIndex  = mapIndex;
+    this._waypoints = MAPS[mapIndex]?.waypoints ?? MAPS[0].waypoints;
     this._initTiles();
     this._buildPath();
   }
@@ -40,11 +44,10 @@ export class Grid {
   }
 
   _buildPath() {
-    // Expand PATH_WAYPOINTS into individual tile coordinates
     const pathCoords = [];
-    for (let i = 0; i < PATH_WAYPOINTS.length - 1; i++) {
-      const a = PATH_WAYPOINTS[i];
-      const b = PATH_WAYPOINTS[i + 1];
+    for (let i = 0; i < this._waypoints.length - 1; i++) {
+      const a = this._waypoints[i];
+      const b = this._waypoints[i + 1];
       const dr = Math.sign(b.row - a.row);
       const dc = Math.sign(b.col - a.col);
       let r = a.row;
@@ -55,8 +58,7 @@ export class Grid {
         c += dc;
       }
     }
-    // Push final waypoint
-    const last = PATH_WAYPOINTS[PATH_WAYPOINTS.length - 1];
+    const last = this._waypoints[this._waypoints.length - 1];
     pathCoords.push({ col: last.col, row: last.row });
 
     // Mark tiles

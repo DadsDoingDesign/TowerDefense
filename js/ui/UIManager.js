@@ -1,4 +1,4 @@
-import { TOWERS, UPGRADES, DIFFICULTIES } from '../constants.js';
+import { TOWERS, UPGRADES, DIFFICULTIES, MAPS } from '../constants.js';
 
 export class UIManager {
   constructor() {
@@ -156,9 +156,11 @@ export class UIManager {
   updateWavePreview(counts) {
     if (!this._wavePreviewRow || !this._wavePreviewText) return;
     const parts = [];
-    if (counts.basic) parts.push(`${counts.basic} basic`);
-    if (counts.fast)  parts.push(`${counts.fast} fast`);
-    if (counts.tank)  parts.push(`${counts.tank} tank`);
+    if (counts.boss)    parts.push(`⚠ ${counts.boss} BOSS`);
+    if (counts.basic)   parts.push(`${counts.basic} basic`);
+    if (counts.fast)    parts.push(`${counts.fast} fast`);
+    if (counts.tank)    parts.push(`${counts.tank} tank`);
+    if (counts.armored) parts.push(`${counts.armored} armored`);
     if (parts.length === 0) {
       this._wavePreviewRow.classList.add('hidden');
     } else {
@@ -294,40 +296,59 @@ export class UIManager {
   // ----------------------------------------------------------------
 
   showStartScreen(onStart) {
+    let selectedMapIndex = 0;
+    let selectedDiff     = 'normal';
+
     this.showModal({
       header: 'Ops Console',
       body: `
-        <p>Threats are inbound. Deploy defenses along the perimeter to prevent a breach.</p>
-        <p style="margin-top:10px;color:var(--text-muted);font-size:12px;">
-          Tap a tower type to select, then tap the grid to deploy.<br>
-          Tap a placed tower to upgrade or sell it.<br>
-          Start each wave when ready.
-        </p>
-        <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;" id="difficulty-select">
+        <p>Threats are inbound. Deploy defenses to prevent a breach.</p>
+
+        <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Sector</p>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="map-select">
+          ${MAPS.map((m, i) => `
+            <button class="secondary-btn map-btn${i === 0 ? ' selected' : ''}" data-map="${i}"
+              style="text-align:left;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:500;color:var(--text-primary);font-size:13px">${m.name}</span>
+              <span style="font-size:11px;color:var(--text-secondary)">${m.description}</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);letter-spacing:0.06em;text-transform:uppercase;">Threat level</p>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;" id="difficulty-select">
           ${Object.entries(DIFFICULTIES).map(([key, d]) => `
-            <button class="secondary-btn diff-btn" data-diff="${key}" style="text-align:left;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:500;color:var(--text-primary)">${d.label}</span>
+            <button class="secondary-btn diff-btn${key === 'normal' ? ' selected' : ''}" data-diff="${key}"
+              style="text-align:left;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:500;color:var(--text-primary);font-size:13px">${d.label}</span>
               <span style="font-size:11px;color:var(--text-secondary)">${d.description}</span>
             </button>
           `).join('')}
         </div>
       `,
-      actions: [],
+      actions: [{ label: 'Begin deployment', primary: true, onClick: () => {
+        onStart(DIFFICULTIES[selectedDiff], selectedMapIndex);
+      }}],
     });
 
-    // Wire difficulty buttons (they replace the modal actions)
-    const container = document.getElementById('difficulty-select');
-    if (container) {
-      container.querySelectorAll('.diff-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const key = btn.dataset.diff;
-          this.hideModal();
-          onStart(DIFFICULTIES[key]);
-        });
+    const mapContainer  = document.getElementById('map-select');
+    const diffContainer = document.getElementById('difficulty-select');
+
+    mapContainer?.querySelectorAll('.map-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedMapIndex = parseInt(btn.dataset.map, 10);
+        mapContainer.querySelectorAll('.map-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
       });
-      // Default highlight
-      container.querySelector('[data-diff="normal"]')?.classList.add('selected');
-    }
+    });
+
+    diffContainer?.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedDiff = btn.dataset.diff;
+        diffContainer.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
   }
 
   showWaveComplete(wave, bonus, onContinue) {
@@ -356,7 +377,7 @@ export class UIManager {
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
       `,
-      actions: [{ label: 'Restart deployment', primary: true, onClick: onRestart }],
+      actions: [{ label: 'Restart deployment', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
   }
 
@@ -370,7 +391,7 @@ export class UIManager {
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
       `,
-      actions: [{ label: 'Deploy again', primary: true, onClick: onRestart }],
+      actions: [{ label: 'Deploy again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
   }
 }

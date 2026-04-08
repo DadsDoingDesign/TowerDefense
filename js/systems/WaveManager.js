@@ -75,17 +75,21 @@ export class WaveManager {
   _buildSpawnQueue(wave) {
     const count = Math.floor(WAVE_BASE_COUNT * Math.pow(WAVE_COUNT_SCALE, wave - 1));
     const queue = [];
+
+    // Boss waves: 5, 10, 15 — prepend a boss
+    if (wave % 5 === 0) queue.push('boss');
+
     for (let i = 0; i < count; i++) {
       const r = Math.random();
       let type;
       if (wave <= 2) {
         type = 'basic';
       } else if (wave <= 4) {
-        type = r < 0.7 ? 'basic' : 'fast';
+        type = r < 0.65 ? 'basic' : 'fast';
       } else if (wave <= 7) {
-        type = r < 0.5 ? 'basic' : r < 0.8 ? 'fast' : 'tank';
+        type = r < 0.4 ? 'basic' : r < 0.7 ? 'fast' : r < 0.85 ? 'tank' : 'armored';
       } else {
-        type = r < 0.35 ? 'basic' : r < 0.65 ? 'fast' : 'tank';
+        type = r < 0.25 ? 'basic' : r < 0.5 ? 'fast' : r < 0.7 ? 'tank' : 'armored';
       }
       queue.push(type);
     }
@@ -99,15 +103,18 @@ export class WaveManager {
   /** Returns a summary of what enemies will appear in the NEXT wave. */
   getNextWavePreview() {
     const nextWave = this.wave + 1;
-    const count = Math.floor(WAVE_BASE_COUNT * Math.pow(WAVE_COUNT_SCALE, nextWave - 1));
-    const counts = { basic: 0, fast: 0, tank: 0 };
-    // Replicate composition logic deterministically (rough estimate)
+    const count    = Math.floor(WAVE_BASE_COUNT * Math.pow(WAVE_COUNT_SCALE, nextWave - 1));
+    const counts   = { basic: 0, fast: 0, tank: 0, armored: 0, boss: 0 };
+
+    if (nextWave % 5 === 0) counts.boss++;
+
     for (let i = 0; i < count; i++) {
       let type;
+      const x = i % 20;
       if (nextWave <= 2)      type = 'basic';
-      else if (nextWave <= 4) type = i % 10 < 7 ? 'basic' : 'fast';
-      else if (nextWave <= 7) type = i % 10 < 5 ? 'basic' : i % 10 < 8 ? 'fast' : 'tank';
-      else                    type = i % 20 < 7 ? 'basic' : i % 20 < 13 ? 'fast' : 'tank';
+      else if (nextWave <= 4) type = x < 13 ? 'basic' : 'fast';
+      else if (nextWave <= 7) type = x < 8 ? 'basic' : x < 14 ? 'fast' : x < 17 ? 'tank' : 'armored';
+      else                    type = x < 5 ? 'basic' : x < 10 ? 'fast' : x < 14 ? 'tank' : 'armored';
       counts[type]++;
     }
     return counts;

@@ -198,6 +198,7 @@ export class GameRenderer {
 
     const r = enemy.size / 2;
 
+    // Slow/frost tint
     if (enemy.isFrozen) {
       ctx.fillStyle = COLORS.slowTint;
       ctx.beginPath();
@@ -205,13 +206,42 @@ export class GameRenderer {
       ctx.fill();
     }
 
-    ctx.fillStyle   = enemy.color;
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth   = 1;
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    // Boss: outer pulsing ring
+    if (enemy.isBoss && !enemy.dying) {
+      ctx.strokeStyle = enemy.color;
+      ctx.lineWidth   = 2;
+      ctx.globalAlpha = enemy.opacity * 0.4;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, r * 1.6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = enemy.opacity;
+    }
+
+    // Armored: hexagonal shape approximation (6-sided polygon)
+    if (enemy.armor > 0 && !enemy.isBoss) {
+      ctx.fillStyle = enemy.color;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3 - Math.PI / 6;
+        const px = enemy.x + r * Math.cos(angle);
+        const py = enemy.y + r * Math.sin(angle);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+    } else {
+      // Normal circle
+      ctx.fillStyle   = enemy.color;
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth   = enemy.isBoss ? 2 : 1;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     if (!enemy.dying) this._drawHpBar(enemy, r);
 
