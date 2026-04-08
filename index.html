@@ -5,12 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0a0a0b">
-  <title>Tower Defense — Ops Console</title>
+  <meta name="theme-color" content="#09090f">
+  <title>SENTINEL — Perimeter Defense Console</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="game-wrapper">
+
+    <!-- Site header — brand identity -->
+    <header id="site-header">
+      <div id="header-brand">
+        <div id="header-logo" aria-hidden="true"></div>
+        <div id="header-wordmark">
+          <span id="header-title">SENTINEL</span>
+          <span id="header-subtitle">Perimeter Defense Console</span>
+        </div>
+      </div>
+      <div id="header-meta">
+        <div id="header-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>OPERATIONAL</span>
+        </div>
+        <span id="header-version">v2.4.1</span>
+      </div>
+    </header>
 
     <!-- Canvas layer -->
     <div id="canvas-container">
@@ -26,19 +44,19 @@
       <div id="stats-row">
         <div class="stat" id="stat-gold">
           <span class="stat-value"><span class="stat-icon gold-icon">◆</span><span id="gold-value">150</span></span>
-          <span class="stat-label">CREDITS</span>
+          <span class="stat-label">Credits</span>
         </div>
         <div class="stat" id="stat-lives">
           <span class="stat-value"><span class="stat-icon lives-icon">♥</span><span id="lives-value">20</span></span>
-          <span class="stat-label">LIVES</span>
+          <span class="stat-label">Nodes</span>
         </div>
         <div class="stat" id="stat-wave">
           <span class="stat-value">#<span id="wave-value">—</span></span>
-          <span class="stat-label">WAVE</span>
+          <span class="stat-label">Wave</span>
         </div>
         <div class="stat" id="stat-score">
           <span class="stat-value mono" id="score-value">0</span>
-          <span class="stat-label">SCORE</span>
+          <span class="stat-label">Score</span>
         </div>
         <div class="stats-spacer"></div>
         <button id="speed-btn" class="speed-btn" title="Toggle game speed" aria-label="Speed: 1×">1×</button>
@@ -46,29 +64,29 @@
 
       <!-- Wave preview -->
       <div id="wave-preview-row" class="wave-preview-row hidden">
-        <span class="wave-preview-label">NEXT</span>
+        <span class="wave-preview-label">Inbound</span>
         <span id="wave-preview-text" class="wave-preview-text"></span>
       </div>
 
       <div id="tower-strip">
-        <button class="tower-btn" data-tower="arrow" title="Arrow Tower — 50 credits">
+        <button class="tower-btn" data-tower="arrow" title="Pulse — 50 cr | High-freq interceptor">
           <span class="tower-icon" data-tower="arrow"></span>
-          <span class="tower-name">Arrow</span>
+          <span class="tower-name">Pulse</span>
           <span class="tower-cost mono">50 cr</span>
         </button>
-        <button class="tower-btn" data-tower="cannon" title="Cannon Tower — 100 credits">
+        <button class="tower-btn" data-tower="cannon" title="Burst — 100 cr | Broadcast disruptor">
           <span class="tower-icon" data-tower="cannon"></span>
-          <span class="tower-name">Cannon</span>
+          <span class="tower-name">Burst</span>
           <span class="tower-cost mono">100 cr</span>
         </button>
-        <button class="tower-btn" data-tower="frost" title="Frost Tower — 75 credits">
+        <button class="tower-btn" data-tower="frost" title="Throttle — 75 cr | Bandwidth limiter">
           <span class="tower-icon" data-tower="frost"></span>
-          <span class="tower-name">Frost</span>
+          <span class="tower-name">Throttle</span>
           <span class="tower-cost mono">75 cr</span>
         </button>
-        <button class="tower-btn" data-tower="laser" title="Laser Tower — 150 credits">
+        <button class="tower-btn" data-tower="laser" title="Scan — 150 cr | Deep packet inspection">
           <span class="tower-icon" data-tower="laser"></span>
-          <span class="tower-name">Laser</span>
+          <span class="tower-name">Scan</span>
           <span class="tower-cost mono">150 cr</span>
         </button>
 
@@ -82,7 +100,7 @@
   </div>
 
   <!-- Tower info panel (sell / upgrade) -->
-  <div id="tower-panel" class="tower-panel hidden" role="dialog" aria-label="Tower options">
+  <div id="tower-panel" class="tower-panel hidden" role="dialog" aria-label="Defense module options">
     <div class="tower-panel-inner">
       <div class="tower-panel-header">
         <span id="tp-name"></span>

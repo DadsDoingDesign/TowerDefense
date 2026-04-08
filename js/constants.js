@@ -47,8 +47,8 @@ export const TOWERS = {
     slowFactor:      1.0,
     slowDuration:    0,
     color:           '#3b82f6',
-    displayName:     'Arrow',
-    description:     'Fast, cheap. Single-target.',
+    displayName:     'Pulse',
+    description:     'High-freq interceptor. Single-target.',
   },
   cannon: {
     cost:            100,
@@ -61,8 +61,8 @@ export const TOWERS = {
     slowFactor:      1.0,
     slowDuration:    0,
     color:           '#f59e0b',
-    displayName:     'Cannon',
-    description:     'Slow, heavy. Area damage.',
+    displayName:     'Burst',
+    description:     'Broadcast disruptor. Area effect.',
   },
   frost: {
     cost:            75,
@@ -75,8 +75,8 @@ export const TOWERS = {
     slowFactor:      0.45,
     slowDuration:    1.8,
     color:           '#a855f7',
-    displayName:     'Frost',
-    description:     'Slows enemies. Low damage.',
+    displayName:     'Throttle',
+    description:     'Bandwidth limiter. Slows threats.',
   },
   laser: {
     cost:            150,
@@ -89,8 +89,8 @@ export const TOWERS = {
     slowFactor:      1.0,
     slowDuration:    0,
     color:           '#ef4444',
-    displayName:     'Laser',
-    description:     'High DPS. Single-target.',
+    displayName:     'Scan',
+    description:     'Deep packet inspection. High DPS.',
   },
 };
 
@@ -99,10 +99,10 @@ export const TOWERS = {
 // cost = additional gold to upgrade; stat fields are multipliers on base
 // ============================================================
 export const UPGRADES = {
-  arrow:  { cost: 40,  damageX: 1.6, rangeX: 1.1,  fireRateX: 1.3, label: 'High-tension string — +60% damage, +30% fire rate' },
-  cannon: { cost: 80,  damageX: 1.7, rangeX: 1.1,  fireRateX: 1.2, label: 'Extended barrel — +70% damage, +20% fire rate' },
-  frost:  { cost: 60,  damageX: 1.5, rangeX: 1.15, slowFactor: 0.3, slowDuration: 2.5, label: 'Cryo-core — deeper freeze (30% speed)' },
-  laser:  { cost: 120, damageX: 1.8, rangeX: 1.15, fireRateX: 1.3, label: 'Overclocked emitter — +80% damage, +30% fire rate' },
+  arrow:  { cost: 40,  damageX: 1.6, rangeX: 1.1,  fireRateX: 1.3, label: 'Pulse amplifier — +60% throughput, +30% fire rate' },
+  cannon: { cost: 80,  damageX: 1.7, rangeX: 1.1,  fireRateX: 1.2, label: 'Burst array — +70% damage, +20% fire rate' },
+  frost:  { cost: 60,  damageX: 1.5, rangeX: 1.15, slowFactor: 0.3, slowDuration: 2.5, label: 'Deep throttle — 30% velocity cap, extended suppression' },
+  laser:  { cost: 120, damageX: 1.8, rangeX: 1.15, fireRateX: 1.3, label: 'Turbo scan — +80% DPS, +30% fire rate' },
 };
 
 export const SELL_RATE = 0.75;
@@ -112,28 +112,28 @@ export const SELL_RATE = 0.75;
 // ============================================================
 export const DIFFICULTIES = {
   easy: {
-    label:       'Easy',
-    startGold:   200,
-    startLives:  25,
-    enemyHpMult: 0.75,
+    label:        'Staging',
+    startGold:    200,
+    startLives:   25,
+    enemyHpMult:  0.75,
     enemySpdMult: 0.9,
-    description: 'More credits. Weaker threats.',
+    description:  'Reduced threat load. Extended credit allocation.',
   },
   normal: {
-    label:       'Normal',
-    startGold:   150,
-    startLives:  20,
-    enemyHpMult: 1.0,
+    label:        'Production',
+    startGold:    150,
+    startLives:   20,
+    enemyHpMult:  1.0,
     enemySpdMult: 1.0,
-    description: 'Standard deployment parameters.',
+    description:  'Standard deployment parameters.',
   },
   hard: {
-    label:       'Hard',
-    startGold:   100,
-    startLives:  15,
-    enemyHpMult: 1.35,
+    label:        'Incident',
+    startGold:    100,
+    startLives:   15,
+    enemyHpMult:  1.35,
     enemySpdMult: 1.15,
-    description: 'Hostile environment. High attrition.',
+    description:  'Active breach scenario. Critical resources.',
   },
 };
 
@@ -150,8 +150,8 @@ export const ENEMIES = {
     reward:       10,
     size:         0.45,
     color:        '#71717a',
-    label:        'Basic',
-    armor:        0,      // flat damage reduction per hit
+    label:        'Bot',
+    armor:        0,
     isBoss:       false,
   },
   fast: {
@@ -160,7 +160,7 @@ export const ENEMIES = {
     reward:       7,
     size:         0.35,
     color:        '#22c55e',
-    label:        'Fast',
+    label:        'Script',
     armor:        0,
     isBoss:       false,
   },
@@ -170,7 +170,7 @@ export const ENEMIES = {
     reward:       25,
     size:         0.60,
     color:        '#ef4444',
-    label:        'Tank',
+    label:        'Flood',
     armor:        0,
     isBoss:       false,
   },
@@ -180,7 +180,7 @@ export const ENEMIES = {
     reward:       18,
     size:         0.50,
     color:        '#94a3b8',  // slate-400 — metallic
-    label:        'Armored',
+    label:        'APT',
     armor:        8,           // reduce each hit by 8 (min 1 dmg)
     isBoss:       false,
   },
@@ -190,7 +190,7 @@ export const ENEMIES = {
     reward:       60,
     size:         0.75,
     color:        '#dc2626',  // deep red
-    label:        'Boss',
+    label:        'Zero-Day',
     armor:        5,
     isBoss:       true,
   },
@@ -202,8 +202,8 @@ export const ENEMIES = {
 export const MAPS = [
   {
     id:          'alpha',
-    name:        'Alpha — Z-Route',
-    description: 'Z-shaped path. Balanced chokepoints.',
+    name:        'Alpha — Gateway',
+    description: 'Z-shaped routing. Balanced chokepoints.',
     waypoints: [
       { col: 0,  row: 6  },
       { col: 6,  row: 6  },
@@ -215,8 +215,8 @@ export const MAPS = [
   },
   {
     id:          'beta',
-    name:        'Beta — Serpentine',
-    description: 'Long winding path. More time on target.',
+    name:        'Beta — Backbone',
+    description: 'Core backbone. Serpentine topology.',
     waypoints: [
       { col: 0,  row: 1  },
       { col: 16, row: 1  },
@@ -228,8 +228,8 @@ export const MAPS = [
   },
   {
     id:          'gamma',
-    name:        'Gamma — U-Sweep',
-    description: 'Wide U-turn. Exposed center lane.',
+    name:        'Gamma — DMZ',
+    description: 'DMZ segment. Exposed center lane.',
     waypoints: [
       { col: 0,  row: 3  },
       { col: 9,  row: 3  },
@@ -246,24 +246,24 @@ export const PATH_WAYPOINTS = MAPS[0].waypoints;
 // COLORS (for canvas rendering — mirrors CSS vars)
 // ============================================================
 export const COLORS = {
-  bgBase:         '#0a0a0b',
-  bgSurface:      '#111113',
-  bgElevated:     '#1a1a1f',
-  border:         '#2a2a30',
-  textPrimary:    '#f4f4f5',
-  textSecondary:  '#71717a',
-  accentBlue:     '#3b82f6',
-  accentGreen:    '#22c55e',
-  accentRed:      '#ef4444',
+  bgBase:         '#09090f',
+  bgSurface:      '#0f0f18',
+  bgElevated:     '#17172a',
+  border:         '#252540',
+  textPrimary:    '#f1f5f9',
+  textSecondary:  '#64748b',
+  accentBlue:     '#6366f1',
+  accentGreen:    '#10b981',
+  accentRed:      '#f43f5e',
   accentAmber:    '#f59e0b',
-  accentPurple:   '#a855f7',
-  pathFill:       '#1e1e24',
-  pathBorder:     '#2a2a30',
-  gridLine:       'rgba(255,255,255,0.03)',
-  tileHover:      'rgba(59,130,246,0.18)',
-  tileInvalid:    'rgba(239,68,68,0.18)',
-  hpBarBg:        'rgba(255,255,255,0.08)',
-  rangeRing:      'rgba(255,255,255,0.08)',
-  rangeRingSelected: 'rgba(59,130,246,0.2)',
-  slowTint:       'rgba(168,85,247,0.35)',
+  accentPurple:   '#8b5cf6',
+  pathFill:       '#13132a',
+  pathBorder:     '#252540',
+  gridLine:       'rgba(255,255,255,0.025)',
+  tileHover:      'rgba(99,102,241,0.18)',
+  tileInvalid:    'rgba(244,63,94,0.18)',
+  hpBarBg:        'rgba(255,255,255,0.07)',
+  rangeRing:      'rgba(255,255,255,0.07)',
+  rangeRingSelected: 'rgba(99,102,241,0.22)',
+  slowTint:       'rgba(139,92,246,0.35)',
 };
