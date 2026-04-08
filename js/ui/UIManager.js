@@ -379,8 +379,14 @@ export class UIManager {
   }
 
   showWaveComplete(wave, bonus, onContinue) {
+    const now       = new Date();
+    const startQIdx = Math.floor(now.getMonth() / 3); // 0–3 based on device month
+    const totalQIdx = startQIdx + (wave - 1);
+    const quarter   = (totalQIdx % 4) + 1;
+    const year      = now.getFullYear() + Math.floor(totalQIdx / 4);
+
     this.showModal({
-      header: `Q${wave} Report: Threats Neutralized`,
+      header: `Q${quarter} ${year}: Threats Neutralized`,
       body: `<p style="color:var(--accent-green);font-family:var(--font-mono);font-size:13px">+${bonus} cr allocated to defense budget.</p><p style="margin-top:6px">Board is pleased. Synergies detected. Reinforce before the next earnings call.</p>`,
       actions: [{ label: `Deploy wave ${wave + 1}`, primary: true, onClick: onContinue }],
     });
