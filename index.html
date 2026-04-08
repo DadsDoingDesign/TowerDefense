@@ -33,13 +33,21 @@
           <span class="stat-label">LIVES</span>
         </div>
         <div class="stat" id="stat-wave">
-          <span class="stat-value">#<span id="wave-value">1</span></span>
+          <span class="stat-value">#<span id="wave-value">—</span></span>
           <span class="stat-label">WAVE</span>
         </div>
         <div class="stat" id="stat-score">
           <span class="stat-value mono" id="score-value">0</span>
           <span class="stat-label">SCORE</span>
         </div>
+        <div class="stats-spacer"></div>
+        <button id="speed-btn" class="speed-btn" title="Toggle game speed" aria-label="Speed: 1×">1×</button>
+      </div>
+
+      <!-- Wave preview -->
+      <div id="wave-preview-row" class="wave-preview-row hidden">
+        <span class="wave-preview-label">NEXT</span>
+        <span id="wave-preview-text" class="wave-preview-text"></span>
       </div>
 
       <div id="tower-strip">

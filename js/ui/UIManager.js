@@ -1,4 +1,4 @@
-import { TOWERS, UPGRADES } from '../constants.js';
+import { TOWERS, UPGRADES, DIFFICULTIES } from '../constants.js';
 
 export class UIManager {
   constructor() {
@@ -20,6 +20,16 @@ export class UIManager {
     this._toastTimer = null;
 
     this._floatsEl = document.getElementById('floats');
+
+    // Speed control
+    this._speedBtn       = document.getElementById('speed-btn');
+    this._onSpeedToggle  = null;
+
+    // Wave preview
+    this._wavePreviewRow  = document.getElementById('wave-preview-row');
+    this._wavePreviewText = document.getElementById('wave-preview-text');
+
+    this._bindSpeedButton();
 
     // Tower info panel
     this._towerPanel   = document.getElementById('tower-panel');
@@ -51,6 +61,7 @@ export class UIManager {
   onStartWave(fn)    { this._onStartWave    = fn; }
   onSellTower(fn)    { this._onSellTower    = fn; }
   onUpgradeTower(fn) { this._onUpgradeTower = fn; }
+  onSpeedToggle(fn)  { this._onSpeedToggle  = fn; }
 
   // ----------------------------------------------------------------
   // HUD
@@ -120,6 +131,44 @@ export class UIManager {
 
   _bindStartButton() {
     this._startBtn?.addEventListener('click', () => this._onStartWave?.());
+  }
+
+  _bindSpeedButton() {
+    this._speedBtn?.addEventListener('click', () => this._onSpeedToggle?.());
+  }
+
+  // ----------------------------------------------------------------
+  // Speed display
+  // ----------------------------------------------------------------
+
+  setSpeed(multiplier) {
+    if (!this._speedBtn) return;
+    const isFast = multiplier > 1;
+    this._speedBtn.textContent = `${multiplier}×`;
+    this._speedBtn.classList.toggle('fast', isFast);
+    this._speedBtn.setAttribute('aria-label', `Speed: ${multiplier}×`);
+  }
+
+  // ----------------------------------------------------------------
+  // Wave preview
+  // ----------------------------------------------------------------
+
+  updateWavePreview(counts) {
+    if (!this._wavePreviewRow || !this._wavePreviewText) return;
+    const parts = [];
+    if (counts.basic) parts.push(`${counts.basic} basic`);
+    if (counts.fast)  parts.push(`${counts.fast} fast`);
+    if (counts.tank)  parts.push(`${counts.tank} tank`);
+    if (parts.length === 0) {
+      this._wavePreviewRow.classList.add('hidden');
+    } else {
+      this._wavePreviewText.textContent = parts.join('  ·  ');
+      this._wavePreviewRow.classList.remove('hidden');
+    }
+  }
+
+  hideWavePreview() {
+    this._wavePreviewRow?.classList.add('hidden');
   }
 
   // ----------------------------------------------------------------
@@ -254,9 +303,31 @@ export class UIManager {
           Tap a placed tower to upgrade or sell it.<br>
           Start each wave when ready.
         </p>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;" id="difficulty-select">
+          ${Object.entries(DIFFICULTIES).map(([key, d]) => `
+            <button class="secondary-btn diff-btn" data-diff="${key}" style="text-align:left;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:500;color:var(--text-primary)">${d.label}</span>
+              <span style="font-size:11px;color:var(--text-secondary)">${d.description}</span>
+            </button>
+          `).join('')}
+        </div>
       `,
-      actions: [{ label: 'Begin deployment', primary: true, onClick: onStart }],
+      actions: [],
     });
+
+    // Wire difficulty buttons (they replace the modal actions)
+    const container = document.getElementById('difficulty-select');
+    if (container) {
+      container.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.diff;
+          this.hideModal();
+          onStart(DIFFICULTIES[key]);
+        });
+      });
+      // Default highlight
+      container.querySelector('[data-diff="normal"]')?.classList.add('selected');
+    }
   }
 
   showWaveComplete(wave, bonus, onContinue) {
@@ -267,7 +338,7 @@ export class UIManager {
     });
   }
 
-  showGameOver(wave, score, onRestart) {
+  showGameOver(wave, score, diffLabel, onRestart) {
     this.showModal({
       header: 'Connection lost',
       body: `
@@ -275,6 +346,10 @@ export class UIManager {
         <p style="margin-top:8px">
           <span style="color:var(--text-secondary)">Survived:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">Wave ${wave}</span>
+        </p>
+        <p>
+          <span style="color:var(--text-secondary)">Difficulty:</span>
+          <span style="font-family:var(--font-mono);margin-left:8px">${diffLabel}</span>
         </p>
         <p>
           <span style="color:var(--text-secondary)">Final score:</span>

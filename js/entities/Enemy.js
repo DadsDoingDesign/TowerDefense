@@ -1,16 +1,16 @@
 import { ENEMIES, WAVE_HP_SCALE, WAVE_SPEED_SCALE, ANIM_ENEMY_DEATH } from '../constants.js';
 
 export class Enemy {
-  constructor(type, wave, pathPixels, grid) {
+  constructor(type, wave, pathPixels, grid, hpMult = 1, spdMult = 1) {
     const def = ENEMIES[type];
 
     this.type    = type;
     this.active  = true;
     this.reached = false;
 
-    this.maxHp  = def.hp    * Math.pow(WAVE_HP_SCALE,    wave - 1);
+    this.maxHp  = def.hp    * Math.pow(WAVE_HP_SCALE,    wave - 1) * hpMult;
     this.hp     = this.maxHp;
-    this.speed  = def.speed * Math.pow(WAVE_SPEED_SCALE, wave - 1) * grid.tileSize;
+    this.speed  = def.speed * Math.pow(WAVE_SPEED_SCALE, wave - 1) * spdMult * grid.tileSize;
     this.reward = def.reward;
     this.size   = def.size  * grid.tileSize;
     this.color  = def.color;

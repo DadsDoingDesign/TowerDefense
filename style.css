@@ -29,7 +29,7 @@
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
-  --ui-bar-height: 88px;
+  --ui-bar-height: 96px;
   --radius: 6px;
 }
 
@@ -117,6 +117,50 @@ button:focus-visible {
   gap: 4px;
   padding: 6px 4px 4px;
   border-bottom: 1px solid var(--border);
+}
+
+.stats-spacer { flex: 1; }
+
+/* Speed toggle button */
+.speed-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  min-height: 28px;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+}
+.speed-btn.fast {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+/* Wave preview bar */
+.wave-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px 0;
+  font-size: 10px;
+}
+.wave-preview-label {
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wave-preview-text {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat {
@@ -403,7 +447,7 @@ button:focus-visible {
    ============================================================ */
 @media (min-width: 768px) {
   :root {
-    --ui-bar-height: 96px;
+    --ui-bar-height: 104px;
   }
 
   #stats-row {

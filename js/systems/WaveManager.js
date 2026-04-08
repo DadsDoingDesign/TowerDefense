@@ -22,6 +22,10 @@ export class WaveManager {
     this._spawnQueue    = [];
     this._spawnTimer    = 0;
     this._spawnInterval = 0;
+
+    // Set by main.js before each wave start
+    this.enemyHpMult  = 1;
+    this.enemySpdMult = 1;
   }
 
   reset() {
@@ -52,7 +56,7 @@ export class WaveManager {
       while (this._spawnTimer >= this._spawnInterval && this._spawnQueue.length > 0) {
         this._spawnTimer -= this._spawnInterval;
         const type = this._spawnQueue.shift();
-        this.enemies.push(new Enemy(type, this.wave, this.grid.pathPixels, this.grid));
+        this.enemies.push(new Enemy(type, this.wave, this.grid.pathPixels, this.grid, this.enemyHpMult, this.enemySpdMult));
       }
       if (this._spawnQueue.length === 0) this.state = WaveState.ACTIVE;
     }
@@ -92,7 +96,20 @@ export class WaveManager {
     return this.state === WaveState.IDLE || this.state === WaveState.COMPLETE;
   }
 
-  get nextWaveEnemyCount() {
-    return Math.floor(WAVE_BASE_COUNT * Math.pow(WAVE_COUNT_SCALE, this.wave));
+  /** Returns a summary of what enemies will appear in the NEXT wave. */
+  getNextWavePreview() {
+    const nextWave = this.wave + 1;
+    const count = Math.floor(WAVE_BASE_COUNT * Math.pow(WAVE_COUNT_SCALE, nextWave - 1));
+    const counts = { basic: 0, fast: 0, tank: 0 };
+    // Replicate composition logic deterministically (rough estimate)
+    for (let i = 0; i < count; i++) {
+      let type;
+      if (nextWave <= 2)      type = 'basic';
+      else if (nextWave <= 4) type = i % 10 < 7 ? 'basic' : 'fast';
+      else if (nextWave <= 7) type = i % 10 < 5 ? 'basic' : i % 10 < 8 ? 'fast' : 'tank';
+      else                    type = i % 20 < 7 ? 'basic' : i % 20 < 13 ? 'fast' : 'tank';
+      counts[type]++;
+    }
+    return counts;
   }
 }

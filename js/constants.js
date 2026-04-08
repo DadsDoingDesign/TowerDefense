@@ -105,7 +105,40 @@ export const UPGRADES = {
   laser:  { cost: 120, damageX: 1.8, rangeX: 1.15, fireRateX: 1.3, label: 'Overclocked emitter — +80% damage, +30% fire rate' },
 };
 
-export const SELL_RATE = 0.75; // fraction of total spent returned on sell
+export const SELL_RATE = 0.75;
+
+// ============================================================
+// DIFFICULTY PRESETS
+// ============================================================
+export const DIFFICULTIES = {
+  easy: {
+    label:       'Easy',
+    startGold:   200,
+    startLives:  25,
+    enemyHpMult: 0.75,
+    enemySpdMult: 0.9,
+    description: 'More credits. Weaker threats.',
+  },
+  normal: {
+    label:       'Normal',
+    startGold:   150,
+    startLives:  20,
+    enemyHpMult: 1.0,
+    enemySpdMult: 1.0,
+    description: 'Standard deployment parameters.',
+  },
+  hard: {
+    label:       'Hard',
+    startGold:   100,
+    startLives:  15,
+    enemyHpMult: 1.35,
+    enemySpdMult: 1.15,
+    description: 'Hostile environment. High attrition.',
+  },
+};
+
+// Game speed options
+export const SPEED_OPTIONS = [1, 2]; // multipliers (toggles 1× ↔ 2×)
 
 // ============================================================
 // ENEMY DEFINITIONS

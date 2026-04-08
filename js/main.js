@@ -1,4 +1,4 @@
-import { MAX_DELTA } from './constants.js';
+import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS } from './constants.js';
 import { Grid } from './grid.js';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer.js';
 import { GameRenderer } from './renderer/GameRenderer.js';
@@ -36,6 +36,8 @@ const ui           = new UIManager();
 
 let towers        = [];
 let lastTimestamp = null;
+let gameSpeed     = 1;       // multiplier applied to dt
+let difficulty    = DIFFICULTIES.normal;
 
 // ----------------------------------------------------------------
 // Resize
@@ -148,19 +150,31 @@ ui.onStartWave(() => {
   if (gameState !== State.PLACING && gameState !== State.WAVE) return;
   if (!waveManager.isIdle) return;
 
+  waveManager.enemyHpMult  = difficulty.enemyHpMult;
+  waveManager.enemySpdMult = difficulty.enemySpdMult;
   waveManager.startNextWave();
   gameState = State.WAVE;
   ui.setStartButtonState(false, `Wave ${waveManager.wave} inbound`);
   ui.updateWave(waveManager.wave);
+  ui.hideWavePreview();
   ui.showToast(`Wave ${waveManager.wave} inbound.`);
+});
+
+ui.onSpeedToggle(() => {
+  const idx = SPEED_OPTIONS.indexOf(gameSpeed);
+  gameSpeed = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+  ui.setSpeed(gameSpeed);
 });
 
 // ----------------------------------------------------------------
 // Game reset
 // ----------------------------------------------------------------
 
-function startGame() {
-  economy.reset();
+function startGame(chosenDifficulty = DIFFICULTIES.normal) {
+  difficulty = chosenDifficulty;
+  gameSpeed  = 1;
+  ui.setSpeed(1);
+  economy.reset(difficulty);
   waveManager.reset();
   Projectile.pool.resetAll();
 
@@ -209,10 +223,11 @@ function handleSplash(x, y, radiusPx, damage, slowFactor, slowDuration) {
 function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 
-  const dt = lastTimestamp === null
+  const rawDt = lastTimestamp === null
     ? 0
     : Math.min((timestamp - lastTimestamp) / 1000, MAX_DELTA);
   lastTimestamp = timestamp;
+  const dt = rawDt * gameSpeed;
 
   if (gameState === State.PLACING || gameState === State.WAVE) {
     update(dt);
@@ -252,7 +267,7 @@ function update(dt) {
 
   if (economy.isDead) {
     gameState = State.GAMEOVER;
-    ui.showGameOver(waveManager.wave, economy.score, startGame);
+    ui.showGameOver(waveManager.wave, economy.score, difficulty.label, startGame);
     return;
   }
 
@@ -267,6 +282,9 @@ function update(dt) {
     } else {
       gameState = State.PLACING;
       ui.setStartButtonState(true, `Start wave ${waveManager.wave + 1}`);
+      // Show next wave preview
+      const preview = waveManager.getNextWavePreview();
+      ui.updateWavePreview(preview);
       ui.showWaveComplete(waveManager.wave, bonus, () => {});
     }
   }
@@ -278,8 +296,8 @@ function update(dt) {
 
 function boot() {
   resize();
-  ui.showStartScreen(() => {
-    startGame();
+  ui.showStartScreen((chosenDifficulty) => {
+    startGame(chosenDifficulty);
     requestAnimationFrame(gameLoop);
   });
 }
