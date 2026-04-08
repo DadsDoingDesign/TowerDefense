@@ -69,24 +69,24 @@
       </div>
 
       <div id="tower-strip">
-        <button class="tower-btn" data-tower="arrow" title="Pulse — 50 cr | High-freq interceptor">
-          <span class="tower-icon" data-tower="arrow"></span>
-          <span class="tower-name">Pulse</span>
+        <button class="tower-btn" data-tower="meta" title="Meta — 50 cr | Data harvester. Always watching.">
+          <span class="tower-icon" data-tower="meta"></span>
+          <span class="tower-name">Meta</span>
           <span class="tower-cost mono">50 cr</span>
         </button>
-        <button class="tower-btn" data-tower="cannon" title="Burst — 100 cr | Broadcast disruptor">
-          <span class="tower-icon" data-tower="cannon"></span>
-          <span class="tower-name">Burst</span>
+        <button class="tower-btn" data-tower="amazon" title="Amazon — 100 cr | Ships area damage.">
+          <span class="tower-icon" data-tower="amazon"></span>
+          <span class="tower-name">Amazon</span>
           <span class="tower-cost mono">100 cr</span>
         </button>
-        <button class="tower-btn" data-tower="frost" title="Throttle — 75 cr | Bandwidth limiter">
-          <span class="tower-icon" data-tower="frost"></span>
-          <span class="tower-name">Throttle</span>
+        <button class="tower-btn" data-tower="uber" title="Uber — 75 cr | Surge pricing enforcer. Slows threats.">
+          <span class="tower-icon" data-tower="uber"></span>
+          <span class="tower-name">Uber</span>
           <span class="tower-cost mono">75 cr</span>
         </button>
-        <button class="tower-btn" data-tower="laser" title="Scan — 150 cr | Deep packet inspection">
-          <span class="tower-icon" data-tower="laser"></span>
-          <span class="tower-name">Scan</span>
+        <button class="tower-btn" data-tower="tesla" title="Tesla — 150 cr | Visionary disruptor. High DPS.">
+          <span class="tower-icon" data-tower="tesla"></span>
+          <span class="tower-name">Tesla</span>
           <span class="tower-cost mono">150 cr</span>
         </button>
 
@@ -109,8 +109,11 @@
       </div>
       <div class="tower-panel-stats" id="tp-stats"></div>
       <div class="tower-panel-actions">
-        <button id="tp-upgrade" class="action-btn tp-btn-upgrade"></button>
-        <button id="tp-sell"    class="secondary-btn tp-btn-sell"></button>
+        <div class="tp-upgrade-paths" id="tp-upgrade-paths">
+          <button id="tp-upgrade-a" class="action-btn tp-btn-upgrade"></button>
+          <button id="tp-upgrade-b" class="secondary-btn tp-btn-upgrade-b"></button>
+        </div>
+        <button id="tp-sell" class="secondary-btn tp-btn-sell"></button>
       </div>
     </div>
   </div>

@@ -17,11 +17,12 @@ export class Projectile {
     this.slowDuration = 0;
     this.color        = '#fff';
     this.size         = 4;
+    this.shape        = 'dot';
     this.active       = false;
     this.hit          = false;
   }
 
-  fire(x, y, enemy, damage, speed, splashRadius, slowFactor, slowDuration, color, size) {
+  fire(x, y, enemy, damage, speed, splashRadius, slowFactor, slowDuration, color, size, shape = 'dot') {
     this.x            = x;
     this.y            = y;
     this.targetEnemy  = enemy;
@@ -32,6 +33,7 @@ export class Projectile {
     this.slowDuration = slowDuration;
     this.color        = color;
     this.size         = size;
+    this.shape        = shape;
     this.active       = true;
     this.hit          = false;
   }

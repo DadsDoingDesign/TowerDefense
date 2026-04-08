@@ -29,10 +29,10 @@
   --accent-purple:  #8b5cf6;
 
   /* Tower type colors (game identity — kept stable) */
-  --tower-arrow:    #3b82f6;
-  --tower-cannon:   #f59e0b;
-  --tower-frost:    #a855f7;
-  --tower-laser:    #ef4444;
+  --tower-meta:     #3b82f6;
+  --tower-amazon:   #f59e0b;
+  --tower-uber:     #a855f7;
+  --tower-tesla:    #ef4444;
 
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
@@ -387,10 +387,10 @@ button:focus-visible {
   pointer-events: none;
 }
 
-.tower-btn[data-tower="arrow"].selected  { border-color: var(--tower-arrow);  background: rgba(59, 130, 246, 0.12); }
-.tower-btn[data-tower="cannon"].selected { border-color: var(--tower-cannon); background: rgba(245, 158, 11, 0.10); }
-.tower-btn[data-tower="frost"].selected  { border-color: var(--tower-frost);  background: rgba(168, 85, 247, 0.12); }
-.tower-btn[data-tower="laser"].selected  { border-color: var(--tower-laser);  background: rgba(239, 68, 68, 0.10);  }
+.tower-btn[data-tower="meta"].selected   { border-color: var(--tower-meta);   background: rgba(59, 130, 246, 0.12); }
+.tower-btn[data-tower="amazon"].selected { border-color: var(--tower-amazon); background: rgba(245, 158, 11, 0.10); }
+.tower-btn[data-tower="uber"].selected   { border-color: var(--tower-uber);   background: rgba(168, 85, 247, 0.12); }
+.tower-btn[data-tower="tesla"].selected  { border-color: var(--tower-tesla);  background: rgba(239, 68, 68, 0.10);  }
 
 .tower-name {
   font-size: 10px;
@@ -415,10 +415,14 @@ button:focus-visible {
   display: block;
   border-radius: 3px;
 }
-.tower-icon[data-tower="arrow"]  { background: var(--tower-arrow);  clip-path: polygon(0% 50%, 60% 0%, 60% 35%, 100% 35%, 100% 65%, 60% 65%, 60% 100%); }
-.tower-icon[data-tower="cannon"] { background: var(--tower-cannon); border-radius: 50%; }
-.tower-icon[data-tower="frost"]  { background: var(--tower-frost);  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
-.tower-icon[data-tower="laser"]  { background: var(--tower-laser);  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+/* Meta: infinity / data-loop symbol (two overlapping circles via border-radius trick) */
+.tower-icon[data-tower="meta"]   { background: var(--tower-meta);   border-radius: 50% 50% 0 50% / 50% 50% 50% 0; }
+/* Amazon: box / package silhouette */
+.tower-icon[data-tower="amazon"] { background: var(--tower-amazon); clip-path: polygon(10% 30%, 50% 10%, 90% 30%, 90% 80%, 50% 100%, 10% 80%); }
+/* Uber: car top-down silhouette */
+.tower-icon[data-tower="uber"]   { background: var(--tower-uber);   clip-path: polygon(20% 30%, 35% 10%, 65% 10%, 80% 30%, 90% 40%, 90% 75%, 10% 75%, 10% 40%); }
+/* Tesla: lightning bolt */
+.tower-icon[data-tower="tesla"]  { background: var(--tower-tesla);  clip-path: polygon(60% 0%, 25% 55%, 50% 55%, 40% 100%, 75% 45%, 50% 45%); }
 
 /* Action button */
 .action-btn {
@@ -865,19 +869,69 @@ button:focus-visible {
 
 .tower-panel-actions {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Two upgrade paths side-by-side */
+.tp-upgrade-paths {
+  display: flex;
   gap: 8px;
 }
 
 .tp-btn-upgrade {
   flex: 1;
   min-height: 40px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+/* Path B: outlined/ghost variant */
+.tp-btn-upgrade-b {
+  flex: 1;
+  min-height: 40px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--bg-elevated);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+  text-align: left;
+  padding: 8px 10px;
+}
+.tp-btn-upgrade-b:hover:not(:disabled) {
+  background: var(--primary-dim);
+}
+.tp-btn-upgrade-b:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* Upgrade display name + lore inside the button */
+.upgrade-name {
+  display: block;
+  font-weight: 700;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+.upgrade-lore {
+  display: block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  opacity: 0.75;
+  line-height: 1.3;
+  white-space: normal;
 }
 
 .tp-btn-sell {
-  flex: 1;
-  min-height: 40px;
+  min-height: 36px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;

@@ -32,13 +32,15 @@ export class UIManager {
     this._bindSpeedButton();
 
     // Tower info panel
-    this._towerPanel   = document.getElementById('tower-panel');
-    this._tpName       = document.getElementById('tp-name');
-    this._tpLevel      = document.getElementById('tp-level');
-    this._tpStats      = document.getElementById('tp-stats');
-    this._tpUpgradeBtn = document.getElementById('tp-upgrade');
-    this._tpSellBtn    = document.getElementById('tp-sell');
-    this._tpCloseBtn   = document.getElementById('tp-close');
+    this._towerPanel    = document.getElementById('tower-panel');
+    this._tpName        = document.getElementById('tp-name');
+    this._tpLevel       = document.getElementById('tp-level');
+    this._tpStats       = document.getElementById('tp-stats');
+    this._tpUpgradeBtnA = document.getElementById('tp-upgrade-a');
+    this._tpUpgradeBtnB = document.getElementById('tp-upgrade-b');
+    this._tpUpgradePaths = document.getElementById('tp-upgrade-paths');
+    this._tpSellBtn     = document.getElementById('tp-sell');
+    this._tpCloseBtn    = document.getElementById('tp-close');
 
     this.selectedTowerType = null; // placing selection
     this._currentGold = 0;
@@ -180,28 +182,37 @@ export class UIManager {
   showTowerPanel(tower) {
     if (!this._towerPanel) return;
 
-    const def = TOWERS[tower.type];
-    const up  = UPGRADES[tower.type];
+    const def  = TOWERS[tower.type];
+    const ups  = UPGRADES[tower.type];
+    const upA  = ups?.a;
+    const upB  = ups?.b;
 
     this._tpName.textContent  = def.displayName;
     this._tpLevel.textContent = tower.level === 2 ? 'LVL 2 — MAX' : 'LVL 1';
 
-    const dmgFmt   = tower.damage.toFixed(0);
-    const rangeFmt = (tower.range / this._lastTileSize || 1).toFixed(1);
-    const frFmt    = tower.fireRate.toFixed(1);
+    const dmgFmt = tower.damage.toFixed(0);
+    const frFmt  = tower.fireRate.toFixed(1);
 
     this._tpStats.innerHTML = `
       DMG&nbsp;&nbsp;${dmgFmt}&nbsp;&nbsp;|&nbsp;&nbsp;RNG&nbsp;${(tower._def.range * (tower._upgradeRangeX || 1)).toFixed(1)} tiles&nbsp;&nbsp;|&nbsp;&nbsp;RATE&nbsp;${frFmt}/s
-      ${tower.type === 'frost' ? `<br>SLOW ${(tower.slowFactor * 100).toFixed(0)}%&nbsp;&nbsp;|&nbsp;&nbsp;DUR ${tower.slowDuration}s` : ''}
+      ${tower.type === 'uber' ? `<br>SLOW ${(tower.slowFactor * 100).toFixed(0)}%&nbsp;&nbsp;|&nbsp;&nbsp;DUR ${tower.slowDuration}s` : ''}
     `;
 
-    if (tower.canUpgrade) {
-      const canAfford = this._currentGold >= up.cost;
-      this._tpUpgradeBtn.textContent = `Upgrade — ${up.cost} cr`;
-      this._tpUpgradeBtn.disabled    = !canAfford;
-      this._tpUpgradeBtn.style.display = '';
+    if (tower.canUpgrade && upA && upB) {
+      const canAffordA = this._currentGold >= upA.cost;
+      const canAffordB = this._currentGold >= upB.cost;
+
+      this._tpUpgradeBtnA.innerHTML = `<span class="upgrade-name">${upA.displayName}</span><span class="upgrade-lore">${upA.lore}</span>`;
+      this._tpUpgradeBtnA.disabled  = !canAffordA;
+      this._tpUpgradeBtnA.title     = `${upA.cost} cr`;
+
+      this._tpUpgradeBtnB.innerHTML = `<span class="upgrade-name">${upB.displayName}</span><span class="upgrade-lore">${upB.lore}</span>`;
+      this._tpUpgradeBtnB.disabled  = !canAffordB;
+      this._tpUpgradeBtnB.title     = `${upB.cost} cr`;
+
+      this._tpUpgradePaths.style.display = '';
     } else {
-      this._tpUpgradeBtn.style.display = 'none';
+      this._tpUpgradePaths.style.display = 'none';
     }
 
     this._tpSellBtn.textContent = `Sell — +${tower.sellValue} cr`;
@@ -229,9 +240,13 @@ export class UIManager {
       this.hideTowerPanel();
     });
 
-    this._tpUpgradeBtn?.addEventListener('click', () => {
-      if (this._activeTower) this._onUpgradeTower?.(this._activeTower);
-      // Refresh panel stats after upgrade
+    this._tpUpgradeBtnA?.addEventListener('click', () => {
+      if (this._activeTower) this._onUpgradeTower?.(this._activeTower, 'a');
+      if (this._activeTower) this.showTowerPanel(this._activeTower);
+    });
+
+    this._tpUpgradeBtnB?.addEventListener('click', () => {
+      if (this._activeTower) this._onUpgradeTower?.(this._activeTower, 'b');
       if (this._activeTower) this.showTowerPanel(this._activeTower);
     });
   }
@@ -365,49 +380,55 @@ export class UIManager {
 
   showWaveComplete(wave, bonus, onContinue) {
     this.showModal({
-      header: `Wave ${wave} cleared`,
-      body: `<p>+${bonus} credits allocated to perimeter budget.</p><p>Reinforce your defenses before the next threat sequence.</p>`,
+      header: `Q${wave} Report: Threats Neutralized`,
+      body: `<p style="color:var(--accent-green);font-family:var(--font-mono);font-size:13px">+${bonus} cr allocated to defense budget.</p><p style="margin-top:6px">Board is pleased. Synergies detected. Reinforce before the next earnings call.</p>`,
       actions: [{ label: `Deploy wave ${wave + 1}`, primary: true, onClick: onContinue }],
     });
   }
 
   showGameOver(wave, score, diffLabel, rank, topScores, onRestart) {
+    const acquiAmount = `$${((wave * 500_000) + (score * 750)).toLocaleString()}`;
     this.showModal({
-      header: 'Connection lost',
+      header: 'Acqui-Hired',
       body: `
-        <p>Perimeter breached. All nodes offline.</p>
-        <p style="margin-top:8px">
+        <p style="color:var(--text-secondary);font-size:12px">Perimeter collapsed. Leadership has accepted an acqui-hire offer.</p>
+        <p style="margin-top:10px;font-family:var(--font-mono);font-size:15px;color:var(--accent-amber)">${acquiAmount}</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono)">total acquisition value</p>
+        <p style="margin-top:10px">
           <span style="color:var(--text-secondary)">Survived:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">Wave ${wave}</span>
         </p>
         <p>
-          <span style="color:var(--text-secondary)">Environment:</span>
+          <span style="color:var(--text-secondary)">Stage:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${diffLabel}</span>
         </p>
         <p>
-          <span style="color:var(--text-secondary)">Final score:</span>
+          <span style="color:var(--text-secondary)">Score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
         ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on ${diffLabel} leaderboard</p>` : ''}
         ${this._renderLeaderboard(topScores)}
       `,
-      actions: [{ label: 'Restart deployment', primary: true, onClick: () => this.showStartScreen(onRestart) }],
+      actions: [{ label: 'Pivot and retry', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
   }
 
   showVictory(score, rank, topScores, onRestart) {
+    const valuation = `$${((score * 12_500) + 420_000_000).toLocaleString()}`;
     this.showModal({
-      header: 'Perimeter secured',
+      header: 'Successful Exit',
       body: `
-        <p>All threat vectors neutralized. The network is safe.</p>
-        <p style="margin-top:8px">
+        <p style="color:var(--accent-green);font-size:12px">All threat vectors neutralized. SENTINEL IPO approved.</p>
+        <p style="margin-top:10px;font-family:var(--font-mono);font-size:15px;color:var(--accent-green)">${valuation}</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono)">post-money valuation</p>
+        <p style="margin-top:10px">
           <span style="color:var(--text-secondary)">Final score:</span>
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
         ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on leaderboard</p>` : ''}
         ${this._renderLeaderboard(topScores)}
       `,
-      actions: [{ label: 'Deploy again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
+      actions: [{ label: 'Ring the bell again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
     });
   }
 

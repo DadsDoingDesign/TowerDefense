@@ -1,4 +1,4 @@
-import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS } from './constants.js';
+import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS, UPGRADES } from './constants.js';
 import { Grid } from './grid.js';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer.js';
 import { GameRenderer } from './renderer/GameRenderer.js';
@@ -139,16 +139,18 @@ ui.onSellTower(tower => {
   ui.showToast(`Defense removed. +${refund} cr returned.`);
 });
 
-ui.onUpgradeTower(tower => {
+ui.onUpgradeTower((tower, option = 'a') => {
   if (!tower.canUpgrade) return;
-  if (!economy.canAffordAmount(tower.upgradeCost)) {
+  const up = UPGRADES[tower.type]?.[option];
+  if (!up) return;
+  if (!economy.canAffordAmount(up.cost)) {
     ui.showToast('Insufficient credits.');
     return;
   }
-  economy.gold -= tower.upgradeCost;
-  tower.upgrade();
+  economy.gold -= up.cost;
+  tower.upgrade(option);
   ui.updateGold(economy.gold);
-  ui.showToast(`${tower._def.displayName} upgraded.`);
+  ui.showToast(`${tower._def.displayName}: ${up.displayName} activated.`);
 });
 
 ui.onStartWave(() => {

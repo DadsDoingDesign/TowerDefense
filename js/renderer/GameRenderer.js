@@ -127,56 +127,68 @@ export class GameRenderer {
     ctx.fillStyle = TOWERS[type].color;
 
     switch (type) {
-      case 'arrow':
-        ctx.beginPath();
-        ctx.moveTo(-h * 0.5, -h * 0.28);
-        ctx.lineTo( h * 0.1, -h * 0.28);
-        ctx.lineTo( h * 0.1, -h * 0.55);
-        ctx.lineTo( h * 0.55, 0);
-        ctx.lineTo( h * 0.1,  h * 0.55);
-        ctx.lineTo( h * 0.1,  h * 0.28);
-        ctx.lineTo(-h * 0.5,  h * 0.28);
-        ctx.closePath();
-        ctx.fill();
-        break;
-
-      case 'cannon':
-        ctx.beginPath();
-        ctx.arc(0, 0, h * 0.45, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillRect(h * 0.2, -h * 0.14, h * 0.5, h * 0.28);
-        break;
-
-      case 'frost':
-        ctx.lineWidth   = Math.max(1.5, h * 0.2);
+      case 'meta': {
+        // Infinity / data-loop: two overlapping circles
+        ctx.globalAlpha = 0.9;
+        const cr = h * 0.28;
+        ctx.lineWidth   = Math.max(2, h * 0.22);
         ctx.strokeStyle = TOWERS[type].color;
-        for (let i = 0; i < 6; i++) {
-          ctx.save();
-          ctx.rotate((i * Math.PI) / 3);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(0, -h * 0.55);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(-h * 0.2, -h * 0.35);
-          ctx.lineTo( h * 0.2, -h * 0.35);
-          ctx.stroke();
-          ctx.restore();
-        }
         ctx.beginPath();
-        ctx.arc(0, 0, h * 0.12, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(-cr * 0.85, 0, cr, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc( cr * 0.85, 0, cr, 0, Math.PI * 2);
+        ctx.stroke();
         break;
-
-      case 'laser':
+      }
+      case 'amazon': {
+        // Cardboard box with lid lines
+        const bw = h * 0.8, bh = h * 0.7;
+        ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
+        ctx.strokeStyle = TOWERS[type].color;
+        ctx.lineWidth = Math.max(1, h * 0.1);
+        // Smile arrow across bottom of box
+        ctx.strokeStyle = COLORS.bgBase;
+        ctx.lineWidth   = Math.max(1.5, h * 0.14);
         ctx.beginPath();
-        ctx.moveTo(0,        -h * 0.6);
-        ctx.lineTo( h * 0.55, 0);
-        ctx.lineTo(0,         h * 0.6);
-        ctx.lineTo(-h * 0.55, 0);
+        ctx.moveTo(-bw * 0.35, bh * 0.1);
+        ctx.quadraticCurveTo(0, bh * 0.42, bw * 0.35, bh * 0.1);
+        ctx.stroke();
+        // Lid lines
+        ctx.strokeStyle = COLORS.bgBase;
+        ctx.lineWidth   = Math.max(1, h * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(0, -bh / 2);
+        ctx.lineTo(0, -bh * 0.05);
+        ctx.stroke();
+        break;
+      }
+      case 'uber': {
+        // Car silhouette — top-down (rounded rectangle body)
+        const cw = h * 0.9, ch = h * 0.55;
+        this._roundRect(ctx, -cw / 2, -ch / 2, cw, ch, ch * 0.2);
+        ctx.fill();
+        // Cabin cutout
+        ctx.fillStyle = COLORS.bgBase;
+        ctx.globalAlpha = 0.45;
+        const cabW = cw * 0.5, cabH = ch * 0.58;
+        ctx.fillRect(-cabW / 2, -cabH / 2, cabW, cabH);
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'tesla': {
+        // Lightning bolt
+        ctx.beginPath();
+        ctx.moveTo( h * 0.18, -h * 0.6);
+        ctx.lineTo(-h * 0.22,  h * 0.05);
+        ctx.lineTo( h * 0.08,  h * 0.05);
+        ctx.lineTo(-h * 0.18,  h * 0.6);
+        ctx.lineTo( h * 0.22, -h * 0.05);
+        ctx.lineTo(-h * 0.08, -h * 0.05);
         ctx.closePath();
         ctx.fill();
         break;
+      }
     }
     ctx.restore();
   }
@@ -271,23 +283,63 @@ export class GameRenderer {
   _drawProjectiles() {
     const { ctx } = this;
 
-    // Two-pass render: glow ring then core dot.
-    // Avoids shadowBlur (GPU compositing — expensive on mobile).
+    // Glow pass
     ctx.save();
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.22;
     Projectile.pool.forEachActive(p => {
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * 1.8, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
       ctx.fill();
     });
 
+    // Shape pass
     ctx.globalAlpha = 1;
     Projectile.pool.forEachActive(p => {
       ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      const s = p.size;
+      switch (p.shape) {
+        case 'amazon': {
+          // Cardboard box — small square with lid line
+          ctx.fillRect(p.x - s, p.y - s, s * 2, s * 2);
+          ctx.strokeStyle = COLORS.bgBase;
+          ctx.lineWidth   = Math.max(0.8, s * 0.4);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y - s);
+          ctx.lineTo(p.x, p.y + s * 0.2);
+          ctx.stroke();
+          break;
+        }
+        case 'uber': {
+          // Tiny car — wider rectangle
+          this._roundRect(ctx, p.x - s * 1.4, p.y - s * 0.7, s * 2.8, s * 1.4, s * 0.4);
+          ctx.fill();
+          break;
+        }
+        case 'tesla': {
+          // Mini lightning bolt
+          ctx.beginPath();
+          ctx.moveTo(p.x + s * 0.35, p.y - s);
+          ctx.lineTo(p.x - s * 0.35, p.y);
+          ctx.lineTo(p.x + s * 0.1,  p.y);
+          ctx.lineTo(p.x - s * 0.35, p.y + s);
+          ctx.lineTo(p.x + s * 0.35, p.y);
+          ctx.lineTo(p.x - s * 0.1,  p.y);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        }
+        case 'meta':
+        default: {
+          // Data packet — small square (slightly rotated diamond for meta)
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillRect(-s * 0.85, -s * 0.85, s * 1.7, s * 1.7);
+          ctx.restore();
+          break;
+        }
+      }
     });
     ctx.restore();
   }

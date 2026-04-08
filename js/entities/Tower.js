@@ -48,20 +48,28 @@ export class Tower {
     if (this._upgradeSplashX) this.splashRadius *= this._upgradeSplashX;
   }
 
-  upgrade() {
+  upgrade(option = 'a') {
     if (!this.canUpgrade) return false;
-    const up = UPGRADES[this.type];
+    const up = UPGRADES[this.type][option];
+    if (!up) return false;
 
     this.damage    *= up.damageX   ?? 1;
     this.fireRate  *= up.fireRateX ?? 1;
-    if (up.slowFactor !== undefined)  this.slowFactor  = up.slowFactor;
-    if (up.slowDuration !== undefined) this.slowDuration = up.slowDuration;
+    if (up.slowFactor   !== undefined) this.slowFactor   = up.slowFactor;
+    if (up.slowDuration !== undefined) this.slowDuration  = up.slowDuration;
 
     // Store range multiplier for updatePosition re-apply
     this._upgradeRangeX = up.rangeX ?? 1;
     this.range *= this._upgradeRangeX;
 
-    this._totalSpent += up.cost;
+    // Splash multiplier (amazon drone fleet)
+    if (up.splashX) {
+      this._upgradeSplashX = up.splashX;
+      this.splashRadius *= up.splashX;
+    }
+
+    this._totalSpent    += up.cost;
+    this._chosenUpgrade  = option;
     this.level = 2;
 
     // Restart placement animation briefly to signal the upgrade
@@ -71,7 +79,7 @@ export class Tower {
   }
 
   get canUpgrade() { return this.level < 2; }
-  get upgradeCost() { return UPGRADES[this.type].cost; }
+  upgradeCostFor(option) { return UPGRADES[this.type]?.[option]?.cost ?? 0; }
   get sellValue()  { return Math.floor(this._totalSpent * SELL_RATE); }
 
   update(dt, enemies) {
@@ -129,6 +137,7 @@ export class Tower {
       this.slowDuration,
       this.color,
       this._def.projectileSize,
+      this.type,
     );
   }
 }
