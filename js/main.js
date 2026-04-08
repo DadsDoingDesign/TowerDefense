@@ -262,9 +262,12 @@ function gameLoop(timestamp) {
 }
 
 function update(dt) {
-  if (gameState !== State.WAVE) return;
+  // Always tick tower animations (spawn scale-in) — pass empty array during
+  // PLACING so towers are visible but don't acquire targets or fire.
+  const activeEnemies = gameState === State.WAVE ? waveManager.enemies : [];
+  for (const t of towers) t.update(dt, activeEnemies);
 
-  for (const t of towers) t.update(dt, waveManager.enemies);
+  if (gameState !== State.WAVE) return;
 
   Projectile.pool.forEachActive(p => p.update(dt, waveManager.enemies, handleSplash));
 
