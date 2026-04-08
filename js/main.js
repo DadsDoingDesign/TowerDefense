@@ -52,6 +52,7 @@ function resize() {
   grid.resize(w, h);
   bgRenderer.draw();
   for (const t of towers) t.updatePosition();
+  ui.setTileSize(grid.tileSize);
 }
 
 let _resizeTimer;
@@ -69,12 +70,24 @@ window.addEventListener('orientationchange', debouncedResize);
 const input = new InputManager(gameCanvas, {
   onTap(x, y) {
     if (gameState !== State.PLACING && gameState !== State.WAVE) return;
-    if (!gameRenderer.placingTower) return;
 
     const cell = grid.screenToGrid(x, y);
     if (!cell) return;
-
     const { col, row } = cell;
+
+    // Tap on existing tower → show info panel
+    const existing = grid.getTower(col, row);
+    if (existing) {
+      gameRenderer.selectedTower = existing;
+      gameRenderer.placingTower  = null;
+      ui.deselectTower();
+      ui.setTileSize(grid.tileSize);
+      ui.showTowerPanel(existing);
+      return;
+    }
+
+    // Tap on empty cell while placing → place tower
+    if (!gameRenderer.placingTower) return;
     if (!grid.canPlaceTower(col, row)) return;
     if (!economy.canAfford(gameRenderer.placingTower)) return;
 
@@ -86,8 +99,7 @@ const input = new InputManager(gameCanvas, {
     towers.push(tower);
 
     ui.updateGold(economy.gold);
-    const name = type.charAt(0).toUpperCase() + type.slice(1);
-    ui.showToast(`${name} tower deployed.`);
+    ui.showToast(`${tower._def.displayName} tower deployed.`);
   },
 
   onHover(x, y) {
@@ -104,7 +116,32 @@ const input = new InputManager(gameCanvas, {
 // ----------------------------------------------------------------
 
 ui.onSelectTower(type => {
-  gameRenderer.placingTower = type;
+  gameRenderer.placingTower  = type;
+  gameRenderer.selectedTower = null;
+  ui.hideTowerPanel();
+});
+
+ui.onSellTower(tower => {
+  if (!tower) { gameRenderer.selectedTower = null; return; }
+  const refund = tower.sellValue;
+  economy.gold += refund;
+  grid.removeTower(tower.col, tower.row);
+  towers = towers.filter(t => t !== tower);
+  gameRenderer.selectedTower = null;
+  ui.updateGold(economy.gold);
+  ui.showToast(`Tower sold. +${refund} credits.`);
+});
+
+ui.onUpgradeTower(tower => {
+  if (!tower.canUpgrade) return;
+  if (!economy.canAffordAmount(tower.upgradeCost)) {
+    ui.showToast('Insufficient credits.');
+    return;
+  }
+  economy.gold -= tower.upgradeCost;
+  tower.upgrade();
+  ui.updateGold(economy.gold);
+  ui.showToast(`${tower._def.displayName} upgraded to level 2.`);
 });
 
 ui.onStartWave(() => {
@@ -134,9 +171,11 @@ function startGame() {
     }
   }
 
-  gameRenderer.placingTower = null;
-  gameRenderer.hoverCell    = null;
+  gameRenderer.placingTower  = null;
+  gameRenderer.hoverCell     = null;
+  gameRenderer.selectedTower = null;
   ui.deselectTower();
+  ui.hideTowerPanel();
   ui.updateGold(economy.gold);
   ui.updateLives(economy.lives);
   ui.updateWave(0);

@@ -95,6 +95,19 @@ export const TOWERS = {
 };
 
 // ============================================================
+// TOWER UPGRADES (applied as multipliers at level 2)
+// cost = additional gold to upgrade; stat fields are multipliers on base
+// ============================================================
+export const UPGRADES = {
+  arrow:  { cost: 40,  damageX: 1.6, rangeX: 1.1,  fireRateX: 1.3, label: 'High-tension string — +60% damage, +30% fire rate' },
+  cannon: { cost: 80,  damageX: 1.7, rangeX: 1.1,  fireRateX: 1.2, label: 'Extended barrel — +70% damage, +20% fire rate' },
+  frost:  { cost: 60,  damageX: 1.5, rangeX: 1.15, slowFactor: 0.3, slowDuration: 2.5, label: 'Cryo-core — deeper freeze (30% speed)' },
+  laser:  { cost: 120, damageX: 1.8, rangeX: 1.15, fireRateX: 1.3, label: 'Overclocked emitter — +80% damage, +30% fire rate' },
+};
+
+export const SELL_RATE = 0.75; // fraction of total spent returned on sell
+
+// ============================================================
 // ENEMY DEFINITIONS
 // ============================================================
 export const ENEMIES = {

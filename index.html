@@ -73,6 +73,22 @@
     </div>
   </div>
 
+  <!-- Tower info panel (sell / upgrade) -->
+  <div id="tower-panel" class="tower-panel hidden" role="dialog" aria-label="Tower options">
+    <div class="tower-panel-inner">
+      <div class="tower-panel-header">
+        <span id="tp-name"></span>
+        <span id="tp-level" class="tp-level"></span>
+        <button id="tp-close" class="tp-close" aria-label="Close">✕</button>
+      </div>
+      <div class="tower-panel-stats" id="tp-stats"></div>
+      <div class="tower-panel-actions">
+        <button id="tp-upgrade" class="action-btn tp-btn-upgrade"></button>
+        <button id="tp-sell"    class="secondary-btn tp-btn-sell"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal overlay -->
   <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true">
     <div id="modal-card">

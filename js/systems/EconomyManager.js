@@ -21,6 +21,10 @@ export class EconomyManager {
     return this.gold >= TOWERS[towerType].cost;
   }
 
+  canAffordAmount(amount) {
+    return this.gold >= amount;
+  }
+
   spend(towerType) {
     const cost = TOWERS[towerType].cost;
     if (this.gold < cost) return false;

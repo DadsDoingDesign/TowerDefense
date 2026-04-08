@@ -76,6 +76,36 @@ export class GameRenderer {
 
     ctx.save();
     ctx.translate(tower.x, tower.y);
+
+    // Selection ring (shown when tower info panel is open)
+    if (this.selectedTower === tower) {
+      ctx.strokeStyle = COLORS.accentBlue;
+      ctx.lineWidth   = 2;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(0, 0, ts * 0.56, 0, Math.PI * 2);
+      ctx.stroke();
+      // Also draw range ring
+      ctx.strokeStyle = tower.color;
+      ctx.globalAlpha = 0.2;
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(0, 0, tower.range, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    // Upgrade tier indicator (small dot in corner)
+    if (tower.level === 2) {
+      ctx.fillStyle = COLORS.accentAmber;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(ts * 0.3, -ts * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.scale(s, s);
 
     ctx.fillStyle   = COLORS.bgElevated;

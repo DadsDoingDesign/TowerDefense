@@ -455,6 +455,107 @@ button:focus-visible {
 }
 
 /* ============================================================
+   TOWER INFO PANEL (sell / upgrade)
+   ============================================================ */
+.tower-panel {
+  position: fixed;
+  bottom: calc(var(--ui-bar-height) + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  width: min(340px, calc(100vw - 24px));
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms, transform 180ms;
+}
+
+.tower-panel:not(.hidden) {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.tower-panel-inner {
+  padding: 14px 16px 16px;
+}
+
+.tower-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#tp-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.tp-level {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.tp-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tp-close:hover { background: var(--bg-elevated); }
+
+.tower-panel-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  line-height: 1.7;
+  margin-bottom: 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.tower-panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tp-btn-upgrade {
+  flex: 1;
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.tp-btn-sell {
+  flex: 1;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  color: var(--accent-red);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* ============================================================
    UTILITY
    ============================================================ */
 .hidden { display: none !important; }

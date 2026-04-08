@@ -1,54 +1,63 @@
-import { TOWERS } from '../constants.js';
+import { TOWERS, UPGRADES } from '../constants.js';
 
-/**
- * Manages all DOM UI: HUD stats, tower selection, modals, toasts, float text.
- */
 export class UIManager {
   constructor() {
-    // Stat displays
     this._goldEl  = document.getElementById('gold-value');
     this._livesEl = document.getElementById('lives-value');
     this._waveEl  = document.getElementById('wave-value');
     this._scoreEl = document.getElementById('score-value');
 
-    // Tower strip
     this._towerBtns = document.querySelectorAll('.tower-btn');
     this._startBtn  = document.getElementById('start-wave-btn');
     this._startLbl  = document.getElementById('start-wave-label');
 
-    // Modal
     this._modalOverlay = document.getElementById('modal-overlay');
     this._modalHeader  = document.getElementById('modal-header');
     this._modalBody    = document.getElementById('modal-body');
     this._modalActions = document.getElementById('modal-actions');
 
-    // Toast
     this._toast      = document.getElementById('toast');
     this._toastTimer = null;
 
-    // Floats
     this._floatsEl = document.getElementById('floats');
 
-    this.selectedTower = null;
+    // Tower info panel
+    this._towerPanel   = document.getElementById('tower-panel');
+    this._tpName       = document.getElementById('tp-name');
+    this._tpLevel      = document.getElementById('tp-level');
+    this._tpStats      = document.getElementById('tp-stats');
+    this._tpUpgradeBtn = document.getElementById('tp-upgrade');
+    this._tpSellBtn    = document.getElementById('tp-sell');
+    this._tpCloseBtn   = document.getElementById('tp-close');
+
+    this.selectedTowerType = null; // placing selection
+    this._currentGold = 0;
+
     this._onSelectTower = null;
     this._onStartWave   = null;
+    this._onSellTower   = null;
+    this._onUpgradeTower = null;
 
     this._bindTowerButtons();
     this._bindStartButton();
+    this._bindTowerPanel();
   }
 
   // ----------------------------------------------------------------
   // Callbacks
   // ----------------------------------------------------------------
 
-  onSelectTower(fn) { this._onSelectTower = fn; }
-  onStartWave(fn)   { this._onStartWave   = fn; }
+  onSelectTower(fn)  { this._onSelectTower  = fn; }
+  onStartWave(fn)    { this._onStartWave    = fn; }
+  onSellTower(fn)    { this._onSellTower    = fn; }
+  onUpgradeTower(fn) { this._onUpgradeTower = fn; }
 
   // ----------------------------------------------------------------
-  // HUD updates
+  // HUD
   // ----------------------------------------------------------------
 
   updateGold(gold) {
+    this._currentGold = gold;
     if (this._goldEl) this._goldEl.textContent = gold;
     this._refreshAffordability(gold);
   }
@@ -72,18 +81,16 @@ export class UIManager {
   }
 
   // ----------------------------------------------------------------
-  // Tower selection
+  // Tower selection (placing)
   // ----------------------------------------------------------------
 
   selectTower(type) {
-    this.selectedTower = type;
-    this._towerBtns.forEach(btn => {
-      btn.classList.toggle('selected', btn.dataset.tower === type);
-    });
+    this.selectedTowerType = type;
+    this._towerBtns.forEach(btn => btn.classList.toggle('selected', btn.dataset.tower === type));
   }
 
   deselectTower() {
-    this.selectedTower = null;
+    this.selectedTowerType = null;
     this._towerBtns.forEach(btn => btn.classList.remove('selected'));
   }
 
@@ -98,10 +105,12 @@ export class UIManager {
     this._towerBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.tower;
-        if (this.selectedTower === type) {
+        if (this.selectedTowerType === type) {
           this.deselectTower();
           this._onSelectTower?.(null);
         } else {
+          this.deselectTower();
+          this.hideTowerPanel();
           this.selectTower(type);
           this._onSelectTower?.(type);
         }
@@ -110,8 +119,69 @@ export class UIManager {
   }
 
   _bindStartButton() {
-    this._startBtn?.addEventListener('click', () => {
-      this._onStartWave?.();
+    this._startBtn?.addEventListener('click', () => this._onStartWave?.());
+  }
+
+  // ----------------------------------------------------------------
+  // Tower info panel
+  // ----------------------------------------------------------------
+
+  showTowerPanel(tower) {
+    if (!this._towerPanel) return;
+
+    const def = TOWERS[tower.type];
+    const up  = UPGRADES[tower.type];
+
+    this._tpName.textContent  = def.displayName;
+    this._tpLevel.textContent = tower.level === 2 ? 'LVL 2 — MAX' : 'LVL 1';
+
+    const dmgFmt   = tower.damage.toFixed(0);
+    const rangeFmt = (tower.range / this._lastTileSize || 1).toFixed(1);
+    const frFmt    = tower.fireRate.toFixed(1);
+
+    this._tpStats.innerHTML = `
+      DMG&nbsp;&nbsp;${dmgFmt}&nbsp;&nbsp;|&nbsp;&nbsp;RNG&nbsp;${(tower._def.range * (tower._upgradeRangeX || 1)).toFixed(1)} tiles&nbsp;&nbsp;|&nbsp;&nbsp;RATE&nbsp;${frFmt}/s
+      ${tower.type === 'frost' ? `<br>SLOW ${(tower.slowFactor * 100).toFixed(0)}%&nbsp;&nbsp;|&nbsp;&nbsp;DUR ${tower.slowDuration}s` : ''}
+    `;
+
+    if (tower.canUpgrade) {
+      const canAfford = this._currentGold >= up.cost;
+      this._tpUpgradeBtn.textContent = `Upgrade — ${up.cost} cr`;
+      this._tpUpgradeBtn.disabled    = !canAfford;
+      this._tpUpgradeBtn.style.display = '';
+    } else {
+      this._tpUpgradeBtn.style.display = 'none';
+    }
+
+    this._tpSellBtn.textContent = `Sell — +${tower.sellValue} cr`;
+
+    this._activeTower = tower;
+    this._towerPanel.classList.remove('hidden');
+  }
+
+  hideTowerPanel() {
+    this._towerPanel?.classList.add('hidden');
+    this._activeTower = null;
+  }
+
+  /** Called on resize so stat display has correct tile size */
+  setTileSize(px) { this._lastTileSize = px; }
+
+  _bindTowerPanel() {
+    this._tpCloseBtn?.addEventListener('click', () => {
+      this.hideTowerPanel();
+      this._onSellTower?.(null); // null = just deselect
+    });
+
+    this._tpSellBtn?.addEventListener('click', () => {
+      if (this._activeTower) this._onSellTower?.(this._activeTower);
+      this.hideTowerPanel();
+    });
+
+    this._tpUpgradeBtn?.addEventListener('click', () => {
+      if (this._activeTower) this._onUpgradeTower?.(this._activeTower);
+      // Refresh panel stats after upgrade
+      if (this._activeTower) this.showTowerPanel(this._activeTower);
     });
   }
 
@@ -129,15 +199,15 @@ export class UIManager {
   }
 
   // ----------------------------------------------------------------
-  // Gold float text
+  // Gold floats
   // ----------------------------------------------------------------
 
   showGoldFloat(screenX, screenY, amount) {
     const el = document.createElement('div');
-    el.className = 'float-text';
-    el.textContent = `+${amount}`;
-    el.style.left = `${screenX}px`;
-    el.style.top  = `${screenY - 10}px`;
+    el.className    = 'float-text';
+    el.textContent  = `+${amount}`;
+    el.style.left   = `${screenX}px`;
+    el.style.top    = `${screenY}px`;
     this._floatsEl?.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
   }
@@ -180,7 +250,8 @@ export class UIManager {
       body: `
         <p>Threats are inbound. Deploy defenses along the perimeter to prevent a breach.</p>
         <p style="margin-top:10px;color:var(--text-muted);font-size:12px;">
-          Tap a tower type, then tap the grid to deploy.<br>
+          Tap a tower type to select, then tap the grid to deploy.<br>
+          Tap a placed tower to upgrade or sell it.<br>
           Start each wave when ready.
         </p>
       `,
@@ -224,9 +295,7 @@ export class UIManager {
           <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
         </p>
       `,
-      actions: [
-        { label: 'Deploy again', primary: true, onClick: onRestart },
-      ],
+      actions: [{ label: 'Deploy again', primary: true, onClick: onRestart }],
     });
   }
 }

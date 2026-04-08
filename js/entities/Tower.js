@@ -1,22 +1,25 @@
-import { TOWERS, ANIM_TOWER_SPAWN } from '../constants.js';
+import { TOWERS, UPGRADES, SELL_RATE, ANIM_TOWER_SPAWN } from '../constants.js';
 import { Projectile } from './Projectile.js';
 
 export class Tower {
   constructor(type, col, row, grid) {
     this._def = TOWERS[type];
 
-    this.type = type;
-    this.col  = col;
-    this.row  = row;
-    this.grid = grid;
+    this.type  = type;
+    this.col   = col;
+    this.row   = row;
+    this.grid  = grid;
+    this.level = 1;
 
+    // Mutable stats (upgrade modifies these in place)
     this.damage          = this._def.damage;
     this.fireRate        = this._def.fireRate;
     this.projectileSpeed = this._def.projectileSpeed;
     this.slowFactor      = this._def.slowFactor;
+    this.slowDuration    = this._def.slowDuration;
     this.color           = this._def.color;
 
-    // Pixel-scaled values — updated by updatePosition() on resize
+    // Pixel-scaled — set by updatePosition()
     this.range        = 0;
     this.splashRadius = 0;
     this.x = 0;
@@ -28,6 +31,9 @@ export class Tower {
     this.scale     = 0;
     this.animTimer = 0;
 
+    // Economy tracking for sell calculation
+    this._totalSpent = this._def.cost;
+
     this.updatePosition();
   }
 
@@ -37,7 +43,36 @@ export class Tower {
     this.y = center.y;
     this.range        = this._def.range        * this.grid.tileSize;
     this.splashRadius = this._def.splashRadius  * this.grid.tileSize;
+    // Re-scale if upgraded
+    if (this._upgradeRangeX) this.range *= this._upgradeRangeX;
+    if (this._upgradeSplashX) this.splashRadius *= this._upgradeSplashX;
   }
+
+  upgrade() {
+    if (!this.canUpgrade) return false;
+    const up = UPGRADES[this.type];
+
+    this.damage    *= up.damageX   ?? 1;
+    this.fireRate  *= up.fireRateX ?? 1;
+    if (up.slowFactor !== undefined)  this.slowFactor  = up.slowFactor;
+    if (up.slowDuration !== undefined) this.slowDuration = up.slowDuration;
+
+    // Store range multiplier for updatePosition re-apply
+    this._upgradeRangeX = up.rangeX ?? 1;
+    this.range *= this._upgradeRangeX;
+
+    this._totalSpent += up.cost;
+    this.level = 2;
+
+    // Restart placement animation briefly to signal the upgrade
+    this.animTimer = 0;
+    this.scale     = 0;
+    return true;
+  }
+
+  get canUpgrade() { return this.level < 2; }
+  get upgradeCost() { return UPGRADES[this.type].cost; }
+  get sellValue()  { return Math.floor(this._totalSpent * SELL_RATE); }
 
   update(dt, enemies) {
     if (this.animTimer < ANIM_TOWER_SPAWN) {
@@ -91,7 +126,7 @@ export class Tower {
       this.projectileSpeed,
       this.splashRadius,
       this.slowFactor,
-      this._def.slowDuration,
+      this.slowDuration,
       this.color,
       this._def.projectileSize,
     );
