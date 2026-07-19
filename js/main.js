@@ -1,340 +1,221 @@
-import { MAX_DELTA, DIFFICULTIES, SPEED_OPTIONS } from './constants.js';
-import { Grid } from './grid.js';
+import { MAX_DELTA, TOWERS } from './constants.js';
+import { RunState } from './state/RunState.js';
+import { Tower } from './entities/Tower.js';
+import { LoopManager } from './systems/LoopManager.js';
+import { SpawnManager } from './systems/SpawnManager.js';
+import { CombatManager } from './systems/CombatManager.js';
+import { MilestoneManager } from './systems/MilestoneManager.js';
+import { UpgradeManager } from './systems/UpgradeManager.js';
+import { MetaProgressionManager } from './systems/MetaProgressionManager.js';
+import { OfflineManager } from './systems/OfflineManager.js';
+import { SaveManager } from './systems/SaveManager.js';
+import { InputManager } from './systems/InputManager.js';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer.js';
 import { GameRenderer } from './renderer/GameRenderer.js';
-import { Tower } from './entities/Tower.js';
-import { Projectile } from './entities/Projectile.js';
-import { WaveManager, WaveState } from './systems/WaveManager.js';
-import { EconomyManager } from './systems/EconomyManager.js';
-import { InputManager } from './systems/InputManager.js';
 import { UIManager } from './ui/UIManager.js';
-import { ErrorHandler } from './systems/ErrorHandler.js';
-import { DebugOverlay } from './systems/DebugOverlay.js';
-import { Leaderboard } from './systems/Leaderboard.js';
 
-const TOTAL_WAVES = 15;
-
-const State = {
-  START:    'start',
-  PLACING:  'placing',
-  WAVE:     'wave',
-  GAMEOVER: 'gameover',
-  VICTORY:  'victory',
-};
-
-let gameState = State.START;
-
-// ----------------------------------------------------------------
-// Core objects
-// ----------------------------------------------------------------
-const bgCanvas   = document.getElementById('bg-canvas');
+const bgCanvas = document.getElementById('bg-canvas');
 const gameCanvas = document.getElementById('game-canvas');
+const canvasWrap = document.getElementById('canvas-wrap');
+const bgCtx = bgCanvas.getContext('2d');
+const gameCtx = gameCanvas.getContext('2d');
 
-const grid         = new Grid();
-const bgRenderer   = new BackgroundRenderer(bgCanvas, grid);
-const gameRenderer = new GameRenderer(gameCanvas, grid);
-const waveManager  = new WaveManager(grid);
-const economy      = new EconomyManager();
-const ui           = new UIManager();
+const loopManager = new LoopManager();
+const spawnManager = new SpawnManager();
+const combatManager = new CombatManager();
+const backgroundRenderer = new BackgroundRenderer();
+const gameRenderer = new GameRenderer();
+const uiManager = new UIManager();
+const inputManager = new InputManager(gameCanvas);
+const offlineManager = new OfflineManager();
 
-let towers        = [];
-let lastTimestamp = null;
-let gameSpeed     = 1;
-let difficulty    = DIFFICULTIES.normal;
+const metaState = SaveManager.loadMeta();
+let upgradeManager = new UpgradeManager();
+let runState = null;
+let paused = false;
+let placingTower = null;
+let hoverSlot = null;
+let runFinished = false;
 
-const debugOverlay = new DebugOverlay(gameCanvas);
-
-// ----------------------------------------------------------------
-// Resize
-// ----------------------------------------------------------------
-
-function resize() {
-  const container = document.getElementById('canvas-container');
-  const w = container.clientWidth;
-  const h = container.clientHeight;
-
-  bgCanvas.width  = gameCanvas.width  = w;
-  bgCanvas.height = gameCanvas.height = h;
-
-  grid.resize(w, h);
-  bgRenderer.draw();
-  for (const t of towers) t.updatePosition();
-  ui.setTileSize(grid.tileSize);
+function occupiedSlotsSet(rs) {
+  return new Set(rs.towers.map((t) => t.slotIndex));
 }
 
-let _resizeTimer;
-function debouncedResize() {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(resize, 100);
-}
-window.addEventListener('resize', debouncedResize);
-window.addEventListener('orientationchange', debouncedResize);
-
-// ----------------------------------------------------------------
-// Input
-// ----------------------------------------------------------------
-
-const input = new InputManager(gameCanvas, {
-  onTap(x, y) {
-    if (gameState !== State.PLACING && gameState !== State.WAVE) return;
-
-    const cell = grid.screenToGrid(x, y);
-    if (!cell) return;
-    const { col, row } = cell;
-
-    // Tap on existing tower → show info panel
-    const existing = grid.getTower(col, row);
-    if (existing) {
-      gameRenderer.selectedTower = existing;
-      gameRenderer.placingTower  = null;
-      ui.deselectTower();
-      ui.setTileSize(grid.tileSize);
-      ui.showTowerPanel(existing);
-      return;
-    }
-
-    // Tap on empty cell while placing → place tower
-    if (!gameRenderer.placingTower) return;
-    if (!grid.canPlaceTower(col, row)) return;
-    if (!economy.canAfford(gameRenderer.placingTower)) return;
-
-    const type = gameRenderer.placingTower;
-    economy.spend(type);
-
-    const tower = new Tower(type, col, row, grid);
-    grid.placeTower(col, row, tower);
-    towers.push(tower);
-
-    ui.updateGold(economy.gold);
-    ui.showToast(`${tower._def.displayName} deployed.`);
-  },
-
-  onHover(x, y) {
-    gameRenderer.hoverCell = grid.screenToGrid(x, y);
-  },
-
-  onLeave() {
-    gameRenderer.hoverCell = null;
-  },
-});
-
-// ----------------------------------------------------------------
-// UI callbacks
-// ----------------------------------------------------------------
-
-ui.onSelectTower(type => {
-  gameRenderer.placingTower  = type;
-  gameRenderer.selectedTower = null;
-  ui.hideTowerPanel();
-});
-
-ui.onSellTower(tower => {
-  if (!tower) { gameRenderer.selectedTower = null; return; }
-  const refund = tower.sellValue;
-  economy.gold += refund;
-  grid.removeTower(tower.col, tower.row);
-  towers = towers.filter(t => t !== tower);
-  gameRenderer.selectedTower = null;
-  ui.updateGold(economy.gold);
-  ui.showToast(`Defense removed. +${refund} cr returned.`);
-});
-
-ui.onUpgradeTower(tower => {
-  if (!tower.canUpgrade) return;
-  if (!economy.canAffordAmount(tower.upgradeCost)) {
-    ui.showToast('Insufficient credits.');
-    return;
-  }
-  economy.gold -= tower.upgradeCost;
-  tower.upgrade();
-  ui.updateGold(economy.gold);
-  ui.showToast(`${tower._def.displayName} upgraded.`);
-});
-
-ui.onStartWave(() => {
-  if (gameState !== State.PLACING && gameState !== State.WAVE) return;
-  if (!waveManager.isIdle) return;
-
-  waveManager.enemyHpMult  = difficulty.enemyHpMult;
-  waveManager.enemySpdMult = difficulty.enemySpdMult;
-  waveManager.startNextWave();
-  gameState = State.WAVE;
-  ui.setStartButtonState(false, `Wave ${waveManager.wave} active`);
-  ui.updateWave(waveManager.wave);
-  ui.hideWavePreview();
-  ui.showToast(`Wave ${waveManager.wave}: threat sequence initiated.`);
-});
-
-ui.onSpeedToggle(() => {
-  const idx = SPEED_OPTIONS.indexOf(gameSpeed);
-  gameSpeed = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
-  ui.setSpeed(gameSpeed);
-});
-
-// ----------------------------------------------------------------
-// Game reset
-// ----------------------------------------------------------------
-
-function startGame(chosenDifficulty = DIFFICULTIES.normal, mapIndex = 0) {
-  difficulty = chosenDifficulty;
-  gameSpeed  = 1;
-  ui.setSpeed(1);
-  economy.reset(difficulty);
-  waveManager.reset();
-
-  // Load selected map
-  grid.loadMap(mapIndex);
-  if (grid.tileSize > 0) {
-    bgRenderer.draw();
-    waveManager.grid = grid; // re-point in case grid ref changed
-  }
-  Projectile.pool.resetAll();
-
-  towers = [];
-  for (let r = 0; r < grid.rows; r++) {
-    for (let c = 0; c < grid.cols; c++) {
-      if (grid.tiles[r][c].tower) grid.removeTower(c, r);
-    }
-  }
-
-  gameRenderer.placingTower  = null;
-  gameRenderer.hoverCell     = null;
-  gameRenderer.selectedTower = null;
-  ui.deselectTower();
-  ui.hideTowerPanel();
-  ui.updateGold(economy.gold);
-  ui.updateLives(economy.lives);
-  ui.updateWave(0);
-  ui.updateScore(0);
-  ui.setStartButtonState(true, 'Deploy wave 1');
-  ui.hideModal();
-
-  gameState = State.PLACING;
+function drawBackground() {
+  if (!runState) return;
+  backgroundRenderer.draw(bgCtx, bgCanvas, loopManager, occupiedSlotsSet(runState));
 }
 
-// ----------------------------------------------------------------
-// Splash damage
-// ----------------------------------------------------------------
-
-function handleSplash(x, y, radiusPx, damage, slowFactor, slowDuration) {
-  const r2 = radiusPx * radiusPx;
-  for (const e of waveManager.enemies) {
-    if (!e.active || e.dying) continue;
-    const dx = e.x - x;
-    const dy = e.y - y;
-    if (dx * dx + dy * dy <= r2) {
-      e.takeDamage(damage, slowFactor, slowDuration);
-    }
-  }
+function resizeCanvases() {
+  const w = canvasWrap.clientWidth;
+  const h = canvasWrap.clientHeight;
+  bgCanvas.width = w;
+  bgCanvas.height = h;
+  gameCanvas.width = w;
+  gameCanvas.height = h;
+  loopManager.resize(w, h);
+  drawBackground();
 }
 
-// ----------------------------------------------------------------
-// Game loop
-// ----------------------------------------------------------------
-
-function gameLoop(timestamp) {
-  requestAnimationFrame(gameLoop);
-
-  const rawDt = lastTimestamp === null
-    ? 0
-    : Math.min((timestamp - lastTimestamp) / 1000, MAX_DELTA);
-  lastTimestamp = timestamp;
-  const dt = rawDt * gameSpeed;
-
-  debugOverlay.tick(dt);
-
-  if (gameState === State.PLACING || gameState === State.WAVE) {
-    update(dt);
-  }
-
-  gameRenderer.draw(towers, waveManager.enemies);
-
-  if (debugOverlay.visible) {
-    debugOverlay.draw({
-      towers:     towers.length,
-      enemies:    waveManager.enemies.length,
-      poolSize:   Projectile.pool.size,
-      poolActive: Projectile.pool.countActive(),
-      wave:       waveManager.wave,
-      gameSpeed,
-    });
-  }
+function syncLoopManagerToRun() {
+  loopManager.setTierIndex(runState.loopTierIndex);
+  loopManager.setExtraSlots(runState.extraSlots);
 }
 
-function update(dt) {
-  if (gameState !== State.WAVE) return;
-
-  for (const t of towers) t.update(dt, waveManager.enemies);
-
-  Projectile.pool.forEachActive(p => p.update(dt, waveManager.enemies, handleSplash));
-
-  // Single-pass: process reached and killed enemies without allocating filter arrays
-  let livesLost  = 0;
-  let goldChanged = false;
-
-  for (const e of waveManager.enemies) {
-    if (e.reached) {
-      economy.loseLife(1);
-      e.active = false;
-      livesLost++;
-    } else if (e.dying && e.hp <= 0 && !e._rewarded) {
-      e._rewarded = true;
-      economy.earnKill(e.reward);
-      ui.showGoldFloat(e.x, e.y - 30, e.reward);
-      goldChanged = true;
-    }
-  }
-
-  if (livesLost  > 0) ui.updateLives(economy.lives);
-  if (goldChanged)    { ui.updateGold(economy.gold); ui.updateScore(economy.score); }
-
-  waveManager.update(dt);
-
-  if (economy.isDead) {
-    gameState = State.GAMEOVER;
-    submitAndShowEnd((rank, top) => ui.showGameOver(waveManager.wave, economy.score, difficulty.label, rank, top, startGame));
-    return;
-  }
-
-  if (waveManager.state === WaveState.COMPLETE) {
-    const bonus = economy.earnWaveBonus(waveManager.wave);
-    ui.updateGold(economy.gold);
-    ui.updateScore(economy.score);
-
-    if (waveManager.wave >= TOTAL_WAVES) {
-      gameState = State.VICTORY;
-      submitAndShowEnd((rank, top) => ui.showVictory(economy.score, rank, top, startGame));
-    } else {
-      gameState = State.PLACING;
-      ui.setStartButtonState(true, `Deploy wave ${waveManager.wave + 1}`);
-      // Show next wave preview
-      const preview = waveManager.getNextWavePreview();
-      ui.updateWavePreview(preview);
-      ui.showWaveComplete(waveManager.wave, bonus, () => {});
-    }
-  }
+function startNewRun() {
+  runFinished = false;
+  runState = RunState.create(metaState.getBonuses());
+  syncLoopManagerToRun();
+  upgradeManager = new UpgradeManager();
+  gameRenderer.fx = [];
+  placingTower = null;
+  hoverSlot = null;
+  uiManager.clearTowerSelection();
+  uiManager.hideAllModals();
+  resizeCanvases();
+  SaveManager.saveRun(runState);
 }
 
-// ----------------------------------------------------------------
-// Leaderboard helper
-// ----------------------------------------------------------------
-
-function submitAndShowEnd(showFn) {
-  const rank = Leaderboard.submit(difficulty.label, economy.score, waveManager.wave);
-  showFn(rank, Leaderboard.getTop(difficulty.label));
+function finishRun() {
+  if (runFinished || !runState) return;
+  runFinished = true;
+  const cores = MetaProgressionManager.finalizeRun(runState, metaState);
+  SaveManager.saveMeta(metaState);
+  SaveManager.clearRun();
+  uiManager.showRunEndModal(
+    {
+      goldEarned: runState.lifetimeGoldEarned,
+      tierName: loopManager.getCurrentTier().name,
+      kills: runState.killCount,
+      runSeconds: runState.runSeconds(),
+    },
+    cores
+  );
 }
 
-// ----------------------------------------------------------------
-// Boot
-// ----------------------------------------------------------------
-
-function boot() {
-  ErrorHandler.init(ui);
-  resize();
-  ui.showStartScreen((chosenDifficulty, mapIndex) => {
-    startGame(chosenDifficulty, mapIndex);
-    requestAnimationFrame(gameLoop);
+function openUpgradeModal() {
+  paused = true;
+  const choices = upgradeManager.drawChoices(runState);
+  uiManager.showUpgradeModal(choices, (card) => {
+    upgradeManager.applyChoice(card, runState);
+    uiManager.hideAllModals();
+    paused = false;
   });
 }
 
-boot();
+uiManager.bindHandlers({
+  onSelectTower: (typeId) => {
+    placingTower = typeId;
+  },
+  onSelectTroop: (typeId) => {
+    if (runState) spawnManager.sendTroop(typeId, runState);
+  },
+  onCashOut: () => finishRun(),
+  onExpandTier: () => {
+    if (runState && MilestoneManager.expand(runState, loopManager)) {
+      uiManager.hideTierBanner();
+      drawBackground();
+    }
+  },
+  onStartNewRun: () => startNewRun(),
+  onOpenMetaShop: () => uiManager.showMetaShopModal(metaState),
+  onPurchaseMeta: (id) => {
+    if (metaState.purchase(id)) {
+      SaveManager.saveMeta(metaState);
+      uiManager.showMetaShopModal(metaState);
+    }
+  },
+  onDismissOffline: () => uiManager.hideAllModals(),
+});
+
+inputManager.onTap((x, y) => {
+  if (!placingTower || !runState) return;
+  const slotIndex = loopManager.hitTestSlot(x, y, occupiedSlotsSet(runState));
+  if (slotIndex == null) return;
+  const def = TOWERS[placingTower];
+  if (!runState.unlockedTowerTypes.includes(placingTower) || runState.gold < def.cost) return;
+  runState.gold -= def.cost;
+  runState.towers.push(new Tower(placingTower, slotIndex));
+  placingTower = null;
+  uiManager.clearTowerSelection();
+  drawBackground();
+});
+
+inputManager.onHover((x, y) => {
+  if (!placingTower || !runState) {
+    hoverSlot = null;
+    return;
+  }
+  hoverSlot = loopManager.hitTestSlot(x, y, occupiedSlotsSet(runState));
+});
+
+inputManager.onLeave(() => {
+  hoverSlot = null;
+});
+
+window.addEventListener('resize', resizeCanvases);
+
+offlineManager.startAutosave(() => {
+  if (runState && !runFinished) SaveManager.saveRun(runState);
+});
+
+// --- Boot ------------------------------------------------------------
+
+const existingRun = SaveManager.loadRun();
+if (existingRun && !existingRun.gameOver) {
+  runState = existingRun;
+  syncLoopManagerToRun();
+  resizeCanvases();
+  const offlineResult = offlineManager.computeOfflineEarnings(runState);
+  if (!offlineResult.silent) {
+    offlineManager.applyOfflineEarnings(runState, offlineResult);
+    uiManager.showOfflineModal(offlineResult);
+  } else {
+    uiManager.hideAllModals();
+  }
+  runState.lastSaveTimestamp = Date.now();
+} else {
+  resizeCanvases();
+  uiManager.showStartModal(metaState);
+}
+
+let lastTs = null;
+function frame(ts) {
+  if (lastTs == null) lastTs = ts;
+  let dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  dt = Math.min(dt, MAX_DELTA);
+
+  if (runState && !paused && !runFinished) {
+    spawnManager.tick(dt, runState);
+    const events = combatManager.update(dt, runState, loopManager);
+    gameRenderer.addShotEvents(events.shotEvents);
+    gameRenderer.addKillEvents(events.killEvents, loopManager);
+    gameRenderer.addLeashEvents(events.leashEvents, loopManager);
+    upgradeManager.checkThreshold(runState);
+
+    if (runState.gameOver) finishRun();
+  }
+
+  gameRenderer.update(dt);
+
+  if (runState) {
+    uiManager.updateHUD(runState, metaState, loopManager);
+
+    if (!paused && !runFinished && MilestoneManager.isNextTierAvailable(runState, loopManager)) {
+      uiManager.showTierBanner(loopManager.getNextTier());
+    } else {
+      uiManager.hideTierBanner();
+    }
+
+    if (!paused && !runFinished && upgradeManager.hasPendingOffer()) {
+      openUpgradeModal();
+    }
+
+    gameRenderer.draw(gameCtx, gameCanvas, runState, loopManager, hoverSlot);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);

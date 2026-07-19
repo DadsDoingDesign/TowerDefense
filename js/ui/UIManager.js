@@ -1,429 +1,268 @@
-import { TOWERS, UPGRADES, DIFFICULTIES, MAPS } from '../constants.js';
+import { TOWERS, ENEMIES, META_UPGRADES } from '../constants.js';
+
+const TROOP_TYPES = Object.values(ENEMIES).filter((e) => e.kind !== 'auto');
+
+function fmt(n) {
+  return Math.floor(n).toLocaleString();
+}
+
+function fmtDuration(seconds) {
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
 
 export class UIManager {
   constructor() {
-    this._goldEl  = document.getElementById('gold-value');
-    this._livesEl = document.getElementById('lives-value');
-    this._waveEl  = document.getElementById('wave-value');
-    this._scoreEl = document.getElementById('score-value');
-
-    this._towerBtns = document.querySelectorAll('.tower-btn');
-    this._startBtn  = document.getElementById('start-wave-btn');
-    this._startLbl  = document.getElementById('start-wave-label');
-
-    this._modalOverlay = document.getElementById('modal-overlay');
-    this._modalHeader  = document.getElementById('modal-header');
-    this._modalBody    = document.getElementById('modal-body');
-    this._modalActions = document.getElementById('modal-actions');
-
-    this._toast      = document.getElementById('toast');
-    this._toastTimer = null;
-
-    this._floatsEl = document.getElementById('floats');
-
-    // Speed control
-    this._speedBtn       = document.getElementById('speed-btn');
-    this._onSpeedToggle  = null;
-
-    // Wave preview
-    this._wavePreviewRow  = document.getElementById('wave-preview-row');
-    this._wavePreviewText = document.getElementById('wave-preview-text');
-
-    this._bindSpeedButton();
-
-    // Tower info panel
-    this._towerPanel   = document.getElementById('tower-panel');
-    this._tpName       = document.getElementById('tp-name');
-    this._tpLevel      = document.getElementById('tp-level');
-    this._tpStats      = document.getElementById('tp-stats');
-    this._tpUpgradeBtn = document.getElementById('tp-upgrade');
-    this._tpSellBtn    = document.getElementById('tp-sell');
-    this._tpCloseBtn   = document.getElementById('tp-close');
-
-    this.selectedTowerType = null; // placing selection
-    this._currentGold = 0;
-
-    this._onSelectTower = null;
-    this._onStartWave   = null;
-    this._onSellTower   = null;
-    this._onUpgradeTower = null;
-
-    this._bindTowerButtons();
-    this._bindStartButton();
-    this._bindTowerPanel();
+    this.selectedTower = null;
+    this.handlers = {};
+    this._cacheDom();
+    this._buildButtons();
+    this._bindStaticButtons();
   }
 
-  // ----------------------------------------------------------------
-  // Callbacks
-  // ----------------------------------------------------------------
-
-  onSelectTower(fn)  { this._onSelectTower  = fn; }
-  onStartWave(fn)    { this._onStartWave    = fn; }
-  onSellTower(fn)    { this._onSellTower    = fn; }
-  onUpgradeTower(fn) { this._onUpgradeTower = fn; }
-  onSpeedToggle(fn)  { this._onSpeedToggle  = fn; }
-
-  // ----------------------------------------------------------------
-  // HUD
-  // ----------------------------------------------------------------
-
-  updateGold(gold) {
-    this._currentGold = gold;
-    if (this._goldEl) this._goldEl.textContent = gold;
-    this._refreshAffordability(gold);
+  bindHandlers(handlers) {
+    this.handlers = handlers;
   }
 
-  updateLives(lives) {
-    if (this._livesEl) this._livesEl.textContent = lives;
+  _cacheDom() {
+    this.el = {
+      gold: document.getElementById('hud-gold'),
+      baseHpFill: document.getElementById('hud-basehp-fill'),
+      baseHpText: document.getElementById('hud-basehp-text'),
+      tierLabel: document.getElementById('hud-tier-label'),
+      cores: document.getElementById('hud-cores'),
+      tierProgressFill: document.getElementById('tier-progress-fill'),
+      tierProgressLabel: document.getElementById('tier-progress-label'),
+      tierBanner: document.getElementById('tier-banner'),
+      tierBannerText: document.getElementById('tier-banner-text'),
+      expandBtn: document.getElementById('expand-btn'),
+      towerButtons: document.getElementById('tower-buttons'),
+      troopButtons: document.getElementById('troop-buttons'),
+      cashoutBtn: document.getElementById('cashout-btn'),
+      backdrop: document.getElementById('modal-backdrop'),
+      modalStart: document.getElementById('modal-start'),
+      startCores: document.getElementById('start-cores'),
+      startNewRunBtn: document.getElementById('start-newrun-btn'),
+      startMetashopBtn: document.getElementById('start-metashop-btn'),
+      modalUpgrade: document.getElementById('modal-upgrade'),
+      upgradeChoices: document.getElementById('upgrade-choices'),
+      modalRunEnd: document.getElementById('modal-runend'),
+      runEndStats: document.getElementById('runend-stats'),
+      runEndCores: document.getElementById('runend-cores'),
+      runEndNewRunBtn: document.getElementById('runend-newrun-btn'),
+      runEndMetashopBtn: document.getElementById('runend-metashop-btn'),
+      modalMetaShop: document.getElementById('modal-metashop'),
+      metaShopCores: document.getElementById('metashop-cores'),
+      metaShopList: document.getElementById('metashop-list'),
+      metaShopCloseBtn: document.getElementById('metashop-close-btn'),
+      modalOffline: document.getElementById('modal-offline'),
+      offlineSummary: document.getElementById('offline-summary'),
+      offlineDismissBtn: document.getElementById('offline-dismiss-btn'),
+    };
   }
 
-  updateWave(wave) {
-    if (this._waveEl) this._waveEl.textContent = wave === 0 ? '—' : wave;
-  }
-
-  updateScore(score) {
-    if (this._scoreEl) this._scoreEl.textContent = score.toLocaleString();
-  }
-
-  setStartButtonState(canStart, label) {
-    if (!this._startBtn) return;
-    this._startBtn.disabled = !canStart;
-    if (this._startLbl) this._startLbl.textContent = label;
-  }
-
-  // ----------------------------------------------------------------
-  // Tower selection (placing)
-  // ----------------------------------------------------------------
-
-  selectTower(type) {
-    this.selectedTowerType = type;
-    this._towerBtns.forEach(btn => btn.classList.toggle('selected', btn.dataset.tower === type));
-  }
-
-  deselectTower() {
-    this.selectedTowerType = null;
-    this._towerBtns.forEach(btn => btn.classList.remove('selected'));
-  }
-
-  _refreshAffordability(gold) {
-    this._towerBtns.forEach(btn => {
-      const cost = TOWERS[btn.dataset.tower]?.cost ?? Infinity;
-      btn.classList.toggle('unaffordable', gold < cost);
-    });
-  }
-
-  _bindTowerButtons() {
-    this._towerBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const type = btn.dataset.tower;
-        if (this.selectedTowerType === type) {
-          this.deselectTower();
-          this._onSelectTower?.(null);
-        } else {
-          this.deselectTower();
-          this.hideTowerPanel();
-          this.selectTower(type);
-          this._onSelectTower?.(type);
-        }
-      });
-    });
-  }
-
-  _bindStartButton() {
-    this._startBtn?.addEventListener('click', () => this._onStartWave?.());
-  }
-
-  _bindSpeedButton() {
-    this._speedBtn?.addEventListener('click', () => this._onSpeedToggle?.());
-  }
-
-  // ----------------------------------------------------------------
-  // Speed display
-  // ----------------------------------------------------------------
-
-  setSpeed(multiplier) {
-    if (!this._speedBtn) return;
-    const isFast = multiplier > 1;
-    this._speedBtn.textContent = `${multiplier}×`;
-    this._speedBtn.classList.toggle('fast', isFast);
-    this._speedBtn.setAttribute('aria-label', `Speed: ${multiplier}×`);
-  }
-
-  // ----------------------------------------------------------------
-  // Wave preview
-  // ----------------------------------------------------------------
-
-  updateWavePreview(counts) {
-    if (!this._wavePreviewRow || !this._wavePreviewText) return;
-    const parts = [];
-    if (counts.boss)    parts.push(`⚠ ${counts.boss} zero-day`);
-    if (counts.basic)   parts.push(`${counts.basic} bot`);
-    if (counts.fast)    parts.push(`${counts.fast} script`);
-    if (counts.tank)    parts.push(`${counts.tank} flood`);
-    if (counts.armored) parts.push(`${counts.armored} apt`);
-    if (parts.length === 0) {
-      this._wavePreviewRow.classList.add('hidden');
-    } else {
-      this._wavePreviewText.textContent = parts.join('  ·  ');
-      this._wavePreviewRow.classList.remove('hidden');
-    }
-  }
-
-  hideWavePreview() {
-    this._wavePreviewRow?.classList.add('hidden');
-  }
-
-  // ----------------------------------------------------------------
-  // Tower info panel
-  // ----------------------------------------------------------------
-
-  showTowerPanel(tower) {
-    if (!this._towerPanel) return;
-
-    const def = TOWERS[tower.type];
-    const up  = UPGRADES[tower.type];
-
-    this._tpName.textContent  = def.displayName;
-    this._tpLevel.textContent = tower.level === 2 ? 'LVL 2 — MAX' : 'LVL 1';
-
-    const dmgFmt   = tower.damage.toFixed(0);
-    const rangeFmt = (tower.range / this._lastTileSize || 1).toFixed(1);
-    const frFmt    = tower.fireRate.toFixed(1);
-
-    this._tpStats.innerHTML = `
-      DMG&nbsp;&nbsp;${dmgFmt}&nbsp;&nbsp;|&nbsp;&nbsp;RNG&nbsp;${(tower._def.range * (tower._upgradeRangeX || 1)).toFixed(1)} tiles&nbsp;&nbsp;|&nbsp;&nbsp;RATE&nbsp;${frFmt}/s
-      ${tower.type === 'frost' ? `<br>SLOW ${(tower.slowFactor * 100).toFixed(0)}%&nbsp;&nbsp;|&nbsp;&nbsp;DUR ${tower.slowDuration}s` : ''}
-    `;
-
-    if (tower.canUpgrade) {
-      const canAfford = this._currentGold >= up.cost;
-      this._tpUpgradeBtn.textContent = `Upgrade — ${up.cost} cr`;
-      this._tpUpgradeBtn.disabled    = !canAfford;
-      this._tpUpgradeBtn.style.display = '';
-    } else {
-      this._tpUpgradeBtn.style.display = 'none';
-    }
-
-    this._tpSellBtn.textContent = `Sell — +${tower.sellValue} cr`;
-
-    this._activeTower = tower;
-    this._towerPanel.classList.remove('hidden');
-  }
-
-  hideTowerPanel() {
-    this._towerPanel?.classList.add('hidden');
-    this._activeTower = null;
-  }
-
-  /** Called on resize so stat display has correct tile size */
-  setTileSize(px) { this._lastTileSize = px; }
-
-  _bindTowerPanel() {
-    this._tpCloseBtn?.addEventListener('click', () => {
-      this.hideTowerPanel();
-      this._onSellTower?.(null); // null = just deselect
-    });
-
-    this._tpSellBtn?.addEventListener('click', () => {
-      if (this._activeTower) this._onSellTower?.(this._activeTower);
-      this.hideTowerPanel();
-    });
-
-    this._tpUpgradeBtn?.addEventListener('click', () => {
-      if (this._activeTower) this._onUpgradeTower?.(this._activeTower);
-      // Refresh panel stats after upgrade
-      if (this._activeTower) this.showTowerPanel(this._activeTower);
-    });
-  }
-
-  // ----------------------------------------------------------------
-  // Toast
-  // ----------------------------------------------------------------
-
-  showToast(message, duration = 2200) {
-    const t = this._toast;
-    if (!t) return;
-    t.textContent = message;
-    t.classList.add('show');
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => t.classList.remove('show'), duration);
-  }
-
-  // ----------------------------------------------------------------
-  // Gold floats
-  // ----------------------------------------------------------------
-
-  showGoldFloat(screenX, screenY, amount) {
-    const el = document.createElement('div');
-    el.className    = 'float-text';
-    el.textContent  = `+${amount}`;
-    el.style.left   = `${screenX}px`;
-    el.style.top    = `${screenY}px`;
-    this._floatsEl?.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
-  }
-
-  // ----------------------------------------------------------------
-  // Modal
-  // ----------------------------------------------------------------
-
-  showModal({ header, body, actions }) {
-    if (!this._modalOverlay) return;
-    this._modalHeader.innerHTML  = header;
-    this._modalBody.innerHTML    = body;
-    this._modalActions.innerHTML = '';
-
-    for (const { label, primary, onClick } of actions) {
+  _buildButtons() {
+    this.el.towerButtons.innerHTML = '';
+    for (const def of Object.values(TOWERS)) {
       const btn = document.createElement('button');
-      btn.textContent = label;
-      btn.className   = primary ? 'action-btn' : 'secondary-btn';
-      btn.addEventListener('click', () => {
-        this.hideModal();
-        onClick?.();
-      });
-      this._modalActions.appendChild(btn);
+      btn.className = 'action-btn build-btn';
+      btn.dataset.type = def.id;
+      btn.innerHTML = `<span class="swatch" style="background:${def.color}"></span><span class="label">${def.label}</span><span class="cost">${def.cost}g</span>`;
+      btn.addEventListener('click', () => this._onTowerButtonClick(def.id));
+      this.el.towerButtons.appendChild(btn);
     }
 
-    this._modalOverlay.classList.remove('hidden');
+    this.el.troopButtons.innerHTML = '';
+    for (const def of TROOP_TYPES) {
+      const btn = document.createElement('button');
+      btn.className = 'action-btn troop-btn';
+      btn.dataset.type = def.id;
+      btn.innerHTML = `<span class="swatch" style="background:${def.color}"></span><span class="label">${def.label}</span><span class="cost">${def.cost}g</span><span class="value">kill: +${def.killValue}</span>`;
+      btn.addEventListener('click', () => this.handlers.onSelectTroop && this.handlers.onSelectTroop(def.id));
+      this.el.troopButtons.appendChild(btn);
+    }
   }
 
-  hideModal() {
-    this._modalOverlay?.classList.add('hidden');
-  }
-
-  // ----------------------------------------------------------------
-  // Prebuilt modals
-  // ----------------------------------------------------------------
-
-  showStartScreen(onStart) {
-    let selectedMapIndex = 0;
-    let selectedDiff     = 'normal';
-
-    // Build map toggle options — split "Alpha — Gateway" into label + sub
-    const mapToggles = MAPS.map((m, i) => {
-      const parts = m.name.split(' — ');
-      const label = parts[0].trim();
-      const sub   = parts[1] ? parts[1].trim() : '';
-      return `<button class="toggle-opt${i === 0 ? ' selected' : ''}" data-map="${i}">
-        <span class="toggle-opt-label">${label}</span>
-        ${sub ? `<span class="toggle-opt-sub">${sub}</span>` : ''}
-      </button>`;
-    }).join('');
-
-    // Build difficulty toggle options
-    const diffKeys    = Object.keys(DIFFICULTIES);
-    const diffToggles = diffKeys.map(key => {
-      const d = DIFFICULTIES[key];
-      return `<button class="toggle-opt${key === 'normal' ? ' selected' : ''}" data-diff="${key}">
-        <span class="toggle-opt-label">${d.label}</span>
-      </button>`;
-    }).join('');
-
-    this.showModal({
-      header: 'SENTINEL',
-      body: `
-        <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:18px">
-          Intrusion detected. Configure your defense perimeter to neutralize incoming threat vectors.
-        </p>
-
-        <p class="modal-section-label">Network Zone</p>
-        <div class="toggle-group" id="map-select">${mapToggles}</div>
-        <p id="map-desc" class="toggle-hint">${MAPS[0].description}</p>
-
-        <p class="modal-section-label" style="margin-top:16px">Threat Level</p>
-        <div class="toggle-group" id="difficulty-select">${diffToggles}</div>
-        <p id="diff-desc" class="toggle-hint">${DIFFICULTIES.normal.description}</p>
-      `,
-      actions: [{ label: 'Initialize Defense', primary: true, onClick: () => {
-        onStart(DIFFICULTIES[selectedDiff], selectedMapIndex);
-      }}],
+  _bindStaticButtons() {
+    this.el.cashoutBtn.addEventListener('click', () => this.handlers.onCashOut && this.handlers.onCashOut());
+    this.el.expandBtn.addEventListener('click', () => this.handlers.onExpandTier && this.handlers.onExpandTier());
+    this.el.startNewRunBtn.addEventListener('click', () => this.handlers.onStartNewRun && this.handlers.onStartNewRun());
+    this.el.startMetashopBtn.addEventListener('click', () => this.handlers.onOpenMetaShop && this.handlers.onOpenMetaShop());
+    this.el.runEndNewRunBtn.addEventListener('click', () => this.handlers.onStartNewRun && this.handlers.onStartNewRun());
+    this.el.runEndMetashopBtn.addEventListener('click', () => this.handlers.onOpenMetaShop && this.handlers.onOpenMetaShop());
+    this.el.metaShopCloseBtn.addEventListener('click', () => {
+      if (this._metaShopReturnModal) {
+        this._showModal(this._metaShopReturnModal);
+        this._metaShopReturnModal = null;
+      } else {
+        this.hideAllModals();
+      }
+      this.handlers.onCloseMetaShop && this.handlers.onCloseMetaShop();
     });
+    this.el.offlineDismissBtn.addEventListener('click', () => this.handlers.onDismissOffline && this.handlers.onDismissOffline());
+  }
 
-    const mapContainer  = document.getElementById('map-select');
-    const diffContainer = document.getElementById('difficulty-select');
-    const mapDescEl     = document.getElementById('map-desc');
-    const diffDescEl    = document.getElementById('diff-desc');
+  _onTowerButtonClick(typeId) {
+    this.selectedTower = this.selectedTower === typeId ? null : typeId;
+    this._refreshTowerSelection();
+    this.handlers.onSelectTower && this.handlers.onSelectTower(this.selectedTower);
+  }
 
-    mapContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedMapIndex = parseInt(btn.dataset.map, 10);
-        mapContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        if (mapDescEl) mapDescEl.textContent = MAPS[selectedMapIndex].description;
+  clearTowerSelection() {
+    this.selectedTower = null;
+    this._refreshTowerSelection();
+  }
+
+  _refreshTowerSelection() {
+    this.el.towerButtons.querySelectorAll('.build-btn').forEach((btn) => {
+      btn.classList.toggle('selected', btn.dataset.type === this.selectedTower);
+    });
+  }
+
+  // --- HUD -----------------------------------------------------------
+
+  updateHUD(runState, metaState, loopManager) {
+    this.el.gold.textContent = fmt(runState.gold);
+    this.el.cores.textContent = fmt(metaState.cores);
+
+    const hpFrac = runState.baseMaxHP > 0 ? runState.baseHP / runState.baseMaxHP : 0;
+    this.el.baseHpFill.style.width = `${Math.max(0, hpFrac * 100)}%`;
+    this.el.baseHpFill.classList.toggle('low', hpFrac <= 0.3);
+    this.el.baseHpText.textContent = `${Math.max(0, Math.round(runState.baseHP))}/${runState.baseMaxHP}`;
+
+    this.el.tierLabel.textContent = loopManager.getCurrentTier().name;
+
+    const next = loopManager.getNextTier();
+    if (next) {
+      const frac = Math.min(1, runState.lifetimeGoldEarned / next.unlockThreshold);
+      this.el.tierProgressFill.style.width = `${frac * 100}%`;
+      this.el.tierProgressLabel.textContent = `${fmt(runState.lifetimeGoldEarned)} / ${fmt(next.unlockThreshold)} to ${next.name}`;
+    } else {
+      this.el.tierProgressFill.style.width = '100%';
+      this.el.tierProgressLabel.textContent = 'Max ring size reached';
+    }
+
+    this._updateBuildButtons(runState);
+    this._updateTroopButtons(runState);
+  }
+
+  _updateBuildButtons(runState) {
+    this.el.towerButtons.querySelectorAll('.build-btn').forEach((btn) => {
+      const id = btn.dataset.type;
+      const def = TOWERS[id];
+      const locked = !runState.unlockedTowerTypes.includes(id);
+      btn.classList.toggle('locked', locked);
+      btn.disabled = locked || runState.gold < def.cost;
+      const costEl = btn.querySelector('.cost');
+      costEl.textContent = locked ? 'Locked' : `${def.cost}g`;
+    });
+  }
+
+  _updateTroopButtons(runState) {
+    this.el.troopButtons.querySelectorAll('.troop-btn').forEach((btn) => {
+      const id = btn.dataset.type;
+      const def = ENEMIES[id];
+      const cost = Math.round(def.cost * runState.modifiers.troopCostMult);
+      const value = Math.round(def.killValue * runState.modifiers.troopValueMult);
+      btn.disabled = runState.gold < cost;
+      btn.querySelector('.cost').textContent = `${cost}g`;
+      btn.querySelector('.value').textContent = `kill: +${value}`;
+    });
+  }
+
+  // --- Tier expansion banner -------------------------------------------
+
+  showTierBanner(nextTier) {
+    this.el.tierBannerText.textContent = `${nextTier.name} available — expand for ${nextTier.slotCount} slots`;
+    this.el.tierBanner.classList.remove('hidden');
+  }
+
+  hideTierBanner() {
+    this.el.tierBanner.classList.add('hidden');
+  }
+
+  // --- Modals ------------------------------------------------------------
+
+  _showModal(modalEl) {
+    this.el.backdrop.classList.remove('hidden');
+    document.querySelectorAll('.modal').forEach((m) => m.classList.add('hidden'));
+    modalEl.classList.remove('hidden');
+  }
+
+  hideAllModals() {
+    this.el.backdrop.classList.add('hidden');
+    document.querySelectorAll('.modal').forEach((m) => m.classList.add('hidden'));
+  }
+
+  showStartModal(metaState) {
+    this.el.startCores.textContent = fmt(metaState.cores);
+    this._showModal(this.el.modalStart);
+  }
+
+  showUpgradeModal(choices, onPick) {
+    this.el.upgradeChoices.innerHTML = '';
+    for (const card of choices) {
+      const cardEl = document.createElement('button');
+      cardEl.className = 'upgrade-card';
+      cardEl.innerHTML = `<div class="card-title">${card.label}</div><div class="card-desc">${card.description}</div>`;
+      cardEl.addEventListener('click', () => {
+        onPick(card);
       });
-    });
-
-    diffContainer?.querySelectorAll('.toggle-opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedDiff = btn.dataset.diff;
-        diffContainer.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        if (diffDescEl) diffDescEl.textContent = DIFFICULTIES[selectedDiff].description;
-      });
-    });
+      this.el.upgradeChoices.appendChild(cardEl);
+    }
+    this._showModal(this.el.modalUpgrade);
   }
 
-  showWaveComplete(wave, bonus, onContinue) {
-    this.showModal({
-      header: `Wave ${wave} cleared`,
-      body: `<p>+${bonus} credits allocated to perimeter budget.</p><p>Reinforce your defenses before the next threat sequence.</p>`,
-      actions: [{ label: `Deploy wave ${wave + 1}`, primary: true, onClick: onContinue }],
-    });
-  }
-
-  showGameOver(wave, score, diffLabel, rank, topScores, onRestart) {
-    this.showModal({
-      header: 'Connection lost',
-      body: `
-        <p>Perimeter breached. All nodes offline.</p>
-        <p style="margin-top:8px">
-          <span style="color:var(--text-secondary)">Survived:</span>
-          <span style="font-family:var(--font-mono);margin-left:8px">Wave ${wave}</span>
-        </p>
-        <p>
-          <span style="color:var(--text-secondary)">Environment:</span>
-          <span style="font-family:var(--font-mono);margin-left:8px">${diffLabel}</span>
-        </p>
-        <p>
-          <span style="color:var(--text-secondary)">Final score:</span>
-          <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
-        </p>
-        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on ${diffLabel} leaderboard</p>` : ''}
-        ${this._renderLeaderboard(topScores)}
-      `,
-      actions: [{ label: 'Restart deployment', primary: true, onClick: () => this.showStartScreen(onRestart) }],
-    });
-  }
-
-  showVictory(score, rank, topScores, onRestart) {
-    this.showModal({
-      header: 'Perimeter secured',
-      body: `
-        <p>All threat vectors neutralized. The network is safe.</p>
-        <p style="margin-top:8px">
-          <span style="color:var(--text-secondary)">Final score:</span>
-          <span style="font-family:var(--font-mono);margin-left:8px">${score.toLocaleString()}</span>
-        </p>
-        ${rank ? `<p style="margin-top:4px;color:var(--accent-amber);font-family:var(--font-mono);font-size:12px">#${rank} on leaderboard</p>` : ''}
-        ${this._renderLeaderboard(topScores)}
-      `,
-      actions: [{ label: 'Deploy again', primary: true, onClick: () => this.showStartScreen(onRestart) }],
-    });
-  }
-
-  _renderLeaderboard(entries) {
-    if (!entries || entries.length === 0) return '';
-    const rows = entries.slice(0, 5).map((e, i) => `
-      <tr>
-        <td style="color:var(--text-muted);padding-right:8px;font-family:var(--font-mono);font-size:10px">#${i + 1}</td>
-        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-primary)">${e.score.toLocaleString()}</td>
-        <td style="color:var(--text-secondary);padding-left:8px;font-family:var(--font-mono);font-size:11px">W${e.wave}</td>
-        <td style="color:var(--text-muted);padding-left:8px;font-size:10px;font-family:var(--font-mono)">${e.date}</td>
-      </tr>
-    `).join('');
-    return `
-      <p style="margin-top:14px;font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Leaderboard</p>
-      <table style="margin-top:6px;border-collapse:collapse;width:100%">${rows}</table>
+  showRunEndModal(stats, cores) {
+    this.el.runEndStats.innerHTML = `
+      <div>Gold earned: <strong>${fmt(stats.goldEarned)}</strong></div>
+      <div>Loop tier reached: <strong>${stats.tierName}</strong></div>
+      <div>Kills: <strong>${fmt(stats.kills)}</strong></div>
+      <div>Time survived: <strong>${fmtDuration(stats.runSeconds)}</strong></div>
     `;
+    this.el.runEndCores.textContent = fmt(cores);
+    this._showModal(this.el.modalRunEnd);
+  }
+
+  showMetaShopModal(metaState) {
+    const visible = document.querySelector('.modal:not(.hidden)');
+    if (visible && visible.id !== 'modal-metashop') this._metaShopReturnModal = visible;
+    this.el.metaShopCores.textContent = fmt(metaState.cores);
+    this.el.metaShopList.innerHTML = '';
+    for (const def of META_UPGRADES) {
+      const level = metaState.levelOf(def.id);
+      const maxed = level >= def.maxLevel;
+      const cost = maxed ? null : def.costs[level];
+      const row = document.createElement('div');
+      row.className = 'metashop-row';
+      row.innerHTML = `
+        <div class="metashop-info">
+          <div class="metashop-title">${def.label} <span class="metashop-level">${level}/${def.maxLevel}</span></div>
+          <div class="metashop-desc">${def.description}</div>
+        </div>
+        <button class="action-btn metashop-buy" ${maxed || metaState.cores < cost ? 'disabled' : ''}>
+          ${maxed ? 'Maxed' : `Buy — ${cost} Cores`}
+        </button>
+      `;
+      row.querySelector('.metashop-buy').addEventListener('click', () => {
+        this.handlers.onPurchaseMeta && this.handlers.onPurchaseMeta(def.id);
+      });
+      this.el.metaShopList.appendChild(row);
+    }
+    this._showModal(this.el.modalMetaShop);
+  }
+
+  showOfflineModal(result) {
+    const capNote = result.wasCapped ? ' (capped)' : '';
+    this.el.offlineSummary.innerHTML = `
+      <div>You were away for <strong>${fmtDuration(result.elapsedSec)}</strong>.</div>
+      <div>Your towers kept farming grunts and earned <strong>+${fmt(result.offlineGold)} gold</strong>${capNote}.</div>
+    `;
+    this._showModal(this.el.modalOffline);
   }
 }

@@ -1,131 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#09090f">
-  <title>SENTINEL — Perimeter Defense Console</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Loopward</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%234fa8e8' stroke-width='4'/%3E%3Ccircle cx='16' cy='4' r='3.5' fill='%23f2c14e'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="game-wrapper">
-
-    <!-- Site header — brand identity -->
-    <header id="site-header">
-      <div id="header-brand">
-        <div id="header-logo" aria-hidden="true"></div>
-        <div id="header-wordmark">
-          <span id="header-title">SENTINEL</span>
-          <span id="header-subtitle">Perimeter Defense Console</span>
-        </div>
+  <div id="app">
+    <header id="hud">
+      <div class="hud-stat hud-gold">
+        <span class="hud-icon gold-icon"></span>
+        <span id="hud-gold">0</span>
       </div>
-      <div id="header-meta">
-        <div id="header-status">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>OPERATIONAL</span>
+
+      <div class="hud-basehp">
+        <div class="basehp-bar">
+          <div id="hud-basehp-fill" class="basehp-fill"></div>
         </div>
-        <span id="header-version">v2.4.1</span>
+        <span id="hud-basehp-text" class="basehp-text">0/0</span>
+      </div>
+
+      <div class="hud-tier">
+        <span id="hud-tier-label">Ring I</span>
+        <div class="tier-progress-track">
+          <div id="tier-progress-fill" class="tier-progress-fill"></div>
+        </div>
+        <span id="tier-progress-label" class="tier-progress-label"></span>
+      </div>
+
+      <div class="hud-stat hud-cores">
+        <span class="hud-icon cores-icon"></span>
+        <span id="hud-cores">0</span>
       </div>
     </header>
 
-    <!-- Canvas layer -->
-    <div id="canvas-container">
+    <main id="canvas-wrap">
       <canvas id="bg-canvas"></canvas>
       <canvas id="game-canvas"></canvas>
 
-      <!-- Floating toast notification -->
-      <div id="toast" class="toast" aria-live="polite"></div>
-    </div>
-
-    <!-- HUD bar -->
-    <div id="ui-bar">
-      <div id="stats-row">
-        <div class="stat" id="stat-gold">
-          <span class="stat-value"><span class="stat-icon gold-icon">◆</span><span id="gold-value">150</span></span>
-          <span class="stat-label">Credits</span>
-        </div>
-        <div class="stat" id="stat-lives">
-          <span class="stat-value"><span class="stat-icon lives-icon">♥</span><span id="lives-value">20</span></span>
-          <span class="stat-label">Nodes</span>
-        </div>
-        <div class="stat" id="stat-wave">
-          <span class="stat-value">#<span id="wave-value">—</span></span>
-          <span class="stat-label">Wave</span>
-        </div>
-        <div class="stat" id="stat-score">
-          <span class="stat-value mono" id="score-value">0</span>
-          <span class="stat-label">Score</span>
-        </div>
-        <div class="stats-spacer"></div>
-        <button id="speed-btn" class="speed-btn" title="Toggle game speed" aria-label="Speed: 1×">1×</button>
+      <div id="tier-banner" class="tier-banner hidden">
+        <span id="tier-banner-text"></span>
+        <button id="expand-btn" class="action-btn expand-btn">Expand</button>
       </div>
+    </main>
 
-      <!-- Wave preview -->
-      <div id="wave-preview-row" class="wave-preview-row hidden">
-        <span class="wave-preview-label">Inbound</span>
-        <span id="wave-preview-text" class="wave-preview-text"></span>
+    <footer id="action-bar">
+      <div class="panel-row">
+        <span class="panel-label">Build</span>
+        <div id="tower-buttons" class="button-row"></div>
       </div>
-
-      <div id="tower-strip">
-        <button class="tower-btn" data-tower="arrow" title="Pulse — 50 cr | High-freq interceptor">
-          <span class="tower-icon" data-tower="arrow"></span>
-          <span class="tower-name">Pulse</span>
-          <span class="tower-cost mono">50 cr</span>
-        </button>
-        <button class="tower-btn" data-tower="cannon" title="Burst — 100 cr | Broadcast disruptor">
-          <span class="tower-icon" data-tower="cannon"></span>
-          <span class="tower-name">Burst</span>
-          <span class="tower-cost mono">100 cr</span>
-        </button>
-        <button class="tower-btn" data-tower="frost" title="Throttle — 75 cr | Bandwidth limiter">
-          <span class="tower-icon" data-tower="frost"></span>
-          <span class="tower-name">Throttle</span>
-          <span class="tower-cost mono">75 cr</span>
-        </button>
-        <button class="tower-btn" data-tower="laser" title="Scan — 150 cr | Deep packet inspection">
-          <span class="tower-icon" data-tower="laser"></span>
-          <span class="tower-name">Scan</span>
-          <span class="tower-cost mono">150 cr</span>
-        </button>
-
-        <div class="strip-spacer"></div>
-
-        <button id="start-wave-btn" class="action-btn" disabled>
-          <span id="start-wave-label">Place towers</span>
-        </button>
+      <div class="panel-row">
+        <span class="panel-label">Send</span>
+        <div id="troop-buttons" class="button-row"></div>
+        <button id="cashout-btn" class="action-btn cashout-btn">Cash Out</button>
       </div>
-    </div>
+    </footer>
   </div>
 
-  <!-- Tower info panel (sell / upgrade) -->
-  <div id="tower-panel" class="tower-panel hidden" role="dialog" aria-label="Defense module options">
-    <div class="tower-panel-inner">
-      <div class="tower-panel-header">
-        <span id="tp-name"></span>
-        <span id="tp-level" class="tp-level"></span>
-        <button id="tp-close" class="tp-close" aria-label="Close">✕</button>
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div id="modal-start" class="modal hidden">
+      <h1>Loopward</h1>
+      <p class="modal-sub">An idle loop tower defense.</p>
+      <div class="cores-balance">
+        <span class="hud-icon cores-icon"></span>
+        <span id="start-cores">0</span> Cores
       </div>
-      <div class="tower-panel-stats" id="tp-stats"></div>
-      <div class="tower-panel-actions">
-        <button id="tp-upgrade" class="action-btn tp-btn-upgrade"></button>
-        <button id="tp-sell"    class="secondary-btn tp-btn-sell"></button>
+      <button id="start-newrun-btn" class="action-btn primary">New Run</button>
+      <button id="start-metashop-btn" class="action-btn">Meta Shop</button>
+    </div>
+
+    <div id="modal-upgrade" class="modal hidden">
+      <h2>Choose an upgrade</h2>
+      <p class="modal-sub">Applies for the rest of this run only.</p>
+      <div id="upgrade-choices" class="upgrade-choices"></div>
+    </div>
+
+    <div id="modal-runend" class="modal hidden">
+      <h2>Run Over</h2>
+      <div id="runend-stats" class="runend-stats"></div>
+      <div class="cores-balance">
+        Cores earned: <strong><span id="runend-cores">0</span></strong>
       </div>
+      <button id="runend-newrun-btn" class="action-btn primary">Start New Run</button>
+      <button id="runend-metashop-btn" class="action-btn">Meta Shop</button>
+    </div>
+
+    <div id="modal-metashop" class="modal hidden">
+      <h2>Meta Shop</h2>
+      <div class="cores-balance">
+        <span class="hud-icon cores-icon"></span>
+        <span id="metashop-cores">0</span> Cores
+      </div>
+      <div id="metashop-list" class="metashop-list"></div>
+      <button id="metashop-close-btn" class="action-btn">Close</button>
+    </div>
+
+    <div id="modal-offline" class="modal hidden">
+      <h2>Welcome back</h2>
+      <div id="offline-summary" class="offline-summary"></div>
+      <button id="offline-dismiss-btn" class="action-btn primary">Continue</button>
     </div>
   </div>
-
-  <!-- Modal overlay -->
-  <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true">
-    <div id="modal-card">
-      <div id="modal-header"></div>
-      <div id="modal-body"></div>
-      <div id="modal-actions"></div>
-    </div>
-  </div>
-
-  <!-- Gold float container -->
-  <div id="floats" aria-hidden="true"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

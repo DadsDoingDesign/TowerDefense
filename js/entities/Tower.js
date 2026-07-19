@@ -1,134 +1,56 @@
-import { TOWERS, UPGRADES, SELL_RATE, ANIM_TOWER_SPAWN } from '../constants.js';
-import { Projectile } from './Projectile.js';
+import { TOWERS } from '../constants.js';
 
 export class Tower {
-  constructor(type, col, row, grid) {
-    this._def = TOWERS[type];
-
-    this.type  = type;
-    this.col   = col;
-    this.row   = row;
-    this.grid  = grid;
-    this.level = 1;
-
-    // Mutable stats (upgrade modifies these in place)
-    this.damage          = this._def.damage;
-    this.fireRate        = this._def.fireRate;
-    this.projectileSpeed = this._def.projectileSpeed;
-    this.slowFactor      = this._def.slowFactor;
-    this.slowDuration    = this._def.slowDuration;
-    this.color           = this._def.color;
-
-    // Pixel-scaled — set by updatePosition()
-    this.range        = 0;
-    this.splashRadius = 0;
-    this.x = 0;
-    this.y = 0;
-
-    this.fireCooldown = 0;
-    this.target       = null;
-
-    this.scale     = 0;
-    this.animTimer = 0;
-
-    // Economy tracking for sell calculation
-    this._totalSpent = this._def.cost;
-
-    this.updatePosition();
+  constructor(typeId, slotIndex) {
+    this.typeId = typeId;
+    this.slotIndex = slotIndex;
+    this.def = TOWERS[typeId];
+    this.cooldown = 0;
   }
 
-  updatePosition() {
-    const center = this.grid.gridToScreen(this.col, this.row);
-    this.x = center.x;
-    this.y = center.y;
-    this.range        = this._def.range        * this.grid.tileSize;
-    this.splashRadius = this._def.splashRadius  * this.grid.tileSize;
-    // Re-scale if upgraded
-    if (this._upgradeRangeX) this.range *= this._upgradeRangeX;
-    if (this._upgradeSplashX) this.splashRadius *= this._upgradeSplashX;
-  }
+  /**
+   * Acquires and fires at in-range enemies (nearest first, tie-broken toward
+   * enemies closest to breaching their leash). Returns shot events for FX —
+   * kill/gold resolution happens elsewhere by scanning `enemy.dead`.
+   */
+  update(dt, enemies, loopManager, modifiers, buffState) {
+    this.cooldown -= dt;
+    if (this.cooldown > 0) return [];
 
-  upgrade() {
-    if (!this.canUpgrade) return false;
-    const up = UPGRADES[this.type];
+    const selfPos = loopManager.getSlotPosition(this.slotIndex);
+    const inRange = enemies
+      .filter((e) => !e.dead)
+      .map((e) => {
+        const pos = e.positionOn(loopManager);
+        const dx = pos.x - selfPos.x;
+        const dy = pos.y - selfPos.y;
+        return { enemy: e, pos, distSq: dx * dx + dy * dy };
+      })
+      .filter((entry) => entry.distSq <= this.def.range * this.def.range)
+      .sort((a, b) => {
+        if (b.enemy.lapsCompleted !== a.enemy.lapsCompleted) {
+          return b.enemy.lapsCompleted - a.enemy.lapsCompleted;
+        }
+        return a.distSq - b.distSq;
+      });
 
-    this.damage    *= up.damageX   ?? 1;
-    this.fireRate  *= up.fireRateX ?? 1;
-    if (up.slowFactor !== undefined)  this.slowFactor  = up.slowFactor;
-    if (up.slowDuration !== undefined) this.slowDuration = up.slowDuration;
+    if (inRange.length === 0) return [];
 
-    // Store range multiplier for updatePosition re-apply
-    this._upgradeRangeX = up.rangeX ?? 1;
-    this.range *= this._upgradeRangeX;
+    const fireRate = this.def.fireRate * modifiers.fireRateMult;
+    this.cooldown = 1 / fireRate;
 
-    this._totalSpent += up.cost;
-    this.level = 2;
+    const targetCount = 1 + Math.max(0, modifiers.extraTargets);
+    const targets = inRange.slice(0, targetCount);
+    const shotEvents = [];
 
-    // Restart placement animation briefly to signal the upgrade
-    this.animTimer = 0;
-    this.scale     = 0;
-    return true;
-  }
+    targets.forEach((entry, index) => {
+      const isCrit = Math.random() < modifiers.critChance;
+      const damageShare = index === 0 ? 1 : 0.5; // extra targets (Split Shot) take 50%
+      const damage = this.def.damage * modifiers.damageMult * damageShare * (isCrit ? 2 : 1);
+      entry.enemy.takeDamage(damage, buffState);
+      shotEvents.push({ from: selfPos, to: entry.pos, isCrit });
+    });
 
-  get canUpgrade() { return this.level < 2; }
-  get upgradeCost() { return UPGRADES[this.type].cost; }
-  get sellValue()  { return Math.floor(this._totalSpent * SELL_RATE); }
-
-  update(dt, enemies) {
-    if (this.animTimer < ANIM_TOWER_SPAWN) {
-      this.animTimer += dt;
-      const t = Math.min(this.animTimer / ANIM_TOWER_SPAWN, 1);
-      this.scale = t < 0.7 ? (t / 0.7) * 1.1 : 1.1 - ((t - 0.7) / 0.3) * 0.1;
-    } else {
-      this.scale = 1;
-    }
-
-    if (this.fireCooldown > 0) this.fireCooldown -= dt;
-
-    if (this.target && (!this.target.active || !this._inRange(this.target))) {
-      this.target = null;
-    }
-
-    if (!this.target) this.target = this._acquireTarget(enemies);
-
-    if (this.target && this.fireCooldown <= 0) {
-      this._fire();
-      this.fireCooldown = 1 / this.fireRate;
-    }
-  }
-
-  _acquireTarget(enemies) {
-    let best = null;
-    let bestPathIndex = -1;
-    for (const e of enemies) {
-      if (!e.active || e.dying) continue;
-      if (!this._inRange(e)) continue;
-      if (e.pathIndex > bestPathIndex) {
-        bestPathIndex = e.pathIndex;
-        best = e;
-      }
-    }
-    return best;
-  }
-
-  _inRange(enemy) {
-    const dx = enemy.x - this.x;
-    const dy = enemy.y - this.y;
-    return (dx * dx + dy * dy) <= (this.range * this.range);
-  }
-
-  _fire() {
-    const p = Projectile.pool.acquire();
-    p.fire(
-      this.x, this.y,
-      this.target,
-      this.damage,
-      this.projectileSpeed,
-      this.splashRadius,
-      this.slowFactor,
-      this.slowDuration,
-      this.color,
-      this._def.projectileSize,
-    );
+    return shotEvents;
   }
 }
