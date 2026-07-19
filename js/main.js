@@ -33,7 +33,7 @@ const metaState = SaveManager.loadMeta();
 let upgradeManager = new UpgradeManager();
 let runState = null;
 let paused = false;
-let placingTower = null;
+let selectedSlot = null;
 let hoverSlot = null;
 let runFinished = false;
 
@@ -68,9 +68,9 @@ function startNewRun() {
   syncLoopManagerToRun();
   upgradeManager = new UpgradeManager();
   gameRenderer.fx = [];
-  placingTower = null;
+  selectedSlot = null;
   hoverSlot = null;
-  uiManager.clearTowerSelection();
+  uiManager.clearSlotSelection();
   uiManager.hideAllModals();
   resizeCanvases();
   SaveManager.saveRun(runState);
@@ -104,8 +104,20 @@ function openUpgradeModal() {
 }
 
 uiManager.bindHandlers({
-  onSelectTower: (typeId) => {
-    placingTower = typeId;
+  onBuildAtSlot: (slotIndex, typeId) => {
+    if (!runState) return;
+    const def = TOWERS[typeId];
+    const occupied = runState.towers.some((t) => t.slotIndex === slotIndex);
+    if (occupied || !runState.unlockedTowerTypes.includes(typeId) || runState.gold < def.cost) return;
+    runState.gold -= def.cost;
+    runState.towers.push(new Tower(typeId, slotIndex));
+    selectedSlot = null;
+    uiManager.clearSlotSelection();
+    drawBackground();
+  },
+  onDeselectSlot: () => {
+    selectedSlot = null;
+    uiManager.clearSlotSelection();
   },
   onSelectTroop: (typeId) => {
     if (runState) spawnManager.sendTroop(typeId, runState);
@@ -129,24 +141,24 @@ uiManager.bindHandlers({
 });
 
 inputManager.onTap((x, y) => {
-  if (!placingTower || !runState) return;
-  const slotIndex = loopManager.hitTestSlot(x, y, occupiedSlotsSet(runState));
-  if (slotIndex == null) return;
-  const def = TOWERS[placingTower];
-  if (!runState.unlockedTowerTypes.includes(placingTower) || runState.gold < def.cost) return;
-  runState.gold -= def.cost;
-  runState.towers.push(new Tower(placingTower, slotIndex));
-  placingTower = null;
-  uiManager.clearTowerSelection();
-  drawBackground();
+  if (!runState) return;
+  const slotIndex = loopManager.findNearestSlot(x, y);
+  if (slotIndex == null || slotIndex === selectedSlot) {
+    selectedSlot = null;
+    uiManager.clearSlotSelection();
+    return;
+  }
+  selectedSlot = slotIndex;
+  const tower = runState.towers.find((t) => t.slotIndex === slotIndex) ?? null;
+  uiManager.selectSlot(slotIndex, !!tower, tower);
 });
 
 inputManager.onHover((x, y) => {
-  if (!placingTower || !runState) {
+  if (!runState) {
     hoverSlot = null;
     return;
   }
-  hoverSlot = loopManager.hitTestSlot(x, y, occupiedSlotsSet(runState));
+  hoverSlot = loopManager.findNearestSlot(x, y);
 });
 
 inputManager.onLeave(() => {
@@ -212,7 +224,7 @@ function frame(ts) {
       openUpgradeModal();
     }
 
-    gameRenderer.draw(gameCtx, gameCanvas, runState, loopManager, hoverSlot);
+    gameRenderer.draw(gameCtx, gameCanvas, runState, loopManager, hoverSlot, selectedSlot);
   }
 
   requestAnimationFrame(frame);

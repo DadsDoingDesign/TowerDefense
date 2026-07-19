@@ -74,17 +74,22 @@ export class LoopManager {
     return { x: this.cx + r * Math.cos(angle), y: this.cy + r * Math.sin(angle) };
   }
 
-  /** Returns the nearest empty-able slot index within a click tolerance, or null. */
-  hitTestSlot(x, y, occupiedSlots) {
+  /** Returns the nearest slot index (empty or occupied) within a click tolerance, or null. */
+  findNearestSlot(x, y) {
     const slotCount = this.getSlotCount();
     const tolerance = 20 * this.scale + 12;
+    let best = null;
+    let bestDistSq = tolerance * tolerance;
     for (let i = 0; i < slotCount; i++) {
-      if (occupiedSlots.has(i)) continue;
       const pos = this.getSlotPosition(i);
       const dx = pos.x - x;
       const dy = pos.y - y;
-      if (dx * dx + dy * dy <= tolerance * tolerance) return i;
+      const distSq = dx * dx + dy * dy;
+      if (distSq <= bestDistSq) {
+        bestDistSq = distSq;
+        best = i;
+      }
     }
-    return null;
+    return best;
   }
 }

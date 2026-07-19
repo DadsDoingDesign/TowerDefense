@@ -36,12 +36,13 @@ export class GameRenderer {
     this.fx = this.fx.filter((fx) => fx.life > 0);
   }
 
-  draw(ctx, canvas, runState, loopManager, hoverSlot) {
+  draw(ctx, canvas, runState, loopManager, hoverSlot, selectedSlot) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     this._drawCore(ctx, runState, loopManager);
     this._drawTowers(ctx, runState, loopManager);
-    if (hoverSlot != null) this._drawHoverHighlight(ctx, loopManager, hoverSlot);
+    if (hoverSlot != null && hoverSlot !== selectedSlot) this._drawHoverHighlight(ctx, loopManager, hoverSlot);
+    if (selectedSlot != null) this._drawSelectedHighlight(ctx, loopManager, selectedSlot);
     this._drawEnemies(ctx, runState, loopManager);
     this._drawFx(ctx);
   }
@@ -82,6 +83,15 @@ export class GameRenderer {
     ctx.arc(pos.x, pos.y, 12 * loopManager.scale + 4, 0, Math.PI * 2);
     ctx.strokeStyle = COLORS.text;
     ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  _drawSelectedHighlight(ctx, loopManager, slotIndex) {
+    const pos = loopManager.getSlotPosition(slotIndex);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 13 * loopManager.scale + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 

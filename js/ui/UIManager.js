@@ -18,11 +18,14 @@ function fmtDuration(seconds) {
 
 export class UIManager {
   constructor() {
-    this.selectedTower = null;
+    this.selectedSlot = null;
+    this.selectedSlotOccupied = false;
+    this.selectedTowerInfo = null;
     this.handlers = {};
     this._cacheDom();
-    this._buildButtons();
+    this._buildTroopButtons();
     this._bindStaticButtons();
+    this._renderBuildPanel(null);
   }
 
   bindHandlers(handlers) {
@@ -66,17 +69,7 @@ export class UIManager {
     };
   }
 
-  _buildButtons() {
-    this.el.towerButtons.innerHTML = '';
-    for (const def of Object.values(TOWERS)) {
-      const btn = document.createElement('button');
-      btn.className = 'action-btn build-btn';
-      btn.dataset.type = def.id;
-      btn.innerHTML = `<span class="swatch" style="background:${def.color}"></span><span class="label">${def.label}</span><span class="cost">${def.cost}g</span>`;
-      btn.addEventListener('click', () => this._onTowerButtonClick(def.id));
-      this.el.towerButtons.appendChild(btn);
-    }
-
+  _buildTroopButtons() {
     this.el.troopButtons.innerHTML = '';
     for (const def of TROOP_TYPES) {
       const btn = document.createElement('button');
@@ -107,21 +100,98 @@ export class UIManager {
     this.el.offlineDismissBtn.addEventListener('click', () => this.handlers.onDismissOffline && this.handlers.onDismissOffline());
   }
 
-  _onTowerButtonClick(typeId) {
-    this.selectedTower = this.selectedTower === typeId ? null : typeId;
-    this._refreshTowerSelection();
-    this.handlers.onSelectTower && this.handlers.onSelectTower(this.selectedTower);
+  // --- Ring slot selection -> contextual build panel ---------------------
+
+  /** Called whenever the player taps a ring slot (empty or occupied). */
+  selectSlot(slotIndex, occupied, tower) {
+    this.selectedSlot = slotIndex;
+    this.selectedSlotOccupied = occupied;
+    this.selectedTowerInfo = tower ?? null;
   }
 
-  clearTowerSelection() {
-    this.selectedTower = null;
-    this._refreshTowerSelection();
+  clearSlotSelection() {
+    this.selectedSlot = null;
+    this.selectedSlotOccupied = false;
+    this.selectedTowerInfo = null;
   }
 
-  _refreshTowerSelection() {
+  _renderBuildPanel(runState) {
+    const signature = `${this.selectedSlot}|${this.selectedSlotOccupied}`;
+    if (this._buildPanelSignature !== signature) {
+      this._buildPanelSignature = signature;
+      this._rebuildBuildPanel(runState);
+      return;
+    }
+    if (runState && this.selectedSlot != null && !this.selectedSlotOccupied) {
+      this._refreshBuildButtonsAffordability(runState);
+    }
+  }
+
+  _refreshBuildButtonsAffordability(runState) {
     this.el.towerButtons.querySelectorAll('.build-btn').forEach((btn) => {
-      btn.classList.toggle('selected', btn.dataset.type === this.selectedTower);
+      const id = btn.dataset.type;
+      const def = TOWERS[id];
+      const locked = !runState.unlockedTowerTypes.includes(id);
+      btn.disabled = locked || runState.gold < def.cost;
+      btn.querySelector('.cost').textContent = locked ? 'Locked' : `${def.cost}g`;
     });
+  }
+
+  _rebuildBuildPanel(runState) {
+    const container = this.el.towerButtons;
+    container.innerHTML = '';
+
+    if (this.selectedSlot == null || !runState) {
+      const hint = document.createElement('div');
+      hint.className = 'build-hint';
+      hint.textContent = 'Tap a ring slot to build';
+      container.appendChild(hint);
+      return;
+    }
+
+    if (this.selectedSlotOccupied) {
+      const def = this.selectedTowerInfo.def;
+      const info = document.createElement('div');
+      info.className = 'tower-info';
+      info.innerHTML = `
+        <span class="swatch" style="background:${def.color}"></span>
+        <span class="label">${def.label}</span>
+        <span class="stat">DMG ${def.damage}</span>
+        <span class="stat">RNG ${def.range}</span>
+        <span class="stat">RATE ${def.fireRate}/s</span>
+      `;
+      container.appendChild(info);
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'action-btn';
+      closeBtn.textContent = 'Close';
+      closeBtn.addEventListener('click', () => this.handlers.onDeselectSlot && this.handlers.onDeselectSlot());
+      container.appendChild(closeBtn);
+      return;
+    }
+
+    const hint = document.createElement('div');
+    hint.className = 'build-hint';
+    hint.textContent = `Build at slot ${this.selectedSlot + 1}`;
+    container.appendChild(hint);
+
+    for (const def of Object.values(TOWERS)) {
+      const locked = !runState.unlockedTowerTypes.includes(def.id);
+      const btn = document.createElement('button');
+      btn.className = 'action-btn build-btn';
+      btn.dataset.type = def.id;
+      btn.disabled = locked || runState.gold < def.cost;
+      btn.innerHTML = `<span class="swatch" style="background:${def.color}"></span><span class="label">${def.label}</span><span class="cost">${locked ? 'Locked' : `${def.cost}g`}</span>`;
+      btn.addEventListener('click', () => {
+        this.handlers.onBuildAtSlot && this.handlers.onBuildAtSlot(this.selectedSlot, def.id);
+      });
+      container.appendChild(btn);
+    }
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'action-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => this.handlers.onDeselectSlot && this.handlers.onDeselectSlot());
+    container.appendChild(cancelBtn);
   }
 
   // --- HUD -----------------------------------------------------------
@@ -147,20 +217,8 @@ export class UIManager {
       this.el.tierProgressLabel.textContent = 'Max ring size reached';
     }
 
-    this._updateBuildButtons(runState);
+    this._renderBuildPanel(runState);
     this._updateTroopButtons(runState);
-  }
-
-  _updateBuildButtons(runState) {
-    this.el.towerButtons.querySelectorAll('.build-btn').forEach((btn) => {
-      const id = btn.dataset.type;
-      const def = TOWERS[id];
-      const locked = !runState.unlockedTowerTypes.includes(id);
-      btn.classList.toggle('locked', locked);
-      btn.disabled = locked || runState.gold < def.cost;
-      const costEl = btn.querySelector('.cost');
-      costEl.textContent = locked ? 'Locked' : `${def.cost}g`;
-    });
   }
 
   _updateTroopButtons(runState) {
