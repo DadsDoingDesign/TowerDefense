@@ -2,10 +2,27 @@ import { COLORS } from '../constants.js';
 
 const SHOT_LIFE = 0.15;
 const TEXT_LIFE = 0.7;
+const LAST_LAP_DANGER_MIX = 0.6; // how far the fill shifts toward danger-red on the final lap
+const LAST_LAP_PULSE_SPEED = 6; // radians/sec
+
+function hexToRgb(hex) {
+  const v = parseInt(hex.slice(1), 16);
+  return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+}
+
+function mixColor(hexA, hexB, t) {
+  const a = hexToRgb(hexA);
+  const b = hexToRgb(hexB);
+  const r = Math.round(a.r + (b.r - a.r) * t);
+  const g = Math.round(a.g + (b.g - a.g) * t);
+  const bl = Math.round(a.b + (b.b - a.b) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
 
 export class GameRenderer {
   constructor() {
     this.fx = [];
+    this.time = 0;
   }
 
   addShotEvents(shotEvents) {
@@ -29,6 +46,7 @@ export class GameRenderer {
   }
 
   update(dt) {
+    this.time += dt;
     for (const fx of this.fx) {
       fx.life -= dt;
       if (fx.type === 'text') fx.y -= dt * 24;
@@ -99,9 +117,22 @@ export class GameRenderer {
     for (const enemy of runState.enemies) {
       const pos = enemy.positionOn(loopManager);
       const r = enemy.def.radius * Math.max(0.7, loopManager.scale);
+      const onLastLap = enemy.lapsCompleted >= runState.leashLaps - 1;
+
+      if (onLastLap) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.time * LAST_LAP_PULSE_SPEED);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, r + 3 + pulse * 2, 0, Math.PI * 2);
+        ctx.strokeStyle = COLORS.danger;
+        ctx.globalAlpha = 0.35 + pulse * 0.5;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = enemy.def.color;
+      ctx.fillStyle = onLastLap ? mixColor(enemy.def.color, COLORS.danger, LAST_LAP_DANGER_MIX) : enemy.def.color;
       ctx.fill();
 
       if (enemy.hp < enemy.maxHp) {
