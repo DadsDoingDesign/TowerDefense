@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
 
 export function ResultOverlay() {
@@ -8,6 +9,7 @@ export function ResultOverlay() {
   const waveIndex = useGameStore((s) => s.waveIndex)
   const totalWaves = useGameStore((s) => s.totalWaves)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
+  const lastLoot = useGameStore((s) => s.lastLoot)
   const continueAfterWave = useGameStore((s) => s.continueAfterWave)
   const newRun = useGameStore((s) => s.newRun)
 
@@ -55,6 +57,12 @@ export function ResultOverlay() {
             {Math.ceil(lastResult.baseHpLeft)} left {lastResult.leaks > 0 && `(−${lastResult.leaks})`}
           </strong>
         </div>
+        {lastLoot.length > 0 && (
+          <div className="summary-line">
+            <span>Loot found</span>
+            <strong style={{ color: RARITY[lastLoot[0].rarity].color }}>{lastLoot[0].name}</strong>
+          </div>
+        )}
         <div className="summary-table">
           {lastResult.perSentinel
             .filter((p) => p.kills > 0 || p.damageDealt > 0)

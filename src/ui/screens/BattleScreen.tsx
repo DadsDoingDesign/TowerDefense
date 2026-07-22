@@ -1,5 +1,6 @@
 import { BattleCanvas } from '../BattleCanvas'
 import { BattleControls } from '../components/BattleControls'
+import { EquipModal } from '../components/EquipModal'
 import { EvolutionModal } from '../components/EvolutionModal'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Roster } from '../components/Roster'
@@ -29,6 +30,7 @@ export function BattleScreen() {
       <EvolutionModal />
       <ResultOverlay />
       <SentinelDetail />
+      <EquipModal />
     </div>
   )
 }

@@ -1,10 +1,31 @@
 import { create } from 'zustand'
+import { RNG } from '../game/core/rng'
 import { GameEngine, type BattleResult } from '../game/engine/engine'
 import { applyXp, evolutionPending, evolveInto } from '../game/engine/leveling'
+import { teamKeepsakeMods } from '../game/engine/combat'
 import { FIRST_MAP } from '../game/data/maps'
 import { startingRoster } from '../game/data/sentinels'
+import {
+  canUpgrade,
+  generateItem,
+  reforgeCost,
+  reforgeItem,
+  upgradeCost,
+  upgradeRarity,
+} from '../game/data/items'
 import { generateWave, TOTAL_WAVES } from '../game/data/waves'
-import type { GameMap, Placement, Sentinel } from '../game/types'
+import type { GameMap, Item, ItemSlot, Placement, Sentinel } from '../game/types'
+
+// Item RNG lives outside the store; auto-seeded (no Date/Math.random dependency).
+const itemRng = new RNG()
+
+function startingInventory(): Item[] {
+  return [
+    generateItem(itemRng, { slot: 'weapon', rarity: 'common' }),
+    generateItem(itemRng, { slot: 'armor', rarity: 'common' }),
+    generateItem(itemRng, { slot: 'trinket', rarity: 'rare' }),
+  ]
+}
 
 export type Phase = 'setup' | 'battle' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
@@ -41,6 +62,10 @@ interface GameState {
   /** Sentinel ids owed an evolution choice after the last battle. */
   evolutionQueue: string[]
 
+  // Inventory / loot
+  inventory: Item[]
+  lastLoot: Item[]
+
   // Battle runtime
   engine: GameEngine | null
   hud: HudSnapshot
@@ -60,6 +85,10 @@ interface GameState {
   closeDetail: () => void
   openEquip: (sentinelId: string, slot: import('../game/types').ItemSlot) => void
   closeEquip: () => void
+  equipItem: (sentinelId: string, slot: ItemSlot, itemId: string) => void
+  unequipItem: (sentinelId: string, slot: ItemSlot) => void
+  reforge: (itemId: string) => void
+  upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
 }
 
@@ -83,6 +112,40 @@ export function placedSentinels(
   return out
 }
 
+const SLOTS: ItemSlot[] = ['weapon', 'armor', 'trinket']
+
+/** Locate an item by id anywhere (inventory or equipped). */
+function findItem(state: GameState, itemId: string): { item: Item } | null {
+  const inv = state.inventory.find((i) => i.id === itemId)
+  if (inv) return { item: inv }
+  for (const s of state.roster) {
+    for (const slot of SLOTS) {
+      const it = s.equipment[slot]
+      if (it && it.id === itemId) return { item: it }
+    }
+  }
+  return null
+}
+
+/** Replace an item (same id) wherever it lives — inventory or a Sentinel slot. */
+function replaceItem(
+  get: () => GameState,
+  set: (partial: Partial<GameState>) => void,
+  itemId: string,
+  next: Item,
+): void {
+  const { inventory, roster } = get()
+  const nextInv = inventory.map((i) => (i.id === itemId ? next : i))
+  const nextRoster = roster.map((s) => {
+    let eq = s.equipment
+    for (const slot of SLOTS) {
+      if (eq[slot]?.id === itemId) eq = { ...eq, [slot]: next }
+    }
+    return eq === s.equipment ? s : { ...s, equipment: eq }
+  })
+  set({ inventory: nextInv, roster: nextRoster })
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
   map: FIRST_MAP,
   phase: 'setup',
@@ -97,6 +160,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   detailId: null,
   equipContext: null,
   evolutionQueue: [],
+  inventory: startingInventory(),
+  lastLoot: [],
   engine: null,
   hud: {
     baseHp: MAX_BASE_HP,
@@ -123,6 +188,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       detailId: null,
       equipContext: null,
       evolutionQueue: [],
+      inventory: startingInventory(),
+      lastLoot: [],
       engine: null,
       lastResult: null,
       hud: {
@@ -167,6 +234,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       placedSentinels: placedSentinels(roster, placements),
       baseHp,
       maxBaseHp: MAX_BASE_HP,
+      teamMods: teamKeepsakeMods(roster),
     })
     set({
       engine,
@@ -193,7 +261,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   finishBattle: () => {
-    const { engine, roster, gold, waveIndex, totalWaves } = get()
+    const { engine, roster, gold, waveIndex, totalWaves, inventory } = get()
     if (!engine) return
     const result = engine.result()
 
@@ -207,12 +275,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     const nextRoster = roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0))
     const evolutionQueue = nextRoster.filter(evolutionPending).map((s) => s.id)
 
+    // Loot: one drop per cleared wave, rarity odds rising slightly with depth.
+    const loot = [generateItem(itemRng, { luck: Math.min(0.35, waveIndex * 0.03) })]
+
     const wonRun = waveIndex >= totalWaves
     set({
       roster: nextRoster,
       gold: gold + result.goldEarned,
       baseHp: result.baseHpLeft,
       lastResult: result,
+      lastLoot: loot,
+      inventory: [...inventory, ...loot],
       evolutionQueue,
       phase: wonRun ? 'won' : 'setup',
       engine: null,
@@ -226,6 +299,53 @@ export const useGameStore = create<GameState>((set, get) => ({
   closeDetail: () => set({ detailId: null }),
   openEquip: (sentinelId, slot) => set({ equipContext: { sentinelId, slot } }),
   closeEquip: () => set({ equipContext: null }),
+
+  equipItem: (sentinelId, slot, itemId) => {
+    const { roster, inventory } = get()
+    const item = inventory.find((i) => i.id === itemId)
+    if (!item || item.slot !== slot) return
+    let nextInv = inventory.filter((i) => i.id !== itemId)
+    const nextRoster = roster.map((s) => {
+      if (s.id !== sentinelId) return s
+      const prev = s.equipment[slot]
+      if (prev) nextInv = [...nextInv, prev] // swap the old one back to the bag
+      return { ...s, equipment: { ...s.equipment, [slot]: item } }
+    })
+    set({ roster: nextRoster, inventory: nextInv })
+  },
+
+  unequipItem: (sentinelId, slot) => {
+    const { roster, inventory } = get()
+    const s = roster.find((x) => x.id === sentinelId)
+    const item = s?.equipment[slot]
+    if (!item) return
+    const nextRoster = roster.map((x) =>
+      x.id === sentinelId ? { ...x, equipment: { ...x.equipment, [slot]: null } } : x,
+    )
+    set({ roster: nextRoster, inventory: [...inventory, item] })
+  },
+
+  reforge: (itemId) => {
+    const { gold } = get()
+    const found = findItem(get(), itemId)
+    if (!found) return
+    const cost = reforgeCost(found.item)
+    if (gold < cost) return
+    const next = reforgeItem(found.item, itemRng)
+    replaceItem(get, set, itemId, next)
+    set({ gold: gold - cost })
+  },
+
+  upgradeItem: (itemId) => {
+    const { gold } = get()
+    const found = findItem(get(), itemId)
+    if (!found || !canUpgrade(found.item)) return
+    const cost = upgradeCost(found.item)
+    if (gold < cost) return
+    const next = upgradeRarity(found.item, itemRng)
+    replaceItem(get, set, itemId, next)
+    set({ gold: gold - cost })
+  },
 
   chooseEvolution: (sentinelId, nodeId) => {
     const { roster, evolutionQueue } = get()

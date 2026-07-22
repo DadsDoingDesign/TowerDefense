@@ -1,4 +1,4 @@
-import type { CoreStats, EffectMods } from '../types'
+import type { CoreStats, EffectMods, Enchantment } from '../types'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
 const signPct = (mult: number) => {
@@ -31,6 +31,18 @@ export function describeMods(m: EffectMods): string[] {
   if (m.selfSacrifice) out.push(`sacrifices ${pct(m.selfSacrifice)} HP for power`)
   if (m.trap) out.push(`lays traps (${Math.round(m.trap.dps)}/s)`)
   return out
+}
+
+/** One-line effect summary for an enchantment (label + what it does). */
+export function describeEnchant(e: Enchantment): string {
+  const parts: string[] = []
+  if (e.stats?.str) parts.push(`+${e.stats.str} STR`)
+  if (e.stats?.dex) parts.push(`+${e.stats.dex} DEX`)
+  if (e.stats?.int) parts.push(`+${e.stats.int} INT`)
+  if (e.thorns) parts.push(`+${e.thorns} Thorns`)
+  if (e.patience) parts.push(`+${e.patience} Patience`)
+  if (e.mods) parts.push(...describeMods(e.mods))
+  return parts.join(', ')
 }
 
 /** Short stat-grant summary, e.g. "+8 STR +3 DEX +3 Patience". */

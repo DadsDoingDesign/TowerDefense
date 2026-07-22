@@ -2,6 +2,16 @@ import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
 import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
 
+/** Gather team-wide EffectMods from every equipped keepsake across a roster. */
+export function teamKeepsakeMods(roster: Sentinel[]): EffectMods[] {
+  const out: EffectMods[] = []
+  for (const s of roster) {
+    const t = s.equipment.trinket
+    if (t?.keepsake) for (const e of t.enchantments) if (e.mods) out.push(e.mods)
+  }
+  return out
+}
+
 /** Everything the engine needs to run a Sentinel's attacks and role effects. */
 export interface CombatProfile {
   damage: number
@@ -53,6 +63,8 @@ function emptyGear(): GearContribution {
 
 function addItem(acc: GearContribution, item: Item | null): void {
   if (!item) return
+  // Keepsakes buff the whole team via teamMods, not the holder locally.
+  if (item.keepsake) return
   const b = item.base
   acc.flatPhys += b.physDamage ?? 0
   acc.flatMag += b.magDamage ?? 0
