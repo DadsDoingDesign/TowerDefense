@@ -11,7 +11,7 @@ export function Roster() {
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const select = useGameStore((s) => s.selectSentinel)
   const openDetail = useGameStore((s) => s.openDetail)
-  const phase = useGameStore((s) => s.phase)
+  const phase = useGameStore((s) => s.battlePhase)
 
   const slotOf = (sentId: string): string | null => {
     for (const [slotId, id] of Object.entries(placements)) if (id === sentId) return slotId

@@ -2,51 +2,34 @@ import type { ReactNode } from 'react'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
 
+/** Wave-clear summary (over the battle screen). Run win/loss lives in RunEndOverlay. */
 export function ResultOverlay() {
-  const phase = useGameStore((s) => s.phase)
+  const screen = useGameStore((s) => s.screen)
+  const runPhase = useGameStore((s) => s.runPhase)
   const lastResult = useGameStore((s) => s.lastResult)
   const roster = useGameStore((s) => s.roster)
-  const waveIndex = useGameStore((s) => s.waveIndex)
-  const totalWaves = useGameStore((s) => s.totalWaves)
+  const currentWave = useGameStore((s) => s.currentWave)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const lastLoot = useGameStore((s) => s.lastLoot)
   const continueAfterWave = useGameStore((s) => s.continueAfterWave)
-  const newRun = useGameStore((s) => s.newRun)
 
   const nameOf = (id: string) => roster.find((r) => r.id === id)?.name ?? '—'
 
-  if (phase === 'won') {
-    return (
-      <Overlay tone="win">
-        <h2>Field Secured</h2>
-        <p>You held the line through all {totalWaves} waves. The Warden falls.</p>
-        <button className="overlay-btn" onClick={newRun}>
-          New Run
-        </button>
-      </Overlay>
-    )
+  // Only the wave-clear summary here, and only once evolutions are resolved.
+  if (
+    runPhase !== 'active' ||
+    screen !== 'battle' ||
+    !lastResult ||
+    lastResult.status !== 'cleared' ||
+    evolutionQueue.length > 0
+  ) {
+    return null
   }
 
-  if (phase === 'lost') {
-    return (
-      <Overlay tone="loss">
-        <h2>The Line Breaks</h2>
-        <p>
-          The base fell on wave {waveIndex}. Permadeath — this run is over.
-          {lastResult ? ` ${lastResult.leaks} enemies leaked through.` : ''}
-        </p>
-        <button className="overlay-btn" onClick={newRun}>
-          New Run
-        </button>
-      </Overlay>
-    )
-  }
-
-  // Between-wave summary during setup — but let evolution choices resolve first.
-  if (phase === 'setup' && lastResult && lastResult.status === 'cleared' && evolutionQueue.length === 0) {
-    return (
-      <Overlay tone="clear">
-        <h2>Wave {waveIndex - 1} Cleared</h2>
+  return (
+    <div className="overlay-scrim">
+      <div className="overlay-card clear">
+        <h2>{currentWave?.isBoss ? 'Boss Defeated' : 'Encounter Cleared'}</h2>
         <div className="summary-line">
           <span>Gold earned</span>
           <strong>⟡ {lastResult.goldEarned}</strong>
@@ -60,7 +43,14 @@ export function ResultOverlay() {
         {lastLoot.length > 0 && (
           <div className="summary-line">
             <span>Loot found</span>
-            <strong style={{ color: RARITY[lastLoot[0].rarity].color }}>{lastLoot[0].name}</strong>
+            <strong className="loot-names">
+              {lastLoot.map((it, i) => (
+                <span key={it.id} style={{ color: RARITY[it.rarity].color }}>
+                  {it.name}
+                  {i < lastLoot.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </strong>
           </div>
         )}
         <div className="summary-table">
@@ -80,16 +70,14 @@ export function ResultOverlay() {
             ))}
         </div>
         <button className="overlay-btn" onClick={continueAfterWave}>
-          Continue
+          Return to Map
         </button>
-      </Overlay>
-    )
-  }
-
-  return null
+      </div>
+    </div>
+  )
 }
 
-function Overlay({
+export function Overlay({
   tone,
   children,
 }: {

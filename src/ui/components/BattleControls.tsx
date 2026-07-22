@@ -1,7 +1,7 @@
 import { placedSentinels, useGameStore } from '../../state/gameStore'
 
 export function BattleControls() {
-  const phase = useGameStore((s) => s.phase)
+  const phase = useGameStore((s) => s.battlePhase)
   const roster = useGameStore((s) => s.roster)
   const placements = useGameStore((s) => s.placements)
   const startWave = useGameStore((s) => s.startWave)

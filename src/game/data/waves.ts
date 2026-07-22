@@ -1,50 +1,57 @@
 import type { SpawnEvent, WaveDef } from '../types'
 
-export const TOTAL_WAVES = 8
+export type EncounterKind = 'normal' | 'elite' | 'boss'
 
 /**
- * Procedurally build a wave. Difficulty escalates: more enemies, tougher HP,
- * and heavier enemy types appear as the run goes on. Wave 8 is the boss.
+ * Build a wave for a map node at the given depth (layer) and kind. Difficulty
+ * scales with depth; elites are denser and tougher; the boss brings a Colossus
+ * with an escort.
  */
-export function generateWave(index: number): WaveDef {
-  const isBoss = index === TOTAL_WAVES
-  if (isBoss) {
-    const spawns: SpawnEvent[] = []
-    // A stream of chaff escorting the Warden.
-    for (let i = 0; i < 12; i++) {
-      spawns.push({ typeId: i % 2 === 0 ? 'runner' : 'grunt', at: i * 0.7, hpMult: 2.4 })
-    }
-    spawns.push({ typeId: 'warden', at: 3, hpMult: 1 })
-    return { index, label: `Wave ${index} — The Warden`, spawns, isBoss: true }
-  }
+export function generateEncounter(depth: number, kind: EncounterKind, label?: string): WaveDef {
+  if (kind === 'boss') return bossWave(depth, label)
 
-  const hpMult = 1 + (index - 1) * 0.28
-  const gruntCount = 4 + index * 2
-  const runnerCount = index >= 2 ? Math.floor(index * 1.5) : 0
-  const bruteCount = index >= 3 ? Math.floor((index - 2) / 1.5) : 0
+  const eliteBoost = kind === 'elite' ? 1.35 : 1
+  const hpMult = (1 + (depth - 1) * 0.22) * eliteBoost
+  const gap = kind === 'elite' ? 0.7 : 0.85
+
+  const grunts = 5 + depth * 2 + (kind === 'elite' ? 3 : 0)
+  const runners = depth >= 2 ? depth + 1 : 0
+  const shades = depth >= 4 ? depth - 3 : 0
+  const brutes = (depth >= 3 ? Math.floor((depth - 2) / 2) : 0) + (kind === 'elite' ? 2 : 0)
+  const ogres = (depth >= 6 ? Math.floor((depth - 5) / 2) : 0) + (kind === 'elite' && depth >= 4 ? 1 : 0)
 
   const spawns: SpawnEvent[] = []
   let t = 0
-  const push = (typeId: string, count: number, gap: number) => {
+  const push = (typeId: string, count: number, g: number) => {
     for (let i = 0; i < count; i++) {
       spawns.push({ typeId, at: t, hpMult })
-      t += gap
+      t += g
     }
   }
+  push('grunt', grunts, gap)
+  if (runners) { t += 1.2; push('runner', runners, gap * 0.7) }
+  if (shades) { t += 1.2; push('shade', shades, gap) }
+  if (brutes) { t += 1.4; push('brute', brutes, gap * 2) }
+  if (ogres) { t += 1.6; push('ogre', ogres, gap * 2.4) }
 
-  push('grunt', gruntCount, 0.85)
-  if (runnerCount) {
-    t += 1.5
-    push('runner', runnerCount, 0.55)
-  }
-  if (bruteCount) {
-    t += 1.5
-    push('brute', bruteCount, 1.8)
-  }
-
-  // Sort by spawn time so interleaving reads cleanly.
   spawns.sort((a, b) => a.at - b.at)
-  return { index, label: `Wave ${index}`, spawns, isBoss: false }
+  return {
+    index: depth,
+    label: label ?? (kind === 'elite' ? `Elite — Depth ${depth}` : `Depth ${depth}`),
+    spawns,
+    isBoss: false,
+  }
+}
+
+function bossWave(depth: number, label?: string): WaveDef {
+  const spawns: SpawnEvent[] = []
+  for (let i = 0; i < 16; i++) {
+    spawns.push({ typeId: i % 3 === 0 ? 'brute' : i % 2 === 0 ? 'runner' : 'grunt', at: i * 0.6, hpMult: 2.2 })
+  }
+  spawns.push({ typeId: 'warden', at: 4, hpMult: 1 })
+  spawns.push({ typeId: 'colossus', at: 12, hpMult: 1 })
+  spawns.sort((a, b) => a.at - b.at)
+  return { index: depth, label: label ?? 'The Final Watch', spawns, isBoss: true }
 }
 
 /** Human-readable composition summary for the pre-wave preview. */

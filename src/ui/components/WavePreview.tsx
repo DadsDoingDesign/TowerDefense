@@ -1,10 +1,10 @@
 import { ENEMY_TYPES } from '../../game/data/enemies'
-import { generateWave, waveComposition } from '../../game/data/waves'
+import { waveComposition } from '../../game/data/waves'
 import { useGameStore } from '../../state/gameStore'
 
 export function WavePreview() {
-  const waveIndex = useGameStore((s) => s.waveIndex)
-  const wave = generateWave(waveIndex)
+  const wave = useGameStore((s) => s.currentWave)
+  if (!wave) return null
   const comp = waveComposition(wave)
   const total = wave.spawns.length
 

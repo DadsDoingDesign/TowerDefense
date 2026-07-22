@@ -56,7 +56,7 @@ export function BattleCanvas() {
       if (dt > 0.05) dt = 0.05 // clamp after tab-out / hitch
 
       const st = useGameStore.getState()
-      const { map, engine, phase, speed } = st
+      const { battleMap: map, engine, battlePhase: phase, speed } = st
 
       // --- simulate ---
       if (phase === 'battle' && engine) {
@@ -137,7 +137,7 @@ export function BattleCanvas() {
     const toLogical = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect()
       const st = useGameStore.getState()
-      const view = fitView(rect.width, rect.height, st.map)
+      const view = fitView(rect.width, rect.height, st.battleMap)
       return {
         x: (clientX - rect.left - view.ox) / view.scale,
         y: (clientY - rect.top - view.oy) / view.scale,
@@ -147,7 +147,7 @@ export function BattleCanvas() {
     const hitSlot = (x: number, y: number): string | null => {
       const st = useGameStore.getState()
       let best: { id: string; d: number } | null = null
-      for (const slot of st.map.slots) {
+      for (const slot of st.battleMap.slots) {
         const d = dist({ x, y }, slot.pos)
         if (d <= SLOT_HIT_RADIUS && (!best || d < best.d)) best = { id: slot.id, d }
       }
@@ -156,7 +156,7 @@ export function BattleCanvas() {
 
     const onPointerMove = (e: PointerEvent) => {
       const st = useGameStore.getState()
-      if (st.phase !== 'setup') {
+      if (st.battlePhase !== 'setup') {
         hoverSlot.current = null
         return
       }
@@ -166,7 +166,7 @@ export function BattleCanvas() {
 
     const onPointerDown = (e: PointerEvent) => {
       const st = useGameStore.getState()
-      if (st.phase !== 'setup') return
+      if (st.battlePhase !== 'setup') return
       const { x, y } = toLogical(e.clientX, e.clientY)
       const slotId = hitSlot(x, y)
       if (!slotId) return

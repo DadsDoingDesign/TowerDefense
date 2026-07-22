@@ -1,20 +1,19 @@
-import { useGameStore, type Speed } from '../../state/gameStore'
+import { MAX_BASE_HP, useGameStore, type Speed } from '../../state/gameStore'
 
 const SPEEDS: Speed[] = [1, 2, 3]
 
 export function TopBar() {
-  const phase = useGameStore((s) => s.phase)
-  const waveIndex = useGameStore((s) => s.waveIndex)
-  const totalWaves = useGameStore((s) => s.totalWaves)
+  const battlePhase = useGameStore((s) => s.battlePhase)
+  const currentWave = useGameStore((s) => s.currentWave)
   const baseHpStore = useGameStore((s) => s.baseHp)
   const gold = useGameStore((s) => s.gold)
   const hud = useGameStore((s) => s.hud)
   const speed = useGameStore((s) => s.speed)
   const setSpeed = useGameStore((s) => s.setSpeed)
 
-  const inBattle = phase === 'battle'
+  const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore
-  const maxHp = hud.maxBaseHp
+  const maxHp = hud.maxBaseHp || MAX_BASE_HP
   const goldDisplay = gold + (inBattle ? hud.goldEarned : 0)
   const hpFrac = Math.max(0, baseHp) / maxHp
 
@@ -22,9 +21,7 @@ export function TopBar() {
     <header className="topbar">
       <div className="topbar-left">
         <span className="brand">FIELDWATCH</span>
-        <span className="wave-chip">
-          Wave {Math.min(waveIndex, totalWaves)} / {totalWaves}
-        </span>
+        <span className="wave-chip">{currentWave?.label ?? 'Encounter'}</span>
       </div>
 
       <div className="base-hp" title="Base integrity">
