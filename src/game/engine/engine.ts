@@ -2,7 +2,7 @@ import { GamePath } from '../core/path'
 import { nextId, RNG } from '../core/rng'
 import { dist, distSq, moveToward, type Vec2 } from '../core/vec'
 import { ENEMY_TYPES } from '../data/enemies'
-import type { EffectMods, EnemyType, GameMap, Sentinel, WaveDef } from '../types'
+import type { EffectMods, EnemyType, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 import { computeCombat, type CombatProfile } from './combat'
 
 const PATIENCE_INTERVAL = 3 // seconds per stack
@@ -120,6 +120,8 @@ export class GameEngine {
   private rng: RNG
   private teamMods: EffectMods[]
   private enemyHpMult: number
+  private tactics: Tactics
+  private holdThreshold: number
   private xpGained = new Map<string, number>()
 
   constructor(opts: {
@@ -130,6 +132,7 @@ export class GameEngine {
     maxBaseHp: number
     teamMods?: EffectMods[]
     enemyHpMult?: number
+    tactics?: Tactics
     seed?: number
   }) {
     this.map = opts.map
@@ -139,6 +142,8 @@ export class GameEngine {
     this.maxBaseHp = opts.maxBaseHp
     this.teamMods = opts.teamMods ?? []
     this.enemyHpMult = opts.enemyHpMult ?? 1
+    this.tactics = opts.tactics ?? { focus: 'first', holdFire: false }
+    this.holdThreshold = this.tactics.holdFire ? this.path.length * 0.45 : 0
     this.rng = new RNG(opts.seed)
 
     const slotById = new Map(opts.map.slots.map((s) => [s.id, s]))
@@ -322,7 +327,7 @@ export class GameEngine {
 
       const rangeSq = s.profile.range * s.profile.range
       let target = s.targetId ? this.enemies.find((e) => e.id === s.targetId) : undefined
-      if (!target || distSq(s.pos, target.pos) > rangeSq) {
+      if (!target || distSq(s.pos, target.pos) > rangeSq || target.distance < this.holdThreshold) {
         target = this.acquireTarget(s, rangeSq)
         s.targetId = target?.id ?? null
       }
@@ -347,11 +352,32 @@ export class GameEngine {
     }
   }
 
+  /** Score an in-range enemy per the active focus tactic (higher = preferred). */
+  private focusScore(s: RtSentinel, e: RtEnemy): number {
+    switch (this.tactics.focus) {
+      case 'lowestHp':
+        return -e.hp
+      case 'strongest':
+        return e.maxHp
+      case 'nearest':
+        return -distSq(s.pos, e.pos)
+      case 'first':
+      default:
+        return e.distance
+    }
+  }
+
   private acquireTarget(s: RtSentinel, rangeSq: number): RtEnemy | undefined {
     let best: RtEnemy | undefined
+    let bestScore = -Infinity
     for (const e of this.enemies) {
       if (distSq(s.pos, e.pos) > rangeSq) continue
-      if (!best || e.distance > best.distance) best = e
+      if (e.distance < this.holdThreshold) continue // hold fire until past the point
+      const score = this.focusScore(s, e)
+      if (!best || score > bestScore) {
+        best = e
+        bestScore = score
+      }
     }
     return best
   }
@@ -468,9 +494,12 @@ export class GameEngine {
 
     // On-hit statuses (only if the enemy is still alive).
     if (e.hp > 0) {
+      const src = p.srcId ? this.sentinels.find((x) => x.id === p.srcId) : undefined
       if (p.mods.burn) {
+        const fresh = this.elapsed >= e.burnUntil
         e.burnDps = Math.max(e.burnDps, p.mods.burn.dps)
         e.burnUntil = Math.max(e.burnUntil, this.elapsed + p.mods.burn.dur)
+        if (fresh && src) src.procFlash = 1
       }
       if (p.mods.chill) {
         e.chillSlow = Math.max(e.chillSlow, p.mods.chill.slow)
@@ -478,6 +507,8 @@ export class GameEngine {
       }
       if (p.mods.stunChance && this.rng.chance(p.mods.stunChance)) {
         e.stunUntil = Math.max(e.stunUntil, this.elapsed + (p.mods.stunDur ?? 0.5))
+        this.spawnFloater(e.pos, 'STUN', '#ffe08a', true)
+        if (src) src.procFlash = 1
       }
     }
 

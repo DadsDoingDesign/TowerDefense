@@ -369,10 +369,49 @@ export function drawTrap(ctx: CanvasRenderingContext2D, pos: Vec2, now: number):
 export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEngine): void {
   const now = engine.elapsed
   for (const t of engine.traps) drawTrap(ctx, t.pos, now)
+
+  // Faint aura rings for support Sentinels (cleric/guard).
+  for (const s of engine.sentinels) {
+    if (s.downed) continue
+    const m = s.profile.mods
+    const aura = m.healAura ?? m.buffAura ?? m.dmgReductionAura
+    if (aura) drawAura(ctx, s.pos, aura.radius, m.healAura ? '#7ac74f' : m.dmgReductionAura ? '#98c1d9' : '#f0a868', now)
+  }
+
+  const targeted = new Set(engine.sentinels.map((s) => s.targetId).filter(Boolean) as string[])
   for (const e of engine.enemies) drawEnemy(ctx, e, now)
+  for (const e of engine.enemies) if (targeted.has(e.id)) drawReticle(ctx, e.pos, e.type.radius)
   for (const s of engine.sentinels) drawSentinel(ctx, sentinelFromRt(s))
   for (const p of engine.projectiles) drawProjectile(ctx, p)
   for (const f of engine.floaters) drawFloater(ctx, f)
+}
+
+function drawAura(ctx: CanvasRenderingContext2D, pos: Vec2, radius: number, color: string, now: number): void {
+  const pulse = 0.5 + 0.5 * Math.sin(now * 2 + pos.x * 0.05)
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
+  ctx.strokeStyle = hexToRgba(color, 0.1 + pulse * 0.1)
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([6, 8])
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.restore()
+}
+
+function drawReticle(ctx: CanvasRenderingContext2D, pos: Vec2, r: number): void {
+  ctx.save()
+  ctx.translate(pos.x, pos.y)
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+  ctx.lineWidth = 1.5
+  const rr = r + 5
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath()
+    const a = (i * Math.PI) / 2 + Math.PI / 4
+    ctx.arc(0, 0, rr, a - 0.35, a + 0.35)
+    ctx.stroke()
+  }
+  ctx.restore()
 }
 
 // ---- small canvas helpers ----

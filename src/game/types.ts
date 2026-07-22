@@ -193,3 +193,13 @@ export interface WaveDef {
 
 /** Mapping of which sentinel occupies which slot, for the setup phase. */
 export type Placement = Record<string, string | null> // slotId -> sentinelId | null
+
+/** Team-wide targeting priority. */
+export type FocusMode = 'first' | 'lowestHp' | 'strongest' | 'nearest'
+
+/** Team-wide behavior modifiers set before a wave. */
+export interface Tactics {
+  focus: FocusMode
+  /** Hold fire until an enemy crosses the path midpoint (concentrates damage). */
+  holdFire: boolean
+}

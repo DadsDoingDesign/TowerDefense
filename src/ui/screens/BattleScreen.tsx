@@ -3,6 +3,7 @@ import { BattleControls } from '../components/BattleControls'
 import { EvolutionModal } from '../components/EvolutionModal'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Roster } from '../components/Roster'
+import { TacticsPanel } from '../components/TacticsPanel'
 import { TopBar } from '../components/TopBar'
 import { WavePreview } from '../components/WavePreview'
 import { useGameStore } from '../../state/gameStore'
@@ -20,6 +21,7 @@ export function BattleScreen() {
 
         <aside className="side-panel">
           {isSetup && <WavePreview />}
+          {isSetup && <TacticsPanel />}
           <Roster />
         </aside>
       </div>

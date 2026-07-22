@@ -7,7 +7,7 @@ Recruit up to five **Sentinels** (tower units), place them along a fixed path, s
 team tactics, then let each wave auto-resolve. Sentinels level up _during_ a run and
 branch into specialized forms. Runs are permadeath; meta-progression persists in a hub.
 
-> Status: **Milestone 1 complete** — core wave/combat loop. See the roadmap below.
+> Status: **Complete** — all seven milestones shipped. See the roadmap below.
 
 ## Tech stack
 
@@ -56,11 +56,24 @@ and reports a `BattleResult` (gold, per-Sentinel kills/damage/XP, base HP left) 
 
 ## Roadmap (milestones)
 
-1. ✅ **Core wave/combat loop** — fixed path, escalating waves, placeholder Sentinels
-   (Fighter / Rogue / Mystic) on fixed slots, Canvas 2D battle, speed toggle, win/lose.
-2. ⏳ Archetype branching (3 → 9 → 27) with per-branch abilities and in-run leveling.
-3. ⏳ Itemization — base stats + random enchantments + rarity, Reforge / Increase Rarity.
-4. ⏳ Node map — Standard / Elite / Merchant / Shrine / Recruit, branching paths.
-5. ⏳ Meta-progression hub + permadeath reset, Dark Sacrifice prestige.
-6. ⏳ Endless Watch (Arena) mode with the Rooms economy.
-7. ⏳ Polish — tactics/behavior settings, richer enchant-proc feedback.
+1. ✅ **Core wave/combat loop** — fixed path, escalating waves, Fighter/Rogue/Mystic on
+   fixed slots, Canvas 2D battle, speed toggle, win/lose.
+2. ✅ **Archetype branching (3 → 9 → 27)** — data-driven ability mods, in-run leveling,
+   evolution choices; engine gains HP, blocking, DoTs, CC, thorns, auras, Patience.
+3. ✅ **Itemization** — base stats + rolled enchantments + rarity ladder, Keepsakes
+   (team buffs), Reforge / Increase Rarity sinks, equip UI, loot drops.
+4. ✅ **Node map** — Slay-the-Spire DAG with Standard / Elite / Merchant / Shrine /
+   Recruit / Boss nodes and branching paths.
+5. ✅ **Meta-progression hub + permadeath** — Watch Marks, upgrades, Dark Sacrifice
+   prestige, lifetime stats, persisted to localStorage.
+6. ✅ **Endless Watch (Arena)** — 200 Gold / 30 Dust / 3 lives, Rooms economy
+   (Merchant / Forge / Shrine / Recruit), escalating AI waves, win counter.
+7. ✅ **Polish** — team Tactics (focus priority + hold-fire), proc/aura/reticle
+   visual feedback, mobile-first layout throughout.
+
+## Testing
+
+Gameplay logic is covered by deterministic, seeded harnesses run with `tsx`
+(engine simulation, tree integrity, item generation, map connectivity, meta and
+endless economy) plus headless-browser playthroughs (Playwright) for each
+milestone. All combat is reproducible via the seeded `RNG`.

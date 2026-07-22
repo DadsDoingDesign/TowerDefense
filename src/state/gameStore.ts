@@ -19,8 +19,10 @@ import {
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
-import type { Archetype, GameMap, Item, ItemRarity, ItemSlot, Placement, Sentinel, WaveDef } from '../game/types'
+import type { Archetype, GameMap, Item, ItemRarity, ItemSlot, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
 import { useMetaStore, type MetaBonuses } from './metaStore'
+
+const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
 
 export type Screen = 'hub' | 'map' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'
@@ -113,6 +115,7 @@ interface GameState {
   currentWave: WaveDef | null
   battlePhase: BattlePhase
   speed: Speed
+  tactics: Tactics
   engine: GameEngine | null
   hud: HudSnapshot
   lastResult: BattleResult | null
@@ -156,6 +159,7 @@ interface GameState {
   placeOnSlot: (slotId: string) => void
   clearSlot: (slotId: string) => void
   setSpeed: (s: Speed) => void
+  setTactics: (t: Partial<Tactics>) => void
   startWave: () => void
   syncHud: () => void
   finishBattle: () => void
@@ -285,6 +289,7 @@ export const useGameStore = create<GameState>((set, get) => {
     currentWave: null,
     battlePhase: 'setup',
     speed: 1,
+    tactics: DEFAULT_TACTICS,
     engine: null,
     hud: freshHud(),
     lastResult: null,
@@ -329,6 +334,7 @@ export const useGameStore = create<GameState>((set, get) => {
         currentWave: null,
         battlePhase: 'setup',
         speed: 1,
+        tactics: DEFAULT_TACTICS,
         engine: null,
         hud: freshHud(),
         lastResult: null,
@@ -373,6 +379,7 @@ export const useGameStore = create<GameState>((set, get) => {
         currentWave: null,
         battlePhase: 'setup',
         speed: 1,
+        tactics: DEFAULT_TACTICS,
         engine: null,
         hud: freshHud(),
         lastResult: null,
@@ -542,9 +549,10 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     setSpeed: (s) => set({ speed: s }),
+    setTactics: (t) => set({ tactics: { ...get().tactics, ...t } }),
 
     startWave: () => {
-      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, currentWave } = get()
+      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, currentWave, tactics } = get()
       if (!currentWave) return
       const engine = new GameEngine({
         map: battleMap,
@@ -554,6 +562,7 @@ export const useGameStore = create<GameState>((set, get) => {
         maxBaseHp,
         enemyHpMult,
         teamMods: teamKeepsakeMods(roster),
+        tactics,
       })
       set({ engine, battlePhase: 'battle', selectedSentinelId: null, hud: engine.hudSnapshot() })
     },
