@@ -10,15 +10,15 @@ export type EncounterKind = 'normal' | 'elite' | 'boss'
 export function generateEncounter(depth: number, kind: EncounterKind, label?: string): WaveDef {
   if (kind === 'boss') return bossWave(depth, label)
 
-  const eliteBoost = kind === 'elite' ? 1.35 : 1
-  const hpMult = (1 + (depth - 1) * 0.22) * eliteBoost
-  const gap = kind === 'elite' ? 0.7 : 0.85
+  const eliteBoost = kind === 'elite' ? 1.4 : 1
+  const hpMult = (1 + (depth - 1) * 0.32) * eliteBoost
+  const gap = kind === 'elite' ? 0.62 : 0.78
 
-  const grunts = 5 + depth * 2 + (kind === 'elite' ? 3 : 0)
-  const runners = depth >= 2 ? depth + 1 : 0
+  const grunts = 5 + Math.round(depth * 2.4) + (kind === 'elite' ? 4 : 0)
+  const runners = depth >= 2 ? depth + 2 : 0
   const shades = depth >= 4 ? depth - 3 : 0
-  const brutes = (depth >= 3 ? Math.floor((depth - 2) / 2) : 0) + (kind === 'elite' ? 2 : 0)
-  const ogres = (depth >= 6 ? Math.floor((depth - 5) / 2) : 0) + (kind === 'elite' && depth >= 4 ? 1 : 0)
+  const brutes = (depth >= 3 ? Math.floor((depth - 2) / 1.5) : 0) + (kind === 'elite' ? 2 : 0)
+  const ogres = (depth >= 6 ? Math.floor((depth - 5) / 1.5) : 0) + (kind === 'elite' && depth >= 4 ? 1 : 0)
 
   const spawns: SpawnEvent[] = []
   let t = 0

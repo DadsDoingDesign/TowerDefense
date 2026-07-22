@@ -71,9 +71,24 @@ and reports a `BattleResult` (gold, per-Sentinel kills/damage/XP, base HP left) 
 7. ✅ **Polish** — team Tactics (focus priority + hold-fire), proc/aura/reticle
    visual feedback, mobile-first layout throughout.
 
+## Compounding difficulty (Threat)
+
+A campaign run is one continuous, escalating defense: base HP, tower placements,
+roster, gear, and evolutions all persist across nodes. A **Threat** multiplier
+compounds as you clear nodes (more for elites) and as you gain power (shrines,
+recruits), scaling enemy HP so the opposition keeps pace with your growing
+strength. Threat is shown on the map header and in the pre-wave preview.
+
 ## Testing
 
 Gameplay logic is covered by deterministic, seeded harnesses run with `tsx`
 (engine simulation, tree integrity, item generation, map connectivity, meta and
 endless economy) plus headless-browser playthroughs (Playwright) for each
 milestone. All combat is reproducible via the seeded `RNG`.
+
+```bash
+npm run balance   # sweeps all 27 builds, item tiers/affixes, and Monte-Carlo runs;
+                  # writes balance/REPORT.md and fails on any balance invariant.
+```
+
+See [`balance/`](./balance) for the balance-testing harness.

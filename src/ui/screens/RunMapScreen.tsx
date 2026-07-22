@@ -11,6 +11,7 @@ export function RunMapScreen() {
   const roster = useGameStore((s) => s.roster)
   const baseHp = useGameStore((s) => s.baseHp)
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
+  const threat = useGameStore((s) => s.threat)
   const gold = useGameStore((s) => s.gold)
   const inventory = useGameStore((s) => s.inventory)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
@@ -28,6 +29,9 @@ export function RunMapScreen() {
           <span className="brand">FIELDWATCH</span>
           <span className="wave-chip">
             Depth {depth}/{runMap.layers - 1}
+          </span>
+          <span className="threat-chip" title="Enemies scale with your compounding power">
+            ⚡ ×{threat.toFixed(2)}
           </span>
         </div>
         <div className="mh-right">

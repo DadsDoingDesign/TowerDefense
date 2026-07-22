@@ -42,6 +42,12 @@ export const ENDLESS_LIVES = 3
 const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200 }
 const RECRUIT_PRICE = 80
 
+// Compounding difficulty: a campaign run is one continuous escalating defense.
+// Threat rises as you clear nodes and as you gain power (shrines / recruits), so
+// enemies get tougher to reflect your own compounding strength.
+export const THREAT_PER_NODE = { normal: 1.08, elite: 1.16, boss: 1 } as const
+export const THREAT_PER_CHOICE = 1.05
+
 export type GameMode = 'campaign' | 'endless'
 export type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 
@@ -104,6 +110,8 @@ interface GameState {
   baseHp: number
   maxBaseHp: number
   enemyHpMult: number
+  /** Compounding campaign difficulty multiplier (1 = start of run). */
+  threat: number
   inventory: Item[]
   // Run tallies (for meta rewards)
   runKills: number
@@ -280,6 +288,7 @@ export const useGameStore = create<GameState>((set, get) => {
     baseHp: MAX_BASE_HP,
     maxBaseHp: MAX_BASE_HP,
     enemyHpMult: 1,
+    threat: 1,
     inventory: startingInventory(),
     runKills: 0,
     runDowns: 0,
@@ -326,6 +335,7 @@ export const useGameStore = create<GameState>((set, get) => {
         baseHp: b.maxBaseHp,
         maxBaseHp: b.maxBaseHp,
         enemyHpMult: b.enemyHpMult,
+        threat: 1,
         inventory: startingInventory(b.extraItems),
         runKills: 0,
         runDowns: 0,
@@ -371,6 +381,7 @@ export const useGameStore = create<GameState>((set, get) => {
         baseHp: b.maxBaseHp,
         maxBaseHp: b.maxBaseHp,
         enemyHpMult: b.enemyHpMult,
+        threat: 1,
         inventory: startingInventory(b.extraItems),
         runKills: 0,
         runDowns: 0,
@@ -552,15 +563,17 @@ export const useGameStore = create<GameState>((set, get) => {
     setTactics: (t) => set({ tactics: { ...get().tactics, ...t } }),
 
     startWave: () => {
-      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, currentWave, tactics } = get()
+      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, threat, mode, currentWave, tactics } = get()
       if (!currentWave) return
+      // Campaign compounds via Threat; endless escalates via its own round scaling.
+      const effHpMult = enemyHpMult * (mode === 'campaign' ? threat : 1)
       const engine = new GameEngine({
         map: battleMap,
         wave: currentWave,
         placedSentinels: placedSentinels(roster, placements),
         baseHp,
         maxBaseHp,
-        enemyHpMult,
+        enemyHpMult: effHpMult,
         teamMods: teamKeepsakeMods(roster),
         tactics,
       })
@@ -700,11 +713,15 @@ export const useGameStore = create<GameState>((set, get) => {
             .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns })
         : 0
 
+      // The world escalates with each node cleared — more so for elites.
+      const nextThreat = st.threat * THREAT_PER_NODE[kind]
+
       set({
         roster: nextRoster,
         gold: gold + result.goldEarned + bonusGold,
         baseHp: result.baseHpLeft,
         inventory: [...inventory, ...loot],
+        threat: nextThreat,
         lastResult: result,
         lastLoot: loot,
         evolutionQueue,
@@ -745,6 +762,7 @@ export const useGameStore = create<GameState>((set, get) => {
         gold: gold - merchant.recruit.price,
         roster: [...roster, merchant.recruit.sentinel],
         merchant: { ...merchant, recruit: null },
+        threat: get().threat * THREAT_PER_CHOICE,
       })
     },
 
@@ -762,6 +780,7 @@ export const useGameStore = create<GameState>((set, get) => {
         roster: eff.roster ?? roster,
         baseHp: newBaseHp,
         gold: Math.max(0, gold + (eff.goldDelta ?? 0)),
+        threat: get().threat * THREAT_PER_CHOICE, // a stronger team draws a stronger foe
       })
       completeNode(get, set, event.nodeId)
     },
@@ -775,7 +794,9 @@ export const useGameStore = create<GameState>((set, get) => {
       const { recruitOptions, roster, event } = get()
       if (!event) return
       const pick = recruitOptions.find((s) => s.id === sentinelId)
-      if (pick && roster.length < MAX_ROSTER) set({ roster: [...roster, pick] })
+      if (pick && roster.length < MAX_ROSTER) {
+        set({ roster: [...roster, pick], threat: get().threat * THREAT_PER_CHOICE })
+      }
       completeNode(get, set, event.nodeId)
     },
 

@@ -4,15 +4,20 @@ import { useGameStore } from '../../state/gameStore'
 
 export function WavePreview() {
   const wave = useGameStore((s) => s.currentWave)
+  const mode = useGameStore((s) => s.mode)
+  const threat = useGameStore((s) => s.threat)
   if (!wave) return null
   const comp = waveComposition(wave)
   const total = wave.spawns.length
+  const showThreat = mode === 'campaign' && threat > 1.001
 
   return (
     <div className="wave-preview">
       <div className="panel-head">
         <span>{wave.isBoss ? '☠ Boss Wave' : 'Incoming Wave'}</span>
-        <span className="hint">{total} enemies</span>
+        <span className="hint">
+          {total} enemies{showThreat && ` · ⚡×${threat.toFixed(2)} HP`}
+        </span>
       </div>
       <div className="wave-enemies">
         {comp.map(({ typeId, count }) => {
