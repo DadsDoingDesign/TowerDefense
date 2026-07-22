@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { computeEffectiveAttack } from '../game/engine/effective'
+import { computeCombat } from '../game/engine/combat'
 import {
   drawBattleEntities,
   drawField,
@@ -84,7 +84,8 @@ export function BattleCanvas() {
       if (phase === 'battle' && liveEngine) {
         // Show ranges faintly while the fight runs.
         for (const s of liveEngine.sentinels) {
-          drawRange(ctx, s.pos, s.eff.range, s.def.accent)
+          if (s.downed) continue
+          drawRange(ctx, s.pos, s.profile.range, s.def.accent)
         }
         drawBattleEntities(ctx, liveEngine)
       } else {
@@ -93,8 +94,8 @@ export function BattleCanvas() {
         const occupied = new Set(placed.map((p) => p.slotId))
         for (const p of placed) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
-          const range = computeEffectiveAttack(p.sentinel).range
-          drawRange(ctx, slot.pos, range, p.sentinel.accent)
+          const profile = computeCombat(p.sentinel)
+          drawRange(ctx, slot.pos, profile.range, p.sentinel.accent)
         }
         for (const slot of map.slots) {
           if (occupied.has(slot.id)) continue
@@ -108,15 +109,21 @@ export function BattleCanvas() {
         }
         for (const p of placed) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
-          const eff = computeEffectiveAttack(p.sentinel)
+          const profile = computeCombat(p.sentinel)
           const ds: DrawSentinel = {
             pos: slot.pos,
             archetype: p.sentinel.archetype,
             color: p.sentinel.color,
             accent: p.sentinel.accent,
-            range: eff.range,
+            range: profile.range,
             aimAngle: 0,
             fireFlash: 0,
+            hp: profile.maxHp,
+            maxHp: profile.maxHp,
+            downed: false,
+            procFlash: 0,
+            patienceStacks: 0,
+            blocking: false,
           }
           drawSentinel(ctx, ds)
         }

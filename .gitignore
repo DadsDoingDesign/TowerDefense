@@ -29,3 +29,11 @@ pnpm-debug.log*
 
 # Vite
 .vite
+
+# Local scratch test harnesses (not part of the shipped project)
+_*.ts
+_*.mjs
+_*.png
+
+# TS incremental build info
+*.tsbuildinfo

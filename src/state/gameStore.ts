@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { GameEngine, type BattleResult } from '../game/engine/engine'
+import { applyXp, evolutionPending, evolveInto } from '../game/engine/leveling'
 import { FIRST_MAP } from '../game/data/maps'
 import { startingRoster } from '../game/data/sentinels'
 import { generateWave, TOTAL_WAVES } from '../game/data/waves'
@@ -33,6 +34,12 @@ interface GameState {
 
   // Setup interaction
   selectedSentinelId: string | null
+  /** Sentinel whose detail panel is open, or null. */
+  detailId: string | null
+  /** Which sentinel+slot is choosing an item to equip (M3), or null. */
+  equipContext: { sentinelId: string; slot: import('../game/types').ItemSlot } | null
+  /** Sentinel ids owed an evolution choice after the last battle. */
+  evolutionQueue: string[]
 
   // Battle runtime
   engine: GameEngine | null
@@ -49,6 +56,11 @@ interface GameState {
   syncHud: () => void
   finishBattle: () => void
   continueAfterWave: () => void
+  openDetail: (id: string) => void
+  closeDetail: () => void
+  openEquip: (sentinelId: string, slot: import('../game/types').ItemSlot) => void
+  closeEquip: () => void
+  chooseEvolution: (sentinelId: string, nodeId: string) => void
 }
 
 function emptyPlacements(map: GameMap): Placement {
@@ -82,6 +94,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   gold: START_GOLD,
   speed: 1,
   selectedSentinelId: null,
+  detailId: null,
+  equipContext: null,
+  evolutionQueue: [],
   engine: null,
   hud: {
     baseHp: MAX_BASE_HP,
@@ -105,6 +120,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       gold: START_GOLD,
       speed: 1,
       selectedSentinelId: null,
+      detailId: null,
+      equipContext: null,
+      evolutionQueue: [],
       engine: null,
       lastResult: null,
       hud: {
@@ -184,9 +202,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       return
     }
 
-    // Apply rewards and XP (leveling proper lands in M2; XP accrues now).
+    // Apply XP and level growth, then find who is owed an evolution choice.
     const xpById = new Map(result.perSentinel.map((p) => [p.id, p.xpGained]))
-    const nextRoster = roster.map((s) => ({ ...s, xp: s.xp + (xpById.get(s.id) ?? 0) }))
+    const nextRoster = roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0))
+    const evolutionQueue = nextRoster.filter(evolutionPending).map((s) => s.id)
 
     const wonRun = waveIndex >= totalWaves
     set({
@@ -194,6 +213,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       gold: gold + result.goldEarned,
       baseHp: result.baseHpLeft,
       lastResult: result,
+      evolutionQueue,
       phase: wonRun ? 'won' : 'setup',
       engine: null,
     })
@@ -201,4 +221,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   continueAfterWave: () => set({ lastResult: null }),
+
+  openDetail: (id) => set({ detailId: id }),
+  closeDetail: () => set({ detailId: null }),
+  openEquip: (sentinelId, slot) => set({ equipContext: { sentinelId, slot } }),
+  closeEquip: () => set({ equipContext: null }),
+
+  chooseEvolution: (sentinelId, nodeId) => {
+    const { roster, evolutionQueue } = get()
+    const nextRoster = roster.map((s) => (s.id === sentinelId ? evolveInto(s, nodeId) : s))
+    set({
+      roster: nextRoster,
+      evolutionQueue: evolutionQueue.filter((id) => id !== sentinelId),
+    })
+  },
 }))

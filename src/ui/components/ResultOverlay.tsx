@@ -7,6 +7,7 @@ export function ResultOverlay() {
   const roster = useGameStore((s) => s.roster)
   const waveIndex = useGameStore((s) => s.waveIndex)
   const totalWaves = useGameStore((s) => s.totalWaves)
+  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const continueAfterWave = useGameStore((s) => s.continueAfterWave)
   const newRun = useGameStore((s) => s.newRun)
 
@@ -39,8 +40,8 @@ export function ResultOverlay() {
     )
   }
 
-  // Between-wave summary during setup.
-  if (phase === 'setup' && lastResult && lastResult.status === 'cleared') {
+  // Between-wave summary during setup — but let evolution choices resolve first.
+  if (phase === 'setup' && lastResult && lastResult.status === 'cleared' && evolutionQueue.length === 0) {
     return (
       <Overlay tone="clear">
         <h2>Wave {waveIndex - 1} Cleared</h2>
@@ -59,8 +60,11 @@ export function ResultOverlay() {
             .filter((p) => p.kills > 0 || p.damageDealt > 0)
             .sort((a, b) => b.damageDealt - a.damageDealt)
             .map((p) => (
-              <div key={p.id} className="summary-row">
-                <span className="sr-name">{nameOf(p.id)}</span>
+              <div key={p.id} className={`summary-row ${p.downed ? 'downed' : ''}`}>
+                <span className="sr-name">
+                  {nameOf(p.id)}
+                  {p.downed && <span className="sr-down"> ✕</span>}
+                </span>
                 <span className="sr-kills">{p.kills} kills</span>
                 <span className="sr-dmg">{p.damageDealt} dmg</span>
                 <span className="sr-xp">+{p.xpGained} xp</span>

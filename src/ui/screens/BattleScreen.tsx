@@ -1,7 +1,9 @@
 import { BattleCanvas } from '../BattleCanvas'
 import { BattleControls } from '../components/BattleControls'
+import { EvolutionModal } from '../components/EvolutionModal'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Roster } from '../components/Roster'
+import { SentinelDetail } from '../components/SentinelDetail'
 import { TopBar } from '../components/TopBar'
 import { WavePreview } from '../components/WavePreview'
 import { useGameStore } from '../../state/gameStore'
@@ -24,7 +26,9 @@ export function BattleScreen() {
       </div>
 
       <BattleControls />
+      <EvolutionModal />
       <ResultOverlay />
+      <SentinelDetail />
     </div>
   )
 }

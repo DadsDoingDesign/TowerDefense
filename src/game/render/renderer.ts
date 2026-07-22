@@ -26,6 +26,12 @@ export interface DrawSentinel {
   range: number
   aimAngle: number
   fireFlash: number
+  hp: number
+  maxHp: number
+  downed: boolean
+  procFlash: number
+  patienceStacks: number
+  blocking: boolean
 }
 
 export function sentinelFromRt(s: RtSentinel): DrawSentinel {
@@ -34,9 +40,15 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
     archetype: s.def.archetype,
     color: s.def.color,
     accent: s.def.accent,
-    range: s.eff.range,
+    range: s.profile.range,
     aimAngle: s.aimAngle,
     fireFlash: s.fireFlash,
+    hp: s.hp,
+    maxHp: s.maxHp,
+    downed: s.downed,
+    procFlash: s.procFlash,
+    patienceStacks: s.patienceStacks,
+    blocking: s.blockIds.length > 0,
   }
 }
 
@@ -156,9 +168,47 @@ export function drawRange(ctx: CanvasRenderingContext2D, pos: Vec2, range: numbe
 
 export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): void {
   const { pos } = s
-  const pulse = 1 + s.fireFlash * 0.18
   ctx.save()
   ctx.translate(pos.x, pos.y)
+
+  if (s.downed) {
+    // Fallen: a dim marker.
+    ctx.globalAlpha = 0.5
+    ctx.beginPath()
+    ctx.arc(0, 0, 13, 0, Math.PI * 2)
+    ctx.fillStyle = '#2a2f2c'
+    ctx.fill()
+    ctx.strokeStyle = '#e05a4f'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.fillStyle = '#e05a4f'
+    ctx.font = 'bold 13px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('✕', 0, 1)
+    ctx.restore()
+    return
+  }
+
+  const pulse = 1 + s.fireFlash * 0.18
+
+  // Proc feedback ring (on-hit effect fired)
+  if (s.procFlash > 0) {
+    ctx.beginPath()
+    ctx.arc(0, 0, 22, 0, Math.PI * 2)
+    ctx.strokeStyle = hexToRgba('#ffe08a', s.procFlash * 0.7)
+    ctx.lineWidth = 3
+    ctx.stroke()
+  }
+
+  // Blocking indicator (holding enemies)
+  if (s.blocking) {
+    ctx.beginPath()
+    ctx.arc(0, 0, 20, -0.5, Math.PI + 0.5)
+    ctx.strokeStyle = hexToRgba('#e05a4f', 0.5)
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
 
   // Barrel/indicator pointing at target
   ctx.save()
@@ -177,7 +227,6 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   ctx.strokeStyle = s.accent
   ctx.stroke()
 
-  // Muzzle flash glow
   if (s.fireFlash > 0) {
     ctx.beginPath()
     ctx.arc(0, 0, 15 * pulse + 4, 0, Math.PI * 2)
@@ -193,24 +242,66 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   ctx.textBaseline = 'middle'
   ctx.fillText(GLYPH[s.archetype], 0, 1)
 
+  // HP bar (only when damaged)
+  const frac = Math.max(0, s.hp) / s.maxHp
+  if (frac < 0.999) {
+    const w = 30
+    const y = 20
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    roundRect(ctx, -w / 2, y, w, 4, 2)
+    ctx.fill()
+    ctx.fillStyle = frac > 0.5 ? '#7ac74f' : frac > 0.25 ? '#e6b800' : '#e05a4f'
+    roundRect(ctx, -w / 2, y, w * frac, 4, 2)
+    ctx.fill()
+  }
+
+  // Patience pips (top-right of token)
+  if (s.patienceStacks > 0) {
+    for (let i = 0; i < s.patienceStacks; i++) {
+      ctx.beginPath()
+      ctx.arc(-12 + i * 5, -19, 1.8, 0, Math.PI * 2)
+      ctx.fillStyle = '#9ec1f0'
+      ctx.fill()
+    }
+  }
+
   ctx.restore()
 }
 
 const GLYPH: Record<Archetype, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }
 
-export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy): void {
+export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number): void {
   const { pos, type } = e
+  const burning = now < e.burnUntil
+  const chilled = now < e.chillUntil
+  const stunned = now < e.stunUntil
   ctx.save()
   ctx.translate(pos.x, pos.y)
 
   ctx.beginPath()
   ctx.arc(0, 0, type.radius, 0, Math.PI * 2)
-  ctx.fillStyle = type.color
+  ctx.fillStyle = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
   ctx.fill()
   if (type.isBoss) {
     ctx.lineWidth = 3
     ctx.strokeStyle = '#e0aaff'
     ctx.stroke()
+  }
+  // Burning aura
+  if (burning) {
+    ctx.beginPath()
+    ctx.arc(0, 0, type.radius + 3, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(240,120,50,0.7)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
+  // Stun stars
+  if (stunned) {
+    ctx.fillStyle = '#ffe08a'
+    ctx.font = 'bold 11px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('✦', 0, -type.radius - 6)
   }
   if (e.hitFlash > 0) {
     ctx.beginPath()
@@ -258,9 +349,27 @@ export function drawFloater(ctx: CanvasRenderingContext2D, f: FloatingText): voi
   ctx.restore()
 }
 
+export function drawTrap(ctx: CanvasRenderingContext2D, pos: Vec2, now: number): void {
+  const pulse = 0.5 + 0.5 * Math.sin(now * 4 + pos.x)
+  ctx.save()
+  ctx.translate(pos.x, pos.y)
+  ctx.beginPath()
+  ctx.arc(0, 0, 30, 0, Math.PI * 2)
+  ctx.fillStyle = `rgba(200,90,60,${0.08 + pulse * 0.06})`
+  ctx.fill()
+  ctx.setLineDash([3, 4])
+  ctx.strokeStyle = 'rgba(224,90,79,0.5)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.restore()
+}
+
 /** Convenience: draw a whole running battle from an engine. */
 export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEngine): void {
-  for (const e of engine.enemies) drawEnemy(ctx, e)
+  const now = engine.elapsed
+  for (const t of engine.traps) drawTrap(ctx, t.pos, now)
+  for (const e of engine.enemies) drawEnemy(ctx, e, now)
   for (const s of engine.sentinels) drawSentinel(ctx, sentinelFromRt(s))
   for (const p of engine.projectiles) drawProjectile(ctx, p)
   for (const f of engine.floaters) drawFloater(ctx, f)
@@ -292,6 +401,22 @@ export function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(h.substring(2, 4), 16)
   const b = parseInt(h.substring(4, 6), 16)
   return `rgba(${r},${g},${b},${alpha})`
+}
+
+/** Blend two hex colors, t=0 → a, t=1 → b. Returns an rgb() string. */
+export function mix(a: string, b: string, t: number): string {
+  const pa = a.replace('#', '')
+  const pb = b.replace('#', '')
+  const ar = parseInt(pa.substring(0, 2), 16)
+  const ag = parseInt(pa.substring(2, 4), 16)
+  const ab = parseInt(pa.substring(4, 6), 16)
+  const br = parseInt(pb.substring(0, 2), 16)
+  const bg = parseInt(pb.substring(2, 4), 16)
+  const bb = parseInt(pb.substring(4, 6), 16)
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bl = Math.round(ab + (bb - ab) * t)
+  return `rgb(${r},${g},${bl})`
 }
 
 /** Archetype accent used by UI chips too. */
