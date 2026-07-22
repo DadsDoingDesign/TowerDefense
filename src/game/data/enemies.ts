@@ -1,0 +1,45 @@
+import type { EnemyType } from '../types'
+
+export const ENEMY_TYPES: Record<string, EnemyType> = {
+  grunt: {
+    id: 'grunt',
+    name: 'Grunt',
+    baseHp: 46,
+    speed: 62,
+    reward: 4,
+    leak: 1,
+    radius: 12,
+    color: '#8b9467',
+  },
+  runner: {
+    id: 'runner',
+    name: 'Runner',
+    baseHp: 26,
+    speed: 118,
+    reward: 5,
+    leak: 1,
+    radius: 10,
+    color: '#c9a24b',
+  },
+  brute: {
+    id: 'brute',
+    name: 'Brute',
+    baseHp: 150,
+    speed: 42,
+    reward: 11,
+    leak: 2,
+    radius: 17,
+    color: '#a8563c',
+  },
+  warden: {
+    id: 'warden',
+    name: 'Warden',
+    baseHp: 900,
+    speed: 34,
+    reward: 80,
+    leak: 10,
+    radius: 26,
+    color: '#7a3b8f',
+    isBoss: true,
+  },
+}
