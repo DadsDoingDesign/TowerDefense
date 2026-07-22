@@ -1,5 +1,6 @@
 import { useGameStore } from './state/gameStore'
 import { BattleScreen } from './ui/screens/BattleScreen'
+import { HubScreen } from './ui/screens/HubScreen'
 import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { EquipModal } from './ui/components/EquipModal'
 import { RunEndOverlay } from './ui/components/RunEndOverlay'
@@ -11,7 +12,9 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {screen === 'map' ? <RunMapScreen /> : <BattleScreen />}
+      {screen === 'hub' && <HubScreen />}
+      {screen === 'map' && <RunMapScreen />}
+      {screen === 'battle' && <BattleScreen />}
       {/* Shared across screens */}
       <SentinelDetail />
       <EquipModal />

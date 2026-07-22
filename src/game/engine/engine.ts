@@ -91,6 +91,7 @@ export interface BattleResult {
   baseHpLeft: number
   leaks: number
   downed: number
+  enemiesKilled: number
   perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number; downed: boolean }[]
 }
 
@@ -110,6 +111,7 @@ export class GameEngine {
   goldEarned = 0
   leaks = 0
   downedCount = 0
+  killCount = 0
   status: BattleStatus = 'running'
   elapsed = 0
 
@@ -117,6 +119,7 @@ export class GameEngine {
   private spawnIndex = 0
   private rng: RNG
   private teamMods: EffectMods[]
+  private enemyHpMult: number
   private xpGained = new Map<string, number>()
 
   constructor(opts: {
@@ -126,6 +129,7 @@ export class GameEngine {
     baseHp: number
     maxBaseHp: number
     teamMods?: EffectMods[]
+    enemyHpMult?: number
     seed?: number
   }) {
     this.map = opts.map
@@ -134,6 +138,7 @@ export class GameEngine {
     this.baseHp = opts.baseHp
     this.maxBaseHp = opts.maxBaseHp
     this.teamMods = opts.teamMods ?? []
+    this.enemyHpMult = opts.enemyHpMult ?? 1
     this.rng = new RNG(opts.seed)
 
     const slotById = new Map(opts.map.slots.map((s) => [s.id, s]))
@@ -221,7 +226,7 @@ export class GameEngine {
     ) {
       const s = this.spawnQueue[this.spawnIndex]
       const type = ENEMY_TYPES[s.typeId]
-      const maxHp = Math.round(type.baseHp * s.hpMult)
+      const maxHp = Math.round(type.baseHp * s.hpMult * this.enemyHpMult)
       this.enemies.push({
         id: nextId('en'),
         type,
@@ -509,6 +514,7 @@ export class GameEngine {
     const idx = this.enemies.indexOf(e)
     if (idx === -1) return
     this.enemies.splice(idx, 1)
+    this.killCount++
     this.goldEarned += e.type.reward
     if (srcId) {
       const s = this.sentinels.find((x) => x.id === srcId)
@@ -601,6 +607,7 @@ export class GameEngine {
       baseHpLeft: this.baseHp,
       leaks: this.leaks,
       downed: this.downedCount,
+      enemiesKilled: this.killCount,
       perSentinel: this.sentinels.map((s) => ({
         id: s.id,
         kills: s.kills,

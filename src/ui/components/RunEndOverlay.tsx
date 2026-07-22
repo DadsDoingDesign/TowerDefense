@@ -1,14 +1,17 @@
 import { useGameStore } from '../../state/gameStore'
 
-/** Run-level win/loss. Permadeath: a loss ends the run. */
+/** Run-level win/loss. Permadeath: a loss ends the run and returns to the hub. */
 export function RunEndOverlay() {
   const runPhase = useGameStore((s) => s.runPhase)
+  const screen = useGameStore((s) => s.screen)
   const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
-  const newRun = useGameStore((s) => s.newRun)
+  const marksEarned = useGameStore((s) => s.marksEarned)
+  const returnToHub = useGameStore((s) => s.returnToHub)
 
-  if (runPhase === 'active') return null
+  // Only show while still inside the run (not after returning to the hub).
+  if (runPhase === 'active' || screen === 'hub') return null
 
-  const depth = clearedNodeIds.length - 1 // minus the start node
+  const depth = clearedNodeIds.length - 1
 
   return (
     <div className="overlay-scrim">
@@ -27,8 +30,12 @@ export function RunEndOverlay() {
             </p>
           </>
         )}
-        <button className="overlay-btn" onClick={newRun}>
-          New Run
+        <div className="marks-earned">
+          <span>Watch Marks earned</span>
+          <strong>✦ {marksEarned}</strong>
+        </div>
+        <button className="overlay-btn" onClick={returnToHub}>
+          Return to Watchtower
         </button>
       </div>
     </div>

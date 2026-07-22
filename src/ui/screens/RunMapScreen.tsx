@@ -1,5 +1,5 @@
 import { buildName } from '../../game/engine/leveling'
-import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
+import { useGameStore } from '../../state/gameStore'
 import { MerchantModal } from '../components/MerchantModal'
 import { RecruitModal } from '../components/RecruitModal'
 import { ShrineModal } from '../components/ShrineModal'
@@ -10,6 +10,7 @@ const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '�
 export function RunMapScreen() {
   const roster = useGameStore((s) => s.roster)
   const baseHp = useGameStore((s) => s.baseHp)
+  const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const gold = useGameStore((s) => s.gold)
   const inventory = useGameStore((s) => s.inventory)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
@@ -18,7 +19,7 @@ export function RunMapScreen() {
   const openDetail = useGameStore((s) => s.openDetail)
 
   const depth = cleared.length - 1
-  const hpFrac = Math.max(0, baseHp) / MAX_BASE_HP
+  const hpFrac = Math.max(0, baseHp) / maxBaseHp
 
   return (
     <div className="run-map-screen">
@@ -31,7 +32,7 @@ export function RunMapScreen() {
         </div>
         <div className="mh-right">
           <span className="mh-base" title="Base integrity">
-            ⬡ {Math.ceil(baseHp)}/{MAX_BASE_HP}
+            ⬡ {Math.ceil(baseHp)}/{maxBaseHp}
             <span className="mh-hp-bar">
               <span
                 className="mh-hp-fill"

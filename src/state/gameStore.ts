@@ -18,8 +18,9 @@ import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, type EncounterKind } from '../game/data/waves'
 import type { Archetype, GameMap, Item, ItemRarity, ItemSlot, Placement, Sentinel, WaveDef } from '../game/types'
+import { useMetaStore, type MetaBonuses } from './metaStore'
 
-export type Screen = 'map' | 'battle'
+export type Screen = 'hub' | 'map' | 'battle'
 export type BattlePhase = 'setup' | 'battle'
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
@@ -34,12 +35,27 @@ const RECRUIT_PRICE = 80
 
 const rng = new RNG()
 
-function startingInventory(): Item[] {
-  return [
+function startingInventory(extra = 0): Item[] {
+  const items = [
     generateItem(rng, { slot: 'weapon', rarity: 'common' }),
     generateItem(rng, { slot: 'armor', rarity: 'common' }),
     generateItem(rng, { slot: 'trinket', rarity: 'rare' }),
   ]
+  for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1 }))
+  return items
+}
+
+function applyStatBonus(s: Sentinel, n: number): Sentinel {
+  if (!n) return s
+  return { ...s, stats: { str: s.stats.str + n, dex: s.stats.dex + n, int: s.stats.int + n } }
+}
+
+/** Starting roster including any meta bonuses (extra Sentinels + flat stats). */
+function buildStartingRoster(bonuses: MetaBonuses): Sentinel[] {
+  const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
+  const extra: Sentinel[] = []
+  for (let i = 0; i < bonuses.extraSentinels; i++) extra.push(createSentinel(archs[i % 3]))
+  return [...startingRoster(), ...extra].map((s) => applyStatBonus(s, bonuses.statBonus))
 }
 
 interface HudSnapshot {
@@ -72,7 +88,13 @@ interface GameState {
   placements: Placement
   gold: number
   baseHp: number
+  maxBaseHp: number
+  enemyHpMult: number
   inventory: Item[]
+  // Run tallies (for meta rewards)
+  runKills: number
+  runDowns: number
+  marksEarned: number
 
   // Active battle
   activeNodeId: string | null
@@ -97,6 +119,7 @@ interface GameState {
 
   // Actions — run/map
   newRun: () => void
+  returnToHub: () => void
   selectNode: (nodeId: string) => void
   // Actions — battle
   selectSentinel: (id: string | null) => void
@@ -210,7 +233,7 @@ const nodeKind = (node: MapNode): EncounterKind =>
 export const useGameStore = create<GameState>((set, get) => {
   const initial = makeRun()
   return {
-    screen: 'map',
+    screen: 'hub',
     runPhase: 'active',
     ...initial,
     event: null,
@@ -220,7 +243,12 @@ export const useGameStore = create<GameState>((set, get) => {
     placements: emptyPlacements(FIRST_MAP),
     gold: START_GOLD,
     baseHp: MAX_BASE_HP,
+    maxBaseHp: MAX_BASE_HP,
+    enemyHpMult: 1,
     inventory: startingInventory(),
+    runKills: 0,
+    runDowns: 0,
+    marksEarned: 0,
 
     activeNodeId: null,
     currentWave: null,
@@ -241,17 +269,23 @@ export const useGameStore = create<GameState>((set, get) => {
     evolutionQueue: [],
 
     newRun: () => {
+      const b = useMetaStore.getState().bonuses()
       set({
         screen: 'map',
         runPhase: 'active',
         ...makeRun(),
         event: null,
         battleMap: FIRST_MAP,
-        roster: startingRoster(),
+        roster: buildStartingRoster(b),
         placements: emptyPlacements(FIRST_MAP),
-        gold: START_GOLD,
-        baseHp: MAX_BASE_HP,
-        inventory: startingInventory(),
+        gold: b.startGold,
+        baseHp: b.maxBaseHp,
+        maxBaseHp: b.maxBaseHp,
+        enemyHpMult: b.enemyHpMult,
+        inventory: startingInventory(b.extraItems),
+        runKills: 0,
+        runDowns: 0,
+        marksEarned: 0,
         activeNodeId: null,
         currentWave: null,
         battlePhase: 'setup',
@@ -269,6 +303,8 @@ export const useGameStore = create<GameState>((set, get) => {
         evolutionQueue: [],
       })
     },
+
+    returnToHub: () => set({ screen: 'hub', runPhase: 'active', engine: null }),
 
     selectNode: (nodeId) => {
       const { reachableNodeIds, runMap, roster } = get()
@@ -300,6 +336,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
       // Battle / elite / boss
       const wave = generateEncounter(node.layer, nodeKind(node))
+      const { baseHp, maxBaseHp } = get()
       set({
         activeNodeId: nodeId,
         currentWave: wave,
@@ -308,7 +345,7 @@ export const useGameStore = create<GameState>((set, get) => {
         selectedSentinelId: null,
         lastResult: null,
         lastLoot: [],
-        hud: { ...freshHud(), baseHp: get().baseHp, enemiesTotal: wave.spawns.length },
+        hud: { ...freshHud(), baseHp, maxBaseHp, enemiesTotal: wave.spawns.length },
       })
     },
 
@@ -333,14 +370,15 @@ export const useGameStore = create<GameState>((set, get) => {
     setSpeed: (s) => set({ speed: s }),
 
     startWave: () => {
-      const { battleMap, roster, placements, baseHp, currentWave } = get()
+      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, currentWave } = get()
       if (!currentWave) return
       const engine = new GameEngine({
         map: battleMap,
         wave: currentWave,
         placedSentinels: placedSentinels(roster, placements),
         baseHp,
-        maxBaseHp: MAX_BASE_HP,
+        maxBaseHp,
+        enemyHpMult,
         teamMods: teamKeepsakeMods(roster),
       })
       set({ engine, battlePhase: 'battle', selectedSentinelId: null, hud: engine.hudSnapshot() })
@@ -363,13 +401,27 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     finishBattle: () => {
-      const { engine, roster, gold, inventory, runMap, activeNodeId } = get()
+      const { engine, roster, gold, inventory, runMap, activeNodeId, runKills, runDowns } = get()
       if (!engine || !activeNodeId) return
       const result = engine.result()
       const node = runMap.nodes.find((n) => n.id === activeNodeId)!
+      const totalKills = runKills + result.enemiesKilled
+      const totalDowns = runDowns + result.downed
 
       if (result.status === 'defeated') {
-        set({ runPhase: 'lost', lastResult: result, baseHp: 0, engine: null })
+        const depth = get().clearedNodeIds.length - 1
+        const marks = useMetaStore
+          .getState()
+          .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns })
+        set({
+          runPhase: 'lost',
+          lastResult: result,
+          baseHp: 0,
+          engine: null,
+          runKills: totalKills,
+          runDowns: totalDowns,
+          marksEarned: marks,
+        })
         return
       }
 
@@ -388,6 +440,12 @@ export const useGameStore = create<GameState>((set, get) => {
       // Advance the map.
       const cleared = [...get().clearedNodeIds, activeNodeId]
       const reachable = neighborsOf(runMap, activeNodeId).filter((id) => !cleared.includes(id))
+      const wonRun = node.type === 'boss'
+      const marks = wonRun
+        ? useMetaStore
+            .getState()
+            .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns })
+        : 0
 
       set({
         roster: nextRoster,
@@ -400,8 +458,11 @@ export const useGameStore = create<GameState>((set, get) => {
         clearedNodeIds: cleared,
         currentNodeId: activeNodeId,
         reachableNodeIds: reachable,
-        runPhase: node.type === 'boss' ? 'won' : 'active',
+        runPhase: wonRun ? 'won' : 'active',
         engine: null,
+        runKills: totalKills,
+        runDowns: totalDowns,
+        marksEarned: marks,
       })
     },
 
