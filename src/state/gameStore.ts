@@ -10,17 +10,19 @@ import {
   generateItem,
   RARITY,
   reforgeCost,
+  reforgeDust,
   reforgeItem,
   upgradeCost,
+  upgradeDust,
   upgradeRarity,
 } from '../game/data/items'
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
-import { generateEncounter, type EncounterKind } from '../game/data/waves'
+import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
 import type { Archetype, GameMap, Item, ItemRarity, ItemSlot, Placement, Sentinel, WaveDef } from '../game/types'
 import { useMetaStore, type MetaBonuses } from './metaStore'
 
-export type Screen = 'hub' | 'map' | 'battle'
+export type Screen = 'hub' | 'map' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
@@ -30,8 +32,16 @@ export const MAX_BASE_HP = 20
 export const START_GOLD = 60
 export const MAX_ROSTER = 5
 
+// Endless Watch starting pool + tuning.
+export const ENDLESS_START_GOLD = 200
+export const ENDLESS_START_DUST = 30
+export const ENDLESS_LIVES = 3
+
 const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200 }
 const RECRUIT_PRICE = 80
+
+export type GameMode = 'campaign' | 'endless'
+export type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 
 const rng = new RNG()
 
@@ -73,6 +83,8 @@ interface MerchantStock {
 }
 
 interface GameState {
+  // Mode
+  mode: GameMode
   // Run structure
   screen: Screen
   runPhase: RunPhase
@@ -111,6 +123,14 @@ interface GameState {
   shrineOffer: ShrineOffer | null
   recruitOptions: Sentinel[]
 
+  // Endless Watch
+  dust: number
+  lives: number
+  wins: number
+  round: number
+  endlessRecruitCost: number
+  endlessRoom: EndlessRoom | null
+
   // UI
   selectedSentinelId: string | null
   detailId: string | null
@@ -121,6 +141,16 @@ interface GameState {
   newRun: () => void
   returnToHub: () => void
   selectNode: (nodeId: string) => void
+  // Actions — endless
+  startEndless: () => void
+  endlessOpenRoom: (room: EndlessRoom) => void
+  endlessCloseRoom: () => void
+  endlessBeginWave: () => void
+  endlessBuyItem: (itemId: string) => void
+  endlessRecruit: () => void
+  endlessForgeReforge: (itemId: string) => void
+  endlessForgeUpgrade: (itemId: string) => void
+  endlessShrineAccept: () => void
   // Actions — battle
   selectSentinel: (id: string | null) => void
   placeOnSlot: (slotId: string) => void
@@ -233,6 +263,7 @@ const nodeKind = (node: MapNode): EncounterKind =>
 export const useGameStore = create<GameState>((set, get) => {
   const initial = makeRun()
   return {
+    mode: 'campaign',
     screen: 'hub',
     runPhase: 'active',
     ...initial,
@@ -263,6 +294,13 @@ export const useGameStore = create<GameState>((set, get) => {
     shrineOffer: null,
     recruitOptions: [],
 
+    dust: 0,
+    lives: ENDLESS_LIVES,
+    wins: 0,
+    round: 1,
+    endlessRecruitCost: 100,
+    endlessRoom: null,
+
     selectedSentinelId: null,
     detailId: null,
     equipContext: null,
@@ -271,6 +309,7 @@ export const useGameStore = create<GameState>((set, get) => {
     newRun: () => {
       const b = useMetaStore.getState().bonuses()
       set({
+        mode: 'campaign',
         screen: 'map',
         runPhase: 'active',
         ...makeRun(),
@@ -305,6 +344,141 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     returnToHub: () => set({ screen: 'hub', runPhase: 'active', engine: null }),
+
+    // ---- Endless Watch ----
+    startEndless: () => {
+      const b = useMetaStore.getState().bonuses()
+      set({
+        mode: 'endless',
+        screen: 'endless',
+        runPhase: 'active',
+        battleMap: FIRST_MAP,
+        roster: buildStartingRoster(b),
+        placements: emptyPlacements(FIRST_MAP),
+        gold: ENDLESS_START_GOLD,
+        dust: ENDLESS_START_DUST,
+        lives: ENDLESS_LIVES,
+        wins: 0,
+        round: 1,
+        endlessRecruitCost: 100,
+        endlessRoom: null,
+        baseHp: b.maxBaseHp,
+        maxBaseHp: b.maxBaseHp,
+        enemyHpMult: b.enemyHpMult,
+        inventory: startingInventory(b.extraItems),
+        runKills: 0,
+        runDowns: 0,
+        marksEarned: 0,
+        activeNodeId: null,
+        currentWave: null,
+        battlePhase: 'setup',
+        speed: 1,
+        engine: null,
+        hud: freshHud(),
+        lastResult: null,
+        lastLoot: [],
+        merchant: null,
+        shrineOffer: null,
+        selectedSentinelId: null,
+        detailId: null,
+        equipContext: null,
+        evolutionQueue: [],
+      })
+    },
+
+    endlessOpenRoom: (room) => {
+      const { roster } = get()
+      if (room === 'merchant') {
+        const luck = Math.min(0.4, get().round * 0.03)
+        const items = Array.from({ length: 4 }, () => {
+          const item = generateItem(rng, { luck })
+          return { item, price: ITEM_PRICE[item.rarity] }
+        })
+        set({ endlessRoom: 'merchant', merchant: { items, recruit: null } })
+      } else if (room === 'shrine') {
+        set({ endlessRoom: 'shrine', shrineOffer: rollShrine(rng) })
+      } else if (room === 'recruit') {
+        const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
+        set({ endlessRoom: 'recruit', recruitOptions: roster.length < MAX_ROSTER ? archs.map(createSentinel) : [] })
+      } else {
+        set({ endlessRoom: 'forge' })
+      }
+    },
+
+    endlessCloseRoom: () => set({ endlessRoom: null, merchant: null, shrineOffer: null, recruitOptions: [] }),
+
+    endlessBeginWave: () => {
+      const wave = generateEndlessWave(get().round)
+      const { baseHp, maxBaseHp } = get()
+      set({
+        currentWave: wave,
+        battlePhase: 'setup',
+        screen: 'battle',
+        endlessRoom: null,
+        selectedSentinelId: null,
+        lastResult: null,
+        lastLoot: [],
+        hud: { ...freshHud(), baseHp, maxBaseHp, enemiesTotal: wave.spawns.length },
+      })
+    },
+
+    endlessBuyItem: (itemId) => {
+      const { merchant, gold, inventory } = get()
+      if (!merchant) return
+      const entry = merchant.items.find((e) => e.item.id === itemId)
+      if (!entry || gold < entry.price) return
+      set({
+        gold: gold - entry.price,
+        inventory: [...inventory, entry.item],
+        merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
+      })
+    },
+
+    endlessRecruit: () => {
+      const { gold, roster, endlessRecruitCost, recruitOptions } = get()
+      if (roster.length >= MAX_ROSTER || gold < endlessRecruitCost) return
+      const pick = recruitOptions[0] ?? createSentinel(rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[]))
+      set({
+        gold: gold - endlessRecruitCost,
+        roster: [...roster, pick],
+        endlessRecruitCost: Math.round(endlessRecruitCost * 1.6),
+        endlessRoom: null,
+        recruitOptions: [],
+      })
+    },
+
+    endlessForgeReforge: (itemId) => {
+      const { dust } = get()
+      const found = findItem(get(), itemId)
+      if (!found) return
+      const cost = reforgeDust(found.item)
+      if (dust < cost) return
+      replaceItem(get, set, itemId, reforgeItem(found.item, rng))
+      set({ dust: dust - cost })
+    },
+
+    endlessForgeUpgrade: (itemId) => {
+      const { dust } = get()
+      const found = findItem(get(), itemId)
+      if (!found || !canUpgrade(found.item)) return
+      const cost = upgradeDust(found.item)
+      if (dust < cost) return
+      replaceItem(get, set, itemId, upgradeRarity(found.item, rng))
+      set({ dust: dust - cost })
+    },
+
+    endlessShrineAccept: () => {
+      const { shrineOffer, roster, baseHp, gold } = get()
+      if (!shrineOffer) return
+      const eff = shrineOffer.apply({ roster, baseHp, gold })
+      set({
+        roster: eff.roster ?? roster,
+        baseHp: Math.max(1, baseHp + (eff.baseHpDelta ?? 0)),
+        gold: Math.max(0, gold + (eff.goldDelta ?? 0)),
+        endlessRoom: null,
+        shrineOffer: null,
+      })
+    },
 
     selectNode: (nodeId) => {
       const { reachableNodeIds, runMap, roster } = get()
@@ -401,12 +575,82 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     finishBattle: () => {
-      const { engine, roster, gold, inventory, runMap, activeNodeId, runKills, runDowns } = get()
-      if (!engine || !activeNodeId) return
-      const result = engine.result()
+      const st = get()
+      if (!st.engine) return
+      const result = st.engine.result()
+      const totalKills0 = st.runKills + result.enemiesKilled
+      const totalDowns0 = st.runDowns + result.downed
+
+      // XP + evolution apply in both modes and both outcomes.
+      const xpById0 = new Map(result.perSentinel.map((p) => [p.id, p.xpGained]))
+      const rosterXp = st.roster.map((s) => applyXp(s, xpById0.get(s.id) ?? 0))
+      const evoQueue0 = rosterXp.filter(evolutionPending).map((s) => s.id)
+
+      if (st.mode === 'endless') {
+        if (result.status === 'cleared') {
+          const isBoss = st.round % 10 === 0
+          const isElite = !isBoss && st.round % 5 === 0
+          const dustGain = 5 + (isElite ? 5 : 0) + (isBoss ? 15 : 0)
+          const lootCount = isBoss ? 3 : isElite ? 2 : 1
+          const loot = Array.from({ length: lootCount }, () =>
+            generateItem(rng, { luck: Math.min(0.45, st.round * 0.03) }),
+          )
+          set({
+            roster: rosterXp,
+            gold: st.gold + result.goldEarned,
+            dust: st.dust + dustGain,
+            baseHp: st.maxBaseHp,
+            inventory: [...st.inventory, ...loot],
+            lastResult: result,
+            lastLoot: loot,
+            evolutionQueue: evoQueue0,
+            wins: st.wins + 1,
+            round: st.round + 1,
+            engine: null,
+            runKills: totalKills0,
+            runDowns: totalDowns0,
+          })
+        } else {
+          const lives = st.lives - 1
+          if (lives <= 0) {
+            const marks = Math.round(st.wins * 8)
+            useMetaStore.getState().grantMarks(marks)
+            set({
+              roster: rosterXp,
+              gold: st.gold + result.goldEarned,
+              lives: 0,
+              runPhase: 'lost',
+              lastResult: result,
+              engine: null,
+              marksEarned: marks,
+              runKills: totalKills0,
+              runDowns: totalDowns0,
+              evolutionQueue: evoQueue0,
+            })
+          } else {
+            set({
+              roster: rosterXp,
+              gold: st.gold + result.goldEarned,
+              baseHp: st.maxBaseHp,
+              lives,
+              round: st.round + 1,
+              lastResult: result,
+              engine: null,
+              runKills: totalKills0,
+              runDowns: totalDowns0,
+              evolutionQueue: evoQueue0,
+            })
+          }
+        }
+        return
+      }
+
+      // ---- Campaign ----
+      const { roster, gold, inventory, runMap, activeNodeId } = st
+      if (!activeNodeId) return
       const node = runMap.nodes.find((n) => n.id === activeNodeId)!
-      const totalKills = runKills + result.enemiesKilled
-      const totalDowns = runDowns + result.downed
+      const totalKills = totalKills0
+      const totalDowns = totalDowns0
 
       if (result.status === 'defeated') {
         const depth = get().clearedNodeIds.length - 1
@@ -467,8 +711,9 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     continueAfterWave: () => {
-      // Return to the map after the wave-clear summary.
-      set({ screen: 'map', activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], battlePhase: 'setup' })
+      // Endless returns to the Rooms screen; campaign returns to the node map.
+      const dest = get().mode === 'endless' ? 'endless' : 'map'
+      set({ screen: dest, activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], battlePhase: 'setup' })
     },
 
     // ---- events ----

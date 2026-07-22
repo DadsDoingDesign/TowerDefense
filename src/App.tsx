@@ -1,5 +1,6 @@
 import { useGameStore } from './state/gameStore'
 import { BattleScreen } from './ui/screens/BattleScreen'
+import { EndlessScreen } from './ui/screens/EndlessScreen'
 import { HubScreen } from './ui/screens/HubScreen'
 import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { EquipModal } from './ui/components/EquipModal'
@@ -14,6 +15,7 @@ export default function App() {
     <div className="app-root">
       {screen === 'hub' && <HubScreen />}
       {screen === 'map' && <RunMapScreen />}
+      {screen === 'endless' && <EndlessScreen />}
       {screen === 'battle' && <BattleScreen />}
       {/* Shared across screens */}
       <SentinelDetail />

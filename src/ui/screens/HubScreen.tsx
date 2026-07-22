@@ -6,6 +6,7 @@ export function HubScreen() {
   const stats = useMetaStore((s) => s.stats)
   const sacrificeTier = useMetaStore((s) => s.sacrificeTier)
   const newRun = useGameStore((s) => s.newRun)
+  const startEndless = useGameStore((s) => s.startEndless)
 
   return (
     <div className="hub-screen">
@@ -43,9 +44,12 @@ export function HubScreen() {
         </section>
       </div>
 
-      <footer className="hub-footer">
+      <footer className="hub-footer hub-footer-modes">
         <button className="start-run-btn" onClick={newRun}>
           Begin Run ▶
+        </button>
+        <button className="endless-run-btn" onClick={startEndless}>
+          Endless Watch ∞
         </button>
       </footer>
     </div>

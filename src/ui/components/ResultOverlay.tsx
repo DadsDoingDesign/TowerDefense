@@ -5,6 +5,8 @@ import { useGameStore } from '../../state/gameStore'
 /** Wave-clear summary (over the battle screen). Run win/loss lives in RunEndOverlay. */
 export function ResultOverlay() {
   const screen = useGameStore((s) => s.screen)
+  const mode = useGameStore((s) => s.mode)
+  const lives = useGameStore((s) => s.lives)
   const runPhase = useGameStore((s) => s.runPhase)
   const lastResult = useGameStore((s) => s.lastResult)
   const roster = useGameStore((s) => s.roster)
@@ -15,21 +17,34 @@ export function ResultOverlay() {
 
   const nameOf = (id: string) => roster.find((r) => r.id === id)?.name ?? '—'
 
-  // Only the wave-clear summary here, and only once evolutions are resolved.
+  // Show once evolutions are resolved. Campaign only shows on a clear (a loss is
+  // run-ending); endless also shows a "wave lost" summary when a life remains.
+  const cleared = lastResult?.status === 'cleared'
+  const endlessSurvivedLoss = mode === 'endless' && lastResult?.status === 'defeated'
   if (
     runPhase !== 'active' ||
     screen !== 'battle' ||
     !lastResult ||
-    lastResult.status !== 'cleared' ||
-    evolutionQueue.length > 0
+    evolutionQueue.length > 0 ||
+    (!cleared && !endlessSurvivedLoss)
   ) {
     return null
   }
 
+  const title = cleared
+    ? currentWave?.isBoss
+      ? 'Boss Defeated'
+      : 'Encounter Cleared'
+    : 'Wave Lost'
+  const continueLabel = mode === 'endless' ? 'Continue' : 'Return to Map'
+
   return (
     <div className="overlay-scrim">
-      <div className="overlay-card clear">
-        <h2>{currentWave?.isBoss ? 'Boss Defeated' : 'Encounter Cleared'}</h2>
+      <div className={`overlay-card ${cleared ? 'clear' : 'loss'}`}>
+        <h2>{title}</h2>
+        {endlessSurvivedLoss && (
+          <p className="life-lost">The base fell — a life was lost. {lives} remaining.</p>
+        )}
         <div className="summary-line">
           <span>Gold earned</span>
           <strong>⟡ {lastResult.goldEarned}</strong>
@@ -70,7 +85,7 @@ export function ResultOverlay() {
             ))}
         </div>
         <button className="overlay-btn" onClick={continueAfterWave}>
-          Return to Map
+          {continueLabel}
         </button>
       </div>
     </div>

@@ -2,9 +2,11 @@ import { useGameStore } from '../../state/gameStore'
 
 /** Run-level win/loss. Permadeath: a loss ends the run and returns to the hub. */
 export function RunEndOverlay() {
+  const mode = useGameStore((s) => s.mode)
   const runPhase = useGameStore((s) => s.runPhase)
   const screen = useGameStore((s) => s.screen)
   const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
+  const wins = useGameStore((s) => s.wins)
   const marksEarned = useGameStore((s) => s.marksEarned)
   const returnToHub = useGameStore((s) => s.returnToHub)
 
@@ -16,7 +18,15 @@ export function RunEndOverlay() {
   return (
     <div className="overlay-scrim">
       <div className={`overlay-card ${runPhase === 'won' ? 'win' : 'loss'}`}>
-        {runPhase === 'won' ? (
+        {mode === 'endless' ? (
+          <>
+            <h2>Endless Watch — Over</h2>
+            <p>
+              You held out for {wins} wave{wins === 1 ? '' : 's'} before the last life fell. A strong
+              stand.
+            </p>
+          </>
+        ) : runPhase === 'won' ? (
           <>
             <h2>The Watch Holds</h2>
             <p>You reached the end of the line and struck down the Colossus. The field is secured.</p>

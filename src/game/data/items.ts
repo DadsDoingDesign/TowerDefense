@@ -168,6 +168,13 @@ export function upgradeCost(item: Item): number {
   // Cost to reach the NEXT tier from this one.
   return { common: 50, rare: 90, epic: 150, legendary: 0 }[item.rarity]
 }
+/** Dust costs used by the Endless Watch Forge. */
+export function reforgeDust(item: Item): number {
+  return { common: 4, rare: 7, epic: 12, legendary: 20 }[item.rarity]
+}
+export function upgradeDust(item: Item): number {
+  return { common: 8, rare: 14, epic: 24, legendary: 0 }[item.rarity]
+}
 export function canUpgrade(item: Item): boolean {
   return RARITY_ORDER.indexOf(item.rarity) < RARITY_ORDER.length - 1
 }

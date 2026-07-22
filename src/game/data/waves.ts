@@ -54,6 +54,16 @@ function bossWave(depth: number, label?: string): WaveDef {
   return { index: depth, label: label ?? 'The Final Watch', spawns, isBoss: true }
 }
 
+/**
+ * Endless Watch wave for a given round. Every 10th round is a boss, every 5th an
+ * elite; difficulty ramps faster than the campaign (depth = round + 2).
+ */
+export function generateEndlessWave(round: number): WaveDef {
+  const kind: EncounterKind = round % 10 === 0 ? 'boss' : round % 5 === 0 ? 'elite' : 'normal'
+  const wave = generateEncounter(round + 2, kind, `Wave ${round}${kind === 'elite' ? ' — Elite' : kind === 'boss' ? ' — Boss' : ''}`)
+  return { ...wave, index: round }
+}
+
 /** Human-readable composition summary for the pre-wave preview. */
 export function waveComposition(wave: WaveDef): { typeId: string; count: number }[] {
   const counts = new Map<string, number>()

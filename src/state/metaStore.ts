@@ -52,6 +52,7 @@ interface MetaState {
   buyUpgrade: (id: string) => void
   sacrificeCost: () => number
   doSacrifice: () => void
+  grantMarks: (n: number) => void
   grantRunRewards: (info: { depth: number; won: boolean; kills: number; downs: number }) => number
   bonuses: () => MetaBonuses
   resetMeta: () => void
@@ -101,6 +102,8 @@ export const useMetaStore = create<MetaState>()(
         if (watchMarks < cost) return
         set({ watchMarks: watchMarks - cost, sacrificeTier: sacrificeTier + 1 })
       },
+
+      grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
       grantRunRewards: ({ depth, won, kills, downs }) => {
         const { watchMarks, stats, upgrades, sacrificeTier } = get()
