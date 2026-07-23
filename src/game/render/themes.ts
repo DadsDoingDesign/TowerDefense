@@ -8,10 +8,9 @@
  */
 export type TokenShape = 'circle' | 'square' | 'ring' | 'gem'
 
-/** When set, the theme renders real sprites (see game/render/sprites.ts). */
+/** When set, the theme renders real sprites from a pack (see game/render/sprites.ts). */
 export interface SpriteConfig {
-  ground: string
-  road: string
+  pack: string
   towerScale: number
   enemyScale: number
 }
@@ -45,11 +44,78 @@ export interface ThemeStyle {
   projectile: { glow: number; square: boolean }
 }
 
+// Shared token/enemy/projectile fallbacks (used only until sprites finish loading).
+const SPRITE_FALLBACK = {
+  token: { shape: 'circle' as const, gradient: false, glow: 0, outline: 2, barrel: false },
+  enemy: { shape: 'circle' as const, gradient: false, glow: 0, outline: 0 },
+  projectile: { glow: 6, square: false },
+}
+
 export const THEMES: Record<string, ThemeStyle> = {
+  fantasy: {
+    id: 'fantasy',
+    name: 'Fantasy Fields',
+    blurb: 'Human heroes vs goblins & orcs on grassy plains.',
+    smoothing: false,
+    sprites: { pack: 'fantasy', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#d9a441', accentDim: 'rgba(217,164,65,0.16)', radius: '6px', bg: '#0e0b08', panel: '#181209' },
+    field: { top: '#2b3a22', bottom: '#1c2718', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
+    path: { edge: '#3c2c18', fill: '#6b4f2c', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
+  undead: {
+    id: 'undead',
+    name: 'Undead Crypt',
+    blurb: 'Death knights & necromancers hold a cursed stone hall of the dead.',
+    smoothing: false,
+    sprites: { pack: 'undead', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#9fb4c0', accentDim: 'rgba(159,180,192,0.16)', radius: '6px', bg: '#090b0f', panel: '#12161e' },
+    field: { top: '#2b3038', bottom: '#171b22', grid: 'rgba(0,0,0,0.18)', gridStep: 32 },
+    path: { edge: '#1c1f26', fill: '#3a2a2a', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
+  infernal: {
+    id: 'infernal',
+    name: 'Infernal Depths',
+    blurb: 'Hell knights & warlocks against a demon horde over volcanic rock.',
+    smoothing: false,
+    sprites: { pack: 'infernal', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#ef7738', accentDim: 'rgba(239,119,56,0.16)', radius: '6px', bg: '#140708', panel: '#210b0c' },
+    field: { top: '#3a1712', bottom: '#20090a', grid: 'rgba(0,0,0,0.2)', gridStep: 32 },
+    path: { edge: '#2a0d0a', fill: '#5a2418', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
+  frost: {
+    id: 'frost',
+    name: 'Frostreach',
+    blurb: 'Guardians & mages defend the ice against drakes and frost giants.',
+    smoothing: false,
+    sprites: { pack: 'frost', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#7fd0f0', accentDim: 'rgba(127,208,240,0.16)', radius: '6px', bg: '#071019', panel: '#0e1a28' },
+    field: { top: '#26384a', bottom: '#152331', grid: 'rgba(255,255,255,0.05)', gridStep: 32 },
+    path: { edge: '#22323f', fill: '#4a6272', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
+  sylvan: {
+    id: 'sylvan',
+    name: 'Sylvan Wilds',
+    blurb: 'Rangers & druids hold a mossy forest trail against wild beasts.',
+    smoothing: false,
+    sprites: { pack: 'sylvan', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#8ac74f', accentDim: 'rgba(138,199,79,0.16)', radius: '6px', bg: '#0a1309', panel: '#121d0e' },
+    field: { top: '#26401e', bottom: '#182a14', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
+    path: { edge: '#2c2110', fill: '#5a4326', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
   tactical: {
     id: 'tactical',
-    name: 'Tactical',
-    blurb: 'Clean geometric tokens on a dark field. The current look.',
+    name: 'Tactical (minimal)',
+    blurb: 'No sprites — clean geometric tokens on a dark field.',
     smoothing: true,
     css: { accent: '#f0a868', accentDim: 'rgba(240,168,104,0.16)', radius: '12px', bg: '#0a0e0c' },
     field: { top: '#141b17', bottom: '#0d1411', grid: 'rgba(255,255,255,0.03)', gridStep: 48 },
@@ -58,76 +124,10 @@ export const THEMES: Record<string, ThemeStyle> = {
     enemy: { shape: 'circle', gradient: false, glow: 0, outline: 0 },
     projectile: { glow: 8, square: false },
   },
-
-  pixel: {
-    id: 'pixel',
-    name: 'Pixel Keep',
-    blurb: 'Retro pixel-art vibe — blocky tokens, tiled road, chunky pixels.',
-    smoothing: false,
-    css: { accent: '#8bd450', accentDim: 'rgba(139,212,80,0.16)', radius: '3px', bg: '#0b0d0a', panel: '#141810', font: "'Courier New', ui-monospace, monospace" },
-    field: { top: '#20301c', bottom: '#16210f', grid: 'rgba(0,0,0,0.25)', gridStep: 24 },
-    path: { edge: '#5a4a30', fill: '#caa46a', center: 'rgba(90,74,48,0.6)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'butt' },
-    token: { shape: 'square', gradient: true, glow: 0, outline: 3, barrel: false },
-    enemy: { shape: 'square', gradient: true, glow: 0, outline: 2 },
-    projectile: { glow: 0, square: true },
-  },
-
-  arcane: {
-    id: 'arcane',
-    name: 'Arcane',
-    blurb: 'Painterly fantasy — glowing gem tokens, runic road, soft light.',
-    smoothing: true,
-    css: { accent: '#f0c060', accentDim: 'rgba(240,192,96,0.16)', radius: '16px', bg: '#0d0a18', panel: '#171227' },
-    field: { top: '#221a3a', bottom: '#120e22', grid: 'rgba(180,150,240,0.05)', gridStep: 56 },
-    path: { edge: '#2c2350', fill: '#3a2f66', center: 'rgba(240,192,96,0.35)', edgeWidth: 44, fillWidth: 34, dash: [8, 12], cap: 'round' },
-    token: { shape: 'gem', gradient: true, glow: 14, outline: 2, barrel: true },
-    enemy: { shape: 'circle', gradient: true, glow: 8, outline: 0 },
-    projectile: { glow: 16, square: false },
-  },
-
-  neon: {
-    id: 'neon',
-    name: 'Neon Grid',
-    blurb: 'Arcade cyberpunk — glowing vector rings on a dark grid.',
-    smoothing: true,
-    css: { accent: '#39e0e0', accentDim: 'rgba(57,224,224,0.16)', radius: '10px', bg: '#05060a', panel: '#0b0f18' },
-    field: { top: '#0a1020', bottom: '#05060a', grid: 'rgba(57,224,224,0.10)', gridStep: 40 },
-    path: { edge: '#1b6f77', fill: '#0a1a20', center: 'rgba(57,224,224,0.5)', edgeWidth: 40, fillWidth: 30, dash: [6, 10], cap: 'round' },
-    token: { shape: 'ring', gradient: false, glow: 14, outline: 3, barrel: false },
-    enemy: { shape: 'ring', gradient: false, glow: 10, outline: 3 },
-    projectile: { glow: 18, square: false },
-  },
-
-  fantasy: {
-    id: 'fantasy',
-    name: 'Fantasy Pixels',
-    blurb: 'Real CC0 pixel-art heroes, monsters & terrain (Dungeon Crawl tiles).',
-    smoothing: false,
-    sprites: { ground: 'grass', road: 'road', towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#d9a441', accentDim: 'rgba(217,164,65,0.16)', radius: '6px', bg: '#0e0b08', panel: '#181209' },
-    field: { top: '#2b3a22', bottom: '#1c2718', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
-    path: { edge: '#4a3720', fill: '#6b4f2c', center: 'rgba(60,44,24,0.0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    token: { shape: 'circle', gradient: false, glow: 0, outline: 2, barrel: false },
-    enemy: { shape: 'circle', gradient: false, glow: 0, outline: 0 },
-    projectile: { glow: 6, square: false },
-  },
-
-  storybook: {
-    id: 'storybook',
-    name: 'Storybook',
-    blurb: 'Bright flat cartoon — thick outlines, soft pastel field.',
-    smoothing: true,
-    css: { accent: '#ff8a5c', accentDim: 'rgba(255,138,92,0.18)', radius: '18px', bg: '#14241f', panel: '#1b3029' },
-    field: { top: '#26443a', bottom: '#1a3229', grid: 'rgba(255,255,255,0.04)', gridStep: 60 },
-    path: { edge: '#6b4a34', fill: '#e8cfa0', center: 'rgba(107,74,52,0.35)', edgeWidth: 46, fillWidth: 36, dash: null, cap: 'round' },
-    token: { shape: 'circle', gradient: false, glow: 0, outline: 4, barrel: false },
-    enemy: { shape: 'circle', gradient: false, glow: 0, outline: 3.5 },
-    projectile: { glow: 4, square: false },
-  },
 }
 
 export const THEME_IDS = Object.keys(THEMES)
-export const DEFAULT_THEME = 'tactical'
+export const DEFAULT_THEME = 'fantasy'
 
 let activeStyle: ThemeStyle = THEMES[DEFAULT_THEME]
 export const getActiveStyle = (): ThemeStyle => activeStyle

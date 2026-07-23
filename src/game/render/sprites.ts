@@ -1,16 +1,18 @@
 /**
- * Sprite loader for the Fantasy theme. Assets are CC0 pixel art from the Dungeon
- * Crawl Stone Soup tileset (public domain); see public/assets/sprites/CREDITS.md.
- * Images are keyed by tower archetype ('fighter'|'rogue'|'mystic'), enemy type id
- * ('grunt'|'runner'|...), and terrain ('grass'|'road').
+ * Sprite loader for the real-art themes. Each theme has its own pack folder under
+ * public/assets/sprites/<pack>/ containing role-named PNGs (fighter/rogue/mystic,
+ * the enemy roster, plus grass/road terrain). Assets are CC0 pixel art from the
+ * Dungeon Crawl Stone Soup tileset — see public/assets/sprites/CREDITS.md.
  */
-const SPRITE_NAMES = [
+export const SPRITE_PACKS = ['fantasy', 'undead', 'infernal', 'frost', 'sylvan']
+const ROLE_NAMES = [
   'fighter', 'rogue', 'mystic',
   'grunt', 'runner', 'shade', 'brute', 'ogre', 'warden', 'colossus',
   'grass', 'road',
 ]
 
 const images = new Map<string, HTMLImageElement>()
+const total = SPRITE_PACKS.length * ROLE_NAMES.length
 let loadedCount = 0
 let started = false
 const readyCbs: (() => void)[] = []
@@ -18,26 +20,28 @@ const readyCbs: (() => void)[] = []
 export function preloadSprites(): void {
   if (started || typeof document === 'undefined') return
   started = true
-  for (const name of SPRITE_NAMES) {
-    const img = new Image()
-    img.onload = () => {
-      loadedCount++
-      if (loadedCount === SPRITE_NAMES.length) readyCbs.forEach((cb) => cb())
+  for (const pack of SPRITE_PACKS) {
+    for (const name of ROLE_NAMES) {
+      const img = new Image()
+      img.onload = img.onerror = () => {
+        loadedCount++
+        if (loadedCount === total) readyCbs.forEach((cb) => cb())
+      }
+      img.src = `assets/sprites/${pack}/${name}.png`
+      images.set(`${pack}/${name}`, img)
     }
-    img.src = `assets/sprites/${name}.png`
-    images.set(name, img)
   }
 }
 
-/** An image only if it has finished decoding (else undefined → caller falls back). */
-export function getSprite(name: string): HTMLImageElement | undefined {
-  const img = images.get(name)
+/** A decoded image for pack+role, or undefined (caller falls back procedurally). */
+export function getSprite(pack: string, name: string): HTMLImageElement | undefined {
+  const img = images.get(`${pack}/${name}`)
   return img && img.complete && img.naturalWidth > 0 ? img : undefined
 }
 
-export const spritesReady = (): boolean => loadedCount === SPRITE_NAMES.length
+export const spritesReady = (): boolean => loadedCount >= total
 
-/** Register a callback fired once all sprites have loaded (or immediately if ready). */
+/** Fire cb once all sprites have loaded (or immediately if already ready). */
 export function onSpritesReady(cb: () => void): void {
   if (spritesReady()) cb()
   else readyCbs.push(cb)

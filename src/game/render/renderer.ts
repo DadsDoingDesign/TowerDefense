@@ -69,8 +69,8 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
 
   // Sprite themes tile real terrain, then fall back to procedural if not loaded.
   if (style.sprites) {
-    const grass = getSprite(style.sprites.ground)
-    const road = getSprite(style.sprites.road)
+    const grass = getSprite(style.sprites.pack, 'grass')
+    const road = getSprite(style.sprites.pack, 'road')
     if (grass && road) {
       drawSpriteTerrain(ctx, map, grass, road, style.path.edge)
       drawBase(ctx, map.base)
@@ -251,7 +251,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const style = getActiveStyle()
   const t = style.token
   const r = 15 * pulse
-  const sprite = style.sprites ? getSprite(s.archetype) : undefined
+  const sprite = style.sprites ? getSprite(style.sprites.pack, s.archetype) : undefined
 
   if (sprite) {
     // Grounding shadow + faction-tinted ring so archetypes stay readable.
@@ -367,7 +367,7 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const sprite = style.sprites ? getSprite(type.id) : undefined
+  const sprite = style.sprites ? getSprite(style.sprites.pack, type.id) : undefined
 
   if (sprite) {
     // Grounding shadow + real monster sprite scaled to the enemy's radius.
@@ -668,8 +668,8 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
   ]
 
   // background + grid (or tiled terrain for sprite themes)
-  const grassImg = style.sprites ? getSprite(style.sprites.ground) : undefined
-  const roadImg = style.sprites ? getSprite(style.sprites.road) : undefined
+  const grassImg = style.sprites ? getSprite(style.sprites.pack, 'grass') : undefined
+  const roadImg = style.sprites ? getSprite(style.sprites.pack, 'road') : undefined
   if (style.sprites && grassImg && roadImg) {
     ctx.fillStyle = ctx.createPattern(grassImg, 'repeat')!
     ctx.fillRect(0, 0, w, h)
@@ -723,7 +723,7 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
     const es = style.enemy
     ctx.save()
     ctx.translate(e.x, e.y)
-    const espr = style.sprites ? getSprite(e.id) : undefined
+    const espr = style.sprites ? getSprite(style.sprites.pack, e.id) : undefined
     if (espr) {
       const sz = e.r * style.sprites!.enemyScale
       ctx.drawImage(espr, -sz / 2, -sz / 2 - e.r * 0.25, sz, sz)
