@@ -2226,6 +2226,64 @@
   }
 }
 
+/* ===== Tiny Swords nine-slice UI skin ===== */
+/* Hero-pick cards → parchment (dark ink on cream). */
+.hp-card {
+  background: transparent;
+  border: 20px solid transparent;
+  border-image: url(/assets/ui/tinyswords/paper_regular_9.png) 46 fill / 20px / 0 stretch;
+  border-radius: 0;
+  color: #4a3a1e;
+  padding: 4px 14px 12px;
+}
+.hp-card:hover {
+  transform: translateY(-4px);
+  box-shadow: none;
+  filter: brightness(1.04);
+}
+.hp-blurb,
+.hp-role,
+.hp-stats {
+  color: #6a5738;
+}
+.hp-stats b {
+  color: #3a2c14;
+}
+.hp-portrait {
+  background: rgba(120, 92, 48, 0.18);
+  border-radius: 10px;
+}
+/* CTAs + primary buttons → the teal Tiny Swords button. */
+.hp-cta,
+.overlay-btn {
+  border: 15px solid transparent;
+  border-image: url(/assets/ui/tinyswords/btn_big_blue_9.png) 46 fill / 15px / 0 stretch;
+  background: none;
+  color: #eaf6ff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+/* Post-wave / crossroads-reveal overlay → dark "special paper" (gold corners). */
+.overlay-card {
+  border: 22px solid transparent;
+  border-image: url(/assets/ui/tinyswords/paper_special_9.png) 46 fill / 22px / 0 stretch;
+  border-radius: 0;
+  background: transparent;
+}
+/* Crossroads columns → framed wood panels (specific enough to beat .cr-col). */
+.crossroads .cr-col {
+  border: 26px solid transparent;
+  border-image: url(/assets/ui/tinyswords/woodtable_9.png) 46 fill / 26px / 0 stretch;
+  border-radius: 0;
+  background: transparent;
+  color: #f4ecd8;
+}
+.crossroads .cr-col h2 {
+  color: #fff;
+}
+.crossroads .cr-col .cr-note {
+  color: #ecdcbb;
+}
+
 /* ---- hero mutations (detail panel) ---- */
 .mutation-list {
   margin: 0;
