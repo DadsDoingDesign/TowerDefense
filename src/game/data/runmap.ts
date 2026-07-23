@@ -99,30 +99,55 @@ function mkNode(type: NodeType, layer: number, row: number, ny: number): MapNode
   return { id: nextId('node'), type, layer, row, nx: 0, ny }
 }
 
+/** Per-map caps and spacing so a map holds a minimal, non-repetitive set of
+ * special tiles instead of ~half the nodes being shops/shrines/elites. */
+const SPECIAL_CAPS: Record<string, number> = { merchant: 2, shrine: 2, recruit: 1, elite: 2 }
+const MIN_SPECIAL_GAP = 2 // layers between two specials of the same type
+
 function assignTypes(nodesByLayer: MapNode[][], rng: RNG): void {
   const last = nodesByLayer.length - 1
   const middle: MapNode[] = []
   for (let l = 1; l < last; l++) middle.push(...nodesByLayer[l])
 
-  for (const n of middle) {
-    // Layer 1 stays battles to ease players in.
-    if (n.layer === 1) {
-      n.type = 'battle'
-      continue
+  const counts: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0 }
+  const lastLayer: Record<string, number> = { merchant: -9, shrine: -9, recruit: -9, elite: -9 }
+
+  // Roll layer by layer (excluding the pre-boss layer, handled below). Enforce
+  // per-type caps, a minimum layer gap between same-type specials, and at most
+  // one special per layer so specials never cluster.
+  for (let l = 1; l < last - 1; l++) {
+    let specialThisLayer = false
+    for (const n of nodesByLayer[l]) {
+      if (l === 1) { n.type = 'battle'; continue } // ease-in layer
+      let t = weightedType(n.layer, last, rng)
+      if (t !== 'battle') {
+        const capped = counts[t] >= (SPECIAL_CAPS[t] ?? 99)
+        const tooClose = n.layer - lastLayer[t] < MIN_SPECIAL_GAP
+        if (capped || tooClose || specialThisLayer) t = 'battle'
+      }
+      n.type = t
+      if (t !== 'battle') {
+        counts[t]++
+        lastLayer[t] = n.layer
+        specialThisLayer = true
+      }
     }
-    n.type = weightedType(n.layer, last, rng)
   }
 
-  // The layer right before the boss is always a prep stop (merchant or shrine).
+  // The layer right before the boss is a single prep stop — pick one node to be
+  // a merchant (preferred) or shrine, and leave the rest as battles.
   const preBoss = nodesByLayer[last - 1]
-  for (const n of preBoss) if (n.type === 'battle' || n.type === 'elite') n.type = rng.chance(0.6) ? 'merchant' : 'shrine'
+  for (const n of preBoss) n.type = 'battle'
+  const prep: NodeType = counts.merchant <= counts.shrine ? 'merchant' : 'shrine'
+  rng.pick(preBoss).type = prep
+  counts[prep]++
 
-  // Guarantee at least one of each key type appears (after the pre-boss pass so
-  // a guaranteed node isn't converted away). Elites avoid the pre-boss layer.
-  ensureType('recruit', middle, rng, (n) => n.layer >= 2 && n.layer <= last - 3)
-  ensureType('merchant', middle, rng, (n) => n.layer >= 3)
-  ensureType('shrine', middle, rng, (n) => n.layer >= 2)
-  ensureType('elite', middle, rng, (n) => n.layer >= 3 && n.layer < last - 1)
+  // Guarantee at least one of each key type appears (only adds when absent, so
+  // it never fights the caps). Elites avoid the pre-boss layer.
+  ensureType('recruit', middle, rng, (n) => n.type === 'battle' && n.layer >= 2 && n.layer <= last - 3)
+  ensureType('merchant', middle, rng, (n) => n.type === 'battle' && n.layer >= 3)
+  ensureType('shrine', middle, rng, (n) => n.type === 'battle' && n.layer >= 2)
+  ensureType('elite', middle, rng, (n) => n.type === 'battle' && n.layer >= 3 && n.layer < last - 1)
 }
 
 function weightedType(layer: number, last: number, rng: RNG): NodeType {
