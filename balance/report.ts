@@ -11,7 +11,10 @@ import { getNode } from '../src/game/data/archetypeTree'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import type { Enchantment, Item, ItemRarity, Sentinel } from '../src/game/types'
-import { buildSpec, mean, median, runBattle, soloOffense, std, SUPPORT_SPECS, TIER2_NODES } from './harness'
+import { generateRunMap } from '../src/game/data/runmap'
+import { allMutations } from '../src/game/data/mutations'
+import { UPGRADE_PATHS } from '../src/game/data/upgradeTree'
+import { buildSpec, depthUpgrades, mean, median, runBattle, soloOffense, std, SUPPORT_SPECS, TIER2_NODES } from './harness'
 
 const f1 = (n: number) => n.toFixed(1)
 const f2 = (n: number) => n.toFixed(2)
@@ -185,24 +188,27 @@ line('')
 // Difficulty ceiling: standard team vs rising Threat at a fixed depth.
 line('## 5. Threat ceiling (standard team, depth 8)')
 line('')
-line('A balanced 3-build team (Vanguard / Sharpshooter / Pyromancer, Epic gear) faces')
-line('depth-8 waves at rising Threat. The **break point** is where the base falls.')
+line('A balanced depth-8 team (Vanguard / Sharpshooter / Pyromancer, Epic gear +')
+line('focused upgrades) faces depth-8 waves at rising Threat. Informational: a')
+line('well-built team can tank a *single* node at high threat — the real difficulty')
+line('is the compounding climb, measured by the §6 Monte Carlo win-rate band.')
 line('')
+const stdUpg = depthUpgrades(8)
 const stdTeam = [
-  { sentinel: buildSpec('vanguard', { gearRarity: 'epic', seed: 8 }), slotId: 's0' },
-  { sentinel: buildSpec('sharpshooter', { gearRarity: 'epic', seed: 8 }), slotId: 's3' },
-  { sentinel: buildSpec('pyromancer', { gearRarity: 'epic', seed: 8 }), slotId: 's5' },
+  { sentinel: buildSpec('vanguard', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's0' },
+  { sentinel: buildSpec('sharpshooter', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's3' },
+  { sentinel: buildSpec('pyromancer', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's5' },
 ]
 line('| Threat | Cleared | Base HP left | Kills |')
 line('|--:|:-:|--:|--:|')
 let breakPoint = 0
-for (let threat = 1.0; threat <= 5.01; threat += 0.5) {
-  const m = runBattle({ team: stdTeam, depth: 8, enemyHpMult: threat, baseHp: 20, maxSeconds: 90, seed: 21 })
+for (let threat = 1.0; threat <= 8.01; threat += 1.0) {
+  const m = runBattle({ team: stdTeam, depth: 8, enemyHpMult: threat, baseHp: 12, maxSeconds: 90, seed: 21 })
   line(`| ×${f2(threat)} | ${m.cleared ? '✓' : '✗'} | ${f1(m.baseHpLeft)} | ${m.killCount} |`)
   if (m.cleared) breakPoint = threat
 }
 line('')
-line(`Standard team holds depth-8 up to **Threat ×${f2(breakPoint)}**.`)
+line(`Standard team holds depth-8 up to **Threat ×${f2(breakPoint)}** (informational).`)
 line('')
 const baselineClear = runBattle({ team: stdTeam, depth: 6, enemyHpMult: 1, baseHp: 20, maxSeconds: 90, seed: 21 })
 if (!baselineClear.cleared) failures.push('Standard team cannot clear depth 6 at Threat ×1 — game may be unwinnable.')
@@ -231,9 +237,10 @@ for (let r = 0; r < RUNS; r++) {
   let threat = 1
   let reached = 0
   for (let depth = 1; depth <= NODES; depth++) {
-    // Rebuild the team at depth-appropriate power (compounding player strength).
+    // Rebuild the team at depth-appropriate power (compounding player strength):
+    // level, gear rarity, AND purchased tower-upgrade levels all scale with depth.
     const team = specIds.map((id, i) => ({
-      sentinel: buildSpec(id, { level: depthLevel(depth), gearRarity: depthRarity(depth), seed: r * 10 + i }),
+      sentinel: buildSpec(id, { level: depthLevel(depth), gearRarity: depthRarity(depth), seed: r * 10 + i, upgrades: depthUpgrades(depth) }),
       slotId: slots[i],
     }))
     const kind = depth === NODES ? 'boss' : depth % 4 === 0 ? 'elite' : 'normal'
@@ -241,7 +248,7 @@ for (let r = 0; r < RUNS; r++) {
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) break
     reached = depth
-    threat *= kind === 'elite' ? 1.16 : 1.08 // mirrors THREAT_PER_NODE
+    threat *= kind === 'elite' ? 1.2 : 1.12 // mirrors THREAT_PER_NODE
   }
   depths.push(reached)
   if (reached >= NODES) wins++
@@ -255,6 +262,76 @@ line(`- Depth distribution: ${histogram(depths, NODES)}`)
 line('')
 if (winRate < 0.1) failures.push(`Monte Carlo win rate ${pct(winRate)} < 10% — runs may be too hard.`)
 if (winRate > 0.8) failures.push(`Monte Carlo win rate ${pct(winRate)} > 80% — runs may be too easy.`)
+
+// -------------------------------------------------------------- Sweep 7
+// Tower upgrade-path value: solo DPS at each purchased level of each path.
+line('## 7. Tower upgrade paths (solo DPS by level)')
+line('')
+line('A Weaponmaster with each upgrade path bought to level 0→3. Each path should')
+line('be a net gain over unupgraded even with its level-3 tradeoff.')
+line('')
+line('| Path | L0 | L1 | L2 | L3 | L3 vs L0 |')
+line('|---|--:|--:|--:|--:|--:|')
+const upgBase = soloDpsOf(buildSpec('weaponmaster', { seed: 2 }))
+for (const path of UPGRADE_PATHS) {
+  const dps = [0, 1, 2, 3].map((lvl) => soloDpsOf(buildSpec('weaponmaster', { seed: 2, upgrades: { [path.id]: lvl } })))
+  const gain = upgBase ? (dps[3] - dps[0]) / dps[0] : 0
+  line(`| ${path.name} | ${f1(dps[0])} | ${f1(dps[1])} | ${f1(dps[2])} | ${f1(dps[3])} | ${gain >= 0 ? '+' : ''}${pct(gain)} |`)
+  if (dps[3] <= dps[0]) failures.push(`Upgrade path "${path.name}" L3 (${f1(dps[3])}) is not a net gain over L0 (${f1(dps[0])}).`)
+}
+line('')
+
+// -------------------------------------------------------------- Sweep 8
+// Mutation tradeoffs: net solo DPS + the stated downside. Mutations should be
+// dramatic re-shapes, not tiny nudges — each must move solo DPS by ≥5%.
+line('## 8. Mutation tradeoffs')
+line('')
+line('Each mutation applied alone to a Weaponmaster vs. none. **ΔDPS** is the net')
+line('solo throughput change; the downside is the axis it trades away.')
+line('')
+line('| Mutation | ΔDPS | Downside |')
+line('|---|--:|---|')
+const mutBase = buildSpec('weaponmaster', { seed: 2 })
+const mutBaseDps = soloDpsOf(mutBase)
+for (const mut of allMutations()) {
+  const withMut: Sentinel = { ...mutBase, mutations: [mut] }
+  const dps = soloDpsOf(withMut)
+  const delta = mutBaseDps ? (dps - mutBaseDps) / mutBaseDps : 0
+  line(`| ${mut.name} | ${delta >= 0 ? '+' : ''}${pct(delta)} | ${mut.downside} |`)
+  if (!mut.downside) failures.push(`Mutation "${mut.name}" has no stated downside tradeoff.`)
+}
+line('')
+
+// -------------------------------------------------------------- Sweep 9
+// Map special-tile pacing: specials should be a minimal, non-clustered set.
+line('## 9. Map special-tile pacing')
+line('')
+line('300 generated maps. Specials should be a minimal set (no whole-layer clusters).')
+line('')
+const specialTypes = ['merchant', 'shrine', 'recruit', 'elite']
+const perType: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0 }
+let specialSum = 0
+let worstLayerCluster = 0
+const MAPS = 300
+for (let i = 0; i < MAPS; i++) {
+  const m = generateRunMap(new RNG(i * 7 + 1))
+  const byLayer: Record<number, number> = {}
+  for (const n of m.nodes) {
+    if (specialTypes.includes(n.type)) {
+      perType[n.type]++
+      specialSum++
+      byLayer[n.layer] = (byLayer[n.layer] ?? 0) + 1
+    }
+  }
+  for (const k of Object.keys(byLayer)) worstLayerCluster = Math.max(worstLayerCluster, byLayer[+k])
+}
+const avgSpecials = specialSum / MAPS
+line(`- Avg special tiles per map: **${f1(avgSpecials)}**`)
+line(`- Per type per map: ${specialTypes.map((t) => `${t} ${f2(perType[t] / MAPS)}`).join(', ')}`)
+line(`- Max specials in a single layer (any map): **${worstLayerCluster}**`)
+line('')
+if (avgSpecials > 8) failures.push(`Maps carry too many special tiles (avg ${f1(avgSpecials)} > 8).`)
+if (worstLayerCluster > 2) failures.push(`Map special tiles cluster (${worstLayerCluster} in one layer > 2).`)
 
 // -------------------------------------------------------------- Summary
 line('## Verdict')

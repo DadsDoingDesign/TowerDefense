@@ -50,7 +50,7 @@ const RECRUIT_PRICE = 80
 // Compounding difficulty: a campaign run is one continuous escalating defense.
 // Threat rises as you clear nodes and as you gain power (shrines / recruits), so
 // enemies get tougher to reflect your own compounding strength.
-export const THREAT_PER_NODE = { normal: 1.08, elite: 1.16, boss: 1 } as const
+export const THREAT_PER_NODE = { normal: 1.12, elite: 1.2, boss: 1 } as const
 export const THREAT_PER_CHOICE = 1.05
 
 export type GameMode = 'campaign' | 'endless'

@@ -9,35 +9,35 @@ builds (heals/shields/buffs) are expected to read low here and are measured in �
 
 | Build | Archetype | Role | Empirical DPS | Analytic DPS | Cleared | vs median |
 |---|---|---|--:|--:|:-:|--:|
-| Sharpshooter ⚠️ | rogue | offense | 312.9 | 1494.5 | ✓ | 1.49× |
-| Deathdealer | rogue | offense | 231.5 | 1599.7 | ✓ | 1.10× |
-| Arbalest | rogue | offense | 231.5 | 1654.0 | ✓ | 1.10× |
-| Ranger | rogue | offense | 218.9 | 1460.6 | ✓ | 1.04× |
-| Nightblade | rogue | offense | 218.3 | 1746.8 | ✓ | 1.04× |
-| Doomcaller | mystic | offense | 217.2 | 448.3 | ✓ | 1.04× |
-| Reaper | rogue | offense | 216.8 | 1419.3 | ✓ | 1.03× |
-| Venomancer | rogue | offense | 212.7 | 987.4 | ✓ | 1.01× |
-| Saboteur | rogue | offense | 210.4 | 1009.5 | ✓ | 1.00× |
-| Hexblade | rogue | offense | 210.1 | 998.4 | ✓ | 1.00× |
-| Soulflay | mystic | offense | 209.3 | 321.3 | ✓ | 1.00× |
-| Templar | mystic | support | 205.3 | 125.3 | ✓ | 0.98× |
-| Oracle | mystic | support | 196.0 | 147.3 | ✓ | 0.93× |
-| Radiant | mystic | support | 195.0 | 126.7 | ✓ | 0.93× |
-| Stormcaller | mystic | offense | 193.1 | 139.4 | ✓ | 0.92× |
-| Plaguebringer | mystic | offense | 188.7 | 191.4 | ✓ | 0.90× |
-| Juggernaut | fighter | offense | 176.6 | 669.4 | ✓ | 0.84× |
-| Bannerman | fighter | support | 176.0 | 459.6 | ✓ | 0.84× |
-| Bulwark | fighter | support | 175.3 | 475.3 | ✓ | 0.84× |
-| Warden of Ash | fighter | support | 175.2 | 472.7 | ✓ | 0.84× |
-| Vanguard | fighter | offense | 174.2 | 629.5 | ✓ | 0.83× |
-| Weaponmaster | fighter | offense | 173.6 | 1183.0 | ✓ | 0.83× |
-| Berserker | fighter | offense | 173.6 | 1263.3 | ✓ | 0.83× |
-| Sentinel of Order | fighter | offense | 170.6 | 466.4 | ✓ | 0.81× |
-| Aegis | fighter | support | 169.8 | 468.3 | ✓ | 0.81× |
-| Cryomancer | mystic | offense | 168.9 | 137.9 | ✓ | 0.81× |
-| Pyromancer | mystic | offense | 164.8 | 134.8 | ✓ | 0.79× |
+| Sharpshooter ⚠️ | rogue | offense | 508.3 | 1494.5 | ✓ | 1.46× |
+| Arbalest | rogue | offense | 393.9 | 1654.0 | ✓ | 1.13× |
+| Doomcaller | mystic | offense | 392.4 | 448.3 | ✓ | 1.13× |
+| Deathdealer | rogue | offense | 385.4 | 1599.7 | ✓ | 1.11× |
+| Reaper | rogue | offense | 371.9 | 1419.3 | ✓ | 1.07× |
+| Ranger | rogue | offense | 370.0 | 1460.6 | ✓ | 1.06× |
+| Nightblade | rogue | offense | 367.3 | 1746.8 | ✓ | 1.05× |
+| Soulflay | mystic | offense | 353.1 | 321.3 | ✓ | 1.01× |
+| Saboteur | rogue | offense | 352.4 | 1009.5 | ✓ | 1.01× |
+| Hexblade | rogue | offense | 348.9 | 998.4 | ✓ | 1.00× |
+| Venomancer | rogue | offense | 347.9 | 987.4 | ✓ | 1.00× |
+| Stormcaller | mystic | offense | 321.4 | 139.4 | ✓ | 0.92× |
+| Oracle | mystic | support | 311.0 | 147.3 | ✓ | 0.89× |
+| Berserker | fighter | offense | 302.2 | 1263.3 | ✓ | 0.87× |
+| Weaponmaster | fighter | offense | 290.6 | 1183.0 | ✓ | 0.83× |
+| Plaguebringer | mystic | offense | 289.7 | 191.4 | ✓ | 0.83× |
+| Aegis | fighter | support | 288.3 | 468.3 | ✓ | 0.83× |
+| Bulwark | fighter | support | 284.3 | 475.3 | ✓ | 0.82× |
+| Warden of Ash | fighter | support | 284.0 | 472.7 | ✓ | 0.82× |
+| Cryomancer | mystic | offense | 283.1 | 137.9 | ✓ | 0.81× |
+| Bannerman | fighter | support | 282.4 | 459.6 | ✓ | 0.81× |
+| Juggernaut | fighter | offense | 281.1 | 669.4 | ✓ | 0.81× |
+| Vanguard | fighter | offense | 277.4 | 629.5 | ✓ | 0.80× |
+| Sentinel of Order | fighter | offense | 274.8 | 466.4 | ✓ | 0.79× |
+| Radiant | mystic | support | 268.3 | 126.7 | ✓ | 0.77× |
+| Templar | mystic | support | 264.5 | 125.3 | ✓ | 0.76× |
+| Pyromancer | mystic | offense | 260.7 | 134.8 | ✓ | 0.75× |
 
-Offense builds — mean **203.7**, median **209.7**, σ **33.2**, spread **1.90×** (max/min).
+Offense builds — mean **338.6**, median **348.4**, σ **57.9**, spread **1.95×** (max/min).
 
 ## 2. Support value (team uplift)
 
@@ -46,13 +46,13 @@ same wave. **Uplift** = reduction in clear time (or added kills if not cleared).
 
 | Support | Control clear | With support | Δ time | Δ base HP |
 |---|--:|--:|--:|--:|
-| Aegis | 53.9s | 54.3s | +0.4s | +0.0 |
-| Bulwark | 53.9s | 54.3s | +0.4s | +0.0 |
-| Bannerman | 53.9s | 54.3s | +0.4s | +0.0 |
-| Warden of Ash | 53.9s | 54.3s | +0.4s | +0.0 |
-| Radiant | 53.9s | 54.3s | +0.4s | +0.0 |
-| Templar | 53.9s | 54.3s | +0.4s | +0.0 |
-| Oracle | 53.9s | 54.3s | +0.4s | +0.0 |
+| Aegis | 56.9s | 55.1s | −1.9s | +0.0 |
+| Bulwark | 56.9s | 55.1s | −1.9s | +0.0 |
+| Bannerman | 56.9s | 55.1s | −1.9s | +0.0 |
+| Warden of Ash | 56.9s | 55.1s | −1.9s | +0.0 |
+| Radiant | 56.9s | 55.1s | −1.9s | +0.0 |
+| Templar | 56.9s | 55.1s | −1.9s | +0.0 |
+| Oracle | 56.9s | 55.1s | −1.9s | +0.0 |
 
 ## 3. Item rarity ladder
 
@@ -73,41 +73,42 @@ Each enchantment (max roll) equipped alone on a Weaponmaster vs. no gear.
 
 | Enchantment | DPS uplift |
 |---|--:|
-| shocking | +15% |
-| piercing | +14% |
-| bursting | +13% |
-| cruelty | +6% |
-| swift | +6% |
-| might | +5% |
-| heavy | +5% |
+| piercing | +64% |
+| bursting | +61% |
+| shocking | +61% |
+| precision | +35% |
+| heavy | +35% |
+| swift | +33% |
+| might | +33% |
+| ruin | +30% |
+| cruelty | +27% |
+| reach | +17% |
+| frost | +0% |
 | insight | +0% |
 | patience | +0% |
 | vampiric | +0% |
-| precision | -2% |
-| ruin | -2% |
-| reach | -2% |
-| executioner | -2% |
-| flaming | -7% |
-| frost | -7% |
+| flaming | -4% |
+| executioner | -13% |
 
 ## 5. Threat ceiling (standard team, depth 8)
 
-A balanced 3-build team (Vanguard / Sharpshooter / Pyromancer, Epic gear) faces
-depth-8 waves at rising Threat. The **break point** is where the base falls.
+A balanced depth-8 team (Vanguard / Sharpshooter / Pyromancer, Epic gear +
+focused upgrades) faces depth-8 waves at rising Threat. Informational: a
+well-built team can tank a *single* node at high threat — the real difficulty
+is the compounding climb, measured by the §6 Monte Carlo win-rate band.
 
 | Threat | Cleared | Base HP left | Kills |
 |--:|:-:|--:|--:|
-| ×1.00 | ✓ | 20.0 | 37 |
-| ×1.50 | ✓ | 20.0 | 37 |
-| ×2.00 | ✓ | 20.0 | 39 |
-| ×2.50 | ✓ | 20.0 | 37 |
-| ×3.00 | ✓ | 20.0 | 38 |
-| ×3.50 | ✓ | 20.0 | 38 |
-| ×4.00 | ✓ | 20.0 | 39 |
-| ×4.50 | ✓ | 20.0 | 37 |
-| ×5.00 | ✓ | 20.0 | 38 |
+| ×1.00 | ✓ | 12.0 | 39 |
+| ×2.00 | ✓ | 12.0 | 39 |
+| ×3.00 | ✓ | 12.0 | 39 |
+| ×4.00 | ✓ | 12.0 | 39 |
+| ×5.00 | ✓ | 12.0 | 39 |
+| ×6.00 | ✓ | 12.0 | 39 |
+| ×7.00 | ✓ | 12.0 | 39 |
+| ×8.00 | ✓ | 12.0 | 38 |
 
-Standard team holds depth-8 up to **Threat ×5.00**.
+Standard team holds depth-8 up to **Threat ×8.00** (informational).
 
 ## 6. Monte Carlo full runs (compounding Threat vs. progression)
 
@@ -116,9 +117,47 @@ Random teams (3–5 specs) play depths 1→10. Team **power scales with depth**
 Threat compounds ×1.05/node and base HP (20) persists. **Win** = the boss falls.
 
 - Runs: **150**
-- Win rate (reached boss): **77%**
-- Average depth reached: **9.3 / 10**
-- Depth distribution: 0:0  1:0  2:0  3:2  4:0  5:0  6:0  7:32  8:0  9:0  10:116
+- Win rate (reached boss): **69%**
+- Average depth reached: **8.8 / 10**
+- Depth distribution: 0:0  1:0  2:0  3:9  4:0  5:0  6:2  7:35  8:0  9:0  10:104
+
+## 7. Tower upgrade paths (solo DPS by level)
+
+A Weaponmaster with each upgrade path bought to level 0→3. Each path should
+be a net gain over unupgraded even with its level-3 tradeoff.
+
+| Path | L0 | L1 | L2 | L3 | L3 vs L0 |
+|---|--:|--:|--:|--:|--:|
+| Onslaught | 183.7 | 216.8 | 251.0 | 279.4 | +52% |
+| Tempo | 183.7 | 223.5 | 239.0 | 254.0 | +38% |
+| Precision | 183.7 | 220.8 | 236.9 | 275.0 | +50% |
+
+## 8. Mutation tradeoffs
+
+Each mutation applied alone to a Weaponmaster vs. none. **ΔDPS** is the net
+solo throughput change; the downside is the axis it trades away.
+
+| Mutation | ΔDPS | Downside |
+|---|--:|---|
+| Volatile Rounds | +60% | −15% attack speed |
+| Chain Arc | +63% | −12% damage |
+| Piercing Volley | +64% | −15% damage |
+| Rapid Fire | +39% | −45% damage per hit |
+| Heavy Ordnance | +30% | −50% attack speed |
+| Incendiary | -9% | −15% damage |
+| Cryo Blast | +61% | −15% damage |
+| Executioner | -16% | −15% attack speed |
+| Siphon | -1% | −20% range |
+| Overcharge | +29% | −35% attack speed |
+| Concussive | +8% | −20% damage |
+
+## 9. Map special-tile pacing
+
+300 generated maps. Specials should be a minimal set (no whole-layer clusters).
+
+- Avg special tiles per map: **6.2**
+- Per type per map: merchant 1.98, shrine 1.68, recruit 1.00, elite 1.50
+- Max specials in a single layer (any map): **2**
 
 ## Verdict
 

@@ -29,6 +29,8 @@ export interface BuildOptions {
   level?: number
   gearRarity?: ItemRarity
   seed?: number
+  /** Purchased tower-upgrade levels per path (power/tempo/precision), 0–3 each. */
+  upgrades?: Record<string, number>
 }
 
 /**
@@ -45,7 +47,25 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
   if (level >= 10) s = evolveInto(s, spec.parent!) // tier 1
   if (level >= 20) s = evolveInto(s, specId) // tier 2
   if (opts.gearRarity) s = equipFullSet(s, opts.gearRarity, rng)
+  if (opts.upgrades) s = { ...s, upgrades: { ...opts.upgrades } }
   return s
+}
+
+/**
+ * A depth-appropriate spread of purchased upgrade levels — models a player
+ * spending gold on the tower upgrade tree as a run progresses. Gold is scarce
+ * (≈945 to fully max one tower's three paths), so a realistic player focuses:
+ * max one path, then dabble in a second — not max everything on everyone.
+ */
+export function depthUpgrades(depth: number): Record<string, number> {
+  let total = Math.min(6, Math.floor(Math.max(0, depth) * 0.6))
+  const per = [0, 0, 0]
+  for (let pi = 0; pi < 3 && total > 0; pi++) {
+    const add = Math.min(3, total)
+    per[pi] = add
+    total -= add
+  }
+  return { power: per[0], tempo: per[1], precision: per[2] }
 }
 
 function xpForLevelApprox(level: number): number {

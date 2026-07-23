@@ -14,9 +14,9 @@ export function generateEncounter(depth: number, kind: EncounterKind, label?: st
   if (kind === 'boss') return bossWave(depth, label)
 
   const eliteBoost = kind === 'elite' ? 1.4 : 1
-  // Depth HP curve — steepened after the P1–P3 power gains (dead item slots
-  // became live offense) to keep the difficulty band honest.
-  const hpMult = (1 + (depth - 1) * 0.4) * eliteBoost
+  // Depth HP curve — steepened after the P1–P4 power gains (dead item slots
+  // became live offense, plus the tower upgrade tree) to keep the band honest.
+  const hpMult = (1 + (depth - 1) * 0.85) * eliteBoost
   const gap = kind === 'elite' ? 0.62 : 0.78
   const bump = kind === 'elite' ? 1 : 0
 

@@ -22,9 +22,18 @@ const MUTATIONS: MutTemplate[] = [
   { key: 'concussive', name: 'Concussive', desc: '30% chance to stun for 0.9s — hits land weaker.', downside: '−20% damage', mods: { stunChance: 0.3, stunDur: 0.9, damageMult: 0.8 } },
 ]
 
+function toMutation(t: MutTemplate, id: string): Mutation {
+  return { id, key: t.key, name: t.name, desc: t.desc, rarity: 'mythic', downside: t.downside, mods: t.mods, grantUpgrade: t.grantUpgrade }
+}
+
 /** Roll one random mutation, avoiding keys the hero already carries when possible. */
 export function rollMutation(rng: RNG, exclude: string[] = []): Mutation {
   const pool = MUTATIONS.filter((m) => !exclude.includes(m.key))
   const t = rng.pick(pool.length ? pool : MUTATIONS)
-  return { id: nextId('mut'), key: t.key, name: t.name, desc: t.desc, rarity: 'mythic', downside: t.downside, mods: t.mods, grantUpgrade: t.grantUpgrade }
+  return toMutation(t, nextId('mut'))
+}
+
+/** One of every mutation (for balance tooling and previews). */
+export function allMutations(): Mutation[] {
+  return MUTATIONS.map((t) => toMutation(t, `mut_${t.key}`))
 }
