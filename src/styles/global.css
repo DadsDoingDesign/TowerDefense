@@ -1,28 +1,38 @@
 :root {
-  /* Palette — dark tactical field */
-  --bg: #0a0e0c;
-  --panel: #111813;
-  --panel-2: #16201a;
-  --panel-3: #1c2a22;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.16);
-  --text: #e7efe9;
-  --muted: #8a9992;
-  --muted-2: #647069;
-  --accent: #f0a868;
-  --accent-dim: rgba(240, 168, 104, 0.16);
-  --good: #7ac74f;
-  --warn: #e6b800;
-  --bad: #e05a4f;
-  --info: #98c1d9;
+  /* Palette — warm "Tiny Swords" table (see docs/BRAND.md) */
+  --bg: #201711;
+  --bg-2: #2a1f16;
+  --panel: #2f2418;
+  --panel-2: #3a2c1c;
+  --panel-3: #46331f;
+  --line: rgba(233, 205, 150, 0.12);
+  --line-strong: rgba(233, 205, 150, 0.22);
+  --text: #f3e7d0;
+  --muted: #b89e7e;
+  --muted-2: #8a7458;
+  --accent: #e0ac4c;
+  --accent-dim: rgba(224, 172, 76, 0.16);
+  --teal: #57a2b6;
+  --teal-dim: rgba(87, 162, 182, 0.18);
+  --good: #6fce88;
+  --warn: #e0b23a;
+  --bad: #d0563a;
+  --info: #6fb0d8;
+
+  /* Parchment / wood surface inks */
+  --paper: #ece0c8;
+  --ink: #4a3a1e;
+  --ink-dim: #6a5738;
+  --wood: #6b4526;
 
   /* Archetype hues */
   --fighter: #d9743f;
   --rogue: #4fae72;
   --mystic: #5b8cd6;
 
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font-display: 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -47,10 +57,22 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 620px at 50% -10%, rgba(224, 172, 76, 0.06), transparent 60%),
+    radial-gradient(900px 700px at 50% 120%, rgba(0, 0, 0, 0.35), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 button {

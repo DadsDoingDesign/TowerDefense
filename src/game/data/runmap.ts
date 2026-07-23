@@ -20,13 +20,13 @@ export interface RunMap {
 }
 
 const NODE_META: Record<NodeType, { label: string; glyph: string; color: string }> = {
-  start: { label: 'Start', glyph: '◆', color: '#98c1d9' },
-  battle: { label: 'Battle', glyph: '⚔', color: '#c9d1cc' },
-  elite: { label: 'Elite', glyph: '☠', color: '#e05a4f' },
-  merchant: { label: 'Merchant', glyph: '⟡', color: '#f0b868' },
-  shrine: { label: 'Shrine', glyph: '❖', color: '#c48ff0' },
-  recruit: { label: 'Recruit', glyph: '＋', color: '#7ac74f' },
-  boss: { label: 'Boss', glyph: '♛', color: '#e0aaff' },
+  start: { label: 'Start', glyph: '◆', color: '#57a2b6' },
+  battle: { label: 'Battle', glyph: '⚔', color: '#cbb488' },
+  elite: { label: 'Elite', glyph: '☠', color: '#d0563a' },
+  merchant: { label: 'Merchant', glyph: '⟡', color: '#e0ac4c' },
+  shrine: { label: 'Shrine', glyph: '❖', color: '#7fb8a0' },
+  recruit: { label: 'Recruit', glyph: '＋', color: '#6fce88' },
+  boss: { label: 'Boss', glyph: '♛', color: '#c0503a' },
 }
 
 export const nodeMeta = (t: NodeType) => NODE_META[t]

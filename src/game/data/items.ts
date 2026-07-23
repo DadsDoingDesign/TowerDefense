@@ -30,9 +30,9 @@ export const RARITY: Record<
   ItemRarity,
   { label: string; budget: number; enchants: number; color: string; dropWeight: number }
 > = {
-  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c9d1cc', dropWeight: 58 },
-  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#7aa8f0', dropWeight: 28 },
-  epic: { label: 'Epic', budget: 2.5, enchants: 2, color: '#c48ff0', dropWeight: 11 },
+  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 58 },
+  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 28 },
+  epic: { label: 'Epic', budget: 2.5, enchants: 2, color: '#c67ab0', dropWeight: 11 },
   legendary: { label: 'Legendary', budget: 3.6, enchants: 3, color: '#f0b868', dropWeight: 3 },
 }
 

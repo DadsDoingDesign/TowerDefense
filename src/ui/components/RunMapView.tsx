@@ -65,7 +65,7 @@ export function RunMapView() {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke={active ? 'rgba(240,168,104,0.5)' : 'rgba(255,255,255,0.1)'}
+                stroke={active ? 'rgba(224,172,76,0.55)' : 'rgba(233,205,150,0.12)'}
                 strokeWidth={active ? 2.5 : 1.5}
               />
             )

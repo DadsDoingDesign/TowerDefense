@@ -139,7 +139,7 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 240px;
-  background: #0a0e0c;
+  background: #17100a;
 }
 
 .battle-canvas {
@@ -314,7 +314,7 @@
 
 .xp-fill {
   height: 100%;
-  background: var(--info);
+  background: var(--teal);
   transition: width 0.3s ease;
 }
 
@@ -499,7 +499,7 @@
 .overlay-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 6, 0.72);
+  background: rgba(20, 12, 6, 0.66);
   backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
@@ -729,7 +729,7 @@
 
 .eo-grant {
   font-size: 11px;
-  color: var(--info);
+  color: var(--teal);
   font-weight: 600;
 }
 
@@ -947,16 +947,16 @@
   color: var(--text);
 }
 .rar-rare {
-  border-color: #4d79c4;
+  border-color: #3f7d8c;
 }
 .rar-rare .es-name {
-  color: #7aa8f0;
+  color: #5fb0c4;
 }
 .rar-epic {
-  border-color: #9a5cc9;
+  border-color: #9c4d84;
 }
 .rar-epic .es-name {
-  color: #c48ff0;
+  color: #c67ab0;
 }
 .rar-legendary {
   border-color: #d08a3a;
@@ -1003,13 +1003,13 @@
   gap: 6px;
 }
 .item-card.rar-common {
-  border-left-color: #c9d1cc;
+  border-left-color: #c3b291;
 }
 .item-card.rar-rare {
-  border-left-color: #7aa8f0;
+  border-left-color: #5fb0c4;
 }
 .item-card.rar-epic {
-  border-left-color: #c48ff0;
+  border-left-color: #c67ab0;
 }
 .item-card.rar-legendary {
   border-left-color: #f0b868;
@@ -1060,10 +1060,10 @@
 }
 .ic-ench-line {
   font-size: 11px;
-  color: var(--info);
+  color: var(--teal);
 }
 .ic-ench-line strong {
-  color: #b8d4ff;
+  color: #9fd4e0;
 }
 .ic-footer {
   margin-top: 2px;
@@ -1154,7 +1154,7 @@
   border-color: var(--line-strong);
 }
 .forge-btn.upgrade {
-  color: var(--info);
+  color: var(--teal);
 }
 .forge-btn:disabled {
   opacity: 0.4;
@@ -1275,7 +1275,7 @@
   height: 16px;
   border-radius: 50%;
   background: var(--good);
-  color: #0a0e0c;
+  color: #17100a;
   font-size: 10px;
   font-weight: 800;
   display: grid;
@@ -1291,7 +1291,7 @@
 }
 .map-node.current {
   background: var(--panel-3);
-  box-shadow: 0 0 0 2px var(--info);
+  box-shadow: 0 0 0 2px var(--teal);
 }
 @keyframes node-pulse {
   0%,
@@ -1534,7 +1534,7 @@
 .ro-dps {
   font-size: 11px;
   font-weight: 700;
-  color: var(--info);
+  color: var(--accent);
   margin-top: 2px;
 }
 .loot-names {
@@ -1549,7 +1549,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(1000px 500px at 50% -5%, rgba(152, 193, 217, 0.08), transparent 60%),
+    radial-gradient(1000px 500px at 50% -5%, rgba(224, 172, 76, 0.08), transparent 60%),
     var(--bg);
 }
 .hub-header {
@@ -1573,9 +1573,9 @@
 .marks-chip {
   font-size: 15px;
   font-weight: 800;
-  color: var(--info);
-  background: rgba(152, 193, 217, 0.12);
-  border: 1px solid rgba(152, 193, 217, 0.3);
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(224, 172, 76, 0.34);
   padding: 6px 14px;
   border-radius: 999px;
 }
@@ -1605,8 +1605,8 @@
   gap: 2px;
 }
 .hub-stat.accent {
-  border-color: rgba(196, 143, 240, 0.4);
-  background: rgba(196, 143, 240, 0.08);
+  border-color: rgba(208, 86, 58, 0.42);
+  background: rgba(208, 86, 58, 0.09);
 }
 .hs-val {
   font-size: 22px;
@@ -1683,8 +1683,8 @@
   border: 1px solid var(--line);
 }
 .ur-pip.on {
-  background: var(--info);
-  border-color: var(--info);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 .ur-buy {
   flex: 0 0 auto;
@@ -1692,8 +1692,8 @@
   font-weight: 700;
   padding: 9px 14px;
   border-radius: 8px;
-  background: var(--info);
-  color: #0a0e0c;
+  background: var(--teal);
+  color: #0e1a1e;
   min-width: 68px;
 }
 .ur-buy:disabled {
@@ -1702,8 +1702,8 @@
 }
 
 .sacrifice-panel {
-  background: rgba(196, 143, 240, 0.06);
-  border: 1px solid rgba(196, 143, 240, 0.25);
+  background: rgba(208, 86, 58, 0.07);
+  border: 1px solid rgba(208, 86, 58, 0.28);
   border-radius: 12px;
   padding: 14px;
 }
@@ -1721,7 +1721,7 @@
 .srt-val {
   font-size: 16px;
   font-weight: 800;
-  color: #c48ff0;
+  color: var(--bad);
 }
 .srt-label {
   font-size: 11px;
@@ -1733,8 +1733,8 @@
   font-weight: 700;
   padding: 10px 16px;
   border-radius: 8px;
-  background: #9a5cc9;
-  color: #fff;
+  background: var(--bad);
+  color: #fbeee4;
 }
 .sacrifice-btn:disabled {
   background: var(--panel-3);
@@ -1766,8 +1766,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(152, 193, 217, 0.1);
-  border: 1px solid rgba(152, 193, 217, 0.25);
+  background: var(--accent-dim);
+  border: 1px solid rgba(224, 172, 76, 0.28);
   border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 16px;
@@ -1775,7 +1775,7 @@
 }
 .marks-earned strong {
   font-size: 18px;
-  color: var(--info);
+  color: var(--accent);
 }
 
 @media (min-width: 620px) {
@@ -1792,15 +1792,15 @@
 .endless-run-btn {
   flex: 0 0 auto;
   background: var(--panel-3);
-  color: var(--info);
-  border: 1px solid rgba(152, 193, 217, 0.35);
+  color: var(--teal);
+  border: 1px solid rgba(87, 162, 182, 0.4);
   font-weight: 800;
   font-size: 15px;
   padding: 15px 18px;
   border-radius: var(--radius);
 }
 .endless-run-btn:hover {
-  background: rgba(152, 193, 217, 0.12);
+  background: var(--teal-dim);
 }
 
 .endless-screen {
@@ -1850,7 +1850,7 @@
 .dust-chip {
   font-size: 13px;
   font-weight: 700;
-  color: #b8d4ff;
+  color: var(--teal);
 }
 .endless-body {
   flex: 1 1 auto;

@@ -58,3 +58,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Fix: trees moved to a perimeter forest frame (interior kept clear); grass got
   tonal blobs + tufts + flowers; the lane got dirt speckle, worn ruts, and a
   tufted broken edge; base grass muted so units pop.
+
+- **2026-07-23 — brand guide + full UI reskin.** The battle map + accessory
+  screens were on-theme, but the surrounding UI chrome was still cool blue-grey
+  (info-blue Marks/Endless/Dust, purple Sacrifice/epic, blue rarity, cool-black
+  scrim/letterbox, white-alpha borders). Wrote `docs/BRAND.md` (warm storybook
+  medieval; no cool chrome; teal = primary, gold = value) and swept every screen
+  against it. Retokenised `global.css` :root to the warm table palette; warmed
+  the scrim (`rgba(20,12,6,.66)`) and canvas letterbox (`#17100a`); recoloured
+  hub marks→gold, sacrifice→goblin-red, upgrade buys→teal; endless→teal;
+  map node types→warm (teal start, sage shrines, gold merchant), edges→gold,
+  current→teal; rarity ramp→warm (stone/teal/orchid/gold); enchant + upgrade +
+  xp + evolution-grant accents→teal; recruit DPS→gold. Verified with real
+  screenshots of hub, map, battle, detail, merchant, shrine, and equip — all
+  now read as one warm wooden-table set. Mystic-blue kept as intentional class
+  identity (per BRAND.md archetype hues).
