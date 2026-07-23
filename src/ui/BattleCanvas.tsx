@@ -10,6 +10,7 @@ import {
   type DrawSentinel,
 } from '../game/render/renderer'
 import { dist } from '../game/core/vec'
+import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 
 const SLOT_HIT_RADIUS = 26
@@ -76,6 +77,7 @@ export function BattleCanvas() {
       const view = fitView(cssW, cssH, map)
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.imageSmoothingEnabled = getActiveStyle().smoothing
       ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.ox, dpr * view.oy)
 
       drawField(ctx, map)

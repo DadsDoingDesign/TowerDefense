@@ -1,5 +1,6 @@
 import { useGameStore } from '../../state/gameStore'
 import { UPGRADES, useMetaStore } from '../../state/metaStore'
+import { ThemeGallery } from '../components/ThemeGallery'
 
 export function HubScreen() {
   const watchMarks = useMetaStore((s) => s.watchMarks)
@@ -42,6 +43,8 @@ export function HubScreen() {
           <h2>Dark Sacrifice</h2>
           <SacrificePanel />
         </section>
+
+        <ThemeGallery />
       </div>
 
       <footer className="hub-footer hub-footer-modes">

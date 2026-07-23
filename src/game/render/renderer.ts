@@ -2,6 +2,7 @@ import type { GameEngine, RtEnemy, RtProjectile, RtSentinel, FloatingText } from
 import { ARCHETYPES } from '../data/sentinels'
 import type { Vec2 } from '../core/vec'
 import type { Archetype, GameMap } from '../types'
+import { getActiveStyle } from './themes'
 
 export interface View {
   scale: number
@@ -53,12 +54,6 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
 }
 
 const COLORS = {
-  fieldTop: '#141b17',
-  fieldBottom: '#0d1411',
-  grid: 'rgba(255,255,255,0.03)',
-  pathFill: '#2a2620',
-  pathEdge: '#3a352b',
-  pathCenter: 'rgba(210,180,120,0.10)',
   base: '#3d5a80',
   baseCore: '#98c1d9',
   slot: 'rgba(255,255,255,0.16)',
@@ -69,21 +64,22 @@ const COLORS = {
 
 /** Full background: gradient field + subtle grid + path + base marker. */
 export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const style = getActiveStyle()
   const grad = ctx.createLinearGradient(0, 0, 0, map.height)
-  grad.addColorStop(0, COLORS.fieldTop)
-  grad.addColorStop(1, COLORS.fieldBottom)
+  grad.addColorStop(0, style.field.top)
+  grad.addColorStop(1, style.field.bottom)
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, map.width, map.height)
 
-  // Faint grid for a "tactical map" read.
-  ctx.strokeStyle = COLORS.grid
+  ctx.strokeStyle = style.field.grid
   ctx.lineWidth = 1
   ctx.beginPath()
-  for (let x = 0; x <= map.width; x += 48) {
+  const step = style.field.gridStep
+  for (let x = 0; x <= map.width; x += step) {
     ctx.moveTo(x, 0)
     ctx.lineTo(x, map.height)
   }
-  for (let y = 0; y <= map.height; y += 48) {
+  for (let y = 0; y <= map.height; y += step) {
     ctx.moveTo(0, y)
     ctx.lineTo(map.width, y)
   }
@@ -94,20 +90,21 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
 }
 
 function drawPath(ctx: CanvasRenderingContext2D, pts: Vec2[]): void {
+  const p = getActiveStyle().path
   ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
+  ctx.lineCap = p.cap
 
-  ctx.strokeStyle = COLORS.pathEdge
-  ctx.lineWidth = 46
+  ctx.strokeStyle = p.edge
+  ctx.lineWidth = p.edgeWidth
   strokePolyline(ctx, pts)
 
-  ctx.strokeStyle = COLORS.pathFill
-  ctx.lineWidth = 38
+  ctx.strokeStyle = p.fill
+  ctx.lineWidth = p.fillWidth
   strokePolyline(ctx, pts)
 
-  ctx.strokeStyle = COLORS.pathCenter
+  ctx.strokeStyle = p.center
   ctx.lineWidth = 2
-  ctx.setLineDash([10, 14])
+  if (p.dash) ctx.setLineDash(p.dash)
   strokePolyline(ctx, pts)
   ctx.setLineDash([])
 }
@@ -210,33 +207,58 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     ctx.stroke()
   }
 
-  // Barrel/indicator pointing at target
-  ctx.save()
-  ctx.rotate(s.aimAngle)
-  ctx.fillStyle = s.accent
-  roundRect(ctx, 6, -3.5, 18 * pulse, 7, 3)
-  ctx.fill()
-  ctx.restore()
+  const t = getActiveStyle().token
+  const r = 15 * pulse
 
-  // Body token
-  ctx.beginPath()
-  ctx.arc(0, 0, 15 * pulse, 0, Math.PI * 2)
-  ctx.fillStyle = s.color
-  ctx.fill()
-  ctx.lineWidth = 2.5
-  ctx.strokeStyle = s.accent
-  ctx.stroke()
+  // Barrel/indicator pointing at target (themes that use it)
+  if (t.barrel) {
+    ctx.save()
+    ctx.rotate(s.aimAngle)
+    ctx.fillStyle = s.accent
+    roundRect(ctx, 6, -3.5, 18 * pulse, 7, 3)
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // Body token, per theme shape
+  if (t.glow > 0) {
+    ctx.shadowColor = s.accent
+    ctx.shadowBlur = t.glow
+  }
+  if (t.shape === 'ring') {
+    ctx.beginPath()
+    ctx.arc(0, 0, r, 0, Math.PI * 2)
+    ctx.lineWidth = t.outline + 1
+    ctx.strokeStyle = s.color
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(0, 0, r - 4, 0, Math.PI * 2)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = s.accent
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  } else {
+    shapePath(ctx, t.shape, r)
+    ctx.fillStyle = t.gradient ? radialFill(ctx, r, s.accent, s.color) : s.color
+    ctx.fill()
+    ctx.shadowBlur = 0
+    if (t.outline > 0) {
+      ctx.lineWidth = t.outline
+      ctx.strokeStyle = t.shape === 'circle' || t.shape === 'gem' ? s.accent : darken(s.color, 0.45)
+      ctx.stroke()
+    }
+  }
 
   if (s.fireFlash > 0) {
     ctx.beginPath()
-    ctx.arc(0, 0, 15 * pulse + 4, 0, Math.PI * 2)
+    ctx.arc(0, 0, r + 4, 0, Math.PI * 2)
     ctx.strokeStyle = hexToRgba(s.accent, s.fireFlash * 0.6)
     ctx.lineWidth = 3
     ctx.stroke()
   }
 
   // Archetype glyph
-  ctx.fillStyle = 'rgba(0,0,0,0.55)'
+  ctx.fillStyle = t.shape === 'ring' ? s.accent : 'rgba(0,0,0,0.6)'
   ctx.font = 'bold 14px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -278,11 +300,32 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number
   ctx.save()
   ctx.translate(pos.x, pos.y)
 
-  ctx.beginPath()
-  ctx.arc(0, 0, type.radius, 0, Math.PI * 2)
-  ctx.fillStyle = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  ctx.fill()
+  const es = getActiveStyle().enemy
+  const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
+  if (es.glow > 0) {
+    ctx.shadowColor = fill
+    ctx.shadowBlur = es.glow
+  }
+  if (es.shape === 'ring') {
+    ctx.beginPath()
+    ctx.arc(0, 0, type.radius, 0, Math.PI * 2)
+    ctx.lineWidth = es.outline + 1.5
+    ctx.strokeStyle = fill
+    ctx.stroke()
+  } else {
+    shapePath(ctx, es.shape, type.radius)
+    ctx.fillStyle = es.gradient ? radialFill(ctx, type.radius, lighten(fill, 0.3), fill) : fill
+    ctx.fill()
+    if (es.outline > 0) {
+      ctx.lineWidth = es.outline
+      ctx.strokeStyle = darken(fill, 0.45)
+      ctx.stroke()
+    }
+  }
+  ctx.shadowBlur = 0
   if (type.isBoss) {
+    ctx.beginPath()
+    ctx.arc(0, 0, type.radius, 0, Math.PI * 2)
     ctx.lineWidth = 3
     ctx.strokeStyle = '#e0aaff'
     ctx.stroke()
@@ -326,14 +369,22 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number
 }
 
 export function drawProjectile(ctx: CanvasRenderingContext2D, p: RtProjectile): void {
+  const pr = getActiveStyle().projectile
   ctx.save()
-  ctx.beginPath()
   const r = p.splashRadius > 0 ? 5 : p.isCrit ? 4.5 : 3.5
-  ctx.arc(p.pos.x, p.pos.y, r, 0, Math.PI * 2)
   ctx.fillStyle = p.color
-  ctx.shadowColor = p.color
-  ctx.shadowBlur = 8
-  ctx.fill()
+  if (pr.glow > 0) {
+    ctx.shadowColor = p.color
+    ctx.shadowBlur = pr.glow
+  }
+  if (pr.square) {
+    roundRect(ctx, p.pos.x - r, p.pos.y - r, r * 2, r * 2, 1)
+    ctx.fill()
+  } else {
+    ctx.beginPath()
+    ctx.arc(p.pos.x, p.pos.y, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.restore()
 }
 
@@ -461,4 +512,172 @@ export function mix(a: string, b: string, t: number): string {
 /** Archetype accent used by UI chips too. */
 export function archetypeColor(a: Archetype): string {
   return ARCHETYPES[a].color
+}
+
+// ---- theme shape + color helpers ----
+
+/** Trace a shape path centered at the origin (caller fills/strokes). */
+function shapePath(ctx: CanvasRenderingContext2D, shape: string, r: number): void {
+  ctx.beginPath()
+  if (shape === 'square') {
+    const rr = Math.min(3, r / 2)
+    ctx.moveTo(-r + rr, -r)
+    ctx.arcTo(r, -r, r, r, rr)
+    ctx.arcTo(r, r, -r, r, rr)
+    ctx.arcTo(-r, r, -r, -r, rr)
+    ctx.arcTo(-r, -r, r, -r, rr)
+    ctx.closePath()
+  } else if (shape === 'gem') {
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2
+      const x = Math.cos(a) * r
+      const y = Math.sin(a) * r
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+  } else {
+    ctx.arc(0, 0, r, 0, Math.PI * 2)
+  }
+}
+
+function radialFill(ctx: CanvasRenderingContext2D, r: number, inner: string, outer: string): CanvasGradient {
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r)
+  g.addColorStop(0, inner)
+  g.addColorStop(1, outer)
+  return g
+}
+
+function toRgb(c: string): [number, number, number] {
+  if (c.startsWith('#')) {
+    const h = c.replace('#', '')
+    return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)]
+  }
+  const m = c.match(/\d+/g)
+  return m ? [Number(m[0]), Number(m[1]), Number(m[2])] : [128, 128, 128]
+}
+function darken(c: string, t: number): string {
+  const [r, g, b] = toRgb(c)
+  return `rgb(${Math.round(r * (1 - t))},${Math.round(g * (1 - t))},${Math.round(b * (1 - t))})`
+}
+function lighten(c: string, t: number): string {
+  const [r, g, b] = toRgb(c)
+  return `rgb(${Math.round(r + (255 - r) * t)},${Math.round(g + (255 - g) * t)},${Math.round(b + (255 - b) * t)})`
+}
+
+/**
+ * Draw a small sample scene (path + 3 towers + 2 enemies + a shot) for the theme
+ * gallery. Uses whatever theme is currently active — wrap in withStyle().
+ */
+export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const style = getActiveStyle()
+  // background + grid
+  const grad = ctx.createLinearGradient(0, 0, 0, h)
+  grad.addColorStop(0, style.field.top)
+  grad.addColorStop(1, style.field.bottom)
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, w, h)
+  ctx.strokeStyle = style.field.grid
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let x = 0; x <= w; x += style.field.gridStep / 2) {
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, h)
+  }
+  ctx.stroke()
+
+  // an S path
+  const pts: Vec2[] = [
+    { x: -10, y: h * 0.3 },
+    { x: w * 0.4, y: h * 0.3 },
+    { x: w * 0.4, y: h * 0.72 },
+    { x: w + 10, y: h * 0.72 },
+  ]
+  const p = style.path
+  ctx.lineJoin = 'round'
+  ctx.lineCap = p.cap
+  ctx.strokeStyle = p.edge
+  ctx.lineWidth = p.edgeWidth * 0.5
+  strokePolyline(ctx, pts)
+  ctx.strokeStyle = p.fill
+  ctx.lineWidth = p.fillWidth * 0.5
+  strokePolyline(ctx, pts)
+  ctx.strokeStyle = p.center
+  ctx.lineWidth = 1.5
+  if (p.dash) ctx.setLineDash(p.dash)
+  strokePolyline(ctx, pts)
+  ctx.setLineDash([])
+
+  // enemies on the path
+  const enemyDemo = [
+    { x: w * 0.62, y: h * 0.72, color: '#a8563c', r: 9 },
+    { x: w * 0.82, y: h * 0.72, color: '#8b9467', r: 7 },
+  ]
+  for (const e of enemyDemo) {
+    const es = style.enemy
+    ctx.save()
+    ctx.translate(e.x, e.y)
+    if (es.glow > 0) {
+      ctx.shadowColor = e.color
+      ctx.shadowBlur = es.glow
+    }
+    if (es.shape === 'ring') {
+      ctx.beginPath()
+      ctx.arc(0, 0, e.r, 0, Math.PI * 2)
+      ctx.lineWidth = es.outline + 1.5
+      ctx.strokeStyle = e.color
+      ctx.stroke()
+    } else {
+      shapePath(ctx, es.shape, e.r)
+      ctx.fillStyle = es.gradient ? radialFill(ctx, e.r, lighten(e.color, 0.3), e.color) : e.color
+      ctx.fill()
+      if (es.outline > 0) {
+        ctx.lineWidth = es.outline
+        ctx.strokeStyle = darken(e.color, 0.45)
+        ctx.stroke()
+      }
+    }
+    ctx.restore()
+  }
+
+  // 3 towers, one per archetype
+  const towers: { x: number; y: number; a: Archetype }[] = [
+    { x: w * 0.2, y: h * 0.55, a: 'fighter' },
+    { x: w * 0.5, y: h * 0.48, a: 'rogue' },
+    { x: w * 0.72, y: h * 0.45, a: 'mystic' },
+  ]
+  for (const tw of towers) {
+    drawSentinel(ctx, {
+      pos: { x: tw.x, y: tw.y },
+      archetype: tw.a,
+      color: ARCHETYPES[tw.a].color,
+      accent: ARCHETYPES[tw.a].accent,
+      range: 0,
+      aimAngle: 0.4,
+      fireFlash: 0,
+      hp: 1,
+      maxHp: 1,
+      downed: false,
+      procFlash: 0,
+      patienceStacks: 0,
+      blocking: false,
+    })
+  }
+
+  // a projectile in flight
+  drawProjectile(ctx, {
+    id: 'demo',
+    pos: { x: w * 0.58, y: h * 0.62 },
+    toPos: { x: 0, y: 0 },
+    targetId: null,
+    srcId: '',
+    damage: 0,
+    damageType: 'physical',
+    isCrit: true,
+    speed: 0,
+    splashRadius: 0,
+    pierce: 0,
+    color: ARCHETYPES.rogue.accent,
+    mods: {},
+    lifedrain: 0,
+  })
 }
