@@ -4,6 +4,8 @@
  * the enemy roster, plus grass/road terrain). Assets are CC0 pixel art from the
  * Dungeon Crawl Stone Soup tileset — see public/assets/sprites/CREDITS.md.
  */
+import { ANIM_ROLES } from './anim'
+
 export const SPRITE_PACKS = ['tinyswords', 'fantasy', 'undead', 'infernal', 'frost', 'sylvan']
 const ROLE_NAMES = [
   // towers
@@ -21,7 +23,8 @@ const ROLE_NAMES = [
 ]
 
 const images = new Map<string, HTMLImageElement>()
-const total = SPRITE_PACKS.length * ROLE_NAMES.length
+// Static role sprites across all packs + the Tiny Swords animation strips.
+const total = SPRITE_PACKS.length * ROLE_NAMES.length + ANIM_ROLES.length
 let loadedCount = 0
 let started = false
 const readyCbs: (() => void)[] = []
@@ -29,17 +32,20 @@ const readyCbs: (() => void)[] = []
 export function preloadSprites(): void {
   if (started || typeof document === 'undefined') return
   started = true
-  for (const pack of SPRITE_PACKS) {
-    for (const name of ROLE_NAMES) {
-      const img = new Image()
-      img.onload = img.onerror = () => {
-        loadedCount++
-        if (loadedCount === total) readyCbs.forEach((cb) => cb())
-      }
-      img.src = `assets/sprites/${pack}/${name}.png`
-      images.set(`${pack}/${name}`, img)
+  const load = (key: string, src: string) => {
+    const img = new Image()
+    img.onload = img.onerror = () => {
+      loadedCount++
+      if (loadedCount === total) readyCbs.forEach((cb) => cb())
     }
+    img.src = src
+    images.set(key, img)
   }
+  for (const pack of SPRITE_PACKS) {
+    for (const name of ROLE_NAMES) load(`${pack}/${name}`, `assets/sprites/${pack}/${name}.png`)
+  }
+  // Animation strips live only in the tinyswords pack.
+  for (const name of ANIM_ROLES) load(`tinyswords/${name}`, `assets/sprites/tinyswords/${name}.png`)
 }
 
 /** A decoded image for pack+role, or undefined (caller falls back procedurally). */

@@ -4,6 +4,10 @@ import type { Vec2 } from '../core/vec'
 import type { Archetype, GameMap } from '../types'
 import { getActiveStyle } from './themes'
 import { getSprite } from './sprites'
+import { ANIM_FRAMES, loopFrame } from './anim'
+
+/** Real-time clock (seconds) for looping idle/ambient animation. */
+const animNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000
 
 export interface View {
   scale: number
@@ -491,10 +495,12 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const style = getActiveStyle()
   const t = style.token
   const r = 15 * pulse
-  const sprite = style.sprites ? getSprite(style.sprites.pack, s.archetype) : undefined
+  const pack = style.sprites?.pack
+  const idle = pack ? getSprite(pack, `${s.archetype}_idle`) : undefined
+  const atk = pack ? getSprite(pack, `${s.archetype}_atk`) : undefined
+  const staticSpr = pack ? getSprite(pack, s.archetype) : undefined
 
-  if (sprite) {
-    // Grounding shadow + faction-tinted ring so archetypes stay readable.
+  const groundRing = () => {
     ctx.beginPath()
     ctx.ellipse(0, 13, 14, 5, 0, 0, Math.PI * 2)
     ctx.fillStyle = 'rgba(0,0,0,0.32)'
@@ -504,8 +510,29 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     ctx.strokeStyle = hexToRgba(s.accent, 0.6)
     ctx.lineWidth = 2
     ctx.stroke()
-    const sz = 15 * pulse * (style.sprites!.towerScale)
-    ctx.drawImage(sprite, -sz / 2, -sz / 2 - 5, sz, sz)
+  }
+
+  if (idle || atk) {
+    groundRing()
+    // Play the attack strip while firing (advances as fireFlash decays), else
+    // loop the idle strip. Scale by the idle height so the body stays consistent.
+    const firing = s.fireFlash > 0.05 && !!atk
+    const strip = (firing ? atk : idle) ?? idle ?? atk!
+    const frames = ANIM_FRAMES[`${s.archetype}_${firing ? 'atk' : 'idle'}`] ?? 1
+    const ref = idle ?? strip
+    const k = (15 * style.sprites!.towerScale * 1.5) / ref.naturalHeight
+    const fw = strip.naturalWidth / frames
+    const fh = strip.naturalHeight
+    const dw = fw * k
+    const dh = fh * k
+    const frame = firing
+      ? Math.min(frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * frames))
+      : loopFrame(animNow(), frames, 6, s.pos.x * 0.05)
+    ctx.drawImage(strip, frame * fw, 0, fw, fh, -dw / 2, 8 - dh, dw, dh)
+  } else if (staticSpr) {
+    groundRing()
+    const sz = 15 * pulse * style.sprites!.towerScale
+    ctx.drawImage(staticSpr, -sz / 2, -sz / 2 - 5, sz, sz)
     if (s.fireFlash > 0) {
       ctx.beginPath()
       ctx.arc(0, 2, 18, 0, Math.PI * 2)
@@ -607,16 +634,18 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const sprite = style.sprites ? getSprite(style.sprites.pack, type.id) : undefined
+  const pack = style.sprites?.pack
+  const walkFrames = pack ? ANIM_FRAMES[`${type.id}_walk`] : undefined
+  const walk = pack && walkFrames ? getSprite(pack, `${type.id}_walk`) : undefined
+  const staticSpr = pack ? getSprite(pack, type.id) : undefined
 
-  if (sprite) {
-    // Grounding shadow + real monster sprite scaled to the enemy's radius.
+  const enemyShadow = () => {
     ctx.beginPath()
     ctx.ellipse(0, type.radius * 0.7, type.radius * 0.9, type.radius * 0.35, 0, 0, Math.PI * 2)
     ctx.fillStyle = 'rgba(0,0,0,0.3)'
     ctx.fill()
-    const sz = type.radius * style.sprites!.enemyScale
-    ctx.drawImage(sprite, -sz / 2, -sz / 2 - type.radius * 0.25, sz, sz)
+  }
+  const overlays = (ringR: number) => {
     if (chilled) {
       ctx.beginPath()
       ctx.arc(0, 0, type.radius, 0, Math.PI * 2)
@@ -625,11 +654,38 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number
     }
     if (type.isBoss) {
       ctx.beginPath()
-      ctx.arc(0, 0, sz / 2 + 2, 0, Math.PI * 2)
+      ctx.arc(0, 0, ringR, 0, Math.PI * 2)
       ctx.strokeStyle = '#e0aaff'
       ctx.lineWidth = 2.5
       ctx.stroke()
     }
+  }
+
+  if (walk && walkFrames) {
+    enemyShadow()
+    // Run cycle — advances with game time, so it freezes on pause (not walking in place).
+    const fw = walk.naturalWidth / walkFrames
+    const fh = walk.naturalHeight
+    const dh = type.radius * style.sprites!.enemyScale * 1.15
+    const dw = dh * (fw / fh)
+    const frame = loopFrame(now, walkFrames, 10, pos.x * 0.08)
+    const bob = Math.sin(now * 12 + pos.x * 0.3) * 1.4
+    ctx.drawImage(walk, frame * fw, 0, fw, fh, -dw / 2, type.radius * 0.55 - dh + bob, dw, dh)
+    overlays(dh / 2 + 2)
+  } else if (staticSpr) {
+    enemyShadow()
+    const sz = type.radius * style.sprites!.enemyScale
+    if (type.id.startsWith('barrel')) {
+      // Barrels roll as they trundle down the lane.
+      ctx.save()
+      ctx.translate(0, -type.radius * 0.1)
+      ctx.rotate((pos.x + pos.y) / (type.radius * 1.6))
+      ctx.drawImage(staticSpr, -sz / 2, -sz / 2, sz, sz)
+      ctx.restore()
+    } else {
+      ctx.drawImage(staticSpr, -sz / 2, -sz / 2 - type.radius * 0.25, sz, sz)
+    }
+    overlays(sz / 2 + 2)
   } else {
     if (es.glow > 0) {
       ctx.shadowColor = fill
