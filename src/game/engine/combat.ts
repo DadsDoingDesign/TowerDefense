@@ -141,7 +141,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
     damage,
     range,
     rate,
-    projectileSpeed: base.projectileSpeed,
+    projectileSpeed: base.projectileSpeed * (mods.projSpeedMult ?? 1),
     splashRadius,
     critChance,
     critMult,

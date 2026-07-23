@@ -12,6 +12,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.damageMult != null && m.damageMult !== 1) out.push(`${signPct(m.damageMult)} damage`)
   if (m.rateMult != null && m.rateMult !== 1) out.push(`${signPct(m.rateMult)} attack speed`)
   if (m.rangeMult != null && m.rangeMult !== 1) out.push(`${signPct(m.rangeMult)} range`)
+  if (m.projSpeedMult != null && m.projSpeedMult !== 1) out.push(`${signPct(m.projSpeedMult)} projectile speed`)
   if (m.hpMult != null && m.hpMult !== 1) out.push(`${signPct(m.hpMult)} HP`)
   if (m.critChanceAdd) out.push(`${m.critChanceAdd >= 0 ? '+' : ''}${pct(m.critChanceAdd)} crit chance`)
   if (m.critMultAdd) out.push(`${m.critMultAdd >= 0 ? '+' : ''}${pct(m.critMultAdd)} crit damage`)

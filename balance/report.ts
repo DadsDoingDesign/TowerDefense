@@ -165,7 +165,7 @@ line('**Uplift** = % change in solo DPS.')
 line('')
 const baseBuild = buildSpec('weaponmaster', { seed: 2 })
 const baseDps = soloDpsOf(baseBuild)
-const enchIds = ['might', 'precision', 'insight', 'warding', 'patience', 'cruelty', 'heavy', 'swift', 'flaming', 'frost', 'shocking', 'piercing', 'vampiric', 'executioner']
+const enchIds = ['might', 'precision', 'insight', 'reach', 'patience', 'cruelty', 'ruin', 'bursting', 'heavy', 'swift', 'flaming', 'frost', 'shocking', 'piercing', 'vampiric', 'executioner']
 const enchRows: { id: string; uplift: number }[] = []
 for (const id of enchIds) {
   const ench = rollNamedEnchant(id)

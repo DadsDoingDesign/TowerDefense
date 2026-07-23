@@ -41,6 +41,8 @@ export interface EffectMods {
   rateMult?: number
   rangeMult?: number
   hpMult?: number
+  /** Projectile-speed multiplier — faster shots reach targets sooner (marksman). */
+  projSpeedMult?: number
   /** Flat physical-defense add — the fighter "Guardian" line's block mitigation. */
   physDefAdd?: number
   splashAdd?: number

@@ -28,8 +28,8 @@ const STAT_CARDS: StatTemplate[] = [
   { title: 'Ferocity', desc: '+6% crit chance for the team', grant: { mods: { critChanceAdd: 0.06 } } },
   { title: 'Haste', desc: '+6% attack rate for the team', grant: { mods: { rateMult: 1.06 } } },
   { title: 'Power', desc: '+8% damage for the team', grant: { mods: { damageMult: 1.08 } } },
-  { title: 'Vigor', desc: '+10% max HP for the team', grant: { mods: { hpMult: 1.1 } } },
-  { title: 'Barbs', desc: '+4 thorns to the whole team', grant: { thorns: 4 } },
+  { title: 'Reach', desc: '+8% range for the team', grant: { mods: { rangeMult: 1.08 } } },
+  { title: 'Ruin', desc: '+25% crit damage for the team', grant: { mods: { critMultAdd: 0.25 } } },
   { title: 'Resolve', desc: '+3 patience to the whole team', grant: { patience: 3 } },
 ]
 

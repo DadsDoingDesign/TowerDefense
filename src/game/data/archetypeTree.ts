@@ -140,7 +140,7 @@ const TIER1: TreeNode[] = [
   // Rogue
   t1('assassin', 'rogue', 'Assassin', 'Executes.', 'Instantly kills badly wounded foes.', { stats: { dex: 8, str: 2 }, patience: 3 }, { execute: 0.15, critChanceAdd: 0.1 }),
   t1('trickster', 'rogue', 'Trickster', 'Traps & debuffs.', 'Lays hazards that wound and slow.', { stats: { dex: 7, int: 3 }, patience: 3 }, { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }),
-  t1('marksman', 'rogue', 'Marksman', 'Range & pierce.', 'Long shots that pierce one extra enemy.', { stats: { dex: 8, str: 1 }, patience: 3 }, { rangeMult: 1.5, pierce: 1 }),
+  t1('marksman', 'rogue', 'Marksman', 'Range & pierce.', 'Long shots that pierce one extra enemy.', { stats: { dex: 8, str: 1 }, patience: 3 }, { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4 }),
   // Mystic
   t1('elementalist', 'mystic', 'Elementalist', 'DoTs.', 'Splash that burns over time.', { stats: { int: 8, dex: 2 }, patience: 3 }, { burn: { dps: 12, dur: 3 }, splashAdd: 15 }),
   t1('cleric', 'mystic', 'Cleric', 'Heals & buffs.', 'Heals and empowers the Sentinel row.', { stats: { int: 7, str: 2 }, patience: 4 }, { healAura: { hps: 8, radius: 130 }, buffAura: { damageMult: 1.15, radius: 130 } }),
@@ -209,6 +209,7 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     rateMult: 1,
     rangeMult: 1,
     hpMult: 1,
+    projSpeedMult: 1,
     physDefAdd: 0,
     splashAdd: 0,
     critChanceAdd: 0,
@@ -231,6 +232,7 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     if (m.damageMult != null) out.damageMult! *= m.damageMult
     if (m.rateMult != null) out.rateMult! *= m.rateMult
     if (m.rangeMult != null) out.rangeMult! *= m.rangeMult
+    if (m.projSpeedMult != null) out.projSpeedMult! *= m.projSpeedMult
     if (m.hpMult != null) out.hpMult! *= m.hpMult
     if (m.thornsMult != null) out.thornsMult! *= m.thornsMult
     if (m.physDefAdd != null) out.physDefAdd! += m.physDefAdd

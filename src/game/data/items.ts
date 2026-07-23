@@ -76,9 +76,11 @@ const ENCHANTS: EnchantTemplate[] = [
   { id: 'might', label: 'of Might', roll: (r, b) => ({ stats: { str: round(r.range(3, 6) * b) } }) },
   { id: 'precision', label: 'of Precision', roll: (r, b) => ({ stats: { dex: round(r.range(3, 6) * b) } }) },
   { id: 'insight', label: 'of Insight', roll: (r, b) => ({ stats: { int: round(r.range(3, 6) * b) } }) },
-  { id: 'warding', label: 'of Warding', roll: (r, b) => ({ thorns: round(r.range(3, 7) * b) }) },
+  { id: 'reach', label: 'of Reach', roll: (r, b) => ({ mods: { rangeMult: 1 + r.range(0.05, 0.1) * b } }) },
   { id: 'patience', label: 'of Patience', roll: (r, b) => ({ patience: round(r.range(2, 4) * b) }) },
   { id: 'cruelty', label: 'Cruel', roll: (r, b) => ({ mods: { critChanceAdd: r.range(0.04, 0.08) * b } }) },
+  { id: 'ruin', label: 'Ruinous', roll: (r, b) => ({ mods: { critMultAdd: r.range(0.15, 0.3) * b } }) },
+  { id: 'bursting', label: 'Bursting', roll: (r, b) => ({ mods: { splashAdd: round(r.range(6, 12) * b) } }) },
   { id: 'heavy', label: 'Heavy', roll: (r, b) => ({ mods: { damageMult: 1 + r.range(0.06, 0.12) * b } }) },
   { id: 'swift', label: 'Swift', roll: (r, b) => ({ mods: { rateMult: 1 + r.range(0.05, 0.1) * b } }) },
   { id: 'flaming', label: 'Flaming', roll: (r, b) => ({ mods: { burn: { dps: round(r.range(6, 12) * b), dur: 3 } } }) },
@@ -106,8 +108,8 @@ const KEEPSAKE_ENCHANTS: EnchantTemplate[] = [
   { id: 'k_rally', label: 'of Rallying', roll: (r, b) => ({ mods: { damageMult: 1 + r.range(0.05, 0.1) * b } }) },
   { id: 'k_quicken', label: 'of Haste', roll: (r, b) => ({ mods: { rateMult: 1 + r.range(0.05, 0.09) * b } }) },
   { id: 'k_focus', label: 'of Focus', roll: (r, b) => ({ mods: { critChanceAdd: r.range(0.03, 0.06) * b } }) },
-  { id: 'k_vigor', label: 'of Vigor', roll: (r, b) => ({ mods: { hpMult: 1 + r.range(0.1, 0.2) * b } }) },
-  { id: 'k_barbs', label: 'of Barbs', roll: (r, b) => ({ mods: { thornsMult: 1 + r.range(0.3, 0.6) * b } }) },
+  { id: 'k_reach', label: 'of the Hunt', roll: (r, b) => ({ mods: { rangeMult: 1 + r.range(0.06, 0.12) * b } }) },
+  { id: 'k_ruin', label: 'of Ruin', roll: (r, b) => ({ mods: { critMultAdd: r.range(0.2, 0.4) * b } }) },
 ]
 
 function rollEnchantments(pool: EnchantTemplate[], count: number, budget: number, rng: RNG): Enchantment[] {
