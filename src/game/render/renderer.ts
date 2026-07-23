@@ -70,9 +70,11 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
   // Sprite themes tile real terrain, then fall back to procedural if not loaded.
   if (style.sprites) {
     const grass = getSprite(style.sprites.pack, 'grass')
-    const road = getSprite(style.sprites.pack, 'road')
-    if (grass && road) {
-      drawSpriteTerrain(ctx, map, grass, road, style.path.edge)
+    if (grass) {
+      // Road tile is optional: packs without a seamless path tile (e.g. Tiny
+      // Swords) get a solid dirt lane stroked in the theme's path colour.
+      const road = getSprite(style.sprites.pack, 'road')
+      drawSpriteTerrain(ctx, map, grass, road, style.path.edge, style.path.fill)
       drawBase(ctx, map.base)
       return
     }
@@ -134,8 +136,9 @@ function drawSpriteTerrain(
   ctx: CanvasRenderingContext2D,
   map: GameMap,
   grass: HTMLImageElement,
-  road: HTMLImageElement,
+  road: HTMLImageElement | undefined,
   edgeColor: string,
+  fillColor: string,
 ): void {
   const scale = new DOMMatrix([1.4, 0, 0, 1.4, 0, 0])
   const gp = ctx.createPattern(grass, 'repeat')!
@@ -150,9 +153,13 @@ function drawSpriteTerrain(
   ctx.strokeStyle = edgeColor
   ctx.lineWidth = 46
   strokePolyline(ctx, map.path)
-  const rp = ctx.createPattern(road, 'repeat')!
-  rp.setTransform(scale)
-  ctx.strokeStyle = rp
+  if (road) {
+    const rp = ctx.createPattern(road, 'repeat')!
+    rp.setTransform(scale)
+    ctx.strokeStyle = rp
+  } else {
+    ctx.strokeStyle = fillColor
+  }
   ctx.lineWidth = 38
   strokePolyline(ctx, map.path)
 }
@@ -670,7 +677,7 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
   // background + grid (or tiled terrain for sprite themes)
   const grassImg = style.sprites ? getSprite(style.sprites.pack, 'grass') : undefined
   const roadImg = style.sprites ? getSprite(style.sprites.pack, 'road') : undefined
-  if (style.sprites && grassImg && roadImg) {
+  if (style.sprites && grassImg) {
     ctx.fillStyle = ctx.createPattern(grassImg, 'repeat')!
     ctx.fillRect(0, 0, w, h)
     ctx.fillStyle = 'rgba(0,0,0,0.12)'
@@ -680,7 +687,7 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
     ctx.strokeStyle = style.path.edge
     ctx.lineWidth = 22
     strokePolyline(ctx, pts)
-    ctx.strokeStyle = ctx.createPattern(roadImg, 'repeat')!
+    ctx.strokeStyle = roadImg ? ctx.createPattern(roadImg, 'repeat')! : style.path.fill
     ctx.lineWidth = 17
     strokePolyline(ctx, pts)
   } else {
@@ -716,8 +723,8 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
 
   // enemies on the path
   const enemyDemo = [
-    { x: w * 0.62, y: h * 0.72, color: '#a8563c', r: 9, id: 'brute' },
-    { x: w * 0.82, y: h * 0.72, color: '#8b9467', r: 7, id: 'grunt' },
+    { x: w * 0.62, y: h * 0.72, color: '#8a5ec0', r: 9, id: 'barrel3' },
+    { x: w * 0.82, y: h * 0.72, color: '#d0563a', r: 7, id: 'torch2' },
   ]
   for (const e of enemyDemo) {
     const es = style.enemy

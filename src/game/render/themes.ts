@@ -52,6 +52,18 @@ const SPRITE_FALLBACK = {
 }
 
 export const THEMES: Record<string, ThemeStyle> = {
+  tinyswords: {
+    id: 'tinyswords',
+    name: 'Tiny Swords',
+    blurb: 'Knight towers hold a sunny meadow against the goblin horde.',
+    smoothing: false,
+    sprites: { pack: 'tinyswords', towerScale: 2.7, enemyScale: 2.7 },
+    css: { accent: '#eab24a', accentDim: 'rgba(234,178,74,0.16)', radius: '8px', bg: '#0e140c', panel: '#18220f' },
+    field: { top: '#5a9b43', bottom: '#3f7a30', grid: 'rgba(0,0,0,0.10)', gridStep: 32 },
+    path: { edge: '#3c2c18', fill: '#7a5a30', center: 'rgba(0,0,0,0)', edgeWidth: 46, fillWidth: 36, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
   fantasy: {
     id: 'fantasy',
     name: 'Fantasy Fields',
@@ -127,7 +139,7 @@ export const THEMES: Record<string, ThemeStyle> = {
 }
 
 export const THEME_IDS = Object.keys(THEMES)
-export const DEFAULT_THEME = 'fantasy'
+export const DEFAULT_THEME = 'tinyswords'
 
 let activeStyle: ThemeStyle = THEMES[DEFAULT_THEME]
 export const getActiveStyle = (): ThemeStyle => activeStyle

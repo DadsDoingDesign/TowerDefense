@@ -4,10 +4,15 @@
  * the enemy roster, plus grass/road terrain). Assets are CC0 pixel art from the
  * Dungeon Crawl Stone Soup tileset — see public/assets/sprites/CREDITS.md.
  */
-export const SPRITE_PACKS = ['fantasy', 'undead', 'infernal', 'frost', 'sylvan']
+export const SPRITE_PACKS = ['tinyswords', 'fantasy', 'undead', 'infernal', 'frost', 'sylvan']
 const ROLE_NAMES = [
+  // towers
   'fighter', 'rogue', 'mystic',
-  'grunt', 'runner', 'shade', 'brute', 'ogre', 'warden', 'colossus',
+  // enemies — 3 goblin factions × 5 tiers (Tiny Swords)
+  'torch1', 'torch2', 'torch3', 'torch4', 'torch5',
+  'tnt1', 'tnt2', 'tnt3', 'tnt4', 'tnt5',
+  'barrel1', 'barrel2', 'barrel3', 'barrel4', 'barrel5',
+  // terrain
   'grass', 'road',
 ]
 

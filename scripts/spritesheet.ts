@@ -84,7 +84,7 @@ function sectionHeader(y: number, label: string, sub: string) {
 // ---- enemies ----
 const enemyY = treeBottom + 30
 sectionHeader(enemyY, 'ENEMIES', 'drawn to relative scale')
-const enemyIds = ['grunt', 'runner', 'shade', 'brute', 'ogre', 'warden', 'colossus']
+const enemyIds = ['torch1', 'torch3', 'tnt2', 'tnt4', 'barrel3', 'torch5', 'barrel5']
 const eStep = (W - 48) / enemyIds.length
 const eRowY = enemyY + 58
 enemyIds.forEach((id, i) => {
