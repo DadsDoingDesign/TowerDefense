@@ -59,7 +59,7 @@ const TIER0: TreeNode[] = [
     baseStats: { str: 12, dex: 6, int: 3 },
     baseThorns: 8,
     basePatience: 5,
-    mods: { block: { count: 2, radius: 72 } },
+    mods: { block: { count: 2, radius: 72 }, physDefAdd: 20 },
     ...HUES.fighter,
   },
   {
@@ -134,9 +134,9 @@ const t2 = (
 // ---------------------------------------------------------------- Tier 1 (9)
 const TIER1: TreeNode[] = [
   // Fighter
-  t1('warrior', 'fighter', 'Warrior', 'Pure damage.', 'Heavier, faster strikes.', { stats: { str: 8, dex: 3 }, thorns: 3, patience: 3 }, { damageMult: 1.25, rateMult: 1.1 }),
-  t1('knight', 'fighter', 'Knight', 'Crowd control.', 'Bashes stun foes; holds 3 enemies.', { stats: { str: 7, dex: 2 }, thorns: 4, patience: 4 }, { stunChance: 0.18, stunDur: 0.7, block: { count: 3, radius: 80 } }),
-  t1('guard', 'fighter', 'Guard', 'Shields allies.', 'Reduces damage to nearby allies; strong thorns.', { stats: { str: 8, dex: 1 }, thorns: 8, patience: 5 }, { dmgReductionAura: { reduction: 0.2, radius: 120 }, block: { count: 3, radius: 85 }, thornsMult: 1.5 }),
+  t1('warrior', 'fighter', 'Warrior', 'Pure damage.', 'Heavier, faster strikes.', { stats: { str: 8, dex: 3 }, thorns: 3, patience: 3 }, { damageMult: 1.25, rateMult: 1.1, physDefAdd: 6 }),
+  t1('knight', 'fighter', 'Knight', 'Crowd control.', 'Bashes stun foes; holds 3 enemies.', { stats: { str: 7, dex: 2 }, thorns: 4, patience: 4 }, { stunChance: 0.18, stunDur: 0.7, block: { count: 3, radius: 80 }, physDefAdd: 16 }),
+  t1('guard', 'fighter', 'Guard', 'Shields allies.', 'Reduces damage to nearby allies; strong thorns.', { stats: { str: 8, dex: 1 }, thorns: 8, patience: 5 }, { dmgReductionAura: { reduction: 0.2, radius: 120 }, block: { count: 3, radius: 85 }, thornsMult: 1.5, physDefAdd: 24 }),
   // Rogue
   t1('assassin', 'rogue', 'Assassin', 'Executes.', 'Instantly kills badly wounded foes.', { stats: { dex: 8, str: 2 }, patience: 3 }, { execute: 0.15, critChanceAdd: 0.1 }),
   t1('trickster', 'rogue', 'Trickster', 'Traps & debuffs.', 'Lays hazards that wound and slow.', { stats: { dex: 7, int: 3 }, patience: 3 }, { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }),
@@ -151,15 +151,15 @@ const TIER1: TreeNode[] = [
 const TIER2: TreeNode[] = [
   // Warrior
   t2('berserker', 'warrior', 'fighter', 'Berserker', 'Reckless: huge damage, thinner armor.', { stats: { str: 12, dex: 4 }, thorns: 4 }, { damageMult: 1.4, rateMult: 1.25, hpMult: 0.85 }),
-  t2('juggernaut', 'warrior', 'fighter', 'Juggernaut', 'An immovable wall with punishing thorns.', { stats: { str: 10 }, thorns: 10, patience: 6 }, { hpMult: 1.6, block: { count: 4, radius: 90 }, thornsMult: 2 }),
+  t2('juggernaut', 'warrior', 'fighter', 'Juggernaut', 'An immovable wall with punishing thorns.', { stats: { str: 10 }, thorns: 10, patience: 6 }, { hpMult: 1.6, block: { count: 4, radius: 90 }, thornsMult: 2, physDefAdd: 30 }),
   t2('weaponmaster', 'warrior', 'fighter', 'Weaponmaster', 'Precise strikes crit often and hard.', { stats: { str: 8, dex: 8 } }, { critChanceAdd: 0.2, critMultAdd: 0.6, damageMult: 1.2 }),
   // Knight
-  t2('bulwark', 'knight', 'fighter', 'Bulwark', 'Fortress: blocks many, shields all.', { stats: { str: 10 }, thorns: 8, patience: 8 }, { block: { count: 5, radius: 95 }, dmgReductionAura: { reduction: 0.3, radius: 130 } }),
+  t2('bulwark', 'knight', 'fighter', 'Bulwark', 'Fortress: blocks many, shields all.', { stats: { str: 10 }, thorns: 8, patience: 8 }, { block: { count: 5, radius: 95 }, dmgReductionAura: { reduction: 0.3, radius: 130 }, physDefAdd: 34 }),
   t2('vanguard', 'knight', 'fighter', 'Vanguard', 'A stunning charge with real damage.', { stats: { str: 10, dex: 4 } }, { stunChance: 0.25, stunDur: 0.9, damageMult: 1.25 }),
   t2('order_sentinel', 'knight', 'fighter', 'Sentinel of Order', 'Locks the lane with stun and chill.', { stats: { str: 8, int: 4 }, patience: 5 }, { stunChance: 0.3, stunDur: 0.8, chill: { slow: 0.4, dur: 1.5 } }),
   // Guard
-  t2('aegis', 'guard', 'fighter', 'Aegis', 'An aura of protection for the whole line.', { stats: { str: 9 }, thorns: 8, patience: 8 }, { dmgReductionAura: { reduction: 0.4, radius: 150 }, block: { count: 3, radius: 85 } }),
-  t2('warden_of_ash', 'guard', 'fighter', 'Warden of Ash', 'Attackers burn themselves on thorns.', { stats: { str: 10 }, thorns: 16, patience: 6 }, { thornsMult: 3, block: { count: 4, radius: 90 } }),
+  t2('aegis', 'guard', 'fighter', 'Aegis', 'An aura of protection for the whole line.', { stats: { str: 9 }, thorns: 8, patience: 8 }, { dmgReductionAura: { reduction: 0.4, radius: 150 }, block: { count: 3, radius: 85 }, physDefAdd: 26 }),
+  t2('warden_of_ash', 'guard', 'fighter', 'Warden of Ash', 'Attackers burn themselves on thorns.', { stats: { str: 10 }, thorns: 16, patience: 6 }, { thornsMult: 3, block: { count: 4, radius: 90 }, physDefAdd: 22 }),
   t2('bannerman', 'guard', 'fighter', 'Bannerman', 'Rallies allies with damage and healing.', { stats: { str: 7, int: 4 }, patience: 6 }, { buffAura: { damageMult: 1.25, radius: 140 }, healAura: { hps: 6, radius: 120 } }),
   // Assassin
   t2('deathdealer', 'assassin', 'rogue', 'Deathdealer', 'Bigger executes, deadly crits.', { stats: { dex: 12, str: 3 } }, { execute: 0.22, critChanceAdd: 0.15, critMultAdd: 0.5 }),
@@ -209,6 +209,7 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     rateMult: 1,
     rangeMult: 1,
     hpMult: 1,
+    physDefAdd: 0,
     splashAdd: 0,
     critChanceAdd: 0,
     critMultAdd: 0,
@@ -232,6 +233,7 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     if (m.rangeMult != null) out.rangeMult! *= m.rangeMult
     if (m.hpMult != null) out.hpMult! *= m.hpMult
     if (m.thornsMult != null) out.thornsMult! *= m.thornsMult
+    if (m.physDefAdd != null) out.physDefAdd! += m.physDefAdd
     if (m.splashAdd != null) out.splashAdd! += m.splashAdd
     if (m.critChanceAdd != null) out.critChanceAdd! += m.critChanceAdd
     if (m.critMultAdd != null) out.critMultAdd! += m.critMultAdd

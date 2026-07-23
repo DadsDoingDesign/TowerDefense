@@ -27,8 +27,8 @@ export interface CombatProfile {
   /** Fraction of max HP the unit starts a wave missing (warlock self-sacrifice). */
   startMissingFrac: number
   thorns: number
+  /** Physical-defense for block mitigation (fighter Guardian line only). */
   physDef: number
-  magDef: number
   mods: EffectMods
   /** Average sustained single-target DPS, for UI. */
   dps: number
@@ -41,9 +41,9 @@ interface GearContribution {
   flatPhys: number
   flatMag: number
   atkSpeed: number
-  physDef: number
-  magDef: number
-  hp: number
+  critChance: number
+  rangeMult: number
+  splashAdd: number
   mods: EffectMods[]
 }
 
@@ -55,9 +55,9 @@ function emptyGear(): GearContribution {
     flatPhys: 0,
     flatMag: 0,
     atkSpeed: 0,
-    physDef: 0,
-    magDef: 0,
-    hp: 0,
+    critChance: 0,
+    rangeMult: 0,
+    splashAdd: 0,
     mods: [],
   }
 }
@@ -70,9 +70,9 @@ function addItem(acc: GearContribution, item: Item | null): void {
   acc.flatPhys += b.physDamage ?? 0
   acc.flatMag += b.magDamage ?? 0
   acc.atkSpeed += b.attackSpeed ?? 0
-  acc.physDef += b.physDef ?? 0
-  acc.magDef += b.magDef ?? 0
-  acc.hp += b.hp ?? 0
+  acc.critChance += b.critChance ?? 0
+  acc.rangeMult += b.rangeMult ?? 0
+  acc.splashAdd += b.splashAdd ?? 0
   for (const e of item.enchantments) {
     if (e.stats) {
       acc.stats.str += e.stats.str ?? 0
@@ -127,11 +127,11 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const sacBonus = 1 + (mods.selfSacrifice ?? 0)
   const damage = (base.damage + flat) * (1 + damageStat * 0.04) * (mods.damageMult ?? 1) * sacBonus
   const rate = base.rate * (1 + st.dex * 0.02) * (mods.rateMult ?? 1) * (1 + gear.atkSpeed)
-  const range = base.range * (mods.rangeMult ?? 1)
-  const critChance = clamp(base.critChance + st.dex * 0.004 + (mods.critChanceAdd ?? 0), 0, 0.95)
+  const range = base.range * ((mods.rangeMult ?? 1) + gear.rangeMult)
+  const critChance = clamp(base.critChance + st.dex * 0.004 + (mods.critChanceAdd ?? 0) + gear.critChance, 0, 0.95)
   const critMult = base.critMult + (mods.critMultAdd ?? 0)
-  const splashRadius = base.splashRadius + (mods.splashAdd ?? 0)
-  const maxHp = Math.round((70 + st.str * 9 + gear.hp) * (mods.hpMult ?? 1))
+  const splashRadius = base.splashRadius + (mods.splashAdd ?? 0) + gear.splashAdd
+  const maxHp = Math.round((70 + st.str * 9) * (mods.hpMult ?? 1))
   const thorns = (s.thorns + gear.thorns) * (mods.thornsMult ?? 1)
 
   const avgCrit = 1 + critChance * (critMult - 1)
@@ -149,8 +149,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
     maxHp,
     startMissingFrac: mods.selfSacrifice ?? 0,
     thorns,
-    physDef: gear.physDef,
-    magDef: gear.magDef,
+    physDef: Math.max(0, mods.physDefAdd ?? 0),
     mods,
     dps,
   }

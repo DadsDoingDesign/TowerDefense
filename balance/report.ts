@@ -288,7 +288,16 @@ if (failures.length) {
 // ---- helpers ----
 function baseStatTotal(it: Item): number {
   const b = it.base
-  return (b.physDamage ?? 0) + (b.magDamage ?? 0) + (b.physDef ?? 0) + (b.magDef ?? 0) + (b.hp ?? 0) + (b.attackSpeed ?? 0) * 100
+  // Normalise disparate base fields onto a rough "budget points" scale so the
+  // rarity ladder stays comparable across weapon / off-hand / body items.
+  return (
+    (b.physDamage ?? 0) +
+    (b.magDamage ?? 0) +
+    (b.attackSpeed ?? 0) * 100 +
+    (b.critChance ?? 0) * 100 +
+    (b.rangeMult ?? 0) * 100 +
+    (b.splashAdd ?? 0)
+  )
 }
 
 function soloDpsOf(s: Sentinel): number {

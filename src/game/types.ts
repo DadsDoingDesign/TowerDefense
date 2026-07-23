@@ -41,6 +41,8 @@ export interface EffectMods {
   rateMult?: number
   rangeMult?: number
   hpMult?: number
+  /** Flat physical-defense add — the fighter "Guardian" line's block mitigation. */
+  physDefAdd?: number
   splashAdd?: number
   critChanceAdd?: number
   critMultAdd?: number
@@ -104,14 +106,23 @@ export interface Item {
   name: string
   slot: ItemSlot
   rarity: ItemRarity
-  /** Flat base stat block. */
+  /**
+   * Flat base stat block. Weapons carry damage + attack speed; off-hands and
+   * body items carry universally-useful offense/utility (crit, range, splash)
+   * so no equip slot is dead on a tower that never gets hit. Defensive stats
+   * (HP/armour) live on the fighter "Guardian" tree, not on gear.
+   */
   base: {
     physDamage?: number
     magDamage?: number
+    /** Attack-rate bonus fraction (e.g. 0.05 = +5% rate). Weapons + off-hands. */
     attackSpeed?: number
-    physDef?: number
-    magDef?: number
-    hp?: number
+    /** Flat crit-chance add (e.g. 0.05 = +5%). Off-hands. */
+    critChance?: number
+    /** Range multiplier bonus fraction (e.g. 0.1 = +10% range). Body. */
+    rangeMult?: number
+    /** Flat splash-radius add in px. Body. */
+    splashAdd?: number
   }
   enchantments: Enchantment[]
   /** Keepsakes (a trinket variant) buff the whole team instead of one Sentinel. */

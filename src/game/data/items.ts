@@ -50,12 +50,13 @@ const WEAPONS: WeaponType[] = [
   { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
   { name: 'Wand', damageType: 'magic', hands: 'oneHand', speedBias: 0.06 },
   { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0.03 },
+  { name: 'Scepter', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
   // two-hand: bigger damage, but fills both hands
   { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05 },
   { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.08 },
   { name: 'Bow', damageType: 'physical', hands: 'twoHand', speedBias: 0.04 },
   { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0 },
-  { name: 'Halberd', damageType: 'physical', hands: 'twoHand', speedBias: -0.04 },
+  { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
 ]
 const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus']
 const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis']
@@ -119,18 +120,16 @@ function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType):
       : { magDamage: dmg, attackSpeed: w.speedBias * budget }
   }
   if (slot === 'offHand') {
-    // defensive / utility — the enchant pool adds the flavour
+    // "Precision" slot — attack speed + crit, useful on every tower
     return {
-      physDef: round(rng.range(3, 6) * budget),
-      magDef: round(rng.range(3, 6) * budget),
-      hp: round(rng.range(6, 12) * budget),
+      attackSpeed: rng.range(0.04, 0.08) * budget,
+      critChance: rng.range(0.03, 0.06) * budget,
     }
   }
-  // body armour
+  // body — the "Amplifier" slot: reach + area, useful on every tower
   return {
-    physDef: round(rng.range(6, 10) * budget),
-    magDef: round(rng.range(5, 9) * budget),
-    hp: round(rng.range(16, 26) * budget),
+    rangeMult: rng.range(0.06, 0.12) * budget,
+    splashAdd: round(rng.range(8, 16) * budget),
   }
 }
 
@@ -231,9 +230,10 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
   const next = RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1]
   const cfg = RARITY[next]
   const scale = cfg.budget / RARITY[item.rarity].budget
+  const floatKeys = new Set(['attackSpeed', 'critChance', 'rangeMult'])
   const base: Item['base'] = { ...item.base }
   for (const k of Object.keys(base) as (keyof Item['base'])[]) {
-    if (base[k] != null) base[k] = k === 'attackSpeed' ? base[k]! * scale : Math.round(base[k]! * scale)
+    if (base[k] != null) base[k] = floatKeys.has(k) ? base[k]! * scale : Math.round(base[k]! * scale)
   }
   // Keep existing enchantments, add new ones to reach the higher slot count.
   const pool = item.keepsake ? KEEPSAKE_ENCHANTS : ENCHANTS
@@ -253,7 +253,7 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
 
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
-  const nounMatch = item.name.match(/(Sword|Axe|Dagger|Wand|Rod|Greatsword|Warhammer|Bow|Staff|Halberd|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
+  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
   const noun = nounMatch?.[0] ?? 'Relic'
   if (item.keepsake) return `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim()
   const suffix = ench.find((e) => e.label.startsWith('of'))
@@ -265,11 +265,12 @@ function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
 export function describeBase(item: Item): string[] {
   const b = item.base
   const out: string[] = []
+  const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
   if (b.physDamage) out.push(`+${b.physDamage} Physical Damage`)
   if (b.magDamage) out.push(`+${b.magDamage} Magic Damage`)
-  if (b.attackSpeed) out.push(`+${Math.round(b.attackSpeed * 100)}% Attack Speed`)
-  if (b.physDef) out.push(`+${b.physDef} Physical Defense`)
-  if (b.magDef) out.push(`+${b.magDef} Magic Defense`)
-  if (b.hp) out.push(`+${b.hp} HP`)
+  if (b.attackSpeed) out.push(`${signed(Math.round(b.attackSpeed * 100))}% Attack Speed`)
+  if (b.critChance) out.push(`+${Math.round(b.critChance * 100)}% Crit Chance`)
+  if (b.rangeMult) out.push(`+${Math.round(b.rangeMult * 100)}% Range`)
+  if (b.splashAdd) out.push(`+${b.splashAdd} Splash Radius`)
   return out
 }

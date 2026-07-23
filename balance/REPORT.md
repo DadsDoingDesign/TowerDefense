@@ -9,35 +9,35 @@ builds (heals/shields/buffs) are expected to read low here and are measured in �
 
 | Build | Archetype | Role | Empirical DPS | Analytic DPS | Cleared | vs median |
 |---|---|---|--:|--:|:-:|--:|
-| Sharpshooter ⚠️ | rogue | offense | 225.0 | 1244.7 | ✓ | 1.71× |
-| Arbalest | rogue | offense | 179.2 | 1377.1 | ✓ | 1.36× |
-| Ranger | rogue | offense | 177.9 | 1215.6 | ✓ | 1.35× |
-| Hexblade | rogue | offense | 165.4 | 831.3 | ✓ | 1.25× |
-| Saboteur | rogue | offense | 164.8 | 840.5 | ✓ | 1.25× |
-| Venomancer | rogue | offense | 163.9 | 822.2 | ✓ | 1.24× |
-| Deathdealer | rogue | offense | 161.7 | 1333.3 | ✓ | 1.23× |
-| Nightblade | rogue | offense | 159.6 | 1452.0 | ✓ | 1.21× |
-| Reaper | rogue | offense | 157.9 | 1180.0 | ✓ | 1.20× |
-| Doomcaller | mystic | offense | 132.5 | 370.9 | ✓ | 1.00× |
-| Berserker | fighter | offense | 131.4 | 1044.9 | ✓ | 1.00× |
-| Weaponmaster | fighter | offense | 131.4 | 989.0 | ✓ | 1.00× |
-| Soulflay | mystic | offense | 131.1 | 265.8 | ✓ | 0.99× |
-| Juggernaut | fighter | offense | 130.3 | 553.8 | ✓ | 0.99× |
-| Vanguard | fighter | offense | 130.2 | 520.6 | ✓ | 0.99× |
-| Warden of Ash | fighter | support | 130.2 | 391.0 | ✓ | 0.99× |
-| Bannerman | fighter | support | 130.2 | 380.2 | ✓ | 0.99× |
-| Oracle | mystic | support | 129.6 | 121.8 | ✓ | 0.98× |
-| Sentinel of Order | fighter | offense | 129.2 | 385.8 | ✓ | 0.98× |
-| Aegis | fighter | support | 129.2 | 387.4 | ✓ | 0.98× |
-| Bulwark | fighter | support | 129.0 | 393.2 | ✓ | 0.98× |
-| Radiant | mystic | support | 128.1 | 104.8 | ✓ | 0.97× |
-| Templar | mystic | support | 128.1 | 103.7 | ✓ | 0.97× |
-| Stormcaller | mystic | offense | 115.5 | 115.3 | ✓ | 0.88× |
-| Cryomancer | mystic | offense | 109.9 | 114.1 | ✓ | 0.83× |
-| Plaguebringer | mystic | offense | 106.3 | 158.4 | ✓ | 0.81× |
-| Pyromancer | mystic | offense | 102.2 | 111.5 | ✓ | 0.77× |
+| Sharpshooter ⚠️ | rogue | offense | 274.9 | 1183.3 | ✓ | 1.45× |
+| Ranger | rogue | offense | 212.7 | 1155.6 | ✓ | 1.12× |
+| Arbalest | rogue | offense | 211.2 | 1309.1 | ✓ | 1.11× |
+| Saboteur | rogue | offense | 202.9 | 799.0 | ✓ | 1.07× |
+| Deathdealer | rogue | offense | 201.6 | 1267.6 | ✓ | 1.06× |
+| Hexblade | rogue | offense | 200.5 | 790.3 | ✓ | 1.06× |
+| Venomancer | rogue | offense | 199.0 | 781.6 | ✓ | 1.05× |
+| Soulflay | mystic | offense | 196.5 | 278.9 | ✓ | 1.04× |
+| Nightblade | rogue | offense | 195.1 | 1380.2 | ✓ | 1.03× |
+| Doomcaller | mystic | offense | 191.2 | 388.8 | ✓ | 1.01× |
+| Oracle | mystic | support | 190.2 | 128.1 | ✓ | 1.00× |
+| Radiant | mystic | support | 188.9 | 110.3 | ✓ | 1.00× |
+| Templar | mystic | support | 188.9 | 109.2 | ✓ | 1.00× |
+| Stormcaller | mystic | offense | 188.5 | 121.1 | ✓ | 0.99× |
+| Reaper | rogue | offense | 184.2 | 1121.6 | ✓ | 0.97× |
+| Cryomancer | mystic | offense | 172.4 | 119.9 | ✓ | 0.91× |
+| Plaguebringer | mystic | offense | 156.9 | 166.5 | ✓ | 0.83× |
+| Berserker | fighter | offense | 156.0 | 992.8 | ✓ | 0.82× |
+| Weaponmaster | fighter | offense | 155.8 | 940.5 | ✓ | 0.82× |
+| Juggernaut | fighter | offense | 155.7 | 526.2 | ✓ | 0.82× |
+| Vanguard | fighter | offense | 155.6 | 494.7 | ✓ | 0.82× |
+| Bannerman | fighter | support | 155.4 | 361.2 | ✓ | 0.82× |
+| Bulwark | fighter | support | 154.5 | 373.6 | ✓ | 0.81× |
+| Sentinel of Order | fighter | offense | 154.5 | 366.6 | ✓ | 0.81× |
+| Aegis | fighter | support | 154.0 | 368.1 | ✓ | 0.81× |
+| Warden of Ash | fighter | support | 154.0 | 371.6 | ✓ | 0.81× |
+| Pyromancer | mystic | offense | 148.7 | 117.0 | ✓ | 0.78× |
 
-Offense builds — mean **145.3**, median **131.9**, σ **29.4**, spread **2.20×** (max/min).
+Offense builds — mean **185.7**, median **189.8**, σ **29.5**, spread **1.85×** (max/min).
 
 ## 2. Support value (team uplift)
 
@@ -46,13 +46,13 @@ same wave. **Uplift** = reduction in clear time (or added kills if not cleared).
 
 | Support | Control clear | With support | Δ time | Δ base HP |
 |---|--:|--:|--:|--:|
-| Aegis | 52.0s | 52.2s | +0.2s | +0.0 |
-| Bulwark | 52.0s | 52.2s | +0.2s | +0.0 |
-| Bannerman | 52.0s | 52.2s | +0.2s | +0.0 |
-| Warden of Ash | 52.0s | 52.2s | +0.2s | +0.0 |
-| Radiant | 52.0s | 52.2s | +0.2s | +0.0 |
-| Templar | 52.0s | 52.2s | +0.2s | +0.0 |
-| Oracle | 52.0s | 52.2s | +0.2s | +0.0 |
+| Aegis | 53.0s | 53.0s | −0.0s | +0.0 |
+| Bulwark | 53.0s | 53.0s | −0.0s | +0.0 |
+| Bannerman | 53.0s | 53.0s | −0.0s | +0.0 |
+| Warden of Ash | 53.0s | 53.0s | −0.0s | +0.0 |
+| Radiant | 53.0s | 53.0s | −0.0s | +0.0 |
+| Templar | 53.0s | 53.0s | −0.0s | +0.0 |
+| Oracle | 53.0s | 53.0s | −0.0s | +0.0 |
 
 ## 3. Item rarity ladder
 
@@ -60,10 +60,10 @@ Average base-stat budget and enchant count over 400 rolled weapons per tier.
 
 | Rarity | Avg base-stat total | Avg enchants | Config slots |
 |---|--:|--:|--:|
-| Common | 10.0 | 0.0 | 0 |
-| Rare | 16.7 | 1.0 | 1 |
-| Epic | 25.2 | 2.0 | 2 |
-| Legendary | 35.6 | 3.0 | 3 |
+| Common | 11.9 | 0.0 | 0 |
+| Rare | 20.4 | 1.0 | 1 |
+| Epic | 30.0 | 2.0 | 2 |
+| Legendary | 42.0 | 3.0 | 3 |
 
 ## 4. Enchantment strength (single-affix uplift)
 
@@ -72,20 +72,20 @@ Each enchantment (max roll) equipped alone on a Weaponmaster vs. no gear.
 
 | Enchantment | DPS uplift |
 |---|--:|
-| piercing | +12% |
-| shocking | +12% |
-| precision | +8% |
-| swift | +8% |
+| shocking | +10% |
+| cruelty | +9% |
 | heavy | +8% |
-| cruelty | +8% |
-| warding | +3% |
-| might | +1% |
-| frost | +0% |
+| piercing | +8% |
+| precision | +8% |
+| swift | +7% |
+| frost | +5% |
+| warding | +0% |
+| might | +0% |
 | insight | +0% |
 | patience | +0% |
 | vampiric | +0% |
 | flaming | -3% |
-| executioner | -9% |
+| executioner | -7% |
 
 ## 5. Threat ceiling (standard team, depth 8)
 
@@ -94,15 +94,15 @@ depth-8 waves at rising Threat. The **break point** is where the base falls.
 
 | Threat | Cleared | Base HP left | Kills |
 |--:|:-:|--:|--:|
-| ×1.00 | ✓ | 20.0 | 45 |
-| ×1.50 | ✓ | 20.0 | 45 |
-| ×2.00 | ✓ | 20.0 | 43 |
-| ×2.50 | ✓ | 20.0 | 45 |
-| ×3.00 | ✓ | 20.0 | 45 |
-| ×3.50 | ✓ | 20.0 | 44 |
-| ×4.00 | ✓ | 20.0 | 44 |
-| ×4.50 | ✓ | 20.0 | 44 |
-| ×5.00 | ✓ | 20.0 | 45 |
+| ×1.00 | ✓ | 20.0 | 33 |
+| ×1.50 | ✓ | 20.0 | 37 |
+| ×2.00 | ✓ | 20.0 | 39 |
+| ×2.50 | ✓ | 20.0 | 39 |
+| ×3.00 | ✓ | 20.0 | 39 |
+| ×3.50 | ✓ | 20.0 | 37 |
+| ×4.00 | ✓ | 20.0 | 38 |
+| ×4.50 | ✓ | 20.0 | 38 |
+| ×5.00 | ✓ | 20.0 | 36 |
 
 Standard team holds depth-8 up to **Threat ×5.00**.
 
@@ -113,9 +113,9 @@ Random teams (3–5 specs) play depths 1→10. Team **power scales with depth**
 Threat compounds ×1.05/node and base HP (20) persists. **Win** = the boss falls.
 
 - Runs: **150**
-- Win rate (reached boss): **68%**
-- Average depth reached: **9.0 / 10**
-- Depth distribution: 0:0  1:0  2:0  3:1  4:0  5:0  6:5  7:42  8:0  9:0  10:102
+- Win rate (reached boss): **78%**
+- Average depth reached: **9.3 / 10**
+- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:33  8:0  9:0  10:117
 
 ## Verdict
 
