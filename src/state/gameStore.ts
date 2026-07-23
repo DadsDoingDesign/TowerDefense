@@ -27,7 +27,7 @@ import { useMetaStore, type MetaBonuses } from './metaStore'
 
 const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
 
-export type Screen = 'hub' | 'map' | 'battle' | 'endless'
+export type Screen = 'hub' | 'heroPick' | 'map' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
@@ -157,6 +157,7 @@ interface GameState {
 
   // Actions — run/map
   newRun: () => void
+  pickStartingHero: (archetype: Archetype) => void
   returnToHub: () => void
   selectNode: (nodeId: string) => void
   // Actions — endless
@@ -330,12 +331,12 @@ export const useGameStore = create<GameState>((set, get) => {
       const b = useMetaStore.getState().bonuses()
       set({
         mode: 'campaign',
-        screen: 'map',
+        screen: 'heroPick',
         runPhase: 'active',
         ...makeRun(),
         event: null,
         battleMap: FIRST_MAP,
-        roster: buildStartingRoster(b),
+        roster: [],
         placements: emptyPlacements(FIRST_MAP),
         gold: b.startGold,
         baseHp: b.maxBaseHp,
@@ -365,6 +366,15 @@ export const useGameStore = create<GameState>((set, get) => {
         equipContext: null,
         evolutionQueue: [],
       })
+    },
+
+    pickStartingHero: (archetype) => {
+      const b = useMetaStore.getState().bonuses()
+      const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
+      const extra: Sentinel[] = []
+      for (let i = 0; i < b.extraSentinels; i++) extra.push(createSentinel(archs[i % 3]))
+      const roster = [createSentinel(archetype), ...extra].map((s) => applyStatBonus(s, b.statBonus))
+      set({ roster, screen: 'map' })
     },
 
     returnToHub: () => set({ screen: 'hub', runPhase: 'active', engine: null }),

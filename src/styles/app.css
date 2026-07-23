@@ -2115,3 +2115,113 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- choose-your-first-hero screen ---- */
+.hero-pick {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  gap: 28px;
+}
+.hp-head {
+  text-align: center;
+  max-width: 640px;
+}
+.hp-head h1 {
+  font-size: 30px;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+.hp-head p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+}
+.hp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 260px));
+  gap: 18px;
+}
+.hp-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+  text-align: center;
+}
+.hp-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+.hp-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.hp-portrait {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border: 2px solid;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hp-portrait img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.hp-name {
+  font-size: 20px;
+}
+.hp-blurb {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+  min-height: 36px;
+}
+.hp-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.hp-stats b {
+  color: var(--text);
+  font-size: 15px;
+  margin-right: 3px;
+}
+.hp-role {
+  font-size: 12px;
+  color: var(--muted-2);
+  line-height: 1.4;
+  min-height: 34px;
+}
+.hp-cta {
+  margin-top: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  color: #10140e;
+  font-weight: 700;
+  font-size: 13px;
+  width: 100%;
+}
+@media (max-width: 720px) {
+  .hp-grid {
+    grid-template-columns: 1fr;
+  }
+}
