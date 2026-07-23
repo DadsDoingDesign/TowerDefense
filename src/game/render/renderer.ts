@@ -131,7 +131,13 @@ function strokePolyline(ctx: CanvasRenderingContext2D, pts: Vec2[]): void {
   ctx.stroke()
 }
 
-/** Tile a grass field and stroke a dirt road along the path (sprite themes). */
+/**
+ * Tile the grass field and lay the dirt lane (sprite themes). Design goals
+ * (per the level-design review): keep the interior readable — trees frame the
+ * map at its margins, never in the play area — give the grass low-contrast
+ * tonal life so it isn't a solid block, and give the road real character
+ * (dirt speckle, worn ruts, a broken tufted edge).
+ */
 function drawSpriteTerrain(
   ctx: CanvasRenderingContext2D,
   map: GameMap,
@@ -140,28 +146,255 @@ function drawSpriteTerrain(
   edgeColor: string,
   fillColor: string,
 ): void {
+  const style = getActiveStyle()
+  const green = mix(style.field.top, style.field.bottom, 0.5)
+  const dr = getDressing(map)
+
+  // Base grass tiles + a whisper of darkening so bright units pop.
   const scale = new DOMMatrix([1.4, 0, 0, 1.4, 0, 0])
   const gp = ctx.createPattern(grass, 'repeat')!
   gp.setTransform(scale)
   ctx.fillStyle = gp
   ctx.fillRect(0, 0, map.width, map.height)
-  ctx.fillStyle = 'rgba(0,0,0,0.12)'
+  ctx.fillStyle = 'rgba(0,0,0,0.06)'
   ctx.fillRect(0, 0, map.width, map.height)
 
+  drawGrassDetail(ctx, dr, green)
+
+  // The dirt lane: dark grassy edge, mid fill, worn lighter centre.
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   ctx.strokeStyle = edgeColor
-  ctx.lineWidth = 46
+  ctx.lineWidth = 50
   strokePolyline(ctx, map.path)
   if (road) {
     const rp = ctx.createPattern(road, 'repeat')!
     rp.setTransform(scale)
     ctx.strokeStyle = rp
+    ctx.lineWidth = 40
+    strokePolyline(ctx, map.path)
   } else {
     ctx.strokeStyle = fillColor
+    ctx.lineWidth = 40
+    strokePolyline(ctx, map.path)
+    ctx.strokeStyle = lighten(fillColor, 0.1)
+    ctx.lineWidth = 20
+    strokePolyline(ctx, map.path)
   }
-  ctx.lineWidth = 38
-  strokePolyline(ctx, map.path)
+  drawPathDetail(ctx, dr, fillColor, green)
+
+  drawDecos(ctx, dr)
+  vignette(ctx, map.width, map.height)
+}
+
+// ── Level dressing ──────────────────────────────────────────────────────────
+// All geometry is generated once per map (seeded, deterministic) and cached, so
+// the animation loop only ever draws it.
+
+interface Deco { x: number; y: number; name: string; scale: number; flip: boolean }
+interface Blob { x: number; y: number; r: number; light: boolean }
+interface Speck { x: number; y: number; r: number; light: boolean }
+interface Rut { x: number; y: number; tx: number; ty: number }
+interface Dressing {
+  blobs: Blob[]
+  tufts: { x: number; y: number; s: number; a: number }[]
+  flowers: { x: number; y: number; c: number }[]
+  specks: Speck[]
+  ruts: Rut[]
+  edgeTufts: { x: number; y: number; r: number }[]
+  decos: Deco[]
+}
+let dressCache: { key: string; dr: Dressing } | null = null
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Shortest distance from a point to the path polyline (keeps the lane clear). */
+function distToPath(x: number, y: number, pts: Vec2[]): number {
+  let best = Infinity
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]
+    const dx = b.x - a.x, dy = b.y - a.y
+    const len2 = dx * dx + dy * dy || 1
+    let t = ((x - a.x) * dx + (y - a.y) * dy) / len2
+    t = Math.max(0, Math.min(1, t))
+    const px = a.x + t * dx, py = a.y + t * dy
+    const d = Math.hypot(x - px, y - py)
+    if (d < best) best = d
+  }
+  return best
+}
+
+/** Walk the path polyline at a fixed spacing, yielding point + tangent + normal. */
+function samplePath(pts: Vec2[], spacing: number) {
+  const out: { x: number; y: number; tx: number; ty: number; nx: number; ny: number }[] = []
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i]
+    const dx = b.x - a.x, dy = b.y - a.y
+    const len = Math.hypot(dx, dy) || 1
+    const tx = dx / len, ty = dy / len
+    for (let d = 0; d < len; d += spacing) out.push({ x: a.x + tx * d, y: a.y + ty * d, tx, ty, nx: -ty, ny: tx })
+  }
+  return out
+}
+
+function buildDressing(map: GameMap): Dressing {
+  const rng = mulberry32(((map.width * 73856093) ^ (map.height * 19349663) ^ (map.path.length * 83492791)) >>> 0)
+  const W = map.width, H = map.height
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
+  const clearOf = (x: number, y: number, m = 44) =>
+    distToPath(x, y, map.path) > m &&
+    Math.hypot(x - map.base.x, y - map.base.y) > 70 &&
+    !map.slots.some((s) => Math.hypot(x - s.pos.x, y - s.pos.y) < 40)
+
+  // Grass: soft tonal blobs + tufts + occasional flowers (all low contrast).
+  const blobs: Blob[] = []
+  for (let i = Math.round((W * H) / 38000) + 5; i > 0; i--) blobs.push({ x: rng() * W, y: rng() * H, r: 64 + rng() * 104, light: rng() < 0.5 })
+  const tufts: Dressing['tufts'] = []
+  for (let i = Math.round((W * H) / 5200); i > 0; i--) {
+    const x = rng() * W, y = rng() * H
+    if (distToPath(x, y, map.path) < 24) continue
+    tufts.push({ x, y, s: 3 + rng() * 3, a: 0.3 + rng() * 0.25 })
+  }
+  const flowers: Dressing['flowers'] = []
+  for (let i = Math.round((W * H) / 24000); i > 0; i--) {
+    const x = rng() * W, y = rng() * H
+    if (distToPath(x, y, map.path) < 26) continue
+    flowers.push({ x, y, c: Math.floor(rng() * 4) })
+  }
+
+  // Path: dirt speckle, worn ruts, grass tufts breaking the outline.
+  const specks: Speck[] = [], ruts: Rut[] = [], edgeTufts: Dressing['edgeTufts'] = []
+  const half = 15
+  for (const s of samplePath(map.path, 10)) {
+    if (rng() < 0.85) specks.push({ x: s.x + s.nx * (rng() * 2 - 1) * half, y: s.y + s.ny * (rng() * 2 - 1) * half, r: 1.2 + rng() * 2, light: rng() < 0.45 })
+    if (rng() < 0.5) for (const o of [-7, 7]) ruts.push({ x: s.x + s.nx * o, y: s.y + s.ny * o, tx: s.tx, ty: s.ty })
+    for (const o of [-(half + 2), half + 2]) if (rng() < 0.34) edgeTufts.push({ x: s.x + s.nx * o + (rng() - 0.5) * 6, y: s.y + s.ny * o + (rng() - 0.5) * 5, r: 2.4 + rng() * 2 })
+  }
+
+  // Decorations: TREES ONLY at the margins (a forest frame), so the interior
+  // stays readable. Small pebbles/bushes give the middle a little life.
+  const decos: Deco[] = []
+  const trees = ['tree1', 'tree2', 'tree3', 'tree4']
+  for (let x = 16; x < W - 16; x += 32 + rng() * 30) {
+    for (const y of [60 + rng() * 40, H - 12 - rng() * 34]) {
+      if (rng() < 0.82 && clearOf(x, y, 46)) decos.push({ x: x + (rng() - 0.5) * 16, y, name: pick(trees), scale: 0.5 + rng() * 0.22, flip: rng() < 0.5 })
+    }
+  }
+  for (let y = 74; y < H - 40; y += 34 + rng() * 30) {
+    for (const x of [22 + rng() * 34, W - 22 - rng() * 34]) {
+      if (rng() < 0.62 && clearOf(x, y, 46)) decos.push({ x, y, name: pick(trees), scale: 0.5 + rng() * 0.2, flip: rng() < 0.5 })
+    }
+  }
+  for (let gx = 110; gx < W - 100; gx += 128) {
+    for (let gy = 96; gy < H - 88; gy += 112) {
+      const x = gx + (rng() - 0.5) * 74, y = gy + (rng() - 0.5) * 70
+      if (x < 92 || x > W - 92 || y < 88 || y > H - 78 || !clearOf(x, y, 42)) continue
+      const r = rng()
+      if (r < 0.14) decos.push({ x, y, name: pick(['rock1', 'rock2', 'rock3', 'rock4']), scale: 0.45 + rng() * 0.2, flip: rng() < 0.5 })
+      else if (r < 0.26) decos.push({ x, y, name: pick(['bush1', 'bush2']), scale: 0.4 + rng() * 0.22, flip: rng() < 0.5 })
+    }
+  }
+  decos.sort((a, b) => a.y - b.y)
+  return { blobs, tufts, flowers, specks, ruts, edgeTufts, decos }
+}
+
+function getDressing(map: GameMap): Dressing {
+  const key = `${map.width}x${map.height}:${map.path.length}:${Math.round(map.path[1]?.x ?? 0)}`
+  if (!dressCache || dressCache.key !== key) dressCache = { key, dr: buildDressing(map) }
+  return dressCache.dr
+}
+
+const FLOWER_COLORS = ['#f2ead0', '#e8cf55', '#e07ba0', '#eaf2f6']
+
+/** rgba() from any hex OR rgb() colour (mix/lighten/darken all return rgb()). */
+function withAlpha(c: string, a: number): string {
+  const [r, g, b] = toRgb(c)
+  return `rgba(${r},${g},${b},${a})`
+}
+
+function drawGrassDetail(ctx: CanvasRenderingContext2D, dr: Dressing, green: string): void {
+  for (const b of dr.blobs) {
+    const col = b.light ? lighten(green, 0.14) : darken(green, 0.16)
+    const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r)
+    g.addColorStop(0, withAlpha(col, 0.2))
+    g.addColorStop(1, withAlpha(col, 0))
+    ctx.fillStyle = g
+    ctx.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2)
+  }
+  const tuft = darken(green, 0.26)
+  ctx.lineWidth = 1
+  ctx.lineCap = 'round'
+  for (const t of dr.tufts) {
+    ctx.strokeStyle = withAlpha(tuft, t.a)
+    ctx.beginPath()
+    ctx.moveTo(t.x, t.y); ctx.lineTo(t.x, t.y - t.s)
+    ctx.moveTo(t.x - 2, t.y); ctx.lineTo(t.x - 3, t.y - t.s * 0.7)
+    ctx.moveTo(t.x + 2, t.y); ctx.lineTo(t.x + 3, t.y - t.s * 0.7)
+    ctx.stroke()
+  }
+  for (const f of dr.flowers) {
+    ctx.fillStyle = FLOWER_COLORS[f.c]
+    ctx.beginPath(); ctx.arc(f.x, f.y, 1.6, 0, Math.PI * 2); ctx.fill()
+  }
+}
+
+function drawPathDetail(ctx: CanvasRenderingContext2D, dr: Dressing, fill: string, green: string): void {
+  for (const s of dr.specks) {
+    ctx.fillStyle = withAlpha(s.light ? lighten(fill, 0.16) : darken(fill, 0.22), 0.5)
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.strokeStyle = withAlpha(darken(fill, 0.16), 0.35)
+  ctx.lineWidth = 2
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  for (const r of dr.ruts) { ctx.moveTo(r.x - r.tx * 3, r.y - r.ty * 3); ctx.lineTo(r.x + r.tx * 3, r.y + r.ty * 3) }
+  ctx.stroke()
+  // Grass blades poking over the dirt edge — irregular, so the lane isn't a clean stroke.
+  ctx.strokeStyle = withAlpha(lighten(green, 0.02), 0.92)
+  ctx.lineWidth = 1.2
+  ctx.lineCap = 'round'
+  for (const e of dr.edgeTufts) {
+    ctx.beginPath()
+    ctx.moveTo(e.x, e.y + 1); ctx.lineTo(e.x, e.y - e.r)
+    ctx.moveTo(e.x - 1.6, e.y + 1); ctx.lineTo(e.x - 2.4, e.y - e.r * 0.7)
+    ctx.moveTo(e.x + 1.6, e.y + 1); ctx.lineTo(e.x + 2.4, e.y - e.r * 0.7)
+    ctx.stroke()
+  }
+}
+
+function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
+  const style = getActiveStyle()
+  if (!style.sprites) return
+  for (const d of dr.decos) {
+    const spr = getSprite(style.sprites.pack, d.name)
+    if (!spr) continue
+    const w = spr.naturalWidth * d.scale, h = spr.naturalHeight * d.scale
+    ctx.beginPath()
+    ctx.ellipse(d.x, d.y - 2, w * 0.32, w * 0.13, 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(0,0,0,0.20)'
+    ctx.fill()
+    ctx.save()
+    if (d.flip) { ctx.translate(d.x, 0); ctx.scale(-1, 1); ctx.translate(-d.x, 0) }
+    ctx.drawImage(spr, d.x - w / 2, d.y - h, w, h)
+    ctx.restore()
+  }
+}
+
+/** Soft darkening toward the edges so the field reads with depth, not flat. */
+function vignette(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.72)
+  g.addColorStop(0, 'rgba(0,0,0,0)')
+  g.addColorStop(1, 'rgba(0,0,0,0.22)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, w, h)
 }
 
 function drawBase(ctx: CanvasRenderingContext2D, base: Vec2): void {

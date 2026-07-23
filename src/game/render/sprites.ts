@@ -14,6 +14,10 @@ const ROLE_NAMES = [
   'barrel1', 'barrel2', 'barrel3', 'barrel4', 'barrel5',
   // terrain
   'grass', 'road',
+  // decorations (Tiny Swords)
+  'tree1', 'tree2', 'tree3', 'tree4',
+  'rock1', 'rock2', 'rock3', 'rock4',
+  'bush1', 'bush2',
 ]
 
 const images = new Map<string, HTMLImageElement>()
