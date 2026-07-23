@@ -37,3 +37,4 @@ _*.png
 
 # TS incremental build info
 *.tsbuildinfo
+scratch_art/
