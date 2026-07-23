@@ -87,6 +87,19 @@ export function SentinelDetail() {
           )}
         </div>
 
+        {s.mutations && s.mutations.length > 0 && (
+          <div className="detail-section">
+            <span className="ds-head">Mutations</span>
+            <ul className="mutation-list">
+              {s.mutations.map((m) => (
+                <li key={m.id}>
+                  <strong>{m.name}</strong> — {m.desc}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="detail-section">
           <span className="ds-head">Equipment</span>
           <div className="equip-slots">

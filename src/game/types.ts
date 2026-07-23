@@ -74,6 +74,15 @@ export interface EffectMods {
   trap?: { dps: number; slow: number }
 }
 
+/** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
+export interface Mutation {
+  id: string
+  key: string
+  name: string
+  desc: string
+  mods: EffectMods
+}
+
 /** What kind of item this is — determines which hero slot(s) it can occupy. */
 export type ItemSlot = 'oneHand' | 'twoHand' | 'offHand' | 'body'
 /** The equip slots on a hero. A two-hand item fills mainHand and blocks offHand. */
@@ -133,6 +142,8 @@ export interface Sentinel {
   level: number
   xp: number
   equipment: Equipment
+  /** Attack mutations rolled at the mid-map fork; merged into combat mods. */
+  mutations?: Mutation[]
   color: string
   accent: string
 }

@@ -20,14 +20,15 @@ import {
 } from '../game/data/items'
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { generateRewardCards, type RewardCard } from '../game/data/rewards'
+import { rollMutation } from '../game/data/mutations'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
-import type { Archetype, EffectMods, GameMap, HeroSlot, Item, ItemRarity, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
+import type { Archetype, EffectMods, GameMap, HeroSlot, Item, ItemRarity, Mutation, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
 import { useMetaStore, type MetaBonuses } from './metaStore'
 
 const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
 
-export type Screen = 'hub' | 'heroPick' | 'map' | 'battle' | 'endless'
+export type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
@@ -140,6 +141,9 @@ interface GameState {
   reward: RewardCard[] | null
   /** Team-wide mods granted by attribute rewards this run. */
   runMods: EffectMods[]
+  /** Mid-map fork (once per run): recruit a teammate or roll an attack mutation. */
+  crossroads: { recruits: Sentinel[]; revealed?: { heroName: string; mutation: Mutation } } | null
+  forkDone: boolean
 
   // Endless Watch
   dust: number
@@ -180,6 +184,9 @@ interface GameState {
   syncHud: () => void
   finishBattle: () => void
   chooseReward: (cardId: string) => void
+  recruitTeammate: (sentinelId: string) => void
+  rollHeroMutation: (heroId: string) => void
+  finishCrossroads: () => void
   continueAfterWave: () => void
   // Actions — events
   buyMerchantItem: (itemId: string) => void
@@ -314,6 +321,10 @@ export const useGameStore = create<GameState>((set, get) => {
     merchant: null,
     shrineOffer: null,
     recruitOptions: [],
+    reward: null,
+    runMods: [],
+    crossroads: null,
+    forkDone: false,
 
     dust: 0,
     lives: ENDLESS_LIVES,
@@ -361,6 +372,8 @@ export const useGameStore = create<GameState>((set, get) => {
         recruitOptions: [],
         reward: null,
         runMods: [],
+        crossroads: null,
+        forkDone: false,
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
@@ -417,6 +430,8 @@ export const useGameStore = create<GameState>((set, get) => {
         shrineOffer: null,
         reward: null,
         runMods: [],
+        crossroads: null,
+        forkDone: false,
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
@@ -736,6 +751,13 @@ export const useGameStore = create<GameState>((set, get) => {
       const reward = wonRun ? null : generateRewardCards(rng, { luck, count: 3 })
       const bossLoot = wonRun ? Array.from({ length: 3 }, () => generateItem(rng, { luck })) : []
 
+      // At the map's halfway point, fire the one-time fork: recruit or mutate.
+      const half = Math.ceil((runMap.layers - 1) / 2)
+      const fireFork = !st.forkDone && !wonRun && node.layer >= half
+      const crossroads = fireFork
+        ? { recruits: nextRoster.length < MAX_ROSTER ? (['fighter', 'rogue', 'mystic'] as Archetype[]).map(createSentinel) : [] }
+        : null
+
       set({
         roster: nextRoster,
         gold: gold + result.goldEarned + bonusGold,
@@ -745,6 +767,8 @@ export const useGameStore = create<GameState>((set, get) => {
         lastResult: result,
         lastLoot: bossLoot,
         reward,
+        crossroads,
+        forkDone: st.forkDone || fireFork,
         evolutionQueue,
         clearedNodeIds: cleared,
         currentNodeId: activeNodeId,
@@ -782,13 +806,13 @@ export const useGameStore = create<GameState>((set, get) => {
         }))
         if (g.mods) nextMods = [...runMods, g.mods]
       }
-      // Applying a reward returns to the node map (campaign only).
+      // Applying a reward returns to the map — or to the mid-map fork if it fired.
       set({
         roster: nextRoster,
         inventory: nextInv,
         runMods: nextMods,
         reward: null,
-        screen: 'map',
+        screen: get().crossroads ? 'crossroads' : 'map',
         activeNodeId: null,
         currentWave: null,
         lastResult: null,
@@ -796,6 +820,32 @@ export const useGameStore = create<GameState>((set, get) => {
         battlePhase: 'setup',
       })
     },
+
+    recruitTeammate: (sentinelId) => {
+      const { crossroads, roster } = get()
+      if (!crossroads) return
+      const hero = crossroads.recruits.find((s) => s.id === sentinelId)
+      if (!hero || roster.length >= MAX_ROSTER) return
+      set({ roster: [...roster, hero], crossroads: null, screen: 'map', threat: get().threat * THREAT_PER_CHOICE })
+    },
+
+    rollHeroMutation: (heroId) => {
+      const { crossroads, roster } = get()
+      if (!crossroads) return
+      const hero = roster.find((s) => s.id === heroId)
+      if (!hero) return
+      const mutation = rollMutation(rng, (hero.mutations ?? []).map((m) => m.key))
+      const nextRoster = roster.map((s) =>
+        s.id === heroId ? { ...s, mutations: [...(s.mutations ?? []), mutation] } : s,
+      )
+      set({
+        roster: nextRoster,
+        crossroads: { ...crossroads, revealed: { heroName: hero.name, mutation } },
+        threat: get().threat * THREAT_PER_CHOICE,
+      })
+    },
+
+    finishCrossroads: () => set({ crossroads: null, screen: 'map' }),
 
     continueAfterWave: () => {
       // Endless returns to the Rooms screen; campaign returns to the node map.

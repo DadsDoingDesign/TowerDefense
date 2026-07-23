@@ -111,7 +111,8 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
 
   const gear = gearOf(s.equipment)
   const branchMods = s.branchPath.map((id) => getNode(id).mods)
-  const mods = mergeMods([...branchMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  const mutationMods = s.mutations?.map((m) => m.mods) ?? []
+  const mods = mergeMods([...branchMods, ...mutationMods, ...gear.mods, ...(ctx.teamMods ?? [])])
 
   const pMult = ctx.patienceMult ?? 1
   const st = {
