@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
+import { ItemCard } from './ItemCard'
 
 /** Wave-clear summary (over the battle screen). Run win/loss lives in RunEndOverlay. */
 export function ResultOverlay() {
@@ -14,6 +15,8 @@ export function ResultOverlay() {
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const lastLoot = useGameStore((s) => s.lastLoot)
   const continueAfterWave = useGameStore((s) => s.continueAfterWave)
+  const reward = useGameStore((s) => s.reward)
+  const chooseReward = useGameStore((s) => s.chooseReward)
 
   const nameOf = (id: string) => roster.find((r) => r.id === id)?.name ?? '—'
 
@@ -84,9 +87,30 @@ export function ResultOverlay() {
               </div>
             ))}
         </div>
-        <button className="overlay-btn" onClick={continueAfterWave}>
-          {continueLabel}
-        </button>
+        {reward ? (
+          <div className="reward-pick">
+            <span className="reward-title">Choose one reward</span>
+            <div className="reward-cards">
+              {reward.map((c) => (
+                <button key={c.id} className={`reward-card kind-${c.kind}`} onClick={() => chooseReward(c.id)}>
+                  {c.kind === 'item' && c.item ? (
+                    <ItemCard item={c.item} />
+                  ) : (
+                    <div className="reward-stat">
+                      <span className="rs-tag">Attribute</span>
+                      <span className="rs-title">{c.title}</span>
+                      <span className="rs-desc">{c.desc}</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button className="overlay-btn" onClick={continueAfterWave}>
+            {continueLabel}
+          </button>
+        )}
       </div>
     </div>
   )

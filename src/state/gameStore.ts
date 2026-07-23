@@ -19,9 +19,10 @@ import {
   upgradeRarity,
 } from '../game/data/items'
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
+import { generateRewardCards, type RewardCard } from '../game/data/rewards'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
-import type { Archetype, GameMap, HeroSlot, Item, ItemRarity, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
+import type { Archetype, EffectMods, GameMap, HeroSlot, Item, ItemRarity, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
 import { useMetaStore, type MetaBonuses } from './metaStore'
 
 const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
@@ -135,6 +136,10 @@ interface GameState {
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
   recruitOptions: Sentinel[]
+  /** Post-wave: three cards to choose one of (attribute buff or item). */
+  reward: RewardCard[] | null
+  /** Team-wide mods granted by attribute rewards this run. */
+  runMods: EffectMods[]
 
   // Endless Watch
   dust: number
@@ -173,6 +178,7 @@ interface GameState {
   startWave: () => void
   syncHud: () => void
   finishBattle: () => void
+  chooseReward: (cardId: string) => void
   continueAfterWave: () => void
   // Actions — events
   buyMerchantItem: (itemId: string) => void
@@ -352,6 +358,8 @@ export const useGameStore = create<GameState>((set, get) => {
         merchant: null,
         shrineOffer: null,
         recruitOptions: [],
+        reward: null,
+        runMods: [],
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
@@ -397,6 +405,8 @@ export const useGameStore = create<GameState>((set, get) => {
         lastLoot: [],
         merchant: null,
         shrineOffer: null,
+        reward: null,
+        runMods: [],
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
@@ -563,7 +573,7 @@ export const useGameStore = create<GameState>((set, get) => {
     setTactics: (t) => set({ tactics: { ...get().tactics, ...t } }),
 
     startWave: () => {
-      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, threat, mode, currentWave, tactics } = get()
+      const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, threat, mode, currentWave, tactics, runMods } = get()
       if (!currentWave) return
       // Campaign compounds via Threat; endless escalates via its own round scaling.
       const effHpMult = enemyHpMult * (mode === 'campaign' ? threat : 1)
@@ -574,7 +584,7 @@ export const useGameStore = create<GameState>((set, get) => {
         baseHp,
         maxBaseHp,
         enemyHpMult: effHpMult,
-        teamMods: teamKeepsakeMods(roster),
+        teamMods: [...teamKeepsakeMods(roster), ...runMods],
         tactics,
       })
       set({ engine, battlePhase: 'battle', selectedSentinelId: null, hud: engine.hudSnapshot() })
@@ -696,14 +706,8 @@ export const useGameStore = create<GameState>((set, get) => {
       const nextRoster = roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0))
       const evolutionQueue = nextRoster.filter(evolutionPending).map((s) => s.id)
 
-      // Loot + bonus gold scale with node kind.
-      const kind = nodeKind(node)
-      const lootCount = kind === 'boss' ? 3 : kind === 'elite' ? 2 : 1
-      const luck = (kind === 'boss' ? 0.35 : kind === 'elite' ? 0.15 : 0) + node.layer * 0.03
-      const loot = Array.from({ length: lootCount }, () => generateItem(rng, { luck }))
-      const bonusGold = kind === 'boss' ? 100 : kind === 'elite' ? 25 : 0
-
       // Advance the map.
+      const kind = nodeKind(node)
       const cleared = [...get().clearedNodeIds, activeNodeId]
       const reachable = neighborsOf(runMap, activeNodeId).filter((id) => !cleared.includes(id))
       const wonRun = node.type === 'boss'
@@ -712,18 +716,25 @@ export const useGameStore = create<GameState>((set, get) => {
             .getState()
             .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns })
         : 0
-
       // The world escalates with each node cleared — more so for elites.
       const nextThreat = st.threat * THREAT_PER_NODE[kind]
+      const bonusGold = kind === 'boss' ? 100 : kind === 'elite' ? 25 : 0
+      const luck = (kind === 'boss' ? 0.35 : kind === 'elite' ? 0.15 : 0) + node.layer * 0.03
+
+      // Non-boss clears offer a 3-card pick (attribute buff or item). The boss
+      // win ends the run, so it just drops its loot straight to the inventory.
+      const reward = wonRun ? null : generateRewardCards(rng, { luck, count: 3 })
+      const bossLoot = wonRun ? Array.from({ length: 3 }, () => generateItem(rng, { luck })) : []
 
       set({
         roster: nextRoster,
         gold: gold + result.goldEarned + bonusGold,
         baseHp: result.baseHpLeft,
-        inventory: [...inventory, ...loot],
+        inventory: [...inventory, ...bossLoot],
         threat: nextThreat,
         lastResult: result,
-        lastLoot: loot,
+        lastLoot: bossLoot,
+        reward,
         evolutionQueue,
         clearedNodeIds: cleared,
         currentNodeId: activeNodeId,
@@ -736,10 +747,50 @@ export const useGameStore = create<GameState>((set, get) => {
       })
     },
 
+    chooseReward: (cardId) => {
+      const { reward, roster, inventory, runMods } = get()
+      if (!reward) return
+      const card = reward.find((c) => c.id === cardId)
+      if (!card) return
+      let nextRoster = roster
+      let nextInv = inventory
+      let nextMods = runMods
+      if (card.kind === 'item' && card.item) {
+        nextInv = [...inventory, card.item]
+      } else if (card.grant) {
+        const g = card.grant
+        nextRoster = roster.map((s) => ({
+          ...s,
+          stats: {
+            ...s.stats,
+            str: s.stats.str + (g.stats?.str ?? 0),
+            dex: s.stats.dex + (g.stats?.dex ?? 0),
+            int: s.stats.int + (g.stats?.int ?? 0),
+          },
+          thorns: s.thorns + (g.thorns ?? 0),
+          patience: s.patience + (g.patience ?? 0),
+        }))
+        if (g.mods) nextMods = [...runMods, g.mods]
+      }
+      // Applying a reward returns to the node map (campaign only).
+      set({
+        roster: nextRoster,
+        inventory: nextInv,
+        runMods: nextMods,
+        reward: null,
+        screen: 'map',
+        activeNodeId: null,
+        currentWave: null,
+        lastResult: null,
+        lastLoot: [],
+        battlePhase: 'setup',
+      })
+    },
+
     continueAfterWave: () => {
       // Endless returns to the Rooms screen; campaign returns to the node map.
       const dest = get().mode === 'endless' ? 'endless' : 'map'
-      set({ screen: dest, activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], battlePhase: 'setup' })
+      set({ screen: dest, activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], reward: null, battlePhase: 'setup' })
     },
 
     // ---- events ----
