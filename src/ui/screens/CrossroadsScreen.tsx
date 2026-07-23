@@ -20,8 +20,12 @@ export function CrossroadsScreen() {
           <span className="cr-eyebrow">Mutation rolled</span>
           <h1>{heroName} mutated!</h1>
           <div className="cr-mut-card">
-            <strong className="cr-mut-name">{mutation.name}</strong>
+            <div className="cr-mut-top">
+              <strong className="cr-mut-name">{mutation.name}</strong>
+              <span className="cr-mut-rarity">Mythic</span>
+            </div>
             <span className="cr-mut-desc">{mutation.desc}</span>
+            <span className="cr-mut-downside">Tradeoff: {mutation.downside}</span>
           </div>
           <button className="overlay-btn" onClick={finish}>
             Continue

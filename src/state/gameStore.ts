@@ -43,7 +43,7 @@ export const ENDLESS_START_GOLD = 200
 export const ENDLESS_START_DUST = 30
 export const ENDLESS_LIVES = 3
 
-const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200 }
+const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
 const RECRUIT_PRICE = 80
 
 // Compounding difficulty: a campaign run is one continuous escalating defense.

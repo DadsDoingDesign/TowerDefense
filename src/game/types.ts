@@ -82,14 +82,18 @@ export interface Mutation {
   key: string
   name: string
   desc: string
+  /** Mutations are always Mythic quality — the super-rare top tier. */
+  rarity: ItemRarity
   mods: EffectMods
+  /** One-line summary of the downside this mutation trades for its power. */
+  downside: string
 }
 
 /** What kind of item this is — determines which hero slot(s) it can occupy. */
 export type ItemSlot = 'oneHand' | 'twoHand' | 'offHand' | 'body'
 /** The equip slots on a hero. A two-hand item fills mainHand and blocks offHand. */
 export type HeroSlot = 'mainHand' | 'offHand' | 'body'
-export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
+export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic'
 
 /** A rolled affix on an item — flat stat bonuses and/or combat mods. */
 export interface Enchantment {

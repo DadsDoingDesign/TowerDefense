@@ -1,7 +1,7 @@
 import { nextId, RNG } from '../core/rng'
 import type { Enchantment, HeroSlot, Item, ItemRarity, ItemSlot } from '../types'
 
-export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
+export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic']
 
 /** The three equip slots on a hero, in display order. */
 export const HERO_SLOTS: HeroSlot[] = ['mainHand', 'offHand', 'body']
@@ -30,10 +30,11 @@ export const RARITY: Record<
   ItemRarity,
   { label: string; budget: number; enchants: number; color: string; dropWeight: number }
 > = {
-  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 58 },
+  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 56 },
   rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 28 },
   epic: { label: 'Epic', budget: 2.5, enchants: 2, color: '#c67ab0', dropWeight: 11 },
-  legendary: { label: 'Legendary', budget: 3.6, enchants: 3, color: '#f0b868', dropWeight: 3 },
+  legendary: { label: 'Legendary', budget: 3.6, enchants: 3, color: '#f0b868', dropWeight: 4 },
+  mythic: { label: 'Mythic', budget: 5.0, enchants: 4, color: '#ef6a3a', dropWeight: 1 },
 }
 
 // ---- weapon subtypes give damage a physical/magic identity + a hand cost ----
@@ -87,6 +88,18 @@ const ENCHANTS: EnchantTemplate[] = [
   { id: 'vampiric', label: 'Vampiric', roll: (r, b) => ({ mods: { lifedrain: r.range(0.1, 0.2) * b } }) },
   { id: 'executioner', label: 'Executioner', roll: (r, b) => ({ mods: { execute: Math.min(0.25, r.range(0.08, 0.14) * b) } }) },
 ]
+
+// ---- curse pool: dramatic tradeoffs (a big upside bought with a real downside).
+// Rolled rarely on epic+ items as an extra affix; flat magnitudes (not budget-
+// scaled) so the gamble reads the same on every high-rarity item. ----
+const CURSE_ENCHANTS: EnchantTemplate[] = [
+  { id: 'cx_reckless', label: 'Reckless', roll: () => ({ mods: { damageMult: 1.5, rangeMult: 0.75 } }) },
+  { id: 'cx_frenzied', label: 'Frenzied', roll: () => ({ mods: { rateMult: 1.7, damageMult: 0.72 } }) },
+  { id: 'cx_wild', label: 'Wild', roll: () => ({ mods: { critChanceAdd: 0.2, critMultAdd: 0.6, rateMult: 0.82 } }) },
+  { id: 'cx_erratic', label: 'Erratic', roll: () => ({ mods: { splashAdd: 34, damageMult: 0.82 } }) },
+  { id: 'cx_vengeful', label: 'Vengeful', roll: () => ({ mods: { damageMult: 1.55, critChanceAdd: -0.15 } }) },
+]
+const CURSE_CHANCE = 0.2
 
 // ---- keepsake pool (team-wide global mods) ----
 const KEEPSAKE_ENCHANTS: EnchantTemplate[] = [
@@ -183,9 +196,13 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   const weapon = isWeapon ? rng.pick(WEAPONS.filter((w) => w.hands === slot)) : undefined
   const noun = isWeapon ? weapon!.name : slot === 'offHand' ? rng.pick(OFFHANDS) : rng.pick(BODIES)
   const ench = rollEnchantments(ENCHANTS, cfg.enchants, cfg.budget, rng)
-  const suffix = ench.find((e) => e.label.startsWith('of'))
-  const prefix = ench.find((e) => !e.label.startsWith('of'))
-  const name = `${prefix ? prefix.label + ' ' : ''}${cfg.label} ${noun}${suffix ? ' ' + suffix.label : ''}`
+  // Epic+ items can roll a rare "curse": a dramatic extra affix with a downside.
+  const canCurse = rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic'
+  if (canCurse && rng.chance(CURSE_CHANCE)) {
+    const c = rng.pick(CURSE_ENCHANTS)
+    ench.push({ id: c.id, label: c.label, ...c.roll(rng, cfg.budget) })
+  }
+  const name = nameItem(cfg.label, noun, ench)
   return {
     id: nextId('itm'),
     name: name.trim(),
@@ -198,18 +215,18 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
 
 // ---- economy sinks ----
 export function reforgeCost(item: Item): number {
-  return { common: 20, rare: 35, epic: 60, legendary: 100 }[item.rarity]
+  return { common: 20, rare: 35, epic: 60, legendary: 100, mythic: 160 }[item.rarity]
 }
 export function upgradeCost(item: Item): number {
-  // Cost to reach the NEXT tier from this one.
-  return { common: 50, rare: 90, epic: 150, legendary: 0 }[item.rarity]
+  // Cost to reach the NEXT tier from this one (0 at the top tier).
+  return { common: 50, rare: 90, epic: 150, legendary: 260, mythic: 0 }[item.rarity]
 }
 /** Dust costs used by the Endless Watch Forge. */
 export function reforgeDust(item: Item): number {
-  return { common: 4, rare: 7, epic: 12, legendary: 20 }[item.rarity]
+  return { common: 4, rare: 7, epic: 12, legendary: 20, mythic: 32 }[item.rarity]
 }
 export function upgradeDust(item: Item): number {
-  return { common: 8, rare: 14, epic: 24, legendary: 0 }[item.rarity]
+  return { common: 8, rare: 14, epic: 24, legendary: 40, mythic: 0 }[item.rarity]
 }
 export function canUpgrade(item: Item): boolean {
   return RARITY_ORDER.indexOf(item.rarity) < RARITY_ORDER.length - 1
@@ -251,14 +268,20 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
   return { ...item, rarity: next, base, enchantments, name: renameFor({ ...item, rarity: next }, enchantments) }
 }
 
+/** Compose an item name: [prefix] Rarity Noun [of Suffix]. A curse wins the prefix. */
+function nameItem(rarityLabel: string, noun: string, ench: Enchantment[]): string {
+  const suffix = ench.find((e) => e.label.startsWith('of'))
+  const prefix =
+    ench.find((e) => e.id.startsWith('cx_')) ?? ench.find((e) => !e.label.startsWith('of'))
+  return `${prefix ? prefix.label + ' ' : ''}${rarityLabel} ${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
+}
+
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
   const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
   const noun = nounMatch?.[0] ?? 'Relic'
   if (item.keepsake) return `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim()
-  const suffix = ench.find((e) => e.label.startsWith('of'))
-  const prefix = ench.find((e) => !e.label.startsWith('of'))
-  return `${prefix ? prefix.label + ' ' : ''}${cfg.label} ${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
+  return nameItem(cfg.label, noun, ench)
 }
 
 /** Human-readable base-stat lines for tooltips. */
