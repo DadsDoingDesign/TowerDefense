@@ -73,9 +73,13 @@ export function RunMapScreen() {
               </span>
             </button>
           ))}
-          <div className="mr-bag" title="Items in inventory">
+          <button
+            className="mr-bag"
+            title="Open inventory"
+            onClick={() => useGameStore.getState().openInventory()}
+          >
             🎒 {inventory.length}
-          </div>
+          </button>
         </div>
       </div>
 

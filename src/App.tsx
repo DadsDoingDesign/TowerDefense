@@ -6,6 +6,7 @@ import { HeroPickScreen } from './ui/screens/HeroPickScreen'
 import { HubScreen } from './ui/screens/HubScreen'
 import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { EquipModal } from './ui/components/EquipModal'
+import { InventoryManager } from './ui/components/InventoryManager'
 import { RunEndOverlay } from './ui/components/RunEndOverlay'
 import { SentinelDetail } from './ui/components/SentinelDetail'
 import { TowerUpgradePanel } from './ui/components/TowerUpgradePanel'
@@ -26,6 +27,7 @@ export default function App() {
       <SentinelDetail />
       <EquipModal />
       <TowerUpgradePanel />
+      <InventoryManager />
       <RunEndOverlay />
     </div>
   )

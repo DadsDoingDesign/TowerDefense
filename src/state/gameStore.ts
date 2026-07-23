@@ -160,6 +160,8 @@ interface GameState {
   equipContext: { sentinelId: string; slot: HeroSlot } | null
   /** Sentinel id whose tower-upgrade panel is open, or null. */
   upgradeTarget: string | null
+  /** Whether the drag-and-drop inventory manager overlay is open. */
+  inventoryOpen: boolean
   evolutionQueue: string[]
 
   // Actions — run/map
@@ -213,6 +215,8 @@ interface GameState {
   openUpgrade: (sentinelId: string) => void
   closeUpgrade: () => void
   buyTowerUpgrade: (sentinelId: string, pathId: string) => void
+  openInventory: () => void
+  closeInventory: () => void
 }
 
 function emptyPlacements(map: GameMap): Placement {
@@ -344,6 +348,7 @@ export const useGameStore = create<GameState>((set, get) => {
     detailId: null,
     equipContext: null,
     upgradeTarget: null,
+    inventoryOpen: false,
     evolutionQueue: [],
 
     newRun: () => {
@@ -996,6 +1001,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     openUpgrade: (sentinelId) => set({ upgradeTarget: sentinelId }),
     closeUpgrade: () => set({ upgradeTarget: null }),
+    openInventory: () => set({ inventoryOpen: true }),
+    closeInventory: () => set({ inventoryOpen: false }),
 
     buyTowerUpgrade: (sentinelId, pathId) => {
       const { roster, gold } = get()

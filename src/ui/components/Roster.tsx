@@ -24,7 +24,9 @@ export function Roster() {
     <div className="roster">
       <div className="panel-head">
         <span>Sentinels</span>
-        <span className="hint">{disabled ? 'Battle in progress' : 'Tap a unit, then a slot'}</span>
+        <button className="inv-open-btn" onClick={() => useGameStore.getState().openInventory()}>
+          🎒 Inventory
+        </button>
       </div>
       <div className="roster-list">
         {roster.map((s) => (
