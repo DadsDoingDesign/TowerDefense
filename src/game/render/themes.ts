@@ -8,11 +8,20 @@
  */
 export type TokenShape = 'circle' | 'square' | 'ring' | 'gem'
 
+/** When set, the theme renders real sprites (see game/render/sprites.ts). */
+export interface SpriteConfig {
+  ground: string
+  road: string
+  towerScale: number
+  enemyScale: number
+}
+
 export interface ThemeStyle {
   id: string
   name: string
   blurb: string
   smoothing: boolean
+  sprites?: SpriteConfig
   css: {
     accent: string
     accentDim: string
@@ -87,6 +96,20 @@ export const THEMES: Record<string, ThemeStyle> = {
     token: { shape: 'ring', gradient: false, glow: 14, outline: 3, barrel: false },
     enemy: { shape: 'ring', gradient: false, glow: 10, outline: 3 },
     projectile: { glow: 18, square: false },
+  },
+
+  fantasy: {
+    id: 'fantasy',
+    name: 'Fantasy Pixels',
+    blurb: 'Real CC0 pixel-art heroes, monsters & terrain (Dungeon Crawl tiles).',
+    smoothing: false,
+    sprites: { ground: 'grass', road: 'road', towerScale: 2.5, enemyScale: 2.6 },
+    css: { accent: '#d9a441', accentDim: 'rgba(217,164,65,0.16)', radius: '6px', bg: '#0e0b08', panel: '#181209' },
+    field: { top: '#2b3a22', bottom: '#1c2718', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
+    path: { edge: '#4a3720', fill: '#6b4f2c', center: 'rgba(60,44,24,0.0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
+    token: { shape: 'circle', gradient: false, glow: 0, outline: 2, barrel: false },
+    enemy: { shape: 'circle', gradient: false, glow: 0, outline: 0 },
+    projectile: { glow: 6, square: false },
   },
 
   storybook: {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { drawThemePreview } from '../../game/render/renderer'
+import { onSpritesReady } from '../../game/render/sprites'
 import { THEMES, THEME_IDS, withStyle } from '../../game/render/themes'
 import { useSettingsStore } from '../../state/settingsStore'
 
@@ -15,9 +16,14 @@ function ThemePreview({ id }: { id: string }) {
     canvas.width = PREVIEW_W * dpr
     canvas.height = PREVIEW_H * dpr
     const ctx = canvas.getContext('2d')!
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.imageSmoothingEnabled = THEMES[id].smoothing
-    withStyle(THEMES[id], () => drawThemePreview(ctx, PREVIEW_W, PREVIEW_H))
+    const render = () => {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.imageSmoothingEnabled = THEMES[id].smoothing
+      withStyle(THEMES[id], () => drawThemePreview(ctx, PREVIEW_W, PREVIEW_H))
+    }
+    render()
+    // Sprite themes: redraw once the images finish loading.
+    if (THEMES[id].sprites) onSpritesReady(render)
   }, [id])
   return <canvas ref={ref} className="theme-canvas" style={{ width: PREVIEW_W, height: PREVIEW_H }} />
 }
