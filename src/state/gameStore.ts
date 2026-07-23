@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { RNG } from '../game/core/rng'
 import { GameEngine, type BattleResult } from '../game/engine/engine'
 import { applyXp, evolutionPending, evolveInto } from '../game/engine/leveling'
-import { teamKeepsakeMods } from '../game/engine/combat'
+import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
 import { FIRST_MAP } from '../game/data/maps'
 import { createSentinel, startingRoster } from '../game/data/sentinels'
 import {
@@ -21,6 +21,7 @@ import {
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { generateRewardCards, type RewardCard } from '../game/data/rewards'
 import { rollMutation } from '../game/data/mutations'
+import { getUpgradePath, milestoneForLevel } from '../game/data/upgradeTree'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
 import type { Archetype, EffectMods, GameMap, HeroSlot, Item, ItemRarity, Mutation, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
@@ -157,6 +158,8 @@ interface GameState {
   selectedSentinelId: string | null
   detailId: string | null
   equipContext: { sentinelId: string; slot: HeroSlot } | null
+  /** Sentinel id whose tower-upgrade panel is open, or null. */
+  upgradeTarget: string | null
   evolutionQueue: string[]
 
   // Actions — run/map
@@ -206,6 +209,10 @@ interface GameState {
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
+  // Actions — per-tower upgrade tree
+  openUpgrade: (sentinelId: string) => void
+  closeUpgrade: () => void
+  buyTowerUpgrade: (sentinelId: string, pathId: string) => void
 }
 
 function emptyPlacements(map: GameMap): Placement {
@@ -336,6 +343,7 @@ export const useGameStore = create<GameState>((set, get) => {
     selectedSentinelId: null,
     detailId: null,
     equipContext: null,
+    upgradeTarget: null,
     evolutionQueue: [],
 
     newRun: () => {
@@ -377,6 +385,7 @@ export const useGameStore = create<GameState>((set, get) => {
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
+        upgradeTarget: null,
         evolutionQueue: [],
       })
     },
@@ -435,6 +444,7 @@ export const useGameStore = create<GameState>((set, get) => {
         selectedSentinelId: null,
         detailId: null,
         equipContext: null,
+        upgradeTarget: null,
         evolutionQueue: [],
       })
     },
@@ -982,6 +992,30 @@ export const useGameStore = create<GameState>((set, get) => {
       const { roster, evolutionQueue } = get()
       const nextRoster = roster.map((s) => (s.id === sentinelId ? evolveInto(s, nodeId) : s))
       set({ roster: nextRoster, evolutionQueue: evolutionQueue.filter((id) => id !== sentinelId) })
+    },
+
+    openUpgrade: (sentinelId) => set({ upgradeTarget: sentinelId }),
+    closeUpgrade: () => set({ upgradeTarget: null }),
+
+    buyTowerUpgrade: (sentinelId, pathId) => {
+      const { roster, gold } = get()
+      const s = roster.find((x) => x.id === sentinelId)
+      const path = getUpgradePath(pathId)
+      if (!s || !path) return
+      // Buy toward the next EFFECTIVE level (free grants from gear/mutations
+      // already fill the lowest levels), so a granted L1 means your first
+      // purchase is L2 at L2's price.
+      const eff = effectiveUpgradeLevels(s)[pathId] ?? 0
+      if (eff >= path.levels.length) return
+      const nextLevel = eff + 1
+      if (s.level < milestoneForLevel(nextLevel)) return
+      const cost = path.levels[nextLevel - 1].cost
+      if (gold < cost) return
+      const bought = s.upgrades?.[pathId] ?? 0
+      const nextRoster = roster.map((x) =>
+        x.id === sentinelId ? { ...x, upgrades: { ...x.upgrades, [pathId]: bought + 1 } } : x,
+      )
+      set({ roster: nextRoster, gold: gold - cost })
     },
   }
 })

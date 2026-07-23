@@ -205,6 +205,11 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     ench.push({ id: c.id, label: c.label, ...c.roll(rng, cfg.budget) })
   }
   const name = nameItem(cfg.label, noun, ench)
+  // Mythic items grant a free level toward a slot-themed upgrade path.
+  const grantUpgrade =
+    rarity === 'mythic'
+      ? { path: slot === 'body' ? 'tempo' : slot === 'offHand' ? 'precision' : 'power', levels: 1 }
+      : undefined
   return {
     id: nextId('itm'),
     name: name.trim(),
@@ -212,6 +217,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     rarity,
     base: baseFor(slot, cfg.budget, rng, weapon),
     enchantments: ench,
+    ...(grantUpgrade ? { grantUpgrade } : {}),
   }
 }
 

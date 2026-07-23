@@ -89,6 +89,8 @@ export interface Mutation {
   mods: EffectMods
   /** One-line summary of the downside this mutation trades for its power. */
   downside: string
+  /** Some mutations also grant free levels toward a tower upgrade path. */
+  grantUpgrade?: UpgradeGrant
 }
 
 /** What kind of item this is — determines which hero slot(s) it can occupy. */
@@ -133,6 +135,8 @@ export interface Item {
   enchantments: Enchantment[]
   /** Keepsakes (a trinket variant) buff the whole team instead of one Sentinel. */
   keepsake?: boolean
+  /** Some items grant free levels toward a tower upgrade path. */
+  grantUpgrade?: UpgradeGrant
 }
 
 /** Gear slots on a Sentinel: two hands + a body slot. One item per slot. */
@@ -161,8 +165,16 @@ export interface Sentinel {
   equipment: Equipment
   /** Attack mutations rolled at the mid-map fork; merged into combat mods. */
   mutations?: Mutation[]
+  /** Purchased per-tower upgrade levels, keyed by upgrade path id (0–3 each). */
+  upgrades?: Record<string, number>
   color: string
   accent: string
+}
+
+/** A free grant of upgrade-path levels carried by an item or mutation. */
+export interface UpgradeGrant {
+  path: string
+  levels: number
 }
 
 /** A fixed build position beside the path. */

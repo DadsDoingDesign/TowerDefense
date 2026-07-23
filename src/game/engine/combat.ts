@@ -1,6 +1,31 @@
 import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
+import { MAX_PATH_LEVEL, UPGRADE_PATHS, pathModsUpTo } from '../data/upgradeTree'
 import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
+
+/**
+ * Effective upgrade-path level for each path: bought levels plus free levels
+ * granted by equipped items and mutations, capped at the path maximum.
+ */
+export function effectiveUpgradeLevels(s: Sentinel): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const p of UPGRADE_PATHS) out[p.id] = s.upgrades?.[p.id] ?? 0
+  const addGrant = (g?: { path: string; levels: number }) => {
+    if (g && out[g.path] != null) out[g.path] += g.levels
+  }
+  for (const it of [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]) addGrant(it?.grantUpgrade)
+  for (const m of s.mutations ?? []) addGrant(m.grantUpgrade)
+  for (const k of Object.keys(out)) out[k] = Math.min(MAX_PATH_LEVEL, out[k])
+  return out
+}
+
+/** EffectMods contributed by a Sentinel's effective upgrade-path levels. */
+function upgradeModsFor(s: Sentinel): EffectMods[] {
+  const levels = effectiveUpgradeLevels(s)
+  const out: EffectMods[] = []
+  for (const [pathId, lvl] of Object.entries(levels)) out.push(...pathModsUpTo(pathId, lvl))
+  return out
+}
 
 /** Gather team-wide EffectMods from every equipped keepsake across a roster. */
 export function teamKeepsakeMods(roster: Sentinel[]): EffectMods[] {
@@ -112,7 +137,8 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const gear = gearOf(s.equipment)
   const branchMods = s.branchPath.map((id) => getNode(id).mods)
   const mutationMods = s.mutations?.map((m) => m.mods) ?? []
-  const mods = mergeMods([...branchMods, ...mutationMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  const upgradeMods = upgradeModsFor(s)
+  const mods = mergeMods([...branchMods, ...mutationMods, ...upgradeMods, ...gear.mods, ...(ctx.teamMods ?? [])])
 
   const pMult = ctx.patienceMult ?? 1
   const st = {

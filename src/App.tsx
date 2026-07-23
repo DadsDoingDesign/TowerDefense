@@ -8,6 +8,7 @@ import { RunMapScreen } from './ui/screens/RunMapScreen'
 import { EquipModal } from './ui/components/EquipModal'
 import { RunEndOverlay } from './ui/components/RunEndOverlay'
 import { SentinelDetail } from './ui/components/SentinelDetail'
+import { TowerUpgradePanel } from './ui/components/TowerUpgradePanel'
 import './styles/app.css'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
       {/* Shared across screens */}
       <SentinelDetail />
       <EquipModal />
+      <TowerUpgradePanel />
       <RunEndOverlay />
     </div>
   )
