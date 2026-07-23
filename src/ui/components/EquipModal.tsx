@@ -1,13 +1,9 @@
-import { canUpgrade, reforgeCost, upgradeCost } from '../../game/data/items'
-import type { Item, ItemSlot } from '../../game/types'
+import { canUpgrade, HERO_SLOT_LABEL, heroSlotsFor, reforgeCost, upgradeCost } from '../../game/data/items'
+import type { Item } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { ItemCard } from './ItemCard'
 
-const SLOT_LABEL: Record<ItemSlot, string> = {
-  weapon: 'Weapon',
-  armor: 'Armor',
-  trinket: 'Trinket',
-}
+const SLOT_LABEL = HERO_SLOT_LABEL
 
 /** Choose/swap gear for a Sentinel slot, and run the Forge sinks on any item. */
 export function EquipModal() {
@@ -26,7 +22,7 @@ export function EquipModal() {
   if (!sentinel) return null
 
   const equipped = sentinel.equipment[ctx.slot]
-  const options = inventory.filter((i) => i.slot === ctx.slot)
+  const options = inventory.filter((i) => heroSlotsFor(i.slot).includes(ctx.slot))
 
   const forgeButtons = (item: Item) => (
     <div className="forge-actions">

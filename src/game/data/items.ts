@@ -1,7 +1,30 @@
 import { nextId, RNG } from '../core/rng'
-import type { Enchantment, Item, ItemRarity, ItemSlot } from '../types'
+import type { Enchantment, HeroSlot, Item, ItemRarity, ItemSlot } from '../types'
 
 export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
+
+/** The three equip slots on a hero, in display order. */
+export const HERO_SLOTS: HeroSlot[] = ['mainHand', 'offHand', 'body']
+export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
+  mainHand: 'Main Hand',
+  offHand: 'Off Hand',
+  body: 'Body',
+}
+export const KIND_LABEL: Record<ItemSlot, string> = {
+  oneHand: '1-Hand',
+  twoHand: '2-Hand',
+  offHand: 'Off-Hand',
+  body: 'Body',
+}
+/** Which hero slot(s) an item of this kind may occupy. */
+export function heroSlotsFor(kind: ItemSlot): HeroSlot[] {
+  switch (kind) {
+    case 'oneHand': return ['mainHand', 'offHand']
+    case 'twoHand': return ['mainHand'] // also blocks offHand while equipped
+    case 'offHand': return ['offHand']
+    case 'body': return ['body']
+  }
+}
 
 export const RARITY: Record<
   ItemRarity,
@@ -13,22 +36,29 @@ export const RARITY: Record<
   legendary: { label: 'Legendary', budget: 3.6, enchants: 3, color: '#f0b868', dropWeight: 3 },
 }
 
-// ---- weapon subtypes give damage a physical/magic identity ----
+// ---- weapon subtypes give damage a physical/magic identity + a hand cost ----
 interface WeaponType {
   name: string
   damageType: 'physical' | 'magic'
+  hands: 'oneHand' | 'twoHand'
   speedBias: number
 }
 const WEAPONS: WeaponType[] = [
-  { name: 'Blade', damageType: 'physical', speedBias: 0.05 },
-  { name: 'Maul', damageType: 'physical', speedBias: 0 },
-  { name: 'Bow', damageType: 'physical', speedBias: 0.06 },
-  { name: 'Staff', damageType: 'magic', speedBias: 0 },
-  { name: 'Wand', damageType: 'magic', speedBias: 0.06 },
-  { name: 'Focus', damageType: 'magic', speedBias: 0.03 },
+  // one-hand: modest damage, can pair with an off-hand
+  { name: 'Sword', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
+  { name: 'Axe', damageType: 'physical', hands: 'oneHand', speedBias: 0.02 },
+  { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
+  { name: 'Wand', damageType: 'magic', hands: 'oneHand', speedBias: 0.06 },
+  { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0.03 },
+  // two-hand: bigger damage, but fills both hands
+  { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05 },
+  { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.08 },
+  { name: 'Bow', damageType: 'physical', hands: 'twoHand', speedBias: 0.04 },
+  { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0 },
+  { name: 'Halberd', damageType: 'physical', hands: 'twoHand', speedBias: -0.04 },
 ]
-const ARMORS = ['Plate', 'Mail', 'Garb', 'Hide', 'Aegis']
-const TRINKETS = ['Charm', 'Ring', 'Idol', 'Sigil', 'Totem']
+const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus']
+const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis']
 const KEEPSAKES = ['Banner', 'Standard', 'Relic', 'Beacon', 'Oath']
 
 // ---- enchantment pool (per-item) ----
@@ -80,22 +110,28 @@ function rollEnchantments(pool: EnchantTemplate[], count: number, budget: number
 }
 
 function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType): Item['base'] {
-  if (slot === 'weapon') {
+  if (slot === 'oneHand' || slot === 'twoHand') {
     const w = weapon!
-    const dmg = round(rng.range(5, 8) * budget)
+    // two-handers hit noticeably harder in exchange for the off-hand slot
+    const dmg = round(rng.range(slot === 'twoHand' ? 9 : 5, slot === 'twoHand' ? 13 : 8) * budget)
     return w.damageType === 'physical'
       ? { physDamage: dmg, attackSpeed: w.speedBias * budget }
       : { magDamage: dmg, attackSpeed: w.speedBias * budget }
   }
-  if (slot === 'armor') {
+  if (slot === 'offHand') {
+    // defensive / utility — the enchant pool adds the flavour
     return {
-      physDef: round(rng.range(6, 10) * budget),
-      magDef: round(rng.range(5, 9) * budget),
-      hp: round(rng.range(16, 26) * budget),
+      physDef: round(rng.range(3, 6) * budget),
+      magDef: round(rng.range(3, 6) * budget),
+      hp: round(rng.range(6, 12) * budget),
     }
   }
-  // trinket
-  return { hp: round(rng.range(8, 14) * budget), magDef: round(rng.range(2, 5) * budget) }
+  // body armour
+  return {
+    physDef: round(rng.range(6, 10) * budget),
+    magDef: round(rng.range(5, 9) * budget),
+    hp: round(rng.range(16, 26) * budget),
+  }
 }
 
 const pickRarity = (rng: RNG): ItemRarity => {
@@ -125,10 +161,10 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     if (idx < RARITY_ORDER.length - 1 && rng.chance(opts.luck)) rarity = RARITY_ORDER[idx + 1]
   }
   const cfg = RARITY[rarity]
-  // Keepsakes only appear on unforced (random-slot) drops, never when a specific
-  // weapon/armor/trinket slot was requested.
+  // Keepsakes only appear on unforced (random-slot) drops. They wear on the body
+  // slot but buff the whole team instead of the holder.
   const isKeepsake = opts.slot === undefined && rng.chance(opts.keepsakeChance ?? 0.12)
-  const slot: ItemSlot = opts.slot ?? rng.pick(['weapon', 'armor', 'trinket'] as ItemSlot[])
+  const slot: ItemSlot = opts.slot ?? rng.pick(['oneHand', 'oneHand', 'twoHand', 'offHand', 'body', 'body'] as ItemSlot[])
 
   if (isKeepsake) {
     const noun = rng.pick(KEEPSAKES)
@@ -136,7 +172,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     return {
       id: nextId('itm'),
       name: `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim(),
-      slot: 'trinket',
+      slot: 'body',
       rarity,
       base: {},
       enchantments: ench,
@@ -144,8 +180,9 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     }
   }
 
-  const weapon = slot === 'weapon' ? rng.pick(WEAPONS) : undefined
-  const noun = slot === 'weapon' ? weapon!.name : slot === 'armor' ? rng.pick(ARMORS) : rng.pick(TRINKETS)
+  const isWeapon = slot === 'oneHand' || slot === 'twoHand'
+  const weapon = isWeapon ? rng.pick(WEAPONS.filter((w) => w.hands === slot)) : undefined
+  const noun = isWeapon ? weapon!.name : slot === 'offHand' ? rng.pick(OFFHANDS) : rng.pick(BODIES)
   const ench = rollEnchantments(ENCHANTS, cfg.enchants, cfg.budget, rng)
   const suffix = ench.find((e) => e.label.startsWith('of'))
   const prefix = ench.find((e) => !e.label.startsWith('of'))
@@ -216,7 +253,7 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
 
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
-  const nounMatch = item.name.match(/(Blade|Maul|Bow|Staff|Wand|Focus|Plate|Mail|Garb|Hide|Aegis|Charm|Ring|Idol|Sigil|Totem|Banner|Standard|Relic|Beacon|Oath)/)
+  const nounMatch = item.name.match(/(Sword|Axe|Dagger|Wand|Rod|Greatsword|Warhammer|Bow|Staff|Halberd|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
   const noun = nounMatch?.[0] ?? 'Relic'
   if (item.keepsake) return `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim()
   const suffix = ench.find((e) => e.label.startsWith('of'))

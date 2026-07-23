@@ -146,7 +146,7 @@ function EndlessForge() {
   const upgrade = useGameStore((s) => s.endlessForgeUpgrade)
   const close = useGameStore((s) => s.endlessCloseRoom)
 
-  const equipped = roster.flatMap((s) => [s.equipment.weapon, s.equipment.armor, s.equipment.trinket]).filter(Boolean)
+  const equipped = roster.flatMap((s) => [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]).filter(Boolean)
   const all = [...inventory, ...(equipped as NonNullable<(typeof equipped)[number]>[])]
 
   return (

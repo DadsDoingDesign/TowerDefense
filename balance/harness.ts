@@ -14,7 +14,7 @@ import { generateItem } from '../src/game/data/items'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { GameEngine } from '../src/game/engine/engine'
 import { applyXp, evolveInto } from '../src/game/engine/leveling'
-import type { ItemRarity, ItemSlot, Sentinel, Tactics } from '../src/game/types'
+import type { HeroSlot, ItemRarity, ItemSlot, Sentinel, Tactics } from '../src/game/types'
 
 export const TIER2_NODES: TreeNode[] = ALL_NODES.filter((n) => n.tier === 2)
 export const SLOT_IDS = FIRST_MAP.slots.map((s) => s.id)
@@ -56,8 +56,9 @@ function xpForLevelApprox(level: number): number {
 
 export function equipFullSet(s: Sentinel, rarity: ItemRarity, rng: RNG): Sentinel {
   const equipment = { ...s.equipment }
-  for (const slot of ['weapon', 'armor', 'trinket'] as ItemSlot[]) {
-    equipment[slot] = generateItem(rng, { slot, rarity })
+  const kinds: Record<HeroSlot, ItemSlot> = { mainHand: 'oneHand', offHand: 'offHand', body: 'body' }
+  for (const slot of ['mainHand', 'offHand', 'body'] as HeroSlot[]) {
+    equipment[slot] = generateItem(rng, { slot: kinds[slot], rarity })
   }
   return { ...s, equipment }
 }

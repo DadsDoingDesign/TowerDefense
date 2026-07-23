@@ -9,14 +9,9 @@ import {
   TIER2_LEVEL,
 } from '../../game/engine/leveling'
 import { ARCHETYPES } from '../../game/data/sentinels'
-import type { Item, ItemSlot } from '../../game/types'
+import { HERO_SLOTS, HERO_SLOT_LABEL } from '../../game/data/items'
+import type { HeroSlot, Item } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
-
-const SLOT_LABELS: Record<ItemSlot, string> = {
-  weapon: 'Weapon',
-  armor: 'Armor',
-  trinket: 'Trinket',
-}
 
 export function SentinelDetail() {
   const detailId = useGameStore((s) => s.detailId)
@@ -95,7 +90,7 @@ export function SentinelDetail() {
         <div className="detail-section">
           <span className="ds-head">Equipment</span>
           <div className="equip-slots">
-            {(['weapon', 'armor', 'trinket'] as ItemSlot[]).map((slot) => (
+            {HERO_SLOTS.map((slot) => (
               <EquipSlot
                 key={slot}
                 slot={slot}
@@ -136,13 +131,13 @@ function EquipSlot({
   item,
   onClick,
 }: {
-  slot: ItemSlot
+  slot: HeroSlot
   item: Item | null
   onClick: () => void
 }) {
   return (
     <button className={`equip-slot ${item ? `rar-${item.rarity}` : 'empty'}`} onClick={onClick}>
-      <span className="es-slot">{SLOT_LABELS[slot]}</span>
+      <span className="es-slot">{HERO_SLOT_LABEL[slot]}</span>
       <span className="es-name">{item ? item.name : 'Empty'}</span>
     </button>
   )

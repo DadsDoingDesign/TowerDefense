@@ -8,6 +8,8 @@ import { createSentinel, startingRoster } from '../game/data/sentinels'
 import {
   canUpgrade,
   generateItem,
+  HERO_SLOTS,
+  heroSlotsFor,
   RARITY,
   reforgeCost,
   reforgeDust,
@@ -19,7 +21,7 @@ import {
 import { generateRunMap, type MapNode, type RunMap } from '../game/data/runmap'
 import { rollShrine, type ShrineOffer } from '../game/data/shrines'
 import { generateEncounter, generateEndlessWave, type EncounterKind } from '../game/data/waves'
-import type { Archetype, GameMap, Item, ItemRarity, ItemSlot, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
+import type { Archetype, GameMap, HeroSlot, Item, ItemRarity, Placement, Sentinel, Tactics, WaveDef } from '../game/types'
 import { useMetaStore, type MetaBonuses } from './metaStore'
 
 const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
@@ -55,9 +57,9 @@ const rng = new RNG()
 
 function startingInventory(extra = 0): Item[] {
   const items = [
-    generateItem(rng, { slot: 'weapon', rarity: 'common' }),
-    generateItem(rng, { slot: 'armor', rarity: 'common' }),
-    generateItem(rng, { slot: 'trinket', rarity: 'rare' }),
+    generateItem(rng, { slot: 'oneHand', rarity: 'common' }),
+    generateItem(rng, { slot: 'body', rarity: 'common' }),
+    generateItem(rng, { slot: 'offHand', rarity: 'rare' }),
   ]
   for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1 }))
   return items
@@ -145,7 +147,7 @@ interface GameState {
   // UI
   selectedSentinelId: string | null
   detailId: string | null
-  equipContext: { sentinelId: string; slot: ItemSlot } | null
+  equipContext: { sentinelId: string; slot: HeroSlot } | null
   evolutionQueue: string[]
 
   // Actions — run/map
@@ -183,10 +185,10 @@ interface GameState {
   // Actions — items / detail / evolution
   openDetail: (id: string) => void
   closeDetail: () => void
-  openEquip: (sentinelId: string, slot: ItemSlot) => void
+  openEquip: (sentinelId: string, slot: HeroSlot) => void
   closeEquip: () => void
-  equipItem: (sentinelId: string, slot: ItemSlot, itemId: string) => void
-  unequipItem: (sentinelId: string, slot: ItemSlot) => void
+  equipItem: (sentinelId: string, slot: HeroSlot, itemId: string) => void
+  unequipItem: (sentinelId: string, slot: HeroSlot) => void
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
@@ -212,13 +214,11 @@ export function placedSentinels(
   return out
 }
 
-const SLOTS: ItemSlot[] = ['weapon', 'armor', 'trinket']
-
 function findItem(state: GameState, itemId: string): { item: Item } | null {
   const inv = state.inventory.find((i) => i.id === itemId)
   if (inv) return { item: inv }
   for (const s of state.roster) {
-    for (const slot of SLOTS) {
+    for (const slot of HERO_SLOTS) {
       const it = s.equipment[slot]
       if (it && it.id === itemId) return { item: it }
     }
@@ -236,7 +236,7 @@ function replaceItem(
   const nextInv = inventory.map((i) => (i.id === itemId ? next : i))
   const nextRoster = roster.map((s) => {
     let eq = s.equipment
-    for (const slot of SLOTS) {
+    for (const slot of HERO_SLOTS) {
       if (eq[slot]?.id === itemId) eq = { ...eq, [slot]: next }
     }
     return eq === s.equipment ? s : { ...s, equipment: eq }
@@ -814,13 +814,24 @@ export const useGameStore = create<GameState>((set, get) => {
     equipItem: (sentinelId, slot, itemId) => {
       const { roster, inventory } = get()
       const item = inventory.find((i) => i.id === itemId)
-      if (!item || item.slot !== slot) return
+      if (!item || !heroSlotsFor(item.slot).includes(slot)) return
       let nextInv = inventory.filter((i) => i.id !== itemId)
+      const ret = (it: Item | null) => { if (it) nextInv = [...nextInv, it] }
       const nextRoster = roster.map((s) => {
         if (s.id !== sentinelId) return s
-        const prev = s.equipment[slot]
-        if (prev) nextInv = [...nextInv, prev]
-        return { ...s, equipment: { ...s.equipment, [slot]: item } }
+        const eq = { ...s.equipment }
+        if (item.slot === 'twoHand') {
+          // two-hander fills the main hand and clears the off hand
+          ret(eq.mainHand); ret(eq.offHand)
+          eq.mainHand = item; eq.offHand = null
+        } else if (slot === 'offHand' && eq.mainHand?.slot === 'twoHand') {
+          // putting something in the off hand frees the held two-hander
+          ret(eq.mainHand); eq.mainHand = null
+          ret(eq.offHand); eq.offHand = item
+        } else {
+          ret(eq[slot]); eq[slot] = item
+        }
+        return { ...s, equipment: eq }
       })
       set({ roster: nextRoster, inventory: nextInv })
     },

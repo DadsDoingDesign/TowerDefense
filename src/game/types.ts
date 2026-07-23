@@ -74,7 +74,10 @@ export interface EffectMods {
   trap?: { dps: number; slow: number }
 }
 
-export type ItemSlot = 'weapon' | 'armor' | 'trinket'
+/** What kind of item this is — determines which hero slot(s) it can occupy. */
+export type ItemSlot = 'oneHand' | 'twoHand' | 'offHand' | 'body'
+/** The equip slots on a hero. A two-hand item fills mainHand and blocks offHand. */
+export type HeroSlot = 'mainHand' | 'offHand' | 'body'
 export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 /** A rolled affix on an item — flat stat bonuses and/or combat mods. */
@@ -106,11 +109,11 @@ export interface Item {
   keepsake?: boolean
 }
 
-/** Gear slots on a Sentinel. Items are defined in game/data/items.ts (M3). */
+/** Gear slots on a Sentinel: two hands + a body slot. One item per slot. */
 export interface Equipment {
-  weapon: Item | null
-  armor: Item | null
-  trinket: Item | null
+  mainHand: Item | null
+  offHand: Item | null
+  body: Item | null
 }
 
 /** A recruited tower unit. The persistent, between-wave definition. */

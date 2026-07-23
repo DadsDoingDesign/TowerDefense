@@ -6,8 +6,9 @@ import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
 export function teamKeepsakeMods(roster: Sentinel[]): EffectMods[] {
   const out: EffectMods[] = []
   for (const s of roster) {
-    const t = s.equipment.trinket
-    if (t?.keepsake) for (const e of t.enchantments) if (e.mods) out.push(e.mods)
+    for (const it of [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]) {
+      if (it?.keepsake) for (const e of it.enchantments) if (e.mods) out.push(e.mods)
+    }
   }
   return out
 }
@@ -87,9 +88,9 @@ function addItem(acc: GearContribution, item: Item | null): void {
 /** Gather all gear contributions on a Sentinel (excludes team keepsakes). */
 export function gearOf(equipment: Equipment): GearContribution {
   const acc = emptyGear()
-  addItem(acc, equipment.weapon)
-  addItem(acc, equipment.armor)
-  addItem(acc, equipment.trinket)
+  addItem(acc, equipment.mainHand)
+  addItem(acc, equipment.offHand)
+  addItem(acc, equipment.body)
   return acc
 }
 

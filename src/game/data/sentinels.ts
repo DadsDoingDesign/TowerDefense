@@ -19,7 +19,7 @@ const NAME_POOLS: Record<Archetype, string[]> = {
 const nameCounters: Record<Archetype, number> = { fighter: 0, rogue: 0, mystic: 0 }
 
 function emptyEquipment(): Equipment {
-  return { weapon: null, armor: null, trinket: null }
+  return { mainHand: null, offHand: null, body: null }
 }
 
 /** Create a fresh level-1 Sentinel of the given archetype. */

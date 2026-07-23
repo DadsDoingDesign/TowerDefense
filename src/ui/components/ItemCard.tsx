@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { describeEnchant } from '../../game/data/describe'
-import { describeBase, RARITY } from '../../game/data/items'
+import { describeBase, KIND_LABEL, RARITY } from '../../game/data/items'
 import type { Item } from '../../game/types'
 
 /** A compact item panel: rarity-colored name, base stats, and enchantments. */
@@ -20,7 +20,7 @@ export function ItemCard({
         <span className="ic-name" style={{ color: rar.color }}>
           {item.name}
         </span>
-        <span className="ic-tag">{item.keepsake ? 'Keepsake' : item.slot}</span>
+        <span className="ic-tag">{item.keepsake ? 'Keepsake' : KIND_LABEL[item.slot]}</span>
       </div>
       {!compact && (
         <>

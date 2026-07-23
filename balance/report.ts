@@ -142,7 +142,7 @@ for (const rar of RARITY_ORDER) {
   let enchSum = 0
   const N = 400
   for (let i = 0; i < N; i++) {
-    const it = generateItem(rng, { slot: 'weapon', rarity: rar })
+    const it = generateItem(rng, { slot: 'oneHand', rarity: rar })
     statSum += baseStatTotal(it)
     enchSum += it.enchantments.length
   }
@@ -170,8 +170,8 @@ const enchRows: { id: string; uplift: number }[] = []
 for (const id of enchIds) {
   const ench = rollNamedEnchant(id)
   if (!ench) continue
-  const item: Item = { id: `t_${id}`, name: id, slot: 'weapon', rarity: 'epic', base: {}, enchantments: [ench] }
-  const withEnch: Sentinel = { ...baseBuild, equipment: { ...baseBuild.equipment, weapon: item } }
+  const item: Item = { id: `t_${id}`, name: id, slot: 'oneHand', rarity: 'epic', base: {}, enchantments: [ench] }
+  const withEnch: Sentinel = { ...baseBuild, equipment: { ...baseBuild.equipment, mainHand: item } }
   const dps = soloDpsOf(withEnch)
   enchRows.push({ id, uplift: baseDps ? (dps - baseDps) / baseDps : 0 })
 }
@@ -300,7 +300,7 @@ function soloDpsOf(s: Sentinel): number {
 function rollNamedEnchant(id: string): Enchantment | null {
   const rng = new RNG(500)
   for (let i = 0; i < 4000; i++) {
-    const it = generateItem(rng, { slot: rng.pick(['weapon', 'armor', 'trinket']), rarity: 'legendary' })
+    const it = generateItem(rng, { slot: rng.pick(['oneHand', 'offHand', 'body']), rarity: 'legendary' })
     const e = it.enchantments.find((x) => x.id === id)
     if (e) return e
   }
