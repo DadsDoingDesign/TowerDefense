@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { sfx } from '../../audio/audio'
 import { useGameStore } from '../../state/gameStore'
 import { UPGRADES, useMetaStore } from '../../state/metaStore'
+import { useSettingsStore } from '../../state/settingsStore'
 
 type MenuView = 'menu' | 'perks' | 'settings'
 
@@ -30,7 +32,7 @@ function MainMenu({ go }: { go: (v: MenuView) => void }) {
       </div>
 
       <div className="menu-actions">
-        <button className="menu-btn primary" onClick={newRun}>
+        <button className="menu-btn primary" data-sfx="confirm" onClick={newRun}>
           <span className="menu-btn-icon">▶</span>
           <span className="menu-btn-text">
             <strong>Start a Run</strong>
@@ -122,6 +124,9 @@ function SettingsView({ back }: { back: () => void }) {
       </header>
 
       <div className="submenu-body">
+        <AudioSettings />
+        <AccessibilitySettings />
+
         <section className="settings-card">
           <div className="settings-row">
             <div className="settings-info">
@@ -157,6 +162,112 @@ function SettingsView({ back }: { back: () => void }) {
         <p className="settings-foot">Fieldwatch · a roguelite tower-defense autobattler</p>
       </div>
     </div>
+  )
+}
+
+/* ------------------------------------------------------------ audio settings */
+function AudioSettings() {
+  const audio = useSettingsStore((s) => s.audio)
+  const setAudio = useSettingsStore((s) => s.setAudio)
+  const toggleMute = useSettingsStore((s) => s.toggleMute)
+
+  return (
+    <section className="settings-card">
+      <div className="settings-row">
+        <div className="settings-info">
+          <strong>Audio</strong>
+          <span>Separate volumes for game sound and interface sound.</span>
+        </div>
+        <Toggle on={!audio.muted} onLabel="On" offLabel="Muted" onToggle={toggleMute} sfxOnToggle={false} />
+      </div>
+      <div className="settings-sliders">
+        <VolumeSlider label="Master" value={audio.master} onChange={(v) => setAudio({ master: v })} preview="click" />
+        <VolumeSlider label="Game" value={audio.game} onChange={(v) => setAudio({ game: v })} preview="coin" />
+        <VolumeSlider label="Interface" value={audio.ui} onChange={(v) => setAudio({ ui: v })} preview="select" />
+      </div>
+    </section>
+  )
+}
+
+function VolumeSlider({
+  label,
+  value,
+  onChange,
+  preview,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+  preview: 'click' | 'coin' | 'select'
+}) {
+  return (
+    <label className="vol-slider">
+      <span className="vol-label">{label}</span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(value * 100)}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        onPointerUp={() => sfx(preview)}
+        aria-label={`${label} volume`}
+      />
+      <span className="vol-val">{Math.round(value * 100)}</span>
+    </label>
+  )
+}
+
+/* ---------------------------------------------------- accessibility settings */
+function AccessibilitySettings() {
+  const reducedMotion = useSettingsStore((s) => s.reducedMotion)
+  const highContrast = useSettingsStore((s) => s.highContrast)
+  const setReducedMotion = useSettingsStore((s) => s.setReducedMotion)
+  const setHighContrast = useSettingsStore((s) => s.setHighContrast)
+
+  return (
+    <section className="settings-card">
+      <div className="settings-row">
+        <div className="settings-info">
+          <strong>Reduce motion</strong>
+          <span>Turn off pulses, lifts, and slide-in animations.</span>
+        </div>
+        <Toggle on={reducedMotion} onToggle={() => setReducedMotion(!reducedMotion)} />
+      </div>
+      <div className="settings-row">
+        <div className="settings-info">
+          <strong>High contrast</strong>
+          <span>Brighter text and stronger borders for readability.</span>
+        </div>
+        <Toggle on={highContrast} onToggle={() => setHighContrast(!highContrast)} />
+      </div>
+    </section>
+  )
+}
+
+function Toggle({
+  on,
+  onToggle,
+  onLabel = 'On',
+  offLabel = 'Off',
+  sfxOnToggle = true,
+}: {
+  on: boolean
+  onToggle: () => void
+  onLabel?: string
+  offLabel?: string
+  sfxOnToggle?: boolean
+}) {
+  return (
+    <button
+      className={`toggle ${on ? 'on' : ''}`}
+      data-sfx={sfxOnToggle ? 'toggle' : 'none'}
+      role="switch"
+      aria-checked={on}
+      onClick={onToggle}
+    >
+      <span className="toggle-knob" />
+      <span className="toggle-text">{on ? onLabel : offLabel}</span>
+    </button>
   )
 }
 

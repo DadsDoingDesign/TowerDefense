@@ -2,11 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { preloadSprites } from './game/render/sprites'
-import { initTheme } from './state/settingsStore'
+import { initSettings, initTheme } from './state/settingsStore'
 import { useGameStore } from './state/gameStore'
 import './styles/global.css'
 
 initTheme()
+initSettings()
 preloadSprites()
 
 // Dev-only: expose the store for headless testing (Playwright verification).

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { sfx } from '../audio/audio'
 
 export interface MetaUpgrade {
   id: string
@@ -90,8 +91,9 @@ export const useMetaStore = create<MetaState>()(
         const level = upgrades[id] ?? 0
         if (level >= u.maxLevel) return
         const cost = get().upgradeCost(id)
-        if (watchMarks < cost) return
+        if (watchMarks < cost) return sfx('error')
         set({ watchMarks: watchMarks - cost, upgrades: { ...upgrades, [id]: level + 1 } })
+        sfx('confirm')
       },
 
       sacrificeCost: () => SACRIFICE_BASE_COST + SACRIFICE_STEP * get().sacrificeTier,
@@ -99,8 +101,9 @@ export const useMetaStore = create<MetaState>()(
       doSacrifice: () => {
         const { watchMarks, sacrificeTier } = get()
         const cost = get().sacrificeCost()
-        if (watchMarks < cost) return
+        if (watchMarks < cost) return sfx('error')
         set({ watchMarks: watchMarks - cost, sacrificeTier: sacrificeTier + 1 })
+        sfx('confirm')
       },
 
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),

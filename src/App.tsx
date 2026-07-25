@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { sfx, type SoundEvent } from './audio/audio'
 import { useGameStore } from './state/gameStore'
 import { BattleScreen } from './ui/screens/BattleScreen'
 import { CrossroadsScreen } from './ui/screens/CrossroadsScreen'
@@ -14,6 +16,27 @@ import './styles/app.css'
 
 export default function App() {
   const screen = useGameStore((s) => s.screen)
+
+  // One delegated listener gives every button a UI sound. `data-sfx` overrides
+  // the sound (or "none" silences it); a few common controls map by class.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest('button, [role="button"]') as HTMLElement | null
+      if (!el || (el as HTMLButtonElement).disabled) return
+      const ds = el.dataset.sfx
+      if (ds === 'none') return
+      let ev: SoundEvent = (ds as SoundEvent) || 'click'
+      if (!ds) {
+        const c = typeof el.className === 'string' ? el.className : ''
+        if (c.includes('detail-close')) ev = 'close'
+        else if (c.includes('submenu-back')) ev = 'back'
+        else if (c.includes('eq-tab') || c.includes('tac-btn') || c.includes('speed-btn') || c.includes('sc-gear-btn')) ev = 'toggle'
+      }
+      sfx(ev)
+    }
+    document.addEventListener('click', onClick)
+    return () => document.removeEventListener('click', onClick)
+  }, [])
 
   return (
     <div className="app-root">

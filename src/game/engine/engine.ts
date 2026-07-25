@@ -110,6 +110,8 @@ export class GameEngine {
   maxBaseHp: number
   goldEarned = 0
   leaks = 0
+  /** Optional sound/event hook (app supplies audio; the headless harness omits it). */
+  private onEvent?: (e: string) => void
   downedCount = 0
   killCount = 0
   status: BattleStatus = 'running'
@@ -134,7 +136,9 @@ export class GameEngine {
     enemyHpMult?: number
     tactics?: Tactics
     seed?: number
+    onEvent?: (e: string) => void
   }) {
+    this.onEvent = opts.onEvent
     this.map = opts.map
     this.path = new GamePath(opts.map.path)
     this.wave = opts.wave
@@ -385,6 +389,7 @@ export class GameEngine {
   private fire(s: RtSentinel, target: RtEnemy): void {
     s.cooldown = 1 / s.profile.rate
     s.fireFlash = 1
+    this.onEvent?.('shoot')
     const isCrit = this.rng.chance(s.profile.critChance)
     const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
     this.projectiles.push({
@@ -425,6 +430,7 @@ export class GameEngine {
       if (e.distance >= this.path.length) {
         this.baseHp -= e.type.leak
         this.leaks += e.type.leak
+        this.onEvent?.('leak')
         continue
       }
       e.pos = this.path.pointAt(e.distance)
@@ -547,6 +553,7 @@ export class GameEngine {
     this.enemies.splice(idx, 1)
     this.killCount++
     this.goldEarned += e.type.reward
+    this.onEvent?.('kill')
     if (srcId) {
       const s = this.sentinels.find((x) => x.id === srcId)
       if (s) {

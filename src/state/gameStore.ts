@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { RNG } from '../game/core/rng'
 import { GameEngine, type BattleResult } from '../game/engine/engine'
 import { applyXp, evolutionPending, evolveInto } from '../game/engine/leveling'
+import { gameSfx, sfx } from '../audio/audio'
 import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
 import { FIRST_MAP } from '../game/data/maps'
 import { createSentinel, startingRoster } from '../game/data/sentinels'
@@ -626,7 +627,9 @@ export const useGameStore = create<GameState>((set, get) => {
         enemyHpMult: effHpMult,
         teamMods: [...teamKeepsakeMods(roster), ...runMods],
         tactics,
+        onEvent: gameSfx,
       })
+      sfx('wave')
       set({ engine, battlePhase: 'battle', selectedSentinelId: null, hud: engine.hudSnapshot() })
     },
 
@@ -650,6 +653,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const st = get()
       if (!st.engine) return
       const result = st.engine.result()
+      sfx(result.status === 'cleared' ? 'confirm' : 'defeat')
       const totalKills0 = st.runKills + result.enemiesKilled
       const totalDowns0 = st.runDowns + result.downed
 
@@ -751,6 +755,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const cleared = [...get().clearedNodeIds, activeNodeId]
       const reachable = neighborsOf(runMap, activeNodeId).filter((id) => !cleared.includes(id))
       const wonRun = node.type === 'boss'
+      if (wonRun) sfx('victory')
       const marks = wonRun
         ? useMetaStore
             .getState()
@@ -801,6 +806,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!reward) return
       const card = reward.find((c) => c.id === cardId)
       if (!card) return
+      sfx('reward')
       let nextRoster = roster
       let nextInv = inventory
       let nextMods = runMods
@@ -960,6 +966,7 @@ export const useGameStore = create<GameState>((set, get) => {
         return { ...s, equipment: eq }
       })
       set({ roster: nextRoster, inventory: nextInv })
+      sfx('equip')
     },
 
     unequipItem: (sentinelId, slot) => {
@@ -978,7 +985,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const found = findItem(get(), itemId)
       if (!found) return
       const cost = reforgeCost(found.item)
-      if (gold < cost) return
+      if (gold < cost) return sfx('error')
       replaceItem(get, set, itemId, reforgeItem(found.item, rng))
       set({ gold: gold - cost })
     },
@@ -988,7 +995,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const found = findItem(get(), itemId)
       if (!found || !canUpgrade(found.item)) return
       const cost = upgradeCost(found.item)
-      if (gold < cost) return
+      if (gold < cost) return sfx('error')
       replaceItem(get, set, itemId, upgradeRarity(found.item, rng))
       set({ gold: gold - cost })
     },
@@ -997,6 +1004,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const { roster, evolutionQueue } = get()
       const nextRoster = roster.map((s) => (s.id === sentinelId ? evolveInto(s, nodeId) : s))
       set({ roster: nextRoster, evolutionQueue: evolutionQueue.filter((id) => id !== sentinelId) })
+      sfx('upgrade')
     },
 
     openUpgrade: (sentinelId) => set({ upgradeTarget: sentinelId }),
@@ -1015,14 +1023,15 @@ export const useGameStore = create<GameState>((set, get) => {
       const eff = effectiveUpgradeLevels(s)[pathId] ?? 0
       if (eff >= path.levels.length) return
       const nextLevel = eff + 1
-      if (s.level < milestoneForLevel(nextLevel)) return
+      if (s.level < milestoneForLevel(nextLevel)) return sfx('error')
       const cost = path.levels[nextLevel - 1].cost
-      if (gold < cost) return
+      if (gold < cost) return sfx('error')
       const bought = s.upgrades?.[pathId] ?? 0
       const nextRoster = roster.map((x) =>
         x.id === sentinelId ? { ...x, upgrades: { ...x.upgrades, [pathId]: bought + 1 } } : x,
       )
       set({ roster: nextRoster, gold: gold - cost })
+      sfx('upgrade')
     },
   }
 })

@@ -141,6 +141,7 @@ function EquipDrawer({ sentinel, initialTab, onClose }: { sentinel: Sentinel; in
                 <div className="eq-item-actions">
                   <button
                     className="equip-btn"
+                    data-sfx="none"
                     onClick={() => {
                       equip(sentinel.id, targetSlot(item), item.id)
                       setSel(null)
