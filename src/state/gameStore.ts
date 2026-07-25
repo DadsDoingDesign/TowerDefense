@@ -157,7 +157,7 @@ interface GameState {
   // UI
   selectedSentinelId: string | null
   detailId: string | null
-  equipContext: { sentinelId: string; slot: HeroSlot } | null
+  equipContext: { sentinelId: string; tab: HeroSlot | 'all' } | null
   /** Sentinel id whose tower-upgrade panel is open, or null. */
   upgradeTarget: string | null
   /** Whether the drag-and-drop inventory manager overlay is open. */
@@ -204,7 +204,7 @@ interface GameState {
   // Actions — items / detail / evolution
   openDetail: (id: string) => void
   closeDetail: () => void
-  openEquip: (sentinelId: string, slot: HeroSlot) => void
+  openEquip: (sentinelId: string, tab?: HeroSlot | 'all') => void
   closeEquip: () => void
   equipItem: (sentinelId: string, slot: HeroSlot, itemId: string) => void
   unequipItem: (sentinelId: string, slot: HeroSlot) => void
@@ -934,7 +934,7 @@ export const useGameStore = create<GameState>((set, get) => {
     // ---- items / detail / evolution ----
     openDetail: (id) => set({ detailId: id }),
     closeDetail: () => set({ detailId: null }),
-    openEquip: (sentinelId, slot) => set({ equipContext: { sentinelId, slot } }),
+    openEquip: (sentinelId, tab = 'all') => set({ equipContext: { sentinelId, tab } }),
     closeEquip: () => set({ equipContext: null }),
 
     equipItem: (sentinelId, slot, itemId) => {

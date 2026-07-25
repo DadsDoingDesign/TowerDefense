@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
+import { HERO_SLOTS, HERO_SLOT_LABEL, RARITY } from '../../game/data/items'
 import { computeCombat } from '../../game/engine/combat'
 import { buildName, levelProgress, MAX_LEVEL } from '../../game/engine/leveling'
-import type { Sentinel } from '../../game/types'
+import type { HeroSlot, Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 
 export function Roster() {
@@ -10,7 +11,9 @@ export function Roster() {
   const selectedId = useGameStore((s) => s.selectedSentinelId)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const select = useGameStore((s) => s.selectSentinel)
+  const clearSlot = useGameStore((s) => s.clearSlot)
   const openDetail = useGameStore((s) => s.openDetail)
+  const openEquip = useGameStore((s) => s.openEquip)
   const phase = useGameStore((s) => s.battlePhase)
 
   const slotOf = (sentId: string): string | null => {
@@ -29,18 +32,22 @@ export function Roster() {
         </button>
       </div>
       <div className="roster-list">
-        {roster.map((s) => (
-          <SentinelCard
-            key={s.id}
-            sentinel={s}
-            slot={slotOf(s.id)}
-            selected={selectedId === s.id}
-            evolveReady={evolutionQueue.includes(s.id)}
-            disabled={disabled}
-            onClick={() => select(selectedId === s.id ? null : s.id)}
-            onInfo={() => openDetail(s.id)}
-          />
-        ))}
+        {roster.map((s) => {
+          const slot = slotOf(s.id)
+          return (
+            <SentinelCard
+              key={s.id}
+              sentinel={s}
+              slot={slot}
+              selected={selectedId === s.id}
+              evolveReady={evolutionQueue.includes(s.id)}
+              disabled={disabled}
+              onDeploy={() => (slot ? clearSlot(slot) : select(selectedId === s.id ? null : s.id))}
+              onInfo={() => openDetail(s.id)}
+              onEditSlot={(hs) => openEquip(s.id, hs)}
+            />
+          )
+        })}
       </div>
     </div>
   )
@@ -52,27 +59,32 @@ function SentinelCard({
   selected,
   evolveReady,
   disabled,
-  onClick,
+  onDeploy,
   onInfo,
+  onEditSlot,
 }: {
   sentinel: Sentinel
   slot: string | null
   selected: boolean
   evolveReady: boolean
   disabled: boolean
-  onClick: () => void
+  onDeploy: () => void
   onInfo: () => void
+  onEditSlot: (slot: HeroSlot) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   const profile = computeCombat(sentinel)
   const progress = levelProgress(sentinel)
+  const deployLabel = slot ? 'Deployed' : selected ? 'Selected' : 'Reserve'
+
   return (
     <div
       className={`sentinel-card ${selected ? 'selected' : ''} ${slot ? 'placed' : ''} ${
-        disabled ? 'disabled' : ''
-      }`}
+        expanded ? 'expanded' : ''
+      } ${disabled ? 'disabled' : ''}`}
       style={{ '--accent': sentinel.color } as CSSProperties}
     >
-      <button className="sc-main" onClick={onClick} disabled={disabled}>
+      <div className="sc-main" role="button" tabIndex={0} onClick={() => setExpanded((e) => !e)}>
         <div className="sc-top">
           <span className="sc-glyph" style={{ background: sentinel.color }}>
             {GLYPH[sentinel.archetype]}
@@ -86,7 +98,27 @@ function SentinelCard({
               {buildName(sentinel)} · Lv {sentinel.level}
             </span>
           </div>
-          <span className={`sc-status ${slot ? 'on' : ''}`}>{slot ? 'Deployed' : 'Reserve'}</span>
+          <button
+            className={`sc-deploy ${slot ? 'on' : ''} ${selected ? 'sel' : ''}`}
+            disabled={disabled}
+            onClick={(e) => {
+              e.stopPropagation()
+              onDeploy()
+            }}
+            title={slot ? 'Recall from slot' : 'Select, then tap a build slot'}
+          >
+            {deployLabel}
+          </button>
+          <button
+            className="sc-info"
+            onClick={(e) => {
+              e.stopPropagation()
+              onInfo()
+            }}
+            aria-label="Sentinel details"
+          >
+            ⓘ
+          </button>
         </div>
         <div className="sc-stats">
           <Stat label="STR" v={sentinel.stats.str} />
@@ -97,10 +129,28 @@ function SentinelCard({
         <div className="xp-bar" title={`Level ${sentinel.level} / ${MAX_LEVEL}`}>
           <div className="xp-fill" style={{ width: `${progress * 100}%` }} />
         </div>
-      </button>
-      <button className="sc-info" onClick={onInfo} aria-label="Sentinel details">
-        ⓘ
-      </button>
+        <span className="sc-chevron">{expanded ? '▾ gear' : '▸ gear'}</span>
+      </div>
+
+      {expanded && (
+        <div className="sc-gear">
+          {HERO_SLOTS.map((hs) => {
+            const worn = sentinel.equipment[hs]
+            return (
+              <button key={hs} className="sc-gear-slot" onClick={() => onEditSlot(hs)}>
+                <span className="scg-label">{HERO_SLOT_LABEL[hs]}</span>
+                <span
+                  className={`scg-item ${worn ? '' : 'empty'}`}
+                  style={worn ? { color: RARITY[worn.rarity].color } : undefined}
+                >
+                  {worn ? worn.name : 'Empty'}
+                </span>
+              </button>
+            )
+          })}
+          <span className="sc-gear-hint">Tap a slot to equip</span>
+        </div>
+      )}
     </div>
   )
 }
