@@ -3393,3 +3393,56 @@
 .sc-gear-btn.open {
   color: var(--accent);
 }
+
+/* ================================================================
+   Mobile / touch pass
+   - Coarse pointers (touch) get >=44px hit targets: a >=44px-tall
+     control is >=40px in at least one direction, satisfying the rule
+     for every button at once. Icon-only controls are made square.
+   - Narrow layout tweaks so nothing overflows in portrait.
+   ================================================================ */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  select,
+  input[type='checkbox'] {
+    min-height: 44px;
+  }
+  /* Icon-only controls -> square 44px tap area (icon stays centered). */
+  .sc-info,
+  .sc-gear-btn,
+  .detail-close,
+  .eq-unequip {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Row-level clickable elements that are not <button>s. */
+  .hold-fire,
+  .inv-item,
+  .eq-item-card {
+    min-height: 44px;
+  }
+  .speed-btn {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  /* The roster card top row reserves room for the (now larger) corner. */
+  .sc-top {
+    padding-right: 96px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Map header: let it wrap and drop the graphical HP bar (keep the number). */
+  .map-header {
+    flex-wrap: wrap;
+  }
+  .mh-hp-bar {
+    display: none;
+  }
+  /* Endless header purse/stat rows wrap instead of overflowing. */
+  .endless-header,
+  .topbar {
+    flex-wrap: wrap;
+  }
+}
