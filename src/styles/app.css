@@ -3357,3 +3357,39 @@
   gap: 6px;
   padding: 8px;
 }
+
+/* ---------- Roster card: select-to-place + gear button ---------- */
+.sc-top {
+  padding-right: 58px; /* reserve space for the corner controls */
+}
+.sc-status.sel {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.sc-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  z-index: 1;
+}
+.sc-gear-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--muted);
+  background: transparent;
+}
+.sc-gear-btn:hover {
+  color: var(--text);
+  background: var(--line);
+}
+.sc-gear-btn.open {
+  color: var(--accent);
+}

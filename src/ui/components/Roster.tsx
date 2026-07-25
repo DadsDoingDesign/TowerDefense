@@ -11,7 +11,6 @@ export function Roster() {
   const selectedId = useGameStore((s) => s.selectedSentinelId)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const select = useGameStore((s) => s.selectSentinel)
-  const clearSlot = useGameStore((s) => s.clearSlot)
   const openDetail = useGameStore((s) => s.openDetail)
   const openEquip = useGameStore((s) => s.openEquip)
   const phase = useGameStore((s) => s.battlePhase)
@@ -32,22 +31,19 @@ export function Roster() {
         </button>
       </div>
       <div className="roster-list">
-        {roster.map((s) => {
-          const slot = slotOf(s.id)
-          return (
-            <SentinelCard
-              key={s.id}
-              sentinel={s}
-              slot={slot}
-              selected={selectedId === s.id}
-              evolveReady={evolutionQueue.includes(s.id)}
-              disabled={disabled}
-              onDeploy={() => (slot ? clearSlot(slot) : select(selectedId === s.id ? null : s.id))}
-              onInfo={() => openDetail(s.id)}
-              onEditSlot={(hs) => openEquip(s.id, hs)}
-            />
-          )
-        })}
+        {roster.map((s) => (
+          <SentinelCard
+            key={s.id}
+            sentinel={s}
+            slot={slotOf(s.id)}
+            selected={selectedId === s.id}
+            evolveReady={evolutionQueue.includes(s.id)}
+            disabled={disabled}
+            onSelect={() => select(selectedId === s.id ? null : s.id)}
+            onInfo={() => openDetail(s.id)}
+            onEditSlot={(hs) => openEquip(s.id, hs)}
+          />
+        ))}
       </div>
     </div>
   )
@@ -59,7 +55,7 @@ function SentinelCard({
   selected,
   evolveReady,
   disabled,
-  onDeploy,
+  onSelect,
   onInfo,
   onEditSlot,
 }: {
@@ -68,14 +64,14 @@ function SentinelCard({
   selected: boolean
   evolveReady: boolean
   disabled: boolean
-  onDeploy: () => void
+  onSelect: () => void
   onInfo: () => void
   onEditSlot: (slot: HeroSlot) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const profile = computeCombat(sentinel)
   const progress = levelProgress(sentinel)
-  const deployLabel = slot ? 'Deployed' : selected ? 'Selected' : 'Reserve'
+  const status = slot ? 'Deployed' : selected ? 'Selected' : 'Reserve'
 
   return (
     <div
@@ -84,7 +80,9 @@ function SentinelCard({
       } ${disabled ? 'disabled' : ''}`}
       style={{ '--accent': sentinel.color } as CSSProperties}
     >
-      <div className="sc-main" role="button" tabIndex={0} onClick={() => setExpanded((e) => !e)}>
+      {/* Tapping the card selects the hero — then tap a build slot to place or
+          move it (a placed hero can be re-selected and moved to another slot). */}
+      <button className="sc-main" onClick={onSelect} disabled={disabled}>
         <div className="sc-top">
           <span className="sc-glyph" style={{ background: sentinel.color }}>
             {GLYPH[sentinel.archetype]}
@@ -98,27 +96,7 @@ function SentinelCard({
               {buildName(sentinel)} · Lv {sentinel.level}
             </span>
           </div>
-          <button
-            className={`sc-deploy ${slot ? 'on' : ''} ${selected ? 'sel' : ''}`}
-            disabled={disabled}
-            onClick={(e) => {
-              e.stopPropagation()
-              onDeploy()
-            }}
-            title={slot ? 'Recall from slot' : 'Select, then tap a build slot'}
-          >
-            {deployLabel}
-          </button>
-          <button
-            className="sc-info"
-            onClick={(e) => {
-              e.stopPropagation()
-              onInfo()
-            }}
-            aria-label="Sentinel details"
-          >
-            ⓘ
-          </button>
+          <span className={`sc-status ${slot ? 'on' : ''} ${selected ? 'sel' : ''}`}>{status}</span>
         </div>
         <div className="sc-stats">
           <Stat label="STR" v={sentinel.stats.str} />
@@ -129,7 +107,20 @@ function SentinelCard({
         <div className="xp-bar" title={`Level ${sentinel.level} / ${MAX_LEVEL}`}>
           <div className="xp-fill" style={{ width: `${progress * 100}%` }} />
         </div>
-        <span className="sc-chevron">{expanded ? '▾ gear' : '▸ gear'}</span>
+      </button>
+
+      <div className="sc-corner">
+        <button
+          className={`sc-gear-btn ${expanded ? 'open' : ''}`}
+          onClick={() => setExpanded((e) => !e)}
+          aria-label="Equipment"
+          title="Equipment"
+        >
+          {expanded ? '▾' : '⚙'}
+        </button>
+        <button className="sc-info" onClick={onInfo} aria-label="Sentinel details">
+          ⓘ
+        </button>
       </div>
 
       {expanded && (
