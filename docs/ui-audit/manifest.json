@@ -1,0 +1,338 @@
+[
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "01-main-menu",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "02-perks-empty",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "03-perks-affordable",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "04-settings",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "05-settings-reset-confirm",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "01-hub-and-menus",
+    "name": "06-settings-high-contrast",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "02-run-start",
+    "name": "01-hero-pick",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "02-run-start",
+    "name": "02-run-map",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "02-run-start",
+    "name": "03-run-map-progressed",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "02-run-start",
+    "name": "04-crossroads",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "03-battle-setup",
+    "name": "setup-tabs",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "03-battle-setup",
+    "name": "card-states",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "03-battle-setup",
+    "name": "placed",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "03-battle-setup",
+    "name": "evolve-ready",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "04-battle-live",
+    "name": "live",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "04-battle-live",
+    "name": "result-victory",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "04-battle-live",
+    "name": "result-defeat",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "sentinel-detail",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "equip-drawer",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "tower-upgrade",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "tower-upgrade-owned",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "inventory",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "merchant",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "shrine",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "recruit",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "recruit-full",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "06-modals",
+    "name": "run-end",
+    "ok": true
+  },
+  {
+    "viewport": "desktop",
+    "flow": "07-endless",
+    "name": "endless",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "01-main-menu",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "02-perks-empty",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "03-perks-affordable",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "04-settings",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "05-settings-reset-confirm",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "01-hub-and-menus",
+    "name": "06-settings-high-contrast",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "02-run-start",
+    "name": "01-hero-pick",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "02-run-start",
+    "name": "02-run-map",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "02-run-start",
+    "name": "03-run-map-progressed",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "02-run-start",
+    "name": "04-crossroads",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "03-battle-setup",
+    "name": "setup-tabs",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "03-battle-setup",
+    "name": "card-states",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "03-battle-setup",
+    "name": "placed",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "03-battle-setup",
+    "name": "evolve-ready",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "04-battle-live",
+    "name": "live",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "04-battle-live",
+    "name": "result-victory",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "04-battle-live",
+    "name": "result-defeat",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "sentinel-detail",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "equip-drawer",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "tower-upgrade",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "tower-upgrade-owned",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "inventory",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "merchant",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "shrine",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "recruit",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "recruit-full",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "06-modals",
+    "name": "run-end",
+    "ok": true
+  },
+  {
+    "viewport": "mobile",
+    "flow": "07-endless",
+    "name": "endless",
+    "ok": true
+  }
+]

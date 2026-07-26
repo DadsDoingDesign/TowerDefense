@@ -42,11 +42,17 @@ System stack (no webfonts — CSP-safe), carried by hierarchy not novelty.
 ## Surfaces & framing (nine-slice)
 
 Reassembled Tiny Swords nine-slices in `public/assets/ui/tinyswords/*_9.png`,
-applied with `border-image`. Reusable classes (in `app.css`):
+applied with `border-image`. The intended reusable classes:
 - `.ts-paper` — parchment panel, **dark ink text**. Menus, choice cards, tooltips.
 - `.ts-special` — dark slate w/ gold corners, **light text**. Overlays, modals.
 - `.ts-wood` — wood frame, **light text**. Section framing, headers.
 - `.ts-btn` — teal button. Primary actions.
+
+> ⚠️ **Not yet implemented.** These four classes do not exist in `app.css`. The
+> nine-slices are currently bound directly to specific components (`.hp-card`,
+> `.hp-cta`/`.overlay-btn`, `.overlay-card`, `.crossroads .cr-col`), so the
+> surface treatments can't be reused without copying a `border-image` line.
+> See `docs/DESIGN_SYSTEM.md` §3.2.
 
 Use warm-dark `--panel` (with `--line`) for dense HUD/data panels where parchment
 would hurt legibility over the bright battlefield.

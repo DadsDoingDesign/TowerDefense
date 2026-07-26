@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "balance": "tsx balance/report.ts",
-    "spritesheet": "tsx scripts/spritesheet.ts"
+    "spritesheet": "tsx scripts/spritesheet.ts",
+    "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -21,6 +22,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.35.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"
