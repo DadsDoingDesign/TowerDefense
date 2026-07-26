@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from 'react'
-import { HERO_SLOTS, HERO_SLOT_LABEL, RARITY, heroSlotsFor } from '../../game/data/items'
+import { HERO_SLOTS, HERO_SLOT_LABEL, heroSlotsFor } from '../../game/data/items'
 import type { HeroSlot, Item } from '../../game/types'
 import { scrapDust, scrapGold, useGameStore } from '../../state/gameStore'
 import { ItemCard } from './ItemCard'
