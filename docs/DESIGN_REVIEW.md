@@ -90,3 +90,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   by the sandbox network policy so pixel art is vector stand-ins, and teal
   legitimately carries two text treatments (dark ink on price chips, light on
   the large nine-slice CTA) — both are in the Button set.
+
+- **2026-07-26 — mobile flow board + mobile UI system.** Added a second Figma
+  page (`_Mobile first UI`) holding two sections. `01 · Mobile UI System` is the
+  390×844 spec — safe areas, 14px gutters, the pinned action footer, a 44/48/52
+  touch-target floor, the four-pattern navigation model (tab / sheet / full /
+  over), and the mobile-only chrome as components (top bar, action footer, tab
+  bar, bottom sheet, toast, inventory grid, list row). `02 · Mobile Flows` is
+  every mobile screen in the audit — 40 frames across 5 lanes (Watchtower, Run,
+  Battle, Gear & pack, Ending & endless) — wired with 68 orthogonally-routed
+  paths, each forward edge labelled with the trigger that fires it and each
+  return edge drawn faded. 56 of those paths are also real Figma prototype
+  reactions attached to the actual CTA, so the board is walkable from
+  A1 · Main Menu; the remaining 12 are state changes with no single trigger
+  element (tab swaps, level-up, wave outcome) and stay documented as wires.
+  Verified each lane with rendered screenshots as it was built.
