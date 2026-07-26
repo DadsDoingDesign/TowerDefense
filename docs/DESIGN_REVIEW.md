@@ -73,3 +73,20 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   screenshots of hub, map, battle, detail, merchant, shrine, and equip — all
   now read as one warm wooden-table set. Mystic-blue kept as intentional class
   identity (per BRAND.md archetype hues).
+
+- **2026-07-26 — UI audit rebuilt in Figma.** Took `docs/ui-audit/` (7 folders,
+  desktop + mobile) and rebuilt it as a real design system in Figma rather than
+  a screenshot dump: `00 · Foundations` (colour/type/radius/spacing/elevation/
+  glyphs, every swatch labelled with its `global.css` token), `01 · Component
+  Library` (43 components, the multi-state ones as proper variant sets),
+  `02 · Screens — Desktop` (9 × 1180×720, assembled from instances),
+  `03 · Modals & Overlays` (7 overlays on a 60% scrim over real screen
+  context), `04 · Screens — Mobile` (4 × 390×844). Verified every section with
+  rendered screenshots from Figma, not assumed output — three defects were
+  caught and fixed that way: sentinel cards were missing the 3px archetype rail,
+  the evolve-ready card clipped its gear/info buttons (header tightened, card
+  340px), and the tactics segmented control clipped "Near" inside the 294px HUD
+  rail. Two fidelity notes recorded in `docs/FIGMA.md`: sprite upload is blocked
+  by the sandbox network policy so pixel art is vector stand-ins, and teal
+  legitimately carries two text treatments (dark ink on price chips, light on
+  the large nine-slice CTA) — both are in the Button set.
