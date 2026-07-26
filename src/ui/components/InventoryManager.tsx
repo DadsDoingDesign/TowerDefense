@@ -1,7 +1,7 @@
 import { useState, type DragEvent } from 'react'
-import { HERO_SLOTS, HERO_SLOT_LABEL, heroSlotsFor } from '../../game/data/items'
-import { useGameStore } from '../../state/gameStore'
+import { HERO_SLOTS, HERO_SLOT_LABEL, RARITY, heroSlotsFor } from '../../game/data/items'
 import type { HeroSlot, Item } from '../../game/types'
+import { scrapDust, scrapGold, useGameStore } from '../../state/gameStore'
 import { ItemCard } from './ItemCard'
 
 type DragSource = 'inventory' | { sentinelId: string; slot: HeroSlot }
@@ -10,150 +10,193 @@ interface Held {
   from: DragSource
 }
 
+const KIND_ABBR: Record<string, string> = { oneHand: '1H', twoHand: '2H', offHand: 'OFF', body: 'BODY' }
+const tileTag = (item: Item) => (item.keepsake ? 'KEEP' : KIND_ABBR[item.slot] ?? '?')
+
 /**
- * Full-screen inventory manager. Drag items from the pool onto a hero's slot to
- * equip, drag an equipped item back to the pool to unequip, or drag slot→slot to
- * move. A tap-to-select fallback covers touch. Slot compatibility is enforced by
- * heroSlotsFor(); the store's equipItem already handles two-hand/off-hand rules.
+ * Grid-based inventory manager. Left: a hero selector + that hero's three
+ * equipment slots (drop targets). Right: a tile grid of all owned items with a
+ * selected-item detail and Equip / Dismantle actions. Drag a tile onto a slot
+ * to equip, drag an equipped item to the grid to unequip, or tap-to-select.
  */
 export function InventoryManager() {
   const open = useGameStore((s) => s.inventoryOpen)
   const close = useGameStore((s) => s.closeInventory)
   const roster = useGameStore((s) => s.roster)
   const inventory = useGameStore((s) => s.inventory)
+  const gold = useGameStore((s) => s.gold)
+  const dust = useGameStore((s) => s.dust)
+  const mode = useGameStore((s) => s.mode)
   const equip = useGameStore((s) => s.equipItem)
   const unequip = useGameStore((s) => s.unequipItem)
+  const sortInv = useGameStore((s) => s.sortInventory)
+  const dismantle = useGameStore((s) => s.dismantleItem)
 
+  const [heroId, setHeroId] = useState<string | null>(null)
+  const [pick, setPick] = useState<string | null>(null)
   const [drag, setDrag] = useState<Held | null>(null)
-  const [pick, setPick] = useState<Held | null>(null)
 
   if (!open) return null
+  const hero = roster.find((h) => h.id === heroId) ?? roster[0]
+  const selItem = inventory.find((i) => i.id === pick) ?? null
+  const compatible = (slot: HeroSlot) => !!drag && heroSlotsFor(drag.item.slot).includes(slot)
 
-  const active = drag ?? pick
-  const compatible = (slot: HeroSlot) => !!active && heroSlotsFor(active.item.slot).includes(slot)
+  const targetSlot = (item: Item): HeroSlot =>
+    item.slot === 'body' ? 'body' : item.slot === 'offHand' ? 'offHand' : 'mainHand'
 
-  const apply = (sentinelId: string, slot: HeroSlot, held: Held) => {
-    if (!heroSlotsFor(held.item.slot).includes(slot)) return
+  const applyToSlot = (slot: HeroSlot, held: Held) => {
+    if (!hero || !heroSlotsFor(held.item.slot).includes(slot)) return
     if (held.from !== 'inventory') unequip(held.from.sentinelId, held.from.slot)
-    equip(sentinelId, slot, held.item.id)
+    equip(hero.id, slot, held.item.id)
+    setPick(null)
   }
 
   const onDragStart = (item: Item, from: DragSource) => (e: DragEvent) => {
     setDrag({ item, from })
-    setPick(null)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', item.id)
   }
-  const allowDrop = (ok: boolean) => (e: DragEvent) => {
-    if (ok) e.preventDefault()
-  }
-  const dropOnSlot = (sentinelId: string, slot: HeroSlot) => (e: DragEvent) => {
+  const dropOnSlot = (slot: HeroSlot) => (e: DragEvent) => {
     e.preventDefault()
-    if (drag) apply(sentinelId, slot, drag)
+    if (drag) applyToSlot(slot, drag)
     setDrag(null)
-    setPick(null)
   }
-  const dropOnPool = (e: DragEvent) => {
+  const dropOnGrid = (e: DragEvent) => {
     e.preventDefault()
     if (drag && drag.from !== 'inventory') unequip(drag.from.sentinelId, drag.from.slot)
     setDrag(null)
-    setPick(null)
-  }
-
-  // Tap fallback: tap an equipped item to unequip; tap a pool item to select,
-  // then tap a compatible slot to place.
-  const tapItem = (item: Item, from: DragSource) => () => {
-    if (from !== 'inventory') {
-      unequip(from.sentinelId, from.slot)
-      setPick(null)
-      return
-    }
-    setPick(pick?.item.id === item.id ? null : { item, from })
-  }
-  const tapSlot = (sentinelId: string, slot: HeroSlot) => () => {
-    if (pick && compatible(slot)) apply(sentinelId, slot, pick)
-    setPick(null)
   }
 
   return (
     <div className="inv-scrim" onClick={close}>
-      <div className="inv-manager" onClick={(e) => e.stopPropagation()}>
-        <div className="inv-head">
-          <div className="inv-title">
-            <strong>Warband Inventory</strong>
-            <span className="inv-sub">Drag items onto a hero&apos;s slot to equip — or tap to select, then tap a slot.</span>
+      <div className="inv2" onClick={(e) => e.stopPropagation()}>
+        <div className="inv2-head">
+          <strong>Inventory</strong>
+          <div className="inv2-res">
+            <span className="gold-chip">⟡ {gold}</span>
+            {mode === 'endless' && <span className="dust-chip">◈ {dust}</span>}
           </div>
           <button className="detail-close" onClick={close} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <div className="inv-body">
-          <div className="inv-heroes">
-            {roster.map((hero) => (
-              <div className="inv-hero" key={hero.id}>
-                <div className="inv-hero-id">
-                  <span className="inv-hero-glyph" style={{ background: hero.color }}>
-                    {hero.name[0]}
+        <div className="inv2-body">
+          {/* ---- hero + equipped ---- */}
+          <div className="inv2-left">
+            <div className="inv2-heroes">
+              {roster.map((h) => (
+                <button
+                  key={h.id}
+                  className={`inv2-hero ${hero?.id === h.id ? 'active' : ''}`}
+                  style={{ borderColor: h.color }}
+                  onClick={() => {
+                    setHeroId(h.id)
+                    setPick(null)
+                  }}
+                >
+                  <span className="inv2-hero-glyph" style={{ background: h.color }}>
+                    {h.name[0]}
                   </span>
-                  <div className="inv-hero-text">
-                    <strong>{hero.name}</strong>
-                    <span>Lv {hero.level}</span>
-                  </div>
-                </div>
-                <div className="inv-slots">
-                  {HERO_SLOTS.map((slot) => {
-                    const worn = hero.equipment[slot]
-                    const ok = compatible(slot)
-                    return (
-                      <div
-                        key={slot}
-                        className={`inv-slot ${ok ? 'droppable' : ''} ${active && !ok ? 'dim' : ''}`}
-                        onDragOver={allowDrop(ok)}
-                        onDrop={dropOnSlot(hero.id, slot)}
-                        onClick={tapSlot(hero.id, slot)}
-                      >
-                        <span className="inv-slot-label">{HERO_SLOT_LABEL[slot]}</span>
-                        {worn ? (
-                          <div
-                            draggable
-                            onDragStart={onDragStart(worn, { sentinelId: hero.id, slot })}
-                            onDragEnd={() => setDrag(null)}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              tapItem(worn, { sentinelId: hero.id, slot })()
-                            }}
-                          >
-                            <ItemCard item={worn} compact />
-                          </div>
-                        ) : (
-                          <span className="inv-slot-empty">Empty</span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                  <span className="inv2-hero-name">{h.name}</span>
+                </button>
+              ))}
+            </div>
+            {hero && (
+              <div className="inv2-slots">
+                {HERO_SLOTS.map((slot) => {
+                  const worn = hero.equipment[slot]
+                  const ok = compatible(slot)
+                  return (
+                    <div
+                      key={slot}
+                      className={`inv2-slot ${ok ? 'droppable' : ''} ${drag && !ok ? 'dim' : ''}`}
+                      onDragOver={(e) => ok && e.preventDefault()}
+                      onDrop={dropOnSlot(slot)}
+                      onClick={() => {
+                        if (selItem && heroSlotsFor(selItem.slot).includes(slot)) applyToSlot(slot, { item: selItem, from: 'inventory' })
+                      }}
+                    >
+                      <span className="inv2-slot-label">{HERO_SLOT_LABEL[slot]}</span>
+                      {worn ? (
+                        <button
+                          className={`inv-tile rar-${worn.rarity} filled`}
+                          draggable
+                          onDragStart={onDragStart(worn, { sentinelId: hero.id, slot })}
+                          onDragEnd={() => setDrag(null)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            unequip(hero.id, slot)
+                          }}
+                          title={`${worn.name} — tap to unequip`}
+                        >
+                          <span className="inv-tile-tag">{tileTag(worn)}</span>
+                        </button>
+                      ) : (
+                        <span className="inv2-slot-empty">Empty</span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            ))}
+            )}
           </div>
 
-          <div className="inv-pool" onDragOver={allowDrop(!!drag)} onDrop={dropOnPool}>
-            <div className="inv-pool-head">Inventory ({inventory.length})</div>
-            {inventory.length === 0 && <div className="inv-empty">No unequipped items.</div>}
-            <div className="inv-pool-grid">
+          {/* ---- item grid ---- */}
+          <div className="inv2-right">
+            <div className="inv2-grid" onDragOver={(e) => drag && e.preventDefault()} onDrop={dropOnGrid}>
+              {inventory.length === 0 && <div className="inv-empty">No unequipped items.</div>}
               {inventory.map((item) => (
-                <div
+                <button
                   key={item.id}
-                  className={`inv-item ${pick?.item.id === item.id ? 'picked' : ''}`}
+                  className={`inv-tile rar-${item.rarity} ${pick === item.id ? 'picked' : ''}`}
                   draggable
                   onDragStart={onDragStart(item, 'inventory')}
                   onDragEnd={() => setDrag(null)}
-                  onClick={tapItem(item, 'inventory')}
+                  onClick={() => setPick(pick === item.id ? null : item.id)}
+                  title={item.name}
                 >
-                  <ItemCard item={item} compact />
-                </div>
+                  <span className="inv-tile-tag">{tileTag(item)}</span>
+                  {item.enchantments.some((e) => e.id.startsWith('cx_')) && <span className="inv-tile-curse">◆</span>}
+                </button>
               ))}
             </div>
+
+            {selItem && (
+              <div className="inv2-detail">
+                <ItemCard item={selItem} />
+                <div className="inv2-actions">
+                  {hero && (
+                    <button className="equip-btn" data-sfx="none" onClick={() => applyToSlot(targetSlot(selItem), { item: selItem, from: 'inventory' })}>
+                      Equip → {HERO_SLOT_LABEL[targetSlot(selItem)]}
+                    </button>
+                  )}
+                  <button
+                    className="dismantle-btn"
+                    data-sfx="none"
+                    onClick={() => {
+                      dismantle(selItem.id)
+                      setPick(null)
+                    }}
+                  >
+                    Dismantle +⟡{scrapGold(selItem)}
+                    {mode === 'endless' ? ` ◈${scrapDust(selItem)}` : ''}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="inv2-foot">
+          <span className="inv2-hint">Drag a tile onto a slot to equip · tap to inspect</span>
+          <div className="inv2-foot-btns">
+            <button className="inv2-sort" data-sfx="toggle" onClick={sortInv}>
+              Sort
+            </button>
+            <button className="inv2-close" onClick={close}>
+              Close
+            </button>
           </div>
         </div>
       </div>

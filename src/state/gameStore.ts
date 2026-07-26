@@ -12,6 +12,7 @@ import {
   HERO_SLOTS,
   heroSlotsFor,
   RARITY,
+  RARITY_ORDER,
   reforgeCost,
   reforgeDust,
   reforgeItem,
@@ -46,6 +47,23 @@ export const ENDLESS_START_DUST = 30
 export const ENDLESS_LIVES = 3
 
 const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
+/** Gold / dust recovered when dismantling an item, by rarity. */
+const SCRAP_GOLD: Record<ItemRarity, number> = { common: 8, rare: 18, epic: 40, legendary: 75, mythic: 130 }
+const SCRAP_DUST: Record<ItemRarity, number> = { common: 2, rare: 4, epic: 8, legendary: 14, mythic: 22 }
+export const scrapGold = (item: Item): number => SCRAP_GOLD[item.rarity]
+export const scrapDust = (item: Item): number => SCRAP_DUST[item.rarity]
+
+/** Inventory sort: rarity (highest first), then kind, then name. */
+function sortItems(items: Item[]): Item[] {
+  const kindOrder = ['oneHand', 'twoHand', 'offHand', 'body']
+  return [...items].sort((a, b) => {
+    const r = RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity)
+    if (r) return r
+    const k = kindOrder.indexOf(a.slot) - kindOrder.indexOf(b.slot)
+    if (k) return k
+    return a.name.localeCompare(b.name)
+  })
+}
 const RECRUIT_PRICE = 80
 
 // Compounding difficulty: a campaign run is one continuous escalating defense.
@@ -209,6 +227,8 @@ interface GameState {
   closeEquip: () => void
   equipItem: (sentinelId: string, slot: HeroSlot, itemId: string) => void
   unequipItem: (sentinelId: string, slot: HeroSlot) => void
+  sortInventory: () => void
+  dismantleItem: (itemId: string) => void
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
@@ -978,6 +998,20 @@ export const useGameStore = create<GameState>((set, get) => {
         x.id === sentinelId ? { ...x, equipment: { ...x.equipment, [slot]: null } } : x,
       )
       set({ roster: nextRoster, inventory: [...inventory, item] })
+    },
+
+    sortInventory: () => set({ inventory: sortItems(get().inventory) }),
+
+    dismantleItem: (itemId) => {
+      const { inventory, gold, dust, mode } = get()
+      const item = inventory.find((i) => i.id === itemId)
+      if (!item) return
+      set({
+        inventory: inventory.filter((i) => i.id !== itemId),
+        gold: gold + scrapGold(item),
+        dust: mode === 'endless' ? dust + scrapDust(item) : dust,
+      })
+      sfx('coin')
     },
 
     reforge: (itemId) => {
