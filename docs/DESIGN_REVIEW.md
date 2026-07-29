@@ -105,3 +105,30 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   A1 · Main Menu; the remaining 12 are state changes with no single trigger
   element (tab swaps, level-up, wave outcome) and stay documented as wires.
   Verified each lane with rendered screenshots as it was built.
+
+- **2026-07-29 — the Root Shell.** The flow board was the diagnosis: 40 screens,
+  four navigation patterns, and a battlefield six different sheets are allowed
+  to cover. Added two Figma sections proposing the fix. `03 · Root Shell` is one
+  390×844 screen in four fixed bands (Header 76 · Stage 388 · Selector 126 ·
+  Detail 254) with the four rules — one interaction, the Stage is never covered,
+  the pack is permanent, modals only for destructive confirms — plus a table of
+  the ten surfaces it retires and every shell part as a component set.
+  `04 · Contexts` renders the whole game in that shell: 21 states, each one
+  nothing but instances, so the claim is checkable rather than asserted.
+
+  Three defects caught by rendering rather than assuming. The run-end contexts
+  were cool blue-grey (`#1d232b` ground, `#5d6b7e` card) — pure invention that
+  broke the no-cool-chrome rule in `BRAND.md`; retinted onto the real
+  `.overlay-card` spec (`--panel` card, `--accent-dim` marks chip, the
+  `0 20px 60px` lift, and a 3px top rule in `--good` / `--bad` so victory and
+  defeat read apart at a glance). The DETAIL band's three sub-panels sat on top
+  of the band label in the anatomy diagram; pushed them below the caption.
+  Context 08 · Battle — wave live turned out to be a *detached* frame named
+  `Shell / Stage Band` — it looked right and undercut the whole section's
+  premise; promoted its extra content (enemies, health bars, damage number,
+  wave strip) into a real sixth variant, `Stage=Battlefield live`, and swapped
+  the context back onto an instance.
+
+  Open question recorded in `docs/FIGMA.md`: `Context Panel · Offer` carries 12
+  of the 21 contexts. It is doing too much and is the first thing to split if
+  the shell gets built.
