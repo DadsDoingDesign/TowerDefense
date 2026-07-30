@@ -1,23 +1,23 @@
 /**
- * Root Shell feature flag.
+ * Root Shell switch.
  *
- * The shell is a whole-app replacement for the screen-and-sheet navigation, so
- * it stays behind a flag until it is at parity. `?shell=1` turns it on and
- * sticks; `?shell=0` turns it back off. Default is off, so main ships the
- * screens it always has.
+ * The shell IS the game's UI — one screen, four bands (see docs/FIGMA.md).
+ * `?shell=0` falls back to the pre-shell screens in `src/ui/screens/` and
+ * sticks, `?shell=1` returns to the shell. The fallback exists only so the two
+ * can be compared while the shell settles; it is not a supported mode.
  */
 const KEY = 'fieldwatch-root-shell'
 
 export function rootShellEnabled(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') return true
   const param = new URLSearchParams(window.location.search).get('shell')
-  if (param === '1' || param === 'on') {
-    localStorage.setItem(KEY, '1')
-    return true
-  }
   if (param === '0' || param === 'off') {
-    localStorage.removeItem(KEY)
+    localStorage.setItem(KEY, '0')
     return false
   }
-  return localStorage.getItem(KEY) === '1'
+  if (param === '1' || param === 'on') {
+    localStorage.removeItem(KEY)
+    return true
+  }
+  return localStorage.getItem(KEY) !== '0'
 }

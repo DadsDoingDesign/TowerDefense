@@ -26,9 +26,10 @@ result. Append a short note to the review log when you're done.
   1–5); waves `src/game/data/waves.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
-- **Root Shell** (the one-screen redesign) in `src/ui/shell/`, behind `?shell=1`
-  — see `docs/FIGMA.md`. The legacy screens in `src/ui/screens/` are still the
-  default; both read the same store.
+- **Root Shell** — `src/ui/shell/` is **the UI the game loads**: one screen,
+  four bands, see `docs/FIGMA.md`. Mobile-only by design (520px cap). The old
+  screens in `src/ui/screens/` survive behind `?shell=0` purely for comparison
+  and are slated for deletion; both read the same store.
 
 ## Conventions
 

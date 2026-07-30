@@ -230,3 +230,14 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   verified with `?shell=0` that tapping a tower still opens `.upgrade-modal`
   with its `.upg-remove` action. 9/9 shell assertions still pass, item panel
   fits its band at 232px of 254, console clean in both modes.
+
+- **2026-07-30 — the shell becomes the game.** Flipped the default: the Root
+  Shell is what loads, and `?shell=0` is the escape hatch rather than `?shell=1`
+  being the way in. Building it flagged-off was the right call while it was
+  unproven, but leaving it that way meant launching the game still showed the
+  old screens — the redesign existed and nobody could see it. Fieldwatch is a
+  mobile app, so the shell's 520px cap is the whole story and no desktop layout
+  is planned. Verified a clean visitor with no query string and no localStorage
+  lands on the shell, that `?shell=0` falls back and sticks, and that `?shell=1`
+  returns. The pre-shell screens in `src/ui/screens/` are now dead weight kept
+  only for comparison.
