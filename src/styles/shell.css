@@ -294,6 +294,8 @@
 .sh-offer {
   position: relative;
   flex: 0 0 auto;
+  /* Hero names are one short word; generated item names are not
+     ("Common Beacon of Rallying"), so offer cards get more room. */
   width: 92px;
   display: flex;
   flex-direction: column;
@@ -307,6 +309,9 @@
   color: var(--text);
   text-align: center;
   cursor: pointer;
+}
+.sh-offer {
+  width: 106px;
 }
 .sh-hero.selected,
 .sh-offer.selected {
@@ -351,14 +356,19 @@
   font-weight: 700;
   line-height: 1.2;
   max-width: 100%;
-  /* Two lines rather than an ellipsis — "Upgrade Perks" and "Endless Watch"
-     both truncate to nonsense at this width. */
+  /* Wrap rather than ellipsis — "Upgrade Perks" and "Endless Watch" both
+     truncate to nonsense at this width. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   /* break-word, not anywhere: "Watchtower" must not split into "Watchtowe/r". */
   overflow-wrap: break-word;
+}
+/* Three lines clears the longest generated item names. */
+.sh-offer-name {
+  font-size: 11px;
+  -webkit-line-clamp: 3;
 }
 .sh-hero-name.muted {
   color: var(--muted-2);
@@ -750,9 +760,11 @@
   min-height: 48px;
   font-size: 13.5px;
 }
-:root[data-scale='large'] .sh-hero,
-:root[data-scale='large'] .sh-offer {
+:root[data-scale='large'] .sh-hero {
   width: 104px;
+}
+:root[data-scale='large'] .sh-offer {
+  width: 118px;
 }
 :root[data-contrast='high'] .sh-hero,
 :root[data-contrast='high'] .sh-offer,

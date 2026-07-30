@@ -177,3 +177,30 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   still a blocking modal (it is destructive, so rule four allows it), the
   Crossroads and post-wave reward boards are wired but unscreenshotted, and the
   shell is capped at 520px so desktop is still the legacy screens' job.
+
+- **2026-07-30 — shell remediation, verified by measurement.** Went back over
+  the six defects from the previous pass and checked each one against the
+  running app rather than trusting the fix. Wrote an assertion harness
+  (`scrollWidth` vs viewport, `scrollHeight` vs `clientHeight` for clipped text,
+  bounding-box overhang for the map node, real taps for the interaction ones)
+  so each fix has a number behind it instead of a glance. All six hold, 9/9
+  assertions pass, console clean.
+
+  Two things that pass turned up which the previous pass had let through:
+
+  - **The map's bottom padding shipped unverified.** It went in after the last
+    capture, so the commit claimed a fix nobody had looked at. It does hold —
+    50px of clearance between the frontier node and the band edge — but that
+    was luck, not process. Re-render *after* the last edit, not before it.
+  - **Offer-card truncation was worse than judged.** The previous pass called
+    "Common Beacon of…" acceptable because the Context panel carries the full
+    name. Measured, 3 of 4 real merchant items clipped — the selector was
+    unreadable for most generated gear. Offer cards widened to 106px with a
+    three-line clamp at 11px (heroes stay 92px/two lines; their names are one
+    short word). Now 0 of 6 clip, and the tallest card is 105px inside the
+    126px band.
+
+  Also rendered the two boards the last pass left unscreenshotted: Crossroads
+  (recruit + mutate offers, "Take the recruit") and the post-wave reward pick
+  ("Take it"). Both correct, no changes needed. Legacy path re-confirmed with
+  `?shell=0` — no `.shell` in the DOM, real `.battle-screen`, clean console.
