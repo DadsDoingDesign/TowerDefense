@@ -33,6 +33,19 @@ const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
 
 export type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'
+
+/**
+ * Root Shell selection. One selection drives the Context panel for every kind
+ * of thing you can tap — heroes, items, offers — so the interaction is learned
+ * once. See docs/FIGMA.md § The Root Shell.
+ */
+export type HeroTab = 'stats' | 'upgrades' | 'tactics'
+export type ShellSelection =
+  | { kind: 'hero'; id: string }
+  | { kind: 'item'; id: string }
+  | { kind: 'offer'; id: string }
+  | null
+
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
 export type EventKind = 'merchant' | 'shrine' | 'recruit'
@@ -183,6 +196,14 @@ interface GameState {
   inventoryOpen: boolean
   evolutionQueue: string[]
 
+  // UI — Root Shell (behind the `shell` flag; unused by the legacy screens)
+  /** The one thing currently filling the Context panel. */
+  shellSelection: ShellSelection
+  /** Which tab a selected hero shows in the Context panel. */
+  heroTab: HeroTab
+  /** Gear slot awaiting an item — the Pack column filters to what fits. */
+  gearSlot: { sentinelId: string; slot: HeroSlot } | null
+
   // Actions — run/map
   newRun: () => void
   pickStartingHero: (archetype: Archetype) => void
@@ -238,7 +259,19 @@ interface GameState {
   buyTowerUpgrade: (sentinelId: string, pathId: string) => void
   openInventory: () => void
   closeInventory: () => void
+  // Actions — Root Shell
+  shellSelect: (sel: ShellSelection) => void
+  setHeroTab: (tab: HeroTab) => void
+  activateGearSlot: (sentinelId: string, slot: HeroSlot) => void
+  clearGearSlot: () => void
 }
+
+/** Cleared whenever the shell changes subject, so nothing leaks between contexts. */
+const CLEAR_SHELL = {
+  shellSelection: null as ShellSelection,
+  heroTab: 'stats' as HeroTab,
+  gearSlot: null,
+} satisfies Partial<GameState>
 
 function emptyPlacements(map: GameMap): Placement {
   const p: Placement = {}
@@ -371,6 +404,7 @@ export const useGameStore = create<GameState>((set, get) => {
     upgradeTarget: null,
     inventoryOpen: false,
     evolutionQueue: [],
+    ...CLEAR_SHELL,
 
     newRun: () => {
       const b = useMetaStore.getState().bonuses()
@@ -413,6 +447,7 @@ export const useGameStore = create<GameState>((set, get) => {
         equipContext: null,
         upgradeTarget: null,
         evolutionQueue: [],
+        ...CLEAR_SHELL,
       })
     },
 
@@ -434,6 +469,9 @@ export const useGameStore = create<GameState>((set, get) => {
         mode: 'endless',
         screen: 'endless',
         runPhase: 'active',
+        // A campaign event left dangling here would outlive the run it belonged
+        // to and shadow the endless room.
+        event: null,
         battleMap: FIRST_MAP,
         roster: buildStartingRoster(b),
         placements: emptyPlacements(FIRST_MAP),
@@ -472,6 +510,7 @@ export const useGameStore = create<GameState>((set, get) => {
         equipContext: null,
         upgradeTarget: null,
         evolutionQueue: [],
+        ...CLEAR_SHELL,
       })
     },
 
@@ -508,6 +547,7 @@ export const useGameStore = create<GameState>((set, get) => {
         lastResult: null,
         lastLoot: [],
         hud: { ...freshHud(), baseHp, maxBaseHp, enemiesTotal: wave.spawns.length },
+        ...CLEAR_SHELL,
       })
     },
 
@@ -609,6 +649,7 @@ export const useGameStore = create<GameState>((set, get) => {
         lastResult: null,
         lastLoot: [],
         hud: { ...freshHud(), baseHp, maxBaseHp, enemiesTotal: wave.spawns.length },
+        ...CLEAR_SHELL,
       })
     },
 
@@ -859,6 +900,7 @@ export const useGameStore = create<GameState>((set, get) => {
         lastResult: null,
         lastLoot: [],
         battlePhase: 'setup',
+        ...CLEAR_SHELL,
       })
     },
 
@@ -891,7 +933,7 @@ export const useGameStore = create<GameState>((set, get) => {
     continueAfterWave: () => {
       // Endless returns to the Rooms screen; campaign returns to the node map.
       const dest = get().mode === 'endless' ? 'endless' : 'map'
-      set({ screen: dest, activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], reward: null, battlePhase: 'setup' })
+      set({ screen: dest, activeNodeId: null, currentWave: null, lastResult: null, lastLoot: [], reward: null, battlePhase: 'setup', ...CLEAR_SHELL })
     },
 
     // ---- events ----
@@ -1046,6 +1088,26 @@ export const useGameStore = create<GameState>((set, get) => {
     openInventory: () => set({ inventoryOpen: true }),
     closeInventory: () => set({ inventoryOpen: false }),
 
+    // ---- Root Shell ----
+    // Selecting a hero is also what arms it for placement, so the Selector's
+    // one gesture both fills the Context panel and picks up the tower.
+    shellSelect: (sel) => {
+      const prev = get().shellSelection
+      const same = prev && sel && prev.kind === sel.kind && prev.id === sel.id
+      const next = same ? null : sel
+      set({
+        shellSelection: next,
+        heroTab: next?.kind === 'hero' && prev?.kind === 'hero' && prev.id === next.id ? get().heroTab : 'stats',
+        gearSlot: null,
+        selectedSentinelId: next?.kind === 'hero' ? next.id : null,
+      })
+    },
+
+    setHeroTab: (tab) => set({ heroTab: tab, gearSlot: null }),
+
+    activateGearSlot: (sentinelId, slot) => set({ gearSlot: { sentinelId, slot } }),
+    clearGearSlot: () => set({ gearSlot: null }),
+
     buyTowerUpgrade: (sentinelId, pathId) => {
       const { roster, gold } = get()
       const s = roster.find((x) => x.id === sentinelId)
@@ -1086,6 +1148,7 @@ function completeNode(
     shrineOffer: null,
     recruitOptions: [],
     screen: 'map',
+    ...CLEAR_SHELL,
   })
 }
 

@@ -116,6 +116,30 @@ Item Fusable · Item Equipped · Offer · Empty) · `Shell / Hero Slot` (6 state
 
 Every context below is those instances and nothing else — no bespoke frames.
 
+### It is built
+
+The shell is implemented in `src/ui/shell/` behind a flag — **`?shell=1`** turns
+it on and sticks, `?shell=0` turns it back off. Default is off, so `main` still
+ships the screens it always has and the two can be compared side by side.
+
+| File | Role |
+| --- | --- |
+| `RootShell.tsx` | The four-band frame |
+| `context.ts` | Game state → which subject each band shows |
+| `offers.ts` | Everything choosable, normalised to one `Offer` shape |
+| `HeaderBand` · `StageBand` · `SelectorBand` · `DetailBand` | The bands |
+| `styles/shell.css` | Band geometry and the shell's own components |
+
+The Stage reuses the real `BattleCanvas` and `RunMapView`, so the battlefield
+and the map are the shipped render path, not a copy.
+
+One deviation from the spec, made while building it: reversible navigation
+(back, leave, walk on, open a submenu) acts on the card tap instead of
+select-then-confirm. Rule one exists so consequential choices show their detail
+before you commit; a back button has no detail worth reading and the second tap
+was pure friction. Offers opt in with `immediate`, and anything that spends,
+grants or destroys is forbidden from setting it.
+
 ## Contexts — `?node-id=2062-4739`
 
 Twenty-one states of the one shell, proving it carries the whole game. Same four

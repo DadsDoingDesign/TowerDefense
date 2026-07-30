@@ -132,3 +132,48 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Open question recorded in `docs/FIGMA.md`: `Context Panel · Offer` carries 12
   of the 21 contexts. It is doing too much and is the first thing to split if
   the shell gets built.
+
+- **2026-07-29 — the Root Shell, built.** Implemented the proposal from the
+  Figma sections as real code in `src/ui/shell/`, behind `?shell=1` so `main`
+  keeps shipping the screens it always has and the two can be compared. The
+  four bands are a CSS grid; the Stage reuses the real `BattleCanvas` and
+  `RunMapView` rather than a copy, so the battlefield and map are the shipped
+  render path. The load-bearing abstraction is `Offer` — merchant stock, shrine
+  terms, recruits, hero picks, reward cards, endless rooms, perks and settings
+  all normalise to one shape, which is what lets a single Selector row and a
+  single Context mode serve twenty-two contexts.
+
+  Verified by driving the real app in Playwright at 390×844 and capturing all
+  22 contexts as a contact sheet, twice over. Six defects came out of that,
+  none of which were visible from reading the code:
+
+  1. **The Selector's scrolling row widened the whole grid**, pushing the Pack
+     column off-screen in every context. `.shell` needed an explicit
+     `grid-template-columns: minmax(0, 1fr)` — without it the implicit column
+     sizes to max-content.
+  2. **A finished run could not be exited.** Contexts 17/18 keep the party in
+     the Selector, so the "Bank and return" offer had nowhere to be tapped.
+     The run-end actions moved into the Context panel's default state.
+  3. **Endless rooms showed the wrong offers** — the endless merchant listed
+     recruits. Root cause was a real store bug, not a shell one: `startEndless`
+     never cleared `event`, so a campaign event outlived its run and shadowed
+     the room. Fixed in the store; the shell also now treats `endlessRoom` as
+     authoritative in endless mode.
+  4. **Going back took two taps**, because every card followed the
+     tap-to-fill-the-panel rule. Added `immediate` for reversible navigation
+     only — recorded in `docs/FIGMA.md` as a deliberate deviation from rule one.
+  5. Card titles truncated to nonsense ("Upgrade …", "Endless …") and then,
+     after switching to two-line wrapping, split mid-word into "Watchtowe/r".
+     `break-word`, not `anywhere`.
+  6. The title stage spread its wordmark and tagline to opposite ends of the
+     band — `place-items: center` on a two-child grid centres each row, not the
+     pair.
+
+  Confirmed the flag actually protects `main`: with `?shell=0` there is no
+  `.shell` in the DOM, the legacy `.battle-screen` renders, and the console is
+  clean.
+
+  Not yet at parity, and deliberately out of this pass: the evolution choice is
+  still a blocking modal (it is destructive, so rule four allows it), the
+  Crossroads and post-wave reward boards are wired but unscreenshotted, and the
+  shell is capped at 520px so desktop is still the legacy screens' job.

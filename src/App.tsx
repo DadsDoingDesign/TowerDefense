@@ -12,7 +12,11 @@ import { InventoryManager } from './ui/components/InventoryManager'
 import { RunEndOverlay } from './ui/components/RunEndOverlay'
 import { SentinelDetail } from './ui/components/SentinelDetail'
 import { TowerUpgradePanel } from './ui/components/TowerUpgradePanel'
+import { RootShell } from './ui/shell/RootShell'
+import { rootShellEnabled } from './ui/shell/flag'
 import './styles/app.css'
+
+const SHELL = rootShellEnabled()
 
 export default function App() {
   const screen = useGameStore((s) => s.screen)
@@ -37,6 +41,16 @@ export default function App() {
     document.addEventListener('click', onClick)
     return () => document.removeEventListener('click', onClick)
   }, [])
+
+  // The Root Shell replaces the whole screen-and-sheet stack, so it is an
+  // either/or with the legacy screens rather than something layered on top.
+  if (SHELL) {
+    return (
+      <div className="app-root shell-root">
+        <RootShell />
+      </div>
+    )
+  }
 
   return (
     <div className="app-root">

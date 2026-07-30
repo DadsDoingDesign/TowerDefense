@@ -1,0 +1,775 @@
+/**
+ * Root Shell — four bands, fixed. Header 76 · Stage 388 · Selector 126 ·
+ * Detail 254 at the 390×844 baseline; the Stage takes any extra height so it
+ * grows on taller screens and the other three stay put.
+ */
+.shell {
+  display: grid;
+  /* An explicit single column: without it the Selector's scrolling row sizes
+     to max-content and drags the other three bands off the viewport. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(180px, 1fr) auto auto;
+  height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow: hidden;
+}
+.shell > * {
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- band 1 */
+.sh-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  min-height: 76px;
+}
+.sh-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sh-header-row.sub {
+  justify-content: space-between;
+}
+.sh-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-size: 15px;
+}
+.sh-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sh-chip.gold {
+  color: var(--accent);
+  border-color: rgba(224, 172, 76, 0.28);
+}
+.sh-chip.teal {
+  color: var(--teal);
+  border-color: var(--teal-dim);
+}
+.sh-chip.threat {
+  color: var(--bad);
+  border-color: rgba(208, 86, 58, 0.3);
+}
+.sh-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.sh-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sh-base {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.sh-base-glyph {
+  color: var(--muted-2);
+  font-size: 11px;
+}
+.sh-base-bar {
+  flex: 1;
+  max-width: 160px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.sh-base-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+.sh-base-val {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sh-res {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------------- band 2 */
+.sh-stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.sh-stage .battle-canvas-wrap {
+  position: absolute;
+  inset: 0;
+}
+.sh-stage.stage-map .run-map-scroll {
+  height: 100%;
+  overflow-y: auto;
+  /* Keeps the frontier node off the band edge when the map scrolls to its end. */
+  padding-bottom: 28px;
+}
+
+.sh-wave-strip {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: rgba(20, 12, 6, 0.72);
+  border-bottom: 1px solid var(--line);
+}
+.sh-wave-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+.sh-wave-bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.sh-wave-fill {
+  display: block;
+  height: 100%;
+  background: var(--good);
+  transition: width 0.2s linear;
+}
+.sh-speed {
+  min-width: 34px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sh-board,
+.sh-result,
+.sh-title {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+.sh-board-card {
+  width: min(330px, 100%);
+  text-align: center;
+  padding: 22px 20px;
+  border-radius: 14px;
+  background: var(--panel-3);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+.sh-board-glyph {
+  color: var(--accent);
+  font-size: 20px;
+}
+.sh-board-card h2 {
+  margin: 6px 0 6px;
+  font-size: 22px;
+  color: var(--text);
+}
+.sh-board-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sh-title h1 {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 10vw, 44px);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1.05;
+}
+.sh-title p {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Run end — mirrors .overlay-card, but as a stage subject, not a modal. */
+.sh-result-card {
+  position: relative;
+  width: min(330px, 100%);
+  text-align: center;
+  padding: 24px 20px 20px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.sh-result-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--good);
+}
+.sh-result-card.loss::before {
+  background: var(--bad);
+}
+.sh-result-glyph {
+  font-size: 26px;
+  color: var(--accent);
+}
+.sh-result-card h2 {
+  margin: 6px 0 8px;
+  font-size: 24px;
+}
+.sh-result-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sh-result-marks {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(224, 172, 76, 0.28);
+  font-size: 13px;
+}
+.sh-result-marks strong {
+  color: var(--accent);
+  font-size: 17px;
+}
+
+/* ---------------------------------------------------------------- band 3 */
+.sh-selector {
+  height: 126px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.sh-selector-row {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+  padding: 10px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.sh-selector-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sh-hero,
+.sh-offer {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--rail, var(--line-strong));
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+.sh-hero.selected,
+.sh-offer.selected {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sh-hero.placed {
+  background: var(--panel-2);
+}
+.sh-hero.empty {
+  border-style: dashed;
+  border-top-style: dashed;
+  opacity: 0.5;
+  cursor: default;
+}
+.sh-hero-glyph {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 14px;
+  color: #1b1409;
+}
+.sh-hero-glyph.ghost {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted-2);
+}
+.sh-hero-star {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 11px;
+  color: var(--accent);
+}
+.sh-hero-name,
+.sh-offer-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  max-width: 100%;
+  /* Two lines rather than an ellipsis — "Upgrade Perks" and "Endless Watch"
+     both truncate to nonsense at this width. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* break-word, not anywhere: "Watchtower" must not split into "Watchtowe/r". */
+  overflow-wrap: break-word;
+}
+.sh-hero-name.muted {
+  color: var(--muted-2);
+}
+.sh-hero-sub,
+.sh-offer-sub {
+  font-size: 10px;
+  color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-hero-xp {
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.sh-hero-xp-fill {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+}
+.sh-hero-tag {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.sh-hero-tag.on {
+  color: var(--good);
+}
+.sh-hero-tag.arm {
+  color: var(--accent);
+}
+.sh-offer-glyph {
+  font-size: 16px;
+  color: var(--accent);
+}
+.sh-offer-cost {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+
+/* ---------------------------------------------------------------- band 4 */
+.sh-detail {
+  height: 254px;
+  display: grid;
+  grid-template-columns: 1fr 78px 100px;
+  gap: 8px;
+  padding: 10px 10px 12px;
+  background: var(--panel);
+}
+.sh-context,
+.sh-gear,
+.sh-pack {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+.sh-context.empty {
+  display: grid;
+  place-items: center;
+}
+.sh-empty-hint {
+  color: var(--muted-2);
+  font-size: 12px;
+  text-align: center;
+  padding: 0 10px;
+}
+.sh-context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sh-context-head strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-context-sub {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.sh-context-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sh-context-foot {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sh-line {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.sh-line.muted {
+  color: var(--muted);
+}
+.sh-line.accent {
+  color: var(--accent);
+}
+
+.sh-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 2px;
+  margin-bottom: 7px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.sh-tab {
+  flex: 1;
+  padding: 5px 4px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.sh-tab.active {
+  background: var(--accent);
+  color: #1b1409;
+}
+
+.sh-statgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.sh-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+.sh-cell-label {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sh-cell-pair {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-meter {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.sh-meter-label {
+  font-size: 10px;
+  color: var(--muted);
+}
+.sh-meter-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.sh-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+}
+.sh-meter-val {
+  font-size: 10px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-upg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+.sh-upg-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sh-upg-head strong {
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.sh-pips {
+  display: flex;
+  gap: 3px;
+}
+.sh-pip {
+  width: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+.sh-pip.on {
+  background: var(--accent);
+}
+
+.sh-seg {
+  display: flex;
+  gap: 3px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.sh-seg-btn {
+  flex: 1;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.sh-seg-btn.active {
+  background: var(--teal);
+  color: #16262c;
+}
+.sh-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: left;
+}
+.sh-check.on {
+  color: var(--text);
+  border-color: var(--teal-dim);
+}
+
+.sh-btn {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sh-btn.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #16262c;
+}
+.sh-btn.small {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.sh-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sh-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+  margin-bottom: 6px;
+}
+.sh-col-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-gear-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+.sh-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--rail, var(--line));
+  background: var(--panel-2);
+  color: var(--muted);
+  min-height: 44px;
+  cursor: pointer;
+}
+.sh-slot.empty {
+  border-style: dashed;
+}
+.sh-slot.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--accent);
+}
+.sh-slot-label {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sh-slot-mark {
+  font-size: 14px;
+  color: var(--rail, var(--muted-2));
+}
+
+.sh-pack.filtering {
+  border-color: var(--accent);
+}
+.sh-pack-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  align-content: start;
+}
+.sh-tile {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--rail, var(--line));
+  background: var(--panel-2);
+  color: var(--rail, var(--text));
+  font-size: 15px;
+  cursor: pointer;
+}
+.sh-tile.selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.sh-pack-empty {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--muted-2);
+  text-align: center;
+  padding-top: 12px;
+}
+
+/* Accessibility: the large-UI setting lifts the touch floor everywhere. */
+:root[data-scale='large'] .sh-btn {
+  min-height: 48px;
+  font-size: 13.5px;
+}
+:root[data-scale='large'] .sh-hero,
+:root[data-scale='large'] .sh-offer {
+  width: 104px;
+}
+:root[data-contrast='high'] .sh-hero,
+:root[data-contrast='high'] .sh-offer,
+:root[data-contrast='high'] .sh-context,
+:root[data-contrast='high'] .sh-gear,
+:root[data-contrast='high'] .sh-pack {
+  border-color: var(--text);
+}
+
+/* Reversible navigation cards act on the tap, so they read quieter than the
+   consequential offers sitting beside them. */
+.sh-offer.nav {
+  background: transparent;
+  border-style: dashed;
+  border-top-color: var(--line);
+}
+.sh-offer.nav .sh-offer-name {
+  color: var(--muted);
+  font-weight: 600;
+}
