@@ -260,6 +260,8 @@ interface GameState {
   openInventory: () => void
   closeInventory: () => void
   // Actions — Root Shell
+  /** Tapping a deployed tower on the field. Drives both UIs. */
+  focusTower: (sentinelId: string) => void
   shellSelect: (sel: ShellSelection) => void
   setHeroTab: (tab: HeroTab) => void
   activateGearSlot: (sentinelId: string, slot: HeroSlot) => void
@@ -1089,6 +1091,18 @@ export const useGameStore = create<GameState>((set, get) => {
     closeInventory: () => set({ inventoryOpen: false }),
 
     // ---- Root Shell ----
+    // Tapping a placed tower on the field. The legacy UI opens its upgrade
+    // modal off `upgradeTarget`; the shell puts the same hero in the Context
+    // panel on its Upgrades tab. Deliberately leaves `selectedSentinelId`
+    // alone — tapping a tower inspects it, it does not pick it up.
+    focusTower: (sentinelId) =>
+      set({
+        upgradeTarget: sentinelId,
+        shellSelection: { kind: 'hero', id: sentinelId },
+        heroTab: 'upgrades',
+        gearSlot: null,
+      }),
+
     // Selecting a hero is also what arms it for placement, so the Selector's
     // one gesture both fills the Context panel and picks up the tower.
     shellSelect: (sel) => {

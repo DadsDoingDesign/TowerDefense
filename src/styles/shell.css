@@ -785,3 +785,31 @@
   color: var(--muted);
   font-weight: 600;
 }
+
+/* Crafting sits with the item, not in a Forge screen — reachable wherever you
+   can select gear. */
+.sh-craft {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+.sh-craft .sh-btn.small {
+  flex: 1;
+  min-height: 28px;
+  font-size: 10.5px;
+  padding: 4px 6px;
+}
+.sh-col-btn {
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0 5px;
+  border: none;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sh-col-btn:hover {
+  color: var(--accent);
+}

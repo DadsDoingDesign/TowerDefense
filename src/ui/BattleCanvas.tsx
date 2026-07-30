@@ -176,8 +176,9 @@ export function BattleCanvas() {
       if (st.selectedSentinelId) {
         st.placeOnSlot(slotId)
       } else if (occupied) {
-        // Clicking a placed tower opens its upgrade panel (removal lives there).
-        st.openUpgrade(occupied)
+        // Clicking a placed tower inspects it — the legacy upgrade modal, or
+        // the shell's Context panel on its Upgrades tab.
+        st.focusTower(occupied)
       }
     }
 

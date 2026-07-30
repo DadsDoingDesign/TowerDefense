@@ -1,5 +1,16 @@
 import type { CSSProperties } from 'react'
-import { describeBase, HERO_SLOTS, HERO_SLOT_LABEL, RARITY, heroSlotsFor } from '../../game/data/items'
+import {
+  canUpgrade,
+  describeBase,
+  HERO_SLOTS,
+  HERO_SLOT_LABEL,
+  RARITY,
+  heroSlotsFor,
+  reforgeCost,
+  reforgeDust,
+  upgradeCost,
+  upgradeDust,
+} from '../../game/data/items'
 import { describeEnchant } from '../../game/data/describe'
 import { UPGRADE_PATHS, milestoneForLevel } from '../../game/data/upgradeTree'
 import { computeCombat, effectiveUpgradeLevels } from '../../game/engine/combat'
@@ -161,7 +172,16 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
 function HeroPanel({ hero }: { hero: Sentinel }) {
   const tab = useGameStore((s) => s.heroTab)
   const setHeroTab = useGameStore((s) => s.setHeroTab)
+  const placements = useGameStore((s) => s.placements)
+  const battlePhase = useGameStore((s) => s.battlePhase)
+  const clearSlot = useGameStore((s) => s.clearSlot)
+  const shellSelect = useGameStore((s) => s.shellSelect)
   const profile = computeCombat(hero)
+
+  // Undeploy lived on the old upgrade modal's footer; without it here a placed
+  // hero can be moved but never taken off the field.
+  const slotId = Object.keys(placements).find((id) => placements[id] === hero.id)
+  const canUndeploy = !!slotId && battlePhase === 'setup'
 
   const TABS: { id: HeroTab; label: string }[] = [
     { id: 'stats', label: 'Stats' },
@@ -194,6 +214,19 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
         {tab === 'upgrades' && <HeroUpgrades hero={hero} />}
         {tab === 'tactics' && <HeroTactics />}
       </div>
+      {canUndeploy && (
+        <div className="sh-context-foot">
+          <button
+            className="sh-btn"
+            onClick={() => {
+              clearSlot(slotId)
+              shellSelect(null)
+            }}
+          >
+            Undeploy
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -321,10 +354,29 @@ function ItemPanel({ item }: { item: Item }) {
   const dismantleItem = useGameStore((s) => s.dismantleItem)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
+  const mode = useGameStore((s) => s.mode)
+  const gold = useGameStore((s) => s.gold)
+  const dust = useGameStore((s) => s.dust)
+  const reforge = useGameStore((s) => s.reforge)
+  const upgradeItemAction = useGameStore((s) => s.upgradeItem)
+  const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
+  const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
 
   // Where is it — loose in the pack, or worn by someone?
   const wearer = roster.find((s) => HERO_SLOTS.some((hs) => s.equipment[hs]?.id === item.id))
   const wornSlot = wearer ? HERO_SLOTS.find((hs) => wearer.equipment[hs]?.id === item.id) : undefined
+
+  // Crafting is gold in the campaign and dust in endless — the Forge room is
+  // only one place you can reach an item, so the actions belong on the item.
+  const endless = mode === 'endless'
+  const craft = {
+    currency: endless ? '◈' : '⟡',
+    purse: endless ? dust : gold,
+    reforgeCost: endless ? reforgeDust(item) : reforgeCost(item),
+    upgradeCost: endless ? upgradeDust(item) : upgradeCost(item),
+    doReforge: () => (endless ? forgeReforge(item.id) : reforge(item.id)),
+    doUpgrade: () => (endless ? forgeUpgrade(item.id) : upgradeItemAction(item.id)),
+  }
 
   return (
     <div className="sh-context">
@@ -348,6 +400,25 @@ function ItemPanel({ item }: { item: Item }) {
             Worn by {wearer.name} · {wornSlot ? HERO_SLOT_LABEL[wornSlot] : ''}
           </p>
         )}
+        <div className="sh-craft">
+          <button
+            className="sh-btn small"
+            disabled={craft.purse < craft.reforgeCost}
+            onClick={craft.doReforge}
+            title="Reroll this item's enchantments"
+          >
+            Reforge {craft.currency}
+            {craft.reforgeCost}
+          </button>
+          <button
+            className="sh-btn small"
+            disabled={!canUpgrade(item) || craft.purse < craft.upgradeCost}
+            onClick={craft.doUpgrade}
+            title="Raise this item's rarity"
+          >
+            {canUpgrade(item) ? `Raise ${craft.currency}${craft.upgradeCost}` : 'Max rarity'}
+          </button>
+        </div>
       </div>
       <div className="sh-context-foot">
         {gearSlot && !wearer && heroSlotsFor(item.slot).includes(gearSlot.slot) ? (
@@ -475,6 +546,7 @@ function PackColumn() {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const equipItem = useGameStore((s) => s.equipItem)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
+  const sortInventory = useGameStore((s) => s.sortInventory)
 
   // With a gear slot armed the pack filters to what fits it — that replaces the
   // whole equip drawer.
@@ -485,6 +557,9 @@ function PackColumn() {
     <div className={`sh-pack ${gearSlot ? 'filtering' : ''}`}>
       <div className="sh-col-head">
         <span>PACK</span>
+        <button className="sh-col-btn" onClick={sortInventory} title="Sort by rarity, then kind" aria-label="Sort pack">
+          ⇅
+        </button>
         <span className="sh-col-count">
           {shown.length}/{inventory.length}
         </span>

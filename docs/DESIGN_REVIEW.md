@@ -204,3 +204,29 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   (recruit + mutate offers, "Take the recruit") and the post-wave reward pick
   ("Take it"). Both correct, no changes needed. Legacy path re-confirmed with
   `?shell=0` — no `.shell` in the DOM, real `.battle-screen`, clean console.
+
+- **2026-07-30 — shell/legacy parity audit.** Diffed the store's action surface
+  against what `src/ui/shell/` actually calls, then confirmed each suspected
+  hole by driving the app rather than trusting the grep. Four actions were
+  unreachable, and one of them was a silent dead end:
+
+  - **Tapping a deployed tower did nothing.** `BattleCanvas` called
+    `openUpgrade`, which only sets `upgradeTarget` — the legacy modal reads it,
+    the shell does not. Measured: after the tap `upgradeTarget` was set and no
+    UI changed at all. Replaced with a `focusTower` action that drives both —
+    legacy still opens its modal, the shell puts that hero in the Context panel
+    on its Upgrades tab. It deliberately leaves `selectedSentinelId` alone:
+    tapping a tower inspects it, it does not pick it up.
+  - **A deployed hero could never be taken off the field.** Undeploy lived on
+    the old upgrade modal's footer and had no home in the shell. Added to the
+    hero panel, setup phase only.
+  - **Campaign reforge / raise-rarity were unreachable** — only the endless
+    Forge room exposed crafting. They now sit on the item panel itself, gold in
+    campaign and dust in endless, which is more honest than a Forge screen
+    given the shell can select an item from anywhere.
+  - **Sort pack** had no control; added to the Pack column header.
+
+  Regression-checked the shared code: `BattleCanvas` is used by both UIs, so
+  verified with `?shell=0` that tapping a tower still opens `.upgrade-modal`
+  with its `.upg-remove` action. 9/9 shell assertions still pass, item panel
+  fits its band at 232px of 254, console clean in both modes.
