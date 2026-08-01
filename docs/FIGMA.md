@@ -31,6 +31,8 @@ disagree, the shipped app is right and the shell is the argument.
 | `02 · Mobile Flows — every path` | All 40 mobile screens in 5 lanes, wired with 68 labelled paths. |
 | `03 · Root Shell — anatomy & parts` | The four-band shell: band anatomy, the four rules, the surfaces it retires, and every shell part as a component set. |
 | `04 · Contexts — the whole app in one shell` | The same shell in 21 states — the whole game, no navigation. |
+| `Mobile UI Layout, Spacing, Gaps, Fonts, Colors` | **The current design direction.** The Watchtower menu and hero pick, drawn directly — serif display type, the 32/16 rhythm, the pinned CTA. |
+| `05 · Built — the shipped mobile UI` | What the code actually renders: the token plate, plus the six screens extrapolated from the two designed ones. |
 
 ### Mobile chrome components
 

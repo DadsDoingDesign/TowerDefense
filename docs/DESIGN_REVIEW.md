@@ -292,3 +292,12 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Verified all 22 contexts at 390×844 with the serif confirmed loaded, page
   height 844, CTA 64px sitting 32px off the bottom, and the legacy path still
   intact under `?shell=0`.
+
+  **Synced back to Figma.** Added `05 · Built — the shipped mobile UI` to the
+  `_Mobile first UI` page: a token plate recording the system as implemented,
+  and the six screens that were extrapolated rather than designed (merchant,
+  shrine, endless rooms, spoils, run end, perks) so the extrapolation is
+  reviewable in the file rather than only in the app. One defect caught by
+  rendering the section: `primaryAxisSizingMode = 'AUTO'` on a horizontal band
+  hugs its *width*, so the CTA bands collapsed to 10px and clipped; they need
+  `layoutSizingVertical = 'HUG'`.
