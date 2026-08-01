@@ -32,7 +32,15 @@ disagree, the shipped app is right and the shell is the argument.
 | `03 · Root Shell — anatomy & parts` | The four-band shell: band anatomy, the four rules, the surfaces it retires, and every shell part as a component set. |
 | `04 · Contexts — the whole app in one shell` | The same shell in 21 states — the whole game, no navigation. |
 | `Mobile UI Layout, Spacing, Gaps, Fonts, Colors` | **The current design direction.** The Watchtower menu and hero pick, drawn directly — serif display type, the 32/16 rhythm, the pinned CTA. |
-| `05 · Built — the shipped mobile UI` | What the code actually renders: the token plate, plus the six screens extrapolated from the two designed ones. |
+| `05 · As built — every screen` | A one-for-one mirror of the running app: the token plate plus all 21 screens, rebuilt as editable frames. |
+
+Sections `01`–`04` are history — the audit, the flow board, and the Root Shell
+proposal. **`05 · As built` is the one to trust**: it is reconciled against real
+390×844 captures of the running app, so where it and an older section disagree,
+`05` is right and the older one is a superseded step.
+
+There is also a **`Working section | DO NOT BUILD`** on the page. Nothing is
+implemented from it, per its own label.
 
 ### Mobile chrome components
 

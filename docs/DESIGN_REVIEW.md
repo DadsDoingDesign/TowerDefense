@@ -301,3 +301,20 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   rendering the section: `primaryAxisSizingMode = 'AUTO'` on a horizontal band
   hugs its *width*, so the CTA bands collapsed to 10px and clipped; they need
   `layoutSizingVertical = 'HUG'`.
+
+- **2026-08-01 — Figma reconciled to the app.** Rebuilt `05` as `As built —
+  every screen`: all 21 screens the app renders, as editable frames, plus the
+  token plate. Pages for everything except battle and the run map, which keep
+  the four bands; the battlefield reuses the existing `Shell / Stage Band`
+  variants so the meadow is the same art the canvas draws.
+
+  Two notes on method. Uploading the real 390×844 captures as image fills would
+  have been the most faithful reconciliation, but the sandbox proxy blocks
+  Figma's upload host, so every screen is a vector rebuild checked against the
+  captures rather than traced from them. And rendering the result caught one
+  defect: the base-integrity readout clipped to "20/" on all six battle frames
+  because the bar was pinned at 160px inside a hugging row.
+
+  `docs/FIGMA.md` now says plainly that `01`–`04` are superseded history and
+  `05` is the section to trust, so the file stops presenting four equally
+  authoritative answers.
