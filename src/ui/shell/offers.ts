@@ -35,6 +35,24 @@ export interface Offer {
    * Anything that spends, grants or destroys must never set this.
    */
   immediate?: boolean
+  /**
+   * Character offers render as the design's portrait chooser — the selected
+   * one grows and takes a rail in its own colour. Without this the page falls
+   * back to full-width rows.
+   */
+  portrait?: { art?: string; glyph?: string; color: string }
+  /** Up to three trait tiles shown under the body, per the hero-pick design. */
+  tiles?: { caption: string; glyph?: string; art?: string }[]
+  /** Bold-value / muted-label pairs, e.g. "12 DEX". */
+  stats?: { label: string; value: number | string }[]
+}
+
+/** Sprite path for an archetype — the real Tiny Swords art, not a stand-in. */
+const heroArt = (archetype: string) => `assets/sprites/tinyswords/${archetype}.png`
+const ARCH_COLOR: Record<string, string> = {
+  fighter: 'var(--fighter)',
+  rogue: 'var(--rogue)',
+  mystic: 'var(--mystic)',
 }
 
 const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }
@@ -46,6 +64,18 @@ function itemBody(item: Item): string[] {
     if (t) out.push(`${e.label} — ${t}`)
   }
   return out
+}
+
+/** Portrait + stat pairs for any Sentinel-shaped offer. */
+function heroBits(s: Sentinel) {
+  return {
+    portrait: { art: heroArt(s.archetype), color: s.color },
+    stats: [
+      { label: 'STR', value: s.stats.str },
+      { label: 'DEX', value: s.stats.dex },
+      { label: 'INT', value: s.stats.int },
+    ],
+  }
 }
 
 function heroBody(s: Sentinel): string[] {
@@ -82,21 +112,68 @@ type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 export type MetaView = 'menu' | 'perks' | 'settings'
 
+const ARCH_PROFILE = {
+  fighter: {
+    headline: 'Front line that holds the lane',
+    blurb: 'Heavy melee — high HP, blocks the path and returns damage on contact.',
+    stats: [
+      { label: 'STR', value: 12 },
+      { label: 'DEX', value: 6 },
+      { label: 'INT', value: 3 },
+    ],
+    tiles: [
+      { caption: '+6 armour', glyph: '⛨' },
+      { caption: 'Blocks lane', glyph: '⛊' },
+      { caption: 'Thorns', glyph: '✦' },
+    ],
+  },
+  rogue: {
+    headline: 'Single-target burst with high crit',
+    blurb: 'Ranged skirmisher — fast attacks and high single-target damage.',
+    stats: [
+      { label: 'STR', value: 6 },
+      { label: 'DEX', value: 12 },
+      { label: 'INT', value: 4 },
+    ],
+    tiles: [
+      { caption: '+4 dodge', glyph: '➶' },
+      { caption: 'Multi attack', glyph: '⚔' },
+      { caption: '+6 speed', glyph: '⚡' },
+    ],
+  },
+  mystic: {
+    headline: 'Control that shapes the whole wave',
+    blurb: 'Ranged caster — chills, chains between enemies and buffs the watch.',
+    stats: [
+      { label: 'STR', value: 4 },
+      { label: 'DEX', value: 5 },
+      { label: 'INT', value: 13 },
+    ],
+    tiles: [
+      { caption: 'Chain arc', glyph: '⚡' },
+      { caption: 'Chills', glyph: '❄' },
+      { caption: 'Ally buff', glyph: '❋' },
+    ],
+  },
+} as const
+
 function heroPickOffers(st: St): Offer[] {
   const archs = ['fighter', 'rogue', 'mystic'] as const
-  const blurb = {
-    fighter: 'Front line. High HP, blocks the lane, thorns on contact.',
-    rogue: 'Fast single-target damage. Crits and executes.',
-    mystic: 'Ranged control. Chills, chains and buffs allies.',
-  }
-  return archs.map((a) => ({
-    id: `pick-${a}`,
-    title: a[0].toUpperCase() + a.slice(1),
-    sub: 'Starting Sentinel',
-    glyph: GLYPH[a],
-    body: [blurb[a]],
-    action: { label: `Take the ${a}`, run: () => st.pickStartingHero(a) },
-  }))
+  return archs.map((a) => {
+    const p = ARCH_PROFILE[a]
+    return {
+      id: `pick-${a}`,
+      title: a[0].toUpperCase() + a.slice(1),
+      sub: 'Starting hero',
+      color: ARCH_COLOR[a],
+      glyph: GLYPH[a],
+      portrait: { art: heroArt(a), color: ARCH_COLOR[a] },
+      stats: [...p.stats],
+      tiles: p.tiles.map((t) => ({ ...t })),
+      body: [p.headline, p.blurb],
+      action: { label: `Choose ${a[0].toUpperCase() + a.slice(1)}`, run: () => st.pickStartingHero(a) },
+    }
+  })
 }
 
 function merchantOffers(st: St): Offer[] {
@@ -124,6 +201,7 @@ function merchantOffers(st: St): Offer[] {
       color: r.sentinel.color,
       glyph: GLYPH[r.sentinel.archetype],
       cost: { amount: r.price, currency: 'gold' },
+      ...heroBits(r.sentinel),
       body: heroBody(r.sentinel),
       action: {
         label: `Recruit · ⟡${r.price}`,
@@ -164,6 +242,7 @@ function recruitOffers(st: St): Offer[] {
     color: s.color,
     glyph: GLYPH[s.archetype],
     cost: st.endlessRoom ? { amount: st.endlessRecruitCost, currency: 'gold' as const } : undefined,
+    ...heroBits(s),
     body: full ? [...heroBody(s), 'Your roster is full — dismiss someone first.'] : heroBody(s),
     action: {
       label: full ? 'Roster full' : 'Recruit',
@@ -228,6 +307,7 @@ function crossroadsOffers(st: St): Offer[] {
     sub: `Recruit · ${buildName(s)}`,
     color: s.color,
     glyph: GLYPH[s.archetype],
+    ...heroBits(s),
     body: heroBody(s),
     action: { label: 'Take the recruit', run: () => st.recruitTeammate(s.id) },
   }))
@@ -238,6 +318,7 @@ function crossroadsOffers(st: St): Offer[] {
       sub: 'Mutate',
       color: h.color,
       glyph: '⚗',
+      ...heroBits(h),
       body: ['Roll a permanent attack mutation for this hero.'],
       action: { label: `Mutate ${h.name}`, run: () => st.rollHeroMutation(h.id) },
     })

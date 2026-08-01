@@ -1,0 +1,354 @@
+/**
+ * Mobile page system — Figma § "Mobile UI Layout, Spacing, Gaps, Fonts, Colors".
+ *
+ * Header · Body (takes the slack) · Secondary · pinned CTA. Every band is
+ * `--band-pad` top/bottom inside a `--gutter` side margin, which is the whole
+ * rhythm of the design.
+ */
+.pg {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+.pg-band {
+  width: 100%;
+  padding: var(--band-pad) var(--gutter);
+}
+.pg-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: center;
+  text-align: center;
+}
+.pg-body {
+  flex: 1 0 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: center;
+  overflow-y: auto;
+}
+.pg-secondary {
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+  justify-content: center;
+}
+.pg-cta-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- type */
+.t-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-align: center;
+  text-wrap: balance;
+}
+.t-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------- CTA */
+.pg-cta {
+  width: 100%;
+  height: var(--cta-h);
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--cta);
+  color: var(--cta-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+.pg-cta:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+.pg-cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- rows */
+.pg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  width: 100%;
+  height: var(--row-h);
+  padding: 0 var(--gutter);
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.pg-row:disabled {
+  cursor: default;
+}
+.pg-row.danger .pg-row-label {
+  color: var(--bad);
+}
+.pg-row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-row-val {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* ------------------------------------------------------------- surfaces */
+.pg-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  width: 100%;
+  padding: var(--gap-sm);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.pg-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.pg-card-body {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.pg-tile {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  padding: var(--gap-xs);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.pg-tile-art {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--r-xs);
+  background: var(--portrait);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.pg-tile-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pg-tile-glyph {
+  font-size: 30px;
+  color: var(--ink);
+}
+.pg-tile-cap {
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--text);
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+/* ------------------------------------------------------------- chooser */
+.pg-portraits {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pg-portrait {
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid var(--rail, var(--line-strong));
+  border-radius: var(--r-sm);
+  background: var(--portrait);
+  cursor: pointer;
+  transition:
+    width 0.14s ease,
+    height 0.14s ease;
+}
+.pg-portrait.sel {
+  width: 120px;
+  height: 120px;
+}
+.pg-portrait img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pg-portrait-glyph {
+  font-size: 34px;
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------- stats */
+.pg-name {
+  font-size: 19px;
+  font-weight: 700;
+  text-align: center;
+}
+.pg-stats {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pg-stat {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.pg-stat b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pg-stat > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* The body block that holds name + stats + description, per the design. */
+.pg-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  align-items: center;
+  width: 100%;
+}
+
+/* Reduced motion honours the accessibility setting. */
+:root[data-reduced-motion='true'] .pg-portrait,
+:root[data-reduced-motion='true'] .pg-cta {
+  transition: none;
+}
+:root[data-scale='large'] .pg-cta {
+  font-size: 26px;
+}
+:root[data-scale='large'] .pg-row {
+  height: 54px;
+  font-size: 17px;
+}
+
+/* ------------------------------------------------- page inside the shell */
+/* Pages have no app header, so the page itself is the only row and must take
+   the full height — otherwise `.pg`'s height:100% resolves against content. */
+/* Two classes deep so it beats `.shell`'s four-row template — shell.css is
+   imported after this file, so equal specificity would lose. */
+.shell.shell-page {
+  grid-template-rows: minmax(0, 1fr);
+}
+.pg-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  width: 100%;
+}
+
+/* The menu's hero art slot — the placeholder block in the design. */
+.pg-art {
+  flex: 1 0 0;
+  min-height: 120px;
+  width: 100%;
+  border-radius: var(--r-sm);
+  background:
+    radial-gradient(120% 90% at 50% 20%, rgba(224, 172, 76, 0.1), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--line);
+}
+
+.pg-verdict {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--good);
+}
+.pg-verdict.loss {
+  border-color: var(--bad);
+}
+.pg-verdict-glyph {
+  font-size: 40px;
+  color: var(--accent);
+}
+
+/* Purse chips inside the title block — pages carry no app header. */
+.pg-res {
+  display: flex;
+  gap: var(--gap-xs);
+  justify-content: center;
+}
+.pg-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pg-chip.gold {
+  color: var(--accent);
+  border-color: rgba(224, 172, 76, 0.28);
+}
+.pg-chip.teal {
+  color: var(--teal);
+  border-color: var(--teal-dim);
+}
+.pg-row.sel {
+  background: var(--panel-3);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* When the body scrolls, fade its bottom edge so a half-cut row reads as
+   "more below" rather than as a clipping bug. */
+.pg-body {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+}
+.pg-body:not(:has(> :nth-child(2))) {
+  -webkit-mask-image: none;
+  mask-image: none;
+}

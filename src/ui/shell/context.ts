@@ -14,6 +14,12 @@ export interface ShellContext {
   meta: boolean
   /** Board headline + blurb, when the stage is a board. */
   board: { title: string; blurb: string } | null
+  /**
+   * `bands` is the four-band shell — used only by battle and the run map,
+   * the two places where the Stage must stay uncovered and the pack must stay
+   * on screen. Everything else is a `page`: title, body, pinned CTA.
+   */
+  layout: 'bands' | 'page'
 }
 
 export function useShellContext(): ShellContext {
@@ -27,11 +33,11 @@ export function useShellContext(): ShellContext {
 
   // A finished run takes over the stage wherever it happened.
   if (runPhase !== 'active' && screen !== 'hub') {
-    return { stage: 'result', selector: 'party', meta: false, board: null }
+    return { stage: 'result', selector: 'party', meta: false, board: null, layout: 'page' }
   }
 
   if (screen === 'hub') {
-    return { stage: 'title', selector: 'menu', meta: true, board: null }
+    return { stage: 'title', selector: 'menu', meta: true, board: null, layout: 'page' }
   }
 
   if (screen === 'heroPick') {
@@ -39,7 +45,8 @@ export function useShellContext(): ShellContext {
       stage: 'board',
       selector: 'offers',
       meta: false,
-      board: { title: 'Choose your first Sentinel', blurb: 'The rest of the watch joins you on the road.' },
+      board: { title: 'Choose your first hero', blurb: 'This is your starting tower. You can recruit more heroes as you play through a run.' },
+      layout: 'page',
     }
   }
 
@@ -49,23 +56,25 @@ export function useShellContext(): ShellContext {
       selector: 'offers',
       meta: false,
       board: { title: 'The Crossroads', blurb: 'One choice only — take a recruit or mutate a hero.' },
+      layout: 'page',
     }
   }
 
   if (screen === 'endless') {
-    if (endlessRoom) return { stage: 'board', selector: 'offers', meta: false, board: ROOM_BOARD[endlessRoom] }
+    if (endlessRoom) return { stage: 'board', selector: 'offers', meta: false, board: ROOM_BOARD[endlessRoom], layout: 'page' }
     return {
       stage: 'board',
       selector: 'rooms',
       meta: false,
       board: { title: 'Endless Watch', blurb: 'Pick a room, then take the next wave.' },
+      layout: 'page',
     }
   }
 
   if (screen === 'map') {
     // An event node parks a board over the map until you resolve it.
     if (event && mode === 'campaign') {
-      return { stage: 'board', selector: 'offers', meta: false, board: EVENT_BOARD[event.kind] }
+      return { stage: 'board', selector: 'offers', meta: false, board: EVENT_BOARD[event.kind], layout: 'page' }
     }
     // A post-wave reward pick is an offer board too.
     if (reward) {
@@ -73,14 +82,15 @@ export function useShellContext(): ShellContext {
         stage: 'board',
         selector: 'offers',
         meta: false,
-        board: { title: 'Spoils', blurb: 'Take one.' },
+        board: { title: 'Spoils', blurb: 'Take one — it applies to the whole watch.' },
+        layout: 'page',
       }
     }
-    return { stage: 'map', selector: 'party', meta: false, board: null }
+    return { stage: 'map', selector: 'party', meta: false, board: null, layout: 'bands' }
   }
 
   // Battle — the stage is the field, live or in setup.
-  return { stage: 'battlefield', selector: 'party', meta: false, board: null }
+  return { stage: 'battlefield', selector: 'party', meta: false, board: null, layout: 'bands' }
 }
 
 const EVENT_BOARD = {

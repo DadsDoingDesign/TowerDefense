@@ -5,8 +5,10 @@ import { DetailBand } from './DetailBand'
 import { HeaderBand } from './HeaderBand'
 import { SelectorBand } from './SelectorBand'
 import { StageBand } from './StageBand'
+import { MenuScreen, PageScreen, ResultScreen } from './PageScreens'
 import { useShellContext } from './context'
 import { useOffers, type MetaView } from './offers'
+import '../../styles/page.css'
 import '../../styles/shell.css'
 
 /**
@@ -17,6 +19,13 @@ import '../../styles/shell.css'
  * The one blocking overlay that survives is the evolution choice, which is
  * destructive and irreversible.
  */
+/** The Watchtower submenus have no board copy of their own. */
+const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
+  menu: {},
+  perks: { title: 'Upgrade Perks', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
+  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast and scale.' },
+}
+
 export function RootShell() {
   const ctx = useShellContext()
   const screen = useGameStore((s) => s.screen)
@@ -32,6 +41,25 @@ export function RootShell() {
       shellSelect(null)
     }
   }, [screen, shellSelect])
+
+  // Battle and the run map keep the four bands; everything else is a page.
+  // Pages carry no app header — the serif title is the header, per the design,
+  // and run resources ride in the title block only where spending matters.
+  if (ctx.layout === 'page') {
+    const isMenu = screen === 'hub' && metaView === 'menu'
+    return (
+      <div className="shell shell-page">
+        {ctx.stage === 'result' ? (
+          <ResultScreen />
+        ) : isMenu ? (
+          <MenuScreen offers={offers} />
+        ) : (
+          <PageScreen ctx={ctx} offers={offers} {...META_COPY[metaView]} />
+        )}
+        <EvolutionModal />
+      </div>
+    )
+  }
 
   return (
     <div className="shell">

@@ -241,3 +241,54 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   lands on the shell, that `?shell=0` falls back and sticks, and that `?shell=1`
   returns. The pre-shell screens in `src/ui/screens/` are now dead weight kept
   only for comparison.
+
+- **2026-08-01 — the mobile UI system.** Implemented the Figma section "Mobile
+  UI Layout, Spacing, Gaps, Fonts, Colors" (node 2111:10818) across the whole
+  app. Two screens were designed directly — the Watchtower menu and hero pick —
+  and the rest were extrapolated from the same rules.
+
+  The system: **Crimson Text** as the display serif for titles (32px, 0.06em)
+  and button labels (24px), self-hosted so a mobile build makes no third-party
+  font request; Inter for everything else. A **32px / 16px** rhythm — every
+  section is 32px of vertical padding inside a 16px gutter. A translucent
+  parchment wash `rgba(220,205,172,.08)` replaces solid brown panels. Radius
+  scale 3 / 5 / 8 / 18, and a deeper teal `#3f7d8c` for the 64px pinned CTA.
+  All of it lives in `global.css` as tokens so both layouts share one source.
+
+  **The structural call.** Neither designed screen has the GEAR/PACK columns,
+  which contradicts the shell's "the pack is permanent" rule. Read as correct
+  rather than an oversight — you own no heroes on hero-pick and no run on the
+  menu — so the four-band shell now applies only to **battle and the run map**,
+  the two places where the uncovered Stage and the persistent pack are the
+  whole point. Everything else is the page skeleton: title, body, optional
+  secondary row, pinned CTA. Pages carry no app header (the serif title is the
+  header, per the design); the purse rides as a chip in the title block on the
+  pages where something is actually bought.
+
+  Every offer already normalised to one shape, so hero-pick, the merchant, the
+  shrine, recruits, the endless rooms, the spoils pick and the perk list all
+  render from one page component — portraits when the offers are characters,
+  rows when they are not.
+
+  Four defects out of rendering, none visible from the code:
+
+  1. **The page collapsed to content height.** `.shell-page` set its grid rows
+     but lost to `.shell` on equal specificity, because `shell.css` imports
+     after `page.css`. Needed `.shell.shell-page`.
+  2. I rendered the app header *and* the page title, spending 76px the design
+     doesn't spend — which is what pushed the hero-pick description into a
+     mid-sentence clip.
+  3. **The Pack's second tile column was cut off by the panel edge** — a
+     pre-existing bug, not from this pass, that the native-resolution crop
+     finally exposed. `aspect-ratio` with the default `stretch` let the row
+     height drive the tile width; `align-self: start` sizes it from the column.
+  4. A composite screenshot made the battle CTA *look* clipped. Measuring said
+     `scrollWidth === clientWidth`. It was a resize artifact — worth recording
+     because the contact sheet is a triage tool, not evidence.
+
+  Battle keeps its density (32px padding would wreck an information-dense HUD)
+  but adopts the same materials — serif headings, the parchment wash, the
+  radius scale and the teal CTA — so it reads as one set with the pages.
+  Verified all 22 contexts at 390×844 with the serif confirmed loaded, page
+  height 844, CTA 64px sitting 32px off the bottom, and the legacy path still
+  intact under `?shell=0`.

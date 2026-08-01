@@ -1,3 +1,19 @@
+/* Display serif, self-hosted so a mobile build has no third-party font request. */
+@font-face {
+  font-family: 'Crimson Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/crimson-text-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Crimson Text';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/crimson-text-700.woff2') format('woff2');
+}
+
 :root {
   /* Palette — warm "Tiny Swords" table (see docs/BRAND.md) */
   --bg: #201711;
@@ -32,7 +48,36 @@
 
   --radius: 10px;
   --radius-sm: 6px;
-  --font-display: 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* ---- Mobile UI system (Figma § Mobile UI Layout, Spacing, Gaps, Fonts) ---- */
+  /* Display serif for titles and button labels; Inter carries everything else. */
+  --font-display: 'Crimson Text', Georgia, 'Times New Roman', serif;
+
+  /* Vertical rhythm: every section is 32px top/bottom inside a 16px gutter. */
+  --gutter: 16px;
+  --band-pad: 32px;
+  --gap: 16px;
+  --gap-sm: 14px;
+  --gap-xs: 8px;
+
+  /* Radius scale */
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 18px;
+
+  /* A translucent parchment wash replaces solid panels for cards and tiles. */
+  --surface: rgba(220, 205, 172, 0.08);
+  --surface-strong: rgba(220, 205, 172, 0.14);
+  --portrait: #dccdac;
+
+  /* Primary call to action — deeper than --teal so it holds its own at 64px. */
+  --cta: #3f7d8c;
+  --cta-ink: #f3e7d0;
+
+  /* Standard control heights */
+  --row-h: 48px;
+  --cta-h: 64px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

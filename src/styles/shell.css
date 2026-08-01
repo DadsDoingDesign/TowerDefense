@@ -40,9 +40,9 @@
 .sh-brand {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--accent);
-  font-size: 15px;
+  font-size: 18px;
 }
 .sh-chip {
   font-size: 11px;
@@ -163,7 +163,7 @@
 .sh-speed {
   min-width: 34px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line-strong);
   background: var(--panel-2);
   color: var(--text);
@@ -302,8 +302,8 @@
   align-items: center;
   gap: 3px;
   padding: 8px 6px;
-  border-radius: 10px;
-  background: var(--panel);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-top: 3px solid var(--rail, var(--line-strong));
   color: var(--text);
@@ -334,7 +334,7 @@
   height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   font-size: 14px;
   color: #1b1409;
 }
@@ -432,8 +432,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-radius: 10px;
-  background: var(--bg-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
   border: 1px solid var(--line);
   padding: 8px;
 }
@@ -455,7 +455,8 @@
   margin-bottom: 6px;
 }
 .sh-context-head strong {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 17px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -497,13 +498,13 @@
   gap: 3px;
   padding: 2px;
   margin-bottom: 7px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
 }
 .sh-tab {
   flex: 1;
   padding: 5px 4px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   border: none;
   background: transparent;
   color: var(--muted);
@@ -525,8 +526,8 @@
   flex-direction: column;
   gap: 2px;
   padding: 5px 7px;
-  border-radius: 7px;
-  background: var(--panel-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
 }
 .sh-cell-label {
   font-size: 9px;
@@ -575,8 +576,8 @@
   justify-content: space-between;
   gap: 6px;
   padding: 5px 7px;
-  border-radius: 7px;
-  background: var(--panel-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
 }
 .sh-upg-head {
   display: flex;
@@ -606,14 +607,14 @@
   display: flex;
   gap: 3px;
   padding: 2px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--bg);
 }
 .sh-seg-btn {
   flex: 1;
   padding: 6px 2px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--muted);
   font-size: 10.5px;
@@ -628,7 +629,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--muted);
@@ -642,20 +643,22 @@
 
 .sh-btn {
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 10px;
-  border-radius: 9px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 .sh-btn.primary {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: #16262c;
+  background: var(--cta);
+  border-color: var(--cta);
+  color: var(--cta-ink);
+  font-family: var(--font-display);
+  font-size: 17px;
 }
 .sh-btn.small {
   flex: 0 0 auto;
@@ -695,10 +698,10 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   border-left: 3px solid var(--rail, var(--line));
-  background: var(--panel-2);
+  background: var(--surface);
   color: var(--muted);
   min-height: 44px;
   cursor: pointer;
@@ -734,12 +737,19 @@
   align-content: start;
 }
 .sh-tile {
+  /* Grid items default to min-width:auto, so the glyph was holding the column
+     wider than its 1fr share and pushing the second tile past the panel. */
+  min-width: 0;
+  /* Size from the column, not the row: with `stretch` the row height drove the
+     width through aspect-ratio and pushed the second column off the panel. */
+  align-self: start;
+  width: 100%;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   border: 1px solid var(--rail, var(--line));
-  background: var(--panel-2);
+  background: var(--surface);
   color: var(--rail, var(--text));
   font-size: 15px;
   cursor: pointer;
