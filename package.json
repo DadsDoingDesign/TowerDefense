@@ -16,7 +16,9 @@
     "fw-icons:check": "tsx scripts/fw-icons.ts --check",
     "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs",
     "anchors": "tsx scripts/anchors.ts",
-    "anchors:check": "tsx scripts/anchors.ts --check"
+    "anchors:check": "tsx scripts/anchors.ts --check",
+    "placeholder-pack": "tsx scripts/gen-placeholder-pack.ts",
+    "slice:shot": "node scripts/slice-shot.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

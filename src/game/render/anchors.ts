@@ -79,22 +79,23 @@ export function anchorsFor(strip: string): AnchorStrip | null {
 
 /**
  * Where a gear cell is held, in cell px. Authored the same way as hero
- * anchors — magenta marks the grip — and stored under `gear_<name>`.
+ * anchors — magenta marks the grip — and keyed by the FULL sprite role
+ * (`gear_sword`), matching the table the extractor writes.
  *
  * Falls back to bottom-centre of the cell, which is what a hilt-down weapon
  * wants and is close enough to keep an un-anchored piece on screen rather than
  * silently dropping it.
  */
-export function gearGrip(name: string, pose: number, cellW: number, cellH: number): { x: number; y: number } {
-  const strip = ANCHORS[`gear_${name}`]
+export function gearGrip(role: string, pose: number, cellW: number, cellH: number): { x: number; y: number } {
+  const strip = ANCHORS[role]
   const a = strip?.[pose]
   if (a) return { x: a.mx, y: a.my }
   return { x: Math.round(cellW / 2), y: cellH - 1 }
 }
 
 /** The weapon tip for a gear cell, used to site enchant particles. */
-export function gearTip(name: string, pose: number, cellW: number): { x: number; y: number } {
-  const strip = ANCHORS[`gear_${name}`]
+export function gearTip(role: string, pose: number, cellW: number): { x: number; y: number } {
+  const strip = ANCHORS[role]
   const a = strip?.[pose]
   if (a) return { x: a.tx, y: a.ty }
   return { x: Math.round(cellW / 2), y: 0 }

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      The sprite loader builds RELATIVE urls (`assets/sprites/<pack>/…`), which
+      resolve against the document. Served from /harness/ that becomes
+      /harness/assets/… and every sprite 404s, so the renderer silently falls
+      back to procedural tokens and the harness shows circles instead of art.
+      Pin the base to the site root; the harness's own files are then absolute.
+    -->
+    <base href="/" />
+    <title>Fieldwatch — Vertical Slice Harness</title>
+    <link rel="stylesheet" href="/harness/slice.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Vertical slice — Phase 1</h1>
+      <p id="sub">Rendered through the real draw code (<code>drawSentinel</code>, <code>pixmap</code>, <code>loadout</code>). Not a mockup.</p>
+      <div id="warn"></div>
+    </header>
+    <main id="app">Loading pack…</main>
+    <script type="module" src="/harness/slice.ts"></script>
+  </body>
+</html>

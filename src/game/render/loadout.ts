@@ -76,26 +76,67 @@ function remember(key: string, canvas: HTMLCanvasElement): HTMLCanvasElement {
 }
 
 /**
- * Draw one gear cell so its grip lands on `(atX, atY)`.
+ * Draw one held gear cell so its grip lands on `(atX, atY)`.
+ *
+ * `role` is the full sprite role (`gear_sword`), not the bare noun — the two
+ * families are named differently on disk and prefixing here would have looked
+ * up `gear_body_plate` for an overlay.
  *
  * Returns false when the art is not loaded yet, which the caller uses to
  * decide the composite is incomplete and must not be cached.
  */
-function drawGear(
+function drawHeld(
   ctx: CanvasRenderingContext2D,
   pack: string,
-  name: string,
+  role: string,
   pose: number,
   atX: number,
   atY: number,
 ): boolean {
-  const sheet = getSprite(pack, `gear_${name}`)
+  const sheet = getSprite(pack, role)
   if (!sheet) return false
   const cw = Math.round(sheet.naturalWidth / GEAR_POSE_CELLS)
   const ch = sheet.naturalHeight
   if (cw <= 0 || ch <= 0) return false
-  const grip = gearGrip(name, pose, cw, ch)
+  const grip = gearGrip(role, pose, cw, ch)
   ctx.drawImage(sheet, pose * cw, 0, cw, ch, atX - grip.x, atY - grip.y, cw, ch)
+  return true
+}
+
+/**
+ * Draw a body overlay, which is NOT a held object.
+ *
+ * Armour is a torso silhouette change — pauldron and hem — so it has no grip
+ * and wants no anchor: giving it one would make a pauldron chase the sword
+ * hand.
+ *
+ * It is placed by **centre-x and bottom-y** rather than at the frame origin,
+ * because the idle and attack cells are different sizes (64×72 and 98×90) and
+ * both are feet-anchored with the figure centred. One overlay strip therefore
+ * serves every animation. Matching the origin instead meant the overlay only
+ * rendered on whichever animation it happened to be authored against, and
+ * silently vanished on the other.
+ */
+function drawOverlay(
+  ctx: CanvasRenderingContext2D,
+  pack: string,
+  role: string,
+  pose: number,
+  frameX: number,
+  cellW: number,
+  cellH: number,
+): boolean {
+  const sheet = getSprite(pack, role)
+  if (!sheet) return false
+  const cw = Math.round(sheet.naturalWidth / GEAR_POSE_CELLS)
+  const ch = sheet.naturalHeight
+  if (cw <= 0 || ch <= 0) return false
+  // An overlay wider or taller than the hero cell would be cropped by the
+  // composite, which is an authoring error worth refusing rather than hiding.
+  if (cw > cellW || ch > cellH) return false
+  const dx = frameX + Math.round((cellW - cw) / 2)
+  const dy = cellH - ch
+  ctx.drawImage(sheet, pose * cw, 0, cw, ch, dx, dy, cw, ch)
   return true
 }
 
@@ -148,17 +189,17 @@ export function heroStrip(
     const pose = poseIndexFor(anim, f, frames)
 
     // Behind the body.
-    if (lo!.offHand && a && !drawGear(ctx, pack, lo!.offHand, pose, dx + a.ox, a.oy)) complete = false
+    if (lo!.offHand && a && !drawHeld(ctx, pack, `gear_${lo!.offHand}`, pose, dx + a.ox, a.oy)) complete = false
 
     ctx.drawImage(body, dx, 0, cw, ch, dx, 0, cw, ch)
 
     // Body overlay is a silhouette change — pauldron and hem — not a torso
     // texture, which is invisible at this size. It shares the main-hand pose
     // index so a cloak can swing with the strike.
-    if (lo!.body && !drawGear(ctx, pack, `body_${lo!.body}`, pose, dx, 0)) complete = false
+    if (lo!.body && !drawOverlay(ctx, pack, `body_${lo!.body}`, pose, dx, cw, ch)) complete = false
 
     // In front.
-    if (lo!.mainHand && a && !drawGear(ctx, pack, lo!.mainHand, pose, dx + a.mx, a.my)) complete = false
+    if (lo!.mainHand && a && !drawHeld(ctx, pack, `gear_${lo!.mainHand}`, pose, dx + a.mx, a.my)) complete = false
   }
 
   // No anchors authored yet means gear had nowhere to attach and the composite

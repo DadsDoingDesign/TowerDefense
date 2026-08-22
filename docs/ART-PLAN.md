@@ -323,15 +323,28 @@ errors.
 **Still open before art lands:** decorations must be re-authored at drawn size (≤ 96 tall),
 and gear body-overlay poses need the `body_*` anchor convention exercised against real art.
 
-### Phase 1 — Style bible + vertical slice ← **the chosen probe**
-One fighter (6 idle + 6 attack), one goblin, one tree, one 9-slice panel, four icons — and
-the fighter shown across **four loadouts with two effects active**. Rendered together at real
-size, at 390 and 320, through the actual draw code.
+### Phase 1 — Style bible + vertical slice ← **the chosen probe** — harness **built**
 
-This tests three things at once: the style holds across contexts; sprites and parchment UI
-read as one game; and the doll rig survives an equip swap. Everything after this is volume.
+The harness is done and runs on placeholder blocking; the art is what is outstanding.
 
-**Gate: do not proceed until the slice passes `DESIGN_REVIEW.md`.**
+- **`harness/`** renders the fighter across five loadouts through the real `drawSentinel`,
+  `pixmap` and compositor — at the three measured viewport scales, plus a 4× inspection
+  view, an anchor-drift strip and the 10px silhouette gate.
+- **`scripts/gen-placeholder-pack.ts`** emits blocking at the exact spec'd dimensions, so
+  the pipeline runs end to end before any real pixel exists and the artist has correctly
+  sized templates.
+- **`scripts/slice-shot.mjs`** screenshots it into `docs/slice/` and prints exactly which
+  roles are still unauthored — that list is the worklist.
+
+Confirmed on the placeholder render: weapons attach and swing through the pose vocabulary,
+off-hands sit behind the body, overlays land on both animations, and the five loadouts read
+apart at true 390-phone size.
+
+**Still art, not code:** the real fighter (6 idle + 6 attack + portrait + anchor layers),
+then rogue and mystic, the remaining gear nouns, one goblin, one tree, the 9-slice panel.
+
+**Gate: do not proceed until the slice passes `DESIGN_REVIEW.md` on REAL art.** The
+placeholder passing proves the rig, not the style.
 
 ### Phase 2 — Heroes and gear
 Three hero bodies (idle + attack + portrait), then the 5-pose weapon strips, then off-hands,
