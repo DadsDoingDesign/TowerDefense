@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Fieldwatch — a roguelite tower-defense autobattler (working title)",
+  "description": "Fieldwatch \u2014 a roguelite tower-defense autobattler (working title)",
   "scripts": {
     "dev": "vite",
-    "build": "npm run fw-icons:check && tsc -b && vite build",
+    "build": "npm run fw-icons:check && npm run anchors:check && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "balance": "tsx balance/report.ts",
@@ -14,7 +14,9 @@
     "icons": "tsx scripts/icons.ts",
     "fw-icons": "tsx scripts/fw-icons.ts",
     "fw-icons:check": "tsx scripts/fw-icons.ts --check",
-    "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs"
+    "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs",
+    "anchors": "tsx scripts/anchors.ts",
+    "anchors:check": "tsx scripts/anchors.ts --check"
   },
   "dependencies": {
     "react": "^18.3.1",

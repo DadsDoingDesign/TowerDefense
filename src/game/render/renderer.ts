@@ -6,6 +6,7 @@ import type { Archetype, EnemyType, GameMap } from '../types'
 import { getActiveStyle } from './themes'
 import { getSprite, onSpritesReady } from './sprites'
 import { ANIM_FRAMES, loopFrame } from './anim'
+import { heroStrip, type Loadout } from './loadout'
 import { pixmap, quarterTurns, type Pixmap } from './pixmap'
 import {
   drawFxDecals,
@@ -61,6 +62,12 @@ export interface DrawSentinel {
   range: number
   aimAngle: number
   fireFlash: number
+  /**
+   * What this hero is wearing, as gear art names. When set, the body and gear
+   * strips are composited into one canvas BEFORE the bake, so the assembled
+   * figure gets a single contour ring — see `loadout.ts`. Undefined draws bare.
+   */
+  loadout?: Loadout
   hp: number
   maxHp: number
   downed: boolean
@@ -1071,9 +1078,14 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const towerPm = (() => {
     if (!style.sprites) return null
     const firing = s.fireFlash > 0.05 && !!atk
-    const strip = (firing ? atk : idle) ?? idle ?? atk
+    const anim = firing ? 'atk' : 'idle'
+    const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
+    // heroStrip returns the bare body when nothing is equipped, so the
+    // un-geared path is exactly what it was before the compositor existed.
+    const strip =
+      heroStrip(style.sprites.pack, s.archetype, anim, frames, s.loadout) ??
+      ((firing ? atk : idle) ?? idle ?? atk)
     if (!strip) return null
-    const frames = ANIM_FRAMES[`${s.archetype}_${firing ? 'atk' : 'idle'}`] ?? 1
     const pm = pixmap(strip, { scale: style.sprites.spriteScale, frames, ring: true })
     if (!pm) return null
     const frame = firing

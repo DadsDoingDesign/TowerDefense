@@ -100,6 +100,37 @@ halving, then ×2.25 for the 1.5× growth on units — and every unit sprite als
 canvas of equal size. Measure before committing to the full roster; the walk strips
 (10 × 690 × 80 today) dominate. If it bites, the lever is strip length, not sprite size.
 
+### 1.6 Considered and deferred: rebuilding the engine for higher density
+
+Raising the *internal* render resolution — compositing at `960R × 560R` and authoring
+sprites at `R×` — was costed and **deferred**. Recording it so it is not relitigated.
+
+Device pixels actually available across the 960-logical field:
+
+| Device | Canvas CSS | dpr | Device px across | Device px per logical px |
+|---|---|---|---|---|
+| 390 phone, dpr 2 | 390 | 2 | 780 | **0.81** — oversampled |
+| 390 phone, dpr 3 | 390 | 3 | 1170 | **1.22** — 22% headroom |
+| 320 phone, dpr 2 | 266 | 2 | 531 | **0.55** — heavily oversampled |
+
+The pipeline already draws more logical pixels than most target devices can show. **Internal
+resolution never changes how many device pixels a sprite occupies** — only how much source
+information feeds them. So raising `R` adds nothing at dpr 2 and is capped at +22% linear on
+dpr-3 phones. `R = 2` costs 4× the fill rate to deliver that same capped 22%.
+
+Against that, growing the sprites gives +50% linear on *every* device for no fill-rate cost.
+
+The rebuild would also not be free in code: `blitPixmap` and `drawSentinel` deliberately round
+to the whole logical grid and would snap to the coarse grid at `R > 1`, reintroducing the
+sub-pixel crawl Phase 3 was built to remove; the CSS-px floors (`renderer.ts:1631–1658`) and
+`resampleMode()` would each need `R` folded in; and 44 `lineWidth` calls, 38 `arc`s and 10
+`setLineDash`es would need re-judging rather than merely re-scaling.
+
+**Revisit only if a landscape or larger battle viewport is ever on the table.** At 844 × 390,
+`fitView` gives `min(844/960, 390/560) = 0.696`, so dpr 2 yields 1.39 device px per logical —
+1.7× today's 0.81. That roughly doubles the budget, and only then does `R = 2` have somewhere
+to put the pixels. Doing the rebuild first means paying for headroom nothing can display.
+
 ---
 
 ## 2. Style: Storybook Chunk
@@ -261,13 +292,36 @@ The compositor and anchor rig are the real work; the art volume is modest.
 Ordered to retire risk first. Everything must be replaced anyway — the licence forces it —
 so sequence by uncertainty, not by tier.
 
-### Phase 0 — Engine prep *(code, no art)*
-1. `spriteScale: 1` in `themes.ts`; re-author or re-export decorations ≤ 96 drawn height.
-2. Anchor-strip build script → JSON.
-3. Loadout compositor + cache, in front of `pixmap()`.
-4. Extend `drawSentinel` to take a loadout key.
+### Phase 0 — Engine prep *(code, no art)* — **done**
 
-Do this before art, so the first sprite drawn is drawn into the real pipeline.
+Built ahead of the art so the first sprite drawn lands in the real pipeline.
+
+1. **New `fieldwatch` pack and theme at `spriteScale: 1`.** Registered in `SPRITE_PACKS`,
+   `PACK_ROLES` and `THEMES`, and **not activated** — Tiny Swords stays the live theme until
+   there is art. Flipping the density under the existing files would draw every sprite at 2×
+   and push every tree past `DECO_CEIL`, where decorations vanish with no warning. A new pack
+   name also drops the last reference to the old licence.
+2. **`scripts/anchors.ts`** reads the `*_anchors.png` marker layers (magenta main hand, cyan
+   off hand, yellow weapon tip) and generates `anchors.generated.ts`. `npm run anchors:check`
+   is wired into `npm run build`, matching the icon-atlas guard.
+3. **`src/game/render/loadout.ts`** — the compositor and its bounded, loadout-keyed cache.
+   Layers body and gear into one canvas **before** the bake, so the assembled figure gets a
+   single contour ring. An incomplete composite is never cached, so a sprite that had not
+   finished loading cannot freeze a hero holding nothing for the session.
+4. **`pixmap()` accepts a canvas source**, which is what lets a composite feed the bake with
+   no special case. Structural narrowing, not `instanceof`, because the headless balance
+   harness has no `HTMLCanvasElement` global.
+5. **`DrawSentinel.loadout`** is optional and `heroStrip()` returns the bare body when it is
+   absent, so the un-geared path is byte-for-byte what it was.
+
+Verified: `npm run build` passes with the new guard; the extractor was tested against a
+generated marker PNG and returns the exact authored coordinates; the guard was confirmed to
+fail on both a stale generated file and a marker layer whose dimensions do not match its
+strip; and the battle was screenshotted in a real browser at 390×844 dpr 2 with no console
+errors.
+
+**Still open before art lands:** decorations must be re-authored at drawn size (≤ 96 tall),
+and gear body-overlay poses need the `body_*` anchor convention exercised against real art.
 
 ### Phase 1 — Style bible + vertical slice ← **the chosen probe**
 One fighter (6 idle + 6 attack), one goblin, one tree, one 9-slice panel, four icons — and

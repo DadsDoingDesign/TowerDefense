@@ -21,7 +21,7 @@
 import { ANIM_ROLES } from './anim'
 import { getActiveStyle, onThemeChange } from './themes'
 
-export const SPRITE_PACKS = ['tinyswords', 'fantasy', 'undead', 'infernal', 'frost', 'sylvan']
+export const SPRITE_PACKS = ['tinyswords', 'fieldwatch', 'fantasy', 'undead', 'infernal', 'frost', 'sylvan']
 
 /**
  * Every role the renderer may ask for. Add new roles here or they won't preload
@@ -43,8 +43,32 @@ const ROLE_NAMES = [
   'bush1', 'bush2',
 ]
 
-/** The animation strips (idle/attack/walk) exist only in the Tiny Swords pack. */
-const ANIM_PACK = 'tinyswords'
+/**
+ * Packs that ship animation strips (idle/attack/walk). The five retired 32px
+ * packs are statics only, so asking them for a `_walk` is 10 guaranteed 404s.
+ */
+const ANIM_PACKS = new Set(['tinyswords', 'fieldwatch'])
+
+/**
+ * Gear art for the paper-doll compositor (`loadout.ts`), which only the
+ * from-scratch pack ships.
+ *
+ * Each `gear_*` file is a `GEAR_POSE_CELLS`-wide strip of the shared angle
+ * vocabulary; each `body_*` is the same strip of pauldron-and-hem overlays.
+ * The nouns mirror `data/items.ts` exactly — WEAPONS, OFFHANDS and BODIES —
+ * because the compositor looks gear up by the item's own lowercased name.
+ */
+const WEAPON_ART = [
+  'sword', 'axe', 'dagger', 'wand', 'rod', 'scepter',
+  'greatsword', 'warhammer', 'bow', 'staff', 'grimoire',
+]
+const OFFHAND_ART = ['shield', 'buckler', 'tome', 'quiver', 'focus']
+const BODY_ART = ['plate', 'mail', 'robe', 'cloak', 'aegis']
+export const GEAR_ROLES = [
+  ...WEAPON_ART.map((n) => `gear_${n}`),
+  ...OFFHAND_ART.map((n) => `gear_${n}`),
+  ...BODY_ART.map((n) => `body_${n}`),
+]
 
 /**
  * What each pack ACTUALLY ships, which is not the same as what the renderer may
@@ -63,6 +87,8 @@ const LEGACY_PACK_ROLES = ['fighter', 'rogue', 'mystic', 'grass', 'road']
 const PACK_ROLES: Record<string, readonly string[]> = {
   // Tiny Swords draws its road procedurally — there is no road.png in the pack.
   tinyswords: ROLE_NAMES.filter((n) => n !== 'road'),
+  // The from-scratch pack: every role Tiny Swords has, plus the gear layers.
+  fieldwatch: [...ROLE_NAMES.filter((n) => n !== 'road'), ...GEAR_ROLES],
   fantasy: LEGACY_PACK_ROLES,
   undead: LEGACY_PACK_ROLES,
   infernal: LEGACY_PACK_ROLES,
@@ -106,7 +132,7 @@ export function preloadPack(pack: string): void {
   for (const name of PACK_ROLES[pack] ?? ROLE_NAMES) {
     load(`${pack}/${name}`, `assets/sprites/${pack}/${name}.png`)
   }
-  if (pack === ANIM_PACK) {
+  if (ANIM_PACKS.has(pack)) {
     for (const name of ANIM_ROLES) load(`${pack}/${name}`, `assets/sprites/${pack}/${name}.png`)
   }
   // Everything may already have been cached synchronously by the browser; a

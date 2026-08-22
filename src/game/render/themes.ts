@@ -86,6 +86,31 @@ export const THEMES: Record<string, ThemeStyle> = {
     ...SPRITE_FALLBACK,
   },
 
+  /**
+   * The from-scratch replacement pack (`docs/ART-PLAN.md`).
+   *
+   * `spriteScale: 1` is the whole point: at one density the artist authors
+   * exactly what the player sees, with no box filter deciding which pixels
+   * survive. Tiny Swords stays at `0.5` and stays the active theme until this
+   * pack has art — flipping the density under the old files would draw every
+   * sprite at 2x and, worse, push every tree past `DECO_CEIL` (96 drawn px),
+   * where decorations are dropped from the pool with no warning.
+   *
+   * Colours below are `BRAND.md` tokens rather than the meadow greens, since
+   * this pack is authored against the brand rather than inheriting a look.
+   */
+  fieldwatch: {
+    id: 'fieldwatch',
+    name: 'Fieldwatch',
+    blurb: 'The watch holds the line. Storybook chunk at one density.',
+    smoothing: false,
+    sprites: { pack: 'fieldwatch', spriteScale: 1, towerScale: 1, enemyScale: 1 },
+    css: { accent: '#e0ac4c', accentDim: 'rgba(224,172,76,0.16)', radius: '10px', bg: '#201711', panel: '#2f2418' },
+    field: { top: '#5a9b43', bottom: '#3f7a30', grid: 'rgba(0,0,0,0.10)', gridStep: 32 },
+    path: { edge: '#3c2c18', fill: '#7a5a30', center: 'rgba(0,0,0,0)', edgeWidth: 46, fillWidth: 36, dash: null, cap: 'round' },
+    ...SPRITE_FALLBACK,
+  },
+
   fantasy: {
     id: 'fantasy',
     name: 'Fantasy Fields',

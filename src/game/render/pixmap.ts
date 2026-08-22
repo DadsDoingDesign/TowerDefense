@@ -87,7 +87,25 @@ export interface Pixmap {
   ring: CanvasImageSource | null
 }
 
-const cache = new WeakMap<HTMLImageElement, Map<string, Pixmap>>()
+/**
+ * What the bake will take as a source.
+ *
+ * Canvases are here for the paper-doll compositor (`loadout.ts`), which layers
+ * body and gear into one canvas and hands that in. The ring is baked inside
+ * this module, so a geared hero MUST arrive pre-composited or each layer would
+ * get its own contour and read as a sticker.
+ */
+export type BakeSource = HTMLImageElement | HTMLCanvasElement
+
+/**
+ * Structural rather than `instanceof`: this module is imported by the headless
+ * balance harness, where `HTMLCanvasElement` is not a defined global and the
+ * type guard would throw on evaluation rather than return false.
+ */
+const srcW = (s: BakeSource): number => ('naturalWidth' in s ? s.naturalWidth : s.width)
+const srcH = (s: BakeSource): number => ('naturalHeight' in s ? s.naturalHeight : s.height)
+
+const cache = new WeakMap<BakeSource, Map<string, Pixmap>>()
 
 const canBake = (): boolean => typeof document !== 'undefined'
 
@@ -223,8 +241,8 @@ export interface PixmapOpts {
  * when there is no document to bake into (the headless balance harness never
  * calls the renderer, but the guard keeps the module import-safe).
  */
-export function pixmap(src: HTMLImageElement, opts: PixmapOpts): Pixmap | null {
-  if (!canBake() || !src.naturalWidth) return null
+export function pixmap(src: BakeSource, opts: PixmapOpts): Pixmap | null {
+  if (!canBake() || !srcW(src)) return null
   const frames = opts.frames ?? 1
   const key = `${opts.scale}|${frames}|${opts.ring ? 1 : 0}|${opts.cell ? `${opts.cell.x},${opts.cell.y},${opts.cell.w},${opts.cell.h}` : ''}`
   let byKey = cache.get(src)
@@ -232,8 +250,8 @@ export function pixmap(src: HTMLImageElement, opts: PixmapOpts): Pixmap | null {
   const hit = byKey.get(key)
   if (hit) return hit
 
-  const cw = opts.cell?.w ?? src.naturalWidth / frames
-  const ch = opts.cell?.h ?? src.naturalHeight
+  const cw = opts.cell?.w ?? srcW(src) / frames
+  const ch = opts.cell?.h ?? srcH(src)
   const cx = opts.cell?.x ?? 0
   const cy = opts.cell?.y ?? 0
 
@@ -242,9 +260,9 @@ export function pixmap(src: HTMLImageElement, opts: PixmapOpts): Pixmap | null {
     // Native density, whole sheet, no ring: the source image IS the pixmap.
     out = { img: src, fw: cw, fh: ch, frames, ring: null }
   } else {
-    const sc = scratch(src.naturalWidth, src.naturalHeight)
+    const sc = scratch(srcW(src), srcH(src))
     sc.drawImage(src, 0, 0)
-    const full = sc.getImageData(0, 0, src.naturalWidth, src.naturalHeight)
+    const full = sc.getImageData(0, 0, srcW(src), srcH(src))
 
     let fw: number, fh: number, strip: ImageData
     if (opts.scale === 1) {
