@@ -16,7 +16,32 @@ const NAME_POOLS: Record<Archetype, string[]> = {
   rogue: ['Vesper', 'Quill', 'Sable', 'Nyx', 'Wren', 'Fenn', 'Dask', 'Lyre'],
   mystic: ['Aldre', 'Sorrel', 'Ipha', 'Cael', 'Mireth', 'Yavn', 'Esk', 'Orla'],
 }
-const nameCounters: Record<Archetype, number> = { fighter: 0, rogue: 0, mystic: 0 }
+export type NameCounters = Record<Archetype, number>
+
+/**
+ * How many names each archetype pool has handed out. A process-global, like the
+ * entity-id counter — so it resets on reload, and a Sentinel recruited after a
+ * resume used to be handed a name already worn by someone on the roster. It
+ * rides in the run snapshot for exactly that reason (m-4).
+ */
+const nameCounters: NameCounters = { fighter: 0, rogue: 0, mystic: 0 }
+
+/** The counters as they stand, for the run snapshot. */
+export const nameCounterState = (): NameCounters => ({ ...nameCounters })
+
+/**
+ * Fast-forward the counters past every name a restored run already issued. Only
+ * ever moves forward, so it cannot collide with names handed out since boot.
+ */
+export function restoreNameCounters(counters: Partial<NameCounters> | null | undefined): void {
+  if (!counters) return
+  for (const key of Object.keys(nameCounters) as Archetype[]) {
+    const n = counters[key]
+    if (typeof n === 'number' && Number.isFinite(n) && n > nameCounters[key]) {
+      nameCounters[key] = Math.floor(n)
+    }
+  }
+}
 
 function emptyEquipment(): Equipment {
   return { mainHand: null, offHand: null, body: null }
@@ -36,7 +61,6 @@ export function createSentinel(archetype: Archetype): Sentinel {
     stats: { ...node.baseStats! },
     thorns: node.baseThorns!,
     patience: node.basePatience!,
-    attack: { ...node.base! },
     level: 1,
     xp: 0,
     equipment: emptyEquipment(),

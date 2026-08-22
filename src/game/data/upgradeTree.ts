@@ -28,35 +28,59 @@ export interface UpgradePath {
 export const UPGRADE_MILESTONES = [2, 8, 14] as const
 export const MAX_PATH_LEVEL = 3
 
+/**
+ * **Why every level past the first carries a cross-axis cost (M18).**
+ *
+ * The old tree was a calculator, not a decision: all nine levels were pure gains
+ * except the three level-3s, and Onslaught simply paid best (+52% at level 3
+ * against Tempo's +38% for the identical 315 gold), so the optimal play was
+ * "buy Onslaught, then buy whatever is affordable". Nothing was ever given up.
+ *
+ * Two changes make it a choice:
+ *
+ *  1. **The three paths now converge on roughly the same raw throughput.** No
+ *     path is the arithmetically correct answer, so which one is right depends on
+ *     the tower: Onslaught wants big hits that are not overkill (armour), Tempo
+ *     wants hits that carry something (burn / execute / stun / life-drain),
+ *     Precision wants a build that already crits — it is near worthless on a
+ *     5%-crit mystic and enormous on a Sharpshooter.
+ *  2. **The paths interfere.** Onslaught buys damage with attack speed and Tempo
+ *     buys attack speed with damage, so a tower that buys deep into both spends
+ *     630 gold to partially cancel itself. *That* is the opportunity cost: gold
+ *     spent here is a commitment to a shape, not a stat top-up.
+ *
+ * Costs are deliberately unchanged — the run economy is tuned elsewhere, and the
+ * opportunity cost here is structural rather than a price hike.
+ */
 export const UPGRADE_PATHS: UpgradePath[] = [
   {
     id: 'power',
     name: 'Onslaught',
-    blurb: 'Raw hitting power.',
+    blurb: 'Fewer, heavier blows.',
     levels: [
       { desc: '+15% damage', cost: 40, mods: { damageMult: 1.15 } },
-      { desc: '+25% damage', cost: 95, mods: { damageMult: 1.25 } },
-      { desc: '+45% damage, −12% attack speed', cost: 180, mods: { damageMult: 1.45, rateMult: 0.88 }, downside: '−12% attack speed' },
+      { desc: '+28% damage, −15% projectile speed', cost: 95, mods: { damageMult: 1.28, projSpeedMult: 0.85 }, downside: '−15% projectile speed' },
+      { desc: '+50% damage, −12% attack speed', cost: 180, mods: { damageMult: 1.5, rateMult: 0.88 }, downside: '−12% attack speed' },
     ],
   },
   {
     id: 'tempo',
     name: 'Tempo',
-    blurb: 'Faster, relentless attacks.',
+    blurb: 'More blows, each one lighter.',
     levels: [
       { desc: '+12% attack speed', cost: 40, mods: { rateMult: 1.12 } },
-      { desc: '+20% attack speed, +20% projectile speed', cost: 95, mods: { rateMult: 1.2, projSpeedMult: 1.2 } },
-      { desc: '+35% attack speed, −10% damage', cost: 180, mods: { rateMult: 1.35, damageMult: 0.9 }, downside: '−10% damage per hit' },
+      { desc: '+20% attack speed, +20% projectile speed, −6% damage', cost: 95, mods: { rateMult: 1.2, projSpeedMult: 1.2, damageMult: 0.94 }, downside: '−6% damage per hit' },
+      { desc: '+28% attack speed, −14% damage', cost: 180, mods: { rateMult: 1.28, damageMult: 0.86 }, downside: '−14% damage per hit' },
     ],
   },
   {
     id: 'precision',
     name: 'Precision',
-    blurb: 'Crits and reach.',
+    blurb: 'Rarer blows that end things.',
     levels: [
-      { desc: '+8% crit chance', cost: 40, mods: { critChanceAdd: 0.08 } },
-      { desc: '+12% range, +40% crit damage', cost: 95, mods: { rangeMult: 1.12, critMultAdd: 0.4 } },
-      { desc: '+15% crit chance, +60% crit damage, −8% range', cost: 180, mods: { critChanceAdd: 0.15, critMultAdd: 0.6, rangeMult: 0.92 }, downside: '−8% range' },
+      { desc: '+14% crit chance', cost: 40, mods: { critChanceAdd: 0.14 } },
+      { desc: '+12% range, +50% crit damage, −5% attack speed', cost: 95, mods: { rangeMult: 1.12, critMultAdd: 0.5, rateMult: 0.95 }, downside: '−5% attack speed' },
+      { desc: '+24% crit chance, +80% crit damage, −8% range', cost: 180, mods: { critChanceAdd: 0.24, critMultAdd: 0.8, rangeMult: 0.92 }, downside: '−8% range' },
     ],
   },
 ]
