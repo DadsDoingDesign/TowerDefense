@@ -1,9 +1,30 @@
 /**
- * UI audit harness — drives the real app in a headless browser and captures a
- * labelled screenshot of every screen, modal, and component state.
+ * ⚠️ NON-FUNCTIONAL AS CHECKED IN — `npm run ui-audit` will not run here.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Two things are missing, both of them environmental:
  *
+ *   1. `playwright-core` is **not a dependency** of this project (check
+ *      `package.json`). The import below fails with MODULE_NOT_FOUND.
+ *   2. `PW_CHROMIUM` defaults to a **Linux** Chromium path baked into the
+ *      container this script was written in. This repo is developed on Windows,
+ *      where that path does not exist.
+ *
+ * To actually run it:
+ *
+ *   npm i -D playwright-core            # or `playwright`, which bundles browsers
+ *   npx playwright install chromium     # if you used the bundled variant
+ *   set PW_CHROMIUM=<path to chrome>    # only needed for playwright-core
  *   npx vite --port 5188 --strictPort &
  *   node scripts/ui-audit.mjs
+ *
+ * Nothing else in the project depends on this script, and no CI step runs it.
+ * It is kept because the shot list below is the only written inventory of every
+ * screen, modal and component state the app can be in. Treat it as a spec that
+ * happens to be executable, not as a test that passes.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * What it does when it *is* wired up: drives the real app in a headless browser
+ * and captures a labelled screenshot of every screen, modal, and component state.
  *
  * Output: docs/ui-audit/<NN-flow>/<NN-step>.<viewport>.png
  *
@@ -11,13 +32,39 @@
  * dev) and the real data factories (imported live off the Vite dev server), so
  * every shot is the actual render path — never a mock.
  */
-import { chromium } from 'playwright-core'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const BASE = 'http://localhost:5188/'
+const BASE = process.env.UI_AUDIT_BASE ?? 'http://localhost:5188/'
 const OUT = path.resolve('docs/ui-audit')
-const EXEC = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+/** Chromium binary for `playwright-core`. Unset when using the bundled `playwright`. */
+const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+
+/**
+ * Resolve Playwright at run time so the missing dependency produces an actionable
+ * message instead of a MODULE_NOT_FOUND stack from a bare top-level import.
+ */
+const loadChromium = async () => {
+  for (const pkg of ['playwright', 'playwright-core']) {
+    try {
+      return (await import(pkg)).chromium
+    } catch {
+      /* try the next one */
+    }
+  }
+  console.error(
+    [
+      'ui-audit: Playwright is not installed, so this script cannot run.',
+      '',
+      '  npm i -D playwright        # bundles its own browsers (simplest)',
+      '  npx playwright install chromium',
+      '',
+      'Or, with playwright-core, point PW_CHROMIUM at a Chromium/Chrome binary.',
+      'See the header of scripts/ui-audit.mjs.',
+    ].join('\n'),
+  )
+  process.exit(1)
+}
 
 const VIEWPORTS = [
   { id: 'desktop', width: 1440, height: 900, deviceScaleFactor: 1 },
@@ -527,10 +574,17 @@ const SHOTS = [
 
 /* --------------------------------------------------------------------- run */
 const run = async () => {
+  // Resolve the browser BEFORE wiping the output directory: a missing Playwright
+  // must not destroy the checked-in screenshot set it cannot regenerate.
+  const chromium = await loadChromium()
+
   if (fs.existsSync(OUT)) fs.rmSync(OUT, { recursive: true })
   fs.mkdirSync(OUT, { recursive: true })
 
-  const browser = await chromium.launch({ executablePath: EXEC, args: ['--no-sandbox', '--font-render-hinting=none'] })
+  // `playwright` finds its own bundled browser; `playwright-core` needs a path.
+  const launchOpts = { args: ['--no-sandbox', '--font-render-hinting=none'] }
+  if (fs.existsSync(EXEC)) launchOpts.executablePath = EXEC
+  const browser = await chromium.launch(launchOpts)
   const manifest = []
   let failures = 0
 

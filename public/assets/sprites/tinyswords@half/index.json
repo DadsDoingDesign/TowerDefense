@@ -1,0 +1,283 @@
+{
+  "generatedBy": "scripts/prep-sprites.ts",
+  "scale": 0.5,
+  "filter": "box (area average, premultiplied alpha)",
+  "halo": {
+    "color": "#161C2E",
+    "alpha": 80,
+    "width": 1,
+    "redrawn": true
+  },
+  "sprites": {
+    "barrel1": {
+      "frames": 1,
+      "width": 28,
+      "height": 38,
+      "frameWidth": 28
+    },
+    "barrel2": {
+      "frames": 1,
+      "width": 28,
+      "height": 38,
+      "frameWidth": 28
+    },
+    "barrel3": {
+      "frames": 1,
+      "width": 28,
+      "height": 38,
+      "frameWidth": 28
+    },
+    "barrel4": {
+      "frames": 1,
+      "width": 28,
+      "height": 38,
+      "frameWidth": 28
+    },
+    "barrel5": {
+      "frames": 1,
+      "width": 28,
+      "height": 38,
+      "frameWidth": 28
+    },
+    "bush1": {
+      "frames": 1,
+      "width": 34,
+      "height": 24,
+      "frameWidth": 34
+    },
+    "bush2": {
+      "frames": 1,
+      "width": 24,
+      "height": 19,
+      "frameWidth": 24
+    },
+    "fighter": {
+      "frames": 1,
+      "width": 42,
+      "height": 49,
+      "frameWidth": 42
+    },
+    "fighter_atk": {
+      "frames": 6,
+      "width": 402,
+      "height": 62,
+      "frameWidth": 67
+    },
+    "fighter_idle": {
+      "frames": 6,
+      "width": 264,
+      "height": 50,
+      "frameWidth": 44
+    },
+    "grass": {
+      "frames": 1,
+      "width": 32,
+      "height": 32,
+      "frameWidth": 32
+    },
+    "mystic": {
+      "frames": 1,
+      "width": 32,
+      "height": 33,
+      "frameWidth": 32
+    },
+    "mystic_atk": {
+      "frames": 6,
+      "width": 306,
+      "height": 43,
+      "frameWidth": 51
+    },
+    "mystic_idle": {
+      "frames": 6,
+      "width": 204,
+      "height": 34,
+      "frameWidth": 34
+    },
+    "rock1": {
+      "frames": 1,
+      "width": 13,
+      "height": 12,
+      "frameWidth": 13
+    },
+    "rock2": {
+      "frames": 1,
+      "width": 25,
+      "height": 20,
+      "frameWidth": 25
+    },
+    "rock3": {
+      "frames": 1,
+      "width": 18,
+      "height": 14,
+      "frameWidth": 18
+    },
+    "rock4": {
+      "frames": 1,
+      "width": 25,
+      "height": 20,
+      "frameWidth": 25
+    },
+    "rogue": {
+      "frames": 1,
+      "width": 34,
+      "height": 41,
+      "frameWidth": 34
+    },
+    "rogue_atk": {
+      "frames": 8,
+      "width": 368,
+      "height": 61,
+      "frameWidth": 46
+    },
+    "rogue_idle": {
+      "frames": 6,
+      "width": 228,
+      "height": 42,
+      "frameWidth": 38
+    },
+    "tnt1": {
+      "frames": 1,
+      "width": 46,
+      "height": 37,
+      "frameWidth": 46
+    },
+    "tnt1_walk": {
+      "frames": 6,
+      "width": 282,
+      "height": 38,
+      "frameWidth": 47
+    },
+    "tnt2": {
+      "frames": 1,
+      "width": 46,
+      "height": 37,
+      "frameWidth": 46
+    },
+    "tnt2_walk": {
+      "frames": 6,
+      "width": 282,
+      "height": 38,
+      "frameWidth": 47
+    },
+    "tnt3": {
+      "frames": 1,
+      "width": 46,
+      "height": 37,
+      "frameWidth": 46
+    },
+    "tnt3_walk": {
+      "frames": 6,
+      "width": 282,
+      "height": 38,
+      "frameWidth": 47
+    },
+    "tnt4": {
+      "frames": 1,
+      "width": 46,
+      "height": 37,
+      "frameWidth": 46
+    },
+    "tnt4_walk": {
+      "frames": 6,
+      "width": 282,
+      "height": 38,
+      "frameWidth": 47
+    },
+    "tnt5": {
+      "frames": 1,
+      "width": 46,
+      "height": 37,
+      "frameWidth": 46
+    },
+    "tnt5_walk": {
+      "frames": 6,
+      "width": 282,
+      "height": 38,
+      "frameWidth": 47
+    },
+    "torch1": {
+      "frames": 1,
+      "width": 40,
+      "height": 43,
+      "frameWidth": 40
+    },
+    "torch1_walk": {
+      "frames": 6,
+      "width": 360,
+      "height": 42,
+      "frameWidth": 60
+    },
+    "torch2": {
+      "frames": 1,
+      "width": 40,
+      "height": 43,
+      "frameWidth": 40
+    },
+    "torch2_walk": {
+      "frames": 6,
+      "width": 360,
+      "height": 42,
+      "frameWidth": 60
+    },
+    "torch3": {
+      "frames": 1,
+      "width": 40,
+      "height": 43,
+      "frameWidth": 40
+    },
+    "torch3_walk": {
+      "frames": 6,
+      "width": 360,
+      "height": 42,
+      "frameWidth": 60
+    },
+    "torch4": {
+      "frames": 1,
+      "width": 40,
+      "height": 43,
+      "frameWidth": 40
+    },
+    "torch4_walk": {
+      "frames": 6,
+      "width": 360,
+      "height": 42,
+      "frameWidth": 60
+    },
+    "torch5": {
+      "frames": 1,
+      "width": 40,
+      "height": 43,
+      "frameWidth": 40
+    },
+    "torch5_walk": {
+      "frames": 6,
+      "width": 360,
+      "height": 42,
+      "frameWidth": 60
+    },
+    "tree1": {
+      "frames": 1,
+      "width": 59,
+      "height": 90,
+      "frameWidth": 59
+    },
+    "tree2": {
+      "frames": 1,
+      "width": 56,
+      "height": 90,
+      "frameWidth": 56
+    },
+    "tree3": {
+      "frames": 1,
+      "width": 58,
+      "height": 89,
+      "frameWidth": 58
+    },
+    "tree4": {
+      "frames": 1,
+      "width": 21,
+      "height": 18,
+      "frameWidth": 21
+    }
+  }
+}
