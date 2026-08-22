@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
+import { rarityVar } from '../channels'
 import { ItemCard } from './ItemCard'
 
 /** Wave-clear summary (over the battle screen). Run win/loss lives in RunEndOverlay. */
@@ -55,7 +55,12 @@ export function ResultOverlay() {
         <div className="summary-line">
           <span>Base integrity</span>
           <strong>
-            {Math.ceil(lastResult.baseHpLeft)} left {lastResult.leaks > 0 && `(−${lastResult.leaks})`}
+            {/* Both numbers arrive whole from the engine and reconcile by
+                construction (`startBaseHp − leakDamage + healed`), so rounding
+                them again here is what produced "19 left (−2)" against a
+                20-HP base. `leakDamage` is also the honest name for what this
+                line has always meant (F2). */}
+            {lastResult.baseHpLeft} left {lastResult.leakDamage > 0 && `(−${lastResult.leakDamage})`}
           </strong>
         </div>
         {lastLoot.length > 0 && (
@@ -63,7 +68,7 @@ export function ResultOverlay() {
             <span>Loot found</span>
             <strong className="loot-names">
               {lastLoot.map((it, i) => (
-                <span key={it.id} style={{ color: RARITY[it.rarity].color }}>
+                <span key={it.id} style={{ color: rarityVar(it.rarity) }}>
                   {it.name}
                   {i < lastLoot.length - 1 ? ', ' : ''}
                 </span>

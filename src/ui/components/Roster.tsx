@@ -1,9 +1,10 @@
 import { useState, type CSSProperties } from 'react'
-import { HERO_SLOTS, HERO_SLOT_LABEL, RARITY } from '../../game/data/items'
+import { HERO_SLOTS, HERO_SLOT_LABEL } from '../../game/data/items'
 import { computeCombat } from '../../game/engine/combat'
 import { buildName, levelProgress, MAX_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
+import { ARCHETYPE_GLYPH as GLYPH, rarityVar } from '../channels'
 
 export function Roster() {
   const roster = useGameStore((s) => s.roster)
@@ -132,7 +133,7 @@ function SentinelCard({
                 <span className="scg-label">{HERO_SLOT_LABEL[hs]}</span>
                 <span
                   className={`scg-item ${worn ? '' : 'empty'}`}
-                  style={worn ? { color: RARITY[worn.rarity].color } : undefined}
+                  style={worn ? { color: rarityVar(worn.rarity) } : undefined}
                 >
                   {worn ? worn.name : 'Empty'}
                 </span>
@@ -155,4 +156,3 @@ function Stat({ label, v, wide }: { label: string; v: number; wide?: boolean }) 
   )
 }
 
-const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }

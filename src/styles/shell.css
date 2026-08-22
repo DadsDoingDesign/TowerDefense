@@ -2,13 +2,68 @@
  * Root Shell — four bands, fixed. Header 76 · Stage 388 · Selector 126 ·
  * Detail 254 at the 390×844 baseline; the Stage takes any extra height so it
  * grows on taller screens and the other three stay put.
+ *
+ * ---------------------------------------------------------------------------
+ * THE BAND BUDGET IS A SET OF TOKENS, NOT A SET OF LITERALS (C11)
+ * ---------------------------------------------------------------------------
+ * Every fixed band height below reads one of the `--sh-*` custom properties
+ * declared here, and the short-viewport tiers at the foot of this file do
+ * nothing but re-declare them. That is deliberate: the numbers add up to a
+ * height budget, and a budget that is spelled out in six different rules is a
+ * budget nobody can check.
+ *
+ * The budget they add up to:
+ *
+ *     header + coach + STAGE + selector + detail  ==  100dvh
+ *
+ * The Stage is the only `1fr`, so it absorbs the slack — which also means it is
+ * the only band that can be squeezed to nothing when the other four ask for
+ * more than the viewport has. When the four fixed bands plus the Stage's own
+ * floor exceed 100dvh, the grid does NOT shrink them: it overflows, `.shell`
+ * clips it (`overflow: hidden`), and whatever was in the last row is simply
+ * gone — with no scrollbar, because the document cannot scroll either.
+ *
+ * That is exactly what shipped. At the 390×844 baseline the sum is
+ * 76 + 45 + 180(floor) + 126 + 310 = 737, which fits; at 375×667 it does not,
+ * and the thing in the last row is the battle's `Start Wave ▶`. There was no
+ * portrait short-viewport query at all, so an iPhone SE, a Galaxy S8 and every
+ * 6/7/8-sized phone could not start the first wave of the game. Measured cold
+ * at 375×667: button top 674 (7px below the fold), and `elementFromPoint` at
+ * its centre returned `null`.
+ *
+ * So: keep the four-band geometry — it is the design (docs/FIGMA.md) and the
+ * Stage stays uncovered — and make the budget adapt. See § short viewport.
  */
 .shell {
+  /* The floor the Stage may be compressed to before the layout would rather
+     overflow. Every tier below lowers it in step with the fixed bands. */
+  --sh-stage-min: 180px;
+  --sh-selector-h: 126px;
+  /* The Detail band's own height. With a wave bar present the band grows by
+     `--sh-wavebar-h` on top of this — see `.sh-detail:has(> .sh-wavebar)`. */
+  --sh-detail-h: 254px;
+  --sh-wavebar-h: 56px;
+  --sh-detail-pad-y: 10px;
+  --sh-detail-pad-b: 12px;
+  --sh-header-min: 76px;
+  --sh-header-pad: 10px;
+  --sh-coach-pad: 6px;
+  --sh-card-gap: 3px;
+  --sh-card-glyph: 30px;
+  --sh-card-pad: 8px;
+  --sh-selrow-pad: 10px;
+
   display: grid;
   /* An explicit single column: without it the Selector's scrolling row sizes
      to max-content and drags the other three bands off the viewport. */
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(180px, 1fr) auto auto;
+  /* Five rows, not four: row 2 is the coach strip (WS9). Every band names the
+     row it sits in, so when no tip is live row 2 has no child, resolves to 0px
+     and the layout is byte-identical to the four-band one. Placing them by
+     source order instead would silently promote the Stage into the `auto` row
+     the moment a tip appeared - and the Stage is the only band that must have
+     the `1fr`. */
+  grid-template-rows: auto auto minmax(var(--sh-stage-min), 1fr) auto auto;
   height: 100dvh;
   max-width: 520px;
   margin: 0 auto;
@@ -19,15 +74,32 @@
   min-width: 0;
 }
 
+/* Band -> row. See the note on `.shell` above. */
+.sh-header {
+  grid-row: 1;
+}
+.sh-coach {
+  grid-row: 2;
+}
+.sh-stage {
+  grid-row: 3;
+}
+.sh-selector {
+  grid-row: 4;
+}
+.sh-detail {
+  grid-row: 5;
+}
+
 /* ---------------------------------------------------------------- band 1 */
 .sh-header {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 14px;
+  padding: var(--sh-header-pad) 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
-  min-height: 76px;
+  min-height: var(--sh-header-min);
 }
 .sh-header-row {
   display: flex;
@@ -45,7 +117,7 @@
   font-size: 18px;
 }
 .sh-chip {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--panel-2);
@@ -62,19 +134,19 @@
   border-color: var(--teal-dim);
 }
 .sh-chip.threat {
-  color: var(--bad);
-  border-color: rgba(208, 86, 58, 0.3);
+  color: var(--bad-text);
+  border-color: rgba(239, 131, 104, 0.42);
 }
 .sh-status {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--accent);
 }
 .sh-muted {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-xs);
 }
 .sh-base {
   display: flex;
@@ -85,7 +157,7 @@
 }
 .sh-base-glyph {
   color: var(--muted-2);
-  font-size: 11px;
+  font-size: var(--fs-micro);
 }
 .sh-base-bar {
   flex: 1;
@@ -102,7 +174,7 @@
   transition: width 0.25s ease;
 }
 .sh-base-val {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -121,6 +193,19 @@
 .sh-stage .battle-canvas-wrap {
   position: absolute;
   inset: 0;
+  /* `app.css` floors the wrap at `min-height: 240px` — a sensible rule for the
+     legacy battle screen, where the wrap is a flex child that has to hold its
+     own against a side panel. In the shell the wrap is `inset: 0` inside the
+     Stage band, and `min-height` still wins over `inset`: on any viewport whose
+     Stage resolves shorter than 240px the canvas is drawn 240px tall, the band
+     clips the difference, and the bottom of the field — which is where half the
+     build slots are — is both invisible and untappable.
+     Measured at 320x568 Large UI: Stage 91px, canvas 240px, and the tap that
+     should have posted a Sentinel on slot 0 landed 2px outside the band on the
+     Selector below. The cold walk reached "Start Wave ▶" with nothing deployed.
+     Latent before this pass (the Stage floor was 180, so it clipped 60px on
+     every sub-740px phone); the short-viewport tiers are what made it bite. */
+  min-height: 0;
 }
 .sh-stage.stage-map .run-map-scroll {
   height: 100%;
@@ -129,151 +214,20 @@
   padding-bottom: 28px;
 }
 
-.sh-wave-strip {
-  position: absolute;
-  inset: 0 0 auto 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  background: rgba(20, 12, 6, 0.72);
-  border-bottom: 1px solid var(--line);
-}
-.sh-wave-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text);
-  text-transform: uppercase;
-}
-.sh-wave-bar {
-  flex: 1;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-}
-.sh-wave-fill {
-  display: block;
-  height: 100%;
-  background: var(--good);
-  transition: width 0.2s linear;
-}
-.sh-speed {
-  min-width: 34px;
-  height: 24px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line-strong);
-  background: var(--panel-2);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.sh-board,
-.sh-result,
-.sh-title {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
-}
-.sh-board-card {
-  width: min(330px, 100%);
-  text-align: center;
-  padding: 22px 20px;
-  border-radius: 14px;
-  background: var(--panel-3);
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
-}
-.sh-board-glyph {
-  color: var(--accent);
-  font-size: 20px;
-}
-.sh-board-card h2 {
-  margin: 6px 0 6px;
-  font-size: 22px;
-  color: var(--text);
-}
-.sh-board-card p {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.sh-title h1 {
-  font-family: var(--font-display);
-  font-size: clamp(30px, 10vw, 44px);
-  letter-spacing: 0.08em;
-  color: var(--accent);
-  text-align: center;
-  line-height: 1.05;
-}
-.sh-title p {
-  text-align: center;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* Run end — mirrors .overlay-card, but as a stage subject, not a modal. */
-.sh-result-card {
-  position: relative;
-  width: min(330px, 100%);
-  text-align: center;
-  padding: 24px 20px 20px;
-  border-radius: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-.sh-result-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--good);
-}
-.sh-result-card.loss::before {
-  background: var(--bad);
-}
-.sh-result-glyph {
-  font-size: 26px;
-  color: var(--accent);
-}
-.sh-result-card h2 {
-  margin: 6px 0 8px;
-  font-size: 24px;
-}
-.sh-result-card p {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.sh-result-marks {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--accent-dim);
-  border: 1px solid rgba(224, 172, 76, 0.28);
-  font-size: 13px;
-}
-.sh-result-marks strong {
-  color: var(--accent);
-  font-size: 17px;
-}
+/* `.sh-wave-strip` USED TO BE HERE, and its absence is M1 (see `StageBand`).
+   It was `position: absolute; inset: 0 0 auto 0; z-index: 2` on a
+   `rgba(20,12,6,0.72)` scrim over the battlefield, and because it carried the
+   speed toggle at the 44px touch floor it stood 54-62px tall. Measured share of
+   the composed field: 1.4% at 390x844, 23.9% at 375x667, 27.9% at 360x640,
+   35.5% at 320x568 and 40.4% at 320x568 Large - covering build slot `s1` and
+   the top lane of `kilnroad` on four of ten viewport x scale cells. The Stage
+   now has NO absolutely-positioned children at all, which is the only form of
+   "nothing ever covers the subject" that a measurement can confirm.
+   The three pieces live in `.sh-wavebar` further down this file. */
 
 /* ---------------------------------------------------------------- band 3 */
 .sh-selector {
-  height: 126px;
+  height: var(--sh-selector-h);
   background: var(--bg-2);
   border-bottom: 1px solid var(--line);
 }
@@ -281,7 +235,7 @@
   display: flex;
   gap: 8px;
   height: 100%;
-  padding: 10px 14px;
+  padding: var(--sh-selrow-pad) 14px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -300,8 +254,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 6px;
+  gap: var(--sh-card-gap);
+  padding: var(--sh-card-pad) 6px;
   border-radius: var(--r-sm);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -330,8 +284,8 @@
 }
 .sh-hero-glyph {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: var(--sh-card-glyph);
+  height: var(--sh-card-glyph);
   display: grid;
   place-items: center;
   border-radius: var(--r-sm);
@@ -343,16 +297,27 @@
   border: 1px dashed var(--line-strong);
   color: var(--muted-2);
 }
+/* Gold on the archetype badge measured 1.56:1 - the one mark that says "this
+   hero has a permanent choice waiting" was effectively invisible on a fighter.
+   It gets its own dark disc, which also lifts it off whatever hue is behind. */
 .sh-hero-star {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  font-size: 11px;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
+  font-size: var(--fs-micro);
+  line-height: 1;
   color: var(--accent);
 }
 .sh-hero-name,
 .sh-offer-name {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 1.2;
   max-width: 100%;
@@ -367,7 +332,7 @@
 }
 /* Three lines clears the longest generated item names. */
 .sh-offer-name {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   -webkit-line-clamp: 3;
 }
 .sh-hero-name.muted {
@@ -375,7 +340,7 @@
 }
 .sh-hero-sub,
 .sh-offer-sub {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--muted);
   max-width: 100%;
   overflow: hidden;
@@ -395,7 +360,7 @@
   background: var(--teal);
 }
 .sh-hero-tag {
-  font-size: 9px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-2);
@@ -411,7 +376,7 @@
   color: var(--accent);
 }
 .sh-offer-cost {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--accent);
 }
@@ -419,12 +384,37 @@
 
 /* ---------------------------------------------------------------- band 4 */
 .sh-detail {
-  height: 254px;
+  height: var(--sh-detail-h);
   display: grid;
-  grid-template-columns: 1fr 78px 100px;
+  /* 74/108 rather than 78/100 (M2). The pack's two tile columns were 38px wide
+     - under the 44px floor, on the grid you tap most - while the gear column
+     had room it was not using. Six pixels move across and both clear the
+     floor: tiles land at ~47px, gear slots at ~58px. */
+  /* `minmax(0, ...)`, not a bare `1fr`: the wave bar spans all three tracks,
+     and a bare `1fr` floors the first track at its content's min-content - so
+     the bar's 152px button plus its hint widened the whole band past the
+     viewport and pushed the Pack column off-screen. */
+  grid-template-columns: minmax(0, 1fr) 74px 108px;
+  grid-template-rows: minmax(0, 1fr);
   gap: 8px;
-  padding: 10px 10px 12px;
+  padding: var(--sh-detail-pad-y) 10px var(--sh-detail-pad-b);
   background: var(--panel);
+}
+/*
+ * In a battle the band grows a second row for the wave bar (C4), and the Stage
+ * pays for it - it is the only band with the flexible height. 56px off a ~340px
+ * field is a cheaper trade than the alternative, which was to squeeze the bar
+ * into the context column: at 176px wide with a pinned foot, that left an item
+ * two visible lines of description and pushed its craft buttons below the fold.
+ *
+ * `:has()` rather than a class on `.sh-detail`, because the bar decides for
+ * itself whether it exists (`WaveBar` returns null outside a battle) and a
+ * second source of that truth is a second thing to get out of step. The same
+ * selector style is already used in page.css.
+ */
+.sh-detail:has(> .sh-wavebar) {
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: calc(var(--sh-detail-h) + var(--sh-wavebar-h) + var(--safe-bottom));
 }
 .sh-context,
 .sh-gear,
@@ -437,13 +427,18 @@
   border: 1px solid var(--line);
   padding: 8px;
 }
+/* The pack trades side padding for tile width - see the grid note above. */
+.sh-pack {
+  padding-left: 4px;
+  padding-right: 4px;
+}
 .sh-context.empty {
   display: grid;
   place-items: center;
 }
 .sh-empty-hint {
   color: var(--muted-2);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   text-align: center;
   padding: 0 10px;
 }
@@ -456,13 +451,13 @@
 }
 .sh-context-head strong {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--fs-lg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sh-context-sub {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -481,9 +476,12 @@
   gap: 6px;
   margin-top: 8px;
 }
+/* 12px, not 13. The floor is 11 and this is a real lift from the old 11.5,
+   but the context panel is ~176x180 with a pinned foot: at 13px an item's
+   description had two visible lines and its craft row fell below the fold. */
 .sh-line {
-  font-size: 11.5px;
-  line-height: 1.4;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
   color: var(--text);
 }
 .sh-line.muted {
@@ -491,6 +489,11 @@
 }
 .sh-line.accent {
   color: var(--accent);
+}
+/* The armed-confirm warning inside a context panel. */
+.sh-line.bad {
+  color: var(--bad-text);
+  font-weight: 600;
 }
 
 .sh-tabs {
@@ -508,20 +511,25 @@
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 700;
+  min-height: var(--hit-min);
 }
 .sh-tab.active {
   background: var(--accent);
   color: #1b1409;
 }
 
+/* `minmax(0, 1fr)`, not `1fr`: grid items floor at min-content, so the longest
+   unbreakable label ("PHYSICAL/MAGIC") widened both tracks and pushed the
+   second cell out through the side of the panel. */
 .sh-statgrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 5px;
 }
 .sh-cell {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -530,15 +538,17 @@
   background: var(--surface);
 }
 .sh-cell-label {
-  font-size: 9px;
+  font-size: var(--fs-micro);
+  line-height: 1.15;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
+  overflow-wrap: break-word;
 }
 .sh-cell-pair {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -550,7 +560,7 @@
   gap: 6px;
 }
 .sh-meter-label {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--muted);
 }
 .sh-meter-track {
@@ -565,9 +575,93 @@
   background: var(--teal);
 }
 .sh-meter-val {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Wave composition, the last battle's roll, and any other name/detail/number
+   list in the context panel. One row shape, three uses. */
+.sh-comp {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sh-comp-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--r-xs);
+  background: var(--surface);
+}
+.sh-comp-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+.sh-comp-res {
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  color: var(--muted);
+}
+.sh-comp-boss {
+  color: var(--bad-text);
+  margin-right: 3px;
+}
+/* The word beside the skull (M11). `.sh-comp-name` is a column, so the mark and
+   the word need this wrapper to share a line; uppercase and `--bad-text` make
+   it a tag rather than part of the enemy's name. */
+.sh-comp-tag {
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--bad-text);
+}
+/* The map's own name, above the roster. Quiet - it is the ground the fight
+   happens on, not a line of the fight. */
+.sh-comp-ground {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: var(--fs-micro);
+}
+.sh-comp-row.downed .sh-comp-name {
+  color: var(--bad-text);
+}
+.sh-comp-count {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An upgrade path plus the sentence describing what its next level buys and
+   what it costs you (M18). */
+.sh-upgblock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sh-upgblock + .sh-upgblock {
+  margin-top: 6px;
+}
+/* A section eyebrow inside the context panel — "Abilities", "Orders". */
+.sh-line.head {
+  margin-top: 4px;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .sh-upg {
@@ -586,7 +680,7 @@
   min-width: 0;
 }
 .sh-upg-head strong {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   white-space: nowrap;
 }
 .sh-pips {
@@ -603,21 +697,25 @@
   background: var(--accent);
 }
 
+/* M2 - four options across a ~156px context panel gave 34px-wide buttons. A
+   2x2 grid gets each one to ~75px without taking the row out of the panel. */
 .sh-seg {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 3px;
   padding: 2px;
   border-radius: var(--r-md);
   background: var(--bg);
 }
 .sh-seg-btn {
-  flex: 1;
+  min-width: 0;
+  min-height: var(--hit-min);
   padding: 6px 2px;
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
   font-weight: 700;
 }
 .sh-seg-btn.active {
@@ -633,8 +731,9 @@
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   text-align: left;
+  min-height: var(--hit-min);
 }
 .sh-check.on {
   color: var(--text);
@@ -643,13 +742,13 @@
 
 .sh-btn {
   flex: 1;
-  min-height: 44px;
+  min-height: var(--hit-min);
   padding: 8px 10px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -658,13 +757,31 @@
   border-color: var(--cta);
   color: var(--cta-ink);
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--fs-lg);
 }
+/* M2 — these were 30px on a 44px floor, and they are where money moves:
+   upgrade buys, Reforge, Raise rarity. `small` now means narrow, not short. */
 .sh-btn.small {
   flex: 0 0 auto;
-  min-height: 30px;
+  min-height: var(--hit-min);
   padding: 5px 9px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
+}
+/* The armed confirm's own control - deliberately not `.primary`, so the
+   destructive verb never sits on the button that armed it.
+
+   `order: -1` keeps it drawn to the LEFT of the control that armed it while
+   sitting AFTER it in the DOM, so tabbing forward from "Never mind" lands on
+   the confirm. It used to precede the CTA in source order, which meant a
+   keyboard user had to Shift+Tab backwards to find the one control in the shell
+   that is worth finding deliberately. Nothing about the pointer layout moves. */
+.sh-btn.danger {
+  order: -1;
+  background: transparent;
+  border: 2px solid var(--bad-text);
+  color: var(--bad-text);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
 }
 .sh-btn:disabled {
   opacity: 0.45;
@@ -675,13 +792,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.08em;
   color: var(--muted-2);
   margin-bottom: 6px;
-}
-.sh-col-count {
-  font-variant-numeric: tabular-nums;
 }
 
 .sh-gear-slots {
@@ -703,7 +817,13 @@
   border-left: 3px solid var(--rail, var(--line));
   background: var(--surface);
   color: var(--muted);
-  min-height: 44px;
+  /* The token, not the literal 44 it was written as. Large UI lifts the floor
+     to 48 and this rule was the one control in the shell that stayed at 44 —
+     invisible at 390x844, where the gear column has enough room that `flex: 1`
+     hands every slot ~70px anyway, and measurable the moment the band gets
+     shorter. At 375x667 Large the three slots landed at exactly 44 against a
+     48px floor. */
+  min-height: var(--hit-min);
   cursor: pointer;
 }
 .sh-slot.empty {
@@ -715,13 +835,18 @@
   color: var(--accent);
 }
 .sh-slot-label {
-  font-size: 8.5px;
+  font-size: var(--fs-micro);
+  line-height: 1.05;
+  text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
+/* `--muted-2` sat on TWO stacked parchment washes here (the column's and the
+   slot's), which lifted the ground enough to drop this to 3.86:1. The brighter
+   step clears AA on the composite. */
 .sh-slot-mark {
-  font-size: 14px;
-  color: var(--rail, var(--muted-2));
+  font-size: var(--fs-md);
+  color: var(--rail, var(--muted));
 }
 
 .sh-pack.filtering {
@@ -751,7 +876,7 @@
   border: 1px solid var(--rail, var(--line));
   background: var(--surface);
   color: var(--rail, var(--text));
-  font-size: 15px;
+  font-size: var(--fs-md);
   cursor: pointer;
 }
 .sh-tile.selected {
@@ -759,16 +884,27 @@
 }
 .sh-pack-empty {
   grid-column: 1 / -1;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   color: var(--muted-2);
   text-align: center;
   padding-top: 12px;
 }
 
-/* Accessibility: the large-UI setting lifts the touch floor everywhere. */
-:root[data-scale='large'] .sh-btn {
-  min-height: 48px;
-  font-size: 13.5px;
+/* Accessibility: Large UI lifts the touch floor and the whole type ramp (both
+   come from `--hit-min` / `--fs-*` in global.css, so nothing here has to
+   restate a size). Only the card WIDTHS need saying, because they are the one
+   thing the ramp cannot infer. */
+/* Large UI also needs the pack a touch wider, or its two tile columns land at
+   46px against a 48px floor - the columns are px, so the ramp cannot infer it. */
+/* Large UI moves the whole detail band's budget around, because the columns are
+   px and the ramp cannot infer them: the pack needs 112 to keep two 49px tiles,
+   the gear column can give ground down to 54px of content, and the side padding
+   drops 2px each way - which is what keeps the three hero tabs above 48px in the
+   context column rather than landing at 45. */
+:root[data-scale='large'] .sh-detail {
+  grid-template-columns: minmax(0, 1fr) 70px 112px;
+  padding-left: max(8px, var(--safe-left));
+  padding-right: max(8px, var(--safe-right));
 }
 :root[data-scale='large'] .sh-hero {
   width: 104px;
@@ -796,8 +932,10 @@
   font-weight: 600;
 }
 
-/* Crafting sits with the item, not in a Forge screen — reachable wherever you
-   can select gear. */
+/* Crafting sits with the item, not in a Forge screen - reachable wherever you
+   can select gear. It is pinned to the bottom of the scrolling body rather than
+   left to float after the description, because at 44px tall it is the first
+   thing a long enchantment list pushes below the fold. */
 .sh-craft {
   display: flex;
   gap: 5px;
@@ -805,21 +943,776 @@
 }
 .sh-craft .sh-btn.small {
   flex: 1;
-  min-height: 28px;
-  font-size: 10.5px;
+  min-height: var(--hit-min);
+  font-size: var(--fs-micro);
   padding: 4px 6px;
 }
+/* M2 - the sort control was a ~19px-wide glyph. It is now a real 44x44 target.
+   The pack head becomes a two-row grid so the 44px square has somewhere to sit
+   inside a 108px column without pushing PACK and its count off the edge. */
+.sh-pack .sh-col-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--hit-min);
+  align-items: center;
+  column-gap: 2px;
+  min-height: var(--hit-min);
+}
+.sh-pack .sh-col-head > span:first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+.sh-col-count {
+  grid-column: 1;
+  grid-row: 2;
+  font-variant-numeric: tabular-nums;
+}
 .sh-col-btn {
-  margin-left: auto;
-  margin-right: 6px;
-  padding: 0 5px;
-  border: none;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: var(--hit-min);
+  min-width: var(--hit-min);
+  height: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--muted-2);
-  font-size: 12px;
+  font-size: var(--fs-md);
   line-height: 1;
   cursor: pointer;
 }
 .sh-col-btn:hover {
   color: var(--accent);
+}
+
+/* ==================================================== battle action bar (C4)
+   Always on screen during a battle: one line saying what to do next, and the
+   control that starts the wave. It replaces the copy of that button that used
+   to live inside `EmptyPanel`, so there is exactly one Start Wave in the DOM
+   and it does not depend on what is selected.
+
+   `min-height` rather than a fixed height: the hint wraps to two lines on the
+   narrowest phone and the bar grows down into the panel above it, which
+   scrolls, rather than clipping the button. */
+.sh-wavebar {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+}
+.sh-wavebar-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.sh-wavebar-hint.ready {
+  color: var(--text);
+}
+/* Fixed width, and the hint takes the slack: the button must not resize as the
+   hint changes from "tap a Sentinel" to "1 posted", or the primary action moves
+   under a thumb that is already on its way down. */
+.sh-wavebar .sh-btn {
+  flex: 0 0 152px;
+}
+/* The one bar with no hint beside it - the panel above is already explaining. */
+.sh-wavebar.solo .sh-btn {
+  flex: 1 1 auto;
+}
+/* Live wave: a status line where the button was, so the bar neither disappears
+   (which is what made the layout jump) nor offers an action the store refuses.
+
+   It now also carries the wave name, the kill progress and the speed toggle -
+   the three things that used to be painted on top of the battlefield (M1).
+
+   Still ONE line, and the band's height is still exactly `--sh-wavebar-h`: the
+   toggle is at the 44px touch floor and everything else sits beside it, so the
+   Stage gives up nothing beyond the 56px it was already giving up. The only
+   part that shrinks is the wave NAME, because it is the one part of this row
+   that is said in full somewhere else - the composition panel directly above
+   names the wave, its variant, and what the variant asks for. */
+.sh-wavebar-live {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--hit-min);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sh-wavebar-live-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.sh-wavebar-left {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.sh-wavebar-live b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+/* The bar takes the slack; the speed toggle keeps its own footprint so it never
+   moves under a thumb already on its way down - the same rule the Start Wave
+   button follows two rules up. */
+.sh-wave-bar {
+  flex: 1 1 auto;
+  min-width: 24px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.sh-wave-fill {
+  display: block;
+  height: 100%;
+  background: var(--good);
+  transition: width 0.2s linear;
+}
+.sh-speed {
+  flex: 0 0 auto;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+/* ========================================================= coach marks (WS9)
+   First-run teaching. One idea at a time, in the band where the idea lives,
+   dismissible, and never shown twice - the seen flags live in `settingsStore`
+   so they outlast the run that taught them.
+
+   It is its own grid row rather than an overlay, because the two rules that
+   matter here are that the Stage is never covered and that nothing moves under
+   a finger already coming down. A row appears above the Stage, the Stage gives
+   up the height (it is the only `1fr` band), and every control below it stays
+   exactly where it was. */
+.sh-coach {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Tight on purpose: this row takes its height from the Stage, and the deploy
+     tip is live at exactly the moment the player needs to see the field. */
+  padding: var(--sh-coach-pad) 12px;
+  padding-left: max(12px, var(--safe-left));
+  padding-right: max(12px, var(--safe-right));
+  background: var(--accent-dim);
+  border-bottom: 1px solid var(--line-strong);
+}
+.sh-coach-glyph {
+  flex: 0 0 auto;
+  /* 16px, not 32. The 32px version measured 579.9px of bands in a 568px
+     viewport at 320 Large — dm-reach caught it — because the coach strip is
+     sized by its tallest child and 32px of icon is 12px taller than the 15px
+     text line it replaced. The strip is one line of type; the mark next to it
+     is a line-height thing, not a tile. */
+  margin-top: 2px;
+  color: var(--accent);
+}
+.sh-coach-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--text);
+  text-wrap: pretty;
+}
+.sh-coach-text b {
+  color: var(--accent);
+}
+/* "Got it" rather than a glyph (M8): `✕` is the renderer's mark for a Sentinel
+   that has fallen, red on dark, on the same screen and in the same phase. The
+   button keeps the 44px square as its FLOOR and grows sideways for the word -
+   `min-width` not `width`, and `white-space: nowrap` so it never becomes two
+   stacked syllables when the strip is squeezed. */
+.sh-coach-dismiss {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: var(--hit-min);
+  height: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 10px;
+  margin: -6px -6px -6px 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* The 44px square must not be what sets the strip's height once the strip is
+   being squeezed — negative margins let it keep its target while the text
+   decides how tall the row is. */
+.sh-coach-dismiss {
+  margin: calc(0px - var(--sh-coach-pad)) calc(0px - var(--sh-coach-pad)) calc(0px - var(--sh-coach-pad)) 0;
+}
+.sh-coach-dismiss:hover {
+  color: var(--text);
+}
+
+/* ============================================ rarity without colour (M27c)
+   The pack grid and the gear slots said "rare" with a border hue and nothing
+   else, which is no signal at all to roughly one man in twelve. Every rarity
+   now also carries its initial, and the tiles carry a count of notches down
+   the leading edge - so the ramp is readable as SHAPE first and colour second.
+   The `title` those tiles used to rely on does not exist on touch; they carry
+   a real `aria-label` now too. */
+.sh-tile {
+  position: relative;
+}
+.sh-tile-rar,
+.sh-slot-rar {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--rail, var(--muted-2));
+}
+.sh-tile-pips {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  gap: 2px;
+}
+.sh-tile-pip {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--rail, var(--muted-2));
+}
+.sh-slot {
+  position: relative;
+}
+.sh-slot-rar {
+  top: 2px;
+  left: 4px;
+}
+
+/* ============================================================ safe area (M1)
+   `.shell` is 100dvh under `viewport-fit=cover`, so on a notched iPhone the
+   Header sits under the notch and the Detail band's controls ride the home
+   indicator. The insets existed only in the legacy app.css, which the shipping
+   shell never loads.
+
+   They are applied to the OUTER bands (header top, detail bottom, both sides)
+   rather than to `.shell`, so each band keeps its painted background edge to
+   edge and only its CONTENT is pushed clear. The `max()` form means a device
+   with no inset keeps exactly the original padding. */
+.sh-header {
+  padding-top: max(var(--sh-header-pad), var(--safe-top));
+  padding-left: max(14px, var(--safe-left));
+  padding-right: max(14px, var(--safe-right));
+}
+.sh-selector-row {
+  padding-left: max(14px, var(--safe-left));
+  padding-right: max(14px, var(--safe-right));
+}
+.sh-detail {
+  /* The home indicator eats ~34px; the band needs the extra HEIGHT too, or
+     padding alone just costs the Pack column a row. */
+  height: calc(var(--sh-detail-h) + var(--safe-bottom));
+  padding-bottom: calc(var(--sh-detail-pad-b) + var(--safe-bottom));
+  padding-left: max(10px, var(--safe-left));
+  padding-right: max(10px, var(--safe-right));
+}
+
+/* ======================================================= narrow viewport (C11)
+   The Detail band's three columns are two fixed px widths plus the slack, so
+   the CONTEXT column is whatever the phone's width leaves over — and the three
+   hero tabs (Stats / Upgr / Team) divide that by three. At the 390px baseline
+   that lands them at 45px, one pixel over the floor. Nobody had measured any
+   other width:
+
+     390 wide  tab 45.0  ok          360 wide  tab 38.0  under the 44 floor
+     375 wide  tab 43.0  under       320 wide  tab 27.4  under, badly
+
+   Same class of blind spot as the height one, and the same cause — one
+   hard-coded viewport in every harness. The Selector's cards, the pack tiles
+   and the gear slots all clear the floor at these widths; it is only the
+   three-up tab row and the columns feeding it that do not.
+
+   The fix is a width budget rather than a shrink: give the tab row back the
+   pixels the gutters were spending, then move a few from the gear column,
+   and below 360 stop asking two pack tiles to share a 108px column at all —
+   one tile per row is bigger, not smaller, and the pack still scrolls exactly
+   as it did. Nothing here touches the 44/48 floors themselves. */
+@media (max-width: 389px) {
+  /* 6px of pure gutter inside a row whose three children are up against a
+     floor. Costs nothing and is worth ~2px per tab. */
+  .sh-tabs {
+    gap: 2px;
+    padding: 1px;
+  }
+}
+
+/* Every width below was SOLVED by measurement (`scratchpad/dm-cols.mjs` sweeps
+   candidate column triples and reports the resulting tab / gear-slot / pack-tile
+   boxes), not derived on paper — the paper answer was consistently ~2px
+   optimistic once borders, the scroll gutter and sub-pixel rounding landed. */
+@media (min-width: 360px) and (max-width: 389px) {
+  .sh-detail {
+    grid-template-columns: minmax(0, 1fr) 62px 104px;
+  }
+  .sh-context {
+    padding: 6px;
+  }
+}
+@media (max-width: 359px) {
+  .sh-detail {
+    grid-template-columns: minmax(0, 1fr) 62px 58px;
+  }
+  .sh-context {
+    padding: 5px;
+  }
+  /* One tile per row below 360px. Two 1fr columns cannot both clear 44px in
+     any pack width this viewport can spare — measured, the best two-column
+     answer leaves the tabs at 34px — and one tile is 48-52px, which is BIGGER
+     than the two it replaces. The grid scrolls for the rest exactly as before,
+     so nothing leaves the pack; it is the same inventory, one column deep. */
+  .sh-pack-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Large UI raises the floor to 48 and the type with it, so the two-column pack
+   stops fitting a phone narrower than 390 at all: measured, every candidate
+   leaves the tiles at 44-46. One column throughout, and the gear column takes
+   the two pixels its 48px slot needs. (These need the `:root[data-scale]`
+   prefix only to outrank the 70/112 Large base further up this file.) */
+@media (min-width: 360px) and (max-width: 389px) {
+  :root[data-scale='large'] .sh-detail {
+    grid-template-columns: minmax(0, 1fr) 66px 62px;
+  }
+}
+@media (max-width: 389px) {
+  :root[data-scale='large'] .sh-pack-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 359px) {
+  :root[data-scale='large'] .sh-detail {
+    grid-template-columns: minmax(0, 1fr) 64px 60px;
+  }
+}
+/* Once the pack is a single tile wide, its header cannot be a label BESIDE a
+   44px button any more: 58px of column minus the panel's padding leaves the
+   button 6px of room for "PACK" and its count, and they ran underneath it.
+   Caught by looking at a render, not by the clip check — `.sh-col-head` has
+   `overflow: visible`, so nothing was technically clipped; it was just illegible.
+   Stack instead: label, count, then the control full-width beneath them. It
+   costs ~14px of pack height and keeps every part readable and 44px tall. */
+@media (max-width: 359px) {
+  .sh-pack .sh-col-head {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .sh-col-btn {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+/* Large UI puts the pack on one tile column all the way up to 390, so it needs
+   the stacked header at every one of those widths, not just below 360. */
+@media (max-width: 389px) {
+  :root[data-scale='large'] .sh-pack .sh-col-head {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  :root[data-scale='large'] .sh-col-btn {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+/* ====================================================== short viewport (C11)
+   THE FIX FOR THE PHONE THAT COULD NOT START THE GAME.
+
+   `shell.css` and `page.css` between them had exactly two media queries, both
+   `orientation: landscape`. Nothing anywhere adapted a PORTRAIT phone that is
+   simply shorter than the 844px the bands were designed against — so the band
+   budget (see the note on `.shell`) overflowed a viewport that cannot scroll,
+   `overflow: hidden` ate the overflow, and the battle's primary action was
+   below the bottom edge with `elementFromPoint` returning `null` at its centre.
+   Measured cold, before:
+
+     390x844  Start Wave top 781  hit `sh-btn primary`   sum 844 / 844
+     375x667  Start Wave top 674  hit null               sum 737 / 667
+     360x640  Start Wave top 674  hit null               sum 737 / 640
+     320x568  Start Wave top 689  hit null               sum 754 / 568   (the
+              coach strip wraps to three lines at 320px wide, so the shortest
+              phone was also carrying the tallest coach — 62px, not 45)
+
+   Three tiers, each re-declaring nothing but the budget tokens. They cascade:
+   a 568px phone matches all three and the last one wins. The numbers are not
+   guesses — each tier is set so that
+
+     header + coach(worst case, Large UI, three wrapped lines)
+       + selector + detail(+ wave bar) + STAGE FLOOR  <=  the viewport
+
+   with the Stage floor left as the slack, and each one is verified by
+   `scratchpad/dm-reach.mjs` across the whole device matrix at both UI scales
+   and in both contrast modes.
+
+   What is NOT given up, because it is the design (docs/FIGMA.md):
+   the four bands, the uncovered Stage, and the permanent pack. What gives
+   ground instead is density — a shorter Stage, tighter cards, a shallower
+   Detail band whose three columns each scroll internally. The 11px type floor
+   and the 44px touch floor are untouched at every tier.
+
+   `orientation: portrait` on all three, so none of this can collide with the
+   landscape rules below, which solve a different problem (a phone on its side
+   is covered by `.fw-rotate` and a short desktop window wants the Stage and
+   Detail to give ground rather than the whole budget to be rewritten). */
+
+/* --- tier 1: a shortish modern phone (360x740 and friends) ---------------- */
+@media (orientation: portrait) and (max-height: 800px) {
+  .shell {
+    --sh-stage-min: 152px;
+    --sh-selector-h: 120px;
+    --sh-detail-h: 232px;
+    --sh-card-glyph: 28px;
+  }
+}
+
+/* --- tier 2: 375x667 and 360x640 — the phones that could not start a wave - */
+@media (orientation: portrait) and (max-height: 700px) {
+  .shell {
+    --sh-stage-min: 124px;
+    --sh-selector-h: 112px;
+    --sh-detail-h: 206px;
+    --sh-header-min: 68px;
+    --sh-header-pad: 8px;
+    --sh-coach-pad: 5px;
+    --sh-card-gap: 2px;
+    --sh-card-glyph: 27px;
+    --sh-card-pad: 7px;
+    --sh-selrow-pad: 8px;
+    --sh-detail-pad-y: 8px;
+    --sh-detail-pad-b: 10px;
+  }
+  /* The Detail band's columns are now shallower than their content wants to
+     be, so each one has to scroll rather than clip. The context body and the
+     pack grid already did; the gear column did not, and three 44px slots in a
+     column that no longer fits three 44px slots is the one place a fixed floor
+     and a shrinking band actually collide. `min-height` on `.sh-slot` still
+     wins over flex shrinking, so every slot keeps its target and the column
+     scrolls instead. */
+  .sh-gear-slots {
+    overflow-y: auto;
+    gap: 4px;
+  }
+  .sh-col-head {
+    margin-bottom: 4px;
+  }
+}
+
+/* --- tier 3: 320x568 — the smallest viewport the game supports ------------ */
+@media (orientation: portrait) and (max-height: 600px) {
+  .shell {
+    --sh-stage-min: 88px;
+    --sh-selector-h: 106px;
+    --sh-detail-h: 186px;
+    --sh-header-min: 62px;
+    --sh-header-pad: 6px;
+    --sh-coach-pad: 4px;
+    --sh-card-glyph: 26px;
+    --sh-card-pad: 6px;
+    --sh-selrow-pad: 6px;
+    --sh-detail-pad-y: 6px;
+    --sh-detail-pad-b: 8px;
+  }
+  /* `.sh-context` gets the same trim from the narrow-viewport block above —
+     every viewport this short is also narrow. */
+  .sh-gear {
+    padding: 5px;
+  }
+  .sh-gear-slots {
+    gap: 3px;
+  }
+  .sh-col-head {
+    margin-bottom: 3px;
+  }
+  /* The XP hairline is the one card row that carries no text and no target —
+     it is the cheapest 6px on the card, and the level it tracks is already
+     spelled out in the sub line beside the build name. */
+  .sh-hero-xp {
+    display: none;
+  }
+}
+
+/* ============================================================ landscape (M36)
+   The four bands want ~844px of height; a landscape phone has ~360px, which no
+   amount of squeezing makes playable. `.fw-rotate` (src/ui/overlays.css) covers
+   the screen there — hide the shell behind it so nothing half-laid-out shows
+   through. Between those two worlds (a short-ish tablet or desktop window) just
+   let the Stage and Detail bands give ground instead of clipping.
+
+   This query MUST stay identical to the `.fw-rotate` one in src/ui/overlays.css:
+   this half hides the app, that half draws the replacement, and any drift
+   between them leaves a screen with nothing on it at all. Orientation and
+   height were not enough on their own — a 1200x480 desktop window (a laptop
+   with devtools docked along the bottom) matched both and got blanked, with
+   zero reachable controls, on a machine that cannot be rotated. `pointer:
+   coarse` and a phone-sized max-width narrow it to what the prompt always
+   claimed to cover: a phone on its side. The widest phone landscape in
+   circulation is ~932px. */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 950px) and (pointer: coarse) {
+  .shell,
+  .shell-page {
+    visibility: hidden;
+  }
+}
+@media (orientation: landscape) and (min-height: 501px) and (max-height: 720px) {
+  .shell {
+    grid-template-rows: auto auto minmax(140px, 1fr) auto auto;
+  }
+  /* Both forms, or the `:has()` rule above (more specific) keeps the fixed
+     battle height here and the band stops giving ground on a short viewport. */
+  .sh-detail,
+  .sh-detail:has(> .sh-wavebar) {
+    height: auto;
+    min-height: 190px;
+  }
+}
+
+/* ---------------------------------------------------- the wave-clear beat
+   The visual half of H18's beat. The sting says it in sound and this says the
+   same thing in colour, a glyph and a word — audio is never the only channel
+   for anything here, and neither is colour: the glyph and the text carry it on
+   their own.
+
+   Deliberately a state of the bar that is already there rather than an overlay:
+   nothing covers the field during the hold, because the last frame of the fight
+   IS the thing being held. */
+.sh-wavebar.sh-beat {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-strong));
+  animation: sh-beat-in 220ms ease-out;
+}
+.sh-wavebar.sh-beat.lost {
+  border-color: color-mix(in srgb, var(--bad, #e05a4f) 55%, var(--line));
+  background: color-mix(in srgb, var(--bad, #e05a4f) 12%, var(--surface-strong));
+}
+.sh-wavebar.sh-beat .sh-wavebar-hint {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+@keyframes sh-beat-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   The icon layer, in the four bands (P3)
+   ==========================================================================
+   Base `.fw-i` lives in global.css. Everything here is placement: what sits
+   next to what, and which corner of a 48px pack tile a mark is allowed to use.
+
+   The rule every one of these obeys: the icon is ADDITIVE. Not one of these
+   rules removes a letter, a pip, a word or an accessible name — the pack tile
+   ends up carrying five channels where it used to carry two, and four of the
+   five survive with colour switched off entirely. */
+
+/* --- band 1: the header chips ------------------------------------------- */
+.sh-chip,
+.sh-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sh-base {
+  gap: 6px;
+}
+/* Was a `⬡` at `--fs-micro`; the keep is a picture now and sizes itself. */
+.sh-base-glyph {
+  font-size: 0;
+}
+
+/* --- band 3: the roster card gets its portrait back ---------------------- */
+/* The badge is now a frame around a real sprite rather than a coloured square
+   with a glyph in it, so it clips and positions rather than centring text. */
+.sh-hero-glyph {
+  overflow: hidden;
+}
+.sh-hero-art {
+  /* Absolutely positioned to the badge's box rather than laid out inside it.
+     The three portraits are 78x91, 62x75 and 58x59 — all taller than wide, all
+     trimmed to their own bbox — so `object-fit: contain` letterboxes them to
+     about two thirds of the room. The first fix was `transform: scale(1.35)`,
+     which `ws9-fit` caught immediately: a transformed child overflows its box
+     (35x38 drawn inside 30x28) whether or not the box clips it. As a plain grid
+     item with `height: 100%` it still measured 30x31, because the grid row is
+     sized by its tallest item, not by the badge. `position: absolute; inset: 0`
+     takes exactly the badge, and `cover` fills it by CROPPING — which on a
+     standing figure means losing the feet, the right thing to lose. */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+  /* The sprite sheets are 1x pixel art (measured: no file in the harvest is a
+     scaled block grid), so anything but nearest-neighbour here turns a knight
+     into a smudge at 30px. */
+  image-rendering: pixelated;
+}
+/* The archetype mark, kept. Three sprites are three silhouettes, and at 27px on
+   a 320px phone the silhouette is not a channel — the mark is. It gets its own
+   dark plate for the same reason `.sh-hero-star` does: it now sits over
+   arbitrary sprite pixels rather than over a flat known hue. */
+.sh-hero-arch {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  min-width: 12px;
+  padding: 0 1px;
+  border-radius: var(--r-sm) 0 var(--r-sm) 0;
+  background: rgba(22, 28, 46, 0.88);
+  color: var(--text);
+  /* 11px, the type floor, NOT 10. `ws9-audit` caught this at 10px on seven
+     surfaces — and it is the one mark that still says "fighter" when the rail
+     hue is gone, so it is the last thing in the shell that may be undersized. */
+  font-size: var(--fs-micro);
+  line-height: 13px;
+  text-align: center;
+}
+.sh-hero-star {
+  /* 18px so the 16px mark has a pixel of disc around it. */
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+}
+
+/* --- band 3: offer cards ------------------------------------------------- */
+.sh-offer-glyph {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+/* Physical vs magic rides BESIDE the shape rather than on top of it: an
+   overlapping corner stamp would have to be drawn at 8px, and a 16x16 pixel
+   sprite halved is a sprite with every other column deleted. */
+.sh-offer-mark {
+  align-self: flex-end;
+}
+
+/* --- band 4: context panel ---------------------------------------------- */
+.sh-context-icon {
+  align-self: center;
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 2px;
+}
+/* A hanging indent, so a wrapped effect sentence lines up under itself instead
+   of running back under its own icon. 16px icon + 5px gap. */
+.sh-line > .fw-i {
+  margin-right: 5px;
+}
+.sh-line.iconed {
+  padding-left: 21px;
+  text-indent: -21px;
+}
+.sh-comp-boss {
+  vertical-align: -3px;
+}
+
+/* --- band 4: the pack tile ---------------------------------------------- */
+.sh-tile-glyph {
+  display: grid;
+  place-items: center;
+}
+/* Top-right, the one corner of the tile nothing else uses: the rarity letter
+   holds top-left, the pips hold bottom-right and the ornaments hold the left
+   edge. */
+.sh-tile-mark {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+}
+/*
+   The rarity frame, encoded as ORNAMENT COUNT.
+
+   This is deliberately not five pieces of frame art. Five frames that differ
+   only in hue would put rarity back on colour alone, which is the Phase-2
+   failure this project already paid to fix; and five frame PNGs would cost real
+   bytes to carry a channel a count carries for free. So the ornament is a
+   COUNT — one notch at Common, five at Mythic — running up the tile's left
+   edge, where it doubles the pip row on the opposite corner rather than
+   competing with it. Mythic additionally takes a full second ring, so the top
+   of the ramp is legible as one glance of "more ornate" as well as as a count.
+
+   Two count channels, one letter and one hue, on a 48px square. */
+.sh-tile-frame {
+  position: absolute;
+  left: 3px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  pointer-events: none;
+}
+.sh-tile-orn {
+  width: 3px;
+  height: 3px;
+  background: var(--rail, var(--muted-2));
+  transform: rotate(45deg);
+}
+/* Mythic's fifth ornament is a longer tick rather than a second ring: a ring
+   would have had to be a box-shadow on the tile, and the tile already spends
+   its box-shadow on the selected state. Length is still form, not colour. */
+.sh-tile-orn:nth-child(5) {
+  width: 5px;
+  height: 5px;
+}
+
+/* The context panel is ~150px wide at 320, and the item head is icon + name +
+   rarity word in that. The name is the half a player reads, so below 360 the
+   shape gives way — it is still on the pack tile one column to the right,
+   which is the tile they just tapped to get here. */
+@media (max-width: 359px) {
+  .sh-context-icon {
+    display: none;
+  }
 }

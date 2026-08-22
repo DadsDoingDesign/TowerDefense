@@ -32,6 +32,14 @@
   align-items: center;
   overflow-y: auto;
 }
+/* A scrolling flex column must not also SQUASH its content: with the default
+   `flex-shrink: 1`, a body that overflows compresses every child instead of
+   scrolling, which turned the run-end verdict circle into an ellipse and
+   clipped card text mid-line. `.pg-art` is the one child that is meant to take
+   the slack (the Watchtower's hero-art block), so it keeps its own rule. */
+.pg-body > *:not(.pg-art) {
+  flex: 0 0 auto;
+}
 .pg-secondary {
   display: flex;
   gap: var(--gap);
@@ -42,6 +50,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* The pinned exits row. It borrows the CTA band's gutter and spends no band
+   padding of its own — it is the top half of a two-action footer, not a
+   section, so the only air it needs is the gap down to the CTA. */
+.pg-foot {
+  padding: 0 var(--gutter) 12px;
+}
+
+/* The confirm control comes AFTER the CTA in the DOM so that tabbing forward
+   from "Never mind" reaches it (see the note in Page.tsx). `order` puts the
+   picture back: notice, then the confirm, then the pinned CTA at the bottom.
+   The CTA's own box is unaffected — it neither moves nor resizes when the
+   action arms, which is the property `rev-shift` exists to protect. */
+.pg-notice {
+  order: 1;
+}
+.pg-confirm-band {
+  order: 2;
+}
+.pg-cta-band {
+  order: 3;
 }
 
 /* ---------------------------------------------------------------- type */
@@ -56,7 +85,7 @@
   text-wrap: balance;
 }
 .t-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.35;
   color: var(--muted);
   text-align: center;
@@ -85,6 +114,87 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* Destructive and irreversible — Reset progress, Banner unlock, mutation
+   commit. The armed state is the same button in the same place, so nothing
+   moves under a finger that is already coming down.
+
+   DARK ink on the fill, not `--cta-ink` (F8). This is the arming control for
+   every destructive action in the game, and it was the one place in the palette
+   where turning HIGH CONTRAST ON made a control HARDER to read: high contrast
+   brightens `--bad` from `#d0563a` to `#ff6f52`, which lifts the fill's
+   luminance and drops parchment-on-red straight through the large-text bar.
+
+     ink            fill                ratio
+     #f3e7d0        #d0563a (normal)    3.38:1   marginal
+     #f3e7d0        #ff6f52 (high)      2.24:1   FAILS the 3.0 large-text bar
+     #1b1409        #d0563a (normal)    4.49:1   passes as body text, nearly
+     #1b1409        #ff6f52 (high)      6.72:1   and high contrast now HELPS
+
+   It is also the pairing the rest of the app already uses on a solid warm fill
+   (`.sh-tab.active`, `.sh-seg-btn.active`); this button was the outlier.
+   `.pg-confirm` is untouched — it is transparent with a `--bad-text` border and
+   measures 5.85:1 either way. */
+.pg-cta.danger {
+  background: var(--bad);
+  color: var(--ink-on-fill);
+}
+
+/* ------------------------------------------------------------- confirm */
+.pg-notice {
+  display: flex;
+  gap: var(--gap-xs);
+  align-items: flex-start;
+  width: 100%;
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 10px var(--gutter);
+  color: var(--bad-text);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+.pg-notice-glyph {
+  flex: 0 0 auto;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+}
+
+/* The armed confirm's own control — a different element from the CTA that
+   armed it, so no repetition of one press can reach it. It sits above the
+   pinned CTA and takes its room from the body, which is why arming still moves
+   nothing under a finger already coming down. `--band-pad` on the CTA band
+   below keeps a full 32px of dead space between the two, so a tap aimed at one
+   cannot land on the other. */
+.pg-confirm-band {
+  display: flex;
+  width: 100%;
+  padding: 0 var(--gutter);
+}
+.pg-confirm {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 2px solid var(--bad-text);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--bad-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-wrap: balance;
+  transition: filter 0.12s ease;
+}
+.pg-confirm:active {
+  filter: brightness(0.88);
+}
+.pg-confirm:focus-visible {
+  outline: var(--focus-width) solid var(--bad-text);
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 4px rgba(239, 131, 104, 0.28);
+}
 
 /* ---------------------------------------------------------------- rows */
 .pg-row {
@@ -99,18 +209,33 @@
   border-radius: var(--r-md);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
+/* A row you cannot afford greys out in place — it still reads its price, which
+   is the whole point of showing it rather than hiding it. */
 .pg-row:disabled {
   cursor: default;
+  opacity: 0.45;
 }
 .pg-row.danger .pg-row-label {
-  color: var(--bad);
+  color: var(--bad-text);
+}
+/* The offer's own accent as a left edge — rarity on a spoils card, archetype on
+   a recruit. Padding compensates so the label does not shift when a rail
+   appears. */
+.pg-row.railed {
+  border-left: 3px solid var(--rail, var(--line-strong));
+  padding-left: calc(var(--gutter) - 3px);
 }
 .pg-row-label {
+  /* With an icon the row has three children, and `space-between` centred the
+     label between them. It takes the slack instead, so a row reads the same
+     whether or not it has a picture. */
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -119,7 +244,12 @@
   flex: 0 0 auto;
   color: var(--accent);
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--fs-md);
+}
+/* Two currencies can share a page (the Forge shows gold and dust), so a price
+   takes the colour of its own purse chip rather than the generic accent. */
+.pg-row-val.dust {
+  color: var(--teal-text);
 }
 
 /* ------------------------------------------------------------- surfaces */
@@ -133,14 +263,22 @@
   background: var(--surface);
 }
 .pg-card-title {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
 }
 .pg-card-body {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   color: var(--muted);
+}
+/* The tradeoff line. Colour AND the ⚠ glyph AND the word "Downside", because
+   colour alone never carries meaning (BRAND.md). */
+.pg-card-warn {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--bad-text);
 }
 
 .pg-tile {
@@ -173,7 +311,7 @@
   color: var(--ink);
 }
 .pg-tile-cap {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.25;
   color: var(--text);
   text-align: center;
@@ -189,6 +327,7 @@
   flex-wrap: wrap;
 }
 .pg-portrait {
+  position: relative;
   width: 92px;
   height: 92px;
   padding: 0;
@@ -202,6 +341,30 @@
   transition:
     width 0.14s ease,
     height 0.14s ease;
+}
+/* What KIND of choice this portrait is, where one chooser mixes kinds — the
+   Crossroads offers a stranger and three of your own as identical sprites in
+   identical archetype-coloured frames. Ink on the rail colour, on the parchment
+   tile, so it stays inside the warm set. */
+/* The corner mark saying what KIND of choice a portrait is, where a chooser
+   mixes kinds — the Crossroads, where a stranger and one of your own are both
+   an archetype sprite in an archetype-coloured frame.
+   Drawn rather than typed since P3. It was ＋ and ⚗ as text, and ⚗ was
+   ALSO the mark on the mutation offers one tap later: one concept wearing two
+   representations in two bands, which is the same defect as ★ vs ❖ for
+   "evolution ready". The disc stays, because it lifts the mark off whatever
+   sprite pixels sit behind it. */
+.pg-portrait-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--rail, var(--line-strong));
+  box-shadow: 0 0 0 1px rgba(22, 28, 46, 0.7);
 }
 .pg-portrait.sel {
   width: 120px;
@@ -220,7 +383,7 @@
 
 /* --------------------------------------------------------------- stats */
 .pg-name {
-  font-size: 19px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   text-align: center;
 }
@@ -237,13 +400,13 @@
   align-items: baseline;
 }
 .pg-stat b {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .pg-stat > span {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   color: var(--muted);
 }
 
@@ -256,17 +419,190 @@
   width: 100%;
 }
 
+/* ------------------------------------------------------------ run receipt
+   Per-Sentinel contribution on the end screen (M14). Numbers are tabular so
+   the column reads as a column. */
+.pg-recap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+.pg-recap-head,
+.pg-recap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-xs);
+  padding: 8px var(--gap-sm);
+}
+.pg-recap-head {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.pg-recap-row + .pg-recap-row {
+  border-top: 1px solid var(--line);
+}
+/* A hero who fell is marked in form as well as colour — a red row alone is not
+   a signal a colour-blind player can read (M27c). The word "fell" rides in the
+   build line for exactly that reason. */
+.pg-recap-row.downed .pg-recap-name {
+  color: var(--bad-text);
+}
+.pg-recap-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.pg-recap-build {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pg-recap-num {
+  flex: 0 0 auto;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------ lifetime records */
+.pg-records {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-xs) var(--gap);
+  justify-content: center;
+  width: 100%;
+}
+.pg-record {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+}
+.pg-record b {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.pg-record > span {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------- Banner picker
+   The run-start difficulty ladder (H16). A scrolling chip row plus the card
+   that spells out every rule the chosen rung puts in force — chips carry the
+   name as well as the numeral, because "Banner 3" says nothing on its own. */
+.pg-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  width: 100%;
+}
+.pg-banner-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-xs);
+}
+.pg-banner-label {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pg-banner-mult {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+/* Horizontal scroll, not wrap: the row must never grow the page's width — the
+   defect that pushed the Pack column off screen when the Selector wrapped. */
+.pg-banner-row {
+  display: flex;
+  gap: var(--gap-xs);
+  width: 100%;
+  overflow-x: auto;
+  /* The right padding is what lets the LAST chip scroll clear of the fade
+     below — without it, scrolling to the end parks the top rung under its own
+     gradient, which is the one chip that must read solid. */
+  padding: 0 24px 2px 0;
+  scrollbar-width: none;
+  /* Five rungs plus "No Banner" is 595px of chips in a 358px row, so the last
+     one is always cut. The same fade the page body uses for its own overflow
+     turns that cut into "there is more" rather than a clipping bug. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+}
+.pg-banner-row::-webkit-scrollbar {
+  display: none;
+}
+.pg-banner-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 92px;
+  max-width: 118px;
+  /* The 44px touch floor a previous pass established (M2). */
+  min-height: var(--hit-min);
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.pg-banner-chip.sel {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+.pg-banner-tier {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  line-height: 1;
+  color: var(--accent);
+}
+.pg-banner-name {
+  font-size: var(--fs-micro);
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+.pg-card-body.accent {
+  color: var(--accent);
+}
+
 /* Reduced motion honours the accessibility setting. */
 :root[data-reduced-motion='true'] .pg-portrait,
 :root[data-reduced-motion='true'] .pg-cta {
   transition: none;
 }
+/* Large UI: the type ramp and `--row-h` already grow in global.css, so the
+   only thing left to say is the display CTA, which is off-ramp by design. */
 :root[data-scale='large'] .pg-cta {
   font-size: 26px;
-}
-:root[data-scale='large'] .pg-row {
-  height: 54px;
-  font-size: 17px;
 }
 
 /* ------------------------------------------------- page inside the shell */
@@ -299,6 +635,11 @@
 .pg-verdict {
   display: grid;
   place-items: center;
+  /* `flex: 0 0 auto` because the body is a flex column: once the run receipt
+     made the end screen overflow, the default `flex-shrink: 1` squashed the
+     96px circle into an ellipse. A circle that is only round on short content
+     is not a circle. */
+  flex: 0 0 auto;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -320,7 +661,7 @@
   justify-content: center;
 }
 .pg-chip {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -334,7 +675,7 @@
   border-color: rgba(224, 172, 76, 0.28);
 }
 .pg-chip.teal {
-  color: var(--teal);
+  color: var(--teal-text);
   border-color: var(--teal-dim);
 }
 .pg-row.sel {
@@ -351,4 +692,168 @@
 .pg-body:not(:has(> :nth-child(2))) {
   -webkit-mask-image: none;
   mask-image: none;
+}
+
+/* ============================================================ safe area (M1)
+   A page is one full-height column under `viewport-fit=cover`, so without these
+   the title sits under the notch and the pinned CTA — the one control the whole
+   screen exists to offer — sits under the home indicator. `max()` keeps the
+   design's `--band-pad` / `--gutter` rhythm exactly as-is on a device with no
+   insets. */
+.pg {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+.pg-head {
+  padding-top: max(var(--band-pad), var(--safe-top));
+}
+.pg-cta-band {
+  padding-bottom: max(var(--band-pad), calc(12px + var(--safe-bottom)));
+}
+
+/* ====================================================== short viewport (C11)
+   The page skeleton has the same disease the four-band shell had: two fixed
+   bands of `--band-pad` (32px top AND bottom, twice over) plus a 64px pinned
+   CTA, sized against an 844px phone and never re-checked on a shorter one. It
+   never became unreachable — `.pg-body` scrolls and the CTA is pinned — but on
+   a 667px or 568px screen the 32/16 rhythm spends a quarter of the viewport on
+   air, which is what pushes the hero's own description below the fold on the
+   screen that exists to describe a hero.
+
+   Same shape as the shell's tiers: portrait-gated so it cannot collide with
+   the landscape rules, and it trims the rhythm rather than the content. */
+@media (orientation: portrait) and (max-height: 800px) {
+  .pg-band {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+  .pg-head {
+    padding-top: max(20px, var(--safe-top));
+    gap: 10px;
+  }
+  .t-title {
+    font-size: 28px;
+  }
+  .pg-cta-band {
+    padding-bottom: max(16px, calc(10px + var(--safe-bottom)));
+  }
+}
+@media (orientation: portrait) and (max-height: 660px) {
+  .pg-band {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .pg-head {
+    padding-top: max(12px, var(--safe-top));
+  }
+  .t-title {
+    font-size: 24px;
+  }
+  /* 56, not 64 — still well over the 44px floor, and the serif label rides the
+     ramp down with it so nothing crowds. */
+  .pg-cta {
+    height: 56px;
+    font-size: 21px;
+  }
+  .pg-cta-band {
+    padding-bottom: max(12px, calc(8px + var(--safe-bottom)));
+  }
+  /* The band rhythm is what usually separates the confirm control from the CTA
+     — put the gap back explicitly once the rhythm is down to 12px. */
+  .pg-confirm-band {
+    padding-bottom: 12px;
+  }
+}
+
+/* ============================================================ landscape (M36)
+   Pages are a tall column with a pinned CTA; on a landscape phone the band
+   padding alone eats the viewport. Shrink the rhythm and let the head/CTA stop
+   claiming fixed height so the CTA stays reachable on any short viewport that
+   isn't covered by the rotate prompt. */
+@media (orientation: landscape) and (max-height: 720px) {
+  .pg-band {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .pg-head {
+    padding-top: max(12px, var(--safe-top));
+  }
+  .t-title {
+    font-size: 24px;
+  }
+  .pg-cta-band {
+    padding-bottom: max(12px, calc(8px + var(--safe-bottom)));
+  }
+  /* The band rhythm is what usually separates the confirm control from the CTA;
+     with it down to 12px, put the gap back explicitly rather than let two
+     buttons — one of them irreversible — sit a thumb's width apart. */
+  .pg-confirm-band {
+    padding-bottom: 12px;
+  }
+}
+
+/* ==========================================================================
+   The icon layer, on the page skeleton (P3)
+   ==========================================================================
+   `MenuRow` is the important one. It took no icon at all, so every `Offer`
+   that declared a `glyph` had it dropped at the render site — which is why the
+   merchant board and the Spoils screen, the two places a roguelite is supposed
+   to feel like loot, were lists of plain text rows. */
+.pg-row-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+/* Physical vs magic sits BESIDE the shape, not stamped on it. A corner stamp
+   would have to draw at 8px, and halving a 16x16 pixel sprite deletes every
+   other column of it — the outline that makes it read as Tiny Swords included. */
+.pg-row-mark {
+  align-self: flex-end;
+}
+/* The `role="img"` wrapper that carries the mark's NAME (M11): the damage type
+   was drawn on this row and stated nowhere, and a row's accessible name is its
+   text content. Purely a box for the sprite - it must not move the sprite, so
+   it takes over the alignment its child was setting for itself. */
+.pg-row-mark-wrap {
+  display: flex;
+  align-self: flex-end;
+}
+/* The fallback for a concept with no atlas cell. Sized to the 32px icon slot so
+   a mixed list does not step. */
+.pg-row-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-lg);
+  color: var(--muted);
+}
+/* Hanging indent on a marked card line — a wrapped sentence lines up under
+   itself instead of running back under its own icon. */
+.pg-card-body.iconed {
+  padding-left: 21px;
+  text-indent: -21px;
+}
+.pg-card-body > .fw-i {
+  margin-right: 5px;
+}
+
+/* Purse chips and the notice line carry their mark inline. */
+.pg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pg-notice {
+  align-items: center;
+}
+.pg-notice-glyph {
+  font-size: 0;
+}
+.pg-card-warn > .fw-i {
+  margin-right: 2px;
+}
+.pg-verdict-glyph {
+  font-size: 0;
 }

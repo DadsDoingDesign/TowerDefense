@@ -1,8 +1,7 @@
 import { computeCombat } from '../../game/engine/combat'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
-
-const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }
+import { ARCHETYPE_GLYPH as GLYPH } from '../channels'
 
 export function RecruitModal() {
   const event = useGameStore((s) => s.event)

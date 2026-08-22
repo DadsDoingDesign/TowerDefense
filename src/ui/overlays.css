@@ -1,0 +1,173 @@
+/**
+ * Root-level overlays: crash recovery (H21), resume-run (C3), rotate (M36).
+ * Deliberately self-contained — these have to render when the rest of the app
+ * is on fire, so they lean on the design tokens but assume nothing else has
+ * mounted.
+ */
+
+/**
+ * Safe-area insets, named once (M1).
+ *
+ * Every band that touches a screen edge reads these rather than calling `env()`
+ * inline. One place to change, and — because a custom property CAN be
+ * overridden from script while `env()` cannot — a notched device is testable in
+ * a desktop browser by setting `--safe-top` and friends on the root.
+ *
+ * Declared here because this file loads on both the Root Shell and the legacy
+ * `?shell=0` path.
+ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+.fw-crash,
+.fw-resume {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right))
+    calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  background: rgba(16, 11, 8, 0.88);
+  color: var(--text, #f3e7d0);
+  font-family: var(--font-ui, system-ui, sans-serif);
+  overflow-y: auto;
+}
+
+.fw-crash-card,
+.fw-resume-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel, #2f2418);
+  border: 1px solid var(--line-strong, rgba(233, 205, 150, 0.22));
+  border-radius: var(--radius, 10px);
+  padding: 20px 18px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.fw-crash-title,
+.fw-resume-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  color: var(--accent, #e0ac4c);
+}
+
+.fw-crash-body,
+.fw-resume-body {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted, #b89e7e);
+}
+.fw-crash-body strong,
+.fw-resume-body strong {
+  color: var(--text, #f3e7d0);
+}
+
+.fw-crash-actions,
+.fw-resume-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.fw-crash-btn,
+.fw-resume-btn {
+  /* 44px floor: this is the one screen a player must be able to hit. */
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--line-strong, rgba(233, 205, 150, 0.22));
+  background: var(--panel-2, #3a2c1c);
+  color: var(--text, #f3e7d0);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fw-crash-btn.primary,
+.fw-resume-btn.primary {
+  background: var(--accent, #e0ac4c);
+  border-color: var(--accent, #e0ac4c);
+  color: #2a1c0c;
+}
+.fw-crash-btn.quiet,
+.fw-resume-btn.quiet {
+  background: transparent;
+  color: var(--muted, #b89e7e);
+}
+
+/* --------------------------------------------------------------- rotate (M36)
+   Hidden by default and shown ONLY on a phone lying on its side: short,
+   landscape, phone-width and driven by a finger. Orientation and height alone
+   also matched a 1200x480 desktop window — a laptop with devtools docked along
+   the bottom — and blanked it completely, which is the one machine that cannot
+   do anything about it. `pointer: coarse` is what tells the two apart.
+
+   Keep this query byte-identical to the shell-hiding one in
+   src/styles/shell.css: that half hides the app and this half draws the
+   replacement, so if they ever disagree the result is an empty screen. */
+.fw-rotate {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 950px) and (pointer: coarse) {
+  .fw-rotate {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(16px, var(--safe-top)) max(16px, var(--safe-right))
+      max(16px, var(--safe-bottom)) max(16px, var(--safe-left));
+    background: var(--bg, #201711);
+    color: var(--text, #f3e7d0);
+    font-family: var(--font-ui, system-ui, sans-serif);
+    text-align: center;
+  }
+}
+.fw-rotate-card {
+  max-width: 420px;
+}
+.fw-rotate-glyph {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--accent, #e0ac4c);
+  margin-bottom: 8px;
+}
+.fw-rotate-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--accent, #e0ac4c);
+}
+.fw-rotate-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted, #b89e7e);
+}
+
+.fw-crash-detail {
+  margin: 14px 0 0;
+  padding: 8px;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted-2, #8a7458);
+  background: var(--bg, #201711);
+  border-radius: var(--radius-sm, 6px);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

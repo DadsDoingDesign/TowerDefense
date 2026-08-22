@@ -4,8 +4,8 @@ import { MerchantModal } from '../components/MerchantModal'
 import { RecruitModal } from '../components/RecruitModal'
 import { ShrineModal } from '../components/ShrineModal'
 import { RunMapView } from '../components/RunMapView'
-
-const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }
+// One definition of the archetype glyph (L3) — see the note in EndlessScreen.
+import { ARCHETYPE_GLYPH as GLYPH } from '../channels'
 
 export function RunMapScreen() {
   const roster = useGameStore((s) => s.roster)
