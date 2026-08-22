@@ -10,9 +10,17 @@ This repository is public, so every one of those PNGs is a redistribution. **All
 and both FX sheets must be replaced.** The 78-icon atlas is generated from source code in this
 repo and is the one raster asset that does *not* need relicensing.
 
-**Status of the numbers below.** Every dimension, frame count and draw size in this document was
-measured live from the running game via a `drawImage` census, not read off the source files or
-inferred. Where a value is computed rather than observed it is marked ⚠.
+**Status of the numbers below.** Every frame count and **drawn** size in this document was measured
+live from the running game via a `drawImage` census, not read off the source files or inferred.
+Where a value is computed rather than observed it is marked ⚠.
+
+**The `Sheet px` and `Cell px` columns are the target for the replacement, not a record of the
+current files.** Each cell dimension is the measured one rounded **up to the next even number**
+(§1.2), and the sheet is that cell times the frame count. 17 of the 25 current sprites are odd on
+at least one axis and so differ from the table by a pixel per axis — `rogue_idle.png` is 426 × 79
+on disk against the 432 × 80 specified here. Author to the table: because `drawn = ceil(cell/2)`,
+even cells reproduce today's drawn sizes exactly, which is why the `Drawn on field` column is
+identical either way. Do **not** treat the table as a description of what is in `public/` today.
 
 ---
 
@@ -58,8 +66,9 @@ their size. That density split is deliberate — it is what makes a boss read as
 the **only** density split permitted anywhere in the game. Do not introduce a third.
 
 > **Always use even native dimensions.** The `ceil` means an odd `2S−1` also lands on `S`, which
-> silently swallows a one-pixel authoring error. Several cells in the current pack are odd
-> (`fighter_idle` at 84×95); round those **up** to even in the replacement.
+> silently swallows a one-pixel authoring error. Most cells in the current pack are odd on at
+> least one axis (`fighter_idle` is 84 × 95 on disk); the tables in §2–§4 have already rounded
+> those **up** to even for you, which is why they read 84 × 96. Author the table's number.
 
 ### 1.3 Anchoring and trim
 
@@ -538,17 +547,19 @@ count — plus a hue. Any art you add must be **additive to those**, never a rep
 ## 8. T1 — UI chrome (currently 1 live file, 4 total)
 
 `public/assets/ui/` holds 68 PNGs totalling 94,903 bytes. **63 of them are orphaned — 90.3 % by
-bytes.** Confirmed independently by the build's own reachability pass: `dist/sw.js` precaches
+bytes.** Note the two directories below: `fw-icons.png` sits at the `ui/` root, but all four
+9-slice panels live one level down in **`public/assets/ui/tinyswords/`**. Deliver to the exact
+path in the table — a file at the wrong one 404s silently (§1.8). Confirmed independently by the build's own reachability pass: `dist/sw.js` precaches
 exactly five files. Orphans include all 30 `icon_*`, all 6 `pointer_*`, 6 `banner_*`, 3 `ribbon_*`,
 3 `pickup_*`, 3 `carved_*` and 10 `button_*`. **Do not re-commission any of them.**
 
 | File | Dims | Used by | 9-slice |
 |---|---|---|---|
-| `fw-icons.png` | 128 × 160 | `.fw-i` (`global.css:318`) | — |
-| `paper_special_9.png` | 110 × 110 | `.overlay-card` (`app.css:383`) | slice 46, 22 px border, `fill`, no stretch |
-| `paper_regular_9.png` ⚠ | 110 × 110 | `.hp-card` (`legacy.css:1845`) | slice 46, 20 px border |
-| `btn_big_blue_9.png` ⚠ | 110 × 110 | `.hp-cta`, `.overlay-btn` (`legacy.css:1871`) | slice 46, 15 px border |
-| `woodtable_9.png` ⚠ | 110 × 110 | `.crossroads .cr-col` (`legacy.css:1879`) | slice 46, 26 px border |
+| `ui/fw-icons.png` | 128 × 160 | `.fw-i` (`global.css:318`) | — |
+| `ui/tinyswords/paper_special_9.png` | 110 × 110 | `.overlay-card` (`app.css:383`) | slice 46, 22 px border, `fill`, no stretch |
+| `ui/tinyswords/paper_regular_9.png` ⚠ | 110 × 110 | `.hp-card` (`legacy.css:1845`) | slice 46, 20 px border |
+| `ui/tinyswords/btn_big_blue_9.png` ⚠ | 110 × 110 | `.hp-cta`, `.overlay-btn` (`legacy.css:1871`) | slice 46, 15 px border |
+| `ui/tinyswords/woodtable_9.png` ⚠ | 110 × 110 | `.crossroads .cr-col` (`legacy.css:1879`) | slice 46, 26 px border |
 
 ⚠ The three `legacy.css` files load **only** under `?shell=0`, which is documented as unsupported.
 **In the shipping shell only `fw-icons.png` and `paper_special_9.png` are live.** Replace those two
@@ -564,7 +575,7 @@ different size, the `border-image-slice` values in the CSS must change to match.
 
 ### 9.1 Main-menu art block — **currently empty**
 
-`.pg-art` (`src/ui/screens/PageScreens.tsx:410`) holds no image at all today, just a radial-gradient
+`.pg-art` (`src/ui/shell/PageScreens.tsx:412`, styled at `src/styles/page.css:624`) holds no image at all today, just a radial-gradient
 placeholder. It is `flex: 1 0 0`, so its height depends on whether the lifetime-records row is
 present:
 
@@ -717,7 +728,7 @@ public/assets/sprites/<pack>/
 public/assets/fx/<pack>/
   explosions.png  fire.png
 
-public/assets/ui/
+public/assets/ui/tinyswords/
   paper_special_9.png
 ```
 
