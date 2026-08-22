@@ -28,12 +28,16 @@ current-state reference; the redesign plan lives in `docs/BALANCE_PLAN.md`._
    while `range`, `splash`, `crit-mult`, and every crowd-control/support mod are
    unreachable by gear, and `projectileSpeed`/`damageType` are unreachable by
    *anything*.
-6. **Maps are overloaded with special tiles.** A typical 11-layer map carries
-   ~12–13 special tiles out of ~27 (~47%): merchant ≈4–5, shrine ≈4, recruit ≈2,
-   elite ≈2–3 — and the pre-boss layer is force-converted to *all* shops/shrines.
-7. **The game is too easy at the top.** The balance harness reports the standard
-   team never breaks up to Threat ×5, and the support sweep can't tell supports
-   apart (a harness blind spot).
+6. ~~**Maps are overloaded with special tiles.**~~ **FIXED** — `runmap.ts` now
+   caps specials per type, enforces `MIN_SPECIAL_GAP`, allows at most one special
+   per layer, and promotes exactly one pre-boss prep node. Measured: 6.2 specials
+   per map, max 2 in any layer. See §5.
+7. **The game is too easy at the top** — confirmed, and now measurable. The
+   harness blind spots called out here (support sweep can't tell supports apart;
+   threat ceiling never breaks) were harness bugs and have been rebuilt; see §6.
+   With a ladder that *can* break, a standard depth-8 team holds **siege pressure
+   ×25** against a ×2–×8 design band, the Monte Carlo wins **67%** against a
+   45–60% band, and the boss kills **0 of 100** teams that reach it.
 
 ---
 
@@ -182,31 +186,62 @@ Barbs (thorns=dead), Resolve (patience).
 
 ---
 
-## 5. Map generation (`runmap.ts`)
+## 5. Map generation (`runmap.ts`) — ⚠️ SUPERSEDED, fixed
 
-11 layers; middle layers 1–9 have `rng.int(2,4)` nodes (mean 3, ~27 middle).
-Type weights: battle 52 / elite 14 (L≥3) / merchant 12 / shrine 12 / recruit 10
-(L≤7). Memoryless — no caps, no spacing. `ensureType` guarantees ≥1 of each.
-Pre-boss layer 9 force-converts **every** node to merchant (60%)/shrine (40%).
+> **This section described the pre-fix generator and no longer matches the code.**
+> Kept for the record because §0.6 and the plan reference it. The current
+> behaviour is below; the finding it raised has been closed.
 
-**Expected specials per map:** merchant ≈4–5, shrine ≈4, recruit ≈2, elite ≈2–3
-→ **~12–13 specials of ~27 (~47%)**. Merchant+shrine alone ≈8. Specials cluster
-(whole pre-boss layer) and repeat back-to-back (no spacing). Target: ~4–6.
+**What this section used to say** (accurate against the generator as audited):
+memoryless type assignment with no caps and no spacing, and a pre-boss layer that
+force-converted **every** node to merchant (60%) / shrine (40%) — giving ~12–13
+specials out of ~27 middle nodes (~47%), with whole-layer clusters.
 
-Intervention points: the per-node assign loop (`runmap.ts:107-114`, add
-count caps + min-layer spacing), `weightedType` weights, and the pre-boss loop
-(`:118`, convert at most one node).
+**What `runmap.ts` does now.** The skeleton is unchanged — 11 layers, middle
+layers 1–9 with `rng.int(2,4)` nodes (~27 middle), the same `weightedType` weights
+(battle 52 / elite 14 at L≥3 / merchant 12 / shrine 12 / recruit 10 at L ≤ last−3),
+and `ensureType` still guaranteeing ≥1 of each. `assignTypes` adds three limits:
+
+- `SPECIAL_CAPS` — merchant 2, shrine 2, recruit 1, elite 2 per map;
+- `MIN_SPECIAL_GAP = 2` — two specials of the same type cannot sit within two
+  layers of each other;
+- at most **one special per layer**, and layer 1 is a forced ease-in battle.
+
+The pre-boss layer is no longer force-converted: every node in it is reset to
+`battle` and exactly **one** is promoted to a single prep stop (merchant if the
+map has fewer merchants than shrines, otherwise shrine).
+
+**Measured result** (balance harness §9, 300 generated maps): **6.2 specials per
+map** — merchant 1.98, shrine 1.68, recruit 1.00, elite 1.50 — and a maximum of
+**2** specials in any single layer of any map. That is inside the ~4–6 target and
+the clustering is gone.
 
 ---
 
-## 6. Balance harness (`balance/`, `npm run balance`)
+## 6. Balance harness (`balance/`, `npm run balance`) — ⚠️ SUPERSEDED, rebuilt
 
-Real headless engine sim, seeded/reproducible. 6 sweeps: spec throughput (27),
-support value, item rarity ladder, enchant strength, threat ceiling, Monte Carlo
-full runs. CI-gating invariants. Latest report: 68% MC win rate, offense spread
-2.2×, Sharpshooter outlier, **support sweep non-discriminating**, **threat ceiling
-never breaks up to ×5** (too easy), rarity ladder monotonic.
+> **This section described the 6-sweep harness as audited.** It has since been
+> rebuilt (WS10 / M19) into 11 sweeps; the gaps listed here are closed, and the
+> problems the harness was hiding are now visible as failing invariants. See
+> `balance/README.md` for the current design and `balance/REPORT.md` for numbers.
 
-Gaps to fix: `baseStatTotal` counts dead `physDef/magDef/hp`; no sweep for
-tradeoffs, negative items, upgrade trees, or map special-tile counts; threat
-invariant far too loose.
+**What this section used to say.** 6 sweeps (spec throughput, support value, item
+rarity ladder, enchant strength, threat ceiling, Monte Carlo), 68% MC win rate,
+offense spread 2.2×, Sharpshooter outlier, **support sweep non-discriminating**,
+**threat ceiling never breaks up to ×5**, rarity ladder monotonic. Gaps: no sweep
+for tradeoffs, negative items, upgrade trees or map special-tile counts, and a
+threat invariant far too loose.
+
+**What changed.** The three root causes of the false green were: auras that never
+reached an ally (support at `s5`, allies at `s1`/`s3`, 191–210px apart vs a 160px
+maximum radius); scenarios at `baseHp: 999` with no failure mode; and grading on
+per-Sentinel damage attribution, which the engine dropped for DoT, trap and
+execute damage. The harness now grades defences on **stop rate** (share of a
+wave's leak damage prevented, read off base HP), places supports at the one slot
+whose neighbours are inside aura range, and scales encounter *pressure* rather
+than enemy HP alone. Sweeps added: curse affixes, measured mutation cost, tower
+upgrade paths, map special-tile pacing, and a zero-meta fresh-player run.
+
+`baseStatTotal` no longer counts dead defensive stats — `items.ts` moved off-hand
+and body items onto crit / attack-speed / range / splash, so every slot is live on
+every archetype (see §2).

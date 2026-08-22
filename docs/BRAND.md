@@ -33,11 +33,23 @@ Tokens live in `src/styles/global.css` (`:root`) and the `tinyswords` theme in
 
 ## Type
 
-System stack (no webfonts — CSP-safe), carried by hierarchy not novelty.
-- **Display / headings**: `'Trebuchet MS', system-ui, sans-serif`, weight 700–800, tight tracking, `text-wrap: balance`.
-- **Body / UI**: `system-ui, sans-serif`.
+One **self-hosted** display serif over a system stack, carried by hierarchy not
+novelty. There is no third-party font request — the two woff2 faces ship from
+`src/assets/fonts/` and are declared with `@font-face` in `src/styles/global.css`,
+so the page still makes zero cross-origin requests and stays CSP-safe. (This
+section previously read "System stack (no webfonts)", which stopped being true
+when the Crimson Text faces landed.)
+
+- **Display / headings + button labels**: `--font-display` =
+  `'Crimson Text', Georgia, 'Times New Roman', serif`, weights **600 and 700** —
+  the only two faces shipped, so do not ask for 400 or 800 or the browser will
+  synthesise them. `font-display: swap`, tight tracking, `text-wrap: balance`.
+- **Body / UI**: `system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`.
 - **Eyebrows / labels / data**: uppercase, `letter-spacing:.12em`, `--muted`; numeric columns use `font-variant-numeric: tabular-nums`.
 - Scale: 30 / 22 / 17 / 15 / 13 / 11.5.
+- Budget: 2 × ~25KB woff2. A third weight or a second family needs a reason —
+  this is a mobile-first build and the fonts are the only self-hosted binary in
+  the CSS path.
 
 ## Surfaces & framing (nine-slice)
 

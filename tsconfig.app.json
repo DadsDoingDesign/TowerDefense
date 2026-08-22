@@ -6,6 +6,16 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    // This program is the browser bundle, so it gets NO ambient @types package
+    // it did not ask for. Without this, adding `@types/node` (for the balance
+    // harness, which is a different program) silently handed `src/` the whole
+    // Node global scope: `process.env`, `Buffer` and `__dirname` typechecked
+    // clean and then threw ReferenceError in the browser, and `setTimeout`
+    // started resolving to the Node overload returning `NodeJS.Timeout`
+    // instead of the DOM one returning `number`. Node types belong to
+    // tsconfig.node.json, which is where vite.config.ts and balance/ live.
+    "types": [],
+
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
