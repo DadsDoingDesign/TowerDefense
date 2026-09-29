@@ -9,8 +9,7 @@ import { iconCell, type IconKey } from './channels'
  * draws the Threat mark from it, and the Stage band renders that component, so
  * a shell-private module would have made the map node's chip and the header's
  * chip two different pictures of the same thing — which is exactly what they
- * were until M11. The earlier version of this note claimed the `?shell=0`
- * screens under `src/ui/screens/` import it; they do not, and never did.
+ * were until M11.
  *
  * ---------------------------------------------------------------------------
  * Why a background sprite and not an `<img>` or an inline SVG

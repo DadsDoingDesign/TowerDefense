@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import {
   canUpgrade,
   HERO_SLOTS,
@@ -15,30 +15,36 @@ import {
 // lines for all four surfaces (M4). Rebuilding them locally is what let the
 // curse mark reach exactly one of them.
 import { describeMods, STACKING_RULES } from '../../game/data/describe'
+import { mutationName } from '../../game/data/mutations'
 import { childrenOf } from '../../game/data/archetypeTree'
 import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
 import { UPGRADE_PATHS, milestoneForLevel } from '../../game/data/upgradeTree'
-import { computeCombat, effectiveUpgradeLevels } from '../../game/engine/combat'
+import { computeCombat, effectiveUpgradeLevels, totalStats } from '../../game/engine/combat'
 import { buildName, evolutionOptions, MAX_LEVEL, TIER1_LEVEL, TIER2_LEVEL } from '../../game/engine/leveling'
 import type { Item, Sentinel } from '../../game/types'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
 import {
   archetypeVar,
-  CURRENCY_GLYPH,
   damageMark,
   effectIcon,
   FOCUS_OPTS,
   focusFull,
   itemIcon,
+  itemName,
   markLabel,
+  moneyText,
   RARITY_INITIAL,
   rarityRank,
   rarityVar,
   type IconKey,
 } from '../channels'
 import { Icon } from '../Icon'
+import { Money } from './Money'
+import { NodePreviewPanel } from './NodePreview'
+import { useMapFocus } from './mapFocus'
 import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
+import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 
 /**
@@ -126,8 +132,8 @@ function WaveBar() {
          * same tick queue up and read as one long garbled sentence.
          */}
         <p className="sh-wavebar-hint ready" role="status" aria-live="polite">
-          {lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} · {CURRENCY_GLYPH.gold}{' '}
-          {lastResult.goldEarned} earned
+          {lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} · <Money amount={lastResult.goldEarned} c="gold" />{' '}
+          earned
         </p>
         <button className="sh-btn primary" onClick={continueAfterWave}>
           Continue
@@ -170,13 +176,16 @@ function WaveBar() {
             <b>{Math.max(0, left)}</b> left
           </span>
         </p>
+        {/* A visible word, not just "1×" (Wave 1): a bare multiplier in a box
+            read as a score, not as a control. */}
         <button
           className="sh-speed"
           data-sfx="toggle"
           onClick={() => setSpeed(speed === 3 ? 1 : ((speed + 1) as 1 | 2 | 3))}
           aria-label={`Battle speed ${speed}× — tap to change`}
         >
-          {speed}×
+          <span className="sh-speed-word">Speed</span>
+          <span className="sh-speed-val">{speed}×</span>
         </button>
       </div>
     )
@@ -204,8 +213,8 @@ function WaveBar() {
     <div className="sh-wavebar">
       <p className={`sh-wavebar-hint ${deployed ? 'ready' : ''}`}>
         {deployed
-          ? `${deployed} posted · tap a slot to move, or start the wave.`
-          : 'Tap a Sentinel below, then a slot on the field.'}
+          ? `${deployed} posted. Tap a circle to move a hero, or start the wave.`
+          : 'Tap your hero, then a glowing circle on the field.'}
       </p>
       <button className="sh-btn primary" disabled={deployed === 0} onClick={startWave}>
         Start Wave ▶
@@ -281,8 +290,14 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const inventory = useGameStore((s) => s.inventory)
   const gearSlot = useGameStore((s) => s.gearSlot)
   const stranded = useGameStore(strandedInBattle)
+  const screen = useGameStore((s) => s.screen)
+  const focusedNode = useMapFocus((s) => s.nodeId)
 
   if (stranded) return <StrandedPanel />
+  // A focused map node takes the panel whatever else is selected: it is the
+  // decision in front of the player, and it must be readable BEFORE the march
+  // is committed (Wave 1).
+  if (screen === 'map' && focusedNode) return <NodePreviewPanel nodeId={focusedNode} />
   // An armed gear slot with nothing selected is the one moment the next tap
   // equips something in ONE action — `PackColumn` calls `equipItem` straight
   // off the tile — so it is the only moment a two-hand ejection can be warned
@@ -314,7 +329,6 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
   const screen = useGameStore((s) => s.screen)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const currentWave = useGameStore((s) => s.currentWave)
-  const hud = useGameStore((s) => s.hud)
   const lastResult = useGameStore((s) => s.lastResult)
   const lastLoot = useGameStore((s) => s.lastLoot)
   const runPhase = useGameStore((s) => s.runPhase)
@@ -345,7 +359,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
           </div>
           <div className="sh-context-body">
             <p className="sh-line">
-              {CURRENCY_GLYPH.gold} {lastResult.goldEarned} earned · {lastResult.enemiesKilled} felled
+              <Money amount={lastResult.goldEarned} c="gold" /> earned · {lastResult.enemiesKilled} felled
             </p>
             {/* `enemiesLeaked` is the HEAD COUNT; `leaks` (now `leakDamage`)
                 always was base-HP damage, and rendering it after the words
@@ -356,7 +370,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
                 double-rounding was the other half of a receipt that could not
                 be made to add up (F2). */}
             <p className="sh-line muted">
-              {lastResult.enemiesLeaked} reached the line · base {lastResult.baseHpLeft} left
+              {lastResult.enemiesLeaked} reached the Gate · Gate {lastResult.baseHpLeft} left
             </p>
             {/* Loot dropped by the wave. It lands in the pack silently in the
                 shell — only the legacy `ResultOverlay` ever named it — so an
@@ -365,7 +379,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
             {lastLoot.length > 0 && (
               <p className="sh-line accent">
                 <Icon name="loot" /> Found:{' '}
-                {lastLoot.map((i) => `${i.name} (${RARITY[i.rarity].label})`).join(', ')}
+                {lastLoot.map((i) => `${itemName(i)} (${RARITY[i.rarity].label})`).join(', ')}
               </p>
             )}
             {/* Per-Sentinel kills, damage and XP are computed by the engine for
@@ -379,16 +393,21 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
     }
 
     if (battlePhase === 'battle' && hasEngine) {
-      const killed = Math.max(0, hud.enemiesSpawned - hud.enemiesAlive)
+      /*
+       * The live count lives in ONE place now: the WaveBar (Wave 1). It was on
+       * screen three times at once — the header's "LIVE · 16 LEFT" (which
+       * wrapped), a "Cleared 4/20" meter here, and the WaveBar's "16 left" — and
+       * three readouts of one number ticking on every kill is noise, not
+       * information. This panel shows what the wave IS instead.
+       */
       return (
         <div className="sh-context">
           <div className="sh-context-head">
             <strong>{currentWave?.label ?? 'Wave'}</strong>
-            <span className="sh-context-sub">live</span>
           </div>
           <div className="sh-context-body">
-            <Meter label="Cleared" value={`${killed}/${hud.enemiesTotal}`} frac={killed / Math.max(1, hud.enemiesTotal)} />
-            <p className="sh-line muted">{hud.enemiesAlive} on the field</p>
+            <WaveComposition />
+            <p className="sh-line muted">Tap a hero for its detail.</p>
           </div>
         </div>
       )
@@ -405,7 +424,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
         <div className="sh-context-body">
           <WaveComposition />
           <p className="sh-line muted">
-            Post your Sentinels on the marked slots. Each one only reaches what stands inside its ring.
+            Post heroes on the glowing circles. Each reaches only what walks inside its ring.
           </p>
         </div>
       </div>
@@ -414,7 +433,9 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
 
   return (
     <div className="sh-context empty">
-      <p className="sh-empty-hint">{hasOffers ? 'Tap an offer to see what it does.' : 'Tap a Sentinel to see its detail.'}</p>
+      <p className="sh-empty-hint">
+        {hasOffers ? 'Tap an offer to see what it does.' : screen === 'map' ? 'Tap a stop on the map to see what waits there.' : 'Tap a hero to see its detail.'}
+      </p>
     </div>
   )
 }
@@ -539,7 +560,7 @@ function WaveComposition() {
       {asks && <p className="sh-line">{asks}</p>}
       {showThreat && (
         <p className="sh-line accent">
-          <Icon name="threat" /> Threat ×{threat.toFixed(2)} HP on every enemy below.
+          <Icon name="threat" /> Threat ×{threat.toFixed(2)}: every enemy below has {Math.round((threat - 1) * 100)}% more HP.
         </p>
       )}
       <div className="sh-comp">
@@ -626,7 +647,7 @@ function BattleRoll({ result }: { result: { perSentinel: { id: string; kills: nu
         return (
           <div className={`sh-comp-row ${r.downed ? 'downed' : ''}`} key={r.id}>
             <span className="sh-comp-name">
-              {hero?.name ?? 'Sentinel'}
+              {hero?.name ?? 'Hero'}
               <span className="sh-comp-res">
                 {r.kills} kills · +{Math.round(r.xpGained)} xp{r.downed ? ' · fell' : ''}
               </span>
@@ -654,7 +675,7 @@ function StrandedPanel() {
       </div>
       <div className="sh-context-body">
         <p className="sh-line muted">
-          This ground is already settled — there is no wave here to take. March on and pick the next node.
+          This ground is already settled. There is no wave here to take. March on and pick the next stop.
         </p>
       </div>
     </div>
@@ -677,7 +698,9 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
 
   const TABS: { id: HeroTab; label: string }[] = [
     { id: 'stats', label: 'Stats' },
-    { id: 'upgrades', label: 'Upgr' },
+    // "Upgr" was an abbreviation nobody could read aloud. These are the
+    // hero's bought skill paths (Wave 1).
+    { id: 'upgrades', label: 'Skills' },
     // "Tune" said nothing about scope; these are the whole watch's orders, not
     // this hero's (M20).
     { id: 'tactics', label: 'Team' },
@@ -714,6 +737,9 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
         <div className="sh-context-foot">
           <button
             className="sh-btn"
+            // The store plays the undeploy sound itself; the generic click on
+            // top of it doubled the feedback.
+            data-sfx="none"
             onClick={() => {
               clearSlot(slotId)
               shellSelect(null)
@@ -727,75 +753,95 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
   )
 }
 
+/**
+ * Patience, in the engine's own numbers (`engine.ts`): every 3 s of a wave a
+ * hero gains a stack worth +4% to its STR, DEX and INT, up to
+ * `3 + floor(patience / 5)` stacks. The stat itself only raises the CAP.
+ */
+const PATIENCE_INTERVAL_S = 3
+const PATIENCE_PER_STACK = 0.04
+const patienceCap = (patience: number) => 3 + Math.floor(patience / 5)
+
 function HeroStats({ hero }: { hero: Sentinel }) {
   const p = computeCombat(hero)
+  const t = totalStats(hero)
   // `describeMods` — the one function that turns a merged `EffectMods` into
-  // sentences — was called nowhere in the shell, so the hero panel showed five
-  // numbers and not one word about what the hero actually *does*. Everything a
-  // Sentinel has merged into it (tier-0 kit, both evolutions, every enchantment
-  // on its gear, mutations, team keepsakes) lands in `p.mods`.
+  // sentences. Everything a hero has merged into it (tier-0 kit, both
+  // evolutions, every enchantment on its gear, mutations, team keepsakes) lands
+  // in `p.mods`.
   const abilities = describeMods(p.mods)
   const options = evolutionOptions(hero)
   const nextEvoLevel = hero.branchPath.length === 1 ? TIER1_LEVEL : hero.branchPath.length === 2 ? TIER2_LEVEL : null
+  /*
+   * Only a blocker is ever hit (Wave 1). The engine's ONE damage path to a hero
+   * is melee from the enemies it is holding (`engine.ts`, `s.blockIds`), and
+   * thorns fire on the same enemies — so for a hero with no `block` in its
+   * merged mods, HP, armour and thorns are numbers that can never matter, and
+   * printing them invited a player to buy armour for an archer. `p.mods` is the
+   * fully merged build (gear and mutations included), so a rogue handed a block
+   * by some future affix grows the rows back automatically.
+   */
+  const canBeHit = !!p.mods.block
+  const cap = patienceCap(p.patience)
 
   return (
     <>
       <p className="sh-line muted">
         {buildName(hero)} · Level {hero.level}/{MAX_LEVEL}
       </p>
+      {/*
+       * One naming for the three stats everywhere: STR / DEX / INT, the words
+       * the hero cards, recruit offers and shrine terms already use. This panel
+       * said PHY/MAG for the same two numbers.
+       *
+       * DEX sits under Attack now. It drives attack rate (+2% a point) and crit
+       * chance (+0.4% a point) and nothing defensive — it was filed under
+       * "Defense", which sent players to it for survivability.
+       */}
       <div className="sh-statgrid">
-        {/* Short heads: the cell is ~77px wide, and "PHYSICAL/MAGIC" is one
-            unbreakable run that widened the whole grid past the panel. The full
-            words stay in each number's accessible name. */}
-        <Cell label="Attack" a={hero.stats.str} b={hero.stats.int} heads={['PHY', 'MAG']} full={['Physical', 'Magic']} />
-        <Cell label="Defense" a={hero.stats.dex} b={Math.round(p.maxHp)} heads={['DEX', 'HP']} full={['Dexterity', 'Hit points']} />
-        {/* Thorns and Patience are real, rolled on gear ("of Patience"), granted
-            by every branch node, and read by the engine — and the shell showed
-            neither, so two of the six numbers a build is made of were invisible
-            (M6). Armour comes off `physDef`, which is what block mitigation
-            actually uses. */}
         <Cell
-          label="Body"
-          a={Math.round(p.thorns)}
-          b={Math.round(p.physDef)}
-          heads={['THN', 'ARM']}
-          full={['Thorns', 'Armour']}
+          label="Attack"
+          wide
+          values={[
+            { head: 'STR', full: 'Strength', v: Math.round(t.str) },
+            { head: 'DEX', full: 'Dexterity', v: Math.round(t.dex) },
+            { head: 'INT', full: 'Intelligence', v: Math.round(t.int) },
+          ]}
         />
+        <Cell label="Reach" values={[{ head: 'RNG', full: 'Range', v: Math.round(p.range) }]} />
         <Cell
-          label="Hold"
-          a={Math.round(p.patience)}
-          b={Math.round(p.range)}
-          heads={['PAT', 'RNG']}
-          full={['Patience', 'Range']}
+          label="Patience"
+          values={[{ head: 'PAT', full: 'Patience', v: Math.round(p.patience) }]}
+          info={`Every ${PATIENCE_INTERVAL_S} s of a wave: +${Math.round(PATIENCE_PER_STACK * 100)}% STR, DEX and INT, up to ${cap} times (+${Math.round(cap * PATIENCE_PER_STACK * 100)}%). Every 5 Patience adds one more.`}
         />
+        {canBeHit && (
+          <Cell
+            label="Defence"
+            values={[
+              { head: 'HP', full: 'Hit points', v: Math.round(p.maxHp) },
+              { head: 'ARM', full: 'Armour', v: Math.round(p.physDef) },
+            ]}
+          />
+        )}
+        {canBeHit && <Cell label="Thorns" values={[{ head: 'THN', full: 'Thorns', v: Math.round(p.thorns) }]} />}
       </div>
+      {!canBeHit && <p className="sh-line muted">Never hit: only heroes that block take damage.</p>}
       <Meter label="Speed" value={`${p.rate.toFixed(1)}/s`} frac={Math.min(1, p.rate / 3)} />
       <Meter label="Crit mult" value={`×${p.critMult.toFixed(1)}`} frac={Math.min(1, (p.critMult - 1) / 2)} />
       <Meter label="Crit chance" value={`${Math.round(p.critChance * 100)}%`} frac={p.critChance} />
 
       {abilities.length > 0 && (
         <>
-          <p className="sh-line muted head">Abilities</p>
-          {/* 22 distinct effects, and every one of them was a bullet and a
-              sentence. This is the single highest-reuse surface in the game for
-              the status set — everything a Sentinel has merged into it lands
-              here. */}
+          <p className="sh-line muted head">
+            Abilities
+            {/* The stacking rule is reference, not reading: it answers "does a
+                second Burn do anything?" for the player who asks, and it was
+                three always-on lines pushing the abilities themselves out of a
+                176px column. Behind an ⓘ now (Wave 1). */}
+            <InfoToggle label="How effects stack" lines={STACKING_RULES} />
+          </p>
           {abilities.map((a) => (
             <EffectLine text={a} bullet key={a} />
-          ))}
-          {/* Stacking silently decides what a second source of the same effect
-              is worth, and the rule was stated only in a code comment (H2).
-
-              The three-bullet form here, the one-liner everywhere else. This is
-              the only render site that sits directly under the merged ability
-              list — the place where "does a second Burn do anything?" is being
-              asked — and it is a scrolling column, so it can afford the shape
-              that answers it in one glance. The offer cards cannot: they share
-              a fixed-height panel with a price and a CTA. */}
-          {STACKING_RULES.map((r) => (
-            <p className="sh-line muted" key={r}>
-              {r}
-            </p>
           ))}
         </>
       )}
@@ -818,40 +864,80 @@ function HeroStats({ hero }: { hero: Sentinel }) {
 
       {(hero.mutations ?? []).map((m) => (
         <p key={m.key} className="sh-line accent">
-          <Icon name="mutate" /> {m.name} — {m.desc}
+          <Icon name="mutate" /> {mutationName(m.key, m.name)} — {m.desc}
         </p>
       ))}
     </>
   )
 }
 
+/**
+ * A labelled stat cell. The label is one short word and each number carries
+ * its own three-letter head UNDER it, so no cell label wraps — "ATTACK ·
+ * PHY/MAG" broke over two lines in a 77px cell and pushed the bottom row of the
+ * grid under the panel's pinned foot, where its numbers were clipped (Wave 1).
+ * The unabbreviated name is each number's accessible name.
+ */
 function Cell({
   label,
-  a,
-  b,
-  heads,
-  full,
+  values,
+  wide,
+  info,
 }: {
   label: string
-  a: number
-  b: number
-  heads: [string, string]
-  full: [string, string]
+  values: { head: string; full: string; v: number }[]
+  wide?: boolean
+  /** A one-line explanation behind an ⓘ — `title` does not exist on touch. */
+  info?: string
 }) {
   return (
-    <div className="sh-cell">
-      {/* `title` was the whole explanation of what these two numbers are, and
-          `title` does not exist on a touch device — which is every device this
-          game ships to. The label spells the pair out instead, and the numbers
-          carry the unabbreviated name apiece. */}
-      <span className="sh-cell-label">
-        {label} · {heads[0]}/{heads[1]}
-      </span>
-      <span className="sh-cell-pair">
-        <span aria-label={`${full[0]} ${a}`}>{a}</span>
-        <span aria-label={`${full[1]} ${b}`}>{b}</span>
+    <div className={`sh-cell ${wide ? 'wide' : ''}`}>
+      <span className="sh-cell-label">{label}</span>
+      {/* The ⓘ sits with the numbers, not the label: in a 77px cell the label
+          plus the disc wrapped onto two lines. */}
+      <span className="sh-cell-vals">
+        {values.map((x) => (
+          <span className="sh-cell-val" key={x.head} role="img" aria-label={`${x.full} ${x.v}`}>
+            <b aria-hidden="true">{x.v}</b>
+            <small aria-hidden="true">{x.head}</small>
+          </span>
+        ))}
+        {info && <InfoToggle label={`What ${label} does`} lines={[info]} />}
       </span>
     </div>
+  )
+}
+
+/**
+ * An ⓘ that opens one or more lines of reference text in place.
+ *
+ * A disclosure, not a tooltip: a tooltip needs hover, and every device this
+ * ships to is a touchscreen. The text renders into a portal-free sibling so it
+ * pushes the column down rather than covering it (rule two of the shell: nothing
+ * covers anything).
+ */
+function InfoToggle({ label, lines }: { label: string; lines: readonly string[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        className={`sh-info ${open ? 'on' : ''}`}
+        aria-expanded={open}
+        aria-label={label}
+        data-sfx="toggle"
+        onClick={() => setOpen((o) => !o)}
+      >
+        i
+      </button>
+      {open && (
+        <span className="sh-info-body" role="note">
+          {lines.map((l) => (
+            <span key={l}>{l}</span>
+          ))}
+        </span>
+      )}
+    </>
   )
 }
 
@@ -949,7 +1035,15 @@ function HeroUpgrades({ hero }: { hero: Sentinel }) {
                       : `${path.name} level ${nextLevel} unlocks at hero level ${milestone}`
                 }
               >
-                {!canBuyMore ? 'Maxed' : meets ? `L${nextLevel} · ⟡${cost}` : `Lv ${milestone}`}
+                {!canBuyMore ? (
+                  'Maxed'
+                ) : meets ? (
+                  <>
+                    L{nextLevel} · <Money amount={cost} c="gold" />
+                  </>
+                ) : (
+                  `Lv ${milestone}`
+                )}
               </button>
             </div>
             {next ? (
@@ -1048,6 +1142,23 @@ function ItemPanel({ item }: { item: Item }) {
   const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
   const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
 
+  const scrap = useArmedAction(
+    {
+      label: 'Scrap',
+      run: () => {
+        dismantleItem(item.id)
+        if (selection?.kind === 'item' && selection.id === item.id) shellSelect(null)
+      },
+      confirm: {
+        label: 'Yes — scrap it',
+        note: `${itemName(item)} is destroyed for ${moneyText(scrapGold(item), 'gold')}${
+          mode === 'endless' ? ` and ${moneyText(scrapDust(item), 'dust')}` : ''
+        }. There is no undo.`,
+      },
+    },
+    `scrap-${item.id}`,
+  )
+
   // Where is it — loose in the pack, or worn by someone?
   const wearer = roster.find((s) => HERO_SLOTS.some((hs) => s.equipment[hs]?.id === item.id))
   const wornSlot = wearer ? HERO_SLOTS.find((hs) => wearer.equipment[hs]?.id === item.id) : undefined
@@ -1070,7 +1181,7 @@ function ItemPanel({ item }: { item: Item }) {
   // only one place you can reach an item, so the actions belong on the item.
   const endless = mode === 'endless'
   const craft = {
-    currency: endless ? '◈' : '⟡',
+    currency: (endless ? 'dust' : 'gold') as 'dust' | 'gold',
     purse: endless ? dust : gold,
     reforgeCost: endless ? reforgeDust(item) : reforgeCost(item),
     upgradeCost: endless ? upgradeDust(item) : upgradeCost(item),
@@ -1080,7 +1191,7 @@ function ItemPanel({ item }: { item: Item }) {
 
   return (
     <div className="sh-context">
-      <div className="sh-context-head">
+      <div className="sh-context-head start">
         {/* The item's own shape, at the head of its own panel. The damage type
             is NOT repeated here: the panel is ~176px wide and every mark costs
             the item name 18px of it (measured: "Mythic Staff of Ruin" clipped to
@@ -1089,10 +1200,15 @@ function ItemPanel({ item }: { item: Item }) {
         <span className="sh-context-icon" aria-hidden="true">
           <Icon name={itemIcon(item)} />
         </span>
-        <strong style={{ color: rarityVar(item.rarity) }}>{item.name}</strong>
-        <span className="sh-context-sub">{RARITY[item.rarity].label}</span>
+        <strong style={{ color: rarityVar(item.rarity) }}>{itemName(item)}</strong>
       </div>
       <div className="sh-context-body">
+        {/* The rarity in its own hue with a pip count, on its own line: in the
+            head it cost the name its width ("Dagg…"). It used to be the gold
+            sub-label at every tier (Wave 1). */}
+        <p className="sh-line">
+          <RarityTag rarity={item.rarity} />
+        </p>
         {/*
           `itemBody` — the same function the merchant board, the Forge and the
           reward card render, rather than a second copy of the same three steps
@@ -1134,10 +1250,9 @@ function ItemPanel({ item }: { item: Item }) {
             className="sh-btn small"
             disabled={craft.purse < craft.reforgeCost}
             onClick={craft.doReforge}
-            aria-label={`Reforge ${item.name} — reroll its enchantments for ${craft.reforgeCost}`}
+            aria-label={`Reforge ${itemName(item)} — reroll its enchantments for ${moneyText(craft.reforgeCost, craft.currency)}`}
           >
-            Reforge {craft.currency}
-            {craft.reforgeCost}
+            Reforge <Money amount={craft.reforgeCost} c={craft.currency} />
           </button>
           <button
             className="sh-btn small"
@@ -1145,13 +1260,70 @@ function ItemPanel({ item }: { item: Item }) {
             onClick={craft.doUpgrade}
             aria-label={
               canUpgrade(item)
-                ? `Raise ${item.name} one rarity tier for ${craft.upgradeCost}`
-                : `${item.name} is already at the top rarity`
+                ? `Raise ${itemName(item)} one rarity tier for ${moneyText(craft.upgradeCost, craft.currency)}`
+                : `${itemName(item)} is already at the top rarity`
             }
           >
-            {canUpgrade(item) ? `Raise ${craft.currency}${craft.upgradeCost}` : 'Max rarity'}
+            {canUpgrade(item) ? (
+              <>
+                Raise <Money amount={craft.upgradeCost} c={craft.currency} />
+              </>
+            ) : (
+              'Max rarity'
+            )}
           </button>
         </div>
+        {/*
+         * Scrap lives HERE now, in the body beside the other things you can do
+         * to an item, and it arms before it fires (Wave 1).
+         *
+         * It used to be the panel's foot button — one tap, no confirm, no undo,
+         * item destroyed — in exactly the spot where a worn item shows
+         * "Unequip". Unequip a sword, tap it in the pack to look at it, and the
+         * same thumb position now destroyed it. Moving it off the foot breaks
+         * the positional trap; the arm-then-confirm (`useArmedAction`, the
+         * shell's one destructive-confirm pattern) makes it a second decision
+         * on a different control.
+         */}
+        {!wearer && (
+          <div className="sh-craft sh-scrap">
+            <button
+              className={`sh-btn small ${scrap.armed ? '' : 'quiet-danger'}`}
+              onClick={scrap.fire}
+              aria-label={
+                scrap.armed
+                  ? 'Never mind — keep it'
+                  : `Scrap ${itemName(item)} for ${moneyText(scrapGold(item), 'gold')}${endless ? ` and ${moneyText(scrapDust(item), 'dust')}` : ''} — it is destroyed`
+              }
+            >
+              {scrap.armed ? (
+                'Keep it'
+              ) : (
+                <>
+                  Scrap <Money amount={scrapGold(item)} c="gold" />
+                  {endless ? <Money amount={scrapDust(item)} c="dust" /> : null}
+                </>
+              )}
+            </button>
+            {scrap.confirm && (
+              <button
+                className="sh-btn small danger"
+                onClick={scrap.confirm.run}
+                onKeyDown={scrap.confirm.onKeyDown}
+                onPointerDown={scrap.confirm.onPointerDown}
+              >
+                {scrap.confirm.label}
+              </button>
+            )}
+          </div>
+        )}
+        {/* Below the buttons, not above: arming must not move a control under a
+            thumb that is already coming down (the rule `rev-shift` guards). */}
+        {scrap.notice && (
+          <p className="sh-line bad" role="alert">
+            <Icon name="warn" /> {scrap.notice}
+          </p>
+        )}
       </div>
       <div className="sh-context-foot">
         {gearSlot && !wearer && heroSlotsFor(item.slot).includes(gearSlot.slot) ? (
@@ -1176,20 +1348,9 @@ function ItemPanel({ item }: { item: Item }) {
             Unequip
           </button>
         ) : (
-          /* The yield was invisible: "Dismantle" destroyed an item and paid an
-             unstated amount, so scrapping was a guess (M6). Endless pays dust
-             on top of the gold, which is why both are quoted there. */
-          <button
-            className="sh-btn"
-            onClick={() => {
-              dismantleItem(item.id)
-              if (selection?.kind === 'item' && selection.id === item.id) shellSelect(null)
-            }}
-            aria-label={`Dismantle ${item.name} for ${scrapGold(item)} gold${endless ? ` and ${scrapDust(item)} dust` : ''} — it is destroyed`}
-          >
-            Scrap ⟡{scrapGold(item)}
-            {endless ? ` ◈${scrapDust(item)}` : ''}
-          </button>
+          // A loose item with no slot armed: say how to wear it rather than
+          // leaving the foot empty — the foot is where the eye goes next.
+          <p className="sh-line muted sh-foot-hint">Tap a + under Gear to wear it.</p>
         )}
       </div>
     </div>
@@ -1234,6 +1395,12 @@ function OfferPanel({ offer }: { offer: Offer }) {
         {offer.action && (
           <button className="sh-btn primary" disabled={offer.action.disabled} onClick={confirm.fire}>
             {confirm.label}
+            {offer.action.cost && !confirm.armed ? (
+              <>
+                {' · '}
+                <Money amount={offer.action.cost.amount} c={offer.action.cost.currency} />
+              </>
+            ) : null}
           </button>
         )}
         {/* The armed confirm is a different button from the one that armed it —
@@ -1261,15 +1428,18 @@ function OfferPanel({ offer }: { offer: Offer }) {
         {offer.secondary && (
           <button className="sh-btn" disabled={offer.secondary.disabled} onClick={offer.secondary.run}>
             {offer.secondary.label}
-            {offer.secondary.cost ? ` · ${CURRENCY[offer.secondary.cost.currency]}${offer.secondary.cost.amount}` : ''}
+            {offer.secondary.cost ? (
+              <>
+                {' · '}
+                <Money amount={offer.secondary.cost.amount} c={offer.secondary.cost.currency} />
+              </>
+            ) : null}
           </button>
         )}
       </div>
     </div>
   )
 }
-
-const CURRENCY = CURRENCY_GLYPH
 
 /* -------------------------------------------------------------- gear + pack */
 
@@ -1313,7 +1483,7 @@ function GearColumn() {
                   // in its accessible name rather than in a hover tooltip.
                   aria-label={
                     worn
-                      ? `${HERO_SLOT_LABEL[hs]}: ${worn.name}, ${RARITY[worn.rarity].label}`
+                      ? `${HERO_SLOT_LABEL[hs]}: ${itemName(worn)}, ${RARITY[worn.rarity].label}`
                       : active
                         ? `${HERO_SLOT_LABEL[hs]}: choosing — pick something from the pack`
                         : `${HERO_SLOT_LABEL[hs]}: empty`
@@ -1368,8 +1538,14 @@ function PackColumn() {
     <div className={`sh-pack ${gearSlot ? 'filtering' : ''}`}>
       <div className="sh-col-head">
         <span>PACK</span>
+        {/* "0/0" was shown/owned with no words on either number (Wave 1).
+            It says what it counts now, and the filter case says so. */}
         <span className="sh-col-count">
-          {shown.length}/{inventory.length}
+          {inventory.length === 0
+            ? 'empty'
+            : gearSlot
+              ? `${shown.length} of ${inventory.length} fit`
+              : `${inventory.length} item${inventory.length === 1 ? '' : 's'}`}
         </span>
         <button className="sh-col-btn" onClick={sortInventory} aria-label="Sort the pack by rarity, then kind">
           ⇅
@@ -1390,7 +1566,7 @@ function PackColumn() {
                or magic — the property `damageMark` itself calls the one that
                decides whether a drop is worth anything to a given hero — and
                the accessible name did not mention it at all. */
-            aria-label={[`${i.name}, ${RARITY[i.rarity].label} ${KIND_NAME[i.slot] ?? 'item'}`, markLabel(damageMark(i))]
+            aria-label={[`${itemName(i)}, ${RARITY[i.rarity].label} ${KIND_NAME[i.slot] ?? 'item'}`, markLabel(damageMark(i))]
               .filter(Boolean)
               .join(', ')}
             onClick={() => {
@@ -1432,7 +1608,9 @@ function PackColumn() {
             </span>
           </button>
         ))}
-        {shown.length === 0 && <span className="sh-pack-empty">{gearSlot ? 'Nothing fits' : 'Empty'}</span>}
+        {shown.length === 0 && (
+          <span className="sh-pack-empty">{gearSlot ? 'Nothing fits' : 'Nothing yet. Spoils and the merchant fill it.'}</span>
+        )}
       </div>
     </div>
   )

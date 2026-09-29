@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import { computeCombat } from '../../game/engine/combat'
 import { buildName, levelProgress } from '../../game/engine/leveling'
 import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
@@ -38,9 +38,40 @@ import { heroArt } from './offers'
  * at the place that would quietly render an empty row if it stopped being true.
  */
 export function SelectorBand() {
+  const bandRef = useRef<HTMLElement>(null)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const rosterSize = useGameStore((s) => s.roster.length)
+
+  /*
+   * The overflow cue (Wave 1). With four or five heroes the row is wider than
+   * a 390px screen and the last cards were simply cut off at the edge, with
+   * nothing to say the row scrolled. The band carries `data-more-left/right`
+   * from the live scroll position and shell.css fades that edge and draws a
+   * chevron. Written as attributes straight onto the element, not React state,
+   * so a scroll does not re-render the party.
+   */
+  useEffect(() => {
+    const row = rowRef.current
+    const band = bandRef.current
+    if (!row || !band) return
+    const update = () => {
+      const max = row.scrollWidth - row.clientWidth
+      band.dataset.moreLeft = row.scrollLeft > 4 ? '1' : '0'
+      band.dataset.moreRight = row.scrollLeft < max - 4 ? '1' : '0'
+    }
+    update()
+    row.addEventListener('scroll', update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(row)
+    return () => {
+      row.removeEventListener('scroll', update)
+      ro.disconnect()
+    }
+  }, [rosterSize])
+
   return (
-    <section className="sh-selector">
-      <div className="sh-selector-row">
+    <section className="sh-selector" ref={bandRef}>
+      <div className="sh-selector-row" ref={rowRef}>
         <PartyCards />
       </div>
     </section>
@@ -66,7 +97,7 @@ function PartyCards() {
         const selected = selection?.kind === 'hero' && selection.id === s.id
         const profile = computeCombat(s)
         const hue = archetypeVar(s.archetype)
-        const state = placed ? 'deployed' : selected && canPlace ? 'selected, tap a slot to post it' : 'on the bench'
+        const state = placed ? 'deployed' : selected && canPlace ? 'selected, tap a glowing circle to post it' : 'on the bench'
         return (
           <button
             key={s.id}
@@ -112,7 +143,7 @@ function PartyCards() {
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
             </span>
             <span className={`sh-hero-tag ${placed ? 'on' : selected && canPlace ? 'arm' : ''}`}>
-              {placed ? 'Deployed' : selected && canPlace ? 'Tap a slot' : `${Math.round(profile.dps)} DPS`}
+              {placed ? 'Deployed' : selected && canPlace ? 'Place it' : `${Math.round(profile.dps)} DPS`}
             </span>
           </button>
         )
@@ -120,8 +151,8 @@ function PartyCards() {
       {roster.length < MAX_ROSTER && (
         <div className="sh-hero empty" aria-hidden>
           <span className="sh-hero-glyph ghost">+</span>
-          <span className="sh-hero-name muted">Open</span>
-          <span className="sh-hero-sub">recruit</span>
+          <span className="sh-hero-name muted">Open slot</span>
+          <span className="sh-hero-sub">recruit a hero</span>
         </div>
       )}
     </>

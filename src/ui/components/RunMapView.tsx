@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { nodeMeta } from '../../game/data/runmap'
 import { THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
 import { bannerRules } from '../../state/metaStore'
+import { NODE_ICON } from '../channels'
 import { Icon } from '../Icon'
+import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
 
 /**
  * What marching through this node costs the rest of the run (M5).
@@ -47,7 +49,10 @@ const nodeThreat = (type: string): number | null =>
 
 const GAP = 104 // vertical px between layers
 const PAD_X = 44
-const PAD_Y = 46
+// 46 put the top row's centre 46px from the scroll box's top edge, and a node
+// is ~58px tall with its threat chip — so the boss row's label sat under the
+// header band's bottom border and read as clipped (Wave 1). 62 clears it.
+const PAD_Y = 62
 
 /** Slay-the-Spire style vertical node map. Start at the bottom, boss at the top. */
 export function RunMapView() {
@@ -57,6 +62,29 @@ export function RunMapView() {
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
   const allElite = useGameStore((s) => bannerRules(s.runBanner).allElite)
+  const focusedId = useMapFocus((s) => s.nodeId)
+  const focus = useMapFocus((s) => s.focus)
+
+  /*
+   * Look first, march second (Wave 1). A tap used to call `selectNode`, which
+   * commits the march, so a fork could only be read by walking into it. The
+   * first tap (or keyboard focus) now fills the Context panel with what waits
+   * there; tapping the same node again — after the settle window, so a
+   * double-tap is still just a look — or the panel's "March" button commits.
+   */
+  const onNode = (id: string) => {
+    const f = useMapFocus.getState()
+    if (f.nodeId === id && Date.now() - f.at >= MARCH_SETTLE_MS) {
+      focus(null)
+      selectNode(id)
+      return
+    }
+    if (f.nodeId !== id) focus(id)
+  }
+  // A new map (new run, resume) starts with nothing focused.
+  useEffect(() => {
+    focus(null)
+  }, [runMap, focus])
 
   const innerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -109,8 +137,11 @@ export function RunMapView() {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke={active ? 'rgba(224,172,76,0.55)' : 'rgba(233,205,150,0.12)'}
-                strokeWidth={active ? 2.5 : 1.5}
+                /* Future roads were 12% cream — 1.3:1 on the ground, so the
+                   shape of the map ahead was a guess. 38% keeps them clearly
+                   behind the lit route while still reading (Wave 1). */
+                stroke={active ? 'rgba(224,172,76,0.7)' : 'rgba(233,205,150,0.38)'}
+                strokeWidth={active ? 3 : 2}
               />
             )
           })}
@@ -132,13 +163,18 @@ export function RunMapView() {
                 ? 'reachable'
                 : 'locked'
           const threat = nodeThreat(n.type)
+          const isFocused = focusedId === n.id
           return (
             <button
               key={n.id}
-              className={`map-node ${state} type-${n.type}`}
+              className={`map-node ${state} type-${n.type} ${isFocused ? 'focused' : ''}`}
               style={{ left: p.x, top: p.y, borderColor: meta.color }}
               disabled={!isReachable}
-              onClick={() => selectNode(n.id)}
+              aria-pressed={isReachable ? isFocused : undefined}
+              onClick={() => onNode(n.id)}
+              onFocus={() => {
+                if (isReachable && useMapFocus.getState().nodeId !== n.id) focus(n.id)
+              }}
               /* `title` does not exist on a touch device, which is every device
                  this ships to — so the node's kind, its state and what it costs
                  the rest of the run all belong in the accessible name. */
@@ -151,11 +187,22 @@ export function RunMapView() {
                   ? `, raises Threat ×${threat}${SPECIAL_NODES.has(n.type) ? ' just to visit, and ×1.05 more if you take what it offers' : ''}`
                   : ''
               } — ${
-                isCurrent ? 'where you stand' : isCleared ? 'cleared' : isReachable ? 'you can march here' : 'out of reach'
+                isCurrent
+                  ? 'where you stand'
+                  : isCleared
+                    ? 'cleared'
+                    : isReachable
+                      ? isFocused
+                        ? 'previewing — select again to march'
+                        : 'you can march here — select to preview'
+                      : 'out of reach'
               }`}
             >
-              <span className="mn-glyph" style={{ color: meta.color }}>
-                {meta.glyph}
+              {/* The node's pixel mark (Wave 1). This was `meta.glyph` — ⚔ ◆ ☠
+                  ♛ ⟡ ❖ ＋, system-font characters in whatever face the phone
+                  had, and `⟡` doubled as the gold mark. */}
+              <span className="mn-glyph">
+                <Icon name={NODE_ICON[allElite && n.type === 'battle' ? 'elite' : n.type] ?? 'depth'} />
               </span>
               <span className="mn-label">{meta.label}</span>
               {/* Only on nodes you can actually choose between: the cost is

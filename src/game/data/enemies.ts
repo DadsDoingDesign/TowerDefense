@@ -161,6 +161,18 @@ export const ENEMY_MODS: readonly EnemyMod[] = [
 /** The registry key for a base type under a modifier (`null` → the base type). */
 export const modKey = (typeId: string, mod: string | null): string => (mod ? `${typeId}_${mod}` : typeId)
 
+/**
+ * An elite's display name: the goblin first, the modifier after it.
+ *
+ * Built `${prefix} ${base.name}` before, which is how the boss column read
+ * "Plated The Colossus Keg" — an article in the middle of a name. The goblin
+ * leads now and the modifier is a tag on it ("The Colossus Keg · Plated",
+ * "Bomber · Warded"), so a mixed column still sorts by what the enemy IS when
+ * you scan it, and a name that carries its own article keeps it where it
+ * belongs.
+ */
+export const eliteName = (baseName: string, prefix: string): string => `${baseName} · ${prefix}`
+
 function applyMod(base: EnemyType, m: EnemyMod): EnemyType {
   const phys = Math.min(RESIST_CAP, (base.physResist ?? 0) * m.physKeep + m.physResist)
   const mag = Math.min(RESIST_CAP, (base.magResist ?? 0) * m.magKeep + m.magResist)
@@ -169,7 +181,7 @@ function applyMod(base: EnemyType, m: EnemyMod): EnemyType {
     // NOT `${base.id}_${m.id}`: the renderer resolves sprites and the tier tag
     // off `type.id`, and a modified goblin is the same goblin. See above.
     id: base.id,
-    name: `${m.prefix} ${base.name}`,
+    name: eliteName(base.name, m.prefix),
     speed: Math.round(base.speed * m.speedMult),
     physResist: phys > 0 ? Math.round(phys * 100) / 100 : undefined,
     magResist: mag > 0 ? Math.round(mag * 100) / 100 : undefined,

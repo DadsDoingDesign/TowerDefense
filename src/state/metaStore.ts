@@ -35,15 +35,15 @@ export interface MetaUpgrade {
 
 export const UPGRADES: MetaUpgrade[] = [
   // ── the onboarding ramp — bounded on purpose ─────────────────────────────
-  { id: 'base', name: 'Reinforced Base', desc: '+5 max Base integrity', maxLevel: 2, baseCost: 60, step: 40, kind: 'ramp' },
+  { id: 'base', name: 'Reinforced Gate', desc: '+5 max Gate HP', maxLevel: 2, baseCost: 60, step: 40, kind: 'ramp' },
   { id: 'gold', name: 'War Chest', desc: '+25 starting gold', maxLevel: 2, baseCost: 50, step: 30, kind: 'ramp' },
   // The copy says "every Sentinel", and since M18 the code agrees: the bonus is
   // applied in `buildStartingRoster` AND in `scaledRecruit`, so it covers the
   // company you start with and every body the run hires. It used to say
   // "starting Sentinels" and mean it, which made a permanent purchase quietly
   // worth less the longer a run went on.
-  { id: 'stats', name: 'Seasoned Recruits', desc: '+1 to all stats on every Sentinel who joins the watch', maxLevel: 2, baseCost: 80, step: 50, kind: 'ramp' },
-  { id: 'roster', name: 'Standing Company', desc: 'Begin each run with an extra Sentinel', maxLevel: 1, baseCost: 150, step: 150, kind: 'ramp' },
+  { id: 'stats', name: 'Seasoned Recruits', desc: '+1 to all stats on every hero who joins the company', maxLevel: 2, baseCost: 80, step: 50, kind: 'ramp' },
+  { id: 'roster', name: 'Standing Company', desc: 'Begin each run with an extra hero', maxLevel: 1, baseCost: 150, step: 150, kind: 'ramp' },
   { id: 'loot', name: 'Quartermaster', desc: 'Begin each run with an extra item', maxLevel: 1, baseCost: 70, step: 60, kind: 'ramp' },
   /**
    * **`marks` — "Chronicler", +15% Watch Marks per level, four levels — is gone

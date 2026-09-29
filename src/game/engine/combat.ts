@@ -187,3 +187,13 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
     dps,
   }
 }
+
+/** Total core stats including gear (for the hero panel). */
+export function totalStats(s: Sentinel): CoreStats {
+  const gear = gearOf(s.equipment)
+  return {
+    str: s.stats.str + gear.stats.str,
+    dex: s.stats.dex + gear.stats.dex,
+    int: s.stats.int + gear.stats.int,
+  }
+}

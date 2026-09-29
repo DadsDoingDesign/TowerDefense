@@ -74,7 +74,7 @@ export function useShellContext(): ShellContext {
     return {
       stage: 'board',
       selector: 'offers',
-      board: { title: 'Choose your first hero', blurb: 'This is your starting tower. You can recruit more heroes as you play through a run.' },
+      board: { title: 'Choose your first hero', blurb: 'Your first hero. Recruit more along the road.' },
       layout: 'page',
     }
   }
@@ -98,9 +98,9 @@ export function useShellContext(): ShellContext {
         : crossroads.mutationHeroId
           ? {
               title: 'Choose the mutation',
-              blurb: 'Three Mythics, dealt when the fork fired. Read what each one costs — the one you take is permanent.',
+              blurb: 'Three Mythics, dealt when the fork fired. Read what each costs. The one you take is permanent.',
             }
-          : { title: 'The Crossroads', blurb: 'One choice only — take a recruit, or aim a mutation at one of your own.' },
+          : { title: 'The Crossroads', blurb: 'One choice: take a recruit, or aim a mutation at one of your own.' },
       layout: 'page',
     }
   }
@@ -125,7 +125,9 @@ export function useShellContext(): ShellContext {
       return {
         stage: 'board',
         selector: 'offers',
-        board: { title: 'Spoils', blurb: 'Take one — it applies to the whole watch.' },
+        // "It applies to the whole watch" was false for every item card — an
+        // item goes to the pack. Each card now says its own scope (Wave 1).
+        board: { title: 'Spoils', blurb: 'Take one. Each card says where it goes.' },
         layout: 'page',
       }
     }
@@ -156,18 +158,19 @@ export function useShellContext(): ShellContext {
 /** Copy for the unrecognised-screen fallback above. It says so plainly. */
 const LOST_BOARD = {
   title: 'Off the Path',
-  blurb: 'The watch lost its bearings here — this part of the run cannot be shown. Take the way on below.',
+  blurb: 'The company lost its bearings here, and this part of the run cannot be shown. Take the way on below.',
 } as const
 
 const EVENT_BOARD = {
-  merchant: { title: 'Merchant', blurb: 'Three offers. Spend before you march.' },
+  // "Three offers" over a board of four items and a hire (Wave 1).
+  merchant: { title: 'Merchant', blurb: 'Spend your gold before you march.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms. Read them.' },
-  recruit: { title: 'Recruit', blurb: 'A Sentinel looking for a banner.' },
+  recruit: { title: 'Recruit', blurb: 'A hero looking for a company.' },
 } as const
 
 const ROOM_BOARD = {
   merchant: { title: 'Merchant', blurb: 'Spend gold before the next wave.' },
   forge: { title: 'Forge', blurb: 'Spend dust to reforge or upgrade.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms.' },
-  recruit: { title: 'Recruit', blurb: 'Add a Sentinel to the watch.' },
+  recruit: { title: 'Recruit', blurb: 'Add a hero to the company.' },
 } as const
