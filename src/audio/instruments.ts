@@ -321,8 +321,6 @@ export interface VoiceBank {
   /** Buffer + exact playback rate for a pluck at `semi` above A2. */
   pluck(kind: PluckKind, semi: number): { buf: AudioBuffer; rate: number } | null
   drum(kind: DrumKind): AudioBuffer | null
-  /** Render every anchor in [lo, hi] for these voices now, and time it. */
-  warm(kinds: PluckKind[], lo: number, hi: number): void
   /** Total milliseconds spent rendering so far, and buffers held. */
   stats(): { ms: number; buffers: number; bytes: number }
 }
@@ -387,9 +385,6 @@ export function voiceBank(ctx: BaseAudioContext): VoiceBank {
         drums.set(kind, b)
       }
       return b
-    },
-    warm(kinds, lo, hi) {
-      for (const k of kinds) for (let s = lo; s <= hi; s += ANCHOR_STEP) getAnchor(k, anchorFor(s).anchor)
     },
     stats: () => ({ ms, buffers: plucks.size + drums.size, bytes }),
   }

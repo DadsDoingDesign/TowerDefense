@@ -54,7 +54,7 @@ import {
   wakeAudio,
   type MusicClock,
 } from './audio'
-import { voiceBank, type DrumKind, type PluckKind, type VoiceBank } from './instruments'
+import { ANCHOR_STEP, voiceBank, type DrumKind, type PluckKind, type VoiceBank } from './instruments'
 import { CUE_LEVEL_DB, dbToGain, nextLevel, STEM_DB, STEM_PAN, STEM_SEND, STEMS_FOR_LEVEL, type Stem } from './mix'
 import {
   chordAt,
@@ -345,7 +345,7 @@ function droneStart(tonic: number, t: number, bpm: number, to: AudioNode): Drone
   lp.type = 'lowpass'
   lp.frequency.value = 900
   const f2g = ctx.createGain()
-  f2g.gain.value = 0.6
+  f2g.gain.value = 0.4
   const env = ctx.createGain()
   env.gain.setValueAtTime(0, t)
   sum.connect(f1)
@@ -522,7 +522,7 @@ function performStep(p: Perf, step: number, t: number, sd: number): void {
     const to = stem('bass')
     if (step === 0 && track && to) {
       const buzz = p.calm ? 0 : cue.id === 'boss' ? 0.8 : cue.id === 'battle' && p.level >= 2 ? 0.45 : 0
-      const vel = cue.id === 'hub' ? 0.12 : cue.id === 'defeat' ? 0.09 : 0.11
+      const vel = cue.id === 'hub' ? 0.12 : cue.id === 'defeat' ? 0.09 : 0.075
       if (!track.drone) track.drone = droneStart(key, t, cue.bpm, to)
       if (track.drone) droneSet(track.drone, key, vel, buzz, t)
     }
@@ -632,7 +632,8 @@ let outroDone: MusicCue | null = null
 /** Recent beat times (audio clock), for the music clock. */
 const beats: number[] = []
 let beatDur = 0.5
-let prerenderMs = 0
+/** String anchors still to pre-render, a couple per scheduler tick. */
+let warmQueue: [PluckKind, number][] = []
 
 /** Each cue's bar when it last stopped (the hub resumes on its phrase). */
 const position: Record<MusicCue, number> = { hub: 0, prep: 0, battle: 0, victory: 0, defeat: 0 }
@@ -744,19 +745,20 @@ function startTrack(cue: MusicCue, fadeIn: number, at?: number): void {
   const lvl = dbToGain(CUE_LEVEL_DB[cue])
   for (const g of [gain, sendGain]) {
     g.gain.setValueAtTime(0.0001, now)
-    g.gain.linearRampToValueAtTime(g === gain ? lvl : lvl, now + fadeIn)
+    g.gain.linearRampToValueAtTime(lvl, now + fadeIn)
   }
   gain.connect(b.out)
   sendGain.connect(b.send)
   const bank = voiceBank(ctx)
-  const before = bank.stats().ms
-  // Pre-render the strings this cue will reach for (Karplus–Strong anchors
-  // from the bass roots to the top of the tune), so no note ever pays for a
-  // render on the audio clock's deadline.
-  bank.warm(['harp'], -8, 36)
-  bank.warm(['lute'], 0, 36)
+  // The drums are tiny: render them now. The strings (Karplus–Strong
+  // anchors from the bass roots to the top of the tune) are queued and
+  // rendered two per scheduler tick — a few ms each — so the first tap that
+  // starts the score never stalls the main thread for the whole bank; any
+  // note that needs an anchor before the queue reaches it renders it itself.
   for (const d of ['dum', 'tek', 'shaker', 'tomLo', 'tomHi', 'jingle', 'heart'] as const) bank.drum(d)
-  prerenderMs += bank.stats().ms - before
+  warmQueue = []
+  for (let s = -8; s <= 36; s += ANCHOR_STEP) warmQueue.push(['harp', s])
+  for (let s = 0; s <= 36; s += ANCHOR_STEP) warmQueue.push(['lute', s])
   track = { ctx, gain, sendGain, stems: {}, bank, drone: null }
   playing = cue
   form = cue
@@ -796,6 +798,10 @@ function pump(): void {
       step = 0
       barN++
     }
+  }
+  for (let i = 0; i < 2 && warmQueue.length && track; i++) {
+    const [k, semi] = warmQueue.shift()!
+    track.bank.pluck(k, semi)
   }
 }
 
@@ -916,7 +922,7 @@ export function musicStatus(): {
     running: timer !== null,
     scheduled,
     suspended,
-    prerenderMs: Math.round(prerenderMs * 10) / 10,
+    prerenderMs: track ? Math.round(track.bank.stats().ms * 10) / 10 : 0,
     bankBytes: track ? track.bank.stats().bytes : 0,
   }
 }

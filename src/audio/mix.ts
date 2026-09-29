@@ -67,14 +67,14 @@ export const BUS_MAKEUP_DB = { game: 8, ui: 6, music: 8 } as const
  * these bring each cue to its place in the hierarchy (hub ≈ −22, battle ≈ −18
  * LUFS-I at default volumes; the outros sit with the battle).
  */
-export const CUE_LEVEL_DB = { hub: 3.5, prep: 3.5, battle: 0, boss: 0, victory: 2.5, defeat: 3 } as const
+export const CUE_LEVEL_DB = { hub: 4, prep: 3.5, battle: 0, boss: 0, victory: 2.5, defeat: 3 } as const
 
 /**
  * The stems the adaptive score can switch, and each one's level inside a cue
  * (dB). Melody sits on top; the pad is felt, not heard.
  */
 export type Stem = 'drums' | 'bass' | 'pluck' | 'melody' | 'pad'
-export const STEM_DB: Record<Stem, number> = { drums: -14.5, bass: -14, pluck: -8, melody: -11, pad: -12 }
+export const STEM_DB: Record<Stem, number> = { drums: -14.5, bass: -14, pluck: -8, melody: -12, pad: -12 }
 /** Stereo seat per stem (−1…1). Drums and bass stay centred — lows never pan. */
 export const STEM_PAN: Record<Stem, number> = { drums: 0, bass: 0, pluck: -0.28, melody: 0.12, pad: 0.3 }
 /** Reverb send per stem. */
@@ -156,7 +156,7 @@ export const panFor = (x: number | undefined): number =>
 export const CALM = {
   musicDb: -4,
   glue: { threshold: -24, knee: 12, ratio: 1.5, attack: 0.02, release: 0.3 },
-  limiter: { threshold: -2, knee: 4, ratio: 8, attack: 0.003, release: 0.2 },
+  limiter: { threshold: -3.5, knee: 6, ratio: 10, attack: 0.002, release: 0.2 },
 } as const
 
 /**

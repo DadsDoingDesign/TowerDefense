@@ -1235,12 +1235,12 @@ function playGame(event: GameEvent, p: SfxPayload = {}): void {
         noise(0.25, 0.33, { lp: 1200, lpTo: 200, send: 0.25, pan })
         osc(vary(70, 30), 0.3, 0.25, { to: 38, type: 'sine' })
         osc(vary(170, 40), 0.18, 0.12, { to: 60, type: 'sawtooth', send: 0.2, pan })
-        noise(0.07, 0.25, { bp: 1500, q: 1, pan })
+        noise(0.07, 0.42, { bp: 1500, q: 1, pan })
       } else if (p.faction === 'barrel') {
         // Wood giving way: three splintering cracks and a hollow knock.
         noise(0.04, 0.55, { bp: 750, q: 3, pan })
-        noise(0.035, 0.5, { bp: 1250, q: 3, at: 0.028, pan })
-        noise(0.05, 0.45, { bp: 1800, q: 2.5, at: 0.06, pan, send: 0.15 })
+        noise(0.035, 0.75, { bp: 1250, q: 3, at: 0.028, pan })
+        noise(0.05, 0.7, { bp: 1800, q: 2.5, at: 0.06, pan, send: 0.15 })
         osc(vary(150, 40), 0.1, 0.24, { to: 90, type: 'triangle', pan })
         osc(vary(62, 20), 0.14, 0.16, { to: 44, type: 'sine' })
       } else {
@@ -1418,11 +1418,11 @@ function playSting(event: GameEvent, at: number, key: number, clocked: boolean):
       ]
       for (const [semi, dt, len] of calls) {
         for (const det of [-7, 6]) hornVoice(a4(semi), dt, len, 0.04, at, det)
-        hornVoice(a4(semi + 12), dt, len, 0.014, at, 0)
+        hornVoice(a4(semi + 12), dt, len, 0.03, at, 0)
       }
-      drumVoice('tomLo', 0.4, { at })
-      drumVoice('tomLo', 0.35, { at: at + 0.3 })
-      drumVoice('dum', 0.45, { at: at + 0.6 })
+      drumVoice('tomLo', 0.2, { at })
+      drumVoice('tomLo', 0.18, { at: at + 0.3 })
+      drumVoice('dum', 0.25, { at: at + 0.6 })
       duckMusic(DUCK.horn, 1.4, at)
       break
     }
