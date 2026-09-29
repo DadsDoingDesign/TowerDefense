@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { setAudioVolumes } from '../audio/audio'
+import { setAudioOptions, setAudioVolumes } from '../audio/audio'
 import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
 import { bool, clampNum, onStorageKeyChange, safePersistStorage, str } from './storage'
 
@@ -114,6 +114,16 @@ interface SettingsState {
   assist: AssistLevel
   /** Which teaching beats the player has already been shown. */
   taught: TeachSeen
+  /**
+   * "Calm audio" (Phase-2 accessibility): the score without drums, a gentler
+   * limiter, and the effects brought forward — for sensory sensitivity, for
+   * playing at night, for anyone the fight music is too much for.
+   */
+  calmAudio: boolean
+  /** Fold the mix to mono (one earbud, one speaker, a hearing difference). */
+  monoAudio: boolean
+  setCalmAudio: (v: boolean) => void
+  setMonoAudio: (v: boolean) => void
   setAudio: (patch: Partial<AudioSettings>) => void
   /** Master level, 0–1. */
   setMasterVolume: (v: number) => void
@@ -137,8 +147,8 @@ interface SettingsState {
 const prefersReducedMotion =
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Persisted settings schema version (M11). 2: `audio.musicLevel`. */
-export const SETTINGS_VERSION = 2
+/** Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`, `monoAudio`. */
+export const SETTINGS_VERSION = 3
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
@@ -146,7 +156,7 @@ const ASSIST_LEVELS = ['off', 'steady', 'sure'] as const
 
 type PersistedSettings = Pick<
   SettingsState,
-  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught'
+  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught' | 'calmAudio' | 'monoAudio'
 >
 
 /**
@@ -184,6 +194,9 @@ export function migrateSettings(persisted: unknown, _version: number): Persisted
     // spreading whatever arrived, so an unknown key can never become a beat
     // that is silently already "seen".
     taught: readTaught(o.taught),
+    // v2 and earlier had neither: both default off, the mix as designed.
+    calmAudio: bool(o.calmAudio, false),
+    monoAudio: bool(o.monoAudio, false),
   }
 }
 
@@ -226,7 +239,17 @@ export const useSettingsStore = create<SettingsState>()(
       vision: 'default',
       assist: 'off',
       taught: { ...NO_TEACH },
+      calmAudio: false,
+      monoAudio: false,
 
+      setCalmAudio: (v) => {
+        set({ calmAudio: v })
+        setAudioOptions({ calm: v })
+      },
+      setMonoAudio: (v) => {
+        set({ monoAudio: v })
+        setAudioOptions({ mono: v })
+      },
       setAudio: (patch) => {
         const audio = { ...get().audio, ...patch }
         set({ audio })
@@ -308,11 +331,14 @@ export const useSettingsStore = create<SettingsState>()(
         vision: s.vision,
         assist: s.assist,
         taught: s.taught,
+        calmAudio: s.calmAudio,
+        monoAudio: s.monoAudio,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           applyAccessibility(state)
           setAudioVolumes(state.audio)
+          setAudioOptions({ calm: state.calmAudio, mono: state.monoAudio })
         }
       },
     },
@@ -334,4 +360,5 @@ export function initSettings(): void {
   const s = useSettingsStore.getState()
   applyAccessibility(s)
   setAudioVolumes(s.audio)
+  setAudioOptions({ calm: s.calmAudio, mono: s.monoAudio })
 }

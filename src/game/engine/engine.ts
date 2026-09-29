@@ -72,6 +72,24 @@ export interface RtEnemy {
   blockedBy: string | null
 }
 
+/**
+ * What an engine event tells the mixer, beyond its name. `x` is the field
+ * position mapped to −1 (left edge) … 1 (right edge).
+ */
+export interface EngineEventPayload {
+  arch?: string
+  x?: number
+  faction?: string
+  tier?: number
+  boss?: boolean
+}
+
+/** 'tnt3' → { faction: 'tnt', tier: 3 } (elites share their base id). */
+function enemyTag(t: EnemyType): { faction: string; tier: number; boss: boolean } {
+  const m = /^(torch|tnt|barrel)(\d)/.exec(t.id)
+  return { faction: m ? m[1] : 'torch', tier: m ? Number(m[2]) : 1, boss: !!t.isBoss }
+}
+
 export interface RtProjectile {
   id: string
   pos: Vec2
@@ -179,14 +197,22 @@ export class GameEngine {
    * The vocabulary: `'shoot'` (a Sentinel fires), `'hit'` / `'crit'` (a
    * projectile lands — one per impact, not per enemy touched), `'kill'` (an
    * enemy dies), `'down'` (a Sentinel falls), `'leak'` (something reaches the
-   * line).
+   * line), `'boss'` (a champion spawns), `'melee'` (a blocker is taking blows
+   * this tick — the mixer throttles it into discrete thuds).
    *
-   * It is a plain string callback and nothing here ever reads a result from it,
+   * Each call may carry an {@link EngineEventPayload} — who fired, which goblin,
+   * where on the field — so the mixer can give each its own sound and pan it
+   * (Phase-2 audio). The payload is a plain object literal built from state
+   * the sim already holds; it is only built when a listener exists (the
+   * optional call short-circuits its arguments), reads nothing it could
+   * change, and consumes no RNG.
+   *
+   * It is a plain callback and nothing here ever reads a result from it,
    * which is what keeps the sim headless-safe and deterministic: the listener
    * cannot influence a roll, cannot consume the RNG, and does not exist at all
    * in `balance/harness.ts`.
    */
-  private onEvent?: (e: string) => void
+  private onEvent?: (e: string, p?: EngineEventPayload) => void
   downedCount = 0
   killCount = 0
   status: BattleStatus = 'running'
@@ -228,7 +254,7 @@ export class GameEngine {
     seed?: number
     /** Assist dial: multiplier on base damage per leak (default 1 = shipped difficulty). */
     baseDamageMul?: number
-    onEvent?: (e: string) => void
+    onEvent?: (e: string, p?: EngineEventPayload) => void
   }) {
     this.onEvent = opts.onEvent
     this.map = opts.map
@@ -384,6 +410,7 @@ export class GameEngine {
         blockedBy: null,
       })
       this.retargetDirty = true // a new arrival may outrank everyone's current pick
+      if (type.isBoss) this.onEvent?.('boss', { ...enemyTag(type), x: this.fieldX(this.enemies[this.enemies.length - 1].pos.x) })
       this.spawnIndex++
     }
   }
@@ -494,6 +521,7 @@ export class GameEngine {
           if (s.profile.thorns > 0) this.damageEnemy(e, s.profile.thorns * dt, s.id, false, s.profile.damageType, true)
           if (e.hp > 0) this.igniteFromThorns(s, e)
         }
+        if (taken > 0) this.onEvent?.('melee', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
         s.hp -= taken * (1 - s.reduction) * mitigation * dt
         if (s.hp <= 0) this.downSentinel(s)
       }
@@ -533,7 +561,7 @@ export class GameEngine {
   private fire(s: RtSentinel, target: RtEnemy): void {
     s.cooldown = 1 / s.profile.rate
     s.fireFlash = 1
-    this.onEvent?.('shoot')
+    this.onEvent?.('shoot', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
     const isCrit = this.rng.chance(s.profile.critChance)
     const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
     this.projectiles.push({
@@ -611,7 +639,7 @@ export class GameEngine {
         // The head count is tracked separately from the damage, because they are
         // different numbers and two readouts printed one as the other (F3).
         this.leakCount++
-        this.onEvent?.('leak')
+        this.onEvent?.('leak', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
         continue
       }
       e.pos = this.path.pointAt(e.distance)
@@ -710,7 +738,7 @@ export class GameEngine {
      * A shot that arrives with nothing to hit (its target died mid-flight, no
      * splash, no pierce) stays silent, which is correct — nothing was struck.
      */
-    if (hitList.length > 0) this.onEvent?.(p.isCrit ? 'crit' : 'hit')
+    if (hitList.length > 0) this.onEvent?.(p.isCrit ? 'crit' : 'hit', this.hitPayload(p))
 
     for (const e of hitList) this.applyHit(e, p)
 
@@ -944,7 +972,7 @@ export class GameEngine {
     this.enemies.splice(idx, 1)
     this.killCount++
     this.goldEarned += e.type.reward
-    this.onEvent?.('kill')
+    this.onEvent?.('kill', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
     if (srcId) {
       const s = this.sentinels.find((x) => x.id === srcId)
       if (s) {
@@ -1000,8 +1028,20 @@ export class GameEngine {
     // of the base falling, and it announced itself with a floater and nothing
     // else. The player is WATCHING this game — a loss that happens off the part
     // of the screen they are looking at has to be audible.
-    this.onEvent?.('down')
+    this.onEvent?.('down', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
     this.spawnFloater(s.pos, 'DOWN', '#e05a4f', true)
+  }
+
+  /** Field x → −1…1, for the mixer's pan. */
+  private fieldX(x: number): number {
+    const w = this.map.width
+    return w > 0 ? Math.max(-1, Math.min(1, (x / w) * 2 - 1)) : 0
+  }
+
+  /** Who struck and where, for a hit's sound. Reads only. */
+  private hitPayload(p: RtProjectile): EngineEventPayload {
+    const src = this.sentinels.find((x) => x.id === p.srcId)
+    return { arch: src?.def.archetype, x: this.fieldX(p.pos.x) }
   }
 
   private spawnFloater(pos: Vec2, text: string, color: string, big: boolean): void {
