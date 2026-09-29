@@ -4,8 +4,10 @@
  * store's battle slice (`src/state/game/battleSlice.ts`).
  */
 import { hashSeed } from '../core/rng'
+import { ENEMY_TYPES } from '../data/enemies'
+import type { EncounterKind } from '../data/waves'
 import { applyXp, evolutionPending } from '../engine/leveling'
-import type { Sentinel } from '../types'
+import type { Sentinel, WaveDef } from '../types'
 
 /**
  * The combat seed for one battle. Deterministic in (run seed, node, wave), so a
@@ -14,6 +16,80 @@ import type { Sentinel } from '../types'
  */
 export function combatSeed(runSeed: number, nodeKey: string, wave: number): number {
   return hashSeed(runSeed, 'combat', nodeKey, wave)
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Levels are a resource, not a clock (Phase 3b)
+ * ---------------------------------------------------------------------------
+ *
+ * The engine pays `0.2 × maxHp + reward` XP per kill, and `maxHp` carries the
+ * wave's budget AND the run's Threat — both exponential in depth. So the XP a
+ * wave paid grew ~×3 per node while the level curve (`xpToReach`) grows
+ * linearly: the review measured a hero at L8 after depth 3, L14 after depth 4
+ * and L19 after depth 5, i.e. every level-up decision crammed into two nodes
+ * and ~10× overflow for the rest of the run. Depths 1–3 had no build decision
+ * in them at all, and the level-20 evolution arrived with the run half over.
+ *
+ * So the run layer re-prices a cleared wave: it is worth a known amount of
+ * level-XP per fielded hero — {@link waveXp}, linear in depth, more for an
+ * elite or a boss — scaled by how much of the wave the company actually killed
+ * (a leak is XP not earned), and split half evenly (everyone on the field
+ * fought) and half by the engine's own kill credit (who did the killing). The
+ * engine's raw XP still decides the SHARE; it no longer decides the SIZE.
+ *
+ * Fitted so a hero fielded in every fight reaches level 5 around depth 2,
+ * level 10 at the first act boss (depth 4), level 15 around depth 7 and level
+ * 20 around depth 8–9 of 12 — and a route that skips fights for stops levels
+ * visibly slower, which is the trade a stop is supposed to be.
+ */
+export const XP_BASE = 60
+export const XP_PER_DEPTH = 55
+const XP_KIND: Record<EncounterKind, number> = { normal: 1, elite: 1.4, boss: 1.8 }
+
+/**
+ * A stop still drills the company: every hero gains this share of a plain
+ * fight's XP for the layer when the company consumes a merchant, shrine,
+ * recruit or campfire stop. A fight pays more — the XP is still the price of
+ * skipping one — but a stop is no longer a dead loss on the level curve, which
+ * made a stop-first route a walk into the act-2 boss two levels short.
+ */
+export const STOP_XP_SHARE = 0.35
+export const stopXp = (depth: number): number => Math.round(waveXp(depth, 'normal') * STOP_XP_SHARE)
+
+/** Level-XP one fielded hero earns, on average, for clearing a wave at `depth`. */
+export const waveXp = (depth: number, kind: EncounterKind): number =>
+  (XP_BASE + XP_PER_DEPTH * Math.max(1, depth)) * XP_KIND[kind]
+
+/** The raw XP the engine would pay for killing every body in `wave` at `hpMult`. */
+export function waveRawXp(wave: Pick<WaveDef, 'spawns'>, hpMult: number): number {
+  let total = 0
+  for (const s of wave.spawns) {
+    const t = ENEMY_TYPES[s.typeId]
+    if (!t) continue
+    total += Math.round(Math.round(t.baseHp * s.hpMult * hpMult) * 0.2) + t.reward
+  }
+  return total
+}
+
+/**
+ * Re-price a wave's raw XP as level-XP (see the block above). Returns the same
+ * rows with `xpGained` replaced; ids and order are kept.
+ */
+export function levelXpAwards<T extends { id: string; xpGained: number }>(
+  perSentinel: readonly T[],
+  ctx: { wave: Pick<WaveDef, 'spawns'>; hpMult: number; depth: number; kind: EncounterKind },
+): T[] {
+  const n = perSentinel.length
+  if (!n) return []
+  const raw = perSentinel.reduce((a, p) => a + Math.max(0, p.xpGained), 0)
+  const possible = waveRawXp(ctx.wave, ctx.hpMult)
+  const cleared = possible > 0 ? Math.min(1, raw / possible) : 0
+  const pool = waveXp(ctx.depth, ctx.kind) * n * cleared
+  return perSentinel.map((p) => {
+    const share = raw > 0 ? Math.max(0, p.xpGained) / raw : 1 / n
+    return { ...p, xpGained: Math.round(pool * (0.5 / n + 0.5 * share)) }
+  })
 }
 
 /**

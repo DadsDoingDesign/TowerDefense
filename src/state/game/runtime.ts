@@ -10,6 +10,7 @@ import type { MetaBonuses } from '../metaStore'
 import { useMetaStore } from '../metaStore'
 import type { RunChallenge } from '../daily'
 import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
+import { hiresTrained } from '../../game/run/relics'
 
 /**
  * Per-system RNG streams, all derived from the run seed (C1).
@@ -41,8 +42,23 @@ const ZERO_BONUSES: MetaBonuses = { maxBaseHp: MAX_BASE_HP, startGold: START_GOL
 export const runBonuses = (): MetaBonuses => (hub.runUsesHub ? useMetaStore.getState().bonuses() : ZERO_BONUSES)
 export const runUnlocked = (id: string): boolean => hub.runUsesHub && useMetaStore.getState().unlocked(id)
 export const usesHub = (c: RunChallenge): boolean => c.kind !== 'daily'
+/**
+ * Whether a feat-locked perk option is open to this run. The achievement ledger
+ * is the Watchtower's (`metaStore`); a Daily Watch reads no hub, so its perk
+ * options are the base two everywhere.
+ */
+export const featUnlocked = (achievementId: string): boolean =>
+  hub.runUsesHub && useMetaStore.getState().achieved(achievementId)
+export const perkUnlocked = featUnlocked
+/** Whether a feat-locked relic may be dealt into this run's reward hands. */
+export const relicUnlocked = featUnlocked
+
 /** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies). */
-export const recruitHub = () => ({ statBonus: runBonuses().statBonus, trained: runUnlocked('freeCompanies') })
+export const recruitHub = (relics: readonly string[] = []) => ({
+  statBonus: runBonuses().statBonus,
+  // Free Companies, or the Mercenary Charter relic (Phase 3b).
+  trained: hiresTrained(runUnlocked('freeCompanies'), relics),
+})
 
 /**
  * How long the wave-clear beat holds before the wave settles (H18).

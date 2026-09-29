@@ -19,8 +19,7 @@ import { mutationName } from '../../game/data/mutations'
 import { childrenOf } from '../../game/data/archetypeTree'
 import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
-import { UPGRADE_PATHS, milestoneForLevel } from '../../game/data/upgradeTree'
-import { computeCombat, effectiveUpgradeLevels, totalStats } from '../../game/engine/combat'
+import { computeCombat, totalStats } from '../../game/engine/combat'
 import { buildName, evolutionOptions, MAX_LEVEL, TIER1_LEVEL, TIER2_LEVEL } from '../../game/engine/leveling'
 import type { Item, Sentinel } from '../../game/types'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
@@ -41,6 +40,7 @@ import {
 } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
+import { PerkPanel } from './PerkPanel'
 import { NodePreviewPanel } from './NodePreview'
 import { useMapFocus } from './mapFocus'
 import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
@@ -987,89 +987,12 @@ function Meter({ label, value, frac }: { label: string; value: string; frac: num
 }
 
 /**
- * The three upgrade paths — and what each next level actually does (M6 / M18).
- *
- * The whole panel was "Onslaught  ●●○  [L3 · ⟡180]". Every level in the tree
- * carries a `desc`, and every level past the first carries a real `downside`
- * ("−12% attack speed", "−14% damage per hit", "−8% range") that the engine
- * applies — so 180 gold bought a stat change the player could not read until
- * after they had paid for it. The paths deliberately interfere with each other
- * (Onslaught buys damage with attack speed, Tempo buys attack speed with
- * damage), which is only a decision if both halves are on screen.
+ * The Skills tab (Phase 3b): the hero's spec perks. The three identical
+ * Onslaught / Tempo / Precision buy rows it used to hold are gone — a perk is
+ * chosen at level 5 and 15, free, from the hero's own line (`PerkPanel`).
  */
 function HeroUpgrades({ hero }: { hero: Sentinel }) {
-  const gold = useGameStore((s) => s.gold)
-  const buy = useGameStore((s) => s.buyTowerUpgrade)
-  const effective = effectiveUpgradeLevels(hero)
-
-  return (
-    <>
-      {UPGRADE_PATHS.map((path) => {
-        const eff = effective[path.id] ?? 0
-        const canBuyMore = eff < path.levels.length
-        const nextLevel = eff + 1
-        const next = canBuyMore ? path.levels[nextLevel - 1] : null
-        const cost = next?.cost ?? 0
-        const milestone = canBuyMore ? milestoneForLevel(nextLevel) : 0
-        const meets = hero.level >= milestone
-        return (
-          <div className="sh-upgblock" key={path.id}>
-            <div className="sh-upg">
-              <div className="sh-upg-head">
-                <strong>{path.name}</strong>
-                <span className="sh-pips">
-                  {path.levels.map((_, i) => (
-                    <span key={i} className={`sh-pip ${i < eff ? 'on' : ''}`} />
-                  ))}
-                </span>
-              </div>
-              <button
-                className="sh-btn small"
-                disabled={!canBuyMore || !meets || gold < cost}
-                onClick={() => buy(hero.id, path.id)}
-                aria-label={
-                  !canBuyMore
-                    ? `${path.name} is fully bought`
-                    : meets
-                      ? `Buy ${path.name} level ${nextLevel} for ${cost} gold: ${next!.desc}`
-                      : `${path.name} level ${nextLevel} unlocks at hero level ${milestone}`
-                }
-              >
-                {!canBuyMore ? (
-                  'Maxed'
-                ) : meets ? (
-                  <>
-                    L{nextLevel} · <Money amount={cost} c="gold" />
-                  </>
-                ) : (
-                  `Lv ${milestone}`
-                )}
-              </button>
-            </div>
-            {next ? (
-              <>
-                <p className="sh-line muted">
-                  L{nextLevel} — {next.desc}
-                </p>
-                {/* Deliberately a repeat of the tail of `desc`: the tradeoff is
-                    the half a player skims past inside a comma list, and it is
-                    the half they cannot take back. Colour, glyph and the word
-                    "Downside" all carry it, so none of the three is load-bearing
-                    on its own. */}
-                {next.downside && (
-                  <p className="sh-line bad">
-                    <Icon name="warn" /> Downside: {next.downside}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="sh-line muted">{path.blurb} — all three levels bought.</p>
-            )}
-          </div>
-        )
-      })}
-    </>
-  )
+  return <PerkPanel hero={hero} />
 }
 
 /**

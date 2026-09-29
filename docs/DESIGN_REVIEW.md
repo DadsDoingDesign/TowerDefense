@@ -2034,3 +2034,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   so the crop is now clamped at the pennant, which makes it frame-aware rather
   than viewport-aware. Verified at 390×844, 375×667 (with and without
   records), 360×568 and a 1280 desktop.
+
+- **2026-09-29 — Phase 3b run and meta depth: campfire, perks, relics, Codex.**
+  New surfaces were all built on the existing page and offer-card patterns, not
+  new chrome. These are the campfire page (rest / train each hero / Field
+  Kitchen forage / walk on), the merchant's Gate repair and restock rows, the
+  spec-perk picker (a dialog shown after the evolution flow, with locked
+  options showing the feat that opens them), relic reward cards (rarity tag and
+  "relic", the downside in the warning line), the Watchtower's feat-locked rows
+  ("Locked", naming the feat, then the price), the Codex (five sections with a
+  count each, the unseen given as a number and never spoiled), and a feats card
+  on the run receipt. Rendering caught three things. The Codex counted 60
+  goblins, because modded ENEMY_TYPES entries carry their base id, so kinds are
+  now keyed by table key (15). The restock copy said "four items" under Vow 1
+  and with the Seal. The campfire blurb said "rest or train" beside a third
+  forage row. Verified at 390×844 and 375×667.

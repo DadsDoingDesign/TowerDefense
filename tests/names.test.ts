@@ -70,7 +70,7 @@ describe('copy', () => {
 
 describe('icon coverage', () => {
   it('every map node type and every perk has its own atlas cell', () => {
-    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'boss']) {
+    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'campfire', 'miniboss', 'boss']) {
       expect(ICON_ORDER).toContain(NODE_ICON[t])
     }
     const perkIcons = [...UPGRADES.map((u) => PERK_ICON[u.id]), PERK_ICON.sacrifice]

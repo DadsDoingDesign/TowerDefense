@@ -9,6 +9,7 @@ const num1 = (v: number) => v.toFixed(1).replace(/\.0$/, '')
  * 0.1–0.5 values the game actually rolls, instead of rounding to "0%" (H5).
  */
 const lifedrainPer100 = (lifedrain: number) => num1(lifedrain * 0.02 * 100)
+const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`
 const signPct = (mult: number) => {
   const d = mult - 1
   return `${d >= 0 ? '+' : ''}${Math.round(d * 100)}%`
@@ -120,6 +121,16 @@ export function describeMods(m: EffectMods): string[] {
     const slow = m.trap.slow ? `, slows ${pct(m.trap.slow)}` : ''
     out.push(`one hazard on the path beside it: ${Math.round(m.trap.dps)}/s${slow}`)
   }
+  // Rule capabilities (Phase 3b) — each line is the rule the engine applies.
+  if (m.volley) {
+    out.push(`every ${ordinal(m.volley.every)} shot ${m.volley.pierce >= 50 ? 'pierces everything within its reach' : `pierces ${m.volley.pierce} more`}`)
+  }
+  if (m.critEvery) out.push(`every ${ordinal(m.critEvery)} shot is a guaranteed crit`)
+  if (m.blockRegen) out.push(`heals ${pct(m.blockRegen)} of max HP per second while blocking`)
+  if (m.killRush) out.push(`each kill: ${pct(m.killRush.rate)} faster attacks for ${m.killRush.dur}s`)
+  if (m.openingRush) out.push(`first ${m.openingRush.dur}s of a wave: ${pct(m.openingRush.rate)} faster attacks`)
+  if (m.lastStand) out.push(`below ${pct(m.lastStand.below)} HP: ${pct(m.lastStand.damage)} more damage`)
+  if (m.leakWard) out.push(`the first ${m.leakWard} leaks each wave cost the Gate nothing`)
   return out
 }
 

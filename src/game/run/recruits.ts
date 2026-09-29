@@ -9,6 +9,7 @@ import { autoEquipEmpty, recruitKit, wearKit } from '../engine/kit'
 import { applyXp, evolutionPending, xpToReach } from '../engine/leveling'
 import { createSentinel, startingRoster } from '../data/sentinels'
 import type { Archetype, Item, Sentinel } from '../types'
+import { withRelicStats } from './relics'
 
 /** Every archetype, in the order every recruit slate is dealt. */
 export const RECRUIT_ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
@@ -95,10 +96,12 @@ export function withRecruits(
   queue: string[],
   hires: Sentinel[],
   inventory: Item[],
+  relics: readonly string[] = [],
 ): { roster: Sentinel[]; evolutionQueue: string[]; inventory: Item[] } {
   let pack = inventory
   const dressed = hires.map((h) => {
-    const r = autoEquipEmpty([h], pack)
+    // A stat relic is "every hero, hires included" (Phase 3b).
+    const r = autoEquipEmpty([withRelicStats(h, relics)], pack)
     pack = r.rest
     return r.roster[0]
   })

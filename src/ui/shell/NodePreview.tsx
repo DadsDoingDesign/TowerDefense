@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { nodeMeta } from '../../game/data/runmap'
-import { THREAT_PER_CHOICE, THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
+import { useGameStore } from '../../state/gameStore'
+import { encounterThreat } from '../../game/run/threat'
+import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
 import { bannerRules } from '../../state/metaStore'
 import { NODE_ICON } from '../channels'
 import { Icon } from '../Icon'
@@ -12,6 +14,7 @@ const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and sometimes a hero for hire.',
   shrine: 'A bargain: a boon for the company, paid for with a curse.',
   recruit: 'A hero looking for a company. Take one or walk on.',
+  campfire: `Rest (Gate +${CAMPFIRE_REPAIR}) or train one hero a full level. One of the two.`,
 }
 
 /**
@@ -22,8 +25,8 @@ const SPECIAL_BLURB: Record<string, string> = {
  * (`summarizeEncounter`, proven equal to `selectNode`'s wave by
  * `tests/encounterPreview.test.ts`): the variant's name and what it asks for,
  * the elite modifier every enemy wears, the head count, any champions, and a
- * damage-type hint. For a special stop it says what the stop is. Either way the
- * Threat step it charges is stated in full, and the march is a separate button.
+ * damage-type hint, and the Threat it is fought at. For a special stop it says
+ * what the stop is. The march is a separate button.
  */
 export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const runMap = useGameStore((s) => s.runMap)
@@ -47,14 +50,9 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const allElite = bannerRules(runBanner).allElite
   const meta = nodeMeta(allElite && node.type === 'battle' ? 'elite' : node.type)
   const summary = summarizeEncounter({ runSeed, runBanner, runMap }, nodeId)
-  const step =
-    node.type === 'elite'
-      ? THREAT_PER_NODE.elite
-      : node.type === 'battle'
-        ? THREAT_PER_NODE.normal
-        : node.type in SPECIAL_BLURB
-          ? THREAT_PER_NODE.special
-          : null
+  // Threat follows the road (Phase 3b): a fight here is fought at this layer's
+  // Threat whatever the route was, and a stop costs none at all.
+  const step = summary ? encounterThreat(node, bannerRules(runBanner).startThreat) : null
   const hint = summary ? resistHint(summary) : null
 
   return (
@@ -100,8 +98,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         )}
         {step && (
           <p className="sh-line muted">
-            <Icon name="threat" /> Threat ×{step.toFixed(2)} for marching here
-            {node.type in SPECIAL_BLURB ? `, ×${THREAT_PER_CHOICE.toFixed(2)} more if you take what it offers` : ''}.
+            <Icon name="threat" /> Fought at Threat ×{step.toFixed(1)}: every enemy has {Math.round((step - 1) * 100)}% more HP.
           </p>
         )}
         {!canMarch && <p className="sh-line muted">Out of reach from where you stand.</p>}

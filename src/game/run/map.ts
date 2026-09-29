@@ -67,10 +67,26 @@ export function placedSentinels(
 }
 
 /**
- * At the map's halfway point the one-time fork fires: recruit or mutate. Never
- * on the boss clear, never twice.
+ * The node a wave is generated for. An act boss (`miniboss`) fields a `boss`
+ * wave at its own depth — `waves.nodeEncounterSpec` knows the three fight
+ * types it was written for, and this is the one place the fourth is mapped
+ * onto them, so the store's `selectNode` and the map's preview agree.
  */
-export function forkFires(runMap: Pick<RunMap, 'layers'>, layer: number, forkDone: boolean, wonRun: boolean): boolean {
-  const half = Math.ceil((runMap.layers - 1) / 2)
-  return !forkDone && !wonRun && layer >= half
+export const encounterNode = <T extends { type: string; layer: number; row: number }>(node: T): T =>
+  node.type === 'miniboss' ? { ...node, type: 'boss' } : node
+
+/**
+ * The Crossroads — recruit OR mutate — fires on clearing each ACT BOSS
+ * (Phase 3b): at the two act breaks, never on the final boss.
+ *
+ * It used to fire once, at the map's halfway layer, and the review found both
+ * halves of that wanting: a run is three acts now and an act break is the
+ * natural place for the company to change shape, and the one mutation a run
+ * could ever take made the Mythic tier a single dice roll. `forkDone` is kept
+ * for old saves (it records that the first fork has been dealt); the rule reads
+ * the node, and `finishBattle` settles each node only once, so a fork cannot
+ * fire a second time for the same boss.
+ */
+export function forkFires(node: { type: string }): boolean {
+  return node.type === 'miniboss'
 }

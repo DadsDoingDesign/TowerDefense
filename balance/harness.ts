@@ -16,7 +16,7 @@
  *  - **One seed is not a measurement.** Use `multi()` and report mean ± spread.
  */
 import { RNG } from '../src/game/core/rng'
-import { ALL_NODES, childrenOf, getNode, type TreeNode } from '../src/game/data/archetypeTree'
+import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -28,7 +28,13 @@ import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
 import { GameEngine } from '../src/game/engine/engine'
 import { applyXp, evolveInto } from '../src/game/engine/leveling'
-import { MAX_PATH_LEVEL, UPGRADE_MILESTONES, UPGRADE_PATHS } from '../src/game/data/upgradeTree'
+import { perkChoices } from '../src/game/run/perks'
+import { availableEvolutions } from '../src/game/run/unlocks'
+
+/** The modelled player has earned no feats: feat-locked specs are closed (Phase 3b). */
+const NO_FEATS = (): boolean => false
+import { pendingPerkLevel } from '../src/game/run/perks'
+import { perkModsOf } from '../src/game/data/perks'
 import type {
   Archetype,
   EffectMods,
@@ -149,8 +155,15 @@ export interface BuildOptions {
   level?: number
   gearRarity?: ItemRarity
   seed?: number
-  /** Purchased tower-upgrade levels per path (power/tempo/precision), 0–3 each. */
-  upgrades?: Record<string, number>
+  /** Spec perks to hold, by id (Phase 3b). Overrides `perkSeed`. */
+  perks?: string[]
+  /**
+   * Take a random base perk at every milestone the build's level has reached,
+   * off this seed — the depth-appropriate stand-in for the upgrade levels the
+   * old `depthUpgrades` bought. Omitted: no perks (the §1–§5 benches measure a
+   * spec as the tree defines it).
+   */
+  perkSeed?: number
   /** Extra equipment overriding the generated set (used by the affix sweeps). */
   equipment?: Partial<Sentinel['equipment']>
   mutations?: Sentinel['mutations']
@@ -170,7 +183,8 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
   if (level >= 10) s = evolveInto(s, spec.parent!) // tier 1
   if (level >= 20) s = evolveInto(s, specId) // tier 2
   if (opts.gearRarity) s = equipFullSet(s, opts.gearRarity, rng)
-  if (opts.upgrades) s = { ...s, upgrades: { ...opts.upgrades } }
+  if (opts.perks) s = { ...s, perks: [...opts.perks] }
+  else if (opts.perkSeed != null) s = randomPerks(s, new RNG(opts.perkSeed))
   if (opts.mutations) s = { ...s, mutations: opts.mutations }
   if (opts.equipment) s = { ...s, equipment: { ...s.equipment, ...opts.equipment } }
   return s
@@ -179,23 +193,6 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
 /** A single-affix test item: one enchantment, no base stats, so the affix is the variable. */
 export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand'): Item {
   return { id: `t_${id}`, name: id, slot, rarity: 'epic', base: {}, enchantments: [ench] }
-}
-
-/**
- * A depth-appropriate spread of purchased upgrade levels — models a player
- * spending gold on the tower upgrade tree as a run progresses. Gold is scarce
- * (≈945 to fully max one tower's three paths), so a realistic player focuses:
- * max one path, then dabble in a second — not max everything on everyone.
- */
-export function depthUpgrades(depth: number): Record<string, number> {
-  let total = Math.min(6, Math.floor(Math.max(0, depth) * 0.6))
-  const per = [0, 0, 0]
-  for (let pi = 0; pi < 3 && total > 0; pi++) {
-    const add = Math.min(3, total)
-    per[pi] = add
-    total -= add
-  }
-  return { power: per[0], tempo: per[1], precision: per[2] }
 }
 
 function xpForLevelApprox(level: number): number {
@@ -226,6 +223,8 @@ export interface BattleMetrics {
   goldEarned: number
   downs: number
   perSentinel: { id: string; damage: number; kills: number; xp: number; downed: boolean }[]
+  /** The wave that was fought — the run layer re-prices its XP (Phase 3b). */
+  wave: WaveDef
 }
 
 export interface RunBattleOptions {
@@ -303,6 +302,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     totalDamage: res.perSentinel.reduce((a, p) => a + p.damageDealt, 0),
     goldEarned: res.goldEarned,
     downs: res.downed,
+    wave,
     perSentinel: res.perSentinel.map((p) => ({
       id: p.id,
       damage: p.damageDealt,
@@ -647,7 +647,7 @@ export function autoEvolve(s: Sentinel, rng: RNG): Sentinel {
     const owed =
       (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
     if (!owed) break
-    const options = childrenOf(out.branchPath[out.branchPath.length - 1])
+    const options = availableEvolutions(out, NO_FEATS)
     if (!options.length) break
     out = evolveInto(out, rng.pick(options).id)
   }
@@ -666,7 +666,7 @@ export function bestEvolve(s: Sentinel): Sentinel {
     const owed =
       (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
     if (!owed) break
-    const options = childrenOf(out.branchPath[out.branchPath.length - 1])
+    const options = availableEvolutions(out, NO_FEATS)
     if (!options.length) break
     let best = options[0]
     let bestDps = -Infinity
@@ -693,7 +693,7 @@ export function forcedEvolve(s: Sentinel, force: Record<string, string>, rng: RN
       (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
     if (!owed) break
     const parent = out.branchPath[out.branchPath.length - 1]
-    const options = childrenOf(parent)
+    const options = availableEvolutions(out, NO_FEATS)
     if (!options.length) break
     const pinned = force[parent]
     out = evolveInto(out, pinned && options.some((o) => o.id === pinned) ? pinned : rng.pick(options).id)
@@ -702,30 +702,58 @@ export function forcedEvolve(s: Sentinel, force: Record<string, string>, rng: RN
 }
 
 /**
- * Spend gold on tower upgrades the way an income-constrained player does: buy the
- * cheapest affordable next level, respecting the XP milestones (level 2 / 8 / 14),
- * focusing one path before dabbling in a second.
+ * Take every perk a hero owes, at random among the base options (Phase 3b).
+ * Draws one pick per owed milestone off `rng`.
  */
-export function buyUpgrades(s: Sentinel, gold: number): { hero: Sentinel; gold: number } {
-  const upgrades = { ...(s.upgrades ?? {}) }
-  let purse = gold
-  for (let guard = 0; guard < 9; guard++) {
-    let bought = false
-    for (const path of UPGRADE_PATHS) {
-      const lvl = upgrades[path.id] ?? 0
-      if (lvl >= MAX_PATH_LEVEL) continue
-      if (s.level < UPGRADE_MILESTONES[lvl]) continue
-      const cost = path.levels[lvl].cost
-      if (purse < cost) continue
-      upgrades[path.id] = lvl + 1
-      purse -= cost
-      bought = true
-      break // one purchase per pass → focuses the cheapest path first
-    }
-    if (!bought) break
+export function randomPerks(s: Sentinel, rng: RNG): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 3 && pendingPerkLevel(out) !== null; guard++) {
+    const opts = perkChoices(out)
+    if (!opts.length) break
+    out = { ...out, perks: [...(out.perks ?? []), rng.pick(opts).id] }
   }
-  return { hero: { ...s, upgrades }, gold: purse }
+  return out
 }
+
+/**
+ * The "known answer" perk: whichever option raises `heroDps` most. `heroDps`
+ * reads damage × rate × crit only, so it is blind to most rules (a ward, a
+ * regen, a volley) — which is the point of measuring it: a perk set whose
+ * greedy pick wins by a mile is a solved choice.
+ */
+export function bestPerks(s: Sentinel): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 3 && pendingPerkLevel(out) !== null; guard++) {
+    const opts = perkChoices(out)
+    if (!opts.length) break
+    let best = opts[0]
+    let bestDps = -Infinity
+    for (const o of opts) {
+      const d = heroDps({ ...out, perks: [...(out.perks ?? []), o.id] })
+      if (d > bestDps) { bestDps = d; best = o }
+    }
+    out = { ...out, perks: [...(out.perks ?? []), best.id] }
+  }
+  return out
+}
+
+/** Perks with some milestones pinned: `force['5:fighter']` names the pick there. */
+export function forcedPerks(s: Sentinel, force: Record<string, string>, rng: RNG): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 3; guard++) {
+    const level = pendingPerkLevel(out)
+    if (level === null) break
+    const opts = perkChoices(out)
+    if (!opts.length) break
+    const pinned = force[`${level}:${out.branchPath[level === 5 ? 0 : 1]}`]
+    const pick = pinned && opts.some((o) => o.id === pinned) ? pinned : rng.pick(opts).id
+    out = { ...out, perks: [...(out.perks ?? []), pick] }
+  }
+  return out
+}
+
+/** Re-exported for the benches that grade a perk's mods directly. */
+export { perkModsOf }
 
 // ---- small stats helpers ----
 export const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)

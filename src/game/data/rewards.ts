@@ -10,10 +10,16 @@ export interface RewardGrant {
   mods?: EffectMods
 }
 
-/** One of the three cards offered after a cleared wave. Pick exactly one. */
+/**
+ * One of the three cards offered after a cleared wave. Pick exactly one.
+ *
+ * `relic` (Phase 3b) is the company-wide card: it names a relic in
+ * `data/relics.ts` and adds it to the run's `relics`. `stat` is the card the
+ * relic replaced; it survives only so a saved run holding one still resolves.
+ */
 export interface RewardCard {
   id: string
-  kind: 'stat' | 'item'
+  kind: 'stat' | 'item' | 'relic'
   title: string
   desc: string
   /** Card quality, so the offer reads as an offer and not three grey boxes (L2). */
@@ -22,6 +28,8 @@ export interface RewardCard {
   downside?: string
   item?: Item
   grant?: RewardGrant
+  /** The relic id a `relic` card grants. */
+  relic?: string
 }
 
 /**

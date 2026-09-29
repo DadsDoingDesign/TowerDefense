@@ -16,11 +16,9 @@
  * The winning candidate then goes into `waves.ts` as real constants and the
  * full suite confirms it.
  */
-import { RNG } from '../src/game/core/rng'
-import { MAX_BASE_HP, THREAT_PER_CHOICE, THREAT_PER_NODE } from '../src/state/gameStore'
-import type { Archetype, ItemRarity } from '../src/game/types'
-import { buildSpec, depthUpgrades, mean, runBattle, TIER2_NODES } from './harness'
-import { POLICIES, simulateRun, ZERO_META } from './runsim'
+import type { Archetype } from '../src/game/types'
+import { mean } from './harness'
+import { monteCarloRun, POLICIES, simulateRun, ZERO_META } from './runsim'
 
 // The shipped constants this rig perturbs (`waves.ts`).
 const BASE = 170
@@ -71,55 +69,19 @@ for (const p of POLICIES) {
   )
 }
 
-// ---- §6: the Monte Carlo, same model as report.ts --------------------------
+// ---- §6: the Monte Carlo — the SAME model report.ts plays (runsim) -------
 {
   const RUNS = Math.round(N * 0.8)
-  const mcRng = new RNG(2024)
-  const depthLevel = (d: number) => Math.min(20, 2 + d * 2)
-  const depthRarity = (d: number): ItemRarity => (d < 3 ? 'common' : d < 6 ? 'rare' : d < 9 ? 'epic' : 'legendary')
-  const slots = ['s3', 's0', 's5', 's1', 's4', 's2']
   let wins = 0
   let bossAttempts = 0
   let bossKills = 0
   const deathDepths: number[] = []
   for (let r = 0; r < RUNS; r++) {
-    const teamSize = 3 + Math.floor(mcRng.next() * 3)
-    const specIds = Array.from({ length: teamSize }, () => mcRng.pick(TIER2_NODES).id)
-    let baseHp = MAX_BASE_HP
-    let threat = 1
-    let reached = 0
-    for (let depth = 1; depth <= 10; depth++) {
-      const team = specIds.map((id, i) => ({
-        sentinel: buildSpec(id, {
-          level: depthLevel(depth),
-          gearRarity: depthRarity(depth),
-          seed: r * 10 + i,
-          upgrades: depthUpgrades(depth),
-        }),
-        slotId: slots[i],
-      }))
-      const kind = depth === 10 ? 'boss' : depth % 4 === 0 ? 'elite' : 'normal'
-      if (kind === 'boss') bossAttempts++
-      const m = runBattle({
-        team,
-        depth,
-        kind,
-        enemyHpMult: threat * curve(depth, kind),
-        baseHp,
-        maxSeconds: 70,
-        seed: r * 100 + depth,
-      })
-      baseHp = m.baseHpLeft
-      if (!m.cleared || baseHp <= 0) {
-        deathDepths.push(depth)
-        if (kind === 'boss') bossKills++
-        break
-      }
-      reached = depth
-      threat *= THREAT_PER_NODE[kind]
-      if (kind !== 'boss' && mcRng.chance(0.3)) threat *= THREAT_PER_CHOICE
-    }
-    if (reached >= 10) wins++
+    const out = monteCarloRun(r, { curve })
+    if (out.finalAttempt) bossAttempts++
+    if (out.finalKill) bossKills++
+    if (out.died) deathDepths.push(out.died)
+    if (out.won) wins++
   }
   const counts = new Map<number, number>()
   for (const d of deathDepths) counts.set(d, (counts.get(d) ?? 0) + 1)

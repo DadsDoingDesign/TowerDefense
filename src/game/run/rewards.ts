@@ -7,12 +7,15 @@ import { creditPity, type RarityPity } from '../data/items'
 import type { RewardCard } from '../data/rewards'
 import type { EffectMods, Item, Sentinel } from '../types'
 import { receiveItems } from './recruits'
+import { takeRelicOn } from './relics'
 
 export interface RewardTarget {
   roster: Sentinel[]
   inventory: Item[]
   runMods: EffectMods[]
   lootPity: RarityPity
+  /** Relics held this run (Phase 3b). */
+  relics: string[]
 }
 
 /**
@@ -25,12 +28,21 @@ export interface RewardTarget {
  * never mutated (M9): a fresh copy is credited and returned.
  */
 export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget {
-  const { roster, inventory, runMods, lootPity } = t
+  const { roster, inventory, runMods, lootPity, relics } = t
   let nextRoster = roster
   let nextInv = inventory
   let nextMods = runMods
   let nextPity = lootPity
-  if (card.kind === 'item' && card.item) {
+  let nextRelics = relics
+  if (card.kind === 'relic' && card.relic) {
+    // A relic is held once: a second copy of a held relic grants nothing.
+    // Its team mods are read off `relics` every wave; its flat stats land on
+    // the company now (and on every later hire — `withRecruits`).
+    if (!relics.includes(card.relic)) {
+      nextRelics = [...relics, card.relic]
+      nextRoster = takeRelicOn(roster, card.relic)
+    }
+  } else if (card.kind === 'item' && card.item) {
     // Into an empty slot it strictly improves, if the company has one;
     // otherwise the pack. Never over anything already worn.
     const got = receiveItems(roster, inventory, [card.item])
@@ -53,5 +65,5 @@ export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget
     }))
     if (g.mods) nextMods = [...runMods, g.mods]
   }
-  return { roster: nextRoster, inventory: nextInv, runMods: nextMods, lootPity: nextPity }
+  return { roster: nextRoster, inventory: nextInv, runMods: nextMods, lootPity: nextPity, relics: nextRelics }
 }

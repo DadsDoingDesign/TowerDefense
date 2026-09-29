@@ -16,7 +16,7 @@ import { generateRunMap } from '../src/game/data/runmap'
 import { BANNER_RUNGS, MAX_BANNER, bannerRules } from '../src/state/metaStore'
 import type { Archetype } from '../src/game/types'
 import { mean } from './harness'
-import { buildChoicePoints } from './runsim'
+import { buildChoicePoints, monteCarloRun } from './runsim'
 import { loadoutFor, POLICIES, simulateRun, ZERO_META, type Loadout, type RoutePolicy } from './runsim'
 
 const N = Number(process.argv[2]) || 120
@@ -66,8 +66,9 @@ const UNLOCK_CELLS: [string, Record<string, number>][] = [
   ['Free Companies', { freeCompanies: 1 }],
   ['Standing Orders', { standingOrders: 1 }],
   ['all three unlocks', { cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
+  ['Field Kitchen + Relic Cartulary', { fieldKitchen: 1, cartulary: 1 }],
   ['full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
-  ['everything', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
+  ['everything', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
 ]
 
 if (WHAT === 'all' || WHAT === 'unlocks') {
@@ -141,22 +142,6 @@ if (WHAT === 'rules') {
       return `${pct(mean(wins))}/${mean(marks).toFixed(0)}`
     })
     console.log([label.padEnd(24), ...cells].join(' | '))
-  }
-}
-
-if (WHAT === 'special') {
-  // The one free parameter §11 is fitted on, swept across the policy set.
-  console.log(`\n=== THREAT_PER_NODE.special (n=${N}, zero meta, Banner 0) ===`)
-  console.log(['step', ...POLICIES.map((p) => p.id), 'best'].join(' | '))
-  for (const s of [1.13, 1.18, 1.22, 1.26, 1.3, 1.35, 1.42]) {
-    const cells = POLICIES.map((p) => {
-      const wins: number[] = []
-      for (let i = 0; i < N; i++) {
-        wins.push(simulateRun(9001 + i * 17, ARCHES[i % 3], { policy: p, specialThreat: s }).won ? 1 : 0)
-      }
-      return mean(wins)
-    })
-    console.log([`×${s}`, ...cells.map(pct), pct(Math.max(...cells))].join(' | '))
   }
 }
 
@@ -288,4 +273,18 @@ if (WHAT === 'phase3b') {
     }
   }
   console.log(`map: ${pct(fightsOnMap / middle)} of non-start/non-final nodes are fights (battle/elite)`)
+}
+
+/** §6's Monte Carlo at a chosen n — the band the Threat curve is fitted against. */
+if (WHAT === 'mc' || WHAT === 'phase3b') {
+  const runs = Math.max(N, 300)
+  const outs = Array.from({ length: runs }, (_, r) => monteCarloRun(r))
+  const deaths = new Map<number, number>()
+  for (const o of outs) if (o.died) deaths.set(o.died, (deaths.get(o.died) ?? 0) + 1)
+  const lost = outs.filter((o) => !o.won).length
+  const worst = [...deaths.entries()].sort((a, b) => b[1] - a[1])[0] ?? [0, 0]
+  const attempts = outs.filter((o) => o.finalAttempt).length
+  console.log(
+    `\n§6 MC (n=${runs}): win ${pct(outs.filter((o) => o.won).length / runs)} | deaths ${[...deaths.entries()].sort((a, b) => a[0] - b[0]).map(([d, c]) => `${d}:${c}`).join(' ')} | worst d${worst[0]} ${pct(worst[1] / Math.max(1, lost))} | final boss kills ${pct(outs.filter((o) => o.finalKill).length / Math.max(1, attempts))}`,
+  )
 }

@@ -5,6 +5,57 @@
  * settling it pays.
  */
 import type { RunChallenge } from '../../state/daily'
+import type { RunFacts } from '../data/achievements'
+import type { Archetype, Sentinel } from '../types'
+import { actOf } from './threat'
+
+/**
+ * What a run tracks for the feats (Phase 3b) — the few facts a settle cannot
+ * read back off the finished run's roster and map. Snapshotted with the run.
+ */
+export interface RunFeats {
+  starter: Archetype | null
+  /** Company size when the march began (the leader plus any hub extras). */
+  startSize: number
+  maxFielded: number
+  actBosses: number
+  flawlessBosses: number
+  goldPeak: number
+}
+export const freshFeats = (): RunFeats => ({ starter: null, startSize: 0, maxFielded: 0, actBosses: 0, flawlessBosses: 0, goldPeak: 0 })
+
+/** The facts a settled run's feats are judged on. */
+export function runFacts(v: {
+  mode: 'campaign' | 'endless'
+  won: boolean
+  feats: RunFeats
+  roster: readonly Pick<Sentinel, 'mutations'>[]
+  deepestLayer: number
+  banner: number
+  wins: number
+  dailyScored: boolean
+  goblinsSeen: number
+}): RunFacts {
+  return {
+    mode: v.mode,
+    won: v.won,
+    starter: v.feats.starter,
+    hires: Math.max(0, v.roster.length - v.feats.startSize),
+    maxFielded: v.feats.maxFielded,
+    act: v.deepestLayer > 0 ? actOf(v.deepestLayer) : 1,
+    flawlessBosses: v.feats.flawlessBosses,
+    actBosses: v.feats.actBosses,
+    mutated: v.roster.some((s) => (s.mutations?.length ?? 0) > 0),
+    goldPeak: v.feats.goldPeak,
+    banner: v.banner,
+    rounds: v.wins,
+    daily: v.dailyScored,
+    goblinsSeen: v.goblinsSeen,
+  }
+}
+
+/** Distinct goblin KINDS in a Codex list (a Warded Bomber is still a Bomber). */
+export const goblinKinds = (enemyIds: readonly string[]): number => new Set(enemyIds.map((id) => id.split('_')[0])).size
 
 export type SettleMode = 'campaign' | 'endless'
 
@@ -19,6 +70,8 @@ export interface SettleFacts {
   banner: number
   /** Daily / custom seed: a scored Daily records its result, a custom seed is unranked. */
   challenge: RunChallenge
+  /** The facts the feats are judged on, when the settle has them (Phase 3b). */
+  facts?: RunFacts
 }
 
 /** The Daily / ladder arguments every campaign settle passes to `grantRunRewards`. */
@@ -47,6 +100,7 @@ export interface RunGrant {
   banner?: number
   ranked?: boolean
   daily?: string | null
+  facts?: RunFacts
 }
 
 export type PayoutPlan =
@@ -68,7 +122,7 @@ export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan 
     // Endless settles through the same ledger as the campaign (M13): the
     // Chronicler multiplier and the lifetime stats apply to it too.
     if (!runWasPlayed(f)) return { kind: 'none' }
-    return { kind: 'grant', grant: { mode: 'endless', depth: f.wins, won: false, kills: f.kills, downs: f.downs } }
+    return { kind: 'grant', grant: { mode: 'endless', depth: f.wins, won: false, kills: f.kills, downs: f.downs, ...(f.facts ? { facts: f.facts } : {}) } }
   }
   if (!runWasPlayed(f)) {
     // A scored Daily abandoned before its first clear is still the day's
@@ -77,5 +131,8 @@ export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan 
     return { kind: 'none' }
   }
   const banner = Math.min(f.banner, unlockedBanners)
-  return { kind: 'grant', grant: { depth: f.depth, won: false, kills: f.kills, downs: f.downs, banner, ...challengeGrant(f.challenge) } }
+  return {
+    kind: 'grant',
+    grant: { depth: f.depth, won: false, kills: f.kills, downs: f.downs, banner, ...challengeGrant(f.challenge), ...(f.facts ? { facts: f.facts } : {}) },
+  }
 }

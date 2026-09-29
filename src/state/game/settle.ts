@@ -3,14 +3,14 @@
  * What a run is OWED is the pure `game/run/settle.planPayout`; this file owns
  * WHICH run gets settled and the once-only guarantee.
  */
-import { planPayout, type SettleFacts } from '../../game/run/settle'
+import { goblinKinds, planPayout, runFacts, type SettleFacts } from '../../game/run/settle'
 import { useMetaStore } from '../metaStore'
 import { clearSnapshot, loadRunSnapshot, payoutFromRaw } from '../runSnapshot'
 import { session } from './runtime'
 import { isLiveRun } from './selectors'
 import type { GameData, GetState, SetState } from './types'
 
-export const settleFactsFromState = (s: GameData): SettleFacts => ({
+export const settleFactsFromState = (s: GameData, won = false): SettleFacts => ({
   mode: s.mode,
   depth: Math.max(0, s.clearedNodeIds.length - 1),
   kills: s.runKills,
@@ -18,7 +18,24 @@ export const settleFactsFromState = (s: GameData): SettleFacts => ({
   wins: s.wins,
   banner: s.runBanner,
   challenge: s.challenge,
+  facts: runFactsFromState(s, won),
 })
+
+/** The feats' facts for the run in memory (Phase 3b). */
+export function runFactsFromState(s: GameData, won: boolean) {
+  const layers = s.runMap.nodes.filter((n) => s.clearedNodeIds.includes(n.id)).map((n) => n.layer)
+  return runFacts({
+    mode: s.mode,
+    won,
+    feats: s.feats,
+    roster: s.roster,
+    deepestLayer: layers.length ? Math.max(...layers) : 0,
+    banner: s.runBanner,
+    wins: s.wins,
+    dailyScored: s.challenge.kind === 'daily' && s.challenge.scored,
+    goblinsSeen: goblinKinds(useMetaStore.getState().codex.enemies),
+  })
+}
 
 /*
  * There is no `settleFactsFromSnapshot`, on purpose: `payoutFromRaw` reads the

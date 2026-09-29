@@ -1,16 +1,17 @@
 /**
  * Roster slice: equipment, the pack, the forge (campaign gold prices),
- * evolution choices and the per-tower upgrade tree.
+ * evolution choices and spec perks.
  */
-import { effectiveUpgradeLevels } from '../../game/engine/combat'
 import { evolveInto } from '../../game/engine/leveling'
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
-import { getUpgradePath, milestoneForLevel } from '../../game/data/upgradeTree'
+import { takePerk } from '../../game/run/perks'
+import { availableEvolutions } from '../../game/run/unlocks'
 import { scrapDust, scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
 import type { HeroSlot } from '../../game/types'
 import { sfx } from '../../audio/audio'
-import { streams } from './runtime'
+import { featUnlocked, perkUnlocked, streams } from './runtime'
+import { useMetaStore } from '../metaStore'
 import type { Slice } from './types'
 
 export interface RosterActions {
@@ -21,7 +22,12 @@ export interface RosterActions {
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
-  buyTowerUpgrade: (sentinelId: string, pathId: string) => void
+  /**
+   * Take a spec perk at a level milestone (Phase 3b). Refused unless the perk is
+   * one the hero is actually offered right now — `run/perks.perkChoices`, the
+   * same list the picker draws.
+   */
+  choosePerk: (sentinelId: string, perkId: string) => void
 }
 
 export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
@@ -76,32 +82,26 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
 
   chooseEvolution: (sentinelId, nodeId) => {
     const { roster, evolutionQueue } = get()
+    const hero = roster.find((s) => s.id === sentinelId)
+    // Only a path the hero is actually offered — a feat-locked spec is not one
+    // until its feat is earned (Phase 3b).
+    if (!hero || !availableEvolutions(hero, featUnlocked).some((n) => n.id === nodeId)) return
     const nextRoster = roster.map((s) => (s.id === sentinelId ? evolveInto(s, nodeId) : s))
+    useMetaStore.getState().recordCodex({ specs: [nodeId] })
     set({ roster: nextRoster, evolutionQueue: evolutionQueue.filter((id) => id !== sentinelId) })
     // A permanent, irreversible branch — the biggest single choice the run
     // offers — has its own sound: a riser into a struck chord.
     sfx('evolve')
   },
 
-  buyTowerUpgrade: (sentinelId, pathId) => {
-    const { roster, gold } = get()
-    const s = roster.find((x) => x.id === sentinelId)
-    const path = getUpgradePath(pathId)
-    if (!s || !path) return
-    // Buy toward the next EFFECTIVE level (free grants from gear/mutations
-    // already fill the lowest levels), so a granted L1 means your first
-    // purchase is L2 at L2's price.
-    const eff = effectiveUpgradeLevels(s)[pathId] ?? 0
-    if (eff >= path.levels.length) return
-    const nextLevel = eff + 1
-    if (s.level < milestoneForLevel(nextLevel)) return sfx('error')
-    const cost = path.levels[nextLevel - 1].cost
-    if (gold < cost) return sfx('error')
-    const bought = s.upgrades?.[pathId] ?? 0
-    const nextRoster = roster.map((x) =>
-      x.id === sentinelId ? { ...x, upgrades: { ...x.upgrades, [pathId]: bought + 1 } } : x,
-    )
-    set({ roster: nextRoster, gold: gold - cost })
+  choosePerk: (sentinelId, perkId) => {
+    const { roster } = get()
+    const hero = roster.find((x) => x.id === sentinelId)
+    if (!hero) return
+    const next = takePerk(hero, perkId, perkUnlocked)
+    if (!next) return sfx('error')
+    set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
+    useMetaStore.getState().recordCodex({ perks: [perkId] })
     sfx('upgrade')
   },
 })

@@ -87,6 +87,25 @@ export interface EffectMods {
   selfSacrifice?: number
   /** Drop a persistent hazard on the path near this Sentinel (trickster). */
   trap?: { dps: number; slow: number }
+
+  // ---- rule capabilities (Phase 3b) ---------------------------------------
+  // Spec perks and relics that change a RULE rather than add a percentage.
+  // Each is read in exactly one place in `engine.ts`, and each is off unless a
+  // source grants it, so a hero without one fights exactly as before.
+  /** Every `every`th shot this hero fires pierces `pierce` extra enemies. */
+  volley?: { every: number; pierce: number }
+  /** Every `n`th shot this hero fires is a guaranteed crit. */
+  critEvery?: number
+  /** While blocking, this hero heals this fraction of its max HP per second. */
+  blockRegen?: number
+  /** A kill makes this hero attack `rate` faster (×(1+rate)) for `dur` seconds. */
+  killRush?: { rate: number; dur: number }
+  /** For the first `dur` seconds of a wave this hero attacks `rate` faster. */
+  openingRush?: { rate: number; dur: number }
+  /** Below `below` of its max HP this hero deals `damage` more (×(1+damage)). */
+  lastStand?: { below: number; damage: number }
+  /** TEAM rule: the first `n` enemies to reach the Gate each wave cost it nothing. */
+  leakWard?: number
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
@@ -176,7 +195,16 @@ export interface Sentinel {
   equipment: Equipment
   /** Attack mutations rolled at the mid-map fork; merged into combat mods. */
   mutations?: Mutation[]
-  /** Purchased per-tower upgrade levels, keyed by upgrade path id (0–3 each). */
+  /**
+   * Spec perks taken, in milestone order: `perks[0]` at level 5, `perks[1]` at
+   * level 15 (Phase 3b — `data/perks.ts`).
+   */
+  perks?: string[]
+  /**
+   * LEGACY: bought levels of the per-hero upgrade tree the perks replaced.
+   * Nothing reads it; a v6 save's levels are refunded as gold on load
+   * (`runSnapshot.migrateSnapshot`) and the field is dropped.
+   */
   upgrades?: Record<string, number>
   color: string
   accent: string
