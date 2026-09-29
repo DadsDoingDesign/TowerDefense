@@ -202,7 +202,7 @@ interface Dressing {
 }
 let dressCache: { key: string; dr: Dressing } | null = null
 
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0
   return () => {
     a |= 0; a = (a + 0x6d2b79f5) | 0
@@ -262,7 +262,7 @@ const DECO_TREE_MIN = 40
  * crown being clipped off the top of the field (nine of thirty trees were, in
  * the state this replaced).
  */
-function decoPools(): { trees: string[]; litter: string[]; top: number; height: Record<string, number> } {
+export function decoPools(): { trees: string[]; litter: string[]; top: number; height: Record<string, number> } {
   const style = getActiveStyle()
   const pack = style.sprites?.pack
   const sc = style.sprites?.spriteScale ?? 1
@@ -596,7 +596,7 @@ function goldWeight(hue: number): number {
     : (GOLD_HI - hue) / (GOLD_HI - GOLD_CORE_HI)
 }
 
-function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const id = ctx.getImageData(0, 0, w, h)
   const d = id.data
   for (let i = 0; i < d.length; i += 4) {

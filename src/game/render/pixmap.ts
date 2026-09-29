@@ -227,8 +227,14 @@ export interface PixmapOpts {
    * caller would get a sprite at two-thirds of the size it asked for with no
    * error anywhere. Nothing passes anything else today; this makes it
    * impossible to start.
+   *
+   * `2` (Phase 2, readability) is the native strip with every pixel
+   * duplicated — an integer, lossless enlargement, no filter and no choice
+   * about which pixel survives. The shell draws units at native density now
+   * (see `unitPixmapScale` in `frame.ts`), so the champion needs ×2 of that to
+   * stay exactly twice its line troops.
    */
-  scale: 0.5 | 1
+  scale: 0.5 | 1 | 2
   frames?: number
   /** Bake the contour+rim ring. Units yes; terrain dressing no (it is graded). */
   ring?: boolean
@@ -265,7 +271,28 @@ export function pixmap(src: BakeSource, opts: PixmapOpts): Pixmap | null {
     const full = sc.getImageData(0, 0, srcW(src), srcH(src))
 
     let fw: number, fh: number, strip: ImageData
-    if (opts.scale === 1) {
+    if (opts.scale === 2) {
+      // Native cell, then each pixel becomes a 2x2 block. Lossless.
+      const nw = Math.round(cw)
+      const nh = Math.round(ch)
+      fw = nw * 2
+      fh = nh * 2
+      strip = new ImageData(fw * frames, fh)
+      for (let f = 0; f < frames; f++) {
+        const sx = Math.round(cx + f * cw)
+        for (let y = 0; y < fh; y++) {
+          const syy = cy + (y >> 1)
+          for (let x = 0; x < fw; x++) {
+            const so = (syy * full.width + sx + (x >> 1)) * 4
+            const dofs = (y * strip.width + f * fw + x) * 4
+            strip.data[dofs] = full.data[so]
+            strip.data[dofs + 1] = full.data[so + 1]
+            strip.data[dofs + 2] = full.data[so + 2]
+            strip.data[dofs + 3] = full.data[so + 3]
+          }
+        }
+      }
+    } else if (opts.scale === 1) {
       fw = Math.round(cw)
       fh = Math.round(ch)
       strip = new ImageData(fw * frames, fh)

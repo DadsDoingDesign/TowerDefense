@@ -11,6 +11,7 @@ import { onAppHidden, onAppVisible } from './state/lifecycle'
 import { registerServiceWorker } from './pwa'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { reportFatal } from './ui/fatal'
+import { useBattleLedger } from './ui/battleLedger'
 import './styles/global.css'
 
 initTheme()
@@ -67,6 +68,8 @@ if (import.meta.env.DEV) {
   // and how many notes it has scheduled. A test can prove music actually plays
   // without having to listen to it.
   w.__music = musicStatus
+  // Who reached the Gate (Phase 2 defeat receipt), for harness assertions.
+  ;(window as unknown as { __ledger: typeof useBattleLedger }).__ledger = useBattleLedger
 }
 
 registerServiceWorker()

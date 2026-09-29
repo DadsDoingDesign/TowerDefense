@@ -1,0 +1,678 @@
+/**
+ * Phase 2 — "readable, rewarding battles". Loaded after shell.css.
+ *
+ * ---------------------------------------------------------------------------
+ * The live-wave layout
+ * ---------------------------------------------------------------------------
+ * Setup keeps the four bands exactly as shell.css budgets them. When a wave
+ * goes live (`.shell.is-collapsed`, from `useBattleLayout`), the Detail band
+ * collapses to the wave strip alone and the Stage — the only `1fr` row — takes
+ * every pixel it gave up:
+ *
+ *     header + coach + STAGE + selector + wave strip  ==  100dvh
+ *
+ * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
+ * The field is width-bound on every portrait phone (the lane runs edge to edge),
+ * so on the tall ones it is the apron that grows; on the short ones the field
+ * itself grows to full width.
+ *
+ * Selecting something during a live wave (`.is-peek`) re-opens the band so rule
+ * one — tap a thing, read it — still holds. Deselect and the Stage takes the
+ * height back. Reduced motion: instant.
+ */
+.shell {
+  /* The compact strip: one 44px control plus its padding. */
+  --sh-wavebar-live-h: 56px;
+  --sh-collapse-ms: 260ms;
+  /* The champion plate (46) plus the strip's top padding (6). */
+  --sh-bossplate-h: 54px;
+}
+.sh-detail {
+  transition: height var(--sh-collapse-ms) cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sh-detail > .sh-context,
+.sh-detail > .sh-gear,
+.sh-detail > .sh-pack {
+  transition:
+    opacity 160ms ease,
+    visibility 0s linear 0s;
+}
+.shell.is-collapsed .sh-detail {
+  height: calc(var(--sh-wavebar-live-h) + 12px + var(--safe-bottom));
+  padding-top: 6px;
+  padding-bottom: calc(6px + var(--safe-bottom));
+  row-gap: 0;
+  overflow: hidden;
+}
+.shell.is-collapsed .sh-detail > .sh-context,
+.shell.is-collapsed .sh-detail > .sh-gear,
+.shell.is-collapsed .sh-detail > .sh-pack {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms ease,
+    visibility 0s linear 120ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-detail,
+  .sh-detail > .sh-context,
+  .sh-detail > .sh-gear,
+  .sh-detail > .sh-pack {
+    transition: none;
+  }
+}
+/* The landscape short-window rule in shell.css sets `height: auto` on the band;
+   collapsing still has to win there. */
+@media (orientation: landscape) and (min-height: 501px) and (max-height: 720px) {
+  .shell.is-collapsed .sh-detail {
+    min-height: 0;
+  }
+}
+
+/* The command button the COMBAT agent drops into `CommandSlot`. Same footprint
+   as the speed toggle beside it, so neither moves under a thumb. */
+.sh-command {
+  flex: 0 0 auto;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- the Stage */
+.sh-stage .battle-canvas-wrap {
+  padding-top: 0;
+  transition: padding-top var(--sh-collapse-ms) ease;
+}
+/* The nameplate's strip is reserved in the wrap's padding, so the field is fit
+   BELOW it (BattleCanvas reads the content box). */
+.sh-stage:has(.sh-bossplate) .battle-canvas-wrap {
+  padding-top: var(--sh-bossplate-h);
+}
+.sh-stage-top,
+.sh-stage-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.sh-stage-top {
+  top: 0;
+  padding: 6px 10px 0;
+}
+.sh-stage-center {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+}
+
+/* ------------------------------------------------------- champion nameplate */
+.sh-bossplate {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px 9px 7px;
+  border-radius: var(--r-sm);
+  background: rgba(20, 12, 6, 0.82);
+  border: 1px solid color-mix(in srgb, var(--bad-text) 55%, var(--line-strong));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+.sh-bossplate-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.1;
+}
+.sh-bossplate-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm, 14px);
+  color: var(--text);
+}
+.sh-bossplate-more {
+  color: var(--bad-text);
+  font-weight: 700;
+}
+.sh-bossplate-extra {
+  flex: 1 1 auto;
+}
+.sh-bossplate-hp {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sh-bossplate-bar {
+  position: relative;
+  height: 9px;
+  border-radius: 3px;
+  background: #140c06;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+.sh-bossplate-trail,
+.sh-bossplate-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+.sh-bossplate-trail {
+  background: #f3dfb1;
+  transition: width 120ms linear;
+}
+.sh-bossplate-fill {
+  background: linear-gradient(#e0705a, #b8412f);
+  transition: width 90ms linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-bossplate-trail,
+  .sh-bossplate-fill {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------ wave-clear ceremony */
+.sh-ceremony {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(100%, 340px);
+  text-align: center;
+}
+.sh-ceremony-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: rgba(20, 12, 6, 0.86);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  animation: sh-cer-in 280ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.sh-ceremony.lost .sh-ceremony-banner {
+  color: var(--bad-text);
+  border-color: color-mix(in srgb, var(--bad-text) 60%, transparent);
+}
+.sh-ceremony.elite .sh-ceremony-banner {
+  background: linear-gradient(180deg, #3a2610, #1e1208);
+  border-width: 2px;
+  box-shadow:
+    0 0 0 3px rgba(224, 172, 76, 0.18),
+    0 4px 18px rgba(0, 0, 0, 0.5);
+}
+.sh-ceremony-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(24, 15, 8, 0.88);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
+  animation: sh-cer-up 240ms ease-out;
+}
+.sh-ceremony.elite .sh-ceremony-card {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+}
+.sh-ceremony-sums {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.sh-ceremony-sum small {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sh-ceremony-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sh-ceremony-note.loot {
+  color: var(--accent);
+}
+.sh-ceremony-levels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-ceremony-levels li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--teal) 22%, transparent);
+  border: 1px solid var(--teal-dim);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  animation: sh-cer-in 320ms cubic-bezier(0.2, 1.4, 0.4, 1) 200ms both;
+}
+.sh-ceremony-roll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.sh-ceremony-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-xs);
+}
+.sh-ceremony-row.downed .sh-ceremony-who {
+  color: var(--bad-text);
+}
+.sh-ceremony-who {
+  font-weight: 700;
+  color: var(--text);
+}
+.sh-ceremony-what {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+@keyframes sh-cer-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes sh-cer-up {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* A short Stage (setup-height, a peek on a small phone) keeps the banner and
+   the sums and drops the roll, which the Detail band still has. */
+@media (max-height: 700px) {
+  .shell.is-peek .sh-ceremony-roll {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ a11y (F6) */
+/* The bands' heading is the brand word, now an <h1>; keep its look. */
+h1.sh-brand {
+  margin: 0;
+  line-height: 1.2;
+}
+/* Headings take PROGRAMMATIC focus on a screen change (tabindex -1); they are
+   not controls, so no ring. */
+.shell h1[tabindex='-1']:focus,
+.shell h1[tabindex='-1']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* The one polite voice (`Announcer`). Off-screen, not clipped — see the note on
+   the component. */
+.sh-announcer {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 300px;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------- defeat receipt */
+.pg-cause {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--bad-text) 45%, var(--line));
+  border-top: 3px solid var(--bad-text);
+}
+.pg-cause-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+.pg-cause-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pg-cause-rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-sm, 14px);
+}
+.pg-cause-name {
+  color: var(--text);
+  font-weight: 700;
+}
+.pg-cause-num {
+  color: var(--bad-text);
+  font-variant-numeric: tabular-nums;
+}
+.pg-cause-line {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+.pg-cause-line.muted {
+  color: var(--muted);
+}
+
+/* ------------------------------------------- event pages: pack strip + toast */
+.pg-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.pg-strip-label {
+  flex: 0 0 auto;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pg-strip-items {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 3px;
+  overflow: hidden;
+}
+.pg-strip-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-bottom: 2px solid var(--rail);
+}
+.pg-strip-rar {
+  position: absolute;
+  top: -1px;
+  left: 1px;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--rail);
+}
+.pg-strip-more,
+.pg-strip-empty {
+  align-self: center;
+  font-size: var(--fs-micro);
+  color: var(--muted-2);
+}
+.pg-strip-heroes {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  padding-left: 6px;
+  border-left: 1px solid var(--line);
+}
+.pg-strip-hero {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.pg-strip-hero img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pg-strip-tile.fresh,
+.pg-strip-hero.fresh {
+  animation: pg-land 700ms cubic-bezier(0.2, 1.4, 0.4, 1);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+@keyframes pg-land {
+  0% {
+    transform: translateY(-10px) scale(1.3);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+.pg-toast-wrap {
+  position: fixed;
+  left: 50%;
+  top: calc(10px + var(--safe-top, 0px));
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+.pg-toast {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #1f3a2a;
+  border: 1px solid rgba(111, 206, 136, 0.55);
+  color: var(--text);
+  font-size: var(--fs-sm, 14px);
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  animation: sh-cer-up 220ms ease-out;
+}
+
+/* ------------------------------------------------------ elite spoils frame */
+.pg.tone-elite .pg-head {
+  background: linear-gradient(180deg, rgba(224, 172, 76, 0.16), transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.pg.tone-elite .t-title {
+  color: var(--accent);
+}
+.pg.tone-elite .pg-row.selected,
+.pg.tone-elite .pg-detail {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+/* ------------------------------------------------------------- gear (F4) */
+.sh-gear-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.sh-gear-who {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0;
+  font-weight: 700;
+  color: var(--text);
+}
+.sh-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 7px;
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+.sh-compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.sh-compare-head > span {
+  text-transform: uppercase;
+}
+.sh-compare-head b {
+  font-size: var(--fs-xs);
+  color: var(--text);
+  letter-spacing: 0;
+}
+.sh-compare-who {
+  min-height: 28px;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: none;
+}
+@media (pointer: coarse) {
+  .sh-compare-who {
+    min-height: var(--hit-min);
+  }
+}
+.sh-deltas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sh-deltas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.sh-deltas li b {
+  color: var(--text);
+}
+.sh-deltas li i {
+  font-style: normal;
+}
+.sh-deltas li.up i {
+  color: var(--good);
+}
+.sh-deltas li.down i,
+.sh-deltas li.down b {
+  color: var(--bad-text);
+}
+.sh-new {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1b1409;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The reference ⓘ under an offer's detail (Phase 2). */
+.pg-info-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pg-info-line .sh-info-body {
+  flex-basis: 100%;
+}
+
+/* The menu: 64px of air (two 32px band pads) sat between the subtitle and the
+   key art (Phase 2). The art is the head's picture, so it sits close under it;
+   the frame is flexible, so the reclaimed height goes to the art. */
+.pg:has(.pg-body > .pg-art) .pg-head {
+  padding-bottom: 12px;
+}
+.pg-body:has(> .pg-art) {
+  padding-top: 4px;
+}
+/* Where the receipt sits: above the pinned CTA on a page (it used to land on
+   the serif title), just under the header on the bands. Never over a control
+   that takes a tap — and it takes none itself. */
+.shell-page .pg-toast-wrap {
+  top: auto;
+  bottom: calc(104px + var(--safe-bottom, 0px));
+}
+.shell:not(.shell-page) .pg-toast-wrap {
+  top: calc(var(--sh-header-min) + 8px + var(--safe-top, 0px));
+}

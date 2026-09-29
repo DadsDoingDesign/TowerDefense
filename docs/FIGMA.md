@@ -153,6 +153,46 @@ before you commit; a back button has no detail worth reading and the second tap
 was pure friction. Offers opt in with `immediate`, and anything that spends,
 grants or destroys is forbidden from setting it.
 
+## Live wave layout (Phase 2) — the contract the other lanes drop into
+
+Setup keeps the four bands as budgeted in `shell.css`. When a wave goes live the
+shell carries `.is-collapsed` (`useBattleLayout`, `src/ui/shell/live.ts`) and the
+**Detail band collapses to the wave strip**; the Stage, the only `1fr` row, takes
+the height. Selecting anything re-opens it (`.is-peek`) — rule one still holds —
+and Start Wave lets go of the just-posted hero so the common path collapses.
+The wave-clear ceremony keeps the collapse (`settled`) so nothing jumps while the
+eye is on the field. Reduced motion: the 260 ms height transition is instant.
+
+| Band (live) | 390×844 | 375×667 | 320×568 | Holds |
+| --- | --- | --- | --- | --- |
+| Header | 76 | 68 | 63 | Run state (unchanged) |
+| Stage | **574** (was 332) | **419** | **331** | Field + apron, `.sh-stage-top`, `.sh-stage-center` |
+| Selector | 126 | 112 | 106 | Party (unchanged) |
+| Wave strip | 68 | 68 | 68 | name · progress · N left · **CommandSlot** · Speed |
+
+The field (960×560 logical) is fit to the Stage wrap's **content box** and is
+width-bound on every portrait phone (the lane runs edge to edge, so it is never
+cropped): 390 → 390×228, 375 → 375×219 (was 282×164), 320 → 320×187 (was
+149×87). The room the field cannot use is the **apron** (`render/apron.ts`), a
+baked woodland registered under the field with CSS — no letterbox bars. Units draw
+at the pack's native density (`unitPixmapScale`), ~24 CSS px goblins and ~30 CSS
+px heroes at 390 wide.
+
+**Where things go — for the COMBAT and RUN/META lanes:**
+
+| Place | File | Rule |
+| --- | --- | --- |
+| **Command button** | `src/ui/shell/CommandSlot.tsx` (rendered by `WaveBar`, live only) | Return ONE `<button className="sh-command">` (44px, styled in `shell-live.css`) or null. It sits between the progress readout and Speed; the strip's height already fits it. Actions live in band 4 — never on the Stage. |
+| **Boss / champion nameplate** | `src/ui/shell/BossPlate.tsx` in `.sh-stage-top` | While it renders, `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by `--sh-bossplate-h` (54px) and `BattleCanvas` fits the field below it — on a width-bound phone it lands in the apron and the field does not move. Boss phases: fill `.sh-bossplate-extra` (a flex spacer between the name and the HP number) with phase pips / a phase word. |
+| **Telegraphs** | `render/overlays.ts` or a new render file | Draw in the field composite (logical px). The HP bar stack sits at `artTop` (see `render/hpbar.ts`); leave the band just above the head for it. |
+| **Post-wave / result copy** | `WaveCeremony.tsx` (Stage centre, after the fight only), `DefeatReceipt.tsx` (run end) | The ceremony may cover the field because the fight is over; nothing may cover a LIVE field. |
+| **Announcements** | `Announcer.tsx` | The one polite live region in a battle. Add a message there; do not add a second region. |
+| **Event-page receipts** | `ReceiptToast` + `PackStrip` (`PackStrip.tsx`) | Derived from the store (a new item id / hero id), so a new rest/unlock page gets them for free. |
+
+Build circles are real buttons (`src/ui/SlotLayer.tsx`), laid over the canvas
+with `pointer-events: none` — keyboard and assistive tech reach them; a finger
+still lands on the canvas hit test.
+
 ## Contexts — `?node-id=2062-4739`
 
 Twenty-one states of the one shell, proving it carries the whole game. Same four

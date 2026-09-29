@@ -53,3 +53,29 @@ export const setViewScale = (s: number): void => {
 }
 /** The live view scale, for glyphs that need a floor in CSS px. */
 export const getViewScale = (): number => viewScale
+
+/**
+ * The pixmap density units (heroes and enemies) are drawn at — Phase 2,
+ * "readable battles".
+ *
+ * The shell caps at 520px wide, so the 960-wide field is ALWAYS displayed at a
+ * view scale of 0.54 or less, and at 390px it is 0.406. At the pack's ×½ bucket
+ * a line goblin was ~12 CSS px tall and a hero ~15 on the shipping phone —
+ * measured, not estimated — against a readability target of 24. The field is
+ * width-bound on every portrait phone (the lane runs edge to edge on both maps,
+ * so no zoom can grow it without cropping the lane), which leaves exactly one
+ * honest lever: draw the units at the pack's NATIVE density. That is the
+ * cleanest bucket the pipeline has — the source drawn 1:1, no filter at all —
+ * and it roughly doubles every unit: goblins ~24 CSS px, heroes ~30.
+ *
+ * The champion keeps its "exactly 2× its line troops" rule by taking the new
+ * `2` bucket (a lossless pixel-doubled native strip).
+ *
+ * Nothing here is gameplay: `type.radius`, ranges, slots and the path are
+ * untouched, only the art's size on the composite changes. A pack authored at
+ * one density (`spriteScale: 1`, the fieldwatch pack) keeps what it had.
+ */
+export function unitPixmapScale(spriteScale: 0.5 | 1, champion = false): 0.5 | 1 | 2 {
+  if (spriteScale === 1) return 1
+  return champion ? 2 : 1
+}

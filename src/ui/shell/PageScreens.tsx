@@ -9,6 +9,10 @@ import type { ShellContext } from './context'
 import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
 import { MenuKeyArt } from './MenuKeyArt'
+import { DefeatReceipt } from './DefeatReceipt'
+import { PackStrip } from './PackStrip'
+import { InfoToggle } from './InfoToggle'
+import { UpdateNotice } from '../UpdateNotice'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { RunSeed } from './RunSeed'
@@ -172,6 +176,10 @@ export function PageScreen({
 }) {
   const selection = useGameStore((s) => s.shellSelection)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  // The pack + company strip rides on every in-run event page (Phase 2).
+  const inRunBoard = useGameStore(
+    (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
+  )
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
@@ -249,6 +257,8 @@ export function PageScreen({
       // reveal. `titleOverride` is a Watchtower submenu, which is navigation.
       live={!titleOverride && ctx.board?.live}
       resources={purse.size ? <Resources show={purse} /> : undefined}
+      strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
+      tone={ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
@@ -296,11 +306,9 @@ export function PageScreen({
         ) : undefined
       }
     >
-      {receipt?.text ? (
-        <p className="pg-receipt" role="status">
-          <Icon name="boon" /> {receipt.text}
-        </p>
-      ) : null}
+      {/* The receipt is said by `ReceiptToast` now (Phase 2), derived from what
+          actually landed, and shown where the eye is — the in-body line sat
+          below the fold on a small phone. `receipt` still holds the CTA. */}
 
       {asPortraits && (
         <PortraitRow
@@ -367,6 +375,12 @@ export function PageScreen({
           ) : null}
           {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
           <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+          {selected.info && (
+            <p className="pg-info-line">
+              {selected.info.label}
+              <InfoToggle label={selected.info.label} lines={selected.info.lines} />
+            </p>
+          )}
           {selected.sliders?.length ? (
             <div className="pg-sliders">
               {selected.sliders.map((d) => (
@@ -472,6 +486,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       title="Fieldwatch"
       subtitle="Hold the meadow against the goblin horde"
       cta={primary?.action ? { label: 'Start a Run', run: primary.action.run } : undefined}
+      strip={<UpdateNotice />}
     >
       <MenuKeyArt />
       {hasRecord && (
@@ -635,6 +650,10 @@ export function ResultScreen() {
         it findable (F11), and reclaiming them costs the screen nothing it was
         not already saying twice.
       */}
+      {/* The cause, named, before anything else (Phase 2): which goblins got
+          through, the hardest hit, the wave and the seed. */}
+      {!won && <DefeatReceipt />}
+
       {won && (
         <div className="pg-verdict win">
           {/* Was `❖`, which also meant "shrine" and "evolution ready". The keep
