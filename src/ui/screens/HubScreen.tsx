@@ -3,6 +3,7 @@ import { sfx } from '../../audio/audio'
 import { useGameStore } from '../../state/gameStore'
 import { UPGRADES, useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
+import { leaveLegacyUi } from '../shell/flag'
 
 type MenuView = 'menu' | 'perks' | 'settings'
 
@@ -52,6 +53,23 @@ function MainMenu({ go }: { go: (v: MenuView) => void }) {
           <span className="menu-btn-text">
             <strong>Settings</strong>
             <span>Options &amp; progress</span>
+          </span>
+        </button>
+        {/*
+          M30 — the way back out of `?shell=0`.
+
+          The flag writes a sticky localStorage key on purpose, so that a
+          comparison survives a reload. What that also did was strand anyone who
+          ever loaded these screens once: every later visit landed here, and
+          nothing in this UI led back — the only exit was knowing to type
+          `?shell=1` into the address bar. This row is only ever rendered by
+          the legacy tree, so it cannot appear in the shell.
+        */}
+        <button className="menu-btn" onClick={leaveLegacyUi}>
+          <span className="menu-btn-icon">↩</span>
+          <span className="menu-btn-text">
+            <strong>Back to the game&rsquo;s UI</strong>
+            <span>These screens are the deprecated build — return to the Root Shell</span>
           </span>
         </button>
       </div>

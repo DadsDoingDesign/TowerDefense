@@ -3,8 +3,13 @@ import { ARCHETYPES } from '../../game/data/sentinels'
 import { buildName } from '../../game/engine/leveling'
 import { ENDLESS_LIVES, MAX_ROSTER, useGameStore } from '../../state/gameStore'
 import { ItemCard } from '../components/ItemCard'
-
-const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }
+// The archetype glyph has ONE definition now (L3). It was copy-pasted into six
+// files and the copies had already drifted: rogue was `✦` here, which is also
+// Watch Marks, attribute rewards, perks and mutations — the overload
+// DESIGN_SYSTEM §6 flags. `channels.ts` is the design-token module (filed under
+// shell/, but nothing in it is shell-specific) and is already eagerly bundled,
+// so importing it from the lazy legacy chunk costs nothing.
+import { ARCHETYPE_GLYPH as GLYPH } from '../channels'
 
 export function EndlessScreen() {
   const round = useGameStore((s) => s.round)
@@ -246,7 +251,7 @@ function EndlessRecruit() {
               <strong>{cand.name}</strong>
               <span>{ARCHETYPES[cand.archetype].name}</span>
             </div>
-            <button className="buy-btn" disabled={gold < cost} onClick={recruit}>
+            <button className="buy-btn" disabled={gold < cost} onClick={() => recruit(cand.id)}>
               Recruit ⟡{cost}
             </button>
           </div>

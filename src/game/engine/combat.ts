@@ -52,6 +52,8 @@ export interface CombatProfile {
   /** Fraction of max HP the unit starts a wave missing (warlock self-sacrifice). */
   startMissingFrac: number
   thorns: number
+  /** Patience including gear ("of Patience"), driving the stack ceiling. */
+  patience: number
   /** Physical-defense for block mitigation (fighter Guardian line only). */
   physDef: number
   mods: EffectMods
@@ -141,6 +143,8 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const mods = mergeMods([...branchMods, ...mutationMods, ...upgradeMods, ...gear.mods, ...(ctx.teamMods ?? [])])
 
   const pMult = ctx.patienceMult ?? 1
+  // Intended (L9d): Patience is a percentage buff on the unit's TOTAL core stats,
+  // gear included — the same way every other multiplier here treats gear.
   const st = {
     str: (s.stats.str + gear.stats.str) * pMult,
     dex: (s.stats.dex + gear.stats.dex) * pMult,
@@ -159,6 +163,8 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const splashRadius = base.splashRadius + (mods.splashAdd ?? 0) + gear.splashAdd
   const maxHp = Math.round((70 + st.str * 9) * (mods.hpMult ?? 1))
   const thorns = (s.thorns + gear.thorns) * (mods.thornsMult ?? 1)
+  // "of Patience" gear was accumulated and then dropped on the floor (H10).
+  const patience = s.patience + gear.patience
 
   const avgCrit = 1 + critChance * (critMult - 1)
   const dps = damage * rate * avgCrit
@@ -175,6 +181,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
     maxHp,
     startMissingFrac: mods.selfSacrifice ?? 0,
     thorns,
+    patience,
     physDef: Math.max(0, mods.physDefAdd ?? 0),
     mods,
     dps,

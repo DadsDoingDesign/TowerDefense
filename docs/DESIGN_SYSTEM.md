@@ -80,7 +80,12 @@ All in `src/styles/global.css :root`.
 `--fighter` `#d9743f` · `--rogue` `#4fae72` · `--mystic` `#5b8cd6`
 
 ### Shape & type
-`--radius` `10px` · `--radius-sm` `6px` · `--font-display` `'Trebuchet MS', system-ui, …`
+`--radius` `10px` · `--radius-sm` `6px` · `--font-display` `'Crimson Text', Georgia, 'Times New Roman', serif`
+
+`--font-display` resolves to the **self-hosted** Crimson Text faces (weights 600
+and 700) declared with `@font-face` at the top of `src/styles/global.css`. There
+is no `--font-body` token — `body` sets `system-ui, -apple-system, 'Segoe UI',
+Roboto, sans-serif` inline.
 
 ---
 
@@ -207,7 +212,8 @@ What a complete system needs. **Bold** = new.
 
   /** NEW — typography */
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Trebuchet MS', system-ui, sans-serif;
+  /* Ships today (self-hosted, weights 600 + 700 — see docs/BRAND.md § Type). */
+  --font-display: 'Crimson Text', Georgia, 'Times New Roman', serif;
   --fs-display: 30px;  --fs-h1: 22px;  --fs-h2: 17px;
   --fs-body: 15px;     --fs-sm: 13px;  --fs-xs: 11px;  --fs-micro: 10px;
   --lh-tight: 1.15;  --lh-body: 1.45;

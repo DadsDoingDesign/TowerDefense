@@ -92,3 +92,10 @@ const SHRINES: ShrineOffer[] = [
 export function rollShrine(rng: RNG): ShrineOffer {
   return rng.pick(SHRINES)
 }
+
+/**
+ * Look an offer back up by id. A shrine carries an `apply` closure, so it can't
+ * ride in a JSON run snapshot — the snapshot stores the id and rehydrates here,
+ * which keeps a resumed run on the shrine it was actually offered (C3).
+ */
+export const shrineById = (id: string): ShrineOffer | null => SHRINES.find((s) => s.id === id) ?? null

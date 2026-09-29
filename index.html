@@ -2,12 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
+    <!--
+      Pinch zoom is deliberately left enabled (M36): the scale lock this tag
+      used to carry is a WCAG 1.4.4 failure, and it bit hardest here because
+      some shell labels run as small as 8.5px. viewport-fit=cover stays — the
+      safe-area insets in shell.css/page.css keep content clear of the notch.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#201711" />
     <meta name="description" content="Fieldwatch — a roguelite tower-defense autobattler." />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Installable web app (M24) -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fieldwatch" />
+
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0e0c'/%3E%3Cpath d='M16 4l10 4v7c0 6-4 10-10 13C10 25 6 21 6 15V8z' fill='none' stroke='%23f0a868' stroke-width='2.5' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='14' r='3' fill='%23f0a868'/%3E%3C/svg%3E"

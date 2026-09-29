@@ -64,6 +64,17 @@ export interface EffectMods {
   block?: { count: number; radius: number }
   /** Multiplies the Sentinel's Thorns reflect. */
   thornsMult?: number
+  /**
+   * This Sentinel's thorns are a **strike**: the grind it puts on everything it
+   * blocks applies its {@link burn} as well as its reflect damage.
+   *
+   * Statuses are otherwise written in exactly one place — `engine.applyHit`,
+   * reachable only from a projectile impact — so a blocker's melee retaliation
+   * could not light anything, and `Warden of Ash` ("Everything it holds burns on
+   * its thorns") sold a mechanism the engine did not have. Opt-in rather than
+   * universal; the reasoning is in `engine.igniteFromThorns`.
+   */
+  thornsIgnite?: boolean
   /** Heal allied Sentinels in radius, HP/sec (cleric). */
   healAura?: { hps: number; radius: number }
   /** Buff allied Sentinel damage in radius (cleric/guard). */
@@ -158,8 +169,8 @@ export interface Sentinel {
   thorns: number
   /** Secondary: scales stat gain the longer a Sentinel survives a wave un-KO'd. */
   patience: number
-  /** Base attack from the tier-0 archetype; branches/gear modify it via mods. */
-  attack: AttackProfile
+  // NOTE: the base attack is NOT stored here — combat.ts reads it live from the
+  // tier-0 archetype node, so evolutions/gear never desync from a stale copy (L1).
   level: number
   xp: number
   equipment: Equipment

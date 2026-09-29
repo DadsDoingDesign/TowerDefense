@@ -1,4 +1,4 @@
-import { placedSentinels, useGameStore } from '../../state/gameStore'
+import { canStartWave, placedSentinels, useGameStore } from '../../state/gameStore'
 
 export function BattleControls() {
   const phase = useGameStore((s) => s.battlePhase)
@@ -6,6 +6,18 @@ export function BattleControls() {
   const placements = useGameStore((s) => s.placements)
   const startWave = useGameStore((s) => s.startWave)
   const hud = useGameStore((s) => s.hud)
+  /**
+   * The store's own answer, exactly as `DetailBand` asks it in the shell.
+   *
+   * This used to gate on `deployed === 0` alone, which is a *stricter* rule laid
+   * on top of the store's — allowed — but it was the ONLY rule, so every reason
+   * `startWave` refuses for (a wave already resolved, a node already cleared, no
+   * `currentWave`, an engine still running) rendered as an enabled button that
+   * does nothing, on a legacy screen with no other way out. The invariant is
+   * that a control the store refuses never renders enabled, and it has to hold
+   * in both UIs, not just the one that happens to be reachable today.
+   */
+  const canStart = useGameStore(canStartWave)
 
   const deployed = placedSentinels(roster, placements).length
 
@@ -41,7 +53,7 @@ export function BattleControls() {
         {deployed} deployed
         {deployed === 0 && <em className="warn"> — deploy at least one Sentinel</em>}
       </span>
-      <button className="start-btn" onClick={startWave} disabled={deployed === 0}>
+      <button className="start-btn" onClick={startWave} disabled={!canStart || deployed === 0}>
         Start Wave ▶
       </button>
     </div>

@@ -1,0 +1,32 @@
+/* Harness chrome only. Nothing here affects the game. */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px 20px 64px;
+  background: #201711; color: #f3e7d0;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font: 700 26px/1.2 Georgia, "Times New Roman", serif; margin: 0 0 6px; color: #e0ac4c; }
+header p { margin: 0 0 4px; color: #b89e7e; max-width: 70ch; }
+code { color: #e0ac4c; }
+#warn:not(:empty) {
+  margin: 12px 0; padding: 10px 12px; border-radius: 8px;
+  background: rgba(208, 86, 58, .16); border: 1px solid #d0563a; color: #f3e7d0;
+}
+section { margin: 34px 0 0; }
+h2 {
+  font: 700 17px/1.3 Georgia, serif; margin: 0 0 4px; color: #f3e7d0;
+  border-bottom: 1px solid rgba(233, 205, 150, .22); padding-bottom: 6px;
+}
+.note { color: #8a7458; margin: 0 0 14px; max-width: 78ch; font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+.cell { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.cap { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #b89e7e; text-align: center; }
+.cap b { color: #f3e7d0; letter-spacing: 0; text-transform: none; font-size: 12px; }
+canvas { display: block; background: #4a7a34; border-radius: 4px; }
+canvas.plain { background: transparent; }
+canvas.sil { background: #ece0c8; }
+.gate { border-left: 3px solid #e0ac4c; padding-left: 12px; margin: 10px 0; }
+.gate.fail { border-left-color: #d0563a; }
+.gate.pass { border-left-color: #6fce88; }
+label { display: inline-flex; gap: 6px; align-items: center; color: #b89e7e; font-size: 13px; margin-right: 16px; }

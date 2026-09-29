@@ -12,6 +12,7 @@ import { ARCHETYPES } from '../../game/data/sentinels'
 import { HERO_SLOTS, HERO_SLOT_LABEL } from '../../game/data/items'
 import type { HeroSlot, Item } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
+import { ARCHETYPE_GLYPH as GLYPH } from '../channels'
 
 export function SentinelDetail() {
   const detailId = useGameStore((s) => s.detailId)
@@ -174,4 +175,3 @@ function DDeriv({ label, v }: { label: string; v: number | string }) {
   )
 }
 
-const GLYPH: Record<string, string> = { fighter: '⚔', rogue: '✦', mystic: '❋' }

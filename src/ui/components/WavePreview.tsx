@@ -22,6 +22,11 @@ export function WavePreview() {
       <div className="wave-enemies">
         {comp.map(({ typeId, count }) => {
           const t = ENEMY_TYPES[typeId]
+          // A type this build does not have is a row we cannot draw, not a
+          // reason to take the setup screen down (F8). Its shell twin
+          // (`DetailBand`) has always null-checked here; this legacy panel did
+          // not, and the same wave reaches both.
+          if (!t) return null
           return (
             <div key={typeId} className="wave-enemy">
               <span className="we-dot" style={{ background: t.color }} />

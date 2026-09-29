@@ -3,12 +3,22 @@ import { useGameStore } from '../../state/gameStore'
 
 const MAX_ROSTER = 5
 
-/** Mid-map fork: recruit a teammate OR roll a random attack mutation on a hero. */
+/**
+ * Mid-map fork: recruit a teammate, OR aim a mutation at a hero and pick one of
+ * the three Mythics the fork dealt.
+ *
+ * This screen is the deprecated `?shell=0` build, but it had the same defect as
+ * the shell: its "Roll ⟳" button called `rollHeroMutation`, which is now only a
+ * deprecated alias for `aimHeroMutation`, and nothing here rendered
+ * `mutationHeroId` — so the button set a field and looked broken. A dead button
+ * is a dead button whichever UI it is in.
+ */
 export function CrossroadsScreen() {
   const cr = useGameStore((s) => s.crossroads)
   const roster = useGameStore((s) => s.roster)
   const recruit = useGameStore((s) => s.recruitTeammate)
-  const rollMut = useGameStore((s) => s.rollHeroMutation)
+  const aimMut = useGameStore((s) => s.aimHeroMutation)
+  const chooseMut = useGameStore((s) => s.chooseHeroMutation)
   const finish = useGameStore((s) => s.finishCrossroads)
   if (!cr) return null
 
@@ -17,7 +27,7 @@ export function CrossroadsScreen() {
     return (
       <div className="crossroads">
         <div className="cr-reveal">
-          <span className="cr-eyebrow">Mutation rolled</span>
+          <span className="cr-eyebrow">Mutation taken</span>
           <h1>{heroName} mutated!</h1>
           <div className="cr-mut-card">
             <div className="cr-mut-top">
@@ -31,6 +41,42 @@ export function CrossroadsScreen() {
             Continue
           </button>
         </div>
+      </div>
+    )
+  }
+
+  // Step two: a hero is aimed at, so the choice is which of the three to take.
+  const aimed = cr.mutationHeroId ? roster.find((h) => h.id === cr.mutationHeroId) : undefined
+  if (aimed) {
+    return (
+      <div className="crossroads">
+        <div className="cr-head">
+          <h1>Choose the mutation</h1>
+          <p>
+            Three Mythics, dealt when the fork fired — aiming at someone else does not change them. Whichever{' '}
+            {aimed.name} takes is permanent, and Threat rises ×1.05 when it lands.
+          </p>
+        </div>
+        <div className="cr-heroes">
+          {cr.mutations.map((m) => {
+            const held = (aimed.mutations ?? []).some((x) => x.key === m.key)
+            return (
+              <button key={m.id} className="cr-hero" disabled={held} onClick={() => chooseMut(aimed.id, m.id)}>
+                <span className="cr-hero-info">
+                  <strong>{m.name}</strong>
+                  <span className="cr-sub">{m.desc}</span>
+                  <span className="cr-mut-downside">
+                    {held ? `${aimed.name} already carries this one.` : `Tradeoff: ${m.downside}`}
+                  </span>
+                </span>
+                <span className="cr-roll">{held ? '—' : 'Take'}</span>
+              </button>
+            )
+          })}
+        </div>
+        <button className="overlay-btn" onClick={() => aimMut(null)}>
+          Pick someone else
+        </button>
       </div>
     )
   }
@@ -72,12 +118,14 @@ export function CrossroadsScreen() {
 
         <section className="cr-col">
           <h2>Mutate a hero</h2>
-          <p className="cr-note">Rolls a random mutation that dramatically changes that hero&apos;s attack.</p>
+          <p className="cr-note">
+            Pick who it lands on, then choose one of {cr.mutations.length} Mythic mutations. Aiming costs nothing.
+          </p>
           <div className="cr-heroes">
             {roster.map((s) => {
               const m = ARCHETYPES[s.archetype]
               return (
-                <button key={s.id} className="cr-hero" onClick={() => rollMut(s.id)}>
+                <button key={s.id} className="cr-hero" onClick={() => aimMut(s.id)}>
                   <img src={`assets/sprites/tinyswords/${s.archetype}.png`} alt={m.name} />
                   <span className="cr-hero-info">
                     <strong>{s.name}</strong>
@@ -86,7 +134,7 @@ export function CrossroadsScreen() {
                       {s.mutations?.length ? ` · ${s.mutations.length} mutation${s.mutations.length > 1 ? 's' : ''}` : ''}
                     </span>
                   </span>
-                  <span className="cr-roll">Roll ⟳</span>
+                  <span className="cr-roll">Aim ▸</span>
                 </button>
               )
             })}

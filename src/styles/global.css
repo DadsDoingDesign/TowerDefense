@@ -24,8 +24,14 @@
   --line: rgba(233, 205, 150, 0.12);
   --line-strong: rgba(233, 205, 150, 0.22);
   --text: #f3e7d0;
-  --muted: #b89e7e;
-  --muted-2: #8a7458;
+  /* M27e — the old ramp put `--muted-2` at 3.40:1 on `--panel`, which is under
+     AA for every string it carries (GEAR/PACK heads, hero tags, cell labels).
+     Both muted steps are now AA on every ground the shell actually paints —
+     `--panel`, `--panel-2`, `--bg`, `--bg-2` and the `--surface` wash — and the
+     step between them is still 1.2:1 so the hierarchy survives. Measured:
+     `--muted` 7.00 / `--muted-2` 5.63 on `--panel`; 5.79 / 4.65 on `--surface`. */
+  --muted: #c4ad8c;
+  --muted-2: #b39a78;
   --accent: #e0ac4c;
   --accent-dim: rgba(224, 172, 76, 0.16);
   --teal: #57a2b6;
@@ -34,6 +40,14 @@
   --warn: #e0b23a;
   --bad: #d0563a;
   --info: #6fb0d8;
+
+  /* Danger and teal as TEXT (M27e). `--bad` is 3.66:1 on `--panel` and 3.02:1
+     on the `--surface` wash — it fails AA at body size in the one place where
+     failing is worst. It stays the FILL colour (bars, rules, solid buttons,
+     where 3:1 is the bar); anything that spells out a warning uses `--bad-text`
+     (5.85 on `--panel`, 4.83 on `--surface`). Same for small teal strings. */
+  --bad-text: #ef8368;
+  --teal-text: #6cb4c8;
 
   /* Parchment / wood surface inks */
   --paper: #ece0c8;
@@ -66,6 +80,43 @@
   --r-md: 8px;
   --r-lg: 18px;
 
+  /* ---------------------------------------------------- type ramp (M3) ----
+     Every string in the shell reads one of these, and NOTHING is allowed
+     below `--fs-micro`. The shell used to run 11.5px body, 10px subs, 9px
+     tags and 8.5px gear-slot labels — sizes docs/DESIGN_SYSTEM.md itself
+     calls "below the practical floor on mobile".
+
+     The ramp is also what makes the "Large UI" setting honest. It used to
+     claim "Bigger type" and move exactly one number (`.sh-btn` 13→13.5); now
+     `:root[data-scale='large']` redefines the whole ramp, so every label,
+     tag, meter and price grows with it. */
+  --fs-micro: 11px; /* the floor — eyebrows, tags, cell labels */
+  --fs-xs: 12px; /* subs, chips, captions */
+  --fs-sm: 13px; /* body lines, small buttons */
+  --fs-md: 15px; /* emphasis, tile glyph captions */
+  --fs-lg: 17px; /* context headings, the in-band primary button */
+  --fs-xl: 22px;
+  --fs-display: 32px;
+  --lh-tight: 1.15;
+  --lh-body: 1.4;
+
+  /* Rarity, as tokens rather than five hexes copied out of items.ts. Naming
+     them here is what lets the colour-vision modes below re-tint the ramp,
+     and what lets the shell stop hardcoding a second copy. */
+  --rarity-common: #c3b291;
+  --rarity-rare: #5fb0c4;
+  --rarity-epic: #c67ab0;
+  --rarity-legendary: #f0b868;
+  --rarity-mythic: #ef6a3a;
+
+  /* Focus (M27a) — one ring, everywhere. */
+  --focus-ring: var(--accent);
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* Touch floor (M2). */
+  --hit-min: 44px;
+
   /* A translucent parchment wash replaces solid panels for cards and tiles. */
   --surface: rgba(220, 205, 172, 0.08);
   --surface-strong: rgba(220, 205, 172, 0.14);
@@ -74,6 +125,14 @@
   /* Primary call to action — deeper than --teal so it holds its own at 64px. */
   --cta: #3f7d8c;
   --cta-ink: #f3e7d0;
+  /*
+   * Ink for a SOLID warm fill — the shell already uses this exact value on the
+   * active tab and the active segment, on the same reasoning: `--accent`,
+   * `--bad` and `--teal` are bright enough as backgrounds that light text on
+   * them is the weaker pairing, not the stronger one. Named here so the one
+   * remaining case that got it wrong can read the same value as the rest.
+   */
+  --ink-on-fill: #1b1409;
 
   /* Standard control heights */
   --row-h: 48px;
@@ -131,6 +190,151 @@ button {
 button:disabled {
   cursor: not-allowed;
 }
+
+/* ======================================================== focus ring (M27a)
+   The shipping shell had ZERO `:focus-visible` rules — the only two in the
+   codebase were in legacy `app.css`, on two components the shell never mounts.
+   Keyboard focus was therefore invisible across ~100 controls, including the
+   destructive-confirm control.
+
+   Declared once, here, so no component has to remember. `:focus-visible` (not
+   `:focus`) means a mouse or finger press never draws it. The gold ring clears
+   4.5:1 against every ground in the palette, and the `outline-offset` keeps it
+   off the control's own border so a 1px hairline cannot swallow it. */
+:is(button, [role='button'], a[href], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  /* Some shell controls are clipped by a scrolling parent; a matching shadow
+     means the ring is still readable when the outline is cropped. */
+  box-shadow: 0 0 0 4px rgba(224, 172, 76, 0.25);
+}
+/* On a solid gold surface the gold ring disappears into it — invert. */
+.sh-tab.active:focus-visible,
+.pg-cta:focus-visible {
+  --focus-ring: var(--text);
+  box-shadow: 0 0 0 4px rgba(20, 12, 6, 0.45);
+}
+
+/* ==================================================== Large UI (M3) --------
+   "Bigger type" now means it. The whole ramp shifts ~1.15×, which every shell
+   and page rule reads through, so the 11px floor becomes 12.5px and the
+   smallest string on screen grows with everything else. */
+:root[data-scale='large'] {
+  --fs-micro: 12.5px;
+  --fs-xs: 13.5px;
+  --fs-sm: 15px;
+  --fs-md: 17px;
+  --fs-lg: 19px;
+  --fs-xl: 24px;
+  --row-h: 54px;
+  --hit-min: 48px;
+}
+
+/* ============================================ colour-vision modes (M34) ----
+   High contrast was the only accommodation the game had, and it does not help
+   anyone who cannot separate two hues of equal lightness — which is exactly
+   what the rarity ramp and the three archetype hues are.
+
+   These modes re-tint the two ramps to pairs that stay separable under the
+   common confusions, and they lean harder on LIGHTNESS so the ordering
+   survives even when the hue does not. They ride alongside the non-colour
+   channels the shell now draws (rarity initials on pack tiles and gear slots,
+   the archetype glyph on every hero card) rather than replacing them: colour
+   is never the only carrier, and this makes the redundant carrier better. */
+:root[data-vision='deuter'],
+:root[data-vision='protan'] {
+  /* Red/green confusions: drop green out of the ramp, spread on blue↔amber. */
+  --rarity-common: #cbbda0;
+  --rarity-rare: #7ec8e3;
+  --rarity-epic: #d79ad2;
+  --rarity-legendary: #f3c069;
+  --rarity-mythic: #ff9d5c;
+  --good: #7fd8ff;
+  --bad: #ff9d5c;
+  --bad-text: #ffb083;
+  --fighter: #f0a868;
+  --rogue: #7fd8ff;
+  --mystic: #b79ce8;
+}
+:root[data-vision='tritan'] {
+  /* Blue/yellow confusions: separate on red↔cyan-green instead. */
+  --rarity-common: #cbbda0;
+  --rarity-rare: #57c2b0;
+  --rarity-epic: #e58ab0;
+  --rarity-legendary: #ef8a5c;
+  --rarity-mythic: #d0453f;
+  --good: #57c2b0;
+  --bad: #e05a63;
+  --bad-text: #f5808a;
+  --fighter: #e05a63;
+  --rogue: #57c2b0;
+  --mystic: #9aa6e8;
+}
+
+/* ================================================== the icon atlas (P3) ----
+   78 cells of `public/assets/ui/fw-icons.png`, addressed by `--ix` / `--iy`
+   from `src/ui/Icon.tsx`. One sprite sheet, one request, one precache entry.
+
+   `--fw-i-cols` / `--fw-i-rows` are the SHEET's grid, and they are declared
+   here because `background-size` is what actually decides where a cell is.
+   This rule used to hardcode `* 8` and `* 9` under a comment saying it read
+   `--fw-i-cols`, which was defined nowhere in the project — so the checked,
+   duplicated, "append-never-reorder" cell list in `channels.ts` was guarding
+   the half of the mapping that could not go wrong on its own, while the half
+   that decides the pixels sat unguarded in a stylesheet. Appending a row of
+   icons would have shifted all 71 sprites by a fraction of a cell with nothing
+   anywhere to notice — and M3 then appended seven, so the sheet really did grow
+   a tenth row. That is the edit this guard exists for: with `--fw-i-rows` left
+   at 9 the build refuses to start, rather than every icon in the game sampling
+   9/10ths of the wrong cell. `scripts/fw-icons.ts --check` reads these two
+   declarations back, compares them with the real sheet and with `ICON_COLS` /
+   `ICON_ROWS`, and `npm run build` runs it (M13).
+
+   `--fw-i-size` drives width, height, `background-size` AND
+   `background-position` together, so the two display sizes are one number
+   rather than two sets of coordinates that can drift apart.
+
+   Integer scales only — 16 and 32. `image-rendering: pixelated` at a
+   fractional scale does not soften, it duplicates and drops columns, and the
+   1px `#161C2E` silhouette is exactly the feature that breaks when it does.
+   That is also why Large UI does NOT scale these: the type ramp grows 15%,
+   which would put an icon at 18.4px. They stay at 16/32 and the touch target
+   around them is what grows, which is the part a thumb actually needs.
+
+   The URL is root-absolute because the file lives in `public/` and Vite cannot
+   resolve a relative reference to something it does not process — the same
+   reason the four `border-image` rules in app.css and legacy.css are written
+   that way. */
+.fw-i {
+  --fw-i-size: 16px;
+  /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */
+  --fw-i-cols: 8;
+  --fw-i-rows: 10;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--fw-i-size);
+  height: var(--fw-i-size);
+  vertical-align: -3px;
+  background-image: url(/assets/ui/fw-icons.png);
+  background-repeat: no-repeat;
+  background-size: calc(var(--fw-i-size) * var(--fw-i-cols)) calc(var(--fw-i-size) * var(--fw-i-rows));
+  background-position: calc(var(--ix) * var(--fw-i-size) * -1) calc(var(--iy) * var(--fw-i-size) * -1);
+  image-rendering: pixelated;
+}
+.fw-i.lg {
+  --fw-i-size: 32px;
+  vertical-align: -6px;
+}
+
+/* There is deliberately NO visually-hidden text utility here.
+   M11 needed the damage-type mark to be in three accessible names, and a
+   `width:1px;overflow:hidden` span is the usual way to do it — but ws9-fit
+   audits exactly that shape to catch a control whose label has been cut off,
+   and it flagged ten of them across the device matrix the moment one existed.
+   A layout audit that shouts on genuine clipping is worth more than the
+   convenience, so the three sites say it in ways that leave no clipped boxes
+   behind: two build the `aria-label` themselves, and `MenuRow` gives the mark
+   `role="img"` and a name of its own (see `.pg-row-mark-wrap` in page.css). */
 
 /* Thin scrollbars for panels */
 * {

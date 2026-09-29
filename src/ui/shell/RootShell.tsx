@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { EvolutionModal } from '../components/EvolutionModal'
+import { assertRarityTokensMatch } from '../channels'
+import { Coach } from './Coach'
 import { DetailBand } from './DetailBand'
 import { HeaderBand } from './HeaderBand'
 import { SelectorBand } from './SelectorBand'
@@ -23,7 +25,7 @@ import '../../styles/shell.css'
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   perks: { title: 'Upgrade Perks', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
-  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast and scale.' },
+  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision and assist.' },
 }
 
 export function RootShell() {
@@ -32,6 +34,14 @@ export function RootShell() {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const [metaView, setMetaView] = useState<MetaView>('menu')
   const offers = useOffers(metaView, setMetaView)
+
+  // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
+  // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
+  // now the shell reads the tokens, so a drift would silently mis-colour every
+  // pack tile. Runs once, after the stylesheets are up.
+  useEffect(() => {
+    if (import.meta.env.DEV) assertRarityTokensMatch()
+  }, [])
 
   // The Watchtower's submenus are a change of Selector contents, not a screen.
   // Leaving the hub drops back to its menu so returning is never mid-submenu.
@@ -63,9 +73,15 @@ export function RootShell() {
 
   return (
     <div className="shell">
-      <HeaderBand meta={ctx.meta} />
+      <HeaderBand />
+      {/* First-run teaching, in its own grid row so it never covers the Stage
+          and never shifts a control (WS9). Renders nothing once taught. */}
+      <Coach />
       <StageBand ctx={ctx} />
-      <SelectorBand ctx={ctx} offers={offers} />
+      {/* No `ctx` and no `offers`: this band is the party row and nothing else.
+          The offers branch it used to carry was unreachable — see the note in
+          SelectorBand.tsx and the invariant in context.ts. */}
+      <SelectorBand />
       <DetailBand offers={offers} />
       <EvolutionModal />
     </div>
