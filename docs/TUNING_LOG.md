@@ -73,10 +73,61 @@ _(newest last)_
   that was starved of levels. Battles/recruits moved ≤1.7pt (paired noise; the
   XP change re-deals evolution/perk rolls behind it).
 
+### Diagnosis — where battles-first loses on the wide map (n=300, E1 state)
+
+`scratchpad/tuning/diag.ts` (per-fight hook on `simulateRun`):
+
+| | zero meta | Cartographer |
+|---|--:|--:|
+| win | 28.7% | 25.3% |
+| battles / run | 8.93 | 9.77 |
+| fights taken at layers 2 / 3 / 6 / 7 | 210 / 204 / 219 / 210 | 288 / 274 / 290 / 264 |
+| Gate HP lost per fight, layer 7 | 3.0 | 4.0 |
+| deaths at layer 7 (plain battle) | 15 | 29 |
+| Gate HP into the act-2 boss | 18.4 | 17.7 |
+
+Runs die in act 3's plain battles (layers 9–11 lose 4.6–6.7 Gate HP a fight),
+not at the bosses. The wide map hands the fight-first line more fights, and the
+model walked into every one of them however low the Gate was — a campfire one
+fork away included.
+
+### E2 — Gate-aware campfire rank in `prefPolicy` — KEEP
+
+- Change (`balance/runsim.ts`): every fixed-table line ranks a campfire first
+  (8, under the bosses' 9) when the Gate is at or below 60% (`GATE_HURT`, the
+  adaptive line's and the store-model's rest threshold).
+- Why it is a realistic player and not a gate trick: the Gate bar is on screen
+  all run and a campfire's first offer is its repair. The table's only other
+  state read (a full roster skips recruits) is the same kind. It changes no
+  game rule and applies identically to zero meta and every hub state.
+- `tune.ts 600 fresh carto`: zero specials 20.3 · battles 25.3 · recruits 18.8
+  · adaptive 30.5. Cartographer Δ specials −0.3 ±4.3 · battles **−0.3 ±4.3**
+  (was −1.7) · recruits +5.0 · adaptive +6.5.
+- n=210 (the report's cells): battles −4.3 ±7.8 — the first 210 seeds are a
+  noisier draw; passes the gate, but the point estimate is still negative.
+
+### E3 — wide map: every road into the pre-boss layer reaches its campfire — REVERT
+
+- Change (`runmap.ts`, wide map only, edges added, no RNG): each node of the
+  layer before the pre-boss layer gets an edge to the campfire.
+- `tune.ts 600 carto`: specials **−3.0 ±4.3** (worse: the stop-first line now
+  walks into the fire on every act instead of a fight, and loses the XP),
+  battles −0.2, recruits +5.5, adaptive +6.3. Reverted.
+
+### E4 — …and a merchant's Gate repair when hurt and able to pay — KEEP
+
+- Change (`balance/runsim.ts`): a hurt Gate (≤60%) with ≥ `GATE_REPAIR.price`
+  gold ranks a merchant 7 (the counter's repair — the same rule the merchant
+  stop already buys on at ≤65%).
+- `tune.ts 600 fresh carto`: zero specials 20.3 · battles 25.8 · recruits 19.5
+  · adaptive 30.5. Cartographer Δ specials −0.3 ±4.3 · battles **+0.3 ±4.4** ·
+  recruits +5.8 ±4.7 · adaptive +6.5 ±5.1.
+
 ## Current state / next step
 
-- Step 0 done; byte-identical check still running (full run 1/3, scratchpad
-  `tuning/full1.out`).
-- E1 kept. Next: diagnose where battles-first loses on the wide map
-  (`scratchpad/tuning/diag.ts`), then E2 — Gate-aware campfire rank in
-  `prefPolicy` vs a wide-map campfire-placement change.
+- Step 0 done; byte-identical check still running (full run 1/3).
+- E1 + E2 + E4 kept. Cartographer's point estimates are now −0.3 / +0.3 /
+  +5.8 / +6.5 at n=600. Next: E5 — try to lift the stop-first line on the wide
+  map so no line reads below zero (design lever on the wide map's stop
+  density), then run §6+§11+§12 filtered at report n and add the §11
+  first-timer floor gate.
