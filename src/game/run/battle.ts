@@ -53,8 +53,14 @@ const XP_KIND: Record<EncounterKind, number> = { normal: 1, elite: 1.4, boss: 1.
  * recruit or campfire stop. A fight pays more — the XP is still the price of
  * skipping one — but a stop is no longer a dead loss on the level curve, which
  * made a stop-first route a walk into the act-2 boss two levels short.
+ *
+ * 0.35 → **0.55** (tuning lane): at 0.35 the first-timer line — the
+ * stop-first heuristic REPORT §11 models — won 14% (15.3% at n=600), under its
+ * 15–35% band, because it reached act 3 levels short. At 0.55 it wins 20.3%
+ * (n=600) while the fight-first lines move ≤2pt: a fight still pays nearly
+ * twice a stop's XP, plus its gold and card. §6 has no stops, so it cannot move.
  */
-export const STOP_XP_SHARE = 0.35
+export const STOP_XP_SHARE = 0.55
 export const stopXp = (depth: number): number => Math.round(waveXp(depth, 'normal') * STOP_XP_SHARE)
 
 /** Level-XP one fielded hero earns, on average, for clearing a wave at `depth`. */

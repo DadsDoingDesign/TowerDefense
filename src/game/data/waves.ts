@@ -2,6 +2,7 @@ import { hashSeed, RNG } from '../core/rng'
 import { SPECIALISTS, specialistCount } from './behaviours'
 import { effectiveHp, ENEMY_TYPES, modKey } from './enemies'
 import type { SpawnEvent, WaveDef } from '../types'
+import { ACT_LAYERS, RUN_LAYERS } from '../run/threat'
 
 export type EncounterKind = 'normal' | 'elite' | 'boss'
 
@@ -1134,7 +1135,13 @@ function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, 
  * does, just aimed at the next maintainer instead of the player.)
  */
 function defaultLabel(depth: number, kind: EncounterKind, v: WaveVariant): string {
-  if (kind === 'boss') return v.label ? `The Final Watch — ${v.label}` : 'The Final Watch'
+  if (kind === 'boss') {
+    // The three-act road (Phase 3b) fields a boss at the close of every act; only
+    // the last one is the Final Watch. Acts I and II used to be announced as
+    // "The Final Watch" at depth 4 and 8.
+    const title = depth >= RUN_LAYERS - 1 ? 'The Final Watch' : `Act ${Math.ceil(depth / ACT_LAYERS)} Boss`
+    return v.label ? `${title} — ${v.label}` : title
+  }
   if (kind === 'elite') return `Elite — ${v.label}`
   return v.id === 'patrol' ? `Depth ${depth}` : `Depth ${depth} — ${v.label}`
 }
