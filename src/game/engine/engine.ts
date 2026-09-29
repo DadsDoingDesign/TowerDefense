@@ -2,6 +2,7 @@ import { GamePath } from '../core/path'
 import { hashSeed, nextId, RNG } from '../core/rng'
 import { dist, distSq, moveToward, type Vec2 } from '../core/vec'
 import { ENEMY_TYPES } from '../data/enemies'
+import { mergeMods } from '../data/archetypeTree'
 import type { EffectMods, EnemyType, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 import { computeCombat, type CombatProfile } from './combat'
 
@@ -50,6 +51,10 @@ export interface RtSentinel {
   procFlash: number // pulses when an on-hit effect fires (visual feedback, M7)
   /** Seconds until this Sentinel re-scores its target against the focus tactic. */
   retargetIn: number
+  /** Shots fired this wave — the cadence `volley` / `critEvery` count on (Phase 3b). */
+  shots: number
+  /** `elapsed` until which a `killRush` is running (Phase 3b). */
+  rushUntil: number
 }
 
 export interface RtEnemy {
@@ -312,6 +317,8 @@ export class GameEngine {
         procFlash: 0,
         // Stagger re-targeting deterministically so a big team never re-scores in one tick.
         retargetIn: (placeIndex % 4) * (RETARGET_INTERVAL / 4),
+        shots: 0,
+        rushUntil: 0,
       }
       placeIndex++
       this.sentinels.push(rt)
@@ -329,7 +336,12 @@ export class GameEngine {
     }
 
     this.spawnQueue = [...opts.wave.spawns].sort((a, b) => a.at - b.at)
+    // A team ward (a relic) is read off the team's mods once, not per hero.
+    this.leakWardLeft = Math.max(0, Math.floor(mergeMods(this.teamMods).leakWard ?? 0))
   }
+
+  /** Leaks this wave the Gate still shrugs off (`EffectMods.leakWard`, Phase 3b). */
+  private leakWardLeft = 0
 
   private nearestPathPoint(p: Vec2): Vec2 {
     // Sample the path coarsely to find the closest point.
@@ -510,6 +522,9 @@ export class GameEngine {
 
       // Take melee damage from enemies this Sentinel is blocking; reflect thorns.
       if (s.blockIds.length > 0) {
+        // Phase 3b: a blocker with `blockRegen` knits while it holds the line.
+        const regen = s.profile.mods.blockRegen
+        if (regen) s.hp = Math.min(s.maxHp, s.hp + s.maxHp * regen * dt)
         const mitigation = 50 / (50 + s.profile.physDef)
         let taken = 0
         for (const id of s.blockIds) {
@@ -559,11 +574,23 @@ export class GameEngine {
   }
 
   private fire(s: RtSentinel, target: RtEnemy): void {
-    s.cooldown = 1 / s.profile.rate
+    const m = s.profile.mods
+    s.shots++
+    // ---- rule capabilities (Phase 3b) — each is inert unless granted ------
+    // A rush multiplies the rate of THIS shot's reload; nothing else moves.
+    let rate = s.profile.rate
+    if (m.openingRush && this.elapsed < m.openingRush.dur) rate *= 1 + m.openingRush.rate
+    if (m.killRush && this.elapsed < s.rushUntil) rate *= 1 + m.killRush.rate
+    s.cooldown = 1 / rate
     s.fireFlash = 1
     this.onEvent?.('shoot', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
-    const isCrit = this.rng.chance(s.profile.critChance)
-    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
+    // The crit roll is ALWAYS drawn, so a cadence crit never shifts the combat
+    // stream for anything that fires after it.
+    const rolled = this.rng.chance(s.profile.critChance)
+    const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
+    const stand = m.lastStand && s.hp < s.maxHp * m.lastStand.below ? 1 + m.lastStand.damage : 1
+    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * stand
+    const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
     this.projectiles.push({
       id: nextId('p'),
       pos: { ...s.pos },
@@ -575,7 +602,7 @@ export class GameEngine {
       isCrit,
       speed: s.profile.projectileSpeed,
       splashRadius: s.profile.splashRadius,
-      pierce: s.profile.mods.pierce ?? 0,
+      pierce: (s.profile.mods.pierce ?? 0) + volley,
       color: s.def.accent,
       mods: s.profile.mods,
       lifedrain: s.profile.mods.lifedrain ?? 0,
@@ -633,7 +660,11 @@ export class GameEngine {
         // ones — only the bite the line takes is smaller. `leaks` is the number
         // the summary prints next to "left", so it reports the damage ACTUALLY
         // taken; reporting the un-assisted figure would make the receipt lie.
-        const dmg = e.type.leak * this.baseDamageMul
+        // Phase 3b: a team ward turns the first leaks of the wave aside. The
+        // body still reached the line — it counts — it just costs the Gate nothing.
+        const warded = this.leakWardLeft > 0
+        if (warded) this.leakWardLeft--
+        const dmg = warded ? 0 : e.type.leak * this.baseDamageMul
         this.baseHp -= dmg
         this.leaks += dmg
         // The head count is tracked separately from the damage, because they are
@@ -977,6 +1008,7 @@ export class GameEngine {
       const s = this.sentinels.find((x) => x.id === srcId)
       if (s) {
         s.kills++
+        if (s.profile.mods.killRush) s.rushUntil = this.elapsed + s.profile.mods.killRush.dur
         const xp = Math.round(e.maxHp * 0.2) + e.type.reward
         this.xpGained.set(srcId, (this.xpGained.get(srcId) ?? 0) + xp)
       }

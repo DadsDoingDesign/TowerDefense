@@ -61,6 +61,8 @@ const SNAPSHOT_FIELDS = [
   'runMods',
   'crossroads',
   'forkDone',
+  'relics',
+  'feats',
   'evolutionQueue',
   'dust',
   'lives',

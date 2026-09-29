@@ -8,8 +8,10 @@ import { createSentinel, restoreNameCounters } from '../../game/data/sentinels'
 import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
-import { merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { emptyPlacements } from '../../game/run/map'
+import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
+import { emptyPlacements, encounterNode } from '../../game/run/map'
+import { shelfSize } from '../../game/run/relics'
+import { freshFeats } from '../../game/run/settle'
 import { applyStatBonus, hubExtras, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit } from '../../game/run/recruits'
 import type { Archetype, Placement } from '../../game/types'
 import { sfx } from '../../audio/audio'
@@ -154,7 +156,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const leader = wearKit(company[0], kit)
     const worn = new Set([leader.equipment.mainHand, leader.equipment.offHand, leader.equipment.body].map((i) => i?.id))
     const { roster, inventory } = receiveItems([leader, ...company.slice(1)], st.inventory, kit.filter((i) => !worn.has(i.id)))
-    set({ roster, inventory, challenge, screen: 'map' })
+    // The feats ledger starts here, with the company as it marches out.
+    const feats = { ...freshFeats(), starter: archetype, startSize: roster.length, goldPeak: get().gold }
+    useMetaStore.getState().recordCodex({ specs: [...new Set(roster.flatMap((s) => s.branchPath))] })
+    set({ roster, inventory, challenge, screen: 'map', feats })
   },
 
   // Leaving for the Watchtower ends the run, so it settles like any other end.
@@ -247,6 +252,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       recruitOptions: snap.recruitOptions,
       reward: snap.reward,
       runMods: snap.runMods,
+      relics: snap.relics,
+      feats: snap.feats,
       crossroads: snap.crossroads,
       forkDone: snap.forkDone,
       evolutionQueue: snap.evolutionQueue,
@@ -328,12 +335,19 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     if (node.type === 'merchant') {
       // An OFFER: `rollMerchantShelf` rolls with the drought's luck but leaves
       // the pity counter alone; `buyMerchantItem` charges it on the sale (F4).
-      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity })
+      const relics = get().relics
+      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics, banner.thinPickings) })
       const recruit =
         roster.length < MAX_ROSTER && !banner.noRecruits
-          ? { sentinel: scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub()), price: RECRUIT_PRICE }
+          ? { sentinel: scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub(relics)), price: RECRUIT_PRICE }
           : null
-      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit } })
+      // The Gate repair is on every campaign counter (Phase 3b): the comeback.
+      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR }, rerolls: 0 } })
+      return
+    }
+    if (node.type === 'campfire') {
+      // Nothing is rolled: a campfire is the same two choices every time.
+      set({ event: { kind: 'campfire', nodeId } })
       return
     }
     if (node.type === 'shrine') {
@@ -341,7 +355,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       return
     }
     if (node.type === 'recruit') {
-      set({ event: { kind: 'recruit', nodeId }, recruitOptions: recruitSlate(streams.rng, roster, recruitHub()) })
+      set({ event: { kind: 'recruit', nodeId }, recruitOptions: recruitSlate(streams.rng, roster, recruitHub(get().relics)) })
       return
     }
 
@@ -354,7 +368,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // A Vow-made elite (Elite Watch) is drawn `eliteDepth` deeper; an elite
     // the MAP dealt stays at its own depth. `nodeEncounter` is the one
     // derivation — the map's preview reads the same one.
-    const wave = nodeEncounter(node, get().runSeed, banner)!
+    const wave = nodeEncounter(encounterNode(node), get().runSeed, banner)!
     const { baseHp, maxBaseHp } = get()
     set({
       activeNodeId: nodeId,

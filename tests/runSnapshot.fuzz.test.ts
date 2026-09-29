@@ -42,6 +42,7 @@ import {
   snapshotBattleMap,
   type RunSnapshot,
 } from '../src/state/runSnapshot'
+import { relicTeamMods } from '../src/game/data/relics'
 
 // ---------------------------------------------------------------- the base run
 
@@ -66,7 +67,7 @@ function buildBase(): Record<string, unknown> {
     ...s.roster[0],
     equipment: { mainHand: epic('oneHand'), offHand: { ...epic('offHand'), keepsake: true }, body: epic('body') },
     mutations: [muts[0]],
-    upgrades: { power: 1 },
+    perks: ['f5_second_wind'],
   }
   const extra = createSentinel('mystic')
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
@@ -78,8 +79,12 @@ function buildBase(): Record<string, unknown> {
     reward: [
       { id: 'rw-a', kind: 'item', title: 'An item', desc: '', rarity: 'epic', item: epic('body') },
       { id: 'rw-b', kind: 'stat', title: 'A stat', desc: '', rarity: 'rare', grant: { stats: { str: 2 }, mods: { rateMult: 1.1 } } },
+      { id: 'rw-c', kind: 'relic', title: 'Hound Banner', desc: '', rarity: 'rare', relic: 'hound_banner' },
     ],
-    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: createSentinel('rogue'), price: 90 } },
+    // Phase 3b: relics held (a stat one, a rule one, a team capability) and the feats ledger.
+    relics: ['ledger', 'charter', 'warding_stone'],
+    feats: { starter: 'fighter', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
+    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: createSentinel('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [createSentinel('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
   })
   const snap = captureRun(useGameStore.getState(), {
@@ -111,7 +116,7 @@ function assertFiniteCombat(s: Sentinel, teamMods: EffectMods[], where: string):
 function assertPlayable(snap: RunSnapshot, where: string): void {
   snapshotBattleMap(snap)
   describeSnapshot(snap)
-  const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster)]
+  const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
     ...snap.recruitOptions,
@@ -152,6 +157,12 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   }
   for (const k of ['gold', 'baseHp', 'maxBaseHp', 'enemyHpMult', 'threat', 'runBanner', 'dust', 'lives', 'round'] as const) {
     if (!Number.isFinite(snap[k])) throw new Error(`${where}: ${k} = ${snap[k]}`)
+  }
+  // v7: the merchant's Gate repair and reroll count both reach arithmetic.
+  const rep = snap.merchant?.repair
+  if (rep && !(Number.isFinite(rep.hp) && Number.isFinite(rep.price))) throw new Error(`${where}: merchant.repair`)
+  if (snap.merchant && snap.merchant.rerolls !== undefined && !Number.isFinite(snap.merchant.rerolls)) {
+    throw new Error(`${where}: merchant.rerolls = ${snap.merchant.rerolls}`)
   }
 }
 
@@ -336,5 +347,33 @@ describe('run snapshot fuzz', () => {
     expect(idCounterState()).toBeGreaterThanOrEqual(1_000_000)
     expect(nameCounterState().fighter).toBeGreaterThanOrEqual(500)
     expect(nextId()).not.toBe('e0')
+  })
+})
+
+describe('v6 → v7: the skill tree became spec perks', () => {
+  it('refunds every bought upgrade level and converts the free path levels', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; gold: number; inventory: Item[] }
+    raw.v = 6
+    const hero = raw.roster[0]
+    hero.upgrades = { power: 2, tempo: 1 }
+    delete hero.perks
+    const mythic = { ...raw.inventory[0], rarity: 'mythic' as const, grantUpgrade: { path: 'precision', levels: 1 } }
+    raw.inventory = [mythic]
+    const gold = raw.gold
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    // Onslaught L1+L2 (40 + 95) and Tempo L1 (40).
+    expect(snap!.gold).toBe(gold + 175)
+    expect(snap!.roster[0].upgrades).toBeUndefined()
+    const item = snap!.inventory[0]
+    expect(item.grantUpgrade).toBeUndefined()
+    expect(item.enchantments.some((e) => e.id === 'mythic_precision')).toBe(true)
+  })
+
+  it('leaves a v7 payload alone', () => {
+    const raw = buildBase() as Record<string, unknown> & { gold: number }
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap!.gold).toBe(raw.gold)
+    expect(snap!.roster[0].perks).toEqual(['f5_second_wind'])
   })
 })

@@ -4,6 +4,7 @@
  */
 import { RARITY } from '../../game/data/items'
 import type { ItemRarity } from '../../game/types'
+import { nodeThreatMult } from '../../game/run/threat'
 import type { GameData } from './types'
 
 /**
@@ -60,3 +61,15 @@ export const isLiveRun = (s: Pick<GameData, 'runPhase' | 'screen' | 'runSettled'
   s.runPhase === 'active' && s.screen !== 'hub' && !s.runSettled
 
 export const rarityColor = (r: ItemRarity) => RARITY[r].color
+
+/**
+ * The HP multiplier the current fight's enemies carry: the hub's (always 1
+ * today), the run's Threat, and — on a campaign node — what the node's own type
+ * adds (`nodeThreatMult`: an elite ×1.1, the final boss ×0.75). `startWave`
+ * spawns with it and `finishBattle` prices the wave's XP with it, so the two
+ * read one number.
+ */
+export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'mode' | 'activeNodeId' | 'runMap'>): number {
+  const node = s.mode === 'campaign' && s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
+  return s.enemyHpMult * s.threat * nodeThreatMult(node?.type)
+}

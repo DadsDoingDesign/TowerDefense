@@ -374,6 +374,8 @@ function gate(mix: FactionMix, depth: number): FactionMix {
  * fixed share either way, so every order costs the same pool.
  */
 const BOSS_CHAMPIONS = ['barrel5', 'torch5', 'tnt5'] as const
+/** The champions a boss with fewer than three fields, lightest leak first (Phase 3b). */
+const SHALLOW_BOSS_CHAMPIONS = ['torch5', 'tnt5'] as const
 
 const NORMAL_VARIANTS: readonly WaveVariant[] = [
   {
@@ -911,7 +913,16 @@ export function generateEncounter(depth: number, kind: EncounterKind, opts: Enco
   // roster made a shallow boss's HP pool swing 2.4× once `MIN_HP_MULT` clamped
   // the solve. The set is taken canonically and only the arrival order belongs
   // to the variant, which is the half that was interesting anyway.
-  const champSet: readonly string[] = BOSS_CHAMPIONS.slice(0, nChamps)
+  //
+  // A shallow boss (Phase 3b: the act bosses on layers 4 and 8) takes its one
+  // or two champions from the LIGHTEST leakers — Warlord Grukk (leak 11), then
+  // the Powderkeg King (15) — never the Colossus Keg first. At depth 4 the
+  // Keg's 2600 base HP is clamped to ×0.85 by `MIN_HP_MULT`, four times the
+  // budget it was solved for, and its 22-point leak ends a 20-HP Gate outright:
+  // measured, the act-1 boss ended 90% of first runs on that one body. A full
+  // three-champion boss is untouched.
+  const champSet: readonly string[] =
+    nChamps >= BOSS_CHAMPIONS.length ? BOSS_CHAMPIONS : SHALLOW_BOSS_CHAMPIONS.slice(0, nChamps)
   const champOrder = (v.champions ?? BOSS_CHAMPIONS).filter((id) => champSet.includes(id))
   const champs: string[] =
     kind === 'boss'

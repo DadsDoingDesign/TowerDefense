@@ -8,6 +8,10 @@ import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
+import { PerkPicker } from '../shell/PerkPicker'
+import { featName, usePerkUnlocks } from '../shell/perkUnlocks'
+import { availableEvolutions, lockedEvolutions } from '../../game/run/unlocks'
+import { LOCKED_SPECS } from '../../game/data/achievements'
 import { Tap } from '../pointer'
 
 /**
@@ -29,6 +33,7 @@ export function EvolutionModal() {
   const queue = useGameStore((s) => s.evolutionQueue)
   const roster = useGameStore((s) => s.roster)
   const choose = useGameStore((s) => s.chooseEvolution)
+  const unlocked = usePerkUnlocks()
   // The heads-up the coach strip gives at level 8 is a warning that this is
   // coming. This is the explanation of what it *is*, and it stays until the
   // player has been through one — see `markTaught('evolve')` below.
@@ -97,11 +102,15 @@ export function EvolutionModal() {
     return () => document.removeEventListener('keydown', onKeyDown, true)
   }, [open, queue[0]])
 
-  if (!open) return null
+  // No evolution owed: the level-up perk choice (Phase 3b) uses this same
+  // moment and the same dialog contract — evolutions first, then perks.
+  if (!open) return <PerkPicker />
   const sentinel = roster.find((s) => s.id === queue[0])
   if (!sentinel) return null
 
-  const options = evolutionOptions(sentinel)
+  // Feat-locked specs (Phase 3b) are left out of the choice and named below it.
+  const options = availableEvolutions(sentinel, unlocked)
+  const locked = lockedEvolutions(sentinel, unlocked)
   const chosen = options.find((o) => o.id === picked) ?? null
   const tier = sentinel.branchPath.length === 1 ? 'Sub-archetype' : 'Specialization'
 
@@ -147,6 +156,11 @@ export function EvolutionModal() {
             </button>
           ))}
         </div>
+        {locked.map((node) => (
+          <p className="evolve-more" key={node.id}>
+            {node.name} — locked, {featName(LOCKED_SPECS[node.id] ?? '')}.
+          </p>
+        ))}
         {chosen ? (
           <EvolvePreview hero={sentinel} nodeId={chosen.id} />
         ) : (

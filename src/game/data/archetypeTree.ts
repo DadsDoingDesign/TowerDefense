@@ -356,6 +356,21 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     out.buffAura = bestOf(out.buffAura, m.buffAura)
     out.dmgReductionAura = bestOf(out.dmgReductionAura, m.dmgReductionAura)
     out.trap = bestOf(out.trap, m.trap)
+    // Rule capabilities (Phase 3b). A cadence is better when it is SHORTER, so
+    // `volley` and `critEvery` keep the smallest interval (best-of on `every`
+    // would keep the worst); the timed rushes and the last stand keep the best
+    // of each field like the other statuses; a ward is a count and adds up.
+    if (m.volley) {
+      out.volley = out.volley
+        ? { every: Math.min(out.volley.every, m.volley.every), pierce: Math.max(out.volley.pierce, m.volley.pierce) }
+        : m.volley
+    }
+    if (m.critEvery != null) out.critEvery = out.critEvery != null ? Math.min(out.critEvery, m.critEvery) : m.critEvery
+    if (m.blockRegen != null) out.blockRegen = Math.max(out.blockRegen ?? 0, m.blockRegen)
+    out.killRush = bestOf(out.killRush, m.killRush)
+    out.openingRush = bestOf(out.openingRush, m.openingRush)
+    out.lastStand = bestOf(out.lastStand, m.lastStand)
+    if (m.leakWard) out.leakWard = (out.leakWard ?? 0) + m.leakWard
   }
   return out
 }

@@ -17,6 +17,7 @@ import { UpdateNotice } from '../UpdateNotice'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { RunSeed } from './RunSeed'
+import { FeatsEarned } from './FeatsEarned'
 import { VolumeSlider } from './VolumeSlider'
 
 /**
@@ -698,6 +699,9 @@ export function ResultScreen() {
           first, and the offer reads as an option rather than as a verdict on
           the player. Loss only (F11); the control it explains is pinned in the
           foot so it does not have to be scrolled to. */}
+      {/* Feats this run earned (Phase 3b): what the player opened, by name. */}
+      <FeatsEarned />
+
       {!won && <AssistCard assist={assist} />}
 
       <InfoCard

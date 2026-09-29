@@ -59,9 +59,32 @@ export const endlessMerchantLuck = (round: number): number => Math.min(0.4, roun
  * Deterministic in the stream: the same loot-stream position deals the same
  * shelf (item ids aside, which come from the process-wide id counter).
  */
-export function rollMerchantShelf(rng: RNG, opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity }): ShelfEntry[] {
-  return Array.from({ length: 4 }, () => {
+export function rollMerchantShelf(rng: RNG, opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number }): ShelfEntry[] {
+  return Array.from({ length: opts.size ?? 4 }, () => {
     const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false })
     return { item, price: ITEM_PRICE[item.rarity] }
   })
 }
+
+/**
+ * ---------------------------------------------------------------------------
+ * The gold sinks that replaced the skill tree (Phase 3b)
+ * ---------------------------------------------------------------------------
+ *
+ * Gold used to have one real destination: the per-hero upgrade tree (≈945 gold
+ * to max one hero's three paths). Those paths are spec perks now, chosen at
+ * level-up for free, so the gold needs somewhere to go that is a DECISION
+ * rather than a stat top-up:
+ *
+ *  - **Gate repair** at a merchant — the comeback the review found missing;
+ *  - **a reroll of the merchant's shelf**, dearer each time at that stall.
+ */
+
+/** A merchant's Gate repair: `hp` Gate for `price` gold, once per visit. */
+export const GATE_REPAIR = { hp: 5, price: 35 } as const
+
+/** The Gate after buying a merchant repair (capped at its maximum). */
+export const repairGate = (baseHp: number, maxBaseHp: number): number => Math.min(maxBaseHp, baseHp + GATE_REPAIR.hp)
+
+/** What rerolling a merchant's shelf costs after `rerolls` rerolls at this stall. */
+export const rerollCost = (rerolls: number): number => 20 + 15 * Math.max(0, Math.floor(rerolls))

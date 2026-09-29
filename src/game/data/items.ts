@@ -517,7 +517,12 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   const demand = typeDemand(opts.roster)
   // Keepsakes only appear on unforced (random-slot) drops. They wear on the body
   // slot but buff the whole team instead of the holder.
-  const isKeepsake = opts.slot === undefined && rng.chance(opts.keepsakeChance ?? 0.12)
+  // Keepsakes became RELICS (Phase 3b, `data/relics.ts`): a company-wide buff
+  // is a reward card now, not a body-slot item. The chance draw is still taken
+  // so every item behind it rolls from the same stream position; it just
+  // never lands unless a caller asks for one (the old saves' keepsakes still
+  // work — `teamKeepsakeMods`).
+  const isKeepsake = opts.slot === undefined && rng.chance(opts.keepsakeChance ?? 0)
   const slot: ItemSlot = opts.slot ?? rng.pick(['oneHand', 'oneHand', 'twoHand', 'offHand', 'body', 'body'] as ItemSlot[])
 
   if (isKeepsake) {
@@ -557,11 +562,10 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     ench.push({ id: c.id, label: c.label, ...c.roll(rng, cfg.budget) })
   }
   const name = nameItem(cfg.label, noun, ench)
-  // Mythic items grant a free level toward a slot-themed upgrade path.
-  const grantUpgrade =
-    rarity === 'mythic'
-      ? { path: slot === 'body' ? 'tempo' : slot === 'offHand' ? 'precision' : 'power', levels: 1 }
-      : undefined
+  // A Mythic carries a slot-themed edge. It used to be a free level of an
+  // upgrade path (`grantUpgrade`); the paths are spec perks now (Phase 3b), so
+  // the same level's value rides on the item as an enchantment instead.
+  if (rarity === 'mythic') ench.push(mythicEdge(slot))
   return {
     id: nextId('itm'),
     name: name.trim(),
@@ -569,9 +573,22 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     rarity,
     base: baseFor(slot, cfg.budget, rng, weapon),
     enchantments: ench,
-    ...(grantUpgrade ? { grantUpgrade } : {}),
   }
 }
+
+/**
+ * The Mythic edge — the old upgrade-path level at the same value: a weapon's
+ * Onslaught (+15% damage), a body's Tempo (+12% attack speed), an off-hand's
+ * Precision (+14% crit). `runSnapshot` converts a v6 item's `grantUpgrade`
+ * through the same table.
+ */
+export const MYTHIC_EDGE: Record<string, Enchantment> = {
+  power: { id: 'mythic_power', label: 'Mythic Onslaught', mods: { damageMult: 1.15 } },
+  tempo: { id: 'mythic_tempo', label: 'Mythic Tempo', mods: { rateMult: 1.12 } },
+  precision: { id: 'mythic_precision', label: 'Mythic Precision', mods: { critChanceAdd: 0.14 } },
+}
+export const mythicEdge = (slot: ItemSlot): Enchantment =>
+  ({ ...MYTHIC_EDGE[slot === 'body' ? 'tempo' : slot === 'offHand' ? 'precision' : 'power'] })
 
 // ---- economy sinks ----
 export function reforgeCost(item: Item): number {

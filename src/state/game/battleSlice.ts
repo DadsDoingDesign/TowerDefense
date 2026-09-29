@@ -3,24 +3,27 @@
  * place a wave pays out (`finishBattle`) for both modes.
  */
 import { GameEngine } from '../../game/engine/engine'
+import { hashSeed, RNG } from '../../game/core/rng'
 import { teamKeepsakeMods } from '../../game/engine/combat'
 import { generateItem } from '../../game/data/items'
-import { generateRewardCards } from '../../game/data/rewards'
-import { rollMutationChoices } from '../../game/data/mutations'
-import { applyBattleXp, combatSeed, endlessRoundSpoils } from '../../game/run/battle'
+import { relicTeamMods } from '../../game/data/relics'
+import { afterFightRelics, cartularyRelic, diaryXp, handSize, rewardHand } from '../../game/run/relics'
+import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
+import { applyBattleXp, combatSeed, endlessRoundSpoils, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, placedSentinels } from '../../game/run/map'
 import { receiveItems, recruitSlate } from '../../game/run/recruits'
 import { challengeGrant } from '../../game/run/settle'
-import { clearBonusGold, nodeClearLuck, threatAfterClear, threatAfterRound } from '../../game/run/threat'
+import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
 import { bannerRules, useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
-import { beat, clearBeatTimer, recruitHub, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS } from './runtime'
-import { canStartWave } from './selectors'
+import { runFactsFromState } from './settle'
+import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS } from './runtime'
+import { battleHpMult, canStartWave } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
 export interface BattleActions {
@@ -66,7 +69,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
 
   startWave: () => {
     const st = get()
-    const { battleMap, roster, placements, baseHp, maxBaseHp, enemyHpMult, threat, mode, currentWave, tactics, runMods } = st
+    const { battleMap, roster, placements, baseHp, maxBaseHp, mode, currentWave, tactics, runMods } = st
     // ---- the load-bearing invariant (C-1) --------------------------------
     // A wave that has already resolved can never be fought again, and a node
     // already in `clearedNodeIds` can never be re-fought. Both grants — gold,
@@ -81,7 +84,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     if (!canStartWave(st)) return
     if (!currentWave) return // narrowing only — `canStartWave` already rejected it
     // Both modes compound via Threat (H7): one difficulty model covers both.
-    const effHpMult = enemyHpMult * threat
+    const effHpMult = battleHpMult(st)
     // The battle's combat rolls are pinned to (run seed, node, wave) — replaying
     // the same run replays the same fight, and no two nodes share a sequence.
     // A campaign wave without a node never reaches this line (`canStartWave`),
@@ -95,7 +98,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       baseHp,
       maxBaseHp,
       enemyHpMult: effHpMult,
-      teamMods: [...teamKeepsakeMods(roster), ...runMods],
+      // Relics (Phase 3b) ride beside the legacy keepsakes and stat-card mods an
+      // older save may still carry.
+      teamMods: [...teamKeepsakeMods(roster), ...runMods, ...relicTeamMods(st.relics)],
       tactics,
       seed: combatSeed(st.runSeed, nodeKey, waveIndex),
       // The assist dial is read HERE, not inside the sim (M34). The engine
@@ -111,7 +116,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       onEvent: gameSfx,
     })
     sfx('wave')
-    set({ engine, battlePhase: 'battle', selectedSentinelId: null, hud: engine.hudSnapshot() })
+    // The Codex notes every goblin the Watch has faced; the feats note the
+    // biggest company ever fielded (Phase 3b).
+    useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))] })
+    const fielded = engine.sentinels.length
+    set({
+      engine,
+      battlePhase: 'battle',
+      selectedSentinelId: null,
+      hud: engine.hudSnapshot(),
+      feats: fielded > st.feats.maxFielded ? { ...st.feats, maxFielded: fielded } : st.feats,
+    })
   },
 
   syncHud: () => {
@@ -185,7 +200,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       set(abandonBattle(st.mode))
       return
     }
-    const result = st.engine.result()
+    const rawResult = st.engine.result()
     // The payout lands here, so the coin does too (H17): sting → hold →
     // receipt, with the money on the receipt. It sounds when ANY currency
     // lands, not just kill gold — see `clearBonusGold` (F12). (No 'confirm'
@@ -195,13 +210,35 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       st.mode === 'campaign' && st.activeNodeId
         ? st.runMap.nodes.find((n) => n.id === st.activeNodeId)
         : undefined
+    // Levels are a resource, not a clock (Phase 3b): the wave's raw XP decides
+    // who gets the share, `waveXp` decides how big the share is. The receipt
+    // prints the re-priced number, because it is the one the heroes received.
+    const endlessSpoils = st.mode === 'endless' ? endlessRoundSpoils(st.round) : null
+    const result = {
+      ...rawResult,
+      perSentinel: st.currentWave
+        ? levelXpAwards(rawResult.perSentinel, {
+            wave: st.currentWave,
+            hpMult: battleHpMult(st),
+            depth: settlingNode ? settlingNode.layer : st.round,
+            kind: settlingNode
+              ? mapKind(settlingNode)
+              : endlessSpoils?.isBoss
+                ? 'boss'
+                : endlessSpoils?.isElite
+                  ? 'elite'
+                  : 'normal',
+          })
+        : rawResult.perSentinel,
+    }
     const nodePurse = settlingNode ? clearBonusGold(settlingNode) : 0
     if (result.status === 'cleared' && (result.goldEarned > 0 || nodePurse > 0)) sfx('coin')
     const totalKills = st.runKills + result.enemiesKilled
     const totalDowns = st.runDowns + result.downed
 
     // XP + evolution apply in both modes and both outcomes.
-    const { roster: rosterXp, evolutionQueue } = applyBattleXp(st.roster, result.perSentinel)
+    // The War Diary relic tops up the least-levelled hero on the field.
+    const { roster: rosterXp, evolutionQueue } = applyBattleXp(st.roster, diaryXp(result.perSentinel, st.roster, st.relics))
 
     if (st.mode === 'endless') {
       if (result.status === 'cleared') {
@@ -242,7 +279,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           // Endless pays through the SAME ledger as a campaign run (M13).
           const marks = useMetaStore
             .getState()
-            .grantRunRewards({ mode: 'endless', depth: st.wins, won: false, kills: totalKills, downs: totalDowns })
+            .grantRunRewards({ mode: 'endless', depth: st.wins, won: false, kills: totalKills, downs: totalDowns, facts: runFactsFromState(st, false) })
           // The run is over, and losing has a sound (M32).
           sfx('defeat')
           set({
@@ -303,7 +340,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       const depth = get().clearedNodeIds.length - 1
       const marks = useMetaStore
         .getState()
-        .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge) })
+        .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
       set({
         runPhase: 'lost',
         // `grantRunRewards` just paid this run out; settling it here is what
@@ -329,14 +366,32 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     const reachable = frontierFrom(runMap, activeNodeId, cleared)
     const wonRun = node.type === 'boss'
     if (wonRun) sfx('victory')
+    // An act boss down is a feat's fact; one felled without a scratch on the
+    // Gate is a better one (Phase 3b).
+    const actBoss = node.type === 'miniboss'
+    const feats = {
+      ...st.feats,
+      actBosses: st.feats.actBosses + (actBoss ? 1 : 0),
+      flawlessBosses: st.feats.flawlessBosses + (actBoss && result.baseHpLeft >= st.baseHp ? 1 : 0),
+      goldPeak: Math.max(st.feats.goldPeak, gold + result.goldEarned + clearBonusGold(node)),
+    }
     const marks = wonRun
       ? useMetaStore
           .getState()
-          .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge) })
+          .grantRunRewards({
+            depth: cleared.length - 1,
+            won: true,
+            kills: totalKills,
+            downs: totalDowns,
+            banner: st.runBanner,
+            ...challengeGrant(st.challenge),
+            facts: runFactsFromState({ ...st, feats, roster: rosterXp, clearedNodeIds: cleared }, true),
+          })
       : 0
     // What the NODE costs and what the NODE pays: both follow the kind the map
     // dealt, not the one the Banner substituted (see `mapKind`).
-    const nextThreat = threatAfterClear(st.threat, node)
+    // Threat follows the road: the next stop is fought at the next layer's.
+    const nextThreat = threatAfterLayer(node.layer, banner.startThreat)
     const bonusGold = clearBonusGold(node)
     const luck = nodeClearLuck(node)
 
@@ -349,28 +404,48 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // hand is an offer of which at most one card is taken, so it rolls with
     // the drought's luck and `chooseReward` charges the card actually picked.
     const pity = { ...st.lootPity }
+    const handKind = node.type === 'miniboss' ? 'boss' : node.type === 'elite' ? 'elite' : 'battle'
     const reward = wonRun
       ? null
-      : generateRewardCards(streams.rng, { luck, count: banner.thinPickings ? 2 : 3, roster: rosterXp, pity })
+      : rewardHand(streams.rng, {
+          // An act boss's hand is three relics; an elite's always holds one.
+          kind: handKind,
+          luck,
+          count: handSize({ thinPickings: banner.thinPickings }),
+          noBattleRelics: banner.thinPickings,
+          held: st.relics,
+          unlocked: relicUnlocked,
+          roster: rosterXp,
+          pity,
+        })
+    // The Relic Cartulary: one more relic beside an act boss's hand, from its
+    // own seeded stream so the service re-deals nothing else in the run.
+    if (reward && handKind === 'boss' && runUnlocked('cartulary')) {
+      const extra = cartularyRelic(new RNG(hashSeed(st.runSeed, 'cartulary', node.layer)), { luck, held: st.relics, hand: reward, unlocked: relicUnlocked })
+      if (extra) reward.push(extra)
+    }
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
       ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity }))
       : []
 
-    // At the map's halfway point, fire the one-time fork: recruit or mutate.
-    const fireFork = forkFires(runMap, node.layer, st.forkDone, wonRun)
+    // After each act boss, the Crossroads: recruit or mutate (Phase 3b).
+    const fireFork = !wonRun && forkFires(node)
     // Both halves of the fork are dealt HERE, from the seeded run stream, and
     // then live in run state until the player answers (M8) — so the offer
     // survives a snapshot unchanged and "aim at another hero" is not a reroll.
     const crossroads: Crossroads | null = fireFork
       ? {
-          recruits: rosterXp.length < MAX_ROSTER && !banner.noRecruits ? recruitSlate(streams.rng, rosterXp, recruitHub()) : [],
+          recruits: rosterXp.length < MAX_ROSTER && !banner.noRecruits ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
           mutations: rollMutationChoices(
             streams.rng,
             // Nothing already on the company's books — the offer must not
             // contain an option that is a no-op for the hero it lands on.
             [...new Set(rosterXp.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))],
+            // Two under Vow 1 (Thin Pickings: half the offer), else three — one
+            // of each template (Phase 3b). The Strange Growth feat adds one.
+            mutationOfferSize(banner.thinPickings, featUnlocked('mutant')),
           ),
           mutationHeroId: null,
         }
@@ -378,8 +453,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
 
     set({
       roster: rosterXp,
-      gold: gold + result.goldEarned + bonusGold,
-      baseHp: result.baseHpLeft,
+      // Field Surgeon's Kit and the Tithe Box pay on every won fight.
+      ...afterFightRelics(st.relics, { baseHp: result.baseHpLeft, maxBaseHp: st.maxBaseHp, gold: gold + result.goldEarned + bonusGold }),
       inventory: wonRun ? inventory : [...inventory, ...bossLoot],
       threat: nextThreat,
       lastResult: result,
@@ -393,6 +468,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       forkDone: st.forkDone || fireFork,
       evolutionQueue,
       clearedNodeIds: cleared,
+      feats,
       currentNodeId: activeNodeId,
       reachableNodeIds: reachable,
       runPhase: wonRun ? 'won' : 'active',

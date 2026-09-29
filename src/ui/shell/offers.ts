@@ -2,16 +2,19 @@ import { canUpgrade, describeBase, RARITY, reforgeDust, upgradeDust } from '../.
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { getNode } from '../../game/data/archetypeTree'
 import { mutationName } from '../../game/data/mutations'
-import { UPGRADE_PATHS } from '../../game/data/upgradeTree'
 import { buildName } from '../../game/engine/leveling'
 import { computeCombat } from '../../game/engine/combat'
-import { MAX_ROSTER, THREAT_PER_CHOICE, THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
+import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
 import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { dailySeed, utcDateKey } from '../../state/daily'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
+import { campfireOffers, merchantServiceOffers } from './campfireOffers'
+import { relicLines } from './relicOffers'
+import { codexOffers } from './codexOffers'
+import { ACHIEVEMENTS } from '../../game/data/achievements'
 import type { Archetype, Item, Sentinel } from '../../game/types'
 
 export interface Price {
@@ -200,49 +203,27 @@ export interface Offer {
 }
 
 /**
- * The Threat a choice charges, said out loud at the point it is charged (M5).
+ * What a choice costs in Threat, said at the point of choosing — which is now
+ * nothing (Phase 3b).
  *
- * `acceptShrine`, `acceptRecruit`, `recruitTeammate`, `chooseHeroMutation` and
- * `buyMerchantRecruit` all multiply the run's Threat by `THREAT_PER_CHOICE`
- * — every enemy in every later wave gets that much more HP — and no terms text
- * anywhere mentioned it. Declining, walking on, buying *items* and merely
- * AIMING a mutation (`aimHeroMutation` commits nothing) do not charge it.
+ * Accepting a hire, a pact or a mutation used to multiply the run's Threat by
+ * `THREAT_PER_CHOICE` (×1.05), and consuming a merchant / shrine / recruit stop
+ * charged a ×1.13 visit step on top, so these terms read "Threat ×1.19 if you
+ * take it". The review's verdict was that Threat punished getting stronger.
+ * Threat now follows the road alone (`run/threat.ts`): every stop moves the
+ * company one layer on, and the next fight is at that layer's Threat whatever
+ * was taken. The terms say so, because the old wording is still in players'
+ * heads and "take it or leave it, it costs the same" is the new rule.
  *
- * **There are two shapes of this, because there are two kinds of place it is
- * charged in, and one blanket string is now a lie in one of them.**
- *
- * On the MAP, `completeNode` charges `THREAT_PER_NODE.special` (×1.13) for
- * consuming a merchant / shrine / recruit node *at all*, decision or no
- * decision — so "Walking away costs nothing" stopped being true the moment that
- * rule landed. Walking away is still the cheaper of the two, which is the thing
- * the terms have to keep saying clearly; it is the ×1.05 you avoid, not the
- * visit. The two steps compose, so accepting is ×1.13 × 1.05.
- *
- * At the CROSSROADS there is no visit step at all — `finishCrossroads` only
- * changes the screen — so marching on really is free there, and that variant
- * keeps the original wording.
- *
- * In ENDLESS neither step exists: rooms go through `endlessOpenRoom`, which
- * touches `threat` nowhere, and `endlessShrineAccept` / `endlessRecruit` charge
- * no choice tax either. Every call site below stays guarded on the mode rather
- * than quoting a campaign number at an endless player.
+ * Endless has its own round-by-round Threat and never charged either step, so
+ * every call site stays guarded on the mode.
  */
-const VISIT_MULT = THREAT_PER_NODE.special
-const ACCEPT_MULT = VISIT_MULT * THREAT_PER_CHOICE
-
-/** Terms for a special node on the map, where the visit itself is already billed. */
-export const THREAT_TAX_VISIT: string[] = [
-  `Threat ×${ACCEPT_MULT.toFixed(2)} if you take it — ×${VISIT_MULT.toFixed(2)} for the stop itself, ×${THREAT_PER_CHOICE.toFixed(2)} more for the offer.`,
-  `Walking away still pays the ×${VISIT_MULT.toFixed(2)}: reaching this node is what costs that, not the decision. Threat is the HP multiplier on every enemy in every wave that follows.`,
+export const THREAT_FREE_CHOICE: string[] = [
+  'No Threat for taking it. Threat rises with every stop you pass, whatever you take there.',
 ]
 
-/** Terms at the Crossroads, which is not a map node — marching on is genuinely free. */
-export const THREAT_TAX_FREE_EXIT: string[] = [
-  // "Marching on costs nothing" used to close this line, and there is no
-  // marching on from step one of the fork: it offers a recruit or a hero to
-  // aim at and nothing else. The sentence priced an option that did not exist.
-  `Threat ×${THREAT_PER_CHOICE.toFixed(2)}: every enemy in every later wave gets ${Math.round((THREAT_PER_CHOICE - 1) * 100)}% more HP.`,
-]
+/** At the Crossroads — not a map stop, so nothing about the road moves. */
+export const THREAT_FREE_FORK: string[] = ['No Threat for taking it: the Crossroads is not a stop on the road.']
 
 /**
  * Sprite path for an archetype — the real Tiny Swords art, not a stand-in.
@@ -451,6 +432,7 @@ function contextOffers(
   if (kind === 'merchant') return merchantOffers(st)
   if (kind === 'shrine') return shrineOffers(st)
   if (kind === 'recruit') return recruitOffers(st)
+  if (kind === 'campfire') return campfireOffers(st, runUnlocked('fieldKitchen'))
   if (kind === 'forge') return forgeOffers(st)
   return []
 }
@@ -499,7 +481,7 @@ const inEndlessRoom = (st: St): boolean => inEndless(st) && !!st.endlessRoom
 type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
-export type MetaView = 'menu' | 'perks' | 'settings'
+export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
 
 /**
  * ---------------------------------------------------------------------------
@@ -662,7 +644,7 @@ function merchantOffers(st: St): Offer[] {
       // the merchant is a map special, so the visit step is already on the bill.
       // (Endless merchants deal `recruit: null`, so this branch is campaign in
       // practice — guarded anyway rather than relying on that.)
-      body: [...heroBody(r.sentinel), ...(inEndless(st) ? [] : THREAT_TAX_VISIT)],
+      body: [...heroBody(r.sentinel), ...(inEndless(st) ? [] : THREAT_FREE_CHOICE)],
       action: {
         label: 'Recruit',
         cost: { amount: r.price, currency: 'gold' },
@@ -672,6 +654,7 @@ function merchantOffers(st: St): Offer[] {
       },
     })
   }
+  out.push(...merchantServiceOffers(st))
   out.push(leaveOffer(st))
   return out
 }
@@ -691,7 +674,7 @@ function shrineOffers(st: St): Offer[] {
       // ×1.13 visit, so walking away is cheaper rather than free. The endless
       // room charges neither step (`endlessShrineAccept` does not touch
       // `threat`), so the terms stay campaign-only or they become a new lie.
-      body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...(inEndless(st) ? [] : THREAT_TAX_VISIT)],
+      body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...(inEndless(st) ? [] : THREAT_FREE_CHOICE)],
       action: { label: 'Accept the terms', run: accept },
       secondary: inEndless(st)
         ? { label: 'Walk away', icon: 'back', run: () => st.endlessCloseRoom() }
@@ -715,7 +698,7 @@ function recruitOffers(st: St): Offer[] {
       ...(full ? ['Your company is full — dismiss someone first.'] : []),
       // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
       // recruit node's own visit step; endless rooms pay neither.
-      ...(inEndless(st) || full ? [] : THREAT_TAX_VISIT),
+      ...(inEndless(st) || full ? [] : THREAT_FREE_CHOICE),
     ],
     action: {
       // The tapped candidate's id goes to the store in both modes. Without it
@@ -807,16 +790,18 @@ function rewardOffers(st: St): Offer[] {
     // applies to the whole watch", which is false for every item card: an item
     // goes to the pack and helps whoever wears it.
     // Short, because it shares the row with the card's name and rarity.
-    sub: c.kind === 'item' ? 'to pack' : 'company',
+    sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'company',
     rarity: c.rarity,
     color: rarityVar(c.rarity),
-    icon: c.item ? itemIcon(c.item) : 'boon',
+    icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? 'relic' : 'boon',
     mark: c.item ? damageMark(c.item) : null,
     bodyIcons: !!c.item,
     warn: c.downside ? `Downside — ${c.downside}` : undefined,
     body: (c.item
       ? [c.desc, ...itemBody(c.item)]
-      : [
+      : c.kind === 'relic'
+        ? relicLines(c.relic)
+        : [
           c.desc,
           c.grant ? describeGrant(c.grant) : '',
           ...(c.grant?.mods ? describeMods(c.grant.mods) : []),
@@ -918,12 +903,9 @@ function crossroadsOffers(st: St): Offer[] {
           // line — `mutations.ts` states that its `downside` is the number the
           // engine applies, and this is what lets a player check that.
           ...describeMods(m.mods),
-          ...(m.grantUpgrade
-            ? [`Also grants ${aimed.name} ${m.grantUpgrade.levels} free level of ${upgradePathName(m.grantUpgrade.path)}.`]
-            : []),
           held
             ? `${aimed.name} already carries this one.`
-            : `Permanent — ${aimed.name} keeps it for the rest of the run and there is no reroll. Threat ×${THREAT_PER_CHOICE.toFixed(2)} when it lands.`,
+            : `Permanent — ${aimed.name} keeps it for the rest of the run and there is no reroll.`,
         ],
         action: {
           label: held ? 'Already carried' : `Give ${aimed.name} ${name}`,
@@ -969,7 +951,7 @@ function crossroadsOffers(st: St): Offer[] {
     // The FREE_EXIT variant, not the VISIT one: the Crossroads is a screen, not
     // a map node — `finishCrossroads` only changes `screen` and charges no
     // visit step — so marching on here really does cost nothing.
-    body: [...heroBody(s), ...THREAT_TAX_FREE_EXIT],
+    body: [...heroBody(s), ...THREAT_FREE_FORK],
     action: { label: 'Take the recruit', run: () => st.recruitTeammate(s.id) },
   }))
   for (const h of st.roster) {
@@ -993,9 +975,6 @@ function crossroadsOffers(st: St): Offer[] {
   }
   return out
 }
-
-/** The upgrade path a mutation grants a free level of, by its player-facing name. */
-const upgradePathName = (id: string): string => UPGRADE_PATHS.find((p) => p.id === id)?.name ?? id
 
 function roomOffers(st: St): Offer[] {
   const rooms = [
@@ -1338,11 +1317,26 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') return [back, ...settingsOffers(settings)]
+  if (view === 'codex') return [back, ...codexOffers(meta)]
   if (view === 'perks') {
     return [back, ...UPGRADES.map((u): Offer => {
       const level = meta.upgrades[u.id] ?? 0
       const maxed = level >= u.maxLevel
       const cost = meta.upgradeCost(u.id)
+      // A service opened by a feat (Phase 3b): shown, priced, and locked until
+      // the feat is earned — the row says which one, so the goal is legible.
+      const feat = u.requires && !meta.achieved(u.requires) ? ACHIEVEMENTS.find((a) => a.id === u.requires) : undefined
+      if (feat) {
+        return {
+          id: u.id,
+          title: u.name,
+          sub: 'Locked',
+          icon: PERK_ICON[u.id] ?? 'boon',
+          dim: true,
+          body: [u.desc, `Opens with the feat ${feat.name}: ${feat.feat}`, `Then ${moneyText(cost, 'marks')}.`],
+          action: { label: `Locked — ${feat.name}`, run: () => {}, disabled: true },
+        }
+      }
       return {
         id: u.id,
         title: u.name,
@@ -1391,6 +1385,15 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       immediate: true,
       body: ['Spend Watch Marks on permanent bonuses that carry between runs.'],
       action: { label: 'Open', run: () => setView('perks') },
+    },
+    {
+      id: 'codex',
+      title: 'Codex',
+      sub: `${Object.keys(meta.achievements).length}/${ACHIEVEMENTS.length} feats`,
+      icon: 'grimoire',
+      immediate: true,
+      body: ['Feats earned and still open, and every goblin, relic, specialization and perk the Watch has seen.'],
+      action: { label: 'Open', run: () => setView('codex') },
     },
     {
       id: 'endless',

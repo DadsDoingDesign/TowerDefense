@@ -3,13 +3,17 @@
  * post-wave reward pick, and the mid-map crossroads fork.
  */
 import { creditPity } from '../../game/data/items'
-import { MAX_ROSTER } from '../../game/run/economy'
+import { merchantLuck, MAX_ROSTER, repairGate, rerollCost, rollMerchantShelf } from '../../game/run/economy'
+import { canTrain, forageAtCampfire, restAtCampfire, trainAtCampfire } from '../../game/run/campfire'
 import { receiveItems, withRecruits } from '../../game/run/recruits'
 import { applyRewardCard } from '../../game/run/rewards'
-import { threatAfterChoice } from '../../game/run/threat'
+import { applyBattleXp } from '../../game/run/battle'
+import { restockFree, shelfSize } from '../../game/run/relics'
 import { sfx, sfxRarity, sfxReward } from '../../audio/audio'
 import { CLEAR_SHELL } from './fresh'
+import { bannerRules, useMetaStore } from '../metaStore'
 import { completeNode } from './nodes'
+import { runUnlocked, streams } from './runtime'
 import type { Slice } from './types'
 
 export interface EventActions {
@@ -36,11 +40,21 @@ export interface EventActions {
   declineShrine: () => void
   acceptRecruit: (sentinelId: string) => void
   skipRecruit: () => void
+  /** Campfire (Phase 3b): the Gate recovers `CAMPFIRE_REPAIR`, and the stop is spent. */
+  campfireRest: () => void
+  /** Campfire: one hero gains a full level, and the stop is spent. */
+  campfireTrain: (sentinelId: string) => void
+  /** Campfire with the Field Kitchen: forage `CAMPFIRE_FORAGE` gold, and the stop is spent. */
+  campfireForage: () => void
+  /** Buy the merchant's Gate repair (once per visit). */
+  buyGateRepair: () => void
+  /** Reroll the merchant's four-item shelf, at `rerollCost(rerolls)`. */
+  rerollMerchant: () => void
 }
 
 export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   chooseReward: (cardId) => {
-    const { reward, roster, inventory, runMods, lootPity } = get()
+    const { reward, roster, inventory, runMods, lootPity, relics } = get()
     if (!reward) return
     const card = reward.find((c) => c.id === cardId)
     if (!card) return
@@ -54,13 +68,15 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (card.kind !== 'item' || !card.item) sfx('upgrade')
     // The pity counter moves for the card actually taken, and only if it is an
     // item (F4) — see `applyRewardCard`.
-    const next = applyRewardCard({ roster, inventory, runMods, lootPity }, card)
+    const next = applyRewardCard({ roster, inventory, runMods, lootPity, relics }, card)
+    if (card.kind === 'relic' && card.relic) useMetaStore.getState().recordCodex({ relics: [card.relic] })
     // Applying a reward returns to the map — or to the mid-map fork if it fired.
     set({
       roster: next.roster,
       inventory: next.inventory,
       runMods: next.runMods,
       lootPity: next.lootPity,
+      relics: next.relics,
       reward: null,
       screen: get().crossroads ? 'crossroads' : 'map',
       activeNodeId: null,
@@ -90,10 +106,9 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     const hero = crossroads.recruits.find((s) => s.id === sentinelId)
     if (!hero || roster.length >= MAX_ROSTER) return
     set({
-      ...withRecruits(roster, get().evolutionQueue, [hero], get().inventory),
+      ...withRecruits(roster, get().evolutionQueue, [hero], get().inventory, get().relics),
       crossroads: null,
       screen: 'map',
-      threat: threatAfterChoice(get().threat),
     })
   },
 
@@ -127,8 +142,6 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     set({
       roster: nextRoster,
       crossroads: { ...crossroads, mutationHeroId: heroId, revealed: { heroName: hero.name, mutation } },
-      // The Threat tax is paid on the COMMITMENT, not on looking at the offer.
-      threat: threatAfterChoice(get().threat),
     })
   },
 
@@ -160,9 +173,8 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (!merchant?.recruit || gold < merchant.recruit.price || roster.length >= MAX_ROSTER) return
     set({
       gold: gold - merchant.recruit.price,
-      ...withRecruits(roster, get().evolutionQueue, [merchant.recruit.sentinel], get().inventory),
+      ...withRecruits(roster, get().evolutionQueue, [merchant.recruit.sentinel], get().inventory, get().relics),
       merchant: { ...merchant, recruit: null },
-      threat: threatAfterChoice(get().threat),
     })
   },
 
@@ -183,7 +195,6 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
       roster: eff.roster ?? roster,
       baseHp: newBaseHp,
       gold: Math.max(0, gold + (eff.goldDelta ?? 0)),
-      threat: threatAfterChoice(get().threat), // a stronger team draws a stronger foe
     })
     completeNode(get, set, event.nodeId)
   },
@@ -198,7 +209,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (!event) return
     const pick = recruitOptions.find((s) => s.id === sentinelId)
     if (pick && roster.length < MAX_ROSTER) {
-      set({ ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory), threat: threatAfterChoice(get().threat) })
+      set({ ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory, get().relics) })
     }
     completeNode(get, set, event.nodeId)
   },
@@ -206,5 +217,58 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   skipRecruit: () => {
     const { event } = get()
     if (event) completeNode(get, set, event.nodeId)
+  },
+
+  // ---- campfire (Phase 3b) ----
+  // One of two, and the stop is spent either way: the choice IS the node.
+  campfireRest: () => {
+    const { event, baseHp, maxBaseHp } = get()
+    if (event?.kind !== 'campfire') return
+    set({ baseHp: restAtCampfire(baseHp, maxBaseHp) })
+    sfx('upgrade')
+    completeNode(get, set, event.nodeId)
+  },
+
+  campfireTrain: (sentinelId) => {
+    const { event, roster, evolutionQueue } = get()
+    if (event?.kind !== 'campfire') return
+    const hero = roster.find((s) => s.id === sentinelId)
+    if (!hero || !canTrain(hero)) return
+    const trained = trainAtCampfire(hero)
+    const nextRoster = roster.map((s) => (s.id === sentinelId ? trained : s))
+    // A level that crosses 10 or 20 owes a branch choice, exactly as a wave's XP does.
+    const owed = applyBattleXp(nextRoster, []).evolutionQueue
+    set({ roster: nextRoster, evolutionQueue: [...new Set([...evolutionQueue, ...owed])] })
+    sfx('upgrade')
+    completeNode(get, set, event.nodeId)
+  },
+
+  campfireForage: () => {
+    const { event, gold, feats } = get()
+    if (event?.kind !== 'campfire' || !runUnlocked('fieldKitchen')) return
+    const next = forageAtCampfire(gold)
+    set({ gold: next, feats: { ...feats, goldPeak: Math.max(feats.goldPeak, next) } })
+    sfx('coin')
+    completeNode(get, set, event.nodeId)
+  },
+
+  buyGateRepair: () => {
+    const { merchant, gold, baseHp, maxBaseHp } = get()
+    const repair = merchant?.repair
+    if (!merchant || !repair || gold < repair.price || baseHp >= maxBaseHp) return
+    sfx('coin')
+    set({ gold: gold - repair.price, baseHp: repairGate(baseHp, maxBaseHp), merchant: { ...merchant, repair: null } })
+  },
+
+  rerollMerchant: () => {
+    const { merchant, gold, event, runMap, roster, lootPity, mode, relics, runBanner } = get()
+    if (!merchant || mode !== 'campaign' || event?.kind !== 'merchant') return
+    // The Quartermaster's Seal makes the first restock at each stall free.
+    const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0)
+    if (gold < cost) return sfx('error')
+    const node = runMap.nodes.find((n) => n.id === event.nodeId)
+    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics, bannerRules(runBanner).thinPickings) })
+    sfx('coin')
+    set({ gold: gold - cost, merchant: { ...merchant, items, rerolls: (merchant.rerolls ?? 0) + 1 } })
   },
 })

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
-import { milestoneForLevel, UPGRADE_PATHS } from '../../game/data/upgradeTree'
-import { effectiveUpgradeLevels } from '../../game/engine/combat'
+import { ITEM_PRICE } from '../../game/run/economy'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
-import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
@@ -121,9 +119,10 @@ export function Coach() {
     showThreat: mode === 'campaign' && threat > 1.001,
     threat,
     nearEvolution: nearEvolution?.name,
-    // After the first fight (the start node plus one), with gold that would
-    // actually buy a skill level for someone right now.
-    spendableGold: mode === 'campaign' && cleared >= 2 && canBuyASkill(roster, gold) ? gold : 0,
+    // After the first fight (the start node plus one), with enough gold for a
+    // rare item at the next merchant — gold's job since the skill tree became
+    // free perks (Phase 3b).
+    spendableGold: mode === 'campaign' && cleared >= 2 && gold >= ITEM_PRICE.rare ? gold : 0,
   })
 
   /*
@@ -281,7 +280,7 @@ function pickTip(s: {
       icon: 'gold',
       body: (
         <>
-          <b>{s.spendableGold} gold</b> unspent. <Tap /> a hero, then <b>Skills</b>, to spend it.
+          <b>{s.spendableGold} gold</b> in hand. Spend it at a <b>Merchant</b> stop: gear, a hire, or Gate repair.
         </>
       ),
     }
@@ -289,21 +288,3 @@ function pickTip(s: {
   return null
 }
 
-/**
- * True when some hero could buy its next skill level right now — the same
- * three gates `HeroUpgrades` puts on its buy button (a level left, the hero's
- * level milestone met, the gold in hand). The tip must never tell a player to
- * spend gold on a button that would refuse them.
- */
-function canBuyASkill(roster: Sentinel[], gold: number): boolean {
-  for (const h of roster) {
-    const eff = effectiveUpgradeLevels(h)
-    for (const path of UPGRADE_PATHS) {
-      const lvl = eff[path.id] ?? 0
-      if (lvl >= path.levels.length) continue
-      const next = path.levels[lvl]
-      if (h.level >= milestoneForLevel(lvl + 1) && gold >= next.cost) return true
-    }
-  }
-  return false
-}

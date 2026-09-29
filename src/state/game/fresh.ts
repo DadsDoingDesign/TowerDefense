@@ -5,6 +5,7 @@
 import { pickBattleMap } from '../../game/data/maps'
 import { newRarityPity } from '../../game/data/items'
 import { emptyPlacements, makeRun, mapOptionsFor } from '../../game/run/map'
+import { freshFeats } from '../../game/run/settle'
 import { ENDLESS_LIVES, MAX_BASE_HP } from '../../game/run/economy'
 import type { Tactics } from '../../game/types'
 import { bannerRules, type BannerRules } from '../metaStore'
@@ -88,6 +89,8 @@ export function freshRunState(runSeed: number) {
     recruitOptions: [],
     reward: null,
     runMods: [],
+    relics: [],
+    feats: freshFeats(),
     crossroads: null,
     forkDone: false,
     dust: 0,

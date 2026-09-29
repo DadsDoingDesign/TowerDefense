@@ -12,6 +12,7 @@ import type { ShrineOffer } from '../../game/data/shrines'
 import type { EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, WaveDef } from '../../game/types'
 import type { AssistLevel } from '../settingsStore'
 import type { RunChallenge } from '../daily'
+import type { RunFeats } from '../../game/run/settle'
 import type { RunActions } from './runSlice'
 import type { BattleActions } from './battleSlice'
 import type { RosterActions } from './rosterSlice'
@@ -60,7 +61,7 @@ export interface Crossroads {
 
 export type RunPhase = 'active' | 'won' | 'lost'
 export type Speed = 1 | 2 | 3
-export type EventKind = 'merchant' | 'shrine' | 'recruit'
+export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
 export type GameMode = 'campaign' | 'endless'
 export type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 
@@ -125,6 +126,13 @@ export interface RunRecap {
 export interface MerchantStock {
   items: { item: Item; price: number }[]
   recruit: { sentinel: Sentinel; price: number } | null
+  /**
+   * The Gate repair on this stall's counter (Phase 3b): null once bought, or
+   * on a stall that does not sell one (an Endless merchant room).
+   */
+  repair?: { hp: number; price: number } | null
+  /** How many times this stall's shelf has been rerolled (each costs more). */
+  rerolls?: number
 }
 
 /** Every data field of the store. Actions live on the slice interfaces. */
@@ -225,8 +233,15 @@ export interface GameData {
   recruitOptions: Sentinel[]
   /** Post-wave: three cards to choose one of (attribute buff or item). */
   reward: RewardCard[] | null
-  /** Team-wide mods granted by attribute rewards this run. */
+  /**
+   * LEGACY team-wide mods from the stat cards relics replaced. A run saved with
+   * some still applies them; nothing new is added here.
+   */
   runMods: EffectMods[]
+  /** Relics held this run, by id, in the order taken (Phase 3b, `data/relics.ts`). */
+  relics: string[]
+  /** What this run has done that a feat may ask about (Phase 3b). */
+  feats: RunFeats
   /** Mid-map fork (once per run): recruit a teammate or take an attack mutation. */
   crossroads: Crossroads | null
   forkDone: boolean

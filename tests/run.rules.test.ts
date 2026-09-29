@@ -8,52 +8,83 @@ import { xpToReach } from '../src/game/engine/leveling'
 import { endlessRoundSpoils } from '../src/game/run/battle'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
 import { forkFires } from '../src/game/run/map'
-import { recruitSlate, recruitTargetLevel, scaledRecruit } from '../src/game/run/recruits'
+import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
 import { applyRewardCard } from '../src/game/run/rewards'
 import { planPayout, runWasPlayed, type SettleFacts } from '../src/game/run/settle'
 import {
-  THREAT_PER_CHOICE,
-  THREAT_PER_NODE,
+  ACT_JUMP,
+  ACT_LAYERS,
+  ACT_STEPS,
+  RUN_LAYERS,
   THREAT_PER_ROUND,
+  actOf,
   clearBonusGold,
+  encounterThreat,
+  isActBossLayer,
   mapKind,
   nodeClearLuck,
   nodeKind,
-  threatAfterChoice,
-  threatAfterClear,
+  nodeThreatMult,
+  threatAfterLayer,
   threatAfterRound,
-  threatAfterSpecial,
+  threatAtLayer,
 } from '../src/game/run/threat'
+import { CAMPFIRE_REPAIR, canTrain, restAtCampfire, restGain, trainAtCampfire, xpToNextLevel } from '../src/game/run/campfire'
+import { GATE_REPAIR, repairGate, rerollCost } from '../src/game/run/economy'
+import { levelXpAwards, STOP_XP_SHARE, stopXp, waveRawXp, waveXp } from '../src/game/run/battle'
+import { encounterNode } from '../src/game/run/map'
+import { generateRunMap } from '../src/game/data/runmap'
+import { RNG } from '../src/game/core/rng'
+import { ENGINE_CAPABILITIES, RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
+import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
+import { lockedPerkChoices, pendingPerkLevel, perkChoices, takePerk } from '../src/game/run/perks'
+import { allPerkPoints } from '../src/game/data/perks'
+import { computeCombat } from '../src/game/engine/combat'
 import { STANDARD_RUN } from '../src/state/daily'
 import type { Sentinel } from '../src/game/types'
 
 const node = (type: MapNode['type'], layer = 3): MapNode => ({ id: `n-${type}-${layer}`, type, layer, row: 0 }) as MapNode
 
 describe('threat maths (game/run/threat)', () => {
-  it('charges each node its MAP kind, whatever the Banner substitutes', () => {
-    expect(threatAfterClear(1, node('battle'))).toBe(THREAT_PER_NODE.normal)
-    expect(threatAfterClear(1, node('elite'))).toBe(THREAT_PER_NODE.elite)
-    expect(threatAfterClear(2, node('boss'))).toBe(2)
-    // Elite Watch substitutes the encounter, never the node's worth (M19-g).
+  it('follows the road: a pure function of layer and act', () => {
+    expect(threatAtLayer(1)).toBe(1)
+    expect(threatAtLayer(2)).toBeCloseTo(ACT_STEPS[0], 12)
+    // Crossing into act 2 (layer 5) pays the act step AND the jump.
+    expect(threatAtLayer(5) / threatAtLayer(4)).toBeCloseTo(ACT_STEPS[1] * ACT_JUMP, 12)
+    expect(threatAtLayer(6) / threatAtLayer(5)).toBeCloseTo(ACT_STEPS[1], 12)
+    expect(threatAtLayer(9) / threatAtLayer(8)).toBeCloseTo(ACT_STEPS[2] * ACT_JUMP, 12)
+    // A Vow's starting Threat scales the whole curve.
+    expect(threatAtLayer(7, 2)).toBeCloseTo(2 * threatAtLayer(7), 12)
+    // Strictly rising along the road.
+    for (let l = 2; l < RUN_LAYERS; l++) expect(threatAtLayer(l)).toBeGreaterThan(threatAtLayer(l - 1))
+  })
+
+  it('every node type moves the road on equally — no choice tax, no visit step', () => {
+    for (const layer of [1, 3, 4, 7]) expect(threatAfterLayer(layer)).toBe(threatAtLayer(layer + 1))
+  })
+
+  it('acts are four layers; bosses hold layers 4, 8 and 12', () => {
+    expect(RUN_LAYERS).toBe(13)
+    expect([1, 4, 5, 8, 9, 12].map(actOf)).toEqual([1, 1, 2, 2, 3, 3])
+    expect([4, 8, 12].every(isActBossLayer)).toBe(true)
+    expect([1, 3, 5, 11].some(isActBossLayer)).toBe(false)
+    expect(ACT_LAYERS).toBe(4)
+  })
+
+  it('a node type adds to the road, not to the rest of the run', () => {
+    expect(nodeThreatMult('battle')).toBe(1)
+    expect(nodeThreatMult('elite')).toBeGreaterThan(1)
+    expect(nodeThreatMult('boss')).toBeLessThan(1)
+    expect(nodeThreatMult('miniboss')).toBe(1)
+    expect(encounterThreat(node('elite', 6))).toBeCloseTo(threatAtLayer(6) * nodeThreatMult('elite'), 12)
+  })
+
+  it('kinds: an act boss fields a boss wave; a Vow substitutes the encounter, not the node', () => {
+    expect(nodeKind(node('miniboss', 4))).toBe('boss')
     expect(nodeKind(node('battle'), { allElite: true })).toBe('elite')
     expect(mapKind(node('battle'))).toBe('normal')
-  })
-
-  it('compounds: a route is the product of its steps', () => {
-    let t = 1
-    t = threatAfterClear(t, node('battle'))
-    t = threatAfterSpecial(t, 'shrine')
-    t = threatAfterChoice(t)
-    t = threatAfterClear(t, node('elite'))
-    expect(t).toBeCloseTo(1.42 * 1.13 * 1.05 * 1.52, 12)
-    // The exact float the store used to compute inline, step by step.
-    expect(t).toBe(((1 * THREAT_PER_NODE.normal) * THREAT_PER_NODE.special * THREAT_PER_CHOICE) * THREAT_PER_NODE.elite)
-  })
-
-  it('only specials charge the special step; the rest pass through', () => {
-    for (const s of ['merchant', 'shrine', 'recruit'] as const) expect(threatAfterSpecial(1, s)).toBe(THREAT_PER_NODE.special)
-    for (const s of ['battle', 'elite', 'boss', 'start'] as const) expect(threatAfterSpecial(1.5, s)).toBe(1.5)
-    expect(threatAfterSpecial(1.5, undefined)).toBe(1.5)
+    expect(encounterNode(node('miniboss', 4)).type).toBe('boss')
+    expect(encounterNode(node('battle')).type).toBe('battle')
   })
 
   it('an Endless elite round compounds harder than a plain one', () => {
@@ -64,10 +95,121 @@ describe('threat maths (game/run/threat)', () => {
   it('purse and luck follow the map kind', () => {
     expect(clearBonusGold(node('battle'))).toBe(0)
     expect(clearBonusGold(node('elite'))).toBe(25)
+    expect(clearBonusGold(node('miniboss', 4))).toBe(60)
     expect(clearBonusGold(node('boss'))).toBe(100)
-    expect(nodeClearLuck(node('battle', 2))).toBeCloseTo(0.06)
-    expect(nodeClearLuck(node('elite', 2))).toBeCloseTo(0.21)
-    expect(nodeClearLuck(node('boss', 10))).toBeCloseTo(0.65)
+    expect(nodeClearLuck(node('battle', 2))).toBeCloseTo(0.05)
+    expect(nodeClearLuck(node('elite', 2))).toBeCloseTo(0.2)
+    expect(nodeClearLuck(node('boss', 12))).toBeCloseTo(0.65)
+  })
+})
+
+describe('the run map in three acts (data/runmap)', () => {
+  const maps = Array.from({ length: 60 }, (_, i) => generateRunMap(new RNG(i * 7 + 1)))
+
+  it('every map has 13 layers, act bosses on 4 and 8, the final boss on 12', () => {
+    for (const m of maps) {
+      expect(m.layers).toBe(RUN_LAYERS)
+      for (const l of [4, 8]) {
+        const row = m.nodes.filter((n) => n.layer === l)
+        expect(row.map((n) => n.type)).toEqual(['miniboss'])
+      }
+      expect(m.nodes.filter((n) => n.layer === 12).map((n) => n.type)).toEqual(['boss'])
+    }
+  })
+
+  it('a campfire waits in the layer before each act boss, and every layer keeps a fight', () => {
+    for (const m of maps) {
+      for (const l of [3, 7, 11]) expect(m.nodes.some((n) => n.layer === l && n.type === 'campfire')).toBe(true)
+      for (let l = 1; l < 12; l++) {
+        if (isActBossLayer(l)) continue
+        expect(m.nodes.some((n) => n.layer === l && (n.type === 'battle' || n.type === 'elite'))).toBe(true)
+      }
+    }
+  })
+
+  it('every node is reachable from the start', () => {
+    for (const m of maps) {
+      const start = m.nodes.find((n) => n.type === 'start')!
+      const seen = new Set([start.id])
+      const q = [start.id]
+      while (q.length) {
+        const id = q.shift()!
+        for (const e of m.edges) if (e.from === id && !seen.has(e.to)) { seen.add(e.to); q.push(e.to) }
+      }
+      expect(seen.size).toBe(m.nodes.length)
+    }
+  })
+})
+
+describe('campfire (game/run/campfire)', () => {
+  it('rest restores CAMPFIRE_REPAIR, capped at the maximum', () => {
+    expect(restAtCampfire(5, 20)).toBe(5 + CAMPFIRE_REPAIR)
+    expect(restAtCampfire(18, 20)).toBe(20)
+    expect(restGain(18, 20)).toBe(2)
+    expect(restGain(20, 20)).toBe(0)
+  })
+
+  it('train is exactly one level, from wherever the XP stands; the cap cannot train', () => {
+    const s = createSentinel('rogue')
+    const t = trainAtCampfire(s)
+    expect(t.level).toBe(s.level + 1)
+    expect(t.xp).toBe(xpToReach(s.level + 1))
+    const partway = { ...s, level: 4, xp: xpToReach(4) + 10 }
+    expect(xpToNextLevel(partway)).toBe(xpToReach(5) - partway.xp)
+    expect(trainAtCampfire(partway).level).toBe(5)
+    const capped = { ...s, level: 20, xp: xpToReach(20) }
+    expect(canTrain(capped)).toBe(false)
+    expect(trainAtCampfire(capped)).toBe(capped)
+  })
+})
+
+describe('the gold sinks that replaced the skill tree (game/run/economy)', () => {
+  it('a merchant repair heals GATE_REPAIR, capped', () => {
+    expect(repairGate(3, 20)).toBe(3 + GATE_REPAIR.hp)
+    expect(repairGate(19, 20)).toBe(20)
+  })
+  it('each reroll at a stall costs more than the last', () => {
+    expect(rerollCost(0)).toBeLessThan(rerollCost(1))
+    expect(rerollCost(1)).toBeLessThan(rerollCost(2))
+  })
+})
+
+describe('levels are a resource (game/run/battle)', () => {
+  const wave = { spawns: [{ typeId: 'torch1', at: 0, hpMult: 1 }, { typeId: 'torch2', at: 1, hpMult: 2 }] }
+
+  it('raw XP matches the engine formula', () => {
+    // 0.2 × round(24 × 1 × 3) + 4, then 0.2 × round(42 × 2 × 3) + 5
+    expect(waveRawXp(wave, 3)).toBe(Math.round(72 * 0.2) + 4 + Math.round(252 * 0.2) + 5)
+  })
+
+  it('a full clear pays waveXp per fielded hero, split half even, half by kills', () => {
+    const raw = waveRawXp(wave, 1)
+    const out = levelXpAwards([{ id: 'a', xpGained: raw }, { id: 'b', xpGained: 0 }], { wave, hpMult: 1, depth: 3, kind: 'normal' })
+    const pool = waveXp(3, 'normal') * 2
+    expect(out[0].xpGained).toBe(Math.round(pool * 0.75))
+    expect(out[1].xpGained).toBe(Math.round(pool * 0.25))
+  })
+
+  it('Threat no longer inflates XP; depth and kind do, linearly', () => {
+    const raw = (m: number) => waveRawXp(wave, m)
+    const at = (m: number) => levelXpAwards([{ id: 'a', xpGained: raw(m) }], { wave, hpMult: m, depth: 5, kind: 'normal' })[0].xpGained
+    expect(at(1)).toBe(at(40))
+    expect(waveXp(6, 'normal') - waveXp(5, 'normal')).toBeCloseTo(waveXp(5, 'normal') - waveXp(4, 'normal'), 9)
+    expect(waveXp(5, 'elite')).toBeGreaterThan(waveXp(5, 'normal'))
+    expect(waveXp(5, 'boss')).toBeGreaterThan(waveXp(5, 'elite'))
+  })
+
+  it('a stop pays a share of a plain fight, never more than the fight', () => {
+    for (const d of [1, 5, 11]) {
+      expect(stopXp(d)).toBe(Math.round(waveXp(d, 'normal') * STOP_XP_SHARE))
+      expect(stopXp(d)).toBeLessThan(waveXp(d, 'normal'))
+    }
+  })
+
+  it('a leak is XP not earned', () => {
+    const raw = waveRawXp(wave, 1)
+    const half = levelXpAwards([{ id: 'a', xpGained: raw / 2 }], { wave, hpMult: 1, depth: 2, kind: 'normal' })[0].xpGained
+    expect(half).toBe(Math.round(waveXp(2, 'normal') / 2))
   })
 })
 
@@ -103,7 +245,7 @@ describe('merchant shelf (game/run/economy)', () => {
 })
 
 describe('reward application (game/run/rewards)', () => {
-  const base = () => ({ roster: [createSentinel('fighter'), createSentinel('mystic')], inventory: [], runMods: [], lootPity: { dry: 4 } })
+  const base = () => ({ roster: [createSentinel('fighter'), createSentinel('mystic')], inventory: [], runMods: [], lootPity: { dry: 4 }, relics: [] as string[] })
 
   it('a stat card buffs the whole company and appends its team mods', () => {
     const t = base()
@@ -214,12 +356,9 @@ describe('run structure helpers', () => {
     expect(endlessRoundSpoils(30).luck).toBe(0.45)
   })
 
-  it('the fork fires once, at half depth, never on the boss', () => {
-    const map = { layers: 11 }
-    expect(forkFires(map, 4, false, false)).toBe(false)
-    expect(forkFires(map, 5, false, false)).toBe(true)
-    expect(forkFires(map, 5, true, false)).toBe(false)
-    expect(forkFires(map, 10, false, true)).toBe(false)
+  it('the Crossroads fires on each act boss, and on nothing else', () => {
+    expect(forkFires({ type: 'miniboss' })).toBe(true)
+    for (const t of ['battle', 'elite', 'boss', 'campfire', 'merchant']) expect(forkFires({ type: t })).toBe(false)
   })
 })
 
@@ -243,5 +382,120 @@ describe('settle pays once (through the store)', () => {
     g().returnToHub()
     g().newRun()
     expect(runs()).toBe(before + 1)
+  })
+})
+
+describe('spec perks (game/run/perks)', () => {
+  const at = (level: number, path: string[], perks: string[] = []) => ({ level, branchPath: path, perks })
+
+  it('owes the level-5 pick by base archetype, the level-15 pick by the evolved line', () => {
+    expect(pendingPerkLevel(at(4, ['rogue']))).toBeNull()
+    expect(pendingPerkLevel(at(5, ['rogue']))).toBe(5)
+    // Level 15 waits for the level-10 evolution: its line is the sub-archetype.
+    expect(pendingPerkLevel(at(15, ['rogue'], ['r5_ambush']))).toBeNull()
+    expect(pendingPerkLevel(at(15, ['rogue', 'marksman'], ['r5_ambush']))).toBe(15)
+    expect(pendingPerkLevel(at(20, ['rogue', 'marksman', 'ranger'], ['r5_ambush', 'marksman_volley']))).toBeNull()
+    // A level-5 pick still owed at level 12 comes first.
+    expect(pendingPerkLevel(at(12, ['rogue', 'marksman']))).toBe(5)
+  })
+
+  it('offers two per line, hides feat-locked options until opened', () => {
+    const five = perkChoices(at(5, ['fighter']))
+    expect(five.map((p) => p.id)).toEqual(['f5_second_wind', 'f5_last_stand'])
+    expect(lockedPerkChoices(at(5, ['fighter'])).map((p) => p.id)).toEqual(['f5_riposte'])
+    expect(perkChoices(at(5, ['fighter']), (id) => id === 'lone_wolf')).toHaveLength(3)
+    expect(perkChoices(at(15, ['rogue', 'marksman'], ['r5_ambush'])).map((p) => p.id)).toEqual(['marksman_volley', 'marksman_deadeye'])
+  })
+
+  it('takePerk refuses anything not on offer, and appends in milestone order', () => {
+    const h = at(5, ['mystic'])
+    expect(takePerk(h, 'warrior_cleave')).toBeNull()
+    expect(takePerk(h, 'm5_ember')).toBeNull() // locked
+    expect(takePerk(h, 'm5_arc')?.perks).toEqual(['m5_arc'])
+  })
+
+  it('every line has its own perks: no id or pair is shared', () => {
+    const points = allPerkPoints()
+    expect(points).toHaveLength(12)
+    const ids = points.flatMap((p) => p.options.map((o) => o.id))
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const p of points) expect(p.options.filter((o) => !o.unlock)).toHaveLength(2)
+  })
+
+  it('perk mods reach the combat profile', () => {
+    const base = createSentinel('rogue')
+    const withPerk = { ...base, level: 5, perks: ['r5_ambush'] }
+    expect(computeCombat(withPerk).mods.openingRush).toEqual({ rate: 0.7, dur: 20 })
+    expect(computeCombat({ ...base, perks: ['not-a-perk'] }).dps).toBe(computeCombat(base).dps)
+  })
+})
+
+describe('relics (data/relics + game/run/relics)', () => {
+  it('one pool: about half rules, no plain "+x% damage", ids unique', () => {
+    const ids = RELICS.map((r) => r.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    const rules = RELICS.filter((r) => r.kind === 'rule').length
+    expect(rules / RELICS.length).toBeGreaterThanOrEqual(0.45)
+    for (const r of RELICS) {
+      if ((r.grant?.mods?.damageMult ?? 1) > 1) expect(r.downside).toBeTruthy()
+    }
+  })
+
+  it('never offers a relic whose engine capability is missing, a held one, or a locked one', () => {
+    const pool = relicPool({ held: ['tithe'] })
+    expect(pool.every(relicSupported)).toBe(true)
+    expect(pool.some((r) => r.id === 'tithe')).toBe(false)
+    expect(pool.some((r) => r.id === 'ember_urn')).toBe(ENGINE_CAPABILITIES.burnSpreadOnDeath)
+    expect(pool.some((r) => r.unlock)).toBe(false)
+    expect(relicPool({ unlocked: () => true }).some((r) => r.id === 'charter')).toBe(true)
+  })
+
+  it('team mods and stat grants reach the company, hires included', () => {
+    expect(relicTeamMods(['warding_stone'])).toEqual([{ leakWard: 2 }])
+    expect(relicTeamMods(['ember_urn'])).toEqual(ENGINE_CAPABILITIES.burnSpreadOnDeath ? [{ burnSpreadOnDeath: true }] : [])
+    const s = createSentinel('fighter')
+    const g = withRelicStats(s, ['ledger', 'hourglass'])
+    expect(g.stats.str).toBe(s.stats.str + 3)
+    expect(g.patience).toBe(s.patience + 5)
+    const hired = withRecruits([], [], [s], [], ['ledger']).roster[0]
+    expect(hired.stats.dex).toBe(s.stats.dex + 3)
+  })
+
+  it('run rules: surgeon, tithe, charter, seal, diary', () => {
+    expect(afterFightRelics(['surgeon', 'tithe'], { baseHp: 10, maxBaseHp: 20, gold: 5 })).toEqual({ baseHp: 10 + SURGEON_HEAL, gold: 5 + TITHE_GOLD })
+    expect(afterFightRelics([], { baseHp: 10, maxBaseHp: 20, gold: 5 })).toEqual({ baseHp: 10, gold: 5 })
+    expect(afterFightRelics(['surgeon'], { baseHp: 20, maxBaseHp: 20, gold: 0 }).baseHp).toBe(20)
+    expect(hiresTrained(false, ['charter'])).toBe(true)
+    expect(hiresTrained(false, [])).toBe(false)
+    expect(shelfSize(['seal'])).toBe(5)
+    expect(restockFree(['seal'], 0)).toBe(true)
+    expect(restockFree(['seal'], 1)).toBe(false)
+    const roster = [{ id: 'a', level: 9 }, { id: 'b', level: 3 }]
+    const awards = diaryXp([{ id: 'a', xpGained: 100 }, { id: 'b', xpGained: 100 }], roster, ['diary'])
+    expect(awards.map((x) => x.xpGained)).toEqual([100, 150])
+  })
+
+  it('the reward hand: a battle mixes, an elite always holds a relic, an act boss is all relics', () => {
+    const roster = [{ archetype: 'rogue' as const }]
+    for (let seed = 1; seed < 40; seed++) {
+      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, count: 3, held: [], roster })
+      expect(battle.some((c) => c.kind === 'item')).toBe(true)
+      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, count: 3, held: [], roster })
+      expect(elite.some((c) => c.kind === 'relic')).toBe(true)
+      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, count: 3, held: [], roster })
+      expect(boss.every((c) => c.kind === 'relic')).toBe(true)
+      expect(new Set(boss.map((c) => c.relic)).size).toBe(3)
+    }
+  })
+
+  it('taking a relic card adds it once and lands its stats', () => {
+    const t = { roster: [createSentinel('mystic')], inventory: [], runMods: [], lootPity: { dry: 0 }, relics: [] as string[] }
+    const card: RewardCard = { id: 'r', kind: 'relic', title: '', desc: '', rarity: 'common', relic: 'ledger' }
+    const once = applyRewardCard(t, card)
+    expect(once.relics).toEqual(['ledger'])
+    expect(once.roster[0].stats.int).toBe(t.roster[0].stats.int + 3)
+    const twice = applyRewardCard(once, card)
+    expect(twice.relics).toEqual(['ledger'])
+    expect(twice.roster[0].stats.int).toBe(once.roster[0].stats.int)
   })
 })

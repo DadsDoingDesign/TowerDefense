@@ -7,6 +7,8 @@
 export { useGameStore } from './game/store'
 export { flushRunSnapshot, installRunPersistence, peekSavedRun } from './game/persistence'
 export { canStartWave, rarityColor, type StartWaveGate } from './game/selectors'
+/** Whether THIS run may use a hub service (false on a Daily, which ignores the hub). */
+export { runUnlocked } from './game/runtime'
 export type {
   BattlePhase,
   Crossroads,
@@ -30,5 +32,5 @@ export {
   scrapDust,
   scrapGold,
 } from '../game/run/economy'
-export { THREAT_PER_CHOICE, THREAT_PER_NODE, THREAT_PER_ROUND } from '../game/run/threat'
+export { ACT_JUMP, THREAT_PER_ROUND, THREAT_STEP, threatAtLayer } from '../game/run/threat'
 export { placedSentinels } from '../game/run/map'

@@ -175,6 +175,7 @@ const EVENT_BOARD = {
   merchant: { title: 'Merchant', blurb: 'Spend your gold before you march.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms. Read them.' },
   recruit: { title: 'Recruit', blurb: 'A hero looking for a company.' },
+  campfire: { title: 'Campfire', blurb: 'One night at the fire, and one thing done with it. Choose one.' },
 } as const
 
 const ROOM_BOARD = {

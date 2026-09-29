@@ -1,7 +1,13 @@
 import type { RNG } from '../core/rng'
 import { nextId } from '../core/rng'
+import { ACT_LAYERS, isActBossLayer, RUN_LAYERS } from '../run/threat'
 
-export type NodeType = 'start' | 'battle' | 'elite' | 'merchant' | 'shrine' | 'recruit' | 'boss'
+/**
+ * `campfire` (Phase 3b) is the rest stop: repair the Gate or train a hero.
+ * `miniboss` is an act boss — the fight that closes acts 1 and 2 (layers 4 and
+ * 8). `boss` is the final one, and clearing it is the only campaign win.
+ */
+export type NodeType = 'start' | 'battle' | 'elite' | 'merchant' | 'shrine' | 'recruit' | 'campfire' | 'miniboss' | 'boss'
 
 export interface MapNode {
   id: string
@@ -26,6 +32,8 @@ const NODE_META: Record<NodeType, { label: string; glyph: string; color: string 
   merchant: { label: 'Merchant', glyph: '⟡', color: '#e0ac4c' },
   shrine: { label: 'Shrine', glyph: '❖', color: '#7fb8a0' },
   recruit: { label: 'Recruit', glyph: '＋', color: '#6fce88' },
+  campfire: { label: 'Campfire', glyph: '♨', color: '#e08a4c' },
+  miniboss: { label: 'Act boss', glyph: '♜', color: '#c0503a' },
   boss: { label: 'Boss', glyph: '♛', color: '#c0503a' },
 }
 
@@ -98,18 +106,23 @@ export interface MapOptions {
 }
 
 /**
- * Build a Slay-the-Spire-style branching DAG: a start node, several layers of
- * 2–4 nodes, and a boss. Edges only connect adjacent layers, forward-only, and
- * every node is reachable with at least one outgoing edge.
+ * Build a Slay-the-Spire-style branching DAG in three ACTS (Phase 3b): a start
+ * node, then per act three free layers of 2–4 nodes and a single act-boss
+ * layer every route funnels through. Edges only connect adjacent layers,
+ * forward-only, and every node is reachable with at least one outgoing edge.
+ *
+ * The act bosses are single-node layers on purpose: an act is a chapter, and a
+ * chapter ends in the same fight for everyone. What differs is how the company
+ * arrives — which is the route's whole job.
  */
 export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number): RunMap {
   /**
-   * **The run is the same length whatever the hub has bought.** The boss sits on
-   * layer 10 of an 11-layer map for everyone, so it is quoted off the same
-   * `waveBudget(9)` and met after the same ten compounding Threat steps. A hub
+   * **The run is the same length whatever the hub has bought.** Every map has
+   * `RUN_LAYERS` layers (13: the start and three acts of four), so every run
+   * meets the same act bosses at the same depth and the same final boss. A hub
    * purchase may change the *shape* of the march; it may not change its price.
    */
-  const layerCount = layers ?? 11
+  const layerCount = layers ?? RUN_LAYERS
   const nodesByLayer: MapNode[][] = []
 
   // Layer 0: start.
@@ -117,7 +130,12 @@ export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number)
 
   // Middle layers. A wide map forks harder — 3–4 nodes a layer instead of 2–4 —
   // so a route is a real choice rather than a corridor with occasional doors.
+  // An act-boss layer holds one node: the act's closing fight.
   for (let layer = 1; layer < layerCount - 1; layer++) {
+    if (isActBossLayer(layer)) {
+      nodesByLayer.push([mkNode('miniboss', layer, 0, 0.5)])
+      continue
+    }
     const count = opts.wideMap ? rng.int(3, 4) : rng.int(2, 4)
     const row: MapNode[] = []
     for (let r = 0; r < count; r++) {
@@ -146,12 +164,8 @@ export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number)
     for (const n of cur) {
       const sorted = [...next].sort((a, b) => Math.abs(a.ny - n.ny) - Math.abs(b.ny - n.ny))
       // A fork is an out-edge, not a node. The default map gives each node 1–2
-      // of them, so about half of all steps are a corridor with no decision in
-      // them at all; a wide map guarantees at least two wherever two exist.
-      //
-      // The single-successor case still consumes no roll, exactly as it always
-      // did: this generator is driven by the run's seeded map stream, and moving
-      // a draw here would re-deal every default map in the game.
+      // of them; a wide map guarantees at least two wherever two exist. A
+      // single-successor step (into an act boss) consumes no roll.
       const k = next.length === 1 ? 1 : Math.min(next.length, opts.wideMap ? rng.int(2, 3) : rng.int(1, 2))
       for (const t of sorted.slice(0, k)) edges.push({ from: n.id, to: t.id })
     }
@@ -173,113 +187,157 @@ export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number)
     return true
   })
 
+  if (opts.wideMap) detourThroughFights(nodesByLayer, uniqueEdges)
   if (opts.standingOrders) relocateForcedElites(nodesByLayer, uniqueEdges, rng)
 
   return { nodes: nodesByLayer.flat(), edges: uniqueEdges, layers: layerCount }
+}
+
+/**
+ * **On a wide map, a detour leads back to the fighting (Phase 3b).**
+ *
+ * Three or four roads a layer and two or three edges out of every node let a
+ * stop-greedy route chain stop into stop almost the whole way down, and §12
+ * measured that costing the stop-first line 11pt: the extra forks became a way
+ * to never fight, not a better argument. So on a wide map a road out of a stop
+ * that leads straight into another stop is re-pointed at the nearest fight in
+ * that layer the stop does not already reach — keeping the fork count, and the
+ * target keeping another way in. No RNG is drawn, so nothing after it shifts.
+ */
+function detourThroughFights(nodesByLayer: MapNode[][], edges: { from: string; to: string }[]): void {
+  const byId = new Map(nodesByLayer.flat().map((n) => [n.id, n]))
+  const isStop = (n: MapNode) => n.type !== 'battle' && n.type !== 'elite' && n.type !== 'start' && n.type !== 'miniboss' && n.type !== 'boss'
+  for (const e of edges) {
+    const a = byId.get(e.from)!
+    const b = byId.get(e.to)!
+    if (!isStop(a) || !isStop(b)) continue
+    // `b` must keep another way in, or it would be stranded.
+    if (!edges.some((o) => o !== e && o.to === b.id)) continue
+    const reached = new Set(edges.filter((o) => o.from === a.id).map((o) => o.to))
+    const fight = nodesByLayer[b.layer]
+      .filter((c) => (c.type === 'battle' || c.type === 'elite') && !reached.has(c.id))
+      .sort((x, y) => Math.abs(x.ny - a.ny) - Math.abs(y.ny - a.ny))[0]
+    if (fight) e.to = fight.id
+  }
 }
 
 function mkNode(type: NodeType, layer: number, row: number, ny: number): MapNode {
   return { id: nextId('node'), type, layer, row, nx: 0, ny }
 }
 
-/** Per-map caps and spacing so a map holds a minimal, non-repetitive set of
- * special tiles instead of ~half the nodes being shops/shrines/elites. */
-const SPECIAL_CAPS: Record<string, number> = { merchant: 2, shrine: 2, recruit: 1, elite: 2 }
-const MIN_SPECIAL_GAP = 2 // layers between two specials of the same type
+/**
+ * Per-map caps on each kind of stop (Phase 3b).
+ *
+ * The review measured **~70–83% of all nodes as battles** and a route spread of
+ * a few points between the best and worst line: a map that is mostly one node
+ * type is a corridor with a coat of paint, and a fork between two battles is
+ * not a fork. With Threat now following the road rather than the choice
+ * (`run/threat.ts`), a stop is no longer a trap — skipping a fight costs its
+ * XP, gold and card, not a compounding surcharge — so the map can afford more
+ * of them. The target is 55–60% fights across the free layers, which
+ * `balance/report.ts` §9 gates.
+ *
+ * Caps are per map across all three acts; `MIN_SPECIAL_GAP` keeps two stops of
+ * the same kind out of adjacent layers.
+ */
+const SPECIAL_CAPS: Record<string, number> = { merchant: 4, shrine: 3, recruit: 3, elite: 3, campfire: 3 }
+const MIN_SPECIAL_GAP = 1 // same-type stops never share a layer (adjacent layers are fine)
+/** At most this many stops in one layer — and always at least one fight beside them. */
+const MAX_SPECIALS_PER_LAYER = 2
+
+const isFight = (n: MapNode): boolean => n.type === 'battle' || n.type === 'elite'
 
 function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {}): void {
   const last = nodesByLayer.length - 1
   const middle: MapNode[] = []
-  for (let l = 1; l < last; l++) middle.push(...nodesByLayer[l])
+  for (let l = 1; l < last; l++) if (!isActBossLayer(l)) middle.push(...nodesByLayer[l])
 
-  // A longer map earns proportionally more stops, or the extra layers are just
-  // more battles; a Banner that forbids a stop sets its cap to zero.
+  // A Vow that forbids a stop sets its cap to zero.
   const caps = { ...SPECIAL_CAPS }
-  /**
-   * **A wide map holds the same stops; it just offers more ways past them.**
-   *
-   * The old version raised the merchant, shrine AND elite caps, which is how a
-   * "more routes" purchase came to sell a harder map — and it does not even
-   * help the routes. A stop costs a ×1.13 Threat step and pays a shop the run
-   * usually cannot afford, so *adding* stops measures negative on every routing
-   * policy (−12pt on the specials-first line, −2pt on the adaptive one, n=300).
-   * Width buys forks; forks are the thing the card is selling.
-   */
   /**
    * **A wide map trades stop *density* for fork density.** Half a layer more
    * road and an extra edge out of every node means a stop-greedy route walks
-   * into more of them, and on the current numbers a stop is worth *negative* to
-   * a fresh run (§11) — so leaving the caps alone made the unlock measure −9pt
-   * on the line a first-timer walks. One merchant and one shrine come off the
-   * cap to pay for the roads, which lands every routing policy at or above the
-   * baseline. The map keeps one of each by guarantee, so nothing disappears
-   * from a run; what changes is that the second one is not owed.
+   * into more of them. It used to pay for that by taking a merchant and a
+   * shrine off the cap; on the three-act road (Phase 3b) that stopped being
+   * enough (§12: −11pt on the stop-first line) and started starving it of Gate
+   * repairs. The price is structural now: a wide layer keeps TWO fights (below)
+   * and a road out of a stop leads back to a fight (`detourThroughFights`).
    */
-  if (opts.wideMap) { caps.merchant -= 1; caps.shrine -= 1 }
-  if (opts.extraRecruit) caps.recruit += 1
+  // Free Companies guarantees a SECOND hiring stop (below) rather than raising the
+  // cap: a map already carries up to three, and a higher cap only traded fights
+  // for hiring stops the company could not fill (measured −8pt on the recruit line).
   if (opts.noMerchants) caps.merchant = 0
   if (opts.noRecruits) caps.recruit = 0
 
-  const counts: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0 }
-  const lastLayer: Record<string, number> = { merchant: -9, shrine: -9, recruit: -9, elite: -9 }
+  const counts: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0, campfire: 0 }
+  const lastLayer: Record<string, number> = { merchant: -9, shrine: -9, recruit: -9, elite: -9, campfire: -9 }
 
-  // Roll layer by layer (excluding the pre-boss layer, handled below). Enforce
-  // per-type caps, a minimum layer gap between same-type specials, and at most
-  // one special per layer so specials never cluster.
-  for (let l = 1; l < last - 1; l++) {
-    let specialThisLayer = false
-    for (const n of nodesByLayer[l]) {
-      if (l === 1) { n.type = 'battle'; continue } // ease-in layer
+  // Roll layer by layer. Enforce per-type caps, a minimum layer gap between
+  // same-type specials, and at most MAX_SPECIALS_PER_LAYER stops a layer with at
+  // least one fight left in it — so "fight here" is always one of the roads.
+  for (let l = 1; l < last; l++) {
+    if (isActBossLayer(l)) continue
+    const row = nodesByLayer[l]
+    let specialsThisLayer = 0
+    // A wide layer keeps two fights: its extra road is a fork, not another stop.
+    const maxStops = opts.wideMap ? Math.max(1, Math.min(MAX_SPECIALS_PER_LAYER, row.length - 2)) : MAX_SPECIALS_PER_LAYER
+    for (let i = 0; i < row.length; i++) {
+      const n = row[i]
+      // The first layer eases in: at most one stop, and it is never a shrine's bill.
       let t = weightedType(n.layer, last, rng)
       if (t !== 'battle') {
         const capped = counts[t] >= (caps[t] ?? 99)
         const tooClose = n.layer - lastLayer[t] < MIN_SPECIAL_GAP
-        if (capped || tooClose || specialThisLayer) t = 'battle'
+        const crowded = t !== 'elite' && (specialsThisLayer >= (l === 1 ? 1 : maxStops) || (l === 1 && t === 'shrine'))
+        // The last node of a layer cannot be a stop if nothing before it fights.
+        const noFightLeft = t !== 'elite' && i === row.length - 1 && !row.slice(0, i).some(isFight)
+        if (capped || tooClose || crowded || noFightLeft) t = 'battle'
       }
       n.type = t
       if (t !== 'battle') {
         counts[t]++
         lastLayer[t] = n.layer
-        specialThisLayer = true
+        if (t !== 'elite') specialsThisLayer++
       }
     }
   }
 
-  // The layer right before the boss is a prep stop: normally ONE node of it, a
-  // merchant (preferred) or a shrine — which the run reaches only if its route
-  // happens to land on that node.
-  //
-  // Standing Orders used to put a merchant AND a shrine here. It was worth
-  // nothing, and it could not have been worth anything: the run walks exactly
-  // ONE node of this layer, so a second prep node on a different road changes
-  // which stop you might reach, not whether you reach one. Measured across four
-  // routing policies it moved the win rate by −2 to +5pt — inside the noise of
-  // its own sample — and adding stops measures *negative* on every policy,
-  // because a stop costs a Threat step and pays a shop a first run cannot
-  // afford. What that unlock now buys is in `relocateForcedElites`.
-  const preBoss = nodesByLayer[last - 1]
-  for (const n of preBoss) n.type = 'battle'
-  const prep: NodeType = counts.merchant <= counts.shrine ? 'merchant' : 'shrine'
-  if (!(prep === 'merchant' && opts.noMerchants)) {
-    const pick = rng.pick(preBoss)
-    pick.type = prep
-    counts[prep]++
+  /**
+   * **Every act closes with a campfire in reach (Phase 3b).** The layer before
+   * each act boss holds one — the rest-or-train decision the review found the
+   * game missing entirely ("no comeback: the Gate never regenerates, there is
+   * no rest node"). It is one node of that layer, not the whole layer, so
+   * taking it is still a route choice: the fire, or one more fight's XP and
+   * gold before the boss.
+   */
+  for (let l = ACT_LAYERS - 1; l < last; l += ACT_LAYERS) {
+    const row = nodesByLayer[l]
+    if (!row || row.some((n) => n.type === 'campfire')) continue
+    const battles = row.filter((n) => n.type === 'battle')
+    const stops = row.filter((n) => !isFight(n))
+    // Never the layer's last fight, and never a third stop: the campfire joins
+    // the road, it does not close it. A full layer trades one of its stops.
+    const candidates =
+      stops.length < MAX_SPECIALS_PER_LAYER && (battles.length > 1 || row.some((n) => n.type === 'elite')) ? battles : []
+    const pick = candidates.length ? rng.pick(candidates) : stops.length ? rng.pick(stops) : rng.pick(row)
+    if (pick.type !== 'battle' && counts[pick.type] != null) counts[pick.type]--
+    pick.type = 'campfire'
+    counts.campfire++
   }
 
   // Guarantee at least one of each key type appears (only adds when absent, so
-  // it never fights the caps). Elites avoid the pre-boss layer.
+  // it never fights the caps). Elites avoid the layer before an act boss.
+  const preBoss = (n: MapNode) => isActBossLayer(n.layer + 1)
   if (!opts.noRecruits) {
     ensureType('recruit', middle, rng, (n) => n.type === 'battle' && n.layer >= 2 && n.layer <= last - 3)
-    // Free Companies: a SECOND hiring stop, well clear of the first. A single
-    // recruit node is why the fresh-player harness reads a *roster-size* cliff —
-    // one extra body was worth more than everything else in the run combined.
+    // Free Companies: a SECOND hiring stop, well clear of the first.
     if (opts.extraRecruit) forceSecond('recruit', middle, rng, (n) => n.layer >= 4 && n.layer <= last - 2)
   }
   if (!opts.noMerchants) ensureType('merchant', middle, rng, (n) => n.type === 'battle' && n.layer >= 3)
   ensureType('shrine', middle, rng, (n) => n.type === 'battle' && n.layer >= 2)
-  ensureType('elite', middle, rng, (n) => n.type === 'battle' && n.layer >= 3 && n.layer < last - 1)
+  ensureType('elite', middle, rng, (n) => n.type === 'battle' && n.layer >= 3 && !preBoss(n))
 
-  // A Banner's rule is absolute: a stop it forbids must not survive any of the
+  // A Vow's rule is absolute: a stop it forbids must not survive any of the
   // guarantee passes above.
   if (opts.noMerchants) for (const n of middle) if (n.type === 'merchant') n.type = 'battle'
   if (opts.noRecruits) for (const n of middle) if (n.type === 'recruit') n.type = 'battle'
@@ -331,18 +389,26 @@ function forceSecond(
   if (existing.length >= 2) return
   const firstLayer = existing[0]?.layer ?? -99
   const candidates = middle.filter(
-    (n) => n.type === 'battle' && eligible(n) && Math.abs(n.layer - firstLayer) >= MIN_SPECIAL_GAP,
+    (n) => n.type === 'battle' && eligible(n) && Math.abs(n.layer - firstLayer) >= MIN_SPECIAL_GAP && (type === 'elite' || notLastFight(n, middle)),
   )
   if (candidates.length) rng.pick(candidates).type = type
 }
 
+/** True when `n`'s layer keeps a fight even if `n` stops being one. */
+const notLastFight = (n: MapNode, middle: MapNode[]): boolean =>
+  middle.some((o) => o !== n && o.layer === n.layer && isFight(o)) &&
+  middle.filter((o) => o.layer === n.layer && !isFight(o)).length < MAX_SPECIALS_PER_LAYER
+
 function weightedType(layer: number, last: number, rng: RNG): NodeType {
+  // Fights are still the most common road; a stop is a detour whose price is
+  // the fight it replaces — not a Threat surcharge any more (Phase 3b).
   const w: [NodeType, number][] = [
-    ['battle', 52],
-    ['elite', layer >= 3 ? 14 : 0],
-    ['merchant', 12],
-    ['shrine', 12],
+    ['battle', 24],
+    ['elite', layer >= 3 ? 13 : 0],
+    ['merchant', 13],
+    ['shrine', 10],
     ['recruit', layer <= last - 3 ? 10 : 0],
+    ['campfire', layer >= 2 ? 11 : 0],
   ]
   const total = w.reduce((s, [, n]) => s + n, 0)
   let roll = rng.range(0, total)
@@ -360,6 +426,7 @@ function ensureType(
   eligible: (n: MapNode) => boolean,
 ): void {
   if (middle.some((n) => n.type === type)) return
-  const candidates = middle.filter((n) => n.type === 'battle' && eligible(n))
+  // A guaranteed stop never takes a layer's last fight (an elite still is one).
+  const candidates = middle.filter((n) => n.type === 'battle' && eligible(n) && (type === 'elite' || notLastFight(n, middle)))
   if (candidates.length) rng.pick(candidates).type = type
 }

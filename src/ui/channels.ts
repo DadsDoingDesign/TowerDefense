@@ -246,6 +246,10 @@ export const NODE_ICON: Record<string, IconKey> = {
   merchant: 'merchant',
   shrine: 'shrine',
   recruit: 'recruit',
+  // No atlas cell of their own yet (the sheet is a pipeline asset): the fire is
+  // the heal mark, an act boss the boss mark, the final boss keeps the crown.
+  campfire: 'auraHeal',
+  miniboss: 'boss',
   boss: 'crown',
 }
 
@@ -264,6 +268,9 @@ export const PERK_ICON: Record<string, IconKey> = {
   cartographer: 'map',
   freeCompanies: 'recruit',
   standingOrders: 'orders',
+  // Phase 3b horizontal unlocks: the campfire's heal mark, the relic's own.
+  fieldKitchen: 'auraHeal',
+  cartulary: 'relic',
   sacrifice: 'vow',
 }
 

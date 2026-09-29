@@ -22,7 +22,8 @@ import { createSentinel } from '../src/game/data/sentinels'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
-import { UPGRADE_PATHS } from '../src/game/data/upgradeTree'
+import { allPerkPoints } from '../src/game/data/perks'
+import { childrenOf } from '../src/game/data/archetypeTree'
 import {
   encounterSeed,
   generateEncounter,
@@ -32,13 +33,23 @@ import {
   type EncounterKind,
   type WaveVariant,
 } from '../src/game/data/waves'
-import { allStatCards, generateRewardCards, type RewardGrant } from '../src/game/data/rewards'
+import { generateRewardCards, type RewardGrant } from '../src/game/data/rewards'
+import { RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
+import { withRelicStats } from '../src/game/run/relics'
 import { applyXp } from '../src/game/engine/leveling'
-import { MAX_BASE_HP, START_GOLD, THREAT_PER_CHOICE, THREAT_PER_NODE } from '../src/state/gameStore'
+import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '../src/state/gameStore'
+import { levelXpAwards } from '../src/game/run/battle'
+import { nodeThreatMult } from '../src/game/run/threat'
 import { bannerRules, BANNER_RUNGS, MAX_BANNER } from '../src/state/metaStore'
 import {
   loadoutFor,
   marksFor,
+  policyById,
+  MC_LAYERS,
+  mcKind,
+  mcLevel,
+  mcRarity,
+  monteCarloRun,
   POLICIES,
   simulateRun,
   ZERO_META,
@@ -52,8 +63,8 @@ import {
   AURA_TRIO,
   bestSlots,
   buildSpec,
-  buyUpgrades,
-  depthUpgrades,
+  randomPerks,
+  heroDps,
   equipIfBetter,
   freshHero,
   makeWave,
@@ -87,21 +98,6 @@ const pct = (n: number) => `${(n * 100).toFixed(0)}%`
 const pp = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n * 100).toFixed(1)}pt`
 const pm = (s: Stat, digits = 1) => `${s.mean.toFixed(digits)} ±${s.std.toFixed(digits)}`
 const md: string[] = []
-/**
- * Exploration override for the special-node Threat step, **Node-only** —
- * `balance/` never ships to the browser, which is exactly why the dial lives
- * here and the shipped value lives as a plain constant in `gameStore.ts`.
- *
- * Defaults to the shipped `THREAT_PER_NODE.special`. `FW_SPECIAL_THREAT=1.2 npm
- * run balance` re-fits the dial without touching `src/`; the report prints a
- * loud warning when the number it is describing is not the number the game
- * ships, so an overridden run can never be mistaken for a measurement of the
- * game.
- */
-const SPECIAL_ENV = Number(process.env.FW_SPECIAL_THREAT)
-const SPECIAL_THREAT = Number.isFinite(SPECIAL_ENV) && SPECIAL_ENV > 0 ? SPECIAL_ENV : THREAT_PER_NODE.special
-const SPECIAL_OVERRIDDEN = SPECIAL_THREAT !== THREAT_PER_NODE.special
-
 const failures: string[] = []
 const line = (s = '') => md.push(s)
 
@@ -918,6 +914,13 @@ line('')
 // -------------------------------------------------------------- Sweep 5
 // Pressure ceiling — rebuilt (M19-d2).
 line('## 5. Pressure ceiling (standard team, depth 8)')
+/**
+ * The standard team's level (Phase 3b). It was L20 — a finished tier-2 build —
+ * which matched the old road, where Threat compounded to ×11.6 by depth 8. On
+ * the three-act road levels are a resource: L20 lands around depth 9–10, and a
+ * depth-8 company is a tier-1 line in its mid-teens.
+ */
+const STD_LEVEL = 16
 line('')
 line('**What broke before.** The old sweep scaled enemy **HP only**, stopped at ×8, and')
 line('was demoted to "informational" with no invariant at all. Enemies that arrive at')
@@ -930,18 +933,18 @@ line('axis, because `engine.impact` applies splash to every enemy in radius with
 line('target cap — piling bodies into the same space makes a splash line **stronger**,')
 line('which is exactly how the old ladder ended up censored.')
 line('')
-line(`A depth-8 team (Vanguard / Sharpshooter / Pyromancer, Epic gear + focused upgrades)`)
-line(`faces depth-8 waves at the Threat a real depth-8 run carries (×${f2(THREAT_PER_NODE.normal ** 7)}) with the real`)
+line(`A depth-8 team (Vanguard / Sharpshooter / Pyromancer lines at level ${STD_LEVEL} — tier 1, where the`)
+line('XP curve (§9) puts a depth-8 company, with L20 two layers deeper — Epic gear and random spec perks)')
+line(`faces depth-8 waves at the Threat a real depth-8 fight is fought at (×${f2(threatAtLayer(8))}) with the real`)
 line(`base of ${MAX_BASE_HP}. ${SEEDS.slice(0, 4).length} seeds per rung.`)
 line('')
 const PRESSURE_LADDER = [1, 1.5, 2.2, 3.4, 5, 7.6, 11, 17, 25, 38, 57, 85]
 const CEIL_SEEDS = SEEDS.slice(0, 4)
-const stdThreat = THREAT_PER_NODE.normal ** 7
-const stdUpg = depthUpgrades(8)
+const stdThreat = threatAtLayer(8)
 const stdTeam = [
-  { sentinel: buildSpec('vanguard', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's0' },
-  { sentinel: buildSpec('sharpshooter', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's3' },
-  { sentinel: buildSpec('pyromancer', { gearRarity: 'epic', seed: 8, upgrades: stdUpg }), slotId: 's5' },
+  { sentinel: buildSpec('vanguard', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's0' },
+  { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's3' },
+  { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's5' },
 ]
 line('| Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |')
 line('|--:|--:|:-:|--:|--:|')
@@ -988,12 +991,12 @@ if (!baselineClear.cleared) failures.push('Standard team cannot clear depth 6 at
 // Monte Carlo full runs.
 line('## 6. Monte Carlo full runs (compounding Threat vs. progression)')
 line('')
-line('Random teams (3–5 specs) play depths 1→10. Team **power scales with depth**')
-line('(level ≈ 2+2·depth, gear rarity improving, upgrade levels bought) to mirror real')
-line(`progression. Threat compounds by the real store constants — **×${THREAT_PER_NODE.normal} per node,`)
-line(`×${THREAT_PER_NODE.elite} per elite** (\`THREAT_PER_NODE\`) — *plus* **×${THREAT_PER_CHOICE} per accepted shrine /`)
-line('recruit / merchant-recruit (`THREAT_PER_CHOICE`)**, which the old sweep omitted')
-line('entirely and so understated real difficulty. Base HP (20) persists between nodes.')
+line('Random teams (3–5 specs) play all twelve layers of the three acts — an act boss on')
+line('layers 4 and 8, the final boss on 12, an elite mid-way through acts 2 and 3. Team **power')
+line('scales with depth** (level ≈ 2.5·depth, the curve `levelXpAwards` pays; gear rarity improving)')
+line('to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×' + THREAT_STEP + ' a layer, ×' + ACT_JUMP + ' more')
+line('per act) — it no longer compounds on choices, so this model and the routed first run in §11')
+line('meet every layer at the same Threat. Base HP (20) persists between nodes.')
 line('**Win** = the boss falls.')
 line('')
 /**
@@ -1011,89 +1014,31 @@ line('')
  * to one σ.
  */
 const RUNS = 300
-const NODES = 10
-/**
- * Share of non-boss nodes where the player accepts a Threat-raising choice. Map
- * generation caps specials at 2 merchant / 2 shrine / 1 recruit / 2 elite plus one
- * pre-boss prep node across ~27 middle nodes, but players *route toward* them, so
- * ~3 accepted choices over a 10-node path is the realistic figure.
- */
-const CHOICE_RATE = 0.3
+const NODES = MC_LAYERS
 let wins = 0
 const depths: number[] = []
 const deathDepths: number[] = []
 let bossAttempts = 0
 let bossKills = 0
-/** Threat each team carried into the boss fight — the other half of the §6/§11 gap. */
+/** Threat each team carried into the final boss — the other half of the §6/§11 gap. */
 const mcBossThreats: number[] = []
-const depthLevel = (d: number) => Math.min(20, 2 + d * 2)
-const depthRarity = (d: number): ItemRarity => (d < 3 ? 'common' : d < 6 ? 'rare' : d < 9 ? 'epic' : 'legendary')
 /**
  * Every Monte Carlo run draws a battlefield and a set of composition variants
- * off its own index, the way a real run draws them off its seed (WS8). The win
- * rate below is therefore an average over the field distribution and the
- * wave-variant distribution the shipped game produces, rather than a
- * measurement of one map fighting one fixed wave table ten times.
+ * off its own index, the way a real run draws them off its seed (WS8), and its
+ * own RNG stream, so two configs compare on paired seeds. The model itself is
+ * `runsim.monteCarloRun`, shared with `fit-curve.ts`.
  */
 const mcFieldCounts = new Map<string, { n: number; won: number }>()
 for (let r = 0; r < RUNS; r++) {
-  // One stream PER RUN, not one shared across all of them (WS8). With a single
-  // stream a config change that ends run 12 a node earlier consumes fewer draws
-  // and hands every later run a different team, so two configs could not be
-  // compared on paired seeds — a 3pt tuning step and a reshuffle looked
-  // identical. Measured while fitting the composition variants: the same field
-  // read 61% and 48% across two configs that did not touch it.
-  const runRng = new RNG(hashSeed(r, 'mcteam'))
-  const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
-  const specIds = Array.from({ length: teamSize }, () => runRng.pick(TIER2_NODES).id)
-  const field = pickBattleMap(hashSeed(r, 'mc'))
-  const fieldTally = mcFieldCounts.get(field.id) ?? { n: 0, won: 0 }
+  const out = monteCarloRun(r)
+  const fieldTally = mcFieldCounts.get(out.fieldId) ?? { n: 0, won: 0 }
   fieldTally.n++
-  mcFieldCounts.set(field.id, fieldTally)
-  const slots = bestSlots(field)
-  let baseHp = MAX_BASE_HP
-  let threat = 1
-  let reached = 0
-  let died = 0
-  for (let depth = 1; depth <= NODES; depth++) {
-    // Rebuild the team at depth-appropriate power (compounding player strength):
-    // level, gear rarity, AND purchased tower-upgrade levels all scale with depth.
-    const team = specIds.map((id, i) => ({
-      sentinel: buildSpec(id, {
-        level: depthLevel(depth),
-        gearRarity: depthRarity(depth),
-        seed: r * 10 + i,
-        upgrades: depthUpgrades(depth),
-      }),
-      slotId: slots[i],
-    }))
-    const kind = depth === NODES ? 'boss' : depth % 4 === 0 ? 'elite' : 'normal'
-    if (kind === 'boss') { bossAttempts++; mcBossThreats.push(threat) }
-    const m = runBattle({
-      team,
-      depth,
-      kind,
-      map: field,
-      variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
-      enemyHpMult: threat,
-      baseHp,
-      maxSeconds: 70,
-      seed: r * 100 + depth,
-    })
-    baseHp = m.baseHpLeft
-    if (!m.cleared || baseHp <= 0) {
-      died = depth
-      if (kind === 'boss') bossKills++
-      break
-    }
-    reached = depth
-    threat *= THREAT_PER_NODE[kind]
-    // The choice tax: shrines, recruits and merchant recruits each raise Threat.
-    if (kind !== 'boss' && runRng.chance(CHOICE_RATE)) threat *= THREAT_PER_CHOICE
-  }
-  depths.push(reached)
-  if (died) deathDepths.push(died)
-  if (reached >= NODES) {
+  mcFieldCounts.set(out.fieldId, fieldTally)
+  if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
+  if (out.finalKill) bossKills++
+  depths.push(out.reached)
+  if (out.died) deathDepths.push(out.died)
+  if (out.won) {
     wins++
     fieldTally.won++
   }
@@ -1182,27 +1127,110 @@ if (bossKills === 0) {
 }
 
 // -------------------------------------------------------------- Sweep 7
-// Tower upgrade-path value: solo DPS at each purchased level of each path.
-line('## 7. Tower upgrade paths (solo DPS by level)')
+// Spec perks — the level-up choices that replaced the upgrade tree (Phase 3b).
+line('## 7. Spec perks (is any pick dead, and is any pair solved?)')
 line('')
-line('A Weaponmaster with each upgrade path bought to level 0→3, over')
-line(`${SEEDS.slice(0, 3).length} seeds. Each path should be a net gain over unupgraded even with its`)
-line('level-3 tradeoff.')
+line('**What this replaced.** §7 used to measure the per-hero upgrade tree: three identical')
+line('paths (Onslaught / Tempo / Precision) offered to all 27 specs, graded as solo DPS. It')
+line('measured the one decision every hero in the game shared — "+x%, bought with gold". The')
+line('tree is gone; a hero now picks one of two **spec perks** at level 5 (by base archetype)')
+line('and level 15 (by the line it evolved into), most of them rules rather than percentages.')
 line('')
-line('| Path | L0 ± | L1 ± | L2 ± | L3 ± | L3 vs L0 |')
-line('|---|--:|--:|--:|--:|--:|')
-const UPG_SEEDS = SEEDS.slice(0, 3)
-for (const path of UPGRADE_PATHS) {
-  const dps = [0, 1, 2, 3].map((lvl) =>
-    stat(UPG_SEEDS.map((seed) => soloDpsOf(buildSpec('weaponmaster', { seed: 2, upgrades: { [path.id]: lvl } }), seed))),
-  )
-  const gain = dps[0].mean ? (dps[3].mean - dps[0].mean) / dps[0].mean : 0
-  line(`| ${path.name} | ${pm(dps[0])} | ${pm(dps[1])} | ${pm(dps[2])} | ${pm(dps[3])} | ${gain >= 0 ? '+' : ''}${pct(gain)} |`)
-  if (dps[3].mean <= dps[0].mean) {
-    failures.push(`Upgrade path "${path.name}" L3 (${f1(dps[3].mean)}) is not a net gain over L0 (${f1(dps[0].mean)}).`)
+line('**How each perk is graded.** A representative hero of the line — level 9 (a Fighter,')
+line('Rogue or Mystic before its evolution) for a level-5 perk, level 19 in the line for a')
+line('level-15 one — takes the perk alone, and is graded by **stop rate** on three waves of')
+line('its depth (4 or 8): a `swarm` of runts, an `armour` column (Plated elite) and a `line`')
+line('(the depth\'s normal wave). Each point\'s waves are first scaled so the hero **without** a')
+line('perk stops about half of each — a bench at 0% or 100% cannot see a perk at all. A')
+line('cleric\'s auras need someone to reach, so the cleric line is graded beside a blocker.')
+line('')
+const PERK_SEEDS = SEEDS.slice(0, 3)
+interface PerkRow { point: string; perk: string; name: string; locked: boolean; d: Record<string, number>; mean: number; dps: number }
+const perkRows: PerkRow[] = []
+const perkPointSummary: { point: string; gap: number; greedy: string; measured: string; tradesBoth: boolean }[] = []
+const PERK_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
+function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], WaveDef> {
+  return {
+    swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
+    armour: generateEncounter(depth, 'elite', { variantId: 'plated' }),
+    line: generateEncounter(depth, 'normal'),
   }
 }
+function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
+  if (line !== 'cleric') return [{ sentinel: hero, slotId: 's3' }]
+  return [
+    { sentinel: hero, slotId: AURA_TRIO.support },
+    { sentinel: buildSpec('berserker', { level, seed: 5 }), slotId: AURA_TRIO.allies[0] },
+  ]
+}
+for (const point of allPerkPoints()) {
+  const level = point.level === 5 ? 9 : 19
+  const depth = point.level === 5 ? 4 : 8
+  // The representative: the line's first spec, built to `level` (so a level-9
+  // build is still its base archetype and a level-19 one is in the line).
+  const specId = point.level === 5 ? childrenOf(childrenOf(point.line)[0].id)[0].id : childrenOf(point.line)[0].id
+  // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a wave
+  // the hero cannot kill, which flattens a bench into a plateau no perk moves.
+  const base = buildSpec(specId, { level, seed: 5 })
+  const benches = perkBenches(depth)
+  // Scale the waves so the perk-less hero stops ~half of each (geometric bisection).
+  const pressure: Record<string, number> = {}
+  for (const k of PERK_BENCH_KEYS) {
+    let lo = 0.02
+    let hi = 60
+    for (let it = 0; it < 9; it++) {
+      const mid = Math.sqrt(lo * hi)
+      const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid })
+      if (r > 0.5) lo = mid
+      else hi = mid
+    }
+    pressure[k] = Math.sqrt(lo * hi)
+  }
+  const baseRate: Record<string, number> = {}
+  for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k] })
+  const rows: PerkRow[] = []
+  for (const perk of point.options) {
+    const hero: Sentinel = { ...base, perks: [perk.id] }
+    const d: Record<string, number> = {}
+    for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k] }) - baseRate[k]
+    rows.push({ point: point.key, perk: perk.id, name: perk.name, locked: !!perk.unlock, d, mean: mean(PERK_BENCH_KEYS.map((k) => d[k])), dps: heroDps(hero) })
+  }
+  perkRows.push(...rows)
+  const open = rows.filter((r) => !r.locked)
+  const top = [...open].sort((a, b) => b.mean - a.mean)
+  const greedy = [...open].sort((a, b) => b.dps - a.dps)[0]
+  // A real pair: each option is the better one on at least one bench.
+  const tradesBoth = open.length < 2 || open.every((r) => PERK_BENCH_KEYS.some((k) => open.every((o) => o === r || r.d[k] >= o.d[k] - 0.005)))
+  perkPointSummary.push({ point: point.key, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, tradesBoth })
+}
+line('| Point | Perk | `swarm` | `armour` | `line` | Mean | heroDps |')
+line('|---|---|--:|--:|--:|--:|--:|')
+for (const r of perkRows) {
+  line(`| ${r.point} | ${r.name}${r.locked ? ' 🔒' : ''} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
+}
 line('')
+line('| Point | Gap between the two open options | The greedy (heroDps) pick | The measured better pick | Each option wins a bench? |')
+line('|---|--:|---|---|:-:|')
+for (const s of perkPointSummary) line(`| ${s.point} | ${pp(s.gap)} | ${s.greedy} | ${s.measured} | ${s.tradesBoth ? 'yes' : '**no**'} |`)
+line('')
+/** A perk must move at least one of its benches by this much, or it is dead. */
+const PERK_EDGE = 0.02
+/** Two open options may not sit further apart than this on the three-bench mean. */
+const PERK_GAP_CEILING = 0.2
+const greedyRight = perkPointSummary.filter((s) => s.greedy === s.measured).length
+line(`**Invariants.** Every perk moves at least one bench by ≥ ${pp(PERK_EDGE)} (none is dead); no choice point`)
+line(`has its two open options more than ${pp(PERK_GAP_CEILING)} apart on the mean (none is solved by`)
+line(`a mile). Reported, not gated: whether each option wins a bench of its own, and how often`)
+line(`the heroDps-greedy pick — the "read the tooltip" answer — is the measured better one:`)
+line(`**${greedyRight} of ${perkPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave, not the arithmetic.`)
+line('')
+for (const r of perkRows) {
+  const best = Math.max(...PERK_BENCH_KEYS.map((k) => r.d[k]))
+  if (best < PERK_EDGE) failures.push(`Spec perk "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(PERK_EDGE)}).`)
+}
+for (const s of perkPointSummary) {
+  if (s.gap > PERK_GAP_CEILING) failures.push(`Spec perks at ${s.point} are a solved pair: ${s.measured} leads by ${pp(s.gap)} on the three-bench mean (ceiling ${pp(PERK_GAP_CEILING)}).`)
+}
 
 // -------------------------------------------------------------- Sweep 8
 // Mutation tradeoffs — now measured, not asserted (M19-d1).
@@ -1319,34 +1347,57 @@ line('')
 
 // -------------------------------------------------------------- Sweep 9
 // Map special-tile pacing: specials should be a minimal, non-clustered set.
-line('## 9. Map special-tile pacing')
+line('## 9. Map pacing — how much of the road is a fight')
 line('')
-line('300 generated maps. Specials should be a minimal set (no whole-layer clusters).')
+line('300 generated maps. The review found **~70–83% of all nodes were battles** (83% measured on')
+line('the 10-layer map), so most forks were a battle against a battle and the route barely mattered.')
+line('With Threat following the road instead of the choice (Phase 3b), a stop is priced by the fight')
+line('it replaces, so the map can carry more of them: the target is **55–60% fights** across the')
+line('free layers (act bosses excluded — every route fights those). Stops still never crowd a layer')
+line('— at most two, and every free layer keeps at least one fight.')
 line('')
-const specialTypes = ['merchant', 'shrine', 'recruit', 'elite']
-const perType: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0 }
+const specialTypes = ['merchant', 'shrine', 'recruit', 'campfire', 'elite']
+const perType: Record<string, number> = Object.fromEntries(specialTypes.map((t) => [t, 0]))
 let specialSum = 0
 let worstLayerCluster = 0
+let freeNodes = 0
+let freeFights = 0
+let fightlessLayers = 0
 const MAPS = 300
 for (let i = 0; i < MAPS; i++) {
   const m = generateRunMap(new RNG(i * 7 + 1))
-  const byLayer: Record<number, number> = {}
+  const stopsByLayer: Record<number, number> = {}
+  const fightsByLayer: Record<number, number> = {}
+  const free = new Set<number>()
   for (const n of m.nodes) {
+    if (n.type === 'start' || n.type === 'miniboss' || n.type === 'boss') continue
+    free.add(n.layer)
+    freeNodes++
+    const fight = n.type === 'battle' || n.type === 'elite'
+    if (fight) { freeFights++; fightsByLayer[n.layer] = (fightsByLayer[n.layer] ?? 0) + 1 }
     if (specialTypes.includes(n.type)) {
       perType[n.type]++
       specialSum++
-      byLayer[n.layer] = (byLayer[n.layer] ?? 0) + 1
+      if (!fight) stopsByLayer[n.layer] = (stopsByLayer[n.layer] ?? 0) + 1
     }
   }
-  for (const k of Object.keys(byLayer)) worstLayerCluster = Math.max(worstLayerCluster, byLayer[+k])
+  for (const k of Object.keys(stopsByLayer)) worstLayerCluster = Math.max(worstLayerCluster, stopsByLayer[+k])
+  for (const l of free) if (!fightsByLayer[l]) fightlessLayers++
 }
 const avgSpecials = specialSum / MAPS
+const fightShare = freeFights / freeNodes
+/** The band the map is shaped to (Phase 3b): down from ~83% toward 55–60%. */
+const FIGHT_SHARE_BAND: [number, number] = [0.5, 0.63]
+line(`- Fights (battle or elite) among free-layer nodes: **${pct(fightShare)}** (band ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])}; target 55–60%)`)
 line(`- Avg special tiles per map: **${f1(avgSpecials)}**`)
 line(`- Per type per map: ${specialTypes.map((t) => `${t} ${f2(perType[t] / MAPS)}`).join(', ')}`)
-line(`- Max specials in a single layer (any map): **${worstLayerCluster}**`)
+line(`- Max stops in a single layer (any map): **${worstLayerCluster}** · free layers with no fight: **${fightlessLayers}**`)
 line('')
-if (avgSpecials > 8) failures.push(`Maps carry too many special tiles (avg ${f1(avgSpecials)} > 8).`)
-if (worstLayerCluster > 2) failures.push(`Map special tiles cluster (${worstLayerCluster} in one layer > 2).`)
+if (fightShare < FIGHT_SHARE_BAND[0] || fightShare > FIGHT_SHARE_BAND[1]) {
+  failures.push(`Map pacing: ${pct(fightShare)} of free-layer nodes are fights, outside the ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])} band.`)
+}
+if (worstLayerCluster > 2) failures.push(`Map stops cluster (${worstLayerCluster} in one layer > 2).`)
+if (fightlessLayers > 0) failures.push(`${fightlessLayers} free map layer(s) offer no fight at all — "fight here" must always be a road.`)
 
 // -------------------------------------------------------------- Sweep 10
 // Curse affixes — new (M19-c).
@@ -1471,17 +1522,12 @@ line('hands over a hero at the roster **median level minus 3**, not a level-1 bo
 line('Both models are reported. The strict one is kept because it is a useful lower')
 line('bound on how badly a first run can be played; the graded one is the realistic one.')
 line('')
-line('**Both models now charge Threat on every node the run consumes.** They did not')
-line('always: `completeNode` used to leave Threat untouched, so a merchant, shrine or')
-line(`recruit stop skipped a ×${THREAT_PER_NODE.normal} step outright and paid a reward for it. That made`)
-line('"take the special" close to strictly correct on both axes at once, which is the')
-line('one thing a route fork cannot survive. Specials now charge')
-line(`**×${SPECIAL_THREAT} (\`THREAT_PER_NODE.special\`)** — smaller than a battle, but not nothing.`)
-if (SPECIAL_OVERRIDDEN) {
-  line('')
-  line(`> ⚠️ **This run is an exploration override.** \`FW_SPECIAL_THREAT=${SPECIAL_THREAT}\` was set, so the`)
-  line(`> numbers below describe a special-node step of ×${SPECIAL_THREAT}, not the ×${THREAT_PER_NODE.special} the game ships.`)
-}
+line('**Threat follows the road (Phase 3b).** Both models fight every layer at')
+line('`threatAtLayer(layer)` — the same number whatever route reached it. The old rules')
+line('charged every battle ×1.42 (×1.52 an elite), every stop ×1.13 and every accepted')
+line('hire, pact or mutation ×1.05, which made taking power a Threat bill and put the boss')
+line('anywhere from ×15 to ×30 depending on greed. A stop now costs the fight it replaces —')
+line('its XP, gold and card — and nothing else.')
 line('')
 
 /**
@@ -1497,7 +1543,6 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   let roster: Sentinel[] = [freshHero(archetype, rng)]
   let gold = START_GOLD
   let baseHp = MAX_BASE_HP
-  let threat = 1
   let reached = 0
   let bossThreat: number | null = null
   let runMods: EffectMods[] = []
@@ -1506,13 +1551,13 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   const heroSlots = bestSlots(field)
   for (let depth = 1; depth <= NODES; depth++) {
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
-      // A recruit node hands over a fresh level-1 body — and taxes Threat for it.
+      // A recruit node hands over a fresh level-1 body.
       const a = rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[])
       roster = [...roster, wearKit(createSentinel(a), recruitKit(rng, a))]
-      threat *= THREAT_PER_CHOICE
     }
-    const kind = depth === NODES ? 'boss' : depth % 4 === 0 ? 'elite' : 'normal'
-    if (kind === 'boss') bossThreat = threat
+    const kind = mcKind(depth)
+    const threat = threatAtLayer(depth) * nodeThreatMult(depth === NODES ? 'boss' : kind === 'elite' ? 'elite' : 'battle')
+    if (depth === NODES) bossThreat = threat
     const m = runBattle({
       team: roster.map((s, i) => ({ sentinel: s, slotId: heroSlots[i] })),
       depth,
@@ -1529,12 +1574,14 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     if (!m.cleared || baseHp <= 0) break
     reached = depth
 
-    gold += m.goldEarned + (kind === 'boss' ? 100 : kind === 'elite' ? 25 : 0)
-    const xpById = new Map(m.perSentinel.map((p) => [p.id, p.xp]))
+    if (depth === NODES) break
+    gold += m.goldEarned + (kind === 'boss' ? 60 : kind === 'elite' ? 25 : 0)
+    const awards = levelXpAwards(m.perSentinel.map((p) => ({ id: p.id, xpGained: p.xp })), { wave: m.wave, hpMult: threat, depth, kind })
+    const xpById = new Map(awards.map((p) => [p.id, p.xpGained]))
     roster = roster.map((s) => autoEvolve(applyXp(s, xpById.get(s.id) ?? 0), rng))
 
     // One of three reward cards, taken at random the way a first-timer would.
-    if (kind !== 'boss') {
+    {
       const card = rng.pick(generateRewardCards(rng, { luck: depth * 0.03 }))
       if (card.kind === 'item' && card.item) {
         roster = [equipIfBetter(roster[0], card.item), ...roster.slice(1)]
@@ -1543,13 +1590,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
       }
     }
 
-    for (let i = 0; i < roster.length; i++) {
-      const res = buyUpgrades(roster[i], gold)
-      gold = res.gold
-      roster[i] = res.hero
-    }
-    threat *= THREAT_PER_NODE[kind]
-    if (kind !== 'boss' && rng.chance(CHOICE_RATE)) threat *= THREAT_PER_CHOICE
+    roster = roster.map((h) => randomPerks(h, rng))
   }
   const won = reached >= NODES
   return {
@@ -1562,6 +1603,10 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     marks: marksFor(reached, won, bannerRules(0)),
     layers: NODES + 1,
     fieldId: field.id,
+    starter: archetype,
+    fights: reached + 1,
+    nodes: reached + 1,
+    levelByLayer: [],
   }
 }
 
@@ -1595,7 +1640,7 @@ const FRESH_WIN_BAND: [number, number] = [0.15, 0.35]
  * It is gated in **§12**, not here, and the reason is worth writing down: the
  * obvious version of this check compares §11's fresh run against §6's
  * depth-appropriate company, and those two models differ in their *structure*
- * (§6 fights ten straight battles with no map to route) as much as in their
+ * (§6 fights every layer straight with no map to route) as much as in their
  * team, so the number it produces is not about the team at all. §12 compares a
  * zero-meta run against a hub-equipped one **inside one model, on identical
  * seeds**, which is the same question asked properly.
@@ -1696,15 +1741,7 @@ const freshReal = freshByPolicy[policyIdx('specials')]
 const freshBest = freshByPolicy.reduce((a, b) => (b.winRate > a.winRate ? b : a))
 const freshSolo = summarise('Strict floor — 10 forced battles, no shops, no hires, random card', 'Strict floor', (s, a) => freshRun(s, a, []))
 const freshRecruit = summarise('Strict floor + 2 free level-1 recruits (depths 3 and 6)', 'Strict + 2 recruits', (s, a) => freshRun(s, a, [3, 6]))
-// The two counterfactuals that bracket the shipped rule. Neither is a model of
-// the game: they are the two ends of the one dial §11 is fitted on, kept in the
-// report so the choice of `THREAT_PER_NODE.special` is auditable rather than
-// asserted. `freshFree` is the pre-fix game (specials cost nothing); `freshFull`
-// charges specials the full battle step. Both are measured on the gated line.
-const gatePolicy = POLICIES[policyIdx('specials')]
-const freshFree = summarise('_counterfactual_ — pre-fix: specials advance Threat by nothing', '_cf_ — specials ×1.00 (pre-fix)', (s, a) => simulateRun(s, a, { policy: gatePolicy, specialThreat: 1 }))
-const freshFull = summarise('_counterfactual_ — specials charge the FULL battle step', `_cf_ — specials ×${THREAT_PER_NODE.normal} (full step)`, (s, a) => simulateRun(s, a, { policy: gatePolicy, specialThreat: THREAT_PER_NODE.normal }))
-const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy, freshFree, freshFull]
+const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy]
 
 line('| Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |')
 line('|---|--:|--:|--:|--:|--:|--:|--:|')
@@ -1755,7 +1792,7 @@ line(
   `- **The largest single term in a fresh run is the route.** ${((freshBest.winRate - freshReal.winRate) * 100).toFixed(0)} points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).`,
 )
 line(
-  `- **Every stop is a trap on the current numbers.** The specials-first line takes ${f1(10 - freshReal.avgBattles)} more non-battle nodes than the battles-first line and wins ${((freshByPolicy[policyIdx('battles')].winRate - freshReal.winRate) * 100).toFixed(0)} points less. A merchant charges a ×${SPECIAL_THREAT} Threat step for a shelf a ${START_GOLD}-gold run mostly cannot buy from, and a shrine charges it again for a pact. This is not a routing lesson the game teaches anywhere, and it is the mechanism behind two other findings: it is why "no Merchants" could not carry a Banner rung (see \`metaStore\`), and why a map with *more* forks reads negative on this line in §12. **Handoff:** the dials are \`THREAT_PER_NODE.special\`, \`ITEM_PRICE\` and the merchant stock roll, none of which are in this workstream.`,
+  `- **A stop is a price now, not a trap.** The specials-first line fights ${f1(freshByPolicy[policyIdx('battles')].avgBattles - freshReal.avgBattles)} fewer battles than the battles-first line and wins ${Math.abs((freshReal.winRate - freshByPolicy[policyIdx('battles')].winRate) * 100).toFixed(0)} points ${freshReal.winRate >= freshByPolicy[policyIdx('battles')].winRate ? 'more' : 'less'}. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.`,
 )
 line(
   `- The curve has a real bite at every node rather than one cliff: no single depth ends more than ${pct(freshReal.cliffShare)} of gated-line runs (depth ${freshReal.cliffDepth} is the worst).`,
@@ -1765,20 +1802,17 @@ line(
 )
 line('')
 line('**Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through')
-line(`ten straight battles and wins ${pct(winRate)} of the time; the zero-meta first run, played the`)
+line(`all twelve layers and wins ${pct(winRate)} of the time; the zero-meta first run, played the`)
 line(`way the game is actually laid out, wins ${pct(freshReal.winRate)} on the first-timer line and ${pct(freshBest.winRate)} on the best`)
 line('one. The gap between those numbers is what the meta layer and the player\'s own')
 line('learning are worth, and it is now a difference in *how much slack you have*, not')
 line('the difference between a game and a grind gate.')
 line('')
-line('**The two bands no longer fight each other.** §6 fights ten straight battles and')
-line(`meets the boss at a measured mean Threat of **×${f1(mcBossThreat)}**. Before specials were charged, a`)
-line(`routed first run met it at **×${f1(freshFree.bossThreat)}** — a **${f1(mcBossThreat / Math.max(1, freshFree.bossThreat))}×** gap. Since every dial in \`waves.ts\` /`)
-line('`enemies.ts` is multiplied by Threat, that gap is the exchange rate between the two')
-line('sweeps: a wave-table change that moved §11 by one point moved §6 by roughly that many.')
-line(`Charging specials at ×${SPECIAL_THREAT} puts a routed run at **×${f1(freshReal.bossThreat)}** — a **${f1(mcBossThreat / Math.max(1, freshReal.bossThreat))}×** gap. The wave`)
-line('table can now be tuned for one band without silently detonating the other, which is')
-line('the structural half of this change and outlives the particular number fitted here.')
+line('**The two bands meet the boss at the same Threat.** §6 and a routed first run both fight')
+line(`every layer at \`threatAtLayer\`, so the final boss is ×${f1(mcBossThreat)} in §6 and ×${f1(freshReal.bossThreat)} on the first-timer line —`)
+line('the exchange-rate problem the old special step was introduced to narrow (a routed run used to')
+line('meet the boss at ×11–15 against §6\'s ×30) is gone by construction: a wave-table dial now lands')
+line('equally hard on both sweeps.')
 line('')
 line('**The three gates.**')
 line('')
@@ -1822,18 +1856,6 @@ line('| enemy resists +0.12 | 42% → 28% | 53% → **39%** | §6 win band broke
 line('| enemy leak ×2 | 42% → 41% | 53% → 47% | no effect on §11 |')
 line('| budget curve front-loaded | 42% → **47%** | 53% → 55% | wrong direction |')
 line('| enemy speed ×1.5, boss 0.86 | 45% → 30% | 50% | §4 censors, §6 concentration 74% |')
-line('')
-line('**Why the special step is a *partial* one.** The rule is fitted on exactly one free')
-line(`parameter, \`THREAT_PER_NODE.special\`, and the two counterfactual rows above bracket`)
-line(`it: ×1.00 (the pre-fix game) wins ${pct(freshFree.winRate)} on the gated line, ×${THREAT_PER_NODE.normal} (the full battle step)`)
-line(`wins ${pct(freshFull.winRate)}. Note what the policy set adds to that old fit: the step barely moves the`)
-line('battles-first line at all, because that line does not take the stops. It is a dial on')
-line('*how badly bad routing is punished*, not a dial on the game\'s difficulty — which is')
-line('why it could not be used to bring the win rate down this time.')
-line('')
-line('The greed tax composes on top: **visiting** a shrine costs')
-line(`×${SPECIAL_THREAT}; **taking** the pact costs ×${SPECIAL_THREAT} × ${THREAT_PER_CHOICE} = ×${f2(SPECIAL_THREAT * THREAT_PER_CHOICE)}. Walking away is still cheaper`)
-line('than accepting, and both are cheaper than fighting.')
 line('')
 if (freshBest.winRate < FRESH_WIN_BAND[0]) {
   failures.push(
@@ -1888,8 +1910,10 @@ const HUB_TOLERANCE = 0.03
  * n=500 while reading −1 on the others. The exemption was the wrong answer: it
  * would have shipped an unlock that is a trap for exactly the player least
  * equipped to see it coming. The map generator pays for its extra roads
- * instead, by trading a merchant and a shrine off the per-map cap
- * (`runmap.assignTypes`), which lands every line at or above the baseline. The
+ * instead (`runmap.assignTypes`): a wide layer keeps two fights and a road out
+ * of a stop leads back to a fight (Phase 3b — the old price, a merchant and a
+ * shrine off the cap, starved the stop-first line of Gate repairs on the
+ * three-act road), which lands every line at or above the baseline. The
  * gate is therefore the strong form of the rule the doctrine states: buying
  * anything must not make the run worse, for anybody.
  */
@@ -1951,8 +1975,11 @@ const HUB_STATES: [string, Record<string, number>][] = [
   ['Free Companies', { freeCompanies: 1 }],
   ['Standing Orders', { standingOrders: 1 }],
   ['all three unlocks', { cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
+  // Phase 3b: the two feat-opened services, graded together (one row, to hold
+  // §12's wall time): more choices at a campfire and an act boss, never less.
+  ['Field Kitchen + Relic Cartulary', { fieldKitchen: 1, cartulary: 1 }],
   ['the full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
-  ['everything the hub sells', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
+  ['everything the hub sells', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
 ]
 const hubZero: Record<string, HubCell> = {}
 for (const p of POLICIES) hubZero[p.id] = hubCell(ZERO_META, p)
@@ -2042,10 +2069,14 @@ function mapShape(opts: Parameters<typeof generateRunMap>[1]): MapShape {
     for (const e of m.edges) if (outDeg.get(e.from) === 1) forcedIds.add(e.to)
     for (const n of m.nodes) {
       if (n.type === 'elite') { elites++; if (forcedIds.has(n.id)) forced++ }
-      if (['merchant', 'shrine', 'recruit', 'elite'].includes(n.type)) specials++
+      if (['merchant', 'shrine', 'recruit', 'campfire', 'elite'].includes(n.type)) specials++
       if (n.type === 'boss') continue
       const outs = m.edges.filter((e) => e.from === n.id).map((e) => byId.get(e.to)!)
       if (!outs.length) continue
+      // The step into an act boss has one road on every map by design (the
+      // act's closing fight is a single-node layer), so it is not a fork any
+      // unlock could widen and is left out of the fork measure.
+      if (outs.every((o) => o.type === 'miniboss' || o.type === 'boss')) continue
       steps++
       if (outs.length === 1) noChoice++
       else if (new Set(outs.map((o) => o.type)).size > 1) mixed++
@@ -2097,7 +2128,7 @@ if (shapeHire.specials <= shapeBase.specials) {
 line('**Findings.**')
 line('')
 line(
-  `- \`Cartographer's Table\` is now width, not length: same 11 layers, same boss budget, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} and mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.`,
+  `- \`Cartographer's Table\` is now width, not length: same ${f1(shapeBase.layers)} layers, same boss budget, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} and mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.`,
 )
 line(
   `- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries ${f1(shapeBase.specials - shapeWide.specials)} fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.`,
@@ -2218,8 +2249,8 @@ line('rung needs a fourth rule (no Shrines is the obvious candidate and wants a'
 line('`noShrines` flag threaded through `mapOptionsFor`), not a bigger multiplier.')
 line('')
 line('**The Banner-2 surcharge is gone, and so is its hidden rebate (M19-g).** `allElite`')
-line(`used to route through \`THREAT_PER_NODE[kind]\`, so a Banner-2 run was charged ×${THREAT_PER_NODE.elite} per`)
-line(`battle instead of ×${THREAT_PER_NODE.normal} — a compounding number (×1.9 on every enemy's HP by the`)
+line('used to route through `THREAT_PER_NODE[kind]`, so a Banner-2 run was charged ×1.52 per')
+line("battle instead of ×1.42 — a compounding number (×1.9 on every enemy's HP by the")
 line('boss) stacked on top of the composition change the rung actually sells, and nowhere')
 line("in its copy. A Banner substitutes an *encounter*, not a node, so the step now")
 line('follows the kind the MAP dealt (`mapKind` in `gameStore`, mirrored in `runsim` and')
@@ -2366,9 +2397,9 @@ if (ALL_MAPS.length < 2) {
 const VARIETY_TEAMS = 14
 function variantLeak(depth: number, kind: EncounterKind, variantId: string): number {
   const rr = new RNG(77)
-  const level = Math.min(20, 2 + depth * 2)
-  const rarity: ItemRarity = depth < 3 ? 'common' : depth < 6 ? 'rare' : depth < 9 ? 'epic' : 'legendary'
-  const threat = THREAT_PER_NODE.normal ** (depth - 1)
+  const level = mcLevel(depth)
+  const rarity: ItemRarity = mcRarity(depth)
+  const threat = threatAtLayer(depth)
   const wave = generateEncounter(depth, kind, { variantId })
   const ml = maxLeak(wave)
   const out: number[] = []
@@ -2378,7 +2409,7 @@ function variantLeak(depth: number, kind: EncounterKind, variantId: string): num
     for (const field of ALL_MAPS) {
       const order = bestSlots(field)
       const team = ids.map((id, i) => ({
-        sentinel: buildSpec(id, { level, gearRarity: rarity, seed: t * 10 + i, upgrades: depthUpgrades(depth) }),
+        sentinel: buildSpec(id, { level, gearRarity: rarity, seed: t * 10 + i, perkSeed: t * 10 + i }),
         slotId: order[i],
       }))
       out.push(
@@ -2898,35 +2929,33 @@ for (const [name, m] of [['depth-4 node', dealtNormal], ['depth-8 elite', dealtE
 // above, beside the rotation table it is measured from — see F4.)
 
 // -------------------------------------------------------------- Sweep 15
-// Reward cards — new (M6). Nothing had ever measured one.
-line('## 15. Reward cards (the hand you are dealt after every clear)')
+// Relics — the reward half of the hand (Phase 3b; this sweep graded the stat
+// cards relics replaced, and it grades the same way).
+line('## 15. Relics (the company-wide half of every reward hand)')
 line('')
-line('**What was missing.** `generateRewardCards` appears in this whole suite twice —')
-line('§11\'s fresh run and `runsim.ts` — and both absorb a **random** card into a win')
-line('rate. No sweep enumerated `STAT_CARDS`; none of the fourteen sweeps in')
-line('`balance/README.md` was about reward cards. So the offer a player answers after')
-line('every single cleared wave, all run long, was the one system in the game graded by')
-line('nothing, while `rewards.ts` asserted a rarity ladder ("the grant scales with the')
-line('tier") that had never been checked. It was **inverted**: two of the three')
-line('legendaries measured net negative, an epic measured −2.9pt, and the best card in')
-line('the game was a rare.')
+line('**What changed (Phase 3b).** Keepsakes (body-slot items that buffed the whole company)')
+line('and team stat cards (rewards that buffed the whole company) did one job with two')
+line('vocabularies. They are one pool of **relics** now: a run-long possession taken from')
+line('a reward hand (every elite deals one, an act boss deals three). About half are no')
+line('longer "+x%" but a **rule** — a ward, a cadence, a rush, a charter — and no relic sells')
+line('plain "+x% damage", which removed one of the eight `damageMult` sources.')
 line('')
-line('**What it does now.** Every card is applied alone — `mods` as `teamMods`, exactly')
-line('the way `finishBattle` applies them, and stats / Thorns / Patience onto the hero —')
-line('and graded on the same **stop rate** §4, §8 and §10 use. Four benches: §8\'s three')
-line('on a physical Weaponmaster, plus §4\'s `magic` bench on a Stormcaller, because a')
-line('card is team-wide and half of them do nothing on a STR build (this is the same')
-line('defect §4 was rebuilt to fix — `insight` read +0% on a physical bench forever).')
+line('**How they are graded.** A relic that acts inside a fight (a stat relic, or a rule the')
+line('engine keeps) is applied alone — its mods as `teamMods`, exactly as `startWave` hands')
+line('them over, its stats onto the hero — and graded on **stop rate** on four benches, as')
+line('the stat cards were: §8\'s three on a physical Weaponmaster and §4\'s `magic` bench on a')
+line('Stormcaller. A relic that changes the RUN (hires, Gate, merchants, XP, gold) cannot be')
+line('seen in one wave, so it is graded on whole runs instead: held from the first node, on')
+line('paired seeds, against the same runs without it.')
 line('')
 /**
- * Six seeds rather than §8's four. A reward card is a *fraction* of a mutation —
- * the biggest one here moves a bench half as far as the biggest mutation does —
- * so the cells have to be quieter to resolve one.
+ * Six seeds rather than §8's four. A relic is a *fraction* of a mutation, so
+ * the cells have to be quieter to resolve one.
  */
 const CARD_SEEDS = [11, 137, 409, 1013, 2411, 5171]
 /** How far a stated tradeoff must move a bench, in each direction, to be one. */
 const CARD_EDGE = 0.02
-/** …and how far below zero a card's average may sit before it is a punishment. */
+/** …and how far below zero a relic's average may sit before it is a punishment. */
 const CARD_TRAP = 0.02
 interface CardBench { label: string; wave: WaveDef; hero: Sentinel; pin: number; blurb: string }
 const CARD_BENCHES: CardBench[] = [
@@ -2941,17 +2970,6 @@ const CARD_BENCHES: CardBench[] = [
     blurb: 'a splash mystic — the half of the roster a STR card cannot reach',
   },
 ]
-/** Apply a card's non-mod half (stats / Thorns / Patience) to the bench hero. */
-const withGrant = (s: Sentinel, g: RewardGrant): Sentinel => ({
-  ...s,
-  stats: {
-    str: s.stats.str + (g.stats?.str ?? 0),
-    dex: s.stats.dex + (g.stats?.dex ?? 0),
-    int: s.stats.int + (g.stats?.int ?? 0),
-  },
-  thorns: s.thorns + (g.thorns ?? 0),
-  patience: s.patience + (g.patience ?? 0),
-})
 const cardBase = CARD_BENCHES.map((bch) =>
   stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin }),
 )
@@ -2961,14 +2979,16 @@ CARD_BENCHES.forEach((b, i) => line(`| \`${b.label}\` | ${b.blurb} | ${pct(cardB
 line('')
 line(`${CARD_SEEDS.length} seeds per cell.`)
 line('')
-line('| Card | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |')
-line('|---|---|--:|--:|--:|--:|--:|--:|---|')
+const RUN_RULE_RELICS = RELICS.filter((r) => r.rule)
+const FIGHT_RELICS = RELICS.filter((r) => !r.rule && relicSupported(r) && r.grant)
+line('| Relic | Kind | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |')
+line('|---|---|---|--:|--:|--:|--:|--:|--:|---|')
 const cardTier = new Map<ItemRarity, number[]>()
-for (const card of allStatCards()) {
-  const teamMods = card.grant.mods ? [card.grant.mods] : []
+for (const relic of FIGHT_RELICS) {
+  const teamMods = relicTeamMods([relic.id])
   const d = CARD_BENCHES.map(
     (bch, i) =>
-      stopRate([{ sentinel: withGrant(bch.hero, card.grant), slotId: 's3' }], bch.wave, CARD_SEEDS, {
+      stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: 's3' }], bch.wave, CARD_SEEDS, {
         enemyHpMult: bch.pin,
         teamMods,
       }) - cardBase[i],
@@ -2976,68 +2996,75 @@ for (const card of allStatCards()) {
   const m = mean(d)
   const worst = Math.min(...d)
   const best = Math.max(...d)
-  cardTier.set(card.rarity, [...(cardTier.get(card.rarity) ?? []), m])
+  // The rarity ladder is read off the STAT half — a rule's value depends on the
+  // wave it meets, which is the point of a rule, and says nothing about tier.
+  if (relic.kind === 'stat') cardTier.set(relic.rarity, [...(cardTier.get(relic.rarity) ?? []), m])
   line(
-    `| ${card.title} | ${RARITY[card.rarity].label} | ${pp(d[0])} | ${pp(d[1])} | ${pp(d[2])} | ${pp(d[3])} | **${pp(m)}** | ${pp(worst)} | ${card.downside ?? '—'} |`,
+    `| ${relic.name} | ${relic.kind} | ${RARITY[relic.rarity].label} | ${pp(d[0])} | ${pp(d[1])} | ${pp(d[2])} | ${pp(d[3])} | **${pp(m)}** | ${pp(worst)} | ${relic.downside ?? '—'} |`,
   )
-  /**
-   * (1) No card may be a trap. A reward is a reward; one that leaves the average
-   * team worse off is a punishment for clearing a wave.
-   */
   if (m < -CARD_TRAP) {
     failures.push(
-      `Reward card "${card.title}" (${card.rarity}) is a trap: it measures ${pp(m)} averaged over §15's four benches. A card offered as a reward for clearing a wave must not make the team worse.`,
+      `Relic "${relic.name}" (${relic.rarity}) is a trap: it measures ${pp(m)} averaged over §15's four benches. A reward must not make the company worse.`,
     )
   }
-  /**
-   * (2) A card that states a downside must be a real trade, in both directions —
-   * the standard §8 applies to mutations and §10 to curses. A pact with no
-   * measurable cost is a plain upgrade wearing a warning label; one with no
-   * measurable upside is a warning label.
-   */
-  if (card.downside) {
+  if (relic.kind === 'rule' && best < CARD_EDGE) {
+    failures.push(`Rule relic "${relic.name}" changes nothing a fight can see: its best bench is ${pp(best)} (needs ≥ ${pp(CARD_EDGE)}).`)
+  }
+  if (relic.downside) {
     if (best < CARD_EDGE) {
-      failures.push(
-        `Reward card "${card.title}" is a pact with no upside: its best bench is ${pp(best)}. It charges "${card.downside}" for nothing.`,
-      )
+      failures.push(`Relic "${relic.name}" is a pact with no upside: its best bench is ${pp(best)}. It charges "${relic.downside}" for nothing.`)
     }
     if (worst > -CARD_EDGE) {
       failures.push(
-        `Reward card "${card.title}" claims "${card.downside}" but costs nothing measurable: its worst bench is ${pp(worst)}. It is a plain upgrade wearing a pact label — the same defect §8 catches on mutations and §10 on curses.`,
+        `Relic "${relic.name}" claims "${relic.downside}" but costs nothing measurable: its worst bench is ${pp(worst)}. A plain upgrade wearing a pact label.`,
       )
     }
   }
 }
 line('')
-line('| Rarity | Cards | Mean value |')
+line('| Rarity (stat relics) | Relics | Mean value |')
 line('|---|--:|--:|')
 const CARD_TIERS: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
 const tierMean = CARD_TIERS.map((r) => mean(cardTier.get(r) ?? [0]))
 CARD_TIERS.forEach((r, i) => line(`| ${RARITY[r].label} | ${(cardTier.get(r) ?? []).length} | **${pp(tierMean[i])}** |`))
 line('')
-line('**Three invariants.** (1) no card may be a trap — a mean below')
-line(`${pp(-CARD_TRAP)} over the four benches; (2) a card that states a downside must be a real`)
-line(`trade — at least ${pp(CARD_EDGE)} of upside somewhere *and* that much cost somewhere, which is`)
-line('exactly what §8 asks of a mutation and §10 of a curse; (3) **the rarity ladder must')
-line('go up**, because rarity is the only thing the offer tells a player about value')
-line('before they pick. As shipped it read +0.8 / +3.4 / +3.7 / **+0.5**.')
-line('')
 for (let i = 1; i < CARD_TIERS.length; i++) {
   if (tierMean[i] < tierMean[i - 1]) {
     failures.push(
-      `Reward-card rarity ladder is inverted: ${RARITY[CARD_TIERS[i]].label} cards mean ${pp(tierMean[i])}, below ${RARITY[CARD_TIERS[i - 1]].label} at ${pp(tierMean[i - 1])}. Rarity is the only signal the offer gives before the pick; a ladder that goes down tells the player to take the worse card.`,
+      `Relic rarity ladder is inverted: ${RARITY[CARD_TIERS[i]].label} stat relics mean ${pp(tierMean[i])}, below ${RARITY[CARD_TIERS[i - 1]].label} at ${pp(tierMean[i - 1])}. Rarity is the only signal the offer gives before the pick.`,
     )
   }
 }
-line('**What is reported and NOT gated, and why.** The four commons (+3/+4 of one core')
-line('stat, +4 Patience) sit at or under this bench\'s resolution: one leak point on the')
-line('`armour` bench is 4.2pt and on `line` 0.4pt, so a card worth half a point cannot')
-line('be told from a card worth nothing here. They are printed above at face value —')
-line('`Insight` in particular reads ~+0.2pt, and that is a real statement about a +4 INT')
-line('card on a hero who already has thirty of them, not a rounding artifact. A floor')
-line('this bench cannot resolve would be a gate that passes on noise, which is the')
-line('failure mode `balance/README.md` lists as trap 2.')
+
+// ---- the run-rule half: whole runs, paired ---------------------------------
+/** Paired runs per run-rule relic (adaptive line, zero meta). */
+const RELIC_RUNS = Number(process.env.FW_RELIC_RUNS) || 150
+const relicPolicy = policyById('adaptive')
+const relicZero = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy }).won ? 1 : 0))
+line(`**The run-rule relics, on whole runs.** Each held from the first node, ${RELIC_RUNS} paired runs on the adaptive line, against the same runs without it (zero meta ${pct(mean(relicZero))}):`)
 line('')
+line('| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |')
+line('|---|---|---|--:|--:|')
+for (const relic of RUN_RULE_RELICS) {
+  const wins = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: [relic.id] }).won ? 1 : 0))
+  const dlt = mean(wins) - mean(relicZero)
+  const tol = Math.max(HUB_TOLERANCE, pairedTolerance(wins, relicZero))
+  line(`| ${relic.name} | ${RARITY[relic.rarity].label} | ${relic.desc} | ${pct(mean(wins))} | ${dlt >= 0 ? '+' : '−'}${Math.abs(dlt * 100).toFixed(0)}±${(tol * 100).toFixed(0)}pt |`)
+  if (dlt + tol < 0) {
+    failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor). A relic is a reward.`)
+  }
+}
+line('')
+const awaiting = RELICS.filter((r) => !relicSupported(r))
+line(`**Declared, not dealt.** ${awaiting.length ? awaiting.map((r) => `${r.name} (\`${r.requires}\`)`).join(', ') : 'none'} — relics whose rule belongs to the combat lane's engine. \`ENGINE_CAPABILITIES\` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.`)
+line('')
+for (const r of relicPool({ unlocked: () => true })) {
+  if (!relicSupported(r)) failures.push(`Relic "${r.name}" is in the offer pool but needs \`${r.requires}\`, which this engine does not implement.`)
+}
+const plainDamage = RELICS.filter((r) => r.grant?.mods?.damageMult && r.grant.mods.damageMult > 1 && !r.downside)
+line(`**No plain "+x% damage" relic:** ${plainDamage.length === 0 ? 'none in the pool' : plainDamage.map((r) => r.name).join(', ')}. Damage relics are pacts, which is the point.`)
+line('')
+if (plainDamage.length) failures.push(`Relic(s) ${plainDamage.map((r) => r.name).join(', ')} sell plain "+x% damage" — the damageMult source Phase 3b removed.`)
 
 // -------------------------------------------------------------- Summary
 line('## Verdict')
@@ -3068,7 +3095,7 @@ console.log(
 )
 console.log(`Fresh player STRICT floor: ${pct(freshSolo.winRate)} win, ${f1(freshSolo.avgDepth)}/${NODES} nodes | +2 recruits ${pct(freshRecruit.winRate)}`)
 console.log(
-  `Special-node Threat ×${SPECIAL_THREAT}${SPECIAL_OVERRIDDEN ? ' (ENV OVERRIDE)' : ''}: fresh ${pct(freshReal.winRate)} @ boss ×${f1(freshReal.bossThreat)} | free ×1.00 -> ${pct(freshFree.winRate)} @ ×${f1(freshFree.bossThreat)} | full ×${THREAT_PER_NODE.normal} -> ${pct(freshFull.winRate)} @ ×${f1(freshFull.bossThreat)} | §6 boss ×${f1(mcBossThreat)}`,
+  `Fresh run by starter (first-timer line): ${Object.entries(freshReal.byArch).map(([k, v]) => `${k} ${f1(v)} nodes`).join(', ')} | boss met at ×${f1(freshReal.bossThreat)}`,
 )
 console.log(
   `Fresh-run routing spread: ${freshByPolicy.map((r) => `${r.short} ${pct(r.winRate)}`).join(', ')} | gated: ceiling on ${freshReal.short} (${pct(freshReal.winRate)} vs ${pct(FRESH_WIN_BAND[1])}), floor on ${freshBest.short} (${pct(freshBest.winRate)} vs ${pct(FRESH_WIN_BAND[0])})`,
@@ -3107,11 +3134,6 @@ function baseStatTotal(it: Item): number {
     (b.rangeMult ?? 0) * 100 +
     (b.splashAdd ?? 0)
   )
-}
-
-function soloDpsOf(s: Sentinel, seed = 4242): number {
-  const m = runBattle({ team: [{ sentinel: s, slotId: 's3' }], depth: 6, enemyHpMult: 1.8, baseHp: 999, maxSeconds: 90, seed })
-  return m.timeSec > 0 ? m.totalDamage / m.timeSec : 0
 }
 
 /** Roll a single named enchantment at legendary budget by generating items until it appears. */
