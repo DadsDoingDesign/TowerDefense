@@ -1,0 +1,23 @@
+{
+  // The Node build/asset scripts under scripts/ (run with tsx). They were in no
+  // tsconfig at all, so `npm run typecheck` never looked at them and a type
+  // error there surfaced only when someone next ran the script. Node types
+  // on, DOM on too — several scripts import src/ modules that mention DOM
+  // types (sprites, anchors).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["scripts/**/*.ts"]
+}

@@ -51,7 +51,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import sharp from 'sharp'
+import sharp, { type OverlayOptions } from 'sharp'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const ASSETS = join(ROOT, 'public', 'assets')
@@ -177,7 +177,7 @@ async function nineSlice(srcPath: string, out: string, size: number, border: num
   const cols: Array<[number, number, number]> = [[0, t, border], [t, S - 2 * t, mid], [S - t, t, border]]
   const rows = cols
   const canvas = sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-  const parts: sharp.OverlayOptions[] = []
+  const parts: OverlayOptions[] = []
   let top = 0
   for (const [sy, sh, dh] of rows) {
     let left = 0
