@@ -1,5 +1,6 @@
 import { hashSeed, RNG } from '../core/rng'
-import { ENEMY_TYPES, modKey } from './enemies'
+import { SPECIALISTS, specialistCount } from './behaviours'
+import { effectiveHp, ENEMY_TYPES, modKey } from './enemies'
 import type { SpawnEvent, WaveDef } from '../types'
 
 export type EncounterKind = 'normal' | 'elite' | 'boss'
@@ -101,6 +102,32 @@ const BUDGET_RATIO_DECAY = 0.8
  * and only its *distribution* has moved. Measured: the deadliest single Monte
  * Carlo node fell from 49% of all losses to 42%, and boss kills rose from 30% to
  * 36% of arrivals while the win rate stayed at 50%.
+ *
+ * ### Phase 3a — the clock came out of the measurement, and the curve was refit
+ *
+ * Every number in the history above was fitted against a Monte Carlo sweep
+ * that capped each battle at 70 seconds (the run model at 90) and booked a
+ * capped battle as a LOSS. The game has no timeout. Re-measured with no cap on
+ * the Phase 3b three-act road, the pre-3a campaign won **85%** of §6 runs, not
+ * 57%, and its final boss killed **9%** of arrivals, not 29% — the champions
+ * simply had not arrived when the clock ran out. (On the older ten-node road
+ * the same test read 73% / 5%, and 38 of 72 "deaths" were the clock.)
+ *
+ * Phase 3a removed the clock — the harness cap is a per-sub-wave safety net
+ * (600s) and REPORT §6 gates on it firing zero times — and cut every node
+ * into sub-waves, which takes overlap (pressure) out of a node. The curve was
+ * refit on the honest measure, on paired seeds, against every gate at once:
+ *
+ *   - the sub-wave HP step and pace below (`subWaveHp`, `SUBWAVE_PACE`);
+ *   - elites take {@link ELITE_SUBWAVE_SCALE} of a battle node's step — paid
+ *     as an HP step rather than out of `ELITE_BUDGET`, because the budget also
+ *     solves the HEAD COUNT, and lowering it capped the depth-2 Warded Host's
+ *     bodies (§14b's max-leak spread went ×1.33 → ×1.78);
+ *   - the FINAL boss takes {@link FINAL_BOSS_STEP}× an act boss's budget: the
+ *     act bosses are where a first run is decided, the final boss is where a
+ *     full company is examined, and only the second needed raising.
+ *
+ * The report's own run is the number of record (REPORT §6, §11, §16).
  */
 const ELITE_BUDGET = 0.8
 /**
@@ -197,8 +224,24 @@ const NORMAL_CHAMPION_SHARE = 0.22
  * it in §6, against a design target of ≥10%.
  */
 const BOSS_STEP = 0.515
-/** Share of the boss budget carried by its champions rather than their escort. */
+/**
+ * Share of the boss budget carried by its champions rather than their escort.
+ * 0.45 → 0.30 in Phase 3a — see the note on {@link ELITE_BUDGET}.
+ */
 const BOSS_CHAMPION_SHARE = 0.45
+/**
+ * The FINAL boss — the three-champion fight (`championCount`, depth ≥ 9) —
+ * takes this much more budget than an act boss (Phase 3a).
+ *
+ * Measured with the harness clock removed (see the Phase 3a note on
+ * {@link ELITE_BUDGET}), the final boss killed 2–9% of the §6 teams that
+ * reached it: its "29%" had been the 70-second cap, not the champions. The
+ * act bosses on layers 4 and 8 are where a first run is decided, and a zero-
+ * meta company rarely stands at layer 12 at all — so the final exam can be
+ * raised for the companies that get there without moving the first-run curve.
+ */
+const FINAL_BOSS_DEPTH = 9
+const FINAL_BOSS_STEP = 2.1
 
 /** Never let the solved multiplier drop below this — enemies must not read as *weaker* than their tier. */
 const MIN_HP_MULT = 0.85
@@ -248,7 +291,7 @@ export function waveBudget(depth: number): number {
 
 /** The HP pool this node may spend, kind included. */
 function kindBudget(depth: number, kind: EncounterKind): number {
-  if (kind === 'boss') return waveBudget(Math.max(1, depth - 1)) * BOSS_STEP
+  if (kind === 'boss') return waveBudget(Math.max(1, depth - 1)) * BOSS_STEP * (depth >= FINAL_BOSS_DEPTH ? FINAL_BOSS_STEP : 1)
   return waveBudget(depth) * (kind === 'elite' ? ELITE_BUDGET : 1)
 }
 
@@ -715,7 +758,7 @@ const SHAPES: Record<ScheduleShape, { barrel: [number, number]; torch: [number, 
  * same is true of the variant: it decides the mix, the tier and the count, and
  * the solve pays the bill.
  */
-function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVariant): Rank[] {
+function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVariant, specialists = true): Rank[] {
   const bump = kind === 'elite' ? 1 : 0
   const tier = clampTier(1 + Math.floor((depth - 1) / 2.5) + bump + v.tierBump)
   /**
@@ -767,9 +810,31 @@ function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVaria
 
   const w = SHAPES[v.shape]
   const ranks: Rank[] = []
-  if (barrels) ranks.push({ typeId: id('barrel', tier), count: barrels, at: w.barrel[0], until: w.barrel[1] })
-  ranks.push({ typeId: id('torch', tier), count: torches, at: w.torch[0], until: w.torch[1] })
-  if (tnts) ranks.push({ typeId: id('tnt', tier), count: tnts, at: w.tnt[0], until: w.tnt[1] })
+  /*
+   * The behaviour specialists (Phase 3a — `behaviours.ts`): a few shamans and
+   * shield-bearers carved OUT of their faction's rank, never added on top of
+   * it, so the head count this function just solved is still the head count.
+   * They walk the same window as the rank they came from, inset a little so
+   * they arrive among it rather than at its very front or back.
+   */
+  const pushRank = (fam: 'torch' | 'tnt' | 'barrel', n: number, win: [number, number]) => {
+    if (n <= 0) return
+    const sp = SPECIALISTS.find((x) => x.faction === fam)
+    const k = sp && specialists ? specialistCount(sp, tier, n) : 0
+    if (n - k > 0) ranks.push({ typeId: id(fam, tier), count: n - k, at: win[0], until: win[1] })
+    if (sp && k > 0) {
+      const inset = (win[1] - win[0]) * 0.15
+      ranks.push({
+        typeId: modKey(`${fam}${tier}_${sp.suffix}`, v.mod),
+        count: k,
+        at: win[0] + inset,
+        until: win[1] - inset,
+      })
+    }
+  }
+  pushRank('barrel', barrels, w.barrel)
+  pushRank('torch', torches, w.torch)
+  pushRank('tnt', tnts, w.tnt)
   // The elite's vanguard: an armoured rank that walks in FIRST and has to be
   // chewed through while the column arrives behind it. A tier above the rest at
   // depths 4–5; the same tier from depth 6, where the ladder tops out — see
@@ -786,8 +851,8 @@ function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVaria
 }
 
 /** Total unmultiplied HP a set of ranks represents — the denominator of the budget solve. */
-function rosterHp(ranks: Rank[]): number {
-  return ranks.reduce((a, r) => a + (ENEMY_TYPES[r.typeId]?.baseHp ?? 0) * r.count, 0)
+function rosterHp(ranks: Rank[], hpOf: (key: string) => number = effectiveHp): number {
+  return ranks.reduce((a, r) => a + hpOf(r.typeId) * r.count, 0)
 }
 
 /** Lay ranks out across a window and stamp every spawn with the solved multiplier. */
@@ -827,6 +892,12 @@ export interface EncounterOptions {
   sibling?: number
   /** Force one variant by id — the variety sweeps and nothing else. */
   variantId?: string
+  /**
+   * `false` returns the node as ONE continuous wave — the pre-3a shape, with
+   * no sub-wave cut, pace, HP step or behaviour specialists. Only the balance harness's item benches
+   * pass it (`BENCH_RULES`); every shipped call site takes the default.
+   */
+  subWaves?: boolean
 }
 
 /**
@@ -931,12 +1002,15 @@ export function generateEncounter(depth: number, kind: EncounterKind, opts: Enco
   const champShare =
     champs.length === 0 ? 0 : kind === 'boss' ? BOSS_CHAMPION_SHARE : kind === 'elite' ? ELITE_CHAMPION_SHARE : NORMAL_CHAMPION_SHARE
   const champBudget = budget * champShare
+  // A piece-carrying body is priced at its EFFECTIVE HP (`enemies.effectiveHp`)
+  // — except in the pre-3a shape (`subWaves: false`), which prices plain HP.
+  const hpOf = opts.subWaves === false ? (k: string) => ENEMY_TYPES[k]?.baseHp ?? 0 : effectiveHp
   const champMult = champs.length
-    ? Math.max(MIN_HP_MULT, champBudget / champs.reduce((a, id) => a + ENEMY_TYPES[id].baseHp, 0))
+    ? Math.max(MIN_HP_MULT, champBudget / champs.reduce((a, id) => a + hpOf(id), 0))
     : 0
 
-  const ranks = roster(depth, kind, budget - champBudget, v)
-  const hpMult = Math.max(MIN_HP_MULT, (budget - champBudget) / Math.max(1, rosterHp(ranks)))
+  const ranks = roster(depth, kind, budget - champBudget, v, opts.subWaves !== false)
+  const hpMult = Math.max(MIN_HP_MULT, (budget - champBudget) / Math.max(1, rosterHp(ranks, hpOf)))
 
   const spawns = schedule(ranks, window, hpMult)
   // Champions land ON TOP of the escort at spaced intervals, so the fight has
@@ -949,9 +1023,99 @@ export function generateEncounter(depth: number, kind: EncounterKind, opts: Enco
   return {
     index: depth,
     label: opts.label ?? defaultLabel(depth, kind, v),
-    spawns,
+    spawns: opts.subWaves === false ? spawns : splitSubWaves(spawns, subWaveCount(depth, kind), kind === 'boss' ? champs.length : 0, subWaveHp(depth, kind)),
     isBoss: kind === 'boss',
   }
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Sub-waves (Phase 3a)
+ * ---------------------------------------------------------------------------
+ *
+ * A node used to be one wave: tap Start, watch 20–50 seconds. It is now two or
+ * three SUB-WAVES — the same spawns, cut into consecutive groups — with a
+ * breather between them where the sim stops and the player may move one hero
+ * and gets the Watch Command's charge back (`engine.ts` → `enterBreather`).
+ *
+ * The cut is a PARTITION of the spawn list this function was already
+ * producing, so head count, leak ceiling and composition are untouched (the
+ * HP pool carries the step below), and `waveComposition` / the map preview
+ * read exactly what they read before. That is also why this lives here and
+ * not in the engine: the preview and the fight must come from ONE derivation
+ * (`nodeEncounter`), and `tests/encounterPreview.test.ts` holds them to it.
+ *
+ *  - **Where it cuts.** By head count, in arrival order: equal bodies per
+ *    group, contiguous in time. A boss is cut at its champions instead, so each
+ *    champion LEADS a sub-wave — three champions, three acts.
+ *  - **How many.** Two for a battle or an elite, three for the boss. Three on
+ *    the mid-depth battle nodes was measured and rejected: every extra cut
+ *    removes another overlap, and at three the zero-meta curve lost most of
+ *    its mid-game (§11 depths 5–8 fell from 46% of fresh runs ending there to
+ *    26%) while its boss share climbed past the 40% cliff gate.
+ *  - **The pace inside a group.** `at` becomes seconds after the sub-wave
+ *    starts, compressed by {@link SUBWAVE_PACE}. Sub-waves no longer overlap
+ *    (a group starts only once the one before is cleared), and that takes
+ *    pressure out of a node: measured on the pre-3a curve, cutting alone moved
+ *    §6 from 73% to 87% won. Tightening each group's arrivals, and the HP step
+ *    below, put it back.
+ *  - **The HP step.** Every spawn of a cut node carries {@link subWaveHp}: the
+ *    pressure the lost overlap used to supply, paid as toughness instead.
+ *    Battle nodes step up with depth (×1.17 at depth 2 → ×1.94 at depth 11),
+ *    because the overlap a cut removes grows with the wave; elites take
+ *    ×0.97 of that, a boss a flat ×1.20. So the budget solve's HP pool is the node's
+ *    DESIGN pool and the fight carries it ×subWaveHp — reported beside the
+ *    preview's head count, which the cut does not change.
+ *
+ * All three were fitted together against REPORT §6 and §11 (see the Phase 3a
+ * note on {@link ELITE_BUDGET}); §16c checks the cut on every shape.
+ */
+export const SUBWAVE_PACE = 0.6
+/** HP step for the boss node cut into sub-waves. */
+export const SUBWAVE_HP = 1.2
+/** Per-depth slope of the HP step on battle nodes: 1 + slope × depth. */
+export const SUBWAVE_HP_SLOPE = 0.085
+/** Elites take this share of a battle node's step (see the Phase 3a note on {@link ELITE_BUDGET}). */
+export const ELITE_SUBWAVE_SCALE = 0.97
+/** The HP step a node carries for being cut into sub-waves. */
+export function subWaveHp(depth: number, kind: EncounterKind): number {
+  if (kind === 'boss') return SUBWAVE_HP
+  const step = 1 + SUBWAVE_HP_SLOPE * depth
+  return kind === 'elite' ? step * ELITE_SUBWAVE_SCALE : step
+}
+
+/** How many sub-waves a node is cut into (the depth is the seam for a later curve). */
+export function subWaveCount(_depth: number, kind: EncounterKind): number {
+  return kind === 'boss' ? 3 : 2
+}
+
+function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, hpStep: number): SpawnEvent[] {
+  const n = spawns.length
+  const g = Math.max(1, Math.min(groups, n))
+  // Start index of each group after the first.
+  let starts: number[] = []
+  if (champions >= 2) {
+    // A boss: champion i ≥ 1 opens group i. Champions are the spawns whose
+    // type is a tier-5 (boss) type; they are already in arrival order.
+    const idx = spawns.map((s, i) => (ENEMY_TYPES[s.typeId]?.isBoss ? i : -1)).filter((i) => i > 0)
+    starts = idx.slice(0, g - 1)
+  }
+  if (starts.length !== g - 1) {
+    starts = []
+    for (let k = 1; k < g; k++) starts.push(Math.round((n * k) / g))
+  }
+  const out: SpawnEvent[] = []
+  let gi = 0
+  let first = spawns[0]?.at ?? 0
+  for (let i = 0; i < n; i++) {
+    if (gi < starts.length && i === starts[gi]) {
+      gi++
+      first = spawns[i].at
+    }
+    const s = spawns[i]
+    out.push({ typeId: s.typeId, at: (s.at - first) * SUBWAVE_PACE, hpMult: g > 1 ? s.hpMult * hpStep : s.hpMult, group: gi })
+  }
+  return out
 }
 
 /**

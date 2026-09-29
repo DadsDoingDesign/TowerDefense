@@ -608,8 +608,20 @@ export function drawEnemy(
   // HP bar, tier ticks and elite badge — one stack over the head (Phase 2,
   // `hpbar.ts`). The tier plaque it replaces stacked into a white ribbon down
   // a crowded lane; the count now lives inside the bar.
-  drawEnemyBar(ctx, e.id, e.hp, e.maxHp, enemyTier(type.id), eliteMark(type), !!type.isBoss, Math.round(artTop) - 1)
+  const barTop = drawEnemyBar(ctx, e.id, e.hp, e.maxHp, enemyTier(type.id), eliteMark(type), !!type.isBoss, Math.round(artTop) - 1)
+  // Phase 3a: where this enemy's head-stack ends, in field space, so the
+  // behaviour marks (`telegraphs.ts`) sit above the bar instead of on the art.
+  headTops.set(e.id, Math.round(pos.y + kick.y) + barTop)
   ctx.restore()
+}
+
+/** Top of each drawn enemy's bar stack this frame (field px), keyed by id. */
+const headTops = new Map<string, number>()
+/** Where to put a mark above this enemy's bar, or undefined before its first draw. */
+export const enemyHeadTop = (id: string): number | undefined => headTops.get(id)
+/** Drop entries for enemies no longer drawn (called once a battle frame). */
+export function pruneHeadTops(alive: ReadonlySet<string>): void {
+  for (const id of headTops.keys()) if (!alive.has(id)) headTops.delete(id)
 }
 
 /**

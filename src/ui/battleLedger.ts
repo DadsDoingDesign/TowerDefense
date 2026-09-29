@@ -98,7 +98,8 @@ export class LedgerWatch {
     // Champions arriving — the only per-tick check that runs every tick, and it
     // is a flag test per enemy.
     for (const e of engine.enemies) {
-      if (e.type.isBoss && !this.seen.has(e.id)) {
+      // A Colossus half (Phase 3a) is the same champion's second act, not an arrival.
+      if (e.type.isBoss && !this.seen.has(e.id) && !e.type.name.endsWith('(half)')) {
         this.seen.add(e.id)
         const st = useBattleLedger.getState()
         useBattleLedger.setState({ champions: [...st.champions, { id: e.id, name: e.type.name }] })

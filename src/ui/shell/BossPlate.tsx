@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useBattleLedger } from '../battleLedger'
 import { Icon } from '../Icon'
+import { bossPhaseInfo } from '../../game/data/behaviours'
 
 interface Plate {
   id: string
@@ -9,6 +10,8 @@ interface Plate {
   hp: number
   maxHp: number
   more: number
+  /** Phase 3a: the champion's boss phases (`bossPhaseInfo`). */
+  phase: { total: number; done: number; label: string } | null
 }
 
 /**
@@ -62,7 +65,7 @@ export function BossPlate() {
         else if (now - t.at > 450 || t.frac - frac > 0.3) t.frac = Math.max(frac, t.frac - 0.05)
       }
       setTrailFrac(trail.current.frac)
-      setPlate({ id: lead.id, name: lead.type.name, hp: lead.hp, maxHp: lead.maxHp, more: alive.length - 1 })
+      setPlate({ id: lead.id, name: lead.type.name, hp: lead.hp, maxHp: lead.maxHp, more: alive.length - 1, phase: bossPhaseInfo(lead.type, lead.phase) })
     }
     tick()
     const iv = window.setInterval(tick, 100)
@@ -77,7 +80,16 @@ export function BossPlate() {
         <Icon name="boss" className="sh-bossplate-mark" />
         <span className="sh-bossplate-name">{plate.name}</span>
         {plate.more > 0 && <span className="sh-bossplate-more">+{plate.more}</span>}
-        <span className="sh-bossplate-extra" />
+        <span className="sh-bossplate-extra">
+          {plate.phase && (
+            <span className="sh-bossphase" aria-label={`Phase ${plate.phase.done} of ${plate.phase.total}: ${plate.phase.label}`}>
+              {Array.from({ length: plate.phase.total }, (_, i) => (
+                <span key={i} className={`sh-bossphase-pip ${i < plate.phase!.done ? 'done' : ''}`} aria-hidden="true" />
+              ))}
+              <span className="sh-bossphase-label">{plate.phase.label}</span>
+            </span>
+          )}
+        </span>
         <span className="sh-bossplate-hp" aria-hidden="true">
           {Math.ceil(Math.max(0, plate.hp))}
         </span>

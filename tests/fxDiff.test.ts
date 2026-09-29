@@ -65,11 +65,12 @@ const asEngine = (e: ReturnType<typeof fakeEngine>) => e as unknown as GameEngin
 describe('fx differ predicates', () => {
   it('burnToll is the engine arithmetic: dps × TICK, resisted by the burn type', () => {
     const e = { burnDps: 180, burnUntil: 12, burnType: 'physical' as const }
-    expect(burnToll(e, 11, 0.55, 0.1)).toBe(180 * TICK * (1 - 0.55))
-    expect(burnToll({ ...e, burnType: 'magic' }, 11, 0.55, 0.1)).toBe(180 * TICK * (1 - 0.1))
+    // The multipliers are `engine.takenMult` — `1 - resist` with no aura or frost.
+    expect(burnToll(e, 11, 1 - 0.55, 1 - 0.1)).toBe(180 * TICK * (1 - 0.55))
+    expect(burnToll({ ...e, burnType: 'magic' }, 11, 1 - 0.55, 1 - 0.1)).toBe(180 * TICK * (1 - 0.1))
     // Expired on the clock the tick will run against.
-    expect(burnToll(e, 12, 0.55, 0.1)).toBe(0)
-    expect(burnToll({ ...e, burnDps: 0 }, 11, 0, 0)).toBe(0)
+    expect(burnToll(e, 12, 1 - 0.55, 1 - 0.1)).toBe(0)
+    expect(burnToll({ ...e, burnDps: 0 }, 11, 1, 1)).toBe(0)
   })
 
   it('a drop equal to the exact attrition toll is NOT a hit; any more is (C1)', () => {

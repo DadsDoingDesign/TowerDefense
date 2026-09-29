@@ -72,6 +72,12 @@ export interface HudSnapshot {
   enemiesAlive: number
   enemiesSpawned: number
   enemiesTotal: number
+  /** Sub-waves (Phase 3a): which one is live (0-based), of how many, and whether the sim is in a breather. */
+  subWave: number
+  subWaveCount: number
+  breather: boolean
+  /** The Watch Command's per-sub-wave charge is available. */
+  commandReady: boolean
 }
 
 /**
@@ -242,6 +248,11 @@ export interface GameData {
   relics: string[]
   /** What this run has done that a feat may ask about (Phase 3b). */
   feats: RunFeats
+  /**
+   * Breather UI (Phase 3a): the slot whose hero the player has picked up to
+   * move (one move per breather). Presentation — not snapshotted.
+   */
+  breatherPick: string | null
   /** Mid-map fork (once per run): recruit a teammate or take an attack mutation. */
   crossroads: Crossroads | null
   forkDone: boolean

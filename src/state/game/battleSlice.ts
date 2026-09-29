@@ -6,7 +6,7 @@ import { GameEngine } from '../../game/engine/engine'
 import { hashSeed, RNG } from '../../game/core/rng'
 import { teamKeepsakeMods } from '../../game/engine/combat'
 import { generateItem } from '../../game/data/items'
-import { relicTeamMods } from '../../game/data/relics'
+import { relicCommands, relicTeamMods } from '../../game/data/relics'
 import { afterFightRelics, cartularyRelic, diaryXp, handSize, rewardHand } from '../../game/run/relics'
 import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
 import { applyBattleXp, combatSeed, endlessRoundSpoils, levelXpAwards } from '../../game/run/battle'
@@ -15,6 +15,8 @@ import { forkFires, frontierFrom, placedSentinels } from '../../game/run/map'
 import { receiveItems, recruitSlate } from '../../game/run/recruits'
 import { challengeGrant } from '../../game/run/settle'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
+import { commandsFor, type CommandId } from '../../game/data/commands'
+import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
 import { bannerRules, useMetaStore } from '../metaStore'
@@ -32,6 +34,19 @@ export interface BattleActions {
   setSpeed: (s: Speed) => void
   setTactics: (t: Partial<Tactics>) => void
   startWave: () => void
+  /**
+   * Fire a Watch Command (Phase 3a). The engine decides whether it can — one
+   * charge per sub-wave — and logs the tick; the store only forwards the tap.
+   */
+  useCommand: (id: CommandId) => void
+  /**
+   * A tap on a slot during a breather: the first picks up the hero standing
+   * there, the second puts it down (swapping with whoever stands there). One
+   * move per breather; tapping the picked slot again drops the pick.
+   */
+  breatherTap: (slotId: string) => void
+  /** End the breather and send in the next sub-wave. */
+  resumeSubWave: () => void
   syncHud: () => void
   finishBattle: () => void
   /**
@@ -65,7 +80,14 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
   },
 
   setSpeed: (s) => set({ speed: s }),
-  setTactics: (t) => set({ tactics: { ...get().tactics, ...t } }),
+  setTactics: (t) => {
+    const tactics = { ...get().tactics, ...t }
+    set({ tactics })
+    // Mid-battle, the order reaches the live fight too — logged by the engine
+    // with its tick, so a replay reproduces the change (Phase 3a).
+    const { engine, battlePhase } = get()
+    if (engine && battlePhase === 'battle') engine.setFocus(tactics.focus)
+  },
 
   startWave: () => {
     const st = get()
@@ -113,7 +135,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       // reproducibility contract, which is why the recap records it next to
       // the seed (F6).
       baseDamageMul: assistProfile(useSettingsStore.getState().assist).baseDamageMul,
-      onEvent: gameSfx,
+      // Audio hears every event; the Announcer hears the few a player must be
+      // told about (boss phases, the breather, a command) — `combatNotes.ts`.
+      onEvent: (e, p) => {
+        gameSfx(e, p)
+        noteEngineEvent(e, p)
+      },
+      // The game pauses between sub-waves for the player's one move; the
+      // harness and replays auto-continue (Phase 3a).
+      breathers: 'pause',
+      // Rally Horn, unless a relic swapped it (Signal Flare → Flare).
+      commands: commandsFor(relicCommands(st.relics)),
     })
     sfx('wave')
     // The Codex notes every goblin the Watch has faced; the feats note the
@@ -124,25 +156,52 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       engine,
       battlePhase: 'battle',
       selectedSentinelId: null,
-      hud: engine.hudSnapshot(),
+      breatherPick: null,
+      hud: hudOf(engine),
       feats: fielded > st.feats.maxFielded ? { ...st.feats, maxFielded: fielded } : st.feats,
     })
+  },
+
+  useCommand: (id) => {
+    const { engine, battlePhase } = get()
+    if (!engine || battlePhase !== 'battle') return
+    if (engine.useCommand(id)) {
+      sfx('confirm')
+      set({ hud: hudOf(engine) })
+    }
+  },
+
+  breatherTap: (slotId) => {
+    const { engine, battlePhase, breatherPick } = get()
+    if (!engine || battlePhase !== 'battle' || !engine.breather) return
+    if (engine.subWaveState().moved) return
+    if (!breatherPick) {
+      // Only a slot with a hero on it can be picked up.
+      if (!engine.sentinelOnSlot(slotId)) return
+      set({ breatherPick: slotId })
+      sfx('toggle')
+      return
+    }
+    if (breatherPick === slotId) {
+      set({ breatherPick: null })
+      return
+    }
+    if (engine.moveHero(breatherPick, slotId)) sfx('deploy')
+    set({ breatherPick: null, hud: hudOf(engine) })
+  },
+
+  resumeSubWave: () => {
+    const { engine } = get()
+    if (!engine || !engine.breather) return
+    engine.resume()
+    sfx('wave')
+    set({ breatherPick: null, hud: hudOf(engine) })
   },
 
   syncHud: () => {
     const { engine } = get()
     if (!engine) return
-    const s = engine.hudSnapshot()
-    set({
-      hud: {
-        baseHp: s.baseHp,
-        maxBaseHp: s.maxBaseHp,
-        goldEarned: s.goldEarned,
-        enemiesAlive: s.enemiesAlive,
-        enemiesSpawned: s.enemiesSpawned,
-        enemiesTotal: s.enemiesTotal,
-      },
-    })
+    set({ hud: hudOf(engine) })
   },
 
   /**
@@ -518,3 +577,20 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     })
   },
 })
+
+/** The HUD fields the shell reads, off a live engine. */
+function hudOf(engine: GameEngine) {
+  const s = engine.hudSnapshot()
+  return {
+    baseHp: s.baseHp,
+    maxBaseHp: s.maxBaseHp,
+    goldEarned: s.goldEarned,
+    enemiesAlive: s.enemiesAlive,
+    enemiesSpawned: s.enemiesSpawned,
+    enemiesTotal: s.enemiesTotal,
+    subWave: s.subWave,
+    subWaveCount: s.subWaveCount,
+    breather: s.breather,
+    commandReady: s.commandReady,
+  }
+}

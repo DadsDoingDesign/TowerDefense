@@ -1,9 +1,13 @@
 import { GamePath } from '../core/path'
 import { hashSeed, nextId, RNG } from '../core/rng'
 import { dist, distSq, moveToward, type Vec2 } from '../core/vec'
-import { ENEMY_TYPES } from '../data/enemies'
 import { mergeMods } from '../data/archetypeTree'
-import type { EffectMods, EnemyType, GameMap, Sentinel, Tactics, WaveDef } from '../types'
+import { behaviourOf, RESIST_CAP } from '../data/behaviours'
+import { DEFAULT_COMMANDS, FLARE, HOLD, RALLY, type CommandId } from '../data/commands'
+import { ENEMY_MODS, ENEMY_TYPES, modKey } from '../data/enemies'
+import type { EffectMods, EnemyBehaviour, EnemyType, FocusMode, GameMap, Sentinel, Tactics, WaveDef } from '../types'
+
+type Behaviour<K extends EnemyBehaviour['kind']> = Extract<EnemyBehaviour, { kind: K }>
 import { computeCombat, type CombatProfile } from './combat'
 
 /**
@@ -26,6 +30,224 @@ const RETARGET_INTERVAL = 0.45
  * this same number; keep the two in step (H5).
  */
 const LIFEDRAIN_SCALE = 0.02
+
+// ---- status interactions (Phase 3a) -----------------------------------------
+/**
+ * BRITTLE: a FROST-chilled enemy takes this much more physical damage. Frost
+ * means a `chill` status from a hit (`mods.chill`) — NOT a trap's drag, which
+ * writes the same slow fields, because a rogue trap is physical and would
+ * otherwise buff its own damage with its own slow.
+ */
+export const BRITTLE_MULT = 1.25
+/** SHATTER: a shock arc (or a shock shot) meeting a frosted enemy bursts it for this share of the hit, and thaws it. */
+export const SHATTER_FRAC = 0.6
+/** Burn SPREAD: a burning body that dies lights up to this many neighbours… */
+export const SPREAD_COUNT = 2
+/** …within this radius, for what was left of the burn (at least `SPREAD_MIN_DUR` s). */
+export const SPREAD_RADIUS = 70
+const SPREAD_MIN_DUR = 1
+// ---- sub-waves ----------------------------------------------------------------
+/**
+ * The breather between sub-waves mends the company: the living recover this
+ * share of max HP, and the downed stand back up with it. It is what makes a
+ * bomber's damage a problem for the SUB-WAVE it lands in rather than a tax on
+ * the rest of the node, and it is priced into §6/§11 (see the report's §16).
+ */
+export const BREATHER_MEND = 0.3
+/** Whether the downed stand back up at the breather (with {@link BREATHER_MEND} of their HP). */
+export const BREATHER_REVIVE = true
+/** Split pieces and boss halves are placed this far apart along the lane, so they read as separate bodies. */
+const SPLIT_SPACING = 14
+
+/** One recorded player input, stamped with the tick it took effect after. */
+export type BattleInput =
+  | { tick: number; kind: 'command'; id: CommandId }
+  | { tick: number; kind: 'move'; from: string; to: string }
+  | { tick: number; kind: 'focus'; focus: FocusMode }
+  | { tick: number; kind: 'resume' }
+
+/** A transient, sim-timed marker the renderer draws (`render/telegraphs.ts`). */
+export type TelegraphKind =
+  | 'lob'
+  | 'kingLob'
+  | 'blast'
+  | 'heal'
+  | 'warcry'
+  | 'leap'
+  | 'split'
+  | 'flare'
+  | 'shatter'
+  | 'spread'
+  | 'phase'
+export interface Telegraph {
+  id: number
+  kind: TelegraphKind
+  x: number
+  y: number
+  r: number
+  /** Sim time it appeared / it resolves (engine clock, `engine.elapsed`). */
+  t0: number
+  t1: number
+  /** The enemy that owns it — a lob's mark vanishes if its thrower dies first. */
+  srcId?: string
+  /** Second point (a leap's landing spot). */
+  x2?: number
+  y2?: number
+}
+
+/**
+ * What the behaviour kit, the interactions, the commands and the sub-waves
+ * actually DID this battle. Every counter here is one a balance-report sweep
+ * reads, so a behaviour that silently stops firing shows up as a zero.
+ */
+export interface BehaviourStats {
+  healPulses: number
+  hpHealed: number
+  enrages: number
+  sapperBlasts: number
+  /** Sapper blasts that went off on their blocker (paid as that hero's kill). */
+  sapperHeld: number
+  sapperDamage: number
+  lobsStarted: number
+  lobsLanded: number
+  lobsCancelled: number
+  lobDamage: number
+  splits: number
+  splitSpawned: number
+  /** Leaks, attributed: a split piece, an enraged berserker, a leaper that vaulted. */
+  splitLeaks: number
+  enragedLeaks: number
+  leapLeaks: number
+  shieldedPrevented: number
+  leaps: number
+  warCries: number
+  hasteApplied: number
+  kingLobs: number
+  kingDisables: number
+  kingDamage: number
+  bossSplits: number
+  bossPhases: number
+  shatters: number
+  shatterDamage: number
+  burnSpreads: number
+  brittleBonus: number
+  /** Everything the kit dealt to HEROES (blasts, lobs, the King). */
+  heroDamage: number
+  commandsUsed: number
+  holdBlocked: number
+  breathers: number
+  repositions: number
+}
+
+const emptyStats = (): BehaviourStats => ({
+  healPulses: 0,
+  hpHealed: 0,
+  enrages: 0,
+  sapperBlasts: 0,
+  sapperHeld: 0,
+  sapperDamage: 0,
+  lobsStarted: 0,
+  lobsLanded: 0,
+  lobsCancelled: 0,
+  lobDamage: 0,
+  splits: 0,
+  splitSpawned: 0,
+  splitLeaks: 0,
+  enragedLeaks: 0,
+  leapLeaks: 0,
+  shieldedPrevented: 0,
+  leaps: 0,
+  warCries: 0,
+  hasteApplied: 0,
+  kingLobs: 0,
+  kingDisables: 0,
+  kingDamage: 0,
+  bossSplits: 0,
+  bossPhases: 0,
+  shatters: 0,
+  shatterDamage: 0,
+  burnSpreads: 0,
+  brittleBonus: 0,
+  heroDamage: 0,
+  commandsUsed: 0,
+  holdBlocked: 0,
+  breathers: 0,
+  repositions: 0,
+})
+
+/**
+ * Switches for counterfactual measurement ONLY. The game ships with every
+ * rule on; the balance harness turns one off to measure what it is worth on
+ * identical seeds (REPORT §16). Nothing under `src/state` passes this.
+ */
+export interface EngineRules {
+  /** The enemy behaviour kit and boss phases. */
+  behaviours: boolean
+  /** Brittle / shatter / burn spread. */
+  interactions: boolean
+  /** Sub-waves: `false` fights every group as one continuous wave, the pre-3a shape. */
+  subWaves: boolean
+}
+const ALL_RULES: EngineRules = { behaviours: true, interactions: true, subWaves: true }
+
+/**
+ * The share of incoming damage of `type` an enemy actually takes: its
+ * resistance (plus any shield-bearer aura, capped), times brittle for physical
+ * damage on a frosted body.
+ *
+ * ONE function, exported, because the tick differ (`render/fxDiff.ts`) has to
+ * re-run this exact arithmetic to tell a burn tick from a hit — the audit's
+ * lesson is that a predicate re-deriving the engine's resist by hand drifts
+ * the moment the engine's rule changes. `shield` and `brittle` are frozen per
+ * tick (written at the END of `step`), so the differ's pre-tick snapshot and
+ * the tick it describes agree exactly. With no shield and no frost this is
+ * `1 - resist` to the ulp, i.e. the pre-3a arithmetic.
+ */
+export function takenMult(e: Pick<RtEnemy, 'type' | 'shield' | 'brittle'>, type: 'physical' | 'magic'): number {
+  const base = type === 'physical' ? (e.type.physResist ?? 0) : (e.type.magResist ?? 0)
+  // The bearer HARDENS armour; it cannot create it. Only a type the body
+  // already resists gets the aura, so an elite modifier's open damage type
+  // (Plated's magic, Warded's steel) stays open — the modifiers' one promise.
+  const resist = e.shield > 0 && base > 0 ? Math.min(RESIST_CAP, base + e.shield) : base
+  return type === 'physical' && e.brittle ? (1 - resist) * BRITTLE_MULT : 1 - resist
+}
+
+/**
+ * The Phase-3a half of a fresh `RtEnemy`, at rest: no statuses, no behaviour
+ * state in progress. Exported for the few places outside the engine that build
+ * an enemy to DRAW it (the slice harness, the fx-differ tests).
+ */
+export function enemyBehaviourState(key: string, reward: number) {
+  return {
+    key,
+    reward,
+    frostUntil: 0,
+    brittle: false,
+    shield: 0,
+    flareSlow: 0,
+    flareUntil: 0,
+    hasteMult: 1,
+    hasteUntil: 0,
+    enraged: false,
+    lobCharges: 0,
+    lobUntil: 0,
+    lobX: 0,
+    lobY: 0,
+    kingNextAt: 0,
+    kingUntil: 0,
+    kingX: 0,
+    kingY: 0,
+    kingTargetId: null as string | null,
+    phase: 0,
+    warCryUntil: 0,
+    leapt: false,
+    leapOver: null as string | null,
+    healNextAt: 0,
+    healReadyAt: 0,
+    healed: 0,
+    piece: false,
+  }
+}
 
 export interface RtSentinel {
   id: string
@@ -55,6 +277,8 @@ export interface RtSentinel {
   shots: number
   /** `elapsed` until which a `killRush` is running (Phase 3b). */
   rushUntil: number
+  /** Sim time until which this post is knocked out (Powderkeg King): no shots, no block. */
+  disabledUntil: number
 }
 
 export interface RtEnemy {
@@ -75,6 +299,50 @@ export interface RtEnemy {
   chillUntil: number
   stunUntil: number
   blockedBy: string | null
+  // ---- Phase 3a: behaviours, interactions, commands ------------------------
+  /** The registry key it spawned under (`barrel4_plated`) — a split's pieces inherit its modifier. */
+  key: string
+  /** Gold on kill. The type's reward, except for split pieces and boss halves. */
+  reward: number
+  /** Sim time a FROST chill (a hit's `mods.chill`, not a trap) lasts until — brittle and shatter read this. */
+  frostUntil: number
+  /** Frozen per tick at the end of `step`: frosted right now (see {@link takenMult}). */
+  brittle: boolean
+  /** Frozen per tick: the shield-bearer resist covering this body (0 = none). */
+  shield: number
+  /** Command: Flare's slow. */
+  flareSlow: number
+  flareUntil: number
+  /** Grukk's war-cry haste. */
+  hasteMult: number
+  hasteUntil: number
+  /** Berserker: below its threshold, for good. */
+  enraged: boolean
+  /** Bomber: throws left; while `lobUntil > 0` it is planted and winding up at (`lobX`, `lobY`). */
+  lobCharges: number
+  lobUntil: number
+  lobX: number
+  lobY: number
+  /** Powderkeg King: next throw, and the throw in flight. */
+  kingNextAt: number
+  kingUntil: number
+  kingX: number
+  kingY: number
+  kingTargetId: string | null
+  /** Boss phase counter (war-cry thresholds passed / King rage / Colossus split). */
+  phase: number
+  /** Grukk: sim time the war-cry in progress resolves (0 = none). */
+  warCryUntil: number
+  /** Leaper: has vaulted, and over whom (that blocker can never hold it). */
+  leapt: boolean
+  leapOver: string | null
+  /** Shaman: next pulse. Everyone: earliest time a pulse may heal it again. */
+  healNextAt: number
+  healReadyAt: number
+  /** HP a heal added THIS tick — the tick differ subtracts it so a heal cannot hide a hit. */
+  healed: number
+  /** Born from a splitter's death (its leak is booked as `splitLeaks`). */
+  piece: boolean
 }
 
 /**
@@ -87,6 +355,12 @@ export interface EngineEventPayload {
   faction?: string
   tier?: number
   boss?: boolean
+  /** Phase 3a: the enemy's display name (behaviour / boss-phase events). */
+  name?: string
+  /** Phase 3a: the boss phase just entered (1-based count of phases passed). */
+  phase?: number
+  /** Phase 3a: which Watch Command fired (`command`, `command:<id>`). */
+  command?: string
 }
 
 /** 'tnt3' → { faction: 'tnt', tier: 3 } (elites share their base id). */
@@ -176,6 +450,17 @@ export interface BattleResult {
   perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number; downed: boolean }[]
 }
 
+/** The public state of the sub-wave machine, for the HUD. */
+export interface SubWaveState {
+  /** 0-based index of the sub-wave being fought (or about to be, during a breather). */
+  index: number
+  count: number
+  /** True while the sim is paused between sub-waves. */
+  breather: boolean
+  /** True once the one allowed reposition of this breather has been spent. */
+  moved: boolean
+}
+
 export class GameEngine {
   readonly map: GameMap
   readonly path: GamePath
@@ -222,8 +507,40 @@ export class GameEngine {
   killCount = 0
   status: BattleStatus = 'running'
   elapsed = 0
+  /** Whole steps simulated. Player inputs are stamped with it (`inputLog`). */
+  tick = 0
 
-  private spawnQueue: { typeId: string; at: number; hpMult: number }[]
+  // ---- Phase 3a ----------------------------------------------------------
+  /** Transient markers for the renderer (`render/telegraphs.ts`). Sim state, never read back by the sim. */
+  telegraphs: Telegraph[] = []
+  /** What the behaviour kit / interactions / commands did — the harness reads it. */
+  readonly behaviourStats: BehaviourStats = emptyStats()
+  /** Every player input this battle, stamped with its tick. Replaying it reproduces the battle. */
+  readonly inputLog: BattleInput[] = []
+  /** The Watch Commands this company carries; all share ONE charge per sub-wave. */
+  readonly commands: readonly CommandId[]
+  /** The per-sub-wave charge. Refilled when a sub-wave begins. */
+  commandReady = true
+  /** Rally Horn is sounding until this sim time. */
+  rallyUntil = 0
+  /** Hold the Line: leaks the Gate still ignores this sub-wave. */
+  holdLeaks = 0
+  /** Which sub-wave is live, and the machine's pause state. */
+  subWave = 0
+  readonly subWaveCount: number
+  /** True while the sim is paused between two sub-waves. */
+  breather = false
+  private movedThisBreather = false
+  private groupStart = 0
+  private readonly breatherMode: 'pause' | 'auto'
+  private readonly rules: EngineRules
+  private readonly script: readonly BattleInput[]
+  private scriptIndex = 0
+  private pendingSpawns: RtEnemy[] = []
+  private pendingBurns: { e: RtEnemy; dps: number; dur: number; src: string | undefined; type: 'physical' | 'magic' }[] = []
+  private telegraphSeq = 0
+
+  private spawnQueue: { typeId: string; at: number; hpMult: number; g: number }[]
   private spawnIndex = 0
   /** Combat stream: every roll that changes the outcome (crits, stuns, cooldown offsets). */
   private rng: RNG
@@ -260,8 +577,29 @@ export class GameEngine {
     /** Assist dial: multiplier on base damage per leak (default 1 = shipped difficulty). */
     baseDamageMul?: number
     onEvent?: (e: string, p?: EngineEventPayload) => void
+    /**
+     * What the engine does when a sub-wave is cleared and another is queued.
+     *
+     *  - `'pause'` (the game): the sim stops (`breather` is true, `step` is a
+     *    no-op) until {@link resume} — the player may make ONE {@link moveHero}.
+     *  - `'auto'` (default — the harness, tests, replays): the breather is
+     *    entered and left on the next `step` with no player, after applying any
+     *    scripted inputs stamped for it. The two modes run the identical
+     *    battle when the player simply taps Continue.
+     */
+    breathers?: 'pause' | 'auto'
+    /** Watch Commands available (default: {@link DEFAULT_COMMANDS}). */
+    commands?: readonly CommandId[]
+    /** A recorded input log to replay (see {@link inputLog}). */
+    script?: readonly BattleInput[]
+    /** Counterfactual switches for the balance harness only (default: all on). */
+    rules?: Partial<EngineRules>
   }) {
     this.onEvent = opts.onEvent
+    this.breatherMode = opts.breathers ?? 'auto'
+    this.commands = [...(opts.commands ?? DEFAULT_COMMANDS)]
+    this.rules = { ...ALL_RULES, ...opts.rules }
+    this.script = [...(opts.script ?? [])].sort((a, b) => a.tick - b.tick)
     this.map = opts.map
     this.path = new GamePath(opts.map.path)
     this.wave = opts.wave
@@ -319,6 +657,7 @@ export class GameEngine {
         retargetIn: (placeIndex % 4) * (RETARGET_INTERVAL / 4),
         shots: 0,
         rushUntil: 0,
+        disabledUntil: 0,
       }
       placeIndex++
       this.sentinels.push(rt)
@@ -335,13 +674,45 @@ export class GameEngine {
       }
     }
 
-    this.spawnQueue = [...opts.wave.spawns].sort((a, b) => a.at - b.at)
+    /*
+     * Sub-waves (Phase 3a). Group numbers are normalised to 0..n-1 in order, so
+     * a wave whose groups skip a number still runs every group. With
+     * `rules.subWaves` off, every group is laid end to end on ONE clock — the
+     * counterfactual the harness prices the breathers against.
+     */
+    const groups = [...new Set(opts.wave.spawns.map((s) => s.group ?? 0))].sort((a, b) => a - b)
+    const gIndex = new Map(groups.map((g, i) => [g, i]))
+    const flat = !this.rules.subWaves && groups.length > 1
+    let offset = 0
+    const offsets: number[] = []
+    if (flat) {
+      for (const g of groups) {
+        offsets.push(offset)
+        const last = Math.max(...opts.wave.spawns.filter((s) => (s.group ?? 0) === g).map((s) => s.at))
+        offset += last
+      }
+    }
+    this.spawnQueue = opts.wave.spawns
+      .map((s) => {
+        const g = gIndex.get(s.group ?? 0)!
+        return flat
+          ? { typeId: s.typeId, at: s.at + offsets[g], hpMult: s.hpMult, g: 0 }
+          : { typeId: s.typeId, at: s.at, hpMult: s.hpMult, g }
+      })
+      // Stable, and for a one-group wave exactly the old `a.at - b.at` order.
+      .sort((a, b) => a.g - b.g || a.at - b.at)
+    this.subWaveCount = flat ? 1 : Math.max(1, groups.length)
     // A team ward (a relic) is read off the team's mods once, not per hero.
-    this.leakWardLeft = Math.max(0, Math.floor(mergeMods(this.teamMods).leakWard ?? 0))
+    const team = mergeMods(this.teamMods)
+    this.leakWardLeft = Math.max(0, Math.floor(team.leakWard ?? 0))
+    // Burn spread is a granted capability (the Ember Urn relic), read the same way.
+    this.spreadOnDeath = !!team.burnSpreadOnDeath
   }
 
   /** Leaks this wave the Gate still shrugs off (`EffectMods.leakWard`, Phase 3b). */
   private leakWardLeft = 0
+  /** The team carries `burnSpreadOnDeath` (Phase 3a capability; the Ember Urn relic). */
+  private spreadOnDeath = false
 
   private nearestPathPoint(p: Vec2): Vec2 {
     // Sample the path coarsely to find the closest point.
@@ -364,24 +735,196 @@ export class GameEngine {
 
   step(dt: number): void {
     if (this.status !== 'running') return
+    // Scripted inputs stamped with the tick just completed land first — the
+    // same moment a live input between two frames lands.
+    this.applyScript()
+    if (this.breather) {
+      if (this.breatherMode === 'pause') return
+      this.resume()
+    }
+    this.tick++
     this.elapsed += dt
+    for (const e of this.enemies) e.healed = 0
 
     this.spawnDue()
     this.updatePatience(dt)
     this.updateAuras(dt)
     this.assignBlocking()
+    this.updateBehaviours()
     this.updateSentinels(dt)
     this.updateEnemies(dt)
     this.updateProjectiles(dt)
     this.updateTraps(dt)
+    // Everything a tick deferred — split pieces, boss halves, spread burns —
+    // lands here, after every loop over `this.enemies` has finished. Adding a
+    // body to the list mid-`updateEnemies` would be dropped by its
+    // `this.enemies = survivors` (the F1 shape, from the other side).
+    this.flushPending()
+    this.refreshEnemyState()
     this.updateFloaters(dt)
     this.checkEnd()
+  }
+
+  // ------------------------------------------------------------ player inputs
+
+  private applyScript(): void {
+    while (this.scriptIndex < this.script.length && this.script[this.scriptIndex].tick <= this.tick) {
+      const input = this.script[this.scriptIndex++]
+      if (input.tick < this.tick) continue // stale — never re-time an input
+      switch (input.kind) {
+        case 'command':
+          this.useCommand(input.id)
+          break
+        case 'move':
+          this.moveHero(input.from, input.to)
+          break
+        case 'focus':
+          this.setFocus(input.focus)
+          break
+        case 'resume':
+          this.resume()
+          break
+      }
+    }
+  }
+
+  /** Can a Watch Command fire right now? (The UI reads the same answer the engine gives.) */
+  canUseCommand(id: CommandId): boolean {
+    if (this.status !== 'running' || this.breather || !this.commandReady) return false
+    if (!this.commands.includes(id)) return false
+    // A Flare with nothing to aim at would spend the charge on the grass.
+    if (id === 'flare' && this.enemies.length === 0) return false
+    return true
+  }
+
+  /**
+   * Fire a Watch Command. Returns whether it fired. One charge per sub-wave,
+   * shared by every command the company carries; logged with its tick.
+   */
+  useCommand(id: CommandId): boolean {
+    if (!this.canUseCommand(id)) return false
+    this.commandReady = false
+    this.inputLog.push({ tick: this.tick, kind: 'command', id })
+    this.behaviourStats.commandsUsed++
+    if (id === 'rally') {
+      this.rallyUntil = this.elapsed + RALLY.dur
+      for (const s of this.sentinels) if (!s.downed) this.spawnFloater(s.pos, 'RALLY', '#f5c542', false)
+    } else if (id === 'flare') {
+      // Auto-aimed at the front of the column (see `commands.ts`).
+      let lead = this.enemies[0]
+      for (const e of this.enemies) if (e.distance > lead.distance) lead = e
+      const r2 = FLARE.radius * FLARE.radius
+      for (const e of this.enemies) {
+        if (distSq(e.pos, lead.pos) > r2) continue
+        e.flareSlow = FLARE.slow
+        e.flareUntil = this.elapsed + FLARE.dur
+      }
+      this.addTelegraph('flare', lead.pos.x, lead.pos.y, FLARE.radius, FLARE.dur)
+    } else if (id === 'hold') {
+      this.holdLeaks = HOLD.leaks
+    }
+    this.onEvent?.('command', { command: id })
+    this.onEvent?.(`command:${id}`, { command: id })
+    return true
+  }
+
+  /** Change the whole watch's targeting order mid-battle (logged). */
+  setFocus(focus: FocusMode): void {
+    if (this.status !== 'running' || this.tactics.focus === focus) return
+    this.tactics = { ...this.tactics, focus }
+    this.retargetDirty = true
+    this.inputLog.push({ tick: this.tick, kind: 'focus', focus })
+  }
+
+  /** The sub-wave machine's state, for the HUD. */
+  subWaveState(): SubWaveState {
+    return { index: this.subWave, count: this.subWaveCount, breather: this.breather, moved: this.movedThisBreather }
+  }
+
+  /** Has the live sub-wave spawned every body it has? */
+  subWaveSpawned(): boolean {
+    return this.spawnIndex >= this.spawnQueue.length || this.spawnQueue[this.spawnIndex].g !== this.subWave
+  }
+
+  /** Which Sentinel stands on a slot (for the breather's move UI). */
+  sentinelOnSlot(slotId: string): RtSentinel | undefined {
+    return this.sentinels.find((s) => s.slotId === slotId)
+  }
+
+  /**
+   * The breather's one reposition: move the hero on `from` to `to`, swapping
+   * with whoever stands there. Only during a breather, once per breather.
+   */
+  moveHero(from: string, to: string): boolean {
+    if (!this.breather || this.movedThisBreather || from === to) return false
+    const slotTo = this.map.slots.find((s) => s.id === to)
+    const a = this.sentinelOnSlot(from)
+    if (!slotTo || !a) return false
+    const b = this.sentinelOnSlot(to)
+    const slotFrom = this.map.slots.find((s) => s.id === from)!
+    this.placeAt(a, slotTo.id, slotTo.pos)
+    if (b) this.placeAt(b, slotFrom.id, slotFrom.pos)
+    this.movedThisBreather = true
+    this.behaviourStats.repositions++
+    this.inputLog.push({ tick: this.tick, kind: 'move', from, to })
+    this.onEvent?.('reposition')
+    return true
+  }
+
+  private placeAt(s: RtSentinel, slotId: string, pos: Vec2): void {
+    s.slotId = slotId
+    s.pos = { ...pos }
+    s.targetId = null
+    // Its trap is laid where it stands, so it moves with it.
+    for (const t of this.traps) if (t.srcId === s.id) t.pos = this.nearestPathPoint(pos)
+  }
+
+  /** End the breather and start the next sub-wave. Logged; a no-op outside a breather. */
+  resume(): void {
+    if (!this.breather) return
+    this.breather = false
+    this.movedThisBreather = false
+    this.groupStart = this.elapsed
+    this.commandReady = true
+    this.inputLog.push({ tick: this.tick, kind: 'resume' })
+    this.onEvent?.('subwaveStart')
+  }
+
+  /**
+   * A sub-wave is clear and another is queued: pause, and mend the company
+   * (see {@link BREATHER_MEND}). Everything timed to the sub-wave just fought
+   * — Rally Horn, Hold the Line, the markers on the field — ends with it.
+   */
+  private enterBreather(): void {
+    this.subWave++
+    this.breather = true
+    this.movedThisBreather = false
+    this.behaviourStats.breathers++
+    this.rallyUntil = 0
+    this.holdLeaks = 0
+    this.telegraphs = []
+    for (const s of this.sentinels) {
+      if (s.downed) {
+        if (!BREATHER_REVIVE) continue
+        s.downed = false
+        s.hp = 0
+      }
+      s.hp = Math.min(s.maxHp, s.hp + s.maxHp * BREATHER_MEND)
+      s.disabledUntil = 0
+      s.targetId = null
+    }
+    this.onEvent?.('subwave')
+  }
+
+  private addTelegraph(kind: TelegraphKind, x: number, y: number, r: number, dur: number, srcId?: string, x2?: number, y2?: number): void {
+    this.telegraphs.push({ id: ++this.telegraphSeq, kind, x, y, r, t0: this.elapsed, t1: this.elapsed + dur, srcId, x2, y2 })
   }
 
   private spawnDue(): void {
     while (
       this.spawnIndex < this.spawnQueue.length &&
-      this.spawnQueue[this.spawnIndex].at <= this.elapsed
+      this.spawnQueue[this.spawnIndex].g === this.subWave &&
+      this.groupStart + this.spawnQueue[this.spawnIndex].at <= this.elapsed
     ) {
       const s = this.spawnQueue[this.spawnIndex]
       const type = ENEMY_TYPES[s.typeId]
@@ -404,26 +947,40 @@ export class GameEngine {
         continue
       }
       const maxHp = Math.round(type.baseHp * s.hpMult * this.enemyHpMult)
-      this.enemies.push({
-        id: nextId('en'),
-        type,
-        hp: maxHp,
-        maxHp,
-        distance: 0,
-        pos: this.path.pointAt(0),
-        hitFlash: 0,
-        burnDps: 0,
-        burnUntil: 0,
-        burnSrcId: undefined,
-        burnType: 'magic',
-        chillSlow: 0,
-        chillUntil: 0,
-        stunUntil: 0,
-        blockedBy: null,
-      })
+      this.enemies.push(this.makeEnemy(type, s.typeId, maxHp, 0, type.reward))
       this.retargetDirty = true // a new arrival may outrank everyone's current pick
       if (type.isBoss) this.onEvent?.('boss', { ...enemyTag(type), x: this.fieldX(this.enemies[this.enemies.length - 1].pos.x) })
       this.spawnIndex++
+    }
+  }
+
+  /** One fresh runtime enemy. The single place an `RtEnemy` literal is written. */
+  private makeEnemy(type: EnemyType, key: string, maxHp: number, distance: number, reward: number): RtEnemy {
+    const lob = behaviourOf(type, 'lob')
+    const heal = behaviourOf(type, 'healPulse')
+    const king = behaviourOf(type, 'kingLob')
+    return {
+      id: nextId('en'),
+      type,
+      hp: maxHp,
+      maxHp,
+      distance,
+      pos: this.path.pointAt(distance),
+      hitFlash: 0,
+      burnDps: 0,
+      burnUntil: 0,
+      burnSrcId: undefined,
+      burnType: 'magic',
+      chillSlow: 0,
+      chillUntil: 0,
+      stunUntil: 0,
+      blockedBy: null,
+      ...enemyBehaviourState(key, reward),
+      lobCharges: lob?.charges ?? 0,
+      kingNextAt: king ? this.elapsed + king.first : 0,
+      // First pulse half an interval in, so a shaman does something before it
+      // reaches the first tower rather than exactly one interval after spawning.
+      healNextAt: heal ? this.elapsed + heal.interval / 2 : 0,
     }
   }
 
@@ -481,17 +1038,280 @@ export class GameEngine {
     for (const e of this.enemies) e.blockedBy = null
     for (const s of this.sentinels) {
       const block = s.profile.mods.block
-      if (!block || s.downed) continue
+      if (!block || s.downed || this.elapsed < s.disabledUntil) continue
       const r2 = block.radius * block.radius
       const inRange = this.enemies
-        .filter((e) => !e.blockedBy && distSq(s.pos, e.pos) <= r2)
+        .filter((e) => !e.blockedBy && e.leapOver !== s.id && distSq(s.pos, e.pos) <= r2)
         .sort((a, b) => b.distance - a.distance)
-        .slice(0, block.count)
+      // `slice(0, count)` as before, except that a leaper vaults instead of
+      // being held and so does not use up a place in the hold.
+      let held = 0
       for (const e of inRange) {
+        if (held >= block.count) break
+        if (this.rules.behaviours && !e.leapt) {
+          const leap = behaviourOf(e.type, 'leap')
+          if (leap) {
+            this.vault(e, s, leap.distance)
+            continue
+          }
+        }
         e.blockedBy = s.id
         s.blockIds.push(e.id)
+        held++
       }
     }
+  }
+
+  /** The leaper's one vault over the blocker that tried to hold it. */
+  private vault(e: RtEnemy, over: RtSentinel, distance: number): void {
+    const from = e.pos
+    e.leapt = true
+    e.leapOver = over.id
+    e.distance = Math.min(this.path.length, e.distance + distance)
+    e.pos = this.path.pointAt(e.distance)
+    this.behaviourStats.leaps++
+    this.addTelegraph('leap', from.x, from.y, e.type.radius, 0.45, e.id, e.pos.x, e.pos.y)
+    this.onEvent?.('behaviour:leap', this.tagOf(e))
+  }
+
+  // ---------------------------------------------------------- the behaviour kit
+
+  /**
+   * Resolve every enemy behaviour for this tick. Runs after blocking (a sapper
+   * reads whether it is held) and before the Sentinels act (a disabled post
+   * does not shoot this tick). Walks a SNAPSHOT: a sapper removes itself.
+   */
+  private updateBehaviours(): void {
+    if (!this.rules.behaviours) return
+    for (const e of this.enemies.slice()) {
+      if (e.hp <= 0) continue
+      const bs = e.type.behaviours
+      if (!bs) continue
+      for (const b of bs) {
+        if (e.hp <= 0) break
+        switch (b.kind) {
+          case 'healPulse':
+            if (this.elapsed >= e.healNextAt) {
+              e.healNextAt += b.interval
+              this.healPulse(e, b.radius, b.heal, b.interval)
+            }
+            break
+          case 'enrage':
+            if (!e.enraged && e.hp / e.maxHp < b.below) {
+              e.enraged = true
+              this.behaviourStats.enrages++
+              this.spawnFloater(e.pos, 'ENRAGE', '#ff6b3d', true)
+              this.onEvent?.('behaviour:enrage', this.tagOf(e))
+            }
+            break
+          case 'sapper':
+            if (e.blockedBy || this.heroWithin(e.pos, b.trigger)) this.detonate(e, b.radius, b.damage, e.blockedBy)
+            break
+          case 'lob':
+            this.updateLob(e, b)
+            break
+          case 'warCry':
+            this.updateWarCry(e, b)
+            break
+          case 'kingLob':
+            this.updateKingLob(e, b)
+            break
+          // 'split', 'bossSplit' resolve on damage/death; 'shieldAura' in
+          // `refreshEnemyState`; 'leap' in `assignBlocking`.
+        }
+      }
+    }
+  }
+
+  /** The nearest standing hero within `r` of a point, or undefined. Ties go to roster order. */
+  private heroWithin(p: Vec2, r: number): RtSentinel | undefined {
+    let best: RtSentinel | undefined
+    let bestD = r * r
+    for (const s of this.sentinels) {
+      if (s.downed) continue
+      const d = distSq(s.pos, p)
+      if (d <= bestD) {
+        bestD = d
+        best = s
+      }
+    }
+    return best
+  }
+
+  /**
+   * Damage every standing hero within `r` of a point. A Guard's damage-
+   * reduction aura applies (it is the counterplay for a line that has to post
+   * near the lane); a fighter's melee `physDef` does not — a blast is not a
+   * swing. Returns the HP actually removed.
+   */
+  private blastHeroes(p: Vec2, r: number, damage: number): number {
+    let total = 0
+    const r2 = r * r
+    for (const s of this.sentinels) {
+      if (s.downed || distSq(s.pos, p) > r2) continue
+      const dmg = Math.min(s.hp, damage * (1 - s.reduction))
+      s.hp -= damage * (1 - s.reduction)
+      total += dmg
+      if (s.hp <= 0) this.downSentinel(s)
+    }
+    this.behaviourStats.heroDamage += total
+    return total
+  }
+
+  private healPulse(src: RtEnemy, radius: number, heal: number, interval: number): void {
+    const r2 = radius * radius
+    let healedAny = 0
+    for (const e of this.enemies) {
+      if (e.hp <= 0 || e.hp >= e.maxHp || this.elapsed < e.healReadyAt) continue
+      if (distSq(e.pos, src.pos) > r2) continue
+      const amt = Math.min(e.maxHp - e.hp, e.maxHp * heal)
+      e.hp += amt
+      e.healed += amt
+      // Pulses do not stack: one heal per body per interval, whoever casts it.
+      e.healReadyAt = this.elapsed + interval
+      healedAny += amt
+    }
+    this.behaviourStats.healPulses++
+    this.behaviourStats.hpHealed += healedAny
+    this.addTelegraph('heal', src.pos.x, src.pos.y, radius, 0.6, src.id)
+    if (healedAny > 0) this.onEvent?.('behaviour:healPulse', this.tagOf(src))
+  }
+
+  /**
+   * A sapper goes off: heroes in the blast take its damage and the sapper is
+   * spent. One that went off on the hero HOLDING it (`blocker`) was stopped at
+   * the wall, and counts as that hero's kill — bounty and XP — so holding it on
+   * a hero who can take the blast is an answer, not just a way to lose HP. One
+   * that reached a post unheld pays nothing: that is the sapper winning.
+   */
+  private detonate(e: RtEnemy, radius: number, damage: number, blocker: string | null = null): void {
+    const dealt = this.blastHeroes(e.pos, radius, damage)
+    this.behaviourStats.sapperBlasts++
+    this.behaviourStats.sapperDamage += dealt
+    this.addTelegraph('blast', e.pos.x, e.pos.y, radius, 0.5, e.id)
+    this.spawnFloater(e.pos, 'BOOM', '#ff9f43', true)
+    this.onEvent?.('behaviour:sapper', this.tagOf(e))
+    if (blocker) {
+      this.behaviourStats.sapperHeld++
+      e.hp = 0
+      this.killEnemy(e, blocker)
+    } else this.removeEnemy(e)
+  }
+
+  /**
+   * Take an enemy off the field WITHOUT killing it — no gold, no XP, no kill.
+   * `hp = 0` is the "already removed this tick" mark every snapshot loop checks.
+   */
+  private removeEnemy(e: RtEnemy): void {
+    const idx = this.enemies.indexOf(e)
+    if (idx === -1) return
+    e.hp = 0
+    this.enemies.splice(idx, 1)
+    this.dropTelegraphsOf(e.id)
+  }
+
+  private dropTelegraphsOf(id: string): void {
+    this.telegraphs = this.telegraphs.filter((t) => t.srcId !== id || (t.kind !== 'lob' && t.kind !== 'kingLob'))
+  }
+
+  private updateLob(e: RtEnemy, b: Behaviour<'lob'>): void {
+    if (e.lobUntil > 0) {
+      if (this.elapsed < e.lobUntil) return
+      e.lobUntil = 0
+      e.lobCharges--
+      const dealt = this.blastHeroes({ x: e.lobX, y: e.lobY }, b.radius, b.damage)
+      this.behaviourStats.lobsLanded++
+      this.behaviourStats.lobDamage += dealt
+      this.addTelegraph('blast', e.lobX, e.lobY, b.radius, 0.45)
+      this.onEvent?.('behaviour:lob', this.tagOf(e))
+      return
+    }
+    if (e.lobCharges <= 0 || e.blockedBy) return
+    const target = this.heroWithin(e.pos, b.range)
+    if (!target) return
+    // One mark per post at a time: a bomber whose target is already under a
+    // live mark holds its charge and walks on (it may throw at the next post).
+    // Without this a Bombard column stacked ten charges on the first post it
+    // reached — a pile-on with no counterplay but "be somewhere else".
+    if (this.telegraphs.some((t) => (t.kind === 'lob' || t.kind === 'kingLob') && t.x === target.pos.x && t.y === target.pos.y)) return
+    e.lobUntil = this.elapsed + b.windup
+    e.lobX = target.pos.x
+    e.lobY = target.pos.y
+    this.behaviourStats.lobsStarted++
+    this.addTelegraph('lob', e.lobX, e.lobY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
+    this.onEvent?.('behaviour:lobWindup', this.tagOf(e))
+  }
+
+  private updateWarCry(e: RtEnemy, b: Behaviour<'warCry'>): void {
+    if (e.warCryUntil > 0) {
+      if (this.elapsed < e.warCryUntil) return
+      e.warCryUntil = 0
+      const r2 = b.radius * b.radius
+      let n = 0
+      for (const a of this.enemies) {
+        if (a.hp <= 0 || distSq(a.pos, e.pos) > r2) continue
+        a.hasteMult = b.speedMult
+        a.hasteUntil = this.elapsed + b.dur
+        n++
+      }
+      this.behaviourStats.warCries++
+      this.behaviourStats.hasteApplied += n
+      this.spawnFloater(e.pos, 'WAR-CRY', '#ff5d5d', true)
+      this.onEvent?.('behaviour:warCry', this.tagOf(e))
+      return
+    }
+    const next = b.at[e.phase]
+    if (next === undefined || e.hp / e.maxHp > next) return
+    e.phase++
+    e.warCryUntil = this.elapsed + b.windup
+    this.bossPhase(e)
+    this.addTelegraph('warcry', e.pos.x, e.pos.y, b.radius, b.windup, e.id)
+  }
+
+  private updateKingLob(e: RtEnemy, b: Behaviour<'kingLob'>): void {
+    if (e.phase === 0 && e.hp / e.maxHp <= b.rageAt) {
+      e.phase = 1
+      this.bossPhase(e)
+      this.spawnFloater(e.pos, 'ENRAGED', '#ff5d5d', true)
+      // The next throw comes on the rage clock, not the calm one.
+      if (e.kingUntil === 0) e.kingNextAt = Math.min(e.kingNextAt, this.elapsed + b.rageInterval)
+    }
+    if (e.kingUntil > 0) {
+      if (this.elapsed < e.kingUntil) return
+      e.kingUntil = 0
+      const dealt = this.blastHeroes({ x: e.kingX, y: e.kingY }, b.radius, b.damage)
+      const target = this.sentinels.find((s) => s.id === e.kingTargetId)
+      if (target && !target.downed) {
+        target.disabledUntil = this.elapsed + b.disable
+        target.targetId = null
+        this.behaviourStats.kingDisables++
+        this.spawnFloater(target.pos, 'DAZED', '#c9b8ff', true)
+      }
+      this.behaviourStats.kingLobs++
+      this.behaviourStats.kingDamage += dealt
+      this.addTelegraph('blast', e.kingX, e.kingY, b.radius, 0.5)
+      this.onEvent?.('behaviour:kingLob', this.tagOf(e))
+      return
+    }
+    if (this.elapsed < e.kingNextAt) return
+    const target = this.heroWithin(e.pos, b.range)
+    if (!target) {
+      e.kingNextAt = this.elapsed + 0.5
+      return
+    }
+    e.kingUntil = this.elapsed + b.windup
+    e.kingX = target.pos.x
+    e.kingY = target.pos.y
+    e.kingTargetId = target.id
+    e.kingNextAt = this.elapsed + (e.phase > 0 ? b.rageInterval : b.interval)
+    this.addTelegraph('kingLob', e.kingX, e.kingY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
+    this.onEvent?.('behaviour:kingLobWindup', this.tagOf(e))
+  }
+
+  private bossPhase(e: RtEnemy): void {
+    this.behaviourStats.bossPhases++
+    this.addTelegraph('phase', e.pos.x, e.pos.y, e.type.radius * 2.2, 0.7, e.id)
+    this.onEvent?.('bossPhase', { ...this.tagOf(e), phase: e.phase })
   }
 
   private updateSentinels(dt: number): void {
@@ -500,6 +1320,12 @@ export class GameEngine {
       if (s.cooldown > 0) s.cooldown -= dt
       if (s.fireFlash > 0) s.fireFlash = Math.max(0, s.fireFlash - dt * 5)
       if (s.procFlash > 0) s.procFlash = Math.max(0, s.procFlash - dt * 3)
+      // Knocked out by the Powderkeg King: no shots (and `assignBlocking` gave
+      // it no hold, so it takes no melee either).
+      if (this.elapsed < s.disabledUntil) {
+        s.targetId = null
+        continue
+      }
 
       const rangeSq = s.profile.range * s.profile.range
       s.retargetIn -= dt
@@ -532,7 +1358,7 @@ export class GameEngine {
           if (!e) continue
           // A stun stops the enemy swinging, but thorns keep grinding: a fighter's
           // own stun proc must never switch off its own damage (L9a).
-          if (this.elapsed >= e.stunUntil) taken += e.type.meleeDps
+          if (this.elapsed >= e.stunUntil) taken += e.enraged ? this.enragedMelee(e) : e.type.meleeDps
           if (s.profile.thorns > 0) this.damageEnemy(e, s.profile.thorns * dt, s.id, false, s.profile.damageType, true)
           if (e.hp > 0) this.igniteFromThorns(s, e)
         }
@@ -544,9 +1370,34 @@ export class GameEngine {
     this.retargetDirty = false
   }
 
+  private enragedMelee(e: RtEnemy): number {
+    return e.type.meleeDps * (behaviourOf(e.type, 'enrage')?.meleeMult ?? 1)
+  }
+
+  /**
+   * How urgently the 'threat' order wants this enemy dead, 0–4. A bomber or the
+   * King mid-wind-up first (killing it cancels the throw), then the casters
+   * whose value is to OTHER goblins, then an unspent sapper, then anything else
+   * with a behaviour. Plain walkers score 0 and fall back to first-in-lane.
+   */
+  static threatRank(e: RtEnemy): number {
+    if (e.lobUntil > 0 || e.kingUntil > 0) return 4
+    const bs = e.type.behaviours
+    if (!bs) return 0
+    let r = 1
+    for (const b of bs) {
+      if (b.kind === 'healPulse' || b.kind === 'shieldAura') r = Math.max(r, 3)
+      else if (b.kind === 'sapper' || (b.kind === 'lob' && e.lobCharges > 0)) r = Math.max(r, 2)
+    }
+    return r
+  }
+
   /** Score an in-range enemy per the active focus tactic (higher = preferred). */
   private focusScore(s: RtSentinel, e: RtEnemy): number {
     switch (this.tactics.focus) {
+      case 'threat':
+        // Rank dominates; distance down the lane breaks ties (≤ ~2300 px).
+        return GameEngine.threatRank(e) * 1e5 + e.distance
       case 'lowestHp':
         return -e.hp
       case 'strongest':
@@ -581,6 +1432,8 @@ export class GameEngine {
     let rate = s.profile.rate
     if (m.openingRush && this.elapsed < m.openingRush.dur) rate *= 1 + m.openingRush.rate
     if (m.killRush && this.elapsed < s.rushUntil) rate *= 1 + m.killRush.rate
+    // Rally Horn (Phase 3a) is an attack-SPEED buff: it shortens this reload and nothing else.
+    if (this.elapsed < this.rallyUntil) rate *= RALLY.rateMult
     s.cooldown = 1 / rate
     s.fireFlash = 1
     this.onEvent?.('shoot', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
@@ -650,8 +1503,10 @@ export class GameEngine {
 
       const stunned = this.elapsed < e.stunUntil
       const chill = this.elapsed < e.chillUntil ? e.chillSlow : 0
-      if (!stunned && !e.blockedBy) {
-        e.distance += e.type.speed * (1 - chill) * dt
+      // A bomber plants its feet to throw — that stillness IS the window.
+      const planted = e.lobUntil > 0
+      if (!stunned && !e.blockedBy && !planted) {
+        e.distance += e.type.speed * (1 - chill) * this.paceMult(e) * dt
       }
 
       if (e.distance >= this.path.length) {
@@ -660,6 +1515,20 @@ export class GameEngine {
         // ones — only the bite the line takes is smaller. `leaks` is the number
         // the summary prints next to "left", so it reports the damage ACTUALLY
         // taken; reporting the un-assisted figure would make the receipt lie.
+        // The head count is tracked separately from the damage, because they are
+        // different numbers and two readouts printed one as the other (F3).
+        this.leakCount++
+        if (e.piece) this.behaviourStats.splitLeaks++
+        if (e.enraged) this.behaviourStats.enragedLeaks++
+        if (e.leapt) this.behaviourStats.leapLeaks++
+        if (this.holdLeaks > 0) {
+          // Hold the Line (a Watch Command, Phase 3a): it reached the Gate and
+          // the Gate held. It still counts as having got through, and costs nothing.
+          this.holdLeaks--
+          this.behaviourStats.holdBlocked++
+          this.onEvent?.('hold', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
+          continue
+        }
         // Phase 3b: a team ward turns the first leaks of the wave aside. The
         // body still reached the line — it counts — it just costs the Gate nothing.
         const warded = this.leakWardLeft > 0
@@ -667,9 +1536,6 @@ export class GameEngine {
         const dmg = warded ? 0 : e.type.leak * this.baseDamageMul
         this.baseHp -= dmg
         this.leaks += dmg
-        // The head count is tracked separately from the damage, because they are
-        // different numbers and two readouts printed one as the other (F3).
-        this.leakCount++
         this.onEvent?.('leak', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
         continue
       }
@@ -677,6 +1543,19 @@ export class GameEngine {
       survivors.push(e)
     }
     this.enemies = survivors
+  }
+
+  /**
+   * Every multiplier on an enemy's walking pace except chill (which the old
+   * line already applied): Flare, the berserker's rage, Grukk's war-cry. 1 for
+   * a plain walker, so the pre-3a arithmetic is `speed * (1 - chill) * 1`.
+   */
+  private paceMult(e: RtEnemy): number {
+    let m = 1
+    if (this.elapsed < e.flareUntil) m *= 1 - e.flareSlow
+    if (e.enraged) m *= behaviourOf(e.type, 'enrage')?.speedMult ?? 1
+    if (this.elapsed < e.hasteUntil) m *= e.hasteMult
+    return m
   }
 
   private updateProjectiles(dt: number): void {
@@ -771,6 +1650,11 @@ export class GameEngine {
      */
     if (hitList.length > 0) this.onEvent?.(p.isCrit ? 'crit' : 'hit', this.hitPayload(p))
 
+    // Frost standing BEFORE this shot lands — a shock shot's own chill (if it
+    // carries one) must not shatter the body it is chilling in the same hit.
+    const frostedBefore =
+      p.mods.shock && this.rules.interactions ? new Set(this.enemies.filter((e) => this.elapsed < e.frostUntil)) : null
+
     for (const e of hitList) this.applyHit(e, p)
 
     // Chain lightning: arc to nearby enemies for a fraction of the hit.
@@ -784,6 +1668,21 @@ export class GameEngine {
       if (src) src.procFlash = 1
       for (const e of chained) {
         this.damageEnemy(e, p.damage * p.mods.shock.dmgFrac, p.srcId, false, p.damageType, false)
+      }
+      // SHATTER (Phase 3a): lightning meeting ice. Every body this shot touched
+      // — struck or arced to — that is frost-chilled bursts for a share of the
+      // hit, and is thawed by it, so one frost application buys one shatter.
+      if (frostedBefore && frostedBefore.size) {
+        for (const e of [...hitList, ...chained]) {
+          if (e.hp <= 0 || !frostedBefore.has(e) || this.elapsed >= e.frostUntil) continue
+          e.frostUntil = 0
+          const burst = this.damageEnemy(e, p.damage * SHATTER_FRAC, p.srcId, false, p.damageType, true)
+          this.behaviourStats.shatters++
+          this.behaviourStats.shatterDamage += burst
+          this.addTelegraph('shatter', e.pos.x, e.pos.y, e.type.radius + 10, 0.35)
+          this.spawnFloater(e.pos, 'SHATTER', '#bfe6ff', true)
+          this.onEvent?.('shatter', this.tagOf(e))
+        }
       }
     }
   }
@@ -845,6 +1744,8 @@ export class GameEngine {
       if (p.mods.chill) {
         e.chillSlow = Math.max(e.chillSlow, p.mods.chill.slow)
         e.chillUntil = Math.max(e.chillUntil, this.elapsed + p.mods.chill.dur)
+        // Frost — the only chill brittle and shatter answer to (see BRITTLE_MULT).
+        e.frostUntil = Math.max(e.frostUntil, this.elapsed + p.mods.chill.dur)
       }
       if (p.mods.stunChance && this.rng.chance(p.mods.stunChance)) {
         e.stunUntil = Math.max(e.stunUntil, this.elapsed + (p.mods.stunDur ?? 0.5))
@@ -981,9 +1882,12 @@ export class GameEngine {
     type: 'physical' | 'magic',
     quiet: boolean,
   ): number {
-    const resist = type === 'physical' ? (e.type.physResist ?? 0) : (e.type.magResist ?? 0)
-    const dealt = amount * (1 - resist)
+    // `takenMult` is resist, the shield-bearer's aura and brittle in one number,
+    // and it is the SAME function the tick differ re-runs (see its note).
+    const mult = takenMult(e, type)
+    const dealt = amount * mult
     const applied = Math.min(e.hp, dealt)
+    if (e.shield > 0 || e.brittle) this.bookModifiers(e, amount, type, applied)
     e.hp -= dealt
     e.hitFlash = 1
     if (srcId) {
@@ -994,7 +1898,57 @@ export class GameEngine {
       this.spawnFloater(e.pos, Math.round(dealt).toString(), isCrit ? '#ffd166' : '#ffffff', isCrit)
     }
     if (e.hp <= 0) this.killEnemy(e, srcId)
+    else if (this.rules.behaviours && e.phase === 0) this.maybeBossSplit(e)
     return applied
+  }
+
+  /**
+   * Book what the shield took off and what brittle added, for the harness
+   * (§16). Pure accounting: it reads the hit, it never changes it.
+   */
+  private bookModifiers(e: RtEnemy, amount: number, type: 'physical' | 'magic', applied: number): void {
+    const plain = amount * takenMult({ type: e.type, shield: 0, brittle: e.brittle }, type)
+    if (e.shield > 0) this.behaviourStats.shieldedPrevented += Math.max(0, Math.min(e.hp, plain) - applied)
+    if (e.brittle && type === 'physical') this.behaviourStats.brittleBonus += applied - applied / BRITTLE_MULT
+  }
+
+  /**
+   * The Colossus Keg breaks in two at half health. The body that was hit
+   * BECOMES the first half (so no loop that is holding a reference to it ever
+   * sees it vanish), and the others are queued behind it — added to the field
+   * at the end of the tick with everything else a tick defers.
+   */
+  private maybeBossSplit(e: RtEnemy): void {
+    const b = behaviourOf(e.type, 'bossSplit')
+    if (!b || e.hp / e.maxHp > b.at) return
+    e.phase = 1
+    const halfType: EnemyType = {
+      ...e.type,
+      name: `${e.type.name} (half)`,
+      radius: b.radius,
+      speed: Math.round(e.type.speed * b.speedMult),
+      leak: Math.ceil(e.type.leak / b.count),
+      reward: Math.floor(e.type.reward / b.count),
+      behaviours: (e.type.behaviours ?? []).filter((x) => x.kind !== 'bossSplit'),
+    }
+    const hp = e.hp * b.hpShare
+    const maxHp = e.maxHp * b.at * b.hpShare
+    const reward = Math.floor(e.reward / b.count)
+    e.type = halfType
+    e.hp = hp
+    e.maxHp = maxHp
+    e.reward = reward
+    e.blockedBy = null
+    for (let i = 1; i < b.count; i++) {
+      const half = this.makeEnemy(halfType, e.key, maxHp, Math.max(0, e.distance - SPLIT_SPACING * i), reward)
+      half.hp = hp
+      half.phase = 1
+      this.pendingSpawns.push(half)
+    }
+    this.behaviourStats.bossSplits++
+    this.addTelegraph('split', e.pos.x, e.pos.y, b.radius * 2, 0.6, e.id)
+    this.spawnFloater(e.pos, 'SPLIT!', '#ffd166', true)
+    this.bossPhase(e)
   }
 
   private killEnemy(e: RtEnemy, srcId: string | undefined): void {
@@ -1002,17 +1956,122 @@ export class GameEngine {
     if (idx === -1) return
     this.enemies.splice(idx, 1)
     this.killCount++
-    this.goldEarned += e.type.reward
+    this.goldEarned += e.reward
     this.onEvent?.('kill', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
     if (srcId) {
       const s = this.sentinels.find((x) => x.id === srcId)
       if (s) {
         s.kills++
         if (s.profile.mods.killRush) s.rushUntil = this.elapsed + s.profile.mods.killRush.dur
-        const xp = Math.round(e.maxHp * 0.2) + e.type.reward
+        const xp = Math.round(e.maxHp * 0.2) + e.reward
         this.xpGained.set(srcId, (this.xpGained.get(srcId) ?? 0) + xp)
       }
     }
+    this.onDeath(e)
+  }
+
+  /**
+   * What a death sets off (Phase 3a). Everything here is DEFERRED to the end
+   * of the tick (`flushPending`): `killEnemy` is reached from inside loops over
+   * `this.enemies`, and the audit's hardest lesson is what happens when one of
+   * those loops sees the list change under it.
+   */
+  private onDeath(e: RtEnemy): void {
+    if (e.lobUntil > 0 || e.kingUntil > 0) {
+      // Killed mid-wind-up: the throw never happens. This is the dodge.
+      if (e.lobUntil > 0) this.behaviourStats.lobsCancelled++
+      e.lobUntil = 0
+      e.kingUntil = 0
+      this.onEvent?.('behaviour:lobCancel', this.tagOf(e))
+    }
+    this.dropTelegraphsOf(e.id)
+    if (this.rules.behaviours) {
+      const split = behaviourOf(e.type, 'split')
+      if (split) this.splitOnDeath(e, split)
+    }
+    // Burn SPREAD: a burning body that dies lights its nearest neighbours — a
+    // capability the team must carry (`burnSpreadOnDeath`, the Ember Urn).
+    if (this.rules.interactions && this.spreadOnDeath && e.burnDps > 0 && this.elapsed < e.burnUntil) {
+      const r2 = SPREAD_RADIUS * SPREAD_RADIUS
+      const near = this.enemies
+        .filter((x) => x.hp > 0 && distSq(x.pos, e.pos) <= r2)
+        .sort((a, b) => distSq(a.pos, e.pos) - distSq(b.pos, e.pos))
+        .slice(0, SPREAD_COUNT)
+      const dur = Math.max(SPREAD_MIN_DUR, e.burnUntil - this.elapsed)
+      for (const x of near) this.pendingBurns.push({ e: x, dps: e.burnDps, dur, src: e.burnSrcId, type: e.burnType })
+      if (near.length) {
+        this.behaviourStats.burnSpreads += near.length
+        this.addTelegraph('spread', e.pos.x, e.pos.y, SPREAD_RADIUS, 0.4)
+        this.onEvent?.('burnSpread', this.tagOf(e))
+      }
+    }
+  }
+
+  private splitOnDeath(e: RtEnemy, b: Behaviour<'split'>): void {
+    // The pieces wear the parent's modifier: a Plated splitter breaks into Plated imps.
+    const mod = ENEMY_MODS.find((m) => e.key.endsWith(`_${m.id}`))
+    const key = modKey(b.into, mod?.id ?? null)
+    const type = ENEMY_TYPES[key] ?? ENEMY_TYPES[b.into]
+    if (!type) return
+    const maxHp = Math.max(1, Math.round(e.maxHp * b.hpFrac))
+    const reward = Math.floor(type.reward / 2)
+    // The pieces share the barrel's leak: a split never puts more through the
+    // Gate than the barrel would have (`enemies.leakCeiling` states the same).
+    const leak = Math.max(1, Math.min(type.leak, Math.floor(e.type.leak / b.count)))
+    const pieceType: EnemyType = leak === type.leak ? type : { ...type, leak }
+    for (let i = 0; i < b.count; i++) {
+      const offset = (i - (b.count - 1) / 2) * SPLIT_SPACING
+      const piece = this.makeEnemy(pieceType, key, maxHp, Math.min(this.path.length - 1, Math.max(0, e.distance + offset)), reward)
+      piece.piece = true
+      this.pendingSpawns.push(piece)
+    }
+    this.behaviourStats.splits++
+    this.behaviourStats.splitSpawned += b.count
+    this.addTelegraph('split', e.pos.x, e.pos.y, e.type.radius * 2, 0.5)
+    this.onEvent?.('behaviour:split', this.tagOf(e))
+  }
+
+  /** Land everything a tick deferred (see `step`). */
+  private flushPending(): void {
+    if (this.pendingSpawns.length) {
+      for (const e of this.pendingSpawns) this.enemies.push(e)
+      this.pendingSpawns = []
+      this.retargetDirty = true
+    }
+    if (this.pendingBurns.length) {
+      for (const b of this.pendingBurns) {
+        if (b.e.hp <= 0) continue
+        this.writeBurn(b.e, { dps: b.dps, dur: b.dur }, b.src, b.type)
+      }
+      this.pendingBurns = []
+    }
+  }
+
+  /**
+   * Freeze the per-tick modifiers the NEXT tick's damage reads — the
+   * shield-bearer's cover and brittle — and expire finished markers. Written
+   * at the end of a tick so the tick differ's pre-tick snapshot holds exactly
+   * the values the whole next tick will use (see {@link takenMult}).
+   */
+  private refreshEnemyState(): void {
+    const interactions = this.rules.interactions
+    const behaviours = this.rules.behaviours
+    for (const e of this.enemies) {
+      e.brittle = interactions && this.elapsed < e.frostUntil
+      e.shield = 0
+    }
+    if (behaviours) {
+      for (const b of this.enemies) {
+        const aura = behaviourOf(b.type, 'shieldAura')
+        if (!aura) continue
+        const r2 = aura.radius * aura.radius
+        for (const e of this.enemies) {
+          if (e === b || distSq(e.pos, b.pos) > r2) continue
+          if (aura.resist > e.shield) e.shield = aura.resist
+        }
+      }
+    }
+    if (this.telegraphs.length) this.telegraphs = this.telegraphs.filter((t) => t.t1 > this.elapsed)
   }
 
   /**
@@ -1064,6 +2123,11 @@ export class GameEngine {
     this.spawnFloater(s.pos, 'DOWN', '#e05a4f', true)
   }
 
+  /** An enemy's tag for a Phase-3a behaviour / boss-phase event. */
+  private tagOf(e: RtEnemy): EngineEventPayload {
+    return { ...enemyTag(e.type), x: this.fieldX(e.pos.x), name: e.type.name }
+  }
+
   /** Field x → −1…1, for the mixer's pan. */
   private fieldX(x: number): number {
     const w = this.map.width
@@ -1106,11 +2170,14 @@ export class GameEngine {
       this.status = 'defeated'
       return
     }
-    const done =
-      this.spawnIndex >= this.spawnQueue.length &&
-      this.enemies.length === 0 &&
-      this.projectiles.length === 0
-    if (done) this.status = 'cleared'
+    // The live sub-wave has spawned everything it has…
+    const groupSpawned = this.subWaveSpawned()
+    // …and nothing of it is left on the field or in the air.
+    const groupDone =
+      groupSpawned && this.enemies.length === 0 && this.projectiles.length === 0 && this.pendingSpawns.length === 0
+    if (!groupDone) return
+    if (this.spawnIndex >= this.spawnQueue.length) this.status = 'cleared'
+    else this.enterBreather()
   }
 
   hudSnapshot() {
@@ -1123,6 +2190,10 @@ export class GameEngine {
       enemiesSpawned: this.spawnIndex,
       enemiesTotal: this.spawnQueue.length,
       elapsed: this.elapsed,
+      subWave: this.subWave,
+      subWaveCount: this.subWaveCount,
+      breather: this.breather,
+      commandReady: this.commandReady,
     }
   }
 
