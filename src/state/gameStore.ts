@@ -35,6 +35,7 @@ import type { Archetype, EffectMods, GameMap, HeroSlot, Item, ItemRarity, Mutati
 import { bannerRules, MAX_BANNER, useMetaStore, type BannerRules, type MetaBonuses } from './metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel } from './settingsStore'
 import { onAppHidden } from './lifecycle'
+import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from './daily'
 import {
   captureRun,
   clearSnapshot,
@@ -202,6 +203,18 @@ export type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 let rng = streamRng(0, 'loot')
 let mapRng = streamRng(0, 'map')
 
+/**
+ * Whether the live run reads the player's hub (Phase 1). A Daily Watch is
+ * played under STANDARD rules — no hub bonuses, no unlocks — so that its seed
+ * deals the same map, waves and offers to everyone who plays it that day. Every
+ * run-logic read of the hub goes through {@link runBonuses} / {@link runUnlocked}.
+ */
+let runUsesHub = true
+const ZERO_BONUSES: MetaBonuses = { maxBaseHp: MAX_BASE_HP, startGold: START_GOLD, statBonus: 0, extraSentinels: 0, extraItems: 0, enemyHpMult: 1 }
+const runBonuses = (): MetaBonuses => (runUsesHub ? useMetaStore.getState().bonuses() : ZERO_BONUSES)
+const runUnlocked = (id: string): boolean => runUsesHub && useMetaStore.getState().unlocked(id)
+const usesHub = (c: RunChallenge): boolean => c.kind !== 'daily'
+
 /** Re-seed every derived stream for a new run. Call before generating anything. */
 function seedRunStreams(runSeed: number): void {
   rng = streamRng(runSeed, 'loot')
@@ -290,7 +303,7 @@ function armedSentinel(archetype: Archetype): Sentinel {
  * cannot be forgotten by the next one that is added.
  */
 function scaledRecruit(archetype: Archetype, roster: Sentinel[]): Sentinel {
-  const bonus = useMetaStore.getState().bonuses().statBonus
+  const bonus = runBonuses().statBonus
   // Armed, not dressed: the rest of their kit comes out of the pack when they
   // join (`withRecruits`). A hire used to arrive with nothing at all while the
   // balance harness priced every hire as carrying a full opening kit.
@@ -298,7 +311,7 @@ function scaledRecruit(archetype: Archetype, roster: Sentinel[]): Sentinel {
   if (!roster.length) return base
   const levels = roster.map((s) => s.level).sort((a, b) => a - b)
   const median = levels[Math.floor(levels.length / 2)]
-  const trained = useMetaStore.getState().unlocked('freeCompanies')
+  const trained = runUnlocked('freeCompanies')
   const target = Math.max(1, trained ? median : median - 3)
   return target <= 1 ? base : applyXp(base, xpToReach(target))
 }
@@ -409,6 +422,8 @@ export interface RunRecap {
   enemiesLeaked: number
   /** The next Banner this run has earned the right to fly, if any. */
   nextBanner: number
+  /** Daily Watch / custom seed — the receipt says which, beside the seed. */
+  challenge: RunChallenge
   /** Loot the boss dropped — held here rather than pushed into a dead run (M16). */
   spoils: Item[]
 }
@@ -450,6 +465,8 @@ interface GameState {
    * Sacrifice, was a permanent global ratchet that could not be turned off.
    */
   runBanner: number
+  /** Daily Watch / custom seed / standard (Phase 1) — see `state/daily.ts`. */
+  challenge: RunChallenge
   /**
    * The recap a finished campaign leaves behind (H23). A boss win used to
    * produce one "Bank and return" card and nothing else — no record of the run,
@@ -558,6 +575,15 @@ interface GameState {
 
   // Actions — run/map
   newRun: () => void
+  /** Start a campaign on a given seed (the one door `newRun`, the Daily and custom seeds share). */
+  beginCampaign: (runSeed: number, challenge: RunChallenge) => void
+  /** Today's Daily Watch: the UTC day's shared seed, standard rules. */
+  startDaily: () => void
+  /**
+   * Re-deal the run being set up from a typed seed (hero-pick only, before a
+   * hero is committed). Returns false when refused or the text is empty.
+   */
+  reseedRun: (input: string) => boolean
   /**
    * Choose the Banner for the run being set up. Only legal on the hero-pick
    * screen — a Banner is a bet you place before the first node, never a switch
@@ -733,11 +759,10 @@ function freshHud(): HudSnapshot {
  * Banner the run is flying. Unlocks widen it; Banners narrow it (H15 / H16).
  */
 function mapOptionsFor(banner: BannerRules): MapOptions {
-  const meta = useMetaStore.getState()
   return {
-    wideMap: meta.unlocked('cartographer'),
-    extraRecruit: meta.unlocked('freeCompanies'),
-    standingOrders: meta.unlocked('standingOrders'),
+    wideMap: runUnlocked('cartographer'),
+    extraRecruit: runUnlocked('freeCompanies'),
+    standingOrders: runUnlocked('standingOrders'),
     noMerchants: banner.noMerchants,
     noRecruits: banner.noRecruits,
   }
@@ -841,6 +866,7 @@ function freshRunState(runSeed: number) {
     runPhase: 'active' as RunPhase,
     runSettled: false,
     runBanner: 0,
+    challenge: STANDARD_RUN,
     victory: null,
     ...makeRun(),
     event: null,
@@ -957,7 +983,15 @@ interface SettleFacts {
   wins: number
   /** The Banner the run flew — it scales the payout (H16). */
   banner: number
+  /** Daily / custom seed: a scored Daily records its result, a custom seed is unranked. */
+  challenge: RunChallenge
 }
+
+/** The Daily / ladder arguments every campaign settle passes to `grantRunRewards`. */
+const challengeGrant = (c: RunChallenge) => ({
+  ranked: c.kind !== 'seeded',
+  daily: c.kind === 'daily' && c.scored ? c.date : null,
+})
 
 /**
  * A campaign run only counts as one you PLAYED (m-6).
@@ -977,6 +1011,7 @@ const settleFactsFromState = (s: GameState): SettleFacts => ({
   downs: s.runDowns,
   wins: s.wins,
   banner: s.runBanner,
+  challenge: s.challenge,
 })
 
 /*
@@ -998,12 +1033,17 @@ function payOutRun(f: SettleFacts): void {
     meta.grantRunRewards({ mode: 'endless', depth: f.wins, won: false, kills: f.kills, downs: f.downs })
     return
   }
-  if (!runWasPlayed(f)) return
+  if (!runWasPlayed(f)) {
+    // A scored Daily abandoned before its first clear is still the day's
+    // attempt: close it at depth 0 rather than leave it "under way" forever.
+    if (f.challenge.kind === 'daily' && f.challenge.scored && f.challenge.date) meta.closeDaily(f.challenge.date)
+    return
+  }
   // The Banner a stored payload claims is validated against what this save has
   // opened, exactly as a resume is (F8). Nothing else stands between a
   // hand-edited `runBanner: 5` on a fresh Watchtower and a ×3.4 payout.
   const banner = Math.min(f.banner, meta.sacrificeTier)
-  meta.grantRunRewards({ depth: f.depth, won: false, kills: f.kills, downs: f.downs, banner })
+  meta.grantRunRewards({ depth: f.depth, won: false, kills: f.kills, downs: f.downs, banner, ...challengeGrant(f.challenge) })
 }
 
 /**
@@ -1144,18 +1184,23 @@ export const useGameStore = create<GameState>((set, get) => {
     enemyHpMult: 1,
     inventory: [],
 
-    newRun: () => {
+    newRun: () => get().beginCampaign(newRunSeed(), STANDARD_RUN),
+
+    beginCampaign: (runSeed, challenge) => {
       // Starting a run destroys any saved one. Settle it first — the marks it
       // earned are the player's either way (M-2).
       settleSavedRun()
-      const b = useMetaStore.getState().bonuses()
-      // One fresh seed per run, then every stream (map/loot/combat) hangs off it.
-      const runSeed = newRunSeed()
+      // A Daily Watch reads no hub at all (standard rules), so the same seed
+      // deals the same map, waves and offers on every save.
+      runUsesHub = usesHub(challenge)
+      const b = runBonuses()
+      // One seed per run, then every stream (map/loot/combat) hangs off it.
       seedRunStreams(runSeed)
       set({
         ...freshRunState(runSeed),
         mode: 'campaign',
         runSeed,
+        challenge,
         screen: 'heroPick',
         roster: [],
         gold: b.startGold,
@@ -1167,10 +1212,30 @@ export const useGameStore = create<GameState>((set, get) => {
       })
     },
 
+    startDaily: () => {
+      const date = utcDateKey()
+      // Whether this is the day's scored attempt is decided when a hero is
+      // committed (`pickStartingHero`), not here: looking at today's map and
+      // backing out costs nothing, but a run that has begun is the attempt.
+      get().beginCampaign(dailySeed(date), { kind: 'daily', date, scored: false })
+    },
+
+    reseedRun: (input) => {
+      const st = get()
+      if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return false
+      const seed = parseSeed(input)
+      if (seed === null) return false
+      const banner = st.challenge.kind === 'daily' ? 0 : st.runBanner
+      get().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
+      if (banner > 0) get().setRunBanner(banner)
+      return true
+    },
+
     setRunBanner: (tier) => {
       const st = get()
-      // A Banner is chosen before the march, never during it.
-      if (st.screen !== 'heroPick' || st.mode !== 'campaign') return
+      // A Banner is chosen before the march, never during it — and never on a
+      // Daily Watch, which is one set of rules for everyone.
+      if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.challenge.kind === 'daily') return
       const unlocked = useMetaStore.getState().sacrificeTier
       const next = Math.max(0, Math.min(Math.min(MAX_BANNER, unlocked), Math.floor(tier)))
       if (next === st.runBanner) return
@@ -1188,8 +1253,12 @@ export const useGameStore = create<GameState>((set, get) => {
       // The end screen's second door (M15). Three taps through the hub is not a
       // "one more run" loop; this is. The Banner carries over, so a run you
       // just lost under Banner 2 is retried under Banner 2.
-      const banner = get().runBanner
-      get().newRun()
+      const { runBanner: banner, challenge, runSeed } = get()
+      // A Daily is retried as today's Daily (practice once the attempt is
+      // spent); a custom seed replays the same seed.
+      if (challenge.kind === 'daily') return get().startDaily()
+      if (challenge.kind === 'seeded') get().beginCampaign(runSeed, challenge)
+      else get().newRun()
       if (banner > 0) get().setRunBanner(banner)
     },
 
@@ -1197,7 +1266,13 @@ export const useGameStore = create<GameState>((set, get) => {
       const st = get()
       // Once per run: a second pick would re-deal the kit off the loot stream.
       if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return
-      const b = useMetaStore.getState().bonuses()
+      const b = runBonuses()
+      // Committing a hero to today's Daily claims the day's scored attempt —
+      // or finds it already claimed, and the run is practice.
+      const challenge =
+        st.challenge.kind === 'daily' && st.challenge.date
+          ? { ...st.challenge, scored: useMetaStore.getState().beginDaily(st.challenge.date) }
+          : st.challenge
       const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
       const extra: Sentinel[] = []
       for (let i = 0; i < b.extraSentinels; i++) extra.push(armedSentinel(archs[i % 3]))
@@ -1210,7 +1285,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const leader = wearKit(company[0], kit)
       const worn = new Set([leader.equipment.mainHand, leader.equipment.offHand, leader.equipment.body].map((i) => i?.id))
       const { roster, inventory } = receiveItems([leader, ...company.slice(1)], st.inventory, kit.filter((i) => !worn.has(i.id)))
-      set({ roster, inventory, screen: 'map' })
+      set({ roster, inventory, challenge, screen: 'map' })
     },
 
     // Leaving for the Watchtower ends the run, so it settles like any other end.
@@ -1239,6 +1314,7 @@ export const useGameStore = create<GameState>((set, get) => {
       // A resume replaces the whole run, `waveBeat` included, so any hold still
       // outstanding from the session's previous run goes with it (F6).
       clearBeatTimer()
+      runUsesHub = snap.mode === 'endless' || usesHub(snap.challenge)
       // Rebuild the seeded streams, then fast-forward each to where the run had
       // got to — a resume must not re-deal loot the player already saw.
       seedRunStreams(snap.runSeed)
@@ -1343,7 +1419,8 @@ export const useGameStore = create<GameState>((set, get) => {
         // the start of a run, arriving through the back door instead. Downwards
         // only: a resume may never grant a rung, and it may never quietly raise
         // the difficulty of the run the player left.
-        runBanner: Math.min(snap.runBanner, useMetaStore.getState().sacrificeTier),
+        runBanner: snap.challenge.kind === 'daily' ? 0 : Math.min(snap.runBanner, useMetaStore.getState().sacrificeTier),
+        challenge: snap.challenge,
         // A snapshot only ever exists for a LIVE run, so there is no recap to
         // restore — and leaving a stale one would show the last run's receipt
         // over this one's first node.
@@ -1381,6 +1458,7 @@ export const useGameStore = create<GameState>((set, get) => {
     startEndless: () => {
       // Same contract as `newRun`: the saved run is settled, not dropped (M-2).
       settleSavedRun()
+      runUsesHub = true
       const b = useMetaStore.getState().bonuses()
       const runSeed = newRunSeed()
       seedRunStreams(runSeed)
@@ -1955,7 +2033,7 @@ export const useGameStore = create<GameState>((set, get) => {
         const depth = get().clearedNodeIds.length - 1
         const marks = useMetaStore
           .getState()
-          .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns, banner: st.runBanner })
+          .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge) })
         set({
           runPhase: 'lost',
           // `grantRunRewards` just paid this run out; settling it here is what
@@ -1991,7 +2069,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const marks = wonRun
         ? useMetaStore
             .getState()
-            .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns, banner: st.runBanner })
+            .grantRunRewards({ depth: cleared.length - 1, won: true, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge) })
         : 0
       // What the NODE costs and what the NODE pays: both follow the kind the map
       // dealt, not the one the Banner substituted (see `mapKind`). The world
@@ -2517,6 +2595,7 @@ function buildRecap(
     won: info.won,
     mode: st.mode,
     seed: st.runSeed,
+    challenge: st.challenge,
     // The seed alone does not reproduce the run; the pair does (F6).
     assist: useSettingsStore.getState().assist,
     depth: info.depth,
@@ -2606,6 +2685,7 @@ export const rarityColor = (r: ItemRarity) => RARITY[r].color
 
 /** The state fields that constitute "the run". Changing any of them re-saves. */
 const SNAPSHOT_FIELDS = [
+  'challenge',
   'mode',
   'runSeed',
   'screen',

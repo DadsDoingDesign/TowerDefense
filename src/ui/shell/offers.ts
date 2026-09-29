@@ -7,6 +7,7 @@ import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, THREAT_PER_CHOICE, THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
 import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
+import { dailySeed, utcDateKey } from '../../state/daily'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
@@ -1210,6 +1211,33 @@ function sacrificeOffer(meta: Meta): Offer {
   }
 }
 
+/**
+ * Daily Watch (Phase 1): the UTC day's shared seed under standard rules, one
+ * scored attempt a day. Kept to one row on purpose — the UI lane restyles it.
+ */
+function dailyOffer(meta: Meta): Offer {
+  const date = utcDateKey()
+  const rec = meta.daily?.date === date ? meta.daily : null
+  const status = !rec
+    ? "Today's scored attempt is unplayed."
+    : !rec.done
+      ? "Today's scored attempt is under way — another start today is practice."
+      : `Today: ${rec.won ? 'won' : `depth ${rec.depth}`}, score ${rec.score}. Another start today is practice.`
+  return {
+    id: 'daily',
+    title: 'Daily Watch',
+    sub: date,
+    glyph: '☼',
+    color: 'var(--accent)',
+    body: [
+      `Seed ${dailySeed(date)} — the same map, waves and offers for every Watch today (UTC).`,
+      'Standard rules: no perks, no unlocks, no Banner. The first run you commit a hero to each day is scored.',
+      status,
+    ],
+    action: { label: rec ? 'Practice' : 'Begin', run: () => useGameStore.getState().startDaily() },
+  }
+}
+
 function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v: MetaView) => void): Offer[] {
   const game = useGameStore.getState()
   // Going back is a choice like any other, so it rides in the Selector rather
@@ -1261,6 +1289,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       body: ['A fresh map, a fresh roster. Permadeath — one loss ends it.'],
       action: { label: 'Begin', run: () => game.newRun() },
     },
+    dailyOffer(meta),
     {
       id: 'perks',
       title: 'Upgrade Perks',

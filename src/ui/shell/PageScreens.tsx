@@ -8,6 +8,7 @@ import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/s
 import type { ShellContext } from './context'
 import { bannerLine, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
+import { RunSeed } from './RunSeed'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, StatRow, Tile } from './Page'
 
 /**
@@ -327,6 +328,7 @@ export function PageScreen({
         The ability sentence goes first.
       */}
       <BannerPicker />
+      <RunSeed />
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
@@ -650,7 +652,14 @@ export function ResultScreen() {
         />
       )}
 
-      {recap && <InfoCard lines={[`Run seed ${recap.seed}`, 'The same seed deals the same map, loot and rolls.']} />}
+      {recap && (
+        <InfoCard
+          lines={[
+            `Run seed ${recap.seed}${recap.challenge.kind === 'daily' ? ` · Daily Watch ${recap.challenge.date}${recap.challenge.scored ? ' (scored)' : ' (practice)'}` : recap.challenge.kind === 'seeded' ? ' · custom seed' : ''}`,
+            'The same seed deals the same map, loot and rolls.',
+          ]}
+        />
+      )}
 
       {!campaign && (
         <div className="pg-rows">

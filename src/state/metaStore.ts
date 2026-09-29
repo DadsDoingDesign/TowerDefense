@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { sfx } from '../audio/audio'
 import { num, numRecord, safePersistStorage } from './storage'
+import { dailyScore } from './daily'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -344,6 +345,35 @@ export interface MetaStats {
   runsWon: number
 }
 
+/**
+ * The day's scored Daily Watch attempt (Phase 1). One per UTC day: it is
+ * claimed the moment a hero is committed to that day's seed, so backing out
+ * after a bad first wave does not buy a second scored try.
+ */
+export interface DailyRecord {
+  date: string
+  depth: number
+  won: boolean
+  kills: number
+  score: number
+  /** True once the run has settled; false while the attempt is still live. */
+  done: boolean
+}
+
+function migrateDaily(raw: unknown): DailyRecord | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  if (typeof o.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.date)) return null
+  return {
+    date: o.date,
+    depth: Math.max(0, num(o.depth, 0)),
+    won: o.won === true,
+    kills: Math.max(0, num(o.kills, 0)),
+    score: Math.max(0, num(o.score, 0)),
+    done: o.done === true,
+  }
+}
+
 /** Bonuses the meta layer grants to each new run. */
 export interface MetaBonuses {
   maxBaseHp: number
@@ -365,7 +395,16 @@ interface MetaState {
    */
   sacrificeTier: number
   stats: MetaStats
+  /** Today's (or the last played day's) scored Daily Watch attempt. */
+  daily: DailyRecord | null
   // actions
+  /**
+   * Claim `date`'s scored Daily attempt. Returns false — and changes nothing —
+   * when that day's attempt was already claimed: the run is practice.
+   */
+  beginDaily: (date: string) => boolean
+  /** Close `date`'s attempt as it stands (a run abandoned before it earned anything). */
+  closeDaily: (date: string) => void
   upgradeCost: (id: string) => number
   buyUpgrade: (id: string) => void
   /** True once this hub unlock has been bought. */
@@ -385,6 +424,8 @@ interface MetaState {
      * marks but does not count toward the ladder.
      */
     ranked?: boolean
+    /** The UTC day of a SCORED Daily attempt this settle belongs to. */
+    daily?: string | null
   }) => number
   bonuses: () => MetaBonuses
   resetMeta: () => void
@@ -417,11 +458,12 @@ const freshStats = (): MetaStats => ({
  * v3 — Banner rungs are earned by winning, not bought. Every mark a v1/v2 save
  * spent unlocking rungs is refunded (`legacyBannerRefund`), and the rungs it
  * holds are KEPT: the fix is to the price, not a reason to take back progress.
+ * `daily` (the Daily Watch record) is added and defaults to null.
  */
 export const META_VERSION = 3
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats'>
+type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily'>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -463,6 +505,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
       runsCompleted: Math.max(0, num(rawStats.runsCompleted, base.runsCompleted)),
       runsWon: Math.max(0, num(rawStats.runsWon, base.runsWon)),
     },
+    daily: migrateDaily(o.daily),
   }
 }
 
@@ -473,6 +516,18 @@ export const useMetaStore = create<MetaState>()(
       upgrades: {},
       sacrificeTier: 0,
       stats: freshStats(),
+      daily: null,
+
+      beginDaily: (date) => {
+        if (get().daily?.date === date) return false
+        set({ daily: { date, depth: 0, won: false, kills: 0, score: 0, done: false } })
+        return true
+      },
+
+      closeDaily: (date) => {
+        const rec = get().daily
+        if (rec && rec.date === date && !rec.done) set({ daily: { ...rec, done: true } })
+      },
 
       upgradeCost: (id) => {
         const u = UPGRADE_BY_ID.get(id)!
@@ -496,8 +551,22 @@ export const useMetaStore = create<MetaState>()(
 
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
-      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true }) => {
+      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true, daily = null }) => {
         const { watchMarks, stats, sacrificeTier } = get()
+        // The scored Daily attempt records its result on the record it claimed
+        // at hero-pick — and only that one, and only once.
+        const rec = get().daily
+        const dailyNext =
+          daily && rec && rec.date === daily && !rec.done && mode !== 'endless'
+            ? {
+                ...rec,
+                depth: Math.max(0, num(depth, 0)),
+                won,
+                kills: Math.max(0, num(kills, 0)),
+                score: dailyScore(num(depth, 0), num(kills, 0), won),
+                done: true,
+              }
+            : rec
         // **One multiplier, and you have to earn it.** The formula used to fold
         // in `sacrificeTier` (a permanent bonus for a permanent penalty, paid
         // whether the run was hard or not) and then the Chronicler hub line (a
@@ -523,6 +592,7 @@ export const useMetaStore = create<MetaState>()(
         set({
           watchMarks: num(watchMarks, 0) + earned,
           sacrificeTier: nextTier,
+          daily: dailyNext,
           stats: {
             // Campaign depth and Endless rounds are different achievements and
             // are recorded as such — an Endless run used to update nothing at
@@ -559,7 +629,7 @@ export const useMetaStore = create<MetaState>()(
         }
       },
 
-      resetMeta: () => set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats() }),
+      resetMeta: () => set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null }),
     }),
     {
       name: 'fieldwatch-meta',
@@ -570,6 +640,7 @@ export const useMetaStore = create<MetaState>()(
         upgrades: s.upgrades,
         sacrificeTier: s.sacrificeTier,
         stats: s.stats,
+        daily: s.daily,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is
