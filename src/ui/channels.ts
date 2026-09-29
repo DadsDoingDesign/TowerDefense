@@ -1,4 +1,5 @@
 import { RARITY, RARITY_ORDER } from '../game/data/items'
+import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 
 /**
@@ -79,8 +80,12 @@ export const archetypeVar = (archetype: string): string =>
  * and mutations, five meanings on one glyph and twice on some screens
  * (DESIGN_SYSTEM §6 flags the overload). `✦` now means Watch Marks and nothing
  * else; rogue took `➶`, which reads as the ranged skirmisher it is.
+ *
+ * The table itself lives in `src/game/data/glyphs.ts` so the canvas renderer
+ * (which must not import `ui/`) reads the SAME one; this is it, widened to a
+ * string key for callers holding an unnarrowed archetype.
  */
-export const ARCHETYPE_GLYPH: Record<string, string> = { fighter: '⚔', rogue: '➶', mystic: '❋' }
+export const ARCHETYPE_GLYPH: Readonly<Record<string, string>> = ARCHETYPE_GLYPH_TABLE
 
 /**
  * Currency marks, as TEXT — deprecated, and imported by nothing in the shell.

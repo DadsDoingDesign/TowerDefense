@@ -22,6 +22,7 @@ import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateItem, type RosterRef } from '../src/game/data/items'
 import { startingKit, wearKit } from '../src/game/engine/kit'
+import { recruitTargetLevel } from '../src/game/run/recruits'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
@@ -549,26 +550,22 @@ export function freshHero(archetype: Archetype, rng: RNG): Sentinel {
 
 // ---- the shop and the map, as a real first run meets them -----------------
 /**
- * `gameStore`'s merchant prices and hire cost, mirrored here because importing
- * the store pulls in zustand and the audio module. Keep these three in step with `gameStore.ITEM_PRICE` / `RECRUIT_PRICE`
- * / `MAX_ROSTER`.
+ * The shop's prices, the hire cost and the roster cap — the game's own numbers
+ * from `src/game/run/economy.ts` (pure, no zustand), re-exported so the run
+ * model charges exactly what the store charges. They used to be mirrored here.
  */
-export const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
-export const RECRUIT_PRICE = 80
-export const MAX_ROSTER = 5
+export { ITEM_PRICE, MAX_ROSTER, RECRUIT_PRICE } from '../src/game/run/economy'
 
 /**
- * `gameStore.scaledRecruit` **with no meta unlocks**: a hire arrives at the
- * roster's median level MINUS 3 (the `freeCompanies` unlock is what removes the
- * −3). This matters more than any other number in the fresh-player model — the
+ * The level a hire arrives at **with no meta unlocks**: the roster's median
+ * level MINUS 3 (the `freeCompanies` unlock is what removes the −3). This is
+ * the store's own rule (`src/game/run/recruits.recruitTargetLevel`), not a copy
+ * of it. It matters more than any other number in the fresh-player model — the
  * old sweep handed the player a *level-1* body at a recruit node, which is not
  * what the game does and made "two free recruits" look worth 2 points.
  */
 export function scaledRecruitLevel(roster: Sentinel[], trained = false): number {
-  if (!roster.length) return 1
-  const levels = roster.map((s) => s.level).sort((a, b) => a - b)
-  const median = levels[Math.floor(levels.length / 2)]
-  return Math.max(1, trained ? median : median - 3)
+  return recruitTargetLevel(roster, trained)
 }
 
 /**

@@ -1,7 +1,7 @@
 {
   "name": "Fieldwatch",
   "short_name": "Fieldwatch",
-  "description": "A roguelite tower-defense autobattler. Build a company, hold the lane, watch it play out.",
+  "description": "Hold the meadow against the goblin horde. A roguelite tower-defense autobattler: post your company, then watch the fight play out.",
   "start_url": "./",
   "scope": "./",
   "id": "./",

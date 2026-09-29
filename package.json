@@ -12,6 +12,7 @@
     "balance": "tsx balance/report.ts",
     "spritesheet": "tsx scripts/spritesheet.ts",
     "icons": "tsx scripts/icons.ts",
+    "brand": "tsx scripts/brand.ts",
     "fw-icons": "tsx scripts/fw-icons.ts",
     "fw-icons:check": "tsx scripts/fw-icons.ts --check",
     "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs",

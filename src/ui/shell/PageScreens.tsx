@@ -8,6 +8,7 @@ import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/s
 import type { ShellContext } from './context'
 import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
+import { MenuKeyArt } from './MenuKeyArt'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { RunSeed } from './RunSeed'
@@ -472,7 +473,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       subtitle="Hold the meadow against the goblin horde"
       cta={primary?.action ? { label: 'Start a Run', run: primary.action.run } : undefined}
     >
-      <div className="pg-art" aria-hidden />
+      <MenuKeyArt />
       {hasRecord && (
         <div className="pg-records">
           <Record label="Best depth" value={stats.bestDepth} />
