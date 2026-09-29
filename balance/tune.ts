@@ -5,8 +5,9 @@
  *     n     runs per cell (default 240)
  *     what  any of `fresh` (§11's four routing lines, zero meta), `carto`
  *           (§12's Cartographer's Table against zero meta, all four lines),
- *           `hub` (every §12 hub state), `mc` (§6's Monte Carlo, n = 300 unless
- *           given); default `fresh carto mc`
+ *           `hub` (every §12 hub state), `banner` (§13's Vow ladder on the
+ *           adaptive line), `mc` (§6's Monte Carlo, n = 300 unless given);
+ *           default `fresh carto mc`
  *
  * Every cell uses §11/§12's own seeds (`9001 + i·17`, starter `i % 3`), so the
  * numbers are the report's numbers at a different `n`, and the run is sharded
@@ -17,6 +18,7 @@ import { spawn } from 'child_process'
 import { cpus } from 'os'
 import { fileURLToPath } from 'url'
 import type { Archetype } from '../src/game/types'
+import { bannerRules, MAX_BANNER } from '../src/state/metaStore'
 import { loadoutFor, monteCarloRun, POLICIES, simulateRun, ZERO_META } from './runsim'
 
 const N = Number(process.argv[2]) || 240
@@ -46,6 +48,13 @@ function cellsFor(): { key: string; run: (i: number) => number }[] {
       for (const p of POLICIES) {
         out.push({ key: `${label}|${p.id}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { meta, policy: p }).won ? 1 : 0) })
       }
+    }
+  }
+  if (WHAT.includes('banner')) {
+    const adaptive = POLICIES.find((p) => p.id === 'adaptive')!
+    for (let t = 0; t <= MAX_BANNER; t++) {
+      const banner = bannerRules(t)
+      out.push({ key: `banner|B${t}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { banner, policy: adaptive }).won ? 1 : 0) })
     }
   }
   return out
@@ -92,7 +101,14 @@ if (shard !== undefined) {
   }
   console.log(`n=${N} (${K} shards, ${((Date.now() - t0) / 1000).toFixed(0)}s)`)
   if (merged['mc']) console.log(`§6 Monte Carlo: ${pct(m(merged['mc']))} (n=${merged['mc'].length})`)
-  const states = [...new Set(Object.keys(merged).filter((k) => k.includes('|')).map((k) => k.split('|')[0]))]
+  const bannerKeys = Object.keys(merged).filter((k) => k.startsWith('banner|')).sort()
+  if (bannerKeys.length) {
+    console.log(`Vow ladder (adaptive): ${bannerKeys.map((k, i) => {
+      const w = m(merged[k])
+      return `${k.split('|')[1]} ${pct(w)}${i ? ` (−${((m(merged[bannerKeys[i - 1]]) - w) * 100).toFixed(1)})` : ''}`
+    }).join(' | ')}`)
+  }
+  const states = [...new Set(Object.keys(merged).filter((k) => k.includes('|') && !k.startsWith('banner|')).map((k) => k.split('|')[0]))]
   for (const st of states) {
     const row = POLICIES.map((p) => {
       const a = bySeed(`${st}|${p.id}`)

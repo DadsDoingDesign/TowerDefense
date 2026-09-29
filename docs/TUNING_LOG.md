@@ -183,9 +183,20 @@ meta. The wide map itself is unchanged.
 
 Gates: `npm run typecheck` ✓ · `npm test` 264/264 ✓ · `npm run build` ✓.
 
+### R3 — full run 2/3 — FAILED one invariant (§13)
+
+- Everything else green: §6 59% · §11 (n=240) specials **22%** · battles 31 ·
+  recruits 17 · adaptive 33 · strict 1% / +2 recruits 4% · §12 worst −3pt
+  (Cartographer) · ramp +27pt.
+- **§13 Vow ladder (adaptive, n=600): B0 31% · B1 29% · B2 20% · B3 4%.**
+  Thin Pickings now costs 1.5pt, under the 3pt a rung must cost (it cost 5pt
+  at 7e1c084: 28% → 23%). Cause: `STOP_XP_SHARE` 0.55 — levels from stops
+  substitute for the cards and shelf slot Thin Pickings takes away.
+- Added `banner` to `tune.ts` (the §13 ladder on every core, 24s at n=600):
+  reproduces B0 30.5 · B1 29.0 (−1.5) · B2 19.8 · B3 4.0.
+
 ## Current state / next step
 
-- Steps 0–2 complete and committed (non-WIP).
-- Next: Step 3 — full balance run 2/3 in the background, then commit the
-  regenerated `REPORT.md` and fill the final numbers table. Step 4 (Playwright
-  review) runs alongside it.
+- REPORT.md not committed (the full run failed). Next: E6 — find a
+  `STOP_XP_SHARE` (0.45?) or a Thin Pickings adjustment that keeps the
+  first-timer line ≥ ~20% and B1 costing ≥ 3pt; then full run 3/3.
