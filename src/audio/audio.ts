@@ -41,7 +41,19 @@
  * needs eager setup, it belongs behind an explicit `initAudio()` the app calls,
  * not at module scope.
  */
-import { busGains, dbToGain, GAIN_SMOOTH_S, hasRaritySting, MASTER_CHAIN, UI_TRIM_DB, type UiSample } from './mix'
+import {
+  busGains,
+  dbToGain,
+  GAIN_SMOOTH_S,
+  hasRaritySting,
+  IDLE_SUSPEND_S,
+  MASTER_CHAIN,
+  REVERB_TAIL_S,
+  shouldSuspend,
+  throttleAllows,
+  UI_TRIM_DB,
+  type UiSample,
+} from './mix'
 
 type Channel = 'ui' | 'game'
 /*
@@ -191,9 +203,169 @@ export function setAudioVolumes(v: {
   // `music` is optional so a payload written before it existed (or any caller
   // that predates it) keeps whatever the current value is instead of setting a
   // gain to `undefined`, which is NaN and silences the bus permanently.
-  vol = { ...vol, ...v, music: v.music ?? vol.music }
+  const wasMuted = vol.muted
+  vol = { master: v.master, game: v.game, ui: v.ui, music: v.music ?? vol.music, muted: v.muted }
   applyGains()
+  // Un-muting is a tap on the mute control — a gesture — so this is the one
+  // moment a context we suspended for the mute can always be woken.
+  if (wasMuted && !vol.muted && ctx && asleep(ctx)) void resumeCtx(ctx)
   for (const cb of readyCbs) safely(cb)
+  // Muting starts the fade; the suspend follows once it has finished.
+  scheduleIdleCheck(vol.muted ? GAIN_SMOOTH_S * 8 : undefined)
+}
+
+// ---- power: suspend the context when nothing can be heard ------------------
+//
+// A running AudioContext costs battery even when silent: the two convolvers
+// and both compressors process zeros on the audio thread forever. The policy
+// is `shouldSuspend` (mix.ts, unit-tested); this is the plumbing.
+
+/** The tab is hidden (set via the music engine's lifecycle hooks). */
+let hidden = false
+/** The score is performing (set by `music.ts`). */
+let musicActive = false
+/** Audio-clock time the last scheduled voice ends. */
+let busyUntil = 0
+/**
+ * WE suspended the context, on purpose. The state-change handler must tell
+ * that apart from iOS taking the audio session away, which it must undo.
+ */
+let intendedSuspend = false
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+/** A voice was scheduled to ring until `end` (audio clock). */
+function markBusy(end: number): void {
+  if (end > busyUntil) busyUntil = end
+  // Lazy: one pending timer at a time. When it fires it re-reads `busyUntil`
+  // and re-arms itself if the mix got busier meanwhile, so a dense wave costs
+  // one timer, not one per voice.
+  if (idleTimer === null) scheduleIdleCheck()
+}
+
+function scheduleIdleCheck(inSeconds?: number): void {
+  if (!ctx || typeof setTimeout !== 'function') return
+  if (idleTimer !== null) {
+    if (inSeconds === undefined) return
+    clearTimeout(idleTimer)
+  }
+  if (inSeconds === undefined) {
+    if (musicActive && !vol.muted) {
+      idleTimer = null
+      return
+    }
+    // The earliest the policy could flip: tail over while hidden, or the idle
+    // window over while visible. Re-evaluated when it fires.
+    inSeconds = Math.max(0.25, busyUntil - ctx.currentTime + (hidden ? REVERB_TAIL_S : IDLE_SUSPEND_S))
+  }
+  idleTimer = setTimeout(checkSuspend, inSeconds * 1000)
+}
+
+function checkSuspend(): void {
+  idleTimer = null
+  const c = ctx
+  if (!c) return
+  const want = shouldSuspend({ muted: vol.muted, hidden, musicPlaying: musicActive, now: c.currentTime, busyUntil })
+  if (want) {
+    if ((c.state as string) === 'running') {
+      intendedSuspend = true
+      disarmUnlock()
+      try {
+        void c.suspend().catch(() => {
+          intendedSuspend = false
+        })
+      } catch {
+        intendedSuspend = false
+      }
+    }
+    return
+  }
+  scheduleIdleCheck()
+}
+
+/** Called by the music engine when its transport starts or stops. */
+export function setMusicActive(on: boolean): void {
+  if (musicActive === on) return
+  musicActive = on
+  // A stopping track still has its fade and a reverb tail to ring out.
+  if (!on && ctx) markBusy(ctx.currentTime + 0.5)
+}
+
+/** Called by the music engine from the app's one visibility lifecycle. */
+export function setAudioHidden(h: boolean): void {
+  hidden = h
+  if (h) scheduleIdleCheck(0.5)
+}
+
+/**
+ * Wake a context we (or the OS) put to sleep, when something wants to be
+ * heard — the music engine calls this when a cue is wanted but the bus is not
+ * running. Never creates a context and never overrides a mute. Without a
+ * gesture behind it this can fail (iOS); the armed unlock listeners then
+ * retry on the next touch.
+ */
+export function wakeAudio(): void {
+  if (ctx && !vol.muted && asleep(ctx)) void resumeCtx(ctx)
+}
+
+// ---- unlock: stay armed until the context is actually running --------------
+
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'keydown', 'click'] as const
+let unlockArmed = false
+
+function onUnlockGesture(): void {
+  if (!ctx) return
+  if ((ctx.state as string) === 'running') {
+    disarmUnlock()
+    return
+  }
+  if (!vol.muted) void resumeCtx(ctx)
+}
+
+/**
+ * The first-touch unlock in App.tsx is `once`, and a first touch does not
+ * always grant activation (a scroll, a touchstart on some iOS versions, a
+ * resume the OS refused). These listeners stay on the document until the
+ * context really reports 'running' — every gesture until then tries again.
+ */
+function armUnlock(): void {
+  if (unlockArmed || typeof document === 'undefined' || !document.addEventListener) return
+  unlockArmed = true
+  for (const e of UNLOCK_EVENTS) document.addEventListener(e, onUnlockGesture, { capture: true, passive: true })
+}
+
+function disarmUnlock(): void {
+  if (!unlockArmed || typeof document === 'undefined') return
+  unlockArmed = false
+  for (const e of UNLOCK_EVENTS) document.removeEventListener(e, onUnlockGesture, { capture: true })
+}
+
+/**
+ * The context changed state behind our back — or in front of it.
+ *
+ * 'running': unlocked or recovered; stop listening for gestures, tell the
+ * music. A suspend WE asked for: nothing to do. Anything else (iOS
+ * 'interrupted' after a call, 'suspended' by the OS): re-arm the gesture
+ * listeners and, if the tab is visible, try to come back straight away.
+ */
+function onCtxStateChange(c: AudioContext): void {
+  if (c !== ctx) return
+  const st = c.state as string
+  if (st === 'running') {
+    intendedSuspend = false
+    disarmUnlock()
+    fireReady()
+    scheduleIdleCheck()
+    return
+  }
+  if (st === 'closed') {
+    // Nothing can reopen a closed context; the next sound builds a new one.
+    ctx = null
+    disarmUnlock()
+    return
+  }
+  if (intendedSuspend || vol.muted) return
+  armUnlock()
+  if (!hidden) void resumeCtx(c)
 }
 
 /** Is audio muted right now? Read by the music engine, which idles when it is. */
@@ -336,6 +508,10 @@ function ensureCtx(): AudioContext | null {
     // Music: longer and darker, so pads bloom.
     musicSend = buildSpace(ctx, musicGain, 1.8, 2.2, 0.22, 0.6)
     applyGains(true)
+    const made = ctx
+    made.onstatechange = () => onCtxStateChange(made)
+    hidden = typeof document !== 'undefined' && !!document.hidden
+    if (needsResume(made)) armUnlock()
     for (const name of SAMPLE_FILES) void loadSample(name)
   } catch {
     ctx = null
@@ -557,6 +733,7 @@ function emitBuffer(buf: AudioBuffer, channel: Channel, gain: number): void {
   src.connect(g)
   g.connect(channel === 'ui' ? uiGain : gameGain)
   src.start()
+  markBusy(ctx.currentTime + buf.duration)
 }
 
 /**
@@ -654,6 +831,7 @@ function osc(freq: number, dur: number, peak: number, o: VoiceOpts = {}): void {
   route(g, o.bus ?? 'game', o.send ?? 0)
   n.start(t0)
   n.stop(t0 + dur + 0.03)
+  markBusy(t0 + dur)
 }
 
 interface NoiseOpts {
@@ -710,6 +888,7 @@ function noise(dur: number, peak: number, o: NoiseOpts = {}): void {
   route(g, o.bus ?? 'game', o.send ?? 0)
   src.start(t0, offset, dur + 0.05)
   src.stop(t0 + dur + 0.05)
+  markBusy(t0 + dur)
 }
 
 /** Dry to the channel, plus an optional tap into that channel's reverb. */
@@ -927,7 +1106,7 @@ export function sfxRarity(rarity: string): void {
     // The top tiers get a shimmer tail; the bottom two deliberately do not.
     if (cfg.notes.length >= 4) noise(0.6, 0.04 * cfg.level, { hp: 4000, at: cfg.spread * 2, send: cfg.send })
   }
-  if (needsResume(c)) void resumeCtx(c).then(play)
+  if (asleep(c)) void resumeCtx(c).then(play)
   else play()
 }
 
@@ -940,23 +1119,40 @@ export function sfxRarity(rarity: string): void {
  * rest of the session. `AudioContextState` doesn't name it, hence the widening.
  */
 const needsResume = (c: AudioContext): boolean => (c.state as string) !== 'running'
+/**
+ * Not running, OR running with a suspend of ours in flight. A sound that
+ * arrives in that window must resume first, or it plays into a context about
+ * to freeze and is lost.
+ */
+const asleep = (c: AudioContext): boolean => needsResume(c) || intendedSuspend
 
 let resuming: Promise<void> | null = null
 
 /** Resume the context, coalescing concurrent attempts into one. */
 function resumeCtx(c: AudioContext): Promise<void> {
-  if (!needsResume(c)) return Promise.resolve()
+  if (!asleep(c)) return Promise.resolve()
   if (resuming) return resuming
-  resuming = c
-    .resume()
+  // Wanting it running cancels any suspend we asked for.
+  intendedSuspend = false
+  let p: Promise<void>
+  try {
+    p = c.resume()
+  } catch {
+    p = Promise.reject(new Error('resume threw'))
+  }
+  resuming = p
     .catch(() => {
-      /* no gesture yet, or the OS refused — the next gesture tries again */
+      /* no gesture yet, or the OS refused — the armed listeners try again */
     })
     .finally(() => {
       resuming = null
       // The moment audio is actually running is the moment the music engine can
       // schedule anything at all, so tell it here rather than making it poll.
-      if (!needsResume(c)) fireReady()
+      if (!needsResume(c)) {
+        disarmUnlock()
+        fireReady()
+        scheduleIdleCheck()
+      } else if (!vol.muted) armUnlock()
     })
   return resuming
 }
@@ -967,7 +1163,8 @@ function resumeCtx(c: AudioContext): Promise<void> {
  * gesture behind it that would only produce a suspended one.
  */
 export function resumeAudio(): void {
-  if (ctx && needsResume(ctx)) void resumeCtx(ctx)
+  hidden = false
+  if (ctx && !vol.muted && asleep(ctx)) void resumeCtx(ctx)
 }
 
 /** Play a sound event. `throttleMs` drops repeats of the same event fired too close together (combat spam). */
@@ -977,8 +1174,7 @@ export function sfx(event: SoundEvent, opts: { throttleMs?: number } = {}): void
   if (vol.muted) return
   if (opts.throttleMs) {
     const now = c.currentTime * 1000
-    const last = lastPlayed.get(event) ?? -1e9
-    if (now - last < opts.throttleMs) return
+    if (!throttleAllows(lastPlayed.get(event), now, opts.throttleMs)) return
     lastPlayed.set(event, now)
   }
 
@@ -991,7 +1187,7 @@ export function sfx(event: SoundEvent, opts: { throttleMs?: number } = {}): void
   // The gesture that unlocks audio is usually the same gesture that asks for a
   // sound. Firing without awaiting the resume played that first sound into a
   // still-suspended context, where it was simply dropped (M31).
-  if (needsResume(c)) void resumeCtx(c).then(emit)
+  if (asleep(c)) void resumeCtx(c).then(emit)
   else emit()
 }
 
