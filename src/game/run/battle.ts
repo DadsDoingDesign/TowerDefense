@@ -54,7 +54,7 @@ const XP_KIND: Record<EncounterKind, number> = { normal: 1, elite: 1.4, boss: 1.
  * skipping one — but a stop is no longer a dead loss on the level curve, which
  * made a stop-first route a walk into the act-2 boss two levels short.
  */
-export const STOP_XP_SHARE = 0.35
+export const STOP_XP_SHARE = 0.55
 export const stopXp = (depth: number): number => Math.round(waveXp(depth, 'normal') * STOP_XP_SHARE)
 
 /** Level-XP one fielded hero earns, on average, for clearing a wave at `depth`. */

@@ -55,9 +55,28 @@ _(newest last)_
 - Verification pending: full unfiltered run must leave `REPORT.md`
   byte-identical (full run 1 of 3, running).
 
+- Baseline reproduction: the old `report.ts` (instrumented copy, single core,
+  469s end to end: §12 290s, §13 65s, §15 37s) regenerates the committed
+  `REPORT.md` byte for byte.
+
+### E1 — `STOP_XP_SHARE` 0.35 → 0.55 — KEEP
+
+- Change: `src/game/run/battle.ts` `STOP_XP_SHARE = 0.55` (a stop drills the
+  company for 55% of a plain fight's XP for the layer, up from 35%).
+- Command: `npx tsx balance/tune.ts 600 fresh carto` (91s).
+- Zero meta: specials **15.3 → 20.3%** · battles 27.0 → 25.3 · recruits
+  19.8 → 18.5 · adaptive 28.3 → 30.5.
+- Cartographer Δ: specials −0.2 ±4.4 · battles **−1.7 ±4.2** · recruits
+  +4.2 ±4.5 · adaptive +6.5 ±5.1.
+- §6 cannot move (its model has no stops). Hits the ~20% target on the
+  first-timer line with an onboarding lever: the line that stops most is the one
+  that was starved of levels. Battles/recruits moved ≤1.7pt (paired noise; the
+  XP change re-deals evolution/perk rolls behind it).
+
 ## Current state / next step
 
-- Step 0 done, pending the byte-identical check (full run 1/3 in background,
-  output in scratchpad `tuning/full1.out`).
-- Next: Step 1 experiments with `tune.ts` — E1 `STOP_XP_SHARE` 0.35 → 0.55,
-  E2 Gate-aware campfire rank in `prefPolicy`.
+- Step 0 done; byte-identical check still running (full run 1/3, scratchpad
+  `tuning/full1.out`).
+- E1 kept. Next: diagnose where battles-first loses on the wide map
+  (`scratchpad/tuning/diag.ts`), then E2 — Gate-aware campfire rank in
+  `prefPolicy` vs a wide-map campfire-placement change.
