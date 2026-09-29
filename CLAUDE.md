@@ -56,6 +56,13 @@ result. Append a short note to the review log when you're done.
   and each pack declares what it actually ships.
 - Keep the enemy lane and build slots visually clear — decoration frames the
   map at its margins (see the review checklist).
+- Never put `.js`, `.css` or `.woff2` files under `public/assets/`: `vercel.json`
+  serves every such file under `/assets/` as `immutable` for a year, which is
+  only safe for Vite's content-hashed output.
+- Run `npm test` (Vitest, `tests/`) alongside the typecheck. CI
+  (`.github/workflows/ci.yml`) runs typecheck, tests and build on every PR, and
+  `npm run balance` when `src/game`, `src/state` or `balance/` change. The
+  committed `balance/REPORT.md` is a golden file: commit it regenerated.
 - Typecheck with `npm run typecheck` (`tsc -b`) before committing. Plain
   `npx tsc --noEmit` checks nothing: the root tsconfig has `"files": []` and
   only `-b` follows its project references.

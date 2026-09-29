@@ -18,7 +18,8 @@
     "anchors": "tsx scripts/anchors.ts",
     "anchors:check": "tsx scripts/anchors.ts --check",
     "placeholder-pack": "tsx scripts/gen-placeholder-pack.ts",
-    "slice:shot": "node scripts/slice-shot.mjs"
+    "slice:shot": "node scripts/slice-shot.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -33,7 +34,8 @@
     "sharp": "^0.35.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^2.1.9"
   },
   "license": "UNLICENSED"
 }

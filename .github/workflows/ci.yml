@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # Includes fw-icons:check and anchors:check (generated files in sync).
+      - run: npm run build
+      # Sprite provenance (`npx tsx scripts/harvest-cc0.ts --check`) is a manual
+      # check: it downloads the CC0 mirror through GitHub's unauthenticated,
+      # rate-limited API, which would make this job flaky.
+
+  balance:
+    name: Balance invariants
+    # ~3 minutes. Only when the simulation or its data can have moved.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the sim change?
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "$base" HEAD | grep -qE '^(src/game/|src/state/|balance/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.changed.outputs.run == 'true'
+        run: npm ci
+      # Exits non-zero on any failed invariant.
+      - if: steps.changed.outputs.run == 'true'
+        run: npm run balance
+      # The report is deterministic, so the committed copy is a golden file:
+      # a sim change must ship with its regenerated report.
+      - if: steps.changed.outputs.run == 'true'
+        name: Committed balance/REPORT.md is current
+        run: git diff --exit-code balance/REPORT.md

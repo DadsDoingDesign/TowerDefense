@@ -96,25 +96,32 @@ strength. Threat is shown on the map header and in the pre-wave preview.
 
 ## Testing
 
-There is **one** automated test asset: the balance harness. It is a deterministic,
-seeded simulation harness — not a unit-test suite — that drives the real
-`GameEngine` headlessly and gates on balance invariants. All combat is
-reproducible via the seeded `RNG`.
+Two automated test assets:
+
+- **Vitest unit tests** in `tests/` — starting with engine determinism (same seed
+  ⇒ identical battle at 1×/2×/3×).
+- **The balance harness** — a deterministic, seeded simulation that drives the
+  real `GameEngine` headlessly and gates on balance invariants.
 
 ```bash
+npm test            # Vitest (tests/**/*.test.ts)
 npm run balance     # 15 sweeps against the live engine; writes balance/REPORT.md
                     # and exits non-zero on any failed balance invariant.
-npm run typecheck   # tsc -b --noEmit over src/, vite.config.ts and balance/
+npm run typecheck   # tsc -b --noEmit over src/, harness/, vite/vitest configs, balance/, tests/
 npm run build       # type-check + production build
 ```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on every pull
+request and push to `main`, and the balance harness when the simulation or its
+data change. `balance/REPORT.md` is deterministic, so CI fails if the committed
+copy is stale.
 
 See [`balance/README.md`](./balance/README.md) for what each sweep measures and
 which invariants gate the run.
 
-**What does not exist** (previously claimed here, and worth knowing before you go
-looking for it): there is no unit-test runner, no separate harness for tree
-integrity / item generation / map connectivity / meta or endless economy, and no
-Playwright — it is not a dependency and never has been. Tree, item, map and
+**What does not exist yet:** unit tests for tree integrity, item generation, map
+connectivity, save migration, or meta/endless economy, and no Playwright
+dependency. Tree, item, map and
 economy behaviour is exercised only indirectly, through the balance sweeps.
 
 `npm run ui-audit` (`scripts/ui-audit.mjs`) is a screenshot harness that is
