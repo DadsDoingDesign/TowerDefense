@@ -18,7 +18,7 @@ every later run a different team, so two configs could not be compared on paired
 seeds. Measured while fitting the composition variants, the same battlefield read
 61% and 48% across two configs that never touched it.
 
-Runtime is around **3½ minutes** (the Banner ladder at 600 runs a rung is ~40s of it). It was 26 seconds before §12 and §13, which
+Runtime is around **8 minutes** on one core (§12 is ~5 of it, §13 ~1; `FW_SECTIONS` runs a subset). It was 26 seconds before §12 and §13, which
 simulate whole runs rather than single waves: the hub sweep alone plays 4,200
 campaigns. That is the price of measuring a *run*-level defect, and the defects
 it was written for had been invisible to every wave-level sweep in the suite.
@@ -35,6 +35,7 @@ npx tsx balance/meta-sweep.ts 240 phase3b   # the Phase 3b scoreboard: route / b
 npx tsx balance/meta-sweep.ts 300 mc        # §6's Monte Carlo alone, for fitting the Threat curve
 npx tsx balance/meta-sweep.ts 1 map         # map shape: forks, stops, forced elites
 npx tsx balance/fit-curve.ts 170 2.7 1.44 0.515 200   # a candidate waves.ts curve, against §6 AND §11
+npx tsx balance/tune.ts 600 fresh carto mc             # §11 lines, §12 Cartographer and §6 at n=600, on every core
 ```
 
 ### Node-only exploration knobs
@@ -48,8 +49,9 @@ and it broke the build and every live harness.
 | Variable | Default | What it does |
 |---|---|---|
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
-| `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt for a fit. |
+| `FW_FRESH_RUNS` | `240` | §11 sample size. Raised from 120 when the first-timer line gained a floor gate (15%): at 120 a ~20% line sat one σ (≈3.7pt) off it. 240 is 1σ ≈ 2.6pt; `480` drops it to ≈ 1.8pt for a fit. |
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
+| `FW_SECTIONS` | all | Comma-separated section numbers (`FW_SECTIONS=6,11,12`): run only those sections, their invariants and their console lines. A filtered run prints its sections and writes them to `balance/REPORT.sections.md` (ignored) — it never touches the golden `REPORT.md`. Prose that quotes a section you did not ask for reads `NaN`; no gate reads across sections. Combine with the sample-size knobs above for a quick read, e.g. `FW_SECTIONS=11,12 FW_FRESH_RUNS=120 FW_META_RUNS=120`. |
 
 ## The rule this harness is built around
 
