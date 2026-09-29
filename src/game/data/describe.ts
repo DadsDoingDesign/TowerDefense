@@ -103,7 +103,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.healAura) out.push(`heals allies ${Math.round(m.healAura.hps)}/s`)
   if (m.buffAura) out.push(`buffs allies ${signPct(m.buffAura.damageMult)} dmg`)
   if (m.dmgReductionAura) out.push(`shields allies ${pct(m.dmgReductionAura.reduction)}`)
-  if (m.lifedrain) out.push(`life-drain: +${lifedrainPer100(m.lifedrain)} base HP per 100 damage`)
+  if (m.lifedrain) out.push(`life-drain: +${lifedrainPer100(m.lifedrain)} Gate HP per 100 damage`)
   // Both halves, because the effect has two (F11). `computeCombat` turns
   // `selfSacrifice` into BOTH `startMissingFrac` (the Sentinel deploys at that
   // much less HP) and a `1 + selfSacrifice` multiplier on its damage. The old

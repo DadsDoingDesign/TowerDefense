@@ -32,7 +32,7 @@ interface MutTemplate { key: string; name: string; desc: string; downside: strin
 const MUTATIONS: MutTemplate[] = [
   {
     key: 'volatile',
-    name: 'Volatile Rounds',
+    name: 'Blasting Powder',
     desc: 'Every shot detonates in a wide blast — but the round itself is mostly casing.',
     downside: '−55% damage per hit, −15% attack speed',
     mods: { splashAdd: 50, damageMult: 0.45, rateMult: 0.85 },
@@ -53,7 +53,7 @@ const MUTATIONS: MutTemplate[] = [
   },
   {
     key: 'rapid',
-    name: 'Rapid Fire',
+    name: 'Quickdraw',
     desc: 'Twice the rate of fire, and no time to aim any of it.',
     downside: '−62% damage per hit',
     mods: { rateMult: 2.0, damageMult: 0.38 },
@@ -61,7 +61,7 @@ const MUTATIONS: MutTemplate[] = [
   },
   {
     key: 'heavy',
-    name: 'Heavy Ordnance',
+    name: 'Siege Weight',
     desc: 'One devastating 2.8× shell per reload. Anything small is a waste of it.',
     downside: '−50% attack speed',
     mods: { damageMult: 2.8, rateMult: 0.5 },
@@ -118,14 +118,14 @@ const MUTATIONS: MutTemplate[] = [
    */
   {
     key: 'incendiary',
-    name: 'Incendiary',
+    name: 'Emberbrand',
     desc: 'Every hit sets the target burning for 180/s over 4s — the ignition takes a moment.',
     downside: '−30% attack speed, −20% damage',
     mods: { burn: { dps: 180, dur: 4 }, rateMult: 0.7, damageMult: 0.8 },
   },
   {
     key: 'cryo',
-    name: 'Cryo Blast',
+    name: 'Hoarfrost',
     desc: 'A freezing burst that halves the speed of everything it touches — and barely scratches it.',
     downside: '−70% damage per hit',
     mods: { chill: { slow: 0.55, dur: 3 }, splashAdd: 34, damageMult: 0.3 },
@@ -185,7 +185,7 @@ const MUTATIONS: MutTemplate[] = [
   },
   {
     key: 'overcharge',
-    name: 'Overcharge',
+    name: 'Stormcharged',
     desc: 'A wound-up shot that reaches almost twice as far and lands like an execution — once in a long while.',
     downside: '−45% attack speed',
     mods: { rangeMult: 1.9, critChanceAdd: 0.2, critMultAdd: 0.8, rateMult: 0.55 },
@@ -244,4 +244,18 @@ export function rollMutationChoices(
 /** One of every mutation (for balance tooling and previews). */
 export function allMutations(): Mutation[] {
   return MUTATIONS.map((t) => toMutation(t, `mut_${t.key}`))
+}
+
+/**
+ * The CURRENT display name for a mutation key.
+ *
+ * Six mutations were renamed (Wave 1 copy pass — Volatile Rounds → Blasting
+ * Powder, Heavy Ordnance → Siege Weight, Rapid Fire → Quickdraw, Cryo Blast →
+ * Hoarfrost, Overcharge → Stormcharged, Incendiary → Emberbrand). A hero that
+ * took one before the rename carries the OLD `name` in its saved run, because a
+ * `Mutation` is copied onto the hero whole. The key never changed, so every
+ * render site reads the name through here and a resumed save shows the new one.
+ */
+export function mutationName(key: string, fallback: string): string {
+  return MUTATIONS.find((m) => m.key === key)?.name ?? fallback
 }

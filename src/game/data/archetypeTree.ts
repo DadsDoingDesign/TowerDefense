@@ -159,14 +159,14 @@ const TIER1: TreeNode[] = [
   t1('marksman', 'rogue', 'Marksman', 'Range & pierce.', 'Long shots that pierce one extra enemy.', { stats: { dex: 8, str: 1 }, patience: 3 }, { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4 }),
   // Mystic
   t1('elementalist', 'mystic', 'Elementalist', 'DoTs.', 'Splash that burns over time.', { stats: { int: 8, dex: 2 }, patience: 3 }, { burn: { dps: 12, dur: 3 }, splashAdd: 15 }),
-  t1('cleric', 'mystic', 'Cleric', 'Heals & buffs.', 'Heals and empowers the Sentinel row.', { stats: { int: 7, str: 2 }, patience: 4 }, { healAura: { hps: 8, radius: 130 }, buffAura: { damageMult: 1.15, radius: 130 } }),
+  t1('cleric', 'mystic', 'Cleric', 'Heals & buffs.', 'Heals and empowers the heroes around it.', { stats: { int: 7, str: 2 }, patience: 4 }, { healAura: { hps: 8, radius: 130 }, buffAura: { damageMult: 1.15, radius: 130 } }),
   t1('warlock', 'mystic', 'Warlock', 'Life-drain.', 'Drains life; sacrifices HP for power.', { stats: { int: 8, str: 2 }, patience: 2 }, { lifedrain: 0.2, selfSacrifice: 0.15, damageMult: 1.3 }),
 ]
 
 // ---------------------------------------------------------------- Tier 2 (27)
 const TIER2: TreeNode[] = [
   // Warrior
-  t2('berserker', 'warrior', 'fighter', 'Berserker', 'Reckless: huge damage, thinner armor.', { stats: { str: 12, dex: 4 }, thorns: 4 }, { damageMult: 1.4, rateMult: 1.25, hpMult: 0.85 }),
+  t2('berserker', 'warrior', 'fighter', 'Berserker', 'Reckless: huge damage, thinner armour.', { stats: { str: 12, dex: 4 }, thorns: 4 }, { damageMult: 1.4, rateMult: 1.25, hpMult: 0.85 }),
   t2('juggernaut', 'warrior', 'fighter', 'Juggernaut', 'An immovable wall with punishing thorns.', { stats: { str: 10 }, thorns: 10, patience: 6 }, { hpMult: 1.6, block: { count: 4, radius: 90 }, thornsMult: 2, physDefAdd: 30 }),
   t2('weaponmaster', 'warrior', 'fighter', 'Weaponmaster', 'Precise strikes crit often and hard.', { stats: { str: 8, dex: 8 } }, { critChanceAdd: 0.2, critMultAdd: 0.6, damageMult: 1.2 }),
   // Knight

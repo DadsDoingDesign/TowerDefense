@@ -52,7 +52,7 @@ const WEAPONS: WeaponType[] = [
   { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
   { name: 'Wand', damageType: 'magic', hands: 'oneHand', speedBias: 0.06 },
   { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0.03 },
-  { name: 'Scepter', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
+  { name: 'Sceptre', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
   // two-hand: bigger damage, but fills both hands
   { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05 },
   { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.08 },
@@ -521,7 +521,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     const ench = rollEnchantments(KEEPSAKE_ENCHANTS, Math.max(1, cfg.enchants), cfg.budget, rng)
     return {
       id: nextId('itm'),
-      name: `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim(),
+      name: `${noun} ${ench[0]?.label ?? ''}`.trim(),
       slot: 'body',
       rarity,
       base: {},
@@ -635,18 +635,28 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
 }
 
 /** Compose an item name: [prefix] Rarity Noun [of Suffix]. A curse wins the prefix. */
-function nameItem(rarityLabel: string, noun: string, ench: Enchantment[]): string {
+/**
+ * `[prefix] Noun [of Suffix]` — and NOT the rarity word (Wave 1 copy pass).
+ *
+ * Names used to carry the rarity in the middle ("Heavy Rare Grimoire"), and every
+ * surface that shows an item also shows its rarity beside it, so the screen read
+ * "Heavy Rare Grimoire · Rare" and "Common Axe · Common". The rarity is a label,
+ * a colour, a letter and a pip count already; it does not need to be a word in
+ * the name too. `rarityLabel` stays in the signature so the call sites keep
+ * reading as they did.
+ */
+function nameItem(_rarityLabel: string, noun: string, ench: Enchantment[]): string {
   const suffix = ench.find((e) => e.label.startsWith('of'))
   const prefix =
     ench.find((e) => e.id.startsWith('cx_')) ?? ench.find((e) => !e.label.startsWith('of'))
-  return `${prefix ? prefix.label + ' ' : ''}${rarityLabel} ${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
+  return `${prefix ? prefix.label + ' ' : ''}${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
 }
 
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
-  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
+  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
   const noun = nounMatch?.[0] ?? 'Relic'
-  if (item.keepsake) return `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim()
+  if (item.keepsake) return `${noun} ${ench[0]?.label ?? ''}`.trim()
   return nameItem(cfg.label, noun, ench)
 }
 
