@@ -273,9 +273,39 @@ number said, and faster levelling (more of the level-10/15/20 choices get
 reached) widened it by ~6pt. It is not gated; it belongs to the perk/evolution
 lane, not to this one.
 
+### Step 4 — review conclusions (screenshots in scratchpad only, not committed)
+
+Run 2 (Mystic, `GOD=1` refills the Gate before each fight, as a review
+shortcut) reached the act-1 boss: Warlord Grukk's plate stepped
+"Phase 0 of 2: war-cry at 66%" → "1 of 2: war-cry at 33%" → "2 of 2:
+war-cries spent", followed by the Crossroads, a campfire and a second recruit.
+Desk pass at 1440×900: 1/2/3 → speed 3/1/2 ✓, Space → battle starts ✓,
+C → command spent (ready true → false) ✓, ? → key sheet ✓, Esc closes ✓.
+Codex: five sections with counts; the feats list is readable.
+
+**Scorecard** (docs/DESIGN_REVIEW.md checklist, 1–5): readability 4 · decoration
+at the margins 5 · faction legibility 4 · colour/surface 5 · surface character 4
+· depth/composition 4 · polish 3.
+
+**Fixed and committed** (each rendered again at 390×844):
+1. Campfire on a full Gate leads with Train, not "Rest anyway" (3b02683).
+2. Long offer names wrap; the rarity tag wraps its suffix (3b02683, dcca65d).
+3. Act bosses are "Act N Boss", not "The Final Watch" (2dbce38).
+
+**Open** (listed in DESIGN_REVIEW.md, 2026-09-29 entry): the last enemy is
+frozen mid-death during a breather; the breather banner and boss plate cover
+the lane's entry at the top of the portrait field; the merchant item's detail
+sits below the fold; the layer-1 map nodes touch at 390px; the gear-slot rarity
+letter overlaps its label; the defeat receipt's company list clips to one row
+("0 kills" reads oddly); the node preview cuts off its Threat line; a depth-0
+resume offers "collect marks"; relics share one glyph.
+
+`window.__game` exists only in DEV builds, so the playthrough ran on the Vite
+dev server and the production preview was used for the menu and the Codex.
+
 ## Current state / next step
 
-- Steps 0–3 done. Step 4 review: run 2 (Mystic, GOD) reached the act-1 boss
-  (all three Grukk phases captured), Crossroads, campfire; still running
-  toward the end screen. Desk pass done. Codex done.
-- Next: write the review scorecard here and in docs/DESIGN_REVIEW.md, commit.
+- **All four steps done.** Branch `worktree-agent-a26babe6cd2b22e29`,
+  not pushed.
+- Next (for a later lane): the open review items above, and the build-spread
+  watch item (the oracle-vs-random gap is ~30pt out of sample).
