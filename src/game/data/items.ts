@@ -352,9 +352,9 @@ const OFF_TYPE_FLOOR = 0.45
 const WEIGHT_RES = 8
 
 /** Damage type per archetype, read from the tree so there is one authority. */
-const damageTypeOf = (a: Archetype): 'physical' | 'magic' => getNode(a).base?.damageType ?? 'physical'
+export const damageTypeOf = (a: Archetype): 'physical' | 'magic' => getNode(a).base?.damageType ?? 'physical'
 
-type DamageType = 'physical' | 'magic'
+export type DamageType = 'physical' | 'magic'
 
 /**
  * A weight in (0, 1] for each damage type, given who is on the field.
@@ -466,6 +466,16 @@ export interface GenerateOpts {
    * drought with a drop nobody ever saw (F4).
    */
   commitPity?: boolean
+  /**
+   * Force a weapon roll onto one damage type. Only the opening kit uses it
+   * (`startingKit`): the kit is dealt FOR a hero who has already been picked,
+   * and a physical one-hander in a Mystic's hand is a blank slot — roster
+   * weighting alone still deals an off-type weapon ~31% of the time. Consumes
+   * exactly the same stream draws as an unforced roll.
+   */
+  damageType?: DamageType
+  /** `false` never rolls a curse (the opening kit — a trade is the player's to make). */
+  allowCurse?: boolean
 }
 
 /**
@@ -528,15 +538,9 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // With no roster the pools are the literal arrays, so the draw is byte-for-byte
   // the one this generator has always made.
   const rosterAware = !!opts.roster && opts.roster.length > 0
+  const handed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
   const weapon = isWeapon
-    ? rng.pick(
-        rosterAware
-          ? weightedPool(
-              WEAPONS.filter((w) => w.hands === slot),
-              (w) => demand[w.damageType],
-            )
-          : WEAPONS.filter((w) => w.hands === slot),
-      )
+    ? rng.pick(rosterAware ? weightedPool(handed, (w) => demand[w.damageType]) : handed)
     : undefined
   const noun = isWeapon ? weapon!.name : slot === 'offHand' ? rng.pick(OFFHANDS) : rng.pick(BODIES)
   const enchantPool = rosterAware
@@ -548,7 +552,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   const ench = rollEnchantments(enchantPool, cfg.enchants, cfg.budget, rng)
   // Epic+ items can roll a rare "curse": a dramatic extra affix with a downside.
   const canCurse = rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic'
-  if (canCurse && rng.chance(CURSE_CHANCE)) {
+  if (canCurse && opts.allowCurse !== false && rng.chance(CURSE_CHANCE)) {
     const c = rng.pick(CURSE_ENCHANTS)
     ench.push({ id: c.id, label: c.label, ...c.roll(rng, cfg.budget) })
   }

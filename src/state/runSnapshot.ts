@@ -52,6 +52,7 @@ import type {
   WaveDef,
 } from '../game/types'
 import { MAX_BANNER } from './metaStore'
+import { migrateChallenge, type RunChallenge } from './daily'
 import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
 
 export const RUN_SNAPSHOT_KEY = 'fieldwatch-run'
@@ -75,7 +76,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 5
+export const RUN_SNAPSHOT_VERSION = 6
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -145,6 +146,8 @@ export interface RunSnapshot {
    * exactly right: nothing before v3 could have flown one.
    */
   runBanner: number
+  /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
+  challenge: RunChallenge
   inventory: Item[]
   runKills: number
   runDowns: number
@@ -234,6 +237,7 @@ export interface RunStateSource {
   enemyHpMult: number
   threat: number
   runBanner: number
+  challenge: RunChallenge
   inventory: Item[]
   runKills: number
   runDowns: number
@@ -291,6 +295,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     enemyHpMult: s.enemyHpMult,
     threat: s.threat,
     runBanner: s.runBanner,
+    challenge: s.challenge,
     inventory: s.inventory,
     runKills: s.runKills,
     runDowns: s.runDowns,
@@ -799,7 +804,12 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // this number and a 99 indexes past the end of the array. Whether a value is
     // in range is a property of the value, not of who happens to read it.
     runBanner: clampBanner(o.runBanner),
-    inventory,
+    challenge: migrateChallenge(o.challenge),
+    // v5 → v6: the campaign kit used to be dealt into the pack at `newRun`,
+    // before the hero was picked. It is dealt at the pick now, so a v5 payload
+    // parked on hero-pick drops the old roster-blind kit instead of carrying
+    // it beside the new one.
+    inventory: version < 6 && o.screen === 'heroPick' && roster.length === 0 ? [] : inventory,
     runKills: Math.max(0, num(o.runKills, 0)),
     runDowns: Math.max(0, num(o.runDowns, 0)),
     marksEarned: Math.max(0, num(o.marksEarned, 0)),
@@ -811,7 +821,8 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
         'first',
         ['first', 'lowestHp', 'strongest', 'nearest'] as const,
       ),
-      holdFire: bool((o.tactics as Tactics | undefined)?.holdFire, false),
+      // `holdFire` was cut (it cost stop rate in 7 of 8 measured cells); a
+      // payload that still carries it has it dropped here, not restored.
     },
     lastResult: migrateResult(o.lastResult),
     // Display-only (the summary's loot line — the items themselves are already
@@ -999,6 +1010,8 @@ export interface SnapshotPayout {
   wins: number
   /** Banner the run was flying — it scales what the settle pays (H16). */
   banner: number
+  /** Daily / custom-seed facts: a scored Daily records, a custom seed is unranked. */
+  challenge: RunChallenge
 }
 
 /**
@@ -1033,6 +1046,7 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     runSeed: num(o.runSeed, 0),
     mode: str<GameMode>(o.mode, 'campaign', MODES),
     banner: clampBanner(o.runBanner),
+    challenge: migrateChallenge(o.challenge),
     depth: Math.max(0, cleared.size - 1),
     kills: Math.max(0, num(o.runKills, 0)),
     downs: Math.max(0, num(o.runDowns, 0)),

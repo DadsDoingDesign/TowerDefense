@@ -10,6 +10,7 @@ import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
+import { RunSeed } from './RunSeed'
 import { VolumeSlider } from './VolumeSlider'
 
 /**
@@ -397,6 +398,7 @@ export function PageScreen({
         The ability sentence goes first.
       */}
       <BannerPicker />
+      <RunSeed />
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
@@ -713,7 +715,14 @@ export function ResultScreen() {
         />
       )}
 
-      {recap && <InfoCard lines={[`Run seed ${recap.seed}`, 'The same seed deals the same map, loot and rolls.']} />}
+      {recap && (
+        <InfoCard
+          lines={[
+            `Run seed ${recap.seed}${recap.challenge.kind === 'daily' ? ` · Daily Watch ${recap.challenge.date}${recap.challenge.scored ? ' (scored)' : ' (practice)'}` : recap.challenge.kind === 'seeded' ? ' · custom seed' : ''}`,
+            'The same seed deals the same map, loot and rolls.',
+          ]}
+        />
+      )}
 
       {!campaign && (
         <div className="pg-rows">

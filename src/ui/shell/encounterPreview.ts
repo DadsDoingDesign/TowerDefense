@@ -1,8 +1,8 @@
 import { ENEMY_MODS, ENEMY_TYPES, type EnemyMod } from '../../game/data/enemies'
 import type { MapNode, RunMap } from '../../game/data/runmap'
 import {
-  encounterSeed,
-  generateEncounter,
+  nodeEncounter,
+  nodeEncounterSpec,
   pickVariant,
   waveComposition,
   type EncounterKind,
@@ -48,19 +48,15 @@ export interface PreviewRun {
   runMap: RunMap
 }
 
-/** The encounter kind the store fields on this node (mirrors `nodeKind`). */
+/** The encounter kind the store fields on this node. */
 export function encounterKindFor(node: Pick<MapNode, 'type'>, runBanner: number): EncounterKind | null {
-  if (node.type === 'boss') return 'boss'
-  if (node.type === 'elite') return 'elite'
-  if (node.type === 'battle') return bannerRules(runBanner).allElite ? 'elite' : 'normal'
-  return null
+  return nodeEncounterSpec({ type: node.type, layer: 0, row: 0 }, 0, bannerRules(runBanner))?.kind ?? null
 }
 
 /** The variant the store's `generateEncounter` call will pick for this node. */
 export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
-  const kind = encounterKindFor(node, run.runBanner)
-  if (!kind) return null
-  return pickVariant(kind, node.layer, encounterSeed(run.runSeed, node.layer), node.row)
+  const spec = nodeEncounterSpec(node, run.runSeed, bannerRules(run.runBanner))
+  return spec ? pickVariant(spec.kind, spec.depth, spec.seed, spec.sibling) : null
 }
 
 /**
@@ -69,13 +65,7 @@ export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
  */
 export function previewEncounter(run: PreviewRun, nodeId: string): WaveDef | null {
   const node = run.runMap.nodes.find((n) => n.id === nodeId)
-  if (!node) return null
-  const kind = encounterKindFor(node, run.runBanner)
-  if (!kind) return null
-  return generateEncounter(node.layer, kind, {
-    seed: encounterSeed(run.runSeed, node.layer),
-    sibling: node.row,
-  })
+  return node ? nodeEncounter(node, run.runSeed, bannerRules(run.runBanner)) : null
 }
 
 /** The one-glance read of an encounter, for the Context panel. */

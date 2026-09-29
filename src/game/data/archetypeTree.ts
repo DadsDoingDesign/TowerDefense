@@ -203,9 +203,30 @@ const TIER2: TreeNode[] = [
   t2('ranger', 'marksman', 'rogue', 'Ranger', 'Rapid piercing volleys.', { stats: { dex: 14 } }, { pierce: 3, rateMult: 1.35 }),
   t2('arbalest', 'marksman', 'rogue', 'Arbalest', 'Heavy bolts punch through ranks.', { stats: { dex: 9, str: 5 } }, { pierce: 2, damageMult: 1.5 }),
   // Elementalist
+  //
+  // ---- the Mystic offense floor, lifted where it can be (Phase 1 design) ----
+  //
+  // §1 measured Cryomancer / Stormcaller / Plaguebringer at 0.17× / 0.42× /
+  // 0.53× the median offense throughput — the three weakest damage specs in
+  // the game, all on the Mystic, and the reason a Mystic-led run that evolved
+  // into one of them died at the boss. Each now carries a `damageMult` on the
+  // hit (their control/DoT identity is untouched): ×1.5 / ×1.35 / ×1.1 put
+  // them at 0.70× / 0.63× / 0.63× (Cryomancer's chill makes its throughput
+  // non-linear in damage — ×2.0 measured 0.99×, far past the target).
+  //
+  // **Pyromancer is deliberately NOT lifted** (0.33×). It is §2's mystic
+  // *filler* — the damage tower every cleric support is graded against — and
+  // the clerics clear it by ×1.15–×1.20 against a ×1.10 floor on a ladder whose
+  // rungs are ×1.048 apart. One rung of Pyromancer power fails Templar and
+  // Oracle. Lifting it means re-deriving the cleric kits too; that is a
+  // support-line change, not a quick win, and is left for one.
+  //
+  // Stormcaller is also §4/§15's `magic` bench subject, so `BENCH_PIN.magic`
+  // in `balance/report.ts` was re-derived with it (0.89 → 1.2 ≈ 0.89 × 1.35);
+  // the bench baseline reads 30% against the 32% it was fitted at.
   t2('pyromancer', 'elementalist', 'mystic', 'Pyromancer', 'Infernos that spread and burn.', { stats: { int: 12 } }, { burn: { dps: 26, dur: 4 }, splashAdd: 25 }),
-  t2('cryomancer', 'elementalist', 'mystic', 'Cryomancer', 'Freezing fields slow everything.', { stats: { int: 10, dex: 3 } }, { chill: { slow: 0.55, dur: 2.5 }, splashAdd: 20 }),
-  t2('stormcaller', 'elementalist', 'mystic', 'Stormcaller', 'Lightning arcs between foes.', { stats: { int: 11, dex: 3 } }, { shock: { chains: 3, dmgFrac: 0.6 }, splashAdd: 10 }),
+  t2('cryomancer', 'elementalist', 'mystic', 'Cryomancer', 'Freezing fields slow everything.', { stats: { int: 10, dex: 3 } }, { chill: { slow: 0.55, dur: 2.5 }, splashAdd: 20, damageMult: 1.5 }),
+  t2('stormcaller', 'elementalist', 'mystic', 'Stormcaller', 'Lightning arcs between foes.', { stats: { int: 11, dex: 3 } }, { shock: { chains: 3, dmgFrac: 0.6 }, splashAdd: 10, damageMult: 1.35 }),
   // Cleric
   // The pure healer has to out-earn a Pyromancer in the same slot, and at 16hps
   // it did not: §2 measured it +4.7% over a mystic damage filler, inside the
@@ -236,7 +257,7 @@ const TIER2: TreeNode[] = [
   t2('oracle', 'cleric', 'mystic', 'Oracle', 'A balance of speed, heal, and buff.', { stats: { int: 11 }, patience: 4 }, { buffAura: { damageMult: 1.2, radius: 150 }, healAura: { hps: 10, radius: 150 }, rateMult: 1.15 }),
   // Warlock
   t2('soulflay', 'warlock', 'mystic', 'Soulflay', 'Massive drain and raw power.', { stats: { int: 12, str: 2 } }, { lifedrain: 0.35, selfSacrifice: 0.2, damageMult: 1.4 }),
-  t2('plaguebringer', 'warlock', 'mystic', 'Plaguebringer', 'Plague clouds that devour ranks.', { stats: { int: 10, str: 3 } }, { burn: { dps: 22, dur: 5 }, splashAdd: 35, lifedrain: 0.15 }),
+  t2('plaguebringer', 'warlock', 'mystic', 'Plaguebringer', 'Plague clouds that devour ranks.', { stats: { int: 10, str: 3 } }, { burn: { dps: 22, dur: 5 }, splashAdd: 35, lifedrain: 0.15, damageMult: 1.1 }),
   t2('doomcaller', 'warlock', 'mystic', 'Doomcaller', 'Ruinous power at great personal cost.', { stats: { int: 13 } }, { selfSacrifice: 0.3, damageMult: 1.8, execute: 0.15 }),
 ]
 

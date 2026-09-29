@@ -842,6 +842,61 @@ export function encounterSeed(runSeed: number, depth: number): number {
   return hashSeed(runSeed, 'field', 'wave', depth)
 }
 
+/** The slice of the Vow (Banner) rules that changes which wave a node fields. */
+export interface NodeEncounterRules {
+  /** Every battle node fields an elite wave (Vow 2+). */
+  allElite: boolean
+  /** How many depths deeper a Vow-made elite is drawn (an elite the map dealt is not). */
+  eliteDepth: number
+}
+
+/** Exactly how a run-map node's wave is generated: the ONE derivation. */
+export interface NodeEncounterSpec {
+  kind: EncounterKind
+  depth: number
+  seed: number
+  sibling: number
+}
+
+/**
+ * The single source of truth for "which wave does this node field?".
+ *
+ * The store's `selectNode` spawns `generateEncounter(spec.depth, spec.kind, …)`
+ * from this, and the map's pre-march preview reads the same spec, so the two
+ * cannot drift. They did once: the Elite Watch rule moved Vow-made elites one
+ * depth deeper in the store while the preview kept the node's own depth, so the
+ * preview promised a different column than the one that marched
+ * (tests/encounterPreview.test.ts caught it).
+ */
+export function nodeEncounterSpec(
+  node: { type: string; layer: number; row: number },
+  runSeed: number,
+  rules: NodeEncounterRules,
+): NodeEncounterSpec | null {
+  let kind: EncounterKind
+  if (node.type === 'boss') kind = 'boss'
+  else if (node.type === 'elite') kind = 'elite'
+  else if (node.type === 'battle') kind = rules.allElite ? 'elite' : 'normal'
+  else return null
+  const vowElite = node.type === 'battle' && kind === 'elite'
+  return {
+    kind,
+    depth: node.layer + (vowElite ? rules.eliteDepth : 0),
+    seed: encounterSeed(runSeed, node.layer),
+    sibling: node.row,
+  }
+}
+
+/** The wave a run-map node fields (see {@link nodeEncounterSpec}), or null for a non-fight. */
+export function nodeEncounter(
+  node: { type: string; layer: number; row: number },
+  runSeed: number,
+  rules: NodeEncounterRules,
+): WaveDef | null {
+  const spec = nodeEncounterSpec(node, runSeed, rules)
+  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling }) : null
+}
+
 export function generateEncounter(depth: number, kind: EncounterKind, opts: EncounterOptions = {}): WaveDef {
   const v = opts.variantId
     ? (variantsFor(kind, depth).find((x) => x.id === opts.variantId) ?? pickVariant(kind, depth, opts.seed, opts.sibling))

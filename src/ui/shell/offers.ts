@@ -8,6 +8,7 @@ import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, THREAT_PER_CHOICE, THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
 import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
+import { dailySeed, utcDateKey } from '../../state/daily'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
@@ -1202,14 +1203,16 @@ function settingsOffers(s: Settings): Offer[] {
  * The copy that shipped here described the system it replaced, word for word:
  * "Permanent and irreversible… +1 to all starting stats, +10% Watch Marks —
  * and +15% enemy HP in every future run… There is no way back down a tier."
- * Not one clause of that is true any more. `metaStore` kept the old API names
- * (`sacrificeTier`, `sacrificeCost`, `doSacrifice`) so every save migrates, but
- * the number now means "highest Banner UNLOCKED", unlocking applies nothing to
- * anything, and `bonuses().enemyHpMult` is hard-wired to 1.
+ * Not one clause of that is true any more. `metaStore` kept the old field name
+ * (`sacrificeTier`) so every save migrates, but the number now means "highest
+ * Banner UNLOCKED", unlocking applies nothing to anything, and
+ * `bonuses().enemyHpMult` is hard-wired to 1.
  *
- * So this row buys a *rung*, and the rung is flown — or not — per run, at
- * hero-pick, by {@link BannerPicker}. The confirm stays: it is still an
- * irreversible spend of a few hundred Watch Marks.
+ * Rungs are **earned, not bought** (Phase 1): Banner N opens when a run flown
+ * under Banner N−1 is won (`grantRunRewards`). This row used to sell the next
+ * rung for 200 / 350 / 500 Watch Marks; it is information now, with no price
+ * and no button, and the rung is flown — or not — per run, at hero-pick, by
+ * {@link BannerPicker}.
  */
 export const BANNER_BLURB =
   'A Vow is a bet you place at the start of a run: it takes a rule away and pays more Watch Marks for the finish. It applies to that run only, and you pick it fresh every time.'
@@ -1232,11 +1235,8 @@ export const bannerLine = (tier: number): string =>
 
 function sacrificeOffer(meta: Meta): Offer {
   const tier = meta.sacrificeTier
-  const cost = meta.sacrificeCost()
-  const afford = meta.watchMarks >= cost
   const maxed = tier >= MAX_BANNER
   const next = maxed ? null : BANNER_RUNGS[tier]
-  const price = moneyText(cost, 'marks')
 
   if (maxed) {
     return {
@@ -1254,17 +1254,16 @@ function sacrificeOffer(meta: Meta): Offer {
     }
   }
 
+  const earnBy = tier === 0 ? `Win a run with no ${VOW}` : `Win a run under ${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name}`
   return {
     id: 'sacrifice',
     title: `${VOW} ${next!.tier} · ${next!.name}`,
-    sub: `${tier}/${MAX_BANNER} unlocked`,
+    sub: `${tier}/${MAX_BANNER} unlocked · win to unlock`,
     icon: PERK_ICON.sacrifice,
     color: 'var(--accent)',
-    cost: { amount: cost, currency: 'marks' as const },
-    dim: !afford,
     pips: { on: tier, of: MAX_BANNER },
     body: [
-      `Unlock ${VOW} ${next!.tier} — ${next!.name} — for ${price}.`,
+      `${earnBy} to unlock ${VOW} ${next!.tier} — ${next!.name}. Vows are earned by winning, never bought.`,
       next!.rule,
       `A run under it pays ×${next!.markMult} Watch Marks. Vows stack: swearing ${next!.tier} swears every Vow below it too.`,
       BANNER_BLURB,
@@ -1272,16 +1271,33 @@ function sacrificeOffer(meta: Meta): Offer {
         ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.`
         : 'Nothing is unlocked yet, so every run is the ordinary march. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.',
     ],
-    action: {
-      label: afford ? 'Unlock' : 'Need',
-      cost: { amount: cost, currency: 'marks' as const },
-      run: () => meta.doSacrifice(),
-      disabled: !afford,
-      confirm: {
-        label: `Yes — spend ${price}`,
-        note: `${price} are spent for good. It does not make any run harder by itself; it adds ${VOW} ${next!.tier} to the Vows you may swear at the start of a run. Press "Yes — spend ${price}" below to go through with it; "Never mind" or another row keeps the marks.`,
-      },
-    },
+  }
+}
+
+/**
+ * Daily Watch (Phase 1): the UTC day's shared seed under standard rules, one
+ * scored attempt a day. Kept to one row on purpose — the UI lane restyles it.
+ */
+function dailyOffer(meta: Meta): Offer {
+  const date = utcDateKey()
+  const rec = meta.daily?.date === date ? meta.daily : null
+  const status = !rec
+    ? "Today's scored attempt is unplayed."
+    : !rec.done
+      ? "Today's scored attempt is under way — another start today is practice."
+      : `Today: ${rec.won ? 'won' : `depth ${rec.depth}`}, score ${rec.score}. Another start today is practice.`
+  return {
+    id: 'daily',
+    title: 'Daily Watch',
+    sub: date,
+    icon: 'map',
+    color: 'var(--accent)',
+    body: [
+      `Seed ${dailySeed(date)} — the same map, waves and offers for every Watch today (UTC).`,
+      `Standard rules: no perks, no unlocks, no ${VOW}. The first run you commit a hero to each day is scored.`,
+      status,
+    ],
+    action: { label: rec ? 'Practice' : 'Begin', run: () => useGameStore.getState().startDaily() },
   }
 }
 
@@ -1342,6 +1358,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       body: ['A fresh map, a fresh company. Permadeath — one loss ends it.'],
       action: { label: 'Begin', run: () => game.newRun() },
     },
+    dailyOffer(meta),
     {
       id: 'perks',
       title: 'Watchtower',
