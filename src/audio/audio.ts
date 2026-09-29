@@ -1,6 +1,7 @@
 /**
  * Audio engine — three channels (UI, Game, Music) under a master gain, into a
- * gentle limiter.
+ * glue compressor and a limiter. Every level, trim and chain setting is data
+ * in `mix.ts`; this file is the plumbing.
  *
  * UI events play real CC0 samples (Kenney "Interface Sounds", public/assets/
  * audio/ui/*.wav — licence and provenance in docs/AUDIO_CREDITS.md). Game and

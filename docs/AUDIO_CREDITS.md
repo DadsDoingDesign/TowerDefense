@@ -4,7 +4,7 @@ Every sound Fieldwatch can make, where it came from, and under what terms. This
 game is a commercial product, so the rule is simple: **if a licence cannot be verified
 from a file shipped in this repository, the audio does not ship.**
 
-Last verified: 2026-08-21.
+Last verified: 2026-09-29.
 
 ---
 
@@ -41,10 +41,15 @@ the pack is peak-normalised rather than loudness-matched.
 | **Payload** | **0 bytes** of audio assets |
 
 Every combat sound — `shoot`, `hit`, `crit`, `death`, `down`, `leak`, `coin`,
-`wave`, `clear`, `victory`, `defeat`, `upgrade`, `evolve`, and the five
-rarity stings — is built from oscillators, one shared noise buffer and a
-generated convolution impulse response. Nothing is fetched and nothing is
-sampled from any third-party recording.
+`wave`, `clear`, `victory`, `defeat`, `upgrade`, `evolve`, `deploy`,
+`undeploy`, and the five rarity stings — is built from oscillators, one
+shared noise buffer and a generated convolution impulse response. Nothing is
+fetched and nothing is sampled from any third-party recording.
+
+Levels, the UI-sample trims, the per-bus makeup and the master chain (glue
+compressor → limiter) are data in `src/audio/mix.ts`, each with the harness
+measurement that set it. Default mix: ≈ −18 LUFS integrated in battle, ≈ −22
+in the hub, true peak ≤ −2 dBTP.
 
 ---
 
@@ -104,6 +109,11 @@ information the music does not.
   half you can drop on its own.
 * **A hidden tab** suspends it, through the app's single `visibilitychange`
   lifecycle (`src/state/lifecycle.ts`) — no second listener.
+* **The hub cue resumes** at the start of the bar it stopped in, rather than
+  from bar 1 after every wave. The battle cue always starts at bar 1.
+* **The AudioContext itself is suspended** when nothing can be heard — muted,
+  hidden with nothing ringing, or 8 s of silence with the music off — and
+  woken by the next sound (policy: `shouldSuspend` in `mix.ts`).
 * Never the only channel for anything: the score carries no information, and
   every event it accompanies is also stated in text and colour.
 

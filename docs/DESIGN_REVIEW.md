@@ -1951,3 +1951,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   `src/ui`, no `src/styles`, no `scripts/`. The concurrent balance pass changed
   `archetypeTree.ts`'s `radiant` node (`healAura` now `hps: 38, radius: 160`)
   and added `thornsIgnite`; the failure is theirs to close.
+
+- **2026-09-29 — audio Phase 1: loudness, phone speakers, and the silent
+  deploy.** Rendered every cue through the OfflineAudioContext harness and
+  measured (ebur128 / pyloudnorm, plus a 4th-order 400 Hz HPF as the phone).
+  Problems: the whole game ~10 LU too quiet (battle −26.5, hub −34.3 LUFS-I);
+  UI samples peak- not loudness-normalised (35 LU spread, a tap louder than a
+  crit, `reward` burying the rarity ladder); hit/leak/kick energy all under
+  250 Hz, so on a phone the leak warning was quieter than the music; deploying
+  a hero silent. Fixes: per-sample trims, bus makeup + glue/limiter chain
+  (battle −16.6 at 3× / −18.2 at 1×, hub −21.9, TP ≤ −2 dBTP), phone presence
+  layers (hit 2.6 dB under the score's median → 3.1 over; leak now 7.7 dB over
+  the score's p90), an even rarity ladder (~1.9 LU steps), a deploy "thock",
+  context suspension when inaudible, and hub-cue resume. Hierarchy re-checked:
+  crit > hit > shoot; wave/clear/victory above combat. Numbers live in
+  `src/audio/mix.ts`.
