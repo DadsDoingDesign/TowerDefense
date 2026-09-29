@@ -5,7 +5,7 @@ import { applyXp, buildName, evolutionPending, evolveInto, xpToReach } from '../
 import { gameSfx, sfx, sfxRarity } from '../audio/audio'
 import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
 import { pickBattleMap } from '../game/data/maps'
-import { createSentinel, nameCounterState, startingRoster } from '../game/data/sentinels'
+import { createSentinel, nameCounterState, restoreNameCounters, startingRoster } from '../game/data/sentinels'
 import {
   canUpgrade,
   creditPity,
@@ -1185,7 +1185,10 @@ export const useGameStore = create<GameState>((set, get) => {
       // next drop is a function of both, so rewinding one alone resumes into a
       // sequence the interrupted run would never have dealt (M9).
       const lootPity: RarityPity = { dry: snap.lootPity }
+      // The process-global counters move HERE, when the run really comes back —
+      // not when the save is merely loaded to be peeked at or settled.
       restoreIdCounter(snap.idCounter)
+      restoreNameCounters(snap.nameCounters)
 
       const battleMap = snapshotBattleMap(snap)
       const placements: Placement = { ...emptyPlacements(battleMap) }
