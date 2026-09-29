@@ -77,3 +77,24 @@ describe('volume setters', () => {
     expect(audio().muted).toBe(false)
   })
 })
+
+describe('Calm audio and mono (settings v3)', () => {
+  it('a v2 payload migrates with both off', () => {
+    const m = migrateSettings({ audio: { music: 0.4 } }, 2)
+    expect(m.calmAudio).toBe(false)
+    expect(m.monoAudio).toBe(false)
+  })
+  it('keeps what was stored and coerces garbage', () => {
+    expect(migrateSettings({ calmAudio: true, monoAudio: true }, 3)).toMatchObject({ calmAudio: true, monoAudio: true })
+    expect(migrateSettings({ calmAudio: 'yes', monoAudio: 1 }, 3)).toMatchObject({ calmAudio: false, monoAudio: false })
+  })
+  it('the setters flip the flags without touching a volume', () => {
+    const before = { ...useSettingsStore.getState().audio }
+    useSettingsStore.getState().setCalmAudio(true)
+    useSettingsStore.getState().setMonoAudio(true)
+    expect(useSettingsStore.getState()).toMatchObject({ calmAudio: true, monoAudio: true })
+    expect(useSettingsStore.getState().audio).toEqual(before)
+    useSettingsStore.getState().setCalmAudio(false)
+    useSettingsStore.getState().setMonoAudio(false)
+  })
+})

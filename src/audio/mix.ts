@@ -62,11 +62,102 @@ export const UI_TARGET_MMAX = -24
 export const BUS_MAKEUP_DB = { game: 8, ui: 6, music: 8 } as const
 
 /**
- * Per-cue level inside the music bus, in dB. The hub cue has no drums and a
- * long reverb, so at the same fader it measures ~3 LU under the battle cue;
- * this lifts it to its target without re-orchestrating it.
+ * Per-cue level inside the music bus, in dB. The hub has no drums and a long
+ * reverb, so at the same fader it measures a few LU under the battle cue;
+ * these bring each cue to its place in the hierarchy (hub ≈ −22, battle ≈ −18
+ * LUFS-I at default volumes; the outros sit with the battle).
  */
-export const CUE_LEVEL_DB = { hub: 1, battle: 0 } as const
+export const CUE_LEVEL_DB = { hub: 4, prep: 3.5, battle: 0, boss: 0, victory: 2.5, defeat: 3 } as const
+
+/**
+ * The stems the adaptive score can switch, and each one's level inside a cue
+ * (dB). Melody sits on top; the pad is felt, not heard.
+ */
+export type Stem = 'drums' | 'bass' | 'pluck' | 'melody' | 'pad'
+export const STEM_DB: Record<Stem, number> = { drums: -14.5, bass: -14, pluck: -8, melody: -12, pad: -12 }
+/** Stereo seat per stem (−1…1). Drums and bass stay centred — lows never pan. */
+export const STEM_PAN: Record<Stem, number> = { drums: 0, bass: 0, pluck: -0.28, melody: 0.12, pad: 0.3 }
+/** Reverb send per stem. */
+export const STEM_SEND: Record<Stem, number> = { drums: 0.12, bass: 0.1, pluck: 0.3, melody: 0.42, pad: 0.6 }
+
+/**
+ * Which stems each intensity level lets in (battle and boss). Level 0 is the
+ * lull between spawns — drone, ostinato and pad; the tune waits for level 1;
+ * the full groove and the counter-line for 2–3.
+ */
+export const STEMS_FOR_LEVEL: readonly (readonly Stem[])[] = [
+  ['bass', 'pluck', 'pad'],
+  ['bass', 'pluck', 'pad', 'melody', 'drums'],
+  ['bass', 'pluck', 'pad', 'melody', 'drums'],
+  ['bass', 'pluck', 'pad', 'melody', 'drums'],
+]
+
+export interface IntensityInput {
+  /** Enemies on the field. */
+  alive: number
+  /** How far into the run (campaign nodes cleared, or endless rounds / 2). */
+  depth: number
+  boss: boolean
+  /** Gate HP, 0–1. */
+  gate: number
+  speed: number
+}
+
+/**
+ * How hard the fight is, 0–1. Mostly the crowd (the thing on screen), then
+ * danger to the Gate, then depth and speed as a floor — so a quiet moment in
+ * a deep run is still louder than a quiet moment on node one.
+ */
+export function musicIntensity(i: IntensityInput): number {
+  const crowd = Math.min(1, Math.max(0, i.alive) / 14)
+  const danger = Math.min(1, Math.max(0, (1 - clamp01(i.gate)) / 0.7))
+  const deep = Math.min(1, Math.max(0, i.depth) / 10)
+  const fast = Math.min(1, Math.max(0, (i.speed || 1) - 1) / 2)
+  let v = 0.12 + 0.5 * crowd + 0.2 * danger + 0.12 * deep + 0.08 * fast
+  if (i.boss) v = Math.max(v, 0.8)
+  return clamp01(v)
+}
+const clamp01 = (v: number): number => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0)
+
+/** Intensity → level 0–3. */
+export const levelFor = (v: number): number => (v < 0.28 ? 0 : v < 0.52 ? 1 : v < 0.76 ? 2 : 3)
+
+/**
+ * Bar-boundary hysteresis: go UP at once (the player just saw why), come DOWN
+ * only after `LEVEL_DROP_BARS` bars below — so a single kill does not strip
+ * the drums out and put them back.
+ */
+export const LEVEL_DROP_BARS = 2
+export function nextLevel(current: number, target: number, barsBelow: number): { level: number; barsBelow: number } {
+  if (target >= current) return { level: target, barsBelow: 0 }
+  const below = barsBelow + 1
+  return below >= LEVEL_DROP_BARS ? { level: current - 1, barsBelow: 0 } : { level: current, barsBelow: below }
+}
+
+/** Gate HP fraction at which the score closes in, and at which it lets go. */
+export const LOW_GATE = { on: 0.3, off: 0.36, lowpassHz: 900, openHz: 20000 } as const
+
+/**
+ * Side-chain-style ducking of the music bus, in dB, on its own node (never the
+ * player's volume). Fast in, slow out, so the event reads and the score
+ * breathes back without a pump.
+ */
+export const DUCK = { leak: 4, down: 4, sting: 4, horn: 5, attackTau: 0.012, releaseTau: 0.3 } as const
+
+/** How far SFX pan with the field x position (−1…1 → ±PAN_WIDTH). */
+export const PAN_WIDTH = 0.4
+export const panFor = (x: number | undefined): number =>
+  typeof x === 'number' && Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) * PAN_WIDTH : 0
+
+/**
+ * "Calm audio": no drums, a softer glue and a gentler limiter, the score a few
+ * dB further back so the effects — the information — come forward.
+ */
+export const CALM = {
+  musicDb: -4,
+  glue: { threshold: -24, knee: 12, ratio: 1.5, attack: 0.02, release: 0.3 },
+  limiter: { threshold: -3.5, knee: 6, ratio: 10, attack: 0.002, release: 0.2 },
+} as const
 
 /**
  * The master chain: a gentle glue compressor, then a real limiter.
@@ -100,12 +191,12 @@ export const safeLevel = (v: unknown, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback
 
 /** The gain each bus node should be set to for these volumes. */
-export function busGains(v: Volumes): { master: number; game: number; ui: number; music: number } {
+export function busGains(v: Volumes, calm = false): { master: number; game: number; ui: number; music: number } {
   return {
     master: v.muted ? 0 : safeLevel(v.master, 0.8),
     game: safeLevel(v.game, 0.7) * dbToGain(BUS_MAKEUP_DB.game),
     ui: safeLevel(v.ui, 0.9) * dbToGain(BUS_MAKEUP_DB.ui),
-    music: safeLevel(v.music, 0.55) * dbToGain(BUS_MAKEUP_DB.music),
+    music: safeLevel(v.music, 0.55) * dbToGain(BUS_MAKEUP_DB.music + (calm ? CALM.musicDb : 0)),
   }
 }
 

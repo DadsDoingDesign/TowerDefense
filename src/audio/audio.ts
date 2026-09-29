@@ -44,17 +44,24 @@
  */
 import {
   busGains,
+  CALM,
   dbToGain,
+  DUCK,
   GAIN_SMOOTH_S,
   hasRaritySting,
   IDLE_SUSPEND_S,
+  LOW_GATE,
   MASTER_CHAIN,
+  panFor,
+  RARITIES,
   REVERB_TAIL_S,
   shouldSuspend,
   throttleAllows,
   UI_TRIM_DB,
   type UiSample,
 } from './mix'
+import { voiceBank, type DrumKind, type PluckKind } from './instruments'
+import { stingDegrees } from './theme'
 
 type Channel = 'ui' | 'game'
 /*
@@ -85,7 +92,23 @@ type GameEvent =
   | 'evolve'
   | 'deploy'
   | 'undeploy'
+  | 'levelup'
+  | 'boss'
+  | 'melee'
 export type SoundEvent = UiEvent | GameEvent
+
+/**
+ * What the engine says about a combat event, beyond its name (Phase 2). All
+ * optional: an event without a payload plays the generic sound it always did.
+ * `x` is the field position, −1 (left edge) … 1 (right edge), for panning.
+ */
+export interface SfxPayload {
+  arch?: string
+  x?: number
+  faction?: string
+  tier?: number
+  boss?: boolean
+}
 
 /**
  * Every UI event, the file it plays and the trim it plays at. The trims are
@@ -143,6 +166,17 @@ let uiGain: GainNode
  * everything else, and `src/audio/music.ts` never touches `destination` itself.
  */
 let musicGain: GainNode
+/**
+ * After the music fader: the low-Gate lowpass, then the duck. The duck is its
+ * own node so ducking can never touch — or be undone by — the player's volume.
+ */
+let musicFilter: BiquadFilterNode
+let musicDuck: GainNode
+let glueNode: DynamicsCompressorNode
+let limiterNode: DynamicsCompressorNode
+/** Accessibility options (settings: "Calm audio", "Mono"). */
+let opts = { calm: false, mono: false }
+let lowGate = false
 /** Per-channel reverb sends — see `buildSpace()`. */
 let gameSend: GainNode
 let musicSend: GainNode
@@ -384,7 +418,7 @@ export const audioMuted = (): boolean => vol.muted
  */
 function applyGains(immediate = false): void {
   if (!ctx) return
-  const g = busGains(vol)
+  const g = busGains(vol, opts.calm)
   const t = ctx.currentTime
   const set = (p: AudioParam, v: number): void => {
     if (immediate) {
@@ -489,8 +523,10 @@ function ensureCtx(): AudioContext | null {
       k.release.value = o.release
       return k
     }
-    const glue = comp(MASTER_CHAIN.glue)
-    const limiter = comp(MASTER_CHAIN.limiter)
+    const glue = comp(opts.calm ? CALM.glue : MASTER_CHAIN.glue)
+    const limiter = comp(opts.calm ? CALM.limiter : MASTER_CHAIN.limiter)
+    glueNode = glue
+    limiterNode = limiter
     const outTrim = ctx.createGain()
     outTrim.gain.value = dbToGain(MASTER_CHAIN.outTrimDb)
     glue.connect(limiter)
@@ -498,12 +534,20 @@ function ensureCtx(): AudioContext | null {
     outTrim.connect(ctx.destination)
     masterGain = ctx.createGain()
     masterGain.connect(glue)
+    applyMono()
     gameGain = ctx.createGain()
     gameGain.connect(masterGain)
     uiGain = ctx.createGain()
     uiGain.connect(masterGain)
     musicGain = ctx.createGain()
-    musicGain.connect(masterGain)
+    musicFilter = ctx.createBiquadFilter()
+    musicFilter.type = 'lowpass'
+    musicFilter.Q.value = 0.8
+    musicFilter.frequency.value = lowGate ? LOW_GATE.lowpassHz : LOW_GATE.openHz
+    musicDuck = ctx.createGain()
+    musicGain.connect(musicFilter)
+    musicFilter.connect(musicDuck)
+    musicDuck.connect(masterGain)
     // Combat: short and bright, so it adds body without smearing the next hit.
     gameSend = buildSpace(ctx, gameGain, 0.7, 2.6, 0.5, 0.5)
     // Music: longer and darker, so pads bloom.
@@ -527,9 +571,106 @@ function ensureCtx(): AudioContext | null {
  * the same reason `resumeAudio()` does not (with no gesture behind it that
  * would only produce a suspended one).
  */
-export function musicBus(): { ctx: AudioContext; out: GainNode; send: GainNode } | null {
+export function musicBus(): { ctx: AudioContext; out: GainNode; send: GainNode; sfx: GainNode } | null {
   if (!ctx || (ctx.state as string) !== 'running') return null
-  return { ctx, out: musicGain, send: musicSend }
+  return { ctx, out: musicGain, send: musicSend, sfx: gameGain }
+}
+
+// ---- the music clock, ducking, low Gate, accessibility (Phase 2) ------------
+
+/** What the score tells the SFX about where it is: tempo, next beat, key. */
+export interface MusicClock {
+  cue: string
+  bpm: number
+  /** Seconds per beat. */
+  beat: number
+  /** Tonic, semitones from A (folded to −5…+6). */
+  key: number
+  mode: string
+  /** The first beat (or 8th, for slow cues) at or after audio time `after`. */
+  nextBeat(after: number): number
+}
+let clockSource: (() => MusicClock | null) | null = null
+/** `music.ts` hands its transport over here, so this file never imports it. */
+export function registerMusicClock(fn: () => MusicClock | null): void {
+  clockSource = fn
+}
+/** The live music clock, or null when no score is playing. */
+export const musicClock = (): MusicClock | null => (clockSource ? clockSource() : null)
+
+/** Longest a sting may be held to reach its beat. */
+const STING_MAX_WAIT = 0.7
+
+/**
+ * When a sting should start (seconds from now) and in which key: on the next
+ * beat of the score, in the score's key — or at once, in A, with no score.
+ */
+export function stingTiming(): { delay: number; key: number; clocked: boolean } {
+  const c = musicClock()
+  if (!c || !ctx) return { delay: 0, key: 0, clocked: false }
+  const now = ctx.currentTime
+  const at = c.nextBeat(now + 0.03)
+  const delay = at - now
+  return { delay: delay >= 0 && delay <= STING_MAX_WAIT ? delay : 0, key: c.key, clocked: true }
+}
+
+/**
+ * Duck the music bus by `db` from `at` seconds from now, for `hold` seconds.
+ * Fast attack, slow release, on the duck node only.
+ */
+export function duckMusic(db: number, hold: number, at = 0): void {
+  if (!ctx || !musicDuck) return
+  const p = musicDuck.gain
+  const t = ctx.currentTime + Math.max(0, at)
+  const h = (p as AudioParam & { cancelAndHoldAtTime?: (t: number) => AudioParam }).cancelAndHoldAtTime
+  if (h) h.call(p, t)
+  else p.cancelScheduledValues(t)
+  p.setTargetAtTime(dbToGain(-Math.abs(db)), t, DUCK.attackTau)
+  p.setTargetAtTime(1, t + Math.max(0.05, hold), DUCK.releaseTau)
+}
+
+/**
+ * Low Gate (≤30 % Gate HP): the score closes in behind a 900 Hz lowpass, the
+ * heartbeat starts (music.ts), and a leak tolls instead of clanging.
+ */
+export function setLowGate(on: boolean): void {
+  if (lowGate === on) return
+  lowGate = on
+  if (!ctx || !musicFilter) return
+  const f = musicFilter.frequency
+  f.cancelScheduledValues(ctx.currentTime)
+  f.setValueAtTime(f.value, ctx.currentTime)
+  f.setTargetAtTime(on ? LOW_GATE.lowpassHz : LOW_GATE.openHz, ctx.currentTime, on ? 0.35 : 0.8)
+}
+export const lowGateActive = (): boolean => lowGate
+export const isCalmAudio = (): boolean => opts.calm
+
+/** Calm audio / mono, from the settings store. */
+export function setAudioOptions(o: { calm?: boolean; mono?: boolean }): void {
+  opts = { calm: o.calm ?? opts.calm, mono: o.mono ?? opts.mono }
+  if (!ctx) return
+  const set = (k: DynamicsCompressorNode, c: { threshold: number; knee: number; ratio: number; attack: number; release: number }) => {
+    k.threshold.value = c.threshold
+    k.knee.value = c.knee
+    k.ratio.value = c.ratio
+    k.attack.value = c.attack
+    k.release.value = c.release
+  }
+  if (glueNode) set(glueNode, opts.calm ? CALM.glue : MASTER_CHAIN.glue)
+  if (limiterNode) set(limiterNode, opts.calm ? CALM.limiter : MASTER_CHAIN.limiter)
+  applyMono()
+  applyGains()
+}
+
+/**
+ * Mono: fold the whole mix to one channel at the master (one ear, one
+ * speaker, a hearing difference) — the next node up-mixes it back to both.
+ */
+function applyMono(): void {
+  if (!masterGain) return
+  masterGain.channelCount = opts.mono ? 1 : 2
+  masterGain.channelCountMode = 'explicit'
+  masterGain.channelInterpretation = 'speakers'
 }
 
 const readyCbs = new Set<() => void>()
@@ -812,6 +953,8 @@ interface VoiceOpts {
   send?: number
   /** Which bus this voice belongs to. */
   bus?: Channel
+  /** Stereo position −1…1 (already scaled). Leave lows at 0. */
+  pan?: number
 }
 
 /** One enveloped oscillator voice. */
@@ -829,7 +972,7 @@ function osc(freq: number, dur: number, peak: number, o: VoiceOpts = {}): void {
   g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + a)
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
   n.connect(g)
-  route(g, o.bus ?? 'game', o.send ?? 0)
+  route(g, o.bus ?? 'game', o.send ?? 0, o.pan)
   n.start(t0)
   n.stop(t0 + dur + 0.03)
   markBusy(t0 + dur)
@@ -847,6 +990,9 @@ interface NoiseOpts {
   bus?: Channel
   /** Sweep the lowpass down to this frequency across the burst. */
   lpTo?: number
+  /** Sweep the band-pass centre to this frequency across the burst. */
+  bpTo?: number
+  pan?: number
 }
 
 /** One enveloped noise burst, band-limited. */
@@ -862,7 +1008,8 @@ function noise(dur: number, peak: number, o: NoiseOpts = {}): void {
   if (o.bp) {
     const f = ctx.createBiquadFilter()
     f.type = 'bandpass'
-    f.frequency.value = o.bp
+    f.frequency.setValueAtTime(o.bp, t0)
+    if (o.bpTo) f.frequency.exponentialRampToValueAtTime(Math.max(60, o.bpTo), t0 + dur)
     f.Q.value = o.q ?? 1
     node.connect(f)
     node = f
@@ -886,23 +1033,107 @@ function noise(dur: number, peak: number, o: NoiseOpts = {}): void {
   g.gain.setValueAtTime(peak, t0)
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
   node.connect(g)
-  route(g, o.bus ?? 'game', o.send ?? 0)
+  route(g, o.bus ?? 'game', o.send ?? 0, o.pan)
   src.start(t0, offset, dur + 0.05)
   src.stop(t0 + dur + 0.05)
   markBusy(t0 + dur)
 }
 
-/** Dry to the channel, plus an optional tap into that channel's reverb. */
-function route(g: GainNode, bus: Channel, send: number): void {
+/**
+ * Dry to the channel, plus an optional tap into that channel's reverb. A
+ * voice with a `pan` gets a StereoPanner first (skipped in mono, and for a pan
+ * too small to hear — a node per voice is not free).
+ */
+function route(g: GainNode, bus: Channel, send: number, pan = 0): void {
   if (!ctx) return
-  g.connect(bus === 'ui' ? uiGain : gameGain)
+  let out: AudioNode = g
+  if (!opts.mono && Math.abs(pan) > 0.03 && typeof ctx.createStereoPanner === 'function') {
+    const p = ctx.createStereoPanner()
+    p.pan.value = Math.max(-1, Math.min(1, pan))
+    g.connect(p)
+    out = p
+  }
+  out.connect(bus === 'ui' ? uiGain : gameGain)
   if (send > 0) {
     const s = ctx.createGain()
     s.gain.value = send
-    g.connect(s)
+    out.connect(s)
     s.connect(gameSend)
   }
 }
+
+/** A pre-rendered string (instruments.ts) — the folk stings and the Rogue's bow. */
+function pluckVoice(kind: PluckKind, semiA2: number, peak: number, o: { at?: number; send?: number; pan?: number; cut?: number } = {}): void {
+  if (!ctx) return
+  const t0 = ctx.currentTime + (o.at ?? 0)
+  if (!takeVoice(t0)) return
+  const v = voiceBank(ctx).pluck(kind, semiA2)
+  if (!v) return
+  const src = ctx.createBufferSource()
+  src.buffer = v.buf
+  src.playbackRate.value = v.rate
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(peak, t0)
+  const len = o.cut ?? v.buf.duration / v.rate
+  if (o.cut) g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.cut)
+  src.connect(g)
+  route(g, 'game', o.send ?? 0, o.pan)
+  src.start(t0)
+  src.stop(t0 + len + 0.02)
+  markBusy(t0 + len)
+}
+
+/** A pre-rendered percussive buffer (instruments.ts). */
+function drumVoice(kind: DrumKind, peak: number, o: { at?: number; rate?: number; send?: number; pan?: number } = {}): void {
+  if (!ctx) return
+  const t0 = ctx.currentTime + (o.at ?? 0)
+  if (!takeVoice(t0)) return
+  const buf = voiceBank(ctx).drum(kind)
+  if (!buf) return
+  const src = ctx.createBufferSource()
+  src.buffer = buf
+  src.playbackRate.value = o.rate ?? 1
+  const g = ctx.createGain()
+  g.gain.value = peak
+  src.connect(g)
+  route(g, 'game', o.send ?? 0, o.pan)
+  src.start(t0)
+  markBusy(t0 + buf.duration)
+}
+
+/** Two-operator FM: the Mystic's sparkle. The index falls, so it starts bright and settles. */
+function fm(f0: number, f1: number, ratio: number, index: number, dur: number, peak: number, o: VoiceOpts = {}): void {
+  if (!ctx) return
+  const t0 = ctx.currentTime + (o.at ?? 0)
+  if (!takeVoice(t0)) return
+  const car = ctx.createOscillator()
+  car.type = 'sine'
+  car.frequency.setValueAtTime(f0, t0)
+  car.frequency.exponentialRampToValueAtTime(f1, t0 + dur)
+  const mod = ctx.createOscillator()
+  mod.frequency.setValueAtTime(f0 * ratio, t0)
+  mod.frequency.exponentialRampToValueAtTime(f1 * ratio, t0 + dur)
+  const idx = ctx.createGain()
+  idx.gain.setValueAtTime(f0 * index, t0)
+  idx.gain.exponentialRampToValueAtTime(Math.max(1, f1 * index * 0.1), t0 + dur)
+  mod.connect(idx)
+  idx.connect(car.frequency)
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.0001, t0)
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.006)
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+  car.connect(g)
+  route(g, 'game', o.send ?? 0, o.pan)
+  car.start(t0)
+  mod.start(t0)
+  car.stop(t0 + dur + 0.03)
+  mod.stop(t0 + dur + 0.03)
+  markBusy(t0 + dur)
+}
+
+/** Semitones above A4 → Hz, and above A2 for the string bank. */
+const a4 = (semi: number): number => 440 * Math.pow(2, semi / 12)
+const A4_IN_BANK = 24
 
 /**
  * A struck bell: sine partials at 1, 2, 2.4 and 3× the fundamental (the 2.4
@@ -926,151 +1157,331 @@ function arp(freqs: number[], dur: number, peak: number, spread: number, o: Voic
   freqs.forEach((f, i) => osc(f, dur, peak, { ...o, at: (o.at ?? 0) + i * spread }))
 }
 
-function playGame(event: GameEvent): void {
+/**
+ * The events that are STINGS: musical phrases rather than impacts. They are
+ * held to the score's next beat, written in its key, and duck it (Phase 2).
+ * Everything else is an impact and plays the instant it happens.
+ */
+const STINGS: ReadonlySet<GameEvent> = new Set<GameEvent>(['wave', 'clear', 'victory', 'defeat', 'upgrade', 'evolve', 'levelup', 'boss'])
+
+function playGame(event: GameEvent, p: SfxPayload = {}): void {
+  const pan = panFor(p.x)
+  if (STINGS.has(event)) {
+    const { delay, key, clocked } = stingTiming()
+    playSting(event, delay, key, clocked)
+    return
+  }
   switch (event) {
     /* Quietest thing in the mix: it fires more than anything else, and a shot
-       that competes with its own impact is what makes combat mush. */
+       that competes with its own impact is what makes combat mush. Each
+       archetype now has its own (Phase 2) — the player can hear who fired. */
     case 'shoot':
-      noise(0.02, 0.05, { hp: 1600, lp: 7000 })
-      osc(vary(760, 90), 0.07, 0.07, { to: 200, type: 'square' })
+      if (p.arch === 'fighter') {
+        // A blade swish: a band of noise sweeping down 3 → 1 kHz in 90 ms,
+        // and a small metallic ting (inharmonic 2.2/3.1 kHz) on the edge.
+        noise(0.09, 0.44, { bp: 3000, bpTo: 1000, q: 2.2, pan })
+        osc(vary(2200, 25), 0.12, 0.032, { type: 'sine', at: 0.012, pan, send: 0.1 })
+        osc(vary(3100, 25), 0.09, 0.023, { type: 'sine', at: 0.012, pan })
+      } else if (p.arch === 'rogue') {
+        // A bowstring (a real Karplus–Strong string, very short) and the
+        // arrow leaving: a band of noise sweeping up.
+        pluckVoice('bow', 7 + Math.round(Math.random() * 2), 0.25, { pan, cut: 0.2 })
+        noise(0.12, 0.075, { bp: 1300, bpTo: 3800, q: 1.6, at: 0.018, pan })
+      } else if (p.arch === 'mystic') {
+        // FM sparkle, 1.2 → 2.4 kHz.
+        fm(vary(1200, 40), 2400, 1.51, 1.6, 0.14, 0.07, { pan, send: 0.3 })
+      } else {
+        noise(0.02, 0.05, { hp: 1600, lp: 7000, pan })
+        osc(vary(760, 90), 0.07, 0.07, { to: 200, type: 'square', pan })
+      }
       break
-    /* THE most frequent meaningful event in the game, and it was silent.
-       Transient (the contact) + body (the weight) + tick (the readability).
-
-       Phone speakers roll off under ~400 Hz, and the old body (196→108 Hz)
-       lived entirely below that: through a phone filter the hit measured
-       −47 LUFS, i.e. gone. The body now sits at 330→180 Hz, and a 25 ms band
-       of noise at 2.5 kHz — where a small speaker is most efficient — carries
-       the contact (15 ms, the first try, was too short to register over the
-       score through a phone filter). */
+    /* THE most frequent meaningful event in the game. Transient (the contact)
+       + body (the weight) + a 2.5 kHz band — where a small speaker is most
+       efficient — so a phone hears it over the score. The body/transient
+       change with who struck; the presence band never goes away. */
     case 'hit':
-      noise(0.032, 0.24, { hp: 900, lp: 5200, lpTo: 1800, send: 0.08 })
-      noise(0.025, 0.7, { bp: 2500, q: 1.2 })
-      osc(vary(330, 120), 0.09, 0.2, { to: 180, type: 'triangle', send: 0.08 })
-      osc(vary(1380, 140), 0.022, 0.1, { type: 'square' })
+      if (p.arch === 'rogue') {
+        // An arrow thunking into wood and hide: short, higher, drier.
+        noise(0.025, 0.8, { bp: 2400, q: 1.4, pan })
+        osc(vary(520, 90), 0.06, 0.21, { to: 250, type: 'triangle', pan, send: 0.05 })
+        osc(vary(1100, 60), 0.018, 0.1, { type: 'square', pan })
+      } else if (p.arch === 'mystic') {
+        // A spell landing: a rising ping and a hiss, no thud.
+        noise(0.025, 0.63, { bp: 2600, q: 1.2, pan })
+        osc(vary(880, 50), 0.09, 0.14, { to: 1320, type: 'sine', pan, send: 0.2 })
+        noise(0.06, 0.09, { hp: 3200, pan, send: 0.2 })
+      } else {
+        noise(0.032, 0.24, { hp: 900, lp: 5200, lpTo: 1800, send: 0.08, pan })
+        noise(0.025, 0.7, { bp: 2500, q: 1.2, pan })
+        osc(vary(330, 120), 0.09, 0.2, { to: 180, type: 'triangle', send: 0.08, pan })
+        osc(vary(1380, 140), 0.022, 0.1, { type: 'square', pan })
+      }
       break
     /* A crit must not be "hit, louder": brighter transient, a real sub, and a
        rising shine on top, so the channel carries information. */
     case 'crit':
-      noise(0.05, 0.26, { hp: 1300, lp: 9000, lpTo: 2400, send: 0.3 })
-      osc(vary(262, 60), 0.15, 0.2, { to: 92, type: 'sawtooth', send: 0.25 })
+      noise(0.05, 0.26, { hp: 1300, lp: 9000, lpTo: 2400, send: 0.3, pan })
+      osc(vary(262, 60), 0.15, 0.2, { to: 92, type: 'sawtooth', send: 0.25, pan })
       osc(vary(92, 40), 0.18, 0.24, { to: 54, type: 'sine' })
-      osc(vary(1760, 60), 0.24, 0.11, { to: 2794, type: 'triangle', at: 0.012, send: 0.4 })
+      osc(vary(1760, 60), 0.24, 0.11, { to: 2794, type: 'triangle', at: 0.012, send: 0.4, pan })
       break
-    /* A kill is the loudest routine sound — the payoff the whole loop is for. */
+    /* A kill is the loudest routine sound — the payoff the whole loop is for.
+       Each faction dies its own way (Phase 2): a torch goblin pops, a bomber
+       goes up, a barrel splinters. */
     case 'death':
-      noise(0.2, 0.26, { lp: 2600, lpTo: 500, send: 0.2 })
-      osc(vary(184, 80), 0.22, 0.15, { to: 46, type: 'sawtooth', send: 0.18 })
-      osc(vary(74, 50), 0.17, 0.2, { to: 44, type: 'sine' })
-      // The "pop" a phone can actually play: everything above is sub-400 Hz.
-      osc(vary(700, 60), 0.06, 0.1, { to: 160, type: 'square' })
+      if (p.faction === 'tnt') {
+        // The boom: noise closing 1.2 kHz → 200 Hz over 250 ms, a sub under
+        // it, and a crackle a phone can play.
+        noise(0.25, 0.33, { lp: 1200, lpTo: 200, send: 0.25, pan })
+        osc(vary(70, 30), 0.3, 0.25, { to: 38, type: 'sine' })
+        osc(vary(170, 40), 0.18, 0.12, { to: 60, type: 'sawtooth', send: 0.2, pan })
+        noise(0.07, 0.42, { bp: 1500, q: 1, pan })
+      } else if (p.faction === 'barrel') {
+        // Wood giving way: three splintering cracks and a hollow knock.
+        noise(0.04, 0.55, { bp: 750, q: 3, pan })
+        noise(0.035, 0.75, { bp: 1250, q: 3, at: 0.028, pan })
+        noise(0.05, 0.7, { bp: 1800, q: 2.5, at: 0.06, pan, send: 0.15 })
+        osc(vary(150, 40), 0.1, 0.24, { to: 90, type: 'triangle', pan })
+        osc(vary(62, 20), 0.14, 0.16, { to: 44, type: 'sine' })
+      } else {
+        noise(0.2, 0.26, { lp: 2600, lpTo: 500, send: 0.2, pan })
+        osc(vary(184, 80), 0.22, 0.15, { to: 46, type: 'sawtooth', send: 0.18, pan })
+        osc(vary(74, 50), 0.17, 0.2, { to: 44, type: 'sine' })
+        // The "pop" a phone can actually play: everything above is sub-400 Hz.
+        osc(vary(700, 60), 0.06, 0.1, { to: 160, type: 'square', pan })
+      }
+      if (p.boss) {
+        // A champion falls: a struck bell in the score's key over it all.
+        const k = musicClock()?.key ?? 0
+        bell(a4(k - 12), 1.6, 0.16, { pan })
+        osc(55 * Math.pow(2, k / 12), 0.9, 0.2, { type: 'sine' })
+        duckMusic(DUCK.sting, 0.8)
+      }
       break
     /* A Sentinel going down. Falls, where a kill drops — different shape on
        purpose, because this one is YOUR loss. */
     case 'down':
-      osc(330, 0.2, 0.16, { to: 233, type: 'square', send: 0.3 })
-      osc(247, 0.34, 0.16, { to: 155, type: 'square', at: 0.11, send: 0.35 })
+      osc(330, 0.2, 0.16, { to: 233, type: 'square', send: 0.3, pan })
+      osc(247, 0.34, 0.16, { to: 155, type: 'square', at: 0.11, send: 0.35, pan })
       noise(0.3, 0.1, { lp: 900, lpTo: 260, send: 0.25 })
+      duckMusic(DUCK.down, 0.45)
       break
-    /* Something got through — the most important warning in a wave, and it
-       was a 140→46 Hz saw over a 56 Hz sine: through a phone it measured
-       −36.7 LUFS, quieter than the music under it. The low thud stays for
-       headphones; a struck bell on A4 (inharmonic partials 1, 2, 2.4, 3)
-       is what a phone hears, and it cuts through the score. */
-    case 'leak':
+    /* Something got through — the most important warning in a wave. The low
+       thud stays for headphones; the struck bell is what a phone hears. With
+       the Gate low it becomes a TOLL: slower, deeper, longer — the same bell
+       the town rings. */
+    case 'leak': {
       osc(140, 0.38, 0.28, { to: 46, type: 'sawtooth', send: 0.3 })
       osc(56, 0.42, 0.2, { to: 40, type: 'sine' })
       noise(0.2, 0.14, { lp: 800, lpTo: 200, send: 0.2 })
-      bell(440, 0.6, 0.2)
+      const k = musicClock()?.key ?? 0
+      if (lowGate) bell(a4(k - 12), 2.4, 0.1, { send: 0.55 })
+      else bell(a4(k), 0.6, 0.2)
+      duckMusic(DUCK.leak, lowGate ? 1.2 : 0.4)
+      break
+    }
+    /* A goblin's club on a blocking hero's shield — dull, low-mid, no ring. */
+    case 'melee':
+      drumVoice('thud', 0.13, { rate: 0.9 + Math.random() * 0.2, pan })
       break
     case 'coin':
       osc(1046, 0.05, 0.14, { type: 'square', send: 0.15 })
       osc(1568, 0.13, 0.14, { type: 'square', at: 0.05, send: 0.25 })
       osc(2093, 0.09, 0.06, { type: 'triangle', at: 0.05, send: 0.3 })
       break
-    /* A horn call, not a beep: two saws a fifth apart, rising together. */
-    case 'wave':
-      // +3 dB in audio Phase 1: it sat level with a crit, and the call that
-      // starts a wave has to read over the fight it starts.
-      osc(196, 0.5, 0.18, { to: 294, type: 'sawtooth', attack: 0.05, send: 0.35 })
-      osc(294, 0.5, 0.127, { to: 440, type: 'sawtooth', attack: 0.06, send: 0.35 })
-      noise(0.25, 0.07, { hp: 400, lp: 2000, send: 0.3 })
-      break
     /*
-     * The wave-clear sting (H18). Short — it has to fit inside the hold and be
-     * skippable — but it resolves: a rising third to a fifth, a shimmer over
-     * the top, and a bloom of reverb that says "that is finished".
-     */
-    case 'clear':
-      arp([523.25, 659.25, 783.99], 0.2, 0.16, 0.075, { type: 'triangle', send: 0.45 })
-      osc(1046.5, 0.5, 0.11, { type: 'triangle', at: 0.225, send: 0.6 })
-      osc(130.81, 0.6, 0.13, { type: 'sine', at: 0.225 })
-      noise(0.5, 0.045, { hp: 3500, send: 0.5 })
-      break
-    /* The run win. Longer, a full triad, and it lands on an octave. */
-    case 'victory':
-      arp([523.25, 659.25, 783.99, 1046.5], 0.22, 0.17, 0.13, { type: 'square', send: 0.4 })
-      arp([523.25, 659.25, 783.99, 1046.5], 1.1, 0.09, 0, { type: 'triangle', at: 0.52, send: 0.6 })
-      osc(130.81, 1.2, 0.14, { type: 'sine', at: 0.52 })
-      noise(0.9, 0.05, { hp: 3000, send: 0.6 })
-      break
-    /* The run LOSS (M32) — called from nowhere before this phase. Descending
-       minor over a drone: unmistakably an ending, and not a long one. */
-    case 'defeat':
-      arp([392, 349.23, 293.66, 233.08], 0.3, 0.15, 0.17, { type: 'sawtooth', send: 0.4 })
-      osc(87.31, 1.5, 0.16, { to: 65.41, type: 'sine', attack: 0.12 })
-      osc(116.54, 1.4, 0.07, { type: 'triangle', at: 0.2, send: 0.5 })
-      noise(0.8, 0.05, { lp: 700, lpTo: 180, send: 0.4 })
-      break
-    case 'upgrade':
-      arp([659.25, 830.61, 987.77, 1318.5], 0.14, 0.13, 0.06, { type: 'square', send: 0.3 })
-      osc(164.81, 0.3, 0.1, { type: 'sine', at: 0.06 })
-      break
-    /*
-     * Evolution — the loudest ceremony in a run that is not its ending. A riser
-     * into a struck chord, so the moment has a before and an after.
-     */
-    /*
-     * Setting a hero down on a slot — which was silent, because it happens on
-     * the canvas and the canvas is not a button. A wooden "thock": a narrow
-     * band of noise at 900 Hz (the knock), a short triangle falling 220→150 Hz
-     * (the weight), and a 1.3 kHz tick on top so a phone hears it land.
+     * Setting a hero down on a slot: a wooden "thock" — a narrow band of noise
+     * at 900 Hz (the knock), a short triangle falling 220→150 Hz (the weight),
+     * and a 1.3 kHz tick on top so a phone hears it land.
      */
     case 'deploy':
       noise(0.03, 1.0, { bp: 900, q: 4 })
       osc(vary(220, 40), 0.08, 0.3, { to: 150, type: 'triangle', send: 0.1 })
       osc(vary(1300, 50), 0.018, 0.18, { type: 'square' })
       break
-    /* Lifting one off again: the same materials lower and reversed — the
-       body rises instead of falling, and the tick comes after, not before. */
+    /* Lifting one off again: the same materials lower and reversed. */
     case 'undeploy':
       noise(0.03, 0.8, { bp: 650, q: 4 })
       osc(vary(130, 40), 0.08, 0.28, { to: 185, type: 'triangle', send: 0.1 })
       osc(vary(1000, 50), 0.018, 0.15, { type: 'square', at: 0.05 })
       break
-    case 'evolve':
-      osc(220, 0.55, 0.09, { to: 880, type: 'sawtooth', attack: 0.3, send: 0.4 })
-      noise(0.55, 0.06, { hp: 600, lp: 1200, lpTo: 9000, send: 0.4 })
-      arp([523.25, 783.99, 1046.5, 1567.98], 0.75, 0.12, 0.035, { type: 'triangle', at: 0.5, send: 0.6 })
-      osc(130.81, 0.9, 0.15, { type: 'sine', at: 0.5 })
-      break
   }
 }
 
-/** Rarity tiers, brightest last. Shared with `sfxRarity`. */
-/*
- * `level` evens out the ladder's LOUDNESS steps, which were lopsided: common
- * sat 7 LU under rare and the four upper tiers were bunched within 2.5 LU, so
- * epic→mythic climbed in length and brightness but hardly in weight.
+/**
+ * The stings — every one written in scale degrees and transposed to the
+ * score's key, starting on its next beat (`at`). Open fifths and octaves over
+ * the tonic (see `stingDegrees`), so a sting is consonant whichever chord it
+ * lands on. With no score playing they start at once, in A.
  */
-const RARITY_STING: Record<string, { notes: number[]; peak: number; spread: number; send: number; sub?: number; level: number }> = {
+function playSting(event: GameEvent, at: number, key: number, clocked: boolean): void {
+  const deg = (kind: Parameters<typeof stingDegrees>[0], rung = 0) => stingDegrees(kind, key, rung)
+  switch (event) {
+    /* The wave call: a horn a fifth wide, rising — tonic-and-fifth, in key. */
+    case 'wave': {
+      const [lo, hi] = deg('call')
+      osc(a4(lo - 5), 0.5, 0.18, { to: a4(lo), type: 'sawtooth', attack: 0.05, send: 0.35, at })
+      osc(a4(hi - 5), 0.5, 0.127, { to: a4(hi), type: 'sawtooth', attack: 0.06, send: 0.35, at })
+      noise(0.25, 0.07, { hp: 400, lp: 2000, send: 0.3, at })
+      drumVoice('dum', 0.1, { at })
+      duckMusic(DUCK.sting, 0.5, at)
+      break
+    }
+    /* The wave-clear sting: a harp up through the open fifths to the octave,
+       a shimmer, and a bloom of reverb that says "that is finished". */
+    case 'clear': {
+      const n = deg('clear')
+      n.forEach((s, i) => {
+        pluckVoice('harp', A4_IN_BANK + s, 0.22, { at: at + i * 0.075, send: 0.45 })
+        osc(a4(s), 0.2, 0.055, { type: 'triangle', send: 0.45, at: at + i * 0.075 })
+      })
+      osc(a4(n[n.length - 1] + 12), 0.5, 0.055, { type: 'triangle', at: at + 0.225, send: 0.6 })
+      osc(a4(n[1] - 24), 0.6, 0.09, { type: 'sine', at: at + 0.225 })
+      noise(0.5, 0.045, { hp: 3500, send: 0.5, at })
+      duckMusic(DUCK.sting, 0.7, at)
+      break
+    }
+    /* The run win. With the score on, the victory OUTRO carries the fanfare
+       (music.ts) and this is only its downbeat: a strummed major chord and the
+       frame drum. With the score off, it is the whole fanfare: A C♯ E A. */
+    case 'victory': {
+      const root = deg('call')[0] + 12
+      const t = [0, 4, 7, 12].map((d) => d + root)
+      if (clocked) {
+        t.forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s, 0.34, { at: at + i * 0.03, send: 0.5 }))
+        drumVoice('dum', 0.7, { at })
+      } else {
+        arp(t.map(a4), 0.22, 0.17, 0.13, { type: 'square', send: 0.4, at })
+        arp(t.map(a4), 1.1, 0.09, 0, { type: 'triangle', at: at + 0.52, send: 0.6 })
+        osc(a4(root - 24), 1.2, 0.14, { type: 'sine', at: at + 0.52 })
+        noise(0.9, 0.05, { hp: 3000, send: 0.6, at })
+      }
+      duckMusic(DUCK.sting, 1.2, at)
+      break
+    }
+    /* The run loss: with the score on, the defeat outro falls away on its own
+       and this is a low toll under it; without, a descending minor line. */
+    case 'defeat': {
+      const r = deg('call')[0] + 12
+      if (clocked) {
+        bell(a4(r - 12), 2.2, 0.18, { at, send: 0.5 })
+        osc(a4(r - 24), 1.5, 0.16, { type: 'sine', attack: 0.08, at })
+      } else {
+        arp([-2, -4, -7, -11].map((d) => a4(r + d)), 0.3, 0.15, 0.17, { type: 'sawtooth', send: 0.4, at })
+        osc(a4(r - 24 - 4), 1.5, 0.16, { to: a4(r - 24 - 9), type: 'sine', attack: 0.12, at })
+        noise(0.8, 0.05, { lp: 700, lpTo: 180, send: 0.4, at })
+      }
+      duckMusic(DUCK.sting, 1.2, at)
+      break
+    }
+    /* A purchase or a card: a quick rising figure on the harp, in key. */
+    case 'upgrade': {
+      const n = deg('rise')
+      n.forEach((s, i) => {
+        pluckVoice('harp', A4_IN_BANK + s + 12, 0.25, { at: at + i * 0.06, send: 0.3 })
+        osc(a4(s + 12), 0.14, 0.062, { type: 'triangle', send: 0.3, at: at + i * 0.06 })
+      })
+      osc(a4(n[0] - 24), 0.3, 0.1, { type: 'sine', at: at + 0.06 })
+      duckMusic(DUCK.sting - 1, 0.4, at)
+      break
+    }
+    /* A hero levels up (new, Phase 2): a sus-to-tonic chime — tonic, fourth,
+       fifth, octave — in key, with a small bell on top. */
+    case 'levelup': {
+      const n = deg('levelup')
+      n.forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s + 12, 0.22, { at: at + i * 0.07, send: 0.4 }))
+      bell(a4(n[n.length - 1] + 12), 0.9, 0.06, { at: at + 0.21 })
+      duckMusic(DUCK.sting - 1, 0.6, at)
+      break
+    }
+    /* Evolution — a riser into a struck chord, so the moment has a before and
+       an after. The riser starts NOW; the chord lands on the first beat after it. */
+    case 'evolve': {
+      const n = deg('evolve')
+      osc(a4(n[0]), 0.55, 0.09, { to: a4(n[0] + 24), type: 'sawtooth', attack: 0.3, send: 0.4 })
+      noise(0.55, 0.06, { hp: 600, lp: 1200, lpTo: 9000, send: 0.4 })
+      const land = clockAfter(0.5)
+      n.slice(2).forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s, 0.24, { at: land + i * 0.035, send: 0.6 }))
+      arp(n.slice(2, 6).map(a4), 0.75, 0.08, 0.035, { type: 'triangle', at: land, send: 0.6 })
+      osc(a4(n[0]), 0.9, 0.15, { type: 'sine', at: land })
+      duckMusic(DUCK.sting, 1, land)
+      break
+    }
+    /* A champion arrives (new, Phase 2): a low brass call on tonic and fifth,
+       rhythm TA–TA–TAAA, the filter opening 300 Hz → 2 kHz across the call. */
+    case 'boss': {
+      const r = deg('call')[0] // the tonic, A3 in A
+      const calls: [number, number, number][] = [
+        [r - 12, 0, 0.24],
+        [r - 12, 0.3, 0.24],
+        [r - 5, 0.6, 1.0],
+      ]
+      for (const [semi, dt, len] of calls) {
+        for (const det of [-7, 6]) hornVoice(a4(semi), dt, len, 0.04, at, det)
+        hornVoice(a4(semi + 12), dt, len, 0.03, at, 0)
+      }
+      drumVoice('tomLo', 0.2, { at })
+      drumVoice('tomLo', 0.18, { at: at + 0.3 })
+      drumVoice('dum', 0.25, { at: at + 0.6 })
+      duckMusic(DUCK.horn, 1.4, at)
+      break
+    }
+  }
+}
+
+/** The first score beat at least `min` seconds from now (or `min` with no score). */
+function clockAfter(min: number): number {
+  const c = musicClock()
+  if (!c || !ctx) return min
+  const now = ctx.currentTime
+  const t = c.nextBeat(now + min) - now
+  return t >= min && t <= min + STING_MAX_WAIT ? t : min
+}
+
+/** Length of the whole boss call, over which its filter opens 300 Hz → 2 kHz. */
+const HORN_CALL_S = 1.6
+const hornCutoff = (s: number): number => 300 * Math.pow(2000 / 300, Math.min(1, Math.max(0, s / HORN_CALL_S)))
+
+/** One saw of the boss horn, starting `dt` into the call. */
+function hornVoice(f: number, dt: number, len: number, peak: number, at: number, detune: number): void {
+  if (!ctx) return
+  const t0 = ctx.currentTime + at + dt
+  if (!takeVoice(t0)) return
+  const o = ctx.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.value = f
+  o.detune.value = detune
+  const lp = ctx.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.5
+  lp.frequency.setValueAtTime(hornCutoff(dt), t0)
+  lp.frequency.exponentialRampToValueAtTime(hornCutoff(dt + len), t0 + len)
+  const g = ctx.createGain()
+  g.gain.setValueAtTime(0.0001, t0)
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.04)
+  g.gain.setValueAtTime(peak, t0 + Math.max(0.05, len - 0.08))
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + len + 0.1)
+  o.connect(lp)
+  lp.connect(g)
+  route(g, 'game', 0.3, 0)
+  o.start(t0)
+  o.stop(t0 + len + 0.15)
+  markBusy(t0 + len + 0.1)
+}
+
+/**
+ * The rarity ladder. One tier, one sound: longer, brighter and wetter as it
+ * climbs — open fifths and octaves over the tonic, in the score's key — and
+ * from `rare` up a sub note under it. `level` evens out the loudness steps.
+ */
+const RARITY_STING: Record<string, { peak: number; spread: number; send: number; sub: boolean; level: number }> = {
   /* Common: a two-note acknowledgement. Not a fanfare — most drops are these,
      and a mythic that sounds like them is the actual bug. */
-  common: { notes: [523.25, 659.25], peak: 0.11, spread: 0.07, send: 0.2, level: 1.26 },
-  rare: { notes: [523.25, 659.25, 783.99], peak: 0.12, spread: 0.065, send: 0.3, sub: 130.81, level: 0.63 },
-  epic: { notes: [523.25, 659.25, 783.99, 1046.5], peak: 0.13, spread: 0.06, send: 0.4, sub: 130.81, level: 0.74 },
-  legendary: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51], peak: 0.14, spread: 0.055, send: 0.5, sub: 98, level: 0.86 },
-  mythic: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], peak: 0.15, spread: 0.05, send: 0.65, sub: 65.41, level: 1.06 },
+  common: { peak: 0.11, spread: 0.07, send: 0.2, sub: false, level: 0.68 },
+  rare: { peak: 0.12, spread: 0.065, send: 0.3, sub: true, level: 0.46 },
+  epic: { peak: 0.13, spread: 0.06, send: 0.4, sub: true, level: 0.55 },
+  legendary: { peak: 0.14, spread: 0.055, send: 0.5, sub: true, level: 0.71 },
+  mythic: { peak: 0.15, spread: 0.05, send: 0.65, sub: true, level: 0.86 },
 }
 
 /**
@@ -1102,10 +1513,17 @@ export function sfxRarity(rarity: string): void {
   if (!c || vol.muted) return
   const play = () => {
     if (vol.muted) return
-    arp(cfg.notes, 0.26, cfg.peak * cfg.level, cfg.spread, { type: 'triangle', send: cfg.send })
-    if (cfg.sub) osc(cfg.sub, 0.7, 0.13 * cfg.level, { type: 'sine', at: cfg.spread })
+    const rung = (RARITIES as readonly string[]).indexOf(rarity)
+    const { delay: at, key } = stingTiming()
+    // Voiced a minor third up from the other stings (C in A), where the old
+    // C-major ladder sat, so the tier steps measure as they did.
+    const notes = stingDegrees('rarity', key, rung).map((s) => s + 3)
+    arp(notes.map(a4), 0.26, cfg.peak * cfg.level, cfg.spread, { type: 'triangle', send: cfg.send, at })
+    notes.slice(0, 3).forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s, cfg.peak * cfg.level * 2.2, { at: at + i * cfg.spread, send: cfg.send }))
+    if (cfg.sub) osc(a4(notes[0] - (rung >= 3 ? 36 : 24)), 0.7, 0.13 * cfg.level, { type: 'sine', at: at + cfg.spread })
     // The top tiers get a shimmer tail; the bottom two deliberately do not.
-    if (cfg.notes.length >= 4) noise(0.6, 0.04 * cfg.level, { hp: 4000, at: cfg.spread * 2, send: cfg.send })
+    if (notes.length >= 4) noise(0.6, 0.04 * cfg.level, { hp: 4000, at: at + cfg.spread * 2, send: cfg.send })
+    duckMusic(DUCK.sting - 1, 0.3 + notes.length * cfg.spread, at)
   }
   if (asleep(c)) void resumeCtx(c).then(play)
   else play()
@@ -1168,21 +1586,27 @@ export function resumeAudio(): void {
   if (ctx && !vol.muted && asleep(ctx)) void resumeCtx(ctx)
 }
 
-/** Play a sound event. `throttleMs` drops repeats of the same event fired too close together (combat spam). */
-export function sfx(event: SoundEvent, opts: { throttleMs?: number } = {}): void {
+/**
+ * Play a sound event. `throttleMs` drops repeats of the same event fired too
+ * close together (combat spam); `key` names the throttle's budget when one
+ * event has several (each archetype's shot keeps its own). `p` is what the
+ * engine said about it (archetype, faction, position).
+ */
+export function sfx(event: SoundEvent, o: { throttleMs?: number; key?: string } = {}, p?: SfxPayload): void {
   const c = ensureCtx()
   if (!c) return
   if (vol.muted) return
-  if (opts.throttleMs) {
+  if (o.throttleMs) {
     const now = c.currentTime * 1000
-    if (!throttleAllows(lastPlayed.get(event), now, opts.throttleMs)) return
-    lastPlayed.set(event, now)
+    const k = o.key ?? event
+    if (!throttleAllows(lastPlayed.get(k), now, o.throttleMs)) return
+    lastPlayed.set(k, now)
   }
 
   const emit = () => {
     if (vol.muted) return
     if (isUiEvent(event)) playBuffer(UI_SAMPLES[event].file, 'ui', UI_SAMPLES[event].gain)
-    else playGame(event)
+    else playGame(event, p)
   }
 
   // The gesture that unlocks audio is usually the same gesture that asks for a
@@ -1223,31 +1647,45 @@ export const audioState = (): string => (ctx ? (ctx.state as string) : 'none')
  * shot, so the rarer, louder events keep their own budget and are never dropped
  * to make room for the constant one.
  */
-export function gameSfx(event: string): void {
+export function gameSfx(event: string, p?: SfxPayload): void {
   switch (event) {
     case 'shoot':
-      sfx('shoot', { throttleMs: 90 })
+      // One budget per archetype: three different sounds do not mask each
+      // other the way three copies of one did, and a Fighter never silences
+      // the Rogue beside it.
+      sfx('shoot', { throttleMs: 120, key: 'shoot:' + (p?.arch ?? '') }, p)
       break
     case 'hit':
       // 70ms ⇒ ≤14/s. Was 55 (≤18/s), which at 3× with a full line of
       // Sentinels was a continuous rattle rather than a series of impacts.
-      sfx('hit', { throttleMs: 70 })
+      sfx('hit', { throttleMs: 70 }, p)
       break
     case 'crit':
       // Its own budget, so a crit is never swallowed by the hit stream — that
       // is the entire reason the event exists.
-      sfx('crit', { throttleMs: 110 })
+      sfx('crit', { throttleMs: 110 }, p)
       break
     case 'kill':
-      sfx('death', { throttleMs: 70 })
+      // A champion's death always plays; the routine ones share a budget.
+      sfx('death', p?.boss ? {} : { throttleMs: 70 }, p)
       break
     case 'down':
       // Rare and important: nearly unthrottled, because two Sentinels falling
       // in the same second is exactly what the player needs to hear.
-      sfx('down', { throttleMs: 180 })
+      sfx('down', { throttleMs: 180 }, p)
       break
     case 'leak':
-      sfx('leak', { throttleMs: 120 })
+      sfx('leak', { throttleMs: 120 }, p)
+      break
+    case 'boss':
+      // A champion took the field: the horn, once (two champions spawning
+      // together are one call).
+      sfx('boss', { throttleMs: 1500 }, p)
+      break
+    case 'melee':
+      // The engine reports blocking every tick it deals damage; this is what
+      // turns a continuous stream into a blow every ~third of a second.
+      sfx('melee', { throttleMs: 320 }, p)
       break
     // NOT `'coin'`. `gameSfx` maps ENGINE events (`GameEngine.onEvent`) to the
     // mixer, and the engine has no coin event: gold is credited by the store,
