@@ -1,5 +1,5 @@
 /**
- * The Fieldwatch icon atlas — one PNG, 94 icons, drawn in the Tiny Swords hand.
+ * The Fieldwatch icon atlas — one PNG, 96 icons, drawn in the Tiny Swords hand.
  *
  * Run with `npm run fw-icons` to REWRITE the committed
  * `public/assets/ui/fw-icons.png`; `npm run fw-icons:check` re-encodes into
@@ -2202,6 +2202,47 @@ icon('tips', [
   '.....PPP........',
   '.....PP.........',
   '.....P..........',
+  '................',
+  '................',
+])
+
+
+/* The audio lane's two accessibility rows (Calm audio, Mono audio) arrived on
+   `♪` and `◑`; they get cells like every other Settings row. */
+icon('calm', [
+  '................',
+  '................',
+  '........TTTTTT..',
+  '........TTTTTT..',
+  '........T....T..',
+  '........T....T..',
+  '........T....T..',
+  '........T....T..',
+  '........T....T..',
+  '.....tttT..tttT.',
+  '....ttttT.ttttT.',
+  '....tttt..tttt..',
+  '.....tt....tt...',
+  '................',
+  '................',
+  '................',
+])
+
+icon('mono', [
+  '................',
+  '................',
+  '.....PPPPP......',
+  '....PPpppPP.....',
+  '...PPp...pPP....',
+  '...Pp.....pP....',
+  '...Pp..pp.pP....',
+  '...PP.p..pPP....',
+  '....PP..pPP.....',
+  '.....PP.PP......',
+  '......PPP.......',
+  '..l...PP........',
+  '..ll.PP.........',
+  '..lllP..........',
   '................',
   '................',
 ])

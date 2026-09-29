@@ -1093,7 +1093,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'calmAudio',
       title: 'Calm audio',
       sub: onOff(s.calmAudio),
-      glyph: '♪',
+      icon: 'calm',
       body: [
         'The score without its drums, a softer master limiter, and the effects a little further forward than the music.',
         'Every warning still plays — only the pulse goes.',
@@ -1104,7 +1104,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'monoAudio',
       title: 'Mono audio',
       sub: onOff(s.monoAudio),
-      glyph: '◑',
+      icon: 'mono',
       body: ['Folds the stereo mix to one channel, so nothing is lost to a single earbud or one ear.'],
       action: { label: s.monoAudio ? 'Turn off' : 'Turn on', run: () => s.setMonoAudio(!s.monoAudio) },
     },

@@ -201,7 +201,7 @@ export const ICON_ORDER = [
   'battle', 'start', 'elite', 'crown', 'endless', 'coffer', 'seasoned', 'company',
   'map', 'orders', 'vow',
   // row 11 (cont.) — the Settings rows' last system-font glyphs (Phase 2)
-  'motion', 'contrast', 'scale', 'vision', 'tips',
+  'motion', 'contrast', 'scale', 'vision', 'tips', 'calm', 'mono',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
