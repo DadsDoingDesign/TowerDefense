@@ -10,7 +10,10 @@
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#201711" />
-    <meta name="description" content="Fieldwatch — a roguelite tower-defense autobattler." />
+    <meta
+      name="description"
+      content="Hold the meadow against the goblin horde. A roguelite tower-defense autobattler: post your heroes, then watch the fight play out."
+    />
     <meta name="color-scheme" content="dark" />
 
     <!-- Installable web app (M24) -->
@@ -25,6 +28,37 @@
          for browsers that do not take SVG favicons. -->
     <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32" />
+
+    <!-- Link previews (Phase 4). The card is public/social/og-image.png, rendered
+         by scripts/brand.ts. build/siteMeta.ts makes these URLs absolute when the
+         site URL is known at build time (FW_SITE_URL, or Vercel's production URL). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Fieldwatch" />
+    <meta property="og:title" content="Fieldwatch — hold the meadow against the goblin horde" />
+    <meta
+      property="og:description"
+      content="A roguelite tower-defense autobattler. Post your heroes along the road, then watch them hold the line."
+    />
+    <meta property="og:url" content="./" />
+    <meta property="og:image" content="social/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Fieldwatch: pixel-art heroes guard a meadow road at dusk as a goblin column with torches approaches."
+    />
+    <meta property="og:locale" content="en_GB" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fieldwatch — hold the meadow against the goblin horde" />
+    <meta
+      name="twitter:description"
+      content="A roguelite tower-defense autobattler. Post your heroes along the road, then watch them hold the line."
+    />
+    <meta name="twitter:image" content="social/og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Fieldwatch: pixel-art heroes guard a meadow road at dusk as a goblin column with torches approaches."
+    />
     <title>Fieldwatch</title>
   </head>
   <body>

@@ -102,7 +102,7 @@ export interface PrecachePlan {
  *    the UI sample names in `audio.ts`). Quoted, so a stem that merely occurs
  *    inside an identifier or a longer word (`deco` in "decode") does not count.
  *  - **Outside `assets/`** (index.html, the web manifest, its icons) is always
- *    precached.
+ *    precached — except `social/`, the link-preview card only crawlers fetch.
  *
  * The haystack is the emitted code, not the source: a path that survives only
  * in a comment is not a reference, and comments are gone by this point.
@@ -125,6 +125,9 @@ export function planPrecache(input: PrecacheInput): PrecachePlan {
     input.haystack.includes(`"${s}"`) || input.haystack.includes(`'${s}'`) || input.haystack.includes('`' + s + '`')
 
   const reachable = (f: string): boolean => {
+    // Link-preview art (the og:image card) is fetched by other sites' crawlers,
+    // never by the game; it stays in dist/ and out of every player's offline set.
+    if (f.startsWith('social/')) return false
     if (!f.startsWith('assets/')) return true
     if (f.startsWith('assets/sprites/')) return packSet.has(f)
     return input.haystack.includes(base(f)) || quoted(stem(f))
