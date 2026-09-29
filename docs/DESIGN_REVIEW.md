@@ -2012,3 +2012,25 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   and go solid gold with a pulse (static under reduced motion) over a dimmed
   field while a hero is armed. Eleven atlas cells added (map nodes, ∞, perks),
   cog/helm/thorns recoloured warm; `fw-icons:check` green at 89 keys / 8×12.
+
+- **2026-09-29 — Phase 4 identity: mark, icons, social card, menu key art.**
+  The favicon and app icons were a generic outline shield with a dot (read as
+  a VPN app) in two colours from no token; there was no social image; the
+  menu's first screen spent ~40% on an empty gradient box. Now: the mark is
+  the Watchtower on the meadow rim against a dusk sun, lamp lit. It is one
+  compound path, so it works in one colour, plus a 16×16 reduction drawn on the
+  grid in the atlas's outline convention. Wordmark is outlined Crimson Text Bold,
+  spaced by eye, its baseline on the mark's horizon. One pipeline
+  (`scripts/brand.ts`) renders the favicon, PWA and apple icons, the 1200×630
+  card and the menu diorama from the game's own CC0 sprites. Caught by
+  rendering: the first 16px reduction read as a cross (stepped deck/eaves),
+  fixed by dropping the deck and fattening the body; the tower-on-mound route
+  was a speck in a square icon, so the disc route won. In the diorama, the
+  first goblin column was a pile at the crop edge (four overlapping, barrel
+  cut at 358px), so it was spaced out and trimmed to three plus horde sparks.
+  The meadow read as daytime, so the dusk grade was deepened. The tagline sat
+  on the treeline in the card, so the horizon was dropped for that card. A
+  returning player's 120px frame on 375×667 cut the tower (a fixed 50% crop),
+  so the crop is now clamped at the pennant, which makes it frame-aware rather
+  than viewport-aware. Verified at 390×844, 375×667 (with and without
+  records), 360×568 and a 1280 desktop.
