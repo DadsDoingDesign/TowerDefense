@@ -1085,6 +1085,25 @@ function settingsOffers(s: Settings): Offer[] {
       action: { label: s.audio.muted ? 'Unmute' : 'Mute', run: () => s.toggleMute() },
     },
     {
+      id: 'calmAudio',
+      title: 'Calm audio',
+      sub: onOff(s.calmAudio),
+      glyph: '♪',
+      body: [
+        'The score without its drums, a softer master limiter, and the effects a little further forward than the music.',
+        'Every warning still plays — only the pulse goes.',
+      ],
+      action: { label: s.calmAudio ? 'Turn off' : 'Turn on', run: () => s.setCalmAudio(!s.calmAudio) },
+    },
+    {
+      id: 'monoAudio',
+      title: 'Mono audio',
+      sub: onOff(s.monoAudio),
+      glyph: '◑',
+      body: ['Folds the stereo mix to one channel, so nothing is lost to a single earbud or one ear.'],
+      action: { label: s.monoAudio ? 'Turn off' : 'Turn on', run: () => s.setMonoAudio(!s.monoAudio) },
+    },
+    {
       id: 'motion',
       title: 'Reduced motion',
       sub: onOff(s.reducedMotion),

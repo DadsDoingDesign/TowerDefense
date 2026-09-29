@@ -1,291 +1,702 @@
 /**
- * Music — an original, procedurally performed score.
+ * Music — an original, procedurally performed folk score.
  *
  * ---- why there is no .ogg here ------------------------------------------
  *
- * The settings page has promised "music and effects" since before there was any
- * music, and the brief for this phase was: ship music, but only under a licence
- * that is unambiguously safe for commercial use with no attribution trap —
- * this project is commercial and has already had one licence problem with a
- * sprite pack. The cheapest way to make that guarantee absolute is to not have
- * a third-party file at all. This score is written here, in code, and is
- * therefore the project's own work: no download, no CC-BY small print, nothing
- * to re-verify when the next asset pack changes its terms.
+ * The brief was: ship music, but only under a licence that is unambiguously
+ * safe for commercial use. The cheapest way to make that guarantee absolute is
+ * to not have a third-party file at all. This score is written in this
+ * repository (`theme.ts` holds the notes) and performed here, in code: 0 bytes
+ * of payload, nothing to precache, nothing that can 404 on a train, and a live
+ * performance rather than a loop, so it does not audibly stitch.
  *
- * It also happens to be the right engineering answer for a mobile PWA:
- *   - **0 bytes** of payload. Two streamed tracks would have been ~1.5–3 MB and
- *     would have landed in the service worker's precache (see vite.config.ts),
- *     which every player pays for on install.
- *   - It never has to be fetched, so it cannot 404, stall on a train, or need
- *     the negative-cache/backoff machinery the UI samples needed.
- *   - It is a live performance rather than a loop, so an eight-bar cycle does
- *     not audibly stitch every 30 seconds.
+ * ---- the band -----------------------------------------------------------
  *
- * ---- how it works --------------------------------------------------------
+ * Cozy medieval, not chiptune (Phase 4 re-orchestration). Every voice is
+ * synthesised; the plucked ones are pre-rendered Karplus–Strong strings
+ * (`instruments.ts`) replayed through `playbackRate`:
  *
- * A lookahead scheduler (the standard Web Audio pattern): a coarse `setInterval`
- * wakes up often enough to queue the next fraction of a second of notes onto the
- * *audio* clock, which is sample-accurate and immune to the main thread
- * stuttering. Nothing here reads game state; `src/audio/director.ts` decides
- * which cue should be playing and this module performs it.
+ *   lute    short, nasal plectrum pluck — the ostinato on the Green Line
+ *   harp    long, round gut pluck — arpeggios, counter-lines, the hub
+ *   recorder  sine + a little 2nd/3rd harmonic, breath noise with a tongued
+ *           chiff, pitch scoop, and a 5 Hz vibrato that waits 0.2 s to bloom
+ *   reed    the same with a buzzier spectrum — a shawm, for the Kiln Road and
+ *           the boss
+ *   drone   hurdy-gurdy: saws on tonic + fifth through two formant bandpasses,
+ *           with the "dog" buzz rasping in 16ths when the fight gets hot
+ *   viols   the pad: three soft saws under one lowpass
+ *   frame drum / tabor (dum, tek), shaker, tambourine; war drums for the boss;
+ *           low brass-ish saws with a filter swell for the boss
  *
- * Everything is routed through the music bus in `audio.ts`, so master volume,
- * the music volume and mute all apply for free — this file never touches
- * `destination`.
+ * ---- the transport ------------------------------------------------------
+ *
+ * A lookahead scheduler: a coarse `setInterval` queues the next fraction of a
+ * second of 16th-note steps onto the audio clock. At every barline the
+ * performer asks `theme.ts` what the bar holds (`planBar`), applies the
+ * intensity level the director last reported (with hysteresis), swaps between
+ * the battle and boss forms if a champion arrived or fell, and picks up key
+ * changes — so every adaptive change lands on a barline.
+ *
+ * The transport also IS the game's music clock: `audio.ts` asks it for the
+ * next beat and the current key, so stings land in time and in tune.
+ *
+ * Nothing here reads game state; `director.ts` decides what should play.
  */
-import { audioMuted, musicBus, onAudioReady, setAudioHidden, setMusicActive, wakeAudio } from './audio'
-import { CUE_LEVEL_DB, dbToGain } from './mix'
+import {
+  audioMuted,
+  isCalmAudio,
+  lowGateActive,
+  musicBus,
+  onAudioReady,
+  registerMusicClock,
+  setAudioHidden,
+  setMusicActive,
+  wakeAudio,
+  type MusicClock,
+} from './audio'
+import { voiceBank, type DrumKind, type PluckKind, type VoiceBank } from './instruments'
+import { CUE_LEVEL_DB, dbToGain, nextLevel, STEM_DB, STEM_PAN, STEM_SEND, STEMS_FOR_LEVEL, type Stem } from './mix'
+import {
+  chordAt,
+  CUES,
+  DEFAULT_FIELD,
+  DRUMS,
+  FIELD_VOICES,
+  formBars,
+  OSTINATO,
+  planBar,
+  REST,
+  type BarPlan,
+  type Chord,
+  type CueDef,
+  type CueId,
+  type FieldVoice,
+  type Lead,
+} from './theme'
 
-export type MusicCue = 'hub' | 'battle'
+/** What the director can ask for. The boss is not a cue: it is the battle cue in its boss form. */
+export type MusicCue = 'hub' | 'prep' | 'battle' | 'victory' | 'defeat'
 
-/* --------------------------------------------------------------- the notes */
-
-/** Semitones above A2 (110 Hz) → frequency. The whole score is written in A minor. */
+/** Semitones above A2 → Hz. */
 const hz = (semi: number): number => 110 * Math.pow(2, semi / 12)
+/** Fold a key into −5…+6 so every cue stays in a singable register. */
+const foldKey = (k: number): number => ((((k + 5) % 12) + 12) % 12) - 5
 
-/** A chord: its root (for the bass) and the tones the upper voices may use. */
-interface Chord {
-  root: number
-  tones: number[]
+/* --------------------------------------------------------------- state */
+
+/** What the director reports. Read only at barlines. */
+export interface MusicState {
+  /** Target intensity level, 0–3. */
+  level: number
+  /** A champion is on the field. */
+  boss: boolean
+  /** Battlefield id — picks the key and the lead/ostinato voices. */
+  field: string
+  /** Extra semitones (endless: +1 every ten waves). */
+  keyLift: number
 }
-const C = (root: number, tones: number[]): Chord => ({ root, tones })
+const state: MusicState = { level: 2, boss: false, field: 'greenline', keyLift: 0 }
 
-/* A minor / C major, the mode this game already looks like: modal, plain, no
- * leading-tone drama except at the turn-around (the E major in bar 8). */
-const Am = C(0, [0, 3, 7, 12])
-const F = C(-4, [-4, 0, 3, 8])
-const G = C(-2, [-2, 2, 5, 10])
-const Cmaj = C(3, [3, 7, 10, 15])
-const Dm = C(5, [5, 8, 12, 17])
-const E = C(7, [7, 11, 14, 19])
-
-interface CueDef {
-  bpm: number
-  /** One chord per bar; the progression loops. */
-  bars: Chord[]
-  /** Perform one 16th-note step. `t` is the audio-clock time it lands on. */
-  step: (i: number, bar: number, chord: Chord, t: number, stepDur: number) => void
+/** Update what the score should reflect. Cheap; safe to call every frame. */
+export function setMusicState(p: Partial<MusicState>): void {
+  if (p.level !== undefined && Number.isFinite(p.level)) state.level = Math.max(0, Math.min(3, Math.round(p.level)))
+  if (p.boss !== undefined) state.boss = !!p.boss
+  if (p.field !== undefined) state.field = p.field
+  if (p.keyLift !== undefined && Number.isFinite(p.keyLift)) state.keyLift = Math.max(0, Math.min(11, Math.round(p.keyLift)))
 }
 
-/* ----------------------------------------------------------------- voices */
+/* ------------------------------------------------------------ the track */
 
-let bus: { ctx: AudioContext; out: GainNode; send: GainNode } | null = null
-/** Everything the score plays goes through here, so a cue can be faded as one. */
-let track: GainNode | null = null
+interface StemNodes {
+  in: GainNode
+}
+interface Track {
+  ctx: AudioContext
+  gain: GainNode
+  sendGain: GainNode
+  stems: Partial<Record<Stem, StemNodes>>
+  bank: VoiceBank
+  drone: Drone | null
+}
+
+let bus: { ctx: AudioContext; out: GainNode; send: GainNode; sfx: GainNode } | null = null
+let track: Track | null = null
 let noiseBuf: AudioBuffer | null = null
+/** Notes scheduled this session. Exported (via status) for verification. */
+let scheduled = 0
 
-function getNoise(c: AudioContext): AudioBuffer {
+function getNoise(c: BaseAudioContext): AudioBuffer {
   if (noiseBuf && noiseBuf.sampleRate === c.sampleRate) return noiseBuf
   const n = Math.floor(c.sampleRate * 2)
   const b = c.createBuffer(1, n, c.sampleRate)
   const d = b.getChannelData(0)
-  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1
+  let s = 12345
+  for (let i = 0; i < n; i++) {
+    s = (s * 16807) % 2147483647
+    d[i] = (s / 2147483647) * 2 - 1
+  }
   noiseBuf = b
   return b
 }
 
-/** Notes actually scheduled this session. Exported for verification. */
-let scheduled = 0
-
-interface NoteOpts {
-  type?: OscillatorType
-  attack?: number
-  /** Portion of this voice sent to the music reverb. */
-  send?: number
-  /** Glide to this frequency across the note. */
-  to?: number
-  /** Detune in cents, for the two-oscillator pad. */
-  detune?: number
-  /** Lowpass the voice; the pad uses it to stay behind the melody. */
-  lp?: number
+const waves = new WeakMap<BaseAudioContext, Record<'recorder' | 'reed', PeriodicWave>>()
+function periodic(c: BaseAudioContext, kind: 'recorder' | 'reed'): PeriodicWave {
+  let w = waves.get(c)
+  if (!w) {
+    const make = (amps: number[]) => {
+      const real = new Float32Array(amps.length + 1)
+      const imag = new Float32Array(amps.length + 1)
+      amps.forEach((a, i) => (imag[i + 1] = a))
+      return c.createPeriodicWave(real, imag)
+    }
+    // Recorder: nearly a sine — the 2nd harmonic is its "chiff" colour.
+    // Reed (shawm): a double reed's dense odd-and-even ladder.
+    w = { recorder: make([1, 0.3, 0.1, 0.04, 0.015]), reed: make([1, 0.75, 0.6, 0.45, 0.34, 0.25, 0.17, 0.11, 0.07]) }
+    waves.set(c, w)
+  }
+  return w[kind]
 }
 
-function note(freq: number, t: number, dur: number, peak: number, o: NoteOpts = {}): void {
-  if (!bus || !track) return
-  const { ctx } = bus
-  const n = ctx.createOscillator()
-  n.type = o.type ?? 'triangle'
-  n.frequency.setValueAtTime(Math.max(1, freq), t)
-  if (o.to) n.frequency.exponentialRampToValueAtTime(Math.max(1, o.to), t + dur)
-  if (o.detune) n.detune.setValueAtTime(o.detune, t)
+/** A stem's input node on the live track, created on first use. */
+function stem(s: Stem): AudioNode | null {
+  if (!track) return null
+  const have = track.stems[s]
+  if (have) return have.in
+  const { ctx } = track
   const g = ctx.createGain()
-  const a = o.attack ?? 0.008
-  g.gain.setValueAtTime(0.0001, t)
-  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  let head: AudioNode = n
-  if (o.lp) {
-    const f = ctx.createBiquadFilter()
-    f.type = 'lowpass'
-    f.frequency.value = o.lp
-    n.connect(f)
-    head = f
+  g.gain.value = dbToGain(STEM_DB[s])
+  let head: AudioNode = g
+  const pan = STEM_PAN[s]
+  if (pan && typeof ctx.createStereoPanner === 'function') {
+    const p = ctx.createStereoPanner()
+    p.pan.value = pan
+    g.connect(p)
+    head = p
   }
-  head.connect(g)
-  g.connect(track)
-  if (o.send) {
-    const s = ctx.createGain()
-    s.gain.value = o.send
-    g.connect(s)
-    s.connect(bus.send)
-  }
-  n.start(t)
-  n.stop(t + dur + 0.05)
-  scheduled++
+  head.connect(track.gain)
+  const snd = ctx.createGain()
+  snd.gain.value = STEM_SEND[s]
+  head.connect(snd)
+  snd.connect(track.sendGain)
+  track.stems[s] = { in: g }
+  return g
 }
 
-function perc(t: number, dur: number, peak: number, hp: number, lp: number, send = 0): void {
-  if (!bus || !track) return
-  const { ctx } = bus
+/* ------------------------------------------------------------ voices */
+
+function pluck(kind: PluckKind, semi: number, t: number, vel: number, to: AudioNode | null, cut?: number): void {
+  if (!track || !to) return
+  const v = track.bank.pluck(kind, semi)
+  if (!v) return
+  const { ctx } = track
   const src = ctx.createBufferSource()
-  src.buffer = getNoise(ctx)
-  const f1 = ctx.createBiquadFilter()
-  f1.type = 'highpass'
-  f1.frequency.value = hp
-  const f2 = ctx.createBiquadFilter()
-  f2.type = 'lowpass'
-  f2.frequency.value = lp
+  src.buffer = v.buf
+  src.playbackRate.value = v.rate
   const g = ctx.createGain()
-  g.gain.setValueAtTime(peak, t)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  src.connect(f1)
-  f1.connect(f2)
-  f2.connect(g)
-  g.connect(track)
-  if (send) {
-    const s = ctx.createGain()
-    s.gain.value = send
-    g.connect(s)
-    s.connect(bus.send)
+  g.gain.setValueAtTime(vel, t)
+  if (cut) {
+    // A palm-muted or damped note: choke it.
+    g.gain.setValueAtTime(vel, t + cut)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + cut + 0.05)
   }
-  src.start(t, Math.random() * 1.5, dur + 0.05)
-  src.stop(t + dur + 0.05)
+  src.connect(g)
+  g.connect(to)
+  src.start(t)
+  src.stop(t + Math.min(v.buf.duration / v.rate, cut ? cut + 0.08 : 99))
   scheduled++
 }
 
-/** Two detuned saws under a lowpass — the bed both cues sit on. */
-function pad(chord: Chord, t: number, dur: number, peak: number, lp: number): void {
-  for (const s of chord.tones.slice(0, 3)) {
-    note(hz(s + 12), t, dur, peak, { type: 'sawtooth', attack: dur * 0.28, send: 0.5, lp, detune: -6 })
-    note(hz(s + 12), t, dur, peak * 0.8, { type: 'sawtooth', attack: dur * 0.34, send: 0.5, lp, detune: 7 })
+function drum(kind: DrumKind, t: number, vel: number, to: AudioNode | null, rate = 1): void {
+  if (!track || !to) return
+  const buf = track.bank.drum(kind)
+  if (!buf) return
+  const { ctx } = track
+  const src = ctx.createBufferSource()
+  src.buffer = buf
+  src.playbackRate.value = rate
+  const g = ctx.createGain()
+  g.gain.value = vel
+  src.connect(g)
+  g.connect(to)
+  src.start(t)
+  scheduled++
+}
+
+/**
+ * The recorder (and, with `reed`, the shawm): a wind voice, tongued.
+ */
+function wind(semi: number, t: number, dur: number, vel: number, reed: boolean, to: AudioNode | null): void {
+  if (!track || !to) return
+  const { ctx } = track
+  const f = hz(semi)
+  const o = ctx.createOscillator()
+  o.setPeriodicWave(periodic(ctx, reed ? 'reed' : 'recorder'))
+  o.frequency.setValueAtTime(f, t)
+  // The scoop: a wind note starts a little flat and blows up to pitch.
+  o.detune.setValueAtTime(-28, t)
+  o.detune.linearRampToValueAtTime(0, t + 0.045)
+  const env = ctx.createGain()
+  const a = reed ? 0.02 : 0.03
+  const end = t + Math.max(0.08, dur)
+  env.gain.setValueAtTime(0.0001, t)
+  env.gain.exponentialRampToValueAtTime(vel, t + a)
+  env.gain.setValueAtTime(vel, Math.max(t + a, end - 0.07))
+  env.gain.exponentialRampToValueAtTime(0.0001, end)
+  let head: AudioNode = o
+  if (reed) {
+    // The shawm's bell: a nasal formant, and the very top rolled off.
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'peaking'
+    bp.frequency.value = 1250
+    bp.Q.value = 1.4
+    bp.gain.value = 6
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 3800
+    o.connect(bp)
+    bp.connect(lp)
+    head = lp
+  }
+  head.connect(env)
+  // Vibrato: delayed, so short notes are straight and long ones sing.
+  if (dur > 0.3) {
+    const lfo = ctx.createOscillator()
+    lfo.frequency.value = 5 + (semi % 3) * 0.15
+    const depth = ctx.createGain()
+    depth.gain.setValueAtTime(0, t)
+    depth.gain.setValueAtTime(0, t + 0.2)
+    depth.gain.linearRampToValueAtTime(f * 0.0065, t + Math.min(dur, 0.55))
+    lfo.connect(depth)
+    depth.connect(o.frequency)
+    lfo.start(t)
+    lfo.stop(end + 0.02)
+  }
+  // Breath: band-passed noise, a burst on the tongue then a thin whisper.
+  const n = ctx.createBufferSource()
+  n.buffer = getNoise(ctx)
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = Math.min(9000, f * 2.2)
+  bp.Q.value = 1.2
+  const ng = ctx.createGain()
+  const breath = reed ? 0.1 : 0.22
+  ng.gain.setValueAtTime(0.0001, t)
+  ng.gain.exponentialRampToValueAtTime(vel * breath * 2.2, t + 0.012)
+  ng.gain.exponentialRampToValueAtTime(vel * breath * 0.35, t + 0.09)
+  ng.gain.setValueAtTime(vel * breath * 0.35, Math.max(t + 0.09, end - 0.07))
+  ng.gain.exponentialRampToValueAtTime(0.0001, end)
+  n.connect(bp)
+  bp.connect(ng)
+  ng.connect(to)
+  env.connect(to)
+  o.start(t)
+  o.stop(end + 0.02)
+  n.start(t, (semi * 0.037) % 1.5, dur + 0.1)
+  n.stop(end + 0.02)
+  scheduled++
+}
+
+/**
+ * The hurdy-gurdy: tonic, fifth and octave, bowed by a wheel that never stops
+ * — so it is ONE voice for the life of a track, not a note per bar (notes
+ * per bar left a dip at every restart). Two formant bandpasses make it a
+ * wooden box rather than a synth; `buzz` opens the trompette's rasp in 16ths.
+ * Key, level and buzz move at barlines, gliding.
+ */
+interface Drone {
+  oscs: OscillatorNode[]
+  env: GainNode
+  buzzDepth: GainNode
+  buzzBase: GainNode
+  lfo: OscillatorNode
+  tonic: number
+}
+const DRONE_PARTS: [interval: number, detune: number, level: number][] = [
+  [0, -2, 1],
+  [7, 2, 0.8],
+  [12, 0, 0.3],
+]
+
+function droneStart(tonic: number, t: number, bpm: number, to: AudioNode): Drone | null {
+  if (!track) return null
+  const { ctx } = track
+  const sum = ctx.createGain()
+  sum.gain.value = 0.4
+  const oscs = DRONE_PARTS.map(([iv, det, lvl]) => {
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = hz(tonic + iv)
+    o.detune.value = det
+    const g = ctx.createGain()
+    g.gain.value = lvl
+    o.connect(g)
+    g.connect(sum)
+    return o
+  })
+  const f1 = ctx.createBiquadFilter()
+  f1.type = 'bandpass'
+  f1.frequency.value = 620
+  f1.Q.value = 2.2
+  const f2 = ctx.createBiquadFilter()
+  f2.type = 'bandpass'
+  f2.frequency.value = 1350
+  f2.Q.value = 3
+  const lp = ctx.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = 900
+  const f2g = ctx.createGain()
+  f2g.gain.value = 0.6
+  const env = ctx.createGain()
+  env.gain.setValueAtTime(0, t)
+  sum.connect(f1)
+  sum.connect(f2)
+  sum.connect(lp)
+  f1.connect(env)
+  f2.connect(f2g)
+  f2g.connect(env)
+  lp.connect(env)
+  // The buzz: the envelope's output through a gain the 16th-note square wave wobbles.
+  const buzzBase = ctx.createGain()
+  buzzBase.gain.value = 1
+  const lfo = ctx.createOscillator()
+  lfo.type = 'square'
+  lfo.frequency.value = (bpm / 60) * 4
+  const buzzDepth = ctx.createGain()
+  buzzDepth.gain.value = 0
+  lfo.connect(buzzDepth)
+  buzzDepth.connect(buzzBase.gain)
+  env.connect(buzzBase)
+  buzzBase.connect(to)
+  for (const o of oscs) o.start(t)
+  lfo.start(t)
+  scheduled++
+  return { oscs, env, buzzDepth, buzzBase, lfo, tonic }
+}
+
+/** Move the drone at a barline: glide to a new tonic, level and buzz. */
+function droneSet(d: Drone, tonic: number, vel: number, buzz: number, t: number): void {
+  if (tonic !== d.tonic) {
+    d.oscs.forEach((o, i) => o.frequency.setTargetAtTime(hz(tonic + DRONE_PARTS[i][0]), t, 0.08))
+    d.tonic = tonic
+  }
+  d.env.gain.setTargetAtTime(vel, t, 0.25)
+  d.buzzDepth.gain.setTargetAtTime(buzz * 0.45, t, 0.05)
+  d.buzzBase.gain.setTargetAtTime(1 - buzz * 0.45, t, 0.05)
+}
+
+function droneStop(d: Drone, t: number): void {
+  d.env.gain.setTargetAtTime(0, t, 0.3)
+  for (const o of d.oscs) o.stop(t + 2)
+  d.lfo.stop(t + 2)
+}
+
+/** Viols: three soft saws on the chord, under one lowpass. */
+function viols(tones: number[], t: number, dur: number, vel: number, lp: number, to: AudioNode | null): void {
+  if (!track || !to) return
+  const { ctx } = track
+  const f = ctx.createBiquadFilter()
+  f.type = 'lowpass'
+  f.frequency.value = lp
+  const env = ctx.createGain()
+  env.gain.setValueAtTime(0.0001, t)
+  env.gain.exponentialRampToValueAtTime(vel, t + dur * 0.3)
+  env.gain.setValueAtTime(vel, t + dur * 0.7)
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.4)
+  f.connect(env)
+  env.connect(to)
+  tones.slice(0, 3).forEach((s, i) => {
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = hz(s)
+    o.detune.value = [-7, 5, 1][i]
+    o.connect(f)
+    o.start(t)
+    o.stop(t + dur + 0.45)
+  })
+  scheduled++
+}
+
+/** The boss's low brass: a power chord of saws with a filter swell. */
+function brass(root: number, t: number, dur: number, vel: number, to: AudioNode | null): void {
+  if (!track || !to) return
+  const { ctx } = track
+  const f = ctx.createBiquadFilter()
+  f.type = 'lowpass'
+  f.Q.value = 2
+  f.frequency.setValueAtTime(300, t)
+  f.frequency.exponentialRampToValueAtTime(1700, t + 0.1)
+  f.frequency.exponentialRampToValueAtTime(800, t + 0.45)
+  const env = ctx.createGain()
+  env.gain.setValueAtTime(0.0001, t)
+  env.gain.exponentialRampToValueAtTime(vel, t + 0.05)
+  env.gain.setValueAtTime(vel * 0.75, t + Math.max(0.1, dur - 0.1))
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15)
+  f.connect(env)
+  env.connect(to)
+  for (const [s, d] of [
+    [root, -6],
+    [root, 6],
+    [root + 7, 0],
+    [root + 12, 3],
+  ] as const) {
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = hz(s)
+    o.detune.value = d
+    o.connect(f)
+    o.start(t)
+    o.stop(t + dur + 0.2)
+  }
+  scheduled++
+}
+
+/* ------------------------------------------------------------ performing */
+
+/** The chord's ostinato voicing: root, fifth, octave, tenth, twelfth. */
+const voicing = (c: Chord): number[] => {
+  const [r, third, fifth] = c.tones
+  return [r, fifth, r + 12, third + 12, fifth + 12]
+}
+
+/** The melody note sounding at a 16th step (for the counter-line), or null. */
+function melodyAt(bar: BarPlan['melody'], step: number): number | null {
+  if (!bar) return null
+  let pos = 0
+  for (const [s, e] of bar) {
+    if (step >= pos && step < pos + e * 2) return s === REST ? null : s
+    pos += e * 2
+  }
+  return null
+}
+
+/** A harmony note under the tune: the chord tone a third-to-sixth below it. */
+export function counterNote(c: Chord, mel: number | null): number {
+  const pcs = c.tones.map((x) => ((x % 12) + 12) % 12)
+  if (mel === null) return c.tones[1] + 12
+  for (let d = 3; d <= 9; d++) {
+    const cand = mel - d
+    if (pcs.includes(((cand % 12) + 12) % 12)) return cand
+  }
+  return mel - 12
+}
+
+interface Perf {
+  cue: CueDef
+  field: FieldVoice
+  /** Tonic, semitones above A2. */
+  key: number
+  plan: BarPlan
+  stems: ReadonlySet<Stem>
+  level: number
+  calm: boolean
+}
+
+const leadVoice = (lead: Lead, field: FieldVoice): Lead => (lead === 'recorder' ? field.lead : lead)
+
+function performStep(p: Perf, step: number, t: number, sd: number): void {
+  const { plan, key, cue } = p
+  const chord = chordAt(plan.chord, step)
+  const on = (s: Stem) => p.stems.has(s)
+  const rnd = () => 0.9 + ((step * 7 + plan.bar * 13) % 10) / 50 // deterministic ±10 % velocity
+
+  // --- drums ---------------------------------------------------------------
+  if (on('drums') && plan.drums) {
+    const pat = DRUMS[plan.drums]
+    const c = pat.hits[step]
+    const to = stem('drums')
+    if (c === 'D') drum('dum', t, 0.9 * rnd(), to)
+    else if (c === 't') drum('tek', t, (step % 4 === 0 ? 0.62 : 0.4) * rnd(), to)
+    else if (c === 'L' || c === 'l') drum('tomLo', t, (c === 'L' ? 0.85 : 0.36) * rnd(), to)
+    else if (c === 'H' || c === 'h') drum('tomHi', t, (c === 'H' ? 0.75 : 0.32) * rnd(), to)
+    const sh = pat.shaker[step]
+    if (sh === 'x') drum('shaker', t, 0.34 * rnd(), to)
+    else if (sh === 'o') drum('shaker', t, 0.15 * rnd(), to, 1.08)
+    if (p.level >= 3 && (step === 4 || step === 12) && cue.id === 'battle') drum('jingle', t, 0.2, to)
+    // The boss keeps the frame drum under its war drums, on the beat.
+    if (cue.id === 'boss' && (step === 0 || step === 8)) drum('dum', t, 0.85, to)
+  }
+
+  // --- bass / drone ----------------------------------------------------------
+  if (!on('bass') && step === 0 && track?.drone) droneSet(track.drone, key, 0, 0, t)
+  if (on('bass')) {
+    const to = stem('bass')
+    if (step === 0 && track && to) {
+      const buzz = p.calm ? 0 : cue.id === 'boss' ? 0.8 : cue.id === 'battle' && p.level >= 2 ? 0.45 : 0
+      const vel = cue.id === 'hub' ? 0.12 : cue.id === 'defeat' ? 0.09 : 0.11
+      if (!track.drone) track.drone = droneStart(key, t, cue.bpm, to)
+      if (track.drone) droneSet(track.drone, key, vel, buzz, t)
+    }
+    if (cue.id === 'boss') {
+      if (step === 0 || (step === 8 && Array.isArray(plan.chord))) brass(key + chord.root, t, sd * 7.5, 0.12, to)
+    } else if (cue.id !== 'hub' && cue.id !== 'defeat') {
+      // A low harp on the roots: 1 and 3, the fifth pushing on the "and" of 2
+      // once the fight is up.
+      const root = key + chord.root
+      const hits = p.level >= 2 && cue.id === 'battle' ? [0, 6, 8, 14] : [0, 8]
+      if (hits.includes(step)) pluck('harp', step === 6 ? root + 7 : step === 14 ? root + 12 : root, t, 0.5, to, sd * 3.5)
+    }
+  }
+
+  // --- the ostinato --------------------------------------------------------
+  if (on('pluck') && plan.ostinato) {
+    const pat = OSTINATO[plan.ostinato]
+    const v = voicing(chord)
+    const kind: PluckKind = cue.id === 'hub' || cue.id === 'defeat' ? 'harp' : p.field.ostinato
+    const to = stem('pluck')
+    const vel = cue.id === 'hub' ? 0.5 : plan.ostinato === 'run' ? 0.26 : plan.ostinato === 'muted' ? 0.4 : 0.34
+    pat.forEach(([s, idx], i) => {
+      if (s !== step) return
+      const semi = key + 12 + v[Math.min(v.length - 1, idx)]
+      if (plan.ostinato === 'strum') pluck('harp', semi, t + i * 0.035, 0.3, to)
+      else if (plan.ostinato === 'muted') pluck('lute', semi - 12, t, vel, to, sd * 1.2)
+      else pluck(kind, semi, t, vel * (s % 4 === 0 ? 1 : 0.8), to)
+    })
+  }
+
+  // --- the tune ------------------------------------------------------------
+  if (on('melody') && plan.melody && plan.lead) {
+    const to = stem('melody')
+    const voice = leadVoice(plan.lead, p.field)
+    let pos = 0
+    for (const [s, e] of plan.melody) {
+      if (pos === step && s !== REST) {
+        const semi = key + 24 + s + 12 * plan.leadOct
+        const dur = e * 2 * sd
+        // Rubato in the hub: the tune breathes a few ms either side of the grid.
+        const lean = cue.id === 'hub' ? (((s * 31 + plan.bar * 17) % 7) - 3) * 0.006 : 0
+        if (voice === 'recorder' || voice === 'reed') wind(semi, t + Math.max(0, lean), dur * 0.94, voice === 'reed' ? 0.16 : 0.2, voice === 'reed', to)
+        else pluck(voice, semi, t + Math.max(0, lean), voice === 'harp' ? 0.5 : 0.46, to)
+      }
+      pos += e * 2
+    }
+  }
+  if (on('melody') && plan.counter && (step === 0 || step === 8) && (cue.id !== 'battle' || p.level >= 2)) {
+    const mel = melodyAt(plan.melody, step)
+    const semi = key + 24 + counterNote(chord, mel) + 12 * Math.min(0, plan.leadOct)
+    pluck(p.field.ostinato === 'harp' ? 'lute' : 'harp', semi, t, 0.26, stem('melody'))
+  }
+
+  // --- the pad ---------------------------------------------------------------
+  if (on('pad') && (step === 0 || (step === 8 && Array.isArray(plan.chord)))) {
+    const len = Array.isArray(plan.chord) ? sd * 8 : sd * 16
+    const vel = cue.id === 'hub' ? 0.05 : 0.04
+    viols(
+      chord.tones.map((x) => key + 12 + x),
+      t,
+      len,
+      vel,
+      cue.id === 'boss' ? 1300 : 950,
+      stem('pad'),
+    )
+  }
+
+  // --- the Gate's heartbeat -------------------------------------------------
+  // Locked to the score (every two beats: 66 BPM at the fight's 132), and on
+  // the Effects bus, so the music's low-gate lowpass never muffles it.
+  if (lowGateActive() && (cue.id === 'battle' || cue.id === 'boss') && step % 8 === 0 && bus) {
+    const buf = track?.bank.drum('heart')
+    if (buf && track) {
+      const src = track.ctx.createBufferSource()
+      src.buffer = buf
+      const g = track.ctx.createGain()
+      g.gain.value = 0.14
+      src.connect(g)
+      g.connect(bus.sfx)
+      src.start(t)
+      scheduled++
+    }
   }
 }
 
-/* ------------------------------------------------------------------- cues */
+/* ------------------------------------------------------------ transport */
 
-/**
- * The battle cue. 132 BPM, driving but deliberately not busy in the top
- * octave — combat SFX live up there and the music must not fight them for the
- * band the player is listening to for information (Lisa Brown's rule: juice
- * that obscures the next threat is a defect).
- */
-const BATTLE: CueDef = {
-  bpm: 132,
-  bars: [Am, Am, F, G, Am, Cmaj, Dm, E],
-  step(i, bar, ch, t, sd) {
-    // --- drums -------------------------------------------------------------
-    if (i === 0 || i === 8 || i === 11) {
-      note(128, t, 0.13, 0.34, { type: 'sine', to: 44, attack: 0.002 })
-      // The beater. A 128→44 Hz sine is inaudible on a phone speaker; a
-      // 5 ms click at 3 kHz is what tells a phone there is a kick at all.
-      perc(t, 0.005, 0.14, 2400, 4200)
-    }
-    if (i === 4 || i === 12) {
-      perc(t, 0.15, 0.16, 1400, 9000, 0.25)
-      note(196, t, 0.07, 0.09, { type: 'triangle', to: 150, attack: 0.002 })
-    }
-    if (i % 2 === 0) perc(t, i === 14 ? 0.14 : 0.03, i === 14 ? 0.06 : 0.045, 7000, 16000, 0.15)
-
-    // --- bass: straight 8ths, octave lift on the back half of the bar ------
-    if (i % 2 === 0) {
-      const oct = i === 6 || i === 14 ? 12 : 0
-      note(hz(ch.root - 12 + oct), t, sd * 1.7, 0.2, { type: 'sawtooth', lp: 700, attack: 0.006 })
-      // Octave-up triangle: the 55 Hz root is below any phone speaker, and
-      // this is what lets the line (and its harmony) survive one.
-      note(hz(ch.root + oct), t, sd * 1.5, 0.06, { type: 'triangle', attack: 0.006 })
-    }
-
-    // --- arpeggio: 16ths through the chord, two octaves, with a rest that
-    //     moves each bar so eight bars never repeat exactly ------------------
-    const rest = (bar * 3 + 5) % 16
-    if (i !== rest && i !== (rest + 1) % 16) {
-      const seq = [...ch.tones, ...ch.tones.map((x) => x + 12)]
-      const n = seq[(i + bar) % seq.length]
-      note(hz(n + 12), t, sd * 2.2, 0.062, { type: 'square', send: 0.35, lp: 4200 })
-    }
-
-    // --- pad: one hit per bar, long enough to overlap the next -------------
-    if (i === 0) pad(ch, t, sd * 18, 0.035, 1500)
-  },
-}
-
-/**
- * The hub / menu cue. 76 BPM, no drums, wide reverb: the Watchtower is where
- * you read numbers and decide things, so the music holds still.
- */
-const HUB: CueDef = {
-  bpm: 76,
-  bars: [Am, Am, Cmaj, Cmaj, F, F, G, E],
-  step(i, bar, ch, t, sd) {
-    if (i === 0) {
-      pad(ch, t, sd * 19, 0.042, 1100)
-      note(hz(ch.root - 12), t, sd * 14, 0.15, { type: 'sine', attack: 0.06 })
-    }
-    // A sparse plucked figure. The pattern rotates with the bar so the phrase
-    // breathes instead of ticking.
-    const pattern = [0, 3, 6, 10, 13]
-    if (pattern.includes((i + bar * 2) % 16)) {
-      const seq = [...ch.tones, ...ch.tones.map((x) => x + 12)]
-      const n = seq[(i + bar) % seq.length]
-      note(hz(n + 12), t, sd * 6, 0.075, { type: 'triangle', send: 0.7, attack: 0.01 })
-    }
-    // A high, quiet fifth on the last beat of every other bar — the one thing
-    // in the cue that draws the ear, and it happens rarely.
-    if (i === 14 && bar % 2 === 1) {
-      note(hz(ch.tones[1] + 24), t, sd * 8, 0.03, { type: 'sine', send: 0.8, attack: 0.15 })
-    }
-  },
-}
-
-const CUES: Record<MusicCue, CueDef> = { hub: HUB, battle: BATTLE }
-
-/**
- * Which cues pick up where they left off. The hub restarted at bar 1 every
- * time it came back — after every wave, every menu — so the player heard the
- * same four bars of it all session. It now resumes at the start of the bar it
- * was in. The battle cue deliberately does not: its first bar landing as a
- * change is the point of it.
- */
-const RESUMES: Record<MusicCue, boolean> = { hub: true, battle: false }
-/** Each cue's step index when it last stopped. */
-const position: Record<MusicCue, number> = { hub: 0, battle: 0 }
-
-/** Where a cue should start: bar-aligned resume, or bar 1. Exported for tests. */
-export function resumeStep(cue: MusicCue, stoppedAt: number): number {
-  if (!RESUMES[cue]) return 0
-  const bars = CUES[cue].bars.length
-  // Bar-aligned so the pad (struck on step 0 of a bar) comes in with the
-  // fade, and wrapped to one lap of the progression so it never grows.
-  return (Math.floor(Math.max(0, stoppedAt) / 16) % bars) * 16
-}
-
-/* -------------------------------------------------------------- transport */
-
-/** How far ahead notes are queued, and how often the scheduler wakes. */
 const HORIZON = 0.35
 const TICK_MS = 60
 
 let wanted: MusicCue | null = null
 let playing: MusicCue | null = null
+/** The form actually being performed ('boss' while the battle cue is in its boss form). */
+let form: CueId = 'hub'
 let timer: ReturnType<typeof setInterval> | null = null
-let stepIndex = 0
+let barN = 0
+let step = 0
 let nextTime = 0
-/** Set while the tab is hidden: the transport stops rather than playing to nobody. */
+let plan: BarPlan | null = null
+let perf: Perf | null = null
+let level = 2
+let barsBelow = 0
 let suspended = false
 let readyBound = false
+/** A one-shot outro that has finished while still wanted — the hub follows it. */
+let outroDone: MusicCue | null = null
+/** Recent beat times (audio clock), for the music clock. */
+const beats: number[] = []
+let beatDur = 0.5
+let prerenderMs = 0
 
-function stepDuration(cue: MusicCue): number {
-  return 60 / CUES[cue].bpm / 4 // one 16th
+/** Each cue's bar when it last stopped (the hub resumes on its phrase). */
+const position: Record<MusicCue, number> = { hub: 0, prep: 0, battle: 0, victory: 0, defeat: 0 }
+
+/**
+ * Where a cue should start, in bars. The hub and the prep cue pick up at the
+ * start of the four-bar phrase they were in (the player hears them after
+ * every wave; bar 1 every time was the same four bars all session). The fight
+ * and the outros start at the top: their first bar landing is the point.
+ */
+export function resumeBar(cue: MusicCue, stoppedAt: number): number {
+  if (cue !== 'hub' && cue !== 'prep') return 0
+  const total = formBars(CUES[cue])
+  return (Math.floor(Math.max(0, stoppedAt) / 4) * 4) % total
+}
+
+const fieldVoice = (): FieldVoice => FIELD_VOICES[state.field] ?? DEFAULT_FIELD
+
+function keyFor(cue: CueDef): number {
+  if (cue.id === 'hub') return foldKey(cue.keyShift)
+  return foldKey(fieldVoice().key + state.keyLift + cue.keyShift)
+}
+
+function stemsFor(cue: CueDef, lvl: number, calm: boolean): Set<Stem> {
+  const base: readonly Stem[] =
+    cue.id === 'battle' || cue.id === 'boss' ? STEMS_FOR_LEVEL[lvl] : ['drums', 'bass', 'pluck', 'melody', 'pad']
+  return new Set(base.filter((s) => !(calm && s === 'drums')))
+}
+
+/** Begin a bar: the one place any adaptive change is allowed to happen. */
+function beginBar(): void {
+  if (!playing) return
+  // Battle ⇄ boss, on the barline.
+  if (playing === 'battle') {
+    if (state.boss && form !== 'boss') {
+      form = 'boss'
+      barN = 0
+    } else if (!state.boss && form === 'boss') {
+      form = 'battle'
+      barN = 2 // straight back into A, past the intro
+    }
+  }
+  const cue = CUES[form]
+  if (cue.oneShot && barN >= formBars(cue)) {
+    finishOutro()
+    return
+  }
+  const nl = nextLevel(level, state.level, barsBelow)
+  level = nl.level
+  barsBelow = nl.barsBelow
+  const calm = isCalmAudio()
+  plan = planBar(cue, barN, level)
+  perf = { cue, field: fieldVoice(), key: keyFor(cue), plan, stems: stemsFor(cue, level, calm), level, calm }
+  beatDur = 60 / cue.bpm
+}
+
+function finishOutro(): void {
+  const done = playing
+  outroDone = done
+  plan = null
+  perf = null
+  stopPlaying(3)
+  if (done) position[done] = 0
+  apply()
 }
 
 function stopTimer(): void {
@@ -295,49 +706,67 @@ function stopTimer(): void {
   }
 }
 
-/**
- * Fade the current track out, let its tail ring, and then let it go.
- *
- * The disconnect is the point of the timer: a cue switch, a mute and a tab
- * coming back all pass through here, and a fresh `GainNode` is created for each
- * new track — without this, every one of them stayed wired to the music bus for
- * the life of the page with a gain of zero, which over a long session is a slow
- * leak of live audio nodes for nothing.
- */
+/** Fade the current track out, let its tail ring, then disconnect it. */
 function fadeOut(seconds: number): void {
   if (!bus || !track) return
   const dying = track
   const now = bus.ctx.currentTime
-  dying.gain.cancelScheduledValues(now)
-  dying.gain.setValueAtTime(dying.gain.value, now)
-  dying.gain.linearRampToValueAtTime(0.0001, now + seconds)
+  if (dying.drone) droneStop(dying.drone, now + seconds * 0.5)
+  for (const g of [dying.gain, dying.sendGain]) {
+    g.gain.cancelScheduledValues(now)
+    g.gain.setValueAtTime(g.gain.value, now)
+    g.gain.linearRampToValueAtTime(0.0001, now + seconds)
+  }
   track = null
-  // A little past the fade, so the longest already-scheduled note has finished.
-  setTimeout(() => dying.disconnect(), seconds * 1000 + 2500)
+  setTimeout(() => {
+    dying.gain.disconnect()
+    dying.sendGain.disconnect()
+  }, seconds * 1000 + 2500)
 }
 
-/** Stop the current cue, remembering where it was. */
 function stopPlaying(fade: number): void {
   if (!playing) return
-  position[playing] = stepIndex
+  position[playing] = barN
   fadeOut(fade)
   stopTimer()
   playing = null
   setMusicActive(false)
 }
 
-function startTrack(cue: MusicCue, fadeIn: number): void {
+function startTrack(cue: MusicCue, fadeIn: number, at?: number): void {
   const b = musicBus()
   if (!b) return
   bus = b
-  track = b.ctx.createGain()
-  track.gain.setValueAtTime(0.0001, b.ctx.currentTime)
-  track.gain.linearRampToValueAtTime(dbToGain(CUE_LEVEL_DB[cue]), b.ctx.currentTime + fadeIn)
-  track.connect(b.out)
+  const { ctx } = b
+  const gain = ctx.createGain()
+  const sendGain = ctx.createGain()
+  const now = ctx.currentTime
+  const lvl = dbToGain(CUE_LEVEL_DB[cue])
+  for (const g of [gain, sendGain]) {
+    g.gain.setValueAtTime(0.0001, now)
+    g.gain.linearRampToValueAtTime(g === gain ? lvl : lvl, now + fadeIn)
+  }
+  gain.connect(b.out)
+  sendGain.connect(b.send)
+  const bank = voiceBank(ctx)
+  const before = bank.stats().ms
+  // Pre-render the strings this cue will reach for (Karplus–Strong anchors
+  // from the bass roots to the top of the tune), so no note ever pays for a
+  // render on the audio clock's deadline.
+  bank.warm(['harp'], -8, 36)
+  bank.warm(['lute'], 0, 36)
+  for (const d of ['dum', 'tek', 'shaker', 'tomLo', 'tomHi', 'jingle', 'heart'] as const) bank.drum(d)
+  prerenderMs += bank.stats().ms - before
+  track = { ctx, gain, sendGain, stems: {}, bank, drone: null }
   playing = cue
-  stepIndex = resumeStep(cue, position[cue])
+  form = cue
+  if (cue === 'battle' && state.boss) form = 'boss'
+  barN = resumeBar(cue, position[cue])
+  step = 0
+  level = state.level
+  barsBelow = 0
   setMusicActive(true)
-  nextTime = b.ctx.currentTime + 0.08
+  nextTime = at !== undefined && at > now ? at : now + 0.08
   stopTimer()
   timer = setInterval(pump, TICK_MS)
   pump()
@@ -347,41 +776,75 @@ function pump(): void {
   if (!bus || !track || !playing || suspended) return
   const { ctx } = bus
   if (ctx.state !== 'running') return
-  const cue = CUES[playing]
-  const sd = stepDuration(playing)
-  // A throttled or backgrounded tab can leave the transport far behind the
-  // clock. Catching up note by note would dump a hundred voices at once, so
-  // resynchronise instead — the score is a loop, not a recording, and nothing
-  // in it needs to have been heard.
-  if (nextTime < ctx.currentTime - 0.25) {
-    nextTime = ctx.currentTime + 0.05
-  }
+  // A throttled tab can leave the transport far behind the clock; resync
+  // rather than dumping a hundred voices at once.
+  if (nextTime < ctx.currentTime - 0.25) nextTime = ctx.currentTime + 0.05
   let guard = 0
-  while (nextTime < ctx.currentTime + HORIZON && guard++ < 128) {
-    const bar = Math.floor(stepIndex / 16) % cue.bars.length
-    cue.step(stepIndex % 16, bar, cue.bars[bar], nextTime, sd)
-    stepIndex++
+  while (playing && nextTime < ctx.currentTime + HORIZON && guard++ < 128) {
+    if (step === 0) beginBar()
+    if (!playing || !perf) return
+    const cue = perf.cue
+    const sd = (60 / cue.bpm / 4) * (cue.stretch ? cue.stretch(perf.plan, step) : 1)
+    if (step % 4 === 0) {
+      beats.push(nextTime)
+      if (beats.length > 8) beats.shift()
+    }
+    performStep(perf, step, nextTime, sd)
     nextTime += sd
+    step++
+    if (step === 16) {
+      step = 0
+      barN++
+    }
   }
 }
 
+/* ------------------------------------------------------------ the clock */
+
 /**
- * Ask for a cue. `null` stops the music.
- *
- * Safe to call before audio is unlocked and safe to call every render: asking
- * for the cue that is already playing does nothing at all, so the director can
- * simply state what should be true.
+ * The music clock `audio.ts` quantises stings to. `nextBeat` answers with a
+ * scheduled beat when one is queued, else extrapolates on the grid; when a
+ * beat is more than half a second off (the 72 BPM hub) it answers on the 8th
+ * instead, so a tap is never held longer than that.
+ */
+function clock(): MusicClock | null {
+  if (!playing || !perf || !bus) return null
+  const cue = perf.cue
+  return {
+    cue: form,
+    bpm: cue.bpm,
+    beat: beatDur,
+    key: perf.key,
+    mode: cue.mode,
+    nextBeat(after: number): number {
+      const grid = beatDur > 0.5 ? beatDur / 2 : beatDur
+      const last = beats.length ? beats[beats.length - 1] : nextTime
+      for (const b of beats) if (b >= after) return b
+      if (last >= after) return last
+      const k = Math.ceil((after - last) / grid)
+      return last + k * grid
+    },
+  }
+}
+
+/* ------------------------------------------------------------ the API */
+
+/**
+ * Ask for a cue. `null` stops the music. Safe to call every render: asking for
+ * what is already playing does nothing.
  */
 export function playMusic(cue: MusicCue | null): void {
+  if (cue !== wanted) outroDone = null
   wanted = cue
   apply()
 }
 
+/** What should actually be performing: an outro that has finished hands over to the hub. */
+const effective = (): MusicCue | null => (wanted && wanted === outroDone ? 'hub' : wanted)
+
 function apply(): void {
   const b = musicBus()
   if (!b) {
-    // No context yet, still locked, or asleep. `onAudioReady` will call back
-    // once it runs; if we suspended it to save power, this is what wakes it.
     bindReady()
     if (wanted && !audioMuted() && !suspended) wakeAudio()
     return
@@ -389,43 +852,36 @@ function apply(): void {
   bus = b
   bindReady()
   if (audioMuted() || suspended) {
-    // Muted: stop performing rather than performing into a gain of zero. The
-    // master gain already silences it; this is about not spending a phone's
-    // battery on notes nobody can hear.
     stopPlaying(0.15)
     return
   }
-  if (wanted === playing) {
-    // Already right — but the transport may have been stopped by a mute or a
-    // hidden tab, so make sure it is actually running.
+  const want = effective()
+  if (want === playing) {
     if (playing && timer === null) startTrack(playing, 0.6)
     return
   }
+  // Hand over ON THE BEAT: the new cue's first bar lands on the old cue's
+  // next beat — the same beat a wave-start sting was quantised to.
+  const c = clock()
+  const at = c ? c.nextBeat(b.ctx.currentTime + 0.03) : undefined
+  const fromOutro = !playing && outroDone !== null
   stopPlaying(0.5)
-  if (wanted) startTrack(wanted, 1.2)
+  // The fight and the outros land on their downbeat; the hub and prep drift in.
+  const fadeIn = fromOutro ? 3 : want === 'battle' ? 0.1 : want === 'victory' || want === 'defeat' ? 0.05 : 1.2
+  if (want) startTrack(want, fadeIn, at !== undefined && at - b.ctx.currentTime < 0.7 ? at : undefined)
 }
 
 function bindReady(): void {
   if (readyBound) return
   readyBound = true
-  // Fires on unlock, on an iOS interruption ending, and on every volume/mute
-  // change — all three are moments the transport may need to start or stop.
+  registerMusicClock(clock)
   onAudioReady(() => apply())
 }
 
-/**
- * Stop performing because the tab went away.
- *
- * Wired from `main.tsx` to the app's ONE visibility lifecycle (`state/
- * lifecycle.ts`, Phase 1) rather than binding a second `visibilitychange`
- * listener here. A backgrounded tab's AudioContext keeps running on desktop, so
- * without this the score plays on in another app's tab forever.
- */
+/** Stop performing because the tab went away (the app's one lifecycle, not a second listener). */
 export function suspendMusic(): void {
   suspended = true
   stopPlaying(0.2)
-  // With the score stopped, the audio engine can put the context to sleep
-  // once whatever is still ringing has finished.
   setAudioHidden(true)
 }
 
@@ -436,13 +892,31 @@ export function resumeMusic(): void {
   apply()
 }
 
-/** Live transport state, for tests and for the settings row. */
+/** Live transport state, for tests, the dev hook and the harness. */
 export function musicStatus(): {
   wanted: MusicCue | null
   playing: MusicCue | null
+  form: CueId | null
+  bar: number
+  level: number
+  key: number | null
   running: boolean
   scheduled: number
   suspended: boolean
+  prerenderMs: number
+  bankBytes: number
 } {
-  return { wanted, playing, running: timer !== null, scheduled, suspended }
+  return {
+    wanted,
+    playing,
+    form: playing ? form : null,
+    bar: barN,
+    level,
+    key: perf?.key ?? null,
+    running: timer !== null,
+    scheduled,
+    suspended,
+    prerenderMs: Math.round(prerenderMs * 10) / 10,
+    bankBytes: track ? track.bank.stats().bytes : 0,
+  }
 }
