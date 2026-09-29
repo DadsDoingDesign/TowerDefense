@@ -80,6 +80,23 @@ export function writeJson(key: string, value: unknown): boolean {
 }
 
 /**
+ * Run `cb` whenever ANOTHER tab changes `key` (or clears storage).
+ *
+ * zustand's `persist` reads storage once, at boot, and afterwards only writes.
+ * With the game open in two tabs that is a lost update: tab B earns marks and
+ * saves, then stale tab A buys a perk and saves its whole old record over B's.
+ * The `storage` event is the browser telling us the other write happened — it
+ * never fires for this tab's own writes — so a store that rehydrates on it is
+ * always writing on top of the latest record rather than its boot-time copy.
+ */
+export function onStorageKeyChange(key: string, cb: () => void): void {
+  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return
+  window.addEventListener('storage', (e: StorageEvent) => {
+    if (e.key === key || e.key === null) cb()
+  })
+}
+
+/**
  * A zustand `persist` storage adapter built on the guards above.
  *
  * zustand's own `createJSONStorage` catches the *lookup* of localStorage but not

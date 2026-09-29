@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { setAudioVolumes } from '../audio/audio'
 import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
-import { bool, clampNum, safePersistStorage, str } from './storage'
+import { bool, clampNum, onStorageKeyChange, safePersistStorage, str } from './storage'
 
 export type UiScale = 'normal' | 'large'
 
@@ -266,6 +266,11 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 )
+
+// Settings changed in another tab apply here too (and re-run the rehydrate
+// hook above, so accessibility and volumes follow), instead of being reverted
+// by this tab's next save.
+onStorageKeyChange('fieldwatch-settings', () => void useSettingsStore.persist.rehydrate())
 
 /** The UI is locked to the Tiny Swords art direction — no theme picker. */
 export function initTheme(): void {
