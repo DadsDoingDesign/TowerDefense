@@ -123,11 +123,24 @@ fork away included.
   · adaptive 30.5. Cartographer Δ specials −0.3 ±4.3 · battles **+0.3 ±4.4** ·
   recruits +5.8 ±4.7 · adaptive +6.5 ±5.1.
 
+### S0 verified — full run 1/3
+
+- Unfiltered `npx tsx balance/report.ts` with the `FW_SECTIONS` refactor (at
+  7e1c084's game, STOP_XP 0.35) left `balance/REPORT.md` byte-identical to the
+  committed file and passed every invariant. Console summary lines unchanged.
+
+### Step 1 gate + prose
+
+- `report.ts` §11: new invariant — the first-timer line (the shipped heuristic,
+  `specials`) must win ≥ 15% as well as ≤ 35% (`FRESH_WIN_BAND`). Prose: "The
+  four gates", a re-fit paragraph with the n=600 before/after; §12 gets a
+  finding on Gate-aware routing and the reverted map change.
+- `battle.ts`: `STOP_XP_SHARE` doc updated with the fit.
+
 ## Current state / next step
 
-- Step 0 done; byte-identical check still running (full run 1/3).
-- E1 + E2 + E4 kept. Cartographer's point estimates are now −0.3 / +0.3 /
-  +5.8 / +6.5 at n=600. Next: E5 — try to lift the stop-first line on the wide
-  map so no line reads below zero (design lever on the wide map's stop
-  density), then run §6+§11+§12 filtered at report n and add the §11
-  first-timer floor gate.
+- Running `FW_SECTIONS=6,11,12` (report n) to read §11 at n=120 and §12 at
+  n=210 with the new gate (scratchpad `tuning/f2.out`).
+- Next: if green, gates (typecheck/test/build) and a non-WIP commit for Steps
+  1+2; then the Cartographer robustness read at n=600 with `FW_META_RUNS=600
+  FW_SECTIONS=12` (or `tune.ts 600 hub`).

@@ -1842,7 +1842,7 @@ if (want(11)) {
   line('| Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |')
   line('|---|--:|--:|--:|--:|')
   for (const s of freshByPolicy) {
-    const gate = s === freshReal ? ' ← **gated (ceiling)**' : s === freshBest ? ' ← **gated (floor)**' : ''
+    const gate = s === freshReal ? ' ← **gated (band)**' : s === freshBest ? ' ← **gated (floor)**' : ''
     line(`| ${s.label}${gate} | **${pct(s.winRate)}** | ${f1(s.avgDepth)} | ${f1(s.avgBattles)} | ×${f1(s.bossThreat)} |`)
   }
   line('')
@@ -1899,7 +1899,7 @@ if (want(11)) {
   line('meet the boss at ×11–15 against §6\'s ×30) is gone by construction: a wave-table dial now lands')
   line('equally hard on both sweeps.')
   line('')
-  line('**The three gates.**')
+  line('**The four gates.**')
   line('')
   line(
     `1. **Floor — winnable played well:** the best line in the set must win ≥ ${pct(FRESH_WIN_BAND[0])}. Measured **${pct(freshBest.winRate)}** (${freshBest.short}). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.`,
@@ -1908,7 +1908,10 @@ if (want(11)) {
     `2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ ${pct(FRESH_WIN_BAND[1])}. Measured **${pct(freshReal.winRate)}**.`,
   )
   line(
-    `3. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
+    `3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ ${pct(FRESH_WIN_BAND[0])}. Measured **${pct(freshReal.winRate)}**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.`,
+  )
+  line(
+    `4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
   )
   line('')
   line(`The design *target* inside the band remains **15–25%** on the gated line. The band`)
@@ -1933,6 +1936,14 @@ if (want(11)) {
   line('boss keeps the same absolute HP pool; the nodes in front of it caught up. See the')
   line('constant\'s own doc comment for the before/after on both sweeps.')
   line('')
+  line('**The first-timer line, re-fitted (tuning lane).** It read 14% here and 15.3% at n=600 — under')
+  line('its own band, ungated. The lever was onboarding, not stats: `STOP_XP_SHARE` 0.35 → 0.55')
+  line('(`run/battle.ts`), so a stop drills the company for a bigger share of the fight it skipped. The')
+  line('line that stops most is the one that reached act 3 levels short, and §6 cannot move — its model')
+  line('has no stops. Measured at n=600 on these seeds: first-timer 15.3% → 20.3%, battles 27 → 26,')
+  line('recruits 20 → 20, adaptive 28 → 31. Every fixed-table line also reads its Gate now: at or below')
+  line('60% it takes a campfire (or a merchant\'s repair it can pay for) when the road offers one — see §12.')
+  line('')
   line('| Dial tried (earlier fit, kept for the record) | §11 realistic | §6 Monte Carlo | Verdict |')
   line('|---|--:|--:|---|')
   line('| budget step +4%/depth | 42% → 29% | 53% → **25%** | §6 win band broken |')
@@ -1945,6 +1956,11 @@ if (want(11)) {
   if (freshBest.winRate < FRESH_WIN_BAND[0]) {
     failures.push(
       `Zero-meta baseline is a grind gate: even the best routing line (${freshBest.short}) wins only ${pct(freshBest.winRate)}, below the ${pct(FRESH_WIN_BAND[0])} floor. Losing a first run has to be a skill signal, not an instruction to farm the hub.`,
+    )
+  }
+  if (freshReal.winRate < FRESH_WIN_BAND[0]) {
+    failures.push(
+      `First-timer line is a wall: the shipped heuristic wins only ${pct(freshReal.winRate)} at zero meta, below the ${pct(FRESH_WIN_BAND[0])} floor of its band. The line a first-timer walks has to be winnable, not only the best line.`,
     )
   }
   if (freshReal.winRate > FRESH_WIN_BAND[1]) {
@@ -1965,7 +1981,7 @@ if (want(11)) {
   summary.push(`Fresh player REALISTIC (zero meta, 1 hero, ${START_GOLD}g): ${pct(freshReal.winRate)} win (band ${pct(FRESH_WIN_BAND[0])}-${pct(FRESH_WIN_BAND[1])}), ${f1(freshReal.avgDepth)}/${NODES} nodes, ${f1(freshReal.avgBattles)} battles, worst node ${pct(freshReal.cliffShare)}`)
   summary.push(`Fresh player STRICT floor: ${pct(freshSolo.winRate)} win, ${f1(freshSolo.avgDepth)}/${NODES} nodes | +2 recruits ${pct(freshRecruit.winRate)}`)
   summary.push(`Fresh run by starter (first-timer line): ${Object.entries(freshReal.byArch).map(([k, v]) => `${k} ${f1(v)} nodes`).join(', ')} | boss met at ×${f1(freshReal.bossThreat)}`)
-  summary.push(`Fresh-run routing spread: ${freshByPolicy.map((r) => `${r.short} ${pct(r.winRate)}`).join(', ')} | gated: ceiling on ${freshReal.short} (${pct(freshReal.winRate)} vs ${pct(FRESH_WIN_BAND[1])}), floor on ${freshBest.short} (${pct(freshBest.winRate)} vs ${pct(FRESH_WIN_BAND[0])})`)
+  summary.push(`Fresh-run routing spread: ${freshByPolicy.map((r) => `${r.short} ${pct(r.winRate)}`).join(', ')} | gated: band on ${freshReal.short} (${pct(freshReal.winRate)} vs ${pct(FRESH_WIN_BAND[0])}–${pct(FRESH_WIN_BAND[1])}), floor on ${freshBest.short} (${pct(freshBest.winRate)} vs ${pct(FRESH_WIN_BAND[0])})`)
 }
 
 // -------------------------------------------------------------- Sweep 12
@@ -2227,6 +2243,9 @@ if (want(12)) {
   )
   line(
     `- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries ${f1(shapeBase.specials - shapeWide.specials)} fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.`,
+  )
+  line(
+    '- **A fight-first player reads the Gate bar.** On the three-act road the wide map hands the battles-first line ~0.8 more fights a run (layers 2, 3, 6 and 7 are fought a quarter to a third more often), and the model used to walk into every one of them however low the Gate was, a campfire one fork away included: Cartographer read −6pt at n=210 and −3.5 ±4.2 at n=600, dying in act 3\'s plain battles. Every fixed-table line now does what the adaptive line always did — at or below 60% of the Gate it takes the fire, or a merchant\'s repair it can pay for, when the road offers one — and the unlock reads −0 / +0 / +6 / +6pt at n=600 (specials / battles / recruits / adaptive). The map was not changed: giving every road on a wide map a way to the pre-boss campfire was tried and cost the stop-first line 3pt (it trades a fight\'s XP for a rest it did not need).',
   )
   line(
     `- \`Standing Orders\` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them ${pct(shapeBase.forcedElites)} → ${pct(shapeCamp.forcedElites)}.`,
