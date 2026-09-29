@@ -95,21 +95,3 @@ tints the procedural fallback token, not the sprite.
 
 Distinct champion art is an open art task. Until it exists, do not describe
 these as recoloured.
-
-## `fantasy` / `undead` / `infernal` / `frost` / `sylvan` — Dungeon Crawl themes
-
-Sprites from the **Dungeon Crawl Stone Soup** tileset (`rltiles`), **CC0 /
-public domain**.
-- Source: https://github.com/crawl/crawl (`crawl-ref/source/rltiles`)
-
-Each theme has a pack folder with role-named files. These packs predate the
-goblin taxonomy, so their enemies fall back to procedural shapes; their
-`fighter/rogue/mystic` tower tiles still render.
-
-| Role | fantasy | undead | infernal | frost | sylvan |
-|---|---|---|---|---|---|
-| fighter | vault_guard | death_knight | hell_knight | vault_guard | vault_guard |
-| rogue | deep_elf_blademaster | deep_elf_master_archer | deep_elf_blademaster | deep_elf_master_archer | deep_elf_master_archer |
-| mystic | arcanist | necromancer | occultist | arcanist | arcanist |
-| grass | floor/grass/grass0 | floor/rect_gray0 | floor/volcanic_floor0 | floor/ice0 | floor/moss0 |
-| road | floor/dirt0 | floor/cobble_blood1 | floor/rough_red0 | floor/crystal_floor0 | floor/dirt0 |

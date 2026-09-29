@@ -20,11 +20,6 @@ The *current* Tiny Swords download is under a different, non-CC0 licence. No
 file from that build is included; `npx tsx scripts/harvest-cc0.ts --check`
 verifies this.
 
-### Dungeon Crawl Stone Soup tiles — CC0 1.0
-
-Retired sprite themes under `public/assets/sprites/{fantasy,undead,infernal,frost,sylvan}/`.
-Source: <https://github.com/crawl/crawl> (`crawl-ref/source/rltiles`). CC0 1.0.
-
 ## Audio
 
 ### Interface Sounds 1.0 — Kenney — CC0 1.0

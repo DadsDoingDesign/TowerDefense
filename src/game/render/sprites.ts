@@ -6,22 +6,18 @@
  *
  * **Load the active pack, not all of them (M37).**
  *
- * This used to fetch `SPRITE_PACKS.length × ROLE_NAMES.length` images at boot —
- * 196 requests for a game whose theme is hardcoded to `tinyswords` and which has
- * no picker. 150 of those requests were for the five inactive packs, and only 25
- * of the 150 were even real files: the other 125 asked for roles those packs
- * have never contained (see PACK_ROLES), so on a static host they 404 and behind
- * an SPA fallback they hand back index.html to be decoded as an image. All of it
- * on a phone, before the first wave, for art nothing can select.
- *
- * Now `preloadSprites()` loads exactly the pack the active theme names, and
+ * This used to fetch every pack × every role at boot — 196 requests for a game
+ * whose theme is hardcoded to `tinyswords` and which has no picker. Now
+ * `preloadSprites()` loads exactly the pack the active theme names, and
  * {@link preloadPack} is the hook a theme picker would call when the player
- * switches — the other packs stay reachable, they just are not paid for up front.
+ * switches.
+ *
+ * The same declaration drives the service worker's precache: `build/pwa.ts`
+ * precaches {@link packAssetPaths} of the active theme's pack and nothing else
+ * under `assets/sprites/`, so an inactive pack costs no install requests.
  */
 import { ANIM_ROLES } from './anim'
 import { getActiveStyle, onThemeChange } from './themes'
-
-export const SPRITE_PACKS = ['tinyswords', 'fieldwatch', 'fantasy', 'undead', 'infernal', 'frost', 'sylvan']
 
 /**
  * Every role the renderer may ask for. Add new roles here or they won't preload
@@ -43,10 +39,7 @@ const ROLE_NAMES = [
   'bush1', 'bush2',
 ]
 
-/**
- * Packs that ship animation strips (idle/attack/walk). The five retired 32px
- * packs are statics only, so asking them for a `_walk` is 10 guaranteed 404s.
- */
+/** Packs that ship animation strips (idle/attack/walk). */
 const ANIM_PACKS = new Set(['tinyswords', 'fieldwatch'])
 
 /**
@@ -72,28 +65,26 @@ export const GEAR_ROLES = [
 
 /**
  * What each pack ACTUALLY ships, which is not the same as what the renderer may
- * ask for.
- *
- * The five non-default packs predate the Tiny Swords enemy roster: on disk each
- * holds `fighter/rogue/mystic/grass/road` plus seven enemy PNGs under retired
- * names (brute/colossus/grunt/ogre/runner/shade/warden) that no current enemy id
- * maps to. Preloading `ROLE_NAMES` against them therefore requested 25 files per
- * pack that cannot exist. Listing the truth per pack costs one line each and
- * makes a request that misses a bug rather than the norm.
+ * ask for. Listing the truth per pack makes a request that misses a bug rather
+ * than the norm — and it is also the precache list for the active pack.
  *
  * Keep these in sync with `public/assets/sprites/<pack>/`.
  */
-const LEGACY_PACK_ROLES = ['fighter', 'rogue', 'mystic', 'grass', 'road']
 const PACK_ROLES: Record<string, readonly string[]> = {
   // Tiny Swords draws its road procedurally — there is no road.png in the pack.
   tinyswords: ROLE_NAMES.filter((n) => n !== 'road'),
   // The from-scratch pack: every role Tiny Swords has, plus the gear layers.
   fieldwatch: [...ROLE_NAMES.filter((n) => n !== 'road'), ...GEAR_ROLES],
-  fantasy: LEGACY_PACK_ROLES,
-  undead: LEGACY_PACK_ROLES,
-  infernal: LEGACY_PACK_ROLES,
-  frost: LEGACY_PACK_ROLES,
-  sylvan: LEGACY_PACK_ROLES,
+}
+
+/**
+ * Every file `preloadPack(pack)` requests, as `assets/`-relative URLs. The
+ * single source of truth for "what this pack costs", shared by the loader and
+ * the service worker's precache (`build/pwa.ts`).
+ */
+export function packAssetPaths(pack: string): string[] {
+  const roles = [...(PACK_ROLES[pack] ?? ROLE_NAMES), ...(ANIM_PACKS.has(pack) ? ANIM_ROLES : [])]
+  return [...new Set(roles)].map((name) => `assets/sprites/${pack}/${name}.png`)
 }
 
 const images = new Map<string, HTMLImageElement>()
@@ -129,11 +120,9 @@ export function preloadPack(pack: string): void {
   if (typeof document === 'undefined' || packsLoaded.has(pack)) return
   packsLoaded.add(pack)
   started = true
-  for (const name of PACK_ROLES[pack] ?? ROLE_NAMES) {
-    load(`${pack}/${name}`, `assets/sprites/${pack}/${name}.png`)
-  }
-  if (ANIM_PACKS.has(pack)) {
-    for (const name of ANIM_ROLES) load(`${pack}/${name}`, `assets/sprites/${pack}/${name}.png`)
+  for (const src of packAssetPaths(pack)) {
+    const name = src.slice(src.lastIndexOf('/') + 1, -'.png'.length)
+    load(`${pack}/${name}`, src)
   }
   // Everything may already have been cached synchronously by the browser; a
   // no-pending state still has to reach the callbacks.

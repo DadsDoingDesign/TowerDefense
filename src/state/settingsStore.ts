@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { setAudioVolumes } from '../audio/audio'
-import { applyThemeCss, setActiveTheme } from '../game/render/themes'
+import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
 import { bool, clampNum, safePersistStorage, str } from './storage'
 
 export type UiScale = 'normal' | 'large'
@@ -269,7 +269,7 @@ export const useSettingsStore = create<SettingsState>()(
 
 /** The UI is locked to the Tiny Swords art direction — no theme picker. */
 export function initTheme(): void {
-  applyThemeCss(setActiveTheme('tinyswords'))
+  applyThemeCss(setActiveTheme(DEFAULT_THEME))
 }
 
 /** Apply persisted accessibility + audio settings before first paint. */
