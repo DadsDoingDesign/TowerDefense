@@ -34,6 +34,7 @@
  * `destination`.
  */
 import { audioMuted, musicBus, onAudioReady } from './audio'
+import { CUE_LEVEL_DB, dbToGain } from './mix'
 
 export type MusicCue = 'hub' | 'battle'
 
@@ -185,6 +186,9 @@ const BATTLE: CueDef = {
     // --- drums -------------------------------------------------------------
     if (i === 0 || i === 8 || i === 11) {
       note(128, t, 0.13, 0.34, { type: 'sine', to: 44, attack: 0.002 })
+      // The beater. A 128→44 Hz sine is inaudible on a phone speaker; a
+      // 5 ms click at 3 kHz is what tells a phone there is a kick at all.
+      perc(t, 0.005, 0.14, 2400, 4200)
     }
     if (i === 4 || i === 12) {
       perc(t, 0.15, 0.16, 1400, 9000, 0.25)
@@ -196,6 +200,9 @@ const BATTLE: CueDef = {
     if (i % 2 === 0) {
       const oct = i === 6 || i === 14 ? 12 : 0
       note(hz(ch.root - 12 + oct), t, sd * 1.7, 0.2, { type: 'sawtooth', lp: 700, attack: 0.006 })
+      // Octave-up triangle: the 55 Hz root is below any phone speaker, and
+      // this is what lets the line (and its harmony) survive one.
+      note(hz(ch.root + oct), t, sd * 1.5, 0.06, { type: 'triangle', attack: 0.006 })
     }
 
     // --- arpeggio: 16ths through the chord, two octaves, with a rest that
@@ -295,7 +302,7 @@ function startTrack(cue: MusicCue, fadeIn: number): void {
   bus = b
   track = b.ctx.createGain()
   track.gain.setValueAtTime(0.0001, b.ctx.currentTime)
-  track.gain.linearRampToValueAtTime(1, b.ctx.currentTime + fadeIn)
+  track.gain.linearRampToValueAtTime(dbToGain(CUE_LEVEL_DB[cue]), b.ctx.currentTime + fadeIn)
   track.connect(b.out)
   playing = cue
   stepIndex = 0

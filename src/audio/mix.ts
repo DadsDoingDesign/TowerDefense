@@ -23,28 +23,29 @@ export type UiSample = 'click' | 'confirm' | 'back' | 'close' | 'toggle' | 'erro
  * loudness-matched: played untrimmed the ten samples spanned 35 LU (click −42
  * Mmax, reward −7.6), and the loudest were 15–35 dB above the combat mix, so
  * one menu tap was louder than a crit and the `reward` sample buried the whole
- * rarity ladder. These bring every sample to the same momentary-max target
- * (about crit level — see `UI_TARGET_MMAX`), measured, not guessed.
+ * rarity ladder. These bring every sample to one momentary-max target, a few
+ * LU under a crit (`UI_TARGET_MMAX`) — measured, not guessed.
  */
 export const UI_TRIM_DB: Record<UiSample, number> = {
-  // Measured Mmax after trim (harness, default volumes, pre-makeup): click
-  // −33.1, back −30.4, equip −30.3, toggle −30.2, error −30.4, close −30.4,
-  // confirm −30.1, reward −29.2. Click is left 3 LU shy on purpose: it is
-  // 115 ms long, a 400 ms window under-reads it, and at +12 its transient
-  // was the only UI sound that reached the limiter — ducking the score on
+  // Measured Mmax in the final chain (harness, default volumes, after bus
+  // makeup, glue and limiter): click −28.0, back −26.5, equip −24.4, toggle
+  // −24.1, error −23.8, close −23.7, confirm −24.1, reward −22.0 — against
+  // crit −19.9. Click and back read a few LU shy because they are 60–115 ms
+  // long and a 400 ms window under-reads a transient; pushing them further
+  // only drives their peaks into the limiter, which ducks the score on
   // every tap.
-  click: 9,
-  back: 4,
-  equip: 0,
-  toggle: -7,
-  error: -9,
-  close: -10,
-  confirm: -18,
-  reward: -22,
+  click: 14,
+  back: 8,
+  equip: 2,
+  toggle: -6,
+  error: -9.5,
+  close: -11,
+  confirm: -21,
+  reward: -24.5,
 }
 
-/** Momentary-max LUFS the trims aim each UI sample at, before bus makeup. */
-export const UI_TARGET_MMAX = -30
+/** Momentary-max LUFS the trims aim each UI sample at (final chain, defaults). */
+export const UI_TARGET_MMAX = -24
 
 /**
  * Fixed makeup per bus, in dB, on top of the player's slider.
@@ -53,16 +54,19 @@ export const UI_TARGET_MMAX = -30
  * in the hub — about 10 dB under every other phone game, so players turned the
  * device up and then got blasted by the next app. The makeup is what brings
  * the default mix to ≈ −18 LUFS in battle and ≈ −22 in the hub, with the
- * limiter below catching the peaks that creates.
+ * limiter below catching the peaks that creates. Measured (harness, default
+ * volumes): battle 1× −18.2, 3× −16.6, hub −21.9 LUFS-I; true peak ≤ −2.0
+ * dBTP everywhere. The UI bus gets 2 dB less than the others because it plays
+ * alone, in the hub, a few centimetres from the player's attention.
  */
-export const BUS_MAKEUP_DB = { game: 8, ui: 8, music: 8 } as const
+export const BUS_MAKEUP_DB = { game: 8, ui: 6, music: 8 } as const
 
 /**
  * Per-cue level inside the music bus, in dB. The hub cue has no drums and a
  * long reverb, so at the same fader it measures ~3 LU under the battle cue;
  * this lifts it to its target without re-orchestrating it.
  */
-export const CUE_LEVEL_DB = { hub: 4, battle: 0 } as const
+export const CUE_LEVEL_DB = { hub: 1, battle: 0 } as const
 
 /**
  * The master chain: a gentle glue compressor, then a real limiter.
