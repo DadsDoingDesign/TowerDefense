@@ -74,7 +74,10 @@ would hurt legibility over the bright battlefield.
 - **Primary** → `.ts-btn` (teal) — the one main action per view (Begin Run, Equip, Choose).
 - **Secondary** → warm `--panel-2` fill, `--line-strong` border, `--text`.
 - **Ghost/quiet** → transparent, `--muted`, hover to `--text`.
-- Currency/cost shown inline with the gold coin glyph `⟡` in `--accent`.
+- Currency/cost shown inline with the currency's **pixel mark** (`<Money>` in
+  `src/ui/shell/Money.tsx`: coin, dust crystal, Watch Mark star) and the number —
+  one mark per currency, never a Unicode glyph beside it. In prose, say it in
+  words: "60 gold", "12 dust", "40 Watch Marks".
 - Disabled: `--panel-3` fill, `--muted-2` text, `cursor:not-allowed`.
 
 ## Layout structure (every page)
@@ -92,6 +95,75 @@ would hurt legibility over the bright battlefield.
 - **Transitions**: 80–120ms ease on transform/filter/border. Respect `prefers-reduced-motion`.
 - **State in form + colour**: pills/stripes for rarity, boss, danger — colour alone never carries meaning.
 - Feedback is immediate and plainly worded ("Equipped", "Recruited").
+
+## Voice & tone
+
+Fieldwatch speaks like a **veteran sergeant writing orders on a campaign
+table**: plain, warm, brief, and never wrong. The storybook lives in the art;
+the words' job is to be believed.
+
+**Rules** (Strunk & White, applied to a 390px screen)
+
+1. **True first.** Every string that states a number or a rule is checked
+   against the engine before it ships. A lovely sentence that misstates a
+   mechanic is a bug. (Examples retired in Wave 1: "Take one — it applies to
+   the whole watch" on item cards that go to the pack; "Marching on costs
+   nothing" on a fork with no march-on; "Three offers" over five.)
+2. **Omit needless words.** "Your first hero. Recruit more along the road." —
+   not "This is your starting tower. You can recruit more heroes as you play
+   through a run." Cut until the next cut loses meaning.
+3. **Active voice, second person, present tense.** "Tap your hero, then a
+   glowing circle." Not "Heroes can be deployed by…".
+4. **Say the number and what it does.** "Threat ×1.42: enemies have 42% more
+   HP." A multiplier with no noun is a riddle.
+5. **Point at what is on screen, by its label.** Name a control by the words it
+   shows ("Skills", "a + under Gear"), never by a glyph that may not render.
+6. **One idea per line.** Coach tips are one sentence where possible, two at
+   most. Anything longer is a help page, and the game has none.
+7. **Costs before benefits are read.** A downside is its own line, in
+   `--bad-text`, with the warning mark and the word "Downside".
+8. **No exclamation marks, no "simply", no "just".** Calm is the brand.
+9. **UK spelling.** Armour, defence, colour, sceptre, centre.
+10. **Sentence case** for body text and buttons ("Start a Run" and other
+    display titles keep their title case; everything else is sentence case).
+
+**Tone by moment**
+
+| Moment | Tone | Example |
+|---|---|---|
+| Teaching | a hand on the shoulder | "3 items to equip. Tap a + under Gear." |
+| A cost or risk | level, exact | "At level 10, Doyle picks a path. It's permanent." |
+| Destructive confirm | plain, no drama | "There is no undo." |
+| Victory | quiet pride | "You reached the end of the road and broke the last stand." |
+| Defeat | honest, no blame | "Your Gate fell after 4 stops. Permadeath: this run is over." |
+| Receipt | two to five words | "Cloak added to your pack" · "Sable joined the company" |
+
+## Glossary — one noun per concept
+
+| Concept | Say | Never say |
+|---|---|---|
+| A unit you post on the field | **hero** | tower, Sentinel, unit, defender |
+| All your heroes together | **company** | team, roster, watch, party |
+| Base HP / what enemies attack | **Gate** ("Gate 20/20", "Gate HP") | base, lives, Base integrity, keep |
+| Where a hero is posted | **circle** (in teaching), slot (in code only) | marked slot, tile, pad |
+| The HP multiplier that climbs | **Threat** | heat, difficulty, danger |
+| Map node | **stop** (prose), node (code) | room, tile |
+| Endless second chances | **retries** | lives, hearts |
+| The per-run difficulty ladder | **Vow** (ids/store stay `banner`/`sacrifice`) | Banner, Sacrifice, ascension |
+| A hero's bought upgrade paths | **Skills** | Upgr, upgrades, tower upgrades |
+| Currencies | **gold**, **dust**, **Watch Marks** | coins, crystals, marks alone in body copy |
+| STR / DEX / INT | exactly these three, everywhere | PHY, MAG, strength stat |
+| An elite enemy | "Bomber · Warded" (goblin first, modifier after) | "Warded Bomber", "Plated The Colossus Keg" |
+| An item | "Heavy Grimoire" + its rarity beside it | "Heavy Rare Grimoire · Rare" |
+
+"Sentinel" survives only as flavour inside proper names (Sentinel of Order).
+
+## Banned terms
+
+`tower` (for a hero) · `Sentinel` (as the unit noun) · `team` · `lives` ·
+`Base integrity` · `Banner` (for the difficulty ladder) · `Upgr` · `PHY/MAG` ·
+`bought with rate/reach` · `simply` · `just` · `!` · US spellings (`armor`,
+`defense`, `color`, `scepter`) · any currency glyph (`⟡ ◈ ✦`) in shell UI.
 
 ## Apply-everywhere checklist
 
