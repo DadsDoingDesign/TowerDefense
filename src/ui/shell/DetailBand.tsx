@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import {
   canUpgrade,
   HERO_SLOTS,
@@ -47,6 +47,8 @@ import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
+import { InfoToggle } from './InfoToggle'
+import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -910,39 +912,6 @@ function Cell({
 }
 
 /**
- * An ⓘ that opens one or more lines of reference text in place.
- *
- * A disclosure, not a tooltip: a tooltip needs hover, and every device this
- * ships to is a touchscreen. The text renders into a portal-free sibling so it
- * pushes the column down rather than covering it (rule two of the shell: nothing
- * covers anything).
- */
-function InfoToggle({ label, lines }: { label: string; lines: readonly string[] }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        className={`sh-info ${open ? 'on' : ''}`}
-        aria-expanded={open}
-        aria-label={label}
-        data-sfx="toggle"
-        onClick={() => setOpen((o) => !o)}
-      >
-        i
-      </button>
-      {open && (
-        <span className="sh-info-body" role="note">
-          {lines.map((l) => (
-            <span key={l}>{l}</span>
-          ))}
-        </span>
-      )}
-    </>
-  )
-}
-
-/**
  * One line of generated effect text, with its own mark.
  *
  * `describeMods` / `describeBase` / `describeEnchant` produce every effect
@@ -1121,6 +1090,7 @@ function ItemPanel({ item }: { item: Item }) {
   const dismantleItem = useGameStore((s) => s.dismantleItem)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
+  const activateGearSlot = useGameStore((s) => s.activateGearSlot)
   const mode = useGameStore((s) => s.mode)
   const gold = useGameStore((s) => s.gold)
   const dust = useGameStore((s) => s.dust)
@@ -1146,23 +1116,39 @@ function ItemPanel({ item }: { item: Item }) {
     `scrap-${item.id}`,
   )
 
+  // On a short phone the armed confirm and its "no undo" line land below the
+  // context column's fold (Phase 2). Bring them up the moment it arms — the
+  // column scrolls, so nothing moves under the thumb that armed it.
+  const scrapNoticeRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (scrap.armed) scrapNoticeRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [scrap.armed])
+
   // Where is it — loose in the pack, or worn by someone?
   const wearer = roster.find((s) => HERO_SLOTS.some((hs) => s.equipment[hs]?.id === item.id))
   const wornSlot = wearer ? HERO_SLOTS.find((hs) => wearer.equipment[hs]?.id === item.id) : undefined
 
-  // What equipping this into the armed slot would push back into the pack.
-  // Mirrors `equipItem`'s two-hand branches exactly.
-  const target = gearSlot && !wearer ? roster.find((s) => s.id === gearSlot.sentinelId) : undefined
-  const ejection = ((): string | null => {
-    if (!target || !gearSlot || !heroSlotsFor(item.slot).includes(gearSlot.slot)) return null
-    if (item.slot === 'twoHand' && target.equipment.offHand) {
-      return `Two-handed — ${target.name} puts ${target.equipment.offHand.name} back in the pack to hold it.`
-    }
-    if (gearSlot.slot === 'offHand' && target.equipment.mainHand?.slot === 'twoHand') {
-      return `${target.name} needs both hands for ${target.equipment.mainHand.name} — it goes back in the pack.`
-    }
-    return null
-  })()
+  /*
+   * Equip, in one tap, with the comparison in front of you (Phase 2, F4).
+   *
+   * Tapping an item never offered to put it on: the foot said "Tap a + under
+   * Gear", and a swap took four taps (open the worn item, unequip, find the new
+   * one in the pack, arm the slot, tap it). Now a loose item always offers
+   * "Equip → <hero>" — the hero whose gear you were just looking at, or the one
+   * it helps most — and an occupied slot SWAPS in that one tap, the old piece
+   * going back to the pack. `planEquip` mirrors `equipFromPack` exactly, so the
+   * DPS and stat lines below are the result, not an estimate.
+   */
+  const gearTargetId = useGearTarget((s) => s.heroId)
+  const armedHero = gearSlot && !wearer ? roster.find((s) => s.id === gearSlot.sentinelId) : undefined
+  const target = wearer ? undefined : equipTarget(roster, item, armedHero?.id, gearTargetId)
+  const plan = target ? planEquip(target, item, armedHero && gearSlot ? gearSlot.slot : null) : null
+  const deltas = target && plan ? gearDeltas(target, plan.after) : []
+  const fresh = plan ? newAffixes(item, plan.displaced) : []
+  const ejection =
+    plan && plan.displaced.length > 0
+      ? `${plan.displaced.map((d) => d.name).join(' and ')} ${plan.displaced.length > 1 ? 'go' : 'goes'} back to the pack.`
+      : null
 
   // Crafting is gold in the campaign and dust in endless — the Forge room is
   // only one place you can reach an item, so the actions belong on the item.
@@ -1196,6 +1182,58 @@ function ItemPanel({ item }: { item: Item }) {
         <p className="sh-line">
           <RarityTag rarity={item.rarity} />
         </p>
+        {/* The comparison FIRST — what changes on the target if this goes on —
+            so the decision reads above the fold; the item's own lines follow. */}
+        {target && plan && (
+          <div className="sh-compare" aria-label={`On ${target.name}, ${plan.slotLabel}`} role="group">
+            <p className="sh-compare-head">
+              {roster.length > 1 && !armedHero ? (
+                <select
+                  className="sh-compare-who"
+                  value={target.id}
+                  aria-label="Equip on which hero"
+                  onChange={(e) => useGearTarget.setState({ heroId: e.target.value })}
+                >
+                  {roster.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <b>{target.name}</b>
+              )}
+              <span>{plan.slotLabel}</span>
+            </p>
+            {deltas.length === 0 ? (
+              <p className="sh-line muted">No change to {target.name}&rsquo;s numbers.</p>
+            ) : (
+              <ul className="sh-deltas">
+                {deltas.map((d) => (
+                  <li key={d.label} className={d.after > d.before ? 'up' : 'down'}>
+                    <span>{d.label}</span>
+                    <span>
+                      {d.a} → <b>{d.b}</b> <i aria-hidden="true">{d.after > d.before ? '▲' : '▼'}</i>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {fresh.map((f) => (
+              <p className="sh-line accent" key={f}>
+                <span className="sh-new">New</span> {f}
+              </p>
+            ))}
+            {/* M26 — a two-hander ejects the off hand and an off-hand ejects a
+                held two-hander. They go back to the pack, so this is a line,
+                not a confirm — what was wrong was that it happened unsaid. */}
+            {ejection && (
+              <p className="sh-line muted">
+                <Icon name="back" /> {ejection}
+              </p>
+            )}
+          </div>
+        )}
         {/*
           `itemBody` — the same function the merchant board, the Forge and the
           reward card render, rather than a second copy of the same three steps
@@ -1215,16 +1253,6 @@ function ItemPanel({ item }: { item: Item }) {
         {wearer && (
           <p className="sh-line muted">
             Worn by {wearer.name} · {wornSlot ? HERO_SLOT_LABEL[wornSlot] : ''}
-          </p>
-        )}
-        {/* M26 — equipping a two-hander silently ejected whatever was in the
-            off hand, and equipping an off-hand silently ejected a held
-            two-hander. Both go back to the pack rather than being destroyed, so
-            a warning is the honest fix rather than a confirm; what was wrong was
-            that it happened with no word at all. */}
-        {ejection && (
-          <p className="sh-line bad">
-            <Icon name="warn" /> {ejection}
           </p>
         )}
         {/* `title` carried the only explanation of what these two buttons do,
@@ -1307,38 +1335,49 @@ function ItemPanel({ item }: { item: Item }) {
         {/* Below the buttons, not above: arming must not move a control under a
             thumb that is already coming down (the rule `rev-shift` guards). */}
         {scrap.notice && (
-          <p className="sh-line bad" role="alert">
+          <p className="sh-line bad" role="alert" ref={scrapNoticeRef}>
             <Icon name="warn" /> {scrap.notice}
           </p>
         )}
       </div>
       <div className="sh-context-foot">
-        {gearSlot && !wearer && heroSlotsFor(item.slot).includes(gearSlot.slot) ? (
+        {target && plan ? (
           <button
             className="sh-btn primary"
             onClick={() => {
-              equipItem(gearSlot.sentinelId, gearSlot.slot, item.id)
+              equipItem(target.id, plan.slot, item.id)
               clearGearSlot()
+              useGearTarget.setState({ heroId: target.id })
               shellSelect(null)
             }}
+            aria-label={`Equip ${itemName(item)} on ${target.name}, ${plan.slotLabel}${ejection ? `. ${ejection}` : ''}`}
           >
-            Equip to {HERO_SLOT_LABEL[gearSlot.slot]}
+            Equip → {target.name}
           </button>
         ) : wearer && wornSlot ? (
-          <button
-            className="sh-btn"
-            onClick={() => {
-              unequipItem(wearer.id, wornSlot)
-              shellSelect(null)
-            }}
-          >
-            Unequip
-          </button>
-        ) : (
-          // A loose item with no slot armed: say how to wear it rather than
-          // leaving the foot empty — the foot is where the eye goes next.
-          <p className="sh-line muted sh-foot-hint">Tap a + under Gear to wear it.</p>
-        )}
+          <>
+            <button
+              className="sh-btn"
+              onClick={() => {
+                unequipItem(wearer.id, wornSlot)
+                shellSelect(null)
+              }}
+            >
+              Unequip
+            </button>
+            {/* Swap in two taps: arm this slot, then tap the replacement in the
+                pack — the pack filters to what fits. */}
+            <button
+              className="sh-btn"
+              onClick={() => {
+                shellSelect(null)
+                activateGearSlot(wearer.id, wornSlot)
+              }}
+            >
+              Swap
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   )
@@ -1438,14 +1477,24 @@ function GearColumn() {
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const shellSelect = useGameStore((s) => s.shellSelect)
 
-  // Follows the selected hero; falls back to the first of the roster so the
-  // column is never an empty mystery.
-  const hero = (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ?? roster[0]
+  // Follows the selected hero, then the last hero you looked at (an item tap
+  // is a different selection, and used to snap this back to `roster[0]`), and
+  // only then the first of the roster — and it SAYS whose it is (Phase 2).
+  const gearTargetId = useGearTarget((s) => s.heroId)
+  const inventory = useGameStore((s) => s.inventory)
+  // A loose item selected: show the gear it would be compared against.
+  const looseItem = selection?.kind === 'item' ? inventory.find((i) => i.id === selection.id) : undefined
+  const hero =
+    (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ??
+    (looseItem ? equipTarget(roster, looseItem, gearSlot?.sentinelId, gearTargetId) : undefined) ??
+    roster.find((h) => h.id === gearTargetId) ??
+    roster[0]
 
   return (
-    <div className="sh-gear">
-      <div className="sh-col-head">
+    <div className="sh-gear" role="group" aria-label={hero ? `${hero.name}'s gear` : 'Gear'}>
+      <div className="sh-col-head sh-gear-head">
         <span>GEAR</span>
+        {hero && <span className="sh-gear-who">{hero.name}</span>}
       </div>
       <div className="sh-gear-slots">
         {hero

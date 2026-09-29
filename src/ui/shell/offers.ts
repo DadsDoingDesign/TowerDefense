@@ -1,5 +1,5 @@
 import { canUpgrade, describeBase, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
-import { describeEnchant, describeGrant, describeMods, STACKING_RULE } from '../../game/data/describe'
+import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { getNode } from '../../game/data/archetypeTree'
 import { mutationName } from '../../game/data/mutations'
 import { UPGRADE_PATHS } from '../../game/data/upgradeTree'
@@ -138,6 +138,8 @@ export interface Offer {
    * nowhere else.
    */
   bodyIcons?: boolean
+  /** Reference text behind an ⓘ under the detail (Phase 2) — never a body line. */
+  info?: { label: string; lines: readonly string[] }
   /** Price chip on the card. */
   cost?: Price
   /** Bullet lines shown in the Context panel. */
@@ -818,11 +820,13 @@ function rewardOffers(st: St): Offer[] {
           c.desc,
           c.grant ? describeGrant(c.grant) : '',
           ...(c.grant?.mods ? describeMods(c.grant.mods) : []),
-          // Team-wide mods merge with gear and branch mods, and the rule that
-          // decides the winner was surfaced nowhere (H2).
-          c.grant?.mods ? STACKING_RULE : '',
         ]
     ).filter(Boolean),
+    // Team-wide mods merge with gear and branch mods, and the rule that decides
+    // the winner was surfaced nowhere (H2). It is reference text, so it sits
+    // behind an ⓘ like the hero panel's (Phase 2) instead of a paragraph on
+    // every card.
+    info: c.grant?.mods ? { label: 'How effects stack', lines: STACKING_RULES } : undefined,
     action: { label: 'Take it', run: () => st.chooseReward(c.id) },
   }))
 }
@@ -876,7 +880,8 @@ function crossroadsOffers(st: St): Offer[] {
         color: rarityVar('mythic'),
         icon: 'mutate',
         warn: m.downside ? `Downside — ${m.downside}` : undefined,
-        body: [m.desc, ...describeMods(m.mods), STACKING_RULE],
+        body: [m.desc, ...describeMods(m.mods)],
+        info: { label: 'How effects stack', lines: STACKING_RULES },
         action: { label: 'March on', run: () => st.finishCrossroads() },
       },
     ]
@@ -1088,7 +1093,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'motion',
       title: 'Reduced motion',
       sub: onOff(s.reducedMotion),
-      glyph: '≈',
+      icon: 'motion',
       body: ['Cuts animation and screen shake.'],
       action: { label: s.reducedMotion ? 'Turn off' : 'Turn on', run: () => s.setReducedMotion(!s.reducedMotion) },
     },
@@ -1096,7 +1101,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'contrast',
       title: 'High contrast',
       sub: onOff(s.highContrast),
-      glyph: '◐',
+      icon: 'contrast',
       body: ['Stronger borders and text contrast throughout.'],
       action: { label: s.highContrast ? 'Turn off' : 'Turn on', run: () => s.setHighContrast(!s.highContrast) },
     },
@@ -1104,7 +1109,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'scale',
       title: 'Large UI',
       sub: onOff(s.uiScale === 'large'),
-      glyph: '⤢',
+      icon: 'scale',
       body: [
         'Grows every label, tag and price by about 15%, and lifts the touch floor from 44px to 48px.',
         'It used to promise "bigger type" and move one button. It moves the whole type ramp now.',
@@ -1118,7 +1123,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'vision',
       title: 'Colour vision',
       sub: VISION_LABEL[s.vision],
-      glyph: '◔',
+      icon: 'vision',
       body: [
         'Re-tints the rarity ramp, the three archetype hues and the good/bad pair for the common colour-vision differences.',
         'Rarity also carries a letter and a pip count, and every hero carries its archetype mark — so colour is never the only signal either way.',
@@ -1166,7 +1171,7 @@ function settingsOffers(s: Settings): Offer[] {
       id: 'tips',
       title: 'Tips',
       sub: Object.values(s.taught).some(Boolean) ? 'Some seen' : 'All waiting',
-      glyph: '❓',
+      icon: 'tips',
       body: [
         'The one-line hints that appear the first time something new matters — posting a hero, equipping, Threat, spending gold, evolutions.',
         'Bring them back for another pass, or for whoever picks the game up on this device next.',

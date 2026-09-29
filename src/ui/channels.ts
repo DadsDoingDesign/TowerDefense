@@ -200,6 +200,8 @@ export const ICON_ORDER = [
   // Watchtower perks (Wave 1): the last system-font glyphs in the shell
   'battle', 'start', 'elite', 'crown', 'endless', 'coffer', 'seasoned', 'company',
   'map', 'orders', 'vow',
+  // row 11 (cont.) — the Settings rows' last system-font glyphs (Phase 2)
+  'motion', 'contrast', 'scale', 'vision', 'tips',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]

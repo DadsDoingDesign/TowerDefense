@@ -25,6 +25,8 @@ export function PageLayout({
   cta,
   live,
   foot,
+  strip,
+  tone,
 }: {
   title: string
   subtitle?: string
@@ -81,15 +83,20 @@ export function PageLayout({
    * scrolling body. See the note at the render site.
    */
   foot?: ReactNode
+  /** The pack + company strip on event pages (Phase 2) — buying is seen to land. */
+  strip?: ReactNode
+  /** A distinct frame for an elite's spoils (Phase 2). */
+  tone?: 'elite'
 }) {
   return (
-    <div className="pg">
+    <div className={`pg${tone ? ` tone-${tone}` : ''}`}>
       <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
         <h1 className="t-title" tabIndex={-1}>
           {title}
         </h1>
         {subtitle && <p className="t-sub">{subtitle}</p>}
         {resources && <div className="pg-res">{resources}</div>}
+        {strip}
       </div>
 
       <div className="pg-band pg-body">{children}</div>

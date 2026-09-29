@@ -18,7 +18,7 @@ export interface ShellContext {
    * Only the Crossroads reveal sets it: every other board is somewhere the
    * player chose to go, and announcing those would narrate navigation.
    */
-  board: { title: string; blurb: string; live?: boolean } | null
+  board: { title: string; blurb: string; live?: boolean; tone?: 'elite' } | null
   /**
    * `bands` is the four-band shell — used only by battle and the run map,
    * the two places where the Stage must stay uncovered and the pack must stay
@@ -60,6 +60,8 @@ export function useShellContext(): ShellContext {
   const endlessRoom = useGameStore((s) => s.endlessRoom)
   const crossroads = useGameStore((s) => s.crossroads)
   const reward = useGameStore((s) => s.reward)
+  // The node whose spoils these are — an elite's get their own frame (Phase 2).
+  const clearedType = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.type)
 
   // A finished run takes over the stage wherever it happened.
   if (runPhase !== 'active' && screen !== 'hub') {
@@ -127,7 +129,14 @@ export function useShellContext(): ShellContext {
         selector: 'offers',
         // "It applies to the whole watch" was false for every item card — an
         // item goes to the pack. Each card now says its own scope (Wave 1).
-        board: { title: 'Spoils', blurb: 'Take one. Each card says where it goes.' },
+        board:
+          clearedType === 'elite'
+            ? {
+                title: 'Elite spoils',
+                blurb: 'An elite pays richer: 25 gold banked and luckier cards. Take one.',
+                tone: 'elite',
+              }
+            : { title: 'Spoils', blurb: 'Take one. Each card says where it goes.' },
         layout: 'page',
       }
     }

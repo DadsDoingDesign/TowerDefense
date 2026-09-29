@@ -1,5 +1,5 @@
 /**
- * The Fieldwatch icon atlas — one PNG, 78 icons, drawn in the Tiny Swords hand.
+ * The Fieldwatch icon atlas — one PNG, 94 icons, drawn in the Tiny Swords hand.
  *
  * Run with `npm run fw-icons` to REWRITE the committed
  * `public/assets/ui/fw-icons.png`; `npm run fw-icons:check` re-encodes into
@@ -2102,6 +2102,106 @@ icon('vow', [
   '.....PPPPp......',
   '...hhhhhhhhh....',
   '....hhhhhhh.....',
+  '................',
+  '................',
+])
+
+
+/* ---- row 11 (cont.) — the Settings rows' last system-font glyphs (Phase 2):
+   `≈` Reduced motion, `◐` High contrast, `⤢` Large UI, `◔` Colour vision and
+   `❓` Tips. ---------------------------------------------------------------- */
+
+icon('motion', [
+  '................',
+  '................',
+  '................',
+  '..TT.....TT.....',
+  '.T..T...T..T..T.',
+  '.....T.T....TT..',
+  '......T.........',
+  '................',
+  '..tt.....tt.....',
+  '.t..t...t..t..t.',
+  '.....t.t....tt..',
+  '......t.........',
+  '................',
+  '................',
+  '................',
+  '................',
+])
+
+icon('contrast', [
+  '................',
+  '................',
+  '......WWoo......',
+  '....WWWWoooo....',
+  '...WWWWWooooo...',
+  '...WWWWWooooo...',
+  '..WWWWWWoooooo..',
+  '..WWWWWWoooooo..',
+  '..WWWWWWoooooo..',
+  '..WWWWWWoooooo..',
+  '...WWWWWooooo...',
+  '...WWWWWooooo...',
+  '....WWWWoooo....',
+  '......WWoo......',
+  '................',
+  '................',
+])
+
+icon('scale', [
+  '................',
+  '................',
+  '........GGGGGG..',
+  '.........GGGGG..',
+  '..........GGGG..',
+  '.........GGGGG..',
+  '........GGG.GG..',
+  '.......GGg...G..',
+  '..G...GGg.......',
+  '..GG.GGg........',
+  '..GGGGg.........',
+  '..GGGG..........',
+  '..GGGGG.........',
+  '..GGGGGG........',
+  '................',
+  '................',
+])
+
+icon('vision', [
+  '................',
+  '................',
+  '................',
+  '................',
+  '......PPPP......',
+  '....PPWttWPP....',
+  '..PPWWtuutWWPP..',
+  '.PPWWWtuutWWWPP.',
+  '..PPWWtuutWWPP..',
+  '....PPWttWPP....',
+  '......PPPP......',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+])
+
+icon('tips', [
+  '................',
+  '................',
+  '...PPPPPPPPPP...',
+  '..PPPPPooPPPPP..',
+  '..PPPPoPPoPPPP..',
+  '..PPPPPPPoPPPP..',
+  '..PPPPPPoPPPPP..',
+  '..PPPPPoPPPPPP..',
+  '..PPPPPPPPPPPP..',
+  '..PPPPPoPPPPPP..',
+  '...PPPPPPPPPP...',
+  '.....PPP........',
+  '.....PP.........',
+  '.....P..........',
   '................',
   '................',
 ])

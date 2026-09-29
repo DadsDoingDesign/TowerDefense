@@ -304,6 +304,122 @@
   font-weight: 600;
 }
 
+.evolve-option.picked {
+  background: var(--panel-3);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.evolve-option[aria-pressed='true'] .eo-name::after {
+  content: ' ✓';
+  color: var(--accent);
+}
+/* Phase 2: the card can outgrow a short phone now that it previews. */
+.overlay-card.evolve {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.evolve-hint {
+  margin: 12px 0 0 !important;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.evolve-preview {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.ep-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ep-portrait {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.ep-portrait img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.ep-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ep-title b {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+.ep-title span {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+.ep-ability {
+  margin: 8px 0 0 !important;
+  font-size: var(--fs-xs) !important;
+  line-height: 1.45 !important;
+  color: var(--text) !important;
+}
+.ep-grant {
+  margin: 4px 0 0 !important;
+  font-size: var(--fs-micro) !important;
+  color: var(--teal-text) !important;
+  font-weight: 600;
+}
+.ep-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+.ep-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: var(--fs-xs);
+}
+.ep-stats dt {
+  color: var(--muted);
+}
+.ep-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.ep-stats .up span {
+  color: var(--good);
+}
+.ep-stats .down span {
+  color: var(--bad-text);
+}
+.evolve-confirm {
+  margin-top: 12px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--teal-dim);
+  background: var(--cta, #336e7e);
+  color: #fff8ec;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+}
+.evolve-confirm:disabled {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--muted);
+}
 .evolve-more {
   margin: 14px 0 0 !important;
   font-size: var(--fs-xs);

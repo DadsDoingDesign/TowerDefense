@@ -11,6 +11,7 @@ import { MenuScreen, PageScreen, ResultScreen } from './PageScreens'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
+import { ReceiptToast } from './PackStrip'
 import { useOffers, type MetaView } from './offers'
 import '../../styles/page.css'
 import '../../styles/shell.css'
@@ -97,6 +98,7 @@ export function RootShell() {
         )}
         <EvolutionModal />
         <Announcer />
+        <ReceiptToast />
       </div>
     )
   }
@@ -119,6 +121,7 @@ export function RootShell() {
       <DetailBand offers={offers} />
       <EvolutionModal />
       <Announcer />
+      <ReceiptToast />
     </div>
   )
 }
