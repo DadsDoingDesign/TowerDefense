@@ -1,6 +1,6 @@
 # Fieldwatch in Figma
 
-The UI audit in `docs/ui-audit/` has been rebuilt as a working Figma design
+The UI audit (formerly committed in `docs/ui-audit/`, now generated locally and git-ignored) has been rebuilt as a working Figma design
 system. Every token matches `src/styles/global.css` and `docs/DESIGN_SYSTEM.md`.
 
 **File:** https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite
