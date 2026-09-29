@@ -268,7 +268,7 @@ export function eliteMarkAudit(): { key: string; base: string; mod: string | nul
   return rows
 }
 
-function drawEliteMark(
+export function drawEliteMark(
   ctx: CanvasRenderingContext2D,
   kind: Exclude<EliteMark, null>,
   x: number,

@@ -28,6 +28,7 @@ export function HeaderBand() {
   const baseHpStore = useGameStore((s) => s.baseHp)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const hud = useGameStore((s) => s.hud)
+  const mapName = useGameStore((s) => s.battleMap.name)
 
   const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore
@@ -54,9 +55,13 @@ export function HeaderBand() {
   // only now, beside the wave's name and its progress.
 
   return (
-    <header className="sh-header">
+    <header className="sh-header" aria-label="Run status">
       <div className="sh-header-row">
-        <span className="sh-brand">FIELDWATCH</span>
+        {/* The bands' heading (Phase 2): focus lands here when the screen
+            changes, and its name says which screen it is. */}
+        <h1 className="sh-brand" tabIndex={-1} aria-label={screen === 'battle' ? `Battle — ${mapName}` : 'Run map'}>
+          FIELDWATCH
+        </h1>
         <span
           className="sh-chip"
           role="img"

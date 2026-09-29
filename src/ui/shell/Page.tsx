@@ -85,7 +85,9 @@ export function PageLayout({
   return (
     <div className="pg">
       <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
-        <h1 className="t-title">{title}</h1>
+        <h1 className="t-title" tabIndex={-1}>
+          {title}
+        </h1>
         {subtitle && <p className="t-sub">{subtitle}</p>}
         {resources && <div className="pg-res">{resources}</div>}
       </div>

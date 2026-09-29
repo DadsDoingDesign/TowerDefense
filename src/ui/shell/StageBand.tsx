@@ -1,6 +1,8 @@
 import { BattleCanvas } from '../BattleCanvas'
 import { RunMapView } from '../components/RunMapView'
 import type { ShellContext } from './context'
+import { BossPlate } from './BossPlate'
+import { WaveCeremony } from './WaveCeremony'
 
 /**
  * Band 2 — the subject. Rule two of the shell: nothing ever covers this. No
@@ -43,10 +45,35 @@ import type { ShellContext } from './context'
  * "reserved" strip of dead pixels during setup — the fix costs the field
  * nothing at all, which is what makes it the right one rather than a trade.
  */
+/*
+ * ---------------------------------------------------------------------------
+ * Phase 2: the Stage has two HUD places, and neither covers a live field
+ * ---------------------------------------------------------------------------
+ * `.sh-stage-top` holds the champion nameplate (`BossPlate`). When it renders,
+ * `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by the plate's height,
+ * so `BattleCanvas` fits the field BELOW it — on a width-bound phone the plate
+ * lands in the woodland apron and the field does not move at all.
+ *
+ * `.sh-stage-center` holds the wave-clear ceremony, which only exists once
+ * the fight is over (the beat and the settled receipt).
+ *
+ * The command button is NOT here: it is an action, and every action lives in
+ * band 4 — see `CommandSlot` in the wave strip. docs/FIGMA.md § Live wave layout.
+ */
 export function StageBand({ ctx }: { ctx: ShellContext }) {
   return (
     <section className={`sh-stage stage-${ctx.stage}`}>
-      {ctx.stage === 'battlefield' && <BattleCanvas />}
+      {ctx.stage === 'battlefield' && (
+        <>
+          <BattleCanvas />
+          <div className="sh-stage-top">
+            <BossPlate />
+          </div>
+          <div className="sh-stage-center">
+            <WaveCeremony />
+          </div>
+        </>
+      )}
       {ctx.stage === 'map' && <RunMapView />}
     </section>
   )

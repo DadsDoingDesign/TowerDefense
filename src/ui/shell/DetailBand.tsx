@@ -46,6 +46,7 @@ import { useMapFocus } from './mapFocus'
 import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
+import { CommandSlot } from './CommandSlot'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -101,6 +102,7 @@ function WaveBar() {
   const setSpeed = useGameStore((s) => s.setSpeed)
   const canStart = useGameStore(canStartWave)
   const waveBeat = useGameStore((s) => s.waveBeat)
+  const shellSelect = useGameStore((s) => s.shellSelect)
 
   if (screen !== 'battle' || runPhase !== 'active') return null
 
@@ -113,25 +115,10 @@ function WaveBar() {
   if (lastResult && (battlePhase !== 'battle' || !hasEngine)) {
     return (
       <div className="sh-wavebar">
-        {/*
-         * The one live region for "the wave ended" (F9).
-         *
-         * A screen-reader user got no signal at all before: the field simply
-         * stopped, the panel swapped its contents, and nothing was announced.
-         * The coach strip already had this right (`Coach.tsx`, `role="status"
-         * aria-live="polite"`) and this matches it.
-         *
-         * It goes HERE and not on the result panel below, even though the panel
-         * carries more detail, because the panel is one of several states of
-         * the context column — select a hero and it is the hero's panel
-         * instead, and a live region that only fires when nothing happens to be
-         * selected is not a signal. `WaveBar` renders for every frame of a
-         * battle whatever is selected, so this line is the one that is always
-         * there to change. One region, not two: the panel says the same
-         * headline in different words, and two polite regions firing on the
-         * same tick queue up and read as one long garbled sentence.
-         */}
-        <p className="sh-wavebar-hint ready" role="status" aria-live="polite">
+        {/* No live region here any more (Phase 2): `Announcer` owns the one
+            polite voice for the whole battle — wave start, Gate hits, the
+            clear, level-ups — so two regions can never read over each other. */}
+        <p className="sh-wavebar-hint ready">
           {lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} · <Money amount={lastResult.goldEarned} c="gold" />{' '}
           earned
         </p>
@@ -176,6 +163,9 @@ function WaveBar() {
             <b>{Math.max(0, left)}</b> left
           </span>
         </p>
+        {/* The live wave's command place — the COMBAT agent's active ability
+            renders here (Phase 2 layout contract, docs/FIGMA.md). */}
+        <CommandSlot />
         {/* A visible word, not just "1×" (Wave 1): a bare multiplier in a box
             read as a score, not as a control. */}
         <button
@@ -216,7 +206,18 @@ function WaveBar() {
           ? `${deployed} posted. Tap a circle to move a hero, or start the wave.`
           : 'Tap your hero, then a glowing circle on the field.'}
       </p>
-      <button className="sh-btn primary" disabled={deployed === 0} onClick={startWave}>
+      <button
+        className="sh-btn primary"
+        disabled={deployed === 0}
+        onClick={() => {
+          // A live wave collapses the Detail band so the Stage gets the height
+          // (Phase 2) — unless something is selected, which re-opens it. The
+          // hero just posted is almost always still selected, so let go of it
+          // here, or the most common path into a wave would never collapse.
+          if (useGameStore.getState().shellSelection) shellSelect(null)
+          startWave()
+        }}
+      >
         Start Wave ▶
       </button>
     </div>
