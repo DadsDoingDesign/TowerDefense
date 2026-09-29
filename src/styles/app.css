@@ -1,22 +1,18 @@
 /**
- * The eager stylesheet: the part of the old app.css that the SHIPPING shell
- * still depends on (H14).
- *
- * `App.tsx` imports this file, so every byte in it is in every player's first
- * download. Everything that is only reachable from the `?shell=0` screen tree
- * now lives in `legacy.css`, which `src/ui/screens/LegacyApp.tsx` imports and
- * which therefore rides the lazy chunk instead of the boot payload.
+ * The eager stylesheet: the non-shell rules the Root Shell still depends on
+ * (H14). The pre-shell screens and their `legacy.css` were deleted; what is
+ * left here is every rule a shipping component still names.
  *
  * What earns a place here, and why:
  *
- * - `.app-root`                        — App.tsx, both paths.
+ * - `.app-root`                        — App.tsx.
  * - `.battle-canvas` / `-wrap`         — BattleCanvas, which the shell's Stage
  *                                        band renders.
  * - `.overlay-scrim` / `.overlay-card` — EvolutionModal, still a blocking modal
  *   (+ the Tiny Swords nine-slice     in the shell (rule four allows it), plus
  *   override) and the `.evolve-*`     the parchment override that skins it.
  *   / `.eo-*` group
- * - `.run-map-*` / `.map-node*`        — RunMapView, shared by both UIs.
+ * - `.run-map-*` / `.map-node*`        — RunMapView (the shell's Stage band).
  *   / `.mn-*`
  * - Three DOCUMENT-WIDE blocks that exist nowhere else in the codebase:
  *   the `@media (pointer: coarse)` 44px tap-target floor, the
@@ -27,8 +23,7 @@
  *   would silently do nothing in the UI the game actually ships.
  *
  * Rule order inside this file is the order those blocks had in app.css, so the
- * cascade among them is unchanged; `legacy.css` loads after it, exactly as the
- * back half of app.css used to.
+ * cascade among them is unchanged.
  */
 .app-root {
   height: 100dvh;

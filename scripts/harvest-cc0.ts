@@ -265,20 +265,21 @@ const SPRITES: SpriteJob[] = [
   })),
 ]
 
-/** border-image chrome. Sources chosen for closest tone to what they replace. */
+/** border-image chrome. Source chosen for closest tone to what it replaces. */
 const CHROME: Array<{ out: string; src: string; note: string }> = [
-  { out: 'btn_big_blue_9.png', src: 'UI/Buttons/Button_Blue_9Slides.png',
-    note: 'teal button with light frame — near-exact tonal match to the file it replaces' },
   { out: 'paper_special_9.png', src: 'UI/Buttons/Button_Blue_9Slides_Pressed.png',
     note: 'slate blue-grey panel — closest tone to the retired art; NOTE: the old file had gold corner filigree, which the CC0 build has no equivalent for' },
-  { out: 'paper_regular_9.png', src: 'UI/Buttons/Button_Disable_9Slides.png',
-    note: 'neutral tan panel standing in for cream parchment (legacy.css only)' },
-  { out: 'woodtable_9.png', src: 'UI/Banners/Carved_9Slides.png',
-    note: 'carved wood-grain panel (legacy.css only)' },
 ]
 
-/** Post-CC0 files that are simply deleted: nothing references them. */
-const DELETE = ['btn_big_blue.png', 'paper_regular.png', 'paper_special.png', 'woodtable.png']
+/**
+ * Files that are simply deleted: nothing references them. The first four are
+ * post-CC0; the last three were CC0 chrome that only the deleted pre-shell
+ * screens' `legacy.css` ever painted.
+ */
+const DELETE = [
+  'btn_big_blue.png', 'paper_regular.png', 'paper_special.png', 'woodtable.png',
+  'btn_big_blue_9.png', 'paper_regular_9.png', 'woodtable_9.png',
+]
 
 /** Verbatim copies of old-CC0 art. [upstream path, destination, purpose] */
 const HARVEST: Array<[string, string, string]> = []
@@ -423,7 +424,7 @@ async function main(): Promise<void> {
   // 3. deletions
   for (const f of DELETE) {
     const p = join(ASSETS, 'ui', 'tinyswords', f)
-    if (existsSync(p)) { if (!CHECK_ONLY) rmSync(p); console.log(`  delete ui/tinyswords/${f} (post-CC0, unreferenced)`) }
+    if (existsSync(p)) { if (!CHECK_ONLY) rmSync(p); console.log(`  delete ui/tinyswords/${f} (unreferenced)`) }
   }
 
   // 4. verbatim harvest

@@ -13,8 +13,8 @@
  * overridden from script while `env()` cannot — a notched device is testable in
  * a desktop browser by setting `--safe-top` and friends on the root.
  *
- * Declared here because this file loads on both the Root Shell and the legacy
- * `?shell=0` path.
+ * Declared here because this file loads with every surface that can cover the
+ * shell (the resume, rotate and error overlays), not only with the shell.
  */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
