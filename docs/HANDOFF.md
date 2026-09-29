@@ -73,7 +73,8 @@ size comes only from the PNG.
 - **`DrawSentinel.loadout`** is optional; absent means the bare body renders
   exactly as before.
 - **`fieldwatch` pack + theme** at `spriteScale: 1`, registered but **not
-  activated**. Tiny Swords is still the live theme.
+  the default**. Tiny Swords is still the live theme; `?art=fieldwatch`
+  previews the new pack over a Tiny Swords fallback (§6.4).
 
 ### Phase 1 — the harness (done, working on placeholder art)
 
@@ -169,9 +170,43 @@ Heroes and gear, enemies **bosses first** (`torch5`/`tnt5`/`barrel5` are
 byte-identical to `torch1`/`tnt1`/`barrel3` — three named bosses wearing
 trash-mob art), environment, UI and key art. See `ART-PLAN.md` §4.
 
-### 6.4 Flip the theme — the last step, not the first
-When the pack is complete, change the active theme to `fieldwatch`. **Not
-before**: flipping it now draws today's art at 2× and makes every tree vanish.
+### 6.4 Ship role by role — the per-role fallback chain
+
+The theme flip is no longer all-or-nothing. A theme names a primary pack and a
+fallback chain (`SpriteConfig.fallback` in `themes.ts`; `fieldwatch` →
+`tinyswords`), and every role is drawn from the **first pack in the chain that
+ships its family**, at **that pack's own density** (`packDensity`). A role no
+pack ships still falls through to the procedural token. So each authored role
+can go live on its own:
+
+1. Author the file into `public/assets/sprites/fieldwatch/` at the spec'd size
+   (decorations at their DRAWN size — §5.1 still applies to fieldwatch art).
+2. Add its role to `PACK_ROLES.fieldwatch` in `sprites.ts`. That list is the
+   truth: `tests/pwa.precache.test.ts` fails if a declared file is missing, if
+   a runtime PNG sits in the folder undeclared, or if any decoration the chain
+   resolves would draw taller than `DECO_CEIL`.
+3. Preview it in the real game with **`?art=fieldwatch`** (any build; nothing
+   persists it). Roles the pack ships draw from it; everything else draws from
+   Tiny Swords at ×½, so there are no circles and no vanished trees.
+
+Rules the chain keeps:
+
+- **Families move together.** `fighter`, `fighter_idle` and `fighter_atk` are
+  one figure; a pack that ships any of them owns all three (`artFamily`). Ship
+  a hero's strips together, or the draw code falls back inside the family (no
+  attack strip → the idle strip) rather than mixing artists.
+- **Gear follows the body.** The compositor is called with the pack the body
+  resolved to, and anchors stay keyed by pack (`anchors.generated.ts`) — a
+  Tiny Swords rogue gets no fieldwatch gear, because it has no anchors.
+- **Only drawn files are fetched.** Boot preload and the service-worker precache
+  both come from `themeAssetPaths` — for each role, the one file of the one
+  pack it resolves to. A shadowed Tiny Swords `fighter.png` is not requested.
+- **A broken upload degrades, not disappears.** A declared file that 404s drops
+  that family to the next pack in the chain at runtime.
+
+The last step is still a flip: when enough of the pack is authored to carry the
+game, set `DEFAULT_THEME = 'fieldwatch'`. Whatever is still unauthored keeps
+drawing from Tiny Swords, and the precache follows automatically.
 
 ---
 
@@ -188,11 +223,10 @@ before**: flipping it now draws today's art at 2× and makes every tree vanish.
    names. That mapping — item noun → art role, lowercased, with the §7.4
    26-nouns-to-18-shapes compression — is what makes gear show up in an actual
    battle.
-3. **The placeholder pack is precached.** It added 23 files (~10 KB) to the
-   service worker's install set even though the theme is inactive, because the
-   reachability pass sees `fieldwatch` in the bundle. Harmless, and correct
-   once the pack ships real art, but worth knowing if install weight is being
-   measured before then.
+3. **The placeholder pack is not precached.** The precache is exactly
+   `themeAssetPaths(DEFAULT_THEME)` — the files the default theme draws — so
+   the fieldwatch files enter the offline set role by role, the day the default
+   theme first draws each one, and never before.
 4. **Body armour's real value is unproven.** At 52 device px a torso texture is
    invisible and only a changed outline reads. The placeholder confirms
    pauldrons and a hem survive; whether five *distinct* armours can be told

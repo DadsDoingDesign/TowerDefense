@@ -675,6 +675,25 @@
   -webkit-user-drag: none;
 }
 
+/* The live layer (attract mode, `AttractMode.tsx`): fills the FRAME, not the
+   488×272 stage — the demo fits itself, at an integer device-pixel ratio. It
+   sits over the still and fades in on its first frame, so until then (and
+   whenever it is absent) the still is what shows. */
+.pg-art-livewrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pg-art-live {
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.pg-art-live.is-live {
+  opacity: 1;
+}
+
 /* Ambience — CSS only, over the light sources `scripts/brand.ts` reported.
    Each span is centred on its point. */
 .pg-art-fx {

@@ -2035,6 +2035,87 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   than viewport-aware. Verified at 390×844, 375×667 (with and without
   records), 360×568 and a 1280 desktop.
 
+- **2026-09-29 — Phase 2: readable, rewarding battles.** Reviewed on real
+  renders (Playwright, dev build) at 390×844, 375×667, 320×568 and 430×932, plus
+  a keyboard-only walk (menu → hero → map → post a hero on a circle → wave →
+  clear) and a reduced-motion pass. Shots: `scratchpad/p2/shots/`.
+
+  The battlefield was the leftover `1fr` under ~436px of chrome: 390×227 at
+  390 wide with ~100px of black bars, 282×164 at 375×667, 149×87 at 320×568. A
+  live wave now collapses the Detail band into the wave strip and the Stage takes
+  the height (390: 332 → 574); the field fills the width at every size (375 →
+  375×219, 320 → 320×187). What the renders caught: at 390 the field is
+  WIDTH-bound — the lane runs edge to edge on both maps, so no zoom could grow it
+  without cropping the lane — and units measured ~12 CSS px (goblin) / ~15
+  (hero) against a 24 target. The only honest lever was density: units now draw
+  at the pack's native density (the cleanest bucket the pipeline has, no filter)
+  and champions at a lossless ×2, so goblins ~24 CSS px, heroes ~30. The black
+  bars are a baked woodland apron registered under the field; the first pass drew
+  a hard 6px contact line at the seam that read as a picture frame (replaced by
+  a soft falloff) and one uniform mat of trees (glades added, deeper shade toward
+  the Stage edges). The first scripted tap on a circle missed: the apron canvas
+  was first in the DOM, so `querySelector('canvas')` in every harness found it —
+  the field canvas is first again.
+
+  Readability: one HP bar per unit, floored in CSS px (2.5 fill + 1 outline),
+  with a cream recent-damage trail; tier is tick marks IN the bar (the white
+  notch plaques stacked into a ribbon down a crowded lane); elite modifiers are a
+  badge over the head. Damage numbers of a kind merge into a running total per
+  target. The champion gets a nameplate pinned in the Stage's reserved top strip.
+
+  Ceremony: a banner on the Stage in the clear beat, then gold/XP count-ups,
+  "Doyle → Lv 2" call-outs and the per-hero roll; elite spoils get a gold frame;
+  evolution is select-then-confirm with a preview (DPS 60 → 74, HP 178 → 241, the
+  new ability line); a defeat leads with "What broke the line" (types that
+  reached the Gate by Gate damage, the hardest hit, the last wave, the seed).
+
+  Gear: "Equip → <hero>" on every loose item, the comparison first (it was below
+  the fold when it followed the item lines), one-tap swap, and the Gear column
+  follows the equip target (it showed Doyle while the button said Brann). Event
+  pages got a pack strip and a receipt toast — which landed on the serif title
+  and was moved above the CTA. Keyboard: circles are real buttons ("Circle 2, by
+  the third bend, empty — post Doyle here"), focus lands on each screen's h1
+  (the global focus ring drew a box round the title; suppressed for headings),
+  and one polite region says "Depth 1 begins. 8 enemies." … "Wave cleared.
+  32 gold. Doyle reached level 2."
+
+  Open: on a 430×932 phone the apron is ~230px of forest above and below the
+  field during a live wave — correct, and framed, but it is room a future
+  portrait-authored map could use. A hero posted on Kiln Road's top circle
+  (`s1`, y=60) loses ~2 CSS px of plume to the field's top edge at native density.
+
+- **2026-09-29 — Phase 4: per-role art fallback, attract mode, desk/tablet layout.**
+  Rendered through Playwright on the preview build at 1440×900, 1280×800,
+  1024×768, 768×1024 and 390×844 (dpr 2 and 3), plus `?art=fieldwatch`.
+
+  Art chain: with the placeholder fieldwatch pack previewed, the fighter,
+  torch1, grass and tree1 draw from it and every other role from Tiny Swords at
+  ×½ — no procedural circles, and the Tiny Swords trees are still in the pool
+  (the §5.1 trap is now a test). The page fetched 15 fieldwatch + 38 Tiny Swords
+  files and none of the 7 it shadows.
+
+  Attract mode: first pass opened on 8–10 s of an empty meadow (the column
+  walking in) — fixed by pre-rolling each fight to one second before first
+  contact. A fixed company-centred crop missed most of the fight on the left
+  bend — fixed with a slow eased camera pulled toward the closing column. The
+  first frame was one 392 ms task (terrain, apron, unit pixmaps) — split into
+  idle slices (119 / 101 ms) and the apron is never baked for a frame the field
+  already covers. The frame sat at y = 113.55, so every art pixel straddled two
+  device pixels — the canvas now snaps itself to the device grid. At dpr 3 it
+  shows two device pixels per art pixel, at dpr 2 exactly one.
+
+  Wide layout: first pass stretched the three gear slots to ~180px empty boxes
+  in the full-height right column (capped at 76px); the run map spread its
+  layers across 870px of Stage into long diagonals (centred at ≤760px); the
+  1024 right column left the hero tabs cramped (floor raised to 400px); the
+  menu's right column was top-heavy with a 450px hole above Start a Run (now a
+  centred block, 48px title). The field is exactly 1:1 at 1440×900 (snap), and
+  the still is shown at an exact 2× on a tall desk or tablet under reduced
+  motion. 390×844 re-checked: identical bands, still "Tap".
+
+  Open: at 1280×800 the field is a filtered 0.88 downscale (the side column
+  leaves 850px); a 960px Stage needs a ≥1400px window.
+
 - **2026-09-29 — Phase 3b run and meta depth: campfire, perks, relics, Codex.**
   New surfaces were all built on the existing page and offer-card patterns, not
   new chrome. These are the campfire page (rest / train each hero / Field

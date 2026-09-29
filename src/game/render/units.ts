@@ -11,12 +11,13 @@ import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
 import { pixmap, quarterTurns } from './pixmap'
-import { getSprite } from './sprites'
+import { artFor, getSprite } from './sprites'
 import { getActiveStyle } from './themes'
-import { animNow } from './frame'
+import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
 import { blitPixmap } from './blit'
-import { drawTierTag, eliteMark, enemyTier } from './plaques'
+import { eliteMark, enemyTier } from './plaques'
+import { drawEnemyBar, drawHeroBar } from './hpbar'
 
 /** A minimal, uniform description of a tower to draw (works for setup + battle). */
 export interface DrawSentinel {
@@ -210,7 +211,10 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const style = getActiveStyle()
   const t = style.token
   const r = 15 * pulse
-  const pack = style.sprites?.pack
+  // The figure's pack, from the theme's per-role fallback chain — the whole
+  // family (still, idle, attack) comes from one pack, at that pack's density.
+  const art = artFor(s.archetype)
+  const pack = art?.pack
   const idle = pack ? getSprite(pack, `${s.archetype}_idle`) : undefined
   const atk = pack ? getSprite(pack, `${s.archetype}_atk`) : undefined
   const staticSpr = pack ? getSprite(pack, s.archetype) : undefined
@@ -228,17 +232,17 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   }
 
   const towerPm = (() => {
-    if (!style.sprites) return null
+    if (!art) return null
     const firing = s.fireFlash > 0.05 && !!atk
     const anim = firing ? 'atk' : 'idle'
     const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
     // heroStrip returns the bare body when nothing is equipped, so the
     // un-geared path is exactly what it was before the compositor existed.
     const strip =
-      heroStrip(style.sprites.pack, s.archetype, anim, frames, s.loadout) ??
+      heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
       ((firing ? atk : idle) ?? idle ?? atk)
     if (!strip) return null
-    const pm = pixmap(strip, { scale: style.sprites.spriteScale, frames, ring: true })
+    const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
     if (!pm) return null
     const frame = firing
       ? Math.min(frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * frames))
@@ -262,7 +266,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     blitPixmap(ctx, towerPm.pm, towerPm.frame, 0, 8)
   } else if (staticSpr) {
     groundRing()
-    const pm = pixmap(staticSpr, { scale: style.sprites!.spriteScale, ring: true })
+    const pm = pixmap(staticSpr, { scale: unitPixmapScale(art!.spriteScale), ring: true })
     if (pm) blitPixmap(ctx, pm, 0, 0, 8)
     if (s.fireFlash > 0) {
       ctx.beginPath()
@@ -330,18 +334,9 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   // a 90 ms state tell, not travel) but the recoil and sparks are not.
   drawMuzzle(ctx, fs.muzzle, fs.muzzleAngle, s.accent)
 
-  // HP bar (only when damaged)
-  const frac = Math.max(0, s.hp) / s.maxHp
-  if (frac < 0.999) {
-    const w = 30
-    const y = 20
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    roundRect(ctx, -w / 2, y, w, 4, 2)
-    ctx.fill()
-    ctx.fillStyle = frac > 0.5 ? '#7ac74f' : frac > 0.25 ? '#e6b800' : '#e05a4f'
-    roundRect(ctx, -w / 2, y, w * frac, 4, 2)
-    ctx.fill()
-  }
+  // HP bar (only when damaged) — the CSS-px-floored bar with its damage
+  // trail, under the hero's feet (Phase 2, `hpbar.ts`).
+  drawHeroBar(ctx, s.id, s.hp, s.maxHp, 14)
 
   // Patience pips (top-right of token)
   if (s.patienceStacks > 0) {
@@ -400,7 +395,8 @@ export function drawEnemy(
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const pack = style.sprites?.pack
+  const art = artFor(type.id)
+  const pack = art?.pack
   const walkFrames = pack ? ANIM_FRAMES[`${type.id}_walk`] : undefined
   const walk = pack && walkFrames ? getSprite(pack, `${type.id}_walk`) : undefined
   const staticSpr = pack ? getSprite(pack, type.id) : undefined
@@ -413,7 +409,7 @@ export function drawEnemy(
    * `type.radius` is GAMEPLAY (hit detection, splash, blocking) and is not
    * touched here — only the render scale is.
    */
-  const spriteScale = style.sprites ? (type.isBoss ? 1 : style.sprites.spriteScale) : 1
+  const spriteScale = art ? unitPixmapScale(art.spriteScale, !!type.isBoss) : 1
 
   const enemyShadow = () => {
     ctx.beginPath()
@@ -609,21 +605,10 @@ export function drawEnemy(
     }
   }
 
-  // HP bar
-  const frac = Math.max(0, e.hp) / e.maxHp
-  if (frac < 1) {
-    const w = Math.max(type.radius * 2, 22)
-    const y = -type.radius - 8
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    roundRect(ctx, -w / 2, y, w, 4, 2)
-    ctx.fill()
-    ctx.fillStyle = frac > 0.5 ? '#7ac74f' : frac > 0.25 ? '#e6b800' : '#e05a4f'
-    roundRect(ctx, -w / 2, y, w * frac, 4, 2)
-    ctx.fill()
-  }
-
-  // Above the art AND above the HP bar, whichever reaches higher.
-  drawTierTag(ctx, enemyTier(type.id), type.radius, Math.min(artTop, -type.radius - 8), eliteMark(type))
+  // HP bar, tier ticks and elite badge — one stack over the head (Phase 2,
+  // `hpbar.ts`). The tier plaque it replaces stacked into a white ribbon down
+  // a crowded lane; the count now lives inside the bar.
+  drawEnemyBar(ctx, e.id, e.hp, e.maxHp, enemyTier(type.id), eliteMark(type), !!type.isBoss, Math.round(artTop) - 1)
   ctx.restore()
 }
 

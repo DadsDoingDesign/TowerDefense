@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { computeCombat } from '../game/engine/combat'
 import { MAX_STEPS_PER_FRAME, TICK, type GameEngine } from '../game/engine/engine'
 import {
@@ -23,6 +23,9 @@ import {
   setFxReducedMotion,
 } from '../game/render/fx'
 import { FxDiffer } from '../game/render/fxDiff'
+import { APRON_X, APRON_Y, getApron } from '../game/render/apron'
+import { SlotLayer, type FieldRect } from './SlotLayer'
+import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
@@ -138,14 +141,54 @@ function resampleMode(viewScale: number, dpr: number): 'pixelated' | 'auto' {
  */
 export function BattleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const apronRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const hoverSlot = useRef<string | null>(null)
+  /** The field's CSS rect inside the wrap — what the DOM slot layer rides on. */
+  const [field, setFieldState] = useState<FieldRect | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current!
+    const apron = apronRef.current!
     const wrap = wrapRef.current!
     /** The VISIBLE context. It only ever does the one final blit. */
     const vctx = canvas.getContext('2d')!
+    /** Which baked apron is on the apron element right now. */
+    let apronSrc: HTMLCanvasElement | null = null
+    let apronView = { scale: 0, left: 0, top: 0 }
+    const setField = (r: FieldRect) =>
+      setFieldState((prev) =>
+        prev && prev.left === r.left && prev.top === r.top && prev.width === r.width && prev.height === r.height ? prev : r,
+      )
+    /**
+     * Copy the baked apron onto its element when the bake changes, and keep it
+     * registered under the field. Cheap on every call but the first: a layout
+     * change is three style writes.
+     */
+    const placeApron = (scale: number, left: number, top: number) => {
+      apronView = { scale, left, top }
+      const src = getApron(useGameStore.getState().battleMap)
+      if (src && src !== apronSrc) {
+        apronSrc = src
+        apron.width = src.width
+        apron.height = src.height
+        const actx = apron.getContext('2d')
+        if (actx) {
+          actx.imageSmoothingEnabled = false
+          actx.drawImage(src, 0, 0)
+        }
+      }
+      if (!apronSrc) {
+        apron.style.display = 'none'
+        return
+      }
+      apron.style.display = 'block'
+      apron.style.width = `${apronSrc.width * scale}px`
+      apron.style.height = `${apronSrc.height * scale}px`
+      apron.style.left = `${left - APRON_X * scale}px`
+      apron.style.top = `${top - APRON_Y * scale}px`
+      apron.style.imageRendering = resampleMode(scale, window.devicePixelRatio || 1)
+    }
 
     let cssW = 0
     let cssH = 0
@@ -177,16 +220,43 @@ export function BattleCanvas() {
      */
     const resize = () => {
       const rect = wrap.getBoundingClientRect()
+      // The field fits the wrap's CONTENT box: the Stage reserves a strip at
+      // the top (the boss nameplate) as wrap padding, so the plate sits in the
+      // apron above the field and never over it (Phase 2).
+      const cs = getComputedStyle(wrap)
+      const padT = parseFloat(cs.paddingTop) || 0
+      const padB = parseFloat(cs.paddingBottom) || 0
       cssW = rect.width
-      cssH = rect.height
+      cssH = Math.max(1, rect.height - padT - padB)
       const map = useGameStore.getState().battleMap
       if (canvas.width !== map.width || canvas.height !== map.height) {
         canvas.width = map.width
         canvas.height = map.height
       }
-      const view = fitView(cssW, cssH, map)
-      canvas.style.width = `${map.width * view.scale}px`
-      canvas.style.height = `${map.height * view.scale}px`
+      let view = fitView(cssW, cssH, map)
+      // The wide layout (shell-wide.css) sets `--field-snap: 1`: when the field
+      // is being ENLARGED, snap the scale down to a whole number of device
+      // pixels per field pixel, so a 1440-wide desk shows it at exactly 1:1 (or
+      // 2:1 on a retina panel) instead of a smeared 1.02. Phones never set it —
+      // their field is width-bound and must keep the full width.
+      if (cs.getPropertyValue('--field-snap').trim() === '1') {
+        const d = window.devicePixelRatio || 1
+        const n = Math.floor(view.scale * d + 1e-6)
+        if (n >= 1) {
+          const sc = n / d
+          view = { scale: sc, ox: (cssW - map.width * sc) / 2, oy: (cssH - map.height * sc) / 2 }
+        }
+      }
+      const fw = map.width * view.scale
+      const fh = map.height * view.scale
+      const left = Math.round(view.ox)
+      const top = Math.round(padT + view.oy)
+      canvas.style.width = `${fw}px`
+      canvas.style.height = `${fh}px`
+      canvas.style.left = `${left}px`
+      canvas.style.top = `${top}px`
+      placeApron(view.scale, left, top)
+      setField({ left, top, width: fw, height: fh, scale: view.scale })
       // The renderer draws into the 960×560 composite and otherwise has no way
       // to know how hard that composite is about to be squeezed — which is how
       // the tier notch ended up at 1.11 CSS px on a 320×568 phone (M2).
@@ -221,6 +291,8 @@ export function BattleCanvas() {
      * or scratch table can leak from one wave into the next (see `fxDiff.ts`).
      */
     let fxDiff: FxDiffer | null = null
+    /** Who reached the Gate, per wave — the defeat receipt and the announcer. */
+    let ledger: LedgerWatch | null = null
 
     // The effect sheets are fetched on mount, not at boot: 19 KB that the title
     // screen has no use for.
@@ -272,6 +344,8 @@ export function BattleCanvas() {
           fxEngine = engine
           fxReset()
           fxDiff = new FxDiffer(engine)
+          ledger = new LedgerWatch(engine)
+          ledgerBeginWave(st.runSeed, st.roster)
         }
         /**
          * ---- hitstop, and why it cannot desync the sim (Phase 3) -----------
@@ -295,8 +369,10 @@ export function BattleCanvas() {
             // One diff per TICK, not per frame: at 3× a frame runs three ticks
             // and a frame-level diff would merge them.
             fxDiff.snapBefore(engine)
+            ledger?.before(engine)
             engine.step(TICK)
             fxDiff.diffAfter(engine, speed)
+            ledger?.after(engine)
           }
           accumulator -= TICK
           steps++
@@ -341,6 +417,7 @@ export function BattleCanvas() {
       // compare per frame, no allocation.
       if (canvas.width !== map.width || canvas.height !== map.height) resize()
       else if ((window.devicePixelRatio || 1) !== lastDpr) resize()
+      else if (getApron(map) !== apronSrc) placeApron(apronView.scale, apronView.left, apronView.top)
       // Identity transform: logical px ARE canvas px here, so every sprite blit
       // is 1:1 and smoothing has nothing to do. Left off so the procedural
       // fallback keeps its hard pixel edges.
@@ -526,7 +603,12 @@ export function BattleCanvas() {
 
   return (
     <div className="battle-canvas-wrap" ref={wrapRef}>
+      {/* The field canvas stays FIRST in the DOM, so `querySelector('canvas')`
+          in every harness still finds the field; z-index puts the apron
+          behind it. */}
       <canvas ref={canvasRef} className="battle-canvas" />
+      <canvas ref={apronRef} className="battle-apron" aria-hidden="true" />
+      {field && <SlotLayer field={field} />}
     </div>
   )
 }

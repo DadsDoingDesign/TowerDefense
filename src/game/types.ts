@@ -119,7 +119,7 @@ export interface Mutation {
   mods: EffectMods
   /** One-line summary of the downside this mutation trades for its power. */
   downside: string
-  /** Some mutations also grant free levels toward a tower upgrade path. */
+  /** Legacy (v6 saves): a free upgrade-path level. The tree is gone; v7 migration folds it away. */
   grantUpgrade?: UpgradeGrant
 }
 
@@ -165,7 +165,7 @@ export interface Item {
   enchantments: Enchantment[]
   /** Keepsakes (a trinket variant) buff the whole team instead of one Sentinel. */
   keepsake?: boolean
-  /** Some items grant free levels toward a tower upgrade path. */
+  /** Legacy (v6 saves): a free upgrade-path level. v7 migration turns it into the Mythic Edge enchant. */
   grantUpgrade?: UpgradeGrant
 }
 

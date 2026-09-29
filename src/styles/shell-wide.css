@@ -1,0 +1,349 @@
+/**
+ * Phase 4 — the shell on a tablet and a desk. Loaded after shell-live.css.
+ *
+ * The shell was designed for one 390px column, and that design is untouched:
+ * every rule here is inside a media query no phone matches (portrait phones top
+ * out at ~430px wide; a phone on its side is ≤ 500px tall and gets the rotate
+ * prompt). See docs/FIGMA.md § Wide layout.
+ *
+ *  - TABLET PORTRAIT (700–899px wide, portrait): the same four bands, full
+ *    width instead of a 520px column — the field is width-bound, so the extra
+ *    width is all field (768 → 768×448 vs 520×303), and the Detail band takes a
+ *    little of the extra height.
+ *  - WIDE (≥ 900px wide and ≥ 540px tall — a laptop, a desktop, a tablet on
+ *    its side): header across the top; the Stage on the left, as large as the
+ *    height allows; the Selector and the Detail band stacked in a right column.
+ *    The Detail band no longer collapses in a live wave — it is beside the
+ *    field, not under it, so collapsing it would buy the field nothing.
+ *  - HOVER (a hover-capable fine pointer, any width): hover states and a
+ *    pointer cursor on everything that takes a click.
+ */
+
+/* ============================================================ tablet portrait */
+@media (min-width: 700px) and (max-width: 899.98px) and (orientation: portrait) {
+  .shell:not(.shell-page) {
+    max-width: none;
+    --sh-detail-h: 296px;
+  }
+  .shell.shell-page {
+    max-width: 600px;
+  }
+  /* The menu's key art takes the tablet's extra height (it stops at the
+     phone's 272px otherwise, leaving a hole under the rows)… */
+  .shell-page .pg-art {
+    --art-max: 420px;
+    max-height: var(--art-max);
+  }
+}
+/* …and on a tall one the still is shown at an exact 2× so it fills it. */
+@media (min-width: 700px) and (max-width: 899.98px) and (orientation: portrait) and (min-height: 900px) {
+  .shell-page .pg-art-stage {
+    transform: scale(2);
+    transform-origin: 50% 50%;
+  }
+}
+
+/* ======================================================================= wide */
+@media (min-width: 900px) and (min-height: 540px) {
+  .shell:not(.shell-page) {
+    --sh-side-w: clamp(400px, 32vw, 468px);
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) var(--sh-side-w);
+    /* header · coach · selector · detail. The Stage spans the last two rows
+       of the left column; the detail row is the one that takes the slack. */
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+  }
+
+  /* -- band 1: one row across the whole width -------------------------------- */
+  .shell:not(.shell-page) > .sh-header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    min-height: 60px;
+    padding-top: var(--sh-header-pad);
+    padding-bottom: var(--sh-header-pad);
+    /* room for the "?" shortcuts button pinned at the right */
+    padding-right: 72px;
+  }
+  .shell:not(.shell-page) > .sh-header > .sh-header-row.sub {
+    flex: 1;
+    gap: 24px;
+  }
+  .shell:not(.shell-page) .sh-base-bar {
+    max-width: 320px;
+  }
+
+  .shell:not(.shell-page) > .sh-coach {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  /* -- band 2: the Stage, left, full height -------------------------------- */
+  .shell:not(.shell-page) > .sh-stage {
+    grid-column: 1;
+    grid-row: 3 / 5;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+  /* BattleCanvas snaps an ENLARGED field to whole device pixels per field
+     pixel when it reads this (1:1 on a 1440×900 desk, 2:1 on retina). */
+  .shell:not(.shell-page) .battle-canvas-wrap {
+    --field-snap: 1;
+  }
+
+  /* The run map spreads its layers across the measured width; past ~760px
+     the edges turn into long diagonals that are hard to follow. Centre it. */
+  .shell:not(.shell-page) > .sh-stage .run-map-inner {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  /* -- band 3: the party row, top of the right column ---------------------- */
+  .shell:not(.shell-page) > .sh-selector {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  /* -- band 4: the Detail band fills the rest of the right column ---------- */
+  .shell:not(.shell-page) > .sh-detail,
+  .shell:not(.shell-page) > .sh-detail:has(> .sh-wavebar) {
+    grid-column: 2;
+    grid-row: 4;
+    height: auto;
+    min-height: 0;
+  }
+  /* No live collapse beside the field: undo shell-live.css's strip. */
+  .shell.is-collapsed:not(.shell-page) > .sh-detail {
+    height: auto;
+    padding-top: var(--sh-detail-pad-y);
+    padding-bottom: calc(var(--sh-detail-pad-b) + var(--safe-bottom));
+    row-gap: 8px;
+    overflow: visible;
+  }
+  .shell.is-collapsed:not(.shell-page) > .sh-detail > .sh-context,
+  .shell.is-collapsed:not(.shell-page) > .sh-detail > .sh-gear,
+  .shell.is-collapsed:not(.shell-page) > .sh-detail > .sh-pack {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* The gear column is now as tall as the window; `flex: 1` would stretch three
+     slots to ~180px of empty box each. Cap them at the height the phone gives
+     them and let them sit at the top. */
+  .shell:not(.shell-page) .sh-slot {
+    flex: 0 0 auto;
+    height: 76px;
+  }
+
+  /* -- the "?" keyboard sheet (Shortcuts.tsx) ------------------------------ */
+  .shell:not(.shell-page) > .sh-keys {
+    display: block;
+  }
+
+  /* -- pages: a framed column on a lit table, not a phone in a void -------- */
+  .shell.shell-page {
+    max-width: 600px;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.45);
+  }
+
+  /* -- the Watchtower menu: key art left, the menu right ------------------- */
+  .shell.shell-page:has(.pg-art) {
+    max-width: 1320px;
+    border: 0;
+    box-shadow: none;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 30vw, 420px);
+    /* A centred menu block beside the art: spacer · head · records · rows ·
+       CTA · spacer. The art spans them all. */
+    grid-template-rows: minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
+    column-gap: 56px;
+    padding: 32px 48px;
+  }
+  /* The body's children join the page grid directly. */
+  .shell-page .pg:has(> .pg-body > .pg-art) > .pg-body {
+    display: contents;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) > .pg-head {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0 0 28px;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) .t-title {
+    font-size: 48px;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) .pg-records {
+    grid-column: 2;
+    grid-row: 3;
+    margin-bottom: 16px;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) .pg-rows {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) > .pg-cta-band {
+    grid-column: 2;
+    grid-row: 5;
+    padding: 28px 0 0;
+  }
+  .shell-page .pg:has(> .pg-body > .pg-art) .pg-art {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: center;
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    max-height: calc(100dvh - 64px);
+    min-height: 0;
+    border-radius: var(--r-md);
+  }
+}
+
+/* A desk tall enough for it: the still at an exact 2× (the attract battle
+   fits itself). Integer, so it stays as crisp as the 1× phone copy. */
+@media (min-width: 1200px) and (min-height: 700px) {
+  .shell-page .pg:has(> .pg-body > .pg-art) .pg-art-stage {
+    transform: scale(2);
+    transform-origin: 50% 50%;
+  }
+}
+
+/* The shortcuts button is hidden everywhere the wide rule above does not show
+   it (the keys still work). Pinned to the header's right edge. */
+.sh-keys {
+  display: none;
+  position: fixed;
+  top: calc(10px + var(--safe-top, 0px));
+  right: max(14px, var(--safe-right, 0px));
+  z-index: 30;
+}
+.sh-keys-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+}
+.sh-keys-btn[aria-expanded='true'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+}
+.sh-keys-sheet {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  width: 300px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.sh-keys-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  color: var(--accent);
+}
+.sh-keys-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  align-items: center;
+  font-size: var(--fs-sm);
+}
+.sh-keys-list dt {
+  white-space: nowrap;
+}
+.sh-keys-list dd {
+  margin: 0;
+  color: var(--muted);
+}
+.sh-keys-list kbd {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: 700 var(--fs-micro) / 1.4 system-ui, sans-serif;
+  text-align: center;
+}
+
+/* ====================================================================== hover */
+@media (hover: hover) and (pointer: fine) {
+  .sh-hero,
+  .sh-tile,
+  .sh-slot,
+  .sh-btn,
+  .sh-speed,
+  .sh-command,
+  .sh-tab,
+  .sh-seg-btn,
+  .sh-info,
+  .sh-keys-btn,
+  .pg-row,
+  .pg-portrait,
+  .pg-banner-chip,
+  .pg-confirm,
+  .map-node.reachable {
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease,
+      filter 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  .sh-hero:hover:not(.selected),
+  .sh-tile:hover,
+  .sh-slot:hover,
+  .sh-speed:hover,
+  .sh-tab:hover:not(.active),
+  .sh-seg-btn:hover,
+  .sh-info:hover,
+  .sh-keys-btn:hover,
+  .pg-banner-chip:hover,
+  .pg-portrait:hover:not(.sel) {
+    background-color: var(--surface-strong);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .pg-row:hover:not(:disabled):not(.sel) {
+    background-color: color-mix(in srgb, var(--panel-2) 82%, var(--accent) 18%);
+  }
+  .sh-btn:hover:not(:disabled),
+  .sh-command:hover:not(:disabled),
+  .pg-cta:hover:not(:disabled),
+  .pg-confirm:hover,
+  .evolve-confirm:hover:not(:disabled),
+  .fw-update-btn:hover {
+    filter: brightness(1.1);
+  }
+  .sh-keys-btn:hover {
+    color: var(--text);
+  }
+  /* Disabled stays visibly inert under the cursor. */
+  .sh-btn:disabled,
+  .pg-row:disabled {
+    cursor: not-allowed;
+  }
+  /* The field's circles are drawn on the canvas, which already lights the one
+     under the cursor; say it is clickable too. */
+  .battle-canvas-wrap:has(.slot-layer) .battle-canvas {
+    cursor: crosshair;
+  }
+}

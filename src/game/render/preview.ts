@@ -3,7 +3,7 @@ import type { Vec2 } from '../core/vec'
 import { ARCHETYPES } from '../data/sentinels'
 import type { Archetype } from '../types'
 import { pixmap } from './pixmap'
-import { getSprite } from './sprites'
+import { spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, radialFill, shapePath, strokePolyline } from './paint'
 import { blitPixmap } from './blit'
@@ -24,8 +24,8 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
   ]
 
   // background + grid (or tiled terrain for sprite themes)
-  const grassImg = style.sprites ? getSprite(style.sprites.pack, 'grass') : undefined
-  const roadImg = style.sprites ? getSprite(style.sprites.pack, 'road') : undefined
+  const grassImg = style.sprites ? spriteFor('grass')?.img : undefined
+  const roadImg = style.sprites ? spriteFor('road')?.img : undefined
   if (style.sprites && grassImg) {
     ctx.fillStyle = ctx.createPattern(grassImg, 'repeat')!
     ctx.fillRect(0, 0, w, h)
@@ -79,7 +79,8 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
     const es = style.enemy
     ctx.save()
     ctx.translate(e.x, e.y)
-    const espr = style.sprites ? getSprite(style.sprites.pack, e.id) : undefined
+    const eart = style.sprites ? spriteFor(e.id) : undefined
+    const espr = eart?.img
     if (espr) {
       /**
        * The last non-1.000 sprite draw in the codebase, removed (minor).
@@ -93,7 +94,7 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
        * silently on the day a theme picker landed, in the one screen whose job
        * is to show the player what the art looks like.
        */
-      const pm = pixmap(espr, { scale: style.sprites!.spriteScale, ring: true })
+      const pm = pixmap(espr, { scale: eart!.spriteScale, ring: true })
       if (pm) blitPixmap(ctx, pm, 0, 0, e.r * 0.55)
       ctx.restore()
       continue

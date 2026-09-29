@@ -222,3 +222,11 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Phase 2: in the menu's title block, in flow — not floating over the title. */
+.fw-update.in-flow {
+  position: static;
+  transform: none;
+  box-shadow: none;
+  margin: 0 auto;
+}

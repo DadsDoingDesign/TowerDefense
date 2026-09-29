@@ -41,8 +41,8 @@
  */
 import { ANIM_FRAMES } from './anim'
 import { pixmap, type Pixmap } from './pixmap'
-import { getSprite } from './sprites'
-import { getActiveStyle } from './themes'
+import { artFor, getSprite } from './sprites'
+import { unitPixmapScale } from './frame'
 
 // ── budget ──────────────────────────────────────────────────────────────────
 
@@ -234,8 +234,13 @@ interface Floater {
   text: string
   col: string
   k: number
+  /** How many hits this number is the running total of (Phase 2 merge). */
+  merged?: number
 }
 const floaters: Floater[] = []
+/** A number merges into one of its kind this young, this close (logical px). */
+const MERGE_AGE = 0.55
+const MERGE_R = 26
 
 // ── chain-lightning arcs ────────────────────────────────────────────────────
 
@@ -961,6 +966,27 @@ export function fxProc(id: string, kind: Exclude<ProcKind, null>, x: number, y: 
 /** A damage number or a word, on the real-time clock. */
 export function fxFloater(x: number, y: number, text: string, color: string, kind: number): void {
   fxStats.floatersMade++
+  /*
+   * Merge, don't stack (Phase 2). Five towers on one goblin used to raise five
+   * overlapping numbers that read as one smear. A number landing near a young
+   * number of the same kind (plain into plain, crit into crit) ADDS to it and
+   * restarts its life — a running total per target — so each target carries at
+   * most one plain and one crit number at a time. Words (STUN, EXECUTE) never
+   * merge: each one is news.
+   */
+  if (kind !== F_WORD && /^\d+$/.test(text)) {
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i]
+      if (f.k !== kind || f.t > MERGE_AGE || !/^\d+$/.test(f.text)) continue
+      if (Math.abs(f.x - x) > MERGE_R || Math.abs(f.y - y) > MERGE_R + 14) continue
+      f.text = String(Number(f.text) + Number(text))
+      f.x = x
+      f.y = Math.min(f.y, y)
+      f.t = Math.min(f.t, 0.04)
+      f.merged = (f.merged ?? 1) + 1
+      return
+    }
+  }
   if (floaters.length >= MAX_FLOATERS) floaters.shift()
   floaters.push({
     x,
@@ -1021,10 +1047,10 @@ function sheetBurst(x: number, y: number, sheet: number, n: number, spread: numb
  * than none: it fails Berbece's first test, clarity.
  */
 function corpseArt(typeId: string, boss: boolean): { pm: Pixmap; frame: number; feet: number } | null {
-  const style = getActiveStyle()
-  const pack = style.sprites?.pack
-  if (!pack) return null
-  const sc = boss ? 1 : (style.sprites?.spriteScale ?? 1)
+  const art = artFor(typeId)
+  if (!art) return null
+  const pack = art.pack
+  const sc = unitPixmapScale(art.spriteScale, boss)
   const frames = ANIM_FRAMES[`${typeId}_walk`]
   const walk = frames ? getSprite(pack, `${typeId}_walk`) : undefined
   if (walk && frames) {
@@ -1267,7 +1293,8 @@ export function drawFxFloaters(ctx: CanvasRenderingContext2D): void {
   for (const f of floaters) {
     const k = f.t / f.life
     const alpha = k < 0.62 ? 1 : 1 - (k - 0.62) / 0.38
-    const size = f.k === F_CRIT ? 19 : f.k === F_WORD ? 15 : 13
+    // A running total grows a little with each hit it absorbs (Phase 2).
+    const size = (f.k === F_CRIT ? 19 : f.k === F_WORD ? 15 : 13) + Math.min(4, (f.merged ?? 1) - 1) * 0.75
     // Scale pop: overshoot in, settle. Applied by SIZE rather than by a canvas
     // scale so nothing else on the field is transformed.
     const pop = f.t < 0.09 ? 1 + 0.5 * (1 - f.t / 0.09) : 1
