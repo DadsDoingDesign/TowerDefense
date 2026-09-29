@@ -1,0 +1,184 @@
+{
+  "branch": "claude/whales-ui-critique-plan",
+  "base": "main @ f3760d1",
+  "streams": [
+    { "id": "read", "name": "Readability", "blurb": "Text that fails WCAG AA contrast, mostly caused by dimming with opacity." },
+    { "id": "icons", "name": "Icon legibility", "blurb": "Icons under Whales' 72 image px minimum (36 CSS px at 2×)." },
+    { "id": "action", "name": "Primary actions", "blurb": "The one next step on each screen should be the strongest thing on it." },
+    { "id": "hier", "name": "Hierarchy & headlines", "blurb": "Titles and panel heads that don't outrank their body text." },
+    { "id": "guide", "name": "Battle guidance", "blurb": "The first-deploy and sub-wave instructions lose to ambient status." },
+    { "id": "space", "name": "Layout & space", "blurb": "Empty space and chrome that push the decision below the fold." },
+    { "id": "verify", "name": "Verify", "blurb": "Re-capture and re-critique after the fixes land." }
+  ],
+  "items": [
+    {
+      "id": "R1", "stream": "read", "effort": "M", "source": "whales",
+      "title": "Replace opacity dimming with AA-safe dim colours",
+      "refs": [["map", 2], ["setup", 2], ["wave-m", 4], ["cleared", 3], ["menu-d", 1]],
+      "proposal": [
+        "Add dim text tokens to global.css (for example --text-dim and --muted-dim) and check each against --panel, --panel-2 and --panel-3 so small text clears 4.5:1 and large text 3:1.",
+        "Stop fading whole elements to show state: .sh-hero.empty (opacity 0.5, the 'recruit a hero' slot), .sh-btn:disabled (0.45), .map-node.cleared and .locked glyphs (0.72). Show the state with a dashed border or a dim token instead.",
+        "Lift the labels Whales measured: GEAR, 64 DPS, HAND, DEPLOYED, SPEED, PLACE IT, recruit a hero, and the desktop menu's date and row labels.",
+        "Add a small test (tests/contrast.test.ts) that computes contrast for every text-token and panel-token pair, so these can't regress."
+      ],
+      "files": ["src/styles/global.css", "src/styles/shell.css", "src/styles/shell-live.css", "src/styles/page.css", "tests/contrast.test.ts (new)"]
+    },
+    {
+      "id": "R2", "stream": "read", "effort": "S", "source": "whales",
+      "title": "Make prices you can't afford readable",
+      "refs": [["merchant", 2]],
+      "proposal": [
+        ".pg-row.dim fades the price and icon to 55% opacity. Keep the row marked as unaffordable, but render the price in a readable dim colour (at least 3:1) with a short 'need 18 more' hint, instead of fading it."
+      ],
+      "files": ["src/styles/page.css (.pg-row.dim)", "src/ui/shell/offers.ts"]
+    },
+    {
+      "id": "R3", "stream": "read", "effort": "S", "source": "whales",
+      "title": "Fix the desktop sidebar's faint labels and counters",
+      "refs": [["wave-d", 3]],
+      "proposal": [
+        "Apply the R1 tokens to the desk layout's right rail (the Depth, gear and pack column heads, and their counters).",
+        "Raise any 10px label to the 11px floor (--fs-micro)."
+      ],
+      "files": ["src/styles/shell-wide.css"],
+      "myRead": "Whales read the header's 'GATE 20/20' as 'CS 20/70' and measured it at 1.1:1. The readable text is fine; the 1.1:1 is probably the header's dark ornament behind it. The rest of this row (HAND at 2.8:1, 10px labels) looks right."
+    },
+    {
+      "id": "I1", "stream": "icons", "effort": "M", "source": "whales",
+      "title": "Set an icon size scale and scale up stand-alone icons",
+      "refs": [["menu-m", 2], ["menu-d", 4], ["hero", 4], ["map", 3], ["setup", 3], ["wave-m", 5], ["wave-d", 4], ["cleared", 4], ["spoils", 4], ["merchant", 4], ["lost", 1]],
+      "proposal": [
+        "Add --icon-sm 20px, --icon-md 28px and --icon-lg 36px to global.css, and use them everywhere instead of per-component sizes.",
+        "Move stand-alone icons (menu rows, map node glyphs, the run-lost stat tiles, the Assist and Watchtower rows, empty gear slots) to --icon-lg (36 CSS px = 72 image px).",
+        "Leave inline glyphs that sit beside a text label (gold coin, rarity pips, the Gate tower, the coach arrow) at --icon-sm. Their label already carries the meaning.",
+        "Give the two unlabelled header icons Whales flagged a visible label or an aria-label, or remove them."
+      ],
+      "files": ["src/styles/global.css", "src/styles/shell.css", "src/styles/page.css", "src/ui/shell/PageScreens.tsx", "src/ui/shell/HeaderBand.tsx"],
+      "myRead": "Whales applies its 72 image px minimum to every icon, including glyphs that already have a text label next to them. I'd exempt those, which is the third bullet. Approve as written to keep that exemption, or use Edit to scale every icon."
+    },
+    {
+      "id": "A1", "stream": "action", "effort": "M", "source": "whales",
+      "title": "One primary button style for the next step on every screen",
+      "refs": [["map", 1], ["wave-m", 2], ["cleared", 1], ["spoils", 2]],
+      "proposal": [
+        "The held sub-wave 'Next ▶' (.sh-command.ready) is outlined in gold, while 'Start Wave' is filled teal. Use the filled primary style for both, since each is the one thing to do next.",
+        "March on the run map: make it the filled primary button, with Back as the quiet secondary, and fix its label contrast (Whales measured 2.5:1).",
+        "Brighten --cta (#336e7e) slightly and add a 1px lighter top edge, so Continue, Take it and Run again stand out from the warm art without changing their colour."
+      ],
+      "files": ["src/styles/global.css (--cta)", "src/styles/shell.css (.sh-btn.primary, .sh-command)", "src/ui/shell/CommandSlot.tsx", "src/ui/shell/DetailBand.tsx"],
+      "myRead": "Continue and Take it already use the filled teal button. I read Whales' 'styled well below primary' as the teal being too muted against the bright art, not as a missing style. The third bullet addresses that."
+    },
+    {
+      "id": "A2", "stream": "action", "effort": "S", "source": "whales",
+      "title": "Merchant: make your gold the headline number",
+      "refs": [["merchant", 1]],
+      "proposal": [
+        "Enlarge the gold pill under 'Merchant' (display font, --fs-xl).",
+        "Repeat the remaining gold on the Buy button ('Buy · 30 → 62 left'), so the budget is visible where you commit."
+      ],
+      "files": ["src/ui/shell/Page.tsx", "src/styles/page.css"]
+    },
+    {
+      "id": "H1", "stream": "hier", "effort": "S", "source": "whales",
+      "title": "Stronger title on the main menu",
+      "refs": [["menu-m", 1], ["menu-d", 2], ["menu-d", 3]],
+      "proposal": [
+        "Step the Fieldwatch wordmark up one level (--fs-display to about 40px on phone, 48px on desk) and add a light text shadow so it holds against the art.",
+        "Keep the tagline small, but give it more space below the title so the title and tagline read as a pair."
+      ],
+      "files": ["src/ui/shell/PageScreens.tsx (MenuScreen)", "src/styles/page.css (.pg-head)", "src/styles/shell-wide.css"]
+    },
+    {
+      "id": "H2", "stream": "hier", "effort": "S", "source": "whales",
+      "title": "Give panel heads a real headline (GEAR, Depth)",
+      "refs": [["map", 4], ["wave-m", 4]],
+      "proposal": [
+        "Column heads such as GEAR and PACK are 11px uppercase, above 12–13px bodies. Keep them uppercase but raise the weight and use --text rather than --muted-2.",
+        "The 'Depth 1/12' badge and its progress text are the same size. Make 'Depth N' the heading and the '/12' secondary."
+      ],
+      "files": ["src/styles/shell.css (.sh-col-head)", "src/ui/shell/HeaderBand.tsx"]
+    },
+    {
+      "id": "H3", "stream": "hier", "effort": "M", "source": "whales",
+      "title": "Hero pick: make the selected hero's stats the main content",
+      "refs": [["hero", 1], ["hero", 2]],
+      "proposal": [
+        "Keep the three hero tiles equal and a bit smaller. Move the scale into the detail panel: the hero name at --fs-xl, and DPS, range and HP as three large stat figures instead of one sentence.",
+        "Keep 'Choose Fighter' as the one filled button."
+      ],
+      "files": ["src/ui/shell/PageScreens.tsx (hero pick)", "src/styles/page.css"]
+    },
+    {
+      "id": "G1", "stream": "guide", "effort": "M", "source": "whales",
+      "title": "First deploy: spotlight the hero card",
+      "refs": [["setup", 1], ["wave-m", 1]],
+      "proposal": [
+        "While the coach tip says 'Tap your hero', give the benched hero card a pulsing teal ring and a 'Tap me' label. Stop the pulse after the first tap (respect prefers-reduced-motion).",
+        "Dim the Details button and the open recruit slot until the hero is posted."
+      ],
+      "files": ["src/ui/shell/Coach.tsx", "src/ui/shell/SelectorBand.tsx", "src/styles/shell-live.css"]
+    },
+    {
+      "id": "G2", "stream": "guide", "effort": "S", "source": "whales",
+      "title": "Stronger sub-wave instruction banner",
+      "refs": [["wave-m", 3], ["wave-d", 1]],
+      "proposal": [
+        "The 'Sub-wave 1 of 2 held · tap a hero, then a post' strip is thin, light text on a translucent bar. Make it a solid banner with a readable size (--fs-md) and an icon.",
+        "On desk, show it over the field, not the sidebar."
+      ],
+      "files": ["src/styles/shell-live.css", "src/styles/shell-wide.css", "src/ui/shell/StageBand.tsx"]
+    },
+    {
+      "id": "G3", "stream": "guide", "effort": "S", "source": "whales",
+      "title": "Wave cleared: end the reading order on Continue",
+      "refs": [["cleared", 2]],
+      "proposal": [
+        "Darken the battlefield scrim behind the 'Wave cleared' card, so the card and the Continue footer are the only lit things on screen."
+      ],
+      "files": ["src/ui/shell/WaveCeremony.tsx", "src/styles/shell-live.css"],
+      "myRead": "The 'large image after Continue' Whales flags is most likely the battlefield behind the overlay, not a separate picture. There's nothing to move, so I propose a darker scrim instead of Whales' 'move the picture above the button'."
+    },
+    {
+      "id": "S1", "stream": "space", "effort": "S", "source": "whales",
+      "title": "Close the empty gap on the Spoils, Merchant and Hero pick pages",
+      "refs": [["spoils", 3], ["merchant", 3], ["hero", 3]],
+      "proposal": [
+        "Spoils and Merchant leave about 64px of empty space between the pack strip and the list. Remove it, so the cards and the detail panel sit higher and more merchant offers fit above the fold.",
+        "Keep the title and subtitle; there are no filter rows to cut."
+      ],
+      "files": ["src/ui/shell/Page.tsx", "src/styles/page.css"],
+      "myRead": "Whales says 'banners, filters and navigation' take 29–46% of these screens. There are no filters. The real waste is the empty gap under the pack strip, which is what this item removes."
+    },
+    {
+      "id": "S2", "stream": "space", "effort": "S", "source": "claude",
+      "title": "Merchant: stop the last offer hiding under 'March on'",
+      "refs": [["merchant", 0]],
+      "proposal": [
+        "In the capture, a 7th offer row peeks out behind the 'March on' row. Give the offer list its own scroll area with a fade, or move 'March on' into the footer next to Buy."
+      ],
+      "files": ["src/ui/shell/Page.tsx", "src/styles/page.css"],
+      "myRead": "This one is mine, not Whales'. I spotted it in the screenshot."
+    },
+    {
+      "id": "D1", "stream": "space", "effort": "S", "source": "whales",
+      "title": "Dark art flags: no change",
+      "refs": [["hero", 5], ["setup", 5], ["wave-d", 5], ["cleared", 5], ["spoils", 5], ["merchant", 5]],
+      "proposal": [
+        "Whales asks on six screens whether the hero and item art is too dark. The pixel art is Tiny Swords at full brightness, and the portraits sit on bright orange tiles. I recommend no change unless you see a problem on a device."
+      ],
+      "files": [],
+      "myRead": "I think these are false positives from the dark UI panels around the art. Reject this item if you do want the art brightened."
+    },
+    {
+      "id": "V1", "stream": "verify", "effort": "S", "source": "claude",
+      "title": "Commit the flow-capture script and re-critique after the fixes",
+      "refs": [["lost", 0], ["wave-m", 0], ["wave-d", 0]],
+      "proposal": [
+        "Add scripts/flow-shots.mjs, the Playwright script that played this run (menu → hero → map → battle → spoils → merchant → defeat) on phone and desk.",
+        "After the fixes, re-capture and re-run Whales on every screen. Re-run the two reports that were cut off (both battle screens) and the run-lost screen on a real defeat.",
+        "Add a line to docs/DESIGN_REVIEW.md's log."
+      ],
+      "files": ["scripts/flow-shots.mjs (new)", "docs/DESIGN_REVIEW.md"]
+    }
+  ]
+}

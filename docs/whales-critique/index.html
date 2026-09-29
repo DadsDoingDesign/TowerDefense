@@ -1,0 +1,397 @@
+<title>Fieldwatch UI Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column of plan cards grouped by workstream, a sticky decision tally, screen goals last.
+   Palette borrowed from Fieldwatch itself (dark-only, like the game). */
+:root {
+  color-scheme: dark;
+  --bg: #1c140e;
+  --panel: #2a1f16;
+  --panel-2: #35281b;
+  --line: rgba(233, 205, 150, 0.14);
+  --line-strong: rgba(233, 205, 150, 0.28);
+  --text: #f3e7d0;
+  --muted: #cbb697;
+  --accent: #e0ac4c;
+  --cta: #2f6f80;
+  --cta-ink: #f7efe0;
+  --good: #86cc93;
+  --bad: #ec8e78;
+  --edit: #e8b95d;
+  --mine: #9fc3d6;
+  --font-display: 'Crimson Text', Georgia, 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r: 10px;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 16px/1.5 var(--font-body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 80px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 2.9rem); line-height: 1.05; color: var(--accent); letter-spacing: 0.01em; }
+h2 { font-size: 1.65rem; line-height: 1.15; }
+h3 { font-size: 1.3rem; line-height: 1.2; }
+p { margin: 0; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: 0.82rem; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.lede { color: var(--muted); max-width: 62ch; margin-top: 10px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; color: var(--muted); font-size: 0.9rem; }
+.meta b { color: var(--text); font-weight: 600; }
+
+.tally { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; margin-top: 22px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding-block: 12px; }
+.tally-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.bar { flex: 1 1 220px; height: 8px; border-radius: 99px; background: var(--panel-2); overflow: hidden; display: flex; min-width: 0; }
+.bar i { display: block; height: 100%; }
+.bar .a { background: var(--good); } .bar .e { background: var(--edit); } .bar .r { background: var(--bad); }
+.counts { display: flex; gap: 14px; font-size: 0.92rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.counts b { color: var(--text); }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.sync { font-size: 0.85rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { border: 1px solid var(--line-strong); background: transparent; border-radius: 99px; padding: 3px 11px; font-size: 0.88rem; color: var(--muted); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
+
+.notice { margin-top: 16px; padding: 12px 14px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--panel); color: var(--muted); font-size: 0.95rem; }
+.notice[data-tone="warn"] { border-color: var(--bad); color: var(--text); }
+
+section.stream { margin-top: 40px; display: grid; gap: 14px; }
+.stream-head p { color: var(--muted); margin-top: 4px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; border-left: 4px solid var(--line-strong); }
+.card[data-status="approve"] { border-left-color: var(--good); }
+.card[data-status="edit"] { border-left-color: var(--edit); }
+.card[data-status="reject"] { border-left-color: var(--bad); }
+.card[data-status="reject"] h3 { text-decoration: line-through; text-decoration-color: var(--bad); }
+.card-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.tag { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); border: 1px solid var(--line-strong); border-radius: 6px; padding: 1px 6px; }
+.pill { font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.pill.src-claude { color: var(--mine); }
+.card h3 { flex: 1 1 100%; }
+
+.thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.thumb { flex: 0 0 auto; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0; background: var(--panel-2); cursor: pointer; overflow: hidden; display: grid; }
+.thumb img { display: block; height: 96px; width: auto; max-width: none; }
+.thumb span { font-size: 0.72rem; color: var(--muted); padding: 3px 6px; text-align: left; white-space: nowrap; }
+
+.label { font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+.findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.findings li { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; font-size: 0.93rem; min-width: 0; }
+.findings .where { color: var(--accent); font-weight: 600; }
+.findings .det { color: var(--muted); display: block; font-size: 0.86rem; overflow-wrap: anywhere; }
+.proposal { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.files { display: flex; flex-wrap: wrap; gap: 6px; }
+.files code { background: var(--panel-2); border-radius: 6px; padding: 2px 7px; color: var(--text); overflow-wrap: anywhere; }
+.myread { border: 1px dashed var(--mine); border-radius: 8px; padding: 10px 12px; font-size: 0.93rem; }
+.myread b { color: var(--mine); }
+
+.decide { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; min-height: 40px; }
+.seg button[aria-pressed="true"][data-v="approve"], .seg button[aria-pressed="true"][data-v="confirm"] { background: var(--good); border-color: var(--good); color: #13200f; }
+.seg button[aria-pressed="true"][data-v="edit"] { background: var(--edit); border-color: var(--edit); color: #2a1c05; }
+.seg button[aria-pressed="true"][data-v="reject"] { background: var(--bad); border-color: var(--bad); color: #2a0f08; }
+.seg button:disabled { cursor: not-allowed; opacity: 0.6; }
+textarea { width: 100%; min-height: 72px; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font: 0.95rem/1.45 var(--font-body); }
+textarea::placeholder { color: #a8957a; }
+.saved { font-size: 0.82rem; color: var(--muted); min-height: 1.2em; }
+
+.goals { margin-top: 48px; display: grid; gap: 12px; }
+.goal { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.goal .thumb img { height: 110px; width: 62px; object-fit: cover; object-position: top; }
+.goal .gl { font-weight: 700; }
+.goal .gl small { font-weight: 400; color: var(--muted); }
+.goal q { display: block; color: var(--muted); margin-block: 4px 8px; }
+
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line-strong); border-radius: 12px; padding: 0; width: min(980px, calc(100vw - 24px)); max-height: calc(100vh - 32px); }
+dialog::backdrop { background: rgba(10, 6, 3, 0.8); }
+.dlg { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; padding: 18px; }
+.dlg img { width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+.dlg-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.dlg-close { border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: 8px; padding: 4px 12px; cursor: pointer; min-height: 36px; }
+.dlg .sum { color: var(--muted); margin-block: 8px 12px; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+tr.hit td { background: rgba(224, 172, 76, 0.1); }
+td .det { color: var(--muted); display: block; margin-top: 3px; }
+.note { margin-top: 10px; font-size: 0.88rem; color: var(--edit); }
+@media (max-width: 700px) { .dlg { grid-template-columns: 1fr; } .dlg img { max-width: 260px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Fieldwatch UI Plan</h1>
+    <p class="lede">Whales critiqued 11 screens from one full run of the game. This plan turns those findings into 16 changes. Approve, edit or reject each one. Your choices save here, and Claude will build only what you approve, following your edit notes.</p>
+    <div class="meta">
+      <span>Branch <b class="mono" id="branch">claude/whales-ui-critique-plan</b></span>
+      <span>Base <b class="mono" id="base">main @ f3760d1</b></span>
+      <span>Whales project <b>Tower Defense Game</b></span>
+    </div>
+  </header>
+
+  <div class="tally" aria-live="polite">
+    <div class="tally-row">
+      <div class="bar" aria-hidden="true"><i class="a" id="bar-a"></i><i class="e" id="bar-e"></i><i class="r" id="bar-r"></i></div>
+      <div class="counts">
+        <span><span class="dot" style="background:var(--good)"></span><b id="n-a">0</b> approved</span>
+        <span><span class="dot" style="background:var(--edit)"></span><b id="n-e">0</b> edited</span>
+        <span><span class="dot" style="background:var(--bad)"></span><b id="n-r">0</b> rejected</span>
+        <span><b id="n-p">16</b> to decide</span>
+      </div>
+      <span class="sync" id="sync">Connecting…</span>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter the plan"></div>
+  </div>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <main id="plan"><p class="notice">Loading the plan…</p></main>
+
+  <section class="goals" id="goals-section" hidden>
+    <div class="stream-head">
+      <h2>Screen goals</h2>
+      <p>Whales inferred what each screen is for and critiqued it against that. Confirm the ones that are right. Edit any that are wrong, and I'll re-run that critique against your wording.</p>
+    </div>
+    <div id="goals"></div>
+  </section>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <div class="dlg">
+    <img id="dlg-img" alt="">
+    <div style="min-width:0">
+      <div class="dlg-head">
+        <div><h2 id="dlg-title"></h2><div class="pill" id="dlg-vp"></div></div>
+        <button class="dlg-close" id="dlg-close">Close</button>
+      </div>
+      <p class="sum" id="dlg-sum"></p>
+      <div class="tbl"><table><thead><tr><th>#</th><th>Problem</th><th>What to do</th><th>Why</th></tr></thead><tbody id="dlg-rows"></tbody></table></div>
+      <div id="dlg-also"></div>
+      <p class="note" id="dlg-note" hidden></p>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const h = (tag, attrs = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+    return el;
+  };
+
+  let plan = null, crit = null, screens = {};
+  let decisions = {};          // id -> {status, note}
+  let db = null, canWrite = true;
+  let filter = 'all';
+  const noteTimers = {};
+
+  const setSync = t => { $('#sync').textContent = t; };
+  const notice = (msg, tone) => { const n = $('#notice'); n.hidden = !msg; n.textContent = msg || ''; if (tone) n.dataset.tone = tone; };
+
+  // ---------- rendering ----------
+  function thumb(key, row) {
+    const s = screens[key]; if (!s) return null;
+    return h('button', { class: 'thumb', type: 'button', 'aria-label': `Open ${s.label} (${s.viewport}) and its full Whales critique`, onclick: () => openScreen(key, row) },
+      h('img', { src: s.shot, alt: '', loading: 'lazy' }),
+      h('span', { text: `${s.label}${s.viewport.startsWith('desktop') ? ' · desk' : ''}` }));
+  }
+
+  function decisionControls(id, kind, placeholder) {
+    const d = decisions[id] || {};
+    const opts = kind === 'goal' ? [['confirm', 'Confirm'], ['edit', 'Edit']] : [['approve', 'Approve'], ['edit', 'Edit'], ['reject', 'Reject']];
+    const ta = h('textarea', { id: `note-${id}`, placeholder, 'aria-label': 'Your note for Claude' });
+    ta.value = d.note || '';
+    ta.hidden = !(d.status === 'edit' || (d.note && d.note.length));
+    const saved = h('div', { class: 'saved', id: `saved-${id}` });
+    const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Decision' },
+      opts.map(([v, label]) => h('button', {
+        type: 'button', 'data-v': v, 'aria-pressed': String(d.status === v), disabled: !db || !canWrite,
+        onclick: async () => {
+          const cur = (decisions[id] || {}).status;
+          const next = cur === v ? null : v;
+          ta.hidden = !(next === 'edit' || ta.value.trim());
+          if (next === 'edit') setTimeout(() => ta.focus(), 0);
+          await save(id, kind, { status: next, note: ta.value.trim() });
+        },
+      }, label)));
+    ta.addEventListener('input', () => {
+      clearTimeout(noteTimers[id]);
+      saved.textContent = 'Typing…';
+      noteTimers[id] = setTimeout(() => save(id, kind, { status: (decisions[id] || {}).status || 'edit', note: ta.value.trim() }), 900);
+    });
+    ta.disabled = !db || !canWrite;
+    return h('div', { class: 'decide' }, seg, ta, saved);
+  }
+
+  function card(item) {
+    const d = decisions[item.id] || {};
+    const refs = item.refs.filter(([, n]) => n > 0);
+    const keys = [...new Set(item.refs.map(([k]) => k))];
+    return h('article', { class: 'card', id: `item-${item.id}`, 'data-status': d.status || '' },
+      h('div', { class: 'card-top' },
+        h('span', { class: 'tag', text: item.id }),
+        h('span', { class: 'pill', text: `Effort ${item.effort}` }),
+        h('span', { class: `pill src-${item.source}`, text: item.source === 'whales' ? 'From Whales' : 'From Claude' }),
+        h('h3', { text: item.title })),
+      h('div', { class: 'thumbs' }, keys.map(k => thumb(k, (item.refs.find(r => r[0] === k) || [])[1]))),
+      refs.length ? h('div', {}, h('div', { class: 'label', text: 'What Whales found' }),
+        h('ul', { class: 'findings' }, refs.map(([k, n]) => {
+          const s = screens[k]; const r = s && s.rows[n - 1]; if (!r) return null;
+          return h('li', {}, h('span', { class: 'where', text: `${s.label}${s.viewport.startsWith('desktop') ? ' (desk)' : ''} #${n}: ` }), r.problem, h('span', { class: 'det', text: r.detail }));
+        }))) : null,
+      h('div', {}, h('div', { class: 'label', text: 'Proposed change' }), h('ul', { class: 'proposal' }, item.proposal.map(p => h('li', { text: p })))),
+      item.files.length ? h('div', {}, h('div', { class: 'label', text: 'Files' }), h('div', { class: 'files' }, item.files.map(f => h('code', { text: f })))) : null,
+      item.myRead ? h('p', { class: 'myread' }, h('b', { text: 'My read, not Whales’: ' }), item.myRead) : null,
+      decisionControls(item.id, 'item', 'What should change? e.g. “Scale every icon, including inline ones.”'));
+  }
+
+  function renderPlan() {
+    const main = $('#plan'); main.replaceChildren();
+    for (const st of plan.streams) {
+      const items = plan.items.filter(i => i.stream === st.id).filter(i => {
+        if (filter === 'all') return true;
+        if (filter === 'open') return !(decisions[i.id] || {}).status;
+        return i.stream === filter;
+      });
+      if (!items.length) continue;
+      main.append(h('section', { class: 'stream', id: `stream-${st.id}` },
+        h('div', { class: 'stream-head' }, h('h2', { text: st.name }), h('p', { text: st.blurb })),
+        items.map(card)));
+    }
+    if (!main.children.length) main.append(h('p', { class: 'notice', text: 'Nothing left to decide in this view.' }));
+  }
+
+  function renderGoals() {
+    const g = $('#goals'); g.replaceChildren();
+    for (const s of crit.screens) {
+      const id = `goal-${s.key}`;
+      g.append(h('div', { class: 'goal', id }, thumb(s.key, 0),
+        h('div', { style: 'min-width:0' },
+          h('div', { class: 'gl' }, s.label, ' ', h('small', { text: s.viewport })),
+          h('q', { text: s.goal }),
+          decisionControls(id, 'goal', 'What is this screen actually for?'))));
+    }
+    $('#goals-section').hidden = false;
+  }
+
+  function renderChips() {
+    const c = $('#chips'); c.replaceChildren();
+    const opts = [['all', 'All'], ['open', 'Still to decide'], ...plan.streams.map(s => [s.id, s.name])];
+    for (const [v, label] of opts) c.append(h('button', { class: 'chip', type: 'button', 'aria-pressed': String(filter === v), onclick: () => { filter = v; renderChips(); renderPlan(); } }, label));
+  }
+
+  function renderTally() {
+    const ids = plan.items.map(i => i.id);
+    const n = { approve: 0, edit: 0, reject: 0 };
+    for (const id of ids) { const s = (decisions[id] || {}).status; if (n[s] != null) n[s]++; }
+    const total = ids.length;
+    $('#n-a').textContent = n.approve; $('#n-e').textContent = n.edit; $('#n-r').textContent = n.reject;
+    $('#n-p').textContent = total - n.approve - n.edit - n.reject;
+    $('#bar-a').style.width = `${(n.approve / total) * 100}%`;
+    $('#bar-e').style.width = `${(n.edit / total) * 100}%`;
+    $('#bar-r').style.width = `${(n.reject / total) * 100}%`;
+  }
+
+  function renderAll() {
+    const y = window.scrollY, focusId = document.activeElement && document.activeElement.id;
+    renderChips(); renderPlan(); renderGoals(); renderTally();
+    if (focusId) { const el = document.getElementById(focusId); if (el) el.focus({ preventScroll: true }); }
+    window.scrollTo(0, y);
+  }
+
+  // Update one card/goal in place without re-rendering the page (keeps typing smooth).
+  function refreshOne(id) {
+    const d = decisions[id] || {};
+    const host = document.getElementById(id.startsWith('goal-') ? id : `item-${id}`);
+    if (!host) return;
+    if (!id.startsWith('goal-')) host.dataset.status = d.status || '';
+    host.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === d.status)));
+    const ta = document.getElementById(`note-${id}`);
+    if (ta && document.activeElement !== ta) { ta.value = d.note || ''; ta.hidden = !(d.status === 'edit' || (d.note || '').length); }
+    renderTally();
+  }
+
+  // ---------- saving ----------
+  async function save(id, kind, { status, note }) {
+    const saved = document.getElementById(`saved-${id}`);
+    if (!db) return;
+    decisions[id] = { status, note };
+    refreshOne(id);
+    if (saved) saved.textContent = 'Saving…';
+    try {
+      await db.collection('decisions').doc(id).set({ kind, status: status || null, note: note || '', updatedAt: new Date().toISOString() });
+      if (saved) saved.textContent = 'Saved';
+      setSync('All changes saved');
+    } catch (e) {
+      if (e && e.code === 'invalid_argument') { canWrite = false; notice('You can read this plan but not change it. Only the owner and editors can record decisions.'); renderAll(); return; }
+      if (saved) saved.textContent = 'Couldn’t save. Try again in a moment.';
+      setSync('Last change didn’t save');
+    }
+  }
+
+  // ---------- screen dialog ----------
+  function openScreen(key, row) {
+    const s = screens[key]; if (!s) return;
+    $('#dlg-img').src = s.shot; $('#dlg-img').alt = `${s.label} screenshot, ${s.viewport}`;
+    $('#dlg-title').textContent = s.label; $('#dlg-vp').textContent = `${s.viewport} · goal: ${s.goal}`;
+    $('#dlg-sum').textContent = s.summary;
+    const tb = $('#dlg-rows'); tb.replaceChildren();
+    s.rows.forEach((r, i) => tb.append(h('tr', { class: row === i + 1 ? 'hit' : '' },
+      h('td', { text: String(i + 1) }), h('td', {}, h('b', { text: r.problem }), h('span', { class: 'det', text: r.detail })), h('td', { text: r.fix }), h('td', { text: r.why }))));
+    const also = $('#dlg-also'); also.replaceChildren();
+    if (s.also.length) also.append(h('p', { style: 'margin-top:12px' }, h('b', { text: 'Also noticed' })), h('ul', {}, s.also.map(a => h('li', { text: a }))));
+    $('#dlg-note').hidden = !s.note; $('#dlg-note').textContent = s.note || '';
+    const dlg = $('#dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('#dlg-close').addEventListener('click', () => $('#dlg').close());
+  $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
+
+  // ---------- boot ----------
+  async function boot() {
+    try {
+      [plan, crit] = await Promise.all([fetch('plan.json').then(r => r.json()), fetch('critiques.json').then(r => r.json())]);
+    } catch {
+      $('#plan').replaceChildren(h('p', { class: 'notice', 'data-tone': 'warn', text: 'The plan data didn’t load. Reload the page to try again.' }));
+      return;
+    }
+    for (const s of crit.screens) screens[s.key] = s;
+    $('#branch').textContent = plan.branch; $('#base').textContent = plan.base;
+    renderAll();
+
+    const [dbNs, user] = await Promise.all([
+      window.claude ? window.claude.use('db').catch(() => null) : null,
+      window.claude ? window.claude.use('user').catch(() => null) : null,
+    ]);
+    db = dbNs;
+    if (!db) { setSync('View only'); notice('Decisions can’t be saved in this view. Open the page on claude.ai while signed in to approve or edit items.'); renderAll(); return; }
+    if (user && user.can) { const w = await user.can('data.write'); if (w === false) { canWrite = false; notice('You can read this plan but not change it. Only the owner and editors can record decisions.'); } }
+    renderAll();
+    db.collection('decisions').onSnapshot(snap => {
+      const next = {};
+      for (const d of snap.docs) { const v = d.data(); next[d.id] = { status: v.status || null, note: v.note || '' }; }
+      const changed = new Set([...Object.keys(next), ...Object.keys(decisions)]);
+      decisions = next;
+      for (const id of changed) refreshOne(id);
+      if (filter === 'open') renderPlan();
+      setSync(snap.metadata.fromCache ? 'Syncing…' : 'All changes saved');
+    }, () => { setSync('Live updates stopped. Reload to reconnect.'); });
+  }
+  boot();
+})();
+</script>

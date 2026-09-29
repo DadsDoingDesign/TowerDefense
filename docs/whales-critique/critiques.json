@@ -1,0 +1,155 @@
+{
+  "source": "DadsDoingDesign/TowerDefense @ main f3760d1 (2026-09-29), run locally with Vite; captured with Playwright in Chrome",
+  "whales_product": "Tower Defense Game",
+  "goal_note": "Whales inferred every goal below from its own reading of the screen (goal_source: inferred); none was stated by the designer yet.",
+  "screens": [
+    {
+      "key": "menu-m", "label": "Main menu", "viewport": "mobile 390×844", "shot": "shots/mobile-01-menu.jpg",
+      "critique_id": "4793a732-c544-4991-a827-6cfe86efdb00",
+      "goal": "establish game tone and direct returning players to start playing",
+      "summary": "Fieldwatch's title screen sets tone and points returning players to \"Start a Run\". The title and tagline are styled too quietly to carry that tone, and the menu icons are too small to read at a glance.",
+      "rows": [
+        { "problem": "Game title and tagline don't read as the top of the page", "detail": "title and tagline block at the top, styled well below primary weight against the art scene and oversized teal \"Start a Run\" button", "fix": "Raise the title's size, weight and contrast so it clearly outranks the menu rows below", "why": "Tone is sold in the top half; a quiet title leaves the screen to do that job alone" },
+        { "problem": "Menu icons too small to recognise", "detail": "icons next to \"Watchtower\" 51x59, \"Settings\" 51x51, \"Codex\" 43x47 image px, +5 more, all under the 72 image px house minimum", "fix": "Make menu icons noticeably larger, or drop them and let the labels carry the rows", "why": "Returning players scan for \"Daily Watch\" and \"Codex\"; unreadable glyphs slow that scan" }
+      ],
+      "also": []
+    },
+    {
+      "key": "menu-d", "label": "Main menu", "viewport": "desktop 1440×900", "shot": "shots/desktop-01-menu.jpg",
+      "critique_id": "55b6915a-63a1-4066-8b14-04654f0eeb26",
+      "goal": "get players into a run quickly from the main menu",
+      "summary": "Fieldwatch's main menu sells the game with a looping preview while funnelling every choice into one right-hand column ending in \"Start a Run\". The column's labels sit below WCAG AA contrast, the title is underweighted, and its intro block has no headline.",
+      "rows": [
+        { "problem": "Menu column labels are too dim to scan", "detail": "\"2026-09-29\" at 2.8:1, \"Watchtower\" at 3.9:1, \"Settings\" at 4.2:1, +1 more, all middle-right, AA needs 4.5:1", "fix": "Lighten the text colours (#c79945, #cec1ac, #cec2ac, #c69844) until each clears 4.5:1 on its brown", "why": "Every mode and meta choice lives in this column; dim labels slow the path into a run" },
+        { "problem": "\"Fieldwatch\" title reads weaker than its role", "detail": "Game title and tagline styled well below their intended secondary importance", "fix": "Raise the title's size, weight or contrast so it clearly outranks the small mode rows", "why": "—" },
+        { "problem": "The intro block has no headline", "detail": "\"Hold the meadow against the goblin horde\" title is 16px against 14px body — near-identical", "fix": "Push the title up in size and weight so it leads the block instead of blending into body copy", "why": "A flat block gives players nothing to land on before they hit \"Start a Run\"" },
+        { "problem": "The icon beside \"Fieldwatch\" is unrecognisable", "detail": "Top-right icon measures 29x36 image px against a 72 image px house minimum", "fix": "Make the icon noticeably larger, or drop it if the title carries the branding alone", "why": "An illegible mark adds noise to a column that should read instantly" }
+      ],
+      "also": []
+    },
+    {
+      "key": "hero", "label": "Hero pick", "viewport": "mobile 390×844", "shot": "shots/mobile-02-hero-pick.jpg",
+      "critique_id": "6ca85703-8474-40fe-9695-dc2559d46bf9",
+      "goal": "let user select and confirm a starting hero class",
+      "summary": "This screen lets a player compare three hero classes and commit to one. The Fighter name and stats the choice rests on are styled too lightly, so all three options read as equal, and banners, filters and navigation eat 43% of the first screen.",
+      "rows": [
+        { "problem": "The selected Fighter's stats don't read as the main content", "detail": "Fighter name and STR/DEX/INT stats in the detail panel, a primary message, styled well below primary importance", "fix": "Raise the Fighter name and stat values in size and weight until they clearly outrank the three option tiles", "why": "The stat readout is what justifies the pick; if it reads as secondary, there is nothing to decide on" },
+        { "problem": "Focus is spread across all three options instead of the chosen one", "detail": "Screen reads as distributed focus, but the strategy calls for concentrated emphasis on the detail panel and confirm button", "fix": "Keep the three option tiles small and equal, and push contrast and scale into the detail panel plus confirm button", "why": "Compare-then-commit only works if the selected class visibly dominates the two alternatives" },
+        { "problem": "Banners, filters and navigation crowd out the class details", "detail": "Banners, filters and navigation occupy 43% of the first screen — space for roughly 4.4 more items", "fix": "Trim or collapse the banner and filter rows so the detail panel and confirm button sit higher", "why": "First-screen space should go to the class the player is evaluating, not surrounding chrome" },
+        { "problem": "Perk and header icons are too small to recognise", "detail": "The two icons next to \"Choose your first hero\" (top-left and top-right) at 38x47 image px, an unlabelled bottom-left icon at 47x51, +8 more under the 72 image px house minimum", "fix": "Make these icons noticeably larger, or pair them with text labels where space is tight", "why": "Unreadable perk and header icons remove the visual shorthand players use to weigh one class against another" },
+        { "problem": "Confirm whether the dark Fighter artwork is intentional", "detail": "The Fighter name and stats area is dark enough that faces or subjects may be hard to make out; may be a deliberate style", "fix": "Check on a real device; if unintended, lift exposure or add a scrim behind the name and stats", "why": "A murky hero image weakens the case for the class the screen is asking the player to commit to" }
+      ],
+      "also": []
+    },
+    {
+      "key": "map", "label": "Run map", "viewport": "mobile 390×844", "shot": "shots/mobile-03-run-map.jpg",
+      "critique_id": "925344e3-64b1-455a-a940-e2750ec80dbc",
+      "goal": "let players evaluate their next move and party readiness before committing to a path",
+      "summary": "Players use this screen to weigh the next map node against party readiness before committing to a path. But the March commit button is styled below primary importance, and the readiness labels it depends on — GEAR, DPS, equipment slots — sit at contrast levels that fail WCAG AA.",
+      "rows": [
+        { "problem": "\"March\" doesn't read as the decisive action", "detail": "Back and March commit buttons styled below primary importance; \"March\" label #e4deca on #6f9498 = 2.5:1, below the 3:1 AA minimum at that size", "fix": "Give March a stronger fill and weight than Back, and raise its label past 3:1", "why": "The whole screen builds toward committing to a path; that step should be the clearest thing on it" },
+        { "problem": "Readiness stats are hard to read at a glance", "detail": "\"GEAR\" #a18a6b on #4c4132 = 3.0:1, \"64 DPS\" #9d8769 on #48382a = 3.3:1, \"HAND\" #b19c7d on #534736 = 3.4:1, +9 more failing", "fix": "Lighten these label colours or darken their panels to reach 4.5:1", "why": "Players cross-reference DPS and gear against encounter difficulty; unreadable numbers break that comparison" },
+        { "problem": "Roster and slot icons too small to identify", "detail": "The icon next to \"BATTLE\" 70x63, next to \"Doyle\" 64x64, next to \"Open slot\" 54x54 image px, plus two unlabelled icons at top-left and top-center, against a 72 image px house minimum", "fix": "Make these icons noticeably larger, especially the unlabelled ones", "why": "Encounter type and empty gear slots are read by icon, not text, when scanning readiness" },
+        { "problem": "The GEAR panel has no headline", "detail": "\"GEAR\" title 21px sits below its 25px body text, so the block reads as one flat run", "fix": "Make the GEAR title clearly larger or heavier than its body text", "why": "Support panels need scannable entry points when five blocks compete on one surface" }
+      ],
+      "also": []
+    },
+    {
+      "key": "setup", "label": "Battle setup (first deploy)", "viewport": "mobile 390×844", "shot": "shots/mobile-04-battle-setup.jpg",
+      "critique_id": "12054830-f867-42bb-8b0e-be930d2d401a",
+      "goal": "guide new players through their first hero deployment without distraction",
+      "summary": "The screen sets up a first hero placement before the wave starts. But the hero card the tutorial points to is under-styled, attention spreads instead of funnelling, and the instruction text and HUD icons fall below readable contrast and size.",
+      "rows": [
+        { "problem": "Doyle's hero card doesn't lead the guided path", "detail": "hero card meant to be primary but styled well below it; screen reads as distributed focus, not the intended concentrated funnel", "fix": "Make the hero card the loudest element — stronger glow, larger frame — and quiet the rest of the HUD", "why": "The first deployment depends on players spotting the hero to move into the glowing slot" },
+        { "problem": "Tutorial instruction text sits below readable contrast", "detail": "\"PLACE IT\" bottom-left 4.3:1, \"recruit a hero\" bottom-center 4.4:1, icon glyph mid-left #514c3a on #5a5a39 = 1.2:1", "fix": "Lift all three to 4.5:1 or better — lighten #c59744 and #ab9679, or darken the #483726 and #3d3225 panels", "why": "The banner is the only instruction a first-time player has for the hero→slot step" },
+        { "problem": "HUD icons are too small to recognise at a glance", "detail": "the icon next to \"hi\" 59x57, the icon next to \"ig\" top-left 57x57, an unlabelled top-right icon 36x35 image px, +9 more", "fix": "Scale these icons up noticeably, past the 72 image px house minimum, or pair them with text labels", "why": "Unreadable HUD glyphs pull attention away from the single guided route" },
+        { "problem": "Smallest labels fall under the house minimum size", "detail": "\"ig\" center and one unlabelled glyph, center, both 10 image px against an 11px house minimum", "fix": "Raise both above the 11px house minimum, or drop them if they carry no onboarding information", "why": "—" },
+        { "problem": "Confirm whether Doyle's dark portrait is intentional", "detail": "the hero card art is dark enough that the character may be hard to make out", "fix": "If unintended, brighten the portrait or add a rim light so the hero reads clearly", "why": "Players are being asked to find and place this specific hero" }
+      ],
+      "also": ["Banners, filters and navigation occupy 69% of the first screen, leaving room for roughly 5.4 more items — expected for stripped-back onboarding, but worth confirming the chrome is all earning its place."]
+    },
+    {
+      "key": "wave-m", "label": "Wave in progress", "viewport": "mobile 390×844", "shot": "shots/mobile-05-wave-in-progress.jpg",
+      "critique_id": "eedbbabb-1011-47a7-901b-e40778c61b5d",
+      "goal": "guide new players through active tower-defense battles with clear next actions",
+      "summary": "An active tower-defense battle meant to walk new players through one tap sequence. The pieces that sequence depends on — the hero roster, the instruction banner, \"Next wave\" — are outweighed by ambient status readouts, and small icons plus low-contrast labels add strain.",
+      "rows": [
+        { "problem": "The hero roster the tutorial points to is the weakest thing on screen", "detail": "Doyle's deployed card and the open recruit slot, bottom band — smaller and lower-contrast than the game title with \"Depth 1/12\" and the depth-1 wave readout with 4 enemies left", "fix": "Raise the roster cards' size and contrast above the top status readouts; quiet the title and depth block", "why": "The instruction tells a new player to tap a hero first, so the roster must be the loudest control" },
+        { "problem": "\"Next wave\" doesn't read as a primary action", "detail": "Wave control in the bottom band, meant to be primary-importance but styled well below it, and weaker than the screen's other primary messages", "fix": "Give it a filled, high-contrast primary button treatment, larger than the surrounding roster chrome", "why": "It closes the tutorial's tap sequence; a new player needs to see where the turn ends" },
+        { "problem": "The instruction banner is losing the screen to ambient status", "detail": "\"Sub-wave 1 of 2 held - tap a hero, then…\" over the map stands out far less than the other primary messages; focus reads distributed, not concentrated", "fix": "Strengthen the banner's contrast and size, and mute the resource and wave readouts around it", "why": "The banner is the only place a new player is told what to do next" },
+        { "problem": "Three status labels sit below the readable contrast line", "detail": "\"recruit a hero\" bottom-center at #ab9679 on #3d3225 = 4.4:1; \"DEPLOYED\" bottom-left 4.5:1; \"SPEED\" bottom-right 4.5:1", "fix": "Lighten each label until it clears 4.5:1 against its panel — aim nearer 7:1 for the small sizes", "why": "These labels explain hero state and controls mid-battle, when reading time is short" },
+        { "problem": "Four icons are too small to recognise", "detail": "Unlabelled icons top-left 57x56 and top-right 51x37, the icon next to \"Sub-wave 1 of 2 held - tap a hero, then…\" at 31x38, +1 more bottom-center", "fix": "Make all four noticeably larger than the house minimum, or pair them with text labels", "why": "The banner icon carries the screen's main instruction; the others are unlabelled status" }
+      ],
+      "also": ["Confirm whether the dark treatment of Doyle's card and the open recruit slot is a deliberate style — subjects may be hard to make out.", "The \"Depth 1/12\" title and its body text are both 26px, so the block reads without a headline."],
+      "note": "Whales' report was cut off at its token limit after these rows; the rest of \"Also noticed\" is missing. Re-run to regenerate."
+    },
+    {
+      "key": "wave-d", "label": "Wave in progress", "viewport": "desktop 1440×900", "shot": "shots/desktop-05-wave-in-progress.jpg",
+      "critique_id": "e062149a-2159-4b73-8a1b-9fbd2658bf44",
+      "goal": "keep the player focused on the playfield while keeping reference data glanceable during hero placement",
+      "summary": "This is the placement phase of a tower-defense battle: an open playfield on the left, reference panels on the right. The instruction that drives placement is styled too quietly to lead, the page heading is clipped away, and 24 text elements plus seven icons fall below readable contrast and size.",
+      "rows": [
+        { "problem": "The placement instruction doesn't lead — attention spreads across the sidebar", "detail": "the banner telling players to tap a hero then a post is styled well below its primary role; focus reads as distributed, not playfield-first", "fix": "Raise its size, weight and contrast above every sidebar panel, and quiet the right rail further", "why": "Placement depends on players reading the one-move instruction before tapping a hero onto a post" },
+        { "problem": "The page heading is cut off at the top", "detail": "large heading at the top of the content clipped to glyph fragments — nothing on screen states what the page is", "fix": "Reveal the full heading inside the content area, or add a visible battle/phase title", "why": "Players have no on-screen confirmation of which battle or phase they are placing heroes in" },
+        { "problem": "Sidebar labels and counters are too faint to read", "detail": "\"CS 20/70\" top-left #31261a on #342b1d = 1.1:1; the large \"a: 4\" readout 1.7:1; \"HAND\" top-right 2.8:1; +21 more", "fix": "Lighten text or darken panels to 4.5:1 (3:1 for the large readout); lift 10px labels to the 11px house minimum", "why": "Reference data only works if it is glanceable; at 1.1:1 these values are effectively invisible" },
+        { "problem": "Seven status and panel icons are too small to recognise", "detail": "icons beside \"CS 20/70\" at 43x58 and 31x38 image px, an unlabelled top-right icon at 44x44, +4 more, all under the 72px house minimum", "fix": "Make these noticeably larger, or pair each with a text label", "why": "Wave, gear and inventory icons are reference cues the player must decode without leaving the playfield" },
+        { "problem": "Confirm the dark hero roster art is intentional", "detail": "roster panel art for Doyle (Fighter 1, deployed) and the open recruit slot is dark enough that subjects may be hard to make out", "fix": "Check against the intended art direction; if unintended, lighten the art or raise contrast against the panel", "why": "Players choose which hero to place from this panel, so the portraits need to be identifiable" }
+      ],
+      "also": ["Banners, filters and navigation occupy 98% of the first screen, leaving room for roughly 7.4 more items."],
+      "note": "Whales' report was cut off at its token limit; the rest of \"Also noticed\" is missing. Re-run to regenerate."
+    },
+    {
+      "key": "cleared", "label": "Wave cleared", "viewport": "mobile 390×844", "shot": "shots/mobile-06-wave-cleared.jpg",
+      "critique_id": "86181611-6851-49a8-abe9-9561f6e82760",
+      "goal": "display wave-clear outcome and rewards while presenting the hero roster and funneling the player to continue",
+      "summary": "The screen delivers a wave-clear payoff and pushes the player to continue. But the Continue button and its rewards confirmation are styled well below primary and sit before a large image that pulls the eye past them, and several labels and icons fall under readable thresholds.",
+      "rows": [
+        { "problem": "Continue doesn't read as the main action", "detail": "the Continue button with its rewards confirmation in the footer is styled well below primary; whole screen reads as distributed focus, not concentrated", "fix": "Raise the button to full primary styling so it and the centered reward panel clearly outrank map and roster", "why": "The screen's job is to funnel the player onward; the exit is currently one voice among many" },
+        { "problem": "A large image sits after Continue and pulls the eye past it", "detail": "a picture 33x the button's area in the button's own hue family follows it, as it does the \"8 kills - 184 dmg\" stats block", "fix": "Move the picture above the button so the button ends the block — don't just shrink it", "why": "Reading order should finish on the action, not drift into decorative art after it" },
+        { "problem": "Roster and status labels fall below readable contrast", "detail": "icon-like glyphs middle-right at 1.1:1 (#332a20 on #2d2619), \"recruit a hero\" and \"DEPLOYED\" both 4.4:1", "fix": "Lighten to at least 4.5:1; take the middle-right glyphs to 3:1 or above", "why": "\"recruit a hero\" is the progression hook the earned gold pays for and it is the hardest label to read" },
+        { "problem": "Icons are too small to recognise", "detail": "7 icons under the 72 image px house minimum, including two unlabelled top-left and top-right at 57x56 and 53x45, plus the icon by \"# Doyle > Lv3\"", "fix": "Make these noticeably larger, and label or drop the unlabelled top-corner ones", "why": "Hero and level icons carry roster meaning the player is being asked to act on" },
+        { "problem": "Confirm whether the dark roster art is intentional", "detail": "the Doyle (Fighter, Lv3, deployed) and open-recruit-slot roster is dark enough that faces may be hard to make out", "fix": "Check against the intended art direction; brighten the card art if legibility matters more than mood", "why": "The roster is meant to sell the recruit hook, which needs a visible hero" }
+      ],
+      "also": ["Banners, filters and navigation consume 34% of the first screen — roughly 2.7 more items' worth of room."]
+    },
+    {
+      "key": "spoils", "label": "Spoils", "viewport": "mobile 390×844", "shot": "shots/mobile-07-spoils.jpg",
+      "critique_id": "e2564d10-76bf-45bc-98b4-6626759e73ab",
+      "goal": "let players make informed tradeoff decisions when selecting post-battle rewards",
+      "summary": "This screen asks players to weigh three mutually exclusive loot cards and commit to one. Right now the Piercing Bow option reads as weaker than its peers, the confirm button barely registers, and banners, filters and navigation eat 46% of the first screen.",
+      "rows": [
+        { "problem": "The Piercing Bow card reads as a lesser option, not a peer", "detail": "the rare Piercing Bow card that goes to the pack, styled well below the primary importance it should carry next to the other two", "fix": "Match its card treatment to the other options; reserve extra weight for the selected card only", "why": "Players can only judge a tradeoff if all three rewards read as equal-weight choices" },
+        { "problem": "The Take it confirm button doesn't read as the main action", "detail": "the single confirm button, one of the screen's primary messages, stands out far less than the elements around it", "fix": "Give it a filled, higher-contrast treatment and more visual weight than any card element", "why": "It's the only way to commit once the player has settled the power-versus-cost call" },
+        { "problem": "Banners, filters and navigation crowd out the three cards", "detail": "46% of the first screen, room for roughly 7.8 more items", "fix": "Trim banner and filter height so all three cards and the detail panel sit above the fold", "why": "Comparison breaks down if stats, destination and the downside line need scrolling" },
+        { "problem": "Four icons are too small to recognise", "detail": "the icon next to \"Take one. Each card says where it goes.\" at 51x51, two next to \"Spoils\" at 35x44 and 29x45 image px, +1 more; house minimum 72 image px", "fix": "Scale these icons up noticeably, or pair each with a text label so meaning doesn't rest on the glyph", "why": "Destination and rarity cues are part of the information the tradeoff depends on" },
+        { "problem": "Confirm whether the dark card art is intentional", "detail": "the selected Bloodletting epic relic and the rare Piercing Bow are both dark enough that subjects may be hard to make out", "fix": "Confirm this is a deliberate style; if not, lift image brightness until subjects read clearly", "why": "Art is the fastest way players tell the three options apart at a glance" }
+      ],
+      "also": []
+    },
+    {
+      "key": "merchant", "label": "Merchant", "viewport": "mobile 390×844", "shot": "shots/mobile-08-merchant.jpg",
+      "critique_id": "0e89777d-7cda-43ca-a850-5a4ecb886d50",
+      "goal": "let the player purchase items from a shop by choosing from available offers within their gold budget",
+      "summary": "Shop screen where players weigh priced offers against their gold and buy. The gold balance that drives every decision is underplayed, one price is effectively invisible, and top chrome eats space the offer list needs.",
+      "rows": [
+        { "problem": "The gold balance doesn't read as the screen's key number", "detail": "player's gold of 92 at the top, styled well below primary importance", "fix": "Increase its size and weight so it clearly outranks the offer list as the screen's status line", "why": "Every buy decision is a comparison against the remaining budget" },
+        { "problem": "A price is invisible against its own background", "detail": "the \"80\" price, middle-right, #43331f on #413424 = 1.0:1, where WCAG AA needs 3:1 at this size", "fix": "Lighten the number until it reaches at least 3:1 against #413424", "why": "A player can't judge affordability on an offer whose price can't be read" },
+        { "problem": "Banners, filters and nav crowd out the offers", "detail": "29% of the first screen is chrome — about 4.9 more items could fit", "fix": "Shrink or collapse the top banner and filter row so more offers sit above the fold", "why": "Shops work by comparison; more visible offers means less scrolling to weigh prices" },
+        { "problem": "Navigation and merchant icons are too small to recognise", "detail": "unlabelled top-right icon 51x51 image px, the icon next to \"March on\" 47x43, +3 more by \"Merchant\" — house minimum 72 image px", "fix": "Make these icons noticeably larger, or pair them with visible text labels", "why": "These are how players identify the vendor and exit the shop" },
+        { "problem": "Confirm whether the dark item art is intentional", "detail": "six offer images incl. Executioner Greatsword of F, Frost Axe, Buckler dark enough that subjects may be hard to make out", "fix": "Confirm the style is deliberate; if not, raise brightness on the item art", "why": "Players scan offers by recognising the item before reading its price" }
+      ],
+      "also": []
+    },
+    {
+      "key": "lost", "label": "Run lost", "viewport": "mobile 390×844", "shot": "shots/mobile-09-run-lost.jpg",
+      "critique_id": "bd47f544-f126-4dfd-b4cf-1e7545879ed6",
+      "goal": "soften permadeath failure by providing meaningful post-mortem and stats recap, then encourage immediate retry",
+      "summary": "Whales could not write the full critique for this screen: it lacked measurements for its two main findings (an underweighted headline and distributed focus). It gave one well-evidenced finding.",
+      "rows": [
+        { "problem": "13 icons are under the house minimum", "detail": "the icon next to \"The Line Breaks\" (top-left) at 41x45 image px and the icon next to \"Return to the Watchtower\" (bottom-left) at 47x43 image px sit well under the 72 image px house minimum, as do the icons next to \"0 marks\" and \"Turn on Assist - Steady\" (both 55 px wide) and 9 more", "fix": "Scale the whole icon set up noticeably and keep the sizes consistent across the recap and the action rows", "why": "Those icons mark the stats recap and the two exits (Assist, Watchtower), so the moment meant to make the loss legible and route players into a retry is carried by marks too small to recognise" }
+      ],
+      "also": [],
+      "note": "Partial critique. This defeat was forced (Gate HP set to 1 mid-battle), so \"0 stops\" and \"1 Gate in one\" come from that shortcut. Re-run on a real loss."
+    }
+  ]
+}
