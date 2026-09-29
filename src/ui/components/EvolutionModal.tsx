@@ -4,6 +4,7 @@ import { branchLabel, evolutionOptions } from '../../game/engine/leveling'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar } from '../channels'
+import { Icon } from '../Icon'
 
 /**
  * Shown after a battle when a Sentinel crossed level 10 or 20 and is owed an
@@ -104,15 +105,17 @@ export function EvolutionModal() {
         aria-describedby={taughtEvolve ? undefined : 'evolve-what'}
         tabIndex={-1}
       >
-        <span className="evolve-kicker">✦ {tier} Unlocked</span>
+        <span className="evolve-kicker">
+          <Icon name="evolve" /> {tier} unlocked
+        </span>
         <h2 id="evolve-title">{sentinel.name} evolves</h2>
         <p className="evolve-branch">{branchLabel(sentinel)}</p>
         {/* One line, the first time only: this modal is otherwise a cold
             blocking choice between three names a new player has never seen. */}
         {!taughtEvolve && (
           <p className="evolve-what" id="evolve-what">
-            Pick the path this Sentinel grows down. It is permanent — the other branches close for the rest of
-            the run — and it changes how they fight, not just their numbers.
+            {sentinel.name} picks a path. It&rsquo;s permanent, and it changes how they fight, not just their
+            numbers.
           </p>
         )}
         <div className="evolve-options">

@@ -93,11 +93,26 @@
   font-weight: 600;
   cursor: pointer;
 }
-.fw-crash-btn.primary,
-.fw-resume-btn.primary {
+.fw-crash-btn.primary {
   background: var(--accent, #e0ac4c);
   border-color: var(--accent, #e0ac4c);
   color: #2a1c0c;
+}
+/* Teal, like every other primary action in the game (BRAND: teal = primary,
+   gold = value). It was the one gold CTA in the shell (Wave 1). */
+.fw-resume-btn.primary {
+  background: var(--cta, #336e7e);
+  border-color: var(--cta, #336e7e);
+  color: var(--cta-ink, #f3e7d0);
+}
+.fw-resume-btn.danger {
+  background: transparent;
+  border: 2px solid var(--bad-text, #ef8368);
+  color: var(--bad-text, #ef8368);
+}
+.fw-resume-warn {
+  color: var(--bad-text, #ef8368);
+  font-weight: 600;
 }
 .fw-crash-btn.quiet,
 .fw-resume-btn.quiet {
