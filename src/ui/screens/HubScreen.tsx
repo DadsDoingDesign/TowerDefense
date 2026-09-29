@@ -334,27 +334,15 @@ function UpgradeRow({ id }: { id: string }) {
 
 function SacrificePanel() {
   const tier = useMetaStore((s) => s.sacrificeTier)
-  const cost = useMetaStore((s) => s.sacrificeCost())
-  const watchMarks = useMetaStore((s) => s.watchMarks)
-  const doSacrifice = useMetaStore((s) => s.doSacrifice)
-
+  // Legacy `?shell=0` panel. Banner rungs are earned by winning now, not
+  // bought; the shell's Banners row (`ui/shell/offers.ts`) is the real copy.
   return (
     <div className="sacrifice-panel">
-      <p className="hub-note">
-        Trade this run&apos;s safety for greater power. Each tier permanently grants{' '}
-        <strong>+1 to all starting stats</strong> and <strong>+10% Watch Marks</strong>, but every
-        future enemy gains <strong>+15% HP</strong>.
-      </p>
+      <p className="hub-note">Banners are earned: win a run under your highest Banner to open the next.</p>
       <div className="sacrifice-row">
         <div className="sr-tier">
-          <span className="srt-val">Tier {tier}</span>
-          <span className="srt-label">
-            +{tier} stats · +{tier * 10}% marks · +{tier * 15}% enemy HP
-          </span>
+          <span className="srt-val">Banner {tier}</span>
         </div>
-        <button className="sacrifice-btn" disabled={watchMarks < cost} onClick={doSacrifice}>
-          Sacrifice ✦ {cost}
-        </button>
       </div>
     </div>
   )

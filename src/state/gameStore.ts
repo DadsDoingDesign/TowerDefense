@@ -1619,7 +1619,10 @@ export const useGameStore = create<GameState>((set, get) => {
       // keeps the wave it was dealt across a save/resume, and two battle nodes
       // standing in the same layer are two different fights rather than one
       // fight offered twice (WS8).
-      const wave = generateEncounter(node.layer, nodeKind(node, banner), {
+      // A Banner-made elite (Elite Watch) is drawn `eliteDepth` deeper; an
+      // elite the MAP dealt stays at its own depth (`mapKind`).
+      const bannerElite = nodeKind(node, banner) === 'elite' && mapKind(node) === 'normal'
+      const wave = generateEncounter(node.layer + (bannerElite ? banner.eliteDepth : 0), nodeKind(node, banner), {
         seed: encounterSeed(get().runSeed, node.layer),
         sibling: node.row,
       })

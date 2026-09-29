@@ -102,8 +102,17 @@ export const UPGRADES: MetaUpgrade[] = [
 ]
 const UPGRADE_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]))
 
-export const SACRIFICE_BASE_COST = 200
-export const SACRIFICE_STEP = 150
+/**
+ * What a Banner rung used to cost, kept ONLY so {@link migrateMeta} can refund
+ * it: rung N cost `200 + 150·(N−1)` Watch Marks (200 / 350 / 500 / 650 / 800 —
+ * v1 saves could hold rungs 4–5). Rungs are earned by winning now.
+ */
+const LEGACY_BANNER_PRICE = (rung: number): number => 200 + 150 * (rung - 1)
+export const legacyBannerRefund = (unlocked: number): number => {
+  let total = 0
+  for (let r = 1; r <= Math.max(0, Math.floor(unlocked)); r++) total += LEGACY_BANNER_PRICE(r)
+  return total
+}
 
 /**
  * ---------------------------------------------------------------------------
@@ -115,7 +124,11 @@ export const SACRIFICE_STEP = 150
  *  - **permanent and global** — one tap raised enemy HP by 15% *forever*, on
  *    every run, in both modes, with no way back short of erasing the save;
  *  - **bought, not earned** — the gate was 200 Watch Marks, so it measured
- *    grinding rather than skill;
+ *    grinding rather than skill. (The Banner ladder that replaced it kept the
+ *    price — 200 / 350 / 500 marks a rung — until Phase 1, contradicting this
+ *    very line. A rung is now unlocked by WINNING a run under the rung below
+ *    it: Banner 1 by winning an unbannered run. Marks already spent on rungs
+ *    are refunded by {@link migrateMeta}.)
  *  - **numbers only** — +1 to every stat, +10% marks, +15% enemy HP. Nothing
  *    about the game changed; the same run happened with different arithmetic;
  *  - **a stat ratchet on both sides** — it made the player stronger *and* the
@@ -243,7 +256,17 @@ export const BANNER_RUNGS: BannerRung[] = [
    * rule below says what the code does, including the depth the champion is
    * actually gated behind.
    */
-  { tier: 2, name: 'Elite Watch', rule: 'Every battle node is an elite: armoured, warded or swift, arriving faster — champion-led from depth 6.', markMult: 2.2 },
+  /*
+   * ---- one depth deeper (Phase 1) -------------------------------------------
+   *
+   * With the ≥3pt-per-rung gate (§13), this rung was the one that could not
+   * pass it: alone it measured −0.8pt and on top of Thin Pickings −3.0pt at
+   * n=600 — composition alone is close to free. Its elites are now drawn one
+   * depth deeper (`eliteDepth`), which the card says, and which moves the
+   * champion to depth 5; it costs ~9pt over rung 1 on every routing line. The
+   * payout moved ×2.2 → ×2.5 so expected marks keep rising across the ladder.
+   */
+  { tier: 2, name: 'Elite Watch', rule: 'Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5.', markMult: 2.5 },
   { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The company you start with is the company you finish with.', markMult: 3.5 },
 ]
 
@@ -258,6 +281,12 @@ export interface BannerRules {
   thinPickings: boolean
   /** Every battle node resolves as an elite encounter. */
   allElite: boolean
+  /**
+   * How many depths deeper a Banner-made elite is drawn from (0 = its own
+   * depth). Map-dealt elites are never moved: a Banner substitutes an
+   * encounter, not a node.
+   */
+  eliteDepth: number
   /** Recruit offers are withheld (nodes, crossroads, merchant hires). */
   noRecruits: boolean
   /**
@@ -278,6 +307,7 @@ export const NO_BANNER: BannerRules = {
   noMerchants: false,
   thinPickings: false,
   allElite: false,
+  eliteDepth: 0,
   noRecruits: false,
   startThreat: 1,
   markMult: 1,
@@ -291,6 +321,7 @@ export function bannerRules(tier: number): BannerRules {
     tier: t,
     thinPickings: t >= 1,
     allElite: t >= 2,
+    eliteDepth: t >= 2 ? 1 : 0,
     noRecruits: t >= 3,
     // No rung takes these two. Both are wired, implemented and covered by the
     // map generator; both were measured and neither earns a rung today (see
@@ -330,6 +361,7 @@ interface MetaState {
    * Highest Banner rung UNLOCKED — a record of what you have opened up, not a
    * penalty you are stuck with. Persisted under its old name so every existing
    * save keeps its progress; what changed is what the number means (H16).
+   * Raised only by winning: a campaign win under Banner N opens Banner N+1.
    */
   sacrificeTier: number
   stats: MetaStats
@@ -338,9 +370,6 @@ interface MetaState {
   buyUpgrade: (id: string) => void
   /** True once this hub unlock has been bought. */
   unlocked: (id: string) => boolean
-  sacrificeCost: () => number
-  /** Unlock the next Banner rung. Costs marks; changes nothing about any run by itself. */
-  doSacrifice: () => void
   grantMarks: (n: number) => void
   grantRunRewards: (info: {
     depth: number
@@ -350,6 +379,12 @@ interface MetaState {
     mode?: 'campaign' | 'endless'
     /** Banner the run was flying, if any — scales the payout. */
     banner?: number
+    /**
+     * Whether a win here may open the next Banner rung (default true). A
+     * hand-picked custom seed can be shopped for an easy map, so it pays its
+     * marks but does not count toward the ladder.
+     */
+    ranked?: boolean
   }) => number
   bonuses: () => MetaBonuses
   resetMeta: () => void
@@ -378,8 +413,12 @@ const freshStats = (): MetaStats => ({
  * becomes N unlocked Banners, and the permanent +15% enemy HP / +1 stats it
  * used to carry simply stops applying, which is strictly what the player would
  * have chosen given the option.
+ *
+ * v3 — Banner rungs are earned by winning, not bought. Every mark a v1/v2 save
+ * spent unlocking rungs is refunded (`legacyBannerRefund`), and the rungs it
+ * holds are KEPT: the fix is to the price, not a reason to take back progress.
  */
-export const META_VERSION = 2
+export const META_VERSION = 3
 
 /** Persisted slice — the only part of the store that survives a reload. */
 type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats'>
@@ -395,7 +434,7 @@ type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier'
  * property that a hand-corrupted `fieldwatch-meta` key degrades to defaults
  * rather than crashing: anything unrecognisable simply becomes its default.
  */
-export function migrateMeta(persisted: unknown, _version: number): PersistedMeta {
+export function migrateMeta(persisted: unknown, version: number): PersistedMeta {
   const o = (persisted && typeof persisted === 'object' ? persisted : {}) as Record<string, unknown>
   const rawStats = (o.stats && typeof o.stats === 'object' ? o.stats : {}) as Record<string, unknown>
   const base = freshStats()
@@ -405,10 +444,16 @@ export function migrateMeta(persisted: unknown, _version: number): PersistedMeta
   for (const u of UPGRADES) {
     if (upgrades[u.id] != null) upgrades[u.id] = Math.max(0, Math.min(u.maxLevel, Math.floor(upgrades[u.id])))
   }
+  // Read BEFORE the clamp: a v1 save that bought rungs 4–5 paid for them too.
+  const rawTier = Math.max(0, Math.floor(num(o.sacrificeTier, 0)))
+  // v3: rungs were bought with marks until now; give every one of them back.
+  // Only on a real version step — `merge` calls this with META_VERSION on
+  // every load, and a refund there would pay out on every boot.
+  const refund = version < 3 ? legacyBannerRefund(rawTier) : 0
   return {
-    watchMarks: Math.max(0, num(o.watchMarks, 0)),
+    watchMarks: Math.max(0, num(o.watchMarks, 0)) + refund,
     upgrades,
-    sacrificeTier: Math.max(0, Math.min(MAX_BANNER, num(o.sacrificeTier, 0))),
+    sacrificeTier: Math.max(0, Math.min(MAX_BANNER, rawTier)),
     stats: {
       bestDepth: Math.max(0, num(rawStats.bestDepth, base.bestDepth)),
       bestRound: Math.max(0, num(rawStats.bestRound, base.bestRound)),
@@ -449,23 +494,10 @@ export const useMetaStore = create<MetaState>()(
 
       unlocked: (id) => (get().upgrades[id] ?? 0) > 0,
 
-      sacrificeCost: () => SACRIFICE_BASE_COST + SACRIFICE_STEP * get().sacrificeTier,
-
-      doSacrifice: () => {
-        const { watchMarks, sacrificeTier } = get()
-        if (sacrificeTier >= MAX_BANNER) return sfx('error')
-        const cost = get().sacrificeCost()
-        if (watchMarks < cost) return sfx('error')
-        // Unlocking a Banner changes NOTHING on its own — no global multiplier,
-        // no permanent ratchet. It adds a rung the next run may choose to fly.
-        set({ watchMarks: watchMarks - cost, sacrificeTier: sacrificeTier + 1 })
-        sfx('confirm')
-      },
-
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
-      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0 }) => {
-        const { watchMarks, stats } = get()
+      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true }) => {
+        const { watchMarks, stats, sacrificeTier } = get()
         // **One multiplier, and you have to earn it.** The formula used to fold
         // in `sacrificeTier` (a permanent bonus for a permanent penalty, paid
         // whether the run was hard or not) and then the Chronicler hub line (a
@@ -475,11 +507,22 @@ export const useMetaStore = create<MetaState>()(
         const markMult = bannerRules(banner).markMult
         const earned = Math.round((num(depth, 0) * 8 + (won ? 120 : 0)) * markMult)
         const isEndless = mode === 'endless'
+        // **Earned, not bought.** A campaign win under Banner N opens Banner
+        // N+1 (an unbannered win opens Banner 1). The flown Banner is clamped to
+        // what this save has open, so a hand-edited payload cannot skip rungs.
+        // Unlocking changes nothing about any run by itself — it adds a rung
+        // the next run may choose to fly.
+        const flown = Math.max(0, Math.min(num(sacrificeTier, 0), Math.floor(num(banner, 0))))
+        const nextTier =
+          won && !isEndless && ranked
+            ? Math.max(num(sacrificeTier, 0), Math.min(MAX_BANNER, flown + 1))
+            : num(sacrificeTier, 0)
         // Every read is coerced: this is `x + n` arithmetic over a persisted
         // record, and one field arriving as `undefined` from an older save
         // would turn a stat into NaN permanently (M11).
         set({
           watchMarks: num(watchMarks, 0) + earned,
+          sacrificeTier: nextTier,
           stats: {
             // Campaign depth and Endless rounds are different achievements and
             // are recorded as such — an Endless run used to update nothing at
@@ -511,7 +554,7 @@ export const useMetaStore = create<MetaState>()(
           extraSentinels: lvl('roster'),
           extraItems: lvl('loot'),
           // Nothing the hub sells makes the world harder any more. Difficulty is
-          // opted into per run, by Banner, and it is paid for in marks (H16).
+          // opted into per run, by Banner, and it is earned by winning (H16).
           enemyHpMult: 1,
         }
       },

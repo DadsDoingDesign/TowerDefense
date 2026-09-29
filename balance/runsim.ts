@@ -412,7 +412,9 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     battles++
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: heroSlots[i] })),
-      depth: node.layer,
+      // `gameStore.selectNode`: a Banner-made elite is drawn `eliteDepth`
+      // deeper; a map-dealt one stays at its own depth.
+      depth: node.layer + (kind === 'elite' && worth === 'normal' ? banner.eliteDepth : 0),
       kind,
       map: field,
       // The same key `gameStore.selectNode` uses, so a simulated run meets the

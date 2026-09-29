@@ -1151,14 +1151,16 @@ function settingsOffers(s: Settings): Offer[] {
  * The copy that shipped here described the system it replaced, word for word:
  * "Permanent and irreversible… +1 to all starting stats, +10% Watch Marks —
  * and +15% enemy HP in every future run… There is no way back down a tier."
- * Not one clause of that is true any more. `metaStore` kept the old API names
- * (`sacrificeTier`, `sacrificeCost`, `doSacrifice`) so every save migrates, but
- * the number now means "highest Banner UNLOCKED", unlocking applies nothing to
- * anything, and `bonuses().enemyHpMult` is hard-wired to 1.
+ * Not one clause of that is true any more. `metaStore` kept the old field name
+ * (`sacrificeTier`) so every save migrates, but the number now means "highest
+ * Banner UNLOCKED", unlocking applies nothing to anything, and
+ * `bonuses().enemyHpMult` is hard-wired to 1.
  *
- * So this row buys a *rung*, and the rung is flown — or not — per run, at
- * hero-pick, by {@link BannerPicker}. The confirm stays: it is still an
- * irreversible spend of a few hundred Watch Marks.
+ * Rungs are **earned, not bought** (Phase 1): Banner N opens when a run flown
+ * under Banner N−1 is won (`grantRunRewards`). This row used to sell the next
+ * rung for 200 / 350 / 500 Watch Marks; it is information now, with no price
+ * and no button, and the rung is flown — or not — per run, at hero-pick, by
+ * {@link BannerPicker}.
  */
 export const BANNER_BLURB =
   'A Banner is a bet you place at the start of a run: it takes a rule away and pays more Watch Marks for the finish. It applies to that run only, and you pick it fresh every time.'
@@ -1171,8 +1173,6 @@ export const bannerLine = (tier: number): string =>
 
 function sacrificeOffer(meta: Meta): Offer {
   const tier = meta.sacrificeTier
-  const cost = meta.sacrificeCost()
-  const afford = meta.watchMarks >= cost
   const maxed = tier >= MAX_BANNER
   const next = maxed ? null : BANNER_RUNGS[tier]
 
@@ -1191,15 +1191,15 @@ function sacrificeOffer(meta: Meta): Offer {
     }
   }
 
+  const earnBy = tier === 0 ? 'Win a run with no Banner' : `Win a run under Banner ${tier} · ${BANNER_RUNGS[tier - 1].name}`
   return {
     id: 'sacrifice',
     title: `Banner ${next!.tier} · ${next!.name}`,
-    sub: `${tier}/${MAX_BANNER} unlocked`,
+    sub: `${tier}/${MAX_BANNER} unlocked · win to unlock`,
     icon: 'banner',
     color: 'var(--accent)',
-    cost: { amount: cost, currency: 'marks' as const },
     body: [
-      `Unlock Banner ${next!.tier} — ${next!.name} — for ✦${cost}.`,
+      `${earnBy} to unlock Banner ${next!.tier} — ${next!.name}. Rungs are earned by winning, never bought.`,
       next!.rule,
       `A run flown under it pays ×${next!.markMult} Watch Marks. Banners are cumulative: flying ${next!.tier} means flying every rung below it too.`,
       BANNER_BLURB,
@@ -1207,15 +1207,6 @@ function sacrificeOffer(meta: Meta): Offer {
         ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to fly one.`
         : 'Nothing is unlocked yet, so every run is the ordinary march. Unlocking changes nothing on its own — no run gets harder until you choose to fly one.',
     ],
-    action: {
-      label: afford ? `Unlock · ✦${cost}` : `Need ✦${cost}`,
-      run: () => meta.doSacrifice(),
-      disabled: !afford,
-      confirm: {
-        label: `Yes — spend ✦${cost}`,
-        note: `✦${cost} is spent for good — Watch Marks do not come back. It does not make any run harder by itself; it adds Banner ${next!.tier} to the rungs you may choose at the start of a run. Use the red "Yes — spend ✦${cost}" button below to go through with it; "Never mind" or another row keeps the marks.`,
-      },
-    },
   }
 }
 

@@ -1912,11 +1912,24 @@ const HUB_GATED_POLICIES = POLICIES.map((p) => p.id)
  */
 const HUB_RUNS = Number(process.env.FW_META_RUNS) || 210
 
+/**
+ * §13's own sample size. The Banner gate asks every rung to cost **≥ 3pt** of
+ * win rate (Phase 1: "earned, not bought" — a rung that costs nothing is a
+ * bonus, not a wager), and 210 paired runs cannot resolve that: Thin Pickings
+ * read −1pt at n=210 and −6.2±5.0pt at n=600 on the same model, and it is that
+ * n=210 reading ("Banner 1 costs 0pt for ×1.4 marks") that put it on the review
+ * list. A ≥3pt gate on a ±5pt cell is a coin flip, so the ladder is measured at
+ * 600 (about +30s of runtime) and the gate reads the point estimate.
+ */
+const BANNER_RUNS = Number(process.env.FW_BANNER_RUNS) || 600
+/** The smallest win-rate cost a Banner rung may have over the rung below it. */
+const BANNER_MIN_COST = 0.03
+
 interface HubCell { winRate: number; wins: number[]; marks: number }
-function hubCell(meta: Loadout, policy: RoutePolicy, banner = bannerRules(0)): HubCell {
+function hubCell(meta: Loadout, policy: RoutePolicy, banner = bannerRules(0), runs = HUB_RUNS): HubCell {
   const wins: number[] = []
   const marks: number[] = []
-  for (let i = 0; i < HUB_RUNS; i++) {
+  for (let i = 0; i < runs; i++) {
     const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta, banner, policy })
     wins.push(r.won ? 1 : 0)
     marks.push(r.marks)
@@ -2113,13 +2126,19 @@ line('with copy that restated an inherited rule. Nothing measured any of it.')
 line('')
 line('Each rung is measured on the same paired seeds as §11 and §12, and the payout is')
 line("`grantRunRewards`'s own formula, so the marks column is the number the player's")
-line('purse actually sees.')
+line(`purse actually sees. **${BANNER_RUNS} runs a rung** (§12 uses ${HUB_RUNS}): the gate below asks for`)
+line(`a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per rung, and a ${HUB_RUNS}-run cell cannot resolve one.`)
+line('')
+line('**A rung is earned, not bought.** Banner N unlocks by *winning* a run under Banner')
+line('N−1 (Banner 1 by winning an unbannered run) — `metaStore.grantRunRewards`. It used to')
+line('cost 200 / 350 / 500 Watch Marks, which contradicted the ladder\'s own doctrine: the')
+line('record a ladder keeps should measure skill, and a marks price measures grinding.')
 line('')
 const BANNER_POLICY = POLICIES[policyIdx('adaptive')]
 interface BannerRow { tier: number; name: string; mult: number; win: number; marks: number }
 const bannerRows: BannerRow[] = []
 for (let t = 0; t <= MAX_BANNER; t++) {
-  const c = hubCell(ZERO_META, BANNER_POLICY, bannerRules(t))
+  const c = hubCell(ZERO_META, BANNER_POLICY, bannerRules(t), BANNER_RUNS)
   bannerRows.push({
     tier: t,
     name: t === 0 ? '— (no Banner)' : BANNER_RUNGS[t - 1].name,
@@ -2140,9 +2159,10 @@ for (const r of bannerRows) {
 line('')
 line('**Two invariants.**')
 line('')
-line('1. **Every rung is a cost.** A rung that does not lower the win rate is not a')
-line('   wager, it is a bonus with a warning label — and a mandatory one, since nobody')
-line('   would ever fly the rung below it again.')
+line(`1. **Every rung is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A rung that does not lower the win rate`)
+line('   is not a wager, it is a bonus with a warning label — and a mandatory one, since')
+line('   nobody would ever fly the rung below it again. This used to tolerate a rung')
+line('   *gaining* up to 2pt; it now demands a measurable cost.')
 line('2. **Every rung pays for itself.** Expected marks per run must rise at every step of')
 line('   the ladder. This is the check the old ladder failed: its payout multipliers')
 line('   exactly cancelled the difficulty they added, so climbing was never worth it.')
@@ -2150,9 +2170,9 @@ line('')
 for (let i = 1; i < bannerRows.length; i++) {
   const cur = bannerRows[i]
   const prev = bannerRows[i - 1]
-  if (cur.win > prev.win + 0.02) {
+  if (prev.win - cur.win < BANNER_MIN_COST) {
     failures.push(
-      `Banner ${cur.tier} (${cur.name}) is not a wager: it wins ${pct(cur.win)} against Banner ${prev.tier}'s ${pct(prev.win)}. Its rule costs the run nothing, so the rung is free money and there is no reason to ever fly the one below it.`,
+      `Banner ${cur.tier} (${cur.name}) is not a wager: it wins ${pct(cur.win)} against Banner ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every rung must cost. A rule that costs the run nothing measurable is free money, and there is no reason to ever fly the rung below it.`,
     )
   }
   if (cur.marks <= prev.marks) {
@@ -2162,8 +2182,20 @@ for (let i = 1; i < bannerRows.length; i++) {
   }
 }
 line(
-  `Measured: the win rate falls at every rung (${bannerRows.map((r) => pct(r.win)).join(' → ')}) and the payout rises at every rung (${bannerRows.map((r) => f1(r.marks)).join(' → ')}).`,
+  `Measured: the win rate falls at every rung (${bannerRows.map((r) => pct(r.win)).join(' → ')}; the smallest step is ${(Math.min(...bannerRows.slice(1).map((r, i) => bannerRows[i].win - r.win)) * 100).toFixed(1)}pt) and the payout rises at every rung (${bannerRows.map((r) => f1(r.marks)).join(' → ')}).`,
 )
+line('')
+line('**Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired')
+line('runs on the specials / battles / adaptive lines:')
+line('')
+line('- *Thin Pickings was never free.* It costs **5.5–6.8pt** on every line; the "0pt"')
+line('  reading was a 210-run cell. Its ×1.4 stands — that is the price of the rule it is.')
+line('- *Elite Watch was.* Alone it measured −0.8pt, and on top of Thin Pickings −3.0pt:')
+line('  the one rung a ≥3pt gate would have failed on a resample. Its elites are now drawn')
+line('  **one depth deeper** (`BannerRules.eliteDepth`, so champion-led from depth 5) — a')
+line('  composition rule the card states, not a hidden Threat surcharge (that was the')
+line('  M19-g defect, and the ×1.52 step measured −23pt, far past a rung). It now costs')
+line('  ~9pt over rung 1, and its payout moved ×2.2 → ×2.5 to keep the marks column rising.')
 line('')
 line('**What was cut, and why it is not a rung.** Every candidate rule was measured alone')
 line('on top of Banner 0, across the §11 policy set:')
