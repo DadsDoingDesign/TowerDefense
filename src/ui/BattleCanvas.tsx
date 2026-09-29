@@ -7,6 +7,7 @@ import {
   drawField,
   drawRange,
   drawSentinel,
+  drawPlacementDim,
   drawSlot,
   fitView,
   setPresentationTime,
@@ -1137,6 +1138,9 @@ export function BattleCanvas() {
         // Setup: slots + placed towers + range previews.
         const placed = placedSentinels(st.roster, st.placements)
         const occupied = new Set(placed.map((p) => p.slotId))
+        // A hero armed for posting dims the field so the free slots, lit and
+        // pulsing, are what the eye lands on (Wave 1).
+        if (st.selectedSentinelId) drawPlacementDim(ctx, map.width, map.height)
         for (const p of placed) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)

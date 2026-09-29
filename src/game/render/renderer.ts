@@ -98,9 +98,12 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
 const COLORS = {
   base: '#3d5a80',
   baseCore: '#98c1d9',
-  slot: 'rgba(255,255,255,0.16)',
+  // Cream, near-opaque: the idle slot ring has to read on sunlit grass (Wave 1).
+  slot: 'rgba(255, 245, 220, 0.92)',
   slotFill: 'rgba(255,255,255,0.04)',
   slotHover: '#f0a868',
+  // Solid warm gold for an armed slot — the brightest thing on a dimmed field.
+  slotArmed: '#ffd166',
   slotSelected: '#98c1d9',
 }
 
@@ -754,23 +757,94 @@ function drawBase(ctx: CanvasRenderingContext2D, base: Vec2): void {
   ctx.restore()
 }
 
+/**
+ * A build slot — the circle the coach tells a new player to tap.
+ *
+ * It used to be a r=20, 2px dashed ring in FIELD units, which the composite's
+ * squeeze onto a phone turns into ~8 CSS px of radius and a sub-pixel line on
+ * bright grass: the one target the first-run tip points at was the hardest
+ * thing on the field to see (Wave 1). Three rules now:
+ *
+ *  - **A floor in screen space.** The radius is at least `SLOT_MIN_CSS_R` CSS px
+ *    and the ring at least 2 CSS px, read off `viewScale` — the same
+ *    composite-to-CSS scale the tier notch already uses (M2). It is capped at
+ *    `SLOT_MAX_FIELD_R` field units so the two closest slots on any map (95
+ *    units apart on the Green Line) never touch.
+ *  - **Contrast on any ground.** A dark halo under a light ring, so it reads on
+ *    sunlit grass and on the dirt lane alike.
+ *  - **Armed = lit.** While a hero is selected for posting (`state` is
+ *    'selected' or 'hover') the free slots turn solid gold and pulse, and the
+ *    caller dims the rest of the field (`drawPlacementDim`). With reduced motion
+ *    the pulse holds still at its brightest — a static highlight, never an
+ *    absent one.
+ */
+const SLOT_MIN_CSS_R = 16
+const SLOT_MAX_FIELD_R = 44
+const SLOT_MIN_CSS_LINE = 2
+
 export function drawSlot(
   ctx: CanvasRenderingContext2D,
   pos: Vec2,
   state: 'empty' | 'hover' | 'selected',
 ): void {
+  const vs = Math.max(viewScale, 0.02)
+  const r = Math.min(SLOT_MAX_FIELD_R, Math.max(20, SLOT_MIN_CSS_R / vs))
+  const lw = Math.max(2, SLOT_MIN_CSS_LINE / vs)
+  const armed = state !== 'empty'
+  // 0..1. Held at 1 under reduced motion: the highlight stays, the motion goes.
+  const pulse = armed ? (fxReducedMotion() ? 1 : 0.5 + 0.5 * Math.sin(animNow() * 5)) : 0
+
   ctx.save()
   ctx.translate(pos.x, pos.y)
+
+  if (armed) {
+    // The beckon: a soft ring breathing outward from the slot.
+    ctx.beginPath()
+    ctx.arc(0, 0, r + lw * (1.5 + 2 * pulse), 0, Math.PI * 2)
+    ctx.lineWidth = lw * 1.5
+    ctx.strokeStyle = `rgba(255, 224, 138, ${0.25 + 0.35 * pulse})`
+    ctx.stroke()
+  }
+
+  // Fill: a dark wash when idle (reads on grass), warm light when armed.
   ctx.beginPath()
-  ctx.arc(0, 0, 20, 0, Math.PI * 2)
-  ctx.fillStyle = COLORS.slotFill
+  ctx.arc(0, 0, r, 0, Math.PI * 2)
+  ctx.fillStyle = armed ? `rgba(255, 236, 170, ${0.2 + 0.15 * pulse})` : 'rgba(20, 12, 6, 0.28)'
   ctx.fill()
-  ctx.setLineDash([4, 5])
-  ctx.lineWidth = 2
-  ctx.strokeStyle =
-    state === 'hover' ? COLORS.slotHover : state === 'selected' ? COLORS.slotSelected : COLORS.slot
+
+  // Dark halo under the ring, then the ring itself.
+  ctx.lineWidth = lw + 2 / vs
+  ctx.strokeStyle = 'rgba(20, 12, 6, 0.6)'
+  ctx.stroke()
+  if (!armed) ctx.setLineDash([lw * 2.5, lw * 1.8])
+  ctx.lineWidth = lw
+  ctx.strokeStyle = state === 'hover' ? '#fff3c4' : armed ? COLORS.slotArmed : COLORS.slot
   ctx.stroke()
   ctx.setLineDash([])
+
+  // A small plus at the centre: "something goes here".
+  const arm = r * 0.32
+  ctx.lineWidth = lw
+  ctx.lineCap = 'round'
+  ctx.strokeStyle = armed ? COLORS.slotArmed : COLORS.slot
+  ctx.beginPath()
+  ctx.moveTo(-arm, 0)
+  ctx.lineTo(arm, 0)
+  ctx.moveTo(0, -arm)
+  ctx.lineTo(0, arm)
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * Dims the field while a hero is armed for posting, so the lit slots are the
+ * brightest thing on it (Wave 1). Drawn before the slots and before the posted
+ * heroes, so neither is dimmed. Static — no motion to reduce.
+ */
+export function drawPlacementDim(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  ctx.save()
+  ctx.fillStyle = 'rgba(12, 8, 4, 0.4)'
+  ctx.fillRect(0, 0, w, h)
   ctx.restore()
 }
 
