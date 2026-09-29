@@ -1,5 +1,6 @@
 import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
+import { Money } from './Money'
 
 /**
  * Band 1 — run state, and nothing else. It never holds a control that changes
@@ -17,12 +18,13 @@ export function HeaderBand() {
   const threat = useGameStore((s) => s.threat)
   const lives = useGameStore((s) => s.lives)
   const round = useGameStore((s) => s.round)
-  const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
   // The map's own length. "Depth 3" says nothing about how far there is left to
   // go; "Depth 3/10" is the difference between pacing a run and guessing at it
-  // — and the Cartographer's Table makes the map longer, which the player had
-  // no way of seeing either (M6).
-  const layers = useGameStore((s) => s.runMap.layers)
+  // (M6).
+  const runMap = useGameStore((s) => s.runMap)
+  const currentNodeId = useGameStore((s) => s.currentNodeId)
+  const activeNodeId = useGameStore((s) => s.activeNodeId)
+  const screen = useGameStore((s) => s.screen)
   const baseHpStore = useGameStore((s) => s.baseHp)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const hud = useGameStore((s) => s.hud)
@@ -31,49 +33,71 @@ export function HeaderBand() {
   const baseHp = inBattle ? hud.baseHp : baseHpStore
   const maxHp = hud.maxBaseHp || MAX_BASE_HP
   const hpFrac = Math.max(0, baseHp) / maxHp
+  const hpNow = Math.max(0, Math.ceil(baseHp))
   const goldDisplay = gold + (inBattle ? hud.goldEarned : 0)
-  const depth = Math.max(0, clearedNodeIds.length - 1)
+  /*
+   * Depth is the LAYER of the node you are on (Wave 1).
+   *
+   * It was `clearedNodeIds.length - 1`, which counts nodes already FINISHED —
+   * so the first battle's header said "Depth 0/10" while the wave bar right
+   * below it said "DEPTH 1", because a wave is labelled by its node's layer.
+   * Both read the layer now: the battle being fought, or on the map the node
+   * the company stands on, out of the boss's layer.
+   */
+  const nodeId = screen === 'battle' && activeNodeId ? activeNodeId : currentNodeId
+  const depth = runMap.nodes.find((n) => n.id === nodeId)?.layer ?? 0
+  const lastLayer = Math.max(depth, runMap.layers - 1)
 
-  // There is no 'RUN OVER' branch: a run that is not active takes the result
-  // page instead (useShellContext answers `stage: 'result', layout: 'page'` for
-  // it), so this band is only ever mounted mid-run and the status could never
-  // read anything but LIVE or nothing. That is the same argument that retired
-  // the meta variant described above — this branch was simply missed with it.
-  const status = inBattle ? `LIVE · ${hud.enemiesTotal - hud.enemiesSpawned + hud.enemiesAlive} LEFT` : null
+  // The live "N LEFT" status is gone from this band (Wave 1). The live count
+  // was on screen three times at once — here (where it wrapped to a second
+  // line), in the context panel and in the wave bar. It lives in the wave bar
+  // only now, beside the wave's name and its progress.
 
   return (
     <header className="sh-header">
       <div className="sh-header-row">
         <span className="sh-brand">FIELDWATCH</span>
-        <span className="sh-chip">
-          {mode === 'endless' ? `Round ${round}` : `Depth ${depth}/${Math.max(depth, layers - 1)}`}
+        <span
+          className="sh-chip"
+          role="img"
+          aria-label={mode === 'endless' ? `Round ${round}` : `Depth ${depth} of ${lastLayer}`}
+        >
+          {mode === 'endless' ? `Round ${round}` : `Depth ${depth}/${lastLayer}`}
         </span>
         {mode === 'campaign' && threat > 1.001 && (
-          /* The `title` was the ONLY explanation of what ⚡ meant, and `title`
-             does not exist on a touch device. The name is accessible now, and
-             the first time this chip appears the coach strip says it out loud
-             once (WS9 — `Coach`, tip `threat`). */
+          /* The name is accessible, and the first time this chip appears the
+             coach strip says it out loud once (WS9 — `Coach`, tip `threat`). */
           <span
             className="sh-chip threat"
             role="img"
-            aria-label={`Threat ${threat.toFixed(2)} times — enemies scale up as the run grows`}
+            aria-label={`Threat ${threat.toFixed(2)} times: enemies have ${Math.round((threat - 1) * 100)}% more HP`}
           >
             <Icon name="threat" /> ×{threat.toFixed(2)}
           </span>
         )}
         {mode === 'endless' && (
-          <span className="sh-chip threat" role="img" aria-label={`${lives} lives left`}>
-            <Icon name="hp" /> {lives}
+          /* Was a heart and a bare "3". The heart is the HP mark everywhere
+             else, and nothing said that a lost wave spends one of these and
+             rebuilds the Gate. The word is on the chip now (Wave 1). */
+          <span
+            className="sh-chip threat"
+            role="img"
+            aria-label={`${lives} ${lives === 1 ? 'retry' : 'retries'} left: a lost wave spends one and rebuilds the Gate`}
+          >
+            {lives} {lives === 1 ? 'retry' : 'retries'}
           </span>
         )}
-        {status && <span className="sh-status">{status}</span>}
       </div>
 
       <div className="sh-header-row sub">
-        <span className="sh-base" role="img" aria-label={`Base integrity ${Math.max(0, Math.ceil(baseHp))} of ${maxHp}`}>
-          {/* Was `⬡`, one anti-aliased pixel from `⬢`, which was the mark on
-              every Watchtower perk row. The keep is the keep. */}
+        <span className="sh-base" role="img" aria-label={`Gate ${hpNow} of ${maxHp}`}>
+          {/* Was `⬡`, one anti-aliased pixel from `⬢`. The keep is the keep. */}
           <Icon name="base" className="sh-base-glyph" />
+          {/* The word, visibly (Wave 1): "20/20" beside a bar never said WHAT
+              was twenty. It is the Gate — the one noun for base HP. */}
+          <span className="sh-base-word" aria-hidden="true">
+            Gate
+          </span>
           <span className="sh-base-bar">
             <span
               className="sh-base-fill"
@@ -83,17 +107,17 @@ export function HeaderBand() {
               }}
             />
           </span>
-          <span className="sh-base-val">
-            {Math.max(0, Math.ceil(baseHp))}/{maxHp}
+          <span className="sh-base-val" aria-hidden="true">
+            {hpNow}/{maxHp}
           </span>
         </span>
         <span className="sh-res">
           <span className="sh-chip gold">
-            <Icon name="gold" /> {goldDisplay}
+            <Money amount={goldDisplay} c="gold" />
           </span>
           {mode === 'endless' && (
             <span className="sh-chip teal">
-              <Icon name="dust" /> {dust}
+              <Money amount={dust} c="dust" />
             </span>
           )}
         </span>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { bannerRules, BANNER_RUNGS, useMetaStore } from '../../state/metaStore'
+import { VOW } from './offers'
 
 /**
  * ---------------------------------------------------------------------------
@@ -65,19 +66,22 @@ export function BannerPicker() {
   return (
     <section className="pg-banner">
       <div className="pg-banner-head">
-        <span className="pg-banner-label">Banner</span>
+        {/* "Vow" on screen; `banner` in the store and the save (Wave 1). */}
+        <span className="pg-banner-label">{VOW}</span>
         {/* "×1 marks" is not a payout, it is the absence of one — say so. */}
-        <span className="pg-banner-mult">{runBanner === 0 ? 'standard pay' : `✦ ×${rules.markMult} marks`}</span>
+        <span className="pg-banner-mult">
+          {runBanner === 0 ? 'standard pay' : `pays ×${rules.markMult} Watch Marks`}
+        </span>
       </div>
 
-      <div className="pg-banner-row" ref={rowRef} role="group" aria-label="Choose the Banner for this run">
+      <div className="pg-banner-row" ref={rowRef} role="group" aria-label={`Choose the ${VOW} for this run`}>
         <button
           className={`pg-banner-chip ${runBanner === 0 ? 'sel' : ''}`}
           aria-pressed={runBanner === 0}
           onClick={() => setRunBanner(0)}
         >
           <span className="pg-banner-tier">—</span>
-          <span className="pg-banner-name">No Banner</span>
+          <span className="pg-banner-name">No {VOW}</span>
         </button>
         {rungs.map((r) => (
           <button
@@ -87,7 +91,7 @@ export function BannerPicker() {
             /* The chip's visible text is a numeral and a two-word name; the rule
                it changes and the payout are what the choice is actually about,
                so they belong in the accessible name too. */
-            aria-label={`Banner ${r.tier}, ${r.name}. ${r.rule} Pays ${r.markMult} times Watch Marks.`}
+            aria-label={`${VOW} ${r.tier}, ${r.name}. ${r.rule} Pays ${r.markMult} times Watch Marks.`}
             onClick={() => setRunBanner(r.tier)}
           >
             <span className="pg-banner-tier">{r.tier}</span>
@@ -99,12 +103,12 @@ export function BannerPicker() {
       <div className="pg-card">
         <p className="pg-card-title">
           {runBanner === 0
-            ? 'No Banner — the ordinary march.'
-            : `Banner ${runBanner} · ${BANNER_RUNGS[runBanner - 1].name}`}
+            ? `No ${VOW} — the ordinary march.`
+            : `${VOW} ${runBanner} · ${BANNER_RUNGS[runBanner - 1].name}`}
         </p>
         {runBanner === 0 ? (
           <p className="pg-card-body">
-            Every stop on the map, three cards a clear, standard pay. Fly a Banner to give a rule up and be paid more
+            Every stop on the map, three cards a clear, standard pay. Swear a {VOW} to give up a rule and be paid more
             for finishing without it.
           </p>
         ) : (

@@ -1,6 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react'
+import type { ItemRarity } from '../../game/types'
+import { RARITY } from '../../game/data/items'
 import { Icon } from '../Icon'
-import { effectIcon, markLabel, type IconKey } from '../channels'
+import { effectIcon, markLabel, RARITY_INITIAL, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
+import { Money } from './Money'
 import { lineMark, lineText, type Body } from './offers'
 
 /**
@@ -47,7 +50,14 @@ export function PageLayout({
    * `run` is handed the click that asked for it. Armed, this is the way back
    * out rather than the deed — the deed is on `confirm`.
    */
-  cta?: { label: string; run: (e?: { detail?: number }) => void; disabled?: boolean; danger?: boolean }
+  cta?: {
+    label: string
+    run: (e?: { detail?: number }) => void
+    disabled?: boolean
+    danger?: boolean
+    /** Drawn after the label as the currency's mark and the number (Wave 1). */
+    cost?: { amount: number; currency: Currency }
+  }
   /**
    * Announce this page's title block when it appears (F9).
    *
@@ -123,6 +133,12 @@ export function PageLayout({
         <div className="pg-band pg-cta-band">
           <button className={`pg-cta ${cta.danger ? 'danger' : ''}`} disabled={cta.disabled} onClick={cta.run}>
             {cta.label}
+            {cta.cost && (
+              <>
+                {' · '}
+                <Money amount={cta.cost.amount} c={cta.cost.currency} />
+              </>
+            )}
           </button>
         </div>
       )}
@@ -156,6 +172,9 @@ export function MenuRow({
   icon,
   mark,
   glyph,
+  dim,
+  pips,
+  art,
 }: {
   label: string
   value?: ReactNode
@@ -196,18 +215,34 @@ export function MenuRow({
    * and read as half-broken, which is worse than either extreme.
    */
   glyph?: string
+  /**
+   * The row is something you cannot afford yet (Wave 1). It dims but stays
+   * tappable — reading what a perk does is how you decide to save for it. The
+   * words "not enough yet" ride on the price's accessible name (`priceNode`).
+   */
+  dim?: boolean
+  /** Level pips: `on` filled of `of`. Drawn under the label. */
+  pips?: { on: number; of: number }
+  /** A real sprite in the icon slot — a hero for hire. */
+  art?: string
 }) {
   return (
     <button
-      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''}`}
+      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''}`}
       style={rail ? ({ '--rail': rail } as CSSProperties) : undefined}
       onClick={onClick}
       disabled={!onClick || disabled}
       aria-pressed={selected}
     >
-      {(icon || glyph) && (
+      {(icon || glyph || art) && (
         <span className="pg-row-icon">
-          {icon ? <Icon name={icon} lg /> : <span className="pg-row-glyph">{glyph}</span>}
+          {art ? (
+            <img className="pg-row-art" src={art} alt="" />
+          ) : icon ? (
+            <Icon name={icon} lg />
+          ) : (
+            <span className="pg-row-glyph">{glyph}</span>
+          )}
           {/*
            * The one place an icon is allowed to speak (M11).
            *
@@ -236,11 +271,49 @@ export function MenuRow({
             ))}
         </span>
       )}
-      <span className="pg-row-label">{label}</span>
+      <span className="pg-row-label">
+        {label}
+        {pips && pips.of > 1 && (
+          <span className="pg-pips" role="img" aria-label={`level ${pips.on} of ${pips.of}`}>
+            {Array.from({ length: pips.of }, (_, i) => (
+              <i key={i} className={i < pips.on ? 'on' : ''} />
+            ))}
+          </span>
+        )}
+        {pips && pips.of === 1 && pips.on === 1 && <span className="pg-owned">Owned</span>}
+      </span>
       {value != null && <span className={`pg-row-val ${currency ?? ''}`}>{value}</span>}
     </button>
   )
 }
+
+/**
+ * A rarity, said three ways at once (Wave 1): the word, the rarity's own hue,
+ * and a pip count (1 at Common to 5 at Mythic) — so the ramp reads without
+ * colour. It replaces the rarity words that were drawn in gold at every tier,
+ * which made a Common and a Legendary label the same colour.
+ */
+export function RarityTag({ rarity, suffix }: { rarity: ItemRarity; suffix?: string }) {
+  const n = rarityRank(rarity)
+  return (
+    <span className="rar-tag" style={{ '--rail': rarityVar(rarity) } as CSSProperties}>
+      <span className="rar-tag-pips" aria-hidden="true">
+        {Array.from({ length: n }, (_, i) => (
+          <i key={i} />
+        ))}
+      </span>
+      <span className="rar-tag-word" data-initial={RARITY_INITIAL[rarity]}>
+        {RARITY[rarity].label}
+      </span>
+      {suffix && <span className="rar-tag-suffix"> · {suffix}</span>}
+    </span>
+  )
+}
+
+/** A price as the currency's mark and the number. */
+export const priceNode = (p: { amount: number; currency: Currency }, short?: boolean) => (
+  <Money amount={p.amount} c={p.currency} note={short ? 'not enough yet' : undefined} />
+)
 
 /**
  * Parchment square with a caption — the trait/perk tile from the design.
