@@ -70,6 +70,8 @@ type GameEvent =
   | 'defeat'
   | 'upgrade'
   | 'evolve'
+  | 'deploy'
+  | 'undeploy'
 export type SoundEvent = UiEvent | GameEvent
 
 /**
@@ -848,6 +850,24 @@ function playGame(event: GameEvent): void {
      * Evolution — the loudest ceremony in a run that is not its ending. A riser
      * into a struck chord, so the moment has a before and an after.
      */
+    /*
+     * Setting a hero down on a slot — which was silent, because it happens on
+     * the canvas and the canvas is not a button. A wooden "thock": a narrow
+     * band of noise at 900 Hz (the knock), a short triangle falling 220→150 Hz
+     * (the weight), and a 1.3 kHz tick on top so a phone hears it land.
+     */
+    case 'deploy':
+      noise(0.03, 1.0, { bp: 900, q: 4 })
+      osc(vary(220, 40), 0.08, 0.3, { to: 150, type: 'triangle', send: 0.1 })
+      osc(vary(1300, 50), 0.018, 0.18, { type: 'square' })
+      break
+    /* Lifting one off again: the same materials lower and reversed — the
+       body rises instead of falling, and the tick comes after, not before. */
+    case 'undeploy':
+      noise(0.03, 0.8, { bp: 650, q: 4 })
+      osc(vary(130, 40), 0.08, 0.28, { to: 185, type: 'triangle', send: 0.1 })
+      osc(vary(1000, 50), 0.018, 0.15, { type: 'square', at: 0.05 })
+      break
     case 'evolve':
       osc(220, 0.55, 0.09, { to: 880, type: 'sawtooth', attack: 0.3, send: 0.4 })
       noise(0.55, 0.06, { hp: 600, lp: 1200, lpTo: 9000, send: 0.4 })

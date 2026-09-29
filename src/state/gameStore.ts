@@ -1603,6 +1603,7 @@ export const useGameStore = create<GameState>((set, get) => {
       for (const key of Object.keys(next)) if (next[key] === selectedSentinelId) next[key] = null
       next[slotId] = selectedSentinelId
       set({ placements: next, selectedSentinelId: null })
+      sfx('deploy')
     },
 
     clearSlot: (slotId) => {
@@ -1610,6 +1611,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (battlePhase !== 'setup') return
       if (!placements[slotId]) return
       set({ placements: { ...placements, [slotId]: null } })
+      sfx('undeploy')
     },
 
     setSpeed: (s) => set({ speed: s }),
