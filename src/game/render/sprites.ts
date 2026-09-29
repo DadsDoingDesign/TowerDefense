@@ -57,7 +57,7 @@ const WEAPON_ART = [
 ]
 const OFFHAND_ART = ['shield', 'buckler', 'tome', 'quiver', 'focus']
 const BODY_ART = ['plate', 'mail', 'robe', 'cloak', 'aegis']
-export const GEAR_ROLES = [
+const GEAR_ROLES = [
   ...WEAPON_ART.map((n) => `gear_${n}`),
   ...OFFHAND_ART.map((n) => `gear_${n}`),
   ...BODY_ART.map((n) => `body_${n}`),
@@ -155,7 +155,7 @@ export function getSprite(pack: string, name: string): HTMLImageElement | undefi
   return img && img.complete && img.naturalWidth > 0 ? img : undefined
 }
 
-export const spritesReady = (): boolean => started && pending === 0
+const spritesReady = (): boolean => started && pending === 0
 
 /** See {@link generation}: changes whenever any requested sprite settles. */
 export const spriteGeneration = (): number => generation

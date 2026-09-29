@@ -38,13 +38,11 @@ export interface Loadout {
   body: string | null
 }
 
-export const EMPTY_LOADOUT: Loadout = { mainHand: null, offHand: null, body: null }
-
-export const isBare = (lo: Loadout | undefined | null): boolean =>
+const isBare = (lo: Loadout | undefined | null): boolean =>
   !lo || (!lo.mainHand && !lo.offHand && !lo.body)
 
 /** Stable cache key. `-` rather than empty so `a||b` can't collide with `ab`. */
-export const loadoutKey = (lo: Loadout): string =>
+const loadoutKey = (lo: Loadout): string =>
   `${lo.mainHand ?? '-'}|${lo.offHand ?? '-'}|${lo.body ?? '-'}`
 
 /**
@@ -72,7 +70,7 @@ interface Composite {
 const composites = new Map<string, Composite>()
 
 /** Drop everything. A new pack invalidates every layer in every composite. */
-export function clearLoadoutCache(): void {
+function clearLoadoutCache(): void {
   composites.clear()
 }
 

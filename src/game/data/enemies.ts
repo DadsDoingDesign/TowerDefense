@@ -158,8 +158,6 @@ export const ENEMY_MODS: readonly EnemyMod[] = [
   },
 ]
 
-export const modById = (id: string): EnemyMod | null => ENEMY_MODS.find((m) => m.id === id) ?? null
-
 /** The registry key for a base type under a modifier (`null` → the base type). */
 export const modKey = (typeId: string, mod: string | null): string => (mod ? `${typeId}_${mod}` : typeId)
 

@@ -11,12 +11,6 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
   offHand: 'Off Hand',
   body: 'Body',
 }
-export const KIND_LABEL: Record<ItemSlot, string> = {
-  oneHand: '1-Hand',
-  twoHand: '2-Hand',
-  offHand: 'Off-Hand',
-  body: 'Body',
-}
 /** Which hero slot(s) an item of this kind may occupy. */
 export function heroSlotsFor(kind: ItemSlot): HeroSlot[] {
   switch (kind) {

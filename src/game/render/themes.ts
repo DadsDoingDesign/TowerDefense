@@ -125,7 +125,6 @@ export const THEMES: Record<string, ThemeStyle> = {
   },
 }
 
-export const THEME_IDS = Object.keys(THEMES)
 export const DEFAULT_THEME = 'tinyswords'
 
 let activeStyle: ThemeStyle = THEMES[DEFAULT_THEME]

@@ -29,9 +29,6 @@ function store(): Storage | null {
   return backing
 }
 
-/** True when this browser actually lets us persist anything. */
-export const storageAvailable = (): boolean => store() !== null
-
 export function readRaw(key: string): string | null {
   try {
     return store()?.getItem(key) ?? null

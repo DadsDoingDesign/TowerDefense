@@ -908,7 +908,6 @@ let viewScale = 0.40625
 export const setViewScale = (s: number): void => {
   if (s > 0 && Number.isFinite(s)) viewScale = s
 }
-export const getViewScale = (): number => viewScale
 
 /**
  * The four procs, each with its own colour AND its own geometry.
@@ -2286,11 +2285,6 @@ export function mix(a: string, b: string, t: number): string {
   const g = Math.round(ag + (bg - ag) * t)
   const bl = Math.round(ab + (bb - ab) * t)
   return `rgb(${r},${g},${bl})`
-}
-
-/** Archetype accent used by UI chips too. */
-export function archetypeColor(a: Archetype): string {
-  return ARCHETYPES[a].color
 }
 
 // ---- theme shape + color helpers ----
