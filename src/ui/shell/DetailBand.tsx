@@ -987,11 +987,10 @@ function HeroUpgrades({ hero }: { hero: Sentinel }) {
  * targeting. Every player who set "Low HP" on their rogue expecting their
  * fighter to keep blocking was misled by the layout.
  *
- * The hold-fire copy was also wrong about what it does. "Until in range" is not
- * a rule — a tower cannot fire out of range in the first place. The engine holds
- * fire on anything past **45% of the path** (`holdThreshold = path.length *
- * 0.45`), with one exception: an enemy a fighter is blocking is always shot at,
- * whatever the threshold, so a forward posting cannot soft-stall the wave.
+ * There used to be a "Hold the near half" toggle here as well. It was cut: the
+ * balance harness measured it costing 10–50pt of stop rate in 7 of the 8
+ * team × map × placement cells it was tried in, i.e. a trap option whose only
+ * reliable effect was to lose waves. Targeting is the one order that ships.
  */
 function HeroTactics() {
   const tactics = useGameStore((s) => s.tactics)
@@ -1014,19 +1013,6 @@ function HeroTactics() {
           </button>
         ))}
       </div>
-      <button
-        className={`sh-check ${tactics.holdFire ? 'on' : ''}`}
-        data-sfx="toggle"
-        aria-pressed={tactics.holdFire}
-        onClick={() => setTactics({ holdFire: !tactics.holdFire })}
-      >
-        <span>{tactics.holdFire ? '☑' : '☐'}</span> Hold the near half
-      </button>
-      <p className="sh-line muted">
-        {tactics.holdFire
-          ? 'Holding: nothing is shot until it has walked 45% of the lane — except anything a Sentinel is blocking, which is always fair game.'
-          : 'Off: every Sentinel fires the moment something enters its ring.'}
-      </p>
     </>
   )
 }

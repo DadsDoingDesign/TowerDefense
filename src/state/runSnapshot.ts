@@ -717,7 +717,8 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
         'first',
         ['first', 'lowestHp', 'strongest', 'nearest'] as const,
       ),
-      holdFire: bool((o.tactics as Tactics | undefined)?.holdFire, false),
+      // `holdFire` was cut (it cost stop rate in 7 of 8 measured cells); a
+      // payload that still carries it has it dropped here, not restored.
     },
     lastResult: migrateResult(o.lastResult),
     lastLoot: arr<Item>(o.lastLoot),

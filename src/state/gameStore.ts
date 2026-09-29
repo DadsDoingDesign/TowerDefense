@@ -47,7 +47,7 @@ import {
   type StreamPositions,
 } from './runSnapshot'
 
-const DEFAULT_TACTICS: Tactics = { focus: 'first', holdFire: false }
+const DEFAULT_TACTICS: Tactics = { focus: 'first' }
 
 export type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
 export type BattlePhase = 'setup' | 'battle'

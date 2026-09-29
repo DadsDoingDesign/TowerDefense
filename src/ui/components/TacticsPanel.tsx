@@ -35,13 +35,6 @@ export function TacticsPanel() {
           </button>
         ))}
       </div>
-      <button
-        className={`hold-fire ${tactics.holdFire ? 'on' : ''}`}
-        onClick={() => setTactics({ holdFire: !tactics.holdFire })}
-      >
-        <span className="hf-check">{tactics.holdFire ? '☑' : '☐'}</span>
-        Hold fire until enemies pass the midpoint
-      </button>
     </div>
   )
 }
