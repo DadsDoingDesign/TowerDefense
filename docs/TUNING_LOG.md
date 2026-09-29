@@ -235,8 +235,47 @@ Fixed (UI-only, cannot move the balance report):
 - **Spoils row truncated "Executioner's Oa…"** beside "•••• Legendary · relic"
   at 390px. `.pg-row-label` wraps to two lines inside the 48px row.
 
+### Step 3 — full run 3/3 — ALL INVARIANTS PASS, REPORT.md committed (9ea3779)
+
+## Final numbers
+
+Before = the committed REPORT at 7e1c084; after = REPORT at 9ea3779 (report
+sample sizes: §11 n=120 → 240, §12 n=210, §13 n=600), plus the n=600 paired
+reads from `tune.ts` and the `meta-sweep.ts 240 phase3b` scoreboard run on
+both trees (the "before" from a `git archive` of 7e1c084).
+
+| Metric | Before | After |
+|---|--:|--:|
+| §6 Monte Carlo (band 45–60%) | 59% | 59% |
+| §11 first-timer (specials), report | 14% (n=120, ungated floor) | **22%** (n=240, gated 15–35%) |
+| §11 first-timer, n=600 | 15.3% | **20.3%** |
+| §11 battles / recruits / adaptive, report | 29 / 20 / 34% | 31 / 17 / 33% |
+| §11 battles / recruits / adaptive, n=600 | 27.0 / 19.8 / 28.3% | 25.8 / 19.5 / 30.5% |
+| §11 strict floor / +2 recruits | 2% / 5% | 1% / 4% |
+| Route spread (report §11) | 14–34% (20pt) | 17–33% (16pt) |
+| Route spread (phase3b, n=240) | 18–32% (14.6pt) | 17–33% (15.8pt) |
+| Build spread, oracle vs random (adaptive, in-sample n=240) | 12.1pt | 25.0pt |
+| Build spread, same oracle on 480 fresh seeds | 24.2pt | 30.2pt |
+| Vow ladder B0/B1/B2/B3 (adaptive, n=600) | 28 / 23 / 16 / 4% | 31 / 24 / 17 / 3% |
+| Vow marks/run | 111 / 146 / 213 / 233 | 116 / 149 / 220 / 227 |
+| Starters F/R/M, first-timer line (phase3b n=240) | 14 / 21 / 18% | 25 / 23 / 19% |
+| Starters F/R/M, adaptive (phase3b n=240) | 31 / 38 / 28% | 31 / 38 / 29% |
+| Starters F/R/M, nodes cleared (report §11) | 9.4 / 9.2 / 9.6 | 9.7 / 9.7 / 9.9 |
+| §12 Cartographer worst gated Δ (n=210) | −6pt | −3pt (±8) |
+| §12 Cartographer battles-first, n=600 | −3.5 ±4.2 | +0.3 ±4.4 |
+| §12 any hub state, worst Δ at n=600 | — | −1.2 ±1.7 (Standing Orders, specials) |
+| §17 portrait parity (stop / Gate lost, both fields) | identical (94%/1.56, 94%/1.25) | identical (unchanged) |
+
+**Watch item — build spread.** The in-sample oracle doubled (12 → 25pt), and
+an out-of-sample check (the oracle's picks replayed on 480 seeds it never saw)
+reads 24 → 30pt: the build layer was already more solved than the in-sample
+number said, and faster levelling (more of the level-10/15/20 choices get
+reached) widened it by ~6pt. It is not gated; it belongs to the perk/evolution
+lane, not to this one.
+
 ## Current state / next step
 
-- Run 2 in progress (Mystic, `GOD=1` refills the Gate before each fight so the
-  run reaches the act bosses and the final boss for review — a review shortcut,
-  not play). Full run 3/3 in the background.
+- Steps 0–3 done. Step 4 review: run 2 (Mystic, GOD) reached the act-1 boss
+  (all three Grukk phases captured), Crossroads, campfire; still running
+  toward the end screen. Desk pass done. Codex done.
+- Next: write the review scorecard here and in docs/DESIGN_REVIEW.md, commit.
