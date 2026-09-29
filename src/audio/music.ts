@@ -6,7 +6,7 @@
  * The settings page has promised "music and effects" since before there was any
  * music, and the brief for this phase was: ship music, but only under a licence
  * that is unambiguously safe for commercial use with no attribution trap —
- * this repository is public and has already had one licence problem with a
+ * this project is commercial and has already had one licence problem with a
  * sprite pack. The cheapest way to make that guarantee absolute is to not have
  * a third-party file at all. This score is written here, in code, and is
  * therefore the project's own work: no download, no CC-BY small print, nothing

@@ -4,8 +4,10 @@ Companion to `docs/BRAND.md` (which describes the *intent*). This document is
 the **audit of what actually exists in the code**, the gaps between the two, and
 the full token set a real design system needs.
 
-Screenshots of every state this describes: `docs/ui-audit/` (see
-`docs/ui-audit/INDEX.md`). Regenerate with `node scripts/ui-audit.mjs`.
+Screenshots of every state this describes are generated, not committed:
+`node scripts/ui-audit.mjs` writes them to `docs/ui-audit/` (git-ignored). The
+2026-07-26 set was removed from the repository because it depicted sprite files
+that were not licence-clean.
 
 Audited against `src/styles/global.css` (28 tokens) and `src/styles/app.css`
 (3,877 lines).

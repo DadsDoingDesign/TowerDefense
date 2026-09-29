@@ -10,14 +10,28 @@ Branch: `claude/asset-list-review-2btntw`.
 
 ## 1. Why this programme exists
 
-Tiny Swords is no longer CC0. Its licence forbids redistribution **even of
-modified files**, and this repository is public, so all 45 sprite files and both
-FX sheets are a redistribution and must be replaced from scratch. The 78-icon
-atlas is generated from source in this repo and is licence-clean — it does not
-need replacing.
+> **Corrected 2026-09-29.** This section used to say every sprite *had* to be
+> replaced for licence reasons. That was wrong. Every file in
+> `public/assets/**/tinyswords*` comes from the **old CC0 build** of Tiny Swords
+> (verified: `harvest-cc0.ts --check`, plus a pixel-for-pixel comparison against
+> the pinned CC0 mirror; the `@half` copies are box-filtered from those same CC0
+> files). CC0 is irrevocable, and it permits commercial use, so the live game is
+> licence-clean. Only the *current* Tiny Swords download is restricted, and none
+> of it ships. See `public/licenses/THIRD_PARTY_NOTICES.md`.
+>
+> **Remaining check:** the CC0 claim rests on the mirror matching Pixel Frog's own
+> `TS_old version_CC0 Licensed` download. Download that archive from itch once
+> and record its hashes in `public/assets/CC0-MANIFEST.md`.
 
-That forcing function is why the plan sequences by *risk*, not by tier:
-everything has to be redrawn regardless, so the uncertain parts go first.
+Replacing the art is therefore a **brand and quality decision**, not a legal
+emergency. It still matters for a commercial release: the CC0 build is free for
+everyone, so a game built on it doesn't look distinctive, and it has real gaps
+(bosses reuse trash-mob art, no caster sprite). The 78-icon atlas is generated
+from source in this repo and needs no replacing.
+
+The plan below still sequences by *risk*, not by tier (the uncertain parts
+first). Because nothing is forced any more, the art can ship piece by piece
+behind a per-role fallback, instead of one all-or-nothing theme flip.
 
 ---
 

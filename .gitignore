@@ -38,3 +38,9 @@ _*.png
 # TS incremental build info
 *.tsbuildinfo
 scratch_art/
+
+# Generated screenshot audits — regenerate locally, never commit
+docs/ui-audit/
+
+# Agent worktrees
+.claude/worktrees/

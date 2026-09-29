@@ -7,7 +7,12 @@ Recruit up to five **Sentinels** (tower units), place them along a fixed path, s
 team tactics, then let each wave auto-resolve. Sentinels level up _during_ a run and
 branch into specialized forms. Runs are permadeath; meta-progression persists in a hub.
 
-> Status: **Complete** — all seven milestones shipped. See the roadmap below.
+> **Proprietary — all rights reserved.** Not open source; see [`LICENSE`](./LICENSE).
+> Third-party components: [`public/licenses/THIRD_PARTY_NOTICES.md`](./public/licenses/THIRD_PARTY_NOTICES.md).
+>
+> Status: all seven original milestones shipped, plus three audit phases
+> (`docs/AUDIT_2026-08-20.md`). In active development: art replacement
+> (`docs/HANDOFF.md`) and the improvement plan.
 
 ## Tech stack
 
@@ -15,7 +20,7 @@ branch into specialized forms. Runs are permadeath; meta-progression persists in
 - **Canvas 2D** — the battle view (field, path, towers, enemies, projectiles, effects).
   Chosen over WebGL/PixiJS for a small bundle and fast mobile load; the tower-defense
   entity counts don't need a GPU renderer yet.
-- **Zustand** — game/meta state (will persist to `localStorage` for the hub).
+- **Zustand** — game, meta and settings state; meta, settings and the mid-run snapshot persist to `localStorage`.
 - **Plain CSS** with design tokens — no CSS framework dependency; mobile-first, one-handed.
 
 ## Getting started
@@ -31,24 +36,34 @@ npm run preview    # serve the production build
 
 ```
 src/
-  main.tsx, App.tsx          App entry + screen shell
+  main.tsx, App.tsx          App entry; loads the Root Shell (legacy UI behind ?shell=0)
+  pwa.ts                     service-worker registration (worker generated in vite.config.ts)
+  audio/                     procedural SFX, the score, and the music director
   game/
     core/                    vec math, arc-length path, seeded RNG
-    data/                    maps, enemies, wave generation, sentinel templates
-    engine/                  battle simulation (GameEngine) + stat derivation
-    render/                  Canvas 2D renderer
-  state/                     Zustand store (setup ⇄ battle flow)
+    data/                    archetype tree, sentinels, enemies, waves, items, rewards,
+                             mutations, run map, battlefields
+    engine/                  deterministic battle simulation (GameEngine) + combat maths
+    render/                  Canvas 2D renderer, FX, sprites/themes, paper-doll loadouts
+  state/                     Zustand stores: run (gameStore), meta, settings; run snapshot
   ui/
-    screens/                 BattleScreen
-    components/              TopBar, Roster, WavePreview, BattleControls, ResultOverlay
-    BattleCanvas.tsx         requestAnimationFrame loop + tap-to-place input
-  styles/                    global tokens + component CSS
+    shell/                   Root Shell — the UI the game ships (see docs/FIGMA.md)
+    screens/, components/    legacy UI, lazy-loaded, slated for deletion
+    BattleCanvas.tsx         requestAnimationFrame loop, FX differ, tap-to-place input
+  styles/                    design tokens (global.css) + shell/page CSS
+public/
+  assets/                    sprite packs, UI art, Kenney UI sounds (see CREDITS/CC0-MANIFEST)
+  licenses/                  third-party licence texts, shipped with every build
+balance/                     deterministic balance harness (npm run balance)
+harness/                     art vertical-slice harness (docs/HANDOFF.md)
 ```
 
 ### How the battle loop works
 
-`BattleCanvas` runs a single `requestAnimationFrame` loop. During a wave it steps the
-`GameEngine` by the frame delta (scaled by the 1×/2×/3× speed), draws every frame from
+`BattleCanvas` runs a single `requestAnimationFrame` loop. During a wave it advances the
+`GameEngine` in fixed `TICK` steps through an accumulator; the 1×/2×/3× speed runs more
+ticks per frame, never bigger ones, so a seeded battle is identical at any speed or
+frame rate. It draws every frame from
 the engine's live arrays, and pushes a lightweight HUD snapshot to the store ~10×/sec so
 React re-renders stay cheap. Between waves the same canvas renders the map, slots, and
 placed towers, and handles tap-to-deploy input. The engine owns all mutable combat state
@@ -81,25 +96,32 @@ strength. Threat is shown on the map header and in the pre-wave preview.
 
 ## Testing
 
-There is **one** automated test asset: the balance harness. It is a deterministic,
-seeded simulation harness — not a unit-test suite — that drives the real
-`GameEngine` headlessly and gates on balance invariants. All combat is
-reproducible via the seeded `RNG`.
+Two automated test assets:
+
+- **Vitest unit tests** in `tests/` — starting with engine determinism (same seed
+  ⇒ identical battle at 1×/2×/3×).
+- **The balance harness** — a deterministic, seeded simulation that drives the
+  real `GameEngine` headlessly and gates on balance invariants.
 
 ```bash
-npm run balance     # 11 sweeps against the live engine; writes balance/REPORT.md
+npm test            # Vitest (tests/**/*.test.ts)
+npm run balance     # 15 sweeps against the live engine; writes balance/REPORT.md
                     # and exits non-zero on any failed balance invariant.
-npm run typecheck   # tsc -b --noEmit over src/, vite.config.ts and balance/
+npm run typecheck   # tsc -b --noEmit over src/, harness/, vite/vitest configs, balance/, tests/
 npm run build       # type-check + production build
 ```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on every pull
+request and push to `main`, and the balance harness when the simulation or its
+data change. `balance/REPORT.md` is deterministic, so CI fails if the committed
+copy is stale.
 
 See [`balance/README.md`](./balance/README.md) for what each sweep measures and
 which invariants gate the run.
 
-**What does not exist** (previously claimed here, and worth knowing before you go
-looking for it): there is no unit-test runner, no separate harness for tree
-integrity / item generation / map connectivity / meta or endless economy, and no
-Playwright — it is not a dependency and never has been. Tree, item, map and
+**What does not exist yet:** unit tests for tree integrity, item generation, map
+connectivity, save migration, or meta/endless economy, and no Playwright
+dependency. Tree, item, map and
 economy behaviour is exercised only indirectly, through the balance sweeps.
 
 `npm run ui-audit` (`scripts/ui-audit.mjs`) is a screenshot harness that is

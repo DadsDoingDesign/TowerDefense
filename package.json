@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Fieldwatch \u2014 a roguelite tower-defense autobattler (working title)",
+  "description": "Fieldwatch — a roguelite tower-defense autobattler (working title)",
   "scripts": {
     "dev": "vite",
     "build": "npm run fw-icons:check && npm run anchors:check && tsc -b && vite build",
@@ -18,7 +18,8 @@
     "anchors": "tsx scripts/anchors.ts",
     "anchors:check": "tsx scripts/anchors.ts --check",
     "placeholder-pack": "tsx scripts/gen-placeholder-pack.ts",
-    "slice:shot": "node scripts/slice-shot.mjs"
+    "slice:shot": "node scripts/slice-shot.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -33,6 +34,8 @@
     "sharp": "^0.35.3",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
-  }
+    "vite": "^5.4.11",
+    "vitest": "^2.1.9"
+  },
+  "license": "UNLICENSED"
 }
