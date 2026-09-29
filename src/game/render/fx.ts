@@ -41,8 +41,7 @@
  */
 import { ANIM_FRAMES } from './anim'
 import { pixmap, type Pixmap } from './pixmap'
-import { getSprite } from './sprites'
-import { getActiveStyle } from './themes'
+import { artFor, getSprite } from './sprites'
 import { unitPixmapScale } from './frame'
 
 // ── budget ──────────────────────────────────────────────────────────────────
@@ -1048,10 +1047,10 @@ function sheetBurst(x: number, y: number, sheet: number, n: number, spread: numb
  * than none: it fails Berbece's first test, clarity.
  */
 function corpseArt(typeId: string, boss: boolean): { pm: Pixmap; frame: number; feet: number } | null {
-  const style = getActiveStyle()
-  const pack = style.sprites?.pack
-  if (!pack) return null
-  const sc = style.sprites ? unitPixmapScale(style.sprites.spriteScale, boss) : 1
+  const art = artFor(typeId)
+  if (!art) return null
+  const pack = art.pack
+  const sc = unitPixmapScale(art.spriteScale, boss)
   const frames = ANIM_FRAMES[`${typeId}_walk`]
   const walk = frames ? getSprite(pack, `${typeId}_walk`) : undefined
   if (walk && frames) {

@@ -22,8 +22,8 @@
  */
 import type { GameMap } from '../types'
 import { pixmap } from './pixmap'
-import { getSprite, onSpritesReady } from './sprites'
-import { decoPools, gradeEnvironment, mulberry32 } from './terrain'
+import { onSpritesReady, spriteFor } from './sprites'
+import { decoPools, decoStamp, gradeEnvironment, mulberry32 } from './terrain'
 import { getActiveStyle } from './themes'
 
 export const APRON_X = 260
@@ -39,10 +39,10 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null
   const style = getActiveStyle()
   if (!style.sprites) return null
-  const pack = style.sprites.pack
-  const grass = getSprite(pack, 'grass')
+  // Roles resolve down the theme's fallback chain one by one (sprites.ts).
+  const grass = spriteFor('grass')
   if (!grass) return null
-  const key = `${style.id}:${map.id}:${grass.naturalWidth}`
+  const key = `${style.id}:${map.id}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
   if (cache && cache.key === key) return cache.canvas
 
   const W = map.width + APRON_X * 2
@@ -53,11 +53,9 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   const ctx = c.getContext('2d', { willReadFrequently: true })
   if (!ctx) return null
   ctx.imageSmoothingEnabled = false
-  const sc = style.sprites.spriteScale
-
   // 1. The same grass the field is tiled with, at the same density.
-  const gpm = pixmap(grass, { scale: sc })
-  ctx.fillStyle = ctx.createPattern(gpm ? (gpm.img as CanvasImageSource) : grass, 'repeat')!
+  const gpm = pixmap(grass.img, { scale: grass.spriteScale })
+  ctx.fillStyle = ctx.createPattern(gpm ? (gpm.img as CanvasImageSource) : grass.img, 'repeat')!
   ctx.fillRect(0, 0, W, H)
 
   // 2. Forest. A jittered grid of the field's own framing trees, everywhere
@@ -89,9 +87,9 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   }
   put.sort((a, b) => a.y - b.y)
   for (const d of put) {
-    const spr = getSprite(pack, d.name)
+    const spr = spriteFor(d.name)
     if (!spr) continue
-    const pm = pixmap(spr, { scale: sc })
+    const pm = pixmap(spr.img, { scale: spr.spriteScale })
     if (!pm) continue
     ctx.beginPath()
     ctx.ellipse(d.x, d.y - 2, pm.fw * 0.34, pm.fw * 0.14, 0, 0, Math.PI * 2)

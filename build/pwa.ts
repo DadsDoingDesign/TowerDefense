@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, posix, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
-import { packAssetPaths } from '../src/game/render/sprites'
+import { themeArtPacks, themeAssetPaths } from '../src/game/render/sprites'
 import { DEFAULT_THEME, THEMES } from '../src/game/render/themes'
 
 /**
@@ -50,9 +50,13 @@ export interface PrecacheInput {
   bundleFiles: ReadonlySet<string>
   /** The emitted JS/CSS/HTML/manifest text, concatenated. */
   haystack: string
-  /** The pack the active theme renders with, or null for a procedural theme. */
-  activePack: string | null
-  /** `packAssetPaths(activePack)` — every file the sprite loader requests. */
+  /**
+   * The packs the default theme draws from — its primary pack and whichever
+   * fallback packs supply a role (`themeArtPacks`). Empty for a procedural
+   * theme.
+   */
+  activePacks: readonly string[]
+  /** `themeAssetPaths(theme)` — exactly the files the sprite loader requests. */
   packFiles: readonly string[]
 }
 
@@ -65,7 +69,7 @@ export interface PrecachePlan {
   unreachable: string[]
   /** Declared by the active pack but absent from `dist/` — a runtime 404. */
   missingPackFiles: string[]
-  /** Sprite folders the emitted code names literally that are NOT the active pack. */
+  /** Sprite folders the emitted code names literally that are NOT an active pack. */
   foreignPackDirs: string[]
 }
 
@@ -90,11 +94,13 @@ export interface PrecachePlan {
  * retired sprite packs, the inactive `fieldwatch` placeholder pack, and a lazy
  * chunk for a UI no player could open. Now:
  *
- *  - **Sprites** (`assets/sprites/**`) are precached iff the ACTIVE theme's
- *    pack declares them (`PACK_ROLES` via `packAssetPaths` in `sprites.ts`) —
- *    the same list the loader fetches at boot, so the two cannot drift. Every
- *    other pack (`fieldwatch` while it is a placeholder, `tinyswords@half`)
- *    stays on disk and out of the offline set.
+ *  - **Sprites** (`assets/sprites/**`) are precached iff the default theme
+ *    DRAWS them: `themeAssetPaths` in `sprites.ts` walks the theme's per-role
+ *    fallback chain and names, for each role, the one file of the one pack it
+ *    resolves to — the same list the loader fetches at boot, so the two cannot
+ *    drift. A shadowed file (the tinyswords copy of a role fieldwatch ships),
+ *    every pack outside the chain and `tinyswords@half` stay on disk and out
+ *    of the offline set.
  *  - **Everything else under `assets/`** is precached iff the emitted code
  *    names it: its basename occurs literally (every `border-image`, the icon
  *    atlas, the fonts), or its extensionless stem occurs as a QUOTED string —
@@ -148,7 +154,7 @@ export function planPrecache(input: PrecacheInput): PrecachePlan {
    */
   const dirs = new Set<string>()
   for (const m of input.haystack.matchAll(/assets\/sprites\/([A-Za-z0-9_@.-]+)\//g)) dirs.add(m[1])
-  const foreignPackDirs = [...dirs].filter((d) => d !== input.activePack).sort()
+  const foreignPackDirs = [...dirs].filter((d) => !input.activePacks.includes(d)).sort()
 
   return { critical, optional, unreachable, missingPackFiles, foreignPackDirs }
 }
@@ -215,19 +221,21 @@ export function pwa(): Plugin {
         .filter((f) => /\.(js|css|html|webmanifest|json)$/i.test(f) && f !== 'sw.js')
         .map((f) => readFileSync(join(root, f), 'utf8'))
         .join('\n')
-      const activePack = THEMES[DEFAULT_THEME]?.sprites?.pack ?? null
+      const theme = THEMES[DEFAULT_THEME]
+      const activePacks = theme ? themeArtPacks(theme) : []
+      const activePack = activePacks.join(' + ') || 'none'
       const plan = planPrecache({
         files,
         bundleFiles,
         haystack,
-        activePack,
-        packFiles: activePack ? packAssetPaths(activePack) : [],
+        activePacks,
+        packFiles: theme ? themeAssetPaths(theme) : [],
       })
 
       if (plan.foreignPackDirs.length) {
         throw new Error(
           `fieldwatch-pwa: the build names sprite folder(s) ${plan.foreignPackDirs.map((d) => `assets/sprites/${d}/`).join(', ')}, ` +
-            `but only the active pack (${activePack}) is precached. Load that art through the active ` +
+            `but only the active pack(s) (${activePack}) are precached. Load that art through the active ` +
             'theme (sprites.ts PACK_ROLES), or extend planPrecache in build/pwa.ts — otherwise the offline install ships without it.',
         )
       }
