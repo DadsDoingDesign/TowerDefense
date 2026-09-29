@@ -2,6 +2,7 @@ import { GamePath } from '../core/path'
 import { hashSeed, nextId, RNG } from '../core/rng'
 import { dist, distSq, moveToward, type Vec2 } from '../core/vec'
 import { ENEMY_TYPES } from '../data/enemies'
+import { mergeMods } from '../data/archetypeTree'
 import type { EffectMods, EnemyType, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 import { computeCombat, type CombatProfile } from './combat'
 
@@ -50,6 +51,10 @@ export interface RtSentinel {
   procFlash: number // pulses when an on-hit effect fires (visual feedback, M7)
   /** Seconds until this Sentinel re-scores its target against the focus tactic. */
   retargetIn: number
+  /** Shots fired this wave — the cadence `volley` / `critEvery` count on (Phase 3b). */
+  shots: number
+  /** `elapsed` until which a `killRush` is running (Phase 3b). */
+  rushUntil: number
 }
 
 export interface RtEnemy {
@@ -70,6 +75,24 @@ export interface RtEnemy {
   chillUntil: number
   stunUntil: number
   blockedBy: string | null
+}
+
+/**
+ * What an engine event tells the mixer, beyond its name. `x` is the field
+ * position mapped to −1 (left edge) … 1 (right edge).
+ */
+export interface EngineEventPayload {
+  arch?: string
+  x?: number
+  faction?: string
+  tier?: number
+  boss?: boolean
+}
+
+/** 'tnt3' → { faction: 'tnt', tier: 3 } (elites share their base id). */
+function enemyTag(t: EnemyType): { faction: string; tier: number; boss: boolean } {
+  const m = /^(torch|tnt|barrel)(\d)/.exec(t.id)
+  return { faction: m ? m[1] : 'torch', tier: m ? Number(m[2]) : 1, boss: !!t.isBoss }
 }
 
 export interface RtProjectile {
@@ -179,14 +202,22 @@ export class GameEngine {
    * The vocabulary: `'shoot'` (a Sentinel fires), `'hit'` / `'crit'` (a
    * projectile lands — one per impact, not per enemy touched), `'kill'` (an
    * enemy dies), `'down'` (a Sentinel falls), `'leak'` (something reaches the
-   * line).
+   * line), `'boss'` (a champion spawns), `'melee'` (a blocker is taking blows
+   * this tick — the mixer throttles it into discrete thuds).
    *
-   * It is a plain string callback and nothing here ever reads a result from it,
+   * Each call may carry an {@link EngineEventPayload} — who fired, which goblin,
+   * where on the field — so the mixer can give each its own sound and pan it
+   * (Phase-2 audio). The payload is a plain object literal built from state
+   * the sim already holds; it is only built when a listener exists (the
+   * optional call short-circuits its arguments), reads nothing it could
+   * change, and consumes no RNG.
+   *
+   * It is a plain callback and nothing here ever reads a result from it,
    * which is what keeps the sim headless-safe and deterministic: the listener
    * cannot influence a roll, cannot consume the RNG, and does not exist at all
    * in `balance/harness.ts`.
    */
-  private onEvent?: (e: string) => void
+  private onEvent?: (e: string, p?: EngineEventPayload) => void
   downedCount = 0
   killCount = 0
   status: BattleStatus = 'running'
@@ -228,7 +259,7 @@ export class GameEngine {
     seed?: number
     /** Assist dial: multiplier on base damage per leak (default 1 = shipped difficulty). */
     baseDamageMul?: number
-    onEvent?: (e: string) => void
+    onEvent?: (e: string, p?: EngineEventPayload) => void
   }) {
     this.onEvent = opts.onEvent
     this.map = opts.map
@@ -286,6 +317,8 @@ export class GameEngine {
         procFlash: 0,
         // Stagger re-targeting deterministically so a big team never re-scores in one tick.
         retargetIn: (placeIndex % 4) * (RETARGET_INTERVAL / 4),
+        shots: 0,
+        rushUntil: 0,
       }
       placeIndex++
       this.sentinels.push(rt)
@@ -303,7 +336,12 @@ export class GameEngine {
     }
 
     this.spawnQueue = [...opts.wave.spawns].sort((a, b) => a.at - b.at)
+    // A team ward (a relic) is read off the team's mods once, not per hero.
+    this.leakWardLeft = Math.max(0, Math.floor(mergeMods(this.teamMods).leakWard ?? 0))
   }
+
+  /** Leaks this wave the Gate still shrugs off (`EffectMods.leakWard`, Phase 3b). */
+  private leakWardLeft = 0
 
   private nearestPathPoint(p: Vec2): Vec2 {
     // Sample the path coarsely to find the closest point.
@@ -384,6 +422,7 @@ export class GameEngine {
         blockedBy: null,
       })
       this.retargetDirty = true // a new arrival may outrank everyone's current pick
+      if (type.isBoss) this.onEvent?.('boss', { ...enemyTag(type), x: this.fieldX(this.enemies[this.enemies.length - 1].pos.x) })
       this.spawnIndex++
     }
   }
@@ -483,6 +522,9 @@ export class GameEngine {
 
       // Take melee damage from enemies this Sentinel is blocking; reflect thorns.
       if (s.blockIds.length > 0) {
+        // Phase 3b: a blocker with `blockRegen` knits while it holds the line.
+        const regen = s.profile.mods.blockRegen
+        if (regen) s.hp = Math.min(s.maxHp, s.hp + s.maxHp * regen * dt)
         const mitigation = 50 / (50 + s.profile.physDef)
         let taken = 0
         for (const id of s.blockIds) {
@@ -494,6 +536,7 @@ export class GameEngine {
           if (s.profile.thorns > 0) this.damageEnemy(e, s.profile.thorns * dt, s.id, false, s.profile.damageType, true)
           if (e.hp > 0) this.igniteFromThorns(s, e)
         }
+        if (taken > 0) this.onEvent?.('melee', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
         s.hp -= taken * (1 - s.reduction) * mitigation * dt
         if (s.hp <= 0) this.downSentinel(s)
       }
@@ -531,11 +574,23 @@ export class GameEngine {
   }
 
   private fire(s: RtSentinel, target: RtEnemy): void {
-    s.cooldown = 1 / s.profile.rate
+    const m = s.profile.mods
+    s.shots++
+    // ---- rule capabilities (Phase 3b) — each is inert unless granted ------
+    // A rush multiplies the rate of THIS shot's reload; nothing else moves.
+    let rate = s.profile.rate
+    if (m.openingRush && this.elapsed < m.openingRush.dur) rate *= 1 + m.openingRush.rate
+    if (m.killRush && this.elapsed < s.rushUntil) rate *= 1 + m.killRush.rate
+    s.cooldown = 1 / rate
     s.fireFlash = 1
-    this.onEvent?.('shoot')
-    const isCrit = this.rng.chance(s.profile.critChance)
-    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
+    this.onEvent?.('shoot', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
+    // The crit roll is ALWAYS drawn, so a cadence crit never shifts the combat
+    // stream for anything that fires after it.
+    const rolled = this.rng.chance(s.profile.critChance)
+    const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
+    const stand = m.lastStand && s.hp < s.maxHp * m.lastStand.below ? 1 + m.lastStand.damage : 1
+    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * stand
+    const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
     this.projectiles.push({
       id: nextId('p'),
       pos: { ...s.pos },
@@ -547,7 +602,7 @@ export class GameEngine {
       isCrit,
       speed: s.profile.projectileSpeed,
       splashRadius: s.profile.splashRadius,
-      pierce: s.profile.mods.pierce ?? 0,
+      pierce: (s.profile.mods.pierce ?? 0) + volley,
       color: s.def.accent,
       mods: s.profile.mods,
       lifedrain: s.profile.mods.lifedrain ?? 0,
@@ -605,13 +660,17 @@ export class GameEngine {
         // ones — only the bite the line takes is smaller. `leaks` is the number
         // the summary prints next to "left", so it reports the damage ACTUALLY
         // taken; reporting the un-assisted figure would make the receipt lie.
-        const dmg = e.type.leak * this.baseDamageMul
+        // Phase 3b: a team ward turns the first leaks of the wave aside. The
+        // body still reached the line — it counts — it just costs the Gate nothing.
+        const warded = this.leakWardLeft > 0
+        if (warded) this.leakWardLeft--
+        const dmg = warded ? 0 : e.type.leak * this.baseDamageMul
         this.baseHp -= dmg
         this.leaks += dmg
         // The head count is tracked separately from the damage, because they are
         // different numbers and two readouts printed one as the other (F3).
         this.leakCount++
-        this.onEvent?.('leak')
+        this.onEvent?.('leak', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
         continue
       }
       e.pos = this.path.pointAt(e.distance)
@@ -710,7 +769,7 @@ export class GameEngine {
      * A shot that arrives with nothing to hit (its target died mid-flight, no
      * splash, no pierce) stays silent, which is correct — nothing was struck.
      */
-    if (hitList.length > 0) this.onEvent?.(p.isCrit ? 'crit' : 'hit')
+    if (hitList.length > 0) this.onEvent?.(p.isCrit ? 'crit' : 'hit', this.hitPayload(p))
 
     for (const e of hitList) this.applyHit(e, p)
 
@@ -944,11 +1003,12 @@ export class GameEngine {
     this.enemies.splice(idx, 1)
     this.killCount++
     this.goldEarned += e.type.reward
-    this.onEvent?.('kill')
+    this.onEvent?.('kill', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
     if (srcId) {
       const s = this.sentinels.find((x) => x.id === srcId)
       if (s) {
         s.kills++
+        if (s.profile.mods.killRush) s.rushUntil = this.elapsed + s.profile.mods.killRush.dur
         const xp = Math.round(e.maxHp * 0.2) + e.type.reward
         this.xpGained.set(srcId, (this.xpGained.get(srcId) ?? 0) + xp)
       }
@@ -1000,8 +1060,20 @@ export class GameEngine {
     // of the base falling, and it announced itself with a floater and nothing
     // else. The player is WATCHING this game — a loss that happens off the part
     // of the screen they are looking at has to be audible.
-    this.onEvent?.('down')
+    this.onEvent?.('down', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
     this.spawnFloater(s.pos, 'DOWN', '#e05a4f', true)
+  }
+
+  /** Field x → −1…1, for the mixer's pan. */
+  private fieldX(x: number): number {
+    const w = this.map.width
+    return w > 0 ? Math.max(-1, Math.min(1, (x / w) * 2 - 1)) : 0
+  }
+
+  /** Who struck and where, for a hit's sound. Reads only. */
+  private hitPayload(p: RtProjectile): EngineEventPayload {
+    const src = this.sentinels.find((x) => x.id === p.srcId)
+    return { arch: src?.def.archetype, x: this.fieldX(p.pos.x) }
   }
 
   private spawnFloater(pos: Vec2, text: string, color: string, big: boolean): void {

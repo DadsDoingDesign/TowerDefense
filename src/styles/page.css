@@ -620,16 +620,136 @@
   width: 100%;
 }
 
-/* The menu's hero art slot — the placeholder block in the design. */
+/* The menu's key art (`MenuKeyArt.tsx`) — a 488×272 dusk diorama at one art
+   pixel per CSS pixel, CROPPED (never scaled) to whatever height the menu can
+   spare. It takes the body's slack like the placeholder did, but stops at the
+   art's own height: past 272px there is nothing more to show. */
 .pg-art {
+  --art-w: 488px;
+  --art-h: 272px;
+  /* scene y of the pennant's top, negated (keyart.ts / scripts/brand.ts) */
+  --art-keep-top: -50px;
+  position: relative;
   flex: 1 0 0;
   min-height: 120px;
+  max-height: var(--art-h);
   width: 100%;
+  overflow: hidden;
   border-radius: var(--r-sm);
-  background:
-    radial-gradient(120% 90% at 50% 20%, rgba(224, 172, 76, 0.1), transparent 70%),
-    var(--surface);
-  border: 1px solid var(--line);
+  /* The scene's own sky and meadow, so a frame wider than the art (a 520px
+     column) reads as more of the same dusk rather than a letterbox. */
+  background: linear-gradient(#2e1b1f 0 36%, #3b3218 36% 100%);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 0 0 0 1px rgba(20, 12, 6, 0.6);
+}
+/* The stage is the scene's coordinate space. Horizontally centred; vertically
+   the crop takes half the overflow off each end, so a short frame loses a
+   strip of sky and a strip of foreground rather than all of either — but never
+   more than `--art-keep-top` off the top. That is where the watchtower's
+   pennant starts: the tower against the sun is the identity, so on the
+   shortest frames (a returning player's menu on a 375×667 phone leaves ~120px)
+   the foreground goes first. Frame-aware, not viewport-aware: the records row
+   changes the frame height without changing the viewport. */
+.pg-art-stage {
+  position: absolute;
+  width: var(--art-w);
+  height: var(--art-h);
+  left: calc(50% - var(--art-w) / 2);
+  top: max(var(--art-keep-top), (100% - var(--art-h)) / 2);
+}
+/* Whole-pixel placement, where supported: a half-pixel offset is a blurred
+   column at 1× and 3×. `round()` is progressive — without it the fallback
+   above is at most half a pixel out. */
+@supports (left: round(down, 1.5px, 1px)) {
+  .pg-art-stage {
+    left: round(down, 50% - var(--art-w) / 2, 1px);
+    top: round(down, max(var(--art-keep-top), (100% - var(--art-h)) / 2), 1px);
+  }
+}
+.pg-art-img {
+  display: block;
+  width: var(--art-w);
+  height: var(--art-h);
+  image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* The live layer (attract mode, `AttractMode.tsx`): fills the FRAME, not the
+   488×272 stage — the demo fits itself, at an integer device-pixel ratio. It
+   sits over the still and fades in on its first frame, so until then (and
+   whenever it is absent) the still is what shows. */
+.pg-art-livewrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pg-art-live {
+  display: block;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.pg-art-live.is-live {
+  opacity: 1;
+}
+
+/* Ambience — CSS only, over the light sources `scripts/brand.ts` reported.
+   Each span is centred on its point. */
+.pg-art-fx {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.pg-art-lamp {
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(closest-side, rgba(255, 228, 160, 0.55), rgba(255, 190, 90, 0.18) 60%, transparent);
+  mix-blend-mode: screen;
+  animation: pg-art-breathe 3.6s ease-in-out infinite;
+}
+.pg-art-torch {
+  width: 34px;
+  height: 34px;
+  background: radial-gradient(closest-side, rgba(255, 176, 80, 0.35), rgba(255, 140, 50, 0.1) 65%, transparent);
+  mix-blend-mode: screen;
+  animation: pg-art-flicker 1.9s steps(6, end) infinite;
+}
+.pg-art-star {
+  width: 1px;
+  height: 1px;
+  border-radius: 0;
+  background: var(--text);
+  opacity: 0;
+  animation: pg-art-twinkle 7s ease-in-out infinite;
+}
+@keyframes pg-art-breathe {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+@keyframes pg-art-flicker {
+  0% { opacity: 0.9; }
+  20% { opacity: 0.6; }
+  45% { opacity: 1; }
+  60% { opacity: 0.7; }
+  80% { opacity: 0.95; }
+  100% { opacity: 0.8; }
+}
+@keyframes pg-art-twinkle {
+  0%, 70%, 100% { opacity: 0; }
+  80% { opacity: 1; }
+}
+/* Reduced motion: no ambience at all — the still is complete on its own. The
+   global kill in app.css would leave each animation parked on a keyframe, so
+   these are removed outright rather than shortened. */
+:root[data-reduced-motion='true'] .pg-art-fx {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-art-fx {
+    display: none;
+  }
 }
 
 .pg-verdict {

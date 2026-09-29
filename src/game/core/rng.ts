@@ -65,6 +65,23 @@ export const nextId = (prefix = 'e'): string => `${prefix}${(idCounter++).toStri
 export const idCounterState = (): number => idCounter
 
 /**
+ * Run `fn` and then put the entity-id counter back exactly where it was.
+ *
+ * For simulations that are NOT the run — the menu's attract-mode battle — so
+ * the ids they mint cannot shift what a real run started afterwards is dealt.
+ * Only sound for a self-contained sim: nothing `fn` creates may outlive it
+ * alongside run entities, since its ids will be re-issued.
+ */
+export function withIsolatedIds<T>(fn: () => T): T {
+  const saved = idCounter
+  try {
+    return fn()
+  } finally {
+    idCounter = saved
+  }
+}
+
+/**
  * Fast-forward the id counter past everything a restored run already minted.
  * Only ever moves forward, so it can't collide with ids handed out since boot.
  */

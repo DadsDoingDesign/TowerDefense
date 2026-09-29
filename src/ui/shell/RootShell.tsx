@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { EvolutionModal } from '../components/EvolutionModal'
 import { assertRarityTokensMatch } from '../channels'
@@ -9,9 +9,15 @@ import { SelectorBand } from './SelectorBand'
 import { StageBand } from './StageBand'
 import { MenuScreen, PageScreen, ResultScreen } from './PageScreens'
 import { useShellContext } from './context'
+import { useBattleLayout } from './live'
+import { Announcer } from './Announcer'
+import { ReceiptToast } from './PackStrip'
+import { Shortcuts } from './Shortcuts'
 import { useOffers, type MetaView } from './offers'
 import '../../styles/page.css'
 import '../../styles/shell.css'
+import '../../styles/shell-live.css'
+import '../../styles/shell-wide.css'
 
 /**
  * The whole game in one screen. Four bands at fixed heights; every surface the
@@ -25,6 +31,7 @@ import '../../styles/shell.css'
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   perks: { title: 'Watchtower', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
+  codex: { title: 'Codex', subtitle: 'Feats to earn, and everything the Watch has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision and assist.' },
 }
 
@@ -34,6 +41,7 @@ export function RootShell() {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const [metaView, setMetaView] = useState<MetaView>('menu')
   const offers = useOffers(metaView, setMetaView)
+  const battle = useBattleLayout()
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
   // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
@@ -52,6 +60,31 @@ export function RootShell() {
     }
   }, [screen, shellSelect])
 
+  /*
+   * Focus follows the screen (Phase 2, finding 6). A new screen used to leave
+   * keyboard focus on a control that no longer existed — it fell to <body>,
+   * and the next Tab started from the top of a page the user could not see
+   * the start of. Each screen's heading takes focus now, so a screen reader
+   * reads where you are and Tab starts from the top of it.
+   *
+   * Skipped while a modal is open (the evolution choice manages its own focus)
+   * and on the very first paint, which is the browser's to own.
+   */
+  const screenKey = `${ctx.layout}|${screen}|${ctx.stage}|${ctx.board?.title ?? ''}|${metaView}`
+  const firstKey = useRef(true)
+  useEffect(() => {
+    if (firstKey.current) {
+      firstKey.current = false
+      return
+    }
+    const raf = requestAnimationFrame(() => {
+      if (document.querySelector('[aria-modal="true"]')) return
+      const h = document.querySelector<HTMLElement>('.shell h1')
+      h?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [screenKey])
+
   // Battle and the run map keep the four bands; everything else is a page.
   // Pages carry no app header — the serif title is the header, per the design,
   // and run resources ride in the title block only where spending matters.
@@ -67,12 +100,18 @@ export function RootShell() {
           <PageScreen ctx={ctx} offers={offers} {...META_COPY[metaView]} />
         )}
         <EvolutionModal />
+        <Announcer />
+        <ReceiptToast />
       </div>
     )
   }
 
+  // Phase 2: a live wave collapses the Detail band into the wave strip and
+  // hands the Stage its height; a selection re-opens it (`useBattleLayout`).
+  const cls = ['shell', battle.collapsed ? 'is-collapsed' : '', battle.peek ? 'is-peek' : ''].filter(Boolean).join(' ')
+
   return (
-    <div className="shell">
+    <div className={cls} data-battle={battle.layout}>
       <HeaderBand />
       {/* First-run teaching, in its own grid row so it never covers the Stage
           and never shifts a control (WS9). Renders nothing once taught. */}
@@ -83,7 +122,12 @@ export function RootShell() {
           SelectorBand.tsx and the invariant in context.ts. */}
       <SelectorBand />
       <DetailBand offers={offers} />
+      {/* Keyboard shortcuts + the "?" sheet (Phase 4). The button shows only
+          to a fine pointer; the keys work on any keyboard. */}
+      <Shortcuts />
       <EvolutionModal />
+      <Announcer />
+      <ReceiptToast />
     </div>
   )
 }

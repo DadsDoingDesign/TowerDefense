@@ -10,6 +10,7 @@ import {
 } from '../../game/data/waves'
 import type { WaveDef } from '../../game/types'
 import { bannerRules } from '../../state/metaStore'
+import { encounterNode } from '../../game/run/map'
 
 /**
  * ---------------------------------------------------------------------------
@@ -50,12 +51,12 @@ export interface PreviewRun {
 
 /** The encounter kind the store fields on this node. */
 export function encounterKindFor(node: Pick<MapNode, 'type'>, runBanner: number): EncounterKind | null {
-  return nodeEncounterSpec({ type: node.type, layer: 0, row: 0 }, 0, bannerRules(runBanner))?.kind ?? null
+  return nodeEncounterSpec(encounterNode({ type: node.type, layer: 0, row: 0 }), 0, bannerRules(runBanner))?.kind ?? null
 }
 
 /** The variant the store's `generateEncounter` call will pick for this node. */
 export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
-  const spec = nodeEncounterSpec(node, run.runSeed, bannerRules(run.runBanner))
+  const spec = nodeEncounterSpec(encounterNode(node), run.runSeed, bannerRules(run.runBanner))
   return spec ? pickVariant(spec.kind, spec.depth, spec.seed, spec.sibling) : null
 }
 
@@ -65,7 +66,7 @@ export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
  */
 export function previewEncounter(run: PreviewRun, nodeId: string): WaveDef | null {
   const node = run.runMap.nodes.find((n) => n.id === nodeId)
-  return node ? nodeEncounter(node, run.runSeed, bannerRules(run.runBanner)) : null
+  return node ? nodeEncounter(encounterNode(node), run.runSeed, bannerRules(run.runBanner)) : null
 }
 
 /** The one-glance read of an encounter, for the Context panel. */

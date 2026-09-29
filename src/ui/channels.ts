@@ -1,4 +1,5 @@
 import { RARITY, RARITY_ORDER } from '../game/data/items'
+import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 
 /**
@@ -79,8 +80,12 @@ export const archetypeVar = (archetype: string): string =>
  * and mutations, five meanings on one glyph and twice on some screens
  * (DESIGN_SYSTEM §6 flags the overload). `✦` now means Watch Marks and nothing
  * else; rogue took `➶`, which reads as the ranged skirmisher it is.
+ *
+ * The table itself lives in `src/game/data/glyphs.ts` so the canvas renderer
+ * (which must not import `ui/`) reads the SAME one; this is it, widened to a
+ * string key for callers holding an unnarrowed archetype.
  */
-export const ARCHETYPE_GLYPH: Record<string, string> = { fighter: '⚔', rogue: '➶', mystic: '❋' }
+export const ARCHETYPE_GLYPH: Readonly<Record<string, string>> = ARCHETYPE_GLYPH_TABLE
 
 /**
  * Currency marks, as TEXT — deprecated, and imported by nothing in the shell.
@@ -195,6 +200,8 @@ export const ICON_ORDER = [
   // Watchtower perks (Wave 1): the last system-font glyphs in the shell
   'battle', 'start', 'elite', 'crown', 'endless', 'coffer', 'seasoned', 'company',
   'map', 'orders', 'vow',
+  // row 11 (cont.) — the Settings rows' last system-font glyphs (Phase 2)
+  'motion', 'contrast', 'scale', 'vision', 'tips', 'calm', 'mono',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -239,6 +246,10 @@ export const NODE_ICON: Record<string, IconKey> = {
   merchant: 'merchant',
   shrine: 'shrine',
   recruit: 'recruit',
+  // No atlas cell of their own yet (the sheet is a pipeline asset): the fire is
+  // the heal mark, an act boss the boss mark, the final boss keeps the crown.
+  campfire: 'auraHeal',
+  miniboss: 'boss',
   boss: 'crown',
 }
 
@@ -257,6 +268,9 @@ export const PERK_ICON: Record<string, IconKey> = {
   cartographer: 'map',
   freeCompanies: 'recruit',
   standingOrders: 'orders',
+  // Phase 3b horizontal unlocks: the campfire's heal mark, the relic's own.
+  fieldKitchen: 'auraHeal',
+  cartulary: 'relic',
   sacrifice: 'vow',
 }
 

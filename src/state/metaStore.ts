@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { sfx } from '../audio/audio'
 import { num, numRecord, onStorageKeyChange, safePersistStorage } from './storage'
 import { dailyScore } from './daily'
+import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achievements'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -32,6 +33,12 @@ export interface MetaUpgrade {
   baseCost: number
   step: number
   kind: UpgradeKind
+  /**
+   * The feat that makes this purchasable (Phase 3b). A horizontal service is
+   * opened by PLAYING — the achievement — and then bought with marks; the
+   * ramp needs nothing.
+   */
+  requires?: string
 }
 
 export const UPGRADES: MetaUpgrade[] = [
@@ -99,6 +106,28 @@ export const UPGRADES: MetaUpgrade[] = [
     baseCost: 160,
     step: 0,
     kind: 'unlock',
+  },
+  // ── Phase 3b: services opened by a feat, then bought — more choices, never
+  //    more power at any one of them. Each is graded in §12 like the rest.
+  {
+    id: 'fieldKitchen',
+    name: 'Field Kitchen',
+    desc: 'Every campfire offers a third choice: forage the road for 40 gold instead of resting or training',
+    maxLevel: 1,
+    baseCost: 220,
+    step: 0,
+    kind: 'unlock',
+    requires: 'act_two',
+  },
+  {
+    id: 'cartulary',
+    name: 'Relic Cartulary',
+    desc: 'An act boss lays out four relics instead of three — the same prize, a wider pick',
+    maxLevel: 1,
+    baseCost: 260,
+    step: 0,
+    kind: 'unlock',
+    requires: 'first_light',
   },
 ]
 const UPGRADE_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]))
@@ -235,7 +264,7 @@ export interface BannerRung {
  * Existing saves that had unlocked rungs 4–5 clamp to 3 in {@link migrateMeta}.
  */
 export const BANNER_RUNGS: BannerRung[] = [
-  { tier: 1, name: 'Thin Pickings', rule: 'Every clear offers two reward cards instead of three. Half the build, same march.', markMult: 1.4 },
+  { tier: 1, name: 'Thin Pickings', rule: 'Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants stock one item fewer, and the Crossroads offers two mutations. Half the build, same march.', markMult: 1.4 },
   /*
    * ---- this card said three things and one of them was true (M7a) ---------
    *
@@ -268,7 +297,10 @@ export const BANNER_RUNGS: BannerRung[] = [
    * payout moved ×2.2 → ×2.5 so expected marks keep rising across the ladder.
    */
   { tier: 2, name: 'Elite Watch', rule: 'Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5.', markMult: 2.5 },
-  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The company you start with is the company you finish with.', markMult: 3.5 },
+  // ×3.5 → ×4.2 (Phase 3b): on the three-act road the rung's win rate fell
+  // further than the old multiplier paid for — §13 measured it banking fewer
+  // marks a run than Vow 2, which makes the top rung a decoration.
+  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The company you start with is the company you finish with.', markMult: 4.2 },
 ]
 
 export const MAX_BANNER = BANNER_RUNGS.length
@@ -374,6 +406,46 @@ function migrateDaily(raw: unknown): DailyRecord | null {
   }
 }
 
+/** The Codex (Phase 3b): the Watch's field notes, persisted with the meta save. */
+export interface Codex {
+  /** Enemy type ids met in a wave (modded ids included — a Warded Bomber is its own entry). */
+  enemies: string[]
+  /** Relic ids ever taken. */
+  relics: string[]
+  /** Archetype-tree node ids ever reached (base, sub-archetype, specialization). */
+  specs: string[]
+  /** Spec perk ids ever taken. */
+  perks: string[]
+}
+const freshCodex = (): Codex => ({ enemies: [], relics: [], specs: [], perks: [] })
+const strList = (raw: unknown): string[] =>
+  Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
+function migrateCodex(raw: unknown): Codex {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return { enemies: strList(o.enemies), relics: strList(o.relics), specs: strList(o.specs), perks: strList(o.perks) }
+}
+function migrateAchievements(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (!raw || typeof raw !== 'object') return out
+  const known = new Set(ACHIEVEMENTS.map((a) => a.id))
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (known.has(k)) out[k] = Math.max(1, Math.floor(num(v, 1)))
+  }
+  return out
+}
+
+/**
+ * Endless payout (Phase 3b). It paid a flat 8 marks a round and read no
+ * multiplier at all, so the mode a strong player would spend an hour in paid
+ * least per minute. It now pays per round, a bonus every fifth (an elite or a
+ * boss round), and the multiplier of the highest Vow the player has WON — the
+ * ladder's reward carries into the endless mode it opened.
+ */
+export function endlessMarks(rounds: number, bestBanner: number): number {
+  const r = Math.max(0, Math.floor(num(rounds, 0)))
+  return Math.round((r * 8 + Math.floor(r / 5) * 20) * bannerRules(bestBanner).markMult)
+}
+
 /** Bonuses the meta layer grants to each new run. */
 export interface MetaBonuses {
   maxBaseHp: number
@@ -397,6 +469,14 @@ interface MetaState {
   stats: MetaStats
   /** Today's (or the last played day's) scored Daily Watch attempt. */
   daily: DailyRecord | null
+  /**
+   * Feats earned (Phase 3b): achievement id → the run count it was earned on.
+   * A feat opens content — a spec, a relic, a perk option, a Watchtower
+   * service — and pays its purse once.
+   */
+  achievements: Record<string, number>
+  /** What the Watch has seen and used, for the Codex (Phase 3b). */
+  codex: Codex
   // actions
   /**
    * Claim `date`'s scored Daily attempt. Returns false — and changes nothing —
@@ -426,8 +506,16 @@ interface MetaState {
     ranked?: boolean
     /** The UTC day of a SCORED Daily attempt this settle belongs to. */
     daily?: string | null
+    /** The facts the feats are judged on (Phase 3b). Omitted: no feat can be earned. */
+    facts?: RunFacts
   }) => number
   bonuses: () => MetaBonuses
+  /** True once a feat is earned. */
+  achieved: (id: string) => boolean
+  /** Whether a hub purchase's feat (if it has one) is earned. */
+  purchasable: (id: string) => boolean
+  /** Add to the Codex. Ids are deduplicated; order of first sighting is kept. */
+  recordCodex: (seen: Partial<Codex>) => void
   resetMeta: () => void
 }
 
@@ -459,11 +547,14 @@ const freshStats = (): MetaStats => ({
  * spent unlocking rungs is refunded (`legacyBannerRefund`), and the rungs it
  * holds are KEPT: the fix is to the price, not a reason to take back progress.
  * `daily` (the Daily Watch record) is added and defaults to null.
+ *
+ * v4 — Phase 3b: `achievements` (feats earned) and `codex` (enemies, relics,
+ * specs and perks seen) are added and default to empty. Nothing moves.
  */
-export const META_VERSION = 3
+export const META_VERSION = 4
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily'>
+type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily' | 'achievements' | 'codex'>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -506,8 +597,17 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
       runsWon: Math.max(0, num(rawStats.runsWon, base.runsWon)),
     },
     daily: migrateDaily(o.daily),
+    achievements: migrateAchievements(o.achievements),
+    codex: migrateCodex(o.codex),
   }
 }
+
+/**
+ * The feats the most recent `grantRunRewards` call earned — read by the run's
+ * receipt (the recap) right after it settles. Process-local, not persisted:
+ * the ledger itself is `achievements`.
+ */
+export const lastFeats: { ids: string[] } = { ids: [] }
 
 export const useMetaStore = create<MetaState>()(
   persist(
@@ -517,6 +617,8 @@ export const useMetaStore = create<MetaState>()(
       sacrificeTier: 0,
       stats: freshStats(),
       daily: null,
+      achievements: {},
+      codex: freshCodex(),
 
       beginDaily: (date) => {
         if (get().daily?.date === date) return false
@@ -541,6 +643,8 @@ export const useMetaStore = create<MetaState>()(
         const { watchMarks, upgrades } = get()
         const level = upgrades[id] ?? 0
         if (level >= u.maxLevel) return
+        // A service behind a feat cannot be bought before the feat.
+        if (!get().purchasable(id)) return sfx('error')
         const cost = get().upgradeCost(id)
         if (watchMarks < cost) return sfx('error')
         set({ watchMarks: watchMarks - cost, upgrades: { ...upgrades, [id]: level + 1 } })
@@ -549,10 +653,29 @@ export const useMetaStore = create<MetaState>()(
 
       unlocked: (id) => (get().upgrades[id] ?? 0) > 0,
 
+      achieved: (id) => !!get().achievements[id],
+
+      purchasable: (id) => {
+        const u = UPGRADE_BY_ID.get(id)
+        return !!u && (!u.requires || !!get().achievements[u.requires])
+      },
+
+      recordCodex: (seen) => {
+        const cur = get().codex
+        const merge = (a: string[], b?: string[]) => (b && b.some((x) => !a.includes(x)) ? [...a, ...b.filter((x, i) => !a.includes(x) && b.indexOf(x) === i)] : a)
+        const next: Codex = {
+          enemies: merge(cur.enemies, seen.enemies),
+          relics: merge(cur.relics, seen.relics),
+          specs: merge(cur.specs, seen.specs),
+          perks: merge(cur.perks, seen.perks),
+        }
+        if (next.enemies !== cur.enemies || next.relics !== cur.relics || next.specs !== cur.specs || next.perks !== cur.perks) set({ codex: next })
+      },
+
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
-      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true, daily = null }) => {
-        const { watchMarks, stats, sacrificeTier } = get()
+      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true, daily = null, facts }) => {
+        const { watchMarks, stats, sacrificeTier, achievements } = get()
         // The scored Daily attempt records its result on the record it claimed
         // at hero-pick — and only that one, and only once.
         const rec = get().daily
@@ -574,8 +697,19 @@ export const useMetaStore = create<MetaState>()(
         // actually flew — a bet the player placed at the start of THIS march —
         // multiplied by how far the march got.
         const markMult = bannerRules(banner).markMult
-        const earned = Math.round((num(depth, 0) * 8 + (won ? 120 : 0)) * markMult)
         const isEndless = mode === 'endless'
+        // Endless is routed through the Vow the player has won (Phase 3b) —
+        // once the Ten Rounds feat opens it; before that it pays unmultiplied.
+        const runMarks = isEndless
+          ? endlessMarks(depth, achievements.endless_ten ? stats.bestBanner : 0)
+          : Math.round((num(depth, 0) * 8 + (won ? 120 : 0)) * markMult)
+        // Feats: judged on the facts this run leaves, earned once, each paying
+        // its purse on top of the run's marks.
+        const feats = facts ? newlyEarned(facts, achievements) : []
+        const runsDone = num(stats.runsCompleted, 0) + 1
+        const featMarks = feats.reduce((a, f) => a + f.marks, 0)
+        const earned = runMarks + featMarks
+        lastFeats.ids = feats.map((f) => f.id)
         // **Earned, not bought.** A campaign win under Banner N opens Banner
         // N+1 (an unbannered win opens Banner 1). The flown Banner is clamped to
         // what this save has open, so a hand-edited payload cannot skip rungs.
@@ -593,6 +727,7 @@ export const useMetaStore = create<MetaState>()(
           watchMarks: num(watchMarks, 0) + earned,
           sacrificeTier: nextTier,
           daily: dailyNext,
+          achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
             // Campaign depth and Endless rounds are different achievements and
             // are recorded as such — an Endless run used to update nothing at
@@ -629,7 +764,8 @@ export const useMetaStore = create<MetaState>()(
         }
       },
 
-      resetMeta: () => set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null }),
+      resetMeta: () =>
+        set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null, achievements: {}, codex: freshCodex() }),
     }),
     {
       name: 'fieldwatch-meta',
@@ -641,6 +777,8 @@ export const useMetaStore = create<MetaState>()(
         sacrificeTier: s.sacrificeTier,
         stats: s.stats,
         daily: s.daily,
+        achievements: s.achievements,
+        codex: s.codex,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is

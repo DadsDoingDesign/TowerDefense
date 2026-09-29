@@ -1,7 +1,22 @@
 import { nextId, type RNG } from '../core/rng'
-import type { EffectMods, Mutation, UpgradeGrant } from '../types'
+import type { EffectMods, Mutation } from '../types'
 
-interface MutTemplate { key: string; name: string; desc: string; downside: string; mods: EffectMods; grantUpgrade?: UpgradeGrant }
+/**
+ * Three mutations used to also grant a free level of an upgrade path
+ * (`grantUpgrade`). The paths are spec perks now (Phase 3b), so the level each
+ * one granted is folded into its own mods at the same value: Quickdraw's Tempo
+ * L1 (×1.12 rate), Siege Weight's Onslaught L1 (×1.15 damage), Executioner's
+ * Precision L1 (+14% crit). Nothing about what the card does changed.
+ */
+/**
+ * Two templates (Phase 3b). The review found every mutation was one shape — a
+ * big reshaping of the attack (splash, chains, pierce, rate) paid for with
+ * "−N% damage per hit". `reshape` is that shape, kept. `rule` is the second:
+ * a TRIGGER the attack did not have — a cadence, a rush, a last stand — whose
+ * price is a real cost on another axis rather than always the hit.
+ */
+export type MutationTemplate = 'reshape' | 'rule'
+interface MutTemplate { key: string; name: string; desc: string; downside: string; mods: EffectMods; template?: MutationTemplate }
 
 /**
  * Attack mutations — the game's Mythic-tier reward, and the most consequential
@@ -54,18 +69,16 @@ const MUTATIONS: MutTemplate[] = [
   {
     key: 'rapid',
     name: 'Quickdraw',
-    desc: 'Twice the rate of fire, and no time to aim any of it.',
+    desc: 'Over twice the rate of fire (×2.24), and no time to aim any of it.',
     downside: '−62% damage per hit',
-    mods: { rateMult: 2.0, damageMult: 0.38 },
-    grantUpgrade: { path: 'tempo', levels: 1 },
+    mods: { rateMult: 2.24, damageMult: 0.38 },
   },
   {
     key: 'heavy',
     name: 'Siege Weight',
-    desc: 'One devastating 2.8× shell per reload. Anything small is a waste of it.',
+    desc: 'One devastating 3.2× shell per reload. Anything small is a waste of it.',
     downside: '−50% attack speed',
-    mods: { damageMult: 2.8, rateMult: 0.5 },
-    grantUpgrade: { path: 'power', levels: 1 },
+    mods: { damageMult: 3.22, rateMult: 0.5 },
   },
   /**
    * ---- re-costed against an honest baseline (F1-B) --------------------------
@@ -133,10 +146,9 @@ const MUTATIONS: MutTemplate[] = [
   {
     key: 'executioner',
     name: 'Executioner',
-    desc: 'Finishes anything under 38% HP outright, and crits 15% more often — you take your time.',
+    desc: 'Finishes anything under 38% HP outright, and crits 29% more often — you take your time.',
     downside: '−20% attack speed',
-    mods: { execute: 0.38, critChanceAdd: 0.15, rateMult: 0.8 },
-    grantUpgrade: { path: 'precision', levels: 1 },
+    mods: { execute: 0.38, critChanceAdd: 0.29, rateMult: 0.8 },
   },
   /**
    * ---- the outlier §8 could not fail, re-costed onto an axis (M5) -----------
@@ -190,6 +202,39 @@ const MUTATIONS: MutTemplate[] = [
     downside: '−45% attack speed',
     mods: { rangeMult: 1.9, critChanceAdd: 0.2, critMultAdd: 0.8, rateMult: 0.55 },
   },
+  // ---- the `rule` template (Phase 3b) -------------------------------------
+  {
+    key: 'ricochet',
+    name: 'Ricochet',
+    desc: 'Every 3rd shot tears through everything within its reach — and every shot lands lighter.',
+    downside: '−35% damage per hit',
+    mods: { volley: { every: 3, pierce: 99 }, damageMult: 0.65 },
+    template: 'rule',
+  },
+  {
+    key: 'frenzy',
+    name: 'Blood Frenzy',
+    desc: 'Every kill doubles its rate of fire for 2 seconds; between kills it swings wild.',
+    downside: '−35% damage per hit',
+    mods: { killRush: { rate: 1, dur: 2 }, damageMult: 0.65 },
+    template: 'rule',
+  },
+  {
+    key: 'salvo',
+    name: 'Opening Salvo',
+    desc: 'Fires at 2.5× speed for the first 20s of every wave, then settles into a slow reload.',
+    downside: '−40% attack speed after the opening',
+    mods: { openingRush: { rate: 1.5, dur: 20 }, rateMult: 0.6 },
+    template: 'rule',
+  },
+  {
+    key: 'cornered',
+    name: 'Cornered',
+    desc: 'Below half its HP it strikes more than twice as hard; untouched, it is slow to swing.',
+    downside: '−25% attack speed',
+    mods: { lastStand: { below: 0.5, damage: 1.3 }, rateMult: 0.75 },
+    template: 'rule',
+  },
   {
     key: 'concussive',
     name: 'Concussive',
@@ -199,11 +244,18 @@ const MUTATIONS: MutTemplate[] = [
   },
 ]
 
-/** How many mutations a fork offers the player to choose between (M8). */
+/** How many mutations a fork offers the player to choose between (M8) — two under Vow 1. */
 export const MUTATION_OFFER_SIZE = 3
 
+/** The Crossroads' mutation offer: two under Vow 1, and one more with the Strange Growth feat. */
+export const mutationOfferSize = (thinPickings: boolean, strangeGrowth: boolean): number =>
+  (thinPickings ? 2 : MUTATION_OFFER_SIZE) + (strangeGrowth ? 1 : 0)
+
+/** Which template a mutation is. Everything that predates Phase 3b is `reshape`. */
+export const mutationTemplate = (key: string): MutationTemplate => MUTATIONS.find((m) => m.key === key)?.template ?? 'reshape'
+
 function toMutation(t: MutTemplate, id: string): Mutation {
-  return { id, key: t.key, name: t.name, desc: t.desc, rarity: 'mythic', downside: t.downside, mods: t.mods, grantUpgrade: t.grantUpgrade }
+  return { id, key: t.key, name: t.name, desc: t.desc, rarity: 'mythic', downside: t.downside, mods: t.mods }
 }
 
 /*
@@ -233,6 +285,18 @@ export function rollMutationChoices(
   const pool = MUTATIONS.filter((m) => !exclude.includes(m.key))
   const src = pool.length >= count ? [...pool] : [...MUTATIONS]
   const out: Mutation[] = []
+  // An offer of two or more always holds BOTH templates when the pool has them
+  // (Phase 3b): a reshape and a rule, so the fork is a choice of kind, not
+  // three variations on "−N% damage per hit".
+  if (count >= 2) {
+    for (const tpl of ['rule', 'reshape'] as const) {
+      const of = src.filter((m) => (m.template ?? 'reshape') === tpl)
+      if (!of.length) continue
+      const t = rng.pick(of)
+      src.splice(src.indexOf(t), 1)
+      out.push(toMutation(t, nextId('mut')))
+    }
+  }
   while (out.length < count && src.length > 0) {
     const t = rng.pick(src)
     src.splice(src.indexOf(t), 1)

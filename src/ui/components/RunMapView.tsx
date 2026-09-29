@@ -1,51 +1,27 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { nodeMeta } from '../../game/data/runmap'
-import { THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
+import { nodeMeta, type MapNode } from '../../game/data/runmap'
+import { useGameStore } from '../../state/gameStore'
+import { encounterThreat } from '../../game/run/threat'
 import { bannerRules } from '../../state/metaStore'
 import { NODE_ICON } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
 
 /**
- * What marching through this node costs the rest of the run (M5).
+ * The Threat a fight on this node is fought at (M5, re-based in Phase 3b).
  *
- * Threat multiplies the HP of every enemy in every wave that follows, so route
- * choice is a compounding decision — six normal nodes and six elites are not
- * the same run — and none of it was visible on the map, which made the fork
- * that matters most the one picked blind.
- *
- * **Every node the player consumes charges a step now.** `completeNode` used to
- * advance the map and nothing else, so routing through a merchant / shrine /
- * recruit skipped a difficulty step outright: the special paid a reward *and*
- * made the run cheaper, which made "take the special" close to strictly correct
- * and the map's central choice a calculator with one answer. Specials charge
- * `.special` (×1.13) for the visit, deliberately smaller than a battle step, so
- * a special is still the cheaper node without being a free one.
- *
- * This function therefore covers three of the four rows of `THREAT_PER_NODE`.
- * The fourth is the boss (×1, there is nothing after it), and `start` is not a
- * node anyone chooses.
- *
- * `THREAT_PER_CHOICE` (×1.05) is a *separate*, composing step charged only when
- * the player accepts what a special offers — it belongs to the offer, not to
- * the route, and is disclosed there (`THREAT_TAX_VISIT` in `ui/shell/offers.ts`
- * quotes both halves and their product).
+ * Threat multiplies the HP of every enemy in a wave, and it used to be a
+ * compounding bill for the ROUTE — each battle, elite, visit and accepted offer
+ * multiplied it for the rest of the run, so the chip quoted the step a node
+ * would charge. Threat now follows the road alone (`run/threat.ts`): every node
+ * on a layer is fought at the same Threat, whatever route reached it. So the
+ * chip says the one number that matters on a fight — how hard it is — and
+ * stops appearing on stops, which cost no Threat at all.
  */
-const SPECIAL_NODES = new Set(['merchant', 'shrine', 'recruit'])
+const FIGHT_NODES = new Set(['battle', 'elite', 'miniboss', 'boss'])
 
-const nodeThreat = (type: string): number | null =>
-  // The step follows the node's OWN kind, which is what `completeNode` charges
-  // (`threatKind` in `gameStore`). Banner 2 substitutes an elite *encounter*
-  // into every battle node — the glyph below says so — but that is a rule about
-  // what you fight, not a surcharge on the march, so the chip still quotes
-  // ×1.42 there and it is still the truth.
-  type === 'elite'
-    ? THREAT_PER_NODE.elite
-    : type === 'battle'
-      ? THREAT_PER_NODE.normal
-      : SPECIAL_NODES.has(type)
-        ? THREAT_PER_NODE.special
-        : null
+const nodeThreat = (n: { type: MapNode['type']; layer: number }, startThreat: number): number | null =>
+  FIGHT_NODES.has(n.type) ? Math.round(encounterThreat(n, startThreat) * 10) / 10 : null
 
 const GAP = 104 // vertical px between layers
 const PAD_X = 44
@@ -62,6 +38,7 @@ export function RunMapView() {
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
   const allElite = useGameStore((s) => bannerRules(s.runBanner).allElite)
+  const startThreat = useGameStore((s) => bannerRules(s.runBanner).startThreat)
   const focusedId = useMapFocus((s) => s.nodeId)
   const focus = useMapFocus((s) => s.focus)
 
@@ -162,7 +139,7 @@ export function RunMapView() {
               : isReachable
                 ? 'reachable'
                 : 'locked'
-          const threat = nodeThreat(n.type)
+          const threat = nodeThreat(n, startThreat)
           const isFocused = focusedId === n.id
           return (
             <button
@@ -184,7 +161,7 @@ export function RunMapView() {
                  spells it out. */
               aria-label={`${meta.label}${
                 threat
-                  ? `, raises Threat ×${threat}${SPECIAL_NODES.has(n.type) ? ' just to visit, and ×1.05 more if you take what it offers' : ''}`
+                  ? `, fought at Threat ×${threat}`
                   : ''
               } — ${
                 isCurrent

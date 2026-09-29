@@ -1,10 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { describeGrant } from '../../game/data/describe'
-import { branchLabel, evolutionOptions } from '../../game/engine/leveling'
+import { computeCombat } from '../../game/engine/combat'
+import { branchLabel, evolutionOptions, evolveInto } from '../../game/engine/leveling'
+import type { Sentinel } from '../../game/types'
+import { heroArt } from '../shell/offers'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
+import { PerkPicker } from '../shell/PerkPicker'
+import { featName, usePerkUnlocks } from '../shell/perkUnlocks'
+import { availableEvolutions, lockedEvolutions } from '../../game/run/unlocks'
+import { LOCKED_SPECS } from '../../game/data/achievements'
+import { Tap } from '../pointer'
 
 /**
  * Shown after a battle when a Sentinel crossed level 10 or 20 and is owed an
@@ -25,6 +33,7 @@ export function EvolutionModal() {
   const queue = useGameStore((s) => s.evolutionQueue)
   const roster = useGameStore((s) => s.roster)
   const choose = useGameStore((s) => s.chooseEvolution)
+  const unlocked = usePerkUnlocks()
   // The heads-up the coach strip gives at level 8 is a warning that this is
   // coming. This is the explanation of what it *is*, and it stays until the
   // player has been through one — see `markTaught('evolve')` below.
@@ -33,6 +42,14 @@ export function EvolutionModal() {
 
   const cardRef = useRef<HTMLDivElement>(null)
   const open = queue.length > 0
+  /**
+   * Select, THEN confirm (Phase 2). A single tap on a card used to commit an
+   * irreversible evolution — the one decision in the game that most needs its
+   * detail read first, and the one place rule one ("tap a thing, read it") was
+   * not honoured. A tap now previews the evolved hero; "Evolve" commits.
+   */
+  const [picked, setPicked] = useState<string | null>(null)
+  useEffect(() => setPicked(null), [queue[0]])
 
   /*
    * Focus goes to the card when the dialog opens, and Tab is confined to it.
@@ -85,11 +102,16 @@ export function EvolutionModal() {
     return () => document.removeEventListener('keydown', onKeyDown, true)
   }, [open, queue[0]])
 
-  if (!open) return null
+  // No evolution owed: the level-up perk choice (Phase 3b) uses this same
+  // moment and the same dialog contract — evolutions first, then perks.
+  if (!open) return <PerkPicker />
   const sentinel = roster.find((s) => s.id === queue[0])
   if (!sentinel) return null
 
-  const options = evolutionOptions(sentinel)
+  // Feat-locked specs (Phase 3b) are left out of the choice and named below it.
+  const options = availableEvolutions(sentinel, unlocked)
+  const locked = lockedEvolutions(sentinel, unlocked)
+  const chosen = options.find((o) => o.id === picked) ?? null
   const tier = sentinel.branchPath.length === 1 ? 'Sub-archetype' : 'Specialization'
 
   return (
@@ -118,27 +140,103 @@ export function EvolutionModal() {
             numbers.
           </p>
         )}
-        <div className="evolve-options">
+        <div className="evolve-options" role="group" aria-label="Paths">
           {options.map((node) => (
             <button
               key={node.id}
-              className="evolve-option"
+              className={`evolve-option ${picked === node.id ? 'picked' : ''}`}
               // The archetype hue through its token rather than the raw hex on
               // the sentinel, so the colour-vision modes reach it too (M34).
               style={{ borderColor: archetypeVar(sentinel.archetype) }}
-              onClick={() => {
-                markTaught('evolve')
-                choose(sentinel.id, node.id)
-              }}
+              aria-pressed={picked === node.id}
+              onClick={() => setPicked(node.id)}
             >
               <span className="eo-name">{node.name}</span>
-              <span className="eo-ability">{node.ability}</span>
-              {node.grant && <span className="eo-grant">{describeGrant(node.grant)}</span>}
+              <span className="eo-ability">{node.blurb}</span>
             </button>
           ))}
         </div>
+        {locked.map((node) => (
+          <p className="evolve-more" key={node.id}>
+            {node.name} — locked, {featName(LOCKED_SPECS[node.id] ?? '')}.
+          </p>
+        ))}
+        {chosen ? (
+          <EvolvePreview hero={sentinel} nodeId={chosen.id} />
+        ) : (
+          <p className="evolve-hint">
+            <Tap /> a path to see what {sentinel.name} becomes.
+          </p>
+        )}
+        <button
+          className="evolve-confirm"
+          disabled={!chosen}
+          onClick={() => {
+            if (!chosen) return
+            markTaught('evolve')
+            choose(sentinel.id, chosen.id)
+          }}
+        >
+          {chosen ? `Evolve into ${chosen.name}` : 'Choose a path'}
+        </button>
         {queue.length > 1 && <p className="evolve-more">{queue.length - 1} more to evolve…</p>}
       </div>
+    </div>
+  )
+}
+
+/**
+ * What the evolved hero looks like on paper, before the irreversible tap:
+ * portrait, the stat lines that move, and the new ability in full.
+ */
+function EvolvePreview({ hero, nodeId }: { hero: Sentinel; nodeId: string }) {
+  const node = evolutionOptions(hero).find((o) => o.id === nodeId)
+  if (!node) return null
+  const before = computeCombat(hero)
+  const evolved = evolveInto(hero, nodeId)
+  const after = computeCombat(evolved)
+  const rows: { label: string; a: number; b: number; fmt?: (n: number) => string }[] = [
+    { label: 'DPS', a: before.dps, b: after.dps, fmt: (n) => String(Math.round(n)) },
+    { label: 'Reach', a: before.range, b: after.range, fmt: (n) => String(Math.round(n)) },
+    { label: 'HP', a: before.maxHp, b: after.maxHp, fmt: (n) => String(Math.round(n)) },
+    { label: 'STR', a: hero.stats.str, b: evolved.stats.str },
+    { label: 'DEX', a: hero.stats.dex, b: evolved.stats.dex },
+    { label: 'INT', a: hero.stats.int, b: evolved.stats.int },
+  ]
+  const moved = rows.filter((r) => Math.round(r.a) !== Math.round(r.b))
+  return (
+    <div className="evolve-preview" aria-live="polite">
+      <div className="ep-head">
+        <span className="ep-portrait" style={{ background: archetypeVar(hero.archetype) }} aria-hidden="true">
+          <img src={heroArt(hero.archetype)} alt="" />
+        </span>
+        <span className="ep-title">
+          <b>
+            {hero.name} → {node.name}
+          </b>
+          <span>Permanent. It changes how {hero.name} fights.</span>
+        </span>
+      </div>
+      <p className="ep-ability">
+        <Icon name="evolve" /> {node.ability}
+      </p>
+      {node.grant && <p className="ep-grant">{describeGrant(node.grant)}</p>}
+      {moved.length > 0 && (
+        <dl className="ep-stats">
+          {moved.map((r) => {
+            const f = r.fmt ?? ((n: number) => String(n))
+            const up = r.b > r.a
+            return (
+              <div key={r.label} className={up ? 'up' : 'down'}>
+                <dt>{r.label}</dt>
+                <dd>
+                  {f(r.a)} → <b>{f(r.b)}</b> <span aria-hidden="true">{up ? '▲' : '▼'}</span>
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
+      )}
     </div>
   )
 }

@@ -30,6 +30,8 @@
  *   a restored one.
  */
 import { getNode } from '../game/data/archetypeTree'
+import { MYTHIC_EDGE } from '../game/data/items'
+import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
 import { FIRST_MAP, mapById } from '../game/data/maps'
 import type { NameCounters } from '../game/data/sentinels'
@@ -52,6 +54,7 @@ import type {
   WaveDef,
 } from '../game/types'
 import { MAX_BANNER } from './metaStore'
+import type { RunFeats } from '../game/run/settle'
 import { migrateChallenge, type RunChallenge } from './daily'
 import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
 
@@ -76,12 +79,12 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 6
+export const RUN_SNAPSHOT_VERSION = 7
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
 type RunPhase = 'active' | 'won' | 'lost'
-type EventKind = 'merchant' | 'shrine' | 'recruit'
+type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
 type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 
 /**
@@ -107,10 +110,15 @@ interface CrossroadsSnap {
 const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'battle', 'endless']
 const MODES: readonly GameMode[] = ['campaign', 'endless']
 const PHASES: readonly RunPhase[] = ['active', 'won', 'lost']
+const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
   recruit: { sentinel: Sentinel; price: number } | null
+  /** v7: the Gate repair on the counter (null once bought). */
+  repair?: { hp: number; price: number } | null
+  /** v7: rerolls taken at this stall. */
+  rerolls?: number
 }
 
 /** The persisted form. Everything here is plain JSON, by construction. */
@@ -172,6 +180,10 @@ export interface RunSnapshot {
   recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
+  /** v7: relics held, by id. An id this build does not know grants nothing. */
+  relics: string[]
+  /** v7: what the run has done that a feat may ask about. */
+  feats: RunFeats
   crossroads: CrossroadsSnap | null
   forkDone: boolean
   /** Heroes with an evolution choice still owed to the player. */
@@ -252,6 +264,8 @@ export interface RunStateSource {
   recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
+  relics: string[]
+  feats: RunFeats
   crossroads: CrossroadsSnap | null
   forkDone: boolean
   evolutionQueue: string[]
@@ -310,6 +324,8 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     recruitOptions: s.recruitOptions,
     reward: s.reward,
     runMods: s.runMods,
+    relics: s.relics,
+    feats: s.feats,
     crossroads: s.crossroads,
     forkDone: s.forkDone,
     evolutionQueue: s.evolutionQueue,
@@ -427,6 +443,12 @@ const MOD_STRUCT_FIELDS = {
   buffAura: ['damageMult', 'radius'],
   dmgReductionAura: ['reduction', 'radius'],
   trap: ['dps', 'slow'],
+  // Phase 3b rule capabilities: a cadence, two timed rushes and a last stand,
+  // every field of which reaches the engine's arithmetic.
+  volley: ['every', 'pierce'],
+  killRush: ['rate', 'dur'],
+  openingRush: ['rate', 'dur'],
+  lastStand: ['below', 'damage'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -444,6 +466,7 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   burn: true, chill: true, shock: true, stunChance: true, stunDur: true, execute: true,
   block: true, thornsMult: true, thornsIgnite: true, healAura: true, buffAura: true,
   dmgReductionAura: true, lifedrain: true, selfSacrifice: true, trap: true,
+  volley: true, critEvery: true, blockRegen: true, killRush: true, openingRush: true, lastStand: true, leakWard: true,
 }
 
 /**
@@ -603,6 +626,9 @@ function validSentinel(raw: unknown): raw is Sentinel {
   if (!isStr(raw.color) || !isStr(raw.accent)) return false
   if (raw.mutations !== undefined && !(Array.isArray(raw.mutations) && raw.mutations.every(validMutation))) return false
   if (raw.upgrades !== undefined && !(isObj(raw.upgrades) && Object.values(raw.upgrades).every(isStat))) return false
+  // v7: spec perks are ids. An id this build does not know is harmless
+  // (`perkModsOf` skips it), so only the shape is checked.
+  if (raw.perks !== undefined && !(Array.isArray(raw.perks) && raw.perks.every(isStr))) return false
   const eq = raw.equipment
   if (!isObj(eq)) return false
   return validEquipSlot(eq.mainHand) && validEquipSlot(eq.offHand) && validEquipSlot(eq.body)
@@ -622,6 +648,8 @@ function validRewardCard(raw: unknown): raw is RewardCard {
   if (!RARITIES.includes(raw.rarity as ItemRarity)) return false
   if (raw.kind === 'item') return validItem(raw.item)
   if (raw.kind === 'stat') return isObj(raw.grant) && validGrantBlock(raw.grant)
+  // v7: a relic card names its relic; taking it adds that id to `relics`.
+  if (raw.kind === 'relic') return isStr(raw.relic)
   return false
 }
 
@@ -630,9 +658,28 @@ function validMerchant(raw: unknown): raw is MerchantStock {
   if (!isObj(raw)) return false
   if (!Array.isArray(raw.items)) return false
   if (!raw.items.every((e) => isObj(e) && validItem(e.item) && isNum(e.price))) return false
+  // v7: the repair heals the Gate and the reroll count prices the next reroll,
+  // so both reach arithmetic and both are held to finite numbers.
+  const rep = raw.repair
+  if (rep !== undefined && rep !== null && !(isObj(rep) && isStat(rep.hp) && isStat(rep.price))) return false
+  if (raw.rerolls !== undefined && !isStat(raw.rerolls)) return false
   const r = raw.recruit
   if (r === null || r === undefined) return true
   return isObj(r) && validSentinel(r.sentinel) && isNum(r.price)
+}
+
+/** The run's feats ledger (v7), every counter a non-negative finite number. */
+function migrateFeats(raw: unknown): RunFeats {
+  const o = (isObj(raw) ? raw : {}) as Record<string, unknown>
+  const count = (x: unknown) => Math.max(0, Math.floor(num(x, 0)))
+  return {
+    starter: ARCHETYPES.includes(o.starter as Archetype) ? (o.starter as Archetype) : null,
+    startSize: count(o.startSize),
+    maxFielded: count(o.maxFielded),
+    actBosses: count(o.actBosses),
+    flawlessBosses: count(o.flawlessBosses),
+    goldPeak: count(o.goldPeak),
+  }
 }
 
 /** Name counters, defensively defaulted — a bad one must not stall name issuance. */
@@ -699,6 +746,52 @@ function migrateResult(raw: unknown): BattleResult | null {
       })),
   }
 }
+
+// ------------------------------------------------------------------ v6 → v7
+/**
+ * What each level of the retired upgrade tree cost, per path, in order — kept
+ * ONLY to refund a v6 save (Onslaught / Tempo / Precision all cost 40, 95, 180).
+ */
+const LEGACY_PATH_COSTS = [40, 95, 180] as const
+/** The v6 tree's path ids, the keys `grantUpgrade` named. */
+const LEGACY_PATHS: Record<string, keyof typeof MYTHIC_EDGE> = { power: 'power', tempo: 'tempo', precision: 'precision' }
+
+/** Gold owed for every upgrade level a v6 roster bought. */
+export function legacyUpgradeRefund(roster: readonly Sentinel[]): number {
+  let gold = 0
+  for (const s of roster) {
+    for (const [path, lvl] of Object.entries(s.upgrades ?? {})) {
+      if (!(path in LEGACY_PATHS)) continue
+      const n = Math.max(0, Math.min(LEGACY_PATH_COSTS.length, Math.floor(num(lvl, 0))))
+      for (let i = 0; i < n; i++) gold += LEGACY_PATH_COSTS[i]
+    }
+  }
+  return gold
+}
+
+function legacyItem(item: Item): void {
+  const g = item.grantUpgrade
+  if (!g) return
+  const edge = LEGACY_PATHS[g.path] ? MYTHIC_EDGE[LEGACY_PATHS[g.path]] : undefined
+  if (edge && !item.enchantments.some((e) => e.id === edge.id)) item.enchantments.push({ ...edge })
+  delete item.grantUpgrade
+}
+
+function legacyMutation(m: Mutation): void {
+  if (!m.grantUpgrade) return
+  const now = allMutations().find((t) => t.key === m.key)
+  if (now) m.mods = now.mods
+  delete m.grantUpgrade
+}
+
+function legacyStripSentinels(list: Sentinel[]): void {
+  for (const s of list) {
+    delete s.upgrades
+    for (const slot of ['mainHand', 'offHand', 'body'] as const) if (s.equipment[slot]) legacyItem(s.equipment[slot]!)
+    for (const m of s.mutations ?? []) legacyMutation(m)
+  }
+}
+const legacyStripRoster = legacyStripSentinels
 
 /**
  * Bring any stored payload up to the current schema, defaulting every numeric
@@ -778,6 +871,28 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // ---- and the wave, which resolves instead, because the game re-deals it ---
   const currentWave = validWave(o.currentWave) ? (o.currentWave as WaveDef) : null
 
+  // ---- v6 → v7: the skill tree became spec perks (Phase 3b) ----------------
+  // A version STEP, so it rewrites — exactly like the v5 → v6 kit move below.
+  // Every level a hero BOUGHT is refunded at the price it cost, so the gold
+  // goes to the new sinks instead of vanishing; a Mythic item's free path level
+  // becomes the same value as an enchantment (`MYTHIC_EDGE`); a mutation that
+  // carried one takes its current mods, which fold that level in.
+  const refund = version < 7 ? legacyUpgradeRefund(roster) : 0
+  if (version < 7) {
+    legacyStripRoster(roster)
+    legacyStripSentinels(recruitOptions)
+    for (const i of inventory) legacyItem(i)
+    if (merchant && isObj(merchant)) {
+      for (const e of (merchant as MerchantStock).items) legacyItem(e.item)
+      if ((merchant as MerchantStock).recruit) legacyStripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+    }
+    for (const c of reward ?? []) if (c.item) legacyItem(c.item)
+    if (crossroads) {
+      legacyStripSentinels(crossroads.recruits)
+      for (const m of crossroads.mutations) legacyMutation(m)
+    }
+  }
+
   const snap: RunSnapshot = {
     v: RUN_SNAPSHOT_VERSION,
     savedAt: num(o.savedAt, 0),
@@ -789,11 +904,17 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     currentNodeId,
     clearedNodeIds: arr<string>(o.clearedNodeIds),
     reachableNodeIds: arr<string>(o.reachableNodeIds),
-    event: (o.event as RunSnapshot['event']) ?? null,
+    // A parked event this build cannot open (an unknown kind, a missing node id)
+    // is dropped: `coherent()` then lands the run on the map beside that node,
+    // which is still un-cleared and can be entered again.
+    event:
+      isObj(o.event) && EVENT_KINDS.includes(o.event.kind as EventKind) && isStr(o.event.nodeId)
+        ? (o.event as RunSnapshot['event'])
+        : null,
     battleMapId,
     roster,
     placements: (o.placements && typeof o.placements === 'object' ? o.placements : {}) as Placement,
-    gold: Math.max(0, num(o.gold, 0)),
+    gold: Math.max(0, num(o.gold, 0)) + refund,
     baseHp: num(o.baseHp, 1),
     maxBaseHp: Math.max(1, num(o.maxBaseHp, 20)),
     enemyHpMult: num(o.enemyHpMult, 1),
@@ -834,6 +955,12 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     recruitOptions,
     reward,
     runMods,
+    // A relic list is earned content like the rest, but an entry is only an id:
+    // a non-string is dropped (it could never have been dealt), a duplicate too.
+    relics: [...new Set(arr<unknown>(o.relics).filter(isStr))],
+    // Counters, defaulted like every other number here: a payload from before
+    // they existed simply has no feat progress, which is the honest reading.
+    feats: migrateFeats(o.feats),
     crossroads,
     forkDone: bool(o.forkDone, false),
     evolutionQueue: arr<string>(o.evolutionQueue),

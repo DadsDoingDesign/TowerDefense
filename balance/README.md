@@ -31,7 +31,8 @@ before/after can be quoted with its `n` on it:
 npx tsx balance/meta-sweep.ts 300 unlocks   # hub states × routing policies
 npx tsx balance/meta-sweep.ts 250 banners   # the Banner ladder's economy
 npx tsx balance/meta-sweep.ts 200 rules     # each Banner rule measured alone
-npx tsx balance/meta-sweep.ts 200 special   # THREAT_PER_NODE.special, swept
+npx tsx balance/meta-sweep.ts 240 phase3b   # the Phase 3b scoreboard: route / build spread, XP curve, §6
+npx tsx balance/meta-sweep.ts 300 mc        # §6's Monte Carlo alone, for fitting the Threat curve
 npx tsx balance/meta-sweep.ts 1 map         # map shape: forks, stops, forced elites
 npx tsx balance/fit-curve.ts 170 2.7 1.44 0.515 200   # a candidate waves.ts curve, against §6 AND §11
 ```
@@ -46,9 +47,8 @@ and it broke the build and every live harness.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `FW_SPECIAL_THREAT` | `THREAT_PER_NODE.special` | Overrides the special-node Threat step for §11 only. The report prints a loud warning when set, so an overridden run cannot be mistaken for a measurement of the shipped game. |
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
-| `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt and is what the special-node step was fitted at. |
+| `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt for a fit. |
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
 
 ## The rule this harness is built around
@@ -147,16 +147,31 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
 5. **Pressure ceiling** — a standard depth-8 team faces *siege pressure* (HP ×p,
    count ×p^0.35, arrival compressed by p^0.35) until it breaks. Count is the
    weakest axis on purpose: `engine.impact` applies splash with no target cap, so
-   a count-led ladder makes splash lines stronger and can never break.
-6. **Monte Carlo full runs** — 300 random teams (3–5 specs) play depths 1→10 with
-   team power scaling to mirror progression and Threat compounding by the real
-   store constants, **including the ×1.05 `THREAT_PER_CHOICE` tax** on accepted
-   shrines / recruits. Reports win rate, depth distribution and where runs end.
-7. **Tower upgrade paths** — solo DPS at each purchased level of each path.
+   a count-led ladder makes splash lines stronger and can never break. The team
+   is **level 16** (tier 1, Epic gear, random spec perks) — where the Phase 3b XP
+   curve puts a depth-8 company; it was a finished L20 build when Threat
+   compounded to ×11.6 by depth 8, and against the road's ×1.8 that team broke
+   at ×11, outside the ×2–×8 band.
+6. **Monte Carlo full runs** — 300 random 3–5 spec companies play all twelve
+   layers of the three acts (act bosses on 4 and 8, the final boss on 12), with
+   power scaling by depth (level ≈ 2.5·depth, gear rarity lagging, the company
+   growing an act at a time) and every layer fought at the real road Threat
+   (`threatAtLayer` × the node type's multiplier). The model lives in
+   `runsim.monteCarloRun` so `fit-curve.ts` plays the same one. Reports win rate,
+   depth distribution and where runs end.
+7. **Spec perks** (Phase 3b; replaced the per-hero upgrade tree) — each perk at
+   each choice point (level 5 by archetype, level 15 by the tier-1 line) taken
+   alone by a representative hero **without gear** (a rolled `vampiric` affix
+   heals the Gate off an unkillable wave and flattens the bench) and graded by
+   stop rate on `swarm` / `armour` / `line`, each wave first scaled so the bare
+   hero stops about half. Gates: no perk is dead (best bench ≥ +2pt) and no
+   pair of open options is more than 20pt apart on the mean (none is solved).
 8. **Mutation tradeoffs** — each mutation measured by stop rate on three waves
    loading different axes (`swarm` / `armour` / `line`). A mutation is a real
    tradeoff only if it is clearly better in one and clearly worse in another.
-9. **Map special-tile pacing** — 300 generated maps; counts and layer clustering.
+9. **Map pacing** — 300 generated maps: the share of free-layer nodes that are
+   fights (gated 50–63%, target 55–60%), stops per type, and that no layer holds
+   more than two stops or no fight at all.
 10. **Curse affixes** — the five `CURSE_ENCHANTS`, each equipped alone on both an
     offensive and a low-crit magic build, to see whether the "downside" costs
     anything on either.
@@ -170,7 +185,7 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     the harness used to hand every hire a full fresh kit while the store hired
     a bare body, which overstated a recruit by ~5–9pt of win rate. Reported in **two models**, because the first one was a fiction:
 
-    - the **strict floor** marches through ten consecutive battles, refuses every
+    - the **strict floor** marches through every layer as a battle, refuses every
       merchant, takes no recruits and picks a reward card at random;
     - the **realistic first run** — *the model the invariant gates on* — walks a
       real `generateRunMap` with no meta unlocks, routes the way a player reads a
@@ -179,22 +194,12 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
       with `scaledRecruit`'s real level (roster median −3, not level 1), takes
       shrines it can pay for, and reads the reward cards instead of rolling one.
 
-    Both models charge Threat on **every node the run consumes** — battles at
-    `THREAT_PER_NODE.normal` / `.elite`, merchant / shrine / recruit stops at the
-    smaller `THREAT_PER_NODE.special`. That rule used to not exist: `completeNode`
-    left Threat untouched, so routing through a special skipped a ×1.42 step
-    outright *and* paid a reward, which made "take the special" close to strictly
-    correct on both axes at once. Two further rows are **counterfactuals**, not
-    models of the game — the same run with specials at ×1.00 (the pre-fix rule)
-    and at the full ×1.42 battle step. They bracket the one free parameter this
-    sweep is fitted on, so the shipped value is auditable rather than asserted
-    (see REPORT §11).
-
-    Both sweeps also print the **mean Threat carried into the boss fight**. That
-    number is the exchange rate between §6 and §11: every dial in `waves.ts` /
-    `enemies.ts` is multiplied by Threat, so when §6 met the boss at ×30.8 and a
-    routed first run met it at ×11.3, any shared dial landed 2.7× harder on the
-    Monte Carlo. Charging specials closes it to 2.0×.
+    Both models fight every layer at the **road's Threat** (`threatAtLayer`,
+    Phase 3b): the old per-battle ×1.42, per-stop ×1.13 and per-choice ×1.05
+    steps are gone, so a stop's price is the fight it replaces (its XP, gold and
+    card) and a hire, a pact or a mutation costs no Threat at all. Both sweeps
+    print the **Threat carried into the final boss**, which §6 and §11 now share
+    by construction — the old 2–3× exchange rate between the two bands is gone.
 
     **The policy set.** §11 used to grade one hardcoded routing rule — specials
     over battles, elites last — and describe it as "the way a player reads a
@@ -218,8 +223,11 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     harness had been grading a player who could not read.
 
 12. **The hub** — every purchasable state of the Watchtower (each unlock alone,
-    all three, the ramp, everything) played out as whole runs on **paired
-    seeds**, against the zero-meta baseline. Also checks that each unlock
+    all three, the two feat-opened services together — Field Kitchen and Relic
+    Cartulary — the ramp, everything) played out as whole runs on **paired
+    seeds**, against the zero-meta baseline. The map rides its own RNG stream and
+    the Cartulary's extra relic its own, so an unlock that reshapes the map or
+    widens a hand does not re-deal every later roll behind it. Also checks that each unlock
     delivers the *breadth its card promises* — forks, reachable stops, elites
     with a way around them — measured over 500 generated maps.
 13. **The Banner ladder** — every rung played out as whole runs, with the marks
@@ -250,6 +258,13 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     worth more per point of HP is sold less of it — the HP ceiling is a loose
     sanity bound at 35%, and the fairness gate is 14c.
 
+15. **Relics** (Phase 3b; merged keepsakes and team stat cards) — the stat half
+    graded on the §7-style fight benches as a company-wide grant, the run-rule
+    half (Gate heals, tithes, charters, the ledger) by paired whole runs
+    (`FW_RELIC_RUNS`, 150). A relic whose rule needs an engine capability that
+    has not shipped (`ENGINE_CAPABILITIES`, e.g. `burnSpreadOnDeath`) must be
+    out of the pool; the gate fails if one is dealt.
+
 ## Invariants (fail the run)
 
 - No build deals zero damage (broken build).
@@ -275,6 +290,15 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
 - Every mutation has both a measurable cost (≤ −3pt somewhere) and measurable
   power (≥ +3pt somewhere). A `downside` string is not evidence of a downside.
 - No curse is a net upgrade in *every* scenario (a fake tradeoff).
+- **Spec perks** (§7): every perk moves at least one bench by ≥ +2pt (none is
+  dead), and no choice point's two open options are more than 20pt apart on
+  the three-bench mean (none is solved).
+- **Map pacing** (§9): 50–63% of free-layer nodes are fights (target 55–60%),
+  and every free layer offers a fight.
+- **Relics** (§15): every rule relic changes something a fight can see (≥ +2pt
+  on its best bench), no pact is a cost for nothing, no run-rule relic lowers
+  the paired win rate, none sells plain "+x% damage", and nothing in the pool
+  needs an engine capability that has not shipped.
 - Fresh-player difficulty is a curve, not a cliff: no single node ends more than
   40% of zero-meta runs — checked on **both** §11 models.
 - **The zero-meta baseline is winnable and still hard.** Three checks, each on

@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { sfx, unlockAudio, type SoundEvent } from './audio/audio'
 import { ResumeRunPrompt } from './ui/ResumeRunPrompt'
 import { RotatePrompt } from './ui/RotatePrompt'
-import { UpdateNotice } from './ui/UpdateNotice'
 import { RootShell } from './ui/shell/RootShell'
 import './styles/app.css'
 
@@ -43,7 +42,8 @@ export default function App() {
       <RootShell />
       <ResumeRunPrompt />
       <RotatePrompt />
-      <UpdateNotice />
+      {/* UpdateNotice lives in the menu's title block now (Phase 2) — it used
+          to float over the hub title. */}
     </div>
   )
 }

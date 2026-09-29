@@ -5,6 +5,7 @@ import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
 import { archetypeVar, ARCHETYPE_GLYPH } from '../channels'
 import { Icon } from '../Icon'
 import { heroArt } from './offers'
+import { tapWord } from '../pointer'
 
 /**
  * Band 3 — the party. One tap fills the Context panel below with a hero's
@@ -97,7 +98,7 @@ function PartyCards() {
         const selected = selection?.kind === 'hero' && selection.id === s.id
         const profile = computeCombat(s)
         const hue = archetypeVar(s.archetype)
-        const state = placed ? 'deployed' : selected && canPlace ? 'selected, tap a glowing circle to post it' : 'on the bench'
+        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing circle to post it` : 'on the bench'
         return (
           <button
             key={s.id}

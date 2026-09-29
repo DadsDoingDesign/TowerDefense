@@ -28,15 +28,36 @@ result. Append a short note to the review log when you're done.
 
 - Sprites: `public/assets/sprites/<pack>/` (role-named PNGs). Loader
   `src/game/render/sprites.ts`; themes `src/game/render/themes.ts`.
-- Battle rendering: `src/game/render/renderer.ts` (`drawField` → terrain +
-  level dressing, `drawSentinel`, `drawEnemy`).
+- Battle rendering: `src/game/render/renderer.ts` is a facade (public names +
+  `drawBattleEntities`) over `terrain.ts` (`drawField`, baked once per map),
+  `units.ts` (`drawSentinel`, `drawEnemy`), `plaques.ts` (tier/elite plaque),
+  `overlays.ts` (slots, ranges, reticles, base gate), `projectiles.ts`,
+  `blit.ts` (the 1:1 sprite blit + census), `paint.ts` (colour helpers) and
+  `frame.ts` (presentation clock, view scale). Import from `renderer`.
+- FX: `src/game/render/fx.ts` draws effects; `fxDiff.ts` derives them from the
+  engine tick by tick — one `FxDiffer` per battle, created by `BattleCanvas`,
+  no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.
+- Run store: `src/state/gameStore.ts` is a barrel — import `useGameStore` and
+  the constants from there. The store is `src/state/game/`: ONE zustand store
+  combined from action slices (`runSlice`, `endlessSlice`, `battleSlice`,
+  `eventsSlice`, `rosterSlice`, `shellSlice`) over the data in `types.ts`;
+  RNG streams, the hub flag, the wave-beat timer and session ownership live in
+  `runtime.ts`; snapshot autosave in `persistence.ts`; settle-once in
+  `settle.ts`. RNG draw ORDER is part of behaviour: keep it when editing.
+- Pure run rules (no zustand/React/DOM, unit-tested in `tests/run.rules.test.ts`
+  and read by the balance harness): `src/game/run/` — `threat.ts`,
+  `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
+  `settle.ts` (payout plan), `inventory.ts`, `map.ts`, `battle.ts`. Put a new
+  rule here, not in a slice.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
   1–5); waves `src/game/data/waves.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
-  one: one screen, four bands, see `docs/FIGMA.md`. Mobile-only by design
-  (520px cap). The pre-shell screens (`?shell=0`) were deleted. The only
+  one: one screen, four bands, see `docs/FIGMA.md`. Mobile-first (a 520px
+  column on phones); tablet and desk re-flow the same bands in
+  `src/styles/shell-wide.css` (FIGMA.md § Wide layout). Copy that says "Tap"
+  uses `<Tap />` / `tapWord()` from `src/ui/pointer.tsx`. The pre-shell screens (`?shell=0`) were deleted. The only
   components outside `shell/` are `src/ui/components/RunMapView.tsx` and
   `EvolutionModal.tsx`, both rendered by the shell. Eager non-shell CSS those
   (and BattleCanvas) need lives in `src/styles/app.css`.
@@ -44,8 +65,9 @@ result. Append a short note to the review log when you're done.
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
   `src/ui/UpdateNotice.tsx`. A new build WAITS; it never takes over a running
-  page. The precache is derived from the ACTIVE theme's pack (`packAssetPaths`
-  in `sprites.ts`) plus whatever the emitted code names — see `planPrecache`.
+  page. The precache is derived from the files the DEFAULT theme draws across
+  its per-role fallback chain (`themeAssetPaths` in `sprites.ts`) plus
+  whatever the emitted code names — see `planPrecache`.
 - Run snapshot load/validation: `src/state/runSnapshot.ts` — every field a
   save can put into arithmetic is validated, and `tests/runSnapshot.fuzz.test.ts`
   mutates a real snapshot ~15k ways to prove it. Extend the validators (and the
@@ -56,14 +78,18 @@ result. Append a short note to the review log when you're done.
   piece would overhang a hero cell.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
-  Import it. Every local copy of one of those has gone stale so far.
+  Import it. Every local copy of one of those has gone stale so far. A table the
+  CANVAS also needs lives under `src/game/data/` (e.g. `glyphs.ts`, the archetype
+  glyph) and `channels.ts` re-exports it — `game/` must not import `ui/`.
 
 ## Conventions
 
 - Sprite pack files are role-named; add new roles to `ROLE_NAMES` in
   `sprites.ts` or they won't preload — and add them to the pack's entry in
-  `PACK_ROLES` too, since only the ACTIVE theme's pack is fetched at boot (M37)
-  and each pack declares what it actually ships.
+  `PACK_ROLES` too: each pack declares exactly what it ships, and each role is
+  drawn from the first pack in the theme's fallback chain that ships it
+  (`fieldwatch` → `tinyswords`, at each pack's own density). Preview the new
+  pack with `?art=fieldwatch`; see `docs/HANDOFF.md` §6.4.
 - Keep the enemy lane and build slots visually clear — decoration frames the
   map at its margins (see the review checklist).
 - Never put `.js`, `.css` or `.woff2` files under `public/assets/`: `vercel.json`

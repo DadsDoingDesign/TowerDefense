@@ -44,12 +44,21 @@ src/
     data/                    archetype tree, sentinels, enemies, waves, items, rewards,
                              mutations, run map, battlefields
     engine/                  deterministic battle simulation (GameEngine) + combat maths
-    render/                  Canvas 2D renderer, FX, sprites/themes, paper-doll loadouts
-  state/                     Zustand stores: run (gameStore), meta, settings; run snapshot
+    run/                     pure run rules (no zustand/React/DOM): threat, economy +
+                             merchant roll, recruits, rewards, settle payout, inventory
+    render/                  Canvas 2D: renderer.ts facade over terrain / units / plaques /
+                             overlays / projectiles / blit / paint; fx.ts (effects),
+                             fxDiff.ts (per-battle tick differ); sprites/themes, loadouts
+  state/
+    gameStore.ts             barrel for the run store (useGameStore + constants)
+    game/                    the run store: one zustand store from slices (run, endless,
+                             battle, events, roster, shell), runtime.ts, persistence.ts
+    metaStore.ts, settingsStore.ts, runSnapshot.ts, daily.ts
   ui/
     shell/                   Root Shell — the UI the game ships (see docs/FIGMA.md)
     components/              RunMapView + EvolutionModal (rendered by the shell)
-    BattleCanvas.tsx         requestAnimationFrame loop, FX differ, tap-to-place input
+    channels.ts              shared UI vocabulary (glyphs, rarity tokens, labels)
+    BattleCanvas.tsx         requestAnimationFrame loop + tap-to-place input
   styles/                    design tokens (global.css) + shell/page CSS
 public/
   assets/                    sprite packs, UI art, Kenney UI sounds (see CREDITS/CC0-MANIFEST)
@@ -65,8 +74,11 @@ harness/                     art vertical-slice harness (docs/HANDOFF.md)
 ticks per frame, never bigger ones, so a seeded battle is identical at any speed or
 frame rate. It draws every frame from
 the engine's live arrays, and pushes a lightweight HUD snapshot to the store ~10×/sec so
-React re-renders stay cheap. Between waves the same canvas renders the map, slots, and
-placed towers, and handles tap-to-deploy input. The engine owns all mutable combat state
+React re-renders stay cheap. Around every tick a per-battle `FxDiffer`
+(`src/game/render/fxDiff.ts`) snapshots the engine and derives the presentation events
+(impacts, kills, leaks, procs) from the difference, so the sim never emits them. Between
+waves the same canvas renders the map, slots, and placed towers, and handles tap-to-deploy
+input. The engine owns all mutable combat state
 and reports a `BattleResult` (gold, per-Sentinel kills/damage/XP, base HP left) on finish.
 
 ## Roadmap (milestones)

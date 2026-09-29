@@ -168,7 +168,7 @@ Average base-stat budget and enchant count over 400 rolled weapons per tier.
 | Rare | 20.4 | 1.0 | 1 |
 | Epic | 31.9 | 2.2 | 2 |
 | Legendary | 43.4 | 3.2 | 3 |
-| Mythic | 59.9 | 4.2 | 4 |
+| Mythic | 59.9 | 5.2 | 4 |
 
 ## 4. Enchantment strength (scenario-matched)
 
@@ -242,8 +242,9 @@ axis, because `engine.impact` applies splash to every enemy in radius with no
 target cap — piling bodies into the same space makes a splash line **stronger**,
 which is exactly how the old ladder ended up censored.
 
-A depth-8 team (Vanguard / Sharpshooter / Pyromancer, Epic gear + focused upgrades)
-faces depth-8 waves at the Threat a real depth-8 run carries (×11.64) with the real
+A depth-8 team (Vanguard / Sharpshooter / Pyromancer lines at level 16 — tier 1, where the
+XP curve (§9) puts a depth-8 company, with L20 two layers deeper — Epic gear and random spec perks)
+faces depth-8 waves at the Threat a real depth-8 fight is fought at (×1.83) with the real
 base of 20. 4 seeds per rung.
 
 | Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |
@@ -251,9 +252,11 @@ base of 20. 4 seeds per rung.
 | ×1.00 | 46 | 4/4 | 20.0 ±0.0 | 0.0 ±0.0 |
 | ×1.50 | 46 | 4/4 | 20.0 ±0.0 | 0.0 ±0.0 |
 | ×2.20 | 46 | 4/4 | 20.0 ±0.0 | 0.0 ±0.0 |
-| ×3.40 | 92 | 0/4 | 0.0 ±0.0 | 0.0 ±0.0 |
+| ×3.40 | 92 | 4/4 | 20.0 ±0.0 | 0.0 ±0.0 |
+| ×5.00 | 92 | 1/4 | 0.5 ±0.9 | 0.0 ±0.0 |
+| ×7.60 | 92 | 0/4 | 0.0 ±0.0 | 0.0 ±0.0 |
 
-Standard depth-8 team holds up to **siege pressure ×2.20**.
+Standard depth-8 team holds up to **siege pressure ×3.40**.
 
 **Design target:** a depth-appropriate team should break somewhere in **×2–×8** — comfortable
 at its own node, in danger at a couple of nodes deeper. Anything far above that
@@ -261,29 +264,29 @@ means the depth-8 encounter is not an encounter for a depth-8 team.
 
 ## 6. Monte Carlo full runs (compounding Threat vs. progression)
 
-Random teams (3–5 specs) play depths 1→10. Team **power scales with depth**
-(level ≈ 2+2·depth, gear rarity improving, upgrade levels bought) to mirror real
-progression. Threat compounds by the real store constants — **×1.42 per node,
-×1.52 per elite** (`THREAT_PER_NODE`) — *plus* **×1.05 per accepted shrine /
-recruit / merchant-recruit (`THREAT_PER_CHOICE`)**, which the old sweep omitted
-entirely and so understated real difficulty. Base HP (20) persists between nodes.
+Random teams (3–5 specs) play all twelve layers of the three acts — an act boss on
+layers 4 and 8, the final boss on 12, an elite mid-way through acts 2 and 3. Team **power
+scales with depth** (level ≈ 2.5·depth, the curve `levelXpAwards` pays; gear rarity improving)
+to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×1.06 a layer, ×1.05 more
+per act) — it no longer compounds on choices, so this model and the routed first run in §11
+meet every layer at the same Threat. Base HP (20) persists between nodes.
 **Win** = the boss falls.
 
 - Runs: **300**
-- Win rate (boss falls): **50%**
-- Average depth reached: **8.9 / 10**
-- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:12  7:68  8:5  9:66  10:149
-- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:12  8:68  9:5  10:66
-- Distinct depths that killed at least one team: **4**
-- Deadliest single node: **depth 8** — **45%** of all lost runs end there
-- Boss attempts: **215**, boss kills: **66** (**31%** of arrivals)
-- Mean Threat carried into the boss fight: **×30.4** (the exchange rate with §11 — see there)
-- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 44% · **kilnroad** n=147 (49%) win 56%
+- Win rate (boss falls): **57%**
+- Average depth reached: **11.3 / 12**
+- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:1  7:0  8:10  9:8  10:40  11:70  12:171
+- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:1  8:0  9:10  10:8  11:40  12:70
+- Distinct depths that killed at least one team: **5**
+- Deadliest single node: **depth 12** — **54%** of all lost runs end there
+- Boss attempts: **241**, boss kills: **70** (**29%** of arrivals)
+- Mean Threat carried into the boss fight: **×2.2** (the exchange rate with §11 — see there)
+- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 50% · **kilnroad** n=147 (49%) win 64%
 
 **Target win-rate band: 45%–60%** for a depth-appropriate team. That is the band where a
 run is worth finishing and losing is worth minding; the old 10–80% guardrail was a
 smoke test that a completely degenerate curve could pass. The current game is
-**inside the band** (50% vs 45%–60%).
+**inside the band** (57% vs 45%–60%).
 
 **Distribution shape matters as much as the rate.** A curve where every death
 lands on the same two elite nodes and the boss kills nobody is degenerate even at
@@ -292,17 +295,72 @@ invariants guard the shape — deaths must spread across at least
 3 distinct depths, no single node may end more than 60% of lost runs, and
 the boss must kill a nonzero share of the teams that reach it (design target ≥ 10%).
 
-## 7. Tower upgrade paths (solo DPS by level)
+## 7. Spec perks (is any pick dead, and is any pair solved?)
 
-A Weaponmaster with each upgrade path bought to level 0→3, over
-3 seeds. Each path should be a net gain over unupgraded even with its
-level-3 tradeoff.
+**What this replaced.** §7 used to measure the per-hero upgrade tree: three identical
+paths (Onslaught / Tempo / Precision) offered to all 27 specs, graded as solo DPS. It
+measured the one decision every hero in the game shared — "+x%, bought with gold". The
+tree is gone; a hero now picks one of two **spec perks** at level 5 (by base archetype)
+and level 15 (by the line it evolved into), most of them rules rather than percentages.
 
-| Path | L0 ± | L1 ± | L2 ± | L3 ± | L3 vs L0 |
-|---|--:|--:|--:|--:|--:|
-| Onslaught | 202.5 ±21.5 | 246.3 ±27.3 | 297.6 ±7.5 | 311.8 ±20.0 | +54% |
-| Tempo | 202.5 ±21.5 | 230.8 ±9.1 | 261.0 ±18.2 | 282.6 ±7.4 | +40% |
-| Precision | 202.5 ±21.5 | 235.9 ±20.2 | 260.8 ±19.9 | 344.6 ±4.3 | +70% |
+**How each perk is graded.** A representative hero of the line — level 9 (a Fighter,
+Rogue or Mystic before its evolution) for a level-5 perk, level 19 in the line for a
+level-15 one — takes the perk alone, and is graded by **stop rate** on three waves of
+its depth (4 or 8): a `swarm` of runts, an `armour` column (Plated elite) and a `line`
+(the depth's normal wave). Each point's waves are first scaled so the hero **without** a
+perk stops about half of each — a bench at 0% or 100% cannot see a perk at all. A
+cleric's auras need someone to reach, so the cleric line is graded beside a blocker.
+
+| Point | Perk | `swarm` | `armour` | `line` | Mean | heroDps |
+|---|---|--:|--:|--:|--:|--:|
+| 5:fighter | Second Wind | +0.0pt | +7.4pt | +3.4pt | **+3.6pt** | 70.6 |
+| 5:fighter | Last Stand | +0.0pt | +10.2pt | +5.1pt | **+5.1pt** | 70.6 |
+| 5:fighter | Riposte 🔒 | +23.3pt | +7.4pt | +12.0pt | **+14.2pt** | 70.6 |
+| 5:rogue | Ambush | +28.9pt | +24.1pt | +20.5pt | **+24.5pt** | 99.6 |
+| 5:rogue | Bloodrush | +12.8pt | +13.0pt | +6.0pt | **+10.6pt** | 99.6 |
+| 5:rogue | Poisoned Tips 🔒 | +37.2pt | +35.2pt | +14.5pt | **+29.0pt** | 99.6 |
+| 5:mystic | Arc Spark | +6.7pt | +16.7pt | +23.1pt | **+15.5pt** | 36.6 |
+| 5:mystic | Frostbite | +0.0pt | +33.3pt | +9.4pt | **+14.2pt** | 36.6 |
+| 5:mystic | Ember Veil 🔒 | +0.0pt | +11.1pt | +25.6pt | **+12.3pt** | 36.6 |
+| 15:warrior | Cleave | +65.8pt | +48.1pt | +47.3pt | **+53.8pt** | 182.8 |
+| 15:warrior | Frenzy | +57.1pt | +30.0pt | +28.7pt | **+38.6pt** | 182.8 |
+| 15:knight | Concussion | +0.0pt | +4.0pt | +3.9pt | **+2.6pt** | 129.4 |
+| 15:knight | Shield Wall | +0.0pt | +17.8pt | +14.0pt | **+10.6pt** | 129.4 |
+| 15:guard | Frozen Ground | +3.8pt | −9.4pt | +11.2pt | **+1.9pt** | 129.0 |
+| 15:guard | Unbroken | +0.0pt | +2.4pt | +0.0pt | **+0.8pt** | 129.0 |
+| 15:assassin | Opening Cut | +52.1pt | +23.9pt | +39.1pt | **+38.4pt** | 203.9 |
+| 15:assassin | Killing Spree | +43.3pt | +12.1pt | +22.5pt | **+26.0pt** | 203.9 |
+| 15:trickster | Second Charge | +50.4pt | +5.4pt | +17.4pt | **+24.4pt** | 181.5 |
+| 15:trickster | Venom | +51.7pt | +19.5pt | +34.1pt | **+35.1pt** | 181.5 |
+| 15:marksman | Volley | +12.9pt | +13.8pt | +10.9pt | **+12.5pt** | 187.5 |
+| 15:marksman | Deadeye | +18.3pt | +10.1pt | +16.7pt | **+15.0pt** | 203.2 |
+| 15:elementalist | Conflagration | +64.6pt | +53.5pt | +50.4pt | **+56.2pt** | 67.7 |
+| 15:elementalist | Static Field | +62.1pt | +49.5pt | +48.1pt | **+53.2pt** | 67.7 |
+| 15:cleric | Sanctuary | +0.0pt | +3.7pt | +0.0pt | **+1.2pt** | 64.8 |
+| 15:cleric | Blessing | −4.6pt | +5.1pt | +5.0pt | **+1.8pt** | 64.8 |
+| 15:warlock | Blood Pact | +6.0pt | +49.9pt | +37.9pt | **+31.3pt** | 98.1 |
+| 15:warlock | Deep Siphon | +30.0pt | +28.4pt | +32.0pt | **+30.1pt** | 112.9 |
+
+| Point | Gap between the two open options | The greedy (heroDps) pick | The measured better pick | Each option wins a bench? |
+|---|--:|---|---|:-:|
+| 5:fighter | +1.5pt | Second Wind | Last Stand | yes |
+| 5:rogue | +13.9pt | Ambush | Ambush | **no** |
+| 5:mystic | +1.2pt | Arc Spark | Arc Spark | yes |
+| 15:warrior | +15.2pt | Cleave | Cleave | **no** |
+| 15:knight | +8.0pt | Concussion | Shield Wall | yes |
+| 15:guard | +1.1pt | Frozen Ground | Frozen Ground | yes |
+| 15:assassin | +12.4pt | Opening Cut | Opening Cut | **no** |
+| 15:trickster | +10.7pt | Second Charge | Venom | **no** |
+| 15:marksman | +2.5pt | Deadeye | Deadeye | yes |
+| 15:elementalist | +3.0pt | Conflagration | Conflagration | **no** |
+| 15:cleric | +0.6pt | Sanctuary | Blessing | yes |
+| 15:warlock | +1.1pt | Deep Siphon | Blood Pact | yes |
+
+**Invariants.** Every perk moves at least one bench by ≥ +2.0pt (none is dead); no choice point
+has its two open options more than +20.0pt apart on the mean (none is solved by
+a mile). Reported, not gated: whether each option wins a bench of its own, and how often
+the heroDps-greedy pick — the "read the tooltip" answer — is the measured better one:
+**7 of 12** points. A low number is the goal: it means the answer depends on the wave, not the arithmetic.
 
 ## 8. Mutation tradeoffs (measured, not asserted)
 
@@ -331,6 +389,10 @@ Baseline stop rate — `swarm` (90 tiny fast runners — a pure rate/splash test
 | Executioner | −4.4pt | +29.2pt | −1.5pt | −4.4pt on `swarm` | −20% attack speed |
 | Siphon | +7.5pt | −16.7pt | +26.8pt | −16.7pt on `armour` | −30% damage per hit |
 | Stormcharged | −6.7pt | +25.0pt | −10.5pt | −10.5pt on `line` | −45% attack speed |
+| Ricochet | +52.2pt | −6.3pt | −2.6pt | −6.3pt on `armour` | −35% damage per hit |
+| Blood Frenzy | +38.9pt | −2.1pt | −5.8pt | −5.8pt on `line` | −35% damage per hit |
+| Opening Salvo | +5.6pt | −22.9pt | −5.5pt | −22.9pt on `armour` | −40% attack speed after the opening |
+| Cornered | −5.6pt | +2.1pt | +4.1pt | −5.6pt on `swarm` | −25% attack speed |
 | Concussive | +18.9pt | −16.7pt | −4.4pt | −16.7pt on `armour` | −58% damage per hit |
 
 **The ceiling, per column: how far the leader stands clear of the runner-up.**
@@ -347,13 +409,19 @@ reaching a 100% stop, which is a fact about the bench.
 | `armour` | +52.1pt | Siege Weight +39.6pt | Executioner +29.2pt | **+10.4pt** |
 | `line` | +81.4pt | Siphon +26.8pt | Emberbrand +23.0pt | **+3.9pt** |
 
-## 9. Map special-tile pacing
+## 9. Map pacing — how much of the road is a fight
 
-300 generated maps. Specials should be a minimal set (no whole-layer clusters).
+300 generated maps. The review found **~70–83% of all nodes were battles** (83% measured on
+the 10-layer map), so most forks were a battle against a battle and the route barely mattered.
+With Threat following the road instead of the choice (Phase 3b), a stop is priced by the fight
+it replaces, so the map can carry more of them: the target is **55–60% fights** across the
+free layers (act bosses excluded — every route fights those). Stops still never crowd a layer
+— at most two, and every free layer keeps at least one fight.
 
-- Avg special tiles per map: **6.2**
-- Per type per map: merchant 1.98, shrine 1.68, recruit 1.00, elite 1.50
-- Max specials in a single layer (any map): **2**
+- Fights (battle or elite) among free-layer nodes: **58%** (band 50%–63%; target 55–60%)
+- Avg special tiles per map: **13.7**
+- Per type per map: merchant 2.98, shrine 2.01, recruit 1.79, campfire 4.47, elite 2.41
+- Max stops in a single layer (any map): **2** · free layers with no fight: **0**
 
 ## 10. Curse affixes (are the tradeoffs real?)
 
@@ -419,90 +487,83 @@ hands over a hero at the roster **median level minus 3**, not a level-1 body.
 Both models are reported. The strict one is kept because it is a useful lower
 bound on how badly a first run can be played; the graded one is the realistic one.
 
-**Both models now charge Threat on every node the run consumes.** They did not
-always: `completeNode` used to leave Threat untouched, so a merchant, shrine or
-recruit stop skipped a ×1.42 step outright and paid a reward for it. That made
-"take the special" close to strictly correct on both axes at once, which is the
-one thing a route fork cannot survive. Specials now charge
-**×1.13 (`THREAT_PER_NODE.special`)** — smaller than a battle, but not nothing.
+**Threat follows the road (Phase 3b).** Both models fight every layer at
+`threatAtLayer(layer)` — the same number whatever route reached it. The old rules
+charged every battle ×1.42 (×1.52 an elite), every stop ×1.13 and every accepted
+hire, pact or mutation ×1.05, which made taking power a Threat bill and put the boss
+anywhere from ×15 to ×30 depending on greed. A stop now costs the fight it replaces —
+its XP, gold and card — and nothing else.
 
 | Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |
 |---|--:|--:|--:|--:|--:|--:|--:|
-| Strict floor — 10 forced battles, no shops, no hires, random card | 120 | **1%** | 6.3 | 7.3 | 1.0 | depth 7 | 31% |
-| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 120 | **3%** | 6.5 | 7.5 | 2.9 | depth 7 | 31% |
-| route: specials-first (the shipped heuristic) | 120 | **24%** | 7.5 | 5.9 | 2.4 | depth 10 | 23% |
-| route: battles-first | 120 | **26%** | 8.0 | 8.1 | 2.2 | depth 9 | 23% |
-| route: recruits, else battles | 120 | **28%** | 8.0 | 7.7 | 2.6 | depth 9 | 21% |
-| route: adaptive (reads the run state) | 120 | **25%** | 8.0 | 7.6 | 2.6 | depth 10 | 24% |
-| _counterfactual_ — pre-fix: specials advance Threat by nothing | 120 | **38%** | 8.1 | 6.2 | 2.4 | depth 10 | 18% |
-| _counterfactual_ — specials charge the FULL battle step | 120 | **8%** | 6.7 | 5.5 | 2.2 | depth 10 | 24% |
+| Strict floor — 10 forced battles, no shops, no hires, random card | 120 | **5%** | 6.7 | 7.7 | 1.0 | depth 6 | 34% |
+| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 120 | **6%** | 8.2 | 9.2 | 3.0 | depth 9 | 37% |
+| route: specials-first (the shipped heuristic) | 120 | **17%** | 9.4 | 4.4 | 4.5 | depth 10 | 35% |
+| route: battles-first | 120 | **27%** | 9.4 | 8.8 | 3.3 | depth 10 | 23% |
+| route: recruits, else battles | 120 | **23%** | 9.3 | 7.6 | 4.3 | depth 10 | 31% |
+| route: adaptive (reads the run state) | 120 | **28%** | 9.7 | 6.4 | 4.7 | depth 10 | 36% |
 
 **The routing spread.** Same seeds, same starting heroes, same map — only the
 rule for choosing the next node changes:
 
 | Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |
 |---|--:|--:|--:|--:|
-| route: specials-first (the shipped heuristic) ← **gated (ceiling)** | **24%** | 7.5 | 5.9 | ×14.8 |
-| route: battles-first | **26%** | 8.0 | 8.1 | ×21.8 |
-| route: recruits, else battles ← **gated (floor)** | **28%** | 8.0 | 7.7 | ×20.4 |
-| route: adaptive (reads the run state) | **25%** | 8.0 | 7.6 | ×19.9 |
+| route: specials-first (the shipped heuristic) ← **gated (ceiling)** | **17%** | 9.4 | 4.4 | ×4.0 |
+| route: battles-first | **27%** | 9.4 | 8.8 | ×4.0 |
+| route: recruits, else battles | **23%** | 9.3 | 7.6 | ×4.0 |
+| route: adaptive (reads the run state) ← **gated (floor)** | **28%** | 9.7 | 6.4 | ×4.0 |
 
-Spread across the set: **24% – 28%** — 3 points between the line the report used to grade and the best one it can find.
+Spread across the set: **17% – 28%** — 12 points between the line the report used to grade and the best one it can find.
 
 Survival curve — share of fresh runs that clear each node:
 
-| Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Strict floor | 100% | 100% | 100% | 91% | 83% | 77% | 46% | 24% | 9% | 1% |
-| Strict + 2 recruits | 100% | 100% | 100% | 95% | 85% | 82% | 51% | 25% | 11% | 3% |
-| specials | 100% | 100% | 100% | 98% | 84% | 78% | 65% | 53% | 47% | 24% |
-| battles | 100% | 100% | 100% | 98% | 94% | 89% | 81% | 68% | 45% | 26% |
-| recruits | 100% | 100% | 100% | 98% | 93% | 89% | 80% | 68% | 48% | 28% |
-| adaptive | 100% | 100% | 100% | 98% | 93% | 88% | 79% | 68% | 49% | 25% |
-| _cf_ — specials ×1.00 (pre-fix) | 100% | 100% | 100% | 98% | 92% | 84% | 75% | 64% | 56% | 38% |
-| _cf_ — specials ×1.42 (full step) | 100% | 100% | 100% | 94% | 78% | 68% | 53% | 43% | 32% | 8% |
+| Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Strict floor | 100% | 100% | 100% | 100% | 99% | 65% | 38% | 35% | 14% | 10% | 5% | 5% |
+| Strict + 2 recruits | 100% | 100% | 100% | 100% | 100% | 88% | 79% | 78% | 42% | 19% | 8% | 6% |
+| specials | 100% | 100% | 100% | 100% | 100% | 98% | 90% | 84% | 79% | 44% | 33% | 17% |
+| battles | 100% | 100% | 100% | 100% | 100% | 98% | 88% | 86% | 68% | 45% | 31% | 27% |
+| recruits | 100% | 100% | 100% | 100% | 100% | 99% | 88% | 88% | 70% | 39% | 27% | 23% |
+| adaptive | 100% | 100% | 100% | 100% | 100% | 100% | 92% | 92% | 79% | 43% | 34% | 28% |
 
-Nodes-cleared histogram (strict): 0:0  1:0  2:0  3:11  4:10  5:7  6:37  7:26  8:18  9:10  10:1
-Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:3  4:16  5:8  6:15  7:15  8:7  9:27  10:29
+Nodes-cleared histogram (strict): 0:0  1:0  2:0  3:0  4:1  5:41  6:32  7:4  8:25  9:5  10:6  11:0  12:6
+Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:0  4:0  5:3  6:9  7:7  8:6  9:42  10:14  11:19  12:20
 
 Average nodes cleared by starting archetype (gated line): 
-**fighter** 6.8, **rogue** 7.7, **mystic** 8.0.
+**fighter** 9.0, **rogue** 9.4, **mystic** 9.9.
 
 **Findings.**
 
-- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 1% when the model refuses to spend gold, hire or read a card, and 24% when it does what the game offers.
-- **The largest single term in a fresh run is the route.** 3 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
-- **Every stop is a trap on the current numbers.** The specials-first line takes 4.1 more non-battle nodes than the battles-first line and wins 2 points less. A merchant charges a ×1.13 Threat step for a shelf a 60-gold run mostly cannot buy from, and a shrine charges it again for a pact. This is not a routing lesson the game teaches anywhere, and it is the mechanism behind two other findings: it is why "no Merchants" could not carry a Banner rung (see `metaStore`), and why a map with *more* forks reads negative on this line in §12. **Handoff:** the dials are `THREAT_PER_NODE.special`, `ITEM_PRICE` and the merchant stock roll, none of which are in this workstream.
-- The curve has a real bite at every node rather than one cliff: no single depth ends more than 23% of gated-line runs (depth 10 is the worst).
+- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 5% when the model refuses to spend gold, hire or read a card, and 17% when it does what the game offers.
+- **The largest single term in a fresh run is the route.** 12 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
+- **A stop is a price now, not a trap.** The specials-first line fights 4.4 fewer battles than the battles-first line and wins 10 points less. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
+- The curve has a real bite at every node rather than one cliff: no single depth ends more than 35% of gated-line runs (depth 10 is the worst).
 - Depths 1–3 are not a wall — 100% of gated-line zero-meta runs clear depth 3 — and neither is any single later node.
 
 **Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through
-ten straight battles and wins 50% of the time; the zero-meta first run, played the
-way the game is actually laid out, wins 24% on the first-timer line and 28% on the best
+all twelve layers and wins 57% of the time; the zero-meta first run, played the
+way the game is actually laid out, wins 17% on the first-timer line and 28% on the best
 one. The gap between those numbers is what the meta layer and the player's own
 learning are worth, and it is now a difference in *how much slack you have*, not
 the difference between a game and a grind gate.
 
-**The two bands no longer fight each other.** §6 fights ten straight battles and
-meets the boss at a measured mean Threat of **×30.4**. Before specials were charged, a
-routed first run met it at **×10.9** — a **2.8×** gap. Since every dial in `waves.ts` /
-`enemies.ts` is multiplied by Threat, that gap is the exchange rate between the two
-sweeps: a wave-table change that moved §11 by one point moved §6 by roughly that many.
-Charging specials at ×1.13 puts a routed run at **×14.8** — a **2.1×** gap. The wave
-table can now be tuned for one band without silently detonating the other, which is
-the structural half of this change and outlives the particular number fitted here.
+**The two bands meet the boss at the same Threat.** §6 and a routed first run both fight
+every layer at `threatAtLayer`, so the final boss is ×2.2 in §6 and ×4.0 on the first-timer line —
+the exchange-rate problem the old special step was introduced to narrow (a routed run used to
+meet the boss at ×11–15 against §6's ×30) is gone by construction: a wave-table dial now lands
+equally hard on both sweeps.
 
 **The three gates.**
 
-1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **28%** (recruits). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
-2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **24%**.
-3. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 50% against this sweep's best line at 28%, and §12 puts the same comparison on a like-for-like footing.
+1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **28%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
+2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **17%**.
+3. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 57% against this sweep's best line at 28%, and §12 puts the same comparison on a like-for-like footing.
 
 The design *target* inside the band remains **15–25%** on the gated line. The band
 is wide partly because this is a Monte Carlo over 120 runs of a *modelled* player
 (1σ ≈ 4.6pt), and partly for a reason that belongs in the open.
 
-**The shipped number is 24%.** Two structural corrections moved it, and both were
+**The shipped number is 17%.** Two structural corrections moved it, and both were
 the harness being wrong rather than the game changing:
 
 | Correction | What it was |
@@ -529,18 +590,6 @@ constant's own doc comment for the before/after on both sweeps.
 | budget curve front-loaded | 42% → **47%** | 53% → 55% | wrong direction |
 | enemy speed ×1.5, boss 0.86 | 45% → 30% | 50% | §4 censors, §6 concentration 74% |
 
-**Why the special step is a *partial* one.** The rule is fitted on exactly one free
-parameter, `THREAT_PER_NODE.special`, and the two counterfactual rows above bracket
-it: ×1.00 (the pre-fix game) wins 38% on the gated line, ×1.42 (the full battle step)
-wins 8%. Note what the policy set adds to that old fit: the step barely moves the
-battles-first line at all, because that line does not take the stops. It is a dial on
-*how badly bad routing is punished*, not a dial on the game's difficulty — which is
-why it could not be used to bring the win rate down this time.
-
-The greed tax composes on top: **visiting** a shrine costs
-×1.13; **taking** the pact costs ×1.13 × 1.05 = ×1.19. Walking away is still cheaper
-than accepting, and both are cheaper than fighting.
-
 ## 12. What the hub sells (does a purchase ever make the game worse?)
 
 **Why this exists.** `Cartographer's Table` shipped as a 120-mark horizontal
@@ -560,13 +609,14 @@ two standard errors of that paired difference.
 
 | Hub state | specials | battles | recruits | adaptive | worst gated Δ |
 |---|--:|--:|--:|--:|--:|
-| zero meta | 26% (+0±0) | 26% (+0±0) | 30% (+0±0) | 29% (+0±0) | +0pt |
-| Cartographer's Table | 36% (+10±9) | 26% (+0±8) | 34% (+4±9) | 34% (+5±8) | +0pt |
-| Free Companies | 27% (+1±7) | 31% (+6±7) | 34% (+4±8) | 32% (+3±8) | +1pt |
-| Standing Orders | 27% (+1±3) | 28% (+2±3) | 31% (+1±3) | 32% (+3±4) | +1pt |
-| all three unlocks | 34% (+9±9) | 26% (+0±9) | 40% (+10±10) | 40% (+10±10) | +0pt |
-| the full ramp | 40% (+14±9) | 42% (+17±9) | 43% (+13±10) | 43% (+14±9) | +13pt |
-| everything the hub sells | 39% (+13±9) | 52% (+27±9) | 43% (+13±9) | 40% (+11±9) | +11pt |
+| zero meta | 21% (+0±0) | 28% (+0±0) | 20% (+0±0) | 30% (+0±0) | +0pt |
+| Cartographer's Table | 22% (+1±8) | 41% (+13±9) | 28% (+8±8) | 41% (+12±9) | +1pt |
+| Free Companies | 22% (+1±6) | 37% (+10±8) | 26% (+6±8) | 33% (+4±7) | +1pt |
+| Standing Orders | 23% (+2±4) | 28% (+0±0) | 19% (−1±2) | 31% (+1±2) | −1pt |
+| all three unlocks | 22% (+1±7) | 40% (+13±9) | 30% (+9±8) | 44% (+15±8) | +1pt |
+| Field Kitchen + Relic Cartulary | 20% (−2±3) | 28% (+0±4) | 21% (+1±3) | 32% (+2±3) | −2pt |
+| the full ramp | 38% (+16±8) | 38% (+10±9) | 32% (+11±8) | 42% (+12±9) | +10pt |
+| everything the hub sells | 36% (+15±8) | 38% (+10±10) | 27% (+7±9) | 44% (+14±9) | +7pt |
 
 **The invariant.** No hub state — any unlock alone, all of them together, the ramp,
 or everything the hub sells — may measure below zero meta by more than the paired
@@ -577,7 +627,7 @@ worse, only that it did.
 
 At 210 runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; `FW_META_RUNS=500` halves it for a fit.
 
-**Does the campaign notice a team?** The full ramp is worth **+17pt** over zero meta at its best (specials +14, battles +17, recruits +13, adaptive +14). The gate asks for ≥ 8%: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.
+**Does the campaign notice a team?** The full ramp is worth **+16pt** over zero meta at its best (specials +16, battles +10, recruits +11, adaptive +12). The gate asks for ≥ 8%: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.
 
 **The breadth each unlock promises is checked separately**, because a horizontal
 unlock is not supposed to move the win rate at all — it is supposed to widen the
@@ -585,16 +635,16 @@ run. A card that promises forks has to produce forks:
 
 | Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |
 |---|--:|--:|--:|--:|--:|
-| default (zero meta) | 11.0 | 49% | 25% | 41% | 6.2 |
-| Cartographer's Table | 11.0 | 11% | 42% | 0% | 5.4 |
-| Standing Orders | 11.0 | 46% | 28% | 0% | 6.2 |
-| Free Companies | 11.0 | 49% | 28% | 42% | 7.1 |
+| default (zero meta) | 13.0 | 38% | 53% | 28% | 13.7 |
+| Cartographer's Table | 13.0 | 0% | 81% | 0% | 14.3 |
+| Standing Orders | 13.0 | 34% | 56% | 0% | 13.7 |
+| Free Companies | 13.0 | 38% | 54% | 29% | 14.1 |
 
 **Findings.**
 
-- `Cartographer's Table` is now width, not length: same 11 layers, same boss budget, choiceless steps 49% → 11% and mixed forks 25% → 42%. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.
-- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries 0.7 fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.
-- `Standing Orders` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them 41% → 0%.
+- `Cartographer's Table` is now width, not length: same 13.0 layers, same boss budget, choiceless steps 38% → 0% and mixed forks 53% → 81%. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.
+- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries -0.7 fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.
+- `Standing Orders` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them 28% → 0%.
 - `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign's dominant term.
 - **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.
 
@@ -619,10 +669,10 @@ record a ladder keeps should measure skill, and a marks price measures grinding.
 
 | Banner | Rule it adds | ×marks | Win rate | **Marks / run** | Δ marks |
 |--:|---|--:|--:|--:|--:|
-| 0 · — (no Banner) | — | ×1 | 32% | **103.8** | — |
-| 1 · Thin Pickings | Every clear offers two reward cards instead of three. Half the build, same march. | ×1.4 | 26% | **132.8** | +29 |
-| 2 · Elite Watch | Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5. | ×2.5 | 17% | **168.7** | +36 |
-| 3 · Blood Price | No recruits, anywhere. The company you start with is the company you finish with. | ×3.5 | 9% | **204.6** | +36 |
+| 0 · — (no Banner) | — | ×1 | 33% | **117.4** | — |
+| 1 · Thin Pickings | Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants stock one item fewer, and the Crossroads offers two mutations. Half the build, same march. | ×1.4 | 27% | **154.3** | +37 |
+| 2 · Elite Watch | Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5. | ×2.5 | 17% | **214.3** | +60 |
+| 3 · Blood Price | No recruits, anywhere. The company you start with is the company you finish with. | ×4.2 | 5% | **236.1** | +22 |
 
 **Two invariants.**
 
@@ -634,7 +684,7 @@ record a ladder keeps should measure skill, and a marks price measures grinding.
    the ladder. This is the check the old ladder failed: its payout multipliers
    exactly cancelled the difficulty they added, so climbing was never worth it.
 
-Measured: the win rate falls at every rung (32% → 26% → 17% → 9%; the smallest step is 6.2pt) and the payout rises at every rung (103.8 → 132.8 → 168.7 → 204.6).
+Measured: the win rate falls at every rung (33% → 27% → 17% → 5%; the smallest step is 5.7pt) and the payout rises at every rung (117.4 → 154.3 → 214.3 → 236.1).
 
 **Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired
 runs on the specials / battles / adaptive lines:
@@ -858,15 +908,15 @@ because a 20-HP base dies to the four points a 96%-stop wave puts through.
 
 | Depth | Kind | Variant | Base HP leaked (mean of 14 teams × 2 fields) | vs the canonical shape |
 |--:|---|---|--:|--:|
-| 8 | normal | Patrol | 7.39 | ×1.00 |
-| 8 | normal | Swarm | 3.86 | ×0.52 |
-| 8 | normal | Bombard | 5.75 | ×0.78 |
-| 8 | normal | Column | 6.17 | ×0.83 |
-| 8 | elite | Plated Column | 14.94 | ×1.00 |
-| 8 | elite | Warded Host | 8.43 | ×0.56 |
-| 8 | elite | Swift Raid | 12.77 | ×0.85 |
+| 8 | normal | Patrol | 0.00 | — |
+| 8 | normal | Swarm | 0.00 | — |
+| 8 | normal | Bombard | 0.00 | — |
+| 8 | normal | Column | 0.00 | — |
+| 8 | elite | Plated Column | 0.00 | — |
+| 8 | elite | Warded Host | 0.00 | — |
+| 8 | elite | Swift Raid | 0.00 | — |
 
-Widest unadapted spread: **×1.91** at depth 8 normal (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.
+Widest unadapted spread: **×1.00** at  (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.
 
 **What this gate is worth, stated plainly.** `budgetScale` is fitted *against*
 this number, so a green §14c is not independent evidence that the shapes are
@@ -929,24 +979,22 @@ distinct shapes that exist. Both halves are checked below.
 
 Battle nodes from depth 3 up — **normal and elite** (where all three factions are legal) — differ by at least **39%** mean body-mix distance in the worst cell (elite:7:4, floor 30%). At depths 1–2 the pool holds 1–2 shapes against layers up to 4 nodes wide, so this mean would be measuring the pigeonhole rather than the table; the rotation check above is what holds those layers.
 
-## 15. Reward cards (the hand you are dealt after every clear)
+## 15. Relics (the company-wide half of every reward hand)
 
-**What was missing.** `generateRewardCards` appears in this whole suite twice —
-§11's fresh run and `runsim.ts` — and both absorb a **random** card into a win
-rate. No sweep enumerated `STAT_CARDS`; none of the fourteen sweeps in
-`balance/README.md` was about reward cards. So the offer a player answers after
-every single cleared wave, all run long, was the one system in the game graded by
-nothing, while `rewards.ts` asserted a rarity ladder ("the grant scales with the
-tier") that had never been checked. It was **inverted**: two of the three
-legendaries measured net negative, an epic measured −2.9pt, and the best card in
-the game was a rare.
+**What changed (Phase 3b).** Keepsakes (body-slot items that buffed the whole company)
+and team stat cards (rewards that buffed the whole company) did one job with two
+vocabularies. They are one pool of **relics** now: a run-long possession taken from
+a reward hand (every elite deals one, an act boss deals three). About half are no
+longer "+x%" but a **rule** — a ward, a cadence, a rush, a charter — and no relic sells
+plain "+x% damage", which removed one of the eight `damageMult` sources.
 
-**What it does now.** Every card is applied alone — `mods` as `teamMods`, exactly
-the way `finishBattle` applies them, and stats / Thorns / Patience onto the hero —
-and graded on the same **stop rate** §4, §8 and §10 use. Four benches: §8's three
-on a physical Weaponmaster, plus §4's `magic` bench on a Stormcaller, because a
-card is team-wide and half of them do nothing on a STR build (this is the same
-defect §4 was rebuilt to fix — `insight` read +0% on a physical bench forever).
+**How they are graded.** A relic that acts inside a fight (a stat relic, or a rule the
+engine keeps) is applied alone — its mods as `teamMods`, exactly as `startWave` hands
+them over, its stats onto the hero — and graded on **stop rate** on four benches, as
+the stat cards were: §8's three on a physical Weaponmaster and §4's `magic` bench on a
+Stormcaller. A relic that changes the RUN (hires, Gate, merchants, XP, gold) cannot be
+seen in one wave, so it is graded on whole runs instead: held from the first node, on
+paired seeds, against the same runs without it.
 
 | Bench | What it loads | Baseline stop rate |
 |---|---|--:|
@@ -957,47 +1005,44 @@ defect §4 was rebuilt to fix — `insight` read +0% on a physical bench forever
 
 6 seeds per cell.
 
-| Card | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |
-|---|---|--:|--:|--:|--:|--:|--:|---|
-| Might | Common | +0.0pt | +8.3pt | +0.0pt | +0.0pt | **+2.1pt** | +0.0pt | — |
-| Finesse | Common | +2.2pt | +6.9pt | −0.2pt | −4.2pt | **+1.2pt** | −4.2pt | — |
-| Insight | Common | +0.0pt | +0.0pt | +0.0pt | +2.2pt | **+0.6pt** | +0.0pt | — |
-| Resolve | Common | +0.0pt | +4.2pt | −0.4pt | +1.5pt | **+1.3pt** | −0.4pt | — |
-| Ferocity | Rare | +0.0pt | +4.2pt | +0.0pt | +0.4pt | **+1.1pt** | +0.0pt | — |
-| Haste | Rare | +3.3pt | +6.9pt | +0.0pt | −4.5pt | **+1.5pt** | −4.5pt | — |
-| Power | Rare | +0.0pt | +26.4pt | −1.2pt | +3.2pt | **+7.1pt** | −1.2pt | — |
-| Reach | Rare | +1.1pt | +2.8pt | −6.0pt | +12.7pt | **+2.6pt** | −6.0pt | — |
-| Ruin | Rare | +0.0pt | +13.9pt | −1.2pt | +0.7pt | **+3.4pt** | −1.2pt | — |
-| Close Quarters | Epic | −3.3pt | +19.4pt | +7.2pt | +2.4pt | **+6.4pt** | −3.3pt | −18% range · whole company |
-| Long Watch | Epic | +2.2pt | +16.7pt | −4.3pt | +12.7pt | **+6.8pt** | −4.3pt | −8% attack rate · whole company |
-| Whetstone Pact | Epic | +12.2pt | +1.4pt | −3.9pt | +19.4pt | **+7.3pt** | −3.9pt | the company never crits |
-| Bloodletting | Epic | +3.3pt | +23.6pt | −2.3pt | +8.1pt | **+8.2pt** | −2.3pt | −22% hero HP · whole company |
-| Executioner’s Oath | Legendary | −3.3pt | +45.8pt | +4.8pt | −6.1pt | **+10.3pt** | −6.1pt | −12% attack rate · whole company |
-| Wildfire Pact | Legendary | +0.0pt | −2.8pt | −0.6pt | +31.8pt | **+7.1pt** | −2.8pt | −35% damage per hit · whole company |
-| Iron Vigil | Legendary | +2.2pt | +30.6pt | +0.8pt | −7.5pt | **+6.5pt** | −7.5pt | −14% damage · whole company |
+| Relic | Kind | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |
+|---|---|---|--:|--:|--:|--:|--:|--:|---|
+| Drillmaster's Ledger | stat | Common | +0.0pt | +11.1pt | +0.2pt | −0.2pt | **+2.8pt** | −0.2pt | — |
+| Watch Hourglass | stat | Common | +0.0pt | +4.2pt | −0.4pt | +1.5pt | **+1.3pt** | −0.4pt | — |
+| Hunting Horn | stat | Rare | +3.3pt | +6.9pt | +0.0pt | +4.7pt | **+3.8pt** | +0.0pt | — |
+| Keen Whetstone | stat | Rare | +0.0pt | +20.8pt | −0.6pt | +1.5pt | **+5.4pt** | −0.6pt | — |
+| Close Quarters | stat | Epic | −3.3pt | +19.4pt | +7.2pt | +2.4pt | **+6.4pt** | −3.3pt | −18% range · whole company |
+| Whetstone Pact | stat | Epic | +12.2pt | +1.4pt | −3.9pt | +19.4pt | **+7.3pt** | −3.9pt | the company never crits |
+| Bloodletting | stat | Epic | +3.3pt | +23.6pt | −2.3pt | +8.1pt | **+8.2pt** | −2.3pt | −22% hero HP · whole company |
+| Executioner’s Oath | stat | Legendary | −3.3pt | +45.8pt | +4.8pt | −6.1pt | **+10.3pt** | −6.1pt | −12% attack speed · whole company |
+| Wildfire Pact | stat | Legendary | +0.0pt | −2.8pt | −0.6pt | +31.8pt | **+7.1pt** | −2.8pt | −35% damage per hit · whole company |
+| Iron Vigil | stat | Legendary | +2.2pt | +30.6pt | +0.8pt | −7.5pt | **+6.5pt** | −7.5pt | −14% damage · whole company |
+| Warding Stone | rule | Rare | +2.2pt | +16.7pt | +2.3pt | +1.5pt | **+5.7pt** | +1.5pt | — |
+| Bloodhound Banner | rule | Rare | +12.2pt | +25.0pt | +5.4pt | +0.0pt | **+10.7pt** | +0.0pt | — |
+| Ambush Drum | rule | Rare | +6.7pt | +0.0pt | +1.6pt | +2.4pt | **+2.6pt** | +0.0pt | — |
+| Veteran's Cloak | rule | Epic | +8.9pt | +12.5pt | +1.6pt | +15.3pt | **+9.6pt** | +1.6pt | — |
+| Last Rampart | rule | Epic | +0.0pt | +18.1pt | +1.2pt | +0.0pt | **+4.8pt** | +0.0pt | — |
 
-| Rarity | Cards | Mean value |
+| Rarity (stat relics) | Relics | Mean value |
 |---|--:|--:|
-| Common | 4 | **+1.3pt** |
-| Rare | 5 | **+3.1pt** |
-| Epic | 4 | **+7.2pt** |
+| Common | 2 | **+2.0pt** |
+| Rare | 2 | **+4.6pt** |
+| Epic | 3 | **+7.3pt** |
 | Legendary | 3 | **+8.0pt** |
 
-**Three invariants.** (1) no card may be a trap — a mean below
-−2.0pt over the four benches; (2) a card that states a downside must be a real
-trade — at least +2.0pt of upside somewhere *and* that much cost somewhere, which is
-exactly what §8 asks of a mutation and §10 of a curse; (3) **the rarity ladder must
-go up**, because rarity is the only thing the offer tells a player about value
-before they pick. As shipped it read +0.8 / +3.4 / +3.7 / **+0.5**.
+**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 31%):
 
-**What is reported and NOT gated, and why.** The four commons (+3/+4 of one core
-stat, +4 Patience) sit at or under this bench's resolution: one leak point on the
-`armour` bench is 4.2pt and on `line` 0.4pt, so a card worth half a point cannot
-be told from a card worth nothing here. They are printed above at face value —
-`Insight` in particular reads ~+0.2pt, and that is a real statement about a +4 INT
-card on a hero who already has thirty of them, not a rounding artifact. A floor
-this bench cannot resolve would be a gate that passes on noise, which is the
-failure mode `balance/README.md` lists as trap 2.
+| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
+|---|---|---|--:|--:|
+| Mercenary Charter | Rare | Recruits arrive at your company’s median level instead of three behind it. | 33% | +3±9pt |
+| Field Surgeon's Kit | Common | The Gate recovers 2 after every fight you win. | 31% | +1±3pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 33% | +3±9pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 39% | +8±9pt |
+| Tithe Box | Common | +10 gold for every fight you win. | 30% | −1±3pt |
+
+**Declared, not dealt.** Ember Urn (`burnSpreadOnDeath`), Signal Flare (`command:flare`) — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
+
+**No plain "+x% damage" relic:** none in the pool. Damage relics are pacts, which is the point.
 
 ## Verdict
 

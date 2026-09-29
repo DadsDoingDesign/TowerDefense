@@ -80,12 +80,12 @@ const VIEWPORTS = [
 // Installed into the page after every navigation. Everything a shot needs to
 // build deterministic state lives here so shot bodies stay one-liners.
 const INSTALL = async () => {
-  const [items, sentinels, mutations, rng, upgradeTree] = await Promise.all([
+  const [items, sentinels, mutations, rng, perks] = await Promise.all([
     import('/src/game/data/items.ts'),
     import('/src/game/data/sentinels.ts'),
     import('/src/game/data/mutations.ts'),
     import('/src/game/core/rng.ts'),
-    import('/src/game/data/upgradeTree.ts'),
+    import('/src/game/data/perks.ts'),
   ])
   const R = new rng.RNG(12345)
   const g = window.__game
@@ -93,7 +93,7 @@ const INSTALL = async () => {
   const mk = (rarity, slot) => items.generateItem(new rng.RNG(rarity.length * 977 + (slot ? slot.length : 3)), { rarity, slot })
 
   window.__h = {
-    items, sentinels, mutations, upgradeTree, RNG: rng.RNG, R, g, mk,
+    items, sentinels, mutations, perks, RNG: rng.RNG, R, g, mk,
     set: (o) => g.setState(o),
     get: () => g.getState(),
     // A roster of three, one per archetype, levelled for interesting cards.
@@ -456,7 +456,7 @@ const SHOTS = [
         const h = window.__h
         h.startBattle()
         const st = h.get()
-        const hero = { ...st.roster[0], level: 16, upgrades: { power: 2, tempo: 1 } }
+        const hero = { ...st.roster[0], level: 16, perks: ['f5_second_wind'] }
         const slot = Object.keys(st.placements)[0]
         h.set({ roster: [hero, ...st.roster.slice(1)], placements: { ...st.placements, [slot]: hero.id }, gold: 500, upgradeTarget: hero.id })
       })
