@@ -94,6 +94,19 @@ import {
   type Stat,
 } from './harness'
 
+/**
+ * `FW_SECTIONS=6,11,12 npm run balance` runs only those sections, their
+ * invariants and their console lines — for iterating on a number without paying
+ * for the whole suite. A filtered run never touches `REPORT.md` (the golden
+ * file): it prints its sections and writes them to `REPORT.sections.md`
+ * (ignored by version control). A section that quotes another one's result in
+ * its prose reads `NaN` when that section was not asked for; no gate reads
+ * across sections. Unset, every section runs and the output is unchanged.
+ */
+const SECTIONS = process.env.FW_SECTIONS
+  ? new Set(process.env.FW_SECTIONS.split(',').map((s) => Number(s.trim())).filter((n) => n > 0))
+  : null
+const want = (n: number): boolean => !SECTIONS || SECTIONS.has(n)
 const f1 = (n: number) => n.toFixed(1)
 const f2 = (n: number) => n.toFixed(2)
 const pct = (n: number) => `${(n * 100).toFixed(0)}%`
@@ -103,6 +116,8 @@ const pm = (s: Stat, digits = 1) => `${s.mean.toFixed(digits)} ±${s.std.toFixed
 const md: string[] = []
 const failures: string[] = []
 const line = (s = '') => md.push(s)
+/** One console line per section, pushed when it runs (see the end of the file). */
+const summary: string[] = []
 
 line('# Fieldwatch — Balance Report')
 line('')
@@ -115,470 +130,481 @@ line('than per-Sentinel damage attribution, and because it has a real failure mo
 line('')
 
 // -------------------------------------------------------------- Sweep 1
-// Solo-offense throughput for every specialization (epic gear).
-line('## 1. Specialization throughput (all 27, Epic gear)')
-line('')
-line('**What broke here (M19-f).** This sweep used to report *damage dealt ÷ clear time*')
-line('on a wave the tower could not run out of — `baseHp: 999`, a depth-6 roster at ×1.8')
-line('HP — and gate "no dominant outlier" on the spread of that number. The wave is')
-line('**spawn-bound**: it ends when the last enemy is dealt with, and the last enemy')
-line('cannot be dealt with before it arrives, so every build shared a floor on clear time')
-line('and the measured spread compressed to **1.4×** while the analytic spread across the')
-line('same 27 builds was **14×**. An invariant with a 3× ceiling over a number that')
-line('cannot exceed 1.5× is not an invariant. It also fed a ⚠️ flag off mean ± 2σ of that')
-line('compressed distribution, which flagged builds that were not outliers and missed')
-line('ones that were.')
-line('')
+if (want(1)) {
+  // Solo-offense throughput for every specialization (epic gear).
+  line('## 1. Specialization throughput (all 27, Epic gear)')
+  line('')
+  line('**What broke here (M19-f).** This sweep used to report *damage dealt ÷ clear time*')
+  line('on a wave the tower could not run out of — `baseHp: 999`, a depth-6 roster at ×1.8')
+  line('HP — and gate "no dominant outlier" on the spread of that number. The wave is')
+  line('**spawn-bound**: it ends when the last enemy is dealt with, and the last enemy')
+  line('cannot be dealt with before it arrives, so every build shared a floor on clear time')
+  line('and the measured spread compressed to **1.4×** while the analytic spread across the')
+  line('same 27 builds was **14×**. An invariant with a 3× ceiling over a number that')
+  line('cannot exceed 1.5× is not an invariant. It also fed a ⚠️ flag off mean ± 2σ of that')
+  line('compressed distribution, which flagged builds that were not outliers and missed')
+  line('ones that were.')
+  line('')
 
-interface SpecRow {
-  id: string
-  name: string
-  archetype: string
-  support: boolean
-  dps: Stat
-  /** Raw HP of damage dealt inside the window — the un-quantised number (m-2). */
-  damage: Stat
-  analyticDps: number
-  cleared: boolean
-}
-const SPEC_SEEDS = SEEDS.slice(0, 3)
-/**
- * The saturated throughput scenario. `barrel4` is the slowest body in the game
- * (60px/s on a 2290px lane) and the toughest, so forty of them at ×6 HP is a
- * target-rich field for the whole window with nothing leaking out of it.
- */
-const THROUGHPUT_WINDOW = 40
-const THROUGHPUT_COUNT = 40
-const THROUGHPUT_HP_MULT = 12
-const THROUGHPUT_WAVE = makeWave(
-  [{ typeId: 'barrel4', count: THROUGHPUT_COUNT, hpMult: THROUGHPUT_HP_MULT, gap: 0.8 }],
-  'saturated',
-)
-/** `ENEMY_TYPES.barrel4.baseHp` × the wave's multiplier — HP per kill. */
-const THROUGHPUT_HP = 430 * THROUGHPUT_HP_MULT
-/** The most this scenario can measure: if a build hits it, the bench is too small. */
-const THROUGHPUT_CEILING = (THROUGHPUT_COUNT * THROUGHPUT_HP) / THROUGHPUT_WINDOW
-line('**What it does now.** Throughput is measured as **enemy HP destroyed per second**')
-line(`inside a fixed ${THROUGHPUT_WINDOW}s window, on a queue the tower cannot exhaust and cannot outrun:`)
-line(`${THROUGHPUT_COUNT} Siege Barrels at ×${THROUGHPUT_HP_MULT} HP, one every 0.8s, on a lane they need 38s to walk. Nothing`)
-line('clears, nothing leaks out of the window, and the metric is read off the kill count')
-line('rather than per-Sentinel `damageDealt`, so the attribution gaps that made burn and')
-line('execute builds read *negative* cannot touch it.')
-line('')
-line('The density is deliberate and bounded: 20–40 bodies queued is the shape the game')
-line('actually ships in its back half. An earlier version of this bench used 150 bodies to')
-line('guarantee saturation and measured **6450 HP/s** for the top build — splash landing')
-line('on a blob nothing in the game generates, which is trap 4 in `balance/README.md`: the')
-line('sweep grading its own pressure model instead of its subject. There is now an')
-line('invariant on that too — if any build reaches 90% of what the bench can physically')
-line('measure, the bench is reported as saturating rather than quietly compressing again.')
-line('')
-line('Supports still read low here on purpose and are graded in §2.')
-line('')
-function throughput(s: Sentinel, seed: number): { hpPerSec: number; damage: number } {
-  const m = runBattle({
-    team: [{ sentinel: s, slotId: 's3' }],
-    depth: 6,
-    wave: THROUGHPUT_WAVE,
-    baseHp: 999,
-    maxSeconds: THROUGHPUT_WINDOW,
-    seed,
-    // A stat bench on a FIXED HP queue: its ceiling is count × HP ÷ window, and
-    // `hpPerSec` books kills × HP. The Siege Barrel is a splitter now (Phase
-    // 3a), so with the kit on every kill would book two imps' worth of bodies
-    // the queue never contained and the bench reads "saturating" at 2× its own
-    // ceiling. The kit is graded in §16; this bench grades the tower.
-    rules: { behaviours: false },
-  })
-  return { hpPerSec: (m.killCount * THROUGHPUT_HP) / THROUGHPUT_WINDOW, damage: m.totalDamage }
-}
-const specRows: SpecRow[] = []
-for (const node of TIER2_NODES) {
-  const built = buildSpec(node.id, { gearRarity: 'epic', seed: 7 })
-  const cells = SPEC_SEEDS.map((seed) => throughput(built, seed))
-  specRows.push({
-    id: node.id,
-    name: node.name,
-    archetype: node.archetype,
-    support: SUPPORT_SPECS.has(node.id),
-    dps: stat(cells.map((c) => c.hpPerSec)),
-    damage: stat(cells.map((c) => c.damage)),
-    analyticDps: computeCombat(built).dps,
-    cleared: soloOffense(node.id, { gearRarity: 'epic', seed: 7 }, SPEC_SEEDS[0]).cleared,
-  })
-}
-const offense = specRows.filter((r) => !r.support)
-const offDps = offense.map((r) => r.dps.mean)
-const offMean = mean(offDps)
-const offStd = std(offDps)
-const offMed = median(offDps)
-
-specRows.sort((a, b) => b.dps.mean - a.dps.mean)
-line('| Build | Archetype | Role | HP destroyed/s ± | Analytic DPS | Clears a depth-6 wave | vs median |')
-line('|---|---|---|--:|--:|:-:|--:|')
-for (const r of specRows) {
-  const ratio = offMed ? r.dps.mean / offMed : 0
-  const flag = !r.support && (ratio > 2 || ratio < 0.5) ? ' ⚠️' : ''
-  line(
-    `| ${r.name}${flag} | ${r.archetype} | ${r.support ? 'support' : 'offense'} | ${pm(r.dps)} | ${f1(r.analyticDps)} | ${r.cleared ? '✓' : '—'} | ${f2(ratio)}× |`,
+  interface SpecRow {
+    id: string
+    name: string
+    archetype: string
+    support: boolean
+    dps: Stat
+    /** Raw HP of damage dealt inside the window — the un-quantised number (m-2). */
+    damage: Stat
+    analyticDps: number
+    cleared: boolean
+  }
+  const SPEC_SEEDS = SEEDS.slice(0, 3)
+  /**
+   * The saturated throughput scenario. `barrel4` is the slowest body in the game
+   * (60px/s on a 2290px lane) and the toughest, so forty of them at ×6 HP is a
+   * target-rich field for the whole window with nothing leaking out of it.
+   */
+  const THROUGHPUT_WINDOW = 40
+  const THROUGHPUT_COUNT = 40
+  const THROUGHPUT_HP_MULT = 12
+  const THROUGHPUT_WAVE = makeWave(
+    [{ typeId: 'barrel4', count: THROUGHPUT_COUNT, hpMult: THROUGHPUT_HP_MULT, gap: 0.8 }],
+    'saturated',
   )
-}
-line('')
-const analyticSpread = Math.max(...offense.map((r) => r.analyticDps)) / Math.min(...offense.map((r) => r.analyticDps))
-line(
-  `Offense builds — mean **${f1(offMean)}**, median **${f1(offMed)}**, σ **${f1(offStd)}**, measured spread **${f2(Math.max(...offDps) / Math.min(...offDps))}×** (max/min) against an analytic spread of **${f2(analyticSpread)}×**.`,
-)
-line('')
-if (Math.max(...offDps) > THROUGHPUT_CEILING * 0.9) {
-  failures.push(
-    `The §1 throughput bench is saturating: the top build destroys ${f1(Math.max(...offDps))} HP/s against a bench ceiling of ${f1(THROUGHPUT_CEILING)}. A scenario a build can exhaust is spawn-bound again, which is the exact defect this rebuild replaced — raise \`THROUGHPUT_COUNT\` / \`THROUGHPUT_HP_MULT\`.`,
-  )
-}
-line('The ⚠️ flag is now the same rule the invariant is: a build over 2× or under 0.5×')
-line('the median. It used to be mean ± 2σ of a distribution the scenario had already')
-line('crushed, which is how a build at analytic 1494 got flagged while one at 1747 read')
-line('as normal.')
-line('')
+  /** `ENEMY_TYPES.barrel4.baseHp` × the wave's multiplier — HP per kill. */
+  const THROUGHPUT_HP = 430 * THROUGHPUT_HP_MULT
+  /** The most this scenario can measure: if a build hits it, the bench is too small. */
+  const THROUGHPUT_CEILING = (THROUGHPUT_COUNT * THROUGHPUT_HP) / THROUGHPUT_WINDOW
+  line('**What it does now.** Throughput is measured as **enemy HP destroyed per second**')
+  line(`inside a fixed ${THROUGHPUT_WINDOW}s window, on a queue the tower cannot exhaust and cannot outrun:`)
+  line(`${THROUGHPUT_COUNT} Siege Barrels at ×${THROUGHPUT_HP_MULT} HP, one every 0.8s, on a lane they need 38s to walk. Nothing`)
+  line('clears, nothing leaks out of the window, and the metric is read off the kill count')
+  line('rather than per-Sentinel `damageDealt`, so the attribution gaps that made burn and')
+  line('execute builds read *negative* cannot touch it.')
+  line('')
+  line('The density is deliberate and bounded: 20–40 bodies queued is the shape the game')
+  line('actually ships in its back half. An earlier version of this bench used 150 bodies to')
+  line('guarantee saturation and measured **6450 HP/s** for the top build — splash landing')
+  line('on a blob nothing in the game generates, which is trap 4 in `balance/README.md`: the')
+  line('sweep grading its own pressure model instead of its subject. There is now an')
+  line('invariant on that too — if any build reaches 90% of what the bench can physically')
+  line('measure, the bench is reported as saturating rather than quietly compressing again.')
+  line('')
+  line('Supports still read low here on purpose and are graded in §2.')
+  line('')
+  function throughput(s: Sentinel, seed: number): { hpPerSec: number; damage: number } {
+    const m = runBattle({
+      team: [{ sentinel: s, slotId: 's3' }],
+      depth: 6,
+      wave: THROUGHPUT_WAVE,
+      baseHp: 999,
+      maxSeconds: THROUGHPUT_WINDOW,
+      seed,
+      // A stat bench on a FIXED HP queue: its ceiling is count × HP ÷ window, and
+      // `hpPerSec` books kills × HP. The Siege Barrel is a splitter now (Phase
+      // 3a), so with the kit on every kill would book two imps' worth of bodies
+      // the queue never contained and the bench reads "saturating" at 2× its own
+      // ceiling. The kit is graded in §16; this bench grades the tower.
+      rules: { behaviours: false },
+    })
+    return { hpPerSec: (m.killCount * THROUGHPUT_HP) / THROUGHPUT_WINDOW, damage: m.totalDamage }
+  }
+  const specRows: SpecRow[] = []
+  for (const node of TIER2_NODES) {
+    const built = buildSpec(node.id, { gearRarity: 'epic', seed: 7 })
+    const cells = SPEC_SEEDS.map((seed) => throughput(built, seed))
+    specRows.push({
+      id: node.id,
+      name: node.name,
+      archetype: node.archetype,
+      support: SUPPORT_SPECS.has(node.id),
+      dps: stat(cells.map((c) => c.hpPerSec)),
+      damage: stat(cells.map((c) => c.damage)),
+      analyticDps: computeCombat(built).dps,
+      cleared: soloOffense(node.id, { gearRarity: 'epic', seed: 7 }, SPEC_SEEDS[0]).cleared,
+    })
+  }
+  const offense = specRows.filter((r) => !r.support)
+  const offDps = offense.map((r) => r.dps.mean)
+  const offMean = mean(offDps)
+  const offStd = std(offDps)
+  const offMed = median(offDps)
 
-/*
- * ---- "dealt no damage" now means dealt no damage (m-2) --------------------
- *
- * This read `r.dps.mean <= 0` and reported it as *"Build X dealt no damage
- * (broken)"*. `dps` here is **HP destroyed per second, read off the kill
- * count** — deliberately, so that burn and execute attribution gaps cannot
- * touch it — and the bench's body is a Siege Barrel at ×12 HP, i.e. **5,160 HP
- * per unit of measurement**. A build whose 40-second window does 5,000 damage to
- * one barrel and does not finish it therefore scored 0 and was reported as
- * broken, having dealt five thousand damage.
- *
- * That is not hypothetical and it is not an edge: Radiant's analytic DPS is
- * 126.7, so its whole window is ~5,068 HP against a 5,160-HP body — the check
- * was one percent of one barrel away from firing on a healthy build, and an
- * unrelated affix re-roll elsewhere in `items.ts` was enough to tip it, on four
- * builds at once.
- *
- * The invariant is kept and pointed at what it names. `BattleMetrics.totalDamage`
- * is the un-quantised number and it is what "dealt no damage" is a claim about;
- * a build that truly cannot hurt anything still fails, and now nothing else
- * does. The kill-quantised zero is a fact about the bench and belongs in the
- * reported low-end table below, which is where it now is.
- */
-for (const r of specRows) {
-  if (r.damage.mean <= 0) {
-    failures.push(
-      `Build "${r.name}" dealt no damage at all in ${THROUGHPUT_WINDOW}s (broken) — not "killed nothing", which is a different and legitimate result on a bench whose unit is a ${THROUGHPUT_HP}-HP body.`,
+  specRows.sort((a, b) => b.dps.mean - a.dps.mean)
+  line('| Build | Archetype | Role | HP destroyed/s ± | Analytic DPS | Clears a depth-6 wave | vs median |')
+  line('|---|---|---|--:|--:|:-:|--:|')
+  for (const r of specRows) {
+    const ratio = offMed ? r.dps.mean / offMed : 0
+    const flag = !r.support && (ratio > 2 || ratio < 0.5) ? ' ⚠️' : ''
+    line(
+      `| ${r.name}${flag} | ${r.archetype} | ${r.support ? 'support' : 'offense'} | ${pm(r.dps)} | ${f1(r.analyticDps)} | ${r.cleared ? '✓' : '—'} | ${f2(ratio)}× |`,
     )
   }
-}
-const zeroKill = specRows.filter((r) => r.dps.mean <= 0)
-if (zeroKill.length) {
+  line('')
+  const analyticSpread = Math.max(...offense.map((r) => r.analyticDps)) / Math.min(...offense.map((r) => r.analyticDps))
   line(
-    `**${zeroKill.length} build(s) finished nothing inside the window** — ${zeroKill.map((r) => `${r.name} (${f1(r.damage.mean)} HP of damage dealt)`).join(', ')} — against a bench body of ${THROUGHPUT_HP} HP. That is the metric's quantum, not a broken build: the invariant below is on damage dealt, which is the thing the sentence "dealt no damage" is about.`,
+    `Offense builds — mean **${f1(offMean)}**, median **${f1(offMed)}**, σ **${f1(offStd)}**, measured spread **${f2(Math.max(...offDps) / Math.min(...offDps))}×** (max/min) against an analytic spread of **${f2(analyticSpread)}×**.`,
   )
   line('')
-}
-const worstRatio = Math.max(...offDps) / offMed
-if (worstRatio > 3) failures.push(`Offense spread too wide: top build is ${f2(worstRatio)}× the median (>3×) on saturated throughput.`)
+  if (Math.max(...offDps) > THROUGHPUT_CEILING * 0.9) {
+    failures.push(
+      `The §1 throughput bench is saturating: the top build destroys ${f1(Math.max(...offDps))} HP/s against a bench ceiling of ${f1(THROUGHPUT_CEILING)}. A scenario a build can exhaust is spawn-bound again, which is the exact defect this rebuild replaced — raise \`THROUGHPUT_COUNT\` / \`THROUGHPUT_HP_MULT\`.`,
+    )
+  }
+  line('The ⚠️ flag is now the same rule the invariant is: a build over 2× or under 0.5×')
+  line('the median. It used to be mean ± 2σ of a distribution the scenario had already')
+  line('crushed, which is how a build at analytic 1494 got flagged while one at 1747 read')
+  line('as normal.')
+  line('')
 
-/**
- * **What this sweep does *not* measure, stated plainly.**
- *
- * The old §1 gated "no dominant outlier" on a number whose full range was 1.4×,
- * so the 3× ceiling could not be reached by anything. On the saturated bench the
- * same builds span **16×**, so the ceiling is now a real check — a genuinely
- * dominant damage build trips it.
- *
- * The *floor* is deliberately not a gate, and that is a statement about the
- * metric rather than a concession. Throughput cannot tell "weak" from "not a
- * damage build": Cryomancer sells chill, Plaguebringer sells a spreading DoT,
- * and both come out near the bottom of an HP-destroyed-per-second table by
- * design, exactly as an INT affix comes out at +0 on a STR build. Grading them
- * here would repeat the mistake §4 was rebuilt to stop making. The builds that
- * read low are listed instead, with their analytic DPS beside them, as a
- * question for whoever owns `archetypeTree` / `items`: a spec whose kit is
- * damage and reads 0.13× the median is a balance defect; a spec whose kit is
- * control and reads 0.13× is a spec this sweep cannot grade.
- */
-const lowOffense = offense.filter((r) => r.dps.mean < offMed * 0.5).sort((a, b) => a.dps.mean - b.dps.mean)
-line('')
-line('**Reported, not gated — the low end.**')
-line('')
-if (lowOffense.length) {
-  line(`| Build | HP destroyed/s | vs median | Analytic DPS |`)
-  line('|---|--:|--:|--:|')
-  for (const r of lowOffense) line(`| ${r.name} | ${f1(r.dps.mean)} | ${f2(r.dps.mean / offMed)}× | ${f1(r.analyticDps)} |`)
-} else {
-  line('_No offense build reads below half the median._')
+  /*
+   * ---- "dealt no damage" now means dealt no damage (m-2) --------------------
+   *
+   * This read `r.dps.mean <= 0` and reported it as *"Build X dealt no damage
+   * (broken)"*. `dps` here is **HP destroyed per second, read off the kill
+   * count** — deliberately, so that burn and execute attribution gaps cannot
+   * touch it — and the bench's body is a Siege Barrel at ×12 HP, i.e. **5,160 HP
+   * per unit of measurement**. A build whose 40-second window does 5,000 damage to
+   * one barrel and does not finish it therefore scored 0 and was reported as
+   * broken, having dealt five thousand damage.
+   *
+   * That is not hypothetical and it is not an edge: Radiant's analytic DPS is
+   * 126.7, so its whole window is ~5,068 HP against a 5,160-HP body — the check
+   * was one percent of one barrel away from firing on a healthy build, and an
+   * unrelated affix re-roll elsewhere in `items.ts` was enough to tip it, on four
+   * builds at once.
+   *
+   * The invariant is kept and pointed at what it names. `BattleMetrics.totalDamage`
+   * is the un-quantised number and it is what "dealt no damage" is a claim about;
+   * a build that truly cannot hurt anything still fails, and now nothing else
+   * does. The kill-quantised zero is a fact about the bench and belongs in the
+   * reported low-end table below, which is where it now is.
+   */
+  for (const r of specRows) {
+    if (r.damage.mean <= 0) {
+      failures.push(
+        `Build "${r.name}" dealt no damage at all in ${THROUGHPUT_WINDOW}s (broken) — not "killed nothing", which is a different and legitimate result on a bench whose unit is a ${THROUGHPUT_HP}-HP body.`,
+      )
+    }
+  }
+  const zeroKill = specRows.filter((r) => r.dps.mean <= 0)
+  if (zeroKill.length) {
+    line(
+      `**${zeroKill.length} build(s) finished nothing inside the window** — ${zeroKill.map((r) => `${r.name} (${f1(r.damage.mean)} HP of damage dealt)`).join(', ')} — against a bench body of ${THROUGHPUT_HP} HP. That is the metric's quantum, not a broken build: the invariant below is on damage dealt, which is the thing the sentence "dealt no damage" is about.`,
+    )
+    line('')
+  }
+  const worstRatio = Math.max(...offDps) / offMed
+  if (worstRatio > 3) failures.push(`Offense spread too wide: top build is ${f2(worstRatio)}× the median (>3×) on saturated throughput.`)
+
+  /**
+   * **What this sweep does *not* measure, stated plainly.**
+   *
+   * The old §1 gated "no dominant outlier" on a number whose full range was 1.4×,
+   * so the 3× ceiling could not be reached by anything. On the saturated bench the
+   * same builds span **16×**, so the ceiling is now a real check — a genuinely
+   * dominant damage build trips it.
+   *
+   * The *floor* is deliberately not a gate, and that is a statement about the
+   * metric rather than a concession. Throughput cannot tell "weak" from "not a
+   * damage build": Cryomancer sells chill, Plaguebringer sells a spreading DoT,
+   * and both come out near the bottom of an HP-destroyed-per-second table by
+   * design, exactly as an INT affix comes out at +0 on a STR build. Grading them
+   * here would repeat the mistake §4 was rebuilt to stop making. The builds that
+   * read low are listed instead, with their analytic DPS beside them, as a
+   * question for whoever owns `archetypeTree` / `items`: a spec whose kit is
+   * damage and reads 0.13× the median is a balance defect; a spec whose kit is
+   * control and reads 0.13× is a spec this sweep cannot grade.
+   */
+  const lowOffense = offense.filter((r) => r.dps.mean < offMed * 0.5).sort((a, b) => a.dps.mean - b.dps.mean)
+  line('')
+  line('**Reported, not gated — the low end.**')
+  line('')
+  if (lowOffense.length) {
+    line(`| Build | HP destroyed/s | vs median | Analytic DPS |`)
+    line('|---|--:|--:|--:|')
+    for (const r of lowOffense) line(`| ${r.name} | ${f1(r.dps.mean)} | ${f2(r.dps.mean / offMed)}× | ${f1(r.analyticDps)} |`)
+  } else {
+    line('_No offense build reads below half the median._')
+  }
+  line('')
+  line('Throughput cannot distinguish a weak damage build from a control build doing its')
+  line('job — chill, DoT and crowd effects are not HP-per-second — so the floor is reported')
+  line('rather than gated, the same way §4 refuses to grade an INT affix on a STR build.')
+  line('The ceiling **is** gated, and now on a metric with a 16× range instead of a 1.4×')
+  line('one. What the table above is worth as a finding: the analytic column tracks it,')
+  line(`so the ${f2(Math.max(...offense.map((r) => r.analyticDps)) / Math.min(...offense.map((r) => r.analyticDps)))}× analytic spread across offense specs is real and is a question for`)
+  line('whoever owns the spec tree, not an artifact of this bench.')
+  line('')
+  summary.push(`Specializations: ${TIER2_NODES.length} | offense DPS median ${f1(offMed)}, spread ${f2(Math.max(...offDps) / Math.min(...offDps))}×`)
 }
-line('')
-line('Throughput cannot distinguish a weak damage build from a control build doing its')
-line('job — chill, DoT and crowd effects are not HP-per-second — so the floor is reported')
-line('rather than gated, the same way §4 refuses to grade an INT affix on a STR build.')
-line('The ceiling **is** gated, and now on a metric with a 16× range instead of a 1.4×')
-line('one. What the table above is worth as a finding: the analytic column tracks it,')
-line(`so the ${f2(Math.max(...offense.map((r) => r.analyticDps)) / Math.min(...offense.map((r) => r.analyticDps)))}× analytic spread across offense specs is real and is a question for`)
-line('whoever owns the spec tree, not an artifact of this bench.')
-line('')
 
 // -------------------------------------------------------------- Sweep 2
-// Support value — rebuilt twice (M19-a, then M19-a2).
-line('## 2. Support value (adjacency + real encounters + a Threat ladder)')
-line('')
-line('**What broke the first time.** This sweep used to place the support at `s5` and the')
-line('damage dealers at `s1`/`s3` — 191–210px apart, while the largest aura radius in')
-line(`the game is ${MAX_AURA_RADIUS}. No aura ever reached an ally. It also ran at \`baseHp: 999\`, so`)
-line('heal / shield / damage-reduction had nothing to prevent, and graded on clear time,')
-line('which was spawn-bound. All seven supports returned an identical −1.9s / +0.0.')
-line('')
-line('**What broke the second time — and why the metric changed again.** The rebuild')
-line('fixed adjacency and the failure mode but graded on a *swarm-pressure* ladder: the')
-line('depth-9 roster was copied ×p and the arrival window compressed by √p until the line')
-line('collapsed. It collapsed at ×12 — which is **612 goblins carrying a ×30 HP')
-line('multiplier, all of them on the field inside 8.4 seconds**. Nothing the game')
-line('generates is remotely that shape, and in that regime the engine stops answering.')
-line('Holding the third slot fixed and injecting one effect at a time onto a Weaponmaster')
-line('moved the ceiling by **exactly 0.00** for `block`, `thorns`, `chill`, `burn`,')
-line('`trap`, `stun`, `pierce` and `splash+30`; only `buffAura ×1.25` (+25%),')
-line('`rangeMult ×2` (+40%), `dmgReductionAura 0.6` (+12%) and `healAura 20` (+12%)')
-line('registered at all. Worse, the **control failed**: two carriers with an empty slot')
-line('held ×12.26 and the same carriers plus a full tier-2 Weaponmaster held ×12.59 —')
-line("inside the ladder's own rung ratio. A bar that a real damage tower cannot clear is")
-line('not "a generic damage tower" bar, and by this harness’s first rule a sweep whose')
-line('control does not discriminate is not measuring its subject.')
-line('')
-line('**What it does now.** Same placement, same carriers, same finite base — but the')
-line("ladder is the run's own difficulty dial applied to the encounters the game actually")
-line('ships. `generateEncounter` builds a depth-9 swarm, a depth-8 elite armour column and')
-line('the depth-10 boss; head count, arrival schedule and composition are left exactly as')
-line('designed, and **Threat** is raised on a ×1.15 ladder until the base falls. The grade')
-line('is "did every seed clear with the real 20-HP base", which a stalled wave cannot fake')
-line('(a permanently blocked enemy leaves the wave uncleared, whereas a stop-rate reading')
-line('would score that 100%). Three shapes, geometric mean, so no single kit shape wins by')
-line('accident.')
-line('')
-const CONTROL_NOTE_AT = md.length
-line('')
+if (want(2)) {
+  // Support value — rebuilt twice (M19-a, then M19-a2).
+  line('## 2. Support value (adjacency + real encounters + a Threat ladder)')
+  line('')
+  line('**What broke the first time.** This sweep used to place the support at `s5` and the')
+  line('damage dealers at `s1`/`s3` — 191–210px apart, while the largest aura radius in')
+  line(`the game is ${MAX_AURA_RADIUS}. No aura ever reached an ally. It also ran at \`baseHp: 999\`, so`)
+  line('heal / shield / damage-reduction had nothing to prevent, and graded on clear time,')
+  line('which was spawn-bound. All seven supports returned an identical −1.9s / +0.0.')
+  line('')
+  line('**What broke the second time — and why the metric changed again.** The rebuild')
+  line('fixed adjacency and the failure mode but graded on a *swarm-pressure* ladder: the')
+  line('depth-9 roster was copied ×p and the arrival window compressed by √p until the line')
+  line('collapsed. It collapsed at ×12 — which is **612 goblins carrying a ×30 HP')
+  line('multiplier, all of them on the field inside 8.4 seconds**. Nothing the game')
+  line('generates is remotely that shape, and in that regime the engine stops answering.')
+  line('Holding the third slot fixed and injecting one effect at a time onto a Weaponmaster')
+  line('moved the ceiling by **exactly 0.00** for `block`, `thorns`, `chill`, `burn`,')
+  line('`trap`, `stun`, `pierce` and `splash+30`; only `buffAura ×1.25` (+25%),')
+  line('`rangeMult ×2` (+40%), `dmgReductionAura 0.6` (+12%) and `healAura 20` (+12%)')
+  line('registered at all. Worse, the **control failed**: two carriers with an empty slot')
+  line('held ×12.26 and the same carriers plus a full tier-2 Weaponmaster held ×12.59 —')
+  line("inside the ladder's own rung ratio. A bar that a real damage tower cannot clear is")
+  line('not "a generic damage tower" bar, and by this harness’s first rule a sweep whose')
+  line('control does not discriminate is not measuring its subject.')
+  line('')
+  line('**What it does now.** Same placement, same carriers, same finite base — but the')
+  line("ladder is the run's own difficulty dial applied to the encounters the game actually")
+  line('ships. `generateEncounter` builds a depth-9 swarm, a depth-8 elite armour column and')
+  line('the depth-10 boss; head count, arrival schedule and composition are left exactly as')
+  line('designed, and **Threat** is raised on a ×1.15 ladder until the base falls. The grade')
+  line('is "did every seed clear with the real 20-HP base", which a stalled wave cannot fake')
+  line('(a permanently blocked enemy leaves the wave uncleared, whereas a stop-rate reading')
+  line('would score that 100%). Three shapes, geometric mean, so no single kit shape wins by')
+  line('accident.')
+  line('')
+  const CONTROL_NOTE_AT = md.length
+  line('')
 
-line('The support sits at the one slot on The Green Line whose')
-line(
-  `neighbours are inside aura range: \`${AURA_TRIO.support}\` is ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[0]))}px from \`${AURA_TRIO.allies[0]}\` and ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[1]))}px from \`${AURA_TRIO.allies[1]}\`.`,
-)
-line('The carriers are a **blocking** Berserker (which can be killed, so heals and')
-line(`damage-reduction have a failure mode) and a Sharpshooter, with the real \`MAX_BASE_HP\` of ${MAX_BASE_HP}.`)
-line('Each support is graded against a *generic damage tower of its own archetype* in the')
-line('same slot, so "a third body" cannot masquerade as support value.')
-line('')
+  line('The support sits at the one slot on The Green Line whose')
+  line(
+    `neighbours are inside aura range: \`${AURA_TRIO.support}\` is ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[0]))}px from \`${AURA_TRIO.allies[0]}\` and ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[1]))}px from \`${AURA_TRIO.allies[1]}\`.`,
+  )
+  line('The carriers are a **blocking** Berserker (which can be killed, so heals and')
+  line(`damage-reduction have a failure mode) and a Sharpshooter, with the real \`MAX_BASE_HP\` of ${MAX_BASE_HP}.`)
+  line('Each support is graded against a *generic damage tower of its own archetype* in the')
+  line('same slot, so "a third body" cannot masquerade as support value.')
+  line('')
 
-const SUP_SEEDS = SEEDS.slice(0, 4)
-/** Threat rungs — a ×1.15 geometric ladder, finer than the old sweep's rungs. */
-const THREAT_LADDER: number[] = []
-for (let t = 1; t <= 60; t *= 1.15) THREAT_LADDER.push(Math.round(t * 100) / 100)
-/** The three encounter shapes the campaign actually fields in its back half. */
-const SUP_SHAPES: { name: string; depth: number; kind: EncounterKind }[] = [
-  { name: 'depth 9 — swarm', depth: 9, kind: 'normal' },
-  { name: 'depth 8 — elite column', depth: 8, kind: 'elite' },
-  { name: 'depth 10 — boss', depth: 10, kind: 'boss' },
-]
-const carrierBlocker = buildSpec('berserker', { gearRarity: 'epic', seed: 3 })
-const carrierRanged = buildSpec('sharpshooter', { gearRarity: 'epic', seed: 4 })
-
-function supportTeam(third: Sentinel | null) {
-  return [
-    { sentinel: carrierBlocker, slotId: 's4' },
-    { sentinel: carrierRanged, slotId: 's2' },
-    ...(third ? [{ sentinel: third, slotId: AURA_TRIO.support }] : []),
+  const SUP_SEEDS = SEEDS.slice(0, 4)
+  /** Threat rungs — a ×1.15 geometric ladder, finer than the old sweep's rungs. */
+  const THREAT_LADDER: number[] = []
+  for (let t = 1; t <= 60; t *= 1.15) THREAT_LADDER.push(Math.round(t * 100) / 100)
+  /** The three encounter shapes the campaign actually fields in its back half. */
+  const SUP_SHAPES: { name: string; depth: number; kind: EncounterKind }[] = [
+    { name: 'depth 9 — swarm', depth: 9, kind: 'normal' },
+    { name: 'depth 8 — elite column', depth: 8, kind: 'elite' },
+    { name: 'depth 10 — boss', depth: 10, kind: 'boss' },
   ]
-}
-/** Highest Threat rung every seed still CLEARS, on one shipped encounter. */
-function threatCeiling(third: Sentinel | null, shape: { depth: number; kind: EncounterKind }): number {
-  const wave = generateEncounter(shape.depth, shape.kind)
-  const team = supportTeam(third)
-  let hold = 0
-  for (const threat of THREAT_LADDER) {
-    const ok = SUP_SEEDS.every(
-      (seed) =>
-        runBattle({ team, depth: shape.depth, wave, enemyHpMult: threat, baseHp: MAX_BASE_HP, maxSeconds: 150, seed })
-          .cleared,
-    )
-    if (!ok) break
-    hold = threat
-  }
-  return hold
-}
-/**
- * The OLD metric, kept as a reported diagnostic so the change is auditable
- * rather than a claim: the swarm-blob ladder the invariant used to be graded on.
- */
-const SWARM_LADDER = [6, 8, 10, 12, 14, 16, 18, 20, 24]
-function swarmCeiling(third: Sentinel | null): number {
-  const team = supportTeam(third)
-  let hold = 0
-  for (const p of SWARM_LADDER) {
-    const ok = SUP_SEEDS.every(
-      (seed) =>
-        runBattle({
-          team,
-          depth: 9,
-          pressure: p,
-          pressureModel: SWARM_PRESSURE,
-          enemyHpMult: 2.5,
-          baseHp: MAX_BASE_HP,
-          maxSeconds: 240,
-          seed,
-        }).cleared,
-    )
-    if (!ok) break
-    hold = p
-  }
-  return hold
-}
+  const carrierBlocker = buildSpec('berserker', { gearRarity: 'epic', seed: 3 })
+  const carrierRanged = buildSpec('sharpshooter', { gearRarity: 'epic', seed: 4 })
 
-interface SupRow {
-  label: string
-  kind: 'control' | 'filler' | 'support'
-  arch: Archetype | null
-  ceilings: number[]
-  score: number
-  swarm: number
-}
-function supRow(label: string, kind: SupRow['kind'], arch: Archetype | null, third: Sentinel | null): SupRow {
-  const ceilings = SUP_SHAPES.map((sh) => threatCeiling(third, sh))
-  const score = ceilings.every((c) => c > 0)
-    ? Math.exp(ceilings.reduce((a, c) => a + Math.log(c), 0) / ceilings.length)
-    : 0
-  return { label, kind, arch, ceilings, score, swarm: swarmCeiling(third) }
-}
-
-const fighterFiller = buildSpec('weaponmaster', { gearRarity: 'epic', seed: 5 })
-const mysticFiller = buildSpec('pyromancer', { gearRarity: 'epic', seed: 5 })
-const supRows: SupRow[] = [
-  supRow('_(two carriers, empty slot)_', 'control', null, null),
-  supRow('_filler_ — Weaponmaster (fighter DPS)', 'filler', 'fighter', fighterFiller),
-  supRow('_filler_ — Pyromancer (mystic DPS)', 'filler', 'mystic', mysticFiller),
-  ...SUPPORT_SPEC_IDS.map((id) =>
-    supRow(getNode(id).name, 'support', getNode(id).archetype, buildSpec(id, { gearRarity: 'epic', seed: 5 })),
-  ),
-]
-const fillerScore: Record<string, number> = {
-  fighter: supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!.score,
-  mystic: supRows.find((r) => r.kind === 'filler' && r.arch === 'mystic')!.score,
-}
-
-{
-  const ctrl = supRows.find((r) => r.kind === 'control')!
-  const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!
-  md[CONTROL_NOTE_AT] =
-    `**What the change did to the control:** the empty slot reads ×${f2(ctrl.score)} and the fighter ` +
-    `filler ×${f2(fFill.score)} — a generic damage tower is worth **+${(((fFill.score / ctrl.score) - 1) * 100).toFixed(0)}%** Threat instead of the +0% ` +
-    `the swarm-blob ladder credited it with. The control discriminates, so the invariant ` +
-    `has something to stand on.`
-}
-line(
-  `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs own-archetype filler | _(old swarm-blob ladder)_ |`,
-)
-line(`|---|${'--:|'.repeat(SUP_SHAPES.length)}--:|--:|--:|`)
-for (const r of supRows) {
-  const bar = r.arch ? fillerScore[r.arch] : 0
-  const rel =
-    r.kind === 'support' && bar > 0
-      ? `${(r.score / bar - 1) * 100 >= 0 ? '+' : ''}${(((r.score / bar) - 1) * 100).toFixed(0)}%`
-      : '—'
-  line(`| ${r.label} | ${r.ceilings.map((c) => `×${f2(c)}`).join(' | ')} | **×${f2(r.score)}** | ${rel} | ×${r.swarm} |`)
-}
-line('')
-line('**Findings.**')
-line('')
-/**
- * A support must clear its filler by a real margin, not by an epsilon.
- *
- * The rungs are ×1.15 apart and the score is the cube-root geometric mean of
- * three of them, so **one rung on one shape is ×1.0477** — the floor of what
- * this measurement can resolve at all, below which a "win" is ladder alignment
- * rather than a finding. The gate is set at **×1.10**, roughly two rungs, which
- * every support currently clears by 21% or more; it is deliberately well above
- * the resolution floor so that a support drifting toward its filler trips the
- * check while it is still a design problem rather than a rounding one.
- *
- * The old form of this check asked only for "strictly greater" on rungs 15–33%
- * apart, where a tie was the overwhelmingly likely outcome — and three of the
- * seven supports duly tied.
- */
-const SUPPORT_MARGIN = 1.1
-const beaten: string[] = []
-const notBeaten: string[] = []
-for (const r of supRows.filter((x) => x.kind === 'support')) {
-  const bar = fillerScore[r.arch!] ?? 0
-  const txt = `${r.label} (×${f2(r.score)} vs a ×${f2(bar)} filler)`
-  ;(r.score >= bar * SUPPORT_MARGIN ? beaten : notBeaten).push(txt)
-}
-line(
-  `- Supports that beat a plain damage tower of their own archetype by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
-)
-line(`- Supports that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
-line('')
-line('The Guard line (Aegis / Bulwark / Warden of Ash) reads *worse than an empty slot*')
-line('in the old swarm-blob column and best-in-game on the real encounters. That is not')
-line('noise and it is not a kit problem: a melee blocker pins enemies at its own feet and')
-line('eats their melee, which is decisive against a wave of 50–110 bodies and a suicide')
-line('note against 612 of them at ×30 HP. Injecting `block: {count: 5}` onto the')
-line('*Pyromancer* — a spec with no melee identity at all — cost it four rungs on the old')
-line('ladder, which is the cleanest available proof that the ladder was grading the')
-line('pressure model rather than the kit.')
-line('')
-for (const r of supRows.filter((x) => x.kind === 'support')) {
-  const bar = fillerScore[r.arch!] ?? 0
-  if (!(r.score >= bar * SUPPORT_MARGIN)) {
-    failures.push(
-      `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than a generic ${r.arch} damage tower in the same slot (×${f2(bar)}). Its support kit is not paying for the DPS it costs.`,
-    )
+  function supportTeam(third: Sentinel | null) {
+    return [
+      { sentinel: carrierBlocker, slotId: 's4' },
+      { sentinel: carrierRanged, slotId: 's2' },
+      ...(third ? [{ sentinel: third, slotId: AURA_TRIO.support }] : []),
+    ]
   }
+  /** Highest Threat rung every seed still CLEARS, on one shipped encounter. */
+  function threatCeiling(third: Sentinel | null, shape: { depth: number; kind: EncounterKind }): number {
+    const wave = generateEncounter(shape.depth, shape.kind)
+    const team = supportTeam(third)
+    let hold = 0
+    for (const threat of THREAT_LADDER) {
+      const ok = SUP_SEEDS.every(
+        (seed) =>
+          runBattle({ team, depth: shape.depth, wave, enemyHpMult: threat, baseHp: MAX_BASE_HP, maxSeconds: 150, seed })
+            .cleared,
+      )
+      if (!ok) break
+      hold = threat
+    }
+    return hold
+  }
+  /**
+   * The OLD metric, kept as a reported diagnostic so the change is auditable
+   * rather than a claim: the swarm-blob ladder the invariant used to be graded on.
+   */
+  const SWARM_LADDER = [6, 8, 10, 12, 14, 16, 18, 20, 24]
+  function swarmCeiling(third: Sentinel | null): number {
+    const team = supportTeam(third)
+    let hold = 0
+    for (const p of SWARM_LADDER) {
+      const ok = SUP_SEEDS.every(
+        (seed) =>
+          runBattle({
+            team,
+            depth: 9,
+            pressure: p,
+            pressureModel: SWARM_PRESSURE,
+            enemyHpMult: 2.5,
+            baseHp: MAX_BASE_HP,
+            maxSeconds: 240,
+            seed,
+          }).cleared,
+      )
+      if (!ok) break
+      hold = p
+    }
+    return hold
+  }
+
+  interface SupRow {
+    label: string
+    kind: 'control' | 'filler' | 'support'
+    arch: Archetype | null
+    ceilings: number[]
+    score: number
+    swarm: number
+  }
+  function supRow(label: string, kind: SupRow['kind'], arch: Archetype | null, third: Sentinel | null): SupRow {
+    const ceilings = SUP_SHAPES.map((sh) => threatCeiling(third, sh))
+    const score = ceilings.every((c) => c > 0)
+      ? Math.exp(ceilings.reduce((a, c) => a + Math.log(c), 0) / ceilings.length)
+      : 0
+    return { label, kind, arch, ceilings, score, swarm: swarmCeiling(third) }
+  }
+
+  const fighterFiller = buildSpec('weaponmaster', { gearRarity: 'epic', seed: 5 })
+  const mysticFiller = buildSpec('pyromancer', { gearRarity: 'epic', seed: 5 })
+  const supRows: SupRow[] = [
+    supRow('_(two carriers, empty slot)_', 'control', null, null),
+    supRow('_filler_ — Weaponmaster (fighter DPS)', 'filler', 'fighter', fighterFiller),
+    supRow('_filler_ — Pyromancer (mystic DPS)', 'filler', 'mystic', mysticFiller),
+    ...SUPPORT_SPEC_IDS.map((id) =>
+      supRow(getNode(id).name, 'support', getNode(id).archetype, buildSpec(id, { gearRarity: 'epic', seed: 5 })),
+    ),
+  ]
+  const fillerScore: Record<string, number> = {
+    fighter: supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!.score,
+    mystic: supRows.find((r) => r.kind === 'filler' && r.arch === 'mystic')!.score,
+  }
+
+  {
+    const ctrl = supRows.find((r) => r.kind === 'control')!
+    const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!
+    md[CONTROL_NOTE_AT] =
+      `**What the change did to the control:** the empty slot reads ×${f2(ctrl.score)} and the fighter ` +
+      `filler ×${f2(fFill.score)} — a generic damage tower is worth **+${(((fFill.score / ctrl.score) - 1) * 100).toFixed(0)}%** Threat instead of the +0% ` +
+      `the swarm-blob ladder credited it with. The control discriminates, so the invariant ` +
+      `has something to stand on.`
+  }
+  line(
+    `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs own-archetype filler | _(old swarm-blob ladder)_ |`,
+  )
+  line(`|---|${'--:|'.repeat(SUP_SHAPES.length)}--:|--:|--:|`)
+  for (const r of supRows) {
+    const bar = r.arch ? fillerScore[r.arch] : 0
+    const rel =
+      r.kind === 'support' && bar > 0
+        ? `${(r.score / bar - 1) * 100 >= 0 ? '+' : ''}${(((r.score / bar) - 1) * 100).toFixed(0)}%`
+        : '—'
+    line(`| ${r.label} | ${r.ceilings.map((c) => `×${f2(c)}`).join(' | ')} | **×${f2(r.score)}** | ${rel} | ×${r.swarm} |`)
+  }
+  line('')
+  line('**Findings.**')
+  line('')
+  /**
+   * A support must clear its filler by a real margin, not by an epsilon.
+   *
+   * The rungs are ×1.15 apart and the score is the cube-root geometric mean of
+   * three of them, so **one rung on one shape is ×1.0477** — the floor of what
+   * this measurement can resolve at all, below which a "win" is ladder alignment
+   * rather than a finding. The gate is set at **×1.10**, roughly two rungs, which
+   * every support currently clears by 21% or more; it is deliberately well above
+   * the resolution floor so that a support drifting toward its filler trips the
+   * check while it is still a design problem rather than a rounding one.
+   *
+   * The old form of this check asked only for "strictly greater" on rungs 15–33%
+   * apart, where a tie was the overwhelmingly likely outcome — and three of the
+   * seven supports duly tied.
+   */
+  const SUPPORT_MARGIN = 1.1
+  const beaten: string[] = []
+  const notBeaten: string[] = []
+  for (const r of supRows.filter((x) => x.kind === 'support')) {
+    const bar = fillerScore[r.arch!] ?? 0
+    const txt = `${r.label} (×${f2(r.score)} vs a ×${f2(bar)} filler)`
+    ;(r.score >= bar * SUPPORT_MARGIN ? beaten : notBeaten).push(txt)
+  }
+  line(
+    `- Supports that beat a plain damage tower of their own archetype by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
+  )
+  line(`- Supports that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
+  line('')
+  line('The Guard line (Aegis / Bulwark / Warden of Ash) reads *worse than an empty slot*')
+  line('in the old swarm-blob column and best-in-game on the real encounters. That is not')
+  line('noise and it is not a kit problem: a melee blocker pins enemies at its own feet and')
+  line('eats their melee, which is decisive against a wave of 50–110 bodies and a suicide')
+  line('note against 612 of them at ×30 HP. Injecting `block: {count: 5}` onto the')
+  line('*Pyromancer* — a spec with no melee identity at all — cost it four rungs on the old')
+  line('ladder, which is the cleanest available proof that the ladder was grading the')
+  line('pressure model rather than the kit.')
+  line('')
+  for (const r of supRows.filter((x) => x.kind === 'support')) {
+    const bar = fillerScore[r.arch!] ?? 0
+    if (!(r.score >= bar * SUPPORT_MARGIN)) {
+      failures.push(
+        `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than a generic ${r.arch} damage tower in the same slot (×${f2(bar)}). Its support kit is not paying for the DPS it costs.`,
+      )
+    }
+  }
+  summary.push(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: fighter ×${f2(fillerScore.fighter)}, mystic ×${f2(fillerScore.mystic)}`)
 }
 
 // -------------------------------------------------------------- Sweep 3
-// Rarity budget ladder (monotonic check).
-line('## 3. Item rarity ladder')
-line('')
-line('Average base-stat budget and enchant count over 400 rolled weapons per tier.')
-line('')
-line('| Rarity | Avg base-stat total | Avg enchants | Config slots |')
-line('|---|--:|--:|--:|')
-const rarBudget: Record<string, number> = {}
-for (const rar of RARITY_ORDER) {
-  const rng = new RNG(99)
-  let statSum = 0
-  let enchSum = 0
-  const N = 400
-  for (let i = 0; i < N; i++) {
-    const it = generateItem(rng, { slot: 'oneHand', rarity: rar })
-    statSum += baseStatTotal(it)
-    enchSum += it.enchantments.length
+if (want(3)) {
+  // Rarity budget ladder (monotonic check).
+  line('## 3. Item rarity ladder')
+  line('')
+  line('Average base-stat budget and enchant count over 400 rolled weapons per tier.')
+  line('')
+  line('| Rarity | Avg base-stat total | Avg enchants | Config slots |')
+  line('|---|--:|--:|--:|')
+  const rarBudget: Record<string, number> = {}
+  for (const rar of RARITY_ORDER) {
+    const rng = new RNG(99)
+    let statSum = 0
+    let enchSum = 0
+    const N = 400
+    for (let i = 0; i < N; i++) {
+      const it = generateItem(rng, { slot: 'oneHand', rarity: rar })
+      statSum += baseStatTotal(it)
+      enchSum += it.enchantments.length
+    }
+    rarBudget[rar] = statSum / N
+    line(`| ${RARITY[rar].label} | ${f1(statSum / N)} | ${f1(enchSum / N)} | ${RARITY[rar].enchants} |`)
   }
-  rarBudget[rar] = statSum / N
-  line(`| ${RARITY[rar].label} | ${f1(statSum / N)} | ${f1(enchSum / N)} | ${RARITY[rar].enchants} |`)
-}
-line('')
-for (let i = 1; i < RARITY_ORDER.length; i++) {
-  const lo = rarBudget[RARITY_ORDER[i - 1]]
-  const hi = rarBudget[RARITY_ORDER[i]]
-  if (hi <= lo) failures.push(`Rarity budget not monotonic: ${RARITY_ORDER[i]} (${f1(hi)}) ≤ ${RARITY_ORDER[i - 1]} (${f1(lo)}).`)
+  line('')
+  for (let i = 1; i < RARITY_ORDER.length; i++) {
+    const lo = rarBudget[RARITY_ORDER[i - 1]]
+    const hi = rarBudget[RARITY_ORDER[i]]
+    if (hi <= lo) failures.push(`Rarity budget not monotonic: ${RARITY_ORDER[i]} (${f1(hi)}) ≤ ${RARITY_ORDER[i - 1]} (${f1(lo)}).`)
+  }
 }
 
 // -------------------------------------------------------------- Sweep 4
-// Enchantment strength — rebuilt (M19-b).
-line('## 4. Enchantment strength (scenario-matched)')
-line('')
-line('**What broke before.** Every affix was tested on one *physical* Weaponmaster at')
-line('`baseHp: 999`, graded on attributed damage. `insight` grants INT and so did')
-line("literally nothing on a STR build; `frost`'s slow and `vampiric`'s base-heal had no")
-line('leak to prevent; `flaming` and `executioner` read **negative** because burn ticks')
-line('and executed remainders were not credited to the tower that caused them; the gear')
-line('`patience` affix was genuinely dead in the engine. Four affixes read +0% and two')
-line('read negative, and nothing failed.')
-line('')
-line('**What it does now.** Three scenarios, each graded on **stop rate**:')
-line('')
-line('| Scenario | Build | Wave | Measured length | Baseline stop rate | Resolution (1 leak / 1 seed) | Tests |')
-line('|---|---|---|--:|--:|--:|---|')
+if (want(4)) {
+  // Enchantment strength — rebuilt (M19-b).
+  line('## 4. Enchantment strength (scenario-matched)')
+  line('')
+  line('**What broke before.** Every affix was tested on one *physical* Weaponmaster at')
+  line('`baseHp: 999`, graded on attributed damage. `insight` grants INT and so did')
+  line("literally nothing on a STR build; `frost`'s slow and `vampiric`'s base-heal had no")
+  line('leak to prevent; `flaming` and `executioner` read **negative** because burn ticks')
+  line('and executed remainders were not credited to the tower that caused them; the gear')
+  line('`patience` affix was genuinely dead in the engine. Four affixes read +0% and two')
+  line('read negative, and nothing failed.')
+  line('')
+  line('**What it does now.** Three scenarios, each graded on **stop rate**:')
+  line('')
+  line('| Scenario | Build | Wave | Measured length | Baseline stop rate | Resolution (1 leak / 1 seed) | Tests |')
+  line('|---|---|---|--:|--:|--:|---|')
+
+}
 
 /**
  * ---- eight seeds, not four, and the reason is printed in the table (m-2) ----
@@ -674,604 +700,625 @@ function benchStop(hero: Sentinel, k: ScenarioKey): number {
 }
 const SCEN_KEYS = Object.keys(AFFIX_SCENARIOS) as ScenarioKey[]
 const affixBase: Record<ScenarioKey, number> = {} as Record<ScenarioKey, number>
-for (const k of SCEN_KEYS) {
-  affixBase[k] = benchStop(AFFIX_SCENARIOS[k].build, k)
-}
-/**
- * The smallest change one bench can report: one leaked body's worth of base HP,
- * divided across the seed set. Below this an affix and a dead affix are the same
- * number, and a floor placed inside it is a coin toss dressed as an invariant.
- */
-const benchQuantum: Record<ScenarioKey, number> = {} as Record<ScenarioKey, number>
-for (const k of SCEN_KEYS) {
-  const sc = AFFIX_SCENARIOS[k]
-  const ml = maxLeak(sc.wave)
-  const dur = runBattle({ team: [{ sentinel: sc.build, slotId: 's3' }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11, rules: BENCH_RULES }).timeSec
-  // The lightest body in the wave is the finest step it can take.
-  const minLeak = Math.min(...sc.wave.spawns.map((s) => ENEMY_TYPES[s.typeId].leak))
-  benchQuantum[k] = minLeak / ml / affixSeeds.length
-  line(
-    `| \`${sc.label}\` | ${sc.buildLabel} | ${sc.waveLabel} | ${f1(dur)}s | ${pct(affixBase[k])} | ${pp(benchQuantum[k])} | ${sc.blurb} |`,
-  )
-}
-line('')
-for (const k of SCEN_KEYS) {
-  if (affixBase[k] < BENCH_BAND[0] || affixBase[k] > BENCH_BAND[1]) {
-    failures.push(
-      `Affix bench "${k}" has drifted out of the band an affix can be resolved in: baseline stop rate ${pct(affixBase[k])}, band ${pct(BENCH_BAND[0])}–${pct(BENCH_BAND[1])}. At the floor every affix reads +0 because the build is already losing; at the ceiling every affix reads +0 because it is already winning. Re-pin \`BENCH_PIN.${k}\` against the current \`waves.ts\` curve.`,
-    )
-  }
-}
-line(
-  `Each scenario is **pinned** to the pressure it was fitted at (\`BENCH_PIN\`: ${SCEN_KEYS.map((k) => `${k} ×${BENCH_PIN[k]}`).join(', ')}), so a change to the campaign's difficulty curve moves the game without silently moving the bench every affix is graded on — and the baselines above must stay inside ${pct(BENCH_BAND[0])}–${pct(BENCH_BAND[1])}, which is checked.`,
-)
-line('')
-line('Each affix is rolled at legendary budget and equipped **alone** (an item with no')
-line('base stats), so the affix is the only variable. Every affix is measured in all')
-line('three scenarios; it is *graded* on the one it is designed for.')
-line('')
-
-/**
- * Which scenario each affix is actually designed to pay off in.
- *
- * ---- `reach`: `magic` → `endure`, and why that is a correction rather than
- * ---- moving the goalposts (F1-B) ------------------------------------------
- *
- * The old entry read `reach: 'magic'` with the note *"a blocking fighter fights
- * at 72–85px; reach only matters at range"*. That confuses a blocker's **melee
- * engagement distance** with its **attack range**: a Weaponmaster holding a
- * queue still shoots, and its 96px reach sees about 4% of a 2290px lane, so how
- * far back down the queue it can reach is the binding constraint on the entire
- * bench. The claim was never measured; when it was, it turned out backwards.
- *
- * `rangeMult` swept across all three benches, 4 seeds (what the gate uses) and
- * 12 seeds (to separate signal from sampling):
- *
- *   ×      1.05   1.10   1.15   1.20   1.25   1.30   1.35   1.40   1.50   2.00
- *   magic  +5.0  +14.4  +10.9  +22.3  +12.1   +3.7   +1.1   +5.2  +24.1   +3.9
- *   endure +0.4   +0.8   +0.8   +2.5   +2.5   +2.5   +2.5   +3.3   +4.6  +46.3
- *   phys   +0.4   +0.8   +1.0   +1.1   +1.1   +1.4   +1.5   +2.2   +2.1   +2.1
- *                                                       (12 seeds, in points)
- *
- * `magic` is **not noisy — it is non-monotone**, and that is the important
- * distinction: the 4-seed and 12-seed columns agree to within a point at every
- * rung (+1.1/+1.1 at ×1.35, +23.7/+24.1 at ×1.50), so tripling the sample does
- * not smooth it. A Stormcaller carries an 83px splash, and moving its range
- * ring changes *which* enemy it picks, which changes which cluster the blast
- * catches — a discontinuity in the outcome, not a distribution to average. A
- * bench whose answer swings between +1.1pt and +23.7pt as the affix gets
- * monotonically stronger cannot grade that affix in either direction: it would
- * have passed a dead `reach` on one rung and failed a working one on the next.
- *
- * `endure` is monotone across the whole sweep and the mechanism is legible, so
- * that is where `reach` is graded. `phys` is the other failure mode and is worth
- * recording too — a Sharpshooter already sees 479px of road, so range saturates
- * there at about +2pt no matter how much of it is bought.
- *
- * The gate keeps its teeth on the new home: at ×1.05–×1.10 `reach` reads +0.0pt
- * on `endure`, which is exactly the dead-affix signature this invariant exists
- * to catch.
- *
- * ---- and the re-home does not make it a comfortable pass (m-2) -------------
- *
- * `endure`'s answer to `reach` is coarse: the bench's whole leak pool is 80 (20
- * Siege Barrels at 4 apiece), so a seed's response to this affix is one barrel
- * or none — 5.0pt or 0.0pt, nothing between. At four seeds the affix read +3.7pt
- * against a +2.0pt floor, which is a pass decided by a single body out of eighty.
- * The seed set is doubled above and the bench quantum is printed in the table, and
- * `reach` reads **+4.4pt against a quantum of 0.63pt** on the shipped table,
- * which clears the two-quantum bar and is reported as a clean pass. It did not
- * get there by being re-graded: the `items.ts` clamp fix raised the Legendary
- * budget 3.6 → 3.7, so the roll this sweep grades is a little larger. At the
- * four-seed grid it was +3.7pt, i.e. **less than one leaked barrel** clear of
- * the floor — the reported `marginal` verdict exists so that state is visible
- * the next time it happens rather than passing silently.
- *
- * ---- `executioner`: `phys` → `endure`, and it was never passing honestly ----
- *
- * The old home was `phys`, and it read +5pt there — on a roll it should not have
- * been able to make. `items.ts` rolled `execute` as `min(0.25, range(0.08,0.14) ×
- * budget)`, which pins at the 0.25 cap for **100%** of Legendary and Mythic rolls
- * and 68.6% of Epic ones (measured, 6,000 items per tier), so the sweep was
- * grading a 25% threshold against a card whose band tops out below 20%. Re-based
- * so the ladder has room (see `items.ts`), the same affix reads **+0.8pt** on
- * `phys` — below the floor.
- *
- * That is not a reason to put the cap back; it is a reason `phys` was the wrong
- * bench. Execute removes the last `x` of a body's HP, so what it is worth scales
- * with how much HP a body has — `engine.applyHit`'s own note derives this — and
- * `phys` is a Sharpshooter against a swarm-scaled column of light bodies, where
- * a tenth of a Torch Raider is nothing. `endure` is twenty Siege Barrels at ×3
- * HP, which is where a threshold is worth something. On the shipped table the
- * same roll reads **+2.4pt on `phys` and +13.1pt on `endure`** — a factor of
- * five, on one affix, from nothing but which bodies it is asked to finish.
- */
-const AFFIX_HOME: Record<string, ScenarioKey> = {
-  might: 'phys',
-  precision: 'phys',
-  insight: 'magic',
-  reach: 'endure', // range is the binding constraint on a 96px blocker, not on a mystic
-  patience: 'endure',
-  cruelty: 'phys',
-  ruin: 'phys',
-  bursting: 'endure', // splash pays off against the queue a blocker holds still
-  heavy: 'phys',
-  swift: 'phys',
-  flaming: 'phys',
-  frost: 'magic',
-  shocking: 'phys',
-  piercing: 'phys',
-  vampiric: 'phys',
-  executioner: 'endure', // a threshold is worth what the body it removes is worth
-}
-/** An affix must move its own scenario by at least this much to count as working. */
-const MIN_AFFIX_UPLIFT = 0.02
-
-interface AffixRow { id: string; home: ScenarioKey; deltas: Record<ScenarioKey, number> }
-const affixRows: AffixRow[] = []
-for (const id of Object.keys(AFFIX_HOME)) {
-  const ench = rollNamedEnchant(id)
-  if (!ench) {
-    failures.push(`Enchantment "${id}" could not be rolled — the sweep cannot see it.`)
-    continue
-  }
-  const deltas = {} as Record<ScenarioKey, number>
+// §4 grades on these baselines and §10 grades the curses against them.
+if (want(4) || want(10)) {
   for (const k of SCEN_KEYS) {
-    const b = AFFIX_SCENARIOS[k].build
-    const withAffix: Sentinel = { ...b, equipment: { ...b.equipment, mainHand: affixItem(id, ench) } }
-    deltas[k] = benchStop(withAffix, k) - affixBase[k]
-  }
-  affixRows.push({ id, home: AFFIX_HOME[id], deltas })
-}
-affixRows.sort((a, b) => b.deltas[b.home] - a.deltas[a.home])
-/** How many bench quanta of daylight an uplift needs before it is a clean pass. */
-const MARGINAL_QUANTA = 2
-line('| Enchantment | Graded on | Uplift there | Verdict | `phys` | `magic` | `endure` |')
-line('|---|:-:|--:|:-:|--:|--:|--:|')
-const marginalAffixes: string[] = []
-for (const r of affixRows) {
-  const up = r.deltas[r.home]
-  const clean = up >= MIN_AFFIX_UPLIFT + MARGINAL_QUANTA * benchQuantum[r.home]
-  const verdict = up < MIN_AFFIX_UPLIFT ? '❌ dead' : clean ? '✅' : '⚠️ marginal'
-  if (up >= MIN_AFFIX_UPLIFT && !clean) marginalAffixes.push(`${r.id} (${pp(up)} on \`${r.home}\`, quantum ${pp(benchQuantum[r.home])})`)
-  line(
-    `| ${r.id} | \`${r.home}\` | **${pp(up)}** | ${verdict} | ${pp(r.deltas.phys)} | ${pp(r.deltas.magic)} | ${pp(r.deltas.endure)} |`,
-  )
-}
-line('')
-line(
-  `**⚠️ marginal** means the uplift clears the ${pp(MIN_AFFIX_UPLIFT)} floor by less than ${MARGINAL_QUANTA} of its bench's own quanta — the pass is real but it is being carried by one or two leaked bodies, and it should not be read as a measurement. ${marginalAffixes.length ? `Currently: ${marginalAffixes.join('; ')}.` : 'Currently: none.'} This is reported, not failed: the honest response to a number the bench cannot resolve is to say so, not to widen the floor until it looks clean or narrow it until it breaks.`,
-)
-line('')
-line(`**Invariant:** every affix must move its own scenario by ≥ ${pp(MIN_AFFIX_UPLIFT)}. This is the check`)
-line('that would have caught the dead `patience` gear affix: before the engine wired')
-line('`gear.patience` into the stack ceiling it contributed *exactly* 0.0pt, in every')
-line('scenario, forever.')
-line('')
-for (const r of affixRows) {
-  if (r.deltas[r.home] < MIN_AFFIX_UPLIFT) {
-    failures.push(
-      `Enchantment "${r.id}" moves its own scenario (\`${r.home}\`) by ${pp(r.deltas[r.home])} — at or below the ${pp(MIN_AFFIX_UPLIFT)} floor. It is dead, mis-scaled, or mis-scoped.`,
-    )
+    affixBase[k] = benchStop(AFFIX_SCENARIOS[k].build, k)
   }
 }
 
-/*
- * ---- and does the affix have a rarity ladder at all? (m-2) -----------------
- *
- * §3 checks that base-stat budget rises with rarity. Nothing checked the same
- * thing for an *enchantment*, and two of them did not have one: both roll
- * `budget`-scaled inside a `Math.min`, and the budget ladder (1.0 / 1.7 / 2.5 /
- * 3.6 / 5.0) drove them straight into the cap. As shipped, over 6,000 generated
- * items per tier:
- *
- *   frost         rare 0.0%   epic 39.3%   legendary **87.9%**   mythic 100%
- *   executioner   rare 0.0%   epic 68.6%   legendary **100%**    mythic 100%
- *
- * — "at the cap", i.e. the share of rolls where rarity bought nothing. A
- * Legendary Frost was 0.600 nine times in ten and a Legendary Executioner was
- * 0.250 every single time, while §4 scored `frost` as the strongest affix in the
- * game at a value it almost always rolled. This is the `cx_vengeful` crit-clamp
- * defect (see `items.ts`) in the enchantment table.
- *
- * The check is on the **median**, not the mean, and on every consecutive pair:
- * a ladder that stops climbing is what pinning looks like from the outside, and
- * it needs no knowledge of where the cap is. The list is explicit because only
- * a clamped affix can fail — `piercing` and `shocking` roll `int(1,2)` and do not
- * scale with rarity at all by design, so a blanket sweep would fail them for a
- * different reason. Add a row here whenever a `Math.min` appears in a roll.
- */
-const CLAMPED_AFFIXES: { id: string; label: string; read: (e: Enchantment) => number | undefined }[] = [
-  { id: 'frost', label: 'chill slow', read: (e) => e.mods?.chill?.slow },
-  { id: 'executioner', label: 'execute threshold', read: (e) => e.mods?.execute },
-]
-/** Rarities that must show a climb. Common rolls no enchantments at all. */
-const LADDER_RARITIES: ItemRarity[] = ['rare', 'epic', 'legendary', 'mythic']
-const LADDER_ROLLS = 3000
-line('**Does the affix itself have a rarity ladder?** Median rolled magnitude per tier,')
-line(`over ${LADDER_ROLLS} generated items each. Only clamped affixes can fail this; \`piercing\` and`)
-line('`shocking` roll a small integer and are deliberately rarity-flat.')
-line('')
-line(`| Affix | Value | ${LADDER_RARITIES.map((r) => RARITY[r].label).join(' | ')} |`)
-line(`|---|---|${LADDER_RARITIES.map(() => '--:').join('|')}|`)
-for (const ca of CLAMPED_AFFIXES) {
-  const meds: number[] = []
-  for (const rar of LADDER_RARITIES) {
-    const rng = new RNG(4242)
-    const vals: number[] = []
-    for (let i = 0; i < LADDER_ROLLS; i++) {
-      const it = generateItem(rng, { slot: rng.pick(['oneHand', 'offHand', 'body']), rarity: rar })
-      for (const e of it.enchantments) {
-        if (e.id !== ca.id) continue
-        const v = ca.read(e)
-        if (v != null) vals.push(v)
-      }
-    }
-    meds.push(median(vals))
+if (want(4)) {
+  /**
+   * The smallest change one bench can report: one leaked body's worth of base HP,
+   * divided across the seed set. Below this an affix and a dead affix are the same
+   * number, and a floor placed inside it is a coin toss dressed as an invariant.
+   */
+  const benchQuantum: Record<ScenarioKey, number> = {} as Record<ScenarioKey, number>
+  for (const k of SCEN_KEYS) {
+    const sc = AFFIX_SCENARIOS[k]
+    const ml = maxLeak(sc.wave)
+    const dur = runBattle({ team: [{ sentinel: sc.build, slotId: 's3' }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11, rules: BENCH_RULES }).timeSec
+    // The lightest body in the wave is the finest step it can take.
+    const minLeak = Math.min(...sc.wave.spawns.map((s) => ENEMY_TYPES[s.typeId].leak))
+    benchQuantum[k] = minLeak / ml / affixSeeds.length
+    line(
+      `| \`${sc.label}\` | ${sc.buildLabel} | ${sc.waveLabel} | ${f1(dur)}s | ${pct(affixBase[k])} | ${pp(benchQuantum[k])} | ${sc.blurb} |`,
+    )
   }
-  line(`| ${ca.id} | ${ca.label} | ${meds.map((m) => f2(m)).join(' | ')} |`)
-  for (let i = 1; i < meds.length; i++) {
-    if (meds[i] <= meds[i - 1]) {
+  line('')
+  for (const k of SCEN_KEYS) {
+    if (affixBase[k] < BENCH_BAND[0] || affixBase[k] > BENCH_BAND[1]) {
       failures.push(
-        `Enchantment "${ca.id}" has no rarity ladder: its median ${ca.label} at ${RARITY[LADDER_RARITIES[i]].label} is ${f2(meds[i])}, no better than ${RARITY[LADDER_RARITIES[i - 1]].label}'s ${f2(meds[i - 1])}. Its roll is budget-scaled inside a clamp, so the cap — not the rarity — is deciding the value.`,
+        `Affix bench "${k}" has drifted out of the band an affix can be resolved in: baseline stop rate ${pct(affixBase[k])}, band ${pct(BENCH_BAND[0])}–${pct(BENCH_BAND[1])}. At the floor every affix reads +0 because the build is already losing; at the ceiling every affix reads +0 because it is already winning. Re-pin \`BENCH_PIN.${k}\` against the current \`waves.ts\` curve.`,
       )
     }
   }
+  line(
+    `Each scenario is **pinned** to the pressure it was fitted at (\`BENCH_PIN\`: ${SCEN_KEYS.map((k) => `${k} ×${BENCH_PIN[k]}`).join(', ')}), so a change to the campaign's difficulty curve moves the game without silently moving the bench every affix is graded on — and the baselines above must stay inside ${pct(BENCH_BAND[0])}–${pct(BENCH_BAND[1])}, which is checked.`,
+  )
+  line('')
+  line('Each affix is rolled at legendary budget and equipped **alone** (an item with no')
+  line('base stats), so the affix is the only variable. Every affix is measured in all')
+  line('three scenarios; it is *graded* on the one it is designed for.')
+  line('')
+
+  /**
+   * Which scenario each affix is actually designed to pay off in.
+   *
+   * ---- `reach`: `magic` → `endure`, and why that is a correction rather than
+   * ---- moving the goalposts (F1-B) ------------------------------------------
+   *
+   * The old entry read `reach: 'magic'` with the note *"a blocking fighter fights
+   * at 72–85px; reach only matters at range"*. That confuses a blocker's **melee
+   * engagement distance** with its **attack range**: a Weaponmaster holding a
+   * queue still shoots, and its 96px reach sees about 4% of a 2290px lane, so how
+   * far back down the queue it can reach is the binding constraint on the entire
+   * bench. The claim was never measured; when it was, it turned out backwards.
+   *
+   * `rangeMult` swept across all three benches, 4 seeds (what the gate uses) and
+   * 12 seeds (to separate signal from sampling):
+   *
+   *   ×      1.05   1.10   1.15   1.20   1.25   1.30   1.35   1.40   1.50   2.00
+   *   magic  +5.0  +14.4  +10.9  +22.3  +12.1   +3.7   +1.1   +5.2  +24.1   +3.9
+   *   endure +0.4   +0.8   +0.8   +2.5   +2.5   +2.5   +2.5   +3.3   +4.6  +46.3
+   *   phys   +0.4   +0.8   +1.0   +1.1   +1.1   +1.4   +1.5   +2.2   +2.1   +2.1
+   *                                                       (12 seeds, in points)
+   *
+   * `magic` is **not noisy — it is non-monotone**, and that is the important
+   * distinction: the 4-seed and 12-seed columns agree to within a point at every
+   * rung (+1.1/+1.1 at ×1.35, +23.7/+24.1 at ×1.50), so tripling the sample does
+   * not smooth it. A Stormcaller carries an 83px splash, and moving its range
+   * ring changes *which* enemy it picks, which changes which cluster the blast
+   * catches — a discontinuity in the outcome, not a distribution to average. A
+   * bench whose answer swings between +1.1pt and +23.7pt as the affix gets
+   * monotonically stronger cannot grade that affix in either direction: it would
+   * have passed a dead `reach` on one rung and failed a working one on the next.
+   *
+   * `endure` is monotone across the whole sweep and the mechanism is legible, so
+   * that is where `reach` is graded. `phys` is the other failure mode and is worth
+   * recording too — a Sharpshooter already sees 479px of road, so range saturates
+   * there at about +2pt no matter how much of it is bought.
+   *
+   * The gate keeps its teeth on the new home: at ×1.05–×1.10 `reach` reads +0.0pt
+   * on `endure`, which is exactly the dead-affix signature this invariant exists
+   * to catch.
+   *
+   * ---- and the re-home does not make it a comfortable pass (m-2) -------------
+   *
+   * `endure`'s answer to `reach` is coarse: the bench's whole leak pool is 80 (20
+   * Siege Barrels at 4 apiece), so a seed's response to this affix is one barrel
+   * or none — 5.0pt or 0.0pt, nothing between. At four seeds the affix read +3.7pt
+   * against a +2.0pt floor, which is a pass decided by a single body out of eighty.
+   * The seed set is doubled above and the bench quantum is printed in the table, and
+   * `reach` reads **+4.4pt against a quantum of 0.63pt** on the shipped table,
+   * which clears the two-quantum bar and is reported as a clean pass. It did not
+   * get there by being re-graded: the `items.ts` clamp fix raised the Legendary
+   * budget 3.6 → 3.7, so the roll this sweep grades is a little larger. At the
+   * four-seed grid it was +3.7pt, i.e. **less than one leaked barrel** clear of
+   * the floor — the reported `marginal` verdict exists so that state is visible
+   * the next time it happens rather than passing silently.
+   *
+   * ---- `executioner`: `phys` → `endure`, and it was never passing honestly ----
+   *
+   * The old home was `phys`, and it read +5pt there — on a roll it should not have
+   * been able to make. `items.ts` rolled `execute` as `min(0.25, range(0.08,0.14) ×
+   * budget)`, which pins at the 0.25 cap for **100%** of Legendary and Mythic rolls
+   * and 68.6% of Epic ones (measured, 6,000 items per tier), so the sweep was
+   * grading a 25% threshold against a card whose band tops out below 20%. Re-based
+   * so the ladder has room (see `items.ts`), the same affix reads **+0.8pt** on
+   * `phys` — below the floor.
+   *
+   * That is not a reason to put the cap back; it is a reason `phys` was the wrong
+   * bench. Execute removes the last `x` of a body's HP, so what it is worth scales
+   * with how much HP a body has — `engine.applyHit`'s own note derives this — and
+   * `phys` is a Sharpshooter against a swarm-scaled column of light bodies, where
+   * a tenth of a Torch Raider is nothing. `endure` is twenty Siege Barrels at ×3
+   * HP, which is where a threshold is worth something. On the shipped table the
+   * same roll reads **+2.4pt on `phys` and +13.1pt on `endure`** — a factor of
+   * five, on one affix, from nothing but which bodies it is asked to finish.
+   */
+  const AFFIX_HOME: Record<string, ScenarioKey> = {
+    might: 'phys',
+    precision: 'phys',
+    insight: 'magic',
+    reach: 'endure', // range is the binding constraint on a 96px blocker, not on a mystic
+    patience: 'endure',
+    cruelty: 'phys',
+    ruin: 'phys',
+    bursting: 'endure', // splash pays off against the queue a blocker holds still
+    heavy: 'phys',
+    swift: 'phys',
+    flaming: 'phys',
+    frost: 'magic',
+    shocking: 'phys',
+    piercing: 'phys',
+    vampiric: 'phys',
+    executioner: 'endure', // a threshold is worth what the body it removes is worth
+  }
+  /** An affix must move its own scenario by at least this much to count as working. */
+  const MIN_AFFIX_UPLIFT = 0.02
+
+  interface AffixRow { id: string; home: ScenarioKey; deltas: Record<ScenarioKey, number> }
+  const affixRows: AffixRow[] = []
+  for (const id of Object.keys(AFFIX_HOME)) {
+    const ench = rollNamedEnchant(id)
+    if (!ench) {
+      failures.push(`Enchantment "${id}" could not be rolled — the sweep cannot see it.`)
+      continue
+    }
+    const deltas = {} as Record<ScenarioKey, number>
+    for (const k of SCEN_KEYS) {
+      const b = AFFIX_SCENARIOS[k].build
+      const withAffix: Sentinel = { ...b, equipment: { ...b.equipment, mainHand: affixItem(id, ench) } }
+      deltas[k] = benchStop(withAffix, k) - affixBase[k]
+    }
+    affixRows.push({ id, home: AFFIX_HOME[id], deltas })
+  }
+  affixRows.sort((a, b) => b.deltas[b.home] - a.deltas[a.home])
+  /** How many bench quanta of daylight an uplift needs before it is a clean pass. */
+  const MARGINAL_QUANTA = 2
+  line('| Enchantment | Graded on | Uplift there | Verdict | `phys` | `magic` | `endure` |')
+  line('|---|:-:|--:|:-:|--:|--:|--:|')
+  const marginalAffixes: string[] = []
+  for (const r of affixRows) {
+    const up = r.deltas[r.home]
+    const clean = up >= MIN_AFFIX_UPLIFT + MARGINAL_QUANTA * benchQuantum[r.home]
+    const verdict = up < MIN_AFFIX_UPLIFT ? '❌ dead' : clean ? '✅' : '⚠️ marginal'
+    if (up >= MIN_AFFIX_UPLIFT && !clean) marginalAffixes.push(`${r.id} (${pp(up)} on \`${r.home}\`, quantum ${pp(benchQuantum[r.home])})`)
+    line(
+      `| ${r.id} | \`${r.home}\` | **${pp(up)}** | ${verdict} | ${pp(r.deltas.phys)} | ${pp(r.deltas.magic)} | ${pp(r.deltas.endure)} |`,
+    )
+  }
+  line('')
+  line(
+    `**⚠️ marginal** means the uplift clears the ${pp(MIN_AFFIX_UPLIFT)} floor by less than ${MARGINAL_QUANTA} of its bench's own quanta — the pass is real but it is being carried by one or two leaked bodies, and it should not be read as a measurement. ${marginalAffixes.length ? `Currently: ${marginalAffixes.join('; ')}.` : 'Currently: none.'} This is reported, not failed: the honest response to a number the bench cannot resolve is to say so, not to widen the floor until it looks clean or narrow it until it breaks.`,
+  )
+  line('')
+  line(`**Invariant:** every affix must move its own scenario by ≥ ${pp(MIN_AFFIX_UPLIFT)}. This is the check`)
+  line('that would have caught the dead `patience` gear affix: before the engine wired')
+  line('`gear.patience` into the stack ceiling it contributed *exactly* 0.0pt, in every')
+  line('scenario, forever.')
+  line('')
+  for (const r of affixRows) {
+    if (r.deltas[r.home] < MIN_AFFIX_UPLIFT) {
+      failures.push(
+        `Enchantment "${r.id}" moves its own scenario (\`${r.home}\`) by ${pp(r.deltas[r.home])} — at or below the ${pp(MIN_AFFIX_UPLIFT)} floor. It is dead, mis-scaled, or mis-scoped.`,
+      )
+    }
+  }
+
+  /*
+   * ---- and does the affix have a rarity ladder at all? (m-2) -----------------
+   *
+   * §3 checks that base-stat budget rises with rarity. Nothing checked the same
+   * thing for an *enchantment*, and two of them did not have one: both roll
+   * `budget`-scaled inside a `Math.min`, and the budget ladder (1.0 / 1.7 / 2.5 /
+   * 3.6 / 5.0) drove them straight into the cap. As shipped, over 6,000 generated
+   * items per tier:
+   *
+   *   frost         rare 0.0%   epic 39.3%   legendary **87.9%**   mythic 100%
+   *   executioner   rare 0.0%   epic 68.6%   legendary **100%**    mythic 100%
+   *
+   * — "at the cap", i.e. the share of rolls where rarity bought nothing. A
+   * Legendary Frost was 0.600 nine times in ten and a Legendary Executioner was
+   * 0.250 every single time, while §4 scored `frost` as the strongest affix in the
+   * game at a value it almost always rolled. This is the `cx_vengeful` crit-clamp
+   * defect (see `items.ts`) in the enchantment table.
+   *
+   * The check is on the **median**, not the mean, and on every consecutive pair:
+   * a ladder that stops climbing is what pinning looks like from the outside, and
+   * it needs no knowledge of where the cap is. The list is explicit because only
+   * a clamped affix can fail — `piercing` and `shocking` roll `int(1,2)` and do not
+   * scale with rarity at all by design, so a blanket sweep would fail them for a
+   * different reason. Add a row here whenever a `Math.min` appears in a roll.
+   */
+  const CLAMPED_AFFIXES: { id: string; label: string; read: (e: Enchantment) => number | undefined }[] = [
+    { id: 'frost', label: 'chill slow', read: (e) => e.mods?.chill?.slow },
+    { id: 'executioner', label: 'execute threshold', read: (e) => e.mods?.execute },
+  ]
+  /** Rarities that must show a climb. Common rolls no enchantments at all. */
+  const LADDER_RARITIES: ItemRarity[] = ['rare', 'epic', 'legendary', 'mythic']
+  const LADDER_ROLLS = 3000
+  line('**Does the affix itself have a rarity ladder?** Median rolled magnitude per tier,')
+  line(`over ${LADDER_ROLLS} generated items each. Only clamped affixes can fail this; \`piercing\` and`)
+  line('`shocking` roll a small integer and are deliberately rarity-flat.')
+  line('')
+  line(`| Affix | Value | ${LADDER_RARITIES.map((r) => RARITY[r].label).join(' | ')} |`)
+  line(`|---|---|${LADDER_RARITIES.map(() => '--:').join('|')}|`)
+  for (const ca of CLAMPED_AFFIXES) {
+    const meds: number[] = []
+    for (const rar of LADDER_RARITIES) {
+      const rng = new RNG(4242)
+      const vals: number[] = []
+      for (let i = 0; i < LADDER_ROLLS; i++) {
+        const it = generateItem(rng, { slot: rng.pick(['oneHand', 'offHand', 'body']), rarity: rar })
+        for (const e of it.enchantments) {
+          if (e.id !== ca.id) continue
+          const v = ca.read(e)
+          if (v != null) vals.push(v)
+        }
+      }
+      meds.push(median(vals))
+    }
+    line(`| ${ca.id} | ${ca.label} | ${meds.map((m) => f2(m)).join(' | ')} |`)
+    for (let i = 1; i < meds.length; i++) {
+      if (meds[i] <= meds[i - 1]) {
+        failures.push(
+          `Enchantment "${ca.id}" has no rarity ladder: its median ${ca.label} at ${RARITY[LADDER_RARITIES[i]].label} is ${f2(meds[i])}, no better than ${RARITY[LADDER_RARITIES[i - 1]].label}'s ${f2(meds[i - 1])}. Its roll is budget-scaled inside a clamp, so the cap — not the rarity — is deciding the value.`,
+        )
+      }
+    }
+  }
+  line('')
 }
-line('')
 
 // -------------------------------------------------------------- Sweep 5
-// Pressure ceiling — rebuilt (M19-d2).
-line('## 5. Pressure ceiling (standard team, depth 8)')
-/**
- * The standard team's level (Phase 3b). It was L20 — a finished tier-2 build —
- * which matched the old road, where Threat compounded to ×11.6 by depth 8. On
- * the three-act road levels are a resource: L20 lands around depth 9–10, and a
- * depth-8 company is a tier-1 line in its mid-teens.
- */
-const STD_LEVEL = 16
-line('')
-line('**What broke before.** The old sweep scaled enemy **HP only**, stopped at ×8, and')
-line('was demoted to "informational" with no invariant at all. Enemies that arrive at')
-line('the same rate and in the same number cannot threaten a tower line, so it could')
-line('not break — and an invariant that cannot fail is not an invariant.')
-line('')
-line('**What it does now.** *Siege pressure* scales three axes: per-enemy HP ×p, head')
-line('count ×p^0.35 and arrival compressed by p^0.35. Count is deliberately the *weakest*')
-line('axis, because `engine.impact` applies splash to every enemy in radius with no')
-line('target cap — piling bodies into the same space makes a splash line **stronger**,')
-line('which is exactly how the old ladder ended up censored.')
-line('')
-line(`A depth-8 team (Vanguard / Sharpshooter / Pyromancer lines at level ${STD_LEVEL} — tier 1, where the`)
-line('XP curve (§9) puts a depth-8 company, with L20 two layers deeper — Epic gear and random spec perks)')
-line(`faces depth-8 waves at the Threat a real depth-8 fight is fought at (×${f2(threatAtLayer(8))}) with the real`)
-line(`base of ${MAX_BASE_HP}. ${SEEDS.slice(0, 4).length} seeds per rung.`)
-line('')
-const PRESSURE_LADDER = [1, 1.5, 2.2, 3.4, 5, 7.6, 11, 17, 25, 38, 57, 85]
-const CEIL_SEEDS = SEEDS.slice(0, 4)
-const stdThreat = threatAtLayer(8)
-const stdTeam = [
-  { sentinel: buildSpec('vanguard', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's0' },
-  { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's3' },
-  { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's5' },
-]
-line('| Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |')
-line('|--:|--:|:-:|--:|--:|')
-let breakPoint = 0
-let censored = true
-for (const p of PRESSURE_LADDER) {
-  const wave = scaleWave(generateEncounter(8, 'normal'), p, SIEGE_PRESSURE)
-  const rows = CEIL_SEEDS.map((seed) =>
-    runBattle({ team: stdTeam, depth: 8, wave, enemyHpMult: stdThreat, baseHp: MAX_BASE_HP, maxSeconds: 240, seed }),
-  )
-  const cleared = rows.filter((r) => r.cleared).length
-  const hpLeft = stat(rows.map((r) => r.baseHpLeft))
-  const downs = stat(rows.map((r) => r.downs))
-  line(`| ×${f2(p)} | ${wave.spawns.length} | ${cleared}/${rows.length} | ${pm(hpLeft)} | ${pm(downs)} |`)
-  if (cleared === rows.length) breakPoint = p
-  if (cleared === 0) { censored = false; break }
-}
-line('')
-line(`Standard depth-8 team holds up to **siege pressure ×${f2(breakPoint)}**.`)
-line('')
-/** A depth-appropriate team should be genuinely tested by its own depth. */
-const TARGET_BREAK_BAND: [number, number] = [2, 8]
-line(
-  `**Design target:** a depth-appropriate team should break somewhere in **×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]}** — comfortable`,
-)
-line('at its own node, in danger at a couple of nodes deeper. Anything far above that')
-line('means the depth-8 encounter is not an encounter for a depth-8 team.')
-line('')
-if (censored) {
-  failures.push(
-    `Pressure ceiling is censored: the standard team survived every rung up to ×${f2(PRESSURE_LADDER[PRESSURE_LADDER.length - 1])}. The sweep found no break point, so it is not measuring difficulty.`,
-  )
-} else if (breakPoint > TARGET_BREAK_BAND[1]) {
-  failures.push(
-    `Standard depth-8 team holds siege pressure ×${f2(breakPoint)}, far above the ×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]} design band — a well-built team is untouchable at its own depth.`,
-  )
-} else if (breakPoint < TARGET_BREAK_BAND[0]) {
-  failures.push(`Standard depth-8 team breaks at siege pressure ×${f2(breakPoint)} — below the ×${TARGET_BREAK_BAND[0]} floor; depth 8 may be unwinnable.`)
-}
-const baselineClear = runBattle({ team: stdTeam, depth: 6, enemyHpMult: 1, baseHp: 20, maxSeconds: 90, seed: 21 })
-if (!baselineClear.cleared) failures.push('Standard team cannot clear depth 6 at Threat ×1 — game may be unwinnable.')
-
-// -------------------------------------------------------------- Sweep 6
-// Monte Carlo full runs.
-line('## 6. Monte Carlo full runs (compounding Threat vs. progression)')
-line('')
-line('Random teams (3–5 specs) play all twelve layers of the three acts — an act boss on')
-line('layers 4 and 8, the final boss on 12, an elite mid-way through acts 2 and 3. Team **power')
-line('scales with depth** (level ≈ 2.5·depth, the curve `levelXpAwards` pays; gear rarity improving)')
-line('to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×' + THREAT_STEP + ' a layer, ×' + ACT_JUMP + ' more')
-line('per act) — it no longer compounds on choices, so this model and the routed first run in §11')
-line('meet every layer at the same Threat. Base HP (20) persists between nodes.')
-line('**Win** = the boss falls.')
-line('')
-/**
- * 150 → 200 → **300** (M19-f, then P7).
- *
- * Three of this sweep's four gates sit within one σ of their own edge — the win
- * band's floor, the 60% concentration ceiling and the "≥3 distinct death
- * depths" rule — so at 150 runs (σ = 4.1pt on the win rate at p≈0.5) the suite
- * could fail on a resample rather than on a change. 200 brought that to 3.5pt;
- * P7 widened the sweep again and took it to 300, where σ is **2.9pt**.
- *
- * The doc said "150 → 200" for as long as the constant has said 300 (F13). A
- * sample size is a claim about how much of a failure is noise, so a stale one
- * is not a cosmetic comment — it quotes the wrong σ beside gates that are read
- * to one σ.
- */
-const RUNS = 300
-const NODES = MC_LAYERS
-let wins = 0
-const depths: number[] = []
-const deathDepths: number[] = []
-let bossAttempts = 0
-let bossKills = 0
-/**
- * Battles that hit the harness cap instead of ending (Phase 3a). This sweep
- * used a 70-second cap, and a capped battle counted as a LOSS: re-measured with
- * no cap, 38 of the 72 "deaths" in a 150-run sample were the clock — mostly at
- * the boss — and the honest win rate of the pre-3a game was 73%, not 50%. The
- * game has no timeout. The cap is now a per-sub-wave safety net far above any
- * real clear, and this counter must stay at zero.
- */
-let mcTimeouts = 0
-/** Threat each team carried into the boss fight — the other half of the §6/§11 gap. */
-const mcBossThreats: number[] = []
-/**
- * Every Monte Carlo run draws a battlefield and a set of composition variants
- * off its own index, the way a real run draws them off its seed (WS8), and its
- * own RNG stream, so two configs compare on paired seeds. The model itself is
- * `runsim.monteCarloRun`, shared with `fit-curve.ts`.
- */
-const mcFieldCounts = new Map<string, { n: number; won: number }>()
-for (let r = 0; r < RUNS; r++) {
-  const out = monteCarloRun(r)
-  const fieldTally = mcFieldCounts.get(out.fieldId) ?? { n: 0, won: 0 }
-  fieldTally.n++
-  mcFieldCounts.set(out.fieldId, fieldTally)
-  if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
-  if (out.finalKill) bossKills++
-  mcTimeouts += out.timeouts
-  depths.push(out.reached)
-  if (out.died) deathDepths.push(out.died)
-  if (out.won) {
-    wins++
-    fieldTally.won++
+if (want(5)) {
+  // Pressure ceiling — rebuilt (M19-d2).
+  line('## 5. Pressure ceiling (standard team, depth 8)')
+  /**
+   * The standard team's level (Phase 3b). It was L20 — a finished tier-2 build —
+   * which matched the old road, where Threat compounded to ×11.6 by depth 8. On
+   * the three-act road levels are a resource: L20 lands around depth 9–10, and a
+   * depth-8 company is a tier-1 line in its mid-teens.
+   */
+  const STD_LEVEL = 16
+  line('')
+  line('**What broke before.** The old sweep scaled enemy **HP only**, stopped at ×8, and')
+  line('was demoted to "informational" with no invariant at all. Enemies that arrive at')
+  line('the same rate and in the same number cannot threaten a tower line, so it could')
+  line('not break — and an invariant that cannot fail is not an invariant.')
+  line('')
+  line('**What it does now.** *Siege pressure* scales three axes: per-enemy HP ×p, head')
+  line('count ×p^0.35 and arrival compressed by p^0.35. Count is deliberately the *weakest*')
+  line('axis, because `engine.impact` applies splash to every enemy in radius with no')
+  line('target cap — piling bodies into the same space makes a splash line **stronger**,')
+  line('which is exactly how the old ladder ended up censored.')
+  line('')
+  line(`A depth-8 team (Vanguard / Sharpshooter / Pyromancer lines at level ${STD_LEVEL} — tier 1, where the`)
+  line('XP curve (§9) puts a depth-8 company, with L20 two layers deeper — Epic gear and random spec perks)')
+  line(`faces depth-8 waves at the Threat a real depth-8 fight is fought at (×${f2(threatAtLayer(8))}) with the real`)
+  line(`base of ${MAX_BASE_HP}. ${SEEDS.slice(0, 4).length} seeds per rung.`)
+  line('')
+  const PRESSURE_LADDER = [1, 1.5, 2.2, 3.4, 5, 7.6, 11, 17, 25, 38, 57, 85]
+  const CEIL_SEEDS = SEEDS.slice(0, 4)
+  const stdThreat = threatAtLayer(8)
+  const stdTeam = [
+    { sentinel: buildSpec('vanguard', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's0' },
+    { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's3' },
+    { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's5' },
+  ]
+  line('| Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |')
+  line('|--:|--:|:-:|--:|--:|')
+  let breakPoint = 0
+  let censored = true
+  for (const p of PRESSURE_LADDER) {
+    const wave = scaleWave(generateEncounter(8, 'normal'), p, SIEGE_PRESSURE)
+    const rows = CEIL_SEEDS.map((seed) =>
+      runBattle({ team: stdTeam, depth: 8, wave, enemyHpMult: stdThreat, baseHp: MAX_BASE_HP, maxSeconds: 240, seed }),
+    )
+    const cleared = rows.filter((r) => r.cleared).length
+    const hpLeft = stat(rows.map((r) => r.baseHpLeft))
+    const downs = stat(rows.map((r) => r.downs))
+    line(`| ×${f2(p)} | ${wave.spawns.length} | ${cleared}/${rows.length} | ${pm(hpLeft)} | ${pm(downs)} |`)
+    if (cleared === rows.length) breakPoint = p
+    if (cleared === 0) { censored = false; break }
   }
+  line('')
+  line(`Standard depth-8 team holds up to **siege pressure ×${f2(breakPoint)}**.`)
+  line('')
+  /** A depth-appropriate team should be genuinely tested by its own depth. */
+  const TARGET_BREAK_BAND: [number, number] = [2, 8]
+  line(
+    `**Design target:** a depth-appropriate team should break somewhere in **×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]}** — comfortable`,
+  )
+  line('at its own node, in danger at a couple of nodes deeper. Anything far above that')
+  line('means the depth-8 encounter is not an encounter for a depth-8 team.')
+  line('')
+  if (censored) {
+    failures.push(
+      `Pressure ceiling is censored: the standard team survived every rung up to ×${f2(PRESSURE_LADDER[PRESSURE_LADDER.length - 1])}. The sweep found no break point, so it is not measuring difficulty.`,
+    )
+  } else if (breakPoint > TARGET_BREAK_BAND[1]) {
+    failures.push(
+      `Standard depth-8 team holds siege pressure ×${f2(breakPoint)}, far above the ×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]} design band — a well-built team is untouchable at its own depth.`,
+    )
+  } else if (breakPoint < TARGET_BREAK_BAND[0]) {
+    failures.push(`Standard depth-8 team breaks at siege pressure ×${f2(breakPoint)} — below the ×${TARGET_BREAK_BAND[0]} floor; depth 8 may be unwinnable.`)
+  }
+  const baselineClear = runBattle({ team: stdTeam, depth: 6, enemyHpMult: 1, baseHp: 20, maxSeconds: 90, seed: 21 })
+  if (!baselineClear.cleared) failures.push('Standard team cannot clear depth 6 at Threat ×1 — game may be unwinnable.')
+  summary.push(`Pressure ceiling (std team, depth 8): ×${f2(breakPoint)} (target ×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]})`)
 }
-const winRate = wins / RUNS
-const avgDepth = mean(depths)
-const deathSpread = new Set(deathDepths).size
-const bossKillShare = bossAttempts ? bossKills / bossAttempts : 0
-/**
- * Mean Threat carried into the boss fight here. Printed because it is the
- * exchange rate between this sweep and §11: every wave-table dial is multiplied
- * by Threat, so a sweep that meets the boss at ×N feels a given change N times
- * over. When the two sweeps met the boss at wildly different Threat, they pulled
- * any shared dial in opposite directions.
- */
-const mcBossThreat = mean(mcBossThreats)
-const deathCounts = new Map<number, number>()
-for (const d of deathDepths) deathCounts.set(d, (deathCounts.get(d) ?? 0) + 1)
-const worstDeathDepth = [...deathCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [0, 0]
-const deathConcentration = deathDepths.length ? worstDeathDepth[1] / deathDepths.length : 0
-line(`- Runs: **${RUNS}**`)
-line(`- Win rate (boss falls): **${pct(winRate)}**`)
-line(`- Average depth reached: **${f1(avgDepth)} / ${NODES}**`)
-line(`- Depth distribution: ${histogram(depths, NODES)}`)
-line(`- Runs ended at each depth: ${histogram(deathDepths, NODES)}`)
-line(`- Distinct depths that killed at least one team: **${deathSpread}**`)
-line(`- Deadliest single node: **depth ${worstDeathDepth[0]}** — **${pct(deathConcentration)}** of all lost runs end there`)
-line(`- Boss attempts: **${bossAttempts}**, boss kills: **${bossKills}** (**${pct(bossKillShare)}** of arrivals)`)
-line(`- Mean Threat carried into the boss fight: **×${f1(mcBossThreat)}** (the exchange rate with §11 — see there)`)
-line(
-  `- Battlefields drawn, and what each one wins: ${[...mcFieldCounts.entries()]
-    .map(([id, t]) => `**${id}** n=${t.n} (${pct(t.n / RUNS)}) win ${pct(t.won / t.n)}`)
-    .join(' · ')}`,
-)
-line('')
 
-/** The band the design is aiming for, not a smoke test. */
-const TARGET_WIN_BAND: [number, number] = [0.45, 0.6]
-/** Deaths must not all land on one or two nodes. */
-const MIN_DEATH_SPREAD = 3
-/** …and no single node may be the whole difficulty curve on its own. */
-const MAX_DEATH_CONCENTRATION = 0.6
-/** The final boss must actually be a boss. */
-const TARGET_BOSS_KILL_SHARE = 0.1
-line(
-  `**Target win-rate band: ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}** for a depth-appropriate team. That is the band where a`,
-)
-line('run is worth finishing and losing is worth minding; the old 10–80% guardrail was a')
-line('smoke test that a completely degenerate curve could pass. The current game is')
-const bandGap =
-  winRate > TARGET_WIN_BAND[1]
-    ? `${((winRate - TARGET_WIN_BAND[1]) * 100).toFixed(0)}pt above the top of the band`
-    : winRate < TARGET_WIN_BAND[0]
-      ? `${((TARGET_WIN_BAND[0] - winRate) * 100).toFixed(0)}pt below the bottom of the band`
-      : 'inside the band'
-line(`**${bandGap}** (${pct(winRate)} vs ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}).`)
-line('')
-line('**Distribution shape matters as much as the rate.** A curve where every death')
-line('lands on the same two elite nodes and the boss kills nobody is degenerate even at')
-line('a perfect win rate: it means eight of the ten nodes are not doing anything. Three')
-line('invariants guard the shape — deaths must spread across at least')
-line(`${MIN_DEATH_SPREAD} distinct depths, no single node may end more than ${pct(MAX_DEATH_CONCENTRATION)} of lost runs, and`)
-line(`the boss must kill a nonzero share of the teams that reach it (design target ≥ ${pct(TARGET_BOSS_KILL_SHARE)}).`)
-line('')
-if (winRate < TARGET_WIN_BAND[0] || winRate > TARGET_WIN_BAND[1]) {
-  failures.push(
-    `Monte Carlo win rate ${pct(winRate)} is outside the ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])} design band (${bandGap}).`,
+/** Every campaign sweep (§6, §11, §14, §17) is this many layers deep. */
+const NODES = MC_LAYERS
+/** §6's win rate and boss Threat, which §11's prose reads against its own. */
+let winRate = NaN
+let mcBossThreat = NaN
+// -------------------------------------------------------------- Sweep 6
+if (want(6)) {
+  // Monte Carlo full runs.
+  line('## 6. Monte Carlo full runs (compounding Threat vs. progression)')
+  line('')
+  line('Random teams (3–5 specs) play all twelve layers of the three acts — an act boss on')
+  line('layers 4 and 8, the final boss on 12, an elite mid-way through acts 2 and 3. Team **power')
+  line('scales with depth** (level ≈ 2.5·depth, the curve `levelXpAwards` pays; gear rarity improving)')
+  line('to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×' + THREAT_STEP + ' a layer, ×' + ACT_JUMP + ' more')
+  line('per act) — it no longer compounds on choices, so this model and the routed first run in §11')
+  line('meet every layer at the same Threat. Base HP (20) persists between nodes.')
+  line('**Win** = the boss falls.')
+  line('')
+  /**
+   * 150 → 200 → **300** (M19-f, then P7).
+   *
+   * Three of this sweep's four gates sit within one σ of their own edge — the win
+   * band's floor, the 60% concentration ceiling and the "≥3 distinct death
+   * depths" rule — so at 150 runs (σ = 4.1pt on the win rate at p≈0.5) the suite
+   * could fail on a resample rather than on a change. 200 brought that to 3.5pt;
+   * P7 widened the sweep again and took it to 300, where σ is **2.9pt**.
+   *
+   * The doc said "150 → 200" for as long as the constant has said 300 (F13). A
+   * sample size is a claim about how much of a failure is noise, so a stale one
+   * is not a cosmetic comment — it quotes the wrong σ beside gates that are read
+   * to one σ.
+   */
+  const RUNS = 300
+  let wins = 0
+  const depths: number[] = []
+  const deathDepths: number[] = []
+  let bossAttempts = 0
+  let bossKills = 0
+  /**
+   * Battles that hit the harness cap instead of ending (Phase 3a). This sweep
+   * used a 70-second cap, and a capped battle counted as a LOSS: re-measured with
+   * no cap, 38 of the 72 "deaths" in a 150-run sample were the clock — mostly at
+   * the boss — and the honest win rate of the pre-3a game was 73%, not 50%. The
+   * game has no timeout. The cap is now a per-sub-wave safety net far above any
+   * real clear, and this counter must stay at zero.
+   */
+  let mcTimeouts = 0
+  /** Threat each team carried into the boss fight — the other half of the §6/§11 gap. */
+  const mcBossThreats: number[] = []
+  /**
+   * Every Monte Carlo run draws a battlefield and a set of composition variants
+   * off its own index, the way a real run draws them off its seed (WS8), and its
+   * own RNG stream, so two configs compare on paired seeds. The model itself is
+   * `runsim.monteCarloRun`, shared with `fit-curve.ts`.
+   */
+  const mcFieldCounts = new Map<string, { n: number; won: number }>()
+  for (let r = 0; r < RUNS; r++) {
+    const out = monteCarloRun(r)
+    const fieldTally = mcFieldCounts.get(out.fieldId) ?? { n: 0, won: 0 }
+    fieldTally.n++
+    mcFieldCounts.set(out.fieldId, fieldTally)
+    if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
+    if (out.finalKill) bossKills++
+    mcTimeouts += out.timeouts
+    depths.push(out.reached)
+    if (out.died) deathDepths.push(out.died)
+    if (out.won) {
+      wins++
+      fieldTally.won++
+    }
+  }
+  winRate = wins / RUNS
+  const avgDepth = mean(depths)
+  const deathSpread = new Set(deathDepths).size
+  const bossKillShare = bossAttempts ? bossKills / bossAttempts : 0
+  /**
+   * Mean Threat carried into the boss fight here. Printed because it is the
+   * exchange rate between this sweep and §11: every wave-table dial is multiplied
+   * by Threat, so a sweep that meets the boss at ×N feels a given change N times
+   * over. When the two sweeps met the boss at wildly different Threat, they pulled
+   * any shared dial in opposite directions.
+   */
+  mcBossThreat = mean(mcBossThreats)
+  const deathCounts = new Map<number, number>()
+  for (const d of deathDepths) deathCounts.set(d, (deathCounts.get(d) ?? 0) + 1)
+  const worstDeathDepth = [...deathCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [0, 0]
+  const deathConcentration = deathDepths.length ? worstDeathDepth[1] / deathDepths.length : 0
+  line(`- Runs: **${RUNS}**`)
+  line(`- Win rate (boss falls): **${pct(winRate)}**`)
+  line(`- Average depth reached: **${f1(avgDepth)} / ${NODES}**`)
+  line(`- Depth distribution: ${histogram(depths, NODES)}`)
+  line(`- Runs ended at each depth: ${histogram(deathDepths, NODES)}`)
+  line(`- Distinct depths that killed at least one team: **${deathSpread}**`)
+  line(`- Deadliest single node: **depth ${worstDeathDepth[0]}** — **${pct(deathConcentration)}** of all lost runs end there`)
+  line(`- Boss attempts: **${bossAttempts}**, boss kills: **${bossKills}** (**${pct(bossKillShare)}** of arrivals)`)
+  line(`- Mean Threat carried into the boss fight: **×${f1(mcBossThreat)}** (the exchange rate with §11 — see there)`)
+  line(
+    `- Battlefields drawn, and what each one wins: ${[...mcFieldCounts.entries()]
+      .map(([id, t]) => `**${id}** n=${t.n} (${pct(t.n / RUNS)}) win ${pct(t.won / t.n)}`)
+      .join(' · ')}`,
   )
-}
-if (deathSpread < MIN_DEATH_SPREAD) {
-  failures.push(
-    `Difficulty curve is degenerate: runs end at only ${deathSpread} distinct depth(s) (need ≥ ${MIN_DEATH_SPREAD}). ${histogram(deathDepths, NODES)}`,
+  line('')
+
+  /** The band the design is aiming for, not a smoke test. */
+  const TARGET_WIN_BAND: [number, number] = [0.45, 0.6]
+  /** Deaths must not all land on one or two nodes. */
+  const MIN_DEATH_SPREAD = 3
+  /** …and no single node may be the whole difficulty curve on its own. */
+  const MAX_DEATH_CONCENTRATION = 0.6
+  /** The final boss must actually be a boss. */
+  const TARGET_BOSS_KILL_SHARE = 0.1
+  line(
+    `**Target win-rate band: ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}** for a depth-appropriate team. That is the band where a`,
   )
-}
-if (deathConcentration > MAX_DEATH_CONCENTRATION) {
-  failures.push(
-    `Difficulty curve is a cliff: depth ${worstDeathDepth[0]} alone ends ${pct(deathConcentration)} of all lost Monte Carlo runs (max ${pct(MAX_DEATH_CONCENTRATION)}). The other nine nodes are not contributing difficulty.`,
-  )
-}
-line(`- Battles that hit the harness cap instead of ending: **${mcTimeouts}** (must be 0 — the game has no clock, so neither may the measurement)`)
-line('')
-if (mcTimeouts > 0) {
-  failures.push(`${mcTimeouts} Monte Carlo battle(s) ended on the harness cap rather than a win or a loss — the clock is deciding runs again.`)
-}
-if (bossKills === 0) {
-  failures.push(`The boss killed 0 of ${bossAttempts} teams that reached it — the final node is not a boss.`)
-} else if (bossKillShare < TARGET_BOSS_KILL_SHARE) {
-  failures.push(
-    `The boss kills only ${pct(bossKillShare)} of the teams that reach it, below the ${pct(TARGET_BOSS_KILL_SHARE)} design target.`,
-  )
+  line('run is worth finishing and losing is worth minding; the old 10–80% guardrail was a')
+  line('smoke test that a completely degenerate curve could pass. The current game is')
+  const bandGap =
+    winRate > TARGET_WIN_BAND[1]
+      ? `${((winRate - TARGET_WIN_BAND[1]) * 100).toFixed(0)}pt above the top of the band`
+      : winRate < TARGET_WIN_BAND[0]
+        ? `${((TARGET_WIN_BAND[0] - winRate) * 100).toFixed(0)}pt below the bottom of the band`
+        : 'inside the band'
+  line(`**${bandGap}** (${pct(winRate)} vs ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}).`)
+  line('')
+  line('**Distribution shape matters as much as the rate.** A curve where every death')
+  line('lands on the same two elite nodes and the boss kills nobody is degenerate even at')
+  line('a perfect win rate: it means eight of the ten nodes are not doing anything. Three')
+  line('invariants guard the shape — deaths must spread across at least')
+  line(`${MIN_DEATH_SPREAD} distinct depths, no single node may end more than ${pct(MAX_DEATH_CONCENTRATION)} of lost runs, and`)
+  line(`the boss must kill a nonzero share of the teams that reach it (design target ≥ ${pct(TARGET_BOSS_KILL_SHARE)}).`)
+  line('')
+  if (winRate < TARGET_WIN_BAND[0] || winRate > TARGET_WIN_BAND[1]) {
+    failures.push(
+      `Monte Carlo win rate ${pct(winRate)} is outside the ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])} design band (${bandGap}).`,
+    )
+  }
+  if (deathSpread < MIN_DEATH_SPREAD) {
+    failures.push(
+      `Difficulty curve is degenerate: runs end at only ${deathSpread} distinct depth(s) (need ≥ ${MIN_DEATH_SPREAD}). ${histogram(deathDepths, NODES)}`,
+    )
+  }
+  if (deathConcentration > MAX_DEATH_CONCENTRATION) {
+    failures.push(
+      `Difficulty curve is a cliff: depth ${worstDeathDepth[0]} alone ends ${pct(deathConcentration)} of all lost Monte Carlo runs (max ${pct(MAX_DEATH_CONCENTRATION)}). The other nine nodes are not contributing difficulty.`,
+    )
+  }
+  line(`- Battles that hit the harness cap instead of ending: **${mcTimeouts}** (must be 0 — the game has no clock, so neither may the measurement)`)
+  line('')
+  if (mcTimeouts > 0) {
+    failures.push(`${mcTimeouts} Monte Carlo battle(s) ended on the harness cap rather than a win or a loss — the clock is deciding runs again.`)
+  }
+  if (bossKills === 0) {
+    failures.push(`The boss killed 0 of ${bossAttempts} teams that reached it — the final node is not a boss.`)
+  } else if (bossKillShare < TARGET_BOSS_KILL_SHARE) {
+    failures.push(
+      `The boss kills only ${pct(bossKillShare)} of the teams that reach it, below the ${pct(TARGET_BOSS_KILL_SHARE)} design target.`,
+    )
+  }
+  summary.push(`Monte Carlo: ${pct(winRate)} win rate (target ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}), avg depth ${f1(avgDepth)}/${NODES}, deaths on ${deathSpread} depths, boss kills ${pct(bossKillShare)}`)
 }
 
 // -------------------------------------------------------------- Sweep 7
-// Spec perks — the level-up choices that replaced the upgrade tree (Phase 3b).
-line('## 7. Spec perks (is any pick dead, and is any pair solved?)')
-line('')
-line('**What this replaced.** §7 used to measure the per-hero upgrade tree: three identical')
-line('paths (Onslaught / Tempo / Precision) offered to all 27 specs, graded as solo DPS. It')
-line('measured the one decision every hero in the game shared — "+x%, bought with gold". The')
-line('tree is gone; a hero now picks one of two **spec perks** at level 5 (by base archetype)')
-line('and level 15 (by the line it evolved into), most of them rules rather than percentages.')
-line('')
-line('**How each perk is graded.** A representative hero of the line — level 9 (a Fighter,')
-line('Rogue or Mystic before its evolution) for a level-5 perk, level 19 in the line for a')
-line('level-15 one — takes the perk alone, and is graded by **stop rate** on three waves of')
-line('its depth (4 or 8): a `swarm` of runts, an `armour` column (Plated elite) and a `line`')
-line('(the depth\'s normal wave). Each point\'s waves are first scaled so the hero **without** a')
-line('perk stops about half of each — a bench at 0% or 100% cannot see a perk at all. A')
-line('cleric\'s auras need someone to reach, so the cleric line is graded beside a blocker.')
-line('')
-const PERK_SEEDS = SEEDS.slice(0, 3)
-interface PerkRow { point: string; perk: string; name: string; locked: boolean; d: Record<string, number>; mean: number; dps: number }
-const perkRows: PerkRow[] = []
-const perkPointSummary: { point: string; gap: number; greedy: string; measured: string; tradesBoth: boolean }[] = []
-const PERK_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
-function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], WaveDef> {
-  return {
-    swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
-    // Bench mode (`BENCH_RULES`, harness.ts): a perk is graded on the shape it was fitted to.
-    armour: generateEncounter(depth, 'elite', { variantId: 'plated', subWaves: false }),
-    line: generateEncounter(depth, 'normal', { subWaves: false }),
-  }
-}
-function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
-  if (line !== 'cleric') return [{ sentinel: hero, slotId: 's3' }]
-  return [
-    { sentinel: hero, slotId: AURA_TRIO.support },
-    { sentinel: buildSpec('berserker', { level, seed: 5 }), slotId: AURA_TRIO.allies[0] },
-  ]
-}
-for (const point of allPerkPoints()) {
-  const level = point.level === 5 ? 9 : 19
-  const depth = point.level === 5 ? 4 : 8
-  // The representative: the line's first spec, built to `level` (so a level-9
-  // build is still its base archetype and a level-19 one is in the line).
-  const specId = point.level === 5 ? childrenOf(childrenOf(point.line)[0].id)[0].id : childrenOf(point.line)[0].id
-  // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a wave
-  // the hero cannot kill, which flattens a bench into a plateau no perk moves.
-  const base = buildSpec(specId, { level, seed: 5 })
-  const benches = perkBenches(depth)
-  // Scale the waves so the perk-less hero stops ~half of each (geometric bisection).
-  const pressure: Record<string, number> = {}
-  for (const k of PERK_BENCH_KEYS) {
-    let lo = 0.02
-    let hi = 60
-    for (let it = 0; it < 9; it++) {
-      const mid = Math.sqrt(lo * hi)
-      const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
-      if (r > 0.5) lo = mid
-      else hi = mid
+if (want(7)) {
+  // Spec perks — the level-up choices that replaced the upgrade tree (Phase 3b).
+  line('## 7. Spec perks (is any pick dead, and is any pair solved?)')
+  line('')
+  line('**What this replaced.** §7 used to measure the per-hero upgrade tree: three identical')
+  line('paths (Onslaught / Tempo / Precision) offered to all 27 specs, graded as solo DPS. It')
+  line('measured the one decision every hero in the game shared — "+x%, bought with gold". The')
+  line('tree is gone; a hero now picks one of two **spec perks** at level 5 (by base archetype)')
+  line('and level 15 (by the line it evolved into), most of them rules rather than percentages.')
+  line('')
+  line('**How each perk is graded.** A representative hero of the line — level 9 (a Fighter,')
+  line('Rogue or Mystic before its evolution) for a level-5 perk, level 19 in the line for a')
+  line('level-15 one — takes the perk alone, and is graded by **stop rate** on three waves of')
+  line('its depth (4 or 8): a `swarm` of runts, an `armour` column (Plated elite) and a `line`')
+  line('(the depth\'s normal wave). Each point\'s waves are first scaled so the hero **without** a')
+  line('perk stops about half of each — a bench at 0% or 100% cannot see a perk at all. A')
+  line('cleric\'s auras need someone to reach, so the cleric line is graded beside a blocker.')
+  line('')
+  const PERK_SEEDS = SEEDS.slice(0, 3)
+  interface PerkRow { point: string; perk: string; name: string; locked: boolean; d: Record<string, number>; mean: number; dps: number }
+  const perkRows: PerkRow[] = []
+  const perkPointSummary: { point: string; gap: number; greedy: string; measured: string; tradesBoth: boolean }[] = []
+  const PERK_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
+  function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], WaveDef> {
+    return {
+      swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
+      // Bench mode (`BENCH_RULES`, harness.ts): a perk is graded on the shape it was fitted to.
+      armour: generateEncounter(depth, 'elite', { variantId: 'plated', subWaves: false }),
+      line: generateEncounter(depth, 'normal', { subWaves: false }),
     }
-    pressure[k] = Math.sqrt(lo * hi)
   }
-  const baseRate: Record<string, number> = {}
-  for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES })
-  const rows: PerkRow[] = []
-  for (const perk of point.options) {
-    const hero: Sentinel = { ...base, perks: [perk.id] }
-    const d: Record<string, number> = {}
-    for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES }) - baseRate[k]
-    rows.push({ point: point.key, perk: perk.id, name: perk.name, locked: !!perk.unlock, d, mean: mean(PERK_BENCH_KEYS.map((k) => d[k])), dps: heroDps(hero) })
+  function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
+    if (line !== 'cleric') return [{ sentinel: hero, slotId: 's3' }]
+    return [
+      { sentinel: hero, slotId: AURA_TRIO.support },
+      { sentinel: buildSpec('berserker', { level, seed: 5 }), slotId: AURA_TRIO.allies[0] },
+    ]
   }
-  perkRows.push(...rows)
-  const open = rows.filter((r) => !r.locked)
-  const top = [...open].sort((a, b) => b.mean - a.mean)
-  const greedy = [...open].sort((a, b) => b.dps - a.dps)[0]
-  // A real pair: each option is the better one on at least one bench.
-  const tradesBoth = open.length < 2 || open.every((r) => PERK_BENCH_KEYS.some((k) => open.every((o) => o === r || r.d[k] >= o.d[k] - 0.005)))
-  perkPointSummary.push({ point: point.key, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, tradesBoth })
-}
-line('| Point | Perk | `swarm` | `armour` | `line` | Mean | heroDps |')
-line('|---|---|--:|--:|--:|--:|--:|')
-for (const r of perkRows) {
-  line(`| ${r.point} | ${r.name}${r.locked ? ' 🔒' : ''} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
-}
-line('')
-line('| Point | Gap between the two open options | The greedy (heroDps) pick | The measured better pick | Each option wins a bench? |')
-line('|---|--:|---|---|:-:|')
-for (const s of perkPointSummary) line(`| ${s.point} | ${pp(s.gap)} | ${s.greedy} | ${s.measured} | ${s.tradesBoth ? 'yes' : '**no**'} |`)
-line('')
-/** A perk must move at least one of its benches by this much, or it is dead. */
-const PERK_EDGE = 0.02
-/** Two open options may not sit further apart than this on the three-bench mean. */
-const PERK_GAP_CEILING = 0.2
-const greedyRight = perkPointSummary.filter((s) => s.greedy === s.measured).length
-line(`**Invariants.** Every perk moves at least one bench by ≥ ${pp(PERK_EDGE)} (none is dead); no choice point`)
-line(`has its two open options more than ${pp(PERK_GAP_CEILING)} apart on the mean (none is solved by`)
-line(`a mile). Reported, not gated: whether each option wins a bench of its own, and how often`)
-line(`the heroDps-greedy pick — the "read the tooltip" answer — is the measured better one:`)
-line(`**${greedyRight} of ${perkPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave, not the arithmetic.`)
-line('')
-for (const r of perkRows) {
-  const best = Math.max(...PERK_BENCH_KEYS.map((k) => r.d[k]))
-  if (best < PERK_EDGE) failures.push(`Spec perk "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(PERK_EDGE)}).`)
-}
-for (const s of perkPointSummary) {
-  if (s.gap > PERK_GAP_CEILING) failures.push(`Spec perks at ${s.point} are a solved pair: ${s.measured} leads by ${pp(s.gap)} on the three-bench mean (ceiling ${pp(PERK_GAP_CEILING)}).`)
+  for (const point of allPerkPoints()) {
+    const level = point.level === 5 ? 9 : 19
+    const depth = point.level === 5 ? 4 : 8
+    // The representative: the line's first spec, built to `level` (so a level-9
+    // build is still its base archetype and a level-19 one is in the line).
+    const specId = point.level === 5 ? childrenOf(childrenOf(point.line)[0].id)[0].id : childrenOf(point.line)[0].id
+    // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a wave
+    // the hero cannot kill, which flattens a bench into a plateau no perk moves.
+    const base = buildSpec(specId, { level, seed: 5 })
+    const benches = perkBenches(depth)
+    // Scale the waves so the perk-less hero stops ~half of each (geometric bisection).
+    const pressure: Record<string, number> = {}
+    for (const k of PERK_BENCH_KEYS) {
+      let lo = 0.02
+      let hi = 60
+      for (let it = 0; it < 9; it++) {
+        const mid = Math.sqrt(lo * hi)
+        const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
+        if (r > 0.5) lo = mid
+        else hi = mid
+      }
+      pressure[k] = Math.sqrt(lo * hi)
+    }
+    const baseRate: Record<string, number> = {}
+    for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES })
+    const rows: PerkRow[] = []
+    for (const perk of point.options) {
+      const hero: Sentinel = { ...base, perks: [perk.id] }
+      const d: Record<string, number> = {}
+      for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES }) - baseRate[k]
+      rows.push({ point: point.key, perk: perk.id, name: perk.name, locked: !!perk.unlock, d, mean: mean(PERK_BENCH_KEYS.map((k) => d[k])), dps: heroDps(hero) })
+    }
+    perkRows.push(...rows)
+    const open = rows.filter((r) => !r.locked)
+    const top = [...open].sort((a, b) => b.mean - a.mean)
+    const greedy = [...open].sort((a, b) => b.dps - a.dps)[0]
+    // A real pair: each option is the better one on at least one bench.
+    const tradesBoth = open.length < 2 || open.every((r) => PERK_BENCH_KEYS.some((k) => open.every((o) => o === r || r.d[k] >= o.d[k] - 0.005)))
+    perkPointSummary.push({ point: point.key, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, tradesBoth })
+  }
+  line('| Point | Perk | `swarm` | `armour` | `line` | Mean | heroDps |')
+  line('|---|---|--:|--:|--:|--:|--:|')
+  for (const r of perkRows) {
+    line(`| ${r.point} | ${r.name}${r.locked ? ' 🔒' : ''} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
+  }
+  line('')
+  line('| Point | Gap between the two open options | The greedy (heroDps) pick | The measured better pick | Each option wins a bench? |')
+  line('|---|--:|---|---|:-:|')
+  for (const s of perkPointSummary) line(`| ${s.point} | ${pp(s.gap)} | ${s.greedy} | ${s.measured} | ${s.tradesBoth ? 'yes' : '**no**'} |`)
+  line('')
+  /** A perk must move at least one of its benches by this much, or it is dead. */
+  const PERK_EDGE = 0.02
+  /** Two open options may not sit further apart than this on the three-bench mean. */
+  const PERK_GAP_CEILING = 0.2
+  const greedyRight = perkPointSummary.filter((s) => s.greedy === s.measured).length
+  line(`**Invariants.** Every perk moves at least one bench by ≥ ${pp(PERK_EDGE)} (none is dead); no choice point`)
+  line(`has its two open options more than ${pp(PERK_GAP_CEILING)} apart on the mean (none is solved by`)
+  line(`a mile). Reported, not gated: whether each option wins a bench of its own, and how often`)
+  line(`the heroDps-greedy pick — the "read the tooltip" answer — is the measured better one:`)
+  line(`**${greedyRight} of ${perkPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave, not the arithmetic.`)
+  line('')
+  for (const r of perkRows) {
+    const best = Math.max(...PERK_BENCH_KEYS.map((k) => r.d[k]))
+    if (best < PERK_EDGE) failures.push(`Spec perk "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(PERK_EDGE)}).`)
+  }
+  for (const s of perkPointSummary) {
+    if (s.gap > PERK_GAP_CEILING) failures.push(`Spec perks at ${s.point} are a solved pair: ${s.measured} leads by ${pp(s.gap)} on the three-bench mean (ceiling ${pp(PERK_GAP_CEILING)}).`)
+  }
 }
 
 // -------------------------------------------------------------- Sweep 8
-// Mutation tradeoffs — now measured, not asserted (M19-d1).
-line('## 8. Mutation tradeoffs (measured, not asserted)')
-line('')
-line('**What broke before.** The invariant checked that a `downside` *string* existed.')
-line('It never checked that the downside cost anything, so Incendiary (−9%), Executioner')
-line('(−16%) and Siphon (−1%) all passed green while the numbers said the opposite of')
-line('what the card said — those negatives were a damage-attribution artifact, not a')
-line('tradeoff.')
-line('')
-line('**What it does now.** Each mutation is applied alone to a Weaponmaster and')
-line('measured by **stop rate** across three shapes of wave. A mutation is a genuine')
-line('tradeoff only if it is clearly better in at least one and clearly worse in at least')
-line('one — that is what "re-shapes how you attack" means. Pure upside is a stat stick.')
-line('')
+if (want(8)) {
+  // Mutation tradeoffs — now measured, not asserted (M19-d1).
+  line('## 8. Mutation tradeoffs (measured, not asserted)')
+  line('')
+  line('**What broke before.** The invariant checked that a `downside` *string* existed.')
+  line('It never checked that the downside cost anything, so Incendiary (−9%), Executioner')
+  line('(−16%) and Siphon (−1%) all passed green while the numbers said the opposite of')
+  line('what the card said — those negatives were a damage-attribution artifact, not a')
+  line('tradeoff.')
+  line('')
+  line('**What it does now.** Each mutation is applied alone to a Weaponmaster and')
+  line('measured by **stop rate** across three shapes of wave. A mutation is a genuine')
+  line('tradeoff only if it is clearly better in at least one and clearly worse in at least')
+  line('one — that is what "re-shapes how you attack" means. Pure upside is a stat stick.')
+  line('')
+}
+
 const MUT_SEEDS = SEEDS.slice(0, 4)
 // Three waves chosen to load *different* axes, so a mutation that trades one for
 // another has somewhere to show the loss:
@@ -1289,272 +1336,282 @@ const MUT_SCENARIOS = {
 type MutKey = keyof typeof MUT_SCENARIOS
 const MUT_KEYS = Object.keys(MUT_SCENARIOS) as MutKey[]
 const mutBase = buildSpec('weaponmaster', { seed: 2 })
-const mutBaseRate = {} as Record<MutKey, number>
-for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES })
-line(`Baseline stop rate — ${MUT_KEYS.map((k) => `\`${k}\` (${MUT_SCENARIOS[k].blurb}) ${pct(mutBaseRate[k])}`).join(', ')}.`)
-line('')
-/** How far a mutation must move a scenario for that scenario to count as power / cost. */
-const MUT_EDGE = 0.03
-/**
- * ---- and a CEILING, because both of the above are floors (M5) --------------
- *
- * `hasCost` and `hasPower` are the same inequality pointing in two directions:
- * a mutation must move some scenario by at least 3pt down and some scenario by
- * at least 3pt up. Nothing bounded how far *up*. Pushing Incendiary's burn from
- * 180/s to 300/s scores −7.8 / +31.3 / +25.0 and passes green; Siphon shipped
- * at **+54.6pt on `line`**, rank 1 of 11 at z = +2.77 and thirty-one points
- * clear of the runner-up, and passed green.
- *
- * **Why the ceiling is a gap to the runner-up and not an absolute number.** The
- * `swarm` bench baselines at 47.8%, so +52.2pt *is* a 100% stop — its arithmetic
- * maximum — and four mutations sit exactly there. Any absolute cap low enough to
- * have caught Siphon's +54.6 would have failed those four for saturating a
- * bench, which is a fact about the bench and not about them. The gap to the next
- * mutation in the same column is immune to that by construction: where the
- * column is saturated the leaders tie and the gap is zero, and a genuine outlier
- * has nobody standing next to it. Measured on the shipped table the gaps are
- * `swarm` 0.0pt (four-way tie at the ceiling), `armour` 10.4pt, `line` 3.8pt
- * after the Siphon re-cost and **31.6pt** before it.
- *
- * The headroom of each column is printed beside its baseline above so a reader
- * can see which numbers are capped.
- */
-const MUT_GAP_CEILING = 0.15
-line('| Mutation | `swarm` | `armour` | `line` | Measured cost | Stated downside |')
-line('|---|--:|--:|--:|---|---|')
-const mutDeltas: { name: string; d: Record<MutKey, number> }[] = []
-for (const mut of allMutations()) {
-  const withMut: Sentinel = { ...mutBase, mutations: [mut] }
-  const d = {} as Record<MutKey, number>
-  for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES }) - mutBaseRate[k]
-  mutDeltas.push({ name: mut.name, d })
-  const worstKey = MUT_KEYS.reduce((a, b) => (d[a] <= d[b] ? a : b))
-  const bestKey = MUT_KEYS.reduce((a, b) => (d[a] >= d[b] ? a : b))
-  const hasCost = d[worstKey] <= -MUT_EDGE
-  const hasPower = d[bestKey] >= MUT_EDGE
-  const costCell = hasCost ? `${pp(d[worstKey])} on \`${worstKey}\`` : '**none measurable**'
-  line(`| ${mut.name} | ${pp(d.swarm)} | ${pp(d.armour)} | ${pp(d.line)} | ${costCell} | ${mut.downside} |`)
-  if (!mut.downside) failures.push(`Mutation "${mut.name}" has no stated downside tradeoff.`)
-  if (!hasCost) {
-    failures.push(
-      `Mutation "${mut.name}" claims "${mut.downside}" but costs nothing measurable: its worst scenario is ${pp(d[worstKey])} (\`${worstKey}\`). It is pure upside wearing a tradeoff label.`,
-    )
-  }
-  if (!hasPower) {
-    failures.push(
-      `Mutation "${mut.name}" is not worth taking: its best scenario is only ${pp(d[bestKey])} (\`${bestKey}\`).`,
-    )
-  }
-}
-line('')
-line('**The ceiling, per column: how far the leader stands clear of the runner-up.**')
-line(`A mutation more than ${pp(MUT_GAP_CEILING)} above the next one in the same scenario is not a`)
-line('tradeoff, it is the pick — and the two checks above are both *floors*, so nothing')
-line('bounded that until now. The gap rather than an absolute cap because `swarm`')
-line(`baselines at ${pct(mutBaseRate.swarm)} and therefore *cannot* be moved more than ${pp(1 - mutBaseRate.swarm)}: an`)
-line('absolute cap tight enough to catch a real outlier fails four mutations for')
-line('reaching a 100% stop, which is a fact about the bench.')
-line('')
-line('| Scenario | Headroom (100% − baseline) | Leader | Runner-up | Gap |')
-line('|---|--:|---|---|--:|')
-for (const k of MUT_KEYS) {
-  const ranked = [...mutDeltas].sort((a, b) => b.d[k] - a.d[k])
-  const gap = ranked[0].d[k] - ranked[1].d[k]
-  line(
-    `| \`${k}\` | ${pp(1 - mutBaseRate[k])} | ${ranked[0].name} ${pp(ranked[0].d[k])} | ${ranked[1].name} ${pp(ranked[1].d[k])} | **${pp(gap)}** |`,
-  )
-  if (gap > MUT_GAP_CEILING) {
-    failures.push(
-      `Mutation "${ranked[0].name}" is ${pp(gap)} clear of the next-best mutation on \`${k}\` (${pp(ranked[0].d[k])} vs ${pp(ranked[1].d[k])}, ceiling ${pp(MUT_GAP_CEILING)}). §8's other two checks are both floors; a Mythic that dominates a whole shape of wave by that margin is not a tradeoff, it is the answer, and the fork stops being a decision.`,
-    )
-  }
-}
-line('')
 
-// -------------------------------------------------------------- Sweep 9
-// Map special-tile pacing: specials should be a minimal, non-clustered set.
-line('## 9. Map pacing — how much of the road is a fight')
-line('')
-line('300 generated maps. The review found **~70–83% of all nodes were battles** (83% measured on')
-line('the 10-layer map), so most forks were a battle against a battle and the route barely mattered.')
-line('With Threat following the road instead of the choice (Phase 3b), a stop is priced by the fight')
-line('it replaces, so the map can carry more of them: the target is **55–60% fights** across the')
-line('free layers (act bosses excluded — every route fights those). Stops still never crowd a layer')
-line('— at most two, and every free layer keeps at least one fight.')
-line('')
-const specialTypes = ['merchant', 'shrine', 'recruit', 'campfire', 'elite']
-const perType: Record<string, number> = Object.fromEntries(specialTypes.map((t) => [t, 0]))
-let specialSum = 0
-let worstLayerCluster = 0
-let freeNodes = 0
-let freeFights = 0
-let fightlessLayers = 0
-const MAPS = 300
-for (let i = 0; i < MAPS; i++) {
-  const m = generateRunMap(new RNG(i * 7 + 1))
-  const stopsByLayer: Record<number, number> = {}
-  const fightsByLayer: Record<number, number> = {}
-  const free = new Set<number>()
-  for (const n of m.nodes) {
-    if (n.type === 'start' || n.type === 'miniboss' || n.type === 'boss') continue
-    free.add(n.layer)
-    freeNodes++
-    const fight = n.type === 'battle' || n.type === 'elite'
-    if (fight) { freeFights++; fightsByLayer[n.layer] = (fightsByLayer[n.layer] ?? 0) + 1 }
-    if (specialTypes.includes(n.type)) {
-      perType[n.type]++
-      specialSum++
-      if (!fight) stopsByLayer[n.layer] = (stopsByLayer[n.layer] ?? 0) + 1
+if (want(8)) {
+  const mutBaseRate = {} as Record<MutKey, number>
+  for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES })
+  line(`Baseline stop rate — ${MUT_KEYS.map((k) => `\`${k}\` (${MUT_SCENARIOS[k].blurb}) ${pct(mutBaseRate[k])}`).join(', ')}.`)
+  line('')
+  /** How far a mutation must move a scenario for that scenario to count as power / cost. */
+  const MUT_EDGE = 0.03
+  /**
+   * ---- and a CEILING, because both of the above are floors (M5) --------------
+   *
+   * `hasCost` and `hasPower` are the same inequality pointing in two directions:
+   * a mutation must move some scenario by at least 3pt down and some scenario by
+   * at least 3pt up. Nothing bounded how far *up*. Pushing Incendiary's burn from
+   * 180/s to 300/s scores −7.8 / +31.3 / +25.0 and passes green; Siphon shipped
+   * at **+54.6pt on `line`**, rank 1 of 11 at z = +2.77 and thirty-one points
+   * clear of the runner-up, and passed green.
+   *
+   * **Why the ceiling is a gap to the runner-up and not an absolute number.** The
+   * `swarm` bench baselines at 47.8%, so +52.2pt *is* a 100% stop — its arithmetic
+   * maximum — and four mutations sit exactly there. Any absolute cap low enough to
+   * have caught Siphon's +54.6 would have failed those four for saturating a
+   * bench, which is a fact about the bench and not about them. The gap to the next
+   * mutation in the same column is immune to that by construction: where the
+   * column is saturated the leaders tie and the gap is zero, and a genuine outlier
+   * has nobody standing next to it. Measured on the shipped table the gaps are
+   * `swarm` 0.0pt (four-way tie at the ceiling), `armour` 10.4pt, `line` 3.8pt
+   * after the Siphon re-cost and **31.6pt** before it.
+   *
+   * The headroom of each column is printed beside its baseline above so a reader
+   * can see which numbers are capped.
+   */
+  const MUT_GAP_CEILING = 0.15
+  line('| Mutation | `swarm` | `armour` | `line` | Measured cost | Stated downside |')
+  line('|---|--:|--:|--:|---|---|')
+  const mutDeltas: { name: string; d: Record<MutKey, number> }[] = []
+  for (const mut of allMutations()) {
+    const withMut: Sentinel = { ...mutBase, mutations: [mut] }
+    const d = {} as Record<MutKey, number>
+    for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES }) - mutBaseRate[k]
+    mutDeltas.push({ name: mut.name, d })
+    const worstKey = MUT_KEYS.reduce((a, b) => (d[a] <= d[b] ? a : b))
+    const bestKey = MUT_KEYS.reduce((a, b) => (d[a] >= d[b] ? a : b))
+    const hasCost = d[worstKey] <= -MUT_EDGE
+    const hasPower = d[bestKey] >= MUT_EDGE
+    const costCell = hasCost ? `${pp(d[worstKey])} on \`${worstKey}\`` : '**none measurable**'
+    line(`| ${mut.name} | ${pp(d.swarm)} | ${pp(d.armour)} | ${pp(d.line)} | ${costCell} | ${mut.downside} |`)
+    if (!mut.downside) failures.push(`Mutation "${mut.name}" has no stated downside tradeoff.`)
+    if (!hasCost) {
+      failures.push(
+        `Mutation "${mut.name}" claims "${mut.downside}" but costs nothing measurable: its worst scenario is ${pp(d[worstKey])} (\`${worstKey}\`). It is pure upside wearing a tradeoff label.`,
+      )
+    }
+    if (!hasPower) {
+      failures.push(
+        `Mutation "${mut.name}" is not worth taking: its best scenario is only ${pp(d[bestKey])} (\`${bestKey}\`).`,
+      )
     }
   }
-  for (const k of Object.keys(stopsByLayer)) worstLayerCluster = Math.max(worstLayerCluster, stopsByLayer[+k])
-  for (const l of free) if (!fightsByLayer[l]) fightlessLayers++
+  line('')
+  line('**The ceiling, per column: how far the leader stands clear of the runner-up.**')
+  line(`A mutation more than ${pp(MUT_GAP_CEILING)} above the next one in the same scenario is not a`)
+  line('tradeoff, it is the pick — and the two checks above are both *floors*, so nothing')
+  line('bounded that until now. The gap rather than an absolute cap because `swarm`')
+  line(`baselines at ${pct(mutBaseRate.swarm)} and therefore *cannot* be moved more than ${pp(1 - mutBaseRate.swarm)}: an`)
+  line('absolute cap tight enough to catch a real outlier fails four mutations for')
+  line('reaching a 100% stop, which is a fact about the bench.')
+  line('')
+  line('| Scenario | Headroom (100% − baseline) | Leader | Runner-up | Gap |')
+  line('|---|--:|---|---|--:|')
+  for (const k of MUT_KEYS) {
+    const ranked = [...mutDeltas].sort((a, b) => b.d[k] - a.d[k])
+    const gap = ranked[0].d[k] - ranked[1].d[k]
+    line(
+      `| \`${k}\` | ${pp(1 - mutBaseRate[k])} | ${ranked[0].name} ${pp(ranked[0].d[k])} | ${ranked[1].name} ${pp(ranked[1].d[k])} | **${pp(gap)}** |`,
+    )
+    if (gap > MUT_GAP_CEILING) {
+      failures.push(
+        `Mutation "${ranked[0].name}" is ${pp(gap)} clear of the next-best mutation on \`${k}\` (${pp(ranked[0].d[k])} vs ${pp(ranked[1].d[k])}, ceiling ${pp(MUT_GAP_CEILING)}). §8's other two checks are both floors; a Mythic that dominates a whole shape of wave by that margin is not a tradeoff, it is the answer, and the fork stops being a decision.`,
+      )
+    }
+  }
+  line('')
 }
-const avgSpecials = specialSum / MAPS
-const fightShare = freeFights / freeNodes
-/** The band the map is shaped to (Phase 3b): down from ~83% toward 55–60%. */
-const FIGHT_SHARE_BAND: [number, number] = [0.5, 0.63]
-line(`- Fights (battle or elite) among free-layer nodes: **${pct(fightShare)}** (band ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])}; target 55–60%)`)
-line(`- Avg special tiles per map: **${f1(avgSpecials)}**`)
-line(`- Per type per map: ${specialTypes.map((t) => `${t} ${f2(perType[t] / MAPS)}`).join(', ')}`)
-line(`- Max stops in a single layer (any map): **${worstLayerCluster}** · free layers with no fight: **${fightlessLayers}**`)
-line('')
-if (fightShare < FIGHT_SHARE_BAND[0] || fightShare > FIGHT_SHARE_BAND[1]) {
-  failures.push(`Map pacing: ${pct(fightShare)} of free-layer nodes are fights, outside the ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])} band.`)
+
+// -------------------------------------------------------------- Sweep 9
+if (want(9)) {
+  // Map special-tile pacing: specials should be a minimal, non-clustered set.
+  line('## 9. Map pacing — how much of the road is a fight')
+  line('')
+  line('300 generated maps. The review found **~70–83% of all nodes were battles** (83% measured on')
+  line('the 10-layer map), so most forks were a battle against a battle and the route barely mattered.')
+  line('With Threat following the road instead of the choice (Phase 3b), a stop is priced by the fight')
+  line('it replaces, so the map can carry more of them: the target is **55–60% fights** across the')
+  line('free layers (act bosses excluded — every route fights those). Stops still never crowd a layer')
+  line('— at most two, and every free layer keeps at least one fight.')
+  line('')
+  const specialTypes = ['merchant', 'shrine', 'recruit', 'campfire', 'elite']
+  const perType: Record<string, number> = Object.fromEntries(specialTypes.map((t) => [t, 0]))
+  let specialSum = 0
+  let worstLayerCluster = 0
+  let freeNodes = 0
+  let freeFights = 0
+  let fightlessLayers = 0
+  const MAPS = 300
+  for (let i = 0; i < MAPS; i++) {
+    const m = generateRunMap(new RNG(i * 7 + 1))
+    const stopsByLayer: Record<number, number> = {}
+    const fightsByLayer: Record<number, number> = {}
+    const free = new Set<number>()
+    for (const n of m.nodes) {
+      if (n.type === 'start' || n.type === 'miniboss' || n.type === 'boss') continue
+      free.add(n.layer)
+      freeNodes++
+      const fight = n.type === 'battle' || n.type === 'elite'
+      if (fight) { freeFights++; fightsByLayer[n.layer] = (fightsByLayer[n.layer] ?? 0) + 1 }
+      if (specialTypes.includes(n.type)) {
+        perType[n.type]++
+        specialSum++
+        if (!fight) stopsByLayer[n.layer] = (stopsByLayer[n.layer] ?? 0) + 1
+      }
+    }
+    for (const k of Object.keys(stopsByLayer)) worstLayerCluster = Math.max(worstLayerCluster, stopsByLayer[+k])
+    for (const l of free) if (!fightsByLayer[l]) fightlessLayers++
+  }
+  const avgSpecials = specialSum / MAPS
+  const fightShare = freeFights / freeNodes
+  /** The band the map is shaped to (Phase 3b): down from ~83% toward 55–60%. */
+  const FIGHT_SHARE_BAND: [number, number] = [0.5, 0.63]
+  line(`- Fights (battle or elite) among free-layer nodes: **${pct(fightShare)}** (band ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])}; target 55–60%)`)
+  line(`- Avg special tiles per map: **${f1(avgSpecials)}**`)
+  line(`- Per type per map: ${specialTypes.map((t) => `${t} ${f2(perType[t] / MAPS)}`).join(', ')}`)
+  line(`- Max stops in a single layer (any map): **${worstLayerCluster}** · free layers with no fight: **${fightlessLayers}**`)
+  line('')
+  if (fightShare < FIGHT_SHARE_BAND[0] || fightShare > FIGHT_SHARE_BAND[1]) {
+    failures.push(`Map pacing: ${pct(fightShare)} of free-layer nodes are fights, outside the ${pct(FIGHT_SHARE_BAND[0])}–${pct(FIGHT_SHARE_BAND[1])} band.`)
+  }
+  if (worstLayerCluster > 2) failures.push(`Map stops cluster (${worstLayerCluster} in one layer > 2).`)
+  if (fightlessLayers > 0) failures.push(`${fightlessLayers} free map layer(s) offer no fight at all — "fight here" must always be a road.`)
 }
-if (worstLayerCluster > 2) failures.push(`Map stops cluster (${worstLayerCluster} in one layer > 2).`)
-if (fightlessLayers > 0) failures.push(`${fightlessLayers} free map layer(s) offer no fight at all — "fight here" must always be a road.`)
 
 // -------------------------------------------------------------- Sweep 10
-// Curse affixes — new (M19-c).
-line('## 10. Curse affixes (are the tradeoffs real?)')
-line('')
-line('`CURSE_ENCHANTS` roll at 20% on epic+ items as a *dramatic* extra affix: a big')
-line('upside bought with a real downside. Nothing measured them until now. Each curse is')
-line('equipped alone on both an offensive build and a low-crit magic build (the case')
-line('where a crit penalty has nothing to bite), and graded on the same stop rate as §4.')
-line('')
-const curseFound = new Map<string, Enchantment>()
-{
-  const rng = new RNG(1234)
-  for (let i = 0; i < 40000 && curseFound.size < 5; i++) {
-    const it = generateItem(rng, { slot: rng.pick(['oneHand', 'offHand', 'body']), rarity: 'legendary' })
-    for (const e of it.enchantments) if (e.id.startsWith('cx_') && !curseFound.has(e.id)) curseFound.set(e.id, e)
+if (want(10)) {
+  // Curse affixes — new (M19-c).
+  line('## 10. Curse affixes (are the tradeoffs real?)')
+  line('')
+  line('`CURSE_ENCHANTS` roll at 20% on epic+ items as a *dramatic* extra affix: a big')
+  line('upside bought with a real downside. Nothing measured them until now. Each curse is')
+  line('equipped alone on both an offensive build and a low-crit magic build (the case')
+  line('where a crit penalty has nothing to bite), and graded on the same stop rate as §4.')
+  line('')
+  const curseFound = new Map<string, Enchantment>()
+  {
+    const rng = new RNG(1234)
+    for (let i = 0; i < 40000 && curseFound.size < 5; i++) {
+      const it = generateItem(rng, { slot: rng.pick(['oneHand', 'offHand', 'body']), rarity: 'legendary' })
+      for (const e of it.enchantments) if (e.id.startsWith('cx_') && !curseFound.has(e.id)) curseFound.set(e.id, e)
+    }
   }
+  /** A curse whose *worst* scenario is still this far positive is not a tradeoff. */
+  const CURSE_FAKE_THRESHOLD = 0.05
+  /**
+   * The floor this sweep was missing (M19-f).
+   *
+   * "No curse is a net upgrade in *every* scenario" is satisfied trivially by a
+   * curse that does nothing at all, and by one that is simply bad — neither is a
+   * tradeoff, and both shipped. A curse is a *dramatic* affix: a big upside
+   * bought with a real downside. So it has to move a build by this much in BOTH
+   * directions somewhere in the set, exactly the way §8 grades a mutation.
+   *
+   * This replaces the old single-sided check. Before/after on the shipped table:
+   * the old form passed all five curses; the new form is what shows `cx_reckless`
+   * to be inert (×1.0175 throughput — the "big hits instead of many" shape it
+   * sells does not exist in an engine whose only per-hit non-linearity is a
+   * fractional resist) and `cx_frenzied` to be strictly worse than no curse.
+   */
+  const CURSE_EDGE = 0.02
+  line('| Curse | Rolled mods | `phys` | `magic` | Worst case | Verdict |')
+  line('|---|---|--:|--:|--:|---|')
+  for (const [id, e] of curseFound) {
+    const dPhys =
+      benchStop(
+        { ...AFFIX_SCENARIOS.phys.build, equipment: { ...AFFIX_SCENARIOS.phys.build.equipment, mainHand: affixItem(id, e) } },
+        'phys',
+      ) - affixBase.phys
+    const dMagic =
+      benchStop(
+        { ...AFFIX_SCENARIOS.magic.build, equipment: { ...AFFIX_SCENARIOS.magic.build.equipment, mainHand: affixItem(id, e) } },
+        'magic',
+      ) - affixBase.magic
+    const worst = Math.min(dPhys, dMagic)
+    const fake = worst > CURSE_FAKE_THRESHOLD
+    line(
+      `| ${e.label} (\`${id}\`) | \`${JSON.stringify(e.mods)}\` | ${pp(dPhys)} | ${pp(dMagic)} | ${pp(worst)} | ${fake ? '**fake tradeoff — net upgrade**' : 'real tradeoff'} |`,
+    )
+    const best = Math.max(dPhys, dMagic)
+    if (best < CURSE_EDGE) {
+      failures.push(
+        `Curse "${e.label}" (${id}) has no upside: its BEST scenario is ${pp(best)} (phys ${pp(dPhys)}, magic ${pp(dMagic)}). A curse is a dramatic affix bought with a downside; one that is inert or strictly bad is a downside bought with nothing.`,
+      )
+    }
+    if (worst > -CURSE_EDGE && best >= CURSE_EDGE) {
+      failures.push(
+        `Curse "${e.label}" (${id}) has no downside anywhere it was measured: worst scenario ${pp(worst)}. It is a plain upgrade wearing a curse label.`,
+      )
+    }
+    if (fake) {
+      failures.push(
+        `Curse "${e.label}" (${id}) is a fake tradeoff: even its worst scenario is ${pp(worst)}. It is a straight upgrade wearing a curse label.`,
+      )
+    }
+  }
+  line('')
+  line('**Two invariants, not one.** A curse must (a) not be a net upgrade in every')
+  line(`scenario — the original check — and (b) actually be a *trade*: at least ${pp(CURSE_EDGE)} of`)
+  line('upside somewhere and at least that much cost somewhere. (b) is new, and it is the')
+  line('half that can catch an affix that does nothing: the old check was satisfied by any')
+  line('curse whose worst case was negative, including one whose best case was too.')
+  line('')
+  line('The prose that used to sit here described `cx_frenzied` as "+22% net with no axis')
+  line('given up" and the −15% crit on `cx_vengeful` as "free for half the roster", one line')
+  line('above a table showing neither number. Whatever the table says above is the current')
+  line('state; this paragraph no longer carries a second, older one.')
+  line('')
+  line('**What (b) caught, and what fixing it taught (M19-g).** `cx_frenzied` was the last')
+  line('affix to fail this floor: at ×1.9 rate / ×0.5 damage it measured −0.6pt / +13.6pt —')
+  line('mildly bad on one bench, good on the other, i.e. a plain upgrade wearing a curse')
+  line('label. The cause is structural and worth writing down before the next affix is')
+  line('designed the same way: **the engine cannot read hit size.** Resists are fractional,')
+  line('there is no flat armour, and nothing anywhere turns a halved hit into a wasted one,')
+  line('so a rate/damage pair that cancels arithmetically buys nothing and costs nothing.')
+  line('Sweeping that pair from ×1.9/×0.5 out to ×4.0/×0.3 moved the `phys` column −5.2,')
+  line('−1.7, +3.5, +3.1, +5.8, −0.7, −2.0pt with no trend — noise, not a tradeoff. Crit is')
+  line('the only per-hit spike the engine has, so it is the only axis a hit-size trade can')
+  line('be priced against: Frenzied now buys its flurry with its crit (×1.9 rate, ×0.6')
+  line('damage, −100% crit chance) and `cx_vengeful` buys raw damage with the same coin in')
+  line('the opposite direction — one wants many cheap hits, the other few expensive ones.')
+  line('Both of Frenzied\'s signs hold across the whole neighbourhood rate 1.8–2.2 × damage')
+  line('0.60–0.70, so the pass is a basin rather than a knife edge.')
+  line('')
 }
-/** A curse whose *worst* scenario is still this far positive is not a tradeoff. */
-const CURSE_FAKE_THRESHOLD = 0.05
-/**
- * The floor this sweep was missing (M19-f).
- *
- * "No curse is a net upgrade in *every* scenario" is satisfied trivially by a
- * curse that does nothing at all, and by one that is simply bad — neither is a
- * tradeoff, and both shipped. A curse is a *dramatic* affix: a big upside
- * bought with a real downside. So it has to move a build by this much in BOTH
- * directions somewhere in the set, exactly the way §8 grades a mutation.
- *
- * This replaces the old single-sided check. Before/after on the shipped table:
- * the old form passed all five curses; the new form is what shows `cx_reckless`
- * to be inert (×1.0175 throughput — the "big hits instead of many" shape it
- * sells does not exist in an engine whose only per-hit non-linearity is a
- * fractional resist) and `cx_frenzied` to be strictly worse than no curse.
- */
-const CURSE_EDGE = 0.02
-line('| Curse | Rolled mods | `phys` | `magic` | Worst case | Verdict |')
-line('|---|---|--:|--:|--:|---|')
-for (const [id, e] of curseFound) {
-  const dPhys =
-    benchStop(
-      { ...AFFIX_SCENARIOS.phys.build, equipment: { ...AFFIX_SCENARIOS.phys.build.equipment, mainHand: affixItem(id, e) } },
-      'phys',
-    ) - affixBase.phys
-  const dMagic =
-    benchStop(
-      { ...AFFIX_SCENARIOS.magic.build, equipment: { ...AFFIX_SCENARIOS.magic.build.equipment, mainHand: affixItem(id, e) } },
-      'magic',
-    ) - affixBase.magic
-  const worst = Math.min(dPhys, dMagic)
-  const fake = worst > CURSE_FAKE_THRESHOLD
-  line(
-    `| ${e.label} (\`${id}\`) | \`${JSON.stringify(e.mods)}\` | ${pp(dPhys)} | ${pp(dMagic)} | ${pp(worst)} | ${fake ? '**fake tradeoff — net upgrade**' : 'real tradeoff'} |`,
-  )
-  const best = Math.max(dPhys, dMagic)
-  if (best < CURSE_EDGE) {
-    failures.push(
-      `Curse "${e.label}" (${id}) has no upside: its BEST scenario is ${pp(best)} (phys ${pp(dPhys)}, magic ${pp(dMagic)}). A curse is a dramatic affix bought with a downside; one that is inert or strictly bad is a downside bought with nothing.`,
-    )
-  }
-  if (worst > -CURSE_EDGE && best >= CURSE_EDGE) {
-    failures.push(
-      `Curse "${e.label}" (${id}) has no downside anywhere it was measured: worst scenario ${pp(worst)}. It is a plain upgrade wearing a curse label.`,
-    )
-  }
-  if (fake) {
-    failures.push(
-      `Curse "${e.label}" (${id}) is a fake tradeoff: even its worst scenario is ${pp(worst)}. It is a straight upgrade wearing a curse label.`,
-    )
-  }
-}
-line('')
-line('**Two invariants, not one.** A curse must (a) not be a net upgrade in every')
-line(`scenario — the original check — and (b) actually be a *trade*: at least ${pp(CURSE_EDGE)} of`)
-line('upside somewhere and at least that much cost somewhere. (b) is new, and it is the')
-line('half that can catch an affix that does nothing: the old check was satisfied by any')
-line('curse whose worst case was negative, including one whose best case was too.')
-line('')
-line('The prose that used to sit here described `cx_frenzied` as "+22% net with no axis')
-line('given up" and the −15% crit on `cx_vengeful` as "free for half the roster", one line')
-line('above a table showing neither number. Whatever the table says above is the current')
-line('state; this paragraph no longer carries a second, older one.')
-line('')
-line('**What (b) caught, and what fixing it taught (M19-g).** `cx_frenzied` was the last')
-line('affix to fail this floor: at ×1.9 rate / ×0.5 damage it measured −0.6pt / +13.6pt —')
-line('mildly bad on one bench, good on the other, i.e. a plain upgrade wearing a curse')
-line('label. The cause is structural and worth writing down before the next affix is')
-line('designed the same way: **the engine cannot read hit size.** Resists are fractional,')
-line('there is no flat armour, and nothing anywhere turns a halved hit into a wasted one,')
-line('so a rate/damage pair that cancels arithmetically buys nothing and costs nothing.')
-line('Sweeping that pair from ×1.9/×0.5 out to ×4.0/×0.3 moved the `phys` column −5.2,')
-line('−1.7, +3.5, +3.1, +5.8, −0.7, −2.0pt with no trend — noise, not a tradeoff. Crit is')
-line('the only per-hit spike the engine has, so it is the only axis a hit-size trade can')
-line('be priced against: Frenzied now buys its flurry with its crit (×1.9 rate, ×0.6')
-line('damage, −100% crit chance) and `cx_vengeful` buys raw damage with the same coin in')
-line('the opposite direction — one wants many cheap hits, the other few expensive ones.')
-line('Both of Frenzied\'s signs hold across the whole neighbourhood rate 1.8–2.2 × damage')
-line('0.60–0.70, so the pass is a basin rather than a knife edge.')
-line('')
 
 // -------------------------------------------------------------- Sweep 11
-// Fresh-player run — new (M19-e), then re-modelled (M19-e2).
-line('## 11. Fresh-player run (zero meta, one hero, 60 gold)')
-line('')
-line('**Why this exists.** Every other sweep fields 3–5 tier-2 specialists with')
-line('depth-scaled gear sets and upgrade purchases on every tower. A real first run does')
-line(`not: \`pickStartingHero\` hands the player **one level-1 hero**, \`START_GOLD\` = ${START_GOLD},`)
-line('and the opening kit `engine/kit.ts` deals **after the pick** and has the hero **wear**')
-line('(a weapon of the hero\'s own damage type — common, or epic for a Mystic — a common body,')
-line('a rare off-hand; the harness and the store call the same function). Every Sentinel who')
-line('joins later arrives carrying one common on-type weapon and dresses its empty slots out')
-line('of the pack. The zero-meta baseline had never been simulated, so nobody knew whether it')
-line('was a wall.')
-line('')
-line('**Two models, because one of them was a fiction.** The first version of this sweep')
-line('marched the hero through ten consecutive battles, refused every merchant, took no')
-line('recruits and picked a reward card **at random**. It reported 0%. That is not the')
-line('floor, it is a floor with the game removed: `generateRunMap` guarantees a recruit')
-line('stop, a merchant stop and a shrine on every map; `resolveNode` fires a one-time')
-line('Crossroads offering a free scaled body at the halfway point; and `scaledRecruit`')
-line('hands over a hero at the roster **median level minus 3**, not a level-1 body.')
-line('Both models are reported. The strict one is kept because it is a useful lower')
-line('bound on how badly a first run can be played; the graded one is the realistic one.')
-line('')
-line('**Threat follows the road (Phase 3b).** Both models fight every layer at')
-line('`threatAtLayer(layer)` — the same number whatever route reached it. The old rules')
-line('charged every battle ×1.42 (×1.52 an elite), every stop ×1.13 and every accepted')
-line('hire, pact or mutation ×1.05, which made taking power a Threat bill and put the boss')
-line('anywhere from ×15 to ×30 depending on greed. A stop now costs the fight it replaces —')
-line('its XP, gold and card — and nothing else.')
-line('')
+if (want(11)) {
+  // Fresh-player run — new (M19-e), then re-modelled (M19-e2).
+  line('## 11. Fresh-player run (zero meta, one hero, 60 gold)')
+  line('')
+  line('**Why this exists.** Every other sweep fields 3–5 tier-2 specialists with')
+  line('depth-scaled gear sets and upgrade purchases on every tower. A real first run does')
+  line(`not: \`pickStartingHero\` hands the player **one level-1 hero**, \`START_GOLD\` = ${START_GOLD},`)
+  line('and the opening kit `engine/kit.ts` deals **after the pick** and has the hero **wear**')
+  line('(a weapon of the hero\'s own damage type — common, or epic for a Mystic — a common body,')
+  line('a rare off-hand; the harness and the store call the same function). Every Sentinel who')
+  line('joins later arrives carrying one common on-type weapon and dresses its empty slots out')
+  line('of the pack. The zero-meta baseline had never been simulated, so nobody knew whether it')
+  line('was a wall.')
+  line('')
+  line('**Two models, because one of them was a fiction.** The first version of this sweep')
+  line('marched the hero through ten consecutive battles, refused every merchant, took no')
+  line('recruits and picked a reward card **at random**. It reported 0%. That is not the')
+  line('floor, it is a floor with the game removed: `generateRunMap` guarantees a recruit')
+  line('stop, a merchant stop and a shrine on every map; `resolveNode` fires a one-time')
+  line('Crossroads offering a free scaled body at the halfway point; and `scaledRecruit`')
+  line('hands over a hero at the roster **median level minus 3**, not a level-1 body.')
+  line('Both models are reported. The strict one is kept because it is a useful lower')
+  line('bound on how badly a first run can be played; the graded one is the realistic one.')
+  line('')
+  line('**Threat follows the road (Phase 3b).** Both models fight every layer at')
+  line('`threatAtLayer(layer)` — the same number whatever route reached it. The old rules')
+  line('charged every battle ×1.42 (×1.52 an elite), every stop ×1.13 and every accepted')
+  line('hire, pact or mutation ×1.05, which made taking power a Threat bill and put the boss')
+  line('anywhere from ×15 to ×30 depending on greed. A stop now costs the fight it replaces —')
+  line('its XP, gold and card — and nothing else.')
+  line('')
+
+}
 
 /**
  * One simulated run's outcome. Model B now returns `runsim`'s {@link RunOutcome}
@@ -1683,6 +1740,7 @@ const FRESH_CLIFF_MAX = 0.4
  */
 const FRESH_RUNS = Number(process.env.FW_FRESH_RUNS) || 120
 const FRESH_ARCHES: Archetype[] = ['fighter', 'rogue', 'mystic']
+const policyIdx = (id: string) => POLICIES.findIndex((p) => p.id === id)
 interface FreshSummary {
   label: string
   /** Row label for the survival table, where the full one does not fit. */
@@ -1731,198 +1789,207 @@ function summarise(label: string, short: string, run: (seed: number, a: Archetyp
     byArch: Object.fromEntries(Object.entries(byArch).map(([k, v]) => [k, mean(v)])),
   }
 }
-/**
- * ---------------------------------------------------------------------------
- * The policy set (M19-f)
- * ---------------------------------------------------------------------------
- *
- * §11 used to grade **one hardcoded routing policy** — specials over battles,
- * elites last — and call it "the way a player reads a map". Measured against
- * three alternatives on identical seeds and heroes, it is the *worst* line
- * available, which meant the 15–35% gate was being satisfied by a badly-played
- * run while nobody had ever measured what a well-played one does.
- *
- * All four are reported. The two edges of the gate are then read off the policy
- * each edge is a question about:
- *
- *  - **the floor** — "can a zero-meta run be won at all?" — is a question about
- *    the *ceiling of play*, so it is gated on the best line in the set;
- *  - **the ceiling** — "is a first run still hard?" — is a question about the
- *    line a first-timer actually walks, so it is gated on the shipped heuristic;
- *  - and a third gate, new, asks whether the campaign notices a real team at
- *    all: the best zero-meta line must stay a clear distance below §6's
- *    depth-appropriate 3–5 tower company.
- *
- * That is strictly more binding than the old single-policy band: it can now
- * fail because good play is impossible, because bad play is unpunished, or
- * because bringing a team stopped mattering.
- */
-const freshByPolicy = POLICIES.map((p) =>
-  summarise(`route: ${p.label}`, p.id, (s, a) => simulateRun(s, a, { policy: p })),
-)
-const policyIdx = (id: string) => POLICIES.findIndex((p) => p.id === id)
-/** The line a first-timer walks — what §11 has always claimed to model. */
-const freshReal = freshByPolicy[policyIdx('specials')]
-/** The best line the set finds, i.e. the ceiling of play on the same seeds. */
-const freshBest = freshByPolicy.reduce((a, b) => (b.winRate > a.winRate ? b : a))
-const freshSolo = summarise('Strict floor — 10 forced battles, no shops, no hires, random card', 'Strict floor', (s, a) => freshRun(s, a, []))
-const freshRecruit = summarise('Strict floor + 2 free level-1 recruits (depths 3 and 6)', 'Strict + 2 recruits', (s, a) => freshRun(s, a, [3, 6]))
-const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy]
 
-line('| Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |')
-line('|---|--:|--:|--:|--:|--:|--:|--:|')
-for (const s of FRESH_ROWS) {
+if (want(11)) {
+  /**
+   * ---------------------------------------------------------------------------
+   * The policy set (M19-f)
+   * ---------------------------------------------------------------------------
+   *
+   * §11 used to grade **one hardcoded routing policy** — specials over battles,
+   * elites last — and call it "the way a player reads a map". Measured against
+   * three alternatives on identical seeds and heroes, it is the *worst* line
+   * available, which meant the 15–35% gate was being satisfied by a badly-played
+   * run while nobody had ever measured what a well-played one does.
+   *
+   * All four are reported. The two edges of the gate are then read off the policy
+   * each edge is a question about:
+   *
+   *  - **the floor** — "can a zero-meta run be won at all?" — is a question about
+   *    the *ceiling of play*, so it is gated on the best line in the set;
+   *  - **the ceiling** — "is a first run still hard?" — is a question about the
+   *    line a first-timer actually walks, so it is gated on the shipped heuristic;
+   *  - and a third gate, new, asks whether the campaign notices a real team at
+   *    all: the best zero-meta line must stay a clear distance below §6's
+   *    depth-appropriate 3–5 tower company.
+   *
+   * That is strictly more binding than the old single-policy band: it can now
+   * fail because good play is impossible, because bad play is unpunished, or
+   * because bringing a team stopped mattering.
+   */
+  const freshByPolicy = POLICIES.map((p) =>
+    summarise(`route: ${p.label}`, p.id, (s, a) => simulateRun(s, a, { policy: p })),
+  )
+  /** The line a first-timer walks — what §11 has always claimed to model. */
+  const freshReal = freshByPolicy[policyIdx('specials')]
+  /** The best line the set finds, i.e. the ceiling of play on the same seeds. */
+  const freshBest = freshByPolicy.reduce((a, b) => (b.winRate > a.winRate ? b : a))
+  const freshSolo = summarise('Strict floor — 10 forced battles, no shops, no hires, random card', 'Strict floor', (s, a) => freshRun(s, a, []))
+  const freshRecruit = summarise('Strict floor + 2 free level-1 recruits (depths 3 and 6)', 'Strict + 2 recruits', (s, a) => freshRun(s, a, [3, 6]))
+  const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy]
+
+  line('| Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |')
+  line('|---|--:|--:|--:|--:|--:|--:|--:|')
+  for (const s of FRESH_ROWS) {
+    line(
+      `| ${s.label} | ${FRESH_RUNS} | **${pct(s.winRate)}** | ${f1(s.avgDepth)} | ${f1(s.avgBattles)} | ${f1(s.avgRoster)} | depth ${s.cliffDepth} | ${pct(s.cliffShare)} |`,
+    )
+  }
+  line('')
+  line('**The routing spread.** Same seeds, same starting heroes, same map — only the')
+  line('rule for choosing the next node changes:')
+  line('')
+  line('| Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |')
+  line('|---|--:|--:|--:|--:|')
+  for (const s of freshByPolicy) {
+    const gate = s === freshReal ? ' ← **gated (ceiling)**' : s === freshBest ? ' ← **gated (floor)**' : ''
+    line(`| ${s.label}${gate} | **${pct(s.winRate)}** | ${f1(s.avgDepth)} | ${f1(s.avgBattles)} | ×${f1(s.bossThreat)} |`)
+  }
+  line('')
   line(
-    `| ${s.label} | ${FRESH_RUNS} | **${pct(s.winRate)}** | ${f1(s.avgDepth)} | ${f1(s.avgBattles)} | ${f1(s.avgRoster)} | depth ${s.cliffDepth} | ${pct(s.cliffShare)} |`,
+    `Spread across the set: **${pct(Math.min(...freshByPolicy.map((s) => s.winRate)))} – ${pct(Math.max(...freshByPolicy.map((s) => s.winRate)))}** — ${((freshBest.winRate - freshReal.winRate) * 100).toFixed(0)} points between the line the report used to grade and the best one it can find.`,
   )
-}
-line('')
-line('**The routing spread.** Same seeds, same starting heroes, same map — only the')
-line('rule for choosing the next node changes:')
-line('')
-line('| Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |')
-line('|---|--:|--:|--:|--:|')
-for (const s of freshByPolicy) {
-  const gate = s === freshReal ? ' ← **gated (ceiling)**' : s === freshBest ? ' ← **gated (floor)**' : ''
-  line(`| ${s.label}${gate} | **${pct(s.winRate)}** | ${f1(s.avgDepth)} | ${f1(s.avgBattles)} | ×${f1(s.bossThreat)} |`)
-}
-line('')
-line(
-  `Spread across the set: **${pct(Math.min(...freshByPolicy.map((s) => s.winRate)))} – ${pct(Math.max(...freshByPolicy.map((s) => s.winRate)))}** — ${((freshBest.winRate - freshReal.winRate) * 100).toFixed(0)} points between the line the report used to grade and the best one it can find.`,
-)
-line('')
-line('Survival curve — share of fresh runs that clear each node:')
-line('')
-line(`| Depth | ${Array.from({ length: NODES }, (_, i) => i + 1).join(' | ')} |`)
-line(`|---|${'--:|'.repeat(NODES)}`)
-for (const s of FRESH_ROWS) {
-  line(`| ${s.short} | ${s.survival.map(pct).join(' | ')} |`)
-}
-line('')
-line(`Nodes-cleared histogram (strict): ${freshSolo.hist.map((c, d) => `${d}:${c}`).join('  ')}`)
-line(`Nodes-cleared histogram (gated line): ${freshReal.hist.map((c, d) => `${d}:${c}`).join('  ')}`)
-line('')
-line('Average nodes cleared by starting archetype (gated line): ')
-line(
-  Object.entries(freshReal.byArch)
-    .map(([k, v]) => `**${k}** ${f1(v)}`)
-    .join(', ') + '.',
-)
-line('')
-line('**Findings.**')
-line('')
-line(
-  `- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins ${pct(freshSolo.winRate)} when the model refuses to spend gold, hire or read a card, and ${pct(freshReal.winRate)} when it does what the game offers.`,
-)
-line(
-  `- **The largest single term in a fresh run is the route.** ${((freshBest.winRate - freshReal.winRate) * 100).toFixed(0)} points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).`,
-)
-line(
-  `- **A stop is a price now, not a trap.** The specials-first line fights ${f1(freshByPolicy[policyIdx('battles')].avgBattles - freshReal.avgBattles)} fewer battles than the battles-first line and wins ${Math.abs((freshReal.winRate - freshByPolicy[policyIdx('battles')].winRate) * 100).toFixed(0)} points ${freshReal.winRate >= freshByPolicy[policyIdx('battles')].winRate ? 'more' : 'less'}. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.`,
-)
-line(
-  `- The curve has a real bite at every node rather than one cliff: no single depth ends more than ${pct(freshReal.cliffShare)} of gated-line runs (depth ${freshReal.cliffDepth} is the worst).`,
-)
-line(
-  `- Depths 1–3 are not a wall — ${pct(freshReal.survival[2])} of gated-line zero-meta runs clear depth 3 — and neither is any single later node.`,
-)
-line('')
-line('**Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through')
-line(`all twelve layers and wins ${pct(winRate)} of the time; the zero-meta first run, played the`)
-line(`way the game is actually laid out, wins ${pct(freshReal.winRate)} on the first-timer line and ${pct(freshBest.winRate)} on the best`)
-line('one. The gap between those numbers is what the meta layer and the player\'s own')
-line('learning are worth, and it is now a difference in *how much slack you have*, not')
-line('the difference between a game and a grind gate.')
-line('')
-line('**The two bands meet the boss at the same Threat.** §6 and a routed first run both fight')
-line(`every layer at \`threatAtLayer\`, so the final boss is ×${f1(mcBossThreat)} in §6 and ×${f1(freshReal.bossThreat)} on the first-timer line —`)
-line('the exchange-rate problem the old special step was introduced to narrow (a routed run used to')
-line('meet the boss at ×11–15 against §6\'s ×30) is gone by construction: a wave-table dial now lands')
-line('equally hard on both sweeps.')
-line('')
-line('**The three gates.**')
-line('')
-line(
-  `1. **Floor — winnable played well:** the best line in the set must win ≥ ${pct(FRESH_WIN_BAND[0])}. Measured **${pct(freshBest.winRate)}** (${freshBest.short}). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.`,
-)
-line(
-  `2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ ${pct(FRESH_WIN_BAND[1])}. Measured **${pct(freshReal.winRate)}**.`,
-)
-line(
-  `3. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
-)
-line('')
-line(`The design *target* inside the band remains **15–25%** on the gated line. The band`)
-line(`is wide partly because this is a Monte Carlo over ${FRESH_RUNS} runs of a *modelled* player`)
-line(`(1σ ≈ ${f1(Math.sqrt(0.25 / FRESH_RUNS) * 100)}pt), and partly for a reason that belongs in the open.`)
-line('')
-line(`**The shipped number is ${pct(freshReal.winRate)}.** Two structural corrections moved it, and both were`)
-line('the harness being wrong rather than the game changing:')
-line('')
-line('| Correction | What it was |')
-line('|---|---|')
-line('| Equipping model | `itemScore` summed `physDamage + magDamage`; `computeCombat` reads only the one matching the wielder — `const flat = isPhys ? gear.flatPhys : gear.flatMag` — so the modelled player bought Greatswords for mystics and scored them as upgrades. Every buy and equip decision is now a `computeCombat().dps` delta. |')
-line('| Loot parity | `generateItem` / `generateRewardCards` were called with `{ luck }` only, while every shipped call site passes `roster` (type-aware offers) and `pity` (the drought timer). Now at parity, including `creditPity` on the item actually taken. |')
-line('')
-line('Together they were worth **+13pt** on this line — 24% before, 37% after, same')
-line('policy, same seeds, same game. They are quoted together because they were')
-line('measured together; the split between them was not measured and is not claimed.')
-line('Either way the point stands: 13 of the points this sweep used to report as')
-line('difficulty were the model failing to play the game properly.')
-line('The wave tables then moved once, deliberately, and for a reason that belongs to §6')
-line('as much as here: `BUDGET_RATIO_FLOOR` 1.30 → 1.44 and `BOSS_STEP` 0.78 → 0.58. The')
-line('boss keeps the same absolute HP pool; the nodes in front of it caught up. See the')
-line('constant\'s own doc comment for the before/after on both sweeps.')
-line('')
-line('| Dial tried (earlier fit, kept for the record) | §11 realistic | §6 Monte Carlo | Verdict |')
-line('|---|--:|--:|---|')
-line('| budget step +4%/depth | 42% → 29% | 53% → **25%** | §6 win band broken |')
-line('| head count −38% | 42% → 27% | deaths **49% → 84%** on one node | §6 shape broken |')
-line('| enemy resists +0.12 | 42% → 28% | 53% → **39%** | §6 win band broken |')
-line('| enemy leak ×2 | 42% → 41% | 53% → 47% | no effect on §11 |')
-line('| budget curve front-loaded | 42% → **47%** | 53% → 55% | wrong direction |')
-line('| enemy speed ×1.5, boss 0.86 | 45% → 30% | 50% | §4 censors, §6 concentration 74% |')
-line('')
-if (freshBest.winRate < FRESH_WIN_BAND[0]) {
-  failures.push(
-    `Zero-meta baseline is a grind gate: even the best routing line (${freshBest.short}) wins only ${pct(freshBest.winRate)}, below the ${pct(FRESH_WIN_BAND[0])} floor. Losing a first run has to be a skill signal, not an instruction to farm the hub.`,
+  line('')
+  line('Survival curve — share of fresh runs that clear each node:')
+  line('')
+  line(`| Depth | ${Array.from({ length: NODES }, (_, i) => i + 1).join(' | ')} |`)
+  line(`|---|${'--:|'.repeat(NODES)}`)
+  for (const s of FRESH_ROWS) {
+    line(`| ${s.short} | ${s.survival.map(pct).join(' | ')} |`)
+  }
+  line('')
+  line(`Nodes-cleared histogram (strict): ${freshSolo.hist.map((c, d) => `${d}:${c}`).join('  ')}`)
+  line(`Nodes-cleared histogram (gated line): ${freshReal.hist.map((c, d) => `${d}:${c}`).join('  ')}`)
+  line('')
+  line('Average nodes cleared by starting archetype (gated line): ')
+  line(
+    Object.entries(freshReal.byArch)
+      .map(([k, v]) => `**${k}** ${f1(v)}`)
+      .join(', ') + '.',
   )
-}
-if (freshReal.winRate > FRESH_WIN_BAND[1]) {
-  failures.push(
-    `Zero-meta baseline is too soft: the first-timer line wins ${pct(freshReal.winRate)}, above the ${pct(FRESH_WIN_BAND[1])} ceiling.`,
+  line('')
+  line('**Findings.**')
+  line('')
+  line(
+    `- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins ${pct(freshSolo.winRate)} when the model refuses to spend gold, hire or read a card, and ${pct(freshReal.winRate)} when it does what the game offers.`,
   )
-}
-if (freshReal.cliffShare > FRESH_CLIFF_MAX) {
-  failures.push(
-    `Fresh-player difficulty is a cliff, not a curve: depth ${freshReal.cliffDepth} alone ends ${pct(freshReal.cliffShare)} of gated-line zero-meta runs (max ${pct(FRESH_CLIFF_MAX)}).`,
+  line(
+    `- **The largest single term in a fresh run is the route.** ${((freshBest.winRate - freshReal.winRate) * 100).toFixed(0)} points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).`,
   )
-}
-if (freshSolo.cliffShare > FRESH_CLIFF_MAX) {
-  failures.push(
-    `Strict-floor difficulty is a cliff, not a curve: depth ${freshSolo.cliffDepth} alone ends ${pct(freshSolo.cliffShare)} of zero-meta solo runs (max ${pct(FRESH_CLIFF_MAX)}).`,
+  line(
+    `- **A stop is a price now, not a trap.** The specials-first line fights ${f1(freshByPolicy[policyIdx('battles')].avgBattles - freshReal.avgBattles)} fewer battles than the battles-first line and wins ${Math.abs((freshReal.winRate - freshByPolicy[policyIdx('battles')].winRate) * 100).toFixed(0)} points ${freshReal.winRate >= freshByPolicy[policyIdx('battles')].winRate ? 'more' : 'less'}. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.`,
   )
+  line(
+    `- The curve has a real bite at every node rather than one cliff: no single depth ends more than ${pct(freshReal.cliffShare)} of gated-line runs (depth ${freshReal.cliffDepth} is the worst).`,
+  )
+  line(
+    `- Depths 1–3 are not a wall — ${pct(freshReal.survival[2])} of gated-line zero-meta runs clear depth 3 — and neither is any single later node.`,
+  )
+  line('')
+  line('**Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through')
+  line(`all twelve layers and wins ${pct(winRate)} of the time; the zero-meta first run, played the`)
+  line(`way the game is actually laid out, wins ${pct(freshReal.winRate)} on the first-timer line and ${pct(freshBest.winRate)} on the best`)
+  line('one. The gap between those numbers is what the meta layer and the player\'s own')
+  line('learning are worth, and it is now a difference in *how much slack you have*, not')
+  line('the difference between a game and a grind gate.')
+  line('')
+  line('**The two bands meet the boss at the same Threat.** §6 and a routed first run both fight')
+  line(`every layer at \`threatAtLayer\`, so the final boss is ×${f1(mcBossThreat)} in §6 and ×${f1(freshReal.bossThreat)} on the first-timer line —`)
+  line('the exchange-rate problem the old special step was introduced to narrow (a routed run used to')
+  line('meet the boss at ×11–15 against §6\'s ×30) is gone by construction: a wave-table dial now lands')
+  line('equally hard on both sweeps.')
+  line('')
+  line('**The three gates.**')
+  line('')
+  line(
+    `1. **Floor — winnable played well:** the best line in the set must win ≥ ${pct(FRESH_WIN_BAND[0])}. Measured **${pct(freshBest.winRate)}** (${freshBest.short}). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.`,
+  )
+  line(
+    `2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ ${pct(FRESH_WIN_BAND[1])}. Measured **${pct(freshReal.winRate)}**.`,
+  )
+  line(
+    `3. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
+  )
+  line('')
+  line(`The design *target* inside the band remains **15–25%** on the gated line. The band`)
+  line(`is wide partly because this is a Monte Carlo over ${FRESH_RUNS} runs of a *modelled* player`)
+  line(`(1σ ≈ ${f1(Math.sqrt(0.25 / FRESH_RUNS) * 100)}pt), and partly for a reason that belongs in the open.`)
+  line('')
+  line(`**The shipped number is ${pct(freshReal.winRate)}.** Two structural corrections moved it, and both were`)
+  line('the harness being wrong rather than the game changing:')
+  line('')
+  line('| Correction | What it was |')
+  line('|---|---|')
+  line('| Equipping model | `itemScore` summed `physDamage + magDamage`; `computeCombat` reads only the one matching the wielder — `const flat = isPhys ? gear.flatPhys : gear.flatMag` — so the modelled player bought Greatswords for mystics and scored them as upgrades. Every buy and equip decision is now a `computeCombat().dps` delta. |')
+  line('| Loot parity | `generateItem` / `generateRewardCards` were called with `{ luck }` only, while every shipped call site passes `roster` (type-aware offers) and `pity` (the drought timer). Now at parity, including `creditPity` on the item actually taken. |')
+  line('')
+  line('Together they were worth **+13pt** on this line — 24% before, 37% after, same')
+  line('policy, same seeds, same game. They are quoted together because they were')
+  line('measured together; the split between them was not measured and is not claimed.')
+  line('Either way the point stands: 13 of the points this sweep used to report as')
+  line('difficulty were the model failing to play the game properly.')
+  line('The wave tables then moved once, deliberately, and for a reason that belongs to §6')
+  line('as much as here: `BUDGET_RATIO_FLOOR` 1.30 → 1.44 and `BOSS_STEP` 0.78 → 0.58. The')
+  line('boss keeps the same absolute HP pool; the nodes in front of it caught up. See the')
+  line('constant\'s own doc comment for the before/after on both sweeps.')
+  line('')
+  line('| Dial tried (earlier fit, kept for the record) | §11 realistic | §6 Monte Carlo | Verdict |')
+  line('|---|--:|--:|---|')
+  line('| budget step +4%/depth | 42% → 29% | 53% → **25%** | §6 win band broken |')
+  line('| head count −38% | 42% → 27% | deaths **49% → 84%** on one node | §6 shape broken |')
+  line('| enemy resists +0.12 | 42% → 28% | 53% → **39%** | §6 win band broken |')
+  line('| enemy leak ×2 | 42% → 41% | 53% → 47% | no effect on §11 |')
+  line('| budget curve front-loaded | 42% → **47%** | 53% → 55% | wrong direction |')
+  line('| enemy speed ×1.5, boss 0.86 | 45% → 30% | 50% | §4 censors, §6 concentration 74% |')
+  line('')
+  if (freshBest.winRate < FRESH_WIN_BAND[0]) {
+    failures.push(
+      `Zero-meta baseline is a grind gate: even the best routing line (${freshBest.short}) wins only ${pct(freshBest.winRate)}, below the ${pct(FRESH_WIN_BAND[0])} floor. Losing a first run has to be a skill signal, not an instruction to farm the hub.`,
+    )
+  }
+  if (freshReal.winRate > FRESH_WIN_BAND[1]) {
+    failures.push(
+      `Zero-meta baseline is too soft: the first-timer line wins ${pct(freshReal.winRate)}, above the ${pct(FRESH_WIN_BAND[1])} ceiling.`,
+    )
+  }
+  if (freshReal.cliffShare > FRESH_CLIFF_MAX) {
+    failures.push(
+      `Fresh-player difficulty is a cliff, not a curve: depth ${freshReal.cliffDepth} alone ends ${pct(freshReal.cliffShare)} of gated-line zero-meta runs (max ${pct(FRESH_CLIFF_MAX)}).`,
+    )
+  }
+  if (freshSolo.cliffShare > FRESH_CLIFF_MAX) {
+    failures.push(
+      `Strict-floor difficulty is a cliff, not a curve: depth ${freshSolo.cliffDepth} alone ends ${pct(freshSolo.cliffShare)} of zero-meta solo runs (max ${pct(FRESH_CLIFF_MAX)}).`,
+    )
+  }
+  summary.push(`Fresh player REALISTIC (zero meta, 1 hero, ${START_GOLD}g): ${pct(freshReal.winRate)} win (band ${pct(FRESH_WIN_BAND[0])}-${pct(FRESH_WIN_BAND[1])}), ${f1(freshReal.avgDepth)}/${NODES} nodes, ${f1(freshReal.avgBattles)} battles, worst node ${pct(freshReal.cliffShare)}`)
+  summary.push(`Fresh player STRICT floor: ${pct(freshSolo.winRate)} win, ${f1(freshSolo.avgDepth)}/${NODES} nodes | +2 recruits ${pct(freshRecruit.winRate)}`)
+  summary.push(`Fresh run by starter (first-timer line): ${Object.entries(freshReal.byArch).map(([k, v]) => `${k} ${f1(v)} nodes`).join(', ')} | boss met at ×${f1(freshReal.bossThreat)}`)
+  summary.push(`Fresh-run routing spread: ${freshByPolicy.map((r) => `${r.short} ${pct(r.winRate)}`).join(', ')} | gated: ceiling on ${freshReal.short} (${pct(freshReal.winRate)} vs ${pct(FRESH_WIN_BAND[1])}), floor on ${freshBest.short} (${pct(freshBest.winRate)} vs ${pct(FRESH_WIN_BAND[0])})`)
 }
 
 // -------------------------------------------------------------- Sweep 12
-// The hub — new (M19-f). The sweep that would have stopped the Cartographer.
-line('## 12. What the hub sells (does a purchase ever make the game worse?)')
-line('')
-line('**Why this exists.** `Cartographer\'s Table` shipped as a 120-mark horizontal')
-line('unlock whose card promised *"longer runs, wider forks, more routes worth arguing')
-line('about"*. It set `layerCount` 11 → 13, which moved the boss from layer 10 to layer')
-line('12: two extra compounding Threat steps (×1.42² = ×2.02) **and** a boss budget')
-line('quoted off `waveBudget(11)` instead of `waveBudget(9)` (×2.28) — a ~4.6× harder')
-line('final fight, uncompensated, for a purchase that pays +8% marks. Measured on the')
-line('model below it took the campaign from **40% winnable to 7%**, permanently, with no')
-line('opt-out short of `resetMeta`. The fully-bought hub was the *worst* state to play')
-line('from. Every invariant in this report was green while that was true, because')
-line('nothing here had ever simulated a run with a hub behind it.')
-line('')
-line('Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the')
-line('comparison against zero meta is paired and the noise mostly cancels; the ± column is')
-line('two standard errors of that paired difference.')
-line('')
+if (want(12)) {
+  // The hub — new (M19-f). The sweep that would have stopped the Cartographer.
+  line('## 12. What the hub sells (does a purchase ever make the game worse?)')
+  line('')
+  line('**Why this exists.** `Cartographer\'s Table` shipped as a 120-mark horizontal')
+  line('unlock whose card promised *"longer runs, wider forks, more routes worth arguing')
+  line('about"*. It set `layerCount` 11 → 13, which moved the boss from layer 10 to layer')
+  line('12: two extra compounding Threat steps (×1.42² = ×2.02) **and** a boss budget')
+  line('quoted off `waveBudget(11)` instead of `waveBudget(9)` (×2.28) — a ~4.6× harder')
+  line('final fight, uncompensated, for a purchase that pays +8% marks. Measured on the')
+  line('model below it took the campaign from **40% winnable to 7%**, permanently, with no')
+  line('opt-out short of `resetMeta`. The fully-bought hub was the *worst* state to play')
+  line('from. Every invariant in this report was green while that was true, because')
+  line('nothing here had ever simulated a run with a hub behind it.')
+  line('')
+  line('Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the')
+  line('comparison against zero meta is paired and the noise mostly cancels; the ± column is')
+  line('two standard errors of that paired difference.')
+  line('')
+
+}
 
 /** How far below zero-meta a purchase may measure before it is a defect. */
 const HUB_TOLERANCE = 0.03
@@ -2007,1211 +2074,1239 @@ const HUB_STATES: [string, Record<string, number>][] = [
   ['the full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
   ['everything the hub sells', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
 ]
-const hubZero: Record<string, HubCell> = {}
-for (const p of POLICIES) hubZero[p.id] = hubCell(ZERO_META, p)
 
-const hubCells = new Map<string, HubCell[]>()
-line(`| Hub state | ${POLICIES.map((p) => p.id).join(' | ')} | worst gated Δ |`)
-line(`|---|${'--:|'.repeat(POLICIES.length)}--:|`)
-for (const [label, upgrades] of HUB_STATES) {
-  // The zero-meta row IS the baseline — same loadout, same seeds — so it is
-  // reused rather than replayed.
-  const cells =
-    label === 'zero meta'
-      ? POLICIES.map((p) => hubZero[p.id])
-      : POLICIES.map((p) => hubCell(loadoutFor(label, upgrades), p))
-  hubCells.set(label, cells)
-  const deltas = cells.map((c, i) => c.winRate - hubZero[POLICIES[i].id].winRate)
-  const cellText = cells.map((c, i) => {
-    const d = deltas[i]
-    const tol = pairedTolerance(c.wins, hubZero[POLICIES[i].id].wins)
-    return `${pct(c.winRate)} (${d >= 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(0)}±${(tol * 100).toFixed(0)})`
-  })
-  let worst = Infinity
-  for (let i = 0; i < POLICIES.length; i++) {
-    if (!HUB_GATED_POLICIES.includes(POLICIES[i].id)) continue
-    worst = Math.min(worst, deltas[i])
-    const tol = Math.max(HUB_TOLERANCE, pairedTolerance(cells[i].wins, hubZero[POLICIES[i].id].wins))
-    if (deltas[i] + tol < 0) {
-      failures.push(
-        `Hub purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero meta's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). A hub purchase may add breadth; it may never remove baseline viability.`,
-      )
+if (want(12)) {
+  const hubZero: Record<string, HubCell> = {}
+  for (const p of POLICIES) hubZero[p.id] = hubCell(ZERO_META, p)
+
+  const hubCells = new Map<string, HubCell[]>()
+  line(`| Hub state | ${POLICIES.map((p) => p.id).join(' | ')} | worst gated Δ |`)
+  line(`|---|${'--:|'.repeat(POLICIES.length)}--:|`)
+  for (const [label, upgrades] of HUB_STATES) {
+    // The zero-meta row IS the baseline — same loadout, same seeds — so it is
+    // reused rather than replayed.
+    const cells =
+      label === 'zero meta'
+        ? POLICIES.map((p) => hubZero[p.id])
+        : POLICIES.map((p) => hubCell(loadoutFor(label, upgrades), p))
+    hubCells.set(label, cells)
+    const deltas = cells.map((c, i) => c.winRate - hubZero[POLICIES[i].id].winRate)
+    const cellText = cells.map((c, i) => {
+      const d = deltas[i]
+      const tol = pairedTolerance(c.wins, hubZero[POLICIES[i].id].wins)
+      return `${pct(c.winRate)} (${d >= 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(0)}±${(tol * 100).toFixed(0)})`
+    })
+    let worst = Infinity
+    for (let i = 0; i < POLICIES.length; i++) {
+      if (!HUB_GATED_POLICIES.includes(POLICIES[i].id)) continue
+      worst = Math.min(worst, deltas[i])
+      const tol = Math.max(HUB_TOLERANCE, pairedTolerance(cells[i].wins, hubZero[POLICIES[i].id].wins))
+      if (deltas[i] + tol < 0) {
+        failures.push(
+          `Hub purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero meta's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). A hub purchase may add breadth; it may never remove baseline viability.`,
+        )
+      }
     }
+    line(`| ${label} | ${cellText.join(' | ')} | ${worst === Infinity ? '—' : `${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`} |`)
   }
-  line(`| ${label} | ${cellText.join(' | ')} | ${worst === Infinity ? '—' : `${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`} |`)
-}
-line('')
-line('**The invariant.** No hub state — any unlock alone, all of them together, the ramp,')
-line('or everything the hub sells — may measure below zero meta by more than the paired')
-line(`noise floor (2 s.e., minimum ${pct(HUB_TOLERANCE)}) on any of the gated routing lines`)
-line(`(${HUB_GATED_POLICIES.join(', ')}). This is the check that makes the Cartographer class of`)
-line('defect impossible to ship green: it does not care *why* a purchase made the run')
-line('worse, only that it did.')
-line('')
-line(
-  `At ${HUB_RUNS} runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; \`FW_META_RUNS=500\` halves it for a fit.`,
-)
-line('')
-{
-  // Does the campaign notice a team at all? Zero meta against the full ramp, one
-  // model, identical seeds — the comparison the §11 ceiling's rationale wanted.
-  const rampCells = hubCells.get('the full ramp')!
-  const edges = HUB_GATED_POLICIES.map((id) => {
-    const i = POLICIES.findIndex((x) => x.id === id)
-    return rampCells[i].winRate - hubZero[id].winRate
-  })
-  const bestEdge = Math.max(...edges)
+  line('')
+  line('**The invariant.** No hub state — any unlock alone, all of them together, the ramp,')
+  line('or everything the hub sells — may measure below zero meta by more than the paired')
+  line(`noise floor (2 s.e., minimum ${pct(HUB_TOLERANCE)}) on any of the gated routing lines`)
+  line(`(${HUB_GATED_POLICIES.join(', ')}). This is the check that makes the Cartographer class of`)
+  line('defect impossible to ship green: it does not care *why* a purchase made the run')
+  line('worse, only that it did.')
+  line('')
   line(
-    `**Does the campaign notice a team?** The full ramp is worth **+${(bestEdge * 100).toFixed(0)}pt** over zero meta at its best (${HUB_GATED_POLICIES.map((id, i) => `${id} +${(edges[i] * 100).toFixed(0)}`).join(', ')}). The gate asks for ≥ ${pct(FRESH_TEAM_EDGE)}: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.`,
+    `At ${HUB_RUNS} runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; \`FW_META_RUNS=500\` halves it for a fit.`,
   )
   line('')
-  if (bestEdge < FRESH_TEAM_EDGE) {
-    failures.push(
-      `The campaign does not notice whether the player brought a team: the entire hub ramp is worth ${(bestEdge * 100).toFixed(0)}pt of win rate (needs ≥ ${pct(FRESH_TEAM_EDGE)}). Every purchase is cosmetic.`,
+  {
+    // Does the campaign notice a team at all? Zero meta against the full ramp, one
+    // model, identical seeds — the comparison the §11 ceiling's rationale wanted.
+    const rampCells = hubCells.get('the full ramp')!
+    const edges = HUB_GATED_POLICIES.map((id) => {
+      const i = POLICIES.findIndex((x) => x.id === id)
+      return rampCells[i].winRate - hubZero[id].winRate
+    })
+    const bestEdge = Math.max(...edges)
+    line(
+      `**Does the campaign notice a team?** The full ramp is worth **+${(bestEdge * 100).toFixed(0)}pt** over zero meta at its best (${HUB_GATED_POLICIES.map((id, i) => `${id} +${(edges[i] * 100).toFixed(0)}`).join(', ')}). The gate asks for ≥ ${pct(FRESH_TEAM_EDGE)}: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.`,
     )
-  }
-}
-line('**The breadth each unlock promises is checked separately**, because a horizontal')
-line('unlock is not supposed to move the win rate at all — it is supposed to widen the')
-line('run. A card that promises forks has to produce forks:')
-line('')
-const MAP_SAMPLES = 500
-interface MapShape { noChoice: number; mixed: number; specials: number; forcedElites: number; layers: number }
-function mapShape(opts: Parameters<typeof generateRunMap>[1]): MapShape {
-  let steps = 0
-  let noChoice = 0
-  let mixed = 0
-  let specials = 0
-  let elites = 0
-  let forced = 0
-  let layers = 0
-  for (let i = 0; i < MAP_SAMPLES; i++) {
-    const m = generateRunMap(new RNG(i * 7 + 1), opts)
-    layers += m.layers
-    const byId = new Map(m.nodes.map((n) => [n.id, n]))
-    const outDeg = new Map<string, number>()
-    for (const e of m.edges) outDeg.set(e.from, (outDeg.get(e.from) ?? 0) + 1)
-    const forcedIds = new Set<string>()
-    for (const e of m.edges) if (outDeg.get(e.from) === 1) forcedIds.add(e.to)
-    for (const n of m.nodes) {
-      if (n.type === 'elite') { elites++; if (forcedIds.has(n.id)) forced++ }
-      if (['merchant', 'shrine', 'recruit', 'campfire', 'elite'].includes(n.type)) specials++
-      if (n.type === 'boss') continue
-      const outs = m.edges.filter((e) => e.from === n.id).map((e) => byId.get(e.to)!)
-      if (!outs.length) continue
-      // The step into an act boss has one road on every map by design (the
-      // act's closing fight is a single-node layer), so it is not a fork any
-      // unlock could widen and is left out of the fork measure.
-      if (outs.every((o) => o.type === 'miniboss' || o.type === 'boss')) continue
-      steps++
-      if (outs.length === 1) noChoice++
-      else if (new Set(outs.map((o) => o.type)).size > 1) mixed++
+    line('')
+    if (bestEdge < FRESH_TEAM_EDGE) {
+      failures.push(
+        `The campaign does not notice whether the player brought a team: the entire hub ramp is worth ${(bestEdge * 100).toFixed(0)}pt of win rate (needs ≥ ${pct(FRESH_TEAM_EDGE)}). Every purchase is cosmetic.`,
+      )
     }
   }
-  return {
-    noChoice: noChoice / steps,
-    mixed: mixed / steps,
-    specials: specials / MAP_SAMPLES,
-    forcedElites: elites ? forced / elites : 0,
-    layers: layers / MAP_SAMPLES,
+  line('**The breadth each unlock promises is checked separately**, because a horizontal')
+  line('unlock is not supposed to move the win rate at all — it is supposed to widen the')
+  line('run. A card that promises forks has to produce forks:')
+  line('')
+  const MAP_SAMPLES = 500
+  interface MapShape { noChoice: number; mixed: number; specials: number; forcedElites: number; layers: number }
+  function mapShape(opts: Parameters<typeof generateRunMap>[1]): MapShape {
+    let steps = 0
+    let noChoice = 0
+    let mixed = 0
+    let specials = 0
+    let elites = 0
+    let forced = 0
+    let layers = 0
+    for (let i = 0; i < MAP_SAMPLES; i++) {
+      const m = generateRunMap(new RNG(i * 7 + 1), opts)
+      layers += m.layers
+      const byId = new Map(m.nodes.map((n) => [n.id, n]))
+      const outDeg = new Map<string, number>()
+      for (const e of m.edges) outDeg.set(e.from, (outDeg.get(e.from) ?? 0) + 1)
+      const forcedIds = new Set<string>()
+      for (const e of m.edges) if (outDeg.get(e.from) === 1) forcedIds.add(e.to)
+      for (const n of m.nodes) {
+        if (n.type === 'elite') { elites++; if (forcedIds.has(n.id)) forced++ }
+        if (['merchant', 'shrine', 'recruit', 'campfire', 'elite'].includes(n.type)) specials++
+        if (n.type === 'boss') continue
+        const outs = m.edges.filter((e) => e.from === n.id).map((e) => byId.get(e.to)!)
+        if (!outs.length) continue
+        // The step into an act boss has one road on every map by design (the
+        // act's closing fight is a single-node layer), so it is not a fork any
+        // unlock could widen and is left out of the fork measure.
+        if (outs.every((o) => o.type === 'miniboss' || o.type === 'boss')) continue
+        steps++
+        if (outs.length === 1) noChoice++
+        else if (new Set(outs.map((o) => o.type)).size > 1) mixed++
+      }
+    }
+    return {
+      noChoice: noChoice / steps,
+      mixed: mixed / steps,
+      specials: specials / MAP_SAMPLES,
+      forcedElites: elites ? forced / elites : 0,
+      layers: layers / MAP_SAMPLES,
+    }
   }
-}
-const shapeBase = mapShape({})
-const shapeWide = mapShape({ wideMap: true })
-const shapeCamp = mapShape({ standingOrders: true })
-const shapeHire = mapShape({ extraRecruit: true })
-line(`| Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |`)
-line('|---|--:|--:|--:|--:|--:|')
-for (const [label, sh] of [
-  ['default (zero meta)', shapeBase],
-  ["Cartographer's Table", shapeWide],
-  ['Standing Orders', shapeCamp],
-  ['Free Companies', shapeHire],
-] as [string, MapShape][]) {
-  line(`| ${label} | ${f1(sh.layers)} | ${pct(sh.noChoice)} | ${pct(sh.mixed)} | ${pct(sh.forcedElites)} | ${f1(sh.specials)} |`)
-}
-line('')
-/** A "wider forks" unlock has to at least halve the share of choiceless steps. */
-const WIDE_FORK_TARGET = 0.5
-if (shapeWide.layers !== shapeBase.layers) {
-  failures.push(
-    `Cartographer's Table changes the LENGTH of the run (${f1(shapeBase.layers)} → ${f1(shapeWide.layers)} layers). A longer map is a compounding Threat increase and a bigger boss budget; an unlock may widen the march, never lengthen it.`,
+  const shapeBase = mapShape({})
+  const shapeWide = mapShape({ wideMap: true })
+  const shapeCamp = mapShape({ standingOrders: true })
+  const shapeHire = mapShape({ extraRecruit: true })
+  line(`| Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |`)
+  line('|---|--:|--:|--:|--:|--:|')
+  for (const [label, sh] of [
+    ['default (zero meta)', shapeBase],
+    ["Cartographer's Table", shapeWide],
+    ['Standing Orders', shapeCamp],
+    ['Free Companies', shapeHire],
+  ] as [string, MapShape][]) {
+    line(`| ${label} | ${f1(sh.layers)} | ${pct(sh.noChoice)} | ${pct(sh.mixed)} | ${pct(sh.forcedElites)} | ${f1(sh.specials)} |`)
+  }
+  line('')
+  /** A "wider forks" unlock has to at least halve the share of choiceless steps. */
+  const WIDE_FORK_TARGET = 0.5
+  if (shapeWide.layers !== shapeBase.layers) {
+    failures.push(
+      `Cartographer's Table changes the LENGTH of the run (${f1(shapeBase.layers)} → ${f1(shapeWide.layers)} layers). A longer map is a compounding Threat increase and a bigger boss budget; an unlock may widen the march, never lengthen it.`,
+    )
+  }
+  if (shapeWide.noChoice > shapeBase.noChoice * WIDE_FORK_TARGET) {
+    failures.push(
+      `Cartographer's Table does not deliver the forks its card sells: steps with no choice ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} (needs ≤ ${pct(shapeBase.noChoice * WIDE_FORK_TARGET)}).`,
+    )
+  }
+  if (shapeCamp.forcedElites > 0) {
+    failures.push(
+      `Standing Orders does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
+    )
+  }
+  if (shapeHire.specials <= shapeBase.specials) {
+    failures.push(`Free Companies adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
+  }
+  line('**Findings.**')
+  line('')
+  line(
+    `- \`Cartographer's Table\` is now width, not length: same ${f1(shapeBase.layers)} layers, same boss budget, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} and mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.`,
+  )
+  line(
+    `- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries ${f1(shapeBase.specials - shapeWide.specials)} fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.`,
+  )
+  line(
+    `- \`Standing Orders\` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them ${pct(shapeBase.forcedElites)} → ${pct(shapeCamp.forcedElites)}.`,
+  )
+  line(
+    '- `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign\'s dominant term.',
+  )
+  line(
+    '- **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.',
+  )
+  line('')
+  summary.push(
+    `Hub (n=${HUB_RUNS}/cell, gated lines ${HUB_GATED_POLICIES.join('/')}): ${HUB_STATES.map(([label]) => {
+      const cells = hubCells.get(label)!
+      const worst = Math.min(
+        ...HUB_GATED_POLICIES.map((id) => cells[POLICIES.findIndex((x) => x.id === id)].winRate - hubZero[id].winRate),
+      )
+      return `${label} ${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`
+    }).join(' | ')}`,
   )
 }
-if (shapeWide.noChoice > shapeBase.noChoice * WIDE_FORK_TARGET) {
-  failures.push(
-    `Cartographer's Table does not deliver the forks its card sells: steps with no choice ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} (needs ≤ ${pct(shapeBase.noChoice * WIDE_FORK_TARGET)}).`,
-  )
-}
-if (shapeCamp.forcedElites > 0) {
-  failures.push(
-    `Standing Orders does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
-  )
-}
-if (shapeHire.specials <= shapeBase.specials) {
-  failures.push(`Free Companies adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
-}
-line('**Findings.**')
-line('')
-line(
-  `- \`Cartographer's Table\` is now width, not length: same ${f1(shapeBase.layers)} layers, same boss budget, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} and mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.`,
-)
-line(
-  `- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries ${f1(shapeBase.specials - shapeWide.specials)} fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.`,
-)
-line(
-  `- \`Standing Orders\` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them ${pct(shapeBase.forcedElites)} → ${pct(shapeCamp.forcedElites)}.`,
-)
-line(
-  '- `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign\'s dominant term.',
-)
-line(
-  '- **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.',
-)
-line('')
 
 // -------------------------------------------------------------- Sweep 13
-// The Banner ladder's economy — new (M19-f).
-line('## 13. The Banner ladder (is climbing ever worth it?)')
-line('')
-line('**Why this exists.** A ladder rung is a wager: it takes a rule away and pays more')
-line('for the run. The old ladder was three separate failures at once — its first rung')
-line('was free money (deleting the merchants costs nothing measurable and paid +25%), its')
-line('top three rungs were strictly ignorable (marks/run flatlined at ~100–160 while the')
-line('win rate collapsed 32 → 11 → 1%), and its last rung was a bare `startThreat: 2`')
-line('with copy that restated an inherited rule. Nothing measured any of it.')
-line('')
-line('Each rung is measured on the same paired seeds as §11 and §12, and the payout is')
-line("`grantRunRewards`'s own formula, so the marks column is the number the player's")
-line(`purse actually sees. **${BANNER_RUNS} runs a rung** (§12 uses ${HUB_RUNS}): the gate below asks for`)
-line(`a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per rung, and a ${HUB_RUNS}-run cell cannot resolve one.`)
-line('')
-line('**A rung is earned, not bought.** Banner N unlocks by *winning* a run under Banner')
-line('N−1 (Banner 1 by winning an unbannered run) — `metaStore.grantRunRewards`. It used to')
-line('cost 200 / 350 / 500 Watch Marks, which contradicted the ladder\'s own doctrine: the')
-line('record a ladder keeps should measure skill, and a marks price measures grinding.')
-line('')
-const BANNER_POLICY = POLICIES[policyIdx('adaptive')]
-interface BannerRow { tier: number; name: string; mult: number; win: number; marks: number }
-const bannerRows: BannerRow[] = []
-for (let t = 0; t <= MAX_BANNER; t++) {
-  const c = hubCell(ZERO_META, BANNER_POLICY, bannerRules(t), BANNER_RUNS)
-  bannerRows.push({
-    tier: t,
-    name: t === 0 ? '— (no Banner)' : BANNER_RUNGS[t - 1].name,
-    mult: bannerRules(t).markMult,
-    win: c.winRate,
-    marks: c.marks,
-  })
-}
-line('| Banner | Rule it adds | ×marks | Win rate | **Marks / run** | Δ marks |')
-line('|--:|---|--:|--:|--:|--:|')
-for (const r of bannerRows) {
-  const prev = r.tier > 0 ? bannerRows[r.tier - 1].marks : null
-  const rule = r.tier === 0 ? '—' : BANNER_RUNGS[r.tier - 1].rule
+if (want(13)) {
+  // The Banner ladder's economy — new (M19-f).
+  line('## 13. The Banner ladder (is climbing ever worth it?)')
+  line('')
+  line('**Why this exists.** A ladder rung is a wager: it takes a rule away and pays more')
+  line('for the run. The old ladder was three separate failures at once — its first rung')
+  line('was free money (deleting the merchants costs nothing measurable and paid +25%), its')
+  line('top three rungs were strictly ignorable (marks/run flatlined at ~100–160 while the')
+  line('win rate collapsed 32 → 11 → 1%), and its last rung was a bare `startThreat: 2`')
+  line('with copy that restated an inherited rule. Nothing measured any of it.')
+  line('')
+  line('Each rung is measured on the same paired seeds as §11 and §12, and the payout is')
+  line("`grantRunRewards`'s own formula, so the marks column is the number the player's")
+  line(`purse actually sees. **${BANNER_RUNS} runs a rung** (§12 uses ${HUB_RUNS}): the gate below asks for`)
+  line(`a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per rung, and a ${HUB_RUNS}-run cell cannot resolve one.`)
+  line('')
+  line('**A rung is earned, not bought.** Banner N unlocks by *winning* a run under Banner')
+  line('N−1 (Banner 1 by winning an unbannered run) — `metaStore.grantRunRewards`. It used to')
+  line('cost 200 / 350 / 500 Watch Marks, which contradicted the ladder\'s own doctrine: the')
+  line('record a ladder keeps should measure skill, and a marks price measures grinding.')
+  line('')
+  const BANNER_POLICY = POLICIES[policyIdx('adaptive')]
+  interface BannerRow { tier: number; name: string; mult: number; win: number; marks: number }
+  const bannerRows: BannerRow[] = []
+  for (let t = 0; t <= MAX_BANNER; t++) {
+    const c = hubCell(ZERO_META, BANNER_POLICY, bannerRules(t), BANNER_RUNS)
+    bannerRows.push({
+      tier: t,
+      name: t === 0 ? '— (no Banner)' : BANNER_RUNGS[t - 1].name,
+      mult: bannerRules(t).markMult,
+      win: c.winRate,
+      marks: c.marks,
+    })
+  }
+  line('| Banner | Rule it adds | ×marks | Win rate | **Marks / run** | Δ marks |')
+  line('|--:|---|--:|--:|--:|--:|')
+  for (const r of bannerRows) {
+    const prev = r.tier > 0 ? bannerRows[r.tier - 1].marks : null
+    const rule = r.tier === 0 ? '—' : BANNER_RUNGS[r.tier - 1].rule
+    line(
+      `| ${r.tier} · ${r.name} | ${rule} | ×${r.mult} | ${pct(r.win)} | **${f1(r.marks)}** | ${prev === null ? '—' : `${r.marks - prev >= 0 ? '+' : '−'}${Math.abs(r.marks - prev).toFixed(0)}`} |`,
+    )
+  }
+  line('')
+  line('**Two invariants.**')
+  line('')
+  line(`1. **Every rung is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A rung that does not lower the win rate`)
+  line('   is not a wager, it is a bonus with a warning label — and a mandatory one, since')
+  line('   nobody would ever fly the rung below it again. This used to tolerate a rung')
+  line('   *gaining* up to 2pt; it now demands a measurable cost.')
+  line('2. **Every rung pays for itself.** Expected marks per run must rise at every step of')
+  line('   the ladder. This is the check the old ladder failed: its payout multipliers')
+  line('   exactly cancelled the difficulty they added, so climbing was never worth it.')
+  line('')
+  for (let i = 1; i < bannerRows.length; i++) {
+    const cur = bannerRows[i]
+    const prev = bannerRows[i - 1]
+    if (prev.win - cur.win < BANNER_MIN_COST) {
+      failures.push(
+        `Banner ${cur.tier} (${cur.name}) is not a wager: it wins ${pct(cur.win)} against Banner ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every rung must cost. A rule that costs the run nothing measurable is free money, and there is no reason to ever fly the rung below it.`,
+      )
+    }
+    if (cur.marks <= prev.marks) {
+      failures.push(
+        `Banner ${cur.tier} (${cur.name}) is not worth flying: ${f1(cur.marks)} marks a run against Banner ${prev.tier}'s ${f1(prev.marks)}. The payout multiplier does not cover the difficulty the rung adds, so the ladder is a decoration.`,
+      )
+    }
+  }
   line(
-    `| ${r.tier} · ${r.name} | ${rule} | ×${r.mult} | ${pct(r.win)} | **${f1(r.marks)}** | ${prev === null ? '—' : `${r.marks - prev >= 0 ? '+' : '−'}${Math.abs(r.marks - prev).toFixed(0)}`} |`,
+    `Measured: the win rate falls at every rung (${bannerRows.map((r) => pct(r.win)).join(' → ')}; the smallest step is ${(Math.min(...bannerRows.slice(1).map((r, i) => bannerRows[i].win - r.win)) * 100).toFixed(1)}pt) and the payout rises at every rung (${bannerRows.map((r) => f1(r.marks)).join(' → ')}).`,
   )
+  line('')
+  line('**Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired')
+  line('runs on the specials / battles / adaptive lines:')
+  line('')
+  line('- *Thin Pickings was never free.* It costs **5.5–6.8pt** on every line; the "0pt"')
+  line('  reading was a 210-run cell. Its ×1.4 stands — that is the price of the rule it is.')
+  line('- *Elite Watch was.* Alone it measured −0.8pt, and on top of Thin Pickings −3.0pt:')
+  line('  the one rung a ≥3pt gate would have failed on a resample. Its elites are now drawn')
+  line('  **one depth deeper** (`BannerRules.eliteDepth`, so champion-led from depth 5) — a')
+  line('  composition rule the card states, not a hidden Threat surcharge (that was the')
+  line('  M19-g defect, and the ×1.52 step measured −23pt, far past a rung). It now costs')
+  line('  ~9pt over rung 1, and its payout moved ×2.2 → ×2.5 to keep the marks column rising.')
+  line('')
+  line('**What was cut, and why it is not a rung.** Every candidate rule was measured alone')
+  line('on top of Banner 0, across the §11 policy set:')
+  line('')
+  line('| Rule alone | specials | battles | recruits | adaptive |')
+  line('|---|--:|--:|--:|--:|')
+  line('| two reward cards instead of three | −9 | −12 | −6 | −7 |')
+  line('| **no Merchant stops** | **−1** | **−7** | **−1** | **−3** |')
+  line('| **every battle node is an elite** | **0** | **−3** | **+1** | **−1** |')
+  line('| no recruits | −10 | −23 | −21 | −21 |')
+  line('| start at Threat ×2 | −24 | −28 | −24 | −25 |')
+  line('')
+  line('`Forced March` is gone because deleting the merchants is not a difficulty: it')
+  line('measured a *buff* on the specials line when the rung was cut, and −1 to −7pt on the')
+  line('re-measure above — either way a rung that asked +25% for nothing a player can feel.')
+  line('`The Long Dark` is gone because')
+  line('`startThreat: 2` is the largest number on that table and the only one that changes')
+  line('no decision — a treadmill rung by the ladder doctrine\'s own definition. A fourth')
+  line('rung needs a fourth rule (no Shrines is the obvious candidate and wants a')
+  line('`noShrines` flag threaded through `mapOptionsFor`), not a bigger multiplier.')
+  line('')
+  line('**The Banner-2 surcharge is gone, and so is its hidden rebate (M19-g).** `allElite`')
+  line('used to route through `THREAT_PER_NODE[kind]`, so a Banner-2 run was charged ×1.52 per')
+  line("battle instead of ×1.42 — a compounding number (×1.9 on every enemy's HP by the")
+  line('boss) stacked on top of the composition change the rung actually sells, and nowhere')
+  line("in its copy. A Banner substitutes an *encounter*, not a node, so the step now")
+  line('follows the kind the MAP dealt (`mapKind` in `gameStore`, mirrored in `runsim` and')
+  line('in the map chip).')
+  line('')
+  line('Removing the surcharge alone made the rung **free money** — 34% win against Banner')
+  line("1's 29%, which fails the first invariant above — because the same `kind` was also")
+  line('paying every Banner-made elite +25 gold and +0.15 card luck. The pay follows the')
+  line('same rule as the price now, and the ladder is monotone again in both columns.')
+  line('')
+  line('**And the rung has been re-priced where it should have been (WS8).** The note that')
+  line('used to sit here recorded the honest measurement — `every battle node is an elite`,')
+  line('priced purely as composition, was worth about **−1pt**, while carrying the')
+  line("ladder's second-largest payout multiplier — and named the fix: not a third")
+  line('surcharge, but the elite composition itself. Elites now field one of three')
+  line('mechanically distinct columns (Plated / Warded / Swift, §14), each built around a')
+  line('modifier that changes which damage type gets through and how long a defence has to')
+  line('apply it. Measured on the same paired seeds, Elite Watch is no longer close to')
+  line('free.')
+  line('')
+  summary.push(`Banner ladder (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `B${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`)
 }
-line('')
-line('**Two invariants.**')
-line('')
-line(`1. **Every rung is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A rung that does not lower the win rate`)
-line('   is not a wager, it is a bonus with a warning label — and a mandatory one, since')
-line('   nobody would ever fly the rung below it again. This used to tolerate a rung')
-line('   *gaining* up to 2pt; it now demands a measurable cost.')
-line('2. **Every rung pays for itself.** Expected marks per run must rise at every step of')
-line('   the ladder. This is the check the old ladder failed: its payout multipliers')
-line('   exactly cancelled the difficulty they added, so climbing was never worth it.')
-line('')
-for (let i = 1; i < bannerRows.length; i++) {
-  const cur = bannerRows[i]
-  const prev = bannerRows[i - 1]
-  if (prev.win - cur.win < BANNER_MIN_COST) {
-    failures.push(
-      `Banner ${cur.tier} (${cur.name}) is not a wager: it wins ${pct(cur.win)} against Banner ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every rung must cost. A rule that costs the run nothing measurable is free money, and there is no reason to ever fly the rung below it.`,
-    )
-  }
-  if (cur.marks <= prev.marks) {
-    failures.push(
-      `Banner ${cur.tier} (${cur.name}) is not worth flying: ${f1(cur.marks)} marks a run against Banner ${prev.tier}'s ${f1(prev.marks)}. The payout multiplier does not cover the difficulty the rung adds, so the ladder is a decoration.`,
-    )
-  }
-}
-line(
-  `Measured: the win rate falls at every rung (${bannerRows.map((r) => pct(r.win)).join(' → ')}; the smallest step is ${(Math.min(...bannerRows.slice(1).map((r, i) => bannerRows[i].win - r.win)) * 100).toFixed(1)}pt) and the payout rises at every rung (${bannerRows.map((r) => f1(r.marks)).join(' → ')}).`,
-)
-line('')
-line('**Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired')
-line('runs on the specials / battles / adaptive lines:')
-line('')
-line('- *Thin Pickings was never free.* It costs **5.5–6.8pt** on every line; the "0pt"')
-line('  reading was a 210-run cell. Its ×1.4 stands — that is the price of the rule it is.')
-line('- *Elite Watch was.* Alone it measured −0.8pt, and on top of Thin Pickings −3.0pt:')
-line('  the one rung a ≥3pt gate would have failed on a resample. Its elites are now drawn')
-line('  **one depth deeper** (`BannerRules.eliteDepth`, so champion-led from depth 5) — a')
-line('  composition rule the card states, not a hidden Threat surcharge (that was the')
-line('  M19-g defect, and the ×1.52 step measured −23pt, far past a rung). It now costs')
-line('  ~9pt over rung 1, and its payout moved ×2.2 → ×2.5 to keep the marks column rising.')
-line('')
-line('**What was cut, and why it is not a rung.** Every candidate rule was measured alone')
-line('on top of Banner 0, across the §11 policy set:')
-line('')
-line('| Rule alone | specials | battles | recruits | adaptive |')
-line('|---|--:|--:|--:|--:|')
-line('| two reward cards instead of three | −9 | −12 | −6 | −7 |')
-line('| **no Merchant stops** | **−1** | **−7** | **−1** | **−3** |')
-line('| **every battle node is an elite** | **0** | **−3** | **+1** | **−1** |')
-line('| no recruits | −10 | −23 | −21 | −21 |')
-line('| start at Threat ×2 | −24 | −28 | −24 | −25 |')
-line('')
-line('`Forced March` is gone because deleting the merchants is not a difficulty: it')
-line('measured a *buff* on the specials line when the rung was cut, and −1 to −7pt on the')
-line('re-measure above — either way a rung that asked +25% for nothing a player can feel.')
-line('`The Long Dark` is gone because')
-line('`startThreat: 2` is the largest number on that table and the only one that changes')
-line('no decision — a treadmill rung by the ladder doctrine\'s own definition. A fourth')
-line('rung needs a fourth rule (no Shrines is the obvious candidate and wants a')
-line('`noShrines` flag threaded through `mapOptionsFor`), not a bigger multiplier.')
-line('')
-line('**The Banner-2 surcharge is gone, and so is its hidden rebate (M19-g).** `allElite`')
-line('used to route through `THREAT_PER_NODE[kind]`, so a Banner-2 run was charged ×1.52 per')
-line("battle instead of ×1.42 — a compounding number (×1.9 on every enemy's HP by the")
-line('boss) stacked on top of the composition change the rung actually sells, and nowhere')
-line("in its copy. A Banner substitutes an *encounter*, not a node, so the step now")
-line('follows the kind the MAP dealt (`mapKind` in `gameStore`, mirrored in `runsim` and')
-line('in the map chip).')
-line('')
-line('Removing the surcharge alone made the rung **free money** — 34% win against Banner')
-line("1's 29%, which fails the first invariant above — because the same `kind` was also")
-line('paying every Banner-made elite +25 gold and +0.15 card luck. The pay follows the')
-line('same rule as the price now, and the ladder is monotone again in both columns.')
-line('')
-line('**And the rung has been re-priced where it should have been (WS8).** The note that')
-line('used to sit here recorded the honest measurement — `every battle node is an elite`,')
-line('priced purely as composition, was worth about **−1pt**, while carrying the')
-line("ladder's second-largest payout multiplier — and named the fix: not a third")
-line('surcharge, but the elite composition itself. Elites now field one of three')
-line('mechanically distinct columns (Plated / Warded / Swift, §14), each built around a')
-line('modifier that changes which damage type gets through and how long a defence has to')
-line('apply it. Measured on the same paired seeds, Elite Watch is no longer close to')
-line('free.')
-line('')
 
 // -------------------------------------------------------------- Sweep 14
-// Run variety: battlefields and composition variants (WS8).
-line('## 14. Run variety — battlefields and wave composition')
-line('')
-line('**What this measures.** The audit\'s last open finding was that the tactical layer')
-line('had *no input randomness at all*: `ALL_MAPS` held one map, and `generateEncounter`')
-line('took no RNG, so depth 4 was the identical wave in every run forever and two battle')
-line('nodes in the same layer were literally the same fight. This sweep exists to hold')
-line('the fix honest in both directions — **varied enough to re-solve, fair enough to')
-line('stay attributable**. Variety that is bought with difficulty is not variety, it is a')
-line('difficulty roll, which is the output randomness the doctrine forbids.')
-line('')
+if (want(14)) {
+  // Run variety: battlefields and composition variants (WS8).
+  line('## 14. Run variety — battlefields and wave composition')
+  line('')
+  line('**What this measures.** The audit\'s last open finding was that the tactical layer')
+  line('had *no input randomness at all*: `ALL_MAPS` held one map, and `generateEncounter`')
+  line('took no RNG, so depth 4 was the identical wave in every run forever and two battle')
+  line('nodes in the same layer were literally the same fight. This sweep exists to hold')
+  line('the fix honest in both directions — **varied enough to re-solve, fair enough to')
+  line('stay attributable**. Variety that is bought with difficulty is not variety, it is a')
+  line('difficulty roll, which is the output randomness the doctrine forbids.')
+  line('')
 
-line('### 14a. The battlefields')
-line('')
-line('Path length is the load-bearing number: enemy speeds in `enemies.ts` are tuned as')
-line('*crossing times* against a 2290px field, and time in range is the one difficulty')
-line('axis the run\'s Threat multiplier does not touch — so a field 20% longer is a 20%')
-line('easier game on every dial in this report at once. Slot coverage is the road (in px)')
-line('a tower at that slot can see at a nominal 150px range; it is what makes the two')
-line('fields different puzzles rather than different wallpaper.')
-line('')
-line('| Field | Path px | Min slot gap | Coverage by slot (px of road seen) | Best-first order |')
-line('|---|--:|--:|---|---|')
-for (const m of MAP_FACTS) {
-  const cov = m.order.map((id) => `${id} ${m.coverage[id]}`).join(' · ')
-  line(`| ${m.name} (\`${m.id}\`) | ${m.length} | ${m.minSlotGap} | ${cov} | ${m.order.join(' → ')} |`)
-}
-line('')
-/** Fields must be within this of each other in path length. */
-const MAX_FIELD_LENGTH_SPREAD = 0.06
-/** …and no slot may be further apart than the canvas hit floor can resolve. */
-const MIN_SLOT_GAP = 90
-const fieldLens = MAP_FACTS.map((m) => m.length)
-const fieldSpread = Math.max(...fieldLens) / Math.min(...fieldLens) - 1
-line(
-  `Path lengths spread **${(fieldSpread * 100).toFixed(1)}%** (ceiling ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%); tightest slot gap **${Math.min(...MAP_FACTS.map((m) => m.minSlotGap))}px** (floor ${MIN_SLOT_GAP}px, the canvas hit test's).`,
-)
-line('')
-if (fieldSpread > MAX_FIELD_LENGTH_SPREAD) {
-  failures.push(
-    `Battlefield path lengths differ by ${(fieldSpread * 100).toFixed(1)}% (max ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%). Crossing time is a difficulty dial Threat does not multiply, so a longer field is a quietly easier game.`,
-  )
-}
-for (const m of MAP_FACTS) {
-  if (m.minSlotGap < MIN_SLOT_GAP) {
-    failures.push(
-      `${m.name} has two build slots ${m.minSlotGap}px apart (floor ${MIN_SLOT_GAP}px). At the smallest supported viewport the canvas hit radius is capped at 80 logical px, so their catchment areas collapse into one target.`,
-    )
+  line('### 14a. The battlefields')
+  line('')
+  line('Path length is the load-bearing number: enemy speeds in `enemies.ts` are tuned as')
+  line('*crossing times* against a 2290px field, and time in range is the one difficulty')
+  line('axis the run\'s Threat multiplier does not touch — so a field 20% longer is a 20%')
+  line('easier game on every dial in this report at once. Slot coverage is the road (in px)')
+  line('a tower at that slot can see at a nominal 150px range; it is what makes the two')
+  line('fields different puzzles rather than different wallpaper.')
+  line('')
+  line('| Field | Path px | Min slot gap | Coverage by slot (px of road seen) | Best-first order |')
+  line('|---|--:|--:|---|---|')
+  for (const m of MAP_FACTS) {
+    const cov = m.order.map((id) => `${id} ${m.coverage[id]}`).join(' · ')
+    line(`| ${m.name} (\`${m.id}\`) | ${m.length} | ${m.minSlotGap} | ${cov} | ${m.order.join(' → ')} |`)
   }
-}
-/**
- * The two fields have to be different *puzzles*, and the number that decides
- * that is not per-slot coverage — it is **overlap**.
- *
- * The first version of this check compared the sorted per-slot coverage vector
- * and read 7.9% apart, which says almost nothing: two fields can hand out the
- * same six coverage numbers and still be completely different to deploy on,
- * because what matters is whether the second tower you place sees road the
- * first one already sees. So the metric is the **marginal** union curve: fill
- * the slots best-first and record how much *new* road each one adds, as a share
- * of the path. That is exactly the sequence a player experiences when deciding
- * whether a fourth body is worth a slot, and it is where the two fields
- * separate — The Green Line's cluster is redundant early and pays off late, The
- * Kiln Road's crossroads pays immediately and its last two slots are scraps.
- */
-function marginalCurve(m: (typeof MAP_FACTS)[number]): number[] {
-  const map = ALL_MAPS.find((x) => x.id === m.id)!
-  const step = 6
-  const pts: { x: number; y: number }[] = []
-  for (let i = 1; i < map.path.length; i++) {
-    const a = map.path[i - 1]
-    const b = map.path[i]
-    const len = Math.hypot(b.x - a.x, b.y - a.y)
-    const n = Math.max(1, Math.round(len / step))
-    for (let k = 0; k < n; k++) pts.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n })
-  }
-  const chosen: { x: number; y: number }[] = []
-  const out: number[] = []
-  let prev = 0
-  for (const id of m.order) {
-    chosen.push(map.slots.find((s) => s.id === id)!.pos)
-    const seen = pts.filter((p) => chosen.some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= 150)).length / pts.length
-    out.push(seen - prev)
-    prev = seen
-  }
-  return out
-}
-const curves = MAP_FACTS.map(marginalCurve)
-const shapeDist =
-  curves.length < 2 ? 0 : 0.5 * curves[0].reduce((a, v, i) => a + Math.abs(v - (curves[1][i] ?? 0)), 0)
-/** Two fields whose marginal-coverage curves are this close are one puzzle twice. */
-const MIN_FIELD_SHAPE_DIST = 0.08
-line('| Field | New road each successive best slot adds (share of path) | Union at 5 towers |')
-line('|---|---|--:|')
-MAP_FACTS.forEach((m, i) => {
+  line('')
+  /** Fields must be within this of each other in path length. */
+  const MAX_FIELD_LENGTH_SPREAD = 0.06
+  /** …and no slot may be further apart than the canvas hit floor can resolve. */
+  const MIN_SLOT_GAP = 90
+  const fieldLens = MAP_FACTS.map((m) => m.length)
+  const fieldSpread = Math.max(...fieldLens) / Math.min(...fieldLens) - 1
   line(
-    `| ${m.name} | ${curves[i].map((v) => pct(v)).join(' → ')} | ${pct(curves[i].slice(0, 5).reduce((a, b) => a + b, 0))} |`,
+    `Path lengths spread **${(fieldSpread * 100).toFixed(1)}%** (ceiling ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%); tightest slot gap **${Math.min(...MAP_FACTS.map((m) => m.minSlotGap))}px** (floor ${MIN_SLOT_GAP}px, the canvas hit test's).`,
   )
-})
-line('')
-line(
-  `Marginal-coverage curves are **${(shapeDist * 100).toFixed(1)}%** apart (total-variation distance; floor ${(MIN_FIELD_SHAPE_DIST * 100).toFixed(0)}%). Five towers see **${pct(curves[0].slice(0, 5).reduce((a, b) => a + b, 0))}** of The Green Line and **${pct((curves[1] ?? []).slice(0, 5).reduce((a, b) => a + b, 0))}** of The Kiln Road, and they get there on different curves — which is the same company covering a different amount of road for the same six decisions.`,
-)
-line('')
-if (ALL_MAPS.length > 1 && shapeDist < MIN_FIELD_SHAPE_DIST) {
-  failures.push(
-    `The shipped battlefields have near-identical marginal-coverage curves (${(shapeDist * 100).toFixed(1)}% apart, floor ${(MIN_FIELD_SHAPE_DIST * 100).toFixed(0)}%). A second map that does not change the placement decision is wallpaper, not variety.`,
-  )
-}
-if (ALL_MAPS.length < 2) {
-  failures.push('Only one battlefield ships. Run-to-run variance below the map layer is then a single scalar, and placement solves once.')
-}
-
-/**
- * The §14c bench: how much base HP one composition variant actually puts
- * through a random depth-appropriate line, averaged over teams and fields.
- *
- * `baseHp` is `maxLeak + 2` so the battle always runs to the end and the number
- * is not truncated by the base falling; the seeds and team draws are identical
- * across variants, so the comparison is paired.
- */
-const VARIETY_TEAMS = 14
-function variantLeak(depth: number, kind: EncounterKind, variantId: string): number {
-  const rr = new RNG(77)
-  const level = mcLevel(depth)
-  const rarity: ItemRarity = mcRarity(depth)
-  const threat = threatAtLayer(depth)
-  const wave = generateEncounter(depth, kind, { variantId })
-  const ml = maxLeak(wave)
-  const out: number[] = []
-  for (let t = 0; t < VARIETY_TEAMS; t++) {
-    const size = 3 + Math.floor(rr.next() * 3)
-    const ids = Array.from({ length: size }, () => rr.pick(TIER2_NODES).id)
-    for (const field of ALL_MAPS) {
-      const order = bestSlots(field)
-      const team = ids.map((id, i) => ({
-        sentinel: buildSpec(id, { level, gearRarity: rarity, seed: t * 10 + i, perkSeed: t * 10 + i }),
-        slotId: order[i],
-      }))
-      out.push(
-        runBattle({ team, depth, wave, map: field, enemyHpMult: threat, baseHp: ml + 2, maxSeconds: 120, seed: t * 31 + depth })
-          .baseHpLost,
-      )
-    }
-  }
-  return mean(out)
-}
-
-line('### 14b. How different is one depth-4 wave from another?')
-line('')
-line('Composition distance is the **total-variation distance** between two waves\' enemy')
-line('mixes — the share of bodies of each type, half the L1 norm of the difference. 0%')
-line('is the same wave; 100% shares no enemy type at all. It is quoted alongside the')
-line('*head count* and the *total effective HP*, because the pair is the whole claim:')
-line('the mix moves, the size does not.')
-line('')
-/**
- * **Every depth the campaign has, not a sample of three (M1).**
- *
- * This was `[4, 7, 9]`, and the three it skipped are the three that were broken.
- * `gate()` in `waves.ts` admits bombers only from depth 2 and armour only from
- * depth 3, and `roster()`'s tier ladder does not move until depth 4 — so the
- * shallow end is exactly where two variants can collapse onto one composition,
- * and it was the only part of the range never measured. Depth 1 elite read
- * **0.0%** (Plated Column and Swift Raid were both 100% torch), depth 2 read
- * 13.3%, and the normal pool read 0.0% / 14.2% / 19.1% at depths 1/2/3 — all
- * against this section's own 35% floor, all under a paragraph claiming
- * "42.7%–55.6% apart" that was true precisely over the sampled range.
- *
- * A gate whose sample excludes its failure region is the defect it is supposed
- * to catch. The fix is in `waves.ts` (`swarm.minDepth` 1 → 4, `plated.minDepth`
- * 1 → 3: a variant is legal only where its identity exists) and the range here
- * is now the whole campaign, with no exclusions.
- */
-const GATE_DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-/** The depths whose full body-by-body composition is printed. The gate is wider. */
-const VARIETY_DEPTHS = [4, 7, 9]
-line('| Depth | Kind | Variant | Bodies | Total HP | Max leak | Composition |')
-line('|--:|---|---|--:|--:|--:|---|')
-// Effective HP (Phase 3a): a splitter's pieces are HP the node carries, and
-// `waves.ts` prices them into its budget — so the pool is read the same way.
-const waveHp = (w: ReturnType<typeof generateEncounter>) =>
-  Math.round(w.spawns.reduce((a, s) => a + effectiveHp(s.typeId) * s.hpMult, 0))
-/**
- * The body mix of a wave, keyed by the **base type id** — `barrel4`, not
- * `barrel4_plated`.
- *
- * ---- this used to key on the registry key, and that made the gate below
- * ---- incapable of failing for elites (F5) --------------------------------
- *
- * `enemies.ts` gives a modified goblin two identities on purpose: the registry
- * KEY (`barrel4_plated`) is its gameplay identity, and the `id` (`barrel4`) is
- * its art identity — "a variant is the same goblin wearing more iron, it must
- * draw as one". Keying the share map on the registry key therefore makes any
- * two elite variants disjoint **by construction**, because each one wears a
- * different modifier: every elite pair read exactly 100% apart, at every depth,
- * no matter what bodies were actually in the two columns. A gate that cannot
- * fail is not a gate, and this one was reporting the strongest number in §14
- * while measuring nothing.
- *
- * The base id is what the renderer draws and what the player watches walk down
- * the road, so it is the honest denominator for "how much of this wave is the
- * same as that wave". The modifier is a real, disclosed difference and it is
- * still reported — in its own column, beside the number, rather than smuggled
- * into it.
- */
-const shares = (w: ReturnType<typeof generateEncounter>): Map<string, number> => {
-  const m = new Map<string, number>()
-  for (const s of w.spawns) {
-    const base = ENEMY_TYPES[s.typeId].id
-    m.set(base, (m.get(base) ?? 0) + 1)
-  }
-  const tot = w.spawns.length || 1
-  for (const [k, v] of m) m.set(k, v / tot)
-  return m
-}
-/** Total-variation distance between two composition share maps, 0…1. */
-function compDist(a: Map<string, number>, b: Map<string, number>): number {
-  let d = 0
-  for (const k of new Set([...a.keys(), ...b.keys()])) d += Math.abs((a.get(k) ?? 0) - (b.get(k) ?? 0))
-  return d / 2
-}
-interface VarietyCell {
-  depth: number
-  kind: EncounterKind
-  v: WaveVariant
-  wave: ReturnType<typeof generateEncounter>
-}
-const varietyCells: VarietyCell[] = []
-for (const depth of GATE_DEPTHS) {
-  for (const kind of ['normal', 'elite'] as EncounterKind[]) {
-    for (const v of variantsFor(kind, depth)) {
-      const wave = generateEncounter(depth, kind, { variantId: v.id })
-      varietyCells.push({ depth, kind, v, wave })
-      if (!VARIETY_DEPTHS.includes(depth)) continue
-      const comp = waveComposition(wave)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3)
-        .map((c) => `${ENEMY_TYPES[c.typeId].name} ×${c.count}`)
-        .join(', ')
-      line(
-        `| ${depth} | ${kind} | ${v.label || v.id} | ${wave.spawns.length} | ${waveHp(wave)} | ${maxLeak(wave)} | ${comp} |`,
-      )
-    }
-  }
-}
-line('')
-/** Two shapes closer than this are the same fight with a different name. */
-const MIN_COMP_DIST = 0.35
-/**
- * How far apart the HP *pools* of one node's variants may be.
- *
- * This is a sanity bound, not the fairness gate — §14c is. The first version of
- * it sat at 20% on the theory that equal budget is equal fairness, and that
- * theory is wrong: measured, an armour column and a light swarm carrying
- * *identical* HP differ by ×2.6 in the damage they actually put through a
- * depth-scaled line, because armour concentrates HP behind resistances and a
- * swarm spends it on bodies that die to splash. Equalising the pools would have
- * shipped a "fair" table in which one shape was two and a half times the fight
- * the other was.
- *
- * So the budget is a **price list**: a shape that is worth more per point of HP
- * is sold less of it (`WaveVariant.budgetScale`, fitted against §14c). The pools
- * therefore differ on purpose, and this ceiling only exists to catch a scale
- * that has run away far enough to be a difficulty roll dressed as a price.
- */
-const MAX_HP_SPREAD = 0.35
-/** …and the damage a wave can do if nothing stops it stays in a band. */
-const MAX_LEAK_SPREAD = 1.6
-line('| Depth | Kind | Pool | Pairwise body-mix distance (min / mean) | Closest pair | Total-HP spread | Max-leak spread |')
-line('|--:|---|--:|---|---|--:|--:|')
-let worstCompDist = 1
-let worstCompPair = ''
-let worstHpSpread = 0
-let worstLeakSpread = 1
-for (const depth of GATE_DEPTHS) {
-  for (const kind of ['normal', 'elite'] as EncounterKind[]) {
-    const cells = varietyCells.filter((c) => c.depth === depth && c.kind === kind)
-    if (cells.length < 2) {
-      // Reported rather than skipped in silence: a one-variant pool is a real
-      // statement about the depth (the faction gate leaves one legal shape), and
-      // an empty row here is what let depths 1–3 go unexamined (M1).
-      line(
-        `| ${depth} | ${kind} | ${cells.length} | — (one legal shape) | — | — | — |`,
-      )
-      continue
-    }
-    const dists: number[] = []
-    let cellWorst = 1
-    let cellWorstPair = ''
-    for (let i = 0; i < cells.length; i++) {
-      for (let j = i + 1; j < cells.length; j++) {
-        const d = compDist(shares(cells[i].wave), shares(cells[j].wave))
-        dists.push(d)
-        if (d < cellWorst) {
-          cellWorst = d
-          cellWorstPair = `${cells[i].v.label || cells[i].v.id} vs ${cells[j].v.label || cells[j].v.id}`
-        }
-      }
-    }
-    const hps = cells.map((c) => waveHp(c.wave))
-    const leaks = cells.map((c) => maxLeak(c.wave))
-    const hpSpread = Math.max(...hps) / Math.min(...hps) - 1
-    const leakSpread = Math.max(...leaks) / Math.max(1, Math.min(...leaks))
-    if (cellWorst < worstCompDist) {
-      worstCompDist = cellWorst
-      worstCompPair = `depth ${depth} ${kind}, ${cellWorstPair}`
-    }
-    worstHpSpread = Math.max(worstHpSpread, hpSpread)
-    worstLeakSpread = Math.max(worstLeakSpread, leakSpread)
-    line(
-      `| ${depth} | ${kind} | ${cells.length} | ${pct(Math.min(...dists))} / ${pct(mean(dists))} | ${cellWorstPair} ${pct(cellWorst)} | ${(hpSpread * 100).toFixed(1)}% | ×${f2(leakSpread)} |`,
-    )
-  }
-}
-line('')
-line(`**Read the columns together.** The closest pair of shapes anywhere in the table is`)
-line(`**${pct(worstCompDist)}** apart (floor ${pct(MIN_COMP_DIST)}) — ${worstCompPair} — so two waves at the same node`)
-line(`share at most ${pct(1 - worstCompDist)} of their bodies. Over the same cells the total HP pool moves by`)
-line(`at most **${(worstHpSpread * 100).toFixed(1)}%** (ceiling ${(MAX_HP_SPREAD * 100).toFixed(0)}%) and the leak a wave can do if nothing stops it by at`)
-line(`most **×${f2(worstLeakSpread)}** (ceiling ×${f2(MAX_LEAK_SPREAD)}). That is the fairness claim, stated as numbers: the`)
-line('problem changes, the size does not.')
-line('')
-line('**The distance is measured on the BASE body — `barrel4`, not `barrel4_plated`.**')
-line('It used to key on the registry key, which made every elite pair disjoint by')
-line('construction (each elite variant wears a different modifier) and printed a')
-line('flat 100% for all nine elite pairs at every depth: the strongest number in §14,')
-line('measuring nothing. The modifier is a real and disclosed difference — the')
-line('pre-wave preview prints "shrugs off physical 55%" in the enemy\'s own row — but')
-line('it is not a difference in *which goblins walk down the road*, and that is what')
-line('this metric is for. A player who loses a Warded Host should lose to a')
-line('damage-type mistake they could read off the preview; whether the column that')
-line('taught them that is also a different column is a separate question, and it is')
-line('the one asked here.')
-line('')
-line('**And it is measured at every depth the campaign has (M1).** It used to be')
-line('measured at depths 4, 7 and 9 — and the paragraph below, reporting the elite')
-line('pairs "42.7%–55.6% apart", was true exactly over that range and false')
-line('immediately under it. `gate()` withholds bombers until depth 2 and armour')
-line('until depth 3, and `roster()`\'s tier ladder does not move until depth 4, so')
-line('the shallow end is the only place two variants can collapse onto one')
-line('composition — and it was the only part of the range never sampled. The')
-line('numbers that were there:')
-line('')
-line('| | depth 1 | depth 2 | depth 3 |')
-line('|---|--:|--:|--:|')
-line('| elite — Plated Column vs Swift Raid | **0.0%** | **13.3%** | 44.4% |')
-line('| normal — Patrol vs Swarm | **0.0%** | **14.2%** | **19.1%** |')
-line('')
-line('Four cells under a 35% floor, one of them at zero, in the part of the')
-line('campaign every run plays and Banner 2 turns entirely elite. Neither pair was')
-line('fixable by reshaping a mix: at depth 1 exactly one faction is legal, so every')
-line('variant is 100% torch whatever it is called, and at depth 2 Patrol\'s own 6:3')
-line('shape caps the best achievable distance at 33%. What was wrong was offering')
-line('a shape where it is not a second shape — so `swarm` is legal from depth 4')
-line('(where its `tierBump` stops clamping) and `plated` from depth 3 (where it')
-line('first contains a barrel, which is also when its "column of rolling armour"')
-line('line becomes true). The table above is the whole range, gated with no')
-line('exclusions.')
-line('')
-line('**What the honest number found, and what was done about it (F5).** Re-keyed,')
-line('the three elite mixes measured **17.6%–39.5%** apart — Warded Host against')
-line('Swift Raid at 17.6% at depth 9 — because `{3,2,4}` / `{5,3,1}` / `{7,2,0.5}` is')
-line('two torch-led hosts and one armour column, not three columns. A concurrent')
-line('render review found the same three pixel-identical on the field (the modifier')
-line('moves `speed`, `physResist` and `magResist`, none of which the renderer reads),')
-line('so "three elite variants" was very close to one wave with three names — and the')
-line('Banner rung built on them (§13, *Elite Watch*) was standing on it.')
-line('')
-line('The mixes are rebuilt onto **one faction each** — barrels / bombers / torches —')
-line('which is the only arrangement that makes three columns distinct when the roster')
-line('has three factions. The elite pairs now sit **42.7%–57.8%** apart across every')
-line('depth they are offered at, and the binding cell in this table is a *normal* pair.')
-line('The bill came due in two other columns of the same table and is paid there:')
-line('a bomber host leaks 3 per body against a torch raid\'s 1, which pushed max-leak')
-line('spread to ×1.68 until Swift\'s `countMult` went 1.2 → 1.3; and the three shapes')
-line('are worth very different amounts per point of HP, which is the `budgetScale`')
-line('refit in §14c below.')
-line('')
-if (worstCompDist < MIN_COMP_DIST) {
-  failures.push(
-    `Two composition variants at the same node are only ${pct(worstCompDist)} apart in body mix (floor ${pct(MIN_COMP_DIST)}): ${worstCompPair}. Variety the player cannot perceive is not variety. NOTE: this gate keys on the BASE body id (\`barrel4\`), not the registry key (\`barrel4_plated\`) — keying on the latter made every elite pair 100% apart by construction and could not fail (F5). Two variants are close when their \`mix\` weights are close, so the fix is in \`NORMAL_VARIANTS\` / \`ELITE_VARIANTS\` in \`waves.ts\`, and it is a rebalance rather than a report change: moving a mix moves what that shape is worth per point of HP, which needs \`budgetScale\` refitted against §14c and re-checked against the HP-spread and max-leak ceilings above.`,
-  )
-}
-if (worstHpSpread > MAX_HP_SPREAD) {
-  failures.push(
-    `Composition variants at the same node differ in total HP by ${(worstHpSpread * 100).toFixed(1)}% (ceiling ${(MAX_HP_SPREAD * 100).toFixed(0)}%). A variant is meant to change the problem, not roll the difficulty.`,
-  )
-}
-if (worstLeakSpread > MAX_LEAK_SPREAD) {
-  failures.push(
-    `Composition variants at the same node differ in maximum leak by ×${f2(worstLeakSpread)} (ceiling ×${f2(MAX_LEAK_SPREAD)}). The wave that walks through does wildly different damage depending on a roll the player never made.`,
-  )
-}
-
-line('### 14c. Is any shape a free win or an auto-loss?')
-line('')
-line('Composition distance says the shapes *differ*; it cannot say whether one of them')
-line('is simply the easy one. **This is the gate the budget scales are fitted against**,')
-line('and it is where the fairness claim actually lives.')
-line('')
-line('The bench is deliberately not the §5 standard team: on the encounters the game')
-line("ships, that team stops **100.0%** of every variant's leak at every depth tried, so")
-line('it grades nothing — trap 2 in `balance/README.md`, a scenario with no failure')
-line('mode. What discriminates is a §6-shaped draw: random 3–5 tower teams at')
-line("depth-appropriate level, rarity and upgrades, on **both** battlefields, at the real")
-line('Threat a depth-8 run carries. The metric is **base HP leaked**, not stop rate,')
-line('because a 20-HP base dies to the four points a 96%-stop wave puts through.')
-line('')
-line(`| Depth | Kind | Variant | Base HP leaked (mean of ${VARIETY_TEAMS} teams × ${ALL_MAPS.length} fields) | vs the canonical shape |`)
-line('|--:|---|---|--:|--:|')
-let worstLeakRatio = 1
-let worstLeakCell = ''
-for (const depth of [8]) {
-  for (const kind of ['normal', 'elite'] as EncounterKind[]) {
-    const vs = variantsFor(kind, depth)
-    const leaks = vs.map((v) => variantLeak(depth, kind, v.id))
-    for (let i = 0; i < vs.length; i++) {
-      line(
-        `| ${depth} | ${kind} | ${vs[i].label || vs[i].id} | ${leaks[i].toFixed(2)} | ${leaks[0] > 0 ? `×${f2(leaks[i] / leaks[0])}` : '—'} |`,
-      )
-    }
-    const ratio = Math.max(...leaks) / Math.max(0.05, Math.min(...leaks))
-    if (ratio > worstLeakRatio) {
-      worstLeakRatio = ratio
-      worstLeakCell = `depth ${depth} ${kind}`
-    }
-  }
-}
-line('')
-/**
- * The widest leak ratio one node's variants may span against a random,
- * *unadapted* team. Some spread is wanted and is the content: a Plated Column is
- * supposed to be a worse fight for a steel line than a Swarm is, and a bench
- * team cannot counter-pick the way a player who reads the preview can — so this
- * number is the upper bound on what the roll is worth, not what it costs a
- * player. ×2 is the point at which the roll, rather than the deployment, is
- * choosing the outcome of the node; before the budget scales were fitted the
- * unadapted spread measured ×2.6 (normal) and ×2.5 (elite).
- */
-const MAX_LEAK_RATIO = 2
-line(
-  `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.`,
-)
-line('')
-line('**What this gate is worth, stated plainly.** `budgetScale` is fitted *against*')
-line('this number, so a green §14c is not independent evidence that the shapes are')
-line('fair — it is evidence that the fit converged. What it does still catch, and')
-line('what makes it worth running, is the case where **no** fit exists: the ceiling')
-line('is ×2.00 and the scales are bounded by §14b\'s 35% HP-spread ceiling to a ×1.35')
-line('ratio, so a shape whose worth per point of HP is more than about ×1.6 away from')
-line('its siblings cannot be priced into band and fails here no matter how the dial')
-line('is turned. That is a real property of the variant table and it is the one this')
-line('sweep tests. On the current table the measured worth per unit of scale is')
-line('warded 5.97, plated 7.74, swift 13.50 base HP through a random depth-8 line —')
-line('a ×2.26 spread — so the fit runs out of room and the residual ×1.54 above is')
-line('what is left over, not what was aimed at. Sweeping each variant across')
-line('`budgetScale` ×0.8…×1.85 is what produced those three slopes; the numbers are')
-line('not read off the shipped point.')
-line('')
-line('The gate that is **not** circular is §14b\'s pair: composition distance and the')
-line('HP-spread ceiling are computed straight off the wave tables with no fit')
-line('between them, and they are what bounds this one.')
-line('')
-if (worstLeakRatio > MAX_LEAK_RATIO) {
-  failures.push(
-    `Composition variants at ${worstLeakCell} span ×${f2(worstLeakRatio)} in base HP leaked against random unadapted teams (ceiling ×${f2(MAX_LEAK_RATIO)}). At that width the variant roll, not the deployment, is deciding the node.`,
-  )
-}
-
-line('### 14d. Does a seeded run actually see the variety?')
-line('')
-line('A variant table nothing draws from is decoration. `encounterSeed(runSeed, layer)`')
-line("plus the node's row is what the store and `runsim` both key on, so this is the")
-line('distribution the game deals: 400 run seeds, the shape each one hands to depth 4 and')
-line('to its elites, and what the node standing beside it gets.')
-line('')
-const VARIETY_RUNS = 400
-const dealtNormal = new Map<string, number>()
-const dealtElite = new Map<string, number>()
-const dealtField = new Map<string, number>()
-for (let i = 0; i < VARIETY_RUNS; i++) {
-  const rs = hashSeed(i, 'variety')
-  dealtField.set(pickBattleMap(rs).id, (dealtField.get(pickBattleMap(rs).id) ?? 0) + 1)
-  const n = generateEncounter(4, 'normal', { seed: encounterSeed(rs, 4) })
-  const nv = variantsFor('normal', 4).find((v) => n.label.includes(v.label) || v.id === 'patrol')
-  dealtNormal.set(n.label, (dealtNormal.get(n.label) ?? 0) + 1)
-  void nv
-  const e = generateEncounter(8, 'elite', { seed: encounterSeed(rs, 8) })
-  dealtElite.set(e.label, (dealtElite.get(e.label) ?? 0) + 1)
-}
-const dist = (m: Map<string, number>) =>
-  [...m.entries()].sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${pct(v / VARIETY_RUNS)}`).join(' · ')
-line(`- Battlefield over ${VARIETY_RUNS} seeds: ${dist(dealtField)}`)
-line(`- Depth-4 node: ${dist(dealtNormal)}`)
-line(`- Depth-8 elite: ${dist(dealtElite)}`)
-line('')
-
-/*
- * ---- the same-layer gate, rewritten so it can fail (F4) --------------------
- *
- * It used to compare `sibling: 0` against `sibling: 1` at depth 4 and gate the
- * mean at 30%. Depth 4's normal pool holds FOUR variants and `pickVariant`
- * rotates by the row — `pool[(base + sibling) % pool.length]` — so rows 0 and 1
- * are structurally guaranteed to draw different variants there. The gate was a
- * tautology: no change to the variant table, the rotation or the map generator
- * could have made it fail.
- *
- * `runmap.ts` deals **2–4 nodes per layer** (3–4 on a wide map), and
- * `variantsFor` returns 1 variant at depth 1 and 2 at depth 2. So the interesting
- * question was never "do rows 0 and 1 differ" but "what happens when the layer is
- * wider than the pool", and the honest answer is the pigeonhole: they cannot all
- * differ. `pickVariant`'s doc claimed two nodes in one layer "can never be dealt
- * the same shape", which is false wherever width > pool — measured at 17% of
- * multi-node battle layers, and on every seed of a wide map's layer 1.
- *
- * What the rotation DOES guarantee is that it is optimal: rows 0…w-1 receive
- * `min(w, pool)` distinct variants, always, which is the most any assignment can
- * manage. That is a real, falsifiable property — swap the rotation for an iid
- * draw and it breaks on the first seed — so that is what is gated here, across
- * every depth the map deals and every width it can deal.
- */
-line('**Two battle nodes standing in one layer.** `runmap.ts` puts 2–4 nodes in a')
-line('layer (3–4 on a wide map) and rotates each row through the depth\'s variant pool.')
-line('Where the layer is no wider than the pool, every node gets a different shape;')
-line('where it is wider, the pigeonhole applies and the rotation deals the most')
-line('distinct shapes that exist. Both halves are checked below.')
-line('')
-const LAYER_WIDTHS = [2, 3, 4]
-const ROTATION_DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-line('| Depth | Kind | Pool | Distinct shapes at width 2 / 3 / 4 | Optimal on every seed? | Mean body-mix distance (w2/w3/w4) |')
-line('|--:|---|--:|---|---|---|')
-let rotationOptimal = true
-const rotationMisses: string[] = []
-/** Mean same-layer body-mix distance, per (kind, depth, width). */
-const layerMixMean = new Map<string, number>()
-for (const kind of ['normal', 'elite'] as EncounterKind[]) {
-  for (const depth of ROTATION_DEPTHS) {
-    const pool = variantsFor(kind, depth).length
-    const distinctCols: string[] = []
-    const mixCols: string[] = []
-    let rowOptimal = true
-    for (const width of LAYER_WIDTHS) {
-      let optimal = 0
-      const seen = new Set<number>()
-      const ds: number[] = []
-      for (let i = 0; i < VARIETY_RUNS; i++) {
-        const rs = hashSeed(i, 'variety')
-        const seed = encounterSeed(rs, depth)
-        const ids = new Set<string>()
-        for (let r = 0; r < width; r++) ids.add(pickVariant(kind, depth, seed, r).id)
-        seen.add(ids.size)
-        if (ids.size === Math.min(width, pool)) optimal++
-        const waves = Array.from({ length: width }, (_, r) =>
-          generateEncounter(depth, kind, { seed, sibling: r }),
-        )
-        for (let a = 0; a < width; a++)
-          for (let b = a + 1; b < width; b++) ds.push(compDist(shares(waves[a]), shares(waves[b])))
-      }
-      if (optimal < VARIETY_RUNS) {
-        rotationOptimal = false
-        rowOptimal = false
-        rotationMisses.push(
-          `${kind} depth ${depth} width ${width}: ${VARIETY_RUNS - optimal}/${VARIETY_RUNS} seeds dealt fewer than ${Math.min(width, pool)} distinct shapes`,
-        )
-      }
-      distinctCols.push([...seen].sort().join('/'))
-      const m = mean(ds)
-      layerMixMean.set(`${kind}:${depth}:${width}`, m)
-      mixCols.push(pct(m))
-    }
-    line(
-      `| ${depth} | ${kind} | ${pool} | ${distinctCols.join(' / ')} | ${rowOptimal ? '✅' : '❌'} | ${mixCols.join(' / ')} |`,
-    )
-  }
-}
-line('')
-/**
- * The rotation must deal the most distinct shapes the pool allows, on every
- * seed. Unlike the old depth-4 rows-0-and-1 check, this one is falsifiable: an
- * iid draw fails it immediately, and so does a pool that has silently shrunk.
- */
-if (!rotationOptimal) {
-  failures.push(
-    `The same-layer variant rotation is not dealing the maximum distinct shapes its pool allows: ${rotationMisses.slice(0, 4).join('; ')}. Two battle nodes in one layer must differ wherever the pool has the shapes to differ.`,
-  )
-}
-/**
- * …and where two nodes DO get different variants, the columns must actually
- * look different.
- *
- * Gated from depth 3 up, and the exclusion is structural rather than
- * convenient: `gate()` in `waves.ts` admits bombers only from depth 2 and armour
- * only from depth 3, so at depth 1 EVERY normal variant collapses to a pure
- * torch column no matter which one is drawn — the measured distance there is
- * 0.0% for every width and would be 0.0% for any variant table anyone could
- * write. Asking "do the compositions differ" where exactly one composition is
- * legal is not a gate, it is a definition. Depths 1–2 are held by the rotation
- * check above instead, which is the only thing that IS controllable there.
- *
- * **Elites are gated here now (M1).** The old note said they were reported but
- * not checked because `variantsFor('elite', d)` returned 2 variants at depth 1
- * and 3 from depth 2 on, so depths 1–2 were "a pigeonhole plus a faction gate,
- * exactly the case this check excludes on the normal side". The first half of
- * that was an accurate description of a table in which Plated Column contained
- * no barrels until depth 3 and was therefore the same 100%-torch column as Swift
- * Raid at depth 1 — §14b, measuring only depths 4/7/9, never saw it. Now that a
- * variant is only offered where its identity exists, the elite cells clear this
- * floor at every depth this check covers, so there is no reason to look away
- * from them.
- *
- * Depths 1–2 stay out, for both kinds, and the exclusion is arithmetic rather
- * than convenient: those pools hold 1–2 shapes against layers up to 4 nodes
- * wide, so the mean below is dominated by pigeonhole duplicates — it would be
- * measuring `runmap.ts`'s layer width, not the variant table. The rotation check
- * above is what holds those layers, and it is the only thing that can.
- */
-const MIN_SAME_LAYER_DIFF = 0.3
-const gatedLayerCells = [...layerMixMean.entries()].filter(([k]) => {
-  const [, depth] = k.split(':')
-  return Number(depth) >= 3
-})
-const worstLayerMix = Math.min(...gatedLayerCells.map(([, v]) => v))
-const worstLayerCell = gatedLayerCells.find(([, v]) => v === worstLayerMix)?.[0] ?? ''
-line(
-  `Battle nodes from depth 3 up — **normal and elite** (where all three factions are legal) — differ by at least **${pct(worstLayerMix)}** mean body-mix distance in the worst cell (${worstLayerCell}, floor ${pct(MIN_SAME_LAYER_DIFF)}). At depths 1–2 the pool holds 1–2 shapes against layers up to 4 nodes wide, so this mean would be measuring the pigeonhole rather than the table; the rotation check above is what holds those layers.`,
-)
-line('')
-if (worstLayerMix < MIN_SAME_LAYER_DIFF) {
-  failures.push(
-    `Two battle nodes in the same map layer differ by only ${pct(worstLayerMix)} body-mix distance at ${worstLayerCell} (kind:depth:width; floor ${pct(MIN_SAME_LAYER_DIFF)}). A fork between two identical fights is not a fork.`,
-  )
-}
-/** The map draw must not be degenerate. */
-const MIN_FIELD_SHARE = 0.3
-const fieldShares = [...dealtField.values()].map((v) => v / VARIETY_RUNS)
-if (ALL_MAPS.length > 1 && Math.min(...fieldShares) < MIN_FIELD_SHARE) {
-  failures.push(
-    `Battlefield selection is lopsided: the rarest field lands in ${pct(Math.min(...fieldShares))} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_FIELD_SHARE)}).`,
-  )
-}
-/** …and neither may a node's shape draw. */
-const MIN_VARIANT_SHARE = 0.12
-for (const [name, m] of [['depth-4 node', dealtNormal], ['depth-8 elite', dealtElite]] as const) {
-  const pool = m.size
-  const rarest = Math.min(...[...m.values()].map((v) => v / VARIETY_RUNS))
-  if (pool < 2) {
-    failures.push(`The ${name} draws only ${pool} distinct shape(s) across ${VARIETY_RUNS} seeds — the node is still a fixed wave.`)
-  } else if (rarest < MIN_VARIANT_SHARE) {
+  line('')
+  if (fieldSpread > MAX_FIELD_LENGTH_SPREAD) {
     failures.push(
-      `The ${name}'s rarest shape lands in ${pct(rarest)} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_VARIANT_SHARE)}) — a variant a player will not meet is not content.`,
+      `Battlefield path lengths differ by ${(fieldSpread * 100).toFixed(1)}% (max ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%). Crossing time is a difficulty dial Threat does not multiply, so a longer field is a quietly easier game.`,
     )
   }
-}
-// (The "two nodes in one layer must not be one node offered twice" gate now sits
-// above, beside the rotation table it is measured from — see F4.)
-
-// -------------------------------------------------------------- Sweep 15
-// Relics — the reward half of the hand (Phase 3b; this sweep graded the stat
-// cards relics replaced, and it grades the same way).
-line('## 15. Relics (the company-wide half of every reward hand)')
-line('')
-line('**What changed (Phase 3b).** Keepsakes (body-slot items that buffed the whole company)')
-line('and team stat cards (rewards that buffed the whole company) did one job with two')
-line('vocabularies. They are one pool of **relics** now: a run-long possession taken from')
-line('a reward hand (every elite deals one, an act boss deals three). About half are no')
-line('longer "+x%" but a **rule** — a ward, a cadence, a rush, a charter — and no relic sells')
-line('plain "+x% damage", which removed one of the eight `damageMult` sources.')
-line('')
-line('**How they are graded.** A relic that acts inside a fight (a stat relic, or a rule the')
-line('engine keeps) is applied alone — its mods as `teamMods`, exactly as `startWave` hands')
-line('them over, its stats onto the hero — and graded on **stop rate** on four benches, as')
-line('the stat cards were: §8\'s three on a physical Weaponmaster and §4\'s `magic` bench on a')
-line('Stormcaller. A relic that changes the RUN (hires, Gate, merchants, XP, gold) cannot be')
-line('seen in one wave, so it is graded on whole runs instead: held from the first node, on')
-line('paired seeds, against the same runs without it.')
-line('')
-/**
- * Six seeds rather than §8's four. A relic is a *fraction* of a mutation, so
- * the cells have to be quieter to resolve one.
- */
-const CARD_SEEDS = [11, 137, 409, 1013, 2411, 5171]
-/** How far a stated tradeoff must move a bench, in each direction, to be one. */
-const CARD_EDGE = 0.02
-/** …and how far below zero a relic's average may sit before it is a punishment. */
-const CARD_TRAP = 0.02
-interface CardBench { label: string; wave: WaveDef; hero: Sentinel; pin: number; blurb: string }
-const CARD_BENCHES: CardBench[] = [
-  { label: 'swarm', wave: MUT_SCENARIOS.swarm.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.swarm.blurb },
-  { label: 'armour', wave: MUT_SCENARIOS.armour.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.armour.blurb },
-  { label: 'line', wave: MUT_SCENARIOS.line.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.line.blurb },
-  {
-    label: 'magic',
-    wave: AFFIX_SCENARIOS.magic.wave,
-    hero: AFFIX_SCENARIOS.magic.build,
-    pin: BENCH_PIN.magic,
-    blurb: 'a splash mystic — the half of the roster a STR card cannot reach',
-  },
-]
-const cardBase = CARD_BENCHES.map((bch) =>
-  stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin, rules: BENCH_RULES }),
-)
-line('| Bench | What it loads | Baseline stop rate |')
-line('|---|---|--:|')
-CARD_BENCHES.forEach((b, i) => line(`| \`${b.label}\` | ${b.blurb} | ${pct(cardBase[i])} |`))
-line('')
-line(`${CARD_SEEDS.length} seeds per cell.`)
-line('')
-const RUN_RULE_RELICS = RELICS.filter((r) => r.rule)
-const FIGHT_RELICS = RELICS.filter((r) => !r.rule && relicSupported(r) && r.grant)
-line('| Relic | Kind | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |')
-line('|---|---|---|--:|--:|--:|--:|--:|--:|---|')
-const cardTier = new Map<ItemRarity, number[]>()
-for (const relic of FIGHT_RELICS) {
-  const teamMods = relicTeamMods([relic.id])
-  const d = CARD_BENCHES.map(
-    (bch, i) =>
-      stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: 's3' }], bch.wave, CARD_SEEDS, {
-        enemyHpMult: bch.pin,
-        teamMods,
-        rules: BENCH_RULES,
-      }) - cardBase[i],
-  )
-  const m = mean(d)
-  const worst = Math.min(...d)
-  const best = Math.max(...d)
-  // The rarity ladder is read off the STAT half — a rule's value depends on the
-  // wave it meets, which is the point of a rule, and says nothing about tier.
-  if (relic.kind === 'stat') cardTier.set(relic.rarity, [...(cardTier.get(relic.rarity) ?? []), m])
-  line(
-    `| ${relic.name} | ${relic.kind} | ${RARITY[relic.rarity].label} | ${pp(d[0])} | ${pp(d[1])} | ${pp(d[2])} | ${pp(d[3])} | **${pp(m)}** | ${pp(worst)} | ${relic.downside ?? '—'} |`,
-  )
-  if (m < -CARD_TRAP) {
-    failures.push(
-      `Relic "${relic.name}" (${relic.rarity}) is a trap: it measures ${pp(m)} averaged over §15's four benches. A reward must not make the company worse.`,
-    )
-  }
-  if (relic.kind === 'rule' && best < CARD_EDGE) {
-    failures.push(`Rule relic "${relic.name}" changes nothing a fight can see: its best bench is ${pp(best)} (needs ≥ ${pp(CARD_EDGE)}).`)
-  }
-  if (relic.downside) {
-    if (best < CARD_EDGE) {
-      failures.push(`Relic "${relic.name}" is a pact with no upside: its best bench is ${pp(best)}. It charges "${relic.downside}" for nothing.`)
-    }
-    if (worst > -CARD_EDGE) {
+  for (const m of MAP_FACTS) {
+    if (m.minSlotGap < MIN_SLOT_GAP) {
       failures.push(
-        `Relic "${relic.name}" claims "${relic.downside}" but costs nothing measurable: its worst bench is ${pp(worst)}. A plain upgrade wearing a pact label.`,
+        `${m.name} has two build slots ${m.minSlotGap}px apart (floor ${MIN_SLOT_GAP}px). At the smallest supported viewport the canvas hit radius is capped at 80 logical px, so their catchment areas collapse into one target.`,
       )
     }
   }
-}
-line('')
-line('| Rarity (stat relics) | Relics | Mean value |')
-line('|---|--:|--:|')
-const CARD_TIERS: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
-const tierMean = CARD_TIERS.map((r) => mean(cardTier.get(r) ?? [0]))
-CARD_TIERS.forEach((r, i) => line(`| ${RARITY[r].label} | ${(cardTier.get(r) ?? []).length} | **${pp(tierMean[i])}** |`))
-line('')
-for (let i = 1; i < CARD_TIERS.length; i++) {
-  if (tierMean[i] < tierMean[i - 1]) {
+  /**
+   * The two fields have to be different *puzzles*, and the number that decides
+   * that is not per-slot coverage — it is **overlap**.
+   *
+   * The first version of this check compared the sorted per-slot coverage vector
+   * and read 7.9% apart, which says almost nothing: two fields can hand out the
+   * same six coverage numbers and still be completely different to deploy on,
+   * because what matters is whether the second tower you place sees road the
+   * first one already sees. So the metric is the **marginal** union curve: fill
+   * the slots best-first and record how much *new* road each one adds, as a share
+   * of the path. That is exactly the sequence a player experiences when deciding
+   * whether a fourth body is worth a slot, and it is where the two fields
+   * separate — The Green Line's cluster is redundant early and pays off late, The
+   * Kiln Road's crossroads pays immediately and its last two slots are scraps.
+   */
+  function marginalCurve(m: (typeof MAP_FACTS)[number]): number[] {
+    const map = ALL_MAPS.find((x) => x.id === m.id)!
+    const step = 6
+    const pts: { x: number; y: number }[] = []
+    for (let i = 1; i < map.path.length; i++) {
+      const a = map.path[i - 1]
+      const b = map.path[i]
+      const len = Math.hypot(b.x - a.x, b.y - a.y)
+      const n = Math.max(1, Math.round(len / step))
+      for (let k = 0; k < n; k++) pts.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n })
+    }
+    const chosen: { x: number; y: number }[] = []
+    const out: number[] = []
+    let prev = 0
+    for (const id of m.order) {
+      chosen.push(map.slots.find((s) => s.id === id)!.pos)
+      const seen = pts.filter((p) => chosen.some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= 150)).length / pts.length
+      out.push(seen - prev)
+      prev = seen
+    }
+    return out
+  }
+  const curves = MAP_FACTS.map(marginalCurve)
+  const shapeDist =
+    curves.length < 2 ? 0 : 0.5 * curves[0].reduce((a, v, i) => a + Math.abs(v - (curves[1][i] ?? 0)), 0)
+  /** Two fields whose marginal-coverage curves are this close are one puzzle twice. */
+  const MIN_FIELD_SHAPE_DIST = 0.08
+  line('| Field | New road each successive best slot adds (share of path) | Union at 5 towers |')
+  line('|---|---|--:|')
+  MAP_FACTS.forEach((m, i) => {
+    line(
+      `| ${m.name} | ${curves[i].map((v) => pct(v)).join(' → ')} | ${pct(curves[i].slice(0, 5).reduce((a, b) => a + b, 0))} |`,
+    )
+  })
+  line('')
+  line(
+    `Marginal-coverage curves are **${(shapeDist * 100).toFixed(1)}%** apart (total-variation distance; floor ${(MIN_FIELD_SHAPE_DIST * 100).toFixed(0)}%). Five towers see **${pct(curves[0].slice(0, 5).reduce((a, b) => a + b, 0))}** of The Green Line and **${pct((curves[1] ?? []).slice(0, 5).reduce((a, b) => a + b, 0))}** of The Kiln Road, and they get there on different curves — which is the same company covering a different amount of road for the same six decisions.`,
+  )
+  line('')
+  if (ALL_MAPS.length > 1 && shapeDist < MIN_FIELD_SHAPE_DIST) {
     failures.push(
-      `Relic rarity ladder is inverted: ${RARITY[CARD_TIERS[i]].label} stat relics mean ${pp(tierMean[i])}, below ${RARITY[CARD_TIERS[i - 1]].label} at ${pp(tierMean[i - 1])}. Rarity is the only signal the offer gives before the pick.`,
+      `The shipped battlefields have near-identical marginal-coverage curves (${(shapeDist * 100).toFixed(1)}% apart, floor ${(MIN_FIELD_SHAPE_DIST * 100).toFixed(0)}%). A second map that does not change the placement decision is wallpaper, not variety.`,
     )
   }
-}
+  if (ALL_MAPS.length < 2) {
+    failures.push('Only one battlefield ships. Run-to-run variance below the map layer is then a single scalar, and placement solves once.')
+  }
 
-// ---- the run-rule half: whole runs, paired ---------------------------------
-/** Paired runs per run-rule relic (adaptive line, zero meta). */
-const RELIC_RUNS = Number(process.env.FW_RELIC_RUNS) || 150
-const relicPolicy = policyById('adaptive')
-const relicZero = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy }).won ? 1 : 0))
-line(`**The run-rule relics, on whole runs.** Each held from the first node, ${RELIC_RUNS} paired runs on the adaptive line, against the same runs without it (zero meta ${pct(mean(relicZero))}):`)
-line('')
-line('| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |')
-line('|---|---|---|--:|--:|')
-for (const relic of RUN_RULE_RELICS) {
-  const wins = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: [relic.id] }).won ? 1 : 0))
-  const dlt = mean(wins) - mean(relicZero)
-  const tol = Math.max(HUB_TOLERANCE, pairedTolerance(wins, relicZero))
-  line(`| ${relic.name} | ${RARITY[relic.rarity].label} | ${relic.desc} | ${pct(mean(wins))} | ${dlt >= 0 ? '+' : '−'}${Math.abs(dlt * 100).toFixed(0)}±${(tol * 100).toFixed(0)}pt |`)
-  if (dlt + tol < 0) {
-    failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor). A relic is a reward.`)
-  }
-}
-line('')
-const awaiting = RELICS.filter((r) => !relicSupported(r))
-line(`**Declared, not dealt.** ${awaiting.length ? awaiting.map((r) => `${r.name} (\`${r.requires}\`)`).join(', ') : 'none'} — relics whose rule belongs to the combat lane's engine. \`ENGINE_CAPABILITIES\` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.`)
-line('')
-for (const r of relicPool({ unlocked: () => true })) {
-  if (!relicSupported(r)) failures.push(`Relic "${r.name}" is in the offer pool but needs \`${r.requires}\`, which this engine does not implement.`)
-}
-const plainDamage = RELICS.filter((r) => r.grant?.mods?.damageMult && r.grant.mods.damageMult > 1 && !r.downside)
-line(`**No plain "+x% damage" relic:** ${plainDamage.length === 0 ? 'none in the pool' : plainDamage.map((r) => r.name).join(', ')}. Damage relics are pacts, which is the point.`)
-line('')
-if (plainDamage.length) failures.push(`Relic(s) ${plainDamage.map((r) => r.name).join(', ')} sell plain "+x% damage" — the damageMult source Phase 3b removed.`)
-
-// -------------------------------------------------------------- Sweep 16
-// Combat depth (Phase 3a): the behaviour kit, boss phases, sub-waves, Watch
-// Commands and status interactions — each with a bench, a counter and a gate.
-const combatDepth = runCombatDepth()
-for (const l of combatDepth.md) line(l)
-failures.push(...combatDepth.failures)
-
-// -------------------------------------------------------------- Sweep 17
-line('## 17. Portrait twins — does a phone fight the same battle?')
-line('')
-line('**Why this exists.** A phone held upright fights on a **portrait twin** of the')
-line('seeded field (`maps.ts` § Portrait battlefields): the landscape field transposed')
-line('and padded, so the lane fills the tall live-wave Stage instead of a 390×228 strip.')
-line('The seed still deals the landscape field (`pickBattleMap` never returns a twin);')
-line('which twin is fought on is chosen per battle from the layout. That is only safe if')
-line('the two are the same game — the Daily Watch deals one seed to every device, and a')
-line('twin that were even a few points easier would make the phone the right way to')
-line('play it. So the twin is checked twice: its geometry against the original, and its')
-line('difficulty on the live engine.')
-line('')
-/** Path lengths may differ by at most this (the ±5% brief; the isometry gives 0). */
-const TWIN_MAX_LENGTH_DIFF = 0.005
-/** Per-slot coverage at every range may differ by at most this share of the original. */
-const TWIN_MAX_COVERAGE_DIFF = 0.02
-/** Stop-rate difference allowed across the battery (points). */
-const TWIN_MAX_STOP_DIFF = 0.03
-/** Mean Gate HP lost may differ by at most this share (or 0.25 HP, whichever is larger). */
-const TWIN_MAX_LEAK_DIFF = 0.05
-const TWIN_RANGES = [96, 150, 168]
-line('| Field | Twin | Box | Path px (twin / original) | Slots | Worst per-slot coverage Δ (96 / 150 / 168px) | Worst slot-gap Δ |')
-line('|---|---|---|--:|--:|---|--:|')
-for (const land of ALL_MAPS) {
-  const tall = orientField(land, 'portrait')
-  const lenL = pathLength(land.path)
-  const lenT = pathLength(tall.path)
-  const covDiff = TWIN_RANGES.map((r) => {
-    const a = slotCoverage(land, r)
-    const b = slotCoverage(tall, r)
-    return Math.max(...land.slots.map((sl) => Math.abs(b[sl.id] - a[sl.id]) / Math.max(1, a[sl.id])))
-  })
-  let gapDiff = 0
-  for (const a of land.slots) {
-    for (const b of land.slots) {
-      const ta = tall.slots.find((x) => x.id === a.id)!
-      const tb = tall.slots.find((x) => x.id === b.id)!
-      gapDiff = Math.max(gapDiff, Math.abs(Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) - Math.hypot(ta.pos.x - tb.pos.x, ta.pos.y - tb.pos.y)))
-    }
-  }
-  line(
-    `| ${land.name} | \`${tall.id}\` | ${tall.width}×${tall.height} | ${Math.round(lenT)} / ${Math.round(lenL)} | ${tall.slots.length} / ${land.slots.length} | ${covDiff.map((d) => `${(d * 100).toFixed(1)}%`).join(' / ')} | ${gapDiff.toFixed(2)}px |`,
-  )
-  if (Math.abs(lenT / lenL - 1) > TWIN_MAX_LENGTH_DIFF) {
-    failures.push(`${land.name}'s portrait twin is ${((lenT / lenL - 1) * 100).toFixed(1)}% off the original's path length (max ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%): crossing time is a difficulty dial Threat does not multiply.`)
-  }
-  if (tall.slots.length !== land.slots.length || tall.slots.some((sl, i) => sl.id !== land.slots[i].id)) {
-    failures.push(`${land.name}'s portrait twin does not carry the same slots (placements are keyed by slot id and ride across orientations).`)
-  }
-  if (Math.max(...covDiff) > TWIN_MAX_COVERAGE_DIFF) {
-    failures.push(`${land.name}'s portrait twin changes what a slot sees by up to ${(Math.max(...covDiff) * 100).toFixed(1)}% (max ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}%) — a phone would be solving a different placement puzzle.`)
-  }
-}
-line('')
-/**
- * The battery: the §14c teams (3–5 random tier-2 specs, depth-scaled level and
- * gear, best-coverage slots) at five depths and three node kinds, on the twin
- * and on the original, same seeds. `baseHp` is the real 20 so the stop rate
- * means something; Gate HP lost is summed over every fight.
- */
-const TWIN_DEPTHS: [number, EncounterKind][] = [[2, 'normal'], [4, 'boss'], [6, 'elite'], [8, 'normal'], [10, 'normal'], [12, 'boss']]
-const TWIN_TEAMS = 8
-line(`**Battery** — ${TWIN_TEAMS} random §14c-style companies × ${TWIN_DEPTHS.length} nodes (${TWIN_DEPTHS.map(([d, k]) => `d${d} ${k}`).join(', ')}) at the road's Threat, base ${MAX_BASE_HP}, identical seeds on both twins:`)
-line('')
-line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |')
-line('|---|---|--:|--:|--:|--:|')
-for (const land of ALL_MAPS) {
-  const res: Record<string, { cleared: number; lost: number; downs: number; n: number }> = {}
-  for (const field of [land, orientField(land, 'portrait')]) {
-    const acc = { cleared: 0, lost: 0, downs: 0, n: 0 }
-    const rr = new RNG(1717)
-    const order = bestSlots(field)
-    for (let t = 0; t < TWIN_TEAMS; t++) {
+  /**
+   * The §14c bench: how much base HP one composition variant actually puts
+   * through a random depth-appropriate line, averaged over teams and fields.
+   *
+   * `baseHp` is `maxLeak + 2` so the battle always runs to the end and the number
+   * is not truncated by the base falling; the seeds and team draws are identical
+   * across variants, so the comparison is paired.
+   */
+  const VARIETY_TEAMS = 14
+  function variantLeak(depth: number, kind: EncounterKind, variantId: string): number {
+    const rr = new RNG(77)
+    const level = mcLevel(depth)
+    const rarity: ItemRarity = mcRarity(depth)
+    const threat = threatAtLayer(depth)
+    const wave = generateEncounter(depth, kind, { variantId })
+    const ml = maxLeak(wave)
+    const out: number[] = []
+    for (let t = 0; t < VARIETY_TEAMS; t++) {
       const size = 3 + Math.floor(rr.next() * 3)
       const ids = Array.from({ length: size }, () => rr.pick(TIER2_NODES).id)
-      for (const [depth, kind] of TWIN_DEPTHS) {
+      for (const field of ALL_MAPS) {
+        const order = bestSlots(field)
         const team = ids.map((id, i) => ({
-          sentinel: buildSpec(id, { level: mcLevel(depth), gearRarity: mcRarity(depth), seed: t * 10 + i, perkSeed: t * 10 + i }),
+          sentinel: buildSpec(id, { level, gearRarity: rarity, seed: t * 10 + i, perkSeed: t * 10 + i }),
           slotId: order[i],
         }))
-        const m = runBattle({ team, depth, kind, map: field, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
-        acc.n++
-        if (m.cleared) acc.cleared++
-        acc.lost += m.baseHpLost
-        acc.downs += m.downs
+        out.push(
+          runBattle({ team, depth, wave, map: field, enemyHpMult: threat, baseHp: ml + 2, maxSeconds: 120, seed: t * 31 + depth })
+            .baseHpLost,
+        )
       }
     }
-    res[orientationOf(field)] = acc
-    line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} | ${f2(acc.downs / acc.n)} |`)
+    return mean(out)
   }
-  const a = res.landscape
-  const b = res.portrait
-  const stopDiff = Math.abs(a.cleared / a.n - b.cleared / b.n)
-  const leakA = a.lost / a.n
-  const leakB = b.lost / b.n
-  if (stopDiff > TWIN_MAX_STOP_DIFF) {
-    failures.push(`${land.name}: the portrait twin's stop rate differs from the landscape field's by ${(stopDiff * 100).toFixed(1)}pt (max ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt) — the orientation a device picks is changing the game.`)
+
+  line('### 14b. How different is one depth-4 wave from another?')
+  line('')
+  line('Composition distance is the **total-variation distance** between two waves\' enemy')
+  line('mixes — the share of bodies of each type, half the L1 norm of the difference. 0%')
+  line('is the same wave; 100% shares no enemy type at all. It is quoted alongside the')
+  line('*head count* and the *total effective HP*, because the pair is the whole claim:')
+  line('the mix moves, the size does not.')
+  line('')
+  /**
+   * **Every depth the campaign has, not a sample of three (M1).**
+   *
+   * This was `[4, 7, 9]`, and the three it skipped are the three that were broken.
+   * `gate()` in `waves.ts` admits bombers only from depth 2 and armour only from
+   * depth 3, and `roster()`'s tier ladder does not move until depth 4 — so the
+   * shallow end is exactly where two variants can collapse onto one composition,
+   * and it was the only part of the range never measured. Depth 1 elite read
+   * **0.0%** (Plated Column and Swift Raid were both 100% torch), depth 2 read
+   * 13.3%, and the normal pool read 0.0% / 14.2% / 19.1% at depths 1/2/3 — all
+   * against this section's own 35% floor, all under a paragraph claiming
+   * "42.7%–55.6% apart" that was true precisely over the sampled range.
+   *
+   * A gate whose sample excludes its failure region is the defect it is supposed
+   * to catch. The fix is in `waves.ts` (`swarm.minDepth` 1 → 4, `plated.minDepth`
+   * 1 → 3: a variant is legal only where its identity exists) and the range here
+   * is now the whole campaign, with no exclusions.
+   */
+  const GATE_DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  /** The depths whose full body-by-body composition is printed. The gate is wider. */
+  const VARIETY_DEPTHS = [4, 7, 9]
+  line('| Depth | Kind | Variant | Bodies | Total HP | Max leak | Composition |')
+  line('|--:|---|---|--:|--:|--:|---|')
+  // Effective HP (Phase 3a): a splitter's pieces are HP the node carries, and
+  // `waves.ts` prices them into its budget — so the pool is read the same way.
+  const waveHp = (w: ReturnType<typeof generateEncounter>) =>
+    Math.round(w.spawns.reduce((a, s) => a + effectiveHp(s.typeId) * s.hpMult, 0))
+  /**
+   * The body mix of a wave, keyed by the **base type id** — `barrel4`, not
+   * `barrel4_plated`.
+   *
+   * ---- this used to key on the registry key, and that made the gate below
+   * ---- incapable of failing for elites (F5) --------------------------------
+   *
+   * `enemies.ts` gives a modified goblin two identities on purpose: the registry
+   * KEY (`barrel4_plated`) is its gameplay identity, and the `id` (`barrel4`) is
+   * its art identity — "a variant is the same goblin wearing more iron, it must
+   * draw as one". Keying the share map on the registry key therefore makes any
+   * two elite variants disjoint **by construction**, because each one wears a
+   * different modifier: every elite pair read exactly 100% apart, at every depth,
+   * no matter what bodies were actually in the two columns. A gate that cannot
+   * fail is not a gate, and this one was reporting the strongest number in §14
+   * while measuring nothing.
+   *
+   * The base id is what the renderer draws and what the player watches walk down
+   * the road, so it is the honest denominator for "how much of this wave is the
+   * same as that wave". The modifier is a real, disclosed difference and it is
+   * still reported — in its own column, beside the number, rather than smuggled
+   * into it.
+   */
+  const shares = (w: ReturnType<typeof generateEncounter>): Map<string, number> => {
+    const m = new Map<string, number>()
+    for (const s of w.spawns) {
+      const base = ENEMY_TYPES[s.typeId].id
+      m.set(base, (m.get(base) ?? 0) + 1)
+    }
+    const tot = w.spawns.length || 1
+    for (const [k, v] of m) m.set(k, v / tot)
+    return m
   }
-  if (Math.abs(leakB - leakA) > Math.max(0.25, TWIN_MAX_LEAK_DIFF * leakA)) {
-    failures.push(`${land.name}: the portrait twin leaks ${f2(leakB)} Gate HP a fight against ${f2(leakA)} on the landscape field (max ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}%).`)
+  /** Total-variation distance between two composition share maps, 0…1. */
+  function compDist(a: Map<string, number>, b: Map<string, number>): number {
+    let d = 0
+    for (const k of new Set([...a.keys(), ...b.keys()])) d += Math.abs((a.get(k) ?? 0) - (b.get(k) ?? 0))
+    return d / 2
   }
+  interface VarietyCell {
+    depth: number
+    kind: EncounterKind
+    v: WaveVariant
+    wave: ReturnType<typeof generateEncounter>
+  }
+  const varietyCells: VarietyCell[] = []
+  for (const depth of GATE_DEPTHS) {
+    for (const kind of ['normal', 'elite'] as EncounterKind[]) {
+      for (const v of variantsFor(kind, depth)) {
+        const wave = generateEncounter(depth, kind, { variantId: v.id })
+        varietyCells.push({ depth, kind, v, wave })
+        if (!VARIETY_DEPTHS.includes(depth)) continue
+        const comp = waveComposition(wave)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3)
+          .map((c) => `${ENEMY_TYPES[c.typeId].name} ×${c.count}`)
+          .join(', ')
+        line(
+          `| ${depth} | ${kind} | ${v.label || v.id} | ${wave.spawns.length} | ${waveHp(wave)} | ${maxLeak(wave)} | ${comp} |`,
+        )
+      }
+    }
+  }
+  line('')
+  /** Two shapes closer than this are the same fight with a different name. */
+  const MIN_COMP_DIST = 0.35
+  /**
+   * How far apart the HP *pools* of one node's variants may be.
+   *
+   * This is a sanity bound, not the fairness gate — §14c is. The first version of
+   * it sat at 20% on the theory that equal budget is equal fairness, and that
+   * theory is wrong: measured, an armour column and a light swarm carrying
+   * *identical* HP differ by ×2.6 in the damage they actually put through a
+   * depth-scaled line, because armour concentrates HP behind resistances and a
+   * swarm spends it on bodies that die to splash. Equalising the pools would have
+   * shipped a "fair" table in which one shape was two and a half times the fight
+   * the other was.
+   *
+   * So the budget is a **price list**: a shape that is worth more per point of HP
+   * is sold less of it (`WaveVariant.budgetScale`, fitted against §14c). The pools
+   * therefore differ on purpose, and this ceiling only exists to catch a scale
+   * that has run away far enough to be a difficulty roll dressed as a price.
+   */
+  const MAX_HP_SPREAD = 0.35
+  /** …and the damage a wave can do if nothing stops it stays in a band. */
+  const MAX_LEAK_SPREAD = 1.6
+  line('| Depth | Kind | Pool | Pairwise body-mix distance (min / mean) | Closest pair | Total-HP spread | Max-leak spread |')
+  line('|--:|---|--:|---|---|--:|--:|')
+  let worstCompDist = 1
+  let worstCompPair = ''
+  let worstHpSpread = 0
+  let worstLeakSpread = 1
+  for (const depth of GATE_DEPTHS) {
+    for (const kind of ['normal', 'elite'] as EncounterKind[]) {
+      const cells = varietyCells.filter((c) => c.depth === depth && c.kind === kind)
+      if (cells.length < 2) {
+        // Reported rather than skipped in silence: a one-variant pool is a real
+        // statement about the depth (the faction gate leaves one legal shape), and
+        // an empty row here is what let depths 1–3 go unexamined (M1).
+        line(
+          `| ${depth} | ${kind} | ${cells.length} | — (one legal shape) | — | — | — |`,
+        )
+        continue
+      }
+      const dists: number[] = []
+      let cellWorst = 1
+      let cellWorstPair = ''
+      for (let i = 0; i < cells.length; i++) {
+        for (let j = i + 1; j < cells.length; j++) {
+          const d = compDist(shares(cells[i].wave), shares(cells[j].wave))
+          dists.push(d)
+          if (d < cellWorst) {
+            cellWorst = d
+            cellWorstPair = `${cells[i].v.label || cells[i].v.id} vs ${cells[j].v.label || cells[j].v.id}`
+          }
+        }
+      }
+      const hps = cells.map((c) => waveHp(c.wave))
+      const leaks = cells.map((c) => maxLeak(c.wave))
+      const hpSpread = Math.max(...hps) / Math.min(...hps) - 1
+      const leakSpread = Math.max(...leaks) / Math.max(1, Math.min(...leaks))
+      if (cellWorst < worstCompDist) {
+        worstCompDist = cellWorst
+        worstCompPair = `depth ${depth} ${kind}, ${cellWorstPair}`
+      }
+      worstHpSpread = Math.max(worstHpSpread, hpSpread)
+      worstLeakSpread = Math.max(worstLeakSpread, leakSpread)
+      line(
+        `| ${depth} | ${kind} | ${cells.length} | ${pct(Math.min(...dists))} / ${pct(mean(dists))} | ${cellWorstPair} ${pct(cellWorst)} | ${(hpSpread * 100).toFixed(1)}% | ×${f2(leakSpread)} |`,
+      )
+    }
+  }
+  line('')
+  line(`**Read the columns together.** The closest pair of shapes anywhere in the table is`)
+  line(`**${pct(worstCompDist)}** apart (floor ${pct(MIN_COMP_DIST)}) — ${worstCompPair} — so two waves at the same node`)
+  line(`share at most ${pct(1 - worstCompDist)} of their bodies. Over the same cells the total HP pool moves by`)
+  line(`at most **${(worstHpSpread * 100).toFixed(1)}%** (ceiling ${(MAX_HP_SPREAD * 100).toFixed(0)}%) and the leak a wave can do if nothing stops it by at`)
+  line(`most **×${f2(worstLeakSpread)}** (ceiling ×${f2(MAX_LEAK_SPREAD)}). That is the fairness claim, stated as numbers: the`)
+  line('problem changes, the size does not.')
+  line('')
+  line('**The distance is measured on the BASE body — `barrel4`, not `barrel4_plated`.**')
+  line('It used to key on the registry key, which made every elite pair disjoint by')
+  line('construction (each elite variant wears a different modifier) and printed a')
+  line('flat 100% for all nine elite pairs at every depth: the strongest number in §14,')
+  line('measuring nothing. The modifier is a real and disclosed difference — the')
+  line('pre-wave preview prints "shrugs off physical 55%" in the enemy\'s own row — but')
+  line('it is not a difference in *which goblins walk down the road*, and that is what')
+  line('this metric is for. A player who loses a Warded Host should lose to a')
+  line('damage-type mistake they could read off the preview; whether the column that')
+  line('taught them that is also a different column is a separate question, and it is')
+  line('the one asked here.')
+  line('')
+  line('**And it is measured at every depth the campaign has (M1).** It used to be')
+  line('measured at depths 4, 7 and 9 — and the paragraph below, reporting the elite')
+  line('pairs "42.7%–55.6% apart", was true exactly over that range and false')
+  line('immediately under it. `gate()` withholds bombers until depth 2 and armour')
+  line('until depth 3, and `roster()`\'s tier ladder does not move until depth 4, so')
+  line('the shallow end is the only place two variants can collapse onto one')
+  line('composition — and it was the only part of the range never sampled. The')
+  line('numbers that were there:')
+  line('')
+  line('| | depth 1 | depth 2 | depth 3 |')
+  line('|---|--:|--:|--:|')
+  line('| elite — Plated Column vs Swift Raid | **0.0%** | **13.3%** | 44.4% |')
+  line('| normal — Patrol vs Swarm | **0.0%** | **14.2%** | **19.1%** |')
+  line('')
+  line('Four cells under a 35% floor, one of them at zero, in the part of the')
+  line('campaign every run plays and Banner 2 turns entirely elite. Neither pair was')
+  line('fixable by reshaping a mix: at depth 1 exactly one faction is legal, so every')
+  line('variant is 100% torch whatever it is called, and at depth 2 Patrol\'s own 6:3')
+  line('shape caps the best achievable distance at 33%. What was wrong was offering')
+  line('a shape where it is not a second shape — so `swarm` is legal from depth 4')
+  line('(where its `tierBump` stops clamping) and `plated` from depth 3 (where it')
+  line('first contains a barrel, which is also when its "column of rolling armour"')
+  line('line becomes true). The table above is the whole range, gated with no')
+  line('exclusions.')
+  line('')
+  line('**What the honest number found, and what was done about it (F5).** Re-keyed,')
+  line('the three elite mixes measured **17.6%–39.5%** apart — Warded Host against')
+  line('Swift Raid at 17.6% at depth 9 — because `{3,2,4}` / `{5,3,1}` / `{7,2,0.5}` is')
+  line('two torch-led hosts and one armour column, not three columns. A concurrent')
+  line('render review found the same three pixel-identical on the field (the modifier')
+  line('moves `speed`, `physResist` and `magResist`, none of which the renderer reads),')
+  line('so "three elite variants" was very close to one wave with three names — and the')
+  line('Banner rung built on them (§13, *Elite Watch*) was standing on it.')
+  line('')
+  line('The mixes are rebuilt onto **one faction each** — barrels / bombers / torches —')
+  line('which is the only arrangement that makes three columns distinct when the roster')
+  line('has three factions. The elite pairs now sit **42.7%–57.8%** apart across every')
+  line('depth they are offered at, and the binding cell in this table is a *normal* pair.')
+  line('The bill came due in two other columns of the same table and is paid there:')
+  line('a bomber host leaks 3 per body against a torch raid\'s 1, which pushed max-leak')
+  line('spread to ×1.68 until Swift\'s `countMult` went 1.2 → 1.3; and the three shapes')
+  line('are worth very different amounts per point of HP, which is the `budgetScale`')
+  line('refit in §14c below.')
+  line('')
+  if (worstCompDist < MIN_COMP_DIST) {
+    failures.push(
+      `Two composition variants at the same node are only ${pct(worstCompDist)} apart in body mix (floor ${pct(MIN_COMP_DIST)}): ${worstCompPair}. Variety the player cannot perceive is not variety. NOTE: this gate keys on the BASE body id (\`barrel4\`), not the registry key (\`barrel4_plated\`) — keying on the latter made every elite pair 100% apart by construction and could not fail (F5). Two variants are close when their \`mix\` weights are close, so the fix is in \`NORMAL_VARIANTS\` / \`ELITE_VARIANTS\` in \`waves.ts\`, and it is a rebalance rather than a report change: moving a mix moves what that shape is worth per point of HP, which needs \`budgetScale\` refitted against §14c and re-checked against the HP-spread and max-leak ceilings above.`,
+    )
+  }
+  if (worstHpSpread > MAX_HP_SPREAD) {
+    failures.push(
+      `Composition variants at the same node differ in total HP by ${(worstHpSpread * 100).toFixed(1)}% (ceiling ${(MAX_HP_SPREAD * 100).toFixed(0)}%). A variant is meant to change the problem, not roll the difficulty.`,
+    )
+  }
+  if (worstLeakSpread > MAX_LEAK_SPREAD) {
+    failures.push(
+      `Composition variants at the same node differ in maximum leak by ×${f2(worstLeakSpread)} (ceiling ×${f2(MAX_LEAK_SPREAD)}). The wave that walks through does wildly different damage depending on a roll the player never made.`,
+    )
+  }
+
+  line('### 14c. Is any shape a free win or an auto-loss?')
+  line('')
+  line('Composition distance says the shapes *differ*; it cannot say whether one of them')
+  line('is simply the easy one. **This is the gate the budget scales are fitted against**,')
+  line('and it is where the fairness claim actually lives.')
+  line('')
+  line('The bench is deliberately not the §5 standard team: on the encounters the game')
+  line("ships, that team stops **100.0%** of every variant's leak at every depth tried, so")
+  line('it grades nothing — trap 2 in `balance/README.md`, a scenario with no failure')
+  line('mode. What discriminates is a §6-shaped draw: random 3–5 tower teams at')
+  line("depth-appropriate level, rarity and upgrades, on **both** battlefields, at the real")
+  line('Threat a depth-8 run carries. The metric is **base HP leaked**, not stop rate,')
+  line('because a 20-HP base dies to the four points a 96%-stop wave puts through.')
+  line('')
+  line(`| Depth | Kind | Variant | Base HP leaked (mean of ${VARIETY_TEAMS} teams × ${ALL_MAPS.length} fields) | vs the canonical shape |`)
+  line('|--:|---|---|--:|--:|')
+  let worstLeakRatio = 1
+  let worstLeakCell = ''
+  for (const depth of [8]) {
+    for (const kind of ['normal', 'elite'] as EncounterKind[]) {
+      const vs = variantsFor(kind, depth)
+      const leaks = vs.map((v) => variantLeak(depth, kind, v.id))
+      for (let i = 0; i < vs.length; i++) {
+        line(
+          `| ${depth} | ${kind} | ${vs[i].label || vs[i].id} | ${leaks[i].toFixed(2)} | ${leaks[0] > 0 ? `×${f2(leaks[i] / leaks[0])}` : '—'} |`,
+        )
+      }
+      const ratio = Math.max(...leaks) / Math.max(0.05, Math.min(...leaks))
+      if (ratio > worstLeakRatio) {
+        worstLeakRatio = ratio
+        worstLeakCell = `depth ${depth} ${kind}`
+      }
+    }
+  }
+  line('')
+  /**
+   * The widest leak ratio one node's variants may span against a random,
+   * *unadapted* team. Some spread is wanted and is the content: a Plated Column is
+   * supposed to be a worse fight for a steel line than a Swarm is, and a bench
+   * team cannot counter-pick the way a player who reads the preview can — so this
+   * number is the upper bound on what the roll is worth, not what it costs a
+   * player. ×2 is the point at which the roll, rather than the deployment, is
+   * choosing the outcome of the node; before the budget scales were fitted the
+   * unadapted spread measured ×2.6 (normal) and ×2.5 (elite).
+   */
+  const MAX_LEAK_RATIO = 2
+  line(
+    `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.`,
+  )
+  line('')
+  line('**What this gate is worth, stated plainly.** `budgetScale` is fitted *against*')
+  line('this number, so a green §14c is not independent evidence that the shapes are')
+  line('fair — it is evidence that the fit converged. What it does still catch, and')
+  line('what makes it worth running, is the case where **no** fit exists: the ceiling')
+  line('is ×2.00 and the scales are bounded by §14b\'s 35% HP-spread ceiling to a ×1.35')
+  line('ratio, so a shape whose worth per point of HP is more than about ×1.6 away from')
+  line('its siblings cannot be priced into band and fails here no matter how the dial')
+  line('is turned. That is a real property of the variant table and it is the one this')
+  line('sweep tests. On the current table the measured worth per unit of scale is')
+  line('warded 5.97, plated 7.74, swift 13.50 base HP through a random depth-8 line —')
+  line('a ×2.26 spread — so the fit runs out of room and the residual ×1.54 above is')
+  line('what is left over, not what was aimed at. Sweeping each variant across')
+  line('`budgetScale` ×0.8…×1.85 is what produced those three slopes; the numbers are')
+  line('not read off the shipped point.')
+  line('')
+  line('The gate that is **not** circular is §14b\'s pair: composition distance and the')
+  line('HP-spread ceiling are computed straight off the wave tables with no fit')
+  line('between them, and they are what bounds this one.')
+  line('')
+  if (worstLeakRatio > MAX_LEAK_RATIO) {
+    failures.push(
+      `Composition variants at ${worstLeakCell} span ×${f2(worstLeakRatio)} in base HP leaked against random unadapted teams (ceiling ×${f2(MAX_LEAK_RATIO)}). At that width the variant roll, not the deployment, is deciding the node.`,
+    )
+  }
+
+  line('### 14d. Does a seeded run actually see the variety?')
+  line('')
+  line('A variant table nothing draws from is decoration. `encounterSeed(runSeed, layer)`')
+  line("plus the node's row is what the store and `runsim` both key on, so this is the")
+  line('distribution the game deals: 400 run seeds, the shape each one hands to depth 4 and')
+  line('to its elites, and what the node standing beside it gets.')
+  line('')
+  const VARIETY_RUNS = 400
+  const dealtNormal = new Map<string, number>()
+  const dealtElite = new Map<string, number>()
+  const dealtField = new Map<string, number>()
+  for (let i = 0; i < VARIETY_RUNS; i++) {
+    const rs = hashSeed(i, 'variety')
+    dealtField.set(pickBattleMap(rs).id, (dealtField.get(pickBattleMap(rs).id) ?? 0) + 1)
+    const n = generateEncounter(4, 'normal', { seed: encounterSeed(rs, 4) })
+    const nv = variantsFor('normal', 4).find((v) => n.label.includes(v.label) || v.id === 'patrol')
+    dealtNormal.set(n.label, (dealtNormal.get(n.label) ?? 0) + 1)
+    void nv
+    const e = generateEncounter(8, 'elite', { seed: encounterSeed(rs, 8) })
+    dealtElite.set(e.label, (dealtElite.get(e.label) ?? 0) + 1)
+  }
+  const dist = (m: Map<string, number>) =>
+    [...m.entries()].sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${pct(v / VARIETY_RUNS)}`).join(' · ')
+  line(`- Battlefield over ${VARIETY_RUNS} seeds: ${dist(dealtField)}`)
+  line(`- Depth-4 node: ${dist(dealtNormal)}`)
+  line(`- Depth-8 elite: ${dist(dealtElite)}`)
+  line('')
+
+  /*
+   * ---- the same-layer gate, rewritten so it can fail (F4) --------------------
+   *
+   * It used to compare `sibling: 0` against `sibling: 1` at depth 4 and gate the
+   * mean at 30%. Depth 4's normal pool holds FOUR variants and `pickVariant`
+   * rotates by the row — `pool[(base + sibling) % pool.length]` — so rows 0 and 1
+   * are structurally guaranteed to draw different variants there. The gate was a
+   * tautology: no change to the variant table, the rotation or the map generator
+   * could have made it fail.
+   *
+   * `runmap.ts` deals **2–4 nodes per layer** (3–4 on a wide map), and
+   * `variantsFor` returns 1 variant at depth 1 and 2 at depth 2. So the interesting
+   * question was never "do rows 0 and 1 differ" but "what happens when the layer is
+   * wider than the pool", and the honest answer is the pigeonhole: they cannot all
+   * differ. `pickVariant`'s doc claimed two nodes in one layer "can never be dealt
+   * the same shape", which is false wherever width > pool — measured at 17% of
+   * multi-node battle layers, and on every seed of a wide map's layer 1.
+   *
+   * What the rotation DOES guarantee is that it is optimal: rows 0…w-1 receive
+   * `min(w, pool)` distinct variants, always, which is the most any assignment can
+   * manage. That is a real, falsifiable property — swap the rotation for an iid
+   * draw and it breaks on the first seed — so that is what is gated here, across
+   * every depth the map deals and every width it can deal.
+   */
+  line('**Two battle nodes standing in one layer.** `runmap.ts` puts 2–4 nodes in a')
+  line('layer (3–4 on a wide map) and rotates each row through the depth\'s variant pool.')
+  line('Where the layer is no wider than the pool, every node gets a different shape;')
+  line('where it is wider, the pigeonhole applies and the rotation deals the most')
+  line('distinct shapes that exist. Both halves are checked below.')
+  line('')
+  const LAYER_WIDTHS = [2, 3, 4]
+  const ROTATION_DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  line('| Depth | Kind | Pool | Distinct shapes at width 2 / 3 / 4 | Optimal on every seed? | Mean body-mix distance (w2/w3/w4) |')
+  line('|--:|---|--:|---|---|---|')
+  let rotationOptimal = true
+  const rotationMisses: string[] = []
+  /** Mean same-layer body-mix distance, per (kind, depth, width). */
+  const layerMixMean = new Map<string, number>()
+  for (const kind of ['normal', 'elite'] as EncounterKind[]) {
+    for (const depth of ROTATION_DEPTHS) {
+      const pool = variantsFor(kind, depth).length
+      const distinctCols: string[] = []
+      const mixCols: string[] = []
+      let rowOptimal = true
+      for (const width of LAYER_WIDTHS) {
+        let optimal = 0
+        const seen = new Set<number>()
+        const ds: number[] = []
+        for (let i = 0; i < VARIETY_RUNS; i++) {
+          const rs = hashSeed(i, 'variety')
+          const seed = encounterSeed(rs, depth)
+          const ids = new Set<string>()
+          for (let r = 0; r < width; r++) ids.add(pickVariant(kind, depth, seed, r).id)
+          seen.add(ids.size)
+          if (ids.size === Math.min(width, pool)) optimal++
+          const waves = Array.from({ length: width }, (_, r) =>
+            generateEncounter(depth, kind, { seed, sibling: r }),
+          )
+          for (let a = 0; a < width; a++)
+            for (let b = a + 1; b < width; b++) ds.push(compDist(shares(waves[a]), shares(waves[b])))
+        }
+        if (optimal < VARIETY_RUNS) {
+          rotationOptimal = false
+          rowOptimal = false
+          rotationMisses.push(
+            `${kind} depth ${depth} width ${width}: ${VARIETY_RUNS - optimal}/${VARIETY_RUNS} seeds dealt fewer than ${Math.min(width, pool)} distinct shapes`,
+          )
+        }
+        distinctCols.push([...seen].sort().join('/'))
+        const m = mean(ds)
+        layerMixMean.set(`${kind}:${depth}:${width}`, m)
+        mixCols.push(pct(m))
+      }
+      line(
+        `| ${depth} | ${kind} | ${pool} | ${distinctCols.join(' / ')} | ${rowOptimal ? '✅' : '❌'} | ${mixCols.join(' / ')} |`,
+      )
+    }
+  }
+  line('')
+  /**
+   * The rotation must deal the most distinct shapes the pool allows, on every
+   * seed. Unlike the old depth-4 rows-0-and-1 check, this one is falsifiable: an
+   * iid draw fails it immediately, and so does a pool that has silently shrunk.
+   */
+  if (!rotationOptimal) {
+    failures.push(
+      `The same-layer variant rotation is not dealing the maximum distinct shapes its pool allows: ${rotationMisses.slice(0, 4).join('; ')}. Two battle nodes in one layer must differ wherever the pool has the shapes to differ.`,
+    )
+  }
+  /**
+   * …and where two nodes DO get different variants, the columns must actually
+   * look different.
+   *
+   * Gated from depth 3 up, and the exclusion is structural rather than
+   * convenient: `gate()` in `waves.ts` admits bombers only from depth 2 and armour
+   * only from depth 3, so at depth 1 EVERY normal variant collapses to a pure
+   * torch column no matter which one is drawn — the measured distance there is
+   * 0.0% for every width and would be 0.0% for any variant table anyone could
+   * write. Asking "do the compositions differ" where exactly one composition is
+   * legal is not a gate, it is a definition. Depths 1–2 are held by the rotation
+   * check above instead, which is the only thing that IS controllable there.
+   *
+   * **Elites are gated here now (M1).** The old note said they were reported but
+   * not checked because `variantsFor('elite', d)` returned 2 variants at depth 1
+   * and 3 from depth 2 on, so depths 1–2 were "a pigeonhole plus a faction gate,
+   * exactly the case this check excludes on the normal side". The first half of
+   * that was an accurate description of a table in which Plated Column contained
+   * no barrels until depth 3 and was therefore the same 100%-torch column as Swift
+   * Raid at depth 1 — §14b, measuring only depths 4/7/9, never saw it. Now that a
+   * variant is only offered where its identity exists, the elite cells clear this
+   * floor at every depth this check covers, so there is no reason to look away
+   * from them.
+   *
+   * Depths 1–2 stay out, for both kinds, and the exclusion is arithmetic rather
+   * than convenient: those pools hold 1–2 shapes against layers up to 4 nodes
+   * wide, so the mean below is dominated by pigeonhole duplicates — it would be
+   * measuring `runmap.ts`'s layer width, not the variant table. The rotation check
+   * above is what holds those layers, and it is the only thing that can.
+   */
+  const MIN_SAME_LAYER_DIFF = 0.3
+  const gatedLayerCells = [...layerMixMean.entries()].filter(([k]) => {
+    const [, depth] = k.split(':')
+    return Number(depth) >= 3
+  })
+  const worstLayerMix = Math.min(...gatedLayerCells.map(([, v]) => v))
+  const worstLayerCell = gatedLayerCells.find(([, v]) => v === worstLayerMix)?.[0] ?? ''
+  line(
+    `Battle nodes from depth 3 up — **normal and elite** (where all three factions are legal) — differ by at least **${pct(worstLayerMix)}** mean body-mix distance in the worst cell (${worstLayerCell}, floor ${pct(MIN_SAME_LAYER_DIFF)}). At depths 1–2 the pool holds 1–2 shapes against layers up to 4 nodes wide, so this mean would be measuring the pigeonhole rather than the table; the rotation check above is what holds those layers.`,
+  )
+  line('')
+  if (worstLayerMix < MIN_SAME_LAYER_DIFF) {
+    failures.push(
+      `Two battle nodes in the same map layer differ by only ${pct(worstLayerMix)} body-mix distance at ${worstLayerCell} (kind:depth:width; floor ${pct(MIN_SAME_LAYER_DIFF)}). A fork between two identical fights is not a fork.`,
+    )
+  }
+  /** The map draw must not be degenerate. */
+  const MIN_FIELD_SHARE = 0.3
+  const fieldShares = [...dealtField.values()].map((v) => v / VARIETY_RUNS)
+  if (ALL_MAPS.length > 1 && Math.min(...fieldShares) < MIN_FIELD_SHARE) {
+    failures.push(
+      `Battlefield selection is lopsided: the rarest field lands in ${pct(Math.min(...fieldShares))} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_FIELD_SHARE)}).`,
+    )
+  }
+  /** …and neither may a node's shape draw. */
+  const MIN_VARIANT_SHARE = 0.12
+  for (const [name, m] of [['depth-4 node', dealtNormal], ['depth-8 elite', dealtElite]] as const) {
+    const pool = m.size
+    const rarest = Math.min(...[...m.values()].map((v) => v / VARIETY_RUNS))
+    if (pool < 2) {
+      failures.push(`The ${name} draws only ${pool} distinct shape(s) across ${VARIETY_RUNS} seeds — the node is still a fixed wave.`)
+    } else if (rarest < MIN_VARIANT_SHARE) {
+      failures.push(
+        `The ${name}'s rarest shape lands in ${pct(rarest)} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_VARIANT_SHARE)}) — a variant a player will not meet is not content.`,
+      )
+    }
+  }
+  // (The "two nodes in one layer must not be one node offered twice" gate now sits
+  // above, beside the rotation table it is measured from — see F4.)
 }
-line('')
-line(`**The gates.** Path length within ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%, the same slot ids, every slot's coverage within ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}% at ${TWIN_RANGES.join(' / ')}px, and on the battery a stop rate within ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt and Gate HP lost within ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.`)
-line('')
+
+// -------------------------------------------------------------- Sweep 15
+if (want(15)) {
+  // Relics — the reward half of the hand (Phase 3b; this sweep graded the stat
+  // cards relics replaced, and it grades the same way).
+  line('## 15. Relics (the company-wide half of every reward hand)')
+  line('')
+  line('**What changed (Phase 3b).** Keepsakes (body-slot items that buffed the whole company)')
+  line('and team stat cards (rewards that buffed the whole company) did one job with two')
+  line('vocabularies. They are one pool of **relics** now: a run-long possession taken from')
+  line('a reward hand (every elite deals one, an act boss deals three). About half are no')
+  line('longer "+x%" but a **rule** — a ward, a cadence, a rush, a charter — and no relic sells')
+  line('plain "+x% damage", which removed one of the eight `damageMult` sources.')
+  line('')
+  line('**How they are graded.** A relic that acts inside a fight (a stat relic, or a rule the')
+  line('engine keeps) is applied alone — its mods as `teamMods`, exactly as `startWave` hands')
+  line('them over, its stats onto the hero — and graded on **stop rate** on four benches, as')
+  line('the stat cards were: §8\'s three on a physical Weaponmaster and §4\'s `magic` bench on a')
+  line('Stormcaller. A relic that changes the RUN (hires, Gate, merchants, XP, gold) cannot be')
+  line('seen in one wave, so it is graded on whole runs instead: held from the first node, on')
+  line('paired seeds, against the same runs without it.')
+  line('')
+  /**
+   * Six seeds rather than §8's four. A relic is a *fraction* of a mutation, so
+   * the cells have to be quieter to resolve one.
+   */
+  const CARD_SEEDS = [11, 137, 409, 1013, 2411, 5171]
+  /** How far a stated tradeoff must move a bench, in each direction, to be one. */
+  const CARD_EDGE = 0.02
+  /** …and how far below zero a relic's average may sit before it is a punishment. */
+  const CARD_TRAP = 0.02
+  interface CardBench { label: string; wave: WaveDef; hero: Sentinel; pin: number; blurb: string }
+  const CARD_BENCHES: CardBench[] = [
+    { label: 'swarm', wave: MUT_SCENARIOS.swarm.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.swarm.blurb },
+    { label: 'armour', wave: MUT_SCENARIOS.armour.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.armour.blurb },
+    { label: 'line', wave: MUT_SCENARIOS.line.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.line.blurb },
+    {
+      label: 'magic',
+      wave: AFFIX_SCENARIOS.magic.wave,
+      hero: AFFIX_SCENARIOS.magic.build,
+      pin: BENCH_PIN.magic,
+      blurb: 'a splash mystic — the half of the roster a STR card cannot reach',
+    },
+  ]
+  const cardBase = CARD_BENCHES.map((bch) =>
+    stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin, rules: BENCH_RULES }),
+  )
+  line('| Bench | What it loads | Baseline stop rate |')
+  line('|---|---|--:|')
+  CARD_BENCHES.forEach((b, i) => line(`| \`${b.label}\` | ${b.blurb} | ${pct(cardBase[i])} |`))
+  line('')
+  line(`${CARD_SEEDS.length} seeds per cell.`)
+  line('')
+  const RUN_RULE_RELICS = RELICS.filter((r) => r.rule)
+  const FIGHT_RELICS = RELICS.filter((r) => !r.rule && relicSupported(r) && r.grant)
+  line('| Relic | Kind | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |')
+  line('|---|---|---|--:|--:|--:|--:|--:|--:|---|')
+  const cardTier = new Map<ItemRarity, number[]>()
+  for (const relic of FIGHT_RELICS) {
+    const teamMods = relicTeamMods([relic.id])
+    const d = CARD_BENCHES.map(
+      (bch, i) =>
+        stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: 's3' }], bch.wave, CARD_SEEDS, {
+          enemyHpMult: bch.pin,
+          teamMods,
+          rules: BENCH_RULES,
+        }) - cardBase[i],
+    )
+    const m = mean(d)
+    const worst = Math.min(...d)
+    const best = Math.max(...d)
+    // The rarity ladder is read off the STAT half — a rule's value depends on the
+    // wave it meets, which is the point of a rule, and says nothing about tier.
+    if (relic.kind === 'stat') cardTier.set(relic.rarity, [...(cardTier.get(relic.rarity) ?? []), m])
+    line(
+      `| ${relic.name} | ${relic.kind} | ${RARITY[relic.rarity].label} | ${pp(d[0])} | ${pp(d[1])} | ${pp(d[2])} | ${pp(d[3])} | **${pp(m)}** | ${pp(worst)} | ${relic.downside ?? '—'} |`,
+    )
+    if (m < -CARD_TRAP) {
+      failures.push(
+        `Relic "${relic.name}" (${relic.rarity}) is a trap: it measures ${pp(m)} averaged over §15's four benches. A reward must not make the company worse.`,
+      )
+    }
+    if (relic.kind === 'rule' && best < CARD_EDGE) {
+      failures.push(`Rule relic "${relic.name}" changes nothing a fight can see: its best bench is ${pp(best)} (needs ≥ ${pp(CARD_EDGE)}).`)
+    }
+    if (relic.downside) {
+      if (best < CARD_EDGE) {
+        failures.push(`Relic "${relic.name}" is a pact with no upside: its best bench is ${pp(best)}. It charges "${relic.downside}" for nothing.`)
+      }
+      if (worst > -CARD_EDGE) {
+        failures.push(
+          `Relic "${relic.name}" claims "${relic.downside}" but costs nothing measurable: its worst bench is ${pp(worst)}. A plain upgrade wearing a pact label.`,
+        )
+      }
+    }
+  }
+  line('')
+  line('| Rarity (stat relics) | Relics | Mean value |')
+  line('|---|--:|--:|')
+  const CARD_TIERS: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
+  const tierMean = CARD_TIERS.map((r) => mean(cardTier.get(r) ?? [0]))
+  CARD_TIERS.forEach((r, i) => line(`| ${RARITY[r].label} | ${(cardTier.get(r) ?? []).length} | **${pp(tierMean[i])}** |`))
+  line('')
+  for (let i = 1; i < CARD_TIERS.length; i++) {
+    if (tierMean[i] < tierMean[i - 1]) {
+      failures.push(
+        `Relic rarity ladder is inverted: ${RARITY[CARD_TIERS[i]].label} stat relics mean ${pp(tierMean[i])}, below ${RARITY[CARD_TIERS[i - 1]].label} at ${pp(tierMean[i - 1])}. Rarity is the only signal the offer gives before the pick.`,
+      )
+    }
+  }
+
+  // ---- the run-rule half: whole runs, paired ---------------------------------
+  /** Paired runs per run-rule relic (adaptive line, zero meta). */
+  const RELIC_RUNS = Number(process.env.FW_RELIC_RUNS) || 150
+  const relicPolicy = policyById('adaptive')
+  const relicZero = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy }).won ? 1 : 0))
+  line(`**The run-rule relics, on whole runs.** Each held from the first node, ${RELIC_RUNS} paired runs on the adaptive line, against the same runs without it (zero meta ${pct(mean(relicZero))}):`)
+  line('')
+  line('| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |')
+  line('|---|---|---|--:|--:|')
+  for (const relic of RUN_RULE_RELICS) {
+    const wins = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: [relic.id] }).won ? 1 : 0))
+    const dlt = mean(wins) - mean(relicZero)
+    const tol = Math.max(HUB_TOLERANCE, pairedTolerance(wins, relicZero))
+    line(`| ${relic.name} | ${RARITY[relic.rarity].label} | ${relic.desc} | ${pct(mean(wins))} | ${dlt >= 0 ? '+' : '−'}${Math.abs(dlt * 100).toFixed(0)}±${(tol * 100).toFixed(0)}pt |`)
+    if (dlt + tol < 0) {
+      failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor). A relic is a reward.`)
+    }
+  }
+  line('')
+  const awaiting = RELICS.filter((r) => !relicSupported(r))
+  line(`**Declared, not dealt.** ${awaiting.length ? awaiting.map((r) => `${r.name} (\`${r.requires}\`)`).join(', ') : 'none'} — relics whose rule belongs to the combat lane's engine. \`ENGINE_CAPABILITIES\` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.`)
+  line('')
+  for (const r of relicPool({ unlocked: () => true })) {
+    if (!relicSupported(r)) failures.push(`Relic "${r.name}" is in the offer pool but needs \`${r.requires}\`, which this engine does not implement.`)
+  }
+  const plainDamage = RELICS.filter((r) => r.grant?.mods?.damageMult && r.grant.mods.damageMult > 1 && !r.downside)
+  line(`**No plain "+x% damage" relic:** ${plainDamage.length === 0 ? 'none in the pool' : plainDamage.map((r) => r.name).join(', ')}. Damage relics are pacts, which is the point.`)
+  line('')
+  if (plainDamage.length) failures.push(`Relic(s) ${plainDamage.map((r) => r.name).join(', ')} sell plain "+x% damage" — the damageMult source Phase 3b removed.`)
+}
+
+// -------------------------------------------------------------- Sweep 16
+if (want(16)) {
+  // Combat depth (Phase 3a): the behaviour kit, boss phases, sub-waves, Watch
+  // Commands and status interactions — each with a bench, a counter and a gate.
+  const combatDepth = runCombatDepth()
+  for (const l of combatDepth.md) line(l)
+  failures.push(...combatDepth.failures)
+  summary.push(combatDepth.summary)
+}
+
+// -------------------------------------------------------------- Sweep 17
+if (want(17)) {
+  line('## 17. Portrait twins — does a phone fight the same battle?')
+  line('')
+  line('**Why this exists.** A phone held upright fights on a **portrait twin** of the')
+  line('seeded field (`maps.ts` § Portrait battlefields): the landscape field transposed')
+  line('and padded, so the lane fills the tall live-wave Stage instead of a 390×228 strip.')
+  line('The seed still deals the landscape field (`pickBattleMap` never returns a twin);')
+  line('which twin is fought on is chosen per battle from the layout. That is only safe if')
+  line('the two are the same game — the Daily Watch deals one seed to every device, and a')
+  line('twin that were even a few points easier would make the phone the right way to')
+  line('play it. So the twin is checked twice: its geometry against the original, and its')
+  line('difficulty on the live engine.')
+  line('')
+  /** Path lengths may differ by at most this (the ±5% brief; the isometry gives 0). */
+  const TWIN_MAX_LENGTH_DIFF = 0.005
+  /** Per-slot coverage at every range may differ by at most this share of the original. */
+  const TWIN_MAX_COVERAGE_DIFF = 0.02
+  /** Stop-rate difference allowed across the battery (points). */
+  const TWIN_MAX_STOP_DIFF = 0.03
+  /** Mean Gate HP lost may differ by at most this share (or 0.25 HP, whichever is larger). */
+  const TWIN_MAX_LEAK_DIFF = 0.05
+  const TWIN_RANGES = [96, 150, 168]
+  line('| Field | Twin | Box | Path px (twin / original) | Slots | Worst per-slot coverage Δ (96 / 150 / 168px) | Worst slot-gap Δ |')
+  line('|---|---|---|--:|--:|---|--:|')
+  for (const land of ALL_MAPS) {
+    const tall = orientField(land, 'portrait')
+    const lenL = pathLength(land.path)
+    const lenT = pathLength(tall.path)
+    const covDiff = TWIN_RANGES.map((r) => {
+      const a = slotCoverage(land, r)
+      const b = slotCoverage(tall, r)
+      return Math.max(...land.slots.map((sl) => Math.abs(b[sl.id] - a[sl.id]) / Math.max(1, a[sl.id])))
+    })
+    let gapDiff = 0
+    for (const a of land.slots) {
+      for (const b of land.slots) {
+        const ta = tall.slots.find((x) => x.id === a.id)!
+        const tb = tall.slots.find((x) => x.id === b.id)!
+        gapDiff = Math.max(gapDiff, Math.abs(Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) - Math.hypot(ta.pos.x - tb.pos.x, ta.pos.y - tb.pos.y)))
+      }
+    }
+    line(
+      `| ${land.name} | \`${tall.id}\` | ${tall.width}×${tall.height} | ${Math.round(lenT)} / ${Math.round(lenL)} | ${tall.slots.length} / ${land.slots.length} | ${covDiff.map((d) => `${(d * 100).toFixed(1)}%`).join(' / ')} | ${gapDiff.toFixed(2)}px |`,
+    )
+    if (Math.abs(lenT / lenL - 1) > TWIN_MAX_LENGTH_DIFF) {
+      failures.push(`${land.name}'s portrait twin is ${((lenT / lenL - 1) * 100).toFixed(1)}% off the original's path length (max ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%): crossing time is a difficulty dial Threat does not multiply.`)
+    }
+    if (tall.slots.length !== land.slots.length || tall.slots.some((sl, i) => sl.id !== land.slots[i].id)) {
+      failures.push(`${land.name}'s portrait twin does not carry the same slots (placements are keyed by slot id and ride across orientations).`)
+    }
+    if (Math.max(...covDiff) > TWIN_MAX_COVERAGE_DIFF) {
+      failures.push(`${land.name}'s portrait twin changes what a slot sees by up to ${(Math.max(...covDiff) * 100).toFixed(1)}% (max ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}%) — a phone would be solving a different placement puzzle.`)
+    }
+  }
+  line('')
+  /**
+   * The battery: the §14c teams (3–5 random tier-2 specs, depth-scaled level and
+   * gear, best-coverage slots) at five depths and three node kinds, on the twin
+   * and on the original, same seeds. `baseHp` is the real 20 so the stop rate
+   * means something; Gate HP lost is summed over every fight.
+   */
+  const TWIN_DEPTHS: [number, EncounterKind][] = [[2, 'normal'], [4, 'boss'], [6, 'elite'], [8, 'normal'], [10, 'normal'], [12, 'boss']]
+  const TWIN_TEAMS = 8
+  line(`**Battery** — ${TWIN_TEAMS} random §14c-style companies × ${TWIN_DEPTHS.length} nodes (${TWIN_DEPTHS.map(([d, k]) => `d${d} ${k}`).join(', ')}) at the road's Threat, base ${MAX_BASE_HP}, identical seeds on both twins:`)
+  line('')
+  line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |')
+  line('|---|---|--:|--:|--:|--:|')
+  for (const land of ALL_MAPS) {
+    const res: Record<string, { cleared: number; lost: number; downs: number; n: number }> = {}
+    for (const field of [land, orientField(land, 'portrait')]) {
+      const acc = { cleared: 0, lost: 0, downs: 0, n: 0 }
+      const rr = new RNG(1717)
+      const order = bestSlots(field)
+      for (let t = 0; t < TWIN_TEAMS; t++) {
+        const size = 3 + Math.floor(rr.next() * 3)
+        const ids = Array.from({ length: size }, () => rr.pick(TIER2_NODES).id)
+        for (const [depth, kind] of TWIN_DEPTHS) {
+          const team = ids.map((id, i) => ({
+            sentinel: buildSpec(id, { level: mcLevel(depth), gearRarity: mcRarity(depth), seed: t * 10 + i, perkSeed: t * 10 + i }),
+            slotId: order[i],
+          }))
+          const m = runBattle({ team, depth, kind, map: field, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
+          acc.n++
+          if (m.cleared) acc.cleared++
+          acc.lost += m.baseHpLost
+          acc.downs += m.downs
+        }
+      }
+      res[orientationOf(field)] = acc
+      line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} | ${f2(acc.downs / acc.n)} |`)
+    }
+    const a = res.landscape
+    const b = res.portrait
+    const stopDiff = Math.abs(a.cleared / a.n - b.cleared / b.n)
+    const leakA = a.lost / a.n
+    const leakB = b.lost / b.n
+    if (stopDiff > TWIN_MAX_STOP_DIFF) {
+      failures.push(`${land.name}: the portrait twin's stop rate differs from the landscape field's by ${(stopDiff * 100).toFixed(1)}pt (max ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt) — the orientation a device picks is changing the game.`)
+    }
+    if (Math.abs(leakB - leakA) > Math.max(0.25, TWIN_MAX_LEAK_DIFF * leakA)) {
+      failures.push(`${land.name}: the portrait twin leaks ${f2(leakB)} Gate HP a fight against ${f2(leakA)} on the landscape field (max ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}%).`)
+    }
+  }
+  line('')
+  line(`**The gates.** Path length within ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%, the same slot ids, every slot's coverage within ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}% at ${TWIN_RANGES.join(' / ')}px, and on the battery a stop rate within ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt and Gate HP lost within ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.`)
+  line('')
+}
 
 // -------------------------------------------------------------- Summary
 line('## Verdict')
 line('')
+if (SECTIONS) {
+  line(`_Filtered run (\`FW_SECTIONS\`): sections ${[...SECTIONS].sort((a, b) => a - b).join(', ')} and their invariants only._`)
+  line('')
+}
 if (failures.length === 0) {
   line('✅ **All balance invariants passed.**')
 } else {
@@ -3225,38 +3320,16 @@ if (failures.length === 0) {
 line('')
 
 const out = md.join('\n')
-writeFileSync(new URL('./REPORT.md', import.meta.url), out)
+// A filtered run is a partial report: it must never overwrite the golden file.
+const outPath = new URL(SECTIONS ? './REPORT.sections.md' : './REPORT.md', import.meta.url)
+writeFileSync(outPath, out)
+if (SECTIONS) console.log(out)
 
-// Console summary
+// Console summary — one line per section, pushed by each section as it ran, so a
+// filtered run prints only the lines of the sections it ran (same order).
 console.log('=== Fieldwatch Balance ===')
-console.log(`Specializations: ${TIER2_NODES.length} | offense DPS median ${f1(offMed)}, spread ${f2(Math.max(...offDps) / Math.min(...offDps))}×`)
-console.log(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: fighter ×${f2(fillerScore.fighter)}, mystic ×${f2(fillerScore.mystic)}`)
-console.log(`Pressure ceiling (std team, depth 8): ×${f2(breakPoint)} (target ×${TARGET_BREAK_BAND[0]}–×${TARGET_BREAK_BAND[1]})`)
-console.log(`Monte Carlo: ${pct(winRate)} win rate (target ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}), avg depth ${f1(avgDepth)}/${NODES}, deaths on ${deathSpread} depths, boss kills ${pct(bossKillShare)}`)
-console.log(
-  `Fresh player REALISTIC (zero meta, 1 hero, ${START_GOLD}g): ${pct(freshReal.winRate)} win (band ${pct(FRESH_WIN_BAND[0])}-${pct(FRESH_WIN_BAND[1])}), ${f1(freshReal.avgDepth)}/${NODES} nodes, ${f1(freshReal.avgBattles)} battles, worst node ${pct(freshReal.cliffShare)}`,
-)
-console.log(`Fresh player STRICT floor: ${pct(freshSolo.winRate)} win, ${f1(freshSolo.avgDepth)}/${NODES} nodes | +2 recruits ${pct(freshRecruit.winRate)}`)
-console.log(
-  `Fresh run by starter (first-timer line): ${Object.entries(freshReal.byArch).map(([k, v]) => `${k} ${f1(v)} nodes`).join(', ')} | boss met at ×${f1(freshReal.bossThreat)}`,
-)
-console.log(
-  `Fresh-run routing spread: ${freshByPolicy.map((r) => `${r.short} ${pct(r.winRate)}`).join(', ')} | gated: ceiling on ${freshReal.short} (${pct(freshReal.winRate)} vs ${pct(FRESH_WIN_BAND[1])}), floor on ${freshBest.short} (${pct(freshBest.winRate)} vs ${pct(FRESH_WIN_BAND[0])})`,
-)
-console.log(
-  `Hub (n=${HUB_RUNS}/cell, gated lines ${HUB_GATED_POLICIES.join('/')}): ${HUB_STATES.map(([label]) => {
-    const cells = hubCells.get(label)!
-    const worst = Math.min(
-      ...HUB_GATED_POLICIES.map((id) => cells[POLICIES.findIndex((x) => x.id === id)].winRate - hubZero[id].winRate),
-    )
-    return `${label} ${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`
-  }).join(' | ')}`,
-)
-console.log(
-  `Banner ladder (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `B${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`,
-)
-console.log(combatDepth.summary)
-console.log(`Report written to balance/REPORT.md`)
+for (const s of summary) console.log(s)
+console.log(SECTIONS ? `Sections ${[...SECTIONS].sort((a, b) => a - b).join(', ')} written to ${outPath.pathname}` : `Report written to balance/REPORT.md`)
 if (failures.length) {
   console.log(`\n❌ ${failures.length} invariant(s) failed:`)
   for (const fmsg of failures) console.log('  - ' + fmsg)

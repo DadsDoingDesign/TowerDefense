@@ -44,3 +44,4 @@ docs/ui-audit/
 
 # Agent worktrees
 .claude/worktrees/
+balance/REPORT.sections.md
