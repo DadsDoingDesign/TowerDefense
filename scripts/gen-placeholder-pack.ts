@@ -156,7 +156,7 @@ async function fighterAtk(): Promise<void> {
   const F = 6, CW = 98, CH = 90
   const body = new Px(CW * F, CH)
   const anch = new Px(CW * F, CH)
-  const REACH = [-4, -2, 6, 14, 10, 2]
+  const REACH = [-4, -2, 6, 12, 10, 2]
   const LIFT = [1, 2, 1, 0, 0, 0]
   for (let f = 0; f < F; f++) {
     const cx = f * CW + CW / 2

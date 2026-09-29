@@ -92,6 +92,13 @@ const packsLoaded = new Set<string>()
 /** Images requested but not yet settled. Ready means started and nothing pending. */
 let pending = 0
 let started = false
+/**
+ * Bumped every time an image settles (loads OR fails). A cache of anything
+ * built from sprites — the paper-doll composites in `loadout.ts` — keys on it,
+ * so a result built while art was still missing is rebuilt once more art has
+ * arrived, and not on every frame in between.
+ */
+let generation = 0
 const readyCbs: (() => void)[] = []
 
 function settle(): void {
@@ -106,6 +113,7 @@ function load(key: string, src: string): void {
   const img = new Image()
   img.onload = img.onerror = () => {
     pending--
+    generation++
     settle()
   }
   img.src = src
@@ -148,6 +156,9 @@ export function getSprite(pack: string, name: string): HTMLImageElement | undefi
 }
 
 export const spritesReady = (): boolean => started && pending === 0
+
+/** See {@link generation}: changes whenever any requested sprite settles. */
+export const spriteGeneration = (): number => generation
 
 /** Fire cb once the requested sprites have loaded (or immediately if already so). */
 export function onSpritesReady(cb: () => void): void {

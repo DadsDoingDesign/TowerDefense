@@ -28,7 +28,7 @@
  * so a composite is a first-class input and needs no special case there.
  */
 import { anchorsFor, gearGrip, poseIndexFor, GEAR_POSE_CELLS } from './anchors'
-import { getSprite } from './sprites'
+import { getSprite, spriteGeneration } from './sprites'
 import { onThemeChange } from './themes'
 
 /** What a hero is wearing, as gear art names (lowercased item nouns). */
@@ -48,12 +48,28 @@ export const loadoutKey = (lo: Loadout): string =>
   `${lo.mainHand ?? '-'}|${lo.offHand ?? '-'}|${lo.body ?? '-'}`
 
 /**
- * Composites are keyed by pack, strip and loadout. Bounded because a long run
- * equips a lot: without a cap this grows for the whole session, and each entry
- * holds a full strip canvas.
+ * Composites are keyed by pack, strip and loadout, in a small LRU. Bounded
+ * because a long run equips a lot: without a cap this grows for the whole
+ * session, and each entry holds a full strip canvas.
+ *
+ * **Identity is the point.** `pixmap()` caches its bake per source object, so
+ * handing the renderer a fresh canvas every frame re-bakes (ring and all) every
+ * frame — measured at ~4.3 ms per geared hero per frame when a composite was
+ * incomplete and therefore never cached. Incomplete composites are cached now
+ * too, tagged with the sprite-load generation they were built at: they are
+ * reused until more art arrives (the generation moves), and rebuilt once then.
+ * Art that 404s never arrives, so its composite settles into the cache instead
+ * of being rebuilt forever.
  */
 const CACHE_MAX = 24
-const composites = new Map<string, HTMLCanvasElement>()
+interface Composite {
+  canvas: HTMLCanvasElement
+  /** Every layer was drawn — valid until the cache is cleared. */
+  complete: boolean
+  /** `spriteGeneration()` at build time; an incomplete entry expires when it moves. */
+  generation: number
+}
+const composites = new Map<string, Composite>()
 
 /** Drop everything. A new pack invalidates every layer in every composite. */
 export function clearLoadoutCache(): void {
@@ -65,14 +81,29 @@ export function clearLoadoutCache(): void {
 // new pack and draw last season's hero holding this season's sword.
 onThemeChange(clearLoadoutCache)
 
-function remember(key: string, canvas: HTMLCanvasElement): HTMLCanvasElement {
-  // Map preserves insertion order, so the first key is the oldest.
-  if (composites.size >= CACHE_MAX) {
-    const oldest = composites.keys().next().value
-    if (oldest !== undefined) composites.delete(oldest)
+/** A still-valid cached composite, refreshed as most-recently-used. */
+function recall(key: string): HTMLCanvasElement | null {
+  const hit = composites.get(key)
+  if (!hit) return null
+  if (!hit.complete && hit.generation !== spriteGeneration()) {
+    composites.delete(key)
+    return null
   }
-  composites.set(key, canvas)
-  return canvas
+  // Map iteration is insertion order: re-inserting moves it to the young end.
+  composites.delete(key)
+  composites.set(key, hit)
+  return hit.canvas
+}
+
+function remember(key: string, entry: Composite): HTMLCanvasElement {
+  composites.delete(key)
+  while (composites.size >= CACHE_MAX) {
+    const oldest = composites.keys().next().value
+    if (oldest === undefined) break
+    composites.delete(oldest)
+  }
+  composites.set(key, entry)
+  return entry.canvas
 }
 
 /**
@@ -98,7 +129,7 @@ function drawHeld(
   const cw = Math.round(sheet.naturalWidth / GEAR_POSE_CELLS)
   const ch = sheet.naturalHeight
   if (cw <= 0 || ch <= 0) return false
-  const grip = gearGrip(role, pose, cw, ch)
+  const grip = gearGrip(pack, role, pose, cw, ch)
   ctx.drawImage(sheet, pose * cw, 0, cw, ch, atX - grip.x, atY - grip.y, cw, ch)
   return true
 }
@@ -147,10 +178,14 @@ function drawOverlay(
  * Layer order is back-hand → body → armour → front-hand, which is what puts a
  * shield behind the torso and a sword in front of it.
  *
- * **An incomplete composite is never cached.** Sprites load asynchronously, so
- * the first few frames after a pack switch can ask for gear whose PNG has not
- * arrived. Caching that would freeze a hero holding nothing for the rest of the
- * session; instead the partial result is drawn once and rebuilt next frame.
+ * Gear only ever lands on anchors drawn for THIS pack (see `anchors.ts`): a
+ * pack with no anchors for the strip returns the bare body — the same object
+ * every call, so the bake behind it is cached too.
+ *
+ * Each frame's layers are clipped to that frame's cell. A weapon reaching past
+ * its cell used to paint into the NEXT frame of the strip, where it flickered
+ * in for one frame of the following pose; `npm run anchors:check` now refuses
+ * art that would need the clip, and the clip keeps a miss from bleeding.
  */
 export function heroStrip(
   pack: string,
@@ -162,15 +197,20 @@ export function heroStrip(
   const body = getSprite(pack, `${archetype}_${anim}`)
   if (!body) return null
   if (isBare(lo) || typeof document === 'undefined') return body
+  const anchors = anchorsFor(pack, `${archetype}_${anim}`)
+  if (!anchors) return body
 
   const key = `${pack}|${archetype}|${anim}|${frames}|${loadoutKey(lo!)}`
-  const hit = composites.get(key)
+  const hit = recall(key)
   if (hit) return hit
 
   const cw = Math.round(body.naturalWidth / frames)
   const ch = body.naturalHeight
   if (cw <= 0 || ch <= 0) return body
 
+  // Read before drawing: an image that lands mid-build must still expire this
+  // entry, so the generation is the one the build STARTED from.
+  const generation = spriteGeneration()
   const canvas = document.createElement('canvas')
   canvas.width = cw * frames
   canvas.height = ch
@@ -180,13 +220,17 @@ export function heroStrip(
   // so there is nothing to interpolate. Smoothing on would soften the grip seam.
   ctx.imageSmoothingEnabled = false
 
-  const anchors = anchorsFor(`${archetype}_${anim}`)
   let complete = true
 
   for (let f = 0; f < frames; f++) {
     const dx = f * cw
-    const a = anchors?.[f] ?? null
+    const a = anchors[f] ?? null
     const pose = poseIndexFor(anim, f, frames)
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(dx, 0, cw, ch)
+    ctx.clip()
 
     // Behind the body.
     if (lo!.offHand && a && !drawHeld(ctx, pack, `gear_${lo!.offHand}`, pose, dx + a.ox, a.oy)) complete = false
@@ -200,12 +244,9 @@ export function heroStrip(
 
     // In front.
     if (lo!.mainHand && a && !drawHeld(ctx, pack, `gear_${lo!.mainHand}`, pose, dx + a.mx, a.my)) complete = false
+
+    ctx.restore()
   }
 
-  // No anchors authored yet means gear had nowhere to attach and the composite
-  // is just the body — not worth a cache slot, and it must rebuild once the
-  // anchor table lands.
-  if (!complete || !anchors) return canvas
-
-  return remember(key, canvas)
+  return remember(key, { canvas, complete, generation })
 }
