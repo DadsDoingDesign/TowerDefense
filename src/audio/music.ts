@@ -33,7 +33,8 @@
  * the music volume and mute all apply for free — this file never touches
  * `destination`.
  */
-import { audioMuted, musicBus, onAudioReady } from './audio'
+import { audioMuted, musicBus, onAudioReady, setAudioHidden, setMusicActive, wakeAudio } from './audio'
+import { CUE_LEVEL_DB, dbToGain } from './mix'
 
 export type MusicCue = 'hub' | 'battle'
 
@@ -185,6 +186,9 @@ const BATTLE: CueDef = {
     // --- drums -------------------------------------------------------------
     if (i === 0 || i === 8 || i === 11) {
       note(128, t, 0.13, 0.34, { type: 'sine', to: 44, attack: 0.002 })
+      // The beater. A 128→44 Hz sine is inaudible on a phone speaker; a
+      // 5 ms click at 3 kHz is what tells a phone there is a kick at all.
+      perc(t, 0.005, 0.14, 2400, 4200)
     }
     if (i === 4 || i === 12) {
       perc(t, 0.15, 0.16, 1400, 9000, 0.25)
@@ -196,6 +200,9 @@ const BATTLE: CueDef = {
     if (i % 2 === 0) {
       const oct = i === 6 || i === 14 ? 12 : 0
       note(hz(ch.root - 12 + oct), t, sd * 1.7, 0.2, { type: 'sawtooth', lp: 700, attack: 0.006 })
+      // Octave-up triangle: the 55 Hz root is below any phone speaker, and
+      // this is what lets the line (and its harmony) survive one.
+      note(hz(ch.root + oct), t, sd * 1.5, 0.06, { type: 'triangle', attack: 0.006 })
     }
 
     // --- arpeggio: 16ths through the chord, two octaves, with a rest that
@@ -241,6 +248,26 @@ const HUB: CueDef = {
 }
 
 const CUES: Record<MusicCue, CueDef> = { hub: HUB, battle: BATTLE }
+
+/**
+ * Which cues pick up where they left off. The hub restarted at bar 1 every
+ * time it came back — after every wave, every menu — so the player heard the
+ * same four bars of it all session. It now resumes at the start of the bar it
+ * was in. The battle cue deliberately does not: its first bar landing as a
+ * change is the point of it.
+ */
+const RESUMES: Record<MusicCue, boolean> = { hub: true, battle: false }
+/** Each cue's step index when it last stopped. */
+const position: Record<MusicCue, number> = { hub: 0, battle: 0 }
+
+/** Where a cue should start: bar-aligned resume, or bar 1. Exported for tests. */
+export function resumeStep(cue: MusicCue, stoppedAt: number): number {
+  if (!RESUMES[cue]) return 0
+  const bars = CUES[cue].bars.length
+  // Bar-aligned so the pad (struck on step 0 of a bar) comes in with the
+  // fade, and wrapped to one lap of the progression so it never grows.
+  return (Math.floor(Math.max(0, stoppedAt) / 16) % bars) * 16
+}
 
 /* -------------------------------------------------------------- transport */
 
@@ -289,16 +316,27 @@ function fadeOut(seconds: number): void {
   setTimeout(() => dying.disconnect(), seconds * 1000 + 2500)
 }
 
+/** Stop the current cue, remembering where it was. */
+function stopPlaying(fade: number): void {
+  if (!playing) return
+  position[playing] = stepIndex
+  fadeOut(fade)
+  stopTimer()
+  playing = null
+  setMusicActive(false)
+}
+
 function startTrack(cue: MusicCue, fadeIn: number): void {
   const b = musicBus()
   if (!b) return
   bus = b
   track = b.ctx.createGain()
   track.gain.setValueAtTime(0.0001, b.ctx.currentTime)
-  track.gain.linearRampToValueAtTime(1, b.ctx.currentTime + fadeIn)
+  track.gain.linearRampToValueAtTime(dbToGain(CUE_LEVEL_DB[cue]), b.ctx.currentTime + fadeIn)
   track.connect(b.out)
   playing = cue
-  stepIndex = 0
+  stepIndex = resumeStep(cue, position[cue])
+  setMusicActive(true)
   nextTime = b.ctx.currentTime + 0.08
   stopTimer()
   timer = setInterval(pump, TICK_MS)
@@ -342,8 +380,10 @@ export function playMusic(cue: MusicCue | null): void {
 function apply(): void {
   const b = musicBus()
   if (!b) {
-    // No context yet (or still locked). `onAudioReady` will call back.
+    // No context yet, still locked, or asleep. `onAudioReady` will call back
+    // once it runs; if we suspended it to save power, this is what wakes it.
     bindReady()
+    if (wanted && !audioMuted() && !suspended) wakeAudio()
     return
   }
   bus = b
@@ -352,11 +392,7 @@ function apply(): void {
     // Muted: stop performing rather than performing into a gain of zero. The
     // master gain already silences it; this is about not spending a phone's
     // battery on notes nobody can hear.
-    if (playing) {
-      fadeOut(0.15)
-      stopTimer()
-      playing = null
-    }
+    stopPlaying(0.15)
     return
   }
   if (wanted === playing) {
@@ -365,11 +401,7 @@ function apply(): void {
     if (playing && timer === null) startTrack(playing, 0.6)
     return
   }
-  if (playing) {
-    fadeOut(0.5)
-    stopTimer()
-    playing = null
-  }
+  stopPlaying(0.5)
   if (wanted) startTrack(wanted, 1.2)
 }
 
@@ -391,16 +423,16 @@ function bindReady(): void {
  */
 export function suspendMusic(): void {
   suspended = true
-  if (playing) {
-    fadeOut(0.2)
-    stopTimer()
-    playing = null
-  }
+  stopPlaying(0.2)
+  // With the score stopped, the audio engine can put the context to sleep
+  // once whatever is still ringing has finished.
+  setAudioHidden(true)
 }
 
 /** The tab is back — resume whatever cue was wanted. */
 export function resumeMusic(): void {
   suspended = false
+  setAudioHidden(false)
   apply()
 }
 

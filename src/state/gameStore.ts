@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { hashSeed, idCounterState, newRunSeed, restoreIdCounter, streamRng } from '../game/core/rng'
 import { GameEngine, type BattleResult } from '../game/engine/engine'
 import { applyXp, buildName, evolutionPending, evolveInto, xpToReach } from '../game/engine/leveling'
-import { gameSfx, sfx, sfxRarity } from '../audio/audio'
+import { gameSfx, sfx, sfxRarity, sfxReward } from '../audio/audio'
 import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
 import { pickBattleMap } from '../game/data/maps'
 import { createSentinel, nameCounterState, restoreNameCounters, startingRoster } from '../game/data/sentinels'
@@ -1581,6 +1581,7 @@ export const useGameStore = create<GameState>((set, get) => {
       for (const key of Object.keys(next)) if (next[key] === selectedSentinelId) next[key] = null
       next[slotId] = selectedSentinelId
       set({ placements: next, selectedSentinelId: null })
+      sfx('deploy')
     },
 
     clearSlot: (slotId) => {
@@ -1588,6 +1589,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (battlePhase !== 'setup') return
       if (!placements[slotId]) return
       set({ placements: { ...placements, [slotId]: null } })
+      sfx('undeploy')
     },
 
     setSpeed: (s) => set({ speed: s }),
@@ -2034,17 +2036,17 @@ export const useGameStore = create<GameState>((set, get) => {
        * ---- ceremony (Phase 3) ----------------------------------------------
        *
        * Taking a reward is one of the two emotional peaks of a roguelite run
-       * and it was a UI click sample over a state merge. It now gets the click
-       * AND a sting whose length, brightness and reverb follow the rarity of
-       * what was actually taken — a mythic must not sound like a common.
+       * and it was a UI click sample over a state merge. An item now gets a
+       * sting whose length, brightness and reverb follow its rarity — ALONE,
+       * because the `reward` sample layered on top masked the ladder by 16–26
+       * dB. Anything without a sting gets the (trimmed) `reward` sample.
        *
        * Rarity is on the card in words, as a letter and as a pip count, so this
        * is a second channel for something already legible and never the only
        * one.
        */
-      sfx('reward')
-      if (card.kind === 'item' && card.item) sfxRarity(card.item.rarity)
-      else sfx('upgrade')
+      sfxReward(card.kind === 'item' ? card.item?.rarity : undefined)
+      if (card.kind !== 'item' || !card.item) sfx('upgrade')
       let nextRoster = roster
       let nextInv = inventory
       let nextMods = runMods

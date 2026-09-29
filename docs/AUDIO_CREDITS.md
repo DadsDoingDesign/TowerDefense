@@ -4,24 +4,30 @@ Every sound Fieldwatch can make, where it came from, and under what terms. This
 game is a commercial product, so the rule is simple: **if a licence cannot be verified
 from a file shipped in this repository, the audio does not ship.**
 
-Last verified: 2026-08-21.
+Last verified: 2026-09-29.
 
 ---
 
-## 1. Interface samples — 10 × `.wav`
+## 1. Interface samples — 8 × `.wav`
 
 | | |
 |---|---|
-| **Files** | `public/assets/audio/ui/{back,click,close,confirm,equip,error,open,reward,select,toggle}.wav` |
+| **Files** | `public/assets/audio/ui/{back,click,close,confirm,equip,error,reward,toggle}.wav` |
 | **Pack** | Kenney, *Interface Sounds* (1.0), created 2020-02-11 |
 | **Source** | <https://kenney.nl> |
 | **Licence** | **CC0 1.0 Universal** (public domain dedication) |
 | **Licence text in repo** | `public/assets/audio/ui/KENNEY-LICENSE.txt` — ships alongside the files |
 | **Attribution required** | **No.** The pack's own licence file states crediting Kenney "is not mandatory". |
 | **Commercial use** | Yes, explicitly: "free to use in personal, educational and commercial projects". |
-| **Payload** | 236 KB total, precached by the service worker |
+| **Payload** | ~190 KB total, precached by the service worker |
 
 Credited here anyway, because not being obliged to is not a reason not to.
+
+`open.wav` and `select.wav` from the same pack used to ship too. Nothing played
+`open`, and `select` only previewed a legacy slider, yet both were fetched at
+boot and precached on install, so they were removed (audio Phase 1). Each sample
+plays at a per-file loudness trim (`UI_TRIM_DB` in `src/audio/mix.ts`) because
+the pack is peak-normalised rather than loudness-matched.
 
 ---
 
@@ -35,10 +41,15 @@ Credited here anyway, because not being obliged to is not a reason not to.
 | **Payload** | **0 bytes** of audio assets |
 
 Every combat sound — `shoot`, `hit`, `crit`, `death`, `down`, `leak`, `coin`,
-`wave`, `clear`, `victory`, `defeat`, `upgrade`, `evolve`, and the five
-rarity stings — is built from oscillators, one shared noise buffer and a
-generated convolution impulse response. Nothing is fetched and nothing is
-sampled from any third-party recording.
+`wave`, `clear`, `victory`, `defeat`, `upgrade`, `evolve`, `deploy`,
+`undeploy`, and the five rarity stings — is built from oscillators, one
+shared noise buffer and a generated convolution impulse response. Nothing is
+fetched and nothing is sampled from any third-party recording.
+
+Levels, the UI-sample trims, the per-bus makeup and the master chain (glue
+compressor → limiter) are data in `src/audio/mix.ts`, each with the harness
+measurement that set it. Default mix: ≈ −18 LUFS integrated in battle, ≈ −22
+in the hub, true peak ≤ −2 dBTP.
 
 ---
 
@@ -98,6 +109,11 @@ information the music does not.
   half you can drop on its own.
 * **A hidden tab** suspends it, through the app's single `visibilitychange`
   lifecycle (`src/state/lifecycle.ts`) — no second listener.
+* **The hub cue resumes** at the start of the bar it stopped in, rather than
+  from bar 1 after every wave. The battle cue always starts at bar 1.
+* **The AudioContext itself is suspended** when nothing can be heard — muted,
+  hidden with nothing ringing, or 8 s of silence with the music off — and
+  woken by the next sound (policy: `shouldSuspend` in `mix.ts`).
 * Never the only channel for anything: the score carries no information, and
   every event it accompanies is also stated in text and colour.
 

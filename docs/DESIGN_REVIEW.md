@@ -1963,3 +1963,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   build on any such overhang. The composite cache is an LRU that also keeps
   incomplete composites (keyed by sprite-load generation): 60 frames of an
   unauthored-weapon loadout went from a re-bake per frame to 2.8 ms total.
+
+- **2026-09-29 — audio Phase 1: loudness, phone speakers, and the silent
+  deploy.** Rendered every cue through the OfflineAudioContext harness and
+  measured (ebur128 / pyloudnorm, plus a 4th-order 400 Hz HPF as the phone).
+  Problems: the whole game ~10 LU too quiet (battle −26.5, hub −34.3 LUFS-I);
+  UI samples peak- not loudness-normalised (35 LU spread, a tap louder than a
+  crit, `reward` burying the rarity ladder); hit/leak/kick energy all under
+  250 Hz, so on a phone the leak warning was quieter than the music; deploying
+  a hero silent. Fixes: per-sample trims, bus makeup + glue/limiter chain
+  (battle −16.6 at 3× / −18.2 at 1×, hub −21.9, TP ≤ −2 dBTP), phone presence
+  layers (hit 2.6 dB under the score's median → 3.1 over; leak now 7.7 dB over
+  the score's p90), an even rarity ladder (~1.9 LU steps), a deploy "thock",
+  context suspension when inaudible, and hub-cue resume. Hierarchy re-checked:
+  crit > hit > shoot; wave/clear/victory above combat. Numbers live in
+  `src/audio/mix.ts`.
