@@ -1,8 +1,16 @@
 # Fieldwatch — project notes for Claude
 
 A roguelite tower-defense autobattler. Vite + React + TypeScript + Canvas 2D +
-Zustand. Art direction: **Tiny Swords** (Pixel Frog, CC0) — the `tinyswords`
-sprite pack/theme is the default.
+Zustand. Art direction: **Tiny Swords** (Pixel Frog) — **old CC0 build only**;
+the `tinyswords` sprite pack/theme is the default. Never import files from the
+current Tiny Swords download (not CC0); `npx tsx scripts/harvest-cc0.ts --check`
+verifies provenance.
+
+**This is proprietary, commercial software** (see `LICENSE`). Every third-party
+asset or package added must allow commercial use and be recorded in
+`public/licenses/THIRD_PARTY_NOTICES.md` (plus `CC0-MANIFEST.md` /
+`sprites/CREDITS.md` / `docs/AUDIO_CREDITS.md` for its category). No CC-BY-SA /
+GPL / non-commercial material, and nothing without a verifiable licence.
 
 ## Working practice — review after every task
 
@@ -48,4 +56,6 @@ result. Append a short note to the review log when you're done.
   and each pack declares what it actually ships.
 - Keep the enemy lane and build slots visually clear — decoration frames the
   map at its margins (see the review checklist).
-- Typecheck with `npx tsc --noEmit` before committing.
+- Typecheck with `npm run typecheck` (`tsc -b`) before committing. Plain
+  `npx tsc --noEmit` checks nothing: the root tsconfig has `"files": []` and
+  only `-b` follows its project references.

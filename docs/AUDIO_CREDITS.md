@@ -1,7 +1,7 @@
 # Audio provenance and licences
 
 Every sound Fieldwatch can make, where it came from, and under what terms. This
-repository is public, so the rule is simple: **if a licence cannot be verified
+game is a commercial product, so the rule is simple: **if a licence cannot be verified
 from a file shipped in this repository, the audio does not ship.**
 
 Last verified: 2026-08-21.

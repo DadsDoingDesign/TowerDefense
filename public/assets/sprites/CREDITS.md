@@ -13,8 +13,10 @@ required; provenance is recorded for reference, courtesy, and — for Tiny Sword
 > > is always welcome. **You may not redistribute, resell, or repackage the
 > > assets, even if the files are modified.**"
 >
-> This repository is public, so every PNG in it is a redistribution. Pixel Frog
-> was asked about this exact case — a public GitHub starter kit — and declined.
+> A web game serves its PNGs as loose, downloadable files, which is exactly the
+> "repackage" case, and this repository was public for most of its history. Pixel Frog was
+> asked about a public GitHub starter kit and declined. Keep the current build out
+> entirely, private repo or not.
 >
 > Pixel Frog kept the older public-domain build as a **separate download** named
 > `TS_old version_CC0 Licensed`. **Only that build may be shipped here.** Anything

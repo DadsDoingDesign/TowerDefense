@@ -4,11 +4,13 @@
 dimensions, frame counts, anchoring rules and file names the engine requires. It exists so a
 from-scratch art pack can be produced that drops in with **zero code changes**.
 
-**Why from scratch.** The current pack is Tiny Swords, which is no longer CC0. Its licence reads:
-*"You may not redistribute, resell, or repackage the assets, even if the files are modified."*
-This repository is public, so every one of those PNGs is a redistribution. **All 45 sprite files
-and both FX sheets must be replaced.** The 78-icon atlas is generated from source code in this
-repo and is the one raster asset that does *not* need relicensing.
+**Why from scratch.** *Corrected 2026-09-29:* this is a brand and quality decision, **not** a
+licence requirement. The shipped pack comes from the **old CC0 build** of Tiny Swords (verified
+by `scripts/harvest-cc0.ts --check` and a pixel comparison against the CC0 mirror). CC0 is
+irrevocable and allows commercial use. Only the *current* Tiny Swords download carries the
+restrictive "may not redistribute… even if modified" licence, and none of it is used. The reasons
+to replace the art are distinctiveness for a commercial release and gaps in the CC0 set (no
+caster, bosses reuse tier-1 art). The 78-icon atlas is generated from source in this repo.
 
 **Status of the numbers below.** Every frame count and **drawn** size in this document was measured
 live from the running game via a `drawImage` census, not read off the source files or inferred.
