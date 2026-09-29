@@ -18,6 +18,7 @@ const files = [
   'sw.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
+  'social/og-image.png',
   'licenses/OFL.txt',
   'assets/index-abc.js',
   'assets/index-abc.css',
@@ -82,6 +83,11 @@ describe('planPrecache', () => {
         'assets/deco/tinyswords/deco_01.png',
       ]),
     )
+  })
+
+  it('ships the link-preview card but never precaches it', () => {
+    expect(plan.unreachable).toContain('social/og-image.png')
+    expect(plan.optional).not.toContain('social/og-image.png')
   })
 
   it('never precaches the worker or licence text', () => {
