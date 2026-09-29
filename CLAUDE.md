@@ -40,6 +40,12 @@ result. Append a short note to the review log when you're done.
   components outside `shell/` are `src/ui/components/RunMapView.tsx` and
   `EvolutionModal.tsx`, both rendered by the shell. Eager non-shell CSS those
   (and BattleCanvas) need lives in `src/styles/app.css`.
+- Service worker: generated after every build by `build/pwa.ts` from the
+  template `src/sw/sw.template.js`; registration and the "update ready" signal
+  (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
+  `src/ui/UpdateNotice.tsx`. A new build WAITS; it never takes over a running
+  page. The precache is derived from the ACTIVE theme's pack (`packAssetPaths`
+  in `sprites.ts`) plus whatever the emitted code names — see `planPrecache`.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far.
