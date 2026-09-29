@@ -1112,6 +1112,34 @@ on both fields. Metric: **base HP lost** per node (lower is better), mean over t
 
 Burn keeps its audit-era arithmetic: it is resisted by the burning tower's damage type through the same `takenMult` the tick differ re-runs, so a spread burn is resisted exactly as the burn it came from.
 
+## 17. Portrait twins — does a phone fight the same battle?
+
+**Why this exists.** A phone held upright fights on a **portrait twin** of the
+seeded field (`maps.ts` § Portrait battlefields): the landscape field transposed
+and padded, so the lane fills the tall live-wave Stage instead of a 390×228 strip.
+The seed still deals the landscape field (`pickBattleMap` never returns a twin);
+which twin is fought on is chosen per battle from the layout. That is only safe if
+the two are the same game — the Daily Watch deals one seed to every device, and a
+twin that were even a few points easier would make the phone the right way to
+play it. So the twin is checked twice: its geometry against the original, and its
+difficulty on the live engine.
+
+| Field | Twin | Box | Path px (twin / original) | Slots | Worst per-slot coverage Δ (96 / 150 / 168px) | Worst slot-gap Δ |
+|---|---|---|--:|--:|---|--:|
+| The Green Line | `greenline-tall` | 620×960 | 2290 / 2290 | 6 / 6 | 0.0% / 0.0% / 0.0% | 0.00px |
+| The Kiln Road | `kilnroad-tall` | 620×960 | 2300 / 2300 | 6 / 6 | 0.0% / 0.0% / 0.0% | 0.00px |
+
+**Battery** — 8 random §14c-style companies × 6 nodes (d2 normal, d4 boss, d6 elite, d8 normal, d10 normal, d12 boss) at the road's Threat, base 20, identical seeds on both twins:
+
+| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |
+|---|---|--:|--:|--:|--:|
+| The Green Line | landscape (`greenline`) | 48 | 94% | 1.56 | 0.46 |
+| The Green Line | portrait (`greenline-tall`) | 48 | 94% | 1.56 | 0.46 |
+| The Kiln Road | landscape (`kilnroad`) | 48 | 94% | 1.25 | 0.54 |
+| The Kiln Road | portrait (`kilnroad-tall`) | 48 | 94% | 1.25 | 0.54 |
+
+**The gates.** Path length within ±0.5%, the same slot ids, every slot's coverage within 2% at 96 / 150 / 168px, and on the battery a stop rate within 3pt and Gate HP lost within ±5% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.
+
 ## Verdict
 
 ✅ **All balance invariants passed.**

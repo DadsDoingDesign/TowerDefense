@@ -3,9 +3,10 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 
 /**
- * The battlefields. Logical coordinates are 960x560 on every one of them; the
- * renderer composes at exactly that size and blits down, so the field
- * dimensions are a fixed contract, not a per-map choice.
+ * The battlefields. Every landscape field is 960x560 logical px; the renderer
+ * composes at exactly the map's own size and blits down, so the field
+ * dimensions are a fixed contract, not a per-map choice. Each one also has a
+ * 620x960 portrait twin a phone fights on (see § Portrait battlefields below).
  *
  * ---------------------------------------------------------------------------
  * Why there is more than one (WS8)
@@ -152,6 +153,115 @@ export const ALL_MAPS: readonly GameMap[] = [FIRST_MAP, KILN_MAP]
 
 /** The map with this id, or null if this build has never heard of it. */
 export const mapById = (id: string): GameMap | null => ALL_MAPS.find((m) => m.id === id) ?? null
+
+/**
+ * ---------------------------------------------------------------------------
+ * Portrait battlefields
+ * ---------------------------------------------------------------------------
+ *
+ * A 960×560 landscape field on a portrait phone is width-bound: at 390×844 in
+ * a live wave the Stage is 390×573 and the field used 390×228 of it, with ~170
+ * px of decorative forest above and below (more on a 430×932). The lane is the
+ * subject of the game and it was 40% of the screen it had.
+ *
+ * So every field ships a PORTRAIT TWIN, drawn tall, and a phone fights on it.
+ *
+ * **The twin is the landscape field under an isometry**, not a redrawn map: the
+ * transpose `(x, y) → (y + PORTRAIT_PAD, x)`, a reflection across the diagonal
+ * plus a shift. Rather than authoring a second path by hand and then tuning it
+ * until it measures "close", the twin is exactly as long (±0 px), has the same
+ * six slots, and every slot sees exactly the same road at every range, every
+ * aura pair is the same distance apart, and the order in which the column meets
+ * each slot is unchanged. Balance does not *transfer*, it is identical by
+ * construction — and `balance/report.ts` §17 proves it on the live engine (a
+ * geometry check plus a stop-rate / Gate-HP battery at several depths), so any
+ * future axis-dependent rule in the sim (a lob that falls "down", a spawn edge
+ * that assumes x) fails the gate instead of quietly making phones easier.
+ *
+ * That matters more than it looks: the **Daily Watch deals one seed to every
+ * player**, on whatever device they own. A portrait twin that was "within 3%"
+ * would make the daily a different puzzle on a phone than on a desk. An
+ * isometric one makes it the same puzzle turned on its side.
+ *
+ * The transpose sends the landscape's left edge to the top: the column enters
+ * at the top of a phone screen and walks down toward the Gate at the bottom,
+ * which is where the party row and the wave strip are — the fight moves toward
+ * the player's thumb. `PORTRAIT_PAD` widens the field by 30 px either side so
+ * the meadow fills a 390-wide Stage (the field is height-bound there: 573/960
+ * = 0.597, so it can be up to 653 wide before width starts to bind).
+ *
+ * Scale at the live Stage (CSS px per field px), landscape → portrait:
+ * 390×844 0.406 → 0.597 · 375×667 0.391 → 0.435 · 320×568 0.333 → 0.344 ·
+ * 430×932 0.448 → 0.689. Units draw at the field's own density, so a goblin
+ * that was ~24 CSS px on a 390 phone is ~35 on the portrait field.
+ */
+export const PORTRAIT_PAD = 30
+
+export type FieldOrientation = 'landscape' | 'portrait'
+
+/** The portrait twin of a landscape field — see the note above. */
+function portraitTwin(m: GameMap): GameMap {
+  const t = (p: Vec2): Vec2 => ({ x: p.y + PORTRAIT_PAD, y: p.x })
+  const path = m.path.map(t)
+  return {
+    id: `${m.id}-tall`,
+    name: m.name,
+    width: m.height + PORTRAIT_PAD * 2,
+    height: m.width,
+    path,
+    base: path[path.length - 1],
+    slots: m.slots.map((s) => ({ id: s.id, pos: t(s.pos) })),
+    orientation: 'portrait',
+    twinOf: m.id,
+  }
+}
+
+/** Every portrait twin, in `ALL_MAPS` order. Never dealt by `pickBattleMap`. */
+export const PORTRAIT_MAPS: readonly GameMap[] = ALL_MAPS.map(portraitTwin)
+
+/**
+ * The run's field identity for any map, landscape or twin — what the seed
+ * dealt, what the snapshot stores, what the music cue keys on.
+ */
+export const fieldIdOf = (m: GameMap): string => m.twinOf ?? m.id
+
+/** Which way up a map is drawn. */
+export const orientationOf = (m: GameMap): FieldOrientation => m.orientation ?? 'landscape'
+
+/**
+ * The field `map` stands for, drawn `orientation` up. Idempotent, and a pure
+ * lookup: the field identity never changes, only the twin that is fought on.
+ */
+export function orientField(map: GameMap, orientation: FieldOrientation): GameMap {
+  const id = fieldIdOf(map)
+  const land = mapById(id) ?? map
+  if (orientation === 'landscape') return land
+  return PORTRAIT_MAPS.find((m) => m.twinOf === id) ?? land
+}
+
+/**
+ * Which orientation a battle is fought in, from the viewport at the moment the
+ * battle starts (entering its node).
+ *
+ * Portrait exactly when the shell is the phone column (`< 700` wide, the
+ * `shell-wide.css` break — tablets and desks re-flow into a side-by-side
+ * layout whose Stage is landscape) AND the window is clearly tall (h ≥ 1.3 w),
+ * which every portrait phone is (1.75–2.2) and a near-square narrow desktop
+ * window is not. A landscape phone gets the rotate prompt; a short landscape
+ * window gets the landscape field.
+ *
+ * **Fixed for the battle.** The choice is made once, when the node is entered,
+ * and stored with the run: a rotation or window resize mid-battle re-fits the
+ * same field (letterboxed in the apron) rather than swapping geometry under a
+ * placed company, and a resumed battle comes back on the field it was saved
+ * on. The next node chooses again. Because the twins are isometric this is a
+ * presentation decision with zero balance consequence either way — which is
+ * what makes "per battle, from the layout" safe rather than exploitable.
+ */
+export function chooseFieldOrientation(viewportW: number, viewportH: number): FieldOrientation {
+  if (!(viewportW > 0) || !(viewportH > 0)) return 'landscape'
+  return viewportW < 700 && viewportH >= viewportW * 1.3 ? 'portrait' : 'landscape'
+}
 
 /**
  * Which battlefield a run is fought on — drawn from the run seed, once.

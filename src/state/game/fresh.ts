@@ -20,6 +20,7 @@ export const CLEAR_SHELL = {
   shellSelection: null as ShellSelection,
   heroTab: 'stats' as HeroTab,
   gearSlot: null,
+  detailOpen: false,
 } satisfies Partial<GameData>
 
 export function freshHud(): HudSnapshot {

@@ -171,13 +171,42 @@ eye is on the field. Reduced motion: the 260 ms height transition is instant.
 | Selector | 126 | 112 | 106 | Party (unchanged) |
 | Wave strip | 68 | 68 | 68 | name · progress · N left · **CommandSlot** · Speed |
 
-The field (960×560 logical) is fit to the Stage wrap's **content box** and is
-width-bound on every portrait phone (the lane runs edge to edge, so it is never
-cropped): 390 → 390×228, 375 → 375×219 (was 282×164), 320 → 320×187 (was
-149×87). The room the field cannot use is the **apron** (`render/apron.ts`), a
+The field is fit to the Stage wrap's **content box**. On the phone column a
+battle is fought on the field's **portrait twin** (620×960 logical, the
+landscape field transposed — see *Portrait battlefields* below), which is
+height-bound in the tall Stage; desks and tablets keep the 960×560 landscape
+field. The room the field cannot use is the **apron** (`render/apron.ts`), a
 baked woodland registered under the field with CSS — no letterbox bars. Units draw
-at the pack's native density (`unitPixmapScale`), ~24 CSS px goblins and ~30 CSS
-px heroes at 390 wide.
+at the pack's native density (`unitPixmapScale`): ~35 CSS px goblins and ~44 CSS
+px heroes on the portrait field at 390 wide (they were ~24 / ~30 on the
+landscape field).
+
+### Portrait battlefields — which field, and what setup looks like
+
+| Phone (live) | Landscape field (before) | Portrait twin (now) | Scale |
+| --- | --- | --- | --- |
+| 390×844 | 390×228 | **370×573** | 0.41 → 0.60 |
+| 375×667 | 375×219 | **270×418** | 0.39 → 0.44 |
+| 320×568 | 320×187 | **213×330** | 0.33 → 0.34 |
+| 430×932 | 430×251 | **427×661** | 0.45 → 0.69 |
+
+- **Which field.** `chooseFieldOrientation(innerWidth, innerHeight)` in
+  `maps.ts`: portrait on the phone column (`< 700` wide and `h ≥ 1.3 w`),
+  landscape everywhere else (tablets, desks, short landscape windows). It is read
+  **once per battle**, when the node is entered, and stored with the run — a
+  rotation mid-battle re-fits the same field in the apron, a resume comes back on
+  the twin it was saved on, and the next node chooses again. The twins are an
+  isometry of the originals, so this is a presentation choice with zero balance
+  consequence (REPORT §17 gates it).
+- **Setup collapses too on a portrait field** (`setupCollapsible`, `live.ts`).
+  A portrait field in the four-band setup Stage would be smaller than the
+  landscape one was (0.30 at 390, 0.12 at 320), so setup takes the live layout:
+  the Detail band is the wave strip — a two-line hint (*Post a hero* / *8
+  enemies*), a **Details** toggle and Start Wave. Arming a hero from the party
+  row keeps it collapsed (the field is the target); a post lets go of the
+  selection; Details, or tapping a posted hero on the field, opens the band.
+  Setup field at 390×844: 341×528 (was 390×228); at 320×568: 184×285 (was
+  191×111).
 
 **Where things go — for the COMBAT and RUN/META lanes:**
 

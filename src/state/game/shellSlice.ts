@@ -13,6 +13,8 @@ export interface ShellActions {
   setHeroTab: (tab: HeroTab) => void
   activateGearSlot: (sentinelId: string, slot: HeroSlot) => void
   clearGearSlot: () => void
+  /** Open / close the Detail band during a collapsed (portrait) setup. */
+  toggleDetail: () => void
 }
 
 export const createShellSlice: Slice<ShellActions> = (set, get) => ({
@@ -44,4 +46,5 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
 
   activateGearSlot: (sentinelId, slot) => set({ gearSlot: { sentinelId, slot } }),
   clearGearSlot: () => set({ gearSlot: null }),
+  toggleDetail: () => set({ detailOpen: !get().detailOpen }),
 })

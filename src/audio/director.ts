@@ -16,6 +16,7 @@ import { playMusic, setMusicState, type MusicCue } from './music'
 import { endlessKeyLift } from './theme'
 import { useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
+import { fieldIdOf } from '../game/data/maps'
 
 /** The slice of game state the rule reads. */
 export interface CueInput {
@@ -101,7 +102,7 @@ export function installMusicDirector(): void {
     setMusicState({
       level: live ? levelFor(musicIntensity(input)) : 1,
       boss: live && input.boss,
-      field: s.battleMap?.id ?? 'greenline',
+      field: s.battleMap ? fieldIdOf(s.battleMap) : 'greenline',
       keyLift: s.mode === 'endless' ? endlessKeyLift(s.round) : 0,
     })
     playMusic(cue)

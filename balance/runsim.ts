@@ -276,6 +276,8 @@ export interface SimOptions {
   subWaves?: boolean
   /** Per-sub-wave safety cap (default 600s; counterfactuals only). */
   maxSeconds?: number
+  /** Diagnostics: told about every fight the run takes (never changes the run). */
+  onFight?: (f: { layer: number; type: string; hpBefore: number; hpAfter: number; cleared: boolean; roster: number; level: number }) => void
 }
 
 export interface RunOutcome {
@@ -560,6 +562,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       rules: o.rules,
       subWaves: o.subWaves,
     })
+    o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) break
     clearedCount++

@@ -24,7 +24,7 @@ import {
 } from '../game/render/fx'
 import { FxDiffer } from '../game/render/fxDiff'
 import { drawBreatherBanner } from '../game/render/telegraphs'
-import { APRON_X, APRON_Y, getApron } from '../game/render/apron'
+import { apronMargins, getApron } from '../game/render/apron'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
@@ -186,8 +186,9 @@ export function BattleCanvas() {
       apron.style.display = 'block'
       apron.style.width = `${apronSrc.width * scale}px`
       apron.style.height = `${apronSrc.height * scale}px`
-      apron.style.left = `${left - APRON_X * scale}px`
-      apron.style.top = `${top - APRON_Y * scale}px`
+      const m = apronMargins(useGameStore.getState().battleMap)
+      apron.style.left = `${left - m.x * scale}px`
+      apron.style.top = `${top - m.y * scale}px`
       apron.style.imageRendering = resampleMode(scale, window.devicePixelRatio || 1)
     }
 
