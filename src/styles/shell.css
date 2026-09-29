@@ -2048,3 +2048,35 @@
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
   mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
 }
+
+/* A fifth targeting order ('Threat', Phase 3a) spans the 2x2 grid's last row. */
+.sh-seg-btn:nth-child(5):last-child {
+  grid-column: 1 / -1;
+}
+
+/* Phase 3a: a spent Watch Command reads as spent. */
+.sh-command:disabled {
+  opacity: 0.5;
+}
+
+/* Phase 3a — boss phase pips in the nameplate (`.sh-bossplate-extra`). */
+.sh-bossphase {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sh-bossphase-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid #ffd166;
+}
+.sh-bossphase-pip.done {
+  background: #ffd166;
+}
+.sh-bossphase-label {
+  margin-left: 2px;
+}

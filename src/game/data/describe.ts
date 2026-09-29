@@ -131,6 +131,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.openingRush) out.push(`first ${m.openingRush.dur}s of a wave: ${pct(m.openingRush.rate)} faster attacks`)
   if (m.lastStand) out.push(`below ${pct(m.lastStand.below)} HP: ${pct(m.lastStand.damage)} more damage`)
   if (m.leakWard) out.push(`the first ${m.leakWard} leaks each wave cost the Gate nothing`)
+  if (m.burnSpreadOnDeath) out.push('a burning enemy that dies spreads its fire to its neighbours')
   return out
 }
 

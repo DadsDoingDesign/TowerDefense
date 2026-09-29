@@ -19,6 +19,7 @@ import { drawFxDecals, drawFxFloaters, drawFxParticles } from './fx'
 import { animNow } from './frame'
 import { drawAura, drawBaseFx, drawReticle } from './overlays'
 import { drawProjectile, drawTrap } from './projectiles'
+import { drawTelegraphs } from './telegraphs'
 import { drawEnemy, drawSentinel, sentinelFromRt } from './units'
 
 export { fitView, setPresentationTime, setViewScale, type View } from './frame'
@@ -65,6 +66,7 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   targeted.clear()
   for (const s of engine.sentinels) if (s.targetId) targeted.add(s.targetId)
   for (const e of engine.enemies) drawEnemy(ctx, e, now, simNow)
+  drawTelegraphs(ctx, engine) // Phase 3a: behaviour marks (render/telegraphs.ts)
   for (const e of engine.enemies) if (targeted.has(e.id)) drawReticle(ctx, e.pos, e.type.radius)
   for (const s of engine.sentinels) drawSentinel(ctx, sentinelFromRt(s))
   for (const p of engine.projectiles) drawProjectile(ctx, p)

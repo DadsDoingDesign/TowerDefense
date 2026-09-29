@@ -54,7 +54,8 @@ import { forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
 import { canTrain, forageAtCampfire, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
 import { bannerRules, useMetaStore, type BannerRules } from '../src/state/metaStore'
-import type { Archetype, Item, ItemRarity, Sentinel } from '../src/game/types'
+import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
+import type { EngineRules } from '../src/game/engine/engine'
 import { createSentinel } from '../src/game/data/sentinels'
 import { autoEquipEmpty, recruitKit, wearKit } from '../src/game/engine/kit'
 import {
@@ -76,6 +77,8 @@ import {
   runBattle,
   scaledRecruitLevel,
   startingItems,
+  PLAYER,
+  type PlayerPolicy,
 } from './harness'
 
 /** The campaign is ten nodes deep on a default map; a wide map is longer. */
@@ -260,6 +263,19 @@ export interface SimOptions {
   build?: 'random' | 'best' | { force: Record<string, string> }
   /** Relics held from the first node (§15 grades the run-rule half this way). */
   startRelics?: string[]
+  /**
+   * Who presses the in-battle buttons (Phase 3a). Default {@link PLAYER}: the
+   * Rally Horn spent when the fight is on, no repositioning, first-in-lane.
+   */
+  player?: PlayerPolicy
+  /** Targeting order the company fights under (default first-in-lane). */
+  focus?: FocusMode
+  /** Counterfactual engine switches (REPORT §16 only). */
+  rules?: Partial<EngineRules>
+  /** `false`: every node as one continuous wave (the pre-3a shape; counterfactuals only). */
+  subWaves?: boolean
+  /** Per-sub-wave safety cap (default 600s; counterfactuals only). */
+  maxSeconds?: number
 }
 
 export interface RunOutcome {
@@ -533,8 +549,16 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       enemyHpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1),
       baseHp,
       teamMods: relicTeamMods(relics),
-      maxSeconds: 90,
+      // A cap, not a clock: the game has no timeout, and sub-waves (Phase 3a)
+      // run their groups back to back, so a node now takes longer end to end.
+      // Set far above any real clear so a timeout can never be the thing that
+      // ends a run (the M19 lesson — every loss was once the clock).
+      maxSeconds: o.maxSeconds ?? 600,
       seed: seed * 131 + node.layer,
+      player: o.player ?? PLAYER,
+      tactics: o.focus ? { focus: o.focus } : undefined,
+      rules: o.rules,
+      subWaves: o.subWaves,
     })
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) break
@@ -702,9 +726,14 @@ export interface McOutcome {
   /** Did the run reach the final boss, and did the final boss end it? */
   finalAttempt: boolean
   finalKill: boolean
+  /** Battles that ended on the harness cap rather than a win or a loss (must be 0). */
+  timeouts: number
 }
 
-export function monteCarloRun(r: number, o: { curve?: (depth: number, kind: EncounterKind) => number } = {}): McOutcome {
+export function monteCarloRun(
+  r: number,
+  o: { curve?: (depth: number, kind: EncounterKind) => number; player?: PlayerPolicy; rules?: Partial<EngineRules> } = {},
+): McOutcome {
   const runRng = new RNG(hashSeed(r, 'mcteam'))
   const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
   const specIds = Array.from({ length: teamSize }, () => runRng.pick(TIER2_NODES).id)
@@ -716,6 +745,7 @@ export function monteCarloRun(r: number, o: { curve?: (depth: number, kind: Enco
   let bossThreat: number | null = null
   let finalAttempt = false
   let finalKill = false
+  let timeouts = 0
   for (let depth = 1; depth <= MC_LAYERS; depth++) {
     const team = specIds.slice(0, mcCompany(depth, specIds.length)).map((id, i) => ({
       sentinel: buildSpec(id, {
@@ -737,9 +767,17 @@ export function monteCarloRun(r: number, o: { curve?: (depth: number, kind: Enco
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),
       baseHp,
-      maxSeconds: 70,
+      // A cap, not a clock (Phase 3a). This was 70s and a capped battle was a
+      // LOSS: re-measured with no cap, most "boss kills" were the clock — the
+      // champions had simply not arrived. The game has no timeout; the cap is
+      // now a per-sub-wave safety net and REPORT §6 gates on it firing never.
+      maxSeconds: 600,
       seed: r * 100 + depth,
+      // The modelled player spends the Rally Horn when the fight is on.
+      player: o.player ?? PLAYER,
+      rules: o.rules,
     })
+    if (!m.cleared && !m.defeated) timeouts++
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) {
       died = depth
@@ -748,5 +786,5 @@ export function monteCarloRun(r: number, o: { curve?: (depth: number, kind: Enco
     }
     reached = depth
   }
-  return { reached, died, won: reached >= MC_LAYERS, bossThreat, fieldId: field.id, finalAttempt, finalKill }
+  return { reached, died, won: reached >= MC_LAYERS, bossThreat, fieldId: field.id, finalAttempt, finalKill, timeouts }
 }

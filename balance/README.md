@@ -257,6 +257,45 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     it on bodies that die to splash. So the budget is a **price list** — a shape
     worth more per point of HP is sold less of it — the HP ceiling is a loose
     sanity bound at 35%, and the fairness gate is 14c.
+15. **Reward cards** — every card graded on its own benches (see REPORT §15).
+16. **Combat depth** (Phase 3a, `balance/combat.ts`) — the enemy behaviour kit,
+    the boss phases, sub-waves, the Watch Commands and the status
+    interactions. Every row is **paired** (same wave, heroes and seeds):
+    - 16a — each behaviour on its own bench, with and without the counterplay
+      its card states (`BEHAVIOUR_INFO.counter`), read off the engine's own
+      `behaviourStats` counter for that behaviour;
+    - 16b — the three boss phases, counted across every shipped boss variant;
+    - 16c — every generated node shape is cut into the specified 2–3 sub-waves;
+    - 16d — **decision value**: a battery of real encounters played by
+      different input policies (`PlayerPolicy` in `harness.ts`: command timing
+      none / early / surge / finish, five targeting orders, breather
+      repositions none / sponge / cover / uncover), in base HP lost per node,
+      against the pre-3a game where targeting was the only input;
+    - 16e — shatter / spread / brittle, on and off.
+
+### Phase 3a changes to how the harness plays a battle
+
+- **The clock is out of the measurement.** §6 used a 70-second cap and booked a
+  capped battle as a loss; re-measured with no cap, 38 of 72 "deaths" in a
+  150-run sample were the clock, mostly at the boss (honest pre-3a win rate
+  73%, not 50%). `maxSeconds` is now a **per-sub-wave** safety net (600s in §6
+  and the run simulator) and §6 gates on it firing **zero** times. A cap sized
+  for one continuous wave also silently truncated the later sub-waves of every
+  other bench, which is why `runBattle` resets it at each sub-wave.
+- **Who presses the buttons.** `runBattle({ player })` — the whole-run sweeps
+  (§6, §11–§13) play `PLAYER` (Rally Horn when enough of the column is in
+  reach, no repositioning, first-in-lane); every bench defaults to `NO_INPUT`.
+- **Bench mode.** §4 affixes, §8 mutations, §10 curses and §15 reward cards
+  grade an item's stat contribution on scenarios whose pressure was fitted
+  (`BENCH_PIN`), and they keep grading it on the shape they were fitted to:
+  `BENCH_RULES` (kit, interactions and sub-waves off) and
+  `generateEncounter(..., { subWaves: false })` (no cut, no HP step, no
+  specialists). The new rules are graded in §16 and in the whole-run sweeps,
+  which play with everything on; §2, §5 and §14 grade encounters and also
+  play with everything on. Measured on the first full-rules pass, `magic`'s
+  baseline fell to 10% (band 15–75%) and eleven item verdicts flipped on a
+  bench that had moved under them — and those files are re-tuned in parallel
+  by another lane, which is the shared-constant collision the audit names.
 
 15. **Relics** (Phase 3b; merged keepsakes and team stat cards) — the stat half
     graded on the §7-style fight benches as a company-wide grant, the run-rule
@@ -358,6 +397,12 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     of seeds, every node draws ≥ 2 distinct shapes with the rarest at ≥ 12%, and
     two battle nodes standing in the same map layer differ by ≥ 30% composition
     distance — a fork between two identical fights is not a fork.
+- **Combat depth (§16).** Every behaviour fires on its bench and its stated
+  counter measurably reduces it; every boss phase triggers in the shipped boss
+  fights; every node shape is cut into 2–3 sub-waves; the Rally Horn used well
+  is worth between 0.05 and 3 base HP per node over never pressing it (a
+  command must matter and must not be the game); each interaction fires.
+- **The clock never decides a run**: zero §6 battles may end on the harness cap.
 - **The affix bench stays in the band it can resolve in.** §4's `phys` / `magic`
   scenarios borrow real encounters, so a change to the campaign's difficulty
   curve silently re-scales the bench every affix is graded on. They are pinned

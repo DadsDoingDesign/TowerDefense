@@ -17,7 +17,8 @@
  */
 import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
-import { ENEMY_TYPES } from '../src/game/data/enemies'
+import { leakCeiling } from '../src/game/data/enemies'
+import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateItem, type RosterRef } from '../src/game/data/items'
@@ -26,7 +27,7 @@ import { recruitTargetLevel } from '../src/game/run/recruits'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
-import { GameEngine } from '../src/game/engine/engine'
+import { GameEngine, type BehaviourStats, type EngineRules } from '../src/game/engine/engine'
 import { applyXp, evolveInto } from '../src/game/engine/leveling'
 import { perkChoices } from '../src/game/run/perks'
 import { availableEvolutions } from '../src/game/run/unlocks'
@@ -225,6 +226,141 @@ export interface BattleMetrics {
   perSentinel: { id: string; damage: number; kills: number; xp: number; downed: boolean }[]
   /** The wave that was fought — the run layer re-prices its XP (Phase 3b). */
   wave: WaveDef
+  /** What the behaviour kit, interactions and commands did (Phase 3a — REPORT §16). */
+  stats: BehaviourStats
+  /** Ticks (at the harness `dt`) at which each Watch Command fired. */
+  commandTicks: number[]
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * The modelled player's in-battle inputs (Phase 3a)
+ * ---------------------------------------------------------------------------
+ *
+ * A battle has inputs now — one Watch Command per sub-wave, one reposition per
+ * breather, and a targeting order that can change — so a harness that fights
+ * waves has to say who is pressing the buttons. Every policy is a pure
+ * function of engine state, so a policy run is as reproducible as the seed.
+ *
+ *  - `command` — WHEN the charge is spent: `none` (never — every pre-3a
+ *    number), `early` (the first tick of each sub-wave, before anything is in
+ *    range — the button-masher), `surge` (when enough bodies are inside the
+ *    company's reach, or the column is nearly through), `finish` (once the
+ *    sub-wave is all out and only its last one or two bodies — usually the
+ *    toughest, the ones that leak — are left).
+ *  - `reposition` — at each breather: `none`, `sponge` (put a fighter on the
+ *    first post the lane passes, where the bombers' lobs and the sappers
+ *    land), `cover` (move the hero on the least-covered post to the
+ *    best-covered free one), `uncover` (the reverse — the hardest-hitting hero
+ *    to the worst free post).
+ *
+ * `PLAYER` is the default the whole-run sweeps (§6, §11–§13) play with: a
+ * player who uses the Rally Horn sensibly and otherwise leaves the line alone.
+ */
+export interface PlayerPolicy {
+  command: 'none' | 'early' | 'surge' | 'finish'
+  /** Which of the company's commands to spend (default: the first it carries). */
+  commandId?: CommandId
+  reposition: 'none' | 'sponge' | 'cover' | 'uncover'
+}
+export const NO_INPUT: PlayerPolicy = { command: 'none', reposition: 'none' }
+
+/**
+ * **Bench mode** — the pre-3a battle shape, for the sweeps that grade an
+ * ITEM's stat contribution on a pinned scenario: §4 affixes, §8 mutations,
+ * §10 curses, §15 reward cards.
+ *
+ * Why those four and nothing else. Each grades a number on a gear piece or a
+ * card against a scenario whose pressure was FITTED (`BENCH_PIN`, the card
+ * pins) so the baseline sits where an affix can be resolved. Sub-waves, the
+ * breather's mend and the enemy kit reshape every one of those scenarios at
+ * once — measured on the first full-rules pass, `magic`'s baseline fell to
+ * 10% (band 15–75%) and eleven item verdicts flipped on a bench that had
+ * moved under them rather than on anything about the items. Those files are
+ * also being re-tuned in parallel (RUN/META owns items, mutations and cards),
+ * and moving their bench under that work is the shared-constant collision the
+ * audit names as the one that broke convergence.
+ *
+ * So they keep grading the item on the shape they were fitted to, and the new
+ * rules are graded where they belong: the kit, its counters, the commands and
+ * the interactions in §16, and the campaign-level consequences in §6 and
+ * §11–§13, which play with every rule on. §2 (supports), §5 (pressure) and §14
+ * (variety) grade the ENCOUNTERS and so also run with every rule on.
+ */
+export const BENCH_RULES: Partial<EngineRules> = { behaviours: false, interactions: false, subWaves: false }
+export const PLAYER: PlayerPolicy = { command: 'surge', reposition: 'none' }
+
+/** Should the policy fire its command this tick? */
+function wantsCommand(engine: GameEngine, policy: PlayerPolicy, id: CommandId): boolean {
+  if (!engine.canUseCommand(id)) return false
+  const len = engine.path.length
+  let lead = 0
+  for (const e of engine.enemies) if (e.distance > lead) lead = e.distance
+  switch (policy.command) {
+    case 'none':
+      return false
+    case 'early':
+      return true
+    case 'finish':
+      // The sub-wave is all out and all but its last one or two are dead —
+      // and the last ones standing are the ones that were hardest to kill.
+      return engine.subWaveSpawned() && engine.enemies.length > 0 && engine.enemies.length <= 2
+    case 'surge': {
+      if (id === 'hold') return lead > len * 0.85
+      if (id === 'flare') {
+        if (lead < len * 0.5) return false
+        const front = engine.enemies.reduce((a, e) => (e.distance > a.distance ? e : a))
+        return engine.enemies.filter((e) => Math.hypot(e.pos.x - front.pos.x, e.pos.y - front.pos.y) <= 160).length >= 3
+      }
+      // Rally: when enough of the column is inside the company's reach.
+      let engaged = 0
+      for (const e of engine.enemies) {
+        if (engine.sentinels.some((s) => !s.downed && Math.hypot(s.pos.x - e.pos.x, s.pos.y - e.pos.y) <= s.profile.range)) engaged++
+      }
+      return engaged >= 4 || (engaged >= 1 && lead > len * 0.6)
+    }
+  }
+}
+
+/** The breather's one move, per policy. */
+function repositionAt(engine: GameEngine, policy: PlayerPolicy): void {
+  if (policy.reposition === 'none') return
+  // Posts in the order the lane reaches them.
+  const order = [...engine.sentinels]
+    .map((s) => ({ s, d: nearestPathDistance(engine, s.pos) }))
+    .sort((a, b) => a.d - b.d)
+  if (order.length < 2) return
+  const first = order[0].s
+  const fighter = order.find((o) => o.s.def.archetype === 'fighter')?.s
+  if (policy.reposition === 'sponge') {
+    if (fighter && first.def.archetype !== 'fighter') engine.moveHero(fighter.slotId, first.slotId)
+    return
+  }
+  const cov = slotCoverage(engine.map)
+  const free = engine.map.slots.filter((sl) => !engine.sentinelOnSlot(sl.id)).map((sl) => sl.id)
+  if (!free.length) return
+  free.sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
+  if (policy.reposition === 'cover') {
+    const worstHeld = [...engine.sentinels].sort((a, b) => cov[a.slotId] - cov[b.slotId])[0]
+    if (cov[free[0]] > cov[worstHeld.slotId]) engine.moveHero(worstHeld.slotId, free[0])
+  } else if (policy.reposition === 'uncover') {
+    const ace = [...engine.sentinels].sort((a, b) => b.profile.dps - a.profile.dps)[0]
+    engine.moveHero(ace.slotId, free[free.length - 1])
+  }
+}
+
+function nearestPathDistance(engine: GameEngine, p: { x: number; y: number }): number {
+  let best = Infinity
+  let bd = 0
+  for (let d = 0; d <= engine.path.length; d += 16) {
+    const q = engine.path.pointAt(d)
+    const dd = (q.x - p.x) ** 2 + (q.y - p.y) ** 2
+    if (dd < best) {
+      best = dd
+      bd = d
+    }
+  }
+  return bd
 }
 
 export interface RunBattleOptions {
@@ -259,6 +395,14 @@ export interface RunBattleOptions {
   variantSibling?: number
   /** Force one composition variant by id (the §14 variety bench only). */
   variantId?: string
+  /** Who presses the in-battle buttons (default {@link NO_INPUT}). */
+  player?: PlayerPolicy
+  /** Watch Commands the company carries (default: the engine's — Rally Horn). */
+  commands?: readonly CommandId[]
+  /** Counterfactual engine switches (REPORT §16 only). */
+  rules?: Partial<EngineRules>
+  /** `false`: generate the node as one continuous wave (the pre-3a shape; see `BENCH_RULES`). */
+  subWaves?: boolean
 }
 
 /** Run one wave to completion (or timeout) and return comparable metrics. */
@@ -272,6 +416,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
       seed: opts.variantSeed,
       sibling: opts.variantSibling,
       variantId: opts.variantId,
+      subWaves: opts.subWaves,
     })
   if (opts.pressure != null && opts.pressure !== 1) wave = scaleWave(wave, opts.pressure, opts.pressureModel)
   const engine = new GameEngine({
@@ -284,11 +429,32 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     tactics: opts.tactics,
     teamMods: opts.teamMods,
     seed: opts.seed ?? 42,
+    commands: opts.commands,
+    rules: opts.rules,
   })
+  const player = opts.player ?? NO_INPUT
+  const commandId = player.commandId ?? engine.commands[0]
+  const commandTicks: number[] = []
+  /*
+   * `maxSeconds` is a cap PER SUB-WAVE (Phase 3a). Every cap in the suite was
+   * sized for one continuous wave; a node cut into sub-waves fights them back
+   * to back, so a whole-battle cap silently truncated the later sub-waves —
+   * and a truncated wave leaks nothing, which reads as a stronger defence.
+   * Measured on the first pass: §14c's depth-8 patrol "leaked" 0.14 base HP
+   * against 7.39 before, because the 120s cap ended it during sub-wave 2.
+   */
   let steps = 0
+  let liveSub = engine.subWave
   while (engine.status === 'running' && steps < maxSteps) {
+    // Inputs land between steps, exactly where a live tap lands.
+    if (engine.breather) repositionAt(engine, player)
+    else if (commandId && wantsCommand(engine, player, commandId) && engine.useCommand(commandId)) commandTicks.push(engine.tick)
     engine.step(dt)
     steps++
+    if (engine.subWave !== liveSub) {
+      liveSub = engine.subWave
+      steps = 0
+    }
   }
   const res = engine.result()
   return {
@@ -310,6 +476,8 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
       xp: p.xpGained,
       downed: p.downed,
     })),
+    stats: { ...engine.behaviourStats },
+    commandTicks,
   }
 }
 
@@ -402,7 +570,9 @@ export function makeWave(
 
 /** Base HP this wave removes if literally nothing stops it. */
 export function maxLeak(wave: WaveDef): number {
-  return wave.spawns.reduce((a, s) => a + ENEMY_TYPES[s.typeId].leak, 0)
+  // `leakCeiling` counts a splitter's pieces too (Phase 3a), or a wave whose
+  // imps leaked could read as a negative stop rate.
+  return wave.spawns.reduce((a, s) => a + leakCeiling(s.typeId), 0)
 }
 
 /**
@@ -425,7 +595,7 @@ export function stopRate(
   sentinels: { sentinel: Sentinel; slotId: string }[],
   wave: WaveDef,
   seeds: number[] = SEEDS.slice(0, 4),
-  opts: { enemyHpMult?: number; maxSeconds?: number; teamMods?: EffectMods[] } = {},
+  opts: { enemyHpMult?: number; maxSeconds?: number; teamMods?: EffectMods[]; rules?: Partial<EngineRules> } = {},
 ): number {
   const ml = maxLeak(wave)
   if (ml <= 0) return 1
@@ -440,6 +610,7 @@ export function stopRate(
           enemyHpMult: opts.enemyHpMult ?? 1,
           maxSeconds: opts.maxSeconds ?? 200,
           teamMods: opts.teamMods,
+          rules: opts.rules,
           seed,
         }).baseHpLost,
     ),
@@ -452,7 +623,7 @@ export const soloStopRate = (
   s: Sentinel,
   wave: WaveDef,
   seeds?: number[],
-  opts?: { enemyHpMult?: number },
+  opts?: { enemyHpMult?: number; rules?: Partial<EngineRules> },
 ): number => stopRate([{ sentinel: s, slotId: 's3' }], wave, seeds, opts)
 
 /** Solo-offense benchmark: one build vs a fixed tanky wave; measures throughput. */

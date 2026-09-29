@@ -56,6 +56,11 @@ describe('encounter preview == spawned encounter', () => {
           const spawned = useGameStore.getState().currentWave
           expect(spawned, `selectNode spawned nothing on ${node.id}`).not.toBeNull()
           expect(preview).toEqual(spawned)
+          // Phase 3a: the node is cut into 2–3 sub-waves, and the preview
+          // carries the same cut (the deep-equal above includes `group`).
+          const groups = new Set(spawned!.spawns.map((s) => s.group))
+          expect(groups.size, `sub-waves on ${node.id}`).toBeGreaterThanOrEqual(2)
+          expect(groups.size).toBeLessThanOrEqual(3)
           // The summary reads that same wave.
           const sum = summarizeEncounter(st, node.id)!
           expect(sum.heads).toBe(spawned!.spawns.length)
