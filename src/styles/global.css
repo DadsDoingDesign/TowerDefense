@@ -122,8 +122,11 @@
   --surface-strong: rgba(220, 205, 172, 0.14);
   --portrait: #dccdac;
 
-  /* Primary call to action — deeper than --teal so it holds its own at 64px. */
-  --cta: #3f7d8c;
+  /* Primary call to action — deeper than --teal so it holds its own at 64px.
+     #3f7d8c measured 3.79:1 under the cream ink: a pass at 24px, a fail at the
+     17px the in-band primary uses. #336e7e is 4.66:1 and still reads as the
+     knights' teal (Wave 1). */
+  --cta: #336e7e;
   --cta-ink: #f3e7d0;
   /*
    * Ink for a SOLID warm fill — the shell already uses this exact value on the
@@ -309,7 +312,7 @@ button:disabled {
   --fw-i-size: 16px;
   /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */
   --fw-i-cols: 8;
-  --fw-i-rows: 10;
+  --fw-i-rows: 12;
   display: inline-block;
   flex: 0 0 auto;
   width: var(--fw-i-size);

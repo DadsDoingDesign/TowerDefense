@@ -84,8 +84,29 @@ export const archetypeVar = (archetype: string): string =>
  */
 export const ARCHETYPE_GLYPH: Record<string, string> = { fighter: '⚔', rogue: '➶', mystic: '❋' }
 
-/** Currency marks. `✦` is Watch Marks — only Watch Marks. */
+/**
+ * Currency marks, as TEXT. Kept only for the `?shell=0` screens, which are
+ * being deleted — the shell draws every currency with its atlas cell
+ * ({@link CURRENCY_ICON}) and names it in words in prose ({@link CURRENCY_NAME}).
+ *
+ * Wave 1: the shell used to print `⟡ 240` beside a pixel coin — two marks for
+ * one currency, one of them a system-font glyph that ALSO meant "Merchant" on
+ * the run map. One mark per currency now: the coin, the dust crystal, the
+ * Watch Mark star.
+ */
 export const CURRENCY_GLYPH = { gold: '⟡', dust: '◈', marks: '✦' } as const
+
+export type Currency = 'gold' | 'dust' | 'marks'
+
+/** The one drawn mark for each currency. */
+export const CURRENCY_ICON: Record<Currency, IconKey> = { gold: 'gold', dust: 'dust', marks: 'marks' }
+
+/** The currency in words — what prose and accessible names say. */
+export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Watch Marks' }
+
+/** "60 gold", "12 dust", "1 Watch Mark". */
+export const moneyText = (amount: number, c: Currency): string =>
+  c === 'marks' ? `${amount} Watch Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
 
 /**
  * The four targeting orders, named once (L3).
@@ -106,7 +127,7 @@ export const FOCUS_OPTS: readonly { id: FocusMode; label: string; full: string }
   { id: 'first', label: 'First', full: 'First in the lane' },
   { id: 'lowestHp', label: 'Low HP', full: 'Lowest health' },
   { id: 'strongest', label: 'Strong', full: 'Strongest' },
-  { id: 'nearest', label: 'Near', full: 'Nearest to the Sentinel' },
+  { id: 'nearest', label: 'Near', full: 'Nearest to the hero' },
 ]
 
 /** The unabbreviated focus name, by id. */
@@ -172,6 +193,10 @@ export const ICON_ORDER = [
   'boon', 'loot', 'slow', 'weaken', 'assist', 'equip', 'deploy', 'frail',
   // row 9 — the rest of the polarity mirrors (M3)
   'shorten', 'drag', 'shrink', 'nocrit', 'blunt', 'auraWeaken',
+  // row 9 (cont.) – 11 — the map's node marks, the menu's endless loop and the
+  // Watchtower perks (Wave 1): the last system-font glyphs in the shell
+  'battle', 'start', 'elite', 'crown', 'endless', 'coffer', 'seasoned', 'company',
+  'map', 'orders', 'vow',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -185,7 +210,7 @@ export type IconKey = (typeof ICON_ORDER)[number]
  * every cell in the atlas with nothing anywhere to notice (M13).
  */
 export const ICON_COLS = 8
-export const ICON_ROWS = 10
+export const ICON_ROWS = 12
 
 /**
  * Where an icon sits in the sheet, as (column, row).
@@ -201,6 +226,40 @@ export const iconCell = (k: IconKey): { ix: number; iy: number } => {
   const i = ICON_ORDER.indexOf(k)
   if (i < 0) throw new Error(`[channels] unknown icon key '${k}' — not in ICON_ORDER`)
   return { ix: i % ICON_COLS, iy: Math.floor(i / ICON_COLS) }
+}
+
+/**
+ * The run map's node marks (Wave 1). These were `⚔ ◆ ☠ ♛ ⟡ ❖ ＋` from
+ * `NODE_META.glyph` — system-font characters, and `⟡` was also the gold mark.
+ * Keyed by `NodeType` without importing it, so this module stays free of the
+ * map generator.
+ */
+export const NODE_ICON: Record<string, IconKey> = {
+  start: 'start',
+  battle: 'battle',
+  elite: 'elite',
+  merchant: 'merchant',
+  shrine: 'shrine',
+  recruit: 'recruit',
+  boss: 'crown',
+}
+
+/**
+ * One mark per Watchtower perk (Wave 1) — all nine used to share `boon`, so the
+ * list was nine identical green pluses. Where a perk IS an existing concept the
+ * concept's own mark is reused (the Gate, the loot chest, the recruit); the rest
+ * got cells of their own.
+ */
+export const PERK_ICON: Record<string, IconKey> = {
+  base: 'base',
+  gold: 'coffer',
+  stats: 'seasoned',
+  roster: 'company',
+  loot: 'loot',
+  cartographer: 'map',
+  freeCompanies: 'recruit',
+  standingOrders: 'orders',
+  sacrifice: 'vow',
 }
 
 /**
@@ -538,3 +597,15 @@ export function effectIcon(line: string): IconKey | null {
   const flipped = POLARITY[best]
   return flipped && signOf(line, bestAt, bestEnd) < 0 ? flipped : best
 }
+
+/**
+ * An item's name without the rarity word in it.
+ *
+ * New items are named without it (`nameItem` in items.ts), but an item that
+ * dropped before that change keeps "Heavy Rare Grimoire" in its saved run, and
+ * every surface prints the rarity beside the name — "Heavy Rare Grimoire ·
+ * Rare". This strips the first whole rarity word, so old saves read the same as
+ * new drops. A name with no rarity word in it passes through untouched.
+ */
+export const itemName = (item: Pick<Item, 'name'>): string =>
+  item.name.replace(/\b(Common|Rare|Epic|Legendary|Mythic) /, '').trim() || item.name
