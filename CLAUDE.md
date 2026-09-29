@@ -28,8 +28,27 @@ result. Append a short note to the review log when you're done.
 
 - Sprites: `public/assets/sprites/<pack>/` (role-named PNGs). Loader
   `src/game/render/sprites.ts`; themes `src/game/render/themes.ts`.
-- Battle rendering: `src/game/render/renderer.ts` (`drawField` → terrain +
-  level dressing, `drawSentinel`, `drawEnemy`).
+- Battle rendering: `src/game/render/renderer.ts` is a facade (public names +
+  `drawBattleEntities`) over `terrain.ts` (`drawField`, baked once per map),
+  `units.ts` (`drawSentinel`, `drawEnemy`), `plaques.ts` (tier/elite plaque),
+  `overlays.ts` (slots, ranges, reticles, base gate), `projectiles.ts`,
+  `blit.ts` (the 1:1 sprite blit + census), `paint.ts` (colour helpers) and
+  `frame.ts` (presentation clock, view scale). Import from `renderer`.
+- FX: `src/game/render/fx.ts` draws effects; `fxDiff.ts` derives them from the
+  engine tick by tick — one `FxDiffer` per battle, created by `BattleCanvas`,
+  no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.
+- Run store: `src/state/gameStore.ts` is a barrel — import `useGameStore` and
+  the constants from there. The store is `src/state/game/`: ONE zustand store
+  combined from action slices (`runSlice`, `endlessSlice`, `battleSlice`,
+  `eventsSlice`, `rosterSlice`, `shellSlice`) over the data in `types.ts`;
+  RNG streams, the hub flag, the wave-beat timer and session ownership live in
+  `runtime.ts`; snapshot autosave in `persistence.ts`; settle-once in
+  `settle.ts`. RNG draw ORDER is part of behaviour: keep it when editing.
+- Pure run rules (no zustand/React/DOM, unit-tested in `tests/run.rules.test.ts`
+  and read by the balance harness): `src/game/run/` — `threat.ts`,
+  `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
+  `settle.ts` (payout plan), `inventory.ts`, `map.ts`, `battle.ts`. Put a new
+  rule here, not in a slice.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
   1–5); waves `src/game/data/waves.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
@@ -56,7 +75,9 @@ result. Append a short note to the review log when you're done.
   piece would overhang a hero cell.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
-  Import it. Every local copy of one of those has gone stale so far.
+  Import it. Every local copy of one of those has gone stale so far. A table the
+  CANVAS also needs lives under `src/game/data/` (e.g. `glyphs.ts`, the archetype
+  glyph) and `channels.ts` re-exports it — `game/` must not import `ui/`.
 
 ## Conventions
 
