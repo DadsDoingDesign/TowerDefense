@@ -1733,12 +1733,13 @@ const FRESH_TEAM_EDGE = 0.08
 const FRESH_CLIFF_MAX = 0.4
 
 /**
- * Sample size for both §11 models. 120 keeps the suite inside its ~26s budget at
- * 1σ ≈ 4.6pt, which is enough for a gate with a 20-point band. `FW_FRESH_RUNS=480`
- * (Node-only, like `FW_SPECIAL_THREAT`) drops that to ≈ 1.8pt and is what the
- * special-node step was fitted at — see the fit table below.
+ * Sample size for both §11 models. 120 → **240** (tuning lane): the first-timer
+ * line is now gated at BOTH edges of its band, and at 120 (1σ ≈ 3.7pt at p≈0.2)
+ * a 20% line sits one σ off the 15% floor — the gate would flip on a resample.
+ * 240 puts 1σ at ≈ 2.6pt for ~25s more. `FW_FRESH_RUNS=480` (Node-only, like
+ * `FW_SPECIAL_THREAT`) drops it to ≈ 1.8pt for a fit.
  */
-const FRESH_RUNS = Number(process.env.FW_FRESH_RUNS) || 120
+const FRESH_RUNS = Number(process.env.FW_FRESH_RUNS) || 240
 const FRESH_ARCHES: Archetype[] = ['fighter', 'rogue', 'mystic']
 const policyIdx = (id: string) => POLICIES.findIndex((p) => p.id === id)
 interface FreshSummary {

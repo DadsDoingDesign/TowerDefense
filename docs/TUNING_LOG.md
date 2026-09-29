@@ -137,10 +137,55 @@ fork away included.
   finding on Gate-aware routing and the reverted map change.
 - `battle.ts`: `STOP_XP_SHARE` doc updated with the fit.
 
+### R1 — filtered report at report n (`FW_SECTIONS=6,11,12`)
+
+- §6 **59%** (unchanged: its model has no stops or routes).
+- §11 (n=120): specials **18%** · battles 29 · recruits 17 · adaptive 30;
+  strict 2% / +2 recruits 5%. All §11 gates green including the new floor.
+- §12 (n=210): Cartographer −1 / −3 / +12 / +3 (worst −3pt vs a ±8 floor);
+  every state green; full ramp +27pt.
+
+### R2 — every hub state at n=600 (`tune.ts 600 hub`, 303s)
+
+| Hub state | specials | battles | recruits | adaptive |
+|---|--:|--:|--:|--:|
+| zero meta | 20.3% | 25.8% | 19.5% | 30.5% |
+| Cartographer's Table | −0.3 ±4.3 | +0.3 ±4.4 | +5.8 ±4.7 | +6.5 ±5.1 |
+| Free Companies | +3.0 ±3.8 | +4.0 ±4.6 | +8.7 ±4.3 | +5.8 ±4.7 |
+| Standing Orders | −1.2 ±1.7 | +0.0 ±0.9 | −0.7 ±1.1 | +0.8 ±1.2 |
+| all three unlocks | +3.7 | +5.0 | +8.3 | +11.0 |
+| Field Kitchen + Cartulary | +0.3 ±1.6 | −0.8 ±1.9 | +0.0 ±2.0 | −0.3 ±1.9 |
+| the full ramp | +28.7 | +29.8 | +31.0 | +29.0 |
+| everything | +31.8 | +30.7 | +32.2 | +34.7 |
+
+No state is below zero meta by more than 1.2pt on any line at n=600 (the gate
+allows max(3pt, 2 s.e.)): "no hub purchase lowers win rate" holds robustly.
+
+### E5 — §11 sample 120 → 240 — KEEP
+
+- With a floor gate on the first-timer line, n=120 (1σ ≈ 3.7pt at p≈0.2)
+  put an 18% reading one σ off 15%. `tune.ts 240 fresh`: specials **22.1%** ·
+  battles 30.8 · recruits 16.7 · adaptive 32.5 (n=360: 21.1%). Default
+  `FW_FRESH_RUNS` is now 240 (+~25s).
+
+### Step 2 decision — Cartographer's Table
+
+**Chosen: the Gate-aware player model (E2 + E4), not a map change.** The map
+change that was the natural design lever (E3: every road into the pre-boss
+layer reaches its campfire) cost the stop-first line 3pt, because a line that
+already ranks the fire high traded a fight's XP for rests it did not need. The
+defect the numbers showed was the model: a fixed-table player marching into its
+fourth act-3 battle on 5 Gate HP with a campfire one fork away. Reading the
+on-screen Gate bar and walking to the fire (or buying the merchant's repair)
+below 60% is what the adaptive line and the store's own rest rule already do;
+it changes no game rule and applies identically to every hub state and to zero
+meta. The wide map itself is unchanged.
+
+Gates: `npm run typecheck` ✓ · `npm test` 264/264 ✓ · `npm run build` ✓.
+
 ## Current state / next step
 
-- Running `FW_SECTIONS=6,11,12` (report n) to read §11 at n=120 and §12 at
-  n=210 with the new gate (scratchpad `tuning/f2.out`).
-- Next: if green, gates (typecheck/test/build) and a non-WIP commit for Steps
-  1+2; then the Cartographer robustness read at n=600 with `FW_META_RUNS=600
-  FW_SECTIONS=12` (or `tune.ts 600 hub`).
+- Steps 0–2 complete and committed (non-WIP).
+- Next: Step 3 — full balance run 2/3 in the background, then commit the
+  regenerated `REPORT.md` and fill the final numbers table. Step 4 (Playwright
+  review) runs alongside it.
