@@ -609,8 +609,16 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * absolute HP pool it was fitted against. They are the *inverse* of the budget
  * ratio at that depth and must be re-derived whenever the curve moves again —
  * which the baseline-band invariant below will insist on.
+ *
+ * **The subject can move the bench too.** `magic`'s build is a Stormcaller, and
+ * when Stormcaller gained `damageMult: 1.35` (Phase 1, lifting the Mystic
+ * offense floor in §1) its baseline went 32% → 55% and every affix, curse and
+ * reward card graded on it was re-scaled with nothing about *them* changing —
+ * §15 read Legendary cards below Epic. The pin was re-derived the same way as
+ * for a curve change, by dividing the subject's change back out
+ * (0.89 × 1.35 ≈ 1.2): baseline 30%, inside the band and within 2pt of the fit.
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 0.89, endure: 1 }
+const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 1.2, endure: 1 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
