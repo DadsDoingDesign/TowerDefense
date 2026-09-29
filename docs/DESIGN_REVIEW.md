@@ -2034,3 +2034,52 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   so the crop is now clamped at the pennant, which makes it frame-aware rather
   than viewport-aware. Verified at 390×844, 375×667 (with and without
   records), 360×568 and a 1280 desktop.
+
+- **2026-09-29 — Phase 2: readable, rewarding battles.** Reviewed on real
+  renders (Playwright, dev build) at 390×844, 375×667, 320×568 and 430×932, plus
+  a keyboard-only walk (menu → hero → map → post a hero on a circle → wave →
+  clear) and a reduced-motion pass. Shots: `scratchpad/p2/shots/`.
+
+  The battlefield was the leftover `1fr` under ~436px of chrome: 390×227 at
+  390 wide with ~100px of black bars, 282×164 at 375×667, 149×87 at 320×568. A
+  live wave now collapses the Detail band into the wave strip and the Stage takes
+  the height (390: 332 → 574); the field fills the width at every size (375 →
+  375×219, 320 → 320×187). What the renders caught: at 390 the field is
+  WIDTH-bound — the lane runs edge to edge on both maps, so no zoom could grow it
+  without cropping the lane — and units measured ~12 CSS px (goblin) / ~15
+  (hero) against a 24 target. The only honest lever was density: units now draw
+  at the pack's native density (the cleanest bucket the pipeline has, no filter)
+  and champions at a lossless ×2, so goblins ~24 CSS px, heroes ~30. The black
+  bars are a baked woodland apron registered under the field; the first pass drew
+  a hard 6px contact line at the seam that read as a picture frame (replaced by
+  a soft falloff) and one uniform mat of trees (glades added, deeper shade toward
+  the Stage edges). The first scripted tap on a circle missed: the apron canvas
+  was first in the DOM, so `querySelector('canvas')` in every harness found it —
+  the field canvas is first again.
+
+  Readability: one HP bar per unit, floored in CSS px (2.5 fill + 1 outline),
+  with a cream recent-damage trail; tier is tick marks IN the bar (the white
+  notch plaques stacked into a ribbon down a crowded lane); elite modifiers are a
+  badge over the head. Damage numbers of a kind merge into a running total per
+  target. The champion gets a nameplate pinned in the Stage's reserved top strip.
+
+  Ceremony: a banner on the Stage in the clear beat, then gold/XP count-ups,
+  "Doyle → Lv 2" call-outs and the per-hero roll; elite spoils get a gold frame;
+  evolution is select-then-confirm with a preview (DPS 60 → 74, HP 178 → 241, the
+  new ability line); a defeat leads with "What broke the line" (types that
+  reached the Gate by Gate damage, the hardest hit, the last wave, the seed).
+
+  Gear: "Equip → <hero>" on every loose item, the comparison first (it was below
+  the fold when it followed the item lines), one-tap swap, and the Gear column
+  follows the equip target (it showed Doyle while the button said Brann). Event
+  pages got a pack strip and a receipt toast — which landed on the serif title
+  and was moved above the CTA. Keyboard: circles are real buttons ("Circle 2, by
+  the third bend, empty — post Doyle here"), focus lands on each screen's h1
+  (the global focus ring drew a box round the title; suppressed for headings),
+  and one polite region says "Depth 1 begins. 8 enemies." … "Wave cleared.
+  32 gold. Doyle reached level 2."
+
+  Open: on a 430×932 phone the apron is ~230px of forest above and below the
+  field during a live wave — correct, and framed, but it is room a future
+  portrait-authored map could use. A hero posted on Kiln Road's top circle
+  (`s1`, y=60) loses ~2 CSS px of plume to the field's top edge at native density.

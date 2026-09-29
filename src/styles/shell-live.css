@@ -341,8 +341,10 @@ h1.sh-brand {
 }
 /* Headings take PROGRAMMATIC focus on a screen change (tabindex -1); they are
    not controls, so no ring. */
-.shell h1[tabindex='-1']:focus {
+.shell h1[tabindex='-1']:focus,
+.shell h1[tabindex='-1']:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 /* The one polite voice (`Announcer`). Off-screen, not clipped — see the note on
    the component. */

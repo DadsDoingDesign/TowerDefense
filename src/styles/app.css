@@ -122,9 +122,9 @@
 }
 .slot-btn {
   position: absolute;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -132,9 +132,11 @@
   pointer-events: none;
 }
 .slot-btn:focus-visible {
-  outline: 3px solid var(--accent, #e0ac4c);
-  outline-offset: 0;
-  box-shadow: 0 0 0 6px rgba(20, 12, 6, 0.7);
+  outline: 3px solid #fff1c8;
+  outline-offset: 1px;
+  box-shadow:
+    0 0 0 5px rgba(20, 12, 6, 0.85),
+    0 0 0 8px var(--teal, #47aba9);
 }
 /* Wide screens: the canvas wrap gives up its 240px floor to the side panel.
    Lifted out of the legacy `@media (min-width: 860px)` block, whose other five
