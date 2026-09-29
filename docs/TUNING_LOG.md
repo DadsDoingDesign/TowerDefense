@@ -195,8 +195,25 @@ Gates: `npm run typecheck` ✓ · `npm test` 264/264 ✓ · `npm run build` ✓.
 - Added `banner` to `tune.ts` (the §13 ladder on every core, 24s at n=600):
   reproduces B0 30.5 · B1 29.0 (−1.5) · B2 19.8 · B3 4.0.
 
+### E6 — STOP_XP_SHARE vs the Vow ladder (`tune.ts 600 banner fresh`, `tune.ts 240 fresh`)
+
+| STOP_XP_SHARE | Thin Pickings shelf | first-timer n=600 | first-timer n=240 | B0 → B1 (cost) | B2 | B3 |
+|---|---|--:|--:|--:|--:|--:|
+| 0.35 (7e1c084) | −1 | 15.3% | — | 28 → 23 (5.0, report) | 16 | 4 |
+| 0.40 | −1 | 16.8% | 21.7% | 27.3 → 22.3 (**5.0**) | 16.2 | 3.5 |
+| 0.45 | −1 | 19.3% | 24.6% | 28.7 → 25.8 (**2.8** ✗) | 18.3 | 3.3 |
+| 0.55 | −1 | 20.3% | 22.1% | 30.5 → 29.0 (**1.5** ✗) | 19.8 | 4.0 |
+| 0.45 | **−2 (half)** | 19.3% | 24.6% | 28.7 → 21.8 (6.8) | 14.8 | 3.0 |
+| **0.55** | **−2 (half)** | **20.3%** | **22.1%** | **30.5 → 23.8 (6.7)** | **16.7** | **2.7** |
+
+STOP_XP alone cannot hit both targets: every non-loot power gain shrinks what
+a loot-denial rung costs. **KEEP 0.55 + Thin Pickings halves the shelf**
+(`shelfSize` 4 → 2, 5 → 3 with the Seal): the card already reads "Half the
+build, same march", two cards instead of three; the shelf now matches. Copy in
+`metaStore` BANNER_RUNGS, doc on `shelfSize`, unit test, §13 prose. Every rung
+costs ≥ 6.7pt at n=600; no §11/§12 cell moves (both are Banner 0).
+
 ## Current state / next step
 
-- REPORT.md not committed (the full run failed). Next: E6 — find a
-  `STOP_XP_SHARE` (0.45?) or a Thin Pickings adjustment that keeps the
-  first-timer line ≥ ~20% and B1 costing ≥ 3pt; then full run 3/3.
+- Next: gates, then full run 3/3 (the last) in the background; Step 4 runs
+  alongside (UI-only fixes cannot move the report).
