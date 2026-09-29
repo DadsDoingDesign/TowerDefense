@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
+import { milestoneForLevel, UPGRADE_PATHS } from '../../game/data/upgradeTree'
+import { effectiveUpgradeLevels } from '../../game/engine/combat'
+import { TIER1_LEVEL } from '../../game/engine/leveling'
+import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
@@ -80,6 +84,8 @@ export function Coach() {
   const inventory = useGameStore((s) => s.inventory)
   const threat = useGameStore((s) => s.threat)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
+  const gold = useGameStore((s) => s.gold)
+  const cleared = useGameStore((s) => s.clearedNodeIds.length)
 
   const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
   const wearingAnything = roster.some((h) => HERO_SLOTS.some((slot) => !!h.equipment[slot]))
@@ -94,6 +100,11 @@ export function Coach() {
   useEffect(() => {
     if (wearingAnything) markTaught('equip')
   }, [wearingAnything, markTaught])
+  // Buying any skill level is the gold lesson performed.
+  const boughtSkill = roster.some((h) => Object.values(h.upgrades ?? {}).some((n) => n > 0))
+  useEffect(() => {
+    if (boughtSkill) markTaught('gold')
+  }, [boughtSkill, markTaught])
 
   // The evolution heads-up has to arrive BEFORE the choice does. Once a hero is
   // in the queue the blocking modal is already up and the tip is too late — it
@@ -107,7 +118,11 @@ export function Coach() {
     packCount: inventory.length,
     wearingAnything,
     showThreat: mode === 'campaign' && threat > 1.001,
+    threat,
     nearEvolution: nearEvolution?.name,
+    // After the first fight (the start node plus one), with gold that would
+    // actually buy a skill level for someone right now.
+    spendableGold: mode === 'campaign' && cleared >= 2 && canBuyASkill(roster, gold) ? gold : 0,
   })
 
   /*
@@ -195,7 +210,9 @@ function pickTip(s: {
   packCount: number
   wearingAnything: boolean
   showThreat: boolean
+  threat: number
   nearEvolution?: string
+  spendableGold: number
 }): Tip | null {
   if (!s.taught.evolve && s.nearEvolution) {
     return {
@@ -203,8 +220,7 @@ function pickTip(s: {
       icon: 'evolve',
       body: (
         <>
-          <b>{s.nearEvolution}</b> nears Level 10 — a permanent branch choice that cannot be swapped
-          later.
+          At level {TIER1_LEVEL}, <b>{s.nearEvolution}</b> picks a path. It&rsquo;s permanent.
         </>
       ),
     }
@@ -215,13 +231,10 @@ function pickTip(s: {
       icon: 'threat',
       body: (
         <>
-          {/* The chip up top was `⚡` when this string was written and has been
-              `<Icon name="threat"/>` — three climbing bars — since P3. Telling
-              the player to look for a mark that is not on the screen is worse
-              than not pointing at all, so the tip names the chip by its LABEL,
-              which is the half that cannot go stale (M11). */}
-          <b>Threat</b> — the multiplier chip up top — raises the HP of everything the horde
-          brings. It climbs with every node cleared.
+          {/* Names the chip by its LABEL, the half that cannot go stale (M11),
+              and says what the number does in one plain clause. */}
+          <b>Threat ×{s.threat.toFixed(2)}</b>: enemies have {Math.round((s.threat - 1) * 100)}% more HP. It
+          rises at every stop.
         </>
       ),
     }
@@ -237,8 +250,7 @@ function pickTip(s: {
       icon: 'deploy',
       body: (
         <>
-          Tap a Sentinel below, then a <b>marked slot</b> on the field. Start Wave lights up once one is
-          posted.
+          Tap your hero, then a <b>glowing circle</b> on the field.
         </>
       ),
     }
@@ -253,11 +265,44 @@ function pickTip(s: {
       icon: 'equip',
       body: (
         <>
-          <b>{s.packCount} unworn</b> {s.packCount === 1 ? 'piece' : 'pieces'} in your pack. Tap a dashed{' '}
-          <b>+</b> under GEAR, then an item to put it on.
+          <b>
+            {s.packCount} {s.packCount === 1 ? 'item' : 'items'}
+          </b>{' '}
+          to equip. Tap a <b>+</b> under Gear.
+        </>
+      ),
+    }
+  }
+  if (!s.taught.gold && s.inSetup && s.spendableGold > 0) {
+    return {
+      id: 'gold',
+      // The coin: this is the one tip about a currency.
+      icon: 'gold',
+      body: (
+        <>
+          <b>{s.spendableGold} gold</b> unspent. Tap a hero, then <b>Skills</b>, to spend it.
         </>
       ),
     }
   }
   return null
+}
+
+/**
+ * True when some hero could buy its next skill level right now — the same
+ * three gates `HeroUpgrades` puts on its buy button (a level left, the hero's
+ * level milestone met, the gold in hand). The tip must never tell a player to
+ * spend gold on a button that would refuse them.
+ */
+function canBuyASkill(roster: Sentinel[], gold: number): boolean {
+  for (const h of roster) {
+    const eff = effectiveUpgradeLevels(h)
+    for (const path of UPGRADE_PATHS) {
+      const lvl = eff[path.id] ?? 0
+      if (lvl >= path.levels.length) continue
+      const next = path.levels[lvl]
+      if (h.level >= milestoneForLevel(lvl + 1) && gold >= next.cost) return true
+    }
+  }
+  return false
 }

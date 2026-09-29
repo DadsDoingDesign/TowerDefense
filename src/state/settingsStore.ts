@@ -37,9 +37,9 @@ export interface AssistProfile {
 }
 
 const ASSIST: Record<AssistLevel, AssistProfile> = {
-  off: { baseDamageMul: 1, label: 'Off', blurb: 'The watch stands as it was written.' },
-  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'The line takes 40% less damage when something gets through.' },
-  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'The line takes 70% less damage when something gets through.' },
+  off: { baseDamageMul: 1, label: 'Off', blurb: 'The game as it was written.' },
+  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'The Gate takes 40% less damage when something gets through.' },
+  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'The Gate takes 70% less damage when something gets through.' },
 }
 
 /**
@@ -56,11 +56,11 @@ export const assistProfile = (level: AssistLevel): AssistProfile => ASSIST[level
  * They live in settings rather than in the run so they survive a run ending,
  * and so "Show the tips again" is one row on the settings page.
  */
-export type TeachId = 'deploy' | 'equip' | 'threat' | 'evolve'
-export const TEACH_IDS = ['deploy', 'equip', 'threat', 'evolve'] as const
+export type TeachId = 'deploy' | 'equip' | 'threat' | 'evolve' | 'gold'
+export const TEACH_IDS = ['deploy', 'equip', 'threat', 'evolve', 'gold'] as const
 export type TeachSeen = Record<TeachId, boolean>
 
-const NO_TEACH: TeachSeen = { deploy: false, equip: false, threat: false, evolve: false }
+const NO_TEACH: TeachSeen = { deploy: false, equip: false, threat: false, evolve: false, gold: false }
 
 export interface AudioSettings {
   master: number
