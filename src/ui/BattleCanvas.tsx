@@ -23,7 +23,8 @@ import {
   setFxReducedMotion,
 } from '../game/render/fx'
 import { FxDiffer } from '../game/render/fxDiff'
-import { APRON_X, APRON_Y, getApron } from '../game/render/apron'
+import { drawBreatherBanner } from '../game/render/telegraphs'
+import { apronMargins, getApron } from '../game/render/apron'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
@@ -185,8 +186,9 @@ export function BattleCanvas() {
       apron.style.display = 'block'
       apron.style.width = `${apronSrc.width * scale}px`
       apron.style.height = `${apronSrc.height * scale}px`
-      apron.style.left = `${left - APRON_X * scale}px`
-      apron.style.top = `${top - APRON_Y * scale}px`
+      const m = apronMargins(useGameStore.getState().battleMap)
+      apron.style.left = `${left - m.x * scale}px`
+      apron.style.top = `${top - m.y * scale}px`
       apron.style.imageRendering = resampleMode(scale, window.devicePixelRatio || 1)
     }
 
@@ -451,7 +453,19 @@ export function BattleCanvas() {
           if (s.downed) continue
           drawRange(ctx, s.pos, s.profile.range, s.def.accent)
         }
+        // Breather: the open posts light up as places a hero can move to.
+        if (liveEngine.breather && !liveEngine.subWaveState().moved) {
+          for (const slot of map.slots) {
+            if (liveEngine.sentinelOnSlot(slot.id)) continue
+            drawSlot(ctx, slot.pos, st.breatherPick ? 'selected' : 'empty')
+          }
+        }
         drawBattleEntities(ctx, liveEngine)
+        if (st.breatherPick) {
+          const picked = map.slots.find((sl) => sl.id === st.breatherPick)
+          if (picked) drawSlot(ctx, picked.pos, 'hover')
+        }
+        if (liveEngine.breather) drawBreatherBanner(ctx, liveEngine)
       } else {
         // Setup: slots + placed towers + range previews.
         const placed = placedSentinels(st.roster, st.placements)
@@ -575,6 +589,14 @@ export function BattleCanvas() {
 
     const onPointerDown = (e: PointerEvent) => {
       const st = useGameStore.getState()
+      // The breather between sub-waves (Phase 3a): the sim is paused and the
+      // player may move ONE hero — tap it, then tap where it goes.
+      if (st.battlePhase === 'battle' && st.engine?.breather) {
+        const p = toLogical(e.clientX, e.clientY)
+        const target = hitSlot(p.x, p.y, p.scale)
+        if (target) st.breatherTap(target)
+        return
+      }
       if (st.battlePhase !== 'setup') return
       const { x, y, scale } = toLogical(e.clientX, e.clientY)
       const slotId = hitSlot(x, y, scale)

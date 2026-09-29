@@ -11,6 +11,7 @@ import { useMetaStore } from '../metaStore'
 import type { RunChallenge } from '../daily'
 import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
 import { hiresTrained } from '../../game/run/relics'
+import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
 
 /**
  * Per-system RNG streams, all derived from the run seed (C1).
@@ -98,3 +99,25 @@ export function clearBeatTimer(): void {
  * or by an explicit discard.
  */
 export const session = { ownsRun: false }
+
+/**
+ * Which way up the NEXT battle's field is drawn (Portrait battlefields).
+ *
+ * Read once, when a battle node is entered (`selectNode`, `endlessBeginWave`),
+ * and stored on the run as the oriented `battleMap` — so a rotation mid-battle
+ * never swaps the geometry under a posted company. The default reads the
+ * window through the pure `chooseFieldOrientation`; with no window (the balance
+ * harness, Vitest in node) it is landscape. Tests pin it with
+ * `setLayoutOrientation`.
+ */
+export const layout: { orientation: () => FieldOrientation } = {
+  orientation: () => {
+    const w = typeof window !== 'undefined' ? (window as { innerWidth?: number; innerHeight?: number }) : null
+    return chooseFieldOrientation(w?.innerWidth ?? 0, w?.innerHeight ?? 0)
+  },
+}
+const defaultOrientation = layout.orientation
+/** Pin the orientation the next battle is dealt (tests); `null` restores the window read. */
+export function setLayoutOrientation(fn: (() => FieldOrientation) | null): void {
+  layout.orientation = fn ?? defaultOrientation
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useBattleLedger } from '../battleLedger'
+import { useCombatNotes } from '../../state/combatNotes'
 import { battleLayoutOf } from './live'
 
 /** Gate hits are spoken at most this often; the latest count wins. */
@@ -91,9 +92,18 @@ export function Announcer() {
       prevL = l
     })
 
+    // Phase 3a: boss phases, the sub-wave breather and Watch Commands, as
+    // sentences (`state/combatNotes.ts`), through this one region.
+    let prevNote = useCombatNotes.getState().seq
+    const unNotes = useCombatNotes.subscribe((n) => {
+      if (n.seq !== prevNote && n.text) say(n.text)
+      prevNote = n.seq
+    })
+
     return () => {
       unGame()
       unLedger()
+      unNotes()
       if (flushT.current !== null) window.clearTimeout(flushT.current)
       if (hitT.current !== null) window.clearTimeout(hitT.current)
     }

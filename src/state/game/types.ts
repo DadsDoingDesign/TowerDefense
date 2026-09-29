@@ -72,6 +72,12 @@ export interface HudSnapshot {
   enemiesAlive: number
   enemiesSpawned: number
   enemiesTotal: number
+  /** Sub-waves (Phase 3a): which one is live (0-based), of how many, and whether the sim is in a breather. */
+  subWave: number
+  subWaveCount: number
+  breather: boolean
+  /** The Watch Command's per-sub-wave charge is available. */
+  commandReady: boolean
 }
 
 /**
@@ -242,6 +248,11 @@ export interface GameData {
   relics: string[]
   /** What this run has done that a feat may ask about (Phase 3b). */
   feats: RunFeats
+  /**
+   * Breather UI (Phase 3a): the slot whose hero the player has picked up to
+   * move (one move per breather). Presentation — not snapshotted.
+   */
+  breatherPick: string | null
   /** Mid-map fork (once per run): recruit a teammate or take an attack mutation. */
   crossroads: Crossroads | null
   forkDone: boolean
@@ -265,6 +276,13 @@ export interface GameData {
   heroTab: HeroTab
   /** Gear slot awaiting an item — the Pack column filters to what fits. */
   gearSlot: { sentinelId: string; slot: HeroSlot } | null
+  /**
+   * Portrait battlefields: on a portrait field the setup layout collapses the
+   * Detail band like a live wave does, so the tall Stage is the field's; the
+   * wave strip's Details toggle (or tapping a posted hero) opens it again.
+   * Reset with the rest of the shell on every node entry.
+   */
+  detailOpen: boolean
 }
 
 export interface GameState

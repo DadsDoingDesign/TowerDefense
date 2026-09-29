@@ -21,7 +21,8 @@ import type { RNG } from '../../game/core/rng'
 import { sfx, sfxRarity } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
-import { hub, recruitHub, seedRunStreams, streams } from './runtime'
+import { hub, layout, recruitHub, seedRunStreams, streams } from './runtime'
+import { orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { EndlessRoom, Slice } from './types'
 
@@ -133,6 +134,8 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     const { baseHp, maxBaseHp } = get()
     set({
       currentWave: wave,
+      // Chosen per battle from the layout (Portrait battlefields), as `selectNode`.
+      battleMap: orientField(get().battleMap, layout.orientation()),
       battlePhase: 'setup',
       screen: 'battle',
       endlessRoom: null,

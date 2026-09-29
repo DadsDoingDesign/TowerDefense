@@ -131,6 +131,8 @@ export const FOCUS_OPTS: readonly { id: FocusMode; label: string; full: string }
   { id: 'lowestHp', label: 'Low HP', full: 'Lowest health' },
   { id: 'strongest', label: 'Strong', full: 'Strongest' },
   { id: 'nearest', label: 'Near', full: 'Nearest to the hero' },
+  // Phase 3a: casters, bombers mid-wind-up and sappers first (GameEngine.threatRank).
+  { id: 'threat', label: 'Threat', full: 'Threats first — bombers, casters, sappers' },
 ]
 
 /** The unabbreviated focus name, by id. */

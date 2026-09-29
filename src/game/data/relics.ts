@@ -66,8 +66,11 @@ export const ENGINE_CAPABILITIES: Record<Capability, boolean> = {
   killRush: true,
   openingRush: true,
   lastStand: true,
-  burnSpreadOnDeath: false,
-  'command:flare': false,
+  // Phase 3a: `engine.onDeath` spreads a burn when the team carries the flag
+  // below, and Flare is a Watch Command (`data/commands.ts`); a relic's
+  // `commands` swap the company's Rally Horn for it (`commandsFor`).
+  burnSpreadOnDeath: true,
+  'command:flare': true,
 }
 
 /**

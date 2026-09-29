@@ -29,9 +29,32 @@ import { getActiveStyle } from './themes'
 export const APRON_X = 260
 export const APRON_Y = 560
 
-let cache: { key: string; canvas: HTMLCanvasElement } | null = null
+/**
+ * How far the apron reaches past the field on each side, per orientation
+ * (Portrait battlefields).
+ *
+ * A landscape field is width-bound on a phone, so its spare room is above and
+ * below (`APRON_Y`). A portrait field is height-bound, so its spare room is
+ * beside it: at a live wave only ~10 CSS px a side at 390 wide, but ~100 at
+ * 375×667 and ~115 at 320×568 (field scale 0.435 / 0.344), and ~200 when the
+ * Detail band is opened during setup and the field shrinks to the setup Stage.
+ * 560 logical px a side covers all of those; 240 above and below covers the
+ * boss nameplate's reserved strip. The two bakes cost the same (~2.5 Mpx).
+ */
+export function apronMargins(map: GameMap): { x: number; y: number } {
+  return map.orientation === 'portrait' ? { x: 560, y: 240 } : { x: APRON_X, y: APRON_Y }
+}
+
+/**
+ * Baked aprons, most recent first. Two entries, not one: the menu's attract
+ * battle is always the landscape Green Line while a phone battle is now fought
+ * on a portrait twin, and a one-entry cache re-baked ~2.5 Mpx of forest on every
+ * trip between the menu and a battle.
+ */
+const CACHE_SIZE = 2
+let cache: { key: string; canvas: HTMLCanvasElement }[] = []
 onSpritesReady(() => {
-  cache = null
+  cache = []
 })
 
 /** The baked apron for this map, or null before the pack has decoded. */
@@ -42,11 +65,16 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   // Roles resolve down the theme's fallback chain one by one (sprites.ts).
   const grass = spriteFor('grass')
   if (!grass) return null
-  const key = `${style.id}:${map.id}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
-  if (cache && cache.key === key) return cache.canvas
+  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
+  const hit = cache.find((e) => e.key === key)
+  if (hit) {
+    cache = [hit, ...cache.filter((e) => e !== hit)]
+    return hit.canvas
+  }
 
-  const W = map.width + APRON_X * 2
-  const H = map.height + APRON_Y * 2
+  const M = apronMargins(map)
+  const W = map.width + M.x * 2
+  const H = map.height + M.y * 2
   const c = document.createElement('canvas')
   c.width = W
   c.height = H
@@ -63,7 +91,7 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   //    foot so crowns overlap back-to-front.
   const { trees, litter } = decoPools()
   const rng = mulberry32((map.id.length * 2654435761) ^ (map.path.length * 40503) ^ 0x9e37)
-  const fx0 = APRON_X, fy0 = APRON_Y, fx1 = APRON_X + map.width, fy1 = APRON_Y + map.height
+  const fx0 = M.x, fy0 = M.y, fx1 = M.x + map.width, fy1 = M.y + map.height
   const put: { x: number; y: number; name: string; flip: boolean }[] = []
   const STEP_X = 44
   const STEP_Y = 30
@@ -144,6 +172,6 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   band(0, fy1, 0, fy1 + rim, 0, fy1, W, rim)
   band(fx0, 0, fx0 - rim, 0, fx0 - rim, 0, rim, H)
   band(fx1, 0, fx1 + rim, 0, fx1, 0, rim, H)
-  cache = { key, canvas: c }
+  cache = [{ key, canvas: c }, ...cache].slice(0, CACHE_SIZE)
   return c
 }

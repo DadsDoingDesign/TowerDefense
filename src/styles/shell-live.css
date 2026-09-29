@@ -676,3 +676,47 @@ h1.sh-brand {
 .shell:not(.shell-page) .pg-toast-wrap {
   top: calc(var(--sh-header-min) + 8px + var(--safe-top, 0px));
 }
+
+/* ---------------------------------------------------------------------------
+ * Portrait battlefields — setup runs collapsed on a portrait field
+ * ---------------------------------------------------------------------------
+ * `useBattleLayout` collapses the Detail band during setup when the battle is
+ * fought on a portrait field (see `setupCollapsible`), so the strip carries a
+ * compact hint, the Details toggle and Start Wave. The toggle is a secondary
+ * control at the 44px floor; Start Wave keeps its footprint so the primary
+ * action never moves under a thumb, and gives a little back on the narrowest
+ * phones so the hint keeps two readable lines.
+ */
+.sh-wavebar .sh-btn.sh-detail-toggle {
+  flex: 0 0 auto;
+  min-width: var(--hit-min);
+  padding: 0 12px;
+}
+/* Two short lines, never three: the action, then what is coming. */
+.sh-wavebar-hint.compact {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-sm);
+  line-height: 1.25;
+}
+.sh-wavebar-do {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sh-wavebar-foes {
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (max-width: 379.98px) {
+  .sh-wavebar:has(.sh-detail-toggle) .sh-btn.primary {
+    flex-basis: 112px;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+  .sh-wavebar .sh-btn.sh-detail-toggle {
+    padding: 0 8px;
+  }
+  .sh-wavebar:has(.sh-detail-toggle) {
+    gap: 6px;
+  }
+}

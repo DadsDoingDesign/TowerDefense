@@ -21,7 +21,7 @@ import type { Loadout } from '../src/game/render/loadout'
 import { onSpritesReady, preloadPack } from '../src/game/render/sprites'
 import { setActiveTheme } from '../src/game/render/themes'
 import { ENEMY_TYPES } from '../src/game/data/enemies'
-import type { RtEnemy } from '../src/game/engine/engine'
+import { enemyBehaviourState, type RtEnemy } from '../src/game/engine/engine'
 
 const PACK = 'fieldwatch'
 
@@ -206,6 +206,7 @@ function build(): void {
       distance: 40, pos: { x: 0, y: 0 }, hitFlash: 0,
       burnDps: 0, burnUntil: 0, burnSrcId: undefined, burnType: 'physical',
       chillSlow: 0, chillUntil: 0, stunUntil: 0, blockedBy: null,
+      ...enemyBehaviourState(def.id, def.reward),
     }
     drawEnemy(ctx, e, 0, 0)
     erow.appendChild(cell(def.id, silhouette(c), def.name))

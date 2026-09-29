@@ -20,6 +20,7 @@ export const CLEAR_SHELL = {
   shellSelection: null as ShellSelection,
   heroTab: 'stats' as HeroTab,
   gearSlot: null,
+  detailOpen: false,
 } satisfies Partial<GameData>
 
 export function freshHud(): HudSnapshot {
@@ -30,6 +31,10 @@ export function freshHud(): HudSnapshot {
     enemiesAlive: 0,
     enemiesSpawned: 0,
     enemiesTotal: 0,
+    subWave: 0,
+    subWaveCount: 1,
+    breather: false,
+    commandReady: false,
   }
 }
 
@@ -91,6 +96,7 @@ export function freshRunState(runSeed: number) {
     runMods: [],
     relics: [],
     feats: freshFeats(),
+    breatherPick: null,
     crossroads: null,
     forkDone: false,
     dust: 0,

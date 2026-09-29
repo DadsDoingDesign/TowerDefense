@@ -106,6 +106,12 @@ export interface EffectMods {
   lastStand?: { below: number; damage: number }
   /** TEAM rule: the first `n` enemies to reach the Gate each wave cost it nothing. */
   leakWard?: number
+  /**
+   * TEAM rule (Phase 3a capability, granted by the Ember Urn relic): a burning
+   * enemy that dies spreads its burn to its nearest neighbours
+   * (`engine.onDeath`, `SPREAD_COUNT` / `SPREAD_RADIUS`).
+   */
+  burnSpreadOnDeath?: boolean
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
@@ -233,6 +239,17 @@ export interface GameMap {
   slots: TowerSlot[]
   /** Where the base sits (end of path). */
   base: Vec2
+  /**
+   * Which way up this field is drawn (Portrait battlefields). Absent means
+   * `landscape` — every map in `ALL_MAPS` is the landscape original.
+   */
+  orientation?: 'landscape' | 'portrait'
+  /**
+   * The id of the landscape field this one is the portrait twin of. The run's
+   * seeded field identity (`pickBattleMap`, the snapshot's `battleMapId`, the
+   * music cue) is always the twin's id, never this map's.
+   */
+  twinOf?: string
 }
 
 /** An enemy archetype/template. */
@@ -255,15 +272,93 @@ export interface EnemyType {
   /** Magic damage resistance, 0..1. */
   magResist?: number
   isBoss?: boolean
+  /**
+   * What this enemy DOES, beyond walking and swinging (Phase 3a). Each entry is
+   * a declarative capability the engine resolves in `engine.ts`; the numbers
+   * and the per-faction assignment live in `src/game/data/behaviours.ts`.
+   * Absent = a plain walker, which is what every enemy was before.
+   */
+  behaviours?: readonly EnemyBehaviour[]
 }
+
+/**
+ * The enemy behaviour kit (Phase 3a). One union member per capability, so a
+ * new behaviour is a new member and a new `case` in the engine — never a
+ * special case keyed on an enemy id.
+ *
+ * Every member has a telegraph (`src/game/render/telegraphs.ts`), an engine
+ * event (`behaviour:<kind>` or `bossPhase`), a counter the balance harness
+ * reads (`BehaviourStats`), and a counterplay stated in `behaviours.ts`.
+ */
+export type EnemyBehaviour =
+  /** Torch shaman: every `interval` s, heal allies within `radius` by `heal` × their max HP. */
+  | { kind: 'healPulse'; radius: number; heal: number; interval: number }
+  /** Torch berserker: below `below` of max HP, moves `speedMult`× and swings `meleeMult`× harder. */
+  | { kind: 'enrage'; below: number; speedMult: number; meleeMult: number }
+  /**
+   * TNT sapper: detonates the moment it is blocked or passes within `trigger`
+   * px of a hero post, dealing `damage` to every hero within `radius`. It is
+   * spent by the blast — no leak, no gold.
+   */
+  | { kind: 'sapper'; trigger: number; radius: number; damage: number }
+  /**
+   * TNT bomber: within `range` of a hero post it plants its feet and winds up
+   * for `windup` s (telegraphed circle on the post); then `damage` to every
+   * hero within `radius` of the mark. Killing it during the windup cancels the
+   * throw. `charges` throws per bomber.
+   */
+  | { kind: 'lob'; range: number; radius: number; damage: number; windup: number; charges: number }
+  /** Barrel splitter: on death, breaks into `count` × `into`, each with `hpFrac` of this body's max HP. */
+  | { kind: 'split'; into: string; count: number; hpFrac: number }
+  /** Shield-bearer: allies (not itself) within `radius` gain `resist` flat to both resistances. */
+  | { kind: 'shieldAura'; radius: number; resist: number }
+  /** Leaper: the first time a blocker would hold it, it vaults `distance` px down the lane instead. */
+  | { kind: 'leap'; distance: number }
+  /** Boss (Grukk): at each HP fraction in `at`, a `windup`-s war-cry, then allies in `radius` move `speedMult`× for `dur` s. */
+  | { kind: 'warCry'; at: readonly number[]; windup: number; radius: number; speedMult: number; dur: number }
+  /**
+   * Boss (Powderkeg King): every `interval` s, lobs TNT at the nearest hero
+   * within `range`; after `windup` s every hero within `radius` takes
+   * `damage` and the targeted post is DISABLED (no shots, no block) for
+   * `disable` s. Below `rageAt` of max HP the interval becomes `rageInterval`.
+   */
+  | {
+      kind: 'kingLob'
+      interval: number
+      first: number
+      windup: number
+      range: number
+      radius: number
+      damage: number
+      disable: number
+      rageAt: number
+      rageInterval: number
+    }
+  /**
+   * Boss (Colossus Keg): at `at` of max HP, breaks into `count` halves, each
+   * carrying `hpShare` of what was left (0.5 over two halves conserves HP;
+   * more makes the split a second act rather than a relabel).
+   */
+  | { kind: 'bossSplit'; at: number; count: number; hpShare: number; speedMult: number; radius: number }
+
+export type EnemyBehaviourKind = EnemyBehaviour['kind']
 
 /** One scheduled spawn within a wave. */
 export interface SpawnEvent {
   typeId: string
-  /** Seconds after wave start to spawn. */
+  /**
+   * Seconds after the START OF ITS SUB-WAVE to spawn. With no `group` this is
+   * seconds after wave start, which is what every wave was before sub-waves.
+   */
   at: number
   /** HP multiplier applied to the enemy template for this wave. */
   hpMult: number
+  /**
+   * Which sub-wave this spawn belongs to (0-based; Phase 3a). A group starts
+   * only once the previous one is cleared and its breather has passed. Absent
+   * = group 0, so a hand-built wave is one sub-wave, exactly as before.
+   */
+  group?: number
 }
 
 export interface WaveDef {
@@ -277,7 +372,7 @@ export interface WaveDef {
 export type Placement = Record<string, string | null> // slotId -> sentinelId | null
 
 /** Team-wide targeting priority. */
-export type FocusMode = 'first' | 'lowestHp' | 'strongest' | 'nearest'
+export type FocusMode = 'first' | 'lowestHp' | 'strongest' | 'nearest' | 'threat'
 
 /** Team-wide behavior modifiers set before a wave. */
 export interface Tactics {

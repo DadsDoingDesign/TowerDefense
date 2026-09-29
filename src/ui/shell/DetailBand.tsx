@@ -50,6 +50,7 @@ import { CommandSlot } from './CommandSlot'
 import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
+import { orientationOf } from '../../game/data/maps'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -58,7 +59,7 @@ import { Tap, tapWord } from '../pointer'
  */
 export function DetailBand({ offers }: { offers: Offer[] }) {
   return (
-    <section className="sh-detail">
+    <section className="sh-detail" id="sh-detail-panels">
       <ContextPanel offers={offers} />
       <GearColumn />
       <PackColumn />
@@ -106,6 +107,9 @@ function WaveBar() {
   const canStart = useGameStore(canStartWave)
   const waveBeat = useGameStore((s) => s.waveBeat)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  const portrait = useGameStore((s) => orientationOf(s.battleMap) === 'portrait')
+  const detailOpen = useGameStore((s) => s.detailOpen)
+  const toggleDetail = useGameStore((s) => s.toggleDetail)
 
   if (screen !== 'battle' || runPhase !== 'active') return null
 
@@ -205,6 +209,15 @@ function WaveBar() {
   const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
   return (
     <div className="sh-wavebar">
+      {portrait ? (
+        /* Portrait setup runs collapsed (Portrait battlefields): the strip is
+           the whole Detail band, so it says the two things a post needs — what
+           to do, and what is coming — in the room beside two buttons. */
+        <p className={`sh-wavebar-hint compact ${deployed ? 'ready' : ''}`}>
+          <span className="sh-wavebar-do">{deployed ? `${deployed} posted` : 'Post a hero'}</span>
+          <span className="sh-wavebar-foes">{currentWave?.spawns.length ?? 0} enemies</span>
+        </p>
+      ) : (
       <p className={`sh-wavebar-hint ${deployed ? 'ready' : ''}`}>
         {deployed ? (
           <>
@@ -216,6 +229,17 @@ function WaveBar() {
           </>
         )}
       </p>
+      )}
+      {portrait && (
+        <button
+          className="sh-btn sh-detail-toggle"
+          aria-expanded={detailOpen}
+          aria-controls="sh-detail-panels"
+          onClick={toggleDetail}
+        >
+          {detailOpen ? 'Hide' : 'Details'}
+        </button>
+      )}
       <button
         className="sh-btn primary"
         disabled={deployed === 0}

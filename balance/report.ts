@@ -13,8 +13,8 @@
 import { writeFileSync } from 'fs'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
-import { ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
+import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
+import { ALL_MAPS, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import { recruitKit, wearKit } from '../src/game/engine/kit'
@@ -41,6 +41,7 @@ import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '.
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
 import { bannerRules, BANNER_RUNGS, MAX_BANNER } from '../src/state/metaStore'
+import { runCombatDepth } from './combat'
 import {
   loadoutFor,
   marksFor,
@@ -72,12 +73,14 @@ import {
   maxLeak,
   MAX_ROSTER,
   MAX_AURA_RADIUS,
+  BENCH_RULES,
   mean,
   median,
   runBattle,
   scaleWave,
   SEEDS,
   SIEGE_PRESSURE,
+  slotCoverage,
   slotDist,
   soloOffense,
   soloStopRate,
@@ -180,6 +183,12 @@ function throughput(s: Sentinel, seed: number): { hpPerSec: number; damage: numb
     baseHp: 999,
     maxSeconds: THROUGHPUT_WINDOW,
     seed,
+    // A stat bench on a FIXED HP queue: its ceiling is count × HP ÷ window, and
+    // `hpPerSec` books kills × HP. The Siege Barrel is a splitter now (Phase
+    // 3a), so with the kit on every kill would book two imps' worth of bodies
+    // the queue never contained and the bench reads "saturating" at 2× its own
+    // ceiling. The kit is graded in §16; this bench grades the tower.
+    rules: { behaviours: false },
   })
   return { hpPerSec: (m.killCount * THROUGHPUT_HP) / THROUGHPUT_WINDOW, damage: m.totalDamage }
 }
@@ -622,7 +631,7 @@ const AFFIX_SCENARIOS = {
     label: 'phys',
     blurb: 'physical scaling, single-target',
     build: buildSpec('sharpshooter', { seed: 2 }),
-    wave: scaleWave(generateEncounter(8, 'normal'), 1.5, SWARM_PRESSURE),
+    wave: scaleWave(generateEncounter(8, 'normal', { subWaves: false }), 1.5, SWARM_PRESSURE),
     waveLabel: 'depth 8, ×1.5 swarm',
     buildLabel: 'Sharpshooter (no gear)',
   },
@@ -630,7 +639,7 @@ const AFFIX_SCENARIOS = {
     label: 'magic',
     blurb: 'INT scaling, splash + crowd control',
     build: buildSpec('stormcaller', { seed: 2 }),
-    wave: scaleWave(generateEncounter(6, 'normal'), 1.5, SWARM_PRESSURE),
+    wave: scaleWave(generateEncounter(6, 'normal', { subWaves: false }), 1.5, SWARM_PRESSURE),
     waveLabel: 'depth 6, ×1.5 swarm',
     buildLabel: 'Stormcaller (no gear)',
   },
@@ -661,7 +670,7 @@ const AFFIX_SCENARIOS = {
 type ScenarioKey = keyof typeof AFFIX_SCENARIOS
 /** Stop rate on one bench scenario, at the pressure the bench was fitted at. */
 function benchStop(hero: Sentinel, k: ScenarioKey): number {
-  return soloStopRate(hero, AFFIX_SCENARIOS[k].wave, affixSeeds, { enemyHpMult: BENCH_PIN[k] })
+  return soloStopRate(hero, AFFIX_SCENARIOS[k].wave, affixSeeds, { enemyHpMult: BENCH_PIN[k], rules: BENCH_RULES })
 }
 const SCEN_KEYS = Object.keys(AFFIX_SCENARIOS) as ScenarioKey[]
 const affixBase: Record<ScenarioKey, number> = {} as Record<ScenarioKey, number>
@@ -677,7 +686,7 @@ const benchQuantum: Record<ScenarioKey, number> = {} as Record<ScenarioKey, numb
 for (const k of SCEN_KEYS) {
   const sc = AFFIX_SCENARIOS[k]
   const ml = maxLeak(sc.wave)
-  const dur = runBattle({ team: [{ sentinel: sc.build, slotId: 's3' }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11 }).timeSec
+  const dur = runBattle({ team: [{ sentinel: sc.build, slotId: 's3' }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11, rules: BENCH_RULES }).timeSec
   // The lightest body in the wave is the finest step it can take.
   const minLeak = Math.min(...sc.wave.spawns.map((s) => ENEMY_TYPES[s.typeId].leak))
   benchQuantum[k] = minLeak / ml / affixSeeds.length
@@ -1020,7 +1029,16 @@ const depths: number[] = []
 const deathDepths: number[] = []
 let bossAttempts = 0
 let bossKills = 0
-/** Threat each team carried into the final boss — the other half of the §6/§11 gap. */
+/**
+ * Battles that hit the harness cap instead of ending (Phase 3a). This sweep
+ * used a 70-second cap, and a capped battle counted as a LOSS: re-measured with
+ * no cap, 38 of the 72 "deaths" in a 150-run sample were the clock — mostly at
+ * the boss — and the honest win rate of the pre-3a game was 73%, not 50%. The
+ * game has no timeout. The cap is now a per-sub-wave safety net far above any
+ * real clear, and this counter must stay at zero.
+ */
+let mcTimeouts = 0
+/** Threat each team carried into the boss fight — the other half of the §6/§11 gap. */
 const mcBossThreats: number[] = []
 /**
  * Every Monte Carlo run draws a battlefield and a set of composition variants
@@ -1036,6 +1054,7 @@ for (let r = 0; r < RUNS; r++) {
   mcFieldCounts.set(out.fieldId, fieldTally)
   if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
   if (out.finalKill) bossKills++
+  mcTimeouts += out.timeouts
   depths.push(out.reached)
   if (out.died) deathDepths.push(out.died)
   if (out.won) {
@@ -1118,6 +1137,11 @@ if (deathConcentration > MAX_DEATH_CONCENTRATION) {
     `Difficulty curve is a cliff: depth ${worstDeathDepth[0]} alone ends ${pct(deathConcentration)} of all lost Monte Carlo runs (max ${pct(MAX_DEATH_CONCENTRATION)}). The other nine nodes are not contributing difficulty.`,
   )
 }
+line(`- Battles that hit the harness cap instead of ending: **${mcTimeouts}** (must be 0 — the game has no clock, so neither may the measurement)`)
+line('')
+if (mcTimeouts > 0) {
+  failures.push(`${mcTimeouts} Monte Carlo battle(s) ended on the harness cap rather than a win or a loss — the clock is deciding runs again.`)
+}
 if (bossKills === 0) {
   failures.push(`The boss killed 0 of ${bossAttempts} teams that reached it — the final node is not a boss.`)
 } else if (bossKillShare < TARGET_BOSS_KILL_SHARE) {
@@ -1152,8 +1176,9 @@ const PERK_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
 function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], WaveDef> {
   return {
     swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
-    armour: generateEncounter(depth, 'elite', { variantId: 'plated' }),
-    line: generateEncounter(depth, 'normal'),
+    // Bench mode (`BENCH_RULES`, harness.ts): a perk is graded on the shape it was fitted to.
+    armour: generateEncounter(depth, 'elite', { variantId: 'plated', subWaves: false }),
+    line: generateEncounter(depth, 'normal', { subWaves: false }),
   }
 }
 function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
@@ -1180,19 +1205,19 @@ for (const point of allPerkPoints()) {
     let hi = 60
     for (let it = 0; it < 9; it++) {
       const mid = Math.sqrt(lo * hi)
-      const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid })
+      const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
       if (r > 0.5) lo = mid
       else hi = mid
     }
     pressure[k] = Math.sqrt(lo * hi)
   }
   const baseRate: Record<string, number> = {}
-  for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k] })
+  for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES })
   const rows: PerkRow[] = []
   for (const perk of point.options) {
     const hero: Sentinel = { ...base, perks: [perk.id] }
     const d: Record<string, number> = {}
-    for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k] }) - baseRate[k]
+    for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES }) - baseRate[k]
     rows.push({ point: point.key, perk: perk.id, name: perk.name, locked: !!perk.unlock, d, mean: mean(PERK_BENCH_KEYS.map((k) => d[k])), dps: heroDps(hero) })
   }
   perkRows.push(...rows)
@@ -1258,13 +1283,14 @@ const MUT_SEEDS = SEEDS.slice(0, 4)
 const MUT_SCENARIOS = {
   swarm: { wave: makeWave([{ typeId: 'torch1', count: 90, hpMult: 2, gap: 0.22 }], 'swarm'), blurb: '90 tiny fast runners — a pure rate/splash test' },
   armour: { wave: makeWave([{ typeId: 'barrel4', count: 12, hpMult: 2, gap: 2.4 }], 'armour'), blurb: '12 Siege Barrels, 30% physical resist' },
-  line: { wave: scaleWave(generateEncounter(8, 'normal'), 1.25, SWARM_PRESSURE), blurb: 'a depth-8 wave at ×1.25 swarm pressure' },
+  // Bench mode (`BENCH_RULES`): the pre-3a continuous wave, see harness.ts.
+  line: { wave: scaleWave(generateEncounter(8, 'normal', { subWaves: false }), 1.25, SWARM_PRESSURE), blurb: 'a depth-8 wave at ×1.25 swarm pressure' },
 } as const
 type MutKey = keyof typeof MUT_SCENARIOS
 const MUT_KEYS = Object.keys(MUT_SCENARIOS) as MutKey[]
 const mutBase = buildSpec('weaponmaster', { seed: 2 })
 const mutBaseRate = {} as Record<MutKey, number>
-for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS)
+for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES })
 line(`Baseline stop rate — ${MUT_KEYS.map((k) => `\`${k}\` (${MUT_SCENARIOS[k].blurb}) ${pct(mutBaseRate[k])}`).join(', ')}.`)
 line('')
 /** How far a mutation must move a scenario for that scenario to count as power / cost. */
@@ -1300,7 +1326,7 @@ const mutDeltas: { name: string; d: Record<MutKey, number> }[] = []
 for (const mut of allMutations()) {
   const withMut: Sentinel = { ...mutBase, mutations: [mut] }
   const d = {} as Record<MutKey, number>
-  for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS) - mutBaseRate[k]
+  for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES }) - mutBaseRate[k]
   mutDeltas.push({ name: mut.name, d })
   const worstKey = MUT_KEYS.reduce((a, b) => (d[a] <= d[b] ? a : b))
   const bestKey = MUT_KEYS.reduce((a, b) => (d[a] >= d[b] ? a : b))
@@ -2452,8 +2478,10 @@ const GATE_DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 const VARIETY_DEPTHS = [4, 7, 9]
 line('| Depth | Kind | Variant | Bodies | Total HP | Max leak | Composition |')
 line('|--:|---|---|--:|--:|--:|---|')
+// Effective HP (Phase 3a): a splitter's pieces are HP the node carries, and
+// `waves.ts` prices them into its budget — so the pool is read the same way.
 const waveHp = (w: ReturnType<typeof generateEncounter>) =>
-  Math.round(w.spawns.reduce((a, s) => a + ENEMY_TYPES[s.typeId].baseHp * s.hpMult, 0))
+  Math.round(w.spawns.reduce((a, s) => a + effectiveHp(s.typeId) * s.hpMult, 0))
 /**
  * The body mix of a wave, keyed by the **base type id** — `barrel4`, not
  * `barrel4_plated`.
@@ -2971,7 +2999,7 @@ const CARD_BENCHES: CardBench[] = [
   },
 ]
 const cardBase = CARD_BENCHES.map((bch) =>
-  stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin }),
+  stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin, rules: BENCH_RULES }),
 )
 line('| Bench | What it loads | Baseline stop rate |')
 line('|---|---|--:|')
@@ -2991,6 +3019,7 @@ for (const relic of FIGHT_RELICS) {
       stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: 's3' }], bch.wave, CARD_SEEDS, {
         enemyHpMult: bch.pin,
         teamMods,
+        rules: BENCH_RULES,
       }) - cardBase[i],
   )
   const m = mean(d)
@@ -3066,6 +3095,120 @@ line(`**No plain "+x% damage" relic:** ${plainDamage.length === 0 ? 'none in the
 line('')
 if (plainDamage.length) failures.push(`Relic(s) ${plainDamage.map((r) => r.name).join(', ')} sell plain "+x% damage" — the damageMult source Phase 3b removed.`)
 
+// -------------------------------------------------------------- Sweep 16
+// Combat depth (Phase 3a): the behaviour kit, boss phases, sub-waves, Watch
+// Commands and status interactions — each with a bench, a counter and a gate.
+const combatDepth = runCombatDepth()
+for (const l of combatDepth.md) line(l)
+failures.push(...combatDepth.failures)
+
+// -------------------------------------------------------------- Sweep 17
+line('## 17. Portrait twins — does a phone fight the same battle?')
+line('')
+line('**Why this exists.** A phone held upright fights on a **portrait twin** of the')
+line('seeded field (`maps.ts` § Portrait battlefields): the landscape field transposed')
+line('and padded, so the lane fills the tall live-wave Stage instead of a 390×228 strip.')
+line('The seed still deals the landscape field (`pickBattleMap` never returns a twin);')
+line('which twin is fought on is chosen per battle from the layout. That is only safe if')
+line('the two are the same game — the Daily Watch deals one seed to every device, and a')
+line('twin that were even a few points easier would make the phone the right way to')
+line('play it. So the twin is checked twice: its geometry against the original, and its')
+line('difficulty on the live engine.')
+line('')
+/** Path lengths may differ by at most this (the ±5% brief; the isometry gives 0). */
+const TWIN_MAX_LENGTH_DIFF = 0.005
+/** Per-slot coverage at every range may differ by at most this share of the original. */
+const TWIN_MAX_COVERAGE_DIFF = 0.02
+/** Stop-rate difference allowed across the battery (points). */
+const TWIN_MAX_STOP_DIFF = 0.03
+/** Mean Gate HP lost may differ by at most this share (or 0.25 HP, whichever is larger). */
+const TWIN_MAX_LEAK_DIFF = 0.05
+const TWIN_RANGES = [96, 150, 168]
+line('| Field | Twin | Box | Path px (twin / original) | Slots | Worst per-slot coverage Δ (96 / 150 / 168px) | Worst slot-gap Δ |')
+line('|---|---|---|--:|--:|---|--:|')
+for (const land of ALL_MAPS) {
+  const tall = orientField(land, 'portrait')
+  const lenL = pathLength(land.path)
+  const lenT = pathLength(tall.path)
+  const covDiff = TWIN_RANGES.map((r) => {
+    const a = slotCoverage(land, r)
+    const b = slotCoverage(tall, r)
+    return Math.max(...land.slots.map((sl) => Math.abs(b[sl.id] - a[sl.id]) / Math.max(1, a[sl.id])))
+  })
+  let gapDiff = 0
+  for (const a of land.slots) {
+    for (const b of land.slots) {
+      const ta = tall.slots.find((x) => x.id === a.id)!
+      const tb = tall.slots.find((x) => x.id === b.id)!
+      gapDiff = Math.max(gapDiff, Math.abs(Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) - Math.hypot(ta.pos.x - tb.pos.x, ta.pos.y - tb.pos.y)))
+    }
+  }
+  line(
+    `| ${land.name} | \`${tall.id}\` | ${tall.width}×${tall.height} | ${Math.round(lenT)} / ${Math.round(lenL)} | ${tall.slots.length} / ${land.slots.length} | ${covDiff.map((d) => `${(d * 100).toFixed(1)}%`).join(' / ')} | ${gapDiff.toFixed(2)}px |`,
+  )
+  if (Math.abs(lenT / lenL - 1) > TWIN_MAX_LENGTH_DIFF) {
+    failures.push(`${land.name}'s portrait twin is ${((lenT / lenL - 1) * 100).toFixed(1)}% off the original's path length (max ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%): crossing time is a difficulty dial Threat does not multiply.`)
+  }
+  if (tall.slots.length !== land.slots.length || tall.slots.some((sl, i) => sl.id !== land.slots[i].id)) {
+    failures.push(`${land.name}'s portrait twin does not carry the same slots (placements are keyed by slot id and ride across orientations).`)
+  }
+  if (Math.max(...covDiff) > TWIN_MAX_COVERAGE_DIFF) {
+    failures.push(`${land.name}'s portrait twin changes what a slot sees by up to ${(Math.max(...covDiff) * 100).toFixed(1)}% (max ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}%) — a phone would be solving a different placement puzzle.`)
+  }
+}
+line('')
+/**
+ * The battery: the §14c teams (3–5 random tier-2 specs, depth-scaled level and
+ * gear, best-coverage slots) at five depths and three node kinds, on the twin
+ * and on the original, same seeds. `baseHp` is the real 20 so the stop rate
+ * means something; Gate HP lost is summed over every fight.
+ */
+const TWIN_DEPTHS: [number, EncounterKind][] = [[2, 'normal'], [4, 'boss'], [6, 'elite'], [8, 'normal'], [10, 'normal'], [12, 'boss']]
+const TWIN_TEAMS = 8
+line(`**Battery** — ${TWIN_TEAMS} random §14c-style companies × ${TWIN_DEPTHS.length} nodes (${TWIN_DEPTHS.map(([d, k]) => `d${d} ${k}`).join(', ')}) at the road's Threat, base ${MAX_BASE_HP}, identical seeds on both twins:`)
+line('')
+line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |')
+line('|---|---|--:|--:|--:|--:|')
+for (const land of ALL_MAPS) {
+  const res: Record<string, { cleared: number; lost: number; downs: number; n: number }> = {}
+  for (const field of [land, orientField(land, 'portrait')]) {
+    const acc = { cleared: 0, lost: 0, downs: 0, n: 0 }
+    const rr = new RNG(1717)
+    const order = bestSlots(field)
+    for (let t = 0; t < TWIN_TEAMS; t++) {
+      const size = 3 + Math.floor(rr.next() * 3)
+      const ids = Array.from({ length: size }, () => rr.pick(TIER2_NODES).id)
+      for (const [depth, kind] of TWIN_DEPTHS) {
+        const team = ids.map((id, i) => ({
+          sentinel: buildSpec(id, { level: mcLevel(depth), gearRarity: mcRarity(depth), seed: t * 10 + i, perkSeed: t * 10 + i }),
+          slotId: order[i],
+        }))
+        const m = runBattle({ team, depth, kind, map: field, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
+        acc.n++
+        if (m.cleared) acc.cleared++
+        acc.lost += m.baseHpLost
+        acc.downs += m.downs
+      }
+    }
+    res[orientationOf(field)] = acc
+    line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} | ${f2(acc.downs / acc.n)} |`)
+  }
+  const a = res.landscape
+  const b = res.portrait
+  const stopDiff = Math.abs(a.cleared / a.n - b.cleared / b.n)
+  const leakA = a.lost / a.n
+  const leakB = b.lost / b.n
+  if (stopDiff > TWIN_MAX_STOP_DIFF) {
+    failures.push(`${land.name}: the portrait twin's stop rate differs from the landscape field's by ${(stopDiff * 100).toFixed(1)}pt (max ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt) — the orientation a device picks is changing the game.`)
+  }
+  if (Math.abs(leakB - leakA) > Math.max(0.25, TWIN_MAX_LEAK_DIFF * leakA)) {
+    failures.push(`${land.name}: the portrait twin leaks ${f2(leakB)} Gate HP a fight against ${f2(leakA)} on the landscape field (max ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}%).`)
+  }
+}
+line('')
+line(`**The gates.** Path length within ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%, the same slot ids, every slot's coverage within ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}% at ${TWIN_RANGES.join(' / ')}px, and on the battery a stop rate within ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt and Gate HP lost within ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.`)
+line('')
+
 // -------------------------------------------------------------- Summary
 line('## Verdict')
 line('')
@@ -3112,6 +3255,7 @@ console.log(
 console.log(
   `Banner ladder (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `B${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`,
 )
+console.log(combatDepth.summary)
 console.log(`Report written to balance/REPORT.md`)
 if (failures.length) {
   console.log(`\n❌ ${failures.length} invariant(s) failed:`)

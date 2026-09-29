@@ -10,7 +10,7 @@
  * effects themselves go to `fx.ts` through an injectable `FxSink`, which is
  * what lets `tests/fxDiff.test.ts` drive it on synthetic engine snapshots.
  */
-import { TICK, type GameEngine, type RtSentinel } from '../engine/engine'
+import { takenMult, TICK, type GameEngine, type RtSentinel } from '../engine/engine'
 import type { EffectMods } from '../types'
 import {
   FLOAT_CRIT,
@@ -132,13 +132,17 @@ interface ESnap {
   color: string
   typeId: string
   /**
-   * The two resistances `damageEnemy` multiplies into everything that reaches
-   * this enemy, snapshotted because attrition has to be re-derived with them —
-   * see `tookDiscreteDamage`. They live on `e.type`, so they are already known
-   * at snapshot time and cost nothing to carry.
+   * The two multipliers `damageEnemy` applies to everything that reaches this
+   * enemy — `engine.takenMult`, i.e. resistance, the shield-bearer's aura and
+   * brittle — snapshotted because attrition has to be re-derived with them
+   * (see `tookDiscreteDamage`). The engine freezes the aura and brittle at the
+   * END of a tick, so the values read here are exactly the ones the next tick
+   * uses. Before Phase 3a these were the raw resistances and the arithmetic
+   * was `1 - resist`; `takenMult` returns that same double when no aura or
+   * frost is in play.
    */
-  physResist: number
-  magResist: number
+  physMult: number
+  magMult: number
   /**
    * EXACTLY the HP this enemy's own continuous damage removed this tick: burn,
    * thorns and traps, each already multiplied by the resistance that source's
@@ -232,19 +236,19 @@ export function deathClass(typeId: string): DeathClass {
 }
 
 /**
- * The exact HP a live burn removes in one tick: `burnDps * TICK`, resisted by
- * the burn's own damage type — the same two products, in the same order, as
+ * The exact HP a live burn removes in one tick: `burnDps * TICK`, times the
+ * taken-multiplier of the burn's own damage type — the same two products, in the same order, as
  * `damageEnemy`, so it agrees with the engine to the ulp (see `snapBefore`).
  * `tickElapsed` is the clock the tick about to run compares against.
  */
 export function burnToll(
   e: { burnDps: number; burnUntil: number; burnType: 'physical' | 'magic' },
   tickElapsed: number,
-  physResist: number,
-  magResist: number,
+  physMult: number,
+  magMult: number,
 ): number {
   return e.burnDps > 0 && tickElapsed < e.burnUntil
-    ? e.burnDps * TICK * (1 - (e.burnType === 'physical' ? physResist : magResist))
+    ? e.burnDps * TICK * (e.burnType === 'physical' ? physMult : magMult)
     : 0
 }
 
@@ -378,8 +382,8 @@ export class FxDiffer {
      */
     const tickElapsed = engine.elapsed + TICK
     for (const e of engine.enemies) {
-      const physResist = e.type.physResist ?? 0
-      const magResist = e.type.magResist ?? 0
+      const physMult = takenMult(e, 'physical')
+      const magMult = takenMult(e, 'magic')
       const snap: ESnap = {
         id: e.id,
         hp: e.hp,
@@ -390,13 +394,13 @@ export class FxDiffer {
         radius: e.type.radius,
         color: e.type.color,
         typeId: e.type.id,
-        physResist,
-        magResist,
+        physMult,
+        magMult,
         // `updateEnemies` runs `damageEnemy(e, e.burnDps * dt, …, e.burnType)`,
-        // and `damageEnemy` deals `amount * (1 - resist)`. Same two products, in
-        // the same order, against the same doubles — so this is the burn's exact
-        // toll, not a bound on it.
-        atr: burnToll(e, tickElapsed, physResist, magResist),
+        // and `damageEnemy` deals `amount * takenMult(e, type)`. Same two
+        // products, in the same order, against the same doubles — so this is the
+        // burn's exact toll, not a bound on it.
+        atr: burnToll(e, tickElapsed, physMult, magMult),
       }
       this.eSnap.push(snap)
       this.snapById.set(e.id, snap)
@@ -502,7 +506,7 @@ export class FxDiffer {
   private addAttrition(id: string, amount: number, type: 'physical' | 'magic'): void {
     const s = this.snapById.get(id)
     if (!s) return
-    s.atr += amount * (1 - (type === 'physical' ? s.physResist : s.magResist))
+    s.atr += amount * (type === 'physical' ? s.physMult : s.magMult)
   }
 
   /**
@@ -540,7 +544,10 @@ export class FxDiffer {
     this.nxNow.clear()
     this.nyNow.clear()
     for (const e of engine.enemies) {
-      this.hpNow.set(e.id, e.hp)
+      // A shaman's heal this tick is added back out, so a heal can never mask
+      // the hit it landed alongside (the heal is not damage, so it is not
+      // attrition either — it is simply not part of the drop).
+      this.hpNow.set(e.id, e.hp - (e.healed ?? 0))
       this.nxNow.set(e.id, e.pos.x)
       this.nyNow.set(e.id, e.pos.y)
     }

@@ -33,7 +33,7 @@ import { getNode } from '../game/data/archetypeTree'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
-import { FIRST_MAP, mapById } from '../game/data/maps'
+import { FIRST_MAP, fieldIdOf, mapById, orientationOf, orientField, type FieldOrientation } from '../game/data/maps'
 import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
 import type { BattleResult } from '../game/engine/engine'
@@ -79,7 +79,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 7
+export const RUN_SNAPSHOT_VERSION = 9
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -111,6 +111,7 @@ const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'bat
 const MODES: readonly GameMode[] = ['campaign', 'endless']
 const PHASES: readonly RunPhase[] = ['active', 'won', 'lost']
 const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
+const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
@@ -138,6 +139,12 @@ export interface RunSnapshot {
   event: { kind: EventKind; nodeId: string } | null
 
   battleMapId: string
+  /**
+   * v9: which twin of `battleMapId` the current battle is fought on (Portrait
+   * battlefields). `battleMapId` stays the seeded field's id; this is the
+   * per-battle orientation chosen when its node was entered.
+   */
+  fieldOrientation: FieldOrientation
   roster: Sentinel[]
   placements: Placement
   gold: number
@@ -300,7 +307,8 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     clearedNodeIds: s.clearedNodeIds,
     reachableNodeIds: s.reachableNodeIds,
     event: s.event,
-    battleMapId: s.battleMap?.id ?? FIRST_MAP.id,
+    battleMapId: s.battleMap ? fieldIdOf(s.battleMap) : FIRST_MAP.id,
+    fieldOrientation: s.battleMap ? orientationOf(s.battleMap) : 'landscape',
     roster: s.roster,
     placements: s.placements,
     gold: s.gold,
@@ -360,7 +368,9 @@ export const snapshotShrine = (snap: RunSnapshot): ShrineOffer | null =>
 export function snapshotBattleMap(snap: RunSnapshot): GameMap {
   const map = mapById(snap.battleMapId)
   if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
-  return map
+  // The battle comes back on the twin it was saved on, whatever the viewport
+  // is now: orientation is fixed for the duration of a battle.
+  return orientField(map, snap.fieldOrientation)
 }
 
 // ------------------------------------------------------------------ migrate
@@ -459,6 +469,7 @@ const MOD_STRUCT_FIELDS = {
  */
 const MOD_BOOL_FIELDS = {
   thornsIgnite: true,
+  burnSpreadOnDeath: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
   damageMult: true, rateMult: true, rangeMult: true, hpMult: true, projSpeedMult: true,
@@ -467,6 +478,7 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   block: true, thornsMult: true, thornsIgnite: true, healAura: true, buffAura: true,
   dmgReductionAura: true, lifedrain: true, selfSacrifice: true, trap: true,
   volley: true, critEvery: true, blockRegen: true, killRush: true, openingRush: true, lastStand: true, leakWard: true,
+  burnSpreadOnDeath: true,
 }
 
 /**
@@ -524,7 +536,16 @@ function validWave(raw: unknown): raw is WaveDef {
   if (!isNum(raw.index) || !isStr(raw.label) || typeof raw.isBoss !== 'boolean') return false
   if (!Array.isArray(raw.spawns) || raw.spawns.length === 0) return false
   return raw.spawns.every(
-    (s) => isObj(s) && isStr(s.typeId) && !!ENEMY_TYPES[s.typeId] && isNum(s.at) && isNum(s.hpMult),
+    (s) =>
+      isObj(s) &&
+      isStr(s.typeId) &&
+      !!ENEMY_TYPES[s.typeId] &&
+      isNum(s.at) &&
+      isNum(s.hpMult) &&
+      // v7: the sub-wave a spawn belongs to. Absent is group 0 (a v1–v6 wave
+      // is one sub-wave, exactly as it was fought); present must be a small
+      // non-negative integer — the engine sorts and indexes by it.
+      (s.group === undefined || (Number.isInteger(s.group) && (s.group as number) >= 0 && (s.group as number) < 16)),
   )
 }
 
@@ -871,6 +892,16 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // ---- and the wave, which resolves instead, because the game re-deals it ---
   const currentWave = validWave(o.currentWave) ? (o.currentWave as WaveDef) : null
 
+  // ---- v8 → v9: portrait battlefields — nothing to rewrite ----------------
+  // `fieldOrientation` was added (below). A v8 save has none and was fought on
+  // the landscape field, which is exactly what the default restores.
+
+  // ---- v7 → v8: sub-waves (Phase 3a) — nothing to rewrite ---------------
+  // A stored wave's spawns may now carry `group` (its sub-wave; `validWave`
+  // checks it), and `tactics.focus` may be 'threat'. A v7 wave has no groups
+  // and resumes as ONE sub-wave — the wave it was when it was saved — and the
+  // next node deals its cut from the seed like any other.
+
   // ---- v6 → v7: the skill tree became spec perks (Phase 3b) ----------------
   // A version STEP, so it rewrites — exactly like the v5 → v6 kit move below.
   // Every level a hero BOUGHT is refunded at the price it cost, so the gold
@@ -912,6 +943,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
         ? (o.event as RunSnapshot['event'])
         : null,
     battleMapId,
+    // v8 → v9: every older save was fought on the landscape field. A value this
+    // build cannot name falls back to it too — the twins are isometric, so the
+    // fallback changes how the battle is drawn, never how it plays.
+    fieldOrientation: str<FieldOrientation>(o.fieldOrientation, 'landscape', ORIENTATIONS),
     roster,
     placements: (o.placements && typeof o.placements === 'object' ? o.placements : {}) as Placement,
     gold: Math.max(0, num(o.gold, 0)) + refund,
@@ -940,7 +975,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
       focus: str(
         (o.tactics as Tactics | undefined)?.focus,
         'first',
-        ['first', 'lowestHp', 'strongest', 'nearest'] as const,
+        ['first', 'lowestHp', 'strongest', 'nearest', 'threat'] as const,
       ),
       // `holdFire` was cut (it cost stop rate in 7 of 8 measured cells); a
       // payload that still carries it has it dropped here, not restored.

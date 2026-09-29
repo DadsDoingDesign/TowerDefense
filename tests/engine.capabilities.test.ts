@@ -43,7 +43,9 @@ describe('rule capabilities (engine)', () => {
   })
 
   it('critEvery and volley: a cadence the engine keeps without moving the combat stream', () => {
-    const wave = generateEncounter(3, 'normal')
+    // One continuous wave (no sub-wave breathers), so a solo rogue cannot clear
+    // it and a cadence's extra damage has bodies left to land on.
+    const wave = generateEncounter(3, 'normal', { subWaves: false })
     const rogue = createSentinel('rogue')
     const a = run({ team: [{ sentinel: rogue, slotId: 's3' }], wave })
     const b = run({ team: [{ sentinel: withPerkMods(rogue, { critEvery: 3 }), slotId: 's3' }], wave })

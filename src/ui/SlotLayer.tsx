@@ -62,6 +62,40 @@ export function SlotLayer({ field }: { field: FieldRect }) {
   const armed = useGameStore((s) => s.selectedSentinelId)
   const placeOnSlot = useGameStore((s) => s.placeOnSlot)
   const focusTower = useGameStore((s) => s.focusTower)
+  // Phase 3a: during a sub-wave breather the same circles are the one move —
+  // pick a hero up, put it down — so the move is reachable without a pointer.
+  const breather = useGameStore((s) => s.hud.breather && !!s.engine?.breather)
+  const pick = useGameStore((s) => s.breatherPick)
+  const breatherTap = useGameStore((s) => s.breatherTap)
+
+  if (screen === 'battle' && battlePhase === 'battle' && engine && breather) {
+    return (
+      <div
+        className="slot-layer"
+        role="group"
+        aria-label={pick ? 'Breather — choose where the hero goes' : 'Breather — choose a hero to move (one move)'}
+        style={{ left: field.left, top: field.top, width: field.width, height: field.height }}
+      >
+        {map.slots.map((slot, i) => {
+          const rt = engine.sentinelOnSlot(slot.id)
+          const where = slotPlace(map, slot.pos)
+          const state = rt ? `${rt.def.name} posted` : 'empty'
+          const action = pick ? (pick === slot.id ? ' — put back' : ' — move here') : rt ? ' — pick up to move' : ''
+          return (
+            <button
+              key={slot.id}
+              type="button"
+              className={`slot-btn ${rt ? 'filled' : ''}`}
+              style={{ left: slot.pos.x * field.scale, top: slot.pos.y * field.scale }}
+              aria-label={`Circle ${i + 1}, ${where}, ${state}${action}`}
+              aria-disabled={engine.subWaveState().moved || (!pick && !rt)}
+              onClick={() => breatherTap(slot.id)}
+            />
+          )
+        })}
+      </div>
+    )
+  }
 
   if (screen !== 'battle' || battlePhase !== 'setup' || engine) return null
   const armedHero = roster.find((h) => h.id === armed)
