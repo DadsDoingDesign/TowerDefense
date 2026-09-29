@@ -46,6 +46,14 @@ result. Append a short note to the review log when you're done.
   `src/ui/UpdateNotice.tsx`. A new build WAITS; it never takes over a running
   page. The precache is derived from the ACTIVE theme's pack (`packAssetPaths`
   in `sprites.ts`) plus whatever the emitted code names — see `planPrecache`.
+- Run snapshot load/validation: `src/state/runSnapshot.ts` — every field a
+  save can put into arithmetic is validated, and `tests/runSnapshot.fuzz.test.ts`
+  mutates a real snapshot ~15k ways to prove it. Extend the validators (and the
+  fuzz's base run) when you add a snapshot field.
+- Paper-doll compositor `src/game/render/loadout.ts`. Anchors are generated per
+  PACK by `npm run anchors` (`scripts/anchors.ts` + `anchors-lib.ts`) into
+  `anchors.generated.ts`; `anchors:check` in the build also fails if any gear
+  piece would overhang a hero cell.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far.
@@ -67,4 +75,6 @@ result. Append a short note to the review log when you're done.
   committed `balance/REPORT.md` is a golden file: commit it regenerated.
 - Typecheck with `npm run typecheck` (`tsc -b`) before committing. Plain
   `npx tsc --noEmit` checks nothing: the root tsconfig has `"files": []` and
-  only `-b` follows its project references.
+  only `-b` follows its project references — `tsconfig.app.json` (src,
+  harness), `tsconfig.node.json` (vite/vitest config, build/, balance, tests)
+  and `tsconfig.scripts.json` (scripts/).
