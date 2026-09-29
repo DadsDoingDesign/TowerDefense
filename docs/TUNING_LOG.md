@@ -195,8 +195,117 @@ Gates: `npm run typecheck` ✓ · `npm test` 264/264 ✓ · `npm run build` ✓.
 - Added `banner` to `tune.ts` (the §13 ladder on every core, 24s at n=600):
   reproduces B0 30.5 · B1 29.0 (−1.5) · B2 19.8 · B3 4.0.
 
+### E6 — STOP_XP_SHARE vs the Vow ladder (`tune.ts 600 banner fresh`, `tune.ts 240 fresh`)
+
+| STOP_XP_SHARE | Thin Pickings shelf | first-timer n=600 | first-timer n=240 | B0 → B1 (cost) | B2 | B3 |
+|---|---|--:|--:|--:|--:|--:|
+| 0.35 (7e1c084) | −1 | 15.3% | — | 28 → 23 (5.0, report) | 16 | 4 |
+| 0.40 | −1 | 16.8% | 21.7% | 27.3 → 22.3 (**5.0**) | 16.2 | 3.5 |
+| 0.45 | −1 | 19.3% | 24.6% | 28.7 → 25.8 (**2.8** ✗) | 18.3 | 3.3 |
+| 0.55 | −1 | 20.3% | 22.1% | 30.5 → 29.0 (**1.5** ✗) | 19.8 | 4.0 |
+| 0.45 | **−2 (half)** | 19.3% | 24.6% | 28.7 → 21.8 (6.8) | 14.8 | 3.0 |
+| **0.55** | **−2 (half)** | **20.3%** | **22.1%** | **30.5 → 23.8 (6.7)** | **16.7** | **2.7** |
+
+STOP_XP alone cannot hit both targets: every non-loot power gain shrinks what
+a loot-denial rung costs. **KEEP 0.55 + Thin Pickings halves the shelf**
+(`shelfSize` 4 → 2, 5 → 3 with the Seal): the card already reads "Half the
+build, same march", two cards instead of three; the shelf now matches. Copy in
+`metaStore` BANNER_RUNGS, doc on `shelfSize`, unit test, §13 prose. Every rung
+costs ≥ 6.7pt at n=600; no §11/§12 cell moves (both are Banner 0).
+
+### Step 4 — review, run 1 (390×844, dev server for `window.__game`; prod preview for the menu)
+
+`window.__game` is exposed only in DEV builds (`main.tsx`), so the playthrough
+runs on `npx vite --port 4361`; the menu/attract mode was checked on the
+production preview (4360). Driver: scratchpad `pw.mjs` + `auto.mjs` (taps the
+real canvas at each slot's box — the "Circle N" buttons are an accessible layer
+under the canvas).
+
+Run 1 (Fighter, honest play, no Assist): lost at depth 5 (Torch ×12, Bomber
+×3; 72 marks). Seen: attract mode, hero pick, map, node preview, portrait setup
++ coach tip, sub-waves 1/2 and 1–2/3, the breather banner, Rally Horn in the
+command slot, wave-cleared card, campfire, spoils (relic + item), level-5 perk
+dialog (locked perk shows its feat), Crossroads, defeat receipt.
+
+Fixed (UI-only, cannot move the balance report):
+- **Campfire on a full Gate preselected "Rest by the fire — Gate is full"
+  with "Rest anyway" as the big button** — one tap from wasting the fire.
+  `campfireOffers` now leads with a trainable hero when the Gate is full
+  (rest still leads on a hurt Gate).
+- **Spoils row truncated "Executioner's Oa…"** beside "•••• Legendary · relic"
+  at 390px. `.pg-row-label` wraps to two lines inside the 48px row.
+
+### Step 3 — full run 3/3 — ALL INVARIANTS PASS, REPORT.md committed (9ea3779)
+
+## Final numbers
+
+Before = the committed REPORT at 7e1c084; after = REPORT at 9ea3779 (report
+sample sizes: §11 n=120 → 240, §12 n=210, §13 n=600), plus the n=600 paired
+reads from `tune.ts` and the `meta-sweep.ts 240 phase3b` scoreboard run on
+both trees (the "before" from a `git archive` of 7e1c084).
+
+| Metric | Before | After |
+|---|--:|--:|
+| §6 Monte Carlo (band 45–60%) | 59% | 59% |
+| §11 first-timer (specials), report | 14% (n=120, ungated floor) | **22%** (n=240, gated 15–35%) |
+| §11 first-timer, n=600 | 15.3% | **20.3%** |
+| §11 battles / recruits / adaptive, report | 29 / 20 / 34% | 31 / 17 / 33% |
+| §11 battles / recruits / adaptive, n=600 | 27.0 / 19.8 / 28.3% | 25.8 / 19.5 / 30.5% |
+| §11 strict floor / +2 recruits | 2% / 5% | 1% / 4% |
+| Route spread (report §11) | 14–34% (20pt) | 17–33% (16pt) |
+| Route spread (phase3b, n=240) | 18–32% (14.6pt) | 17–33% (15.8pt) |
+| Build spread, oracle vs random (adaptive, in-sample n=240) | 12.1pt | 25.0pt |
+| Build spread, same oracle on 480 fresh seeds | 24.2pt | 30.2pt |
+| Vow ladder B0/B1/B2/B3 (adaptive, n=600) | 28 / 23 / 16 / 4% | 31 / 24 / 17 / 3% |
+| Vow marks/run | 111 / 146 / 213 / 233 | 116 / 149 / 220 / 227 |
+| Starters F/R/M, first-timer line (phase3b n=240) | 14 / 21 / 18% | 25 / 23 / 19% |
+| Starters F/R/M, adaptive (phase3b n=240) | 31 / 38 / 28% | 31 / 38 / 29% |
+| Starters F/R/M, nodes cleared (report §11) | 9.4 / 9.2 / 9.6 | 9.7 / 9.7 / 9.9 |
+| §12 Cartographer worst gated Δ (n=210) | −6pt | −3pt (±8) |
+| §12 Cartographer battles-first, n=600 | −3.5 ±4.2 | +0.3 ±4.4 |
+| §12 any hub state, worst Δ at n=600 | — | −1.2 ±1.7 (Standing Orders, specials) |
+| §17 portrait parity (stop / Gate lost, both fields) | identical (94%/1.56, 94%/1.25) | identical (unchanged) |
+
+**Watch item — build spread.** The in-sample oracle doubled (12 → 25pt), and
+an out-of-sample check (the oracle's picks replayed on 480 seeds it never saw)
+reads 24 → 30pt: the build layer was already more solved than the in-sample
+number said, and faster levelling (more of the level-10/15/20 choices get
+reached) widened it by ~6pt. It is not gated; it belongs to the perk/evolution
+lane, not to this one.
+
+### Step 4 — review conclusions (screenshots in scratchpad only, not committed)
+
+Run 2 (Mystic, `GOD=1` refills the Gate before each fight, as a review
+shortcut) reached the act-1 boss: Warlord Grukk's plate stepped
+"Phase 0 of 2: war-cry at 66%" → "1 of 2: war-cry at 33%" → "2 of 2:
+war-cries spent", followed by the Crossroads, a campfire and a second recruit.
+Desk pass at 1440×900: 1/2/3 → speed 3/1/2 ✓, Space → battle starts ✓,
+C → command spent (ready true → false) ✓, ? → key sheet ✓, Esc closes ✓.
+Codex: five sections with counts; the feats list is readable.
+
+**Scorecard** (docs/DESIGN_REVIEW.md checklist, 1–5): readability 4 · decoration
+at the margins 5 · faction legibility 4 · colour/surface 5 · surface character 4
+· depth/composition 4 · polish 3.
+
+**Fixed and committed** (each rendered again at 390×844):
+1. Campfire on a full Gate leads with Train, not "Rest anyway" (3b02683).
+2. Long offer names wrap; the rarity tag wraps its suffix (3b02683, dcca65d).
+3. Act bosses are "Act N Boss", not "The Final Watch" (2dbce38).
+
+**Open** (listed in DESIGN_REVIEW.md, 2026-09-29 entry): the last enemy is
+frozen mid-death during a breather; the breather banner and boss plate cover
+the lane's entry at the top of the portrait field; the merchant item's detail
+sits below the fold; the layer-1 map nodes touch at 390px; the gear-slot rarity
+letter overlaps its label; the defeat receipt's company list clips to one row
+("0 kills" reads oddly); the node preview cuts off its Threat line; a depth-0
+resume offers "collect marks"; relics share one glyph.
+
+`window.__game` exists only in DEV builds, so the playthrough ran on the Vite
+dev server and the production preview was used for the menu and the Codex.
+
 ## Current state / next step
 
-- REPORT.md not committed (the full run failed). Next: E6 — find a
-  `STOP_XP_SHARE` (0.45?) or a Thin Pickings adjustment that keeps the
-  first-timer line ≥ ~20% and B1 costing ≥ 3pt; then full run 3/3.
+- **All four steps done.** Branch `worktree-agent-a26babe6cd2b22e29`,
+  not pushed.
+- Next (for a later lane): the open review items above, and the build-spread
+  watch item (the oracle-vs-random gap is ~30pt out of sample).
