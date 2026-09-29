@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { sfx } from '../audio/audio'
-import { num, numRecord, safePersistStorage } from './storage'
+import { num, numRecord, onStorageKeyChange, safePersistStorage } from './storage'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -537,3 +537,7 @@ export const useMetaStore = create<MetaState>()(
     },
   ),
 )
+
+// Another tab's marks/perks land here instead of being overwritten by this
+// tab's stale copy on its next save (see onStorageKeyChange).
+onStorageKeyChange('fieldwatch-meta', () => void useMetaStore.persist.rehydrate())

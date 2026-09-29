@@ -34,17 +34,27 @@ result. Append a short note to the review log when you're done.
   1–5); waves `src/game/data/waves.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
-- **Root Shell** — `src/ui/shell/` is **the UI the game loads**: one screen,
-  four bands, see `docs/FIGMA.md`. Mobile-only by design (520px cap). The old
-  screens in `src/ui/screens/` survive behind `?shell=0` purely for comparison
-  and are slated for deletion; both read the same store. They are **lazy** —
-  `App.tsx` reaches them through `React.lazy(() => import('./ui/screens/LegacyApp'))`,
-  so they cost a chunk nobody fetches rather than a slice of every download
-  (H14). Their CSS is lazy too — `src/styles/legacy.css` is imported from
-  `LegacyApp.tsx`, and `src/styles/app.css` is now only the ~8% of it the shell
-  still needs. Before adding a rule, check which of the two it belongs in; both
-  headers say what they hold.
-- Anything the two UIs must agree on — archetype glyphs, currency marks, the
+- **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
+  one: one screen, four bands, see `docs/FIGMA.md`. Mobile-only by design
+  (520px cap). The pre-shell screens (`?shell=0`) were deleted. The only
+  components outside `shell/` are `src/ui/components/RunMapView.tsx` and
+  `EvolutionModal.tsx`, both rendered by the shell. Eager non-shell CSS those
+  (and BattleCanvas) need lives in `src/styles/app.css`.
+- Service worker: generated after every build by `build/pwa.ts` from the
+  template `src/sw/sw.template.js`; registration and the "update ready" signal
+  (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
+  `src/ui/UpdateNotice.tsx`. A new build WAITS; it never takes over a running
+  page. The precache is derived from the ACTIVE theme's pack (`packAssetPaths`
+  in `sprites.ts`) plus whatever the emitted code names — see `planPrecache`.
+- Run snapshot load/validation: `src/state/runSnapshot.ts` — every field a
+  save can put into arithmetic is validated, and `tests/runSnapshot.fuzz.test.ts`
+  mutates a real snapshot ~15k ways to prove it. Extend the validators (and the
+  fuzz's base run) when you add a snapshot field.
+- Paper-doll compositor `src/game/render/loadout.ts`. Anchors are generated per
+  PACK by `npm run anchors` (`scripts/anchors.ts` + `anchors-lib.ts`) into
+  `anchors.generated.ts`; `anchors:check` in the build also fails if any gear
+  piece would overhang a hero cell.
+- Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far.
 
@@ -65,4 +75,6 @@ result. Append a short note to the review log when you're done.
   committed `balance/REPORT.md` is a golden file: commit it regenerated.
 - Typecheck with `npm run typecheck` (`tsc -b`) before committing. Plain
   `npx tsc --noEmit` checks nothing: the root tsconfig has `"files": []` and
-  only `-b` follows its project references.
+  only `-b` follows its project references — `tsconfig.app.json` (src,
+  harness), `tsconfig.node.json` (vite/vitest config, build/, balance, tests)
+  and `tsconfig.scripts.json` (scripts/).

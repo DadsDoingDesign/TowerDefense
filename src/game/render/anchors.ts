@@ -18,6 +18,12 @@
  *    for the main hand, cyan for the off hand, yellow for the weapon tip) which
  *    `scripts/anchors.ts` reads into {@link anchors.generated}. Drawing beats
  *    maintaining a table by hand — the table goes stale on the first revision.
+ *
+ * 3. **Anchors belong to the pack they were drawn on.** They are cell
+ *    coordinates, so the table is keyed by pack and every lookup names one.
+ *    A pack with no anchors (Tiny Swords today) gets no gear overlay at all,
+ *    rather than fieldwatch's 64px-cell hand positions applied to its 84px
+ *    cells — which drew the sword beside the hero instead of in its fist.
  */
 import { ANCHORS } from './anchors.generated'
 
@@ -40,6 +46,8 @@ export interface Anchor {
 
 export type AnchorStrip = readonly Anchor[]
 export type AnchorTable = Readonly<Record<string, AnchorStrip>>
+/** Pack → strip → per-frame anchors. What `anchors.generated.ts` exports. */
+export type AnchorPacks = Readonly<Record<string, AnchorTable>>
 
 /**
  * The shared angle vocabulary. Every hero's arm hits these five positions and
@@ -72,9 +80,13 @@ export function poseIndexFor(anim: string, frame: number, frames: number): numbe
   return 4 // recover
 }
 
-/** Anchors for one strip, e.g. `fighter_idle`. Null when the art has none yet. */
-export function anchorsFor(strip: string): AnchorStrip | null {
-  return ANCHORS[strip] ?? null
+/**
+ * Anchors for one strip of one pack, e.g. (`fieldwatch`, `fighter_idle`). Null
+ * when that pack's art has none — including when ANOTHER pack has a strip of
+ * the same name, which is the whole point of keying by pack.
+ */
+export function anchorsFor(pack: string, strip: string): AnchorStrip | null {
+  return ANCHORS[pack]?.[strip] ?? null
 }
 
 /**
@@ -86,16 +98,22 @@ export function anchorsFor(strip: string): AnchorStrip | null {
  * wants and is close enough to keep an un-anchored piece on screen rather than
  * silently dropping it.
  */
-export function gearGrip(role: string, pose: number, cellW: number, cellH: number): { x: number; y: number } {
-  const strip = ANCHORS[role]
+export function gearGrip(
+  pack: string,
+  role: string,
+  pose: number,
+  cellW: number,
+  cellH: number,
+): { x: number; y: number } {
+  const strip = ANCHORS[pack]?.[role]
   const a = strip?.[pose]
   if (a) return { x: a.mx, y: a.my }
   return { x: Math.round(cellW / 2), y: cellH - 1 }
 }
 
 /** The weapon tip for a gear cell, used to site enchant particles. */
-export function gearTip(role: string, pose: number, cellW: number): { x: number; y: number } {
-  const strip = ANCHORS[role]
+export function gearTip(pack: string, role: string, pose: number, cellW: number): { x: number; y: number } {
+  const strip = ANCHORS[pack]?.[role]
   const a = strip?.[pose]
   if (a) return { x: a.tx, y: a.ty }
   return { x: Math.round(cellW / 2), y: 0 }

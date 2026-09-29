@@ -5,7 +5,7 @@
  * build has no image-generation step and `sharp` stays a dev-only dependency.
  * The mark is the same shield/eye used by the favicon in index.html.
  */
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'

@@ -13,8 +13,8 @@
  * overridden from script while `env()` cannot — a notched device is testable in
  * a desktop browser by setting `--safe-top` and friends on the root.
  *
- * Declared here because this file loads on both the Root Shell and the legacy
- * `?shell=0` path.
+ * Declared here because this file loads with every surface that can cover the
+ * shell (the resume, rotate and error overlays), not only with the shell.
  */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
@@ -103,6 +103,42 @@
 .fw-resume-btn.quiet {
   background: transparent;
   color: var(--muted, #b89e7e);
+}
+
+/* --------------------------------------------------------------- update ready
+   A pill, not a dialog: it never blocks the menu and the update applies on the
+   next launch anyway. Shown only at the hub (UpdateNotice.tsx). Top edge, over
+   the title: the bottom is where the menu's primary CTA lives. */
+.fw-update {
+  position: fixed;
+  left: 50%;
+  top: calc(8px + var(--safe-top));
+  white-space: nowrap;
+  transform: translateX(-50%);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 6px 6px 14px;
+  background: var(--panel, #2f2418);
+  border: 1px solid var(--line-strong, rgba(233, 205, 150, 0.22));
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: var(--text, #f3e7d0);
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 13px;
+}
+.fw-update-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent, #e0ac4c);
+  background: var(--accent, #e0ac4c);
+  color: #2a1c0c;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* --------------------------------------------------------------- rotate (M36)

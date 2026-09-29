@@ -5,7 +5,7 @@ import { applyXp, buildName, evolutionPending, evolveInto, xpToReach } from '../
 import { gameSfx, sfx, sfxRarity } from '../audio/audio'
 import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
 import { pickBattleMap } from '../game/data/maps'
-import { createSentinel, nameCounterState, startingRoster } from '../game/data/sentinels'
+import { createSentinel, nameCounterState, restoreNameCounters, startingRoster } from '../game/data/sentinels'
 import {
   canUpgrade,
   creditPity,
@@ -505,15 +505,9 @@ interface GameState {
 
   // UI
   selectedSentinelId: string | null
-  detailId: string | null
-  equipContext: { sentinelId: string; tab: HeroSlot | 'all' } | null
-  /** Sentinel id whose tower-upgrade panel is open, or null. */
-  upgradeTarget: string | null
-  /** Whether the drag-and-drop inventory manager overlay is open. */
-  inventoryOpen: boolean
   evolutionQueue: string[]
 
-  // UI — Root Shell (behind the `shell` flag; unused by the legacy screens)
+  // UI — Root Shell
   /** The one thing currently filling the Context panel. */
   shellSelection: ShellSelection
   /** Which tab a selected hero shows in the Context panel. */
@@ -554,7 +548,6 @@ interface GameState {
   endlessForgeUpgrade: (itemId: string) => void
   endlessShrineAccept: () => void
   // Actions — battle
-  selectSentinel: (id: string | null) => void
   placeOnSlot: (slotId: string) => void
   clearSlot: (slotId: string) => void
   setSpeed: (s: Speed) => void
@@ -595,11 +588,7 @@ interface GameState {
   declineShrine: () => void
   acceptRecruit: (sentinelId: string) => void
   skipRecruit: () => void
-  // Actions — items / detail / evolution
-  openDetail: (id: string) => void
-  closeDetail: () => void
-  openEquip: (sentinelId: string, tab?: HeroSlot | 'all') => void
-  closeEquip: () => void
+  // Actions — items / evolution
   equipItem: (sentinelId: string, slot: HeroSlot, itemId: string) => void
   unequipItem: (sentinelId: string, slot: HeroSlot) => void
   sortInventory: () => void
@@ -608,13 +597,9 @@ interface GameState {
   upgradeItem: (itemId: string) => void
   chooseEvolution: (sentinelId: string, nodeId: string) => void
   // Actions — per-tower upgrade tree
-  openUpgrade: (sentinelId: string) => void
-  closeUpgrade: () => void
   buyTowerUpgrade: (sentinelId: string, pathId: string) => void
-  openInventory: () => void
-  closeInventory: () => void
   // Actions — Root Shell
-  /** Tapping a deployed tower on the field. Drives both UIs. */
+  /** Tapping a deployed tower on the field. */
   focusTower: (sentinelId: string) => void
   shellSelect: (sel: ShellSelection) => void
   setHeroTab: (tab: HeroTab) => void
@@ -841,10 +826,6 @@ function freshRunState(runSeed: number) {
     endlessRecruitCost: 100,
     endlessRoom: null,
     selectedSentinelId: null,
-    detailId: null,
-    equipContext: null,
-    upgradeTarget: null,
-    inventoryOpen: false,
     evolutionQueue: [],
     ...CLEAR_SHELL,
   } satisfies Partial<GameState>
@@ -1204,7 +1185,10 @@ export const useGameStore = create<GameState>((set, get) => {
       // next drop is a function of both, so rewinding one alone resumes into a
       // sequence the interrupted run would never have dealt (M9).
       const lootPity: RarityPity = { dry: snap.lootPity }
+      // The process-global counters move HERE, when the run really comes back —
+      // not when the save is merely loaded to be peeked at or settled.
       restoreIdCounter(snap.idCounter)
+      restoreNameCounters(snap.nameCounters)
 
       const battleMap = snapshotBattleMap(snap)
       const placements: Placement = { ...emptyPlacements(battleMap) }
@@ -1305,10 +1289,6 @@ export const useGameStore = create<GameState>((set, get) => {
         // over this one's first node.
         victory: null,
         selectedSentinelId: null,
-        detailId: null,
-        equipContext: null,
-        upgradeTarget: null,
-        inventoryOpen: false,
         ...CLEAR_SHELL,
       })
     },
@@ -1593,8 +1573,6 @@ export const useGameStore = create<GameState>((set, get) => {
         ...CLEAR_SHELL,
       })
     },
-
-    selectSentinel: (id) => set({ selectedSentinelId: id }),
 
     placeOnSlot: (slotId) => {
       const { selectedSentinelId, placements, battlePhase, screen } = get()
@@ -2274,11 +2252,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (event) completeNode(get, set, event.nodeId)
     },
 
-    // ---- items / detail / evolution ----
-    openDetail: (id) => set({ detailId: id }),
-    closeDetail: () => set({ detailId: null }),
-    openEquip: (sentinelId, tab = 'all') => set({ equipContext: { sentinelId, tab } }),
-    closeEquip: () => set({ equipContext: null }),
+    // ---- items / evolution ----
 
     equipItem: (sentinelId, slot, itemId) => {
       const { roster, inventory } = get()
@@ -2362,19 +2336,12 @@ export const useGameStore = create<GameState>((set, get) => {
       sfx('evolve')
     },
 
-    openUpgrade: (sentinelId) => set({ upgradeTarget: sentinelId }),
-    closeUpgrade: () => set({ upgradeTarget: null }),
-    openInventory: () => set({ inventoryOpen: true }),
-    closeInventory: () => set({ inventoryOpen: false }),
-
     // ---- Root Shell ----
-    // Tapping a placed tower on the field. The legacy UI opens its upgrade
-    // modal off `upgradeTarget`; the shell puts the same hero in the Context
-    // panel on its Upgrades tab. Deliberately leaves `selectedSentinelId`
+    // Tapping a placed tower on the field puts that hero in the Context panel
+    // on its Upgrades tab. Deliberately leaves `selectedSentinelId`
     // alone — tapping a tower inspects it, it does not pick it up.
     focusTower: (sentinelId) =>
       set({
-        upgradeTarget: sentinelId,
         shellSelection: { kind: 'hero', id: sentinelId },
         heroTab: 'upgrades',
         gearSlot: null,

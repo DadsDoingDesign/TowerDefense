@@ -17,8 +17,8 @@ export interface SpriteConfig {
    * factor once at load and then drawn **1:1** into the 960×560 field
    * composite, so no sprite is ever resampled per frame.
    *
-   * `0.5` for Tiny Swords, whose art is authored around a 73px goblin; the five
-   * retired packs are 32px and draw native. Tier-5 champions are the one
+   * `0.5` for Tiny Swords, whose art is authored around a 73px goblin; the
+   * from-scratch `fieldwatch` pack draws native. Tier-5 champions are the one
    * exception and always draw at `1` — see the two-bucket note in `pixmap.ts`.
    */
   spriteScale: 0.5 | 1
@@ -111,66 +111,6 @@ export const THEMES: Record<string, ThemeStyle> = {
     ...SPRITE_FALLBACK,
   },
 
-  fantasy: {
-    id: 'fantasy',
-    name: 'Fantasy Fields',
-    blurb: 'Human heroes vs goblins & orcs on grassy plains.',
-    smoothing: false,
-    sprites: { pack: 'fantasy', spriteScale: 1, towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#d9a441', accentDim: 'rgba(217,164,65,0.16)', radius: '6px', bg: '#0e0b08', panel: '#181209' },
-    field: { top: '#2b3a22', bottom: '#1c2718', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
-    path: { edge: '#3c2c18', fill: '#6b4f2c', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    ...SPRITE_FALLBACK,
-  },
-
-  undead: {
-    id: 'undead',
-    name: 'Undead Crypt',
-    blurb: 'Death knights & necromancers hold a cursed stone hall of the dead.',
-    smoothing: false,
-    sprites: { pack: 'undead', spriteScale: 1, towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#9fb4c0', accentDim: 'rgba(159,180,192,0.16)', radius: '6px', bg: '#090b0f', panel: '#12161e' },
-    field: { top: '#2b3038', bottom: '#171b22', grid: 'rgba(0,0,0,0.18)', gridStep: 32 },
-    path: { edge: '#1c1f26', fill: '#3a2a2a', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    ...SPRITE_FALLBACK,
-  },
-
-  infernal: {
-    id: 'infernal',
-    name: 'Infernal Depths',
-    blurb: 'Hell knights & warlocks against a demon horde over volcanic rock.',
-    smoothing: false,
-    sprites: { pack: 'infernal', spriteScale: 1, towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#ef7738', accentDim: 'rgba(239,119,56,0.16)', radius: '6px', bg: '#140708', panel: '#210b0c' },
-    field: { top: '#3a1712', bottom: '#20090a', grid: 'rgba(0,0,0,0.2)', gridStep: 32 },
-    path: { edge: '#2a0d0a', fill: '#5a2418', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    ...SPRITE_FALLBACK,
-  },
-
-  frost: {
-    id: 'frost',
-    name: 'Frostreach',
-    blurb: 'Guardians & mages defend the ice against drakes and frost giants.',
-    smoothing: false,
-    sprites: { pack: 'frost', spriteScale: 1, towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#7fd0f0', accentDim: 'rgba(127,208,240,0.16)', radius: '6px', bg: '#071019', panel: '#0e1a28' },
-    field: { top: '#26384a', bottom: '#152331', grid: 'rgba(255,255,255,0.05)', gridStep: 32 },
-    path: { edge: '#22323f', fill: '#4a6272', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    ...SPRITE_FALLBACK,
-  },
-
-  sylvan: {
-    id: 'sylvan',
-    name: 'Sylvan Wilds',
-    blurb: 'Rangers & druids hold a mossy forest trail against wild beasts.',
-    smoothing: false,
-    sprites: { pack: 'sylvan', spriteScale: 1, towerScale: 2.5, enemyScale: 2.6 },
-    css: { accent: '#8ac74f', accentDim: 'rgba(138,199,79,0.16)', radius: '6px', bg: '#0a1309', panel: '#121d0e' },
-    field: { top: '#26401e', bottom: '#182a14', grid: 'rgba(0,0,0,0.14)', gridStep: 32 },
-    path: { edge: '#2c2110', fill: '#5a4326', center: 'rgba(0,0,0,0)', edgeWidth: 44, fillWidth: 34, dash: null, cap: 'round' },
-    ...SPRITE_FALLBACK,
-  },
-
   tactical: {
     id: 'tactical',
     name: 'Tactical (minimal)',
@@ -185,7 +125,6 @@ export const THEMES: Record<string, ThemeStyle> = {
   },
 }
 
-export const THEME_IDS = Object.keys(THEMES)
 export const DEFAULT_THEME = 'tinyswords'
 
 let activeStyle: ThemeStyle = THEMES[DEFAULT_THEME]

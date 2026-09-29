@@ -1951,3 +1951,15 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   `src/ui`, no `src/styles`, no `scripts/`. The concurrent balance pass changed
   `archetypeTree.ts`'s `radiant` node (`healAura` now `hps: 38, radius: 160`)
   and added `thornsIgnite`; the failure is theirs to close.
+
+- **2026-09-29 — paper-doll compositor: per-pack anchors, per-frame clip.**
+  Rendered through the slice harness (`harness/`, fieldwatch pack, 390 and 320
+  phone scales): all five loadouts still read apart at idle and attack, grips
+  land in the fist. Two fixes behind that render: gear only uses anchors drawn
+  for its own pack (Tiny Swords now draws bare instead of fieldwatch's 64px
+  grips on 84px cells), and each frame is clipped to its cell. The placeholder
+  fighter's frame-3 reach drops 14→12 px so the sword/greatsword/staff no
+  longer overhang the 98px attack cell — `npm run anchors:check` now fails the
+  build on any such overhang. The composite cache is an LRU that also keeps
+  incomplete composites (keyed by sprite-load generation): 60 frames of an
+  unauthored-weapon loadout went from a re-bake per frame to 2.8 ms total.
