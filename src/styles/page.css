@@ -1015,6 +1015,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* A long name beside a long value wraps to a second line inside the row
+     instead of being cut: at 390px the Spoils row "Executioner's Oath" beside
+     "•••• Legendary · relic" read "Executioner's Oa". Two lines fit the row. */
+  white-space: normal;
+  line-height: 1.15;
 }
 /* Level pips on a levelled purchase — the count, not a colour. */
 .pg-pips {

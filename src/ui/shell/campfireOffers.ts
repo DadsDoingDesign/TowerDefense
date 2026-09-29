@@ -84,7 +84,12 @@ export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
         },
       ]
     : []
-  return [rest, ...train, ...forage, walk]
+  // The page preselects the first row, so lead with the useful choice: the
+  // rest on a hurt Gate, a trainable hero on a full one. A full Gate used to
+  // open on "Rest by the fire — Gate is full" with "Rest anyway" as the big
+  // button, i.e. one tap from wasting the fire.
+  const trainable = train.some((o) => !o.action?.disabled)
+  return gain > 0 || !trainable ? [rest, ...train, ...forage, walk] : [...train, rest, ...forage, walk]
 }
 
 /**

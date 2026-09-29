@@ -213,7 +213,30 @@ build, same march", two cards instead of three; the shelf now matches. Copy in
 `metaStore` BANNER_RUNGS, doc on `shelfSize`, unit test, §13 prose. Every rung
 costs ≥ 6.7pt at n=600; no §11/§12 cell moves (both are Banner 0).
 
+### Step 4 — review, run 1 (390×844, dev server for `window.__game`; prod preview for the menu)
+
+`window.__game` is exposed only in DEV builds (`main.tsx`), so the playthrough
+runs on `npx vite --port 4361`; the menu/attract mode was checked on the
+production preview (4360). Driver: scratchpad `pw.mjs` + `auto.mjs` (taps the
+real canvas at each slot's box — the "Circle N" buttons are an accessible layer
+under the canvas).
+
+Run 1 (Fighter, honest play, no Assist): lost at depth 5 (Torch ×12, Bomber
+×3; 72 marks). Seen: attract mode, hero pick, map, node preview, portrait setup
++ coach tip, sub-waves 1/2 and 1–2/3, the breather banner, Rally Horn in the
+command slot, wave-cleared card, campfire, spoils (relic + item), level-5 perk
+dialog (locked perk shows its feat), Crossroads, defeat receipt.
+
+Fixed (UI-only, cannot move the balance report):
+- **Campfire on a full Gate preselected "Rest by the fire — Gate is full"
+  with "Rest anyway" as the big button** — one tap from wasting the fire.
+  `campfireOffers` now leads with a trainable hero when the Gate is full
+  (rest still leads on a hurt Gate).
+- **Spoils row truncated "Executioner's Oa…"** beside "•••• Legendary · relic"
+  at 390px. `.pg-row-label` wraps to two lines inside the 48px row.
+
 ## Current state / next step
 
-- Next: gates, then full run 3/3 (the last) in the background; Step 4 runs
-  alongside (UI-only fixes cannot move the report).
+- Run 2 in progress (Mystic, `GOD=1` refills the Gate before each fight so the
+  run reaches the act bosses and the final boss for review — a review shortcut,
+  not play). Full run 3/3 in the background.
