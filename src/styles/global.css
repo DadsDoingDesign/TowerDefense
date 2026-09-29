@@ -196,7 +196,7 @@ button:disabled {
 
 /* ======================================================== focus ring (M27a)
    The shipping shell had ZERO `:focus-visible` rules — the only two in the
-   codebase were in legacy `app.css`, on two components the shell never mounts.
+   codebase were on two components the shell never mounted.
    Keyboard focus was therefore invisible across ~100 controls, including the
    destructive-confirm control.
 
@@ -306,8 +306,7 @@ button:disabled {
 
    The URL is root-absolute because the file lives in `public/` and Vite cannot
    resolve a relative reference to something it does not process — the same
-   reason the four `border-image` rules in app.css and legacy.css are written
-   that way. */
+   reason the `border-image` rules in app.css are written that way. */
 .fw-i {
   --fw-i-size: 16px;
   /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */

@@ -1053,18 +1053,33 @@ const nextAssist = (v: AssistLevel): AssistLevel =>
 /**
  * The Sound row's dials, read and written through ONE adapter.
  *
- * TODO(audio-integration): the audio lane is adding dedicated setters for
- * separate Music / Effects / UI volume to `settingsStore`. Until that lands the
- * dials write through the existing `setAudio` patch — `music`, `game` (the
- * effects bus) and `ui` are real, persisted and applied by `setAudioVolumes`
- * today. When the setters arrive, switch the three `set` lines below to them;
- * nothing else in the shell reads or writes a volume.
+ * The audio lane adds dedicated, clamped, NaN-safe setters to `settingsStore`
+ * — `setMusicVolume`, `setEffectsVolume` (drives `audio.game`) and
+ * `setUiVolume`. This prefers them when the store has them and falls back to
+ * the existing `setAudio` patch otherwise, so the dials work on either side of
+ * that merge.
+ * TODO(audio-integration): once the setters are on the branch, drop the
+ * fallback and call them directly.
  */
+type VolumeSetters = Partial<Record<'setMusicVolume' | 'setEffectsVolume' | 'setUiVolume', (v: number) => void>>
 function audioDials(s: Settings): NonNullable<Offer['sliders']> {
+  const v = s as Settings & VolumeSetters
   return [
-    { id: 'music', label: 'Music', value: s.audio.music, set: (v) => s.setAudio({ music: v }) },
-    { id: 'effects', label: 'Effects', value: s.audio.game, set: (v) => s.setAudio({ game: v }), preview: 'coin' },
-    { id: 'ui', label: 'Interface', value: s.audio.ui, set: (v) => s.setAudio({ ui: v }), preview: 'select' },
+    { id: 'music', label: 'Music', value: s.audio.music, set: (x) => (v.setMusicVolume ? v.setMusicVolume(x) : s.setAudio({ music: x })) },
+    {
+      id: 'effects',
+      label: 'Effects',
+      value: s.audio.game,
+      set: (x) => (v.setEffectsVolume ? v.setEffectsVolume(x) : s.setAudio({ game: x })),
+      preview: 'coin',
+    },
+    {
+      id: 'ui',
+      label: 'Interface',
+      value: s.audio.ui,
+      set: (x) => (v.setUiVolume ? v.setUiVolume(x) : s.setAudio({ ui: x })),
+      preview: 'select',
+    },
   ]
 }
 

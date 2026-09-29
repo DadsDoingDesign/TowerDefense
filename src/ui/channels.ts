@@ -2,14 +2,12 @@ import { RARITY, RARITY_ORDER } from '../game/data/items'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 
 /**
- * The vocabulary both UIs draw from: non-colour channels, the tokens that carry
- * the colour one (M27c, M34), and the handful of labels that must not differ
- * between the Root Shell and the `?shell=0` screens.
+ * The UI's shared vocabulary: non-colour channels, the tokens that carry the
+ * colour one (M27c, M34), and the labels every surface must agree on.
  *
- * It lives at `src/ui/` rather than `src/ui/shell/` (L3) because it is not a
- * shell module — `src/ui/components/` and `src/ui/screens/` both import it, and
- * a module three sibling directories reach into should not sit inside one of
- * them. Every time a caller kept a private copy instead of importing, the copy
+ * It lives at `src/ui/` rather than `src/ui/shell/` (L3) because it is not only
+ * a shell module — `src/ui/components/` (the run map, the evolution modal)
+ * imports it too. Every time a caller kept a private copy instead of importing, the copy
  * went stale: three of them were still drawing rogue as `✦` long after `✦` had
  * been reserved for Watch Marks alone.
  *
@@ -85,9 +83,9 @@ export const archetypeVar = (archetype: string): string =>
 export const ARCHETYPE_GLYPH: Record<string, string> = { fighter: '⚔', rogue: '➶', mystic: '❋' }
 
 /**
- * Currency marks, as TEXT. Kept only for the `?shell=0` screens, which are
- * being deleted — the shell draws every currency with its atlas cell
- * ({@link CURRENCY_ICON}) and names it in words in prose ({@link CURRENCY_NAME}).
+ * Currency marks, as TEXT — deprecated, and imported by nothing in the shell.
+ * Every currency is drawn with its atlas cell ({@link CURRENCY_ICON}) and named
+ * in words in prose ({@link CURRENCY_NAME}). Delete once nothing imports it.
  *
  * Wave 1: the shell used to print `⟡ 240` beside a pixel coin — two marks for
  * one currency, one of them a system-font glyph that ALSO meant "Merchant" on

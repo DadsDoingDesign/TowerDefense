@@ -737,6 +737,9 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
         <div className="sh-context-foot">
           <button
             className="sh-btn"
+            // The store plays the undeploy sound itself; the generic click on
+            // top of it doubled the feedback.
+            data-sfx="none"
             onClick={() => {
               clearSlot(slotId)
               shellSelect(null)
