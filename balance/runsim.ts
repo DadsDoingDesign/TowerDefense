@@ -26,6 +26,7 @@
  * numbers comparable to §11's rather than a second opinion.
  */
 import { RNG } from '../src/game/core/rng'
+import { ALL_NODES, childrenOf } from '../src/game/data/archetypeTree'
 import {
   creditPity,
   generateItem,
@@ -48,6 +49,8 @@ import { createSentinel } from '../src/game/data/sentinels'
 import { autoEquipEmpty, recruitKit, wearKit } from '../src/game/engine/kit'
 import {
   autoEvolve,
+  bestEvolve,
+  forcedEvolve,
   bestSlotGain,
   bestSlots,
   buyUpgrades,
@@ -214,6 +217,16 @@ export interface SimOptions {
    * seconds rather than by editing constants and running the whole suite.
    */
   curve?: (depth: number, kind: EncounterKind) => number
+  /**
+   * How the modelled player answers a build choice (an evolution, and — where
+   * the game offers one — a level-up perk). `random` is the default and what
+   * every gate reads: it prices the *tier* rather than a player's read of it.
+   * `best` takes whichever option raises `heroDps` most — the "known answer"
+   * a spreadsheet player converges on. The gap between the two is the
+   * evolution best-vs-random spread: the wider it is, the more solved the
+   * build layer (Phase 3b review: 44% vs 28% before the perk rework).
+   */
+  build?: 'random' | 'best' | { force: Record<string, string> }
 }
 
 export interface RunOutcome {
@@ -230,9 +243,28 @@ export interface RunOutcome {
   layers: number
   /** Which battlefield this run's seed dealt (WS8). */
   fieldId: string
+  /** The starting hero's archetype. */
+  starter: Archetype
+  /** Nodes consumed that were fights (battle / elite / boss), and all nodes consumed. */
+  fights: number
+  nodes: number
+  /** The leader's level after each layer it cleared, index = layer. */
+  levelByLayer: number[]
 }
 
 const ARCHS: Archetype[] = ['fighter', 'rogue', 'mystic']
+
+/**
+ * Every build choice a run can be asked to make, keyed the way
+ * `SimOptions.build.force` pins them: a tree node id → its children.
+ */
+export function buildChoicePoints(): { id: string; archetype: Archetype; options: string[] }[] {
+  return ALL_NODES.filter((n) => n.tier < 2).map((n) => ({
+    id: n.id,
+    archetype: n.archetype,
+    options: childrenOf(n.id).map((c) => c.id),
+  }))
+}
 
 /** A body joining the company, carrying what the store hands it (`RECRUIT_KIT`). */
 const recruitBody = (a: Archetype, rng: RNG): Sentinel => wearKit(createSentinel(a), recruitKit(rng, a))
@@ -268,6 +300,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   const special = o.specialThreat ?? THREAT_PER_NODE.special
 
   const rng = new RNG(seed)
+  const force = typeof o.build === 'object' ? o.build.force : null
+  const evolve = (s: Sentinel): Sentinel =>
+    o.build === 'best' ? bestEvolve(s) : force ? forcedEvolve(s, force, rng) : autoEvolve(s, rng)
+  const levelByLayer: number[] = []
+  let nodes = 0
   const map = generateRunMap(rng, mapOptionsFor(meta, banner))
   const byId = new Map(map.nodes.map((n) => [n.id, n]))
   // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8).
@@ -332,7 +369,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
     // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
     const base = applyStatBonus(recruitBody(rng.pick(ARCHS), rng), meta.statBonus)
-    const dressed = autoEquipEmpty([autoEvolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)), rng)], pack)
+    const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack)
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
     threat *= THREAT_PER_CHOICE
@@ -344,6 +381,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     if (!nexts.length) break
     const node = policy.pick(nexts, { roster, gold, baseHp, threat, layer: cur.layer, layers: map.layers })
     cur = node
+    nodes++
 
     if (node.type === 'merchant') {
       // Four items rolled the way `selectNode` rolls them — with the roster's
@@ -435,7 +473,8 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
 
     gold += m.goldEarned + (worth === 'elite' ? 25 : 0)
     const xpById = new Map(m.perSentinel.map((p) => [p.id, p.xp]))
-    roster = roster.map((s) => autoEvolve(applyXp(s, xpById.get(s.id) ?? 0), rng))
+    roster = roster.map((s) => evolve(applyXp(s, xpById.get(s.id) ?? 0)))
+    levelByLayer[node.layer] = roster[0].level
 
     // The reward hand, dealt the way `finishBattle` deals it: the run's luck, the
     // Banner's card count, the roster's damage-type demand and the drought.
@@ -526,6 +565,10 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     marks: marksFor(clearedCount, won, banner, meta.markMult),
     layers: map.layers,
     fieldId: field.id,
+    starter: archetype,
+    fights: battles,
+    nodes,
+    levelByLayer,
   }
 }
 

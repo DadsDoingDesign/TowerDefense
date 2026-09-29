@@ -16,6 +16,7 @@ import { generateRunMap } from '../src/game/data/runmap'
 import { BANNER_RUNGS, MAX_BANNER, bannerRules } from '../src/state/metaStore'
 import type { Archetype } from '../src/game/types'
 import { mean } from './harness'
+import { buildChoicePoints } from './runsim'
 import { loadoutFor, POLICIES, simulateRun, ZERO_META, type Loadout, type RoutePolicy } from './runsim'
 
 const N = Number(process.argv[2]) || 120
@@ -196,4 +197,95 @@ if (WHAT === 'all' || WHAT === 'map') {
       `${label.padEnd(28)} layers ${(layers / 500).toFixed(1)}  no-choice steps ${pct(noChoice / steps)}  mixed forks ${pct(mixed / steps)}  specials/map ${(specials / 500).toFixed(1)}  forced elites ${pct(forcedElites / elites)}`,
     )
   }
+}
+
+/**
+ * The Phase 3b scoreboard — every number the run/meta-depth pass is judged on,
+ * from one simulator on paired seeds:
+ *
+ *  - fresh-player win rate by starter, per routing policy;
+ *  - the route-policy spread (best line − worst line);
+ *  - the build spread: `build: 'best'` (heroDps-greedy evolutions and perks)
+ *    against `build: 'random'` on the best line — the narrower, the fewer
+ *    solved picks;
+ *  - how many consumed nodes are fights, and the leader's level by layer (the
+ *    XP curve);
+ *  - marks per run.
+ */
+if (WHAT === 'phase3b') {
+  console.log(`\n=== phase 3b scoreboard (n=${N}/cell, paired seeds, zero meta) ===`)
+  const rows = POLICIES.map((p) => {
+    const outs = Array.from({ length: N }, (_, i) => simulateRun(9001 + i * 17, ARCHES[i % 3], { policy: p }))
+    return { p, outs }
+  })
+  const byStarter = (outs: ReturnType<typeof simulateRun>[], a: Archetype) => {
+    const xs = outs.filter((o) => o.starter === a)
+    return mean(xs.map((o) => (o.won ? 1 : 0)))
+  }
+  console.log('route | win | fighter | rogue | mystic | fights/nodes | marks/run')
+  for (const { p, outs } of rows) {
+    const fights = mean(outs.map((o) => o.fights))
+    const nodes = mean(outs.map((o) => o.nodes))
+    console.log(
+      `${p.id.padEnd(9)} | ${pct(mean(outs.map((o) => (o.won ? 1 : 0))))} | ${ARCHES.map((a) => pct(byStarter(outs, a))).join(' | ')} | ${fights.toFixed(1)}/${nodes.toFixed(1)} (${pct(fights / nodes)}) | ${mean(outs.map((o) => o.marks)).toFixed(1)}`,
+    )
+  }
+  const rates = rows.map(({ outs }) => mean(outs.map((o) => (o.won ? 1 : 0))))
+  console.log(`route spread: ${pct(Math.min(...rates))} – ${pct(Math.max(...rates))} (${((Math.max(...rates) - Math.min(...rates)) * 100).toFixed(1)}pt)`)
+  const best = rows[rates.indexOf(Math.max(...rates))].p
+  for (const p of [best, ...POLICIES.filter((q) => q !== best)].slice(0, 2)) {
+    const greedy = mean(Array.from({ length: N }, (_, i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { policy: p, build: 'best' }).won ? 1 : 0)))
+    const coin = rates[POLICIES.indexOf(p)]
+    console.log(`build spread on ${p.id}: best ${pct(greedy)} vs random ${pct(coin)} (${((greedy - coin) * 100).toFixed(1)}pt)`)
+  }
+  // ---- the measured "known answer": pin each choice point, keep the best ----
+  // Every build choice point (a parent node in the tree, and later a perk
+  // level) is pinned to each of its options in turn, with every other choice
+  // left to the coin; the option that wins most is the oracle's pick. Then the
+  // oracle plays with every point pinned. best − random is the build spread.
+  {
+    const winsWith = (force: Record<string, string>, only?: Archetype) => {
+      const xs: number[] = []
+      for (let i = 0; i < N; i++) {
+        const a = ARCHES[i % 3]
+        if (only && a !== only) continue
+        xs.push(simulateRun(9001 + i * 17, a, { policy: best, build: { force } }).won ? 1 : 0)
+      }
+      return mean(xs)
+    }
+    const oracle: Record<string, string> = {}
+    const picks: string[] = []
+    for (const point of buildChoicePoints()) {
+      let top = { id: '', w: -1 }
+      for (const opt of point.options) {
+        const w = winsWith({ [point.id]: opt }, point.archetype)
+        if (w > top.w) top = { id: opt, w }
+      }
+      oracle[point.id] = top.id
+      picks.push(`${point.id}→${top.id} ${pct(top.w)}`)
+    }
+    const always = winsWith(oracle)
+    const coin = rates[POLICIES.indexOf(best)]
+    console.log(`oracle picks: ${picks.join(', ')}`)
+    console.log(`BUILD SPREAD (oracle vs random, ${best.id}): ${pct(always)} vs ${pct(coin)} (${((always - coin) * 100).toFixed(1)}pt)`)
+  }
+  const outs = rows[rates.indexOf(Math.max(...rates))].outs
+  const maxLayer = Math.max(...outs.map((o) => o.levelByLayer.length))
+  const lv: string[] = []
+  for (let l = 1; l < maxLayer; l++) {
+    const xs = outs.map((o) => o.levelByLayer[l]).filter((x): x is number => typeof x === 'number')
+    if (xs.length) lv.push(`d${l}:${mean(xs).toFixed(1)}`)
+  }
+  console.log(`leader level after each layer (best line, fights only): ${lv.join(' ')}`)
+  let middle = 0
+  let fightsOnMap = 0
+  for (let i = 0; i < 300; i++) {
+    const m = generateRunMap(new RNG(i * 7 + 1), {})
+    for (const n of m.nodes) {
+      if (n.type === 'start' || n.type === 'boss') continue
+      middle++
+      if (n.type === 'battle' || n.type === 'elite') fightsOnMap++
+    }
+  }
+  console.log(`map: ${pct(fightsOnMap / middle)} of non-start/non-final nodes are fights (battle/elite)`)
 }

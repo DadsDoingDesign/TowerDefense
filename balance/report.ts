@@ -1562,6 +1562,10 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     marks: marksFor(reached, won, bannerRules(0)),
     layers: NODES + 1,
     fieldId: field.id,
+    starter: archetype,
+    fights: reached + 1,
+    nodes: reached + 1,
+    levelByLayer: [],
   }
 }
 

@@ -655,6 +655,53 @@ export function autoEvolve(s: Sentinel, rng: RNG): Sentinel {
 }
 
 /**
+ * The "known answer" evolution: whichever child raises `heroDps` most. Draws
+ * nothing from any RNG. The random pick above is what every gate reads; this
+ * exists so the report can measure how *solved* the build layer is — the win
+ * rate a spreadsheet player gets over a coin-flipper (Phase 3b).
+ */
+export function bestEvolve(s: Sentinel): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 4; guard++) {
+    const owed =
+      (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
+    if (!owed) break
+    const options = childrenOf(out.branchPath[out.branchPath.length - 1])
+    if (!options.length) break
+    let best = options[0]
+    let bestDps = -Infinity
+    for (const o of options) {
+      const d = heroDps(evolveInto(out, o.id))
+      if (d > bestDps) { bestDps = d; best = o }
+    }
+    out = evolveInto(out, best.id)
+  }
+  return out
+}
+
+/**
+ * An evolution with some picks pinned: `force[parentId]` names the child to
+ * take at that node; anything unpinned is the usual coin flip. The oracle in
+ * `meta-sweep.ts phase3b` pins each choice point in turn to find the picks a
+ * run is measurably best off taking — the "known answer", measured rather than
+ * guessed from a tooltip.
+ */
+export function forcedEvolve(s: Sentinel, force: Record<string, string>, rng: RNG): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 4; guard++) {
+    const owed =
+      (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
+    if (!owed) break
+    const parent = out.branchPath[out.branchPath.length - 1]
+    const options = childrenOf(parent)
+    if (!options.length) break
+    const pinned = force[parent]
+    out = evolveInto(out, pinned && options.some((o) => o.id === pinned) ? pinned : rng.pick(options).id)
+  }
+  return out
+}
+
+/**
  * Spend gold on tower upgrades the way an income-constrained player does: buy the
  * cheapest affordable next level, respecting the XP milestones (level 2 / 8 / 14),
  * focusing one path before dabbling in a second.
