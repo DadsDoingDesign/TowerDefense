@@ -26,9 +26,16 @@ import { COLORS, darken, lighten, mix, roundRect, strokePolyline, toRgb } from '
  * different before and after the pack decodes, and `onSpritesReady` drops the
  * bake so the first fully-dressed frame is the one that sticks.
  */
-let terrainCache: { key: string; canvas: HTMLCanvasElement } | null = null
+/**
+ * Two bakes, most recent first (Portrait battlefields): the menu's attract
+ * battle draws the landscape Green Line while a phone battle is fought on a
+ * portrait twin, and a one-entry cache re-baked (and re-graded, pixel by pixel)
+ * the whole field on every trip between them.
+ */
+const TERRAIN_CACHE_SIZE = 2
+let terrainCache: { key: string; canvas: HTMLCanvasElement }[] = []
 onSpritesReady(() => {
-  terrainCache = null
+  terrainCache = []
 })
 function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null
@@ -63,12 +70,18 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
     // The pack stamp is in the key so a re-exported sprite pack re-bakes rather
     // than leaving a terrain built from the old art on screen.
     const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}`
-    if (!terrainCache || terrainCache.key !== key) {
+    let hit = terrainCache.find((e) => e.key === key)
+    if (!hit) {
       const baked = bakeTerrain(map)
-      terrainCache = baked ? { key, canvas: baked } : null
+      if (baked) {
+        hit = { key, canvas: baked }
+        terrainCache = [hit, ...terrainCache].slice(0, TERRAIN_CACHE_SIZE)
+      }
+    } else if (terrainCache[0] !== hit) {
+      terrainCache = [hit, ...terrainCache.filter((e) => e !== hit)]
     }
-    if (terrainCache) {
-      ctx.drawImage(terrainCache.canvas, 0, 0)
+    if (hit) {
+      ctx.drawImage(hit.canvas, 0, 0)
       return
     }
   }
@@ -421,7 +434,7 @@ function getDressing(map: GameMap): Dressing {
   // The pack stamp is part of the key: which asset is a tree and which is
   // litter is decided by measured height, so a re-export has to regenerate the
   // layout rather than reuse one built against the old sizes.
-  const key = `${map.width}x${map.height}:${map.path.length}:${Math.round(map.path[1]?.x ?? 0)}:${decoStamp()}`
+  const key = `${map.id}:${map.width}x${map.height}:${map.path.length}:${Math.round(map.path[1]?.x ?? 0)}:${decoStamp()}`
   if (!dressCache || dressCache.key !== key) dressCache = { key, dr: buildDressing(map) }
   return dressCache.dr
 }

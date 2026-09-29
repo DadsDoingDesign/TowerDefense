@@ -19,7 +19,8 @@ import { bannerRules, MAX_BANNER, useMetaStore } from '../metaStore'
 import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
 import { snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, hub, recruitHub, runBonuses, seedRunStreams, streams, usesHub } from './runtime'
+import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, streams, usesHub } from './runtime'
+import { orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
 
@@ -373,6 +374,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     set({
       activeNodeId: nodeId,
       currentWave: wave,
+      // The battle's orientation is chosen HERE, once, from the layout the
+      // player is holding (Portrait battlefields) — the field identity is the
+      // run's seeded one; only which twin is fought on changes.
+      battleMap: orientField(get().battleMap, layout.orientation()),
       battlePhase: 'setup',
       screen: 'battle',
       selectedSentinelId: null,

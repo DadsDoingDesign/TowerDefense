@@ -276,6 +276,13 @@ export interface GameData {
   heroTab: HeroTab
   /** Gear slot awaiting an item — the Pack column filters to what fits. */
   gearSlot: { sentinelId: string; slot: HeroSlot } | null
+  /**
+   * Portrait battlefields: on a portrait field the setup layout collapses the
+   * Detail band like a live wave does, so the tall Stage is the field's; the
+   * wave strip's Details toggle (or tapping a posted hero) opens it again.
+   * Reset with the rest of the shell on every node entry.
+   */
+  detailOpen: boolean
 }
 
 export interface GameState

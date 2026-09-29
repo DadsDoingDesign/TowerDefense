@@ -33,6 +33,7 @@ import { computeCombat, teamKeepsakeMods } from '../src/game/engine/combat'
 import type { EffectMods, Item, Sentinel } from '../src/game/types'
 import { peekSavedRun, useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
+import { setLayoutOrientation } from '../src/state/game/runtime'
 import {
   RUN_SNAPSHOT_KEY,
   captureRun,
@@ -57,7 +58,11 @@ function buildBase(): Record<string, unknown> {
   g.newRun()
   useGameStore.getState().pickStartingHero('fighter')
   const st = useGameStore.getState()
-  st.selectNode(st.reachableNodeIds[0])
+  // v9: the node is entered held portrait, so the base carries a portrait
+  // battlefield (`fieldOrientation`) for the mutations to land on.
+  setLayoutOrientation(() => 'portrait')
+  st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
+  setLayoutOrientation(null)
 
   const rng = new RNG(1234)
   const epic = (slot: Item['slot']): Item => generateItem(rng, { slot, rarity: 'epic' })
@@ -214,6 +219,9 @@ describe('run snapshot fuzz', () => {
     expect(snap).not.toBeNull()
     assertPlayable(snap!, 'base')
     expect(snap!.roster[0].equipment.mainHand?.enchantments.length).toBeGreaterThan(0)
+    // The base is a portrait battle, and it resumes onto the portrait twin.
+    expect(snap!.fieldOrientation).toBe('portrait')
+    expect(snapshotBattleMap(snap!).orientation).toBe('portrait')
   })
 
   it('every single-field mutation loads without throwing and never yields NaN combat', () => {

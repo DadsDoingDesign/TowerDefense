@@ -16,6 +16,7 @@ import { receiveItems, recruitSlate } from '../../game/run/recruits'
 import { challengeGrant } from '../../game/run/settle'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
+import { orientationOf } from '../../game/data/maps'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
@@ -67,7 +68,11 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     const next: Placement = { ...placements }
     for (const key of Object.keys(next)) if (next[key] === selectedSentinelId) next[key] = null
     next[slotId] = selectedSentinelId
-    set({ placements: next, selectedSentinelId: null })
+    // On a portrait field the post also lets go of the hero's Context panel:
+    // the setup Detail band is collapsed there (Portrait battlefields), and a
+    // selection left behind would re-open it the instant the hero landed.
+    const portrait = orientationOf(get().battleMap) === 'portrait'
+    set({ placements: next, selectedSentinelId: null, ...(portrait ? { shellSelection: null } : {}) })
     sfx('deploy')
   },
 

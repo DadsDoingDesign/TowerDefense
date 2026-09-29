@@ -239,6 +239,17 @@ export interface GameMap {
   slots: TowerSlot[]
   /** Where the base sits (end of path). */
   base: Vec2
+  /**
+   * Which way up this field is drawn (Portrait battlefields). Absent means
+   * `landscape` — every map in `ALL_MAPS` is the landscape original.
+   */
+  orientation?: 'landscape' | 'portrait'
+  /**
+   * The id of the landscape field this one is the portrait twin of. The run's
+   * seeded field identity (`pickBattleMap`, the snapshot's `battleMapId`, the
+   * music cue) is always the twin's id, never this map's.
+   */
+  twinOf?: string
 }
 
 /** An enemy archetype/template. */

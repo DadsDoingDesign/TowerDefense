@@ -33,7 +33,7 @@ import { getNode } from '../game/data/archetypeTree'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
-import { FIRST_MAP, mapById } from '../game/data/maps'
+import { FIRST_MAP, fieldIdOf, mapById, orientationOf, orientField, type FieldOrientation } from '../game/data/maps'
 import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
 import type { BattleResult } from '../game/engine/engine'
@@ -79,7 +79,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 8
+export const RUN_SNAPSHOT_VERSION = 9
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -111,6 +111,7 @@ const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'bat
 const MODES: readonly GameMode[] = ['campaign', 'endless']
 const PHASES: readonly RunPhase[] = ['active', 'won', 'lost']
 const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
+const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
@@ -138,6 +139,12 @@ export interface RunSnapshot {
   event: { kind: EventKind; nodeId: string } | null
 
   battleMapId: string
+  /**
+   * v9: which twin of `battleMapId` the current battle is fought on (Portrait
+   * battlefields). `battleMapId` stays the seeded field's id; this is the
+   * per-battle orientation chosen when its node was entered.
+   */
+  fieldOrientation: FieldOrientation
   roster: Sentinel[]
   placements: Placement
   gold: number
@@ -300,7 +307,8 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     clearedNodeIds: s.clearedNodeIds,
     reachableNodeIds: s.reachableNodeIds,
     event: s.event,
-    battleMapId: s.battleMap?.id ?? FIRST_MAP.id,
+    battleMapId: s.battleMap ? fieldIdOf(s.battleMap) : FIRST_MAP.id,
+    fieldOrientation: s.battleMap ? orientationOf(s.battleMap) : 'landscape',
     roster: s.roster,
     placements: s.placements,
     gold: s.gold,
@@ -360,7 +368,9 @@ export const snapshotShrine = (snap: RunSnapshot): ShrineOffer | null =>
 export function snapshotBattleMap(snap: RunSnapshot): GameMap {
   const map = mapById(snap.battleMapId)
   if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
-  return map
+  // The battle comes back on the twin it was saved on, whatever the viewport
+  // is now: orientation is fixed for the duration of a battle.
+  return orientField(map, snap.fieldOrientation)
 }
 
 // ------------------------------------------------------------------ migrate
@@ -882,6 +892,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // ---- and the wave, which resolves instead, because the game re-deals it ---
   const currentWave = validWave(o.currentWave) ? (o.currentWave as WaveDef) : null
 
+  // ---- v8 → v9: portrait battlefields — nothing to rewrite ----------------
+  // `fieldOrientation` was added (below). A v8 save has none and was fought on
+  // the landscape field, which is exactly what the default restores.
+
   // ---- v7 → v8: sub-waves (Phase 3a) — nothing to rewrite ---------------
   // A stored wave's spawns may now carry `group` (its sub-wave; `validWave`
   // checks it), and `tactics.focus` may be 'threat'. A v7 wave has no groups
@@ -929,6 +943,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
         ? (o.event as RunSnapshot['event'])
         : null,
     battleMapId,
+    // v8 → v9: every older save was fought on the landscape field. A value this
+    // build cannot name falls back to it too — the twins are isometric, so the
+    // fallback changes how the battle is drawn, never how it plays.
+    fieldOrientation: str<FieldOrientation>(o.fieldOrientation, 'landscape', ORIENTATIONS),
     roster,
     placements: (o.placements && typeof o.placements === 'object' ? o.placements : {}) as Placement,
     gold: Math.max(0, num(o.gold, 0)) + refund,

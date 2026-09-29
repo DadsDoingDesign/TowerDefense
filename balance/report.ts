@@ -14,7 +14,7 @@ import { writeFileSync } from 'fs'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import { recruitKit, wearKit } from '../src/game/engine/kit'
@@ -80,6 +80,7 @@ import {
   scaleWave,
   SEEDS,
   SIEGE_PRESSURE,
+  slotCoverage,
   slotDist,
   soloOffense,
   soloStopRate,
@@ -3100,6 +3101,113 @@ if (plainDamage.length) failures.push(`Relic(s) ${plainDamage.map((r) => r.name)
 const combatDepth = runCombatDepth()
 for (const l of combatDepth.md) line(l)
 failures.push(...combatDepth.failures)
+
+// -------------------------------------------------------------- Sweep 17
+line('## 17. Portrait twins — does a phone fight the same battle?')
+line('')
+line('**Why this exists.** A phone held upright fights on a **portrait twin** of the')
+line('seeded field (`maps.ts` § Portrait battlefields): the landscape field transposed')
+line('and padded, so the lane fills the tall live-wave Stage instead of a 390×228 strip.')
+line('The seed still deals the landscape field (`pickBattleMap` never returns a twin);')
+line('which twin is fought on is chosen per battle from the layout. That is only safe if')
+line('the two are the same game — the Daily Watch deals one seed to every device, and a')
+line('twin that were even a few points easier would make the phone the right way to')
+line('play it. So the twin is checked twice: its geometry against the original, and its')
+line('difficulty on the live engine.')
+line('')
+/** Path lengths may differ by at most this (the ±5% brief; the isometry gives 0). */
+const TWIN_MAX_LENGTH_DIFF = 0.005
+/** Per-slot coverage at every range may differ by at most this share of the original. */
+const TWIN_MAX_COVERAGE_DIFF = 0.02
+/** Stop-rate difference allowed across the battery (points). */
+const TWIN_MAX_STOP_DIFF = 0.03
+/** Mean Gate HP lost may differ by at most this share (or 0.25 HP, whichever is larger). */
+const TWIN_MAX_LEAK_DIFF = 0.05
+const TWIN_RANGES = [96, 150, 168]
+line('| Field | Twin | Box | Path px (twin / original) | Slots | Worst per-slot coverage Δ (96 / 150 / 168px) | Worst slot-gap Δ |')
+line('|---|---|---|--:|--:|---|--:|')
+for (const land of ALL_MAPS) {
+  const tall = orientField(land, 'portrait')
+  const lenL = pathLength(land.path)
+  const lenT = pathLength(tall.path)
+  const covDiff = TWIN_RANGES.map((r) => {
+    const a = slotCoverage(land, r)
+    const b = slotCoverage(tall, r)
+    return Math.max(...land.slots.map((sl) => Math.abs(b[sl.id] - a[sl.id]) / Math.max(1, a[sl.id])))
+  })
+  let gapDiff = 0
+  for (const a of land.slots) {
+    for (const b of land.slots) {
+      const ta = tall.slots.find((x) => x.id === a.id)!
+      const tb = tall.slots.find((x) => x.id === b.id)!
+      gapDiff = Math.max(gapDiff, Math.abs(Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y) - Math.hypot(ta.pos.x - tb.pos.x, ta.pos.y - tb.pos.y)))
+    }
+  }
+  line(
+    `| ${land.name} | \`${tall.id}\` | ${tall.width}×${tall.height} | ${Math.round(lenT)} / ${Math.round(lenL)} | ${tall.slots.length} / ${land.slots.length} | ${covDiff.map((d) => `${(d * 100).toFixed(1)}%`).join(' / ')} | ${gapDiff.toFixed(2)}px |`,
+  )
+  if (Math.abs(lenT / lenL - 1) > TWIN_MAX_LENGTH_DIFF) {
+    failures.push(`${land.name}'s portrait twin is ${((lenT / lenL - 1) * 100).toFixed(1)}% off the original's path length (max ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%): crossing time is a difficulty dial Threat does not multiply.`)
+  }
+  if (tall.slots.length !== land.slots.length || tall.slots.some((sl, i) => sl.id !== land.slots[i].id)) {
+    failures.push(`${land.name}'s portrait twin does not carry the same slots (placements are keyed by slot id and ride across orientations).`)
+  }
+  if (Math.max(...covDiff) > TWIN_MAX_COVERAGE_DIFF) {
+    failures.push(`${land.name}'s portrait twin changes what a slot sees by up to ${(Math.max(...covDiff) * 100).toFixed(1)}% (max ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}%) — a phone would be solving a different placement puzzle.`)
+  }
+}
+line('')
+/**
+ * The battery: the §14c teams (3–5 random tier-2 specs, depth-scaled level and
+ * gear, best-coverage slots) at five depths and three node kinds, on the twin
+ * and on the original, same seeds. `baseHp` is the real 20 so the stop rate
+ * means something; Gate HP lost is summed over every fight.
+ */
+const TWIN_DEPTHS: [number, EncounterKind][] = [[2, 'normal'], [4, 'boss'], [6, 'elite'], [8, 'normal'], [10, 'normal'], [12, 'boss']]
+const TWIN_TEAMS = 8
+line(`**Battery** — ${TWIN_TEAMS} random §14c-style companies × ${TWIN_DEPTHS.length} nodes (${TWIN_DEPTHS.map(([d, k]) => `d${d} ${k}`).join(', ')}) at the road's Threat, base ${MAX_BASE_HP}, identical seeds on both twins:`)
+line('')
+line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |')
+line('|---|---|--:|--:|--:|--:|')
+for (const land of ALL_MAPS) {
+  const res: Record<string, { cleared: number; lost: number; downs: number; n: number }> = {}
+  for (const field of [land, orientField(land, 'portrait')]) {
+    const acc = { cleared: 0, lost: 0, downs: 0, n: 0 }
+    const rr = new RNG(1717)
+    const order = bestSlots(field)
+    for (let t = 0; t < TWIN_TEAMS; t++) {
+      const size = 3 + Math.floor(rr.next() * 3)
+      const ids = Array.from({ length: size }, () => rr.pick(TIER2_NODES).id)
+      for (const [depth, kind] of TWIN_DEPTHS) {
+        const team = ids.map((id, i) => ({
+          sentinel: buildSpec(id, { level: mcLevel(depth), gearRarity: mcRarity(depth), seed: t * 10 + i, perkSeed: t * 10 + i }),
+          slotId: order[i],
+        }))
+        const m = runBattle({ team, depth, kind, map: field, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
+        acc.n++
+        if (m.cleared) acc.cleared++
+        acc.lost += m.baseHpLost
+        acc.downs += m.downs
+      }
+    }
+    res[orientationOf(field)] = acc
+    line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} | ${f2(acc.downs / acc.n)} |`)
+  }
+  const a = res.landscape
+  const b = res.portrait
+  const stopDiff = Math.abs(a.cleared / a.n - b.cleared / b.n)
+  const leakA = a.lost / a.n
+  const leakB = b.lost / b.n
+  if (stopDiff > TWIN_MAX_STOP_DIFF) {
+    failures.push(`${land.name}: the portrait twin's stop rate differs from the landscape field's by ${(stopDiff * 100).toFixed(1)}pt (max ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt) — the orientation a device picks is changing the game.`)
+  }
+  if (Math.abs(leakB - leakA) > Math.max(0.25, TWIN_MAX_LEAK_DIFF * leakA)) {
+    failures.push(`${land.name}: the portrait twin leaks ${f2(leakB)} Gate HP a fight against ${f2(leakA)} on the landscape field (max ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}%).`)
+  }
+}
+line('')
+line(`**The gates.** Path length within ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%, the same slot ids, every slot's coverage within ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}% at ${TWIN_RANGES.join(' / ')}px, and on the battery a stop rate within ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt and Gate HP lost within ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.`)
+line('')
 
 // -------------------------------------------------------------- Summary
 line('## Verdict')
