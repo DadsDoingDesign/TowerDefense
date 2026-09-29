@@ -11,7 +11,7 @@ import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
 import { pixmap, quarterTurns } from './pixmap'
-import { getSprite } from './sprites'
+import { artFor, getSprite } from './sprites'
 import { getActiveStyle } from './themes'
 import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
@@ -211,7 +211,10 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const style = getActiveStyle()
   const t = style.token
   const r = 15 * pulse
-  const pack = style.sprites?.pack
+  // The figure's pack, from the theme's per-role fallback chain — the whole
+  // family (still, idle, attack) comes from one pack, at that pack's density.
+  const art = artFor(s.archetype)
+  const pack = art?.pack
   const idle = pack ? getSprite(pack, `${s.archetype}_idle`) : undefined
   const atk = pack ? getSprite(pack, `${s.archetype}_atk`) : undefined
   const staticSpr = pack ? getSprite(pack, s.archetype) : undefined
@@ -229,17 +232,17 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   }
 
   const towerPm = (() => {
-    if (!style.sprites) return null
+    if (!art) return null
     const firing = s.fireFlash > 0.05 && !!atk
     const anim = firing ? 'atk' : 'idle'
     const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
     // heroStrip returns the bare body when nothing is equipped, so the
     // un-geared path is exactly what it was before the compositor existed.
     const strip =
-      heroStrip(style.sprites.pack, s.archetype, anim, frames, s.loadout) ??
+      heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
       ((firing ? atk : idle) ?? idle ?? atk)
     if (!strip) return null
-    const pm = pixmap(strip, { scale: unitPixmapScale(style.sprites.spriteScale), frames, ring: true })
+    const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
     if (!pm) return null
     const frame = firing
       ? Math.min(frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * frames))
@@ -263,7 +266,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     blitPixmap(ctx, towerPm.pm, towerPm.frame, 0, 8)
   } else if (staticSpr) {
     groundRing()
-    const pm = pixmap(staticSpr, { scale: unitPixmapScale(style.sprites!.spriteScale), ring: true })
+    const pm = pixmap(staticSpr, { scale: unitPixmapScale(art!.spriteScale), ring: true })
     if (pm) blitPixmap(ctx, pm, 0, 0, 8)
     if (s.fireFlash > 0) {
       ctx.beginPath()
@@ -392,7 +395,8 @@ export function drawEnemy(
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const pack = style.sprites?.pack
+  const art = artFor(type.id)
+  const pack = art?.pack
   const walkFrames = pack ? ANIM_FRAMES[`${type.id}_walk`] : undefined
   const walk = pack && walkFrames ? getSprite(pack, `${type.id}_walk`) : undefined
   const staticSpr = pack ? getSprite(pack, type.id) : undefined
@@ -405,7 +409,7 @@ export function drawEnemy(
    * `type.radius` is GAMEPLAY (hit detection, splash, blocking) and is not
    * touched here — only the render scale is.
    */
-  const spriteScale = style.sprites ? unitPixmapScale(style.sprites.spriteScale, !!type.isBoss) : 1
+  const spriteScale = art ? unitPixmapScale(art.spriteScale, !!type.isBoss) : 1
 
   const enemyShadow = () => {
     ctx.beginPath()

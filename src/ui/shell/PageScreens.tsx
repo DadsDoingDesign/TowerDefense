@@ -9,6 +9,7 @@ import type { ShellContext } from './context'
 import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
 import { MenuKeyArt } from './MenuKeyArt'
+import { AttractMode } from './AttractMode'
 import { DefeatReceipt } from './DefeatReceipt'
 import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
@@ -488,7 +489,9 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       cta={primary?.action ? { label: 'Start a Run', run: primary.action.run } : undefined}
       strip={<UpdateNotice />}
     >
-      <MenuKeyArt />
+      <MenuKeyArt>
+        <AttractMode />
+      </MenuKeyArt>
       {hasRecord && (
         <div className="pg-records">
           <Record label="Best depth" value={stats.bestDepth} />

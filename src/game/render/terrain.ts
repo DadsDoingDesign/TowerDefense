@@ -5,7 +5,7 @@
 import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import { pixmap } from './pixmap'
-import { getSprite, onSpritesReady } from './sprites'
+import { onSpritesReady, spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { COLORS, darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
 
@@ -33,7 +33,9 @@ onSpritesReady(() => {
 function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   if (typeof document === 'undefined') return null
   const style = getActiveStyle()
-  const grass = style.sprites ? getSprite(style.sprites.pack, 'grass') : undefined
+  // Each terrain role resolves down the theme's fallback chain on its own, and
+  // carries its own pack's density (sprites.ts `spriteFor`).
+  const grass = style.sprites ? spriteFor('grass') : undefined
   if (!style.sprites || !grass) return null
   const c = document.createElement('canvas')
   c.width = map.width
@@ -41,7 +43,7 @@ function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   const ctx = c.getContext('2d', { willReadFrequently: true })
   if (!ctx) return null
   ctx.imageSmoothingEnabled = false
-  const road = getSprite(style.sprites.pack, 'road')
+  const road = spriteFor('road')
   drawSpriteTerrain(ctx, map, grass, road, style.path.edge, style.path.fill)
   // The environment is graded AFTER the dressing goes down and BEFORE the base
   // marker, so the grade reaches the decoration sprites (which is where the
@@ -60,9 +62,7 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
   if (style.sprites) {
     // The pack stamp is in the key so a re-exported sprite pack re-bakes rather
     // than leaving a terrain built from the old art on screen.
-    const key = `${style.id}:${map.id}:${map.width}x${map.height}:${
-      style.sprites ? DECO_NAMES.map((n) => getSprite(style.sprites!.pack, n)?.naturalHeight ?? 0).join(',') : ''
-    }`
+    const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}`
     if (!terrainCache || terrainCache.key !== key) {
       const baked = bakeTerrain(map)
       terrainCache = baked ? { key, canvas: baked } : null
@@ -127,15 +127,14 @@ function drawPath(ctx: CanvasRenderingContext2D, pts: Vec2[]): void {
 function drawSpriteTerrain(
   ctx: CanvasRenderingContext2D,
   map: GameMap,
-  grass: HTMLImageElement,
-  road: HTMLImageElement | undefined,
+  grass: DrawnArt,
+  road: DrawnArt | undefined,
   edgeColor: string,
   fillColor: string,
 ): void {
   const style = getActiveStyle()
   const green = mix(style.field.top, style.field.bottom, 0.5)
   const dr = getDressing(map)
-  const sc = style.sprites!.spriteScale
 
   // Base grass tiles + a whisper of darkening so bright units pop.
   //
@@ -143,8 +142,8 @@ function drawSpriteTerrain(
   // upscaled, which is why terrain pixels measured 2.2× the hero's and 6.5× a
   // barrel's. It is box-filtered to the same ×½ density as everything else now
   // and tiled 1:1, so one grass pixel is one unit pixel.
-  const gpm = pixmap(grass, { scale: sc })
-  const gp = ctx.createPattern(gpm ? (gpm.img as CanvasImageSource) : grass, 'repeat')!
+  const gpm = pixmap(grass.img, { scale: grass.spriteScale })
+  const gp = ctx.createPattern(gpm ? (gpm.img as CanvasImageSource) : grass.img, 'repeat')!
   ctx.fillStyle = gp
   ctx.fillRect(0, 0, map.width, map.height)
   ctx.fillStyle = 'rgba(0,0,0,0.06)'
@@ -159,8 +158,8 @@ function drawSpriteTerrain(
   ctx.lineWidth = 50
   strokePolyline(ctx, map.path)
   if (road) {
-    const rpm = pixmap(road, { scale: sc })
-    const rp = ctx.createPattern(rpm ? (rpm.img as CanvasImageSource) : road, 'repeat')!
+    const rpm = pixmap(road.img, { scale: road.spriteScale })
+    const rp = ctx.createPattern(rpm ? (rpm.img as CanvasImageSource) : road.img, 'repeat')!
     ctx.strokeStyle = rp
     ctx.lineWidth = 40
     strokePolyline(ctx, map.path)
@@ -243,6 +242,20 @@ function samplePath(pts: Vec2[], spacing: number) {
 
 /** Every decoration role the renderer may place, in one list. */
 const DECO_NAMES = ['tree1', 'tree2', 'tree3', 'tree4', 'rock1', 'rock2', 'rock3', 'rock4', 'bush1', 'bush2']
+
+/** A decoded role and the pack/density it resolved to (sprites.ts `spriteFor`). */
+type DrawnArt = NonNullable<ReturnType<typeof spriteFor>>
+
+/**
+ * Which pack each role resolved to and how tall it is. A cache key: a role
+ * that moves pack (a newly shipped fieldwatch tree), or a re-exported file,
+ * has to re-bake the terrain and re-lay the dressing.
+ */
+const artStamp = (n: string): string => {
+  const a = spriteFor(n)
+  return a ? `${a.pack}/${a.img.naturalHeight}` : '-'
+}
+export const decoStamp = (): string => DECO_NAMES.map(artStamp).join(',')
 /**
  * The tallest a decoration may be drawn, in logical px.
  *
@@ -263,17 +276,16 @@ const DECO_TREE_MIN = 40
  * the state this replaced).
  */
 export function decoPools(): { trees: string[]; litter: string[]; top: number; height: Record<string, number> } {
-  const style = getActiveStyle()
-  const pack = style.sprites?.pack
-  const sc = style.sprites?.spriteScale ?? 1
   const trees: string[] = []
   const litter: string[] = []
   const height: Record<string, number> = {}
   let tallest = 0
   for (const n of DECO_NAMES) {
-    const spr = pack ? getSprite(pack, n) : undefined
+    // Measured at the density of the pack it is drawn FROM, so a fallback
+    // Tiny Swords tree under the one-density theme is still halved (§5.1).
+    const spr = spriteFor(n)
     if (!spr) continue
-    const h = Math.ceil(spr.naturalHeight * sc)
+    const h = Math.ceil(spr.img.naturalHeight * spr.spriteScale)
     height[n] = h
     if (h > DECO_CEIL) continue
     if (h >= DECO_TREE_MIN) {
@@ -409,9 +421,7 @@ function getDressing(map: GameMap): Dressing {
   // The pack stamp is part of the key: which asset is a tree and which is
   // litter is decided by measured height, so a re-export has to regenerate the
   // layout rather than reuse one built against the old sizes.
-  const pack = getActiveStyle().sprites?.pack
-  const stamp = pack ? DECO_NAMES.map((n) => getSprite(pack, n)?.naturalHeight ?? 0).join(',') : ''
-  const key = `${map.width}x${map.height}:${map.path.length}:${Math.round(map.path[1]?.x ?? 0)}:${stamp}`
+  const key = `${map.width}x${map.height}:${map.path.length}:${Math.round(map.path[1]?.x ?? 0)}:${decoStamp()}`
   if (!dressCache || dressCache.key !== key) dressCache = { key, dr: buildDressing(map) }
   return dressCache.dr
 }
@@ -475,13 +485,11 @@ function drawPathDetail(ctx: CanvasRenderingContext2D, dr: Dressing, fill: strin
 }
 
 function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
-  const style = getActiveStyle()
-  if (!style.sprites) return
-  const sc = style.sprites.spriteScale
+  if (!getActiveStyle().sprites) return
   for (const d of dr.decos) {
-    const spr = getSprite(style.sprites.pack, d.name)
+    const spr = spriteFor(d.name)
     if (!spr) continue
-    const pm = pixmap(spr, { scale: sc })
+    const pm = pixmap(spr.img, { scale: spr.spriteScale })
     if (!pm) continue
     const w = pm.fw, h = pm.fh
     // Contact shadow — kept on all three object classes, per the checklist.

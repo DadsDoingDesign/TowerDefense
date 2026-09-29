@@ -129,8 +129,9 @@ Every context below is those instances and nothing else — no bespoke frames.
 ### It is built
 
 The shell is implemented in `src/ui/shell/` and is **the game's UI** — it is
-what loads. Fieldwatch is a mobile app, so the shell is the only layout that
-matters; it caps at 520px and centres.
+what loads. Fieldwatch is mobile-first: on a phone the shell is one column
+capped at 520px. On a tablet and a desk the same bands re-flow — see
+§ Wide layout below.
 
 The pre-shell screens (`src/ui/screens/`, the `?shell=0` fallback) have been
 deleted; the shell is the only UI.
@@ -192,6 +193,62 @@ px heroes at 390 wide.
 Build circles are real buttons (`src/ui/SlotLayer.tsx`), laid over the canvas
 with `pointer-events: none` — keyboard and assistive tech reach them; a finger
 still lands on the canvas hit test.
+
+## Wide layout (Phase 4) — tablet and desk
+
+Same bands, same components, same rule set (the Stage is never covered, one
+interaction, the pack is permanent). Only the GRID changes, all of it in
+`src/styles/shell-wide.css`, behind media queries no phone matches — 390×844 is
+byte-for-byte the phone layout.
+
+| Viewport | Query | Layout |
+| --- | --- | --- |
+| Phone portrait | < 700 wide | Unchanged: one 520px-capped column, four bands. |
+| Phone landscape | landscape, ≤ 500 tall, ≤ 950 wide, coarse pointer | Unchanged: the rotate prompt. |
+| Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; menu key art up to 420 tall. |
+| Wide | ≥ 900 wide and ≥ 540 tall | Header one row across; Stage left spanning the height; Selector + Detail stacked in a right column `clamp(400px, 32vw, 468px)`. |
+
+**Wide, battle / run map** (1440×900):
+
+    ┌──────────────────────────────── header 60 ────────────────────── ? ┐
+    ├──────────────────────────────── coach (when a tip is live) ────────┤
+    │                                        │ Selector 126 (party row)   │
+    │   STAGE  980×840                       ├────────────────────────────┤
+    │   field 960×560 at exactly 1:1         │ Detail — context · gear ·  │
+    │   (woodland apron around it)           │ pack, full height; wave    │
+    │                                        │ strip at its foot          │
+    └────────────────────────────────────────┴────────────────────────────┘
+
+- **Field scale.** `--field-snap: 1` on the canvas wrap makes `BattleCanvas`
+  snap an ENLARGED field down to whole device pixels per field pixel (1:1 at
+  1440×900 dpr 1, 2:1 on a retina 1440). A field that must shrink (1024 → 0.66,
+  1280 → 0.88) keeps the one filtered resample. Phones never snap.
+- **No live collapse.** The Detail band sits beside the field, so collapsing it
+  in a live wave would buy the field nothing: it stays open, wave strip at its
+  foot. Gear slots cap at 76px (`flex: 1` would make 180px empty boxes).
+- **Run map** centred at ≤ 760px of the Stage.
+- **Pages** are a 600px column framed on the table (hairline sides, soft
+  shadow). The **Watchtower menu** is two columns: key art left (16:10, the
+  attract battle fitting itself; the still at an exact 2× from 1200×700), the
+  title / records / rows / Start a Run as a centred block right
+  (`clamp(320px, 30vw, 420px)`, 48px title).
+
+**Pointer and keyboard** (any width):
+
+- Copy follows the primary pointer, not the UA: `(hover: hover) and (pointer:
+  fine)` says **Click**, everything else **Tap** — `<Tap />` / `tapWord()` in
+  `src/ui/pointer.tsx`. New copy that tells the player to activate something
+  uses them.
+- Hover (fine pointer only): cards, tiles, gear slots, tabs, rows, portraits
+  lift to `--surface-strong` with an accent inset; buttons brighten 10%;
+  pointer cursor; disabled shows `not-allowed`.
+- Shortcuts (`Shortcuts.tsx`): **1 / 2 / 3** speed · **Space / Enter** Start
+  Wave · **C** the command button (`.sh-command`, when COMBAT's slot shows one)
+  · **?** the sheet · **Esc** closes. They press the visible control
+  (`[data-key="start"]`), so they can never do what it would refuse, and they
+  yield to a focused control, a text field, a modifier chord or an open modal.
+  The "?" button shows in the wide header only; the sheet opens over the right
+  column, never over the Stage.
 
 ## Contexts — `?node-id=2062-4739`
 

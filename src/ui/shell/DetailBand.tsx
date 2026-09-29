@@ -49,6 +49,7 @@ import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
 import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
+import { Tap, tapWord } from '../pointer'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -173,8 +174,9 @@ function WaveBar() {
         <button
           className="sh-speed"
           data-sfx="toggle"
+          aria-keyshortcuts="1 2 3"
           onClick={() => setSpeed(speed === 3 ? 1 : ((speed + 1) as 1 | 2 | 3))}
-          aria-label={`Battle speed ${speed}× — tap to change`}
+          aria-label={`Battle speed ${speed}× — ${tapWord(false)} to change`}
         >
           <span className="sh-speed-word">Speed</span>
           <span className="sh-speed-val">{speed}×</span>
@@ -204,13 +206,23 @@ function WaveBar() {
   return (
     <div className="sh-wavebar">
       <p className={`sh-wavebar-hint ${deployed ? 'ready' : ''}`}>
-        {deployed
-          ? `${deployed} posted. Tap a circle to move a hero, or start the wave.`
-          : 'Tap your hero, then a glowing circle on the field.'}
+        {deployed ? (
+          <>
+            {deployed} posted. <Tap /> a circle to move a hero, or start the wave.
+          </>
+        ) : (
+          <>
+            <Tap /> your hero, then a glowing circle on the field.
+          </>
+        )}
       </p>
       <button
         className="sh-btn primary"
         disabled={deployed === 0}
+        /* The keyboard path (Space / Enter, `Shortcuts.tsx`) presses THIS
+           button, so a shortcut can never do what the button would refuse. */
+        data-key="start"
+        aria-keyshortcuts="Space Enter"
         onClick={() => {
           // A live wave collapses the Detail band so the Stage gets the height
           // (Phase 2) — unless something is selected, which re-opens it. The
@@ -410,7 +422,9 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
           </div>
           <div className="sh-context-body">
             <WaveComposition />
-            <p className="sh-line muted">Tap a hero for its detail.</p>
+            <p className="sh-line muted">
+              <Tap /> a hero for its detail.
+            </p>
           </div>
         </div>
       )
@@ -437,7 +451,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
   return (
     <div className="sh-context empty">
       <p className="sh-empty-hint">
-        {hasOffers ? 'Tap an offer to see what it does.' : screen === 'map' ? 'Tap a stop on the map to see what waits there.' : 'Tap a hero to see its detail.'}
+        <Tap /> {hasOffers ? 'an offer to see what it does.' : screen === 'map' ? 'a stop on the map to see what waits there.' : 'a hero to see its detail.'}
       </p>
     </div>
   )
@@ -476,7 +490,9 @@ function GearSlotPanel() {
         <span className="sh-context-sub">{hero.name}</span>
       </div>
       <div className="sh-context-body">
-        <p className="sh-line muted">The pack is showing only what fits. Tap one to put it on.</p>
+        <p className="sh-line muted">
+          The pack is showing only what fits. <Tap /> one to put it on.
+        </p>
         {warn && (
           <p className="sh-line bad">
             <Icon name="warn" /> {warn}

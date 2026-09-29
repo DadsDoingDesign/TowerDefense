@@ -8,6 +8,7 @@ import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import type { IconKey } from '../channels'
+import { Tap } from '../pointer'
 
 /**
  * First-run teaching (WS9).
@@ -250,7 +251,7 @@ function pickTip(s: {
       icon: 'deploy',
       body: (
         <>
-          Tap your hero, then a <b>glowing circle</b> on the field.
+          <Tap /> your hero, then a <b>glowing circle</b> on the field.
         </>
       ),
     }
@@ -268,7 +269,7 @@ function pickTip(s: {
           <b>
             {s.packCount} {s.packCount === 1 ? 'item' : 'items'}
           </b>{' '}
-          to equip. Tap a <b>+</b> under Gear.
+          to equip. <Tap /> a <b>+</b> under Gear.
         </>
       ),
     }
@@ -280,7 +281,7 @@ function pickTip(s: {
       icon: 'gold',
       body: (
         <>
-          <b>{s.spendableGold} gold</b> unspent. Tap a hero, then <b>Skills</b>, to spend it.
+          <b>{s.spendableGold} gold</b> unspent. <Tap /> a hero, then <b>Skills</b>, to spend it.
         </>
       ),
     }

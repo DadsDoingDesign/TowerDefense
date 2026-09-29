@@ -233,7 +233,20 @@ export function BattleCanvas() {
         canvas.width = map.width
         canvas.height = map.height
       }
-      const view = fitView(cssW, cssH, map)
+      let view = fitView(cssW, cssH, map)
+      // The wide layout (shell-wide.css) sets `--field-snap: 1`: when the field
+      // is being ENLARGED, snap the scale down to a whole number of device
+      // pixels per field pixel, so a 1440-wide desk shows it at exactly 1:1 (or
+      // 2:1 on a retina panel) instead of a smeared 1.02. Phones never set it —
+      // their field is width-bound and must keep the full width.
+      if (cs.getPropertyValue('--field-snap').trim() === '1') {
+        const d = window.devicePixelRatio || 1
+        const n = Math.floor(view.scale * d + 1e-6)
+        if (n >= 1) {
+          const sc = n / d
+          view = { scale: sc, ox: (cssW - map.width * sc) / 2, oy: (cssH - map.height * sc) / 2 }
+        }
+      }
       const fw = map.width * view.scale
       const fh = map.height * view.scale
       const left = Math.round(view.ox)

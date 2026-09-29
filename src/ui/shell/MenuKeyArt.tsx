@@ -18,15 +18,17 @@ import { KEYART } from '../../assets/brand/keyart'
  * vertically. The composition keeps the subject in the middle 328×150 and
  * puts only trees and brush in the margins that get cropped.
  *
- * ## The seam for the attract-mode battle
+ * ## The live layer (attract mode)
  *
- * `children` replaces the still. A live attract battle should render into a
- * `KEYART.w × KEYART.h` box (it is positioned and cropped exactly like the
- * still), or fill the frame itself if it does its own fitting:
+ * `children` is a LIVE layer laid over the still, filling the whole frame
+ * (not the 488×272 stage) — it does its own fitting:
  *
- *     <MenuKeyArt><AttractBattle /></MenuKeyArt>
+ *     <MenuKeyArt><AttractMode /></MenuKeyArt>
  *
- * Nothing else in the menu needs to change.
+ * The still always renders underneath. The live layer fades in over it once it
+ * has a frame, and simply is not there under reduced motion, before idle or
+ * offline without its chunk — so every one of those cases shows the diorama,
+ * with no placeholder and no layout change.
  *
  * ## Ambience
  *
@@ -38,7 +40,10 @@ import { KEYART } from '../../assets/brand/keyart'
 export function MenuKeyArt({ children }: { children?: ReactNode }) {
   return (
     <div className="pg-art" aria-hidden>
-      <div className="pg-art-stage">{children ?? <KeyArtStill />}</div>
+      <div className="pg-art-stage">
+        <KeyArtStill />
+      </div>
+      {children}
     </div>
   )
 }

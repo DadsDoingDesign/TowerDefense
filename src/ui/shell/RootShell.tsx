@@ -12,10 +12,12 @@ import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
 import { ReceiptToast } from './PackStrip'
+import { Shortcuts } from './Shortcuts'
 import { useOffers, type MetaView } from './offers'
 import '../../styles/page.css'
 import '../../styles/shell.css'
 import '../../styles/shell-live.css'
+import '../../styles/shell-wide.css'
 
 /**
  * The whole game in one screen. Four bands at fixed heights; every surface the
@@ -119,6 +121,9 @@ export function RootShell() {
           SelectorBand.tsx and the invariant in context.ts. */}
       <SelectorBand />
       <DetailBand offers={offers} />
+      {/* Keyboard shortcuts + the "?" sheet (Phase 4). The button shows only
+          to a fine pointer; the keys work on any keyboard. */}
+      <Shortcuts />
       <EvolutionModal />
       <Announcer />
       <ReceiptToast />

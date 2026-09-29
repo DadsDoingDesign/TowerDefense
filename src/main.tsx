@@ -5,6 +5,7 @@ import { preloadAudioSamples, resumeAudio } from './audio/audio'
 import { installMusicDirector } from './audio/director'
 import { musicStatus, resumeMusic, suspendMusic } from './audio/music'
 import { preloadSprites } from './game/render/sprites'
+import { applyThemeCss, artOverride, setActiveTheme } from './game/render/themes'
 import { initSettings, initTheme, useSettingsStore } from './state/settingsStore'
 import { flushRunSnapshot, installRunPersistence, useGameStore } from './state/gameStore'
 import { onAppHidden, onAppVisible } from './state/lifecycle'
@@ -14,7 +15,11 @@ import { reportFatal } from './ui/fatal'
 import { useBattleLedger } from './ui/battleLedger'
 import './styles/global.css'
 
-initTheme()
+// `?art=fieldwatch` previews a sprite theme with its per-role fallback chain
+// (HANDOFF §6.4); without it the default theme boots exactly as before.
+const art = artOverride()
+if (art) applyThemeCss(setActiveTheme(art))
+else initTheme()
 initSettings()
 preloadSprites()
 // Fetch the UI samples now so the first tap has bytes to decode (M31).

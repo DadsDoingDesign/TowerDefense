@@ -32,6 +32,14 @@ export interface SpriteConfig {
   towerScale: number
   /** @deprecated see towerScale. */
   enemyScale: number
+  /**
+   * The per-role fallback chain (HANDOFF §6.4): packs to draw a role from when
+   * this pack does not ship it, in order. Each role comes from the FIRST pack
+   * in `[pack, ...fallback]` that ships its family, at THAT pack's density
+   * (`packDensity`) — so a half-authored pack can go live role by role, and
+   * a role nobody ships still falls through to the procedural token.
+   */
+  fallback?: readonly string[]
 }
 
 export interface ThemeStyle {
@@ -91,10 +99,14 @@ export const THEMES: Record<string, ThemeStyle> = {
    *
    * `spriteScale: 1` is the whole point: at one density the artist authors
    * exactly what the player sees, with no box filter deciding which pixels
-   * survive. Tiny Swords stays at `0.5` and stays the active theme until this
-   * pack has art — flipping the density under the old files would draw every
-   * sprite at 2x and, worse, push every tree past `DECO_CEIL` (96 drawn px),
-   * where decorations are dropped from the pool with no warning.
+   * survive. Tiny Swords stays at `0.5`, and stays the DEFAULT theme until
+   * enough of this pack is authored to carry the game.
+   *
+   * `fallback` makes that incremental: every role this pack does not ship is
+   * drawn from Tiny Swords at Tiny Swords' own density (`packDensity`), so the
+   * old trap — flipping the density under the old files drew every sprite at
+   * 2× and pushed every tree past `DECO_CEIL` (96 drawn px), where decorations
+   * vanish with no warning — cannot recur. Preview it with `?art=fieldwatch`.
    *
    * Colours below are `BRAND.md` tokens rather than the meadow greens, since
    * this pack is authored against the brand rather than inheriting a look.
@@ -104,7 +116,7 @@ export const THEMES: Record<string, ThemeStyle> = {
     name: 'Fieldwatch',
     blurb: 'The watch holds the line. Storybook chunk at one density.',
     smoothing: false,
-    sprites: { pack: 'fieldwatch', spriteScale: 1, towerScale: 1, enemyScale: 1 },
+    sprites: { pack: 'fieldwatch', spriteScale: 1, towerScale: 1, enemyScale: 1, fallback: ['tinyswords'] },
     css: { accent: '#e0ac4c', accentDim: 'rgba(224,172,76,0.16)', radius: '10px', bg: '#201711', panel: '#2f2418' },
     field: { top: '#5a9b43', bottom: '#3f7a30', grid: 'rgba(0,0,0,0.10)', gridStep: 32 },
     path: { edge: '#3c2c18', fill: '#7a5a30', center: 'rgba(0,0,0,0)', edgeWidth: 46, fillWidth: 36, dash: null, cap: 'round' },
@@ -126,6 +138,31 @@ export const THEMES: Record<string, ThemeStyle> = {
 }
 
 export const DEFAULT_THEME = 'tinyswords'
+
+/**
+ * The density a pack is authored at — the `spriteScale` of the theme that
+ * owns it. A pack's density is a property of its files, not of whichever theme
+ * is borrowing them, which is why a fallback role keeps its own scale: a
+ * Tiny Swords tree drawn under the fieldwatch theme is still halved, and never
+ * trips `DECO_CEIL` (HANDOFF §5.1).
+ */
+export function packDensity(pack: string): 0.5 | 1 {
+  for (const t of Object.values(THEMES)) if (t.sprites?.pack === pack) return t.sprites.spriteScale
+  return 1
+}
+
+/**
+ * The art preview switch: `?art=fieldwatch` boots the named sprite theme
+ * instead of the default, so authored roles can be reviewed in the real game
+ * with everything else falling back down the chain. Only sprite themes are
+ * accepted. It is a URL switch rather than a setting on purpose: nothing
+ * persists it and no player can reach it by accident. Returns null when absent
+ * or unknown.
+ */
+export function artOverride(search: string = typeof location === 'undefined' ? '' : location.search): string | null {
+  const id = new URLSearchParams(search).get('art')
+  return id && THEMES[id]?.sprites ? id : null
+}
 
 let activeStyle: ThemeStyle = THEMES[DEFAULT_THEME]
 export const getActiveStyle = (): ThemeStyle => activeStyle
