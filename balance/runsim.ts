@@ -44,13 +44,14 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { THREAT_PER_CHOICE, THREAT_PER_NODE } from '../src/state/gameStore'
 import { bannerRules, useMetaStore, type BannerRules } from '../src/state/metaStore'
 import type { Archetype, EffectMods, Item, Sentinel } from '../src/game/types'
+import { createSentinel } from '../src/game/data/sentinels'
+import { autoEquipEmpty, recruitKit, wearKit } from '../src/game/engine/kit'
 import {
   autoEvolve,
   bestSlotGain,
   bestSlots,
   buyUpgrades,
-  equipIfBetter,
-  freshHero,
+  equipAndDisplace,
   heroDps,
   ITEM_PRICE,
   MAX_ROSTER,
@@ -232,6 +233,9 @@ export interface RunOutcome {
 }
 
 const ARCHS: Archetype[] = ['fighter', 'rogue', 'mystic']
+
+/** A body joining the company, carrying what the store hands it (`RECRUIT_KIT`). */
+const recruitBody = (a: Archetype, rng: RNG): Sentinel => wearKit(createSentinel(a), recruitKit(rng, a))
 const rosterRefs = (roster: Sentinel[]): RosterRef[] => roster.map((s) => ({ archetype: s.archetype }))
 
 function applyStatBonus(s: Sentinel, n: number): Sentinel {
@@ -272,13 +276,29 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   const field = pickBattleMap(seed)
 
   // ---- the company, as `newRun` + `pickStartingHero` deal it ----
-  const kit = startingItems(rng, meta.extraItems)
-  let roster: Sentinel[] = [applyStatBonus(freshHero(archetype, rng), meta.statBonus)]
+  // The kit is dealt AFTER the pick, for the company that exists, and the
+  // leader wears its three core pieces — `pickStartingHero`, via the shared
+  // `engine/kit.ts`. The hub's extra Sentinels arrive bare, as
+  // `pickStartingHero` makes them; Quartermaster's extra rolls go to whoever
+  // they improve, and anything they unseat goes to the pack.
+  let roster: Sentinel[] = [applyStatBonus(createSentinel(archetype), meta.statBonus)]
   for (let i = 0; i < meta.extraSentinels; i++) {
-    roster.push(applyStatBonus(freshHero(ARCHS[i % 3], rng), meta.statBonus))
+    roster.push(applyStatBonus(recruitBody(ARCHS[i % 3], rng), meta.statBonus))
   }
-  // The three forced-rarity openers are already worn by the hero (`freshHero`);
-  // anything Quartermaster adds is handed to whoever it improves.
+  /**
+   * What the company owns but is not wearing. The store has always had one
+   * (`inventory`); this model used to throw every displaced item away and
+   * hand every hire a freshly rolled kit, while the game hires a BARE body.
+   * A hire now dresses out of the pack with the store's own empty-slot rule.
+   */
+  let pack: Item[] = []
+  const equipOn = (h: number, item: Item) => {
+    const r = equipAndDisplace(roster[h], item)
+    roster[h] = r.hero
+    if (r.displaced) pack.push(r.displaced)
+  }
+  const kit = startingItems(rng, archetype, meta.extraItems, rosterRefs(roster))
+  roster[0] = wearKit(roster[0], kit)
   for (const item of kit.slice(3)) {
     let best = -Infinity
     let who = 0
@@ -286,7 +306,8 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       const g = bestSlotGain(roster[h], item)
       if (g > best) { best = g; who = h }
     }
-    if (best > 0) roster[who] = equipIfBetter(roster[who], item)
+    if (best > 0) equipOn(who, item)
+    else pack.push(item)
   }
 
   let gold = meta.startGold
@@ -308,8 +329,12 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
 
   const hire = () => {
     const lvl = scaledRecruitLevel(roster, meta.extraRecruit)
-    const base = applyStatBonus(freshHero(rng.pick(ARCHS), rng), meta.statBonus)
-    roster = [...roster, autoEvolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)), rng)]
+    // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
+    // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
+    const base = applyStatBonus(recruitBody(rng.pick(ARCHS), rng), meta.statBonus)
+    const dressed = autoEquipEmpty([autoEvolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)), rng)], pack)
+    pack = dressed.rest
+    roster = [...roster, dressed.roster[0]]
     threat *= THREAT_PER_CHOICE
   }
 
@@ -340,7 +365,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         if (!best) break
         gold -= ITEM_PRICE[best.item.rarity]
         stock.splice(stock.indexOf(best.item), 1)
-        roster[best.hero] = equipIfBetter(roster[best.hero], best.item)
+        equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
       }
       if (roster.length < MAX_ROSTER && gold >= RECRUIT_PRICE && !banner.noRecruits) {
@@ -427,7 +452,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       }
     }
     if (bestItem && bestItem.gain > 0) {
-      roster[bestItem.hero] = equipIfBetter(roster[bestItem.hero], bestItem.item)
+      equipOn(bestItem.hero, bestItem.item)
       creditPity(pity, bestItem.item.rarity) // `chooseReward` charges the card taken
     } else {
       const grant = cards

@@ -17,6 +17,8 @@ import { ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
+import { recruitKit, wearKit } from '../src/game/engine/kit'
+import { createSentinel } from '../src/game/data/sentinels'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
@@ -1444,8 +1446,12 @@ line('')
 line('**Why this exists.** Every other sweep fields 3–5 tier-2 specialists with')
 line('depth-scaled gear sets and upgrade purchases on every tower. A real first run does')
 line(`not: \`pickStartingHero\` hands the player **one level-1 hero**, \`START_GOLD\` = ${START_GOLD},`)
-line('and three starting items (a common one-hand, a common body, a rare off-hand). The')
-line('zero-meta baseline had never been simulated, so nobody knew whether it was a wall.')
+line('and the opening kit `engine/kit.ts` deals **after the pick** and has the hero **wear**')
+line('(a weapon of the hero\'s own damage type — common, or epic for a Mystic — a common body,')
+line('a rare off-hand; the harness and the store call the same function). Every Sentinel who')
+line('joins later arrives carrying one common on-type weapon and dresses its empty slots out')
+line('of the pack. The zero-meta baseline had never been simulated, so nobody knew whether it')
+line('was a wall.')
 line('')
 line('**Two models, because one of them was a fiction.** The first version of this sweep')
 line('marched the hero through ten consecutive battles, refused every merchant, took no')
@@ -1493,7 +1499,8 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   for (let depth = 1; depth <= NODES; depth++) {
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
       // A recruit node hands over a fresh level-1 body — and taxes Threat for it.
-      roster = [...roster, freshHero(rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[]), rng)]
+      const a = rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[])
+      roster = [...roster, wearKit(createSentinel(a), recruitKit(rng, a))]
       threat *= THREAT_PER_CHOICE
     }
     const kind = depth === NODES ? 'boss' : depth % 4 === 0 ? 'elite' : 'normal'

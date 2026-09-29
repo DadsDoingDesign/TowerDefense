@@ -20,7 +20,8 @@ import { ALL_NODES, childrenOf, getNode, type TreeNode } from '../src/game/data/
 import { ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
-import { generateItem } from '../src/game/data/items'
+import { generateItem, type RosterRef } from '../src/game/data/items'
+import { startingKit, wearKit } from '../src/game/engine/kit'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
@@ -530,36 +531,26 @@ export const SEEDS = [11, 137, 409, 1013, 2411, 5171, 7919]
 
 // ---- fresh-player modelling ----------------------------------------------
 /**
- * The three items a brand-new run actually starts with
- * (`gameStore.startingInventory`): a common one-hand, a common body, a rare
- * off-hand. Reproduced here rather than imported because the store pulls in
- * zustand + the audio module.
+ * The kit a brand-new run opens with — **the store's own function**
+ * (`src/game/engine/kit.ts`), not a copy of it. This used to be a hand-kept
+ * mirror of `gameStore.startingInventory`, and the two disagreed about the one
+ * moment every run shares: the store dealt the kit roster-blind *before* the
+ * hero was picked and left it in the pack, while this modelled it worn. Both
+ * now call `startingKit` after the pick and `wearKit` onto the hero.
  */
-export function startingItems(rng: RNG, extra = 0): Item[] {
-  const items = [
-    generateItem(rng, { slot: 'oneHand', rarity: 'common' }),
-    generateItem(rng, { slot: 'body', rarity: 'common' }),
-    generateItem(rng, { slot: 'offHand', rarity: 'rare' }),
-  ]
-  // `Quartermaster` (hub, `loot`): the same extra rolls the store deals, at the
-  // same luck. Roster-blind on purpose — `newRun` deals the kit before the hero
-  // is picked, so `startingInventory` is called with no roster there either.
-  for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1 }))
-  return items
+export function startingItems(rng: RNG, archetype: Archetype, extra = 0, roster?: readonly RosterRef[]): Item[] {
+  return startingKit(rng, archetype, { extra, roster })
 }
 
-/** A level-1 hero of the given archetype with the real starting kit equipped. */
+/** A level-1 hero of the given archetype wearing the real opening kit. */
 export function freshHero(archetype: Archetype, rng: RNG): Sentinel {
-  const s = createSentinel(archetype)
-  const [oneHand, body, offHand] = startingItems(rng)
-  return { ...s, equipment: { mainHand: oneHand, offHand, body } }
+  return wearKit(createSentinel(archetype), startingKit(rng, archetype))
 }
 
 // ---- the shop and the map, as a real first run meets them -----------------
 /**
- * `gameStore`'s merchant prices and hire cost, mirrored here for the same reason
- * {@link startingItems} is: importing the store pulls in zustand and the audio
- * module. Keep these three in step with `gameStore.ITEM_PRICE` / `RECRUIT_PRICE`
+ * `gameStore`'s merchant prices and hire cost, mirrored here because importing
+ * the store pulls in zustand and the audio module. Keep these three in step with `gameStore.ITEM_PRICE` / `RECRUIT_PRICE`
  * / `MAX_ROSTER`.
  */
 export const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
@@ -631,14 +622,25 @@ export function bestSlotGain(s: Sentinel, item: Item): number {
 
 /** Equip `item` if it raises the wielder's DPS; returns the (possibly) new hero. */
 export function equipIfBetter(s: Sentinel, item: Item): Sentinel {
-  if (item.keepsake) return s
+  return equipAndDisplace(s, item).hero
+}
+
+/**
+ * {@link equipIfBetter}, also returning whatever the item unseated. The run
+ * model keeps those in a **pack**, exactly as the store does, because a
+ * mid-run hire arrives bare (`gameStore.scaledRecruit`) and dresses out of it.
+ */
+export function equipAndDisplace(s: Sentinel, item: Item): { hero: Sentinel; displaced: Item | null } {
+  if (item.keepsake) return { hero: s, displaced: null }
   const now = heroDps(s)
   let best: { slot: HeroSlot; dps: number } | null = null
   for (const slot of slotsFor(item)) {
     const dps = heroDps(withItem(s, slot, item))
     if (dps > now && (!best || dps > best.dps)) best = { slot, dps }
   }
-  return best ? withItem(s, best.slot, item) : s
+  return best
+    ? { hero: withItem(s, best.slot, item), displaced: s.equipment[best.slot] ?? null }
+    : { hero: s, displaced: null }
 }
 
 /** Auto-pick an evolution when one is owed (a real player always takes one). */

@@ -4,6 +4,7 @@ import { GameEngine, type BattleResult } from '../game/engine/engine'
 import { applyXp, buildName, evolutionPending, evolveInto, xpToReach } from '../game/engine/leveling'
 import { gameSfx, sfx, sfxRarity } from '../audio/audio'
 import { effectiveUpgradeLevels, teamKeepsakeMods } from '../game/engine/combat'
+import { autoEquipEmpty, recruitKit, startingKit, wearKit } from '../game/engine/kit'
 import { pickBattleMap } from '../game/data/maps'
 import { createSentinel, nameCounterState, startingRoster } from '../game/data/sentinels'
 import {
@@ -237,17 +238,16 @@ function combatSeed(runSeed: number, nodeKey: string, wave: number): number {
 }
 
 /**
- * The kit a run opens with. `roster` is the company it is being dealt FOR (M9):
- * a mono-mystic opening should not be handed a Greatsword whose whole damage
- * line reads 0 on everyone who could hold it. Omit it and the table is the
- * roster-blind one, byte for byte — which is what `newRun` wants, because there
- * the hero has not been picked yet.
+ * The Endless Watch's opening pack: three forced-rarity pieces and the
+ * Quartermaster rolls, weighted for the roster it is dealt for (M9). The
+ * CAMPAIGN kit is no longer dealt here — it is dealt after the hero is picked,
+ * for that hero, by `engine/kit.startingKit` (the balance harness calls the
+ * same function), and worn.
  *
- * No pity is threaded here on purpose: these are forced-rarity/luck-0.1 opening
- * items, not the drought the pity timer exists to end, and starting a run with
- * the counter already spent would make the first real drop worse.
+ * No pity is threaded on purpose: these are forced-rarity/luck-0.1 opening
+ * items, not the drought the pity timer exists to end.
  */
-function startingInventory(extra = 0, roster?: readonly RosterRef[]): Item[] {
+function endlessInventory(extra: number, roster: readonly RosterRef[]): Item[] {
   const items = [
     generateItem(rng, { slot: 'oneHand', rarity: 'common', roster }),
     generateItem(rng, { slot: 'body', rarity: 'common', roster }),
@@ -255,6 +255,15 @@ function startingInventory(extra = 0, roster?: readonly RosterRef[]): Item[] {
   ]
   for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1, roster }))
   return items
+}
+
+/**
+ * A body joining the company, carrying what `RECRUIT_KIT` hands it (a common
+ * weapon of its own damage type). Every Sentinel who joins after the leader —
+ * hub extras, hires, candidates — comes through here.
+ */
+function armedSentinel(archetype: Archetype): Sentinel {
+  return wearKit(createSentinel(archetype), recruitKit(rng, archetype))
 }
 
 /**
@@ -282,7 +291,10 @@ function startingInventory(extra = 0, roster?: readonly RosterRef[]): Item[] {
  */
 function scaledRecruit(archetype: Archetype, roster: Sentinel[]): Sentinel {
   const bonus = useMetaStore.getState().bonuses().statBonus
-  const base = applyStatBonus(createSentinel(archetype), bonus)
+  // Armed, not dressed: the rest of their kit comes out of the pack when they
+  // join (`withRecruits`). A hire used to arrive with nothing at all while the
+  // balance harness priced every hire as carrying a full opening kit.
+  const base = applyStatBonus(armedSentinel(archetype), bonus)
   if (!roster.length) return base
   const levels = roster.map((s) => s.level).sort((a, b) => a - b)
   const median = levels[Math.floor(levels.length / 2)]
@@ -291,16 +303,39 @@ function scaledRecruit(archetype: Archetype, roster: Sentinel[]): Sentinel {
   return target <= 1 ? base : applyXp(base, xpToReach(target))
 }
 
-/** Add hires to the roster and queue any branch choice they arrive owing. */
+/**
+ * Add hires to the roster, dress their empty slots from the pack, and queue any
+ * branch choice they arrive owing. Only EMPTY slots are filled, and only with
+ * strict upgrades (`autoEquipEmpty`) — nothing anyone is wearing moves.
+ */
 function withRecruits(
   roster: Sentinel[],
   queue: string[],
   hires: Sentinel[],
-): { roster: Sentinel[]; evolutionQueue: string[] } {
+  inventory: Item[],
+): { roster: Sentinel[]; evolutionQueue: string[]; inventory: Item[] } {
+  let pack = inventory
+  const dressed = hires.map((h) => {
+    const r = autoEquipEmpty([h], pack)
+    pack = r.rest
+    return r.roster[0]
+  })
   return {
-    roster: [...roster, ...hires],
-    evolutionQueue: [...queue, ...hires.filter(evolutionPending).map((s) => s.id)],
+    roster: [...roster, ...dressed],
+    evolutionQueue: [...queue, ...dressed.filter(evolutionPending).map((s) => s.id)],
+    inventory: pack,
   }
+}
+
+/**
+ * New items into the run: each drops into the empty slot it strictly improves
+ * most, anywhere on the roster; the rest go to the pack. Never replaces
+ * anything worn (`engine/kit.autoEquipEmpty`).
+ */
+function receiveItems(roster: Sentinel[], inventory: Item[], items: Item[]): { roster: Sentinel[]; inventory: Item[] } {
+  if (!items.length) return { roster, inventory }
+  const r = autoEquipEmpty(roster, items)
+  return { roster: r.roster, inventory: [...inventory, ...r.rest] }
 }
 
 function applyStatBonus(s: Sentinel, n: number): Sentinel {
@@ -312,7 +347,7 @@ function applyStatBonus(s: Sentinel, n: number): Sentinel {
 function buildStartingRoster(bonuses: MetaBonuses): Sentinel[] {
   const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
   const extra: Sentinel[] = []
-  for (let i = 0; i < bonuses.extraSentinels; i++) extra.push(createSentinel(archs[i % 3]))
+  for (let i = 0; i < bonuses.extraSentinels; i++) extra.push(armedSentinel(archs[i % 3]))
   return [...startingRoster(), ...extra].map((s) => applyStatBonus(s, bonuses.statBonus))
 }
 
@@ -1107,7 +1142,7 @@ export const useGameStore = create<GameState>((set, get) => {
     baseHp: MAX_BASE_HP,
     maxBaseHp: MAX_BASE_HP,
     enemyHpMult: 1,
-    inventory: startingInventory(0, bootRoster),
+    inventory: [],
 
     newRun: () => {
       // Starting a run destroys any saved one. Settle it first — the marks it
@@ -1127,10 +1162,8 @@ export const useGameStore = create<GameState>((set, get) => {
         baseHp: b.maxBaseHp,
         maxBaseHp: b.maxBaseHp,
         enemyHpMult: b.enemyHpMult,
-        // No roster to weight the kit for: `roster` is [] here and the hero is
-        // picked on the NEXT screen, so this deliberately stays the
-        // roster-blind table rather than weighting against an empty company.
-        inventory: startingInventory(b.extraItems),
+        // The kit is dealt in `pickStartingHero`, FOR the hero picked there.
+        inventory: [],
       })
     },
 
@@ -1161,12 +1194,23 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     pickStartingHero: (archetype) => {
+      const st = get()
+      // Once per run: a second pick would re-deal the kit off the loot stream.
+      if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return
       const b = useMetaStore.getState().bonuses()
       const archs: Archetype[] = ['fighter', 'rogue', 'mystic']
       const extra: Sentinel[] = []
-      for (let i = 0; i < b.extraSentinels; i++) extra.push(createSentinel(archs[i % 3]))
-      const roster = [createSentinel(archetype), ...extra].map((s) => applyStatBonus(s, b.statBonus))
-      set({ roster, screen: 'map' })
+      for (let i = 0; i < b.extraSentinels; i++) extra.push(armedSentinel(archs[i % 3]))
+      const company = [createSentinel(archetype), ...extra].map((s) => applyStatBonus(s, b.statBonus))
+      // The opening kit is dealt NOW, for the hero just picked — a Mystic is
+      // not handed a Sword — and WORN, not left in the pack. The balance
+      // harness calls the same two functions (`engine/kit.ts`), so the run it
+      // grades is the run this deals.
+      const kit = startingKit(rng, archetype, { extra: b.extraItems, roster: company })
+      const leader = wearKit(company[0], kit)
+      const worn = new Set([leader.equipment.mainHand, leader.equipment.offHand, leader.equipment.body].map((i) => i?.id))
+      const { roster, inventory } = receiveItems([leader, ...company.slice(1)], st.inventory, kit.filter((i) => !worn.has(i.id)))
+      set({ roster, inventory, screen: 'map' })
     },
 
     // Leaving for the Watchtower ends the run, so it settles like any other end.
@@ -1352,13 +1396,12 @@ export const useGameStore = create<GameState>((set, get) => {
         mode: 'endless',
         runSeed,
         screen: 'endless',
-        roster,
         gold: ENDLESS_START_GOLD,
         dust: ENDLESS_START_DUST,
         baseHp: b.maxBaseHp,
         maxBaseHp: b.maxBaseHp,
         enemyHpMult: b.enemyHpMult,
-        inventory: startingInventory(b.extraItems, roster),
+        ...receiveItems(roster, [], endlessInventory(b.extraItems, roster)),
       })
     },
 
@@ -1445,7 +1488,7 @@ export const useGameStore = create<GameState>((set, get) => {
       sfxRarity(entry.item.rarity)
       set({
         gold: gold - entry.price,
-        inventory: [...inventory, entry.item],
+        ...receiveItems(get().roster, inventory, [entry.item]),
         lootPity: pity,
         merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
       })
@@ -1462,7 +1505,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const pick = chosen ?? recruitOptions[0] ?? scaledRecruit(rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[]), roster)
       set({
         gold: gold - endlessRecruitCost,
-        ...withRecruits(roster, get().evolutionQueue, [pick]),
+        ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory),
         endlessRecruitCost: Math.round(endlessRecruitCost * 1.6),
         endlessRoom: null,
         recruitOptions: [],
@@ -1806,7 +1849,9 @@ export const useGameStore = create<GameState>((set, get) => {
             generateItem(rng, { luck: Math.min(0.45, st.round * 0.03), roster: rosterXp, pity }),
           )
           set({
-            roster: rosterXp,
+            // Loot drops into any empty slot it strictly improves; the rest
+            // goes to the pack. Nothing worn is ever replaced.
+            ...receiveItems(rosterXp, st.inventory, loot),
             lootPity: pity,
             gold: st.gold + result.goldEarned,
             dust: st.dust + dustGain,
@@ -1815,7 +1860,6 @@ export const useGameStore = create<GameState>((set, get) => {
             // (F5) precisely so it cannot be re-rolled on demand; this is the
             // one place it is allowed to change.
             merchant: null,
-            inventory: [...st.inventory, ...loot],
             lastResult: result,
             lastLoot: loot,
             evolutionQueue: evoQueue0,
@@ -2076,7 +2120,11 @@ export const useGameStore = create<GameState>((set, get) => {
       // only when that card is an item, since a stat card is not a drop either.
       let nextPity = lootPity
       if (card.kind === 'item' && card.item) {
-        nextInv = [...inventory, card.item]
+        // Into an empty slot it strictly improves, if the company has one;
+        // otherwise the pack. Never over anything already worn.
+        const got = receiveItems(roster, inventory, [card.item])
+        nextRoster = got.roster
+        nextInv = got.inventory
         nextPity = { ...lootPity }
         creditPity(nextPity, card.item.rarity)
       } else if (card.grant) {
@@ -2133,7 +2181,7 @@ export const useGameStore = create<GameState>((set, get) => {
       const hero = crossroads.recruits.find((s) => s.id === sentinelId)
       if (!hero || roster.length >= MAX_ROSTER) return
       set({
-        ...withRecruits(roster, get().evolutionQueue, [hero]),
+        ...withRecruits(roster, get().evolutionQueue, [hero], get().inventory),
         crossroads: null,
         screen: 'map',
         threat: get().threat * THREAT_PER_CHOICE,
@@ -2199,7 +2247,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     // ---- events ----
     buyMerchantItem: (itemId) => {
-      const { merchant, gold, inventory, lootPity } = get()
+      const { merchant, gold, inventory, lootPity, roster } = get()
       if (!merchant) return
       const entry = merchant.items.find((e) => e.item.id === itemId)
       if (!entry || gold < entry.price) return
@@ -2214,7 +2262,7 @@ export const useGameStore = create<GameState>((set, get) => {
       sfxRarity(entry.item.rarity)
       set({
         gold: gold - entry.price,
-        inventory: [...inventory, entry.item],
+        ...receiveItems(roster, inventory, [entry.item]),
         lootPity: pity,
         merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
       })
@@ -2225,7 +2273,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!merchant?.recruit || gold < merchant.recruit.price || roster.length >= MAX_ROSTER) return
       set({
         gold: gold - merchant.recruit.price,
-        ...withRecruits(roster, get().evolutionQueue, [merchant.recruit.sentinel]),
+        ...withRecruits(roster, get().evolutionQueue, [merchant.recruit.sentinel], get().inventory),
         merchant: { ...merchant, recruit: null },
         threat: get().threat * THREAT_PER_CHOICE,
       })
@@ -2264,7 +2312,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!event) return
       const pick = recruitOptions.find((s) => s.id === sentinelId)
       if (pick && roster.length < MAX_ROSTER) {
-        set({ ...withRecruits(roster, get().evolutionQueue, [pick]), threat: get().threat * THREAT_PER_CHOICE })
+        set({ ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory), threat: get().threat * THREAT_PER_CHOICE })
       }
       completeNode(get, set, event.nodeId)
     },
