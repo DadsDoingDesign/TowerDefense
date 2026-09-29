@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { onSpritesReady } from '../../game/render/sprites'
 import { useSettingsStore } from '../../state/settingsStore'
+import { useMedia } from '../pointer'
 
 /**
  * The menu's live key art: gatekeeper for the attract-mode battle (Phase 4).
@@ -15,8 +16,9 @@ import { useSettingsStore } from '../../state/settingsStore'
  *    (a timer where that is missing) and only once the boot sprites have
  *    decoded, so the menu's first paint and first tap never wait on it, and it
  *    never draws a frame of procedural placeholder circles.
- *  - **Parked when unseen** — a hidden tab or a frame scrolled/laid out of view
- *    stops the loop outright (no rAF), holding the last frame.
+ *  - **Parked when unseen** — a hidden tab, a frame scrolled/laid out of view,
+ *    or a phone on its side (under the rotate prompt) stops the loop outright
+ *    (no rAF), holding the last frame.
  *
  * It owns no run state and writes nothing: the sim is sealed off from the
  * store and from the global id/name counters (see `attractSim.ts`).
@@ -28,6 +30,10 @@ export function AttractMode() {
 
   const [Battle, setBattle] = useState<ComponentType<{ running: boolean }> | null>(null)
   const [inView, setInView] = useState(true)
+  // A phone on its side is covered by the rotate prompt (the shell is only
+  // visibility-hidden, so the observer still sees the frame): park there too.
+  // Same query as BattleCanvas / overlays.css / shell.css.
+  const rotated = useMedia('(orientation: landscape) and (max-height: 500px) and (max-width: 950px) and (pointer: coarse)')
   const [pageShown, setPageShown] = useState(() => typeof document === 'undefined' || !document.hidden)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -82,20 +88,7 @@ export function AttractMode() {
   if (reduced) return null
   return (
     <div className="pg-art-livewrap" ref={wrapRef}>
-      {Battle && <Battle running={inView && pageShown} />}
+      {Battle && <Battle running={inView && pageShown && !rotated} />}
     </div>
   )
-}
-
-function useMedia(query: string): boolean {
-  const get = () => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches
-  const [on, setOn] = useState(get)
-  useEffect(() => {
-    const mq = window.matchMedia?.(query)
-    if (!mq) return
-    const cb = () => setOn(mq.matches)
-    mq.addEventListener('change', cb)
-    return () => mq.removeEventListener('change', cb)
-  }, [query])
-  return on
 }

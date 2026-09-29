@@ -54,8 +54,10 @@ result. Append a short note to the review log when you're done.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
-  one: one screen, four bands, see `docs/FIGMA.md`. Mobile-only by design
-  (520px cap). The pre-shell screens (`?shell=0`) were deleted. The only
+  one: one screen, four bands, see `docs/FIGMA.md`. Mobile-first (a 520px
+  column on phones); tablet and desk re-flow the same bands in
+  `src/styles/shell-wide.css` (FIGMA.md § Wide layout). Copy that says "Tap"
+  uses `<Tap />` / `tapWord()` from `src/ui/pointer.tsx`. The pre-shell screens (`?shell=0`) were deleted. The only
   components outside `shell/` are `src/ui/components/RunMapView.tsx` and
   `EvolutionModal.tsx`, both rendered by the shell. Eager non-shell CSS those
   (and BattleCanvas) need lives in `src/styles/app.css`.

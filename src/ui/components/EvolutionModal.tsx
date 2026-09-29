@@ -8,6 +8,7 @@ import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
+import { Tap } from '../pointer'
 
 /**
  * Shown after a battle when a Sentinel crossed level 10 or 20 and is owed an
@@ -149,7 +150,9 @@ export function EvolutionModal() {
         {chosen ? (
           <EvolvePreview hero={sentinel} nodeId={chosen.id} />
         ) : (
-          <p className="evolve-hint">Tap a path to see what {sentinel.name} becomes.</p>
+          <p className="evolve-hint">
+            <Tap /> a path to see what {sentinel.name} becomes.
+          </p>
         )}
         <button
           className="evolve-confirm"

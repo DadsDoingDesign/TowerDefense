@@ -2083,3 +2083,35 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   field during a live wave — correct, and framed, but it is room a future
   portrait-authored map could use. A hero posted on Kiln Road's top circle
   (`s1`, y=60) loses ~2 CSS px of plume to the field's top edge at native density.
+
+- **2026-09-29 — Phase 4: per-role art fallback, attract mode, desk/tablet layout.**
+  Rendered through Playwright on the preview build at 1440×900, 1280×800,
+  1024×768, 768×1024 and 390×844 (dpr 2 and 3), plus `?art=fieldwatch`.
+
+  Art chain: with the placeholder fieldwatch pack previewed, the fighter,
+  torch1, grass and tree1 draw from it and every other role from Tiny Swords at
+  ×½ — no procedural circles, and the Tiny Swords trees are still in the pool
+  (the §5.1 trap is now a test). The page fetched 15 fieldwatch + 38 Tiny Swords
+  files and none of the 7 it shadows.
+
+  Attract mode: first pass opened on 8–10 s of an empty meadow (the column
+  walking in) — fixed by pre-rolling each fight to one second before first
+  contact. A fixed company-centred crop missed most of the fight on the left
+  bend — fixed with a slow eased camera pulled toward the closing column. The
+  first frame was one 392 ms task (terrain, apron, unit pixmaps) — split into
+  idle slices (119 / 101 ms) and the apron is never baked for a frame the field
+  already covers. The frame sat at y = 113.55, so every art pixel straddled two
+  device pixels — the canvas now snaps itself to the device grid. At dpr 3 it
+  shows two device pixels per art pixel, at dpr 2 exactly one.
+
+  Wide layout: first pass stretched the three gear slots to ~180px empty boxes
+  in the full-height right column (capped at 76px); the run map spread its
+  layers across 870px of Stage into long diagonals (centred at ≤760px); the
+  1024 right column left the hero tabs cramped (floor raised to 400px); the
+  menu's right column was top-heavy with a 450px hole above Start a Run (now a
+  centred block, 48px title). The field is exactly 1:1 at 1440×900 (snap), and
+  the still is shown at an exact 2× on a tall desk or tablet under reduced
+  motion. 390×844 re-checked: identical bands, still "Tap".
+
+  Open: at 1280×800 the field is a filtered 0.88 downscale (the side column
+  leaves 850px); a 960px Stage needs a ≥1400px window.
