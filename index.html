@@ -15,16 +15,16 @@
 
     <!-- Installable web app (M24) -->
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Fieldwatch" />
 
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0e0c'/%3E%3Cpath d='M16 4l10 4v7c0 6-4 10-10 13C10 25 6 21 6 15V8z' fill='none' stroke='%23f0a868' stroke-width='2.5' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='14' r='3' fill='%23f0a868'/%3E%3C/svg%3E"
-    />
+    <!-- The mark, drawn on the 16px grid (scripts/brand.ts). SVG first; the PNG is
+         for browsers that do not take SVG favicons. -->
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32" />
     <title>Fieldwatch</title>
   </head>
   <body>
