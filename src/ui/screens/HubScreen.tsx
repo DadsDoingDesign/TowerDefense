@@ -201,7 +201,7 @@ function AudioSettings() {
       <div className="settings-sliders">
         <VolumeSlider label="Master" value={audio.master} onChange={(v) => setAudio({ master: v })} preview="click" />
         <VolumeSlider label="Game" value={audio.game} onChange={(v) => setAudio({ game: v })} preview="coin" />
-        <VolumeSlider label="Interface" value={audio.ui} onChange={(v) => setAudio({ ui: v })} preview="select" />
+        <VolumeSlider label="Interface" value={audio.ui} onChange={(v) => setAudio({ ui: v })} preview="toggle" />
       </div>
     </section>
   )
@@ -216,7 +216,7 @@ function VolumeSlider({
   label: string
   value: number
   onChange: (v: number) => void
-  preview: 'click' | 'coin' | 'select'
+  preview: 'click' | 'coin' | 'toggle'
 }) {
   return (
     <label className="vol-slider">

@@ -41,8 +41,15 @@
  * needs eager setup, it belongs behind an explicit `initAudio()` the app calls,
  * not at module scope.
  */
+import { dbToGain, hasRaritySting, UI_TRIM_DB, type UiSample } from './mix'
+
 type Channel = 'ui' | 'game'
-type UiEvent = 'click' | 'select' | 'confirm' | 'back' | 'open' | 'close' | 'toggle' | 'error' | 'equip' | 'reward'
+/*
+ * `open` and `select` used to be here too. Nothing ever played `open`, and
+ * `select` only previewed the legacy Interface slider — yet both were fetched
+ * at boot and precached on install. They are gone from code and from public/.
+ */
+type UiEvent = UiSample
 /**
  * Combat/ceremony events. `crit`, `down`, `clear` and `evolve` are Phase-3
  * additions: a crit that sounds identical to a normal hit wastes the channel,
@@ -65,18 +72,22 @@ type GameEvent =
   | 'evolve'
 export type SoundEvent = UiEvent | GameEvent
 
-const UI_SAMPLES: Record<UiEvent, string> = {
-  click: 'click',
-  select: 'select',
-  confirm: 'confirm',
-  back: 'back',
-  open: 'open',
-  close: 'close',
-  toggle: 'toggle',
-  error: 'error',
-  equip: 'equip',
-  reward: 'reward',
+/**
+ * Every UI event, the file it plays and the trim it plays at. The trims are
+ * the whole fix for the samples being peak- rather than loudness-normalised —
+ * see `UI_TRIM_DB` in mix.ts for the measurements.
+ */
+const UI_SAMPLES: Record<UiEvent, { file: string; gain: number }> = {
+  click: { file: 'click', gain: dbToGain(UI_TRIM_DB.click) },
+  confirm: { file: 'confirm', gain: dbToGain(UI_TRIM_DB.confirm) },
+  back: { file: 'back', gain: dbToGain(UI_TRIM_DB.back) },
+  close: { file: 'close', gain: dbToGain(UI_TRIM_DB.close) },
+  toggle: { file: 'toggle', gain: dbToGain(UI_TRIM_DB.toggle) },
+  error: { file: 'error', gain: dbToGain(UI_TRIM_DB.error) },
+  equip: { file: 'equip', gain: dbToGain(UI_TRIM_DB.equip) },
+  reward: { file: 'reward', gain: dbToGain(UI_TRIM_DB.reward) },
 }
+const SAMPLE_FILES = Object.values(UI_SAMPLES).map((s) => s.file)
 /**
  * Where a UI sample lives, resolved against the deploy's base.
  *
@@ -287,7 +298,7 @@ function ensureCtx(): AudioContext | null {
     // Music: longer and darker, so pads bloom.
     musicSend = buildSpace(ctx, musicGain, 1.8, 2.2, 0.22, 0.6)
     applyGains()
-    for (const name of Object.values(UI_SAMPLES)) void loadSample(name)
+    for (const name of SAMPLE_FILES) void loadSample(name)
   } catch {
     ctx = null
   }
@@ -341,7 +352,7 @@ function fireReady(): void {
 export function preloadAudioSamples(): void {
   if (typeof fetch !== 'function') return
   listenForReconnect()
-  for (const name of Object.values(UI_SAMPLES)) void fetchSample(name)
+  for (const name of SAMPLE_FILES) void fetchSample(name)
 }
 
 let reconnectBound = false
@@ -775,6 +786,19 @@ const RARITY_STING: Record<string, { notes: number[]; peak: number; spread: numb
 }
 
 /**
+ * The reward ceremony: the rarity sting when the reward has a rarity that owns
+ * one, and the generic `reward` sample only when it does not.
+ *
+ * They used to play together, and the sample (then −7.6 LUFS Mmax, untrimmed)
+ * sat 16–26 dB over the sting, so every tier sounded the same — the one thing
+ * the ladder exists to prevent.
+ */
+export function sfxReward(rarity?: string): void {
+  if (hasRaritySting(rarity)) sfxRarity(rarity as string)
+  else sfx('reward')
+}
+
+/**
  * The rarity-aware half of the reward/purchase ceremony.
  *
  * One tier, one sound: the arpeggio gets longer, brighter and wetter as the
@@ -852,7 +876,7 @@ export function sfx(event: SoundEvent, opts: { throttleMs?: number } = {}): void
 
   const emit = () => {
     if (vol.muted) return
-    if (isUiEvent(event)) playBuffer(UI_SAMPLES[event], 'ui')
+    if (isUiEvent(event)) playBuffer(UI_SAMPLES[event].file, 'ui', UI_SAMPLES[event].gain)
     else playGame(event)
   }
 

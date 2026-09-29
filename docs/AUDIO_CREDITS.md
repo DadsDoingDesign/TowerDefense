@@ -8,20 +8,26 @@ Last verified: 2026-08-21.
 
 ---
 
-## 1. Interface samples — 10 × `.wav`
+## 1. Interface samples — 8 × `.wav`
 
 | | |
 |---|---|
-| **Files** | `public/assets/audio/ui/{back,click,close,confirm,equip,error,open,reward,select,toggle}.wav` |
+| **Files** | `public/assets/audio/ui/{back,click,close,confirm,equip,error,reward,toggle}.wav` |
 | **Pack** | Kenney, *Interface Sounds* (1.0), created 2020-02-11 |
 | **Source** | <https://kenney.nl> |
 | **Licence** | **CC0 1.0 Universal** (public domain dedication) |
 | **Licence text in repo** | `public/assets/audio/ui/KENNEY-LICENSE.txt` — ships alongside the files |
 | **Attribution required** | **No.** The pack's own licence file states crediting Kenney "is not mandatory". |
 | **Commercial use** | Yes, explicitly: "free to use in personal, educational and commercial projects". |
-| **Payload** | 236 KB total, precached by the service worker |
+| **Payload** | ~190 KB total, precached by the service worker |
 
 Credited here anyway, because not being obliged to is not a reason not to.
+
+`open.wav` and `select.wav` from the same pack used to ship too. Nothing played
+`open`, and `select` only previewed a legacy slider, yet both were fetched at
+boot and precached on install, so they were removed (audio Phase 1). Each sample
+plays at a per-file loudness trim (`UI_TRIM_DB` in `src/audio/mix.ts`) because
+the pack is peak-normalised rather than loudness-matched.
 
 ---
 
