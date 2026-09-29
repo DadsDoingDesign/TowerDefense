@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RARITY } from '../../game/data/items'
-import { CURRENCY_GLYPH, type IconKey } from '../channels'
+import { itemName, moneyText } from '../channels'
 import { Icon } from '../Icon'
 import { useGameStore } from '../../state/gameStore'
 import { bannerRules, useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/settingsStore'
 import type { ShellContext } from './context'
-import { bannerLine, type Act, type Offer, type Price } from './offers'
+import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
-import { InfoCard, MenuRow, PageLayout, PortraitRow, StatRow, Tile } from './Page'
+import { Money } from './Money'
+import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
+import { RunSeed } from './RunSeed'
+import { VolumeSlider } from './VolumeSlider'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -174,8 +177,25 @@ export function PageScreen({
   const choices = offers.filter((o) => !o.immediate)
   const navs = offers.filter((o) => o.immediate)
 
-  // The CTA always needs a target, so default to the first choice.
-  const selected = choices.find((o) => o.id === selection?.id) ?? choices[0]
+  /*
+   * After a purchase the page selects NOTHING (Wave 1).
+   *
+   * The CTA defaults to the first choice when nothing is picked, and a bought
+   * item leaves the list — so the selection fell through to the next row and
+   * the same thumb, on the same pinned button, bought it too. `receipt` holds
+   * the brief "added to your pack" line and, while it is up, suppresses the
+   * default; picking any row clears it.
+   */
+  const [receipt, setReceipt] = useState<{ text: string; key: number } | null>(null)
+  useEffect(() => {
+    if (!receipt) return
+    const t = setTimeout(() => setReceipt((r) => (r?.key === receipt.key ? { ...r, text: '' } : r)), 2600)
+    return () => clearTimeout(t)
+  }, [receipt])
+  const explicit = choices.find((o) => o.id === selection?.id)
+  // The CTA needs a target, so default to the first choice — except straight
+  // after a purchase, when the player has to pick the next thing on purpose.
+  const selected = explicit ?? (receipt ? undefined : choices[0])
   const confirm = useArmedAction(selected?.action, selected?.id)
 
   // With a long row list — the perks page is seven rows — the detail for the
@@ -186,12 +206,18 @@ export function PageScreen({
   // would otherwise re-clip the detail at the moment it matters most.
   const detailRef = useRef<HTMLDivElement>(null)
   const tapped = useRef(false)
+  // Counts taps, so tapping the row that is ALREADY the default selection (the
+  // Settings page's first row, Sound) still brings its detail — the dials —
+  // into view; `selected.id` alone does not change on that tap.
+  const [tapN, setTapN] = useState(0)
   useEffect(() => {
     if (tapped.current) detailRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [selected?.id, confirm.armed])
+  }, [selected?.id, confirm.armed, tapN])
 
   const pick = (id: string) => {
     tapped.current = true
+    setTapN((n) => n + 1)
+    setReceipt(null)
     confirm.disarm()
     if (selection?.kind !== 'offer' || selection.id !== id) shellSelect({ kind: 'offer', id })
   }
@@ -226,8 +252,25 @@ export function PageScreen({
       confirm={confirm.confirm}
       cta={
         selected?.action
-          ? { label: confirm.label, run: confirm.fire, disabled: selected.action.disabled, danger: confirm.danger }
-          : undefined
+          ? {
+              label: confirm.label,
+              run: () => {
+                const done = selected.action?.done
+                confirm.fire()
+                if (done && !selected.action?.confirm) {
+                  setReceipt({ text: done, key: Date.now() })
+                  shellSelect(null)
+                }
+              },
+              disabled: selected.action.disabled,
+              danger: confirm.danger,
+              // Armed, the CTA is the way back out ("Never mind") and carries no price.
+              cost: confirm.armed ? undefined : selected.action.cost,
+            }
+          : receipt
+            ? // Held in place, disabled, so nothing moves under the thumb.
+              { label: 'Pick the next one', run: () => {}, disabled: true }
+            : undefined
       }
       secondary={
         selected?.tiles?.length ? (
@@ -252,6 +295,12 @@ export function PageScreen({
         ) : undefined
       }
     >
+      {receipt?.text ? (
+        <p className="pg-receipt" role="status">
+          <Icon name="boon" /> {receipt.text}
+        </p>
+      ) : null}
+
       {asPortraits && (
         <PortraitRow
           items={choices.map((o) => ({
@@ -280,12 +329,17 @@ export function PageScreen({
             <MenuRow
               key={o.id}
               label={o.title}
-              value={o.cost ? priceLabel(o.cost) : o.sub}
+              value={
+                o.cost ? priceNode(o.cost, o.dim) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
+              }
               currency={o.cost?.currency}
               rail={o.color}
               icon={o.icon}
               mark={o.mark}
               glyph={o.glyph}
+              art={o.rowArt}
+              dim={o.dim}
+              pips={o.pips}
               onClick={() => pick(o.id)}
               selected={o.id === selected?.id}
             />
@@ -300,8 +354,25 @@ export function PageScreen({
               {selected.title}
             </p>
           )}
+          {/* The full name with its rarity in its own hue and pip count. A long
+              generated name ("Ruinous Bow of Precision") is cut short in its
+              row, and merchant and Forge rows spend their value slot on the
+              price, so this line is where both read in full. */}
+          {asRows && selected.rarity ? (
+            <p className="pg-rarity-line">
+              <b style={selected.color ? { color: selected.color } : undefined}>{selected.title}</b>{' '}
+              <RarityTag rarity={selected.rarity} />
+            </p>
+          ) : null}
           {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
           <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+          {selected.sliders?.length ? (
+            <div className="pg-sliders">
+              {selected.sliders.map((d) => (
+                <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -327,6 +398,7 @@ export function PageScreen({
         The ability sentence goes first.
       */}
       <BannerPicker />
+      <RunSeed />
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
@@ -336,9 +408,10 @@ export function PageScreen({
         <div className="pg-rows">
           <MenuRow
             label={selected.secondary.label}
-            value={selected.secondary.cost ? priceLabel(selected.secondary.cost) : undefined}
+            value={selected.secondary.cost ? priceNode(selected.secondary.cost) : undefined}
             onClick={selected.secondary.run}
             disabled={selected.secondary.disabled}
+            dim={selected.secondary.disabled}
             currency={selected.secondary.cost?.currency}
             icon={selected.secondary.icon}
           />
@@ -349,22 +422,12 @@ export function PageScreen({
   )
 }
 
-const priceLabel = (p: { amount: number; currency: keyof typeof CURRENCY_GLYPH }) =>
-  `${CURRENCY_GLYPH[p.currency]} ${p.amount}`
-
-/** The atlas cell for each purse, so a chip and its icon cannot disagree. */
-const CURRENCY_ICON: Record<Price['currency'], IconKey> = {
-  gold: 'gold',
-  dust: 'dust',
-  marks: 'marks',
-}
-
 /**
  * Purse chips for exactly the currencies the page in front of you spends.
  *
- * The glyph stays beside the icon rather than being replaced by it: `⟡ 240`
- * with a coin in front is two channels, and the glyph is what a copied string
- * or a screen reader still carries.
+ * One mark per currency (Wave 1): the chip used to be a pixel coin AND `⟡ 240`,
+ * and `⟡` was also the Merchant on the run map. The words a copied string or a
+ * screen reader needs are in `Money`'s accessible name ("240 gold").
  */
 function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
   const screen = useGameStore((s) => s.screen)
@@ -374,8 +437,8 @@ function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
 
   const chip = (c: Price['currency'], n: number, tone: string) => (
     <span className={`pg-chip ${tone}`} key={c}>
-      <Icon name={CURRENCY_ICON[c]} />
-      {CURRENCY_GLYPH[c]} {n}
+      <Money amount={n} c={c} />
+      {c === 'marks' && <span className="pg-chip-word">Watch Marks</span>}
     </span>
   )
 
@@ -414,7 +477,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
         <div className="pg-records">
           <Record label="Best depth" value={stats.bestDepth} />
           <Record label="Best round" value={stats.bestRound} />
-          <Record label="Best banner" value={stats.bestBanner} />
+          <Record label={`Best ${VOW}`} value={stats.bestBanner} />
           <Record label="Runs won" value={`${stats.runsWon}/${stats.runsCompleted}`} />
         </div>
       )}
@@ -423,7 +486,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
           <MenuRow
             key={o.id}
             label={o.title}
-            value={o.cost ? `✦ ${o.cost.amount}` : o.sub}
+            value={o.cost ? priceNode(o.cost) : o.sub}
             icon={o.icon}
             glyph={o.glyph}
             onClick={() => o.action?.run()}
@@ -458,10 +521,10 @@ export function runEndCopy(mode: string, won: boolean, wins: number, depth: numb
     }
   }
   return won
-    ? { title: 'The Watch Holds', blurb: 'You reached the end of the line and struck down the Colossus.' }
+    ? { title: 'The Watch Holds', blurb: 'You reached the end of the road and broke the last stand.' }
     : {
         title: 'The Line Breaks',
-        blurb: `Your base has fallen after clearing ${depth} node${depth === 1 ? '' : 's'}. Permadeath — this run is over.`,
+        blurb: `Your Gate fell after ${depth} stop${depth === 1 ? '' : 's'}. Permadeath: this run is over.`,
       }
 }
 
@@ -546,7 +609,7 @@ export function ResultScreen() {
       }
       secondary={
         <>
-          <Tile caption={`✦ ${marks} earned`} icon="marks" />
+          <Tile caption={`${marks} marks earned`} icon="marks" />
           <Tile caption={mode === 'endless' ? `${wins} waves` : `Depth ${depth}`} icon="depth" />
           {/* The real number, not a verdict (F5). "Base intact" was printed for
               any win, so surviving the Colossus on 1 of 20 read exactly like
@@ -557,7 +620,7 @@ export function ResultScreen() {
               skull is the boss enemy's mark in the wave list, and one picture
               meaning both "a Colossus is coming" and "your keep is gone" is the
               collision this pass exists to remove. */}
-          <Tile caption={`Base ${Math.max(0, base)}/${maxBaseHp}`} icon={base > 0 ? 'base' : 'warn'} />
+          <Tile caption={`Gate ${Math.max(0, base)}/${maxBaseHp}`} icon={base > 0 ? 'base' : 'warn'} />
         </>
       }
     >
@@ -588,7 +651,7 @@ export function ResultScreen() {
       {recap && recap.heroes.length > 0 && (
         <div className="pg-recap">
           <div className="pg-recap-head">
-            <span>The Watch</span>
+            <span>The company</span>
             <span>KILLS · DMG</span>
           </div>
           {recap.heroes.map((h) => (
@@ -616,13 +679,13 @@ export function ResultScreen() {
 
       <InfoCard
         lines={[
-          `✦ ${marks} Watch Marks earned`,
+          `${moneyText(marks, 'marks')} earned`,
           ...(recap
             ? [
                 // `enemiesLeaked`, not `leaks` — the latter is base-HP damage
                 // and this line counts enemies (F2).
-                `${recap.kills} felled · ${recap.downs} Sentinel${recap.downs === 1 ? '' : 's'} lost · ${recap.enemiesLeaked} reached the line`,
-                `⟡ ${recap.goldLeft} unspent · Threat reached ×${recap.threat.toFixed(2)}`,
+                `${recap.kills} felled · ${recap.downs} hero${recap.downs === 1 ? '' : 'es'} lost · ${recap.enemiesLeaked} reached the Gate`,
+                `${moneyText(recap.goldLeft, 'gold')} unspent · Threat reached ×${recap.threat.toFixed(2)}`,
                 bannerLine(recap.banner),
               ]
             : []),
@@ -633,8 +696,10 @@ export function ResultScreen() {
       {recap && recap.spoils.length > 0 && (
         <InfoCard
           lines={[
-            `The Colossus dropped ${recap.spoils.length} thing${recap.spoils.length === 1 ? '' : 's'}`,
-            ...recap.spoils.map((i) => `${i.name} — ${RARITY[i.rarity].label}`),
+            // Not "The Colossus dropped": the final fight fields up to three
+            // champions in a variant's order, and the spoils are the fight's.
+            `The last stand left ${recap.spoils.length} thing${recap.spoils.length === 1 ? '' : 's'} behind`,
+            ...recap.spoils.map((i) => `${itemName(i)} · ${RARITY[i.rarity].label}`),
           ]}
         />
       )}
@@ -645,12 +710,19 @@ export function ResultScreen() {
         <InfoCard
           lines={[
             `Next: ${bannerLine(recap.nextBanner)}`,
-            `Pick it on the hero screen of your next run — it pays ×${bannerRules(recap.nextBanner).markMult} Watch Marks.`,
+            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Watch Marks.`,
           ]}
         />
       )}
 
-      {recap && <InfoCard lines={[`Run seed ${recap.seed}`, 'The same seed deals the same map, loot and rolls.']} />}
+      {recap && (
+        <InfoCard
+          lines={[
+            `Run seed ${recap.seed}${recap.challenge.kind === 'daily' ? ` · Daily Watch ${recap.challenge.date}${recap.challenge.scored ? ' (scored)' : ' (practice)'}` : recap.challenge.kind === 'seeded' ? ' · custom seed' : ''}`,
+            'The same seed deals the same map, loot and rolls.',
+          ]}
+        />
+      )}
 
       {!campaign && (
         <div className="pg-rows">
@@ -707,7 +779,7 @@ function AssistCard({ assist }: { assist: AssistLevel }) {
       lines={[
         'Assist is there if you want it.',
         `${steady.label} — ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
-        'Nothing else moves: same waves, same loot, same Watch Marks, same Banner payout. Change it whenever you like, mid-run included.',
+        'Nothing else moves: same waves, same loot, same Watch Marks, same Vow payout. Change it whenever you like, mid-run included.',
       ]}
     />
   )

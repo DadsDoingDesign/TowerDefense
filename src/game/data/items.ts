@@ -11,12 +11,6 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
   offHand: 'Off Hand',
   body: 'Body',
 }
-export const KIND_LABEL: Record<ItemSlot, string> = {
-  oneHand: '1-Hand',
-  twoHand: '2-Hand',
-  offHand: 'Off-Hand',
-  body: 'Body',
-}
 /** Which hero slot(s) an item of this kind may occupy. */
 export function heroSlotsFor(kind: ItemSlot): HeroSlot[] {
   switch (kind) {
@@ -52,7 +46,7 @@ const WEAPONS: WeaponType[] = [
   { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
   { name: 'Wand', damageType: 'magic', hands: 'oneHand', speedBias: 0.06 },
   { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0.03 },
-  { name: 'Scepter', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
+  { name: 'Sceptre', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
   // two-hand: bigger damage, but fills both hands
   { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05 },
   { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.08 },
@@ -358,9 +352,9 @@ const OFF_TYPE_FLOOR = 0.45
 const WEIGHT_RES = 8
 
 /** Damage type per archetype, read from the tree so there is one authority. */
-const damageTypeOf = (a: Archetype): 'physical' | 'magic' => getNode(a).base?.damageType ?? 'physical'
+export const damageTypeOf = (a: Archetype): 'physical' | 'magic' => getNode(a).base?.damageType ?? 'physical'
 
-type DamageType = 'physical' | 'magic'
+export type DamageType = 'physical' | 'magic'
 
 /**
  * A weight in (0, 1] for each damage type, given who is on the field.
@@ -472,6 +466,16 @@ export interface GenerateOpts {
    * drought with a drop nobody ever saw (F4).
    */
   commitPity?: boolean
+  /**
+   * Force a weapon roll onto one damage type. Only the opening kit uses it
+   * (`startingKit`): the kit is dealt FOR a hero who has already been picked,
+   * and a physical one-hander in a Mystic's hand is a blank slot — roster
+   * weighting alone still deals an off-type weapon ~31% of the time. Consumes
+   * exactly the same stream draws as an unforced roll.
+   */
+  damageType?: DamageType
+  /** `false` never rolls a curse (the opening kit — a trade is the player's to make). */
+  allowCurse?: boolean
 }
 
 /**
@@ -521,7 +525,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     const ench = rollEnchantments(KEEPSAKE_ENCHANTS, Math.max(1, cfg.enchants), cfg.budget, rng)
     return {
       id: nextId('itm'),
-      name: `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim(),
+      name: `${noun} ${ench[0]?.label ?? ''}`.trim(),
       slot: 'body',
       rarity,
       base: {},
@@ -534,15 +538,9 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // With no roster the pools are the literal arrays, so the draw is byte-for-byte
   // the one this generator has always made.
   const rosterAware = !!opts.roster && opts.roster.length > 0
+  const handed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
   const weapon = isWeapon
-    ? rng.pick(
-        rosterAware
-          ? weightedPool(
-              WEAPONS.filter((w) => w.hands === slot),
-              (w) => demand[w.damageType],
-            )
-          : WEAPONS.filter((w) => w.hands === slot),
-      )
+    ? rng.pick(rosterAware ? weightedPool(handed, (w) => demand[w.damageType]) : handed)
     : undefined
   const noun = isWeapon ? weapon!.name : slot === 'offHand' ? rng.pick(OFFHANDS) : rng.pick(BODIES)
   const enchantPool = rosterAware
@@ -554,7 +552,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   const ench = rollEnchantments(enchantPool, cfg.enchants, cfg.budget, rng)
   // Epic+ items can roll a rare "curse": a dramatic extra affix with a downside.
   const canCurse = rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic'
-  if (canCurse && rng.chance(CURSE_CHANCE)) {
+  if (canCurse && opts.allowCurse !== false && rng.chance(CURSE_CHANCE)) {
     const c = rng.pick(CURSE_ENCHANTS)
     ench.push({ id: c.id, label: c.label, ...c.roll(rng, cfg.budget) })
   }
@@ -635,18 +633,28 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
 }
 
 /** Compose an item name: [prefix] Rarity Noun [of Suffix]. A curse wins the prefix. */
-function nameItem(rarityLabel: string, noun: string, ench: Enchantment[]): string {
+/**
+ * `[prefix] Noun [of Suffix]` — and NOT the rarity word (Wave 1 copy pass).
+ *
+ * Names used to carry the rarity in the middle ("Heavy Rare Grimoire"), and every
+ * surface that shows an item also shows its rarity beside it, so the screen read
+ * "Heavy Rare Grimoire · Rare" and "Common Axe · Common". The rarity is a label,
+ * a colour, a letter and a pip count already; it does not need to be a word in
+ * the name too. `rarityLabel` stays in the signature so the call sites keep
+ * reading as they did.
+ */
+function nameItem(_rarityLabel: string, noun: string, ench: Enchantment[]): string {
   const suffix = ench.find((e) => e.label.startsWith('of'))
   const prefix =
     ench.find((e) => e.id.startsWith('cx_')) ?? ench.find((e) => !e.label.startsWith('of'))
-  return `${prefix ? prefix.label + ' ' : ''}${rarityLabel} ${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
+  return `${prefix ? prefix.label + ' ' : ''}${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
 }
 
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
-  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
+  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
   const noun = nounMatch?.[0] ?? 'Relic'
-  if (item.keepsake) return `${cfg.label} ${noun} ${ench[0]?.label ?? ''}`.trim()
+  if (item.keepsake) return `${noun} ${ench[0]?.label ?? ''}`.trim()
   return nameItem(cfg.label, noun, ench)
 }
 

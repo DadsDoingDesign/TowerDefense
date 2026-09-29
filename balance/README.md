@@ -18,7 +18,7 @@ every later run a different team, so two configs could not be compared on paired
 seeds. Measured while fitting the composition variants, the same battlefield read
 61% and 48% across two configs that never touched it.
 
-Runtime is around **2 minutes**. It was 26 seconds before §12 and §13, which
+Runtime is around **3½ minutes** (the Banner ladder at 600 runs a rung is ~40s of it). It was 26 seconds before §12 and §13, which
 simulate whole runs rather than single waves: the hub sweep alone plays 4,200
 campaigns. That is the price of measuring a *run*-level defect, and the defects
 it was written for had been invisible to every wave-level sweep in the suite.
@@ -49,6 +49,7 @@ and it broke the build and every live harness.
 | `FW_SPECIAL_THREAT` | `THREAT_PER_NODE.special` | Overrides the special-node Threat step for §11 only. The report prints a loud warning when set, so an overridden run cannot be mistaken for a measurement of the shipped game. |
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
 | `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt and is what the special-node step was fitted at. |
+| `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
 
 ## The rule this harness is built around
 
@@ -161,8 +162,13 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     anything on either.
 11. **Fresh-player run** — the zero-meta baseline, measured across a **set of
     routing policies** rather than one hardcoded line (see below): one level-1 hero, `START_GOLD`,
-    the three real starting items, base HP persisting between nodes and the real
-    Threat ramp. Reported in **two models**, because the first one was a fiction:
+    the real opening kit **worn** (`src/game/engine/kit.ts` — the store and the
+    harness call the same `startingKit` / `wearKit`, after the pick), base HP
+    persisting between nodes and the real Threat ramp. Every Sentinel who joins
+    later carries `RECRUIT_KIT` (one common on-type weapon) and dresses its
+    empty slots from a modelled pack with the store's own `autoEquipEmpty` —
+    the harness used to hand every hire a full fresh kit while the store hired
+    a bare body, which overstated a recruit by ~5–9pt of win rate. Reported in **two models**, because the first one was a fiction:
 
     - the **strict floor** marches through ten consecutive battles, refuses every
       merchant, takes no recruits and picks a reward card at random;
@@ -294,12 +300,19 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
   may not change the *length* of the run and must at least halve the share of
   choiceless steps; `Standing Orders` must leave no Elite standing on a road with
   no way around it; `Free Companies` must add a hiring stop.
-- **Every Banner rung is a wager.** A rung must cost win rate (a rung that does
-  not is a mandatory bonus, not a bet — nobody would fly the rung below it
-  again), and expected **marks per run must rise at every step of the ladder**
-  (a rung whose payout does not cover the difficulty it adds is a decoration).
-  The old ladder failed both: rung 1 paid +25% for a rule that costs nothing,
-  and marks/run flatlined at ~100–160 while the win rate collapsed 32 → 11 → 1%.
+- **Every Banner rung is a wager.** A rung must cost **at least 3pt** of win
+  rate over the rung below it (a rung that does not is a mandatory bonus, not a
+  bet — nobody would fly the rung below it again), and expected **marks per run
+  must rise at every step of the ladder** (a rung whose payout does not cover
+  the difficulty it adds is a decoration). The old ladder failed both: rung 1
+  paid +25% for a rule that costs nothing, and marks/run flatlined at ~100–160
+  while the win rate collapsed 32 → 11 → 1%. The cost floor used to be "may
+  not *gain* more than 2pt"; Phase 1 tightened it to a 3pt cost, measured at
+  `FW_BANNER_RUNS` (600) because 210 cannot resolve 3pt. Under it, Elite Watch
+  (−0.8pt alone, −3.0pt over rung 1) was the rung with no teeth; its elites are
+  now drawn one depth deeper and it pays ×2.5. Rungs are **earned** — Banner N
+  opens by winning a run under Banner N−1 (`metaStore.grantRunRewards`) — not
+  bought with marks.
 - **A curse is a trade in both directions**: ≥ +2pt of upside somewhere and
   ≥ 2pt of cost somewhere. The old form asked only that a curse not be a net
   upgrade in *every* scenario, which is satisfied by a curse that does nothing —

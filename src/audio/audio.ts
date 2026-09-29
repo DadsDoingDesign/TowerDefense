@@ -1,6 +1,7 @@
 /**
  * Audio engine — three channels (UI, Game, Music) under a master gain, into a
- * gentle limiter.
+ * glue compressor and a limiter. Every level, trim and chain setting is data
+ * in `mix.ts`; this file is the plumbing.
  *
  * UI events play real CC0 samples (Kenney "Interface Sounds", public/assets/
  * audio/ui/*.wav — licence and provenance in docs/AUDIO_CREDITS.md). Game and
@@ -41,8 +42,27 @@
  * needs eager setup, it belongs behind an explicit `initAudio()` the app calls,
  * not at module scope.
  */
+import {
+  busGains,
+  dbToGain,
+  GAIN_SMOOTH_S,
+  hasRaritySting,
+  IDLE_SUSPEND_S,
+  MASTER_CHAIN,
+  REVERB_TAIL_S,
+  shouldSuspend,
+  throttleAllows,
+  UI_TRIM_DB,
+  type UiSample,
+} from './mix'
+
 type Channel = 'ui' | 'game'
-type UiEvent = 'click' | 'select' | 'confirm' | 'back' | 'open' | 'close' | 'toggle' | 'error' | 'equip' | 'reward'
+/*
+ * `open` and `select` used to be here too. Nothing ever played `open`, and
+ * `select` only previewed the legacy Interface slider — yet both were fetched
+ * at boot and precached on install. They are gone from code and from public/.
+ */
+type UiEvent = UiSample
 /**
  * Combat/ceremony events. `crit`, `down`, `clear` and `evolve` are Phase-3
  * additions: a crit that sounds identical to a normal hit wastes the channel,
@@ -63,20 +83,26 @@ type GameEvent =
   | 'defeat'
   | 'upgrade'
   | 'evolve'
+  | 'deploy'
+  | 'undeploy'
 export type SoundEvent = UiEvent | GameEvent
 
-const UI_SAMPLES: Record<UiEvent, string> = {
-  click: 'click',
-  select: 'select',
-  confirm: 'confirm',
-  back: 'back',
-  open: 'open',
-  close: 'close',
-  toggle: 'toggle',
-  error: 'error',
-  equip: 'equip',
-  reward: 'reward',
+/**
+ * Every UI event, the file it plays and the trim it plays at. The trims are
+ * the whole fix for the samples being peak- rather than loudness-normalised —
+ * see `UI_TRIM_DB` in mix.ts for the measurements.
+ */
+const UI_SAMPLES: Record<UiEvent, { file: string; gain: number }> = {
+  click: { file: 'click', gain: dbToGain(UI_TRIM_DB.click) },
+  confirm: { file: 'confirm', gain: dbToGain(UI_TRIM_DB.confirm) },
+  back: { file: 'back', gain: dbToGain(UI_TRIM_DB.back) },
+  close: { file: 'close', gain: dbToGain(UI_TRIM_DB.close) },
+  toggle: { file: 'toggle', gain: dbToGain(UI_TRIM_DB.toggle) },
+  error: { file: 'error', gain: dbToGain(UI_TRIM_DB.error) },
+  equip: { file: 'equip', gain: dbToGain(UI_TRIM_DB.equip) },
+  reward: { file: 'reward', gain: dbToGain(UI_TRIM_DB.reward) },
 }
+const SAMPLE_FILES = Object.values(UI_SAMPLES).map((s) => s.file)
 /**
  * Where a UI sample lives, resolved against the deploy's base.
  *
@@ -178,20 +204,206 @@ export function setAudioVolumes(v: {
   // `music` is optional so a payload written before it existed (or any caller
   // that predates it) keeps whatever the current value is instead of setting a
   // gain to `undefined`, which is NaN and silences the bus permanently.
-  vol = { ...vol, ...v, music: v.music ?? vol.music }
+  const wasMuted = vol.muted
+  vol = { master: v.master, game: v.game, ui: v.ui, music: v.music ?? vol.music, muted: v.muted }
   applyGains()
+  // Un-muting is a tap on the mute control — a gesture — so this is the one
+  // moment a context we suspended for the mute can always be woken.
+  if (wasMuted && !vol.muted && ctx && asleep(ctx)) void resumeCtx(ctx)
   for (const cb of readyCbs) safely(cb)
+  // Muting starts the fade; the suspend follows once it has finished.
+  scheduleIdleCheck(vol.muted ? GAIN_SMOOTH_S * 8 : undefined)
+}
+
+// ---- power: suspend the context when nothing can be heard ------------------
+//
+// A running AudioContext costs battery even when silent: the two convolvers
+// and both compressors process zeros on the audio thread forever. The policy
+// is `shouldSuspend` (mix.ts, unit-tested); this is the plumbing.
+
+/** The tab is hidden (set via the music engine's lifecycle hooks). */
+let hidden = false
+/** The score is performing (set by `music.ts`). */
+let musicActive = false
+/** Audio-clock time the last scheduled voice ends. */
+let busyUntil = 0
+/**
+ * WE suspended the context, on purpose. The state-change handler must tell
+ * that apart from iOS taking the audio session away, which it must undo.
+ */
+let intendedSuspend = false
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+/** A voice was scheduled to ring until `end` (audio clock). */
+function markBusy(end: number): void {
+  if (end > busyUntil) busyUntil = end
+  // Lazy: one pending timer at a time. When it fires it re-reads `busyUntil`
+  // and re-arms itself if the mix got busier meanwhile, so a dense wave costs
+  // one timer, not one per voice.
+  if (idleTimer === null) scheduleIdleCheck()
+}
+
+function scheduleIdleCheck(inSeconds?: number): void {
+  if (!ctx || typeof setTimeout !== 'function') return
+  if (idleTimer !== null) {
+    if (inSeconds === undefined) return
+    clearTimeout(idleTimer)
+  }
+  if (inSeconds === undefined) {
+    if (musicActive && !vol.muted) {
+      idleTimer = null
+      return
+    }
+    // The earliest the policy could flip: tail over while hidden, or the idle
+    // window over while visible. Re-evaluated when it fires.
+    inSeconds = Math.max(0.25, busyUntil - ctx.currentTime + (hidden ? REVERB_TAIL_S : IDLE_SUSPEND_S))
+  }
+  idleTimer = setTimeout(checkSuspend, inSeconds * 1000)
+}
+
+function checkSuspend(): void {
+  idleTimer = null
+  const c = ctx
+  if (!c) return
+  const want = shouldSuspend({ muted: vol.muted, hidden, musicPlaying: musicActive, now: c.currentTime, busyUntil })
+  if (want) {
+    if ((c.state as string) === 'running') {
+      intendedSuspend = true
+      disarmUnlock()
+      try {
+        void c.suspend().catch(() => {
+          intendedSuspend = false
+        })
+      } catch {
+        intendedSuspend = false
+      }
+    }
+    return
+  }
+  scheduleIdleCheck()
+}
+
+/** Called by the music engine when its transport starts or stops. */
+export function setMusicActive(on: boolean): void {
+  if (musicActive === on) return
+  musicActive = on
+  // A stopping track still has its fade and a reverb tail to ring out.
+  if (!on && ctx) markBusy(ctx.currentTime + 0.5)
+}
+
+/** Called by the music engine from the app's one visibility lifecycle. */
+export function setAudioHidden(h: boolean): void {
+  hidden = h
+  if (h) scheduleIdleCheck(0.5)
+}
+
+/**
+ * Wake a context we (or the OS) put to sleep, when something wants to be
+ * heard — the music engine calls this when a cue is wanted but the bus is not
+ * running. Never creates a context and never overrides a mute. Without a
+ * gesture behind it this can fail (iOS); the armed unlock listeners then
+ * retry on the next touch.
+ */
+export function wakeAudio(): void {
+  if (ctx && !vol.muted && asleep(ctx)) void resumeCtx(ctx)
+}
+
+// ---- unlock: stay armed until the context is actually running --------------
+
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'keydown', 'click'] as const
+let unlockArmed = false
+
+function onUnlockGesture(): void {
+  if (!ctx) return
+  if ((ctx.state as string) === 'running') {
+    disarmUnlock()
+    return
+  }
+  if (!vol.muted) void resumeCtx(ctx)
+}
+
+/**
+ * The first-touch unlock in App.tsx is `once`, and a first touch does not
+ * always grant activation (a scroll, a touchstart on some iOS versions, a
+ * resume the OS refused). These listeners stay on the document until the
+ * context really reports 'running' — every gesture until then tries again.
+ */
+function armUnlock(): void {
+  if (unlockArmed || typeof document === 'undefined' || !document.addEventListener) return
+  unlockArmed = true
+  for (const e of UNLOCK_EVENTS) document.addEventListener(e, onUnlockGesture, { capture: true, passive: true })
+}
+
+function disarmUnlock(): void {
+  if (!unlockArmed || typeof document === 'undefined') return
+  unlockArmed = false
+  for (const e of UNLOCK_EVENTS) document.removeEventListener(e, onUnlockGesture, { capture: true })
+}
+
+/**
+ * The context changed state behind our back — or in front of it.
+ *
+ * 'running': unlocked or recovered; stop listening for gestures, tell the
+ * music. A suspend WE asked for: nothing to do. Anything else (iOS
+ * 'interrupted' after a call, 'suspended' by the OS): re-arm the gesture
+ * listeners and, if the tab is visible, try to come back straight away.
+ */
+function onCtxStateChange(c: AudioContext): void {
+  if (c !== ctx) return
+  const st = c.state as string
+  if (st === 'running') {
+    intendedSuspend = false
+    disarmUnlock()
+    fireReady()
+    scheduleIdleCheck()
+    return
+  }
+  if (st === 'closed') {
+    // Nothing can reopen a closed context; the next sound builds a new one.
+    ctx = null
+    disarmUnlock()
+    return
+  }
+  if (intendedSuspend || vol.muted) return
+  armUnlock()
+  if (!hidden) void resumeCtx(c)
 }
 
 /** Is audio muted right now? Read by the music engine, which idles when it is. */
 export const audioMuted = (): boolean => vol.muted
 
-function applyGains(): void {
+/**
+ * Push the volumes into the bus nodes. `busGains` adds each bus's fixed makeup
+ * (mix.ts) and guards against NaN.
+ *
+ * Ramped, not set: writing `.value` on a live gain is a step, and a step in a
+ * signal is a click — most audibly on mute, which used to cut the whole mix
+ * mid-waveform. A 15 ms time constant is inaudible as a fade and kills the
+ * click. `immediate` is for the one moment there is nothing to click: the
+ * graph being built.
+ */
+function applyGains(immediate = false): void {
   if (!ctx) return
-  masterGain.gain.value = vol.muted ? 0 : vol.master
-  gameGain.gain.value = vol.game
-  uiGain.gain.value = vol.ui
-  musicGain.gain.value = vol.music
+  const g = busGains(vol)
+  const t = ctx.currentTime
+  const set = (p: AudioParam, v: number): void => {
+    if (immediate) {
+      p.value = v
+      return
+    }
+    // Hold wherever an in-flight ramp has got to, then glide from there.
+    const hold = (p as AudioParam & { cancelAndHoldAtTime?: (t: number) => AudioParam }).cancelAndHoldAtTime
+    if (hold) hold.call(p, t)
+    else {
+      p.cancelScheduledValues(t)
+      p.setValueAtTime(p.value, t)
+    }
+    p.setTargetAtTime(v, t, GAIN_SMOOTH_S)
+  }
+  set(masterGain.gain, g.master)
+  set(gameGain.gain, g.game)
+  set(uiGain.gain, g.ui)
+  set(musicGain.gain, g.music)
 }
 
 /** The music bus's own volume, so the music engine can scale within it. */
@@ -259,23 +471,33 @@ function ensureCtx(): AudioContext | null {
     if (!AC) return null
     ctx = new AC()
     /*
-     * One compressor across everything, on the way out.
+     * The master chain: glue compressor → limiter → output trim.
      *
      * A dense wave fires shoot + hit + crit + death within a few milliseconds of
-     * each other and the sum clipped — which on a phone speaker is heard as the
-     * whole mix going thin and papery exactly when the most is happening. A
-     * gentle limiter is also what lets the individual voices stay quiet enough
-     * to layer while the mix still reads loud.
+     * each other, and with the mix now at a phone-game loudness (≈ −18 LUFS in
+     * battle, see BUS_MAKEUP_DB) those sums would clip — heard on a phone
+     * speaker as the whole mix going thin and papery exactly when the most is
+     * happening. The old single soft-knee compressor was not a limiter; this
+     * is. Settings and reasoning in `MASTER_CHAIN` (mix.ts).
      */
-    const comp = ctx.createDynamicsCompressor()
-    comp.threshold.value = -12
-    comp.knee.value = 22
-    comp.ratio.value = 6
-    comp.attack.value = 0.003
-    comp.release.value = 0.16
-    comp.connect(ctx.destination)
+    const comp = (o: { threshold: number; knee: number; ratio: number; attack: number; release: number }) => {
+      const k = ctx!.createDynamicsCompressor()
+      k.threshold.value = o.threshold
+      k.knee.value = o.knee
+      k.ratio.value = o.ratio
+      k.attack.value = o.attack
+      k.release.value = o.release
+      return k
+    }
+    const glue = comp(MASTER_CHAIN.glue)
+    const limiter = comp(MASTER_CHAIN.limiter)
+    const outTrim = ctx.createGain()
+    outTrim.gain.value = dbToGain(MASTER_CHAIN.outTrimDb)
+    glue.connect(limiter)
+    limiter.connect(outTrim)
+    outTrim.connect(ctx.destination)
     masterGain = ctx.createGain()
-    masterGain.connect(comp)
+    masterGain.connect(glue)
     gameGain = ctx.createGain()
     gameGain.connect(masterGain)
     uiGain = ctx.createGain()
@@ -286,8 +508,12 @@ function ensureCtx(): AudioContext | null {
     gameSend = buildSpace(ctx, gameGain, 0.7, 2.6, 0.5, 0.5)
     // Music: longer and darker, so pads bloom.
     musicSend = buildSpace(ctx, musicGain, 1.8, 2.2, 0.22, 0.6)
-    applyGains()
-    for (const name of Object.values(UI_SAMPLES)) void loadSample(name)
+    applyGains(true)
+    const made = ctx
+    made.onstatechange = () => onCtxStateChange(made)
+    hidden = typeof document !== 'undefined' && !!document.hidden
+    if (needsResume(made)) armUnlock()
+    for (const name of SAMPLE_FILES) void loadSample(name)
   } catch {
     ctx = null
   }
@@ -341,7 +567,7 @@ function fireReady(): void {
 export function preloadAudioSamples(): void {
   if (typeof fetch !== 'function') return
   listenForReconnect()
-  for (const name of Object.values(UI_SAMPLES)) void fetchSample(name)
+  for (const name of SAMPLE_FILES) void fetchSample(name)
 }
 
 let reconnectBound = false
@@ -508,6 +734,7 @@ function emitBuffer(buf: AudioBuffer, channel: Channel, gain: number): void {
   src.connect(g)
   g.connect(channel === 'ui' ? uiGain : gameGain)
   src.start()
+  markBusy(ctx.currentTime + buf.duration)
 }
 
 /**
@@ -605,12 +832,17 @@ function osc(freq: number, dur: number, peak: number, o: VoiceOpts = {}): void {
   route(g, o.bus ?? 'game', o.send ?? 0)
   n.start(t0)
   n.stop(t0 + dur + 0.03)
+  markBusy(t0 + dur)
 }
 
 interface NoiseOpts {
   at?: number
   lp?: number
   hp?: number
+  /** Band-pass centre, Hz — the phone-presence layers use it. */
+  bp?: number
+  /** Band-pass Q (default 1). */
+  q?: number
   send?: number
   bus?: Channel
   /** Sweep the lowpass down to this frequency across the burst. */
@@ -627,6 +859,14 @@ function noise(dur: number, peak: number, o: NoiseOpts = {}): void {
   // Start somewhere random in the buffer so consecutive bursts differ.
   const offset = Math.random() * Math.max(0.001, src.buffer.duration - dur - 0.05)
   let node: AudioNode = src
+  if (o.bp) {
+    const f = ctx.createBiquadFilter()
+    f.type = 'bandpass'
+    f.frequency.value = o.bp
+    f.Q.value = o.q ?? 1
+    node.connect(f)
+    node = f
+  }
   if (o.hp) {
     const f = ctx.createBiquadFilter()
     f.type = 'highpass'
@@ -649,6 +889,7 @@ function noise(dur: number, peak: number, o: NoiseOpts = {}): void {
   route(g, o.bus ?? 'game', o.send ?? 0)
   src.start(t0, offset, dur + 0.05)
   src.stop(t0 + dur + 0.05)
+  markBusy(t0 + dur)
 }
 
 /** Dry to the channel, plus an optional tap into that channel's reverb. */
@@ -660,6 +901,23 @@ function route(g: GainNode, bus: Channel, send: number): void {
     s.gain.value = send
     g.connect(s)
     s.connect(gameSend)
+  }
+}
+
+/**
+ * A struck bell: sine partials at 1, 2, 2.4 and 3× the fundamental (the 2.4
+ * is what makes it a bell rather than an organ), the upper ones quieter and
+ * shorter, all with an instant attack.
+ */
+function bell(f0: number, decay: number, peak: number, o: VoiceOpts = {}): void {
+  const partials: [number, number, number][] = [
+    [1, 1, 1],
+    [2, 0.55, 0.8],
+    [2.4, 0.4, 0.6],
+    [3, 0.28, 0.45],
+  ]
+  for (const [mul, amp, len] of partials) {
+    osc(f0 * mul, decay * len, peak * amp, { type: 'sine', attack: 0.002, send: 0.3, ...o })
   }
 }
 
@@ -677,11 +935,19 @@ function playGame(event: GameEvent): void {
       osc(vary(760, 90), 0.07, 0.07, { to: 200, type: 'square' })
       break
     /* THE most frequent meaningful event in the game, and it was silent.
-       Transient (the contact) + body (the weight) + tick (the readability). */
+       Transient (the contact) + body (the weight) + tick (the readability).
+
+       Phone speakers roll off under ~400 Hz, and the old body (196→108 Hz)
+       lived entirely below that: through a phone filter the hit measured
+       −47 LUFS, i.e. gone. The body now sits at 330→180 Hz, and a 25 ms band
+       of noise at 2.5 kHz — where a small speaker is most efficient — carries
+       the contact (15 ms, the first try, was too short to register over the
+       score through a phone filter). */
     case 'hit':
-      noise(0.032, 0.17, { hp: 900, lp: 5200, lpTo: 1800, send: 0.08 })
-      osc(vary(196, 120), 0.09, 0.16, { to: 108, type: 'triangle', send: 0.08 })
-      osc(vary(1380, 140), 0.022, 0.05, { type: 'square' })
+      noise(0.032, 0.24, { hp: 900, lp: 5200, lpTo: 1800, send: 0.08 })
+      noise(0.025, 0.7, { bp: 2500, q: 1.2 })
+      osc(vary(330, 120), 0.09, 0.2, { to: 180, type: 'triangle', send: 0.08 })
+      osc(vary(1380, 140), 0.022, 0.1, { type: 'square' })
       break
     /* A crit must not be "hit, louder": brighter transient, a real sub, and a
        rising shine on top, so the channel carries information. */
@@ -696,6 +962,8 @@ function playGame(event: GameEvent): void {
       noise(0.2, 0.26, { lp: 2600, lpTo: 500, send: 0.2 })
       osc(vary(184, 80), 0.22, 0.15, { to: 46, type: 'sawtooth', send: 0.18 })
       osc(vary(74, 50), 0.17, 0.2, { to: 44, type: 'sine' })
+      // The "pop" a phone can actually play: everything above is sub-400 Hz.
+      osc(vary(700, 60), 0.06, 0.1, { to: 160, type: 'square' })
       break
     /* A Sentinel going down. Falls, where a kill drops — different shape on
        purpose, because this one is YOUR loss. */
@@ -704,10 +972,16 @@ function playGame(event: GameEvent): void {
       osc(247, 0.34, 0.16, { to: 155, type: 'square', at: 0.11, send: 0.35 })
       noise(0.3, 0.1, { lp: 900, lpTo: 260, send: 0.25 })
       break
+    /* Something got through — the most important warning in a wave, and it
+       was a 140→46 Hz saw over a 56 Hz sine: through a phone it measured
+       −36.7 LUFS, quieter than the music under it. The low thud stays for
+       headphones; a struck bell on A4 (inharmonic partials 1, 2, 2.4, 3)
+       is what a phone hears, and it cuts through the score. */
     case 'leak':
       osc(140, 0.38, 0.28, { to: 46, type: 'sawtooth', send: 0.3 })
       osc(56, 0.42, 0.2, { to: 40, type: 'sine' })
       noise(0.2, 0.14, { lp: 800, lpTo: 200, send: 0.2 })
+      bell(440, 0.6, 0.2)
       break
     case 'coin':
       osc(1046, 0.05, 0.14, { type: 'square', send: 0.15 })
@@ -716,9 +990,11 @@ function playGame(event: GameEvent): void {
       break
     /* A horn call, not a beep: two saws a fifth apart, rising together. */
     case 'wave':
-      osc(196, 0.5, 0.13, { to: 294, type: 'sawtooth', attack: 0.05, send: 0.35 })
-      osc(294, 0.5, 0.09, { to: 440, type: 'sawtooth', attack: 0.06, send: 0.35 })
-      noise(0.25, 0.05, { hp: 400, lp: 2000, send: 0.3 })
+      // +3 dB in audio Phase 1: it sat level with a crit, and the call that
+      // starts a wave has to read over the fight it starts.
+      osc(196, 0.5, 0.18, { to: 294, type: 'sawtooth', attack: 0.05, send: 0.35 })
+      osc(294, 0.5, 0.127, { to: 440, type: 'sawtooth', attack: 0.06, send: 0.35 })
+      noise(0.25, 0.07, { hp: 400, lp: 2000, send: 0.3 })
       break
     /*
      * The wave-clear sting (H18). Short — it has to fit inside the hold and be
@@ -754,6 +1030,24 @@ function playGame(event: GameEvent): void {
      * Evolution — the loudest ceremony in a run that is not its ending. A riser
      * into a struck chord, so the moment has a before and an after.
      */
+    /*
+     * Setting a hero down on a slot — which was silent, because it happens on
+     * the canvas and the canvas is not a button. A wooden "thock": a narrow
+     * band of noise at 900 Hz (the knock), a short triangle falling 220→150 Hz
+     * (the weight), and a 1.3 kHz tick on top so a phone hears it land.
+     */
+    case 'deploy':
+      noise(0.03, 1.0, { bp: 900, q: 4 })
+      osc(vary(220, 40), 0.08, 0.3, { to: 150, type: 'triangle', send: 0.1 })
+      osc(vary(1300, 50), 0.018, 0.18, { type: 'square' })
+      break
+    /* Lifting one off again: the same materials lower and reversed — the
+       body rises instead of falling, and the tick comes after, not before. */
+    case 'undeploy':
+      noise(0.03, 0.8, { bp: 650, q: 4 })
+      osc(vary(130, 40), 0.08, 0.28, { to: 185, type: 'triangle', send: 0.1 })
+      osc(vary(1000, 50), 0.018, 0.15, { type: 'square', at: 0.05 })
+      break
     case 'evolve':
       osc(220, 0.55, 0.09, { to: 880, type: 'sawtooth', attack: 0.3, send: 0.4 })
       noise(0.55, 0.06, { hp: 600, lp: 1200, lpTo: 9000, send: 0.4 })
@@ -764,14 +1058,32 @@ function playGame(event: GameEvent): void {
 }
 
 /** Rarity tiers, brightest last. Shared with `sfxRarity`. */
-const RARITY_STING: Record<string, { notes: number[]; peak: number; spread: number; send: number; sub?: number }> = {
+/*
+ * `level` evens out the ladder's LOUDNESS steps, which were lopsided: common
+ * sat 7 LU under rare and the four upper tiers were bunched within 2.5 LU, so
+ * epic→mythic climbed in length and brightness but hardly in weight.
+ */
+const RARITY_STING: Record<string, { notes: number[]; peak: number; spread: number; send: number; sub?: number; level: number }> = {
   /* Common: a two-note acknowledgement. Not a fanfare — most drops are these,
      and a mythic that sounds like them is the actual bug. */
-  common: { notes: [523.25, 659.25], peak: 0.11, spread: 0.07, send: 0.2 },
-  rare: { notes: [523.25, 659.25, 783.99], peak: 0.12, spread: 0.065, send: 0.3, sub: 130.81 },
-  epic: { notes: [523.25, 659.25, 783.99, 1046.5], peak: 0.13, spread: 0.06, send: 0.4, sub: 130.81 },
-  legendary: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51], peak: 0.14, spread: 0.055, send: 0.5, sub: 98 },
-  mythic: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], peak: 0.15, spread: 0.05, send: 0.65, sub: 65.41 },
+  common: { notes: [523.25, 659.25], peak: 0.11, spread: 0.07, send: 0.2, level: 1.26 },
+  rare: { notes: [523.25, 659.25, 783.99], peak: 0.12, spread: 0.065, send: 0.3, sub: 130.81, level: 0.63 },
+  epic: { notes: [523.25, 659.25, 783.99, 1046.5], peak: 0.13, spread: 0.06, send: 0.4, sub: 130.81, level: 0.74 },
+  legendary: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51], peak: 0.14, spread: 0.055, send: 0.5, sub: 98, level: 0.86 },
+  mythic: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98], peak: 0.15, spread: 0.05, send: 0.65, sub: 65.41, level: 1.06 },
+}
+
+/**
+ * The reward ceremony: the rarity sting when the reward has a rarity that owns
+ * one, and the generic `reward` sample only when it does not.
+ *
+ * They used to play together, and the sample (then −7.6 LUFS Mmax, untrimmed)
+ * sat 16–26 dB over the sting, so every tier sounded the same — the one thing
+ * the ladder exists to prevent.
+ */
+export function sfxReward(rarity?: string): void {
+  if (hasRaritySting(rarity)) sfxRarity(rarity as string)
+  else sfx('reward')
 }
 
 /**
@@ -790,12 +1102,12 @@ export function sfxRarity(rarity: string): void {
   if (!c || vol.muted) return
   const play = () => {
     if (vol.muted) return
-    arp(cfg.notes, 0.26, cfg.peak, cfg.spread, { type: 'triangle', send: cfg.send })
-    if (cfg.sub) osc(cfg.sub, 0.7, 0.13, { type: 'sine', at: cfg.spread })
+    arp(cfg.notes, 0.26, cfg.peak * cfg.level, cfg.spread, { type: 'triangle', send: cfg.send })
+    if (cfg.sub) osc(cfg.sub, 0.7, 0.13 * cfg.level, { type: 'sine', at: cfg.spread })
     // The top tiers get a shimmer tail; the bottom two deliberately do not.
-    if (cfg.notes.length >= 4) noise(0.6, 0.04, { hp: 4000, at: cfg.spread * 2, send: cfg.send })
+    if (cfg.notes.length >= 4) noise(0.6, 0.04 * cfg.level, { hp: 4000, at: cfg.spread * 2, send: cfg.send })
   }
-  if (needsResume(c)) void resumeCtx(c).then(play)
+  if (asleep(c)) void resumeCtx(c).then(play)
   else play()
 }
 
@@ -808,23 +1120,40 @@ export function sfxRarity(rarity: string): void {
  * rest of the session. `AudioContextState` doesn't name it, hence the widening.
  */
 const needsResume = (c: AudioContext): boolean => (c.state as string) !== 'running'
+/**
+ * Not running, OR running with a suspend of ours in flight. A sound that
+ * arrives in that window must resume first, or it plays into a context about
+ * to freeze and is lost.
+ */
+const asleep = (c: AudioContext): boolean => needsResume(c) || intendedSuspend
 
 let resuming: Promise<void> | null = null
 
 /** Resume the context, coalescing concurrent attempts into one. */
 function resumeCtx(c: AudioContext): Promise<void> {
-  if (!needsResume(c)) return Promise.resolve()
+  if (!asleep(c)) return Promise.resolve()
   if (resuming) return resuming
-  resuming = c
-    .resume()
+  // Wanting it running cancels any suspend we asked for.
+  intendedSuspend = false
+  let p: Promise<void>
+  try {
+    p = c.resume()
+  } catch {
+    p = Promise.reject(new Error('resume threw'))
+  }
+  resuming = p
     .catch(() => {
-      /* no gesture yet, or the OS refused — the next gesture tries again */
+      /* no gesture yet, or the OS refused — the armed listeners try again */
     })
     .finally(() => {
       resuming = null
       // The moment audio is actually running is the moment the music engine can
       // schedule anything at all, so tell it here rather than making it poll.
-      if (!needsResume(c)) fireReady()
+      if (!needsResume(c)) {
+        disarmUnlock()
+        fireReady()
+        scheduleIdleCheck()
+      } else if (!vol.muted) armUnlock()
     })
   return resuming
 }
@@ -835,7 +1164,8 @@ function resumeCtx(c: AudioContext): Promise<void> {
  * gesture behind it that would only produce a suspended one.
  */
 export function resumeAudio(): void {
-  if (ctx && needsResume(ctx)) void resumeCtx(ctx)
+  hidden = false
+  if (ctx && !vol.muted && asleep(ctx)) void resumeCtx(ctx)
 }
 
 /** Play a sound event. `throttleMs` drops repeats of the same event fired too close together (combat spam). */
@@ -845,21 +1175,20 @@ export function sfx(event: SoundEvent, opts: { throttleMs?: number } = {}): void
   if (vol.muted) return
   if (opts.throttleMs) {
     const now = c.currentTime * 1000
-    const last = lastPlayed.get(event) ?? -1e9
-    if (now - last < opts.throttleMs) return
+    if (!throttleAllows(lastPlayed.get(event), now, opts.throttleMs)) return
     lastPlayed.set(event, now)
   }
 
   const emit = () => {
     if (vol.muted) return
-    if (isUiEvent(event)) playBuffer(UI_SAMPLES[event], 'ui')
+    if (isUiEvent(event)) playBuffer(UI_SAMPLES[event].file, 'ui', UI_SAMPLES[event].gain)
     else playGame(event)
   }
 
   // The gesture that unlocks audio is usually the same gesture that asks for a
   // sound. Firing without awaiting the resume played that first sound into a
   // still-suspended context, where it was simply dropped (M31).
-  if (needsResume(c)) void resumeCtx(c).then(emit)
+  if (asleep(c)) void resumeCtx(c).then(emit)
   else emit()
 }
 

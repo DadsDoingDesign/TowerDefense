@@ -1,7 +1,7 @@
 /**
  * ⚠️ NON-FUNCTIONAL AS CHECKED IN — `npm run ui-audit` will not run here.
  * ─────────────────────────────────────────────────────────────────────────────
- * Two things are missing, both of them environmental:
+ * Two things are missing, both of them environmental, and one is stale:
  *
  *   1. `playwright-core` is **not a dependency** of this project (check
  *      `package.json`). The import below fails with MODULE_NOT_FOUND.
@@ -16,6 +16,11 @@
  *   set PW_CHROMIUM=<path to chrome>    # only needed for playwright-core
  *   npx vite --port 5188 --strictPort &
  *   node scripts/ui-audit.mjs
+ *
+ * 3. The pre-shell screens it was written against were deleted, and with them
+ *    the store actions its modal shots call (`openDetail`, `openEquip`,
+ *    `openInventory`, `upgradeTarget`). Those shots need re-pointing at the
+ *    Root Shell's `shellSelect` / `setHeroTab` / `activateGearSlot`.
  *
  * Nothing else in the project depends on this script, and no CI step runs it.
  * It is kept because the shot list below is the only written inventory of every

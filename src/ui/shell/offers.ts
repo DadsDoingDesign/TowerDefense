@@ -1,14 +1,16 @@
 import { canUpgrade, describeBase, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULE } from '../../game/data/describe'
 import { getNode } from '../../game/data/archetypeTree'
+import { mutationName } from '../../game/data/mutations'
 import { UPGRADE_PATHS } from '../../game/data/upgradeTree'
 import { buildName } from '../../game/engine/leveling'
 import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, THREAT_PER_CHOICE, THREAT_PER_NODE, useGameStore } from '../../state/gameStore'
 import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
+import { dailySeed, utcDateKey } from '../../state/daily'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import type { Archetype, Item, Sentinel } from '../../game/types'
 
@@ -70,6 +72,13 @@ export interface Act {
   confirm?: { label: string; note: string }
   /** The mark on the row a secondary action gets drawn as. */
   icon?: IconKey
+  /**
+   * A purchase's receipt, shown briefly once it goes through ("Focus of
+   * Insight added to your pack"). Setting it also tells the page to CLEAR its
+   * selection afterwards, so the CTA under the thumb cannot fall through to the
+   * next offer in the list and buy it on a second tap (Wave 1).
+   */
+  done?: string
 }
 
 /**
@@ -169,6 +178,23 @@ export interface Offer {
   tiles?: { caption: string; glyph?: string; art?: string; icon?: IconKey }[]
   /** Bold-value / muted-label pairs, e.g. "12 DEX". */
   stats?: { label: string; value: number | string }[]
+  /**
+   * A purchase the purse cannot cover right now (Wave 1). The row DIMS rather
+   * than disabling — it still has to be tappable, because reading what a thing
+   * does is how you decide to save up for it. The CTA is the part that refuses.
+   */
+  dim?: boolean
+  /** Level pips for a levelled purchase (a Watchtower perk): `on` of `of`. */
+  pips?: { on: number; of: number }
+  /** A real sprite for a row that is a hero (the merchant's recruit). */
+  rowArt?: string
+  /** The item or card rarity, drawn as a `RarityTag` (word + hue + pips). */
+  rarity?: import('../../game/types').ItemRarity
+  /**
+   * Volume dials drawn in the detail block (the Sound row). A dial is not an
+   * Offer action — dragging it is not a commit — so it rides here instead.
+   */
+  sliders?: { id: string; label: string; value: number; set: (v: number) => void; preview?: 'click' | 'coin' | 'toggle' }[]
 }
 
 /**
@@ -210,7 +236,10 @@ export const THREAT_TAX_VISIT: string[] = [
 
 /** Terms at the Crossroads, which is not a map node — marching on is genuinely free. */
 export const THREAT_TAX_FREE_EXIT: string[] = [
-  `Threat ×${THREAT_PER_CHOICE.toFixed(2)} — taking this raises the HP of every enemy in every wave that follows. Marching on costs nothing.`,
+  // "Marching on costs nothing" used to close this line, and there is no
+  // marching on from step one of the fork: it offers a recruit or a hero to
+  // aim at and nothing else. The sentence priced an option that did not exist.
+  `Threat ×${THREAT_PER_CHOICE.toFixed(2)}: every enemy in every later wave gets ${Math.round((THREAT_PER_CHOICE - 1) * 100)}% more HP.`,
 ]
 
 /**
@@ -244,7 +273,7 @@ const GLYPH = ARCHETYPE_GLYPH
  * and the one item in the game whose value scales with roster size read as the
  * one with no armour on it (M6).
  */
-export const KEEPSAKE_TAG = 'Keepsake — its effects apply to the whole watch, not just whoever carries it.'
+export const KEEPSAKE_TAG = 'Keepsake — its effects apply to the whole company, not just whoever carries it.'
 
 /**
  * Everything an item's own text says about it — the ONE producer of it (M4).
@@ -303,13 +332,15 @@ function heroBits(s: Sentinel) {
   }
 }
 
+/**
+ * A hero offer's body. The STR/DEX/INT line is gone from here: every hero offer
+ * also carries `heroBits(s).stats`, which the page renders as the stat row right
+ * above this card, so the same three numbers were printed twice, one above the
+ * other (Wave 1).
+ */
 function heroBody(s: Sentinel): string[] {
   const p = computeCombat(s)
-  return [
-    `STR ${s.stats.str} · DEX ${s.stats.dex} · INT ${s.stats.int}`,
-    `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range`,
-    `${Math.round(p.maxHp)} HP`,
-  ]
+  return [`${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${Math.round(p.maxHp)} HP`]
 }
 
 /**
@@ -589,8 +620,9 @@ function merchantOffers(st: St): Offer[] {
   if (!m) return []
   const out: Offer[] = m.items.map((e) => ({
     id: e.item.id,
-    title: e.item.name,
+    title: itemName(e.item),
     sub: RARITY[e.item.rarity].label,
+    rarity: e.item.rarity,
     color: rarityVar(e.item.rarity),
     // The merchant board was four text rows. It is the one screen where "what
     // is that, and can my roster use it?" has to be answerable before you read
@@ -599,9 +631,12 @@ function merchantOffers(st: St): Offer[] {
     mark: damageMark(e.item),
     bodyIcons: true,
     cost: { amount: e.price, currency: 'gold' as const },
+    dim: st.gold < e.price,
     body: itemBody(e.item),
     action: {
-      label: `Buy · ⟡${e.price}`,
+      label: 'Buy',
+      cost: { amount: e.price, currency: 'gold' as const },
+      done: `${itemName(e.item)} added to your pack`,
       run: () => (inEndless(st) ? st.endlessBuyItem(e.item.id) : st.buyMerchantItem(e.item.id)),
       disabled: st.gold < e.price,
     },
@@ -610,8 +645,13 @@ function merchantOffers(st: St): Offer[] {
     const r = m.recruit
     out.push({
       id: r.sentinel.id,
-      title: r.sentinel.name,
+      // The class rides in the row's own label: a merchant row is a line of
+      // text, and "Sable" alone did not say this was a hero for hire, let alone
+      // which kind (Wave 1).
+      title: `${r.sentinel.name} · ${buildName(r.sentinel)} for hire`,
       sub: buildName(r.sentinel),
+      rowArt: heroArt(r.sentinel.archetype),
+      dim: st.gold < r.price,
       color: archetypeVar(r.sentinel.archetype),
       glyph: GLYPH[r.sentinel.archetype],
       cost: { amount: r.price, currency: 'gold' },
@@ -622,7 +662,9 @@ function merchantOffers(st: St): Offer[] {
       // practice — guarded anyway rather than relying on that.)
       body: [...heroBody(r.sentinel), ...(inEndless(st) ? [] : THREAT_TAX_VISIT)],
       action: {
-        label: `Recruit · ⟡${r.price}`,
+        label: 'Recruit',
+        cost: { amount: r.price, currency: 'gold' },
+        done: `${r.sentinel.name} joined the company`,
         run: () => st.buyMerchantRecruit(),
         disabled: st.gold < r.price || st.roster.length >= MAX_ROSTER,
       },
@@ -668,7 +710,7 @@ function recruitOffers(st: St): Offer[] {
     ...heroBits(s),
     body: [
       ...heroBody(s),
-      ...(full ? ['Your roster is full — dismiss someone first.'] : []),
+      ...(full ? ['Your company is full — dismiss someone first.'] : []),
       // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
       // recruit node's own visit step; endless rooms pay neither.
       ...(inEndless(st) || full ? [] : THREAT_TAX_VISIT),
@@ -677,7 +719,9 @@ function recruitOffers(st: St): Offer[] {
       // The tapped candidate's id goes to the store in both modes. Without it
       // endless hires `recruitOptions[0]` whatever you picked, which made the
       // whole screen a fake choice.
-      label: full ? 'Roster full' : inEndless(st) ? `Recruit ${s.name} · ⟡${st.endlessRecruitCost}` : `Recruit ${s.name}`,
+      label: full ? 'Company full' : `Recruit ${s.name}`,
+      done: `${s.name} joined the company`,
+      cost: inEndless(st) && !full ? { amount: st.endlessRecruitCost, currency: 'gold' } : undefined,
       run: () => (inEndless(st) ? st.endlessRecruit(s.id) : st.acceptRecruit(s.id)),
       disabled: full || (inEndless(st) ? st.gold < st.endlessRecruitCost : false),
     },
@@ -699,21 +743,23 @@ function recruitOffers(st: St): Offer[] {
 function forgeOffers(st: St): Offer[] {
   const out: Offer[] = st.inventory.map((i) => ({
     id: i.id,
-    title: i.name,
+    title: itemName(i),
     sub: RARITY[i.rarity].label,
+    rarity: i.rarity,
     color: rarityVar(i.rarity),
     icon: itemIcon(i),
     mark: damageMark(i),
     bodyIcons: true,
     cost: { amount: reforgeDust(i), currency: 'dust' as const },
+    dim: st.dust < reforgeDust(i),
     body: [
       ...itemBody(i),
-      `Reforge ◈${reforgeDust(i)} — rerolls every enchantment on it.`,
-      canUpgrade(i) ? `Raise rarity ◈${upgradeDust(i)} — one tier up, base kept.` : 'Already at the top rarity — it cannot be raised.',
-      `You hold ◈${st.dust} dust.`,
+      `Reforge for ${moneyText(reforgeDust(i), 'dust')} — rerolls every enchantment on it.`,
+      canUpgrade(i) ? `Raise rarity for ${moneyText(upgradeDust(i), 'dust')} — one tier up, base kept.` : 'Already at the top rarity — it cannot be raised.',
+      `You hold ${moneyText(st.dust, 'dust')}.`,
     ],
     action: {
-      label: `Reforge · ◈${reforgeDust(i)}`,
+      label: 'Reforge',
       run: () => st.endlessForgeReforge(i.id),
       disabled: st.dust < reforgeDust(i),
       cost: { amount: reforgeDust(i), currency: 'dust' as const },
@@ -732,9 +778,9 @@ function forgeOffers(st: St): Offer[] {
     out.push({
       id: 'forge-empty',
       title: 'Nothing to work',
-      sub: `◈ ${st.dust} dust`,
+      sub: moneyText(st.dust, 'dust'),
       icon: 'forge',
-      body: ['The pack is empty. Find or buy an item, then bring it back here.', `You hold ◈${st.dust} dust.`],
+      body: ['The pack is empty. Find or buy an item, then bring it back here.', `You hold ${moneyText(st.dust, 'dust')}.`],
     })
   }
   out.push({ id: 'leave', title: 'Leave', icon: 'back', immediate: true, body: ['Head back to the rooms.'], action: { label: 'Leave', run: () => st.endlessCloseRoom() } })
@@ -754,8 +800,13 @@ function forgeOffers(st: St): Offer[] {
 function rewardOffers(st: St): Offer[] {
   return (st.reward ?? []).map((c) => ({
     id: c.id,
-    title: c.title,
-    sub: `${RARITY[c.rarity].label} · ${c.kind === 'item' ? 'Item' : 'Attribute'}`,
+    title: c.item ? itemName(c.item) : c.title,
+    // The scope, per card (Wave 1). The board used to say "Take one — it
+    // applies to the whole watch", which is false for every item card: an item
+    // goes to the pack and helps whoever wears it.
+    // Short, because it shares the row with the card's name and rarity.
+    sub: c.kind === 'item' ? 'to pack' : 'company',
+    rarity: c.rarity,
     color: rarityVar(c.rarity),
     icon: c.item ? itemIcon(c.item) : 'boon',
     mark: c.item ? damageMark(c.item) : null,
@@ -820,7 +871,7 @@ function crossroadsOffers(st: St): Offer[] {
     return [
       {
         id: 'revealed',
-        title: m.name,
+        title: mutationName(m.key, m.name),
         sub: `${cr.revealed.heroName} · Mythic`,
         color: rarityVar('mythic'),
         icon: 'mutate',
@@ -839,9 +890,10 @@ function crossroadsOffers(st: St): Offer[] {
       // belt-and-braces — but `chooseHeroMutation` refuses a duplicate key, and
       // the shell must never render an enabled action the store will refuse.
       const held = (aimed.mutations ?? []).some((x) => x.key === m.key)
+      const name = mutationName(m.key, m.name)
       return {
         id: m.id,
-        title: m.name,
+        title: name,
         sub: 'Mythic',
         color: rarityVar('mythic'),
         icon: 'mutate',
@@ -869,12 +921,12 @@ function crossroadsOffers(st: St): Offer[] {
             : `Permanent — ${aimed.name} keeps it for the rest of the run and there is no reroll. Threat ×${THREAT_PER_CHOICE.toFixed(2)} when it lands.`,
         ],
         action: {
-          label: held ? 'Already carried' : `Give ${aimed.name} ${m.name}`,
+          label: held ? 'Already carried' : `Give ${aimed.name} ${name}`,
           run: () => st.chooseHeroMutation(aimed.id, m.id),
           disabled: held,
           confirm: {
             label: `Yes — mutate ${aimed.name}`,
-            note: `${m.name} is permanent — ${aimed.name} carries it for the rest of the run and there is no reroll.${m.downside ? ` It costs ${m.downside}.` : ''} Use the red "Yes — mutate ${aimed.name}" button below to go through with it; "Never mind" or another card leaves the choice open.`,
+            note: `${name} is permanent — ${aimed.name} carries it for the rest of the run and there is no reroll.${m.downside ? ` It costs ${m.downside}.` : ''} Use the red "Yes — mutate ${aimed.name}" button below to go through with it; "Never mind" or another card leaves the choice open.`,
           },
         },
       }
@@ -887,7 +939,7 @@ function crossroadsOffers(st: St): Offer[] {
       sub: `Aiming at ${aimed.name}`,
       icon: 'back',
       immediate: true,
-      body: ['Back to the recruits and the roster. Nothing has been spent, and the same three mutations will be waiting.'],
+      body: ['Back to the recruits and the company. Nothing has been spent, and the same three mutations will be waiting.'],
       action: { label: 'Pick someone else', run: () => st.aimHeroMutation(null) },
     })
     return out
@@ -928,7 +980,7 @@ function crossroadsOffers(st: St): Offer[] {
       body: [
         `Change how ${h.name} attacks, permanently.`,
         `${mutations.length} Mythic mutations are on the table — you read all ${mutations.length} and take one. They were dealt when the fork fired, so aiming at a different hero does not change them.`,
-        ...carried.map((m) => `Already carries ${m.name} — ${m.desc}`),
+        ...carried.map((m) => `Already carries ${mutationName(m.key, m.name)} — ${m.desc}`),
         'Aiming costs nothing and can be undone.',
       ],
       action: { label: `Aim at ${h.name}`, run: () => st.aimHeroMutation(h.id) },
@@ -942,10 +994,10 @@ const upgradePathName = (id: string): string => UPGRADE_PATHS.find((p) => p.id =
 
 function roomOffers(st: St): Offer[] {
   const rooms = [
-    { id: 'merchant', title: 'Merchant', icon: 'merchant', body: ['Four items for gold.'] },
+    { id: 'merchant', title: 'Merchant', icon: 'merchant', body: ['Items for gold.'] },
     { id: 'forge', title: 'Forge', icon: 'forge', body: ['Spend dust to reforge or raise rarity.'] },
     { id: 'shrine', title: 'Shrine', icon: 'shrine', body: ['A bargain with terms.'] },
-    { id: 'recruit', title: 'Recruit', icon: 'recruit', body: ['Add a Sentinel to the watch.'] },
+    { id: 'recruit', title: 'Recruit', icon: 'recruit', body: ['Add a hero to the company.'] },
   ] as const
   const out: Offer[] = rooms.map((r) => ({
     id: r.id,
@@ -999,38 +1051,38 @@ const ASSIST_CYCLE: AssistLevel[] = ['off', 'steady', 'sure']
 const nextAssist = (v: AssistLevel): AssistLevel =>
   ASSIST_CYCLE[(ASSIST_CYCLE.indexOf(v) + 1) % ASSIST_CYCLE.length]
 
+/** The Sound row's dials: `settingsStore`'s clamped, NaN-safe volume setters. */
+function audioDials(s: Settings): NonNullable<Offer['sliders']> {
+  return [
+    { id: 'music', label: 'Music', value: s.audio.music, set: s.setMusicVolume },
+    { id: 'effects', label: 'Effects', value: s.audio.game, set: s.setEffectsVolume, preview: 'coin' },
+    { id: 'ui', label: 'Interface', value: s.audio.ui, set: s.setUiVolume, preview: 'toggle' },
+  ]
+}
+
 function settingsOffers(s: Settings): Offer[] {
   const onOff = (v: boolean) => (v ? 'On' : 'Off')
   return [
     {
       id: 'mute',
       title: 'Sound',
-      sub: onOff(!s.audio.muted),
+      sub: s.audio.muted ? 'Muted' : `Music ${Math.round(s.audio.music * 100)} · Effects ${Math.round(s.audio.game * 100)}`,
       icon: s.audio.muted ? 'soundOff' : 'soundOn',
       /*
-       * This row used to promise "music and effects" while the game had no
-       * music at all — dead copy about a feature that did not exist. There is a
-       * score now (`src/audio/music.ts`), so the sentence is true; the second
-       * line says what the two rows do differently, because "Sound off" and
-       * "Music off" are not the same request.
+       * Three dials and a mute (Wave 1). This row used to be Mute plus a
+       * separate Music on/off row — two switches and no volume at all, while
+       * the store has carried master/game/ui/music gains since the audio pass.
+       * The dials come from the legacy Watchtower's `VolumeSlider`, moved here
+       * before that screen is deleted. Music at 0 stops the score outright
+       * (the director stops scheduling), so the old on/off row is the bottom of
+       * this dial and no longer needs a row of its own.
        */
       body: [
-        'Silences everything: the score, combat and the interface.',
-        'To keep the combat feedback and drop only the score, leave this on and turn Music off instead.',
+        'Effects carry information — what hit, what died, what got through. Music carries none, so it is the one to turn down first.',
+        'Mute silences everything at once.',
       ],
+      sliders: audioDials(s),
       action: { label: s.audio.muted ? 'Unmute' : 'Mute', run: () => s.toggleMute() },
-    },
-    {
-      id: 'music',
-      title: 'Music',
-      sub: onOff(s.audio.music > 0),
-      glyph: '♪',
-      body: [
-        'The score. It follows the game: the Watchtower and the map stay quiet, a live wave gets the drums.',
-        'Sound effects carry information here — what hit, what died, what got through — and the music carries none, so it is the half you can drop.',
-        'Off stops it being performed at all rather than turning it down, so it costs nothing while it is off.',
-      ],
-      action: { label: s.audio.music > 0 ? 'Turn off' : 'Turn on', run: () => s.toggleMusic() },
     },
     {
       id: 'motion',
@@ -1101,7 +1153,7 @@ function settingsOffers(s: Settings): Offer[] {
          * is exactly what changes, so the choice is informed rather than a
          * mystery dial.
          */
-        'Softens what the horde takes off your base when something reaches the line.',
+        'Softens what the horde takes off your Gate when something reaches it.',
         assistProfile(s.assist).blurb,
         'Nothing else moves: same waves, same loot, same Watch Marks. Change it whenever you like, mid-run included.',
       ],
@@ -1116,7 +1168,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: Object.values(s.taught).some(Boolean) ? 'Some seen' : 'All waiting',
       glyph: '❓',
       body: [
-        'The one-line hints that appear the first time something new matters — deploying, equipping, Threat, evolutions.',
+        'The one-line hints that appear the first time something new matters — posting a hero, equipping, Threat, spending gold, evolutions.',
         'Bring them back for another pass, or for whoever picks the game up on this device next.',
       ],
       action: { label: 'Show the tips again', run: () => s.resetTeaching() },
@@ -1128,7 +1180,7 @@ function settingsOffers(s: Settings): Offer[] {
       icon: 'warn',
       color: 'var(--bad-text)',
       body: [
-        'Wipes Watch Marks, perks, Banner unlocks and records.',
+        'Wipes Watch Marks, perks, Vow unlocks and records.',
         'This cannot be undone. Nothing is kept and nothing is backed up.',
       ],
       action: {
@@ -1151,71 +1203,101 @@ function settingsOffers(s: Settings): Offer[] {
  * The copy that shipped here described the system it replaced, word for word:
  * "Permanent and irreversible… +1 to all starting stats, +10% Watch Marks —
  * and +15% enemy HP in every future run… There is no way back down a tier."
- * Not one clause of that is true any more. `metaStore` kept the old API names
- * (`sacrificeTier`, `sacrificeCost`, `doSacrifice`) so every save migrates, but
- * the number now means "highest Banner UNLOCKED", unlocking applies nothing to
- * anything, and `bonuses().enemyHpMult` is hard-wired to 1.
+ * Not one clause of that is true any more. `metaStore` kept the old field name
+ * (`sacrificeTier`) so every save migrates, but the number now means "highest
+ * Banner UNLOCKED", unlocking applies nothing to anything, and
+ * `bonuses().enemyHpMult` is hard-wired to 1.
  *
- * So this row buys a *rung*, and the rung is flown — or not — per run, at
- * hero-pick, by {@link BannerPicker}. The confirm stays: it is still an
- * irreversible spend of a few hundred Watch Marks.
+ * Rungs are **earned, not bought** (Phase 1): Banner N opens when a run flown
+ * under Banner N−1 is won (`grantRunRewards`). This row used to sell the next
+ * rung for 200 / 350 / 500 Watch Marks; it is information now, with no price
+ * and no button, and the rung is flown — or not — per run, at hero-pick, by
+ * {@link BannerPicker}.
  */
 export const BANNER_BLURB =
-  'A Banner is a bet you place at the start of a run: it takes a rule away and pays more Watch Marks for the finish. It applies to that run only, and you pick it fresh every time.'
+  'A Vow is a bet you place at the start of a run: it takes a rule away and pays more Watch Marks for the finish. It applies to that run only, and you pick it fresh every time.'
+
+/**
+ * The player-facing name of the difficulty ladder (Wave 1).
+ *
+ * "Banner" collided with the Banner item — a keepsake, drawn with the same
+ * pennant — so one word meant a thing you carry and a rule you swear to. The
+ * ladder is a Vow on screen now. Ids, store fields and save keys still say
+ * banner/sacrifice, so every save migrates untouched.
+ */
+export const VOW = 'Vow'
 
 /** "Banner 3 — Elite Watch" and what it does to the run, from the real rung data. */
 export const bannerLine = (tier: number): string =>
   tier <= 0 || tier > MAX_BANNER
-    ? 'No Banner — the ordinary march.'
-    : `Banner ${tier} · ${BANNER_RUNGS[tier - 1].name} — ${BANNER_RUNGS[tier - 1].rule}`
+    ? 'No Vow — the ordinary march.'
+    : `${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name} — ${BANNER_RUNGS[tier - 1].rule}`
 
 function sacrificeOffer(meta: Meta): Offer {
   const tier = meta.sacrificeTier
-  const cost = meta.sacrificeCost()
-  const afford = meta.watchMarks >= cost
   const maxed = tier >= MAX_BANNER
   const next = maxed ? null : BANNER_RUNGS[tier]
 
   if (maxed) {
     return {
       id: 'sacrifice',
-      title: 'Banners',
+      title: 'Vows',
       sub: `${MAX_BANNER}/${MAX_BANNER} unlocked`,
-      icon: 'banner',
+      icon: PERK_ICON.sacrifice,
       color: 'var(--accent)',
+      pips: { on: MAX_BANNER, of: MAX_BANNER },
       body: [
-        'Every rung is open. Choose one at the start of a run.',
+        'Every Vow is open. Choose one at the start of a run.',
         BANNER_BLURB,
-        ...BANNER_RUNGS.map((r) => `Banner ${r.tier} · ${r.name} — ${r.rule} Pays ×${r.markMult}.`),
+        ...BANNER_RUNGS.map((r) => `${VOW} ${r.tier} · ${r.name} — ${r.rule} Pays ×${r.markMult}.`),
       ],
     }
   }
 
+  const earnBy = tier === 0 ? `Win a run with no ${VOW}` : `Win a run under ${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name}`
   return {
     id: 'sacrifice',
-    title: `Banner ${next!.tier} · ${next!.name}`,
-    sub: `${tier}/${MAX_BANNER} unlocked`,
-    icon: 'banner',
+    title: `${VOW} ${next!.tier} · ${next!.name}`,
+    sub: `${tier}/${MAX_BANNER} unlocked · win to unlock`,
+    icon: PERK_ICON.sacrifice,
     color: 'var(--accent)',
-    cost: { amount: cost, currency: 'marks' as const },
+    pips: { on: tier, of: MAX_BANNER },
     body: [
-      `Unlock Banner ${next!.tier} — ${next!.name} — for ✦${cost}.`,
+      `${earnBy} to unlock ${VOW} ${next!.tier} — ${next!.name}. Vows are earned by winning, never bought.`,
       next!.rule,
-      `A run flown under it pays ×${next!.markMult} Watch Marks. Banners are cumulative: flying ${next!.tier} means flying every rung below it too.`,
+      `A run under it pays ×${next!.markMult} Watch Marks. Vows stack: swearing ${next!.tier} swears every Vow below it too.`,
       BANNER_BLURB,
       tier > 0
-        ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to fly one.`
-        : 'Nothing is unlocked yet, so every run is the ordinary march. Unlocking changes nothing on its own — no run gets harder until you choose to fly one.',
+        ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.`
+        : 'Nothing is unlocked yet, so every run is the ordinary march. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.',
     ],
-    action: {
-      label: afford ? `Unlock · ✦${cost}` : `Need ✦${cost}`,
-      run: () => meta.doSacrifice(),
-      disabled: !afford,
-      confirm: {
-        label: `Yes — spend ✦${cost}`,
-        note: `✦${cost} is spent for good — Watch Marks do not come back. It does not make any run harder by itself; it adds Banner ${next!.tier} to the rungs you may choose at the start of a run. Use the red "Yes — spend ✦${cost}" button below to go through with it; "Never mind" or another row keeps the marks.`,
-      },
-    },
+  }
+}
+
+/**
+ * Daily Watch (Phase 1): the UTC day's shared seed under standard rules, one
+ * scored attempt a day. Kept to one row on purpose — the UI lane restyles it.
+ */
+function dailyOffer(meta: Meta): Offer {
+  const date = utcDateKey()
+  const rec = meta.daily?.date === date ? meta.daily : null
+  const status = !rec
+    ? "Today's scored attempt is unplayed."
+    : !rec.done
+      ? "Today's scored attempt is under way — another start today is practice."
+      : `Today: ${rec.won ? 'won' : `depth ${rec.depth}`}, score ${rec.score}. Another start today is practice.`
+  return {
+    id: 'daily',
+    title: 'Daily Watch',
+    sub: date,
+    icon: 'map',
+    color: 'var(--accent)',
+    body: [
+      `Seed ${dailySeed(date)} — the same map, waves and offers for every Watch today (UTC).`,
+      `Standard rules: no perks, no unlocks, no ${VOW}. The first run you commit a hero to each day is scored.`,
+      status,
+    ],
+    action: { label: rec ? 'Practice' : 'Begin', run: () => useGameStore.getState().startDaily() },
   }
 }
 
@@ -1226,7 +1308,6 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   const back: Offer = {
     id: 'back',
     title: 'Back',
-    sub: 'Watchtower',
     icon: 'back',
     immediate: true,
     body: ['Back to the Watchtower menu.'],
@@ -1242,11 +1323,18 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
         id: u.id,
         title: u.name,
         sub: `${level}/${u.maxLevel}`,
-        icon: 'boon',
+        icon: PERK_ICON[u.id] ?? 'boon',
+        pips: { on: level, of: u.maxLevel },
         cost: maxed ? undefined : { amount: cost, currency: 'marks' as const },
-        body: [u.desc, maxed ? 'Fully upgraded.' : `Next level costs ✦${cost}.`],
+        dim: !maxed && meta.watchMarks < cost,
+        body: [
+          u.desc,
+          `Level ${level} of ${u.maxLevel}.`,
+          maxed ? 'Fully upgraded.' : `Next level: ${moneyText(cost, 'marks')}.`,
+        ],
         action: {
-          label: maxed ? 'Maxed' : `Buy · ✦${cost}`,
+          label: maxed ? 'Maxed' : 'Buy',
+          cost: maxed ? undefined : { amount: cost, currency: 'marks' as const },
           run: () => meta.buyUpgrade(u.id),
           disabled: maxed || meta.watchMarks < cost,
         },
@@ -1267,13 +1355,14 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
        */
       icon: 'depth',
       color: 'var(--accent)',
-      body: ['A fresh map, a fresh roster. Permadeath — one loss ends it.'],
+      body: ['A fresh map, a fresh company. Permadeath — one loss ends it.'],
       action: { label: 'Begin', run: () => game.newRun() },
     },
+    dailyOffer(meta),
     {
       id: 'perks',
-      title: 'Upgrade Perks',
-      sub: `✦ ${meta.watchMarks}`,
+      title: 'Watchtower',
+      sub: moneyText(meta.watchMarks, 'marks'),
       icon: 'marks',
       immediate: true,
       body: ['Spend Watch Marks on permanent bonuses that carry between runs.'],
@@ -1282,16 +1371,14 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     {
       id: 'endless',
       title: 'Endless Watch',
-      sub: 'Survival',
-      glyph: '∞',
+      icon: 'endless',
       color: 'var(--teal)',
-      body: ['Three lives, escalating waves, rooms between each one.'],
+      body: ['Three retries, escalating waves, rooms between each one.'],
       action: { label: 'Begin', run: () => game.startEndless() },
     },
     {
       id: 'settings',
       title: 'Settings',
-      sub: 'Options',
       icon: 'settings',
       immediate: true,
       body: ['Audio, motion, contrast, scale, colour vision, assist and the first-run tips.'],

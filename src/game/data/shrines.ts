@@ -27,7 +27,7 @@ const SHRINES: ShrineOffer[] = [
   {
     id: 'iron',
     title: 'Trial of Iron',
-    boon: '+4 STR to every Sentinel',
+    boon: '+4 STR to every hero',
     curse: 'The base takes 3 damage now',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({ ...s, stats: { ...s.stats, str: s.stats.str + 4 } })),
@@ -37,7 +37,7 @@ const SHRINES: ShrineOffer[] = [
   {
     id: 'wind',
     title: 'Shrine of Wind',
-    boon: '+4 DEX to every Sentinel',
+    boon: '+4 DEX to every hero',
     curse: 'Lose 40 gold',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({ ...s, stats: { ...s.stats, dex: s.stats.dex + 4 } })),
@@ -47,7 +47,7 @@ const SHRINES: ShrineOffer[] = [
   {
     id: 'mind',
     title: 'Font of Mind',
-    boon: '+4 INT to every Sentinel',
+    boon: '+4 INT to every hero',
     curse: 'The base takes 3 damage now',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({ ...s, stats: { ...s.stats, int: s.stats.int + 4 } })),
@@ -57,7 +57,7 @@ const SHRINES: ShrineOffer[] = [
   {
     id: 'thorn',
     title: 'Bramble Altar',
-    boon: '+6 Thorns and +3 Patience to every Sentinel',
+    boon: '+6 Thorns and +3 Patience to every hero',
     curse: 'Lose 30 gold',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({ ...s, thorns: s.thorns + 6, patience: s.patience + 3 })),
@@ -67,7 +67,7 @@ const SHRINES: ShrineOffer[] = [
   {
     id: 'blood',
     title: 'Blood Pact',
-    boon: '+3 to ALL stats for every Sentinel',
+    boon: '+3 to ALL stats for every hero',
     curse: 'The base takes 5 damage now',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({
@@ -81,7 +81,7 @@ const SHRINES: ShrineOffer[] = [
     id: 'greed',
     title: "Miser's Bargain",
     boon: 'Gain 90 gold',
-    curse: '−2 Patience to every Sentinel',
+    curse: '−2 Patience to every hero',
     apply: ({ roster }) => ({
       roster: bump(roster, (s) => ({ ...s, patience: Math.max(0, s.patience - 2) })),
       goldDelta: 90,

@@ -132,10 +132,8 @@ The shell is implemented in `src/ui/shell/` and is **the game's UI** — it is
 what loads. Fieldwatch is a mobile app, so the shell is the only layout that
 matters; it caps at 520px and centres.
 
-`?shell=0` falls back to the pre-shell screens in `src/ui/screens/` and sticks;
-`?shell=1` returns. That fallback exists only so the two can be compared while
-the shell settles — it is not a supported mode, and the old screens are
-expected to be deleted once the shell has been played in properly.
+The pre-shell screens (`src/ui/screens/`, the `?shell=0` fallback) have been
+deleted; the shell is the only UI.
 
 | File | Role |
 | --- | --- |

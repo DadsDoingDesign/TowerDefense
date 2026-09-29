@@ -13,5 +13,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "balance", "tests"]
+  "include": ["vite.config.ts", "vitest.config.ts", "build", "balance", "tests"]
 }

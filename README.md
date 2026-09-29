@@ -36,7 +36,7 @@ npm run preview    # serve the production build
 
 ```
 src/
-  main.tsx, App.tsx          App entry; loads the Root Shell (legacy UI behind ?shell=0)
+  main.tsx, App.tsx          App entry; loads the Root Shell
   pwa.ts                     service-worker registration (worker generated in vite.config.ts)
   audio/                     procedural SFX, the score, and the music director
   game/
@@ -48,7 +48,7 @@ src/
   state/                     Zustand stores: run (gameStore), meta, settings; run snapshot
   ui/
     shell/                   Root Shell — the UI the game ships (see docs/FIGMA.md)
-    screens/, components/    legacy UI, lazy-loaded, slated for deletion
+    components/              RunMapView + EvolutionModal (rendered by the shell)
     BattleCanvas.tsx         requestAnimationFrame loop, FX differ, tap-to-place input
   styles/                    design tokens (global.css) + shell/page CSS
 public/

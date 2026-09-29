@@ -29,18 +29,19 @@
  *   reload, and without it a freshly generated item could collide with the id of
  *   a restored one.
  */
-import { restoreIdCounter } from '../game/core/rng'
+import { getNode } from '../game/data/archetypeTree'
 import { ENEMY_TYPES } from '../game/data/enemies'
 import { FIRST_MAP, mapById } from '../game/data/maps'
-import { restoreNameCounters, type NameCounters } from '../game/data/sentinels'
+import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
 import type { BattleResult } from '../game/engine/engine'
-import type { RunMap } from '../game/data/runmap'
+import type { MapNode, RunMap } from '../game/data/runmap'
 import type { RewardCard } from '../game/data/rewards'
 import type {
   Archetype,
   EffectMods,
   GameMap,
+  Enchantment,
   Item,
   ItemRarity,
   ItemSlot,
@@ -51,6 +52,7 @@ import type {
   WaveDef,
 } from '../game/types'
 import { MAX_BANNER } from './metaStore'
+import { migrateChallenge, type RunChallenge } from './daily'
 import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
 
 export const RUN_SNAPSHOT_KEY = 'fieldwatch-run'
@@ -74,7 +76,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 5
+export const RUN_SNAPSHOT_VERSION = 6
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -144,6 +146,8 @@ export interface RunSnapshot {
    * exactly right: nothing before v3 could have flown one.
    */
   runBanner: number
+  /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
+  challenge: RunChallenge
   inventory: Item[]
   runKills: number
   runDowns: number
@@ -233,6 +237,7 @@ export interface RunStateSource {
   enemyHpMult: number
   threat: number
   runBanner: number
+  challenge: RunChallenge
   inventory: Item[]
   runKills: number
   runDowns: number
@@ -290,6 +295,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     enemyHpMult: s.enemyHpMult,
     threat: s.threat,
     runBanner: s.runBanner,
+    challenge: s.challenge,
     inventory: s.inventory,
     runKills: s.runKills,
     runDowns: s.runDowns,
@@ -389,6 +395,17 @@ const ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
 const isObj = (x: unknown): x is Record<string, unknown> =>
   !!x && typeof x === 'object' && !Array.isArray(x)
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x)
+/**
+ * A number the combat layer can multiply without overflowing.
+ *
+ * `isNum` alone let `rateMult: 1e308` through, and the profile's product came
+ * out `Infinity` — not NaN, but just as broken, and one `Infinity * 0` from a
+ * NaN. No build has ever rolled a stat, affix or base value anywhere near a
+ * million, so the bound is corruption detection, not balance: it leaves the
+ * "shape, not range" rule below intact for every value a real save can hold.
+ */
+const MAX_MAGNITUDE = 1e6
+const isStat = (x: unknown): x is number => isNum(x) && Math.abs(x) <= MAX_MAGNITUDE
 const isStr = (x: unknown): x is string => typeof x === 'string'
 
 const ITEM_SLOTS: readonly ItemSlot[] = ['oneHand', 'twoHand', 'offHand', 'body']
@@ -461,10 +478,10 @@ function validMods(raw: unknown): raw is EffectMods {
     if (v === undefined) continue
     const struct = (MOD_STRUCT_FIELDS as Record<string, readonly string[] | undefined>)[k]
     if (struct) {
-      if (!isObj(v) || !struct.every((f) => isNum(v[f]))) return false
+      if (!isObj(v) || !struct.every((f) => isStat(v[f]))) return false
     } else if (k in MOD_BOOL_FIELDS) {
       if (typeof v !== 'boolean') return false
-    } else if (k in MOD_KEYS && !isNum(v)) {
+    } else if (k in MOD_KEYS && !isStat(v)) {
       return false
     }
   }
@@ -488,31 +505,104 @@ function validWave(raw: unknown): raw is WaveDef {
   )
 }
 
-/** An item the gear screens can render: a real slot, a real rarity, real affixes. */
+/** Absent, or a finite number. JSON drops `undefined`, so `null` counts as absent. */
+const optNum = (x: unknown): boolean => x === undefined || x === null || isStat(x)
+
+/**
+ * Every key of `Item['base']`. Exhaustive for the same reason `MOD_KEYS` is: a
+ * new base stat that this file forgets fails the compile here.
+ */
+const ITEM_BASE_KEYS: Record<keyof Item['base'], true> = {
+  physDamage: true, magDamage: true, attackSpeed: true, critChance: true, rangeMult: true, splashAdd: true,
+}
+
+/**
+ * An item's flat base block whose numbers are numbers.
+ *
+ * `validItem` used to check only that `base` was an object. `gearOf` adds
+ * `physDamage`, `attackSpeed`, `rangeMult` straight into the combat profile, so
+ * `{"physDamage":"lots"}` loaded cleanly and resumed a hero whose damage was
+ * the string concatenation `"0lots"` times a number — NaN — the silent failure
+ * `validMods` exists to refuse. Unknown keys pass, as they do for mods.
+ */
+function validBase(raw: unknown): boolean {
+  if (!isObj(raw)) return false
+  for (const [k, v] of Object.entries(raw)) if (k in ITEM_BASE_KEYS && !optNum(v)) return false
+  return true
+}
+
+/** Optional partial core stats: each present stat a finite number. */
+const validPartialStats = (raw: unknown): boolean =>
+  raw === undefined || raw === null || (isObj(raw) && optNum(raw.str) && optNum(raw.dex) && optNum(raw.int))
+
+/**
+ * The stat-granting shape an enchantment and a reward card's grant share:
+ * optional stats, thorns, patience and mods, every number a number.
+ */
+const validGrantBlock = (raw: Record<string, unknown>): boolean =>
+  validPartialStats(raw.stats) &&
+  optNum(raw.thorns) &&
+  optNum(raw.patience) &&
+  (raw.mods === undefined || raw.mods === null || validMods(raw.mods))
+
+function validEnchantment(raw: unknown): raw is Enchantment {
+  return isObj(raw) && isStr(raw.id) && isStr(raw.label) && validGrantBlock(raw)
+}
+
+/** A free upgrade-path grant: absent, or a path id and a finite level count. */
+const validUpgradeGrant = (raw: unknown): boolean =>
+  raw === undefined || raw === null || (isObj(raw) && isStr(raw.path) && isStat(raw.levels))
+
+/** An item the gear screens can render AND the combat layer can add up. */
 function validItem(raw: unknown): raw is Item {
   if (!isObj(raw)) return false
   if (!isStr(raw.id) || !isStr(raw.name)) return false
   if (!ITEM_SLOTS.includes(raw.slot as ItemSlot)) return false
   if (!RARITIES.includes(raw.rarity as ItemRarity)) return false
-  if (!isObj(raw.base)) return false
+  if (!validBase(raw.base)) return false
+  if (raw.keepsake !== undefined && typeof raw.keepsake !== 'boolean') return false
+  if (!validUpgradeGrant(raw.grantUpgrade)) return false
   if (!Array.isArray(raw.enchantments)) return false
-  return raw.enchantments.every((e) => isObj(e) && isStr(e.id) && isStr(e.label))
+  return raw.enchantments.every(validEnchantment)
+}
+
+/** A fork mutation: its mods are merged into combat, so they are held to `validMods`. */
+function validMutation(raw: unknown): raw is Mutation {
+  return isObj(raw) && isStr(raw.id) && validMods(raw.mods) && validUpgradeGrant(raw.grantUpgrade)
 }
 
 const validStats = (raw: unknown): boolean =>
-  isObj(raw) && isNum(raw.str) && isNum(raw.dex) && isNum(raw.int)
+  isObj(raw) && isStat(raw.str) && isStat(raw.dex) && isStat(raw.int)
 
 const validEquipSlot = (raw: unknown): boolean => raw === null || raw === undefined || validItem(raw)
+
+/** A node id the archetype tree has — `getNode` throws on anything else. */
+const knownNode = (id: unknown): boolean => {
+  if (!isStr(id)) return false
+  try {
+    getNode(id)
+    return true
+  } catch {
+    return false
+  }
+}
 
 /** A Sentinel `combat.ts` can build a profile from without hitting `undefined`. */
 function validSentinel(raw: unknown): raw is Sentinel {
   if (!isObj(raw)) return false
   if (!isStr(raw.id) || !isStr(raw.name)) return false
   if (!ARCHETYPES.includes(raw.archetype as Archetype)) return false
-  if (!Array.isArray(raw.branchPath) || !raw.branchPath.every(isStr)) return false
+  // `computeCombat` reads the attack off `getNode(branchPath[0]).base` and folds
+  // in every node's mods: an empty path, an unknown id or a root with no base
+  // throws (or NaNs) on the first frame of the resumed battle.
+  const path = raw.branchPath
+  if (!Array.isArray(path) || path.length === 0 || !path.every(knownNode)) return false
+  if (!getNode(path[0] as string).base) return false
   if (!validStats(raw.stats)) return false
-  if (!isNum(raw.thorns) || !isNum(raw.patience) || !isNum(raw.level) || !isNum(raw.xp)) return false
+  if (!isStat(raw.thorns) || !isStat(raw.patience) || !isNum(raw.level) || !isNum(raw.xp)) return false
   if (!isStr(raw.color) || !isStr(raw.accent)) return false
+  if (raw.mutations !== undefined && !(Array.isArray(raw.mutations) && raw.mutations.every(validMutation))) return false
+  if (raw.upgrades !== undefined && !(isObj(raw.upgrades) && Object.values(raw.upgrades).every(isStat))) return false
   const eq = raw.equipment
   if (!isObj(eq)) return false
   return validEquipSlot(eq.mainHand) && validEquipSlot(eq.offHand) && validEquipSlot(eq.body)
@@ -531,7 +621,7 @@ function validRewardCard(raw: unknown): raw is RewardCard {
   if (!isStr(raw.id) || !isStr(raw.title) || !isStr(raw.desc)) return false
   if (!RARITIES.includes(raw.rarity as ItemRarity)) return false
   if (raw.kind === 'item') return validItem(raw.item)
-  if (raw.kind === 'stat') return isObj(raw.grant)
+  if (raw.kind === 'stat') return isObj(raw.grant) && validGrantBlock(raw.grant)
   return false
 }
 
@@ -562,12 +652,12 @@ function migrateNameCounters(raw: unknown): NameCounters {
 function migrateCrossroads(raw: unknown): CrossroadsSnap | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
-  const revealed = o.revealed as CrossroadsSnap['revealed'] | undefined
+  const revealed = o.revealed as CrossroadsSnap['revealed'] | undefined | null
   return {
     recruits: arr<Sentinel>(o.recruits),
-    mutations: arr<Mutation>(o.mutations).filter((m) => m && typeof m.id === 'string'),
+    mutations: arr<unknown>(o.mutations).filter(validMutation),
     mutationHeroId: typeof o.mutationHeroId === 'string' ? o.mutationHeroId : null,
-    ...(revealed && typeof revealed === 'object' && revealed.mutation ? { revealed } : {}),
+    ...(isObj(revealed) && isStr(revealed.heroName) && validMutation(revealed.mutation) ? { revealed } : {}),
   }
 }
 
@@ -643,8 +733,17 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // A version tag cannot tell us what a payload means, so `coherent()` below
   // asks the payload itself instead, and every version goes through it.
 
+  // Every node must be an object with a string id: `coherent()` maps over them
+  // and a single `null` in the array used to throw out of the LOAD — which runs
+  // inside every settle, so New Run crashed on every tap, forever. An edge
+  // that is not a from/to pair is dropped: edges are only ever read to derive
+  // reachability, and a missing one costs a route, not a run.
   const runMap = o.runMap as RunMap | undefined
-  if (!runMap || !Array.isArray(runMap.nodes) || runMap.nodes.length === 0) return null
+  if (!isObj(runMap) || !Array.isArray(runMap.nodes) || runMap.nodes.length === 0) return null
+  if (!runMap.nodes.every((n: unknown) => isObj(n) && isStr(n.id))) return null
+  const edges = arr<unknown>(runMap.edges).filter(
+    (e): e is RunMap['edges'][number] => isObj(e) && isStr(e.from) && isStr(e.to),
+  )
   const roster = arr<Sentinel>(o.roster)
   const currentNodeId = typeof o.currentNodeId === 'string' ? o.currentNodeId : ''
   if (!currentNodeId) return null
@@ -686,7 +785,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     runSeed: num(o.runSeed, 0),
     screen: str<Screen>(o.screen, 'map', SCREENS),
     runPhase: str<RunPhase>(o.runPhase, 'active', PHASES),
-    runMap: { nodes: runMap.nodes, edges: arr(runMap.edges), layers: num(runMap.layers, 11) },
+    runMap: { nodes: runMap.nodes as MapNode[], edges, layers: num(runMap.layers, 11) },
     currentNodeId,
     clearedNodeIds: arr<string>(o.clearedNodeIds),
     reachableNodeIds: arr<string>(o.reachableNodeIds),
@@ -705,7 +804,12 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // this number and a 99 indexes past the end of the array. Whether a value is
     // in range is a property of the value, not of who happens to read it.
     runBanner: clampBanner(o.runBanner),
-    inventory,
+    challenge: migrateChallenge(o.challenge),
+    // v5 → v6: the campaign kit used to be dealt into the pack at `newRun`,
+    // before the hero was picked. It is dealt at the pick now, so a v5 payload
+    // parked on hero-pick drops the old roster-blind kit instead of carrying
+    // it beside the new one.
+    inventory: version < 6 && o.screen === 'heroPick' && roster.length === 0 ? [] : inventory,
     runKills: Math.max(0, num(o.runKills, 0)),
     runDowns: Math.max(0, num(o.runDowns, 0)),
     marksEarned: Math.max(0, num(o.marksEarned, 0)),
@@ -717,10 +821,14 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
         'first',
         ['first', 'lowestHp', 'strongest', 'nearest'] as const,
       ),
-      holdFire: bool((o.tactics as Tactics | undefined)?.holdFire, false),
+      // `holdFire` was cut (it cost stop rate in 7 of 8 measured cells); a
+      // payload that still carries it has it dropped here, not restored.
     },
     lastResult: migrateResult(o.lastResult),
-    lastLoot: arr<Item>(o.lastLoot),
+    // Display-only (the summary's loot line — the items themselves are already
+    // in the inventory), so a malformed entry is dropped rather than refusing
+    // the run over a line of copy.
+    lastLoot: arr<unknown>(o.lastLoot).filter(validItem),
     merchant: merchant as MerchantStock | null,
     shrineOfferId: typeof o.shrineOfferId === 'string' ? o.shrineOfferId : null,
     recruitOptions,
@@ -902,6 +1010,8 @@ export interface SnapshotPayout {
   wins: number
   /** Banner the run was flying — it scales what the settle pays (H16). */
   banner: number
+  /** Daily / custom-seed facts: a scored Daily records, a custom seed is unranked. */
+  challenge: RunChallenge
 }
 
 /**
@@ -936,6 +1046,7 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     runSeed: num(o.runSeed, 0),
     mode: str<GameMode>(o.mode, 'campaign', MODES),
     banner: clampBanner(o.runBanner),
+    challenge: migrateChallenge(o.challenge),
     depth: Math.max(0, cleared.size - 1),
     kills: Math.max(0, num(o.runKills, 0)),
     downs: Math.max(0, num(o.runDowns, 0)),
@@ -978,10 +1089,32 @@ export interface LoadedRun {
 export function loadRunSnapshot(): LoadedRun {
   const raw = readJson<unknown>(RUN_SNAPSHOT_KEY)
   if (raw === null) return { snap: null, unresumable: null }
-  const snap = migrateSnapshot(raw)
-  if (!snap) return { snap: null, unresumable: payoutFromRaw(raw) }
-  restoreIdCounter(snap.idCounter)
-  restoreNameCounters(snap.nameCounters)
+  /*
+   * A throw in here is not a bad save, it is a stuck game: this runs inside
+   * every settle, so `newRun` and `returnToHub` would re-throw on every tap
+   * while the payload that caused it sat in storage untouched. The validators
+   * are fuzzed never to throw (tests/runSnapshot.fuzz.test.ts); this is the
+   * backstop that keeps a missed case unresumable-but-payable instead.
+   */
+  let snap: RunSnapshot | null
+  try {
+    snap = migrateSnapshot(raw)
+  } catch {
+    snap = null
+  }
+  if (!snap) {
+    let unresumable: SnapshotPayout | null = null
+    try {
+      unresumable = payoutFromRaw(raw)
+    } catch {
+      unresumable = null
+    }
+    return { snap: null, unresumable }
+  }
+  // Deliberately NO `restoreIdCounter` / `restoreNameCounters` here. Loading is
+  // also how the boot prompt and every settle PEEK at the save, and bumping the
+  // process-global counters on a peek advanced them for a run nobody resumed.
+  // `resumeRun` restores both, at the moment the run actually comes back.
   return { snap, unresumable: null }
 }
 

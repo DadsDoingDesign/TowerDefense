@@ -1716,3 +1716,335 @@
     display: none;
   }
 }
+
+/* =====================================================================
+   Wave 1 — UI and copy quick wins
+   Contrast, one mark per currency, the Gate label, the stat grid, the
+   selector's overflow cue, the map's future nodes, and the node preview.
+   ===================================================================== */
+
+/* --- one mark per currency --------------------------------------------- */
+.money {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.money + .money {
+  margin-left: 6px;
+}
+
+/* --- band 1: the Gate says what it is ------------------------------------ */
+.sh-base-word {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sh-base-val {
+  color: var(--text);
+}
+
+/* --- band 3: the empty recruit slot is readable, not ghosted -------------
+   It was the whole card at opacity .5 — "Open recruit" measured 2.35:1. It is
+   a placeholder, so it keeps the dashed border and muted ink, at full opacity:
+   --muted on --surface is 5.79:1. */
+.sh-hero.empty {
+  opacity: 1;
+}
+.sh-hero.empty .sh-hero-name.muted,
+.sh-hero.empty .sh-hero-sub {
+  color: var(--muted);
+}
+
+/* --- band 3: the party row says when there is more of it -----------------
+   Four and five heroes clip off the right edge at 390px and nothing said so.
+   Snap scrolling keeps a card from stopping half-cut, and a fade + chevron on
+   whichever edge has more (set by `SelectorBand` from the scroll position) is
+   the cue. The cue is decoration over a row that is also reachable by swipe,
+   by keyboard (focus scrolls into view) and by the screen reader. */
+.sh-selector {
+  position: relative;
+}
+.sh-selector-row {
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 14px;
+}
+.sh-selector-row > .sh-hero {
+  scroll-snap-align: start;
+}
+.sh-selector::before,
+.sh-selector::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 34px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+.sh-selector::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--bg-2) 20%, rgba(42, 31, 22, 0));
+}
+.sh-selector::after {
+  right: 0;
+  background:
+    no-repeat center / 10px 16px
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16'%3E%3Cpath d='M2 2l6 6-6 6' fill='none' stroke='%23e0ac4c' stroke-width='2.5'/%3E%3C/svg%3E"),
+    linear-gradient(270deg, var(--bg-2) 30%, rgba(42, 31, 22, 0));
+}
+.sh-selector[data-more-left='1']::before,
+.sh-selector[data-more-right='1']::after {
+  opacity: 1;
+}
+
+/* --- band 4: disabled controls stay legible -------------------------------
+   `opacity: .45` took a disabled "Start Wave" to 1.93:1, while the hint next
+   to it is THE instruction a new player needs. Disabled is a colour state now,
+   not a transparency: --muted on --panel-3 is 4.69:1, and the teal border
+   keeps the primary's identity. */
+.sh-btn:disabled {
+  opacity: 1;
+  background: var(--panel-3);
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
+.sh-btn.primary:disabled {
+  background: var(--panel-3);
+  border-color: var(--cta);
+  color: var(--muted);
+}
+.sh-wavebar-hint {
+  color: var(--text);
+}
+/* A quiet destructive control: bad-ink outline, no fill. */
+.sh-btn.quiet-danger {
+  background: transparent;
+  border-color: rgba(239, 131, 104, 0.5);
+  color: var(--bad-text);
+}
+.sh-scrap {
+  margin-top: 2px;
+}
+.sh-foot-hint {
+  align-self: center;
+}
+
+/* --- band 4: the speed control says it is one ---------------------------- */
+.sh-speed {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+.sh-speed-word {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sh-speed-val {
+  font-size: var(--fs-sm);
+}
+
+/* --- band 4: the stat grid ----------------------------------------------
+   Short one-word labels over number/head pairs, so no label wraps and the
+   last row is not pushed under the pinned foot. */
+.sh-cell.wide {
+  grid-column: 1 / -1;
+}
+.sh-cell-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sh-cell-vals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.sh-cell-val {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.sh-cell-val b {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.sh-cell-val small {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.sh-line.head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* The ⓘ disclosure. An 18px visible disc with the hit area grown to the touch
+   floor by the pseudo-element, so it does not push the label's line height. */
+.sh-info {
+  position: relative;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  text-transform: none;
+  cursor: pointer;
+}
+.sh-info::after {
+  content: '';
+  position: absolute;
+  inset: -13px;
+}
+.sh-info.on {
+  background: var(--accent);
+  color: var(--ink-on-fill);
+}
+.sh-info-body {
+  flex: 1 0 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 7px;
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
+}
+@media (pointer: coarse) {
+  .sh-info {
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+/* --- band 4: rarity said three ways ------------------------------------- */
+.rar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--rail);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rar-tag-pips {
+  display: inline-flex;
+  gap: 2px;
+}
+.rar-tag-pips i {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--rail);
+}
+.rar-tag-suffix {
+  color: var(--muted);
+  font-weight: 600;
+}
+.sh-context-sub .rar-tag {
+  text-transform: uppercase;
+}
+
+/* --- band 2: the run map's future ---------------------------------------
+   Out-of-reach nodes were the whole node at opacity .32 — 1.89:1, 11px
+   labels. They are a dimmer SURFACE now rather than a transparent one: a
+   full-opacity label in --muted (5.3:1 on the node), a dashed border, and the
+   mark held back so the lit frontier still leads. */
+.sh-stage.stage-map .map-node {
+  width: 78px;
+}
+.sh-stage.stage-map .mn-label {
+  font-size: var(--fs-xs);
+}
+.sh-stage.stage-map .mn-glyph {
+  display: grid;
+  place-items: center;
+  height: 32px;
+}
+.sh-stage.stage-map .mn-glyph .fw-i {
+  --fw-i-size: 32px;
+}
+.sh-stage.stage-map .map-node.locked {
+  opacity: 1;
+  background: var(--panel);
+  border-style: dashed;
+}
+.sh-stage.stage-map .map-node.locked .mn-label {
+  color: var(--muted);
+}
+.sh-stage.stage-map .map-node.locked .mn-glyph {
+  opacity: 0.72;
+}
+.sh-stage.stage-map .map-node.cleared {
+  opacity: 0.72;
+}
+.sh-stage.stage-map .map-node.reachable .mn-label {
+  color: var(--text);
+  font-weight: 700;
+}
+.sh-stage.stage-map .map-node.focused {
+  background: var(--panel-3);
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 14px rgba(224, 172, 76, 0.45);
+  animation: none;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-stage.stage-map .map-node.reachable {
+    animation: none;
+  }
+}
+
+/* A head led by an icon reads left to right: icon, then the name beside it.
+   `space-between` pushed a lone name to the far edge once the sub-label moved
+   into the body (Wave 1). */
+.sh-context-head.start {
+  justify-content: flex-start;
+  align-items: center;
+}
+.sh-context-head.start strong {
+  min-width: 0;
+}
+
+/* The map scrolls under the header band; a hard edge there read as the top
+   row's labels being clipped. Fade the top 22px so it reads as "more above". */
+.sh-stage.stage-map .run-map-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+}

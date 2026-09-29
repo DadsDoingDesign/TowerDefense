@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { setAudioVolumes } from '../audio/audio'
-import { applyThemeCss, setActiveTheme } from '../game/render/themes'
-import { bool, clampNum, safePersistStorage, str } from './storage'
+import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
+import { bool, clampNum, onStorageKeyChange, safePersistStorage, str } from './storage'
 
 export type UiScale = 'normal' | 'large'
 
@@ -37,9 +37,9 @@ export interface AssistProfile {
 }
 
 const ASSIST: Record<AssistLevel, AssistProfile> = {
-  off: { baseDamageMul: 1, label: 'Off', blurb: 'The watch stands as it was written.' },
-  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'The line takes 40% less damage when something gets through.' },
-  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'The line takes 70% less damage when something gets through.' },
+  off: { baseDamageMul: 1, label: 'Off', blurb: 'The game as it was written.' },
+  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'The Gate takes 40% less damage when something gets through.' },
+  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'The Gate takes 70% less damage when something gets through.' },
 }
 
 /**
@@ -56,14 +56,29 @@ export const assistProfile = (level: AssistLevel): AssistProfile => ASSIST[level
  * They live in settings rather than in the run so they survive a run ending,
  * and so "Show the tips again" is one row on the settings page.
  */
-export type TeachId = 'deploy' | 'equip' | 'threat' | 'evolve'
-export const TEACH_IDS = ['deploy', 'equip', 'threat', 'evolve'] as const
+export type TeachId = 'deploy' | 'equip' | 'threat' | 'evolve' | 'gold'
+export const TEACH_IDS = ['deploy', 'equip', 'threat', 'evolve', 'gold'] as const
 export type TeachSeen = Record<TeachId, boolean>
 
-const NO_TEACH: TeachSeen = { deploy: false, equip: false, threat: false, evolve: false }
+const NO_TEACH: TeachSeen = { deploy: false, equip: false, threat: false, evolve: false, gold: false }
 
+/**
+ * The audio settings — and the API the Settings row's sliders are wired to.
+ *
+ * Four independent levels, each 0–1 and persisted:
+ *   - `master` — everything.                       setter: `setMasterVolume`
+ *   - `music`  — the score. 0 = off (see below).   setter: `setMusicVolume`
+ *   - `game`   — "Effects": combat + ceremony.     setter: `setEffectsVolume`
+ *   - `ui`     — interface taps and chimes.        setter: `setUiVolume`
+ * plus `muted` (`toggleMute`) and the music on/off switch (`toggleMusic`).
+ *
+ * The levels are what the player chose; the fixed per-bus loudness makeup
+ * lives in `src/audio/mix.ts` and is applied on top, so a slider at 1 is the
+ * designed maximum and the defaults below are the calibrated mix.
+ */
 export interface AudioSettings {
   master: number
+  /** The Effects bus — combat and ceremony sounds. */
   game: number
   ui: number
   /**
@@ -73,11 +88,22 @@ export interface AudioSettings {
    * buses because a score that competes with combat feedback is a defect.
    */
   music: number
+  /**
+   * The music level to come back to when the score is switched back on — the
+   * last non-zero `music`. Without it, "Music: off → on" threw away whatever
+   * the player had set the slider to and reset it to the default.
+   */
+  musicLevel: number
   muted: boolean
 }
 
 /** Where the Music row puts the dial when it is switched back on. */
 export const MUSIC_DEFAULT = 0.55
+
+/** Is the score switched on? (`music` at 0 means off — the one definition.) */
+export const musicOn = (a: Pick<AudioSettings, 'music'>): boolean => a.music > 0
+
+const vol01 = (v: number, fallback: number): number => clampNum(v, fallback, 0, 1)
 
 interface SettingsState {
   audio: AudioSettings
@@ -89,6 +115,14 @@ interface SettingsState {
   /** Which teaching beats the player has already been shown. */
   taught: TeachSeen
   setAudio: (patch: Partial<AudioSettings>) => void
+  /** Master level, 0–1. */
+  setMasterVolume: (v: number) => void
+  /** Music level, 0–1. 0 switches the score off; any other value is remembered for `toggleMusic`. */
+  setMusicVolume: (v: number) => void
+  /** Effects (combat + ceremony) level, 0–1. */
+  setEffectsVolume: (v: number) => void
+  /** Interface level, 0–1. */
+  setUiVolume: (v: number) => void
   toggleMute: () => void
   setReducedMotion: (v: boolean) => void
   setHighContrast: (v: boolean) => void
@@ -103,8 +137,8 @@ interface SettingsState {
 const prefersReducedMotion =
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Persisted settings schema version (M11). */
-export const SETTINGS_VERSION = 1
+/** Persisted settings schema version (M11). 2: `audio.musicLevel`. */
+export const SETTINGS_VERSION = 2
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
@@ -134,6 +168,10 @@ export function migrateSettings(persisted: unknown, _version: number): Persisted
       // A payload written before music existed has no `music` key at all, so it
       // takes the default and the returning player simply gets the score.
       music: clampNum(a.music, MUSIC_DEFAULT, 0, 1),
+      // v1 had no `musicLevel`: music on/off was `music` alone, and "off" was
+      // stored as 0. Come back to the level the player had if there is one,
+      // else the default — never to 0, which would make "on" silent.
+      musicLevel: readMusicLevel(a),
       muted: bool(a.muted, false),
     },
     reducedMotion: bool(o.reducedMotion, prefersReducedMotion),
@@ -147,6 +185,13 @@ export function migrateSettings(persisted: unknown, _version: number): Persisted
     // that is silently already "seen".
     taught: readTaught(o.taught),
   }
+}
+
+function readMusicLevel(a: Record<string, unknown>): number {
+  const stored = clampNum(a.musicLevel, 0, 0, 1)
+  if (stored > 0) return stored
+  const music = clampNum(a.music, 0, 0, 1)
+  return music > 0 ? music : MUSIC_DEFAULT
 }
 
 function readTaught(v: unknown): TeachSeen {
@@ -174,7 +219,7 @@ function applyAccessibility(s: {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      audio: { master: 0.8, game: 0.7, ui: 0.9, music: MUSIC_DEFAULT, muted: false },
+      audio: { master: 0.8, game: 0.7, ui: 0.9, music: MUSIC_DEFAULT, musicLevel: MUSIC_DEFAULT, muted: false },
       reducedMotion: prefersReducedMotion,
       highContrast: false,
       uiScale: 'normal',
@@ -186,6 +231,13 @@ export const useSettingsStore = create<SettingsState>()(
         const audio = { ...get().audio, ...patch }
         set({ audio })
         setAudioVolumes(audio)
+      },
+      setMasterVolume: (v) => get().setAudio({ master: vol01(v, get().audio.master) }),
+      setEffectsVolume: (v) => get().setAudio({ game: vol01(v, get().audio.game) }),
+      setUiVolume: (v) => get().setAudio({ ui: vol01(v, get().audio.ui) }),
+      setMusicVolume: (v) => {
+        const music = vol01(v, get().audio.music)
+        get().setAudio(music > 0 ? { music, musicLevel: music } : { music: 0 })
       },
       toggleMute: () => {
         const audio = { ...get().audio, muted: !get().audio.muted }
@@ -202,8 +254,8 @@ export const useSettingsStore = create<SettingsState>()(
        * up both.
        */
       toggleMusic: () => {
-        const cur = get().audio.music
-        const audio = { ...get().audio, music: cur > 0 ? 0 : MUSIC_DEFAULT }
+        const a = get().audio
+        const audio = a.music > 0 ? { ...a, music: 0, musicLevel: a.music } : { ...a, music: a.musicLevel > 0 ? a.musicLevel : MUSIC_DEFAULT }
         set({ audio })
         setAudioVolumes(audio)
       },
@@ -267,9 +319,14 @@ export const useSettingsStore = create<SettingsState>()(
   ),
 )
 
+// Settings changed in another tab apply here too (and re-run the rehydrate
+// hook above, so accessibility and volumes follow), instead of being reverted
+// by this tab's next save.
+onStorageKeyChange('fieldwatch-settings', () => void useSettingsStore.persist.rehydrate())
+
 /** The UI is locked to the Tiny Swords art direction — no theme picker. */
 export function initTheme(): void {
-  applyThemeCss(setActiveTheme('tinyswords'))
+  applyThemeCss(setActiveTheme(DEFAULT_THEME))
 }
 
 /** Apply persisted accessibility + audio settings before first paint. */

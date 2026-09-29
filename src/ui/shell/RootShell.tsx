@@ -24,7 +24,7 @@ import '../../styles/shell.css'
 /** The Watchtower submenus have no board copy of their own. */
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
-  perks: { title: 'Upgrade Perks', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
+  perks: { title: 'Watchtower', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision and assist.' },
 }
 

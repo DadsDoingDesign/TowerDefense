@@ -1951,3 +1951,64 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   `src/ui`, no `src/styles`, no `scripts/`. The concurrent balance pass changed
   `archetypeTree.ts`'s `radiant` node (`healAura` now `hps: 38, radius: 160`)
   and added `thornsIgnite`; the failure is theirs to close.
+
+- **2026-09-29 — paper-doll compositor: per-pack anchors, per-frame clip.**
+  Rendered through the slice harness (`harness/`, fieldwatch pack, 390 and 320
+  phone scales): all five loadouts still read apart at idle and attack, grips
+  land in the fist. Two fixes behind that render: gear only uses anchors drawn
+  for its own pack (Tiny Swords now draws bare instead of fieldwatch's 64px
+  grips on 84px cells), and each frame is clipped to its cell. The placeholder
+  fighter's frame-3 reach drops 14→12 px so the sword/greatsword/staff no
+  longer overhang the 98px attack cell — `npm run anchors:check` now fails the
+  build on any such overhang. The composite cache is an LRU that also keeps
+  incomplete composites (keyed by sprite-load generation): 60 frames of an
+  unauthored-weapon loadout went from a re-bake per frame to 2.8 ms total.
+
+- **2026-09-29 — audio Phase 1: loudness, phone speakers, and the silent
+  deploy.** Rendered every cue through the OfflineAudioContext harness and
+  measured (ebur128 / pyloudnorm, plus a 4th-order 400 Hz HPF as the phone).
+  Problems: the whole game ~10 LU too quiet (battle −26.5, hub −34.3 LUFS-I);
+  UI samples peak- not loudness-normalised (35 LU spread, a tap louder than a
+  crit, `reward` burying the rarity ladder); hit/leak/kick energy all under
+  250 Hz, so on a phone the leak warning was quieter than the music; deploying
+  a hero silent. Fixes: per-sample trims, bus makeup + glue/limiter chain
+  (battle −16.6 at 3× / −18.2 at 1×, hub −21.9, TP ≤ −2 dBTP), phone presence
+  layers (hit 2.6 dB under the score's median → 3.1 over; leak now 7.7 dB over
+  the score's p90), an even rarity ladder (~1.9 LU steps), a deploy "thock",
+  context suspension when inaudible, and hub-cue resume. Hierarchy re-checked:
+  crit > hit > shoot; wave/clear/victory above combat. Numbers live in
+  `src/audio/mix.ts`.
+
+- **2026-09-29 — Wave 1: UI and copy quick wins.** Sixteen verified findings,
+  fixed without a layout overhaul and reviewed on real renders (Playwright,
+  dev build, 390×844 / 375×667 / 320×568, plus a keyboard-only walk from the
+  menu to a posted hero). Before/after contact shots live in
+  `scratchpad/ui2/shots/{before,after}-*`.
+
+  What the renders caught that reading the code did not: the first node
+  preview head ellipsised the variant to "P." because the sub-label shared its
+  row; the rarity tag in the item head cut "Dagger" to "Dagg…"; "Not enough yet"
+  on every dimmed perk row truncated the perk names it was annotating (moved to
+  the price's accessible name); "TAP A CIRCLE" wrapped on the 92px hero card
+  and pushed its level off the bottom ("Place it"); the Patience ⓘ wrapped its
+  cell label onto two lines (moved beside the number); the long Spoils scope
+  ("Item · to your pack") cut item names to "Frenzie…" ("to pack"/"company",
+  and the detail now leads with the full name); the new Scrap notice above the
+  buttons would have shifted them on arm, so it sits below.
+
+  The load-bearing change is the map: a tap used to COMMIT the march, so the
+  WS8 variants never reached a decision. A tap (or keyboard focus) now previews
+  — variant, elite modifier, head count, champions, a damage-type hint and the
+  Threat step — and a second select or "March" commits. `tests/encounterPreview`
+  drives the real store's `selectNode` over 10 seeds × every fight node × Vow
+  0/2/5 and asserts deep equality with the preview; mutating the sibling
+  derivation by one fails all three cases.
+
+  Contrast: `--cta` #3f7d8c → #336e7e (3.79 → 4.66:1 under cream); disabled
+  controls are a colour state (4.69:1) instead of `opacity:.45` (1.93:1);
+  locked map nodes are a dim surface with a --muted label (5.3:1) instead of
+  `opacity:.32` (1.89:1); future roads 12% → 38% cream. Build slots have a
+  16 CSS px / 2 CSS px floor off `viewScale`, a dark halo under a cream ring,
+  and go solid gold with a pulse (static under reduced motion) over a dimmed
+  field while a hero is armed. Eleven atlas cells added (map nodes, ∞, perks),
+  cog/helm/thorns recoloured warm; `fw-icons:check` green at 89 keys / 8×12.

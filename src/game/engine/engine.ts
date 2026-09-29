@@ -212,7 +212,6 @@ export class GameEngine {
    */
   private baseDamageMul: number
   private tactics: Tactics
-  private holdThreshold: number
   private xpGained = new Map<string, number>()
   /** Set when an enemy spawns, so every Sentinel re-scores its target that tick (H4). */
   private retargetDirty = false
@@ -251,8 +250,7 @@ export class GameEngine {
       Number.isFinite(opts.baseDamageMul) && (opts.baseDamageMul as number) > 0
         ? (opts.baseDamageMul as number)
         : 1
-    this.tactics = opts.tactics ?? { focus: 'first', holdFire: false }
-    this.holdThreshold = this.tactics.holdFire ? this.path.length * 0.45 : 0
+    this.tactics = opts.tactics ?? { focus: 'first' }
     this.rng = new RNG(opts.seed)
     // Derived, not shared: cosmetic draws can never shift a combat roll.
     this.cosmeticRng = new RNG(hashSeed(opts.seed ?? 0, 'cosmetic'))
@@ -467,11 +465,11 @@ export class GameEngine {
       const rangeSq = s.profile.range * s.profile.range
       s.retargetIn -= dt
       const target0 = s.targetId ? this.enemies.find((e) => e.id === s.targetId) : undefined
-      // A target is stale when it died, left range, or slipped back behind the
-      // hold line; otherwise we still re-score on a cadence (and on any spawn)
+      // A target is stale when it died or left range; otherwise we still
+      // re-score on a cadence (and on any spawn)
       // so lowestHp/nearest/strongest actually steer the fight, not just the
       // moment of acquisition (H4).
-      const stale = !target0 || distSq(s.pos, target0.pos) > rangeSq || !this.targetable(target0)
+      const stale = !target0 || distSq(s.pos, target0.pos) > rangeSq
       let target = target0
       if (stale || this.retargetDirty || s.retargetIn <= 0) {
         target = this.acquireTarget(s, rangeSq)
@@ -503,15 +501,6 @@ export class GameEngine {
     this.retargetDirty = false
   }
 
-  /**
-   * Hold Fire delays engagement until enemies pass the threshold — but an enemy
-   * held by a blocker is never coming any closer, so exempting it stops a
-   * forward-placed fighter from soft-stalling the whole wave (H6).
-   */
-  private targetable(e: RtEnemy): boolean {
-    return e.distance >= this.holdThreshold || e.blockedBy !== null
-  }
-
   /** Score an in-range enemy per the active focus tactic (higher = preferred). */
   private focusScore(s: RtSentinel, e: RtEnemy): number {
     switch (this.tactics.focus) {
@@ -532,7 +521,6 @@ export class GameEngine {
     let bestScore = -Infinity
     for (const e of this.enemies) {
       if (distSq(s.pos, e.pos) > rangeSq) continue
-      if (!this.targetable(e)) continue // hold fire until past the point (blocked enemies exempt)
       const score = this.focusScore(s, e)
       if (!best || score > bestScore) {
         best = e
