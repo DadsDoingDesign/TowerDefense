@@ -202,6 +202,7 @@ function WaveBar() {
             entries={queue}
             lead={held ? `Sub-wave ${hud.subWave + 1} of ${hud.subWaveCount}, next` : 'Still to come'}
             emptyText="All on the field"
+            countNote={held ? 'in the next sub-wave' : 'still to come'}
           />
         </div>
         {/* The live wave's command place — the COMBAT agent's active ability
@@ -255,7 +256,7 @@ function WaveBar() {
           now={deployed ? `${currentWave?.spawns.length ?? 0} enemies` : 'Post a hero'}
           tone={deployed ? undefined : 'do'}
         />
-        <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" />
+        <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" countNote="in this wave" />
       </div>
       {portrait && (
         <button

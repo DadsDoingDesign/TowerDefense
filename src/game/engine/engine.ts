@@ -505,6 +505,12 @@ export class GameEngine {
   private onEvent?: (e: string, p?: EngineEventPayload) => void
   downedCount = 0
   killCount = 0
+  /**
+   * Q10 — kills by registry key (`barrel3_plated`), for the Codex's felled
+   * tally (the enemy info card's knowledge rule). Write-only inside the sim:
+   * nothing here reads it, so it cannot move a roll or a result.
+   */
+  readonly killsByKey = new Map<string, number>()
   status: BattleStatus = 'running'
   elapsed = 0
   /** Whole steps simulated. Player inputs are stamped with it (`inputLog`). */
@@ -1956,6 +1962,7 @@ export class GameEngine {
     if (idx === -1) return
     this.enemies.splice(idx, 1)
     this.killCount++
+    this.killsByKey.set(e.key, (this.killsByKey.get(e.key) ?? 0) + 1) // Q10
     this.goldEarned += e.reward
     this.onEvent?.('kill', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
     if (srcId) {

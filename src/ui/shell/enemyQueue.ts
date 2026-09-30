@@ -105,11 +105,25 @@ export function lineUpWords(entries: readonly LineUpEntry[]): string {
 
 /** A queue portrait's box, in CSS px — `--icon-md`, a whole multiple of 16. */
 export const QUEUE_CHIP = 32
-const GAP = 4
-/** The "+N" tail's reserved width. */
-const MORE = 24
+/**
+ * Q10 — portraits are buttons now, and each one's hit area is 44px square
+ * (6px of invisible margin round the 32px art). A 12px gap is what keeps two
+ * neighbours' 44px targets from overlapping: 32 + 12 = 44 per portrait.
+ */
+const GAP = 12
+/** The "+N" tail's reserved width — "+17" at 12px bold in its bordered box (it counts enemies now, so it runs to two digits). */
+const MORE = 32
 /** The designer's default: at most three kinds, then "+N" for the rest. */
 const MAX_KINDS = 3
+
+/**
+ * Q10 — the "+N" after the portraits counts ENEMIES still to come, not kinds:
+ * "+7" means seven more bodies, whatever they are. (It counted kinds, which
+ * read as a head count and undersold a wave by a factor of five.)
+ */
+export function moreCount(entries: readonly LineUpEntry[], shown: number): number {
+  return entries.slice(Math.max(0, shown)).reduce((n, e) => n + e.count, 0)
+}
 
 /**
  * How many portraits fit in `w` px when there are `n` kinds to show — measured

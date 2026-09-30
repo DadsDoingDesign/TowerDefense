@@ -189,7 +189,7 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
     const m = migrateMeta({ watchMarks: 90, upgrades: { base: 1 }, sacrificeTier: 1, stats: {} }, 3)
     expect(m.watchMarks).toBe(90)
     expect(m.achievements).toEqual({})
-    expect(m.codex).toEqual({ enemies: [], relics: [], specs: [], perks: [] })
+    expect(m.codex).toEqual({ enemies: [], relics: [], specs: [], perks: [], felled: {} })
     const junk = migrateMeta({ achievements: { act_two: 'x', nope: 1, first_light: -4 }, codex: { enemies: ['a', 'a', 3], relics: 'no' } }, 4)
     expect(junk.achievements).toEqual({ act_two: 1, first_light: 1 })
     expect(junk.codex.enemies).toEqual(['a'])

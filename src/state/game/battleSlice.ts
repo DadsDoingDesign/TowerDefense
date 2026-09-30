@@ -25,7 +25,8 @@ import { assistProfile, useSettingsStore } from '../settingsStore'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
 import { runFactsFromState } from './settle'
-import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS } from './runtime'
+import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
+import { enemyKind } from '../../game/data/enemyKnowledge'
 import { battleHpMult, canStartWave } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
@@ -186,6 +187,10 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     sfx('wave')
     // The Codex notes every goblin the Watch has faced; the feats note the
     // biggest company ever fielded (Phase 3b).
+    // Q10: first note which kinds this wave is the first sighting of, for the
+    // enemy info card (see `waveFirsts`).
+    const seenBefore = new Set(useMetaStore.getState().codex.enemies.map(enemyKind))
+    waveFirsts.kinds = new Set(currentWave.spawns.map((sp) => enemyKind(sp.typeId)).filter((k) => !seenBefore.has(k)))
     useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))] })
     const fielded = engine.sentinels.length
     set({
@@ -296,6 +301,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       return
     }
     const rawResult = st.engine.result()
+    // Q10 — the Codex counts what fell, by kind, for the enemy info card.
+    // Past the no-node-pays-twice guard above, so a wave is tallied once.
+    useMetaStore.getState().recordFelled(st.engine.killsByKey)
     // The payout lands here, so the coin does too (H17): sting → hold →
     // receipt, with the money on the receipt. It sounds when ANY currency
     // lands, not just kill gold — see `clearBonusGold` (F12). (No 'confirm'
