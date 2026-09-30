@@ -36,6 +36,20 @@ import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
 import { reportFatal } from './fatal'
+import type { GameMap } from '../game/types'
+import {
+  easeOutCubic,
+  lerpView,
+  nextPressMode,
+  panView,
+  PAN_SLOP,
+  placeZoomScale,
+  zoomAround,
+  ZOOM_EASE_MS,
+  type FieldView,
+  type PressMode,
+  type ViewBox,
+} from './fieldZoom'
 
 /*
  * Tile hit geometry (G1-2).
@@ -136,6 +150,8 @@ export function BattleCanvas() {
   const hoverSlot = useRef<string | null>(null)
   /** The field's CSS rect inside the wrap — what the DOM slot layer rides on. */
   const [field, setFieldState] = useState<FieldRect | null>(null)
+  /** Q3: the field is zoomed for posting (drives the drag hint). */
+  const [zoomOn, setZoomOn] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -185,6 +201,76 @@ export function BattleCanvas() {
     let cssH = 0
     /** The dpr the current `image-rendering` decision was made against. */
     let lastDpr = 0
+
+    /*
+     * ── Zoom to place (Q3; the rules are in `fieldZoom.ts`) ──
+     *
+     * `fit` is the letterboxed view `fitView` gives (unchanged); `shown` is the
+     * view on screen. They differ only while a hero is armed on a phone whose
+     * tiles are under the 44 px floor and the player has touched the field:
+     * then `zoomed` holds the view being eased to / panned, and it lets go the
+     * moment the hero is posted, disarmed, or the setup ends. Nothing here
+     * moves a gameplay coordinate — the element is just laid out bigger, and
+     * every hit test already reads its live rect.
+     */
+    let fit: FieldView = { scale: 1, left: 0, top: 0 }
+    let box: ViewBox = { left: 0, top: 0, width: 1, height: 1 }
+    let shown: FieldView = fit
+    let zoomed: { view: FieldView; armed: string; map: GameMap } | null = null
+    let anim: { from: FieldView; to: FieldView; t0: number; dur: number } | null = null
+    let lastMode = ''
+    /** Lay the field element (and the apron and the DOM grid with it) out at `v`. */
+    const showView = (v: FieldView) => {
+      shown = v
+      const map = useGameStore.getState().battleMap
+      const fw = map.width * v.scale
+      const fh = map.height * v.scale
+      canvas.style.width = `${fw}px`
+      canvas.style.height = `${fh}px`
+      canvas.style.left = `${v.left}px`
+      canvas.style.top = `${v.top}px`
+      placeApron(v.scale, v.left, v.top)
+      setField({ left: v.left, top: v.top, width: fw, height: fh, scale: v.scale })
+      // A whole-device-pixel zoom is ≥ 1 and so `pixelated`: lossless.
+      const mode = resampleMode(v.scale, window.devicePixelRatio || 1)
+      if (mode !== lastMode) canvas.style.imageRendering = lastMode = mode
+    }
+    /** Ease to `to` — or jump there under reduced motion. */
+    const goTo = (to: FieldView, now: number) => {
+      if (useSettingsStore.getState().reducedMotion) {
+        anim = null
+        showView(to)
+      } else anim = { from: shown, to, t0: now, dur: ZOOM_EASE_MS }
+    }
+    const zoomOut = (now: number, instant = false) => {
+      if (!zoomed) return
+      zoomed = null
+      setZoomOn(false)
+      if (instant) {
+        anim = null
+        showView(fit)
+      } else goTo(fit, now)
+    }
+    /** Zoom in about a client point, for `armed`. False when this screen needs no zoom. */
+    const zoomIn = (clientX: number, clientY: number, armed: string, now: number): boolean => {
+      const map = useGameStore.getState().battleMap
+      const dpr = window.devicePixelRatio || 1
+      const zs = placeZoomScale(fit.scale, dpr, map.tile ?? 80)
+      if (!zs) return false
+      const wr = wrap.getBoundingClientRect()
+      const view = zoomAround(shown, zs, clientX - wr.left, clientY - wr.top, map.width, map.height, box, dpr)
+      zoomed = { view, armed, map }
+      setZoomOn(true)
+      goTo(view, now)
+      return true
+    }
+    const panBy = (dx: number, dy: number) => {
+      if (!zoomed) return
+      const map = useGameStore.getState().battleMap
+      zoomed.view = panView(zoomed.view, dx, dy, map.width, map.height, box, window.devicePixelRatio || 1)
+      if (anim) anim.to = zoomed.view
+      else showView(zoomed.view)
+    }
 
     /**
      * The canvas IS the composite.
@@ -238,22 +324,27 @@ export function BattleCanvas() {
           view = { scale: sc, ox: (cssW - map.width * sc) / 2, oy: (cssH - map.height * sc) / 2 }
         }
       }
-      const fw = map.width * view.scale
-      const fh = map.height * view.scale
-      const left = Math.round(view.ox)
-      const top = Math.round(padT + view.oy)
-      canvas.style.width = `${fw}px`
-      canvas.style.height = `${fh}px`
-      canvas.style.left = `${left}px`
-      canvas.style.top = `${top}px`
-      placeApron(view.scale, left, top)
-      setField({ left, top, width: fw, height: fh, scale: view.scale })
+      fit = { scale: view.scale, left: Math.round(view.ox), top: Math.round(padT + view.oy) }
+      box = { left: 0, top: padT, width: cssW, height: cssH }
       // The renderer draws into the 960×560 composite and otherwise has no way
       // to know how hard that composite is about to be squeezed — which is how
       // the tier notch ended up at 1.11 CSS px on a 320×568 phone (M2).
+      // Always the FITTED scale: the place-zoom shows the same composite
+      // bigger, it does not redraw it.
       setViewScale(view.scale)
       lastDpr = window.devicePixelRatio || 1
-      canvas.style.imageRendering = resampleMode(view.scale, lastDpr)
+      anim = null
+      // Q3: a layout change while zoomed keeps the zoom (re-derived for the new
+      // fit, about the box's centre) or drops it if the new fit no longer needs it.
+      const zs = zoomed ? placeZoomScale(fit.scale, lastDpr, map.tile ?? 80) : null
+      if (zoomed && zs && zoomed.map === map) {
+        zoomed.view = zoomAround(shown, zs, box.left + box.width / 2, box.top + box.height / 2, map.width, map.height, box, lastDpr)
+        showView(zoomed.view)
+      } else {
+        zoomed = null
+        setZoomOn(false)
+        showView(fit)
+      }
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -409,6 +500,16 @@ export function BattleCanvas() {
       if (canvas.width !== map.width || canvas.height !== map.height) resize()
       else if ((window.devicePixelRatio || 1) !== lastDpr) resize()
       else if (getApron(map) !== apronSrc) placeApron(apronView.scale, apronView.left, apronView.top)
+      // Q3: the place-zoom lets go once its hero is posted or disarmed (or a
+      // different hero is armed), or the setup ends; then the view eases out.
+      if (zoomed && (st.selectedSentinelId !== zoomed.armed || phase !== 'setup' || engine || st.screen !== 'battle' || map !== zoomed.map))
+        zoomOut(now)
+      if (anim) {
+        const t = anim.dur > 0 ? (now - anim.t0) / anim.dur : 1
+        const v = t >= 1 ? anim.to : lerpView(anim.from, anim.to, easeOutCubic(t))
+        if (t >= 1) anim = null
+        showView(v)
+      }
       // Identity transform: logical px ARE canvas px here, so every sprite blit
       // is 1:1 and smoothing has nothing to do. Left off so the procedural
       // fallback keeps its hard pixel edges.
@@ -592,7 +693,29 @@ export function BattleCanvas() {
      * exactly as before. A mouse gets the same preview on hover. A second
      * finger (pinch-zoom is allowed here) cancels the press without posting.
      */
-    let press: { id: number; touch: boolean } | null = null
+    /*
+     * Zoom to place (Q3) adds two things, both only on a ZOOMED field (so only
+     * on a phone whose tiles are under 44 px, only while posting, only by
+     * touch) — everywhere else this is byte-for-byte the gesture above:
+     *
+     * - `zooming`: the first touch on the field with a hero armed zooms about
+     *   the finger and never posts (a drag during it pans).
+     * - `mode` (`nextPressMode`): on the zoomed field a finger that travels
+     *   past the slop BEFORE the hold is a pan and posts nothing; a tap still
+     *   posts, and a finger that rests first still gets the sliding preview
+     *   and posts where it lifts.
+     */
+    let press: {
+      id: number
+      touch: boolean
+      zooming: boolean
+      mode: PressMode
+      x0: number
+      y0: number
+      t0: number
+      lastX: number
+      lastY: number
+    } | null = null
 
     const onPointerMove = (e: PointerEvent) => {
       if (!tilesLive()) {
@@ -601,6 +724,21 @@ export function BattleCanvas() {
       }
       // A touch only previews while it is down; a mouse previews on hover.
       if (e.pointerType !== 'mouse' && (!press || press.id !== e.pointerId)) return
+      if (press && press.touch && zoomed) {
+        const moved = Math.hypot(e.clientX - press.x0, e.clientY - press.y0)
+        // A zoom-touch cannot become a hold-preview: it never posts.
+        press.mode = press.zooming && press.mode === 'pending' && moved > PAN_SLOP ? 'pan' : nextPressMode(press.mode, moved, performance.now() - press.t0)
+        if (press.mode === 'pan') {
+          panBy(e.clientX - press.lastX, e.clientY - press.lastY)
+          press.lastX = e.clientX
+          press.lastY = e.clientY
+          hoverSlot.current = null
+          return
+        }
+        press.lastX = e.clientX
+        press.lastY = e.clientY
+        if (press.zooming) return
+      }
       const { x, y } = toLogical(e.clientX, e.clientY)
       hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
     }
@@ -613,17 +751,30 @@ export function BattleCanvas() {
         hoverSlot.current = null
         return
       }
+      const touch = e.pointerType !== 'mouse'
+      const now = performance.now()
+      press = { id: e.pointerId, touch, zooming: false, mode: 'pending', x0: e.clientX, y0: e.clientY, t0: now, lastX: e.clientX, lastY: e.clientY }
+      // Q3: the first touch with a hero armed zooms a small-tiled field about
+      // the finger instead of choosing a tile at a size under the floor.
+      const st = useGameStore.getState()
+      if (touch && !zoomed && st.battlePhase === 'setup' && !st.engine && st.selectedSentinelId && zoomIn(e.clientX, e.clientY, st.selectedSentinelId, now)) {
+        press.zooming = true
+        hoverSlot.current = null
+        return
+      }
       const { x, y } = toLogical(e.clientX, e.clientY)
-      press = { id: e.pointerId, touch: e.pointerType !== 'mouse' }
       hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
     }
 
     const onPointerUp = (e: PointerEvent) => {
       if (!press || press.id !== e.pointerId) return
       const wasTouch = press.touch
+      // Q3: the zoom-touch and a pan choose nothing.
+      const chooses = !press.zooming && press.mode !== 'pan'
       press = null
       const { x, y } = toLogical(e.clientX, e.clientY)
       if (wasTouch) hoverSlot.current = null
+      if (!chooses) return
       if (!tilesLive()) return
       // The road runs between the tiles: a tap on the dirt says so rather than
       // posting on whichever tile's square it happens to fall in (G1-2).
@@ -651,8 +802,14 @@ export function BattleCanvas() {
     canvas.addEventListener('pointerup', onPointerUp)
     canvas.addEventListener('pointercancel', onPointerCancel)
     canvas.addEventListener('pointerleave', onPointerLeave)
+    // Q3: keyboard placement is the unzoomed grid, always. Focus arriving in
+    // the tile layer while a touch had zoomed the field snaps it back at once,
+    // so a tile button is never focused outside the clipped Stage.
+    const onFocusIn = () => zoomOut(performance.now(), true)
+    wrap.addEventListener('focusin', onFocusIn)
 
     return () => {
+      wrap.removeEventListener('focusin', onFocusIn)
       cancelAnimationFrame(raf)
       ro.disconnect()
       canvas.removeEventListener('pointermove', onPointerMove)
@@ -671,6 +828,13 @@ export function BattleCanvas() {
       <canvas ref={canvasRef} className="battle-canvas" />
       <canvas ref={apronRef} className="battle-apron" aria-hidden="true" />
       {field && <SlotLayer field={field} />}
+      {/* Q3: only ever shown to a touch that zoomed the field, so it is not
+          announced — the keyboard grid never zooms. */}
+      {zoomOn && (
+        <div className="place-zoom-hint" aria-hidden="true">
+          Drag to look around
+        </div>
+      )}
     </div>
   )
 }

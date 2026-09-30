@@ -2246,3 +2246,21 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   stand inside the scorch now. Still open: the top forest row is shrubs where a
   88px tree cannot fit without clipping or standing on the road. On 375×667
   and 320×568 a tile is about 35px, under the 44px floor.
+- **2026-09-30 — Q3: zoom to place on small phones.** Closes G1-2's open
+  floor: on 375×667 a portrait tile is 34.8 CSS px, on 320×568 27.5. With a
+  hero armed, the first touch on the field now zooms it about the finger (it
+  never posts), a tap or hold-and-slide-and-lift then posts at the zoomed
+  scale, and the view eases back out (220ms; instant under reduced motion) the
+  moment the hero lands or is disarmed. The zoom is always a whole number of
+  device px per field px — 2 at dpr 2, so an 80 CSS px tile; 1 would have been
+  40, under the floor — and measured on the captures every zoomed frame is an
+  exact 2×2 pixel double (100% of adjacent device-pixel pairs identical at one
+  alignment, ~14% on the fitted frame). A quick drag pans; a rest-then-slide is
+  still the range preview. Keyboard placement never zooms; 390×844 and desk
+  are untouched (one tap posts). Rendered at 320×568, 375×667, 390×844 @2x
+  touch and 1440×900. The loop caught one thing: the zoomed field gave no hint
+  that it could be dragged — at 320 it shows about 4 × 4 tiles — so a small
+  "Drag to look around" chip in the boss plate's dress sits at the Stage's top
+  while zoomed. Still open: whether a 2.3–2.9× jump is too far on dpr-2 phones
+  (the only crisp step that clears 44px), and the breather's one move does
+  not zoom.
