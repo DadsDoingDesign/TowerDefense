@@ -13,7 +13,8 @@ import { useGameStore } from '../../state/gameStore'
  *    the sim will refuse;
  *  - during the breather between sub-waves (the sim is paused) it is the
  *    Continue: "Next ▶". The move itself happens on the field — tap a hero,
- *    then a post — and the canvas draws the prompt (`render/telegraphs.ts`).
+ *    then a post — and the strip's left slot says so ("Held · move one hero",
+ *    G2-2; it used to be a banner painted over the field).
  *
  * Its accessible name says what it does and whether the charge is spent. The
  * moments themselves are spoken by the shell's one live region (`Announcer`,

@@ -68,34 +68,11 @@ export function drawTelegraphs(ctx: CanvasRenderingContext2D, engine: GameEngine
   ctx.restore()
 }
 
-/**
- * The breather between sub-waves: the sim is paused, and the field says so —
- * a band across the top with the one thing the player may do. Drawn by
- * `BattleCanvas` LAST, over the heroes, so a hero on a top post never hides it. The Continue
- * control lives in the wave strip (`CommandSlot`); this is the instruction.
- */
-export function drawBreatherBanner(ctx: CanvasRenderingContext2D, engine: GameEngine): void {
-  const w = engine.map.width
-  const { index, count, moved } = engine.subWaveState()
-  const text = moved
-    ? `Sub-wave ${index} of ${count} held · moved — send the next`
-    : `Sub-wave ${index} of ${count} held · tap a hero, then a post (one move)`
-  const s = Math.min(2.2, Math.max(1, 1 / Math.max(getViewScale(), 0.05))) // legible when squeezed
-  const h = Math.round(30 * s)
-  ctx.fillStyle = 'rgba(22, 28, 46, 0.72)'
-  ctx.fillRect(0, 0, w, h)
-  ctx.fillStyle = '#ffe08a'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  // Fit the line to the field: shrink the face until it does, never clip it.
-  let px = Math.round(14 * s)
-  ctx.font = `700 ${px}px sans-serif`
-  while (px > 10 && ctx.measureText(text).width > w * 0.94) {
-    px--
-    ctx.font = `700 ${px}px sans-serif`
-  }
-  ctx.fillText(text, w / 2, h / 2)
-}
+// The breather's banner (`drawBreatherBanner`) was retired by G2-2: the
+// instruction it painted across the top of the field ("Sub-wave 1 of 2 held ·
+// tap a hero, then a post") now lives in the wave strip's left slot
+// (`StripLabel` in `ui/shell/DetailBand.tsx`), so the field keeps its full
+// height. The open posts still light up (`BattleCanvas`).
 
 function progress(t: Telegraph, now: number): number {
   const span = t.t1 - t.t0
