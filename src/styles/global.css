@@ -47,6 +47,11 @@
   --dim: #b39a78;
   --accent: #e0ac4c;
   --accent-dim: rgba(224, 172, 76, 0.16);
+  /* Gold as TEXT on the stacked parchment washes of the lower bands (round-2
+     re-check): `--accent` fell to 3.99:1 on the wave strip's wash, where the
+     held-sub-wave instruction and the reward/affix lines sit. This step is
+     5.03:1 on that wash and 8.2:1 on `--panel-2`. */
+  --accent-text: #f0c46a;
   --teal: #57a2b6;
   --teal-dim: rgba(87, 162, 182, 0.18);
   --good: #6fce88;

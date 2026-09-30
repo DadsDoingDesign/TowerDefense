@@ -70,6 +70,14 @@ describe('text tokens clear WCAG AA on every ground the shell paints', () => {
     })
   }
 
+  // The lower bands' gold and muted text, on the lightest wash measured there
+  // (the wave strip, round-2 re-check).
+  it('--accent-text and --muted clear 4.5:1 on the strongest wash', () => {
+    for (const name of ['accent-text', 'muted']) {
+      expect(ratio(hex(token(name)), grounds['surface-strong over panel-2']), `--${name}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   it('--dim (disabled, unaffordable) still reads at 4.5:1 on the rows it dims', () => {
     const dim = hex(token('dim'))
     for (const g of ['bg', 'panel', 'panel-2'] as const) {

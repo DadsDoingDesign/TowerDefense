@@ -2408,3 +2408,17 @@
   font-weight: 400;
   font-size: 0.85em;
 }
+
+/* Round-2 re-check (Whales): the lower bands stack two parchment washes, so
+   gold and the second muted step read under AA there (3.99:1 and 4.20:1 on the
+   wave strip). Inside those bands gold text takes `--accent-text`, and the
+   wave strip's second muted step folds into `--muted`. Borders and fills that
+   read `--accent` get the same, slightly lighter gold — still the brand hue. */
+.sh-selector,
+.sh-detail,
+.sh-wavebar {
+  --accent: var(--accent-text);
+}
+.sh-wavebar {
+  --muted-2: var(--muted);
+}
