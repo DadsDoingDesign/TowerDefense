@@ -2140,3 +2140,20 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   you can't pay. Re-critiqued on the final build: the phone's contrast failures
   are gone and the desk rail went from 24 to 15. Still open: primary buttons
   read quiet (A1-2), plus the six reworked items in round 2.
+- **2026-09-29 — G3-2: wave cleared and spoils are one screen; level-ups on the
+  roster.** A normal wave used to end in three hops (receipt, Continue, a Spoils
+  page) with a level-up choice as a blocking modal on top. Now the field dims
+  under a one-line result, the Selector holds a compact party strip over the
+  three reward cards (the first preselected, so "Take it" is already in the
+  panel), and a levelled hero glows with a "Lv 3 ↑" badge. Tapping it opens the
+  evolution, the perk, or just "what grew" in the Context panel, and a finished
+  choice hands back to the reward card. The badge persists onto the map, where
+  the modal no longer fires for it. Elite and boss spoils keep their page.
+  Rendering caught three things. A `.sh-chip` class collided with the header's
+  chips, which grew the header by 39px. Evolution and perk options with their
+  blurbs pushed the second option below a 150px phone panel, so options now show
+  names and the picked one opens its line, scrolled into view. The Continue
+  beside "Take it" was a second primary that skipped the pick, so it goes when
+  the reward is in place. Verified at 390×844 and 1440×900 in these cases: plain
+  level, perk, evolution chained into a perk, deferred to the map, and elite
+  spoils unchanged.

@@ -5,6 +5,7 @@ import { useGameStore } from '../../state/gameStore'
 import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
 import { featName, usePerkUnlocks } from './perkUnlocks'
+import { useLevelUps } from './levelUps'
 
 /**
  * The level-up perk choice (Phase 3b) — pick one of two at levels 5 and 15.
@@ -25,14 +26,17 @@ export function PerkPicker() {
   const screen = useGameStore((s) => s.screen)
   const choose = useGameStore((s) => s.choosePerk)
   const unlocked = usePerkUnlocks()
+  // G3-2: heroes whose level-up waits on the roster choose in the Context
+  // panel (`shell/levelUps.ts`); this dialog keeps everyone else.
+  const onRoster = useLevelUps((s) => s.heroes)
   const cardRef = useRef<HTMLDivElement>(null)
   // Select, THEN confirm — the evolution dialog's contract (Phase 2): a tap
   // reads the option, the button commits it. A permanent pick is never one tap.
   const [picked, setPicked] = useState<string | null>(null)
 
   // Between waves only: never over a live fight, never over a finished run.
-  const owed = screen !== 'battle' && runPhase === 'active' && evolutionQueue.length === 0
-    ? roster.filter((s) => pendingPerkLevel(s) !== null)
+  const owed = screen !== 'battle' && runPhase === 'active' && evolutionQueue.every((id) => onRoster[id])
+    ? roster.filter((s) => pendingPerkLevel(s) !== null && !onRoster[s.id])
     : []
   const hero = owed[0]
   const open = !!hero

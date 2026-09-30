@@ -13,6 +13,7 @@ import { featName, usePerkUnlocks } from '../shell/perkUnlocks'
 import { availableEvolutions, lockedEvolutions } from '../../game/run/unlocks'
 import { LOCKED_SPECS } from '../../game/data/achievements'
 import { Tap } from '../pointer'
+import { useLevelUps } from '../shell/levelUps'
 
 /**
  * Shown after a battle when a Sentinel crossed level 10 or 20 and is owed an
@@ -30,7 +31,13 @@ import { Tap } from '../pointer'
  * trap therefore cycles between the options rather than releasing focus.
  */
 export function EvolutionModal() {
-  const queue = useGameStore((s) => s.evolutionQueue)
+  const fullQueue = useGameStore((s) => s.evolutionQueue)
+  // G3-2: a hero whose level-up is waiting on the roster (a normal wave's) is
+  // chosen in the Context panel, not here — see `shell/levelUps.ts`. The modal
+  // keeps every other source: elite and boss waves, endless, a recruit or a
+  // campfire that lands a hero at an evolution level, a resumed save.
+  const onRoster = useLevelUps((s) => s.heroes)
+  const queue = fullQueue.filter((id) => !onRoster[id])
   const roster = useGameStore((s) => s.roster)
   const choose = useGameStore((s) => s.chooseEvolution)
   const unlocked = usePerkUnlocks()

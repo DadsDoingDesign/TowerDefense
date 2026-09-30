@@ -51,6 +51,8 @@ import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
 import { orientationOf } from '../../game/data/maps'
+import { LevelUpPanel } from './LevelUpPanel'
+import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -110,6 +112,7 @@ function WaveBar() {
   const portrait = useGameStore((s) => orientationOf(s.battleMap) === 'portrait')
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
+  const inPlace = useGameStore(rewardInPlace)
 
   if (screen !== 'battle' || runPhase !== 'active') return null
 
@@ -128,10 +131,16 @@ function WaveBar() {
         <p className="sh-wavebar-hint ready">
           {lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} · <Money amount={lastResult.goldEarned} c="gold" />{' '}
           earned
+          {/* G3-2: the reward is picked right here, and "Take it" in the
+              Context panel is the way on — a Continue beside it would be a
+              second primary that skips the pick. */}
+          {inPlace && <> · take a reward to march on</>}
         </p>
-        <button className="sh-btn primary" onClick={continueAfterWave}>
-          Continue
-        </button>
+        {!inPlace && (
+          <button className="sh-btn primary" onClick={continueAfterWave}>
+            Continue
+          </button>
+        )}
       </div>
     )
   }
@@ -331,6 +340,8 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const stranded = useGameStore(strandedInBattle)
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
+  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
+  const levelUps = useLevelUps((s) => s.heroes)
 
   if (stranded) return <StrandedPanel />
   // A focused map node takes the panel whatever else is selected: it is the
@@ -344,6 +355,9 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   if (gearSlot && !selection) return <GearSlotPanel />
   if (selection?.kind === 'hero') {
     const hero = roster.find((h) => h.id === selection.id)
+    // G3-2: a hero wearing the roster's level-up badge opens its level-up
+    // here — the choice the modal used to force — until it is dealt with.
+    if (hero && levelUpOpen(levelUps[hero.id], hero, evolutionQueue)) return <LevelUpPanel hero={hero} />
     if (hero) return <HeroPanel hero={hero} />
   }
   if (selection?.kind === 'item') {

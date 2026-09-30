@@ -3,6 +3,7 @@ import { useGameStore } from '../../state/gameStore'
 import { useBattleLedger } from '../battleLedger'
 import { useCombatNotes } from '../../state/combatNotes'
 import { battleLayoutOf } from './live'
+import { choiceOwed, rewardInPlace } from './levelUps'
 
 /** Gate hits are spoken at most this often; the latest count wins. */
 const HIT_GAP_MS = 1600
@@ -60,14 +61,25 @@ export function Announcer() {
       }
       if (!prev.lastResult && s.lastResult && s.screen === 'battle') {
         const r = s.lastResult
+        // G3-2: after a normal wave the reward is picked in place and a
+        // level-up waits on the roster — say where both are, since the eye
+        // gets there from the layout and a screen reader does not.
+        const inPlace = rewardInPlace(s)
         if (r.status === 'cleared') {
           say(`Wave cleared. ${r.goldEarned} gold${r.enemiesLeaked ? `, ${r.enemiesLeaked} reached the Gate` : ''}.`)
+          if (inPlace) say(`Take one of ${s.reward!.length} rewards, below the field.`)
         } else if (s.runPhase === 'active') {
           say('Wave lost.')
         }
         const start = useBattleLedger.getState().startLevels
         for (const h of s.roster) {
-          if (start[h.id] !== undefined && h.level > start[h.id]) say(`${h.name} reached level ${h.level}.`)
+          if (start[h.id] === undefined || h.level <= start[h.id]) continue
+          const owed = inPlace ? choiceOwed(h, s.evolutionQueue) : null
+          say(
+            `${h.name} reached level ${h.level}${
+              owed === 'evolve' ? ', with an evolution to choose on the roster' : owed === 'perk' ? ', with a perk to choose on the roster' : ''
+            }.`,
+          )
         }
       }
       prev = s

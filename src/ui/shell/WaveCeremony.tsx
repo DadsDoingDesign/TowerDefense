@@ -7,6 +7,7 @@ import { itemName } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
 import { battleLayoutOf } from './live'
+import { rewardInPlace } from './levelUps'
 
 /**
  * A number that counts up to its value once, when it first appears. Instant
@@ -60,6 +61,10 @@ export function WaveCeremony() {
   const isBossWave = useGameStore((s) => !!s.currentWave?.isBoss)
   const lives = useGameStore((s) => s.lives)
   const startLevels = useBattleLedger((s) => s.startLevels)
+  // G3-2: after a normal wave the reward hand is in the Selector and the
+  // level-ups are on the roster, so the Stage says only the result — one line
+  // over a dimmed field, which stays visible around it.
+  const inPlace = useGameStore(rewardInPlace)
 
   const settled = layout === 'settled' && !!result
   const status = beat?.status ?? result?.status
@@ -76,6 +81,33 @@ export function WaveCeremony() {
     ? roster.filter((h) => startLevels[h.id] !== undefined && h.level > startLevels[h.id])
     : []
   const rows = settled ? [...result!.perSentinel].sort((a, b) => b.damageDealt - a.damageDealt) : []
+
+  if (settled && inPlace) {
+    return (
+      <div className="sh-ceremony won settled compact">
+        <div className="sh-ceremony-banner">
+          <Icon name="wave" />
+          <span>Wave cleared</span>
+        </div>
+        <p className="sh-ceremony-line">
+          <span className="sh-ceremony-sum">
+            <Money amount={gold} c="gold" /> <small>gold</small>
+          </span>
+          <span className="sh-ceremony-sum">
+            <b>+{xp}</b> <small>xp</small>
+          </span>
+          <span className="sh-ceremony-sum">
+            <b>{result!.enemiesKilled}</b> <small>felled</small>
+          </span>
+        </p>
+        {result!.enemiesLeaked > 0 && (
+          <p className="sh-ceremony-note">
+            {result!.enemiesLeaked} reached the Gate · Gate {result!.baseHpLeft} left
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`sh-ceremony ${won ? 'won' : 'lost'} ${elite ? 'elite' : ''} ${settled ? 'settled' : 'beat'}`}>

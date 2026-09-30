@@ -104,7 +104,9 @@ async function winFirstBattle(p, shots) {
   if (shots) await p.shot('05-wave-in-progress')
   for (let i = 0; i < 6; i++) {
     const done = await p
-      .btn(/^Continue$/)
+      // A normal wave's reward is picked in place (G3-2): its "Take it" is the
+      // way on. An elite's still ends on Continue → the Spoils page.
+      .btn(/^Continue$|^Take it$/)
       .waitFor({ state: 'visible', timeout: 12000 })
       .then(() => true, () => false)
     if (done) break
@@ -113,9 +115,16 @@ async function winFirstBattle(p, shots) {
   await p.tipOff()
   await p.page.waitForTimeout(400)
   if (shots) await p.shot('06-wave-cleared')
-  await p.tap(/^Continue$/, { wait: 1500 })
-  if (shots) await p.shot('07-spoils')
-  await p.tap(/· to pack|· relic/, { wait: 500 })
+  if (await p.btn(/^Continue$/).count()) {
+    await p.tap(/^Continue$/, { wait: 1500 })
+    if (shots) await p.shot('07-spoils')
+    await p.tap(/· to pack|· relic/, { wait: 500 })
+  } else {
+    // In place: the first card is already showing; read the second.
+    await p.page.locator('.sh-selector .sh-reward').nth(1).click().catch(() => {})
+    await p.page.waitForTimeout(500)
+    if (shots) await p.shot('07-spoils')
+  }
   await p.tap('Take it', { wait: 1500 })
 }
 
