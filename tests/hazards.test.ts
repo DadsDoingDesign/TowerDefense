@@ -97,7 +97,7 @@ describe('the layout', () => {
     }))
     expect(layouts.size).toBeGreaterThan(5)
     // Every tile of the pool is dealt the curse on some seed.
-    const hit = new Set(SEEDS.map((s) => layHazards(tiles, land.path, s).find((t) => t.danger)!.id))
+    const hit = new Set(SEEDS.flatMap((s) => layHazards(tiles, land.path, s).filter((t) => t.danger).map((t) => t.id)))
     expect(hit.size).toBe(DANGER_POOL)
   })
 

@@ -275,6 +275,25 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
       against the pre-3a game where targeting was the only input;
     - 16e — shatter / spread / brittle, on and off.
 
+### The no-HP pass (heroes are never hurt)
+
+Heroes lost their HP, so a blocker no longer falls partway through a hold. Three
+benches that were fitted with a blocker that could die read at their ceiling
+afterwards, and were re-pinned the way `BENCH_PIN` already is (trap 5):
+
+- §8's `armour` bench (a Weaponmaster holding twelve Siege Barrels): 44% → 90%,
+  now pinned ×1.8 HP (58%). §15's `armour` bench is the same wave and pin.
+- §4's `endure` bench (a Weaponmaster holding twenty Siege Barrels): 99%, now
+  pinned ×1.6 (60%); `reach` moved to `magic`, because range buys a holder that
+  cannot fall nothing on `endure`.
+- §2's support table lost Aegis, Bulwark and Warden of Ash: their shield aura
+  and the melee they ate went with hero HP, so they are graded as offense in §1.
+
+TNT leak was split rather than added to (leak + blast = the old leak), so every
+leak ceiling, and with it §14's fairness gates and `maxLeak`, is unchanged; the
+Powderkeg King's TNT is a clock, which `maxLeak` prices as the throws an
+unhindered walk down The Green Line gives him.
+
 ### Phase 3a changes to how the harness plays a battle
 
 - **The clock is out of the measurement.** §6 used a 70-second cap and booked a
@@ -412,12 +431,17 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
   rates must stay inside 15–75%: at the floor every affix reads +0 because the
   build is already losing, at the ceiling because it is already winning.
 
-All of these are green as of the M19-f pass **except one**, and it is red on
-purpose: the new two-sided curse check reports `cx_frenzied` (×1.9 rate, ×0.5
-damage) as a plain upgrade wearing a curse label — its worst measured scenario
-is −0.6pt. The fix is in `src/game/data/items.ts`, which this workstream does
-not own; the invariant is left failing rather than widened, because the whole
-point of it is that an affix which costs nothing must not pass.
+**After the no-HP pass** (heroes are never hurt, then one tuning pass on the
+danger ground, the Threat curve, the Swarm shape's budget and the trade-off
+costs) all of these are green **except two, each within a point of its gate**:
+§11's strict floor ends 41% of its runs at the depth-6 elite (max 40%), and on
+§12's battles line the Field Kitchen + Relic Cartulary row reads −6pt against a
+±5pt paired noise floor. Both moved by 2–3pt between Threat curves that differ
+in the second decimal, and each curve that closed one of them opened another of
+the noise-level gates (§13's Thin Pickings cost, §16d's Rally value, §14c's
+Swarm row), so they are reported rather than chased; the curves tried are
+tabulated in `src/game/run/threat.ts`. (The old red one, `cx_frenzied`, went
+green in an earlier pass.)
 
 Where a red one was closed by
 changing a *measurement* rather than the game, REPORT.md carries the old metric

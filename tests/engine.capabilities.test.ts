@@ -10,7 +10,7 @@ import type { EffectMods, Sentinel, WaveDef } from '../src/game/types'
 
 /**
  * The Phase 3b rule capabilities (`EffectMods.volley`, `critEvery`,
- * `blockRegen`, `killRush`, `openingRush`, `lastStand`, `leakWard`) — each is a
+ * `killRush`, `openingRush`, `leakWard`) — each is a
  * rule a perk or a relic card states, so each is proven to do what the card
  * says and to be inert when nothing grants it.
  */

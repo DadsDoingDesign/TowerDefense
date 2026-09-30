@@ -73,7 +73,8 @@ describe('threat maths (game/run/threat)', () => {
 
   it('a node type adds to the road, not to the rest of the run', () => {
     expect(nodeThreatMult('battle')).toBe(1)
-    expect(nodeThreatMult('elite')).toBeGreaterThan(1)
+    // An elite's price is its composition (`ELITE_BUDGET`, the modifiers) since the no-HP refit.
+    expect(nodeThreatMult('elite')).toBe(1)
     expect(nodeThreatMult('boss')).toBeLessThan(1)
     expect(nodeThreatMult('miniboss')).toBe(1)
     expect(encounterThreat(node('elite', 6))).toBeCloseTo(threatAtLayer(6) * nodeThreatMult('elite'), 12)

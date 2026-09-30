@@ -187,13 +187,21 @@ const MUTATIONS: MutTemplate[] = [
    * `lifedrain 0.34–0.46 × damage 0.66–0.74` holds the same three signs
    * (`swarm` +6.4…+8.6, `armour` −16.7…−18.8, `line` +21.9…+31.5), so the pass
    * is a basin. Measured at 0.40/0.70: **+7.5 / −16.7 / +26.8pt**.
+   *
+   * ---- and onto attack speed, after heroes lost their HP (no-HP pass) --------
+   *
+   * With a Weaponmaster that no longer falls, the damage bill stopped costing
+   * anything (`armour` +33.9pt) while the drain ran on. Paid in attack speed
+   * instead — the `swarm` bench is rate-bound, so that is where it bites — at
+   * 0.25 drain / ×0.6 rate §8 reads **−12.0 / −1.4 / +22.0pt**, 10pt clear of
+   * the `line` runner-up rather than the 17.6pt 0.30/×0.65 left it.
    */
   {
     key: 'siphon',
     name: 'Siphon',
-    desc: 'Damage feeds the Gate: +0.6 Gate HP per 100 damage dealt — and every strike takes a moment to draw.',
-    downside: '−35% attack speed',
-    mods: { lifedrain: 0.3, rateMult: 0.65 },
+    desc: 'Damage feeds the Gate: +0.5 Gate HP per 100 damage dealt — and every strike takes a moment to draw.',
+    downside: '−40% attack speed',
+    mods: { lifedrain: 0.25, rateMult: 0.6 },
   },
   // Stormcharged (`overcharge`: ×1.9 range, +20% crit, +0.8 crit damage, −45%
   // attack speed) was cut with the no-HP pass: §8 measured it negative on all

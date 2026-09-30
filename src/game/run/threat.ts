@@ -31,7 +31,8 @@
  * the player home. Getting stronger now feels stronger.
  *
  * The one thing that still escalates on its own is the act: crossing an act
- * boss is a step up the road, and the curve says so with {@link ACT_JUMP}.
+ * boss is a step up the road: each act climbs faster per layer than the last
+ * ({@link ACT_STEPS}; the separate {@link ACT_JUMP} is ×1 since the no-HP refit).
  */
 import type { MapNode } from '../data/runmap'
 import type { EncounterKind } from '../data/waves'
@@ -61,9 +62,40 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * (L20 lands around depth 8), and a flat last act would make the final boss the
  * only fight in it that could end a run — the "every death on one node" shape
  * §6 forbids.
+ *
+ * ---- refitted after heroes lost their HP (the no-HP pass) ------------------
+ *
+ * [1.06, 1.1, 1.2] with a ×1.05 jump put §6 at 74% before the change and 83%
+ * after it (a blocker that can no longer fall holds far more), with §11's
+ * first-timer line at 35% (gate ≤35%). Hazards could not close it: the harshest
+ * danger ground swept (four ×0-damage cursed tiles and twelve boulders) moved
+ * §6 by 4.6pt. Swept with `hazard-sweep.ts` (§6 n=300, §11 n=300, §13 n=600;
+ * the elite column is `nodeThreatMult('elite')` below):
+ *
+ *   steps × jump, elite         §6 win  §11 first / adaptive  §13 B0→B1
+ *   [1.12, 1.15, 1.20] ×1.05 1.1  67.7%     19.7 / 29.3%          —
+ *   [1.15, 1.18, 1.22] ×1.08 1.1  56.0%     13.3 / 19.0%        1.9pt
+ *   [1.12, 1.15, 1.31] ×1.08 1.1  55.0%     12.7 / 21.0%        1.5pt
+ *   [1.12, 1.17, 1.23] ×1.08 1.1  60.0%     16.0 / 27.7%        4.7pt
+ *   [1.12, 1.20, 1.28] ×1   1.0   58.0%     15.0 / 24.3%       −1.5pt
+ *   [1.12, 1.20, 1.29] ×1   1.0   57.0%     14.5 / 23.3%        0.8pt   ← shipped (Swarm budget 1.0);
+ *                                  the full report reads 57% · 13 / 20% · 4pt
+ *
+ * Two things decided the shape. §11's strict floor (one hero, every layer a
+ * battle) walks into a wall at the depth-6 elite: with the ×1.08 act jump and a
+ * ×1.1 elite, 43–44% of those runs ended there against a 40% gate, so the act
+ * jump is folded into act 2's step and the elite pays in composition only
+ * (37.5–39% there now). And §13's ≥3pt gate on Thin Pickings could not choose:
+ * after the no-HP change that rung costs −1.5 to +5pt depending on details of
+ * the curve that have nothing to do with it (and the full report reads it off
+ * a different id state than the sweep — ~0pt on the ×1.08 curve the sweep put
+ * at 4.7pt), i.e. it sits on its own noise floor; see REPORT §13. Layer 8
+ * lands at ×2.91 (§5's standard team, graded at `threatAtLayer(8)`, clears ×2.2
+ * siege pressure there — it cleared ×3.4 at the old ×1.83 — and holds ×2.2 up
+ * to a layer-8 Threat of ×3.3).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.06, 1.1, 1.2]
-export const ACT_JUMP = 1.05
+export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.29]
+export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]
 
@@ -86,12 +118,13 @@ export function threatAtLayer(layer: number, start = 1): number {
  * What a node's own TYPE adds on top of the road (Phase 3b): the third of the
  * three things difficulty now comes from, beside depth and act.
  *
- *  - an **elite** is a harder fight than the battle beside it — it always was
- *    by composition (`ELITE_BUDGET`, the modifiers); it is ×1.1 here so the
- *    elite's better purse and card luck have a price that stays on the node
- *    instead of following the player home, as the old ×1.52 compounding step
- *    did;
- *  - the **final boss** fights at ×0.75 of its layer: it fields all three
+ *  - an **elite** is a harder fight than the battle beside it — by
+ *    composition (`ELITE_BUDGET`, the modifiers). It carried an extra ×1.1
+ *    here too until the no-HP refit, which steepened act 2 and piled a lone
+ *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
+ *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
+ *    and card luck are paid for by the composition alone now;
+ *  - the **final boss** fights at ×0.55 of its layer: it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -101,7 +134,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  * substitutes an encounter, never a node (M19-g).
  */
 export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
-  type === 'elite' ? 1.1 : type === 'boss' ? 0.55 : 1
+  type === 'boss' ? 0.55 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>

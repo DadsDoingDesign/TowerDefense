@@ -591,7 +591,7 @@ const POLARITY: Partial<Record<IconKey, IconKey>> = {
  * `-1` negative, `1` positive, `0` no number at all — a bare authored phrase,
  * which keeps the plain cell. Both the typographic minus `−` that
  * `describeMods` writes and a plain hyphen count, because only one of those is
- * guaranteed: `describeMods` uses `−` for `physDefAdd` and a plain `-` for
+ * guaranteed: `describeMods` uses `−` in some lines and a plain `-` for
  * everything `signPct` touches.
  *
  * ---------------------------------------------------------------------------
