@@ -185,6 +185,7 @@ export function PageScreen({
   // marks price keeps the plain "not enough yet".
   const shortfall = (c: Price) =>
     c.currency === 'gold' ? Math.max(0, c.amount - gold) : c.currency === 'dust' ? Math.max(0, c.amount - dust) : true
+  const heroPick = useGameStore((s) => s.screen === 'heroPick' && s.mode === 'campaign')
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
@@ -265,7 +266,9 @@ export function PageScreen({
       // Announced only where the board is an outcome — today, the Crossroads
       // reveal. `titleOverride` is a Watchtower submenu, which is navigation.
       live={!titleOverride && ctx.board?.live}
-      resources={purse.size ? <Resources show={purse} /> : undefined}
+      // Hero-pick prices nothing, so its title block carries the run's seed
+      // and terms instead (`RunSeed`, a chip that never scrolls).
+      resources={purse.size ? <Resources show={purse} /> : heroPick ? <RunSeed /> : undefined}
       strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
       tone={ctx.board?.tone}
       notice={confirm.notice}
@@ -427,7 +430,6 @@ export function PageScreen({
         The ability sentence goes first.
       */}
       <BannerPicker />
-      <RunSeed />
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle

@@ -53,6 +53,7 @@ export function HeroPickVariantScreen({ ctx, variant }: { ctx: ShellContext; var
     <PageLayout
       title={ctx.board?.title ?? 'Choose your first hero'}
       subtitle={ctx.board?.blurb}
+      resources={<RunSeed />}
       cta={{ label: `Choose ${selected.name}`, run: () => pickStartingHero(selected.archetype) }}
     >
       <div className={`hpv hpv-${variant}`}>
@@ -172,30 +173,12 @@ function PlanCard({ f }: { f: HeroFacts }) {
 }
 
 /**
- * Seed and Banner, demoted for the player who did not come for them (JTBD
- * doc § Forces). A Daily Watch or a typed seed is WHY that player is here, so
- * there the seed card stays open; on a plain random run it folds behind one
- * row. The Banner picker already renders nothing until a rung is unlocked.
+ * The Banner, demoted for the player who did not come for it (JTBD doc §
+ * Forces): it renders nothing until a rung is unlocked, and nothing on a Daily.
+ * The seed rides in the header now (`RunSeed` in `resources`), as a chip.
  */
 function RunOptions() {
-  const kind = useGameStore((s) => s.challenge.kind)
-  const runSeed = useGameStore((s) => s.runSeed)
-  return (
-    <>
-      <BannerPicker />
-      {kind === 'standard' ? (
-        <details className="hpv-more">
-          <summary>
-            <span>Seed {runSeed}</span>
-            <span className="hpv-more-hint">Play a set seed</span>
-          </summary>
-          <RunSeed />
-        </details>
-      ) : (
-        <RunSeed />
-      )}
-    </>
-  )
+  return <BannerPicker />
 }
 
 interface VariantProps {

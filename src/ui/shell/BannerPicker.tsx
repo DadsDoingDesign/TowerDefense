@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { bannerRules, BANNER_RUNGS, useMetaStore } from '../../state/metaStore'
+import { vowAllowed } from '../../state/runTerms'
 import { VOW } from './offers'
 
 /**
@@ -31,6 +32,7 @@ export function BannerPicker() {
   const runBanner = useGameStore((s) => s.runBanner)
   const setRunBanner = useGameStore((s) => s.setRunBanner)
   const unlocked = useMetaStore((s) => s.sacrificeTier)
+  const vowOpen = useGameStore((s) => vowAllowed(s.challenge))
 
   /*
    * Bring the flown rung into view.
@@ -57,7 +59,11 @@ export function BannerPicker() {
   // Nothing unlocked means there is no ladder to show yet, and a fresh player's
   // first screen should not carry a control with one dead option on it. The
   // Watchtower's Banner row is where the system is introduced.
-  if (screen !== 'heroPick' || mode !== 'campaign' || unlocked < 1) return null
+  //
+  // Nor on a Daily Watch (`vowAllowed`): it is one set of standard rules for
+  // everyone, and the store refuses a Vow there — the chips used to render
+  // anyway and do nothing. The header's run terms (`RunSeed`) say why.
+  if (screen !== 'heroPick' || mode !== 'campaign' || unlocked < 1 || !vowOpen) return null
 
   const rungs = BANNER_RUNGS.slice(0, unlocked)
   const rules = bannerRules(runBanner)
