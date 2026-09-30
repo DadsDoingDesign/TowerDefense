@@ -39,7 +39,9 @@ export function replaceItem(
 
 /**
  * Equip a pack item into a hero's slot, returning whatever it displaces to the
- * pack. Null when the item is not in the pack or cannot go in that slot.
+ * pack. Null when the item is not in the pack or cannot go in that slot —
+ * which, for a one-handed weapon in the off hand, depends on the Ambidextrous
+ * relic (`opts.ambidextrous`, from `run/relics.isAmbidextrous`).
  */
 export function equipFromPack(
   roster: Sentinel[],
@@ -47,9 +49,10 @@ export function equipFromPack(
   sentinelId: string,
   slot: HeroSlot,
   itemId: string,
+  opts: { ambidextrous?: boolean } = {},
 ): { roster: Sentinel[]; inventory: Item[] } | null {
   const item = inventory.find((i) => i.id === itemId)
-  if (!item || !heroSlotsFor(item.slot).includes(slot)) return null
+  if (!item || !heroSlotsFor(item.slot, opts).includes(slot)) return null
   let nextInv = inventory.filter((i) => i.id !== itemId)
   const ret = (it: Item | null) => { if (it) nextInv = [...nextInv, it] }
   const nextRoster = roster.map((s) => {

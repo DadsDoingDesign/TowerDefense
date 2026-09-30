@@ -21,8 +21,8 @@ import { leakCeiling } from '../src/game/data/enemies'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
-import { generateItem, type RosterRef } from '../src/game/data/items'
-import { startingKit, wearKit } from '../src/game/engine/kit'
+import { generateItem, heroSlotsFor, type RosterRef } from '../src/game/data/items'
+import { startingKit, wearKit, type EquipRules } from '../src/game/engine/kit'
 import { recruitTargetLevel } from '../src/game/run/recruits'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
@@ -764,9 +764,21 @@ export function scaledRecruitLevel(roster: Sentinel[], trained = false): number 
  */
 export const heroDps = (s: Sentinel): number => computeCombat(s).dps
 
-/** The slots on a hero an item of this kind may occupy. */
-const slotsFor = (item: Item): HeroSlot[] =>
-  item.slot === 'offHand' ? ['offHand'] : item.slot === 'body' ? ['body'] : ['mainHand', 'offHand']
+/**
+ * The slots on a hero an item of this kind may occupy. A one-handed weapon
+ * follows the game's own rule (`heroSlotsFor`): the off hand takes it only
+ * under the Ambidextrous relic (R3-2). The two-hander keeps this model's older
+ * reading (either hand, nothing cleared) — not the game's, which is main hand
+ * only and empties the off hand; left as it was so R3-2 moves one thing.
+ */
+const slotsFor = (item: Item, rules: EquipRules = {}): HeroSlot[] =>
+  item.slot === 'oneHand'
+    ? heroSlotsFor('oneHand', rules)
+    : item.slot === 'offHand'
+      ? ['offHand']
+      : item.slot === 'body'
+        ? ['body']
+        : ['mainHand', 'offHand']
 
 /** Equip `item` into `slot` without mutating `s`. */
 const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => ({
@@ -780,17 +792,17 @@ const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => ({
  * mystic and an off-type stat line cannot masquerade as an upgrade.
  * Positive means it is an upgrade.
  */
-export function bestSlotGain(s: Sentinel, item: Item): number {
+export function bestSlotGain(s: Sentinel, item: Item, rules: EquipRules = {}): number {
   if (item.keepsake) return 0
   const now = heroDps(s)
   let gain = -Infinity
-  for (const slot of slotsFor(item)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
+  for (const slot of slotsFor(item, rules)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
   return gain
 }
 
 /** Equip `item` if it raises the wielder's DPS; returns the (possibly) new hero. */
-export function equipIfBetter(s: Sentinel, item: Item): Sentinel {
-  return equipAndDisplace(s, item).hero
+export function equipIfBetter(s: Sentinel, item: Item, rules: EquipRules = {}): Sentinel {
+  return equipAndDisplace(s, item, rules).hero
 }
 
 /**
@@ -798,11 +810,11 @@ export function equipIfBetter(s: Sentinel, item: Item): Sentinel {
  * model keeps those in a **pack**, exactly as the store does, because a
  * mid-run hire arrives bare (`gameStore.scaledRecruit`) and dresses out of it.
  */
-export function equipAndDisplace(s: Sentinel, item: Item): { hero: Sentinel; displaced: Item | null } {
+export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}): { hero: Sentinel; displaced: Item | null } {
   if (item.keepsake) return { hero: s, displaced: null }
   const now = heroDps(s)
   let best: { slot: HeroSlot; dps: number } | null = null
-  for (const slot of slotsFor(item)) {
+  for (const slot of slotsFor(item, rules)) {
     const dps = heroDps(withItem(s, slot, item))
     if (dps > now && (!best || dps > best.dps)) best = { slot, dps }
   }

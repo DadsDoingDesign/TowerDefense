@@ -131,7 +131,8 @@
 
   /* The gear column is now as tall as the window; `flex: 1` would stretch three
      slots to ~180px of empty box each. Cap them at the height the phone gives
-     them and let them sit at the top. */
+     them and let them sit at the top. (The STACKED slots only — the paper
+     doll, R3-2, sizes its own; see `.sh-doll` in shell.css.) */
   .shell:not(.shell-page) .sh-slot {
     flex: 0 0 auto;
     height: 76px;
@@ -283,6 +284,23 @@
   color: var(--text);
   font: 700 var(--fs-micro) / 1.4 system-ui, sans-serif;
   text-align: center;
+}
+
+/* ============================================== R3-2 — the doll's column width
+   Tablet and desk give the Detail band more width than a phone, and the gear
+   column takes some of it so the paper doll can use 56px slots with words
+   under the pictures (`@container gear (min-width: 118px)` in shell.css). The
+   context column keeps a 160px floor (170 on Large UI) — the width at which
+   its three hero tabs still clear the touch floor — and the gear column only
+   grows past its phone 98px out of what is left over: on a 1024 desk the rail
+   is at its 400px clamp and the doll keeps its phone size. */
+@media (min-width: 700px) {
+  .shell:not(.shell-page) > .sh-detail {
+    grid-template-columns: minmax(160px, 1fr) minmax(98px, 136px) 108px;
+  }
+  :root[data-scale='large'] .shell:not(.shell-page) > .sh-detail {
+    grid-template-columns: minmax(170px, 1fr) minmax(70px, 140px) 112px;
+  }
 }
 
 /* ====================================================================== hover */

@@ -2140,3 +2140,19 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   you can't pay. Re-critiqued on the final build: the phone's contrast failures
   are gone and the desk rail went from 24 to 15. Still open: primary buttons
   read quiet (A1-2), plus the six reworked items in round 2.
+- **2026-09-29 — R3-2: gear as a paper doll.** The Gear column's three stacked
+  text slots became a small body with the slots on it: body on the chest, off
+  hand left, main hand right, hands at the hips, head above, legs below, in the
+  hero's archetype hue. The figure is built from CSS blocks on whole pixels
+  rather than the hero sprite (Tiny Swords heroes have their weapons painted
+  in), so it stays crisp at every DPR. A container query picks doll or stack
+  from the column's own width: the phone column went 74 → 98px, paid for by the
+  band's gutters and the context padding (hero tabs measured back at 45px).
+  Under 390px and on Large UI phones it stacks with one-word labels. The desk
+  rail gets 60px slots and a caption of what each slot holds. Dual-wielding is
+  now the Ambidextrous relic, and the off hand shows it with a teal doubled
+  outline. Rendering caught four things. The rarity letter sat on the 32px
+  picture (now a tag on the corner). The PATIENCE ⓘ wrapped when the context
+  narrowed. The stack's two-line labels overflowed 48px Large slots. The
+  Ambidextrous note ran past the column. Checked at 390×844, 360×780,
+  390 Large, 1280 Large and 1440×900.

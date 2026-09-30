@@ -315,7 +315,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
         set({
           // Loot drops into any empty slot it strictly improves; the rest
           // goes to the pack. Nothing worn is ever replaced.
-          ...receiveItems(rosterXp, st.inventory, loot),
+          ...receiveItems(rosterXp, st.inventory, loot, st.relics),
           lootPity: pity,
           gold: st.gold + result.goldEarned,
           dust: st.dust + spoils.dustGain,

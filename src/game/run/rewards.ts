@@ -45,7 +45,7 @@ export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget
   } else if (card.kind === 'item' && card.item) {
     // Into an empty slot it strictly improves, if the company has one;
     // otherwise the pack. Never over anything already worn.
-    const got = receiveItems(roster, inventory, [card.item])
+    const got = receiveItems(roster, inventory, [card.item], relics)
     nextRoster = got.roster
     nextInv = got.inventory
     nextPity = { ...lootPity }

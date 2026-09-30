@@ -40,7 +40,7 @@ import {
 import { rollMutationChoices } from '../src/game/data/mutations'
 import type { RewardCard } from '../src/game/data/rewards'
 import { relicTeamMods } from '../src/game/data/relics'
-import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
+import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, isAmbidextrous, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
 import { pickBattleMap } from '../src/game/data/maps'
@@ -57,7 +57,7 @@ import { bannerRules, useMetaStore, type BannerRules } from '../src/state/metaSt
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { createSentinel } from '../src/game/data/sentinels'
-import { autoEquipEmpty, recruitKit, wearKit } from '../src/game/engine/kit'
+import { autoEquipEmpty, recruitKit, wearKit, type EquipRules } from '../src/game/engine/kit'
 import {
   autoEvolve,
   bestEvolve,
@@ -384,8 +384,13 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
    * A hire now dresses out of the pack with the store's own empty-slot rule.
    */
   let pack: Item[] = []
+  /** Relics taken this run (Phase 3b) — the store's `relics`. Declared here,
+   *  before the kit is dressed, because the equip rule reads it (R3-2). */
+  let relics: string[] = [...(o.startRelics ?? [])]
+  /** The run's equip rules: Ambidextrous opens the off hand to one-handers. */
+  const rules = (): EquipRules => ({ ambidextrous: isAmbidextrous(relics) })
   const equipOn = (h: number, item: Item) => {
-    const r = equipAndDisplace(roster[h], item)
+    const r = equipAndDisplace(roster[h], item, rules())
     roster[h] = r.hero
     if (r.displaced) pack.push(r.displaced)
   }
@@ -395,7 +400,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     let best = -Infinity
     let who = 0
     for (let h = 0; h < roster.length; h++) {
-      const g = bestSlotGain(roster[h], item)
+      const g = bestSlotGain(roster[h], item, rules())
       if (g > best) { best = g; who = h }
     }
     if (best > 0) equipOn(who, item)
@@ -411,8 +416,6 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   let clearedCount = 0
   let battles = 0
   let bossThreat: number | null = null
-  /** Relics taken this run (Phase 3b) — the store's `relics`. */
-  let relics: string[] = [...(o.startRelics ?? [])]
   let won = false
   const pity: RarityPity = newRarityPity()
   // Filled best-coverage-first on whichever field this run drew. This used to be
@@ -425,7 +428,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
     // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
     const base = withRelicStats(applyStatBonus(recruitBody(rng.pick(ARCHS), rng), meta.statBonus), relics)
-    const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack)
+    const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack, rules())
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
   }
@@ -456,7 +459,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         for (const it of stock) {
           if (ITEM_PRICE[it.rarity] > gold) continue
           for (let h = 0; h < roster.length; h++) {
-            const g = bestSlotGain(roster[h], it)
+            const g = bestSlotGain(roster[h], it, rules())
             if (g > 0 && (!best || g > best.gain)) best = { item: it, gain: g, hero: h }
           }
         }
@@ -603,7 +606,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     for (const c of cards) {
       if (c.kind !== 'item' || !c.item) continue
       for (let h = 0; h < roster.length; h++) {
-        const g = bestSlotGain(roster[h], c.item)
+        const g = bestSlotGain(roster[h], c.item, rules())
         if (!bestItem || g > bestItem.gain) bestItem = { item: c.item, gain: g, hero: h, frac: g / Math.max(1, heroDps(roster[h])) }
       }
     }

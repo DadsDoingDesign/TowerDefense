@@ -35,7 +35,14 @@ export interface RelicGrant {
 }
 
 /** A rule the RUN layer applies (the engine never sees these). */
-export type RelicRule = 'mercenaryCharter' | 'fieldSurgeon' | 'quartermaster' | 'warDiary' | 'titheBox'
+export type RelicRule =
+  | 'mercenaryCharter'
+  | 'fieldSurgeon'
+  | 'quartermaster'
+  | 'warDiary'
+  | 'titheBox'
+  /** R3-2: the off hand may hold a one-handed weapon (`items.heroSlotsFor`). */
+  | 'ambidextrous'
 
 /**
  * An engine capability a relic needs. Capabilities another lane owns are
@@ -123,6 +130,12 @@ export const RELICS: readonly Relic[] = [
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },
   { id: 'diary', name: 'War Diary', rarity: 'epic', kind: 'rule', desc: 'After every fight, the lowest-level hero on the field gains 50% more XP.', rule: 'warDiary' },
   { id: 'tithe', name: 'Tithe Box', rarity: 'common', kind: 'rule', desc: '+10 gold for every fight you win.', rule: 'titheBox' },
+  // R3-2 — dual-wielding as a bonus. Without it the off hand holds off-hand
+  // pieces only; with it a one-handed weapon fits there too, and (the engine
+  // sums what is worn, `combat.gearOf`) its damage and attack speed count in
+  // full, exactly as the main hand's do. A rule relic because it changes what
+  // the player may DO, not a number; the value is the second weapon it lets in.
+  { id: 'ambidextrous', name: 'Ambidextrous', rarity: 'rare', kind: 'rule', desc: 'Every hero’s off hand can hold a one-handed weapon. Its damage and speed count in full, like the main hand’s.', rule: 'ambidextrous' },
   { id: 'ember_urn', name: 'Ember Urn', rarity: 'epic', kind: 'rule', desc: 'A burning enemy that dies spreads its fire to the enemies beside it.', requires: 'burnSpreadOnDeath' },
   { id: 'signal_flare', name: 'Signal Flare', rarity: 'rare', kind: 'rule', desc: 'Your Rally Horn becomes Flare.', requires: 'command:flare', commands: ['flare'] },
 ]

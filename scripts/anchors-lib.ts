@@ -113,7 +113,8 @@ export interface GearInfo {
  * bleed any more — it is a weapon silently cut off. Either way the art is
  * wrong, and this is where it gets caught: at build time, not by eye. Both
  * hands are checked for every gear piece, because a one-hander may be
- * dual-wielded in the off hand (`heroSlotsFor('oneHand')`).
+ * dual-wielded in the off hand (`heroSlotsFor('oneHand', { ambidextrous: true })`,
+ * the Ambidextrous relic).
  */
 export function gearFitProblems(heroes: readonly HeroStripInfo[], gear: readonly GearInfo[]): string[] {
   const problems: string[] = []
