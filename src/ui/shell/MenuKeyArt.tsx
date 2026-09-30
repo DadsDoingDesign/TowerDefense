@@ -18,17 +18,12 @@ import { KEYART } from '../../assets/brand/keyart'
  * vertically. The composition keeps the subject in the middle 328×150 and
  * puts only trees and brush in the margins that get cropped.
  *
- * ## The live layer (attract mode)
+ * ## Where it shows (Whales UI plan H1-2)
  *
- * `children` is a LIVE layer laid over the still, filling the whole frame
- * (not the 488×272 stage) — it does its own fitting:
- *
- *     <MenuKeyArt><AttractMode /></MenuKeyArt>
- *
- * The still always renders underneath. The live layer fades in over it once it
- * has a frame, and simply is not there under reduced motion, before idle or
- * offline without its chunk — so every one of those cases shows the diorama,
- * with no placeholder and no layout change.
+ * Under reduced motion only. When motion is allowed the menu draws the live
+ * attract battle behind the whole screen instead (`MenuBackdrop` below), and
+ * this frame is not rendered. `children` is still honoured as a layer over the
+ * still, filling the frame, should anything want to lay one there.
  *
  * ## Ambience
  *
@@ -44,6 +39,26 @@ export function MenuKeyArt({ children }: { children?: ReactNode }) {
         <KeyArtStill />
       </div>
       {children}
+    </div>
+  )
+}
+
+/**
+ * The Watchtower menu's cinematic backdrop (Whales UI plan H1-2): the live
+ * attract battle (`children`, i.e. `<AttractMode />`) filling the whole screen
+ * BEHIND the menu, under a shade — a vignette, a wash behind the title and a
+ * bottom-up gradient behind the rows — so the menu overlays the art and stays
+ * readable over its brightest frame.
+ *
+ * Until the battle's first frame (before idle, or offline without its chunk)
+ * this is the page ground under the same shade, and the battle fades up out of
+ * it. Decorative: hidden from assistive tech, takes no pointer.
+ */
+export function MenuBackdrop({ children }: { children?: ReactNode }) {
+  return (
+    <div className="pg-cine-bg" aria-hidden>
+      {children}
+      <div className="pg-cine-shade" />
     </div>
   )
 }

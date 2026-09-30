@@ -10,38 +10,67 @@ import { describe, expect, it, vi } from 'vitest'
 
 type Sim = typeof import('../src/ui/attract/attractSim')
 
-/** Play every scenario to its end, as the menu loop would. */
-function playAll(sim: Sim): { status: string; secs: number }[] {
-  return sim.ATTRACT_SCENARIOS.map((_, i) => {
-    const e = sim.createAttractEngine(i, { preroll: true })
-    let ticks = 0
-    while (e.status === 'running' && ticks < 60 * 120) {
-      sim.stepAttract(e, 2) // the loop's 30 fps cadence: two ticks per frame
-      ticks += 2
-    }
-    return { status: e.status, secs: ticks / 60 }
+/**
+ * Direct the scene and play two loops of it, as the menu would: the director's
+ * headless play, then the engine rebuilt at the opening frame and stepped to
+ * the end of the cut at the loop's 30 fps cadence (two ticks per frame).
+ */
+function playAll(sim: Sim) {
+  const script = sim.directAttract()
+  const loops = [0, 1].map(() => {
+    const e = sim.createAttractEngine(script.startTick)
+    for (let t = 0; t < script.lengthTicks; t += 2) sim.stepAttract(e, 2)
+    return e
   })
+  return { script, loops }
 }
 
 describe('attract-mode battle', () => {
-  it('wins every scenario, in a watchable length of fight', async () => {
+  it('is a directed title sequence: the champion falls in the shot, the knights hold, ~20 s', async () => {
     const sim = await import('../src/ui/attract/attractSim')
-    for (const r of playAll(sim)) {
-      expect(r.status).toBe('cleared')
-      expect(r.secs).toBeGreaterThan(8)
-      expect(r.secs).toBeLessThan(90)
+    const s = sim.directAttract()
+    const secs = s.lengthTicks / 60 + sim.ATTRACT_CUT.hitstop
+    expect(secs).toBeGreaterThan(16)
+    expect(secs).toBeLessThan(24)
+    // The big hit lands late in the cut, with a beat after it before the fade.
+    const hitAt = (s.hitTick - s.startTick) / 60
+    expect(hitAt).toBeGreaterThan(8)
+    expect(secs - hitAt).toBeGreaterThan(sim.ATTRACT_CUT.fadeOut + 1)
+    // An advert, not a warning: nothing reaches the Gate, no knight goes down.
+    expect(s.leaks).toBe(0)
+    expect(s.downed).toBe(0)
+    // He fell somewhere the camera can see: on the field, near the company.
+    const c = sim.attractFocus()
+    expect(Math.hypot(s.hitPos.x - c.x, s.hitPos.y - c.y)).toBeLessThan(200)
+    // The camera track covers the whole cut and never leaves the field.
+    expect(s.cam.length).toBeGreaterThanOrEqual(Math.floor((s.lengthTicks / 60) * 10))
+    for (let t = 0; t <= s.lengthTicks / 60; t += 0.25) {
+      const p = sim.attractCamera(s, t)
+      expect(p.x).toBeGreaterThan(-60)
+      expect(p.x).toBeLessThan(sim.ATTRACT_MAP.width)
+      expect(p.y).toBeGreaterThan(0)
+      expect(p.y).toBeLessThan(sim.ATTRACT_MAP.height)
     }
   })
 
   it('is the same loop every time', async () => {
     const sim = await import('../src/ui/attract/attractSim')
-    const once = (i: number) => {
-      const e = sim.createAttractEngine(i)
-      while (e.status === 'running') sim.stepAttract(e, 60)
-      const { perSentinel, ...r } = e.result()
-      return { ...r, elapsed: e.elapsed, baseHp: e.baseHp, perSentinel }
-    }
-    for (let i = 0; i < sim.ATTRACT_SCENARIOS.length; i++) expect(once(i)).toEqual(once(i))
+    expect(sim.directAttract()).toEqual(sim.directAttract())
+    // The chunked director (the renderer's, one idle slice per chunk) cuts
+    // the same scene as the straight-through one.
+    const it = sim.directAttractSteps(97)
+    let r = it.next()
+    while (!r.done) r = it.next()
+    expect(r.value).toEqual(sim.directAttract())
+    const { loops } = playAll(sim)
+    const snap = (e: (typeof loops)[number]) => ({
+      tick: e.tick,
+      baseHp: e.baseHp,
+      kills: e.killCount,
+      enemies: e.enemies.map((x) => [x.type.id, x.hp, x.pos.x, x.pos.y]),
+      heroes: e.sentinels.map((x) => [x.id, x.hp]),
+    })
+    expect(snap(loops[1])).toEqual(snap(loops[0]))
   })
 
   it('spends no id and no name', async () => {

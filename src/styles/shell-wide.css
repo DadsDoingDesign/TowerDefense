@@ -205,6 +205,88 @@
   }
 }
 
+/* -- H1-2: the Watchtower menu over the cinematic battle (desk) -------------
+   The battle takes the whole screen; the menu is the same right-hand column
+   as the framed layout above, floating over the art. The camera frames its
+   shot in the open left of the screen (`--cine-fx`), and the shade darkens
+   from the right, behind the column, instead of from the bottom. */
+@media (min-width: 900px) and (min-height: 540px) {
+  .shell.shell-page:has(> .pg.has-backdrop) {
+    border: 0;
+    box-shadow: none;
+  }
+  .shell-page .pg.has-backdrop {
+    --cine-col: clamp(340px, 30vw, 440px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cine-col);
+    grid-template-rows: minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
+    column-gap: 56px;
+    padding: 32px clamp(48px, 5vw, 96px);
+  }
+  .shell-page .pg.has-backdrop > .pg-body {
+    display: contents;
+  }
+  .shell-page .pg.has-backdrop .pg-cine-window {
+    display: none;
+  }
+  /* The body is `display: contents`, so its children are the grid items and
+     must be lifted over the backdrop themselves. */
+  .shell-page .pg.has-backdrop .pg-records,
+  .shell-page .pg.has-backdrop .pg-rows {
+    position: relative;
+    z-index: 1;
+  }
+  .shell-page .pg.has-backdrop > .pg-head {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0 0 28px;
+  }
+  .shell-page .pg.has-backdrop .t-title {
+    font-size: 56px;
+  }
+  .shell-page .pg.has-backdrop .pg-records {
+    grid-column: 2;
+    grid-row: 3;
+    margin-bottom: 16px;
+  }
+  .shell-page .pg.has-backdrop .pg-rows {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  .shell-page .pg.has-backdrop > .pg-cta-band {
+    grid-column: 2;
+    grid-row: 5;
+    padding: 28px 0 0;
+  }
+  .shell-page .pg.has-backdrop .pg-cine-bg {
+    --cine-fx: 0.36;
+    --cine-fy: 0.5;
+    /* The camera may run past the field's right edge (the column covers it)
+       and its top (the road comes out of the wood: the establishing shot). */
+    --cine-spill-r: 1;
+    --cine-spill-t: 1;
+    --cine-vx: 36%;
+    --cine-vy: 50%;
+  }
+  .shell-page .pg.has-backdrop .pg-cine-shade {
+    background:
+      linear-gradient(
+        to left,
+        rgba(32, 23, 17, 0.84) 0,
+        rgba(32, 23, 17, 0.7) calc(var(--cine-col) + 96px),
+        rgba(32, 23, 17, 0) calc(var(--cine-col) + 360px)
+      ),
+      radial-gradient(120% 110% at var(--cine-vx) var(--cine-vy), transparent 45%, rgba(10, 6, 3, 0.6) 100%);
+  }
+}
+/* Hover keeps the row translucent, lit toward the accent. */
+@media (hover: hover) and (pointer: fine) {
+  .pg.has-backdrop .pg-row:hover:not(:disabled):not(.sel) {
+    background-color: rgba(70, 52, 30, 0.86);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
 /* A desk tall enough for it: the still at an exact 2× (the attract battle
    fits itself). Integer, so it stays as crisp as the 1× phone copy. */
 @media (min-width: 1200px) and (min-height: 700px) {

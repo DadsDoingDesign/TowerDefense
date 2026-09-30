@@ -103,3 +103,56 @@ describe('icon size tokens are whole multiples of the 16px sprite', () => {
     expect(px % 16).toBe(0)
   })
 })
+
+/*
+ * H1-2 (Whales UI plan): the Watchtower menu overlays the live attract battle.
+ * The art moves and future scenes will differ, so these hold the menu's text
+ * against PURE WHITE art — the brightest ground a frame could put under it —
+ * rather than against any one render. (The real loop is also measured frame by
+ * frame in the DESIGN_REVIEW.md log; its worst frame is far darker than this.)
+ */
+describe('the menu over its cinematic backdrop (H1-2)', () => {
+  const pageCss = readFileSync(join(ROOT, 'src/styles/page.css'), 'utf8')
+  const wideCss = readFileSync(join(ROOT, 'src/styles/shell-wide.css'), 'utf8')
+  const WHITE: RGB = [255, 255, 255]
+  const ruleBg = (selector: string): { rgb: RGB; a: number } => {
+    const at = pageCss.indexOf(`${selector} {`)
+    if (at < 0) throw new Error(`${selector} not found in page.css`)
+    const body = pageCss.slice(at, pageCss.indexOf('}', at))
+    const m = body.match(/background:\s*(rgba\([^)]*\))/)
+    if (!m) throw new Error(`${selector} has no rgba background`)
+    return rgba(m[1])
+  }
+  const alphaAt = (css: string, re: RegExp): number => {
+    const m = css.match(re)
+    if (!m) throw new Error(`stop not found: ${re}`)
+    return +m[1]
+  }
+  const ground = hex(token('bg'))
+
+  it('row labels and values clear 4.5:1 on a translucent row over pure white', () => {
+    const row = over(ruleBg('.pg.has-backdrop .pg-row'), WHITE)
+    for (const name of ['text', 'accent']) {
+      expect(ratio(hex(token(name)), row), `--${name} on a row over white`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('the records pill clears 4.5:1 over pure white', () => {
+    const pill = over(ruleBg('.pg.has-backdrop .pg-records'), WHITE)
+    for (const name of ['muted', 'accent']) {
+      expect(ratio(hex(token(name)), pill), `--${name} on the records pill`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('the tagline clears 4.5:1 and the wordmark 3:1 (large) under the washes over pure white', () => {
+    // Phone: the title wash at the tagline's depth (it only gets darker above).
+    const phone = alphaAt(pageCss, /rgba\(32, 23, 17, ([\d.]+)\) 112px/)
+    // Desk: the right-hand shade across the menu column.
+    const desk = alphaAt(wideCss, /rgba\(32, 23, 17, ([\d.]+)\) calc\(var\(--cine-col\) \+ 96px\)/)
+    for (const [where, a] of [['phone', phone], ['desk', desk]] as const) {
+      const g = over({ rgb: ground, a }, WHITE)
+      expect(ratio(hex(token('text')), g), `tagline (--text) on the ${where} wash`).toBeGreaterThanOrEqual(4.5)
+      expect(ratio(hex(token('accent')), g), `wordmark (--accent) on the ${where} wash`).toBeGreaterThanOrEqual(3)
+    }
+  })
+})

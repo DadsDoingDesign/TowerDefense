@@ -8,8 +8,8 @@ import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/s
 import type { ShellContext } from './context'
 import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
 import { BannerPicker } from './BannerPicker'
-import { MenuKeyArt } from './MenuKeyArt'
-import { AttractMode } from './AttractMode'
+import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
+import { AttractMode, useMenuMotion } from './AttractMode'
 import { DefeatReceipt } from './DefeatReceipt'
 import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
@@ -494,6 +494,11 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
   // only in the retired `HubScreen` — so the shipping UI recorded three lifetime
   // records and displayed none of them (M33). They are the reason to play again.
   const hasRecord = stats.bestDepth > 0 || stats.bestRound > 0 || stats.runsCompleted > 0
+  // H1-2: with motion allowed, the attract battle plays behind the WHOLE menu
+  // and the body keeps an empty window (`pg-cine-window`) where the shot is
+  // framed; under reduced motion the menu is exactly as before — the still
+  // key art in its frame.
+  const cinematic = useMenuMotion()
 
   return (
     <PageLayout
@@ -501,10 +506,15 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       subtitle="Hold the meadow against the goblin horde"
       cta={primary?.action ? { label: 'Start a Run', run: primary.action.run } : undefined}
       strip={<UpdateNotice />}
+      backdrop={
+        cinematic ? (
+          <MenuBackdrop>
+            <AttractMode />
+          </MenuBackdrop>
+        ) : undefined
+      }
     >
-      <MenuKeyArt>
-        <AttractMode />
-      </MenuKeyArt>
+      {cinematic ? <div className="pg-cine-window" aria-hidden /> : <MenuKeyArt />}
       {hasRecord && (
         <div className="pg-records">
           <Record label="Best depth" value={stats.bestDepth} />
