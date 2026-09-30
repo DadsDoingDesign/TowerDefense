@@ -302,7 +302,9 @@ export const BANNER_RUNGS: BannerRung[] = [
   // ×3.5 → ×4.2 (Phase 3b): on the three-act road the rung's win rate fell
   // further than the old multiplier paid for — §13 measured it banking fewer
   // marks a run than Vow 2, which makes the top rung a decoration.
-  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The heroes you start with are the heroes you finish with.', markMult: 4.2 },
+  // ×4.2 → ×4.6 (no hero HP + the tuning lane): §13 read 216.4 marks a run
+  // against Vow 2's 216.8. Payout only; the rung is exactly as hard as before.
+  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The heroes you start with are the heroes you finish with.', markMult: 4.6 },
 ]
 
 export const MAX_BANNER = BANNER_RUNGS.length
