@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import type { Vec2 } from '../game/core/vec'
+import { DANGER_COPY } from '../game/data/hazards'
 import { BLOCK_COPY } from '../game/data/terrain'
 import type { FieldTile, GameMap } from '../game/types'
 import { useGameStore } from '../state/gameStore'
@@ -79,7 +80,7 @@ export function SlotLayer({ field }: { field: FieldRect }) {
   const inBreather = screen === 'battle' && battlePhase === 'battle' && !!engine && breather
   const inSetup = screen === 'battle' && battlePhase === 'setup' && !engine
   if (!inBreather && !inSetup) return null
-  const tiles = map.tiles ?? map.slots.map((s, i) => ({ id: s.id, pos: s.pos, col: i, row: 0, block: null }))
+  const tiles: FieldTile[] = map.tiles ?? map.slots.map((s, i) => ({ id: s.id, pos: s.pos, col: i, row: 0, block: null }))
   const T = (map.tile ?? 80) * field.scale
   const armedHero = roster.find((h) => h.id === armed)
   // The roving stop: the focused tile if it is still on this field, else the
@@ -102,7 +103,8 @@ export function SlotLayer({ field }: { field: FieldRect }) {
   const label = (t: FieldTile): string => {
     const ref = `Tile ${tileRef(t)}`
     if (t.block) return `${ref}, ${BLOCK_COPY[t.block].line}`
-    const where = slotPlace(map, t.pos)
+    // Q1: cursed ground is open, and its name says what standing there costs.
+    const where = t.danger ? `${slotPlace(map, t.pos)}, ${DANGER_COPY[t.danger].line.replace(/\.$/, '')}` : slotPlace(map, t.pos)
     if (inBreather) {
       const rt = engine!.sentinelOnSlot(t.id)
       const state = rt ? `${rt.def.name} posted` : 'open'
@@ -153,7 +155,7 @@ export function SlotLayer({ field }: { field: FieldRect }) {
               else refs.current.delete(t.id)
             }}
             type="button"
-            className={`slot-btn tile-btn ${filled ? 'filled' : ''} ${t.block ? 'blocked' : ''}`}
+            className={`slot-btn tile-btn ${filled ? 'filled' : ''} ${t.block ? 'blocked' : ''} ${t.danger ? 'danger' : ''}`}
             style={{ left: t.pos.x * field.scale, top: t.pos.y * field.scale, width: T, height: T }}
             tabIndex={t.id === stop ? 0 : -1}
             aria-label={label(t)}

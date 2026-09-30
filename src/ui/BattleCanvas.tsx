@@ -9,6 +9,7 @@ import {
   drawPlacementDim,
   drawSlot,
   drawBlockedFlash,
+  drawTerrainDanger,
   drawTerrainFlames,
   drawTileGrid,
   fitView,
@@ -17,6 +18,7 @@ import {
   type DrawSentinel,
 } from '../game/render/renderer'
 import {
+  drawSkull,
   drawStandingFlame,
   fxAdvance,
   fxHitstopLeft,
@@ -537,6 +539,8 @@ export function BattleCanvas() {
       drawField(ctx, map)
       // A Wildfire's standing flames (G1-2): terrain, so under everything else.
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
+      // Q1: the skulls on cursed ground — terrain too, under the hero on it.
+      drawTerrainDanger(map, (x, y, v) => drawSkull(ctx, x, y, v))
 
       const liveEngine = st.engine
       /** The hovered tile, when it is one a hero can stand on. */

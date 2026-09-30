@@ -10,7 +10,7 @@ import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
 import { carryPlacements, encounterNode } from '../../game/run/map'
-import { nodeTerrainRule } from '../../game/run/terrain'
+import { nodeHazardSeed, nodeTerrainRule } from '../../game/run/terrain'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
@@ -395,9 +395,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // The battle's orientation is chosen HERE, once, from the layout the
     // player is holding (Portrait battlefields) — the field identity is the
     // run's seeded one; only which twin is fought on changes. Its map challenge
-    // (G1-2) is the node's own, the same one the preview named.
+    // (G1-2) is the node's own, the same one the preview named, and so (Q1) is
+    // its danger ground and seeded obstacles — a hash of the node, no stream draw.
     const battleMap =
-      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed), layout.orientation()) ??
+      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed), layout.orientation(), nodeHazardSeed(node, get().runSeed)) ??
       orientField(get().battleMap, layout.orientation())
     set({
       activeNodeId: nodeId,

@@ -34,6 +34,7 @@ npx tsx balance/meta-sweep.ts 200 rules     # each Banner rule measured alone
 npx tsx balance/meta-sweep.ts 240 phase3b   # the Phase 3b scoreboard: route / build spread, XP curve, §6
 npx tsx balance/meta-sweep.ts 300 mc        # §6's Monte Carlo alone, for fitting the Threat curve
 npx tsx balance/meta-sweep.ts 1 map         # map shape: forks, stops, forced elites
+npx tsx balance/hazard-sweep.ts mc+banner 300 0.75,1,3,3,10   # Q1 danger-ground levers vs §6 / §11 / §13
 npx tsx balance/fit-curve.ts 170 2.7 1.44 0.515 200   # a candidate waves.ts curve, against §6 AND §11
 ```
 
@@ -50,6 +51,7 @@ and it broke the build and every live harness.
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
 | `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt for a fit. |
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
+| `FW_HAZARDS` | shipped | Q1: `mult,dangerTiles,dangerPool,obstacles,obstaclePool` — run the whole report under other danger-ground levers (`src/game/data/hazards.ts`). `hazard-sweep.ts` is faster but reads §13 a few marks off the report. |
 
 ## The rule this harness is built around
 

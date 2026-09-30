@@ -3,6 +3,7 @@ import { idCounterState } from '../src/game/core/rng'
 import {
   ALL_MAPS,
   chooseFieldOrientation,
+  fieldFor,
   fieldIdOf,
   legacyPostTile,
   orientationOf,
@@ -15,6 +16,7 @@ import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { Archetype, GameMap } from '../src/game/types'
+import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { useGameStore } from '../src/state/gameStore'
 import { STANDARD_RUN } from '../src/state/daily'
 import { setLayoutOrientation } from '../src/state/game/runtime'
@@ -132,7 +134,10 @@ describe('the orientation is chosen per battle and fixed for it', () => {
     setLayoutOrientation(() => 'landscape')
     const node = enterBattle()
     const land = useGameStore.getState()
-    expect(land.battleMap).toBe(orientField(field, 'landscape'))
+    // Q1: the node lays its own danger ground and seeded obstacles on the field.
+    expect(fieldIdOf(land.battleMap)).toBe(field.id)
+    expect(land.battleMap.hazardSeed).toBe(nodeHazardSeed(node, 4242))
+    expect(land.battleMap).toBe(fieldFor(field.id, nodeTerrainRule(node, 4242), 'landscape', nodeHazardSeed(node, 4242)))
     const waveLand = land.currentWave
 
     // Same run, same node, held the other way up.
@@ -140,7 +145,7 @@ describe('the orientation is chosen per battle and fixed for it', () => {
     setLayoutOrientation(() => 'portrait')
     useGameStore.getState().selectNode(node.id)
     const tall = useGameStore.getState()
-    expect(tall.battleMap).toBe(orientField(field, 'portrait'))
+    expect(tall.battleMap).toBe(orientField(land.battleMap, 'portrait'))
     expect(fieldIdOf(tall.battleMap)).toBe(field.id)
     expect(tall.currentWave).toEqual(waveLand)
   })

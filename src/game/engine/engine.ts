@@ -5,6 +5,7 @@ import { mergeMods } from '../data/archetypeTree'
 import { behaviourOf, RESIST_CAP } from '../data/behaviours'
 import { DEFAULT_COMMANDS, FLARE, HOLD, RALLY, type CommandId } from '../data/commands'
 import { ENEMY_MODS, ENEMY_TYPES, modKey } from '../data/enemies'
+import { tileDamageMult } from '../data/hazards'
 import type { EffectMods, EnemyBehaviour, EnemyType, FocusMode, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 
 type Behaviour<K extends EnemyBehaviour['kind']> = Extract<EnemyBehaviour, { kind: K }>
@@ -279,6 +280,11 @@ export interface RtSentinel {
   rushUntil: number
   /** Sim time until which this post is knocked out (Powderkeg King): no shots, no block. */
   disabledUntil: number
+  /**
+   * Q1: the damage multiplier the ground under it imposes — `CURSED_DAMAGE_MULT`
+   * on cursed ground, 1 anywhere else. Re-read on every move (`placeAt`).
+   */
+  groundMult: number
 }
 
 export interface RtEnemy {
@@ -664,6 +670,7 @@ export class GameEngine {
         shots: 0,
         rushUntil: 0,
         disabledUntil: 0,
+        groundMult: tileDamageMult(opts.map, slotId),
       }
       placeIndex++
       this.sentinels.push(rt)
@@ -880,6 +887,8 @@ export class GameEngine {
   private placeAt(s: RtSentinel, slotId: string, pos: Vec2): void {
     s.slotId = slotId
     s.pos = { ...pos }
+    // Q1: stepping onto (or off) cursed ground changes what it deals from now on.
+    s.groundMult = tileDamageMult(this.map, slotId)
     s.targetId = null
     // Its trap is laid where it stands, so it moves with it.
     for (const t of this.traps) if (t.srcId === s.id) t.pos = this.nearestPathPoint(pos)
@@ -1890,16 +1899,17 @@ export class GameEngine {
   ): number {
     // `takenMult` is resist, the shield-bearer's aura and brittle in one number,
     // and it is the SAME function the tick differ re-runs (see its note).
+    // Q1: a hero on cursed ground deals less — ALL of its damage (shots,
+    // splash, the burns it lit, its traps, thorns), read where it stands NOW.
+    const src = srcId ? this.sentinels.find((x) => x.id === srcId) : undefined
+    if (src && src.groundMult !== 1) amount *= src.groundMult
     const mult = takenMult(e, type)
     const dealt = amount * mult
     const applied = Math.min(e.hp, dealt)
     if (e.shield > 0 || e.brittle) this.bookModifiers(e, amount, type, applied)
     e.hp -= dealt
     e.hitFlash = 1
-    if (srcId) {
-      const s = this.sentinels.find((x) => x.id === srcId)
-      if (s) s.damageDealt += applied
-    }
+    if (src) src.damageDealt += applied
     if (!quiet) {
       this.spawnFloater(e.pos, Math.round(dealt).toString(), isCrit ? '#ffd166' : '#ffffff', isCrit)
     }

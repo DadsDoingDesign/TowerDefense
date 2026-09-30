@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { computeCombat } from '../../game/engine/combat'
 import { buildName, levelProgress } from '../../game/engine/leveling'
+import { DANGER_COPY, tileDamageMult } from '../../game/data/hazards'
 import type { Sentinel } from '../../game/types'
 import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
 import { archetypeVar, ARCHETYPE_GLYPH, markLabel } from '../channels'
@@ -103,6 +104,7 @@ function PartyCards() {
   const screen = useGameStore((s) => s.screen)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const levelUps = useLevelUps((s) => s.heroes)
+  const battleMap = useGameStore((s) => s.battleMap)
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
@@ -113,8 +115,12 @@ function PartyCards() {
         const placed = !!slotOf(s.id)
         const selected = selection?.kind === 'hero' && selection.id === s.id
         const profile = computeCombat(s)
+        // Q1: posted on cursed ground — the card says so, and its DPS is the cost's.
+        const ground = screen === 'battle' && placed ? tileDamageMult(battleMap, slotOf(s.id)!) : 1
+        const cursed = ground !== 1
+        const dps = Math.round(profile.dps * ground)
         const hue = archetypeVar(s.archetype)
-        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
+        const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         // G3-2: a level-up waiting on the roster — the card glows and wears a
         // "Lv 5 ↑" badge until it has been dealt with (see `levelUps.ts`).
         const lvlUp = levelUpOpen(levelUps[s.id], s, evolutionQueue)
@@ -126,7 +132,7 @@ function PartyCards() {
                colour-vision modes can move it (M34). */
             style={{ '--rail': hue } as CSSProperties}
             aria-pressed={selected}
-            aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${Math.round(profile.dps)} DPS — ${state}${
+            aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${dps} DPS — ${state}${
               lvlUp ? `, ${levelUpWords(s, evolutionQueue)}` : evolutionQueue.includes(s.id) ? ', ready to evolve' : ''
             }`}
             onClick={() => {
@@ -168,8 +174,8 @@ function PartyCards() {
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
             </span>
-            <span className={`sh-hero-tag ${placed ? 'on' : selected && canPlace ? 'arm' : ''}`}>
-              {placed ? 'Deployed' : selected && canPlace ? 'Place it' : `${Math.round(profile.dps)} DPS`}
+            <span className={`sh-hero-tag ${placed ? (cursed ? 'on cursed' : 'on') : selected && canPlace ? 'arm' : ''}`}>
+              {placed ? (cursed ? 'Cursed' : 'Deployed') : selected && canPlace ? 'Place it' : `${dps} DPS`}
             </span>
           </button>
         )

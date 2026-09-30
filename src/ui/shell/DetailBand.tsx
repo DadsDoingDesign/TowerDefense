@@ -63,6 +63,7 @@ import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
 import { fieldTitle, orientationOf } from '../../game/data/maps'
+import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
 import { LevelUpPanel } from './LevelUpPanel'
 import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 
@@ -816,12 +817,21 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const clearSlot = useGameStore((s) => s.clearSlot)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  const battleMap = useGameStore((s) => s.battleMap)
+  const engine = useGameStore((s) => s.engine)
+  // Re-read where the hero stands after a breather move (the hud changes then).
+  useGameStore((s) => s.hud.breather)
   const profile = computeCombat(hero)
 
   // Undeploy lived on the old upgrade modal's footer; without it here a placed
   // hero can be moved but never taken off the field.
   const slotId = Object.keys(placements).find((id) => placements[id] === hero.id)
   const canUndeploy = !!slotId && battlePhase === 'setup'
+  // Q1: the ground it stands on RIGHT NOW — the live post during a wave (a
+  // breather move changes it), the setup post otherwise.
+  const standing = (engine && battlePhase === 'battle' ? engine.sentinels.find((x) => x.id === hero.id)?.slotId : undefined) ?? slotId
+  const danger = standing ? dangerAt(battleMap, standing) : null
+  const groundMult = danger === 'cursed' ? CURSED_DAMAGE_MULT : 1
 
   const TABS: { id: HeroTab; label: string }[] = [
     { id: 'stats', label: 'Stats' },
@@ -839,8 +849,13 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
         {/* The hue comes from a token, not from `hero.color`'s raw hex, so the
             colour-vision modes in global.css can move it (M34). */}
         <strong style={{ color: archetypeVar(hero.archetype) }}>{hero.name}</strong>
-        <span className="sh-context-sub">DPS {Math.round(profile.dps)}</span>
+        <span className={`sh-context-sub ${danger ? 'sh-cursed' : ''}`}>DPS {Math.round(profile.dps * groundMult)}</span>
       </div>
+      {danger && (
+        <p className="sh-line sh-cursed-line">
+          <Icon name="warn" /> <b>{DANGER_COPY[danger].name}</b>: {DANGER_COPY[danger].short} here ({Math.round(profile.dps)} DPS elsewhere).
+        </p>
+      )}
       <div className="sh-tabs" role="tablist">
         {TABS.map((t) => (
           <button

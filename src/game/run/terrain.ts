@@ -50,3 +50,25 @@ export function endlessTerrainRule(round: number, runSeed: number): TerrainRuleI
   if (u >= CHALLENGE_SHARE) return null
   return TERRAIN_RULE_IDS[Math.floor((u / CHALLENGE_SHARE) * TERRAIN_RULE_IDS.length)] ?? null
 }
+
+/**
+ * Q1: the seed a battle's danger ground and seeded obstacles are laid from
+ * (`data/hazards.ts`) — or null for a node that is not a fight.
+ *
+ * EVERY fight gets one (the designer: "that's part of the seed"): the first,
+ * the elites and the bosses too. Like the challenge draw above it is a HASH of
+ * (run seed, node id), not a draw from a run stream, so it shifts no loot, no
+ * map and no fight, and the same node always lays the same ground — across a
+ * resume and on either twin.
+ */
+export function nodeHazardSeed(node: { id: string; type: string }, runSeed: number): number | null {
+  if (!FIGHTS.has(node.type)) return null
+  return hashSeed(runSeed, 'hazard', node.id)
+}
+
+/** Endless rounds lay their ground from the round, on the same terms. */
+export function endlessHazardSeed(round: number, runSeed: number): number {
+  return hashSeed(runSeed, 'hazard', 'endless', round)
+}
+
+const FIGHTS = new Set(['battle', 'elite', 'boss', 'miniboss'])

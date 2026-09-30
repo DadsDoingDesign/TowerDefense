@@ -369,6 +369,10 @@
 .sh-hero-tag.on {
   color: var(--good);
 }
+/* Q1: posted on cursed ground — the tag names the cost instead of "Deployed". */
+.sh-hero-tag.on.cursed {
+  color: var(--bad-text);
+}
 .sh-hero-tag.arm {
   color: var(--accent);
 }
@@ -499,6 +503,18 @@
 .sh-line.bad {
   color: var(--bad-text);
   font-weight: 600;
+}
+/* Q1: a hero posted on cursed ground — its DPS in the head reads as the
+   debuffed figure, and one line under the head says why. */
+.sh-context-sub.sh-cursed {
+  color: var(--bad-text);
+}
+.sh-line.sh-cursed-line {
+  color: var(--bad-text);
+  margin: -2px 0 6px;
+}
+.sh-cursed-line .fw-i {
+  vertical-align: -2px;
 }
 
 .sh-tabs {

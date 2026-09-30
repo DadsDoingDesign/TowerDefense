@@ -36,6 +36,7 @@ import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 import { withTerrainRule } from '../src/game/data/maps'
 import { parseTileId } from '../src/game/data/terrain'
+import { DANGER_TILES } from '../src/game/data/hazards'
 import { carryPlacements } from '../src/game/run/map'
 import {
   RUN_SNAPSHOT_KEY,
@@ -70,6 +71,8 @@ function buildBase(): Record<string, unknown> {
   setLayoutOrientation(null)
   // v10 (G1-2): the battle is fought under a map challenge with the hero posted
   // on a tile, so mutations land on `terrainRule` and a tile-keyed placement.
+  // Q1: `withTerrainRule` keeps the node's danger ground, so they land on
+  // `hazardSeed` too.
   {
     const cur = useGameStore.getState()
     const field = withTerrainRule(cur.battleMap, 'wildfire')
@@ -147,6 +150,13 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   if (!posted.every((v) => typeof v === 'string')) throw new Error(`${where}: a placement value is not a hero id`)
   if (new Set(posted).size !== posted.length) throw new Error(`${where}: a hero is posted twice`)
   if (field.terrainRule !== (snap.terrainRule ?? undefined)) throw new Error(`${where}: terrain ${field.terrainRule} ≠ ${snap.terrainRule}`)
+  // Q1: the danger-ground seed is a uint32 or null, and the field resumed is
+  // the one it lays — at most one cursed tile per DANGER_TILES, never blocked.
+  const hz = snap.hazardSeed ?? null
+  if (hz !== null && !(Number.isInteger(hz) && hz >= 0 && hz <= 0xffffffff)) throw new Error(`${where}: hazard seed ${hz}`)
+  if ((field.hazardSeed ?? null) !== hz) throw new Error(`${where}: field hazard ${field.hazardSeed} ≠ ${hz}`)
+  const cursed = (field.tiles ?? []).filter((t) => t.danger)
+  if (cursed.length > DANGER_TILES || cursed.some((t) => t.block)) throw new Error(`${where}: bad danger ground`)
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
@@ -258,6 +268,9 @@ describe('run snapshot fuzz', () => {
     // …under its map challenge, with the hero on its tile (G1-2).
     expect(snap!.terrainRule).toBe('wildfire')
     expect(snapshotBattleMap(snap!).terrainRule).toBe('wildfire')
+    // …and the node's danger ground (Q1): a seed, and a cursed tile on the field.
+    expect(snap!.hazardSeed).toEqual(expect.any(Number))
+    expect(snapshotBattleMap(snap!).tiles!.filter((t) => t.danger === 'cursed')).toHaveLength(DANGER_TILES)
     expect(Object.values(snap!.placements)).toHaveLength(1)
   })
 

@@ -9,7 +9,7 @@ import type { RarityPity } from '../../game/data/items'
 import type { RunMap } from '../../game/data/runmap'
 import type { RewardCard } from '../../game/data/rewards'
 import type { ShrineOffer } from '../../game/data/shrines'
-import type { EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, TerrainKind, WaveDef } from '../../game/types'
+import type { DangerKind, EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, TerrainKind, WaveDef } from '../../game/types'
 import type { AssistLevel } from '../settingsStore'
 import type { RunChallenge } from '../daily'
 import type { RunFeats } from '../../game/run/settle'
@@ -287,8 +287,11 @@ export interface GameData {
    * G1-2: the blocked tile the player last tapped, so the coach strip can say
    * why nothing happened ("Rock: nothing can stand here"). Presentation — not
    * snapshotted, cleared with the rest of the shell.
+   *
+   * Q1: or the CURSED tile an armed hero is over / was just posted on, so the
+   * strip says what standing there costs (`kind: 'cursed'`).
    */
-  fieldNote: { tileId: string | null; kind: TerrainKind; at: number } | null
+  fieldNote: { tileId: string | null; kind: TerrainKind | DangerKind; at: number } | null
   /**
    * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
    * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast

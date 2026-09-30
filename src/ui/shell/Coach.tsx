@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
+import { DANGER_COPY } from '../../game/data/hazards'
 import { BLOCK_COPY } from '../../game/data/terrain'
 import { ITEM_PRICE } from '../../game/run/economy'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
@@ -181,12 +182,14 @@ export function Coach() {
   }, [fieldNote, clearFieldNote])
 
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
+    // Q1: the note is a blocked tile's reason, or cursed ground's cost.
+    const copy = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : BLOCK_COPY[fieldNote.kind]
     return (
       <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
         <Icon name="warn" className="sh-coach-glyph" />
         <p className="sh-coach-text" key={fieldNote.at}>
-          <b>{BLOCK_COPY[fieldNote.kind].name}</b>
-          {BLOCK_COPY[fieldNote.kind].line.slice(BLOCK_COPY[fieldNote.kind].name.length)}
+          <b>{copy.name}</b>
+          {copy.line.slice(copy.name.length)}
         </p>
         <button className="sh-coach-dismiss" onClick={clearFieldNote} aria-label="Got it — hide this note" data-sfx="close">
           Got it

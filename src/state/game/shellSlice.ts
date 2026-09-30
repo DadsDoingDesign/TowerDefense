@@ -4,6 +4,7 @@
  * is snapshotted. See docs/FIGMA.md § The Root Shell.
  */
 import { sfx } from '../../audio/audio'
+import { dangerAt } from '../../game/data/hazards'
 import type { HeroSlot } from '../../game/types'
 import type { HeroTab, ShellSelection, Slice } from './types'
 
@@ -25,6 +26,15 @@ export interface ShellActions {
   noteRoad: () => void
   /** Retire the blocked-tile note (the strip's "Got it", or its timeout). */
   clearFieldNote: () => void
+  /**
+   * Q1: a hero was just posted or moved onto `tileId`; if that tile is cursed
+   * ground, the coach strip says what it costs (and the canvas flashes it). A
+   * no-op on safe ground, and it does not re-announce, inside 1.5s, the tile it
+   * is already naming.
+   */
+  noteDanger: (tileId: string) => void
+  /** Q1: {@link noteDanger} for this field's cursed tile, if it has one — on arming a hero. */
+  noteDangerOnField: () => void
 }
 
 export const createShellSlice: Slice<ShellActions> = (set, get) => ({
@@ -50,6 +60,12 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
       gearSlot: null,
       selectedSentinelId: next?.kind === 'hero' ? next.id : null,
     })
+    // Q1: arming a hero on a field with cursed ground says what that ground
+    // costs — now, while the finger is still on the Selector, rather than on
+    // press-over-the-tile, where the strip opening would slide the field out
+    // from under the finger. The canvas outlines the tile for as long.
+    const st = get()
+    if (next?.kind === 'hero' && st.screen === 'battle' && st.battlePhase === 'setup' && !st.engine) st.noteDangerOnField()
   },
 
   setHeroTab: (tab) => set({ heroTab: tab, gearSlot: null }),
@@ -70,5 +86,16 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
   },
   clearFieldNote: () => {
     if (get().fieldNote) set({ fieldNote: null })
+  },
+  noteDanger: (tileId) => {
+    const kind = dangerAt(get().battleMap, tileId)
+    if (!kind) return
+    const cur = get().fieldNote
+    if (cur && cur.tileId === tileId && cur.kind === kind && Date.now() - cur.at < 1500) return
+    set({ fieldNote: { tileId, kind, at: Date.now() } })
+  },
+  noteDangerOnField: () => {
+    const t = get().battleMap.tiles?.find((x) => x.danger)
+    if (t) get().noteDanger(t.id)
   },
 })

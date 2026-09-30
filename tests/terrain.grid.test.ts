@@ -22,7 +22,7 @@ import {
   tileId,
 } from '../src/game/data/terrain'
 import { carryPlacements } from '../src/game/run/map'
-import { CHALLENGE_SHARE, endlessTerrainRule, nodeTerrainRule } from '../src/game/run/terrain'
+import { CHALLENGE_SHARE, endlessTerrainRule, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import type { GameMap, TerrainRuleId } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
@@ -248,7 +248,8 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     expect(node).toBeDefined()
     const st = useGameStore.getState()
     const hero = st.roster[0]
-    const flooded = fieldFor(fieldIdOf(st.battleMap), 'flooded', 'landscape')!
+    // Q1: fought on the flood AND the node's own danger ground / seeded rocks.
+    const flooded = fieldFor(fieldIdOf(st.battleMap), 'flooded', 'landscape', nodeHazardSeed(node!, seed))!
     const water = flooded.tiles!.find((t) => t.block === 'water')!.id
     // The company stood on that tile at the last battle.
     useGameStore.setState({ placements: { ...st.placements, [water]: hero.id } })
@@ -260,11 +261,12 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     expect(Object.keys(after.placements)).not.toContain(water)
 
     // Save and resume: same terrain, same twin.
-    const open = after.battleMap.slots[0].id
+    const open = after.battleMap.slots.find((s) => !after.battleMap.tiles!.find((t) => t.id === s.id)!.danger)!.id
     useGameStore.getState().shellSelect({ kind: 'hero', id: hero.id })
     useGameStore.getState().tapTile(open)
     const snap = captureRun(useGameStore.getState(), { rngLoot: 1, rngMap: 2, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
     expect(snap.terrainRule).toBe('flooded')
+    expect(snap.hazardSeed).toBe(nodeHazardSeed(node!, seed))
     const back = migrateSnapshot(JSON.parse(JSON.stringify(snap)))!
     expect(back.terrainRule).toBe('flooded')
     expect(snapshotBattleMap(back)).toBe(flooded)

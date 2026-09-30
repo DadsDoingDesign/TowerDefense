@@ -66,8 +66,9 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   const grass = spriteFor('grass')
   if (!grass) return null
   // G1-2: a map challenge does not change the woodland round the field, so the
-  // apron is keyed (and seeded) on the plain twin's id — no re-bake per rule.
-  const apronId = map.terrainRule ? map.id.replace(`~${map.terrainRule}`, '') : map.id
+  // apron is keyed (and seeded) on the plain twin's id — no re-bake per rule,
+  // nor (Q1) per battle's danger-ground seed.
+  const apronId = map.baseId ? `${map.baseId}${map.orientation === 'portrait' ? '-tall' : ''}` : map.id
   const key = `${style.id}:${apronId}:${map.width}x${map.height}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
   const hit = cache.find((e) => e.key === key)
   if (hit) {

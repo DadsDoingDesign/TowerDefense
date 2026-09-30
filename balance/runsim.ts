@@ -44,7 +44,7 @@ import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, equi
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
 import { fieldFor, pickBattleMap } from '../src/game/data/maps'
-import { nodeTerrainRule } from '../src/game/run/terrain'
+import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
@@ -544,8 +544,10 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     // G1-2: the node's map challenge, exactly as `selectNode` deals it — the
     // company re-deploys best-first on whatever ground the terrain leaves.
     const rule = nodeTerrainRule(node, seed)
-    const nodeField = rule ? (fieldFor(field.id, rule, 'landscape') ?? field) : field
-    const nodeSlots = rule ? bestSlots(nodeField) : heroSlots
+    // Q1: and its danger ground + seeded obstacles, from the same node hash.
+    const hazard = nodeHazardSeed(node, seed)
+    const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard) ?? field) : field
+    const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
       // `gameStore.selectNode`: a Banner-made elite is drawn `eliteDepth`
@@ -773,12 +775,15 @@ export function monteCarloRun(
     const threat = threatAtLayer(depth) * nodeThreatMult(depth === MC_LAYERS ? 'boss' : kind === 'elite' ? 'elite' : 'battle')
     if (depth === MC_LAYERS) { finalAttempt = true; bossThreat = threat }
     // G1-2: map challenges on the same terms the campaign deals them.
-    const rule = nodeTerrainRule({ id: `mc${depth}`, type: depth === MC_LAYERS || kind === 'boss' ? 'boss' : kind === 'elite' ? 'elite' : 'battle', layer: depth }, hashSeed(r, 'mc'))
+    const mcNode = { id: `mc${depth}`, type: depth === MC_LAYERS || kind === 'boss' ? 'boss' : kind === 'elite' ? 'elite' : 'battle', layer: depth }
+    const rule = nodeTerrainRule(mcNode, hashSeed(r, 'mc'))
+    // Q1: every fight lays danger ground and seeded obstacles from its node.
+    const hazard = nodeHazardSeed(mcNode, hashSeed(r, 'mc'))
     const m = runBattle({
       team,
       depth,
       kind,
-      map: rule ? (fieldFor(field.id, rule, 'landscape') ?? field) : field,
+      map: fieldFor(field.id, rule, 'landscape', hazard) ?? field,
       autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),

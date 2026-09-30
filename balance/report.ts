@@ -18,6 +18,18 @@ import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLe
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import { recruitKit, wearKit } from '../src/game/engine/kit'
+import { HAZARD_LEVERS } from '../src/game/data/hazards'
+/**
+ * Q1 exploration knob (Node-only, like `FW_META_RUNS`): `FW_HAZARDS=mult,dangerTiles,
+ * dangerPool,obstacles,obstaclePool` runs the whole report under other danger-ground
+ * levers. `balance/hazard-sweep.ts` is quicker but reads §13 a few marks off the
+ * report (the report's earlier sections leave process state behind), so a fit
+ * that has to clear a gate by a few marks is confirmed here.
+ */
+if (process.env.FW_HAZARDS) {
+  const [a, b, c, d, e] = process.env.FW_HAZARDS.split(',').map(Number)
+  Object.assign(HAZARD_LEVERS, { cursedDamageMult: a, dangerTiles: b, dangerPool: c, obstacles: d, obstaclePool: e })
+}
 import { createSentinel } from '../src/game/data/sentinels'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'

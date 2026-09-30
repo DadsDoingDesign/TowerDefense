@@ -18,6 +18,7 @@
 import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { leakCeiling } from '../src/game/data/enemies'
+import { tileDamageMult } from '../src/game/data/hazards'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -394,7 +395,9 @@ function repositionAt(engine: GameEngine, policy: PlayerPolicy): void {
     if (fighter && first.def.archetype !== 'fighter') engine.moveHero(fighter.slotId, first.slotId)
     return
   }
-  const cov = slotCoverage(engine.map)
+  // Q1: cursed ground is worth what it leaves after the curse (see `deployTeam`).
+  const raw = slotCoverage(engine.map)
+  const cov: Record<string, number> = Object.fromEntries(Object.entries(raw).map(([id, c]) => [id, c * tileDamageMult(engine.map, id)]))
   const free = engine.map.slots.filter((sl) => !engine.sentinelOnSlot(sl.id)).map((sl) => sl.id)
   if (!free.length) return
   free.sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
@@ -479,6 +482,10 @@ export interface RunBattleOptions {
  * OWN reach: shortest reach first (the blockers have the fewest good tiles),
  * each taking the free tile that sees the most road within its range, ties by
  * tile id so the choice is stable (and identical on both twins).
+ *
+ * Q1: a tile of cursed ground is worth its coverage × `CURSED_DAMAGE_MULT` —
+ * the player reads the curse as the damage it costs, and posts there only when
+ * the view is still worth it after paying.
  */
 const coverageCache = new Map<string, Record<string, number>>()
 export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; slotId: string }[]): { sentinel: Sentinel; slotId: string }[] {
@@ -486,17 +493,22 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
   ranged.sort((a, b) => a.range - b.range || a.i - b.i)
   const taken = new Set<string>()
   const out: { sentinel: Sentinel; slotId: string }[] = new Array(team.length)
+  // Coverage depends on the path and a tile's centre only, never on which
+  // tiles a battle blocks — so it is cached per field and orientation (every
+  // Q1 hazard variant of a field shares one entry) over ALL its tiles.
+  const geo = { path: map.path, slots: map.tiles ?? map.slots }
   for (const h of ranged) {
-    const key = `${map.id}:${h.range}`
+    const key = `${map.baseId ?? map.twinOf ?? map.id}:${map.orientation ?? 'landscape'}:${h.range}`
     let cov = coverageCache.get(key)
     if (!cov) {
-      cov = slotCoverage(map, h.range)
+      cov = slotCoverage(geo, h.range)
       coverageCache.set(key, cov)
     }
+    const worth = (id: string) => cov![id] * tileDamageMult(map, id)
     let best: string | null = null
     for (const s of map.slots) {
       if (taken.has(s.id)) continue
-      if (best === null || cov[s.id] > cov[best] || (cov[s.id] === cov[best] && s.id < best)) best = s.id
+      if (best === null || worth(s.id) > worth(best) || (worth(s.id) === worth(best) && s.id < best)) best = s.id
     }
     taken.add(best!)
     out[h.i] = { sentinel: h.sentinel, slotId: best! }
