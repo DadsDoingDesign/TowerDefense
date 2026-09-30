@@ -99,6 +99,16 @@ function apronWarmer(): (src: HTMLCanvasElement) => HTMLCanvasElement {
   }
 }
 
+/**
+ * The director's cut per seed, kept for the page's life. The cut is a pure
+ * function of the seed (`directAttractSteps`), and directing it is the one
+ * expensive step of the warm-up — seconds of headless play, sliced over idle
+ * callbacks. A return to the menu (quitting a run remounts the demo) reuses it
+ * and warms up without waiting for idle time, so the backdrop is back within a
+ * frame or two instead of blank while the director re-plays the same scene.
+ */
+const directed = new Map<number, AttractScript>()
+
 const smooth = (x: number) => {
   const c = Math.min(1, Math.max(0, x))
   return c * c * (3 - 2 * c)
@@ -418,18 +428,26 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
     }
     const w = window as IdleWin
     let idleId = 0
-    const idle = (fn: () => void) =>
-      (idleId = w.requestIdleCallback ? w.requestIdleCallback(fn, { timeout: 1000 }) : window.setTimeout(fn, 60))
-    const director = directAttractSteps(seed)
+    // A return visit has the cut already: every stage left is a cache hit or a
+    // millisecond, so it runs on plain timers — idle callbacks can be starved
+    // for a second at a time right after the battle unmounts.
+    const cached = directed.get(seed)
+    const useIdle = !cached && !!w.requestIdleCallback
+    const idle = (fn: () => void) => (idleId = useIdle ? w.requestIdleCallback!(fn, { timeout: 1000 }) : window.setTimeout(fn, cached ? 0 : 60))
+    const director = cached ? null : directAttractSteps(seed)
     /** A stage returning `true` wants another slice. */
     const stages: (() => boolean | void)[] = [
       () => {
         fxPreload()
       },
       () => {
-        const r = director.next()
-        if (!r.done) return true
-        script = r.value
+        if (cached) script = cached
+        else {
+          const r = director!.next()
+          if (!r.done) return true
+          script = r.value
+          directed.set(seed, script)
+        }
         map = script.map
         M = apronMargins(map)
       },
@@ -456,7 +474,7 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
 
     return () => {
       cancelled = true
-      if (w.cancelIdleCallback) w.cancelIdleCallback(idleId)
+      if (useIdle) w.cancelIdleCallback?.(idleId)
       else window.clearTimeout(idleId)
       loop.current?.stop()
       loop.current = null

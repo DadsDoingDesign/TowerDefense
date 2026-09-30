@@ -11,7 +11,8 @@ import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { choiceOwed, levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 import { useMapFocus } from './mapFocus'
-import { useShown } from './staging'
+import { openSlotShown } from '../../state/staging'
+import { useShown, useStaged } from './staging'
 
 /**
  * Band 3 — the party. One tap fills the Context panel below with a hero's
@@ -106,8 +107,11 @@ function PartyCards() {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const levelUps = useLevelUps((s) => s.heroes)
   const battleMap = useGameStore((s) => s.battleMap)
-  // LS3: "recruit a hero" names a stop the first run has not reached yet.
+  // LS3: "recruit a hero" names a stop the first run has not reached yet, and
+  // the first battle is only "post a hero, start the wave".
   const recruitShown = useShown('recruit')
+  const staged = useStaged()
+  const openSlot = useGameStore((s) => openSlotShown(staged, recruitShown, s))
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
@@ -183,7 +187,7 @@ function PartyCards() {
           </button>
         )
       })}
-      {roster.length < MAX_ROSTER && recruitShown && (
+      {roster.length < MAX_ROSTER && openSlot && (
         <div className="sh-hero empty" aria-hidden>
           <span className="sh-hero-glyph ghost">+</span>
           <span className="sh-hero-name muted">Open slot</span>

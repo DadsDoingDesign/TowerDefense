@@ -173,3 +173,23 @@ export function metaIdeas(stats: StagingStats): IdeaId[] {
 export function ideaShown(id: IdeaId, staged: boolean, met: readonly string[], present: ReadonlySet<IdeaId>): boolean {
   return !staged || present.has(id) || met.includes(id)
 }
+
+/**
+ * The party row's "Open slot · recruit a hero" card.
+ *
+ * It names the recruit idea, so it follows it — with one exception the brief
+ * spells out: the first battle is only "post a hero, start the wave". A
+ * recruit stop in reach on the first map (layer 1 may roll one) latches the
+ * idea before the first fight, so on a staged run the card also waits out that
+ * fight. Everywhere else — and on any run that is not staged — it is exactly
+ * `recruitShown`.
+ */
+export function openSlotShown(
+  staged: boolean,
+  recruitShown: boolean,
+  s: Pick<StageState, 'screen' | 'runMap' | 'clearedNodeIds'>,
+): boolean {
+  if (!staged) return recruitShown
+  if (s.screen === 'battle' && fightsWon(s) === 0) return false
+  return recruitShown
+}
