@@ -48,13 +48,13 @@ import type { DangerKind, FieldTile, GameMap } from '../types'
  */
 export const HAZARD_LEVERS = {
   /** Damage a hero standing on cursed ground deals, as a multiplier. */
-  cursedDamageMult: 0.75,
+  cursedDamageMult: 0.5,
   /** How many tiles of each battle's field are cursed. */
   dangerTiles: 1,
   /** The cursed tile is drawn from this many best open tiles (by coverage). */
   dangerPool: 3,
   /** How many seeded boulders each battle's field adds. */
-  obstacles: 3,
+  obstacles: 4,
   /** …drawn from this many best open tiles after the cursed one. */
   obstaclePool: 10,
 }
