@@ -370,41 +370,6 @@
   color: var(--muted);
 }
 
-/* ------------------------------------------------------ run options */
-.hpv-more {
-  width: 100%;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-}
-.hpv-more > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap);
-  min-height: var(--hit-min);
-  padding: 0 var(--gap-sm);
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-}
-.hpv-more > summary::-webkit-details-marker {
-  display: none;
-}
-.hpv-more-hint {
-  color: var(--teal-text);
-  font-weight: 600;
-}
-.hpv-more-hint::after {
-  content: ' ▾';
-}
-.hpv-more[open] .hpv-more-hint::after {
-  content: ' ▴';
-}
-.hpv-more > .pg-card {
-  background: transparent;
-}
-
 /* ============================================================ desk / tablet
    The page column is 600px on a desk (shell-wide.css). The cards and the
    comparison want the width a desk has, so the variant pages widen, and the

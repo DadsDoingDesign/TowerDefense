@@ -18,6 +18,7 @@ import type { Archetype, Placement } from '../../game/types'
 import { sfx } from '../../audio/audio'
 import { bannerRules, MAX_BANNER, useMetaStore } from '../metaStore'
 import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
+import { seedEditable, vowAllowed } from '../runTerms'
 import { snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
 import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, streams, usesHub } from './runtime'
@@ -36,6 +37,11 @@ export interface RunActions {
    * hero is committed). Returns false when refused or the text is empty.
    */
   reseedRun: (input: string) => boolean
+  /**
+   * The way back from a typed seed: re-deal the run being set up from a fresh
+   * random seed, keeping its Vow. Same gate as `reseedRun`.
+   */
+  randomizeRunSeed: () => boolean
   /**
    * Choose the Banner for the run being set up. Only legal on the hero-pick
    * screen — a Banner is a bet you place before the first node, never a switch
@@ -96,11 +102,22 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
 
   reseedRun: (input) => {
     const st = get()
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return false
+    // Never on a Daily (`seedEditable`): the day's seed IS the Daily, and this
+    // used to quietly turn today's run into an unranked custom-seed run.
+    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
     const seed = parseSeed(input)
     if (seed === null) return false
-    const banner = st.challenge.kind === 'daily' ? 0 : st.runBanner
+    const banner = st.runBanner
     get().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
+    if (banner > 0) get().setRunBanner(banner)
+    return true
+  },
+
+  randomizeRunSeed: () => {
+    const st = get()
+    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
+    const banner = st.runBanner
+    get().newRun()
     if (banner > 0) get().setRunBanner(banner)
     return true
   },
@@ -109,7 +126,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const st = get()
     // A Banner is chosen before the march, never during it — and never on a
     // Daily Watch, which is one set of rules for everyone.
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.challenge.kind === 'daily') return
+    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || !vowAllowed(st.challenge)) return
     const unlocked = useMetaStore.getState().sacrificeTier
     const next = Math.max(0, Math.min(Math.min(MAX_BANNER, unlocked), Math.floor(tier)))
     if (next === st.runBanner) return

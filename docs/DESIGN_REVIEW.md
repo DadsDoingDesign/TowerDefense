@@ -2291,3 +2291,22 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   grey rocks under it. Frame cost against the round-2 build, both production
   and back to back on a loaded machine: phone 4x CPU median 3.4 / 4.1 ms (base
   3.9 / 4.4). Shots in `fieldwatch-critique/build-q12/`.
+- **2026-09-30 — Q8: hero-pick Daily rules and the seed chip.** The seed card
+  (title, line, full-width field; ~280px of scroll) is now a chip in the title
+  block — `Seed 93200335 ✎` opens a one-line editor in its place (Use /
+  Cancel, Enter / Escape, focus in and back out); a custom seed reads
+  `Custom seed N ✎` with a `Random seed` chip as the way back and one line on
+  what it is not ranked for. On a Daily the chip is fixed (`Daily ·
+  2026-09-30`, a lock, not a control) beside a Scored / Practice pill, with
+  "Picking a hero uses today's one scored attempt." (or "…is used — this run
+  is practice.") and "Standard rules: no Watchtower perks, no Vow." The Vow
+  row no longer renders on a Daily (the store already refused it), and
+  `reseedRun` refuses a Daily. Both read `state/runTerms.ts`, as do the three
+  `?heropick=` layouts. Rendered at 390×844 @2x and 1440×900; the loop caught
+  (1) a double focus ring on the editor field (its accent border plus the
+  global ring — the border is a hairline now), (2) the custom-seed line set
+  all in bold as one sentence (split into a lead and a quiet second line),
+  (3) the practice line running to three lines (shortened to two), and
+  (4) focus dropping to <body> when `Random seed` removed itself. Cost: on a
+  plain run the header is ~52px taller, so on a 390×844 phone the Vow chips
+  now start just under the fold (they were ~40px above it).
