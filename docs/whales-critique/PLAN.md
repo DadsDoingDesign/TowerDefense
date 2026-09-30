@@ -40,14 +40,15 @@ No hero HP and the round-3 answers are built. The builders made these calls on t
 *From NH1*
 
 - Starting with one hero and fighting every battle: 41% of runs end at the first elite (the limit is 40%).
-- Field Kitchen + Relic Cartulary together measure −6 points on the battles route (the noise floor is ±5).
-- My recommendation: leave both until the cuts and merges (LS1, LS2) land, then tune once. Chasing a point now would be undone by those changes.
+- Vow 1 (Thin Pickings) is now only 2.3 points harder than no Vow (the minimum is 3). Field Kitchen + Relic Cartulary now pass.
+- The balance report is repeatable now: the same code gives the same numbers every run, so these are real readings, not noise.
+- My recommendation: leave both until the cuts and merges (LS1, LS2) land, then tune once.
 
 ### N5 · Vow 1 (Thin Pickings) sits on its own noise floor
 
 *From NH1*
 
-- Thin Pickings (two reward cards instead of three, fewer relics) costs between −1.5 and +5 points depending on unrelated curve details. It's still harder in the full report (5.5–6.8 points), but the ladder's first rung is weakly separated.
+- Thin Pickings (two reward cards instead of three, fewer relics) is now measured at 2.3 points harder than no Vow, under the 3-point minimum, so the first rung of the ladder is barely a step.
 - Leave it, or make the first Vow bite harder (for example one card fewer and no merchant restock)?
 
 ### N6 · Zoom to place: the 2× jump
@@ -86,6 +87,20 @@ No hero HP and the round-3 answers are built. The builders made these calls on t
 
 - Because the cinematic now changes daily, some fields put grey rocks under the wordmark: its worst contrast is 3.43:1 (large text needs 3:1, so it passes, but round 2 had 4.9:1).
 - My recommendation: add a soft shade behind the wordmark so every day's scene clears 4.5:1.
+
+### N11 · The first-run hero pick still says "DPS"
+
+*From LS3*
+
+- The three rows use plain words, but the line under them still reads '42 DPS · 96 range · 1.1/s'.
+- My recommendation: on a first run, show that as bars (Damage, Reach, Speed) or drop it; returning players keep the numbers.
+
+### N12 · Fixed: a seed now always deals the same fields
+
+*From Fix*
+
+- Map challenges, cursed ground and fight rolls depended on a counter shared across the page, so the same seed (including the Daily) could deal a different field after a fresh load. They come from the seed alone now, and saved runs keep their fields.
+- Nothing to decide unless you'd rather Daily scores from before this fix were reset.
 
 ## Round 5 · make it easier to learn
 
@@ -167,7 +182,7 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 
 **Files:** `src/ui/shell/Coach.tsx`, `run generation (first-run rules)`, `menu unlocks`
 
-**Result:** Built. A first run shows one new idea at a time. First battle: only the Gate and gold in the header, one tip ("Tap your hero, then a glowing tile"), no pack, speed, Watch Command, danger ground or challenges. Then: speed at the first pause, gear after the first win, Watch Command in the second battle, merchants from the second stop, relics at the first elite, perks at level 5, cursed ground from depth 3, map challenges from depth 4. Each idea gets one tip, once. Vow, Daily Watch and Endless read 'Opens after your first run'. Anyone who has finished a run sees everything, and Settings has 'Show everything from the start'. Try it by opening the game in a private window.
+**Result:** Built. A first run shows one new idea at a time. First battle: only the Gate and gold in the header, one tip ("Tap your hero, then a glowing tile"), no pack, speed, Watch Command, danger ground or challenges. Then: speed at the first pause, gear after the first win, Watch Command in the second battle, merchants from the second stop, relics at the first elite, perks at level 5, cursed ground from depth 3, map challenges from depth 4. Each idea gets one tip, once. Vow, Daily Watch and Endless read 'Opens after your first run'. Anyone who has finished a run sees everything, and Settings has 'Show everything from the start'. Try it by opening the game in a private window. Follow-ups: the first hero pick lists the three heroes with a plain role each; the 'recruit a hero' slot and the speed keys wait until they're introduced; and the menu's background battle comes back right away after you quit a run.
 
 ### LS4 · One name per thing
 
