@@ -112,11 +112,10 @@ export interface RunRecap {
   banner: number
   marks: number
   kills: number
-  downs: number
   goldLeft: number
   threat: number
   /** Per-Sentinel contribution, best first. */
-  heroes: { id: string; name: string; build: string; level: number; kills: number; damage: number; downed: boolean }[]
+  heroes: { id: string; name: string; build: string; level: number; kills: number; damage: number }[]
   /** Base-HP DAMAGE the last wave cost — not a head count (F3). */
   leaks: number
   /** How many enemies reached the line in the last wave. The head count (F3). */
@@ -197,7 +196,6 @@ export interface GameData {
   inventory: Item[]
   // Run tallies (for meta rewards)
   runKills: number
-  runDowns: number
   marksEarned: number
   /**
    * Rarity pity for this run's loot (M9): unforced item rolls since the last

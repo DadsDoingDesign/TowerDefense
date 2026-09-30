@@ -472,7 +472,11 @@ const NORMAL_VARIANTS: readonly WaveVariant[] = [
     tierBump: -1,
     mod: null,
     shape: 'even',
-    budgetScale: 1.13,
+    // 1.13 → 1.0 (no-HP refit, §14c): with heroes never hurt the random
+    // depth-8 lines stop every other shape outright, and the Swarm was the one
+    // shape that still leaked (0.21–0.25 Gate a fight against 0 for its
+    // siblings), which §14c reads as a ×4–5 spread. At 1.0 it leaks 0.07 (×1.4).
+    budgetScale: 1.0,
   },
   {
     id: 'bombard',

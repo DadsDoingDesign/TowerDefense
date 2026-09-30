@@ -692,9 +692,9 @@ export function ResultScreen() {
       )}
 
       {/* Per-Sentinel contribution — computed by the engine every battle and
-          thrown away every battle until now. Best damage first, and a downed
-          hero is marked, because "who actually held the line" is the one
-          question a receipt has to answer. It leads the body for the same
+          thrown away every battle until now. Best damage first, because "who
+          actually held the line" is the one question a receipt has to
+          answer. It leads the body for the same
           reason: measured at 390×844 the body shows ~370px, and everything
           under the second card is a scroll away. */}
       {recap && recap.heroes.length > 0 && (
@@ -704,12 +704,11 @@ export function ResultScreen() {
             <span>KILLS · DMG</span>
           </div>
           {recap.heroes.map((h) => (
-            <div className={`pg-recap-row ${h.downed ? 'downed' : ''}`} key={h.id}>
+            <div className="pg-recap-row" key={h.id}>
               <span className="pg-recap-name">
                 {h.name}
                 <span className="pg-recap-build">
                   {h.build} · L{h.level}
-                  {h.downed ? ' · fell' : ''}
                 </span>
               </span>
               <span className="pg-recap-num">
@@ -736,7 +735,7 @@ export function ResultScreen() {
             ? [
                 // `enemiesLeaked`, not `leaks` — the latter is base-HP damage
                 // and this line counts enemies (F2).
-                `${recap.kills} felled · ${recap.downs} hero${recap.downs === 1 ? '' : 'es'} lost · ${recap.enemiesLeaked} reached the Gate`,
+                `${recap.kills} felled · ${recap.enemiesLeaked} reached the Gate`,
                 `${moneyText(recap.goldLeft, 'gold')} unspent · Threat reached ×${recap.threat.toFixed(2)}`,
                 bannerLine(recap.banner),
               ]

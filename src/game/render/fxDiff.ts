@@ -20,7 +20,6 @@ import {
   fxBaseFrac,
   fxDefeat,
   fxDotEnemy,
-  fxDown,
   fxFloater,
   fxHitEnemy,
   fxHitstop,
@@ -39,7 +38,6 @@ import { baseAnchor } from './overlays'
 export interface FxSink {
   fxFloater: typeof fxFloater
   fxMuzzle: typeof fxMuzzle
-  fxDown: typeof fxDown
   fxHitstop: typeof fxHitstop
   fxHitEnemy: typeof fxHitEnemy
   fxTrauma: typeof fxTrauma
@@ -53,7 +51,7 @@ export interface FxSink {
   fxDefeat: typeof fxDefeat
 }
 const FX_SINK: FxSink = {
-  fxFloater, fxMuzzle, fxDown, fxHitstop, fxHitEnemy, fxTrauma, fxImpact, fxArc, fxProc, fxDotEnemy, fxLeak, fxKill, fxBaseFrac, fxDefeat,
+  fxFloater, fxMuzzle, fxHitstop, fxHitEnemy, fxTrauma, fxImpact, fxArc, fxProc, fxDotEnemy, fxLeak, fxKill, fxBaseFrac, fxDefeat,
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -92,7 +90,6 @@ const FX_SINK: FxSink = {
  * | which proc fired | `procFlash === 1` plus the impacting projectile's mods   |
  * |                  | and a matching `EXECUTE`/`STUN` word floated NEAR THAT   |
  * |                  | IMPACT — never a tick-global flag, and never a guess     |
- * | Sentinel downed  | `downed` flipped                                         |
  * | base hit / loss  | `baseHp` fell / `status` became `'defeated'`             |
  *
  * ## Impact vs attrition — the distinction the first version did not draw
@@ -270,7 +267,6 @@ export class FxDiffer {
   /** `eSnap` by id, so the attrition pass can find an enemy without a scan. */
   private readonly snapById = new Map<string, ESnap>()
   private readonly pSnap: PSnap[] = []
-  private readonly sSnapDowned = new Map<string, boolean>()
   private readonly seenFloaters = new Set<string>()
   /** Scratch, refilled per tick. */
   private readonly removed: ESnap[] = []
@@ -424,8 +420,6 @@ export class FxDiffer {
         hasStun: !!p.mods.stunChance,
       })
     }
-    this.sSnapDowned.clear()
-    for (const s of engine.sentinels) this.sSnapDowned.set(s.id, s.downed)
     this.prevStatus = engine.status
   }
 
@@ -560,10 +554,7 @@ export class FxDiffer {
     this.sentById.clear()
     for (const s of engine.sentinels) this.sentById.set(s.id, s)
     this.blockerOf.clear()
-    // `blockedBy` is the exact answer for anything still standing, and it outlives
-    // its blocker being downed mid-tick — `downSentinel` empties `blockIds` AFTER
-    // that tick's thorns have already been dealt, so the blocker's own list is the
-    // one thing that cannot be trusted there.
+    // `blockedBy` is the exact answer for anything still standing.
     for (const e of engine.enemies) if (e.blockedBy) this.blockerOf.set(e.id, e.blockedBy)
     // …and for anything the tick removed, the blocker's list is all that is left
     // to name it. `assignBlocking` rebuilds these arrays every tick, so they hold
@@ -636,10 +627,6 @@ export class FxDiffer {
     // --- 2. shots fired ------------------------------------------------------
     for (const s of engine.sentinels) {
       if (s.fireFlash === 1) this.sink.fxMuzzle(s.id, s.pos.x, s.pos.y, s.aimAngle, s.def.accent)
-      if (s.downed && this.sSnapDowned.get(s.id) === false) {
-        this.sink.fxDown(s.pos.x, s.pos.y)
-        this.sink.fxHitstop(0.09, speed)
-      }
     }
 
     // --- 3. impacts ----------------------------------------------------------

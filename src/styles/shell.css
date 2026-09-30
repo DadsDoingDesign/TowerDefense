@@ -656,9 +656,6 @@
   text-transform: uppercase;
   font-size: var(--fs-micro);
 }
-.sh-comp-row.downed .sh-comp-name {
-  color: var(--bad-text);
-}
 .sh-comp-count {
   flex: 0 0 auto;
   font-size: var(--fs-xs);

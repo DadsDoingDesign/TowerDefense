@@ -48,15 +48,8 @@ export const SPREAD_COUNT = 2
 export const SPREAD_RADIUS = 70
 const SPREAD_MIN_DUR = 1
 // ---- sub-waves ----------------------------------------------------------------
-/**
- * The breather between sub-waves mends the company: the living recover this
- * share of max HP, and the downed stand back up with it. It is what makes a
- * bomber's damage a problem for the SUB-WAVE it lands in rather than a tax on
- * the rest of the node, and it is priced into §6/§11 (see the report's §16).
- */
-export const BREATHER_MEND = 0.3
-/** Whether the downed stand back up at the breather (with {@link BREATHER_MEND} of their HP). */
-export const BREATHER_REVIVE = true
+/** How far up the road from the Gate a charge aimed at it is drawn (see `gateMark`). */
+const GATE_MARK_INSET = 64
 /** Split pieces and boss halves are placed this far apart along the lane, so they read as separate bodies. */
 const SPLIT_SPACING = 14
 
@@ -105,13 +98,16 @@ export interface BehaviourStats {
   healPulses: number
   hpHealed: number
   enrages: number
+  /** Sappers that went off — held at the wall, or at the Gate. */
   sapperBlasts: number
-  /** Sapper blasts that went off on their blocker (paid as that hero's kill). */
+  /** Sapper blasts that went off on their blocker (harmless; paid as that hero's kill). */
   sapperHeld: number
+  /** Extra Gate damage sappers dealt by reaching it (on top of their leak). */
   sapperDamage: number
   lobsStarted: number
   lobsLanded: number
   lobsCancelled: number
+  /** Gate damage bombers' charges dealt. */
   lobDamage: number
   splits: number
   splitSpawned: number
@@ -124,7 +120,7 @@ export interface BehaviourStats {
   warCries: number
   hasteApplied: number
   kingLobs: number
-  kingDisables: number
+  /** Gate damage the Powderkeg King's TNT dealt. */
   kingDamage: number
   bossSplits: number
   bossPhases: number
@@ -132,8 +128,8 @@ export interface BehaviourStats {
   shatterDamage: number
   burnSpreads: number
   brittleBonus: number
-  /** Everything the kit dealt to HEROES (blasts, lobs, the King). */
-  heroDamage: number
+  /** Everything the kit dealt to the GATE beyond plain leaks (blasts, lobs, the King). */
+  gateDamage: number
   commandsUsed: number
   holdBlocked: number
   breathers: number
@@ -161,7 +157,6 @@ const emptyStats = (): BehaviourStats => ({
   warCries: 0,
   hasteApplied: 0,
   kingLobs: 0,
-  kingDisables: 0,
   kingDamage: 0,
   bossSplits: 0,
   bossPhases: 0,
@@ -169,7 +164,7 @@ const emptyStats = (): BehaviourStats => ({
   shatterDamage: 0,
   burnSpreads: 0,
   brittleBonus: 0,
-  heroDamage: 0,
+  gateDamage: 0,
   commandsUsed: 0,
   holdBlocked: 0,
   breathers: 0,
@@ -238,7 +233,6 @@ export function enemyBehaviourState(key: string, reward: number) {
     kingUntil: 0,
     kingX: 0,
     kingY: 0,
-    kingTargetId: null as string | null,
     phase: 0,
     warCryUntil: 0,
     leapt: false,
@@ -260,15 +254,11 @@ export interface RtSentinel {
   targetId: string | null
   aimAngle: number
   fireFlash: number
-  hp: number
-  maxHp: number
-  downed: boolean
   patienceTime: number
   patienceStacks: number
   patienceMax: number
   blockIds: string[]
   buffMult: number
-  reduction: number
   kills: number
   damageDealt: number
   procFlash: number // pulses when an on-hit effect fires (visual feedback, M7)
@@ -278,8 +268,6 @@ export interface RtSentinel {
   shots: number
   /** `elapsed` until which a `killRush` is running (Phase 3b). */
   rushUntil: number
-  /** Sim time until which this post is knocked out (Powderkeg King): no shots, no block. */
-  disabledUntil: number
   /**
    * Q1: the damage multiplier the ground under it imposes — `CURSED_DAMAGE_MULT`
    * on cursed ground, 1 anywhere else. Re-read on every move (`placeAt`).
@@ -324,17 +312,16 @@ export interface RtEnemy {
   hasteUntil: number
   /** Berserker: below its threshold, for good. */
   enraged: boolean
-  /** Bomber: throws left; while `lobUntil > 0` it is planted and winding up at (`lobX`, `lobY`). */
+  /** Bomber: throws left; while `lobUntil > 0` it is planted and winding up, aimed at the Gate (`lobX`, `lobY`). */
   lobCharges: number
   lobUntil: number
   lobX: number
   lobY: number
-  /** Powderkeg King: next throw, and the throw in flight. */
+  /** Powderkeg King: next throw, and the throw in flight (aimed at the Gate). */
   kingNextAt: number
   kingUntil: number
   kingX: number
   kingY: number
-  kingTargetId: string | null
   /** Boss phase counter (war-cry thresholds passed / King rage / Colossus split). */
   phase: number
   /** Grukk: sim time the war-cry in progress resolves (0 = none). */
@@ -451,9 +438,8 @@ export interface BattleResult {
   leaks: number
   /** How many enemies actually reached the line. A head count, not damage (F3). */
   enemiesLeaked: number
-  downed: number
   enemiesKilled: number
-  perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number; downed: boolean }[]
+  perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number }[]
 }
 
 /** The public state of the sub-wave machine, for the HUD. */
@@ -492,9 +478,9 @@ export class GameEngine {
    *
    * The vocabulary: `'shoot'` (a Sentinel fires), `'hit'` / `'crit'` (a
    * projectile lands — one per impact, not per enemy touched), `'kill'` (an
-   * enemy dies), `'down'` (a Sentinel falls), `'leak'` (something reaches the
-   * line), `'boss'` (a champion spawns), `'melee'` (a blocker is taking blows
-   * this tick — the mixer throttles it into discrete thuds).
+   * enemy dies), `'leak'` (something reaches the line), `'boss'` (a champion
+   * spawns), `'melee'` (a blocker is grinding what it holds this tick — the
+   * mixer throttles it into discrete thuds).
    *
    * Each call may carry an {@link EngineEventPayload} — who fired, which goblin,
    * where on the field — so the mixer can give each its own sound and pan it
@@ -509,7 +495,6 @@ export class GameEngine {
    * in `balance/harness.ts`.
    */
   private onEvent?: (e: string, p?: EngineEventPayload) => void
-  downedCount = 0
   killCount = 0
   /**
    * Q10 — kills by registry key (`barrel3_plated`), for the Codex's felled
@@ -641,7 +626,6 @@ export class GameEngine {
     for (const { sentinel, slotId } of opts.placedSentinels) {
       const slot = slotById.get(slotId)!
       const profile = computeCombat(sentinel, { teamMods: this.teamMods, patienceMult: 1 })
-      const maxHp = profile.maxHp
       const rt: RtSentinel = {
         id: sentinel.id,
         def: sentinel,
@@ -652,16 +636,12 @@ export class GameEngine {
         targetId: null,
         aimAngle: 0,
         fireFlash: 0,
-        hp: maxHp * (1 - profile.startMissingFrac),
-        maxHp,
-        downed: false,
         patienceTime: 0,
         patienceStacks: 0,
         // Gear "of Patience" counts toward the stack ceiling, not just the raw stat (H10).
         patienceMax: 3 + Math.floor(profile.patience / 5),
         blockIds: [],
         buffMult: 1,
-        reduction: 0,
         kills: 0,
         damageDealt: 0,
         procFlash: 0,
@@ -669,7 +649,6 @@ export class GameEngine {
         retargetIn: (placeIndex % 4) * (RETARGET_INTERVAL / 4),
         shots: 0,
         rushUntil: 0,
-        disabledUntil: 0,
         groundMult: tileDamageMult(opts.map, slotId),
       }
       placeIndex++
@@ -761,7 +740,7 @@ export class GameEngine {
 
     this.spawnDue()
     this.updatePatience(dt)
-    this.updateAuras(dt)
+    this.updateAuras()
     this.assignBlocking()
     this.updateBehaviours()
     this.updateSentinels(dt)
@@ -821,7 +800,7 @@ export class GameEngine {
     this.behaviourStats.commandsUsed++
     if (id === 'rally') {
       this.rallyUntil = this.elapsed + RALLY.dur
-      for (const s of this.sentinels) if (!s.downed) this.spawnFloater(s.pos, 'RALLY', '#f5c542', false)
+      for (const s of this.sentinels) this.spawnFloater(s.pos, 'RALLY', '#f5c542', false)
     } else if (id === 'flare') {
       // Auto-aimed at the front of the column (see `commands.ts`).
       let lead = this.enemies[0]
@@ -906,9 +885,9 @@ export class GameEngine {
   }
 
   /**
-   * A sub-wave is clear and another is queued: pause, and mend the company
-   * (see {@link BREATHER_MEND}). Everything timed to the sub-wave just fought
-   * — Rally Horn, Hold the Line, the markers on the field — ends with it.
+   * A sub-wave is clear and another is queued: pause. Everything timed to the
+   * sub-wave just fought — Rally Horn, Hold the Line, the markers on the field
+   * — ends with it.
    */
   private enterBreather(): void {
     this.subWave++
@@ -918,16 +897,7 @@ export class GameEngine {
     this.rallyUntil = 0
     this.holdLeaks = 0
     this.telegraphs = []
-    for (const s of this.sentinels) {
-      if (s.downed) {
-        if (!BREATHER_REVIVE) continue
-        s.downed = false
-        s.hp = 0
-      }
-      s.hp = Math.min(s.maxHp, s.hp + s.maxHp * BREATHER_MEND)
-      s.disabledUntil = 0
-      s.targetId = null
-    }
+    for (const s of this.sentinels) s.targetId = null
     this.onEvent?.('subwave')
   }
 
@@ -1001,7 +971,6 @@ export class GameEngine {
 
   private updatePatience(dt: number): void {
     for (const s of this.sentinels) {
-      if (s.downed) continue
       s.patienceTime += dt
       const stacks = Math.min(s.patienceMax, Math.floor(s.patienceTime / PATIENCE_INTERVAL))
       if (stacks !== s.patienceStacks) {
@@ -1010,40 +979,19 @@ export class GameEngine {
           teamMods: this.teamMods,
           patienceMult: 1 + stacks * PATIENCE_PER_STACK,
         })
-        // Keep current HP ratio when max HP shifts.
-        const ratio = s.maxHp > 0 ? s.hp / s.maxHp : 1
-        s.maxHp = s.profile.maxHp
-        s.hp = s.maxHp * ratio
       }
     }
   }
 
-  /** Resolve buff / heal / damage-reduction auras onto each Sentinel this step. */
-  private updateAuras(dt: number): void {
+  /** Resolve damage-buff auras onto each Sentinel this step. */
+  private updateAuras(): void {
     for (const s of this.sentinels) {
-      if (s.downed) {
-        s.buffMult = 1
-        s.reduction = 0
-        continue
-      }
       let buff = 1
-      let reduction = 0
-      let heal = 0
       for (const src of this.sentinels) {
-        if (src.downed) continue
         const m = src.profile.mods
-        const withinBuff = m.buffAura && dist(s.pos, src.pos) <= m.buffAura.radius
-        const withinRed = m.dmgReductionAura && dist(s.pos, src.pos) <= m.dmgReductionAura.radius
-        const withinHeal = m.healAura && dist(s.pos, src.pos) <= m.healAura.radius
-        if (withinBuff) buff *= m.buffAura!.damageMult
-        if (withinRed) reduction = Math.max(reduction, m.dmgReductionAura!.reduction)
-        if (withinHeal) heal += m.healAura!.hps
+        if (m.buffAura && dist(s.pos, src.pos) <= m.buffAura.radius) buff *= m.buffAura.damageMult
       }
       s.buffMult = buff
-      s.reduction = reduction
-      if (heal > 0 && s.hp < s.maxHp) {
-        s.hp = Math.min(s.maxHp, s.hp + heal * dt)
-      }
     }
   }
 
@@ -1053,7 +1001,7 @@ export class GameEngine {
     for (const e of this.enemies) e.blockedBy = null
     for (const s of this.sentinels) {
       const block = s.profile.mods.block
-      if (!block || s.downed || this.elapsed < s.disabledUntil) continue
+      if (!block) continue
       const r2 = block.radius * block.radius
       const inRange = this.enemies
         .filter((e) => !e.blockedBy && e.leapOver !== s.id && distSq(s.pos, e.pos) <= r2)
@@ -1120,7 +1068,9 @@ export class GameEngine {
             }
             break
           case 'sapper':
-            if (e.blockedBy || this.heroWithin(e.pos, b.trigger)) this.detonate(e, b.radius, b.damage, e.blockedBy)
+            // Held at the wall, it goes off there, harmlessly. Unheld, it walks
+            // on to the Gate and blows there (`updateEnemies`, the leak branch).
+            if (e.blockedBy) this.detonateHeld(e, b.radius, e.blockedBy)
             break
           case 'lob':
             this.updateLob(e, b)
@@ -1136,41 +1086,6 @@ export class GameEngine {
         }
       }
     }
-  }
-
-  /** The nearest standing hero within `r` of a point, or undefined. Ties go to roster order. */
-  private heroWithin(p: Vec2, r: number): RtSentinel | undefined {
-    let best: RtSentinel | undefined
-    let bestD = r * r
-    for (const s of this.sentinels) {
-      if (s.downed) continue
-      const d = distSq(s.pos, p)
-      if (d <= bestD) {
-        bestD = d
-        best = s
-      }
-    }
-    return best
-  }
-
-  /**
-   * Damage every standing hero within `r` of a point. A Guard's damage-
-   * reduction aura applies (it is the counterplay for a line that has to post
-   * near the lane); a fighter's melee `physDef` does not — a blast is not a
-   * swing. Returns the HP actually removed.
-   */
-  private blastHeroes(p: Vec2, r: number, damage: number): number {
-    let total = 0
-    const r2 = r * r
-    for (const s of this.sentinels) {
-      if (s.downed || distSq(s.pos, p) > r2) continue
-      const dmg = Math.min(s.hp, damage * (1 - s.reduction))
-      s.hp -= damage * (1 - s.reduction)
-      total += dmg
-      if (s.hp <= 0) this.downSentinel(s)
-    }
-    this.behaviourStats.heroDamage += total
-    return total
   }
 
   private healPulse(src: RtEnemy, radius: number, heal: number, interval: number): void {
@@ -1193,65 +1108,72 @@ export class GameEngine {
   }
 
   /**
-   * A sapper goes off: heroes in the blast take its damage and the sapper is
-   * spent. One that went off on the hero HOLDING it (`blocker`) was stopped at
-   * the wall, and counts as that hero's kill — bounty and XP — so holding it on
-   * a hero who can take the blast is an answer, not just a way to lose HP. One
-   * that reached a post unheld pays nothing: that is the sapper winning.
+   * A sapper held by a blocker goes off at the wall: it hurts nobody, and it
+   * counts as that hero's kill — bounty and XP. Holding it is the answer; one
+   * that is never held walks on and blows at the Gate (see `updateEnemies`).
    */
-  private detonate(e: RtEnemy, radius: number, damage: number, blocker: string | null = null): void {
-    const dealt = this.blastHeroes(e.pos, radius, damage)
+  private detonateHeld(e: RtEnemy, radius: number, blocker: string): void {
     this.behaviourStats.sapperBlasts++
-    this.behaviourStats.sapperDamage += dealt
+    this.behaviourStats.sapperHeld++
     this.addTelegraph('blast', e.pos.x, e.pos.y, radius, 0.5, e.id)
     this.spawnFloater(e.pos, 'BOOM', '#ff9f43', true)
     this.onEvent?.('behaviour:sapper', this.tagOf(e))
-    if (blocker) {
-      this.behaviourStats.sapperHeld++
-      e.hp = 0
-      this.killEnemy(e, blocker)
-    } else this.removeEnemy(e)
+    e.hp = 0
+    this.killEnemy(e, blocker)
   }
 
   /**
-   * Take an enemy off the field WITHOUT killing it — no gold, no XP, no kill.
-   * `hp = 0` is the "already removed this tick" mark every snapshot loop checks.
+   * Blast damage to the Gate (a bomber's charge, the King's TNT). It is Gate
+   * damage like a leak — booked into `leaks`, so the receipt still reconciles —
+   * but it is not a head through the line.
    */
-  private removeEnemy(e: RtEnemy): void {
-    const idx = this.enemies.indexOf(e)
-    if (idx === -1) return
-    e.hp = 0
-    this.enemies.splice(idx, 1)
-    this.dropTelegraphsOf(e.id)
+  /**
+   * Where a charge aimed at the Gate is drawn: on the road just short of it.
+   * The Gate itself sits on the field's edge, so a mark centred on it was half
+   * off the canvas and read as nothing (seen on the phone capture).
+   */
+  private gateMark(): Vec2 {
+    return this.path.pointAt(Math.max(0, this.path.length - GATE_MARK_INSET))
+  }
+
+  private blastGate(amount: number): number {
+    const dmg = amount * this.baseDamageMul
+    this.baseHp -= dmg
+    this.leaks += dmg
+    this.behaviourStats.gateDamage += dmg
+    return dmg
   }
 
   private dropTelegraphsOf(id: string): void {
     this.telegraphs = this.telegraphs.filter((t) => t.srcId !== id || (t.kind !== 'lob' && t.kind !== 'kingLob'))
   }
 
+  /**
+   * A bomber within `range` of the Gate (measured along the road) plants its
+   * feet and winds up a charge at the Gate; when it lands the Gate takes
+   * `gateDamage`. Killing it in the wind-up cancels the throw. One charge in
+   * the air at a time: a bomber that finds a live mark walks on.
+   */
   private updateLob(e: RtEnemy, b: Behaviour<'lob'>): void {
     if (e.lobUntil > 0) {
       if (this.elapsed < e.lobUntil) return
       e.lobUntil = 0
       e.lobCharges--
-      const dealt = this.blastHeroes({ x: e.lobX, y: e.lobY }, b.radius, b.damage)
+      const dealt = this.blastGate(b.gateDamage)
       this.behaviourStats.lobsLanded++
       this.behaviourStats.lobDamage += dealt
       this.addTelegraph('blast', e.lobX, e.lobY, b.radius, 0.45)
+      this.spawnFloater({ x: e.lobX, y: e.lobY }, 'BOOM', '#ff9f43', true)
       this.onEvent?.('behaviour:lob', this.tagOf(e))
       return
     }
     if (e.lobCharges <= 0 || e.blockedBy) return
-    const target = this.heroWithin(e.pos, b.range)
-    if (!target) return
-    // One mark per post at a time: a bomber whose target is already under a
-    // live mark holds its charge and walks on (it may throw at the next post).
-    // Without this a Bombard column stacked ten charges on the first post it
-    // reached — a pile-on with no counterplay but "be somewhere else".
-    if (this.telegraphs.some((t) => (t.kind === 'lob' || t.kind === 'kingLob') && t.x === target.pos.x && t.y === target.pos.y)) return
+    if (this.path.length - e.distance > b.range) return
+    if (this.telegraphs.some((t) => t.kind === 'lob' || t.kind === 'kingLob')) return
     e.lobUntil = this.elapsed + b.windup
-    e.lobX = target.pos.x
-    e.lobY = target.pos.y
+    const at = this.gateMark()
+    e.lobX = at.x
+    e.lobY = at.y
     this.behaviourStats.lobsStarted++
     this.addTelegraph('lob', e.lobX, e.lobY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
     this.onEvent?.('behaviour:lobWindup', this.tagOf(e))
@@ -1283,6 +1205,11 @@ export class GameEngine {
     this.addTelegraph('warcry', e.pos.x, e.pos.y, b.radius, b.windup, e.id)
   }
 
+  /**
+   * The Powderkeg King throws TNT at the Gate on a clock, from wherever he is:
+   * a wind-up, then `gateDamage` to the Gate. Below `rageAt` of his health the
+   * clock runs faster. The answer is to race him down.
+   */
   private updateKingLob(e: RtEnemy, b: Behaviour<'kingLob'>): void {
     if (e.phase === 0 && e.hp / e.maxHp <= b.rageAt) {
       e.phase = 1
@@ -1294,30 +1221,19 @@ export class GameEngine {
     if (e.kingUntil > 0) {
       if (this.elapsed < e.kingUntil) return
       e.kingUntil = 0
-      const dealt = this.blastHeroes({ x: e.kingX, y: e.kingY }, b.radius, b.damage)
-      const target = this.sentinels.find((s) => s.id === e.kingTargetId)
-      if (target && !target.downed) {
-        target.disabledUntil = this.elapsed + b.disable
-        target.targetId = null
-        this.behaviourStats.kingDisables++
-        this.spawnFloater(target.pos, 'DAZED', '#c9b8ff', true)
-      }
+      const dealt = this.blastGate(b.gateDamage)
       this.behaviourStats.kingLobs++
       this.behaviourStats.kingDamage += dealt
       this.addTelegraph('blast', e.kingX, e.kingY, b.radius, 0.5)
+      this.spawnFloater({ x: e.kingX, y: e.kingY }, 'BOOM', '#ff9f43', true)
       this.onEvent?.('behaviour:kingLob', this.tagOf(e))
       return
     }
     if (this.elapsed < e.kingNextAt) return
-    const target = this.heroWithin(e.pos, b.range)
-    if (!target) {
-      e.kingNextAt = this.elapsed + 0.5
-      return
-    }
     e.kingUntil = this.elapsed + b.windup
-    e.kingX = target.pos.x
-    e.kingY = target.pos.y
-    e.kingTargetId = target.id
+    const at = this.gateMark()
+    e.kingX = at.x
+    e.kingY = at.y
     e.kingNextAt = this.elapsed + (e.phase > 0 ? b.rageInterval : b.interval)
     this.addTelegraph('kingLob', e.kingX, e.kingY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
     this.onEvent?.('behaviour:kingLobWindup', this.tagOf(e))
@@ -1331,16 +1247,9 @@ export class GameEngine {
 
   private updateSentinels(dt: number): void {
     for (const s of this.sentinels) {
-      if (s.downed) continue
       if (s.cooldown > 0) s.cooldown -= dt
       if (s.fireFlash > 0) s.fireFlash = Math.max(0, s.fireFlash - dt * 5)
       if (s.procFlash > 0) s.procFlash = Math.max(0, s.procFlash - dt * 3)
-      // Knocked out by the Powderkeg King: no shots (and `assignBlocking` gave
-      // it no hold, so it takes no melee either).
-      if (this.elapsed < s.disabledUntil) {
-        s.targetId = null
-        continue
-      }
 
       const rangeSq = s.profile.range * s.profile.range
       s.retargetIn -= dt
@@ -1361,32 +1270,21 @@ export class GameEngine {
         if (s.cooldown <= 0) this.fire(s, target)
       }
 
-      // Take melee damage from enemies this Sentinel is blocking; reflect thorns.
+      // Heroes are never hurt: what a blocker holds simply stands still and
+      // grinds on its thorns.
       if (s.blockIds.length > 0) {
-        // Phase 3b: a blocker with `blockRegen` knits while it holds the line.
-        const regen = s.profile.mods.blockRegen
-        if (regen) s.hp = Math.min(s.maxHp, s.hp + s.maxHp * regen * dt)
-        const mitigation = 50 / (50 + s.profile.physDef)
-        let taken = 0
+        let grinding = false
         for (const id of s.blockIds) {
           const e = this.enemies.find((x) => x.id === id)
           if (!e) continue
-          // A stun stops the enemy swinging, but thorns keep grinding: a fighter's
-          // own stun proc must never switch off its own damage (L9a).
-          if (this.elapsed >= e.stunUntil) taken += e.enraged ? this.enragedMelee(e) : e.type.meleeDps
+          grinding = true
           if (s.profile.thorns > 0) this.damageEnemy(e, s.profile.thorns * dt, s.id, false, s.profile.damageType, true)
           if (e.hp > 0) this.igniteFromThorns(s, e)
         }
-        if (taken > 0) this.onEvent?.('melee', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
-        s.hp -= taken * (1 - s.reduction) * mitigation * dt
-        if (s.hp <= 0) this.downSentinel(s)
+        if (grinding) this.onEvent?.('melee', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
       }
     }
     this.retargetDirty = false
-  }
-
-  private enragedMelee(e: RtEnemy): number {
-    return e.type.meleeDps * (behaviourOf(e.type, 'enrage')?.meleeMult ?? 1)
   }
 
   /**
@@ -1456,8 +1354,7 @@ export class GameEngine {
     // stream for anything that fires after it.
     const rolled = this.rng.chance(s.profile.critChance)
     const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
-    const stand = m.lastStand && s.hp < s.maxHp * m.lastStand.below ? 1 + m.lastStand.damage : 1
-    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * stand
+    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
     const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
     this.projectiles.push({
       id: nextId('p'),
@@ -1548,9 +1445,22 @@ export class GameEngine {
         // body still reached the line — it counts — it just costs the Gate nothing.
         const warded = this.leakWardLeft > 0
         if (warded) this.leakWardLeft--
-        const dmg = warded ? 0 : e.type.leak * this.baseDamageMul
+        // A sapper that reaches the Gate blows there: its blast is extra Gate
+        // damage on top of its leak (a ward turns both aside).
+        const sapper = this.rules.behaviours ? behaviourOf(e.type, 'sapper') : undefined
+        const blast = sapper && !warded ? sapper.gateDamage * this.baseDamageMul : 0
+        const dmg = (warded ? 0 : e.type.leak * this.baseDamageMul) + blast
         this.baseHp -= dmg
         this.leaks += dmg
+        if (sapper) {
+          this.behaviourStats.sapperBlasts++
+          this.behaviourStats.sapperDamage += blast
+          this.behaviourStats.gateDamage += blast
+          const at = this.gateMark()
+          this.addTelegraph('blast', at.x, at.y, sapper.radius, 0.5)
+          this.spawnFloater(at, 'BOOM', '#ff9f43', true)
+          this.onEvent?.('behaviour:sapper', this.tagOf(e))
+        }
         this.onEvent?.('leak', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
         continue
       }
@@ -2117,29 +2027,6 @@ export class GameEngine {
     }
   }
 
-  private downSentinel(s: RtSentinel): void {
-    // Idempotent by its own state rather than by its caller's (F10). The one
-    // call site sits under `if (s.downed) continue`, so a second entry was
-    // unreachable — but the cost of the guard is a comparison and the cost of
-    // its absence is `downedCount` counting one Sentinel twice, a doubled
-    // `'down'` sting, and a run summary that reports more losses than the run
-    // had. `killEnemy` already guards itself the same way.
-    if (s.downed) return
-    s.hp = 0
-    s.downed = true
-    s.blockIds = []
-    s.targetId = null
-    s.patienceStacks = 0
-    s.patienceTime = 0
-    this.downedCount++
-    // Losing a Sentinel is the worst thing that can happen inside a wave short
-    // of the base falling, and it announced itself with a floater and nothing
-    // else. The player is WATCHING this game — a loss that happens off the part
-    // of the screen they are looking at has to be audible.
-    this.onEvent?.('down', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
-    this.spawnFloater(s.pos, 'DOWN', '#e05a4f', true)
-  }
-
   /** An enemy's tag for a Phase-3a behaviour / boss-phase event. */
   private tagOf(e: RtEnemy): EngineEventPayload {
     return { ...enemyTag(e.type), x: this.fieldX(e.pos.x), name: e.type.name }
@@ -2239,14 +2126,12 @@ export class GameEngine {
       leakDamage,
       leaks: leakDamage,
       enemiesLeaked: this.leakCount,
-      downed: this.downedCount,
       enemiesKilled: this.killCount,
       perSentinel: this.sentinels.map((s) => ({
         id: s.id,
         kills: s.kills,
         damageDealt: Math.round(s.damageDealt),
         xpGained: this.xpGained.get(s.id) ?? 0,
-        downed: s.downed,
       })),
     }
   }

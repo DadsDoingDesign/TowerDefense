@@ -60,7 +60,6 @@ export type Capability =
   | 'volley'
   | 'killRush'
   | 'openingRush'
-  | 'lastStand'
   /** The combat lane's status interaction: a burning enemy's fire spreads on death. */
   | 'burnSpreadOnDeath'
   /** The combat lane's Watch command, upgraded: Rally Horn becomes Flare. */
@@ -68,7 +67,7 @@ export type Capability =
 
 /**
  * Which capabilities THIS build's engine implements — the relic → engine
- * capability map. The first five are the Phase 3b rule hooks in `engine.ts`.
+ * capability map. The first four are the Phase 3b rule hooks in `engine.ts`.
  * The last two belong to the combat lane and flip to `true` when its engine
  * lands (and `CAPABILITY_MODS` below carries the flag it reads).
  */
@@ -77,7 +76,6 @@ export const ENGINE_CAPABILITIES: Record<Capability, boolean> = {
   volley: true,
   killRush: true,
   openingRush: true,
-  lastStand: true,
   // Phase 3a: `engine.onDeath` spreads a burn when the team carries the flag
   // below, and Flare is a Watch Command (`data/commands.ts`); a relic's
   // `commands` swap the company's Rally Horn for it (`commandsFor`).
@@ -117,19 +115,21 @@ export const RELICS: readonly Relic[] = [
   { id: 'hourglass', name: 'Watch Hourglass', rarity: 'common', kind: 'stat', desc: '+5 Patience · every hero, hires included', grant: { patience: 5 } },
   { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed · the whole company', grant: { mods: { rateMult: 1.07 } } },
   { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage · the whole company', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
-  { id: 'close_quarters', name: 'Close Quarters', rarity: 'epic', kind: 'stat', desc: '+18% damage, −18% range · the whole company', downside: '−18% range · whole company', grant: { mods: { damageMult: 1.18, rangeMult: 0.82 } } },
   { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+32% attack speed, no crits · the whole company', downside: 'the company never crits', grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } } },
-  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+20% damage, +8 Thorns, −22% hero HP · the whole company', downside: '−22% hero HP · whole company', grant: { thorns: 8, mods: { damageMult: 1.2, hpMult: 0.78 } } },
+  // Bloodletting and Iron Vigil sold hero HP (−22% / +60%), which went with hero
+  // HP; each now pays in a number §15 can see. Close Quarters (−18% range) and
+  // Last Rampart (below 35% HP) were cut: the range bill measured +0.0pt on every
+  // bench at every size short of a cliff, and a last stand has no HP to read.
+  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · the whole company', downside: '−34% attack speed · whole company', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
   { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · the whole company', downside: '−12% attack speed · whole company', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
   { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · the whole company', downside: '−35% damage per hit · whole company', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } } },
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+60% hero HP, +16 Thorns, +6 Patience, −14% damage · the whole company', downside: '−14% damage · whole company', grant: { thorns: 16, patience: 6, mods: { hpMult: 1.6, damageMult: 0.86 } } },
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · the whole company', downside: '−12% damage · whole company', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 enemies to reach the Gate each wave cost it nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
   { id: 'hound_banner', name: 'Bloodhound Banner', rarity: 'rare', kind: 'rule', desc: 'Every 5th shot of every hero pierces 2 more enemies.', requires: 'volley', grant: { mods: { volley: { every: 5, pierce: 2 } } } },
   { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, the whole company attacks 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
   { id: 'veteran_cloak', name: "Veteran's Cloak", rarity: 'epic', kind: 'rule', desc: 'A kill makes that hero attack 25% faster for 1.5s.', requires: 'killRush', grant: { mods: { killRush: { rate: 0.25, dur: 1.5 } } }, unlock: 'act_two' },
-  { id: 'last_rampart', name: 'Last Rampart', rarity: 'epic', kind: 'rule', desc: 'Heroes below 35% HP strike 50% harder.', requires: 'lastStand', grant: { mods: { lastStand: { below: 0.35, damage: 0.5 } } }, unlock: 'flawless_boss' },
   { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your company’s median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
   { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'The Gate recovers 2 after every fight you win.', rule: 'fieldSurgeon' },
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },

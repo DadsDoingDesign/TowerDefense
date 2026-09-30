@@ -40,6 +40,7 @@ import { DANGER_TILES } from '../src/game/data/hazards'
 import { carryPlacements } from '../src/game/run/map'
 import {
   RUN_SNAPSHOT_KEY,
+  RUN_SNAPSHOT_VERSION,
   captureRun,
   describeSnapshot,
   migrateSnapshot,
@@ -129,7 +130,7 @@ function buildBase(): Record<string, unknown> {
 
 const PROFILE_NUMBERS = [
   'damage', 'range', 'rate', 'projectileSpeed', 'splashRadius', 'critChance', 'critMult',
-  'maxHp', 'startMissingFrac', 'thorns', 'patience', 'physDef', 'dps',
+  'thorns', 'patience', 'dps',
 ] as const
 
 function assertFiniteCombat(s: Sentinel, teamMods: EffectMods[], where: string): void {
@@ -349,7 +350,7 @@ describe('run snapshot fuzz', () => {
       mem.set(RUN_SNAPSHOT_KEY, JSON.stringify(raw))
       const pay = payoutFromRaw(JSON.parse(mem.get(RUN_SNAPSHOT_KEY)!))
       const ownSeed = useGameStore.getState().runSeed
-      const shouldPay = !!pay && pay.runSeed !== ownSeed && (pay.depth > 0 || pay.kills > 0 || pay.downs > 0)
+      const shouldPay = !!pay && pay.runSeed !== ownSeed && (pay.depth > 0 || pay.kills > 0)
       const before = useMetaStore.getState().stats.runsCompleted
       try {
         useGameStore.getState().newRun()
@@ -433,6 +434,40 @@ describe('v6 → v7: the skill tree became spec perks', () => {
     const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
     expect(snap!.gold).toBe(raw.gold)
     expect(snap!.roster[0].perks).toEqual(['f5_second_wind'])
+  })
+})
+
+describe('v10 → v11: heroes have no HP', () => {
+  it('loads an old save and drops the retired HP fields and mods', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; inventory: Item[]; runMods: EffectMods[] }
+    raw.v = 10
+    raw.runDowns = 4
+    raw.lastResult = {
+      status: 'cleared', goldEarned: 5, baseHpLeft: 18, leakDamage: 2, leaks: 2, enemiesLeaked: 1, downed: 1, enemiesKilled: 9,
+      perSentinel: [{ id: raw.roster[0].id, kills: 9, damageDealt: 300, xpGained: 40, downed: true }],
+    }
+    const legacy = { hpMult: 1.6, physDefAdd: 20, healAura: { hps: 8, radius: 130 }, dmgReductionAura: { reduction: 0.2, radius: 120 }, selfSacrifice: 0.15, blockRegen: 0.03 } as unknown as EffectMods
+    const hero = raw.roster[0]
+    hero.equipment.body!.enchantments.push({ id: 'old', label: 'of the Old Build', mods: { damageMult: 1.1, ...legacy } })
+    hero.mutations = [{ ...hero.mutations![0], mods: { ...hero.mutations![0].mods, ...legacy } }]
+    raw.inventory[0].enchantments.push({ id: 'old2', label: 'of Iron', mods: { ...legacy } })
+    raw.runMods = [{ damageMult: 1.05, ...legacy }]
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.v).toBe(RUN_SNAPSHOT_VERSION)
+    expect((snap as unknown as Record<string, unknown>).runDowns).toBeUndefined()
+    expect((snap!.lastResult as unknown as Record<string, unknown>).downed).toBeUndefined()
+    expect((snap!.lastResult!.perSentinel[0] as unknown as Record<string, unknown>).downed).toBeUndefined()
+    const retired = ['hpMult', 'physDefAdd', 'healAura', 'dmgReductionAura', 'selfSacrifice', 'blockRegen']
+    const clean = (m: EffectMods | undefined) => retired.every((k) => !(k in (m ?? {})))
+    const old = snap!.roster[0].equipment.body!.enchantments.find((e) => e.id === 'old')!
+    expect(clean(old.mods)).toBe(true)
+    expect(old.mods!.damageMult).toBe(1.1)
+    expect(clean(snap!.roster[0].mutations![0].mods)).toBe(true)
+    expect(snap!.inventory.every((i) => i.enchantments.every((e) => clean(e.mods)))).toBe(true)
+    expect(snap!.runMods.every(clean)).toBe(true)
+    expect(snap!.runMods[0].damageMult).toBe(1.05)
+    assertPlayable(snap!, 'v10 save')
   })
 })
 

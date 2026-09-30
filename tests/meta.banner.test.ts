@@ -6,7 +6,7 @@ describe('Banner ladder — earned, not bought', () => {
   beforeEach(() => useMetaStore.getState().resetMeta())
 
   const win = (banner: number, extra: { ranked?: boolean; mode?: 'campaign' | 'endless' } = {}) =>
-    useMetaStore.getState().grantRunRewards({ depth: 10, won: true, kills: 0, downs: 0, banner, ...extra })
+    useMetaStore.getState().grantRunRewards({ depth: 10, won: true, kills: 0, banner, ...extra })
 
   it('an unbannered win opens Banner 1; a win under N opens N+1', () => {
     expect(useMetaStore.getState().sacrificeTier).toBe(0)
@@ -21,7 +21,7 @@ describe('Banner ladder — earned, not bought', () => {
   })
 
   it('a loss, an Endless run, or an unranked (custom-seed) win opens nothing', () => {
-    useMetaStore.getState().grantRunRewards({ depth: 9, won: false, kills: 0, downs: 0, banner: 0 })
+    useMetaStore.getState().grantRunRewards({ depth: 9, won: false, kills: 0, banner: 0 })
     win(0, { mode: 'endless' })
     win(0, { ranked: false })
     expect(useMetaStore.getState().sacrificeTier).toBe(0)

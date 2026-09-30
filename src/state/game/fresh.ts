@@ -77,7 +77,6 @@ export function freshRunState(runSeed: number) {
     placements: emptyPlacements(battleMap),
     threat: 1,
     runKills: 0,
-    runDowns: 0,
     marksEarned: 0,
     // A drought belongs to the run that suffered it (M9).
     lootPity: newRarityPity(),

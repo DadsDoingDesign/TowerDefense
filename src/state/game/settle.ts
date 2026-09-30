@@ -14,7 +14,6 @@ export const settleFactsFromState = (s: GameData, won = false): SettleFacts => (
   mode: s.mode,
   depth: Math.max(0, s.clearedNodeIds.length - 1),
   kills: s.runKills,
-  downs: s.runDowns,
   wins: s.wins,
   banner: s.runBanner,
   challenge: s.challenge,

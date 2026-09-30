@@ -44,9 +44,9 @@ function expectBeats(sim: Sim, s: Script, label: string) {
   const hitAt = (s.hitTick - s.startTick) / 60
   expect(hitAt, `${label}: the hit comes after the walk`).toBeGreaterThan(8)
   expect(secs - hitAt, `${label}: a beat after the hit`).toBeGreaterThan(sim.ATTRACT_CUT.fadeOut + 1)
-  // An advert, not a warning: nothing reaches the Gate, no hero goes down.
+  // An advert, not a warning: nothing hurts the Gate (heroes have no HP, so
+  // the Gate is the one thing on the field that can be hurt).
   expect(s.leaks, `${label}: leaks`).toBe(0)
-  expect(s.downed, `${label}: downed`).toBe(0)
   // He fell somewhere the camera can see: on the field, near the company.
   expect(Math.hypot(s.hitPos.x - s.focus.x, s.hitPos.y - s.focus.y), `${label}: fell on screen`).toBeLessThan(200)
   // The camera track covers the whole cut and never leaves the field.
@@ -104,7 +104,7 @@ describe('attract-mode battle', () => {
       const first = sim.judgeScene(sim.composeScene(seed, 0))
       if (typeof first !== 'string') continue
       found = true
-      expect(['leak', 'downed', 'no-headliner', 'slow', 'quick', 'off-shot']).toContain(first)
+      expect(['leak', 'no-headliner', 'slow', 'quick', 'off-shot']).toContain(first)
       const s = sim.directAttract(seed)
       expect(s.scene.take).toBeGreaterThan(0)
       expect(s.rejected).toBe(s.scene.take)
@@ -140,7 +140,7 @@ describe('attract-mode battle', () => {
       baseHp: e.baseHp,
       kills: e.killCount,
       enemies: e.enemies.map((x) => [x.type.id, x.hp, x.pos.x, x.pos.y]),
-      heroes: e.sentinels.map((x) => [x.id, x.hp]),
+      heroes: e.sentinels.map((x) => [x.id, x.kills, x.damageDealt]),
     })
     expect(snap(loops[1])).toEqual(snap(loops[0]))
   })

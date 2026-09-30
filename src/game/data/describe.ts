@@ -25,9 +25,9 @@ const signPct = (mult: number) => {
  * and best-of is the smallest of the three:
  *
  *  - **multiplies** `damageMult`, `rateMult`, `rangeMult`, `projSpeedMult`,
- *    `hpMult`, `thornsMult`;
- *  - **sums** `physDefAdd`, `splashAdd`, `critChanceAdd`, `critMultAdd`,
- *    `pierce`, `lifedrain`, `selfSacrifice`;
+ *    `thornsMult`;
+ *  - **sums** `splashAdd`, `critChanceAdd`, `critMultAdd`, `pierce`,
+ *    `lifedrain`;
  *  - **takes the best**, per field, only for `stunChance`, `stunDur`, `execute`
  *    and the structured statuses (burn / chill / shock / block / the auras /
  *    trap).
@@ -43,12 +43,12 @@ const signPct = (mult: number) => {
  * The rule below states all three behaviours in the order a player meets them,
  * grouped by the wording they see on the card rather than by the field name:
  * anything that reads as a ± percentage OF the hero (damage, attack speed,
- * range, HP) multiplies; anything that reads as a flat bonus added to a pool
- * (crit, splash, pierce, armour, life-drain) adds; a repeated status is the
- * only case where the strongest simply wins.
+ * range) multiplies; anything that reads as a flat bonus added to a pool
+ * (crit, splash, pierce, life-drain) adds; a repeated status is the only case
+ * where the strongest simply wins.
  */
 export const STACKING_RULE =
-  '±% damage, attack speed, range and HP multiply together. Crit, splash, pierce, armour and life-drain add up. ' +
+  '±% damage, attack speed and range multiply together. Crit, splash, pierce and life-drain add up. ' +
   'Burn, chill, stun, chains, blocks and auras keep the strongest — a second copy of one adds nothing.'
 
 /**
@@ -60,8 +60,8 @@ export const STACKING_RULE =
  * from the other's meaning.
  */
 export const STACKING_RULES: readonly string[] = [
-  'Multiplies: ±% damage, attack speed, range, HP, thorns.',
-  'Adds up: crit chance and damage, splash, pierce, armour, life-drain.',
+  'Multiplies: ±% damage, attack speed, range, thorns.',
+  'Adds up: crit chance and damage, splash, pierce, life-drain.',
   'Strongest wins: burn, chill, stun, chains, blocks, auras, traps.',
 ]
 
@@ -72,16 +72,6 @@ export function describeMods(m: EffectMods): string[] {
   if (m.rateMult != null && m.rateMult !== 1) out.push(`${signPct(m.rateMult)} attack speed`)
   if (m.rangeMult != null && m.rangeMult !== 1) out.push(`${signPct(m.rangeMult)} range`)
   if (m.projSpeedMult != null && m.projSpeedMult !== 1) out.push(`${signPct(m.projSpeedMult)} projectile speed`)
-  if (m.hpMult != null && m.hpMult !== 1) out.push(`${signPct(m.hpMult)} HP`)
-  // `physDefAdd` was merged, applied, and described NOWHERE (F11) — the mirror
-  // of a tooltip claiming an effect that does not exist. It is real armour:
-  // `computeCombat` puts it in `profile.physDef` and the engine mitigates the
-  // melee a blocking Sentinel takes by `50 / (50 + physDef)`. Quoted as the
-  // reduction the player actually gets, since the raw number means nothing.
-  if (m.physDefAdd) {
-    const cut = Math.round((m.physDefAdd / (50 + m.physDefAdd)) * 100)
-    out.push(`−${cut}% melee damage taken while blocking`)
-  }
   // A crit penalty at or past −100% can only ever land on zero (computeCombat
   // clamps crit to [0, 0.95]), so say what actually happens instead of printing
   // a percentage the engine will never apply. `cx_vengeful` is priced on this.
@@ -101,19 +91,17 @@ export function describeMods(m: EffectMods): string[] {
   if (m.stunChance) out.push(`${pct(m.stunChance)} to stun ${m.stunDur ?? 0.5}s`)
   if (m.block) out.push(`blocks ${m.block.count} enemies`)
   if (m.thornsMult && m.thornsMult !== 1) out.push(`${signPct(m.thornsMult)} thorns`)
-  if (m.healAura) out.push(`heals allies ${Math.round(m.healAura.hps)}/s`)
-  if (m.buffAura) out.push(`buffs allies ${signPct(m.buffAura.damageMult)} dmg`)
-  if (m.dmgReductionAura) out.push(`shields allies ${pct(m.dmgReductionAura.reduction)}`)
+  if (m.buffAura) {
+    out.push(
+      m.buffAura.damageMult !== 1
+        ? `buffs allies ${signPct(m.buffAura.damageMult)} dmg`
+        : `blessing reaches ${Math.round(m.buffAura.radius)}px`,
+    )
+  }
   if (m.lifedrain) out.push(`life-drain: +${lifedrainPer100(m.lifedrain)} Gate HP per 100 damage`)
-  // Both halves, because the effect has two (F11). `computeCombat` turns
-  // `selfSacrifice` into BOTH `startMissingFrac` (the Sentinel deploys at that
-  // much less HP) and a `1 + selfSacrifice` multiplier on its damage. The old
-  // line named only the cost — "sacrifices 30% HP for power" — so the tooltip
-  // priced a downside and left the upside to be guessed at.
-  if (m.selfSacrifice) out.push(`starts at ${pct(m.selfSacrifice)} less HP for +${pct(m.selfSacrifice)} damage`)
   // Both numbers, and the honest count. `trap.slow` was merged, applied by
   // `engine.updateTraps` and described nowhere — the same defect as the
-  // undescribed `physDefAdd` above. And "traps", plural, was wrong: the engine
+  // once-undescribed armour stat (F11). And "traps", plural, was wrong: the engine
   // lays exactly ONE trap per Sentinel, in the constructor, at the path point
   // nearest its slot, and never moves it (`engine.ts`, `TRAP_RADIUS`), while
   // `mergeMods` takes the best-of so a second trap source still yields one.
@@ -126,10 +114,8 @@ export function describeMods(m: EffectMods): string[] {
     out.push(`every ${ordinal(m.volley.every)} shot ${m.volley.pierce >= 50 ? 'pierces everything within its reach' : `pierces ${m.volley.pierce} more`}`)
   }
   if (m.critEvery) out.push(`every ${ordinal(m.critEvery)} shot is a guaranteed crit`)
-  if (m.blockRegen) out.push(`heals ${pct(m.blockRegen)} of max HP per second while blocking`)
   if (m.killRush) out.push(`each kill: ${pct(m.killRush.rate)} faster attacks for ${m.killRush.dur}s`)
   if (m.openingRush) out.push(`first ${m.openingRush.dur}s of a wave: ${pct(m.openingRush.rate)} faster attacks`)
-  if (m.lastStand) out.push(`below ${pct(m.lastStand.below)} HP: ${pct(m.lastStand.damage)} more damage`)
   if (m.leakWard) out.push(`the first ${m.leakWard} leaks each wave cost the Gate nothing`)
   if (m.burnSpreadOnDeath) out.push('a burning enemy that dies spreads its fire to its neighbours')
   return out

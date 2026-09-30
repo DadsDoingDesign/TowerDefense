@@ -10,8 +10,8 @@ Companion to `docs/BALANCE_AUDIT.md`. Locked decisions + phased build.
 2. **Defensive layer = Prune to offense/utility.** Remove `magDef` (never read)
    and dead `Sentinel.attack`. Off-hand and body items grant offense & utility
    (range, crit, splash, on-hit effects, auras, attack speed) so no slot is dead
-   on any tower. HP / physDef / block / thorns remain the fighter "Guardian"
-   line's identity only.
+   on any tower. Block / thorns remain the fighter "Guardian" line's identity
+   (hero HP and physDef were removed entirely in the no-HP pass: heroes are never hurt).
 3. **Rarity = 5 tiers.** Common / Rare / Epic / Legendary / **Mythic**, applied
    consistently to items, reward cards, and upgrade nodes. **Mutations are always
    Mythic** (super-rare) and always carry a downside tradeoff.

@@ -46,13 +46,21 @@ import type { DangerKind, FieldTile, GameMap } from '../types'
  * try a setting in-process (`balance/hazard-sweep.ts`); the game never writes
  * it. What each value was measured against is in `balance/README.md` (Q1).
  */
+/*
+ * Tuned in the no-HP pass (the first lever in its order): ×0.5 / 1 tile of
+ * the best 2 → ×0.3 / 3 tiles of the best 6. It is a small lever on §6 — this
+ * setting moved the Monte Carlo 83.3% → 79.7%, and the harshest one swept
+ * (four ×0 tiles, twelve boulders) only to 78.7% — so the rest of the refit is
+ * the Threat curve (`run/threat.ts`). Boulders were left alone: they cost the
+ * same few points and take tiles a player can use.
+ */
 export const HAZARD_LEVERS = {
   /** Damage a hero standing on cursed ground deals, as a multiplier. */
-  cursedDamageMult: 0.5,
+  cursedDamageMult: 0.3,
   /** How many tiles of each battle's field are cursed. */
-  dangerTiles: 1,
-  /** The cursed tile is drawn from this many best open tiles (by coverage). */
-  dangerPool: 2,
+  dangerTiles: 3,
+  /** The cursed tiles are drawn from this many best open tiles (by coverage). */
+  dangerPool: 6,
   /** How many seeded boulders each battle's field adds. */
   obstacles: 6,
   /** …drawn from this many best open tiles after the cursed one. */

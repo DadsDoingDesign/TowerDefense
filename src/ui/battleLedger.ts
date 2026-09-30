@@ -17,6 +17,7 @@ import type { GameEngine } from '../game/engine/engine'
  */
 export interface LeakRow {
   name: string
+  /** Bodies that reached the Gate — or, on a TNT row, charges that landed on it. */
   heads: number
   damage: number
 }
@@ -70,6 +71,8 @@ export class LedgerWatch {
   private names: string[] = []
   private dist: number[] = []
   private leakValue: number[] = []
+  /** Throwers mid-wind-up at the top of the tick (a bomber, the King): their charge may land this tick. */
+  private throwers: string[] = []
   private n = 0
   private leakCount = 0
   private baseHp = 0
@@ -85,13 +88,36 @@ export class LedgerWatch {
     this.baseHp = engine.baseHp
     const es = engine.enemies
     this.n = es.length
+    this.throwers.length = 0
     for (let i = 0; i < es.length; i++) {
       const e = es[i]
       this.ids[i] = e.id
       this.names[i] = e.type.name
       this.dist[i] = e.distance
       this.leakValue[i] = e.type.leak
+      if (e.lobUntil > 0 || e.kingUntil > 0) this.throwers.push(e.id)
     }
+  }
+
+  /**
+   * Heroes have no HP, so TNT hurts the Gate: a charge that lands takes Gate
+   * with no head through the line. Booked as "<thrower>'s TNT", one per charge.
+   */
+  private bookCharge(engine: GameEngine): void {
+    const damage = Math.max(0, Math.round(this.baseHp - engine.baseHp))
+    if (damage <= 0 || !this.throwers.length) return
+    const landed = this.throwers.find((id) => {
+      const e = engine.enemies.find((x) => x.id === id)
+      return e && e.lobUntil === 0 && e.kingUntil === 0
+    })
+    const i = landed ? this.ids.indexOf(landed) : -1
+    if (i < 0) return
+    const name = `${this.names[i]}'s TNT`
+    const st = useBattleLedger.getState()
+    const run = { ...st.run, [name]: { name, heads: (st.run[name]?.heads ?? 0) + 1, damage: (st.run[name]?.damage ?? 0) + damage } }
+    const wave = { ...st.wave, [name]: { name, heads: (st.wave[name]?.heads ?? 0) + 1, damage: (st.wave[name]?.damage ?? 0) + damage } }
+    const worst = !st.worst || damage > st.worst.damage ? { name, damage } : st.worst
+    useBattleLedger.setState({ run, wave, worst, hitSeq: st.hitSeq + 1, lastHit: { gate: Math.max(0, Math.ceil(engine.baseHp)), max: engine.maxBaseHp } })
   }
 
   after(engine: GameEngine): void {
@@ -106,7 +132,7 @@ export class LedgerWatch {
       }
     }
     const heads = engine.leakCount - this.leakCount
-    if (heads <= 0) return
+    if (heads <= 0) return this.bookCharge(engine)
     const damage = Math.max(0, Math.round(this.baseHp - engine.baseHp))
     const alive = new Set(engine.enemies.map((e) => e.id))
     const gone: number[] = []

@@ -22,7 +22,6 @@ export function buildRecap(
     depth: number
     marks: number
     kills: number
-    downs: number
     spoils?: Item[]
     roster?: Sentinel[]
   },
@@ -39,7 +38,6 @@ export function buildRecap(
         level: s?.level ?? 1,
         kills: p.kills,
         damage: Math.round(p.damageDealt),
-        downed: p.downed,
       }
     })
     .sort((a, b) => b.damage - a.damage)
@@ -56,7 +54,6 @@ export function buildRecap(
     banner: st.runBanner,
     marks: info.marks,
     kills: info.kills,
-    downs: info.downs,
     goldLeft: st.gold,
     threat: st.threat,
     heroes,

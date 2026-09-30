@@ -17,7 +17,7 @@
  */
 import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
-import { leakCeiling } from '../src/game/data/enemies'
+import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { tileDamageMult } from '../src/game/data/hazards'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
@@ -90,15 +90,19 @@ function calibratedPosts(): Record<keyof typeof PRE_GRID_COVERAGE, string> {
 }
 export const POST = calibratedPosts()
 
-/** Roles used to interpret solo-offense numbers (supports read low on purpose). */
+/**
+ * Roles used to interpret solo-offense numbers (supports read low on purpose).
+ * A support is a spec whose value is an aura on OTHER heroes. Aegis, Bulwark and
+ * Warden of Ash were here for a shield aura and a hold that ate the line's
+ * melee; both went with hero HP (the no-HP pass), so they are graded as
+ * offense/control in §1 now.
+ */
 export const SUPPORT_SPECS = new Set([
-  'aegis', 'bulwark', 'bannerman', 'warden_of_ash', // guard/knight support-ish
+  'bannerman', // the one fighter aura
   'radiant', 'templar', 'oracle', // cleric
 ])
 /** Same set, in a stable order, so table rows don't depend on Set iteration. */
-export const SUPPORT_SPEC_IDS = [
-  'aegis', 'bulwark', 'bannerman', 'warden_of_ash', 'radiant', 'templar', 'oracle',
-]
+export const SUPPORT_SPEC_IDS = ['bannerman', 'radiant', 'templar', 'oracle']
 
 // ------------------------------------------------------------------ geometry
 export const SLOT_POS: Record<string, { x: number; y: number }> = Object.fromEntries(
@@ -112,14 +116,8 @@ export function slotDist(a: string, b: string): number {
   return Math.hypot(p.x - q.x, p.y - q.y)
 }
 
-/** The largest aura radius any node in the tree grants (currently Radiant, 160). */
-export const MAX_AURA_RADIUS = Math.max(
-  ...ALL_NODES.flatMap((n) => [
-    n.mods?.healAura?.radius ?? 0,
-    n.mods?.buffAura?.radius ?? 0,
-    n.mods?.dmgReductionAura?.radius ?? 0,
-  ]),
-)
+/** The largest aura radius any node in the tree grants (currently Radiant, 210). */
+export const MAX_AURA_RADIUS = Math.max(...ALL_NODES.map((n) => n.mods?.buffAura?.radius ?? 0))
 
 /**
  * The aura bench's triangle: the tiles nearest where the old s3/s2/s4 circles
@@ -281,8 +279,7 @@ export interface BattleMetrics {
   killCount: number
   totalDamage: number
   goldEarned: number
-  downs: number
-  perSentinel: { id: string; damage: number; kills: number; xp: number; downed: boolean }[]
+  perSentinel: { id: string; damage: number; kills: number; xp: number }[]
   /** The wave that was fought — the run layer re-prices its XP (Phase 3b). */
   wave: WaveDef
   /** What the behaviour kit, interactions and commands did (Phase 3a — REPORT §16). */
@@ -374,7 +371,7 @@ function wantsCommand(engine: GameEngine, policy: PlayerPolicy, id: CommandId): 
       // Rally: when enough of the column is inside the company's reach.
       let engaged = 0
       for (const e of engine.enemies) {
-        if (engine.sentinels.some((s) => !s.downed && Math.hypot(s.pos.x - e.pos.x, s.pos.y - e.pos.y) <= s.profile.range)) engaged++
+        if (engine.sentinels.some((s) => Math.hypot(s.pos.x - e.pos.x, s.pos.y - e.pos.y) <= s.profile.range)) engaged++
       }
       return engaged >= 4 || (engaged >= 1 && lead > len * 0.6)
     }
@@ -578,14 +575,12 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     killCount: res.enemiesKilled,
     totalDamage: res.perSentinel.reduce((a, p) => a + p.damageDealt, 0),
     goldEarned: res.goldEarned,
-    downs: res.downed,
     wave,
     perSentinel: res.perSentinel.map((p) => ({
       id: p.id,
       damage: p.damageDealt,
       kills: p.kills,
       xp: p.xpGained,
-      downed: p.downed,
     })),
     stats: { ...engine.behaviourStats },
     commandTicks,
@@ -683,8 +678,17 @@ export function makeWave(
 export function maxLeak(wave: WaveDef): number {
   // `leakCeiling` counts a splitter's pieces too (Phase 3a), or a wave whose
   // imps leaked could read as a negative stop rate.
-  return wave.spawns.reduce((a, s) => a + leakCeiling(s.typeId), 0)
+  // The Powderkeg King's TNT is a clock, not a count (no-HP rule change): it
+  // is priced here as the throws an unhindered walk down The Green Line gives
+  // him, so a bench that fields him cannot read below zero on his lobs alone.
+  return wave.spawns.reduce((a, s) => {
+    const t = ENEMY_TYPES[s.typeId]
+    const king = t?.behaviours?.find((b) => b.kind === 'kingLob')
+    const clock = king && king.kind === 'kingLob' ? Math.ceil((FIRST_MAP_LENGTH / t!.speed - king.first) / king.interval + 1) * king.gateDamage : 0
+    return a + leakCeiling(s.typeId) + clock
+  }, 0)
 }
+const FIRST_MAP_LENGTH = pathLength(FIRST_MAP.path)
 
 /**
  * **Stop rate** — the fraction of a wave's leak damage the defence prevented,

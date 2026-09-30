@@ -164,14 +164,13 @@ const STAT_CARDS: StatTemplate[] = [
     grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } },
   },
   {
-    // −12% tower HP was inside the bench's resolution (−1.9pt worst). HP only
-    // costs anything on a Sentinel that blocks and therefore takes melee, so the
-    // bill has to be big enough to fell one: −22%, against a bigger gain.
+    // Legacy card (saves only). Heroes have no HP now, so its HP bill became
+    // the relic's attack-speed bill (`data/relics.ts`).
     title: 'Bloodletting',
-    desc: '+20% damage, +8 Thorns, −22% hero HP · whole company',
+    desc: '+70% damage, +8 Thorns, −34% attack speed · whole company',
     rarity: 'epic',
-    downside: '−22% hero HP · whole company',
-    grant: { thorns: 8, mods: { damageMult: 1.2, hpMult: 0.78 } },
+    downside: '−34% attack speed · whole company',
+    grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } },
   },
 
   // ---- legendary pacts: run-defining, and they hurt ----
@@ -200,10 +199,10 @@ const STAT_CARDS: StatTemplate[] = [
   },
   {
     title: 'Iron Vigil',
-    desc: '+60% hero HP, +16 Thorns, +6 Patience, −14% damage · whole company',
+    desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · whole company',
     rarity: 'legendary',
-    downside: '−14% damage · whole company',
-    grant: { thorns: 16, patience: 6, mods: { hpMult: 1.6, damageMult: 0.86 } },
+    downside: '−12% damage · whole company',
+    grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } },
   },
 ]
 

@@ -205,7 +205,6 @@ function EvolvePreview({ hero, nodeId }: { hero: Sentinel; nodeId: string }) {
   const rows: { label: string; a: number; b: number; fmt?: (n: number) => string }[] = [
     { label: 'DPS', a: before.dps, b: after.dps, fmt: (n) => String(Math.round(n)) },
     { label: 'Reach', a: before.range, b: after.range, fmt: (n) => String(Math.round(n)) },
-    { label: 'HP', a: before.maxHp, b: after.maxHp, fmt: (n) => String(Math.round(n)) },
     { label: 'STR', a: hero.stats.str, b: evolved.stats.str },
     { label: 'DEX', a: hero.stats.dex, b: evolved.stats.dex },
     { label: 'INT', a: hero.stats.int, b: evolved.stats.int },

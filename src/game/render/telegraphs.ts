@@ -15,8 +15,8 @@ const alive = new Set<string>()
  * does may be invisible. Two kinds of mark are drawn here, both read straight
  * off engine state so the picture can never disagree with the sim:
  *
- *  1. **Moments** — `engine.telegraphs`: a bomber's target circle during its
- *     wind-up, a blast ring, a shaman's pulse, Grukk's war-cry, a leaper's arc,
+ *  1. **Moments** — `engine.telegraphs`: a bomber's (or the King's) target
+ *     circle on the Gate during its wind-up, a blast ring, a shaman's pulse, Grukk's war-cry, a leaper's arc,
  *     a split, a Flare, a shatter, a burn spreading. Each carries sim-clock
  *     `t0`/`t1`, so progress is `engine.elapsed`, frozen with the sim (a
  *     breather or a hitstop freezes the marks too).
@@ -24,8 +24,7 @@ const alive = new Set<string>()
  *     the pip on everything it covers, the shaman's cross, the lit fuse on an
  *     unspent sapper, the bomb a bomber still carries, the leaper's chevron,
  *     the berserker's flame once enraged, frost (brittle) as an icy rim, a
- *     war-cry haste as speed lines — and a post the Powderkeg King has knocked
- *     out, greyed with its countdown.
+ *     war-cry haste as speed lines.
  *
  * Called once per frame from `renderer.drawBattleEntities`, after the enemies
  * are drawn, so the marks sit over the bodies they describe. Colour is never
@@ -50,21 +49,6 @@ export function drawTelegraphs(ctx: CanvasRenderingContext2D, engine: GameEngine
     drawStanding(ctx, e, now, lw, pulse)
   }
   pruneHeadTops(alive)
-  for (const s of engine.sentinels) {
-    if (s.downed || now >= s.disabledUntil) continue
-    // Knocked out: a grey wash over the post and a draining countdown ring.
-    const left = s.disabledUntil - now
-    ctx.beginPath()
-    ctx.arc(s.pos.x, s.pos.y, 24, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(40, 40, 52, 0.45)'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(s.pos.x, s.pos.y, 27, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, left / 4))
-    ctx.lineWidth = lw * 1.5
-    ctx.strokeStyle = 'rgba(201, 184, 255, 0.95)'
-    ctx.stroke()
-    drawDaze(ctx, s.pos.x, s.pos.y - 30, lw)
-  }
   ctx.restore()
 }
 
@@ -101,7 +85,7 @@ function drawMoment(ctx: CanvasRenderingContext2D, t: Telegraph, now: number, lw
   switch (t.kind) {
     case 'lob':
     case 'kingLob': {
-      // The mark on the post: a dashed danger ring with a fill that closes in
+      // The mark on the Gate: a dashed danger ring with a fill that closes in
       // as the fuse burns down — the whole window to kill the thrower.
       const king = t.kind === 'kingLob'
       const hue = king ? '255, 70, 70' : '255, 140, 60'
@@ -295,16 +279,3 @@ function drawFlame(ctx: CanvasRenderingContext2D, x: number, y: number, pulse: n
   ctx.fill()
 }
 
-function drawDaze(ctx: CanvasRenderingContext2D, x: number, y: number, lw: number): void {
-  // Two little stars: knocked silly.
-  ctx.lineWidth = lw
-  ctx.strokeStyle = 'rgba(201, 184, 255, 0.95)'
-  for (const dx of [-6, 6]) {
-    ctx.beginPath()
-    ctx.moveTo(x + dx - 3, y)
-    ctx.lineTo(x + dx + 3, y)
-    ctx.moveTo(x + dx, y - 3)
-    ctx.lineTo(x + dx, y + 3)
-    ctx.stroke()
-  }
-}

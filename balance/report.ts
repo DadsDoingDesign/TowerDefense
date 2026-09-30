@@ -380,8 +380,8 @@ line('The support sits at the one slot on The Green Line whose')
 line(
   `neighbours are inside aura range: \`${AURA_TRIO.support}\` is ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[0]))}px from \`${AURA_TRIO.allies[0]}\` and ${f1(slotDist(AURA_TRIO.support, AURA_TRIO.allies[1]))}px from \`${AURA_TRIO.allies[1]}\`.`,
 )
-line('The carriers are a **blocking** Berserker (which can be killed, so heals and')
-line(`damage-reduction have a failure mode) and a Sharpshooter, with the real \`MAX_BASE_HP\` of ${MAX_BASE_HP}.`)
+line('The carriers are a **blocking** Berserker and a Sharpshooter, with the real')
+line(`\`MAX_BASE_HP\` of ${MAX_BASE_HP}. (Heroes have no HP since the no-HP pass: every support aura is a damage buff now.)`)
 line('Each support is graded against a *generic damage tower of its own archetype* in the')
 line('same slot, so "a third body" cannot masquerade as support value.')
 line('')
@@ -533,14 +533,13 @@ line(
 )
 line(`- Supports that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
 line('')
-line('The Guard line (Aegis / Bulwark / Warden of Ash) reads *worse than an empty slot*')
-line('in the old swarm-blob column and best-in-game on the real encounters. That is not')
-line('noise and it is not a kit problem: a melee blocker pins enemies at its own feet and')
-line('eats their melee, which is decisive against a wave of 50–110 bodies and a suicide')
-line('note against 612 of them at ×30 HP. Injecting `block: {count: 5}` onto the')
-line('*Pyromancer* — a spec with no melee identity at all — cost it four rungs on the old')
-line('ladder, which is the cleanest available proof that the ladder was grading the')
-line('pressure model rather than the kit.')
+line('**Aegis, Bulwark and Warden of Ash left this table in the no-HP pass.** They were')
+line('graded as supports for a shield aura (Aegis, Bulwark) and a hold that ate the melee')
+line('meant for the line; heroes have no HP now, so there is no melee to eat and no aura')
+line('left to grade. They hold and slow (Aegis, Bulwark) or grind (Warden) — offense and')
+line('control, graded in §1 with the rest. Measured on the run before they moved, all three')
+line('read *below* a plain Weaponmaster here (×16.4 / ×18.0 / ×19.7 against ×19.7): a')
+line('blocking damage tower that can no longer fall holds everything a holder did.')
 line('')
 for (const r of supRows.filter((x) => x.kind === 'support')) {
   const bar = fillerScore[r.arch!] ?? 0
@@ -640,7 +639,16 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * for a curve change, by dividing the subject's change back out
  * (0.89 × 1.35 ≈ 1.2): baseline 30%, inside the band and within 2pt of the fit.
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 1.2, endure: 1 }
+/*
+ * **`endure` ×1 → ×1.6 (the no-HP pass).** Its Weaponmaster BLOCKS the barrels,
+ * and until heroes lost their HP it was also being ground down by them: the
+ * hold ended when the blocker fell. Never hurt, it held the whole queue and the
+ * bench read 99% — at its ceiling, where `patience`, `bursting` and
+ * `executioner` all read dead. Swept ×1.3 / ×1.6 / ×1.8 / ×2 / ×2.5 (baseline
+ * 73 / 60 / 56 / 48 / 43%); ×1.6 is the lightest pin that puts it back in band
+ * with every endure affix clear of the floor by two quanta.
+ */
+const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 1.2, endure: 1.6 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
@@ -807,7 +815,13 @@ const AFFIX_HOME: Record<string, ScenarioKey> = {
   might: 'phys',
   precision: 'phys',
   insight: 'magic',
-  reach: 'endure', // range is the binding constraint on a 96px blocker, not on a mystic
+  // `endure` → `magic` (the no-HP pass). Range bought a blocker more of the
+  // queue while it was being worn down; a blocker that is never hurt holds its
+  // two bodies forever either way, and `reach` read −1.2pt there at every pin
+  // swept. `magic` is non-monotone in range (see below), which is why it was not
+  // the home before — the roll graded here is fixed (seed 500), so the number is
+  // stable, but read it knowing that.
+  reach: 'magic',
   patience: 'endure',
   cruelty: 'phys',
   ruin: 'phys',
@@ -972,8 +986,8 @@ const stdTeam = [
   { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: POST.s3 },
   { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: POST.s5 },
 ]
-line('| Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |')
-line('|--:|--:|:-:|--:|--:|')
+line('| Siege pressure | Enemies | Cleared | Base HP left ± |')
+line('|--:|--:|:-:|--:|')
 let breakPoint = 0
 let censored = true
 for (const p of PRESSURE_LADDER) {
@@ -983,8 +997,7 @@ for (const p of PRESSURE_LADDER) {
   )
   const cleared = rows.filter((r) => r.cleared).length
   const hpLeft = stat(rows.map((r) => r.baseHpLeft))
-  const downs = stat(rows.map((r) => r.downs))
-  line(`| ×${f2(p)} | ${wave.spawns.length} | ${cleared}/${rows.length} | ${pm(hpLeft)} | ${pm(downs)} |`)
+  line(`| ×${f2(p)} | ${wave.spawns.length} | ${cleared}/${rows.length} | ${pm(hpLeft)} |`)
   if (cleared === rows.length) breakPoint = p
   if (cleared === 0) { censored = false; break }
 }
@@ -1297,17 +1310,34 @@ const MUT_SEEDS = SEEDS.slice(0, 4)
 //   armour — 12 Siege Barrels at 30% physical resist: raw per-hit damage and
 //            pierce matter, splash and rate much less.
 //   line   — a real depth-8 wave at ×1.25 swarm pressure: the general case.
+/**
+ * ---- `armour` is pinned ×1.8 since heroes lost their HP (no-HP pass) --------
+ *
+ * The Weaponmaster these benches grade on BLOCKS, and until the no-HP change a
+ * blocker holding twelve Siege Barrels took their melee and fell partway
+ * through — so the `armour` bench's 44% baseline was partly "how long does the
+ * blocker last". With heroes never hurt the same wave read **90%**, a bench at
+ * its ceiling: every per-hit-damage mutation's cost vanished into it (Blasting
+ * Powder, Chain Arc, Piercing Volley, Hoarfrost, Ricochet and Blood Frenzy all
+ * read "no cost"). This is trap 5 in `README.md` — a scenario that quietly
+ * stopped being what it was fitted as — and the answer is the same as
+ * `BENCH_PIN`'s: divide the change back out. Swept ×1–×3, the pin that puts the
+ * bench back in its resolving band is ×1.8 (58%; ×2.3 restores the old 46% but
+ * lets Siphon's Gate-drain run 17pt clear of the column). `swarm` and `line`
+ * were not moved: `line` is set by the bodies a lone blocker cannot reach, not
+ * by how long it stands (×1 → ×3 moves it 38% → 30%).
+ */
 const MUT_SCENARIOS = {
-  swarm: { wave: makeWave([{ typeId: 'torch1', count: 90, hpMult: 2, gap: 0.22 }], 'swarm'), blurb: '90 tiny fast runners — a pure rate/splash test' },
-  armour: { wave: makeWave([{ typeId: 'barrel4', count: 12, hpMult: 2, gap: 2.4 }], 'armour'), blurb: '12 Siege Barrels, 30% physical resist' },
+  swarm: { wave: makeWave([{ typeId: 'torch1', count: 90, hpMult: 2, gap: 0.22 }], 'swarm'), pin: 1, blurb: '90 tiny fast runners — a pure rate/splash test' },
+  armour: { wave: makeWave([{ typeId: 'barrel4', count: 12, hpMult: 2, gap: 2.4 }], 'armour'), pin: 1.8, blurb: '12 Siege Barrels, 30% physical resist, ×1.8 HP' },
   // Bench mode (`BENCH_RULES`): the pre-3a continuous wave, see harness.ts.
-  line: { wave: scaleWave(generateEncounter(8, 'normal', { subWaves: false }), 1.25, SWARM_PRESSURE), blurb: 'a depth-8 wave at ×1.25 swarm pressure' },
+  line: { wave: scaleWave(generateEncounter(8, 'normal', { subWaves: false }), 1.25, SWARM_PRESSURE), pin: 1, blurb: 'a depth-8 wave at ×1.25 swarm pressure' },
 } as const
 type MutKey = keyof typeof MUT_SCENARIOS
 const MUT_KEYS = Object.keys(MUT_SCENARIOS) as MutKey[]
 const mutBase = buildSpec('weaponmaster', { seed: 2 })
 const mutBaseRate = {} as Record<MutKey, number>
-for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES })
+for (const k of MUT_KEYS) mutBaseRate[k] = soloStopRate(mutBase, MUT_SCENARIOS[k].wave, MUT_SEEDS, { enemyHpMult: MUT_SCENARIOS[k].pin, rules: BENCH_RULES })
 line(`Baseline stop rate — ${MUT_KEYS.map((k) => `\`${k}\` (${MUT_SCENARIOS[k].blurb}) ${pct(mutBaseRate[k])}`).join(', ')}.`)
 line('')
 /** How far a mutation must move a scenario for that scenario to count as power / cost. */
@@ -1343,7 +1373,7 @@ const mutDeltas: { name: string; d: Record<MutKey, number> }[] = []
 for (const mut of allMutations()) {
   const withMut: Sentinel = { ...mutBase, mutations: [mut] }
   const d = {} as Record<MutKey, number>
-  for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS, { rules: BENCH_RULES }) - mutBaseRate[k]
+  for (const k of MUT_KEYS) d[k] = soloStopRate(withMut, MUT_SCENARIOS[k].wave, MUT_SEEDS, { enemyHpMult: MUT_SCENARIOS[k].pin, rules: BENCH_RULES }) - mutBaseRate[k]
   mutDeltas.push({ name: mut.name, d })
   const worstKey = MUT_KEYS.reduce((a, b) => (d[a] <= d[b] ? a : b))
   const bestKey = MUT_KEYS.reduce((a, b) => (d[a] >= d[b] ? a : b))
@@ -3013,9 +3043,9 @@ const CARD_EDGE = 0.02
 const CARD_TRAP = 0.02
 interface CardBench { label: string; wave: WaveDef; hero: Sentinel; pin: number; blurb: string }
 const CARD_BENCHES: CardBench[] = [
-  { label: 'swarm', wave: MUT_SCENARIOS.swarm.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.swarm.blurb },
-  { label: 'armour', wave: MUT_SCENARIOS.armour.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.armour.blurb },
-  { label: 'line', wave: MUT_SCENARIOS.line.wave, hero: mutBase, pin: 1, blurb: MUT_SCENARIOS.line.blurb },
+  { label: 'swarm', wave: MUT_SCENARIOS.swarm.wave, hero: mutBase, pin: MUT_SCENARIOS.swarm.pin, blurb: MUT_SCENARIOS.swarm.blurb },
+  { label: 'armour', wave: MUT_SCENARIOS.armour.wave, hero: mutBase, pin: MUT_SCENARIOS.armour.pin, blurb: MUT_SCENARIOS.armour.blurb },
+  { label: 'line', wave: MUT_SCENARIOS.line.wave, hero: mutBase, pin: MUT_SCENARIOS.line.pin, blurb: MUT_SCENARIOS.line.blurb },
   {
     label: 'magic',
     wave: AFFIX_SCENARIOS.magic.wave,
@@ -3193,12 +3223,12 @@ const TWIN_DEPTHS: [number, EncounterKind][] = [[2, 'normal'], [4, 'boss'], [6, 
 const TWIN_TEAMS = 8
 line(`**Battery** — ${TWIN_TEAMS} random §14c-style companies × ${TWIN_DEPTHS.length} nodes (${TWIN_DEPTHS.map(([d, k]) => `d${d} ${k}`).join(', ')}) at the road's Threat, base ${MAX_BASE_HP}, identical seeds on both twins:`)
 line('')
-line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) | Towers downed (mean) |')
-line('|---|---|--:|--:|--:|--:|')
+line('| Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) |')
+line('|---|---|--:|--:|--:|')
 for (const land of ALL_MAPS) {
-  const res: Record<string, { cleared: number; lost: number; downs: number; n: number }> = {}
+  const res: Record<string, { cleared: number; lost: number; n: number }> = {}
   for (const field of [land, orientField(land, 'portrait')]) {
-    const acc = { cleared: 0, lost: 0, downs: 0, n: 0 }
+    const acc = { cleared: 0, lost: 0, n: 0 }
     const rr = new RNG(1717)
     const order = bestSlots(field)
     for (let t = 0; t < TWIN_TEAMS; t++) {
@@ -3213,11 +3243,10 @@ for (const land of ALL_MAPS) {
         acc.n++
         if (m.cleared) acc.cleared++
         acc.lost += m.baseHpLost
-        acc.downs += m.downs
       }
     }
     res[orientationOf(field)] = acc
-    line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} | ${f2(acc.downs / acc.n)} |`)
+    line(`| ${land.name} | ${orientationOf(field)} (\`${field.id}\`) | ${acc.n} | ${pct(acc.cleared / acc.n)} | ${f2(acc.lost / acc.n)} |`)
   }
   const a = res.landscape
   const b = res.portrait

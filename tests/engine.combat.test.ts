@@ -3,12 +3,24 @@ import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 
 /** G1-2: the old build circles, as the tiles nearest where they stood. */
 const P = legacyPosts(FIRST_MAP.id)
+/**
+ * The open tile nearest where a Bomber plants its feet — a little inside its
+ * range of the Gate, measured along the road — so a hero there can reach it
+ * during the wind-up.
+ */
+const NEAR_GATE = (() => {
+  const road = new GamePath(FIRST_MAP.path)
+  const lob = BOMBER_LOB.range
+  const plant = road.pointAt(road.length - lob + 20)
+  return [...FIRST_MAP.slots].sort((a, b) => Math.hypot(a.pos.x - plant.x, a.pos.y - plant.y) - Math.hypot(b.pos.x - plant.x, b.pos.y - plant.y))[0].id
+})()
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateEncounter, nodeEncounter, subWaveCount } from '../src/game/data/waves'
 import { commandsFor, HOLD, RALLY } from '../src/game/data/commands'
 import { relicById, relicCommands, relicSupported, relicTeamMods } from '../src/game/data/relics'
-import { COLOSSUS_SPLIT } from '../src/game/data/behaviours'
+import { BOMBER_LOB, COLOSSUS_SPLIT } from '../src/game/data/behaviours'
+import { GamePath } from '../src/game/core/path'
 import {
   BRITTLE_MULT,
   GameEngine,
@@ -106,33 +118,38 @@ describe('the behaviour kit (Phase 3a)', () => {
     expect(b.distance - d1).toBeGreaterThan(calm * 1.4)
   })
 
-  it('a sapper blows up on the first hero post it reaches — no leak, no gold', () => {
-    // s5 is 35px off the lane on the Green Line; the rogue there is in the blast.
+  it('a sapper walks past the heroes and blows at the Gate: its leak plus its blast', () => {
+    // A rogue beside the lane does not set it off — heroes are never hurt.
     const e = runOut(engineFor([at('tnt4', 0, 40)], [['rogue', P.s5]], { rules: {} }))
+    const sapper = ENEMY_TYPES.tnt4.behaviours!.find((b) => b.kind === 'sapper')!
+    const blast = sapper.kind === 'sapper' ? sapper.gateDamage : 0
     expect(e.behaviourStats.sapperBlasts).toBe(1)
-    expect(e.behaviourStats.sapperDamage).toBeGreaterThan(0)
-    expect(e.sentinels[0].hp).toBeLessThan(e.sentinels[0].maxHp)
-    expect(e.goldEarned).toBe(0)
-    expect(e.leakCount).toBe(0)
+    expect(e.behaviourStats.sapperDamage).toBe(blast)
+    expect(e.leakCount).toBe(1)
+    expect(e.baseHp).toBe(200 - ENEMY_TYPES.tnt4.leak - blast)
     expect(e.status).toBe('cleared')
+    // The card's Gate figure counts the blast.
+    expect(leakCeiling('tnt4')).toBe(ENEMY_TYPES.tnt4.leak + blast)
   })
 
-  it('a sapper held by a fighter detonates on the blocker — and is that blocker\'s kill', () => {
+  it('a sapper held by a fighter goes off harmlessly at the wall — and is that blocker\'s kill', () => {
     const e = runOut(engineFor([at('tnt4', 0, 40)], [['fighter', P.s1]]))
     expect(e.behaviourStats.sapperBlasts).toBe(1)
     expect(e.behaviourStats.sapperHeld).toBe(1)
-    expect(e.sentinels[0].hp).toBeLessThan(e.sentinels[0].maxHp)
+    expect(e.behaviourStats.sapperDamage).toBe(0)
+    expect(e.baseHp).toBe(200)
     expect(e.goldEarned).toBeGreaterThan(0)
     expect(e.sentinels[0].kills).toBe(1)
   })
 
-  it('a bomber winds up on a post and lands its charge; killing it in the wind-up cancels the throw', () => {
-    const e = runOut(engineFor([at('tnt2', 0, 30)], [['rogue', P.s1]]))
+  it('a bomber near the Gate winds up and lands its charge on it; killing it in the wind-up cancels the throw', () => {
+    const e = runOut(engineFor([at('tnt2', 0, 30)], [['rogue', NEAR_GATE]]))
     expect(e.behaviourStats.lobsStarted).toBeGreaterThan(0)
     expect(e.behaviourStats.lobsLanded).toBe(1)
     expect(e.behaviourStats.lobDamage).toBeGreaterThan(0)
+    expect(e.baseHp).toBeLessThan(200)
     // Now kill it the moment it plants its feet.
-    const k = engineFor([at('tnt2', 0, 30)], [['rogue', P.s1]])
+    const k = engineFor([at('tnt2', 0, 30)], [['rogue', NEAR_GATE]])
     runOut(k, 60 * 60, (eng) => {
       const b = eng.enemies[0]
       if (b && b.lobUntil > 0) b.hp = 0.01 // the next shot finishes it
@@ -208,10 +225,11 @@ describe('boss phases (Phase 3a)', () => {
     expect(events.filter((x) => x === 'bossPhase').length).toBe(2)
   })
 
-  it('the Powderkeg King lobs TNT that knocks a post out', () => {
+  it('the Powderkeg King lobs TNT at the Gate on a clock', () => {
     const e = runOut(engineFor([at('tnt5', 0, 3)], [['fighter', P.s1], ['rogue', P.s2]], { baseHp: 999 }))
     expect(e.behaviourStats.kingLobs).toBeGreaterThan(0)
-    expect(e.behaviourStats.kingDisables).toBeGreaterThan(0)
+    expect(e.behaviourStats.kingDamage).toBeGreaterThan(0)
+    expect(e.behaviourStats.gateDamage).toBeGreaterThanOrEqual(e.behaviourStats.kingDamage)
   })
 
   it('the Colossus Keg splits into two halves at half health', () => {
@@ -325,13 +343,12 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     expect(e.inputLog.map((i) => i.kind)).toEqual(['move', 'resume'])
   })
 
-  it('the breather mends the line', () => {
-    const spawns = [at('torch1', 0, 0.5, 0), at('torch1', 0, 0.5, 1)]
-    const e = engineFor(spawns, [['rogue', P.s1]], { breathers: 'pause' })
-    e.sentinels[0].hp = 10
-    runOut(e, 60 * 60)
-    expect(e.breather).toBe(true)
-    expect(e.sentinels[0].hp).toBeGreaterThan(10)
+  it('heroes are never hurt: a blocker holding a column takes nothing and keeps fighting', () => {
+    const e = runOut(engineFor([at('barrel3', 0, 8), at('barrel3', 0.5, 8), at('torch4', 1, 8)], [['fighter', P.s1]], { baseHp: 999 }))
+    const s = e.sentinels[0] as unknown as Record<string, unknown>
+    expect(s.hp).toBeUndefined()
+    expect(s.downed).toBeUndefined()
+    expect(e.sentinels[0].kills).toBeGreaterThan(0)
   })
 })
 

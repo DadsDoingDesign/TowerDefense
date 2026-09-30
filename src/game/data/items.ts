@@ -267,7 +267,10 @@ const ENCHANTS: EnchantTemplate[] = [
   { id: 'bursting', label: 'Bursting', roll: (r, b) => ({ mods: { splashAdd: round(r.range(6, 12) * b) } }) },
   { id: 'heavy', label: 'Heavy', roll: (r, b) => ({ mods: { damageMult: 1 + r.range(0.06, 0.12) * b } }) },
   { id: 'swift', label: 'Swift', roll: (r, b) => ({ mods: { rateMult: 1 + r.range(0.05, 0.1) * b } }) },
-  { id: 'flaming', label: 'Flaming', roll: (r, b) => ({ mods: { burn: { dps: round(r.range(6, 12) * b), dur: 3 } } }) },
+  // 6–12 → 10–20 per budget point (no-HP tuning pass): §4 read it at +1.8pt on
+  // `phys`, under the +2.0pt floor, before and after the rule change. One draw
+  // either way, so no roll downstream moves.
+  { id: 'flaming', label: 'Flaming', roll: (r, b) => ({ mods: { burn: { dps: round(r.range(10, 20) * b), dur: 3 } } }) },
   /*
    * ---- a clamp is not a ladder (m-2) ---------------------------------------
    *
@@ -362,9 +365,12 @@ const ENCHANTS: EnchantTemplate[] = [
 // actually branch on — crit, splash radius, per-hit procs — and §10 measures
 // each of them at ≥+2pt somewhere and ≥2pt of cost somewhere. ----
 const CURSE_ENCHANTS: EnchantTemplate[] = [
-  // Burst: net ×1.02 throughput, all of it front-loaded into single huge hits.
-  // Wasted on anything that dies to a normal hit; lethal against armour.
-  { id: 'cx_reckless', label: 'Reckless', roll: () => ({ mods: { damageMult: 1.85, rateMult: 0.55 } }) },
+  // Focus: +30% damage, bought with the blast. It was ×1.85 damage for ×0.55
+  // rate (net ×1.02) — a "burst" shape the engine cannot read, and §10 measured
+  // it at −1.1pt at worst, a plain upgrade. Splash is an axis the engine does
+  // read: a single-target carrier gains (+5.6pt phys), a splash mystic loses
+  // most of its blast (−3.2pt magic).
+  { id: 'cx_reckless', label: 'Reckless', roll: () => ({ mods: { damageMult: 1.3, splashAdd: -45 } }) },
   // Flurry: ×1.9 rate for ×0.6 damage, and it never crits.
   //
   // **Why the crit clause is here (M19-g).** The first version of this was a
@@ -475,8 +481,8 @@ const pickRarity = (rng: RNG): ItemRarity => {
  * contributes 0 on a mystic. Only `attackSpeed` (the weapon's `speedBias`)
  * survives the mismatch. The same cut runs through two enchants: the damage stat
  * is `isPhys ? str : int`, so `insight` is worth *literally nothing* on a
- * physical tower and `might` on a mystic buys only the HP term in
- * `70 + str * 9`.
+ * physical tower and `might` on a mystic buys nothing at all (it used to buy
+ * the hero-HP term, which went with hero HP).
  *
  * Nothing weighted drops by the team that actually exists, and `generateItem`
  * was called roster-blind from every source. On a mono-archetype roster — which
@@ -552,7 +558,7 @@ function weightedPool<T>(items: readonly T[], weight: (item: T) => number): read
  * way whoever wears them.
  */
 const ENCHANT_AFFINITY: Record<string, DamageType> = {
-  might: 'physical', // STR: damage on a fighter/rogue, HP only on a mystic
+  might: 'physical', // STR: damage on a fighter/rogue, nothing on a mystic (heroes have no HP)
   insight: 'magic', // INT: damage on a mystic, nothing at all on anyone else
 }
 

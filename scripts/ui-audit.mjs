@@ -186,7 +186,7 @@ const SHOTS = [
     run: async (p, vp) => {
       await p.evaluate(async () => {
         const m = await import('/src/state/metaStore.ts')
-        m.useMetaStore.setState({ watchMarks: 400, upgrades: { u_gold: 2 }, stats: { bestDepth: 7, totalKills: 812, sentinelsLost: 3, runsCompleted: 5, runsWon: 2 } })
+        m.useMetaStore.setState({ watchMarks: 400, upgrades: { u_gold: 2 }, stats: { bestDepth: 7, totalKills: 812, runsCompleted: 5, runsWon: 2 } })
       })
       await p.getByRole('button', { name: /Upgrade Perks/i }).click()
       await settle(p)

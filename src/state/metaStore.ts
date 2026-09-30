@@ -373,7 +373,6 @@ export interface MetaStats {
   /** Highest Banner ever carried to a campaign win. The real difficulty record. */
   bestBanner: number
   totalKills: number
-  sentinelsLost: number
   runsCompleted: number
   runsWon: number
 }
@@ -502,7 +501,6 @@ interface MetaState {
     depth: number
     won: boolean
     kills: number
-    downs: number
     mode?: 'campaign' | 'endless'
     /** Banner the run was flying, if any — scales the payout. */
     banner?: number
@@ -537,7 +535,6 @@ const freshStats = (): MetaStats => ({
   bestRound: 0,
   bestBanner: 0,
   totalKills: 0,
-  sentinelsLost: 0,
   runsCompleted: 0,
   runsWon: 0,
 })
@@ -602,7 +599,6 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
       bestRound: Math.max(0, num(rawStats.bestRound, base.bestRound)),
       bestBanner: Math.max(0, num(rawStats.bestBanner, base.bestBanner)),
       totalKills: Math.max(0, num(rawStats.totalKills, base.totalKills)),
-      sentinelsLost: Math.max(0, num(rawStats.sentinelsLost, base.sentinelsLost)),
       runsCompleted: Math.max(0, num(rawStats.runsCompleted, base.runsCompleted)),
       runsWon: Math.max(0, num(rawStats.runsWon, base.runsWon)),
     },
@@ -691,7 +687,7 @@ export const useMetaStore = create<MetaState>()(
 
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
-      grantRunRewards: ({ depth, won, kills, downs, mode = 'campaign', banner = 0, ranked = true, daily = null, facts }) => {
+      grantRunRewards: ({ depth, won, kills, mode = 'campaign', banner = 0, ranked = true, daily = null, facts }) => {
         const { watchMarks, stats, sacrificeTier, achievements } = get()
         // The scored Daily attempt records its result on the record it claimed
         // at hero-pick — and only that one, and only once.
@@ -758,7 +754,6 @@ export const useMetaStore = create<MetaState>()(
                 ? Math.max(num(stats.bestBanner, 0), Math.min(MAX_BANNER, Math.max(0, num(banner, 0))))
                 : num(stats.bestBanner, 0),
             totalKills: num(stats.totalKills, 0) + num(kills, 0),
-            sentinelsLost: num(stats.sentinelsLost, 0) + num(downs, 0),
             runsCompleted: num(stats.runsCompleted, 0) + 1,
             runsWon: num(stats.runsWon, 0) + (won ? 1 : 0),
           },

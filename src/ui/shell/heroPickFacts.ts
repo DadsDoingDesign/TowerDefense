@@ -49,7 +49,6 @@ export interface HeroFacts {
   place: string
   dps: number
   range: number
-  hp: number
   rate: number
   critChance: number
   critMult: number
@@ -57,7 +56,6 @@ export interface HeroFacts {
   splash: number
   /** Enemies it stops in their tracks; 0 when it does not block. */
   block: number
-  armour: number
   thorns: number
   /** The three tier-1 forms it can grow into at level 10. */
   grows: string[]
@@ -137,8 +135,6 @@ export function heroFacts(hero: Sentinel): HeroFacts {
     place: placeHint(core),
     ...core,
     dps: Math.round(p.dps),
-    hp: Math.round(p.maxHp),
-    armour: Math.round(p.physDef),
     thorns: Math.round(p.thorns),
     grows: childrenOf(a).map((c) => c.name),
     kit: { weapon: kitWord(weapon.rarity), body: kitWord(body.rarity), offHand: kitWord(offHand.rarity), weaponRarity: weapon.rarity },

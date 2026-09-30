@@ -408,7 +408,7 @@ Listed so the art agent does not produce assets the engine will never load. All 
 | **Palisade gate (base HP)** | 7 planks, step 9, span 54. Planks removed **centre-outward**, one per 1/7 of base HP, and **one always remains**. Body `#6b4526`/`#7a5230` alternating, highlight `rgba(255,232,190,0.26)`, braces `#4a2d18`. |
 | **Build-slot rings** | `arc(r=20)`, dashed `[4,5]`, lw 2. Hover `#f0a868`, selected `#98c1d9`, empty `rgba(255,255,255,0.16)`. Setup phase only. |
 | **Range and aura rings** | Fill accent α0.06, stroke accent α0.35. Auras dashed `[6,8]`, pulsing α0.10–0.20. |
-| **HP bars** | Height 4, radius 2. `#7ac74f` above 50 %, `#e6b800` above 25 %, `#e05a4f` below. |
+| **HP bars** | Enemies only (heroes have no HP). Height 4, radius 2. `#7ac74f` above 50 %, `#e6b800` above 25 %, `#e05a4f` below. |
 | **Tier plaque and elite marks** | See §3.4. |
 | **Damage floaters** | `bold Npx system-ui`, stroke `rgba(24,14,7,0.88)` then fill. Normal 13 px/1.15 s, crit 19 px/1.45 s, word 15 px/1.55 s. Pop 1.5× → 1.0× over 90 ms. Cap 36 on screen. |
 | **Particles** | 7 kinds, pool of 420. SPARK, DUST, EMBER, CHUNK, RING, SMOKE are fully procedural; only SHEET reads art (§5). |

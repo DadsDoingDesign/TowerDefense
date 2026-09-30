@@ -260,7 +260,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       threat: snap.threat,
       inventory: snap.inventory,
       runKills: snap.runKills,
-      runDowns: snap.runDowns,
       marksEarned: snap.marksEarned,
       lootPity,
       activeNodeId: snap.activeNodeId,
