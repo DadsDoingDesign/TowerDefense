@@ -2140,3 +2140,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   you can't pay. Re-critiqued on the final build: the phone's contrast failures
   are gone and the desk rail went from 24 to 15. Still open: primary buttons
   read quiet (A1-2), plus the six reworked items in round 2.
+- **2026-09-29 — H3-2, hero pick: jobs to be done and three directions.**
+  Wrote `docs/JTBD-hero-pick.md` (the job, three hirers, the forces, success
+  signals) and built its three directions into the real screen behind
+  `?heropick=cards|compare|recommend`. Today's screen is unchanged without the
+  parameter. Every sentence the variants print is built from the tree and held
+  by `tests/heroPickFacts.test.ts`, and the attack preview plays the battle's
+  own strips at each hero's real attack rate. Rendering caught six things. On
+  the phone cards, "168" ran into the next stat's icon. The Fighter's 130px
+  swing clipped in a 94px compare column, so phone columns idle now. The
+  compare hero names scrolled away, so they are a pinned header row now.
+  "Recommend" alternatives were truncated in `MenuRow`. The Epic word was
+  4.15:1 on the selected column's wash. The copy said "road" where the glossary
+  reserves it for the run map, so it says "path" now. Pre-existing and left
+  alone: the Vow chips render on a Daily Watch, where the store refuses them.
+  Verified at 390×844 @2x and 1440×900.
