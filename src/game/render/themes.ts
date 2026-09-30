@@ -85,7 +85,7 @@ export const THEMES: Record<string, ThemeStyle> = {
   tinyswords: {
     id: 'tinyswords',
     name: 'Tiny Swords',
-    blurb: 'Knight towers hold a sunny meadow against the goblin horde.',
+    blurb: 'Knights hold a sunny meadow against the goblin horde.',
     smoothing: false,
     sprites: { pack: 'tinyswords', spriteScale: 0.5, towerScale: 2.7, enemyScale: 2.7 },
     css: { accent: '#e0ac4c', accentDim: 'rgba(224,172,76,0.16)', radius: '10px', bg: '#201711', panel: '#2f2418' },

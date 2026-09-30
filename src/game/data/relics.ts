@@ -113,24 +113,24 @@ export const RELICS: readonly Relic[] = [
   // ---- stat relics: the old stat cards and keepsakes, merged -------------
   { id: 'ledger', name: "Drillmaster's Ledger", rarity: 'common', kind: 'stat', desc: '+3 STR, +3 DEX, +3 INT · every hero, hires included', grant: { stats: { str: 3, dex: 3, int: 3 } } },
   { id: 'hourglass', name: 'Watch Hourglass', rarity: 'common', kind: 'stat', desc: '+5 Patience · every hero, hires included', grant: { patience: 5 } },
-  { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed · the whole company', grant: { mods: { rateMult: 1.07 } } },
-  { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage · the whole company', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
-  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+32% attack speed, no crits · the whole company', downside: 'the company never crits', grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } } },
+  { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed · all your heroes', grant: { mods: { rateMult: 1.07 } } },
+  { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage · all your heroes', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
+  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+32% attack speed, no crits · all your heroes', downside: 'your heroes never crit', grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } } },
   // Bloodletting and Iron Vigil sold hero HP (−22% / +60%), which went with hero
   // HP; each now pays in a number §15 can see. Close Quarters (−18% range) and
   // Last Rampart (below 35% HP) were cut: the range bill measured +0.0pt on every
   // bench at every size short of a cliff, and a last stand has no HP to read.
-  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · the whole company', downside: '−34% attack speed · whole company', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
-  { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · the whole company', downside: '−12% attack speed · whole company', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
-  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · the whole company', downside: '−35% damage per hit · whole company', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } } },
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · the whole company', downside: '−12% damage · whole company', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
+  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · all your heroes', downside: '−34% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
+  { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · all your heroes', downside: '−12% attack speed · all your heroes', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
+  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · all your heroes', downside: '−35% damage per hit · all your heroes', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } } },
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · all your heroes', downside: '−12% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 enemies to reach the Gate each wave cost it nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
   { id: 'hound_banner', name: 'Bloodhound Banner', rarity: 'rare', kind: 'rule', desc: 'Every 5th shot of every hero pierces 2 more enemies.', requires: 'volley', grant: { mods: { volley: { every: 5, pierce: 2 } } } },
-  { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, the whole company attacks 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
+  { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, all your heroes attack 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
   { id: 'veteran_cloak', name: "Veteran's Cloak", rarity: 'epic', kind: 'rule', desc: 'A kill makes that hero attack 25% faster for 1.5s.', requires: 'killRush', grant: { mods: { killRush: { rate: 0.25, dur: 1.5 } } }, unlock: 'act_two' },
-  { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your company’s median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
+  { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your heroes’ median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
   { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'The Gate recovers 2 after every fight you win.', rule: 'fieldSurgeon' },
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },
   { id: 'diary', name: 'War Diary', rarity: 'epic', kind: 'rule', desc: 'After every fight, the lowest-level hero on the field gains 50% more XP.', rule: 'warDiary' },

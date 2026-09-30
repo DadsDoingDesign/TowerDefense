@@ -60,12 +60,13 @@ describe('copy', () => {
   it('reward cards state their scope and never say "bought with"', () => {
     for (const c of allStatCards()) {
       expect(c.desc).not.toMatch(/bought with|the team|tower/i)
-      expect(c.desc).toMatch(/whole company/)
+      expect(c.desc).toMatch(/all your heroes/)
     }
   })
   it('money reads in words', () => {
     expect(moneyText(60, 'gold')).toBe('60 gold')
-    expect(moneyText(1, 'marks')).toBe('1 Watch Mark')
+    expect(moneyText(1, 'marks')).toBe('1 Mark')
+    expect(moneyText(3, 'marks')).toBe('3 Marks')
     expect(moneyText(12, 'dust')).toBe('12 dust')
   })
 })

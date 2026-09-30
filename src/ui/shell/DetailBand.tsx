@@ -46,6 +46,8 @@ import {
   TWINBLADE,
   TWINBLADE_TAKES,
   type IconKey,
+  strengthPct,
+  strengthText,
 } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
@@ -688,7 +690,7 @@ function WaveComposition() {
       {asks && <p className="sh-line">{asks}</p>}
       {showThreat && (
         <p className="sh-line accent">
-          <Icon name="threat" /> Threat ×{threat.toFixed(2)}: every enemy below has {Math.round((threat - 1) * 100)}% more HP.
+          <Icon name="threat" /> {strengthText(threat)}: every enemy below has {strengthPct(threat)}% more HP.
         </p>
       )}
       <div className="sh-comp">
@@ -1120,7 +1122,7 @@ function HeroTactics() {
   return (
     <>
       <p className="sh-line muted head">Orders — the whole watch</p>
-      <p className="sh-line muted">Targeting. One rule, followed by every Sentinel on the field.</p>
+      <p className="sh-line muted">Targeting. One rule, followed by every hero on the field.</p>
       <div className="sh-seg" role="group" aria-label="Targeting order for the whole watch">
         {FOCUS_OPTS.map((f) => (
           <button

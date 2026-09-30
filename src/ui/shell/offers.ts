@@ -219,11 +219,11 @@ export interface Offer {
  * every call site stays guarded on the mode.
  */
 export const THREAT_FREE_CHOICE: string[] = [
-  'No Threat for taking it. Threat rises with every stop you pass, whatever you take there.',
+  'Enemies get no stronger for taking it. Enemy strength rises with every stop you pass, whatever you take there.',
 ]
 
 /** At the Crossroads — not a map stop, so nothing about the road moves. */
-export const THREAT_FREE_FORK: string[] = ['No Threat for taking it: the Crossroads is not a stop on the road.']
+export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for taking it: the Crossroads is not a stop on the road.']
 
 /**
  * Sprite path for an archetype — the real Tiny Swords art, not a stand-in.
@@ -256,7 +256,7 @@ const GLYPH = ARCHETYPE_GLYPH
  * and the one item in the game whose value scales with roster size read as the
  * one with no armour on it (M6).
  */
-export const KEEPSAKE_TAG = 'Keepsake — its effects apply to the whole company, not just whoever carries it.'
+export const KEEPSAKE_TAG = 'Keepsake — its effects apply to all your heroes, not just whoever carries it.'
 
 /**
  * Everything an item's own text says about it — the ONE producer of it (M4).
@@ -654,7 +654,7 @@ function merchantOffers(st: St): Offer[] {
       action: {
         label: 'Recruit',
         cost: { amount: r.price, currency: 'gold' },
-        done: `${r.sentinel.name} joined the company`,
+        done: `${r.sentinel.name} joins your heroes`,
         run: () => st.buyMerchantRecruit(),
         disabled: st.gold < r.price || st.roster.length >= MAX_ROSTER,
       },
@@ -701,7 +701,7 @@ function recruitOffers(st: St): Offer[] {
     ...heroBits(s),
     body: [
       ...heroBody(s),
-      ...(full ? ['Your company is full — dismiss someone first.'] : []),
+      ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
       // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
       // recruit node's own visit step; endless rooms pay neither.
       ...(inEndless(st) || full ? [] : THREAT_FREE_CHOICE),
@@ -710,8 +710,8 @@ function recruitOffers(st: St): Offer[] {
       // The tapped candidate's id goes to the store in both modes. Without it
       // endless hires `recruitOptions[0]` whatever you picked, which made the
       // whole screen a fake choice.
-      label: full ? 'Company full' : `Recruit ${s.name}`,
-      done: `${s.name} joined the company`,
+      label: full ? 'No room for more heroes' : `Recruit ${s.name}`,
+      done: `${s.name} joins your heroes`,
       cost: inEndless(st) && !full ? { amount: st.endlessRecruitCost, currency: 'gold' } : undefined,
       run: () => (inEndless(st) ? st.endlessRecruit(s.id) : st.acceptRecruit(s.id)),
       disabled: full || (inEndless(st) ? st.gold < st.endlessRecruitCost : false),
@@ -796,7 +796,7 @@ function rewardOffers(st: St): Offer[] {
     // applies to the whole watch", which is false for every item card: an item
     // goes to the pack and helps whoever wears it.
     // Short, because it shares the row with the card's name and rarity.
-    sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'company',
+    sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'all heroes',
     rarity: c.rarity,
     color: rarityVar(c.rarity),
     icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? 'relic' : 'boon',
@@ -932,7 +932,7 @@ function crossroadsOffers(st: St): Offer[] {
       sub: `Aiming at ${aimed.name}`,
       icon: 'back',
       immediate: true,
-      body: ['Back to the recruits and the company. Nothing has been spent, and the same three mutations will be waiting.'],
+      body: ['Back to the recruits and your heroes. Nothing has been spent, and the same three mutations will be waiting.'],
       action: { label: 'Pick someone else', run: () => st.aimHeroMutation(null) },
     })
     return out
@@ -987,7 +987,7 @@ function roomOffers(st: St): Offer[] {
     { id: 'merchant', title: 'Merchant', icon: 'merchant', body: ['Items for gold.'] },
     { id: 'forge', title: 'Forge', icon: 'forge', body: ['Spend dust to reforge or raise rarity.'] },
     { id: 'shrine', title: 'Shrine', icon: 'shrine', body: ['A bargain with terms.'] },
-    { id: 'recruit', title: 'Recruit', icon: 'recruit', body: ['Add a hero to the company.'] },
+    { id: 'recruit', title: 'Recruit', icon: 'recruit', body: ['Add a hero to your side.'] },
   ] as const
   const out: Offer[] = rooms.map((r) => ({
     id: r.id,
@@ -1164,7 +1164,7 @@ function settingsOffers(s: Settings): Offer[] {
          */
         'Softens what the horde takes off your Gate when something reaches it.',
         assistProfile(s.assist).blurb,
-        'Nothing else moves: same waves, same loot, same Watch Marks. Change it whenever you like, mid-run included.',
+        'Nothing else moves: same waves, same loot, same Marks. Change it whenever you like, mid-run included.',
       ],
       action: {
         label: `Set to ${assistProfile(nextAssist(s.assist)).label}`,
@@ -1177,7 +1177,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: Object.values(s.taught).some(Boolean) ? 'Some seen' : 'All waiting',
       icon: 'tips',
       body: [
-        'The one-line hints that appear the first time something new matters — posting a hero, equipping, Threat, spending gold, evolutions.',
+        'The one-line hints that appear the first time something new matters — posting a hero, gear, enemy strength, the merchant, relics, evolutions.',
         'Bring them back for another pass, or for whoever picks the game up on this device next.',
       ],
       action: { label: 'Show the tips again', run: () => s.resetTeaching() },
@@ -1189,7 +1189,7 @@ function settingsOffers(s: Settings): Offer[] {
       icon: 'warn',
       color: 'var(--bad-text)',
       body: [
-        'Wipes Watch Marks, perks, Vow unlocks and records.',
+        'Wipes Marks, perks, Vow unlocks and records.',
         'This cannot be undone. Nothing is kept and nothing is backed up.',
       ],
       action: {
@@ -1224,7 +1224,7 @@ function settingsOffers(s: Settings): Offer[] {
  * {@link BannerPicker}.
  */
 export const BANNER_BLURB =
-  'A Vow is a bet you place at the start of a run: it takes a rule away and pays more Watch Marks for the finish. It applies to that run only, and you pick it fresh every time.'
+  'A Vow is a bet you place at the start of a run: it takes a rule away and pays more Marks for the finish. It applies to that run only, and you pick it fresh every time.'
 
 /**
  * The player-facing name of the difficulty ladder (Wave 1).
@@ -1274,7 +1274,7 @@ function sacrificeOffer(meta: Meta): Offer {
     body: [
       `${earnBy} to unlock ${VOW} ${next!.tier} — ${next!.name}. Vows are earned by winning, never bought.`,
       next!.rule,
-      `A run under it pays ×${next!.markMult} Watch Marks. Vows stack: swearing ${next!.tier} swears every Vow below it too.`,
+      `A run under it pays ×${next!.markMult} Marks. Vows stack: swearing ${next!.tier} swears every Vow below it too.`,
       BANNER_BLURB,
       tier > 0
         ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.`
@@ -1379,7 +1379,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
        */
       icon: 'depth',
       color: 'var(--accent)',
-      body: ['A fresh map, a fresh company. Permadeath — one loss ends it.'],
+      body: ['A fresh map, fresh heroes. Permadeath — one loss ends it.'],
       action: { label: 'Begin', run: () => game.newRun() },
     },
     dailyOffer(meta),
@@ -1389,7 +1389,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       sub: moneyText(meta.watchMarks, 'marks'),
       icon: 'marks',
       immediate: true,
-      body: ['Spend Watch Marks on permanent bonuses that carry between runs.'],
+      body: ['Spend Marks on permanent bonuses that carry between runs.'],
       action: { label: 'Open', run: () => setView('perks') },
     },
     {

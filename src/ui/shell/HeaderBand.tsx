@@ -2,6 +2,7 @@ import { fieldTitle } from '../../game/data/maps'
 import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
 import { Money } from './Money'
+import { strengthPct, strengthShort, strengthText } from '../channels'
 
 /**
  * Band 1 — run state, and nothing else. It never holds a control that changes
@@ -85,9 +86,9 @@ export function HeaderBand() {
           <span
             className="sh-chip threat"
             role="img"
-            aria-label={`Threat ${threat.toFixed(2)} times: enemies have ${Math.round((threat - 1) * 100)}% more HP`}
+            aria-label={`${strengthText(threat)}: enemies have ${strengthPct(threat)}% more HP`}
           >
-            <Icon name="threat" /> ×{threat.toFixed(2)}
+            <Icon name="threat" /> {strengthShort(threat)}
           </span>
         )}
         {mode === 'endless' && (

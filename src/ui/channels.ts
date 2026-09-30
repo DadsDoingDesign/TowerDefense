@@ -104,12 +104,42 @@ export type Currency = 'gold' | 'dust' | 'marks'
 /** The one drawn mark for each currency. */
 export const CURRENCY_ICON: Record<Currency, IconKey> = { gold: 'gold', dust: 'dust', marks: 'marks' }
 
-/** The currency in words — what prose and accessible names say. */
-export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Watch Marks' }
+/**
+ * The currency in words — what prose and accessible names say.
+ *
+ * LS4 — one name per thing: the meta currency is **Marks**. Its full name,
+ * "Watch Marks", is said once, where it is first explained
+ * ({@link MARKS_INTRO}), and nowhere else.
+ */
+export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Marks' }
 
-/** "60 gold", "12 dust", "1 Watch Mark". */
+/** "60 gold", "12 dust", "1 Mark". */
 export const moneyText = (amount: number, c: Currency): string =>
-  c === 'marks' ? `${amount} Watch Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
+  c === 'marks' ? `${amount} Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
+
+/**
+ * The one place the meta currency's full name is spoken (LS4): its first
+ * explanation, on the run-end receipt and the Watchtower. Everywhere else says
+ * "Marks".
+ */
+export const MARKS_INTRO = 'Watch Marks (Marks) buy permanent upgrades in the Watchtower — they carry into every future run.'
+
+/**
+ * Enemy strength, in words (LS4).
+ *
+ * The run's difficulty multiplier (`threat` in the code, 1 = the start of a
+ * run) multiplies every enemy's HP. It was shown as "Threat ×1.06", which read
+ * as a score and collided with the Threat targeting order. Players read it as
+ * a percentage: "Enemy strength +6%".
+ */
+export const strengthPct = (threat: number): number => Math.round((threat - 1) * 100)
+/** "+6%" — the short form, for a chip or a map node. */
+export const strengthShort = (threat: number): string => {
+  const p = strengthPct(threat)
+  return `${p >= 0 ? '+' : '−'}${Math.abs(p)}%`
+}
+/** "Enemy strength +6%". */
+export const strengthText = (threat: number): string => `Enemy strength ${strengthShort(threat)}`
 
 /**
  * The four targeting orders, named once (L3).

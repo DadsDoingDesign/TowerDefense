@@ -34,7 +34,7 @@ import { useLevelUpTracker } from './levelUps'
 /** The Watchtower submenus have no board copy of their own. */
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
-  perks: { title: 'Watchtower', subtitle: 'Watch Marks buy permanent bonuses that carry into every run.' },
+  perks: { title: 'Watchtower', subtitle: 'Marks buy permanent bonuses that carry into every run.' },
   codex: { title: 'Codex', subtitle: 'Feats to earn, and everything the Watch has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision and assist.' },
 }

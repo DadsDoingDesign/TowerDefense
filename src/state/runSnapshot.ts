@@ -1416,8 +1416,8 @@ export function clearSnapshot(): void {
 /** How far the snapshotted run had got — for the resume prompt's one line of copy. */
 export function describeSnapshot(snap: RunSnapshot): string {
   if (snap.mode === 'endless') {
-    return `Endless Watch · round ${snap.round} · ${snap.lives} ${snap.lives === 1 ? 'life' : 'lives'} · ${snap.roster.length} Sentinels`
+    return `Endless Watch · round ${snap.round} · ${snap.lives} ${snap.lives === 1 ? 'life' : 'lives'} · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
   }
   const depth = Math.max(0, snap.clearedNodeIds.length - 1)
-  return `Campaign · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold}g · ${snap.roster.length} Sentinels`
+  return `Campaign · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold}g · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
 }

@@ -289,7 +289,7 @@ function PartyStrip() {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const levelUps = useLevelUps((s) => s.heroes)
   return (
-    <div className="sh-partystrip" role="group" aria-label="Your company">
+    <div className="sh-partystrip" role="group" aria-label="Your heroes">
       {roster.map((h) => {
         const lvlUp = levelUpOpen(levelUps[h.id], h, evolutionQueue)
         const selected = selection?.kind === 'hero' && selection.id === h.id

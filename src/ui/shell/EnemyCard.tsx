@@ -9,6 +9,7 @@ import { waveFirsts } from '../../state/game/runtime'
 import { spawnOrder } from './enemyQueue'
 import { useMetaStore } from '../../state/metaStore'
 import { Icon } from '../Icon'
+import { strengthShort } from '../channels'
 import { enemyCardData, learnLine } from './enemyFacts'
 import { EnemyPortrait } from './EnemyPortrait'
 
@@ -188,7 +189,7 @@ export function EnemyCard({
           </dt>
           <dd>
             {hpText ?? unknown}
-            {hpText && <small> each{showThreat ? `, at Threat ×${threat.toFixed(2)}` : ''}</small>}
+            {hpText && <small> each{showThreat ? `, at enemy strength ${strengthShort(threat)}` : ''}</small>}
           </dd>
         </div>
         <div>

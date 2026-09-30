@@ -51,7 +51,7 @@ export const UPGRADES: MetaUpgrade[] = [
   // company you start with and every body the run hires. It used to say
   // "starting Sentinels" and mean it, which made a permanent purchase quietly
   // worth less the longer a run went on.
-  { id: 'stats', name: 'Seasoned Recruits', desc: '+1 to all stats on every hero who joins the company', maxLevel: 2, baseCost: 80, step: 50, kind: 'ramp' },
+  { id: 'stats', name: 'Seasoned Recruits', desc: '+1 to all stats on every hero you start with or hire', maxLevel: 2, baseCost: 80, step: 50, kind: 'ramp' },
   { id: 'roster', name: 'Standing Company', desc: 'Begin each run with an extra hero', maxLevel: 1, baseCost: 150, step: 150, kind: 'ramp' },
   { id: 'loot', name: 'Quartermaster', desc: 'Begin each run with an extra item', maxLevel: 1, baseCost: 70, step: 60, kind: 'ramp' },
   /**
@@ -301,7 +301,7 @@ export const BANNER_RUNGS: BannerRung[] = [
   // ×3.5 → ×4.2 (Phase 3b): on the three-act road the rung's win rate fell
   // further than the old multiplier paid for — §13 measured it banking fewer
   // marks a run than Vow 2, which makes the top rung a decoration.
-  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The company you start with is the company you finish with.', markMult: 4.2 },
+  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The heroes you start with are the heroes you finish with.', markMult: 4.2 },
 ]
 
 export const MAX_BANNER = BANNER_RUNGS.length

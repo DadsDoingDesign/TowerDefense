@@ -7,7 +7,7 @@ import { TIER1_LEVEL } from '../../game/engine/leveling'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
-import type { IconKey } from '../channels'
+import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
 
 /**
@@ -270,7 +270,7 @@ function pickTip(s: {
         <>
           {/* Names the chip by its LABEL, the half that cannot go stale (M11),
               and says what the number does in one plain clause. */}
-          <b>Threat ×{s.threat.toFixed(2)}</b>: enemies have {Math.round((s.threat - 1) * 100)}% more HP. It
+          <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP. It
           rises at every stop.
         </>
       ),

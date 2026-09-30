@@ -3,7 +3,7 @@ import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
 import { bannerRules } from '../../state/metaStore'
-import { NODE_ICON } from '../channels'
+import { NODE_ICON, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
 
@@ -161,7 +161,7 @@ export function RunMapView() {
                  spells it out. */
               aria-label={`${meta.label}${
                 threat
-                  ? `, fought at Threat ×${threat}`
+                  ? `, enemy strength ${strengthShort(threat)}`
                   : ''
               } — ${
                 isCurrent
@@ -194,7 +194,7 @@ export function RunMapView() {
                   this stays `aria-hidden`. */}
               {threat && isReachable && (
                 <span className="mn-threat" aria-hidden>
-                  <Icon name="threat" />×{threat}
+                  <Icon name="threat" />{strengthShort(threat)}
                 </span>
               )}
             </button>

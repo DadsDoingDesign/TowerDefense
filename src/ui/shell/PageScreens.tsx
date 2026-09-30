@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RARITY } from '../../game/data/items'
-import { itemName, moneyText } from '../channels'
+import { itemName, MARKS_INTRO, moneyText, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { useGameStore } from '../../state/gameStore'
 import { bannerRules, useMetaStore } from '../../state/metaStore'
@@ -469,7 +469,7 @@ function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
   const chip = (c: Price['currency'], n: number, tone: string) => (
     <span className={`pg-chip ${tone}`} key={c}>
       <Money amount={n} c={c} />
-      {c === 'marks' && <span className="pg-chip-word">Watch Marks</span>}
+      {c === 'marks' && <span className="pg-chip-word">Marks</span>}
     </span>
   )
 
@@ -654,7 +654,7 @@ export function ResultScreen() {
       }
       secondary={
         <>
-          <Tile caption={`${marks} marks earned`} icon="marks" />
+          <Tile caption={`${marks} Marks earned`} icon="marks" />
           <Tile caption={mode === 'endless' ? `${wins} waves` : `Depth ${depth}`} icon="depth" />
           {/* The real number, not a verdict (F5). "Base intact" was printed for
               any win, so surviving the Colossus on 1 of 20 read exactly like
@@ -700,7 +700,7 @@ export function ResultScreen() {
       {recap && recap.heroes.length > 0 && (
         <div className="pg-recap">
           <div className="pg-recap-head">
-            <span>The company</span>
+            <span>Your heroes</span>
             <span>KILLS · DMG</span>
           </div>
           {recap.heroes.map((h) => (
@@ -736,11 +736,11 @@ export function ResultScreen() {
                 // `enemiesLeaked`, not `leaks` — the latter is base-HP damage
                 // and this line counts enemies (F2).
                 `${recap.kills} felled · ${recap.enemiesLeaked} reached the Gate`,
-                `${moneyText(recap.goldLeft, 'gold')} unspent · Threat reached ×${recap.threat.toFixed(2)}`,
+                `${moneyText(recap.goldLeft, 'gold')} unspent · ${strengthText(recap.threat)} at the end`,
                 bannerLine(recap.banner),
               ]
             : []),
-          'Marks buy permanent upgrades in the Watchtower — they carry into every future run.',
+          MARKS_INTRO,
         ]}
       />
 
@@ -761,7 +761,7 @@ export function ResultScreen() {
         <InfoCard
           lines={[
             `Next: ${bannerLine(recap.nextBanner)}`,
-            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Watch Marks.`,
+            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Marks.`,
           ]}
         />
       )}
@@ -830,7 +830,7 @@ function AssistCard({ assist }: { assist: AssistLevel }) {
       lines={[
         'Assist is there if you want it.',
         `${steady.label} — ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
-        'Nothing else moves: same waves, same loot, same Watch Marks, same Vow payout. Change it whenever you like, mid-run included.',
+        'Nothing else moves: same waves, same loot, same Marks, same Vow payout. Change it whenever you like, mid-run included.',
       ]}
     />
   )
