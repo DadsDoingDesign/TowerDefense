@@ -9,7 +9,8 @@ import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { emptyPlacements, encounterNode } from '../../game/run/map'
+import { carryPlacements, encounterNode } from '../../game/run/map'
+import { nodeTerrainRule } from '../../game/run/terrain'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { applyStatBonus, hubExtras, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit } from '../../game/run/recruits'
@@ -20,7 +21,7 @@ import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } fro
 import { snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
 import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, streams, usesHub } from './runtime'
-import { orientField } from '../../game/data/maps'
+import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
 
@@ -194,11 +195,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     restoreNameCounters(snap.nameCounters)
 
     const battleMap = snapshotBattleMap(snap)
-    const placements: Placement = { ...emptyPlacements(battleMap) }
+    // Only open tiles of the field the battle resumes on, each hero once, at
+    // most a full company (G1-2) — whatever the payload claims.
     const rosterIds = new Set(snap.roster.map((s) => s.id))
-    for (const [slotId, sentId] of Object.entries(snap.placements ?? {})) {
-      if (slotId in placements && sentId && rosterIds.has(sentId)) placements[slotId] = sentId
-    }
+    const placements: Placement = carryPlacements(snap.placements ?? {}, battleMap, (id) => rosterIds.has(id), MAX_ROSTER)
 
     // Which side of the wave was the snapshot taken on? (C-1)
     //
@@ -371,13 +371,19 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // derivation — the map's preview reads the same one.
     const wave = nodeEncounter(encounterNode(node), get().runSeed, banner)!
     const { baseHp, maxBaseHp } = get()
+    // The battle's orientation is chosen HERE, once, from the layout the
+    // player is holding (Portrait battlefields) — the field identity is the
+    // run's seeded one; only which twin is fought on changes. Its map challenge
+    // (G1-2) is the node's own, the same one the preview named.
+    const battleMap =
+      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed), layout.orientation()) ??
+      orientField(get().battleMap, layout.orientation())
     set({
       activeNodeId: nodeId,
       currentWave: wave,
-      // The battle's orientation is chosen HERE, once, from the layout the
-      // player is holding (Portrait battlefields) — the field identity is the
-      // run's seeded one; only which twin is fought on changes.
-      battleMap: orientField(get().battleMap, layout.orientation()),
+      battleMap,
+      // A hero posted on a tile this field blocks goes back to the bench.
+      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
       battlePhase: 'setup',
       screen: 'battle',
       selectedSentinelId: null,

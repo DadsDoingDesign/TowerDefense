@@ -3,6 +3,11 @@
   "base": "main @ f3760d1",
   "streams": [
     {
+      "id": "round3",
+      "name": "Round 3 · open questions",
+      "blurb": "Everything in round 2 is built. These are the calls I made on your behalf, and the ones the builds turned up. Keep default leaves it as built; Change it means tell me in the note; Drop it removes the behaviour. The first four block progress."
+    },
+    {
       "id": "round2",
       "name": "Round 2 · your edits, reworked",
       "blurb": "You edited these six in round 1. Each is now a bigger change than the original item, so each has a phased proposal and open questions for you. Nothing here is built yet."
@@ -45,6 +50,231 @@
   ],
   "items": [
     {
+      "id": "Q1",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "G1-2",
+      "blocking": true,
+      "title": "Free placement made the game too easy. Which lever brings it back?",
+      "refs": [],
+      "proposal": [
+        "Balance now fails 13 checks: the win rate went from 59% to 80% (the target band is 45–60%). The best tile sees 720px of road against 567px for the best old circle, and a full company can stand on that ground together.",
+        "Options: (a) more fixed rocks and water on the high-value ground, (b) a map challenge on every eligible battle, (c) retune the Threat curve, (d) limit how close to the road a hero may stand.",
+        "My recommendation: (a) first, since it keeps placement interesting, then a small (c) if needed. Nothing is tuned yet, and the CI balance job fails until you choose."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q2",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H3-2",
+      "blocking": true,
+      "title": "Which hero-pick direction should become the real screen?",
+      "refs": [],
+      "proposal": [
+        "A · Play-style cards: all three heroes as cards with a looping attack, one sentence on how they fight, and three big numbers.",
+        "B · Compare: a side-by-side table with bars. The most complete, but the longest on a phone.",
+        "C · Recommended: opens on one suggested hero with its reason; the other two are a tap away. The best fit on a phone.",
+        "The builder's lean, and mine: A as the base, with C's recommendation on a first run only. Try them in the game with ?heropick=cards, ?heropick=compare and ?heropick=recommend."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q3",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "G1-2",
+      "blocking": true,
+      "title": "Tiles on small phones are under the 44px touch floor. Bigger tiles, or zoom to place?",
+      "refs": [],
+      "proposal": [
+        "At 375×667 and 320×568 a tile is about 35px. Bigger tiles mean fewer of them on the field; zoom-to-place keeps the grid and enlarges it while you choose.",
+        "Default: none built yet. My recommendation is zoom-to-place on screens under 390px wide."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q4",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "R3-2",
+      "blocking": true,
+      "title": "Ambidextrous: full off-hand damage or reduced, what rarity, and what name?",
+      "refs": [],
+      "proposal": [
+        "As built: the off-hand weapon counts in full, the relic is rare and in the pool from the start, and it's called 'Ambidextrous'. The balance model shows it as about neutral.",
+        "Alternatives: count the off hand at 50%, lock the relic behind a feat, or give it an object name like the other relics ('Ambidexter's Gauntlet')."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q5",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "R3-2",
+      "blocking": false,
+      "title": "Is it OK that one-handed weapons no longer go in the off hand without the relic?",
+      "refs": [],
+      "proposal": [
+        "Dual-wielding used to be free, so 'becomes a bonus' meant taking it away by default. Before G1, this moved the fresh-player win rate from 14% to 13% (the band starts at 15%). G1 then made the game much easier overall.",
+        "Saves already wearing an off-hand weapon keep it. Should loading such a save move the weapon to the pack instead?"
+      ],
+      "files": []
+    },
+    {
+      "id": "Q6",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H3-2",
+      "blocking": false,
+      "title": "Who is the hero pick for first: a brand-new player, or a returning player choosing a strategy?",
+      "refs": [],
+      "proposal": [
+        "Default: a brand-new player on their first run. If returning players matter more, the Compare direction moves up."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q7",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H3-2",
+      "blocking": false,
+      "title": "What should a first-run recommendation rest on?",
+      "refs": [],
+      "proposal": [
+        "As built: easiest to place. The Rogue reaches farthest, so where you post it matters least.",
+        "Alternatives: the Fighter, whose blocking is the clearest cause and effect on the field, or no recommendation at all."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q8",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H3-2",
+      "blocking": false,
+      "title": "Fix the Daily Watch problems on hero pick now?",
+      "refs": [],
+      "proposal": [
+        "The Vow buttons show but do nothing. Typing a seed quietly turns the Daily into a custom-seed run. The screen also doesn't say that picking a hero uses up today's scored attempt.",
+        "Default: fix all three in whichever direction you pick in Q2."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q9",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H3-2",
+      "blocking": false,
+      "title": "Hero pick details: STR/DEX/INT, the preselected hero, feats and the attack preview",
+      "refs": [],
+      "proposal": [
+        "All three variants drop the STR/DEX/INT line. Today the Fighter is preselected, so one tap starts a run. Should the 'win with this hero first' feats show here? The attack preview runs at the real attack rate, so the Mystic looks slow."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q10",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "G2-2",
+      "blocking": false,
+      "title": "Enemy queue: how to count overflow, and should portraits be tappable?",
+      "refs": [],
+      "proposal": [
+        "As built: the first three kinds, then '+N', where N counts kinds, not enemies. Portraits are glance-only. Elites and specialists share their base goblin's picture. A held sub-wave shows only the next sub-wave, not all remaining.",
+        "On desk the rail has room for more portraits, or names beside them."
+      ],
+      "files": []
+    },
+    {
+      "id": "Q11",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "G3-2",
+      "blocking": false,
+      "title": "Level-up badges: every level, and should they survive a reload?",
+      "refs": [],
+      "proposal": [
+        "As built: plain level-ups get a badge too, and tapping it shows what grew. Badges aren't saved, so after a reload a pending evolution or perk falls back to the old modal. Take it is never blocked by a pending level-up.",
+        "The field dims to about 50% behind the reward. Lighter or darker?"
+      ],
+      "files": []
+    },
+    {
+      "id": "Q12",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "H1-2",
+      "blocking": false,
+      "title": "Menu battle: one fixed title shot forever, and should battle effects show?",
+      "refs": [],
+      "proposal": [
+        "As built: always the same boss scene. Range rings, damage numbers and smoke show as they do in battle; hiding them needs renderer changes. Before the battle loads, the menu is dark and the battle fades up, with no still-image fallback.",
+        "Should the scene ever change, for example by run progress or season?"
+      ],
+      "files": []
+    },
+    {
+      "id": "Q13",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "G1-2",
+      "blocking": false,
+      "title": "Map challenges: how often, should fire spread, and water colour",
+      "refs": [],
+      "proposal": [
+        "As built: about two battles in three have a challenge, never at depth 1 and never on a boss. Terrain is fixed per battle. Water is teal, which is also the tier-2 enemy colour.",
+        "On touch, the range preview shows while your finger is held down. Should a first tap preview and a second tap confirm instead?"
+      ],
+      "files": []
+    },
+    {
+      "id": "Q14",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "R3-2",
+      "blocking": false,
+      "title": "Paper doll: a drawn body, and a head slot later?",
+      "refs": [],
+      "proposal": [
+        "The doll is a simple drawn body in the hero's colour, not the hero sprite. The sprites have their weapons painted in, so the sprite would show gear the hero isn't wearing. On narrow or Large UI phones the slots fall back to a stack.",
+        "A head slot would mean new items, drops and a balance pass. Want it on the roadmap?"
+      ],
+      "files": []
+    },
+    {
       "id": "G1-2",
       "stream": "round2",
       "effort": "L",
@@ -83,7 +313,9 @@
         "src/ui/shell/Coach.tsx",
         "balance/ (placement assumptions)"
       ],
-      "myRead": "This is a gameplay change, not a UI fix. Placements, the engine, maps and the balance report all assume fixed slots today, so it needs its own branch and a balance pass."
+      "myRead": "This is a gameplay change, not a UI fix. Placements, the engine, maps and the balance report all assume fixed slots today, so it needs its own branch and a balance pass.",
+      "built": true,
+      "recheck": "Built phases 1–2: a 7×12 tile grid on phone (12×7 on desk), rocks, lakes and fire that block tiles, the reason on a blocked tap, Flooded meadow and Wildfire challenges named in the preview. Old saves move heroes to the nearest open tile. Phase 3 is open: free placement made the game much easier (win rate 59% → 80%), and the balance check fails until you pick a lever (Q1)."
     },
     {
       "id": "G2-2",
@@ -118,7 +350,9 @@
         "src/ui/shell/StageBand.tsx (remove banner)",
         "src/ui/shell/encounterPreview.ts",
         "src/styles/shell-live.css"
-      ]
+      ],
+      "built": true,
+      "recheck": "Built: the bottom strip is an enemy queue in spawn order, changing across setup, live, held and cleared. The banner over the field is gone, with the same screen-reader announcements."
     },
     {
       "id": "G3-2",
@@ -157,7 +391,9 @@
         "src/ui/shell/DetailBand.tsx",
         "src/ui/shell/offers.ts (rewardOffers)",
         "src/state/game/battleSlice.ts (continueAfterWave → reward)"
-      ]
+      ],
+      "built": true,
+      "recheck": "Built: after a normal wave the three reward cards appear under the dimmed field with the first preselected, and Take it is the one button. Level-ups show a 'Lv N ↑' badge on the roster and are chosen in the panel. Elite and boss spoils keep their own page."
     },
     {
       "id": "H1-2",
@@ -194,7 +430,9 @@
         "src/ui/shell/PageScreens.tsx (MenuScreen)",
         "src/styles/page.css",
         "src/styles/shell-wide.css"
-      ]
+      ],
+      "built": true,
+      "recheck": "Built: one scripted ~19s boss scene fills the menu behind the rows, with the camera on whole pixels, a vignette and gradient, and a stronger title. Rows measured ≥9.4:1 over the brightest frame. Reduced motion shows today's still."
     },
     {
       "id": "H3-2",
@@ -225,7 +463,9 @@
       "files": [
         "docs/JTBD-hero-pick.md (new)",
         "mockups (review page)"
-      ]
+      ],
+      "built": true,
+      "recheck": "Done: docs/JTBD-hero-pick.md, plus three working layouts to try in the game: ?heropick=cards, ?heropick=compare and ?heropick=recommend. Today's screen is unchanged until you pick one (Q2)."
     },
     {
       "id": "R3-2",
@@ -265,7 +505,9 @@
         "src/game/data/items.ts (HERO_SLOTS)",
         "src/game/data/relics or perks (Ambidextrous)",
         "src/styles/shell.css, shell-wide.css"
-      ]
+      ],
+      "built": true,
+      "recheck": "Built: the GEAR column is a small body (off hand left, body on the chest, main hand right) with ≥44px slots. Dual-wielding is the rare Ambidextrous relic, and without it one-handers no longer go in the off hand."
     },
     {
       "id": "A1-2",
@@ -300,7 +542,9 @@
         "src/styles/global.css (--cta, --cta-ink)",
         "src/styles/app.css (high contrast)",
         "tests/contrast.test.ts"
-      ]
+      ],
+      "built": true,
+      "recheck": "Built: primary buttons are the lighter teal (#57a2b6) with dark text. Label 6.3:1, button 6.1:1 against the page, held by the contrast test."
     },
     {
       "id": "R1",
@@ -809,5 +1053,5 @@
       "recheck": "Done: scripts/flow-shots.mjs is committed, and all 11 screens were re-critiqued on the final build. The loss is still forced, so run-end numbers aren't real."
     }
   ],
-  "round": 2
+  "round": 3
 }

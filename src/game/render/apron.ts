@@ -65,7 +65,10 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   // Roles resolve down the theme's fallback chain one by one (sprites.ts).
   const grass = spriteFor('grass')
   if (!grass) return null
-  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
+  // G1-2: a map challenge does not change the woodland round the field, so the
+  // apron is keyed (and seeded) on the plain twin's id — no re-bake per rule.
+  const apronId = map.terrainRule ? map.id.replace(`~${map.terrainRule}`, '') : map.id
+  const key = `${style.id}:${apronId}:${map.width}x${map.height}:${grass.pack}/${grass.img.naturalWidth}:${decoStamp()}`
   const hit = cache.find((e) => e.key === key)
   if (hit) {
     cache = [hit, ...cache.filter((e) => e !== hit)]
@@ -90,7 +93,7 @@ export function getApron(map: GameMap): HTMLCanvasElement | null {
   //    outside the field's box, thicker the further out it gets. Sorted by
   //    foot so crowns overlap back-to-front.
   const { trees, litter } = decoPools()
-  const rng = mulberry32((map.id.length * 2654435761) ^ (map.path.length * 40503) ^ 0x9e37)
+  const rng = mulberry32((apronId.length * 2654435761) ^ (map.path.length * 40503) ^ 0x9e37)
   const fx0 = M.x, fy0 = M.y, fx1 = M.x + map.width, fy1 = M.y + map.height
   const put: { x: number; y: number; name: string; flip: boolean }[] = []
   const STEP_X = 44

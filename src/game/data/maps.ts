@@ -1,6 +1,7 @@
 import { streamRng } from '../core/rng'
 import type { Vec2 } from '../core/vec'
-import type { GameMap } from '../types'
+import type { GameMap, TerrainRuleId } from '../types'
+import { layTiles, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
 
 /**
  * The battlefields. Every landscape field is 960x560 logical px; the renderer
@@ -21,24 +22,48 @@ import type { GameMap } from '../types'
  * A different battlefield is input randomness done right — it makes the player
  * re-solve rather than re-execute.
  *
- * The two fields are deliberately opposite in the one axis that decides tower
- * placement, **how many lanes a slot can see**:
+ * ---------------------------------------------------------------------------
+ * Free-form deployment on a tile grid (G1-2)
+ * ---------------------------------------------------------------------------
  *
- *  - *The Green Line* is a wide snake. Its slots sit in one cluster (s2/s3/s4
- *    within 95–130px) where auras reach and coverage overlaps, and the answer is
- *    to stack the cluster.
- *  - *The Kiln Road* folds three near-parallel lanes 130px apart across the
- *    middle of the field and hangs one slot (`s4`) where three of them converge.
- *    Only ONE pair of its slots is inside aura range, and its best slot is out
- *    of a Fighter's 96px reach of two of the three lanes it overlooks — so the
- *    same company placed the same way covers a different amount of road, and a
- *    support that was the obvious third body on the Green Line is a worse buy
- *    than a long-range carrier here.
+ * The six fixed build circles are gone. The field is a 12 × 7 grid of 80px
+ * tiles (`data/terrain.ts`) and a hero may stand on ANY open grass tile; the
+ * forest frame on the outer ring and the field's terrain pieces are blocked,
+ * and a tap on the road itself says so. `GameMap.slots` is the list of open
+ * tiles, so the engine, the breather move and the balance harness read one
+ * place exactly as they did.
  *
- * Both are ~2290–2300px end to end on purpose. Enemy speeds in `enemies.ts` are
- * tuned as *crossing times* against that length, and time-in-range is the one
- * difficulty axis Threat does not multiply — a field 20% longer would be a 20%
- * easier game on every dial in the balance suite at once.
+ * **The road runs BETWEEN the tiles.** Every corner of every path sits on a
+ * grid intersection (x, y ∈ 80k), so the dirt lane runs along tile edges and a
+ * hero on a roadside tile stands at its centre, 40px from the lane's centre
+ * line — 15px clear of the dirt, the same "hugging the lane" distance the old
+ * circles were placed at (35–65px), which is what the engine's numbers are
+ * tuned against: a Fighter's 72px hold, a sapper's 50–55px trigger, a
+ * bomber's 150px lob. The alternative — the road down the middle of a row of
+ * tiles — puts every hero at least 80px from the lane, out of reach of every
+ * hold in the game; measured before it was rejected (G1-2 notes in
+ * docs/DESIGN_REVIEW.md). One tile back is 120px: a set-back post only the
+ * long-range heroes can use.
+ *
+ * Both fields kept their shape — the Green Line's snake with its wrapped
+ * pocket, the Kiln Road's three stacked lanes — snapped onto the grid, which
+ * moves each fold by up to 40px and quantises the length in 80–160px steps:
+ * the Kiln Road is 2300px end to end (it was 2300), the Green Line 2220 (it
+ * was 2290, the nearest grid shape either side being 2380). Path length still
+ * matters exactly as before: enemy speeds in `enemies.ts` are tuned as
+ * *crossing times*, and time-in-range is the one difficulty axis Threat does
+ * not multiply. `balance/report.ts` §14 holds the spread under 6%.
+ *
+ * The two fields stay opposite in the axis that decides placement, **how many
+ * lanes a tile can see**:
+ *
+ *  - *The Green Line* is a wide snake that wraps a pocket of grass (c6–c8,
+ *    r2–r4) on three sides — where coverage overlaps and auras reach, and the
+ *    answer is to stack the pocket.
+ *  - *The Kiln Road* folds three lanes 160px apart across the field: every
+ *    tile between two lanes hugs one and sees the other, and the middle of the
+ *    field sees all three. Its top-right corner is out of everything's reach
+ *    and is rock.
  */
 export const FIELD_W = 960
 export const FIELD_H = 560
@@ -50,92 +75,185 @@ export function pathLength(path: readonly Vec2[]): number {
   return n
 }
 
-const GREEN_PATH = [
-  { x: -30, y: 90 },
-  { x: 250, y: 90 },
-  { x: 250, y: 300 },
-  { x: 500, y: 300 },
-  { x: 500, y: 120 },
-  { x: 720, y: 120 },
-  { x: 720, y: 440 },
-  { x: 480, y: 440 },
-  { x: 480, y: 520 },
-  { x: 990, y: 520 },
-]
+/**
+ * A battlefield as authored: its lane, the terrain pieces every battle on it
+ * has, and what each map challenge adds (G1-2).
+ *
+ * `posts` are the six build circles the field used to have, by their old ids.
+ * Nothing in the game reads them; they exist so a save written before the grid
+ * (placements keyed `s0`…`s5`) resumes with its company on the nearest open
+ * tiles, and so the balance suite's fixed benches keep meaning "the tile where
+ * `s3` used to be" ({@link legacyPostTile}).
+ */
+interface FieldDef {
+  id: string
+  name: string
+  path: Vec2[]
+  posts: Record<string, Vec2>
+  pieces: readonly TerrainPiece[]
+  rules: Record<TerrainRuleId, readonly TerrainPiece[]>
+}
 
-export const FIRST_MAP: GameMap = {
+/*
+ * The Green Line on the grid (landscape). `T` forest, `R` rock, `.` open;
+ * the road runs along the tile edges between them.
+ *
+ *        0 1 2 3 4 5 6 7 8 9 10 11
+ *   r0   T T T T T T T T T T T  T
+ *   r1   T . . . . . . . . . R  T
+ *   r2   T . . . . . . . . . .  T
+ *   r3   T . . . . . . . . . .  T
+ *   r4   T R . . . . . . . . .  T
+ *   r5   T R . . . . . . . . .  T
+ *   r6   T T T T T T T T T T T  T
+ *
+ * Road: in along the top (y 80) to x 240, down to y 320, east to x 480, up to
+ * y 160, east to x 720, down to y 400, back west to x 480, down to y 480 and
+ * east off the field to the Gate.
+ */
+const GREEN: FieldDef = {
   id: 'greenline',
   name: 'The Green Line',
-  width: FIELD_W,
-  height: FIELD_H,
-  path: GREEN_PATH,
-  base: GREEN_PATH[GREEN_PATH.length - 1],
-  // Positions verified to sit 35–65px from the path so even short-range
-  // Fighters can reach a lane. Each slot covers a different bend.
-  slots: [
-    { id: 's0', pos: { x: 185, y: 200 } },
-    { id: 's1', pos: { x: 430, y: 345 } },
-    { id: 's2', pos: { x: 610, y: 180 } },
-    { id: 's3', pos: { x: 660, y: 300 } },
-    { id: 's4', pos: { x: 655, y: 395 } },
-    { id: 's5', pos: { x: 560, y: 485 } },
+  path: [
+    { x: -30, y: 80 },
+    { x: 240, y: 80 },
+    { x: 240, y: 320 },
+    { x: 480, y: 320 },
+    { x: 480, y: 160 },
+    { x: 720, y: 160 },
+    { x: 720, y: 400 },
+    { x: 480, y: 400 },
+    { x: 480, y: 480 },
+    { x: 990, y: 480 },
   ],
+  posts: {
+    s0: { x: 185, y: 200 },
+    s1: { x: 430, y: 345 },
+    s2: { x: 610, y: 180 },
+    s3: { x: 660, y: 300 },
+    s4: { x: 655, y: 395 },
+    s5: { x: 560, y: 485 },
+  },
+  // Three boulders, all on ground no tower wants — the dead bottom-left and
+  // the far corner. They teach "rock = blocked" on every battle without taking
+  // a decision away.
+  pieces: [
+    [1, 4, 'rock'],
+    [1, 5, 'rock'],
+    [10, 1, 'rock'],
+  ],
+  rules: {
+    // Two ponds, each on the best ground of its part of the field: an L in the
+    // heart of the wrapped pocket (c6–c7 r3, c7 r4) and a pair in the first
+    // loop (c4 r2–r3). The company keeps the pocket's rim; it cannot stack the
+    // middle.
+    flooded: [
+      [6, 3, 'water'],
+      [7, 3, 'water'],
+      [7, 4, 'water'],
+      [4, 2, 'water'],
+      [4, 3, 'water'],
+    ],
+    // Five burning patches, one on each bend's best tile — scattered rather
+    // than pooled, so they break the obvious posts without closing an area.
+    wildfire: [
+      [7, 3, 'fire'],
+      [5, 4, 'fire'],
+      [8, 5, 'fire'],
+      [4, 2, 'fire'],
+      [2, 2, 'fire'],
+    ],
+  },
 }
 
-/**
- * The Kiln Road — three stacked lanes and one crossroads slot.
+/*
+ * The Kiln Road on the grid:
  *
- * The horde enters bottom-left, climbs the left edge, runs the length of the
- * top (y=120), drops one shelf and runs *back* west (y=250), drops again and
- * runs east to the base (y=380). The three lanes are 130px apart, which is
- * inside every tower's range from the shelf between them and inside exactly one
- * aura hop (s2→s3), and the eastern end is where all three converge:
+ *        0 1 2 3 4 5 6 7 8 9 10 11
+ *   r0   T T T T T T T T T T T  T
+ *   r1   T . . . . . . . . R R  T
+ *   r2   T . . . . . . . . . R  T
+ *   r3   T . . . . . . . . . R  T
+ *   r4   T . . . . . . . . . .  T
+ *   r5   T . . . . . . . . . .  T
+ *   r6   T T T T T T T T T T T  T
  *
- *  - `s4` (660,250) is 40px from the middle lane, 136px from the top lane's
- *    corner and 130px from the bottom lane. A Rogue (168) or a Mystic (150)
- *    posted there covers **three** lanes; a Fighter (96) covers one. That is a
- *    real placement question — the best slot on the field is not the best slot
- *    for the body you happen to have.
- *  - `s0` (95,300) sees only the entry climb. It is the cheap early-chip slot
- *    and the first thing a player learns to leave empty.
- *  - `s5` (870,300) sees only the final approach — the last-chance slot, and
- *    the only one that answers a leaker that got past the middle.
- *
- * Slot spacing is 130px minimum (Green Line's is 95.1), so the canvas's
- * screen-space hit floor — a radius capped at 80 logical px, nearest-wins —
- * still resolves every tap to the slot the finger was closest to at the
- * smallest supported viewport.
- *
- * Path length 2300px against the Green Line's 2290 (+0.4%).
+ * Road: the horde enters bottom-left (y 480), climbs the left (x 160) to the
+ * top lane (y 160), runs it east to x 640, drops to the middle lane (y 320)
+ * and runs back west to x 320, drops to the bottom lane (y 480) and runs east
+ * to the Gate.
  */
-const KILN_PATH = [
-  { x: -30, y: 500 },
-  { x: 170, y: 500 },
-  { x: 170, y: 120 },
-  { x: 620, y: 120 },
-  { x: 620, y: 250 },
-  { x: 300, y: 250 },
-  { x: 300, y: 380 },
-  { x: 800, y: 380 },
-  { x: 990, y: 380 },
-]
-
-export const KILN_MAP: GameMap = {
+const KILN: FieldDef = {
   id: 'kilnroad',
   name: 'The Kiln Road',
-  width: FIELD_W,
-  height: FIELD_H,
-  path: KILN_PATH,
-  base: KILN_PATH[KILN_PATH.length - 1],
-  slots: [
-    { id: 's0', pos: { x: 95, y: 300 } },
-    { id: 's1', pos: { x: 250, y: 60 } },
-    { id: 's2', pos: { x: 450, y: 185 } },
-    { id: 's3', pos: { x: 450, y: 315 } },
-    { id: 's4', pos: { x: 660, y: 250 } },
-    { id: 's5', pos: { x: 870, y: 300 } },
+  path: [
+    { x: -30, y: 480 },
+    { x: 160, y: 480 },
+    { x: 160, y: 160 },
+    { x: 640, y: 160 },
+    { x: 640, y: 320 },
+    { x: 320, y: 320 },
+    { x: 320, y: 480 },
+    { x: 990, y: 480 },
   ],
+  posts: {
+    s0: { x: 95, y: 300 },
+    s1: { x: 250, y: 60 },
+    s2: { x: 450, y: 185 },
+    s3: { x: 450, y: 315 },
+    s4: { x: 660, y: 250 },
+    s5: { x: 870, y: 300 },
+  },
+  // A rocky corner where no lane reaches (c9–c10, r1–r3).
+  pieces: [
+    [9, 1, 'rock'],
+    [10, 1, 'rock'],
+    [10, 2, 'rock'],
+    [10, 3, 'rock'],
+  ],
+  rules: {
+    // A pond across the middle of the field (c6 r2–r3) and an L between the
+    // middle and bottom lanes (c5 r4–r5, c6 r4): the tiles that see all three
+    // lanes shrink to their edges.
+    flooded: [
+      [6, 2, 'water'],
+      [6, 3, 'water'],
+      [5, 4, 'water'],
+      [5, 5, 'water'],
+      [6, 4, 'water'],
+    ],
+    wildfire: [
+      [3, 3, 'fire'],
+      [6, 2, 'fire'],
+      [5, 5, 'fire'],
+      [3, 5, 'fire'],
+      [7, 4, 'fire'],
+    ],
+  },
 }
+
+const FIELD_DEFS: readonly FieldDef[] = [GREEN, KILN]
+const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.id === id)
+
+/** Lay one field's grid, with a map challenge's pieces on top when it has one. */
+function buildField(def: FieldDef, rule: TerrainRuleId | null): GameMap {
+  const tiles = layTiles(def.path, [...def.pieces, ...(rule ? def.rules[rule] : [])])
+  return {
+    id: rule ? `${def.id}~${rule}` : def.id,
+    name: def.name,
+    width: FIELD_W,
+    height: FIELD_H,
+    path: def.path,
+    base: def.path[def.path.length - 1],
+    slots: tiles.filter((t) => !t.block).map((t) => ({ id: t.id, pos: t.pos })),
+    tile: TILE,
+    tiles,
+    ...(rule ? { terrainRule: rule, baseId: def.id } : {}),
+  }
+}
+
+export const FIRST_MAP: GameMap = buildField(GREEN, null)
+export const KILN_MAP: GameMap = buildField(KILN, null)
 
 /**
  * Every battle map this build ships. The run snapshot stores a map *id*, so this
@@ -143,16 +261,47 @@ export const KILN_MAP: GameMap = {
  * names it resumes onto the right one, instead of onto whatever happens to be
  * first (m-5).
  *
- * **Slot ids are shared across every map on purpose.** `Placement` is keyed by
- * slot id and rides in the run snapshot; a company deployed to `s3` resumes to
- * `s3` whatever field it is standing on. It also means the balance harness can
- * swap the map under a fixed team without re-writing the placement table — what
- * changes between maps is what a slot *sees*, never what it is called.
+ * **Tile ids are shared across every map on purpose.** `Placement` is keyed by
+ * tile id (`c{col}r{row}`) and rides in the run snapshot; a company deployed to
+ * `c7r2` resumes to `c7r2` whichever twin it is standing on. What changes
+ * between fields — and between battles, under a map challenge — is which tiles
+ * are OPEN, so a placement on a tile the next battle blocks is dropped back to
+ * the bench when that battle is entered (`run/map.carryPlacements`).
  */
 export const ALL_MAPS: readonly GameMap[] = [FIRST_MAP, KILN_MAP]
 
 /** The map with this id, or null if this build has never heard of it. */
 export const mapById = (id: string): GameMap | null => ALL_MAPS.find((m) => m.id === id) ?? null
+
+/**
+ * The open tile a pre-grid build circle maps to on `fieldId`: the nearest open
+ * tile of the field's base terrain to where the circle stood (ties by id).
+ * Null for an id that was never a circle or a field this build does not have.
+ */
+export function legacyPostTile(fieldId: string, postId: string): string | null {
+  const def = defById(fieldId)
+  const land = mapById(fieldId)
+  const at = def?.posts[postId]
+  if (!def || !land || !at) return null
+  let best: { id: string; d: number } | null = null
+  for (const s of land.slots) {
+    const d = Math.hypot(s.pos.x - at.x, s.pos.y - at.y)
+    if (!best || d < best.d - 1e-9 || (Math.abs(d - best.d) <= 1e-9 && s.id < best.id)) best = { id: s.id, d }
+  }
+  return best?.id ?? null
+}
+
+/** Every pre-grid circle id → its tile on `fieldId` (see {@link legacyPostTile}). */
+export function legacyPosts(fieldId: string): Record<string, string> {
+  const def = defById(fieldId)
+  if (!def) return {}
+  const out: Record<string, string> = {}
+  for (const id of Object.keys(def.posts)) {
+    const t = legacyPostTile(fieldId, id)
+    if (t) out[id] = t
+  }
+  return out
+}
 
 /**
  * ---------------------------------------------------------------------------
@@ -170,7 +319,7 @@ export const mapById = (id: string): GameMap | null => ALL_MAPS.find((m) => m.id
  * transpose `(x, y) → (y + PORTRAIT_PAD, x)`, a reflection across the diagonal
  * plus a shift. Rather than authoring a second path by hand and then tuning it
  * until it measures "close", the twin is exactly as long (±0 px), has the same
- * six slots, and every slot sees exactly the same road at every range, every
+ * tiles, and every tile sees exactly the same road at every range, every
  * aura pair is the same distance apart, and the order in which the column meets
  * each slot is unchanged. Balance does not *transfer*, it is identical by
  * construction — and `balance/report.ts` §17 proves it on the live engine (a
@@ -199,7 +348,11 @@ export const PORTRAIT_PAD = 30
 
 export type FieldOrientation = 'landscape' | 'portrait'
 
-/** The portrait twin of a landscape field — see the note above. */
+/**
+ * The portrait twin of a landscape field — see the note above. The deployment
+ * grid goes over with it (G1-2): every tile keeps its id, its centre is
+ * transposed, and its column/row swap, so the twin's grid is 7 × 12.
+ */
 function portraitTwin(m: GameMap): GameMap {
   const t = (p: Vec2): Vec2 => ({ x: p.y + PORTRAIT_PAD, y: p.x })
   const path = m.path.map(t)
@@ -211,6 +364,8 @@ function portraitTwin(m: GameMap): GameMap {
     path,
     base: path[path.length - 1],
     slots: m.slots.map((s) => ({ id: s.id, pos: t(s.pos) })),
+    ...(m.tiles ? { tile: m.tile, tiles: m.tiles.map((c) => ({ ...c, pos: t(c.pos), col: c.row, row: c.col })) } : {}),
+    ...(m.terrainRule ? { terrainRule: m.terrainRule, baseId: m.baseId } : {}),
     orientation: 'portrait',
     twinOf: m.id,
   }
@@ -220,23 +375,59 @@ function portraitTwin(m: GameMap): GameMap {
 export const PORTRAIT_MAPS: readonly GameMap[] = ALL_MAPS.map(portraitTwin)
 
 /**
- * The run's field identity for any map, landscape or twin — what the seed
- * dealt, what the snapshot stores, what the music cue keys on.
+ * The run's field identity for any map, landscape or twin, with or without a
+ * map challenge — what the seed dealt, what the snapshot stores, what the
+ * music cue keys on.
  */
-export const fieldIdOf = (m: GameMap): string => m.twinOf ?? m.id
+export const fieldIdOf = (m: GameMap): string => m.baseId ?? m.twinOf ?? m.id
 
 /** Which way up a map is drawn. */
 export const orientationOf = (m: GameMap): FieldOrientation => m.orientation ?? 'landscape'
 
 /**
- * The field `map` stands for, drawn `orientation` up. Idempotent, and a pure
- * lookup: the field identity never changes, only the twin that is fought on.
+ * Challenge variants, built on first use and kept, so a field is always the
+ * SAME object for the same (field, rule, orientation) — the terrain bake, the
+ * store's equality checks and `orientField`'s idempotence all lean on that.
+ */
+const variants = new Map<string, GameMap>()
+
+/**
+ * The map a battle on `fieldId` is fought on: its base terrain plus the
+ * challenge `rule` adds (G1-2), drawn `orientation` up. A pure lookup. An
+ * unknown field id returns null.
+ */
+export function fieldFor(fieldId: string, rule: TerrainRuleId | null, orientation: FieldOrientation): GameMap | null {
+  const land = mapById(fieldId)
+  if (!land) return null
+  if (!rule) return orientation === 'landscape' ? land : (PORTRAIT_MAPS.find((m) => m.twinOf === fieldId) ?? land)
+  const key = `${fieldId}~${rule}~${orientation}`
+  let m = variants.get(key)
+  if (!m) {
+    const def = defById(fieldId)!
+    const flat = variants.get(`${fieldId}~${rule}~landscape`) ?? buildField(def, rule)
+    variants.set(`${fieldId}~${rule}~landscape`, flat)
+    m = orientation === 'landscape' ? flat : portraitTwin(flat)
+    variants.set(key, m)
+  }
+  return m
+}
+
+/**
+ * The field `map` stands for, drawn `orientation` up — same field, same map
+ * challenge. Idempotent, and a pure lookup: the field identity never changes,
+ * only the twin that is fought on.
  */
 export function orientField(map: GameMap, orientation: FieldOrientation): GameMap {
-  const id = fieldIdOf(map)
-  const land = mapById(id) ?? map
-  if (orientation === 'landscape') return land
-  return PORTRAIT_MAPS.find((m) => m.twinOf === id) ?? land
+  return fieldFor(fieldIdOf(map), map.terrainRule ?? null, orientation) ?? map
+}
+
+/** The field's name with its map challenge, as the battle screen prints it (G1-2). */
+export const fieldTitle = (map: GameMap): string =>
+  map.terrainRule ? `${map.name} · ${TERRAIN_RULES[map.terrainRule].name}` : map.name
+
+/** The same field and orientation as `map`, under map challenge `rule` (or none). */
+export function withTerrainRule(map: GameMap, rule: TerrainRuleId | null): GameMap {
+  return fieldFor(fieldIdOf(map), rule, orientationOf(map)) ?? map
 }
 
 /**

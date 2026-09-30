@@ -4,6 +4,7 @@ import {
   ALL_MAPS,
   chooseFieldOrientation,
   fieldIdOf,
+  legacyPostTile,
   orientationOf,
   orientField,
   pathLength,
@@ -87,7 +88,8 @@ describe('portrait twins', () => {
       const e = new GameEngine({
         map,
         wave: generateEncounter(5, 'normal', { seed }),
-        placedSentinels: team.map(([a, slotId]) => ({ sentinel: createSentinel(a), slotId })),
+        // G1-2: the old circle ids, as each field's nearest open tiles.
+        placedSentinels: team.map(([a, post]) => ({ sentinel: createSentinel(a), slotId: legacyPostTile(fieldIdOf(map), post)! })),
         baseHp: 20,
         maxBaseHp: 20,
         seed,

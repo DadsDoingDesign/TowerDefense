@@ -8,12 +8,16 @@ import {
   drawSentinel,
   drawPlacementDim,
   drawSlot,
+  drawBlockedFlash,
+  drawTerrainFlames,
+  drawTileGrid,
   fitView,
   setPresentationTime,
   setViewScale,
   type DrawSentinel,
 } from '../game/render/renderer'
 import {
+  drawStandingFlame,
   fxAdvance,
   fxHitstopLeft,
   fxPreload,
@@ -27,42 +31,24 @@ import { apronMargins, getApron } from '../game/render/apron'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
+import { distToPolyline, LANE_HALF } from '../game/data/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
 import { reportFatal } from './fatal'
 
-/**
- * Slot hit geometry (M2).
+/*
+ * Tile hit geometry (G1-2).
  *
- * `SLOT_HIT_RADIUS` is in the map's LOGICAL space — a 960×560 field — and the
- * shell draws that field into ~390×387 CSS px, a scale of ~0.406. So 26 logical
- * px is **10.6 CSS px of radius on a phone**: a 21px target for the core
- * placement gesture of the game, under a quarter of the 44px floor. Measured
- * before the fix by tapping at increasing offsets from a slot centre: 9px off
- * still landed, 11px off missed.
- *
- * The fix is not a bigger fixed radius — that would scale wrong on every other
- * viewport — but a floor expressed in the units the finger actually lives in.
- * `SLOT_HIT_SCREEN_RADIUS` is converted back through the live view scale each
- * tap, so the target is ~44px across whatever the field is squeezed to, and the
- * generous logical radius on a desktop-sized canvas is never *smaller* than the
- * original.
+ * Deployment is a tile grid now, and a tap resolves to the TILE whose square it
+ * lands in — open or blocked — rather than to the nearest of six circles within
+ * a radius. The grid tiles the field edge to edge, so there is no dead zone
+ * between targets and no snapping rule to reason about: the target IS the
+ * tile, 80 logical px, which is ~44–48 CSS px on a phone's portrait Stage
+ * (0.55–0.60 CSS px per field px) and 80 on a desk. The old radius floor
+ * (`SLOT_HIT_SCREEN_RADIUS`, M2) existed because a 26px circle on a squeezed
+ * field was a 21px target; a tile cannot be smaller than its own square.
  */
-const SLOT_HIT_RADIUS = 26
-/**
- * Half of the touch target, in CSS pixels. 24 rather than 22 so the guarantee
- * is the 44px floor with margin rather than exactly on the boundary — measured,
- * a tap 22px off centre lands, which is what "44px target" has to mean.
- */
-const SLOT_HIT_SCREEN_RADIUS = 24
-/**
- * Ceiling on the converted radius, in logical px. Slots on the shipped map sit
- * ~95 logical px apart, so this lets neighbouring catchment areas meet (nearest
- * wins, so meeting is fine and is what "snapping" means) while still refusing a
- * tap that is simply nowhere near the build line.
- */
-const SLOT_HIT_MAX_RADIUS = 80
 
 /**
  * A subtle warm grade over the finished frame — the second post-process on the
@@ -143,6 +129,10 @@ export function BattleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const apronRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  /**
+   * The tile under the pointer (desk hover) or under the finger while it is
+   * down (touch) — the armed hero's range is previewed there (G1-2).
+   */
   const hoverSlot = useRef<string | null>(null)
   /** The field's CSS rect inside the wrap — what the DOM slot layer rides on. */
   const [field, setFieldState] = useState<FieldRect | null>(null)
@@ -444,20 +434,26 @@ export function BattleCanvas() {
       }
 
       drawField(ctx, map)
+      // A Wildfire's standing flames (G1-2): terrain, so under everything else.
+      drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
 
       const liveEngine = st.engine
+      /** The hovered tile, when it is one a hero can stand on. */
+      const hoverOpen = hoverSlot.current && map.slots.find((s) => s.id === hoverSlot.current)
       if (phase === 'battle' && liveEngine) {
         // Show ranges faintly while the fight runs.
         for (const s of liveEngine.sentinels) {
           if (s.downed) continue
           drawRange(ctx, s.pos, s.profile.range, s.def.accent)
         }
-        // Breather: the open posts light up as places a hero can move to.
+        // Breather: the open tiles light up as places a hero can move to —
+        // faintly until a hero is picked up, fully once one is (G1-2).
         if (liveEngine.breather && !liveEngine.subWaveState().moved) {
-          for (const slot of map.slots) {
-            if (liveEngine.sentinelOnSlot(slot.id)) continue
-            drawSlot(ctx, slot.pos, st.breatherPick ? 'selected' : 'empty')
-          }
+          const occupied = new Set(liveEngine.sentinels.map((s) => s.slotId))
+          if (st.breatherPick) drawPlacementDim(ctx, map.width, map.height)
+          drawTileGrid(ctx, map, { hover: st.breatherPick && hoverOpen ? hoverOpen.id : null, faint: !st.breatherPick, skip: occupied })
+          const picked = st.breatherPick ? liveEngine.sentinelOnSlot(st.breatherPick) : undefined
+          if (picked && hoverOpen && !occupied.has(hoverOpen.id)) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
         }
         drawBattleEntities(ctx, liveEngine)
         if (st.breatherPick) {
@@ -467,27 +463,26 @@ export function BattleCanvas() {
         // G2-2: no banner over the field during a breather any more — the
         // wave strip says "Held · move one hero" and lists the next sub-wave.
       } else {
-        // Setup: slots + placed towers + range previews.
-        const placed = placedSentinels(st.roster, st.placements)
-        const occupied = new Set(placed.map((p) => p.slotId))
-        // A hero armed for posting dims the field so the free slots, lit and
-        // pulsing, are what the eye lands on (Wave 1).
-        if (st.selectedSentinelId) drawPlacementDim(ctx, map.width, map.height)
+        // Setup: the grid (only while a hero is armed), placed towers, ranges.
+        const placed = placedSentinels(st.roster, st.placements).filter((p) => map.slots.some((s) => s.id === p.slotId))
+        const armed = st.selectedSentinelId ? st.roster.find((h) => h.id === st.selectedSentinelId) : undefined
+        // A hero armed for posting dims the field so the open tiles, lit, are
+        // what the eye lands on (Wave 1); blocked tiles stay dark (G1-2).
+        if (armed) {
+          drawPlacementDim(ctx, map.width, map.height)
+          drawTileGrid(ctx, map, { hover: hoverOpen ? hoverOpen.id : null })
+        }
         for (const p of placed) {
+          // The armed hero's own post shows its range at the tile it would move
+          // to instead, below.
+          if (armed && hoverOpen && p.sentinel.id === armed.id) continue
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)
           drawRange(ctx, slot.pos, profile.range, p.sentinel.accent)
         }
-        for (const slot of map.slots) {
-          if (occupied.has(slot.id)) continue
-          const state =
-            hoverSlot.current === slot.id
-              ? 'hover'
-              : st.selectedSentinelId
-                ? 'selected'
-                : 'empty'
-          drawSlot(ctx, slot.pos, state)
-        }
+        // The range the armed hero WOULD have on the tile under the pointer or
+        // finger — the answer to "what does this tile see?" before committing.
+        if (armed && hoverOpen) drawRange(ctx, hoverOpen.pos, computeCombat(armed).range, armed.accent)
         for (const p of placed) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)
@@ -510,6 +505,10 @@ export function BattleCanvas() {
           drawSentinel(ctx, ds)
         }
       }
+
+      // A tapped blocked tile answers where the finger is (G1-2); the coach
+      // strip says why in words.
+      if (st.fieldNote?.tileId) drawBlockedFlash(ctx, map, st.fieldNote.tileId, (Date.now() - st.fieldNote.at) / 1000)
 
       // A subtle warm grade over the composed frame. The vignette that used to
       // be rebuilt here every frame is baked into the terrain now, so this is
@@ -557,69 +556,110 @@ export function BattleCanvas() {
     }
 
     /**
-     * Nearest slot within a radius that is at least 22 CSS px on screen.
-     *
-     * Nearest-wins rather than first-within-range, so two catchment areas that
-     * overlap resolve to the one the finger was actually closer to — which is
-     * what makes a radius bigger than half the slot spacing safe.
+     * The tile whose square contains a logical point — open or blocked — or
+     * null outside the grid (a portrait twin's side pads). See the note on tile
+     * hit geometry at the top of this file.
      */
-    const hitSlot = (x: number, y: number, scale: number): string | null => {
-      const st = useGameStore.getState()
-      const radius = Math.min(
-        SLOT_HIT_MAX_RADIUS,
-        Math.max(SLOT_HIT_RADIUS, SLOT_HIT_SCREEN_RADIUS / Math.max(scale, 0.001)),
-      )
+    const onRoad = (x: number, y: number): boolean =>
+      distToPolyline({ x, y }, useGameStore.getState().battleMap.path) <= LANE_HALF
+    const hitTile = (x: number, y: number): string | null => {
+      const map = useGameStore.getState().battleMap
+      const half = (map.tile ?? 80) / 2
+      for (const t of map.tiles ?? []) {
+        if (Math.abs(x - t.pos.x) <= half && Math.abs(y - t.pos.y) <= half) return t.id
+      }
+      // A map without a grid (none ship; kept for a hand-built test map): the
+      // nearest open post within a tile's reach.
       let best: { id: string; d: number } | null = null
-      for (const slot of st.battleMap.slots) {
-        const d = dist({ x, y }, slot.pos)
-        if (d <= radius && (!best || d < best.d)) best = { id: slot.id, d }
+      for (const s of map.tiles ? [] : map.slots) {
+        const d = dist({ x, y }, s.pos)
+        if (d <= half * 2 && (!best || d < best.d)) best = { id: s.id, d }
       }
       return best?.id ?? null
     }
+    /** Is the field taking a tile right now (setup, or the breather's move)? */
+    const tilesLive = () => {
+      const st = useGameStore.getState()
+      return (st.battlePhase === 'setup' && !st.engine) || (st.battlePhase === 'battle' && !!st.engine?.breather)
+    }
+
+    /*
+     * Tap, then tap — unchanged as a gesture (G1-2): pick a hero, then tap a
+     * tile. The tile is committed on RELEASE rather than on press, so while a
+     * finger is down on the field the armed hero's range is previewed at the
+     * tile under it, and sliding the finger moves the preview; lifting posts.
+     * A plain tap is a press and a release on the same tile, so it behaves
+     * exactly as before. A mouse gets the same preview on hover. A second
+     * finger (pinch-zoom is allowed here) cancels the press without posting.
+     */
+    let press: { id: number; touch: boolean } | null = null
 
     const onPointerMove = (e: PointerEvent) => {
-      const st = useGameStore.getState()
-      if (st.battlePhase !== 'setup') {
+      if (!tilesLive()) {
         hoverSlot.current = null
         return
       }
-      const { x, y, scale } = toLogical(e.clientX, e.clientY)
-      hoverSlot.current = hitSlot(x, y, scale)
+      // A touch only previews while it is down; a mouse previews on hover.
+      if (e.pointerType !== 'mouse' && (!press || press.id !== e.pointerId)) return
+      const { x, y } = toLogical(e.clientX, e.clientY)
+      hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
     }
 
     const onPointerDown = (e: PointerEvent) => {
-      const st = useGameStore.getState()
-      // The breather between sub-waves (Phase 3a): the sim is paused and the
-      // player may move ONE hero — tap it, then tap where it goes.
-      if (st.battlePhase === 'battle' && st.engine?.breather) {
-        const p = toLogical(e.clientX, e.clientY)
-        const target = hitSlot(p.x, p.y, p.scale)
-        if (target) st.breatherTap(target)
+      if (!tilesLive()) return
+      if (press && press.id !== e.pointerId) {
+        // A second finger: this is a pinch, not a placement.
+        press = null
+        hoverSlot.current = null
         return
       }
-      if (st.battlePhase !== 'setup') return
-      const { x, y, scale } = toLogical(e.clientX, e.clientY)
-      const slotId = hitSlot(x, y, scale)
-      if (!slotId) return
-      const occupied = st.placements[slotId]
-      if (st.selectedSentinelId) {
-        st.placeOnSlot(slotId)
-      } else if (occupied) {
-        // Clicking a placed tower inspects it — the legacy upgrade modal, or
-        // the shell's Context panel on its Upgrades tab.
-        st.focusTower(occupied)
+      const { x, y } = toLogical(e.clientX, e.clientY)
+      press = { id: e.pointerId, touch: e.pointerType !== 'mouse' }
+      hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
+    }
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!press || press.id !== e.pointerId) return
+      const wasTouch = press.touch
+      press = null
+      const { x, y } = toLogical(e.clientX, e.clientY)
+      if (wasTouch) hoverSlot.current = null
+      if (!tilesLive()) return
+      // The road runs between the tiles: a tap on the dirt says so rather than
+      // posting on whichever tile's square it happens to fall in (G1-2).
+      if (onRoad(x, y)) {
+        useGameStore.getState().noteRoad()
+        return
       }
+      const tile = hitTile(x, y)
+      if (!tile) return
+      // One router for canvas and keyboard: a blocked tile says why, an open
+      // one posts / moves / inspects (`battleSlice.tapTile`).
+      useGameStore.getState().tapTile(tile)
+    }
+
+    const onPointerCancel = () => {
+      press = null
+      hoverSlot.current = null
+    }
+    const onPointerLeave = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') hoverSlot.current = null
     }
 
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('pointerdown', onPointerDown)
-    canvas.addEventListener('pointerleave', () => (hoverSlot.current = null))
+    canvas.addEventListener('pointerup', onPointerUp)
+    canvas.addEventListener('pointercancel', onPointerCancel)
+    canvas.addEventListener('pointerleave', onPointerLeave)
 
     return () => {
       cancelAnimationFrame(raf)
       ro.disconnect()
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('pointerup', onPointerUp)
+      canvas.removeEventListener('pointercancel', onPointerCancel)
+      canvas.removeEventListener('pointerleave', onPointerLeave)
     }
   }, [])
 

@@ -6,7 +6,7 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import { fxBaseState, fxNow, fxReducedMotion } from './fx'
 import { animNow, getViewScale } from './frame'
-import { COLORS, hexToRgba } from './paint'
+import { COLORS, hexToRgba, roundRect, strokePolyline } from './paint'
 
 /**
  * A build slot — the circle the coach tells a new player to tap.
@@ -83,6 +83,107 @@ export function drawSlot(
   ctx.lineTo(arm, 0)
   ctx.moveTo(0, -arm)
   ctx.lineTo(0, arm)
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * The deployment grid (G1-2): the open tiles, lit, while a hero is armed.
+ *
+ * The grid is only on screen when it is needed — a hero picked up in setup,
+ * or the breather's one move — and then it is the brightest thing on a dimmed
+ * field (`drawPlacementDim` goes down first). Open tiles get a warm wash and a
+ * light outline, inset so neighbours read as separate squares; blocked tiles
+ * get nothing, so they stay dark under the dim with their terrain showing. The
+ * tile under the pointer (or the finger, while it is down) is lit harder.
+ *
+ * Line widths have a floor in SCREEN px (read off `viewScale`) so the outline
+ * is ≥ 1.5 CSS px on a phone, where a tile is ~44 CSS px. With reduced motion
+ * the breathing wash holds still at its brightest.
+ */
+export function drawTileGrid(
+  ctx: CanvasRenderingContext2D,
+  map: GameMap,
+  opts: { hover: string | null; faint?: boolean; skip?: ReadonlySet<string> },
+): void {
+  const T = map.tile ?? 80
+  const vs = Math.max(getViewScale(), 0.02)
+  const pulse = fxReducedMotion() ? 1 : 0.5 + 0.5 * Math.sin(animNow() * 3)
+  const k = opts.faint ? 0.55 : 1
+  const inset = Math.max(3, 2 / vs)
+  const lw = Math.max(1.5, 1.5 / vs)
+  // The road runs along tile edges, so a roadside tile's square takes in a
+  // strip of dirt. The lit squares are drawn on a layer and the road is cut
+  // out of it, so what lights up is exactly the grass a hero stands on.
+  const layer = gridLayer(map.width, map.height)
+  const lctx = layer?.getContext('2d') ?? null
+  const g = lctx ?? ctx
+  if (lctx) lctx.clearRect(0, 0, map.width, map.height)
+  g.save()
+  for (const s of map.slots) {
+    if (opts.skip?.has(s.id)) continue
+    const hover = s.id === opts.hover
+    const x = s.pos.x - T / 2 + inset
+    const y = s.pos.y - T / 2 + inset
+    const w = T - inset * 2
+    roundRect(g, x, y, w, w, Math.min(10, w / 5))
+    g.fillStyle = hover
+      ? 'rgba(255, 243, 196, 0.34)'
+      : `rgba(255, 236, 170, ${(0.08 + 0.06 * pulse) * k})`
+    g.fill()
+    g.lineWidth = hover ? lw * 1.6 : lw
+    g.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
+    g.stroke()
+  }
+  g.restore()
+  if (lctx && layer) {
+    // Cut the road (its drawn 50px, plus the outline's width) out of the layer.
+    lctx.save()
+    lctx.globalCompositeOperation = 'destination-out'
+    lctx.lineJoin = 'round'
+    lctx.lineCap = 'round'
+    lctx.lineWidth = 50 + lw * 2
+    lctx.strokeStyle = '#000'
+    strokePolyline(lctx, map.path)
+    lctx.restore()
+    ctx.drawImage(layer, 0, 0)
+  }
+}
+
+/** One scratch layer for the grid, reused frame to frame (one field size at a time). */
+let gridCanvas: HTMLCanvasElement | null = null
+function gridLayer(w: number, h: number): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null
+  if (!gridCanvas) gridCanvas = document.createElement('canvas')
+  if (gridCanvas.width !== w || gridCanvas.height !== h) {
+    gridCanvas.width = w
+    gridCanvas.height = h
+  }
+  return gridCanvas
+}
+
+/**
+ * G1-2: the answer at the point of touch when a blocked tile is tapped — a
+ * brief outline on that tile, fading over `BLOCKED_FLASH_S`, while the coach
+ * strip says why in words. Under reduced motion it holds at half strength for
+ * the same time instead of fading.
+ */
+export const BLOCKED_FLASH_S = 0.7
+export function drawBlockedFlash(ctx: CanvasRenderingContext2D, map: GameMap, tileId: string, age: number): void {
+  if (age < 0 || age > BLOCKED_FLASH_S) return
+  const t = map.tiles?.find((x) => x.id === tileId)
+  if (!t) return
+  const T = map.tile ?? 80
+  const vs = Math.max(getViewScale(), 0.02)
+  const a = fxReducedMotion() ? 0.5 : 1 - age / BLOCKED_FLASH_S
+  const inset = Math.max(3, 2 / vs)
+  ctx.save()
+  roundRect(ctx, t.pos.x - T / 2 + inset, t.pos.y - T / 2 + inset, T - inset * 2, T - inset * 2, 10)
+  ctx.lineWidth = Math.max(2.5, 2.5 / vs)
+  ctx.strokeStyle = `rgba(20, 12, 6, ${0.7 * a})`
+  ctx.stroke()
+  ctx.lineWidth = Math.max(1.5, 1.5 / vs)
+  ctx.strokeStyle = `rgba(240, 150, 120, ${0.95 * a})`
   ctx.stroke()
   ctx.restore()
 }

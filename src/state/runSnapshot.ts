@@ -33,7 +33,8 @@ import { getNode } from '../game/data/archetypeTree'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
-import { FIRST_MAP, fieldIdOf, mapById, orientationOf, orientField, type FieldOrientation } from '../game/data/maps'
+import { fieldFor, FIRST_MAP, fieldIdOf, legacyPostTile, mapById, orientationOf, type FieldOrientation } from '../game/data/maps'
+import { parseTileId, terrainRuleById } from '../game/data/terrain'
 import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
 import type { BattleResult } from '../game/engine/engine'
@@ -51,6 +52,7 @@ import type {
   Placement,
   Sentinel,
   Tactics,
+  TerrainRuleId,
   WaveDef,
 } from '../game/types'
 import { MAX_BANNER } from './metaStore'
@@ -79,7 +81,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 9
+export const RUN_SNAPSHOT_VERSION = 10
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -145,7 +147,13 @@ export interface RunSnapshot {
    * per-battle orientation chosen when its node was entered.
    */
   fieldOrientation: FieldOrientation
+  /**
+   * v10: the map challenge the current battle's field carries (G1-2), or null
+   * for plain ground. `battleMapId` stays the seeded field's id.
+   */
+  terrainRule: TerrainRuleId | null
   roster: Sentinel[]
+  /** v10: keyed by deployment TILE id (`c{col}r{row}`); ≤ v9 by circle id `s0`…`s5`. */
   placements: Placement
   gold: number
   baseHp: number
@@ -309,6 +317,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     event: s.event,
     battleMapId: s.battleMap ? fieldIdOf(s.battleMap) : FIRST_MAP.id,
     fieldOrientation: s.battleMap ? orientationOf(s.battleMap) : 'landscape',
+    terrainRule: s.battleMap?.terrainRule ?? null,
     roster: s.roster,
     placements: s.placements,
     gold: s.gold,
@@ -366,11 +375,12 @@ export const snapshotShrine = (snap: RunSnapshot): ShrineOffer | null =>
  * of exploding on the resume tap.
  */
 export function snapshotBattleMap(snap: RunSnapshot): GameMap {
-  const map = mapById(snap.battleMapId)
-  if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
   // The battle comes back on the twin it was saved on, whatever the viewport
-  // is now: orientation is fixed for the duration of a battle.
-  return orientField(map, snap.fieldOrientation)
+  // is now: orientation is fixed for the duration of a battle — and so is its
+  // map challenge (G1-2).
+  const map = fieldFor(snap.battleMapId, snap.terrainRule ?? null, snap.fieldOrientation)
+  if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
+  return map
 }
 
 // ------------------------------------------------------------------ migrate
@@ -892,6 +902,16 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // ---- and the wave, which resolves instead, because the game re-deals it ---
   const currentWave = validWave(o.currentWave) ? (o.currentWave as WaveDef) : null
 
+  // ---- v9 → v10: the deployment grid (G1-2) -----------------------------
+  // Placements were keyed by build-circle id (`s0`…`s5`); they are keyed by
+  // tile id now. An old save's company is moved onto the tile nearest where
+  // each circle stood on its field (`legacyPostTile`). Anything that is not a
+  // tile id this grid has, or not a hero id, is dropped; a hero named twice
+  // keeps its first post. `resumeRun` then keeps only the tiles the resumed
+  // field actually has open. A v9 save has no map challenge: plain ground.
+  const placements = migratePlacements(o.placements, battleMapId, version)
+  const terrainRule = terrainRuleById(o.terrainRule)?.id ?? null
+
   // ---- v8 → v9: portrait battlefields — nothing to rewrite ----------------
   // `fieldOrientation` was added (below). A v8 save has none and was fought on
   // the landscape field, which is exactly what the default restores.
@@ -947,8 +967,9 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // build cannot name falls back to it too — the twins are isometric, so the
     // fallback changes how the battle is drawn, never how it plays.
     fieldOrientation: str<FieldOrientation>(o.fieldOrientation, 'landscape', ORIENTATIONS),
+    terrainRule,
     roster,
-    placements: (o.placements && typeof o.placements === 'object' ? o.placements : {}) as Placement,
+    placements,
     gold: Math.max(0, num(o.gold, 0)) + refund,
     baseHp: num(o.baseHp, 1),
     maxBaseHp: Math.max(1, num(o.maxBaseHp, 20)),
@@ -1022,6 +1043,25 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   if (snap.screen === 'hub') return null
 
   return coherent(snap, version)
+}
+
+/**
+ * A stored placement map, reduced to what this build can post (G1-2): tile id
+ * → hero id strings only, each hero at most once. A ≤ v9 payload's circle ids
+ * (`s0`…`s5`) are moved onto their nearest open tile of the saved field.
+ */
+function migratePlacements(raw: unknown, fieldId: string, version: number): Placement {
+  const out: Placement = {}
+  if (!isObj(raw)) return out
+  const seen = new Set<string>()
+  for (const [key, val] of Object.entries(raw)) {
+    if (!isStr(val) || !val || seen.has(val)) continue
+    const tile = parseTileId(key) ? key : version < 10 ? legacyPostTile(fieldId, key) : null
+    if (!tile || Object.prototype.hasOwnProperty.call(out, tile)) continue
+    out[tile] = val
+    seen.add(val)
+  }
+  return out
 }
 
 /**

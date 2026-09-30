@@ -523,6 +523,22 @@ function sheetPm(i: number): Pixmap | null {
   return s.pm
 }
 
+/**
+ * G1-2: one standing flame from the fire sheet, looped in place, its BASE at
+ * (x, y) — the Wildfire map challenge's burning tiles (`terrain.drawTerrainFlames`).
+ * `phase` staggers neighbours so a patch does not flicker in lockstep. Under
+ * reduced motion the flame holds one frame: still there, not moving. Draws
+ * nothing until the sheet has decoded.
+ */
+export function drawStandingFlame(ctx: CanvasRenderingContext2D, x: number, y: number, phase: number): void {
+  fxPreload()
+  const pm = sheetPm(FX_FIRE)
+  if (!pm) return
+  const f = reducedMotion ? 2 : Math.floor(fxT * 10 + phase) % pm.frames
+  // The flame's base sits ~6px above the bottom of its 64px cell.
+  ctx.drawImage(pm.img, f * pm.fw, 0, pm.fw, pm.fh, Math.round(x - pm.fw / 2), Math.round(y - pm.fh + 6), pm.fw, pm.fh)
+}
+
 // ── lifecycle ───────────────────────────────────────────────────────────────
 
 /** Drop everything. Called when a new battle starts. */

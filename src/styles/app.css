@@ -138,6 +138,18 @@
     0 0 0 5px rgba(20, 12, 6, 0.85),
     0 0 0 8px var(--teal, #47aba9);
 }
+/* G1-2: a deployment tile. Sized inline to the tile's square on screen and
+   centred on its centre; the focus ring is inset so neighbouring tiles' rings
+   never overlap. */
+.tile-btn {
+  margin: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 6px;
+}
+.tile-btn:focus-visible {
+  outline-offset: -4px;
+  box-shadow: inset 0 0 0 7px rgba(20, 12, 6, 0.55);
+}
 /* Wide screens: the canvas wrap gives up its 240px floor to the side panel.
    Lifted out of the legacy `@media (min-width: 860px)` block, whose other five
    rules are all battle-screen chrome. */

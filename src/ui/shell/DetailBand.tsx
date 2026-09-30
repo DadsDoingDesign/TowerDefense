@@ -54,7 +54,7 @@ import { lineUp, queueFor } from './enemyQueue'
 import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
-import { orientationOf } from '../../game/data/maps'
+import { fieldTitle, orientationOf } from '../../game/data/maps'
 import { LevelUpPanel } from './LevelUpPanel'
 import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 
@@ -518,7 +518,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
         <div className="sh-context-body">
           <WaveComposition />
           <p className="sh-line muted">
-            Post heroes on the glowing circles. Each reaches only what walks inside its ring.
+            Post heroes on any glowing tile. Each reaches only what walks inside its ring.
           </p>
         </div>
       </div>
@@ -654,7 +654,8 @@ function WaveComposition() {
        * randomness in the game (different lane, different slots, different
        * counter-picks) and it was announced by the pixels and by nothing else.
        */}
-      <p className="sh-line muted sh-comp-ground">{battleMap.name}</p>
+      {/* G1-2: the battle's map challenge rides with the ground's name. */}
+      <p className="sh-line muted sh-comp-ground">{fieldTitle(battleMap)}</p>
       {/*
        * What the shape asks for. This is the whole disclosure for Swift Raid,
        * which had none: its modifier is `physKeep 0.5 / magKeep 0.5` over a

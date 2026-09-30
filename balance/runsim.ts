@@ -43,7 +43,8 @@ import { relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, isAmbidextrous, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
-import { pickBattleMap } from '../src/game/data/maps'
+import { fieldFor, pickBattleMap } from '../src/game/data/maps'
+import { nodeTerrainRule } from '../src/game/run/terrain'
 import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
@@ -540,13 +541,19 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const final = node.type === 'boss'
     if (final) bossThreat = threat
     battles++
+    // G1-2: the node's map challenge, exactly as `selectNode` deals it — the
+    // company re-deploys best-first on whatever ground the terrain leaves.
+    const rule = nodeTerrainRule(node, seed)
+    const nodeField = rule ? (fieldFor(field.id, rule, 'landscape') ?? field) : field
+    const nodeSlots = rule ? bestSlots(nodeField) : heroSlots
     const m = runBattle({
-      team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: heroSlots[i] })),
+      team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
       // `gameStore.selectNode`: a Banner-made elite is drawn `eliteDepth`
       // deeper; a map-dealt one stays at its own depth.
       depth: node.layer + (kind === 'elite' && worth === 'normal' ? banner.eliteDepth : 0),
       kind,
-      map: field,
+      map: nodeField,
+      autoDeploy: true,
       // The same key `gameStore.selectNode` uses, so a simulated run meets the
       // composition variants the shipped game would deal it (WS8).
       variantSeed: encounterSeed(seed, node.layer),
@@ -765,11 +772,14 @@ export function monteCarloRun(
     const kind = mcKind(depth)
     const threat = threatAtLayer(depth) * nodeThreatMult(depth === MC_LAYERS ? 'boss' : kind === 'elite' ? 'elite' : 'battle')
     if (depth === MC_LAYERS) { finalAttempt = true; bossThreat = threat }
+    // G1-2: map challenges on the same terms the campaign deals them.
+    const rule = nodeTerrainRule({ id: `mc${depth}`, type: depth === MC_LAYERS || kind === 'boss' ? 'boss' : kind === 'elite' ? 'elite' : 'battle', layer: depth }, hashSeed(r, 'mc'))
     const m = runBattle({
       team,
       depth,
       kind,
-      map: field,
+      map: rule ? (fieldFor(field.id, rule, 'landscape') ?? field) : field,
+      autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),
       baseHp,

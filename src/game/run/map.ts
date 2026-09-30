@@ -52,6 +52,31 @@ export function emptyPlacements(map: GameMap): Placement {
   return p
 }
 
+/**
+ * The company's posts carried onto `map` (G1-2). A placement is keyed by tile
+ * id, and the next battle's terrain can block a tile the company stood on (a
+ * lake, a fire): that hero goes back to the bench rather than standing in it.
+ * Only open tiles are kept, each hero at most once, and at most `cap` heroes.
+ * `keep` filters hero ids (e.g. to the live roster).
+ */
+export function carryPlacements(
+  prev: Placement,
+  map: GameMap,
+  keep: (sentinelId: string) => boolean = () => true,
+  cap = Infinity,
+): Placement {
+  const next = emptyPlacements(map)
+  const seen = new Set<string>()
+  for (const [tileId, sentId] of Object.entries(prev ?? {})) {
+    if (!sentId || typeof sentId !== 'string' || !Object.prototype.hasOwnProperty.call(next, tileId)) continue
+    if (seen.has(sentId) || !keep(sentId)) continue
+    if (seen.size >= cap) break
+    next[tileId] = sentId
+    seen.add(sentId)
+  }
+  return next
+}
+
 export function placedSentinels(
   roster: Sentinel[],
   placements: Placement,

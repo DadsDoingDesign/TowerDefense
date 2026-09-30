@@ -3,6 +3,7 @@
  * which hero tab, which gear slot is waiting). Presentation only — none of it
  * is snapshotted. See docs/FIGMA.md § The Root Shell.
  */
+import { sfx } from '../../audio/audio'
 import type { HeroSlot } from '../../game/types'
 import type { HeroTab, ShellSelection, Slice } from './types'
 
@@ -15,6 +16,15 @@ export interface ShellActions {
   clearGearSlot: () => void
   /** Open / close the Detail band during a collapsed (portrait) setup. */
   toggleDetail: () => void
+  /**
+   * G1-2: a tap landed on a blocked tile — note it, so the coach strip says
+   * why ("Rock: nothing can stand here"). A no-op for an open or unknown tile.
+   */
+  noteTerrain: (tileId: string) => void
+  /** G1-2: a tap landed on the road itself, between the tiles. */
+  noteRoad: () => void
+  /** Retire the blocked-tile note (the strip's "Got it", or its timeout). */
+  clearFieldNote: () => void
 }
 
 export const createShellSlice: Slice<ShellActions> = (set, get) => ({
@@ -47,4 +57,18 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
   activateGearSlot: (sentinelId, slot) => set({ gearSlot: { sentinelId, slot } }),
   clearGearSlot: () => set({ gearSlot: null }),
   toggleDetail: () => set({ detailOpen: !get().detailOpen }),
+
+  noteTerrain: (tileId) => {
+    const tile = get().battleMap.tiles?.find((t) => t.id === tileId)
+    if (!tile?.block) return
+    set({ fieldNote: { tileId, kind: tile.block, at: Date.now() } })
+    sfx('error')
+  },
+  noteRoad: () => {
+    set({ fieldNote: { tileId: null, kind: 'lane', at: Date.now() } })
+    sfx('error')
+  },
+  clearFieldNote: () => {
+    if (get().fieldNote) set({ fieldNote: null })
+  },
 })

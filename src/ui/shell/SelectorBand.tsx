@@ -114,7 +114,7 @@ function PartyCards() {
         const selected = selection?.kind === 'hero' && selection.id === s.id
         const profile = computeCombat(s)
         const hue = archetypeVar(s.archetype)
-        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing circle to post it` : 'on the bench'
+        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         // G3-2: a level-up waiting on the roster — the card glows and wears a
         // "Lv 5 ↑" badge until it has been dealt with (see `levelUps.ts`).
         const lvlUp = levelUpOpen(levelUps[s.id], s, evolutionQueue)

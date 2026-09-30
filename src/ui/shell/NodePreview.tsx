@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { nodeMeta } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
+import { nodeTerrainRule } from '../../game/run/terrain'
+import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
 import { bannerRules } from '../../state/metaStore'
 import { NODE_ICON } from '../channels'
@@ -54,6 +56,9 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   // Threat whatever the route was, and a stop costs none at all.
   const step = summary ? encounterThreat(node, bannerRules(runBanner).startThreat) : null
   const hint = summary ? resistHint(summary) : null
+  // The map challenge this fight is fought under (G1-2) — the same pure draw
+  // `selectNode` makes, so the preview can never name the wrong ground.
+  const rule = summary ? nodeTerrainRule(node, runSeed) : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -68,7 +73,13 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
       <div className="sh-context-body">
         <p className="sh-line muted sh-node-kind">
           {meta.label} · Depth {node.layer}
+          {rule ? ` · ${TERRAIN_RULES[rule].name}` : ''}
         </p>
+        {rule && (
+          <p className="sh-line sh-node-terrain">
+            <Icon name="warn" /> <b>{TERRAIN_RULES[rule].name}.</b> {TERRAIN_RULES[rule].blurb}
+          </p>
+        )}
         {summary ? (
           <>
             <p className="sh-line">

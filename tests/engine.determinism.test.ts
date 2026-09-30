@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { FIRST_MAP } from '../src/game/data/maps'
+import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
+
+/** G1-2: the old build circles, as the tiles nearest where they stood. */
+const P = legacyPosts(FIRST_MAP.id)
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, MAX_STEPS_PER_FRAME, TICK } from '../src/game/engine/engine'
@@ -12,9 +15,9 @@ import type { Archetype } from '../src/game/types'
  */
 
 const TEAM: [Archetype, string][] = [
-  ['fighter', 's0'],
-  ['rogue', 's1'],
-  ['mystic', 's2'],
+  ['fighter', P.s0],
+  ['rogue', P.s1],
+  ['mystic', P.s2],
 ]
 
 function fight(seed: number, ticksPerFrame: number) {

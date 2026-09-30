@@ -106,9 +106,172 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap): void {
   }
   ctx.stroke()
 
+  drawTerrainGround(ctx, map, style.field.bottom)
   drawPath(ctx, map.path)
   drawBase(ctx, map.base)
 }
+
+// ── Terrain pieces (G1-2) ──────────────────────────────────────────────────
+/**
+ * The ground under each blocked terrain tile, baked with the rest of the field.
+ *
+ *  - **Water** is Tiny Swords' own flat water (`#47aba9`, `fx/water.png`) with
+ *    its foam rim (`#c6f0db` on `#458597`, `fx/foam.png`), drawn as one shape
+ *    per lake: neighbouring water tiles are bridged, so two tiles make one
+ *    pond, not two puddles.
+ *  - **Fire** is scorched earth — a charcoal patch with embers — under the
+ *    animated flames `drawTerrainFlames` stands on it every frame.
+ *  - **Rock** is a darker patch of ground the boulder sprites (dressing) sit
+ *    on, so a rock tile differs from grass in value as well as in shape.
+ *
+ * Every piece is inset from its tile edge where the neighbour is not the same
+ * kind, so the grid's tile boundaries stay legible when a hero is armed; and a
+ * side the ROAD runs along (roads follow tile edges, `maps.ts`) keeps clear of
+ * the dirt, so a pond never runs into the lane.
+ */
+const WATER = '#47aba9'
+const FOAM = '#c6f0db'
+const FOAM_EDGE = '#458597'
+/** Clearance from the lane's centre line on a road side: 25px of dirt + 6 of grass. */
+const ROAD_INSET = 31
+
+type Rect = { x0: number; y0: number; x1: number; y1: number }
+type Tile = NonNullable<GameMap['tiles']>[number]
+
+/**
+ * A piece's shape as rectangles: one core per tile (inset on every side, more
+ * on a road side) plus a square BRIDGE across each shared edge to a same-kind
+ * neighbour. Bridges, not grown cores: a core grown into two neighbours pokes
+ * a rounded corner into the diagonal tile at an L, which read as a notch.
+ */
+function pieceShape(map: GameMap, kind: string, inset: number, r: number): { cores: Rect[]; bridges: Rect[] } {
+  const tiles = (map.tiles ?? []).filter((t) => t.block === kind)
+  const T = map.tile ?? 80
+  const h = T / 2
+  const at = new Map(tiles.map((t) => [`${t.col},${t.row}`, t]))
+  const roadOn = (x: number, y: number) => distToPath(x, y, map.path) <= 27
+  const core = (t: Tile): Rect => {
+    const side = (dc: number, dr: number) => (roadOn(t.pos.x + dc * h, t.pos.y + dr * h) ? Math.max(inset, ROAD_INSET) : inset)
+    return { x0: t.pos.x - h + side(-1, 0), x1: t.pos.x + h - side(1, 0), y0: t.pos.y - h + side(0, -1), y1: t.pos.y + h - side(0, 1) }
+  }
+  const cores = new Map(tiles.map((t) => [t.id, core(t)]))
+  const bridges: Rect[] = []
+  for (const t of tiles) {
+    const a = cores.get(t.id)!
+    // Right and down only, so each shared edge is bridged once; never across
+    // the road.
+    const right = at.get(`${t.col + 1},${t.row}`)
+    if (right && !roadOn(t.pos.x + h, t.pos.y)) {
+      const b = cores.get(right.id)!
+      bridges.push({ x0: a.x1 - r, x1: b.x0 + r, y0: Math.max(a.y0, b.y0), y1: Math.min(a.y1, b.y1) })
+    }
+    const down = at.get(`${t.col},${t.row + 1}`)
+    if (down && !roadOn(t.pos.x, t.pos.y + h)) {
+      const b = cores.get(down.id)!
+      bridges.push({ x0: Math.max(a.x0, b.x0), x1: Math.min(a.x1, b.x1), y0: a.y1 - r, y1: b.y0 + r })
+    }
+  }
+  return { cores: [...cores.values()], bridges }
+}
+
+function fillShape(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
+  for (const c of s.cores) {
+    roundRect(ctx, c.x0, c.y0, c.x1 - c.x0, c.y1 - c.y0, r)
+    ctx.fill()
+  }
+  for (const b of s.bridges) if (b.x1 > b.x0 && b.y1 > b.y0) ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
+}
+
+/** Where a burning tile's scorch sits (its core), for the flames to stand in. */
+function scorchOf(map: GameMap, t: Tile): Rect {
+  const s = pieceShape({ ...map, tiles: [t] }, 'fire', 7, 0)
+  return s.cores[0]
+}
+
+function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: string): void {
+  const tiles = map.tiles
+  if (!tiles?.length) return
+  const T = map.tile ?? 80
+  if (tiles.some((t) => t.block === 'water')) {
+    // Three passes over the whole lake so rims never draw over a neighbour's
+    // water: dark edge, then foam, then water.
+    const passes: [string, number][] = [
+      [FOAM_EDGE, 3],
+      [FOAM, 5],
+      [WATER, 10],
+    ]
+    for (const [col, inset] of passes) {
+      const r = Math.max(8, 25 - inset)
+      ctx.fillStyle = col
+      fillShape(ctx, pieceShape(map, 'water', inset, r), r)
+    }
+    // A few flat ripples, the way the pack's water is lit, kept inside each
+    // tile's water.
+    ctx.strokeStyle = 'rgba(198,240,219,0.55)'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    for (const c of pieceShape(map, 'water', 16, 0).cores) {
+      const seed = mulberry32((Math.round(c.x0) * 928371 + Math.round(c.y0) * 1237) >>> 0)
+      for (let i = 0; i < 2; i++) {
+        const w = 8 + seed() * 8
+        const x = c.x0 + w / 2 + seed() * Math.max(0, c.x1 - c.x0 - w)
+        const y = c.y0 + seed() * (c.y1 - c.y0)
+        ctx.beginPath()
+        ctx.moveTo(Math.round(x - w / 2), Math.round(y))
+        ctx.lineTo(Math.round(x + w / 2), Math.round(y))
+        ctx.stroke()
+      }
+    }
+  }
+  if (tiles.some((t) => t.block === 'fire')) {
+    // Scorched earth: charcoal, with a warm rim where the grass is burning back.
+    ctx.fillStyle = '#6b3a1c'
+    fillShape(ctx, pieceShape(map, 'fire', 5, 22), 22)
+    ctx.fillStyle = '#2b1d17'
+    fillShape(ctx, pieceShape(map, 'fire', 9, 18), 18)
+    for (const t of tiles) {
+      if (t.block !== 'fire') continue
+      const c = scorchOf(map, t)
+      const seed = mulberry32((t.col * 7919 + t.row * 104729) >>> 0)
+      for (let i = 0; i < 9; i++) {
+        ctx.fillStyle = i % 3 ? '#e0772e' : '#f3c14d'
+        ctx.fillRect(Math.round(c.x0 + 6 + seed() * (c.x1 - c.x0 - 12)), Math.round(c.y0 + 6 + seed() * (c.y1 - c.y0 - 12)), 2, 2)
+      }
+    }
+  }
+  for (const t of tiles) {
+    if (t.block !== 'rock') continue
+    // Worn ground under the boulders: the grass, darker — a value change
+    // under the cluster so the tile separates from the meadow.
+    ctx.fillStyle = withAlpha(darken(green, 0.35), 0.45)
+    ctx.beginPath()
+    ctx.ellipse(t.pos.x + 2, t.pos.y + 12, T * 0.42, T * 0.24, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+/**
+ * The standing flames on a Wildfire's burning tiles (G1-2) — drawn every frame
+ * over the baked scorch, two per tile out of phase, both standing inside the
+ * scorch (which keeps off the road). The fire sheet is the pack's own
+ * (`fx/fire.png`), at the field's one density.
+ */
+export function drawTerrainFlames(
+  map: GameMap,
+  drawFlame: (x: number, y: number, phase: number) => void,
+): void {
+  if (!map.tiles) return
+  for (const t of map.tiles) {
+    if (t.block !== 'fire') continue
+    const c = scorchOf(map, t)
+    const cx = (c.x0 + c.x1) / 2
+    const cy = (c.y0 + c.y1) / 2
+    const dx = Math.min(13, (c.x1 - c.x0) / 2 - 12)
+    drawFlame(cx - dx, cy + 12, t.col * 3 + t.row)
+    drawFlame(cx + dx, cy + 2, t.col * 5 + t.row * 2 + 3)
+  }
+}
+
 
 function drawPath(ctx: CanvasRenderingContext2D, pts: Vec2[]): void {
   const p = getActiveStyle().path
@@ -163,6 +326,8 @@ function drawSpriteTerrain(
   ctx.fillRect(0, 0, map.width, map.height)
 
   drawGrassDetail(ctx, dr, green)
+  // Terrain pieces' ground (G1-2): lakes, scorched earth, bare soil under rock.
+  drawTerrainGround(ctx, map, green)
 
   // The dirt lane: dark grassy edge, mid fill, worn lighter centre.
   ctx.lineJoin = 'round'
@@ -199,7 +364,7 @@ function drawSpriteTerrain(
  * decided by WHICH art gets picked, never by a random multiplier. `x`/`y` are
  * whole logical px so a flipped blit stays on the pixel grid.
  */
-interface Deco { x: number; y: number; name: string; flip: boolean }
+interface Deco { x: number; y: number; name: string; flip: boolean; native?: boolean }
 interface Blob { x: number; y: number; r: number; light: boolean }
 interface Speck { x: number; y: number; r: number; light: boolean }
 interface Rut { x: number; y: number; tx: number; ty: number }
@@ -316,10 +481,6 @@ function buildDressing(map: GameMap): Dressing {
   const rng = mulberry32(((map.width * 73856093) ^ (map.height * 19349663) ^ (map.path.length * 83492791)) >>> 0)
   const W = map.width, H = map.height
   const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
-  const clearOf = (x: number, y: number, m = 44) =>
-    distToPath(x, y, map.path) > m &&
-    Math.hypot(x - map.base.x, y - map.base.y) > 70 &&
-    !map.slots.some((s) => Math.hypot(x - s.pos.x, y - s.pos.y) < 40)
 
   // Grass: soft tonal blobs + tufts + occasional flowers (all low contrast).
   const blobs: Blob[] = []
@@ -352,78 +513,100 @@ function buildDressing(map: GameMap): Dressing {
     for (const o of [-(half + 2), half + 2]) if (rng() < 0.34) edgeTufts.push({ x: s.x + s.nx * o + (rng() - 0.5) * 6, y: s.y + s.ny * o + (rng() - 0.5) * 5, r: 2.4 + rng() * 2 })
   }
 
-  // Decorations. Three measured problems are being answered here at once.
+  // Decorations (G1-2): driven by the deployment grid, not scattered.
   //
-  // 1. PROPORTION. 28 of the 30 decorations were trees; they covered 35.7% of
-  //    the field; `tree2` drew 155–177 logical px against a 61px hero and a
-  //    34px tier-1 goblin — 5.2× a tier-1 enemy — and nine of thirty were
-  //    clipped off the top edge. Placement was never the problem (`clearOf`
-  //    works: 0 of 30 touched the lane or a slot), so the fix is scale and mix.
-  // 2. DENSITY. Every deco had a random 0.4–0.72 scale factor. There is one
-  //    density now, so the pool itself has to carry the size range.
-  // 3. RESERVED CHANNELS. Rocks were ~85% tier-2 teal and `tree4` ~55% tier-4
-  //    gold — environment art wearing the hues that encode enemy tier. Grading
-  //    (see `gradeEnvironment`) desaturates that away; the mix change means far
-  //    less of the field is wearing it in the first place.
+  // Deployment is free-form on a tile grid now, and a decoration is no longer
+  // only dressing — it is how a player reads that a tile is blocked. So the
+  // rule is one-to-one: **every blocked tile shows its reason, and no open
+  // tile carries anything that looks like one.** The forest frame is trees on
+  // the outer ring of tiles (and in a portrait twin's side pads, which are
+  // outside the grid), a rock tile is a boulder cluster on bare soil, and open
+  // grass keeps only the flat detail above (blobs, tufts, flowers). The old
+  // pebble litter across the meadow is gone: a pebble on an open tile would
+  // say "rock" about a tile a hero can stand on.
   //
-  // Which asset counts as a "tree" is DERIVED from its drawn height rather than
-  // from its filename (see `decoPools`), because a name is not a size: the pack
-  // was re-exported mid-pass and `tree4` went from a 124px tree to a 32px stump
-  // while `tree2` lost a third of its height. A hard-coded pool would have gone
-  // silently wrong; a height test just reclassified the stump as litter.
+  // What stays from the measured passes this replaced: one density (the pool
+  // carries the size range, no random scale), nothing taller than the biggest
+  // unit (`DECO_CEIL`), nothing clipped off the top of the field, and nothing
+  // leaning over the lane — every tree is still tested along its whole trunk
+  // (`clearSprite`), because a canopy over the road hides the thing the game
+  // is about.
   const decos: Deco[] = []
-  const { trees: TREES, litter: LITTER, top: TREE_TOP, height: DH } = decoPools()
-  /**
-   * Clearance is tested along the whole TRUNK, not just at the anchor.
-   *
-   * `clearOf` asks about the point a decoration stands on, which is the right
-   * question for a pebble and the wrong one for a tree: an 88px crown hanging
-   * off a base that is a legal 46px from the lane still leans over the lane, and
-   * the first pass at this drew a treeline across the top of the map with its
-   * canopy sitting on the enemy path. The mid-trunk and crown are checked too,
-   * at a relaxing margin — a canopy may come nearer than a trunk, because it is
-   * further from where the units walk.
-   */
+  const { trees: TREES, litter: LITTER, height: DH } = decoPools()
+  const T = map.tile ?? 80
+  const tiles = map.tiles ?? []
+  const at = new Map(tiles.map((t) => [`${t.col},${t.row}`, t]))
   const clearSprite = (x: number, y: number, h: number, m: number) =>
-    clearOf(x, y, m) &&
+    distToPath(x, y, map.path) > m &&
     distToPath(x, y - h * 0.5, map.path) > m * 0.86 &&
     distToPath(x, y - h * 0.88, map.path) > m * 0.72
-  const put = (x: number, y: number, name: string, margin = 46) => {
-    if (x < 10 || x > W - 10 || y < (DH[name] ?? 0) + 4 || y > H - 2) return false
-    if (!clearSprite(x, y, DH[name] ?? 0, margin)) return false
+  const put = (x: number, y: number, name: string, margin = 34) => {
+    const h = DH[name] ?? 0
+    if (y - h < 0 || y > H) return false
+    if (!clearSprite(x, y, h, margin)) return false
     decos.push({ x: Math.round(x), y: Math.round(y), name, flip: rng() < 0.5 })
     return true
   }
-  /**
-   * A treeline that survives the lane. The path hugs the top edge for a third
-   * of the map's width, so a single fixed band of trees is simply deleted there
-   * — the first pass at this drew four trees on the whole field. Each column
-   * therefore gets three candidate depths and takes the first that clears; a
-   * blocked column steps inward rather than vanishing, and where no tree fits at
-   * all it falls back to litter, so the frame stays continuous without anything
-   * leaning over the lane.
-   */
-  const treeline = (x: number, ys: number[]) => {
-    for (const y of ys) if (put(x + (rng() - 0.5) * 16, y + (rng() - 0.5) * 10, pick(TREES))) return
-    for (const y of ys) if (put(x + (rng() - 0.5) * 16, y + (rng() - 0.5) * 10, pick(LITTER), 38)) return
+  const bushes = LITTER.filter((n) => n.startsWith('bush'))
+  const shrubs = bushes.length ? bushes : LITTER
+  const rocks = LITTER.filter((n) => n.startsWith('rock'))
+  const boulders = rocks.length ? rocks : LITTER
+  // Tallest first, so a tile takes the biggest tree that fits.
+  const treesByHeight = [...TREES].sort((a, b) => (DH[b] ?? 0) - (DH[a] ?? 0))
+
+  for (const t of tiles) {
+    const x0 = t.pos.x - T / 2
+    const y0 = t.pos.y - T / 2
+    const y1 = t.pos.y + T / 2
+    if (t.block === 'forest') {
+      const above = at.get(`${t.col},${t.row - 1}`)
+      const below = at.get(`${t.col},${t.row + 1}`)
+      // How tall a tree this tile can hold: up into the tile above when that is
+      // forest too (the canopy layers), 12px into open grass (a crown tip, never
+      // a trunk), not at all into the lane.
+      const canopyTop = !above ? 0 : above.block === 'forest' ? above.pos.y - T / 2 : above.block === 'lane' ? y0 : y0 - 12
+      // Top-row tiles stand their tree a few px into the tile below (never the
+      // lane) rather than clip its crown off the field's edge.
+      const dip = !above && below && below.block !== 'lane' ? 12 : 0
+      const baseY = y1 - 3 + dip - Math.floor(rng() * 3)
+      const x = t.pos.x + (rng() - 0.5) * 14
+      const tree = treesByHeight.find((n) => baseY - (DH[n] ?? 0) >= Math.max(0, canopyTop))
+      if (!(tree && put(x, baseY, tree))) {
+        // No tree fits: a thicket instead, two shrubs across the tile, each at
+        // the lowest spot in it that stays off the road.
+        for (const fx of [0.3, 0.7]) {
+          const name = pick(shrubs)
+          for (let yy = y1 - 8 - Math.floor(rng() * 6); yy > y0 + (DH[name] ?? 20); yy -= 6) {
+            if (put(x0 + T * fx + (rng() - 0.5) * 8, yy, name, 30)) break
+          }
+        }
+      }
+      // Undergrowth at the tree's foot, off to one side.
+      if (rng() < 0.55) put(x + (rng() < 0.5 ? -22 : 22), baseY - 2, pick(shrubs), 26)
+    } else if (t.block === 'rock') {
+      // A boulder cluster: two big stones and a small one, drawn at the pack's
+      // NATIVE density — the density the units stand at (`unitPixmapScale`) —
+      // so a rock tile reads as "rock" at 44 CSS px and not as a pebble. At the
+      // ×½ litter density the biggest stone was 23px on an 80px tile.
+      const big = [...boulders].sort((a, b) => (DH[b] ?? 0) - (DH[a] ?? 0))
+      const native = (x: number, y: number, name: string | undefined) => {
+        if (!name) return
+        decos.push({ x: Math.round(x), y: Math.round(y), name, flip: rng() < 0.5, native: true })
+      }
+      native(t.pos.x + 12, t.pos.y + 4, big[1] ?? big[0])
+      native(t.pos.x - 9, t.pos.y + 20, big[0])
+      native(t.pos.x + 20, t.pos.y + 26, big[big.length - 1])
+    }
   }
-  for (let x = 22; x < W - 22; x += 74 + rng() * 40) {
-    if (rng() < 0.86) treeline(x, [TREE_TOP + 2, TREE_TOP + 27, TREE_TOP + 54])
-    if (rng() < 0.80) treeline(x, [H - 6, H - 31, H - 58])
-  }
-  for (let y = TREE_TOP + 46; y < H - 44; y += 66 + rng() * 34) {
-    if (rng() < 0.72) treeline(22, [y, y + 22])
-    if (rng() < 0.72) treeline(W - 22, [y, y + 22])
-  }
-  // Ground litter. Everything in this pool is shorter than the shortest hero at
-  // this density (22 logical px against 32), so none of it can compete with a
-  // unit wherever it lands — but it is still kept sparse. The first pass ran
-  // this at 0.34/0.62 and scattered ~35 pebbles over the field, which read as
-  // gravel rather than as a meadow.
-  for (let gx = 52; gx < W - 40; gx += 84) {
-    for (let gy = 64; gy < H - 24; gy += 76) {
-      const x = gx + (rng() - 0.5) * 58, y = gy + (rng() - 0.5) * 54
-      if (rng() < 0.34) put(x, y, pick(LITTER), 40)
+  // A portrait twin's side pads sit outside the grid: forest, like the ring.
+  if (map.orientation === 'portrait') {
+    const padW = tiles.length ? Math.min(...tiles.map((t) => t.pos.x)) - T / 2 : 0
+    if (padW > 0) {
+      for (const px of [padW / 2, W - padW / 2]) {
+        for (let y = (DH[treesByHeight[0]] ?? 88) + 2; y < H - 2; y += 58 + Math.floor(rng() * 22)) {
+          put(px + (rng() - 0.5) * 8, y, pick(treesByHeight) ?? TREES[0], 30)
+        }
+      }
     }
   }
   decos.sort((a, b) => a.y - b.y)
@@ -502,7 +685,7 @@ function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
   for (const d of dr.decos) {
     const spr = spriteFor(d.name)
     if (!spr) continue
-    const pm = pixmap(spr.img, { scale: spr.spriteScale })
+    const pm = pixmap(spr.img, { scale: d.native ? 1 : spr.spriteScale })
     if (!pm) continue
     const w = pm.fw, h = pm.fh
     // Contact shadow — kept on all three object classes, per the checklist.

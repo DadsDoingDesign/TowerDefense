@@ -22,7 +22,9 @@ import { sfx, sfxRarity } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
 import { hub, layout, recruitHub, seedRunStreams, streams } from './runtime'
-import { orientField } from '../../game/data/maps'
+import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
+import { carryPlacements } from '../../game/run/map'
+import { endlessTerrainRule } from '../../game/run/terrain'
 import { settleSavedRun } from './settle'
 import type { EndlessRoom, Slice } from './types'
 
@@ -131,11 +133,16 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
   endlessBeginWave: () => {
     if (get().mode !== 'endless') return
     const wave = generateEndlessWave(get().round, get().runSeed)
-    const { baseHp, maxBaseHp } = get()
+    const { baseHp, maxBaseHp, roster } = get()
+    // Chosen per battle from the layout (Portrait battlefields), as `selectNode`,
+    // with the round's map challenge (G1-2).
+    const battleMap =
+      fieldFor(fieldIdOf(get().battleMap), endlessTerrainRule(get().round, get().runSeed), layout.orientation()) ??
+      orientField(get().battleMap, layout.orientation())
     set({
       currentWave: wave,
-      // Chosen per battle from the layout (Portrait battlefields), as `selectNode`.
-      battleMap: orientField(get().battleMap, layout.orientation()),
+      battleMap,
+      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
       battlePhase: 'setup',
       screen: 'battle',
       endlessRoom: null,

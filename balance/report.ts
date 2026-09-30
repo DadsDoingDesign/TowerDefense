@@ -14,7 +14,7 @@ import { writeFileSync } from 'fs'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import { recruitKit, wearKit } from '../src/game/engine/kit'
@@ -62,6 +62,7 @@ import {
   affixItem,
   autoEvolve,
   AURA_TRIO,
+  POST,
   bestSlots,
   buildSpec,
   randomPerks,
@@ -177,7 +178,11 @@ line('Supports still read low here on purpose and are graded in §2.')
 line('')
 function throughput(s: Sentinel, seed: number): { hpPerSec: number; damage: number } {
   const m = runBattle({
-    team: [{ sentinel: s, slotId: 's3' }],
+    // G1-2: this bench reads kills inside a fixed window, so what calibrates it
+    // is WHEN the queue reaches the hero, not how much road the post sees — it
+    // keeps the tile nearest where s3 stood rather than the coverage-matched
+    // `POST.s3` the stop-rate benches use (which starved the slow mystics to 0).
+    team: [{ sentinel: s, slotId: legacyPostTile(FIRST_MAP.id, 's3')! }],
     depth: 6,
     wave: THROUGHPUT_WAVE,
     baseHp: 999,
@@ -384,8 +389,8 @@ const carrierRanged = buildSpec('sharpshooter', { gearRarity: 'epic', seed: 4 })
 
 function supportTeam(third: Sentinel | null) {
   return [
-    { sentinel: carrierBlocker, slotId: 's4' },
-    { sentinel: carrierRanged, slotId: 's2' },
+    { sentinel: carrierBlocker, slotId: AURA_TRIO.allies[1] },
+    { sentinel: carrierRanged, slotId: AURA_TRIO.allies[0] },
     ...(third ? [{ sentinel: third, slotId: AURA_TRIO.support }] : []),
   ]
 }
@@ -686,7 +691,7 @@ const benchQuantum: Record<ScenarioKey, number> = {} as Record<ScenarioKey, numb
 for (const k of SCEN_KEYS) {
   const sc = AFFIX_SCENARIOS[k]
   const ml = maxLeak(sc.wave)
-  const dur = runBattle({ team: [{ sentinel: sc.build, slotId: 's3' }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11, rules: BENCH_RULES }).timeSec
+  const dur = runBattle({ team: [{ sentinel: sc.build, slotId: POST.s3 }], depth: 8, wave: sc.wave, baseHp: ml + 2, enemyHpMult: BENCH_PIN[k], maxSeconds: 300, seed: 11, rules: BENCH_RULES }).timeSec
   // The lightest body in the wave is the finest step it can take.
   const minLeak = Math.min(...sc.wave.spawns.map((s) => ENEMY_TYPES[s.typeId].leak))
   benchQuantum[k] = minLeak / ml / affixSeeds.length
@@ -951,9 +956,9 @@ const PRESSURE_LADDER = [1, 1.5, 2.2, 3.4, 5, 7.6, 11, 17, 25, 38, 57, 85]
 const CEIL_SEEDS = SEEDS.slice(0, 4)
 const stdThreat = threatAtLayer(8)
 const stdTeam = [
-  { sentinel: buildSpec('vanguard', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's0' },
-  { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's3' },
-  { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: 's5' },
+  { sentinel: buildSpec('vanguard', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: POST.s0 },
+  { sentinel: buildSpec('sharpshooter', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: POST.s3 },
+  { sentinel: buildSpec('pyromancer', { level: STD_LEVEL, gearRarity: 'epic', seed: 8, perkSeed: 8 }), slotId: POST.s5 },
 ]
 line('| Siege pressure | Enemies | Cleared | Base HP left ± | Towers downed ± |')
 line('|--:|--:|:-:|--:|--:|')
@@ -1182,7 +1187,7 @@ function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], Wa
   }
 }
 function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
-  if (line !== 'cleric') return [{ sentinel: hero, slotId: 's3' }]
+  if (line !== 'cleric') return [{ sentinel: hero, slotId: POST.s3 }]
   return [
     { sentinel: hero, slotId: AURA_TRIO.support },
     { sentinel: buildSpec('berserker', { level, seed: 5 }), slotId: AURA_TRIO.allies[0] },
@@ -1589,6 +1594,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
       depth,
       kind,
       map: field,
+      autoDeploy: true,
       variantSeed: encounterSeed(seed, depth),
       enemyHpMult: threat,
       baseHp,
@@ -2316,25 +2322,33 @@ line('')
 line('Path length is the load-bearing number: enemy speeds in `enemies.ts` are tuned as')
 line('*crossing times* against a 2290px field, and time in range is the one difficulty')
 line('axis the run\'s Threat multiplier does not touch — so a field 20% longer is a 20%')
-line('easier game on every dial in this report at once. Slot coverage is the road (in px)')
-line('a tower at that slot can see at a nominal 150px range; it is what makes the two')
-line('fields different puzzles rather than different wallpaper.')
+line('easier game on every dial in this report at once. Coverage is the road (in px) a')
+line('tower on a tile can see at a nominal 150px range; it is what makes the two fields')
+line('different puzzles rather than different wallpaper.')
 line('')
-line('| Field | Path px | Min slot gap | Coverage by slot (px of road seen) | Best-first order |')
-line('|---|--:|--:|---|---|')
+line('Deployment is a tile grid (G1-2): a hero may stand on any open grass tile, so a')
+line('field\'s "slots" are its open tiles and the table lists the eight best of them.')
+line('')
+line('| Field | Path px | Open tiles | Tile pitch | Coverage, best 8 tiles (px of road seen) |')
+line('|---|--:|--:|--:|---|')
 for (const m of MAP_FACTS) {
-  const cov = m.order.map((id) => `${id} ${m.coverage[id]}`).join(' · ')
-  line(`| ${m.name} (\`${m.id}\`) | ${m.length} | ${m.minSlotGap} | ${cov} | ${m.order.join(' → ')} |`)
+  const cov = m.order.slice(0, 8).map((id) => `${id} ${m.coverage[id]}`).join(' · ')
+  line(`| ${m.name} (\`${m.id}\`) | ${m.length} | ${m.order.length} | ${m.minSlotGap} | ${cov} |`)
 }
 line('')
 /** Fields must be within this of each other in path length. */
 const MAX_FIELD_LENGTH_SPREAD = 0.06
-/** …and no slot may be further apart than the canvas hit floor can resolve. */
-const MIN_SLOT_GAP = 90
+/**
+ * …and no two posts may be closer than one tile (G1-2). The hit test is the
+ * tile's own square now, not a radius snapped to the nearest circle, so the
+ * floor that matters is the tile: 80 logical px, ≥ 44 CSS px at the phone's
+ * portrait Stage. (It was 90px — the old radius hit test's — before the grid.)
+ */
+const MIN_SLOT_GAP = 80
 const fieldLens = MAP_FACTS.map((m) => m.length)
 const fieldSpread = Math.max(...fieldLens) / Math.min(...fieldLens) - 1
 line(
-  `Path lengths spread **${(fieldSpread * 100).toFixed(1)}%** (ceiling ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%); tightest slot gap **${Math.min(...MAP_FACTS.map((m) => m.minSlotGap))}px** (floor ${MIN_SLOT_GAP}px, the canvas hit test's).`,
+  `Path lengths spread **${(fieldSpread * 100).toFixed(1)}%** (ceiling ${(MAX_FIELD_LENGTH_SPREAD * 100).toFixed(0)}%); tightest tile pitch **${Math.min(...MAP_FACTS.map((m) => m.minSlotGap))}px** (floor ${MIN_SLOT_GAP}px, one tile — the hit target).`,
 )
 line('')
 if (fieldSpread > MAX_FIELD_LENGTH_SPREAD) {
@@ -2345,7 +2359,7 @@ if (fieldSpread > MAX_FIELD_LENGTH_SPREAD) {
 for (const m of MAP_FACTS) {
   if (m.minSlotGap < MIN_SLOT_GAP) {
     failures.push(
-      `${m.name} has two build slots ${m.minSlotGap}px apart (floor ${MIN_SLOT_GAP}px). At the smallest supported viewport the canvas hit radius is capped at 80 logical px, so their catchment areas collapse into one target.`,
+      `${m.name} has two posts ${m.minSlotGap}px apart (floor ${MIN_SLOT_GAP}px, one tile). Two posts closer than a tile cannot both be hit targets.`,
     )
   }
 }
@@ -2395,7 +2409,7 @@ line('| Field | New road each successive best slot adds (share of path) | Union 
 line('|---|---|--:|')
 MAP_FACTS.forEach((m, i) => {
   line(
-    `| ${m.name} | ${curves[i].map((v) => pct(v)).join(' → ')} | ${pct(curves[i].slice(0, 5).reduce((a, b) => a + b, 0))} |`,
+    `| ${m.name} | ${curves[i].slice(0, 8).map((v) => pct(v)).join(' → ')} | ${pct(curves[i].slice(0, 5).reduce((a, b) => a + b, 0))} |`,
   )
 })
 line('')
@@ -2439,7 +2453,7 @@ function variantLeak(depth: number, kind: EncounterKind, variantId: string): num
         slotId: order[i],
       }))
       out.push(
-        runBattle({ team, depth, wave, map: field, enemyHpMult: threat, baseHp: ml + 2, maxSeconds: 120, seed: t * 31 + depth })
+        runBattle({ team, depth, wave, map: field, autoDeploy: true, enemyHpMult: threat, baseHp: ml + 2, maxSeconds: 120, seed: t * 31 + depth })
           .baseHpLost,
       )
     }
@@ -2999,7 +3013,7 @@ const CARD_BENCHES: CardBench[] = [
   },
 ]
 const cardBase = CARD_BENCHES.map((bch) =>
-  stopRate([{ sentinel: bch.hero, slotId: 's3' }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin, rules: BENCH_RULES }),
+  stopRate([{ sentinel: bch.hero, slotId: POST.s3 }], bch.wave, CARD_SEEDS, { enemyHpMult: bch.pin, rules: BENCH_RULES }),
 )
 line('| Bench | What it loads | Baseline stop rate |')
 line('|---|---|--:|')
@@ -3016,7 +3030,7 @@ for (const relic of FIGHT_RELICS) {
   const teamMods = relicTeamMods([relic.id])
   const d = CARD_BENCHES.map(
     (bch, i) =>
-      stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: 's3' }], bch.wave, CARD_SEEDS, {
+      stopRate([{ sentinel: withRelicStats(bch.hero, [relic.id]), slotId: POST.s3 }], bch.wave, CARD_SEEDS, {
         enemyHpMult: bch.pin,
         teamMods,
         rules: BENCH_RULES,
@@ -3183,7 +3197,7 @@ for (const land of ALL_MAPS) {
           sentinel: buildSpec(id, { level: mcLevel(depth), gearRarity: mcRarity(depth), seed: t * 10 + i, perkSeed: t * 10 + i }),
           slotId: order[i],
         }))
-        const m = runBattle({ team, depth, kind, map: field, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
+        const m = runBattle({ team, depth, kind, map: field, autoDeploy: true, enemyHpMult: threatAtLayer(depth), baseHp: MAX_BASE_HP, maxSeconds: 600, seed: t * 97 + depth, variantSeed: t * 13 + depth })
         acc.n++
         if (m.cleared) acc.cleared++
         acc.lost += m.baseHpLost

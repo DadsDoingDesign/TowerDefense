@@ -94,6 +94,7 @@ section.stream { margin-top: 40px; display: grid; gap: 14px; }
 .done .pill-ok { background: var(--good); color: #13200f; border-radius: 99px; padding: 2px 10px; font-weight: 700; font-size: 0.8rem; }
 .done .pill-re { background: var(--edit); color: #2a1c05; border-radius: 99px; padding: 2px 10px; font-weight: 700; font-size: 0.8rem; }
 .card.settled { padding-block: 14px; gap: 10px; }
+.pill-block { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #2a0f08; background: var(--bad); border-radius: 99px; padding: 1px 9px; }
 .myread b { color: var(--mine); }
 
 .decide { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
@@ -138,7 +139,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
 <div class="wrap">
   <header>
     <h1>Fieldwatch UI Plan</h1>
-    <p class="lede">Round 2. The ten items you approved are done: nine are built on the branch and re-checked with Whales, and D1 needed no change. The six you edited are reworked at the top, each with questions for you, plus one new item (A1-2) from Whales' re-check. Approve, edit or reject them the same way; your choices save here.</p>
+    <p class="lede">Round 3. Everything you approved in rounds 1 and 2 is built on the branch. What remains are the open questions: the defaults I chose for you, and the calls the builds turned up. The first four block progress. Every answer can carry a note.</p>
     <div class="meta">
       <span>Branch <b class="mono" id="branch">claude/whales-ui-critique-plan</b></span>
       <span>Base <b class="mono" id="base">main @ f3760d1</b></span>
@@ -153,7 +154,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
         <span><span class="dot" style="background:var(--good)"></span><b id="n-a">0</b> approved</span>
         <span><span class="dot" style="background:var(--edit)"></span><b id="n-e">0</b> edited</span>
         <span><span class="dot" style="background:var(--bad)"></span><b id="n-r">0</b> rejected</span>
-        <span><b id="n-p">7</b> to decide</span>
+        <span><b id="n-p">14</b> to decide</span>
       </div>
       <span class="sync" id="sync">Connecting…</span>
     </div>
@@ -233,7 +234,9 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
 
   function decisionControls(id, kind, placeholder) {
     const d = decisions[id] || {};
-    const opts = kind === 'goal' ? [['confirm', 'Confirm'], ['edit', 'Edit']] : [['approve', 'Approve'], ['edit', 'Edit'], ['reject', 'Reject']];
+    const opts = kind === 'goal' ? [['confirm', 'Confirm'], ['edit', 'Edit']]
+      : kind === 'question' ? [['approve', 'Keep default'], ['edit', 'Change it'], ['reject', 'Drop it']]
+      : [['approve', 'Approve'], ['edit', 'Edit'], ['reject', 'Reject']];
     // Every decision can carry a note — an approval with context ("yes, but keep
     // the old teal for Endless") is as useful as an edit, and so is a reason
     // for a rejection. The box is always there; only its prompt changes.
@@ -268,8 +271,9 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
     return h('article', { class: `card${item.built || item.reworked ? ' settled' : ''}`, id: `item-${item.id}`, 'data-status': d.status || '' },
       h('div', { class: 'card-top' },
         h('span', { class: 'tag', text: item.id }),
-        h('span', { class: 'pill', text: `Effort ${item.effort}` }),
-        h('span', { class: `pill src-${item.source}`, text: item.source === 'whales' ? 'From Whales' : 'From Claude' }),
+        item.kind === 'question' ? null : h('span', { class: 'pill', text: `Effort ${item.effort}` }),
+        item.kind === 'question' ? h('span', { class: 'pill', text: `From ${item.from}` }) : h('span', { class: `pill src-${item.source}`, text: item.source === 'whales' ? 'From Whales' : 'From Claude' }),
+        item.blocking ? h('span', { class: 'pill-block', text: 'Blocks progress' }) : null,
         h('h3', { text: item.title })),
       item.yourNote ? h('p', { class: 'yournote' }, h('b', { text: `Your note on ${item.replaces}` }), item.yourNote) : null,
       h('div', { class: 'thumbs' }, keys.map(k => thumb(k, (item.refs.find(r => r[0] === k) || [])[1]))),
@@ -278,7 +282,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
           const s = screens[k]; const r = s && s.rows[n - 1]; if (!r) return null;
           return h('li', {}, h('span', { class: 'where', text: `${s.label}${s.viewport.startsWith('desktop') ? ' (desk)' : ''} #${n}: ` }), r.problem, h('span', { class: 'det', text: r.detail }));
         }))) : null,
-      h('div', {}, h('div', { class: 'label', text: 'Proposed change' }), h('ul', { class: 'proposal' }, item.proposal.map(p => h('li', { text: p })))),
+      h('div', {}, h('div', { class: 'label', text: item.kind === 'question' ? 'What was built, and the options' : 'Proposed change' }), h('ul', { class: 'proposal' }, item.proposal.map(p => h('li', { text: p })))),
       item.files.length ? h('div', {}, h('div', { class: 'label', text: 'Files' }), h('div', { class: 'files' }, item.files.map(f => h('code', { text: f })))) : null,
       item.myRead ? h('p', { class: 'myread' }, h('b', { text: 'My read, not Whales’: ' }), item.myRead) : null,
       item.questions ? h('div', {}, h('div', { class: 'label', text: 'Questions for you (answer in your note)' }), h('ol', { class: 'questions' }, item.questions.map(q => h('li', { text: q })))) : null,
@@ -290,6 +294,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
   function footer(item) {
     if (item.built) return h('div', { class: 'done' }, h('span', { class: 'pill-ok', text: item.builtNote ? 'Done' : 'Built on the branch' }), item.builtNote || item.recheck || 'You approved this. It is in the branch.');
     if (item.reworked) return h('div', { class: 'done' }, h('span', { class: 'pill-re', text: `Reworked as ${item.reworked}` }), h('a', { href: `#item-${item.reworked}`, text: 'See round 2 ↑' }));
+    if (item.kind === 'question') return decisionControls(item.id, 'question', 'What should it be instead?');
     return decisionControls(item.id, 'item', 'Approve as is, or tell me what to change and answer the questions.');
   }
 

@@ -44,7 +44,7 @@
 import { withIsolatedIds } from '../../game/core/rng'
 import type { Vec2 } from '../../game/core/vec'
 import { getNode } from '../../game/data/archetypeTree'
-import { FIRST_MAP } from '../../game/data/maps'
+import { FIRST_MAP, legacyPostTile } from '../../game/data/maps'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
@@ -96,6 +96,9 @@ export const ATTRACT_CUT = {
 /** Camera samples per second of sim time. */
 const CAM_HZ = 10
 
+/** G1-2: the company is authored on the old circle ids; each stands on the tile nearest its circle. */
+const post = (id: string): string => legacyPostTile(ATTRACT_MAP.id, id) ?? id
+
 /** A company member, built without touching the name or id counters. */
 function attractHero(archetype: Archetype, level: number, i: number): Sentinel {
   const node = getNode(archetype)
@@ -123,7 +126,7 @@ function buildEngine(sc: AttractScenario): GameEngine {
       new GameEngine({
         map: ATTRACT_MAP,
         wave: generateEncounter(sc.depth, sc.kind, { seed: sc.seed }),
-        placedSentinels: sc.company.map((c, i) => ({ sentinel: attractHero(c.archetype, c.level, i), slotId: c.slot })),
+        placedSentinels: sc.company.map((c, i) => ({ sentinel: attractHero(c.archetype, c.level, i), slotId: post(c.slot) })),
         baseHp: 20,
         maxBaseHp: 20,
         seed: sc.seed,
@@ -167,7 +170,7 @@ export function stepAttract(
 
 /** Where the company stands. */
 export function attractFocus(): Vec2 {
-  const pts = ATTRACT_SCENE.company.map((c) => ATTRACT_MAP.slots.find((s) => s.id === c.slot)!.pos)
+  const pts = ATTRACT_SCENE.company.map((c) => ATTRACT_MAP.slots.find((s) => s.id === post(c.slot))!.pos)
   return {
     x: pts.reduce((a, p) => a + p.x, 0) / pts.length,
     y: pts.reduce((a, p) => a + p.y, 0) / pts.length,
