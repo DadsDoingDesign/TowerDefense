@@ -2246,3 +2246,30 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   stand inside the scorch now. Still open: the top forest row is shrubs where a
   88px tree cannot fit without clipping or standing on the road. On 375×667
   and 320×568 a tile is about 35px, under the 44px floor.
+- **2026-09-30 — Q12: the menu cinematic drawn from the day's seed.** The
+  designer asked for a randomised cinematic played out from a seed, "maybe the
+  daily seed". `AttractMode` now hands the sim `dailySeed(utcDateKey())`, and
+  `composeScene(seed, take)` draws the field (Green Line / Kiln Road), its
+  flavour (plain / Flooded / Wildfire), the foe (boss depth 4–8 or elite depth
+  6–8, with the wave's own variant seed), and a company of 3–4 (always a
+  Fighter), with levels 12–20, evolutions and rolled gear, posted around the
+  point on the road the headliner reaches ~11–15 s in. The cut is the same
+  every day. The director plays each draw headless and rejects it the tick a
+  beat breaks: a leak, a hero down, the headliner slower than 18.8 s or
+  quicker than 8.5 s, falling more than 190 px from the company, or a cut
+  that cannot be padded to 16–24 s. It then tries the next draw of the same
+  seed, so a seed always lands on the same scene. Over 50 dates about 75% of
+  first draws are kept, at most 3 are rejected, and there are no fallbacks.
+  Rendering caught one real bug. The idle-slice director minted entity ids
+  from the global counter per chunk, so a goblin spawned a chunk later could
+  take the champion's id, and the browser cut a different scene from the one
+  the test checked (the champion drawn as a ghost walking off-beat). Each
+  attract engine now mints from its own counter (`withOwnIds`), and the test
+  compares chunked and straight-through play over 12 dates. Contrast was
+  measured every 0.5 s of four dates' loops with text hidden (brightest pixel
+  behind each element). Rows were at least 10.1:1 for labels and 5.98:1 for
+  values, the tagline at least 5.97:1, and the wordmark at least 3.43:1 (large
+  text). The desk wordmark is lower than round 2's 4.9 because some fields put
+  grey rocks under it. Frame cost against the round-2 build, both production
+  and back to back on a loaded machine: phone 4x CPU median 3.4 / 4.1 ms (base
+  3.9 / 4.4). Shots in `fieldwatch-critique/build-q12/`.

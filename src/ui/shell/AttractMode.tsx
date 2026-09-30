@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { onSpritesReady } from '../../game/render/sprites'
+import { dailySeed, utcDateKey } from '../../state/daily'
 import { useSettingsStore } from '../../state/settingsStore'
 import { useMedia } from '../pointer'
 
@@ -35,12 +36,18 @@ export function useMenuMotion(): boolean {
  *    rAF), holding the last frame.
  *
  * It owns no run state and writes nothing: the sim is sealed off from the
- * store and from the global id/name counters (see `attractSim.ts`).
+ * store and from the global id/name counters (see `attractSim.ts`). The one
+ * thing it reads is the day's seed — `dailySeed(utcDateKey())`, a pure hash of
+ * the date — which it hands to the sim, so the sim still imports no `state/`.
  */
 export function AttractMode() {
   const reduced = !useMenuMotion()
 
-  const [Battle, setBattle] = useState<ComponentType<{ running: boolean }> | null>(null)
+  const [Battle, setBattle] = useState<ComponentType<{ running: boolean; seed: number }> | null>(null)
+  // Q12: the scene is drawn from today's Daily Watch seed (the UTC day), read
+  // once per mount — everyone sees the same cinematic today, a new one
+  // tomorrow, and a menu left open past midnight keeps the scene it opened on.
+  const [seed] = useState(() => dailySeed(utcDateKey()))
   const [inView, setInView] = useState(true)
   // A phone on its side is covered by the rotate prompt (the shell is only
   // visibility-hidden, so the observer still sees the frame): park there too.
@@ -100,7 +107,7 @@ export function AttractMode() {
   if (reduced) return null
   return (
     <div className="pg-art-livewrap" ref={wrapRef}>
-      {Battle && <Battle running={inView && pageShown && !rotated} />}
+      {Battle && <Battle running={inView && pageShown && !rotated} seed={seed} />}
     </div>
   )
 }

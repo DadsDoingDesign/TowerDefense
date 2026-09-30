@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GameEngine } from '../../game/engine/engine'
+import type { GameMap } from '../../game/types'
 import { apronMargins, getApron } from '../../game/render/apron'
 import { fxAdvance, fxPreload, fxReset, setFxReducedMotion } from '../../game/render/fx'
 import { FxDiffer } from '../../game/render/fxDiff'
 import { animNow, getViewScale } from '../../game/render/frame'
 import { drawBattleEntities, drawField, setPresentationTime, setViewScale } from '../../game/render/renderer'
+import { FIELD_H, FIELD_W } from '../../game/data/maps'
 import {
   ATTRACT_CUT,
-  ATTRACT_MAP,
   attractCamera,
   createAttractEngine,
   directAttractSteps,
@@ -24,8 +25,10 @@ import {
  *
  * ## A title sequence, not a feed
  *
- * One scene, one cut (`directAttract`): fade up on the lane entrance, the
- * camera eases along the road with the champion, the knights hold, he falls —
+ * One scene a day, one cut (`directAttract(seed)` — the scene is drawn from
+ * the seed `AttractMode` hands in, today's Daily Watch seed): fade up on the
+ * lane entrance, the camera eases along the road with the headliner, the
+ * company holds, he falls —
  * a short freeze, a small kick of the camera and a warm flare where he fell —
  * then a beat on the company and a fade back to the page ground, and the same
  * shot again. The sim runs against a TARGET tick derived from the loop clock,
@@ -105,7 +108,7 @@ const smooth = (x: number) => {
  * `running` false parks the loop entirely (no rAF at all) and keeps the last
  * frame on screen — `AttractMode` drives it from visibility and intersection.
  */
-export default function AttractBattle({ running }: { running: boolean }) {
+export default function AttractBattle({ running, seed }: { running: boolean; seed: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const loop = useRef<{ start: () => void; stop: () => void } | null>(null)
   const [live, setLive] = useState(false)
@@ -117,11 +120,13 @@ export default function AttractBattle({ running }: { running: boolean }) {
     const frameEl = canvas.parentElement!
     const vctx = canvas.getContext('2d')
     if (!vctx) return
-    const map = ATTRACT_MAP
-    const M = apronMargins(map)
+    // The field is the scene's, known once the director has kept a draw (every
+    // landscape field is FIELD_W × FIELD_H). Nothing is painted before that.
+    let map!: GameMap
+    let M = { x: 0, y: 0 }
     const comp = document.createElement('canvas')
-    comp.width = map.width
-    comp.height = map.height
+    comp.width = FIELD_W
+    comp.height = FIELD_H
     const cctx = comp.getContext('2d')
     if (!cctx) return
     cctx.imageSmoothingEnabled = false
@@ -208,7 +213,7 @@ export default function AttractBattle({ running }: { running: boolean }) {
 
     const resetLoop = () => {
       fxReset()
-      engine = createAttractEngine(script!.startTick)
+      engine = createAttractEngine(script!.scene, script!.startTick)
       differ = new FxDiffer(engine)
       loopT = 0
     }
@@ -400,10 +405,12 @@ export default function AttractBattle({ running }: { running: boolean }) {
 
     /*
      * Warm-up, one idle slice per step, so a tap never waits on more than one
-     * slice: the terrain bake (the battle's own cache — the first real battle
-     * on this map inherits it), the apron, the director's headless play of the
-     * scene in ~240-tick chunks, the engine at the opening frame, and the unit
-     * pixmaps. The loop's first frame is then an ordinary 1 ms frame.
+     * slice: the director's headless play of the day's scene in ~240-tick
+     * chunks (a rejected draw and the next one included — see `attractSim`),
+     * then its field's terrain bake (the battle's own cache — a real battle on
+     * the same field inherits it), the apron, the engine at the opening frame,
+     * and the unit pixmaps. The loop's first frame is then an ordinary 1 ms
+     * frame.
      */
     type IdleWin = Window & {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number
@@ -413,21 +420,23 @@ export default function AttractBattle({ running }: { running: boolean }) {
     let idleId = 0
     const idle = (fn: () => void) =>
       (idleId = w.requestIdleCallback ? w.requestIdleCallback(fn, { timeout: 1000 }) : window.setTimeout(fn, 60))
-    const director = directAttractSteps()
+    const director = directAttractSteps(seed)
     /** A stage returning `true` wants another slice. */
     const stages: (() => boolean | void)[] = [
       () => {
         fxPreload()
-        drawField(cctx, map)
-      },
-      () => {
-        const a = getApron(map)
-        if (a) warm(a)
       },
       () => {
         const r = director.next()
         if (!r.done) return true
         script = r.value
+        map = script.map
+        M = apronMargins(map)
+      },
+      () => drawField(cctx, map),
+      () => {
+        const a = getApron(map)
+        if (a) warm(a)
       },
       () => {
         resetLoop()
@@ -455,7 +464,7 @@ export default function AttractBattle({ running }: { running: boolean }) {
       window.removeEventListener('resize', relayout)
       fxReset()
     }
-  }, [])
+  }, [seed])
 
   useEffect(() => {
     if (running) loop.current?.start()

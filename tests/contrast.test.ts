@@ -114,10 +114,12 @@ describe('icon size tokens are whole multiples of the 16px sprite', () => {
 
 /*
  * H1-2 (Whales UI plan): the Watchtower menu overlays the live attract battle.
- * The art moves and future scenes will differ, so these hold the menu's text
- * against PURE WHITE art — the brightest ground a frame could put under it —
- * rather than against any one render. (The real loop is also measured frame by
- * frame in the DESIGN_REVIEW.md log; its worst frame is far darker than this.)
+ * The art moves and, since Q12, the scene is drawn from the day's seed — a
+ * different field, foe and company every day — so these hold the menu's text
+ * against PURE WHITE art, the brightest ground ANY frame of ANY day's scene
+ * could put under it, rather than against one render. (Real loops of several
+ * dates are also measured frame by frame in the DESIGN_REVIEW.md log; their
+ * worst frames are far darker than this.)
  */
 describe('the menu over its cinematic backdrop (H1-2)', () => {
   const pageCss = readFileSync(join(ROOT, 'src/styles/page.css'), 'utf8')
