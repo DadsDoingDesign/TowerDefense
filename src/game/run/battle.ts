@@ -12,7 +12,8 @@ import type { Sentinel, WaveDef } from '../types'
 /**
  * The combat seed for one battle. Deterministic in (run seed, node, wave), so a
  * replayed run replays its fights exactly, while two different nodes never share
- * a roll sequence.
+ * a roll sequence. The node key is the node's map-local id (`n<layer>-<row>`),
+ * never a counter, so the same seed replays the same fights in any session.
  */
 export function combatSeed(runSeed: number, nodeKey: string, wave: number): number {
   return hashSeed(runSeed, 'combat', nodeKey, wave)
