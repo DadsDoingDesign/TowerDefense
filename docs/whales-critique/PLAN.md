@@ -4,17 +4,96 @@ Branch `claude/whales-ui-critique-plan` · Whales project **Tower Defense Game**
 
 Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.
 
-**Status (round 4).** Rounds 1 and 2 are built on this branch. From round 3, Q1, Q3, Q4, Q5, Q8, Q10 and Q12 are being built; Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
+**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are being built. Round 6 lists the calls the builders made, for your review. Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
 
 Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.
+
+## Round 6 · what the builders decided
+
+No hero HP and the round-3 answers are built. The builders made these calls on the way; keep the default, change it, or drop it.
+
+### N1 · Bombers and the King now target the Gate. Keep that?
+
+*From NH1*
+
+- Bombers stop within 450px of the Gate and lob a charge at it; the landing spot is marked on the road so you can kill them during the wind-up.
+- The Powderkeg King lobs TNT at the Gate on a timer instead of at heroes.
+- My recommendation: keep both. They make 'kill the dangerous ones first' the whole lesson, which fits 'easy to pick up'.
+
+### N2 · Content cut with hero HP
+
+*From NH1*
+
+- These relics and mutations only made sense with hero HP and were removed: Close Quarters, Last Rampart, Stormcharged, Cornered.
+- Elites lost their extra ×1.1 enemy strength; they're harder only through what they bring.
+- Keep them cut, or should any come back with a new trade-off?
+
+### N3 · "Not a Scratch" opens nothing
+
+*From NH1*
+
+- The feat 'beat an act boss without the Gate losing HP' now unlocks nothing; it's a feat for its own sake (plus 60 Marks).
+- Fine as is, or should it unlock something (a cosmetic, a banner)?
+
+### N4 · Two balance checks are still slightly red
+
+*From NH1*
+
+- Starting with one hero and fighting every battle: 41% of runs end at the first elite (the limit is 40%).
+- Field Kitchen + Relic Cartulary together measure −6 points on the battles route (the noise floor is ±5).
+- My recommendation: leave both until the cuts and merges (LS1, LS2) land, then tune once. Chasing a point now would be undone by those changes.
+
+### N5 · Vow 1 (Thin Pickings) sits on its own noise floor
+
+*From NH1*
+
+- Thin Pickings (two reward cards instead of three, fewer relics) costs between −1.5 and +5 points depending on unrelated curve details. It's still harder in the full report (5.5–6.8 points), but the ladder's first rung is weakly separated.
+- Leave it, or make the first Vow bite harder (for example one card fewer and no merchant restock)?
+
+### N6 · Zoom to place: the 2× jump
+
+*From Q3*
+
+- On small phones the only crisp zoom that clears 44px tiles is 2× (a 2.3–2.9× visual jump). At 320px wide you see about 4 × 4 tiles while zoomed.
+- The between-waves move doesn't zoom yet.
+- Try it on a small phone: is the jump too far, and should the move zoom too?
+
+### N7 · The seed chip made the hero pick taller
+
+*From Q8*
+
+- The Daily and seed lines add about 52px, so on a 390×844 phone the Vow chips now start just under the fold (they were 40px above).
+- My recommendation: fine for now, since LS3 hides Vows until your first finished run anyway.
+
+### N8 · Off-hand numbers
+
+*From Q4*
+
+- A knife or wand in the off hand counts at 50%; the Twinblade Harness lets a 14-DEX hero carry a sword or axe there at 100%.
+- Axes count as one-handed and can go in the off hand with the Harness. Right numbers?
+
+### N9 · Enemy card: when do you learn things?
+
+*From Q10*
+
+- Never met: name, a greyed portrait, armour. Met once: HP and pace. Felled 5 (1 for a champion): tricks, the counter and Gate cost.
+- On 320px phones the card covers most of the small field while it's open.
+- Are 1 / 5 the right thresholds?
+
+### N10 · Menu title contrast on some days
+
+*From Q12*
+
+- Because the cinematic now changes daily, some fields put grey rocks under the wordmark: its worst contrast is 3.43:1 (large text needs 3:1, so it passes, but round 2 had 4.9:1).
+- My recommendation: add a soft shade behind the wordmark so every day's scene clears 4.5:1.
 
 ## Round 5 · make it easier to learn
 
 Your goal: 'The game should be easy to pick up.' A first run asks you to learn about 20 separate ideas. These proposals cut, merge and stage them. Hero HP is being removed now; LS3 and LS4 are low-risk and will be built right after it. LS1 and LS2 remove content, so they wait for your call.
 
-### NH1 · Heroes are never hit (in progress)
+### NH1 · Heroes are never hit
 
-*Effort L · from Claude · awaiting your decision*
+*Effort L · from Claude · done*
 
 > **Your note on your call:** No let’s remove and adjust. Maybe wait to finish tuning after this
 
@@ -31,6 +110,8 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 1. Any enemy you'd want to keep a hero-facing threat, for example a boss that dazes heroes briefly, or none at all?
 
 **Files:** `src/game/engine/engine.ts`, `src/game/data/enemies.ts, items.ts, relics.ts, perks.ts, mutations.ts`, `hero UI (HP bars, stats)`, `balance/`
+
+**Result:** Built and tuned. Heroes have no HP; a Fighter still holds 2 and thorns still grind. Sappers walk past heroes and blow at the Gate; bombers plant within 450px of the Gate and lob a charge you can see coming; the Powderkeg King lobs TNT at the Gate on a clock. The HP bar, 'fell', 'heroes lost' and the Defence cells are gone. One tuning pass: the win rate went 83% → 57% (band 45–60%) and failing balance checks went 12 → 2, each within a point of its limit.
 
 ### LS1 · Cut what doesn't earn its place
 
@@ -85,7 +166,7 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 
 **Files:** `src/ui/shell/Coach.tsx`, `run generation (first-run rules)`, `menu unlocks`
 
-**Result:** Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).
+**Result:** Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.
 
 ### LS4 · One name per thing
 
@@ -100,7 +181,7 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 
 **Files:** `copy across src/ui`
 
-**Result:** Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).
+**Result:** Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.
 
 ## Round 4 · the bigger design changes
 

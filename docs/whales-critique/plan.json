@@ -1,1361 +1,1533 @@
 {
-  "branch": "claude/whales-ui-critique-plan",
-  "base": "main @ f3760d1",
-  "streams": [
-    {
-      "id": "round5",
-      "name": "Round 5 · make it easier to learn",
-      "blurb": "Your goal: 'The game should be easy to pick up.' A first run asks you to learn about 20 separate ideas. These proposals cut, merge and stage them. Hero HP is being removed now; LS3 and LS4 are low-risk and will be built right after it. LS1 and LS2 remove content, so they wait for your call."
-    },
-    {
-      "id": "round4",
-      "name": "Round 4 · the bigger design changes",
-      "blurb": "Your Q2 answer reshapes how heroes work, so it's written up here as a system before anything is built, with Q6, Q7, Q9, Q11 and Q14 folded in. Spreading fire (Q13) and your champions idea are here too. The seven clearer answers (Q1, Q3, Q4, Q5, Q8, Q10, Q12) are being built now."
-    },
-    {
-      "id": "round3",
-      "name": "Round 3 · open questions",
-      "blurb": "Everything in round 2 is built. These are the calls I made on your behalf, and the ones the builds turned up. Keep default leaves it as built; Change it means tell me in the note; Drop it removes the behaviour. The first four block progress."
-    },
-    {
-      "id": "round2",
-      "name": "Round 2 · your edits, reworked",
-      "blurb": "You edited these six in round 1. Each is now a bigger change than the original item, so each has a phased proposal and open questions for you. Nothing here is built yet."
-    },
-    {
-      "id": "read",
-      "name": "Readability",
-      "blurb": "Text that fails WCAG AA contrast, mostly caused by dimming with opacity."
-    },
-    {
-      "id": "icons",
-      "name": "Icon legibility",
-      "blurb": "Icons under Whales' 72 image px minimum (36 CSS px at 2×)."
-    },
-    {
-      "id": "action",
-      "name": "Primary actions",
-      "blurb": "The one next step on each screen should be the strongest thing on it."
-    },
-    {
-      "id": "hier",
-      "name": "Hierarchy & headlines",
-      "blurb": "Titles and panel heads that don't outrank their body text."
-    },
-    {
-      "id": "guide",
-      "name": "Battle guidance",
-      "blurb": "The first-deploy and sub-wave instructions lose to ambient status."
-    },
-    {
-      "id": "space",
-      "name": "Layout & space",
-      "blurb": "Empty space and chrome that push the decision below the fold."
-    },
-    {
-      "id": "verify",
-      "name": "Verify",
-      "blurb": "Re-capture and re-critique after the fixes land."
-    }
-  ],
-  "items": [
-    {
-      "id": "NH1",
-      "stream": "round5",
-      "effort": "L",
-      "source": "claude",
-      "replaces": "your call",
-      "title": "Heroes are never hit (in progress)",
-      "yourNote": "No let’s remove and adjust. Maybe wait to finish tuning after this",
-      "refs": [],
-      "proposal": [
-        "Heroes have no HP and are never damaged or downed. The breather's 'mend and revive' goes away with it.",
-        "Blocking stays and gets simpler: a Fighter still holds up to 2 enemies on the road, and thorns still hurt the enemies being held.",
-        "Enemies that used to hit heroes hurt the Gate instead. Sappers and TNT goblins blow up at the Gate for extra damage if they reach it, bombers' charges land on the road ahead, and boss slams become Gate damage. Letting the dangerous ones through is what costs you.",
-        "Survival stats leave the game rather than being converted: hero HP, armour/defence on heroes, and HP-based relics, perks and mutation downsides are removed or given a damage-based trade-off instead.",
-        "Balance is tuned once, after this lands, together with Q1's danger tiles."
-      ],
-      "questions": [
-        "Any enemy you'd want to keep a hero-facing threat, for example a boss that dazes heroes briefly, or none at all?"
-      ],
-      "files": [
-        "src/game/engine/engine.ts",
-        "src/game/data/enemies.ts, items.ts, relics.ts, perks.ts, mutations.ts",
-        "hero UI (HP bars, stats)",
-        "balance/"
-      ]
-    },
-    {
-      "id": "LS1",
-      "stream": "round5",
-      "effort": "M",
-      "source": "claude",
-      "title": "Cut what doesn't earn its place",
-      "refs": [],
-      "proposal": [
-        "Patience: a stat that stacks +4% every 3 seconds up to a cap. Invisible in play; cut it.",
-        "Dust, reforge and upgrade: a second currency and two crafting verbs. Cut them; scrapping an item gives gold.",
-        "Curses on items: an epic-and-up affix that adds a hidden downside. Cut it; trade-offs live on relics only.",
-        "STR/DEX/INT stay under the hood but come off the main screens. You see damage, speed, range and reach; the breakdown (SK4) shows the rest on request.",
-        "Watch Commands stay: one clear, active button per sub-wave."
-      ],
-      "questions": [
-        "Tick which of these to cut in your note (for example 'cut patience and curses, keep dust')."
-      ],
-      "files": [
-        "items, economy, combat, UI"
-      ]
-    },
-    {
-      "id": "LS2",
-      "stream": "round5",
-      "effort": "L",
-      "source": "claude",
-      "title": "Merge systems that do the same job",
-      "refs": [],
-      "proposal": [
-        "Perks, mutations and evolutions all answer 'how does this hero get better'. With SK1 they become one thing: skills.",
-        "Relics and shrine boons are both 'a run-long bonus for the company'. Make them one kind, blessings, with one list, one icon and one place you see them.",
-        "Map stops shrink to five kinds: battle, elite, merchant, rest (heal the Gate, or train one hero), and a blessing stop. Crossroads and shrines fold into the blessing stop.",
-        "Result: a player learns one way heroes grow, one kind of bonus and five kinds of stop."
-      ],
-      "questions": [
-        "Keep evolutions as their own moment at levels 10 and 20, or make them skill picks too?"
-      ],
-      "files": [
-        "skills (SK1)",
-        "relics + shrines",
-        "run map node kinds"
-      ]
-    },
-    {
-      "id": "LS3",
-      "stream": "round5",
-      "effort": "M",
-      "source": "claude",
-      "title": "Teach in layers: new ideas arrive when they matter",
-      "refs": [],
-      "proposal": [
-        "First battle: only 'post a hero, start the wave'. The Gate and gold are the only numbers on screen.",
-        "Items appear after your first win, merchants from the second stop, blessings at your first elite, skills at a hero's first skill level, danger tiles and challenges from depth 3.",
-        "Vows or difficulty, Daily Watch and Endless unlock after your first finished run. The menu shows them locked, each with one line on what unlocks it.",
-        "Each new idea gets exactly one coach tip the first time it appears, then never again; the Codex keeps the explanations.",
-        "Returning players see everything from the start; the layering only shapes a player's first runs."
-      ],
-      "questions": [
-        "Too gradual, or about right for a first session?"
-      ],
-      "files": [
-        "src/ui/shell/Coach.tsx",
-        "run generation (first-run rules)",
-        "menu unlocks"
-      ],
-      "builtNote": "Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).",
-      "built": true
-    },
-    {
-      "id": "LS4",
-      "stream": "round5",
-      "effort": "S",
-      "source": "claude",
-      "title": "One name per thing",
-      "refs": [],
-      "proposal": [
-        "Heroes, not sentinels or towers, everywhere a player reads.",
-        "'Threat ×1.06' becomes 'Enemy strength +6%'.",
-        "'Watch Marks' become 'Marks' after the first explanation.",
-        "A short glossary lives in the Codex. No term appears on screen before the player has met it."
-      ],
-      "questions": [],
-      "files": [
-        "copy across src/ui"
-      ],
-      "builtNote": "Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).",
-      "built": true
-    },
-    {
-      "id": "SK1",
-      "stream": "round4",
-      "effort": "L",
-      "source": "claude",
-      "replaces": "Q2",
-      "title": "Heroes with skills: 1 of 3 rolled heroes, a skill pool you grow across runs",
-      "yourNote": "lets make heros more dynamic. there are a set of 3 basic skills you get to start. As you play you unlock levels of progress and you get a random skill every so often when leveling (this should not be super slow at first but it shouldnt unlock all the cards easily). If you beat the game you get a skill each time. but each time you beat the game the difficulty goes up a bit. you can turn it back down but you dont get another skill unless you beat your score when you win at teh same difficulty … you can pick 1 of 3 heros with the random skills … there should be Level 2, 3 skills too … 3 options at each level for 3 levels of skills. you can only equip 3 skills per hero and then it just bumps their stats and you pick which",
-      "refs": [],
-      "proposal": [
-        "Where it starts from: heroes today are one of three classes (Fighter, Rogue, Mystic). They level on their own XP up to level 20, evolve at levels 10 and 20 (pick 1 of 3), and pick a perk at 5 and 15 (1 of 2). The tab labelled 'Skills' in the hero panel already shows those perks, so skills replace perks and the name stays.",
-        "The skill pool: every skill has a tier (T1, T2, T3). You start the game with 3 basic T1 skills unlocked. The rest of the library is locked 'cards' you earn over time.",
-        "Unlocks across runs: every run earns Watch XP (from depth, kills and wins). Each Watch level unlocks one random skill card. Early levels come quickly (about one every 1–2 runs), and the gap widens so the whole pool takes many runs. Beating the game also unlocks a card each time.",
-        "Hero pick: instead of choosing a class, you're offered 3 heroes. Each has a class, a name and 1 random T1 skill rolled from your unlocked pool. As the pool grows, the combinations get more varied. Stats and the full skill text are one tap away.",
-        "In a run, skills come from levelling: at three milestone levels (proposed 5, 10 and 15) the hero is offered 3 skills of that milestone's tier. T2 and T3 skills only ever appear as these level-up offers, never at hero pick.",
-        "A hero equips at most 3 skills. Once all 3 slots are full, a new offer lets you swap one out (you pick which) or take a stat bump instead (you pick the stat).",
-        "Items still matter in a run exactly as today.",
-        "Difficulty after wins: each win raises your Watch difficulty one step (for example +8% enemy HP and one more elite per act). You can lower it at the start of a run, but a win only unlocks a new card if it's at your highest difficulty, or if you beat your best score at the difficulty you chose.",
-        "What this replaces: perks (levels 5/15) become skill milestones, and the Banner/Vow ladder is replaced by this difficulty step. Evolutions at 10 and 20 stay unless you say otherwise.",
-        "This also answers Q6, Q7 and Q9: the pick serves every player the same way (three rolled heroes), no recommendation is needed, and STR/DEX/INT move into the stat breakdown (SK4)."
-      ],
-      "questions": [
-        "Keep evolutions at levels 10 and 20 alongside skills, or fold them into the skill milestones?",
-        "When all 3 skill slots are full: swap or stat bump (as proposed), or stat bump only?",
-        "Starting library size: I'd propose about 12 T1, 12 T2 and 9 T3 skills, built from today's 18 perks, 15 mutations and the evolution effects. Enough to start?",
-        "Should the 3 starting T1 skills be the same for everyone, or one per class?",
-        "Replace the Banner/Vow ladder with the difficulty step, or keep both?"
-      ],
-      "files": [
-        "src/game/data/skills.ts (new)",
-        "src/game/run/skills.ts (new)",
-        "src/state/metaStore.ts (pool, Watch level, difficulty)",
-        "hero pick (HeroPickVariants → one screen)",
-        "LevelUpPanel / PerkPanel → skills",
-        "balance/"
-      ],
-      "myRead": "Against 'easy to pick up', this is heavy as written: three tiers, a card pool, unlock levels and a difficulty ladder. The lighter version I'd build: each hero shows one skill at pick, gets one new pick at levels 5 and 10 (3 options each), holds at most 3, and unlocks happen quietly in the background with no ladder to manage. Tell me which you prefer in your note."
-    },
-    {
-      "id": "SK2",
-      "stream": "round4",
-      "effort": "S",
-      "source": "claude",
-      "replaces": "Q11",
-      "title": "Levels and badges, explained, and what changes with skills",
-      "yourNote": "level on getting xp for towers. each tower levels on its own. dont remember what badges are exactly or how it should integrate. tower lvl or run lvl",
-      "refs": [],
-      "proposal": [
-        "It's per tower already: each hero earns its own XP from the waves it fights (half split evenly, half by kills) and levels on its own, up to 20. The run has depth (1–12), not a level.",
-        "The 'Lv 3 ↑' badge from round 2 marks a hero with a level-up waiting for your choice. Tap it and the choice opens in the panel under the field.",
-        "With SK1, the badge only appears when there's a real choice: a skill milestone (pick 1 of 3, or swap or stat bump) or an evolution. Plain level-ups just show '+1 level' briefly with the stats gained, with no badge to clear."
-      ],
-      "questions": [
-        "OK to drop badges on plain level-ups (no choice) as described?"
-      ],
-      "files": [
-        "src/ui/shell/levelUps.ts",
-        "src/ui/shell/LevelUpPanel.tsx"
-      ]
-    },
-    {
-      "id": "SK4",
-      "stream": "round4",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "Q14",
-      "title": "Exact numbers: a stat breakdown, and before/after on every item and skill",
-      "yourNote": "is it possible to show accurate adjustments to the heros and their items and skills",
-      "refs": [],
-      "proposal": [
-        "Yes. The engine already combines every source (class, levels, gear, skills or perks, relics, mutations, shrines) in one place, so the UI can show exact numbers rather than estimates.",
-        "Tap the hero's stats in the panel for a breakdown. Each stat reads base → +gear → +skills → +relics → final (for example 'Damage 26 → 34 → 41 → 45'), including STR/DEX/INT and what they feed.",
-        "Every item, skill offer, relic and shrine choice shows its exact before/after on that hero: '+7 DPS (60 → 67)', 'Range 168 → 185'. If it affects the whole company, it says so per hero.",
-        "Tests hold the numbers shown to what the engine computes, so the display can never drift from what happens in battle."
-      ],
-      "questions": [
-        "Default to DPS as the headline number, or damage per hit?"
-      ],
-      "files": [
-        "src/game/engine/combat.ts (breakdown helper)",
-        "DetailBand hero panel, item panel, LevelUpPanel",
-        "tests/"
-      ]
-    },
-    {
-      "id": "FX1",
-      "stream": "round4",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "Q13",
-      "title": "Spreading fire you can see coming, and have to move for",
-      "yourNote": "hmm how would this be countered. what if it spreads to a spot im using, do i just have to move my tower. i wouldnt want to lose it. That could be interesting it forces you to move your towers as you play. the spread is random too",
-      "refs": [],
-      "proposal": [
-        "On Wildfire battles, fire spreads 1–2 tiles after each sub-wave, picked at random from the seed. You never lose a hero to it.",
-        "Counterplay by warning: the tiles fire will spread to next are shown with smoke one sub-wave ahead, so you can move before it lands.",
-        "If fire reaches a hero, that hero is Scorched (a burn that reduces damage) until it moves, and the next held sub-wave gives a free extra move for scorched heroes, so moving never costs your one normal move.",
-        "Fire stops at water, the road and rocks; lakes (Flooded meadow) are firebreaks. Frost heroes' hits put out a burning tile next to them, giving the Mystic's Frost line a job.",
-        "It fits Q1's danger tiles: burning ground behaves like a danger tile that moves."
-      ],
-      "questions": [
-        "Should fire also hurt enemies walking through a burning tile on the road edge?",
-        "Is 1–2 tiles per sub-wave the right pace, or once per wave?"
-      ],
-      "files": [
-        "src/game/run/terrain.ts",
-        "src/game/engine (scorch status)",
-        "overlays (smoke telegraph)"
-      ],
-      "myRead": "Spreading fire adds a rule to learn mid-battle. I'd hold it until the first-run layering (LS3) is in, then introduce it on later depths only."
-    },
-    {
-      "id": "HC1",
-      "stream": "round4",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "your idea",
-      "title": "Hall of Champions: every run's company kept, your top 3 on the menu",
-      "yourNote": "you could have a history of you champions somewhere from all your runs and grouped by run. then you can show off your top 3 on the loading screen. click to see stats of the run",
-      "refs": [],
-      "proposal": [
-        "Every finished run is saved to your history: date, seed, difficulty, result, depth, score, and its company. For each hero: name, class, level, skills, gear, kills, damage and time on the field.",
-        "A 'Hall of Champions' row on the Watchtower menu opens the history grouped by run (newest first), with filters for wins, Daily runs and class.",
-        "Your top 3 champions stand on the title/menu screen as small pixel portraits with name and title (for example 'Doyle, Warden of Ash · 12 depth · 1,840 dmg'). Tap one to see that run's stats card, with a 'Play this seed' button.",
-        "The menu cinematic (Q12) could cast your top champions as the heroes in today's scene.",
-        "History is stored locally with the other progress, capped at a sensible number of runs (the top 3 are always kept) and validated on load like the rest of the save."
-      ],
-      "questions": [
-        "'Top' by what: the run's score, or the single hero's damage or kills?",
-        "By 'loading screen', do you mean the main menu, or a separate splash while the game loads?",
-        "Cast your champions in the menu cinematic?"
-      ],
-      "files": [
-        "src/state/metaStore.ts (history)",
-        "src/ui/shell/PageScreens.tsx (menu row, Hall page)",
-        "MenuKeyArt (top 3)",
-        "src/state/runSnapshot.ts (validation)"
-      ],
-      "myRead": "Pure reward with nothing to learn, so it fits 'easy to pick up' well."
-    },
-    {
-      "id": "Q1",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "G1-2",
-      "blocking": true,
-      "title": "Free placement made the game too easy. Which lever brings it back?",
-      "refs": [],
-      "proposal": [
-        "Balance now fails 13 checks: the win rate went from 59% to 80% (the target band is 45–60%). The best tile sees 720px of road against 567px for the best old circle, and a full company can stand on that ground together.",
-        "Options: (a) more fixed rocks and water on the high-value ground, (b) a map challenge on every eligible battle, (c) retune the Threat curve, (d) limit how close to the road a hero may stand.",
-        "My recommendation: (a) first, since it keeps placement interesting, then a small (c) if needed. Nothing is tuned yet, and the CI balance job fails until you choose."
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: danger tiles (one of the best spots debuffs whoever stands there, plus extra seeded obstacles), tuned until the balance check passes again."
-    },
-    {
-      "id": "Q2",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H3-2",
-      "blocking": true,
-      "title": "Which hero-pick direction should become the real screen?",
-      "refs": [],
-      "proposal": [
-        "A · Play-style cards: all three heroes as cards with a looping attack, one sentence on how they fight, and three big numbers.",
-        "B · Compare: a side-by-side table with bars. The most complete, but the longest on a phone.",
-        "C · Recommended: opens on one suggested hero with its reason; the other two are a tap away. The best fit on a phone.",
-        "The builder's lean, and mine: A as the base, with C's recommendation on a first run only. Try them in the game with ?heropick=cards, ?heropick=compare and ?heropick=recommend."
-      ],
-      "files": [],
-      "reworked": "SK1"
-    },
-    {
-      "id": "Q3",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "G1-2",
-      "blocking": true,
-      "title": "Tiles on small phones are under the 44px touch floor. Bigger tiles, or zoom to place?",
-      "refs": [],
-      "proposal": [
-        "At 375×667 and 320×568 a tile is about 35px. Bigger tiles mean fewer of them on the field; zoom-to-place keeps the grid and enlarges it while you choose.",
-        "Default: none built yet. My recommendation is zoom-to-place on screens under 390px wide."
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: zoom to place on phones where tiles are under 44px."
-    },
-    {
-      "id": "Q4",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "R3-2",
-      "blocking": true,
-      "title": "Ambidextrous: full off-hand damage or reduced, what rarity, and what name?",
-      "refs": [],
-      "proposal": [
-        "As built: the off-hand weapon counts in full, the relic is rare and in the pool from the start, and it's called 'Ambidextrous'. The balance model shows it as about neutral.",
-        "Alternatives: count the off hand at 50%, lock the relic behind a feat, or give it an object name like the other relics ('Ambidexter's Gauntlet')."
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: an object-named relic, 100% damage, rare, gated by a stat check on the hero."
-    },
-    {
-      "id": "Q5",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "R3-2",
-      "blocking": false,
-      "title": "Is it OK that one-handed weapons no longer go in the off hand without the relic?",
-      "refs": [],
-      "proposal": [
-        "Dual-wielding used to be free, so 'becomes a bonus' meant taking it away by default. Before G1, this moved the fresh-player win rate from 14% to 13% (the band starts at 15%). G1 then made the game much easier overall.",
-        "Saves already wearing an off-hand weapon keep it. Should loading such a save move the weapon to the pack instead?"
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: the off hand only takes off-hand items (knife, shield, wand, tome), never big ones."
-    },
-    {
-      "id": "Q6",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H3-2",
-      "blocking": false,
-      "title": "Who is the hero pick for first: a brand-new player, or a returning player choosing a strategy?",
-      "refs": [],
-      "proposal": [
-        "Default: a brand-new player on their first run. If returning players matter more, the Compare direction moves up."
-      ],
-      "files": [],
-      "reworked": "SK1"
-    },
-    {
-      "id": "Q7",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H3-2",
-      "blocking": false,
-      "title": "What should a first-run recommendation rest on?",
-      "refs": [],
-      "proposal": [
-        "As built: easiest to place. The Rogue reaches farthest, so where you post it matters least.",
-        "Alternatives: the Fighter, whose blocking is the clearest cause and effect on the field, or no recommendation at all."
-      ],
-      "files": [],
-      "reworked": "SK1"
-    },
-    {
-      "id": "Q8",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H3-2",
-      "blocking": false,
-      "title": "Fix the Daily Watch problems on hero pick now?",
-      "refs": [],
-      "proposal": [
-        "The Vow buttons show but do nothing. Typing a seed quietly turns the Daily into a custom-seed run. The screen also doesn't say that picking a hero uses up today's scored attempt.",
-        "Default: fix all three in whichever direction you pick in Q2."
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: the Daily Watch fixes, and the seed as a small chip that takes no scroll space."
-    },
-    {
-      "id": "Q9",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H3-2",
-      "blocking": false,
-      "title": "Hero pick details: STR/DEX/INT, the preselected hero, feats and the attack preview",
-      "refs": [],
-      "proposal": [
-        "All three variants drop the STR/DEX/INT line. Today the Fighter is preselected, so one tap starts a run. Should the 'win with this hero first' feats show here? The attack preview runs at the real attack rate, so the Mystic looks slow."
-      ],
-      "files": [],
-      "reworked": "SK1"
-    },
-    {
-      "id": "Q10",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "G2-2",
-      "blocking": false,
-      "title": "Enemy queue: how to count overflow, and should portraits be tappable?",
-      "refs": [],
-      "proposal": [
-        "As built: the first three kinds, then '+N', where N counts kinds, not enemies. Portraits are glance-only. Elites and specialists share their base goblin's picture. A held sub-wave shows only the next sub-wave, not all remaining.",
-        "On desk the rail has room for more portraits, or names beside them."
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: '+N' counts enemies, and tapping a portrait opens a small card with what you know from fighting them."
-    },
-    {
-      "id": "Q11",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "G3-2",
-      "blocking": false,
-      "title": "Level-up badges: every level, and should they survive a reload?",
-      "refs": [],
-      "proposal": [
-        "As built: plain level-ups get a badge too, and tapping it shows what grew. Badges aren't saved, so after a reload a pending evolution or perk falls back to the old modal. Take it is never blocked by a pending level-up.",
-        "The field dims to about 50% behind the reward. Lighter or darker?"
-      ],
-      "files": [],
-      "reworked": "SK2"
-    },
-    {
-      "id": "Q12",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "H1-2",
-      "blocking": false,
-      "title": "Menu battle: one fixed title shot forever, and should battle effects show?",
-      "refs": [],
-      "proposal": [
-        "As built: always the same boss scene. Range rings, damage numbers and smoke show as they do in battle; hiding them needs renderer changes. Before the battle loads, the menu is dark and the battle fades up, with no still-image fallback.",
-        "Should the scene ever change, for example by run progress or season?"
-      ],
-      "files": [],
-      "built": true,
-      "builtNote": "Building now: the menu cinematic is generated from a seed (today's Daily), still cut into the directed beats."
-    },
-    {
-      "id": "Q13",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "G1-2",
-      "blocking": false,
-      "title": "Map challenges: how often, should fire spread, and water colour",
-      "refs": [],
-      "proposal": [
-        "As built: about two battles in three have a challenge, never at depth 1 and never on a boss. Terrain is fixed per battle. Water is teal, which is also the tier-2 enemy colour.",
-        "On touch, the range preview shows while your finger is held down. Should a first tap preview and a second tap confirm instead?"
-      ],
-      "files": [],
-      "reworked": "FX1"
-    },
-    {
-      "id": "Q14",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "R3-2",
-      "blocking": false,
-      "title": "Paper doll: a drawn body, and a head slot later?",
-      "refs": [],
-      "proposal": [
-        "The doll is a simple drawn body in the hero's colour, not the hero sprite. The sprites have their weapons painted in, so the sprite would show gear the hero isn't wearing. On narrow or Large UI phones the slots fall back to a stack.",
-        "A head slot would mean new items, drops and a balance pass. Want it on the roadmap?"
-      ],
-      "files": [],
-      "reworked": "SK4"
-    },
-    {
-      "id": "Q15",
-      "stream": "round3",
-      "kind": "question",
-      "effort": "—",
-      "source": "claude",
-      "from": "Whales re-check",
-      "blocking": false,
-      "title": "Whales still says the battle's next action reads quieter than the status bar. Push it further?",
-      "proposal": [
-        "On the re-check of the combined build, Whales' strongest repeat finding on the battle screens is that 'HELD · MOVE ONE HERO' and Next ▶ are outweighed by the header (FIELDWATCH, Depth, Gate, gold). The strip caption is 11px capitals.",
-        "Options: a larger caption in the held state (e.g. 15px), a quieter header during battle, or leave it.",
-        "Smaller things it flagged that I think are noise: 'the page heading is cut off' on desk (there is none), and cards 'covered' that are fully visible in the screenshots. The run map's encounter brief does scroll inside its panel, now a little sooner because the paper doll widened the gear column."
-      ],
-      "refs": [],
-      "files": [],
-      "built": true,
-      "builtNote": "Parked, as you said: we'll look again once everything else lands."
-    },
-    {
-      "id": "G1-2",
-      "stream": "round2",
-      "effort": "L",
-      "source": "claude",
-      "replaces": "G1",
-      "title": "Free-form deployment on a tile grid, with terrain that blocks",
-      "yourNote": "the whole deploy should be free form across a grid. any tile that isnt blocked by the environment or some reason for the map challenge, which should have some ui to show it like a rock or a fire, lake,  etc.",
-      "refs": [
-        [
-          "setup",
-          1
-        ],
-        [
-          "wave-m",
-          1
-        ]
-      ],
-      "proposal": [
-        "Replace the six fixed build circles with a tile grid laid over the field. Any grass tile off the lane can take a hero; the lane, the forest frame and terrain pieces cannot.",
-        "Blocked tiles are drawn as terrain you can read at a glance: rocks, trees, water, a campfire or a burning patch. With a hero armed, open tiles light up faintly and blocked ones stay dark, so the grid is only visible when you need it.",
-        "Tapping a blocked tile says why in the coach strip ('Rock — nothing can stand here'), instead of doing nothing.",
-        "Map challenges become terrain rules: 'Flooded meadow' adds lakes, 'Wildfire' adds fire tiles that spread between waves, 'Ruins' scatters rubble. Each battle's preview names the challenge.",
-        "Keep the rules that make placement a decision: at most five heroes, and one move while a sub-wave is held.",
-        "Phase 1: grid, free placement and blocking with today's terrain (lane and trees). Phase 2: terrain pieces and two map challenges. Phase 3: a balance pass, since free placement changes how strong every hero is."
-      ],
-      "questions": [
-        "Grid size on a phone: a 7×12 portrait grid (about 48px tiles) keeps every tile a comfortable thumb target. Is that the feel you want, or finer?",
-        "Should range still show under your finger while you drag, before you drop the hero?",
-        "Fire that spreads between waves changes the map mid-run. Is that in scope for this game, or do you want terrain fixed per battle?"
-      ],
-      "files": [
-        "src/game/engine/engine.ts (slot → tile placements)",
-        "src/game/data/battlefields (blocked-tile masks)",
-        "src/game/render/overlays.ts (grid + blocked states)",
-        "src/game/render/terrain.ts (terrain pieces)",
-        "src/ui/shell/Coach.tsx",
-        "balance/ (placement assumptions)"
-      ],
-      "myRead": "This is a gameplay change, not a UI fix. Placements, the engine, maps and the balance report all assume fixed slots today, so it needs its own branch and a balance pass.",
-      "built": true,
-      "recheck": "Built phases 1–2: a 7×12 tile grid on phone (12×7 on desk), rocks, lakes and fire that block tiles, the reason on a blocked tap, Flooded meadow and Wildfire challenges named in the preview. Old saves move heroes to the nearest open tile. Phase 3 is open: free placement made the game much easier (win rate 59% → 80%), and the balance check fails until you pick a lever (Q1)."
-    },
-    {
-      "id": "G2-2",
-      "stream": "round2",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "G2",
-      "title": "One wave strip that changes with the moment, and shows who's still coming",
-      "yourNote": "maybe showing whick enenmies left to spawn or so on, find a way without making more ui/ taking up more space. consider dynamic ui than cna change to the current states need without removing actions or context that coudl still be needed",
-      "refs": [
-        [
-          "wave-m",
-          3
-        ],
-        [
-          "wave-d",
-          1
-        ]
-      ],
-      "proposal": [
-        "Use the bottom wave strip you already have ('DEPTH 1 ▬▬ 4 left') and add no new UI. Its progress bar becomes the enemy queue: small enemy portraits in spawn order, next one first, with counts ('Torch ×3 · TNT ×1'). Spawned enemies drop off the front.",
-        "The strip changes with the moment, and the depth label and the button stay put. Setup: the whole wave's line-up plus Start Wave. Live: the remaining queue plus speed. Held sub-wave: the next sub-wave's line-up, 'Held · move one hero' where the depth label was, and Next ▶. Cleared: gold earned plus Continue.",
-        "This retires the separate banner over the top of the field, which gives the field its full height back.",
-        "On desk, the same strip sits at the foot of the right rail, as it does today."
-      ],
-      "questions": [
-        "When there are more enemy types than fit, show the first three and '+N'? Or scroll the strip?",
-        "Should tapping an enemy portrait show its stats in the detail band (the shell's one-interaction rule), or keep it glance-only?"
-      ],
-      "files": [
-        "src/ui/shell/DetailBand.tsx (wave strip)",
-        "src/ui/shell/StageBand.tsx (remove banner)",
-        "src/ui/shell/encounterPreview.ts",
-        "src/styles/shell-live.css"
-      ],
-      "built": true,
-      "recheck": "Built: the bottom strip is an enemy queue in spawn order, changing across setup, live, held and cleared. The banner over the field is gone, with the same screen-reader announcements."
-    },
-    {
-      "id": "G3-2",
-      "stream": "round2",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "G3",
-      "title": "Wave cleared and spoils become one screen, and level-ups happen on the roster",
-      "yourNote": "this should also auto show what reward to pick and give details as you pick below, any level ups on characters should highlight the character on your ui and then be handled in there",
-      "refs": [
-        [
-          "cleared",
-          1
-        ],
-        [
-          "cleared",
-          2
-        ],
-        [
-          "spoils",
-          2
-        ]
-      ],
-      "proposal": [
-        "Drop the hop from 'Wave cleared' through Continue to a separate Spoils page. When a wave clears, the field dims and a short result line shows (gold, XP, felled). The row under the field then fills with the three reward cards straight away.",
-        "Tap a card and its details fill the panel below it (the Root Shell's one-interaction rule), with Take it as the one primary button. The first card is preselected, so the details are already showing.",
-        "Heroes who levelled up glow on the roster with a 'Lv 3 ↑' badge. Tapping one opens that hero's level-up choice in the same panel, not a modal. Take it stays available, and the badge waits until you've dealt with it.",
-        "The standalone Spoils page stays for elite and boss rewards, which deserve their own moment. Say if you want those merged too."
-      ],
-      "questions": [
-        "Should Take it be blocked until pending level-ups are chosen, or can level-ups wait until the next stop?"
-      ],
-      "files": [
-        "src/ui/shell/WaveCeremony.tsx",
-        "src/ui/shell/SelectorBand.tsx",
-        "src/ui/shell/DetailBand.tsx",
-        "src/ui/shell/offers.ts (rewardOffers)",
-        "src/state/game/battleSlice.ts (continueAfterWave → reward)"
-      ],
-      "built": true,
-      "recheck": "Built: after a normal wave the three reward cards appear under the dimmed field with the first preselected, and Take it is the one button. Level-ups show a 'Lv N ↑' badge on the roster and are chosen in the panel. Elite and boss spoils keep their own page."
-    },
-    {
-      "id": "H1-2",
-      "stream": "round2",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "H1",
-      "title": "Main menu: a cinematic battle behind the whole screen, with the menu on top",
-      "yourNote": "i love the improvement, and i like the movement of seing game going on, but maybe a bit rnadom. can you make it more cinematic and part of the BG of the screen, then the home UI can overlay",
-      "refs": [
-        [
-          "menu-m",
-          1
-        ],
-        [
-          "menu-d",
-          2
-        ]
-      ],
-      "proposal": [
-        "The attract-mode battle fills the whole menu screen behind everything on phone and desk, instead of sitting in a framed box.",
-        "Make it directed rather than random: a fixed seed and a scripted ~20 second loop. The camera eases along the lane, a wave arrives, the knights hold, one big hit lands, then it resets on a fade. The same composition every time, so it reads as a title sequence.",
-        "A dark vignette and a bottom-up gradient keep the title and menu rows readable. The rows become translucent panels over the art and still clear 4.5:1 contrast.",
-        "The title gets the stronger treatment from H1 (larger, with a soft shadow), since it now sits on moving art.",
-        "Reduced motion: the still key-art frame, exactly as today."
-      ],
-      "questions": [
-        "On desk, should the battle take the whole width with the menu column floating on the right, or stay centred behind a centred menu?"
-      ],
-      "files": [
-        "src/ui/shell/MenuKeyArt.tsx",
-        "src/ui/shell/AttractMode.tsx",
-        "src/ui/attract/ (scripted sim + camera)",
-        "src/ui/shell/PageScreens.tsx (MenuScreen)",
-        "src/styles/page.css",
-        "src/styles/shell-wide.css"
-      ],
-      "built": true,
-      "recheck": "Built: one scripted ~19s boss scene fills the menu behind the rows, with the camera on whole pixels, a vignette and gradient, and a stronger title. Rows measured ≥9.4:1 over the brightest frame. Reduced motion shows today's still."
-    },
-    {
-      "id": "H3-2",
-      "stream": "round2",
-      "effort": "M",
-      "source": "claude",
-      "replaces": "H3",
-      "title": "Hero pick: a jobs-to-be-done pass before any redesign",
-      "yourNote": "yeah this whole screen needs a jobs to be done exercise",
-      "refs": [
-        [
-          "hero",
-          1
-        ],
-        [
-          "hero",
-          2
-        ]
-      ],
-      "proposal": [
-        "I write the JTBD exercise as a doc for you to mark up: the job ('When I start a run, I want to pick a hero whose way of fighting I understand, so I can plan my first battles and feel it was my choice'), who is hiring the screen (first run, returning player, daily-seed player), the forces (push, pull, anxiety, habit), and what success looks like.",
-        "From that, two or three layout directions as mockups, for example 'play-style cards' (one line on how the hero fights, a looping attack preview and three big stats), 'compare' (side-by-side stat bars), and 'recommended' (a suggested pick for a first run, with the reason).",
-        "You pick a direction on this page, and only then does it get built."
-      ],
-      "questions": [
-        "Who matters most on this screen: a brand-new player on their first run, or a returning player choosing a strategy?"
-      ],
-      "files": [
-        "docs/JTBD-hero-pick.md (new)",
-        "mockups (review page)"
-      ],
-      "built": true,
-      "recheck": "Done: docs/JTBD-hero-pick.md, plus three working layouts to try in the game: ?heropick=cards, ?heropick=compare and ?heropick=recommend. Today's screen is unchanged until you pick one (Q2)."
-    },
-    {
-      "id": "R3-2",
-      "stream": "round2",
-      "effort": "L",
-      "source": "claude",
-      "replaces": "R3",
-      "title": "Gear as a paper doll: slots placed on the hero's body",
-      "yourNote": "I think the way equipment is shown could be way simpler. a little human body type model with the itom slots over it you know left hadn on lefgt head up top chest in middle etc. we should make gear slot based if not already\n\nmaybe some bonuess give you the option to do multi of a ceftain weapon in both slots\n\ni think there is a larger edit than just the labels here",
-      "refs": [
-        [
-          "wave-d",
-          3
-        ],
-        [
-          "map",
-          2
-        ],
-        [
-          "map",
-          4
-        ]
-      ],
-      "proposal": [
-        "Gear is already slot-based: main hand, off hand and body. The change is how it's shown. The GEAR column becomes a small silhouette of the selected hero (the game already composites heroes wearing their gear in loadout.ts), with each slot sitting where it goes: main hand on the right, off hand on the left, body on the chest.",
-        "Tapping a slot works as it does today: the pack filters to what fits, and tapping an item equips it.",
-        "Dual-wielding becomes a bonus: a perk or relic ('Ambidextrous') lets the off hand take a main-hand weapon, and the off-hand slot outline changes to show it.",
-        "This also fixes the desktop sidebar labels from round 1: the doll replaces the three stacked text slots that Whales flagged."
-      ],
-      "questions": [
-        "Do you want a head slot? It would mean new items, new drops and a balance pass, not just UI. I'd leave it out of phase 1.",
-        "Dual-wield: a perk you pick, a relic you find, or a trait of one archetype (the Rogue)?"
-      ],
-      "files": [
-        "src/ui/shell/DetailBand.tsx (gear column)",
-        "src/game/render/loadout.ts (doll render)",
-        "src/game/data/items.ts (HERO_SLOTS)",
-        "src/game/data/relics or perks (Ambidextrous)",
-        "src/styles/shell.css, shell-wide.css"
-      ],
-      "built": true,
-      "recheck": "Built: the GEAR column is a small body (off hand left, body on the chest, main hand right) with ≥44px slots. Dual-wielding is the rare Ambidextrous relic, and without it one-handers no longer go in the off hand."
-    },
-    {
-      "id": "A1-2",
-      "stream": "round2",
-      "effort": "S",
-      "source": "claude",
-      "replaces": "A1",
-      "title": "A brighter primary button with dark text",
-      "refs": [
-        [
-          "spoils",
-          2
-        ],
-        [
-          "cleared",
-          1
-        ],
-        [
-          "map",
-          1
-        ]
-      ],
-      "proposal": [
-        "Whales flagged Take it, Buy and Continue as quiet on every pass, even after A1. The cause is measurable: today's button teal (#336e7e) is only 3.1:1 against the page, so it sinks into the dark brown.",
-        "Switch every primary button to the game's lighter teal (#57a2b6, already --teal) with dark text (#1b1409, the --ink-on-fill the shell uses on solid fills). The label goes from 4.7:1 to 6.3:1, and the button from 3.1:1 to 6.1:1 against the page.",
-        "It's one token change (--cta and --cta-ink), so every primary button moves together. High-contrast mode gets a matching pair."
-      ],
-      "questions": [
-        "This changes the look from cream-on-deep-teal to dark-on-bright-teal. Is that trade OK for the game's feel?"
-      ],
-      "files": [
-        "src/styles/global.css (--cta, --cta-ink)",
-        "src/styles/app.css (high contrast)",
-        "tests/contrast.test.ts"
-      ],
-      "built": true,
-      "recheck": "Built: primary buttons are the lighter teal (#57a2b6) with dark text. Label 6.3:1, button 6.1:1 against the page, held by the contrast test."
-    },
-    {
-      "id": "R1",
-      "stream": "read",
-      "effort": "M",
-      "source": "whales",
-      "title": "Replace opacity dimming with AA-safe dim colours",
-      "refs": [
-        [
-          "map",
-          2
-        ],
-        [
-          "setup",
-          2
-        ],
-        [
-          "wave-m",
-          4
-        ],
-        [
-          "cleared",
-          3
-        ],
-        [
-          "menu-d",
-          1
-        ]
-      ],
-      "proposal": [
-        "Add dim text tokens to global.css (for example --text-dim and --muted-dim) and check each against --panel, --panel-2 and --panel-3 so small text clears 4.5:1 and large text 3:1.",
-        "Stop fading whole elements to show state: .sh-hero.empty (opacity 0.5, the 'recruit a hero' slot), .sh-btn:disabled (0.45), .map-node.cleared and .locked glyphs (0.72). Show the state with a dashed border or a dim token instead.",
-        "Lift the labels Whales measured: GEAR, 64 DPS, HAND, DEPLOYED, SPEED, PLACE IT, recruit a hero, and the desktop menu's date and row labels.",
-        "Add a small test (tests/contrast.test.ts) that computes contrast for every text-token and panel-token pair, so these can't regress."
-      ],
-      "files": [
-        "src/styles/global.css",
-        "src/styles/shell.css",
-        "src/styles/shell-live.css",
-        "src/styles/page.css",
-        "tests/contrast.test.ts (new)"
-      ],
-      "built": true,
-      "recheck": "Re-checked: every contrast failure Whales measured on the phone's run map, battle setup, wave and wave-cleared screens is gone. Desk right rail: 24 failing labels down to 15; the rest are 11px labels at 1x on desk and move with R3-2."
-    },
-    {
-      "id": "R2",
-      "stream": "read",
-      "effort": "S",
-      "source": "whales",
-      "title": "Make prices you can't afford readable",
-      "refs": [
-        [
-          "merchant",
-          2
-        ]
-      ],
-      "proposal": [
-        ".pg-row.dim fades the price and icon to 55% opacity. Keep the row marked as unaffordable, but render the price in a readable dim colour (at least 3:1) with a short 'need 18 more' hint, instead of fading it."
-      ],
-      "files": [
-        "src/styles/page.css (.pg-row.dim)",
-        "src/ui/shell/offers.ts"
-      ],
-      "built": true,
-      "recheck": "Re-checked: the 1.0:1 price is no longer flagged, and 'need 20' shows beside a price you can't pay yet."
-    },
-    {
-      "id": "R3",
-      "stream": "read",
-      "effort": "S",
-      "source": "whales",
-      "title": "Fix the desktop sidebar's faint labels and counters",
-      "refs": [
-        [
-          "wave-d",
-          3
-        ]
-      ],
-      "proposal": [
-        "Apply the R1 tokens to the desk layout's right rail (the Depth, gear and pack column heads, and their counters).",
-        "Raise any 10px label to the 11px floor (--fs-micro)."
-      ],
-      "files": [
-        "src/styles/shell-wide.css"
-      ],
-      "myRead": "Whales read the header's 'GATE 20/20' as 'CS 20/70' and measured it at 1.1:1. The readable text is fine; the 1.1:1 is probably the header's dark ornament behind it. The rest of this row (HAND at 2.8:1, 10px labels) looks right.",
-      "reworked": "R3-2"
-    },
-    {
-      "id": "I1",
-      "stream": "icons",
-      "effort": "M",
-      "source": "whales",
-      "title": "Set an icon size scale and scale up stand-alone icons",
-      "refs": [
-        [
-          "menu-m",
-          2
-        ],
-        [
-          "menu-d",
-          4
-        ],
-        [
-          "hero",
-          4
-        ],
-        [
-          "map",
-          3
-        ],
-        [
-          "setup",
-          3
-        ],
-        [
-          "wave-m",
-          5
-        ],
-        [
-          "wave-d",
-          4
-        ],
-        [
-          "cleared",
-          4
-        ],
-        [
-          "spoils",
-          4
-        ],
-        [
-          "merchant",
-          4
-        ],
-        [
-          "lost",
-          1
-        ]
-      ],
-      "proposal": [
-        "Add --icon-sm 20px, --icon-md 28px and --icon-lg 36px to global.css, and use them everywhere instead of per-component sizes.",
-        "Move stand-alone icons (menu rows, map node glyphs, the run-lost stat tiles, the Assist and Watchtower rows, empty gear slots) to --icon-lg (36 CSS px = 72 image px).",
-        "Leave inline glyphs that sit beside a text label (gold coin, rarity pips, the Gate tower, the coach arrow) at --icon-sm. Their label already carries the meaning.",
-        "Give the two unlabelled header icons Whales flagged a visible label or an aria-label, or remove them."
-      ],
-      "files": [
-        "src/styles/global.css",
-        "src/styles/shell.css",
-        "src/styles/page.css",
-        "src/ui/shell/PageScreens.tsx",
-        "src/ui/shell/HeaderBand.tsx"
-      ],
-      "myRead": "Whales applies its 72 image px minimum to every icon, including glyphs that already have a text label next to them. I'd exempt those, which is the third bullet. Approve as written to keep that exemption, or use Edit to scale every icon.",
-      "built": true,
-      "recheck": "Re-checked: menu rows, map nodes, run-end tiles and exit rows are no longer flagged. Built at 48px, not 36px: the sprites only scale by whole multiples of 16. Still flagged: header marks and roster portraits, which weren't in this item's list."
-    },
-    {
-      "id": "A1",
-      "stream": "action",
-      "effort": "M",
-      "source": "whales",
-      "title": "One primary button style for the next step on every screen",
-      "refs": [
-        [
-          "map",
-          1
-        ],
-        [
-          "wave-m",
-          2
-        ],
-        [
-          "cleared",
-          1
-        ],
-        [
-          "spoils",
-          2
-        ]
-      ],
-      "proposal": [
-        "The held sub-wave 'Next ▶' (.sh-command.ready) is outlined in gold, while 'Start Wave' is filled teal. Use the filled primary style for both, since each is the one thing to do next.",
-        "March on the run map: make it the filled primary button, with Back as the quiet secondary, and fix its label contrast (Whales measured 2.5:1).",
-        "Brighten --cta (#336e7e) slightly and add a 1px lighter top edge, so Continue, Take it and Run again stand out from the warm art without changing their colour."
-      ],
-      "files": [
-        "src/styles/global.css (--cta)",
-        "src/styles/shell.css (.sh-btn.primary, .sh-command)",
-        "src/ui/shell/CommandSlot.tsx",
-        "src/ui/shell/DetailBand.tsx"
-      ],
-      "myRead": "Continue and Take it already use the filled teal button. I read Whales' 'styled well below primary' as the teal being too muted against the bright art, not as a missing style. The third bullet addresses that.",
-      "built": true,
-      "recheck": "Re-checked: Next ▶ and the roster are no longer flagged on the phone battle. Take it, Buy and Continue are still called quiet on every pass — see A1-2."
-    },
-    {
-      "id": "A2",
-      "stream": "action",
-      "effort": "S",
-      "source": "whales",
-      "title": "Merchant: make your gold the headline number",
-      "refs": [
-        [
-          "merchant",
-          1
-        ]
-      ],
-      "proposal": [
-        "Enlarge the gold pill under 'Merchant' (display font, --fs-xl).",
-        "Repeat the remaining gold on the Buy button ('Buy · 30 → 62 left'), so the budget is visible where you commit."
-      ],
-      "files": [
-        "src/ui/shell/Page.tsx",
-        "src/styles/page.css"
-      ],
-      "built": true,
-      "recheck": "Re-checked: gold is display-size and Buy shows what's left ('→ 0 left'). Whales still calls the balance underweighted."
-    },
-    {
-      "id": "H1",
-      "stream": "hier",
-      "effort": "S",
-      "source": "whales",
-      "title": "Stronger title on the main menu",
-      "refs": [
-        [
-          "menu-m",
-          1
-        ],
-        [
-          "menu-d",
-          2
-        ],
-        [
-          "menu-d",
-          3
-        ]
-      ],
-      "proposal": [
-        "Step the Fieldwatch wordmark up one level (--fs-display to about 40px on phone, 48px on desk) and add a light text shadow so it holds against the art.",
-        "Keep the tagline small, but give it more space below the title so the title and tagline read as a pair."
-      ],
-      "files": [
-        "src/ui/shell/PageScreens.tsx (MenuScreen)",
-        "src/styles/page.css (.pg-head)",
-        "src/styles/shell-wide.css"
-      ],
-      "reworked": "H1-2"
-    },
-    {
-      "id": "H2",
-      "stream": "hier",
-      "effort": "S",
-      "source": "whales",
-      "title": "Give panel heads a real headline (GEAR, Depth)",
-      "refs": [
-        [
-          "map",
-          4
-        ],
-        [
-          "wave-m",
-          4
-        ]
-      ],
-      "proposal": [
-        "Column heads such as GEAR and PACK are 11px uppercase, above 12–13px bodies. Keep them uppercase but raise the weight and use --text rather than --muted-2.",
-        "The 'Depth 1/12' badge and its progress text are the same size. Make 'Depth N' the heading and the '/12' secondary."
-      ],
-      "files": [
-        "src/styles/shell.css (.sh-col-head)",
-        "src/ui/shell/HeaderBand.tsx"
-      ],
-      "built": true,
-      "recheck": "Re-checked: GEAR and Depth now lead their blocks. PACK still measures 26px against 25px body text; I stopped at the three-round limit."
-    },
-    {
-      "id": "H3",
-      "stream": "hier",
-      "effort": "M",
-      "source": "whales",
-      "title": "Hero pick: make the selected hero's stats the main content",
-      "refs": [
-        [
-          "hero",
-          1
-        ],
-        [
-          "hero",
-          2
-        ]
-      ],
-      "proposal": [
-        "Keep the three hero tiles equal and a bit smaller. Move the scale into the detail panel: the hero name at --fs-xl, and DPS, range and HP as three large stat figures instead of one sentence.",
-        "Keep 'Choose Fighter' as the one filled button."
-      ],
-      "files": [
-        "src/ui/shell/PageScreens.tsx (hero pick)",
-        "src/styles/page.css"
-      ],
-      "reworked": "H3-2"
-    },
-    {
-      "id": "G1",
-      "stream": "guide",
-      "effort": "M",
-      "source": "whales",
-      "title": "First deploy: spotlight the hero card",
-      "refs": [
-        [
-          "setup",
-          1
-        ],
-        [
-          "wave-m",
-          1
-        ]
-      ],
-      "proposal": [
-        "While the coach tip says 'Tap your hero', give the benched hero card a pulsing teal ring and a 'Tap me' label. Stop the pulse after the first tap (respect prefers-reduced-motion).",
-        "Dim the Details button and the open recruit slot until the hero is posted."
-      ],
-      "files": [
-        "src/ui/shell/Coach.tsx",
-        "src/ui/shell/SelectorBand.tsx",
-        "src/styles/shell-live.css"
-      ],
-      "reworked": "G1-2"
-    },
-    {
-      "id": "G2",
-      "stream": "guide",
-      "effort": "S",
-      "source": "whales",
-      "title": "Stronger sub-wave instruction banner",
-      "refs": [
-        [
-          "wave-m",
-          3
-        ],
-        [
-          "wave-d",
-          1
-        ]
-      ],
-      "proposal": [
-        "The 'Sub-wave 1 of 2 held · tap a hero, then a post' strip is thin, light text on a translucent bar. Make it a solid banner with a readable size (--fs-md) and an icon.",
-        "On desk, show it over the field, not the sidebar."
-      ],
-      "files": [
-        "src/styles/shell-live.css",
-        "src/styles/shell-wide.css",
-        "src/ui/shell/StageBand.tsx"
-      ],
-      "reworked": "G2-2"
-    },
-    {
-      "id": "G3",
-      "stream": "guide",
-      "effort": "S",
-      "source": "whales",
-      "title": "Wave cleared: end the reading order on Continue",
-      "refs": [
-        [
-          "cleared",
-          2
-        ]
-      ],
-      "proposal": [
-        "Darken the battlefield scrim behind the 'Wave cleared' card, so the card and the Continue footer are the only lit things on screen."
-      ],
-      "files": [
-        "src/ui/shell/WaveCeremony.tsx",
-        "src/styles/shell-live.css"
-      ],
-      "myRead": "The 'large image after Continue' Whales flags is most likely the battlefield behind the overlay, not a separate picture. There's nothing to move, so I propose a darker scrim instead of Whales' 'move the picture above the button'.",
-      "reworked": "G3-2"
-    },
-    {
-      "id": "S1",
-      "stream": "space",
-      "effort": "S",
-      "source": "whales",
-      "title": "Close the empty gap on the Spoils, Merchant and Hero pick pages",
-      "refs": [
-        [
-          "spoils",
-          3
-        ],
-        [
-          "merchant",
-          3
-        ],
-        [
-          "hero",
-          3
-        ]
-      ],
-      "proposal": [
-        "Spoils and Merchant leave about 64px of empty space between the pack strip and the list. Remove it, so the cards and the detail panel sit higher and more merchant offers fit above the fold.",
-        "Keep the title and subtitle; there are no filter rows to cut."
-      ],
-      "files": [
-        "src/ui/shell/Page.tsx",
-        "src/styles/page.css"
-      ],
-      "myRead": "Whales says 'banners, filters and navigation' take 29–46% of these screens. There are no filters. The real waste is the empty gap under the pack strip, which is what this item removes.",
-      "built": true,
-      "recheck": "Re-checked: Spoils chrome went from 46% to 31% of the first screen. Also applied to run end, so the taller I1 rows don't push the recap under the fade."
-    },
-    {
-      "id": "S2",
-      "stream": "space",
-      "effort": "S",
-      "source": "claude",
-      "title": "Merchant: stop the last offer hiding under 'March on'",
-      "refs": [
-        [
-          "merchant",
-          0
-        ]
-      ],
-      "proposal": [
-        "In the capture, a 7th offer row peeks out behind the 'March on' row. Give the offer list its own scroll area with a fade, or move 'March on' into the footer next to Buy."
-      ],
-      "files": [
-        "src/ui/shell/Page.tsx",
-        "src/styles/page.css"
-      ],
-      "myRead": "This one is mine, not Whales'. I spotted it in the screenshot.",
-      "built": true,
-      "recheck": "Re-checked: the last merchant row fades under 'March on' instead of cutting off, and isn't flagged."
-    },
-    {
-      "id": "D1",
-      "stream": "space",
-      "effort": "S",
-      "source": "whales",
-      "title": "Dark art flags: no change",
-      "refs": [
-        [
-          "hero",
-          5
-        ],
-        [
-          "setup",
-          5
-        ],
-        [
-          "wave-d",
-          5
-        ],
-        [
-          "cleared",
-          5
-        ],
-        [
-          "spoils",
-          5
-        ],
-        [
-          "merchant",
-          5
-        ]
-      ],
-      "proposal": [
-        "Whales asks on six screens whether the hero and item art is too dark. The pixel art is Tiny Swords at full brightness, and the portraits sit on bright orange tiles. I recommend no change unless you see a problem on a device."
-      ],
-      "files": [],
-      "myRead": "I think these are false positives from the dark UI panels around the art. Reject this item if you do want the art brightened.",
-      "built": true,
-      "builtNote": "No change, as approved."
-    },
-    {
-      "id": "V1",
-      "stream": "verify",
-      "effort": "S",
-      "source": "claude",
-      "title": "Commit the flow-capture script and re-critique after the fixes",
-      "refs": [
-        [
-          "lost",
-          0
-        ],
-        [
-          "wave-m",
-          0
-        ],
-        [
-          "wave-d",
-          0
-        ]
-      ],
-      "proposal": [
-        "Add scripts/flow-shots.mjs, the Playwright script that played this run (menu → hero → map → battle → spoils → merchant → defeat) on phone and desk.",
-        "After the fixes, re-capture and re-run Whales on every screen. Re-run the two reports that were cut off (both battle screens) and the run-lost screen on a real defeat.",
-        "Add a line to docs/DESIGN_REVIEW.md's log."
-      ],
-      "files": [
-        "scripts/flow-shots.mjs (new)",
-        "docs/DESIGN_REVIEW.md"
-      ],
-      "built": true,
-      "recheck": "Done: scripts/flow-shots.mjs is committed, and all 11 screens were re-critiqued on the final build. The loss is still forced, so run-end numbers aren't real."
-    }
-  ],
-  "round": 5
+ "branch": "claude/whales-ui-critique-plan",
+ "base": "main @ f3760d1",
+ "streams": [
+  {
+   "id": "round6",
+   "name": "Round 6 · what the builders decided",
+   "blurb": "No hero HP and the round-3 answers are built. The builders made these calls on the way; keep the default, change it, or drop it."
+  },
+  {
+   "id": "round5",
+   "name": "Round 5 · make it easier to learn",
+   "blurb": "Your goal: 'The game should be easy to pick up.' A first run asks you to learn about 20 separate ideas. These proposals cut, merge and stage them. Hero HP is being removed now; LS3 and LS4 are low-risk and will be built right after it. LS1 and LS2 remove content, so they wait for your call."
+  },
+  {
+   "id": "round4",
+   "name": "Round 4 · the bigger design changes",
+   "blurb": "Your Q2 answer reshapes how heroes work, so it's written up here as a system before anything is built, with Q6, Q7, Q9, Q11 and Q14 folded in. Spreading fire (Q13) and your champions idea are here too. The seven clearer answers (Q1, Q3, Q4, Q5, Q8, Q10, Q12) are being built now."
+  },
+  {
+   "id": "round3",
+   "name": "Round 3 · open questions",
+   "blurb": "Everything in round 2 is built. These are the calls I made on your behalf, and the ones the builds turned up. Keep default leaves it as built; Change it means tell me in the note; Drop it removes the behaviour. The first four block progress."
+  },
+  {
+   "id": "round2",
+   "name": "Round 2 · your edits, reworked",
+   "blurb": "You edited these six in round 1. Each is now a bigger change than the original item, so each has a phased proposal and open questions for you. Nothing here is built yet."
+  },
+  {
+   "id": "read",
+   "name": "Readability",
+   "blurb": "Text that fails WCAG AA contrast, mostly caused by dimming with opacity."
+  },
+  {
+   "id": "icons",
+   "name": "Icon legibility",
+   "blurb": "Icons under Whales' 72 image px minimum (36 CSS px at 2×)."
+  },
+  {
+   "id": "action",
+   "name": "Primary actions",
+   "blurb": "The one next step on each screen should be the strongest thing on it."
+  },
+  {
+   "id": "hier",
+   "name": "Hierarchy & headlines",
+   "blurb": "Titles and panel heads that don't outrank their body text."
+  },
+  {
+   "id": "guide",
+   "name": "Battle guidance",
+   "blurb": "The first-deploy and sub-wave instructions lose to ambient status."
+  },
+  {
+   "id": "space",
+   "name": "Layout & space",
+   "blurb": "Empty space and chrome that push the decision below the fold."
+  },
+  {
+   "id": "verify",
+   "name": "Verify",
+   "blurb": "Re-capture and re-critique after the fixes land."
+  }
+ ],
+ "items": [
+  {
+   "id": "NH1",
+   "stream": "round5",
+   "effort": "L",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Heroes are never hit",
+   "yourNote": "No let’s remove and adjust. Maybe wait to finish tuning after this",
+   "refs": [],
+   "proposal": [
+    "Heroes have no HP and are never damaged or downed. The breather's 'mend and revive' goes away with it.",
+    "Blocking stays and gets simpler: a Fighter still holds up to 2 enemies on the road, and thorns still hurt the enemies being held.",
+    "Enemies that used to hit heroes hurt the Gate instead. Sappers and TNT goblins blow up at the Gate for extra damage if they reach it, bombers' charges land on the road ahead, and boss slams become Gate damage. Letting the dangerous ones through is what costs you.",
+    "Survival stats leave the game rather than being converted: hero HP, armour/defence on heroes, and HP-based relics, perks and mutation downsides are removed or given a damage-based trade-off instead.",
+    "Balance is tuned once, after this lands, together with Q1's danger tiles."
+   ],
+   "questions": [
+    "Any enemy you'd want to keep a hero-facing threat, for example a boss that dazes heroes briefly, or none at all?"
+   ],
+   "files": [
+    "src/game/engine/engine.ts",
+    "src/game/data/enemies.ts, items.ts, relics.ts, perks.ts, mutations.ts",
+    "hero UI (HP bars, stats)",
+    "balance/"
+   ],
+   "built": true,
+   "builtNote": "Built and tuned. Heroes have no HP; a Fighter still holds 2 and thorns still grind. Sappers walk past heroes and blow at the Gate; bombers plant within 450px of the Gate and lob a charge you can see coming; the Powderkeg King lobs TNT at the Gate on a clock. The HP bar, 'fell', 'heroes lost' and the Defence cells are gone. One tuning pass: the win rate went 83% → 57% (band 45–60%) and failing balance checks went 12 → 2, each within a point of its limit."
+  },
+  {
+   "id": "LS1",
+   "stream": "round5",
+   "effort": "M",
+   "source": "claude",
+   "title": "Cut what doesn't earn its place",
+   "refs": [],
+   "proposal": [
+    "Patience: a stat that stacks +4% every 3 seconds up to a cap. Invisible in play; cut it.",
+    "Dust, reforge and upgrade: a second currency and two crafting verbs. Cut them; scrapping an item gives gold.",
+    "Curses on items: an epic-and-up affix that adds a hidden downside. Cut it; trade-offs live on relics only.",
+    "STR/DEX/INT stay under the hood but come off the main screens. You see damage, speed, range and reach; the breakdown (SK4) shows the rest on request.",
+    "Watch Commands stay: one clear, active button per sub-wave."
+   ],
+   "questions": [
+    "Tick which of these to cut in your note (for example 'cut patience and curses, keep dust')."
+   ],
+   "files": [
+    "items, economy, combat, UI"
+   ]
+  },
+  {
+   "id": "LS2",
+   "stream": "round5",
+   "effort": "L",
+   "source": "claude",
+   "title": "Merge systems that do the same job",
+   "refs": [],
+   "proposal": [
+    "Perks, mutations and evolutions all answer 'how does this hero get better'. With SK1 they become one thing: skills.",
+    "Relics and shrine boons are both 'a run-long bonus for the company'. Make them one kind, blessings, with one list, one icon and one place you see them.",
+    "Map stops shrink to five kinds: battle, elite, merchant, rest (heal the Gate, or train one hero), and a blessing stop. Crossroads and shrines fold into the blessing stop.",
+    "Result: a player learns one way heroes grow, one kind of bonus and five kinds of stop."
+   ],
+   "questions": [
+    "Keep evolutions as their own moment at levels 10 and 20, or make them skill picks too?"
+   ],
+   "files": [
+    "skills (SK1)",
+    "relics + shrines",
+    "run map node kinds"
+   ]
+  },
+  {
+   "id": "LS3",
+   "stream": "round5",
+   "effort": "M",
+   "source": "claude",
+   "title": "Teach in layers: new ideas arrive when they matter",
+   "refs": [],
+   "proposal": [
+    "First battle: only 'post a hero, start the wave'. The Gate and gold are the only numbers on screen.",
+    "Items appear after your first win, merchants from the second stop, blessings at your first elite, skills at a hero's first skill level, danger tiles and challenges from depth 3.",
+    "Vows or difficulty, Daily Watch and Endless unlock after your first finished run. The menu shows them locked, each with one line on what unlocks it.",
+    "Each new idea gets exactly one coach tip the first time it appears, then never again; the Codex keeps the explanations.",
+    "Returning players see everything from the start; the layering only shapes a player's first runs."
+   ],
+   "questions": [
+    "Too gradual, or about right for a first session?"
+   ],
+   "files": [
+    "src/ui/shell/Coach.tsx",
+    "run generation (first-run rules)",
+    "menu unlocks"
+   ],
+   "builtNote": "Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.",
+   "built": true
+  },
+  {
+   "id": "LS4",
+   "stream": "round5",
+   "effort": "S",
+   "source": "claude",
+   "title": "One name per thing",
+   "refs": [],
+   "proposal": [
+    "Heroes, not sentinels or towers, everywhere a player reads.",
+    "'Threat ×1.06' becomes 'Enemy strength +6%'.",
+    "'Watch Marks' become 'Marks' after the first explanation.",
+    "A short glossary lives in the Codex. No term appears on screen before the player has met it."
+   ],
+   "questions": [],
+   "files": [
+    "copy across src/ui"
+   ],
+   "builtNote": "Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.",
+   "built": true
+  },
+  {
+   "id": "SK1",
+   "stream": "round4",
+   "effort": "L",
+   "source": "claude",
+   "replaces": "Q2",
+   "title": "Heroes with skills: 1 of 3 rolled heroes, a skill pool you grow across runs",
+   "yourNote": "lets make heros more dynamic. there are a set of 3 basic skills you get to start. As you play you unlock levels of progress and you get a random skill every so often when leveling (this should not be super slow at first but it shouldnt unlock all the cards easily). If you beat the game you get a skill each time. but each time you beat the game the difficulty goes up a bit. you can turn it back down but you dont get another skill unless you beat your score when you win at teh same difficulty … you can pick 1 of 3 heros with the random skills … there should be Level 2, 3 skills too … 3 options at each level for 3 levels of skills. you can only equip 3 skills per hero and then it just bumps their stats and you pick which",
+   "refs": [],
+   "proposal": [
+    "Where it starts from: heroes today are one of three classes (Fighter, Rogue, Mystic). They level on their own XP up to level 20, evolve at levels 10 and 20 (pick 1 of 3), and pick a perk at 5 and 15 (1 of 2). The tab labelled 'Skills' in the hero panel already shows those perks, so skills replace perks and the name stays.",
+    "The skill pool: every skill has a tier (T1, T2, T3). You start the game with 3 basic T1 skills unlocked. The rest of the library is locked 'cards' you earn over time.",
+    "Unlocks across runs: every run earns Watch XP (from depth, kills and wins). Each Watch level unlocks one random skill card. Early levels come quickly (about one every 1–2 runs), and the gap widens so the whole pool takes many runs. Beating the game also unlocks a card each time.",
+    "Hero pick: instead of choosing a class, you're offered 3 heroes. Each has a class, a name and 1 random T1 skill rolled from your unlocked pool. As the pool grows, the combinations get more varied. Stats and the full skill text are one tap away.",
+    "In a run, skills come from levelling: at three milestone levels (proposed 5, 10 and 15) the hero is offered 3 skills of that milestone's tier. T2 and T3 skills only ever appear as these level-up offers, never at hero pick.",
+    "A hero equips at most 3 skills. Once all 3 slots are full, a new offer lets you swap one out (you pick which) or take a stat bump instead (you pick the stat).",
+    "Items still matter in a run exactly as today.",
+    "Difficulty after wins: each win raises your Watch difficulty one step (for example +8% enemy HP and one more elite per act). You can lower it at the start of a run, but a win only unlocks a new card if it's at your highest difficulty, or if you beat your best score at the difficulty you chose.",
+    "What this replaces: perks (levels 5/15) become skill milestones, and the Banner/Vow ladder is replaced by this difficulty step. Evolutions at 10 and 20 stay unless you say otherwise.",
+    "This also answers Q6, Q7 and Q9: the pick serves every player the same way (three rolled heroes), no recommendation is needed, and STR/DEX/INT move into the stat breakdown (SK4)."
+   ],
+   "questions": [
+    "Keep evolutions at levels 10 and 20 alongside skills, or fold them into the skill milestones?",
+    "When all 3 skill slots are full: swap or stat bump (as proposed), or stat bump only?",
+    "Starting library size: I'd propose about 12 T1, 12 T2 and 9 T3 skills, built from today's 18 perks, 15 mutations and the evolution effects. Enough to start?",
+    "Should the 3 starting T1 skills be the same for everyone, or one per class?",
+    "Replace the Banner/Vow ladder with the difficulty step, or keep both?"
+   ],
+   "files": [
+    "src/game/data/skills.ts (new)",
+    "src/game/run/skills.ts (new)",
+    "src/state/metaStore.ts (pool, Watch level, difficulty)",
+    "hero pick (HeroPickVariants → one screen)",
+    "LevelUpPanel / PerkPanel → skills",
+    "balance/"
+   ],
+   "myRead": "Against 'easy to pick up', this is heavy as written: three tiers, a card pool, unlock levels and a difficulty ladder. The lighter version I'd build: each hero shows one skill at pick, gets one new pick at levels 5 and 10 (3 options each), holds at most 3, and unlocks happen quietly in the background with no ladder to manage. Tell me which you prefer in your note."
+  },
+  {
+   "id": "SK2",
+   "stream": "round4",
+   "effort": "S",
+   "source": "claude",
+   "replaces": "Q11",
+   "title": "Levels and badges, explained, and what changes with skills",
+   "yourNote": "level on getting xp for towers. each tower levels on its own. dont remember what badges are exactly or how it should integrate. tower lvl or run lvl",
+   "refs": [],
+   "proposal": [
+    "It's per tower already: each hero earns its own XP from the waves it fights (half split evenly, half by kills) and levels on its own, up to 20. The run has depth (1–12), not a level.",
+    "The 'Lv 3 ↑' badge from round 2 marks a hero with a level-up waiting for your choice. Tap it and the choice opens in the panel under the field.",
+    "With SK1, the badge only appears when there's a real choice: a skill milestone (pick 1 of 3, or swap or stat bump) or an evolution. Plain level-ups just show '+1 level' briefly with the stats gained, with no badge to clear."
+   ],
+   "questions": [
+    "OK to drop badges on plain level-ups (no choice) as described?"
+   ],
+   "files": [
+    "src/ui/shell/levelUps.ts",
+    "src/ui/shell/LevelUpPanel.tsx"
+   ]
+  },
+  {
+   "id": "SK4",
+   "stream": "round4",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "Q14",
+   "title": "Exact numbers: a stat breakdown, and before/after on every item and skill",
+   "yourNote": "is it possible to show accurate adjustments to the heros and their items and skills",
+   "refs": [],
+   "proposal": [
+    "Yes. The engine already combines every source (class, levels, gear, skills or perks, relics, mutations, shrines) in one place, so the UI can show exact numbers rather than estimates.",
+    "Tap the hero's stats in the panel for a breakdown. Each stat reads base → +gear → +skills → +relics → final (for example 'Damage 26 → 34 → 41 → 45'), including STR/DEX/INT and what they feed.",
+    "Every item, skill offer, relic and shrine choice shows its exact before/after on that hero: '+7 DPS (60 → 67)', 'Range 168 → 185'. If it affects the whole company, it says so per hero.",
+    "Tests hold the numbers shown to what the engine computes, so the display can never drift from what happens in battle."
+   ],
+   "questions": [
+    "Default to DPS as the headline number, or damage per hit?"
+   ],
+   "files": [
+    "src/game/engine/combat.ts (breakdown helper)",
+    "DetailBand hero panel, item panel, LevelUpPanel",
+    "tests/"
+   ]
+  },
+  {
+   "id": "FX1",
+   "stream": "round4",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "Q13",
+   "title": "Spreading fire you can see coming, and have to move for",
+   "yourNote": "hmm how would this be countered. what if it spreads to a spot im using, do i just have to move my tower. i wouldnt want to lose it. That could be interesting it forces you to move your towers as you play. the spread is random too",
+   "refs": [],
+   "proposal": [
+    "On Wildfire battles, fire spreads 1–2 tiles after each sub-wave, picked at random from the seed. You never lose a hero to it.",
+    "Counterplay by warning: the tiles fire will spread to next are shown with smoke one sub-wave ahead, so you can move before it lands.",
+    "If fire reaches a hero, that hero is Scorched (a burn that reduces damage) until it moves, and the next held sub-wave gives a free extra move for scorched heroes, so moving never costs your one normal move.",
+    "Fire stops at water, the road and rocks; lakes (Flooded meadow) are firebreaks. Frost heroes' hits put out a burning tile next to them, giving the Mystic's Frost line a job.",
+    "It fits Q1's danger tiles: burning ground behaves like a danger tile that moves."
+   ],
+   "questions": [
+    "Should fire also hurt enemies walking through a burning tile on the road edge?",
+    "Is 1–2 tiles per sub-wave the right pace, or once per wave?"
+   ],
+   "files": [
+    "src/game/run/terrain.ts",
+    "src/game/engine (scorch status)",
+    "overlays (smoke telegraph)"
+   ],
+   "myRead": "Spreading fire adds a rule to learn mid-battle. I'd hold it until the first-run layering (LS3) is in, then introduce it on later depths only."
+  },
+  {
+   "id": "HC1",
+   "stream": "round4",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "your idea",
+   "title": "Hall of Champions: every run's company kept, your top 3 on the menu",
+   "yourNote": "you could have a history of you champions somewhere from all your runs and grouped by run. then you can show off your top 3 on the loading screen. click to see stats of the run",
+   "refs": [],
+   "proposal": [
+    "Every finished run is saved to your history: date, seed, difficulty, result, depth, score, and its company. For each hero: name, class, level, skills, gear, kills, damage and time on the field.",
+    "A 'Hall of Champions' row on the Watchtower menu opens the history grouped by run (newest first), with filters for wins, Daily runs and class.",
+    "Your top 3 champions stand on the title/menu screen as small pixel portraits with name and title (for example 'Doyle, Warden of Ash · 12 depth · 1,840 dmg'). Tap one to see that run's stats card, with a 'Play this seed' button.",
+    "The menu cinematic (Q12) could cast your top champions as the heroes in today's scene.",
+    "History is stored locally with the other progress, capped at a sensible number of runs (the top 3 are always kept) and validated on load like the rest of the save."
+   ],
+   "questions": [
+    "'Top' by what: the run's score, or the single hero's damage or kills?",
+    "By 'loading screen', do you mean the main menu, or a separate splash while the game loads?",
+    "Cast your champions in the menu cinematic?"
+   ],
+   "files": [
+    "src/state/metaStore.ts (history)",
+    "src/ui/shell/PageScreens.tsx (menu row, Hall page)",
+    "MenuKeyArt (top 3)",
+    "src/state/runSnapshot.ts (validation)"
+   ],
+   "myRead": "Pure reward with nothing to learn, so it fits 'easy to pick up' well."
+  },
+  {
+   "id": "Q1",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "G1-2",
+   "blocking": true,
+   "title": "Free placement made the game too easy. Which lever brings it back?",
+   "refs": [],
+   "proposal": [
+    "Balance now fails 13 checks: the win rate went from 59% to 80% (the target band is 45–60%). The best tile sees 720px of road against 567px for the best old circle, and a full company can stand on that ground together.",
+    "Options: (a) more fixed rocks and water on the high-value ground, (b) a map challenge on every eligible battle, (c) retune the Threat curve, (d) limit how close to the road a hero may stand.",
+    "My recommendation: (a) first, since it keeps placement interesting, then a small (c) if needed. Nothing is tuned yet, and the CI balance job fails until you choose."
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built and tuned. Each battle curses 3 of the 6 best spots (a hero there deals −70% damage) and adds six seeded boulders on the next-best ground. Cursed ground is dark soil with green cracks and two skulls, so it never reads as rock."
+  },
+  {
+   "id": "Q2",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H3-2",
+   "blocking": true,
+   "title": "Which hero-pick direction should become the real screen?",
+   "refs": [],
+   "proposal": [
+    "A · Play-style cards: all three heroes as cards with a looping attack, one sentence on how they fight, and three big numbers.",
+    "B · Compare: a side-by-side table with bars. The most complete, but the longest on a phone.",
+    "C · Recommended: opens on one suggested hero with its reason; the other two are a tap away. The best fit on a phone.",
+    "The builder's lean, and mine: A as the base, with C's recommendation on a first run only. Try them in the game with ?heropick=cards, ?heropick=compare and ?heropick=recommend."
+   ],
+   "files": [],
+   "reworked": "SK1"
+  },
+  {
+   "id": "Q3",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "G1-2",
+   "blocking": true,
+   "title": "Tiles on small phones are under the 44px touch floor. Bigger tiles, or zoom to place?",
+   "refs": [],
+   "proposal": [
+    "At 375×667 and 320×568 a tile is about 35px. Bigger tiles mean fewer of them on the field; zoom-to-place keeps the grid and enlarges it while you choose.",
+    "Default: none built yet. My recommendation is zoom-to-place on screens under 390px wide."
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built. On phones where a tile is under 44px, the first touch with a hero ready zooms the field 2× about your finger; the next tap posts, and the view eases back. A 'Drag to look around' chip shows while zoomed."
+  },
+  {
+   "id": "Q4",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "R3-2",
+   "blocking": true,
+   "title": "Ambidextrous: full off-hand damage or reduced, what rarity, and what name?",
+   "refs": [],
+   "proposal": [
+    "As built: the off-hand weapon counts in full, the relic is rare and in the pool from the start, and it's called 'Ambidextrous'. The balance model shows it as about neutral.",
+    "Alternatives: count the off hand at 50%, lock the relic behind a feat, or give it an object name like the other relics ('Ambidexter's Gauntlet')."
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built as the Twinblade Harness: a hero with 14 DEX of their own can carry a one-handed weapon in the off hand at 100%. Short heroes see 'Twinblade · DEX 6/14'."
+  },
+  {
+   "id": "Q5",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "R3-2",
+   "blocking": false,
+   "title": "Is it OK that one-handed weapons no longer go in the off hand without the relic?",
+   "refs": [],
+   "proposal": [
+    "Dual-wielding used to be free, so 'becomes a bonus' meant taking it away by default. Before G1, this moved the fresh-player win rate from 14% to 13% (the band starts at 15%). G1 then made the game much easier overall.",
+    "Saves already wearing an off-hand weapon keep it. Should loading such a save move the weapon to the pack instead?"
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built. Every item has a grip: knives and wands fit either hand; shields, tomes, quivers and foci fit only the off hand; big things take both hands."
+  },
+  {
+   "id": "Q6",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H3-2",
+   "blocking": false,
+   "title": "Who is the hero pick for first: a brand-new player, or a returning player choosing a strategy?",
+   "refs": [],
+   "proposal": [
+    "Default: a brand-new player on their first run. If returning players matter more, the Compare direction moves up."
+   ],
+   "files": [],
+   "reworked": "SK1"
+  },
+  {
+   "id": "Q7",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H3-2",
+   "blocking": false,
+   "title": "What should a first-run recommendation rest on?",
+   "refs": [],
+   "proposal": [
+    "As built: easiest to place. The Rogue reaches farthest, so where you post it matters least.",
+    "Alternatives: the Fighter, whose blocking is the clearest cause and effect on the field, or no recommendation at all."
+   ],
+   "files": [],
+   "reworked": "SK1"
+  },
+  {
+   "id": "Q8",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H3-2",
+   "blocking": false,
+   "title": "Fix the Daily Watch problems on hero pick now?",
+   "refs": [],
+   "proposal": [
+    "The Vow buttons show but do nothing. Typing a seed quietly turns the Daily into a custom-seed run. The screen also doesn't say that picking a hero uses up today's scored attempt.",
+    "Default: fix all three in whichever direction you pick in Q2."
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built. The seed is a small chip in the title ('Seed 93200335 ✎'); a Daily shows a lock, a Scored/Practice pill and 'Standard rules: no perks, no Vow'."
+  },
+  {
+   "id": "Q9",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H3-2",
+   "blocking": false,
+   "title": "Hero pick details: STR/DEX/INT, the preselected hero, feats and the attack preview",
+   "refs": [],
+   "proposal": [
+    "All three variants drop the STR/DEX/INT line. Today the Fighter is preselected, so one tap starts a run. Should the 'win with this hero first' feats show here? The attack preview runs at the real attack rate, so the Mystic looks slow."
+   ],
+   "files": [],
+   "reworked": "SK1"
+  },
+  {
+   "id": "Q10",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "G2-2",
+   "blocking": false,
+   "title": "Enemy queue: how to count overflow, and should portraits be tappable?",
+   "refs": [],
+   "proposal": [
+    "As built: the first three kinds, then '+N', where N counts kinds, not enemies. Portraits are glance-only. Elites and specialists share their base goblin's picture. A held sub-wave shows only the next sub-wave, not all remaining.",
+    "On desk the rail has room for more portraits, or names beside them."
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built. '+8' counts enemies. Tap a portrait for a small card that doesn't pause the game: name and armour at first, HP and pace once met, tricks and counters after 5 felled."
+  },
+  {
+   "id": "Q11",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "G3-2",
+   "blocking": false,
+   "title": "Level-up badges: every level, and should they survive a reload?",
+   "refs": [],
+   "proposal": [
+    "As built: plain level-ups get a badge too, and tapping it shows what grew. Badges aren't saved, so after a reload a pending evolution or perk falls back to the old modal. Take it is never blocked by a pending level-up.",
+    "The field dims to about 50% behind the reward. Lighter or darker?"
+   ],
+   "files": [],
+   "reworked": "SK2"
+  },
+  {
+   "id": "Q12",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "H1-2",
+   "blocking": false,
+   "title": "Menu battle: one fixed title shot forever, and should battle effects show?",
+   "refs": [],
+   "proposal": [
+    "As built: always the same boss scene. Range rings, damage numbers and smoke show as they do in battle; hiding them needs renderer changes. Before the battle loads, the menu is dark and the battle fades up, with no still-image fallback.",
+    "Should the scene ever change, for example by run progress or season?"
+   ],
+   "files": [],
+   "built": true,
+   "builtNote": "Built. The menu cinematic is drawn from today's Daily seed: field, weather, foe and company change daily, and a director throws out any draw that breaks the beats."
+  },
+  {
+   "id": "Q13",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "G1-2",
+   "blocking": false,
+   "title": "Map challenges: how often, should fire spread, and water colour",
+   "refs": [],
+   "proposal": [
+    "As built: about two battles in three have a challenge, never at depth 1 and never on a boss. Terrain is fixed per battle. Water is teal, which is also the tier-2 enemy colour.",
+    "On touch, the range preview shows while your finger is held down. Should a first tap preview and a second tap confirm instead?"
+   ],
+   "files": [],
+   "reworked": "FX1"
+  },
+  {
+   "id": "Q14",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "R3-2",
+   "blocking": false,
+   "title": "Paper doll: a drawn body, and a head slot later?",
+   "refs": [],
+   "proposal": [
+    "The doll is a simple drawn body in the hero's colour, not the hero sprite. The sprites have their weapons painted in, so the sprite would show gear the hero isn't wearing. On narrow or Large UI phones the slots fall back to a stack.",
+    "A head slot would mean new items, drops and a balance pass. Want it on the roadmap?"
+   ],
+   "files": [],
+   "reworked": "SK4"
+  },
+  {
+   "id": "Q15",
+   "stream": "round3",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Whales re-check",
+   "blocking": false,
+   "title": "Whales still says the battle's next action reads quieter than the status bar. Push it further?",
+   "proposal": [
+    "On the re-check of the combined build, Whales' strongest repeat finding on the battle screens is that 'HELD · MOVE ONE HERO' and Next ▶ are outweighed by the header (FIELDWATCH, Depth, Gate, gold). The strip caption is 11px capitals.",
+    "Options: a larger caption in the held state (e.g. 15px), a quieter header during battle, or leave it.",
+    "Smaller things it flagged that I think are noise: 'the page heading is cut off' on desk (there is none), and cards 'covered' that are fully visible in the screenshots. The run map's encounter brief does scroll inside its panel, now a little sooner because the paper doll widened the gear column."
+   ],
+   "refs": [],
+   "files": [],
+   "built": true,
+   "builtNote": "Parked, as you said: we'll look again once everything else lands."
+  },
+  {
+   "id": "G1-2",
+   "stream": "round2",
+   "effort": "L",
+   "source": "claude",
+   "replaces": "G1",
+   "title": "Free-form deployment on a tile grid, with terrain that blocks",
+   "yourNote": "the whole deploy should be free form across a grid. any tile that isnt blocked by the environment or some reason for the map challenge, which should have some ui to show it like a rock or a fire, lake,  etc.",
+   "refs": [
+    [
+     "setup",
+     1
+    ],
+    [
+     "wave-m",
+     1
+    ]
+   ],
+   "proposal": [
+    "Replace the six fixed build circles with a tile grid laid over the field. Any grass tile off the lane can take a hero; the lane, the forest frame and terrain pieces cannot.",
+    "Blocked tiles are drawn as terrain you can read at a glance: rocks, trees, water, a campfire or a burning patch. With a hero armed, open tiles light up faintly and blocked ones stay dark, so the grid is only visible when you need it.",
+    "Tapping a blocked tile says why in the coach strip ('Rock — nothing can stand here'), instead of doing nothing.",
+    "Map challenges become terrain rules: 'Flooded meadow' adds lakes, 'Wildfire' adds fire tiles that spread between waves, 'Ruins' scatters rubble. Each battle's preview names the challenge.",
+    "Keep the rules that make placement a decision: at most five heroes, and one move while a sub-wave is held.",
+    "Phase 1: grid, free placement and blocking with today's terrain (lane and trees). Phase 2: terrain pieces and two map challenges. Phase 3: a balance pass, since free placement changes how strong every hero is."
+   ],
+   "questions": [
+    "Grid size on a phone: a 7×12 portrait grid (about 48px tiles) keeps every tile a comfortable thumb target. Is that the feel you want, or finer?",
+    "Should range still show under your finger while you drag, before you drop the hero?",
+    "Fire that spreads between waves changes the map mid-run. Is that in scope for this game, or do you want terrain fixed per battle?"
+   ],
+   "files": [
+    "src/game/engine/engine.ts (slot → tile placements)",
+    "src/game/data/battlefields (blocked-tile masks)",
+    "src/game/render/overlays.ts (grid + blocked states)",
+    "src/game/render/terrain.ts (terrain pieces)",
+    "src/ui/shell/Coach.tsx",
+    "balance/ (placement assumptions)"
+   ],
+   "myRead": "This is a gameplay change, not a UI fix. Placements, the engine, maps and the balance report all assume fixed slots today, so it needs its own branch and a balance pass.",
+   "built": true,
+   "recheck": "Built phases 1–2: a 7×12 tile grid on phone (12×7 on desk), rocks, lakes and fire that block tiles, the reason on a blocked tap, Flooded meadow and Wildfire challenges named in the preview. Old saves move heroes to the nearest open tile. Phase 3 is open: free placement made the game much easier (win rate 59% → 80%), and the balance check fails until you pick a lever (Q1)."
+  },
+  {
+   "id": "G2-2",
+   "stream": "round2",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "G2",
+   "title": "One wave strip that changes with the moment, and shows who's still coming",
+   "yourNote": "maybe showing whick enenmies left to spawn or so on, find a way without making more ui/ taking up more space. consider dynamic ui than cna change to the current states need without removing actions or context that coudl still be needed",
+   "refs": [
+    [
+     "wave-m",
+     3
+    ],
+    [
+     "wave-d",
+     1
+    ]
+   ],
+   "proposal": [
+    "Use the bottom wave strip you already have ('DEPTH 1 ▬▬ 4 left') and add no new UI. Its progress bar becomes the enemy queue: small enemy portraits in spawn order, next one first, with counts ('Torch ×3 · TNT ×1'). Spawned enemies drop off the front.",
+    "The strip changes with the moment, and the depth label and the button stay put. Setup: the whole wave's line-up plus Start Wave. Live: the remaining queue plus speed. Held sub-wave: the next sub-wave's line-up, 'Held · move one hero' where the depth label was, and Next ▶. Cleared: gold earned plus Continue.",
+    "This retires the separate banner over the top of the field, which gives the field its full height back.",
+    "On desk, the same strip sits at the foot of the right rail, as it does today."
+   ],
+   "questions": [
+    "When there are more enemy types than fit, show the first three and '+N'? Or scroll the strip?",
+    "Should tapping an enemy portrait show its stats in the detail band (the shell's one-interaction rule), or keep it glance-only?"
+   ],
+   "files": [
+    "src/ui/shell/DetailBand.tsx (wave strip)",
+    "src/ui/shell/StageBand.tsx (remove banner)",
+    "src/ui/shell/encounterPreview.ts",
+    "src/styles/shell-live.css"
+   ],
+   "built": true,
+   "recheck": "Built: the bottom strip is an enemy queue in spawn order, changing across setup, live, held and cleared. The banner over the field is gone, with the same screen-reader announcements."
+  },
+  {
+   "id": "G3-2",
+   "stream": "round2",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "G3",
+   "title": "Wave cleared and spoils become one screen, and level-ups happen on the roster",
+   "yourNote": "this should also auto show what reward to pick and give details as you pick below, any level ups on characters should highlight the character on your ui and then be handled in there",
+   "refs": [
+    [
+     "cleared",
+     1
+    ],
+    [
+     "cleared",
+     2
+    ],
+    [
+     "spoils",
+     2
+    ]
+   ],
+   "proposal": [
+    "Drop the hop from 'Wave cleared' through Continue to a separate Spoils page. When a wave clears, the field dims and a short result line shows (gold, XP, felled). The row under the field then fills with the three reward cards straight away.",
+    "Tap a card and its details fill the panel below it (the Root Shell's one-interaction rule), with Take it as the one primary button. The first card is preselected, so the details are already showing.",
+    "Heroes who levelled up glow on the roster with a 'Lv 3 ↑' badge. Tapping one opens that hero's level-up choice in the same panel, not a modal. Take it stays available, and the badge waits until you've dealt with it.",
+    "The standalone Spoils page stays for elite and boss rewards, which deserve their own moment. Say if you want those merged too."
+   ],
+   "questions": [
+    "Should Take it be blocked until pending level-ups are chosen, or can level-ups wait until the next stop?"
+   ],
+   "files": [
+    "src/ui/shell/WaveCeremony.tsx",
+    "src/ui/shell/SelectorBand.tsx",
+    "src/ui/shell/DetailBand.tsx",
+    "src/ui/shell/offers.ts (rewardOffers)",
+    "src/state/game/battleSlice.ts (continueAfterWave → reward)"
+   ],
+   "built": true,
+   "recheck": "Built: after a normal wave the three reward cards appear under the dimmed field with the first preselected, and Take it is the one button. Level-ups show a 'Lv N ↑' badge on the roster and are chosen in the panel. Elite and boss spoils keep their own page."
+  },
+  {
+   "id": "H1-2",
+   "stream": "round2",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "H1",
+   "title": "Main menu: a cinematic battle behind the whole screen, with the menu on top",
+   "yourNote": "i love the improvement, and i like the movement of seing game going on, but maybe a bit rnadom. can you make it more cinematic and part of the BG of the screen, then the home UI can overlay",
+   "refs": [
+    [
+     "menu-m",
+     1
+    ],
+    [
+     "menu-d",
+     2
+    ]
+   ],
+   "proposal": [
+    "The attract-mode battle fills the whole menu screen behind everything on phone and desk, instead of sitting in a framed box.",
+    "Make it directed rather than random: a fixed seed and a scripted ~20 second loop. The camera eases along the lane, a wave arrives, the knights hold, one big hit lands, then it resets on a fade. The same composition every time, so it reads as a title sequence.",
+    "A dark vignette and a bottom-up gradient keep the title and menu rows readable. The rows become translucent panels over the art and still clear 4.5:1 contrast.",
+    "The title gets the stronger treatment from H1 (larger, with a soft shadow), since it now sits on moving art.",
+    "Reduced motion: the still key-art frame, exactly as today."
+   ],
+   "questions": [
+    "On desk, should the battle take the whole width with the menu column floating on the right, or stay centred behind a centred menu?"
+   ],
+   "files": [
+    "src/ui/shell/MenuKeyArt.tsx",
+    "src/ui/shell/AttractMode.tsx",
+    "src/ui/attract/ (scripted sim + camera)",
+    "src/ui/shell/PageScreens.tsx (MenuScreen)",
+    "src/styles/page.css",
+    "src/styles/shell-wide.css"
+   ],
+   "built": true,
+   "recheck": "Built: one scripted ~19s boss scene fills the menu behind the rows, with the camera on whole pixels, a vignette and gradient, and a stronger title. Rows measured ≥9.4:1 over the brightest frame. Reduced motion shows today's still."
+  },
+  {
+   "id": "H3-2",
+   "stream": "round2",
+   "effort": "M",
+   "source": "claude",
+   "replaces": "H3",
+   "title": "Hero pick: a jobs-to-be-done pass before any redesign",
+   "yourNote": "yeah this whole screen needs a jobs to be done exercise",
+   "refs": [
+    [
+     "hero",
+     1
+    ],
+    [
+     "hero",
+     2
+    ]
+   ],
+   "proposal": [
+    "I write the JTBD exercise as a doc for you to mark up: the job ('When I start a run, I want to pick a hero whose way of fighting I understand, so I can plan my first battles and feel it was my choice'), who is hiring the screen (first run, returning player, daily-seed player), the forces (push, pull, anxiety, habit), and what success looks like.",
+    "From that, two or three layout directions as mockups, for example 'play-style cards' (one line on how the hero fights, a looping attack preview and three big stats), 'compare' (side-by-side stat bars), and 'recommended' (a suggested pick for a first run, with the reason).",
+    "You pick a direction on this page, and only then does it get built."
+   ],
+   "questions": [
+    "Who matters most on this screen: a brand-new player on their first run, or a returning player choosing a strategy?"
+   ],
+   "files": [
+    "docs/JTBD-hero-pick.md (new)",
+    "mockups (review page)"
+   ],
+   "built": true,
+   "recheck": "Done: docs/JTBD-hero-pick.md, plus three working layouts to try in the game: ?heropick=cards, ?heropick=compare and ?heropick=recommend. Today's screen is unchanged until you pick one (Q2)."
+  },
+  {
+   "id": "R3-2",
+   "stream": "round2",
+   "effort": "L",
+   "source": "claude",
+   "replaces": "R3",
+   "title": "Gear as a paper doll: slots placed on the hero's body",
+   "yourNote": "I think the way equipment is shown could be way simpler. a little human body type model with the itom slots over it you know left hadn on lefgt head up top chest in middle etc. we should make gear slot based if not already\n\nmaybe some bonuess give you the option to do multi of a ceftain weapon in both slots\n\ni think there is a larger edit than just the labels here",
+   "refs": [
+    [
+     "wave-d",
+     3
+    ],
+    [
+     "map",
+     2
+    ],
+    [
+     "map",
+     4
+    ]
+   ],
+   "proposal": [
+    "Gear is already slot-based: main hand, off hand and body. The change is how it's shown. The GEAR column becomes a small silhouette of the selected hero (the game already composites heroes wearing their gear in loadout.ts), with each slot sitting where it goes: main hand on the right, off hand on the left, body on the chest.",
+    "Tapping a slot works as it does today: the pack filters to what fits, and tapping an item equips it.",
+    "Dual-wielding becomes a bonus: a perk or relic ('Ambidextrous') lets the off hand take a main-hand weapon, and the off-hand slot outline changes to show it.",
+    "This also fixes the desktop sidebar labels from round 1: the doll replaces the three stacked text slots that Whales flagged."
+   ],
+   "questions": [
+    "Do you want a head slot? It would mean new items, new drops and a balance pass, not just UI. I'd leave it out of phase 1.",
+    "Dual-wield: a perk you pick, a relic you find, or a trait of one archetype (the Rogue)?"
+   ],
+   "files": [
+    "src/ui/shell/DetailBand.tsx (gear column)",
+    "src/game/render/loadout.ts (doll render)",
+    "src/game/data/items.ts (HERO_SLOTS)",
+    "src/game/data/relics or perks (Ambidextrous)",
+    "src/styles/shell.css, shell-wide.css"
+   ],
+   "built": true,
+   "recheck": "Built: the GEAR column is a small body (off hand left, body on the chest, main hand right) with ≥44px slots. Dual-wielding is the rare Ambidextrous relic, and without it one-handers no longer go in the off hand."
+  },
+  {
+   "id": "A1-2",
+   "stream": "round2",
+   "effort": "S",
+   "source": "claude",
+   "replaces": "A1",
+   "title": "A brighter primary button with dark text",
+   "refs": [
+    [
+     "spoils",
+     2
+    ],
+    [
+     "cleared",
+     1
+    ],
+    [
+     "map",
+     1
+    ]
+   ],
+   "proposal": [
+    "Whales flagged Take it, Buy and Continue as quiet on every pass, even after A1. The cause is measurable: today's button teal (#336e7e) is only 3.1:1 against the page, so it sinks into the dark brown.",
+    "Switch every primary button to the game's lighter teal (#57a2b6, already --teal) with dark text (#1b1409, the --ink-on-fill the shell uses on solid fills). The label goes from 4.7:1 to 6.3:1, and the button from 3.1:1 to 6.1:1 against the page.",
+    "It's one token change (--cta and --cta-ink), so every primary button moves together. High-contrast mode gets a matching pair."
+   ],
+   "questions": [
+    "This changes the look from cream-on-deep-teal to dark-on-bright-teal. Is that trade OK for the game's feel?"
+   ],
+   "files": [
+    "src/styles/global.css (--cta, --cta-ink)",
+    "src/styles/app.css (high contrast)",
+    "tests/contrast.test.ts"
+   ],
+   "built": true,
+   "recheck": "Built: primary buttons are the lighter teal (#57a2b6) with dark text. Label 6.3:1, button 6.1:1 against the page, held by the contrast test."
+  },
+  {
+   "id": "R1",
+   "stream": "read",
+   "effort": "M",
+   "source": "whales",
+   "title": "Replace opacity dimming with AA-safe dim colours",
+   "refs": [
+    [
+     "map",
+     2
+    ],
+    [
+     "setup",
+     2
+    ],
+    [
+     "wave-m",
+     4
+    ],
+    [
+     "cleared",
+     3
+    ],
+    [
+     "menu-d",
+     1
+    ]
+   ],
+   "proposal": [
+    "Add dim text tokens to global.css (for example --text-dim and --muted-dim) and check each against --panel, --panel-2 and --panel-3 so small text clears 4.5:1 and large text 3:1.",
+    "Stop fading whole elements to show state: .sh-hero.empty (opacity 0.5, the 'recruit a hero' slot), .sh-btn:disabled (0.45), .map-node.cleared and .locked glyphs (0.72). Show the state with a dashed border or a dim token instead.",
+    "Lift the labels Whales measured: GEAR, 64 DPS, HAND, DEPLOYED, SPEED, PLACE IT, recruit a hero, and the desktop menu's date and row labels.",
+    "Add a small test (tests/contrast.test.ts) that computes contrast for every text-token and panel-token pair, so these can't regress."
+   ],
+   "files": [
+    "src/styles/global.css",
+    "src/styles/shell.css",
+    "src/styles/shell-live.css",
+    "src/styles/page.css",
+    "tests/contrast.test.ts (new)"
+   ],
+   "built": true,
+   "recheck": "Re-checked: every contrast failure Whales measured on the phone's run map, battle setup, wave and wave-cleared screens is gone. Desk right rail: 24 failing labels down to 15; the rest are 11px labels at 1x on desk and move with R3-2."
+  },
+  {
+   "id": "R2",
+   "stream": "read",
+   "effort": "S",
+   "source": "whales",
+   "title": "Make prices you can't afford readable",
+   "refs": [
+    [
+     "merchant",
+     2
+    ]
+   ],
+   "proposal": [
+    ".pg-row.dim fades the price and icon to 55% opacity. Keep the row marked as unaffordable, but render the price in a readable dim colour (at least 3:1) with a short 'need 18 more' hint, instead of fading it."
+   ],
+   "files": [
+    "src/styles/page.css (.pg-row.dim)",
+    "src/ui/shell/offers.ts"
+   ],
+   "built": true,
+   "recheck": "Re-checked: the 1.0:1 price is no longer flagged, and 'need 20' shows beside a price you can't pay yet."
+  },
+  {
+   "id": "R3",
+   "stream": "read",
+   "effort": "S",
+   "source": "whales",
+   "title": "Fix the desktop sidebar's faint labels and counters",
+   "refs": [
+    [
+     "wave-d",
+     3
+    ]
+   ],
+   "proposal": [
+    "Apply the R1 tokens to the desk layout's right rail (the Depth, gear and pack column heads, and their counters).",
+    "Raise any 10px label to the 11px floor (--fs-micro)."
+   ],
+   "files": [
+    "src/styles/shell-wide.css"
+   ],
+   "myRead": "Whales read the header's 'GATE 20/20' as 'CS 20/70' and measured it at 1.1:1. The readable text is fine; the 1.1:1 is probably the header's dark ornament behind it. The rest of this row (HAND at 2.8:1, 10px labels) looks right.",
+   "reworked": "R3-2"
+  },
+  {
+   "id": "I1",
+   "stream": "icons",
+   "effort": "M",
+   "source": "whales",
+   "title": "Set an icon size scale and scale up stand-alone icons",
+   "refs": [
+    [
+     "menu-m",
+     2
+    ],
+    [
+     "menu-d",
+     4
+    ],
+    [
+     "hero",
+     4
+    ],
+    [
+     "map",
+     3
+    ],
+    [
+     "setup",
+     3
+    ],
+    [
+     "wave-m",
+     5
+    ],
+    [
+     "wave-d",
+     4
+    ],
+    [
+     "cleared",
+     4
+    ],
+    [
+     "spoils",
+     4
+    ],
+    [
+     "merchant",
+     4
+    ],
+    [
+     "lost",
+     1
+    ]
+   ],
+   "proposal": [
+    "Add --icon-sm 20px, --icon-md 28px and --icon-lg 36px to global.css, and use them everywhere instead of per-component sizes.",
+    "Move stand-alone icons (menu rows, map node glyphs, the run-lost stat tiles, the Assist and Watchtower rows, empty gear slots) to --icon-lg (36 CSS px = 72 image px).",
+    "Leave inline glyphs that sit beside a text label (gold coin, rarity pips, the Gate tower, the coach arrow) at --icon-sm. Their label already carries the meaning.",
+    "Give the two unlabelled header icons Whales flagged a visible label or an aria-label, or remove them."
+   ],
+   "files": [
+    "src/styles/global.css",
+    "src/styles/shell.css",
+    "src/styles/page.css",
+    "src/ui/shell/PageScreens.tsx",
+    "src/ui/shell/HeaderBand.tsx"
+   ],
+   "myRead": "Whales applies its 72 image px minimum to every icon, including glyphs that already have a text label next to them. I'd exempt those, which is the third bullet. Approve as written to keep that exemption, or use Edit to scale every icon.",
+   "built": true,
+   "recheck": "Re-checked: menu rows, map nodes, run-end tiles and exit rows are no longer flagged. Built at 48px, not 36px: the sprites only scale by whole multiples of 16. Still flagged: header marks and roster portraits, which weren't in this item's list."
+  },
+  {
+   "id": "A1",
+   "stream": "action",
+   "effort": "M",
+   "source": "whales",
+   "title": "One primary button style for the next step on every screen",
+   "refs": [
+    [
+     "map",
+     1
+    ],
+    [
+     "wave-m",
+     2
+    ],
+    [
+     "cleared",
+     1
+    ],
+    [
+     "spoils",
+     2
+    ]
+   ],
+   "proposal": [
+    "The held sub-wave 'Next ▶' (.sh-command.ready) is outlined in gold, while 'Start Wave' is filled teal. Use the filled primary style for both, since each is the one thing to do next.",
+    "March on the run map: make it the filled primary button, with Back as the quiet secondary, and fix its label contrast (Whales measured 2.5:1).",
+    "Brighten --cta (#336e7e) slightly and add a 1px lighter top edge, so Continue, Take it and Run again stand out from the warm art without changing their colour."
+   ],
+   "files": [
+    "src/styles/global.css (--cta)",
+    "src/styles/shell.css (.sh-btn.primary, .sh-command)",
+    "src/ui/shell/CommandSlot.tsx",
+    "src/ui/shell/DetailBand.tsx"
+   ],
+   "myRead": "Continue and Take it already use the filled teal button. I read Whales' 'styled well below primary' as the teal being too muted against the bright art, not as a missing style. The third bullet addresses that.",
+   "built": true,
+   "recheck": "Re-checked: Next ▶ and the roster are no longer flagged on the phone battle. Take it, Buy and Continue are still called quiet on every pass — see A1-2."
+  },
+  {
+   "id": "A2",
+   "stream": "action",
+   "effort": "S",
+   "source": "whales",
+   "title": "Merchant: make your gold the headline number",
+   "refs": [
+    [
+     "merchant",
+     1
+    ]
+   ],
+   "proposal": [
+    "Enlarge the gold pill under 'Merchant' (display font, --fs-xl).",
+    "Repeat the remaining gold on the Buy button ('Buy · 30 → 62 left'), so the budget is visible where you commit."
+   ],
+   "files": [
+    "src/ui/shell/Page.tsx",
+    "src/styles/page.css"
+   ],
+   "built": true,
+   "recheck": "Re-checked: gold is display-size and Buy shows what's left ('→ 0 left'). Whales still calls the balance underweighted."
+  },
+  {
+   "id": "H1",
+   "stream": "hier",
+   "effort": "S",
+   "source": "whales",
+   "title": "Stronger title on the main menu",
+   "refs": [
+    [
+     "menu-m",
+     1
+    ],
+    [
+     "menu-d",
+     2
+    ],
+    [
+     "menu-d",
+     3
+    ]
+   ],
+   "proposal": [
+    "Step the Fieldwatch wordmark up one level (--fs-display to about 40px on phone, 48px on desk) and add a light text shadow so it holds against the art.",
+    "Keep the tagline small, but give it more space below the title so the title and tagline read as a pair."
+   ],
+   "files": [
+    "src/ui/shell/PageScreens.tsx (MenuScreen)",
+    "src/styles/page.css (.pg-head)",
+    "src/styles/shell-wide.css"
+   ],
+   "reworked": "H1-2"
+  },
+  {
+   "id": "H2",
+   "stream": "hier",
+   "effort": "S",
+   "source": "whales",
+   "title": "Give panel heads a real headline (GEAR, Depth)",
+   "refs": [
+    [
+     "map",
+     4
+    ],
+    [
+     "wave-m",
+     4
+    ]
+   ],
+   "proposal": [
+    "Column heads such as GEAR and PACK are 11px uppercase, above 12–13px bodies. Keep them uppercase but raise the weight and use --text rather than --muted-2.",
+    "The 'Depth 1/12' badge and its progress text are the same size. Make 'Depth N' the heading and the '/12' secondary."
+   ],
+   "files": [
+    "src/styles/shell.css (.sh-col-head)",
+    "src/ui/shell/HeaderBand.tsx"
+   ],
+   "built": true,
+   "recheck": "Re-checked: GEAR and Depth now lead their blocks. PACK still measures 26px against 25px body text; I stopped at the three-round limit."
+  },
+  {
+   "id": "H3",
+   "stream": "hier",
+   "effort": "M",
+   "source": "whales",
+   "title": "Hero pick: make the selected hero's stats the main content",
+   "refs": [
+    [
+     "hero",
+     1
+    ],
+    [
+     "hero",
+     2
+    ]
+   ],
+   "proposal": [
+    "Keep the three hero tiles equal and a bit smaller. Move the scale into the detail panel: the hero name at --fs-xl, and DPS, range and HP as three large stat figures instead of one sentence.",
+    "Keep 'Choose Fighter' as the one filled button."
+   ],
+   "files": [
+    "src/ui/shell/PageScreens.tsx (hero pick)",
+    "src/styles/page.css"
+   ],
+   "reworked": "H3-2"
+  },
+  {
+   "id": "G1",
+   "stream": "guide",
+   "effort": "M",
+   "source": "whales",
+   "title": "First deploy: spotlight the hero card",
+   "refs": [
+    [
+     "setup",
+     1
+    ],
+    [
+     "wave-m",
+     1
+    ]
+   ],
+   "proposal": [
+    "While the coach tip says 'Tap your hero', give the benched hero card a pulsing teal ring and a 'Tap me' label. Stop the pulse after the first tap (respect prefers-reduced-motion).",
+    "Dim the Details button and the open recruit slot until the hero is posted."
+   ],
+   "files": [
+    "src/ui/shell/Coach.tsx",
+    "src/ui/shell/SelectorBand.tsx",
+    "src/styles/shell-live.css"
+   ],
+   "reworked": "G1-2"
+  },
+  {
+   "id": "G2",
+   "stream": "guide",
+   "effort": "S",
+   "source": "whales",
+   "title": "Stronger sub-wave instruction banner",
+   "refs": [
+    [
+     "wave-m",
+     3
+    ],
+    [
+     "wave-d",
+     1
+    ]
+   ],
+   "proposal": [
+    "The 'Sub-wave 1 of 2 held · tap a hero, then a post' strip is thin, light text on a translucent bar. Make it a solid banner with a readable size (--fs-md) and an icon.",
+    "On desk, show it over the field, not the sidebar."
+   ],
+   "files": [
+    "src/styles/shell-live.css",
+    "src/styles/shell-wide.css",
+    "src/ui/shell/StageBand.tsx"
+   ],
+   "reworked": "G2-2"
+  },
+  {
+   "id": "G3",
+   "stream": "guide",
+   "effort": "S",
+   "source": "whales",
+   "title": "Wave cleared: end the reading order on Continue",
+   "refs": [
+    [
+     "cleared",
+     2
+    ]
+   ],
+   "proposal": [
+    "Darken the battlefield scrim behind the 'Wave cleared' card, so the card and the Continue footer are the only lit things on screen."
+   ],
+   "files": [
+    "src/ui/shell/WaveCeremony.tsx",
+    "src/styles/shell-live.css"
+   ],
+   "myRead": "The 'large image after Continue' Whales flags is most likely the battlefield behind the overlay, not a separate picture. There's nothing to move, so I propose a darker scrim instead of Whales' 'move the picture above the button'.",
+   "reworked": "G3-2"
+  },
+  {
+   "id": "S1",
+   "stream": "space",
+   "effort": "S",
+   "source": "whales",
+   "title": "Close the empty gap on the Spoils, Merchant and Hero pick pages",
+   "refs": [
+    [
+     "spoils",
+     3
+    ],
+    [
+     "merchant",
+     3
+    ],
+    [
+     "hero",
+     3
+    ]
+   ],
+   "proposal": [
+    "Spoils and Merchant leave about 64px of empty space between the pack strip and the list. Remove it, so the cards and the detail panel sit higher and more merchant offers fit above the fold.",
+    "Keep the title and subtitle; there are no filter rows to cut."
+   ],
+   "files": [
+    "src/ui/shell/Page.tsx",
+    "src/styles/page.css"
+   ],
+   "myRead": "Whales says 'banners, filters and navigation' take 29–46% of these screens. There are no filters. The real waste is the empty gap under the pack strip, which is what this item removes.",
+   "built": true,
+   "recheck": "Re-checked: Spoils chrome went from 46% to 31% of the first screen. Also applied to run end, so the taller I1 rows don't push the recap under the fade."
+  },
+  {
+   "id": "S2",
+   "stream": "space",
+   "effort": "S",
+   "source": "claude",
+   "title": "Merchant: stop the last offer hiding under 'March on'",
+   "refs": [
+    [
+     "merchant",
+     0
+    ]
+   ],
+   "proposal": [
+    "In the capture, a 7th offer row peeks out behind the 'March on' row. Give the offer list its own scroll area with a fade, or move 'March on' into the footer next to Buy."
+   ],
+   "files": [
+    "src/ui/shell/Page.tsx",
+    "src/styles/page.css"
+   ],
+   "myRead": "This one is mine, not Whales'. I spotted it in the screenshot.",
+   "built": true,
+   "recheck": "Re-checked: the last merchant row fades under 'March on' instead of cutting off, and isn't flagged."
+  },
+  {
+   "id": "D1",
+   "stream": "space",
+   "effort": "S",
+   "source": "whales",
+   "title": "Dark art flags: no change",
+   "refs": [
+    [
+     "hero",
+     5
+    ],
+    [
+     "setup",
+     5
+    ],
+    [
+     "wave-d",
+     5
+    ],
+    [
+     "cleared",
+     5
+    ],
+    [
+     "spoils",
+     5
+    ],
+    [
+     "merchant",
+     5
+    ]
+   ],
+   "proposal": [
+    "Whales asks on six screens whether the hero and item art is too dark. The pixel art is Tiny Swords at full brightness, and the portraits sit on bright orange tiles. I recommend no change unless you see a problem on a device."
+   ],
+   "files": [],
+   "myRead": "I think these are false positives from the dark UI panels around the art. Reject this item if you do want the art brightened.",
+   "built": true,
+   "builtNote": "No change, as approved."
+  },
+  {
+   "id": "V1",
+   "stream": "verify",
+   "effort": "S",
+   "source": "claude",
+   "title": "Commit the flow-capture script and re-critique after the fixes",
+   "refs": [
+    [
+     "lost",
+     0
+    ],
+    [
+     "wave-m",
+     0
+    ],
+    [
+     "wave-d",
+     0
+    ]
+   ],
+   "proposal": [
+    "Add scripts/flow-shots.mjs, the Playwright script that played this run (menu → hero → map → battle → spoils → merchant → defeat) on phone and desk.",
+    "After the fixes, re-capture and re-run Whales on every screen. Re-run the two reports that were cut off (both battle screens) and the run-lost screen on a real defeat.",
+    "Add a line to docs/DESIGN_REVIEW.md's log."
+   ],
+   "files": [
+    "scripts/flow-shots.mjs (new)",
+    "docs/DESIGN_REVIEW.md"
+   ],
+   "built": true,
+   "recheck": "Done: scripts/flow-shots.mjs is committed, and all 11 screens were re-critiqued on the final build. The loss is still forced, so run-end numbers aren't real."
+  },
+  {
+   "id": "N1",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "NH1",
+   "blocking": false,
+   "title": "Bombers and the King now target the Gate. Keep that?",
+   "refs": [],
+   "proposal": [
+    "Bombers stop within 450px of the Gate and lob a charge at it; the landing spot is marked on the road so you can kill them during the wind-up.",
+    "The Powderkeg King lobs TNT at the Gate on a timer instead of at heroes.",
+    "My recommendation: keep both. They make 'kill the dangerous ones first' the whole lesson, which fits 'easy to pick up'."
+   ],
+   "files": []
+  },
+  {
+   "id": "N2",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "NH1",
+   "blocking": false,
+   "title": "Content cut with hero HP",
+   "refs": [],
+   "proposal": [
+    "These relics and mutations only made sense with hero HP and were removed: Close Quarters, Last Rampart, Stormcharged, Cornered.",
+    "Elites lost their extra ×1.1 enemy strength; they're harder only through what they bring.",
+    "Keep them cut, or should any come back with a new trade-off?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N3",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "NH1",
+   "blocking": false,
+   "title": "\"Not a Scratch\" opens nothing",
+   "refs": [],
+   "proposal": [
+    "The feat 'beat an act boss without the Gate losing HP' now unlocks nothing; it's a feat for its own sake (plus 60 Marks).",
+    "Fine as is, or should it unlock something (a cosmetic, a banner)?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N4",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "NH1",
+   "blocking": false,
+   "title": "Two balance checks are still slightly red",
+   "refs": [],
+   "proposal": [
+    "Starting with one hero and fighting every battle: 41% of runs end at the first elite (the limit is 40%).",
+    "Field Kitchen + Relic Cartulary together measure −6 points on the battles route (the noise floor is ±5).",
+    "My recommendation: leave both until the cuts and merges (LS1, LS2) land, then tune once. Chasing a point now would be undone by those changes."
+   ],
+   "files": []
+  },
+  {
+   "id": "N5",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "NH1",
+   "blocking": false,
+   "title": "Vow 1 (Thin Pickings) sits on its own noise floor",
+   "refs": [],
+   "proposal": [
+    "Thin Pickings (two reward cards instead of three, fewer relics) costs between −1.5 and +5 points depending on unrelated curve details. It's still harder in the full report (5.5–6.8 points), but the ladder's first rung is weakly separated.",
+    "Leave it, or make the first Vow bite harder (for example one card fewer and no merchant restock)?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N6",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Q3",
+   "blocking": false,
+   "title": "Zoom to place: the 2× jump",
+   "refs": [],
+   "proposal": [
+    "On small phones the only crisp zoom that clears 44px tiles is 2× (a 2.3–2.9× visual jump). At 320px wide you see about 4 × 4 tiles while zoomed.",
+    "The between-waves move doesn't zoom yet.",
+    "Try it on a small phone: is the jump too far, and should the move zoom too?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N7",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Q8",
+   "blocking": false,
+   "title": "The seed chip made the hero pick taller",
+   "refs": [],
+   "proposal": [
+    "The Daily and seed lines add about 52px, so on a 390×844 phone the Vow chips now start just under the fold (they were 40px above).",
+    "My recommendation: fine for now, since LS3 hides Vows until your first finished run anyway."
+   ],
+   "files": []
+  },
+  {
+   "id": "N8",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Q4",
+   "blocking": false,
+   "title": "Off-hand numbers",
+   "refs": [],
+   "proposal": [
+    "A knife or wand in the off hand counts at 50%; the Twinblade Harness lets a 14-DEX hero carry a sword or axe there at 100%.",
+    "Axes count as one-handed and can go in the off hand with the Harness. Right numbers?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N9",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Q10",
+   "blocking": false,
+   "title": "Enemy card: when do you learn things?",
+   "refs": [],
+   "proposal": [
+    "Never met: name, a greyed portrait, armour. Met once: HP and pace. Felled 5 (1 for a champion): tricks, the counter and Gate cost.",
+    "On 320px phones the card covers most of the small field while it's open.",
+    "Are 1 / 5 the right thresholds?"
+   ],
+   "files": []
+  },
+  {
+   "id": "N10",
+   "stream": "round6",
+   "kind": "question",
+   "effort": "—",
+   "source": "claude",
+   "from": "Q12",
+   "blocking": false,
+   "title": "Menu title contrast on some days",
+   "refs": [],
+   "proposal": [
+    "Because the cinematic now changes daily, some fields put grey rocks under the wordmark: its worst contrast is 3.43:1 (large text needs 3:1, so it passes, but round 2 had 4.9:1).",
+    "My recommendation: add a soft shade behind the wordmark so every day's scene clears 4.5:1."
+   ],
+   "files": []
+  }
+ ],
+ "round": 6
 }
