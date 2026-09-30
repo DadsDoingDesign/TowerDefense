@@ -15,9 +15,9 @@ L = [
     '# Fieldwatch UI plan — from the Whales critique\n',
     f"Branch `{plan['branch']}` · Whales project **{crit['whales_product']}** · review page: `index.html` (built from `plan.json` and `critiques.json`)\n",
     'Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.\n',
-    '**Status (round 3).** Round 1 (ten items) and round 2 (seven items) are built on this branch and re-checked with Whales. '
-    'What remains are the open questions in round 3; Q1–Q4 block progress. Q1 in particular: free placement (G1-2) '
-    'makes the balance report fail until a difficulty lever is chosen.\n',
+    '**Status (round 4).** Rounds 1 and 2 are built on this branch. From round 3, Q1, Q3, Q4, Q5, Q8, Q10 and Q12 are being built; '
+    'Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), '
+    'together with the Hall of Champions idea. Q15 is parked.\n',
     'Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.\n',
 ]
 for st in plan['streams']:

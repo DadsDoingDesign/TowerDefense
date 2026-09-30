@@ -4,9 +4,122 @@ Branch `claude/whales-ui-critique-plan` · Whales project **Tower Defense Game**
 
 Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.
 
-**Status (round 3).** Round 1 (ten items) and round 2 (seven items) are built on this branch and re-checked with Whales. What remains are the open questions in round 3; Q1–Q4 block progress. Q1 in particular: free placement (G1-2) makes the balance report fail until a difficulty lever is chosen.
+**Status (round 4).** Rounds 1 and 2 are built on this branch. From round 3, Q1, Q3, Q4, Q5, Q8, Q10 and Q12 are being built; Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
 
 Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.
+
+## Round 4 · the bigger design changes
+
+Your Q2 answer reshapes how heroes work, so it's written up here as a system before anything is built, with Q6, Q7, Q9, Q11 and Q14 folded in. Spreading fire (Q13) and your champions idea are here too. The seven clearer answers (Q1, Q3, Q4, Q5, Q8, Q10, Q12) are being built now.
+
+### SK1 · Heroes with skills: 1 of 3 rolled heroes, a skill pool you grow across runs
+
+*Effort L · from Claude · awaiting your decision*
+
+> **Your note on Q2:** lets make heros more dynamic. there are a set of 3 basic skills you get to start. As you play you unlock levels of progress and you get a random skill every so often when leveling (this should not be super slow at first but it shouldnt unlock all the cards easily). If you beat the game you get a skill each time. but each time you beat the game the difficulty goes up a bit. you can turn it back down but you dont get another skill unless you beat your score when you win at teh same difficulty … you can pick 1 of 3 heros with the random skills … there should be Level 2, 3 skills too … 3 options at each level for 3 levels of skills. you can only equip 3 skills per hero and then it just bumps their stats and you pick which
+
+**Proposed change**
+
+- Where it starts from: heroes today are one of three classes (Fighter, Rogue, Mystic). They level on their own XP up to level 20, evolve at levels 10 and 20 (pick 1 of 3), and pick a perk at 5 and 15 (1 of 2). The tab labelled 'Skills' in the hero panel already shows those perks, so skills replace perks and the name stays.
+- The skill pool: every skill has a tier (T1, T2, T3). You start the game with 3 basic T1 skills unlocked. The rest of the library is locked 'cards' you earn over time.
+- Unlocks across runs: every run earns Watch XP (from depth, kills and wins). Each Watch level unlocks one random skill card. Early levels come quickly (about one every 1–2 runs), and the gap widens so the whole pool takes many runs. Beating the game also unlocks a card each time.
+- Hero pick: instead of choosing a class, you're offered 3 heroes. Each has a class, a name and 1 random T1 skill rolled from your unlocked pool. As the pool grows, the combinations get more varied. Stats and the full skill text are one tap away.
+- In a run, skills come from levelling: at three milestone levels (proposed 5, 10 and 15) the hero is offered 3 skills of that milestone's tier. T2 and T3 skills only ever appear as these level-up offers, never at hero pick.
+- A hero equips at most 3 skills. Once all 3 slots are full, a new offer lets you swap one out (you pick which) or take a stat bump instead (you pick the stat).
+- Items still matter in a run exactly as today.
+- Difficulty after wins: each win raises your Watch difficulty one step (for example +8% enemy HP and one more elite per act). You can lower it at the start of a run, but a win only unlocks a new card if it's at your highest difficulty, or if you beat your best score at the difficulty you chose.
+- What this replaces: perks (levels 5/15) become skill milestones, and the Banner/Vow ladder is replaced by this difficulty step. Evolutions at 10 and 20 stay unless you say otherwise.
+- This also answers Q6, Q7 and Q9: the pick serves every player the same way (three rolled heroes), no recommendation is needed, and STR/DEX/INT move into the stat breakdown (SK4).
+
+**Questions (answered by default when approved)**
+
+1. Keep evolutions at levels 10 and 20 alongside skills, or fold them into the skill milestones?
+2. When all 3 skill slots are full: swap or stat bump (as proposed), or stat bump only?
+3. Starting library size: I'd propose about 12 T1, 12 T2 and 9 T3 skills, built from today's 18 perks, 15 mutations and the evolution effects. Enough to start?
+4. Should the 3 starting T1 skills be the same for everyone, or one per class?
+5. Replace the Banner/Vow ladder with the difficulty step, or keep both?
+
+**Files:** `src/game/data/skills.ts (new)`, `src/game/run/skills.ts (new)`, `src/state/metaStore.ts (pool, Watch level, difficulty)`, `hero pick (HeroPickVariants → one screen)`, `LevelUpPanel / PerkPanel → skills`, `balance/`
+
+### SK2 · Levels and badges, explained, and what changes with skills
+
+*Effort S · from Claude · awaiting your decision*
+
+> **Your note on Q11:** level on getting xp for towers. each tower levels on its own. dont remember what badges are exactly or how it should integrate. tower lvl or run lvl
+
+**Proposed change**
+
+- It's per tower already: each hero earns its own XP from the waves it fights (half split evenly, half by kills) and levels on its own, up to 20. The run has depth (1–12), not a level.
+- The 'Lv 3 ↑' badge from round 2 marks a hero with a level-up waiting for your choice. Tap it and the choice opens in the panel under the field.
+- With SK1, the badge only appears when there's a real choice: a skill milestone (pick 1 of 3, or swap or stat bump) or an evolution. Plain level-ups just show '+1 level' briefly with the stats gained, with no badge to clear.
+
+**Questions (answered by default when approved)**
+
+1. OK to drop badges on plain level-ups (no choice) as described?
+
+**Files:** `src/ui/shell/levelUps.ts`, `src/ui/shell/LevelUpPanel.tsx`
+
+### SK4 · Exact numbers: a stat breakdown, and before/after on every item and skill
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on Q14:** is it possible to show accurate adjustments to the heros and their items and skills
+
+**Proposed change**
+
+- Yes. The engine already combines every source (class, levels, gear, skills or perks, relics, mutations, shrines) in one place, so the UI can show exact numbers rather than estimates.
+- Tap the hero's stats in the panel for a breakdown. Each stat reads base → +gear → +skills → +relics → final (for example 'Damage 26 → 34 → 41 → 45'), including STR/DEX/INT and what they feed.
+- Every item, skill offer, relic and shrine choice shows its exact before/after on that hero: '+7 DPS (60 → 67)', 'Range 168 → 185'. If it affects the whole company, it says so per hero.
+- Tests hold the numbers shown to what the engine computes, so the display can never drift from what happens in battle.
+
+**Questions (answered by default when approved)**
+
+1. Default to DPS as the headline number, or damage per hit?
+
+**Files:** `src/game/engine/combat.ts (breakdown helper)`, `DetailBand hero panel, item panel, LevelUpPanel`, `tests/`
+
+### FX1 · Spreading fire you can see coming, and have to move for
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on Q13:** hmm how would this be countered. what if it spreads to a spot im using, do i just have to move my tower. i wouldnt want to lose it. That could be interesting it forces you to move your towers as you play. the spread is random too
+
+**Proposed change**
+
+- On Wildfire battles, fire spreads 1–2 tiles after each sub-wave, picked at random from the seed. You never lose a hero to it.
+- Counterplay by warning: the tiles fire will spread to next are shown with smoke one sub-wave ahead, so you can move before it lands.
+- If fire reaches a hero, that hero is Scorched (a burn that reduces damage) until it moves, and the next held sub-wave gives a free extra move for scorched heroes, so moving never costs your one normal move.
+- Fire stops at water, the road and rocks; lakes (Flooded meadow) are firebreaks. Frost heroes' hits put out a burning tile next to them, giving the Mystic's Frost line a job.
+- It fits Q1's danger tiles: burning ground behaves like a danger tile that moves.
+
+**Questions (answered by default when approved)**
+
+1. Should fire also hurt enemies walking through a burning tile on the road edge?
+2. Is 1–2 tiles per sub-wave the right pace, or once per wave?
+
+**Files:** `src/game/run/terrain.ts`, `src/game/engine (scorch status)`, `overlays (smoke telegraph)`
+
+### HC1 · Hall of Champions: every run's company kept, your top 3 on the menu
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on your idea:** you could have a history of you champions somewhere from all your runs and grouped by run. then you can show off your top 3 on the loading screen. click to see stats of the run
+
+**Proposed change**
+
+- Every finished run is saved to your history: date, seed, difficulty, result, depth, score, and its company. For each hero: name, class, level, skills, gear, kills, damage and time on the field.
+- A 'Hall of Champions' row on the Watchtower menu opens the history grouped by run (newest first), with filters for wins, Daily runs and class.
+- Your top 3 champions stand on the title/menu screen as small pixel portraits with name and title (for example 'Doyle, Warden of Ash · 12 depth · 1,840 dmg'). Tap one to see that run's stats card, with a 'Play this seed' button.
+- The menu cinematic (Q12) could cast your top champions as the heroes in today's scene.
+- History is stored locally with the other progress, capped at a sensible number of runs (the top 3 are always kept) and validated on load like the rest of the save.
+
+**Questions (answered by default when approved)**
+
+1. 'Top' by what: the run's score, or the single hero's damage or kills?
+2. By 'loading screen', do you mean the main menu, or a separate splash while the game loads?
+3. Cast your champions in the menu cinematic?
+
+**Files:** `src/state/metaStore.ts (history)`, `src/ui/shell/PageScreens.tsx (menu row, Hall page)`, `MenuKeyArt (top 3)`, `src/state/runSnapshot.ts (validation)`
 
 ## Round 3 · open questions
 

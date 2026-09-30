@@ -139,7 +139,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
 <div class="wrap">
   <header>
     <h1>Fieldwatch UI Plan</h1>
-    <p class="lede">Round 3. Everything you approved in rounds 1 and 2 is built on the branch. What remains are the open questions: the defaults I chose for you, and the calls the builds turned up. The first four block progress. Every answer can carry a note.</p>
+    <p class="lede">Round 4. The seven clear answers from round 3 are being built now. The bigger changes your answers opened up are here as proposals: the skill system, exact stat numbers, spreading fire and a Hall of Champions. Approve, change or reject each, with a note, and answer the questions in the note.</p>
     <div class="meta">
       <span>Branch <b class="mono" id="branch">claude/whales-ui-critique-plan</b></span>
       <span>Base <b class="mono" id="base">main @ f3760d1</b></span>
@@ -154,7 +154,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
         <span><span class="dot" style="background:var(--good)"></span><b id="n-a">0</b> approved</span>
         <span><span class="dot" style="background:var(--edit)"></span><b id="n-e">0</b> edited</span>
         <span><span class="dot" style="background:var(--bad)"></span><b id="n-r">0</b> rejected</span>
-        <span><b id="n-p">15</b> to decide</span>
+        <span><b id="n-p">5</b> to decide</span>
       </div>
       <span class="sync" id="sync">Connecting…</span>
     </div>
@@ -275,7 +275,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
         item.kind === 'question' ? h('span', { class: 'pill', text: `From ${item.from}` }) : h('span', { class: `pill src-${item.source}`, text: item.source === 'whales' ? 'From Whales' : 'From Claude' }),
         item.blocking ? h('span', { class: 'pill-block', text: 'Blocks progress' }) : null,
         h('h3', { text: item.title })),
-      item.yourNote ? h('p', { class: 'yournote' }, h('b', { text: `Your note on ${item.replaces}` }), item.yourNote) : null,
+      item.yourNote ? h('p', { class: 'yournote' }, h('b', { text: item.replaces === 'your idea' ? 'Your idea' : `Your note on ${item.replaces}` }), item.yourNote) : null,
       h('div', { class: 'thumbs' }, keys.map(k => thumb(k, (item.refs.find(r => r[0] === k) || [])[1]))),
       refs.length ? h('div', {}, h('div', { class: 'label', text: 'What Whales found' }),
         h('ul', { class: 'findings' }, refs.map(([k, n]) => {
