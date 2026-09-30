@@ -20,6 +20,8 @@ import '../../styles/page.css'
 import '../../styles/shell.css'
 import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
+import '../../styles/shell-reward.css'
+import { useLevelUpTracker } from './levelUps'
 
 /**
  * The whole game in one screen. Four bands at fixed heights; every surface the
@@ -50,6 +52,8 @@ export function RootShell() {
   const [metaView, setMetaView] = useState<MetaView>('menu')
   const offers = useOffers(metaView, setMetaView)
   const battle = useBattleLayout()
+  // G3-2: level-ups from a normal wave wait on the roster, not in a modal.
+  useLevelUpTracker()
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
   // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
@@ -128,10 +132,11 @@ export function RootShell() {
           and never shifts a control (WS9). Renders nothing once taught. */}
       <Coach />
       <StageBand ctx={ctx} />
-      {/* No `ctx` and no `offers`: this band is the party row and nothing else.
-          The offers branch it used to carry was unreachable — see the note in
+      {/* No `ctx`: this band is the party row — except after a cleared normal
+          wave, when the reward hand joins it (G3-2), which is what `offers`
+          is for. The old offers branch was unreachable — see the note in
           SelectorBand.tsx and the invariant in context.ts. */}
-      <SelectorBand />
+      <SelectorBand offers={offers} />
       <DetailBand offers={offers} />
       {/* Keyboard shortcuts + the "?" sheet (Phase 4). The button shows only
           to a fine pointer; the keys work on any keyboard. */}
