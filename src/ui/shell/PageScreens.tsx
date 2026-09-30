@@ -19,6 +19,7 @@ import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatR
 import { RunSeed } from './RunSeed'
 import { FeatsEarned } from './FeatsEarned'
 import { VolumeSlider } from './VolumeSlider'
+import { useStaged } from './staging'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -186,6 +187,9 @@ export function PageScreen({
   const shortfall = (c: Price) =>
     c.currency === 'gold' ? Math.max(0, c.amount - gold) : c.currency === 'dust' ? Math.max(0, c.amount - dust) : true
   const heroPick = useGameStore((s) => s.screen === 'heroPick' && s.mode === 'campaign')
+  // LS3: a first run's hero-pick carries no seed chip — a seed is a thing to
+  // share or replay, and a first run has neither yet.
+  const staged = useStaged()
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
@@ -268,7 +272,7 @@ export function PageScreen({
       live={!titleOverride && ctx.board?.live}
       // Hero-pick prices nothing, so its title block carries the run's seed
       // and terms instead (`RunSeed`, a chip that never scrolls).
-      resources={purse.size ? <Resources show={purse} /> : heroPick ? <RunSeed /> : undefined}
+      resources={purse.size ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
       strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
       tone={ctx.board?.tone}
       notice={confirm.notice}
@@ -530,10 +534,14 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
           <MenuRow
             key={o.id}
             label={o.title}
-            value={o.cost ? priceNode(o.cost) : o.sub}
+            // LS3: a locked entry says, in one plain line, what opens it.
+            value={o.locked ? undefined : o.cost ? priceNode(o.cost) : o.sub}
+            note={o.locked}
             icon={o.icon}
             glyph={o.glyph}
             big
+            dim={!!o.locked}
+            disabled={!!o.locked}
             onClick={() => o.action?.run()}
             tone={o.color === 'var(--bad-text)' ? 'danger' : 'default'}
           />

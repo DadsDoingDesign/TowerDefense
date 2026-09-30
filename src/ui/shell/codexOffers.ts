@@ -16,11 +16,38 @@ import { ENEMY_TYPES } from '../../game/data/enemies'
 import { ALL_PERKS } from '../../game/data/perks'
 import { RELICS, relicSupported } from '../../game/data/relics'
 import type { Codex } from '../../state/metaStore'
+import { CORE_IDEAS, IDEAS } from '../../state/staging'
+import { GLOSSARY } from '../channels'
 import type { Body, Offer } from './offers'
 
 export interface CodexView {
   achievements: Record<string, number>
   codex: Codex
+  /** LS3: the ideas the player has met. */
+  met?: readonly string[]
+  /** LS3: a first-timer's Codex lists only what they have met. */
+  staged?: boolean
+}
+
+/**
+ * The glossary (LS3/LS4): one line per idea, in the game's one name for it —
+ * every idea for a returning player, only the ones met so far for a first-timer
+ * (the rest are a count, never a spoiler).
+ */
+export function glossaryOffer(v: Pick<CodexView, 'met' | 'staged'>): Offer {
+  const met = new Set<string>([...CORE_IDEAS, ...(v.met ?? [])])
+  const shown = v.staged ? IDEAS.filter((id) => met.has(id)) : [...IDEAS]
+  const waiting = IDEAS.length - shown.length
+  return {
+    id: 'codex-glossary',
+    title: 'Glossary',
+    sub: v.staged ? `${shown.length}/${IDEAS.length}` : `${IDEAS.length} terms`,
+    icon: 'tips',
+    body: [
+      ...shown.map((id) => `${GLOSSARY[id].term} — ${GLOSSARY[id].line}`),
+      ...(waiting > 0 ? [`${waiting} more to meet on the road.`] : []),
+    ],
+  }
 }
 
 const featName = (id: string): string => ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id
@@ -102,5 +129,5 @@ export function codexOffers(v: CodexView): Offer[] {
     ],
   }
 
-  return [feats, goblins, relics, specs, perks]
+  return [glossaryOffer(v), feats, goblins, relics, specs, perks]
 }

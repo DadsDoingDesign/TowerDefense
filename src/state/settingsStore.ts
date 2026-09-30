@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { setAudioOptions, setAudioVolumes } from '../audio/audio'
 import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
-import { bool, clampNum, onStorageKeyChange, safePersistStorage, str } from './storage'
+import { bool, clampNum, onStorageKeyChange, readRaw, safePersistStorage, str } from './storage'
 
 export type UiScale = 'normal' | 'large'
 
@@ -56,11 +56,42 @@ export const assistProfile = (level: AssistLevel): AssistProfile => ASSIST[level
  * They live in settings rather than in the run so they survive a run ending,
  * and so "Show the tips again" is one row on the settings page.
  */
-export type TeachId = 'deploy' | 'equip' | 'threat' | 'evolve' | 'gold'
-export const TEACH_IDS = ['deploy', 'equip', 'threat', 'evolve', 'gold'] as const
+/*
+ * LS3 added one tip per staged idea (`state/staging.ts`): each is said once,
+ * the first time its idea is on screen. `gold` retired into `merchant` — the
+ * gold tip only ever said "spend it at a Merchant", so it is now said when a
+ * merchant is first in reach. `threat` keeps its id (it is persisted) and now
+ * speaks of enemy strength.
+ */
+export const TEACH_IDS = [
+  'deploy',
+  'equip',
+  'threat',
+  'evolve',
+  'subwave',
+  'speed',
+  'depth',
+  'gear',
+  'command',
+  'merchant',
+  'relic',
+  'perk',
+  'danger',
+  'challenge',
+] as const
+export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>
 
-const NO_TEACH: TeachSeen = { deploy: false, equip: false, threat: false, evolve: false, gold: false }
+/**
+ * The tips LS3 added. A player who had already played before they existed
+ * (settings v3 or older, and a meta save with a finished run) has met every
+ * one of these ideas, so the migration marks them taught — nobody who knows
+ * the game is walked through it again. "Show the tips again" still brings
+ * them all back.
+ */
+export const LS3_TEACH_IDS: readonly TeachId[] = ['subwave', 'speed', 'depth', 'gear', 'command', 'merchant', 'relic', 'perk', 'danger', 'challenge']
+
+const NO_TEACH = Object.fromEntries(TEACH_IDS.map((id) => [id, false])) as TeachSeen
 
 /**
  * The audio settings — and the API the Settings row's sliders are wired to.
@@ -115,6 +146,13 @@ interface SettingsState {
   /** Which teaching beats the player has already been shown. */
   taught: TeachSeen
   /**
+   * LS3: "Show everything from the start". Off, a first run is staged — new
+   * ideas arrive when they matter. On, nothing is held back (and the next run
+   * deals its road as any returning player's would).
+   */
+  showEverything: boolean
+  setShowEverything: (v: boolean) => void
+  /**
    * "Calm audio" (Phase-2 accessibility): the score without drums, a gentler
    * limiter, and the effects brought forward — for sensory sensitivity, for
    * playing at night, for anyone the fight music is too much for.
@@ -147,8 +185,11 @@ interface SettingsState {
 const prefersReducedMotion =
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`, `monoAudio`. */
-export const SETTINGS_VERSION = 3
+/**
+ * Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`,
+ * `monoAudio`. 4: `showEverything`, and the LS3 tips (see {@link LS3_TEACH_IDS}).
+ */
+export const SETTINGS_VERSION = 4
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
@@ -156,7 +197,7 @@ const ASSIST_LEVELS = ['off', 'steady', 'sure'] as const
 
 type PersistedSettings = Pick<
   SettingsState,
-  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught' | 'calmAudio' | 'monoAudio'
+  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught' | 'calmAudio' | 'monoAudio' | 'showEverything'
 >
 
 /**
@@ -167,8 +208,13 @@ type PersistedSettings = Pick<
  * straight back to storage on the next change. Every field is clamped to a
  * range it is actually allowed to hold.
  */
-export function migrateSettings(persisted: unknown, _version: number): PersistedSettings {
+export function migrateSettings(persisted: unknown, version: number, metaRaw: () => string | null = () => readRaw('fieldwatch-meta')): PersistedSettings {
   const o = (persisted && typeof persisted === 'object' ? persisted : {}) as Record<string, unknown>
+  // v3 → v4 (LS3): a player who had finished a run before the new tips
+  // existed has met their ideas already. Only on a real version step —
+  // `merge` calls this with the current version on every load.
+  const taught = readTaught(o.taught)
+  if (version < 4 && playedBefore(metaRaw())) for (const id of LS3_TEACH_IDS) taught[id] = true
   const a = (o.audio && typeof o.audio === 'object' ? o.audio : {}) as Record<string, unknown>
   return {
     audio: {
@@ -193,10 +239,23 @@ export function migrateSettings(persisted: unknown, _version: number): Persisted
     // half-written one may have any subset — coerce every flag rather than
     // spreading whatever arrived, so an unknown key can never become a beat
     // that is silently already "seen".
-    taught: readTaught(o.taught),
+    taught,
     // v2 and earlier had neither: both default off, the mix as designed.
     calmAudio: bool(o.calmAudio, false),
     monoAudio: bool(o.monoAudio, false),
+    showEverything: bool(o.showEverything, false),
+  }
+}
+
+/** Whether a stored meta payload records a finished run. Never throws. */
+function playedBefore(raw: string | null): boolean {
+  if (!raw) return false
+  try {
+    const o = JSON.parse(raw) as { state?: { stats?: { runsCompleted?: unknown } } }
+    const n = o?.state?.stats?.runsCompleted
+    return typeof n === 'number' && Number.isFinite(n) && n > 0
+  } catch {
+    return false
   }
 }
 
@@ -241,6 +300,9 @@ export const useSettingsStore = create<SettingsState>()(
       taught: { ...NO_TEACH },
       calmAudio: false,
       monoAudio: false,
+      showEverything: false,
+
+      setShowEverything: (v) => set({ showEverything: v }),
 
       setCalmAudio: (v) => {
         set({ calmAudio: v })
@@ -333,6 +395,7 @@ export const useSettingsStore = create<SettingsState>()(
         taught: s.taught,
         calmAudio: s.calmAudio,
         monoAudio: s.monoAudio,
+        showEverything: s.showEverything,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

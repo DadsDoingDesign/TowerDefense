@@ -195,6 +195,7 @@ export function MenuRow({
   pips,
   art,
   big,
+  note,
 }: {
   label: string
   value?: ReactNode
@@ -251,6 +252,11 @@ export function MenuRow({
    * Offer rows stay at the standard height — there the name carries the row.
    */
   big?: boolean
+  /**
+   * LS3: one plain line under the name — a locked menu entry's "what opens
+   * it". It is part of the row's text, so it is part of its accessible name.
+   */
+  note?: string
 }) {
   return (
     <button
@@ -297,8 +303,9 @@ export function MenuRow({
             ))}
         </span>
       )}
-      <span className="pg-row-label">
-        {label}
+      <span className={`pg-row-label${note ? ' has-note' : ''}`}>
+        {note ? <span className="pg-row-name">{label}</span> : label}
+        {note && <span className="pg-row-note">{note}</span>}
         {pips && pips.of > 1 && (
           <span className="pg-pips" role="img" aria-label={`level ${pips.on} of ${pips.of}`}>
             {Array.from({ length: pips.of }, (_, i) => (

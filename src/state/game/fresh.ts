@@ -70,6 +70,7 @@ export function freshRunState(runSeed: number) {
     runSettled: false,
     runBanner: 0,
     challenge: STANDARD_RUN,
+    firstRun: false,
     victory: null,
     ...dealRunMap(),
     event: null,

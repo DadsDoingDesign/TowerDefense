@@ -11,6 +11,9 @@ import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
 import { carryPlacements, encounterNode } from '../../game/run/map'
 import { nodeHazardSeed, nodeTerrainRule } from '../../game/run/terrain'
+import { stageFirstRunMap } from '../../game/run/firstRun'
+import { startsFirstRun } from '../staging'
+import { useSettingsStore } from '../settingsStore'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
@@ -77,8 +80,14 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const b = runBonuses()
     // One seed per run, then every stream (map/loot/combat) hangs off it.
     seedRunStreams(runSeed)
+    // LS3: a first run is staged. Decided here, once, and kept by the snapshot.
+    const firstRun = startsFirstRun(useMetaStore.getState().stats, useSettingsStore.getState().showEverything, challenge)
+    const fresh = freshRunState(runSeed)
     set({
-      ...freshRunState(runSeed),
+      ...fresh,
+      // The map is post-processed, never re-dealt: no stream moves (LS3).
+      runMap: stageFirstRunMap(fresh.runMap, firstRun),
+      firstRun,
       mode: 'campaign',
       runSeed,
       challenge,
@@ -137,7 +146,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // map stream is rewound rather than advanced, so switching Banners back and
     // forth cannot be used to reroll the map.
     streams.mapRng = streamRng(st.runSeed, 'map')
-    set({ runBanner: next, threat: rules.startThreat, ...dealRunMap(rules) })
+    const dealt = dealRunMap(rules)
+    set({ runBanner: next, threat: rules.startThreat, ...dealt, runMap: stageFirstRunMap(dealt.runMap, st.firstRun) })
     sfx('confirm')
   },
 
@@ -303,6 +313,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // the run the player left.
       runBanner: snap.challenge.kind === 'daily' ? 0 : Math.min(snap.runBanner, useMetaStore.getState().sacrificeTier),
       challenge: snap.challenge,
+      // LS3: a run saved before staging existed has none, and plays unstaged.
+      firstRun: snap.firstRun === true,
       // A snapshot only ever exists for a LIVE run, so there is no recap to
       // restore — and leaving a stale one would show the last run's receipt
       // over this one's first node.
@@ -397,7 +409,12 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // (G1-2) is the node's own, the same one the preview named, and so (Q1) is
     // its danger ground and seeded obstacles — a hash of the node, no stream draw.
     const battleMap =
-      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed), layout.orientation(), nodeHazardSeed(node, get().runSeed)) ??
+      fieldFor(
+        fieldIdOf(get().battleMap),
+        nodeTerrainRule(node, get().runSeed, { firstRun: get().firstRun }),
+        layout.orientation(),
+        nodeHazardSeed(node, get().runSeed, { firstRun: get().firstRun }),
+      ) ??
       orientField(get().battleMap, layout.orientation())
     set({
       activeNodeId: nodeId,

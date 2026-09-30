@@ -61,6 +61,11 @@ import { equipRules } from '../src/game/run/relics'
  * merchant shelf, a fork, run mods), so a mutation can land on each of them.
  */
 function buildBase(): Record<string, unknown> {
+  // LS3: dealt as a returning player's run, so the node lays its danger ground
+  // for the mutations to land on — then marked a staged first run, so the
+  // `firstRun` flag rides in the base too.
+  const runs = useMetaStore.getState().stats.runsCompleted
+  useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: Math.max(1, runs) } })
   const g = useGameStore.getState()
   g.newRun()
   useGameStore.getState().pickStartingHero('fighter')
@@ -70,6 +75,8 @@ function buildBase(): Record<string, unknown> {
   setLayoutOrientation(() => 'portrait')
   st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
   setLayoutOrientation(null)
+  useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: runs } })
+  useGameStore.setState({ firstRun: true })
   // v10 (G1-2): the battle is fought under a map challenge with the hero posted
   // on a tile, so mutations land on `terrainRule` and a tile-keyed placement.
   // Q1: `withTerrainRule` keeps the node's danger ground, so they land on

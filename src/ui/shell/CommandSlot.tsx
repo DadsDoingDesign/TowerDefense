@@ -20,7 +20,7 @@ import { useGameStore } from '../../state/gameStore'
  * moments themselves are spoken by the shell's one live region (`Announcer`,
  * fed by `state/combatNotes.ts`).
  */
-export function CommandSlot() {
+export function CommandSlot({ staged = false }: { staged?: boolean }) {
   const engine = useGameStore((s) => s.engine)
   const hud = useGameStore((s) => s.hud)
   const useCommand = useGameStore((s) => s.useCommand)
@@ -41,6 +41,10 @@ export function CommandSlot() {
       </button>
     )
   }
+
+  // LS3: the Watch Command arrives after the first battle (`state/staging.ts`).
+  // The breather's "Next" above is not staged — it is how a breather ends.
+  if (staged) return null
 
   // The engine's own list — the one `useCommand` is checked against.
   const id = engine.commands[0]

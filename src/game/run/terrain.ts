@@ -21,6 +21,17 @@
 import { hashSeed, RNG } from '../core/rng'
 import { TERRAIN_RULE_IDS } from '../data/terrain'
 import type { TerrainRuleId } from '../types'
+import { calmGround, calmTerrain } from './firstRun'
+
+/**
+ * LS3: a first run fights its first two depths on plain ground and meets its
+ * first map challenge at depth 4 (`firstRun.calmGround` / `calmTerrain`).
+ * Omitted — as the balance harness always omits it — the answer is exactly
+ * what it was.
+ */
+export interface GroundOpts {
+  firstRun?: boolean
+}
 
 /** Share of eligible battles that carry a map challenge. */
 export const CHALLENGE_SHARE = 2 / 3
@@ -32,9 +43,11 @@ const unit = (...parts: (string | number)[]): number => new RNG(hashSeed(...part
 export function nodeTerrainRule(
   node: { id: string; type: string; layer: number },
   runSeed: number,
+  opts: GroundOpts = {},
 ): TerrainRuleId | null {
   if (node.type !== 'battle' && node.type !== 'elite') return null
   if (node.layer <= 1) return null
+  if (calmTerrain(node, !!opts.firstRun)) return null
   const u = unit(runSeed, 'terrain', node.id)
   if (u >= CHALLENGE_SHARE) return null
   return TERRAIN_RULE_IDS[Math.floor((u / CHALLENGE_SHARE) * TERRAIN_RULE_IDS.length)] ?? null
@@ -61,8 +74,9 @@ export function endlessTerrainRule(round: number, runSeed: number): TerrainRuleI
  * map and no fight, and the same node always lays the same ground — across a
  * resume and on either twin.
  */
-export function nodeHazardSeed(node: { id: string; type: string }, runSeed: number): number | null {
+export function nodeHazardSeed(node: { id: string; type: string; layer?: number }, runSeed: number, opts: GroundOpts = {}): number | null {
   if (!FIGHTS.has(node.type)) return null
+  if (node.layer != null && calmGround({ layer: node.layer }, !!opts.firstRun)) return null
   return hashSeed(runSeed, 'hazard', node.id)
 }
 

@@ -173,6 +173,14 @@ export interface GameData {
   /** Daily Watch / custom seed / standard (Phase 1) — see `state/daily.ts`. */
   challenge: RunChallenge
   /**
+   * LS3: this is the player's first run, and it is staged — new ideas arrive
+   * when they matter (`state/staging.ts`) and the road holds a few back
+   * (`game/run/firstRun.ts`). Decided once, when the run begins, from the meta
+   * save (no finished run yet) and the "Show everything" setting; a resumed
+   * run keeps what it began with.
+   */
+  firstRun: boolean
+  /**
    * The recap a finished campaign leaves behind (H23) — what the win screen
    * reads, and what a defeat screen gets too, so the receipt is real.
    */

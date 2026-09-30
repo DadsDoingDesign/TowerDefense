@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
 import {
   COVERAGE_RANGE,
@@ -21,9 +21,14 @@ import { endlessHazardSeed, nodeHazardSeed } from '../src/game/run/terrain'
 import type { FieldTile, GameMap, SpawnEvent, TerrainRuleId } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
+import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation, streams } from '../src/state/game/runtime'
 import { captureRun, migrateSnapshot, snapshotBattleMap } from '../src/state/runSnapshot'
 import { slotCoverage } from '../balance/harness'
+
+// LS3: this file is about a returning player's road. A first run fights its
+// first depths on plain ground (see tests/staging.test.ts and firstRun.test.ts).
+beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 1 } }))
 
 /**
  * Q1 — danger ground and seeded obstacles.

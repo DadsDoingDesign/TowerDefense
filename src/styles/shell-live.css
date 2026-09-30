@@ -1123,3 +1123,14 @@ h1.sh-brand {
   font-size: var(--fs-lg);
   cursor: pointer;
 }
+
+/* ============================================= LS3 — first-run staging
+   Before the first win there is no gear and no pack on screen (`DetailBand`,
+   `state/staging.ts`), so the context panel takes the Detail band's whole
+   width. `!important` on purpose: the band's column triple is set in eight
+   places (phone widths, Large UI, tablet/desk), and every one of them must
+   yield while the two columns are absent — the wave bar already spans all
+   tracks, so one track is all it needs. */
+.sh-detail.no-gear {
+  grid-template-columns: minmax(0, 1fr) !important;
+}

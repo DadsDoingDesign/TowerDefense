@@ -5,6 +5,7 @@ import { num, numRecord, onStorageKeyChange, safePersistStorage } from './storag
 import { dailyScore } from './daily'
 import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achievements'
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
+import { readMet, type IdeaId } from './staging'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -484,6 +485,12 @@ interface MetaState {
   achievements: Record<string, number>
   /** What the Watch has seen and used, for the Codex (Phase 3b). */
   codex: Codex
+  /**
+   * LS3: the ideas this player has met, in the order they first appeared
+   * (`state/staging.ts`). A staged first run shows an idea once it is here, and
+   * the Codex glossary lists these. Validated on load (`readMet`).
+   */
+  met: IdeaId[]
   // actions
   /**
    * Claim `date`'s scored Daily attempt. Returns false — and changes nothing —
@@ -524,6 +531,8 @@ interface MetaState {
   recordCodex: (seen: Partial<Omit<Codex, 'felled'>>) => void
   /** Q10 — add one settled wave's kills (by registry key) to the Codex's felled tally. */
   recordFelled: (byKey: Iterable<readonly [string, number]>) => void
+  /** LS3 — note ideas as met. Known ids only, each once; a no-op when nothing is new. */
+  recordMet: (ids: Iterable<IdeaId>) => void
   resetMeta: () => void
 }
 
@@ -557,11 +566,16 @@ const freshStats = (): MetaStats => ({
  *
  * v4 — Phase 3b: `achievements` (feats earned) and `codex` (enemies, relics,
  * specs and perks seen) are added and default to empty. Nothing moves.
+ *
+ * v5 — LS3: `met` (the ideas a player has met, for first-run staging and the
+ * Codex glossary) is added and defaults to empty. Nothing moves: whether a
+ * player is staged is read off `stats.runsCompleted`, which every older save
+ * already carries.
  */
-export const META_VERSION = 4
+export const META_VERSION = 5
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily' | 'achievements' | 'codex'>
+type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily' | 'achievements' | 'codex' | 'met'>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -605,6 +619,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     daily: migrateDaily(o.daily),
     achievements: migrateAchievements(o.achievements),
     codex: migrateCodex(o.codex),
+    met: readMet(o.met),
   }
 }
 
@@ -625,6 +640,7 @@ export const useMetaStore = create<MetaState>()(
       daily: null,
       achievements: {},
       codex: freshCodex(),
+      met: [],
 
       beginDaily: (date) => {
         if (get().daily?.date === date) return false
@@ -677,6 +693,12 @@ export const useMetaStore = create<MetaState>()(
           felled: cur.felled,
         }
         if (next.enemies !== cur.enemies || next.relics !== cur.relics || next.specs !== cur.specs || next.perks !== cur.perks) set({ codex: next })
+      },
+
+      recordMet: (ids) => {
+        const cur = get().met
+        const next = readMet([...cur, ...ids])
+        if (next.length !== cur.length) set({ met: next })
       },
 
       recordFelled: (byKey) => {
@@ -777,7 +799,7 @@ export const useMetaStore = create<MetaState>()(
       },
 
       resetMeta: () =>
-        set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null, achievements: {}, codex: freshCodex() }),
+        set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null, achievements: {}, codex: freshCodex(), met: [] }),
     }),
     {
       name: 'fieldwatch-meta',
@@ -791,6 +813,7 @@ export const useMetaStore = create<MetaState>()(
         daily: s.daily,
         achievements: s.achievements,
         codex: s.codex,
+        met: s.met,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is

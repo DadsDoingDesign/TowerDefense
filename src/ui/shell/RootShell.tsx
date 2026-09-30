@@ -22,6 +22,7 @@ import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
 import '../../styles/shell-reward.css'
 import { useLevelUpTracker } from './levelUps'
+import { useMenuStaged, useStagingRecorder } from './staging'
 
 /**
  * The whole game in one screen. Four bands at fixed heights; every surface the
@@ -36,7 +37,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   perks: { title: 'Watchtower', subtitle: 'Marks buy permanent bonuses that carry into every run.' },
   codex: { title: 'Codex', subtitle: 'Feats to earn, and everything the Watch has met on the road.' },
-  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision and assist.' },
+  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
 }
 
 /**
@@ -54,6 +55,15 @@ export function RootShell() {
   const battle = useBattleLayout()
   // G3-2: level-ups from a normal wave wait on the roster, not in a modal.
   useLevelUpTracker()
+  // LS3: latch every idea the player meets, on every screen.
+  useStagingRecorder()
+  // LS4: before the first finished run the Watchtower is where a player first
+  // reads the currency's name, so it says it in full, once.
+  const menuStaged = useMenuStaged()
+  const metaCopy =
+    metaView === 'perks' && menuStaged
+      ? { ...META_COPY.perks, subtitle: 'Watch Marks (Marks) buy permanent bonuses that carry into every run. Every run earns some.' }
+      : META_COPY[metaView]
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
   // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
@@ -112,7 +122,7 @@ export function RootShell() {
           // H3-2 hero-pick directions, behind a URL switch (see above).
           <HeroPickVariantScreen ctx={ctx} variant={HERO_PICK_VARIANT} />
         ) : (
-          <PageScreen ctx={ctx} offers={offers} {...META_COPY[metaView]} />
+          <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
         )}
         <EvolutionModal />
         <Announcer />

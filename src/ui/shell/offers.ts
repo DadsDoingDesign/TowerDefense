@@ -8,6 +8,7 @@ import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
 import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { dailySeed, utcDateKey } from '../../state/daily'
+import { menuStaged } from '../../state/staging'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
@@ -191,6 +192,12 @@ export interface Offer {
   dim?: boolean
   /** Level pips for a levelled purchase (a Watchtower perk): `on` of `of`. */
   pips?: { on: number; of: number }
+  /**
+   * LS3: a menu entry the player has not opened yet — the one plain line that
+   * says what opens it. The menu draws the row dimmed and inert, with this
+   * line under its name.
+   */
+  locked?: string
   /** A real sprite for a row that is a hero (the merchant's recruit). */
   rowArt?: string
   /** The item or card rarity, drawn as a `RarityTag` (word + hue + pips). */
@@ -224,6 +231,17 @@ export const THREAT_FREE_CHOICE: string[] = [
 
 /** At the Crossroads — not a map stop, so nothing about the road moves. */
 export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for taking it: the Crossroads is not a stop on the road.']
+
+/**
+ * LS3: the enemy-strength note rides on a choice only once the player has met
+ * enemy strength — a first run's layer-1 recruit must not explain a number the
+ * header has not shown yet. Endless has no road and never carries it.
+ */
+function strengthNote(st: St, lines: string[]): string[] {
+  if (st.mode === 'endless') return []
+  const met = !st.firstRun || useSettingsStore.getState().showEverything || st.threat > 1.001 || useMetaStore.getState().met.includes('strength')
+  return met ? lines : []
+}
 
 /**
  * Sprite path for an archetype — the real Tiny Swords art, not a stand-in.
@@ -306,16 +324,23 @@ export function itemBody(item: Item): Body {
 }
 
 /** Portrait + stat pairs for any Sentinel-shaped offer. */
+/** LS3: whether the live run is a staged first run. */
+const stagedRun = (): boolean => useGameStore.getState().firstRun && !useSettingsStore.getState().showEverything
+
 function heroBits(s: Sentinel) {
   return {
     // Token, not `s.color`'s raw hex, so the colour-vision modes reach the
     // portrait rail as well as everything else (M34).
     portrait: { art: heroArt(s.archetype), color: archetypeVar(s.archetype) },
-    stats: [
-      { label: 'STR', value: s.stats.str },
-      { label: 'DEX', value: s.stats.dex },
-      { label: 'INT', value: s.stats.int },
-    ],
+    // LS3: a first run reads a hero by what it does, as on the first pick; the
+    // stat block is one tap away on the hero's Stats tab.
+    stats: stagedRun()
+      ? undefined
+      : [
+          { label: 'STR', value: s.stats.str },
+          { label: 'DEX', value: s.stats.dex },
+          { label: 'INT', value: s.stats.int },
+        ],
   }
 }
 
@@ -327,7 +352,10 @@ function heroBits(s: Sentinel) {
  */
 function heroBody(s: Sentinel): string[] {
   const p = computeCombat(s)
-  return [`${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`]
+  const line = `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`
+  // LS3: with the stat row held back, the sentence that says what the hero
+  // does leads — the same one the first pick shows.
+  return stagedRun() ? [getNode(s.branchPath[s.branchPath.length - 1] ?? s.archetype).ability, line] : [line]
 }
 
 /**
@@ -348,6 +376,9 @@ function heroBody(s: Sentinel): string[] {
  */
 const offerDeps = (s: St) => ({
   screen: s.screen,
+  // LS3: a staged first run words hero offers and choices differently.
+  firstRun: s.firstRun,
+  threat: s.threat,
   runPhase: s.runPhase,
   mode: s.mode,
   event: s.event,
@@ -575,6 +606,10 @@ function archetypeTiles(p: ReturnType<typeof computeCombat>): { caption: string;
 
 function heroPickOffers(st: St, meta: Meta): Offer[] {
   const statBonus = meta.bonuses().statBonus
+  // LS3: a first run picks a hero by what it DOES. The stat block, the trait
+  // tiles and the line of secondary numbers (crit, thorns, patience) wait for
+  // the hero's own Stats tab, where they are one tap away and read in context.
+  const staged = st.firstRun && !useSettingsStore.getState().showEverything
   return ARCH_LIST.map((a) => {
     const node = getNode(a)
     const hero = previewHero(a, statBonus)
@@ -586,19 +621,28 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       color: ARCH_COLOR[a],
       glyph: GLYPH[a],
       portrait: { art: heroArt(a), color: ARCH_COLOR[a] },
-      stats: [
-        { label: 'STR', value: hero.stats.str },
-        { label: 'DEX', value: hero.stats.dex },
-        { label: 'INT', value: hero.stats.int },
-      ],
-      tiles: archetypeTiles(p),
+      stats: staged
+        ? undefined
+        : [
+            { label: 'STR', value: hero.stats.str },
+            { label: 'DEX', value: hero.stats.dex },
+            { label: 'INT', value: hero.stats.int },
+          ],
+      // The trait tiles are numbers with names (thorns, crit, splash); the
+      // ability sentence says the same thing in words, and on a first pick it
+      // gets the room.
+      tiles: staged ? undefined : archetypeTiles(p),
       // Three lines, not five: the tiles under the CTA carry the headline
       // traits already, and every line here costs vertical room the Banner
       // picker below needs in order to be seen at all.
       body: [
         node.ability,
         `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`,
-        `${p.damageType === 'magic' ? 'Magic' : 'Physical'} · ${pct(p.critChance)} crit ×${p.critMult.toFixed(1)} · ${Math.round(p.thorns)} thorns · ${Math.round(p.patience)} patience${statBonus ? ` · +${statBonus} all stats (Watchtower)` : ''}`,
+        ...(staged
+          ? []
+          : [
+              `${p.damageType === 'magic' ? 'Magic' : 'Physical'} · ${pct(p.critChance)} crit ×${p.critMult.toFixed(1)} · ${Math.round(p.thorns)} thorns · ${Math.round(p.patience)} patience${statBonus ? ` · +${statBonus} all stats (Watchtower)` : ''}`,
+            ]),
       ],
       action: { label: `Choose ${node.name}`, run: () => st.pickStartingHero(a) },
     }
@@ -650,7 +694,7 @@ function merchantOffers(st: St): Offer[] {
       // the merchant is a map special, so the visit step is already on the bill.
       // (Endless merchants deal `recruit: null`, so this branch is campaign in
       // practice — guarded anyway rather than relying on that.)
-      body: [...heroBody(r.sentinel), ...(inEndless(st) ? [] : THREAT_FREE_CHOICE)],
+      body: [...heroBody(r.sentinel), ...strengthNote(st, THREAT_FREE_CHOICE)],
       action: {
         label: 'Recruit',
         cost: { amount: r.price, currency: 'gold' },
@@ -680,7 +724,7 @@ function shrineOffers(st: St): Offer[] {
       // ×1.13 visit, so walking away is cheaper rather than free. The endless
       // room charges neither step (`endlessShrineAccept` does not touch
       // `threat`), so the terms stay campaign-only or they become a new lie.
-      body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...(inEndless(st) ? [] : THREAT_FREE_CHOICE)],
+      body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...strengthNote(st, THREAT_FREE_CHOICE)],
       action: { label: 'Accept the terms', run: accept },
       secondary: inEndless(st)
         ? { label: 'Walk away', icon: 'back', run: () => st.endlessCloseRoom() }
@@ -704,7 +748,7 @@ function recruitOffers(st: St): Offer[] {
       ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
       // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
       // recruit node's own visit step; endless rooms pay neither.
-      ...(inEndless(st) || full ? [] : THREAT_FREE_CHOICE),
+      ...(full ? [] : strengthNote(st, THREAT_FREE_CHOICE)),
     ],
     action: {
       // The tapped candidate's id goes to the store in both modes. Without it
@@ -957,7 +1001,7 @@ function crossroadsOffers(st: St): Offer[] {
     // The FREE_EXIT variant, not the VISIT one: the Crossroads is a screen, not
     // a map node — `finishCrossroads` only changes `screen` and charges no
     // visit step — so marching on here really does cost nothing.
-    body: [...heroBody(s), ...THREAT_FREE_FORK],
+    body: [...heroBody(s), ...strengthNote(st, THREAT_FREE_FORK)],
     action: { label: 'Take the recruit', run: () => st.recruitTeammate(s.id) },
   }))
   for (const h of st.roster) {
@@ -1172,6 +1216,20 @@ function settingsOffers(s: Settings): Offer[] {
       },
     },
     {
+      id: 'everything',
+      title: 'Show everything from the start',
+      sub: onOff(s.showEverything),
+      icon: 'map',
+      body: [
+        'Off: a first run introduces the game a piece at a time — gear after the first win, relics at the first elite, the Daily and Endless after the first run.',
+        'On: every screen shows everything straight away, as it does for a returning player.',
+      ],
+      action: {
+        label: s.showEverything ? 'Introduce things as they come' : 'Show everything',
+        run: () => s.setShowEverything(!s.showEverything),
+      },
+    },
+    {
       id: 'tips',
       title: 'Tips',
       sub: Object.values(s.taught).some(Boolean) ? 'Some seen' : 'All waiting',
@@ -1242,6 +1300,20 @@ export const bannerLine = (tier: number): string =>
     ? 'No Vow — the ordinary march.'
     : `${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name} — ${BANNER_RUNGS[tier - 1].rule}`
 
+/** LS3: the Vow row before the first finished run — locked, one plain line. */
+function lockedVowOffer(): Offer {
+  return {
+    id: 'sacrifice',
+    title: 'Vows',
+    sub: 'Locked',
+    icon: PERK_ICON.sacrifice,
+    dim: true,
+    locked: OPENS_AFTER_FIRST_RUN,
+    body: [`${OPENS_AFTER_FIRST_RUN}. A Vow makes a run harder, and pays more for finishing it.`],
+    action: { label: 'Locked', run: () => {}, disabled: true },
+  }
+}
+
 function sacrificeOffer(meta: Meta): Offer {
   const tier = meta.sacrificeTier
   const maxed = tier >= MAX_BANNER
@@ -1287,7 +1359,20 @@ function sacrificeOffer(meta: Meta): Offer {
  * Daily Watch (Phase 1): the UTC day's shared seed under standard rules, one
  * scored attempt a day. Kept to one row on purpose — the UI lane restyles it.
  */
-function dailyOffer(meta: Meta): Offer {
+/** LS3: what opens the Daily, Endless and the Vows — said the same way on all three. */
+export const OPENS_AFTER_FIRST_RUN = 'Opens after your first run'
+
+function dailyOffer(meta: Meta, staged: boolean): Offer {
+  if (staged) {
+    return {
+      id: 'daily',
+      title: 'Daily Watch',
+      icon: 'map',
+      dim: true,
+      locked: OPENS_AFTER_FIRST_RUN,
+      body: [`${OPENS_AFTER_FIRST_RUN}: one shared road a day, the same for everyone.`],
+    }
+  }
   const date = utcDateKey()
   const rec = meta.daily?.date === date ? meta.daily : null
   const status = !rec
@@ -1312,6 +1397,9 @@ function dailyOffer(meta: Meta): Offer {
 
 function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v: MetaView) => void): Offer[] {
   const game = useGameStore.getState()
+  // LS3: until the first run is finished the menu holds back what a first
+  // run has not met: the Vows, the Daily Watch and Endless.
+  const staged = menuStaged(meta.stats, settings.showEverything)
   // Going back is a choice like any other, so it rides in the Selector rather
   // than as a floating button over the Stage.
   const back: Offer = {
@@ -1323,7 +1411,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') return [back, ...settingsOffers(settings)]
-  if (view === 'codex') return [back, ...codexOffers(meta)]
+  if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   if (view === 'perks') {
     return [back, ...UPGRADES.map((u): Offer => {
       const level = meta.upgrades[u.id] ?? 0
@@ -1363,7 +1451,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           disabled: maxed || meta.watchMarks < cost,
         },
       }
-    }), sacrificeOffer(meta)]
+    }), staged ? lockedVowOffer() : sacrificeOffer(meta)]
   }
   return [
     {
@@ -1382,11 +1470,13 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       body: ['A fresh map, fresh heroes. Permadeath — one loss ends it.'],
       action: { label: 'Begin', run: () => game.newRun() },
     },
-    dailyOffer(meta),
+    dailyOffer(meta, staged),
     {
       id: 'perks',
       title: 'Watchtower',
-      sub: moneyText(meta.watchMarks, 'marks'),
+      // Marks are met at the end of the first run (LS3/LS4); a first-timer's
+      // menu does not name them before then.
+      sub: staged && meta.watchMarks === 0 ? undefined : moneyText(meta.watchMarks, 'marks'),
       icon: 'marks',
       immediate: true,
       body: ['Spend Marks on permanent bonuses that carry between runs.'],
@@ -1395,20 +1485,29 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     {
       id: 'codex',
       title: 'Codex',
-      sub: `${Object.keys(meta.achievements).length}/${ACHIEVEMENTS.length} feats`,
+      sub: staged ? 'Glossary' : `${Object.keys(meta.achievements).length}/${ACHIEVEMENTS.length} feats`,
       icon: 'grimoire',
       immediate: true,
-      body: ['Feats earned and still open, and every goblin, relic, specialization and perk the Watch has seen.'],
+      body: ['A glossary of every idea you have met, feats earned and still open, and every goblin, relic, specialization and perk the Watch has seen.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
-    {
-      id: 'endless',
-      title: 'Endless Watch',
-      icon: 'endless',
-      color: 'var(--teal)',
-      body: ['Three retries, escalating waves, rooms between each one.'],
-      action: { label: 'Begin', run: () => game.startEndless() },
-    },
+    staged
+      ? {
+          id: 'endless',
+          title: 'Endless Watch',
+          icon: 'endless',
+          dim: true,
+          locked: OPENS_AFTER_FIRST_RUN,
+          body: [`${OPENS_AFTER_FIRST_RUN}: wave after wave, for as long as the Gate holds.`],
+        }
+      : {
+          id: 'endless',
+          title: 'Endless Watch',
+          icon: 'endless',
+          color: 'var(--teal)',
+          body: ['Three retries, escalating waves, rooms between each one.'],
+          action: { label: 'Begin', run: () => game.startEndless() },
+        },
     {
       id: 'settings',
       title: 'Settings',

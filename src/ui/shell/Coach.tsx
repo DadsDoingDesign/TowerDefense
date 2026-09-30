@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
 import { DANGER_COPY } from '../../game/data/hazards'
-import { BLOCK_COPY } from '../../game/data/terrain'
-import { ITEM_PRICE } from '../../game/run/economy'
+import { BLOCK_COPY, terrainRuleById } from '../../game/data/terrain'
+import { commandsFor, WATCH_COMMANDS } from '../../game/data/commands'
+import { relicCommands } from '../../game/data/relics'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
+import { pendingPerkLevel } from '../../game/run/perks'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
+import { rewardInPlace } from './levelUps'
+import { useShown } from './staging'
+import { pickTipId, type TipFacts } from './coachRules'
 
 /**
  * First-run teaching (WS9).
@@ -21,7 +26,7 @@ import { Tap } from '../pointer'
  * The rules this follows, in order of how much they cost to break:
  *
  * 1. **One idea at a time — and one idea at a time in the same PLACE.**
- *    `pickTip` returns at most one tip, ever. It is a priority list, not a
+ *    `pickTipId` returns at most one tip, ever. It is a priority list, not a
  *    queue that drains: the most urgent live tip wins and the rest wait for
  *    their own moment.
  *
@@ -35,9 +40,18 @@ import { Tap } from '../pointer'
  *    makes the strip go quiet in between, so the second tip arrives as a new
  *    thought rather than as more of the same one (F10).
  * 2. **In context, at the moment of need.** Each tip is bound to the state that
- *    makes it true — the deploy tip only while nothing is deployed, the Threat
- *    tip only once the Threat chip is actually on screen, the evolution tip only
- *    when a hero is within two levels of the choice.
+ *    makes it true — the deploy tip only while nothing is deployed, the enemy
+ *    strength tip only once its chip is actually on screen, the evolution tip
+ *    only when a hero is within two levels of the choice.
+ *
+ *    LS3 made this the whole first-run teaching: the first run shows an idea
+ *    only when it matters (`state/staging.ts`), and each staged idea has ONE
+ *    tip here, said the first time the idea is on screen and never again —
+ *    sub-waves and speed at the first breather, gear and the pack at the first
+ *    win's spoils, the Watch Command in the second fight's setup, the road's
+ *    depth and the first merchant on the map, relics at the first elite, perks
+ *    at a hero's first choice, cursed ground and map challenges on the first
+ *    field that has them. The ORDER lives in `coachRules.ts`, pure and tested.
  * 3. **Teach by doing, then get out of the way.** A tip whose lesson the player
  *    has just performed marks itself seen without being dismissed — deploy a
  *    hero and the deploy tip is finished with, equip anything and the equip tip
@@ -89,12 +103,36 @@ export function Coach() {
   const inventory = useGameStore((s) => s.inventory)
   const threat = useGameStore((s) => s.threat)
   const evolutionQueue = useGameStore((s) => s.evolutionQueue)
-  const gold = useGameStore((s) => s.gold)
-  const cleared = useGameStore((s) => s.clearedNodeIds.length)
+  const speed = useGameStore((s) => s.speed)
+  const breather = useGameStore((s) => s.hud.breather)
+  const subWave = useGameStore((s) => s.hud.subWave)
+  const relics = useGameStore((s) => s.relics)
+  const battleMap = useGameStore((s) => s.battleMap)
+  const runMap = useGameStore((s) => s.runMap)
+  const reachable = useGameStore((s) => s.reachableNodeIds)
+  const activeNodeId = useGameStore((s) => s.activeNodeId)
+  const currentNodeId = useGameStore((s) => s.currentNodeId)
+  const reward = useGameStore((s) => s.reward)
+  const inPlace = useGameStore(rewardInPlace)
+  // The engine's own flag: true from the first tick until the charge is spent.
+  const commandUsed = useGameStore((s) => !!s.engine && s.engine.status === 'running' && !s.engine.commandReady)
+
+  // LS3: a tip is about something on screen, so it may only speak once its
+  // idea is shown (`state/staging.ts`) — never ahead of the thing it names.
+  const speedShown = useShown('speed')
+  const subwaveShown = useShown('subwave')
+  const gearShown = useShown('gear')
+  const commandShown = useShown('command')
+  const depthShown = useShown('depth')
 
   const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
   const wearingAnything = roster.some((h) => HERO_SLOTS.some((slot) => !!h.equipment[slot]))
-  const inSetup = screen === 'battle' && battlePhase === 'setup'
+  // Setup is BEFORE the wave: a settled wave also reads 'setup' (with its
+  // result standing), and a tip about posting or the next fight does not
+  // belong on the reward.
+  const settled = useGameStore((s) => !!s.lastResult)
+  const inSetup = screen === 'battle' && battlePhase === 'setup' && !settled
+  const onMap = screen === 'map'
 
   // Rule 3: a lesson performed is a lesson learnt. Doing this in an effect
   // rather than inside `pickTip` keeps the picker pure and keeps the write
@@ -105,16 +143,33 @@ export function Coach() {
   useEffect(() => {
     if (wearingAnything) markTaught('equip')
   }, [wearingAnything, markTaught])
-  // Buying any skill level is the gold lesson performed.
-  const boughtSkill = roster.some((h) => Object.values(h.upgrades ?? {}).some((n) => n > 0))
   useEffect(() => {
-    if (boughtSkill) markTaught('gold')
-  }, [boughtSkill, markTaught])
+    if (speed > 1) markTaught('speed')
+  }, [speed, markTaught])
+  // Sending the next sub-wave is the breather's lesson performed.
+  // (`subWave` counts up as a breather BEGINS, so it is the breather ending.)
+  useEffect(() => {
+    if (subWave > 0 && !breather) markTaught('subwave')
+  }, [subWave, breather, markTaught])
+  useEffect(() => {
+    if (commandUsed) markTaught('command')
+  }, [commandUsed, markTaught])
+  const tookPerk = roster.some((h) => (h.perks?.length ?? 0) > 0)
+  useEffect(() => {
+    if (tookPerk) markTaught('perk')
+  }, [tookPerk, markTaught])
 
   // The evolution heads-up has to arrive BEFORE the choice does. Once a hero is
   // in the queue the blocking modal is already up and the tip is too late — it
   // explains itself there instead (see EvolutionModal).
   const nearEvolution = roster.find((h) => h.level >= 8 && h.level < 10 && !evolutionQueue.includes(h.id))
+  const owesPerk = roster.find((h) => pendingPerkLevel(h) !== null && !evolutionQueue.includes(h.id))
+
+  const node = (id: string | null) => runMap.nodes.find((n) => n.id === id)
+  const nodeHere = node(activeNodeId)
+  const depth = node(screen === 'battle' && activeNodeId ? activeNodeId : currentNodeId)?.layer ?? 0
+  const command = WATCH_COMMANDS[commandsFor(relicCommands(relics))[0]]
+  const rule = terrainRuleById(battleMap.terrainRule)
 
   const tip = pickTip({
     taught,
@@ -125,10 +180,17 @@ export function Coach() {
     showThreat: mode === 'campaign' && threat > 1.001,
     threat,
     nearEvolution: nearEvolution?.name,
-    // After the first fight (the start node plus one), with enough gold for a
-    // rare item at the next merchant — gold's job since the skill tree became
-    // free perks (Phase 3b).
-    spendableGold: mode === 'campaign' && cleared >= 2 && gold >= ITEM_PRICE.rare ? gold : 0,
+    owesPerk: owesPerk && (onMap || inSetup || inPlace) ? owesPerk.name : undefined,
+    danger: inSetup && !!battleMap.tiles?.some((t) => t.danger === 'cursed'),
+    challenge: inSetup && rule ? { name: rule.name, blurb: rule.blurb } : undefined,
+    elite: inSetup && nodeHere?.type === 'elite',
+    relicOffered: inPlace && !!reward?.some((c) => c.kind === 'relic'),
+    command: mode === 'campaign' && inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
+    subwave: screen === 'battle' && battlePhase === 'battle' && breather && subwaveShown,
+    speed: screen === 'battle' && battlePhase === 'battle' && breather && speedShown,
+    gear: gearShown && mode === 'campaign' && (inPlace || onMap),
+    depth: depthShown && mode === 'campaign' && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
+    merchant: mode === 'campaign' && onMap && reachable.some((id) => node(id)?.type === 'merchant'),
   })
 
   /*
@@ -233,95 +295,173 @@ export function Coach() {
 }
 
 /**
- * Which single tip is live. Pure and exported-shaped so the ordering can be
- * reasoned about (and tested) without a browser.
- *
- * Ordered by urgency rather than by when a player meets them: the two late
- * tips cannot fire before their early siblings are long since taught, and if a
- * returning player somehow met both at once, the one with a deadline wins.
+ * The tip `pickTipId` (`coachRules.ts`) names, as the strip renders it. The
+ * ORDER lives there, pure and tested; this is only the words and the picture.
  */
-function pickTip(s: {
-  taught: Record<TeachId, boolean>
-  inSetup: boolean
-  deployed: number
-  packCount: number
-  wearingAnything: boolean
-  showThreat: boolean
-  threat: number
-  nearEvolution?: string
-  spendableGold: number
-}): Tip | null {
-  if (!s.taught.evolve && s.nearEvolution) {
-    return {
-      id: 'evolve',
-      icon: 'evolve',
-      body: (
-        <>
-          At level {TIER1_LEVEL}, <b>{s.nearEvolution}</b> picks a path. It&rsquo;s permanent.
-        </>
-      ),
-    }
+export function pickTip(s: TipFacts): Tip | null {
+  const id = pickTipId(s)
+  if (!id) return null
+  switch (id) {
+    case 'evolve':
+      return {
+        id,
+        icon: 'evolve',
+        body: (
+          <>
+            At level {TIER1_LEVEL}, <b>{s.nearEvolution}</b> picks a path. It&rsquo;s permanent.
+          </>
+        ),
+      }
+    case 'perk':
+      return {
+        id,
+        icon: 'boon',
+        body: (
+          <>
+            <b>{s.owesPerk}</b> can pick a <b>perk</b>. <Tap /> the glowing hero to choose — it&rsquo;s permanent.
+          </>
+        ),
+      }
+    case 'danger':
+      return {
+        id,
+        icon: 'warn',
+        body: (
+          <>
+            <b>{DANGER_COPY.cursed.name}</b> (the skull tiles): a hero can stand there, but deals {DANGER_COPY.cursed.short}.
+          </>
+        ),
+      }
+    case 'challenge':
+      return {
+        id,
+        icon: 'map',
+        body: (
+          <>
+            <b>{s.challenge?.name}</b>: {s.challenge?.blurb}
+          </>
+        ),
+      }
+    case 'deploy':
+      return {
+        id,
+        // `wave` before (M8). That one pennant was carrying four unrelated
+        // meanings — an incoming wave, the wave-clear beat, "start a campaign"
+        // and this, "post a hero on a slot" — and a picture with four
+        // meanings teaches none of them. `deploy` is a caret coming down onto
+        // the dashed slot marker the sentence below tells the player to look for.
+        icon: 'deploy',
+        body: (
+          <>
+            <Tap /> your hero, then a <b>glowing tile</b> on the field.
+          </>
+        ),
+      }
+    case 'relic':
+      return {
+        id,
+        icon: 'relic',
+        body: s.elite ? (
+          <>
+            An <b>elite</b>: tougher goblins, and a <b>relic</b> in the spoils. A relic helps all your heroes for the rest of the run.
+          </>
+        ) : (
+          <>
+            A <b>relic</b> helps all your heroes for the rest of the run.
+          </>
+        ),
+      }
+    case 'command':
+      return {
+        id,
+        icon: 'orders',
+        body: (
+          <>
+            New: <b>{s.command?.name}</b>, once per sub-wave in the fight. {s.command?.blurb}.
+          </>
+        ),
+      }
+    case 'subwave':
+      return {
+        id,
+        icon: 'wave',
+        body: (
+          <>
+            A <b>sub-wave</b> is down and the fight is paused. Move one hero if you like, then <b>Next</b>.
+          </>
+        ),
+      }
+    case 'speed':
+      return {
+        id,
+        icon: 'haste',
+        body: (
+          <>
+            <b>Speed</b> fast-forwards the fight. <Tap /> it for 2× or 3×.
+          </>
+        ),
+      }
+    case 'gear':
+      return {
+        id,
+        icon: 'equip',
+        body: (
+          <>
+            Items you win land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one.
+          </>
+        ),
+      }
+    case 'threat':
+      return {
+        id,
+        icon: 'threat',
+        body: (
+          <>
+            {/* Names the chip by its LABEL, the half that cannot go stale (M11),
+                and says what the number does in one plain clause. */}
+            <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP. It rises at every stop.
+          </>
+        ),
+      }
+    case 'equip':
+      return {
+        id,
+        // `settings` before — a cog, which is the Settings screen's mark, on a
+        // tip about putting armour on (M8). `equip` draws the dashed `+` the
+        // sentence names, so the picture and the instruction point at the same
+        // pixels on the same screen.
+        icon: 'equip',
+        body: (
+          <>
+            <b>
+              {s.packCount} {s.packCount === 1 ? 'item' : 'items'}
+            </b>{' '}
+            to equip. <Tap /> a <b>+</b> under Gear.
+          </>
+        ),
+      }
+    case 'depth':
+      return {
+        id,
+        icon: 'depth',
+        body: (
+          <>
+            <b>
+              Depth {s.depth?.depth}/{s.depth?.last}
+            </b>
+            : how far down the road you are. The boss waits at the end.
+          </>
+        ),
+      }
+    case 'merchant':
+      return {
+        id,
+        icon: 'merchant',
+        body: (
+          <>
+            A <b>Merchant</b> is in reach: spend gold on gear, a hire or Gate repair.
+          </>
+        ),
+      }
   }
-  if (!s.taught.threat && s.showThreat) {
-    return {
-      id: 'threat',
-      icon: 'threat',
-      body: (
-        <>
-          {/* Names the chip by its LABEL, the half that cannot go stale (M11),
-              and says what the number does in one plain clause. */}
-          <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP. It
-          rises at every stop.
-        </>
-      ),
-    }
-  }
-  if (!s.taught.deploy && s.inSetup && s.deployed === 0) {
-    return {
-      id: 'deploy',
-      // `wave` before (M8). That one pennant was carrying four unrelated
-      // meanings — an incoming wave, the wave-clear beat, "start a campaign"
-      // and this, "post a Sentinel on a slot" — and a picture with four
-      // meanings teaches none of them. `deploy` is a caret coming down onto the
-      // dashed slot marker the sentence below tells the player to look for.
-      icon: 'deploy',
-      body: (
-        <>
-          <Tap /> your hero, then a <b>glowing tile</b> on the field.
-        </>
-      ),
-    }
-  }
-  if (!s.taught.equip && s.inSetup && s.packCount > 0 && !s.wearingAnything) {
-    return {
-      id: 'equip',
-      // `settings` before — a cog, which is the Settings screen's mark, on a
-      // tip about putting armour on (M8). `equip` draws the dashed `+` the
-      // sentence names, so the picture and the instruction point at the same
-      // pixels on the same screen.
-      icon: 'equip',
-      body: (
-        <>
-          <b>
-            {s.packCount} {s.packCount === 1 ? 'item' : 'items'}
-          </b>{' '}
-          to equip. <Tap /> a <b>+</b> under Gear.
-        </>
-      ),
-    }
-  }
-  if (!s.taught.gold && s.inSetup && s.spendableGold > 0) {
-    return {
-      id: 'gold',
-      // The coin: this is the one tip about a currency.
-      icon: 'gold',
-      body: (
-        <>
-          <b>{s.spendableGold} gold</b> in hand. Spend it at a <b>Merchant</b> stop: gear, a hire, or Gate repair.
-        </>
-      ),
-    }
-  }
-  return null
 }
-

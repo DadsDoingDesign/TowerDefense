@@ -39,6 +39,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const selectNode = useGameStore((s) => s.selectNode)
   const focus = useMapFocus((s) => s.focus)
 
+  const firstRun = useGameStore((s) => s.firstRun)
   const node = runMap.nodes.find((n) => n.id === nodeId)
   const canMarch = !!node && reachable.includes(nodeId) && !cleared.includes(nodeId)
 
@@ -58,7 +59,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw
   // `selectNode` makes, so the preview can never name the wrong ground.
-  const rule = summary ? nodeTerrainRule(node, runSeed) : null
+  // LS3: a first run's first two depths are plain ground — the same answer.
+  const rule = summary ? nodeTerrainRule(node, runSeed, { firstRun }) : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -107,7 +109,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         ) : (
           <p className="sh-line">{SPECIAL_BLURB[node.type] ?? 'Where the march began.'}</p>
         )}
-        {step && (
+        {/* Enemies at their starting strength need no line (LS3/LS4). */}
+        {step && strengthPct(step) > 0 && (
           <p className="sh-line muted">
             <Icon name="threat" /> {strengthText(step)}: every enemy has {strengthPct(step)}% more HP.
           </p>
