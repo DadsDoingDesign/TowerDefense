@@ -5,7 +5,7 @@
     {
       "id": "round5",
       "name": "Round 5 · make it easier to learn",
-      "blurb": "You said it feels like a lot to learn. A first run asks you to learn about 20 separate ideas, and the last rounds each added one. These proposals cut, merge and stage them. Hero HP is already being removed, the simplest way possible."
+      "blurb": "Your goal: 'The game should be easy to pick up.' A first run asks you to learn about 20 separate ideas. These proposals cut, merge and stage them. Hero HP is being removed now; LS3 and LS4 are low-risk and will be built right after it. LS1 and LS2 remove content, so they wait for your call."
     },
     {
       "id": "round4",
@@ -149,7 +149,9 @@
         "src/ui/shell/Coach.tsx",
         "run generation (first-run rules)",
         "menu unlocks"
-      ]
+      ],
+      "builtNote": "Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).",
+      "built": true
     },
     {
       "id": "LS4",
@@ -167,7 +169,9 @@
       "questions": [],
       "files": [
         "copy across src/ui"
-      ]
+      ],
+      "builtNote": "Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).",
+      "built": true
     },
     {
       "id": "SK1",
@@ -204,7 +208,8 @@
         "hero pick (HeroPickVariants → one screen)",
         "LevelUpPanel / PerkPanel → skills",
         "balance/"
-      ]
+      ],
+      "myRead": "Against 'easy to pick up', this is heavy as written: three tiers, a card pool, unlock levels and a difficulty ladder. The lighter version I'd build: each hero shows one skill at pick, gets one new pick at levels 5 and 10 (3 options each), holds at most 3, and unlocks happen quietly in the background with no ladder to manage. Tell me which you prefer in your note."
     },
     {
       "id": "SK2",
@@ -276,7 +281,8 @@
         "src/game/run/terrain.ts",
         "src/game/engine (scorch status)",
         "overlays (smoke telegraph)"
-      ]
+      ],
+      "myRead": "Spreading fire adds a rule to learn mid-battle. I'd hold it until the first-run layering (LS3) is in, then introduce it on later depths only."
     },
     {
       "id": "HC1",
@@ -304,7 +310,8 @@
         "src/ui/shell/PageScreens.tsx (menu row, Hall page)",
         "MenuKeyArt (top 3)",
         "src/state/runSnapshot.ts (validation)"
-      ]
+      ],
+      "myRead": "Pure reward with nothing to learn, so it fits 'easy to pick up' well."
     },
     {
       "id": "Q1",

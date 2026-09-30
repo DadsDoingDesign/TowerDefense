@@ -10,7 +10,7 @@ Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/f
 
 ## Round 5 · make it easier to learn
 
-You said it feels like a lot to learn. A first run asks you to learn about 20 separate ideas, and the last rounds each added one. These proposals cut, merge and stage them. Hero HP is already being removed, the simplest way possible.
+Your goal: 'The game should be easy to pick up.' A first run asks you to learn about 20 separate ideas. These proposals cut, merge and stage them. Hero HP is being removed now; LS3 and LS4 are low-risk and will be built right after it. LS1 and LS2 remove content, so they wait for your call.
 
 ### NH1 · Heroes are never hit (in progress)
 
@@ -69,7 +69,7 @@ You said it feels like a lot to learn. A first run asks you to learn about 20 se
 
 ### LS3 · Teach in layers: new ideas arrive when they matter
 
-*Effort M · from Claude · awaiting your decision*
+*Effort M · from Claude · done*
 
 **Proposed change**
 
@@ -85,9 +85,11 @@ You said it feels like a lot to learn. A first run asks you to learn about 20 se
 
 **Files:** `src/ui/shell/Coach.tsx`, `run generation (first-run rules)`, `menu unlocks`
 
+**Result:** Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).
+
 ### LS4 · One name per thing
 
-*Effort S · from Claude · awaiting your decision*
+*Effort S · from Claude · done*
 
 **Proposed change**
 
@@ -97,6 +99,8 @@ You said it feels like a lot to learn. A first run asks you to learn about 20 se
 - A short glossary lives in the Codex. No term appears on screen before the player has met it.
 
 **Files:** `copy across src/ui`
+
+**Result:** Next up: built right after the no-HP change lands (low-risk and serves 'easy to pick up' directly).
 
 ## Round 4 · the bigger design changes
 
@@ -130,6 +134,8 @@ Your Q2 answer reshapes how heroes work, so it's written up here as a system bef
 5. Replace the Banner/Vow ladder with the difficulty step, or keep both?
 
 **Files:** `src/game/data/skills.ts (new)`, `src/game/run/skills.ts (new)`, `src/state/metaStore.ts (pool, Watch level, difficulty)`, `hero pick (HeroPickVariants → one screen)`, `LevelUpPanel / PerkPanel → skills`, `balance/`
+
+> **My read, not Whales':** Against 'easy to pick up', this is heavy as written: three tiers, a card pool, unlock levels and a difficulty ladder. The lighter version I'd build: each hero shows one skill at pick, gets one new pick at levels 5 and 10 (3 options each), holds at most 3, and unlocks happen quietly in the background with no ladder to manage. Tell me which you prefer in your note.
 
 ### SK2 · Levels and badges, explained, and what changes with skills
 
@@ -189,6 +195,8 @@ Your Q2 answer reshapes how heroes work, so it's written up here as a system bef
 
 **Files:** `src/game/run/terrain.ts`, `src/game/engine (scorch status)`, `overlays (smoke telegraph)`
 
+> **My read, not Whales':** Spreading fire adds a rule to learn mid-battle. I'd hold it until the first-run layering (LS3) is in, then introduce it on later depths only.
+
 ### HC1 · Hall of Champions: every run's company kept, your top 3 on the menu
 
 *Effort M · from Claude · awaiting your decision*
@@ -210,6 +218,8 @@ Your Q2 answer reshapes how heroes work, so it's written up here as a system bef
 3. Cast your champions in the menu cinematic?
 
 **Files:** `src/state/metaStore.ts (history)`, `src/ui/shell/PageScreens.tsx (menu row, Hall page)`, `MenuKeyArt (top 3)`, `src/state/runSnapshot.ts (validation)`
+
+> **My read, not Whales':** Pure reward with nothing to learn, so it fits 'easy to pick up' well.
 
 ## Round 3 · open questions
 
