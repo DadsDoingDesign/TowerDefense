@@ -548,7 +548,6 @@ export function BattleCanvas() {
       if (phase === 'battle' && liveEngine) {
         // Show ranges faintly while the fight runs.
         for (const s of liveEngine.sentinels) {
-          if (s.downed) continue
           drawRange(ctx, s.pos, s.profile.range, s.def.accent)
         }
         // Breather: the open tiles light up as places a hero can move to —
@@ -600,9 +599,6 @@ export function BattleCanvas() {
             range: profile.range,
             aimAngle: 0,
             fireFlash: 0,
-            hp: profile.maxHp,
-            maxHp: profile.maxHp,
-            downed: false,
             procFlash: 0,
             patienceStacks: 0,
             blocking: false,

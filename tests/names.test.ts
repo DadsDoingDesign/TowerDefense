@@ -43,13 +43,15 @@ describe('item names', () => {
 describe('mutation display names', () => {
   it('uses the new names and resolves old saved names by key', () => {
     const names = allMutations().map((m) => m.name)
-    for (const n of ['Blasting Powder', 'Siege Weight', 'Quickdraw', 'Hoarfrost', 'Stormcharged', 'Emberbrand']) {
+    for (const n of ['Blasting Powder', 'Siege Weight', 'Quickdraw', 'Hoarfrost', 'Emberbrand']) {
       expect(names).toContain(n)
     }
     for (const old of ['Volatile Rounds', 'Heavy Ordnance', 'Rapid Fire', 'Cryo Blast', 'Overcharge', 'Incendiary']) {
       expect(names).not.toContain(old)
     }
     expect(mutationName('volatile', 'Volatile Rounds')).toBe('Blasting Powder')
+    // Cut from the pool (no-HP pass), still named on a saved hero.
+    expect(mutationName('overcharge', 'Overcharge')).toBe('Stormcharged')
     expect(mutationName('no-such-key', 'Kept')).toBe('Kept')
   })
 })

@@ -1258,7 +1258,7 @@ function playGame(event: GameEvent, p: SfxPayload = {}): void {
         duckMusic(DUCK.sting, 0.8)
       }
       break
-    /* A Sentinel going down. Falls, where a kill drops — different shape on
+    /* Something of yours falling (an Endless life lost). Falls, where a kill drops — different shape on
        purpose, because this one is YOUR loss. */
     case 'down':
       osc(330, 0.2, 0.16, { to: 233, type: 'square', send: 0.3, pan })
@@ -1668,11 +1668,6 @@ export function gameSfx(event: string, p?: SfxPayload): void {
     case 'kill':
       // A champion's death always plays; the routine ones share a budget.
       sfx('death', p?.boss ? {} : { throttleMs: 70 }, p)
-      break
-    case 'down':
-      // Rare and important: nearly unthrottled, because two Sentinels falling
-      // in the same second is exactly what the player needs to hear.
-      sfx('down', { throttleMs: 180 }, p)
       break
     case 'leak':
       sfx('leak', { throttleMs: 120 }, p)

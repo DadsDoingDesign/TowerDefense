@@ -49,12 +49,10 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   const simNow = engine.elapsed
   for (const t of engine.traps) drawTrap(ctx, t.pos, now)
 
-  // Faint aura rings for support Sentinels (cleric/guard).
+  // Faint aura rings for support Sentinels (the blessing: cleric/bannerman).
   for (const s of engine.sentinels) {
-    if (s.downed) continue
-    const m = s.profile.mods
-    const aura = m.healAura ?? m.buffAura ?? m.dmgReductionAura
-    if (aura) drawAura(ctx, s.pos, aura.radius, m.healAura ? '#7ac74f' : m.dmgReductionAura ? '#98c1d9' : '#f0a868', now)
+    const aura = s.profile.mods.buffAura
+    if (aura) drawAura(ctx, s.pos, aura.radius, '#f0a868', now)
   }
 
   // Corpses and splats go down BEFORE the living, so permanence never occludes

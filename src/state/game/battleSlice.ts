@@ -348,7 +348,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     const nodePurse = settlingNode ? clearBonusGold(settlingNode) : 0
     if (result.status === 'cleared' && (result.goldEarned > 0 || nodePurse > 0)) sfx('coin')
     const totalKills = st.runKills + result.enemiesKilled
-    const totalDowns = st.runDowns + result.downed
 
     // XP + evolution apply in both modes and both outcomes.
     // The War Diary relic tops up the least-levelled hero on the field.
@@ -385,7 +384,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           engine: null,
           battlePhase: 'setup',
           runKills: totalKills,
-          runDowns: totalDowns,
         })
       } else {
         const lives = st.lives - 1
@@ -393,7 +391,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           // Endless pays through the SAME ledger as a campaign run (M13).
           const marks = useMetaStore
             .getState()
-            .grantRunRewards({ mode: 'endless', depth: st.wins, won: false, kills: totalKills, downs: totalDowns, facts: runFactsFromState(st, false) })
+            .grantRunRewards({ mode: 'endless', depth: st.wins, won: false, kills: totalKills, facts: runFactsFromState(st, false) })
           // The run is over, and losing has a sound (M32).
           sfx('defeat')
           set({
@@ -409,7 +407,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             battlePhase: 'setup',
             marksEarned: marks,
             runKills: totalKills,
-            runDowns: totalDowns,
             evolutionQueue,
           })
         } else {
@@ -428,7 +425,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             engine: null,
             battlePhase: 'setup',
             runKills: totalKills,
-            runDowns: totalDowns,
             evolutionQueue,
           })
         }
@@ -454,7 +450,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       const depth = get().clearedNodeIds.length - 1
       const marks = useMetaStore
         .getState()
-        .grantRunRewards({ depth, won: false, kills: totalKills, downs: totalDowns, banner: st.runBanner, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
+        .grantRunRewards({ depth, won: false, kills: totalKills, banner: st.runBanner, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
       set({
         runPhase: 'lost',
         // `grantRunRewards` just paid this run out; settling it here is what
@@ -463,12 +459,11 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
         lastResult: result,
         // The receipt is built here, while everything it needs is still in
         // hand (M14).
-        victory: buildRecap(st, result, { won: false, depth, marks, kills: totalKills, downs: totalDowns }),
+        victory: buildRecap(st, result, { won: false, depth, marks, kills: totalKills }),
         baseHp: 0,
         engine: null,
         battlePhase: 'setup',
         runKills: totalKills,
-        runDowns: totalDowns,
         marksEarned: marks,
       })
       return
@@ -496,7 +491,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             depth: cleared.length - 1,
             won: true,
             kills: totalKills,
-            downs: totalDowns,
             banner: st.runBanner,
             ...challengeGrant(st.challenge),
             facts: runFactsFromState({ ...st, feats, roster: rosterXp, clearedNodeIds: cleared }, true),
@@ -575,7 +569,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       lastLoot: bossLoot,
       lootPity: pity,
       victory: wonRun
-        ? buildRecap(st, result, { won: true, depth: cleared.length - 1, marks, kills: totalKills, downs: totalDowns, spoils: bossLoot, roster: rosterXp })
+        ? buildRecap(st, result, { won: true, depth: cleared.length - 1, marks, kills: totalKills, spoils: bossLoot, roster: rosterXp })
         : null,
       reward,
       crossroads,
@@ -594,7 +588,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       // and left the shell with no way out of a cleared wave.
       battlePhase: 'setup',
       runKills: totalKills,
-      runDowns: totalDowns,
       marksEarned: marks,
     })
   },

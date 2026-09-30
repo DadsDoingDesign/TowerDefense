@@ -69,7 +69,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'win_mystic', name: 'The Long Watch', feat: 'Win with a Mystic as your first hero.', opens: 'Specialization: Doomcaller', marks: 80, check: (f) => f.won && f.starter === 'mystic' },
   { id: 'lone_wolf', name: 'Lone Wolf', feat: 'Reach act 3 without hiring a single hero.', opens: 'A third perk option at level 5 for every archetype', marks: 100, check: (f) => f.mode === 'campaign' && f.act >= 3 && f.hires === 0 },
   { id: 'full_company', name: 'Full Company', feat: 'Field five heroes in one wave.', opens: 'Relic: Mercenary Charter', marks: 40, check: (f) => f.maxFielded >= 5 },
-  { id: 'flawless_boss', name: 'Not a Scratch', feat: 'Beat an act boss without the Gate losing any HP.', opens: 'Relic: Last Rampart', marks: 60, check: (f) => f.flawlessBosses >= 1 },
+  { id: 'flawless_boss', name: 'Not a Scratch', feat: 'Beat an act boss without the Gate losing any HP.', opens: 'Nothing — a feat for its own sake', marks: 60, check: (f) => f.flawlessBosses >= 1 },
   { id: 'mutant', name: 'Strange Growth', feat: 'Win with a mutated hero in the company.', opens: 'The Crossroads offers one more mutation', marks: 60, check: (f) => f.won && f.mutated },
   { id: 'hoard', name: 'Hoard', feat: 'Hold 300 gold at once.', opens: 'Nothing — a feat for its own sake', marks: 30, check: (f) => f.goldPeak >= 300 },
   { id: 'vow_one', name: 'Sworn', feat: 'Win under Vow 1.', opens: 'Nothing new — the Vow ladder opens its own rungs', marks: 100, check: (f) => f.won && f.banner >= 1 },

@@ -152,10 +152,10 @@ describe('FxDiffer on synthetic ticks', () => {
     expect(r.calls.find((c) => c.fn === 'fxBaseFrac')?.args[0]).toBe(18 / 20)
   })
 
-  it('reports a shot fired, a hero going down, and the defeat once', () => {
+  it('reports a shot fired and the defeat once', () => {
     const eng = fakeEngine()
     const hero = {
-      id: 's1', downed: false, fireFlash: 0, procFlash: 0, pos: { x: 5, y: 5 }, aimAngle: 0.3, def: { accent: '#fff' },
+      id: 's1', fireFlash: 0, procFlash: 0, pos: { x: 5, y: 5 }, aimAngle: 0.3, def: { accent: '#fff' },
       profile: { mods: {}, thorns: 0, damageType: 'physical' }, blockIds: [] as string[],
     }
     eng.sentinels.push(hero)
@@ -163,10 +163,9 @@ describe('FxDiffer on synthetic ticks', () => {
     const d = new FxDiffer(asEngine(eng), r.sink)
     d.snapBefore(asEngine(eng))
     hero.fireFlash = 1
-    hero.downed = true
     eng.status = 'defeated'
     d.diffAfter(asEngine(eng), 1)
-    expect(r.names()).toEqual(expect.arrayContaining(['fxMuzzle', 'fxDown', 'fxDefeat']))
+    expect(r.names()).toEqual(expect.arrayContaining(['fxMuzzle', 'fxDefeat']))
     // The next tick does not announce the same defeat again.
     d.snapBefore(asEngine(eng))
     d.diffAfter(asEngine(eng), 1)

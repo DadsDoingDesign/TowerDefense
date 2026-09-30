@@ -64,7 +64,6 @@ export interface SettleFacts {
   mode: SettleMode
   depth: number
   kills: number
-  downs: number
   wins: number
   /** The Banner the run flew — it scales the payout (H16). */
   banner: number
@@ -88,7 +87,7 @@ export const challengeGrant = (c: RunChallenge) => ({
  * killed nothing earns nothing either way, and granting it would add a
  * completed run to the record for zero marks.
  */
-export const runWasPlayed = (f: SettleFacts): boolean => f.depth > 0 || f.kills > 0 || f.downs > 0
+export const runWasPlayed = (f: SettleFacts): boolean => f.depth > 0 || f.kills > 0
 
 /** The arguments `metaStore.grantRunRewards` takes, as a settle builds them. */
 export interface RunGrant {
@@ -96,7 +95,6 @@ export interface RunGrant {
   depth: number
   won: boolean
   kills: number
-  downs: number
   banner?: number
   ranked?: boolean
   daily?: string | null
@@ -122,7 +120,7 @@ export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan 
     // Endless settles through the same ledger as the campaign (M13): the
     // Chronicler multiplier and the lifetime stats apply to it too.
     if (!runWasPlayed(f)) return { kind: 'none' }
-    return { kind: 'grant', grant: { mode: 'endless', depth: f.wins, won: false, kills: f.kills, downs: f.downs, ...(f.facts ? { facts: f.facts } : {}) } }
+    return { kind: 'grant', grant: { mode: 'endless', depth: f.wins, won: false, kills: f.kills, ...(f.facts ? { facts: f.facts } : {}) } }
   }
   if (!runWasPlayed(f)) {
     // A scored Daily abandoned before its first clear is still the day's
@@ -133,6 +131,6 @@ export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan 
   const banner = Math.min(f.banner, unlockedBanners)
   return {
     kind: 'grant',
-    grant: { depth: f.depth, won: false, kills: f.kills, downs: f.downs, banner, ...challengeGrant(f.challenge), ...(f.facts ? { facts: f.facts } : {}) },
+    grant: { depth: f.depth, won: false, kills: f.kills, banner, ...challengeGrant(f.challenge), ...(f.facts ? { facts: f.facts } : {}) },
   }
 }

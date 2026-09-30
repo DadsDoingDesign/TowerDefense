@@ -904,25 +904,6 @@ export function fxKill(
   }
 }
 
-/** A Sentinel falls. Loudest non-terminal event in a wave. */
-export function fxDown(x: number, y: number): void {
-  if (reducedMotion) return
-  fxTrauma(0.22)
-  const n = degrade(12)
-  for (let i = 0; i < n; i++) {
-    const p = take()
-    if (!p) break
-    const a = rnd(0, Math.PI * 2)
-    init(p, SPARK, x, y, Math.cos(a) * rnd(30, 130), Math.sin(a) * rnd(30, 130) - 40, rnd(0.25, 0.55), 2, 0, i % 2 ? '#e05a4f' : '#fff3d6')
-    p.g = 260
-    p.d = 2.2
-  }
-  for (let i = 0; i < degrade(3); i++) {
-    const p = take()
-    if (!p) break
-    init(p, SMOKE, x + rnd(-6, 6), y, rnd(-12, 12), rnd(-30, -14), rnd(0.6, 1.1), 4, 13, 'rgba(224,90,79,0.30)')
-  }
-}
 
 /** Something reached the line. The base takes it, visibly. */
 export function fxLeak(bx: number, by: number, frac: number): void {

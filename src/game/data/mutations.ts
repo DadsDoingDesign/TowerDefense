@@ -191,17 +191,14 @@ const MUTATIONS: MutTemplate[] = [
   {
     key: 'siphon',
     name: 'Siphon',
-    desc: 'Damage feeds the base: +0.8 base HP per 100 damage dealt — the strike gives up its bite to pay for it.',
-    downside: '−30% damage per hit',
-    mods: { lifedrain: 0.4, damageMult: 0.7 },
+    desc: 'Damage feeds the Gate: +0.6 Gate HP per 100 damage dealt — and every strike takes a moment to draw.',
+    downside: '−35% attack speed',
+    mods: { lifedrain: 0.3, rateMult: 0.65 },
   },
-  {
-    key: 'overcharge',
-    name: 'Stormcharged',
-    desc: 'A wound-up shot that reaches almost twice as far and lands like an execution — once in a long while.',
-    downside: '−45% attack speed',
-    mods: { rangeMult: 1.9, critChanceAdd: 0.2, critMultAdd: 0.8, rateMult: 0.55 },
-  },
+  // Stormcharged (`overcharge`: ×1.9 range, +20% crit, +0.8 crit damage, −45%
+  // attack speed) was cut with the no-HP pass: §8 measured it negative on all
+  // three benches (best −2.1pt before the change, −6.5pt after), and no rate it
+  // was swept at bought a positive column. A saved one still works as saved.
   // ---- the `rule` template (Phase 3b) -------------------------------------
   {
     key: 'ricochet',
@@ -227,14 +224,8 @@ const MUTATIONS: MutTemplate[] = [
     mods: { openingRush: { rate: 1.5, dur: 20 }, rateMult: 0.6 },
     template: 'rule',
   },
-  {
-    key: 'cornered',
-    name: 'Cornered',
-    desc: 'Below half its HP it strikes more than twice as hard; untouched, it is slow to swing.',
-    downside: '−25% attack speed',
-    mods: { lastStand: { below: 0.5, damage: 1.3 }, rateMult: 0.75 },
-    template: 'rule',
-  },
+  // Cornered (below half its HP, ×2.3 damage; −25% attack speed) went with
+  // hero HP — a saved one is dropped on load (`runSnapshot`, v10 → v11).
   {
     key: 'concussive',
     name: 'Concussive',
@@ -321,5 +312,8 @@ export function allMutations(): Mutation[] {
  * render site reads the name through here and a resumed save shows the new one.
  */
 export function mutationName(key: string, fallback: string): string {
-  return MUTATIONS.find((m) => m.key === key)?.name ?? fallback
+  return MUTATIONS.find((m) => m.key === key)?.name ?? CUT_MUTATION_NAMES[key] ?? fallback
 }
+
+/** Names for mutations cut from the pool that a saved hero may still carry. */
+const CUT_MUTATION_NAMES: Readonly<Record<string, string>> = { overcharge: 'Stormcharged' }

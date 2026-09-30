@@ -144,13 +144,13 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
   it('a feat pays its purse once, on top of the run, and lands in the ledger', () => {
     const f = facts({ actBosses: 1, act: 2 })
     const before = useMetaStore.getState().watchMarks
-    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, downs: 0, facts: f })
+    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, facts: f })
     const purse = ACHIEVEMENTS.find((a) => a.id === 'act_two')!.marks
     expect(useMetaStore.getState().watchMarks - before).toBe(5 * 8 + purse)
     expect(lastFeats.ids).toEqual(['act_two'])
     expect(useMetaStore.getState().achieved('act_two')).toBe(true)
     const mid = useMetaStore.getState().watchMarks
-    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, downs: 0, facts: f })
+    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, facts: f })
     expect(useMetaStore.getState().watchMarks - mid).toBe(5 * 8)
     expect(lastFeats.ids).toEqual([])
   })
@@ -177,7 +177,7 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
     useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, bestBanner: 2 } })
     const pay = () => {
       const a = useMetaStore.getState().watchMarks
-      useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, downs: 0, mode: 'endless' })
+      useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, mode: 'endless' })
       return useMetaStore.getState().watchMarks - a
     }
     expect(pay()).toBe(endlessMarks(5, 0))

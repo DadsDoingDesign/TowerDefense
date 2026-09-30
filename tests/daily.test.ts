@@ -51,10 +51,10 @@ describe('Daily Watch', () => {
   it('records the scored attempt once, on settle', () => {
     const date = utcDateKey()
     useMetaStore.getState().beginDaily(date)
-    useMetaStore.getState().grantRunRewards({ depth: 6, won: false, kills: 40, downs: 1, daily: date })
+    useMetaStore.getState().grantRunRewards({ depth: 6, won: false, kills: 40, daily: date })
     expect(useMetaStore.getState().daily).toMatchObject({ depth: 6, won: false, score: 640, done: true })
     // A second settle for the same day (practice) does not overwrite it.
-    useMetaStore.getState().grantRunRewards({ depth: 10, won: true, kills: 90, downs: 0, daily: date })
+    useMetaStore.getState().grantRunRewards({ depth: 10, won: true, kills: 90, daily: date })
     expect(useMetaStore.getState().daily?.score).toBe(640)
   })
 

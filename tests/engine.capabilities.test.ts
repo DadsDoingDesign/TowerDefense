@@ -67,17 +67,4 @@ describe('rule capabilities (engine)', () => {
     expect(shots(withPerkMods(rogue, { killRush: { rate: 1, dur: 3 } }))).toBeGreaterThan(base)
   })
 
-  it('blockRegen keeps a blocker standing longer; lastStand only bites when hurt', () => {
-    const wave = generateEncounter(6, 'elite')
-    const fighter = createSentinel('fighter')
-    const hp = (s: Sentinel) => {
-      const e = run({ team: [{ sentinel: s, slotId: P.s0 }], wave, baseHp: 999 })
-      return e.sentinels[0].downed ? 0 : e.sentinels[0].hp
-    }
-    expect(hp(withPerkMods(fighter, { blockRegen: 0.08 }))).toBeGreaterThanOrEqual(hp(fighter))
-    // A last stand at 0% HP never triggers: identical fight.
-    const a = run({ team: [{ sentinel: fighter, slotId: P.s0 }], wave, baseHp: 999 })
-    const b = run({ team: [{ sentinel: withPerkMods(fighter, { lastStand: { below: 0, damage: 5 } }), slotId: P.s0 }], wave, baseHp: 999 })
-    expect(b.sentinels[0].damageDealt).toBe(a.sentinels[0].damageDealt)
-  })
 })

@@ -32,14 +32,14 @@
  * does not give the beats is thrown away and the next draw of the SAME seed is
  * tried (`take` 0, 1, 2, …), so a seed always lands on the same scene:
  *
- *  - something leaked, or a hero went down → rejected the tick it happens;
+ *  - something hurt the Gate → rejected the tick it happens;
  *  - the headliner is not dead within {@link WALK_MAX} s of walking on, or
  *    fell before {@link WALK_MIN} s (no walk to watch) → rejected;
  *  - he fell more than {@link HIT_NEAR} px from the company (off the shot) →
  *    rejected;
  *  - the cut cannot be made 16–24 s long (a short walk is padded first with a
  *    longer establishing shot, then a longer beat after the hit) → rejected;
- *  - anything leaks or anyone falls during the beat after the hit → rejected.
+ *  - anything hurts the Gate during the beat after the hit → rejected.
  *
  * After {@link MAX_TAKES} draws it falls back to the authored scene
  * ({@link FALLBACK_SCENE}, round 2's Green Line boss), which is held by test.
@@ -388,15 +388,14 @@ export interface AttractScript {
   lengthTicks: number
   /** The headliner's smoothed walk in field px, `CAM_HZ` samples per sim second from `startTick` (see `attractCamera`). */
   cam: Vec2[]
-  /** What the probe saw, for the test: nothing leaked, nobody fell, he died. */
+  /** What the probe saw, for the test: the Gate damage taken (0 — nothing hurt it), and he died. */
   leaks: number
-  downed: number
   /** How many draws of the seed were rejected before this one (the fallback counts all of them). */
   rejected: number
 }
 
 /** Why a draw was thrown away (for the test and the notes; the menu never shows it). */
-export type Rejection = 'leak' | 'downed' | 'no-headliner' | 'slow' | 'quick' | 'off-shot'
+export type Rejection = 'leak' | 'no-headliner' | 'slow' | 'quick' | 'off-shot'
 
 /**
  * Play one draw headless and cut it — or reject it. Every `yield` is a point
@@ -420,8 +419,7 @@ function* playScene(sc: AttractScenario, chunk: number): Generator<void, Attract
       for (let i = 0; i < chunk && e.status === 'running'; i++) {
         const kills = e.killCount
         e.step(TICK)
-        if (e.leakCount > 0) return void (verdict = 'leak')
-        if (e.downedCount > 0) return void (verdict = 'downed')
+        if (e.leaks > 0) return void (verdict = 'leak')
         if (!headId) {
           const champ = e.enemies.find((x) => x.type.isBoss)
           if (champ) {
@@ -465,9 +463,8 @@ function* playScene(sc: AttractScenario, chunk: number): Generator<void, Attract
   onEngine(e, () => {
     while (e.tick < endTick && e.status === 'running') e.step(TICK)
   })
-  if (e.leakCount > 0) return 'leak'
-  if (e.downedCount > 0) return 'downed'
-  return cut(sc, map, focus, startTick, endTick, spawnTick, hitTick, hitPos, track, e.leakCount, e.downedCount)
+  if (e.leaks > 0) return 'leak'
+  return cut(sc, map, focus, startTick, endTick, spawnTick, hitTick, hitPos, track, e.leaks)
 }
 
 /**
@@ -517,7 +514,6 @@ function cut(
   hitPos: Vec2,
   track: Vec2[],
   leaks: number,
-  downed: number,
 ): AttractScript {
   const lengthTicks = endTick - startTick
   /** Where the headliner is at tick `t` (held at his spawn before, his fall after). */
@@ -543,7 +539,7 @@ function cut(
     }
     return { x: sx / sw, y: sy / sw }
   })
-  return { scene, map, focus, startTick, hitTick, hitPos, lengthTicks, cam, leaks, downed, rejected: 0 }
+  return { scene, map, focus, startTick, hitTick, hitPos, lengthTicks, cam, leaks, rejected: 0 }
 }
 
 /**

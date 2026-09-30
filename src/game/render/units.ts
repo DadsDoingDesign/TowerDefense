@@ -17,7 +17,7 @@ import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
 import { blitPixmap } from './blit'
 import { eliteMark, enemyTier } from './plaques'
-import { drawEnemyBar, drawHeroBar } from './hpbar'
+import { drawEnemyBar } from './hpbar'
 
 /** A minimal, uniform description of a tower to draw (works for setup + battle). */
 export interface DrawSentinel {
@@ -36,9 +36,6 @@ export interface DrawSentinel {
    * figure gets a single contour ring — see `loadout.ts`. Undefined draws bare.
    */
   loadout?: Loadout
-  hp: number
-  maxHp: number
-  downed: boolean
   procFlash: number
   patienceStacks: number
   blocking: boolean
@@ -54,9 +51,6 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
     range: s.profile.range,
     aimAngle: s.aimAngle,
     fireFlash: s.fireFlash,
-    hp: s.hp,
-    maxHp: s.maxHp,
-    downed: s.downed,
     procFlash: s.procFlash,
     patienceStacks: s.patienceStacks,
     blocking: s.blockIds.length > 0,
@@ -168,28 +162,9 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const fs = fxSentinel(s.id)
   ctx.save()
   // Snap to the composite's pixel grid — see blitPixmap. The fire recoil is
-  // added BEFORE the round, so the whole unit (sprite, ring, HP bar, tier tag)
+  // added BEFORE the round, so the whole unit (sprite, ring, tier tag)
   // moves together and still lands on a whole logical px.
   ctx.translate(Math.round(pos.x + fs.rx), Math.round(pos.y + fs.ry))
-
-  if (s.downed) {
-    // Fallen: a dim marker.
-    ctx.globalAlpha = 0.5
-    ctx.beginPath()
-    ctx.arc(0, 0, 13, 0, Math.PI * 2)
-    ctx.fillStyle = '#2a2f2c'
-    ctx.fill()
-    ctx.strokeStyle = '#e05a4f'
-    ctx.lineWidth = 2
-    ctx.stroke()
-    ctx.fillStyle = '#e05a4f'
-    ctx.font = 'bold 13px system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('✕', 0, 1)
-    ctx.restore()
-    return
-  }
 
   const pulse = 1 + s.fireFlash * 0.18
 
@@ -333,10 +308,6 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   // Muzzle flash, over the art, at the barrel. Kept under reduced motion (it is
   // a 90 ms state tell, not travel) but the recoil and sparks are not.
   drawMuzzle(ctx, fs.muzzle, fs.muzzleAngle, s.accent)
-
-  // HP bar (only when damaged) — the CSS-px-floored bar with its damage
-  // trail, under the hero's feet (Phase 2, `hpbar.ts`).
-  drawHeroBar(ctx, s.id, s.hp, s.maxHp, 14)
 
   // Patience pips (top-right of token)
   if (s.patienceStacks > 0) {

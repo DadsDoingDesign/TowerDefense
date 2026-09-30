@@ -84,7 +84,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 10
+export const RUN_SNAPSHOT_VERSION = 11
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -183,7 +183,6 @@ export interface RunSnapshot {
   challenge: RunChallenge
   inventory: Item[]
   runKills: number
-  runDowns: number
   marksEarned: number
 
   activeNodeId: string | null
@@ -283,7 +282,6 @@ export interface RunStateSource {
   challenge: RunChallenge
   inventory: Item[]
   runKills: number
-  runDowns: number
   marksEarned: number
   activeNodeId: string | null
   currentWave: WaveDef | null
@@ -346,7 +344,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     challenge: s.challenge,
     inventory: s.inventory,
     runKills: s.runKills,
-    runDowns: s.runDowns,
     marksEarned: s.marksEarned,
     activeNodeId: s.activeNodeId,
     currentWave: s.currentWave,
@@ -476,16 +473,13 @@ const MOD_STRUCT_FIELDS = {
   chill: ['slow', 'dur'],
   shock: ['chains', 'dmgFrac'],
   block: ['count', 'radius'],
-  healAura: ['hps', 'radius'],
   buffAura: ['damageMult', 'radius'],
-  dmgReductionAura: ['reduction', 'radius'],
   trap: ['dps', 'slow'],
-  // Phase 3b rule capabilities: a cadence, two timed rushes and a last stand,
-  // every field of which reaches the engine's arithmetic.
+  // Phase 3b rule capabilities: a cadence and two timed rushes, every field
+  // of which reaches the engine's arithmetic.
   volley: ['every', 'pierce'],
   killRush: ['rate', 'dur'],
   openingRush: ['rate', 'dur'],
-  lastStand: ['below', 'damage'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -499,13 +493,33 @@ const MOD_BOOL_FIELDS = {
   burnSpreadOnDeath: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
-  damageMult: true, rateMult: true, rangeMult: true, hpMult: true, projSpeedMult: true,
-  physDefAdd: true, splashAdd: true, critChanceAdd: true, critMultAdd: true, pierce: true,
+  damageMult: true, rateMult: true, rangeMult: true, projSpeedMult: true,
+  splashAdd: true, critChanceAdd: true, critMultAdd: true, pierce: true,
   burn: true, chill: true, shock: true, stunChance: true, stunDur: true, execute: true,
-  block: true, thornsMult: true, thornsIgnite: true, healAura: true, buffAura: true,
-  dmgReductionAura: true, lifedrain: true, selfSacrifice: true, trap: true,
-  volley: true, critEvery: true, blockRegen: true, killRush: true, openingRush: true, lastStand: true, leakWard: true,
+  block: true, thornsMult: true, thornsIgnite: true, buffAura: true,
+  lifedrain: true, trap: true,
+  volley: true, critEvery: true, killRush: true, openingRush: true, leakWard: true,
   burnSpreadOnDeath: true,
+}
+
+/**
+ * v10 → v11: heroes have no HP. The mods that only ever meant something to a
+ * hero's HP are retired, and an older save's gear, mutations and run mods have
+ * them dropped on the way in (`stripRetiredMods`). The engine would ignore
+ * them anyway (`mergeMods` reads only keys it knows); dropping them keeps a
+ * resumed run's tooltips from describing a rule that no longer exists.
+ */
+const RETIRED_MOD_KEYS = ['hpMult', 'physDefAdd', 'healAura', 'dmgReductionAura', 'selfSacrifice', 'blockRegen', 'lastStand'] as const
+/**
+ * Mutations cut with hero HP. `cornered` sold a below-half-HP damage spike and
+ * nothing else, so a saved one is dropped rather than left as a bare −25%
+ * attack speed. (`overcharge`, Stormcharged, was cut from the pool for a
+ * different reason — it cost more than it gave — and still works as saved.)
+ */
+const RETIRED_MUTATIONS = new Set(['cornered'])
+function stripMods(m: EffectMods | undefined): void {
+  if (!m) return
+  for (const k of RETIRED_MOD_KEYS) delete (m as Record<string, unknown>)[k]
 }
 
 /**
@@ -781,7 +795,7 @@ function migrateResult(raw: unknown): BattleResult | null {
     leakDamage,
     leaks: leakDamage,
     enemiesLeaked: Math.max(0, num(o.enemiesLeaked, 0)),
-    downed: Math.max(0, num(o.downed, 0)),
+    // v10 → v11: `downed` (and each hero's) went with hero HP; dropped here.
     enemiesKilled: Math.max(0, num(o.enemiesKilled, 0)),
     perSentinel: arr<Record<string, unknown>>(o.perSentinel)
       .filter((p) => p && typeof p.id === 'string')
@@ -790,7 +804,6 @@ function migrateResult(raw: unknown): BattleResult | null {
         kills: Math.max(0, num(p.kills, 0)),
         damageDealt: Math.max(0, num(p.damageDealt, 0)),
         xpGained: Math.max(0, num(p.xpGained, 0)),
-        downed: bool(p.downed, false),
       })),
   }
 }
@@ -840,6 +853,18 @@ function legacyStripSentinels(list: Sentinel[]): void {
   }
 }
 const legacyStripRoster = legacyStripSentinels
+
+/** v10 → v11: drop the retired hero-HP mods from an item's enchantments (see {@link RETIRED_MOD_KEYS}). */
+function stripItem(item: Item | null | undefined): void {
+  if (item) for (const e of item.enchantments) stripMods(e.mods)
+}
+function stripSentinels(list: Sentinel[]): void {
+  for (const s of list) {
+    for (const slot of ['mainHand', 'offHand', 'body'] as const) stripItem(s.equipment[slot])
+    if (s.mutations) s.mutations = s.mutations.filter((m) => !RETIRED_MUTATIONS.has(m.key))
+    for (const m of s.mutations ?? []) stripMods(m.mods)
+  }
+}
 
 /**
  * Bring any stored payload up to the current schema, defaulting every numeric
@@ -965,6 +990,29 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     }
   }
 
+  // ---- v10 → v11: heroes have no HP --------------------------------------
+  // The retired HP mods are dropped from everything a save can carry them on,
+  // and the run's `runDowns` counter is simply not read back (below).
+  if (version < 11) {
+    stripSentinels(roster)
+    stripSentinels(recruitOptions)
+    for (const i of inventory) stripItem(i)
+    if (merchant && isObj(merchant)) {
+      for (const e of (merchant as MerchantStock).items) stripItem(e.item)
+      if ((merchant as MerchantStock).recruit) stripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+    }
+    for (const c of reward ?? []) {
+      stripItem(c.item)
+      stripMods(c.grant?.mods)
+    }
+    if (crossroads) {
+      stripSentinels(crossroads.recruits)
+      crossroads.mutations = crossroads.mutations.filter((m) => !RETIRED_MUTATIONS.has(m.key))
+      for (const m of crossroads.mutations) stripMods(m.mods)
+    }
+    for (const m of runMods) stripMods(m)
+  }
+
   const snap: RunSnapshot = {
     v: RUN_SNAPSHOT_VERSION,
     savedAt: num(o.savedAt, 0),
@@ -1010,7 +1058,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // it beside the new one.
     inventory: version < 6 && o.screen === 'heroPick' && roster.length === 0 ? [] : inventory,
     runKills: Math.max(0, num(o.runKills, 0)),
-    runDowns: Math.max(0, num(o.runDowns, 0)),
     marksEarned: Math.max(0, num(o.marksEarned, 0)),
     activeNodeId: typeof o.activeNodeId === 'string' ? o.activeNodeId : null,
     currentWave,
@@ -1247,7 +1294,6 @@ export interface SnapshotPayout {
   mode: GameMode
   depth: number
   kills: number
-  downs: number
   wins: number
   /** Banner the run was flying — it scales what the settle pays (H16). */
   banner: number
@@ -1290,7 +1336,6 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     challenge: migrateChallenge(o.challenge),
     depth: Math.max(0, cleared.size - 1),
     kills: Math.max(0, num(o.runKills, 0)),
-    downs: Math.max(0, num(o.runDowns, 0)),
     wins: Math.max(0, num(o.wins, 0)),
   }
 }

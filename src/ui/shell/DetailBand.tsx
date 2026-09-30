@@ -764,7 +764,7 @@ function WaveComposition() {
 }
 
 /** Who did what, last wave. Sorted by damage so the answer leads. */
-function BattleRoll({ result }: { result: { perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number; downed: boolean }[] } }) {
+function BattleRoll({ result }: { result: { perSentinel: { id: string; kills: number; damageDealt: number; xpGained: number }[] } }) {
   const roster = useGameStore((s) => s.roster)
   const rows = [...result.perSentinel].sort((a, b) => b.damageDealt - a.damageDealt)
   if (rows.length === 0) return null
@@ -773,11 +773,11 @@ function BattleRoll({ result }: { result: { perSentinel: { id: string; kills: nu
       {rows.map((r) => {
         const hero = roster.find((h) => h.id === r.id)
         return (
-          <div className={`sh-comp-row ${r.downed ? 'downed' : ''}`} key={r.id}>
+          <div className="sh-comp-row" key={r.id}>
             <span className="sh-comp-name">
               {hero?.name ?? 'Hero'}
               <span className="sh-comp-res">
-                {r.kills} kills · +{Math.round(r.xpGained)} xp{r.downed ? ' · fell' : ''}
+                {r.kills} kills · +{Math.round(r.xpGained)} xp
               </span>
             </span>
             <span className="sh-comp-count">{Math.round(r.damageDealt)}</span>
@@ -915,15 +915,12 @@ function HeroStats({ hero }: { hero: Sentinel }) {
   const options = evolutionOptions(hero)
   const nextEvoLevel = hero.branchPath.length === 1 ? TIER1_LEVEL : hero.branchPath.length === 2 ? TIER2_LEVEL : null
   /*
-   * Only a blocker is ever hit (Wave 1). The engine's ONE damage path to a hero
-   * is melee from the enemies it is holding (`engine.ts`, `s.blockIds`), and
-   * thorns fire on the same enemies — so for a hero with no `block` in its
-   * merged mods, HP, armour and thorns are numbers that can never matter, and
-   * printing them invited a player to buy armour for an archer. `p.mods` is the
-   * fully merged build (gear and mutations included), so a rogue handed a block
-   * by some future affix grows the rows back automatically.
+   * Heroes have no HP and are never hit. Thorns grind what a hero HOLDS, so
+   * the row only means something on a blocker. `p.mods` is the fully merged
+   * build (gear and mutations included), so a rogue handed a block by some
+   * future affix grows the row back automatically.
    */
-  const canBeHit = !!p.mods.block
+  const blocks = !!p.mods.block
   const cap = patienceCap(p.patience)
 
   return (
@@ -956,18 +953,16 @@ function HeroStats({ hero }: { hero: Sentinel }) {
           values={[{ head: 'PAT', full: 'Patience', v: Math.round(p.patience) }]}
           info={`Every ${PATIENCE_INTERVAL_S} s of a wave: +${Math.round(PATIENCE_PER_STACK * 100)}% STR, DEX and INT, up to ${cap} times (+${Math.round(cap * PATIENCE_PER_STACK * 100)}%). Every 5 Patience adds one more.`}
         />
-        {canBeHit && (
+        {blocks && (
           <Cell
-            label="Defence"
+            label="Hold"
             values={[
-              { head: 'HP', full: 'Hit points', v: Math.round(p.maxHp) },
-              { head: 'ARM', full: 'Armour', v: Math.round(p.physDef) },
+              { head: 'HLD', full: 'Enemies held', v: p.mods.block!.count },
+              { head: 'THN', full: 'Thorns', v: Math.round(p.thorns) },
             ]}
           />
         )}
-        {canBeHit && <Cell label="Thorns" values={[{ head: 'THN', full: 'Thorns', v: Math.round(p.thorns) }]} />}
       </div>
-      {!canBeHit && <p className="sh-line muted">Never hit: only heroes that block take damage.</p>}
       <Meter label="Speed" value={`${p.rate.toFixed(1)}/s`} frac={Math.min(1, p.rate / 3)} />
       <Meter label="Crit mult" value={`×${p.critMult.toFixed(1)}`} frac={Math.min(1, (p.critMult - 1) / 2)} />
       <Meter label="Crit chance" value={`${Math.round(p.critChance * 100)}%`} frac={p.critChance} />

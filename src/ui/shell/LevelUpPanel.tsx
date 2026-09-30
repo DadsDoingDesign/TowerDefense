@@ -180,7 +180,6 @@ function EvolveDelta({ hero, nodeId }: { hero: Sentinel; nodeId: string }) {
   const rows = [
     { label: 'DPS', a: a.dps, b: b.dps },
     { label: 'Reach', a: a.range, b: b.range },
-    { label: 'HP', a: a.maxHp, b: b.maxHp },
     { label: 'STR', a: hero.stats.str, b: evolved.stats.str },
     { label: 'DEX', a: hero.stats.dex, b: evolved.stats.dex },
     { label: 'INT', a: hero.stats.int, b: evolved.stats.int },
@@ -206,7 +205,6 @@ function Grew({ hero, before }: { hero: Sentinel; before?: Sentinel }) {
         const b = computeCombat(hero)
         return [
           { label: 'DPS', a: a.dps, b: b.dps },
-          { label: 'HP', a: a.maxHp, b: b.maxHp },
           { label: 'STR', a: before.stats.str, b: hero.stats.str },
           { label: 'DEX', a: before.stats.dex, b: hero.stats.dex },
           { label: 'INT', a: before.stats.int, b: hero.stats.int },

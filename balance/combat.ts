@@ -12,8 +12,7 @@
  */
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { BEHAVIOUR_INFO, COLOSSUS_SPLIT, GRUKK_WARCRY, KING_LOB } from '../src/game/data/behaviours'
-import { ALL_MAPS, FIRST_MAP, pickBattleMap } from '../src/game/data/maps'
-import { distToPolyline } from '../src/game/data/terrain'
+import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
 import { encounterSeed, generateEncounter, subWaveCount, variantsFor, type EncounterKind } from '../src/game/data/waves'
 import { createSentinel } from '../src/game/data/sentinels'
 import type { BehaviourStats, EngineRules } from '../src/game/engine/engine'
@@ -22,7 +21,6 @@ import {
   bestSlots,
   buildSpec,
   POST,
-  slotCoverage,
   makeWave,
   maxLeak,
   mean,
@@ -54,7 +52,7 @@ interface BenchOpts {
 }
 
 /** Mean behaviour stats and stop rate of a bench over the seed set. */
-function bench(o: BenchOpts): { stop: number; stats: BehaviourStats; heroDown: number } {
+function bench(o: BenchOpts): { stop: number; stats: BehaviourStats } {
   const ml = maxLeak(o.wave)
   const rows = SEEDS.map((seed) =>
     runBattle({
@@ -73,7 +71,7 @@ function bench(o: BenchOpts): { stop: number; stats: BehaviourStats; heroDown: n
   )
   const stats = {} as BehaviourStats
   for (const k of Object.keys(rows[0].stats) as (keyof BehaviourStats)[]) stats[k] = mean(rows.map((r) => r.stats[k]))
-  return { stop: 1 - mean(rows.map((r) => r.baseHpLost)) / ml, stats, heroDown: mean(rows.map((r) => r.downs)) }
+  return { stop: 1 - mean(rows.map((r) => r.baseHpLost)) / ml, stats }
 }
 
 const hero = (a: Archetype, level = 6): Sentinel => {
@@ -133,19 +131,13 @@ export function runCombatDepth(): CombatDepthResult {
     const share = (r: typeof on) => (r.stats.enrages > 0 ? r.stats.enragedLeaks / r.stats.enrages : 0)
     rows.push({ name: 'Torch Berserker → enrage', kind: 'enrage', fired: on.stats.enrages, base: share(on) * 100, counter: share(onC) * 100, unit: '% of enraged that reach the Gate', lowerIsBetter: true, counterLabel: 'a frost slow on the line' })
   }
-  // Sapper — placement (post set back from the lane) and a Guard.
+  // Sapper — it blows at the Gate; a blocker on the road holds it and it goes
+  // off harmlessly at the wall (the no-HP rule change: heroes are never hurt).
   {
     const w = makeWave([{ typeId: 'tnt4', count: 8, hpMult: 6, gap: 1 }])
-    // G1-2: on the tile grid "set back" is one tile back — a tile 120px from
-    // every lane (the best such one for a 150px reach) — against a roadside
-    // tile 40px out. Before the grid it was circle s0 (65px) against s5 (35px).
-    const cov = slotCoverage(FIRST_MAP, 150)
-    const setBack = FIRST_MAP.slots
-      .filter((s) => distToPolyline(s.pos, FIRST_MAP.path) >= 100)
-      .sort((a, b) => cov[b.id] - cov[a.id] || a.id.localeCompare(b.id))[0].id
-    const near = bench({ team: post([[hero('mystic'), POST.s5], [hero('rogue'), POST.s2]]), wave: w })
-    const far = bench({ team: post([[hero('mystic'), setBack], [hero('rogue'), POST.s2]]), wave: w })
-    rows.push({ name: 'Sapper (and Fuse Whelp) → blast on arrival', kind: 'sapper', fired: near.stats.sapperBlasts, base: near.stats.sapperDamage, counter: far.stats.sapperDamage, unit: 'HP dealt to heroes', lowerIsBetter: true, counterLabel: `post the Mystic one tile back (${setBack}, 120px) not roadside (${POST.s5}, 40px)` })
+    const open = bench({ team: post([[hero('mystic'), POST.s5], [hero('rogue'), POST.s2]]), wave: w })
+    const held = bench({ team: post([[hero('fighter'), POST.s5], [hero('rogue'), POST.s2]]), wave: w })
+    rows.push({ name: 'Sapper (and Fuse Whelp) → blast at the Gate', kind: 'sapper', fired: open.stats.sapperBlasts, base: open.stats.sapperDamage, counter: held.stats.sapperDamage, unit: 'extra Gate damage from blasts', lowerIsBetter: true, counterLabel: `hold it: a blocking Fighter on the road (${POST.s5}) instead of a Mystic` })
   }
   // Bomber — Threat targeting picks it out of the column and kills it in the wind-up.
   {
@@ -156,7 +148,7 @@ export function runCombatDepth(): CombatDepthResult {
     const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2], [hero('rogue'), POST.s3]])
     const a = bench({ team, wave: w, focus: 'first' })
     const b = bench({ team, wave: w, focus: 'threat' })
-    rows.push({ name: 'Bomber / Demolisher → lobbed charge', kind: 'lob', fired: a.stats.lobsStarted, base: a.stats.lobDamage, counter: b.stats.lobDamage, unit: 'HP dealt to heroes', lowerIsBetter: true, counterLabel: 'Threat targeting (kill it in the wind-up)' })
+    rows.push({ name: 'Bomber / Demolisher → charge lobbed at the Gate', kind: 'lob', fired: a.stats.lobsStarted, base: a.stats.lobDamage, counter: b.stats.lobDamage, unit: 'Gate damage from charges', lowerIsBetter: true, counterLabel: 'Threat targeting (kill it in the wind-up)' })
   }
   // Splitter — splash: the pieces spawn together, so one blast takes both.
   {
@@ -200,7 +192,7 @@ export function runCombatDepth(): CombatDepthResult {
   // ---------------------------------------------------------------- 16b
   line('### 16b. Boss phases — do they trigger in the fights the game ships?')
   line('')
-  const bossStats = { warCries: 0, kingLobs: 0, kingDisables: 0, bossSplits: 0, bossPhases: 0, fights: 0 }
+  const bossStats = { warCries: 0, kingLobs: 0, kingDamage: 0, bossSplits: 0, bossPhases: 0, fights: 0 }
   for (const v of variantsFor('boss', 10)) {
     for (let t = 0; t < 4; t++) {
       const rr = new RNG(hashSeed(t, 'boss16', v.id))
@@ -212,7 +204,7 @@ export function runCombatDepth(): CombatDepthResult {
       bossStats.fights++
       bossStats.warCries += m.stats.warCries
       bossStats.kingLobs += m.stats.kingLobs
-      bossStats.kingDisables += m.stats.kingDisables
+      bossStats.kingDamage += m.stats.kingDamage
       bossStats.bossSplits += m.stats.bossSplits
       bossStats.bossPhases += m.stats.bossPhases
     }
@@ -222,7 +214,7 @@ export function runCombatDepth(): CombatDepthResult {
   line('| Champion | Phase | Triggered |')
   line('|---|---|--:|')
   line(`| Warlord Grukk | war-cry at ${GRUKK_WARCRY.at.map((a) => `${Math.round(a * 100)}%`).join(' / ')} (allies ×${GRUKK_WARCRY.speedMult} pace for ${GRUKK_WARCRY.dur}s) | ${bossStats.warCries} |`)
-  line(`| Powderkeg King | TNT lob on a post, disables it ${KING_LOB.disable}s; rage below ${Math.round(KING_LOB.rageAt * 100)}% | ${bossStats.kingLobs} lobs, ${bossStats.kingDisables} posts knocked out |`)
+  line(`| Powderkeg King | TNT at the Gate every ${KING_LOB.interval}s (${KING_LOB.gateDamage} Gate each); every ${KING_LOB.rageInterval}s below ${Math.round(KING_LOB.rageAt * 100)}% | ${bossStats.kingLobs} lobs, ${f1(bossStats.kingDamage)} Gate damage |`)
   line(`| The Colossus Keg | splits into two halves at ${Math.round(COLOSSUS_SPLIT.at * 100)}% | ${bossStats.bossSplits} |`)
   line(`| (all) | \`bossPhase\` events | ${bossStats.bossPhases} |`)
   line('')

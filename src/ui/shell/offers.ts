@@ -327,7 +327,7 @@ function heroBits(s: Sentinel) {
  */
 function heroBody(s: Sentinel): string[] {
   const p = computeCombat(s)
-  return [`${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${Math.round(p.maxHp)} HP`]
+  return [`${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`]
 }
 
 /**
@@ -564,7 +564,6 @@ function archetypeTiles(p: ReturnType<typeof computeCombat>): { caption: string;
    */
   const out: { caption: string; icon: IconKey }[] = []
   if (p.mods.block) out.push({ caption: `Blocks ${p.mods.block.count}`, icon: 'block' })
-  if (p.physDef) out.push({ caption: `${Math.round(p.physDef)} armour`, icon: 'armour' })
   if (p.critChance >= 0.15) out.push({ caption: `${pct(p.critChance)} crit`, icon: 'crit' })
   if (p.damageType === 'magic') out.push({ caption: 'Magic damage', icon: 'magic' })
   if (p.splashRadius > 0) out.push({ caption: `${Math.round(p.splashRadius)} splash`, icon: 'splash' })
@@ -598,7 +597,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       // picker below needs in order to be seen at all.
       body: [
         node.ability,
-        `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${Math.round(p.maxHp)} HP · ${p.rate.toFixed(1)}/s`,
+        `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`,
         `${p.damageType === 'magic' ? 'Magic' : 'Physical'} · ${pct(p.critChance)} crit ×${p.critMult.toFixed(1)} · ${Math.round(p.thorns)} thorns · ${Math.round(p.patience)} patience${statBonus ? ` · +${statBonus} all stats (Watchtower)` : ''}`,
       ],
       action: { label: `Choose ${node.name}`, run: () => st.pickStartingHero(a) },

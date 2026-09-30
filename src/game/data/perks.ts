@@ -25,7 +25,13 @@ import type { EffectMods } from '../types'
  * stronger version of an old one.
  *
  * Every mod here is one the engine applies (`EffectMods`, `engine.ts`); every
- * `desc` is the number it applies. `balance/report.ts` §7 measures each perk
+ * `desc` is the number it applies.
+ *
+ * Heroes have no HP (the no-HP rule change). The seven perks that read hero
+ * HP or only mattered because a blocker could be hurt — three heals-while-
+ * blocking, a last stand, a heal aura, a blood pact and the Knight's stun —
+ * keep their ids (saves name them) and now sell something that does not need
+ * HP: a wider hold, an opening charge, thorns, speed, damage. `balance/report.ts` §7 measures each perk
  * alone and gates that none is dead and that no pair has a known answer.
  */
 export interface Perk {
@@ -44,9 +50,9 @@ export const PERK_LEVELS = [5, 15] as const
 /** Level 5: by base archetype. */
 const PERKS_5: Record<string, Perk[]> = {
   fighter: [
-    { id: 'f5_second_wind', name: 'Second Wind', desc: 'While blocking, heals 3% of max HP per second.', mods: { blockRegen: 0.03 } },
-    { id: 'f5_last_stand', name: 'Last Stand', desc: 'Below 40% HP, strikes 60% harder.', mods: { lastStand: { below: 0.4, damage: 0.6 } } },
-    { id: 'f5_riposte', name: 'Riposte', desc: 'Thorns ×1.8: every blow it takes is returned harder.', mods: { thornsMult: 1.8 }, unlock: 'lone_wolf' },
+    { id: 'f5_second_wind', name: 'Hold Fast', desc: 'Holds 3 enemies instead of 2.', mods: { block: { count: 3, radius: 72 } } },
+    { id: 'f5_last_stand', name: 'Charge', desc: 'For the first 15s of each wave, attacks 60% faster.', mods: { openingRush: { rate: 0.6, dur: 15 } } },
+    { id: 'f5_riposte', name: 'Riposte', desc: 'Thorns ×1.8: whatever it holds is ground down harder.', mods: { thornsMult: 1.8 }, unlock: 'lone_wolf' },
   ],
   rogue: [
     { id: 'r5_ambush', name: 'Ambush', desc: 'For the first 20s of each wave, attacks 70% faster.', mods: { openingRush: { rate: 0.7, dur: 20 } } },
@@ -64,15 +70,20 @@ const PERKS_5: Record<string, Perk[]> = {
 const PERKS_15: Record<string, Perk[]> = {
   warrior: [
     { id: 'warrior_cleave', name: 'Cleave', desc: 'Strikes carry: +14 splash radius.', mods: { splashAdd: 14 } },
-    { id: 'warrior_frenzy', name: 'Frenzy', desc: 'Each kill: attacks 90% faster for 3s.', mods: { killRush: { rate: 0.9, dur: 3 } } },
+    // 0.9 → 1.3 (no-HP tuning pass): with the Warrior never falling Cleave led
+    // it by 24pt on §7's mean, past the 20pt "solved pair" ceiling (now 14pt).
+    { id: 'warrior_frenzy', name: 'Frenzy', desc: 'Each kill: attacks 130% faster for 3s.', mods: { killRush: { rate: 1.3, dur: 3 } } },
   ],
   knight: [
-    { id: 'knight_concussion', name: 'Concussion', desc: 'Its bash lands more often and harder: 32% to stun, for 1.2s.', mods: { stunChance: 0.32, stunDur: 1.2 } },
-    { id: 'knight_second_wind', name: 'Shield Wall', desc: 'While blocking, heals 4% of max HP per second.', mods: { blockRegen: 0.04 } },
+    // Was a bigger stun (32% for 1.2s). A stun's job on a blocker was to stop
+    // what it holds swinging at it; with heroes never hurt it measured dead
+    // (−1.0pt mean, best +0.6pt), so the bash now simply hits harder.
+    { id: 'knight_concussion', name: 'Heavy Bash', desc: 'Its bash hits 35% harder.', mods: { damageMult: 1.35 } },
+    { id: 'knight_second_wind', name: 'Shield Wall', desc: 'Holds 4 enemies in a wider circle.', mods: { block: { count: 4, radius: 90 } } },
   ],
   guard: [
     { id: 'guard_frozen', name: 'Frozen Ground', desc: 'The ground it holds freezes: blocks 4 enemies in a wider circle, and chills 45% for 2s.', mods: { block: { count: 4, radius: 95 }, chill: { slow: 0.45, dur: 2 } } },
-    { id: 'guard_unbroken', name: 'Unbroken', desc: 'While blocking, heals 3% of max HP per second, and +20 armour.', mods: { blockRegen: 0.03, physDefAdd: 20 } },
+    { id: 'guard_unbroken', name: 'Unbroken', desc: 'Thorns ×2: whatever it holds is ground down twice as fast.', mods: { thornsMult: 2 } },
   ],
   assassin: [
     { id: 'assassin_opening', name: 'Opening Cut', desc: 'For the first 25s of each wave, attacks 120% faster.', mods: { openingRush: { rate: 1.2, dur: 25 } } },
@@ -91,11 +102,13 @@ const PERKS_15: Record<string, Perk[]> = {
     { id: 'elem_static', name: 'Static Field', desc: 'Every hit arcs to 2 more enemies for 50%.', mods: { shock: { chains: 2, dmgFrac: 0.5 } } },
   ],
   cleric: [
-    { id: 'cleric_sanctuary', name: 'Sanctuary', desc: 'Heals allies 18/s in a wider ring.', mods: { healAura: { hps: 18, radius: 150 } } },
+    { id: 'cleric_sanctuary', name: 'Zeal', desc: 'Attacks 40% faster.', mods: { rateMult: 1.4 } },
     { id: 'cleric_blessing', name: 'Blessing', desc: 'Allies nearby deal 20% more damage.', mods: { buffAura: { damageMult: 1.2, radius: 150 } } },
   ],
   warlock: [
-    { id: 'warlock_blood_pact', name: 'Blood Pact', desc: 'While its blood price is paid (below 90% HP), strikes 30% harder.', mods: { lastStand: { below: 0.9, damage: 0.3 } } },
+    // Was "+30% while below 90% HP" — which the Warlock's own self-sacrifice
+    // kept true from the first second of every wave. Now the same +30%, stated.
+    { id: 'warlock_blood_pact', name: 'Blood Pact', desc: 'Strikes 30% harder.', mods: { damageMult: 1.3 } },
     { id: 'warlock_siphon', name: 'Deep Siphon', desc: 'Life-drain +0.3, and +15% damage: the Gate drinks deep of what it deals.', mods: { lifedrain: 0.3, damageMult: 1.15 } },
   ],
 }

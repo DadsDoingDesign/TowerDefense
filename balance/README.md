@@ -124,7 +124,7 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
    saturation and measured 6450 HP/s for the top build — splash landing on a
    blob nothing in the game generates, i.e. trap 4.
 2. **Support value** — each support sits at the one slot whose neighbours are
-   inside aura range, beside a *blocking* carrier that can actually die, with the
+   inside aura range, beside a *blocking* carrier (heroes have no HP since the no-HP pass, so an aura is a damage buff), with the
    real 20-HP base. It is graded on the **encounters the game actually ships** —
    a depth-9 swarm, a depth-8 elite armour column and the depth-10 boss, with
    head count, arrival schedule and composition untouched — and the run's own

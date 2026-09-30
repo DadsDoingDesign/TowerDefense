@@ -56,7 +56,7 @@ function sentinel(over: Partial<DrawSentinel> = {}): DrawSentinel {
   return {
     id: 'harness', pos: { x: 0, y: 0 }, archetype: 'fighter',
     color: '#d9743f', accent: '#e0ac4c', range: 96, aimAngle: 0,
-    fireFlash: 0, hp: 100, maxHp: 100, downed: false,
+    fireFlash: 0,
     procFlash: 0, patienceStacks: 0, blocking: false, ...over,
   }
 }

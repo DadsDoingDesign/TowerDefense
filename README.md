@@ -86,7 +86,7 @@ and reports a `BattleResult` (gold, per-Sentinel kills/damage/XP, base HP left) 
 1. ✅ **Core wave/combat loop** — fixed path, escalating waves, Fighter/Rogue/Mystic on
    fixed slots, Canvas 2D battle, speed toggle, win/lose.
 2. ✅ **Archetype branching (3 → 9 → 27)** — data-driven ability mods, in-run leveling,
-   evolution choices; engine gains HP, blocking, DoTs, CC, thorns, auras, Patience.
+   evolution choices; engine gains blocking, DoTs, CC, thorns, auras, Patience (heroes have no HP — only the Gate can be hurt).
 3. ✅ **Itemization** — base stats + rolled enchantments + rarity ladder, Keepsakes
    (team buffs), Reforge / Increase Rarity sinks, equip UI, loot drops.
 4. ✅ **Node map** — Slay-the-Spire DAG with Standard / Elite / Merchant / Shrine /

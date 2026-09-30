@@ -152,10 +152,10 @@ export function WaveCeremony() {
               {rows.slice(0, 5).map((r) => {
                 const hero = roster.find((h) => h.id === r.id)
                 return (
-                  <div className={`sh-ceremony-row ${r.downed ? 'downed' : ''}`} key={r.id}>
+                  <div className="sh-ceremony-row" key={r.id}>
                     <span className="sh-ceremony-who">{hero?.name ?? 'Hero'}</span>
                     <span className="sh-ceremony-what">
-                      {r.kills} kills · {Math.round(r.damageDealt)} dmg{r.downed ? ' · fell' : ''}
+                      {r.kills} kills · {Math.round(r.damageDealt)} dmg
                     </span>
                   </div>
                 )

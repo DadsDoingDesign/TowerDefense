@@ -163,24 +163,3 @@ export function drawEnemyBar(
   return top
 }
 
-/** A hero's bar — same floors, no tier, only while hurt. */
-export function drawHeroBar(ctx: CanvasRenderingContext2D, id: string, hp: number, maxHp: number, bottom: number): void {
-  const frac = Math.max(0, Math.min(1, hp / maxHp))
-  if (frac >= 0.999) return
-  const trail = trailFor(`h:${id}`, frac)
-  const G = barGeometry(30)
-  const w = Math.round(G.w)
-  const x = -Math.round(w / 2)
-  const y = Math.round(bottom)
-  const inner = w - G.edge * 2
-  ctx.fillStyle = 'rgba(12,7,3,0.92)'
-  ctx.fillRect(x, y, w, G.h)
-  ctx.fillStyle = '#2a1b10'
-  ctx.fillRect(x + G.edge, y + G.edge, inner, G.fillH)
-  if (trail > frac) {
-    ctx.fillStyle = '#f3dfb1'
-    ctx.fillRect(x + G.edge, y + G.edge, inner * trail, G.fillH)
-  }
-  ctx.fillStyle = fillColour(frac)
-  ctx.fillRect(x + G.edge, y + G.edge, inner * frac, G.fillH)
-}

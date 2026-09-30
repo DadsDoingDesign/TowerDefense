@@ -25,14 +25,10 @@ export interface CombatProfile {
   critChance: number
   critMult: number
   damageType: 'physical' | 'magic'
-  maxHp: number
-  /** Fraction of max HP the unit starts a wave missing (warlock self-sacrifice). */
-  startMissingFrac: number
+  /** Damage per second ground into each enemy this Sentinel holds (blockers only). */
   thorns: number
   /** Patience including gear ("of Patience"), driving the stack ceiling. */
   patience: number
-  /** Physical-defense for block mitigation (fighter Guardian line only). */
-  physDef: number
   mods: EffectMods
   /** Average sustained single-target DPS, for UI. */
   dps: number
@@ -107,7 +103,7 @@ export function gearOf(equipment: Equipment): GearContribution {
 }
 
 export interface CombatContext {
-  /** Team-wide mods from keepsakes and cleric/guard auras resolved at runtime. */
+  /** Team-wide mods from relics (and legacy keepsakes). */
   teamMods?: EffectMods[]
   /** Patience multiplier applied to core stats (1 = none). */
   patienceMult?: number
@@ -141,14 +137,12 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const isPhys = base.damageType === 'physical'
   const damageStat = isPhys ? st.str : st.int
   const flat = isPhys ? gear.flatPhys : gear.flatMag
-  const sacBonus = 1 + (mods.selfSacrifice ?? 0)
-  const damage = (base.damage + flat) * (1 + damageStat * 0.04) * (mods.damageMult ?? 1) * sacBonus
+  const damage = (base.damage + flat) * (1 + damageStat * 0.04) * (mods.damageMult ?? 1)
   const rate = base.rate * (1 + st.dex * 0.02) * (mods.rateMult ?? 1) * (1 + gear.atkSpeed)
   const range = base.range * ((mods.rangeMult ?? 1) + gear.rangeMult)
   const critChance = clamp(base.critChance + st.dex * 0.004 + (mods.critChanceAdd ?? 0) + gear.critChance, 0, 0.95)
   const critMult = base.critMult + (mods.critMultAdd ?? 0)
   const splashRadius = base.splashRadius + (mods.splashAdd ?? 0) + gear.splashAdd
-  const maxHp = Math.round((70 + st.str * 9) * (mods.hpMult ?? 1))
   const thorns = (s.thorns + gear.thorns) * (mods.thornsMult ?? 1)
   // "of Patience" gear was accumulated and then dropped on the floor (H10).
   const patience = s.patience + gear.patience
@@ -165,11 +159,8 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
     critChance,
     critMult,
     damageType: base.damageType,
-    maxHp,
-    startMissingFrac: mods.selfSacrifice ?? 0,
     thorns,
     patience,
-    physDef: Math.max(0, mods.physDefAdd ?? 0),
     mods,
     dps,
   }

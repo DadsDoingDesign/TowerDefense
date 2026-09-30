@@ -99,7 +99,7 @@ describe('portrait twins', () => {
       })
       for (let i = 0; i < 200_000 && e.status === 'running'; i++) e.step(TICK)
       const r = e.result()
-      return { status: r.status, baseHp: e.baseHp, killed: r.enemiesKilled, elapsed: e.elapsed, dmg: r.perSentinel.map((p) => [p.kills, Math.round(p.damageDealt), p.downed]) }
+      return { status: r.status, baseHp: e.baseHp, killed: r.enemiesKilled, elapsed: e.elapsed, dmg: r.perSentinel.map((p) => [p.kills, Math.round(p.damageDealt)]) }
     }
     for (const land of ALL_MAPS) {
       for (const seed of [3, 17]) expect(fight(orientField(land, 'portrait'), seed)).toEqual(fight(land, seed))

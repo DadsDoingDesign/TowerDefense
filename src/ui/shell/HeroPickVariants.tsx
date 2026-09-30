@@ -135,13 +135,13 @@ function BigStat({ icon, value, label }: { icon: IconKey; value: number | string
   )
 }
 
-/** The three numbers that decide a first battle: how hard, how far, how long. */
+/** The three numbers that decide a first battle: how hard, how far, how often. */
 function BigThree({ f }: { f: HeroFacts }) {
   return (
     <span className="hpv-big3">
       <BigStat icon={f.splash > 0 ? 'splash' : 'damage'} value={f.dps} label={f.splash > 0 ? 'area dmg/s' : 'damage/s'} />
       <BigStat icon="range" value={f.range} label="reach" />
-      <BigStat icon="hp" value={f.hp} label="health" />
+      <BigStat icon="haste" value={f.rate.toFixed(1)} label="attacks/s" />
     </span>
   )
 }
@@ -239,8 +239,8 @@ function CardsVariant({ facts, selected, onPick }: VariantProps) {
  */
 function CompareVariant({ facts, selected, onPick }: VariantProps) {
   const wide = useMedia('(min-width: 900px) and (min-height: 540px)')
-  const max = (k: 'dps' | 'range' | 'hp' | 'rate') => Math.max(...facts.map((f) => f[k]))
-  const bar = (f: HeroFacts, k: 'dps' | 'range' | 'hp' | 'rate', text: string, note?: string) => (
+  const max = (k: 'dps' | 'range' | 'rate') => Math.max(...facts.map((f) => f[k]))
+  const bar = (f: HeroFacts, k: 'dps' | 'range' | 'rate', text: string, note?: string) => (
     <td key={f.id} className={f.id === selected.id ? 'sel' : ''} style={railStyle(f)}>
       <span className="hpv-cell-num">
         {text}
@@ -305,10 +305,6 @@ function CompareVariant({ facts, selected, onPick }: VariantProps) {
           <tr>
             <th scope="row">Stops enemies</th>
             {facts.map((f) => word(f, f.block ? `Up to ${f.block}` : 'No'))}
-          </tr>
-          <tr>
-            <th scope="row">Health</th>
-            {facts.map((f) => bar(f, 'hp', String(f.hp)))}
           </tr>
           <tr>
             <th scope="row">Attacks/s</th>

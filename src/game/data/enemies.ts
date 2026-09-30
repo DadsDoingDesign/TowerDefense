@@ -53,25 +53,25 @@ import {
  */
 export const ENEMY_TYPES: Record<string, EnemyType> = {
   // ── Torch goblins — melee rushers ──────────────────────────────────────
-  torch1: { id: 'torch1', name: 'Torch Runt', baseHp: 24, speed: 146, reward: 4, leak: 1, radius: 11, color: '#d0563a', meleeDps: 6 },
-  torch2: { id: 'torch2', name: 'Torch Goblin', baseHp: 42, speed: 134, reward: 5, leak: 1, radius: 12, color: '#4a86c0', meleeDps: 9 },
-  torch3: { id: 'torch3', name: 'Torch Raider', baseHp: 76, speed: 125, reward: 7, leak: 1, radius: 13, color: '#8a5ec0', meleeDps: 13 },
-  torch4: { id: 'torch4', name: 'Torch Berserker', baseHp: 128, speed: 118, reward: 11, leak: 2, radius: 15, color: '#d4b24a', meleeDps: 19, behaviours: [BERSERK] },
-  torch5: { id: 'torch5', name: 'Warlord Grukk', baseHp: 950, speed: 89, reward: 110, leak: 11, radius: 26, color: '#b0301f', meleeDps: 46, physResist: 0.15, isBoss: true, behaviours: [GRUKK_WARCRY] },
+  torch1: { id: 'torch1', name: 'Torch Runt', baseHp: 24, speed: 146, reward: 4, leak: 1, radius: 11, color: '#d0563a' },
+  torch2: { id: 'torch2', name: 'Torch Goblin', baseHp: 42, speed: 134, reward: 5, leak: 1, radius: 12, color: '#4a86c0' },
+  torch3: { id: 'torch3', name: 'Torch Raider', baseHp: 76, speed: 125, reward: 7, leak: 1, radius: 13, color: '#8a5ec0' },
+  torch4: { id: 'torch4', name: 'Torch Berserker', baseHp: 128, speed: 118, reward: 11, leak: 2, radius: 15, color: '#d4b24a', behaviours: [BERSERK] },
+  torch5: { id: 'torch5', name: 'Warlord Grukk', baseHp: 950, speed: 89, reward: 110, leak: 11, radius: 26, color: '#b0301f', physResist: 0.15, isBoss: true, behaviours: [GRUKK_WARCRY] },
 
   // ── TNT goblins — bombers ──────────────────────────────────────────────
-  tnt1: { id: 'tnt1', name: 'Fuse Whelp', baseHp: 34, speed: 103, reward: 5, leak: 2, radius: 12, color: '#c0563a', meleeDps: 8, behaviours: [WHELP_SAPPER] },
-  tnt2: { id: 'tnt2', name: 'Bomber', baseHp: 60, speed: 98, reward: 7, leak: 2, radius: 13, color: '#4a86c0', meleeDps: 12, magResist: 0.15, behaviours: [BOMBER_LOB] },
-  tnt3: { id: 'tnt3', name: 'Demolisher', baseHp: 100, speed: 94, reward: 9, leak: 3, radius: 14, color: '#8a5ec0', meleeDps: 17, magResist: 0.2, behaviours: [DEMOLISHER_LOB] },
-  tnt4: { id: 'tnt4', name: 'Sapper', baseHp: 172, speed: 89, reward: 14, leak: 3, radius: 16, color: '#d4b24a', meleeDps: 23, magResist: 0.25, behaviours: [SAPPER] },
-  tnt5: { id: 'tnt5', name: 'Powderkeg King', baseHp: 1350, speed: 74, reward: 150, leak: 15, radius: 28, color: '#802a2a', meleeDps: 54, magResist: 0.25, physResist: 0.1, isBoss: true, behaviours: [KING_LOB] },
+  tnt1: { id: 'tnt1', name: 'Fuse Whelp', baseHp: 34, speed: 103, reward: 5, leak: 1, radius: 12, color: '#c0563a', behaviours: [WHELP_SAPPER] },
+  tnt2: { id: 'tnt2', name: 'Bomber', baseHp: 60, speed: 98, reward: 7, leak: 1, radius: 13, color: '#4a86c0', magResist: 0.15, behaviours: [BOMBER_LOB] },
+  tnt3: { id: 'tnt3', name: 'Demolisher', baseHp: 100, speed: 94, reward: 9, leak: 2, radius: 14, color: '#8a5ec0', magResist: 0.2, behaviours: [DEMOLISHER_LOB] },
+  tnt4: { id: 'tnt4', name: 'Sapper', baseHp: 172, speed: 89, reward: 14, leak: 1, radius: 16, color: '#d4b24a', magResist: 0.25, behaviours: [SAPPER] },
+  tnt5: { id: 'tnt5', name: 'Powderkeg King', baseHp: 1350, speed: 74, reward: 150, leak: 15, radius: 28, color: '#802a2a', magResist: 0.25, physResist: 0.1, isBoss: true, behaviours: [KING_LOB] },
 
   // ── Barrel goblins — rolling tanks ─────────────────────────────────────
-  barrel1: { id: 'barrel1', name: 'Barrel Imp', baseHp: 72, speed: 74, reward: 6, leak: 2, radius: 13, color: '#b5793a', meleeDps: 10, physResist: 0.15 },
-  barrel2: { id: 'barrel2', name: 'Barrel Roller', baseHp: 134, speed: 70, reward: 9, leak: 2, radius: 15, color: '#4a86c0', meleeDps: 16, physResist: 0.2, behaviours: [VAULT] },
-  barrel3: { id: 'barrel3', name: 'Ironbarrel', baseHp: 248, speed: 65, reward: 14, leak: 3, radius: 18, color: '#8a5ec0', meleeDps: 25, physResist: 0.25 },
-  barrel4: { id: 'barrel4', name: 'Siege Barrel', baseHp: 430, speed: 60, reward: 21, leak: 4, radius: 21, color: '#d4b24a', meleeDps: 35, physResist: 0.3, behaviours: [SPLITTER] },
-  barrel5: { id: 'barrel5', name: 'The Colossus Keg', baseHp: 2600, speed: 65, reward: 220, leak: 22, radius: 33, color: '#6a4a8f', meleeDps: 66, physResist: 0.35, magResist: 0.15, isBoss: true, behaviours: [COLOSSUS_SPLIT] },
+  barrel1: { id: 'barrel1', name: 'Barrel Imp', baseHp: 72, speed: 74, reward: 6, leak: 2, radius: 13, color: '#b5793a', physResist: 0.15 },
+  barrel2: { id: 'barrel2', name: 'Barrel Roller', baseHp: 134, speed: 70, reward: 9, leak: 2, radius: 15, color: '#4a86c0', physResist: 0.2, behaviours: [VAULT] },
+  barrel3: { id: 'barrel3', name: 'Ironbarrel', baseHp: 248, speed: 65, reward: 14, leak: 3, radius: 18, color: '#8a5ec0', physResist: 0.25 },
+  barrel4: { id: 'barrel4', name: 'Siege Barrel', baseHp: 430, speed: 60, reward: 21, leak: 4, radius: 21, color: '#d4b24a', physResist: 0.3, behaviours: [SPLITTER] },
+  barrel5: { id: 'barrel5', name: 'The Colossus Keg', baseHp: 2600, speed: 65, reward: 220, leak: 22, radius: 33, color: '#6a4a8f', physResist: 0.35, magResist: 0.15, isBoss: true, behaviours: [COLOSSUS_SPLIT] },
 }
 
 /**
@@ -234,15 +234,19 @@ for (const [key, base] of Object.entries({ ...ENEMY_TYPES })) {
  * The most base HP one spawn of this key can cost if nothing stops it — its
  * own leak plus, for a splitter, every piece it can break into (Phase 3a).
  * The harness's `maxLeak` reads this, so a stop rate can never go negative
- * because a Siege Barrel's imps leaked on top of it. A sapper's ceiling is
- * still its leak: it may walk the whole lane without meeting a hero.
+ * because a Siege Barrel's imps leaked on top of it. A sapper's ceiling adds
+ * the blast it sets off at the Gate, and a bomber's the charges it can throw
+ * there. (The Powderkeg King's TNT is a clock, not a count, so it is not in
+ * here: the card prints his leak, and the harness adds the clock.)
  */
 export function leakCeiling(key: string): number {
   const t = ENEMY_TYPES[key]
   if (!t) return 0
   let total = t.leak
   for (const b of t.behaviours ?? []) {
-    if (b.kind === 'split') {
+    if (b.kind === 'sapper') total += b.gateDamage
+    else if (b.kind === 'lob') total += b.charges * b.gateDamage
+    else if (b.kind === 'split') {
       // The pieces carry the barrel's leak between them (`engine.splitOnDeath`
       // caps each at leak ÷ count), so a split can never put MORE through the
       // Gate than the barrel would have: the ceiling is the larger of the two.

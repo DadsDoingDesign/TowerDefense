@@ -454,12 +454,6 @@
 .pg-recap-row + .pg-recap-row {
   border-top: 1px solid var(--line);
 }
-/* A hero who fell is marked in form as well as colour — a red row alone is not
-   a signal a colour-blind player can read (M27c). The word "fell" rides in the
-   build line for exactly that reason. */
-.pg-recap-row.downed .pg-recap-name {
-  color: var(--bad-text);
-}
 .pg-recap-name {
   display: flex;
   flex-direction: column;

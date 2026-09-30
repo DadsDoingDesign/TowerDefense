@@ -5,11 +5,12 @@ import type { EnemyBehaviour, EnemyBehaviourKind, EnemyType } from '../types'
  * The enemy behaviour kit (Phase 3a)
  * ---------------------------------------------------------------------------
  *
- * Before this file every goblin was HP, speed, reward, leak, melee DPS and two
+ * Before this file every goblin was HP, speed, reward, leak and two
  * resistances: fifteen enemies that were three stat profiles at five sizes.
- * "TNT bombers" did not bomb, the bosses were long HP bars, and because only a
- * blocking fighter ever took damage, a Rogue's or a Mystic's HP was a number
- * nothing could reach.
+ * "TNT bombers" did not bomb and the bosses were long HP bars.
+ *
+ * Heroes have no HP (the no-HP rule change): nothing here hurts a hero. The
+ * TNT kit — sappers, bombers, the Powderkeg King — hurts the GATE instead.
  *
  * Each behaviour below is a declarative capability (`EnemyType.behaviours`)
  * that the engine resolves in one place per kind. Each one ships with four
@@ -27,7 +28,7 @@ import type { EnemyBehaviour, EnemyBehaviourKind, EnemyType } from '../types'
  *
  * The tier a node fields is set by depth (`waves.ts` → `roster`), so assigning
  * behaviours by tier is also a TEACHING ORDER: depths 2–3 meet one new idea
- * (the Fuse Whelp's sapper blast), depths 4–5 meet two (bomber lobs, the
+ * (the Fuse Whelp's blast at the Gate), depths 4–5 meet two (bomber lobs, the
  * Roller's vault), depths 6–8 meet the support casters (shaman, shield-bearer)
  * and the heavier lob, and depths 9–10 the berserker, the big sapper and the
  * splitter. Elites run one tier hot, so they preview the next band early.
@@ -58,19 +59,14 @@ import type { EnemyBehaviour, EnemyBehaviourKind, EnemyType } from '../types'
 // ---------------------------------------------------------------- the numbers
 
 /**
- * Hero-damage numbers are NOT Threat-scaled, on purpose. Threat multiplies
+ * Gate-damage numbers are NOT Threat-scaled, on purpose. Threat multiplies
  * enemy HP (how long a body lives), and a blast is a property of the TNT, not
- * of how tough the goblin carrying it is. A Rogue is 124 HP at level 1 and a
- * Mystic 106 (`computeCombat`: 70 + 9·STR, and a Mystic gains no STR per
- * level), so these are sized in "blasts to down a Mystic": a whelp 8, a bomber
- * 6, a demolisher 5, a sapper 4, the King 4. A Guard's damage-reduction aura
- * applies to all of them (`engine.blastHeroes`); a fighter's melee armour does
- * not — a blast is not a swing.
+ * of how tough the goblin carrying it is. They are in Gate points (the Gate
+ * holds 20), on top of the body's own leak when it walks through.
  *
- * The boss numbers were refit against the zero-meta curve (§11): the King's
- * knock-out is what a one- or two-hero company cannot absorb, so it is short
- * (1.5s) and slow (every 8s) until the King is below half, when it comes
- * every 3s — a phase only a company already winning the fight ever sees.
+ * The King's TNT is a clock, not a target: every 8s from 3s in, and every 4s
+ * once he is below half, whatever the line does — so a company that cannot
+ * race him down pays for every second he lives.
  */
 export const HEAL_PULSE: Extract<EnemyBehaviour, { kind: 'healPulse' }> = {
   kind: 'healPulse',
@@ -83,43 +79,51 @@ export const BERSERK: Extract<EnemyBehaviour, { kind: 'enrage' }> = {
   kind: 'enrage',
   below: 0.4,
   speedMult: 1.5,
-  meleeMult: 1.5,
 }
 
 /**
- * Trigger radii are set against the shipped slot geometry: build slots sit
- * 35–80 px off the lane (Green Line 35/45/45/60/60/65, Kiln Road
- * 40/60/65/65/75/80). A 50 px trigger means the posts hugging the lane get
- * blown and the set-back ones do not — which is the placement decision.
+ * A sapper that reaches the Gate blows there for `gateDamage` on top of its
+ * leak; one a blocker holds goes off at the wall for nothing (the blocker's
+ * kill). So a blocker on the road is the answer, and so is killing it early.
+ *
+ * **The TNT leak was split, not added to.** A TNT goblin that walks the whole
+ * road costs the Gate exactly what it did before the no-HP pass — Fuse Whelp
+ * 1 + 1, Bomber 1 + 1, Demolisher 2 + 1, Sapper 1 + 2 (leak + blast), against
+ * the old 2 / 2 / 3 / 3 — so every node's leak ceiling, and with it the
+ * budget solve and §14's fairness gates, is unchanged. What changed is how
+ * the blast can be dodged: hold the sapper, kill the bomber in its wind-up.
  */
 export const WHELP_SAPPER: Extract<EnemyBehaviour, { kind: 'sapper' }> = {
   kind: 'sapper',
-  trigger: 50,
   radius: 80,
-  damage: 14,
+  gateDamage: 1,
 }
 
 export const SAPPER: Extract<EnemyBehaviour, { kind: 'sapper' }> = {
   kind: 'sapper',
-  trigger: 55,
   radius: 90,
-  damage: 35,
+  gateDamage: 2,
 }
 
+/**
+ * A bomber that gets within `range` px of the Gate (along the road) plants and
+ * throws its charge at it. Only one charge is ever in the air; a bomber that
+ * finds a live mark walks on. Kill it in the wind-up and the throw never lands.
+ */
 export const BOMBER_LOB: Extract<EnemyBehaviour, { kind: 'lob' }> = {
   kind: 'lob',
-  range: 150,
+  range: 450,
   radius: 55,
-  damage: 20,
+  gateDamage: 1,
   windup: 1.6,
   charges: 1,
 }
 
 export const DEMOLISHER_LOB: Extract<EnemyBehaviour, { kind: 'lob' }> = {
   kind: 'lob',
-  range: 170,
+  range: 500,
   radius: 60,
-  damage: 26,
+  gateDamage: 1,
   windup: 1.4,
   charges: 1,
 }
@@ -156,12 +160,10 @@ export const KING_LOB: Extract<EnemyBehaviour, { kind: 'kingLob' }> = {
   interval: 8,
   first: 3,
   windup: 1.5,
-  range: 320,
   radius: 60,
-  damage: 30,
-  disable: 1.5,
+  gateDamage: 1,
   rageAt: 0.5,
-  rageInterval: 3,
+  rageInterval: 4,
 }
 
 export const COLOSSUS_SPLIT: Extract<EnemyBehaviour, { kind: 'bossSplit' }> = {
@@ -237,14 +239,14 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
     counter: 'burst it through the threshold, or chill it — slows still apply to the enraged pace',
   },
   sapper: {
-    label: 'Blows up at the first hero it reaches',
+    label: 'Blows up at the Gate for extra damage',
     telegraph: 'lit fuse over it; blast ring where it goes off',
-    counter: 'kill it on the approach, or hold it on a sturdy blocker (a held sapper is the blocker\'s kill); post fragile heroes back from the lane, or let a Guard shield the blast',
+    counter: 'kill it on the approach, or hold it with a blocker: a held sapper goes off harmlessly and counts as the blocker\'s kill',
   },
   lob: {
-    label: 'Lobs a charge at a hero post',
-    telegraph: 'target circle on the post while it winds up',
-    counter: 'kill it during the wind-up (Threat targeting) or put a sturdy hero on the first post',
+    label: 'Lobs a charge at the Gate when it gets close',
+    telegraph: 'target circle on the Gate while it winds up',
+    counter: 'kill it during the wind-up (Threat targeting), or before it gets near the Gate',
   },
   split: {
     label: 'Breaks apart when destroyed',
@@ -267,9 +269,9 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
     counter: 'Flare or chill the column after the cry; save Rally Horn for the burst through a threshold',
   },
   kingLob: {
-    label: 'Lobs TNT that knocks a hero out of the fight',
-    telegraph: 'large target circle on the post; the post greys out while disabled',
-    counter: 'spread the line, move the targeted hero at the breather, or race it down before it rages',
+    label: 'Lobs TNT at the Gate every few seconds, faster once wounded',
+    telegraph: 'large target circle on the Gate while it winds up',
+    counter: 'race it down: every second it lives is another throw',
   },
   bossSplit: {
     label: 'Splits in two at half health',

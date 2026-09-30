@@ -3,7 +3,7 @@ import type { Vec2 } from './core/vec'
 /** The three base archetypes. Sub-archetypes/specializations arrive in M2. */
 export type Archetype = 'fighter' | 'rogue' | 'mystic'
 
-/** Core stats. STR→physical/HP, DEX→speed/crit/dodge, INT→magic/ability power. */
+/** Core stats. STR→physical damage, DEX→speed/crit, INT→magic damage. Heroes have no HP. */
 export interface CoreStats {
   str: number
   dex: number
@@ -40,11 +40,8 @@ export interface EffectMods {
   damageMult?: number
   rateMult?: number
   rangeMult?: number
-  hpMult?: number
   /** Projectile-speed multiplier — faster shots reach targets sooner (marksman). */
   projSpeedMult?: number
-  /** Flat physical-defense add — the fighter "Guardian" line's block mitigation. */
-  physDefAdd?: number
   splashAdd?: number
   critChanceAdd?: number
   critMultAdd?: number
@@ -75,16 +72,10 @@ export interface EffectMods {
    * universal; the reasoning is in `engine.igniteFromThorns`.
    */
   thornsIgnite?: boolean
-  /** Heal allied Sentinels in radius, HP/sec (cleric). */
-  healAura?: { hps: number; radius: number }
-  /** Buff allied Sentinel damage in radius (cleric/guard). */
+  /** Buff allied Sentinel damage in radius (cleric/bannerman). */
   buffAura?: { damageMult: number; radius: number }
-  /** Reduce melee damage taken by allies in radius, 0..1 (guard). */
-  dmgReductionAura?: { reduction: number; radius: number }
   /** Return a fraction of damage dealt as base-HP healing (warlock). */
   lifedrain?: number
-  /** Spend this fraction of max HP at wave start for a damage bonus (warlock). */
-  selfSacrifice?: number
   /** Drop a persistent hazard on the path near this Sentinel (trickster). */
   trap?: { dps: number; slow: number }
 
@@ -96,14 +87,10 @@ export interface EffectMods {
   volley?: { every: number; pierce: number }
   /** Every `n`th shot this hero fires is a guaranteed crit. */
   critEvery?: number
-  /** While blocking, this hero heals this fraction of its max HP per second. */
-  blockRegen?: number
   /** A kill makes this hero attack `rate` faster (×(1+rate)) for `dur` seconds. */
   killRush?: { rate: number; dur: number }
   /** For the first `dur` seconds of a wave this hero attacks `rate` faster. */
   openingRush?: { rate: number; dur: number }
-  /** Below `below` of its max HP this hero deals `damage` more (×(1+damage)). */
-  lastStand?: { below: number; damage: number }
   /** TEAM rule: the first `n` enemies to reach the Gate each wave cost it nothing. */
   leakWard?: number
   /**
@@ -190,9 +177,9 @@ export interface Sentinel {
   /** Node ids from the archetype tree, tier 0 → current, e.g. ['fighter','knight']. */
   branchPath: string[]
   stats: CoreStats
-  /** Secondary: reflect damage back at melee attackers. */
+  /** Secondary: damage per second ground into every enemy this Sentinel holds. */
   thorns: number
-  /** Secondary: scales stat gain the longer a Sentinel survives a wave un-KO'd. */
+  /** Secondary: scales stat gain the longer a wave goes on. */
   patience: number
   // NOTE: the base attack is NOT stored here — combat.ts reads it live from the
   // tier-0 archetype node, so evolutions/gear never desync from a stale copy (L1).
@@ -313,8 +300,6 @@ export interface EnemyType {
   leak: number
   radius: number
   color: string
-  /** Melee damage dealt to a Sentinel that blocks it, per second. */
-  meleeDps: number
   /** Physical damage resistance, 0..1 (reduces incoming physical). */
   physResist?: number
   /** Magic damage resistance, 0..1. */
@@ -341,21 +326,22 @@ export interface EnemyType {
 export type EnemyBehaviour =
   /** Torch shaman: every `interval` s, heal allies within `radius` by `heal` × their max HP. */
   | { kind: 'healPulse'; radius: number; heal: number; interval: number }
-  /** Torch berserker: below `below` of max HP, moves `speedMult`× and swings `meleeMult`× harder. */
-  | { kind: 'enrage'; below: number; speedMult: number; meleeMult: number }
+  /** Torch berserker: below `below` of max HP, moves `speedMult`× faster. */
+  | { kind: 'enrage'; below: number; speedMult: number }
   /**
-   * TNT sapper: detonates the moment it is blocked or passes within `trigger`
-   * px of a hero post, dealing `damage` to every hero within `radius`. It is
-   * spent by the blast — no leak, no gold.
+   * TNT sapper: heads for the Gate. If it reaches it, it blows there: the Gate
+   * takes `gateDamage` on top of its leak. Held by a blocker, it goes off at the
+   * wall harmlessly and counts as that hero's kill. `radius` is the blast ring
+   * the renderer draws.
    */
-  | { kind: 'sapper'; trigger: number; radius: number; damage: number }
+  | { kind: 'sapper'; radius: number; gateDamage: number }
   /**
-   * TNT bomber: within `range` of a hero post it plants its feet and winds up
-   * for `windup` s (telegraphed circle on the post); then `damage` to every
-   * hero within `radius` of the mark. Killing it during the windup cancels the
-   * throw. `charges` throws per bomber.
+   * TNT bomber: within `range` px of the Gate (along the road) it plants its
+   * feet and winds up for `windup` s (telegraphed circle on the Gate); then the
+   * Gate takes `gateDamage`. Killing it during the windup cancels the throw.
+   * `charges` throws per bomber; `radius` is the drawn mark.
    */
-  | { kind: 'lob'; range: number; radius: number; damage: number; windup: number; charges: number }
+  | { kind: 'lob'; range: number; radius: number; gateDamage: number; windup: number; charges: number }
   /** Barrel splitter: on death, breaks into `count` × `into`, each with `hpFrac` of this body's max HP. */
   | { kind: 'split'; into: string; count: number; hpFrac: number }
   /** Shield-bearer: allies (not itself) within `radius` gain `resist` flat to both resistances. */
@@ -365,20 +351,18 @@ export type EnemyBehaviour =
   /** Boss (Grukk): at each HP fraction in `at`, a `windup`-s war-cry, then allies in `radius` move `speedMult`× for `dur` s. */
   | { kind: 'warCry'; at: readonly number[]; windup: number; radius: number; speedMult: number; dur: number }
   /**
-   * Boss (Powderkeg King): every `interval` s, lobs TNT at the nearest hero
-   * within `range`; after `windup` s every hero within `radius` takes
-   * `damage` and the targeted post is DISABLED (no shots, no block) for
-   * `disable` s. Below `rageAt` of max HP the interval becomes `rageInterval`.
+   * Boss (Powderkeg King): first at `first` s, then every `interval` s, lobs
+   * TNT at the Gate from wherever he stands; after `windup` s the Gate takes
+   * `gateDamage`. Below `rageAt` of max HP the interval becomes `rageInterval`.
+   * `radius` is the drawn mark.
    */
   | {
       kind: 'kingLob'
       interval: number
       first: number
       windup: number
-      range: number
       radius: number
-      damage: number
-      disable: number
+      gateDamage: number
       rageAt: number
       rageInterval: number
     }

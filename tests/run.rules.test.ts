@@ -316,7 +316,7 @@ describe('recruit scaling (game/run/recruits)', () => {
 
 describe('settle payout (game/run/settle)', () => {
   const facts = (over: Partial<SettleFacts> = {}): SettleFacts => ({
-    mode: 'campaign', depth: 3, kills: 10, downs: 0, wins: 0, banner: 0, challenge: STANDARD_RUN, ...over,
+    mode: 'campaign', depth: 3, kills: 10, wins: 0, banner: 0, challenge: STANDARD_RUN, ...over,
   })
 
   it('pays nothing for a run that was never played', () => {
@@ -338,7 +338,7 @@ describe('settle payout (game/run/settle)', () => {
   it('Endless settles through the same ledger, on rounds won', () => {
     expect(planPayout(facts({ mode: 'endless', wins: 7 }), 0)).toEqual({
       kind: 'grant',
-      grant: { mode: 'endless', depth: 7, won: false, kills: 10, downs: 0 },
+      grant: { mode: 'endless', depth: 7, won: false, kills: 10 },
     })
   })
 

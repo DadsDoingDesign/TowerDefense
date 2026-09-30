@@ -207,8 +207,8 @@ export function Coach() {
       {/*
        * "Got it", not `✕` (M8).
        *
-       * `✕` already means something on this screen: the renderer draws a red ✕
-       * over a Sentinel that has fallen on the field, and both marks are red on
+       * `✕` used to mean something else on this screen: the renderer drew a red ✕
+       * over a Sentinel that had fallen (before heroes lost their HP), and both were red on
        * dark, both are reachable during setup, and one of them is a control.
        * A glyph that means "a hero is dead" and "close this" at the same time
        * on the same screen is worse than no glyph.

@@ -511,14 +511,10 @@ export function damageMark(item: Pick<Item, 'base'>): IconKey | null {
  */
 const EFFECT_RULES: [RegExp, IconKey][] = [
   // -- phrases that embed a more generic word, first ------------------------
-  [/melee damage taken while blocking/i, 'armour'],
   [/executes below/i, 'execute'],
   [/life-?drain/i, 'lifedrain'],
-  [/starts at .* less HP/i, 'sacrifice'],
   [/lays traps/i, 'trap'],
-  [/heals allies/i, 'auraHeal'],
-  [/buffs allies/i, 'auraBuff'],
-  [/shields allies/i, 'auraShield'],
+  [/buffs allies|blessing reaches/i, 'auraBuff'],
   [/projectile speed/i, 'projectile'],
   [/attack speed/i, 'haste'],
   [/keepsake/i, 'keepsake'],
@@ -566,17 +562,9 @@ const EFFECT_RULES: [RegExp, IconKey][] = [
  * has to be answerable before you read a word.
  *
  * The full set of sign-carrying concepts, counted off `describeMods` and
- * `describeBase` rather than guessed, is TEN. All ten are here now except two
- * that must not be here, and both exclusions are load-bearing:
- *
- *  - **`armour`** — `−22% melee damage taken while blocking` is written with a
- *    minus and is a BONUS. `physDefAdd` never goes negative in any producer,
- *    and the minus belongs to the damage-taken figure rather than to the stat.
- *    Flipping it would invert the one line in the game whose sign is already
- *    inverted in the words.
- *  - **`sacrifice`** — `starts at 30% less HP for +30% damage` is a cost and a
- *    benefit in one sentence. It has no single direction, which is exactly why
- *    it has a cell of its own.
+ * `describeBase` rather than guessed, was TEN. The two that were deliberately
+ * left out — the armour line and the self-sacrifice line — went with hero HP
+ * (heroes are never hurt), so every signed concept that is left is here.
  *
  * `pierce`, `execute`, `lifedrain`, `trap`, `block` and the four statuses take
  * no entry because their sentences carry no sign at all — `pierces 2 extra

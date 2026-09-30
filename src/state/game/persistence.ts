@@ -39,7 +39,6 @@ const SNAPSHOT_FIELDS = [
   'runBanner',
   'inventory',
   'runKills',
-  'runDowns',
   'marksEarned',
   // Persisted state, so a change to it has to be able to trigger a write (M9).
   // In practice it only ever moves alongside `inventory` / `reward` / `merchant`,
