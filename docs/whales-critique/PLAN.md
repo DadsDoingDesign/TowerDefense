@@ -8,6 +8,96 @@ Whales critiqued 11 screens from one full run (menu → hero pick → run map �
 
 Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.
 
+## Round 5 · make it easier to learn
+
+You said it feels like a lot to learn. A first run asks you to learn about 20 separate ideas, and the last rounds each added one. These proposals cut, merge and stage them. Hero HP is already being removed, the simplest way possible.
+
+### NH1 · Heroes are never hit (in progress)
+
+*Effort L · from Claude · awaiting your decision*
+
+> **Your note on your call:** No let’s remove and adjust. Maybe wait to finish tuning after this
+
+**Proposed change**
+
+- Heroes have no HP and are never damaged or downed. The breather's 'mend and revive' goes away with it.
+- Blocking stays and gets simpler: a Fighter still holds up to 2 enemies on the road, and thorns still hurt the enemies being held.
+- Enemies that used to hit heroes hurt the Gate instead. Sappers and TNT goblins blow up at the Gate for extra damage if they reach it, bombers' charges land on the road ahead, and boss slams become Gate damage. Letting the dangerous ones through is what costs you.
+- Survival stats leave the game rather than being converted: hero HP, armour/defence on heroes, and HP-based relics, perks and mutation downsides are removed or given a damage-based trade-off instead.
+- Balance is tuned once, after this lands, together with Q1's danger tiles.
+
+**Questions (answered by default when approved)**
+
+1. Any enemy you'd want to keep a hero-facing threat, for example a boss that dazes heroes briefly, or none at all?
+
+**Files:** `src/game/engine/engine.ts`, `src/game/data/enemies.ts, items.ts, relics.ts, perks.ts, mutations.ts`, `hero UI (HP bars, stats)`, `balance/`
+
+### LS1 · Cut what doesn't earn its place
+
+*Effort M · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Patience: a stat that stacks +4% every 3 seconds up to a cap. Invisible in play; cut it.
+- Dust, reforge and upgrade: a second currency and two crafting verbs. Cut them; scrapping an item gives gold.
+- Curses on items: an epic-and-up affix that adds a hidden downside. Cut it; trade-offs live on relics only.
+- STR/DEX/INT stay under the hood but come off the main screens. You see damage, speed, range and reach; the breakdown (SK4) shows the rest on request.
+- Watch Commands stay: one clear, active button per sub-wave.
+
+**Questions (answered by default when approved)**
+
+1. Tick which of these to cut in your note (for example 'cut patience and curses, keep dust').
+
+**Files:** `items, economy, combat, UI`
+
+### LS2 · Merge systems that do the same job
+
+*Effort L · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Perks, mutations and evolutions all answer 'how does this hero get better'. With SK1 they become one thing: skills.
+- Relics and shrine boons are both 'a run-long bonus for the company'. Make them one kind, blessings, with one list, one icon and one place you see them.
+- Map stops shrink to five kinds: battle, elite, merchant, rest (heal the Gate, or train one hero), and a blessing stop. Crossroads and shrines fold into the blessing stop.
+- Result: a player learns one way heroes grow, one kind of bonus and five kinds of stop.
+
+**Questions (answered by default when approved)**
+
+1. Keep evolutions as their own moment at levels 10 and 20, or make them skill picks too?
+
+**Files:** `skills (SK1)`, `relics + shrines`, `run map node kinds`
+
+### LS3 · Teach in layers: new ideas arrive when they matter
+
+*Effort M · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- First battle: only 'post a hero, start the wave'. The Gate and gold are the only numbers on screen.
+- Items appear after your first win, merchants from the second stop, blessings at your first elite, skills at a hero's first skill level, danger tiles and challenges from depth 3.
+- Vows or difficulty, Daily Watch and Endless unlock after your first finished run. The menu shows them locked, each with one line on what unlocks it.
+- Each new idea gets exactly one coach tip the first time it appears, then never again; the Codex keeps the explanations.
+- Returning players see everything from the start; the layering only shapes a player's first runs.
+
+**Questions (answered by default when approved)**
+
+1. Too gradual, or about right for a first session?
+
+**Files:** `src/ui/shell/Coach.tsx`, `run generation (first-run rules)`, `menu unlocks`
+
+### LS4 · One name per thing
+
+*Effort S · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Heroes, not sentinels or towers, everywhere a player reads.
+- 'Threat ×1.06' becomes 'Enemy strength +6%'.
+- 'Watch Marks' become 'Marks' after the first explanation.
+- A short glossary lives in the Codex. No term appears on screen before the player has met it.
+
+**Files:** `copy across src/ui`
+
 ## Round 4 · the bigger design changes
 
 Your Q2 answer reshapes how heroes work, so it's written up here as a system before anything is built, with Q6, Q7, Q9, Q11 and Q14 folded in. Spreading fire (Q13) and your champions idea are here too. The seven clearer answers (Q1, Q3, Q4, Q5, Q8, Q10, Q12) are being built now.
