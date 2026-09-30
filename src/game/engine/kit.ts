@@ -20,7 +20,7 @@
  * `balance/harness.freshHero` calls the same two functions on the same stream.
  */
 import type { RNG } from '../core/rng'
-import { damageTypeOf, generateItem, heroSlotsFor, type RosterRef } from '../data/items'
+import { damageTypeOf, generateItem, heroSlotsFor, type EquipRules, type RosterRef } from '../data/items'
 import type { Archetype, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
 import { computeCombat } from './combat'
 
@@ -116,10 +116,12 @@ export function wearKit(hero: Sentinel, kit: readonly Item[]): Sentinel {
   return out
 }
 
-/** The run's equip rules: the Ambidextrous relic opens the off hand to one-handers (R3-2). */
-export interface EquipRules {
-  ambidextrous?: boolean
-}
+/**
+ * The run's equip rules (whether the Twinblade Harness is held). Defined with
+ * the grip table in `data/items.ts`; re-exported here for the callers that
+ * import it beside the kit.
+ */
+export type { EquipRules }
 
 const isCursed = (item: Item): boolean => item.enchantments.some((e) => e.id.startsWith('cx_'))
 
@@ -132,7 +134,7 @@ function emptySlotFor(hero: Sentinel, item: Item, opts: EquipRules = {}): HeroSl
   const eq = hero.equipment
   if (item.slot === 'twoHand') return !eq.mainHand && !eq.offHand ? 'mainHand' : null
   if (eq.mainHand?.slot === 'twoHand' && item.slot !== 'body') return null
-  for (const slot of heroSlotsFor(item.slot, opts)) if (!eq[slot]) return slot
+  for (const slot of heroSlotsFor(item, hero, opts)) if (!eq[slot]) return slot
   return null
 }
 

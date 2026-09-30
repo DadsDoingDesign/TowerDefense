@@ -31,6 +31,9 @@
  */
 import { getNode } from '../game/data/archetypeTree'
 import { MYTHIC_EDGE } from '../game/data/items'
+import { LEGACY_RELIC_IDS } from '../game/data/relics'
+import { settleOffHands } from '../game/run/inventory'
+import { equipRules } from '../game/run/relics'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
 import { fieldFor, FIRST_MAP, fieldIdOf, legacyPostTile, mapById, orientationOf, type FieldOrientation } from '../game/data/maps'
@@ -206,6 +209,12 @@ export interface RunSnapshot {
   relics: string[]
   /** v7: what the run has done that a feat may ask about. */
   feats: RunFeats
+  /**
+   * Set by a LOAD, never by `captureRun` (so never stored): the off-hand items
+   * this load moved to the pack because the off hand no longer takes them
+   * (round 3, Q5 — `inventory.settleOffHands`). `resumeRun` says so, once.
+   */
+  gearReturned?: { hero: string; item: string }[]
   crossroads: CrossroadsSnap | null
   forkDone: boolean
   /** Heroes with an evolution choice still owed to the player. */
@@ -1026,7 +1035,9 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     runMods,
     // A relic list is earned content like the rest, but an entry is only an id:
     // a non-string is dropped (it could never have been dealt), a duplicate too.
-    relics: [...new Set(arr<unknown>(o.relics).filter(isStr))],
+    // An id a relic used to go by is read as the relic it is now
+    // (`ambidextrous` → the Twinblade Harness, round 3).
+    relics: [...new Set(arr<unknown>(o.relics).filter(isStr).map((id) => LEGACY_RELIC_IDS[id] ?? id))],
     // Counters, defaulted like every other number here: a payload from before
     // they existed simply has no feat progress, which is the honest reading.
     feats: migrateFeats(o.feats),
@@ -1055,7 +1066,22 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // has already been left, and offering it back would resurrect a settled one.
   if (snap.screen === 'hub') return null
 
-  return coherent(snap, version)
+  const out = coherent(snap, version)
+  if (!out) return null
+  // ---- round 3 (Q5): the off hand takes off-hand things only -------------
+  // Not a version step: the shape is unchanged, and the rule is a property of
+  // the payload's CONTENTS, so every load asks it (an idempotent no-op on a
+  // company that already obeys it). A save wearing something the off hand no
+  // longer takes — a sword without the Twinblade Harness or the DEX for it,
+  // or a two-hander from a hand-edited payload — gets it back in the pack.
+  // Nothing is destroyed, and `gearReturned` tells the player once.
+  const settled = settleOffHands(out.roster, out.inventory, equipRules(out.relics))
+  if (settled.moved.length) {
+    out.roster = settled.roster
+    out.inventory = settled.inventory
+    out.gearReturned = settled.moved
+  }
+  return out
 }
 
 /**

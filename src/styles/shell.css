@@ -979,20 +979,30 @@
 .sh-doll > .sh-slot.filled .sh-slot-mark {
   margin-top: 10px;
 }
-/* The Ambidextrous off hand: its outline changes, in teal (the rule colour —
-   the gold `--accent` already means "this slot is armed"), doubled so it is a
-   SHAPE change as well as a hue change. */
+/* The Twinblade off hand (a hero who passes the Twinblade Harness's DEX
+   check): its outline changes, in teal (the rule colour — the gold `--accent`
+   already means "this slot is armed"), doubled so it is a SHAPE change as well
+   as a hue change. */
 .sh-slot.dual {
   border: 3px double var(--teal-text);
 }
 .sh-slot.dual.active {
   border-color: var(--accent);
 }
-.sh-slot-dual {
+/* The corner mark on an empty off hand: the blade (Twinblade, teal-outlined
+   slot) or the knife — "small things go here" (round 3, Q5), quieter, since
+   it is the ordinary rule rather than a granted one. */
+/* Bottom-right in the stack: the top edge is the slot's centred two-line name,
+   and the rarity letter only takes this corner once the slot is worn. */
+.sh-slot-dual,
+.sh-slot-takes {
   position: absolute;
-  top: 1px;
+  bottom: 2px;
   right: 2px;
   line-height: 0;
+}
+.sh-slot-takes {
+  opacity: 0.7;
 }
 
 @container gear (min-width: 90px) {
@@ -1120,7 +1130,8 @@
      corners: inside a 44px slot they sat ON the 32px picture. The tag wears
      the slot's own fill, so it reads as part of the slot, not a sticker. */
   .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-rar,
-  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual {
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual,
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-takes {
     z-index: 1;
     padding: 1px 3px;
     border-radius: var(--r-xs);
@@ -1133,9 +1144,16 @@
     right: auto;
     line-height: 11px;
   }
-  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual {
+  /* On the doll the off hand's mark sits on its OUTER corner: the inner one is
+     where the main hand's rarity tag sits, 2px away (round 3). The off hand's
+     own rarity tag shares this corner only when it is worn, and the mark only
+     shows when it is empty. */
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual,
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-takes {
     top: -9px;
-    right: -7px;
+    bottom: auto;
+    left: -7px;
+    right: auto;
     padding: 1px;
   }
   .sh-doll-note {
@@ -1150,6 +1168,13 @@
     font-weight: 700;
     color: var(--teal-text);
     white-space: nowrap;
+  }
+  /* The relic is held but this hero is short of its DEX: the note says by how
+     much, in the muted ink — a fact about the hero, not a granted rule. */
+  .sh-doll-note.short {
+    flex-direction: column;
+    line-height: 1.15;
+    color: var(--muted);
   }
 }
 /* Large UI raises the floor to 48, so two hands need 96px — more than a
@@ -1174,8 +1199,8 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      /* clears the absolutely-placed "Ambidextrous" note under the doll */
-      margin: 30px 5px 0;
+      /* clears the absolutely-placed Twinblade note under the doll */
+      margin: 40px 5px 0;
       padding: 0;
       list-style: none;
     }

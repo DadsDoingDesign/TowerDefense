@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { HERO_SLOT_LABEL, heroSlotsFor } from '../../game/data/items'
 import { computeCombat, totalStats } from '../../game/engine/combat'
 import type { EquipRules } from '../../game/engine/kit'
+import { wearItem } from '../../game/run/inventory'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 
@@ -24,40 +25,24 @@ useGameStore.subscribe((s, prev) => {
 
 /**
  * Where `item` would go on `hero`, what it would push back to the pack, and the
- * hero as they would stand afterwards. Mirrors `equipFromPack`'s two-hand rules
- * exactly (src/game/run/inventory.ts), so the preview is the result — including
- * the Ambidextrous relic's off hand (`rules.ambidextrous`, R3-2).
+ * hero as they would stand afterwards. The slot comes from the same
+ * `heroSlotsFor` the pack obeys (the item's grip, and the Twinblade Harness's
+ * DEX check for a main-hand one-hander in the off hand), and the result from
+ * the same `wearItem` `equipFromPack` runs — so the preview is the result.
  */
 export function planEquip(hero: Sentinel, item: Item, armed?: HeroSlot | null, rules: EquipRules = {}) {
-  const slots = heroSlotsFor(item.slot, rules)
+  const slots = heroSlotsFor(item, hero, rules)
   const eq = hero.equipment
   let slot: HeroSlot
   if (armed && slots.includes(armed)) slot = armed
   else if (item.slot === 'oneHand' && slots.includes('offHand')) {
-    // Ambidextrous: an empty hand first; otherwise the main hand (a swap).
+    // Either hand (a knife, a wand, or any one-hander on a Twinblade wielder):
+    // an empty hand first; otherwise the main hand (a swap).
     slot = !eq.mainHand ? 'mainHand' : !eq.offHand && eq.mainHand.slot !== 'twoHand' ? 'offHand' : 'mainHand'
   } else slot = slots[0]
 
-  const next = { ...eq }
-  const displaced: Item[] = []
-  const ret = (it: Item | null) => {
-    if (it) displaced.push(it)
-  }
-  if (item.slot === 'twoHand') {
-    ret(next.mainHand)
-    ret(next.offHand)
-    next.mainHand = item
-    next.offHand = null
-  } else if (slot === 'offHand' && next.mainHand?.slot === 'twoHand') {
-    ret(next.mainHand)
-    next.mainHand = null
-    ret(next.offHand)
-    next.offHand = item
-  } else {
-    ret(next[slot])
-    next[slot] = item
-  }
-  return { slot, slotLabel: HERO_SLOT_LABEL[slot], displaced, after: { ...hero, equipment: next } as Sentinel }
+  const worn = wearItem(eq, item, slot)
+  return { slot, slotLabel: HERO_SLOT_LABEL[slot], displaced: worn.displaced, after: { ...hero, equipment: worn.equipment } as Sentinel }
 }
 
 export interface GearDelta {

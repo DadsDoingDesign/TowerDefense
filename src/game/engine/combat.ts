@@ -1,5 +1,6 @@
 import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
+import { offHandShare } from '../data/items'
 import { perkModsOf } from '../data/perks'
 import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
 
@@ -65,14 +66,20 @@ function emptyGear(): GearContribution {
   }
 }
 
-function addItem(acc: GearContribution, item: Item | null): void {
+/**
+ * `share` scales the item's weapon line — its flat damage and attack speed —
+ * and nothing else: a knife or a wand in the OFF hand counts at
+ * `OFF_HAND_SHARE` (`items.offHandShare`); its affixes count in full, like any
+ * off-hand piece's.
+ */
+function addItem(acc: GearContribution, item: Item | null, share = 1): void {
   if (!item) return
   // Keepsakes buff the whole team via teamMods, not the holder locally.
   if (item.keepsake) return
   const b = item.base
-  acc.flatPhys += b.physDamage ?? 0
-  acc.flatMag += b.magDamage ?? 0
-  acc.atkSpeed += b.attackSpeed ?? 0
+  acc.flatPhys += (b.physDamage ?? 0) * share
+  acc.flatMag += (b.magDamage ?? 0) * share
+  acc.atkSpeed += (b.attackSpeed ?? 0) * share
   acc.critChance += b.critChance ?? 0
   acc.rangeMult += b.rangeMult ?? 0
   acc.splashAdd += b.splashAdd ?? 0
@@ -92,7 +99,9 @@ function addItem(acc: GearContribution, item: Item | null): void {
 export function gearOf(equipment: Equipment): GearContribution {
   const acc = emptyGear()
   addItem(acc, equipment.mainHand)
-  addItem(acc, equipment.offHand)
+  // A light weapon in the off hand is a second, lighter weapon (Q5); a main-hand
+  // one-hander there (only under the Twinblade Harness) counts in full (Q4).
+  addItem(acc, equipment.offHand, equipment.offHand ? offHandShare(equipment.offHand) : 1)
   addItem(acc, equipment.body)
   return acc
 }

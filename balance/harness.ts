@@ -25,6 +25,7 @@ import { createSentinel } from '../src/game/data/sentinels'
 import { generateItem, heroSlotsFor, type RosterRef } from '../src/game/data/items'
 import { startingKit, wearKit, type EquipRules } from '../src/game/engine/kit'
 import { recruitTargetLevel } from '../src/game/run/recruits'
+import { wearItem } from '../src/game/run/inventory'
 import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
@@ -875,26 +876,25 @@ export function scaledRecruitLevel(roster: Sentinel[], trained = false): number 
 export const heroDps = (s: Sentinel): number => computeCombat(s).dps
 
 /**
- * The slots on a hero an item of this kind may occupy. A one-handed weapon
- * follows the game's own rule (`heroSlotsFor`): the off hand takes it only
- * under the Ambidextrous relic (R3-2). The two-hander keeps this model's older
- * reading (either hand, nothing cleared) — not the game's, which is main hand
- * only and empties the off hand; left as it was so R3-2 moves one thing.
+ * The slots on a hero an item may occupy — the game's own rule
+ * (`items.heroSlotsFor`): the item's grip (round 3, Q5 — a knife or wand fits
+ * either hand, a sword the main hand, a two-hander the main hand only) and,
+ * for a main-hand one-hander in the off hand, the Twinblade Harness plus the
+ * hero's DEX (Q4).
+ *
+ * This model used to read a two-hander as "either hand, nothing cleared" —
+ * a Greatsword in the off hand beside a sword. Q5 is "not something big", and
+ * the model now wears items exactly as the store does ({@link withItem} is
+ * `inventory.wearItem`): a two-hander empties the off hand.
  */
-const slotsFor = (item: Item, rules: EquipRules = {}): HeroSlot[] =>
-  item.slot === 'oneHand'
-    ? heroSlotsFor('oneHand', rules)
-    : item.slot === 'offHand'
-      ? ['offHand']
-      : item.slot === 'body'
-        ? ['body']
-        : ['mainHand', 'offHand']
+const slotsFor = (s: Sentinel, item: Item, rules: EquipRules = {}): HeroSlot[] => heroSlotsFor(item, s, rules)
 
-/** Equip `item` into `slot` without mutating `s`. */
-const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => ({
-  ...s,
-  equipment: { ...s.equipment, [slot]: item },
-})
+/** Equip `item` into `slot` without mutating `s`, by the store's two-hand rules. */
+const wear = (s: Sentinel, slot: HeroSlot, item: Item): { hero: Sentinel; displaced: Item[] } => {
+  const r = wearItem(s.equipment, item, slot)
+  return { hero: { ...s, equipment: r.equipment }, displaced: r.displaced }
+}
+const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => wear(s, slot, item).hero
 
 /**
  * How much DPS `item` adds to `s` in the best slot it can occupy — measured by
@@ -906,7 +906,7 @@ export function bestSlotGain(s: Sentinel, item: Item, rules: EquipRules = {}): n
   if (item.keepsake) return 0
   const now = heroDps(s)
   let gain = -Infinity
-  for (const slot of slotsFor(item, rules)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
+  for (const slot of slotsFor(s, item, rules)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
   return gain
 }
 
@@ -920,17 +920,15 @@ export function equipIfBetter(s: Sentinel, item: Item, rules: EquipRules = {}): 
  * model keeps those in a **pack**, exactly as the store does, because a
  * mid-run hire arrives bare (`gameStore.scaledRecruit`) and dresses out of it.
  */
-export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}): { hero: Sentinel; displaced: Item | null } {
-  if (item.keepsake) return { hero: s, displaced: null }
+export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}): { hero: Sentinel; displaced: Item[] } {
+  if (item.keepsake) return { hero: s, displaced: [] }
   const now = heroDps(s)
   let best: { slot: HeroSlot; dps: number } | null = null
-  for (const slot of slotsFor(item, rules)) {
+  for (const slot of slotsFor(s, item, rules)) {
     const dps = heroDps(withItem(s, slot, item))
     if (dps > now && (!best || dps > best.dps)) best = { slot, dps }
   }
-  return best
-    ? { hero: withItem(s, best.slot, item), displaced: s.equipment[best.slot] ?? null }
-    : { hero: s, displaced: null }
+  return best ? wear(s, best.slot, item) : { hero: s, displaced: [] }
 }
 
 /** Auto-pick an evolution when one is owed (a real player always takes one). */

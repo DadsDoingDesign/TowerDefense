@@ -1,4 +1,4 @@
-import { RARITY, RARITY_ORDER } from '../game/data/items'
+import { DUAL_WIELD_DEX, gripOf, ITEM_NOUN_RE, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 
@@ -332,14 +332,13 @@ export const markLabel = (k: IconKey | null | undefined): string => (k ? (ICON_L
  * about 2.4% of drops.
  *
  * So this is now the same shape as `renameFor`: one alternation, in the same
- * branch order, and the icon is looked up from what it captured. The two
- * cannot disagree about which noun a name carries, because they are asking the
- * same question in the same language. `Sceptre` is carried here and not there
- * only because nothing generates it — the spelling in `WEAPONS` is `Scepter` —
- * and a table that quietly drops a spelling is how this started.
+ * branch order, and the icon is looked up from what it captured. Since round 3
+ * it is literally the same regex (`items.ITEM_NOUN_RE`), which the grip table
+ * — which hand an item fits — reads too, so the icon, the rename and the hand
+ * rule cannot disagree about which noun a name carries. Both spellings of
+ * Sceptre/Scepter are carried.
  */
-const NOUN_RE =
-  /(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
+const NOUN_RE = ITEM_NOUN_RE
 
 const NOUN_ICON: Record<string, IconKey> = {
   Greatsword: 'greatblade',
@@ -384,6 +383,54 @@ export function itemIcon(item: Pick<Item, 'name' | 'slot'>): IconKey {
   const noun = NOUN_RE.exec(item.name)?.[0]
   if (noun && NOUN_ICON[noun]) return NOUN_ICON[noun]
   return SLOT_ICON[item.slot] ?? 'loot'
+}
+
+/*
+ * ---- which hand (round 3, Q4 + Q5) ---------------------------------------
+ * The words for the grip table (`items.ITEM_BASES`), shared by the pack tile's
+ * accessible name, the line every item surface prints (`offers.itemBody`: the
+ * item panel, merchant board, Forge and reward card), and the doll's off-hand
+ * slot. One table, so the four cannot drift.
+ */
+
+/** What an item is, by the hand it fits — the pack tile's accessible name. */
+export const GRIP_NAME: Record<Grip, string> = {
+  main: 'one-handed weapon',
+  either: 'light weapon, either hand',
+  off: 'off-hand item',
+  twoHand: 'two-handed weapon',
+  body: 'body armour',
+}
+
+/** What the off hand takes without the relic. */
+export const OFF_HAND_TAKES = 'knives, wands, shields, bucklers, tomes, quivers and foci'
+/** What the Twinblade Harness adds to it, for a hero who passes its check. */
+export const TWINBLADE_TAKES = 'a sword, axe, rod or sceptre'
+/** The relic's name, as every surface prints it. */
+export const TWINBLADE = 'Twinblade Harness'
+
+/** "Needs 14 DEX — Doyle has 9", or null when the hero passes. */
+export function dualWieldShort(heroName: string, check: { dex: number; need: number }): string | null {
+  return check.dex >= check.need ? null : `Needs ${check.need} DEX — ${heroName} has ${Math.floor(check.dex)}`
+}
+
+/**
+ * The item's hand rule as one line (null on body armour, which has one place).
+ * Says outright when an item is off-hand-capable, and what it is worth there.
+ */
+export function handLine(item: Pick<Item, 'name' | 'slot'>): string | null {
+  switch (gripOf(item)) {
+    case 'either':
+      return `Either hand · off hand: ${Math.round(OFF_HAND_SHARE * 100)}% of its damage and speed`
+    case 'off':
+      return 'Off hand'
+    case 'main':
+      return `Main hand · off hand only with the ${TWINBLADE} and ${DUAL_WIELD_DEX} DEX`
+    case 'twoHand':
+      return 'Both hands · empties the off hand'
+    case 'body':
+      return null
+  }
 }
 
 /**

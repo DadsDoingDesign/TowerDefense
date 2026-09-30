@@ -48,6 +48,8 @@ import {
   type RunSnapshot,
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
+import { offHandAllowed } from '../src/game/run/inventory'
+import { equipRules } from '../src/game/run/relics'
 
 // ---------------------------------------------------------------- the base run
 
@@ -87,7 +89,13 @@ function buildBase(): Record<string, unknown> {
     mutations: [muts[0]],
     perks: ['f5_second_wind'],
   }
-  const extra = createSentinel('mystic')
+  // Round 3 (Q5): a hero wearing what the off hand no longer takes — a Sword,
+  // on a Mystic nowhere near the Twinblade Harness's DEX — so every load of the
+  // base exercises the move to the pack, and every mutation lands on it too.
+  const extra: Sentinel = {
+    ...createSentinel('mystic'),
+    equipment: { mainHand: null, offHand: { ...epic('oneHand'), name: 'Heavy Sword' }, body: null },
+  }
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
   useGameStore.setState({
     roster: [hero, extra],
@@ -100,7 +108,8 @@ function buildBase(): Record<string, unknown> {
       { id: 'rw-c', kind: 'relic', title: 'Hound Banner', desc: '', rarity: 'rare', relic: 'hound_banner' },
     ],
     // Phase 3b: relics held (a stat one, a rule one, a team capability) and the feats ledger.
-    relics: ['ledger', 'charter', 'warding_stone'],
+    // …and the Twinblade Harness under its pre-round-3 id, `ambidextrous`.
+    relics: ['ledger', 'charter', 'warding_stone', 'ambidextrous'],
     feats: { starter: 'fighter', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
     merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: createSentinel('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [createSentinel('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
@@ -156,6 +165,13 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
     ...(snap.crossroads?.recruits ?? []),
   ]
   for (const s of heroes) assertFiniteCombat(s, team, where)
+  // Round 3 (Q5): nobody on the company resumes wearing what their off hand
+  // does not take, and a load never mints or loses an item doing so.
+  const rules = equipRules(snap.relics)
+  for (const s of snap.roster) {
+    if (!offHandAllowed(s, rules)) throw new Error(`${where}: ${s.id} resumes with ${s.equipment.offHand?.name} in the off hand`)
+  }
+  if (snap.relics.includes('ambidextrous')) throw new Error(`${where}: a legacy relic id survived the load`)
   // Every item that can end up on a hero, worn by a plain one.
   const items: Item[] = [
     ...snap.inventory,
@@ -417,5 +433,58 @@ describe('v6 → v7: the skill tree became spec perks', () => {
     const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
     expect(snap!.gold).toBe(raw.gold)
     expect(snap!.roster[0].perks).toEqual(['f5_second_wind'])
+  })
+})
+
+describe('round 3 (Q5): the off hand takes off-hand things only', () => {
+  const owned = (snap: { roster: Sentinel[]; inventory: Item[] }) =>
+    [...snap.inventory, ...snap.roster.flatMap((s) => [s.equipment.mainHand, s.equipment.offHand, s.equipment.body])]
+      .filter((i): i is Item => !!i)
+      .map((i) => i.id)
+      .sort()
+
+  it('a legacy off-hand sword goes back to the pack on load — nothing lost, the player told once', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; inventory: Item[] }
+    const before = owned(raw)
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(snap).not.toBeNull()
+    // the relic's old id reads as the Twinblade Harness
+    expect(snap.relics).toContain('twinblade')
+    expect(snap.relics).not.toContain('ambidextrous')
+    // the Mystic (DEX 5) cannot carry a sword in the off hand, Harness or not
+    const mystic = snap.roster[1]
+    expect(mystic.equipment.offHand).toBeNull()
+    expect(snap.inventory.some((i) => i.name === 'Heavy Sword')).toBe(true)
+    expect(snap.gearReturned).toEqual([{ hero: mystic.name, item: 'Heavy Sword' }])
+    expect(owned(snap)).toEqual(before)
+    // the fighter's off-hand piece stays where it is
+    expect(snap.roster[0].equipment.offHand).not.toBeNull()
+
+    // Resumed, the toast has its line; saved again, the next load moves nothing.
+    useGameStore.getState().resumeRun(snap)
+    expect(useGameStore.getState().gearNotice?.text).toBe(`${mystic.name}'s Heavy Sword is back in the pack — the off hand holds knives, wands, shields and the like now`)
+    const again = captureRun(useGameStore.getState(), {
+      rngLoot: 7,
+      rngMap: 9,
+      lootPity: 2,
+      idCounter: idCounterState(),
+      nameCounters: nameCounterState(),
+    })
+    expect('gearReturned' in again).toBe(false)
+    const reload = migrateSnapshot(JSON.parse(JSON.stringify(again)))!
+    expect(reload.gearReturned).toBeUndefined()
+    expect(owned(reload)).toEqual(before)
+  })
+
+  it('a hero with the DEX keeps the sword under the Harness, and loses it without', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; relics: string[] }
+    raw.roster[1].stats.dex = 14
+    const kept = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(kept.roster[1].equipment.offHand?.name).toBe('Heavy Sword')
+    expect(kept.gearReturned).toBeUndefined()
+    raw.relics = raw.relics.filter((r) => r !== 'ambidextrous')
+    const lost = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(lost.roster[1].equipment.offHand).toBeNull()
+    expect(lost.gearReturned).toHaveLength(1)
   })
 })

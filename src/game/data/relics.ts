@@ -1,4 +1,5 @@
 import type { CoreStats, EffectMods, ItemRarity } from '../types'
+import { DUAL_WIELD_DEX } from './items'
 
 /**
  * ---------------------------------------------------------------------------
@@ -41,8 +42,12 @@ export type RelicRule =
   | 'quartermaster'
   | 'warDiary'
   | 'titheBox'
-  /** R3-2: the off hand may hold a one-handed weapon (`items.heroSlotsFor`). */
-  | 'ambidextrous'
+  /**
+   * The Twinblade Harness (R3-2, renamed and stat-checked in round 3): a hero
+   * with `DUAL_WIELD_DEX` DEX of their own may carry a main-hand one-hander in
+   * the off hand (`items.heroSlotsFor`).
+   */
+  | 'twinblade'
 
 /**
  * An engine capability a relic needs. Capabilities another lane owns are
@@ -130,15 +135,33 @@ export const RELICS: readonly Relic[] = [
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },
   { id: 'diary', name: 'War Diary', rarity: 'epic', kind: 'rule', desc: 'After every fight, the lowest-level hero on the field gains 50% more XP.', rule: 'warDiary' },
   { id: 'tithe', name: 'Tithe Box', rarity: 'common', kind: 'rule', desc: '+10 gold for every fight you win.', rule: 'titheBox' },
-  // R3-2 — dual-wielding as a bonus. Without it the off hand holds off-hand
-  // pieces only; with it a one-handed weapon fits there too, and (the engine
-  // sums what is worn, `combat.gearOf`) its damage and attack speed count in
-  // full, exactly as the main hand's do. A rule relic because it changes what
-  // the player may DO, not a number; the value is the second weapon it lets in.
-  { id: 'ambidextrous', name: 'Ambidextrous', rarity: 'rare', kind: 'rule', desc: 'Every hero’s off hand can hold a one-handed weapon. Its damage and speed count in full, like the main hand’s.', rule: 'ambidextrous' },
+  // Dual-wielding as a bonus (R3-2), made an object with a stat check (round 3,
+  // Q4). Without it the off hand holds off-hand things only — knives, wands,
+  // shields, bucklers, tomes, quivers, foci (`items.ITEM_BASES`), a knife or
+  // wand at half weight. With it, a hero with DUAL_WIELD_DEX DEX of their own
+  // may carry a sword, axe, rod or sceptre there too, and (the engine sums what
+  // is worn, `combat.gearOf`) its damage and attack speed count in FULL, exactly
+  // as the main hand's do. A hero below the bar gets nothing from it — which is
+  // what keeps it from being a pick-it-and-forget-it. Rare. A rule relic
+  // because it changes what the player may DO; the value is the second weapon
+  // it lets in, and §15 measures it on whole runs.
+  {
+    id: 'twinblade',
+    name: 'Twinblade Harness',
+    rarity: 'rare',
+    kind: 'rule',
+    desc: `A hero with ${DUAL_WIELD_DEX} DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength.`,
+    rule: 'twinblade',
+  },
   { id: 'ember_urn', name: 'Ember Urn', rarity: 'epic', kind: 'rule', desc: 'A burning enemy that dies spreads its fire to the enemies beside it.', requires: 'burnSpreadOnDeath' },
   { id: 'signal_flare', name: 'Signal Flare', rarity: 'rare', kind: 'rule', desc: 'Your Rally Horn becomes Flare.', requires: 'command:flare', commands: ['flare'] },
 ]
+
+/**
+ * Relic ids a save may carry that this build knows by another id. `ambidextrous`
+ * was the Twinblade Harness before round 3 gave it an object's name.
+ */
+export const LEGACY_RELIC_IDS: Readonly<Record<string, string>> = { ambidextrous: 'twinblade' }
 
 const RELIC_BY_ID = new Map(RELICS.map((r) => [r.id, r]))
 export const relicById = (id: string): Relic | undefined => RELIC_BY_ID.get(id)
