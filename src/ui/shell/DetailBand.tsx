@@ -1,8 +1,11 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
   canUpgrade,
+  dualWieldCheck,
+  gripOf,
   HERO_SLOTS,
   HERO_SLOT_LABEL,
+  OFF_HAND_SHARE,
   RARITY,
   heroSlotsFor,
   reforgeCost,
@@ -22,21 +25,26 @@ import { variantsFor, waveComposition } from '../../game/data/waves'
 import { computeCombat, totalStats } from '../../game/engine/combat'
 import { buildName, evolutionOptions, MAX_LEVEL, TIER1_LEVEL, TIER2_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
-import { isAmbidextrous } from '../../game/run/relics'
+import { equipRules } from '../../game/run/relics'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
 import {
   archetypeVar,
   damageMark,
+  dualWieldShort,
   effectIcon,
   FOCUS_OPTS,
   focusFull,
+  GRIP_NAME,
   itemIcon,
   itemName,
   markLabel,
   moneyText,
+  OFF_HAND_TAKES,
   RARITY_INITIAL,
   rarityRank,
   rarityVar,
+  TWINBLADE,
+  TWINBLADE_TAKES,
   type IconKey,
 } from '../channels'
 import { Icon } from '../Icon'
@@ -549,9 +557,10 @@ function GearSlotPanel() {
   const gearSlot = useGameStore((s) => s.gearSlot)
   const roster = useGameStore((s) => s.roster)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
-  const ambi = useGameStore((s) => isAmbidextrous(s.relics))
+  const relics = useGameStore((s) => s.relics)
   const hero = roster.find((h) => h.id === gearSlot?.sentinelId)
   if (!gearSlot || !hero) return null
+  const dual = dualWieldCheck(hero, equipRules(relics))
 
   const offHand = hero.equipment.offHand
   const mainHand = hero.equipment.mainHand
@@ -572,13 +581,24 @@ function GearSlotPanel() {
         <p className="sh-line muted">
           The pack is showing only what fits. <Tap /> one to put it on.
         </p>
-        {/* R3-2: the off hand's two rules, said where the choice is made. */}
+        {/* Round 3 (Q4 + Q5): the off hand's rule, said where the choice is
+            made — what it takes, what a knife is worth there, and where this
+            hero stands on the Twinblade Harness's check. */}
         {gearSlot.slot === 'offHand' && (
-          <p className="sh-line muted">
-            {ambi
-              ? 'Ambidextrous: a one-handed weapon fits here too, and its damage counts in full.'
-              : 'Shields, bucklers, tomes, quivers and focuses go here. A second weapon needs the Ambidextrous relic.'}
-          </p>
+          <>
+            {/* The relic's line first: it is the one about THIS hero, and on a
+                phone the body scrolls under a pinned foot. */}
+            {dual.relic && (
+              <p className={`sh-line ${dual.ok ? 'accent' : 'muted'}`}>
+                {dual.ok
+                  ? `${TWINBLADE}: ${TWINBLADE_TAKES} fits here too, at full strength.`
+                  : `${TWINBLADE}: a sword here needs ${dual.need} DEX — ${hero.name} has ${Math.floor(dual.dex)}.`}
+              </p>
+            )}
+            <p className="sh-line muted">
+              Small things only. A knife or wand hits at {Math.round(OFF_HAND_SHARE * 100)}% here.
+            </p>
+          </>
         )}
         {warn && (
           <p className="sh-line bad">
@@ -1125,7 +1145,7 @@ function ItemPanel({ item }: { item: Item }) {
   const upgradeItemAction = useGameStore((s) => s.upgradeItem)
   const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
   const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
-  const ambidextrousHeld = useGameStore((s) => isAmbidextrous(s.relics))
+  const relics = useGameStore((s) => s.relics)
 
   const scrap = useArmedAction(
     {
@@ -1169,8 +1189,13 @@ function ItemPanel({ item }: { item: Item }) {
    */
   const gearTargetId = useGearTarget((s) => s.heroId)
   const armedHero = gearSlot && !wearer ? roster.find((s) => s.id === gearSlot.sentinelId) : undefined
-  const rules = { ambidextrous: ambidextrousHeld }
+  const rules = equipRules(relics)
   const target = wearer ? undefined : equipTarget(roster, item, armedHero?.id, gearTargetId, rules)
+  // Round 3 (Q4): a main-hand one-hander under the Twinblade Harness — can the
+  // hero it is being weighed for carry it in the off hand?
+  const twinFor = target ?? wearer
+  const twin =
+    rules.twinblade && twinFor && gripOf(item) === 'main' ? { hero: twinFor, check: dualWieldCheck(twinFor, rules) } : null
   const plan = target ? planEquip(target, item, armedHero && gearSlot ? gearSlot.slot : null, rules) : null
   const deltas = target && plan ? gearDeltas(target, plan.after) : []
   const fresh = plan ? newAffixes(item, plan.displaced) : []
@@ -1279,6 +1304,13 @@ function ItemPanel({ item }: { item: Item }) {
         {itemBody(item).map((l, i) => (
           <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} key={i} />
         ))}
+        {twin && (
+          <p className={`sh-line ${twin.check.ok ? 'accent' : 'muted'}`}>
+            {twin.check.ok
+              ? `${TWINBLADE}: ${twin.hero.name} can carry it in the off hand too, at full strength.`
+              : `${TWINBLADE}: ${twin.hero.name} has ${Math.floor(twin.check.dex)} DEX of ${twin.check.need} — not in the off hand yet.`}
+          </p>
+        )}
         {wearer && (
           <p className="sh-line muted">
             Worn by {wearer.name} · {wornSlot ? HERO_SLOT_LABEL[wornSlot] : ''}
@@ -1545,7 +1577,8 @@ function GearColumn() {
   const activateGearSlot = useGameStore((s) => s.activateGearSlot)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const shellSelect = useGameStore((s) => s.shellSelect)
-  const ambi = useGameStore((s) => isAmbidextrous(s.relics))
+  const relics = useGameStore((s) => s.relics)
+  const rules = equipRules(relics)
 
   // Follows the selected hero, then the last hero you looked at (an item tap
   // is a different selection, and used to snap this back to `roster[0]`), and
@@ -1556,9 +1589,18 @@ function GearColumn() {
   const looseItem = selection?.kind === 'item' ? inventory.find((i) => i.id === selection.id) : undefined
   const hero =
     (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ??
-    (looseItem ? equipTarget(roster, looseItem, gearSlot?.sentinelId, gearTargetId, { ambidextrous: ambi }) : undefined) ??
+    (looseItem ? equipTarget(roster, looseItem, gearSlot?.sentinelId, gearTargetId, rules) : undefined) ??
     roster.find((h) => h.id === gearTargetId) ??
     roster[0]
+  // Round 3 (Q4): the Twinblade Harness is company-wide, its check per hero.
+  const twin = hero ? dualWieldCheck(hero, rules) : null
+  const ambi = !!twin?.ok
+  /** The off hand's rule, in words — the slot's accessible name carries it. */
+  const offRule = !twin?.relic
+    ? `takes ${OFF_HAND_TAKES}`
+    : twin.ok
+      ? `${TWINBLADE}: takes ${TWINBLADE_TAKES} too, at full strength`
+      : `takes ${OFF_HAND_TAKES}; ${TWINBLADE}: ${dualWieldShort(hero!.name, twin)}`
 
   return (
     <div className="sh-gear" role="group" aria-label={hero ? `${hero.name}'s gear` : 'Gear'}>
@@ -1578,7 +1620,7 @@ function GearColumn() {
             const worn = hero.equipment[hs]
             const active = gearSlot?.sentinelId === hero.id && gearSlot.slot === hs
             const dual = ambi && hs === 'offHand'
-            const slotName = dual ? `${HERO_SLOT_LABEL[hs]} (Ambidextrous: takes a one-handed weapon too)` : HERO_SLOT_LABEL[hs]
+            const slotName = hs === 'offHand' ? `${HERO_SLOT_LABEL[hs]} (${offRule})` : HERO_SLOT_LABEL[hs]
             return (
               <button
                 key={hs}
@@ -1609,10 +1651,12 @@ function GearColumn() {
                     {RARITY_INITIAL[worn.rarity]}
                   </span>
                 )}
-                {/* The Ambidextrous mark: this hand takes a blade now. */}
-                {dual && !worn && (
-                  <span className="sh-slot-dual" aria-hidden="true">
-                    <Icon name="blade" />
+                {/* What the empty off hand takes (round 3, Q5): a small-things
+                    mark — the knife — or, for a hero the Twinblade Harness
+                    lets dual-wield, the blade. */}
+                {hs === 'offHand' && !worn && (
+                  <span className={dual ? 'sh-slot-dual' : 'sh-slot-takes'} aria-hidden="true">
+                    <Icon name={dual ? 'blade' : 'dagger'} />
                   </span>
                 )}
                 {/* A worn slot draws what is in it, and where the doll has no
@@ -1634,8 +1678,14 @@ function GearColumn() {
               </button>
             )
           })}
-          {/* Which relic changed the off hand — the word the relic card used. */}
-          {ambi && <span className="sh-doll-note">Ambidextrous</span>}
+          {/* Which relic changed the off hand — its name, and when this hero
+              falls short of its check, by how much. */}
+          {twin?.relic && (
+            <span className={`sh-doll-note${twin.ok ? '' : ' short'}`}>
+              <span>Twinblade</span>
+              {!twin.ok && <span>{`DEX ${Math.floor(twin.dex)}/${twin.need}`}</span>}
+            </span>
+          )}
         </div>
       ) : null}
       {/* The desk rail has the height the phone does not: there the doll is
@@ -1667,12 +1717,17 @@ function PackColumn() {
   const equipItem = useGameStore((s) => s.equipItem)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const sortInventory = useGameStore((s) => s.sortInventory)
-  // R3-2: under the Ambidextrous relic the off hand also takes one-handers.
-  const rules = { ambidextrous: useGameStore((s) => isAmbidextrous(s.relics)) }
+  const relics = useGameStore((s) => s.relics)
+  const roster = useGameStore((s) => s.roster)
+  // Round 3 (Q4 + Q5): what fits is the item's grip, and — for a main-hand
+  // one-hander in the off hand — the Twinblade Harness and THIS hero's DEX.
+  const rules = equipRules(relics)
+  const armedHero = gearSlot ? roster.find((h) => h.id === gearSlot.sentinelId) : undefined
 
   // With a gear slot armed the pack filters to what fits it — that replaces the
   // whole equip drawer.
-  const fits = (i: Item) => !gearSlot || heroSlotsFor(i.slot, rules).includes(gearSlot.slot)
+  const fitsArmed = (i: Item) => !!gearSlot && heroSlotsFor(i, armedHero, rules).includes(gearSlot.slot)
+  const fits = (i: Item) => !gearSlot || fitsArmed(i)
   const shown = inventory.filter(fits)
 
   return (
@@ -1707,11 +1762,11 @@ function PackColumn() {
                or magic — the property `damageMark` itself calls the one that
                decides whether a drop is worth anything to a given hero — and
                the accessible name did not mention it at all. */
-            aria-label={[`${itemName(i)}, ${RARITY[i.rarity].label} ${KIND_NAME[i.slot] ?? 'item'}`, markLabel(damageMark(i))]
+            aria-label={[`${itemName(i)}, ${RARITY[i.rarity].label} ${GRIP_NAME[gripOf(i)]}`, markLabel(damageMark(i))]
               .filter(Boolean)
               .join(', ')}
             onClick={() => {
-              if (gearSlot && heroSlotsFor(i.slot, rules).includes(gearSlot.slot)) {
+              if (gearSlot && fitsArmed(i)) {
                 equipItem(gearSlot.sentinelId, gearSlot.slot, i.id)
                 clearGearSlot()
               } else {
@@ -1757,21 +1812,12 @@ function PackColumn() {
   )
 }
 
-/**
- * The four equip kinds, spelled out — a glyph is not an accessible name, and
- * neither is a sprite.
- *
- * The matching `KIND_GLYPH` table is gone. It mapped 26 item nouns onto four
- * marks (`⚔ ⚒ ⛊ ⛨`), every one of them already meaning something else
- * elsewhere in the shell, and a Greatsword, a Warhammer, a Bow, a Staff and a
- * Grimoire were the same picture. `itemIcon` draws the noun now.
+/*
+ * The equip kinds, spelled out — a glyph is not an accessible name, and neither
+ * is a sprite — are `channels.GRIP_NAME` now (round 3): by the hand an item
+ * fits, so a knife says "light weapon, either hand" where a sword says
+ * "one-handed weapon". `itemIcon` draws the noun.
  */
-const KIND_NAME: Record<string, string> = {
-  oneHand: 'one-handed weapon',
-  twoHand: 'two-handed weapon',
-  offHand: 'off-hand',
-  body: 'body armour',
-}
 
 function findItem(inventory: Item[], roster: Sentinel[], id: string): Item | undefined {
   const loose = inventory.find((i) => i.id === id)

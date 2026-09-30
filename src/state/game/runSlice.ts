@@ -13,6 +13,7 @@ import { carryPlacements, encounterNode } from '../../game/run/map'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
+import { gearReturnedText } from '../../game/run/inventory'
 import { applyStatBonus, hubExtras, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit } from '../../game/run/recruits'
 import type { Archetype, Placement } from '../../game/types'
 import { sfx } from '../../audio/audio'
@@ -309,6 +310,9 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       victory: null,
       selectedSentinelId: null,
       ...CLEAR_SHELL,
+      // Round 3 (Q5): the load moved an off-hand item the off hand no longer
+      // takes back to the pack — say so, once (the receipt toast shows it).
+      gearNotice: snap.gearReturned?.length ? { text: gearReturnedText(snap.gearReturned), at: Date.now() } : null,
     })
   },
 

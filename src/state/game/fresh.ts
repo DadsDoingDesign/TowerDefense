@@ -22,6 +22,7 @@ export const CLEAR_SHELL = {
   gearSlot: null,
   detailOpen: false,
   fieldNote: null as GameData['fieldNote'],
+  gearNotice: null as GameData['gearNotice'],
 } satisfies Partial<GameData>
 
 export function freshHud(): HudSnapshot {
