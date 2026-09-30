@@ -178,6 +178,13 @@ export function PageScreen({
 }) {
   const selection = useGameStore((s) => s.shellSelection)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  const gold = useGameStore((s) => s.gold)
+  const dust = useGameStore((s) => s.dust)
+  // How far off an unaffordable price is, in the purse it is paid from (R2).
+  // Marks live in the meta store and are not shown on in-run boards, so a
+  // marks price keeps the plain "not enough yet".
+  const shortfall = (c: Price) =>
+    c.currency === 'gold' ? Math.max(0, c.amount - gold) : c.currency === 'dust' ? Math.max(0, c.amount - dust) : true
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
@@ -279,6 +286,11 @@ export function PageScreen({
               danger: confirm.danger,
               // Armed, the CTA is the way back out ("Never mind") and carries no price.
               cost: confirm.armed ? undefined : selected.action.cost,
+              // A2: the purse after this gold purchase, where you commit to it.
+              after:
+                !confirm.armed && !selected.action.disabled && selected.action.cost?.currency === 'gold'
+                  ? `${gold - selected.action.cost.amount} left`
+                  : undefined,
             }
           : receipt
             ? // Held in place, disabled, so nothing moves under the thumb.
@@ -341,7 +353,7 @@ export function PageScreen({
               key={o.id}
               label={o.title}
               value={
-                o.cost ? priceNode(o.cost, o.dim) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
+                o.cost ? priceNode(o.cost, o.dim ? shortfall(o.cost) : false) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
               }
               currency={o.cost?.currency}
               rail={o.color}
@@ -509,6 +521,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
             value={o.cost ? priceNode(o.cost) : o.sub}
             icon={o.icon}
             glyph={o.glyph}
+            big
             onClick={() => o.action?.run()}
             tone={o.color === 'var(--bad-text)' ? 'danger' : 'default'}
           />
@@ -621,9 +634,9 @@ export function ResultScreen() {
                  setting's mark, the armour stat, the body-armour item kind AND
                  the base-intact tile below. The armour icon says the one thing
                  this row means — less damage taken — and says it once. */
-              <MenuRow label="Turn on Assist · Steady" icon="armour" onClick={() => setAssist('steady')} />
+              <MenuRow label="Turn on Assist · Steady" icon="armour" big onClick={() => setAssist('steady')} />
             )}
-            {campaign && <MenuRow label="Return to the Watchtower" icon="back" onClick={returnToHub} />}
+            {campaign && <MenuRow label="Return to the Watchtower" icon="back" big onClick={returnToHub} />}
           </div>
         ) : undefined
       }
@@ -753,7 +766,7 @@ export function ResultScreen() {
 
       {!campaign && (
         <div className="pg-rows">
-          <MenuRow label="Return to the Watchtower" icon="back" onClick={returnToHub} />
+          <MenuRow label="Return to the Watchtower" icon="back" big onClick={returnToHub} />
         </div>
       )}
     </PageLayout>

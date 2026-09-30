@@ -2,21 +2,201 @@
 
 Branch `claude/whales-ui-critique-plan` · base `main @ f3760d1` · Whales project **Tower Defense Game**
 
-Whales critiqued 11 screens captured from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). This file turns those findings into 16 changes. **Nothing here is implemented yet.** Each item waits for the designer to approve, edit or reject it on the review page. That page is built from `index.html`, `plan.json` and `critiques.json` in this folder.
+Whales critiqued 11 screens captured from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal and reviewed the plan on the review page (built from `index.html`, `plan.json` and `critiques.json` in this folder).
 
-> Whales inferred every goal below from its own reading of the screen (goal_source: inferred); none was stated by the designer yet.
+**Status (round 2).** The ten round-1 items the designer approved are done: nine are built on this branch and re-critiqued with Whales on the final build, and D1 needed no change. The six items the designer edited are reworked as round-2 proposals, plus A1-2 from the re-check. None of round 2 is built yet.
 
-## Plan
+Round-1 screenshots are in `shots/`, after-screenshots in `after/`. `scripts/flow-shots.mjs` recaptures both.
 
-### Readability
+## Round 2 · your edits, reworked
+
+You edited these six in round 1. Each is now a bigger change than the original item, so each has a phased proposal and open questions for you. Nothing here is built yet.
+
+### G1-2 · Free-form deployment on a tile grid, with terrain that blocks
+
+*Effort L · from Claude · awaiting your decision*
+
+> **Your note on G1:** the whole deploy should be free form across a grid. any tile that isnt blocked by the environment or some reason for the map challenge, which should have some ui to show it like a rock or a fire, lake,  etc.
+
+**What Whales found (round 1)**
+
+- Battle setup (first deploy) #1: **Doyle's hero card doesn't lead the guided path**. hero card meant to be primary but styled well below it; screen reads as distributed focus, not the intended concentrated funnel
+- Wave in progress #1: **The hero roster the tutorial points to is the weakest thing on screen**. Doyle's deployed card and the open recruit slot, bottom band — smaller and lower-contrast than the game title with "Depth 1/12" and the depth-1 wave readout with 4 enemies left
+
+**Proposed change**
+
+- Replace the six fixed build circles with a tile grid laid over the field. Any grass tile off the lane can take a hero; the lane, the forest frame and terrain pieces cannot.
+- Blocked tiles are drawn as terrain you can read at a glance: rocks, trees, water, a campfire or a burning patch. With a hero armed, open tiles light up faintly and blocked ones stay dark, so the grid is only visible when you need it.
+- Tapping a blocked tile says why in the coach strip ('Rock — nothing can stand here'), instead of doing nothing.
+- Map challenges become terrain rules: 'Flooded meadow' adds lakes, 'Wildfire' adds fire tiles that spread between waves, 'Ruins' scatters rubble. Each battle's preview names the challenge.
+- Keep the rules that make placement a decision: at most five heroes, and one move while a sub-wave is held.
+- Phase 1: grid, free placement and blocking with today's terrain (lane and trees). Phase 2: terrain pieces and two map challenges. Phase 3: a balance pass, since free placement changes how strong every hero is.
+
+**Questions for you**
+
+1. Grid size on a phone: a 7×12 portrait grid (about 48px tiles) keeps every tile a comfortable thumb target. Is that the feel you want, or finer?
+2. Should range still show under your finger while you drag, before you drop the hero?
+3. Fire that spreads between waves changes the map mid-run. Is that in scope for this game, or do you want terrain fixed per battle?
+
+**Files:** `src/game/engine/engine.ts (slot → tile placements)`, `src/game/data/battlefields (blocked-tile masks)`, `src/game/render/overlays.ts (grid + blocked states)`, `src/game/render/terrain.ts (terrain pieces)`, `src/ui/shell/Coach.tsx`, `balance/ (placement assumptions)`
+
+> **My read, not Whales':** This is a gameplay change, not a UI fix. Placements, the engine, maps and the balance report all assume fixed slots today, so it needs its own branch and a balance pass.
+
+### G2-2 · One wave strip that changes with the moment, and shows who's still coming
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on G2:** maybe showing whick enenmies left to spawn or so on, find a way without making more ui/ taking up more space. consider dynamic ui than cna change to the current states need without removing actions or context that coudl still be needed
+
+**What Whales found (round 1)**
+
+- Wave in progress #3: **The instruction banner is losing the screen to ambient status**. "Sub-wave 1 of 2 held - tap a hero, then…" over the map stands out far less than the other primary messages; focus reads distributed, not concentrated
+- Wave in progress (desk) #1: **The placement instruction doesn't lead — attention spreads across the sidebar**. the banner telling players to tap a hero then a post is styled well below its primary role; focus reads as distributed, not playfield-first
+
+**Proposed change**
+
+- Use the bottom wave strip you already have ('DEPTH 1 ▬▬ 4 left') and add no new UI. Its progress bar becomes the enemy queue: small enemy portraits in spawn order, next one first, with counts ('Torch ×3 · TNT ×1'). Spawned enemies drop off the front.
+- The strip changes with the moment, and the depth label and the button stay put. Setup: the whole wave's line-up plus Start Wave. Live: the remaining queue plus speed. Held sub-wave: the next sub-wave's line-up, 'Held · move one hero' where the depth label was, and Next ▶. Cleared: gold earned plus Continue.
+- This retires the separate banner over the top of the field, which gives the field its full height back.
+- On desk, the same strip sits at the foot of the right rail, as it does today.
+
+**Questions for you**
+
+1. When there are more enemy types than fit, show the first three and '+N'? Or scroll the strip?
+2. Should tapping an enemy portrait show its stats in the detail band (the shell's one-interaction rule), or keep it glance-only?
+
+**Files:** `src/ui/shell/DetailBand.tsx (wave strip)`, `src/ui/shell/StageBand.tsx (remove banner)`, `src/ui/shell/encounterPreview.ts`, `src/styles/shell-live.css`
+
+### G3-2 · Wave cleared and spoils become one screen, and level-ups happen on the roster
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on G3:** this should also auto show what reward to pick and give details as you pick below, any level ups on characters should highlight the character on your ui and then be handled in there
+
+**What Whales found (round 1)**
+
+- Wave cleared #1: **Continue doesn't read as the main action**. the Continue button with its rewards confirmation in the footer is styled well below primary; whole screen reads as distributed focus, not concentrated
+- Wave cleared #2: **A large image sits after Continue and pulls the eye past it**. a picture 33x the button's area in the button's own hue family follows it, as it does the "8 kills - 184 dmg" stats block
+- Spoils #2: **The Take it confirm button doesn't read as the main action**. the single confirm button, one of the screen's primary messages, stands out far less than the elements around it
+
+**Proposed change**
+
+- Drop the hop from 'Wave cleared' through Continue to a separate Spoils page. When a wave clears, the field dims and a short result line shows (gold, XP, felled). The row under the field then fills with the three reward cards straight away.
+- Tap a card and its details fill the panel below it (the Root Shell's one-interaction rule), with Take it as the one primary button. The first card is preselected, so the details are already showing.
+- Heroes who levelled up glow on the roster with a 'Lv 3 ↑' badge. Tapping one opens that hero's level-up choice in the same panel, not a modal. Take it stays available, and the badge waits until you've dealt with it.
+- The standalone Spoils page stays for elite and boss rewards, which deserve their own moment. Say if you want those merged too.
+
+**Questions for you**
+
+1. Should Take it be blocked until pending level-ups are chosen, or can level-ups wait until the next stop?
+
+**Files:** `src/ui/shell/WaveCeremony.tsx`, `src/ui/shell/SelectorBand.tsx`, `src/ui/shell/DetailBand.tsx`, `src/ui/shell/offers.ts (rewardOffers)`, `src/state/game/battleSlice.ts (continueAfterWave → reward)`
+
+### H1-2 · Main menu: a cinematic battle behind the whole screen, with the menu on top
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on H1:** i love the improvement, and i like the movement of seing game going on, but maybe a bit rnadom. can you make it more cinematic and part of the BG of the screen, then the home UI can overlay
+
+**What Whales found (round 1)**
+
+- Main menu #1: **Game title and tagline don't read as the top of the page**. title and tagline block at the top, styled well below primary weight against the art scene and oversized teal "Start a Run" button
+- Main menu (desk) #2: **"Fieldwatch" title reads weaker than its role**. Game title and tagline styled well below their intended secondary importance
+
+**Proposed change**
+
+- The attract-mode battle fills the whole menu screen behind everything on phone and desk, instead of sitting in a framed box.
+- Make it directed rather than random: a fixed seed and a scripted ~20 second loop. The camera eases along the lane, a wave arrives, the knights hold, one big hit lands, then it resets on a fade. The same composition every time, so it reads as a title sequence.
+- A dark vignette and a bottom-up gradient keep the title and menu rows readable. The rows become translucent panels over the art and still clear 4.5:1 contrast.
+- The title gets the stronger treatment from H1 (larger, with a soft shadow), since it now sits on moving art.
+- Reduced motion: the still key-art frame, exactly as today.
+
+**Questions for you**
+
+1. On desk, should the battle take the whole width with the menu column floating on the right, or stay centred behind a centred menu?
+
+**Files:** `src/ui/shell/MenuKeyArt.tsx`, `src/ui/shell/AttractMode.tsx`, `src/ui/attract/ (scripted sim + camera)`, `src/ui/shell/PageScreens.tsx (MenuScreen)`, `src/styles/page.css`, `src/styles/shell-wide.css`
+
+### H3-2 · Hero pick: a jobs-to-be-done pass before any redesign
+
+*Effort M · from Claude · awaiting your decision*
+
+> **Your note on H3:** yeah this whole screen needs a jobs to be done exercise
+
+**What Whales found (round 1)**
+
+- Hero pick #1: **The selected Fighter's stats don't read as the main content**. Fighter name and STR/DEX/INT stats in the detail panel, a primary message, styled well below primary importance
+- Hero pick #2: **Focus is spread across all three options instead of the chosen one**. Screen reads as distributed focus, but the strategy calls for concentrated emphasis on the detail panel and confirm button
+
+**Proposed change**
+
+- I write the JTBD exercise as a doc for you to mark up: the job ('When I start a run, I want to pick a hero whose way of fighting I understand, so I can plan my first battles and feel it was my choice'), who is hiring the screen (first run, returning player, daily-seed player), the forces (push, pull, anxiety, habit), and what success looks like.
+- From that, two or three layout directions as mockups, for example 'play-style cards' (one line on how the hero fights, a looping attack preview and three big stats), 'compare' (side-by-side stat bars), and 'recommended' (a suggested pick for a first run, with the reason).
+- You pick a direction on this page, and only then does it get built.
+
+**Questions for you**
+
+1. Who matters most on this screen: a brand-new player on their first run, or a returning player choosing a strategy?
+
+**Files:** `docs/JTBD-hero-pick.md (new)`, `mockups (review page)`
+
+### R3-2 · Gear as a paper doll: slots placed on the hero's body
+
+*Effort L · from Claude · awaiting your decision*
+
+> **Your note on R3:** I think the way equipment is shown could be way simpler. a little human body type model with the itom slots over it you know left hadn on lefgt head up top chest in middle etc. we should make gear slot based if not already  maybe some bonuess give you the option to do multi of a ceftain weapon in both slots  i think there is a larger edit than just the labels here
+
+**What Whales found (round 1)**
+
+- Wave in progress (desk) #3: **Sidebar labels and counters are too faint to read**. "CS 20/70" top-left #31261a on #342b1d = 1.1:1; the large "a: 4" readout 1.7:1; "HAND" top-right 2.8:1; +21 more
+- Run map #2: **Readiness stats are hard to read at a glance**. "GEAR" #a18a6b on #4c4132 = 3.0:1, "64 DPS" #9d8769 on #48382a = 3.3:1, "HAND" #b19c7d on #534736 = 3.4:1, +9 more failing
+- Run map #4: **The GEAR panel has no headline**. "GEAR" title 21px sits below its 25px body text, so the block reads as one flat run
+
+**Proposed change**
+
+- Gear is already slot-based: main hand, off hand and body. The change is how it's shown. The GEAR column becomes a small silhouette of the selected hero (the game already composites heroes wearing their gear in loadout.ts), with each slot sitting where it goes: main hand on the right, off hand on the left, body on the chest.
+- Tapping a slot works as it does today: the pack filters to what fits, and tapping an item equips it.
+- Dual-wielding becomes a bonus: a perk or relic ('Ambidextrous') lets the off hand take a main-hand weapon, and the off-hand slot outline changes to show it.
+- This also fixes the desktop sidebar labels from round 1: the doll replaces the three stacked text slots that Whales flagged.
+
+**Questions for you**
+
+1. Do you want a head slot? It would mean new items, new drops and a balance pass, not just UI. I'd leave it out of phase 1.
+2. Dual-wield: a perk you pick, a relic you find, or a trait of one archetype (the Rogue)?
+
+**Files:** `src/ui/shell/DetailBand.tsx (gear column)`, `src/game/render/loadout.ts (doll render)`, `src/game/data/items.ts (HERO_SLOTS)`, `src/game/data/relics or perks (Ambidextrous)`, `src/styles/shell.css, shell-wide.css`
+
+### A1-2 · A brighter primary button with dark text
+
+*Effort S · from Claude · awaiting your decision*
+
+**What Whales found (round 1)**
+
+- Spoils #2: **The Take it confirm button doesn't read as the main action**. the single confirm button, one of the screen's primary messages, stands out far less than the elements around it
+- Wave cleared #1: **Continue doesn't read as the main action**. the Continue button with its rewards confirmation in the footer is styled well below primary; whole screen reads as distributed focus, not concentrated
+- Run map #1: **"March" doesn't read as the decisive action**. Back and March commit buttons styled below primary importance; "March" label #e4deca on #6f9498 = 2.5:1, below the 3:1 AA minimum at that size
+
+**Proposed change**
+
+- Whales flagged Take it, Buy and Continue as quiet on every pass, even after A1. The cause is measurable: today's button teal (#336e7e) is only 3.1:1 against the page, so it sinks into the dark brown.
+- Switch every primary button to the game's lighter teal (#57a2b6, already --teal) with dark text (#1b1409, the --ink-on-fill the shell uses on solid fills). The label goes from 4.7:1 to 6.3:1, and the button from 3.1:1 to 6.1:1 against the page.
+- It's one token change (--cta and --cta-ink), so every primary button moves together. High-contrast mode gets a matching pair.
+
+**Questions for you**
+
+1. This changes the look from cream-on-deep-teal to dark-on-bright-teal. Is that trade OK for the game's feel?
+
+**Files:** `src/styles/global.css (--cta, --cta-ink)`, `src/styles/app.css (high contrast)`, `tests/contrast.test.ts`
+
+## Readability
 
 Text that fails WCAG AA contrast, mostly caused by dimming with opacity.
 
-#### R1 · Replace opacity dimming with AA-safe dim colours
+### R1 · Replace opacity dimming with AA-safe dim colours
 
-*Effort M · from Whales*
+*Effort M · from Whales · done*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Run map #2: **Readiness stats are hard to read at a glance**. "GEAR" #a18a6b on #4c4132 = 3.0:1, "64 DPS" #9d8769 on #48382a = 3.3:1, "HAND" #b19c7d on #534736 = 3.4:1, +9 more failing
 - Battle setup (first deploy) #2: **Tutorial instruction text sits below readable contrast**. "PLACE IT" bottom-left 4.3:1, "recruit a hero" bottom-center 4.4:1, icon glyph mid-left #514c3a on #5a5a39 = 1.2:1
@@ -33,11 +213,13 @@ Text that fails WCAG AA contrast, mostly caused by dimming with opacity.
 
 **Files:** `src/styles/global.css`, `src/styles/shell.css`, `src/styles/shell-live.css`, `src/styles/page.css`, `tests/contrast.test.ts (new)`
 
-#### R2 · Make prices you can't afford readable
+**Result:** Re-checked: every contrast failure Whales measured on the phone's run map, battle setup, wave and wave-cleared screens is gone. Desk right rail: 24 failing labels down to 15; the rest are 11px labels at 1x on desk and move with R3-2.
 
-*Effort S · from Whales*
+### R2 · Make prices you can't afford readable
 
-**What Whales found**
+*Effort S · from Whales · done*
+
+**What Whales found (round 1)**
 
 - Merchant #2: **A price is invisible against its own background**. the "80" price, middle-right, #43331f on #413424 = 1.0:1, where WCAG AA needs 3:1 at this size
 
@@ -47,11 +229,13 @@ Text that fails WCAG AA contrast, mostly caused by dimming with opacity.
 
 **Files:** `src/styles/page.css (.pg-row.dim)`, `src/ui/shell/offers.ts`
 
-#### R3 · Fix the desktop sidebar's faint labels and counters
+**Result:** Re-checked: the 1.0:1 price is no longer flagged, and 'need 20' shows beside a price you can't pay yet.
 
-*Effort S · from Whales*
+### R3 · Fix the desktop sidebar's faint labels and counters
 
-**What Whales found**
+*Effort S · from Whales · reworked as R3-2*
+
+**What Whales found (round 1)**
 
 - Wave in progress (desk) #3: **Sidebar labels and counters are too faint to read**. "CS 20/70" top-left #31261a on #342b1d = 1.1:1; the large "a: 4" readout 1.7:1; "HAND" top-right 2.8:1; +21 more
 
@@ -64,15 +248,15 @@ Text that fails WCAG AA contrast, mostly caused by dimming with opacity.
 
 > **My read, not Whales':** Whales read the header's 'GATE 20/20' as 'CS 20/70' and measured it at 1.1:1. The readable text is fine; the 1.1:1 is probably the header's dark ornament behind it. The rest of this row (HAND at 2.8:1, 10px labels) looks right.
 
-### Icon legibility
+## Icon legibility
 
 Icons under Whales' 72 image px minimum (36 CSS px at 2×).
 
-#### I1 · Set an icon size scale and scale up stand-alone icons
+### I1 · Set an icon size scale and scale up stand-alone icons
 
-*Effort M · from Whales*
+*Effort M · from Whales · done*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Main menu #2: **Menu icons too small to recognise**. icons next to "Watchtower" 51x59, "Settings" 51x51, "Codex" 43x47 image px, +5 more, all under the 72 image px house minimum
 - Main menu (desk) #4: **The icon beside "Fieldwatch" is unrecognisable**. Top-right icon measures 29x36 image px against a 72 image px house minimum
@@ -97,15 +281,17 @@ Icons under Whales' 72 image px minimum (36 CSS px at 2×).
 
 > **My read, not Whales':** Whales applies its 72 image px minimum to every icon, including glyphs that already have a text label next to them. I'd exempt those, which is the third bullet. Approve as written to keep that exemption, or use Edit to scale every icon.
 
-### Primary actions
+**Result:** Re-checked: menu rows, map nodes, run-end tiles and exit rows are no longer flagged. Built at 48px, not 36px: the sprites only scale by whole multiples of 16. Still flagged: header marks and roster portraits, which weren't in this item's list.
+
+## Primary actions
 
 The one next step on each screen should be the strongest thing on it.
 
-#### A1 · One primary button style for the next step on every screen
+### A1 · One primary button style for the next step on every screen
 
-*Effort M · from Whales*
+*Effort M · from Whales · done*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Run map #1: **"March" doesn't read as the decisive action**. Back and March commit buttons styled below primary importance; "March" label #e4deca on #6f9498 = 2.5:1, below the 3:1 AA minimum at that size
 - Wave in progress #2: **"Next wave" doesn't read as a primary action**. Wave control in the bottom band, meant to be primary-importance but styled well below it, and weaker than the screen's other primary messages
@@ -122,11 +308,13 @@ The one next step on each screen should be the strongest thing on it.
 
 > **My read, not Whales':** Continue and Take it already use the filled teal button. I read Whales' 'styled well below primary' as the teal being too muted against the bright art, not as a missing style. The third bullet addresses that.
 
-#### A2 · Merchant: make your gold the headline number
+**Result:** Re-checked: Next ▶ and the roster are no longer flagged on the phone battle. Take it, Buy and Continue are still called quiet on every pass — see A1-2.
 
-*Effort S · from Whales*
+### A2 · Merchant: make your gold the headline number
 
-**What Whales found**
+*Effort S · from Whales · done*
+
+**What Whales found (round 1)**
 
 - Merchant #1: **The gold balance doesn't read as the screen's key number**. player's gold of 92 at the top, styled well below primary importance
 
@@ -137,15 +325,17 @@ The one next step on each screen should be the strongest thing on it.
 
 **Files:** `src/ui/shell/Page.tsx`, `src/styles/page.css`
 
-### Hierarchy & headlines
+**Result:** Re-checked: gold is display-size and Buy shows what's left ('→ 0 left'). Whales still calls the balance underweighted.
+
+## Hierarchy & headlines
 
 Titles and panel heads that don't outrank their body text.
 
-#### H1 · Stronger title on the main menu
+### H1 · Stronger title on the main menu
 
-*Effort S · from Whales*
+*Effort S · from Whales · reworked as H1-2*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Main menu #1: **Game title and tagline don't read as the top of the page**. title and tagline block at the top, styled well below primary weight against the art scene and oversized teal "Start a Run" button
 - Main menu (desk) #2: **"Fieldwatch" title reads weaker than its role**. Game title and tagline styled well below their intended secondary importance
@@ -158,11 +348,11 @@ Titles and panel heads that don't outrank their body text.
 
 **Files:** `src/ui/shell/PageScreens.tsx (MenuScreen)`, `src/styles/page.css (.pg-head)`, `src/styles/shell-wide.css`
 
-#### H2 · Give panel heads a real headline (GEAR, Depth)
+### H2 · Give panel heads a real headline (GEAR, Depth)
 
-*Effort S · from Whales*
+*Effort S · from Whales · done*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Run map #4: **The GEAR panel has no headline**. "GEAR" title 21px sits below its 25px body text, so the block reads as one flat run
 - Wave in progress #4: **Three status labels sit below the readable contrast line**. "recruit a hero" bottom-center at #ab9679 on #3d3225 = 4.4:1; "DEPLOYED" bottom-left 4.5:1; "SPEED" bottom-right 4.5:1
@@ -174,11 +364,13 @@ Titles and panel heads that don't outrank their body text.
 
 **Files:** `src/styles/shell.css (.sh-col-head)`, `src/ui/shell/HeaderBand.tsx`
 
-#### H3 · Hero pick: make the selected hero's stats the main content
+**Result:** Re-checked: GEAR and Depth now lead their blocks. PACK still measures 26px against 25px body text; I stopped at the three-round limit.
 
-*Effort M · from Whales*
+### H3 · Hero pick: make the selected hero's stats the main content
 
-**What Whales found**
+*Effort M · from Whales · reworked as H3-2*
+
+**What Whales found (round 1)**
 
 - Hero pick #1: **The selected Fighter's stats don't read as the main content**. Fighter name and STR/DEX/INT stats in the detail panel, a primary message, styled well below primary importance
 - Hero pick #2: **Focus is spread across all three options instead of the chosen one**. Screen reads as distributed focus, but the strategy calls for concentrated emphasis on the detail panel and confirm button
@@ -190,15 +382,15 @@ Titles and panel heads that don't outrank their body text.
 
 **Files:** `src/ui/shell/PageScreens.tsx (hero pick)`, `src/styles/page.css`
 
-### Battle guidance
+## Battle guidance
 
 The first-deploy and sub-wave instructions lose to ambient status.
 
-#### G1 · First deploy: spotlight the hero card
+### G1 · First deploy: spotlight the hero card
 
-*Effort M · from Whales*
+*Effort M · from Whales · reworked as G1-2*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Battle setup (first deploy) #1: **Doyle's hero card doesn't lead the guided path**. hero card meant to be primary but styled well below it; screen reads as distributed focus, not the intended concentrated funnel
 - Wave in progress #1: **The hero roster the tutorial points to is the weakest thing on screen**. Doyle's deployed card and the open recruit slot, bottom band — smaller and lower-contrast than the game title with "Depth 1/12" and the depth-1 wave readout with 4 enemies left
@@ -210,11 +402,11 @@ The first-deploy and sub-wave instructions lose to ambient status.
 
 **Files:** `src/ui/shell/Coach.tsx`, `src/ui/shell/SelectorBand.tsx`, `src/styles/shell-live.css`
 
-#### G2 · Stronger sub-wave instruction banner
+### G2 · Stronger sub-wave instruction banner
 
-*Effort S · from Whales*
+*Effort S · from Whales · reworked as G2-2*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Wave in progress #3: **The instruction banner is losing the screen to ambient status**. "Sub-wave 1 of 2 held - tap a hero, then…" over the map stands out far less than the other primary messages; focus reads distributed, not concentrated
 - Wave in progress (desk) #1: **The placement instruction doesn't lead — attention spreads across the sidebar**. the banner telling players to tap a hero then a post is styled well below its primary role; focus reads as distributed, not playfield-first
@@ -226,11 +418,11 @@ The first-deploy and sub-wave instructions lose to ambient status.
 
 **Files:** `src/styles/shell-live.css`, `src/styles/shell-wide.css`, `src/ui/shell/StageBand.tsx`
 
-#### G3 · Wave cleared: end the reading order on Continue
+### G3 · Wave cleared: end the reading order on Continue
 
-*Effort S · from Whales*
+*Effort S · from Whales · reworked as G3-2*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Wave cleared #2: **A large image sits after Continue and pulls the eye past it**. a picture 33x the button's area in the button's own hue family follows it, as it does the "8 kills - 184 dmg" stats block
 
@@ -242,15 +434,15 @@ The first-deploy and sub-wave instructions lose to ambient status.
 
 > **My read, not Whales':** The 'large image after Continue' Whales flags is most likely the battlefield behind the overlay, not a separate picture. There's nothing to move, so I propose a darker scrim instead of Whales' 'move the picture above the button'.
 
-### Layout & space
+## Layout & space
 
 Empty space and chrome that push the decision below the fold.
 
-#### S1 · Close the empty gap on the Spoils, Merchant and Hero pick pages
+### S1 · Close the empty gap on the Spoils, Merchant and Hero pick pages
 
-*Effort S · from Whales*
+*Effort S · from Whales · done*
 
-**What Whales found**
+**What Whales found (round 1)**
 
 - Spoils #3: **Banners, filters and navigation crowd out the three cards**. 46% of the first screen, room for roughly 7.8 more items
 - Merchant #3: **Banners, filters and nav crowd out the offers**. 29% of the first screen is chrome — about 4.9 more items could fit
@@ -265,9 +457,11 @@ Empty space and chrome that push the decision below the fold.
 
 > **My read, not Whales':** Whales says 'banners, filters and navigation' take 29–46% of these screens. There are no filters. The real waste is the empty gap under the pack strip, which is what this item removes.
 
-#### S2 · Merchant: stop the last offer hiding under 'March on'
+**Result:** Re-checked: Spoils chrome went from 46% to 31% of the first screen. Also applied to run end, so the taller I1 rows don't push the recap under the fade.
 
-*Effort S · from Claude*
+### S2 · Merchant: stop the last offer hiding under 'March on'
+
+*Effort S · from Claude · done*
 
 **Proposed change**
 
@@ -277,11 +471,13 @@ Empty space and chrome that push the decision below the fold.
 
 > **My read, not Whales':** This one is mine, not Whales'. I spotted it in the screenshot.
 
-#### D1 · Dark art flags: no change
+**Result:** Re-checked: the last merchant row fades under 'March on' instead of cutting off, and isn't flagged.
 
-*Effort S · from Whales*
+### D1 · Dark art flags: no change
 
-**What Whales found**
+*Effort S · from Whales · done*
+
+**What Whales found (round 1)**
 
 - Hero pick #5: **Confirm whether the dark Fighter artwork is intentional**. The Fighter name and stats area is dark enough that faces or subjects may be hard to make out; may be a deliberate style
 - Battle setup (first deploy) #5: **Confirm whether Doyle's dark portrait is intentional**. the hero card art is dark enough that the character may be hard to make out
@@ -296,13 +492,15 @@ Empty space and chrome that push the decision below the fold.
 
 > **My read, not Whales':** I think these are false positives from the dark UI panels around the art. Reject this item if you do want the art brightened.
 
-### Verify
+**Result:** No change, as approved.
+
+## Verify
 
 Re-capture and re-critique after the fixes land.
 
-#### V1 · Commit the flow-capture script and re-critique after the fixes
+### V1 · Commit the flow-capture script and re-critique after the fixes
 
-*Effort S · from Claude*
+*Effort S · from Claude · done*
 
 **Proposed change**
 
@@ -312,13 +510,17 @@ Re-capture and re-critique after the fixes land.
 
 **Files:** `scripts/flow-shots.mjs (new)`, `docs/DESIGN_REVIEW.md`
 
-## Whales critiques (verbatim)
+**Result:** Done: scripts/flow-shots.mjs is committed, and all 11 screens were re-critiqued on the final build. The loss is still forced, so run-end numbers aren't real.
+
+## Whales critiques, round 1 (verbatim)
 
 ### Main menu · mobile 390×844
 
-![Main menu](shots/mobile-01-menu.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-01-menu.jpg) | ![after](after/mobile-01-menu.jpg) |
 
-Critique id `4793a732-c544-4991-a827-6cfe86efdb00` · goal (inferred): "establish game tone and direct returning players to start playing"
+Critique id `4793a732-c544-4991-a827-6cfe86efdb00` · re-critique `88a74763-ea82-4bd8-9af6-8979a035bcd6` · goal (confirmed by the designer): "establish game tone and direct returning players to start playing"
 
 Fieldwatch's title screen sets tone and points returning players to "Start a Run". The title and tagline are styled too quietly to carry that tone, and the menu icons are too small to read at a glance.
 
@@ -329,9 +531,11 @@ Fieldwatch's title screen sets tone and points returning players to "Start a Run
 
 ### Main menu · desktop 1440×900
 
-![Main menu](shots/desktop-01-menu.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/desktop-01-menu.jpg) | ![after](after/desktop-01-menu.jpg) |
 
-Critique id `55b6915a-63a1-4066-8b14-04654f0eeb26` · goal (inferred): "get players into a run quickly from the main menu"
+Critique id `55b6915a-63a1-4066-8b14-04654f0eeb26` · goal (confirmed by the designer): "get players into a run quickly from the main menu"
 
 Fieldwatch's main menu sells the game with a looping preview while funnelling every choice into one right-hand column ending in "Start a Run". The column's labels sit below WCAG AA contrast, the title is underweighted, and its intro block has no headline.
 
@@ -344,9 +548,11 @@ Fieldwatch's main menu sells the game with a looping preview while funnelling ev
 
 ### Hero pick · mobile 390×844
 
-![Hero pick](shots/mobile-02-hero-pick.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-02-hero-pick.jpg) | ![after](after/mobile-02-hero-pick.jpg) |
 
-Critique id `6ca85703-8474-40fe-9695-dc2559d46bf9` · goal (inferred): "let user select and confirm a starting hero class"
+Critique id `6ca85703-8474-40fe-9695-dc2559d46bf9` · re-critique `c13b4034-fc58-4e9b-a156-a6d5259c6f6e` · goal (confirmed by the designer): "let user select and confirm a starting hero class"
 
 This screen lets a player compare three hero classes and commit to one. The Fighter name and stats the choice rests on are styled too lightly, so all three options read as equal, and banners, filters and navigation eat 43% of the first screen.
 
@@ -360,9 +566,11 @@ This screen lets a player compare three hero classes and commit to one. The Figh
 
 ### Run map · mobile 390×844
 
-![Run map](shots/mobile-03-run-map.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-03-run-map.jpg) | ![after](after/mobile-03-run-map.jpg) |
 
-Critique id `925344e3-64b1-455a-a940-e2750ec80dbc` · goal (inferred): "let players evaluate their next move and party readiness before committing to a path"
+Critique id `925344e3-64b1-455a-a940-e2750ec80dbc` · re-critique `abb371f4-5df1-45c4-ae8c-82bc58e4f41e` · goal (confirmed by the designer): "let players evaluate their next move and party readiness before committing to a path"
 
 Players use this screen to weigh the next map node against party readiness before committing to a path. But the March commit button is styled below primary importance, and the readiness labels it depends on — GEAR, DPS, equipment slots — sit at contrast levels that fail WCAG AA.
 
@@ -375,9 +583,11 @@ Players use this screen to weigh the next map node against party readiness befor
 
 ### Battle setup (first deploy) · mobile 390×844
 
-![Battle setup (first deploy)](shots/mobile-04-battle-setup.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-04-battle-setup.jpg) | ![after](after/mobile-04-battle-setup.jpg) |
 
-Critique id `12054830-f867-42bb-8b0e-be930d2d401a` · goal (inferred): "guide new players through their first hero deployment without distraction"
+Critique id `12054830-f867-42bb-8b0e-be930d2d401a` · re-critique `90b58aa8-35ef-402d-a1b7-9f0153cb3fa1` · goal (confirmed by the designer): "guide new players through their first hero deployment without distraction"
 
 The screen sets up a first hero placement before the wave starts. But the hero card the tutorial points to is under-styled, attention spreads instead of funnelling, and the instruction text and HUD icons fall below readable contrast and size.
 
@@ -395,9 +605,11 @@ The screen sets up a first hero placement before the wave starts. But the hero c
 
 ### Wave in progress · mobile 390×844
 
-![Wave in progress](shots/mobile-05-wave-in-progress.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-05-wave-in-progress.jpg) | ![after](after/mobile-05-wave-in-progress.jpg) |
 
-Critique id `eedbbabb-1011-47a7-901b-e40778c61b5d` · goal (inferred): "guide new players through active tower-defense battles with clear next actions"
+Critique id `eedbbabb-1011-47a7-901b-e40778c61b5d` · re-critique `da5cf798-f6f6-4110-b1dd-119de305cc56` · goal (confirmed by the designer): "guide new players through active tower-defense battles with clear next actions"
 
 An active tower-defense battle meant to walk new players through one tap sequence. The pieces that sequence depends on — the hero roster, the instruction banner, "Next wave" — are outweighed by ambient status readouts, and small icons plus low-contrast labels add strain.
 
@@ -418,9 +630,11 @@ _Note: Whales' report was cut off at its token limit after these rows; the rest 
 
 ### Wave in progress · desktop 1440×900
 
-![Wave in progress](shots/desktop-05-wave-in-progress.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/desktop-05-wave-in-progress.jpg) | ![after](after/desktop-05-wave-in-progress.jpg) |
 
-Critique id `e062149a-2159-4b73-8a1b-9fbd2658bf44` · goal (inferred): "keep the player focused on the playfield while keeping reference data glanceable during hero placement"
+Critique id `e062149a-2159-4b73-8a1b-9fbd2658bf44` · re-critique `ad7fd232-b5e1-4f65-8351-4ce9d444b0b9` · goal (confirmed by the designer): "keep the player focused on the playfield while keeping reference data glanceable during hero placement"
 
 This is the placement phase of a tower-defense battle: an open playfield on the left, reference panels on the right. The instruction that drives placement is styled too quietly to lead, the page heading is clipped away, and 24 text elements plus seven icons fall below readable contrast and size.
 
@@ -440,9 +654,11 @@ _Note: Whales' report was cut off at its token limit; the rest of "Also noticed"
 
 ### Wave cleared · mobile 390×844
 
-![Wave cleared](shots/mobile-06-wave-cleared.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-06-wave-cleared.jpg) | ![after](after/mobile-06-wave-cleared.jpg) |
 
-Critique id `86181611-6851-49a8-abe9-9561f6e82760` · goal (inferred): "display wave-clear outcome and rewards while presenting the hero roster and funneling the player to continue"
+Critique id `86181611-6851-49a8-abe9-9561f6e82760` · re-critique `43d58d65-b643-4f2a-82b0-5903c50eacd8` · goal (confirmed by the designer): "display wave-clear outcome and rewards while presenting the hero roster and funneling the player to continue"
 
 The screen delivers a wave-clear payoff and pushes the player to continue. But the Continue button and its rewards confirmation are styled well below primary and sit before a large image that pulls the eye past them, and several labels and icons fall under readable thresholds.
 
@@ -460,9 +676,11 @@ The screen delivers a wave-clear payoff and pushes the player to continue. But t
 
 ### Spoils · mobile 390×844
 
-![Spoils](shots/mobile-07-spoils.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-07-spoils.jpg) | ![after](after/mobile-07-spoils.jpg) |
 
-Critique id `e2564d10-76bf-45bc-98b4-6626759e73ab` · goal (inferred): "let players make informed tradeoff decisions when selecting post-battle rewards"
+Critique id `e2564d10-76bf-45bc-98b4-6626759e73ab` · re-critique `fcc0ade2-3e14-4c68-94ea-eac942b29d5b` · goal (confirmed by the designer): "let players make informed tradeoff decisions when selecting post-battle rewards"
 
 This screen asks players to weigh three mutually exclusive loot cards and commit to one. Right now the Piercing Bow option reads as weaker than its peers, the confirm button barely registers, and banners, filters and navigation eat 46% of the first screen.
 
@@ -476,9 +694,11 @@ This screen asks players to weigh three mutually exclusive loot cards and commit
 
 ### Merchant · mobile 390×844
 
-![Merchant](shots/mobile-08-merchant.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-08-merchant.jpg) | ![after](after/mobile-08-merchant.jpg) |
 
-Critique id `0e89777d-7cda-43ca-a850-5a4ecb886d50` · goal (inferred): "let the player purchase items from a shop by choosing from available offers within their gold budget"
+Critique id `0e89777d-7cda-43ca-a850-5a4ecb886d50` · re-critique `315cc62a-65d5-48db-a06f-f0c43a3d054c` · goal (confirmed by the designer): "let the player purchase items from a shop by choosing from available offers within their gold budget"
 
 Shop screen where players weigh priced offers against their gold and buy. The gold balance that drives every decision is underplayed, one price is effectively invisible, and top chrome eats space the offer list needs.
 
@@ -492,9 +712,11 @@ Shop screen where players weigh priced offers against their gold and buy. The go
 
 ### Run lost · mobile 390×844
 
-![Run lost](shots/mobile-09-run-lost.jpg)
+| Before | After round 1 |
+|---|---|
+| ![before](shots/mobile-09-run-lost.jpg) | ![after](after/mobile-09-run-lost.jpg) |
 
-Critique id `bd47f544-f126-4dfd-b4cf-1e7545879ed6` · goal (inferred): "soften permadeath failure by providing meaningful post-mortem and stats recap, then encourage immediate retry"
+Critique id `bd47f544-f126-4dfd-b4cf-1e7545879ed6` · re-critique `449a6922-3edc-4946-a706-fd4e3f3db0c9` · goal (confirmed by the designer): "soften permadeath failure by providing meaningful post-mortem and stats recap, then encourage immediate retry"
 
 Whales could not write the full critique for this screen: it lacked measurements for its two main findings (an underweighted headline and distributed focus). It gave one well-evidenced finding.
 

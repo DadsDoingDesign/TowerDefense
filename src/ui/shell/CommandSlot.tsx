@@ -29,7 +29,10 @@ export function CommandSlot() {
   if (hud.breather) {
     return (
       <button
-        className="sh-command ready"
+        // `next`: while a sub-wave is held this is the ONE thing to do, so it
+        // wears the primary treatment (Whales UI plan A1) — a Watch Command
+        // beside it is an option, and keeps the quieter gold outline.
+        className="sh-command ready next"
         onClick={resume}
         aria-label={`Sub-wave ${hud.subWave} of ${hud.subWaveCount} held. Send the next sub-wave.`}
       >

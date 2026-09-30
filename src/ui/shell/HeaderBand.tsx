@@ -67,7 +67,16 @@ export function HeaderBand() {
           role="img"
           aria-label={mode === 'endless' ? `Round ${round}` : `Depth ${depth} of ${lastLayer}`}
         >
-          {mode === 'endless' ? `Round ${round}` : `Depth ${depth}/${lastLayer}`}
+          {/* H2: "Depth 1" is the heading and "/12" the context — they were one
+              run of same-size text, so the block read without a headline. */}
+          {mode === 'endless' ? (
+            `Round ${round}`
+          ) : (
+            <>
+              <b className="sh-chip-lead">Depth {depth}</b>
+              <span className="sh-chip-of">/{lastLayer}</span>
+            </>
+          )}
         </span>
         {mode === 'campaign' && threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the

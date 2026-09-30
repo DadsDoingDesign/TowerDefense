@@ -29,9 +29,22 @@
      Both muted steps are now AA on every ground the shell actually paints —
      `--panel`, `--panel-2`, `--bg`, `--bg-2` and the `--surface` wash — and the
      step between them is still 1.2:1 so the hierarchy survives. Measured:
-     `--muted` 7.00 / `--muted-2` 5.63 on `--panel`; 5.79 / 4.65 on `--surface`. */
-  --muted: #c4ad8c;
-  --muted-2: #b39a78;
+     `--muted` 7.00 / `--muted-2` 5.63 on `--panel`; 5.79 / 4.65 on `--surface`.
+
+     Whales UI plan R1 (2026-09-29): measured on real renders, the 11px labels
+     these carry (GEAR, DPS, DEPLOYED, SPEED, "recruit a hero") still read at
+     3.0-4.5:1 once anti-aliasing and the stacked parchment washes are counted —
+     `--muted-2` fell to 3.56:1 on `--surface-strong` over `--panel-2`. Both
+     steps moved up one notch so the WORST ground clears AA:
+     `--muted` 8.55 on `--panel`, 5.40 on the strong wash; `--muted-2` 7.71 / 4.87.
+     `tests/contrast.test.ts` holds every text token to that floor. */
+  --muted: #d4c0a0;
+  --muted-2: #ccb694;
+  /* A DIMMED state — disabled, unaffordable, spent — as a colour rather than as
+     `opacity`. Opacity dragged whole controls to 1.0-2.5:1 (the merchant's
+     unaffordable prices, disabled CTAs); this still reads as "not now" beside
+     `--muted` but holds 4.5:1 on `--panel-2`, the ground those rows sit on. */
+  --dim: #b39a78;
   --accent: #e0ac4c;
   --accent-dim: rgba(224, 172, 76, 0.16);
   --teal: #57a2b6;
@@ -136,6 +149,20 @@
    * remaining case that got it wrong can read the same value as the rest.
    */
   --ink-on-fill: #1b1409;
+
+  /* Icon sizes (Whales UI plan I1). Whole multiples of the 16px sprite only —
+     see `.fw-i`: a fractional scale breaks the 1px silhouette. `--icon-lg` is
+     for icons that stand on their own (menu rows, map nodes, recap tiles);
+     inline marks beside a text label stay at `--icon-sm`. */
+  --icon-sm: 16px;
+  --icon-md: 32px;
+  --icon-lg: 48px;
+
+  /* The primary button's lift (A1): a lighter top edge and a drop, so the one
+     next step stands off the bright field art without changing its fill — the
+     fill is pinned by `--cta-ink` contrast (4.67:1), so it cannot brighten. */
+  --cta-edge: #57a2b6;
+  --cta-lift: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 3px 0 rgba(0, 0, 0, 0.38);
 
   /* Standard control heights */
   --row-h: 48px;

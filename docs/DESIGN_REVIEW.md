@@ -2130,3 +2130,13 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   now keyed by table key (15). The restock copy said "four items" under Vow 1
   and with the Seal. The campfire blurb said "rest or train" beside a third
   forage row. Verified at 390×844 and 375×667.
+- **2026-09-29 — Whales UI critique, round 1 (approved items).** Captured the
+  whole run on phone and desk (`scripts/flow-shots.mjs`), had Whales critique
+  11 screens, and built the ten items the designer approved
+  (`docs/whales-critique/PLAN.md`). Muted text ramp lifted one step and held by
+  `tests/contrast.test.ts`; opacity dimming replaced with a `--dim` colour;
+  48px (3x) icons where the picture stands for the row; one primary treatment
+  for the next step; the merchant's gold as a headline and "need N" on prices
+  you can't pay. Re-critiqued on the final build: the phone's contrast failures
+  are gone and the desk rail went from 24 to 15. Still open: primary buttons
+  read quiet (A1-2), plus the six reworked items in round 2.

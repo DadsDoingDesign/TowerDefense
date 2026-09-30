@@ -582,8 +582,11 @@
 }
 :root[data-contrast='high'] {
   --text: #fff8ec;
-  --muted: #ddc8a4;
-  --muted-2: #bda680;
+  /* Kept a step ABOVE the normal ramp — high contrast must never be dimmer
+     than the default, which it would have been once R1 lifted `--muted-2`. */
+  --muted: #e6d4b4;
+  --muted-2: #dcc8a6;
+  --dim: #c4ad8c;
   --line: rgba(255, 242, 214, 0.3);
   --line-strong: rgba(255, 242, 214, 0.5);
   --panel: #241a10;

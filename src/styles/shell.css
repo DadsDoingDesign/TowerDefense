@@ -361,6 +361,7 @@
 }
 .sh-hero-tag {
   font-size: var(--fs-micro);
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-2);
@@ -754,7 +755,10 @@
 }
 .sh-btn.primary {
   background: var(--cta);
-  border-color: var(--cta);
+  /* A1: the teal edge and lift mark THE next step on every screen (March,
+     Start Wave, Continue) without brightening the fill under its ink. */
+  border-color: var(--cta-edge);
+  box-shadow: var(--cta-lift);
   color: var(--cta-ink);
   font-family: var(--font-display);
   font-size: var(--fs-lg);
@@ -794,8 +798,26 @@
   justify-content: space-between;
   font-size: var(--fs-micro);
   letter-spacing: 0.08em;
-  color: var(--muted-2);
+  /* H2: GEAR / PACK are the panels' headings — they were the faintest,
+     lightest-weight text in their own column. Weight and ink now outrank the
+     slot labels and counts below them; the size stays on the 11px floor so
+     the narrow gear column does not wrap. */
+  font-weight: 700;
+  color: var(--text);
   margin-bottom: 6px;
+}
+/* H2, second pass (Whales re-critique): the PACK and GEAR words must also be
+   LARGER than the panel's body text, or the block still has no headline. The
+   word takes `--fs-sm`; the count and the hero's name under it stay small. */
+.sh-col-head > span:first-child {
+  font-size: var(--fs-sm);
+}
+.sh-col-count,
+.sh-gear-who {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .sh-gear-slots {
@@ -845,8 +867,14 @@
    slot's), which lifted the ground enough to drop this to 3.86:1. The brighter
    step clears AA on the composite. */
 .sh-slot-mark {
-  font-size: var(--fs-md);
+  font-size: var(--fs-lg);
+  line-height: 1;
   color: var(--rail, var(--muted));
+}
+/* I1: what a slot is wearing, at 2x — the 16px sprite under an 11px label was
+   the smallest picture in the shell. 32 still fits the ~70px slot at 390x844. */
+.sh-slot-mark .fw-i {
+  --fw-i-size: var(--icon-md);
 }
 
 .sh-pack.filtering {
@@ -1994,10 +2022,12 @@
 .sh-stage.stage-map .mn-glyph {
   display: grid;
   place-items: center;
-  height: 32px;
+  height: var(--icon-lg);
 }
+/* I1: the node's picture IS what the node is (battle, merchant, shrine), so it
+   takes the stand-alone size. 48 = 3x the sprite, an integer scale. */
 .sh-stage.stage-map .mn-glyph .fw-i {
-  --fw-i-size: 32px;
+  --fw-i-size: var(--icon-lg);
 }
 .sh-stage.stage-map .map-node.locked {
   opacity: 1;
@@ -2008,10 +2038,18 @@
   color: var(--muted);
 }
 .sh-stage.stage-map .map-node.locked .mn-glyph {
-  opacity: 0.72;
+  /* R1: held back by desaturating the picture, not by fading the node. */
+  filter: saturate(0.35) brightness(0.85);
 }
 .sh-stage.stage-map .map-node.cleared {
-  opacity: 0.72;
+  opacity: 1;
+  background: var(--panel);
+}
+.sh-stage.stage-map .map-node.cleared .mn-label {
+  color: var(--muted-2);
+}
+.sh-stage.stage-map .map-node.cleared .mn-glyph {
+  filter: saturate(0.5);
 }
 .sh-stage.stage-map .map-node.reachable .mn-label {
   color: var(--text);
@@ -2054,9 +2092,13 @@
   grid-column: 1 / -1;
 }
 
-/* Phase 3a: a spent Watch Command reads as spent. */
+/* Phase 3a: a spent Watch Command reads as spent — in colour, not opacity
+   (R1), so its label stays readable while it recharges. */
 .sh-command:disabled {
-  opacity: 0.5;
+  opacity: 1;
+  background: var(--panel);
+  border-color: var(--line-strong);
+  color: var(--dim);
 }
 
 /* Phase 3a — boss phase pips in the nameplate (`.sh-bossplate-extra`). */
@@ -2079,4 +2121,18 @@
 }
 .sh-bossphase-label {
   margin-left: 2px;
+}
+
+/* H2 — the Depth chip leads with the depth and tucks the total behind it. */
+.sh-chip-lead {
+  font-weight: 700;
+  color: var(--text);
+}
+.sh-chip-lead {
+  font-size: 1.15em;
+}
+.sh-chip-of {
+  color: var(--muted-2);
+  font-weight: 400;
+  font-size: 0.85em;
 }

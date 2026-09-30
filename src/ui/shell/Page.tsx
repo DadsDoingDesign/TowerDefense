@@ -59,6 +59,8 @@ export function PageLayout({
     danger?: boolean
     /** Drawn after the label as the currency's mark and the number (Wave 1). */
     cost?: { amount: number; currency: Currency }
+    /** A quiet consequence after the price — "62 left" on a Buy (Whales UI plan A2). */
+    after?: string
   }
   /**
    * Announce this page's title block when it appears (F9).
@@ -148,6 +150,7 @@ export function PageLayout({
                 <Money amount={cta.cost.amount} c={cta.cost.currency} />
               </>
             )}
+            {cta.after && <span className="pg-cta-after"> → {cta.after}</span>}
           </button>
         </div>
       )}
@@ -184,6 +187,7 @@ export function MenuRow({
   dim,
   pips,
   art,
+  big,
 }: {
   label: string
   value?: ReactNode
@@ -234,10 +238,16 @@ export function MenuRow({
   pips?: { on: number; of: number }
   /** A real sprite in the icon slot — a hero for hire. */
   art?: string
+  /**
+   * The picture stands for the row (the Watchtower menu, run-end exits), so it
+   * draws at `--icon-lg` and the row grows to hold it (Whales UI plan I1).
+   * Offer rows stay at the standard height — there the name carries the row.
+   */
+  big?: boolean
 }) {
   return (
     <button
-      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''}`}
+      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`}
       style={rail ? ({ '--rail': rail } as CSSProperties) : undefined}
       onClick={onClick}
       disabled={!onClick || disabled}
@@ -319,9 +329,25 @@ export function RarityTag({ rarity, suffix }: { rarity: ItemRarity; suffix?: str
   )
 }
 
-/** A price as the currency's mark and the number. */
-export const priceNode = (p: { amount: number; currency: Currency }, short?: boolean) => (
-  <Money amount={p.amount} c={p.currency} note={short ? 'not enough yet' : undefined} />
+/**
+ * A price as the currency's mark and the number. `short` marks a price you
+ * cannot pay yet; given as a number it is the shortfall, and the row says it
+ * out loud — "need 18" — so the dimmed price is still a decision you can read
+ * (Whales UI plan R2).
+ */
+export const priceNode = (p: { amount: number; currency: Currency }, short?: boolean | number) => (
+  <>
+    <Money
+      amount={p.amount}
+      c={p.currency}
+      note={typeof short === 'number' ? `not enough yet, ${short} more needed` : short ? 'not enough yet' : undefined}
+    />
+    {typeof short === 'number' && short > 0 && (
+      <span className="pg-need" aria-hidden="true">
+        need {short}
+      </span>
+    )}
+  </>
 )
 
 /**

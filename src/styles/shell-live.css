@@ -83,6 +83,17 @@
   font-size: var(--fs-xs);
   font-weight: 700;
 }
+/* A held sub-wave's "Next ▶" is the turn's next step, so it takes the primary
+   treatment that "Start Wave" has — filled teal, edge and lift (A1). */
+.sh-command.next {
+  padding: 0 16px;
+  border-color: var(--cta-edge);
+  background: var(--cta);
+  box-shadow: var(--cta-lift);
+  color: var(--cta-ink);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+}
 
 /* ---------------------------------------------------------------- the Stage */
 .sh-stage .battle-canvas-wrap {

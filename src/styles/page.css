@@ -105,6 +105,11 @@
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
+  /* A1 — the same edge and lift as `.sh-btn.primary`, so Take it, Buy and Run
+     again read as the one next step against the warm art. */
+  box-shadow:
+    inset 0 0 0 1px var(--cta-edge),
+    var(--cta-lift);
   transition: filter 0.12s ease;
 }
 .pg-cta:active:not(:disabled) {
@@ -218,7 +223,8 @@
    is the whole point of showing it rather than hiding it. */
 .pg-row:disabled {
   cursor: default;
-  opacity: 0.45;
+  /* R1: a colour state, not opacity — at .45 the whole row fell under 2.5:1. */
+  color: var(--dim);
 }
 .pg-row.danger .pg-row-label {
   color: var(--bad-text);
@@ -805,9 +811,13 @@
 
 /* When the body scrolls, fade its bottom edge so a half-cut row reads as
    "more below" rather than as a clipping bug. */
+/* S2: 24px was too short a fade to read as one — the merchant's seventh row
+   looked cut off behind "March on" rather than scrolled. The fade is exactly the
+   band's bottom padding, so a body that does NOT overflow fades only empty
+   space; any more and it greys out real content (the run-end recap did). */
 .pg-body {
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--band-pad)), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--band-pad)), transparent 100%);
 }
 .pg-body:not(:has(> :nth-child(2))) {
   -webkit-mask-image: none;
@@ -1003,10 +1013,22 @@
   font-weight: 600;
 }
 
-/* A row you cannot afford yet: dimmed, still tappable, and it says so. */
-.pg-row.dim .pg-row-val,
+/* A row you cannot afford yet: dimmed, still tappable, and it says so.
+   R2 — the price is what you read to decide whether to save for it, and at
+   opacity .55 it measured 1.0:1. It is `--dim` now (5.0:1 on the row), the
+   picture is desaturated instead of faded, and `.pg-need` says how far off. */
+.pg-row.dim .pg-row-val {
+  color: var(--dim);
+}
 .pg-row.dim .pg-row-icon {
-  opacity: 0.55;
+  filter: saturate(0.3) brightness(0.9);
+}
+.pg-need {
+  margin-left: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--dim);
+  white-space: nowrap;
 }
 .pg-row.dim .pg-row-label {
   color: var(--muted);
@@ -1130,4 +1152,72 @@
 .pg-vol input[type='range']:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: 4px;
+}
+
+/* =====================================================================
+   Whales UI plan (2026-09-29) — approved items S1, A2, I1
+   ===================================================================== */
+
+/* S1: on the event boards (merchant, spoils) the pack strip closes the head,
+   and the head's bottom band plus the body's top band stacked 64px of nothing
+   between the strip and the first offer. Hero pick had the same gap under its
+   blurb. The head still keeps its 32px top; only the seam between the two
+   bands closes. */
+.pg-head:has(> .pg-strip),
+.pg:has(.pg-portraits) > .pg-head,
+.pg:has(.pg-recap) > .pg-head {
+  padding-bottom: 12px;
+}
+.pg-head:has(> .pg-strip) + .pg-body,
+.pg:has(.pg-portraits) > .pg-body,
+.pg:has(.pg-recap) > .pg-body {
+  padding-top: 8px;
+}
+/* Run end joins S1 because of I1: its two exit rows grew 8px each to carry
+   48px icons, and that pushed the company recap under the body's fade. The
+   same empty seam pays for it, so the recap stays fully on screen. */
+
+/* A2: your gold is the number every price on a board is compared against, so
+   it is the board's status line — display type, a size up from the offers. */
+.pg-res .pg-chip {
+  padding: 4px 14px;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: 1.1;
+}
+.pg-res .pg-chip .fw-i {
+  --fw-i-size: var(--icon-md);
+  vertical-align: -8px;
+}
+.pg-res .pg-chip-word {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--fs-sm);
+}
+/* The purse after this purchase, riding on the Buy button. */
+.pg-cta-after {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* I1: rows whose picture stands for the row — the Watchtower menu, the run-end
+   exits — carry it at 48px (3x), and the row grows to hold it. */
+.pg-row.big {
+  height: auto;
+  min-height: 56px;
+  padding-block: 4px;
+}
+.pg-row.big .pg-row-icon .fw-i.lg {
+  --fw-i-size: var(--icon-lg);
+  vertical-align: middle;
+}
+.pg-row.big .pg-row-glyph {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  font-size: var(--fs-xl);
+}
+/* The recap tiles on run end: the picture is the tile. */
+.pg-tile-art .fw-i.lg {
+  --fw-i-size: var(--icon-lg);
 }
