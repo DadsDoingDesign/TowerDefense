@@ -73,6 +73,13 @@ export const recruitHub = (relics: readonly string[] = []) => ({
 export const WAVE_BEAT_MS = 900
 export const WAVE_BEAT_LOSS_MS = 550
 /** The live hold's timer, and the one flag that lets a settlement through it. */
+/**
+ * Q10 — the kinds the live wave is introducing to the Codex (none of them in
+ * it before this wave started). Session-only: the enemy info card keeps such a
+ * kind "not met yet" until one has actually spawned. Set by `startWave`.
+ */
+export const waveFirsts: { kinds: ReadonlySet<string> } = { kinds: new Set() }
+
 export const beat: { timer: ReturnType<typeof setTimeout> | null; settling: boolean } = { timer: null, settling: false }
 
 /**

@@ -805,7 +805,10 @@ h1.sh-brand {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  /* Q10 — 12px, not 4: each portrait is a button whose 44px target reaches
+     6px past its 32px art, and 32 + 12 keeps neighbours' targets apart
+     (`chipsThatFit` measures with the same number). */
+  gap: 12px;
   height: var(--icon-md);
 }
 .sh-wq-chip {
@@ -813,8 +816,35 @@ h1.sh-brand {
   flex: 0 0 var(--icon-md);
   width: var(--icon-md);
   height: var(--icon-md);
+  /* The touch pass (`app.css`) floors every button at 44px tall; this one's
+     44px target is the ::before below, so the art keeps its 32px box and the
+     strip its 44px row. */
+  min-height: 0;
+  padding: 0;
+  border: 0;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+/* Q10 — the 44px hit area round the 32px art (invisible). */
+.sh-wq-chip::before,
+.sh-wq-more::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+/* The kind whose card is open wears the accent, so the card's pointer and
+   the portrait agree on which one it is about. */
+.sh-wq-chip[aria-expanded='true'] {
+  /* Inset: an outer ring would touch the caption 1px above the strip's row. */
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+@media (hover: hover) {
+  .sh-wq-chip:hover {
+    background: rgba(0, 0, 0, 0.45);
+  }
 }
 /* The next body through the gate. */
 .sh-wq-chip.next {
@@ -850,11 +880,27 @@ h1.sh-brand {
   bottom: -3px;
 }
 .sh-wq-more {
+  /* Q10 — counts ENEMIES left after the portraits ("+7"), and is a button:
+     it opens the card on the first kind it stands for. */
+  position: relative;
   flex: 0 0 auto;
-  min-width: 20px;
+  /* `MORE` in enemyQueue.ts reserves 32px: "+17" is 24 + 3 + 3 + 2. */
+  min-width: 28px;
+  height: var(--icon-md);
+  min-height: 0; /* see .sh-wq-chip */
+  padding: 0 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
   font-size: var(--fs-xs);
   font-weight: 700;
-  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  cursor: pointer;
+}
+.sh-wq-more[aria-expanded='true'] {
+  border-color: var(--accent);
 }
 .sh-wq-empty {
   min-width: 0;
@@ -870,4 +916,213 @@ h1.sh-brand {
   font-size: var(--fs-sm);
   color: var(--text);
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Q10 — the enemy info card
+   ==========================================================================
+   A small NON-modal card that rises from the wave strip's top edge when a
+   queue portrait is tapped: what the Watch has learned about that enemy, "?"
+   for what it has not. Fixed-positioned by `EnemyCard` (portalled to <body>,
+   so no band's overflow can clip it); the wave keeps running under it. */
+.sh-ec {
+  position: fixed;
+  z-index: 40;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  --accent: var(--accent-text);
+}
+.sh-ec:focus {
+  outline: none;
+}
+.sh-ec:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+}
+.sh-ec-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sh-ec-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.3);
+}
+/* The queue's 32px bake at exactly 2x — an integer scale, nearest-neighbour. */
+.sh-ec-art-img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+.sh-ec.lvl-new .sh-ec-art-img {
+  /* Not met: a silhouette-ish read, so "?" below is what the picture says too. */
+  filter: grayscale(1) brightness(0.7);
+}
+.sh-ec-boss {
+  position: absolute;
+  left: -3px;
+  bottom: -3px;
+}
+.sh-ec-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sh-ec-kicker {
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sh-ec.lvl-known .sh-ec-kicker {
+  color: var(--accent);
+}
+.sh-ec-name {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.sh-ec-count {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sh-ec-close {
+  flex: 0 0 auto;
+  min-width: var(--hit-min);
+  height: var(--hit-min);
+  margin: -6px -6px 0 0;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+.sh-ec-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.sh-ec-stats > div {
+  display: contents;
+}
+.sh-ec-stats dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sh-ec-stats dd {
+  margin: 0;
+  min-width: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sh-ec-stats small {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+.sh-ec-q {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.sh-ec-trick {
+  display: block;
+}
+.sh-ec-trick + .sh-ec-trick {
+  margin-top: 4px;
+}
+.sh-ec-trick small {
+  display: block;
+  margin-top: 1px;
+}
+.sh-ec-mod {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sh-ec-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.sh-ec-learn {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sh-ec-pips {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+.sh-ec-pips i {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+.sh-ec-pips i.on {
+  background: var(--accent);
+}
+.sh-ec-nav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sh-ec-nav button {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin: -6px 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-lg);
+  cursor: pointer;
 }

@@ -3,7 +3,7 @@ import { FIRST_MAP } from '../src/game/data/maps'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { WaveDef } from '../src/game/types'
-import { chipsThatFit, lineUp, lineUpWords, queueFor, spawnOrder } from '../src/ui/shell/enemyQueue'
+import { chipsThatFit, lineUp, lineUpWords, moreCount, queueFor, spawnOrder } from '../src/ui/shell/enemyQueue'
 
 /**
  * G2-2 — the wave strip's enemy queue. `spawnOrder` restates the engine's
@@ -108,12 +108,39 @@ describe('enemy queue (G2-2)', () => {
   })
 
   it('chipsThatFit: at most three kinds, and room for "+N" when some are left out', () => {
+    // Q10: 32px portraits 12px apart (44px targets that do not overlap), and a
+    // 12px gap + 32px "+N" tail when anything is left out.
     expect(chipsThatFit(400, 7)).toBe(3)
     expect(chipsThatFit(400, 2)).toBe(2)
-    expect(chipsThatFit(104, 3)).toBe(3) // three, nothing left out
-    expect(chipsThatFit(104, 4)).toBe(2) // two + "+2"
-    expect(chipsThatFit(60, 4)).toBe(1)
-    expect(chipsThatFit(40, 4)).toBe(0)
+    expect(chipsThatFit(120, 3)).toBe(3) // three, nothing left out: 3×32 + 2×12
+    expect(chipsThatFit(120, 4)).toBe(2) // two + "+N": 2×32 + 12 + 12 + 32
+    expect(chipsThatFit(119, 4)).toBe(1)
+    expect(chipsThatFit(76, 4)).toBe(1) // 32 + 12 + 32
+    expect(chipsThatFit(75, 4)).toBe(0)
     expect(chipsThatFit(0, 0)).toBe(0)
+  })
+
+  it('Q10 — "+N" counts the ENEMIES after the shown portraits, not the kinds', () => {
+    const entries = lineUp([
+      { typeId: 'torch1', group: 0 },
+      { typeId: 'torch1', group: 0 },
+      { typeId: 'tnt1', group: 0 },
+      { typeId: 'barrel1', group: 0 },
+      { typeId: 'torch2', group: 0 },
+      { typeId: 'torch2', group: 0 },
+      { typeId: 'torch2', group: 0 },
+      { typeId: 'barrel1', group: 1 },
+      { typeId: 'tnt2', group: 1 },
+      { typeId: 'tnt2', group: 1 },
+      { typeId: 'tnt2', group: 1 },
+      { typeId: 'tnt2', group: 1 },
+    ])
+    // torch1 ×2, tnt1 ×1, barrel1 ×2, torch2 ×3, tnt2 ×4 — five kinds, twelve bodies.
+    expect(entries.map((e) => e.count)).toEqual([2, 1, 2, 3, 4])
+    expect(moreCount(entries, 3)).toBe(7) // torch2 ×3 + tnt2 ×4 — not "+2"
+    expect(moreCount(entries, 1)).toBe(10)
+    expect(moreCount(entries, 5)).toBe(0)
+    expect(moreCount(entries, 0)).toBe(12)
+    expect(moreCount([], 3)).toBe(0)
   })
 })

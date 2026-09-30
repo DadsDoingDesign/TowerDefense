@@ -2310,3 +2310,26 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   (4) focus dropping to <body> when `Random seed` removed itself. Cost: on a
   plain run the header is ~52px taller, so on a 390×844 phone the Vow chips
   now start just under the fold (they were ~40px above it).
+- **2026-09-30 — Q10: "+N" counts enemies; tap a portrait for what you know
+  about it.** The wave strip's "+N" now counts the enemies after the portraits
+  ("+8"), not the kinds. The portraits are buttons: 32px art, a 44px target,
+  and 12px gaps so two targets never overlap. The "+N" is a button too. A tap
+  opens a small card that does not block the game. It sits on the strip's top
+  edge, the wave keeps running under it, and Esc, Close or a tap outside shuts
+  it and puts focus back on the portrait. ‹ › step through every kind in the
+  queue. The card shows only what the Watch has learned. A kind you have never
+  faced shows its name, a greyed portrait and its armour; armour and elite
+  modifiers are on every wave's scouting report anyway. HP, pace, tricks and
+  Gate cost show "?". Once you have faced it, HP and pace appear. HP is this
+  wave's real figure with Threat counted, and pace comes with the time it takes
+  to cross this lane. Once you have felled 5 (1 for a champion), its tricks,
+  the counter to them and its Gate cost appear. The loop caught four things.
+  The touch pass's 44px floor on every button stretched the chips over the
+  caption, so the art keeps 32px and a ::before carries the target. Kinds new
+  to this wave read "Met" in the breather before one had spawned, because the
+  Codex notes the whole line-up when a wave starts; they stay "Not met yet"
+  until one walks out. A kind that finished spawning while its card was open
+  read "×0 still to come". "+10" was wider than the room kept for it. Checked
+  at 390×844, 320×568 and 1440×900 in setup, live and held, with a mixed wave
+  swapped in through the dev store. On 320×568 the card still covers most of
+  the small field while it is open.

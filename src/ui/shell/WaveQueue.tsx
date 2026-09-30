@@ -1,36 +1,55 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ANIM_FRAMES } from '../../game/render/anim'
-import { pixmap } from '../../game/render/pixmap'
-import { artFor, getSprite, onSpritesReady } from '../../game/render/sprites'
-import { barrelCell } from '../../game/render/units'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { Icon } from '../Icon'
-import { chipsThatFit, lineUpWords, QUEUE_CHIP, type LineUpEntry } from './enemyQueue'
+import { chipsThatFit, lineUpWords, moreCount, type LineUpEntry } from './enemyQueue'
+import { EnemyCard } from './EnemyCard'
+import { EnemyPortrait } from './EnemyPortrait'
 
 /**
  * The wave strip's enemy queue (G2-2): small portraits in spawn order, next one
  * first, each with its count. It sits where the kill-progress bar was and takes
  * exactly the bar's room — no new row, no new panel.
  *
- * Glance-only by design (not tappable in this build): the composition panel
- * one band up is where an enemy is read in full. The whole queue is ONE image
- * to assistive tech, named with every kind and count — including the kinds
- * that did not fit — so the "+N" is never the only statement of what is left.
+ * Q10 — tappable now. Each portrait is a button with a 44px hit area round
+ * its 32px art; tapping one opens the enemy info card (`EnemyCard`) with what
+ * the Watch has learned about it. "+N" counts the ENEMIES still to come after
+ * the portraits (not kinds) and opens the card on the first of them; the card's
+ * ‹ › reach every kind. The queue is one GROUP to assistive tech, named with
+ * every kind and count — including the kinds that did not fit — so the "+N"
+ * is never the only statement of what is left.
  */
-
-const CHIP = QUEUE_CHIP
 
 export function WaveQueue({
   entries,
   lead,
   emptyText,
+  countNote,
 }: {
   entries: LineUpEntry[]
   /** What the accessible name opens with — "Still to come", "Next sub-wave"… */
   lead: string
   /** Shown when nothing is queued (every body is already on the field). */
   emptyText: string
+  /** Q10 — the info card's count line: "still to come", "in this wave"… */
+  countNote: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  // Q10 — the open info card: which kind, and the button that opened it.
+  const [card, setCard] = useState<{ typeId: string; opener: HTMLElement } | null>(null)
+  const closeCard = useCallback((restore: boolean) => {
+    setCard((c) => {
+      if (c && restore) {
+        // Back to the portrait for the kind on the card if it is still in the
+        // strip (‹ › may have moved on), else to the button that opened it.
+        const root = ref.current
+        const own = root?.querySelector<HTMLElement>(`[data-wq-type="${CSS.escape(c.typeId)}"]`)
+        const back = own ?? (c.opener.isConnected ? c.opener : root?.querySelector<HTMLElement>('.sh-wq-more'))
+        queueMicrotask(() => back?.focus({ preventScroll: true }))
+      }
+      return null
+    })
+  }, [])
+  const toggle = (typeId: string, opener: HTMLElement) =>
+    setCard((c) => (c && c.typeId === typeId && c.opener === opener ? null : { typeId, opener }))
   const [width, setWidth] = useState(0)
   useLayoutEffect(() => {
     const el = ref.current
@@ -42,95 +61,69 @@ export function WaveQueue({
   }, [])
 
   const total = entries.reduce((n, e) => n + e.count, 0)
+  const cardEl = card && (
+    <EnemyCard
+      entries={entries}
+      typeId={card.typeId}
+      countNote={countNote}
+      anchor={{ strip: ref.current?.closest<HTMLElement>('.sh-wavebar') ?? ref.current, chip: card.opener }}
+      onPick={(typeId) => setCard((c) => (c ? { ...c, typeId } : c))}
+      onClose={closeCard}
+    />
+  )
   if (entries.length === 0) {
     return (
       <div ref={ref} className="sh-wq empty">
         <span className="sh-wq-empty">{emptyText}</span>
+        {/* Q10 — a card left open as the last body spawns stays up ("All on the field now"). */}
+        {cardEl}
       </div>
     )
   }
   const shown = chipsThatFit(width, entries.length)
-  const more = entries.length - shown
+  const more = moreCount(entries, shown)
+  const hidden = entries.slice(shown)
   return (
-    <div ref={ref} className="sh-wq" role="img" aria-label={`${lead}: ${lineUpWords(entries)}.`}>
+    <div ref={ref} className="sh-wq" role="group" aria-label={`${lead}: ${lineUpWords(entries)}.`}>
       {shown === 0 ? (
         // Narrower than one portrait: say it in words rather than clip a face.
         <span className="sh-wq-empty">{total} {total === 1 ? 'enemy' : 'enemies'}</span>
       ) : (
         <>
           {entries.slice(0, shown).map((e, i) => (
-            <span className={`sh-wq-chip${i === 0 ? ' next' : ''}`} key={e.typeId} title={`${e.name} ×${e.count}`}>
+            <button
+              type="button"
+              className={`sh-wq-chip${i === 0 ? ' next' : ''}`}
+              key={e.typeId}
+              data-wq-type={e.typeId}
+              data-sfx="toggle"
+              title={`${e.name} ×${e.count}`}
+              aria-label={`${e.name} ×${e.count} — about this enemy`}
+              aria-haspopup="dialog"
+              aria-expanded={card?.typeId === e.typeId}
+              onClick={(ev) => toggle(e.typeId, ev.currentTarget)}
+            >
               <EnemyPortrait art={e.art} />
               {e.boss && <Icon name="boss" className="sh-wq-boss" />}
               <b className="sh-wq-n">×{e.count}</b>
-            </span>
+            </button>
           ))}
-          {more > 0 && <span className="sh-wq-more">+{more}</span>}
+          {more > 0 && (
+            <button
+              type="button"
+              className="sh-wq-more"
+              data-sfx="toggle"
+              aria-label={`${more} more ${more === 1 ? 'enemy' : 'enemies'}: ${lineUpWords(hidden)} — about them`}
+              aria-haspopup="dialog"
+              aria-expanded={!!card && hidden.some((h) => h.typeId === card.typeId)}
+              onClick={(ev) => toggle(hidden[0].typeId, ev.currentTarget)}
+            >
+              +{more}
+            </button>
+          )}
         </>
       )}
+      {cardEl}
     </div>
   )
-}
-
-/**
- * One enemy, drawn the way the field draws it: the theme's own sprite for the
- * type's art id, baked by `pixmap` with the same contour-and-rim ring.
- *
- * Integer scale only. Tiny Swords is authored at twice the field's density
- * (`spriteScale: 0.5`, a line goblin ~76px), so a 32px chip takes the
- * renderer's ×½ bucket — the box-filtered bake — and draws it 1:1 into a 32×32
- * backing store; a pack authored at one density is drawn as it is. The browser
- * then enlarges the store by the device's own whole-number ratio (×2, ×3) with
- * `image-rendering: pixelated`. A goblin is ~38×41 at that density, so the chip
- * crops the feet and a sliver of each side, never the head — the same crop
- * `.sh-hero-art` makes for the heroes.
- *
- * Not the `tinyswords@half` files: the build refuses to ship a second copy of
- * the pack (`planPrecache`'s foreign-pack guard), and those carry a cold halo
- * the brand rules out. This bake is the same pipeline, run in the browser.
- */
-function EnemyPortrait({ art }: { art: string }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => {
-    let live = true
-    const draw = () => {
-      const c = ref.current
-      const ctx = c?.getContext('2d')
-      if (!live || !c || !ctx) return
-      ctx.clearRect(0, 0, c.width, c.height)
-      const src = artFor(art)
-      if (!src) return
-      let img = getSprite(src.pack, art)
-      let frames = 1
-      if (!img) {
-        // A pack that ships only the run cycle: its first frame.
-        const f = ANIM_FRAMES[`${art}_walk`]
-        const walk = f ? getSprite(src.pack, `${art}_walk`) : undefined
-        if (walk) {
-          img = walk
-          frames = f
-        }
-      }
-      if (!img) return
-      const pm = pixmap(img, {
-        scale: src.spriteScale === 0.5 ? 0.5 : 1,
-        frames,
-        ring: true,
-        cell: frames === 1 ? barrelCell(art, img) : undefined,
-      })
-      if (!pm) return
-      const dx = Math.round((CHIP - pm.fw) / 2)
-      // Taller than the chip: keep the head, lose the feet.
-      const dy = pm.fh > CHIP ? 0 : Math.round((CHIP - pm.fh) / 2)
-      ctx.imageSmoothingEnabled = false
-      if (pm.ring) ctx.drawImage(pm.ring, 0, 0, pm.fw, pm.fh, dx, dy, pm.fw, pm.fh)
-      ctx.drawImage(pm.img, 0, 0, pm.fw, pm.fh, dx, dy, pm.fw, pm.fh)
-    }
-    draw()
-    onSpritesReady(draw)
-    return () => {
-      live = false
-    }
-  }, [art])
-  return <canvas ref={ref} className="sh-wq-art" width={CHIP} height={CHIP} aria-hidden="true" />
 }

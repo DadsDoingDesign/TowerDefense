@@ -4,6 +4,7 @@ import { sfx } from '../audio/audio'
 import { num, numRecord, onStorageKeyChange, safePersistStorage } from './storage'
 import { dailyScore } from './daily'
 import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achievements'
+import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -416,13 +417,20 @@ export interface Codex {
   specs: string[]
   /** Spec perk ids ever taken. */
   perks: string[]
+  /**
+   * Q10 — enemies felled, by KIND (`enemyKind`: the key without its elite
+   * modifier). The enemy info card's knowledge rule reads it
+   * (`game/data/enemyKnowledge.ts`). Added without a version step: an older
+   * save simply has none, which is the truth.
+   */
+  felled: Record<string, number>
 }
-const freshCodex = (): Codex => ({ enemies: [], relics: [], specs: [], perks: [] })
+const freshCodex = (): Codex => ({ enemies: [], relics: [], specs: [], perks: [], felled: {} })
 const strList = (raw: unknown): string[] =>
   Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
 function migrateCodex(raw: unknown): Codex {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { enemies: strList(o.enemies), relics: strList(o.relics), specs: strList(o.specs), perks: strList(o.perks) }
+  return { enemies: strList(o.enemies), relics: strList(o.relics), specs: strList(o.specs), perks: strList(o.perks), felled: sanitizeFelled(o.felled) }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -515,7 +523,9 @@ interface MetaState {
   /** Whether a hub purchase's feat (if it has one) is earned. */
   purchasable: (id: string) => boolean
   /** Add to the Codex. Ids are deduplicated; order of first sighting is kept. */
-  recordCodex: (seen: Partial<Codex>) => void
+  recordCodex: (seen: Partial<Omit<Codex, 'felled'>>) => void
+  /** Q10 — add one settled wave's kills (by registry key) to the Codex's felled tally. */
+  recordFelled: (byKey: Iterable<readonly [string, number]>) => void
   resetMeta: () => void
 }
 
@@ -668,8 +678,15 @@ export const useMetaStore = create<MetaState>()(
           relics: merge(cur.relics, seen.relics),
           specs: merge(cur.specs, seen.specs),
           perks: merge(cur.perks, seen.perks),
+          felled: cur.felled,
         }
         if (next.enemies !== cur.enemies || next.relics !== cur.relics || next.specs !== cur.specs || next.perks !== cur.perks) set({ codex: next })
+      },
+
+      recordFelled: (byKey) => {
+        const cur = get().codex
+        const felled = addFelled(cur.felled, byKey)
+        if (felled) set({ codex: { ...cur, felled } })
       },
 
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
