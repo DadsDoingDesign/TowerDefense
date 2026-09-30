@@ -15,7 +15,7 @@ L = [
     '# Fieldwatch UI plan — from the Whales critique\n',
     f"Branch `{plan['branch']}` · Whales project **{crit['whales_product']}** · review page: `index.html` (built from `plan.json` and `critiques.json`)\n",
     'Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.\n',
-    '**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are being built. Round 6 lists the calls the builders made, for your review. '
+    '**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are built too; try a first run in a private window. Round 6 lists the calls the builders made, for your review. '
     'Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), '
     'together with the Hall of Champions idea. Q15 is parked.\n',
     'Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.\n',

@@ -4,7 +4,7 @@ Branch `claude/whales-ui-critique-plan` · Whales project **Tower Defense Game**
 
 Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.
 
-**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are being built. Round 6 lists the calls the builders made, for your review. Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
+**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are built too; try a first run in a private window. Round 6 lists the calls the builders made, for your review. Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
 
 Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.
 
@@ -162,11 +162,12 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 
 **Questions (answered by default when approved)**
 
-1. Too gradual, or about right for a first session?
+1. Is the order right? For example, should speed come earlier, or merchants on the very first stop?
+2. Should the first battle hide anything else, or show anything it now hides?
 
 **Files:** `src/ui/shell/Coach.tsx`, `run generation (first-run rules)`, `menu unlocks`
 
-**Result:** Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.
+**Result:** Built. A first run shows one new idea at a time. First battle: only the Gate and gold in the header, one tip ("Tap your hero, then a glowing tile"), no pack, speed, Watch Command, danger ground or challenges. Then: speed at the first pause, gear after the first win, Watch Command in the second battle, merchants from the second stop, relics at the first elite, perks at level 5, cursed ground from depth 3, map challenges from depth 4. Each idea gets one tip, once. Vow, Daily Watch and Endless read 'Opens after your first run'. Anyone who has finished a run sees everything, and Settings has 'Show everything from the start'. Try it by opening the game in a private window.
 
 ### LS4 · One name per thing
 
@@ -181,7 +182,7 @@ Your goal: 'The game should be easy to pick up.' A first run asks you to learn a
 
 **Files:** `copy across src/ui`
 
-**Result:** Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.
+**Result:** Built. Your units are 'heroes' everywhere (no more 'company' or 'Sentinels'). 'Threat ×1.06' now reads 'Enemy strength +6%'. 'Watch Marks' become 'Marks' after the first mention. The Codex has a glossary with one line per idea (24); a first-timer sees only the ones they have met. A test now fails if an old name comes back.
 
 ## Round 4 · the bigger design changes
 

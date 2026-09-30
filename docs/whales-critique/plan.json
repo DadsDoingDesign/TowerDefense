@@ -150,15 +150,43 @@
     "Returning players see everything from the start; the layering only shapes a player's first runs."
    ],
    "questions": [
-    "Too gradual, or about right for a first session?"
+    "Is the order right? For example, should speed come earlier, or merchants on the very first stop?",
+    "Should the first battle hide anything else, or show anything it now hides?"
    ],
    "files": [
     "src/ui/shell/Coach.tsx",
     "run generation (first-run rules)",
     "menu unlocks"
    ],
-   "builtNote": "Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.",
-   "built": true
+   "builtNote": "Built. A first run shows one new idea at a time. First battle: only the Gate and gold in the header, one tip (\"Tap your hero, then a glowing tile\"), no pack, speed, Watch Command, danger ground or challenges. Then: speed at the first pause, gear after the first win, Watch Command in the second battle, merchants from the second stop, relics at the first elite, perks at level 5, cursed ground from depth 3, map challenges from depth 4. Each idea gets one tip, once. Vow, Daily Watch and Endless read 'Opens after your first run'. Anyone who has finished a run sees everything, and Settings has 'Show everything from the start'. Try it by opening the game in a private window.",
+   "built": true,
+   "reviewable": true,
+   "shots": [
+    {
+     "src": "after/ls/mobile-10-first-menu.png",
+     "caption": "First menu"
+    },
+    {
+     "src": "after/ls/mobile-13-first-battle-setup.png",
+     "caption": "First battle"
+    },
+    {
+     "src": "after/ls/mobile-17-first-win.png",
+     "caption": "First win"
+    },
+    {
+     "src": "after/ls/mobile-21b-first-elite-tip.png",
+     "caption": "First elite"
+    },
+    {
+     "src": "after/ls/mobile-30-returning-menu.png",
+     "caption": "Returning: menu"
+    },
+    {
+     "src": "after/ls/mobile-32-returning-battle-setup.png",
+     "caption": "Returning: battle"
+    }
+   ]
   },
   {
    "id": "LS4",
@@ -177,8 +205,9 @@
    "files": [
     "copy across src/ui"
    ],
-   "builtNote": "Building now, after the no-HP change landed: first runs meet one idea at a time, with one name per thing.",
-   "built": true
+   "builtNote": "Built. Your units are 'heroes' everywhere (no more 'company' or 'Sentinels'). 'Threat ×1.06' now reads 'Enemy strength +6%'. 'Watch Marks' become 'Marks' after the first mention. The Codex has a glossary with one line per idea (24); a first-timer sees only the ones they have met. A test now fails if an old name comes back.",
+   "built": true,
+   "reviewable": true
   },
   {
    "id": "SK1",

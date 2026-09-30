@@ -76,6 +76,7 @@ section.stream { margin-top: 40px; display: grid; gap: 14px; }
 .thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .thumb { flex: 0 0 auto; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0; background: var(--panel-2); cursor: pointer; overflow: hidden; display: grid; }
 .thumb img { display: block; height: 96px; width: auto; max-width: none; }
+.thumb { text-decoration: none; }
 .thumb span { font-size: 0.72rem; color: var(--muted); padding: 3px 6px; text-align: left; white-space: nowrap; }
 
 .label { font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
@@ -292,7 +293,12 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
   // Round-1 items that are built, or reworked into a round-2 item, show that
   // instead of the decision controls; round-2 items take a fresh decision.
   function footer(item) {
-    if (item.built) return h('div', { class: 'done' }, h('span', { class: 'pill-ok', text: item.builtNote ? 'Done' : 'Built on the branch' }), item.builtNote || item.recheck || 'You approved this. It is in the branch.');
+    if (item.built) {
+      const done = h('div', { class: 'done' }, h('span', { class: 'pill-ok', text: item.builtNote ? 'Done' : 'Built on the branch' }), item.builtNote || item.recheck || 'You approved this. It is in the branch.');
+      const shots = item.shots ? h('div', { class: 'thumbs' }, item.shots.map(sh => h('a', { class: 'thumb', href: sh.src, target: '_blank', rel: 'noopener', title: sh.caption }, h('img', { src: sh.src, alt: sh.caption, loading: 'lazy' }), h('span', { text: sh.caption })))) : null;
+      if (!item.reviewable) return shots ? h('div', {}, done, shots) : done;
+      return h('div', {}, done, shots, decisionControls(item.id, 'item', 'What should change?'));
+    }
     if (item.reworked) return h('div', { class: 'done' }, h('span', { class: 'pill-re', text: `Reworked as ${item.reworked}` }), h('a', { href: `#item-${item.reworked}`, text: 'See round 2 ↑' }));
     if (item.kind === 'question') return decisionControls(item.id, 'question', 'What should it be instead?');
     return decisionControls(item.id, 'item', 'Approve as is, or tell me what to change and answer the questions.');
@@ -303,7 +309,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
     for (const st of plan.streams) {
       const items = plan.items.filter(i => i.stream === st.id).filter(i => {
         if (filter === 'all') return true;
-        if (filter === 'open') return !i.built && !i.reworked && !(decisions[i.id] || {}).status;
+        if (filter === 'open') return (!i.built || i.reviewable) && !i.reworked && !(decisions[i.id] || {}).status;
         return i.stream === filter;
       });
       if (!items.length) continue;
@@ -334,7 +340,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
   }
 
   function renderTally() {
-    const ids = plan.items.filter(i => !i.built && !i.reworked).map(i => i.id);
+    const ids = plan.items.filter(i => (!i.built || i.reviewable) && !i.reworked).map(i => i.id);
     const n = { approve: 0, edit: 0, reject: 0 };
     for (const id of ids) { const s = (decisions[id] || {}).status; if (n[s] != null) n[s]++; }
     const total = ids.length;
