@@ -12,7 +12,8 @@
  */
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { BEHAVIOUR_INFO, COLOSSUS_SPLIT, GRUKK_WARCRY, KING_LOB } from '../src/game/data/behaviours'
-import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, pickBattleMap } from '../src/game/data/maps'
+import { distToPolyline } from '../src/game/data/terrain'
 import { encounterSeed, generateEncounter, subWaveCount, variantsFor, type EncounterKind } from '../src/game/data/waves'
 import { createSentinel } from '../src/game/data/sentinels'
 import type { BehaviourStats, EngineRules } from '../src/game/engine/engine'
@@ -20,6 +21,8 @@ import type { Archetype, EffectMods, FocusMode, Sentinel, WaveDef } from '../src
 import {
   bestSlots,
   buildSpec,
+  POST,
+  slotCoverage,
   makeWave,
   maxLeak,
   mean,
@@ -113,7 +116,7 @@ export function runCombatDepth(): CombatDepthResult {
       { typeId: 'torch3', count: 8, hpMult: 2.5, gap: 0.5 },
       { typeId: 'torch3_shaman', count: 2, hpMult: 2.5, gap: 1.5, delay: -3 },
     ])
-    const team = post([[hero('rogue'), 's1'], [hero('mystic'), 's2'], [hero('rogue'), 's3']])
+    const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2], [hero('rogue'), POST.s3]])
     const a = bench({ team, wave: w, focus: 'first' })
     const b = bench({ team, wave: w, focus: 'threat' })
     rows.push({ name: 'Torch Shaman → heal pulse', kind: 'healPulse', fired: a.stats.healPulses, base: a.stats.hpHealed, counter: b.stats.hpHealed, unit: 'HP healed', lowerIsBetter: true, counterLabel: 'Threat targeting' })
@@ -121,7 +124,7 @@ export function runCombatDepth(): CombatDepthResult {
   // Berserker — a frost slow drags the enraged sprint back down.
   {
     const w = makeWave([{ typeId: 'torch4', count: 14, hpMult: 3, gap: 0.6 }])
-    const team = post([[hero('rogue'), 's1'], [hero('mystic'), 's2']])
+    const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2]])
     const on = bench({ team, wave: w })
     const onC = bench({ team, wave: w, teamMods: [{ chill: { slow: 0.35, dur: 2 } }] })
     // Normalised by how many enraged: a slow keeps bodies in range longer, so
@@ -133,9 +136,16 @@ export function runCombatDepth(): CombatDepthResult {
   // Sapper — placement (post set back from the lane) and a Guard.
   {
     const w = makeWave([{ typeId: 'tnt4', count: 8, hpMult: 6, gap: 1 }])
-    const near = bench({ team: post([[hero('mystic'), 's5'], [hero('rogue'), 's2']]), wave: w })
-    const far = bench({ team: post([[hero('mystic'), 's0'], [hero('rogue'), 's2']]), wave: w })
-    rows.push({ name: 'Sapper (and Fuse Whelp) → blast on arrival', kind: 'sapper', fired: near.stats.sapperBlasts, base: near.stats.sapperDamage, counter: far.stats.sapperDamage, unit: 'HP dealt to heroes', lowerIsBetter: true, counterLabel: 'post the Mystic 65px back (s0) not 35px (s5)' })
+    // G1-2: on the tile grid "set back" is one tile back — a tile 120px from
+    // every lane (the best such one for a 150px reach) — against a roadside
+    // tile 40px out. Before the grid it was circle s0 (65px) against s5 (35px).
+    const cov = slotCoverage(FIRST_MAP, 150)
+    const setBack = FIRST_MAP.slots
+      .filter((s) => distToPolyline(s.pos, FIRST_MAP.path) >= 100)
+      .sort((a, b) => cov[b.id] - cov[a.id] || a.id.localeCompare(b.id))[0].id
+    const near = bench({ team: post([[hero('mystic'), POST.s5], [hero('rogue'), POST.s2]]), wave: w })
+    const far = bench({ team: post([[hero('mystic'), setBack], [hero('rogue'), POST.s2]]), wave: w })
+    rows.push({ name: 'Sapper (and Fuse Whelp) → blast on arrival', kind: 'sapper', fired: near.stats.sapperBlasts, base: near.stats.sapperDamage, counter: far.stats.sapperDamage, unit: 'HP dealt to heroes', lowerIsBetter: true, counterLabel: `post the Mystic one tile back (${setBack}, 120px) not roadside (${POST.s5}, 40px)` })
   }
   // Bomber — Threat targeting picks it out of the column and kills it in the wind-up.
   {
@@ -143,7 +153,7 @@ export function runCombatDepth(): CombatDepthResult {
       { typeId: 'torch2', count: 12, hpMult: 3, gap: 0.6 },
       { typeId: 'tnt2', count: 6, hpMult: 3, gap: 1.2, delay: -7 },
     ])
-    const team = post([[hero('rogue'), 's1'], [hero('mystic'), 's2'], [hero('rogue'), 's3']])
+    const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2], [hero('rogue'), POST.s3]])
     const a = bench({ team, wave: w, focus: 'first' })
     const b = bench({ team, wave: w, focus: 'threat' })
     rows.push({ name: 'Bomber / Demolisher → lobbed charge', kind: 'lob', fired: a.stats.lobsStarted, base: a.stats.lobDamage, counter: b.stats.lobDamage, unit: 'HP dealt to heroes', lowerIsBetter: true, counterLabel: 'Threat targeting (kill it in the wind-up)' })
@@ -151,7 +161,7 @@ export function runCombatDepth(): CombatDepthResult {
   // Splitter — splash: the pieces spawn together, so one blast takes both.
   {
     const w = makeWave([{ typeId: 'barrel4', count: 8, hpMult: 0.45, gap: 1.4 }])
-    const team = post([[hero('mystic', 10), 's0'], [hero('mystic', 10), 's1'], [hero('mystic', 10), 's2']])
+    const team = post([[hero('mystic', 10), POST.s0], [hero('mystic', 10), POST.s1], [hero('mystic', 10), POST.s2]])
     const plain = bench({ team, wave: w })
     const splash = bench({ team, wave: w, teamMods: [{ splashAdd: 50 }] })
     // Normalised by pieces spawned: the question is how many of them get through.
@@ -164,7 +174,7 @@ export function runCombatDepth(): CombatDepthResult {
       { typeId: 'barrel3', count: 6, hpMult: 2, gap: 0.8 },
       { typeId: 'barrel3_bearer', count: 2, hpMult: 2, gap: 1.6, delay: -4 },
     ])
-    const team = post([[hero('rogue'), 's1'], [hero('mystic'), 's2'], [hero('rogue'), 's3']])
+    const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2], [hero('rogue'), POST.s3]])
     const a = bench({ team, wave: w, focus: 'first' })
     const b = bench({ team, wave: w, focus: 'threat' })
     rows.push({ name: 'Shieldbearer → resist aura', kind: 'shieldAura', fired: a.stats.shieldedPrevented > 0 ? 1 : 0, base: a.stats.shieldedPrevented, counter: b.stats.shieldedPrevented, unit: 'damage the shield absorbed', lowerIsBetter: true, counterLabel: 'Threat targeting' })
@@ -172,8 +182,8 @@ export function runCombatDepth(): CombatDepthResult {
   // Leaper — a second blocker downstream.
   {
     const w = makeWave([{ typeId: 'barrel2', count: 10, hpMult: 4, gap: 1 }])
-    const one = bench({ team: post([[hero('fighter'), 's1'], [hero('rogue'), 's3']]), wave: w })
-    const two = bench({ team: post([[hero('fighter'), 's1'], [hero('fighter'), 's4'], [hero('rogue'), 's3']]), wave: w })
+    const one = bench({ team: post([[hero('fighter'), POST.s1], [hero('rogue'), POST.s3]]), wave: w })
+    const two = bench({ team: post([[hero('fighter'), POST.s1], [hero('fighter'), POST.s4], [hero('rogue'), POST.s3]]), wave: w })
     rows.push({ name: 'Barrel Roller → vaults the first blocker', kind: 'leap', fired: one.stats.leaps, base: one.stats.leapLeaks, counter: two.stats.leapLeaks, unit: 'vaulters reaching the Gate', lowerIsBetter: true, counterLabel: 'a second blocker downstream' })
   }
   const isRate = (u: string) => u.startsWith('stop-rate')
@@ -198,7 +208,7 @@ export function runCombatDepth(): CombatDepthResult {
       const field = ALL_MAPS[t % ALL_MAPS.length]
       const slots = bestSlots(field)
       const team = ids.map((id, i) => ({ sentinel: buildSpec(id, { level: 20, gearRarity: 'epic', seed: t * 10 + i, perkSeed: t * 10 + i }), slotId: slots[i] }))
-      const m = runBattle({ team, depth: 10, kind: 'boss', variantId: v.id, map: field, enemyHpMult: 25, baseHp: 999, maxSeconds: 300, seed: t, player: PLAYER })
+      const m = runBattle({ team, depth: 10, kind: 'boss', variantId: v.id, map: field, autoDeploy: true, enemyHpMult: 25, baseHp: 999, maxSeconds: 300, seed: t, player: PLAYER })
       bossStats.fights++
       bossStats.warCries += m.stats.warCries
       bossStats.kingLobs += m.stats.kingLobs
@@ -279,6 +289,7 @@ export function runCombatDepth(): CombatDepthResult {
           depth: b.depth,
           kind: b.kind,
           map: field,
+          autoDeploy: true,
           variantSeed: encounterSeed(hashSeed(t, 'dv16'), b.depth),
           enemyHpMult: threat,
           baseHp: 60,
@@ -349,7 +360,7 @@ export function runCombatDepth(): CombatDepthResult {
   line('')
   {
     const swarm = makeWave([{ typeId: 'torch2', count: 18, hpMult: 9, gap: 0.35 }])
-    const team = post([[hero('mystic', 8), 's2'], [hero('rogue', 8), 's4']])
+    const team = post([[hero('mystic', 8), POST.s2], [hero('rogue', 8), POST.s4]])
     const frostShock: EffectMods[] = [{ chill: { slow: 0.25, dur: 2 } }, { shock: { chains: 2, dmgFrac: 0.45 } }]
     // Spread is a granted capability (the Ember Urn relic's flag).
     const burn: EffectMods[] = [{ burn: { dps: 30, dur: 4 }, splashAdd: 20, burnSpreadOnDeath: true }]
@@ -358,7 +369,7 @@ export function runCombatDepth(): CombatDepthResult {
     const fsOff = bench({ team, wave: swarm, teamMods: frostShock, rules: { interactions: false } })
     const bOn = bench({ team, wave: swarm, teamMods: burn })
     const bOff = bench({ team, wave: swarm, teamMods: burn, rules: { interactions: false } })
-    const phys = post([[hero('rogue', 8), 's2'], [hero('fighter', 8), 's4']])
+    const phys = post([[hero('rogue', 8), POST.s2], [hero('fighter', 8), POST.s4]])
     const frOn = bench({ team: phys, wave: swarm, teamMods: frost })
     const frOff = bench({ team: phys, wave: swarm, teamMods: frost, rules: { interactions: false } })
     line('| Rule | Fired | Stop rate on | off | Δ |')

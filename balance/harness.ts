@@ -19,7 +19,7 @@ import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { leakCeiling } from '../src/game/data/enemies'
 import type { CommandId } from '../src/game/data/commands'
-import { ALL_MAPS, FIRST_MAP } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateItem, type RosterRef } from '../src/game/data/items'
 import { startingKit, wearKit } from '../src/game/engine/kit'
@@ -51,7 +51,42 @@ import type {
 } from '../src/game/types'
 
 export const TIER2_NODES: TreeNode[] = ALL_NODES.filter((n) => n.tier === 2)
+/** Every open deployment tile on The Green Line (G1-2: tiles, not six circles). */
 export const SLOT_IDS = FIRST_MAP.slots.map((s) => s.id)
+/**
+ * The fixed benches' posts (G1-2). Deployment is a tile grid now; the benches
+ * that pinned a hero to a named circle (`s3`, "the third slot") pin it to the
+ * Green Line tile nearest where that circle stood (`maps.legacyPostTile`), so
+ * each bench still measures the same kind of post it always did.
+ */
+/**
+ * The road each old circle saw at 150px on the pre-grid Green Line (REPORT
+ * §14a as it stood before G1-2). A pinned bench is calibrated against how much
+ * road its hero sees, not against a coordinate — s3 was the field's WORST
+ * circle (384px), and the tile nearest it on the grid sees 520 — so each post
+ * is the open tile within reach of where its circle stood whose coverage is
+ * closest to the circle's, nearest first on a tie.
+ */
+const PRE_GRID_COVERAGE = { s0: 434, s1: 432, s2: 560, s3: 384, s4: 567, s5: 543 } as const
+function calibratedPosts(): Record<keyof typeof PRE_GRID_COVERAGE, string> {
+  const near = legacyPosts(FIRST_MAP.id)
+  const cov = slotCoverage(FIRST_MAP)
+  const pos = new Map(FIRST_MAP.slots.map((s) => [s.id, s.pos]))
+  const taken = new Set<string>()
+  const out = {} as Record<keyof typeof PRE_GRID_COVERAGE, string>
+  for (const id of Object.keys(PRE_GRID_COVERAGE) as (keyof typeof PRE_GRID_COVERAGE)[]) {
+    const at = pos.get(near[id])!
+    const d = (s: string) => Math.hypot(pos.get(s)!.x - at.x, pos.get(s)!.y - at.y)
+    const pick = FIRST_MAP.slots
+      .map((s) => s.id)
+      .filter((s) => !taken.has(s) && d(s) <= 115)
+      .sort((a, b) => Math.abs(cov[a] - PRE_GRID_COVERAGE[id]) - Math.abs(cov[b] - PRE_GRID_COVERAGE[id]) || d(a) - d(b) || a.localeCompare(b))[0]
+    out[id] = pick ?? near[id]
+    taken.add(out[id])
+  }
+  return out
+}
+export const POST = calibratedPosts()
 
 /** Roles used to interpret solo-offense numbers (supports read low on purpose). */
 export const SUPPORT_SPECS = new Set([
@@ -85,12 +120,34 @@ export const MAX_AURA_RADIUS = Math.max(
 )
 
 /**
- * The only slot triangle on The Green Line where auras actually reach: s3 is
- * 130.0px from s2 and 95.1px from s4, both inside every aura in the game
- * (120–160). Every other trio is 190px+ apart — which is why the old §2 sweep
- * (support at s5, allies at s1/s3, 191–210px) measured exactly nothing.
+ * The aura bench's triangle: the tiles nearest where the old s3/s2/s4 circles
+ * stood — the support 113px from one ally and 80px from the other, both inside
+ * every aura in the game (120–160). Before the grid (G1-2) this was the ONLY
+ * such trio on the field (every other circle was 190px+ from its nearest
+ * pair); on the grid any two neighbouring tiles are 80px apart, so auras reach
+ * wherever the player stacks the company — which is itself a balance fact
+ * REPORT §2 now reads rather than assumes.
  */
-export const AURA_TRIO = { support: 's3', allies: ['s2', 's4'] as const }
+export const AURA_TRIO = auraTrio()
+/**
+ * The support at the s3 bench post; its allies are the two open tiles within
+ * one tile (diagonal included, ≤ 113px — inside every aura) whose road
+ * coverage is nearest the old s2/s4 circles' (~563px), so the carriers the
+ * aura lands on see what they always saw.
+ */
+function auraTrio(): { support: string; allies: readonly [string, string] } {
+  const cov = slotCoverage(FIRST_MAP)
+  const at = FIRST_MAP.slots.find((s) => s.id === POST.s3)!.pos
+  const d = (id: string) => {
+    const p = FIRST_MAP.slots.find((s) => s.id === id)!.pos
+    return Math.hypot(p.x - at.x, p.y - at.y)
+  }
+  const near = FIRST_MAP.slots
+    .map((s) => s.id)
+    .filter((id) => id !== POST.s3 && d(id) <= 115)
+    .sort((a, b) => Math.abs(cov[a] - 563) - Math.abs(cov[b] - 563) || d(a) - d(b) || a.localeCompare(b))
+  return { support: POST.s3, allies: [near[0], near[1]] as const }
+}
 
 // ------------------------------------------------------- per-map slot value
 /**
@@ -403,6 +460,47 @@ export interface RunBattleOptions {
   rules?: Partial<EngineRules>
   /** `false`: generate the node as one continuous wave (the pre-3a shape; see `BENCH_RULES`). */
   subWaves?: boolean
+  /**
+   * G1-2: ignore the team's `slotId`s and post the company the way a competent
+   * player does on the tile grid ({@link deployTeam}). Every "the modelled
+   * player deploys" call site sets this; the fixed benches pin posts instead.
+   */
+  autoDeploy?: boolean
+}
+
+/**
+ * How a competent player posts a company on the tile grid (G1-2).
+ *
+ * With six fixed circles, "fill the best-coverage slots in order" was a fine
+ * model, because every circle hugged the lane. On a grid the tile that sees the
+ * most road at a nominal 150px can sit 120px from every lane — useless to a
+ * Fighter whose reach is 96 and whose hold is 72. So each hero picks for its
+ * OWN reach: shortest reach first (the blockers have the fewest good tiles),
+ * each taking the free tile that sees the most road within its range, ties by
+ * tile id so the choice is stable (and identical on both twins).
+ */
+const coverageCache = new Map<string, Record<string, number>>()
+export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; slotId: string }[]): { sentinel: Sentinel; slotId: string }[] {
+  const ranged = team.map((m, i) => ({ i, sentinel: m.sentinel, range: Math.round(computeCombat(m.sentinel).range) }))
+  ranged.sort((a, b) => a.range - b.range || a.i - b.i)
+  const taken = new Set<string>()
+  const out: { sentinel: Sentinel; slotId: string }[] = new Array(team.length)
+  for (const h of ranged) {
+    const key = `${map.id}:${h.range}`
+    let cov = coverageCache.get(key)
+    if (!cov) {
+      cov = slotCoverage(map, h.range)
+      coverageCache.set(key, cov)
+    }
+    let best: string | null = null
+    for (const s of map.slots) {
+      if (taken.has(s.id)) continue
+      if (best === null || cov[s.id] > cov[best] || (cov[s.id] === cov[best] && s.id < best)) best = s.id
+    }
+    taken.add(best!)
+    out[h.i] = { sentinel: h.sentinel, slotId: best! }
+  }
+  return out
 }
 
 /** Run one wave to completion (or timeout) and return comparable metrics. */
@@ -422,7 +520,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
   const engine = new GameEngine({
     map: opts.map ?? FIRST_MAP,
     wave,
-    placedSentinels: opts.team,
+    placedSentinels: opts.autoDeploy ? deployTeam(opts.map ?? FIRST_MAP, opts.team) : opts.team,
     baseHp,
     maxBaseHp: baseHp,
     enemyHpMult: opts.enemyHpMult ?? 1,
@@ -624,7 +722,7 @@ export const soloStopRate = (
   wave: WaveDef,
   seeds?: number[],
   opts?: { enemyHpMult?: number; rules?: Partial<EngineRules> },
-): number => stopRate([{ sentinel: s, slotId: 's3' }], wave, seeds, opts)
+): number => stopRate([{ sentinel: s, slotId: POST.s3 }], wave, seeds, opts)
 
 /** Solo-offense benchmark: one build vs a fixed tanky wave; measures throughput. */
 export function soloOffense(specId: string, opts: BuildOptions = {}, battleSeed = 4242): BattleMetrics {
@@ -637,7 +735,7 @@ export function soloOffense(specId: string, opts: BuildOptions = {}, battleSeed 
  */
 export function soloBattle(s: Sentinel, seed = 4242): BattleMetrics {
   return runBattle({
-    team: [{ sentinel: s, slotId: 's3' }],
+    team: [{ sentinel: s, slotId: POST.s3 }],
     depth: 6,
     enemyHpMult: 1.8, // tanky enough to reflect sustained DPS + procs
     baseHp: 999, // isolate offense from leaks
