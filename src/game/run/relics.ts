@@ -45,6 +45,13 @@ export function afterFightRelics(held: readonly string[], v: { baseHp: number; m
 export const hiresTrained = (hubTrained: boolean, held: readonly string[]): boolean =>
   hubTrained || hasRelicRule(held, 'mercenaryCharter')
 
+/**
+ * Whether the off hand may hold a one-handed weapon (the Ambidextrous relic,
+ * R3-2). Every equip path — the pack, the item panel's plan, a hire dressing
+ * from the pack, the balance model — reads it through here.
+ */
+export const isAmbidextrous = (held: readonly string[]): boolean => hasRelicRule(held, 'ambidextrous')
+
 /** How many items a merchant lays out. */
 export const shelfSize = (held: readonly string[], thinPickings = false): number =>
   (hasRelicRule(held, 'quartermaster') ? 5 : 4) - (thinPickings ? 1 : 0)

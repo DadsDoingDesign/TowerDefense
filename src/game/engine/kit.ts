@@ -116,6 +116,11 @@ export function wearKit(hero: Sentinel, kit: readonly Item[]): Sentinel {
   return out
 }
 
+/** The run's equip rules: the Ambidextrous relic opens the off hand to one-handers (R3-2). */
+export interface EquipRules {
+  ambidextrous?: boolean
+}
+
 const isCursed = (item: Item): boolean => item.enchantments.some((e) => e.id.startsWith('cx_'))
 
 /**
@@ -123,11 +128,11 @@ const isCursed = (item: Item): boolean => item.enchantments.some((e) => e.id.sta
  * A two-hander needs BOTH hands free — taking it would otherwise unseat the
  * off-hand, and this rule never unseats anything.
  */
-function emptySlotFor(hero: Sentinel, item: Item): HeroSlot | null {
+function emptySlotFor(hero: Sentinel, item: Item, opts: EquipRules = {}): HeroSlot | null {
   const eq = hero.equipment
   if (item.slot === 'twoHand') return !eq.mainHand && !eq.offHand ? 'mainHand' : null
   if (eq.mainHand?.slot === 'twoHand' && item.slot !== 'body') return null
-  for (const slot of heroSlotsFor(item.slot)) if (!eq[slot]) return slot
+  for (const slot of heroSlotsFor(item.slot, opts)) if (!eq[slot]) return slot
   return null
 }
 
@@ -143,9 +148,9 @@ function emptySlotFor(hero: Sentinel, item: Item): HeroSlot | null {
  *    would block the slot against the right one. Off-hands and bodies carry
  *    archetype-blind reach/area/speed, so "does no harm" is enough for them.
  */
-export function emptySlotGain(hero: Sentinel, item: Item): { slot: HeroSlot; gain: number } | null {
+export function emptySlotGain(hero: Sentinel, item: Item, opts: EquipRules = {}): { slot: HeroSlot; gain: number } | null {
   if (item.keepsake || isCursed(item)) return null
-  const slot = emptySlotFor(hero, item)
+  const slot = emptySlotFor(hero, item, opts)
   if (!slot) return null
   const before = computeCombat(hero).dps
   const after = computeCombat({ ...hero, equipment: { ...hero.equipment, [slot]: item } }).dps
@@ -172,14 +177,14 @@ export interface AutoEquipResult {
  * whole roster. Nothing already worn is ever replaced — a strict upgrade into
  * an EMPTY slot is the only move this makes on the player's behalf.
  */
-export function autoEquipEmpty(roster: readonly Sentinel[], items: readonly Item[]): AutoEquipResult {
+export function autoEquipEmpty(roster: readonly Sentinel[], items: readonly Item[], opts: EquipRules = {}): AutoEquipResult {
   let next = [...roster]
   const rest: Item[] = []
   const placed: AutoEquipResult['placed'] = []
   for (const item of items) {
     let best: { idx: number; slot: HeroSlot; gain: number } | null = null
     next.forEach((hero, idx) => {
-      const g = emptySlotGain(hero, item)
+      const g = emptySlotGain(hero, item, opts)
       if (g && (!best || g.gain > best.gain)) best = { idx, ...g }
     })
     if (!best) {

@@ -21,7 +21,8 @@ import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
 import { computeCombat, totalStats } from '../../game/engine/combat'
 import { buildName, evolutionOptions, MAX_LEVEL, TIER1_LEVEL, TIER2_LEVEL } from '../../game/engine/leveling'
-import type { Item, Sentinel } from '../../game/types'
+import type { HeroSlot, Item, Sentinel } from '../../game/types'
+import { isAmbidextrous } from '../../game/run/relics'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
 import {
   archetypeVar,
@@ -547,6 +548,7 @@ function GearSlotPanel() {
   const gearSlot = useGameStore((s) => s.gearSlot)
   const roster = useGameStore((s) => s.roster)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
+  const ambi = useGameStore((s) => isAmbidextrous(s.relics))
   const hero = roster.find((h) => h.id === gearSlot?.sentinelId)
   if (!gearSlot || !hero) return null
 
@@ -569,6 +571,14 @@ function GearSlotPanel() {
         <p className="sh-line muted">
           The pack is showing only what fits. <Tap /> one to put it on.
         </p>
+        {/* R3-2: the off hand's two rules, said where the choice is made. */}
+        {gearSlot.slot === 'offHand' && (
+          <p className="sh-line muted">
+            {ambi
+              ? 'Ambidextrous: a one-handed weapon fits here too, and its damage counts in full.'
+              : 'Shields, bucklers, tomes, quivers and focuses go here. A second weapon needs the Ambidextrous relic.'}
+          </p>
+        )}
         {warn && (
           <p className="sh-line bad">
             <Icon name="warn" /> {warn}
@@ -1113,6 +1123,7 @@ function ItemPanel({ item }: { item: Item }) {
   const upgradeItemAction = useGameStore((s) => s.upgradeItem)
   const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
   const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
+  const ambidextrousHeld = useGameStore((s) => isAmbidextrous(s.relics))
 
   const scrap = useArmedAction(
     {
@@ -1156,8 +1167,9 @@ function ItemPanel({ item }: { item: Item }) {
    */
   const gearTargetId = useGearTarget((s) => s.heroId)
   const armedHero = gearSlot && !wearer ? roster.find((s) => s.id === gearSlot.sentinelId) : undefined
-  const target = wearer ? undefined : equipTarget(roster, item, armedHero?.id, gearTargetId)
-  const plan = target ? planEquip(target, item, armedHero && gearSlot ? gearSlot.slot : null) : null
+  const rules = { ambidextrous: ambidextrousHeld }
+  const target = wearer ? undefined : equipTarget(roster, item, armedHero?.id, gearTargetId, rules)
+  const plan = target ? planEquip(target, item, armedHero && gearSlot ? gearSlot.slot : null, rules) : null
   const deltas = target && plan ? gearDeltas(target, plan.after) : []
   const fresh = plan ? newAffixes(item, plan.displaced) : []
   const ejection =
@@ -1484,6 +1496,46 @@ function OfferPanel({ offer }: { offer: Offer }) {
 
 /* -------------------------------------------------------------- gear + pack */
 
+/**
+ * R3-2 — the gear as a paper doll.
+ *
+ * The designer: "a little human body type model with the item slots over it —
+ * left hand on left, head up top, chest in middle". The three slots used to be
+ * three stacked text boxes (MAIN HAND / OFF HAND / BODY) that Whales flagged as
+ * faint on the desk rail; they now sit where they go on a small body: the body
+ * slot on the chest, the off hand on the left, the main hand on the right (as
+ * the heroes hold them on the field — shield left, weapon right), the hands at
+ * the hips with the arms running down into them, head above, legs below.
+ *
+ * WHY A BODY MODEL AND NOT THE HERO'S SPRITE. The default Tiny Swords heroes
+ * are chibi figures with their weapons painted in (the fighter always holds a
+ * sword and shield, whatever is equipped), so their silhouette shows gear the
+ * hero is not wearing and puts the hands where a 44px slot cannot follow. The
+ * `loadout.ts` compositor only has art for the placeholder pack's fighter. So
+ * the figure is drawn here from blocks on whole CSS pixels (crisp at any DPR,
+ * nothing scaled), in the selected hero's archetype hue — it is still THEIR
+ * doll, and the column head still names them.
+ *
+ * INTERACTION IS UNCHANGED (FIGMA.md rule three): tap an empty slot → the pack
+ * filters to what fits → tap an item to put it on; tap a worn slot → that item
+ * opens in the context panel. Every slot is a real button, at least
+ * `--hit-min` square, with its state in its accessible name ("Main Hand: Axe,
+ * Rare" / "Off Hand: empty"), in DOM order Body → Off Hand → Main Hand — the
+ * doll's reading order (top, then left to right), so Tab walks it as seen.
+ *
+ * NARROW COLUMNS. Two hands side by side need 2 × `--hit-min` of column. Where
+ * the column cannot give that (a phone under 390px, Large UI on a phone) a
+ * container query drops the figure and stacks the same three buttons in the
+ * same order — see `.sh-doll` in shell.css.
+ *
+ * AMBIDEXTROUS. With the relic held the off hand also takes a one-handed weapon
+ * (`items.heroSlotsFor`): its outline changes (teal, doubled), an empty one
+ * carries a small blade mark, and its accessible name says so.
+ */
+const DOLL_ORDER: readonly HeroSlot[] = ['body', 'offHand', 'mainHand']
+/** The one-word slot names the narrow stack prints over a worn item's picture. */
+const SLOT_SHORT: Record<HeroSlot, string> = { mainHand: 'MAIN', offHand: 'OFF', body: 'BODY' }
+
 function GearColumn() {
   const roster = useGameStore((s) => s.roster)
   const selection = useGameStore((s) => s.shellSelection)
@@ -1491,6 +1543,7 @@ function GearColumn() {
   const activateGearSlot = useGameStore((s) => s.activateGearSlot)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  const ambi = useGameStore((s) => isAmbidextrous(s.relics))
 
   // Follows the selected hero, then the last hero you looked at (an item tap
   // is a different selection, and used to snap this back to `roster[0]`), and
@@ -1501,7 +1554,7 @@ function GearColumn() {
   const looseItem = selection?.kind === 'item' ? inventory.find((i) => i.id === selection.id) : undefined
   const hero =
     (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ??
-    (looseItem ? equipTarget(roster, looseItem, gearSlot?.sentinelId, gearTargetId) : undefined) ??
+    (looseItem ? equipTarget(roster, looseItem, gearSlot?.sentinelId, gearTargetId, { ambidextrous: ambi }) : undefined) ??
     roster.find((h) => h.id === gearTargetId) ??
     roster[0]
 
@@ -1511,62 +1564,95 @@ function GearColumn() {
         <span>GEAR</span>
         {hero && <span className="sh-gear-who">{hero.name}</span>}
       </div>
-      <div className="sh-gear-slots">
-        {hero
-          ? HERO_SLOTS.map((hs) => {
-              const worn = hero.equipment[hs]
-              const active = gearSlot?.sentinelId === hero.id && gearSlot.slot === hs
-              return (
-                <button
-                  key={hs}
-                  className={`sh-slot ${worn ? 'filled' : 'empty'} ${active ? 'active' : ''}`}
-                  style={worn ? ({ '--rail': rarityVar(worn.rarity) } as CSSProperties) : undefined}
-                  onClick={() => {
-                    if (worn) {
-                      shellSelect({ kind: 'item', id: worn.id })
-                    } else if (active) {
-                      clearGearSlot()
-                    } else {
-                      activateGearSlot(hero.id, hs)
-                    }
-                  }}
-                  // `title` is invisible on touch, so the slot's state has to be
-                  // in its accessible name rather than in a hover tooltip.
-                  aria-label={
-                    worn
-                      ? `${HERO_SLOT_LABEL[hs]}: ${itemName(worn)}, ${RARITY[worn.rarity].label}`
-                      : active
-                        ? `${HERO_SLOT_LABEL[hs]}: choosing — pick something from the pack`
-                        : `${HERO_SLOT_LABEL[hs]}: empty`
+      {hero ? (
+        <div className={`sh-gear-slots sh-doll${ambi ? ' ambi' : ''}`} style={{ '--doll-hue': archetypeVar(hero.archetype) } as CSSProperties}>
+          {/* The body model: decoration under the slots, never a target. */}
+          <span className="sh-doll-fig" aria-hidden="true">
+            <i className="sh-doll-head" />
+            <i className="sh-doll-arms" />
+            <i className="sh-doll-legs" />
+          </span>
+          {DOLL_ORDER.map((hs) => {
+            const worn = hero.equipment[hs]
+            const active = gearSlot?.sentinelId === hero.id && gearSlot.slot === hs
+            const dual = ambi && hs === 'offHand'
+            const slotName = dual ? `${HERO_SLOT_LABEL[hs]} (Ambidextrous: takes a one-handed weapon too)` : HERO_SLOT_LABEL[hs]
+            return (
+              <button
+                key={hs}
+                className={`sh-slot sh-doll-slot sh-doll-${hs} ${worn ? 'filled' : 'empty'}${active ? ' active' : ''}${dual ? ' dual' : ''}`}
+                style={worn ? ({ '--rail': rarityVar(worn.rarity) } as CSSProperties) : undefined}
+                onClick={() => {
+                  if (worn) {
+                    shellSelect({ kind: 'item', id: worn.id })
+                  } else if (active) {
+                    clearGearSlot()
+                  } else {
+                    activateGearSlot(hero.id, hs)
                   }
-                >
-                  {/* Rarity as a letter as well as a hue (M27c). */}
-                  {worn && (
-                    <span className="sh-slot-rar" aria-hidden="true">
-                      {RARITY_INITIAL[worn.rarity]}
-                    </span>
-                  )}
-                  <span className="sh-slot-label">{HERO_SLOT_LABEL[hs]}</span>
-                  {/* A filled slot said `◆` — the same diamond the pack used for
-                      an unknown kind, the loot line used for a drop and the
-                      spoils screen used for an item card. It draws what is
-                      actually in it now, so "Main Hand: Greatsword" is legible
-                      without opening the panel. Empty and arming keep their
-                      text marks: they are states, not things. */}
-                  {worn ? (
-                    <span className="sh-slot-mark" aria-hidden="true">
-                      <Icon name={itemIcon(worn)} />
-                    </span>
-                  ) : (
-                    <span className="sh-slot-mark" aria-hidden="true">
-                      {active ? '…' : '+'}
-                    </span>
-                  )}
-                </button>
-              )
-            })
-          : null}
-      </div>
+                }}
+                // `title` is invisible on touch, so the slot's state has to be
+                // in its accessible name rather than in a hover tooltip.
+                aria-label={
+                  worn
+                    ? `${slotName}: ${itemName(worn)}, ${RARITY[worn.rarity].label}`
+                    : active
+                      ? `${slotName}: choosing — pick something from the pack`
+                      : `${slotName}: empty`
+                }
+              >
+                {/* Rarity as a letter as well as a hue (M27c). */}
+                {worn && (
+                  <span className="sh-slot-rar" aria-hidden="true">
+                    {RARITY_INITIAL[worn.rarity]}
+                  </span>
+                )}
+                {/* The Ambidextrous mark: this hand takes a blade now. */}
+                {dual && !worn && (
+                  <span className="sh-slot-dual" aria-hidden="true">
+                    <Icon name="blade" />
+                  </span>
+                )}
+                {/* A worn slot draws what is in it, and where the doll has no
+                    room for words the position says which slot it is. An empty
+                    slot keeps its words — they are the only thing in it. */}
+                <span className="sh-slot-label">{HERO_SLOT_LABEL[hs]}</span>
+                <span className="sh-slot-short" aria-hidden="true">
+                  {SLOT_SHORT[hs]}
+                </span>
+                {worn ? (
+                  <span className="sh-slot-mark" aria-hidden="true">
+                    <Icon name={itemIcon(worn)} />
+                  </span>
+                ) : (
+                  <span className="sh-slot-mark sh-slot-plus" aria-hidden="true">
+                    {active ? '…' : '+'}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          {/* Which relic changed the off hand — the word the relic card used. */}
+          {ambi && <span className="sh-doll-note">Ambidextrous</span>}
+        </div>
+      ) : null}
+      {/* The desk rail has the height the phone does not: there the doll is
+          captioned with what each hand holds, in words (Whales, round 1: the
+          desk's gear labels were the faintest text on the rail). Hidden from
+          assistive tech — each slot button already says exactly this. */}
+      {hero && (
+        <ul className="sh-doll-legend" aria-hidden="true">
+          {DOLL_ORDER.map((hs) => {
+            const worn = hero.equipment[hs]
+            return (
+              <li key={hs}>
+                <span>{HERO_SLOT_LABEL[hs]}</span>
+                <b className={worn ? '' : 'none'}>{worn ? itemName(worn) : 'empty'}</b>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -1579,10 +1665,12 @@ function PackColumn() {
   const equipItem = useGameStore((s) => s.equipItem)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const sortInventory = useGameStore((s) => s.sortInventory)
+  // R3-2: under the Ambidextrous relic the off hand also takes one-handers.
+  const rules = { ambidextrous: useGameStore((s) => isAmbidextrous(s.relics)) }
 
   // With a gear slot armed the pack filters to what fits it — that replaces the
   // whole equip drawer.
-  const fits = (i: Item) => !gearSlot || heroSlotsFor(i.slot).includes(gearSlot.slot)
+  const fits = (i: Item) => !gearSlot || heroSlotsFor(i.slot, rules).includes(gearSlot.slot)
   const shown = inventory.filter(fits)
 
   return (
@@ -1621,7 +1709,7 @@ function PackColumn() {
               .filter(Boolean)
               .join(', ')}
             onClick={() => {
-              if (gearSlot && heroSlotsFor(i.slot).includes(gearSlot.slot)) {
+              if (gearSlot && heroSlotsFor(i.slot, rules).includes(gearSlot.slot)) {
                 equipItem(gearSlot.sentinelId, gearSlot.slot, i.id)
                 clearGearSlot()
               } else {

@@ -9,7 +9,7 @@ import { autoEquipEmpty, recruitKit, wearKit } from '../engine/kit'
 import { applyXp, evolutionPending, xpToReach } from '../engine/leveling'
 import { createSentinel, startingRoster } from '../data/sentinels'
 import type { Archetype, Item, Sentinel } from '../types'
-import { withRelicStats } from './relics'
+import { isAmbidextrous, withRelicStats } from './relics'
 
 /** Every archetype, in the order every recruit slate is dealt. */
 export const RECRUIT_ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
@@ -101,7 +101,7 @@ export function withRecruits(
   let pack = inventory
   const dressed = hires.map((h) => {
     // A stat relic is "every hero, hires included" (Phase 3b).
-    const r = autoEquipEmpty([withRelicStats(h, relics)], pack)
+    const r = autoEquipEmpty([withRelicStats(h, relics)], pack, { ambidextrous: isAmbidextrous(relics) })
     pack = r.rest
     return r.roster[0]
   })
@@ -117,9 +117,14 @@ export function withRecruits(
  * most, anywhere on the roster; the rest go to the pack. Never replaces
  * anything worn (`engine/kit.autoEquipEmpty`).
  */
-export function receiveItems(roster: Sentinel[], inventory: Item[], items: Item[]): { roster: Sentinel[]; inventory: Item[] } {
+export function receiveItems(
+  roster: Sentinel[],
+  inventory: Item[],
+  items: Item[],
+  relics: readonly string[] = [],
+): { roster: Sentinel[]; inventory: Item[] } {
   if (!items.length) return { roster, inventory }
-  const r = autoEquipEmpty(roster, items)
+  const r = autoEquipEmpty(roster, items, { ambidextrous: isAmbidextrous(relics) })
   return { roster: r.roster, inventory: [...inventory, ...r.rest] }
 }
 

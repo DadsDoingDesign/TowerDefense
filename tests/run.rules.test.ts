@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { idCounterState, restoreIdCounter, streamRng } from '../src/game/core/rng'
-import { newRarityPity, generateItem } from '../src/game/data/items'
+import { newRarityPity, generateItem, heroSlotsFor } from '../src/game/data/items'
+import { equipFromPack } from '../src/game/run/inventory'
+import type { Item, ItemSlot } from '../src/game/types'
 import type { MapNode } from '../src/game/data/runmap'
 import type { RewardCard } from '../src/game/data/rewards'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -8,7 +10,7 @@ import { xpToReach } from '../src/game/engine/leveling'
 import { endlessRoundSpoils } from '../src/game/run/battle'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
 import { forkFires } from '../src/game/run/map'
-import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
+import { receiveItems, recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
 import { applyRewardCard } from '../src/game/run/rewards'
 import { planPayout, runWasPlayed, type SettleFacts } from '../src/game/run/settle'
 import {
@@ -36,7 +38,7 @@ import { encounterNode } from '../src/game/run/map'
 import { generateRunMap } from '../src/game/data/runmap'
 import { RNG } from '../src/game/core/rng'
 import { ENGINE_CAPABILITIES, RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
-import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
+import { afterFightRelics, diaryXp, hiresTrained, isAmbidextrous, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
 import { lockedPerkChoices, pendingPerkLevel, perkChoices, takePerk } from '../src/game/run/perks'
 import { allPerkPoints } from '../src/game/data/perks'
 import { computeCombat } from '../src/game/engine/combat'
@@ -497,5 +499,63 @@ describe('relics (data/relics + game/run/relics)', () => {
     const twice = applyRewardCard(once, card)
     expect(twice.relics).toEqual(['ledger'])
     expect(twice.roster[0].stats.int).toBe(once.roster[0].stats.int)
+  })
+})
+
+describe('dual-wielding is a bonus: the Ambidextrous relic (R3-2)', () => {
+  const mk = (id: string, slot: ItemSlot, physDamage = 0): Item => ({
+    id,
+    name: id,
+    slot,
+    rarity: 'common',
+    base: physDamage ? { physDamage } : { attackSpeed: 0.05 },
+    enchantments: [],
+  })
+  const armed = () => {
+    const h = createSentinel('fighter')
+    return { ...h, equipment: { mainHand: mk('main', 'oneHand', 6), offHand: null, body: null } }
+  }
+
+  it('the off hand takes a one-handed weapon only under the relic', () => {
+    expect(heroSlotsFor('oneHand')).toEqual(['mainHand'])
+    expect(heroSlotsFor('oneHand', { ambidextrous: true })).toEqual(['mainHand', 'offHand'])
+    // nothing else moves
+    for (const k of ['twoHand', 'offHand', 'body'] as const) {
+      expect(heroSlotsFor(k, { ambidextrous: true })).toEqual(heroSlotsFor(k))
+    }
+  })
+
+  it('is a rule relic, in the pool from the start, read through isAmbidextrous', () => {
+    const r = RELICS.find((x) => x.id === 'ambidextrous')!
+    expect(r.kind).toBe('rule')
+    expect(r.rule).toBe('ambidextrous')
+    expect(relicPool().some((x) => x.id === 'ambidextrous')).toBe(true)
+    expect(isAmbidextrous([])).toBe(false)
+    expect(isAmbidextrous(['ambidextrous'])).toBe(true)
+  })
+
+  it('equipFromPack refuses a second weapon in the off hand without it, and takes it with it', () => {
+    const hero = armed()
+    const pack = [mk('second', 'oneHand', 7)]
+    expect(equipFromPack([hero], pack, hero.id, 'offHand', 'second')).toBeNull()
+    const got = equipFromPack([hero], pack, hero.id, 'offHand', 'second', { ambidextrous: true })!
+    expect(got.roster[0].equipment.offHand?.id).toBe('second')
+    expect(got.roster[0].equipment.mainHand?.id).toBe('main')
+    expect(got.inventory).toHaveLength(0)
+  })
+
+  it("the off-hand weapon's damage counts in full, as the relic card says", () => {
+    const hero = armed()
+    const dual = { ...hero, equipment: { ...hero.equipment, offHand: mk('second', 'oneHand', 7) } }
+    const one = { ...hero, equipment: { ...hero.equipment, mainHand: mk('main', 'oneHand', 13) } }
+    // 6 + 7 in two hands is the same flat damage as 13 in one.
+    expect(computeCombat(dual).damage).toBeCloseTo(computeCombat(one).damage, 6)
+  })
+
+  it('a new item lands in an empty off hand as a weapon only when the run holds the relic', () => {
+    const hero = armed()
+    const sword = mk('drop', 'oneHand', 9)
+    expect(receiveItems([hero], [], [sword]).roster[0].equipment.offHand).toBeNull()
+    expect(receiveItems([hero], [], [sword], ['ambidextrous']).roster[0].equipment.offHand?.id).toBe('drop')
   })
 })

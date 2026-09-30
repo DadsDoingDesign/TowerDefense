@@ -87,7 +87,7 @@ every other surface becomes a state of those bands rather than a place you go.
 | **Header** | 76 | Run state — depth, base, gold, dust, threat |
 | **Stage** | 388 | The subject: battlefield · map · board · result · title |
 | **Selector** | 126 | The row of choosable things — party, offers, rooms, menu |
-| **Detail** | 254 | Context panel 176 · equipped gear 78 · pack 100 |
+| **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 |
 
 ### The four rules
 
@@ -106,7 +106,7 @@ every other surface becomes a state of those bands rather than a place you go.
 | --- | --- |
 | Squad / Tactics / Wave tabs | Selector is always the party; tactics is a Context tab |
 | Sentinel detail sheet | `Context Panel · Hero Stats` |
-| Equip drawer sheet | Tap a gear slot → the Pack filters → tap the item |
+| Equip drawer sheet | Tap a gear slot → the Pack filters → tap the item. The slots sit on a paper doll (R3-2): body on the chest, off hand left, main hand right |
 | Item inspect sheet | `Context Panel · Item` |
 | Tower upgrade sheet | `Context Panel · Hero Upgrades` |
 | Inventory modal | The Pack column, permanent |
@@ -278,7 +278,9 @@ byte-for-byte the phone layout.
   1280 → 0.88) keeps the one filtered resample. Phones never snap.
 - **No live collapse.** The Detail band sits beside the field, so collapsing it
   in a live wave would buy the field nothing: it stays open, wave strip at its
-  foot. Gear slots cap at 76px (`flex: 1` would make 180px empty boxes).
+  foot. The gear column is a paper doll (R3-2): 60px slots on a larger body,
+  and under it what each slot holds, in words. Where the doll falls back to
+  the stacked slots (narrow rail on Large UI), they cap at 76px.
 - **Run map** centred at ≤ 760px of the Stage.
 - **Pages** are a 600px column framed on the table (hairline sides, soft
   shadow). The **Watchtower menu** is two columns: key art left (16:10, the

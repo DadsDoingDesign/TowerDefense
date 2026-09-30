@@ -159,7 +159,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     sfxRarity(entry.item.rarity)
     set({
       gold: gold - entry.price,
-      ...receiveItems(get().roster, inventory, [entry.item]),
+      ...receiveItems(get().roster, inventory, [entry.item], get().relics),
       lootPity: pity,
       merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
     })
@@ -176,7 +176,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     const pick = chosen ?? recruitOptions[0] ?? scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub())
     set({
       gold: gold - endlessRecruitCost,
-      ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory),
+      ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory, get().relics),
       endlessRecruitCost: Math.round(endlessRecruitCost * 1.6),
       endlessRoom: null,
       recruitOptions: [],

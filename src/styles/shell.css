@@ -395,7 +395,11 @@
      and a bare `1fr` floors the first track at its content's min-content - so
      the bar's 152px button plus its hint widened the whole band past the
      viewport and pushed the Pack column off-screen. */
-  grid-template-columns: minmax(0, 1fr) 74px 108px;
+  /* R3-2: the gear column is a paper doll now, and two 44px hands side by
+     side need 98px of column (90 of content, see `.sh-doll`). The 24px come
+     from the band's gutters and the context column's padding — measured, not
+     derived: see the note on `.sh-gear` padding below. */
+  grid-template-columns: minmax(0, 1fr) 98px 108px;
   grid-template-rows: minmax(0, 1fr);
   gap: 8px;
   padding: var(--sh-detail-pad-y) 10px var(--sh-detail-pad-b);
@@ -877,6 +881,327 @@
   --fw-i-size: var(--icon-md);
 }
 
+/* ======================================================= R3-2 — paper doll
+   The Gear column is a small body with the slots on it (DetailBand
+   `GearColumn`): the chest slot on the torso, the off hand on the LEFT, the
+   main hand on the RIGHT, hands at the hips, head above, legs below.
+
+   It is laid out by a CONTAINER query on the column's own width, not by a
+   viewport query, because what decides it is whether two `--hit-min` hands
+   fit side by side — and that is the column's width, which five different
+   viewport rules set. Below that width the figure goes and the same three
+   buttons stack, in the same DOM order (Body, Off Hand, Main Hand), so a
+   narrow phone or Large UI on a phone still reads and still taps.
+
+   Everything is whole CSS pixels — the figure is blocks, not a scaled image —
+   so it is crisp at 1x, 2x and 3x without an `image-rendering` rule. */
+.sh-gear {
+  container: gear / inline-size;
+  /* The hands run to the column's edge: 3px of side padding, not 8, is what
+     leaves 90px of content in a 98px column. The heading keeps its inset. */
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.sh-gear > .sh-col-head {
+  padding: 0 5px;
+}
+/* The rest of the doll's 24px (the column went 74 → 98): 2px off each gutter
+   between the columns, 4px off the band's side padding (see the safe-area
+   block), and 2px off each side of the context column's padding. Measured at
+   390x844 with a hero open: the three hero tabs land at ~45px, where they sat
+   before (the C11 note says 45) — above the 44 floor, not at it. */
+.sh-detail {
+  column-gap: 6px;
+}
+.sh-context {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+/* …which left the PATIENCE cell's "5 PAT ⓘ" half a pixel short of one line
+   (the ⓘ wrapped under and was clipped). A stat cell's side padding gives it
+   back. */
+.sh-cell {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+.sh-doll {
+  --doll-s: var(--hit-min);
+}
+/* Compact: the stack, as the column always was. The figure and the note need
+   room the stack does not have. */
+.sh-doll-fig,
+.sh-doll-note {
+  display: none;
+}
+/* The stack wears a worn item as its picture under a one-word slot name
+   ("MAIN", "OFF", "BODY"), the rarity letter in the opposite corner: the two-line
+   "MAIN HAND" over a 32px picture overflowed a 48px Large-UI slot, and the
+   rarity letter sat on the label. An empty slot keeps the full name. */
+.sh-slot-short {
+  display: none;
+}
+.sh-doll > .sh-slot.filled .sh-slot-label {
+  display: none;
+}
+.sh-doll > .sh-slot.filled .sh-slot-short {
+  display: block;
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.sh-doll > .sh-slot.filled .sh-slot-rar {
+  left: auto;
+  right: 4px;
+  top: auto;
+  bottom: 3px;
+}
+.sh-doll > .sh-slot.filled .sh-slot-mark {
+  margin-top: 10px;
+}
+/* The Ambidextrous off hand: its outline changes, in teal (the rule colour —
+   the gold `--accent` already means "this slot is armed"), doubled so it is a
+   SHAPE change as well as a hue change. */
+.sh-slot.dual {
+  border: 3px double var(--teal-text);
+}
+.sh-slot.dual.active {
+  border-color: var(--accent);
+}
+.sh-slot-dual {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  line-height: 0;
+}
+
+@container gear (min-width: 90px) {
+  .sh-doll {
+    /* the gap between the two hands, and the head and legs above and below */
+    --doll-g: 2px;
+    --doll-head: 22px;
+    --doll-legs: 16px;
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    width: calc(2 * var(--doll-s) + var(--doll-g));
+    height: calc(var(--doll-head) + 2 * var(--doll-s) + 4px + var(--doll-legs));
+    /* Centred across, hung from the top: on the desk rail the column is as
+       tall as the window, and a doll floating in its middle read as lost. */
+    align-self: center;
+    margin-top: 4px;
+    overflow: visible;
+  }
+  .sh-doll-fig {
+    --doll-ink: color-mix(in srgb, var(--doll-hue) 34%, var(--panel));
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .sh-doll-fig > i {
+    position: absolute;
+    display: block;
+    background: var(--doll-ink);
+  }
+  /* A 16x18 head with a neck, corners stepped a pixel-art 2px. */
+  .sh-doll-head {
+    top: 0;
+    left: calc(50% - 8px);
+    width: 16px;
+    height: calc(var(--doll-head) + 2px);
+    clip-path: polygon(
+      2px 0, 14px 0, 14px 2px, 16px 2px, 16px 16px, 14px 16px, 14px 18px, 11px 18px,
+      11px 100%, 5px 100%, 5px 18px, 2px 18px, 2px 16px, 0 16px, 0 2px, 2px 2px
+    );
+  }
+  /* Shoulders and both arms as one block behind the chest slot: what shows is
+     a shoulder and an arm either side of it, running down into each hand, and
+     a strip of waist between the chest and the hands. */
+  .sh-doll-arms {
+    top: calc(var(--doll-head) - 2px);
+    left: calc(var(--doll-s) / 2 - 8px);
+    right: calc(var(--doll-s) / 2 - 8px);
+    height: calc(var(--doll-s) + 12px);
+    clip-path: polygon(4px 0, calc(100% - 4px) 0, calc(100% - 4px) 2px, calc(100% - 2px) 2px, calc(100% - 2px) 4px, 100% 4px, 100% 100%, 0 100%, 0 4px, 2px 4px, 2px 2px, 4px 2px);
+  }
+  /* Two legs, below the hands, with a 4px step between them. */
+  .sh-doll-fig > .sh-doll-legs {
+    bottom: 0;
+    left: calc(50% - 12px);
+    width: 24px;
+    height: calc(var(--doll-legs) + 4px);
+    background: linear-gradient(90deg, var(--doll-ink) 0 10px, transparent 10px 14px, var(--doll-ink) 14px 24px);
+  }
+
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot {
+    position: absolute;
+    width: var(--doll-s);
+    height: var(--doll-s);
+    min-height: 0;
+    flex: none;
+    padding: 0;
+    gap: 0;
+    /* Opaque, so the figure never shows through a slot: the column's own
+       wash over the band's panel, flattened. */
+    background: color-mix(in srgb, var(--panel) 88%, var(--text) 12%);
+    /* The rarity hue all the way round (as the pack tiles wear it), rather
+       than the stacked slot's left rail: on a body a one-sided rail reads as
+       the slot leaning. */
+    border: 2px solid var(--rail, var(--line-strong));
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.empty {
+    border-style: dashed;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.dual {
+    border: 3px double var(--teal-text);
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.dual.active {
+    border-color: var(--accent);
+  }
+  .sh-doll-body {
+    top: var(--doll-head);
+    left: calc((var(--doll-s) + var(--doll-g)) / 2);
+  }
+  .sh-doll-offHand,
+  .sh-doll-mainHand {
+    top: calc(var(--doll-head) + var(--doll-s) + 4px);
+  }
+  .sh-doll-offHand {
+    left: 0;
+  }
+  .sh-doll-mainHand {
+    right: 0;
+  }
+  /* At 44px a worn slot is its picture and its rarity letter; the doll says
+     which slot it is. An empty one is its words — in the body text ink, not
+     the muted one Whales found faint on the desk rail. */
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.filled .sh-slot-label,
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.filled .sh-slot-short,
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.empty .sh-slot-plus {
+    display: none;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.filled .sh-slot-mark {
+    margin-top: 0;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.empty .sh-slot-label {
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot.active .sh-slot-label {
+    color: var(--accent);
+  }
+  /* The rarity letter and the Ambidextrous blade become tags on the slot's
+     corners: inside a 44px slot they sat ON the 32px picture. The tag wears
+     the slot's own fill, so it reads as part of the slot, not a sticker. */
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-rar,
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual {
+    z-index: 1;
+    padding: 1px 3px;
+    border-radius: var(--r-xs);
+    background: color-mix(in srgb, var(--panel) 88%, var(--text) 12%);
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-rar {
+    top: -8px;
+    bottom: auto;
+    left: -6px;
+    right: auto;
+    line-height: 11px;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-dual {
+    top: -9px;
+    right: -7px;
+    padding: 1px;
+  }
+  .sh-doll-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -2px;
+    right: -2px;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    color: var(--teal-text);
+    white-space: nowrap;
+  }
+}
+/* Large UI raises the floor to 48, so two hands need 96px — more than a
+   90–98px column has. That column only exists on the desk rail near its 400px
+   clamp (a phone on Large UI has a 70px one and stacks): there the hands close
+   their gap and use the column's 3px side padding, the doll centred over the
+   overflow (`align-self`, which centres both ways where `margin: auto` would
+   push it right). */
+@container gear (min-width: 90px) and (max-width: 97.98px) {
+  :root[data-scale='large'] .sh-doll {
+    --doll-g: 0px;
+  }
+}
+/* The desk caption under the doll: what each slot holds, in words. Only on the
+   wide layout, where the gear column is as tall as the window. */
+.sh-doll-legend {
+  display: none;
+}
+@media (min-width: 900px) and (min-height: 540px) {
+  @container gear (min-width: 124px) {
+    .sh-doll-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      /* clears the absolutely-placed "Ambidextrous" note under the doll */
+      margin: 30px 5px 0;
+      padding: 0;
+      list-style: none;
+    }
+    .sh-doll-legend li {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .sh-doll-legend span {
+      font-size: var(--fs-micro);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .sh-doll-legend b {
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }
+    .sh-doll-legend b.none {
+      font-weight: 400;
+      color: var(--muted);
+    }
+  }
+}
+/* A wider column (tablet, desk rail): bigger slots, a bigger body, and the
+   worn item's picture at 48 (a whole 3x of the 16px cell). */
+@container gear (min-width: 124px) {
+  .sh-doll {
+    --doll-s: max(60px, var(--hit-min));
+    --doll-g: 6px;
+    --doll-head: 26px;
+    --doll-legs: 22px;
+  }
+  .sh-gear > .sh-doll > .sh-slot.sh-doll-slot .sh-slot-mark .fw-i {
+    --fw-i-size: var(--icon-lg);
+  }
+}
+
 .sh-pack.filtering {
   border-color: var(--accent);
 }
@@ -1215,8 +1540,10 @@
      padding alone just costs the Pack column a row. */
   height: calc(var(--sh-detail-h) + var(--safe-bottom));
   padding-bottom: calc(var(--sh-detail-pad-b) + var(--safe-bottom));
-  padding-left: max(10px, var(--safe-left));
-  padding-right: max(10px, var(--safe-right));
+  /* 6, not 10 (R3-2): four of the pixels the paper-doll gear column needs.
+     See the R3-2 block for the rest of that budget. */
+  padding-left: max(6px, var(--safe-left));
+  padding-right: max(6px, var(--safe-right));
 }
 
 /* ======================================================= narrow viewport (C11)

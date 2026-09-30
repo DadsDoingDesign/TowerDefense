@@ -162,7 +162,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     sfxRarity(entry.item.rarity)
     set({
       gold: gold - entry.price,
-      ...receiveItems(roster, inventory, [entry.item]),
+      ...receiveItems(roster, inventory, [entry.item], get().relics),
       lootPity: pity,
       merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
     })

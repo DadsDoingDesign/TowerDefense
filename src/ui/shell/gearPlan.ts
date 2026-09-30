@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { HERO_SLOT_LABEL, heroSlotsFor } from '../../game/data/items'
 import { computeCombat, totalStats } from '../../game/engine/combat'
+import type { EquipRules } from '../../game/engine/kit'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 
@@ -24,15 +25,16 @@ useGameStore.subscribe((s, prev) => {
 /**
  * Where `item` would go on `hero`, what it would push back to the pack, and the
  * hero as they would stand afterwards. Mirrors `equipFromPack`'s two-hand rules
- * exactly (src/game/run/inventory.ts), so the preview is the result.
+ * exactly (src/game/run/inventory.ts), so the preview is the result — including
+ * the Ambidextrous relic's off hand (`rules.ambidextrous`, R3-2).
  */
-export function planEquip(hero: Sentinel, item: Item, armed?: HeroSlot | null) {
-  const slots = heroSlotsFor(item.slot)
+export function planEquip(hero: Sentinel, item: Item, armed?: HeroSlot | null, rules: EquipRules = {}) {
+  const slots = heroSlotsFor(item.slot, rules)
   const eq = hero.equipment
   let slot: HeroSlot
   if (armed && slots.includes(armed)) slot = armed
-  else if (item.slot === 'oneHand') {
-    // An empty hand first; otherwise the main hand (a swap).
+  else if (item.slot === 'oneHand' && slots.includes('offHand')) {
+    // Ambidextrous: an empty hand first; otherwise the main hand (a swap).
     slot = !eq.mainHand ? 'mainHand' : !eq.offHand && eq.mainHand.slot !== 'twoHand' ? 'offHand' : 'mainHand'
   } else slot = slots[0]
 
@@ -94,10 +96,10 @@ export function newAffixes(item: Item, displaced: readonly Item[]): string[] {
 }
 
 /** The hero this item helps most (DPS), for when nobody is being looked at. */
-export function bestFitHero(roster: readonly Sentinel[], item: Item): Sentinel | undefined {
+export function bestFitHero(roster: readonly Sentinel[], item: Item, rules: EquipRules = {}): Sentinel | undefined {
   let best: { h: Sentinel; gain: number } | undefined
   for (const h of roster) {
-    const gain = computeCombat(planEquip(h, item).after).dps - computeCombat(h).dps
+    const gain = computeCombat(planEquip(h, item, null, rules).after).dps - computeCombat(h).dps
     if (!best || gain > best.gain) best = { h, gain }
   }
   return best?.h
@@ -114,8 +116,9 @@ export function equipTarget(
   item: Item,
   armedHeroId: string | null | undefined,
   rememberedId: string | null,
+  rules: EquipRules = {},
 ): Sentinel | undefined {
   return (
-    roster.find((h) => h.id === armedHeroId) ?? roster.find((h) => h.id === rememberedId) ?? bestFitHero(roster, item)
+    roster.find((h) => h.id === armedHeroId) ?? roster.find((h) => h.id === rememberedId) ?? bestFitHero(roster, item, rules)
   )
 }

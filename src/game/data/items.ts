@@ -11,10 +11,21 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
   offHand: 'Off Hand',
   body: 'Body',
 }
-/** Which hero slot(s) an item of this kind may occupy. */
-export function heroSlotsFor(kind: ItemSlot): HeroSlot[] {
+/**
+ * Which hero slot(s) an item of this kind may occupy.
+ *
+ * R3-2: dual-wielding is a BONUS now, not the default. A one-handed weapon goes
+ * in the main hand; the off hand holds off-hand pieces (the Precision slot) —
+ * unless the run holds the Ambidextrous relic (`data/relics.ts`), which opens
+ * the off hand to one-handed weapons too. Pass `ambidextrous` from
+ * `hasRelicRule(relics, 'ambidextrous')`; every caller that equips reads it.
+ * A save from before this rule may still WEAR a weapon in the off hand: it is
+ * left where it is (the engine counts what is worn), it just cannot be put
+ * back there without the relic.
+ */
+export function heroSlotsFor(kind: ItemSlot, opts: { ambidextrous?: boolean } = {}): HeroSlot[] {
   switch (kind) {
-    case 'oneHand': return ['mainHand', 'offHand']
+    case 'oneHand': return opts.ambidextrous ? ['mainHand', 'offHand'] : ['mainHand']
     case 'twoHand': return ['mainHand'] // also blocks offHand while equipped
     case 'offHand': return ['offHand']
     case 'body': return ['body']
