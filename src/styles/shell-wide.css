@@ -282,7 +282,7 @@
 }
 /* Hover keeps the row translucent, lit toward the accent. */
 @media (hover: hover) and (pointer: fine) {
-  .pg.has-backdrop .pg-row:hover:not(:disabled):not(.sel) {
+  .pg.has-backdrop .pg-row:hover:not(:disabled):not(.sel):not([aria-disabled='true']) {
     background-color: rgba(70, 52, 30, 0.86);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   }
@@ -422,7 +422,7 @@
     background-color: var(--surface-strong);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   }
-  .pg-row:hover:not(:disabled):not(.sel) {
+  .pg-row:hover:not(:disabled):not(.sel):not([aria-disabled='true']) {
     background-color: color-mix(in srgb, var(--panel-2) 82%, var(--accent) 18%);
   }
   .sh-btn:hover:not(:disabled),

@@ -196,6 +196,7 @@ export function MenuRow({
   art,
   big,
   note,
+  locked,
 }: {
   label: string
   value?: ReactNode
@@ -257,13 +258,20 @@ export function MenuRow({
    * it". It is part of the row's text, so it is part of its accessible name.
    */
   note?: string
+  /**
+   * LS3: a locked entry. It stays in the tab order and says what it is and
+   * what opens it (`aria-disabled`, not `disabled`, so a keyboard or screen-
+   * reader user can reach the line), and a press does nothing.
+   */
+  locked?: boolean
 }) {
   return (
     <button
       className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`}
       style={rail ? ({ '--rail': rail } as CSSProperties) : undefined}
-      onClick={onClick}
-      disabled={!onClick || disabled}
+      onClick={locked ? undefined : onClick}
+      disabled={locked ? undefined : !onClick || disabled}
+      aria-disabled={locked || undefined}
       aria-pressed={selected}
     >
       {(icon || glyph || art) && (

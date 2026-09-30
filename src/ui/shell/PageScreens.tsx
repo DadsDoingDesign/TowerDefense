@@ -541,7 +541,7 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
             glyph={o.glyph}
             big
             dim={!!o.locked}
-            disabled={!!o.locked}
+            locked={!!o.locked}
             onClick={() => o.action?.run()}
             tone={o.color === 'var(--bad-text)' ? 'danger' : 'default'}
           />

@@ -1374,3 +1374,7 @@
   line-height: 1.3;
   white-space: normal;
 }
+/* Locked, but reachable: `aria-disabled` rather than `disabled` (see MenuRow). */
+.pg-row[aria-disabled='true'] {
+  cursor: default;
+}
