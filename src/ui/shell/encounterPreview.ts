@@ -11,6 +11,7 @@ import {
 import type { WaveDef } from '../../game/types'
 import { bannerRules } from '../../state/metaStore'
 import { encounterNode } from '../../game/run/map'
+import { ACT_LAYERS } from '../../game/run/threat'
 
 /**
  * ---------------------------------------------------------------------------
@@ -121,7 +122,7 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const heads = wave.spawns.length
   return {
     kind,
-    variant: v.label || (kind === 'boss' ? 'The Final Watch' : 'Patrol'),
+    variant: v.label || (kind === 'boss' ? (node.type === 'miniboss' ? `Act ${Math.ceil(node.layer / ACT_LAYERS)} Boss` : 'The Final Watch') : 'Patrol'),
     asks: v.asks,
     mod: v.mod ? (ENEMY_MODS.find((m) => m.id === v.mod) ?? null) : null,
     heads,

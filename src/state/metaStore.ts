@@ -266,7 +266,7 @@ export interface BannerRung {
  * Existing saves that had unlocked rungs 4–5 clamp to 3 in {@link migrateMeta}.
  */
 export const BANNER_RUNGS: BannerRung[] = [
-  { tier: 1, name: 'Thin Pickings', rule: 'Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants stock one item fewer, and the Crossroads offers two mutations. Half the build, same march.', markMult: 1.4 },
+  { tier: 1, name: 'Thin Pickings', rule: 'Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants lay out half their shelf, and the Crossroads offers two mutations. Half the build, same march.', markMult: 1.4 },
   /*
    * ---- this card said three things and one of them was true (M7a) ---------
    *

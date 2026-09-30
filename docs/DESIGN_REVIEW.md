@@ -2444,3 +2444,42 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   @2x and 1440×900 (`~/fieldwatch-critique/build-ls2/`). The loop caught one
   thing: the first row tile (52px) read small beside a 16px name on a phone;
   the tile is 60px and the row 80px, so the sprite draws near 1:1 at @2x.
+
+- **2026-09-29 — end-to-end first-run review (tuning lane).** Played at
+  390×844 through Playwright on the real canvas: two runs, a Fighter played
+  straight (lost at depth 5) and a Mystic with the Gate refilled before each
+  fight so the review could reach the act boss. Covered the attract mode, hero
+  pick, map and node preview, portrait setup with the coach tip, sub-waves 1/2
+  and 1–3/3, the breather banner, the Rally Horn in the command slot, all three
+  of Warlord Grukk's phases on the boss plate, the wave-cleared card, campfire,
+  merchant, recruit, Crossroads, level-5 perks (the locked one names its feat),
+  relic and item spoils, the defeat receipt and the Codex. Then a 1440×900 pass:
+  1/2/3 set the speed, Space starts the wave, C spends the ready command, ? opens
+  the key sheet and Esc closes it, all through the visible controls.
+
+  Scorecard (checklist): readability 4/5 (units and lane read cleanly on both
+  twins; the boss plate and breather banner sit over the top of the lane),
+  decoration at the margins 5/5, factions distinguishable 4/5, colour and
+  surface 5/5, surfaces with character 4/5, depth and composition 4/5, polish
+  3/5 (the items below). Against Kingdom Rush the field holds up; the chrome
+  around it is where the rough edges are.
+
+  Fixed: a full Gate opened the campfire on "Rest by the fire — Gate is full"
+  with "Rest anyway" as the big button (it now leads with Train). Row choosers
+  cut "Executioner's Oath" to "Executioner's Oa" beside a Legendary relic tag
+  (the label wraps and the tag's suffix drops a line). Act bosses at depth 4
+  and 8 were announced as "The Final Watch" ("Act 1 Boss" / "Act 2 Boss" now).
+
+  Open: (1) during a breather the last enemy of the sub-wave stays drawn
+  mid-hit, frozen on the lane, on both viewports. The engine only pauses once
+  the field is empty, so this is the presentation freezing its death. (2) The
+  breather banner and the boss plate cover the top ~60px of the portrait field,
+  which is where the lane enters on both twins. (3) On the merchant at 390×844
+  the selected item's stats sit below the fold, under the list. (4) The layer-1
+  row of four map nodes touches edge to edge at 390px ("MERCHANT" meets the
+  frame). (5) The gear slots' rarity letter overlaps the slot label ("CMAIN
+  HAND"). (6) The defeat receipt's company list clips to one faded row, and a
+  hero can read "0 kills · 1334 dmg". (7) The node preview cuts the Threat
+  sentence mid-line. (8) After a reload on the hero-pick screen the "Run in
+  progress" dialog offers "Abandon and collect marks" for a depth-0 run that
+  has no marks. (9) Every relic shares one glyph on the Spoils rows.

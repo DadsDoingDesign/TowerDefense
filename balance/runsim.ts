@@ -169,6 +169,9 @@ export interface RoutePolicy {
   pick: (candidates: MapNode[], view: RunView) => MapNode
 }
 
+/** The share of the Gate at or below which every modelled player heads for a campfire. */
+const GATE_HURT = 0.6
+
 /** A policy that ranks node *types* on a fixed table — the shape §11 shipped. */
 function prefPolicy(id: string, label: string, pref: Record<string, number>): RoutePolicy {
   // Even a fixed-table player can see that a full company cannot hire: a
@@ -176,7 +179,22 @@ function prefPolicy(id: string, label: string, pref: Record<string, number>): Ro
   // carry more hiring stops since Phase 3b, and a model that walked into them
   // with a full roster measured `Free Companies` (a SECOND hiring stop) as a
   // −9pt trap on the recruits line — the purchase was not the defect.
-  const rank = (n: MapNode, v: RunView) => (n.type === 'recruit' && v.roster.length >= MAX_ROSTER ? 0.5 : (pref[n.type] ?? 0))
+  //
+  // …and that a hurt Gate needs the fire. The Gate bar is on screen for the
+  // whole run and a campfire's first offer is its repair, so a player of ANY
+  // table who is down to 60% of the Gate walks to the fire when the road offers
+  // one (the same line the adaptive policy and the store's rest rule use). A
+  // model that marched into its fourth act-3 battle on 5 Gate HP with a
+  // campfire beside it measured the wide map's extra fights as a −3.5pt trap
+  // on the battles-first line: the purchase was not the defect, the blindness was.
+  const rank = (n: MapNode, v: RunView) =>
+    n.type === 'recruit' && v.roster.length >= MAX_ROSTER
+      ? 0.5
+      : n.type === 'campfire' && v.baseHp <= v.maxBaseHp * GATE_HURT
+        ? 8
+        : n.type === 'merchant' && v.baseHp <= v.maxBaseHp * GATE_HURT && v.gold >= GATE_REPAIR.price
+          ? 7
+          : (pref[n.type] ?? 0)
   return {
     id,
     label,

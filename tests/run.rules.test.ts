@@ -469,6 +469,9 @@ describe('relics (data/relics + game/run/relics)', () => {
     expect(hiresTrained(false, ['charter'])).toBe(true)
     expect(hiresTrained(false, [])).toBe(false)
     expect(shelfSize(['seal'])).toBe(5)
+    // Thin Pickings halves the shelf.
+    expect(shelfSize([], true)).toBe(2)
+    expect(shelfSize(['seal'], true)).toBe(3)
     expect(restockFree(['seal'], 0)).toBe(true)
     expect(restockFree(['seal'], 1)).toBe(false)
     const roster = [{ id: 'a', level: 9 }, { id: 'b', level: 3 }]

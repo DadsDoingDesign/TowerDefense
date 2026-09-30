@@ -54,9 +54,16 @@ export const hiresTrained = (hubTrained: boolean, held: readonly string[]): bool
  */
 export const equipRules = (held: readonly string[]): EquipRules => ({ twinblade: hasRelicRule(held, 'twinblade') })
 
-/** How many items a merchant lays out. */
+/**
+ * How many items a merchant lays out. Thin Pickings (Vow 1) halves the shelf,
+ * 4 → 2 (5 → 3 with the Quartermaster's Seal). It took one item off until the
+ * tuning lane raised `STOP_XP_SHARE` to 0.55: the extra stop levels substituted
+ * for the lost card and shelf slot, and the rung's cost fell 5pt → 1.5pt, under
+ * the 3pt REPORT §13 asks of every rung. Half the shelf reads −6.7pt on the
+ * adaptive line (n=600) — "half the build", as the card says.
+ */
 export const shelfSize = (held: readonly string[], thinPickings = false): number =>
-  (hasRelicRule(held, 'quartermaster') ? 5 : 4) - (thinPickings ? 1 : 0)
+  (hasRelicRule(held, 'quartermaster') ? 5 : 4) - (thinPickings ? 2 : 0)
 
 /** Whether this restock is free (the Seal's first one at each stall). */
 export const restockFree = (held: readonly string[], rerolls: number): boolean =>
