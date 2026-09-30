@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TILE } from '../src/game/data/terrain'
+import { COARSE as TILE } from '../src/game/data/terrain'
 import {
   HOLD_MS,
   PAN_SLOP,

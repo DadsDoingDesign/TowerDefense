@@ -167,7 +167,7 @@ eye is on the field. Reduced motion: the 260 ms height transition is instant.
 | Band (live) | 390×844 | 375×667 | 320×568 | Holds |
 | --- | --- | --- | --- | --- |
 | Header | 76 | 68 | 63 | Run state (unchanged) |
-| Stage | **574** (was 332) | **419** | **331** | Field + apron, `.sh-stage-top`, `.sh-stage-center` |
+| Stage | **574** (was 332) | **419** | **331** | Field and the map round it, `.sh-stage-top`, `.sh-stage-center` |
 | Selector | 126 | 112 | 106 | Party (unchanged) |
 | Wave strip | 68 | 68 | 68 | caption (name · N left) over the **enemy queue** · **CommandSlot** · Speed |
 
@@ -175,8 +175,14 @@ The field is fit to the Stage wrap's **content box**. On the phone column a
 battle is fought on the field's **portrait twin** (620×960 logical, the
 landscape field transposed — see *Portrait battlefields* below), which is
 height-bound in the tall Stage; desks and tablets keep the 960×560 landscape
-field. The room the field cannot use is the **apron** (`render/apron.ts`), a
-baked woodland registered under the field with CSS — no letterbox bars. Units draw
+field. Grid-fit: there is no apron and no letterbox — the battlefield is one
+continuous map (`render/terrain.ts` bakes the meadow, the road and the woodland
+round it on the grid's own 40px lattice) and the canvas fills the whole Stage.
+`frame.stageView` fits the **playable rect** (the road inside the grid, the Gate,
+every tile that is not forest) to the content box and shows as much map as the
+Stage has room for; on the side the road enters, it never shows past the field's
+edge, so the horde walks in from off-screen. Desks get a crisp scale: whole device
+px when within 10%, else a ×2/×3 supersampled composite filtered down. Units draw
 at the pack's native density (`unitPixmapScale`): ~35 CSS px goblins and ~44 CSS
 px heroes on the portrait field at 390 wide (they were ~24 / ~30 on the
 landscape field).
@@ -194,7 +200,7 @@ landscape field).
   `maps.ts`: portrait on the phone column (`< 700` wide and `h ≥ 1.3 w`),
   landscape everywhere else (tablets, desks, short landscape windows). It is read
   **once per battle**, when the node is entered, and stored with the run — a
-  rotation mid-battle re-fits the same field in the apron, a resume comes back on
+  rotation mid-battle re-fits the same field (more map round it), a resume comes back on
   the twin it was saved on, and the next node chooses again. The twins are an
   isometry of the originals, so this is a presentation choice with zero balance
   consequence (REPORT §17 gates it).
@@ -236,7 +242,7 @@ line; the header's Depth chip names the wave right above.
 | Place | File | Rule |
 | --- | --- | --- |
 | **Command button** | `src/ui/shell/CommandSlot.tsx` (rendered by `WaveBar`, live only) | Return ONE `<button className="sh-command">` (44px, styled in `shell-live.css`) or null. It sits between the enemy queue and Speed; the strip's height already fits it. Actions live in band 4 — never on the Stage. |
-| **Boss / champion nameplate** | `src/ui/shell/BossPlate.tsx` in `.sh-stage-top` | While it renders, `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by `--sh-bossplate-h` (54px) and `BattleCanvas` fits the field below it — on a width-bound phone it lands in the apron and the field does not move. Boss phases: fill `.sh-bossplate-extra` (a flex spacer between the name and the HP number) with phase pips / a phase word. |
+| **Boss / champion nameplate** | `src/ui/shell/BossPlate.tsx` in `.sh-stage-top` | While it renders, `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by `--sh-bossplate-h` (54px) and `BattleCanvas` fits the playable rect below it — the plate lies over the woodland past the play (grid-fit). Boss phases: fill `.sh-bossplate-extra` (a flex spacer between the name and the HP number) with phase pips / a phase word. |
 | **Telegraphs** | `render/overlays.ts` or a new render file | Draw in the field composite (logical px). The HP bar stack sits at `artTop` (see `render/hpbar.ts`); leave the band just above the head for it. |
 | **Post-wave / result copy** | `WaveCeremony.tsx` (Stage centre, after the fight only), `DefeatReceipt.tsx` (run end) | The ceremony may cover the field because the fight is over; nothing may cover a LIVE field. |
 | **Post-wave reward + level-ups** (G3-2) | `levelUps.ts` (`rewardInPlace`, the roster's level-up state), `SelectorBand.tsx` (`RewardSelector`), `LevelUpPanel.tsx` | After a cleared NORMAL campaign wave the Stage dims to one result line, the Selector holds a compact party strip over the reward hand (first card preselected, "Take it" in the Context panel), and a levelled hero wears a "Lv 5 ↑" badge until its level-up is dealt with in the panel. Elite and boss spoils keep their page, and their level-ups keep the modal. |
@@ -268,7 +274,7 @@ byte-for-byte the phone layout.
     │                                        │ Selector 126 (party row)   │
     │   STAGE  980×840                       ├────────────────────────────┤
     │   field 960×560 at exactly 1:1         │ Detail — context · gear ·  │
-    │   (woodland apron around it)           │ pack, full height; wave    │
+    │   (the map runs on round it)           │ pack, full height; wave    │
     │                                        │ strip at its foot          │
     └────────────────────────────────────────┴────────────────────────────┘
 

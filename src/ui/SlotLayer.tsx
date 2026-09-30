@@ -1,7 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import type { Vec2 } from '../game/core/vec'
 import { DANGER_COPY } from '../game/data/hazards'
-import { BLOCK_COPY } from '../game/data/terrain'
+import { BLOCK_COPY, crowds } from '../game/data/terrain'
 import type { FieldTile, GameMap } from '../game/types'
 import { useGameStore } from '../state/gameStore'
 
@@ -113,6 +113,9 @@ export function SlotLayer({ field }: { field: FieldRect }) {
     }
     const heroId = placements[t.id]
     const hero = heroId ? roster.find((h) => h.id === heroId) : undefined
+    // Grid-fit: beside another posted hero is no place for the armed one.
+    const near = armedHero && !hero ? neighbourOf(t.id) : undefined
+    if (near) return `${ref}, ${where}, too close to ${near.name} — heroes stand at least a tile apart`
     const state = hero ? `${hero.name} posted` : 'open'
     const action = armedHero
       ? hero && hero.id === armedHero.id
@@ -123,8 +126,14 @@ export function SlotLayer({ field }: { field: FieldRect }) {
         : ''
     return `${ref}, ${where}, ${state}${action}`
   }
+  /** The posted hero (not the armed one) standing beside tile `id`, if any. */
+  const neighbourOf = (id: string) => {
+    const k = Object.keys(placements).find((p) => placements[p] && placements[p] !== armed && crowds(p, id))
+    return k ? roster.find((h) => h.id === placements[k]) : undefined
+  }
   const inert = (t: FieldTile): boolean => {
     if (t.block) return true
+    if (inSetup && armedHero && !placements[t.id] && neighbourOf(t.id)) return true
     if (inBreather) return engine!.subWaveState().moved || (!pick && !engine!.sentinelOnSlot(t.id))
     return !armedHero && !placements[t.id]
   }

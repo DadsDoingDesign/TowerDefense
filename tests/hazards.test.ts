@@ -10,6 +10,9 @@ import {
   OBSTACLES,
   dangerAt,
   layHazards,
+  patchesTouch,
+  rankPatches,
+  type Patch,
   roadCoverage,
   tileDamageMult,
 } from '../src/game/data/hazards'
@@ -18,7 +21,7 @@ import { nameCounterState, createSentinel } from '../src/game/data/sentinels'
 import { layTiles, TERRAIN_RULE_IDS } from '../src/game/data/terrain'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import { endlessHazardSeed, nodeHazardSeed } from '../src/game/run/terrain'
-import type { FieldTile, GameMap, SpawnEvent, TerrainRuleId } from '../src/game/types'
+import type { GameMap, SpawnEvent, TerrainRuleId } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
@@ -41,12 +44,6 @@ beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stat
 const RULES: (TerrainRuleId | null)[] = [null, ...TERRAIN_RULE_IDS]
 const SEEDS = Array.from({ length: 60 }, (_, i) => (i * 2654435761) >>> 0 || 1)
 
-/** The open tiles of `map`, best road coverage first (ties by id). */
-function ranked(map: GameMap): FieldTile[] {
-  const open = map.tiles!.filter((t) => !t.block)
-  return [...open].sort((a, b) => roadCoverage(map.path, b.pos) - roadCoverage(map.path, a.pos) || a.id.localeCompare(b.id))
-}
-
 describe('the layout', () => {
   it('measures coverage exactly as the balance harness does', () => {
     const h = slotCoverage(FIRST_MAP, COVERAGE_RANGE)
@@ -54,35 +51,39 @@ describe('the layout', () => {
   })
 
   it.each(ALL_MAPS.flatMap((m) => RULES.map((r) => [m.id, r] as const)))(
-    '%s / %s: one cursed tile among the best, boulders among the next best, nothing else touched',
+    '%s / %s: cursed patches among the best, boulder patches among the next best, nothing else touched',
     (id, rule) => {
       const plain = fieldFor(id, rule, 'landscape')!
-      const best = ranked(plain)
+      // Grid-fit: the unit is a 2 × 2 patch of open tiles, ranked as distinct places.
+      const best = rankPatches(plain.tiles!, plain.path)
+      const key = (p: Patch) => p.cells.map((t) => t.id).sort().join(',')
       for (const seed of SEEDS) {
         const m = fieldFor(id, rule, 'landscape', seed)!
         expect(m.hazardSeed).toBe(seed)
         expect(fieldIdOf(m)).toBe(id)
         expect(m.terrainRule).toBe(rule ?? undefined)
         const cursed = m.tiles!.filter((t) => t.danger)
-        expect(cursed).toHaveLength(DANGER_TILES)
+        expect(cursed).toHaveLength(DANGER_TILES * 4)
         for (const t of cursed) {
           expect(t.danger).toBe('cursed')
           expect(t.block).toBeNull()
           // Open: a hero may stand there.
           expect(m.slots.some((s) => s.id === t.id)).toBe(true)
-          expect(best.slice(0, DANGER_POOL).map((b) => b.id)).toContain(t.id)
         }
-        // The seeded boulders: only on open ground, from the next-best pool,
-        // never two side by side.
+        const pool = best.slice(0, DANGER_POOL)
+        const cursedPatches = pool.filter((p) => p.cells.every((c) => cursed.some((t) => t.id === c.id)))
+        expect(cursedPatches).toHaveLength(DANGER_TILES)
+        // The seeded boulders: only on open ground, whole patches from the
+        // next-best pool, never two side by side.
         const added = m.tiles!.filter((t, i) => t.block !== plain.tiles![i].block)
         expect(added.length).toBeGreaterThan(0)
-        expect(added.length).toBeLessThanOrEqual(OBSTACLES)
-        const pool = best.filter((b) => !cursed.some((c) => c.id === b.id)).slice(0, OBSTACLE_POOL).map((b) => b.id)
-        for (const t of added) {
-          expect(t.block).toBe('rock')
-          expect(pool).toContain(t.id)
-          for (const o of added) if (o !== t) expect(Math.abs(o.col - t.col) + Math.abs(o.row - t.row)).toBeGreaterThan(1)
-        }
+        expect(added.length).toBeLessThanOrEqual(OBSTACLES * 4)
+        expect(added.length % 4).toBe(0)
+        const next = best.filter((p) => !cursedPatches.some((c) => key(c) === key(p))).slice(0, OBSTACLE_POOL)
+        const rocks = next.filter((p) => p.cells.every((c) => added.some((t) => t.id === c.id)))
+        expect(rocks.length * 4).toBe(added.length)
+        for (const t of added) expect(t.block).toBe('rock')
+        for (const p of rocks) for (const q of rocks) if (p !== q) expect(patchesTouch(p, q)).toBe(false)
         // Everything that was blocked stays blocked as it was.
         plain.tiles!.forEach((t, i) => {
           if (t.block) expect(m.tiles![i].block).toBe(t.block)
@@ -101,9 +102,9 @@ describe('the layout', () => {
       return t.filter((x) => x.danger || (x.block === 'rock' && !tiles.find((y) => y.id === x.id)!.block)).map((x) => x.id).join(',')
     }))
     expect(layouts.size).toBeGreaterThan(5)
-    // Every tile of the pool is dealt the curse on some seed.
+    // Every patch of the pool is dealt the curse on some seed.
     const hit = new Set(SEEDS.flatMap((s) => layHazards(tiles, land.path, s).filter((t) => t.danger).map((t) => t.id)))
-    expect(hit.size).toBe(DANGER_POOL)
+    expect(hit.size).toBe(DANGER_POOL * 4)
   })
 
   it('goes over to the portrait twin tile for tile, and a rule change keeps it', () => {

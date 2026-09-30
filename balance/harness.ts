@@ -19,6 +19,7 @@ import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { tileDamageMult } from '../src/game/data/hazards'
+import { crowds, parseTileId } from '../src/game/data/terrain'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -70,6 +71,18 @@ export const SLOT_IDS = FIRST_MAP.slots.map((s) => s.id)
  * closest to the circle's, nearest first on a tie.
  */
 const PRE_GRID_COVERAGE = { s0: 434, s1: 432, s2: 560, s3: 384, s4: 567, s5: 543 } as const
+/**
+ * Grid-fit: the fine (40px) tiles that stand where G1-2's 80px tiles stood
+ * relative to the road — even column, even row (`terrain.fineFromCoarse`).
+ * The pinned benches choose among these only, so every bench keeps the exact
+ * post it had on the 80px grid and measures what it always measured; only the
+ * modelled player's own deployment (`deployTeam`, `bestSlots`) uses the finer
+ * grid's in-between tiles.
+ */
+const onCoarse = (id: string): boolean => {
+  const p = parseTileId(id)
+  return !!p && p.c % 2 === 0 && p.r % 2 === 0
+}
 function calibratedPosts(): Record<keyof typeof PRE_GRID_COVERAGE, string> {
   const near = legacyPosts(FIRST_MAP.id)
   const cov = slotCoverage(FIRST_MAP)
@@ -81,7 +94,7 @@ function calibratedPosts(): Record<keyof typeof PRE_GRID_COVERAGE, string> {
     const d = (s: string) => Math.hypot(pos.get(s)!.x - at.x, pos.get(s)!.y - at.y)
     const pick = FIRST_MAP.slots
       .map((s) => s.id)
-      .filter((s) => !taken.has(s) && d(s) <= 115)
+      .filter((s) => onCoarse(s) && !taken.has(s) && ![...taken].some((t) => crowds(t, s)) && d(s) <= 115)
       .sort((a, b) => Math.abs(cov[a] - PRE_GRID_COVERAGE[id]) - Math.abs(cov[b] - PRE_GRID_COVERAGE[id]) || d(a) - d(b) || a.localeCompare(b))[0]
     out[id] = pick ?? near[id]
     taken.add(out[id])
@@ -144,7 +157,7 @@ function auraTrio(): { support: string; allies: readonly [string, string] } {
   }
   const near = FIRST_MAP.slots
     .map((s) => s.id)
-    .filter((id) => id !== POST.s3 && d(id) <= 115)
+    .filter((id) => onCoarse(id) && id !== POST.s3 && d(id) <= 115)
     .sort((a, b) => Math.abs(cov[a] - 563) - Math.abs(cov[b] - 563) || d(a) - d(b) || a.localeCompare(b))
   return { support: POST.s3, allies: [near[0], near[1]] as const }
 }
@@ -189,10 +202,18 @@ export function slotCoverage(map: { path: readonly { x: number; y: number }[]; s
 /**
  * The slots a competent player fills, best first. Ties break on slot id so the
  * order is stable across runs and platforms.
+ *
+ * Grid-fit: a hero keeps a tile of room (`terrain.POST_ROOM`), so the order is
+ * greedy — each next slot is the best one not beside a slot already taken —
+ * and the crowded ones follow, best first, for anything that wants a full
+ * ranking.
  */
 export function bestSlots(map: Parameters<typeof slotCoverage>[0], range = 150): string[] {
   const cov = slotCoverage(map, range)
-  return [...map.slots].map((s) => s.id).sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
+  const ranked = [...map.slots].map((s) => s.id).sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
+  const spaced: string[] = []
+  for (const id of ranked) if (!spaced.some((t) => crowds(t, id))) spaced.push(id)
+  return [...spaced, ...ranked.filter((id) => !spaced.includes(id))]
 }
 
 /** Every shipped battlefield, with the two numbers a balance run cares about. */
@@ -395,15 +416,23 @@ function repositionAt(engine: GameEngine, policy: PlayerPolicy): void {
   // Q1: cursed ground is worth what it leaves after the curse (see `deployTeam`).
   const raw = slotCoverage(engine.map)
   const cov: Record<string, number> = Object.fromEntries(Object.entries(raw).map(([id, c]) => [id, c * tileDamageMult(engine.map, id)]))
-  const free = engine.map.slots.filter((sl) => !engine.sentinelOnSlot(sl.id)).map((sl) => sl.id)
-  if (!free.length) return
-  free.sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
+  // Grid-fit: the tiles the moving hero could go to — open, and a tile clear
+  // of every OTHER hero (`terrain.POST_ROOM`).
+  const freeFor = (mover: string) => {
+    const others = engine.sentinels.filter((s) => s.slotId !== mover).map((s) => s.slotId)
+    return engine.map.slots
+      .filter((sl) => !engine.sentinelOnSlot(sl.id) && !others.some((o) => crowds(o, sl.id)))
+      .map((sl) => sl.id)
+      .sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
+  }
   if (policy.reposition === 'cover') {
     const worstHeld = [...engine.sentinels].sort((a, b) => cov[a.slotId] - cov[b.slotId])[0]
-    if (cov[free[0]] > cov[worstHeld.slotId]) engine.moveHero(worstHeld.slotId, free[0])
+    const free = freeFor(worstHeld.slotId)
+    if (free.length && cov[free[0]] > cov[worstHeld.slotId]) engine.moveHero(worstHeld.slotId, free[0])
   } else if (policy.reposition === 'uncover') {
     const ace = [...engine.sentinels].sort((a, b) => b.profile.dps - a.profile.dps)[0]
-    engine.moveHero(ace.slotId, free[free.length - 1])
+    const free = freeFor(ace.slotId)
+    if (free.length) engine.moveHero(ace.slotId, free[free.length - 1])
   }
 }
 
@@ -504,7 +533,7 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
     const worth = (id: string) => cov![id] * tileDamageMult(map, id)
     let best: string | null = null
     for (const s of map.slots) {
-      if (taken.has(s.id)) continue
+      if (taken.has(s.id) || [...taken].some((t) => crowds(t, s.id))) continue
       if (best === null || worth(s.id) > worth(best) || (worth(s.id) === worth(best) && s.id < best)) best = s.id
     }
     taken.add(best!)

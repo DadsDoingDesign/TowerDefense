@@ -15,6 +15,7 @@ import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
 import { recruitKit, wearKit } from '../src/game/engine/kit'
@@ -2476,8 +2477,9 @@ if (want(14)) {
   line('tower on a tile can see at a nominal 150px range; it is what makes the two fields')
   line('different puzzles rather than different wallpaper.')
   line('')
-  line('Deployment is a tile grid (G1-2): a hero may stand on any open grass tile, so a')
-  line('field\'s "slots" are its open tiles and the table lists the eight best of them.')
+  line('Deployment is a tile grid (G1-2; 40px tiles since grid-fit): a hero may stand on any open')
+  line('grass tile a tile clear of every other hero, so a field\'s "slots" are its open tiles and the')
+  line('table lists the eight best of them a tile of room apart.')
   line('')
   line('| Field | Path px | Open tiles | Tile pitch | Coverage, best 8 tiles (px of road seen) |')
   line('|---|--:|--:|--:|---|')
@@ -2490,11 +2492,13 @@ if (want(14)) {
   const MAX_FIELD_LENGTH_SPREAD = 0.06
   /**
    * …and no two posts may be closer than one tile (G1-2). The hit test is the
-   * tile's own square now, not a radius snapped to the nearest circle, so the
-   * floor that matters is the tile: 80 logical px, ≥ 44 CSS px at the phone's
-   * portrait Stage. (It was 90px — the old radius hit test's — before the grid.)
+   * tile's own square, not a radius snapped to the nearest circle, so posts
+   * can never be closer than the tile: 40 logical px since grid-fit (it was 80
+   * on G1-2's grid, 90 — the old radius hit test's — before it). What a finger
+   * aims for is a hero's ROOM, two tiles (80px, ≥ 44 CSS px at the phone's
+   * portrait Stage); the tile under it only decides where, to the nearest 40px.
    */
-  const MIN_SLOT_GAP = 80
+  const MIN_SLOT_GAP = TILE
   const fieldLens = MAP_FACTS.map((m) => m.length)
   const fieldSpread = Math.max(...fieldLens) / Math.min(...fieldLens) - 1
   line(

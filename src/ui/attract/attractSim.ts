@@ -74,6 +74,7 @@ import { childrenOf, getNode } from '../../game/data/archetypeTree'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import { generateItem } from '../../game/data/items'
 import { fieldFor, legacyPostTile } from '../../game/data/maps'
+import { crowds } from '../../game/data/terrain'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
@@ -227,7 +228,7 @@ export function composeScene(seed: number, take: number): AttractScenario {
   const taken = new Set<string>()
   const byNear = (p: Vec2) =>
     map.slots
-      .filter((s) => !taken.has(s.id))
+      .filter((s) => !taken.has(s.id) && ![...taken].some((t) => crowds(t, s.id)))
       .map((s) => ({ id: s.id, d: Math.hypot(s.pos.x - p.x, s.pos.y - p.y) }))
       .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1))
   const company: AttractHero[] = archetypes.map((archetype, i) => {

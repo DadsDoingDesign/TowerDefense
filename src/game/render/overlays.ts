@@ -7,7 +7,8 @@ import type { GameMap } from '../types'
 import { CURSED_DAMAGE_MULT } from '../data/hazards'
 import { fxBaseState, fxNow, fxReducedMotion } from './fx'
 import { animNow, getViewScale } from './frame'
-import { COLORS, hexToRgba, roundRect, strokePolyline } from './paint'
+import { COLORS, hexToRgba, roundRect } from './paint'
+import { cursedClusters } from './terrain'
 
 /**
  * A build slot — the circle the coach tells a new player to tap.
@@ -96,104 +97,95 @@ export function drawSlot(
  * field (`drawPlacementDim` goes down first). Open tiles get a warm wash and a
  * light outline, inset so neighbours read as separate squares; blocked tiles
  * get nothing, so they stay dark under the dim with their terrain showing. The
- * tile under the pointer (or the finger, while it is down) is lit harder.
+ * tile under the pointer (or the finger, while it is down) is lit harder, with
+ * the hero's ROOM round it — the two-tile square no other hero may stand in.
+ *
+ * Grid-fit: the tiles are the ground's own lattice (40px), the road runs
+ * through its own tiles, so a lit tile is whole grass — nothing is cut out of
+ * it. `crowded` tiles (beside a hero who stays where it is) are open ground
+ * but no place for this hero: they stay dark too.
  *
  * Line widths have a floor in SCREEN px (read off `viewScale`) so the outline
- * is ≥ 1.5 CSS px on a phone, where a tile is ~44 CSS px. With reduced motion
+ * is ≥ 1 CSS px on a phone, where a tile is ~22 CSS px. With reduced motion
  * the breathing wash holds still at its brightest.
  */
 export function drawTileGrid(
   ctx: CanvasRenderingContext2D,
   map: GameMap,
-  opts: { hover: string | null; faint?: boolean; skip?: ReadonlySet<string> },
+  opts: { hover: string | null; faint?: boolean; skip?: ReadonlySet<string>; crowded?: ReadonlySet<string> },
 ): void {
-  const T = map.tile ?? 80
+  const T = map.tile ?? 40
   const vs = Math.max(getViewScale(), 0.02)
   const pulse = fxReducedMotion() ? 1 : 0.5 + 0.5 * Math.sin(animNow() * 3)
   const k = opts.faint ? 0.55 : 1
-  const inset = Math.max(3, 2 / vs)
-  const lw = Math.max(1.5, 1.5 / vs)
-  // The road runs along tile edges, so a roadside tile's square takes in a
-  // strip of dirt. The lit squares are drawn on a layer and the road is cut
-  // out of it, so what lights up is exactly the grass a hero stands on.
-  const layer = gridLayer(map.width, map.height)
-  const lctx = layer?.getContext('2d') ?? null
-  const g = lctx ?? ctx
-  if (lctx) lctx.clearRect(0, 0, map.width, map.height)
-  g.save()
+  const inset = Math.max(1.5, 1.5 / vs)
+  const lw = Math.max(1, 1 / vs)
+  ctx.save()
   // Q1: cursed ground is open — it lights — but in a caution coral with a
   // dashed edge and its cost printed on it, so it never reads as just more grass.
   const cursed = new Set((map.tiles ?? []).filter((t) => t.danger === 'cursed').map((t) => t.id))
   for (const s of map.slots) {
-    if (opts.skip?.has(s.id)) continue
+    if (opts.skip?.has(s.id) || opts.crowded?.has(s.id)) continue
     const hover = s.id === opts.hover
     const x = s.pos.x - T / 2 + inset
     const y = s.pos.y - T / 2 + inset
     const w = T - inset * 2
-    roundRect(g, x, y, w, w, Math.min(10, w / 5))
+    roundRect(ctx, x, y, w, w, Math.min(6, w / 5))
     if (cursed.has(s.id)) {
-      g.fillStyle = hover ? 'rgba(240, 150, 120, 0.3)' : `rgba(240, 150, 120, ${(0.1 + 0.06 * pulse) * k})`
-      g.fill()
-      g.setLineDash([Math.max(6, 5 / vs), Math.max(4, 3.5 / vs)])
-      g.lineWidth = hover ? lw * 1.6 : lw * 1.2
-      g.strokeStyle = hover ? '#ffd2c0' : `rgba(244, 158, 128, ${(0.6 + 0.25 * pulse) * k})`
-      g.stroke()
-      g.setLineDash([])
+      ctx.fillStyle = hover ? 'rgba(240, 150, 120, 0.3)' : `rgba(240, 150, 120, ${(0.1 + 0.06 * pulse) * k})`
+      ctx.fill()
+      ctx.setLineDash([Math.max(4, 4 / vs), Math.max(3, 3 / vs)])
+      ctx.lineWidth = hover ? lw * 1.6 : lw * 1.2
+      ctx.strokeStyle = hover ? '#ffd2c0' : `rgba(244, 158, 128, ${(0.6 + 0.25 * pulse) * k})`
+      ctx.stroke()
+      ctx.setLineDash([])
       continue
     }
-    g.fillStyle = hover
+    ctx.fillStyle = hover
       ? 'rgba(255, 243, 196, 0.34)'
       : `rgba(255, 236, 170, ${(0.08 + 0.06 * pulse) * k})`
-    g.fill()
-    g.lineWidth = hover ? lw * 1.6 : lw
-    g.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
-    g.stroke()
+    ctx.fill()
+    ctx.lineWidth = hover ? lw * 1.6 : lw
+    ctx.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
+    ctx.stroke()
   }
-  g.restore()
-  if (lctx && layer) {
-    // Cut the road (its drawn 50px, plus the outline's width) out of the layer.
-    lctx.save()
-    lctx.globalCompositeOperation = 'destination-out'
-    lctx.lineJoin = 'round'
-    lctx.lineCap = 'round'
-    lctx.lineWidth = 50 + lw * 2
-    lctx.strokeStyle = '#000'
-    strokePolyline(lctx, map.path)
-    lctx.restore()
-    ctx.drawImage(layer, 0, 0)
+  // The hero's room round the hovered tile: the two-tile square it will keep
+  // clear of every other hero — the size of the thing being placed.
+  const hov = opts.hover ? map.slots.find((s) => s.id === opts.hover) : undefined
+  if (hov) {
+    ctx.setLineDash([Math.max(5, 5 / vs), Math.max(4, 4 / vs)])
+    ctx.lineWidth = Math.max(1.5, 1.5 / vs)
+    ctx.strokeStyle = 'rgba(255, 243, 196, 0.85)'
+    roundRect(ctx, hov.pos.x - T + inset, hov.pos.y - T + inset, T * 2 - inset * 2, T * 2 - inset * 2, Math.min(10, T / 3))
+    ctx.stroke()
+    ctx.setLineDash([])
   }
-  // The cost, on the tile (after the road cut, so the cut never clips a digit).
+  ctx.restore()
+  // The cost, once per cursed patch, on its top edge.
   if (cursed.size) {
-    const px = Math.max(15, 11 / vs)
+    // A floor in screen px (11 CSS), capped at the patch's own size so a small
+    // phone's place-zoom (which enlarges the fitted composite) never blows it
+    // up past the ground it names.
+    const px = Math.min(T * 0.7, Math.max(13, 11 / vs))
     const tag = `−${Math.round((1 - CURSED_DAMAGE_MULT) * 100)}%`
     ctx.save()
     ctx.font = `700 ${Math.round(px)}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
-    for (const s of map.slots) {
-      if (!cursed.has(s.id) || opts.skip?.has(s.id)) continue
-      const ty = s.pos.y - T / 2 + inset + px * 0.9
+    for (const group of cursedClusters(map)) {
+      const live = group.filter((t) => !opts.skip?.has(t.id) && !opts.crowded?.has(t.id))
+      if (!live.length) continue
+      const cx = (Math.min(...group.map((t) => t.pos.x)) + Math.max(...group.map((t) => t.pos.x))) / 2
+      const ty = Math.min(...group.map((t) => t.pos.y)) - T / 2 + inset + px * 0.8
       ctx.lineWidth = Math.max(3, 3 / vs)
       ctx.strokeStyle = `rgba(20, 12, 6, ${0.85 * k})`
-      ctx.strokeText(tag, s.pos.x, ty)
+      ctx.strokeText(tag, cx, ty)
       ctx.fillStyle = `rgba(255, 214, 196, ${k})`
-      ctx.fillText(tag, s.pos.x, ty)
+      ctx.fillText(tag, cx, ty)
     }
     ctx.restore()
   }
-}
-
-/** One scratch layer for the grid, reused frame to frame (one field size at a time). */
-let gridCanvas: HTMLCanvasElement | null = null
-function gridLayer(w: number, h: number): HTMLCanvasElement | null {
-  if (typeof document === 'undefined') return null
-  if (!gridCanvas) gridCanvas = document.createElement('canvas')
-  if (gridCanvas.width !== w || gridCanvas.height !== h) {
-    gridCanvas.width = w
-    gridCanvas.height = h
-  }
-  return gridCanvas
 }
 
 /**
@@ -207,12 +199,12 @@ export function drawBlockedFlash(ctx: CanvasRenderingContext2D, map: GameMap, ti
   if (age < 0 || age > BLOCKED_FLASH_S) return
   const t = map.tiles?.find((x) => x.id === tileId)
   if (!t) return
-  const T = map.tile ?? 80
+  const T = map.tile ?? 40
   const vs = Math.max(getViewScale(), 0.02)
   const a = fxReducedMotion() ? 0.5 : 1 - age / BLOCKED_FLASH_S
-  const inset = Math.max(3, 2 / vs)
+  const inset = Math.max(1.5, 1.5 / vs)
   ctx.save()
-  roundRect(ctx, t.pos.x - T / 2 + inset, t.pos.y - T / 2 + inset, T - inset * 2, T - inset * 2, 10)
+  roundRect(ctx, t.pos.x - T / 2 + inset, t.pos.y - T / 2 + inset, T - inset * 2, T - inset * 2, 6)
   ctx.lineWidth = Math.max(2.5, 2.5 / vs)
   ctx.strokeStyle = `rgba(20, 12, 6, ${0.7 * a})`
   ctx.stroke()
@@ -225,12 +217,14 @@ export function drawBlockedFlash(ctx: CanvasRenderingContext2D, map: GameMap, ti
 /**
  * Dims the field while a hero is armed for posting, so the lit slots are the
  * brightest thing on it (Wave 1). Drawn before the slots and before the posted
- * heroes, so neither is dimmed. Static — no motion to reduce.
+ * heroes, so neither is dimmed. Static — no motion to reduce. `x`/`y` place
+ * the rectangle (grid-fit: the whole part of the map on screen, not only the
+ * field's box).
  */
-export function drawPlacementDim(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+export function drawPlacementDim(ctx: CanvasRenderingContext2D, w: number, h: number, x = 0, y = 0): void {
   ctx.save()
   ctx.fillStyle = 'rgba(12, 8, 4, 0.4)'
-  ctx.fillRect(0, 0, w, h)
+  ctx.fillRect(x, y, w, h)
   ctx.restore()
 }
 
@@ -290,6 +284,41 @@ function laneAngle(map: GameMap): number {
   const a = p[p.length - 2] ?? p[0]
   const b = p[p.length - 1]
   return Math.atan2(b.y - a.y, b.x - a.x)
+}
+
+/**
+ * Clip `ctx` to the field side of the Gate (grid-fit). The drawn road runs on
+ * past the palisade to the edge of the map, while the engine's path — where a
+ * leaking goblin walks until it is counted — ends a few dozen px beyond it.
+ * Clipping the horde at the gate line makes a leak read as going IN through
+ * the gate instead of walking on to vanish on an empty stretch of road.
+ */
+export function clipBeforeGate(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const a = baseAnchor(map)
+  const ang = laneAngle(map)
+  const dx = Math.cos(ang)
+  const dy = Math.sin(ang)
+  const L = 5000
+  const cx = a.x + dx * 8
+  const cy = a.y + dy * 8
+  ctx.beginPath()
+  // The shipped lanes leave along an axis: a plain rectangle keeps the clip on
+  // the canvas's fast path (a rotated polygon would rasterise a mask).
+  if (Math.abs(dy) < 1e-9 || Math.abs(dx) < 1e-9) {
+    const x0 = dx > 0.5 ? cx - L : dx < -0.5 ? cx : cx - L
+    const x1 = dx > 0.5 ? cx : dx < -0.5 ? cx + L : cx + L
+    const y0 = dy > 0.5 ? cy - L : dy < -0.5 ? cy : cy - L
+    const y1 = dy > 0.5 ? cy : dy < -0.5 ? cy + L : cy + L
+    ctx.rect(x0, y0, x1 - x0, y1 - y0)
+    ctx.clip()
+    return
+  }
+  ctx.moveTo(cx - dy * L, cy + dx * L)
+  ctx.lineTo(cx + dy * L, cy - dx * L)
+  ctx.lineTo(cx + dy * L - dx * L, cy - dx * L - dy * L)
+  ctx.lineTo(cx - dy * L - dx * L, cy + dx * L - dy * L)
+  ctx.closePath()
+  ctx.clip()
 }
 
 /**

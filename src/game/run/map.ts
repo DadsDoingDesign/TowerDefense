@@ -5,6 +5,7 @@
  */
 import type { RNG } from '../core/rng'
 import { generateRunMap, type MapOptions, type RunMap } from '../data/runmap'
+import { crowds } from '../data/terrain'
 import type { GameMap, Placement, Sentinel } from '../types'
 
 /** The Banner rules the map shape reads (a subset of `metaStore.BannerRules`). */
@@ -56,7 +57,9 @@ export function emptyPlacements(map: GameMap): Placement {
  * The company's posts carried onto `map` (G1-2). A placement is keyed by tile
  * id, and the next battle's terrain can block a tile the company stood on (a
  * lake, a fire): that hero goes back to the bench rather than standing in it.
- * Only open tiles are kept, each hero at most once, and at most `cap` heroes.
+ * Only open tiles are kept, each hero at most once, at most `cap` heroes, and
+ * never a hero on a tile beside one already kept (grid-fit: a hero keeps a
+ * tile of room, `terrain.POST_ROOM`).
  * `keep` filters hero ids (e.g. to the live roster).
  */
 export function carryPlacements(
@@ -71,6 +74,7 @@ export function carryPlacements(
     if (!sentId || typeof sentId !== 'string' || !Object.prototype.hasOwnProperty.call(next, tileId)) continue
     if (seen.has(sentId) || !keep(sentId)) continue
     if (seen.size >= cap) break
+    if (Object.keys(next).some((k) => next[k] && crowds(k, tileId))) continue
     next[tileId] = sentId
     seen.add(sentId)
   }

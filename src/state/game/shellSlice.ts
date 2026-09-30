@@ -24,6 +24,8 @@ export interface ShellActions {
   noteTerrain: (tileId: string) => void
   /** G1-2: a tap landed on the road itself, between the tiles. */
   noteRoad: () => void
+  /** Grid-fit: a hero may not stand beside another — the tile tapped says so. */
+  noteCrowded: (tileId: string) => void
   /** Retire the blocked-tile note (the strip's "Got it", or its timeout). */
   clearFieldNote: () => void
   /**
@@ -82,6 +84,10 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
   },
   noteRoad: () => {
     set({ fieldNote: { tileId: null, kind: 'lane', at: Date.now() } })
+    sfx('error')
+  },
+  noteCrowded: (tileId) => {
+    set({ fieldNote: { tileId, kind: 'crowded', at: Date.now() } })
     sfx('error')
   },
   clearFieldNote: () => {

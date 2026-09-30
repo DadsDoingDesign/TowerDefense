@@ -12,10 +12,14 @@ import {
   drawTerrainDanger,
   drawTerrainFlames,
   drawTileGrid,
-  fitView,
+  entrySide,
+  playRect,
   setPresentationTime,
   setViewScale,
+  stageView,
+  worldOf,
   type DrawSentinel,
+  type StageView,
 } from '../game/render/renderer'
 import {
   drawSkull,
@@ -29,11 +33,11 @@ import {
   setFxReducedMotion,
 } from '../game/render/fx'
 import { FxDiffer } from '../game/render/fxDiff'
-import { apronMargins, getApron } from '../game/render/apron'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
-import { distToPolyline, LANE_HALF } from '../game/data/terrain'
+import { COARSE, crowds, distToPolyline, LANE_HALF } from '../game/data/terrain'
+import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
@@ -54,16 +58,17 @@ import {
 } from './fieldZoom'
 
 /*
- * Tile hit geometry (G1-2).
+ * Tile hit geometry (G1-2, grid-fit).
  *
- * Deployment is a tile grid now, and a tap resolves to the TILE whose square it
+ * Deployment is a tile grid, and a tap resolves to the TILE whose square it
  * lands in — open or blocked — rather than to the nearest of six circles within
  * a radius. The grid tiles the field edge to edge, so there is no dead zone
- * between targets and no snapping rule to reason about: the target IS the
- * tile, 80 logical px, which is ~44–48 CSS px on a phone's portrait Stage
- * (0.55–0.60 CSS px per field px) and 80 on a desk. The old radius floor
- * (`SLOT_HIT_SCREEN_RADIUS`, M2) existed because a 26px circle on a squeezed
- * field was a 21px target; a tile cannot be smaller than its own square.
+ * between targets and no snapping rule to reason about. Since grid-fit a tile
+ * is 40 logical px (22–24 CSS px on a phone's portrait Stage), and what the
+ * finger aims is a hero's ROOM — two tiles, 80px, 44–48 CSS px — with the tile
+ * under it deciding where the hero lands to the nearest 40px (the range
+ * preview shows the spot before the finger lifts). Past the grid, a tap on
+ * the road where it runs on says so; the woodland takes nothing.
  */
 
 /**
@@ -136,14 +141,13 @@ function resampleMode(viewScale: number, dpr: number): 'pixelated' | 'auto' {
  * composed image replaces ~30 per-sprite per-frame nearest-neighbour
  * minifications, and **not one gameplay coordinate moves**: the field is still
  * 960×560, the path, the build slots, tower range and every radius are
- * untouched, and `fitView` still does the letterboxing. The audit's alternative
+ * untouched, and `stageView` (grid-fit; `fitView` before it) lays it out. The audit's alternative
  * — resizing the field to 780×662 so `dpr × view` came out at 1.0 — would have
  * moved the path and the slots, which is enemy travel time and tower coverage:
  * a balance change wearing an art fix's clothes.
  */
 export function BattleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const apronRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   /**
    * The tile under the pointer (desk hover) or under the finger while it is
@@ -157,63 +161,37 @@ export function BattleCanvas() {
 
   useEffect(() => {
     const canvas = canvasRef.current!
-    const apron = apronRef.current!
     const wrap = wrapRef.current!
     /** The VISIBLE context. It only ever does the one final blit. */
     const vctx = canvas.getContext('2d')!
-    /** Which baked apron is on the apron element right now. */
-    let apronSrc: HTMLCanvasElement | null = null
-    let apronView = { scale: 0, left: 0, top: 0 }
     const setField = (r: FieldRect) =>
       setFieldState((prev) =>
         prev && prev.left === r.left && prev.top === r.top && prev.width === r.width && prev.height === r.height ? prev : r,
       )
-    /**
-     * Copy the baked apron onto its element when the bake changes, and keep it
-     * registered under the field. Cheap on every call but the first: a layout
-     * change is three style writes.
-     */
-    const placeApron = (scale: number, left: number, top: number) => {
-      apronView = { scale, left, top }
-      const src = getApron(useGameStore.getState().battleMap)
-      if (src && src !== apronSrc) {
-        apronSrc = src
-        apron.width = src.width
-        apron.height = src.height
-        const actx = apron.getContext('2d')
-        if (actx) {
-          actx.imageSmoothingEnabled = false
-          actx.drawImage(src, 0, 0)
-        }
-      }
-      if (!apronSrc) {
-        apron.style.display = 'none'
-        return
-      }
-      apron.style.display = 'block'
-      apron.style.width = `${apronSrc.width * scale}px`
-      apron.style.height = `${apronSrc.height * scale}px`
-      const m = apronMargins(useGameStore.getState().battleMap)
-      apron.style.left = `${left - m.x * scale}px`
-      apron.style.top = `${top - m.y * scale}px`
-      apron.style.imageRendering = resampleMode(scale, window.devicePixelRatio || 1)
-    }
 
-    let cssW = 0
-    let cssH = 0
     /** The dpr the current `image-rendering` decision was made against. */
     let lastDpr = 0
+    /**
+     * The map the Stage shows (grid-fit, `frame.stageView`): which part of the
+     * baked world the canvas holds, at what density, and where it sits. The
+     * canvas covers the whole wrap — the field and the map round it are one
+     * picture — and its backing store is that part of the world, `density`
+     * composite px per field px.
+     */
+    let sv: StageView = { scale: 1, density: 1, pixelated: false, x0: 0, y0: 0, w: 1, h: 1, left: 0, top: 0 }
+    /** The map `sv` was laid out for (a new battle re-lays it). */
+    let svMap: GameMap | null = null
 
     /*
      * ── Zoom to place (Q3; the rules are in `fieldZoom.ts`) ──
      *
-     * `fit` is the letterboxed view `fitView` gives (unchanged); `shown` is the
-     * view on screen. They differ only while a hero is armed on a phone whose
-     * tiles are under the 44 px floor and the player has touched the field:
-     * then `zoomed` holds the view being eased to / panned, and it lets go the
-     * moment the hero is posted, disarmed, or the setup ends. Nothing here
-     * moves a gameplay coordinate — the element is just laid out bigger, and
-     * every hit test already reads its live rect.
+     * `fit` is the canvas as `stageView` lays it out; `shown` is the view on
+     * screen. They differ only while a hero is armed on a phone whose hero's
+     * room (two tiles) is under the 44 px floor and the player has touched the
+     * field: then `zoomed` holds the view being eased to / panned, and it lets
+     * go the moment the hero is posted, disarmed, or the setup ends. Nothing
+     * here moves a gameplay coordinate — the element is just laid out bigger,
+     * and every hit test already reads its live rect.
      */
     let fit: FieldView = { scale: 1, left: 0, top: 0 }
     let box: ViewBox = { left: 0, top: 0, width: 1, height: 1 }
@@ -221,20 +199,25 @@ export function BattleCanvas() {
     let zoomed: { view: FieldView; armed: string; map: GameMap } | null = null
     let anim: { from: FieldView; to: FieldView; t0: number; dur: number } | null = null
     let lastMode = ''
-    /** Lay the field element (and the apron and the DOM grid with it) out at `v`. */
+    /** Lay the canvas (and the DOM grid with it) out at `v`. */
     const showView = (v: FieldView) => {
       shown = v
       const map = useGameStore.getState().battleMap
-      const fw = map.width * v.scale
-      const fh = map.height * v.scale
-      canvas.style.width = `${fw}px`
-      canvas.style.height = `${fh}px`
+      canvas.style.width = `${sv.w * v.scale}px`
+      canvas.style.height = `${sv.h * v.scale}px`
       canvas.style.left = `${v.left}px`
       canvas.style.top = `${v.top}px`
-      placeApron(v.scale, v.left, v.top)
-      setField({ left: v.left, top: v.top, width: fw, height: fh, scale: v.scale })
-      // A whole-device-pixel zoom is ≥ 1 and so `pixelated`: lossless.
-      const mode = resampleMode(v.scale, window.devicePixelRatio || 1)
+      // The field's own box inside the wrap — what the DOM tile layer rides on.
+      setField({
+        left: v.left - sv.x0 * v.scale,
+        top: v.top - sv.y0 * v.scale,
+        width: map.width * v.scale,
+        height: map.height * v.scale,
+        scale: v.scale,
+      })
+      // Whole device px per composite px is `pixelated` (lossless); a
+      // supersampled composite is filtered DOWN to the screen (`auto`).
+      const mode = sv.density > 1 ? 'auto' : resampleMode(v.scale, window.devicePixelRatio || 1)
       if (mode !== lastMode) canvas.style.imageRendering = lastMode = mode
     }
     /** Ease to `to` — or jump there under reduced motion. */
@@ -257,10 +240,11 @@ export function BattleCanvas() {
     const zoomIn = (clientX: number, clientY: number, armed: string, now: number): boolean => {
       const map = useGameStore.getState().battleMap
       const dpr = window.devicePixelRatio || 1
-      const zs = placeZoomScale(fit.scale, dpr, map.tile ?? 80)
+      // Grid-fit: the target a finger aims is a hero's room (two tiles).
+      const zs = placeZoomScale(fit.scale, dpr, COARSE)
       if (!zs) return false
       const wr = wrap.getBoundingClientRect()
-      const view = zoomAround(shown, zs, clientX - wr.left, clientY - wr.top, map.width, map.height, box, dpr)
+      const view = zoomAround(shown, zs, clientX - wr.left, clientY - wr.top, sv.w, sv.h, box, dpr)
       zoomed = { view, armed, map }
       setZoomOn(true)
       goTo(view, now)
@@ -268,8 +252,7 @@ export function BattleCanvas() {
     }
     const panBy = (dx: number, dy: number) => {
       if (!zoomed) return
-      const map = useGameStore.getState().battleMap
-      zoomed.view = panView(zoomed.view, dx, dy, map.width, map.height, box, window.devicePixelRatio || 1)
+      zoomed.view = panView(zoomed.view, dx, dy, sv.w, sv.h, box, window.devicePixelRatio || 1)
       if (anim) anim.to = zoomed.view
       else showView(zoomed.view)
     }
@@ -277,70 +260,63 @@ export function BattleCanvas() {
     /**
      * The canvas IS the composite.
      *
-     * The backing store is the map's logical box — 960×560 — not `css × dpr`,
-     * so inside `step` the transform is the identity and one source pixel is one
-     * destination pixel for every sprite on the field. The element is then sized
-     * in CSS to the letterboxed rect `fitView` would have produced, and the
-     * browser compositor performs the single, filtered resample down to the
-     * device.
+     * The backing store is the part of the map the Stage shows, at `density`
+     * composite px per field px (1 everywhere but a desk whose scale is not a
+     * whole number of device px) — not `css × dpr` — so inside `step` every
+     * sprite is a whole-number blit and one source pixel is one (or exactly
+     * 2 × 2, 3 × 3) destination pixels. The element is then sized in CSS, and
+     * the browser compositor performs the single resample down to the device.
      *
      * That resample used to be ours: composite offscreen, then
      * `drawImage(field, …)` with `imageSmoothingQuality`. Measured at 390×844,
      * that one call was **1.2 ms of a 1.5 ms frame** — more than everything else
-     * put together, and more than the ~1000 path ops it had just replaced.
-     * Handing the same resize to the compositor costs the main thread nothing
-     * and is the operation hardware acceleration exists to do.
-     *
-     * `fitView` is untouched and still the authority: the element's own rect now
-     * has the field's exact aspect, so the `ox`/`oy` it computes for hit-testing
-     * come out at 0 and every existing tap path (including `dm-reach`'s and
-     * `ws9-firstrun`'s slot maths, which do the same arithmetic against
-     * `getBoundingClientRect`) stays correct with no change.
+     * put together. Handing the same resize to the compositor costs the main
+     * thread nothing and is the operation hardware acceleration exists to do.
      */
     const resize = () => {
       const rect = wrap.getBoundingClientRect()
-      // The field fits the wrap's CONTENT box: the Stage reserves a strip at
-      // the top (the boss nameplate) as wrap padding, so the plate sits in the
-      // apron above the field and never over it (Phase 2).
+      // The playable rect fits the wrap's CONTENT box: the Stage reserves a
+      // strip at the top (the boss nameplate) as wrap padding, so the plate
+      // sits over the woodland past the field and never over the play.
       const cs = getComputedStyle(wrap)
       const padT = parseFloat(cs.paddingTop) || 0
       const padB = parseFloat(cs.paddingBottom) || 0
-      cssW = rect.width
-      cssH = Math.max(1, rect.height - padT - padB)
       const map = useGameStore.getState().battleMap
-      if (canvas.width !== map.width || canvas.height !== map.height) {
-        canvas.width = map.width
-        canvas.height = map.height
-      }
-      let view = fitView(cssW, cssH, map)
-      // The wide layout (shell-wide.css) sets `--field-snap: 1`: when the field
-      // is being ENLARGED, snap the scale down to a whole number of device
-      // pixels per field pixel, so a 1440-wide desk shows it at exactly 1:1 (or
-      // 2:1 on a retina panel) instead of a smeared 1.02. Phones never set it —
-      // their field is width-bound and must keep the full width.
-      if (cs.getPropertyValue('--field-snap').trim() === '1') {
-        const d = window.devicePixelRatio || 1
-        const n = Math.floor(view.scale * d + 1e-6)
-        if (n >= 1) {
-          const sc = n / d
-          view = { scale: sc, ox: (cssW - map.width * sc) / 2, oy: (cssH - map.height * sc) / 2 }
-        }
-      }
-      fit = { scale: view.scale, left: Math.round(view.ox), top: Math.round(padT + view.oy) }
-      box = { left: 0, top: padT, width: cssW, height: cssH }
-      // The renderer draws into the 960×560 composite and otherwise has no way
-      // to know how hard that composite is about to be squeezed — which is how
-      // the tier notch ended up at 1.11 CSS px on a 320×568 phone (M2).
-      // Always the FITTED scale: the place-zoom shows the same composite
-      // bigger, it does not redraw it.
-      setViewScale(view.scale)
       lastDpr = window.devicePixelRatio || 1
+      // The wide layout (shell-wide.css) sets `--field-snap: 1`: crisp scales
+      // there (see `stageView`). Phones never set it — their field is fit
+      // exactly and must keep the full width.
+      sv = stageView({
+        wrapW: rect.width,
+        wrapH: rect.height,
+        padT,
+        padB,
+        dpr: lastDpr,
+        crisp: cs.getPropertyValue('--field-snap').trim() === '1',
+        play: playRect(map),
+        world: worldOf(map),
+        entry: entrySide(map),
+      })
+      svMap = map
+      const bw = sv.w * sv.density
+      const bh = sv.h * sv.density
+      if (canvas.width !== bw || canvas.height !== bh) {
+        canvas.width = bw
+        canvas.height = bh
+      }
+      fit = { scale: sv.scale, left: sv.left, top: sv.top }
+      box = { left: 0, top: 0, width: rect.width, height: rect.height }
+      // The renderer otherwise has no way to know how hard the composite is
+      // about to be squeezed — which is how the tier notch ended up at 1.11
+      // CSS px on a 320×568 phone (M2). Always the FITTED scale: the
+      // place-zoom shows the same composite bigger, it does not redraw it.
+      setViewScale(sv.scale)
       anim = null
       // Q3: a layout change while zoomed keeps the zoom (re-derived for the new
       // fit, about the box's centre) or drops it if the new fit no longer needs it.
-      const zs = zoomed ? placeZoomScale(fit.scale, lastDpr, map.tile ?? 80) : null
+      const zs = zoomed ? placeZoomScale(fit.scale, lastDpr, COARSE) : null
       if (zoomed && zs && zoomed.map === map) {
-        zoomed.view = zoomAround(shown, zs, box.left + box.width / 2, box.top + box.height / 2, map.width, map.height, box, lastDpr)
+        zoomed.view = zoomAround(fit, zs, box.left + box.width / 2, box.top + box.height / 2, sv.w, sv.h, box, lastDpr)
         showView(zoomed.view)
       } else {
         zoomed = null
@@ -492,16 +468,15 @@ export function BattleCanvas() {
 
       // --- draw ---
       // The map can change under us (a new battle); keep the composite's box
-      // and the element's letterbox in step with it.
+      // and the element's layout in step with it.
       //
       // The dpr check is here rather than on a media-query listener because a
       // dpr change (browser zoom, a drag onto a second monitor) does not have
       // to change the element's size, so `ResizeObserver` can miss it entirely
       // — and dpr is half of the `pixelated`/`auto` decision above. One float
       // compare per frame, no allocation.
-      if (canvas.width !== map.width || canvas.height !== map.height) resize()
+      if (map !== svMap) resize()
       else if ((window.devicePixelRatio || 1) !== lastDpr) resize()
-      else if (getApron(map) !== apronSrc) placeApron(apronView.scale, apronView.left, apronView.top)
       // Q3: the place-zoom lets go once its hero is posted or disarmed (or a
       // different hero is armed), or the setup ends; then the view eases out.
       if (zoomed && (st.selectedSentinelId !== zoomed.armed || phase !== 'setup' || engine || st.screen !== 'battle' || map !== zoomed.map))
@@ -512,11 +487,14 @@ export function BattleCanvas() {
         if (t >= 1) anim = null
         showView(v)
       }
-      // Identity transform: logical px ARE canvas px here, so every sprite blit
-      // is 1:1 and smoothing has nothing to do. Left off so the procedural
-      // fallback keeps its hard pixel edges.
+      // Field px → composite px: a whole-number scale (the density) and a
+      // whole-px offset (the part of the map shown), so every sprite blit is
+      // 1:1 or an exact pixel double and smoothing has nothing to do. Left off
+      // so the procedural fallback keeps its hard pixel edges.
       const ctx = vctx
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      const D = sv.density
+      const base = () => ctx.setTransform(D, 0, 0, D, -sv.x0 * D, -sv.y0 * D)
+      base()
       ctx.imageSmoothingEnabled = getActiveStyle().smoothing
 
       /**
@@ -526,17 +504,17 @@ export function BattleCanvas() {
        * exactly on the pixel grid and every sprite is still a scale-1.000 blit.
        * The terrain is laid down ONCE UNSHAKEN first and then again under the
        * offset: the shifted copy covers all but a ≤7 px band, and that band
-       * shows the unshaken terrain rather than the letterbox, so the field
-       * never grows a black edge as it kicks. It costs one extra 960×560 blit,
-       * on shake frames only.
+       * shows the unshaken terrain rather than a blank edge, so the map never
+       * grows a black edge as it kicks. It costs one extra blit, on shake
+       * frames only.
        */
       const sh = fxShake()
       if (sh.on) {
-        drawField(ctx, map)
+        drawField(ctx, map, sv)
         ctx.translate(sh.dx, sh.dy)
       }
 
-      drawField(ctx, map)
+      drawField(ctx, map, sv)
       // A Wildfire's standing flames (G1-2): terrain, so under everything else.
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
       // Q1: the skulls on cursed ground — terrain too, under the hero on it.
@@ -554,8 +532,12 @@ export function BattleCanvas() {
         // faintly until a hero is picked up, fully once one is (G1-2).
         if (liveEngine.breather && !liveEngine.subWaveState().moved) {
           const occupied = new Set(liveEngine.sentinels.map((s) => s.slotId))
-          if (st.breatherPick) drawPlacementDim(ctx, map.width, map.height)
-          drawTileGrid(ctx, map, { hover: st.breatherPick && hoverOpen ? hoverOpen.id : null, faint: !st.breatherPick, skip: occupied })
+          if (st.breatherPick) drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
+          // Grid-fit: the tiles beside a hero that is not being moved are no
+          // place to put the one that is.
+          const staying = liveEngine.sentinels.filter((s) => s.slotId !== st.breatherPick).map((s) => s.slotId)
+          const crowded = new Set(st.breatherPick ? map.slots.filter((s) => staying.some((o) => crowds(o, s.id))).map((s) => s.id) : [])
+          drawTileGrid(ctx, map, { hover: st.breatherPick && hoverOpen ? hoverOpen.id : null, faint: !st.breatherPick, skip: occupied, crowded })
           const picked = st.breatherPick ? liveEngine.sentinelOnSlot(st.breatherPick) : undefined
           if (picked && hoverOpen && !occupied.has(hoverOpen.id)) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
         }
@@ -573,8 +555,13 @@ export function BattleCanvas() {
         // A hero armed for posting dims the field so the open tiles, lit, are
         // what the eye lands on (Wave 1); blocked tiles stay dark (G1-2).
         if (armed) {
-          drawPlacementDim(ctx, map.width, map.height)
-          drawTileGrid(ctx, map, { hover: hoverOpen ? hoverOpen.id : null })
+          drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
+          // Grid-fit: a posted hero's neighbours stay dark — a hero keeps a
+          // tile of room (`terrain.POST_ROOM`); its own tile lights (a tap
+          // there swaps the armed hero in).
+          const others = placed.filter((p) => p.sentinel.id !== armed.id).map((p) => p.slotId)
+          const crowded = new Set(map.slots.filter((s) => others.some((o) => crowds(o, s.id))).map((s) => s.id))
+          drawTileGrid(ctx, map, { hover: hoverOpen && !crowded.has(hoverOpen.id) ? hoverOpen.id : null, crowded })
         }
         for (const p of placed) {
           // The armed hero's own post shows its range at the tile it would move
@@ -586,7 +573,8 @@ export function BattleCanvas() {
         }
         // The range the armed hero WOULD have on the tile under the pointer or
         // finger — the answer to "what does this tile see?" before committing.
-        if (armed && hoverOpen) drawRange(ctx, hoverOpen.pos, computeCombat(armed).range, armed.accent)
+        if (armed && hoverOpen && !placed.some((p) => p.sentinel.id !== armed.id && crowds(p.slotId, hoverOpen.id)))
+          drawRange(ctx, hoverOpen.pos, computeCombat(armed).range, armed.accent)
         for (const p of placed) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)
@@ -616,10 +604,10 @@ export function BattleCanvas() {
       // the only per-frame post-process left — measured at 0.0 ms p50.
       // Applied under the identity transform so the grade covers the whole
       // canvas regardless of how far the shake has pushed the field.
-      if (sh.on) ctx.setTransform(1, 0, 0, 1, 0, 0)
+      if (sh.on) base()
       ctx.globalCompositeOperation = 'overlay'
       ctx.fillStyle = GRADE
-      ctx.fillRect(0, 0, map.width, map.height)
+      ctx.fillRect(sv.x0, sv.y0, sv.w, sv.h)
       ctx.globalCompositeOperation = 'source-over'
     }
 
@@ -647,12 +635,12 @@ export function BattleCanvas() {
      */
     const toLogical = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect()
-      const st = useGameStore.getState()
-      const view = fitView(rect.width, rect.height, st.battleMap)
+      // The canvas holds the map from (x0, y0), `sv.w` field px across.
+      const scale = rect.width / sv.w
       return {
-        x: (clientX - rect.left - view.ox) / view.scale,
-        y: (clientY - rect.top - view.oy) / view.scale,
-        scale: view.scale,
+        x: (clientX - rect.left) / scale + sv.x0,
+        y: (clientY - rect.top) / scale + sv.y0,
+        scale,
       }
     }
 
@@ -661,8 +649,9 @@ export function BattleCanvas() {
      * null outside the grid (a portrait twin's side pads). See the note on tile
      * hit geometry at the top of this file.
      */
+    /** On the drawn road where it runs on PAST the grid (inside it, the road is its lane tiles). */
     const onRoad = (x: number, y: number): boolean =>
-      distToPolyline({ x, y }, useGameStore.getState().battleMap.path) <= LANE_HALF
+      distToPolyline({ x, y }, drawnRoad(useGameStore.getState().battleMap)) <= LANE_HALF
     const hitTile = (x: number, y: number): string | null => {
       const map = useGameStore.getState().battleMap
       const half = (map.tile ?? 80) / 2
@@ -740,7 +729,7 @@ export function BattleCanvas() {
         if (press.zooming) return
       }
       const { x, y } = toLogical(e.clientX, e.clientY)
-      hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
+      hoverSlot.current = hitTile(x, y)
     }
 
     const onPointerDown = (e: PointerEvent) => {
@@ -763,7 +752,7 @@ export function BattleCanvas() {
         return
       }
       const { x, y } = toLogical(e.clientX, e.clientY)
-      hoverSlot.current = onRoad(x, y) ? null : hitTile(x, y)
+      hoverSlot.current = hitTile(x, y)
     }
 
     const onPointerUp = (e: PointerEvent) => {
@@ -776,14 +765,12 @@ export function BattleCanvas() {
       if (wasTouch) hoverSlot.current = null
       if (!chooses) return
       if (!tilesLive()) return
-      // The road runs between the tiles: a tap on the dirt says so rather than
-      // posting on whichever tile's square it happens to fall in (G1-2).
-      if (onRoad(x, y)) {
-        useGameStore.getState().noteRoad()
+      const tile = hitTile(x, y)
+      if (!tile) {
+        // Past the grid: the road where it runs on says so; the wood is mute.
+        if (onRoad(x, y)) useGameStore.getState().noteRoad()
         return
       }
-      const tile = hitTile(x, y)
-      if (!tile) return
       // One router for canvas and keyboard: a blocked tile says why, an open
       // one posts / moves / inspects (`battleSlice.tapTile`).
       useGameStore.getState().tapTile(tile)
@@ -823,10 +810,8 @@ export function BattleCanvas() {
   return (
     <div className="battle-canvas-wrap" ref={wrapRef}>
       {/* The field canvas stays FIRST in the DOM, so `querySelector('canvas')`
-          in every harness still finds the field; z-index puts the apron
-          behind it. */}
+          in every harness still finds the field. */}
       <canvas ref={canvasRef} className="battle-canvas" />
-      <canvas ref={apronRef} className="battle-apron" aria-hidden="true" />
       {field && <SlotLayer field={field} />}
       {/* Q3: only ever shown to a touch that zoomed the field, so it is not
           announced — the keyboard grid never zooms. */}

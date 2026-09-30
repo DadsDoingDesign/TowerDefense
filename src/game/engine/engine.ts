@@ -6,6 +6,7 @@ import { behaviourOf, RESIST_CAP } from '../data/behaviours'
 import { DEFAULT_COMMANDS, FLARE, HOLD, RALLY, type CommandId } from '../data/commands'
 import { ENEMY_MODS, ENEMY_TYPES, modKey } from '../data/enemies'
 import { tileDamageMult } from '../data/hazards'
+import { crowds } from '../data/terrain'
 import type { EffectMods, EnemyBehaviour, EnemyType, FocusMode, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 
 type Behaviour<K extends EnemyBehaviour['kind']> = Extract<EnemyBehaviour, { kind: K }>
@@ -854,6 +855,12 @@ export class GameEngine {
     if (!slotTo || !a) return false
     const b = this.sentinelOnSlot(to)
     const slotFrom = this.map.slots.find((s) => s.id === from)!
+    // Grid-fit: a hero keeps a tile of room (`terrain.POST_ROOM`) — the move
+    // may not put either hero beside a third.
+    for (const s of this.sentinels) {
+      if (s === a || s === b) continue
+      if (crowds(s.slotId, to) || (b && crowds(s.slotId, from))) return false
+    }
     this.placeAt(a, slotTo.id, slotTo.pos)
     if (b) this.placeAt(b, slotFrom.id, slotFrom.pos)
     this.movedThisBreather = true

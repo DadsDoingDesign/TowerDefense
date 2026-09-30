@@ -51,15 +51,15 @@
    small phone — is exactly the panning this withholds from the browser.) */
 .battle-canvas {
   display: block;
-  /* The element is LETTERBOXED, not stretched (Phase 3). Its backing store is
-     the map's logical box (960x560) so the renderer can draw every sprite 1:1,
-     and `BattleCanvas.resize()` writes the CSS width/height that `fitView`
-     computes — so the element's own rect carries the field's exact aspect and
-     the compositor does the single filtered resample down to the device.
-     `resize()` also writes its `left`/`top` (Phase 2): the field is placed in
-     the wrap's CONTENT box, so a strip the Stage reserves as padding (the boss
-     nameplate) sits above the field rather than on it. What used to be black
-     letterbox bars is the apron (`.battle-apron`) — the meadow and its wood. */
+  /* The element covers the whole wrap (grid-fit): the field and the map it
+     continues into are one picture, so there is no letterbox and no apron.
+     Its backing store is the part of the map on screen, in logical px (times
+     a whole-number density on a desk), so the renderer draws every sprite at
+     a whole-number scale, and `BattleCanvas.resize()` writes the CSS size and
+     `left`/`top` that `stageView` computes — the compositor does the single
+     resample down to the device. The playable rect is fit to the wrap's
+     CONTENT box, so a strip the Stage reserves as padding (the boss nameplate)
+     sits over the woodland rather than on the play. */
   position: absolute;
   left: 0;
   top: 0;
@@ -71,7 +71,7 @@
      holds until the first layout runs, and the correct answer for the case that
      default covers. Read both before changing either.
 
-     The backing store is the LOGICAL FIELD (960x560), not `css x dpr`, so there
+     The backing store is in LOGICAL px, not `css x dpr`, so there
      is always a resample between the canvas and the screen — but its DIRECTION
      depends on the device, and the two directions want opposite answers. The
      earlier version of this comment argued only the first of them:
@@ -102,16 +102,6 @@
      non-integer mapping, the best available answer is one filtered resample
      where pixels must be thrown away, and no filter at all where none must. */
   image-rendering: auto;
-}
-/* The woodland the field sits in (Phase 2, `render/apron.ts`). Behind the
-   field, never interactive; `BattleCanvas` sizes and registers it. */
-.battle-apron {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 0;
-  display: none;
-  pointer-events: none;
 }
 /* Q3 zoom to place: the one line shown while a small phone's field is zoomed
    for posting — the drag is otherwise invisible. The Stage chip's dress (the

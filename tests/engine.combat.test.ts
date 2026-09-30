@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
+import { crowds } from '../src/game/data/terrain'
 
 /** G1-2: the old build circles, as the tiles nearest where they stood. */
 const P = legacyPosts(FIRST_MAP.id)
@@ -333,6 +334,9 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     e.step(TICK)
     e.step(TICK)
     expect(e.tick).toBe(tick) // frozen
+    // Grid-fit: a hero keeps a tile of room — no move onto a tile beside a third.
+    const beside = FIRST_MAP.slots.find((s) => s.id !== P.s1 && crowds(s.id, P.s2) && !crowds(s.id, P.s1))!
+    expect(e.moveHero(P.s1, beside.id)).toBe(false)
     expect(e.moveHero(P.s1, P.s4)).toBe(true)
     expect(e.moveHero(P.s2, P.s5)).toBe(false) // one move per breather
     expect(e.sentinelOnSlot(P.s4)?.def.archetype).toBe('rogue')

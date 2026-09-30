@@ -2,7 +2,7 @@ import { streamRng } from '../core/rng'
 import type { Vec2 } from '../core/vec'
 import type { GameMap, TerrainRuleId } from '../types'
 import { layHazards } from './hazards'
-import { layTiles, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
+import { layTiles, parseTileId, patch, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
 
 /**
  * The battlefields. Every landscape field is 960x560 logical px; the renderer
@@ -27,39 +27,47 @@ import { layTiles, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
  * Free-form deployment on a tile grid (G1-2)
  * ---------------------------------------------------------------------------
  *
- * The six fixed build circles are gone. The field is a 12 × 7 grid of 80px
- * tiles (`data/terrain.ts`) and a hero may stand on ANY open grass tile; the
- * forest frame on the outer ring and the field's terrain pieces are blocked,
- * and a tap on the road itself says so. `GameMap.slots` is the list of open
- * tiles, so the engine, the breather move and the balance harness read one
- * place exactly as they did.
+ * The six fixed build circles are gone. The field is a grid of tiles
+ * (`data/terrain.ts`) and a hero may stand on ANY open grass tile; the road,
+ * the forest round the playable middle and the field's terrain pieces are
+ * blocked. `GameMap.slots` is the list of open tiles, so the engine, the
+ * breather move and the balance harness read one place exactly as they did.
  *
- * **The road runs BETWEEN the tiles.** Every corner of every path sits on a
- * grid intersection (x, y ∈ 80k), so the dirt lane runs along tile edges and a
- * hero on a roadside tile stands at its centre, 40px from the lane's centre
- * line — 15px clear of the dirt, the same "hugging the lane" distance the old
- * circles were placed at (35–65px), which is what the engine's numbers are
- * tuned against: a Fighter's 72px hold, a sapper's 50–55px trigger, a
- * bomber's 150px lob. The alternative — the road down the middle of a row of
- * tiles — puts every hero at least 80px from the lane, out of reach of every
- * hold in the game; measured before it was rejected (G1-2 notes in
- * docs/DESIGN_REVIEW.md). One tile back is 120px: a set-back post only the
- * long-range heroes can use.
+ * **Grid-fit: the road runs THROUGH the tiles, and the tiles are 40px.** G1-2
+ * laid 80px tiles with the road along their edges: a roadside hero stood at
+ * its tile's centre 40px from the lane — the distance every hold, sapper
+ * trigger and reach is tuned against — but the road straddled two rows of
+ * tiles and cut into every roadside square, and the lit grid sat half a tile
+ * off the ground (the designer: "it should match the bg layers grid
+ * exactly"). Running the road down the middle of 80px tiles fixes the picture
+ * and breaks the fight: every hero stands 80px off the lane, beyond a Fighter's
+ * 72px hold (measured again for grid-fit: 25 balance invariants failed even
+ * with the hold compensated). So the grid is refined instead: 24 × 14 tiles of
+ * 40px, the road through their centres, one tile wide. A hero on the tile
+ * beside the road stands 40px from its centre line — exactly as in G1-2 — and
+ * every G1-2 post is still a tile, at the same place relative to the road (the
+ * fine tile at column 2c, row 2r stood where coarse tile c, r did); the finer
+ * grid adds the posts in between, which is the nuance the designer asked for.
  *
- * Both fields kept their shape — the Green Line's snake with its wrapped
- * pocket, the Kiln Road's three stacked lanes — snapped onto the grid, which
- * moves each fold by up to 40px and quantises the length in 80–160px steps:
- * the Kiln Road is 2300px end to end (it was 2300), the Green Line 2220 (it
- * was 2290, the nearest grid shape either side being 2380). Path length still
- * matters exactly as before: enemy speeds in `enemies.ts` are tuned as
- * *crossing times*, and time-in-range is the one difficulty axis Threat does
- * not multiply. `balance/report.ts` §14 holds the spread under 6%.
+ * Both fields were moved by exactly (−20, −20) — half a fine tile — to put
+ * every bend on a tile centre: the same shapes, the same bends in the same
+ * order. The off-field ends keep x −30 and 990, so the way in is 20px shorter
+ * and the way out 20px longer, and each path is exactly as long as it was:
+ * the Kiln Road 2300px, the Green Line 2220. Path length still matters exactly
+ * as before: enemy speeds in `enemies.ts` are tuned as *crossing times*, and
+ * time-in-range is the one difficulty axis Threat does not multiply.
+ * `balance/report.ts` §14 holds the spread under 6%.
+ *
+ * The playable middle is G1-2's interior (`terrain.PLAYABLE`): the forest ring
+ * the 80px grid had is forest tiles here too, and the woodland runs on past
+ * the grid in the render (`render/terrain.ts`). Terrain pieces are authored in
+ * 2 × 2 patches (`terrain.patch`) — 80px, the size they always were.
  *
  * The two fields stay opposite in the axis that decides placement, **how many
  * lanes a tile can see**:
  *
- *  - *The Green Line* is a wide snake that wraps a pocket of grass (c6–c8,
- *    r2–r4) on three sides — where coverage overlaps and auras reach, and the
+ *  - *The Green Line* is a wide snake that wraps a pocket of grass (c12–c16,
+ *    r4–r8) on three sides — where coverage overlaps and auras reach, and the
  *    answer is to stack the pocket.
  *  - *The Kiln Road* folds three lanes 160px apart across the field: every
  *    tile between two lanes hugs one and sees the other, and the middle of the
@@ -80,7 +88,8 @@ export function pathLength(path: readonly Vec2[]): number {
  * A battlefield as authored: its lane, the terrain pieces every battle on it
  * has, and what each map challenge adds (G1-2).
  *
- * `posts` are the six build circles the field used to have, by their old ids.
+ * `posts` are the six build circles the field used to have, by their old ids
+ * (moved with the road, grid-fit).
  * Nothing in the game reads them; they exist so a save written before the grid
  * (placements keyed `s0`…`s5`) resumes with its company on the nearest open
  * tiles, and so the balance suite's fixed benches keep meaning "the tile where
@@ -96,73 +105,69 @@ interface FieldDef {
 }
 
 /*
- * The Green Line on the grid (landscape). `T` forest, `R` rock, `.` open;
- * the road runs along the tile edges between them.
+ * The Green Line on the grid (landscape, 40px tiles). `=` road, `T` forest,
+ * `R` rock, `.` open; the road runs through the centres of its tiles.
  *
- *        0 1 2 3 4 5 6 7 8 9 10 11
- *   r0   T T T T T T T T T T T  T
- *   r1   T . . . . . . . . . R  T
- *   r2   T . . . . . . . . . .  T
- *   r3   T . . . . . . . . . .  T
- *   r4   T R . . . . . . . . .  T
- *   r5   T R . . . . . . . . .  T
- *   r6   T T T T T T T T T T T  T
+ *         0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223
+ *   r0    T T T T T T T T T T T T T T T T T T T T T T T T
+ *   r1    = = = = = = T T T T T T T T T T T T T T T T T T
+ *   r2    T T . . . = . . . . . . . . . . . . . R R T T T
+ *   r3    T T . . . = . . . . . = = = = = = = . R R T T T
+ *   r4    T T . . . = . . . . . = . . . . . = . . . T T T
+ *   r5    T T . . . = . . . . . = . . . . . = . . . T T T
+ *   r6    T T . . . = . . . . . = . . . . . = . . . T T T
+ *   r7    T T . . . = = = = = = = . . . . . = . . . T T T
+ *   r8    T T R R . . . . . . . . . . . . . = . . . T T T
+ *   r9    T T R R . . . . . . . = = = = = = = . . . T T T
+ *   r10   T T R R . . . . . . . = . . . . . . . . . T T T
+ *   r11   T T T T T T T T T T T = = = = = = = = = = = = =
+ *   r12   T T T T T T T T T T T T T T T T T T T T T T T T
+ *   r13   T T T T T T T T T T T T T T T T T T T T T T T T
  *
- * Road: in along the top (y 80) to x 240, down to y 320, east to x 480, up to
- * y 160, east to x 720, down to y 400, back west to x 480, down to y 480 and
+ * Road: in along the top (y 60) to x 220, down to y 300, east to x 460, up to
+ * y 140, east to x 700, down to y 380, back west to x 460, down to y 460 and
  * east off the field to the Gate.
  */
 const GREEN: FieldDef = {
   id: 'greenline',
   name: 'The Green Line',
   path: [
-    { x: -30, y: 80 },
-    { x: 240, y: 80 },
-    { x: 240, y: 320 },
-    { x: 480, y: 320 },
-    { x: 480, y: 160 },
-    { x: 720, y: 160 },
-    { x: 720, y: 400 },
-    { x: 480, y: 400 },
-    { x: 480, y: 480 },
-    { x: 990, y: 480 },
+    { x: -30, y: 60 },
+    { x: 220, y: 60 },
+    { x: 220, y: 300 },
+    { x: 460, y: 300 },
+    { x: 460, y: 140 },
+    { x: 700, y: 140 },
+    { x: 700, y: 380 },
+    { x: 460, y: 380 },
+    { x: 460, y: 460 },
+    { x: 990, y: 460 },
   ],
   posts: {
-    s0: { x: 185, y: 200 },
-    s1: { x: 430, y: 345 },
-    s2: { x: 610, y: 180 },
-    s3: { x: 660, y: 300 },
-    s4: { x: 655, y: 395 },
-    s5: { x: 560, y: 485 },
+    s0: { x: 165, y: 180 },
+    s1: { x: 410, y: 325 },
+    s2: { x: 590, y: 160 },
+    s3: { x: 640, y: 280 },
+    s4: { x: 635, y: 375 },
+    s5: { x: 540, y: 465 },
   },
-  // Three boulders, all on ground no tower wants — the dead bottom-left and
-  // the far corner. They teach "rock = blocked" on every battle without taking
-  // a decision away.
-  pieces: [
-    [1, 4, 'rock'],
-    [1, 5, 'rock'],
-    [10, 1, 'rock'],
-  ],
+  // Two boulder patches, both on ground no tower wants — the dead bottom-left
+  // and the far corner (G1-2's three boulder tiles). They teach "rock =
+  // blocked" on every battle without taking a decision away.
+  pieces: [...patch(2, 8, 'rock', 2, 3), ...patch(19, 2, 'rock')],
   rules: {
     // Two ponds, each on the best ground of its part of the field: an L in the
-    // heart of the wrapped pocket (c6–c7 r3, c7 r4) and a pair in the first
-    // loop (c4 r2–r3). The company keeps the pocket's rim; it cannot stack the
-    // middle.
-    flooded: [
-      [6, 3, 'water'],
-      [7, 3, 'water'],
-      [7, 4, 'water'],
-      [4, 2, 'water'],
-      [4, 3, 'water'],
-    ],
-    // Five burning patches, one on each bend's best tile — scattered rather
+    // heart of the wrapped pocket and a pair of tiles' worth in the first loop.
+    // The company keeps the pocket's rim; it cannot stack the middle.
+    flooded: [...patch(12, 5, 'water', 4, 2), ...patch(14, 7, 'water'), ...patch(7, 3, 'water', 2, 4)],
+    // Five burning patches, one on each bend's best ground — scattered rather
     // than pooled, so they break the obvious posts without closing an area.
     wildfire: [
-      [7, 3, 'fire'],
-      [5, 4, 'fire'],
-      [8, 5, 'fire'],
-      [4, 2, 'fire'],
-      [2, 2, 'fire'],
+      ...patch(13, 5, 'fire'),
+      ...patch(9, 8, 'fire'),
+      ...patch(15, 10, 'fire', 2, 1),
+      ...patch(8, 4, 'fire'),
+      ...patch(3, 3, 'fire'),
     ],
   },
 }
@@ -170,65 +175,61 @@ const GREEN: FieldDef = {
 /*
  * The Kiln Road on the grid:
  *
- *        0 1 2 3 4 5 6 7 8 9 10 11
- *   r0   T T T T T T T T T T T  T
- *   r1   T . . . . . . . . R R  T
- *   r2   T . . . . . . . . . R  T
- *   r3   T . . . . . . . . . R  T
- *   r4   T . . . . . . . . . .  T
- *   r5   T . . . . . . . . . .  T
- *   r6   T T T T T T T T T T T  T
+ *         0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223
+ *   r0    T T T T T T T T T T T T T T T T T T T T T T T T
+ *   r1    T T T T T T T T T T T T T T T T T T T T T T T T
+ *   r2    T T . . . . . . . . . . . . . . . . R R R T T T
+ *   r3    T T . = = = = = = = = = = = = = . . R R R T T T
+ *   r4    T T . = . . . . . . . . . . . = . . . R R T T T
+ *   r5    T T . = . . . . . . . . . . . = . . . R R T T T
+ *   r6    T T . = . . . . . . . . . . . = . . . R R T T T
+ *   r7    T T . = . . . = = = = = = = = = . . . . . T T T
+ *   r8    T T . = . . . = . . . . . . . . . . . . . T T T
+ *   r9    T T . = . . . = . . . . . . . . . . . . . T T T
+ *   r10   T T . = . . . = . . . . . . . . . . . . . T T T
+ *   r11   = = = = T T T = = = = = = = = = = = = = = = = =
+ *   r12   T T T T T T T T T T T T T T T T T T T T T T T T
+ *   r13   T T T T T T T T T T T T T T T T T T T T T T T T
  *
- * Road: the horde enters bottom-left (y 480), climbs the left (x 160) to the
- * top lane (y 160), runs it east to x 640, drops to the middle lane (y 320)
- * and runs back west to x 320, drops to the bottom lane (y 480) and runs east
+ * Road: the horde enters bottom-left (y 460), climbs the left (x 140) to the
+ * top lane (y 140), runs it east to x 620, drops to the middle lane (y 300)
+ * and runs back west to x 300, drops to the bottom lane (y 460) and runs east
  * to the Gate.
  */
 const KILN: FieldDef = {
   id: 'kilnroad',
   name: 'The Kiln Road',
   path: [
-    { x: -30, y: 480 },
-    { x: 160, y: 480 },
-    { x: 160, y: 160 },
-    { x: 640, y: 160 },
-    { x: 640, y: 320 },
-    { x: 320, y: 320 },
-    { x: 320, y: 480 },
-    { x: 990, y: 480 },
+    { x: -30, y: 460 },
+    { x: 140, y: 460 },
+    { x: 140, y: 140 },
+    { x: 620, y: 140 },
+    { x: 620, y: 300 },
+    { x: 300, y: 300 },
+    { x: 300, y: 460 },
+    { x: 990, y: 460 },
   ],
   posts: {
-    s0: { x: 95, y: 300 },
-    s1: { x: 250, y: 60 },
-    s2: { x: 450, y: 185 },
-    s3: { x: 450, y: 315 },
-    s4: { x: 660, y: 250 },
-    s5: { x: 870, y: 300 },
+    s0: { x: 75, y: 280 },
+    s1: { x: 230, y: 40 },
+    s2: { x: 430, y: 165 },
+    s3: { x: 430, y: 295 },
+    s4: { x: 640, y: 230 },
+    s5: { x: 850, y: 280 },
   },
-  // A rocky corner where no lane reaches (c9–c10, r1–r3).
-  pieces: [
-    [9, 1, 'rock'],
-    [10, 1, 'rock'],
-    [10, 2, 'rock'],
-    [10, 3, 'rock'],
-  ],
+  // A rocky corner where no lane reaches (c18–c20, r2–r6).
+  pieces: [...patch(18, 2, 'rock', 3, 2), ...patch(19, 4, 'rock', 2, 3)],
   rules: {
-    // A pond across the middle of the field (c6 r2–r3) and an L between the
-    // middle and bottom lanes (c5 r4–r5, c6 r4): the tiles that see all three
-    // lanes shrink to their edges.
-    flooded: [
-      [6, 2, 'water'],
-      [6, 3, 'water'],
-      [5, 4, 'water'],
-      [5, 5, 'water'],
-      [6, 4, 'water'],
-    ],
+    // A pond across the middle of the field (between the top and middle lanes)
+    // and an L between the middle and bottom lanes: the ground that sees all
+    // three lanes shrinks to its edges.
+    flooded: [...patch(11, 4, 'water', 2, 3), ...patch(9, 8, 'water', 2, 3), ...patch(11, 8, 'water', 2, 1)],
     wildfire: [
-      [3, 3, 'fire'],
-      [6, 2, 'fire'],
-      [5, 5, 'fire'],
-      [3, 5, 'fire'],
-      [7, 4, 'fire'],
+      ...patch(5, 5, 'fire'),
+      ...patch(12, 4, 'fire'),
+      ...patch(9, 9, 'fire'),
+      ...patch(5, 9, 'fire'),
+      ...patch(13, 8, 'fire'),
     ],
   },
 }
@@ -286,16 +287,24 @@ export const mapById = (id: string): GameMap | null => ALL_MAPS.find((m) => m.id
  * The open tile a pre-grid build circle maps to on `fieldId`: the nearest open
  * tile of the field's base terrain to where the circle stood (ties by id).
  * Null for an id that was never a circle or a field this build does not have.
+ *
+ * Grid-fit: chosen among the fine tiles that stand where G1-2's 80px tiles
+ * stood (even column, even row — `terrain.fineFromCoarse`), ties broken on
+ * the G1-2 id, so an old save and every balance bench land on exactly the
+ * post they had before the grid was refined.
  */
 export function legacyPostTile(fieldId: string, postId: string): string | null {
   const def = defById(fieldId)
   const land = mapById(fieldId)
   const at = def?.posts[postId]
   if (!def || !land || !at) return null
-  let best: { id: string; d: number } | null = null
+  let best: { id: string; coarse: string; d: number } | null = null
   for (const s of land.slots) {
+    const p = parseTileId(s.id)
+    if (!p || p.c % 2 || p.r % 2) continue
+    const coarse = `c${p.c / 2}r${p.r / 2}`
     const d = Math.hypot(s.pos.x - at.x, s.pos.y - at.y)
-    if (!best || d < best.d - 1e-9 || (Math.abs(d - best.d) <= 1e-9 && s.id < best.id)) best = { id: s.id, d }
+    if (!best || d < best.d - 1e-9 || (Math.abs(d - best.d) <= 1e-9 && coarse < best.coarse)) best = { id: s.id, coarse, d }
   }
   return best?.id ?? null
 }
@@ -360,7 +369,7 @@ export type FieldOrientation = 'landscape' | 'portrait'
 /**
  * The portrait twin of a landscape field — see the note above. The deployment
  * grid goes over with it (G1-2): every tile keeps its id, its centre is
- * transposed, and its column/row swap, so the twin's grid is 7 × 12.
+ * transposed, and its column/row swap, so the twin's grid is 14 × 24.
  */
 function portraitTwin(m: GameMap): GameMap {
   const t = (p: Vec2): Vec2 => ({ x: p.y + PORTRAIT_PAD, y: p.x })
@@ -479,7 +488,7 @@ export function withTerrainRule(map: GameMap, rule: TerrainRuleId | null): GameM
  *
  * **Fixed for the battle.** The choice is made once, when the node is entered,
  * and stored with the run: a rotation or window resize mid-battle re-fits the
- * same field (letterboxed in the apron) rather than swapping geometry under a
+ * same field (the map round it fills the rest) rather than swapping geometry under a
  * placed company, and a resumed battle comes back on the field it was saved
  * on. The next node chooses again. Because the twins are isometric this is a
  * presentation decision with zero balance consequence either way — which is

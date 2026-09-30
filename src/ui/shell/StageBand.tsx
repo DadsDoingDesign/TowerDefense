@@ -52,7 +52,8 @@ import { WaveCeremony } from './WaveCeremony'
  * `.sh-stage-top` holds the champion nameplate (`BossPlate`). When it renders,
  * `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by the plate's height,
  * so `BattleCanvas` fits the field BELOW it — on a width-bound phone the plate
- * lands in the woodland apron and the field does not move at all.
+ * lands over the woodland past the playable ground and the play does not
+ * move at all (grid-fit: `frame.stageView` fits the playable rect below it).
  *
  * `.sh-stage-center` holds the wave-clear ceremony, which only exists once
  * the fight is over (the beat and the settled receipt).

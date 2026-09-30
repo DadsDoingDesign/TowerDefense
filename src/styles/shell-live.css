@@ -13,8 +13,8 @@
  *
  * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
  * The field is width-bound on every portrait phone (the lane runs edge to edge),
- * so on the tall ones it is the apron that grows; on the short ones the field
- * itself grows to full width.
+ * so on the tall ones more of the map round it shows (grid-fit: one continuous
+ * map, no apron); on the short ones the field itself grows to full width.
  *
  * Selecting something during a live wave (`.is-peek`) re-opens the band so rule
  * one — tap a thing, read it — still holds. Deselect and the Stage takes the

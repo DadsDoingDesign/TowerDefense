@@ -57,13 +57,13 @@ import type { DangerKind, FieldTile, GameMap } from '../types'
 export const HAZARD_LEVERS = {
   /** Damage a hero standing on cursed ground deals, as a multiplier. */
   cursedDamageMult: 0.3,
-  /** How many tiles of each battle's field are cursed. */
+  /** How many patches (2 × 2 tiles, grid-fit) of each battle's field are cursed. */
   dangerTiles: 3,
-  /** The cursed tiles are drawn from this many best open tiles (by coverage). */
+  /** The cursed patches are drawn from this many best distinct patches (by coverage). */
   dangerPool: 6,
-  /** How many seeded boulders each battle's field adds. */
+  /** How many seeded boulder patches each battle's field adds. */
   obstacles: 6,
-  /** …drawn from this many best open tiles after the cursed one. */
+  /** …drawn from this many best distinct patches after the cursed ones. */
   obstaclePool: 12,
 }
 
@@ -106,39 +106,80 @@ export function roadCoverage(path: readonly Vec2[], pos: Vec2, range = COVERAGE_
 }
 
 /**
+ * A 2 × 2 patch of open tiles, named by its top-left tile — the unit Q1 lays
+ * danger and boulders in since grid-fit, so a patch is still a hero's worth of
+ * ground (80px, G1-2's tile) on the 40px lattice.
+ */
+export interface Patch {
+  cells: FieldTile[]
+  centre: Vec2
+  c: number
+  r: number
+}
+
+/**
+ * Every 2 × 2 patch of open tiles, ranked by the road its centre sees (ties by
+ * row, then column), thinned to patches that do not overlap a better one —
+ * "the best spots" as distinct places, the way G1-2's tiles were.
+ */
+export function rankPatches(tiles: readonly FieldTile[], path: readonly Vec2[]): Patch[] {
+  const at = new Map(tiles.map((t) => [`${t.col},${t.row}`, t]))
+  const patches: (Patch & { cov: number })[] = []
+  for (const t of tiles) {
+    const cells = [t, at.get(`${t.col + 1},${t.row}`), at.get(`${t.col},${t.row + 1}`), at.get(`${t.col + 1},${t.row + 1}`)]
+    if (cells.some((x) => !x || x.block)) continue
+    const ok = cells as FieldTile[]
+    const centre = { x: (ok[0].pos.x + ok[3].pos.x) / 2, y: (ok[0].pos.y + ok[3].pos.y) / 2 }
+    patches.push({ cells: ok, centre, c: t.col, r: t.row, cov: roadCoverage(path, centre) })
+  }
+  patches.sort((a, b) => b.cov - a.cov || a.r - b.r || a.c - b.c)
+  const ranked: Patch[] = []
+  for (const p of patches) {
+    if (ranked.some((q) => Math.abs(q.c - p.c) < 2 && Math.abs(q.r - p.r) < 2)) continue
+    ranked.push({ cells: p.cells, centre: p.centre, c: p.c, r: p.r })
+  }
+  return ranked
+}
+
+/** Do two patches share an edge (G1-2's "never two side by side")? */
+export const patchesTouch = (p: Patch, q: Patch): boolean =>
+  (Math.abs(q.c - p.c) <= 2 && Math.abs(q.r - p.r) < 2) || (Math.abs(q.r - p.r) <= 2 && Math.abs(q.c - p.c) < 2)
+
+/**
  * Lay a battle's danger ground and seeded obstacles over a laid (landscape)
  * grid. Returns a NEW tile list; open tiles only are ever touched, so the lane,
  * the forest frame, authored rock and a challenge's lakes/fire are kept.
+ *
+ * Grid-fit: the unit is a 2 × 2 PATCH of open tiles. Every such patch is
+ * ranked by the road its centre sees, then the ranking is thinned to patches
+ * that do not overlap a better one — "the best spots" are distinct places, as
+ * G1-2's tiles were — and the pools and counts ({@link HAZARD_LEVERS}) are
+ * drawn from that list exactly as they were drawn from tiles.
  */
 export function layHazards(tiles: readonly FieldTile[], path: readonly Vec2[], seed: number): FieldTile[] {
   const rng = new RNG(seed)
-  const open = tiles.filter((t) => !t.block)
-  const cov = new Map(open.map((t) => [t.id, roadCoverage(path, t.pos)]))
-  const ranked = [...open].sort((a, b) => cov.get(b.id)! - cov.get(a.id)! || a.id.localeCompare(b.id))
+  const ranked = rankPatches(tiles, path)
 
   const L = HAZARD_LEVERS
-  const cursed = new Set<string>()
+  const cursed: Patch[] = []
   const pool = ranked.slice(0, L.dangerPool)
   for (let i = 0; i < L.dangerTiles && pool.length; i++) {
     const at = Math.floor(rng.next() * pool.length)
-    cursed.add(pool.splice(at, 1)[0].id)
+    cursed.push(pool.splice(at, 1)[0])
   }
 
-  const rocks = new Set<string>()
-  const byId = new Map(tiles.map((t) => [t.id, t]))
-  const touches = (t: FieldTile) =>
-    [...rocks].some((id) => {
-      const o = byId.get(id)!
-      return Math.abs(o.col - t.col) + Math.abs(o.row - t.row) === 1
-    })
-  const candidates = ranked.filter((t) => !cursed.has(t.id)).slice(0, L.obstaclePool)
-  while (rocks.size < L.obstacles && candidates.length) {
-    const t = candidates.splice(Math.floor(rng.next() * candidates.length), 1)[0]
-    if (!touches(t)) rocks.add(t.id)
+  const rocks: Patch[] = []
+  const touches = (p: Patch) => rocks.some((q) => patchesTouch(p, q))
+  const candidates = ranked.filter((p) => !cursed.includes(p)).slice(0, L.obstaclePool)
+  while (rocks.length < L.obstacles && candidates.length) {
+    const p = candidates.splice(Math.floor(rng.next() * candidates.length), 1)[0]
+    if (!touches(p)) rocks.push(p)
   }
 
+  const rockIds = new Set(rocks.flatMap((p) => p.cells.map((t) => t.id)))
+  const cursedIds = new Set(cursed.flatMap((p) => p.cells.map((t) => t.id)))
   return tiles.map((t) =>
-    rocks.has(t.id) ? { ...t, block: 'rock' } : cursed.has(t.id) ? { ...t, danger: 'cursed' as const } : t,
+    rockIds.has(t.id) ? { ...t, block: 'rock' } : cursedIds.has(t.id) ? { ...t, danger: 'cursed' as const } : t,
   )
 }
 

@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GameEngine } from '../../game/engine/engine'
 import type { GameMap } from '../../game/types'
-import { apronMargins, getApron } from '../../game/render/apron'
 import { fxAdvance, fxPreload, fxReset, setFxReducedMotion } from '../../game/render/fx'
 import { FxDiffer } from '../../game/render/fxDiff'
 import { animNow, getViewScale } from '../../game/render/frame'
-import { drawBattleEntities, drawField, setPresentationTime, setViewScale } from '../../game/render/renderer'
-import { FIELD_H, FIELD_W } from '../../game/data/maps'
+import { drawBattleEntities, drawField, setPresentationTime, setViewScale, worldOf } from '../../game/render/renderer'
 import {
   ATTRACT_CUT,
   attractCamera,
@@ -37,14 +35,16 @@ import {
  *
  * ## Pixel-perfect at any size
  *
- * The field is composed at 1:1 exactly as the battle does it (960×560, every
- * sprite a scale-1.000 blit) and then copied to the visible canvas at an
- * INTEGER ratio `k` of DEVICE pixels per composite pixel, never a fraction. The
- * canvas's backing store is its own device-pixel box, so the browser does no
- * second resample, and the camera origin (shake included) is rounded to whole
- * device pixels, so the pan never smears a sprite across two of them. `k` is
- * picked so a phone shows about one art pixel per CSS pixel and a desk about
- * two. What the field does not cover is the woodland apron the battle uses.
+ * The part of the map in shot is composed at 1:1 exactly as the battle does
+ * it (every sprite a scale-1.000 blit) and then copied to the visible canvas
+ * at an INTEGER ratio `k` of DEVICE pixels per composite pixel, never a
+ * fraction. The canvas's backing store is its own device-pixel box, so the
+ * browser does no second resample, and the camera origin (shake included) is
+ * rounded to whole device pixels, so the pan never smears a sprite across two
+ * of them. `k` is picked so a phone shows about one art pixel per CSS pixel
+ * and a desk about two. The map is the battle's own continuous bake
+ * (grid-fit): the field and the woodland round it are one picture, so the
+ * camera may roam anywhere in it and there is no edge to feather.
  *
  * ## Where the subject sits
  *
@@ -69,35 +69,10 @@ const KICK_S = 0.5
 /** The warm flare where the champion falls. */
 const FLARE_S = 0.8
 const FLARE_R = 130
-/** How far (art px) the field's edge is feathered into the woodland. */
-const FEATHER = 44
 /** Art px from a figure's feet (its position) up to where the eye reads it. */
 const AIM_LIFT = 22
-/** The warm grade the composite gets, applied to the apron too so the two meet. */
+/** The warm grade the composite gets (the battle's own `GRADE`). */
 const WARM = 'rgba(255,186,110,0.06)'
-
-/**
- * The apron with the composite's warm grade baked in (once per apron bake):
- * without it the lit field and the woodland meet on a visible seam the moment
- * the camera shows both. One per mounted demo, so the copy goes when it does.
- */
-function apronWarmer(): (src: HTMLCanvasElement) => HTMLCanvasElement {
-  let warmed: { src: HTMLCanvasElement; out: HTMLCanvasElement } | null = null
-  return (src) => {
-    if (warmed?.src === src) return warmed.out
-    const out = document.createElement('canvas')
-    out.width = src.width
-    out.height = src.height
-    const c = out.getContext('2d')
-    if (!c) return src
-    c.drawImage(src, 0, 0)
-    c.globalCompositeOperation = 'overlay'
-    c.fillStyle = WARM
-    c.fillRect(0, 0, out.width, out.height)
-    warmed = { src, out }
-    return out
-  }
-}
 
 /**
  * The director's cut per seed, kept for the page's life. The cut is a pure
@@ -130,17 +105,13 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
     const frameEl = canvas.parentElement!
     const vctx = canvas.getContext('2d')
     if (!vctx) return
-    // The field is the scene's, known once the director has kept a draw (every
-    // landscape field is FIELD_W × FIELD_H). Nothing is painted before that.
+    // The field is the scene's, known once the director has kept a draw.
+    // Nothing is painted before that.
     let map!: GameMap
-    let M = { x: 0, y: 0 }
+    // The composite: the part of the map in shot, resized as the frame is.
     const comp = document.createElement('canvas')
-    comp.width = FIELD_W
-    comp.height = FIELD_H
     const cctx = comp.getContext('2d')
     if (!cctx) return
-    cctx.imageSmoothingEnabled = false
-    const warm = apronWarmer()
 
     // Built in the warm-up below, not here: nothing heavy runs in the commit.
     let script: AttractScript | null = null
@@ -162,8 +133,6 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
     let k = 1
     let focusX = 0.5
     let focusY = 0.5
-    let spillR = false
-    let spillT = false
     let ground = '#201711'
     let pull: [number, number] = [0.2, 0.62]
     const layout = () => {
@@ -188,8 +157,6 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
       }
       focusX = num('--cine-fx', 0.5)
       focusY = num('--cine-fy', 0.5)
-      spillR = num('--cine-spill-r', 0) > 0
-      spillT = num('--cine-spill-t', 0) > 0
       ground = cs.getPropertyValue('--bg').trim() || ground
       // CSS px per art px, so the shot is about the same in art px everywhere:
       // ~390 art px across a portrait phone, ~450 art px tall on a desk (2 at
@@ -247,98 +214,58 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
       return c
     }
 
-    /** Compose the field at 1:1 with the real draw code. */
-    const compose = () => {
+    /**
+     * Where the field's origin lands on the device canvas, for a camera centre
+     * `cam`: the centre on the page's focal point, on whole device pixels, and
+     * clamped so the shot never runs off the baked map. (The old apron met the
+     * lit field on a step, so the camera kept inside the field where it could;
+     * one continuous map has no step to hide.)
+     */
+    const origin = (view: number, lo0: number, hi0: number, focus: number, c: number) => {
+      // The field coordinate range the map covers on this axis: [lo0, hi0].
+      const lo = view - hi0 * k
+      const hi = -lo0 * k
+      if (lo > hi) return Math.round((lo + hi) / 2)
+      return Math.round(Math.min(hi, Math.max(lo, view * focus - c * k)))
+    }
+
+    /** Compose the part of the map in shot at 1:1 with the real draw code, and copy it to the device at ratio k. */
+    const paint = (cam: { x: number; y: number }) => {
+      const W = canvas.width
+      const H = canvas.height
+      const wb = worldOf(map)
+      const ox = origin(W, wb.x0, wb.x0 + wb.w, focusX, cam.x)
+      const oy = origin(H, wb.y0, wb.y0 + wb.h, focusY, cam.y)
+      // The art px in shot: whole px, one spare on the far sides.
+      const ax0 = Math.floor(-ox / k)
+      const ay0 = Math.floor(-oy / k)
+      const aw = Math.ceil(W / k) + 1
+      const ah = Math.ceil(H / k) + 1
+      if (comp.width !== aw || comp.height !== ah) {
+        comp.width = aw
+        comp.height = ah
+      }
       const prevT = animNow()
       const prevScale = getViewScale()
       setPresentationTime(anim)
       setViewScale(k / dpr)
       try {
+        cctx.setTransform(1, 0, 0, 1, -ax0, -ay0)
+        cctx.imageSmoothingEnabled = false
+        drawField(cctx, map, { x0: ax0, y0: ay0, w: aw, h: ah })
+        if (engine) drawBattleEntities(cctx, engine)
         cctx.setTransform(1, 0, 0, 1, 0, 0)
-        drawField(cctx, map)
-        drawBattleEntities(cctx, engine!)
         cctx.globalCompositeOperation = 'overlay'
         cctx.fillStyle = WARM
-        cctx.fillRect(0, 0, map.width, map.height)
+        cctx.fillRect(0, 0, aw, ah)
         cctx.globalCompositeOperation = 'source-over'
       } finally {
         setPresentationTime(prevT)
         setViewScale(prevScale)
       }
-    }
-
-    /**
-     * Where the field's origin lands on the device canvas, for a camera centre
-     * `cam`: the centre on the page's focal point, on whole device pixels, and
-     * clamped. Where the view fits inside the field on an axis it stays inside
-     * the field — the woodland apron meets the lit field on a deliberate step
-     * (the battle's treeline) that reads as a frame edge on a title screen —
-     * except on a side the page opens (`--cine-spill-r` / `--cine-spill-t`:
-     * the desk's menu column covers its right, and its establishing shot looks
-     * up the road into the wood). Where it cannot fit, it may use the apron,
-     * never beyond.
-     */
-    const origin = (view: number, size: number, margin: number, focus: number, c: number, spillLo = false, spillHi = false) => {
-      const fits = view <= size * k
-      const lo = view - (size + (fits && !spillHi ? 0 : margin)) * k
-      const hi = (fits && !spillLo ? 0 : margin) * k
-      if (lo > hi) return Math.round((view - size * k) / 2)
-      return Math.round(Math.min(hi, Math.max(lo, view * focus - c * k)))
-    }
-
-    /** Copy the composite (and the apron round it) to the device at ratio k. */
-    const paint = (cam: { x: number; y: number }) => {
-      const W = canvas.width
-      const H = canvas.height
-      const fw = map.width * k
-      const fh = map.height * k
-      const ox = origin(W, map.width, M.x, focusX, cam.x, false, spillR)
-      const oy = origin(H, map.height, M.y, focusY, cam.y, spillT, false)
       vctx.setTransform(1, 0, 0, 1, 0, 0)
       vctx.imageSmoothingEnabled = false
-      if (ox > 0 || oy > 0 || ox + fw < W || oy + fh < H) {
-        const apron = getApron(map)
-        if (apron) {
-          // Only the bands the field does not cover (a phone always shows
-          // woodland above and below, and blitting the whole apron under the
-          // field every frame was a second full-screen fill). Band edges sit
-          // on whole art px from the field's edge, so the copy stays on grid.
-          const a = warm(apron)
-          const band = (sx: number, sy: number, sw: number, sh: number) => {
-            if (sw > 0 && sh > 0) vctx.drawImage(a, sx, sy, sw, sh, ox + (sx - M.x) * k, oy + (sy - M.y) * k, sw * k, sh * k)
-          }
-          const up = Math.min(M.y, Math.ceil(oy / k))
-          const down = Math.min(M.y, Math.ceil((H - oy - fh) / k))
-          const left = Math.min(M.x, Math.ceil(ox / k))
-          const right = Math.min(M.x, Math.ceil((W - ox - fw) / k))
-          const x0 = M.x - left
-          const wAll = left + map.width + right
-          band(x0, M.y - up, wAll, up)
-          band(x0, M.y + map.height, wAll, down)
-          band(x0, M.y, left, map.height)
-          band(M.x + map.width, M.y, right, map.height)
-        } else {
-          vctx.fillStyle = '#2b3a1e'
-          vctx.fillRect(0, 0, W, H)
-        }
-      }
-      vctx.drawImage(comp, ox, oy, fw, fh)
-      // Where the woodland shows, feather the lit field into it: the apron
-      // steps down in one flat band at the field's edge (right for a battle,
-      // where it is the Stage's frame), which on a moving title shot reads as
-      // a hard line across the screen.
-      const F = FEATHER * k
-      const feather = (x0: number, y0: number, x1: number, y1: number, rx: number, ry: number, rw: number, rh: number) => {
-        const g = vctx.createLinearGradient(x0, y0, x1, y1)
-        g.addColorStop(0, 'rgba(18,11,5,0.42)')
-        g.addColorStop(1, 'rgba(18,11,5,0)')
-        vctx.fillStyle = g
-        vctx.fillRect(rx, ry, rw, rh)
-      }
-      if (oy > 0) feather(0, oy, 0, oy + F, ox, oy, fw, F)
-      if (oy + fh < H) feather(0, oy + fh, 0, oy + fh - F, ox, oy + fh - F, fw, F)
-      if (ox > 0) feather(ox, 0, ox + F, 0, ox, oy, F, fh)
-      if (ox + fw < W) feather(ox + fw, 0, ox + fw - F, 0, ox + fw - F, oy, F, fh)
+      vctx.drawImage(comp, ox + ax0 * k, oy + ay0 * k, aw * k, ah * k)
 
       if (!script) return
       // The flare: a warm bloom where the champion fell, over in half a second.
@@ -394,7 +321,6 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
             after: (e) => d.diffAfter(e, 1),
           })
       }
-      compose()
       paint(camAt())
       if (!drawn) {
         drawn = true
@@ -417,9 +343,9 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
      * Warm-up, one idle slice per step, so a tap never waits on more than one
      * slice: the director's headless play of the day's scene in ~240-tick
      * chunks (a rejected draw and the next one included — see `attractSim`),
-     * then its field's terrain bake (the battle's own cache — a real battle on
-     * the same field inherits it), the apron, the engine at the opening frame,
-     * and the unit pixmaps. The loop's first frame is then an ordinary 1 ms
+     * then its map's bake (the battle's own cache — a real battle on the same
+     * field inherits it), the engine at the opening frame, and the unit
+     * pixmaps. The loop's first frame is then an ordinary 1 ms
      * frame.
      */
     type IdleWin = Window & {
@@ -449,17 +375,12 @@ export default function AttractBattle({ running, seed }: { running: boolean; see
           directed.set(seed, script)
         }
         map = script.map
-        M = apronMargins(map)
       },
+      // The map's bake (the battle's own cache — field and woodland are one).
       () => drawField(cctx, map),
-      () => {
-        const a = getApron(map)
-        if (a) warm(a)
-      },
       () => {
         resetLoop()
       },
-      () => compose(),
       () => {
         ready = true
         if (runningNow.current) loop.current?.start()

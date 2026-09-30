@@ -2483,3 +2483,48 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   sentence mid-line. (8) After a reload on the hero-pick screen the "Run in
   progress" dialog offers "Abandon and collect marks" for a depth-0 run that
   has no marks. (9) Every relic shares one glyph on the Spoils rows.
+- **2026-09-30 — Grid-fit: the grid is the ground's lattice, and the map fills
+  the Stage.** The designer: "this grid is not right size for the map it should
+  match the bg layers grid exactly", "i hate all this empty mirror space around
+  it — just fill it as part of the map", then "the grid might need to be finer"
+  and "that could be bigger on desktop to fill space better too". Diagnosis,
+  confirmed on the lit grid: G1-2's roads ran along 80px tile EDGES, so the road
+  straddled two rows of tiles and was cut out of every roadside square, and the
+  grass texture's own 32px streak rows matched neither. Two options were built
+  and rendered (`~/fieldwatch-critique/grid-after/option80/` vs `grid-after/`).
+  (1) Road through the centres of 80px tiles: the picture is right, the fight is
+  not — every hero stands 80px off the lane, a Fighter's 72px hold never reaches
+  it, and even with the hold compensated the balance suite failed 25 invariants
+  (§6 46%, 21 battles on the harness cap). (2) **Shipped: 40px tiles, 24 × 14,
+  the road through their centres, one tile wide.** A roadside hero stands 40px
+  off the lane exactly as in G1-2, every G1-2 post is still a tile (coarse c, r
+  is fine 2c, 2r), and the in-between tiles are the new choices. The grass tile
+  is resampled to repeat every 40px on the lattice, so its streak rows are the
+  grid lines; rocks, ponds, fire and cursed ground are 2 × 2 patches; a hero
+  keeps a tile of room (no neighbour, diagonals included) and the lit grid leaves
+  those tiles dark; the hovered tile shows the hero's two-tile room. The apron is
+  gone: one continuous bake (field, meadow, road running off-screen both ways,
+  forest on the same lattice thickening outward, the wood darkening smoothly with
+  distance — no seam, no step) fills the Stage; `frame.stageView` fits the
+  playable rect and never shows past the entry edge, so the horde walks in from
+  off-screen, and goblins are clipped at the palisade so a leak goes in through
+  the Gate. Desks get whole device px when within 10% of the fit, otherwise a
+  ×2 supersampled composite filtered down (1920×1080: 1.51×, a 60 CSS px tile;
+  2560×1080: 2×). Rendered at 390×844 @2x, 320×568, 768×1024, 1440×900,
+  1920×1080 and 2560×1080, lit and live, with the boss plate, the Q3 zoom at 320
+  and the menu cinematic. The loop caught four things. (1) Four native boulders
+  per 2 × 2 rock patch read as a grid of stones; big and middling stones now
+  alternate on a checkerboard of the lattice, so a patch reads as one heap.
+  (2) Tree crowns (56px) on 40px forest tiles leaned over lit tiles beside them;
+  a tree beside open ground leans away. (3) A 2 × 2 pond had a square hole where
+  its four cores met; the junction is bridged. (4) The cursed "−70%" label, sized
+  for the fitted scale, filled the screen inside the 320 place-zoom; it is capped
+  at the patch's size. Frame cost, 4× CPU, phone 390 live wave (dev, equivalent
+  posts): median 2.3 / p95 7.5 ms against the base's 2.3 / 8.1; 1080p desk at
+  ×2 supersample 2.6 / 13.2 against 2.3 / 8.1; bake on entry ~1.1 s at 4× (base
+  field + apron ~1.1 s). Balance: §6 57% → 66% (out of band, +9pt): 3pt of it
+  with the modelled player on G1-2's own posts only (hazard patches, the 20px
+  path shift), 6pt from the in-between tiles — the nuance buys power. Reported,
+  not retuned (the designer's tuning pass). Open: tiles are 22–24 CSS px on a
+  phone (a hero's room is 44–48; Q3 zooms on 375 and 320 as before); the cursed
+  and boulder patches are easier to step round on a finer grid.

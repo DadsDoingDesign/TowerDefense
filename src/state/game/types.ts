@@ -297,7 +297,7 @@ export interface GameData {
    * Q1: or the CURSED tile an armed hero is over / was just posted on, so the
    * strip says what standing there costs (`kind: 'cursed'`).
    */
-  fieldNote: { tileId: string | null; kind: TerrainKind | DangerKind; at: number } | null
+  fieldNote: { tileId: string | null; kind: TerrainKind | DangerKind | 'crowded'; at: number } | null
   /**
    * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
    * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast

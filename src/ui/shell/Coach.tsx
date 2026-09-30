@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
 import { DANGER_COPY } from '../../game/data/hazards'
-import { BLOCK_COPY, terrainRuleById } from '../../game/data/terrain'
+import { BLOCK_COPY, ROOM_COPY, terrainRuleById } from '../../game/data/terrain'
 import { commandsFor, WATCH_COMMANDS } from '../../game/data/commands'
 import { relicCommands } from '../../game/data/relics'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
@@ -244,8 +244,9 @@ export function Coach() {
   }, [fieldNote, clearFieldNote])
 
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
-    // Q1: the note is a blocked tile's reason, or cursed ground's cost.
-    const copy = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : BLOCK_COPY[fieldNote.kind]
+    // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
+    // grid-fit, that a hero needs a tile of room).
+    const copy = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : fieldNote.kind === 'crowded' ? ROOM_COPY : BLOCK_COPY[fieldNote.kind]
     return (
       <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
         <Icon name="warn" className="sh-coach-glyph" />

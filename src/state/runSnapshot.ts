@@ -37,7 +37,7 @@ import { equipRules } from '../game/run/relics'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
 import { fieldFor, FIRST_MAP, fieldIdOf, legacyPostTile, mapById, orientationOf, type FieldOrientation } from '../game/data/maps'
-import { parseTileId, terrainRuleById } from '../game/data/terrain'
+import { fineFromCoarse, parseTileId, terrainRuleById } from '../game/data/terrain'
 import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
 import type { BattleResult } from '../game/engine/engine'
@@ -84,7 +84,7 @@ const clampBanner = (raw: unknown): number =>
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 11
+export const RUN_SNAPSHOT_VERSION = 12
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -1146,7 +1146,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
 /**
  * A stored placement map, reduced to what this build can post (G1-2): tile id
  * → hero id strings only, each hero at most once. A ≤ v9 payload's circle ids
- * (`s0`…`s5`) are moved onto their nearest open tile of the saved field.
+ * (`s0`…`s5`) are moved onto their nearest open tile of the saved field. A
+ * v10–v11 payload's ids name the 80px grid; grid-fit (v12) halved the tile,
+ * so each is doubled onto the fine tile at the same place relative to the
+ * road (`terrain.fineFromCoarse`).
  */
 function migratePlacements(raw: unknown, fieldId: string, version: number): Placement {
   const out: Placement = {}
@@ -1154,7 +1157,7 @@ function migratePlacements(raw: unknown, fieldId: string, version: number): Plac
   const seen = new Set<string>()
   for (const [key, val] of Object.entries(raw)) {
     if (!isStr(val) || !val || seen.has(val)) continue
-    const tile = parseTileId(key) ? key : version < 10 ? legacyPostTile(fieldId, key) : null
+    const tile = version >= 12 ? (parseTileId(key) ? key : null) : fineFromCoarse(key) ?? (version < 10 ? legacyPostTile(fieldId, key) : null)
     if (!tile || Object.prototype.hasOwnProperty.call(out, tile)) continue
     out[tile] = val
     seen.add(val)

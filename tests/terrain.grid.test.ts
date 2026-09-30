@@ -10,12 +10,17 @@ import {
   withTerrainRule,
 } from '../src/game/data/maps'
 import { generateRunMap } from '../src/game/data/runmap'
-import { nameCounterState } from '../src/game/data/sentinels'
+import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
 import {
+  crowds,
   distToPolyline,
+  fineFromCoarse,
   GRID_COLS,
   GRID_ROWS,
   LANE_CLEAR,
+  LANE_HALF,
+  PLAYABLE,
+  roomyTiles,
   parseTileId,
   TERRAIN_RULE_IDS,
   TILE,
@@ -43,6 +48,13 @@ beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stat
  */
 
 const RULES: (TerrainRuleId | null)[] = [null, ...TERRAIN_RULE_IDS]
+
+/** Three open tiles of `map`, a tile of room apart (grid-fit), in grid order. */
+function roomy3(map: GameMap): [string, string, string] {
+  const out: string[] = []
+  for (const s of map.slots) if (!out.some((o) => crowds(o, s.id))) out.push(s.id)
+  return [out[0], out[1], out[2]]
+}
 
 /** Road seen from `pos` within `r`, sampled every 8px (the §14 coverage proxy). */
 function coverage(map: GameMap, pos: { x: number; y: number }, r = 150): number {
@@ -74,22 +86,74 @@ describe('the deployment grid', () => {
       const d = distToPolyline(t.pos, map.path)
       if (d < LANE_CLEAR) expect(t.block).toBe('lane')
       else expect(t.block).not.toBe('lane')
-      const ring = t.row === 0 || t.row === GRID_ROWS - 1 || t.col === 0 || t.col === GRID_COLS - 1
-      if (!ring) expect(t.block).not.toBe('forest')
+      // Forest is the frame round the playable middle, and only that.
+      const inside = t.pos.x > PLAYABLE.x0 && t.pos.x < PLAYABLE.x1 && t.pos.y > PLAYABLE.y0 && t.pos.y < PLAYABLE.y1
+      if (inside) expect(t.block).not.toBe('forest')
+      else if (t.block !== 'lane') expect(t.block).toBe('forest')
     }
     // `slots` is exactly the open tiles, in grid order.
     expect(map.slots.map((s) => s.id)).toEqual(tiles.filter((t) => !t.block).map((t) => t.id))
-    // Every lane corner sits on a grid intersection, so the road runs along
-    // tile edges: a roadside hero stands 40px from the lane's centre line
-    // (15px clear of the dirt), the distance the engine's holds, sapper
-    // triggers and lobs are tuned against, and no open tile is ON the road.
+    // Grid-fit: every lane corner sits on a tile CENTRE, so the road runs
+    // through whole tiles, one tile wide. A hero beside it stands a whole tile
+    // (40px) off the lane's centre line — where a G1-2 roadside hero stood,
+    // the distance the engine's holds, sapper triggers and lobs are tuned
+    // against — and no open tile has any road in it.
     for (const p of map.path.slice(1, -1)) {
-      expect(p.x % TILE).toBe(0)
-      expect(p.y % TILE).toBe(0)
+      expect(p.x % TILE).toBe(TILE / 2)
+      expect(p.y % TILE).toBe(TILE / 2)
     }
     const gaps = map.slots.map((s) => distToPolyline(s.pos, map.path))
-    expect(Math.min(...gaps)).toBe(40)
-    expect(gaps.filter((d) => d === 40).length).toBeGreaterThanOrEqual(15)
+    expect(Math.min(...gaps)).toBe(TILE)
+    expect(gaps.filter((d) => d === TILE).length).toBeGreaterThanOrEqual(40)
+    // The drawn road (its dirt and grassy edge, LANE_HALF either side of the
+    // centre line) lies wholly in lane tiles: sample it every 4px, both edges.
+    const tileAt = (x: number, y: number) => tiles.find((t) => Math.abs(x - t.pos.x) < TILE / 2 && Math.abs(y - t.pos.y) < TILE / 2)
+    for (let i = 1; i < map.path.length; i++) {
+      const a = map.path[i - 1]
+      const b = map.path[i]
+      const len = Math.hypot(b.x - a.x, b.y - a.y)
+      const nx = -(b.y - a.y) / len
+      const ny = (b.x - a.x) / len
+      for (let k = 0; k <= len; k += 4) {
+        for (const o of [-(LANE_HALF - 0.5), 0, LANE_HALF - 0.5]) {
+          const x = a.x + ((b.x - a.x) * k) / len + nx * o
+          const y = a.y + ((b.y - a.y) * k) / len + ny * o
+          const t = tileAt(x, y)
+          if (t) expect(t.block).toBe('lane')
+        }
+      }
+    }
+  })
+
+  it.each(ALL_MAPS.map((m) => [m.id] as const))('%s: every G1-2 post is still a tile, at the same place relative to the road', (id) => {
+    // The fine tile at (2c, 2r) sees exactly the road the 80px tile (c, r) saw
+    // before grid-fit: the fields moved by half a fine tile with the road.
+    const land = fieldFor(id, null, 'landscape')!
+    const even = land.slots.filter((s) => {
+      const p = parseTileId(s.id)!
+      return p.c % 2 === 0 && p.r % 2 === 0
+    })
+    // G1-2 posts sat 40px off a road that ran along their edges; so do these.
+    expect(even.filter((s) => distToPolyline(s.pos, land.path) === TILE).length).toBeGreaterThanOrEqual(15)
+    expect(even.length).toBeGreaterThanOrEqual(30)
+    expect(fineFromCoarse('c7r2')).toBe('c14r4')
+    expect(fineFromCoarse('c11r6')).toBe('c22r12')
+    expect(fineFromCoarse('c12r0')).toBeNull()
+    expect(fineFromCoarse('s3')).toBeNull()
+  })
+
+  it('a hero keeps a tile of room: neighbours crowd, diagonals included; two tiles apart do not', () => {
+    expect(crowds('c5r5', 'c6r5')).toBe(true)
+    expect(crowds('c5r5', 'c6r6')).toBe(true)
+    expect(crowds('c5r5', 'c4r4')).toBe(true)
+    expect(crowds('c5r5', 'c7r5')).toBe(false)
+    expect(crowds('c5r5', 'c7r7')).toBe(false)
+    expect(crowds('c5r5', 'c5r5')).toBe(false)
+    expect(crowds('c5r5', 's3')).toBe(false)
+    const land = ALL_MAPS[0]
+    const roomy = roomyTiles(land.slots, [land.slots[40].id])
+    expect(roomy.some((s) => s.id === land.slots[40].id)).toBe(false)
+    for (const s of roomy) expect(crowds(s.id, land.slots[40].id)).toBe(false)
   })
 
   it.each(ALL_MAPS.map((m) => [m.id] as const))('%s: each challenge adds its terrain and still leaves a real choice', (id) => {
@@ -157,15 +221,27 @@ describe('the deployment grid', () => {
     }
   })
 
+  it('carryPlacements keeps a tile of room between heroes', () => {
+    const land = ALL_MAPS[0]
+    const a = land.slots[40]
+    const next = land.slots.find((s) => crowds(s.id, a.id))!
+    const far = land.slots.find((s) => !crowds(s.id, a.id) && s.id !== a.id)!
+    const kept = carryPlacements({ [a.id]: 'a', [next.id]: 'b', [far.id]: 'c' }, land)
+    expect(kept[a.id]).toBe('a')
+    expect(kept[next.id]).toBeNull()
+    expect(kept[far.id]).toBe('c')
+  })
+
   it('carryPlacements keeps open tiles only, each hero once, up to the cap', () => {
     const land = ALL_MAPS[0]
     const flooded = fieldFor(land.id, 'flooded', 'landscape')!
     const water = flooded.tiles!.find((t) => t.block === 'water')!.id
     const open = flooded.slots.map((s) => s.id)
-    const next = carryPlacements({ [water]: 'a', [open[0]]: 'b', [open[1]]: 'b', [open[2]]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c')
-    expect(Object.entries(next).filter(([, v]) => v)).toEqual([[open[0], 'b']])
+    const [o0, o1, o2] = roomy3(flooded)
+    const next = carryPlacements({ [water]: 'a', [o0]: 'b', [o1]: 'b', [o2]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c')
+    expect(Object.entries(next).filter(([, v]) => v)).toEqual([[o0, 'b']])
     expect(Object.keys(next).sort()).toEqual([...open].sort())
-    const capped = carryPlacements({ [open[0]]: 'a', [open[1]]: 'b', [open[2]]: 'c' }, flooded, () => true, 2)
+    const capped = carryPlacements({ [o0]: 'a', [o1]: 'b', [o2]: 'c' }, flooded, () => true, 2)
     expect(Object.values(capped).filter(Boolean)).toHaveLength(2)
   })
 })
@@ -229,7 +305,11 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     useGameStore.getState().tapTile(rock.id)
     expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: rock.id, kind: 'rock' })
     expect(Object.values(useGameStore.getState().placements).filter(Boolean)).toHaveLength(0)
-    // A tap on the road (between tiles) says so too.
+    // A tap on the road is a tap on a lane tile (grid-fit): it names that tile.
+    const lane = st.battleMap.tiles!.find((t) => t.block === 'lane')!
+    useGameStore.getState().tapTile(lane.id)
+    expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: lane.id, kind: 'lane' })
+    // …and on the road where it runs on past the grid, the plain road note.
     useGameStore.getState().noteRoad()
     expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: null, kind: 'lane' })
     // The store refuses a blocked id from any path, not only the router.
@@ -239,6 +319,37 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     useGameStore.getState().tapTile(open)
     expect(useGameStore.getState().placements[open]).toBe(hero.id)
     expect(useGameStore.getState().fieldNote).toBeNull()
+  })
+
+  it('grid-fit: a hero keeps a tile of room — a tap beside a posted hero says so and posts nobody', () => {
+    start(4242)
+    const st0 = useGameStore.getState()
+    const first = st0.runMap.nodes.find((n) => st0.reachableNodeIds.includes(n.id) && n.type === 'battle')!
+    enter(first.id)
+    const second = createSentinel('rogue')
+    useGameStore.setState({ roster: [...useGameStore.getState().roster, second] })
+    const st = useGameStore.getState()
+    const [a, b] = st.roster
+    const safe = st.battleMap.slots.filter((s) => !st.battleMap.tiles!.find((t) => t.id === s.id)!.danger)
+    const at = safe[20]
+    useGameStore.getState().shellSelect({ kind: 'hero', id: a.id })
+    useGameStore.getState().tapTile(at.id)
+    expect(useGameStore.getState().placements[at.id]).toBe(a.id)
+    // Beside it (diagonals too): refused, with the reason on the coach strip.
+    const beside = safe.find((s) => crowds(s.id, at.id))!
+    useGameStore.getState().shellSelect({ kind: 'hero', id: b.id })
+    useGameStore.getState().tapTile(beside.id)
+    expect(useGameStore.getState().placements[beside.id]).toBeFalsy()
+    expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: beside.id, kind: 'crowded' })
+    // A tile of room away: posted.
+    const clear = safe.find((s) => s.id !== at.id && !crowds(s.id, at.id))!
+    useGameStore.getState().tapTile(clear.id)
+    expect(useGameStore.getState().placements[clear.id]).toBe(b.id)
+    // The first hero may move beside where it stood itself (it leaves that tile).
+    useGameStore.getState().shellSelect({ kind: 'hero', id: a.id })
+    const step = safe.find((s) => crowds(s.id, at.id) && !crowds(s.id, clear.id))!
+    useGameStore.getState().tapTile(step.id)
+    expect(useGameStore.getState().placements[step.id]).toBe(a.id)
   })
 
   it('a challenge node is fought on its terrain, benches a hero standing in it, and survives a save', () => {
@@ -299,5 +410,15 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     const n = migrateSnapshot(raw)!
     expect(n.placements).toEqual({})
     expect(n.terrainRule).toBeNull()
+    // Grid-fit: a v10–v11 payload's ids name the 80px grid; each is doubled
+    // onto the fine tile at the same place relative to the road.
+    raw.v = 11
+    raw.placements = { c7r2: hero.id, c3r5: 'h2', c12r0: 'h3' }
+    const o = migrateSnapshot(raw)!
+    expect(o.placements).toEqual({ c14r4: hero.id, c6r10: 'h2' })
+    // A v12 payload's ids are fine ids already.
+    raw.v = 12
+    const q = migrateSnapshot(raw)!
+    expect(q.placements).toEqual({ c7r2: hero.id, c3r5: 'h2', c12r0: 'h3' })
   })
 })

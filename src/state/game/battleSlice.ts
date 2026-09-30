@@ -18,6 +18,7 @@ import { challengeGrant } from '../../game/run/settle'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
 import { orientationOf } from '../../game/data/maps'
+import { crowds } from '../../game/data/terrain'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
@@ -98,6 +99,15 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     if (screen !== 'battle' || battlePhase !== 'setup' || !selectedSentinelId) return
     // Only an OPEN tile of this battle's field takes a hero (G1-2).
     if (!battleMap.slots.some((s) => s.id === slotId)) return
+    // Grid-fit: a hero keeps a tile of room — not beside another posted hero
+    // (the one it would replace on this very tile, or itself, excepted).
+    const neighbour = Object.entries(placements).find(
+      ([k, v]) => v && v !== selectedSentinelId && k !== slotId && crowds(k, slotId),
+    )
+    if (neighbour) {
+      get().noteCrowded(slotId)
+      return
+    }
     const next: Placement = { ...placements }
     for (const key of Object.keys(next)) if (next[key] === selectedSentinelId) next[key] = null
     next[slotId] = selectedSentinelId
@@ -233,6 +243,14 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       return
     }
     const swapped = !!engine.sentinelOnSlot(slotId)
+    // Grid-fit: the engine refuses a move that crowds a third hero; say why.
+    const third = engine.sentinels.some(
+      (s) => s.slotId !== breatherPick && s.slotId !== slotId && (crowds(s.slotId, slotId) || (swapped && crowds(s.slotId, breatherPick))),
+    )
+    if (third) {
+      get().noteCrowded(slotId)
+      return
+    }
     const moved = engine.moveHero(breatherPick, slotId)
     if (moved) sfx('deploy')
     set({ breatherPick: null, hud: hudOf(engine) })

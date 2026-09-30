@@ -1,7 +1,7 @@
 /**
  * The battle renderer's public face. Every draw lives in a module of its own —
  *
- *   frame.ts        presentation clock, view scale, letterbox (`fitView`)
+ *   frame.ts        presentation clock, view scale, the Stage view (`stageView`)
  *   terrain.ts      the static field, baked once per map (`drawField`)
  *   units.ts        sentinels + enemies (`drawSentinel`, `drawEnemy`)
  *   plaques.ts      the enemy tier / elite plaque
@@ -17,13 +17,13 @@
 import type { GameEngine } from '../engine/engine'
 import { drawFxDecals, drawFxFloaters, drawFxParticles } from './fx'
 import { animNow } from './frame'
-import { drawAura, drawBaseFx, drawReticle } from './overlays'
+import { clipBeforeGate, drawAura, drawBaseFx, drawReticle } from './overlays'
 import { drawProjectile, drawTrap } from './projectiles'
 import { drawTelegraphs } from './telegraphs'
 import { drawEnemy, drawSentinel, sentinelFromRt } from './units'
 
-export { fitView, setPresentationTime, setViewScale, type View } from './frame'
-export { drawField, drawTerrainDanger, drawTerrainFlames } from './terrain'
+export { entrySide, fitView, setPresentationTime, setViewScale, stageView, type StageView, type View } from './frame'
+export { drawField, drawTerrainDanger, drawTerrainFlames, playRect, worldOf } from './terrain'
 export { drawEnemy, drawSentinel, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
 export { baseAnchor, drawBaseFx, drawBlockedFlash, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'
@@ -63,7 +63,13 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   // for a set that is at most a handful of ids.
   targeted.clear()
   for (const s of engine.sentinels) if (s.targetId) targeted.add(s.targetId)
+  // Grid-fit: the road runs on past the Gate now, so a goblin that reaches it
+  // is drawn going IN through it — clipped at the palisade — rather than
+  // walking on down the road to vanish where the path ends.
+  ctx.save()
+  clipBeforeGate(ctx, engine.map)
   for (const e of engine.enemies) drawEnemy(ctx, e, now, simNow)
+  ctx.restore()
   drawTelegraphs(ctx, engine) // Phase 3a: behaviour marks (render/telegraphs.ts)
   for (const e of engine.enemies) if (targeted.has(e.id)) drawReticle(ctx, e.pos, e.type.radius)
   for (const s of engine.sentinels) drawSentinel(ctx, sentinelFromRt(s))
