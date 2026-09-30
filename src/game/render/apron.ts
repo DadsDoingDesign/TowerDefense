@@ -47,7 +47,7 @@ export function apronMargins(map: GameMap): { x: number; y: number } {
 
 /**
  * Baked aprons, most recent first. Two entries, not one: the menu's attract
- * battle is always the landscape Green Line while a phone battle is now fought
+ * battle is always a landscape field (the day's, Q12) while a phone battle is fought
  * on a portrait twin, and a one-entry cache re-baked ~2.5 Mpx of forest on every
  * trip between the menu and a battle.
  */

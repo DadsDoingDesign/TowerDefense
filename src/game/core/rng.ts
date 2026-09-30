@@ -82,6 +82,30 @@ export function withIsolatedIds<T>(fn: () => T): T {
 }
 
 /**
+ * A private id counter for a self-contained sim: `n` is where it resumes.
+ *
+ * {@link withIsolatedIds} alone restarts from the GLOBAL counter on every
+ * call, so a sim stepped in several calls re-issues its own ids (a champion
+ * and a goblin spawned a batch later can share one), and what it mints depends
+ * on where the run's counter happened to stand. Minting from its own counter —
+ * the same numbers on every machine, however the stepping is chunked — makes
+ * the sim a pure function of its inputs. The global counter is untouched.
+ */
+export interface IdCounter {
+  n: number
+}
+export function withOwnIds<T>(ids: IdCounter, fn: () => T): T {
+  return withIsolatedIds(() => {
+    idCounter = ids.n
+    try {
+      return fn()
+    } finally {
+      ids.n = idCounter
+    }
+  })
+}
+
+/**
  * Fast-forward the id counter past everything a restored run already minted.
  * Only ever moves forward, so it can't collide with ids handed out since boot.
  */
