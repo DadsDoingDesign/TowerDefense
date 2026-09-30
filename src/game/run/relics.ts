@@ -3,7 +3,7 @@
  * numbers in, the next numbers out — the store and the balance harness both
  * call these, so a relic's card and its effect cannot drift apart.
  */
-import { generateItem, type RarityPity, type RosterRef } from '../data/items'
+import { generateItem, type EquipRules, type RarityPity, type RosterRef } from '../data/items'
 import { hasRelicRule, relicById, relicPool, relicStatGrant } from '../data/relics'
 import { nextId, type RNG } from '../core/rng'
 import type { RewardCard } from '../data/rewards'
@@ -46,11 +46,13 @@ export const hiresTrained = (hubTrained: boolean, held: readonly string[]): bool
   hubTrained || hasRelicRule(held, 'mercenaryCharter')
 
 /**
- * Whether the off hand may hold a one-handed weapon (the Ambidextrous relic,
- * R3-2). Every equip path — the pack, the item panel's plan, a hire dressing
- * from the pack, the balance model — reads it through here.
+ * The run's equip rules: whether the company holds the Twinblade Harness
+ * (round 3, Q4). Every equip path — the pack, the item panel's plan, a hire
+ * dressing from the pack, auto-equip on a drop, the load-time check and the
+ * balance model — reads it through here, and `items.heroSlotsFor` applies the
+ * per-hero DEX check on top.
  */
-export const isAmbidextrous = (held: readonly string[]): boolean => hasRelicRule(held, 'ambidextrous')
+export const equipRules = (held: readonly string[]): EquipRules => ({ twinblade: hasRelicRule(held, 'twinblade') })
 
 /** How many items a merchant lays out. */
 export const shelfSize = (held: readonly string[], thinPickings = false): number =>

@@ -40,7 +40,7 @@ import {
 import { rollMutationChoices } from '../src/game/data/mutations'
 import type { RewardCard } from '../src/game/data/rewards'
 import { relicTeamMods } from '../src/game/data/relics'
-import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, isAmbidextrous, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
+import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, equipRules, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
 import { fieldFor, pickBattleMap } from '../src/game/data/maps'
@@ -388,12 +388,12 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   /** Relics taken this run (Phase 3b) — the store's `relics`. Declared here,
    *  before the kit is dressed, because the equip rule reads it (R3-2). */
   let relics: string[] = [...(o.startRelics ?? [])]
-  /** The run's equip rules: Ambidextrous opens the off hand to one-handers. */
-  const rules = (): EquipRules => ({ ambidextrous: isAmbidextrous(relics) })
+  /** The run's equip rules: whether the Twinblade Harness is held (the DEX check is per hero). */
+  const rules = (): EquipRules => equipRules(relics)
   const equipOn = (h: number, item: Item) => {
     const r = equipAndDisplace(roster[h], item, rules())
     roster[h] = r.hero
-    if (r.displaced) pack.push(r.displaced)
+    pack.push(...r.displaced)
   }
   const kit = startingItems(rng, archetype, meta.extraItems, rosterRefs(roster))
   roster[0] = wearKit(roster[0], kit)

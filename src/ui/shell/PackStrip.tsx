@@ -89,10 +89,26 @@ function useFresh(ids: string[]): Set<string> {
  * used to be below the fold on a small phone.
  */
 export function ReceiptToast() {
-  const [msg, setMsg] = useState<{ text: string; key: number } | null>(null)
+  const [msg, setMsg] = useState<{ text: string; key: number; hold?: number; notice?: boolean } | null>(null)
   useEffect(() => {
+    /*
+     * Round 3 (Q5): a resumed save's off-hand item moved back to the pack.
+     * Said once: the notice is spent (cleared from the store) when its toast
+     * has been on screen for its whole hold — not when it is first shown,
+     * because the resume swaps the page shell for the run shell and the toast
+     * that caught it is unmounted a frame later. The one that mounts next
+     * reads the still-pending notice and says it.
+     */
+    const sayNotice = (n: { text: string; at: number }) => setMsg({ text: n.text, key: n.at, hold: 6000, notice: true })
+    const pending = useGameStore.getState().gearNotice
+    if (pending) sayNotice(pending)
     let prev = useGameStore.getState()
     return useGameStore.subscribe((s) => {
+      if (s.gearNotice && s.gearNotice !== prev.gearNotice) {
+        prev = s
+        sayNotice(s.gearNotice)
+        return
+      }
       if (s.runPhase !== 'active') {
         prev = s
         return
@@ -126,14 +142,18 @@ export function ReceiptToast() {
   }, [])
   useEffect(() => {
     if (!msg) return
-    const t = setTimeout(() => setMsg((m) => (m?.key === msg.key ? null : m)), 2400)
+    const t = setTimeout(() => {
+      setMsg((m) => (m?.key === msg.key ? null : m))
+      // Seen in full: spend the load's notice (above) so it is said once.
+      if (msg.notice && useGameStore.getState().gearNotice?.at === msg.key) useGameStore.setState({ gearNotice: null })
+    }, msg.hold ?? 2400)
     return () => clearTimeout(t)
   }, [msg])
   return (
     <div className="pg-toast-wrap" role="status" aria-live="polite">
       {msg && (
         <p className="pg-toast" key={msg.key}>
-          <Icon name="boon" /> {msg.text}
+          <Icon name={msg.notice ? 'back' : 'boon'} /> {msg.text}
         </p>
       )}
     </div>

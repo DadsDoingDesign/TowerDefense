@@ -2246,3 +2246,24 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   stand inside the scorch now. Still open: the top forest row is shrubs where a
   88px tree cannot fit without clipping or standing on the road. On 375×667
   and 320×568 a tile is about 35px, under the 44px floor.
+- **2026-09-30 — Round 3 Q4 + Q5: the off hand takes small things; the
+  Twinblade Harness.** Every item base now has a grip in data (`ITEM_BASES`).
+  Knives and wands fit either hand; shields, bucklers, tomes, quivers and foci
+  fit the off hand; swords, axes, rods and sceptres fit the main hand; big
+  things are two-handed. A knife or wand in the off hand counts at 50%. The
+  Ambidextrous relic is now the Twinblade Harness. With it, a hero with 14 DEX
+  of their own can carry a main-hand one-hander in the off hand at 100%. The
+  off-hand slot carries a knife mark (the blade and the teal double outline
+  for a hero who qualifies), and the note under the doll reads
+  "Twinblade · DEX 6/14" when a hero is short. Rendered at 390×844 @2x, 360×780
+  (the stacked column) and 1440×900. The loop caught four things. (1) The
+  corner mark sat on the main hand's rarity tag, 2px away. It moved to the off
+  hand's outer corner on the doll and to the bottom-right in the stack, where
+  it had covered "HAND". (2) The one-line "Twinblade · DEX 6/14" note ran past
+  the column. It now wraps to two lines, and the desk legend moved down 10px
+  to clear it. (3) The slot panel's rule copy pushed the hero-specific line
+  below the fold on a phone. The relic line is first now, and both lines are
+  shorter. (4) The load-time toast never showed. The resume swaps the page
+  shell for the run shell, so the toast that caught the notice unmounted a
+  frame later. A notice is now spent only after its toast has been on screen
+  for the full hold.

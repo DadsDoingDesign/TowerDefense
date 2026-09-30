@@ -8,7 +8,7 @@ import { takePerk } from '../../game/run/perks'
 import { availableEvolutions } from '../../game/run/unlocks'
 import { scrapDust, scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
-import { isAmbidextrous } from '../../game/run/relics'
+import { equipRules } from '../../game/run/relics'
 import type { HeroSlot } from '../../game/types'
 import { sfx } from '../../audio/audio'
 import { featUnlocked, perkUnlocked, streams } from './runtime'
@@ -34,7 +34,7 @@ export interface RosterActions {
 export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   equipItem: (sentinelId, slot, itemId) => {
     const { roster, inventory, relics } = get()
-    const next = equipFromPack(roster, inventory, sentinelId, slot, itemId, { ambidextrous: isAmbidextrous(relics) })
+    const next = equipFromPack(roster, inventory, sentinelId, slot, itemId, equipRules(relics))
     if (!next) return
     set(next)
     sfx('equip')

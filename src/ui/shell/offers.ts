@@ -9,7 +9,7 @@ import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/me
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { dailySeed, utcDateKey } from '../../state/daily'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
@@ -45,7 +45,7 @@ export interface BodyLine {
   /** Overrides `effectIcon` where the producer knows what the sentence cannot say. */
   mark?: IconKey
   /** The Context panel's accent treatment. The page card renders every line alike. */
-  tone?: 'accent'
+  tone?: 'accent' | 'muted'
 }
 export type Body = (string | BodyLine)[]
 
@@ -298,6 +298,10 @@ export function itemBody(item: Item): Body {
     })
   }
   if (item.keepsake) out.push({ text: KEEPSAKE_TAG, tone: 'accent' })
+  // Which hand it fits (round 3, Q5) — every item surface says so, and says
+  // what a knife or wand is worth from the off hand.
+  const hand = item.keepsake ? null : handLine(item)
+  if (hand) out.push({ text: hand, mark: 'equip', tone: 'muted' })
   return out
 }
 

@@ -289,6 +289,12 @@ export interface GameData {
    * snapshotted, cleared with the rest of the shell.
    */
   fieldNote: { tileId: string | null; kind: TerrainKind; at: number } | null
+  /**
+   * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
+   * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast
+   * says it once. Presentation — not snapshotted, cleared with the shell.
+   */
+  gearNotice: { text: string; at: number } | null
 }
 
 export interface GameState

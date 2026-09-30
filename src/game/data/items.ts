@@ -1,5 +1,5 @@
 import { nextId, RNG } from '../core/rng'
-import type { Archetype, Enchantment, HeroSlot, Item, ItemRarity, ItemSlot } from '../types'
+import type { Archetype, Enchantment, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
 import { getNode } from './archetypeTree'
 
 export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic']
@@ -11,24 +11,163 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
   offHand: 'Off Hand',
   body: 'Body',
 }
-/**
- * Which hero slot(s) an item of this kind may occupy.
+/*
+ * ---------------------------------------------------------------------------
+ * What each hand may hold (round 3, Q4 + Q5)
+ * ---------------------------------------------------------------------------
  *
- * R3-2: dual-wielding is a BONUS now, not the default. A one-handed weapon goes
- * in the main hand; the off hand holds off-hand pieces (the Precision slot) —
- * unless the run holds the Ambidextrous relic (`data/relics.ts`), which opens
- * the off hand to one-handed weapons too. Pass `ambidextrous` from
- * `hasRelicRule(relics, 'ambidextrous')`; every caller that equips reads it.
- * A save from before this rule may still WEAR a weapon in the off hand: it is
- * left where it is (the engine counts what is worn), it just cannot be put
- * back there without the relic.
+ * The designer's rule: "only off hand weapons or items can go in there so maybe
+ * a knife or a shield or a wand, but not something big". So every item BASE —
+ * the noun the generator names it by — carries a grip, and the grip, not the
+ * item's damage kind, decides which hand takes it:
+ *
+ *   grip      hands                       bases
+ *   main      main hand                   Sword, Axe, Rod, Sceptre
+ *   either    main hand OR off hand       Dagger, Wand
+ *   off       off hand                    Shield, Buckler, Tome, Quiver, Focus
+ *   twoHand   main hand, empties the off  Greatsword, Warhammer, Bow, Staff, Grimoire
+ *   body      body                        Plate, Mail, Robe, Cloak, Aegis (+ keepsakes)
+ *
+ * A knife or a wand in the OFF hand is a light second weapon: its damage and
+ * attack speed count at {@link OFF_HAND_SHARE} there (`combat.gearOf`), in
+ * full in the main hand.
+ *
+ * The one exception is the Twinblade Harness relic (`data/relics.ts`, Q4): a
+ * hero with {@link DUAL_WIELD_DEX} DEX of their own may carry a `main` grip
+ * one-hander in the off hand too, and it counts in full there — a real second
+ * weapon, not a light one. Big things (`twoHand`) never go in the off hand.
+ *
+ * The noun is read out of the item's name ({@link itemNoun}) because that is
+ * where it lives — the same single regex `renameFor` and the shell's icon table
+ * read. A name with no noun this table knows (a hand-built item) falls back to
+ * its kind's grip, and a noun only classifies an item of its own kind, so a
+ * name can never move an item across kinds.
  */
-export function heroSlotsFor(kind: ItemSlot, opts: { ambidextrous?: boolean } = {}): HeroSlot[] {
-  switch (kind) {
-    case 'oneHand': return opts.ambidextrous ? ['mainHand', 'offHand'] : ['mainHand']
-    case 'twoHand': return ['mainHand'] // also blocks offHand while equipped
-    case 'offHand': return ['offHand']
-    case 'body': return ['body']
+export type Grip = 'main' | 'either' | 'off' | 'twoHand' | 'body'
+
+/** Every item base the game generates (or once did), with its kind and grip. */
+export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip }>> = {
+  Sword: { slot: 'oneHand', grip: 'main' },
+  Axe: { slot: 'oneHand', grip: 'main' },
+  Rod: { slot: 'oneHand', grip: 'main' },
+  Sceptre: { slot: 'oneHand', grip: 'main' },
+  Scepter: { slot: 'oneHand', grip: 'main' },
+  Dagger: { slot: 'oneHand', grip: 'either' },
+  Wand: { slot: 'oneHand', grip: 'either' },
+  Greatsword: { slot: 'twoHand', grip: 'twoHand' },
+  Warhammer: { slot: 'twoHand', grip: 'twoHand' },
+  Bow: { slot: 'twoHand', grip: 'twoHand' },
+  Staff: { slot: 'twoHand', grip: 'twoHand' },
+  Grimoire: { slot: 'twoHand', grip: 'twoHand' },
+  Shield: { slot: 'offHand', grip: 'off' },
+  Buckler: { slot: 'offHand', grip: 'off' },
+  Tome: { slot: 'offHand', grip: 'off' },
+  Quiver: { slot: 'offHand', grip: 'off' },
+  Focus: { slot: 'offHand', grip: 'off' },
+  Plate: { slot: 'body', grip: 'body' },
+  Mail: { slot: 'body', grip: 'body' },
+  Robe: { slot: 'body', grip: 'body' },
+  Cloak: { slot: 'body', grip: 'body' },
+  Aegis: { slot: 'body', grip: 'body' },
+  Banner: { slot: 'body', grip: 'body' },
+  Standard: { slot: 'body', grip: 'body' },
+  Relic: { slot: 'body', grip: 'body' },
+  Beacon: { slot: 'body', grip: 'body' },
+  Oath: { slot: 'body', grip: 'body' },
+}
+
+/** A kind's grip when the name carries no known noun. */
+const KIND_GRIP: Record<ItemSlot, Grip> = { oneHand: 'main', twoHand: 'twoHand', offHand: 'off', body: 'body' }
+
+/**
+ * The one noun regex. A single alternation matches leftmost-by-position, so the
+ * noun EARLIEST in the name wins (`Banner of Focus` is a Banner), and branch
+ * order only breaks ties at one position (`Greatsword` before `Sword`).
+ */
+export const ITEM_NOUN_RE =
+  /(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
+
+/** The base noun an item is named by, if the name carries one. */
+export const itemNoun = (item: Pick<Item, 'name'>): string | undefined => ITEM_NOUN_RE.exec(item.name)?.[0]
+
+/** Which hands an item's base fits (see the table above). */
+export function gripOf(item: Pick<Item, 'name' | 'slot'>): Grip {
+  const noun = itemNoun(item)
+  const base = noun ? ITEM_BASES[noun] : undefined
+  return base && base.slot === item.slot ? base.grip : KIND_GRIP[item.slot]
+}
+
+/**
+ * The share of a light weapon's damage and attack speed that counts from the
+ * OFF hand (a knife or a wand there is a second, lighter weapon). A `main`
+ * grip one-hander carried there under the Twinblade Harness counts in full.
+ */
+export const OFF_HAND_SHARE = 0.5
+
+/** How much of `item`'s weapon line counts when it is worn in the off hand. */
+export const offHandShare = (item: Pick<Item, 'name' | 'slot'>): number =>
+  item.slot === 'oneHand' && gripOf(item) === 'either' ? OFF_HAND_SHARE : 1
+
+/**
+ * The Twinblade Harness's stat check: DEX of the hero's OWN — level-ups,
+ * evolutions, shrines, stat relics and cards, never gear. Gear is left out on
+ * purpose: an item that qualified itself (a sword "of Precision") or a swap
+ * that un-qualified a worn sword would make a legal hand illegal behind the
+ * player's back. The hero's own DEX only ever rises, so a hero who passes once
+ * passes for the rest of the run.
+ *
+ * 14 is a real bar, not a formality: nobody starts a run on it (a Rogue opens
+ * at 12 and gains 2 a level, a Fighter opens at 6 and a Mystic at 5, each
+ * gaining 1), so a Rogue qualifies at level 2, a Fighter around level 9 and a
+ * Mystic around level 10 — sooner with DEX from shrines, Finesse or the
+ * Drillmaster's Ledger.
+ */
+export const DUAL_WIELD_DEX = 14
+
+/** The run's equip rules: whether the company holds the Twinblade Harness. */
+export interface EquipRules {
+  twinblade?: boolean
+}
+
+/** Where a hero stands on the Twinblade Harness's check. */
+export interface DualWieldCheck {
+  /** The run holds the relic. */
+  relic: boolean
+  /** The hero's own DEX (gear not counted). */
+  dex: number
+  need: number
+  /** Relic held AND check passed: a main-hand one-hander fits the off hand. */
+  ok: boolean
+}
+
+export function dualWieldCheck(hero: Pick<Sentinel, 'stats'>, rules: EquipRules = {}): DualWieldCheck {
+  const dex = hero.stats.dex
+  const relic = !!rules.twinblade
+  return { relic, dex, need: DUAL_WIELD_DEX, ok: relic && dex >= DUAL_WIELD_DEX }
+}
+
+/**
+ * Which hero slot(s) `item` may occupy on `hero`. Every equip path — the pack,
+ * the item panel's plan, auto-equip on a drop, a hire dressing from the pack,
+ * the opening kit, the load-time check and the balance model — asks here.
+ * Without a hero (nobody to check), a main-hand one-hander is main hand only.
+ */
+export function heroSlotsFor(
+  item: Pick<Item, 'name' | 'slot'>,
+  hero?: Pick<Sentinel, 'stats'> | null,
+  rules: EquipRules = {},
+): HeroSlot[] {
+  switch (gripOf(item)) {
+    case 'main':
+      return hero && dualWieldCheck(hero, rules).ok ? ['mainHand', 'offHand'] : ['mainHand']
+    case 'either':
+      return ['mainHand', 'offHand']
+    case 'twoHand':
+      return ['mainHand'] // and it empties the off hand while held
+    case 'off':
+      return ['offHand']
+    case 'body':
+      return ['body']
   }
 }
 
@@ -51,7 +190,8 @@ interface WeaponType {
   speedBias: number
 }
 const WEAPONS: WeaponType[] = [
-  // one-hand: modest damage, can pair with an off-hand
+  // one-hand: modest damage, can pair with an off-hand. Dagger and Wand are
+  // light enough to BE the off-hand (at OFF_HAND_SHARE) — see `ITEM_BASES`.
   { name: 'Sword', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
   { name: 'Axe', damageType: 'physical', hands: 'oneHand', speedBias: 0.02 },
   { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
@@ -68,6 +208,18 @@ const WEAPONS: WeaponType[] = [
 const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus']
 const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis']
 const KEEPSAKES = ['Banner', 'Standard', 'Relic', 'Beacon', 'Oath']
+
+/**
+ * Every noun each generator pool can name an item by, per kind — read by the
+ * tests that hold {@link ITEM_BASES} to the pools (a base the table did not
+ * classify would silently fall back to its kind's grip).
+ */
+export const GENERATED_BASES: Readonly<Record<ItemSlot, readonly string[]>> = {
+  oneHand: WEAPONS.filter((w) => w.hands === 'oneHand').map((w) => w.name),
+  twoHand: WEAPONS.filter((w) => w.hands === 'twoHand').map((w) => w.name),
+  offHand: OFFHANDS,
+  body: [...BODIES, ...KEEPSAKES],
+}
 
 // ---- enchantment pool (per-item) ----
 interface EnchantTemplate {
@@ -680,8 +832,7 @@ function nameItem(_rarityLabel: string, noun: string, ench: Enchantment[]): stri
 
 function renameFor(item: Item, ench: Enchantment[]): Item['name'] {
   const cfg = RARITY[item.rarity]
-  const nounMatch = item.name.match(/(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/)
-  const noun = nounMatch?.[0] ?? 'Relic'
+  const noun = itemNoun(item) ?? 'Relic'
   if (item.keepsake) return `${noun} ${ench[0]?.label ?? ''}`.trim()
   return nameItem(cfg.label, noun, ench)
 }
