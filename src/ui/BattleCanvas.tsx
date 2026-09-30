@@ -23,7 +23,6 @@ import {
   setFxReducedMotion,
 } from '../game/render/fx'
 import { FxDiffer } from '../game/render/fxDiff'
-import { drawBreatherBanner } from '../game/render/telegraphs'
 import { apronMargins, getApron } from '../game/render/apron'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
@@ -465,7 +464,8 @@ export function BattleCanvas() {
           const picked = map.slots.find((sl) => sl.id === st.breatherPick)
           if (picked) drawSlot(ctx, picked.pos, 'hover')
         }
-        if (liveEngine.breather) drawBreatherBanner(ctx, liveEngine)
+        // G2-2: no banner over the field during a breather any more — the
+        // wave strip says "Held · move one hero" and lists the next sub-wave.
       } else {
         // Setup: slots + placed towers + range previews.
         const placed = placedSentinels(st.roster, st.placements)

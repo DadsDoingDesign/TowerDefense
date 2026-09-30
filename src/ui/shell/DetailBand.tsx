@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
   canUpgrade,
   HERO_SLOTS,
@@ -47,6 +47,9 @@ import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
+// G2-2 — the wave strip's enemy queue.
+import { WaveQueue } from './WaveQueue'
+import { lineUp, queueFor } from './enemyQueue'
 import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
@@ -97,6 +100,7 @@ function WaveBar() {
   const runPhase = useGameStore((s) => s.runPhase)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const hasEngine = useGameStore((s) => !!s.engine)
+  const engine = useGameStore((s) => s.engine)
   const lastResult = useGameStore((s) => s.lastResult)
   const currentWave = useGameStore((s) => s.currentWave)
   const hud = useGameStore((s) => s.hud)
@@ -122,20 +126,26 @@ function WaveBar() {
 
   // A settled wave. `battlePhase` is a label and the engine is the fact, so a
   // stale 'battle' with no engine still reads as finished.
+  // G2-2 — the strip's left slot names the wave in every moment below.
+  const waveName = currentWave?.label ?? 'Wave'
+
   if (lastResult && (battlePhase !== 'battle' || !hasEngine)) {
     return (
-      <div className="sh-wavebar">
+      <div className="sh-wavebar sh-wq-bar">
         {/* No live region here any more (Phase 2): `Announcer` owns the one
             polite voice for the whole battle — wave start, Gate hits, the
             clear, level-ups — so two regions can never read over each other. */}
-        <p className="sh-wavebar-hint ready">
-          {lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} · <Money amount={lastResult.goldEarned} c="gold" />{' '}
-          earned
-          {/* G3-2: the reward is picked right here, and "Take it" in the
-              Context panel is the way on — a Continue beside it would be a
-              second primary that skips the pick. */}
-          {inPlace && <> · take a reward to march on</>}
-        </p>
+        {/* G2-2 — cleared: the same three slots, holding the gold and Continue. */}
+        <div className="sh-wq-mid">
+          <StripCaption name={waveName} now={lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} />
+          <p className="sh-wq sh-wq-gold">
+            <Money amount={lastResult.goldEarned} c="gold" /> earned
+            {/* G3-2: the reward is picked right here, and "Take it" in the
+                Context panel is the way on — a Continue beside it would be a
+                second primary that skips the pick. */}
+            {inPlace && <> · take a reward to march on</>}
+          </p>
+        </div>
         {!inPlace && (
           <button className="sh-btn primary" onClick={continueAfterWave}>
             Continue
@@ -147,10 +157,14 @@ function WaveBar() {
 
   if (battlePhase === 'battle' && hasEngine) {
     const left = hud.enemiesTotal - hud.enemiesSpawned + hud.enemiesAlive
-    const total = hud.enemiesTotal || currentWave?.spawns.length || 0
-    const killed = Math.max(0, hud.enemiesSpawned - hud.enemiesAlive)
+    // G2-2 — the breather between sub-waves is a moment of its own: the
+    // strip's left slot carries the instruction the canvas banner used to
+    // paint over the top of the field, and the queue shows the NEXT sub-wave.
+    const held = hud.breather && !!engine?.breather
+    const moved = held && !!engine?.subWaveState().moved
+    const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
     return (
-      <div className="sh-wavebar">
+      <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
         {/*
          * The live wave's readout, moved down out of the Stage (M1).
          *
@@ -166,19 +180,29 @@ function WaveBar() {
          * speed toggle is an ACTION — every other action in the shell is in
          * band 4. The strip was the only control anywhere in the game that lived
          * on top of the subject.
+         *
+         * G2-2: the kill-progress bar is now the enemy queue — who is still
+         * coming, next first — in the bar's own room.
          */}
-        <p className="sh-wavebar-live">
-          <span className="sh-wavebar-live-name">{currentWave?.label ?? 'Wave'}</span>
-          {/* The bar is decoration over a count that is already in words right
-              beside it, so it is hidden rather than given a `progressbar` role
-              that would read out again on every kill. */}
-          <span className="sh-wave-bar" aria-hidden="true">
-            <span className="sh-wave-fill" style={{ width: `${total ? (killed / total) * 100 : 0}%` }} />
-          </span>
-          <span className="sh-wavebar-left">
-            <b>{Math.max(0, left)}</b> left
-          </span>
-        </p>
+        <div className="sh-wq-mid">
+          {held ? (
+            <StripCaption name="Held" now={moved ? 'Moved — send the next' : 'Move one hero'} tone="do" />
+          ) : (
+            <StripCaption
+              name={waveName}
+              now={
+                <>
+                  <b>{Math.max(0, left)}</b> left
+                </>
+              }
+            />
+          )}
+          <WaveQueue
+            entries={queue}
+            lead={held ? `Sub-wave ${hud.subWave + 1} of ${hud.subWaveCount}, next` : 'Still to come'}
+            emptyText="All on the field"
+          />
+        </div>
         {/* The live wave's command place — the COMBAT agent's active ability
             renders here (Phase 2 layout contract, docs/FIGMA.md). */}
         <CommandSlot />
@@ -217,28 +241,21 @@ function WaveBar() {
 
   const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
   return (
-    <div className="sh-wavebar">
-      {portrait ? (
-        /* Portrait setup runs collapsed (Portrait battlefields): the strip is
-           the whole Detail band, so it says the two things a post needs — what
-           to do, and what is coming — in the room beside two buttons. */
-        <p className={`sh-wavebar-hint compact ${deployed ? 'ready' : ''}`}>
-          <span className="sh-wavebar-do">{deployed ? `${deployed} posted` : 'Post a hero'}</span>
-          <span className="sh-wavebar-foes">{currentWave?.spawns.length ?? 0} enemies</span>
-        </p>
-      ) : (
-      <p className={`sh-wavebar-hint ${deployed ? 'ready' : ''}`}>
-        {deployed ? (
-          <>
-            {deployed} posted. <Tap /> a circle to move a hero, or start the wave.
-          </>
-        ) : (
-          <>
-            <Tap /> your hero, then a glowing circle on the field.
-          </>
-        )}
-      </p>
-      )}
+    <div className="sh-wavebar sh-wq-bar">
+      {/* G2-2 — setup: the wave's name and what to do, then the whole line-up
+          in spawn order, then Start Wave. It was a sentence ("Tap your hero,
+          then a glowing circle…") and a bare "8 enemies"; the sentence is in
+          the composition panel above on a landscape field and the glowing
+          posts say it on the field itself, so the strip keeps the verb and
+          spends the room on WHO is coming. */}
+      <div className="sh-wq-mid">
+        <StripCaption
+          name={waveName}
+          now={deployed ? `${currentWave?.spawns.length ?? 0} enemies` : 'Post a hero'}
+          tone={deployed ? undefined : 'do'}
+        />
+        <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" />
+      </div>
       {portrait && (
         <button
           className="sh-btn sh-detail-toggle"
@@ -268,6 +285,27 @@ function WaveBar() {
         Start Wave ▶
       </button>
     </div>
+  )
+}
+
+/**
+ * G2-2 — the strip's caption: the wave's name, then the moment's few words,
+ * on one line over the queue.
+ *
+ * It stays put across every moment of a battle so the eye learns where to
+ * look — "Depth 1 · Post a hero", "Depth 1 · 4 left", "Held · Move one hero",
+ * "Depth 1 · Wave cleared" — and it sits OVER the queue rather than beside it
+ * so the portraits get the strip's whole middle on a 390px phone. The name
+ * gives way (ellipsis) before the moment does. `do` marks an instruction
+ * rather than a readout. The held instruction is also spoken, by `Announcer`
+ * (`combatNotes`), and the Next button's name carries the sub-wave count.
+ */
+function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' }) {
+  return (
+    <p className={`sh-wq-cap${tone ? ` ${tone}` : ''}`}>
+      <span className="sh-wq-name">{name}</span>
+      <span className="sh-wq-now">{now}</span>
+    </p>
   )
 }
 

@@ -703,21 +703,6 @@ h1.sh-brand {
   min-width: var(--hit-min);
   padding: 0 12px;
 }
-/* Two short lines, never three: the action, then what is coming. */
-.sh-wavebar-hint.compact {
-  display: flex;
-  flex-direction: column;
-  font-size: var(--fs-sm);
-  line-height: 1.25;
-}
-.sh-wavebar-do {
-  font-weight: 700;
-  white-space: nowrap;
-}
-.sh-wavebar-foes {
-  color: var(--muted);
-  white-space: nowrap;
-}
 @media (max-width: 379.98px) {
   .sh-wavebar:has(.sh-detail-toggle) .sh-btn.primary {
     flex-basis: 112px;
@@ -730,4 +715,159 @@ h1.sh-brand {
   .sh-wavebar:has(.sh-detail-toggle) {
     gap: 6px;
   }
+}
+
+/* ==========================================================================
+   G2-2 — one wave strip that changes with the moment
+   ==========================================================================
+   Two slots that never move. The MIDDLE is a caption over the enemy queue —
+   the wave's name and the moment's few words on one line, who is still
+   coming (next first) under it; the queue took over the kill-progress bar's
+   room. The ACTIONS sit on the right: Start Wave (and Details on a portrait
+   field); the Watch Command or Next ▶, and Speed; Continue. Setup, live, held
+   and cleared change what the slots hold, never where they are, and the strip
+   is still one 44px row — a 12px caption line over a 32px portrait — so the
+   Stage gives up nothing for it, and the breather banner that used to sit
+   over the top of the field is gone. */
+.sh-wq-bar {
+  gap: 8px;
+}
+.sh-wq-mid {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* The caption below reads its own room (portrait setup on a phone leaves
+     it ~110px beside Details and Start Wave). */
+  container-type: inline-size;
+}
+.sh-wq-cap {
+  display: flex;
+  min-width: 0;
+  gap: 0.4em;
+  margin-bottom: 1px;
+  font-size: var(--fs-micro);
+  /* 11px caps + 1px + a 32px portrait = the 44px row (46 of 48 at Large UI). */
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* The name gives way before the moment does (the shrink weights), and the
+   moment only ever ellipsises as a last resort. */
+.sh-wq-name {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sh-wq-now {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.sh-wq-now::before {
+  content: '·';
+  margin-right: 0.4em;
+  color: var(--muted);
+}
+.sh-wq-now b {
+  font-variant-numeric: tabular-nums;
+}
+/* Too narrow for both: the moment keeps the line and the name steps aside
+   whole, rather than ellipsising to "D…". Only portrait setup on a phone gets
+   here, and the header's Depth chip is saying the same name right above. */
+@container (max-width: 139.98px) {
+  .sh-wq-name {
+    display: none;
+  }
+  .sh-wq-now::before {
+    content: none;
+  }
+}
+/* An instruction rather than a readout ("Post a hero", "Move one hero"). */
+.sh-wq-cap.do .sh-wq-now {
+  color: var(--accent);
+}
+/* The held sub-wave is a different moment; the strip says so at its edge. */
+.sh-wavebar.sh-wq-bar.held {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+/* The queue. Takes the slack between the label and the actions; how many
+   portraits it shows is measured, not guessed (`chipsThatFit`). */
+.sh-wq {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--icon-md);
+}
+.sh-wq-chip {
+  position: relative;
+  flex: 0 0 var(--icon-md);
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+}
+/* The next body through the gate. */
+.sh-wq-chip.next {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* A 32x32 backing store at 32 CSS px: the device's whole-number ratio does
+   the enlarging, nearest-neighbour (see `EnemyPortrait`). */
+.sh-wq-art {
+  display: block;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+.sh-wq-n {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+/* Tier 5 wears tier 1's sprite; the skull is what says "champion". Low on
+   the chip, like the count, so neither covers a face or the caption. */
+.sh-wq-boss {
+  position: absolute;
+  left: -3px;
+  bottom: -3px;
+}
+.sh-wq-more {
+  flex: 0 0 auto;
+  min-width: 20px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+.sh-wq-empty {
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Cleared: the gold sits where the queue was. */
+.sh-wq.sh-wq-gold {
+  gap: 4px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: nowrap;
 }

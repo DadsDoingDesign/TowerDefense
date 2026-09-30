@@ -169,7 +169,7 @@ eye is on the field. Reduced motion: the 260 ms height transition is instant.
 | Header | 76 | 68 | 63 | Run state (unchanged) |
 | Stage | **574** (was 332) | **419** | **331** | Field + apron, `.sh-stage-top`, `.sh-stage-center` |
 | Selector | 126 | 112 | 106 | Party (unchanged) |
-| Wave strip | 68 | 68 | 68 | name · progress · N left · **CommandSlot** · Speed |
+| Wave strip | 68 | 68 | 68 | caption (name · N left) over the **enemy queue** · **CommandSlot** · Speed |
 
 The field is fit to the Stage wrap's **content box**. On the phone column a
 battle is fought on the field's **portrait twin** (620×960 logical, the
@@ -201,18 +201,41 @@ landscape field).
 - **Setup collapses too on a portrait field** (`setupCollapsible`, `live.ts`).
   A portrait field in the four-band setup Stage would be smaller than the
   landscape one was (0.30 at 390, 0.12 at 320), so setup takes the live layout:
-  the Detail band is the wave strip — a two-line hint (*Post a hero* / *8
-  enemies*), a **Details** toggle and Start Wave. Arming a hero from the party
+  the Detail band is the wave strip — a caption (*Post a hero*, then *12
+  enemies*) over the wave's line-up, a **Details** toggle and Start Wave. Arming a hero from the party
   row keeps it collapsed (the field is the target); a post lets go of the
   selection; Details, or tapping a posted hero on the field, opens the band.
   Setup field at 390×844: 341×528 (was 390×228); at 320×568: 184×285 (was
   191×111).
 
+### One wave strip, four moments (G2-2)
+
+The strip is two slots that never move: a **middle** — a one-line caption (the
+wave's name · the moment's words) over the **enemy queue** — and the
+**actions** on the right. The queue is who is still coming: 32px portraits
+(`--icon-md`, the field's own sprite at its ×½ bake, drawn 1:1) in spawn
+order, next first (accent edge), each with its `×n`; at most three kinds, then
+`+N`, fewer when the room is narrower (`chipsThatFit`). It is glance-only and
+ONE `role="img"` whose name lists every kind and count.
+
+| Moment | Caption | Queue | Actions |
+| --- | --- | --- | --- |
+| Setup | *Depth 1 · Post a hero* → *Depth 1 · 12 enemies* | the whole wave | (Details) · Start Wave |
+| Live | *Depth 1 · 8 left* | everything not yet spawned (*All on the field* when empty) | Watch Command · Speed |
+| Held sub-wave | *Held · Move one hero* → *Held · Moved* (accent edge on the strip) | the NEXT sub-wave only | Next ▶ · Speed |
+| Cleared | *Depth 1 · Wave cleared* | gold earned | Continue |
+
+There is no banner over the field during a held sub-wave any more — the
+caption carries the instruction, `Announcer` speaks it, and the open posts
+still light up on the field. Where the middle is under 140px (portrait setup
+beside Details on a phone, and every moment at 320 wide) the name steps aside whole and the moment keeps the
+line; the header's Depth chip names the wave right above.
+
 **Where things go — for the COMBAT and RUN/META lanes:**
 
 | Place | File | Rule |
 | --- | --- | --- |
-| **Command button** | `src/ui/shell/CommandSlot.tsx` (rendered by `WaveBar`, live only) | Return ONE `<button className="sh-command">` (44px, styled in `shell-live.css`) or null. It sits between the progress readout and Speed; the strip's height already fits it. Actions live in band 4 — never on the Stage. |
+| **Command button** | `src/ui/shell/CommandSlot.tsx` (rendered by `WaveBar`, live only) | Return ONE `<button className="sh-command">` (44px, styled in `shell-live.css`) or null. It sits between the enemy queue and Speed; the strip's height already fits it. Actions live in band 4 — never on the Stage. |
 | **Boss / champion nameplate** | `src/ui/shell/BossPlate.tsx` in `.sh-stage-top` | While it renders, `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by `--sh-bossplate-h` (54px) and `BattleCanvas` fits the field below it — on a width-bound phone it lands in the apron and the field does not move. Boss phases: fill `.sh-bossplate-extra` (a flex spacer between the name and the HP number) with phase pips / a phase word. |
 | **Telegraphs** | `render/overlays.ts` or a new render file | Draw in the field composite (logical px). The HP bar stack sits at `artTop` (see `render/hpbar.ts`); leave the band just above the head for it. |
 | **Post-wave / result copy** | `WaveCeremony.tsx` (Stage centre, after the fight only), `DefeatReceipt.tsx` (run end) | The ceremony may cover the field because the fight is over; nothing may cover a LIVE field. |

@@ -1058,64 +1058,9 @@
 .sh-wavebar.solo .sh-btn {
   flex: 1 1 auto;
 }
-/* Live wave: a status line where the button was, so the bar neither disappears
-   (which is what made the layout jump) nor offers an action the store refuses.
-
-   It now also carries the wave name, the kill progress and the speed toggle -
-   the three things that used to be painted on top of the battlefield (M1).
-
-   Still ONE line, and the band's height is still exactly `--sh-wavebar-h`: the
-   toggle is at the 44px touch floor and everything else sits beside it, so the
-   Stage gives up nothing beyond the 56px it was already giving up. The only
-   part that shrinks is the wave NAME, because it is the one part of this row
-   that is said in full somewhere else - the composition panel directly above
-   names the wave, its variant, and what the variant asks for. */
-.sh-wavebar-live {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--hit-min);
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.sh-wavebar-live-name {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-.sh-wavebar-left {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-.sh-wavebar-live b {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-/* The bar takes the slack; the speed toggle keeps its own footprint so it never
-   moves under a thumb already on its way down - the same rule the Start Wave
-   button follows two rules up. */
-.sh-wave-bar {
-  flex: 1 1 auto;
-  min-width: 24px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-}
-.sh-wave-fill {
-  display: block;
-  height: 100%;
-  background: var(--good);
-  transition: width 0.2s linear;
-}
+/* The live wave's readout — wave name, what is left, and (G2-2) the enemy
+   queue that replaced the kill-progress bar — is `.sh-wq-*` in
+   shell-live.css, with the rest of the strip's moments. */
 .sh-speed {
   flex: 0 0 auto;
   min-width: var(--hit-min);

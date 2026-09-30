@@ -697,5 +697,5 @@ export function idPhase(id: string): number {
  * 3.7% vertical squash cannot recur either.
  */
 const BARREL_CELL = { x: 0, y: 0, w: 60, h: 72 }
-const barrelCell = (id: string, img: HTMLImageElement) =>
+export const barrelCell = (id: string, img: HTMLImageElement) =>
   id.startsWith('barrel') && img.naturalWidth >= 120 ? BARREL_CELL : undefined

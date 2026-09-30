@@ -2193,3 +2193,20 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   tagline ≥ 6.3:1, wordmark ≥ 4.9:1; `tests/contrast.test.ts` pins rows and
   tagline over pure white art. Frame cost: desk 0.9 ms median at 30 fps;
   phone at 4x CPU throttle 2.5 ms median, no worse than the old framed demo.
+- **2026-09-29 — G2-2: one wave strip that changes with the moment.** The
+  strip's kill-progress bar became the enemy queue: 32px portraits (the field's
+  own sprite at its ×½ bake, drawn 1:1, pixelated ×2 on the phone) in spawn
+  order, next first, with `×n` counts, up to three kinds then `+N`. Setup shows
+  the wave, live what has not spawned, a held sub-wave the next sub-wave (and
+  "Held · Move one hero" where the wave name was), cleared the gold and
+  Continue; the breather banner over the top of the field is gone. First
+  render caught three things: portraits drawn at the pack's 2× density (a face
+  crop that read as noise — Tiny Swords is `spriteScale 0.5`, so it takes the
+  ×½ bake); a two-line label beside the queue left room for one portrait on a
+  390 phone in portrait setup, and overlapped the queue's fallback text — the
+  caption now sits on one 11px line OVER the queue, which gets the strip's
+  whole middle (three kinds + `+N` live and held, two + `+N` beside Details and
+  Start Wave); and "Depth 1" ellipsising to "D…" in that narrow setup — under
+  140px the name now steps aside whole (container query). Checked at 390×844,
+  320×568, Large UI and 1440×900, with a mixed wave and a boss-first wave
+  injected in the dev store.
