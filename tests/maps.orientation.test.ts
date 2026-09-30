@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
 import {
   ALL_MAPS,
@@ -18,9 +18,14 @@ import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { Archetype, GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { useGameStore } from '../src/state/gameStore'
+import { useMetaStore } from '../src/state/metaStore'
 import { STANDARD_RUN } from '../src/state/daily'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
+
+// LS3: this file is about a returning player's road. A first run fights its
+// first depths on plain ground (see tests/staging.test.ts and firstRun.test.ts).
+beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 1 } }))
 
 /**
  * Portrait battlefields: every field has a tall twin a phone fights on. The

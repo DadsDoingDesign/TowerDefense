@@ -181,6 +181,12 @@ export interface RunSnapshot {
   runBanner: number
   /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
   challenge: RunChallenge
+  /**
+   * LS3: the run is the player's first, and staged. Optional on purpose — no
+   * version step: a save written before staging existed has none and resumes
+   * unstaged, which is what a returning player should get.
+   */
+  firstRun?: boolean
   inventory: Item[]
   runKills: number
   marksEarned: number
@@ -280,6 +286,8 @@ export interface RunStateSource {
   threat: number
   runBanner: number
   challenge: RunChallenge
+  /** LS3 — optional so a source that predates staging still satisfies it. */
+  firstRun?: boolean
   inventory: Item[]
   runKills: number
   marksEarned: number
@@ -342,6 +350,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     threat: s.threat,
     runBanner: s.runBanner,
     challenge: s.challenge,
+    firstRun: s.firstRun === true,
     inventory: s.inventory,
     runKills: s.runKills,
     marksEarned: s.marksEarned,
@@ -1052,6 +1061,9 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // in range is a property of the value, not of who happens to read it.
     runBanner: clampBanner(o.runBanner),
     challenge: migrateChallenge(o.challenge),
+    // LS3: only a literal `true` stages a run. Anything else — absent (a save
+    // from before staging), a string, a number — resumes unstaged.
+    firstRun: o.firstRun === true,
     // v5 → v6: the campaign kit used to be dealt into the pack at `newRun`,
     // before the hero was picked. It is dealt at the pick now, so a v5 payload
     // parked on hero-pick drops the old roster-blind kit instead of carrying
@@ -1416,8 +1428,8 @@ export function clearSnapshot(): void {
 /** How far the snapshotted run had got — for the resume prompt's one line of copy. */
 export function describeSnapshot(snap: RunSnapshot): string {
   if (snap.mode === 'endless') {
-    return `Endless Watch · round ${snap.round} · ${snap.lives} ${snap.lives === 1 ? 'life' : 'lives'} · ${snap.roster.length} Sentinels`
+    return `Endless Watch · round ${snap.round} · ${snap.lives} ${snap.lives === 1 ? 'life' : 'lives'} · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
   }
   const depth = Math.max(0, snap.clearedNodeIds.length - 1)
-  return `Campaign · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold}g · ${snap.roster.length} Sentinels`
+  return `Campaign · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold}g · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
 }

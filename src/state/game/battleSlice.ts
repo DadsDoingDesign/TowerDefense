@@ -8,6 +8,7 @@ import { teamKeepsakeMods } from '../../game/engine/combat'
 import { generateItem } from '../../game/data/items'
 import { relicCommands, relicTeamMods } from '../../game/data/relics'
 import { afterFightRelics, cartularyRelic, diaryXp, handSize, rewardHand } from '../../game/run/relics'
+import { battleRelicsWithheld } from '../../game/run/firstRun'
 import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
 import { applyBattleXp, combatSeed, endlessRoundSpoils, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
@@ -520,7 +521,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           kind: handKind,
           luck,
           count: handSize({ thinPickings: banner.thinPickings }),
-          noBattleRelics: banner.thinPickings,
+          // LS3: a first run meets relics at its first elite.
+          noBattleRelics: banner.thinPickings || battleRelicsWithheld(st.firstRun, st.runMap, cleared),
           held: st.relics,
           unlocked: relicUnlocked,
           roster: rosterXp,

@@ -16,6 +16,6 @@ export function relicLines(id: string | undefined): string[] {
   const out = [r.desc]
   if (r.grant && (r.grant.stats || r.grant.thorns || r.grant.patience)) out.push(describeGrant(r.grant))
   if (r.grant?.mods) out.push(...describeMods(r.grant.mods).filter((l) => !r.desc.includes(l)))
-  out.push(`${relicKindLabel(r)} — held for the rest of the run, by the whole company.`)
+  out.push(`${relicKindLabel(r)} — held for the rest of the run, by all your heroes.`)
   return out
 }

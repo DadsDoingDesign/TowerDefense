@@ -3,7 +3,7 @@ import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
 import { bannerRules } from '../../state/metaStore'
-import { NODE_ICON } from '../channels'
+import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
 
@@ -160,8 +160,8 @@ export function RunMapView() {
                  say so, but the accessible name does, and the offer itself
                  spells it out. */
               aria-label={`${meta.label}${
-                threat
-                  ? `, fought at Threat ×${threat}`
+                threat && strengthPct(threat) > 0
+                  ? `, enemy strength ${strengthShort(threat)}`
                   : ''
               } — ${
                 isCurrent
@@ -192,9 +192,11 @@ export function RunMapView() {
                   the same screen. Same sprite, same meaning. The accessible
                   name above already spells "raises Threat ×1.05", which is why
                   this stays `aria-hidden`. */}
-              {threat && isReachable && (
+              {/* No "+0%": enemies at their starting strength need no badge,
+                  and a first map says nothing it has not introduced (LS3). */}
+              {threat && isReachable && strengthPct(threat) > 0 && (
                 <span className="mn-threat" aria-hidden>
-                  <Icon name="threat" />×{threat}
+                  <Icon name="threat" />{strengthShort(threat)}
                 </span>
               )}
             </button>

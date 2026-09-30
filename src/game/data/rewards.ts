@@ -107,15 +107,15 @@ const STAT_CARDS: StatTemplate[] = [
   // The four commons are deliberately below the bench's resolution (≈0.4pt, one
   // leak point) and §15 reports them without gating them — see there. +2 → +3/+4
   // because +2 of a stat a level-20 hero already has 30 of is not a card.
-  { title: 'Might', desc: '+3 STR · whole company', rarity: 'common', grant: { stats: { str: 3 } } },
-  { title: 'Finesse', desc: '+4 DEX · whole company', rarity: 'common', grant: { stats: { dex: 4 } } },
-  { title: 'Insight', desc: '+4 INT · whole company', rarity: 'common', grant: { stats: { int: 4 } } },
-  { title: 'Resolve', desc: '+4 Patience · whole company', rarity: 'common', grant: { patience: 4 } },
-  { title: 'Ferocity', desc: '+6% crit chance · whole company', rarity: 'rare', grant: { mods: { critChanceAdd: 0.06 } } },
-  { title: 'Haste', desc: '+6% attack rate · whole company', rarity: 'rare', grant: { mods: { rateMult: 1.06 } } },
-  { title: 'Power', desc: '+8% damage · whole company', rarity: 'rare', grant: { mods: { damageMult: 1.08 } } },
-  { title: 'Reach', desc: '+8% range · whole company', rarity: 'rare', grant: { mods: { rangeMult: 1.08 } } },
-  { title: 'Ruin', desc: '+25% crit damage · whole company', rarity: 'rare', grant: { mods: { critMultAdd: 0.25 } } },
+  { title: 'Might', desc: '+3 STR · all your heroes', rarity: 'common', grant: { stats: { str: 3 } } },
+  { title: 'Finesse', desc: '+4 DEX · all your heroes', rarity: 'common', grant: { stats: { dex: 4 } } },
+  { title: 'Insight', desc: '+4 INT · all your heroes', rarity: 'common', grant: { stats: { int: 4 } } },
+  { title: 'Resolve', desc: '+4 Patience · all your heroes', rarity: 'common', grant: { patience: 4 } },
+  { title: 'Ferocity', desc: '+6% crit chance · all your heroes', rarity: 'rare', grant: { mods: { critChanceAdd: 0.06 } } },
+  { title: 'Haste', desc: '+6% attack rate · all your heroes', rarity: 'rare', grant: { mods: { rateMult: 1.06 } } },
+  { title: 'Power', desc: '+8% damage · all your heroes', rarity: 'rare', grant: { mods: { damageMult: 1.08 } } },
+  { title: 'Reach', desc: '+8% range · all your heroes', rarity: 'rare', grant: { mods: { rangeMult: 1.08 } } },
+  { title: 'Ruin', desc: '+25% crit damage · all your heroes', rarity: 'rare', grant: { mods: { critMultAdd: 0.25 } } },
 
   // ---- epic pacts: a big gain, a real bill ----
   {
@@ -124,9 +124,9 @@ const STAT_CARDS: StatTemplate[] = [
     // Priced down to +18% and the range charged harder, so the pact still reads
     // as one and stops out-earning both legendaries.
     title: 'Close Quarters',
-    desc: '+18% damage, −18% range · whole company',
+    desc: '+18% damage, −18% range · all your heroes',
     rarity: 'epic',
-    downside: '−18% range · whole company',
+    downside: '−18% range · all your heroes',
     grant: { mods: { damageMult: 1.18, rangeMult: 0.82 } },
   },
   {
@@ -135,9 +135,9 @@ const STAT_CARDS: StatTemplate[] = [
     // upside now includes **Patience**, which §4 grades on the one bench where
     // time-in-fight is the binding axis, and the rate bill is lighter.
     title: 'Long Watch',
-    desc: '+25% range, +30% projectile speed, +8 Patience, −8% attack rate · whole company',
+    desc: '+25% range, +30% projectile speed, +8 Patience, −8% attack rate · all your heroes',
     rarity: 'epic',
-    downside: '−8% attack rate · whole company',
+    downside: '−8% attack rate · all your heroes',
     grant: { patience: 8, mods: { rangeMult: 1.25, projSpeedMult: 1.3, rateMult: 0.92 } },
   },
   {
@@ -158,18 +158,18 @@ const STAT_CARDS: StatTemplate[] = [
     // §15 measures +22.9pt on a low-crit splash mystic against −3.9pt on the
     // depth-8 line and a crit carrier's whole burst.
     title: 'Whetstone Pact',
-    desc: '+32% attack rate, no crits · whole company. Ground so fine there is no edge left.',
+    desc: '+32% attack rate, no crits · all your heroes. Ground so fine there is no edge left.',
     rarity: 'epic',
-    downside: 'the company never crits',
+    downside: 'your heroes never crit',
     grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } },
   },
   {
     // Legacy card (saves only). Heroes have no HP now, so its HP bill became
     // the relic's attack-speed bill (`data/relics.ts`).
     title: 'Bloodletting',
-    desc: '+70% damage, +8 Thorns, −34% attack speed · whole company',
+    desc: '+70% damage, +8 Thorns, −34% attack speed · all your heroes',
     rarity: 'epic',
-    downside: '−34% attack speed · whole company',
+    downside: '−34% attack speed · all your heroes',
     grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } },
   },
 
@@ -179,9 +179,9 @@ const STAT_CARDS: StatTemplate[] = [
     // net −4.4pt; the Mythic Executioner mutation carries 38% on ONE hero, and a
     // legendary team card that does a third of that is not a legendary.
     title: 'Executioner’s Oath',
-    desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack rate · whole company',
+    desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack rate · all your heroes',
     rarity: 'legendary',
-    downside: '−12% attack rate · whole company',
+    downside: '−12% attack rate · all your heroes',
     grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } },
   },
   {
@@ -192,16 +192,16 @@ const STAT_CARDS: StatTemplate[] = [
     // a splash line applies it to a crowd (+49.4pt on §15's magic bench) and
     // least on 90 runts that die to the first hit (+0.0pt).
     title: 'Wildfire Pact',
-    desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · whole company',
+    desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · all your heroes',
     rarity: 'legendary',
-    downside: '−35% damage per hit · whole company',
+    downside: '−35% damage per hit · all your heroes',
     grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } },
   },
   {
     title: 'Iron Vigil',
-    desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · whole company',
+    desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · all your heroes',
     rarity: 'legendary',
-    downside: '−12% damage · whole company',
+    downside: '−12% damage · all your heroes',
     grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } },
   },
 ]

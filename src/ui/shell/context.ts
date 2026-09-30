@@ -167,14 +167,14 @@ export function useShellContext(): ShellContext {
 /** Copy for the unrecognised-screen fallback above. It says so plainly. */
 const LOST_BOARD = {
   title: 'Off the Path',
-  blurb: 'The company lost its bearings here, and this part of the run cannot be shown. Take the way on below.',
+  blurb: 'Your heroes lost their bearings here, and this part of the run cannot be shown. Take the way on below.',
 } as const
 
 const EVENT_BOARD = {
   // "Three offers" over a board of four items and a hire (Wave 1).
   merchant: { title: 'Merchant', blurb: 'Spend your gold before you march.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms. Read them.' },
-  recruit: { title: 'Recruit', blurb: 'A hero looking for a company.' },
+  recruit: { title: 'Recruit', blurb: 'A hero looking for work.' },
   campfire: { title: 'Campfire', blurb: 'One night at the fire, and one thing done with it. Choose one.' },
 } as const
 
@@ -182,5 +182,5 @@ const ROOM_BOARD = {
   merchant: { title: 'Merchant', blurb: 'Spend gold before the next wave.' },
   forge: { title: 'Forge', blurb: 'Spend dust to reforge or upgrade.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms.' },
-  recruit: { title: 'Recruit', blurb: 'Add a hero to the company.' },
+  recruit: { title: 'Recruit', blurb: 'Add a hero to your side.' },
 } as const

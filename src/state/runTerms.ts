@@ -86,7 +86,7 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
       editable: true,
       vow: true,
       attempt: null,
-      lines: ['Custom seed · not ranked.', "Pays Watch Marks, but a win won't unlock a Vow."],
+      lines: ['Custom seed · not ranked.', "Pays Marks, but a win won't unlock a Vow."],
     }
   }
   return {

@@ -49,7 +49,7 @@ export const WATCH_COMMANDS: Record<CommandId, WatchCommand> = {
   rally: {
     id: 'rally',
     name: 'Rally Horn',
-    blurb: `The company attacks ${Math.round((RALLY.rateMult - 1) * 100)}% faster for ${RALLY.dur}s`,
+    blurb: `Your heroes attack ${Math.round((RALLY.rateMult - 1) * 100)}% faster for ${RALLY.dur}s`,
   },
   flare: {
     id: 'flare',

@@ -46,6 +46,8 @@ import {
   TWINBLADE,
   TWINBLADE_TAKES,
   type IconKey,
+  strengthPct,
+  strengthText,
 } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
@@ -66,6 +68,7 @@ import { fieldTitle, orientationOf } from '../../game/data/maps'
 import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
 import { LevelUpPanel } from './LevelUpPanel'
 import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
+import { useShown } from './staging'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -73,11 +76,14 @@ import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
  * merchant, so buying an item means watching it land.
  */
 export function DetailBand({ offers }: { offers: Offer[] }) {
+  // LS3: gear and the pack arrive with the first win's spoils. Until then the
+  // context panel has the band to itself (`.sh-detail.no-gear`).
+  const gear = useShown('gear')
   return (
-    <section className="sh-detail" id="sh-detail-panels">
+    <section className={`sh-detail${gear ? '' : ' no-gear'}`} id="sh-detail-panels">
       <ContextPanel offers={offers} />
-      <GearColumn />
-      <PackColumn />
+      {gear && <GearColumn />}
+      {gear && <PackColumn />}
       {/* The battle's action bar is a SIBLING of the context panel, not one of
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
@@ -127,6 +133,11 @@ function WaveBar() {
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
+  // LS3: speed arrives once the first sub-wave is down; the Watch Command
+  // after the first battle. `CommandSlot`'s "Next" is not staged — it is how a
+  // breather ends.
+  const speedShown = useShown('speed')
+  const commandShown = useShown('command')
 
   if (screen !== 'battle' || runPhase !== 'active') return null
 
@@ -216,19 +227,21 @@ function WaveBar() {
         </div>
         {/* The live wave's command place — the COMBAT agent's active ability
             renders here (Phase 2 layout contract, docs/FIGMA.md). */}
-        <CommandSlot />
+        <CommandSlot staged={!commandShown} />
         {/* A visible word, not just "1×" (Wave 1): a bare multiplier in a box
             read as a score, not as a control. */}
-        <button
-          className="sh-speed"
-          data-sfx="toggle"
-          aria-keyshortcuts="1 2 3"
-          onClick={() => setSpeed(speed === 3 ? 1 : ((speed + 1) as 1 | 2 | 3))}
-          aria-label={`Battle speed ${speed}× — ${tapWord(false)} to change`}
-        >
-          <span className="sh-speed-word">Speed</span>
-          <span className="sh-speed-val">{speed}×</span>
-        </button>
+        {speedShown && (
+          <button
+            className="sh-speed"
+            data-sfx="toggle"
+            aria-keyshortcuts="1 2 3"
+            onClick={() => setSpeed(speed === 3 ? 1 : ((speed + 1) as 1 | 2 | 3))}
+            aria-label={`Battle speed ${speed}× — ${tapWord(false)} to change`}
+          >
+            <span className="sh-speed-word">Speed</span>
+            <span className="sh-speed-val">{speed}×</span>
+          </button>
+        )}
       </div>
     )
   }
@@ -688,7 +701,7 @@ function WaveComposition() {
       {asks && <p className="sh-line">{asks}</p>}
       {showThreat && (
         <p className="sh-line accent">
-          <Icon name="threat" /> Threat ×{threat.toFixed(2)}: every enemy below has {Math.round((threat - 1) * 100)}% more HP.
+          <Icon name="threat" /> {strengthText(threat)}: every enemy below has {strengthPct(threat)}% more HP.
         </p>
       )}
       <div className="sh-comp">
@@ -833,15 +846,21 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
   const danger = standing ? dangerAt(battleMap, standing) : null
   const groundMult = danger === 'cursed' ? CURSED_DAMAGE_MULT : 1
 
+  // LS3: Skills (perks) arrive at a hero's first choice, Team (the targeting
+  // order) with the Watch Command — the other order the whole watch shares.
+  const perksShown = useShown('perk')
+  const ordersShown = useShown('command')
   const TABS: { id: HeroTab; label: string }[] = [
     { id: 'stats', label: 'Stats' },
     // "Upgr" was an abbreviation nobody could read aloud. These are the
     // hero's bought skill paths (Wave 1).
-    { id: 'upgrades', label: 'Skills' },
+    ...(perksShown ? [{ id: 'upgrades' as const, label: 'Skills' }] : []),
     // "Tune" said nothing about scope; these are the whole watch's orders, not
     // this hero's (M20).
-    { id: 'tactics', label: 'Team' },
+    ...(ordersShown ? [{ id: 'tactics' as const, label: 'Team' }] : []),
   ]
+  // A tab that is not offered cannot be the open one.
+  const open: HeroTab = TABS.some((t) => t.id === tab) ? tab : 'stats'
 
   return (
     <div className="sh-context">
@@ -856,24 +875,27 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
           <Icon name="warn" /> <b>{DANGER_COPY[danger].name}</b>: {DANGER_COPY[danger].short} here ({Math.round(profile.dps)} DPS elsewhere).
         </p>
       )}
-      <div className="sh-tabs" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`sh-tab ${tab === t.id ? 'active' : ''}`}
-            data-sfx="toggle"
-            onClick={() => setHeroTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* One tab is not a choice: the tab row waits until there are two. */}
+      {TABS.length > 1 && (
+        <div className="sh-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={open === t.id}
+              className={`sh-tab ${open === t.id ? 'active' : ''}`}
+              data-sfx="toggle"
+              onClick={() => setHeroTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="sh-context-body">
-        {tab === 'stats' && <HeroStats hero={hero} />}
-        {tab === 'upgrades' && <HeroUpgrades hero={hero} />}
-        {tab === 'tactics' && <HeroTactics />}
+        {open === 'stats' && <HeroStats hero={hero} />}
+        {open === 'upgrades' && <HeroUpgrades hero={hero} />}
+        {open === 'tactics' && <HeroTactics />}
       </div>
       {canUndeploy && (
         <div className="sh-context-foot">
@@ -922,6 +944,8 @@ function HeroStats({ hero }: { hero: Sentinel }) {
    */
   const blocks = !!p.mods.block
   const cap = patienceCap(p.patience)
+  // LS3: the evolution road is named once a hero has met its first choice.
+  const choicesShown = useShown('perk')
 
   return (
     <>
@@ -986,7 +1010,7 @@ function HeroStats({ hero }: { hero: Sentinel }) {
 
       {/* The evolution choice used to arrive cold: a modal appeared, named three
           branches nobody had heard of, and demanded an irreversible pick (M6). */}
-      {options.length > 0 ? (
+      {!choicesShown ? null : options.length > 0 ? (
         <p className="sh-line accent">
           <Icon name="evolve" /> Evolution ready — {options.map((o) => o.name).join(' · ')}
         </p>
@@ -1120,7 +1144,7 @@ function HeroTactics() {
   return (
     <>
       <p className="sh-line muted head">Orders — the whole watch</p>
-      <p className="sh-line muted">Targeting. One rule, followed by every Sentinel on the field.</p>
+      <p className="sh-line muted">Targeting. One rule, followed by every hero on the field.</p>
       <div className="sh-seg" role="group" aria-label="Targeting order for the whole watch">
         {FOCUS_OPTS.map((f) => (
           <button

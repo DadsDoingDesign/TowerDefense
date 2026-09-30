@@ -76,7 +76,7 @@ export function BannerPicker() {
         <span className="pg-banner-label">{VOW}</span>
         {/* "×1 marks" is not a payout, it is the absence of one — say so. */}
         <span className="pg-banner-mult">
-          {runBanner === 0 ? 'standard pay' : `pays ×${rules.markMult} Watch Marks`}
+          {runBanner === 0 ? 'standard pay' : `pays ×${rules.markMult} Marks`}
         </span>
       </div>
 
@@ -97,7 +97,7 @@ export function BannerPicker() {
             /* The chip's visible text is a numeral and a two-word name; the rule
                it changes and the payout are what the choice is actually about,
                so they belong in the accessible name too. */
-            aria-label={`${VOW} ${r.tier}, ${r.name}. ${r.rule} Pays ${r.markMult} times Watch Marks.`}
+            aria-label={`${VOW} ${r.tier}, ${r.name}. ${r.rule} Pays ${r.markMult} times Marks.`}
             onClick={() => setRunBanner(r.tier)}
           >
             <span className="pg-banner-tier">{r.tier}</span>
@@ -127,7 +127,7 @@ export function BannerPicker() {
               </p>
             ))}
             <p className="pg-card-body accent">
-              Pays ×{rules.markMult} Watch Marks, this run only.
+              Pays ×{rules.markMult} Marks, this run only.
             </p>
           </>
         )}

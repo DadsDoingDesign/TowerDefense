@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState, streamRng } from '../src/game/core/rng'
 import {
   ALL_MAPS,
@@ -26,8 +26,13 @@ import { CHALLENGE_SHARE, endlessTerrainRule, nodeHazardSeed, nodeTerrainRule } 
 import type { GameMap, TerrainRuleId } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
+import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 import { captureRun, migrateSnapshot, snapshotBattleMap } from '../src/state/runSnapshot'
+
+// LS3: this file is about a returning player's road. A first run fights its
+// first depths on plain ground (see tests/staging.test.ts and firstRun.test.ts).
+beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 1 } }))
 
 /**
  * G1-2 — free-form deployment on a tile grid, with terrain that blocks.

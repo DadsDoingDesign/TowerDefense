@@ -69,7 +69,7 @@ export function ResumeRunPrompt() {
           </button>
           {armed && (
             <p className="fw-resume-body fw-resume-warn" role="alert">
-              The run ends here. You keep the Watch Marks it earned; the company, the map and the pack are gone.
+              The run ends here. You keep the Marks it earned; your heroes, the map and the pack are gone.
             </p>
           )}
           {armed && (
@@ -99,7 +99,7 @@ export function ResumeRunPrompt() {
               setArmed((a) => !a)
             }}
           >
-            {armed ? 'Keep the run' : 'Abandon and collect marks'}
+            {armed ? 'Keep the run' : 'Abandon and collect Marks'}
           </button>
         </div>
       </div>

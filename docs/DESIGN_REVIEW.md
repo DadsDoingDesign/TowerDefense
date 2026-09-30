@@ -2392,3 +2392,32 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Gate" on a Gate at 0): the ledger now books a landed charge as "Powderkeg
   King's TNT ×2 · 2 Gate". (3) The blocker's new Hold cell (held / thorns) sat as
   a narrow two-row cell beside Reach; it spans the grid like Attack now.
+- **2026-09-30 — LS3 teach in layers; LS4 one name per thing.** The
+  designer's goal: "easy to pick up". A first run (no finished run on the meta
+  save, "Show everything from the start" off) now shows an idea only when it
+  matters (`state/staging.ts`, latched in `meta.met`): the first battle's
+  header carries the Gate and gold and nothing else, the Detail band has no
+  gear or pack, the wave bar no speed and no Watch Command, the hero panel no
+  Skills/Team tabs, the party row no "recruit a hero" slot, hero-pick no stat
+  block, trait tiles or seed chip. Speed and sub-waves arrive at the first
+  breather; gear, the pack, depth and the Watch Command with the first win;
+  relics at the first elite; perks at the first choice; cursed ground from
+  depth 3 and map challenges from depth 4; merchants from the second stop
+  (`game/run/firstRun.ts`, first-run only, no stream draws). The menu shows the
+  Daily, Endless and the Vows locked, each with "Opens after your first run".
+  Each idea has one coach tip, the first time it is on screen; the Codex has a
+  glossary (only met terms for a first-timer). Copy: heroes everywhere, "Enemy
+  strength +6%" for Threat ×1.06, "Marks" after the one "Watch Marks (Marks)".
+  Rendered at 390×844 @2x and 1440×900, first run in a fresh context and a
+  seeded returning player (`~/fieldwatch-critique/build-ls/`). The loop caught
+  five things. (1) Dropping the thorns tile left the Fighter one trait tile,
+  which grew to a 310px square and pushed the ability sentence off the page;
+  a first pick now has no tiles and the sentence leads. (2) The locked line
+  sat in the value slot and cut "Endless Watch" to "Endless Watc"; it is a
+  second line under the name now. (3) A settled wave still reads
+  `battlePhase: 'setup'`, so the Watch Command tip fired on the first win's
+  reward; setup now means "before the wave". (4) The engine counts a sub-wave
+  up as the breather BEGINS, so the sub-wave tip was marked done before it
+  showed; it is done when the breather ends. (5) Depth 3 could introduce an
+  elite, a relic, cursed ground and a map challenge in one fight; challenges
+  moved to depth 4 on a first run.

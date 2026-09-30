@@ -9,6 +9,7 @@ import { applyThemeCss, artOverride, setActiveTheme } from './game/render/themes
 import { initSettings, initTheme, useSettingsStore } from './state/settingsStore'
 import { flushRunSnapshot, installRunPersistence, useGameStore } from './state/gameStore'
 import { onAppHidden, onAppVisible } from './state/lifecycle'
+import { useMetaStore } from './state/metaStore'
 import { registerServiceWorker } from './pwa'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { reportFatal } from './ui/fatal'
@@ -63,9 +64,12 @@ if (import.meta.env.DEV) {
   const w = window as unknown as {
     __game: typeof useGameStore
     __settings: typeof useSettingsStore
+    __meta: typeof useMetaStore
     __music: typeof musicStatus
   }
   w.__game = useGameStore
+  // LS3: first-run staging reads the meta save (finished runs, ideas met).
+  w.__meta = useMetaStore
   // Settings drive mute, the music dial and the assist level, all of which have
   // to be provable from a harness rather than by ear.
   w.__settings = useSettingsStore

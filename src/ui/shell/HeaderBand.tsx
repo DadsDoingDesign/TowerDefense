@@ -2,6 +2,8 @@ import { fieldTitle } from '../../game/data/maps'
 import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
 import { Money } from './Money'
+import { strengthPct, strengthShort, strengthText } from '../channels'
+import { useShown } from './staging'
 
 /**
  * Band 1 — run state, and nothing else. It never holds a control that changes
@@ -30,6 +32,9 @@ export function HeaderBand() {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const hud = useGameStore((s) => s.hud)
   const mapName = useGameStore((s) => fieldTitle(s.battleMap))
+  // LS3: a first battle's header carries two numbers, the Gate and gold. The
+  // road's length arrives with the first win (`state/staging.ts`).
+  const depthShown = useShown('depth')
 
   const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore
@@ -63,6 +68,7 @@ export function HeaderBand() {
         <h1 className="sh-brand" tabIndex={-1} aria-label={screen === 'battle' ? `Battle — ${mapName}` : 'Run map'}>
           FIELDWATCH
         </h1>
+        {(mode === 'endless' || depthShown) && (
         <span
           className="sh-chip"
           role="img"
@@ -79,15 +85,16 @@ export function HeaderBand() {
             </>
           )}
         </span>
+        )}
         {mode === 'campaign' && threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the
              coach strip says it out loud once (WS9 — `Coach`, tip `threat`). */
           <span
             className="sh-chip threat"
             role="img"
-            aria-label={`Threat ${threat.toFixed(2)} times: enemies have ${Math.round((threat - 1) * 100)}% more HP`}
+            aria-label={`${strengthText(threat)}: enemies have ${strengthPct(threat)}% more HP`}
           >
-            <Icon name="threat" /> ×{threat.toFixed(2)}
+            <Icon name="threat" /> {strengthShort(threat)}
           </span>
         )}
         {mode === 'endless' && (

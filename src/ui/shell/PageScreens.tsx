@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RARITY } from '../../game/data/items'
-import { itemName, moneyText } from '../channels'
+import { itemName, MARKS_INTRO, moneyText, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { useGameStore } from '../../state/gameStore'
 import { bannerRules, useMetaStore } from '../../state/metaStore'
@@ -19,6 +19,7 @@ import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatR
 import { RunSeed } from './RunSeed'
 import { FeatsEarned } from './FeatsEarned'
 import { VolumeSlider } from './VolumeSlider'
+import { useStaged } from './staging'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -186,6 +187,9 @@ export function PageScreen({
   const shortfall = (c: Price) =>
     c.currency === 'gold' ? Math.max(0, c.amount - gold) : c.currency === 'dust' ? Math.max(0, c.amount - dust) : true
   const heroPick = useGameStore((s) => s.screen === 'heroPick' && s.mode === 'campaign')
+  // LS3: a first run's hero-pick carries no seed chip — a seed is a thing to
+  // share or replay, and a first run has neither yet.
+  const staged = useStaged()
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
@@ -268,7 +272,7 @@ export function PageScreen({
       live={!titleOverride && ctx.board?.live}
       // Hero-pick prices nothing, so its title block carries the run's seed
       // and terms instead (`RunSeed`, a chip that never scrolls).
-      resources={purse.size ? <Resources show={purse} /> : heroPick ? <RunSeed /> : undefined}
+      resources={purse.size ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
       strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
       tone={ctx.board?.tone}
       notice={confirm.notice}
@@ -469,7 +473,7 @@ function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
   const chip = (c: Price['currency'], n: number, tone: string) => (
     <span className={`pg-chip ${tone}`} key={c}>
       <Money amount={n} c={c} />
-      {c === 'marks' && <span className="pg-chip-word">Watch Marks</span>}
+      {c === 'marks' && <span className="pg-chip-word">Marks</span>}
     </span>
   )
 
@@ -530,10 +534,14 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
           <MenuRow
             key={o.id}
             label={o.title}
-            value={o.cost ? priceNode(o.cost) : o.sub}
+            // LS3: a locked entry says, in one plain line, what opens it.
+            value={o.locked ? undefined : o.cost ? priceNode(o.cost) : o.sub}
+            note={o.locked}
             icon={o.icon}
             glyph={o.glyph}
             big
+            dim={!!o.locked}
+            locked={!!o.locked}
             onClick={() => o.action?.run()}
             tone={o.color === 'var(--bad-text)' ? 'danger' : 'default'}
           />
@@ -654,7 +662,7 @@ export function ResultScreen() {
       }
       secondary={
         <>
-          <Tile caption={`${marks} marks earned`} icon="marks" />
+          <Tile caption={`${marks} Marks earned`} icon="marks" />
           <Tile caption={mode === 'endless' ? `${wins} waves` : `Depth ${depth}`} icon="depth" />
           {/* The real number, not a verdict (F5). "Base intact" was printed for
               any win, so surviving the Colossus on 1 of 20 read exactly like
@@ -700,7 +708,7 @@ export function ResultScreen() {
       {recap && recap.heroes.length > 0 && (
         <div className="pg-recap">
           <div className="pg-recap-head">
-            <span>The company</span>
+            <span>Your heroes</span>
             <span>KILLS · DMG</span>
           </div>
           {recap.heroes.map((h) => (
@@ -736,11 +744,11 @@ export function ResultScreen() {
                 // `enemiesLeaked`, not `leaks` — the latter is base-HP damage
                 // and this line counts enemies (F2).
                 `${recap.kills} felled · ${recap.enemiesLeaked} reached the Gate`,
-                `${moneyText(recap.goldLeft, 'gold')} unspent · Threat reached ×${recap.threat.toFixed(2)}`,
+                `${moneyText(recap.goldLeft, 'gold')} unspent · ${strengthText(recap.threat)} at the end`,
                 bannerLine(recap.banner),
               ]
             : []),
-          'Marks buy permanent upgrades in the Watchtower — they carry into every future run.',
+          MARKS_INTRO,
         ]}
       />
 
@@ -761,7 +769,7 @@ export function ResultScreen() {
         <InfoCard
           lines={[
             `Next: ${bannerLine(recap.nextBanner)}`,
-            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Watch Marks.`,
+            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Marks.`,
           ]}
         />
       )}
@@ -830,7 +838,7 @@ function AssistCard({ assist }: { assist: AssistLevel }) {
       lines={[
         'Assist is there if you want it.',
         `${steady.label} — ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
-        'Nothing else moves: same waves, same loot, same Watch Marks, same Vow payout. Change it whenever you like, mid-run included.',
+        'Nothing else moves: same waves, same loot, same Marks, same Vow payout. Change it whenever you like, mid-run included.',
       ]}
     />
   )

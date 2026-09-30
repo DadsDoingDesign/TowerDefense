@@ -6,7 +6,7 @@ import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
 import { bannerRules } from '../../state/metaStore'
-import { NODE_ICON } from '../channels'
+import { NODE_ICON, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { resistHint, summarizeEncounter } from './encounterPreview'
 import { useMapFocus } from './mapFocus'
@@ -14,8 +14,8 @@ import { useMapFocus } from './mapFocus'
 /** What each special stop is, in one line — the preview's whole body for a non-fight. */
 const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and sometimes a hero for hire.',
-  shrine: 'A bargain: a boon for the company, paid for with a curse.',
-  recruit: 'A hero looking for a company. Take one or walk on.',
+  shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
+  recruit: 'A hero looking for work. Take one on or walk on.',
   campfire: `Rest (Gate +${CAMPFIRE_REPAIR}) or train one hero a full level. One of the two.`,
 }
 
@@ -39,6 +39,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const selectNode = useGameStore((s) => s.selectNode)
   const focus = useMapFocus((s) => s.focus)
 
+  const firstRun = useGameStore((s) => s.firstRun)
   const node = runMap.nodes.find((n) => n.id === nodeId)
   const canMarch = !!node && reachable.includes(nodeId) && !cleared.includes(nodeId)
 
@@ -58,7 +59,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw
   // `selectNode` makes, so the preview can never name the wrong ground.
-  const rule = summary ? nodeTerrainRule(node, runSeed) : null
+  // LS3: a first run's first two depths are plain ground — the same answer.
+  const rule = summary ? nodeTerrainRule(node, runSeed, { firstRun }) : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -107,9 +109,10 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         ) : (
           <p className="sh-line">{SPECIAL_BLURB[node.type] ?? 'Where the march began.'}</p>
         )}
-        {step && (
+        {/* Enemies at their starting strength need no line (LS3/LS4). */}
+        {step && strengthPct(step) > 0 && (
           <p className="sh-line muted">
-            <Icon name="threat" /> Fought at Threat ×{step.toFixed(1)}: every enemy has {Math.round((step - 1) * 100)}% more HP.
+            <Icon name="threat" /> {strengthText(step)}: every enemy has {strengthPct(step)}% more HP.
           </p>
         )}
         {!canMarch && <p className="sh-line muted">Out of reach from where you stand.</p>}

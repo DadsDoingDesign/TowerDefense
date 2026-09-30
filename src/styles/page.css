@@ -1352,3 +1352,29 @@
     font-size: 30px;
   }
 }
+
+/* ------------------------------------------------ LS3 — a locked menu entry
+   The Daily Watch, Endless and the Vows before the first finished run: the row
+   keeps its name and picture (dimmed, inert) and says in one plain line, under
+   the name, what opens it. */
+.pg-row-label.has-note {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.pg-row-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pg-row-note {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  white-space: normal;
+}
+/* Locked, but reachable: `aria-disabled` rather than `disabled` (see MenuRow). */
+.pg-row[aria-disabled='true'] {
+  cursor: default;
+}

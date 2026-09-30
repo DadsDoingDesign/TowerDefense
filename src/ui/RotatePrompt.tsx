@@ -26,7 +26,7 @@ export function RotatePrompt() {
         </div>
         <h1 className="fw-rotate-title">Turn your phone upright</h1>
         <p className="fw-rotate-body">
-          Fieldwatch is built for one tall screen — the field, your company and the
+          Fieldwatch is built for one tall screen — the field, your heroes and the
           detail panel all read at once. Landscape has nowhere to put them.
         </p>
       </div>

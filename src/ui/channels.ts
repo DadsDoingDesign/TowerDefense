@@ -1,6 +1,8 @@
 import { DUAL_WIELD_DEX, gripOf, ITEM_NOUN_RE, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
+import { MAX_ROSTER as MAX_HEROES } from '../game/run/economy'
+import type { IdeaId } from '../state/staging'
 
 /**
  * The UI's shared vocabulary: non-colour channels, the tokens that carry the
@@ -104,12 +106,42 @@ export type Currency = 'gold' | 'dust' | 'marks'
 /** The one drawn mark for each currency. */
 export const CURRENCY_ICON: Record<Currency, IconKey> = { gold: 'gold', dust: 'dust', marks: 'marks' }
 
-/** The currency in words — what prose and accessible names say. */
-export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Watch Marks' }
+/**
+ * The currency in words — what prose and accessible names say.
+ *
+ * LS4 — one name per thing: the meta currency is **Marks**. Its full name,
+ * "Watch Marks", is said once, where it is first explained
+ * ({@link MARKS_INTRO}), and nowhere else.
+ */
+export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Marks' }
 
-/** "60 gold", "12 dust", "1 Watch Mark". */
+/** "60 gold", "12 dust", "1 Mark". */
 export const moneyText = (amount: number, c: Currency): string =>
-  c === 'marks' ? `${amount} Watch Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
+  c === 'marks' ? `${amount} Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
+
+/**
+ * The one place the meta currency's full name is spoken (LS4): its first
+ * explanation, on the run-end receipt and the Watchtower. Everywhere else says
+ * "Marks".
+ */
+export const MARKS_INTRO = 'Watch Marks (Marks) buy permanent upgrades in the Watchtower — they carry into every future run.'
+
+/**
+ * Enemy strength, in words (LS4).
+ *
+ * The run's difficulty multiplier (`threat` in the code, 1 = the start of a
+ * run) multiplies every enemy's HP. It was shown as "Threat ×1.06", which read
+ * as a score and collided with the Threat targeting order. Players read it as
+ * a percentage: "Enemy strength +6%".
+ */
+export const strengthPct = (threat: number): number => Math.round((threat - 1) * 100)
+/** "+6%" — the short form, for a chip or a map node. */
+export const strengthShort = (threat: number): string => {
+  const p = strengthPct(threat)
+  return `${p >= 0 ? '+' : '−'}${Math.abs(p)}%`
+}
+/** "Enemy strength +6%". */
+export const strengthText = (threat: number): string => `Enemy strength ${strengthShort(threat)}`
 
 /**
  * The four targeting orders, named once (L3).
@@ -658,3 +690,37 @@ export function effectIcon(line: string): IconKey | null {
  */
 export const itemName = (item: Pick<Item, 'name'>): string =>
   item.name.replace(/\b(Common|Rare|Epic|Legendary|Mythic) /, '').trim() || item.name
+
+/**
+ * The glossary (LS3/LS4) — one line per idea, in the game's one name for it.
+ *
+ * The Codex lists these; a first-timer's Codex lists only the ideas they have
+ * met (`meta.met`), so no term appears there before the game has shown it.
+ * The coach's tips say the same things in the moment; these are what stays.
+ */
+export const GLOSSARY: Record<IdeaId, { term: string; line: string }> = {
+  hero: { term: 'Heroes', line: 'Your fighters. Each one hits whatever walks inside its ring.' },
+  post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave starts.' },
+  gate: { term: 'Gate', line: 'Your keep at the end of the road. Goblins that reach it hurt it; if it falls, the run ends.' },
+  gold: { term: 'Gold', line: 'Paid out by every fight. Spend it at a Merchant.' },
+  subwave: { term: 'Sub-wave', line: 'A wave comes in parts. Between them the fight pauses, and you may move one hero.' },
+  speed: { term: 'Speed', line: 'Fast-forwards a fight: 1×, 2× or 3×.' },
+  depth: { term: 'Depth', line: 'How far down the road you are. The boss waits at the end.' },
+  gear: { term: 'Gear and pack', line: 'Items your heroes wear — body, main hand, off hand. New ones wait in the pack.' },
+  command: { term: 'Watch Command', line: 'An order you give once per sub-wave, such as Rally Horn.' },
+  strength: { term: 'Enemy strength', line: 'How much more HP every goblin has than at the start of the run. It rises at every stop.' },
+  recruit: { term: 'Recruit', line: `A stop where a hero joins you. You can lead up to ${MAX_HEROES} heroes.` },
+  merchant: { term: 'Merchant', line: 'A stop that sells gear, a hire and Gate repair, for gold.' },
+  shrine: { term: 'Shrine', line: 'A bargain: a boon for all your heroes, paid for with a curse.' },
+  campfire: { term: 'Campfire', line: 'A stop to rest (the Gate mends) or to train a hero.' },
+  elite: { term: 'Elite', line: 'A tougher fight whose spoils always include a relic.' },
+  relic: { term: 'Relic', line: 'Helps all your heroes for the rest of the run.' },
+  perk: { term: 'Perk', line: 'A permanent choice a hero makes at levels 5 and 15.' },
+  evolve: { term: 'Evolution', line: 'At level 10, and again at 20, a hero picks a path. It is permanent.' },
+  danger: { term: 'Cursed ground', line: 'Skull tiles. A hero may stand there, but deals much less damage.' },
+  challenge: { term: 'Map challenge', line: 'A field changed for one fight — Flooded meadow (lakes) or Wildfire (flames).' },
+  marks: { term: 'Marks', line: 'Watch Marks (Marks): earned by every run, spent in the Watchtower on bonuses that carry into every run.' },
+  vow: { term: 'Vow', line: 'A harder rule you swear to for one run, for more Marks.' },
+  daily: { term: 'Daily Watch', line: 'One shared road a day. Your first try each day is scored.' },
+  endless: { term: 'Endless Watch', line: 'Wave after wave, with three retries.' },
+}

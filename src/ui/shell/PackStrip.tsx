@@ -24,7 +24,7 @@ export function PackStrip() {
   const fresh = useFresh(inventory.map((i) => i.id).concat(roster.map((h) => h.id)))
   const shown = inventory.slice(-8)
   return (
-    <div className="pg-strip" aria-label={`Pack: ${inventory.length} ${inventory.length === 1 ? 'item' : 'items'}. Company: ${roster.map((h) => h.name).join(', ')}.`} role="group">
+    <div className="pg-strip" aria-label={`Pack: ${inventory.length} ${inventory.length === 1 ? 'item' : 'items'}. Heroes: ${roster.map((h) => h.name).join(', ')}.`} role="group">
       <span className="pg-strip-label" aria-hidden="true">
         Pack {inventory.length}
       </span>
@@ -135,7 +135,7 @@ export function ReceiptToast() {
         const o = items[0]
         parts.push(o.wearer ? `${itemName(o.item)} added — ${o.wearer} wears it` : `${itemName(o.item)} added to your pack`)
       } else if (items.length > 1) parts.push(`${items.length} items added`)
-      for (const h of addedHeroes) parts.push(`${h.name} joined the company`)
+      for (const h of addedHeroes) parts.push(`${h.name} joins your heroes`)
       prev = s
       if (parts.length) setMsg({ text: parts.join(' · '), key: Date.now() })
     })

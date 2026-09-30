@@ -19,6 +19,7 @@ import type { GameData, GameState } from './types'
 /** The state fields that constitute "the run". Changing any of them re-saves. */
 const SNAPSHOT_FIELDS = [
   'challenge',
+  'firstRun',
   'mode',
   'runSeed',
   'screen',
