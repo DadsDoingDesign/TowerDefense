@@ -48,6 +48,8 @@ export const SPREAD_COUNT = 2
 export const SPREAD_RADIUS = 70
 const SPREAD_MIN_DUR = 1
 // ---- sub-waves ----------------------------------------------------------------
+/** How far up the road from the Gate a charge aimed at it is drawn (see `gateMark`). */
+const GATE_MARK_INSET = 64
 /** Split pieces and boss halves are placed this far apart along the lane, so they read as separate bodies. */
 const SPLIT_SPACING = 14
 
@@ -1125,6 +1127,15 @@ export class GameEngine {
    * damage like a leak — booked into `leaks`, so the receipt still reconciles —
    * but it is not a head through the line.
    */
+  /**
+   * Where a charge aimed at the Gate is drawn: on the road just short of it.
+   * The Gate itself sits on the field's edge, so a mark centred on it was half
+   * off the canvas and read as nothing (seen on the phone capture).
+   */
+  private gateMark(): Vec2 {
+    return this.path.pointAt(Math.max(0, this.path.length - GATE_MARK_INSET))
+  }
+
   private blastGate(amount: number): number {
     const dmg = amount * this.baseDamageMul
     this.baseHp -= dmg
@@ -1160,8 +1171,9 @@ export class GameEngine {
     if (this.path.length - e.distance > b.range) return
     if (this.telegraphs.some((t) => t.kind === 'lob' || t.kind === 'kingLob')) return
     e.lobUntil = this.elapsed + b.windup
-    e.lobX = this.map.base.x
-    e.lobY = this.map.base.y
+    const at = this.gateMark()
+    e.lobX = at.x
+    e.lobY = at.y
     this.behaviourStats.lobsStarted++
     this.addTelegraph('lob', e.lobX, e.lobY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
     this.onEvent?.('behaviour:lobWindup', this.tagOf(e))
@@ -1219,8 +1231,9 @@ export class GameEngine {
     }
     if (this.elapsed < e.kingNextAt) return
     e.kingUntil = this.elapsed + b.windup
-    e.kingX = this.map.base.x
-    e.kingY = this.map.base.y
+    const at = this.gateMark()
+    e.kingX = at.x
+    e.kingY = at.y
     e.kingNextAt = this.elapsed + (e.phase > 0 ? b.rageInterval : b.interval)
     this.addTelegraph('kingLob', e.kingX, e.kingY, b.radius, b.windup, e.id, e.pos.x, e.pos.y)
     this.onEvent?.('behaviour:kingLobWindup', this.tagOf(e))
@@ -1443,8 +1456,9 @@ export class GameEngine {
           this.behaviourStats.sapperBlasts++
           this.behaviourStats.sapperDamage += blast
           this.behaviourStats.gateDamage += blast
-          this.addTelegraph('blast', this.map.base.x, this.map.base.y, sapper.radius, 0.5)
-          this.spawnFloater(this.map.base, 'BOOM', '#ff9f43', true)
+          const at = this.gateMark()
+          this.addTelegraph('blast', at.x, at.y, sapper.radius, 0.5)
+          this.spawnFloater(at, 'BOOM', '#ff9f43', true)
           this.onEvent?.('behaviour:sapper', this.tagOf(e))
         }
         this.onEvent?.('leak', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })

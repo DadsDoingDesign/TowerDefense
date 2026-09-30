@@ -956,6 +956,7 @@ function HeroStats({ hero }: { hero: Sentinel }) {
         {blocks && (
           <Cell
             label="Hold"
+            wide
             values={[
               { head: 'HLD', full: 'Enemies held', v: p.mods.block!.count },
               { head: 'THN', full: 'Thorns', v: Math.round(p.thorns) },

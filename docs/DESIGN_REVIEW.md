@@ -2374,3 +2374,21 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   shell for the run shell, so the toast that caught the notice unmounted a
   frame later. A notice is now spent only after its toast has been on screen
   for the full hold.
+- **2026-09-30 — Heroes have no HP.** The designer's call: heroes are never
+  hurt, and a TNT goblin that used to hit a hero hurts the Gate instead. A
+  blocker still holds (same capacity) and its thorns still grind what it holds.
+  Sappers walk past the heroes and blow at the Gate (a held one goes off at the
+  wall, for nothing); bombers plant within 450px of the Gate and lob a charge at
+  it; the Powderkeg King lobs TNT at the Gate on a clock. Gone from the screen:
+  the hero HP bar, the red ✕ of a downed hero, "· fell" on every roll, "N heroes
+  lost" on the receipt, the Defence (HP/ARM) cells, "health" on the hero pick
+  (now attacks/s), the HP row in every level-up and evolution delta. Rendered at
+  390×844 @2x and 1440×900 (`~/fieldwatch-critique/build-nohp/`). The loop caught
+  three things. (1) The charge mark was centred on the Gate, which sits on the
+  field's edge, so half the ring was off-canvas and on a phone it read as a
+  sliver at the bottom. It is drawn on the road 64px short of the Gate now, where
+  the whole dashed ring and its crosshair show, with the tether back to the
+  thrower. (2) The defeat receipt could not name a King's TNT ("0 reached the
+  Gate" on a Gate at 0): the ledger now books a landed charge as "Powderkeg
+  King's TNT ×2 · 2 Gate". (3) The blocker's new Hold cell (held / thorns) sat as
+  a narrow two-row cell beside Reach; it spans the grid like Attack now.
