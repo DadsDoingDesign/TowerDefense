@@ -5,7 +5,7 @@
  */
 import type { RNG } from '../core/rng'
 import { generateRunMap, type MapOptions, type RunMap } from '../data/runmap'
-import { crowds } from '../data/terrain'
+import { crowdedBy, isMelee, type Post } from '../data/terrain'
 import type { GameMap, Placement, Sentinel } from '../types'
 
 /** The Banner rules the map shape reads (a subset of `metaStore.BannerRules`). */
@@ -58,27 +58,57 @@ export function emptyPlacements(map: GameMap): Placement {
  * id, and the next battle's terrain can block a tile the company stood on (a
  * lake, a fire): that hero goes back to the bench rather than standing in it.
  * Only open tiles are kept, each hero at most once, at most `cap` heroes, and
- * never a hero on a tile beside one already kept (grid-fit: a hero keeps a
- * tile of room, `terrain.POST_ROOM`).
- * `keep` filters hero ids (e.g. to the live roster).
+ * never a hero too close to one already kept (a Fighter's clearance,
+ * `terrain.CLEARANCE`: nobody beside a melee hero; ranged heroes side by side
+ * are fine). `keep` filters hero ids (e.g. to the live roster); `melee` says
+ * which of them swing (`meleeOf(roster)`).
  */
 export function carryPlacements(
   prev: Placement,
   map: GameMap,
-  keep: (sentinelId: string) => boolean = () => true,
-  cap = Infinity,
+  keep: (sentinelId: string) => boolean,
+  cap: number,
+  melee: (sentinelId: string) => boolean,
 ): Placement {
   const next = emptyPlacements(map)
   const seen = new Set<string>()
+  const kept: Post[] = []
   for (const [tileId, sentId] of Object.entries(prev ?? {})) {
     if (!sentId || typeof sentId !== 'string' || !Object.prototype.hasOwnProperty.call(next, tileId)) continue
     if (seen.has(sentId) || !keep(sentId)) continue
     if (seen.size >= cap) break
-    if (Object.keys(next).some((k) => next[k] && crowds(k, tileId))) continue
+    const m = melee(sentId)
+    if (crowdedBy(tileId, m, kept)) continue
     next[tileId] = sentId
     seen.add(sentId)
+    kept.push({ tile: tileId, melee: m })
   }
   return next
+}
+
+/** Which hero ids of `roster` fight in melee (`terrain.isMelee`); an unknown id does not. */
+export function meleeOf(roster: readonly Sentinel[]): (sentinelId: string) => boolean {
+  const melee = new Set(roster.filter(isMelee).map((h) => h.id))
+  return (id) => melee.has(id)
+}
+
+/**
+ * The heroes posted in `placements` as the spacing rule sees them, `except`
+ * one hero (the one being moved) and any `exceptTile` (the tile it is about to
+ * take, whose occupant goes back to the bench).
+ */
+export function postsOf(
+  placements: Placement,
+  melee: (sentinelId: string) => boolean,
+  except?: string | null,
+  exceptTile?: string,
+): Post[] {
+  const out: Post[] = []
+  for (const [tile, id] of Object.entries(placements)) {
+    if (!id || id === except || tile === exceptTile) continue
+    out.push({ tile, melee: melee(id) })
+  }
+  return out
 }
 
 export function placedSentinels(

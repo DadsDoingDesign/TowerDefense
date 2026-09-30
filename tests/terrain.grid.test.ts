@@ -14,6 +14,7 @@ import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
 import {
   crowds,
   distToPolyline,
+  withinClearance,
   fineFromCoarse,
   GRID_COLS,
   GRID_ROWS,
@@ -26,7 +27,7 @@ import {
   TILE,
   tileId,
 } from '../src/game/data/terrain'
-import { carryPlacements } from '../src/game/run/map'
+import { carryPlacements, emptyPlacements, meleeOf } from '../src/game/run/map'
 import { CHALLENGE_SHARE, endlessTerrainRule, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import type { GameMap, TerrainRuleId } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
@@ -49,10 +50,10 @@ beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stat
 
 const RULES: (TerrainRuleId | null)[] = [null, ...TERRAIN_RULE_IDS]
 
-/** Three open tiles of `map`, a tile of room apart (grid-fit), in grid order. */
+/** Three open tiles of `map`, a clearance apart, in grid order. */
 function roomy3(map: GameMap): [string, string, string] {
   const out: string[] = []
-  for (const s of map.slots) if (!out.some((o) => crowds(o, s.id))) out.push(s.id)
+  for (const s of map.slots) if (!out.some((o) => withinClearance(o, s.id))) out.push(s.id)
   return [out[0], out[1], out[2]]
 }
 
@@ -142,18 +143,21 @@ describe('the deployment grid', () => {
     expect(fineFromCoarse('s3')).toBeNull()
   })
 
-  it('a hero keeps a tile of room: neighbours crowd, diagonals included; two tiles apart do not', () => {
-    expect(crowds('c5r5', 'c6r5')).toBe(true)
-    expect(crowds('c5r5', 'c6r6')).toBe(true)
-    expect(crowds('c5r5', 'c4r4')).toBe(true)
-    expect(crowds('c5r5', 'c7r5')).toBe(false)
-    expect(crowds('c5r5', 'c7r7')).toBe(false)
-    expect(crowds('c5r5', 'c5r5')).toBe(false)
-    expect(crowds('c5r5', 's3')).toBe(false)
+  it('a Fighter keeps a clearance: neighbours crowd it, diagonals included; two tiles apart do not', () => {
+    expect(crowds('c5r5', true, 'c6r5', false)).toBe(true)
+    expect(crowds('c5r5', false, 'c6r6', true)).toBe(true)
+    expect(crowds('c5r5', true, 'c4r4', true)).toBe(true)
+    expect(crowds('c5r5', true, 'c7r5', false)).toBe(false)
+    expect(crowds('c5r5', true, 'c7r7', true)).toBe(false)
+    expect(crowds('c5r5', true, 'c5r5', true)).toBe(false)
+    expect(crowds('c5r5', true, 's3', true)).toBe(false)
+    // Two ranged heroes may stand side by side.
+    expect(crowds('c5r5', false, 'c6r5', false)).toBe(false)
     const land = ALL_MAPS[0]
-    const roomy = roomyTiles(land.slots, [land.slots[40].id])
-    expect(roomy.some((s) => s.id === land.slots[40].id)).toBe(false)
-    for (const s of roomy) expect(crowds(s.id, land.slots[40].id)).toBe(false)
+    const fighter = { tile: land.slots[40].id, melee: true }
+    const roomy = roomyTiles(land.slots, [fighter], false)
+    expect(roomy.some((s) => s.id === fighter.tile)).toBe(false)
+    for (const s of roomy) expect(withinClearance(s.id, fighter.tile)).toBe(false)
   })
 
   it.each(ALL_MAPS.map((m) => [m.id] as const))('%s: each challenge adds its terrain and still leaves a real choice', (id) => {
@@ -221,15 +225,20 @@ describe('the deployment grid', () => {
     }
   })
 
-  it('carryPlacements keeps a tile of room between heroes', () => {
+  it('carryPlacements keeps a Fighter clearance clear, and lets ranged heroes stand side by side', () => {
     const land = ALL_MAPS[0]
     const a = land.slots[40]
-    const next = land.slots.find((s) => crowds(s.id, a.id))!
-    const far = land.slots.find((s) => !crowds(s.id, a.id) && s.id !== a.id)!
-    const kept = carryPlacements({ [a.id]: 'a', [next.id]: 'b', [far.id]: 'c' }, land)
+    const next = land.slots.find((s) => withinClearance(s.id, a.id))!
+    const far = land.slots.find((s) => !withinClearance(s.id, a.id) && s.id !== a.id)!
+    const fighterA = (id: string) => id === 'a'
+    const kept = carryPlacements({ [a.id]: 'a', [next.id]: 'b', [far.id]: 'c' }, land, () => true, Infinity, fighterA)
     expect(kept[a.id]).toBe('a')
     expect(kept[next.id]).toBeNull()
     expect(kept[far.id]).toBe('c')
+    const ranged = carryPlacements({ [a.id]: 'a', [next.id]: 'b' }, land, () => true, Infinity, () => false)
+    expect(ranged[a.id]).toBe('a')
+    expect(ranged[next.id]).toBe('b')
+    expect(meleeOf([])('a')).toBe(false)
   })
 
   it('carryPlacements keeps open tiles only, each hero once, up to the cap', () => {
@@ -238,10 +247,10 @@ describe('the deployment grid', () => {
     const water = flooded.tiles!.find((t) => t.block === 'water')!.id
     const open = flooded.slots.map((s) => s.id)
     const [o0, o1, o2] = roomy3(flooded)
-    const next = carryPlacements({ [water]: 'a', [o0]: 'b', [o1]: 'b', [o2]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c')
+    const next = carryPlacements({ [water]: 'a', [o0]: 'b', [o1]: 'b', [o2]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c', Infinity, () => true)
     expect(Object.entries(next).filter(([, v]) => v)).toEqual([[o0, 'b']])
     expect(Object.keys(next).sort()).toEqual([...open].sort())
-    const capped = carryPlacements({ [o0]: 'a', [o1]: 'b', [o2]: 'c' }, flooded, () => true, 2)
+    const capped = carryPlacements({ [o0]: 'a', [o1]: 'b', [o2]: 'c' }, flooded, () => true, 2, () => true)
     expect(Object.values(capped).filter(Boolean)).toHaveLength(2)
   })
 })
@@ -321,13 +330,12 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     expect(useGameStore.getState().fieldNote).toBeNull()
   })
 
-  it('grid-fit: a hero keeps a tile of room — a tap beside a posted hero says so and posts nobody', () => {
+  it('a Fighter keeps a clearance — a tap beside a posted Fighter says so and posts nobody', () => {
     start(4242)
     const st0 = useGameStore.getState()
     const first = st0.runMap.nodes.find((n) => st0.reachableNodeIds.includes(n.id) && n.type === 'battle')!
     enter(first.id)
-    const second = createSentinel('rogue')
-    useGameStore.setState({ roster: [...useGameStore.getState().roster, second] })
+    useGameStore.setState({ roster: [createSentinel('fighter'), createSentinel('rogue')], placements: emptyPlacements(useGameStore.getState().battleMap) })
     const st = useGameStore.getState()
     const [a, b] = st.roster
     const safe = st.battleMap.slots.filter((s) => !st.battleMap.tiles!.find((t) => t.id === s.id)!.danger)
@@ -336,18 +344,18 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     useGameStore.getState().tapTile(at.id)
     expect(useGameStore.getState().placements[at.id]).toBe(a.id)
     // Beside it (diagonals too): refused, with the reason on the coach strip.
-    const beside = safe.find((s) => crowds(s.id, at.id))!
+    const beside = safe.find((s) => withinClearance(s.id, at.id))!
     useGameStore.getState().shellSelect({ kind: 'hero', id: b.id })
     useGameStore.getState().tapTile(beside.id)
     expect(useGameStore.getState().placements[beside.id]).toBeFalsy()
     expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: beside.id, kind: 'crowded' })
     // A tile of room away: posted.
-    const clear = safe.find((s) => s.id !== at.id && !crowds(s.id, at.id))!
+    const clear = safe.find((s) => s.id !== at.id && !withinClearance(s.id, at.id))!
     useGameStore.getState().tapTile(clear.id)
     expect(useGameStore.getState().placements[clear.id]).toBe(b.id)
     // The first hero may move beside where it stood itself (it leaves that tile).
     useGameStore.getState().shellSelect({ kind: 'hero', id: a.id })
-    const step = safe.find((s) => crowds(s.id, at.id) && !crowds(s.id, clear.id))!
+    const step = safe.find((s) => withinClearance(s.id, at.id) && !withinClearance(s.id, clear.id))!
     useGameStore.getState().tapTile(step.id)
     expect(useGameStore.getState().placements[step.id]).toBe(a.id)
   })

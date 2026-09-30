@@ -20,13 +20,13 @@ import { animNow } from './frame'
 import { clipBeforeGate, drawAura, drawBaseFx, drawReticle } from './overlays'
 import { drawProjectile, drawTrap } from './projectiles'
 import { drawTelegraphs } from './telegraphs'
-import { drawEnemy, drawSentinel, sentinelFromRt } from './units'
+import { backToFront, drawEnemy, drawSentinel, sentinelFromRt, shoulderNudge } from './units'
 
 export { entrySide, fitView, setPresentationTime, setViewScale, stageView, type StageView, type View } from './frame'
 export { drawField, drawTerrainDanger, drawTerrainFlames, playRect, worldOf } from './terrain'
-export { drawEnemy, drawSentinel, sentinelFromRt, type DrawSentinel } from './units'
+export { backToFront, shoulderNudge, drawEnemy, drawSentinel, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
-export { baseAnchor, drawBaseFx, drawBlockedFlash, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'
+export { baseAnchor, drawBaseFx, drawBlockedFlash, drawClearance, drawClearanceLabel, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'
 export { drawProjectile, drawTrap } from './projectiles'
 export { blitCensus } from './blit'
 export { hexToRgba, mix, roundRect } from './paint'
@@ -72,7 +72,14 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   ctx.restore()
   drawTelegraphs(ctx, engine) // Phase 3a: behaviour marks (render/telegraphs.ts)
   for (const e of engine.enemies) if (targeted.has(e.id)) drawReticle(ctx, e.pos, e.type.radius)
-  for (const s of engine.sentinels) drawSentinel(ctx, sentinelFromRt(s))
+  // Back to front, and a row of heroes shoulder to shoulder leans apart a
+  // little at its ends (only a Fighter keeps a clearance; see `units.ts`).
+  const lean = shoulderNudge(engine.sentinels, (x) => x.pos, engine.map.tile)
+  for (const s of backToFront(engine.sentinels, (x) => x.pos)) {
+    const d = sentinelFromRt(s)
+    const o = lean.get(s)
+    drawSentinel(ctx, o && (o.x || o.y) ? { ...d, pos: { x: d.pos.x + o.x, y: d.pos.y + o.y } } : d)
+  }
   for (const p of engine.projectiles) drawProjectile(ctx, p)
 
   // Impact debris, chain-lightning arcs, explosions.

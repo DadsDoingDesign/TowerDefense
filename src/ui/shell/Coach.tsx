@@ -245,7 +245,7 @@ export function Coach() {
 
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
-    // grid-fit, that a hero needs a tile of room).
+    // that a hero stands too close to a Fighter, `terrain.CLEARANCE`).
     const copy = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : fieldNote.kind === 'crowded' ? ROOM_COPY : BLOCK_COPY[fieldNote.kind]
     return (
       <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">

@@ -12,13 +12,13 @@ import { battleRelicsWithheld } from '../../game/run/firstRun'
 import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
 import { applyBattleXp, combatSeed, endlessRoundSpoils, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
-import { forkFires, frontierFrom, placedSentinels } from '../../game/run/map'
+import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
 import { receiveItems, recruitSlate } from '../../game/run/recruits'
 import { challengeGrant } from '../../game/run/settle'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
 import { orientationOf } from '../../game/data/maps'
-import { crowds } from '../../game/data/terrain'
+import { crowdedBy, crowds, isMelee } from '../../game/data/terrain'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
@@ -95,16 +95,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
   },
 
   placeOnSlot: (slotId) => {
-    const { selectedSentinelId, placements, battlePhase, screen, battleMap } = get()
+    const { selectedSentinelId, placements, battlePhase, screen, battleMap, roster } = get()
     if (screen !== 'battle' || battlePhase !== 'setup' || !selectedSentinelId) return
     // Only an OPEN tile of this battle's field takes a hero (G1-2).
     if (!battleMap.slots.some((s) => s.id === slotId)) return
-    // Grid-fit: a hero keeps a tile of room — not beside another posted hero
-    // (the one it would replace on this very tile, or itself, excepted).
-    const neighbour = Object.entries(placements).find(
-      ([k, v]) => v && v !== selectedSentinelId && k !== slotId && crowds(k, slotId),
-    )
-    if (neighbour) {
+    // A Fighter's clearance (`terrain.CLEARANCE`): nobody stands on the tiles
+    // beside a melee hero, whichever of the two is being posted. Ranged heroes
+    // may stand side by side. The hero it would replace on this very tile, and
+    // itself, are excepted.
+    const melee = meleeOf(roster)
+    const others = postsOf(placements, melee, selectedSentinelId, slotId)
+    if (crowdedBy(slotId, melee(selectedSentinelId), others)) {
       get().noteCrowded(slotId)
       return
     }
@@ -242,10 +243,21 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       set({ breatherPick: null })
       return
     }
-    const swapped = !!engine.sentinelOnSlot(slotId)
-    // Grid-fit: the engine refuses a move that crowds a third hero; say why.
+    const other = engine.sentinelOnSlot(slotId)
+    const swapped = !!other
+    const moving = engine.sentinelOnSlot(breatherPick)
+    if (!moving) {
+      set({ breatherPick: null })
+      return
+    }
+    // A Fighter's clearance: the engine refuses a move that puts either hero
+    // too close to a third (`engine.moveHero`); say why.
     const third = engine.sentinels.some(
-      (s) => s.slotId !== breatherPick && s.slotId !== slotId && (crowds(s.slotId, slotId) || (swapped && crowds(s.slotId, breatherPick))),
+      (s) =>
+        s.slotId !== breatherPick &&
+        s.slotId !== slotId &&
+        (crowds(s.slotId, isMelee(s.def), slotId, isMelee(moving.def)) ||
+          (!!other && crowds(s.slotId, isMelee(s.def), breatherPick, isMelee(other.def)))),
     )
     if (third) {
       get().noteCrowded(slotId)

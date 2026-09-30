@@ -1,7 +1,8 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import type { Vec2 } from '../game/core/vec'
 import { DANGER_COPY } from '../game/data/hazards'
-import { BLOCK_COPY, crowds } from '../game/data/terrain'
+import { BLOCK_COPY, CLEARANCE_LABEL, crowdedBy, isMelee, ROOM_REASON } from '../game/data/terrain'
+import { meleeOf, postsOf } from '../game/run/map'
 import type { FieldTile, GameMap } from '../game/types'
 import { useGameStore } from '../state/gameStore'
 
@@ -113,10 +114,12 @@ export function SlotLayer({ field }: { field: FieldRect }) {
     }
     const heroId = placements[t.id]
     const hero = heroId ? roster.find((h) => h.id === heroId) : undefined
-    // Grid-fit: beside another posted hero is no place for the armed one.
+    // A Fighter's clearance: beside a posted Fighter (or, for an armed
+    // Fighter, beside anyone) is no place for the armed hero.
     const near = armedHero && !hero ? neighbourOf(t.id) : undefined
-    if (near) return `${ref}, ${where}, too close to ${near.name} — heroes stand at least a tile apart`
-    const state = hero ? `${hero.name} posted` : 'open'
+    if (near) return `${ref}, ${where}, too close to ${near.name} — ${ROOM_REASON}`
+    // A posted Fighter's tile names the clearance round it, as the grid draws it.
+    const state = hero ? `${hero.name} posted${isMelee(hero) ? `, with a ${CLEARANCE_LABEL.toLowerCase()} round it` : ''}` : 'open'
     const action = armedHero
       ? hero && hero.id === armedHero.id
         ? ''
@@ -126,9 +129,11 @@ export function SlotLayer({ field }: { field: FieldRect }) {
         : ''
     return `${ref}, ${where}, ${state}${action}`
   }
-  /** The posted hero (not the armed one) standing beside tile `id`, if any. */
+  /** The posted hero (not the armed one) the armed hero on tile `id` would stand too close to, if any. */
+  const melee = meleeOf(roster)
   const neighbourOf = (id: string) => {
-    const k = Object.keys(placements).find((p) => placements[p] && placements[p] !== armed && crowds(p, id))
+    if (!armed) return undefined
+    const k = crowdedBy(id, melee(armed), postsOf(placements, melee, armed))?.tile
     return k ? roster.find((h) => h.id === placements[k]) : undefined
   }
   const inert = (t: FieldTile): boolean => {

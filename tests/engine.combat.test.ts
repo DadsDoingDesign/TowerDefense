@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
-import { crowds } from '../src/game/data/terrain'
+import { withinClearance } from '../src/game/data/terrain'
 
 /** G1-2: the old build circles, as the tiles nearest where they stood. */
 const P = legacyPosts(FIRST_MAP.id)
@@ -326,7 +326,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
 
   it("'pause' stops the sim at a breather until resume; one move is allowed", () => {
     const spawns = [at('torch1', 0, 0.5, 0), at('torch1', 0, 0.5, 1)]
-    const e = engineFor(spawns, [['rogue', P.s1], ['mystic', P.s2]], { breathers: 'pause' })
+    const e = engineFor(spawns, [['rogue', P.s1], ['fighter', P.s2]], { breathers: 'pause' })
     runOut(e, 60 * 60)
     expect(e.status).toBe('running')
     expect(e.breather).toBe(true)
@@ -334,8 +334,8 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     e.step(TICK)
     e.step(TICK)
     expect(e.tick).toBe(tick) // frozen
-    // Grid-fit: a hero keeps a tile of room — no move onto a tile beside a third.
-    const beside = FIRST_MAP.slots.find((s) => s.id !== P.s1 && crowds(s.id, P.s2) && !crowds(s.id, P.s1))!
+    // A Fighter's clearance: no move onto a tile beside a Fighter.
+    const beside = FIRST_MAP.slots.find((s) => s.id !== P.s1 && withinClearance(s.id, P.s2) && !withinClearance(s.id, P.s1))!
     expect(e.moveHero(P.s1, beside.id)).toBe(false)
     expect(e.moveHero(P.s1, P.s4)).toBe(true)
     expect(e.moveHero(P.s2, P.s5)).toBe(false) // one move per breather

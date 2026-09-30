@@ -28,18 +28,22 @@
  * is the in-between: a hero can stand at a bend's corner, one step back, or
  * half a big tile along the road.
  *
- * **Heroes keep a tile of room** ({@link POST_ROOM}): a hero's sprite is wider
- * than a 40px tile, so no two heroes may stand on neighbouring tiles
- * (diagonals included) — the closest two heroes can be is 80px, G1-2's
- * spacing. The lit grid leaves a posted hero's neighbours dark.
+ * **Melee heroes keep a clearance** ({@link CLEARANCE}; "Tower Clearance" in
+ * the designer's words, {@link CLEARANCE_LABEL} on the field): a Fighter
+ * swings all round it, so the 3 × 3 block of tiles centred on its own — the 8
+ * tiles beside it, diagonals included — holds no other hero. Ranged heroes
+ * (Rogue, Mystic) may stand shoulder to shoulder; they still may not step into
+ * a Fighter's clearance, and a Fighter may not be posted where its clearance
+ * would take in another hero. Which heroes are melee is read off the
+ * archetype tree ({@link isMelee}), never guessed from a sprite.
  *
  * The portrait twin is the same grid transposed (14 columns × 24 rows between
  * the twin's 30px side pads), so a tile id names the same patch of ground
  * either way up and the twins stay isometric by construction (`maps.ts`
  * § Portrait battlefields). At the phone's live Stage (0.55–0.60 CSS px per
  * field px) a tile is 22–24 CSS px: the finger aims a hero, the tile under it
- * decides where it lands to the nearest 40px, and a hero's room (80px, 44–48
- * CSS px) is the target the touch floor is measured against (`ui/fieldZoom`).
+ * decides where it lands to the nearest 40px, and an 80px patch (44–48 CSS
+ * px) is the target the touch floor is measured against (`ui/fieldZoom`).
  *
  * **Ids are landscape coordinates** (`c{col}r{row}`, 0-based) whichever way the
  * field is drawn. A placement keyed by tile id therefore rides the run snapshot
@@ -60,7 +64,8 @@
  * battle, and named in the node preview before the march.
  */
 import type { Vec2 } from '../core/vec'
-import type { FieldTile, TerrainKind, TerrainRuleId } from '../types'
+import type { Archetype, FieldTile, TerrainKind, TerrainRuleId } from '../types'
+import { getNode } from './archetypeTree'
 
 /** Edge of one deployment tile, in logical field px. */
 export const TILE = 40
@@ -68,8 +73,8 @@ export const TILE = 40
 export const GRID_COLS = 24
 export const GRID_ROWS = 14
 /**
- * The G1-2 grid's tile (80px): a hero's room, the size a terrain piece is
- * authored at, and the target the touch floor is measured against.
+ * The G1-2 grid's tile (80px): the size a terrain piece is authored at, and
+ * the target the touch floor is measured against.
  */
 export const COARSE = 80
 
@@ -89,29 +94,120 @@ export const LANE_CLEAR = 20
 export const LANE_HALF = 20
 
 /**
- * How many tiles of room a hero keeps round it: another hero may not stand
- * within this many tiles, diagonals included (Chebyshev distance). One tile
- * of room puts two heroes at least 80px apart, the G1-2 spacing, so a hero's
- * sprite never overlaps its neighbour's.
+ * A melee hero's clearance, in tiles: no other hero may stand within this many
+ * tiles of it, diagonals included (Chebyshev distance) — the 3 × 3 block of
+ * tiles centred on its own. Ranged heroes keep none.
  */
-export const POST_ROOM = 1
+export const CLEARANCE = 1
 
-/** Do two tiles (by id) stand too close for two heroes? False for anything that is not a tile. */
-export function crowds(a: string, b: string): boolean {
+/**
+ * The clearance zone's name on the field. The designer's words were "Tower
+ * Clearance"; LS4 (`tests/copy.terms.test.ts`) retires "tower" from every
+ * player-facing string — the units are heroes — so the field says the second
+ * word. One constant: the overlay and the keyboard layer both read it.
+ */
+export const CLEARANCE_LABEL = 'Clearance'
+
+/**
+ * Does a hero rooted in `archetype` fight in melee? True when the tier-0 node
+ * its attack is read from HOLDS enemies (`mods.block`): it stands at the road's
+ * edge and swings at what it holds, at a close reach (the Fighter: 96px, against
+ * the Rogue's 168 and the Mystic's 150). That is the Fighter line, and only it:
+ * every evolution inherits its root, and nothing in the tree, the perks, the
+ * mutations or the gear grants a hold to a hero whose root lacks one
+ * (`tests/clearance.test.ts` holds all of it).
+ */
+export function isMeleeArchetype(archetype: Archetype | string): boolean {
+  try {
+    return getNode(archetype).mods?.block != null
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Is this hero melee? Read off the root of its branch path — the node
+ * `computeCombat` reads its attack from — so an evolution or a spec, which
+ * only ever extends the path, can never change the answer mid-run.
+ */
+export const isMelee = (h: { archetype: Archetype; branchPath?: readonly string[] }): boolean =>
+  isMeleeArchetype(h.branchPath?.[0] ?? h.archetype)
+
+/** A hero on the grid, as the spacing rule sees it: where, and whether it swings. */
+export interface Post {
+  tile: string
+  melee: boolean
+}
+
+/** Is `b` inside the clearance zone round `a` (or the reverse)? False for the same tile or anything not a tile. */
+export function withinClearance(a: string, b: string): boolean {
   if (a === b) return false
   const p = parseTileId(a)
   const q = parseTileId(b)
   if (!p || !q) return false
-  return Math.abs(p.c - q.c) <= POST_ROOM && Math.abs(p.r - q.r) <= POST_ROOM
+  return Math.abs(p.c - q.c) <= CLEARANCE && Math.abs(p.r - q.r) <= CLEARANCE
 }
 
 /**
- * Where a company of `others` leaves room for one more hero: the open tiles
- * of `slots` that are not taken and not crowded by any of them.
+ * Do two heroes stand too close? Only when at least one of them is melee and
+ * they are within a clearance of each other: two ranged heroes may stand side
+ * by side, but nobody stands beside a Fighter.
  */
-export function roomyTiles<T extends { id: string }>(slots: readonly T[], others: Iterable<string>): T[] {
+export function crowds(a: string, aMelee: boolean, b: string, bMelee: boolean): boolean {
+  return (aMelee || bMelee) && withinClearance(a, b)
+}
+
+/** The first of `posts` a hero (`melee` or not) on `tile` would stand too close to. */
+export function crowdedBy<P extends Post>(tile: string, melee: boolean, posts: Iterable<P>): P | undefined {
+  for (const o of posts) if (crowds(o.tile, o.melee, tile, melee)) return o
+  return undefined
+}
+
+/**
+ * Where heroes posted at `others` leave room for one more (`melee` or not):
+ * the open tiles of `slots` that are not taken and not too close to any of them.
+ */
+export function roomyTiles<T extends { id: string }>(slots: readonly T[], others: Iterable<Post>, melee: boolean): T[] {
   const taken = [...others]
-  return slots.filter((s) => !taken.some((o) => o === s.id || crowds(o, s.id)))
+  return slots.filter((s) => !taken.some((o) => o.tile === s.id) && !crowdedBy(s.id, melee, taken))
+}
+
+/**
+ * The tiles of the clearance zone round `tile`, itself included — the 3 × 3
+ * block the overlay outlines — clipped to the grid. Empty for anything not a tile.
+ */
+export function clearanceTiles(tile: string): string[] {
+  const p = parseTileId(tile)
+  if (!p) return []
+  const out: string[] = []
+  for (let r = p.r - CLEARANCE; r <= p.r + CLEARANCE; r++)
+    for (let c = p.c - CLEARANCE; c <= p.c + CLEARANCE; c++)
+      if (c >= 0 && r >= 0 && c < GRID_COLS && r < GRID_ROWS) out.push(tileId(c, r))
+  return out
+}
+
+/**
+ * What the placement overlay shows while a hero is armed (setup) or picked up
+ * (the breather's move). Pure, so the tiles the grid lights can be checked
+ * against the rule the store enforces.
+ *
+ * - `crowded`: open tiles the armed hero may not land on because of a hero who
+ *   stays where it is — they stay dark.
+ * - `zones`: the tiles of the staying MELEE heroes (never a ranged hero's),
+ *   whose clearance is drawn faintly so the player sees why those tiles are dark.
+ * - `landing`: the tile whose clearance is drawn at full strength — the
+ *   hovered open tile, when the armed hero is melee; null otherwise.
+ */
+export function clearanceOverlay(
+  slots: readonly { id: string }[],
+  staying: readonly Post[],
+  armedMelee: boolean,
+  hover: string | null,
+): { crowded: Set<string>; zones: string[]; landing: string | null } {
+  const crowded = new Set(slots.filter((s) => !!crowdedBy(s.id, armedMelee, staying)).map((s) => s.id))
+  const zones = staying.filter((o) => o.melee).map((o) => o.tile)
+  const landing = armedMelee && hover && slots.some((s) => s.id === hover) ? hover : null
+  return { crowded, zones, landing }
 }
 
 /**
@@ -217,8 +313,17 @@ export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
   fire: { name: 'Fire', line: 'Fire — this ground is burning.' },
 }
 
-/** The coach line for a tile too close to a posted hero ({@link POST_ROOM}). */
-export const ROOM_COPY = { name: 'Too close', line: 'Too close — heroes stand at least a tile apart.' }
+/**
+ * The coach line for a tile too close to a Fighter ({@link CLEARANCE}): the
+ * reason in plain words, whichever of the two heroes is the Fighter.
+ */
+export const ROOM_COPY = {
+  name: 'Too close',
+  line: 'Too close — Fighters swing all around them, so keep the tiles next to a Fighter clear of other heroes.',
+}
+
+/** The same reason, short, in a tile's name on the keyboard layer. */
+export const ROOM_REASON = 'Fighters swing all around them and need the tiles beside them clear'
 
 /** A map challenge, as a terrain rule. */
 export interface TerrainRule {

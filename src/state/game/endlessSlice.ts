@@ -23,7 +23,7 @@ import { useMetaStore } from '../metaStore'
 import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
 import { hub, layout, recruitHub, seedRunStreams, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
-import { carryPlacements } from '../../game/run/map'
+import { carryPlacements, meleeOf } from '../../game/run/map'
 import { endlessHazardSeed, endlessTerrainRule } from '../../game/run/terrain'
 import { settleSavedRun } from './settle'
 import type { EndlessRoom, Slice } from './types'
@@ -143,7 +143,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     set({
       currentWave: wave,
       battleMap,
-      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
+      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER, meleeOf(roster)),
       battlePhase: 'setup',
       screen: 'battle',
       endlessRoom: null,

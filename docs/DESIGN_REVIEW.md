@@ -2528,3 +2528,55 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   not retuned (the designer's tuning pass). Open: tiles are 22–24 CSS px on a
   phone (a hero's room is 44–48; Q3 zooms on 375 and 320 as before); the cursed
   and boulder patches are easier to step round on a finer grid.
+- **2026-09-30 — Fighter clearance: only melee heroes keep the tiles round
+  them.** The designer, on the grid-fit overlay's dashed two-tile "room": "i
+  dont want the blocking rule on every tower, but maybe melee towers have this
+  rule since they swing around them", and "that dotted area should be red
+  though and have a subtle label like Tower Clearance". The rule: a hero is
+  melee when the tier-0 node its attack comes from HOLDS enemies (`mods.block`)
+  — the Fighter line (reach 96 against the Rogue's 168 and the Mystic's 150),
+  every evolution of it, and nothing else (no perk, mutation, relic or item
+  grants a hold to a Rogue or Mystic line; `tests/clearance.test.ts` holds it).
+  A Fighter keeps the 3 × 3 block round its tile clear of every other hero, in
+  both directions; Rogues and Mystics may stand shoulder to shoulder. Store,
+  breather move (engine and store), `carryPlacements` / save resume, the
+  balance harness's modelled player and the menu cinematic all read one
+  `terrain.crowds(a, aMelee, b, bMelee)`. The coach: "Too close — Fighters swing
+  all around them, so keep the tiles next to a Fighter clear of other heroes."
+  The zone: the dashed room is gone; a Fighter's clearance is one solid red
+  3 × 3 block ON the lattice, full strength round the tile an armed Fighter
+  would land on, faint round every posted Fighter while any hero is armed (or
+  picked up in a breather), never round a ranged hero. Its label says
+  **"Clearance"**, not "Tower Clearance": LS4's grep (`copy.terms.test.ts`)
+  retires "tower" from every player-facing string; the one constant is
+  `terrain.CLEARANCE_LABEL`. Shots at 390×844 @2x and 1440×900 @2x
+  (`~/fieldwatch-critique/clearance/`): Fighter hovering, a posted Fighter's
+  faint zone while a Rogue is armed, three ranged heroes in a row, in a column,
+  two on a diagonal, the breather, and a Fighter beside cursed ground. The loop
+  caught four things. (1) Two ranged heroes side by side overlapped by a third
+  of a body (a figure is ~50px on a 40px tile) and three read as one clump:
+  heroes now draw back to front, left over right on a row (every figure faces
+  right, so faces and bows stay in view), and the ends of a shoulder-to-shoulder
+  run lean 4px apart; a column (the phone's rows) also zig-zags 3px by row, so
+  heads stop stacking like hats on a peg — presentation only, whole px, the
+  hero still stands on its tile. (2) The label, sized off the fitted scale,
+  came out 30 CSS px tall inside the phone's place-zoom; it is sized against
+  the scale the field is SHOWN at (11 CSS px landing, 10 faint) and never
+  outgrows its three tiles. (3) As a tab straddling the zone's bottom edge it
+  covered the top of the lit tile below; it hugs the edge from inside now, over
+  the zone's own bottom row — tiles nobody else can take — below the hero and
+  inside the reach ring. (4) The first red fill tinted dimmed grass orange; it
+  is a whisper (10% / 6%) and the edge carries it. Contrast: cursed ground stays
+  a coral DASHED edge on single tiles with "−70%"; the clearance is a cooler red,
+  one solid block edge with a dark keyline, and labelled — they did not read as
+  one thing on grass, road or next to each other, so neither colour moved.
+  Scorecard: readability 4/5 (a column of three ranged heroes still overlaps —
+  a 40px lattice under 50px figures), functional colour 5/5, polish 4/5.
+  Balance (report regenerated, not retuned): §6 Monte Carlo 66% → 66% (still
+  6pt over the band); the fresh first-timer line 28% → 30%, the adaptive line
+  37% → 39% (ranged heroes can now bunch on the best roadside tiles); invariants
+  6 → 5 failing — the depth-8 elite variant spread went ×8.57 → ×1.00, but only
+  because that bench's unadapted teams now leak nothing on any variant, so it
+  passes by losing resolution, not by a real fix. Banner 2 pays 239 → 253 marks,
+  widening Banner 3's shortfall (−7 → −22). The breather's move spread 1.05 →
+  1.34/node (a ranged hero has more places to go).

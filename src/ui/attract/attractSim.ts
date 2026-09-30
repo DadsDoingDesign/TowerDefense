@@ -74,7 +74,7 @@ import { childrenOf, getNode } from '../../game/data/archetypeTree'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import { generateItem } from '../../game/data/items'
 import { fieldFor, legacyPostTile } from '../../game/data/maps'
-import { crowds } from '../../game/data/terrain'
+import { crowdedBy, isMeleeArchetype, type Post } from '../../game/data/terrain'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
@@ -225,19 +225,22 @@ export function composeScene(seed: number, take: number): AttractScenario {
 
   // Veterans, deeper for a deeper foe: level 12–20.
   const floor = Math.min(18, 8 + depth + (kind === 'boss' ? 1 : 0))
-  const taken = new Set<string>()
-  const byNear = (p: Vec2) =>
+  // The game's spacing rule: nobody beside a Fighter (`terrain.CLEARANCE`);
+  // ranged heroes may stand side by side.
+  const taken: Post[] = []
+  const byNear = (p: Vec2, melee: boolean) =>
     map.slots
-      .filter((s) => !taken.has(s.id) && ![...taken].some((t) => crowds(t, s.id)))
+      .filter((s) => !taken.some((t) => t.tile === s.id) && !crowdedBy(s.id, melee, taken))
       .map((s) => ({ id: s.id, d: Math.hypot(s.pos.x - p.x, s.pos.y - p.y) }))
       .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1))
   const company: AttractHero[] = archetypes.map((archetype, i) => {
     // The holder stands on the roadside tile nearest the hold; the others on
     // one of the few tiles nearest it, so they fight as one group on camera.
-    const near = byNear(hold)
+    const melee = isMeleeArchetype(archetype)
+    const near = byNear(hold, melee)
     const pickFrom = i === 0 ? near.slice(0, 1) : near.filter((t) => t.d < 175).slice(0, 4)
     const slot = (pickFrom.length ? rng.pick(pickFrom) : near[0]).id
-    taken.add(slot)
+    taken.push({ tile: slot, melee })
     const level = Math.min(20, floor + rng.int(0, 3))
     const branchPath = [archetype as string]
     if (level >= TIER1_LEVEL) branchPath.push(rng.pick(childrenOf(archetype)).id)

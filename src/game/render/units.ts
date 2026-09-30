@@ -41,6 +41,69 @@ export interface DrawSentinel {
   blocking: boolean
 }
 
+/**
+ * Heroes in the order they are drawn: back to front, by where their feet are.
+ * Ranged heroes may stand on neighbouring tiles (only a Fighter keeps a
+ * clearance), and a figure is wider and taller than its 40px tile, so the
+ * nearer one must overlap the farther — the order a painter would use. On one
+ * row the figure on the LEFT goes on top: every figure faces right, so that
+ * keeps each one's face and weapon in view and hides only a neighbour's back.
+ * A copy of at most five.
+ */
+export function backToFront<T>(list: readonly T[], pos: (t: T) => Vec2): T[] {
+  return [...list].sort((a, b) => pos(a).y - pos(b).y || pos(b).x - pos(a).x)
+}
+
+/** How far (logical px, whole) a hero at the end of a shoulder-to-shoulder run leans out. */
+export const SHOULDER_NUDGE = 4
+/** How far (logical px, whole) heroes in a column step aside, alternately, so the column zig-zags. */
+export const COLUMN_STAGGER = 3
+
+/**
+ * Draw offsets for heroes standing shoulder to shoulder (only a Fighter keeps
+ * a clearance, so ranged heroes may). A figure is ~50px across and taller than
+ * its 40px tile, so:
+ *
+ *  - **a row**: the hero at each END of a run leans {@link SHOULDER_NUDGE} px
+ *    away from its neighbour, so two figures overlap by a few pixels, not a
+ *    third of a body (the middle of a run of three stays put);
+ *  - **a column** (the portrait field's rows): the ends lean apart the same
+ *    way, up and down, and each hero in it steps {@link COLUMN_STAGGER} px
+ *    left or right by its row's parity, so a column zig-zags and every head
+ *    and bow shows instead of stacking like hats on a peg.
+ *
+ * Presentation only — the hero still stands on its tile (range, projectiles
+ * and the grid read the real position). Whole px, so every blit stays on the
+ * pixel grid.
+ */
+export function shoulderNudge<T>(list: readonly T[], pos: (t: T) => Vec2, tile = 40): Map<T, Vec2> {
+  const out = new Map<T, Vec2>()
+  const near = (d: number, sign: 1 | -1) => sign * d > 0 && sign * d < tile + 1
+  for (const a of list) {
+    const p = pos(a)
+    let left = false
+    let right = false
+    let up = false
+    let down = false
+    for (const b of list) {
+      if (b === a) continue
+      const q = pos(b)
+      if (Math.abs(q.y - p.y) <= 1) {
+        left ||= near(q.x - p.x, -1)
+        right ||= near(q.x - p.x, 1)
+      }
+      if (Math.abs(q.x - p.x) <= 1) {
+        up ||= near(q.y - p.y, -1)
+        down ||= near(q.y - p.y, 1)
+      }
+    }
+    const lean = (lo: boolean, hi: boolean) => (lo === hi ? 0 : lo ? SHOULDER_NUDGE : -SHOULDER_NUDGE)
+    const stagger = up || down ? (Math.round(p.y / tile) % 2 === 0 ? -COLUMN_STAGGER : COLUMN_STAGGER) : 0
+    out.set(a, { x: lean(left, right) + stagger, y: lean(up, down) })
+  }
+  return out
+}
+
 export function sentinelFromRt(s: RtSentinel): DrawSentinel {
   return {
     id: s.id,

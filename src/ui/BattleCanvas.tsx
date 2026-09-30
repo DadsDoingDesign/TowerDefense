@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { computeCombat } from '../game/engine/combat'
 import { MAX_STEPS_PER_FRAME, TICK, type GameEngine } from '../game/engine/engine'
 import {
+  backToFront,
+  shoulderNudge,
   drawBattleEntities,
   drawField,
   drawRange,
@@ -9,6 +11,8 @@ import {
   drawPlacementDim,
   drawSlot,
   drawBlockedFlash,
+  drawClearance,
+  drawClearanceLabel,
   drawTerrainDanger,
   drawTerrainFlames,
   drawTileGrid,
@@ -36,7 +40,7 @@ import { FxDiffer } from '../game/render/fxDiff'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
-import { COARSE, crowds, distToPolyline, LANE_HALF } from '../game/data/terrain'
+import { clearanceOverlay, COARSE, distToPolyline, isMelee, LANE_HALF } from '../game/data/terrain'
 import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
@@ -65,7 +69,7 @@ import {
  * a radius. The grid tiles the field edge to edge, so there is no dead zone
  * between targets and no snapping rule to reason about. Since grid-fit a tile
  * is 40 logical px (22–24 CSS px on a phone's portrait Stage), and what the
- * finger aims is a hero's ROOM — two tiles, 80px, 44–48 CSS px — with the tile
+ * finger aims is an 80px patch — two tiles, 44–48 CSS px — with the tile
  * under it deciding where the hero lands to the nearest 40px (the range
  * preview shows the spot before the finger lifts). Past the grid, a tap on
  * the road where it runs on says so; the woodland takes nothing.
@@ -240,7 +244,7 @@ export function BattleCanvas() {
     const zoomIn = (clientX: number, clientY: number, armed: string, now: number): boolean => {
       const map = useGameStore.getState().battleMap
       const dpr = window.devicePixelRatio || 1
-      // Grid-fit: the target a finger aims is a hero's room (two tiles).
+      // Grid-fit: the target a finger aims is an 80px patch (two tiles).
       const zs = placeZoomScale(fit.scale, dpr, COARSE)
       if (!zs) return false
       const wr = wrap.getBoundingClientRect()
@@ -530,18 +534,29 @@ export function BattleCanvas() {
         }
         // Breather: the open tiles light up as places a hero can move to —
         // faintly until a hero is picked up, fully once one is (G1-2).
+        let labels: { tile: string; strength: 'full' | 'faint' }[] = []
         if (liveEngine.breather && !liveEngine.subWaveState().moved) {
           const occupied = new Set(liveEngine.sentinels.map((s) => s.slotId))
           if (st.breatherPick) drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
-          // Grid-fit: the tiles beside a hero that is not being moved are no
-          // place to put the one that is.
-          const staying = liveEngine.sentinels.filter((s) => s.slotId !== st.breatherPick).map((s) => s.slotId)
-          const crowded = new Set(st.breatherPick ? map.slots.filter((s) => staying.some((o) => crowds(o, s.id))).map((s) => s.id) : [])
-          drawTileGrid(ctx, map, { hover: st.breatherPick && hoverOpen ? hoverOpen.id : null, faint: !st.breatherPick, skip: occupied, crowded })
+          // A Fighter's clearance: the tiles too close to a hero that is not
+          // being moved are no place to put the one that is — and each staying
+          // Fighter's clearance is drawn, faintly, to say why.
           const picked = st.breatherPick ? liveEngine.sentinelOnSlot(st.breatherPick) : undefined
-          if (picked && hoverOpen && !occupied.has(hoverOpen.id)) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
+          const staying = liveEngine.sentinels.filter((s) => s.slotId !== st.breatherPick).map((s) => ({ tile: s.slotId, melee: isMelee(s.def) }))
+          const hover = picked && hoverOpen && !occupied.has(hoverOpen.id) ? hoverOpen.id : null
+          const lay = clearanceOverlay(map.slots, staying, !!picked && isMelee(picked.def), hover)
+          const crowded = picked ? lay.crowded : new Set<string>()
+          const lit = hover && !crowded.has(hover) ? hover : null
+          drawTileGrid(ctx, map, { hover: lit, faint: !st.breatherPick, skip: occupied, crowded })
+          if (picked) {
+            for (const z of lay.zones) drawClearance(ctx, map, z, 'faint')
+            if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
+            labels = [...lay.zones.map((tile) => ({ tile, strength: 'faint' as const })), ...(lay.landing ? [{ tile: lay.landing, strength: 'full' as const }] : [])]
+          }
+          if (picked && lit && hoverOpen) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
         }
         drawBattleEntities(ctx, liveEngine)
+        for (const l of labels) drawClearanceLabel(ctx, map, l.tile, l.strength, shown.scale)
         if (st.breatherPick) {
           const picked = map.slots.find((sl) => sl.id === st.breatherPick)
           if (picked) drawSlot(ctx, picked.pos, 'hover')
@@ -554,14 +569,20 @@ export function BattleCanvas() {
         const armed = st.selectedSentinelId ? st.roster.find((h) => h.id === st.selectedSentinelId) : undefined
         // A hero armed for posting dims the field so the open tiles, lit, are
         // what the eye lands on (Wave 1); blocked tiles stay dark (G1-2).
+        // A Fighter's clearance (`terrain.CLEARANCE`): the tiles too close to a
+        // posted Fighter — or, for an armed Fighter, to anyone — stay dark; each
+        // posted Fighter's clearance is drawn faintly to say why, and an armed
+        // Fighter's is drawn round the tile it would land on. A posted hero's
+        // own tile lights (a tap there swaps the armed hero in).
+        const armedMelee = !!armed && isMelee(armed)
+        const others = armed ? placed.filter((p) => p.sentinel.id !== armed.id).map((p) => ({ tile: p.slotId, melee: isMelee(p.sentinel) })) : []
+        const lay = clearanceOverlay(map.slots, others, armedMelee, armed && hoverOpen ? hoverOpen.id : null)
+        const lit = armed && hoverOpen && !lay.crowded.has(hoverOpen.id) ? hoverOpen : undefined
         if (armed) {
           drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
-          // Grid-fit: a posted hero's neighbours stay dark — a hero keeps a
-          // tile of room (`terrain.POST_ROOM`); its own tile lights (a tap
-          // there swaps the armed hero in).
-          const others = placed.filter((p) => p.sentinel.id !== armed.id).map((p) => p.slotId)
-          const crowded = new Set(map.slots.filter((s) => others.some((o) => crowds(o, s.id))).map((s) => s.id))
-          drawTileGrid(ctx, map, { hover: hoverOpen && !crowded.has(hoverOpen.id) ? hoverOpen.id : null, crowded })
+          drawTileGrid(ctx, map, { hover: lit ? lit.id : null, crowded: lay.crowded })
+          for (const z of lay.zones) drawClearance(ctx, map, z, 'faint')
+          if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
         }
         for (const p of placed) {
           // The armed hero's own post shows its range at the tile it would move
@@ -573,14 +594,17 @@ export function BattleCanvas() {
         }
         // The range the armed hero WOULD have on the tile under the pointer or
         // finger — the answer to "what does this tile see?" before committing.
-        if (armed && hoverOpen && !placed.some((p) => p.sentinel.id !== armed.id && crowds(p.slotId, hoverOpen.id)))
-          drawRange(ctx, hoverOpen.pos, computeCombat(armed).range, armed.accent)
-        for (const p of placed) {
+        if (armed && lit) drawRange(ctx, lit.pos, computeCombat(armed).range, armed.accent)
+        // Heroes stand back to front (by where their feet are), so two ranged
+        // heroes side by side overlap the way the eye expects.
+        const standAt = (q: (typeof placed)[number]) => map.slots.find((s) => s.id === q.slotId)!.pos
+        const lean = shoulderNudge(placed, standAt, map.tile)
+        for (const p of backToFront(placed, standAt)) {
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)
           const ds: DrawSentinel = {
             id: p.sentinel.id,
-            pos: slot.pos,
+            pos: { x: slot.pos.x + (lean.get(p)?.x ?? 0), y: slot.pos.y + (lean.get(p)?.y ?? 0) },
             archetype: p.sentinel.archetype,
             color: p.sentinel.color,
             accent: p.sentinel.accent,
@@ -592,6 +616,10 @@ export function BattleCanvas() {
             blocking: false,
           }
           drawSentinel(ctx, ds)
+        }
+        if (armed) {
+          for (const z of lay.zones) drawClearanceLabel(ctx, map, z, 'faint', shown.scale)
+          if (lay.landing) drawClearanceLabel(ctx, map, lay.landing, 'full', shown.scale)
         }
       }
 

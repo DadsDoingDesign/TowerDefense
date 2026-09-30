@@ -5,6 +5,7 @@
 import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import { CURSED_DAMAGE_MULT } from '../data/hazards'
+import { CLEARANCE_LABEL } from '../data/terrain'
 import { fxBaseState, fxNow, fxReducedMotion } from './fx'
 import { animNow, getViewScale } from './frame'
 import { COLORS, hexToRgba, roundRect } from './paint'
@@ -97,13 +98,14 @@ export function drawSlot(
  * field (`drawPlacementDim` goes down first). Open tiles get a warm wash and a
  * light outline, inset so neighbours read as separate squares; blocked tiles
  * get nothing, so they stay dark under the dim with their terrain showing. The
- * tile under the pointer (or the finger, while it is down) is lit harder, with
- * the hero's ROOM round it — the two-tile square no other hero may stand in.
+ * tile under the pointer (or the finger, while it is down) is lit harder. A
+ * Fighter's clearance is drawn over the grid by {@link drawClearance}.
  *
  * Grid-fit: the tiles are the ground's own lattice (40px), the road runs
  * through its own tiles, so a lit tile is whole grass — nothing is cut out of
- * it. `crowded` tiles (beside a hero who stays where it is) are open ground
- * but no place for this hero: they stay dark too.
+ * it. `crowded` tiles (too close to a Fighter who stays where it is — or, for
+ * an armed Fighter, to anyone) are open ground but no place for this hero:
+ * they stay dark too.
  *
  * Line widths have a floor in SCREEN px (read off `viewScale`) so the outline
  * is ≥ 1 CSS px on a phone, where a tile is ~22 CSS px. With reduced motion
@@ -149,17 +151,6 @@ export function drawTileGrid(
     ctx.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
     ctx.stroke()
   }
-  // The hero's room round the hovered tile: the two-tile square it will keep
-  // clear of every other hero — the size of the thing being placed.
-  const hov = opts.hover ? map.slots.find((s) => s.id === opts.hover) : undefined
-  if (hov) {
-    ctx.setLineDash([Math.max(5, 5 / vs), Math.max(4, 4 / vs)])
-    ctx.lineWidth = Math.max(1.5, 1.5 / vs)
-    ctx.strokeStyle = 'rgba(255, 243, 196, 0.85)'
-    roundRect(ctx, hov.pos.x - T + inset, hov.pos.y - T + inset, T * 2 - inset * 2, T * 2 - inset * 2, Math.min(10, T / 3))
-    ctx.stroke()
-    ctx.setLineDash([])
-  }
   ctx.restore()
   // The cost, once per cursed patch, on its top edge.
   if (cursed.size) {
@@ -186,6 +177,109 @@ export function drawTileGrid(
     }
     ctx.restore()
   }
+}
+
+/**
+ * A Fighter's clearance (`terrain.CLEARANCE`): the 3 × 3 block of tiles round
+ * a melee hero that no other hero may stand in, drawn exactly on the lattice.
+ *
+ * - `'full'` — round the tile an armed Fighter would land on: the answer to
+ *   "what will this Fighter keep clear?" before the tap.
+ * - `'faint'` — round each posted Fighter while any hero is armed, so the dark
+ *   tiles beside it say why they are dark. Never round a ranged hero.
+ *
+ * Red, but quiet: a thin solid edge and a whisper of fill over the dimmed
+ * field. It must never read as cursed ground, which is a coral DASHED edge on
+ * single tiles with its cost printed on it — so the clearance is one solid
+ * block outline, a deeper and cooler red, named by its label
+ * ({@link drawClearanceLabel}), and never dashed.
+ */
+const CLEARANCE_RGB = '226, 64, 72'
+export function drawClearance(ctx: CanvasRenderingContext2D, map: GameMap, tileId: string, strength: 'full' | 'faint'): void {
+  const t = map.tiles?.find((x) => x.id === tileId) ?? map.slots.find((s) => s.id === tileId)
+  if (!t) return
+  const T = map.tile ?? 40
+  const vs = Math.max(getViewScale(), 0.02)
+  const full = strength === 'full'
+  // A floor in screen px: ≥ 1.5 CSS px for the landing zone, 1 for the faint.
+  const lw = Math.max(full ? 2 : 1.5, (full ? 1.5 : 1) / vs)
+  const x = t.pos.x - T * 1.5 + lw / 2
+  const y = t.pos.y - T * 1.5 + lw / 2
+  const w = T * 3 - lw
+  ctx.save()
+  roundRect(ctx, x, y, w, w, Math.min(8, T / 5))
+  ctx.fillStyle = `rgba(${CLEARANCE_RGB}, ${full ? 0.1 : 0.06})`
+  ctx.fill()
+  // A dark keyline under the red, so the edge holds on sunlit grass and dirt.
+  ctx.lineWidth = lw + Math.max(1.5, 1.5 / vs)
+  ctx.strokeStyle = `rgba(20, 8, 8, ${full ? 0.45 : 0.3})`
+  ctx.stroke()
+  ctx.lineWidth = lw
+  ctx.strokeStyle = `rgba(${CLEARANCE_RGB}, ${full ? 0.9 : 0.55})`
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * The clearance's name ({@link CLEARANCE_LABEL}), small, as a tab hugging the
+ * zone's BOTTOM edge from inside: below the hero (a sprite is anchored at its
+ * feet and grows upward, past the zone's top edge on the tall ones), inside
+ * its reach ring (a Fighter's is ≥ 96px; the tab sits 40–60px out), and over
+ * the zone's own bottom row only — tiles no other hero can take — so it never
+ * covers a lit tile the player might aim at. Drawn after the heroes so a hero
+ * posted below the zone never hides it. It flips to the top edge only where
+ * the zone runs off the bottom of the field.
+ *
+ * Its size is set in SCREEN px — 11 CSS px on the landing zone, 10 on a faint
+ * one — against `cssScale`, the CSS px per field px the field is shown at right
+ * now. That is the fitted view scale, except inside a phone's place-zoom (Q3),
+ * which shows the same composite bigger: sized off the fitted scale, the label
+ * came out 30 CSS px tall there, shouting over the tile it names.
+ */
+export function drawClearanceLabel(
+  ctx: CanvasRenderingContext2D,
+  map: GameMap,
+  tileId: string,
+  strength: 'full' | 'faint',
+  cssScale = getViewScale(),
+): void {
+  const t = map.tiles?.find((x) => x.id === tileId) ?? map.slots.find((s) => s.id === tileId)
+  if (!t) return
+  const T = map.tile ?? 40
+  const full = strength === 'full'
+  let px = Math.min(T * 0.42, (full ? 11 : 10) / Math.max(cssScale, 0.02))
+  const text = CLEARANCE_LABEL.toUpperCase()
+  ctx.save()
+  const setFont = () => {
+    ctx.font = `800 ${px.toFixed(2)}px system-ui, sans-serif`
+    ctx.letterSpacing = `${(px * 0.06).toFixed(2)}px`
+  }
+  setFont()
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  // The tab never outgrows the zone it names (a phone's fitted view is where
+  // the screen-px floor would push it past the three tiles).
+  const room = T * 3 - 8
+  let tw = ctx.measureText(text).width
+  if (tw + px > room) {
+    px *= room / (tw + px)
+    setFont()
+    tw = ctx.measureText(text).width
+  }
+  const padX = px * 0.5
+  const h = px * 1.45
+  const below = t.pos.y + T * 1.5 <= map.height
+  const cy = below ? t.pos.y + T * 1.5 - h / 2 - 2 : t.pos.y - T * 1.5 + h / 2 + 2
+  const cx = t.pos.x
+  roundRect(ctx, cx - tw / 2 - padX, cy - h / 2, tw + padX * 2, h, h / 2)
+  ctx.fillStyle = `rgba(28, 10, 12, ${full ? 0.82 : 0.6})`
+  ctx.fill()
+  ctx.lineWidth = Math.max(0.5, px / 11)
+  ctx.strokeStyle = `rgba(${CLEARANCE_RGB}, ${full ? 0.9 : 0.5})`
+  ctx.stroke()
+  ctx.fillStyle = full ? 'rgba(255, 196, 196, 1)' : 'rgba(255, 190, 190, 0.7)'
+  ctx.fillText(text, cx, cy + px * 0.04)
+  ctx.restore()
 }
 
 /**

@@ -19,7 +19,7 @@ import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { tileDamageMult } from '../src/game/data/hazards'
-import { crowds, parseTileId } from '../src/game/data/terrain'
+import { crowdedBy, isMelee, parseTileId, withinClearance, type Post } from '../src/game/data/terrain'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -94,7 +94,7 @@ function calibratedPosts(): Record<keyof typeof PRE_GRID_COVERAGE, string> {
     const d = (s: string) => Math.hypot(pos.get(s)!.x - at.x, pos.get(s)!.y - at.y)
     const pick = FIRST_MAP.slots
       .map((s) => s.id)
-      .filter((s) => onCoarse(s) && !taken.has(s) && ![...taken].some((t) => crowds(t, s)) && d(s) <= 115)
+      .filter((s) => onCoarse(s) && !taken.has(s) && ![...taken].some((t) => withinClearance(t, s)) && d(s) <= 115)
       .sort((a, b) => Math.abs(cov[a] - PRE_GRID_COVERAGE[id]) - Math.abs(cov[b] - PRE_GRID_COVERAGE[id]) || d(a) - d(b) || a.localeCompare(b))[0]
     out[id] = pick ?? near[id]
     taken.add(out[id])
@@ -203,16 +203,19 @@ export function slotCoverage(map: { path: readonly { x: number; y: number }[]; s
  * The slots a competent player fills, best first. Ties break on slot id so the
  * order is stable across runs and platforms.
  *
- * Grid-fit: a hero keeps a tile of room (`terrain.POST_ROOM`), so the order is
- * greedy — each next slot is the best one not beside a slot already taken —
+ * Greedy — each next slot is the best one not beside a slot already taken —
  * and the crowded ones follow, best first, for anything that wants a full
- * ranking.
+ * ranking. The order is a property of the FIELD, not of a team, so it keeps a
+ * clearance (`terrain.CLEARANCE`) between every pair of slots as if each were a
+ * Fighter's: a pinned bench keeps the posts it was calibrated on, whoever it
+ * stands there. The modelled player's own deployment (`deployTeam`) and its
+ * breather move apply the real rule — only a melee hero keeps a clearance.
  */
 export function bestSlots(map: Parameters<typeof slotCoverage>[0], range = 150): string[] {
   const cov = slotCoverage(map, range)
   const ranked = [...map.slots].map((s) => s.id).sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
   const spaced: string[] = []
-  for (const id of ranked) if (!spaced.some((t) => crowds(t, id))) spaced.push(id)
+  for (const id of ranked) if (!spaced.some((t) => withinClearance(t, id))) spaced.push(id)
   return [...spaced, ...ranked.filter((id) => !spaced.includes(id))]
 }
 
@@ -416,12 +419,15 @@ function repositionAt(engine: GameEngine, policy: PlayerPolicy): void {
   // Q1: cursed ground is worth what it leaves after the curse (see `deployTeam`).
   const raw = slotCoverage(engine.map)
   const cov: Record<string, number> = Object.fromEntries(Object.entries(raw).map(([id, c]) => [id, c * tileDamageMult(engine.map, id)]))
-  // Grid-fit: the tiles the moving hero could go to — open, and a tile clear
-  // of every OTHER hero (`terrain.POST_ROOM`).
+  // The tiles the moving hero could go to — open, and not too close to any
+  // OTHER hero: nobody beside a Fighter (`terrain.CLEARANCE`), which the
+  // engine's `moveHero` refuses anyway.
   const freeFor = (mover: string) => {
-    const others = engine.sentinels.filter((s) => s.slotId !== mover).map((s) => s.slotId)
+    const self = engine.sentinelOnSlot(mover)
+    const melee = !!self && isMelee(self.def)
+    const others: Post[] = engine.sentinels.filter((s) => s.slotId !== mover).map((s) => ({ tile: s.slotId, melee: isMelee(s.def) }))
     return engine.map.slots
-      .filter((sl) => !engine.sentinelOnSlot(sl.id) && !others.some((o) => crowds(o, sl.id)))
+      .filter((sl) => !engine.sentinelOnSlot(sl.id) && !crowdedBy(sl.id, melee, others))
       .map((sl) => sl.id)
       .sort((a, b) => cov[b] - cov[a] || a.localeCompare(b))
   }
@@ -518,6 +524,9 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
   const ranged = team.map((m, i) => ({ i, sentinel: m.sentinel, range: Math.round(computeCombat(m.sentinel).range) }))
   ranged.sort((a, b) => a.range - b.range || a.i - b.i)
   const taken = new Set<string>()
+  // A Fighter's clearance (`terrain.CLEARANCE`): nobody beside a melee hero;
+  // ranged heroes may stand side by side.
+  const posts: Post[] = []
   const out: { sentinel: Sentinel; slotId: string }[] = new Array(team.length)
   // Coverage depends on the path and a tile's centre only, never on which
   // tiles a battle blocks — so it is cached per field and orientation (every
@@ -531,12 +540,14 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
       coverageCache.set(key, cov)
     }
     const worth = (id: string) => cov![id] * tileDamageMult(map, id)
+    const melee = isMelee(h.sentinel)
     let best: string | null = null
     for (const s of map.slots) {
-      if (taken.has(s.id) || [...taken].some((t) => crowds(t, s.id))) continue
+      if (taken.has(s.id) || crowdedBy(s.id, melee, posts)) continue
       if (best === null || worth(s.id) > worth(best) || (worth(s.id) === worth(best) && s.id < best)) best = s.id
     }
     taken.add(best!)
+    posts.push({ tile: best!, melee })
     out[h.i] = { sentinel: h.sentinel, slotId: best! }
   }
   return out

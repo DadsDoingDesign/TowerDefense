@@ -37,7 +37,7 @@ import { setLayoutOrientation } from '../src/state/game/runtime'
 import { withTerrainRule } from '../src/game/data/maps'
 import { parseTileId } from '../src/game/data/terrain'
 import { DANGER_TILES } from '../src/game/data/hazards'
-import { carryPlacements } from '../src/game/run/map'
+import { emptyPlacements } from '../src/game/run/map'
 import {
   RUN_SNAPSHOT_KEY,
   RUN_SNAPSHOT_VERSION,
@@ -84,7 +84,7 @@ function buildBase(): Record<string, unknown> {
   {
     const cur = useGameStore.getState()
     const field = withTerrainRule(cur.battleMap, 'wildfire')
-    useGameStore.setState({ battleMap: field, placements: { ...carryPlacements({}, field), [field.slots[5].id]: cur.roster[0].id } })
+    useGameStore.setState({ battleMap: field, placements: { ...emptyPlacements(field), [field.slots[5].id]: cur.roster[0].id } })
   }
 
   const rng = new RNG(1234)
