@@ -51,6 +51,7 @@ and it broke the build and every live harness.
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
 | `FW_FRESH_RUNS` | `120` | §11 sample size. 120 keeps the suite inside its runtime budget at 1σ ≈ 4.6pt; `480` drops it to ≈ 1.8pt for a fit. |
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
+| `FW_HAZARDS` | shipped | Q1: `mult,dangerTiles,dangerPool,obstacles,obstaclePool` — run the whole report under other danger-ground levers (`src/game/data/hazards.ts`). `hazard-sweep.ts` is faster but reads §13 a few marks off the report. |
 
 ## The rule this harness is built around
 

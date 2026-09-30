@@ -2247,9 +2247,9 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   88px tree cannot fit without clipping or standing on the road. On 375×667
   and 320×568 a tile is about 35px, under the 44px floor.
 - **2026-09-30 — Q1: danger ground and seeded obstacles.** Every battle now
-  lays, from a hash of (run seed, node), one CURSED tile drawn from the three
+  lays, from a hash of (run seed, node), one CURSED tile drawn from the two
   best open tiles by road coverage (a hero may post there but deals −50%
-  damage) and four seeded boulders on the next-best ground. Rendered at
+  damage) and six seeded boulders on the next-best ground. Rendered at
   390×844 @2x and 1440×900 on both fields. The loop caught four things. (1)
   The first cursed patch was pale ash-grey: at a glance it read as one more
   rock tile, the thing it must never look like. It is dark blighted soil now,

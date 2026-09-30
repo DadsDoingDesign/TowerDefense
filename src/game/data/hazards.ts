@@ -52,11 +52,11 @@ export const HAZARD_LEVERS = {
   /** How many tiles of each battle's field are cursed. */
   dangerTiles: 1,
   /** The cursed tile is drawn from this many best open tiles (by coverage). */
-  dangerPool: 3,
+  dangerPool: 2,
   /** How many seeded boulders each battle's field adds. */
-  obstacles: 4,
+  obstacles: 6,
   /** …drawn from this many best open tiles after the cursed one. */
-  obstaclePool: 10,
+  obstaclePool: 12,
 }
 
 /** The shipped values, by name, for the UI copy and the tests. */
