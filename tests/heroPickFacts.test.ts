@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { getNode } from '../src/game/data/archetypeTree'
 import { createSentinel } from '../src/game/data/sentinels'
 import { KIT } from '../src/game/engine/kit'
-import { heroFacts, heroPickVariant, HERO_ORDER, placeHint, playStyle, recommendFirstRun } from '../src/ui/shell/heroPickFacts'
+import { heroFacts, heroPickVariant, heroRole, HERO_ORDER, placeHint, playStyle, recommendFirstRun } from '../src/ui/shell/heroPickFacts'
 
 /**
  * H3-2: the hero-pick variants print plain-language lines built from the tree.
@@ -28,6 +28,16 @@ describe('hero-pick facts', () => {
     expect(f.block).toBeGreaterThan(0)
     expect(f.playStyle).toContain(`stops up to ${f.block} enemies`)
     expect(f.place).toMatch(/beside the path/)
+  })
+
+  it('LS3: gives each starter a distinct plain role line, read off the same numbers', () => {
+    expect(heroRole(by('fighter'))).toBe('Holds enemies on the path')
+    expect(heroRole(by('mystic'))).toBe('Hits a whole group at once')
+    expect(heroRole(by('rogue'))).toBe('Hits from far away')
+    expect(new Set(all.map(heroRole)).size).toBe(all.length)
+    // No word a first run has not met.
+    for (const f of all) expect(heroRole(f)).not.toMatch(/crit|DPS|splash|thorns|range/i)
+    expect(heroRole({ block: 0, splash: 0, range: 90 })).toBe('Hits up close')
   })
 
   it('says a splash hero hits a crowd, and never claims it blocks', () => {

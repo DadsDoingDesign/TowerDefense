@@ -2421,3 +2421,26 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   showed; it is done when the breather ends. (5) Depth 3 could introduce an
   elite, a relic, cursed ground and a map challenge in one fight; challenges
   moved to depth 4 on a first run.
+- **2026-09-30 — LS2 follow-ups: seeded content, first-run hero pick, staging
+  gaps, the menu after a quit.** (1) Map node ids came off the global entity
+  counter, and a fight's map challenge, cursed ground and combat rolls hash
+  off the node id — so one seed (the scored Daily included) dealt different
+  ground after a fresh load than mid-session, and `npm run balance` differed
+  run to run. Node ids are map-local now (`n<layer>-<row>`); old saves keep the
+  ids they were dealt. (2) A first run's hero pick was three portraits, one
+  line and ~400px of nothing; it is three framed rows now — the portrait, the
+  name and the hero's job in plain words from the combat numbers ("Holds
+  enemies on the path", "Hits from far away", "Hits a whole group at once"),
+  the selected one lit, its ability line below. Returning players keep the
+  portrait chooser. (3) The "Open slot · recruit a hero" card waits out a first
+  run's first battle even when a layer-1 recruit stop latched the idea on the
+  map; the 1/2/3 speed keys (and the keys sheet's rows for speed and the
+  command) wait for the Speed button. (4) Reproduced the blank menu backdrop
+  after quitting a run: the demo re-ran its whole idle-sliced warm-up (the
+  director's headless replay) on every mount, and idle callbacks were starved
+  to one a second after the battle unmounted — blank for 7s+ in the capture.
+  The loaded chunk and the directed cut are kept for the page's life, and a
+  return visit warms up on plain timers: live within 0.5s. Rendered at 390×844
+  @2x and 1440×900 (`~/fieldwatch-critique/build-ls2/`). The loop caught one
+  thing: the first row tile (52px) read small beside a 16px name on a phone;
+  the tile is 60px and the row 80px, so the sprite draws near 1:1 at @2x.

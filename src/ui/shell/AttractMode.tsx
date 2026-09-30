@@ -40,10 +40,19 @@ export function useMenuMotion(): boolean {
  * thing it reads is the day's seed — `dailySeed(utcDateKey())`, a pure hash of
  * the date — which it hands to the sim, so the sim still imports no `state/`.
  */
+type BattleComponent = ComponentType<{ running: boolean; seed: number }>
+/**
+ * The demo's component once its chunk has loaded. Kept for the page's life so
+ * a return to the menu (quitting a run remounts this) does not wait for the
+ * sprites-ready + idle gate a second time: that gate is for the FIRST paint,
+ * and waiting on it again left the menu's backdrop blank after a quit.
+ */
+let loadedBattle: BattleComponent | null = null
+
 export function AttractMode() {
   const reduced = !useMenuMotion()
 
-  const [Battle, setBattle] = useState<ComponentType<{ running: boolean; seed: number }> | null>(null)
+  const [Battle, setBattle] = useState<BattleComponent | null>(() => loadedBattle)
   // Q12: the scene is drawn from today's Daily Watch seed (the UTC day), read
   // once per mount — everyone sees the same cinematic today, a new one
   // tomorrow, and a menu left open past midnight keeps the scene it opened on.
@@ -64,6 +73,7 @@ export function AttractMode() {
         if (cancelled) return
         import('../attract/AttractBattle')
           .then((m) => {
+            loadedBattle = m.default
             if (!cancelled) setBattle(() => m.default)
           })
           .catch(() => {

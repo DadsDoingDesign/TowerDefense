@@ -15,6 +15,7 @@ import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
 import { codexOffers } from './codexOffers'
+import { heroRole } from './heroPickFacts'
 import { ACHIEVEMENTS } from '../../game/data/achievements'
 import type { Archetype, Item, Sentinel } from '../../game/types'
 
@@ -200,6 +201,11 @@ export interface Offer {
   locked?: string
   /** A real sprite for a row that is a hero (the merchant's recruit). */
   rowArt?: string
+  /**
+   * LS3: one plain line under a row's name (the first-run hero pick's role
+   * line). The row grows to hold it and its sprite draws framed, at 48px.
+   */
+  note?: string
   /** The item or card rarity, drawn as a `RarityTag` (word + hue + pips). */
   rarity?: import('../../game/types').ItemRarity
   /**
@@ -617,10 +623,14 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
     return {
       id: `pick-${a}`,
       title: node.name,
-      sub: 'Starting hero',
+      // LS3: a first run chooses from three rows, each saying the hero's job in
+      // plain words, rather than three bare portraits and one hero's line.
+      sub: staged ? undefined : 'Starting hero',
       color: ARCH_COLOR[a],
       glyph: GLYPH[a],
-      portrait: { art: heroArt(a), color: ARCH_COLOR[a] },
+      ...(staged
+        ? { rowArt: heroArt(a), note: heroRole({ block: p.mods.block?.count ?? 0, splash: Math.round(p.splashRadius), range: Math.round(p.range) }) }
+        : { portrait: { art: heroArt(a), color: ARCH_COLOR[a] } }),
       stats: staged
         ? undefined
         : [

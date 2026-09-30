@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
+import { useMetaStore } from '../../state/metaStore'
+import { useSettingsStore } from '../../state/settingsStore'
+import { ideaShown, presentIdeas } from '../../state/staging'
+import { useShown } from './staging'
 
 /**
  * Keyboard shortcuts for the battle (Phase 4, desktop / tablet layout).
@@ -15,6 +19,10 @@ import { useGameStore } from '../../state/gameStore'
  * shortcut can never do something the visible control would refuse, and a new
  * command button (COMBAT's `CommandSlot`) is picked up with no change here.
  *
+ * LS3: on a staged first run the speed keys wait for the Speed button — the
+ * same `speed` idea gates both (`state/staging.ts`), so a key can never change
+ * a control the player has not been shown yet.
+ *
  * Deliberately inert when the key is someone else's: a focused button, tab,
  * link or text field keeps Space / Enter (native activation), modifier chords
  * are the browser's, and while a modal dialog (the evolution choice) is open
@@ -25,6 +33,8 @@ import { useGameStore } from '../../state/gameStore'
  */
 export function Shortcuts() {
   const [open, setOpen] = useState(false)
+  const speedShown = useShown('speed')
+  const commandShown = useShown('command')
   const sheetRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
 
@@ -48,6 +58,8 @@ export function Shortcuts() {
       if (st.screen !== 'battle') return
 
       if (e.key === '1' || e.key === '2' || e.key === '3') {
+        const staged = st.firstRun && !useSettingsStore.getState().showEverything
+        if (!ideaShown('speed', staged, useMetaStore.getState().met, staged ? presentIdeas(st) : new Set())) return
         st.setSpeed(Number(e.key) as 1 | 2 | 3)
         return
       }
@@ -104,18 +116,26 @@ export function Shortcuts() {
         <div className="sh-keys-sheet" id="sh-keys-sheet" role="dialog" aria-label="Keyboard shortcuts" ref={sheetRef}>
           <p className="sh-keys-title">Keyboard</p>
           <dl className="sh-keys-list">
-            <dt>
-              <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>
-            </dt>
-            <dd>Battle speed</dd>
+            {speedShown && (
+              <>
+                <dt>
+                  <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>
+                </dt>
+                <dd>Battle speed</dd>
+              </>
+            )}
             <dt>
               <kbd>Space</kbd> <kbd>Enter</kbd>
             </dt>
             <dd>Start the wave</dd>
-            <dt>
-              <kbd>C</kbd>
-            </dt>
-            <dd>Watch command (in a wave)</dd>
+            {commandShown && (
+              <>
+                <dt>
+                  <kbd>C</kbd>
+                </dt>
+                <dd>Watch command (in a wave)</dd>
+              </>
+            )}
             <dt>
               <kbd>?</kbd>
             </dt>

@@ -100,6 +100,20 @@ export function playStyle(f: Pick<HeroFacts, 'block' | 'splash' | 'damageType' |
   return `${pace} single shots ${where}.`
 }
 
+/**
+ * LS3: the hero's job in a few plain words — the first-run hero pick's row
+ * line. Same branches as {@link playStyle} (what you SEE a hero do: stop
+ * enemies, hit a crowd, or shoot from where it stands), without the numbers or
+ * the words a first run has not met yet (crit, DPS, splash).
+ */
+export function heroRole(f: Pick<HeroFacts, 'block' | 'splash' | 'range'>): string {
+  if (f.block > 0) return 'Holds enemies on the path'
+  if (f.splash > 0) return 'Hits a whole group at once'
+  if (f.range >= LONG_REACH) return 'Hits from far away'
+  if (f.range < SHORT_REACH) return 'Hits up close'
+  return 'Hits from mid range'
+}
+
 /** Where to post it — the planning half of the job. */
 export function placeHint(f: Pick<HeroFacts, 'block' | 'splash' | 'range'>): string {
   if (f.block > 0) return 'Post it on a circle right beside the path. Enemies stop at it, so they stay in its reach.'

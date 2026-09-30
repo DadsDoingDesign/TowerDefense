@@ -1,5 +1,4 @@
 import type { RNG } from '../core/rng'
-import { nextId } from '../core/rng'
 import { ACT_LAYERS, isActBossLayer, RUN_LAYERS } from '../run/threat'
 
 /**
@@ -221,8 +220,22 @@ function detourThroughFights(nodesByLayer: MapNode[][], edges: { from: string; t
   }
 }
 
+/**
+ * A node's id names its PLACE on the map — `n<layer>-<row>` — and nothing else.
+ *
+ * It used to be minted off the process-global entity counter (`nextId`), and a
+ * node's id is what its map challenge, its cursed ground and its combat rolls
+ * are hashed from (`run/terrain.ts`, `run/battle.combatSeed`). So one seed
+ * dealt different fields depending on how many ids the page had minted before
+ * the run began — a cold load vs. a second run, a Banner re-deal, the balance
+ * report's earlier sections — and a scored Daily was not the same Daily for
+ * everyone. (layer, row) is unique on a map and fixed by the map stream alone.
+ *
+ * Saves from before keep the ids they were dealt (`nodeXX`): the snapshot
+ * carries its map, so a resumed run lays the same ground it always did.
+ */
 function mkNode(type: NodeType, layer: number, row: number, ny: number): MapNode {
-  return { id: nextId('node'), type, layer, row, nx: 0, ny }
+  return { id: `n${layer}-${row}`, type, layer, row, nx: 0, ny }
 }
 
 /**

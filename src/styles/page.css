@@ -1206,6 +1206,24 @@
   --fw-i-size: var(--icon-lg);
   vertical-align: middle;
 }
+/* LS3: a hero row on a first run's hero pick — the portrait chooser's framed
+   parchment tile, row-sized, so the three heroes read as the same three
+   characters they are everywhere else. The frame takes the row's rail hue. */
+.pg-row.big .pg-row-art {
+  width: 60px;
+  height: 60px;
+  padding: 3px;
+  border: 2px solid var(--rail, var(--line-strong));
+  border-radius: var(--r-sm);
+  background: var(--portrait);
+}
+.pg-row.big:has(.pg-row-art) {
+  min-height: 80px;
+  padding-block: 8px;
+}
+.pg-row.big:has(.pg-row-art) .pg-row-name {
+  font-weight: 700;
+}
 .pg-row.big .pg-row-glyph {
   width: var(--icon-lg);
   height: var(--icon-lg);

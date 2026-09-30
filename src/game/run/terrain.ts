@@ -11,7 +11,10 @@
  * The draw is a hash of (run seed, node id), not a draw from any run stream,
  * so adding it cannot shift the loot, the map or a fight (RNG order is
  * behaviour). The same node always carries the same challenge, across a resume
- * and on either twin.
+ * and on either twin. A node id names the node's place on its map
+ * (`n<layer>-<row>`, `data/runmap.ts`) — it used to come off the global entity
+ * counter, so one seed (a Daily's included) dealt different ground depending on
+ * how many ids the page had minted first (`tests/seededContent.test.ts`).
  *
  * Who gets one:
  *  - never the first fight of a run (depth 1): the grid is being learnt there;
