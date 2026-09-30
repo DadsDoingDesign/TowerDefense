@@ -61,12 +61,12 @@ describe('Daily Watch', () => {
   it('backing out of the hero pick spends nothing and records no run', () => {
     const before = useMetaStore.getState()
     const runs = before.stats.runsCompleted
-    const marks = before.marks
+    const marks = before.watchMarks
     g().startDaily()
     g().cancelHeroPick()
     expect(g().screen).toBe('hub')
     expect(useMetaStore.getState().stats.runsCompleted).toBe(runs)
-    expect(useMetaStore.getState().marks).toBe(marks)
+    expect(useMetaStore.getState().watchMarks).toBe(marks)
     expect(useMetaStore.getState().daily?.date === utcDateKey() && useMetaStore.getState().daily?.done).toBeFalsy()
     // Today's scored attempt is still there to take.
     g().startDaily()
