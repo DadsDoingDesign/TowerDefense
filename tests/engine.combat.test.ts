@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { FIRST_MAP } from '../src/game/data/maps'
+import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
+
+/** G1-2: the old build circles, as the tiles nearest where they stood. */
+const P = legacyPosts(FIRST_MAP.id)
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { createSentinel } from '../src/game/data/sentinels'
 import { generateEncounter, nodeEncounter, subWaveCount } from '../src/game/data/waves'
@@ -77,7 +80,7 @@ describe('the behaviour kit (Phase 3a)', () => {
       at('torch3_shaman', 1.2, 2.5),
       at('torch3_shaman', 2.7, 2.5),
     ]
-    const team: [Archetype, string][] = [['rogue', 's1'], ['mystic', 's2'], ['rogue', 's3']]
+    const team: [Archetype, string][] = [['rogue', P.s1], ['mystic', P.s2], ['rogue', P.s3]]
     const first = runOut(engineFor(spawns, team, { focus: 'first' }))
     const threat = runOut(engineFor(spawns, team, { focus: 'threat' }))
     expect(first.behaviourStats.healPulses).toBeGreaterThan(0)
@@ -105,7 +108,7 @@ describe('the behaviour kit (Phase 3a)', () => {
 
   it('a sapper blows up on the first hero post it reaches — no leak, no gold', () => {
     // s5 is 35px off the lane on the Green Line; the rogue there is in the blast.
-    const e = runOut(engineFor([at('tnt4', 0, 40)], [['rogue', 's5']], { rules: {} }))
+    const e = runOut(engineFor([at('tnt4', 0, 40)], [['rogue', P.s5]], { rules: {} }))
     expect(e.behaviourStats.sapperBlasts).toBe(1)
     expect(e.behaviourStats.sapperDamage).toBeGreaterThan(0)
     expect(e.sentinels[0].hp).toBeLessThan(e.sentinels[0].maxHp)
@@ -115,7 +118,7 @@ describe('the behaviour kit (Phase 3a)', () => {
   })
 
   it('a sapper held by a fighter detonates on the blocker — and is that blocker\'s kill', () => {
-    const e = runOut(engineFor([at('tnt4', 0, 40)], [['fighter', 's1']]))
+    const e = runOut(engineFor([at('tnt4', 0, 40)], [['fighter', P.s1]]))
     expect(e.behaviourStats.sapperBlasts).toBe(1)
     expect(e.behaviourStats.sapperHeld).toBe(1)
     expect(e.sentinels[0].hp).toBeLessThan(e.sentinels[0].maxHp)
@@ -124,12 +127,12 @@ describe('the behaviour kit (Phase 3a)', () => {
   })
 
   it('a bomber winds up on a post and lands its charge; killing it in the wind-up cancels the throw', () => {
-    const e = runOut(engineFor([at('tnt2', 0, 30)], [['rogue', 's1']]))
+    const e = runOut(engineFor([at('tnt2', 0, 30)], [['rogue', P.s1]]))
     expect(e.behaviourStats.lobsStarted).toBeGreaterThan(0)
     expect(e.behaviourStats.lobsLanded).toBe(1)
     expect(e.behaviourStats.lobDamage).toBeGreaterThan(0)
     // Now kill it the moment it plants its feet.
-    const k = engineFor([at('tnt2', 0, 30)], [['rogue', 's1']])
+    const k = engineFor([at('tnt2', 0, 30)], [['rogue', P.s1]])
     runOut(k, 60 * 60, (eng) => {
       const b = eng.enemies[0]
       if (b && b.lobUntil > 0) b.hp = 0.01 // the next shot finishes it
@@ -140,7 +143,7 @@ describe('the behaviour kit (Phase 3a)', () => {
   })
 
   it('a splitter breaks into imps on death, and they carry its modifier', () => {
-    const e = runOut(engineFor([at('barrel4_plated', 0, 0.5)], [['mystic', 's1'], ['mystic', 's2'], ['mystic', 's3']]))
+    const e = runOut(engineFor([at('barrel4_plated', 0, 0.5)], [['mystic', P.s1], ['mystic', P.s2], ['mystic', P.s3]]))
     expect(e.behaviourStats.splits).toBe(1)
     expect(e.behaviourStats.splitSpawned).toBe(2)
     expect(e.killCount + e.leakCount).toBe(3)
@@ -162,11 +165,11 @@ describe('the behaviour kit (Phase 3a)', () => {
   })
 
   it('a leaper vaults the first blocker, and a second blocker downstream holds it', () => {
-    const one = engineFor([at('barrel2', 0, 60)], [['fighter', 's1']])
+    const one = engineFor([at('barrel2', 0, 60)], [['fighter', P.s1]])
     runOut(one, 60 * 40)
     expect(one.behaviourStats.leaps).toBe(1)
     // Two fighters: it vaults the first and the second holds it.
-    const two = engineFor([at('barrel2', 0, 60)], [['fighter', 's1'], ['fighter', 's2']])
+    const two = engineFor([at('barrel2', 0, 60)], [['fighter', P.s1], ['fighter', P.s2]])
     let heldBySecond = false
     runOut(two, 60 * 40, (eng) => {
       const b = eng.enemies[0]
@@ -177,7 +180,7 @@ describe('the behaviour kit (Phase 3a)', () => {
   })
 
   it('every behaviour switches off with the counterfactual rule', () => {
-    const e = runOut(engineFor([at('tnt4', 0, 40), at('barrel2', 0.5, 5)], [['fighter', 's1']], { rules: { behaviours: false } }))
+    const e = runOut(engineFor([at('tnt4', 0, 40), at('barrel2', 0.5, 5)], [['fighter', P.s1]], { rules: { behaviours: false } }))
     expect(e.behaviourStats.sapperBlasts).toBe(0)
     expect(e.behaviourStats.leaps).toBe(0)
   })
@@ -206,7 +209,7 @@ describe('boss phases (Phase 3a)', () => {
   })
 
   it('the Powderkeg King lobs TNT that knocks a post out', () => {
-    const e = runOut(engineFor([at('tnt5', 0, 3)], [['fighter', 's1'], ['rogue', 's2']], { baseHp: 999 }))
+    const e = runOut(engineFor([at('tnt5', 0, 3)], [['fighter', P.s1], ['rogue', P.s2]], { baseHp: 999 }))
     expect(e.behaviourStats.kingLobs).toBeGreaterThan(0)
     expect(e.behaviourStats.kingDisables).toBeGreaterThan(0)
   })
@@ -238,11 +241,11 @@ describe('status interactions (Phase 3a)', () => {
   it('SHATTER: a shock shot on a frosted body bursts it; without frost it never fires', () => {
     const spawns = Array.from({ length: 8 }, (_, i) => at('torch2', i * 0.4, 12))
     const both = runOut(
-      engineFor(spawns, [['mystic', 's1'], ['rogue', 's2']], { teamMods: [{ chill: { slow: 0.2, dur: 2 }, shock: { chains: 2, dmgFrac: 0.4 } }] }),
+      engineFor(spawns, [['mystic', P.s1], ['rogue', P.s2]], { teamMods: [{ chill: { slow: 0.2, dur: 2 }, shock: { chains: 2, dmgFrac: 0.4 } }] }),
     )
-    const shockOnly = runOut(engineFor(spawns, [['mystic', 's1'], ['rogue', 's2']], { teamMods: [{ shock: { chains: 2, dmgFrac: 0.4 } }] }))
+    const shockOnly = runOut(engineFor(spawns, [['mystic', P.s1], ['rogue', P.s2]], { teamMods: [{ shock: { chains: 2, dmgFrac: 0.4 } }] }))
     const off = runOut(
-      engineFor(spawns, [['mystic', 's1'], ['rogue', 's2']], {
+      engineFor(spawns, [['mystic', P.s1], ['rogue', P.s2]], {
         teamMods: [{ chill: { slow: 0.2, dur: 2 }, shock: { chains: 2, dmgFrac: 0.4 } }],
         rules: { interactions: false },
       }),
@@ -256,9 +259,9 @@ describe('status interactions (Phase 3a)', () => {
     const spawns = Array.from({ length: 10 }, (_, i) => at('torch1', i * 0.15, 3))
     // A granted capability: the Ember Urn relic hands the team the flag.
     const urn = relicTeamMods(['ember_urn'])
-    const e = runOut(engineFor(spawns, [['mystic', 's1']], { teamMods: [{ burn: { dps: 20, dur: 4 } }, ...urn] }))
-    const noUrn = runOut(engineFor(spawns, [['mystic', 's1']], { teamMods: [{ burn: { dps: 20, dur: 4 } }] }))
-    const off = runOut(engineFor(spawns, [['mystic', 's1']], { teamMods: [{ burn: { dps: 20, dur: 4 } }, ...urn], rules: { interactions: false } }))
+    const e = runOut(engineFor(spawns, [['mystic', P.s1]], { teamMods: [{ burn: { dps: 20, dur: 4 } }, ...urn] }))
+    const noUrn = runOut(engineFor(spawns, [['mystic', P.s1]], { teamMods: [{ burn: { dps: 20, dur: 4 } }] }))
+    const off = runOut(engineFor(spawns, [['mystic', P.s1]], { teamMods: [{ burn: { dps: 20, dur: 4 } }, ...urn], rules: { interactions: false } }))
     expect(e.behaviourStats.burnSpreads).toBeGreaterThan(0)
     expect(noUrn.behaviourStats.burnSpreads).toBe(0)
     expect(off.behaviourStats.burnSpreads).toBe(0)
@@ -304,7 +307,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
 
   it("'pause' stops the sim at a breather until resume; one move is allowed", () => {
     const spawns = [at('torch1', 0, 0.5, 0), at('torch1', 0, 0.5, 1)]
-    const e = engineFor(spawns, [['rogue', 's1'], ['mystic', 's2']], { breathers: 'pause' })
+    const e = engineFor(spawns, [['rogue', P.s1], ['mystic', P.s2]], { breathers: 'pause' })
     runOut(e, 60 * 60)
     expect(e.status).toBe('running')
     expect(e.breather).toBe(true)
@@ -312,9 +315,9 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     e.step(TICK)
     e.step(TICK)
     expect(e.tick).toBe(tick) // frozen
-    expect(e.moveHero('s1', 's4')).toBe(true)
-    expect(e.moveHero('s2', 's5')).toBe(false) // one move per breather
-    expect(e.sentinelOnSlot('s4')?.def.archetype).toBe('rogue')
+    expect(e.moveHero(P.s1, P.s4)).toBe(true)
+    expect(e.moveHero(P.s2, P.s5)).toBe(false) // one move per breather
+    expect(e.sentinelOnSlot(P.s4)?.def.archetype).toBe('rogue')
     e.resume()
     runOut(e)
     expect(e.status).toBe('cleared')
@@ -324,7 +327,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
 
   it('the breather mends the line', () => {
     const spawns = [at('torch1', 0, 0.5, 0), at('torch1', 0, 0.5, 1)]
-    const e = engineFor(spawns, [['rogue', 's1']], { breathers: 'pause' })
+    const e = engineFor(spawns, [['rogue', P.s1]], { breathers: 'pause' })
     e.sentinels[0].hp = 10
     runOut(e, 60 * 60)
     expect(e.breather).toBe(true)
@@ -335,7 +338,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
 describe('Watch Commands (Phase 3a)', () => {
   it('one charge per sub-wave, refilled when the next begins', () => {
     const spawns = [at('torch1', 0, 3, 0), at('torch1', 0, 3, 1)]
-    const e = engineFor(spawns, [['rogue', 's1']], { breathers: 'pause' })
+    const e = engineFor(spawns, [['rogue', P.s1]], { breathers: 'pause' })
     e.step(TICK)
     expect(e.useCommand('rally')).toBe(true)
     expect(e.useCommand('rally')).toBe(false)
@@ -348,13 +351,13 @@ describe('Watch Commands (Phase 3a)', () => {
   })
 
   it('a command the company does not carry cannot fire', () => {
-    const e = engineFor([at('torch1', 0)], [['rogue', 's1']])
+    const e = engineFor([at('torch1', 0)], [['rogue', P.s1]])
     e.step(TICK)
     expect(e.useCommand('hold')).toBe(false)
   })
 
   it('Rally Horn shortens every cooldown by its rate multiplier', () => {
-    const e = engineFor(Array.from({ length: 30 }, (_, i) => at('torch2', i * 0.3, 20)), [['rogue', 's1']])
+    const e = engineFor(Array.from({ length: 30 }, (_, i) => at('torch2', i * 0.3, 20)), [['rogue', P.s1]])
     const shots = (eng: GameEngine, rally: boolean) => {
       let n = 0
       const count = (ev: string) => void (ev === 'shoot' && n++)
@@ -363,7 +366,7 @@ describe('Watch Commands (Phase 3a)', () => {
       return n
     }
     const plain = shots(e, false)
-    const rallied = shots(engineFor(Array.from({ length: 30 }, (_, i) => at('torch2', i * 0.3, 20)), [['rogue', 's1']]), true)
+    const rallied = shots(engineFor(Array.from({ length: 30 }, (_, i) => at('torch2', i * 0.3, 20)), [['rogue', P.s1]]), true)
     expect(rallied).toBeGreaterThan(plain)
   })
 
@@ -394,7 +397,7 @@ describe('determinism with inputs (Phase 3a)', () => {
   /** A live battle with a player: Rally at a fixed tick, one move + Continue at each breather. */
   function live(ticksPerFrame: number) {
     const w = generateEncounter(6, 'normal', { seed: 4242 })
-    const team: [Archetype, string][] = [['fighter', 's1'], ['rogue', 's2'], ['mystic', 's3']]
+    const team: [Archetype, string][] = [['fighter', P.s1], ['rogue', P.s2], ['mystic', P.s3]]
     const e = new GameEngine({
       map: FIRST_MAP,
       wave: w,
@@ -410,7 +413,7 @@ describe('determinism with inputs (Phase 3a)', () => {
     for (let frame = 0; frame < 100_000 && e.status === 'running'; frame++) {
       if (e.breather) {
         // The player taps between frames.
-        e.moveHero(moves % 2 ? 's2' : 's1', 's4')
+        e.moveHero(moves % 2 ? P.s2 : P.s1, P.s4)
         moves++
         e.resume()
       } else if (e.enemies.length >= 3 && e.commandReady) {
@@ -438,7 +441,7 @@ describe('determinism with inputs (Phase 3a)', () => {
   it('replays its own input log to the identical battle', () => {
     const a = live(1)
     const w = generateEncounter(6, 'normal', { seed: 4242 })
-    const team: [Archetype, string][] = [['fighter', 's1'], ['rogue', 's2'], ['mystic', 's3']]
+    const team: [Archetype, string][] = [['fighter', P.s1], ['rogue', P.s2], ['mystic', P.s3]]
     const replay = new GameEngine({
       map: FIRST_MAP,
       wave: w,

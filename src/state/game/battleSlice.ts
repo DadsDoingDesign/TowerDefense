@@ -30,6 +30,13 @@ import { battleHpMult, canStartWave } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
 export interface BattleActions {
+  /**
+   * G1-2: a tap on a deployment tile, from the canvas or its keyboard layer —
+   * the one router: a blocked tile says why (`noteTerrain`), a breather tile
+   * is the one move, a setup tile posts the armed hero or inspects the posted
+   * one.
+   */
+  tapTile: (tileId: string) => void
   placeOnSlot: (slotId: string) => void
   clearSlot: (slotId: string) => void
   setSpeed: (s: Speed) => void
@@ -62,9 +69,33 @@ export interface BattleActions {
 }
 
 export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
+  tapTile: (tileId) => {
+    const st = get()
+    if (st.screen !== 'battle') return
+    // Tiles only mean something while a hero can be put down: setup, or the
+    // breather's one move. A live wave ignores taps on the field.
+    const breather = st.battlePhase === 'battle' && !!st.engine?.breather
+    if (!breather && (st.battlePhase !== 'setup' || st.engine)) return
+    const tile = st.battleMap.tiles?.find((t) => t.id === tileId)
+    // A blocked tile says why instead of doing nothing (G1-2).
+    if (tile?.block) {
+      st.noteTerrain(tileId)
+      return
+    }
+    if (st.fieldNote) set({ fieldNote: null })
+    if (breather) {
+      st.breatherTap(tileId)
+      return
+    }
+    if (st.selectedSentinelId) st.placeOnSlot(tileId)
+    else if (st.placements[tileId]) st.focusTower(st.placements[tileId]!)
+  },
+
   placeOnSlot: (slotId) => {
-    const { selectedSentinelId, placements, battlePhase, screen } = get()
+    const { selectedSentinelId, placements, battlePhase, screen, battleMap } = get()
     if (screen !== 'battle' || battlePhase !== 'setup' || !selectedSentinelId) return
+    // Only an OPEN tile of this battle's field takes a hero (G1-2).
+    if (!battleMap.slots.some((s) => s.id === slotId)) return
     const next: Placement = { ...placements }
     for (const key of Object.keys(next)) if (next[key] === selectedSentinelId) next[key] = null
     next[slotId] = selectedSentinelId

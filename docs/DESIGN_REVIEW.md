@@ -2140,3 +2140,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   you can't pay. Re-critiqued on the final build: the phone's contrast failures
   are gone and the desk rail went from 24 to 15. Still open: primary buttons
   read quiet (A1-2), plus the six reworked items in round 2.
+- **2026-09-29 — G1-2: free-form deployment on a tile grid, terrain that
+  blocks.** The six circles became a 12 × 7 grid of 80px tiles (7 × 12 on the
+  portrait twin); the lit grid appears only while a hero is armed, blocked
+  tiles stay dark under the dim, and the tile under the pointer (or the held
+  finger) previews the hero's range. Rendered at 390×844 @2x and 1440×900 on
+  both fields, plain / Flooded meadow / Wildfire. The loop caught five things.
+  (1) The first cut ran the road down the MIDDLE of a row of tiles, which put
+  every roadside hero 80px from the lane, beyond a Fighter's 72px hold and
+  every sapper trigger (the engine tests failed on it). The roads now run along
+  tile edges, so a roadside hero stands 40px out, as the old circles did, and
+  the lit tiles have the road cut out of them. (2) The rock tiles' soil patch
+  was an invalid colour string, so it filled with whatever came before (grey,
+  teal or orange by map). (3) Boulders at the ×½ litter density were 23px
+  pebbles on an 80px tile; they draw at native density now, the units'
+  density. (4) Two-tile ponds had a notch at the seam, and an L-shaped pond
+  poked a corner into the diagonal tile; ponds are now cores plus square
+  bridges. (5) Flames on a roadside fire tile stood half on the road; they
+  stand inside the scorch now. Still open: the top forest row is shrubs where a
+  88px tree cannot fit without clipping or standing on the road. On 375×667
+  and 320×568 a tile is about 35px, under the 44px floor.

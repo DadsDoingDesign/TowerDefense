@@ -222,10 +222,33 @@ export interface UpgradeGrant {
   levels: number
 }
 
-/** A fixed build position beside the path. */
+/**
+ * A place a hero can stand: one OPEN deployment tile (G1-2). The id is the
+ * tile's landscape grid id (`c{col}r{row}`, `data/terrain.ts`), shared by both
+ * twins of a field.
+ */
 export interface TowerSlot {
   id: string
   pos: Vec2
+}
+
+/** What fills a blocked deployment tile (G1-2, `data/terrain.ts`). */
+export type TerrainKind = 'lane' | 'forest' | 'rock' | 'water' | 'fire'
+
+/** A map challenge, as a terrain rule (G1-2): what the battle's field adds. */
+export type TerrainRuleId = 'flooded' | 'wildfire'
+
+/**
+ * One tile of the deployment grid, open or blocked. `col`/`row` are in the
+ * DRAWN orientation (a portrait twin's are transposed), `pos` is its centre.
+ */
+export interface FieldTile {
+  id: string
+  pos: Vec2
+  col: number
+  row: number
+  /** What stops a hero standing here, or null for open grass. */
+  block: TerrainKind | null
 }
 
 /** A map: the path plus the slots available to build on. */
@@ -236,7 +259,19 @@ export interface GameMap {
   width: number
   height: number
   path: Vec2[]
+  /** The OPEN deployment tiles — where a hero may stand (G1-2). */
   slots: TowerSlot[]
+  /** Edge of one deployment tile in field px (G1-2). */
+  tile?: number
+  /** Every deployment tile, open and blocked, row-major in landscape order. */
+  tiles?: FieldTile[]
+  /** The battle's map challenge, when it has one (G1-2). */
+  terrainRule?: TerrainRuleId
+  /**
+   * The seeded field this map is a variant of (a terrain rule on it). Absent
+   * on the base fields; see `maps.fieldIdOf`.
+   */
+  baseId?: string
   /** Where the base sits (end of path). */
   base: Vec2
   /**
@@ -368,8 +403,8 @@ export interface WaveDef {
   isBoss: boolean
 }
 
-/** Mapping of which sentinel occupies which slot, for the setup phase. */
-export type Placement = Record<string, string | null> // slotId -> sentinelId | null
+/** Mapping of which sentinel occupies which open tile, for the setup phase. */
+export type Placement = Record<string, string | null> // tileId -> sentinelId | null
 
 /** Team-wide targeting priority. */
 export type FocusMode = 'first' | 'lowestHp' | 'strongest' | 'nearest' | 'threat'

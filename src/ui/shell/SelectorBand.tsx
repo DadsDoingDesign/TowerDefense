@@ -98,7 +98,7 @@ function PartyCards() {
         const selected = selection?.kind === 'hero' && selection.id === s.id
         const profile = computeCombat(s)
         const hue = archetypeVar(s.archetype)
-        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing circle to post it` : 'on the bench'
+        const state = placed ? 'deployed' : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         return (
           <button
             key={s.id}

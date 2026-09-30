@@ -1,3 +1,4 @@
+import { fieldTitle } from '../../game/data/maps'
 import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
 import { Money } from './Money'
@@ -28,7 +29,7 @@ export function HeaderBand() {
   const baseHpStore = useGameStore((s) => s.baseHp)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const hud = useGameStore((s) => s.hud)
-  const mapName = useGameStore((s) => s.battleMap.name)
+  const mapName = useGameStore((s) => fieldTitle(s.battleMap))
 
   const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore

@@ -9,7 +9,7 @@ import type { RarityPity } from '../../game/data/items'
 import type { RunMap } from '../../game/data/runmap'
 import type { RewardCard } from '../../game/data/rewards'
 import type { ShrineOffer } from '../../game/data/shrines'
-import type { EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, WaveDef } from '../../game/types'
+import type { EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, TerrainKind, WaveDef } from '../../game/types'
 import type { AssistLevel } from '../settingsStore'
 import type { RunChallenge } from '../daily'
 import type { RunFeats } from '../../game/run/settle'
@@ -283,6 +283,12 @@ export interface GameData {
    * Reset with the rest of the shell on every node entry.
    */
   detailOpen: boolean
+  /**
+   * G1-2: the blocked tile the player last tapped, so the coach strip can say
+   * why nothing happened ("Rock: nothing can stand here"). Presentation — not
+   * snapshotted, cleared with the rest of the shell.
+   */
+  fieldNote: { tileId: string | null; kind: TerrainKind; at: number } | null
 }
 
 export interface GameState

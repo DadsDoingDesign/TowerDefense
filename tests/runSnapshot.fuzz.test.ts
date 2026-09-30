@@ -34,6 +34,9 @@ import type { EffectMods, Item, Sentinel } from '../src/game/types'
 import { peekSavedRun, useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
+import { withTerrainRule } from '../src/game/data/maps'
+import { parseTileId } from '../src/game/data/terrain'
+import { carryPlacements } from '../src/game/run/map'
 import {
   RUN_SNAPSHOT_KEY,
   captureRun,
@@ -63,6 +66,13 @@ function buildBase(): Record<string, unknown> {
   setLayoutOrientation(() => 'portrait')
   st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
   setLayoutOrientation(null)
+  // v10 (G1-2): the battle is fought under a map challenge with the hero posted
+  // on a tile, so mutations land on `terrainRule` and a tile-keyed placement.
+  {
+    const cur = useGameStore.getState()
+    const field = withTerrainRule(cur.battleMap, 'wildfire')
+    useGameStore.setState({ battleMap: field, placements: { ...carryPlacements({}, field), [field.slots[5].id]: cur.roster[0].id } })
+  }
 
   const rng = new RNG(1234)
   const epic = (slot: Item['slot']): Item => generateItem(rng, { slot, rarity: 'epic' })
@@ -119,8 +129,15 @@ function assertFiniteCombat(s: Sentinel, teamMods: EffectMods[], where: string):
 
 /** Everything a loaded snapshot can put into arithmetic must be finite. */
 function assertPlayable(snap: RunSnapshot, where: string): void {
-  snapshotBattleMap(snap)
+  const field = snapshotBattleMap(snap)
   describeSnapshot(snap)
+  // G1-2 (v10): placements are tile id → hero id strings, each hero once, and
+  // the map challenge is one this build has (or none).
+  const posted = Object.values(snap.placements)
+  if (!Object.keys(snap.placements).every((k) => parseTileId(k))) throw new Error(`${where}: a placement key is not a tile`)
+  if (!posted.every((v) => typeof v === 'string')) throw new Error(`${where}: a placement value is not a hero id`)
+  if (new Set(posted).size !== posted.length) throw new Error(`${where}: a hero is posted twice`)
+  if (field.terrainRule !== (snap.terrainRule ?? undefined)) throw new Error(`${where}: terrain ${field.terrainRule} ≠ ${snap.terrainRule}`)
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
@@ -222,6 +239,10 @@ describe('run snapshot fuzz', () => {
     // The base is a portrait battle, and it resumes onto the portrait twin.
     expect(snap!.fieldOrientation).toBe('portrait')
     expect(snapshotBattleMap(snap!).orientation).toBe('portrait')
+    // …under its map challenge, with the hero on its tile (G1-2).
+    expect(snap!.terrainRule).toBe('wildfire')
+    expect(snapshotBattleMap(snap!).terrainRule).toBe('wildfire')
+    expect(Object.values(snap!.placements)).toHaveLength(1)
   })
 
   it('every single-field mutation loads without throwing and never yields NaN combat', () => {

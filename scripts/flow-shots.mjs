@@ -95,7 +95,7 @@ async function toFirstBattle(p, shots) {
 async function winFirstBattle(p, shots) {
   await p.tap(/on the bench|— selected/, { wait: 600 })
   if (shots) await p.shot('04-battle-setup')
-  await p.tap('Circle 4,', { force: true, wait: 600 })
+  await p.tap(/^Tile .*open — post/, { force: true, wait: 600 })
   await p.tipOff()
   await p.tap('Start Wave', { wait: 1500 })
   await p.tap('Battle speed')
@@ -160,7 +160,7 @@ async function run(label) {
   const p = await open(label, log)
   await toFirstBattle(p, false)
   await p.tap(/on the bench|— selected/, { wait: 500 })
-  await p.tap('Circle 1,', { force: true, wait: 500 })
+  await p.tap(/^Tile .*open — post/, { force: true, wait: 500 })
   await p.tipOff()
   await p.tap('Start Wave', { wait: 2500 })
   await p.page.evaluate(() => {

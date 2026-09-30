@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
+import { BLOCK_COPY } from '../../game/data/terrain'
 import { ITEM_PRICE } from '../../game/run/economy'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
 import { useGameStore } from '../../state/gameStore'
@@ -70,6 +71,10 @@ interface Tip {
  * at a time" should not have to be re-derived for each of them.
  */
 const COACH_GAP_MS = 9000
+
+/** How long a blocked-tile note stays in the strip (G1-2). */
+const FIELD_NOTE_MS = 4500
+const inSetupOrBreather = (screen: string, phase: string) => screen === 'battle' && (phase === 'setup' || phase === 'battle')
 
 export function Coach() {
   const taught = useSettingsStore((s) => s.taught)
@@ -161,6 +166,35 @@ export function Coach() {
     return () => clearTimeout(t)
   }, [tip?.id, displayed])
 
+  /*
+   * G1-2: a tap on a blocked tile says why, here, instead of doing nothing.
+   * It outranks any tip and skips the quiet window — it is an answer to
+   * something the player just did, not a lesson — and it clears itself after
+   * a few seconds (or on "Got it", or on the next good tap).
+   */
+  const fieldNote = useGameStore((s) => s.fieldNote)
+  const clearFieldNote = useGameStore((s) => s.clearFieldNote)
+  useEffect(() => {
+    if (!fieldNote) return
+    const t = setTimeout(clearFieldNote, FIELD_NOTE_MS)
+    return () => clearTimeout(t)
+  }, [fieldNote, clearFieldNote])
+
+  if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
+    return (
+      <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
+        <Icon name="warn" className="sh-coach-glyph" />
+        <p className="sh-coach-text" key={fieldNote.at}>
+          <b>{BLOCK_COPY[fieldNote.kind].name}</b>
+          {BLOCK_COPY[fieldNote.kind].line.slice(BLOCK_COPY[fieldNote.kind].name.length)}
+        </p>
+        <button className="sh-coach-dismiss" onClick={clearFieldNote} aria-label="Got it — hide this note" data-sfx="close">
+          Got it
+        </button>
+      </aside>
+    )
+  }
+
   if (!tip || displayed !== tip.id) return null
 
   return (
@@ -250,7 +284,7 @@ function pickTip(s: {
       icon: 'deploy',
       body: (
         <>
-          <Tap /> your hero, then a <b>glowing circle</b> on the field.
+          <Tap /> your hero, then a <b>glowing tile</b> on the field.
         </>
       ),
     }
