@@ -154,7 +154,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
         <span><span class="dot" style="background:var(--good)"></span><b id="n-a">0</b> approved</span>
         <span><span class="dot" style="background:var(--edit)"></span><b id="n-e">0</b> edited</span>
         <span><span class="dot" style="background:var(--bad)"></span><b id="n-r">0</b> rejected</span>
-        <span><b id="n-p">14</b> to decide</span>
+        <span><b id="n-p">15</b> to decide</span>
       </div>
       <span class="sync" id="sync">Connecting…</span>
     </div>
@@ -178,7 +178,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
   <div class="dlg">
     <div class="dlg-shots">
       <figure><figcaption>Before</figcaption><img id="dlg-img" alt=""></figure>
-      <figure id="dlg-after" hidden><figcaption>After round 1</figcaption><img id="dlg-after-img" alt=""></figure>
+      <figure id="dlg-after" hidden><figcaption>After round 2</figcaption><img id="dlg-after-img" alt=""></figure>
     </div>
     <div style="min-width:0">
       <div class="dlg-head">
@@ -387,7 +387,7 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
   function openScreen(key, row) {
     const s = screens[key]; if (!s) return;
     $('#dlg-img').src = s.shot; $('#dlg-img').alt = `${s.label} before the changes, ${s.viewport}`;
-    $('#dlg-after').hidden = !s.after; if (s.after) { $('#dlg-after-img').src = s.after; $('#dlg-after-img').alt = `${s.label} after the round-1 changes`; }
+    $('#dlg-after').hidden = !s.after; if (s.after) { $('#dlg-after-img').src = s.after; $('#dlg-after-img').alt = `${s.label} after the round-2 changes`; }
     $('#dlg-title').textContent = s.label; $('#dlg-vp').textContent = `${s.viewport} · goal: ${s.goal}`;
     $('#dlg-sum').textContent = s.summary;
     const tb = $('#dlg-rows'); tb.replaceChildren();

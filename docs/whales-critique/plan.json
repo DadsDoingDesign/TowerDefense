@@ -275,6 +275,23 @@
       "files": []
     },
     {
+      "id": "Q15",
+      "stream": "round3",
+      "kind": "question",
+      "effort": "—",
+      "source": "claude",
+      "from": "Whales re-check",
+      "blocking": false,
+      "title": "Whales still says the battle's next action reads quieter than the status bar. Push it further?",
+      "proposal": [
+        "On the re-check of the combined build, Whales' strongest repeat finding on the battle screens is that 'HELD · MOVE ONE HERO' and Next ▶ are outweighed by the header (FIELDWATCH, Depth, Gate, gold). The strip caption is 11px capitals.",
+        "Options: a larger caption in the held state (e.g. 15px), a quieter header during battle, or leave it.",
+        "Smaller things it flagged that I think are noise: 'the page heading is cut off' on desk (there is none), and cards 'covered' that are fully visible in the screenshots. The run map's encounter brief does scroll inside its panel, now a little sooner because the paper doll widened the gear column."
+      ],
+      "refs": [],
+      "files": []
+    },
+    {
       "id": "G1-2",
       "stream": "round2",
       "effort": "L",
