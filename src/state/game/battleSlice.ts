@@ -105,6 +105,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     const portrait = orientationOf(get().battleMap) === 'portrait'
     set({ placements: next, selectedSentinelId: null, ...(portrait ? { shellSelection: null } : {}) })
     sfx('deploy')
+    // Q1: posted on cursed ground — the coach strip says what it costs.
+    get().noteDanger(slotId)
   },
 
   clearSlot: (slotId) => {
@@ -216,14 +218,23 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       if (!engine.sentinelOnSlot(slotId)) return
       set({ breatherPick: slotId })
       sfx('toggle')
+      // Q1: a hero picked up to move — where the cursed ground is, and its cost.
+      get().noteDangerOnField()
       return
     }
     if (breatherPick === slotId) {
       set({ breatherPick: null })
       return
     }
-    if (engine.moveHero(breatherPick, slotId)) sfx('deploy')
+    const swapped = !!engine.sentinelOnSlot(slotId)
+    const moved = engine.moveHero(breatherPick, slotId)
+    if (moved) sfx('deploy')
     set({ breatherPick: null, hud: hudOf(engine) })
+    // Q1: whoever the move put on cursed ground, the strip says what it costs.
+    if (moved) {
+      get().noteDanger(slotId)
+      if (swapped) get().noteDanger(breatherPick)
+    }
   },
 
   resumeSubWave: () => {

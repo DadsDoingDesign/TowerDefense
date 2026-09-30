@@ -152,6 +152,13 @@ export interface RunSnapshot {
    * for plain ground. `battleMapId` stays the seeded field's id.
    */
   terrainRule: TerrainRuleId | null
+  /**
+   * Q1: the seed the current battle's danger ground and seeded obstacles were
+   * laid from (`data/hazards.ts`), or null for a field without them. Optional
+   * on purpose — no version step: a save written before Q1 has none and
+   * resumes onto exactly the ground it was fought on.
+   */
+  hazardSeed?: number | null
   roster: Sentinel[]
   /** v10: keyed by deployment TILE id (`c{col}r{row}`); ≤ v9 by circle id `s0`…`s5`. */
   placements: Placement
@@ -318,6 +325,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     battleMapId: s.battleMap ? fieldIdOf(s.battleMap) : FIRST_MAP.id,
     fieldOrientation: s.battleMap ? orientationOf(s.battleMap) : 'landscape',
     terrainRule: s.battleMap?.terrainRule ?? null,
+    hazardSeed: s.battleMap?.hazardSeed ?? null,
     roster: s.roster,
     placements: s.placements,
     gold: s.gold,
@@ -378,7 +386,7 @@ export function snapshotBattleMap(snap: RunSnapshot): GameMap {
   // The battle comes back on the twin it was saved on, whatever the viewport
   // is now: orientation is fixed for the duration of a battle — and so is its
   // map challenge (G1-2).
-  const map = fieldFor(snap.battleMapId, snap.terrainRule ?? null, snap.fieldOrientation)
+  const map = fieldFor(snap.battleMapId, snap.terrainRule ?? null, snap.fieldOrientation, snap.hazardSeed ?? null)
   if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
   return map
 }
@@ -911,6 +919,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // field actually has open. A v9 save has no map challenge: plain ground.
   const placements = migratePlacements(o.placements, battleMapId, version)
   const terrainRule = terrainRuleById(o.terrainRule)?.id ?? null
+  // Q1: a hazard seed is a uint32 hash (`run/terrain.nodeHazardSeed`); anything
+  // else — absent (a pre-Q1 save), a float, a string, out of range — resumes
+  // onto plain ground rather than laying a layout no node could have dealt.
+  const hazardSeed = Number.isInteger(o.hazardSeed) && (o.hazardSeed as number) >= 0 && (o.hazardSeed as number) <= 0xffffffff ? (o.hazardSeed as number) : null
 
   // ---- v8 → v9: portrait battlefields — nothing to rewrite ----------------
   // `fieldOrientation` was added (below). A v8 save has none and was fought on
@@ -968,6 +980,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // fallback changes how the battle is drawn, never how it plays.
     fieldOrientation: str<FieldOrientation>(o.fieldOrientation, 'landscape', ORIENTATIONS),
     terrainRule,
+    hazardSeed,
     roster,
     placements,
     gold: Math.max(0, num(o.gold, 0)) + refund,

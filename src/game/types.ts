@@ -249,7 +249,15 @@ export interface FieldTile {
   row: number
   /** What stops a hero standing here, or null for open grass. */
   block: TerrainKind | null
+  /**
+   * Q1 danger ground: an OPEN tile a hero may stand on, at a cost
+   * (`data/hazards.ts`). Absent on ordinary grass and on every blocked tile.
+   */
+  danger?: DangerKind
 }
+
+/** What makes an open tile dangerous to stand on (Q1, `data/hazards.ts`). */
+export type DangerKind = 'cursed'
 
 /** A map: the path plus the slots available to build on. */
 export interface GameMap {
@@ -267,6 +275,11 @@ export interface GameMap {
   tiles?: FieldTile[]
   /** The battle's map challenge, when it has one (G1-2). */
   terrainRule?: TerrainRuleId
+  /**
+   * Q1: the seed this battle's danger ground and seeded obstacles were laid
+   * from (`data/hazards.ts`). Absent on a field without them.
+   */
+  hazardSeed?: number
   /**
    * The seeded field this map is a variant of (a terrain rule on it). Absent
    * on the base fields; see `maps.fieldIdOf`.

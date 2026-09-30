@@ -539,6 +539,42 @@ export function drawStandingFlame(ctx: CanvasRenderingContext2D, x: number, y: n
   ctx.drawImage(pm.img, f * pm.fw, 0, pm.fw, pm.fh, Math.round(x - pm.fw / 2), Math.round(y - pm.fh + 6), pm.fw, pm.fh)
 }
 
+/**
+ * Q1: the skulls that mark CURSED GROUND (`terrain.drawTerrainDanger`). Two
+ * still cells of the pack's own death strip (`fx/dead.png`, CC0 — see
+ * CC0-MANIFEST.md): a skull sat on its shadow and one half sunk in the dirt.
+ * Not a corpse (fx.ts `corpseArt` keeps the knight strip off dying goblins);
+ * a bleached skull is the genre's plain sign for "this ground is bad".
+ * Drawn at the fx sheets' ×½ density — small, a sign on the ground rather
+ * than a thing standing on it, so it never competes with a unit. Fetched on
+ * first use; draws nothing until it has decoded.
+ */
+const DEAD_SHEET = 'dead'
+let deadImg: HTMLImageElement | null = null
+const skullPm: (Pixmap | null)[] = [null, null]
+/** [x, y] of each skull's 128px cell in the strip: row 0 #3, row 1 #4. */
+const SKULL_CELLS: readonly (readonly [number, number])[] = [
+  [384, 0],
+  [512, 128],
+]
+export function drawSkull(ctx: CanvasRenderingContext2D, x: number, y: number, variant: number): void {
+  if (typeof document === 'undefined') return
+  if (!deadImg) {
+    deadImg = new Image()
+    deadImg.src = `assets/fx/tinyswords/${DEAD_SHEET}.png`
+  }
+  if (!deadImg.complete || !deadImg.naturalWidth) return
+  const v = variant % SKULL_CELLS.length
+  if (!skullPm[v]) {
+    const [cx, cy] = SKULL_CELLS[v]
+    skullPm[v] = pixmap(deadImg, { scale: 0.5, cell: { x: cx, y: cy, w: 128, h: 128 } })
+  }
+  const pm = skullPm[v]
+  if (!pm) return
+  // The skull's shadow sits ~¾ of the way down its cell; that is (x, y).
+  ctx.drawImage(pm.img, 0, 0, pm.fw, pm.fh, Math.round(x - pm.fw / 2), Math.round(y - pm.fh * 0.76), pm.fw, pm.fh)
+}
+
 // ── lifecycle ───────────────────────────────────────────────────────────────
 
 /** Drop everything. Called when a new battle starts. */

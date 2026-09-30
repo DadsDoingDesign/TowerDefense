@@ -24,7 +24,7 @@ import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
 import { hub, layout, recruitHub, seedRunStreams, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { carryPlacements } from '../../game/run/map'
-import { endlessTerrainRule } from '../../game/run/terrain'
+import { endlessHazardSeed, endlessTerrainRule } from '../../game/run/terrain'
 import { settleSavedRun } from './settle'
 import type { EndlessRoom, Slice } from './types'
 
@@ -137,7 +137,8 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     // Chosen per battle from the layout (Portrait battlefields), as `selectNode`,
     // with the round's map challenge (G1-2).
     const battleMap =
-      fieldFor(fieldIdOf(get().battleMap), endlessTerrainRule(get().round, get().runSeed), layout.orientation()) ??
+      // Q1: plus the round's danger ground and seeded obstacles.
+      fieldFor(fieldIdOf(get().battleMap), endlessTerrainRule(get().round, get().runSeed), layout.orientation(), endlessHazardSeed(get().round, get().runSeed)) ??
       orientField(get().battleMap, layout.orientation())
     set({
       currentWave: wave,

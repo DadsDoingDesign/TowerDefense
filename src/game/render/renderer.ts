@@ -23,7 +23,7 @@ import { drawTelegraphs } from './telegraphs'
 import { drawEnemy, drawSentinel, sentinelFromRt } from './units'
 
 export { fitView, setPresentationTime, setViewScale, type View } from './frame'
-export { drawField, drawTerrainFlames } from './terrain'
+export { drawField, drawTerrainDanger, drawTerrainFlames } from './terrain'
 export { drawEnemy, drawSentinel, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
 export { baseAnchor, drawBaseFx, drawBlockedFlash, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'

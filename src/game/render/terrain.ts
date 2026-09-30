@@ -239,6 +239,7 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
       }
     }
   }
+  if (tiles.some((t) => t.danger === 'cursed')) drawCursedGround(ctx, map)
   for (const t of tiles) {
     if (t.block !== 'rock') continue
     // Worn ground under the boulders: the grass, darker — a value change
@@ -247,6 +248,123 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
     ctx.beginPath()
     ctx.ellipse(t.pos.x + 2, t.pos.y + 12, T * 0.42, T * 0.24, 0, 0, Math.PI * 2)
     ctx.fill()
+  }
+}
+
+/**
+ * Q1: CURSED GROUND — an open tile a hero may stand on at a cost
+ * (`data/hazards.ts`). It has to read as "you can post here, but" at a glance,
+ * and never as blocked terrain, so it borrows nothing from rock, water or fire:
+ *
+ *  - **Blighted soil**, not scorch and not stone: the grass is gone to a dark,
+ *    dead olive-brown (low chroma, clear of every reserved tier hue) with a
+ *    soft rim where it bleeds into the living meadow and a few pale dead tufts.
+ *    Rock is LIGHT grey boulders; fire is charcoal with orange embers and
+ *    standing flames; water is teal. This is dark, flat and cold.
+ *  - **Cracks that glow a sickly green** — the one saturated mark on it, in a
+ *    hue no enemy tier wears (t1 red, t2 teal, t3 purple, t4 gold).
+ *  - **Two small skulls** at the patch's two ends (`drawTerrainDanger`, per
+ *    frame, off the pack's own death strip), low, where a hero standing on the
+ *    tile's centre never covers them.
+ *
+ * Kept off the road like a pond, a little tighter ({@link cursedRect}).
+ */
+const CURSE_RIM = '#4d4a34'
+const CURSE_SOIL = '#3e382c'
+const CURSE_GLOW = '#9fcf4a'
+const CURSE_CORE = '#e2f59a'
+/**
+ * The cursed patch's rectangle: the tile inset by `inset`, and on a road side
+ * just clear of the dirt (27px from the lane's centre line — tighter than a
+ * pond's 31, because a roadside tile between two lanes has only 18px of grass
+ * to give).
+ */
+function cursedRect(map: GameMap, t: Tile, inset: number): Rect {
+  const h = (map.tile ?? 80) / 2
+  const roadOn = (x: number, y: number) => distToPath(x, y, map.path) <= 27
+  const side = (dc: number, dr: number) => (roadOn(t.pos.x + dc * h, t.pos.y + dr * h) ? Math.max(inset, 28) : inset)
+  return { x0: t.pos.x - h + side(-1, 0), x1: t.pos.x + h - side(1, 0), y0: t.pos.y - h + side(0, -1), y1: t.pos.y + h - side(0, 1) }
+}
+function drawCursedGround(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const cursed = (map.tiles ?? []).filter((t) => t.danger === 'cursed')
+  for (const t of cursed) {
+    const rim = cursedRect(map, t, 3)
+    const core = cursedRect(map, t, 7)
+    ctx.fillStyle = withAlpha(CURSE_RIM, 0.8)
+    roundRect(ctx, rim.x0, rim.y0, rim.x1 - rim.x0, rim.y1 - rim.y0, Math.min(22, (rim.x1 - rim.x0) / 2, (rim.y1 - rim.y0) / 2))
+    ctx.fill()
+    ctx.fillStyle = CURSE_SOIL
+    roundRect(ctx, core.x0, core.y0, core.x1 - core.x0, core.y1 - core.y0, Math.min(18, (core.x1 - core.x0) / 2, (core.y1 - core.y0) / 2))
+    ctx.fill()
+    const seed = mulberry32((t.col * 3571 + t.row * 7919 + 17) >>> 0)
+    // Dead tufts: short pale strokes, the grass that is left.
+    ctx.strokeStyle = 'rgba(168,160,122,0.75)'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    for (let i = 0; i < 7; i++) {
+      const x = core.x0 + 6 + seed() * (core.x1 - core.x0 - 12)
+      const y = core.y0 + 8 + seed() * (core.y1 - core.y0 - 12)
+      ctx.beginPath()
+      ctx.moveTo(Math.round(x), Math.round(y))
+      ctx.lineTo(Math.round(x + (seed() - 0.5) * 6), Math.round(y - 4 - seed() * 3))
+      ctx.stroke()
+    }
+    // Cracks: four lines from near the centre, each bending once — a soft
+    // green glow under a bright hairline.
+    const cx = (core.x0 + core.x1) / 2
+    const cy = (core.y0 + core.y1) / 2
+    const n = 4
+    const cracks: [number, number, number, number, number, number][] = []
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + seed() * 0.9
+      const r1 = 9 + seed() * 6
+      // Each crack runs out to the patch's own edge (an ellipse inside it), so
+      // a thin roadside patch still cracks along its length.
+      const rx = (core.x1 - core.x0) / 2 - 4
+      const ry = (core.y1 - core.y0) / 2 - 3
+      const bend = a + (seed() - 0.5) * 0.9
+      const k1 = Math.min(r1, rx, ry)
+      cracks.push([cx, cy, cx + Math.cos(a) * k1, cy + Math.sin(a) * k1, cx + Math.cos(bend) * rx, cy + Math.sin(bend) * ry])
+    }
+    for (const [col, w] of [[withAlpha(CURSE_GLOW, 0.45), 5], [CURSE_CORE, 1.5]] as const) {
+      ctx.strokeStyle = col
+      ctx.lineWidth = w
+      for (const [x0, y0, x1, y1, x2, y2] of cracks) {
+        ctx.beginPath()
+        ctx.moveTo(Math.round(x0), Math.round(y0))
+        ctx.lineTo(Math.round(x1), Math.round(y1))
+        ctx.lineTo(Math.round(x2), Math.round(y2))
+        ctx.stroke()
+      }
+    }
+  }
+}
+
+/**
+ * Q1: the skulls on cursed ground, drawn every frame over the baked patch (the
+ * death strip loads lazily, so it cannot be baked). Two per tile at opposite
+ * corners of its patch, which a hero on the tile's centre leaves in view.
+ */
+export function drawTerrainDanger(
+  map: GameMap,
+  drawSkull: (x: number, y: number, variant: number) => void,
+): void {
+  if (!map.tiles) return
+  for (const t of map.tiles) {
+    if (t.danger !== 'cursed') continue
+    // At the two ENDS of the patch along its long axis — beside a hero on the
+    // tile's centre, never under it, and never out on the road.
+    const c = cursedRect(map, t, 7)
+    const cx = (c.x0 + c.x1) / 2
+    if (c.x1 - c.x0 >= c.y1 - c.y0) {
+      // The bottom corners: a hero's sprite rises from its feet at the tile's
+      // centre, so these stay in view while one stands there.
+      drawSkull(c.x0 + 9, c.y1 - 3, 0)
+      drawSkull(c.x1 - 9, c.y1 - 4, 1)
+    } else {
+      drawSkull(cx - 6, c.y0 + 14, 1)
+      drawSkull(cx + 5, c.y1 - 3, 0)
+    }
   }
 }
 
@@ -593,9 +711,16 @@ function buildDressing(map: GameMap): Dressing {
         if (!name) return
         decos.push({ x: Math.round(x), y: Math.round(y), name, flip: rng() < 0.5, native: true })
       }
-      native(t.pos.x + 12, t.pos.y + 4, big[1] ?? big[0])
-      native(t.pos.x - 9, t.pos.y + 20, big[0])
-      native(t.pos.x + 20, t.pos.y + 26, big[big.length - 1])
+      // Q1: seeded boulders land on ROADSIDE tiles (the authored ones never
+      // did), so the cluster steps back from any side the road runs along —
+      // a boulder's base must stand on grass, not on the dirt.
+      const h = T / 2
+      const road = (dc: number, dr: number) => distToPath(t.pos.x + dc * h, t.pos.y + dr * h, map.path) <= 27
+      const sx = (road(1, 0) ? -12 : 0) + (road(-1, 0) ? 10 : 0)
+      const sy = (road(0, 1) ? -16 : 0) + (road(0, -1) ? 8 : 0)
+      native(t.pos.x + 12 + sx, t.pos.y + 4 + sy, big[1] ?? big[0])
+      native(t.pos.x - 9 + sx, t.pos.y + 20 + sy, big[0])
+      native(t.pos.x + 20 + sx, t.pos.y + 26 + sy, big[big.length - 1])
     }
   }
   // A portrait twin's side pads sit outside the grid: forest, like the ring.

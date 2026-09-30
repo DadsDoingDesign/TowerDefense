@@ -4,6 +4,7 @@
  */
 import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
+import { CURSED_DAMAGE_MULT } from '../data/hazards'
 import { fxBaseState, fxNow, fxReducedMotion } from './fx'
 import { animNow, getViewScale } from './frame'
 import { COLORS, hexToRgba, roundRect, strokePolyline } from './paint'
@@ -120,6 +121,9 @@ export function drawTileGrid(
   const g = lctx ?? ctx
   if (lctx) lctx.clearRect(0, 0, map.width, map.height)
   g.save()
+  // Q1: cursed ground is open — it lights — but in a caution coral with a
+  // dashed edge and its cost printed on it, so it never reads as just more grass.
+  const cursed = new Set((map.tiles ?? []).filter((t) => t.danger === 'cursed').map((t) => t.id))
   for (const s of map.slots) {
     if (opts.skip?.has(s.id)) continue
     const hover = s.id === opts.hover
@@ -127,6 +131,16 @@ export function drawTileGrid(
     const y = s.pos.y - T / 2 + inset
     const w = T - inset * 2
     roundRect(g, x, y, w, w, Math.min(10, w / 5))
+    if (cursed.has(s.id)) {
+      g.fillStyle = hover ? 'rgba(240, 150, 120, 0.3)' : `rgba(240, 150, 120, ${(0.1 + 0.06 * pulse) * k})`
+      g.fill()
+      g.setLineDash([Math.max(6, 5 / vs), Math.max(4, 3.5 / vs)])
+      g.lineWidth = hover ? lw * 1.6 : lw * 1.2
+      g.strokeStyle = hover ? '#ffd2c0' : `rgba(244, 158, 128, ${(0.6 + 0.25 * pulse) * k})`
+      g.stroke()
+      g.setLineDash([])
+      continue
+    }
     g.fillStyle = hover
       ? 'rgba(255, 243, 196, 0.34)'
       : `rgba(255, 236, 170, ${(0.08 + 0.06 * pulse) * k})`
@@ -147,6 +161,26 @@ export function drawTileGrid(
     strokePolyline(lctx, map.path)
     lctx.restore()
     ctx.drawImage(layer, 0, 0)
+  }
+  // The cost, on the tile (after the road cut, so the cut never clips a digit).
+  if (cursed.size) {
+    const px = Math.max(15, 11 / vs)
+    const tag = `−${Math.round((1 - CURSED_DAMAGE_MULT) * 100)}%`
+    ctx.save()
+    ctx.font = `700 ${Math.round(px)}px system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.lineJoin = 'round'
+    for (const s of map.slots) {
+      if (!cursed.has(s.id) || opts.skip?.has(s.id)) continue
+      const ty = s.pos.y - T / 2 + inset + px * 0.9
+      ctx.lineWidth = Math.max(3, 3 / vs)
+      ctx.strokeStyle = `rgba(20, 12, 6, ${0.85 * k})`
+      ctx.strokeText(tag, s.pos.x, ty)
+      ctx.fillStyle = `rgba(255, 214, 196, ${k})`
+      ctx.fillText(tag, s.pos.x, ty)
+    }
+    ctx.restore()
   }
 }
 

@@ -2246,3 +2246,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   stand inside the scorch now. Still open: the top forest row is shrubs where a
   88px tree cannot fit without clipping or standing on the road. On 375×667
   and 320×568 a tile is about 35px, under the 44px floor.
+- **2026-09-30 — Q1: danger ground and seeded obstacles.** Every battle now
+  lays, from a hash of (run seed, node), one CURSED tile drawn from the three
+  best open tiles by road coverage (a hero may post there but deals −25%
+  damage) and three seeded boulders on the next-best ground. Rendered at
+  390×844 @2x and 1440×900 on both fields. The loop caught four things. (1)
+  The first cursed patch was pale ash-grey: at a glance it read as one more
+  rock tile, the thing it must never look like. It is dark blighted soil now,
+  with cracks lit a sickly green (a hue no enemy tier wears) and two small
+  skulls off the pack's own death strip. (2) At native density the skulls were
+  unit-sized and competed with the heroes; they draw at the fx sheets' ×½ now.
+  (3) A cursed tile between two lanes has 18px of grass, and the pond-style
+  road inset squashed the patch to a sliver with both skulls stacked on it;
+  the patch now clears the dirt by 2px, the cracks run along its long axis and
+  the skulls sit at its two ends, at the bottom corners, so a hero standing on
+  the tile never covers them. (4) The note first fired on press-over-the-tile,
+  and the coach strip opening slid the field ~90px under a held finger — the
+  release posted on the tile below. It fires when a hero is ARMED now (and on
+  posting), with the canvas flashing the cursed tile. Lit for placement the
+  tile is a dashed coral square with its cost printed on it; the hero panel
+  shows the debuffed DPS and one line why, and the party card says CURSED.
