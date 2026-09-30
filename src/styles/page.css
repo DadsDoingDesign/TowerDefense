@@ -1221,3 +1221,140 @@
 .pg-tile-art .fw-i.lg {
   --fw-i-size: var(--icon-lg);
 }
+
+/* =====================================================================
+   Whales UI plan H1-2 — the Watchtower menu over a cinematic battle
+   =====================================================================
+   With motion allowed, the attract battle plays behind the WHOLE menu
+   (`MenuBackdrop` + `AttractBattle`) and every band overlays it; under
+   reduced motion none of this applies and the menu keeps its framed still
+   (`.pg-art`, above). Everything here is keyed on `.pg.has-backdrop`, which
+   only the menu sets. Desk placement is in shell-wide.css. */
+
+/* The page spans the whole screen (the shell's 520px column is lifted in
+   shell.css terms here), and its content keeps the phone column's width. */
+.shell.shell-page:has(> .pg.has-backdrop) {
+  max-width: none;
+}
+.pg.has-backdrop {
+  position: relative;
+  isolation: isolate;
+  padding-left: max(var(--safe-left), calc((100% - 520px) / 2));
+  padding-right: max(var(--safe-right), calc((100% - 520px) / 2));
+}
+.pg.has-backdrop > :not(.pg-cine-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* The backdrop. `--cine-fx/fy` tell the camera where the shot is framed —
+   here, the window between the title and the rows. */
+.pg-cine-bg {
+  --cine-fx: 0.5;
+  --cine-fy: 0.3;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg);
+}
+/* The shade that keeps the menu readable over the brightest frame:
+   a wash behind the title, a bottom-up gradient behind the rows and the CTA
+   (stops measured from the BOTTOM, because that is where the stack is
+   anchored whatever the screen's height), and a vignette that sinks the
+   corners so the eye lands on the window. */
+.pg-cine-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(32, 23, 17, 0.86) 0, rgba(32, 23, 17, 0.74) 112px, rgba(32, 23, 17, 0) 200px),
+    linear-gradient(
+      to top,
+      rgba(32, 23, 17, 0.9) 0,
+      rgba(32, 23, 17, 0.72) 400px,
+      rgba(32, 23, 17, 0.42) 460px,
+      rgba(32, 23, 17, 0) 560px
+    ),
+    radial-gradient(135% 80% at var(--cine-vx, 50%) var(--cine-vy, 32%), transparent 50%, rgba(10, 6, 3, 0.62) 100%);
+}
+
+/* The window the shot is seen through: the body's slack. The head sits close
+   above it and the rows close below, so the window is as tall as it can be. */
+.pg.has-backdrop .pg-cine-window {
+  flex: 1 0 0;
+  min-height: 0;
+  width: 100%;
+}
+.pg.has-backdrop > .pg-head {
+  padding-bottom: 12px;
+}
+.pg.has-backdrop > .pg-body {
+  padding-top: 0;
+  padding-bottom: 16px;
+  gap: 12px;
+}
+.pg.has-backdrop .pg-rows {
+  gap: 12px;
+}
+.pg.has-backdrop > .pg-cta-band {
+  padding-top: 8px;
+}
+
+/* H1: the wordmark, a step up and lifted off the moving art. The tagline gets
+   air under the title so the two read as a pair, and a shadow of its own. */
+.pg.has-backdrop .t-title {
+  font-size: 40px;
+  text-shadow:
+    0 2px 0 rgba(20, 12, 6, 0.7),
+    0 0 18px rgba(20, 12, 6, 0.8);
+}
+.pg.has-backdrop .t-sub {
+  margin-top: 2px;
+  color: var(--text);
+  text-shadow: 0 1px 2px rgba(20, 12, 6, 0.9);
+}
+
+/* The rows become translucent panels over the art: the battle reads through
+   them, and the text still clears 4.5:1 — measured over every half-second of
+   the loop (DESIGN_REVIEW.md log), and pinned in tests/contrast.test.ts over
+   PURE WHITE art with no gradient under it, so no frame, layout or future
+   scene can take it under. No backdrop blur — a blur re-rasterised under
+   five rows at 30 fps is a cost a phone should not pay for a menu. */
+.pg.has-backdrop .pg-row {
+  background: rgba(44, 33, 21, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(233, 205, 150, 0.16);
+}
+.pg.has-backdrop .pg-records {
+  width: auto;
+  align-self: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(32, 23, 17, 0.8);
+}
+/* Start a Run stays the strongest thing on screen: solid, lit, and now cast
+   onto the art below it. */
+.pg.has-backdrop .pg-cta {
+  box-shadow:
+    inset 0 0 0 1px var(--cta-edge),
+    var(--cta-lift),
+    0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* The canvas fills the backdrop (the livewrap rule above positions it). */
+.pg-cine-bg > .pg-art-livewrap {
+  position: absolute;
+  inset: 0;
+}
+
+/* Short phones: the same trims the page skeleton makes, one step smaller. */
+@media (orientation: portrait) and (max-height: 800px) {
+  .pg.has-backdrop .t-title {
+    font-size: 34px;
+  }
+}
+@media (orientation: portrait) and (max-height: 660px) {
+  .pg.has-backdrop .t-title {
+    font-size: 30px;
+  }
+}

@@ -2140,3 +2140,24 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   you can't pay. Re-critiqued on the final build: the phone's contrast failures
   are gone and the desk rail went from 24 to 15. Still open: primary buttons
   read quiet (A1-2), plus the six reworked items in round 2.
+
+- **2026-09-29 — H1-2: the menu over a cinematic battle.** The designer liked
+  the live battle but found it random and boxed in. It now fills the whole
+  menu behind every band (phone and desk; desk keeps the menu column floating
+  on the right) and plays ONE scene cut as a ~19 s title sequence: fade up on
+  the lane entrance, the camera eases along the road with Warlord Grukk, the
+  knights hold, he falls (hitstop, a 3 px camera kick, a warm flare), a beat,
+  fade to dark, repeat. The beats are read off a headless play of the seeded
+  fight (`directAttract`), not hard-coded. Reduced motion keeps the framed
+  still exactly as before. Caught by rendering: desk at 1 CSS px per art px
+  showed the field as a rectangle on a dark mat and could not pan (the view
+  was the whole apron) — moved to ~450 art px tall; the apron's treeline step
+  read as a hard line across the screen — camera clamped to the field except
+  where the menu covers it, apron warmed and feathered; the phone framing lost
+  the champion under the title — the camera leans on him on narrow views and
+  aims at figures' middles, not feet; a portrait tablet came out 2x — capped
+  at 1.5. Contrast measured over every 0.5 s of the loop with text hidden
+  (brightest pixel behind each element): rows ≥ 9.4:1 labels / 5.6:1 values,
+  tagline ≥ 6.3:1, wordmark ≥ 4.9:1; `tests/contrast.test.ts` pins rows and
+  tagline over pure white art. Frame cost: desk 0.9 ms median at 30 fps;
+  phone at 4x CPU throttle 2.5 ms median, no worse than the old framed demo.
