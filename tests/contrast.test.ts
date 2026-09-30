@@ -87,6 +87,14 @@ describe('text tokens clear WCAG AA on every ground the shell paints', () => {
   it('the primary button ink stays at 4.5:1 on its fill', () => {
     expect(ratio(hex(token('cta-ink')), hex(token('cta')))).toBeGreaterThanOrEqual(4.5)
   })
+
+  // A1-2: the primary is a control, so its FILL must also separate from the
+  // grounds it sits on (WCAG 1.4.11, 3:1). The old deep teal was 3.08 on --bg.
+  it('the primary button fill stands off every ground at 4.5:1', () => {
+    for (const g of ['bg', 'bg-2', 'panel', 'panel-2'] as const) {
+      expect(ratio(hex(token('cta')), grounds[g]), `--cta on ${g}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
 })
 
 describe('icon size tokens are whole multiples of the 16px sprite', () => {

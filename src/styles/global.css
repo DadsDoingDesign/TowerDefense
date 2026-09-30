@@ -135,12 +135,15 @@
   --surface-strong: rgba(220, 205, 172, 0.14);
   --portrait: #dccdac;
 
-  /* Primary call to action — deeper than --teal so it holds its own at 64px.
-     #3f7d8c measured 3.79:1 under the cream ink: a pass at 24px, a fail at the
-     17px the in-band primary uses. #336e7e is 4.66:1 and still reads as the
-     knights' teal (Wave 1). */
-  --cta: #336e7e;
-  --cta-ink: #f3e7d0;
+  /* Primary call to action. History: Wave 1 chose a deep teal (#336e7e) under
+     cream ink (4.66:1) because a lighter teal failed the cream at 17px.
+     Whales UI plan A1-2 (approved 2026-09-30): the deep teal above measured
+     only 3.08:1 against the page, and every Whales pass called the primary
+     buttons quiet. The knights' lighter teal with the shell's dark fill-ink
+     is 6.30:1 for the label and 6.08:1 against `--bg` — the one next step now
+     stands out from the brown by lightness, not only by hue. */
+  --cta: #57a2b6;
+  --cta-ink: #1b1409;
   /*
    * Ink for a SOLID warm fill — the shell already uses this exact value on the
    * active tab and the active segment, on the same reasoning: `--accent`,
@@ -159,10 +162,9 @@
   --icon-lg: 48px;
 
   /* The primary button's lift (A1): a lighter top edge and a drop, so the one
-     next step stands off the bright field art without changing its fill — the
-     fill is pinned by `--cta-ink` contrast (4.67:1), so it cannot brighten. */
-  --cta-edge: #57a2b6;
-  --cta-lift: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 3px 0 rgba(0, 0, 0, 0.38);
+     next step stands off the bright field art as well as the dark brown. */
+  --cta-edge: #86c6d6;
+  --cta-lift: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 0 rgba(0, 0, 0, 0.45);
 
   /* Standard control heights */
   --row-h: 48px;

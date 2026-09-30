@@ -412,7 +412,7 @@
   border-radius: 10px;
   border: 1px solid var(--teal-dim);
   background: var(--cta, #336e7e);
-  color: #fff8ec;
+  color: var(--cta-ink, #fff8ec);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--fs-md);
@@ -593,6 +593,8 @@
   --panel-2: #30240f;
   --accent: #ffbf5e;
   --teal: #7ecadd;
+  --cta: #7ecadd;
+  --cta-ink: #140e06;
   --good: #86e79c;
   --bad: #ff6f52;
 }

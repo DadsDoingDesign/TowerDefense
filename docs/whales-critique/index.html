@@ -103,7 +103,7 @@ section.stream { margin-top: 40px; display: grid; gap: 14px; }
 .seg button[aria-pressed="true"][data-v="edit"] { background: var(--edit); border-color: var(--edit); color: #2a1c05; }
 .seg button[aria-pressed="true"][data-v="reject"] { background: var(--bad); border-color: var(--bad); color: #2a0f08; }
 .seg button:disabled { cursor: not-allowed; opacity: 0.6; }
-textarea { width: 100%; min-height: 72px; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font: 0.95rem/1.45 var(--font-body); }
+textarea { width: 100%; min-height: 56px; resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font: 0.95rem/1.45 var(--font-body); }
 textarea::placeholder { color: #a8957a; }
 .saved { font-size: 0.82rem; color: var(--muted); min-height: 1.2em; }
 
@@ -225,12 +225,20 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
       h('span', { text: `${s.label}${s.viewport.startsWith('desktop') ? ' · desk' : ''}` }));
   }
 
+  const notePrompt = (status, base) =>
+    status === 'approve' || status === 'confirm' ? 'Optional: anything to keep in mind while building this?'
+    : status === 'reject' ? 'Why not? A line of context helps the next round.'
+    : status === 'edit' ? base
+    : 'Optional note — context always helps.';
+
   function decisionControls(id, kind, placeholder) {
     const d = decisions[id] || {};
     const opts = kind === 'goal' ? [['confirm', 'Confirm'], ['edit', 'Edit']] : [['approve', 'Approve'], ['edit', 'Edit'], ['reject', 'Reject']];
-    const ta = h('textarea', { id: `note-${id}`, placeholder, 'aria-label': 'Your note for Claude' });
+    // Every decision can carry a note — an approval with context ("yes, but keep
+    // the old teal for Endless") is as useful as an edit, and so is a reason
+    // for a rejection. The box is always there; only its prompt changes.
+    const ta = h('textarea', { id: `note-${id}`, rows: 2, placeholder: notePrompt(d.status, placeholder), 'aria-label': 'Your note for Claude (optional)' });
     ta.value = d.note || '';
-    ta.hidden = !(d.status === 'edit' || (d.note && d.note.length));
     const saved = h('div', { class: 'saved', id: `saved-${id}` });
     const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Decision' },
       opts.map(([v, label]) => h('button', {
@@ -238,16 +246,17 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
         onclick: async () => {
           const cur = (decisions[id] || {}).status;
           const next = cur === v ? null : v;
-          ta.hidden = !(next === 'edit' || ta.value.trim());
-          if (next === 'edit') setTimeout(() => ta.focus(), 0);
+          ta.placeholder = notePrompt(next, placeholder);
+          if (next === 'edit' || next === 'reject') setTimeout(() => ta.focus(), 0);
           await save(id, kind, { status: next, note: ta.value.trim() });
         },
       }, label)));
     ta.addEventListener('input', () => {
       clearTimeout(noteTimers[id]);
       saved.textContent = 'Typing…';
-      noteTimers[id] = setTimeout(() => save(id, kind, { status: (decisions[id] || {}).status || 'edit', note: ta.value.trim() }), 900);
+      noteTimers[id] = setTimeout(() => save(id, kind, { status: (decisions[id] || {}).status || null, note: ta.value.trim() }), 900);
     });
+    ta.dataset.base = placeholder;
     ta.disabled = !db || !canWrite;
     return h('div', { class: 'decide' }, seg, ta, saved);
   }
@@ -346,7 +355,8 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
     if (!id.startsWith('goal-')) host.dataset.status = d.status || '';
     host.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === d.status)));
     const ta = document.getElementById(`note-${id}`);
-    if (ta && document.activeElement !== ta) { ta.value = d.note || ''; ta.hidden = !(d.status === 'edit' || (d.note || '').length); }
+    if (ta) ta.placeholder = notePrompt(d.status, ta.dataset.base || ta.placeholder);
+    if (ta && document.activeElement !== ta) ta.value = d.note || '';
     renderTally();
   }
 
