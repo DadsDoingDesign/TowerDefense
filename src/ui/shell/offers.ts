@@ -511,8 +511,11 @@ const ARCH_LIST: Archetype[] = ['fighter', 'rogue', 'mystic']
  * id counters, and this runs on every render of the hero-pick page — previewing
  * a hero would burn a name the hero then does not get. It mirrors the same
  * fields (`sentinels.ts` `createSentinel` + `gameStore` `applyStatBonus`).
+ *
+ * Exported for the H3-2 hero-pick variants (`HeroPickVariants.tsx`), so they
+ * preview the same Sentinel this screen does rather than a second copy.
  */
-function previewHero(a: Archetype, statBonus: number): Sentinel {
+export function previewHero(a: Archetype, statBonus: number): Sentinel {
   const node = getNode(a)
   const b = node.baseStats!
   return {
