@@ -368,6 +368,8 @@ export function PageScreen({
               mark={o.mark}
               glyph={o.glyph}
               art={o.rowArt}
+              note={o.note}
+              big={!!o.note}
               dim={o.dim}
               pips={o.pips}
               onClick={() => pick(o.id)}
