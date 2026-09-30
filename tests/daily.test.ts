@@ -58,6 +58,25 @@ describe('Daily Watch', () => {
     expect(useMetaStore.getState().daily?.score).toBe(640)
   })
 
+  it('backing out of the hero pick spends nothing and records no run', () => {
+    const before = useMetaStore.getState()
+    const runs = before.stats.runsCompleted
+    const marks = before.marks
+    g().startDaily()
+    g().cancelHeroPick()
+    expect(g().screen).toBe('hub')
+    expect(useMetaStore.getState().stats.runsCompleted).toBe(runs)
+    expect(useMetaStore.getState().marks).toBe(marks)
+    expect(useMetaStore.getState().daily?.date === utcDateKey() && useMetaStore.getState().daily?.done).toBeFalsy()
+    // Today's scored attempt is still there to take.
+    g().startDaily()
+    g().pickStartingHero('fighter')
+    expect(g().challenge).toMatchObject({ kind: 'daily', scored: true })
+    // Once a hero is committed, Back is no longer the way out.
+    g().cancelHeroPick()
+    expect(g().screen).not.toBe('hub')
+  })
+
   it('flies no Banner', () => {
     useMetaStore.setState({ sacrificeTier: 3 })
     g().startDaily()

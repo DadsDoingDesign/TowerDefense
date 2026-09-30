@@ -616,7 +616,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
   // tiles and the line of secondary numbers (crit, thorns, patience) wait for
   // the hero's own Stats tab, where they are one tap away and read in context.
   const staged = st.firstRun && !useSettingsStore.getState().showEverything
-  return ARCH_LIST.map((a) => {
+  const picks: Offer[] = ARCH_LIST.map((a) => {
     const node = getNode(a)
     const hero = previewHero(a, statBonus)
     const p = computeCombat(hero)
@@ -657,6 +657,10 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       action: { label: `Choose ${node.name}`, run: () => st.pickStartingHero(a) },
     }
   })
+  // The way back to the menu: nothing is spent until a hero is chosen, the
+  // Daily's attempt included. `immediate`, so it sits as a row above the CTA.
+  const back: Offer = { id: 'back', title: 'Back', icon: 'back', immediate: true, body: ['Back to the menu.'], action: { label: 'Back', run: () => st.cancelHeroPick() } }
+  return [...picks, back]
 }
 
 function merchantOffers(st: St): Offer[] {

@@ -23,9 +23,9 @@ import { sfx } from '../../audio/audio'
 import { bannerRules, MAX_BANNER, useMetaStore } from '../metaStore'
 import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
 import { seedEditable, vowAllowed } from '../runTerms'
-import { snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
+import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, streams, usesHub } from './runtime'
+import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, session, streams, usesHub } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
@@ -57,6 +57,12 @@ export interface RunActions {
   runAgain: () => void
   pickStartingHero: (archetype: Archetype) => void
   returnToHub: () => void
+  /**
+   * Back out of the hero pick before any hero is committed. Nothing has begun:
+   * no payout, no finished run on the record (so a first run stays staged), and
+   * a Daily's scored attempt is only spent by `pickStartingHero`.
+   */
+  cancelHeroPick: () => void
   selectNode: (nodeId: string) => void
   /**
    * Put a persisted run back in play (C3). A mid-battle snapshot resumes at that
@@ -199,6 +205,16 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   // battle so nothing is left pointing at a run that no longer exists.
   returnToHub: () => {
     settleSavedRun(get, set)
+    set(leaveToHub())
+  },
+
+  cancelHeroPick: () => {
+    const st = get()
+    if (st.screen !== 'heroPick' || st.roster.length) return
+    // `beginCampaign` already settled whatever run came before; this one never
+    // started, so it is dropped rather than settled (settling would pay it).
+    clearSnapshot()
+    session.ownsRun = false
     set(leaveToHub())
   },
 
