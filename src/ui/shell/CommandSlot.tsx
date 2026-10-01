@@ -20,7 +20,7 @@ import { useGameStore } from '../../state/gameStore'
  * moments themselves are spoken by the shell's one live region (`Announcer`,
  * fed by `state/combatNotes.ts`).
  */
-export function CommandSlot({ staged = false }: { staged?: boolean }) {
+export function CommandSlot({ staged = false, hold }: { staged?: boolean; hold?: string }) {
   const engine = useGameStore((s) => s.engine)
   const hud = useGameStore((s) => s.hud)
   const useCommand = useGameStore((s) => s.useCommand)
@@ -28,14 +28,18 @@ export function CommandSlot({ staged = false }: { staged?: boolean }) {
   if (!engine || engine.status !== 'running') return null
 
   if (hud.breather) {
+    // Weapon clearance: a hero swinging beside another holds the next
+    // sub-wave (`hold` is the strip's reason); the store refuses it too.
     return (
       <button
         // `next`: while a sub-wave is held this is the ONE thing to do, so it
         // wears the primary treatment (Whales UI plan A1) — a Watch Command
         // beside it is an option, and keeps the quieter gold outline.
-        className="sh-command ready next"
+        className={`sh-command next ${hold ? 'spent' : 'ready'}`}
+        disabled={!!hold}
         onClick={resume}
-        aria-label={`Sub-wave ${hud.subWave} of ${hud.subWaveCount} held. Send the next sub-wave.`}
+        aria-describedby={hold ? 'sh-make-space' : undefined}
+        aria-label={`Sub-wave ${hud.subWave} of ${hud.subWaveCount} held. ${hold ? 'Waiting — make space first.' : 'Send the next sub-wave.'}`}
       >
         Next ▶
       </button>

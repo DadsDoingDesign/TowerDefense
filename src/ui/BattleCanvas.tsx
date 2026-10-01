@@ -13,6 +13,7 @@ import {
   drawBlockedFlash,
   drawClearance,
   drawClearanceLabel,
+  drawConflictMark,
   drawTerrainDanger,
   drawTerrainFlames,
   drawTileGrid,
@@ -40,7 +41,9 @@ import { FxDiffer } from '../game/render/fxDiff'
 import { SlotLayer, type FieldRect } from './SlotLayer'
 import { LedgerWatch, ledgerBeginWave } from './battleLedger'
 import { dist } from '../game/core/vec'
-import { clearanceOverlay, COARSE, distToPolyline, isMelee, LANE_HALF } from '../game/data/terrain'
+import { clearanceOverlay, COARSE, distToPolyline, LANE_HALF } from '../game/data/terrain'
+import { isMelee } from '../game/engine/melee'
+import { fieldConflicts } from '../state/game/selectors'
 import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
@@ -150,6 +153,17 @@ function resampleMode(viewScale: number, dpr: number): 'pixelated' | 'auto' {
  * moved the path and the slots, which is enemy travel time and tower coverage:
  * a balance change wearing an art fix's clothes.
  */
+/**
+ * Weapon clearance: where a conflict's zone label goes. It hugs the zone's
+ * bottom row from inside — unless a marked hero stands in that row, when it
+ * hangs just under the zone instead, clear of them.
+ */
+function labelSide(map: GameMap, c: { tile: string; crowding: readonly { tile: string }[] }): 'under' | 'inside' {
+  const at = (id: string) => map.slots.find((s) => s.id === id)?.pos.y ?? 0
+  const y = at(c.tile)
+  return c.crowding.some((o) => at(o.tile) > y + 1) ? 'under' : 'inside'
+}
+
 export function BattleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -535,12 +549,17 @@ export function BattleCanvas() {
         // Breather: the open tiles light up as places a hero can move to —
         // faintly until a hero is picked up, fully once one is (G1-2).
         let labels: { tile: string; strength: 'full' | 'faint' }[] = []
+        // Weapon clearance: a gear change in the breather made a hero swing
+        // beside another — its zone at full strength, whoever is inside it
+        // marked, until the player makes space (`run/clearance`).
+        const conflicts = liveEngine.breather ? fieldConflicts(st) : []
+        const conflictZones = new Set(conflicts.map((c) => c.tile))
         if (liveEngine.breather && !liveEngine.subWaveState().moved) {
           const occupied = new Set(liveEngine.sentinels.map((s) => s.slotId))
           if (st.breatherPick) drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
-          // A Fighter's clearance: the tiles too close to a hero that is not
+          // A swinger's clearance: the tiles too close to a hero that is not
           // being moved are no place to put the one that is — and each staying
-          // Fighter's clearance is drawn, faintly, to say why.
+          // swinger's clearance is drawn, faintly, to say why.
           const picked = st.breatherPick ? liveEngine.sentinelOnSlot(st.breatherPick) : undefined
           const staying = liveEngine.sentinels.filter((s) => s.slotId !== st.breatherPick).map((s) => ({ tile: s.slotId, melee: isMelee(s.def) }))
           const hover = picked && hoverOpen && !occupied.has(hoverOpen.id) ? hoverOpen.id : null
@@ -549,14 +568,18 @@ export function BattleCanvas() {
           const lit = hover && !crowded.has(hover) ? hover : null
           drawTileGrid(ctx, map, { hover: lit, faint: !st.breatherPick, skip: occupied, crowded })
           if (picked) {
-            for (const z of lay.zones) drawClearance(ctx, map, z, 'faint')
+            const faint = lay.zones.filter((z) => !conflictZones.has(z))
+            for (const z of faint) drawClearance(ctx, map, z, 'faint')
             if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
-            labels = [...lay.zones.map((tile) => ({ tile, strength: 'faint' as const })), ...(lay.landing ? [{ tile: lay.landing, strength: 'full' as const }] : [])]
+            labels = [...faint.map((tile) => ({ tile, strength: 'faint' as const })), ...(lay.landing ? [{ tile: lay.landing, strength: 'full' as const }] : [])]
           }
           if (picked && lit && hoverOpen) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
         }
+        for (const z of conflictZones) drawClearance(ctx, map, z, 'full')
         drawBattleEntities(ctx, liveEngine)
         for (const l of labels) drawClearanceLabel(ctx, map, l.tile, l.strength, shown.scale)
+        for (const c of conflicts) drawClearanceLabel(ctx, map, c.tile, 'full', shown.scale, labelSide(map, c))
+        for (const c of conflicts) for (const o of c.crowding) drawConflictMark(ctx, map, o.tile, shown.scale)
         if (st.breatherPick) {
           const picked = map.slots.find((sl) => sl.id === st.breatherPick)
           if (picked) drawSlot(ctx, picked.pos, 'hover')
@@ -569,21 +592,28 @@ export function BattleCanvas() {
         const armed = st.selectedSentinelId ? st.roster.find((h) => h.id === st.selectedSentinelId) : undefined
         // A hero armed for posting dims the field so the open tiles, lit, are
         // what the eye lands on (Wave 1); blocked tiles stay dark (G1-2).
-        // A Fighter's clearance (`terrain.CLEARANCE`): the tiles too close to a
-        // posted Fighter — or, for an armed Fighter, to anyone — stay dark; each
-        // posted Fighter's clearance is drawn faintly to say why, and an armed
-        // Fighter's is drawn round the tile it would land on. A posted hero's
+        // A swinger's clearance (`terrain.CLEARANCE`): the tiles too close to a
+        // posted swinger — or, for an armed swinger, to anyone — stay dark; each
+        // posted swinger's clearance is drawn faintly to say why, and an armed
+        // swinger's is drawn round the tile it would land on. A posted hero's
         // own tile lights (a tap there swaps the armed hero in).
         const armedMelee = !!armed && isMelee(armed)
         const others = armed ? placed.filter((p) => p.sentinel.id !== armed.id).map((p) => ({ tile: p.slotId, melee: isMelee(p.sentinel) })) : []
         const lay = clearanceOverlay(map.slots, others, armedMelee, armed && hoverOpen ? hoverOpen.id : null)
         const lit = armed && hoverOpen && !lay.crowded.has(hoverOpen.id) ? hoverOpen : undefined
+        // Weapon clearance: a hero swinging beside another — its zone at full
+        // strength and whoever is inside it marked, armed or not, until the
+        // player makes space (`run/clearance`). Start Wave waits for it.
+        const conflicts = st.lastResult ? [] : fieldConflicts(st)
+        const conflictZones = new Set(conflicts.map((c) => c.tile))
+        const faintZones = lay.zones.filter((z) => !conflictZones.has(z))
         if (armed) {
           drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
           drawTileGrid(ctx, map, { hover: lit ? lit.id : null, crowded: lay.crowded })
-          for (const z of lay.zones) drawClearance(ctx, map, z, 'faint')
+          for (const z of faintZones) drawClearance(ctx, map, z, 'faint')
           if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
         }
+        for (const z of conflictZones) drawClearance(ctx, map, z, 'full')
         for (const p of placed) {
           // The armed hero's own post shows its range at the tile it would move
           // to instead, below.
@@ -618,9 +648,11 @@ export function BattleCanvas() {
           drawSentinel(ctx, ds)
         }
         if (armed) {
-          for (const z of lay.zones) drawClearanceLabel(ctx, map, z, 'faint', shown.scale)
+          for (const z of faintZones) drawClearanceLabel(ctx, map, z, 'faint', shown.scale)
           if (lay.landing) drawClearanceLabel(ctx, map, lay.landing, 'full', shown.scale)
         }
+        for (const c of conflicts) drawClearanceLabel(ctx, map, c.tile, 'full', shown.scale, labelSide(map, c))
+        for (const c of conflicts) for (const o of c.crowding) drawConflictMark(ctx, map, o.tile, shown.scale)
       }
 
       // A tapped blocked tile answers where the finger is (G1-2); the coach

@@ -99,6 +99,15 @@ export interface EffectMods {
    * (`engine.onDeath`, `SPREAD_COUNT` / `SPREAD_RADIUS`).
    */
   burnSpreadOnDeath?: boolean
+  /**
+   * PLACEMENT capability: this hero swings all round itself, so it keeps a
+   * clearance on the grid (`engine/melee.isMelee`) whatever it holds. Nothing
+   * grants it yet — it is the hook for a skill that turns a hero into a
+   * melee fighter. Read off the hero's OWN mods (path, mutations, perks or
+   * skills, gear), never the team's: a company-wide source would make every
+   * hero swing. It changes nothing in the fight itself.
+   */
+  grantsMelee?: boolean
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */

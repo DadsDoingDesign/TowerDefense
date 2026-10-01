@@ -18,7 +18,8 @@ import { challengeGrant } from '../../game/run/settle'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
 import { orientationOf } from '../../game/data/maps'
-import { crowdedBy, crowds, isMelee } from '../../game/data/terrain'
+import { crowdedBy, crowds } from '../../game/data/terrain'
+import { isMelee } from '../../game/engine/melee'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
@@ -29,7 +30,7 @@ import { buildRecap } from './recap'
 import { runFactsFromState } from './settle'
 import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
-import { battleHpMult, canStartWave } from './selectors'
+import { battleHpMult, canStartWave, fieldConflicts } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
 export interface BattleActions {
@@ -99,14 +100,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     if (screen !== 'battle' || battlePhase !== 'setup' || !selectedSentinelId) return
     // Only an OPEN tile of this battle's field takes a hero (G1-2).
     if (!battleMap.slots.some((s) => s.id === slotId)) return
-    // A Fighter's clearance (`terrain.CLEARANCE`): nobody stands on the tiles
+    // A swinger's clearance (`terrain.CLEARANCE`): nobody stands on the tiles
     // beside a melee hero, whichever of the two is being posted. Ranged heroes
     // may stand side by side. The hero it would replace on this very tile, and
     // itself, are excepted.
     const melee = meleeOf(roster)
     const others = postsOf(placements, melee, selectedSentinelId, slotId)
-    if (crowdedBy(slotId, melee(selectedSentinelId), others)) {
-      get().noteCrowded(slotId)
+    const near = crowdedBy(slotId, melee(selectedSentinelId), others)
+    if (near) {
+      // The coach names whichever of the two swings, and with what.
+      const id = melee(selectedSentinelId) ? selectedSentinelId : placements[near.tile]
+      get().noteCrowded(slotId, roster.find((h) => h.id === id))
       return
     }
     const next: Placement = { ...placements }
@@ -156,6 +160,10 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // store will give — a control the store refuses must never render enabled.
     if (!canStartWave(st)) return
     if (!currentWave) return // narrowing only — `canStartWave` already rejected it
+    // A clearance conflict (a hero swinging beside another, `run/clearance`)
+    // holds the wave until the player makes space. The strip says so and the
+    // button is disabled; this is the store's half of the same rule.
+    if (fieldConflicts(st).length) return sfx('error')
     // Both modes compound via Threat (H7): one difficulty model covers both.
     const effHpMult = battleHpMult(st)
     // The battle's combat rolls are pinned to (run seed, node, wave) — replaying
@@ -212,6 +220,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       battlePhase: 'battle',
       selectedSentinelId: null,
       breatherPick: null,
+      // Gear locks for the round: an armed gear slot would offer an equip the
+      // store now refuses.
+      gearSlot: null,
       hud: hudOf(engine),
       feats: fielded > st.feats.maxFielded ? { ...st.feats, maxFielded: fielded } : st.feats,
     })
@@ -250,9 +261,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       set({ breatherPick: null })
       return
     }
-    // A Fighter's clearance: the engine refuses a move that puts either hero
+    // A swinger's clearance: the engine refuses a move that puts either hero
     // too close to a third (`engine.moveHero`); say why.
-    const third = engine.sentinels.some(
+    const third = engine.sentinels.find(
       (s) =>
         s.slotId !== breatherPick &&
         s.slotId !== slotId &&
@@ -260,7 +271,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           (!!other && crowds(s.slotId, isMelee(s.def), breatherPick, isMelee(other.def)))),
     )
     if (third) {
-      get().noteCrowded(slotId)
+      get().noteCrowded(slotId, isMelee(third.def) ? third.def : isMelee(moving.def) ? moving.def : other?.def)
       return
     }
     const moved = engine.moveHero(breatherPick, slotId)
@@ -276,9 +287,12 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
   resumeSubWave: () => {
     const { engine } = get()
     if (!engine || !engine.breather) return
+    // The next sub-wave waits while a hero swings beside another — the gear
+    // change that made it is the breather's to undo (`run/clearance`).
+    if (fieldConflicts(get()).length) return sfx('error')
     engine.resume()
     sfx('wave')
-    set({ breatherPick: null, hud: hudOf(engine) })
+    set({ breatherPick: null, gearSlot: null, hud: hudOf(engine) })
   },
 
   syncHud: () => {
@@ -659,7 +673,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
 })
 
 /** The HUD fields the shell reads, off a live engine. */
-function hudOf(engine: GameEngine) {
+export function hudOf(engine: GameEngine) {
   const s = engine.hudSnapshot()
   return {
     baseHp: s.baseHp,

@@ -13,6 +13,9 @@ import { choiceOwed, levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 import { useMapFocus } from './mapFocus'
 import { openSlotShown } from '../../state/staging'
 import { useShown, useStaged } from './staging'
+import { isMelee, MELEE_LINE } from '../../game/engine/melee'
+import { conflictedIds } from '../../game/run/clearance'
+import { fieldConflicts } from '../../state/game/selectors'
 
 /**
  * Band 3 — the party. One tap fills the Context panel below with a hero's
@@ -115,6 +118,14 @@ function PartyCards() {
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
+  // Weapon clearance: the card of a hero in a clearance conflict says which
+  // side of it they are on, in the tag's own room (`run/clearance`). The held
+  // engine is re-read on `hud` (a breather move or re-dress changes it).
+  const engine = useGameStore((s) => s.engine)
+  useGameStore((s) => s.hud)
+  const conflicts = fieldConflicts({ screen, engine, battlePhase, roster, placements, battleMap })
+  const swingers = new Set(conflicts.map((c) => c.hero.id))
+  const tooClose = conflictedIds(conflicts)
 
   return (
     <>
@@ -127,7 +138,11 @@ function PartyCards() {
         const cursed = ground !== 1
         const dps = Math.round(profile.dps * ground)
         const hue = archetypeVar(s.archetype)
+        const clash = swingers.has(s.id) ? 'swing' : tooClose.has(s.id) ? 'close' : null
         const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
+        // "Swings — needs clearance", in words, for whoever swings (what it holds or a skill).
+        const swings = isMelee(s) ? `, ${MELEE_LINE.toLowerCase()}` : ''
+        const clashWords = clash === 'swing' ? ', others too close — make space' : clash === 'close' ? ', too close to a hero that swings — move it' : ''
         // G3-2: a level-up waiting on the roster — the card glows and wears a
         // "Lv 5 ↑" badge until it has been dealt with (see `levelUps.ts`).
         const lvlUp = levelUpOpen(levelUps[s.id], s, evolutionQueue)
@@ -139,7 +154,7 @@ function PartyCards() {
                colour-vision modes can move it (M34). */
             style={{ '--rail': hue } as CSSProperties}
             aria-pressed={selected}
-            aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${dps} DPS — ${state}${
+            aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
               lvlUp ? `, ${levelUpWords(s, evolutionQueue)}` : evolutionQueue.includes(s.id) ? ', ready to evolve' : ''
             }`}
             onClick={() => {
@@ -181,8 +196,8 @@ function PartyCards() {
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
             </span>
-            <span className={`sh-hero-tag ${placed ? (cursed ? 'on cursed' : 'on') : selected && canPlace ? 'arm' : ''}`}>
-              {placed ? (cursed ? 'Cursed' : 'Deployed') : selected && canPlace ? 'Place it' : `${dps} DPS`}
+            <span className={`sh-hero-tag ${clash ? 'on clash' : placed ? (cursed ? 'on cursed' : 'on') : selected && canPlace ? 'arm' : ''}`}>
+              {clash === 'swing' ? 'Make space' : clash === 'close' ? 'Too close' : placed ? (cursed ? 'Cursed' : 'Deployed') : selected && canPlace ? 'Place it' : `${dps} DPS`}
             </span>
           </button>
         )

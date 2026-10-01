@@ -225,19 +225,15 @@ describe('the deployment grid', () => {
     }
   })
 
-  it('carryPlacements keeps a Fighter clearance clear, and lets ranged heroes stand side by side', () => {
+  it('carryPlacements never benches a hero for standing too close — a conflict shows instead (weapon clearance)', () => {
     const land = ALL_MAPS[0]
     const a = land.slots[40]
     const next = land.slots.find((s) => withinClearance(s.id, a.id))!
     const far = land.slots.find((s) => !withinClearance(s.id, a.id) && s.id !== a.id)!
-    const fighterA = (id: string) => id === 'a'
-    const kept = carryPlacements({ [a.id]: 'a', [next.id]: 'b', [far.id]: 'c' }, land, () => true, Infinity, fighterA)
+    const kept = carryPlacements({ [a.id]: 'a', [next.id]: 'b', [far.id]: 'c' }, land, () => true, Infinity)
     expect(kept[a.id]).toBe('a')
-    expect(kept[next.id]).toBeNull()
+    expect(kept[next.id]).toBe('b')
     expect(kept[far.id]).toBe('c')
-    const ranged = carryPlacements({ [a.id]: 'a', [next.id]: 'b' }, land, () => true, Infinity, () => false)
-    expect(ranged[a.id]).toBe('a')
-    expect(ranged[next.id]).toBe('b')
     expect(meleeOf([])('a')).toBe(false)
   })
 
@@ -247,10 +243,10 @@ describe('the deployment grid', () => {
     const water = flooded.tiles!.find((t) => t.block === 'water')!.id
     const open = flooded.slots.map((s) => s.id)
     const [o0, o1, o2] = roomy3(flooded)
-    const next = carryPlacements({ [water]: 'a', [o0]: 'b', [o1]: 'b', [o2]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c', Infinity, () => true)
+    const next = carryPlacements({ [water]: 'a', [o0]: 'b', [o1]: 'b', [o2]: 'c', constructor: 'd', nope: 'e' }, flooded, (id) => id !== 'c', Infinity)
     expect(Object.entries(next).filter(([, v]) => v)).toEqual([[o0, 'b']])
     expect(Object.keys(next).sort()).toEqual([...open].sort())
-    const capped = carryPlacements({ [o0]: 'a', [o1]: 'b', [o2]: 'c' }, flooded, () => true, 2, () => true)
+    const capped = carryPlacements({ [o0]: 'a', [o1]: 'b', [o2]: 'c' }, flooded, () => true, 2)
     expect(Object.values(capped).filter(Boolean)).toHaveLength(2)
   })
 })
@@ -330,12 +326,14 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     expect(useGameStore.getState().fieldNote).toBeNull()
   })
 
-  it('a Fighter keeps a clearance — a tap beside a posted Fighter says so and posts nobody', () => {
+  it('a swinger keeps a clearance — a tap beside a posted swordsman says so and posts nobody', () => {
     start(4242)
     const st0 = useGameStore.getState()
     const first = st0.runMap.nodes.find((n) => st0.reachableNodeIds.includes(n.id) && n.type === 'battle')!
     enter(first.id)
-    useGameStore.setState({ roster: [createSentinel('fighter'), createSentinel('rogue')], placements: emptyPlacements(useGameStore.getState().battleMap) })
+    const sword = { id: 'sw', name: 'Plain Sword', slot: 'oneHand' as const, rarity: 'common' as const, base: {}, enchantments: [] }
+    const fighter = createSentinel('fighter')
+    useGameStore.setState({ roster: [{ ...fighter, equipment: { ...fighter.equipment, mainHand: sword } }, createSentinel('rogue')], placements: emptyPlacements(useGameStore.getState().battleMap) })
     const st = useGameStore.getState()
     const [a, b] = st.roster
     const safe = st.battleMap.slots.filter((s) => !st.battleMap.tiles!.find((t) => t.id === s.id)!.danger)

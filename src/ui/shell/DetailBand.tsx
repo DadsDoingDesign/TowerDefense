@@ -69,6 +69,9 @@ import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazar
 import { LevelUpPanel } from './LevelUpPanel'
 import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
 import { useShown } from './staging'
+import { conflictCopy, equipWarning } from '../../game/run/clearance'
+import { isMelee, MELEE_LINE, meleeSource, weaponWord } from '../../game/engine/melee'
+import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/selectors'
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
@@ -133,6 +136,11 @@ function WaveBar() {
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
+  const battleMap = useGameStore((s) => s.battleMap)
+  // Weapon clearance: a hero swinging beside another holds the next wave
+  // (`run/clearance`). Read off the same inputs the strip already follows —
+  // the posts, the roster's gear, and the held engine (re-read on `hud`).
+  const conflicts = fieldConflicts({ screen, engine, battlePhase, roster, placements, battleMap })
   // LS3: speed arrives once the first sub-wave is down; the Watch Command
   // after the first battle. `CommandSlot`'s "Next" is not staged — it is how a
   // breather ends.
@@ -184,6 +192,7 @@ function WaveBar() {
     const held = hud.breather && !!engine?.breather
     const moved = held && !!engine?.subWaveState().moved
     const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
+    const space = held && conflicts.length ? conflictCopy(conflicts, { moveLeft: !moved, breather: true }) : null
     return (
       <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
         {/*
@@ -205,8 +214,10 @@ function WaveBar() {
          * G2-2: the kill-progress bar is now the enemy queue — who is still
          * coming, next first — in the bar's own room.
          */}
-        <div className="sh-wq-mid">
-          {held ? (
+        <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
+          {space ? (
+            <MakeSpace head={space.head} fix={space.fix} />
+          ) : held ? (
             <StripCaption name="Held" now={moved ? 'Moved — send the next' : 'Move one hero'} tone="do" />
           ) : (
             <StripCaption
@@ -218,16 +229,19 @@ function WaveBar() {
               }
             />
           )}
-          <WaveQueue
-            entries={queue}
-            lead={held ? `Sub-wave ${hud.subWave + 1} of ${hud.subWaveCount}, next` : 'Still to come'}
-            emptyText="All on the field"
-            countNote={held ? 'in the next sub-wave' : 'still to come'}
-          />
+          {!space && (
+            <WaveQueue
+              entries={queue}
+              lead={held ? `Sub-wave ${hud.subWave + 1} of ${hud.subWaveCount}, next` : 'Still to come'}
+              emptyText="All on the field"
+              countNote={held ? 'in the next sub-wave' : 'still to come'}
+            />
+          )}
         </div>
         {/* The live wave's command place — the COMBAT agent's active ability
-            renders here (Phase 2 layout contract, docs/FIGMA.md). */}
-        <CommandSlot staged={!commandShown} />
+            renders here (Phase 2 layout contract, docs/FIGMA.md). While a
+            clearance conflict stands, Next waits and says why. */}
+        <CommandSlot staged={!commandShown} hold={space?.line} />
         {/* A visible word, not just "1×" (Wave 1): a bare multiplier in a box
             read as a score, not as a control. */}
         {speedShown && (
@@ -264,21 +278,28 @@ function WaveBar() {
   }
 
   const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
+  const space = conflicts.length ? conflictCopy(conflicts, { moveLeft: true, breather: false }) : null
   return (
-    <div className="sh-wavebar sh-wq-bar">
+    <div className={`sh-wavebar sh-wq-bar${space ? ' conflict' : ''}`}>
       {/* G2-2 — setup: the wave's name and what to do, then the whole line-up
           in spawn order, then Start Wave. It was a sentence ("Tap your hero,
           then a glowing circle…") and a bare "8 enemies"; the sentence is in
           the composition panel above on a landscape field and the glowing
           posts say it on the field itself, so the strip keeps the verb and
           spends the room on WHO is coming. */}
-      <div className="sh-wq-mid">
-        <StripCaption
-          name={waveName}
-          now={deployed ? `${currentWave?.spawns.length ?? 0} enemies` : 'Post a hero'}
-          tone={deployed ? undefined : 'do'}
-        />
-        <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" countNote="in this wave" />
+      <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
+        {space ? (
+          <MakeSpace head={space.head} fix={space.fix} />
+        ) : (
+          <>
+            <StripCaption
+              name={waveName}
+              now={deployed ? `${currentWave?.spawns.length ?? 0} enemies` : 'Post a hero'}
+              tone={deployed ? undefined : 'do'}
+            />
+            <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" countNote="in this wave" />
+          </>
+        )}
       </div>
       {portrait && (
         <button
@@ -292,7 +313,9 @@ function WaveBar() {
       )}
       <button
         className="sh-btn primary"
-        disabled={deployed === 0}
+        disabled={deployed === 0 || !!space}
+        // The reason it waits is the strip beside it, read with the button.
+        aria-describedby={space ? 'sh-make-space' : undefined}
         /* The keyboard path (Space / Enter, `Shortcuts.tsx`) presses THIS
            button, so a shortcut can never do what the button would refuse. */
         data-key="start"
@@ -308,6 +331,37 @@ function WaveBar() {
       >
         Start Wave ▶
       </button>
+    </div>
+  )
+}
+
+/**
+ * Weapon clearance — the strip while a clearance conflict holds the wave: who
+ * swings, in the caption's place ("MAKE SPACE · Doyle swings a sword"), and the
+ * fix in the queue's ("Move a hero out of the red zone."). Not a live region
+ * (the strip has none — `Announcer` is the battle's one voice): the disabled
+ * Start Wave / Next names this block as its description, so the reason is read
+ * with the control it holds. The field draws the same thing (the red zone at
+ * full strength, the hero inside it marked). It goes the moment the player
+ * makes space.
+ */
+function MakeSpace({ head, fix }: { head: string; fix: string }) {
+  return (
+    <div className="sh-space">
+      <p className="sh-wq-cap bad">
+        <span className="sh-wq-name">
+          <Icon name="warn" /> Make space
+        </span>
+        <span className="sh-wq-now">{head}</span>
+      </p>
+      {/* Where the strip is narrow (a phone beside Details and Start Wave) the
+          caption keeps only "Make space" and the who moves into this line. */}
+      <p className="sh-space-fix">
+        <span className="sh-space-do">{fix}</span>
+        <span className="sh-space-who">
+          {head} — {fix.charAt(0).toLowerCase() + fix.slice(1)}
+        </span>
+      </p>
     </div>
   )
 }
@@ -578,6 +632,14 @@ function GearSlotPanel() {
 
   const offHand = hero.equipment.offHand
   const mainHand = hero.equipment.mainHand
+  // Weapon clearance, before the one-tap equip from the pack: a sword, axe,
+  // greatsword or warhammer in this hand would make a posted hero swing beside
+  // someone (still allowed — it shows as a conflict and holds the wave).
+  const swordIn: Item = { id: 'probe', name: 'Sword', slot: 'oneHand', rarity: 'common', base: {}, enchantments: [] }
+  const probe =
+    gearSlot.slot === 'mainHand' || (gearSlot.slot === 'offHand' && dual.ok)
+      ? equipWarning(hero, { ...hero, equipment: { ...hero.equipment, [gearSlot.slot]: swordIn } }, 'a sword', fieldStanding(useGameStore.getState()))
+      : null
   const warn =
     gearSlot.slot === 'mainHand' && offHand
       ? `A two-handed weapon needs both hands — it would put ${offHand.name} back in the pack. A one-hander leaves it where it is.`
@@ -617,6 +679,12 @@ function GearSlotPanel() {
         {warn && (
           <p className="sh-line bad">
             <Icon name="warn" /> {warn}
+          </p>
+        )}
+        {probe && (
+          <p className="sh-line bad">
+            <Icon name="warn" /> A sword, axe or hammer here makes {hero.name} melee — {probe.count} hero{probe.count === 1 ? ' is' : 'es are'}{' '}
+            too close.
           </p>
         )}
       </div>
@@ -845,6 +913,7 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
   const standing = (engine && battlePhase === 'battle' ? engine.sentinels.find((x) => x.id === hero.id)?.slotId : undefined) ?? slotId
   const danger = standing ? dangerAt(battleMap, standing) : null
   const groundMult = danger === 'cursed' ? CURSED_DAMAGE_MULT : 1
+  const swing = meleeSource(hero)
 
   // LS3: Skills (perks) arrive at a hero's first choice, Team (the targeting
   // order) with the Watch Command — the other order the whole watch shares.
@@ -873,6 +942,13 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
       {danger && (
         <p className="sh-line sh-cursed-line">
           <Icon name="warn" /> <b>{DANGER_COPY[danger].name}</b>: {DANGER_COPY[danger].short} here ({Math.round(profile.dps)} DPS elsewhere).
+        </p>
+      )}
+      {/* Weapon clearance: whether this hero swings, in plain words — what
+          it holds decides it (or a skill), not its class. */}
+      {swing && (
+        <p className="sh-line muted sh-swing-line" title={swing.kind === 'weapon' ? `Holding ${weaponWord(swing.item)}` : 'A skill'}>
+          <Icon name="blade" /> {MELEE_LINE}
         </p>
       )}
       {/* One tab is not a choice: the tab row waits until there are two. */}
@@ -1181,6 +1257,14 @@ function ItemPanel({ item }: { item: Item }) {
   const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
   const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
   const relics = useGameStore((s) => s.relics)
+  // Gear only changes between rounds; during a live sub-wave the panel says so
+  // instead of offering an equip the store would refuse.
+  const locked = useGameStore(gearLocked)
+  // Who stands where right now (setup posts, or the breather's field), to warn
+  // BEFORE an equip that would make a hero swing beside someone.
+  useGameStore((s) => s.placements)
+  useGameStore((s) => s.hud)
+  const standing = fieldStanding(useGameStore.getState())
 
   const scrap = useArmedAction(
     {
@@ -1238,6 +1322,18 @@ function ItemPanel({ item }: { item: Item }) {
     plan && plan.displaced.length > 0
       ? `${plan.displaced.map((d) => d.name).join(' and ')} ${plan.displaced.length > 1 ? 'go' : 'goes'} back to the pack.`
       : null
+  // Weapon clearance, said before the swap: a hero that starts swinging where
+  // it stands with someone beside it is a conflict that holds the next wave.
+  // Still allowed — the warning is the decision, not a refusal.
+  const clash = target && plan ? equipWarning(target, plan.after, itemName(item), standing) : null
+  const swingTurn =
+    !clash && target && plan
+      ? !isMelee(target) && isMelee(plan.after)
+        ? `${target.name} will swing — needs clearance.`
+        : isMelee(target) && !isMelee(plan.after)
+          ? `${target.name} stops swinging — no clearance needed.`
+          : null
+      : null
 
   // Crafting is gold in the campaign and dust in endless — the Forge room is
   // only one place you can reach an item, so the actions belong on the item.
@@ -1268,6 +1364,13 @@ function ItemPanel({ item }: { item: Item }) {
         {/* The rarity in its own hue with a pip count, on its own line: in the
             head it cost the name its width ("Dagg…"). It used to be the gold
             sub-label at every tier (Wave 1). */}
+        {/* Weapon clearance: the conflict this equip would cause, said FIRST —
+            above the fold on a phone, where the body scrolls under the foot. */}
+        {clash && (
+          <p className="sh-line bad">
+            <Icon name="warn" /> {clash.text}
+          </p>
+        )}
         <p className="sh-line">
           <RarityTag rarity={item.rarity} />
         </p>
@@ -1319,6 +1422,11 @@ function ItemPanel({ item }: { item: Item }) {
             {ejection && (
               <p className="sh-line muted">
                 <Icon name="back" /> {ejection}
+              </p>
+            )}
+            {swingTurn && (
+              <p className="sh-line muted">
+                <Icon name="blade" /> {swingTurn}
               </p>
             )}
           </div>
@@ -1437,7 +1545,9 @@ function ItemPanel({ item }: { item: Item }) {
         )}
       </div>
       <div className="sh-context-foot">
-        {target && plan ? (
+        {locked && (target || wearer) ? (
+          <GearLockNote />
+        ) : target && plan ? (
           <button
             className="sh-btn primary"
             onClick={() => {
@@ -1446,7 +1556,7 @@ function ItemPanel({ item }: { item: Item }) {
               useGearTarget.setState({ heroId: target.id })
               shellSelect(null)
             }}
-            aria-label={`Equip ${itemName(item)} on ${target.name}, ${plan.slotLabel}${ejection ? `. ${ejection}` : ''}`}
+            aria-label={`Equip ${itemName(item)} on ${target.name}, ${plan.slotLabel}${ejection ? `. ${ejection}` : ''}${clash ? `. ${clash.text}` : ''}`}
           >
             Equip → {target.name}
           </button>
@@ -1566,6 +1676,22 @@ function OfferPanel({ offer }: { offer: Offer }) {
 /* -------------------------------------------------------------- gear + pack */
 
 /**
+ * The designer: "items locked during rounds". While a sub-wave is live, gear
+ * cannot change; where the equip controls would be, this says so calmly — a
+ * small drawn lock and one line — instead of controls that do nothing. It
+ * goes the moment the round ends (the breather or the next setup).
+ */
+export const GEAR_LOCK_LINE = 'Gear locks during a wave'
+function GearLockNote({ compact = false }: { compact?: boolean }) {
+  return (
+    <p className={`sh-lock${compact ? ' compact' : ''}`}>
+      <span className="sh-lock-glyph" aria-hidden="true" />
+      {GEAR_LOCK_LINE}
+    </p>
+  )
+}
+
+/**
  * R3-2 — the gear as a paper doll.
  *
  * The designer: "a little human body type model with the item slots over it —
@@ -1614,6 +1740,9 @@ function GearColumn() {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const relics = useGameStore((s) => s.relics)
   const rules = equipRules(relics)
+  // During a live sub-wave gear is locked: worn pieces still open (to read),
+  // empty slots are not offered, and the column says why.
+  const locked = useGameStore(gearLocked)
 
   // Follows the selected hero, then the last hero you looked at (an item tap
   // is a different selection, and used to snap this back to `roster[0]`), and
@@ -1659,6 +1788,7 @@ function GearColumn() {
             return (
               <button
                 key={hs}
+                disabled={locked && !worn}
                 className={`sh-slot sh-doll-slot sh-doll-${hs} ${worn ? 'filled' : 'empty'}${active ? ' active' : ''}${dual ? ' dual' : ''}`}
                 style={worn ? ({ '--rail': rarityVar(worn.rarity) } as CSSProperties) : undefined}
                 onClick={() => {
@@ -1675,7 +1805,9 @@ function GearColumn() {
                 aria-label={
                   worn
                     ? `${slotName}: ${itemName(worn)}, ${RARITY[worn.rarity].label}`
-                    : active
+                    : locked
+                      ? `${slotName}: empty — ${GEAR_LOCK_LINE.toLowerCase()}`
+                      : active
                       ? `${slotName}: choosing — pick something from the pack`
                       : `${slotName}: empty`
                 }
@@ -1723,6 +1855,8 @@ function GearColumn() {
           )}
         </div>
       ) : null}
+      {/* Once, where the controls are: an open item's panel says it in its foot. */}
+      {locked && hero && selection?.kind !== 'item' && <GearLockNote compact />}
       {/* The desk rail has the height the phone does not: there the doll is
           captioned with what each hand holds, in words (Whales, round 1: the
           desk's gear labels were the faintest text on the rail). Hidden from

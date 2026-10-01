@@ -334,7 +334,11 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     e.step(TICK)
     e.step(TICK)
     expect(e.tick).toBe(tick) // frozen
-    // A Fighter's clearance: no move onto a tile beside a Fighter.
+    // A swinger's clearance: no move onto a tile beside a hero with a sword.
+    // (The Fighter here is unarmed; it takes a sword in the breather — a gear
+    // change, not the move.)
+    const f = e.sentinelOnSlot(P.s2)!
+    expect(e.regear({ ...f.def, equipment: { ...f.def.equipment, mainHand: { id: 'sw', name: 'Plain Sword', slot: 'oneHand', rarity: 'common', base: {}, enchantments: [] } } })).toBe(true)
     const beside = FIRST_MAP.slots.find((s) => s.id !== P.s1 && withinClearance(s.id, P.s2) && !withinClearance(s.id, P.s1))!
     expect(e.moveHero(P.s1, beside.id)).toBe(false)
     expect(e.moveHero(P.s1, P.s4)).toBe(true)
@@ -344,7 +348,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     runOut(e)
     expect(e.status).toBe('cleared')
     expect(e.behaviourStats.breathers).toBe(1)
-    expect(e.inputLog.map((i) => i.kind)).toEqual(['move', 'resume'])
+    expect(e.inputLog.map((i) => i.kind)).toEqual(['gear', 'move', 'resume'])
   })
 
   it('heroes are never hurt: a blocker holding a column takes nothing and keeps fighting', () => {

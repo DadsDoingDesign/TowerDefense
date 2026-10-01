@@ -5,7 +5,9 @@
  */
 import { sfx } from '../../audio/audio'
 import { dangerAt } from '../../game/data/hazards'
-import type { HeroSlot } from '../../game/types'
+import type { HeroSlot, Sentinel } from '../../game/types'
+import { roomLine } from '../../game/run/clearance'
+import { gearLocked } from './selectors'
 import type { HeroTab, ShellSelection, Slice } from './types'
 
 export interface ShellActions {
@@ -24,8 +26,12 @@ export interface ShellActions {
   noteTerrain: (tileId: string) => void
   /** G1-2: a tap landed on the road itself, between the tiles. */
   noteRoad: () => void
-  /** A hero may not stand beside a Fighter (its clearance), nor a Fighter beside anyone — the tile tapped says so. */
-  noteCrowded: (tileId: string) => void
+  /**
+   * A hero may not stand beside one that swings (its clearance), nor a swinger
+   * beside anyone — the tile tapped says so, naming `swinger` and its weapon
+   * when it is known.
+   */
+  noteCrowded: (tileId: string, swinger?: Sentinel) => void
   /** Retire the blocked-tile note (the strip's "Got it", or its timeout). */
   clearFieldNote: () => void
   /**
@@ -72,7 +78,11 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
 
   setHeroTab: (tab) => set({ heroTab: tab, gearSlot: null }),
 
-  activateGearSlot: (sentinelId, slot) => set({ gearSlot: { sentinelId, slot } }),
+  // Gear locks during a live sub-wave: no slot waits for an item then.
+  activateGearSlot: (sentinelId, slot) => {
+    if (gearLocked(get())) return
+    set({ gearSlot: { sentinelId, slot } })
+  },
   clearGearSlot: () => set({ gearSlot: null }),
   toggleDetail: () => set({ detailOpen: !get().detailOpen }),
 
@@ -86,8 +96,8 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
     set({ fieldNote: { tileId: null, kind: 'lane', at: Date.now() } })
     sfx('error')
   },
-  noteCrowded: (tileId) => {
-    set({ fieldNote: { tileId, kind: 'crowded', at: Date.now() } })
+  noteCrowded: (tileId, swinger) => {
+    set({ fieldNote: { tileId, kind: 'crowded', at: Date.now(), ...(swinger ? { line: roomLine(swinger) } : {}) } })
     sfx('error')
   },
   clearFieldNote: () => {

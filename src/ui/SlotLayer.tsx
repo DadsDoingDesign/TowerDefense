@@ -1,7 +1,9 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import type { Vec2 } from '../game/core/vec'
 import { DANGER_COPY } from '../game/data/hazards'
-import { BLOCK_COPY, CLEARANCE_LABEL, crowdedBy, isMelee, ROOM_REASON } from '../game/data/terrain'
+import { BLOCK_COPY, CLEARANCE_LABEL, crowdedBy, ROOM_REASON } from '../game/data/terrain'
+import { isMelee, swingsPhrase } from '../game/engine/melee'
+import { fieldConflicts } from '../state/game/selectors'
 import { meleeOf, postsOf } from '../game/run/map'
 import type { FieldTile, GameMap } from '../game/types'
 import { useGameStore } from '../state/gameStore'
@@ -101,6 +103,15 @@ export function SlotLayer({ field }: { field: FieldRect }) {
     refs.current.get(next.id)?.focus()
   }
 
+  // Weapon clearance: a hero swinging beside another says so in both tiles'
+  // names, as the field marks them (`run/clearance`).
+  const conflicts = fieldConflicts(useGameStore.getState())
+  const conflictNote = (id: string): string => {
+    const own = conflicts.find((c) => c.tile === id)
+    if (own) return `, ${swingsPhrase(own.hero)} with others too close — make space`
+    const inside = conflicts.find((c) => c.crowding.some((o) => o.tile === id))
+    return inside ? `, inside ${inside.hero.name}'s ${CLEARANCE_LABEL.toLowerCase()} — move them out` : ''
+  }
   const label = (t: FieldTile): string => {
     const ref = `Tile ${tileRef(t)}`
     if (t.block) return `${ref}, ${BLOCK_COPY[t.block].line}`
@@ -108,18 +119,20 @@ export function SlotLayer({ field }: { field: FieldRect }) {
     const where = t.danger ? `${slotPlace(map, t.pos)}, ${DANGER_COPY[t.danger].line.replace(/\.$/, '')}` : slotPlace(map, t.pos)
     if (inBreather) {
       const rt = engine!.sentinelOnSlot(t.id)
-      const state = rt ? `${rt.def.name} posted` : 'open'
+      const state = rt ? `${rt.def.name} posted${conflictNote(t.id)}` : 'open'
       const action = pick ? (pick === t.id ? ' — put back' : ' — move here') : rt ? ' — pick up to move' : ''
       return `${ref}, ${where}, ${state}${action}`
     }
     const heroId = placements[t.id]
     const hero = heroId ? roster.find((h) => h.id === heroId) : undefined
-    // A Fighter's clearance: beside a posted Fighter (or, for an armed
-    // Fighter, beside anyone) is no place for the armed hero.
+    // A swinger's clearance: beside a posted swinger (or, for an armed
+    // swinger, beside anyone) is no place for the armed hero.
     const near = armedHero && !hero ? neighbourOf(t.id) : undefined
     if (near) return `${ref}, ${where}, too close to ${near.name} — ${ROOM_REASON}`
-    // A posted Fighter's tile names the clearance round it, as the grid draws it.
-    const state = hero ? `${hero.name} posted${isMelee(hero) ? `, with a ${CLEARANCE_LABEL.toLowerCase()} round it` : ''}` : 'open'
+    // A posted swinger's tile names the clearance round it, as the grid draws it.
+    const state = hero
+      ? `${hero.name} posted${isMelee(hero) ? `, with a ${CLEARANCE_LABEL.toLowerCase()} round it` : ''}${conflictNote(t.id)}`
+      : 'open'
     const action = armedHero
       ? hero && hero.id === armedHero.id
         ? ''

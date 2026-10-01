@@ -245,8 +245,10 @@ export function Coach() {
 
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
-    // that a hero stands too close to a Fighter, `terrain.CLEARANCE`).
-    const copy = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : fieldNote.kind === 'crowded' ? ROOM_COPY : BLOCK_COPY[fieldNote.kind]
+    // that a hero stands too close to one that swings, `terrain.CLEARANCE`).
+    const base = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : fieldNote.kind === 'crowded' ? ROOM_COPY : BLOCK_COPY[fieldNote.kind]
+    // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
+    const copy = fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
     return (
       <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
         <Icon name="warn" className="sh-coach-glyph" />

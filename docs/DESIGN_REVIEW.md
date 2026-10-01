@@ -2580,3 +2580,60 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   passes by losing resolution, not by a real fix. Banner 2 pays 239 → 253 marks,
   widening Banner 3's shortfall (−7 → −22). The breather's move spread 1.05 →
   1.34/node (a ranged hero has more places to go).
+- **2026-09-30 — Weapon clearance: what a hero holds makes it swing; gear and
+  posts change only between rounds.** The designer: "skills and weapon type
+  affect your hero. like equiping a sword might make it unsafe to use a tower
+  where it is and require you to make space. show conflicts and block round
+  start until resolved", then "items locked during rounds, and towers cannot be
+  moved during rounds. only between". The rule: a hero swings — keeps the 3 × 3
+  clearance — when it holds a **Sword, Axe, Greatsword or Warhammer** in either
+  hand (`items.itemSwings`, a `swings` mark on `ITEM_BASES`: the physical
+  `main`/`twoHand` weapons), or when its own derived mods carry
+  `grantsMelee` (the hook a skill sets; nothing grants it yet). Knives (the
+  light `either` grip — the Rogue's thrown strike), bows, wands, rods,
+  sceptres, staves and grimoires do not swing; unarmed and shield-only heroes
+  have nothing to swing. Holding enemies stays the Fighter line's. ONE
+  `melee.isMelee(hero)` is read by the store, `engine.moveHero`, the harness's
+  modelled player, the menu cinematic (the main hand's kind is its own gear
+  stream's first draw, read before the rarity — the scene's draws are
+  unchanged), the canvas, the keyboard tile names and the coach line, which now
+  names the swinger: "Too close — Doyle swings a sword, so keep the tiles next
+  to Doyle clear." No item is class-locked, so a Mystic with a sword swings,
+  and two of three opening physical one-handers (Sword, Axe — not the Dagger)
+  make a Fighter or a Rogue swing from the start. Conflicts: an equip that
+  makes a posted hero swing beside someone is allowed, warned first ("Equipping
+  Keen Sword makes Doyle melee — 1 hero is too close." at the top of the item
+  panel; the armed-slot panel says it for a sword-class piece), and then shown,
+  never fixed for the player: the swinger's zone at full strength with its
+  label hung under the zone when a marked hero stands in its bottom row, each
+  hero inside it ringed in red with a "!" badge, the party cards reading "Make
+  space" / "Too close", and the wave strip "⚠ MAKE SPACE · Doyle swings a sword
+  / Move a hero out of the red zone." with Start Wave disabled (the store
+  refuses too; `selectors.fieldConflicts`, deliberately NOT part of
+  `canStartWave`, whose "no" is the stranded-battle exit). `carryPlacements`
+  no longer benches a crowded hero, so a merchant sword or an old save opens
+  the battle with its conflict drawn. Rounds: during a live sub-wave every
+  equip, unequip, swap and slot-arming refuses and the gear column / item foot
+  say "Gear locks during a wave" beside a drawn lock (no icon-sheet glyph
+  exists); empty doll slots are disabled, worn ones still open to read. The
+  breather opens gear (re-dressed in the fight through a logged
+  `engine.regear`, no RNG) and keeps its ONE move; Next is disabled while a
+  conflict stands ("…or take the sword off", and once the move is spent "Your
+  move is spent — take the sword off."). Never stuck: a breather starts
+  conflict-free, its move is checked against who swings at that moment, so
+  taking every swinging weapon off always clears it (a 300-trial property test);
+  in setup, moves are free and Undeploy always works. Rendered at 390×844 @2x
+  and 1440×900 @2x (`~/fieldwatch-critique/weapon-clearance/before|after/`).
+  The loop caught five things. (1) The equip warning sat under the compare
+  block, below the phone's fold — it leads the panel now. (2) "Doyle swings a
+  sw…" ellipsised in the phone's 121px strip slot and the caption's name hid
+  under 140px; under 260px the caption keeps "⚠ MAKE SPACE" and the reason
+  moves into a three-line body. (3) That body overflowed the collapsed band by
+  15px; a collapsed band grows 26px while a conflict stands. (4) The zone label
+  hugging the bottom row covered the hero it marks; it hangs outside the zone
+  in a conflict. (5) A disabled Next kept the live teal; it takes the disabled
+  primary's treatment. Scorecard: readability 4/5 (the "!" badge sits on the
+  marked hero's body on a 40px tile), functional colour 5/5, polish 4/5.
+  Open: the default heroes' sprites paint their weapon in (a Fighter always
+  shows a sword), so a Fighter holding a dagger looks armed for a clearance it
+  does not keep — `loadout.ts` only has art for the placeholder pack.
