@@ -194,6 +194,17 @@ export interface Sentinel {
    */
   perks?: string[]
   /**
+   * Skills equipped (SK1, `data/skills.ts`), at most three: the Level 1 skill
+   * it was picked or hired with, then whatever its milestones gave it.
+   */
+  skills?: string[]
+  /**
+   * How many skill milestones (levels 5, 10, 15) this hero has settled — with
+   * a new skill, a swap, or a stat bump. The next one is owed once its level
+   * is reached (`run/skills.pendingMilestone`).
+   */
+  skillPicks?: number
+  /**
    * LEGACY: bought levels of the per-hero upgrade tree the perks replaced.
    * Nothing reads it; a v6 save's levels are refunded as gold on load
    * (`runSnapshot.migrateSnapshot`) and the field is dropped.

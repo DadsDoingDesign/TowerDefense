@@ -2,6 +2,7 @@ import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
 import { offHandShare } from '../data/items'
 import { perkModsOf } from '../data/perks'
+import { skillModsOf } from '../data/skills'
 import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
 
 /** Gather team-wide EffectMods from every equipped keepsake across a roster. */
@@ -123,7 +124,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   // Spec perks (Phase 3b) sit where the per-hero upgrade tree's path levels
   // used to: chosen at levels 5 and 15, free, one line's rules per pick.
   const perkMods = perkModsOf(s)
-  const mods = mergeMods([...branchMods, ...mutationMods, ...perkMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  const mods = mergeMods([...branchMods, ...skillModsOf(s), ...mutationMods, ...perkMods, ...gear.mods, ...(ctx.teamMods ?? [])])
 
   const pMult = ctx.patienceMult ?? 1
   // Intended (L9d): Patience is a percentage buff on the unit's TOTAL core stats,
