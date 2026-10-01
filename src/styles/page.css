@@ -1414,3 +1414,88 @@
 .pg-row[aria-disabled='true'] {
   cursor: default;
 }
+
+/* ---------------------------------------------------------- SK1: skill library
+   The Codex's skill cards, grouped by level. An unlocked card names the skill,
+   who may hold it and its one sentence; a locked one is a silhouette — a
+   dashed outline, a "?" and how it opens, nothing more. */
+.pg-skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  width: 100%;
+}
+.pg-skills-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 4px;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pg-skills-head span {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.pg-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pg-skill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+}
+.pg-skill-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.pg-skill-name {
+  font-size: var(--fs-sm);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.pg-skill-sub {
+  margin-left: auto;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pg-skill-text {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+  color: var(--muted);
+}
+.pg-skill.locked {
+  background: transparent;
+  border-style: dashed;
+  border-left-style: dashed;
+  border-left-color: var(--line-strong);
+}
+.pg-skill.locked .pg-skill-name {
+  color: var(--muted);
+}
+.pg-skill-shape {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+}

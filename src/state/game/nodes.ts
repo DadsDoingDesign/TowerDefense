@@ -1,7 +1,7 @@
 import { applyBattleXp, stopXp } from '../../game/run/battle'
 import { frontierFrom } from '../../game/run/map'
 import { threatAfterLayer } from '../../game/run/threat'
-import { bannerRules } from '../metaStore'
+import { difficultyRules } from '../metaStore'
 import { CLEAR_SHELL } from './fresh'
 import type { GetState, SetState } from './types'
 
@@ -16,7 +16,7 @@ import type { GetState, SetState } from './types'
  * replayed snapshot cannot move the run on twice.
  */
 export function completeNode(get: GetState, set: SetState, nodeId: string): void {
-  const { runMap, clearedNodeIds, runBanner } = get()
+  const { runMap, clearedNodeIds, runDifficulty } = get()
   const alreadyCleared = clearedNodeIds.includes(nodeId)
   const node = runMap.nodes.find((n) => n.id === nodeId)
   // A node this map does not have, or one already consumed, is not a node to
@@ -38,17 +38,16 @@ export function completeNode(get: GetState, set: SetState, nodeId: string): void
   }
   const cleared = [...clearedNodeIds, nodeId]
   // A stop still drills the company (Phase 3b): every hero gains `stopXp` for
-  // the layer, and a level that crosses 10 or 20 queues its evolution exactly
-  // as a wave's XP does.
-  const { roster, evolutionQueue } = get()
+  // the layer, and a level that crosses a skill milestone owes its choice
+  // exactly as a wave's XP does (SK1).
+  const { roster } = get()
   const drilled = applyBattleXp(roster, roster.map((s) => ({ id: s.id, xpGained: stopXp(node.layer) })))
   set({
     roster: drilled.roster,
-    evolutionQueue: [...new Set([...evolutionQueue, ...drilled.evolutionQueue])],
     clearedNodeIds: cleared,
     currentNodeId: nodeId,
     reachableNodeIds: frontierFrom(runMap, nodeId, cleared),
-    threat: threatAfterLayer(node.layer, bannerRules(runBanner).startThreat),
+    threat: threatAfterLayer(node.layer, difficultyRules(runDifficulty).startThreat),
     event: null,
     merchant: null,
     shrineOffer: null,

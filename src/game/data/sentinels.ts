@@ -47,6 +47,16 @@ function emptyEquipment(): Equipment {
   return { mainHand: null, offHand: null, body: null }
 }
 
+/**
+ * The name the next `createSentinel(archetype)` will hand out, after `skip`
+ * more of that class — without handing it out. The hero pick names its three
+ * heroes with this (SK1), so the name on the card is the name the hero gets.
+ */
+export function peekName(archetype: Archetype, skip = 0): string {
+  const pool = NAME_POOLS[archetype]
+  return pool[(nameCounters[archetype] + skip) % pool.length]
+}
+
 /** Create a fresh level-1 Sentinel of the given archetype. */
 export function createSentinel(archetype: Archetype): Sentinel {
   const node = getNode(archetype)

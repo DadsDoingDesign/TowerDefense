@@ -49,6 +49,9 @@ import {
   type RunSnapshot,
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
+import { skillById, skillFits, STARTER_SKILLS } from '../src/game/data/skills'
+import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
+import { MAX_DIFFICULTY } from '../src/game/run/watch'
 import { offHandAllowed } from '../src/game/run/inventory'
 import { equipRules } from '../src/game/run/relics'
 
@@ -95,7 +98,9 @@ function buildBase(): Record<string, unknown> {
     ...s.roster[0],
     equipment: { mainHand: epic('oneHand'), offHand: { ...epic('offHand'), keepsake: true }, body: epic('body') },
     mutations: [muts[0]],
-    perks: ['f5_second_wind'],
+    // SK1 (v13): two skills held and one milestone settled.
+    skills: ['hold_fast', 'heavy_blows'],
+    skillPicks: 1,
   }
   // Round 3 (Q5): a hero wearing what the off hand no longer takes — a Sword,
   // on a Mystic nowhere near the Twinblade Harness's DEX — so every load of the
@@ -211,8 +216,24 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const m of snap.crossroads?.mutations ?? []) {
     assertFiniteCombat({ ...probe, mutations: [m] }, team, `${where} mutation ${m.id}`)
   }
-  for (const k of ['gold', 'baseHp', 'maxBaseHp', 'enemyHpMult', 'threat', 'runBanner', 'dust', 'lives', 'round'] as const) {
+  for (const k of ['gold', 'baseHp', 'maxBaseHp', 'enemyHpMult', 'threat', 'runDifficulty', 'dust', 'lives', 'round'] as const) {
     if (!Number.isFinite(snap[k])) throw new Error(`${where}: ${k} = ${snap[k]}`)
+  }
+  // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
+  // known, distinct, its class's, at most three — and its owed offer deals.
+  if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
+  if (!Number.isInteger(snap.runDifficulty) || snap.runDifficulty < 0 || snap.runDifficulty > MAX_DIFFICULTY) throw new Error(`${where}: difficulty ${snap.runDifficulty}`)
+  for (const s of heroes) {
+    const ks = s.skills ?? []
+    if (ks.length > MAX_SKILLS || new Set(ks).size !== ks.length) throw new Error(`${where}: ${s.id} skills ${ks}`)
+    for (const id of ks) {
+      const k = skillById(id)
+      if (!k || !skillFits(k, s.archetype)) throw new Error(`${where}: ${s.id} holds ${id}`)
+    }
+    const picks = s.skillPicks ?? 0
+    if (!Number.isInteger(picks) || picks < 0 || picks > 3) throw new Error(`${where}: ${s.id} skillPicks ${picks}`)
+    if (s.branchPath.length !== 1 || s.branchPath[0] !== s.archetype) throw new Error(`${where}: ${s.id} path ${s.branchPath}`)
+    skillOffer(s, snap.skillPool, snap.runSeed)
   }
   // v7: the merchant's Gate repair and reroll count both reach arithmetic.
   const rep = snap.merchant?.repair
@@ -422,7 +443,6 @@ describe('v6 → v7: the skill tree became spec perks', () => {
     raw.v = 6
     const hero = raw.roster[0]
     hero.upgrades = { power: 2, tempo: 1 }
-    delete hero.perks
     const mythic = { ...raw.inventory[0], rarity: 'mythic' as const, grantUpgrade: { path: 'precision', levels: 1 } }
     raw.inventory = [mythic]
     const gold = raw.gold
@@ -436,11 +456,41 @@ describe('v6 → v7: the skill tree became spec perks', () => {
     expect(item.enchantments.some((e) => e.id === 'mythic_precision')).toBe(true)
   })
 
-  it('leaves a v7 payload alone', () => {
+  it('leaves a current payload alone', () => {
     const raw = buildBase() as Record<string, unknown> & { gold: number }
     const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
     expect(snap!.gold).toBe(raw.gold)
-    expect(snap!.roster[0].perks).toEqual(['f5_second_wind'])
+    expect(snap!.roster[0].skills).toEqual(['hold_fast', 'heavy_blows'])
+  })
+})
+
+describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
+  it('maps a grown hero onto skills, keeps the Vow as the difficulty, and drops the evolution queue', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: (Sentinel & { perks?: string[] })[] }
+    raw.v = 12
+    const hero = raw.roster[0]
+    delete hero.skills
+    delete hero.skillPicks
+    hero.level = 16
+    hero.branchPath = ['fighter', 'guard']
+    hero.perks = ['f5_second_wind']
+    raw.runBanner = 2
+    delete raw.runDifficulty
+    delete raw.skillPool
+    raw.evolutionQueue = [hero.id]
+    const strBefore = hero.stats.str
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    const h = snap!.roster[0]
+    expect(h.skills).toEqual(['hold_fast', 'anchor'])
+    expect(h.skillPicks).toBe(2)
+    expect(h.branchPath).toEqual(['fighter'])
+    expect(h.stats.str).toBe(strBefore)
+    expect((h as { perks?: unknown }).perks).toBeUndefined()
+    expect(snap!.runDifficulty).toBe(2)
+    expect(snap!.skillPool).toEqual([...STARTER_SKILLS])
+    expect((snap as unknown as Record<string, unknown>).evolutionQueue).toBeUndefined()
+    assertPlayable(snap!, 'v12')
   })
 })
 

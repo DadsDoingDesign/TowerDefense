@@ -6,6 +6,17 @@ import { dailyScore } from './daily'
 import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achievements'
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
+import {
+  clampStep,
+  difficultyRules,
+  MAX_DIFFICULTY,
+  rollUnlock,
+  watchLevelFor,
+  watchXpFor,
+  winReward,
+  winScore,
+} from '../game/run/watch'
+import { RANDOM_UNLOCK_SKILLS } from '../game/data/skills'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -148,233 +159,32 @@ export const legacyBannerRefund = (unlocked: number): number => {
 
 /**
  * ---------------------------------------------------------------------------
- * The Banner ladder — what Dark Sacrifice became (H16 / M29).
+ * Difficulty steps — what replaced the Banner (Vow) ladder (SK1)
  * ---------------------------------------------------------------------------
  *
- * Dark Sacrifice broke every rule a difficulty ladder has. It was:
+ * The designer: "each time you beat the game the difficulty goes up a bit.
+ * you can turn it back down but you dont get another skill unless you beat
+ * your score when you win at the same difficulty."
  *
- *  - **permanent and global** — one tap raised enemy HP by 15% *forever*, on
- *    every run, in both modes, with no way back short of erasing the save;
- *  - **bought, not earned** — the gate was 200 Watch Marks, so it measured
- *    grinding rather than skill. (The Banner ladder that replaced it kept the
- *    price — 200 / 350 / 500 marks a rung — until Phase 1, contradicting this
- *    very line. A rung is now unlocked by WINNING a run under the rung below
- *    it: Banner 1 by winning an unbannered run. Marks already spent on rungs
- *    are refunded by {@link migrateMeta}.)
- *  - **numbers only** — +1 to every stat, +10% marks, +15% enemy HP. Nothing
- *    about the game changed; the same run happened with different arithmetic;
- *  - **a stat ratchet on both sides** — it made the player stronger *and* the
- *    enemies stronger, so it did not even reliably raise difficulty.
+ * The Vow ladder took a RULE away per rung (two reward cards, every battle an
+ * elite, no recruits). A difficulty step is one plain dial instead —
+ * enemies +8% stronger and one more elite in each act per step
+ * (`run/watch.difficultyRules`) — raised by WINNING at the top step and
+ * lowered at the start of any run. Marks still pay for the climb (×1.25 a
+ * step), and the balance report keeps the ladder's two gates: every step must
+ * cost, and every step must pay (§13).
  *
- * A Banner is the opposite of all four. It is chosen **per run, at the start**,
- * from the rungs you have unlocked; it never applies to a run you did not
- * choose it for; each rung takes a *rule* away rather than adding a multiplier;
- * and the reward scales with the rung, so flying a Banner is a bet rather than
- * a tax. Rungs are cumulative — Banner 3 flies 1, 2 and 3.
+ * A save's highest unlocked Vow becomes its top difficulty step (v6), so a
+ * player who had opened Vow 2 starts at difficulty 2 and can turn it down.
  */
-export interface BannerRung {
-  tier: number
-  name: string
-  /** The rule this rung changes, in the player's words. */
-  rule: string
-  /** Marks multiplier for finishing a run under this Banner (cumulative). */
-  markMult: number
-}
-
-/**
- * Every rung states exactly one rule, only the rule that rung ADDS, and every
- * rule is implemented and measurable.
- *
- * ---------------------------------------------------------------------------
- * What the ladder used to be, and why none of it survived (F-C2)
- * ---------------------------------------------------------------------------
- *
- * Measured at n=150 paired runs per rung, marks by `grantRunRewards`'s own
- * formula, on the zero-meta baseline:
- *
- * | old rung | rule added | ×marks | win% | marks/run |
- * |---|---|--:|--:|--:|
- * | 1 Forced March | no merchants | 1.25 | 40% | 142 |
- * | 2 Thin Pickings | two cards | 1.55 | 32% | 157 |
- * | 3 Elite Watch | every node elite | 2.0 | 11% | 136 |
- * | 4 Blood Price | no recruits | 2.6 | 1% | 128 |
- * | 5 The Long Dark | start at Threat ×2 | 3.4 | 1% | 137 |
- *
- * Banner 0 wins 40% and banks 114 marks a run. So:
- *
- *  - **Rung 1 was free money.** Deleting the merchants costs a first run
- *    nothing measurable — a merchant detour is a ×1.13 Threat step for a shop
- *    the run usually cannot afford — and it paid +25%. There was no reason to
- *    ever fly Banner 0 again, which makes the ladder's first rung a mandatory
- *    bonus rather than a bet.
- *  - **Rungs 3–5 were strictly ignorable.** The payout multiplier exactly
- *    cancelled the difficulty: marks/run flatlined around 130–160 while the win
- *    rate collapsed 32 → 11 → 1 → 1%. Climbing was never worth it.
- *  - **Rung 5 was a numbers-only rung** — `startThreat: 2` and a line of copy
- *    ("the horde never sends a patrol again") that restated rung 3. Doctrine:
- *    numbers-only rungs are a treadmill.
- *
- * ---------------------------------------------------------------------------
- * What it is now
- * ---------------------------------------------------------------------------
- *
- * Every candidate rule was measured **alone**, on top of Banner 0, at n=200
- * paired runs per cell on the zero-meta baseline, across four routing policies
- * (win rate against Banner 0's 28 / 37 / 35 / 37%):
- *
- * | rule alone | specials | battles | recruits | adaptive |
- * |---|--:|--:|--:|--:|
- * | two reward cards | −9 | −12 | −6 | −7 |
- * | **no Merchants** | **−1** | **−7** | **−1** | **−3** |
- * | **every node elite** | **0** | **−3** | **+1** | **−1** |
- * | no recruits | −10 | −23 | −21 | −21 |
- * | start at Threat ×2 | −24 | −28 | −24 | −25 |
- *
- * **Re-measured after the Banner-2 pricing fix (M19-g).** `allElite` used to
- * read −10 / −25 / −17 / −15 on this table, and almost none of that was the
- * composition: it was `THREAT_PER_NODE[kind]`, which charged every battle node
- * the ×1.52 elite step under this rung instead of ×1.42 — a compounding
- * surcharge the rung's card never mentioned (`gameStore.mapKind`). With the
- * price *and* the elite pay (+25 gold, +0.15 card luck) both following the kind
- * the map dealt, the rule alone is close to free at this sample size. It still
- * earns its rung cumulatively — the ladder measures 39 → 29 → 26 → 11% win with
- * marks 110 → 130 → 181 → 210, so both §13 invariants hold — but Elite Watch is
- * now the cheapest rule on the ladder carrying the second-largest multiplier,
- * and that is the next thing to re-price. The honest fix is a harder elite
- * *composition* (`waves.ts`), not a second surcharge here.
- *
- * So the ladder is three rungs, priced so that *expected marks per run rise
- * across every rung* — the invariant the harness now gates on (§13). Two
- * candidates were cut:
- *
- *  - **Forced March is not a rung.** Deleting the merchants does not make a run
- *    meaningfully harder — a merchant is a ×1.13 Threat step for a shelf a
- *    gold-poor run cannot buy from, so on the line a first-timer walks it once
- *    measured *easier* (+6pt) and re-measures at −1 to −7pt: noise either side
- *    of free. A rung has to be a bet, and this one paid +25% for that. That the
- *    game contains a node type whose removal can measure as a *buff* is a real
- *    defect — it
- *    belongs to the shop economy (prices, stock, the special Threat step), not
- *    to this ladder, and it is reported as such. `noMerchants` stays wired and
- *    tested so the rung can come back the day a merchant is worth stopping at.
- *  - **The Long Dark is not a rung.** `startThreat: 2` is the largest number on
- *    the table and the only one that changes no decision — the definition of a
- *    treadmill rung. A fourth rung needs a fourth *rule* (no Shrines is the
- *    obvious next one, and wants a `noShrines` flag threaded through
- *    `mapOptionsFor`), not a bigger multiplier.
- *
- * Existing saves that had unlocked rungs 4–5 clamp to 3 in {@link migrateMeta}.
- */
-export const BANNER_RUNGS: BannerRung[] = [
-  { tier: 1, name: 'Thin Pickings', rule: 'Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants lay out half their shelf, and the Crossroads offers two mutations. Half the build, same march.', markMult: 1.4 },
-  /*
-   * ---- this card said three things and one of them was true (M7a) ---------
-   *
-   * It read "armour columns, champions, compressed waves". Measured against the
-   * code it names:
-   *
-   *  - **"armour columns"** — `pickVariant` rotates uniformly over `plated` /
-   *    `warded` / `swift` (`waves.ts`), so roughly two thirds of an Elite Watch
-   *    run's battle nodes are not armour at all. Warded is a light host and
-   *    Swift is a fast one; a player who buys this rung and brings magic to
-   *    counter the plate meets a Warded Host that resists exactly that.
-   *  - **"champions"** — `ELITE_CHAMPION_DEPTH` is 6, so on the standard
-   *    11-layer map depths 1–5 field none. Half the march, no champions.
-   *  - **"compressed waves"** — true: `ELITE_WINDOW` is 0.85.
-   *
-   * That is a card taking Watch Marks for mechanics two thirds of which do not
-   * arrive, on a rung the player cannot opt out of once flown. This project has
-   * now shipped copy describing a mechanic that does not exist five times; the
-   * rule below says what the code does, including the depth the champion is
-   * actually gated behind.
-   */
-  /*
-   * ---- one depth deeper (Phase 1) -------------------------------------------
-   *
-   * With the ≥3pt-per-rung gate (§13), this rung was the one that could not
-   * pass it: alone it measured −0.8pt and on top of Thin Pickings −3.0pt at
-   * n=600 — composition alone is close to free. Its elites are now drawn one
-   * depth deeper (`eliteDepth`), which the card says, and which moves the
-   * champion to depth 5; it costs ~9pt over rung 1 on every routing line. The
-   * payout moved ×2.2 → ×2.5 so expected marks keep rising across the ladder.
-   */
-  { tier: 2, name: 'Elite Watch', rule: 'Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5.', markMult: 2.5 },
-  // ×3.5 → ×4.2 (Phase 3b): on the three-act road the rung's win rate fell
-  // further than the old multiplier paid for — §13 measured it banking fewer
-  // marks a run than Vow 2, which makes the top rung a decoration.
-  // ×4.2 → ×4.6 (no hero HP + the tuning lane): §13 read 216.4 marks a run
-  // against Vow 2's 216.8. Payout only; the rung is exactly as hard as before.
-  { tier: 3, name: 'Blood Price', rule: 'No recruits, anywhere. The heroes you start with are the heroes you finish with.', markMult: 4.6 },
-]
-
-export const MAX_BANNER = BANNER_RUNGS.length
-
-/** Everything a run needs to know about the Banner it is flying. */
-export interface BannerRules {
-  tier: number
-  /** No merchant nodes are generated. */
-  noMerchants: boolean
-  /** Reward picks drop from three cards to two. */
-  thinPickings: boolean
-  /** Every battle node resolves as an elite encounter. */
-  allElite: boolean
-  /**
-   * How many depths deeper a Banner-made elite is drawn from (0 = its own
-   * depth). Map-dealt elites are never moved: a Banner substitutes an
-   * encounter, not a node.
-   */
-  eliteDepth: number
-  /** Recruit offers are withheld (nodes, crossroads, merchant hires). */
-  noRecruits: boolean
-  /**
-   * Threat the run starts at.
-   *
-   * No rung sets this any more: it was the whole of the old rung 5, and a rung
-   * that only multiplies a number is a treadmill rather than a wager. The field
-   * stays because `setRunBanner` reads it to seed a run's Threat and a future
-   * rung may want it *alongside* a rule — not as one.
-   */
-  startThreat: number
-  /** Marks multiplier for the run. */
-  markMult: number
-}
-
-export const NO_BANNER: BannerRules = {
-  tier: 0,
-  noMerchants: false,
-  thinPickings: false,
-  allElite: false,
-  eliteDepth: 0,
-  noRecruits: false,
-  startThreat: 1,
-  markMult: 1,
-}
-
-/** The cumulative ruleset for flying Banner `tier` (0 = none). */
-export function bannerRules(tier: number): BannerRules {
-  const t = Math.max(0, Math.min(MAX_BANNER, Math.floor(num(tier, 0))))
-  if (t <= 0) return NO_BANNER
-  return {
-    tier: t,
-    thinPickings: t >= 1,
-    allElite: t >= 2,
-    eliteDepth: t >= 2 ? 1 : 0,
-    noRecruits: t >= 3,
-    // No rung takes these two. Both are wired, implemented and covered by the
-    // map generator; both were measured and neither earns a rung today (see
-    // BANNER_RUNGS above).
-    noMerchants: false,
-    startThreat: 1,
-    markMult: BANNER_RUNGS[t - 1].markMult,
-  }
-}
+export { difficultyRules, MAX_DIFFICULTY, type DifficultyRules } from '../game/run/watch'
 
 export interface MetaStats {
   bestDepth: number
   /** Deepest Endless round survived — tracked separately so one cannot flatter the other (M33). */
   bestRound: number
-  /** Highest Banner ever carried to a campaign win. The real difficulty record. */
-  bestBanner: number
+  /** Highest difficulty step ever carried to a campaign win (was the best Banner). */
+  bestDifficulty: number
   totalKills: number
   runsCompleted: number
   runsWon: number
@@ -415,10 +225,6 @@ export interface Codex {
   enemies: string[]
   /** Relic ids ever taken. */
   relics: string[]
-  /** Archetype-tree node ids ever reached (base, sub-archetype, specialization). */
-  specs: string[]
-  /** Spec perk ids ever taken. */
-  perks: string[]
   /**
    * Q10 — enemies felled, by KIND (`enemyKind`: the key without its elite
    * modifier). The enemy info card's knowledge rule reads it
@@ -427,12 +233,13 @@ export interface Codex {
    */
   felled: Record<string, number>
 }
-const freshCodex = (): Codex => ({ enemies: [], relics: [], specs: [], perks: [], felled: {} })
+const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {} })
 const strList = (raw: unknown): string[] =>
   Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
 function migrateCodex(raw: unknown): Codex {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { enemies: strList(o.enemies), relics: strList(o.relics), specs: strList(o.specs), perks: strList(o.perks), felled: sanitizeFelled(o.felled) }
+  // The spec and perk lists (v4) went with perks and evolutions (SK1).
+  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled) }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -448,12 +255,12 @@ function migrateAchievements(raw: unknown): Record<string, number> {
  * Endless payout (Phase 3b). It paid a flat 8 marks a round and read no
  * multiplier at all, so the mode a strong player would spend an hour in paid
  * least per minute. It now pays per round, a bonus every fifth (an elite or a
- * boss round), and the multiplier of the highest Vow the player has WON — the
- * ladder's reward carries into the endless mode it opened.
+ * boss round), and the multiplier of the highest difficulty step the player
+ * has WON — the climb's reward carries into the endless mode it opened.
  */
-export function endlessMarks(rounds: number, bestBanner: number): number {
+export function endlessMarks(rounds: number, bestDifficulty: number): number {
   const r = Math.max(0, Math.floor(num(rounds, 0)))
-  return Math.round((r * 8 + Math.floor(r / 5) * 20) * bannerRules(bestBanner).markMult)
+  return Math.round((r * 8 + Math.floor(r / 5) * 20) * difficultyRules(bestDifficulty).markMult)
 }
 
 /** Bonuses the meta layer grants to each new run. */
@@ -466,23 +273,48 @@ export interface MetaBonuses {
   enemyHpMult: number
 }
 
+/**
+ * SK1 — what the last settle did for the Watch's long game, for the run's
+ * receipt (the result screen). Process-local, like `lastFeats`.
+ */
+export interface RunProgress {
+  /** Watch XP the run earned. */
+  xp: number
+  levelBefore: number
+  levelAfter: number
+  /** Skill cards unlocked by this settle, in order (Watch levels first, then the win). */
+  cards: string[]
+  /** Why the win did or did not pay a card (null when the run was not a ranked win). */
+  win: null | { step: number; card: boolean; stepUp: boolean; newBest: boolean; score: number; best: number | null }
+}
+export const lastProgress: { run: RunProgress | null } = { run: null }
+
 interface MetaState {
   watchMarks: number
   upgrades: Record<string, number>
   /**
-   * Highest Banner rung UNLOCKED — a record of what you have opened up, not a
-   * penalty you are stuck with. Persisted under its old name so every existing
-   * save keeps its progress; what changed is what the number means (H16).
-   * Raised only by winning: a campaign win under Banner N opens Banner N+1.
+   * The highest difficulty step this save has reached (SK1). A run may be
+   * played at any step from 0 up to it; a win AT it raises it one step. A v5
+   * save's highest unlocked Vow (`sacrificeTier`) becomes this.
    */
-  sacrificeTier: number
+  topDifficulty: number
+  /** Best winning score at each difficulty step, keyed by the step. */
+  difficultyBest: Record<string, number>
+  /** Lifetime Watch XP (SK1): Watch levels are read off it (`run/watch.watchLevelFor`). */
+  watchXp: number
+  /**
+   * Skill cards unlocked by Watch levels and wins, in the order they were
+   * unlocked (SK1). The starters are everyone's and feat cards follow their
+   * feat, so neither is stored. Validated against the library on load.
+   */
+  skills: string[]
   stats: MetaStats
   /** Today's (or the last played day's) scored Daily Watch attempt. */
   daily: DailyRecord | null
   /**
    * Feats earned (Phase 3b): achievement id → the run count it was earned on.
-   * A feat opens content — a spec, a relic, a perk option, a Watchtower
-   * service — and pays its purse once.
+   * A feat opens content — a skill card, a relic, a Watchtower service — and
+   * pays its purse once.
    */
   achievements: Record<string, number>
   /** What the Watch has seen and used, for the Codex (Phase 3b). */
@@ -511,12 +343,12 @@ interface MetaState {
     won: boolean
     kills: number
     mode?: 'campaign' | 'endless'
-    /** Banner the run was flying, if any — scales the payout. */
-    banner?: number
+    /** The difficulty step the run was played at — scales the payout. */
+    difficulty?: number
     /**
-     * Whether a win here may open the next Banner rung (default true). A
-     * hand-picked custom seed can be shopped for an easy map, so it pays its
-     * marks but does not count toward the ladder.
+     * Whether a win here may climb the difficulty and pay a skill card
+     * (default true). A hand-picked custom seed can be shopped for an easy
+     * map, and a Daily is standard rules, so neither counts toward the climb.
      */
     ranked?: boolean
     /** The UTC day of a SCORED Daily attempt this settle belongs to. */
@@ -544,7 +376,7 @@ const BASE_GOLD = 60
 const freshStats = (): MetaStats => ({
   bestDepth: 0,
   bestRound: 0,
-  bestBanner: 0,
+  bestDifficulty: 0,
   totalKills: 0,
   runsCompleted: 0,
   runsWon: 0,
@@ -554,7 +386,7 @@ const freshStats = (): MetaStats => ({
  * Persisted meta schema version (M11). Bump this and add a case to
  * {@link migrateMeta} whenever the shape changes.
  *
- * v2 — `stats.bestRound` / `stats.bestBanner` added, and `sacrificeTier`
+ * v2 — `stats.bestRound` / `stats.bestDifficulty` added, and `topDifficulty`
  * reinterpreted from "permanent global heat, already applied" to "highest
  * Banner unlocked, flown per run". No data has to move: an old save's tier N
  * becomes N unlocked Banners, and the permanent +15% enemy HP / +1 stats it
@@ -573,11 +405,42 @@ const freshStats = (): MetaStats => ({
  * Codex glossary) is added and defaults to empty. Nothing moves: whether a
  * player is staged is read off `stats.runsCompleted`, which every older save
  * already carries.
+ *
+ * v6 — SK1: skills, Watch levels and difficulty steps. The Vow ladder is gone:
+ * the highest Vow a save had unlocked (`sacrificeTier`) becomes its top
+ * difficulty step, and its best Vow won (`stats.bestBanner`) its best
+ * difficulty won. `watchXp`, `skills` and `difficultyBest` are added; a save
+ * that has played is credited the Watch XP its lifetime record implies
+ * ({@link retroWatchXp}) and one card per Watch level that buys, so a veteran
+ * does not start the new progression from nothing. The Codex's spec and perk
+ * lists are dropped with the systems they recorded.
  */
-export const META_VERSION = 5
+export const META_VERSION = 6
+
+/**
+ * The Watch XP a pre-SK1 save is credited (v6): 1 per 10 kills, 60 per win,
+ * and 45 per run finished (about depth 3 — the record keeps no per-run depth).
+ */
+export function retroWatchXp(stats: Pick<MetaStats, 'totalKills' | 'runsWon' | 'runsCompleted'>): number {
+  return Math.floor(Math.max(0, stats.totalKills) / 10) + 60 * Math.max(0, stats.runsWon) + 45 * Math.max(0, stats.runsCompleted)
+}
+
+/** The cards a fresh unlock run of `n` levels deals onto `have`, in order. */
+function dealCards(have: readonly string[], n: number, ...salt: (string | number)[]): string[] {
+  const out = [...have]
+  for (let i = 0; i < n; i++) {
+    const c = rollUnlock(out, ...salt, i)
+    if (!c) break
+    out.push(c)
+  }
+  return out.slice(have.length)
+}
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'watchMarks' | 'upgrades' | 'sacrificeTier' | 'stats' | 'daily' | 'achievements' | 'codex' | 'met'>
+type PersistedMeta = Pick<
+  MetaState,
+  'watchMarks' | 'upgrades' | 'topDifficulty' | 'difficultyBest' | 'watchXp' | 'skills' | 'stats' | 'daily' | 'achievements' | 'codex' | 'met'
+>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -601,26 +464,50 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     if (upgrades[u.id] != null) upgrades[u.id] = Math.max(0, Math.min(u.maxLevel, Math.floor(upgrades[u.id])))
   }
   // Read BEFORE the clamp: a v1 save that bought rungs 4–5 paid for them too.
-  const rawTier = Math.max(0, Math.floor(num(o.sacrificeTier, 0)))
+  // A v5 save keeps its highest unlocked Vow as `sacrificeTier`; v6 calls the
+  // same number its top difficulty step.
+  const rawTier = Math.max(0, Math.floor(num(o.topDifficulty ?? o.sacrificeTier, 0)))
   // v3: rungs were bought with marks until now; give every one of them back.
   // Only on a real version step — `merge` calls this with META_VERSION on
   // every load, and a refund there would pay out on every boot.
   const refund = version < 3 ? legacyBannerRefund(rawTier) : 0
+  const stats: MetaStats = {
+    bestDepth: Math.max(0, num(rawStats.bestDepth, base.bestDepth)),
+    bestRound: Math.max(0, num(rawStats.bestRound, base.bestRound)),
+    // v6: the best Vow won is the best difficulty won.
+    bestDifficulty: clampStep(num(rawStats.bestDifficulty ?? rawStats.bestBanner, base.bestDifficulty)),
+    totalKills: Math.max(0, num(rawStats.totalKills, base.totalKills)),
+    runsCompleted: Math.max(0, num(rawStats.runsCompleted, base.runsCompleted)),
+    runsWon: Math.max(0, num(rawStats.runsWon, base.runsWon)),
+  }
+  // Only the random cards are stored, each once, in unlock order.
+  const known = new Set(RANDOM_UNLOCK_SKILLS)
+  let skills = Array.isArray(o.skills) ? [...new Set(o.skills.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
+  let watchXp = Math.max(0, Math.floor(num(o.watchXp, 0)))
+  // v6: a save that played before skills is credited the Watch XP its record
+  // implies, and the cards those levels unlock. Only on the real step.
+  if (version < 6 && watchXp === 0 && stats.runsCompleted > 0) {
+    watchXp = retroWatchXp(stats)
+    skills = [...skills, ...dealCards(skills, watchLevelFor(watchXp) - 1, 'v6', stats.runsCompleted)]
+  }
+  const difficultyBest: Record<string, number> = {}
+  for (const [k, v] of Object.entries(numRecord(o.difficultyBest))) {
+    const step = Number(k)
+    if (Number.isInteger(step) && step >= 0 && step <= MAX_DIFFICULTY) difficultyBest[String(step)] = Math.max(0, Math.floor(v))
+  }
   return {
     watchMarks: Math.max(0, num(o.watchMarks, 0)) + refund,
     upgrades,
-    sacrificeTier: Math.max(0, Math.min(MAX_BANNER, rawTier)),
-    stats: {
-      bestDepth: Math.max(0, num(rawStats.bestDepth, base.bestDepth)),
-      bestRound: Math.max(0, num(rawStats.bestRound, base.bestRound)),
-      bestBanner: Math.max(0, num(rawStats.bestBanner, base.bestBanner)),
-      totalKills: Math.max(0, num(rawStats.totalKills, base.totalKills)),
-      runsCompleted: Math.max(0, num(rawStats.runsCompleted, base.runsCompleted)),
-      runsWon: Math.max(0, num(rawStats.runsWon, base.runsWon)),
-    },
+    topDifficulty: clampStep(rawTier),
+    difficultyBest,
+    watchXp,
+    skills,
+    stats,
     daily: migrateDaily(o.daily),
     achievements: migrateAchievements(o.achievements),
     codex: migrateCodex(o.codex),
+    // v6: the perk and evolution ideas are one idea now (skill), and the Vow
+    // is the difficulty — `readMet` carries both over.
     met: readMet(o.met),
   }
 }
@@ -637,7 +524,10 @@ export const useMetaStore = create<MetaState>()(
     (set, get) => ({
       watchMarks: 0,
       upgrades: {},
-      sacrificeTier: 0,
+      topDifficulty: 0,
+      difficultyBest: {},
+      watchXp: 0,
+      skills: [],
       stats: freshStats(),
       daily: null,
       achievements: {},
@@ -687,14 +577,8 @@ export const useMetaStore = create<MetaState>()(
       recordCodex: (seen) => {
         const cur = get().codex
         const merge = (a: string[], b?: string[]) => (b && b.some((x) => !a.includes(x)) ? [...a, ...b.filter((x, i) => !a.includes(x) && b.indexOf(x) === i)] : a)
-        const next: Codex = {
-          enemies: merge(cur.enemies, seen.enemies),
-          relics: merge(cur.relics, seen.relics),
-          specs: merge(cur.specs, seen.specs),
-          perks: merge(cur.perks, seen.perks),
-          felled: cur.felled,
-        }
-        if (next.enemies !== cur.enemies || next.relics !== cur.relics || next.specs !== cur.specs || next.perks !== cur.perks) set({ codex: next })
+        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled }
+        if (next.enemies !== cur.enemies || next.relics !== cur.relics) set({ codex: next })
       },
 
       recordMet: (ids) => {
@@ -711,8 +595,8 @@ export const useMetaStore = create<MetaState>()(
 
       grantMarks: (n: number) => set({ watchMarks: get().watchMarks + Math.max(0, Math.round(n)) }),
 
-      grantRunRewards: ({ depth, won, kills, mode = 'campaign', banner = 0, ranked = true, daily = null, facts }) => {
-        const { watchMarks, stats, sacrificeTier, achievements } = get()
+      grantRunRewards: ({ depth, won, kills, mode = 'campaign', difficulty = 0, ranked = true, daily = null, facts }) => {
+        const { watchMarks, stats, topDifficulty, achievements } = get()
         // The scored Daily attempt records its result on the record it claimed
         // at hero-pick — and only that one, and only once.
         const rec = get().daily
@@ -727,18 +611,19 @@ export const useMetaStore = create<MetaState>()(
                 done: true,
               }
             : rec
-        // **One multiplier, and you have to earn it.** The formula used to fold
-        // in `sacrificeTier` (a permanent bonus for a permanent penalty, paid
-        // whether the run was hard or not) and then the Chronicler hub line (a
-        // flat rebate on every run forever). What is left is the Banner the run
-        // actually flew — a bet the player placed at the start of THIS march —
-        // multiplied by how far the march got.
-        const markMult = bannerRules(banner).markMult
         const isEndless = mode === 'endless'
-        // Endless is routed through the Vow the player has won (Phase 3b) —
-        // once the Ten Rounds feat opens it; before that it pays unmultiplied.
+        // The step actually played, clamped to what this save has reached, so
+        // a hand-edited payload can neither skip steps nor be paid for one.
+        const top = clampStep(num(topDifficulty, 0))
+        const flown = Math.min(top, clampStep(num(difficulty, 0)))
+        // **One multiplier, and you have to earn it**: the difficulty step the
+        // run was played at, multiplied by how far the march got.
+        const markMult = difficultyRules(flown).markMult
+        // Endless is routed through the best difficulty the player has won
+        // (Phase 3b) — once the Ten Rounds feat opens it; before that it pays
+        // unmultiplied.
         const runMarks = isEndless
-          ? endlessMarks(depth, achievements.endless_ten ? stats.bestBanner : 0)
+          ? endlessMarks(depth, achievements.endless_ten ? stats.bestDifficulty : 0)
           : Math.round((num(depth, 0) * 8 + (won ? 120 : 0)) * markMult)
         // Feats: judged on the facts this run leaves, earned once, each paying
         // its purse on top of the run's marks.
@@ -747,22 +632,41 @@ export const useMetaStore = create<MetaState>()(
         const featMarks = feats.reduce((a, f) => a + f.marks, 0)
         const earned = runMarks + featMarks
         lastFeats.ids = feats.map((f) => f.id)
-        // **Earned, not bought.** A campaign win under Banner N opens Banner
-        // N+1 (an unbannered win opens Banner 1). The flown Banner is clamped to
-        // what this save has open, so a hand-edited payload cannot skip rungs.
-        // Unlocking changes nothing about any run by itself — it adds a rung
-        // the next run may choose to fly.
-        const flown = Math.max(0, Math.min(num(sacrificeTier, 0), Math.floor(num(banner, 0))))
-        const nextTier =
-          won && !isEndless && ranked
-            ? Math.max(num(sacrificeTier, 0), Math.min(MAX_BANNER, flown + 1))
-            : num(sacrificeTier, 0)
+
+        // ---- SK1: Watch XP, Watch levels, and the cards they unlock -----------
+        const xpBefore = Math.max(0, num(get().watchXp, 0))
+        const xp = watchXpFor({ mode, depth: num(depth, 0), kills: num(kills, 0), won })
+        const levelBefore = watchLevelFor(xpBefore)
+        const levelAfter = watchLevelFor(xpBefore + xp)
+        const have = get().skills
+        const cards = dealCards(have, levelAfter - levelBefore, 'level', runsDone, levelBefore)
+        // A WIN at the top step climbs it and pays a card; a win below it pays a
+        // card only for a new best score there. Not on a custom seed (shoppable)
+        // or a Daily (standard rules, no difficulty step).
+        const best = get().difficultyBest
+        let win: RunProgress['win'] = null
+        let nextTop = top
+        let nextBest = best
+        if (won && !isEndless && ranked && !daily) {
+          const score = winScore(num(depth, 0), num(kills, 0))
+          const prev = best[String(flown)]
+          const r = winReward({ step: flown, top, score, best: prev })
+          if (r.card) cards.push(...dealCards([...have, ...cards], 1, 'win', runsDone, flown))
+          if (r.stepUp) nextTop = Math.min(MAX_DIFFICULTY, top + 1)
+          if (r.newBest) nextBest = { ...best, [String(flown)]: score }
+          win = { step: flown, card: r.card, stepUp: r.stepUp, newBest: r.newBest, score, best: prev ?? null }
+        }
+        lastProgress.run = { xp, levelBefore, levelAfter, cards, win }
+
         // Every read is coerced: this is `x + n` arithmetic over a persisted
         // record, and one field arriving as `undefined` from an older save
         // would turn a stat into NaN permanently (M11).
         set({
           watchMarks: num(watchMarks, 0) + earned,
-          sacrificeTier: nextTier,
+          topDifficulty: nextTop,
+          difficultyBest: nextBest,
+          watchXp: xpBefore + xp,
+          skills: cards.length ? [...have, ...cards] : have,
           daily: dailyNext,
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
@@ -772,11 +676,7 @@ export const useMetaStore = create<MetaState>()(
             // the campaign record a lie instead (M13 / M33).
             bestDepth: isEndless ? num(stats.bestDepth, 0) : Math.max(num(stats.bestDepth, 0), num(depth, 0)),
             bestRound: isEndless ? Math.max(num(stats.bestRound, 0), num(depth, 0)) : num(stats.bestRound, 0),
-            // Clamped to the ladder: a record is a rung that exists (F8).
-            bestBanner:
-              won && !isEndless
-                ? Math.max(num(stats.bestBanner, 0), Math.min(MAX_BANNER, Math.max(0, num(banner, 0))))
-                : num(stats.bestBanner, 0),
+            bestDifficulty: won && !isEndless ? Math.max(num(stats.bestDifficulty, 0), flown) : num(stats.bestDifficulty, 0),
             totalKills: num(stats.totalKills, 0) + num(kills, 0),
             runsCompleted: num(stats.runsCompleted, 0) + 1,
             runsWon: num(stats.runsWon, 0) + (won ? 1 : 0),
@@ -795,13 +695,13 @@ export const useMetaStore = create<MetaState>()(
           extraSentinels: lvl('roster'),
           extraItems: lvl('loot'),
           // Nothing the hub sells makes the world harder any more. Difficulty is
-          // opted into per run, by Banner, and it is earned by winning (H16).
+          // chosen per run, by step, and climbed by winning (SK1).
           enemyHpMult: 1,
         }
       },
 
       resetMeta: () =>
-        set({ watchMarks: 0, upgrades: {}, sacrificeTier: 0, stats: freshStats(), daily: null, achievements: {}, codex: freshCodex(), met: [] }),
+        set({ watchMarks: 0, upgrades: {}, topDifficulty: 0, difficultyBest: {}, watchXp: 0, skills: [], stats: freshStats(), daily: null, achievements: {}, codex: freshCodex(), met: [] }),
     }),
     {
       name: 'fieldwatch-meta',
@@ -810,7 +710,10 @@ export const useMetaStore = create<MetaState>()(
       partialize: (s) => ({
         watchMarks: s.watchMarks,
         upgrades: s.upgrades,
-        sacrificeTier: s.sacrificeTier,
+        topDifficulty: s.topDifficulty,
+        difficultyBest: s.difficultyBest,
+        watchXp: s.watchXp,
+        skills: s.skills,
         stats: s.stats,
         daily: s.daily,
         achievements: s.achievements,

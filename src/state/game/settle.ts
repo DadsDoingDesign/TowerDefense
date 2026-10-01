@@ -15,7 +15,7 @@ export const settleFactsFromState = (s: GameData, won = false): SettleFacts => (
   depth: Math.max(0, s.clearedNodeIds.length - 1),
   kills: s.runKills,
   wins: s.wins,
-  banner: s.runBanner,
+  difficulty: s.runDifficulty,
   challenge: s.challenge,
   facts: runFactsFromState(s, won),
 })
@@ -29,7 +29,7 @@ export function runFactsFromState(s: GameData, won: boolean) {
     feats: s.feats,
     roster: s.roster,
     deepestLayer: layers.length ? Math.max(...layers) : 0,
-    banner: s.runBanner,
+    difficulty: s.runDifficulty,
     wins: s.wins,
     dailyScored: s.challenge.kind === 'daily' && s.challenge.scored,
     goblinsSeen: goblinKinds(useMetaStore.getState().codex.enemies),
@@ -45,7 +45,7 @@ export function runFactsFromState(s: GameData, won: boolean) {
 /** Make the ledger call a retired run is owed (see `planPayout`). */
 export function payOutRun(f: SettleFacts): void {
   const meta = useMetaStore.getState()
-  const plan = planPayout(f, meta.sacrificeTier)
+  const plan = planPayout(f, meta.topDifficulty)
   if (plan.kind === 'closeDaily') meta.closeDaily(plan.date)
   else if (plan.kind === 'grant') meta.grantRunRewards(plan.grant)
 }

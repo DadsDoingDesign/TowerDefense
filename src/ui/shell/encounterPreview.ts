@@ -9,7 +9,6 @@ import {
   type WaveVariant,
 } from '../../game/data/waves'
 import type { WaveDef } from '../../game/types'
-import { bannerRules } from '../../state/metaStore'
 import { encounterNode } from '../../game/run/map'
 import { ACT_LAYERS } from '../../game/run/threat'
 
@@ -46,18 +45,22 @@ import { ACT_LAYERS } from '../../game/run/threat'
 /** Everything `previewEncounter` reads off the run — a slice of `GameState`. */
 export interface PreviewRun {
   runSeed: number
-  runBanner: number
+  runDifficulty: number
   runMap: RunMap
 }
 
-/** The encounter kind the store fields on this node. */
-export function encounterKindFor(node: Pick<MapNode, 'type'>, runBanner: number): EncounterKind | null {
-  return nodeEncounterSpec(encounterNode({ type: node.type, layer: 0, row: 0 }), 0, bannerRules(runBanner))?.kind ?? null
+/**
+ * The encounter kind the store fields on this node: its own. (A Vow could make
+ * a battle node field an elite; a difficulty step makes it an elite NODE on
+ * the map instead, SK1, so the node's type is the whole answer.)
+ */
+export function encounterKindFor(node: Pick<MapNode, 'type'>): EncounterKind | null {
+  return nodeEncounterSpec(encounterNode({ type: node.type, layer: 0, row: 0 }), 0)?.kind ?? null
 }
 
 /** The variant the store's `generateEncounter` call will pick for this node. */
 export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
-  const spec = nodeEncounterSpec(encounterNode(node), run.runSeed, bannerRules(run.runBanner))
+  const spec = nodeEncounterSpec(encounterNode(node), run.runSeed)
   return spec ? pickVariant(spec.kind, spec.depth, spec.seed, spec.sibling) : null
 }
 
@@ -67,7 +70,7 @@ export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
  */
 export function previewEncounter(run: PreviewRun, nodeId: string): WaveDef | null {
   const node = run.runMap.nodes.find((n) => n.id === nodeId)
-  return node ? nodeEncounter(encounterNode(node), run.runSeed, bannerRules(run.runBanner)) : null
+  return node ? nodeEncounter(encounterNode(node), run.runSeed) : null
 }
 
 /** The one-glance read of an encounter, for the Context panel. */
@@ -96,7 +99,7 @@ export interface EncounterSummary {
 export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSummary | null {
   const node = run.runMap.nodes.find((n) => n.id === nodeId)
   if (!node) return null
-  const kind = encounterKindFor(node, run.runBanner)
+  const kind = encounterKindFor(node)
   const wave = previewEncounter(run, nodeId)
   const v = variantFor(run, node)
   if (!kind || !wave || !v) return null

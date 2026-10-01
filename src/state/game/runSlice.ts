@@ -18,14 +18,15 @@ import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
 import { applyStatBonus, hubExtras, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit } from '../../game/run/recruits'
+import { heroChoices, withFirstSkill } from '../../game/run/skills'
 import type { Archetype, Placement } from '../../game/types'
 import { sfx } from '../../audio/audio'
-import { bannerRules, MAX_BANNER, useMetaStore } from '../metaStore'
+import { difficultyRules, MAX_DIFFICULTY, useMetaStore } from '../metaStore'
 import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
-import { seedEditable, vowAllowed } from '../runTerms'
+import { difficultyAllowed, seedEditable } from '../runTerms'
 import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, hub, layout, recruitHub, runBonuses, seedRunStreams, session, streams, usesHub } from './runtime'
+import { clearBeatTimer, dealSkill, hub, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingSkillPool, streams, usesHub } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
@@ -47,14 +48,17 @@ export interface RunActions {
    */
   randomizeRunSeed: () => boolean
   /**
-   * Choose the Banner for the run being set up. Only legal on the hero-pick
-   * screen — a Banner is a bet you place before the first node, never a switch
-   * you flip mid-run — and it re-deals the map, because Banners 1 and 4 change
-   * which stops exist on it.
+   * Choose the difficulty step for the run being set up (SK1): any step from 0
+   * up to the save's top. Only legal on the hero-pick screen — never mid-run —
+   * and it re-deals the map, because a step turns battle nodes into elites.
    */
-  setRunBanner: (tier: number) => void
-  /** Start another run from the end screen, same Banner (M15). */
+  setRunDifficulty: (step: number) => void
+  /** Start another run from the end screen, same difficulty (M15). */
   runAgain: () => void
+  /**
+   * Commit the hero pick (SK1): the hero of this class the pick offers, with
+   * the Level 1 skill it was offered with (`run/skills.heroChoices`).
+   */
   pickStartingHero: (archetype: Archetype) => void
   returnToHub: () => void
   /**
@@ -89,6 +93,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // LS3: a first run is staged. Decided here, once, and kept by the snapshot.
     const firstRun = startsFirstRun(useMetaStore.getState().stats, useSettingsStore.getState().showEverything, challenge)
     const fresh = freshRunState(runSeed)
+    // SK1: the run's skill pool is read once, here, and kept on the run.
+    const skillPool = startingSkillPool(challenge)
+    skillRun.seed = runSeed
+    skillRun.pool = skillPool
     set({
       ...fresh,
       // The map is post-processed, never re-dealt: no stream moves (LS3).
@@ -105,7 +113,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       enemyHpMult: b.enemyHpMult,
       // The kit is dealt in `pickStartingHero`, FOR the hero picked there.
       inventory: [],
+      skillPool,
     })
+    // SK1: a run opens at the save's top difficulty step — the player turns it
+    // down on the hero pick if they like. A Daily is always step 0.
+    if (difficultyAllowed(challenge)) get().setRunDifficulty(useMetaStore.getState().topDifficulty)
   },
 
   startDaily: () => {
@@ -123,51 +135,53 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
     const seed = parseSeed(input)
     if (seed === null) return false
-    const banner = st.runBanner
+    const step = st.runDifficulty
     get().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
-    if (banner > 0) get().setRunBanner(banner)
+    get().setRunDifficulty(step)
     return true
   },
 
   randomizeRunSeed: () => {
     const st = get()
     if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
-    const banner = st.runBanner
+    const step = st.runDifficulty
     get().newRun()
-    if (banner > 0) get().setRunBanner(banner)
+    get().setRunDifficulty(step)
     return true
   },
 
-  setRunBanner: (tier) => {
+  setRunDifficulty: (step) => {
     const st = get()
-    // A Banner is chosen before the march, never during it — and never on a
+    // A step is chosen before the march, never during it — and never on a
     // Daily Watch, which is one set of rules for everyone.
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || !vowAllowed(st.challenge)) return
-    const unlocked = useMetaStore.getState().sacrificeTier
-    const next = Math.max(0, Math.min(Math.min(MAX_BANNER, unlocked), Math.floor(tier)))
-    if (next === st.runBanner) return
-    const rules = bannerRules(next)
-    // Re-deal the map from the SAME run seed: Banner 1 removes merchants and
-    // Banner 4 removes recruiters, so the map is a function of the Banner. The
-    // map stream is rewound rather than advanced, so switching Banners back and
-    // forth cannot be used to reroll the map.
+    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !difficultyAllowed(st.challenge)) return
+    const top = useMetaStore.getState().topDifficulty
+    const next = Math.max(0, Math.min(Math.min(MAX_DIFFICULTY, top), Math.floor(Number.isFinite(step) ? step : 0)))
+    if (next === st.runDifficulty) return
+    const rules = difficultyRules(next)
+    // Re-deal the map from the SAME run seed: a step turns battle nodes into
+    // elites, so the map is a function of the step. The map stream is rewound
+    // rather than advanced, so switching steps back and forth cannot be used
+    // to reroll the map — and which nodes become elites is a hash of the seed
+    // (`run/map.addDifficultyElites`), not a draw.
     streams.mapRng = streamRng(st.runSeed, 'map')
-    const dealt = dealRunMap(rules)
-    set({ runBanner: next, threat: rules.startThreat, ...dealt, runMap: stageFirstRunMap(dealt.runMap, st.firstRun) })
+    const dealt = dealRunMap(rules, st.runSeed)
+    set({ runDifficulty: next, threat: rules.startThreat, ...dealt, runMap: stageFirstRunMap(dealt.runMap, st.firstRun) })
     sfx('confirm')
   },
 
   runAgain: () => {
     // The end screen's second door (M15). Three taps through the hub is not a
-    // "one more run" loop; this is. The Banner carries over, so a run you
-    // just lost under Banner 2 is retried under Banner 2.
-    const { runBanner: banner, challenge, runSeed } = get()
+    // "one more run" loop; this is. The difficulty carries over, so a run you
+    // just lost at step 2 is retried at step 2 — and a win that raised the top
+    // step opens the next run at the new top.
+    const { runDifficulty: step, challenge, runSeed, runPhase } = get()
     // A Daily is retried as today's Daily (practice once the attempt is
     // spent); a custom seed replays the same seed.
     if (challenge.kind === 'daily') return get().startDaily()
     if (challenge.kind === 'seeded') get().beginCampaign(runSeed, challenge)
     else get().newRun()
-    if (banner > 0) get().setRunBanner(banner)
+    if (runPhase !== 'won') get().setRunDifficulty(step)
   },
 
   pickStartingHero: (archetype) => {
@@ -181,9 +195,13 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       st.challenge.kind === 'daily' && st.challenge.date
         ? { ...st.challenge, scored: useMetaStore.getState().beginDaily(st.challenge.date) }
         : st.challenge
+    // SK1: the leader arrives with the Level 1 skill the pick offered it — a
+    // hash of the run seed, not a draw, so no stream below moves.
+    const choice = heroChoices(st.runSeed, st.skillPool).find((c) => c.archetype === archetype)
+    if (!choice) return
     // The hub's extras are armed BEFORE the leader is created (id / name order).
-    const extra = hubExtras(streams.rng, b.extraSentinels)
-    const company = [createSentinel(archetype), ...extra].map((s) => applyStatBonus(s, b.statBonus))
+    const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill)
+    const company = [withFirstSkill(createSentinel(archetype), choice.skill), ...extra].map((s) => applyStatBonus(s, b.statBonus))
     // The opening kit is dealt NOW, for the hero just picked — a Mystic is
     // not handed a Sword — and WORN, not left in the pack. The balance
     // harness calls the same two functions (`engine/kit.ts`), so the run it
@@ -194,7 +212,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const { roster, inventory } = receiveItems([leader, ...company.slice(1)], st.inventory, kit.filter((i) => !worn.has(i.id)))
     // The feats ledger starts here, with the company as it marches out.
     const feats = { ...freshFeats(), starter: archetype, startSize: roster.length, goldPeak: get().gold }
-    useMetaStore.getState().recordCodex({ specs: [...new Set(roster.flatMap((s) => s.branchPath))] })
     set({ roster, inventory, challenge, screen: 'map', feats })
   },
 
@@ -227,6 +244,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // Rebuild the seeded streams, then fast-forward each to where the run had
     // got to — a resume must not re-deal loot the player already saw.
     seedRunStreams(snap.runSeed)
+    skillRun.seed = snap.runSeed
+    skillRun.pool = snap.skillPool
     if (snap.rngLoot !== null) streams.rng.loadState(snap.rngLoot)
     if (snap.rngMap !== null) streams.mapRng.loadState(snap.rngMap)
     // The dry counter is restored WITH the loot stream, never without it: the
@@ -300,7 +319,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       feats: snap.feats,
       crossroads: snap.crossroads,
       forkDone: snap.forkDone,
-      evolutionQueue: snap.evolutionQueue,
+      skillPool: snap.skillPool,
       dust: snap.dust,
       lives: snap.lives,
       wins: snap.wins,
@@ -323,11 +342,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // snapshot was written (see `installRunPersistence`).
       waveBeat: null,
       // Clamped to the ladder by the migration, and clamped again HERE to what
-      // this save has actually opened (F8) — the bypass `setRunBanner` refuses
+      // this save has actually reached (F8) — the bypass `setRunDifficulty` refuses
       // must not arrive through the back door. Downwards only: a resume may
       // never grant a rung, and it may never quietly raise the difficulty of
       // the run the player left.
-      runBanner: snap.challenge.kind === 'daily' ? 0 : Math.min(snap.runBanner, useMetaStore.getState().sacrificeTier),
+      runDifficulty: snap.challenge.kind === 'daily' ? 0 : Math.min(snap.runDifficulty, useMetaStore.getState().topDifficulty),
       challenge: snap.challenge,
       // LS3: a run saved before staging existed has none, and plays unstaged.
       firstRun: snap.firstRun === true,
@@ -353,8 +372,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   },
 
   selectNode: (nodeId) => {
-    const { reachableNodeIds, clearedNodeIds, runMap, roster, runBanner, lootPity, event } = get()
-    const banner = bannerRules(runBanner)
+    const { reachableNodeIds, clearedNodeIds, runMap, roster, lootPity, event } = get()
     if (!reachableNodeIds.includes(nodeId)) return
     // A cleared node is done, whatever `reachableNodeIds` says. Reachability
     // is derived state and a bad snapshot can hand us a set that overlaps the
@@ -385,9 +403,9 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // An OFFER: `rollMerchantShelf` rolls with the drought's luck but leaves
       // the pity counter alone; `buyMerchantItem` charges it on the sale (F4).
       const relics = get().relics
-      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics, banner.thinPickings) })
+      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics) })
       const recruit =
-        roster.length < MAX_ROSTER && !banner.noRecruits
+        roster.length < MAX_ROSTER
           ? { sentinel: scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub(relics)), price: RECRUIT_PRICE }
           : null
       // The Gate repair is on every campaign counter (Phase 3b): the comeback.
@@ -414,10 +432,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // keeps the wave it was dealt across a save/resume, and two battle nodes
     // standing in the same layer are two different fights rather than one
     // fight offered twice (WS8).
-    // A Vow-made elite (Elite Watch) is drawn `eliteDepth` deeper; an elite
+    // A difficulty step's extra elites are real elite NODES on the map
     // the MAP dealt stays at its own depth. `nodeEncounter` is the one
     // derivation — the map's preview reads the same one.
-    const wave = nodeEncounter(encounterNode(node), get().runSeed, banner)!
+    const wave = nodeEncounter(encounterNode(node), get().runSeed)!
     const { baseHp, maxBaseHp } = get()
     // The battle's orientation is chosen HERE, once, from the layout the
     // player is holding (Portrait battlefields) — the field identity is the

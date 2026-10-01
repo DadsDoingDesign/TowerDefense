@@ -35,8 +35,8 @@ import { createSentinel } from '../src/game/data/sentinels'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
-import { allPerkPoints } from '../src/game/data/perks'
-import { childrenOf } from '../src/game/data/archetypeTree'
+import { ALL_SKILLS, skillFits } from '../src/game/data/skills'
+import { heroChoices, recruitSkill, withFirstSkill } from '../src/game/run/skills'
 import {
   encounterSeed,
   generateEncounter,
@@ -49,11 +49,11 @@ import {
 import { generateRewardCards, type RewardGrant } from '../src/game/data/rewards'
 import { RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { withRelicStats } from '../src/game/run/relics'
-import { applyXp } from '../src/game/engine/leveling'
+import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '../src/state/gameStore'
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
-import { bannerRules, BANNER_RUNGS, MAX_BANNER } from '../src/state/metaStore'
+import { difficultyEffect, difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
 import { runCombatDepth } from './combat'
 import {
   loadoutFor,
@@ -73,12 +73,12 @@ import {
 } from './runsim'
 import {
   affixItem,
-  autoEvolve,
   AURA_TRIO,
   POST,
   bestSlots,
   buildSpec,
-  randomPerks,
+  randomSkills,
+  STARTER_SKILL_POOL,
   heroDps,
   equipIfBetter,
   freshHero,
@@ -1225,110 +1225,124 @@ if (want(6)) {
 
 // -------------------------------------------------------------- Sweep 7
 if (want(7)) {
-  // Spec perks — the level-up choices that replaced the upgrade tree (Phase 3b).
-  line('## 7. Spec perks (is any pick dead, and is any pair solved?)')
+  // Skills (SK1) — what replaced the spec perks and the evolutions.
+  line('## 7. Skills (is any skill dead, and is any level solved?)')
   line('')
-  line('**What this replaced.** §7 used to measure the per-hero upgrade tree: three identical')
-  line('paths (Onslaught / Tempo / Precision) offered to all 27 specs, graded as solo DPS. It')
-  line('measured the one decision every hero in the game shared — "+x%, bought with gold". The')
-  line('tree is gone; a hero now picks one of two **spec perks** at level 5 (by base archetype)')
-  line('and level 15 (by the line it evolved into), most of them rules rather than percentages.')
+  line('**What this replaced.** §7 measured the spec perks — one of two at levels 5 and 15, by')
+  line('line. Skills replaced the perks AND the evolutions (SK1): a hero holds up to three, and')
+  line('at levels 5, 10 and 15 it is offered three of one skill level (Level 1, 2, 3) from the')
+  line('player\'s unlocked pool. So a choice point is a (skill level, class) pair, and every skill')
+  line('that class may hold at that level is an option on it.')
   line('')
-  line('**How each perk is graded.** A representative hero of the line — level 9 (a Fighter,')
-  line('Rogue or Mystic before its evolution) for a level-5 perk, level 19 in the line for a')
-  line('level-15 one — takes the perk alone, and is graded by **stop rate** on three waves of')
-  line('its depth (4 or 8): a `swarm` of runts, an `armour` column (Plated elite) and a `line`')
-  line('(the depth\'s normal wave). Each point\'s waves are first scaled so the hero **without** a')
-  line('perk stops about half of each — a bench at 0% or 100% cannot see a perk at all. A')
-  line('cleric\'s auras need someone to reach, so the cleric line is graded beside a blocker.')
+  line('**How each skill is graded.** A representative hero of the class — level 9 for a Level 1')
+  line('skill, 14 for Level 2, 19 for Level 3, no gear and no other skill — takes the skill alone,')
+  line('and is graded by **stop rate** on three waves of its depth (4, 6 or 8): a `swarm` of runts,')
+  line('an `armour` column (Plated elite) and a `line` (the depth\'s normal wave). Each point\'s waves')
+  line('are first scaled so the hero **without** a skill stops about half of each — a bench at 0%')
+  line('or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
+  line('aura is graded beside a second hero.')
   line('')
-  const PERK_SEEDS = SEEDS.slice(0, 3)
-  interface PerkRow { point: string; perk: string; name: string; locked: boolean; d: Record<string, number>; mean: number; dps: number }
-  const perkRows: PerkRow[] = []
-  const perkPointSummary: { point: string; gap: number; greedy: string; measured: string; tradesBoth: boolean }[] = []
-  const PERK_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
-  function perkBenches(depth: number): Record<(typeof PERK_BENCH_KEYS)[number], WaveDef> {
+  const SKILL_SEEDS = SEEDS.slice(0, 3)
+  interface SkillRow { point: string; skill: string; name: string; d: Record<string, number>; mean: number; dps: number }
+  const skillRows: SkillRow[] = []
+  const skillPointSummary: { point: string; gap: number; greedy: string; measured: string; options: number }[] = []
+  const SKILL_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
+  function skillBenches(depth: number): Record<(typeof SKILL_BENCH_KEYS)[number], WaveDef> {
     return {
       swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
-      // Bench mode (`BENCH_RULES`, harness.ts): a perk is graded on the shape it was fitted to.
+      // Bench mode (`BENCH_RULES`, harness.ts): a skill is graded on the shape it was fitted to.
       armour: generateEncounter(depth, 'elite', { variantId: 'plated', subWaves: false }),
       line: generateEncounter(depth, 'normal', { subWaves: false }),
     }
   }
-  function perkTeam(hero: Sentinel, line: string, level: number): { sentinel: Sentinel; slotId: string }[] {
-    if (line !== 'cleric') return [{ sentinel: hero, slotId: POST.s3 }]
+  const ally = (level: number) => applyXp(createSentinel('fighter'), xpToReach(level))
+  function skillTeam(hero: Sentinel, aura: boolean, level: number): { sentinel: Sentinel; slotId: string }[] {
+    if (!aura) return [{ sentinel: hero, slotId: POST.s3 }]
     return [
       { sentinel: hero, slotId: AURA_TRIO.support },
-      { sentinel: buildSpec('berserker', { level, seed: 5 }), slotId: AURA_TRIO.allies[0] },
+      { sentinel: ally(level), slotId: AURA_TRIO.allies[0] },
     ]
   }
-  for (const point of allPerkPoints()) {
-    const level = point.level === 5 ? 9 : 19
-    const depth = point.level === 5 ? 4 : 8
-    // The representative: the line's first spec, built to `level` (so a level-9
-    // build is still its base archetype and a level-19 one is in the line).
-    const specId = point.level === 5 ? childrenOf(childrenOf(point.line)[0].id)[0].id : childrenOf(point.line)[0].id
-    // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a wave
-    // the hero cannot kill, which flattens a bench into a plateau no perk moves.
-    const base = buildSpec(specId, { level, seed: 5 })
-    const benches = perkBenches(depth)
-    // Scale the waves so the perk-less hero stops ~half of each (geometric bisection).
-    const pressure: Record<string, number> = {}
-    for (const k of PERK_BENCH_KEYS) {
-      let lo = 0.02
-      let hi = 60
-      for (let it = 0; it < 9; it++) {
-        const mid = Math.sqrt(lo * hi)
-        const r = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
-        if (r > 0.5) lo = mid
-        else hi = mid
+  for (const tier of [1, 2, 3] as const) {
+    const level = tier === 1 ? 9 : tier === 2 ? 14 : 19
+    const depth = tier === 1 ? 4 : tier === 2 ? 6 : 8
+    for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
+      const options = ALL_SKILLS.filter((k) => k.level === tier && skillFits(k, archetype))
+      const point = `L${tier}:${archetype}`
+      // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a
+      // wave the hero cannot kill, which flattens a bench into a plateau.
+      const base = applyXp(createSentinel(archetype), xpToReach(level))
+      const benches = skillBenches(depth)
+      // Two pressures per point: one for a lone hero, one for a hero beside an
+      // ally (the aura skills), each scaled so the skill-less team stops ~half.
+      const pressureFor = (aura: boolean): Record<string, number> => {
+        const out: Record<string, number> = {}
+        for (const k of SKILL_BENCH_KEYS) {
+          let lo = 0.02
+          let hi = 60
+          for (let it = 0; it < 9; it++) {
+            const mid = Math.sqrt(lo * hi)
+            const r = stopRate(skillTeam(base, aura, level), benches[k], SKILL_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
+            if (r > 0.5) lo = mid
+            else hi = mid
+          }
+          out[k] = Math.sqrt(lo * hi)
+        }
+        return out
       }
-      pressure[k] = Math.sqrt(lo * hi)
+      const pressure = { solo: pressureFor(false), aura: options.some((k) => k.mods.buffAura) ? pressureFor(true) : null }
+      const baseRate = (aura: boolean): Record<string, number> => {
+        const pr = aura ? pressure.aura! : pressure.solo
+        const out: Record<string, number> = {}
+        for (const k of SKILL_BENCH_KEYS) out[k] = stopRate(skillTeam(base, aura, level), benches[k], SKILL_SEEDS, { enemyHpMult: pr[k], rules: BENCH_RULES })
+        return out
+      }
+      const soloBase = baseRate(false)
+      const auraBase = pressure.aura ? baseRate(true) : null
+      const rows: SkillRow[] = []
+      for (const k of options) {
+        const aura = !!k.mods.buffAura
+        const hero: Sentinel = { ...base, skills: [k.id] }
+        const pr = aura ? pressure.aura! : pressure.solo
+        const b = aura ? auraBase! : soloBase
+        const d: Record<string, number> = {}
+        for (const key of SKILL_BENCH_KEYS) d[key] = stopRate(skillTeam(hero, aura, level), benches[key], SKILL_SEEDS, { enemyHpMult: pr[key], rules: BENCH_RULES }) - b[key]
+        rows.push({ point, skill: k.id, name: k.name, d, mean: mean(SKILL_BENCH_KEYS.map((key) => d[key])), dps: heroDps(hero) })
+      }
+      skillRows.push(...rows)
+      const top = [...rows].sort((a, b) => b.mean - a.mean)
+      const greedy = [...rows].sort((a, b) => b.dps - a.dps)[0]
+      skillPointSummary.push({ point, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, options: rows.length })
     }
-    const baseRate: Record<string, number> = {}
-    for (const k of PERK_BENCH_KEYS) baseRate[k] = stopRate(perkTeam(base, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES })
-    const rows: PerkRow[] = []
-    for (const perk of point.options) {
-      const hero: Sentinel = { ...base, perks: [perk.id] }
-      const d: Record<string, number> = {}
-      for (const k of PERK_BENCH_KEYS) d[k] = stopRate(perkTeam(hero, point.line, level), benches[k], PERK_SEEDS, { enemyHpMult: pressure[k], rules: BENCH_RULES }) - baseRate[k]
-      rows.push({ point: point.key, perk: perk.id, name: perk.name, locked: !!perk.unlock, d, mean: mean(PERK_BENCH_KEYS.map((k) => d[k])), dps: heroDps(hero) })
-    }
-    perkRows.push(...rows)
-    const open = rows.filter((r) => !r.locked)
-    const top = [...open].sort((a, b) => b.mean - a.mean)
-    const greedy = [...open].sort((a, b) => b.dps - a.dps)[0]
-    // A real pair: each option is the better one on at least one bench.
-    const tradesBoth = open.length < 2 || open.every((r) => PERK_BENCH_KEYS.some((k) => open.every((o) => o === r || r.d[k] >= o.d[k] - 0.005)))
-    perkPointSummary.push({ point: point.key, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, tradesBoth })
   }
-  line('| Point | Perk | `swarm` | `armour` | `line` | Mean | heroDps |')
+  line('| Point | Skill | `swarm` | `armour` | `line` | Mean | heroDps |')
   line('|---|---|--:|--:|--:|--:|--:|')
-  for (const r of perkRows) {
-    line(`| ${r.point} | ${r.name}${r.locked ? ' 🔒' : ''} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
+  for (const r of skillRows) {
+    line(`| ${r.point} | ${r.name} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
   }
   line('')
-  line('| Point | Gap between the two open options | The greedy (heroDps) pick | The measured better pick | Each option wins a bench? |')
-  line('|---|--:|---|---|:-:|')
-  for (const s of perkPointSummary) line(`| ${s.point} | ${pp(s.gap)} | ${s.greedy} | ${s.measured} | ${s.tradesBoth ? 'yes' : '**no**'} |`)
+  line('| Point | Options | Lead of the best over the runner-up | The greedy (heroDps) pick | The measured best |')
+  line('|---|--:|--:|---|---|')
+  for (const p of skillPointSummary) line(`| ${p.point} | ${p.options} | ${pp(p.gap)} | ${p.greedy} | ${p.measured} |`)
   line('')
-  /** A perk must move at least one of its benches by this much, or it is dead. */
-  const PERK_EDGE = 0.02
-  /** Two open options may not sit further apart than this on the three-bench mean. */
-  const PERK_GAP_CEILING = 0.2
-  const greedyRight = perkPointSummary.filter((s) => s.greedy === s.measured).length
-  line(`**Invariants.** Every perk moves at least one bench by ≥ ${pp(PERK_EDGE)} (none is dead); no choice point`)
-  line(`has its two open options more than ${pp(PERK_GAP_CEILING)} apart on the mean (none is solved by`)
-  line(`a mile). Reported, not gated: whether each option wins a bench of its own, and how often`)
-  line(`the heroDps-greedy pick — the "read the tooltip" answer — is the measured better one:`)
-  line(`**${greedyRight} of ${perkPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave, not the arithmetic.`)
+  /** A skill must move at least one of its benches by this much, or it is dead. */
+  const SKILL_EDGE = 0.02
+  /** The best option at a point may not lead the runner-up by more than this on the mean. */
+  const SKILL_GAP_CEILING = 0.2
+  const greedyRight = skillPointSummary.filter((p) => p.greedy === p.measured).length
+  line(`**Invariants.** Every skill moves at least one bench by ≥ ${pp(SKILL_EDGE)} (none is dead), and no`)
+  line(`point's best skill leads its runner-up by more than ${pp(SKILL_GAP_CEILING)} on the mean (none is solved by`)
+  line(`a mile). An offer deals three of a point's options at random, so a solved point would make`)
+  line(`every offer that holds the answer a non-choice. Reported, not gated: how often the`)
+  line(`heroDps-greedy pick — the "read the tooltip" answer — is the measured best one: **${greedyRight} of`)
+  line(`${skillPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave.`)
   line('')
-  for (const r of perkRows) {
-    const best = Math.max(...PERK_BENCH_KEYS.map((k) => r.d[k]))
-    if (best < PERK_EDGE) failures.push(`Spec perk "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(PERK_EDGE)}).`)
+  for (const r of skillRows) {
+    const best = Math.max(...SKILL_BENCH_KEYS.map((k) => r.d[k]))
+    if (best < SKILL_EDGE) failures.push(`Skill "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(SKILL_EDGE)}).`)
   }
-  for (const s of perkPointSummary) {
-    if (s.gap > PERK_GAP_CEILING) failures.push(`Spec perks at ${s.point} are a solved pair: ${s.measured} leads by ${pp(s.gap)} on the three-bench mean (ceiling ${pp(PERK_GAP_CEILING)}).`)
+  for (const p of skillPointSummary) {
+    if (p.gap > SKILL_GAP_CEILING) failures.push(`Skills at ${p.point} are solved: ${p.measured} leads the runner-up by ${pp(p.gap)} on the three-bench mean (ceiling ${pp(SKILL_GAP_CEILING)}).`)
   }
 }
 
@@ -1671,7 +1685,9 @@ type FreshResult = RunOutcome
 // ---- Model A: the strict floor (unchanged) --------------------------------
 function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): FreshResult {
   const rng = new RNG(seed)
-  let roster: Sentinel[] = [freshHero(archetype, rng)]
+  // SK1: the hero pick's hero of that class, with its starter skill.
+  const pickSkill = heroChoices(seed, STARTER_SKILL_POOL).find((c) => c.archetype === archetype)?.skill ?? null
+  let roster: Sentinel[] = [withFirstSkill(freshHero(archetype, rng), pickSkill)]
   let gold = START_GOLD
   let baseHp = MAX_BASE_HP
   let reached = 0
@@ -1684,7 +1700,8 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
       // A recruit node hands over a fresh level-1 body.
       const a = rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[])
-      roster = [...roster, wearKit(createSentinel(a), recruitKit(rng, a))]
+      const body = wearKit(createSentinel(a), recruitKit(rng, a))
+      roster = [...roster, withFirstSkill(body, recruitSkill(seed, body.id, a, STARTER_SKILL_POOL))]
     }
     const kind = mcKind(depth)
     const threat = threatAtLayer(depth) * nodeThreatMult(depth === NODES ? 'boss' : kind === 'elite' ? 'elite' : 'battle')
@@ -1710,7 +1727,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     gold += m.goldEarned + (kind === 'boss' ? 60 : kind === 'elite' ? 25 : 0)
     const awards = levelXpAwards(m.perSentinel.map((p) => ({ id: p.id, xpGained: p.xp })), { wave: m.wave, hpMult: threat, depth, kind })
     const xpById = new Map(awards.map((p) => [p.id, p.xpGained]))
-    roster = roster.map((s) => autoEvolve(applyXp(s, xpById.get(s.id) ?? 0), rng))
+    roster = roster.map((s) => randomSkills(applyXp(s, xpById.get(s.id) ?? 0), rng, STARTER_SKILL_POOL, seed))
 
     // One of three reward cards, taken at random the way a first-timer would.
     {
@@ -1721,8 +1738,6 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
         roster = applyGrant(roster, card.grant, (m2) => { runMods = [...runMods, m2] })
       }
     }
-
-    roster = roster.map((h) => randomPerks(h, rng))
   }
   const won = reached >= NODES
   return {
@@ -1732,7 +1747,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     battles: reached + 1,
     roster: roster.length,
     bossThreat,
-    marks: marksFor(reached, won, bannerRules(0)),
+    marks: marksFor(reached, won, difficultyRules(0)),
     layers: NODES + 1,
     fieldId: field.id,
     starter: archetype,
@@ -2105,15 +2120,15 @@ const HUB_RUNS = Number(process.env.FW_META_RUNS) || 210
  * 600 (about +30s of runtime) and the gate reads the point estimate.
  */
 const BANNER_RUNS = Number(process.env.FW_BANNER_RUNS) || 600
-/** The smallest win-rate cost a Banner rung may have over the rung below it. */
+/** The smallest win-rate cost a difficulty step may have over the step below it. */
 const BANNER_MIN_COST = 0.03
 
 interface HubCell { winRate: number; wins: number[]; marks: number }
-function hubCell(meta: Loadout, policy: RoutePolicy, banner = bannerRules(0), runs = HUB_RUNS): HubCell {
+function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS): HubCell {
   const wins: number[] = []
   const marks: number[] = []
   for (let i = 0; i < runs; i++) {
-    const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta, banner, policy })
+    const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta, difficulty: banner, policy })
     wins.push(r.won ? 1 : 0)
     marks.push(r.marks)
   }
@@ -2320,138 +2335,73 @@ if (want(12)) {
 
 // -------------------------------------------------------------- Sweep 13
 if (want(13)) {
-  // The Banner ladder's economy — new (M19-f).
-  line('## 13. The Banner ladder (is climbing ever worth it?)')
+  // The difficulty climb's economy (SK1) — what the Banner ladder's §13 became.
+  line('## 13. Difficulty steps (is climbing ever worth it?)')
   line('')
-  line('**Why this exists.** A ladder rung is a wager: it takes a rule away and pays more')
-  line('for the run. The old ladder was three separate failures at once — its first rung')
-  line('was free money (deleting the merchants costs nothing measurable and paid +25%), its')
-  line('top three rungs were strictly ignorable (marks/run flatlined at ~100–160 while the')
-  line('win rate collapsed 32 → 11 → 1%), and its last rung was a bare `startThreat: 2`')
-  line('with copy that restated an inherited rule. Nothing measured any of it.')
+  line('**What changed (SK1).** The Banner (Vow) ladder is gone. Each rung took a RULE away —')
+  line('two reward cards, every battle an elite, no recruits — and was flown per run. A')
+  line('**difficulty step** is one dial instead: each step makes enemies **+8% stronger** (the')
+  line('run starts at that Threat) and turns **one more battle node per act into an elite**, on')
+  line('the map where the player can see it. A win at the top step raises it one step (and')
+  line('unlocks a skill card); the player can turn it down at the start of any run. A save\'s')
+  line('highest unlocked Vow became its top step.')
   line('')
-  line('Each rung is measured on the same paired seeds as §11 and §12, and the payout is')
-  line("`grantRunRewards`'s own formula, so the marks column is the number the player's")
-  line(`purse actually sees. **${BANNER_RUNS} runs a rung** (§12 uses ${HUB_RUNS}): the gate below asks for`)
-  line(`a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per rung, and a ${HUB_RUNS}-run cell cannot resolve one.`)
-  line('')
-  line('**A rung is earned, not bought.** Banner N unlocks by *winning* a run under Banner')
-  line('N−1 (Banner 1 by winning an unbannered run) — `metaStore.grantRunRewards`. It used to')
-  line('cost 200 / 350 / 500 Watch Marks, which contradicted the ladder\'s own doctrine: the')
-  line('record a ladder keeps should measure skill, and a marks price measures grinding.')
+  line('**The intent is unchanged: every step must still be worth climbing.** Each step is')
+  line('measured on the same paired seeds as §11 and §12, and the payout is `grantRunRewards`\'s')
+  line(`own formula (+${((difficultyRules(1).markMult - 1) * 100).toFixed(0)}% Marks a step), so the marks column is what the purse sees. **${BANNER_RUNS} runs a`)
+  line(`step**: the gate below asks for a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per step, and a ${HUB_RUNS}-run cell cannot resolve one.`)
+  line('The modelled player is the zero-meta one (the nine starter skills); a step whose win')
+  line('rate falls under 1% ends the climb — every step above it is at least as hard.')
   line('')
   const BANNER_POLICY = POLICIES[policyIdx('adaptive')]
-  interface BannerRow { tier: number; name: string; mult: number; win: number; marks: number }
-  const bannerRows: BannerRow[] = []
-  for (let t = 0; t <= MAX_BANNER; t++) {
-    const c = hubCell(ZERO_META, BANNER_POLICY, bannerRules(t), BANNER_RUNS)
-    bannerRows.push({
-      tier: t,
-      name: t === 0 ? '— (no Banner)' : BANNER_RUNGS[t - 1].name,
-      mult: bannerRules(t).markMult,
-      win: c.winRate,
-      marks: c.marks,
-    })
+  interface StepRow { tier: number; effect: string; mult: number; win: number; marks: number }
+  const bannerRows: StepRow[] = []
+  for (let t = 0; t <= MAX_DIFFICULTY; t++) {
+    const c = hubCell(ZERO_META, BANNER_POLICY, difficultyRules(t), BANNER_RUNS)
+    bannerRows.push({ tier: t, effect: t === 0 ? 'standard' : difficultyEffect(t), mult: difficultyRules(t).markMult, win: c.winRate, marks: c.marks })
+    if (c.winRate < 0.01) break
   }
-  line('| Banner | Rule it adds | ×marks | Win rate | **Marks / run** | Δ marks |')
+  line('| Step | What it adds | ×marks | Win rate | **Marks / run** | Δ marks |')
   line('|--:|---|--:|--:|--:|--:|')
   for (const r of bannerRows) {
     const prev = r.tier > 0 ? bannerRows[r.tier - 1].marks : null
-    const rule = r.tier === 0 ? '—' : BANNER_RUNGS[r.tier - 1].rule
     line(
-      `| ${r.tier} · ${r.name} | ${rule} | ×${r.mult} | ${pct(r.win)} | **${f1(r.marks)}** | ${prev === null ? '—' : `${r.marks - prev >= 0 ? '+' : '−'}${Math.abs(r.marks - prev).toFixed(0)}`} |`,
+      `| ${r.tier} | ${r.effect} | ×${r.mult} | ${pct(r.win)} | **${f1(r.marks)}** | ${prev === null ? '—' : `${r.marks - prev >= 0 ? '+' : '−'}${Math.abs(r.marks - prev).toFixed(0)}`} |`,
     )
   }
+  if (bannerRows.length <= MAX_DIFFICULTY) line(`| ${bannerRows.length}–${MAX_DIFFICULTY} | not measured: the step below already wins under 1% | | | | |`)
   line('')
-  line('**Two invariants.**')
+  line('**Two invariants**, the ladder\'s own, kept:')
   line('')
-  line(`1. **Every rung is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A rung that does not lower the win rate`)
-  line('   is not a wager, it is a bonus with a warning label — and a mandatory one, since')
-  line('   nobody would ever fly the rung below it again. This used to tolerate a rung')
-  line('   *gaining* up to 2pt; it now demands a measurable cost.')
-  line('2. **Every rung pays for itself.** Expected marks per run must rise at every step of')
-  line('   the ladder. This is the check the old ladder failed: its payout multipliers')
-  line('   exactly cancelled the difficulty they added, so climbing was never worth it.')
+  line(`1. **Every step is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A step that does not lower the win rate`)
+  line('   is not harder, it is a bonus with a warning label.')
+  line('2. **Every step pays for itself.** Expected marks per run must rise at every step —')
+  line('   the check the old ladder failed: its payout multipliers cancelled the difficulty.')
   line('')
   for (let i = 1; i < bannerRows.length; i++) {
     const cur = bannerRows[i]
     const prev = bannerRows[i - 1]
-    if (prev.win - cur.win < BANNER_MIN_COST) {
+    if (prev.win - cur.win < BANNER_MIN_COST && prev.win >= 0.01) {
       failures.push(
-        `Banner ${cur.tier} (${cur.name}) is not a wager: it wins ${pct(cur.win)} against Banner ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every rung must cost. A rule that costs the run nothing measurable is free money, and there is no reason to ever fly the rung below it.`,
+        `Difficulty ${cur.tier} is not harder: it wins ${pct(cur.win)} against difficulty ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every step must cost.`,
       )
     }
     if (cur.marks <= prev.marks) {
       failures.push(
-        `Banner ${cur.tier} (${cur.name}) is not worth flying: ${f1(cur.marks)} marks a run against Banner ${prev.tier}'s ${f1(prev.marks)}. The payout multiplier does not cover the difficulty the rung adds, so the ladder is a decoration.`,
+        `Difficulty ${cur.tier} is not worth climbing: ${f1(cur.marks)} marks a run against difficulty ${prev.tier}'s ${f1(prev.marks)}. The payout multiplier does not cover the difficulty the step adds.`,
       )
     }
   }
   line(
-    `Measured: the win rate falls at every rung (${bannerRows.map((r) => pct(r.win)).join(' → ')}; the smallest step is ${(Math.min(...bannerRows.slice(1).map((r, i) => bannerRows[i].win - r.win)) * 100).toFixed(1)}pt) and the payout rises at every rung (${bannerRows.map((r) => f1(r.marks)).join(' → ')}).`,
+    `Measured: the win rate by step is ${bannerRows.map((r) => pct(r.win)).join(' → ')} and marks per run ${bannerRows.map((r) => f1(r.marks)).join(' → ')}.`,
   )
   line('')
-  line('**Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired')
-  line('runs on the specials / battles / adaptive lines:')
+  line('**Not measured here: what a win buys besides marks.** A win at the top step also')
+  line('unlocks a skill card (`run/watch.winReward`) — a widening of every later run\'s offers,')
+  line('not a number this table can price. It is the main reason to climb; the marks column')
+  line('only has to say the climb is never a loss.')
   line('')
-  line('- *Thin Pickings was never free.* It costs **5.5–6.8pt** on every line; the "0pt"')
-  line('  reading was a 210-run cell. Its ×1.4 stands — that is the price of the rule it is.')
-  line('- *Elite Watch was.* Alone it measured −0.8pt, and on top of Thin Pickings −3.0pt:')
-  line('  the one rung a ≥3pt gate would have failed on a resample. Its elites are now drawn')
-  line('  **one depth deeper** (`BannerRules.eliteDepth`, so champion-led from depth 5) — a')
-  line('  composition rule the card states, not a hidden Threat surcharge (that was the')
-  line('  M19-g defect, and the ×1.52 step measured −23pt, far past a rung). It now costs')
-  line('  ~9pt over rung 1, and its payout moved ×2.2 → ×2.5 to keep the marks column rising.')
-  line('- *Thin Pickings, re-priced again (tuning lane).* When `STOP_XP_SHARE` went 0.35 → 0.55')
-  line('  (§11), stop levels began to stand in for the card and the shelf slot the rung takes, and')
-  line('  its cost fell to **1.5pt** (31% → 29%). Its merchants now lay out **half** their shelf')
-  line('  (4 → 2, `run/relics.ts` `shelfSize`) instead of one item fewer: −6.7pt, back where the')
-  line('  card\'s "half the build" puts it.')
-  line('')
-  line('**What was cut, and why it is not a rung.** Every candidate rule was measured alone')
-  line('on top of Banner 0, across the §11 policy set:')
-  line('')
-  line('| Rule alone | specials | battles | recruits | adaptive |')
-  line('|---|--:|--:|--:|--:|')
-  line('| two reward cards instead of three | −9 | −12 | −6 | −7 |')
-  line('| **no Merchant stops** | **−1** | **−7** | **−1** | **−3** |')
-  line('| **every battle node is an elite** | **0** | **−3** | **+1** | **−1** |')
-  line('| no recruits | −10 | −23 | −21 | −21 |')
-  line('| start at Threat ×2 | −24 | −28 | −24 | −25 |')
-  line('')
-  line('`Forced March` is gone because deleting the merchants is not a difficulty: it')
-  line('measured a *buff* on the specials line when the rung was cut, and −1 to −7pt on the')
-  line('re-measure above — either way a rung that asked +25% for nothing a player can feel.')
-  line('`The Long Dark` is gone because')
-  line('`startThreat: 2` is the largest number on that table and the only one that changes')
-  line('no decision — a treadmill rung by the ladder doctrine\'s own definition. A fourth')
-  line('rung needs a fourth rule (no Shrines is the obvious candidate and wants a')
-  line('`noShrines` flag threaded through `mapOptionsFor`), not a bigger multiplier.')
-  line('')
-  line('**The Banner-2 surcharge is gone, and so is its hidden rebate (M19-g).** `allElite`')
-  line('used to route through `THREAT_PER_NODE[kind]`, so a Banner-2 run was charged ×1.52 per')
-  line("battle instead of ×1.42 — a compounding number (×1.9 on every enemy's HP by the")
-  line('boss) stacked on top of the composition change the rung actually sells, and nowhere')
-  line("in its copy. A Banner substitutes an *encounter*, not a node, so the step now")
-  line('follows the kind the MAP dealt (`mapKind` in `gameStore`, mirrored in `runsim` and')
-  line('in the map chip).')
-  line('')
-  line('Removing the surcharge alone made the rung **free money** — 34% win against Banner')
-  line("1's 29%, which fails the first invariant above — because the same `kind` was also")
-  line('paying every Banner-made elite +25 gold and +0.15 card luck. The pay follows the')
-  line('same rule as the price now, and the ladder is monotone again in both columns.')
-  line('')
-  line('**And the rung has been re-priced where it should have been (WS8).** The note that')
-  line('used to sit here recorded the honest measurement — `every battle node is an elite`,')
-  line('priced purely as composition, was worth about **−1pt**, while carrying the')
-  line("ladder's second-largest payout multiplier — and named the fix: not a third")
-  line('surcharge, but the elite composition itself. Elites now field one of three')
-  line('mechanically distinct columns (Plated / Warded / Swift, §14), each built around a')
-  line('modifier that changes which damage type gets through and how long a defence has to')
-  line('apply it. Measured on the same paired seeds, Elite Watch is no longer close to')
-  line('free.')
-  line('')
-  summary.push(`Banner ladder (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `B${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`)
+  summary.push(`Difficulty steps (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `D${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`)
 }
 
 // -------------------------------------------------------------- Sweep 14

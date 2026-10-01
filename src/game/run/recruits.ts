@@ -6,7 +6,8 @@
  */
 import type { RNG } from '../core/rng'
 import { autoEquipEmpty, recruitKit, wearKit } from '../engine/kit'
-import { applyXp, evolutionPending, xpToReach } from '../engine/leveling'
+import { applyXp, xpToReach } from '../engine/leveling'
+import { withFirstSkill } from './skills'
 import { createSentinel, startingRoster } from '../data/sentinels'
 import type { Archetype, Item, Sentinel } from '../types'
 import { equipRules, withRelicStats } from './relics'
@@ -26,6 +27,12 @@ export interface RecruitHub {
   statBonus: number
   /** Free Companies: hires arrive at the roster's median rather than three back. */
   trained: boolean
+  /**
+   * SK1: the Level 1 skill a hire arrives with — `run/skills.recruitSkill`
+   * over the run's seed and skill pool. A hash of the hire's id, never a draw
+   * on the loot stream, so dealing it moves no other roll. Absent: no skill.
+   */
+  skillFor?: (heroId: string, archetype: Archetype) => string | null
 }
 
 export function applyStatBonus(s: Sentinel, n: number): Sentinel {
@@ -63,8 +70,9 @@ export function recruitTargetLevel(roster: readonly Pick<Sentinel, 'level'>[], t
  * level 1 with no gear while costing a ×1.05 Threat tax — a strictly bad deal
  * past depth 6.)
  *
- * They arrive *un-evolved* even so: the branch choice belongs to the player,
- * which is why callers push a fresh recruit onto `evolutionQueue`.
+ * They arrive with one Level 1 skill (SK1, `hub.skillFor`), and with any skill
+ * milestone their level has passed still OWED: the choice belongs to the
+ * player, and the level-up surfaces offer it like any other.
  *
  * **Seasoned Recruits applies here too (M18).** Every mid-run body comes
  * through this one funnel (crossroads, recruit node, merchant, endless room,
@@ -75,7 +83,8 @@ export function scaledRecruit(rng: RNG, archetype: Archetype, roster: readonly S
   // Armed, not dressed: the rest of their kit comes out of the pack when they
   // join (`withRecruits`). A hire used to arrive with nothing at all while the
   // balance harness priced every hire as carrying a full opening kit.
-  const base = applyStatBonus(armedSentinel(rng, archetype), hub.statBonus)
+  const armed = applyStatBonus(armedSentinel(rng, archetype), hub.statBonus)
+  const base = withFirstSkill(armed, hub.skillFor?.(armed.id, archetype) ?? null)
   if (!roster.length) return base
   const target = recruitTargetLevel(roster, hub.trained)
   return target <= 1 ? base : applyXp(base, xpToReach(target))
@@ -87,17 +96,16 @@ export function recruitSlate(rng: RNG, roster: readonly Sentinel[], hub: Recruit
 }
 
 /**
- * Add hires to the roster, dress their empty slots from the pack, and queue any
- * branch choice they arrive owing. Only EMPTY slots are filled, and only with
- * strict upgrades (`autoEquipEmpty`) — nothing anyone is wearing moves.
+ * Add hires to the roster and dress their empty slots from the pack. Only
+ * EMPTY slots are filled, and only with strict upgrades (`autoEquipEmpty`) —
+ * nothing anyone is wearing moves.
  */
 export function withRecruits(
   roster: Sentinel[],
-  queue: string[],
   hires: Sentinel[],
   inventory: Item[],
   relics: readonly string[] = [],
-): { roster: Sentinel[]; evolutionQueue: string[]; inventory: Item[] } {
+): { roster: Sentinel[]; inventory: Item[] } {
   let pack = inventory
   const dressed = hires.map((h) => {
     // A stat relic is "every hero, hires included" (Phase 3b).
@@ -105,11 +113,7 @@ export function withRecruits(
     pack = r.rest
     return r.roster[0]
   })
-  return {
-    roster: [...roster, ...dressed],
-    evolutionQueue: [...queue, ...dressed.filter(evolutionPending).map((s) => s.id)],
-    inventory: pack,
-  }
+  return { roster: [...roster, ...dressed], inventory: pack }
 }
 
 /**
@@ -128,15 +132,22 @@ export function receiveItems(
   return { roster: r.roster, inventory: [...inventory, ...r.rest] }
 }
 
-/** The hub's extra Sentinels, armed, cycling fighter → rogue → mystic. */
-export function hubExtras(rng: RNG, n: number): Sentinel[] {
+/** Deals a body its first skill (SK1) — `RecruitHub.skillFor`'s shape. */
+export type SkillDealer = (heroId: string, archetype: Archetype) => string | null
+
+/** The hub's extra Sentinels, armed, cycling fighter → rogue → mystic, each with its first skill. */
+export function hubExtras(rng: RNG, n: number, skillFor?: SkillDealer): Sentinel[] {
   const extra: Sentinel[] = []
-  for (let i = 0; i < n; i++) extra.push(armedSentinel(rng, RECRUIT_ARCHETYPES[i % 3]))
+  for (let i = 0; i < n; i++) {
+    const s = armedSentinel(rng, RECRUIT_ARCHETYPES[i % 3])
+    extra.push(withFirstSkill(s, skillFor?.(s.id, s.archetype) ?? null))
+  }
   return extra
 }
 
-/** Endless starting roster including any meta bonuses (extra Sentinels + flat stats). */
-export function buildStartingRoster(rng: RNG, bonuses: CompanyBonuses): Sentinel[] {
-  const extra = hubExtras(rng, bonuses.extraSentinels)
-  return [...startingRoster(), ...extra].map((s) => applyStatBonus(s, bonuses.statBonus))
+/** Endless starting roster including any meta bonuses (extra Sentinels + flat stats), each with its first skill. */
+export function buildStartingRoster(rng: RNG, bonuses: CompanyBonuses, skillFor?: SkillDealer): Sentinel[] {
+  const extra = hubExtras(rng, bonuses.extraSentinels, skillFor)
+  const core = startingRoster().map((s) => withFirstSkill(s, skillFor?.(s.id, s.archetype) ?? null))
+  return [...core, ...extra].map((s) => applyStatBonus(s, bonuses.statBonus))
 }

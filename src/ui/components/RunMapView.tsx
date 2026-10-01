@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
-import { bannerRules } from '../../state/metaStore'
+import { difficultyRules } from '../../state/metaStore'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
@@ -37,8 +37,7 @@ export function RunMapView() {
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
-  const allElite = useGameStore((s) => bannerRules(s.runBanner).allElite)
-  const startThreat = useGameStore((s) => bannerRules(s.runBanner).startThreat)
+  const startThreat = useGameStore((s) => difficultyRules(s.runDifficulty).startThreat)
   const focusedId = useMapFocus((s) => s.nodeId)
   const focus = useMapFocus((s) => s.focus)
 
@@ -128,7 +127,7 @@ export function RunMapView() {
           const p = nodePos.get(n.id)!
           // Under Banner 2 a "battle" node IS an elite — same glyph, same hue,
           // same word, or the map is drawing a wave the run will not field.
-          const meta = nodeMeta(allElite && n.type === 'battle' ? 'elite' : n.type)
+          const meta = nodeMeta(n.type)
           const isCleared = clearedSet.has(n.id)
           const isReachable = reachableSet.has(n.id)
           const isCurrent = n.id === currentNodeId
@@ -179,7 +178,7 @@ export function RunMapView() {
                   ♛ ⟡ ❖ ＋, system-font characters in whatever face the phone
                   had, and `⟡` doubled as the gold mark. */}
               <span className="mn-glyph">
-                <Icon name={NODE_ICON[allElite && n.type === 'battle' ? 'elite' : n.type] ?? 'depth'} />
+                <Icon name={NODE_ICON[n.type] ?? 'depth'} />
               </span>
               <span className="mn-label">{meta.label}</span>
               {/* Only on nodes you can actually choose between: the cost is

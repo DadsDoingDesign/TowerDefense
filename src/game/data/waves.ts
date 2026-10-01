@@ -920,13 +920,19 @@ export function encounterSeed(runSeed: number, depth: number): number {
   return hashSeed(runSeed, 'field', 'wave', depth)
 }
 
-/** The slice of the Vow (Banner) rules that changes which wave a node fields. */
+/**
+ * Rules that change which wave a node fields. The Vow ladder set both (every
+ * battle an elite, drawn a depth deeper); no difficulty step does — a step's
+ * extra elites are elite NODES on the map (SK1) — so the store passes none.
+ * Kept for the balance tooling that still measures the old rule.
+ */
 export interface NodeEncounterRules {
-  /** Every battle node fields an elite wave (Vow 2+). */
+  /** Every battle node fields an elite wave. */
   allElite: boolean
-  /** How many depths deeper a Vow-made elite is drawn (an elite the map dealt is not). */
+  /** How many depths deeper a rule-made elite is drawn (an elite the map dealt is not). */
   eliteDepth: number
 }
+const NO_ENCOUNTER_RULES: NodeEncounterRules = { allElite: false, eliteDepth: 0 }
 
 /** Exactly how a run-map node's wave is generated: the ONE derivation. */
 export interface NodeEncounterSpec {
@@ -949,7 +955,7 @@ export interface NodeEncounterSpec {
 export function nodeEncounterSpec(
   node: { type: string; layer: number; row: number },
   runSeed: number,
-  rules: NodeEncounterRules,
+  rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
 ): NodeEncounterSpec | null {
   let kind: EncounterKind
   if (node.type === 'boss') kind = 'boss'
@@ -969,7 +975,7 @@ export function nodeEncounterSpec(
 export function nodeEncounter(
   node: { type: string; layer: number; row: number },
   runSeed: number,
-  rules: NodeEncounterRules,
+  rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
 ): WaveDef | null {
   const spec = nodeEncounterSpec(node, runSeed, rules)
   return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling }) : null

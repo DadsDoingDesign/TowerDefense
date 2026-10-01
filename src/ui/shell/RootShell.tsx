@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
-import { EvolutionModal } from '../components/EvolutionModal'
 import { assertRarityTokensMatch } from '../channels'
 import { Coach } from './Coach'
 import { DetailBand } from './DetailBand'
@@ -124,7 +123,6 @@ export function RootShell() {
         ) : (
           <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
         )}
-        <EvolutionModal />
         <Announcer />
         <ReceiptToast />
       </div>
@@ -151,7 +149,6 @@ export function RootShell() {
       {/* Keyboard shortcuts + the "?" sheet (Phase 4). The button shows only
           to a fine pointer; the keys work on any keyboard. */}
       <Shortcuts />
-      <EvolutionModal />
       <Announcer />
       <ReceiptToast />
     </div>

@@ -18,7 +18,7 @@ import { spawn } from 'child_process'
 import { cpus } from 'os'
 import { fileURLToPath } from 'url'
 import type { Archetype } from '../src/game/types'
-import { bannerRules, MAX_BANNER } from '../src/state/metaStore'
+import { difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
 import { loadoutFor, monteCarloRun, POLICIES, simulateRun, ZERO_META } from './runsim'
 
 const N = Number(process.argv[2]) || 240
@@ -52,9 +52,9 @@ function cellsFor(): { key: string; run: (i: number) => number }[] {
   }
   if (WHAT.includes('banner')) {
     const adaptive = POLICIES.find((p) => p.id === 'adaptive')!
-    for (let t = 0; t <= MAX_BANNER; t++) {
-      const banner = bannerRules(t)
-      out.push({ key: `banner|B${t}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { banner, policy: adaptive }).won ? 1 : 0) })
+    for (let t = 0; t <= MAX_DIFFICULTY; t++) {
+      const banner = difficultyRules(t)
+      out.push({ key: `banner|B${t}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { difficulty: banner, policy: adaptive }).won ? 1 : 0) })
     }
   }
   return out

@@ -1,16 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { ACHIEVEMENTS, LOCKED_SPECS, newlyEarned, type RunFacts } from '../src/game/data/achievements'
+import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../src/game/data/achievements'
+import { FEAT_SKILLS, skillById } from '../src/game/data/skills'
+import { skillPoolFor } from '../src/game/run/watch'
 import { mutationOfferSize, MUTATION_OFFER_SIZE } from '../src/game/data/mutations'
-import { createSentinel } from '../src/game/data/sentinels'
 import { RNG } from '../src/game/core/rng'
 import { generateRunMap } from '../src/game/data/runmap'
-import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { CAMPFIRE_FORAGE, campfireChoices, forageAtCampfire } from '../src/game/run/campfire'
 import { cartularyRelic, handSize, rewardHand } from '../src/game/run/relics'
 import { freshFeats, goblinKinds, runFacts } from '../src/game/run/settle'
-import { availableEvolutions, lockedEvolutions, specOpen } from '../src/game/run/unlocks'
-import { bannerRules, endlessMarks, lastFeats, migrateMeta, useMetaStore } from '../src/state/metaStore'
-import type { Sentinel } from '../src/game/types'
+import { difficultyRules, endlessMarks, lastFeats, migrateMeta, useMetaStore } from '../src/state/metaStore'
 
 const facts = (over: Partial<RunFacts> = {}): RunFacts => ({
   mode: 'campaign',
@@ -23,7 +21,7 @@ const facts = (over: Partial<RunFacts> = {}): RunFacts => ({
   actBosses: 0,
   mutated: false,
   goldPeak: 0,
-  banner: 0,
+  difficulty: 0,
   rounds: 0,
   daily: false,
   goblinsSeen: 0,
@@ -58,7 +56,7 @@ describe('feats (data/achievements)', () => {
   it('runFacts reads hires off the starting size, the act off the deepest layer, and a mutation off the roster', () => {
     const feats = { ...freshFeats(), starter: 'rogue' as const, startSize: 2, maxFielded: 4, actBosses: 1 }
     const f = runFacts({
-      mode: 'campaign', won: false, feats, deepestLayer: 9, banner: 1, wins: 0, dailyScored: false, goblinsSeen: 4,
+      mode: 'campaign', won: false, feats, deepestLayer: 9, difficulty: 1, wins: 0, dailyScored: false, goblinsSeen: 4,
       roster: [{ mutations: [] }, { mutations: [{ key: 'x' } as never] }, { mutations: [] }],
     })
     expect(f.hires).toBe(1)
@@ -72,22 +70,18 @@ describe('feats (data/achievements)', () => {
   })
 })
 
-describe('feat-locked content (game/run/unlocks)', () => {
-  const at20 = (base: Sentinel, path: string[]): Sentinel => ({ ...applyXp(base, xpToReach(20)), branchPath: path })
-
-  it('a locked spec stays out of the offer until its feat, and every branch keeps two open paths', () => {
-    expect(specOpen('warden_of_ash', () => false)).toBe(false)
-    expect(specOpen('warden_of_ash', (id) => id === 'win_fighter')).toBe(true)
-    const guard = at20(createSentinel('fighter'), ['fighter', 'guard'])
-    const open = availableEvolutions(guard, () => false).map((n) => n.id)
-    expect(open).not.toContain('warden_of_ash')
-    expect(open.length).toBeGreaterThanOrEqual(2)
-    expect(lockedEvolutions(guard, () => false).map((n) => n.id)).toEqual(['warden_of_ash'])
-    expect(availableEvolutions(guard, () => true).map((n) => n.id)).toContain('warden_of_ash')
+describe('feat-locked skill cards (SK1)', () => {
+  it('a feat card stays out of the pool until its feat', () => {
+    expect(skillPoolFor([], () => false)).not.toContain('warden_of_ash')
+    expect(skillPoolFor([], (id) => id === 'win_fighter')).toContain('warden_of_ash')
   })
 
-  it('every locked spec names a real feat', () => {
-    for (const feat of Object.values(LOCKED_SPECS)) expect(ACHIEVEMENTS.some((a) => a.id === feat)).toBe(true)
+  it('every feat card names a real feat, and that feat says it opens the card', () => {
+    for (const [skill, feat] of Object.entries(FEAT_SKILLS)) {
+      const a = ACHIEVEMENTS.find((x) => x.id === feat)
+      expect(a, skill).toBeDefined()
+      expect(a!.opens).toContain(skillById(skill)!.name)
+    }
   })
 })
 
@@ -114,7 +108,7 @@ describe('horizontal services (campfire forage, relic cartulary, strange growth)
     expect(rng2.next()).toBe(after)
   })
 
-  it('Strange Growth offers one more mutation, on either Vow', () => {
+  it('Strange Growth offers one more mutation', () => {
     expect(mutationOfferSize(false, false)).toBe(MUTATION_OFFER_SIZE)
     expect(mutationOfferSize(false, true)).toBe(MUTATION_OFFER_SIZE + 1)
     expect(mutationOfferSize(true, true)).toBe(3)
@@ -165,16 +159,16 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
     expect(useMetaStore.getState().unlocked('fieldKitchen')).toBe(true)
   })
 
-  it('Endless pays per round, a bonus every fifth, multiplied by the Vow won', () => {
+  it('Endless pays per round, a bonus every fifth, multiplied by the best difficulty won', () => {
     expect(endlessMarks(0, 0)).toBe(0)
     expect(endlessMarks(4, 0)).toBe(32)
     expect(endlessMarks(5, 0)).toBe(60)
-    expect(endlessMarks(10, 2)).toBe(Math.round(120 * bannerRules(2).markMult))
+    expect(endlessMarks(10, 2)).toBe(Math.round(120 * difficultyRules(2).markMult))
     expect(endlessMarks(Number.NaN, 1)).toBe(0)
   })
 
-  it('the Vow multiplier reaches Endless only once Ten Rounds is earned', () => {
-    useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, bestBanner: 2 } })
+  it('the difficulty multiplier reaches Endless only once Ten Rounds is earned', () => {
+    useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, bestDifficulty: 2 } })
     const pay = () => {
       const a = useMetaStore.getState().watchMarks
       useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, mode: 'endless' })
@@ -186,10 +180,10 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
   })
 
   it('v3 saves migrate to v4 with an empty ledger and Codex; junk is scrubbed', () => {
-    const m = migrateMeta({ watchMarks: 90, upgrades: { base: 1 }, sacrificeTier: 1, stats: {} }, 3)
+    const m = migrateMeta({ watchMarks: 90, upgrades: { base: 1 }, topDifficulty: 1, stats: {} }, 3)
     expect(m.watchMarks).toBe(90)
     expect(m.achievements).toEqual({})
-    expect(m.codex).toEqual({ enemies: [], relics: [], specs: [], perks: [], felled: {} })
+    expect(m.codex).toEqual({ enemies: [], relics: [], felled: {} })
     const junk = migrateMeta({ achievements: { act_two: 'x', nope: 1, first_light: -4 }, codex: { enemies: ['a', 'a', 3], relics: 'no' } }, 4)
     expect(junk.achievements).toEqual({ act_two: 1, first_light: 1 })
     expect(junk.codex.enemies).toEqual(['a'])

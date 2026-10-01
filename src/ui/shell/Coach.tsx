@@ -4,14 +4,13 @@ import { DANGER_COPY } from '../../game/data/hazards'
 import { BLOCK_COPY, ROOM_COPY, terrainRuleById } from '../../game/data/terrain'
 import { commandsFor, WATCH_COMMANDS } from '../../game/data/commands'
 import { relicCommands } from '../../game/data/relics'
-import { TIER1_LEVEL } from '../../game/engine/leveling'
-import { pendingPerkLevel } from '../../game/run/perks'
+import { pendingMilestone } from '../../game/run/skills'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
-import { rewardInPlace } from './levelUps'
+import { rewardInPlace, waveLive } from './levelUps'
 import { useShown } from './staging'
 import { pickTipId, type TipFacts } from './coachRules'
 
@@ -102,7 +101,7 @@ export function Coach() {
   const placements = useGameStore((s) => s.placements)
   const inventory = useGameStore((s) => s.inventory)
   const threat = useGameStore((s) => s.threat)
-  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
+  const live = useGameStore(waveLive)
   const speed = useGameStore((s) => s.speed)
   const breather = useGameStore((s) => s.hud.breather)
   const subWave = useGameStore((s) => s.hud.subWave)
@@ -154,16 +153,15 @@ export function Coach() {
   useEffect(() => {
     if (commandUsed) markTaught('command')
   }, [commandUsed, markTaught])
-  const tookPerk = roster.some((h) => (h.perks?.length ?? 0) > 0)
+  // SK1: a skill choice made is the milestone lesson learnt.
+  const tookSkill = roster.some((h) => (h.skillPicks ?? 0) > 0)
   useEffect(() => {
-    if (tookPerk) markTaught('perk')
-  }, [tookPerk, markTaught])
+    if (tookSkill) markTaught('skill')
+  }, [tookSkill, markTaught])
 
-  // The evolution heads-up has to arrive BEFORE the choice does. Once a hero is
-  // in the queue the blocking modal is already up and the tip is too late — it
-  // explains itself there instead (see EvolutionModal).
-  const nearEvolution = roster.find((h) => h.level >= 8 && h.level < 10 && !evolutionQueue.includes(h.id))
-  const owesPerk = roster.find((h) => pendingPerkLevel(h) !== null && !evolutionQueue.includes(h.id))
+  // The first milestone's tip speaks only when the choice can be made — never
+  // over a live wave, where the choice waits.
+  const owesSkill = live ? undefined : roster.find((h) => pendingMilestone(h) !== null)
 
   const node = (id: string | null) => runMap.nodes.find((n) => n.id === id)
   const nodeHere = node(activeNodeId)
@@ -179,8 +177,7 @@ export function Coach() {
     wearingAnything,
     showThreat: mode === 'campaign' && threat > 1.001,
     threat,
-    nearEvolution: nearEvolution?.name,
-    owesPerk: owesPerk && (onMap || inSetup || inPlace) ? owesPerk.name : undefined,
+    owesSkill: owesSkill && (onMap || inSetup || inPlace) ? owesSkill.name : undefined,
     danger: inSetup && !!battleMap.tiles?.some((t) => t.danger === 'cursed'),
     challenge: inSetup && rule ? { name: rule.name, blurb: rule.blurb } : undefined,
     elite: inSetup && nodeHere?.type === 'elite',
@@ -303,26 +300,19 @@ export function pickTip(s: TipFacts): Tip | null {
   const id = pickTipId(s)
   if (!id) return null
   switch (id) {
-    case 'evolve':
-      return {
-        id,
-        icon: 'evolve',
-        body: (
-          <>
-            At level {TIER1_LEVEL}, <b>{s.nearEvolution}</b> picks a path. It&rsquo;s permanent.
-          </>
-        ),
-      }
-    case 'perk':
+    case 'skill':
       return {
         id,
         icon: 'boon',
         body: (
           <>
-            <b>{s.owesPerk}</b> can pick a <b>perk</b>. <Tap /> the glowing hero to choose — it&rsquo;s permanent.
+            <b>{s.owesSkill}</b> reached a <b>skill</b> level: <Tap /> the glowing hero and pick one of three. A hero holds up to three skills.
           </>
         ),
       }
+    // Said on the hero pick itself, which has no coach strip (`offers.ts`).
+    case 'heroSkill':
+      return null
     case 'danger':
       return {
         id,

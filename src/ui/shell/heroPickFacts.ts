@@ -16,7 +16,8 @@
  *
  * Pure: game data only, no React, no stores — so the test can run it.
  */
-import { childrenOf, getNode } from '../../game/data/archetypeTree'
+import { getNode } from '../../game/data/archetypeTree'
+import { SKILL_MILESTONES } from '../../game/run/skills'
 import { RARITY } from '../../game/data/items'
 import { computeCombat } from '../../game/engine/combat'
 import { KIT } from '../../game/engine/kit'
@@ -57,7 +58,7 @@ export interface HeroFacts {
   /** Enemies it stops in their tracks; 0 when it does not block. */
   block: number
   thorns: number
-  /** The three tier-1 forms it can grow into at level 10. */
+  /** The hero levels it is offered a new skill at (SK1: heroes no longer evolve). */
   grows: string[]
   /** The opening kit, dealt after the pick (`engine/kit.ts`), as rarity words. */
   kit: { weapon: string; body: string; offHand: string; weaponRarity: ItemRarity }
@@ -150,7 +151,7 @@ export function heroFacts(hero: Sentinel): HeroFacts {
     ...core,
     dps: Math.round(p.dps),
     thorns: Math.round(p.thorns),
-    grows: childrenOf(a).map((c) => c.name),
+    grows: SKILL_MILESTONES.map((l) => `level ${l}`),
     kit: { weapon: kitWord(weapon.rarity), body: kitWord(body.rarity), offHand: kitWord(offHand.rarity), weaponRarity: weapon.rarity },
     attackStrip: `assets/sprites/tinyswords/${a}_atk.png`,
     idleStrip: `assets/sprites/tinyswords/${a}_idle.png`,

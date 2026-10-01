@@ -31,7 +31,7 @@ export function runFacts(v: {
   feats: RunFeats
   roster: readonly Pick<Sentinel, 'mutations'>[]
   deepestLayer: number
-  banner: number
+  difficulty: number
   wins: number
   dailyScored: boolean
   goblinsSeen: number
@@ -47,7 +47,7 @@ export function runFacts(v: {
     actBosses: v.feats.actBosses,
     mutated: v.roster.some((s) => (s.mutations?.length ?? 0) > 0),
     goldPeak: v.feats.goldPeak,
-    banner: v.banner,
+    difficulty: v.difficulty,
     rounds: v.wins,
     daily: v.dailyScored,
     goblinsSeen: v.goblinsSeen,
@@ -65,17 +65,21 @@ export interface SettleFacts {
   depth: number
   kills: number
   wins: number
-  /** The Banner the run flew — it scales the payout (H16). */
-  banner: number
+  /** The difficulty step the run was played at — it scales the payout (SK1). */
+  difficulty: number
   /** Daily / custom seed: a scored Daily records its result, a custom seed is unranked. */
   challenge: RunChallenge
   /** The facts the feats are judged on, when the settle has them (Phase 3b). */
   facts?: RunFacts
 }
 
-/** The Daily / ladder arguments every campaign settle passes to `grantRunRewards`. */
+/**
+ * The Daily / climb arguments every campaign settle passes to `grantRunRewards`.
+ * Only an ordinary run counts toward the difficulty climb (SK1): a custom seed
+ * can be shopped for an easy map, and a Daily is standard rules.
+ */
 export const challengeGrant = (c: RunChallenge) => ({
-  ranked: c.kind !== 'seeded',
+  ranked: c.kind === 'standard',
   daily: c.kind === 'daily' && c.scored ? c.date : null,
 })
 
@@ -95,7 +99,7 @@ export interface RunGrant {
   depth: number
   won: boolean
   kills: number
-  banner?: number
+  difficulty?: number
   ranked?: boolean
   daily?: string | null
   facts?: RunFacts
@@ -110,12 +114,12 @@ export type PayoutPlan =
 /**
  * The payout for a retired, un-won run.
  *
- * `unlockedBanners` is the Watchtower's `sacrificeTier`: the Banner a stored
- * payload claims is validated against what this save has opened, exactly as a
- * resume is (F8) — nothing else stands between a hand-edited `runBanner: 5` on a
- * fresh Watchtower and a ×3.4 payout.
+ * `topDifficulty` is the Watchtower's: the step a stored payload claims is
+ * validated against what this save has reached, exactly as a resume is (F8) —
+ * nothing else stands between a hand-edited `runDifficulty: 9` on a fresh
+ * Watchtower and a ×3.25 payout.
  */
-export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan {
+export function planPayout(f: SettleFacts, topDifficulty: number): PayoutPlan {
   if (f.mode === 'endless') {
     // Endless settles through the same ledger as the campaign (M13): the
     // Chronicler multiplier and the lifetime stats apply to it too.
@@ -128,9 +132,9 @@ export function planPayout(f: SettleFacts, unlockedBanners: number): PayoutPlan 
     if (f.challenge.kind === 'daily' && f.challenge.scored && f.challenge.date) return { kind: 'closeDaily', date: f.challenge.date }
     return { kind: 'none' }
   }
-  const banner = Math.min(f.banner, unlockedBanners)
+  const difficulty = Math.min(f.difficulty, topDifficulty)
   return {
     kind: 'grant',
-    grant: { depth: f.depth, won: false, kills: f.kills, banner, ...challengeGrant(f.challenge), ...(f.facts ? { facts: f.facts } : {}) },
+    grant: { depth: f.depth, won: false, kills: f.kills, difficulty, ...challengeGrant(f.challenge), ...(f.facts ? { facts: f.facts } : {}) },
   }
 }

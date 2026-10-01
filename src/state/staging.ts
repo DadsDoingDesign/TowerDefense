@@ -5,7 +5,8 @@
  * lot to learn." A first run met about twenty ideas at once — the Gate, gold,
  * Threat, three classes and their stats, gear with rarity and enchants, the
  * pack, relics, perks, evolutions, Watch Commands, battle speed, sub-waves,
- * danger tiles, map challenges, Vows, the Daily, Endless …
+ * danger tiles, map challenges, Vows, the Daily, Endless … (Perks and
+ * evolutions are one idea now — skills — and the Vows are the difficulty.)
  *
  * This module is the one answer to "may this idea be on screen yet?". Pure —
  * no zustand, no React — so the rules are unit-tested (`tests/staging.test.ts`)
@@ -48,12 +49,11 @@ export const IDEAS = [
   'campfire',
   'elite',
   'relic',
-  'perk',
-  'evolve',
+  'skill',
   'danger',
   'challenge',
   'marks',
-  'vow',
+  'difficulty',
   'daily',
   'endless',
 ] as const
@@ -71,8 +71,11 @@ export const isIdea = (v: unknown): v is IdeaId => typeof v === 'string' && KNOW
  */
 export function readMet(raw: unknown): IdeaId[] {
   if (!Array.isArray(raw)) return []
-  return [...new Set(raw.filter(isIdea))]
+  // SK1: a player who met perks or evolutions has met skills, and one who met
+  // the Vows has met the difficulty — the ideas they became.
+  return [...new Set(raw.map((x) => (typeof x === 'string' && x in RENAMED ? RENAMED[x] : x)).filter(isIdea))]
 }
+const RENAMED: Record<string, IdeaId> = { perk: 'skill', evolve: 'skill', vow: 'difficulty' }
 
 /** The meta record's one field staging reads. */
 export interface StagingStats {
@@ -84,15 +87,13 @@ export function startsFirstRun(stats: StagingStats, showEverything: boolean, cha
   return !showEverything && challenge.kind === 'standard' && !((stats.runsCompleted ?? 0) > 0)
 }
 
-/** Whether the Watchtower menu is staged (Vow, Daily and Endless locked). */
+/** Whether the Watchtower menu is staged (difficulty, Daily and Endless locked). */
 export function menuStaged(stats: StagingStats, showEverything: boolean): boolean {
   return !showEverything && !((stats.runsCompleted ?? 0) > 0)
 }
 
-/** The first choice a hero is offered (the level-5 perk). */
+/** The first skill choice a hero is offered (its level-5 milestone). */
 export const FIRST_CHOICE_LEVEL = 5
-/** The evolution heads-up window opens this many levels before level 10. */
-export const EVOLVE_LEVEL = 10
 
 const FIGHTS = new Set<MapNode['type']>(['battle', 'elite', 'miniboss', 'boss'])
 
@@ -108,8 +109,7 @@ export interface StageState {
   threat: number
   battlePhase: string
   hud: { subWave: number; breather: boolean }
-  roster: readonly { level: number; branchPath: readonly string[]; perks?: readonly string[] }[]
-  evolutionQueue: readonly string[]
+  roster: readonly { level: number; skills?: readonly string[]; skillPicks?: number }[]
   reward: readonly { kind: string }[] | null
   relics: readonly string[]
   battleMap: { terrainRule?: unknown; tiles?: readonly { danger?: unknown }[] }
@@ -133,7 +133,8 @@ export function fightsWon(s: Pick<StageState, 'runMap' | 'clearedNodeIds'>): num
  *  - **merchant, recruit, shrine, campfire, elite** when one is in reach or
  *    being visited;
  *  - **relic** when a relic is offered or held;
- *  - **perk** at a hero's first choice, **evolve** as the level-10 path nears;
+ *  - **skill** from the hero pick on: every hero there is offered with one
+ *    (its coach tip is the pick's; the first milestone's tip is the choice);
  *  - **danger, challenge** when the field being fought on has them.
  */
 export function presentIdeas(s: StageState): Set<IdeaId> {
@@ -157,8 +158,7 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
     if (here.includes(kind) || s.event?.kind === kind) out.add(kind)
   }
   if (s.relics.length > 0 || s.reward?.some((c) => c.kind === 'relic')) out.add('relic')
-  if (s.roster.some((h) => h.level >= FIRST_CHOICE_LEVEL || (h.perks?.length ?? 0) > 0) || s.evolutionQueue.length > 0) out.add('perk')
-  if (s.roster.some((h) => h.level >= EVOLVE_LEVEL - 2 || h.branchPath.length > 1) || s.evolutionQueue.length > 0) out.add('evolve')
+  if (s.screen === 'heroPick' || s.roster.some((h) => (h.skills?.length ?? 0) > 0 || h.level >= FIRST_CHOICE_LEVEL)) out.add('skill')
   if (live && s.battleMap.tiles?.some((t) => !!t.danger)) out.add('danger')
   if (live && s.battleMap.terrainRule) out.add('challenge')
   return out
@@ -166,7 +166,7 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
 
 /** The ideas the meta save alone introduces: a finished run opens all four. */
 export function metaIdeas(stats: StagingStats): IdeaId[] {
-  return (stats.runsCompleted ?? 0) > 0 ? ['marks', 'vow', 'daily', 'endless'] : []
+  return (stats.runsCompleted ?? 0) > 0 ? ['marks', 'difficulty', 'daily', 'endless'] : []
 }
 
 /** The one visibility rule. */

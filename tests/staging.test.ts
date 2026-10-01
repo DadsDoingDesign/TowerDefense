@@ -50,8 +50,7 @@ const firstBattle = (patch: Partial<StageState> = {}): StageState => ({
   threat: 1,
   battlePhase: 'setup',
   hud: { subWave: 0, breather: false },
-  roster: [{ level: 1, branchPath: ['fighter'] }],
-  evolutionQueue: [],
+  roster: [{ level: 1 }],
   reward: null,
   relics: [],
   battleMap: { tiles: [] },
@@ -65,7 +64,7 @@ describe('what a first run shows, and when', () => {
   it('the first battle carries only the core: heroes, posting, the Gate and gold', () => {
     expect([...shown(firstBattle())].sort()).toEqual([...CORE_IDEAS].sort())
     // …and none of the things the brief names as held back.
-    for (const id of ['speed', 'command', 'gear', 'depth', 'strength', 'relic', 'perk', 'danger', 'challenge'] as IdeaId[]) {
+    for (const id of ['speed', 'command', 'gear', 'depth', 'strength', 'relic', 'skill', 'danger', 'challenge'] as IdeaId[]) {
       expect(shown(firstBattle()).has(id)).toBe(false)
     }
   })
@@ -97,11 +96,11 @@ describe('what a first run shows, and when', () => {
     expect(shown(firstBattle({ screen: 'map', battleMap: { terrainRule: 'flooded', tiles: [{ danger: 'cursed' }] } })).has('danger')).toBe(false)
   })
 
-  it('perks arrive at a hero’s first choice, evolutions as level 10 nears', () => {
-    expect(shown(firstBattle({ roster: [{ level: 4, branchPath: ['fighter'] }] })).has('perk')).toBe(false)
-    expect(shown(firstBattle({ roster: [{ level: 5, branchPath: ['fighter'] }] })).has('perk')).toBe(true)
-    expect(shown(firstBattle({ roster: [{ level: 7, branchPath: ['fighter'] }] })).has('evolve')).toBe(false)
-    expect(shown(firstBattle({ roster: [{ level: 8, branchPath: ['fighter'] }] })).has('evolve')).toBe(true)
+  it('skills arrive with the hero pick (every hero there has one), or at a hero’s first milestone', () => {
+    expect(shown(firstBattle({ roster: [{ level: 4 }] })).has('skill')).toBe(false)
+    expect(shown(firstBattle({ screen: 'heroPick', roster: [] })).has('skill')).toBe(true)
+    expect(shown(firstBattle({ roster: [{ level: 1, skills: ['quick_hands'] }] })).has('skill')).toBe(true)
+    expect(shown(firstBattle({ roster: [{ level: 5 }] })).has('skill')).toBe(true)
   })
 
   it('an idea once met stays shown, even when the moment has passed', () => {
@@ -116,7 +115,7 @@ describe('what a first run shows, and when', () => {
 
   it('the menu opens up with the first finished run', () => {
     expect(metaIdeas({ runsCompleted: 0 })).toEqual([])
-    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['marks', 'vow', 'daily', 'endless'])
+    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['marks', 'difficulty', 'daily', 'endless'])
   })
 })
 
@@ -191,13 +190,15 @@ describe('the store: a first run is staged, a returning player is not', () => {
 describe('persistence and validation', () => {
   it('`met` keeps known ideas only, each once, in the order met', () => {
     expect(readMet(['gear', 'nope', 7, 'gear', null, 'speed', { id: 'relic' }])).toEqual(['gear', 'speed'])
+    // SK1: perks and evolutions were met as skills, and the Vow as the difficulty.
+    expect(readMet(['perk', 'evolve', 'vow', 'gear'])).toEqual(['skill', 'difficulty', 'gear'])
     expect(readMet('gear')).toEqual([])
     expect(readMet(undefined)).toEqual([])
   })
 
-  it('the meta save carries `met` (v5), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(5)
-    const v4 = { watchMarks: 12, upgrades: {}, sacrificeTier: 0, stats: { runsCompleted: 2 }, codex: {} }
+  it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
+    expect(META_VERSION).toBe(6)
+    const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])
     expect(migrateMeta({ ...v4, met: 'relic' }, 5).met).toEqual([])
@@ -297,8 +298,7 @@ describe('one tip per new idea (the coach)', () => {
       [{ merchant: true }, 'merchant'],
       [{ elite: true }, 'relic'],
       [{ relicOffered: true }, 'relic'],
-      [{ owesPerk: 'Doyle' }, 'perk'],
-      [{ nearEvolution: 'Doyle' }, 'evolve'],
+      [{ owesSkill: 'Doyle' }, 'skill'],
       [{ danger: true }, 'danger'],
       [{ challenge: { name: 'Wildfire', blurb: 'Patches of the field are burning.' } }, 'challenge'],
     ]
@@ -318,8 +318,7 @@ describe('one tip per new idea (the coach)', () => {
       danger: true,
       showThreat: true,
       threat: 1.2,
-      owesPerk: 'Doyle',
-      nearEvolution: 'Doyle',
+      owesSkill: 'Doyle',
       depth: { depth: 2, last: 12 },
     })
     expect(pickTipId(everything)).toBeNull()
@@ -348,7 +347,10 @@ describe('the glossary', () => {
     expect(lines.some((l) => l.startsWith('Relic'))).toBe(false)
     expect(lines.at(-1)).toMatch(/more to meet on the road/)
     const all = glossaryOffer({ met: [], staged: false }).body as string[]
-    expect(all).toHaveLength(IDEAS.length)
+    // One line per idea, plus the extra lines an idea carries (SK1: Skill
+    // level and Watch level ride with Skill).
+    expect(all).toHaveLength(IDEAS.length + IDEAS.reduce((n, id) => n + (GLOSSARY[id].also?.length ?? 0), 0))
+    for (const term of ['Skill —', 'Skill level —', 'Difficulty —', 'Watch level —']) expect(all.some((l) => l.startsWith(term))).toBe(true)
   })
 })
 

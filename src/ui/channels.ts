@@ -698,7 +698,7 @@ export const itemName = (item: Pick<Item, 'name'>): string =>
  * met (`meta.met`), so no term appears there before the game has shown it.
  * The coach's tips say the same things in the moment; these are what stays.
  */
-export const GLOSSARY: Record<IdeaId, { term: string; line: string }> = {
+export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { term: string; line: string }[] }> = {
   hero: { term: 'Heroes', line: 'Your fighters. Each one hits whatever walks inside its ring.' },
   post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave starts.' },
   gate: { term: 'Gate', line: 'Your keep at the end of the road. Goblins that reach it hurt it; if it falls, the run ends.' },
@@ -715,12 +715,18 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string }> = {
   campfire: { term: 'Campfire', line: 'A stop to rest (the Gate mends) or to train a hero.' },
   elite: { term: 'Elite', line: 'A tougher fight whose spoils always include a relic.' },
   relic: { term: 'Relic', line: 'Helps all your heroes for the rest of the run.' },
-  perk: { term: 'Perk', line: 'A permanent choice a hero makes at levels 5 and 15.' },
-  evolve: { term: 'Evolution', line: 'At level 10, and again at 20, a hero picks a path. It is permanent.' },
+  skill: {
+    term: 'Skill',
+    line: 'Something a hero does — attack faster, hold more enemies, burn what it hits. Each hero starts with one and holds up to three.',
+    also: [
+      { term: 'Skill level', line: 'Level 1, 2 or 3. A hero is offered three skills of one level at hero levels 5 (Level 1), 10 (Level 2) and 15 (Level 3). With three already, it swaps one out or takes +stats instead.' },
+      { term: 'Watch level', line: 'Every run earns Watch XP. Each Watch level unlocks one new skill card for your heroes to be offered.' },
+    ],
+  },
   danger: { term: 'Cursed ground', line: 'Skull tiles. A hero may stand there, but deals much less damage.' },
   challenge: { term: 'Map challenge', line: 'A field changed for one fight — Flooded meadow (lakes) or Wildfire (flames).' },
   marks: { term: 'Marks', line: 'Watch Marks (Marks): earned by every run, spent in the Watchtower on bonuses that carry into every run.' },
-  vow: { term: 'Vow', line: 'A harder rule you swear to for one run, for more Marks.' },
+  difficulty: { term: 'Difficulty', line: 'How hard your runs are. Each step makes enemies 8% stronger and adds one elite to each act. A win at your highest step raises it and unlocks a skill; you can lower it before any run.' },
   daily: { term: 'Daily Watch', line: 'One shared road a day. Your first try each day is scored.' },
   endless: { term: 'Endless Watch', line: 'Wave after wave, with three retries.' },
 }

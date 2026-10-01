@@ -37,11 +37,11 @@ import { generateRunMap } from '../src/game/data/runmap'
 import { RNG } from '../src/game/core/rng'
 import { ENGINE_CAPABILITIES, RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
-import { lockedPerkChoices, pendingPerkLevel, perkChoices, takePerk } from '../src/game/run/perks'
-import { allPerkPoints } from '../src/game/data/perks'
+import { recruitSkill } from '../src/game/run/skills'
+import { STARTER_SKILLS } from '../src/game/data/skills'
 import { computeCombat } from '../src/game/engine/combat'
 import { STANDARD_RUN } from '../src/state/daily'
-import type { Sentinel } from '../src/game/types'
+import type { Archetype, Sentinel } from '../src/game/types'
 
 const node = (type: MapNode['type'], layer = 3): MapNode => ({ id: `n-${type}-${layer}`, type, layer, row: 0 }) as MapNode
 
@@ -317,7 +317,7 @@ describe('recruit scaling (game/run/recruits)', () => {
 
 describe('settle payout (game/run/settle)', () => {
   const facts = (over: Partial<SettleFacts> = {}): SettleFacts => ({
-    mode: 'campaign', depth: 3, kills: 10, wins: 0, banner: 0, challenge: STANDARD_RUN, ...over,
+    mode: 'campaign', depth: 3, kills: 10, wins: 0, difficulty: 0, challenge: STANDARD_RUN, ...over,
   })
 
   it('pays nothing for a run that was never played', () => {
@@ -331,9 +331,9 @@ describe('settle payout (game/run/settle)', () => {
     expect(planPayout(facts({ depth: 0, kills: 0, challenge: daily }), 0)).toEqual({ kind: 'closeDaily', date: '2026-09-29' })
   })
 
-  it('clamps a claimed Banner to what the save has opened (F8)', () => {
-    const plan = planPayout(facts({ banner: 5 }), 1)
-    expect(plan.kind === 'grant' && plan.grant.banner).toBe(1)
+  it('clamps a claimed difficulty step to what the save has reached (F8)', () => {
+    const plan = planPayout(facts({ difficulty: 5 }), 1)
+    expect(plan.kind === 'grant' && plan.grant.difficulty).toBe(1)
   })
 
   it('Endless settles through the same ledger, on rounds won', () => {
@@ -386,48 +386,25 @@ describe('settle pays once (through the store)', () => {
   })
 })
 
-describe('spec perks (game/run/perks)', () => {
-  const at = (level: number, path: string[], perks: string[] = []) => ({ level, branchPath: path, perks })
-
-  it('owes the level-5 pick by base archetype, the level-15 pick by the evolved line', () => {
-    expect(pendingPerkLevel(at(4, ['rogue']))).toBeNull()
-    expect(pendingPerkLevel(at(5, ['rogue']))).toBe(5)
-    // Level 15 waits for the level-10 evolution: its line is the sub-archetype.
-    expect(pendingPerkLevel(at(15, ['rogue'], ['r5_ambush']))).toBeNull()
-    expect(pendingPerkLevel(at(15, ['rogue', 'marksman'], ['r5_ambush']))).toBe(15)
-    expect(pendingPerkLevel(at(20, ['rogue', 'marksman', 'ranger'], ['r5_ambush', 'marksman_volley']))).toBeNull()
-    // A level-5 pick still owed at level 12 comes first.
-    expect(pendingPerkLevel(at(12, ['rogue', 'marksman']))).toBe(5)
-  })
-
-  it('offers two per line, hides feat-locked options until opened', () => {
-    const five = perkChoices(at(5, ['fighter']))
-    expect(five.map((p) => p.id)).toEqual(['f5_second_wind', 'f5_last_stand'])
-    expect(lockedPerkChoices(at(5, ['fighter'])).map((p) => p.id)).toEqual(['f5_riposte'])
-    expect(perkChoices(at(5, ['fighter']), (id) => id === 'lone_wolf')).toHaveLength(3)
-    expect(perkChoices(at(15, ['rogue', 'marksman'], ['r5_ambush'])).map((p) => p.id)).toEqual(['marksman_volley', 'marksman_deadeye'])
-  })
-
-  it('takePerk refuses anything not on offer, and appends in milestone order', () => {
-    const h = at(5, ['mystic'])
-    expect(takePerk(h, 'warrior_cleave')).toBeNull()
-    expect(takePerk(h, 'm5_ember')).toBeNull() // locked
-    expect(takePerk(h, 'm5_arc')?.perks).toEqual(['m5_arc'])
-  })
-
-  it('every line has its own perks: no id or pair is shared', () => {
-    const points = allPerkPoints()
-    expect(points).toHaveLength(12)
-    const ids = points.flatMap((p) => p.options.map((o) => o.id))
-    expect(new Set(ids).size).toBe(ids.length)
-    for (const p of points) expect(p.options.filter((o) => !o.unlock)).toHaveLength(2)
-  })
-
-  it('perk mods reach the combat profile', () => {
+describe('skills in the run (game/run/skills, SK1)', () => {
+  it('skill mods reach the combat profile; an unknown id is harmless', () => {
     const base = createSentinel('rogue')
-    const withPerk = { ...base, level: 5, perks: ['r5_ambush'] }
-    expect(computeCombat(withPerk).mods.openingRush).toEqual({ rate: 0.7, dur: 20 })
-    expect(computeCombat({ ...base, perks: ['not-a-perk'] }).dps).toBe(computeCombat(base).dps)
+    expect(computeCombat({ ...base, skills: ['charge'] }).mods.openingRush).toEqual({ rate: 0.6, dur: 15 })
+    expect(computeCombat({ ...base, skills: ['not-a-skill'] }).dps).toBe(computeCombat(base).dps)
+  })
+
+  it('a hire arrives with one Level 1 skill, dealt by hash: the loot stream is untouched', () => {
+    const hub = { statBonus: 0, trained: false }
+    const deal = (skillFor?: (id: string, a: Archetype) => string | null) => {
+      const rng = new RNG(31)
+      const slate = recruitSlate(rng, [], { ...hub, skillFor })
+      return { slate, next: rng.next() }
+    }
+    const plain = deal()
+    const skilled = deal((id, a) => recruitSkill(7, id, a, STARTER_SKILLS))
+    expect(skilled.next).toBe(plain.next)
+    for (const s of skilled.slate) expect(s.skills).toHaveLength(1)
+    for (const s of plain.slate) expect(s.skills).toBeUndefined()
   })
 })
 
@@ -458,7 +435,7 @@ describe('relics (data/relics + game/run/relics)', () => {
     const g = withRelicStats(s, ['ledger', 'hourglass'])
     expect(g.stats.str).toBe(s.stats.str + 3)
     expect(g.patience).toBe(s.patience + 5)
-    const hired = withRecruits([], [], [s], [], ['ledger']).roster[0]
+    const hired = withRecruits([], [s], [], ['ledger']).roster[0]
     expect(hired.stats.dex).toBe(s.stats.dex + 3)
   })
 

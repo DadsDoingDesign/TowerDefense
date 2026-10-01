@@ -26,7 +26,7 @@ export function useShown(id: IdeaId): boolean {
   return ideaShown(id, staged, met, present ? new Set([id]) : new Set())
 }
 
-/** True while the Watchtower menu is staged: Vow, Daily and Endless locked. */
+/** True while the Watchtower menu is staged: difficulty, Daily and Endless locked. */
 export function useMenuStaged(): boolean {
   const runs = useMetaStore((s) => s.stats.runsCompleted)
   const showEverything = useSettingsStore((s) => s.showEverything)
@@ -62,7 +62,6 @@ export function useStagingRecorder(): void {
         s.hud.breather !== p.hud.breather ||
         s.hud.subWave !== p.hud.subWave ||
         s.roster !== p.roster ||
-        s.evolutionQueue !== p.evolutionQueue ||
         s.reward !== p.reward ||
         s.relics !== p.relics ||
         s.battleMap !== p.battleMap
