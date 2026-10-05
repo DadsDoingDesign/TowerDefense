@@ -1,18 +1,16 @@
 /**
- * Roster slice: equipment, the pack, the forge (campaign gold prices),
- * evolution choices and spec perks.
+ * Roster slice: equipment, the pack, the forge (campaign gold prices), and
+ * the skill choices heroes make at their milestones (SK1).
  */
-import { evolveInto } from '../../game/engine/leveling'
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
-import { takePerk } from '../../game/run/perks'
-import { availableEvolutions } from '../../game/run/unlocks'
+import type { BumpStat } from '../../game/data/skills'
+import { takeBump, takeSkill } from '../../game/run/skills'
 import { scrapDust, scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
 import { equipRules } from '../../game/run/relics'
 import type { HeroSlot } from '../../game/types'
 import { sfx } from '../../audio/audio'
-import { featUnlocked, perkUnlocked, streams } from './runtime'
-import { useMetaStore } from '../metaStore'
+import { streams } from './runtime'
 import type { GetState, SetState, Slice } from './types'
 import { gearLocked, inBreather } from './selectors'
 import { hudOf } from './battleSlice'
@@ -24,14 +22,24 @@ export interface RosterActions {
   dismantleItem: (itemId: string) => void
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
-  chooseEvolution: (sentinelId: string, nodeId: string) => void
   /**
-   * Take a spec perk at a level milestone (Phase 3b). Refused unless the perk is
-   * one the hero is actually offered right now — `run/perks.perkChoices`, the
-   * same list the picker draws.
+   * Take a skill at the hero's owed milestone (SK1). Refused unless the skill
+   * is on the offer the hero is shown right now (`run/skills.skillOffer`, the
+   * same list every picker draws), and — for a hero whose three slots are full
+   * — unless `drop` names the skill it gives up. Never during a live wave:
+   * choices are made between rounds.
    */
-  choosePerk: (sentinelId: string, perkId: string) => void
+  chooseSkill: (sentinelId: string, skillId: string, drop?: string | null) => void
+  /** Take the stat bump instead, at the same milestone, on the stat chosen (SK1). */
+  chooseStatBump: (sentinelId: string, stat: BumpStat) => void
 }
+
+/**
+ * A wave is being fought right now (the designer: gear and choices are made
+ * between rounds, never mid-fight). A breather between sub-waves is still
+ * the fight.
+ */
+const waveLive = (s: { engine: unknown; battlePhase: string }): boolean => !!s.engine && s.battlePhase === 'battle'
 
 export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   // Gear changes only between rounds (the designer: "items locked during
@@ -101,28 +109,25 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     redressWearer(get, set, itemId)
   },
 
-  chooseEvolution: (sentinelId, nodeId) => {
-    const { roster, evolutionQueue } = get()
-    const hero = roster.find((s) => s.id === sentinelId)
-    // Only a path the hero is actually offered — a feat-locked spec is not one
-    // until its feat is earned (Phase 3b).
-    if (!hero || !availableEvolutions(hero, featUnlocked).some((n) => n.id === nodeId)) return
-    const nextRoster = roster.map((s) => (s.id === sentinelId ? evolveInto(s, nodeId) : s))
-    useMetaStore.getState().recordCodex({ specs: [nodeId] })
-    set({ roster: nextRoster, evolutionQueue: evolutionQueue.filter((id) => id !== sentinelId) })
-    // A permanent, irreversible branch — the biggest single choice the run
-    // offers — has its own sound: a riser into a struck chord.
+  chooseSkill: (sentinelId, skillId, drop) => {
+    const { roster, skillPool, runSeed } = get()
+    const hero = roster.find((x) => x.id === sentinelId)
+    if (!hero || waveLive(get())) return
+    const next = takeSkill(hero, skillId, skillPool, runSeed, drop)
+    if (!next) return sfx('error')
+    set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
+    // A skill is the biggest choice a hero makes, and keeps the struck chord
+    // the evolution had.
     sfx('evolve')
   },
 
-  choosePerk: (sentinelId, perkId) => {
-    const { roster } = get()
+  chooseStatBump: (sentinelId, stat) => {
+    const { roster, skillPool, runSeed } = get()
     const hero = roster.find((x) => x.id === sentinelId)
-    if (!hero) return
-    const next = takePerk(hero, perkId, perkUnlocked)
+    if (!hero || waveLive(get())) return
+    const next = takeBump(hero, stat, skillPool, runSeed)
     if (!next) return sfx('error')
     set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
-    useMetaStore.getState().recordCodex({ perks: [perkId] })
     sfx('upgrade')
   },
 })

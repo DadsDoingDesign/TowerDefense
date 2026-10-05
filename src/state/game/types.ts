@@ -12,6 +12,7 @@ import type { ShrineOffer } from '../../game/data/shrines'
 import type { DangerKind, EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, TerrainKind, WaveDef } from '../../game/types'
 import type { AssistLevel } from '../settingsStore'
 import type { RunChallenge } from '../daily'
+import type { RunProgress } from '../metaStore'
 import type { RunFeats } from '../../game/run/settle'
 import type { RunActions } from './runSlice'
 import type { BattleActions } from './battleSlice'
@@ -109,7 +110,8 @@ export interface RunRecap {
   depth: number
   /** Endless only: rounds survived. */
   rounds: number
-  banner: number
+  /** The difficulty step the run was played at (SK1). */
+  difficulty: number
   marks: number
   kills: number
   goldLeft: number
@@ -120,8 +122,12 @@ export interface RunRecap {
   leaks: number
   /** How many enemies reached the line in the last wave. The head count (F3). */
   enemiesLeaked: number
-  /** The next Banner this run has earned the right to fly, if any. */
-  nextBanner: number
+  /**
+   * SK1: what the settle did for the Watch's long game — Watch XP and levels,
+   * the skill cards unlocked, and whether the win climbed the difficulty.
+   * Null when the run was not paid out on this path.
+   */
+  progress: RunProgress | null
   /** Daily Watch / custom seed — the receipt says which, beside the seed. */
   challenge: RunChallenge
   /** Loot the boss dropped — held here rather than pushed into a dead run (M16). */
@@ -169,7 +175,7 @@ export interface GameData {
    * screen, before the first node, out of the rungs the Watchtower has
    * unlocked — and it applies to THIS run only.
    */
-  runBanner: number
+  runDifficulty: number
   /** Daily Watch / custom seed / standard (Phase 1) — see `state/daily.ts`. */
   challenge: RunChallenge
   /**
@@ -271,9 +277,15 @@ export interface GameData {
   endlessRecruitCost: number
   endlessRoom: EndlessRoom | null
 
+  /**
+   * SK1: the skill ids this run deals from — heroes on offer, hires, and every
+   * milestone offer. Fixed when the run begins (the player's unlocked cards,
+   * or the Daily's fixed pool) and snapshotted, so a resume deals the same.
+   */
+  skillPool: string[]
+
   // UI
   selectedSentinelId: string | null
-  evolutionQueue: string[]
 
   // UI — Root Shell
   /** The one thing currently filling the Context panel. */

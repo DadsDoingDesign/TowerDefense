@@ -1,20 +1,21 @@
 /**
  * The Codex (Phase 3b): the Watch's field notes, as a Watchtower page.
  *
- * Five sections — feats, goblins, relics, specializations, perks — each one
- * row with a count on it; opening a row lists what has been seen by name and
- * what has not as a count, plus the feat that opens anything still locked. It
- * reads only the meta save (`achievements`, `codex`), so it is the same on
- * every device the save is on and says nothing a run could not have shown.
+ * Sections — the glossary, the skill library (SK1), feats, goblins, relics —
+ * each one row with a count on it; opening a row lists what has been seen by
+ * name and what has not as a count, plus the feat that opens anything still
+ * locked. It reads only the meta save, so it is the same on every device the
+ * save is on and says nothing a run could not have shown.
  *
  * A new module rather than more of `offers.ts` (being restructured in
  * parallel): `offers.ts` mounts it with one line for the `codex` view.
  */
-import { ACHIEVEMENTS, LOCKED_SPECS } from '../../game/data/achievements'
-import { ALL_NODES } from '../../game/data/archetypeTree'
+import { ACHIEVEMENTS } from '../../game/data/achievements'
 import { ENEMY_TYPES } from '../../game/data/enemies'
-import { ALL_PERKS } from '../../game/data/perks'
 import { RELICS, relicSupported } from '../../game/data/relics'
+import { ALL_SKILLS, skillLevelLabel } from '../../game/data/skills'
+import { ARCHETYPES } from '../../game/data/sentinels'
+import { skillPoolFor, watchProgress } from '../../game/run/watch'
 import type { Codex } from '../../state/metaStore'
 import { CORE_IDEAS, IDEAS } from '../../state/staging'
 import { GLOSSARY } from '../channels'
@@ -23,6 +24,9 @@ import type { Body, Offer } from './offers'
 export interface CodexView {
   achievements: Record<string, number>
   codex: Codex
+  /** SK1: the skill cards unlocked by Watch levels and wins, and lifetime Watch XP. */
+  skills?: readonly string[]
+  watchXp?: number
   /** LS3: the ideas the player has met. */
   met?: readonly string[]
   /** LS3: a first-timer's Codex lists only what they have met. */
@@ -44,7 +48,7 @@ export function glossaryOffer(v: Pick<CodexView, 'met' | 'staged'>): Offer {
     sub: v.staged ? `${shown.length}/${IDEAS.length}` : `${IDEAS.length} terms`,
     icon: 'tips',
     body: [
-      ...shown.map((id) => `${GLOSSARY[id].term} — ${GLOSSARY[id].line}`),
+      ...shown.flatMap((id) => [GLOSSARY[id], ...(GLOSSARY[id].also ?? [])].map((g) => `${g.term} — ${g.line}`)),
       ...(waiting > 0 ? [`${waiting} more to meet on the road.`] : []),
     ],
   }
@@ -101,33 +105,57 @@ export function codexOffers(v: CodexView): Offer[] {
     ],
   }
 
-  const specNodes = ALL_NODES.filter((n) => n.tier > 0)
-  const seenSpecs = specNodes.filter((n) => v.codex.specs.includes(n.id))
-  const specs: Offer = {
-    id: 'codex-specs',
-    title: 'Specializations',
-    sub: `${seenSpecs.length}/${specNodes.length}`,
-    icon: 'evolve',
-    body: [
-      ...seenBody(seenSpecs.map((n) => n.name), specNodes.length, 'lines'),
-      ...Object.entries(LOCKED_SPECS)
-        .filter(([, feat]) => !v.achievements[feat])
-        .map(([id, feat]) => `Locked: ${ALL_NODES.find((n) => n.id === id)?.name ?? id} — earn ${featName(feat)}.`),
-    ],
-  }
+  return [glossaryOffer(v), skillLibraryOffer(v), feats, goblins, relics]
+}
 
-  const takenPerks = ALL_PERKS.filter((p) => v.codex.perks.includes(p.id))
-  const lockedPerks = ALL_PERKS.filter((p) => p.unlock && !v.achievements[p.unlock])
-  const perks: Offer = {
-    id: 'codex-perks',
-    title: 'Perks',
-    sub: `${takenPerks.length}/${ALL_PERKS.length}`,
+/** LS3: the library opens after the first run, said the same way as the Daily's. */
+const LIBRARY_LOCKED = 'Opens after your first run'
+
+/**
+ * The skill library (SK1): every skill card, by level — the ones this Watch
+ * has, named with their one sentence; the rest as silhouettes that say only
+ * how they open ("Unlocks at random as your Watch level rises", or the feat). The Watch level and how
+ * far it is to the next card lead.
+ */
+export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'watchXp' | 'staged'>): Offer {
+  const pool = new Set(skillPoolFor(v.skills ?? [], (id) => !!v.achievements[id]))
+  const have = ALL_SKILLS.filter((k) => pool.has(k.id)).length
+  if (v.staged) {
+    return {
+      id: 'codex-skills',
+      title: 'Skill library',
+      sub: 'Locked',
+      icon: 'boon',
+      dim: true,
+      note: LIBRARY_LOCKED,
+      body: [`${LIBRARY_LOCKED}: every skill your heroes can be offered, and how to unlock the rest.`],
+    }
+  }
+  const w = watchProgress(v.watchXp ?? 0)
+  return {
+    id: 'codex-skills',
+    title: 'Skill library',
+    sub: `${have}/${ALL_SKILLS.length}`,
     icon: 'boon',
     body: [
-      ...seenBody(takenPerks.map((p) => p.name), ALL_PERKS.length, 'perks'),
-      ...(lockedPerks.length ? [`${lockedPerks.length} perk options locked — earn ${[...new Set(lockedPerks.map((p) => featName(p.unlock!)))].join(', ')}.`] : []),
+      `Watch level ${w.level} — ${w.into}/${w.need} Watch XP to the next. Every Watch level unlocks one skill card.`,
+      'Every run earns Watch XP: 15 a depth, 1 per 10 enemies felled, 60 for a win. A win at your highest difficulty unlocks a card too.',
+      'Your heroes are offered skills only from the cards you have.',
     ],
+    cards: ALL_SKILLS.map((k) => {
+      const group = skillLevelLabel(k.level)
+      if (pool.has(k.id)) {
+        return { id: k.id, group, name: k.name, sub: k.class ? ARCHETYPES[k.class].name : 'Any hero', text: k.desc }
+      }
+      const feat = k.feat ? ACHIEVEMENTS.find((a) => a.id === k.feat) : undefined
+      return {
+        id: k.id,
+        group,
+        name: 'Locked',
+        sub: k.class ? ARCHETYPES[k.class].name : 'Any hero',
+        text: feat ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.` : 'Unlocks at random as your Watch level rises.',
+        locked: true,
+      }
+    }),
   }
-
-  return [glossaryOffer(v), feats, goblins, relics, specs, perks]
 }

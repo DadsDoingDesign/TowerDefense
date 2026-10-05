@@ -183,7 +183,11 @@ export interface Sentinel {
   id: string
   name: string
   archetype: Archetype
-  /** Node ids from the archetype tree, tier 0 → current, e.g. ['fighter','knight']. */
+  /**
+   * Node ids from the archetype tree. Always just the class (`['fighter']`)
+   * since skills replaced evolutions (SK1); a save with a longer path is
+   * migrated to skills on load (`run/skills.migrateGrowth`).
+   */
   branchPath: string[]
   stats: CoreStats
   /** Secondary: damage per second ground into every enemy this Sentinel holds. */
@@ -198,10 +202,16 @@ export interface Sentinel {
   /** Attack mutations rolled at the mid-map fork; merged into combat mods. */
   mutations?: Mutation[]
   /**
-   * Spec perks taken, in milestone order: `perks[0]` at level 5, `perks[1]` at
-   * level 15 (Phase 3b — `data/perks.ts`).
+   * Skills equipped (SK1, `data/skills.ts`), at most three: the Level 1 skill
+   * it was picked or hired with, then whatever its milestones gave it.
    */
-  perks?: string[]
+  skills?: string[]
+  /**
+   * How many skill milestones (levels 5, 10, 15) this hero has settled — with
+   * a new skill, a swap, or a stat bump. The next one is owed once its level
+   * is reached (`run/skills.pendingMilestone`).
+   */
+  skillPicks?: number
   /**
    * LEGACY: bought levels of the per-hero upgrade tree the perks replaced.
    * Nothing reads it; a v6 save's levels are refunded as gold on load

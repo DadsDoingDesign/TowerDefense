@@ -21,7 +21,7 @@ import type { RNG } from '../../game/core/rng'
 import { sfx, sfxRarity } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
-import { hub, layout, recruitHub, seedRunStreams, streams } from './runtime'
+import { dealSkill, hub, layout, recruitHub, seedRunStreams, skillRun, startingSkillPool, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { carryPlacements } from '../../game/run/map'
 import { endlessHazardSeed, endlessTerrainRule } from '../../game/run/terrain'
@@ -71,7 +71,12 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     // Order-preserving: fresh run (deals the map), then roster (spends ids and
     // the loot stream), then the inventory dealt FOR that roster (M9).
     const fresh = freshRunState(runSeed)
-    const roster = buildStartingRoster(streams.rng, b)
+    // SK1: Endless reads the hub, so it deals from the player's skill pool;
+    // every hero it starts with (and every hire) arrives with one Level 1 skill.
+    const skillPool = startingSkillPool({ kind: 'standard', date: null, scored: false })
+    skillRun.seed = runSeed
+    skillRun.pool = skillPool
+    const roster = buildStartingRoster(streams.rng, b, dealSkill)
     set({
       // The same shared reset as `newRun` (m-2): neither entry point may
       // inherit the other's leftovers.
@@ -84,6 +89,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
       baseHp: b.maxBaseHp,
       maxBaseHp: b.maxBaseHp,
       enemyHpMult: b.enemyHpMult,
+      skillPool,
       ...receiveItems(roster, [], endlessInventory(streams.rng, b.extraItems, roster)),
     })
   },
@@ -184,7 +190,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     const pick = chosen ?? recruitOptions[0] ?? scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub())
     set({
       gold: gold - endlessRecruitCost,
-      ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory, get().relics),
+      ...withRecruits(roster, [pick], get().inventory, get().relics),
       endlessRecruitCost: Math.round(endlessRecruitCost * 1.6),
       endlessRoom: null,
       recruitOptions: [],

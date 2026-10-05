@@ -79,13 +79,22 @@ import { isMelee } from '../../game/engine/melee'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
-import { applyXp, evolveInto, TIER1_LEVEL, TIER2_LEVEL, xpToReach } from '../../game/engine/leveling'
+import { applyXp, xpToReach } from '../../game/engine/leveling'
+import { migrateGrowth } from '../../game/run/skills'
+
+/**
+ * The levels the scene draws a hero's line at. Heroes no longer evolve (SK1):
+ * the drawn line is read as the skills it maps to (`migrateGrowth`), and the
+ * draw is kept so every seed still deals the scene it always did.
+ */
+const TIER1_LEVEL = 10
+const TIER2_LEVEL = 20
 import type { Archetype, Equipment, GameMap, Item, ItemRarity, ItemSlot, Sentinel, TerrainRuleId, WaveDef } from '../../game/types'
 
 /** One member of the company. */
 export interface AttractHero {
   archetype: Archetype
-  /** Tree node ids, tier 0 → current (`['fighter', 'knight']`). */
+  /** Tree node ids, tier 0 → current (`['fighter', 'knight']`), read as skills. */
   branchPath: readonly string[]
   /** The open tile they stand on. */
   slot: string
@@ -272,7 +281,8 @@ const GEAR_SLOT: Record<'mainHand' | 'offHand' | 'body', ItemSlot> = { mainHand:
 function attractHero(sc: AttractScenario, h: AttractHero, i: number): Sentinel {
   let s = bareHero(h.archetype, i)
   if (h.level > 1) s = applyXp(s, xpToReach(h.level))
-  for (const id of h.branchPath.slice(1)) s = evolveInto(s, id)
+  const grown = migrateGrowth({ archetype: h.archetype, level: s.level, branchPath: h.branchPath, stats: s.stats })
+  s = { ...s, skills: grown.skills, skillPicks: grown.skillPicks, stats: grown.stats }
   const equipment: Equipment = { mainHand: null, offHand: null, body: null }
   for (const slot of ['mainHand', 'offHand', 'body'] as const) {
     const rarity = h.gear[slot]

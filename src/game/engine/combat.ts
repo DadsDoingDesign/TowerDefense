@@ -1,7 +1,7 @@
 import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
 import { offHandShare } from '../data/items'
-import { perkModsOf } from '../data/perks'
+import { skillModsOf } from '../data/skills'
 import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
 
 /** Gather team-wide EffectMods from every equipped keepsake across a roster. */
@@ -110,20 +110,20 @@ export interface CombatContext {
 }
 
 /**
- * Fold a Sentinel's branch nodes, gear, stats, and (optional) Patience/team mods
- * into a ready-to-use combat profile.
+ * Fold a Sentinel's class, skills, mutations, gear, stats, and (optional)
+ * Patience/team mods into a ready-to-use combat profile.
  */
 export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfile {
   const tier0 = getNode(s.branchPath[0])
   const base = tier0.base!
 
   const gear = gearOf(s.equipment)
-  const branchMods = s.branchPath.map((id) => getNode(id).mods)
   const mutationMods = s.mutations?.map((m) => m.mods) ?? []
-  // Spec perks (Phase 3b) sit where the per-hero upgrade tree's path levels
-  // used to: chosen at levels 5 and 15, free, one line's rules per pick.
-  const perkMods = perkModsOf(s)
-  const mods = mergeMods([...branchMods, ...mutationMods, ...perkMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  // Skills (SK1) are the one way a hero grows: they sit where the evolution
+  // nodes and the spec perks used to. The class's own node (the Fighter's
+  // hold) is the only tree node a hero carries.
+  const skillMods = skillModsOf(s)
+  const mods = mergeMods([tier0.mods, ...skillMods, ...mutationMods, ...gear.mods, ...(ctx.teamMods ?? [])])
 
   const pMult = ctx.patienceMult ?? 1
   // Intended (L9d): Patience is a percentage buff on the unit's TOTAL core stats,

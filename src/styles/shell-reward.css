@@ -306,3 +306,120 @@
 .sh-lvl-deltas .down span {
   color: var(--bad-text);
 }
+
+/* ---------------------------------------------- SK1: the skill choice */
+/* The swap row (a full hero) and the stat bump: small chips, three to a row,
+   on the 44px touch floor. Picked = the accent ring the skill rows use. */
+.sh-lvl-swap,
+.sh-lvl-bump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+.sh-lvl-swap > .sh-line,
+.sh-lvl-bump > .sh-line {
+  flex: 1 0 100%;
+}
+.sh-lvl-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--hit-min);
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.sh-lvl-chip[aria-pressed='true'] {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* "Later" is the quiet way out; the commit keeps the room. */
+.sh-lvl-foot > .sh-btn:not(.primary) {
+  flex: 0 0 auto;
+}
+
+/* SK2: a plain level-up said in passing — the badge's shape, without its
+   glow, fading out on its own. Nothing to clear. */
+.sh-lvflash {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  animation: sh-lvflash 3.2s ease-out forwards;
+  pointer-events: none;
+}
+.sh-hero .sh-lvflash {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+.sh-mate .sh-lvflash {
+  position: absolute;
+  top: -7px;
+  right: 4px;
+}
+@keyframes sh-lvflash {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-lvflash {
+    animation: none;
+  }
+}
+
+/* SK1: the choice has the Detail band to itself (`DetailBand` drops the gear
+   and pack columns while it is open), so the three skills sit side by side as
+   cards, each saying what it does — no tap needed to read one. */
+.sh-detail.choosing .sh-lvl-opts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.sh-detail.choosing .sh-lvl-opt {
+  justify-content: flex-start;
+  padding: 8px 10px;
+}
+.sh-detail.choosing .sh-lvl-opt-blurb {
+  color: var(--muted);
+}
+/* …and it grows to fit the choice (the field above is between rounds and
+   dimmed): the kicker, the three cards, the swap row and the stat bump all on
+   screen at once, with the commit. The Stage keeps its floor. */
+.sh-detail.choosing,
+.sh-detail.choosing:has(> .sh-wavebar) {
+  height: auto;
+  min-height: var(--sh-detail-h);
+}
+/* The Stage gives up its floor to the choice while it is open (phones). */
+.shell:has(.sh-detail.choosing) {
+  --sh-stage-min: 96px;
+}
+/* On a short phone the spoils row waits while the choice is open: the choice
+   and its commit need the room, and the hand is back the moment it closes
+   (the hero strip above stays, so it is clear whose choice this is). */
+@media (orientation: portrait) and (max-height: 760px) {
+  .shell:has(.sh-detail.choosing) .sh-reward-row {
+    display: none;
+  }
+}

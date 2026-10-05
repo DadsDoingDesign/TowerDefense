@@ -255,11 +255,11 @@ describe('every equip path respects the off-hand rule', () => {
   it('a hire dressing from the pack (withRecruits) obeys it per hire', () => {
     const lead = withDex('fighter', 6)
     const lowHire = withDex('mystic', 5, mk('rod', 'Rod', 'oneHand', { magDamage: 6 }))
-    const out = withRecruits([lead], [], [lowHire], [mk('rod2', 'Rod', 'oneHand', { magDamage: 9 })], ['twinblade'])
+    const out = withRecruits([lead], [lowHire], [mk('rod2', 'Rod', 'oneHand', { magDamage: 9 })], ['twinblade'])
     expect(out.roster[1].equipment.offHand).toBeNull()
     expect(out.inventory.map((i) => i.id)).toEqual(['rod2'])
     const highHire = withDex('mystic', DUAL_WIELD_DEX, mk('rod', 'Rod', 'oneHand', { magDamage: 6 }))
-    const out2 = withRecruits([lead], [], [highHire], [mk('rod2', 'Rod', 'oneHand', { magDamage: 9 })], ['twinblade'])
+    const out2 = withRecruits([lead], [highHire], [mk('rod2', 'Rod', 'oneHand', { magDamage: 9 })], ['twinblade'])
     expect(out2.roster[1].equipment.offHand?.id).toBe('rod2')
   })
 

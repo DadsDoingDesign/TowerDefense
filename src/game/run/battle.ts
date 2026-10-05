@@ -6,7 +6,7 @@
 import { hashSeed } from '../core/rng'
 import { ENEMY_TYPES } from '../data/enemies'
 import type { EncounterKind } from '../data/waves'
-import { applyXp, evolutionPending } from '../engine/leveling'
+import { applyXp } from '../engine/leveling'
 import type { Sentinel, WaveDef } from '../types'
 
 /**
@@ -100,16 +100,16 @@ export function levelXpAwards<T extends { id: string; xpGained: number }>(
 }
 
 /**
- * The roster after a wave's XP lands, and the heroes that now owe a branch
- * choice. XP + evolution apply in both modes and both outcomes.
+ * The roster after a wave's XP lands, in both modes and both outcomes. A hero
+ * that crossed a skill milestone now owes its choice; that is read off the
+ * hero itself (`run/skills.pendingMilestone`), so there is no queue to keep.
  */
 export function applyBattleXp(
   roster: Sentinel[],
   perSentinel: readonly { id: string; xpGained: number }[],
-): { roster: Sentinel[]; evolutionQueue: string[] } {
+): { roster: Sentinel[] } {
   const xpById = new Map(perSentinel.map((p) => [p.id, p.xpGained]))
-  const next = roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0))
-  return { roster: next, evolutionQueue: next.filter(evolutionPending).map((s) => s.id) }
+  return { roster: roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0)) }
 }
 
 /** What clearing an Endless round pays: every 10th is a boss, every other 5th an elite. */

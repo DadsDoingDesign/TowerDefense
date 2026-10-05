@@ -5,7 +5,7 @@ import { idCounterState } from '../src/game/core/rng'
 import { ALL_NODES, BASE_ARCHETYPE_NODES, getNode, mergeMods } from '../src/game/data/archetypeTree'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { allMutations } from '../src/game/data/mutations'
-import { allPerkPoints } from '../src/game/data/perks'
+import { ALL_SKILLS } from '../src/game/data/skills'
 import { RELICS, relicTeamMods } from '../src/game/data/relics'
 import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
 import {
@@ -117,9 +117,10 @@ describe('who is melee', () => {
     expect(mergeMods(archer.branchPath.map((id) => getNode(id).mods)).block).toBeDefined()
   })
 
-  it('nothing grants a hold to a ranged line: perks, mutations, relics, gear', () => {
-    for (const pt of allPerkPoints())
-      for (const perk of pt.options) if (perk.mods.block) expect(getNode(pt.line).archetype).toBe('fighter')
+  it('nothing else grants a hold to a ranged hero: skills, mutations, relics, gear', () => {
+    // SK1: a skill that holds is offered only to a Fighter, so no skill turns
+    // a Rogue or Mystic into a melee hero.
+    for (const k of ALL_SKILLS) if (k.mods.block) expect(k.class).toBe('fighter')
     for (const m of allMutations()) expect(m.mods.block).toBeUndefined()
     for (const m of relicTeamMods(RELICS.map((r) => r.id))) expect(m.block).toBeUndefined()
     const items = readFileSync(join(__dirname, '..', 'src', 'game', 'data', 'items.ts'), 'utf8')

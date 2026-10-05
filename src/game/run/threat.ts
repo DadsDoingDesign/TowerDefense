@@ -152,7 +152,7 @@ export const threatAfterLayer = (layer: number, start = 1): number => threatAtLa
  */
 export const THREAT_PER_ROUND = 1.22
 
-/** The one Vow (Banner) rule the encounter kind reads (see `metaStore.BannerRules`). */
+/** The one Vow (Banner) rule the encounter kind reads (see `metaStore.DifficultyRules`). */
 export interface EncounterRules {
   allElite: boolean
 }

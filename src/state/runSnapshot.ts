@@ -30,6 +30,9 @@
  *   a restored one.
  */
 import { getNode } from '../game/data/archetypeTree'
+import { isSkillId, skillById, skillFits, STARTER_SKILLS } from '../game/data/skills'
+import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
+import { clampStep, DAILY_SKILL_POOL } from '../game/run/watch'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
 import { settleOffHands } from '../game/run/inventory'
@@ -58,7 +61,6 @@ import type {
   TerrainRuleId,
   WaveDef,
 } from '../game/types'
-import { MAX_BANNER } from './metaStore'
 import type { RunFeats } from '../game/run/settle'
 import { migrateChallenge, type RunChallenge } from './daily'
 import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
@@ -66,25 +68,23 @@ import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
 export const RUN_SNAPSHOT_KEY = 'fieldwatch-run'
 
 /**
- * A stored Banner tier, coerced onto the ladder (F8).
+ * A stored difficulty step, coerced onto the ladder (F8). A save written before
+ * SK1 calls it `runBanner` — its Vow tier IS its difficulty step now.
  *
- * `Math.max(0, num(...))` was the whole of it, with no ceiling, so a payload
- * saying `runBanner: 99` resumed as 99 and rode into `BANNER_RUNGS[98].name`.
- * One source of truth for the ceiling, shared with `bannerRules`.
- *
- * This clamps the value to something the ladder HAS. Whether the save has
- * unlocked it is a different question, asked where the answer is known — see
- * `resumeRun` in the game store.
+ * `Math.max(0, num(...))` was once the whole of it, with no ceiling, so a
+ * payload saying 99 resumed as 99 and indexed past the end of the rung table.
+ * One source of truth for the ceiling, shared with `difficultyRules`. Whether
+ * the save has REACHED the step is a different question, asked where the answer
+ * is known — see `resumeRun` in the game store.
  */
-const clampBanner = (raw: unknown): number =>
-  Math.max(0, Math.min(MAX_BANNER, Math.floor(num(raw, 0))))
+const stepOf = (o: Record<string, unknown>): number => clampStep(num(o.runDifficulty ?? o.runBanner, 0))
 
 /**
  * Snapshot schema version (M11). Bump on any shape change and extend `migrate`;
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 12
+export const RUN_SNAPSHOT_VERSION = 13
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -171,14 +171,18 @@ export interface RunSnapshot {
   enemyHpMult: number
   threat: number
   /**
-   * The Banner this run is flying (v3). It has to survive a reload for the
-   * obvious reason — Banner 3 makes every node an elite, so a resumed run that
-   * forgot it would quietly become an easier run than the one that was saved —
-   * and for a less obvious one: the payout multiplier is read off it when the
-   * run settles. A v1/v2 payload has no Banner and defaults to 0, which is
-   * exactly right: nothing before v3 could have flown one.
+   * The difficulty step this run is played at (v13; `runBanner` v3–v12, the
+   * Vow tier, which IS the step now). It has to survive a reload: the step's
+   * starting Threat and extra elites are baked into the run, and the payout
+   * multiplier is read off it when the run settles.
    */
-  runBanner: number
+  runDifficulty: number
+  /**
+   * SK1 (v13): the skill ids this run deals from. A v12 payload has none and
+   * resumes on the starters (a Daily on its fixed pool) — the cards it could
+   * have dealt are not knowable from the save.
+   */
+  skillPool: string[]
   /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
   challenge: RunChallenge
   /**
@@ -222,8 +226,6 @@ export interface RunSnapshot {
   gearReturned?: { hero: string; item: string }[]
   crossroads: CrossroadsSnap | null
   forkDone: boolean
-  /** Heroes with an evolution choice still owed to the player. */
-  evolutionQueue: string[]
 
   dust: number
   lives: number
@@ -284,7 +286,8 @@ export interface RunStateSource {
   maxBaseHp: number
   enemyHpMult: number
   threat: number
-  runBanner: number
+  runDifficulty: number
+  skillPool: string[]
   challenge: RunChallenge
   /** LS3 — optional so a source that predates staging still satisfies it. */
   firstRun?: boolean
@@ -305,7 +308,6 @@ export interface RunStateSource {
   feats: RunFeats
   crossroads: CrossroadsSnap | null
   forkDone: boolean
-  evolutionQueue: string[]
   dust: number
   lives: number
   wins: number
@@ -348,7 +350,8 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     maxBaseHp: s.maxBaseHp,
     enemyHpMult: s.enemyHpMult,
     threat: s.threat,
-    runBanner: s.runBanner,
+    runDifficulty: s.runDifficulty,
+    skillPool: s.skillPool,
     challenge: s.challenge,
     firstRun: s.firstRun === true,
     inventory: s.inventory,
@@ -368,7 +371,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     feats: s.feats,
     crossroads: s.crossroads,
     forkDone: s.forkDone,
-    evolutionQueue: s.evolutionQueue,
     dust: s.dust,
     lives: s.lives,
     wins: s.wins,
@@ -688,9 +690,10 @@ function validSentinel(raw: unknown): raw is Sentinel {
   if (!isObj(raw)) return false
   if (!isStr(raw.id) || !isStr(raw.name)) return false
   if (!ARCHETYPES.includes(raw.archetype as Archetype)) return false
-  // `computeCombat` reads the attack off `getNode(branchPath[0]).base` and folds
-  // in every node's mods: an empty path, an unknown id or a root with no base
-  // throws (or NaNs) on the first frame of the resumed battle.
+  // `computeCombat` reads the attack and mods off `getNode(branchPath[0])`: an
+  // empty path, an unknown id or a root with no base throws (or NaNs) on the
+  // first frame of the resumed battle. (A pre-SK1 path carries its evolutions
+  // too; they are known nodes, and the v13 migration turns them into skills.)
   const path = raw.branchPath
   if (!Array.isArray(path) || path.length === 0 || !path.every(knownNode)) return false
   if (!getNode(path[0] as string).base) return false
@@ -699,9 +702,14 @@ function validSentinel(raw: unknown): raw is Sentinel {
   if (!isStr(raw.color) || !isStr(raw.accent)) return false
   if (raw.mutations !== undefined && !(Array.isArray(raw.mutations) && raw.mutations.every(validMutation))) return false
   if (raw.upgrades !== undefined && !(isObj(raw.upgrades) && Object.values(raw.upgrades).every(isStat))) return false
-  // v7: spec perks are ids. An id this build does not know is harmless
-  // (`perkModsOf` skips it), so only the shape is checked.
+  // v7–v12: spec perks are ids — only the shape is checked; the v13 migration
+  // maps them to skills and drops the field.
   if (raw.perks !== undefined && !(Array.isArray(raw.perks) && raw.perks.every(isStr))) return false
+  // SK1: skills are ids, and the milestone count is arithmetic (it decides the
+  // tier an offer deals). The shape is refused here; the values are normalised
+  // by `normaliseSkills` (unknown ids, duplicates, off-class, over three).
+  if (raw.skills !== undefined && !(Array.isArray(raw.skills) && raw.skills.every(isStr))) return false
+  if (raw.skillPicks !== undefined && !isStat(raw.skillPicks)) return false
   const eq = raw.equipment
   if (!isObj(eq)) return false
   return validEquipSlot(eq.mainHand) && validEquipSlot(eq.offHand) && validEquipSlot(eq.body)
@@ -878,6 +886,45 @@ function stripSentinels(list: Sentinel[]): void {
 }
 
 /**
+ * SK1 (v12 → v13): a hero's perks and evolutions become skills
+ * (`run/skills.migrateGrowth` — the mapping is in `data/skills.ts`), and its
+ * path is cut back to its class. Every version then has its skills normalised:
+ * known ids only, each once, only ones its class may hold, at most three; and
+ * its milestone count a whole number from 0 to 3.
+ */
+function migrateSkills(list: Sentinel[], version: number): void {
+  for (const s of list) {
+    const raw = s as Sentinel & { perks?: string[] }
+    if (version < 13) {
+      const m = migrateGrowth({ archetype: s.archetype, level: s.level, branchPath: s.branchPath, perks: raw.perks, skills: s.skills, skillPicks: s.skillPicks, stats: s.stats })
+      s.skills = m.skills
+      s.skillPicks = m.skillPicks
+      s.stats = m.stats
+      s.branchPath = m.branchPath
+    }
+    delete raw.perks
+    normaliseSkills(s)
+  }
+}
+function normaliseSkills(s: Sentinel): void {
+  const kept = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id) && skillFits(skillById(id)!, s.archetype)).slice(0, MAX_SKILLS)
+  if (kept.length) s.skills = kept
+  else delete s.skills
+  const picks = Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(num(s.skillPicks, 0))))
+  if (picks) s.skillPicks = picks
+  else delete s.skillPicks
+  // A path is the class alone since SK1; anything after it is gone above.
+  s.branchPath = [s.archetype]
+}
+
+/** The run's skill pool: known ids, each once; a payload with none deals the starters. */
+function migrateSkillPool(raw: unknown, challenge: RunChallenge): string[] {
+  const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
+  if (ids.length) return ids
+  return [...(challenge.kind === 'daily' ? DAILY_SKILL_POOL : STARTER_SKILLS)]
+}
+
+/**
  * Bring any stored payload up to the current schema, defaulting every numeric
  * field (M11). Returns null when the payload is too broken to trust — a missing
  * run is a far better outcome than a run full of NaN.
@@ -1024,6 +1071,15 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     for (const m of runMods) stripMods(m)
   }
 
+  // ---- v12 → v13: perks and evolutions became skills (SK1) ----------------
+  // Every hero a save can carry — the company, the candidates on offer, a
+  // merchant's hire, the fork's recruits — is migrated and normalised.
+  migrateSkills(roster, version)
+  migrateSkills(recruitOptions, version)
+  if (merchant && isObj(merchant) && (merchant as MerchantStock).recruit) migrateSkills([(merchant as MerchantStock).recruit!.sentinel], version)
+  if (crossroads) migrateSkills(crossroads.recruits, version)
+  const challenge = migrateChallenge(o.challenge)
+
   const snap: RunSnapshot = {
     v: RUN_SNAPSHOT_VERSION,
     savedAt: num(o.savedAt, 0),
@@ -1056,13 +1112,12 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     maxBaseHp: Math.max(1, num(o.maxBaseHp, 20)),
     enemyHpMult: num(o.enemyHpMult, 1),
     threat: num(o.threat, 1),
-    // Clamped to the ladder on the way IN (F8). `bannerRules` clamps internally,
-    // so a 99 in a hand-edited payload was survivable arithmetic — but it is not
-    // survivable copy: the picker reads `BANNER_RUNGS[runBanner - 1].name` off
-    // this number and a 99 indexes past the end of the array. Whether a value is
-    // in range is a property of the value, not of who happens to read it.
-    runBanner: clampBanner(o.runBanner),
-    challenge: migrateChallenge(o.challenge),
+    // Clamped to the ladder on the way IN (F8): whether a value is in range is
+    // a property of the value, not of who happens to read it. A Daily is
+    // always step 0.
+    runDifficulty: challenge.kind === 'daily' ? 0 : stepOf(o),
+    skillPool: migrateSkillPool(o.skillPool, challenge),
+    challenge,
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.
     firstRun: o.firstRun === true,
@@ -1104,7 +1159,8 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     feats: migrateFeats(o.feats),
     crossroads,
     forkDone: bool(o.forkDone, false),
-    evolutionQueue: arr<string>(o.evolutionQueue),
+    // v12's `evolutionQueue` is not read back: an owed choice is read off the
+    // hero now (SK1), and evolutions are skills.
     dust: Math.max(0, num(o.dust, 0)),
     lives: Math.max(0, num(o.lives, 3)),
     wins: Math.max(0, num(o.wins, 0)),
@@ -1312,8 +1368,8 @@ export interface SnapshotPayout {
   depth: number
   kills: number
   wins: number
-  /** Banner the run was flying — it scales what the settle pays (H16). */
-  banner: number
+  /** The difficulty step the run was played at — it scales what the settle pays. */
+  difficulty: number
   /** Daily / custom-seed facts: a scored Daily records, a custom seed is unranked. */
   challenge: RunChallenge
 }
@@ -1349,7 +1405,7 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
   return {
     runSeed: num(o.runSeed, 0),
     mode: str<GameMode>(o.mode, 'campaign', MODES),
-    banner: clampBanner(o.runBanner),
+    difficulty: stepOf(o),
     challenge: migrateChallenge(o.challenge),
     depth: Math.max(0, cleared.size - 1),
     kills: Math.max(0, num(o.runKills, 0)),

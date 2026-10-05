@@ -19,11 +19,11 @@ import {
 // curse mark reach exactly one of them.
 import { describeMods, STACKING_RULES } from '../../game/data/describe'
 import { mutationName } from '../../game/data/mutations'
-import { childrenOf } from '../../game/data/archetypeTree'
+import { skillById } from '../../game/data/skills'
 import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
 import { computeCombat, totalStats } from '../../game/engine/combat'
-import { buildName, evolutionOptions, MAX_LEVEL, TIER1_LEVEL, TIER2_LEVEL } from '../../game/engine/leveling'
+import { buildName, MAX_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { equipRules } from '../../game/run/relics'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
@@ -51,7 +51,7 @@ import {
 } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
-import { PerkPanel } from './PerkPanel'
+import { SkillPanel } from './SkillPanel'
 import { NodePreviewPanel } from './NodePreview'
 import { useMapFocus } from './mapFocus'
 import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
@@ -67,7 +67,7 @@ import { Tap, tapWord } from '../pointer'
 import { fieldTitle, orientationOf } from '../../game/data/maps'
 import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
 import { LevelUpPanel } from './LevelUpPanel'
-import { levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
+import { levelUpOpen, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { useShown } from './staging'
 import { conflictCopy, equipWarning } from '../../game/run/clearance'
 import { isMelee, MELEE_LINE, meleeSource, weaponWord } from '../../game/engine/melee'
@@ -81,9 +81,14 @@ import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/sele
 export function DetailBand({ offers }: { offers: Offer[] }) {
   // LS3: gear and the pack arrive with the first win's spoils. Until then the
   // context panel has the band to itself (`.sh-detail.no-gear`).
-  const gear = useShown('gear')
+  const shown = useShown('gear')
+  // SK1: a skill choice has the band to itself — three skills, a swap row and
+  // a stat bump do not fit a third of a phone, and gear is not what is being
+  // decided. The gear and pack return the moment the choice is made or put off.
+  const choosing = useSkillChoiceOpen()
+  const gear = shown && !choosing
   return (
-    <section className={`sh-detail${gear ? '' : ' no-gear'}`} id="sh-detail-panels">
+    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}`} id="sh-detail-panels">
       <ContextPanel offers={offers} />
       {gear && <GearColumn />}
       {gear && <PackColumn />}
@@ -448,6 +453,19 @@ function WaveBeatBar({ status }: { status: 'cleared' | 'defeated' }) {
 const strandedInBattle = (s: Parameters<typeof canStartWave>[0]): boolean =>
   s.screen === 'battle' && s.runPhase === 'active' && !s.engine && !s.lastResult && !canStartWave(s)
 
+/** SK1: the Context panel is showing a hero's skill choice (see `ContextPanel`). */
+function useSkillChoiceOpen(): boolean {
+  const selection = useGameStore((s) => s.shellSelection)
+  const hero = useGameStore((s) => (s.shellSelection?.kind === 'hero' ? s.roster.find((h) => h.id === s.shellSelection!.id) : undefined))
+  const live = useGameStore(waveLive)
+  const later = useLevelUps((s) => s.later)
+  const screen = useGameStore((s) => s.screen)
+  const focusedNode = useMapFocus((s) => s.nodeId)
+  const stranded = useGameStore(strandedInBattle)
+  if (stranded || (screen === 'map' && focusedNode) || selection?.kind !== 'hero' || !hero) return false
+  return levelUpOpen(hero) && !live && !later[hero.id]
+}
+
 function ContextPanel({ offers }: { offers: Offer[] }) {
   const selection = useGameStore((s) => s.shellSelection)
   const roster = useGameStore((s) => s.roster)
@@ -456,8 +474,8 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const stranded = useGameStore(strandedInBattle)
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
-  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
-  const levelUps = useLevelUps((s) => s.heroes)
+  const later = useLevelUps((s) => s.later)
+  const live = useGameStore(waveLive)
 
   if (stranded) return <StrandedPanel />
   // A focused map node takes the panel whatever else is selected: it is the
@@ -471,9 +489,10 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   if (gearSlot && !selection) return <GearSlotPanel />
   if (selection?.kind === 'hero') {
     const hero = roster.find((h) => h.id === selection.id)
-    // G3-2: a hero wearing the roster's level-up badge opens its level-up
-    // here — the choice the modal used to force — until it is dealt with.
-    if (hero && levelUpOpen(levelUps[hero.id], hero, evolutionQueue)) return <LevelUpPanel hero={hero} />
+    // SK1: a hero wearing the roster's skill badge opens its choice here —
+    // between rounds, unless the player put it off ("Later"). During a live
+    // wave the hero's own panel opens, and its Skills tab says the choice waits.
+    if (hero && levelUpOpen(hero) && !live && !later[hero.id]) return <LevelUpPanel hero={hero} />
     if (hero) return <HeroPanel hero={hero} />
   }
   if (selection?.kind === 'item') {
@@ -915,15 +934,16 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
   const groundMult = danger === 'cursed' ? CURSED_DAMAGE_MULT : 1
   const swing = meleeSource(hero)
 
-  // LS3: Skills (perks) arrive at a hero's first choice, Team (the targeting
-  // order) with the Watch Command — the other order the whole watch shares.
-  const perksShown = useShown('perk')
+  // LS3: Skills arrive with the hero pick (every hero has one), Team (the
+  // targeting order) with the Watch Command — the other order the whole
+  // watch shares.
+  const skillsShown = useShown('skill')
   const ordersShown = useShown('command')
   const TABS: { id: HeroTab; label: string }[] = [
     { id: 'stats', label: 'Stats' },
     // "Upgr" was an abbreviation nobody could read aloud. These are the
     // hero's bought skill paths (Wave 1).
-    ...(perksShown ? [{ id: 'upgrades' as const, label: 'Skills' }] : []),
+    ...(skillsShown ? [{ id: 'upgrades' as const, label: 'Skills' }] : []),
     // "Tune" said nothing about scope; these are the whole watch's orders, not
     // this hero's (M20).
     ...(ordersShown ? [{ id: 'tactics' as const, label: 'Team' }] : []),
@@ -1006,12 +1026,12 @@ function HeroStats({ hero }: { hero: Sentinel }) {
   const p = computeCombat(hero)
   const t = totalStats(hero)
   // `describeMods` — the one function that turns a merged `EffectMods` into
-  // sentences. Everything a hero has merged into it (tier-0 kit, both
-  // evolutions, every enchantment on its gear, mutations, team keepsakes) lands
-  // in `p.mods`.
+  // sentences. Everything a hero has merged into it (its class, its skills,
+  // every enchantment on its gear, mutations, team keepsakes) lands in `p.mods`.
   const abilities = describeMods(p.mods)
-  const options = evolutionOptions(hero)
-  const nextEvoLevel = hero.branchPath.length === 1 ? TIER1_LEVEL : hero.branchPath.length === 2 ? TIER2_LEVEL : null
+  const skills = (hero.skills ?? []).map((id) => skillById(id)?.name).filter((n) => !!n)
+  const owed = levelUpOpen(hero)
+  const live = useGameStore(waveLive)
   /*
    * Heroes have no HP and are never hit. Thorns grind what a hero HOLDS, so
    * the row only means something on a blocker. `p.mods` is the fully merged
@@ -1020,8 +1040,7 @@ function HeroStats({ hero }: { hero: Sentinel }) {
    */
   const blocks = !!p.mods.block
   const cap = patienceCap(p.patience)
-  // LS3: the evolution road is named once a hero has met its first choice.
-  const choicesShown = useShown('perk')
+  const skillsShown = useShown('skill')
 
   return (
     <>
@@ -1084,19 +1103,17 @@ function HeroStats({ hero }: { hero: Sentinel }) {
         </>
       )}
 
-      {/* The evolution choice used to arrive cold: a modal appeared, named three
-          branches nobody had heard of, and demanded an irreversible pick (M6). */}
-      {!choicesShown ? null : options.length > 0 ? (
+      {/* SK1: what the hero holds, by name — the Skills tab has the rest. */}
+      {skillsShown && skills.length > 0 && (
         <p className="sh-line accent">
-          <Icon name="evolve" /> Evolution ready — {options.map((o) => o.name).join(' · ')}
+          <Icon name="boon" /> Skills: {skills.join(' · ')}
         </p>
-      ) : nextEvoLevel ? (
+      )}
+      {/* SK1: a milestone reached mid-wave wears its badge; the choice itself
+          opens between rounds. Said here too, so a tap on the badge answers. */}
+      {owed && (
         <p className="sh-line muted">
-          <Icon name="evolve" /> Next evolution at level {nextEvoLevel} — {childrenOf(hero.branchPath[hero.branchPath.length - 1]).map((o) => o.name).join(' · ')}
-        </p>
-      ) : (
-        <p className="sh-line muted">
-          <Icon name="evolve" /> Fully evolved.
+          <Icon name="boon" /> {live ? 'A skill to choose when this wave is over.' : 'A skill to choose.'}
         </p>
       )}
 
@@ -1191,13 +1208,9 @@ function Meter({ label, value, frac }: { label: string; value: string; frac: num
   )
 }
 
-/**
- * The Skills tab (Phase 3b): the hero's spec perks. The three identical
- * Onslaught / Tempo / Precision buy rows it used to hold are gone — a perk is
- * chosen at level 5 and 15, free, from the hero's own line (`PerkPanel`).
- */
+/** The Skills tab (SK1): the hero's skills, and its next choice (`SkillPanel`). */
 function HeroUpgrades({ hero }: { hero: Sentinel }) {
-  return <PerkPanel hero={hero} />
+  return <SkillPanel hero={hero} />
 }
 
 /**

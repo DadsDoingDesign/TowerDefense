@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { computeCombat } from '../../game/engine/combat'
 import { buildName, levelProgress } from '../../game/engine/leveling'
 import { DANGER_COPY, tileDamageMult } from '../../game/data/hazards'
@@ -9,7 +9,7 @@ import { Icon } from '../Icon'
 import { heroArt, type Offer } from './offers'
 import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
-import { choiceOwed, levelUpOpen, rewardInPlace, useLevelUps } from './levelUps'
+import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
 import { useMapFocus } from './mapFocus'
 import { openSlotShown } from '../../state/staging'
 import { useShown, useStaged } from './staging'
@@ -104,11 +104,10 @@ function PartyCards() {
   const roster = useGameStore((s) => s.roster)
   const placements = useGameStore((s) => s.placements)
   const selection = useGameStore((s) => s.shellSelection)
-  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const screen = useGameStore((s) => s.screen)
   const battlePhase = useGameStore((s) => s.battlePhase)
-  const levelUps = useLevelUps((s) => s.heroes)
+  const flash = useFlashes()
   const battleMap = useGameStore((s) => s.battleMap)
   // LS3: "recruit a hero" names a stop the first run has not reached yet, and
   // the first battle is only "post a hero, start the wave".
@@ -143,9 +142,10 @@ function PartyCards() {
         // "Swings — needs clearance", in words, for whoever swings (what it holds or a skill).
         const swings = isMelee(s) ? `, ${MELEE_LINE.toLowerCase()}` : ''
         const clashWords = clash === 'swing' ? ', others too close — make space' : clash === 'close' ? ', too close to a hero that swings — move it' : ''
-        // G3-2: a level-up waiting on the roster — the card glows and wears a
-        // "Lv 5 ↑" badge until it has been dealt with (see `levelUps.ts`).
-        const lvlUp = levelUpOpen(levelUps[s.id], s, evolutionQueue)
+        // SK1: a skill choice waiting — the card glows and wears its badge
+        // until the choice is made (see `levelUps.ts`). A plain level only
+        // flashes "+1 level" and is gone.
+        const lvlUp = levelUpOpen(s)
         return (
           <button
             key={s.id}
@@ -155,7 +155,7 @@ function PartyCards() {
             style={{ '--rail': hue } as CSSProperties}
             aria-pressed={selected}
             aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
-              lvlUp ? `, ${levelUpWords(s, evolutionQueue)}` : evolutionQueue.includes(s.id) ? ', ready to evolve' : ''
+              lvlUp ? `, ${levelUpWords(s)}` : ''
             }`}
             onClick={() => {
               // A focused map node owns the panel (NodePreview); a levelled
@@ -164,7 +164,7 @@ function PartyCards() {
               shellSelect({ kind: 'hero', id: s.id })
             }}
           >
-            {lvlUp && <LevelBadge level={s.level} />}
+            {lvlUp ? <LevelBadge /> : <LevelFlashChip f={flash[s.id]} />}
             {/*
               The portrait, at last.
               This was a 30x30 square of the archetype hue with a 14px `⚔`/`➶`/`❋`
@@ -181,13 +181,6 @@ function PartyCards() {
             <span className="sh-hero-glyph" style={{ background: hue }} aria-hidden="true">
               <img className="sh-hero-art" src={heroArt(s.archetype)} alt="" />
               <span className="sh-hero-arch">{ARCHETYPE_GLYPH[s.archetype]}</span>
-              {/* One concept, one mark. `★` here and `❖` on the hero panel were
-                  the same "evolution ready" in two bands wearing two glyphs. */}
-              {evolutionQueue.includes(s.id) && !lvlUp && (
-                <span className="sh-hero-star">
-                  <Icon name="evolve" />
-                </span>
-              )}
             </span>
             <span className="sh-hero-name">{s.name}</span>
             <span className="sh-hero-sub">
@@ -216,18 +209,46 @@ function PartyCards() {
 /* ------------------------------------------------------------------ G3-2 */
 
 /** "levelled up to 5, a perk to choose" — the badge, in words. */
-function levelUpWords(hero: Sentinel, evolutionQueue: readonly string[]): string {
-  const owed = choiceOwed(hero, evolutionQueue)
-  return `levelled up to ${hero.level}${owed === 'evolve' ? ', an evolution to choose' : owed === 'perk' ? ', a perk to choose' : ''}`
+function levelUpWords(hero: Sentinel): string {
+  return `level ${hero.level}, a skill to choose`
 }
 
-/** The roster's level-up mark. Visual only — the card's name says it in words. */
-function LevelBadge({ level }: { level: number }) {
+/** The roster's skill-choice mark (SK2: only a real choice wears one). Visual only — the card's name says it in words. */
+function LevelBadge() {
   return (
     <span className="sh-lvup" aria-hidden="true">
-      Lv {level} <span className="sh-lvup-arrow">↑</span>
+      Skill <span className="sh-lvup-arrow">↑</span>
     </span>
   )
+}
+
+/**
+ * A plain level-up, said in passing (SK2): "+1 level" over the card for a
+ * moment after the wave settles, then gone — nothing to clear. Visual only;
+ * the Announcer says it in words.
+ */
+function LevelFlashChip({ f }: { f: LevelFlash | undefined }) {
+  if (!f || !flashLive(f, Date.now())) return null
+  const n = f.to - f.from
+  return (
+    <span className="sh-lvflash" aria-hidden="true" key={f.at}>
+      +{n} level{n === 1 ? '' : 's'}
+    </span>
+  )
+}
+
+/** The live flashes, re-read when the last one should have faded. */
+function useFlashes(): Record<string, LevelFlash> {
+  const flash = useLevelUps((s) => s.flash)
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const ats = Object.values(flash).map((f) => f.at)
+    if (!ats.length) return
+    const wait = Math.max(0, Math.max(...ats) + FLASH_MS - Date.now()) + 50
+    const t = setTimeout(() => tick((n) => n + 1), wait)
+    return () => clearTimeout(t)
+  }, [flash])
+  return flash
 }
 
 /**
@@ -307,13 +328,12 @@ function pickReward(id: string) {
 function PartyStrip() {
   const roster = useGameStore((s) => s.roster)
   const selection = useGameStore((s) => s.shellSelection)
-  const evolutionQueue = useGameStore((s) => s.evolutionQueue)
   const shellSelect = useGameStore((s) => s.shellSelect)
-  const levelUps = useLevelUps((s) => s.heroes)
+  const flash = useFlashes()
   return (
     <div className="sh-partystrip" role="group" aria-label="Your heroes">
       {roster.map((h) => {
-        const lvlUp = levelUpOpen(levelUps[h.id], h, evolutionQueue)
+        const lvlUp = levelUpOpen(h)
         const selected = selection?.kind === 'hero' && selection.id === h.id
         return (
           <button
@@ -321,14 +341,15 @@ function PartyStrip() {
             className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
             style={{ '--rail': archetypeVar(h.archetype) } as CSSProperties}
             aria-pressed={selected}
-            aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h, evolutionQueue)}` : ''}`}
+            aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
             onClick={() => shellSelect({ kind: 'hero', id: h.id })}
           >
             <span className="sh-mate-art" aria-hidden="true">
               <img src={heroArt(h.archetype)} alt="" />
             </span>
             <span className="sh-mate-name">{h.name}</span>
-            {lvlUp ? <LevelBadge level={h.level} /> : <span className="sh-mate-lv">Lv {h.level}</span>}
+            {lvlUp ? <LevelBadge /> : <span className="sh-mate-lv">Lv {h.level}</span>}
+            {!lvlUp && <LevelFlashChip f={flash[h.id]} />}
           </button>
         )
       })}

@@ -15,9 +15,8 @@ export interface TipFacts {
   wearingAnything: boolean
   showThreat: boolean
   threat: number
-  nearEvolution?: string
-  /** A hero owes a perk choice (the first comes at level 5). */
-  owesPerk?: string
+  /** A hero owes a skill choice (the first comes at level 5), and it can be made now. */
+  owesSkill?: string
   /** The field being set up has cursed ground. */
   danger: boolean
   /** The field being set up carries a map challenge. */
@@ -50,8 +49,7 @@ export interface TipFacts {
  */
 export function pickTipId(s: TipFacts): TeachId | null {
   const t = s.taught
-  if (!t.evolve && s.nearEvolution) return 'evolve'
-  if (!t.perk && s.owesPerk) return 'perk'
+  if (!t.skill && s.owesSkill) return 'skill'
   if (!t.danger && s.danger) return 'danger'
   if (!t.challenge && s.challenge) return 'challenge'
   if (!t.deploy && s.inSetup && s.deployed === 0) return 'deploy'

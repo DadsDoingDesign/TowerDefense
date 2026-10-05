@@ -58,9 +58,15 @@ result. Append a short note to the review log when you're done.
   column on phones); tablet and desk re-flow the same bands in
   `src/styles/shell-wide.css` (FIGMA.md § Wide layout). Copy that says "Tap"
   uses `<Tap />` / `tapWord()` from `src/ui/pointer.tsx`. The pre-shell screens (`?shell=0`) were deleted. The only
-  components outside `shell/` are `src/ui/components/RunMapView.tsx` and
-  `EvolutionModal.tsx`, both rendered by the shell. Eager non-shell CSS those
-  (and BattleCanvas) need lives in `src/styles/app.css`.
+  component outside `shell/` is `src/ui/components/RunMapView.tsx`, rendered
+  by the shell (the evolution and perk modals went with SK1 — a skill choice
+  is made in the Context panel, `LevelUpPanel`). Eager non-shell CSS it (and
+  BattleCanvas) needs lives in `src/styles/app.css`.
+- Skills (SK1): the library `src/game/data/skills.ts`; in-run rules (offers,
+  slots, swap/bump, the hero pick, a hire's skill, old-save mapping)
+  `src/game/run/skills.ts`; Watch XP/levels, card unlocks and difficulty steps
+  `src/game/run/watch.ts`. Every skill roll is a fresh RNG hashed from (run
+  seed, purpose, hero id) — never a draw on a run stream.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by

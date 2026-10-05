@@ -23,7 +23,7 @@ import { isMelee } from '../../game/engine/melee'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
-import { bannerRules, useMetaStore } from '../metaStore'
+import { difficultyRules, useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
@@ -404,9 +404,10 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     if (result.status === 'cleared' && (result.goldEarned > 0 || nodePurse > 0)) sfx('coin')
     const totalKills = st.runKills + result.enemiesKilled
 
-    // XP + evolution apply in both modes and both outcomes.
+    // XP applies in both modes and both outcomes; a skill milestone it crosses
+    // is owed and offered between rounds (SK1).
     // The War Diary relic tops up the least-levelled hero on the field.
-    const { roster: rosterXp, evolutionQueue } = applyBattleXp(st.roster, diaryXp(result.perSentinel, st.roster, st.relics))
+    const { roster: rosterXp } = applyBattleXp(st.roster, diaryXp(result.perSentinel, st.roster, st.relics))
 
     if (st.mode === 'endless') {
       if (result.status === 'cleared') {
@@ -430,7 +431,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           merchant: null,
           lastResult: result,
           lastLoot: loot,
-          evolutionQueue,
           wins: st.wins + 1,
           round: st.round + 1,
           // The Watch closes in: every round survived compounds Threat, the
@@ -462,7 +462,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             battlePhase: 'setup',
             marksEarned: marks,
             runKills: totalKills,
-            evolutionQueue,
           })
         } else {
           // A lost ROUND with lives still in hand is not the run ending, so
@@ -480,7 +479,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             engine: null,
             battlePhase: 'setup',
             runKills: totalKills,
-            evolutionQueue,
           })
         }
       }
@@ -505,7 +503,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       const depth = get().clearedNodeIds.length - 1
       const marks = useMetaStore
         .getState()
-        .grantRunRewards({ depth, won: false, kills: totalKills, banner: st.runBanner, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
+        .grantRunRewards({ depth, won: false, kills: totalKills, difficulty: st.runDifficulty, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
       set({
         runPhase: 'lost',
         // `grantRunRewards` just paid this run out; settling it here is what
@@ -525,7 +523,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     }
 
     // Advance the map.
-    const banner = bannerRules(st.runBanner)
+    const rules = difficultyRules(st.runDifficulty)
     const cleared = [...get().clearedNodeIds, activeNodeId]
     const reachable = frontierFrom(runMap, activeNodeId, cleared)
     const wonRun = node.type === 'boss'
@@ -546,20 +544,20 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
             depth: cleared.length - 1,
             won: true,
             kills: totalKills,
-            banner: st.runBanner,
+            difficulty: st.runDifficulty,
             ...challengeGrant(st.challenge),
             facts: runFactsFromState({ ...st, feats, roster: rosterXp, clearedNodeIds: cleared }, true),
           })
       : 0
     // What the NODE costs and what the NODE pays: both follow the kind the map
-    // dealt, not the one the Banner substituted (see `mapKind`).
-    // Threat follows the road: the next stop is fought at the next layer's.
-    const nextThreat = threatAfterLayer(node.layer, banner.startThreat)
+    // dealt (see `mapKind`).
+    // Threat follows the road: the next stop is fought at the next layer's,
+    // from the difficulty step's starting Threat (SK1).
+    const nextThreat = threatAfterLayer(node.layer, rules.startThreat)
     const bonusGold = clearBonusGold(node)
     const luck = nodeClearLuck(node)
 
-    // Non-boss clears offer a card pick (attribute buff or item). Banner 1 —
-    // Thin Pickings — cuts the hand to two.
+    // Non-boss clears offer a card pick (attribute buff or item).
     //
     // Copy-spend-write-back for the pity counter (M9). The two halves differ
     // in WHEN they spend it (F4): the boss's spoils go straight onto the
@@ -574,9 +572,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           // An act boss's hand is three relics; an elite's always holds one.
           kind: handKind,
           luck,
-          count: handSize({ thinPickings: banner.thinPickings }),
+          count: handSize({ thinPickings: false }),
           // LS3: a first run meets relics at its first elite.
-          noBattleRelics: banner.thinPickings || battleRelicsWithheld(st.firstRun, st.runMap, cleared),
+          noBattleRelics: battleRelicsWithheld(st.firstRun, st.runMap, cleared),
           held: st.relics,
           unlocked: relicUnlocked,
           roster: rosterXp,
@@ -601,15 +599,15 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // survives a snapshot unchanged and "aim at another hero" is not a reroll.
     const crossroads: Crossroads | null = fireFork
       ? {
-          recruits: rosterXp.length < MAX_ROSTER && !banner.noRecruits ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
+          recruits: rosterXp.length < MAX_ROSTER ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
           mutations: rollMutationChoices(
             streams.rng,
             // Nothing already on the company's books — the offer must not
             // contain an option that is a no-op for the hero it lands on.
             [...new Set(rosterXp.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))],
-            // Two under Vow 1 (Thin Pickings: half the offer), else three — one
-            // of each template (Phase 3b). The Strange Growth feat adds one.
-            mutationOfferSize(banner.thinPickings, featUnlocked('mutant')),
+            // Three — one of each template (Phase 3b). The Strange Growth
+            // feat adds one.
+            mutationOfferSize(false, featUnlocked('mutant')),
           ),
           mutationHeroId: null,
         }
@@ -630,7 +628,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       reward,
       crossroads,
       forkDone: st.forkDone || fireFork,
-      evolutionQueue,
       clearedNodeIds: cleared,
       feats,
       currentNodeId: activeNodeId,

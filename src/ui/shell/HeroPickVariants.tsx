@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ANIM_FRAMES } from '../../game/render/anim'
-import { TIER1_LEVEL } from '../../game/engine/leveling'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar, ARCHETYPE_GLYPH, type IconKey } from '../channels'
 import { Icon } from '../Icon'
 import { useMedia } from '../pointer'
-import { BannerPicker } from './BannerPicker'
+import { DifficultyPicker } from './DifficultyPicker'
 import type { ShellContext } from './context'
 import { heroFacts, HERO_ORDER, recommendFirstRun, type HeroFacts, type HeroPickVariant } from './heroPickFacts'
 import { heroArt, previewHero } from './offers'
@@ -146,12 +145,8 @@ function BigThree({ f }: { f: HeroFacts }) {
   )
 }
 
-/** "a Warrior, a Knight or a Guard" — with the article each name needs. */
+/** "a sword", "an axe" — with the article each word needs. */
 const an = (w: string) => `${/^[AEIOU]/i.test(w) ? 'an' : 'a'} ${w}`
-const oneOf = (names: string[]) => {
-  const a = names.map(an)
-  return a.length > 1 ? `${a.slice(0, -1).join(', ')} or ${a[a.length - 1]}` : (a[0] ?? '')
-}
 
 const railStyle = (f: HeroFacts) => ({ '--rail': archetypeVar(f.archetype) }) as CSSProperties
 
@@ -163,7 +158,7 @@ function PlanCard({ f }: { f: HeroFacts }) {
         <Icon name="deploy" /> {f.place}
       </p>
       <p className="pg-card-body">
-        <Icon name="evolve" /> At level {TIER1_LEVEL} it grows into {oneOf(f.grows)}.
+        <Icon name="boon" /> It is offered a new skill at {f.grows.join(', ')}.
       </p>
       <p className="pg-card-body">
         <Icon name="equip" /> Starts wearing {an(f.kit.weapon.toLowerCase())} weapon, {f.kit.body.toLowerCase()} armour and {an(f.kit.offHand.toLowerCase())} off-hand.
@@ -178,7 +173,7 @@ function PlanCard({ f }: { f: HeroFacts }) {
  * The seed rides in the header now (`RunSeed` in `resources`), as a chip.
  */
 function RunOptions() {
-  return <BannerPicker />
+  return <DifficultyPicker />
 }
 
 interface VariantProps {
@@ -323,7 +318,7 @@ function CompareVariant({ facts, selected, onPick }: VariantProps) {
             {facts.map((f) => word(f, <RarityTag rarity={f.kit.weaponRarity} />))}
           </tr>
           <tr>
-            <th scope="row">Grows into</th>
+            <th scope="row">New skills at</th>
             {facts.map((f) => word(f, f.grows.join(', ')))}
           </tr>
         </tbody>

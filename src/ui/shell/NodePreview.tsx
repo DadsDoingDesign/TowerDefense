@@ -5,7 +5,7 @@ import { encounterThreat } from '../../game/run/threat'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
-import { bannerRules } from '../../state/metaStore'
+import { difficultyRules } from '../../state/metaStore'
 import { NODE_ICON, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { resistHint, summarizeEncounter } from './encounterPreview'
@@ -33,7 +33,7 @@ const SPECIAL_BLURB: Record<string, string> = {
 export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const runMap = useGameStore((s) => s.runMap)
   const runSeed = useGameStore((s) => s.runSeed)
-  const runBanner = useGameStore((s) => s.runBanner)
+  const runDifficulty = useGameStore((s) => s.runDifficulty)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
   const selectNode = useGameStore((s) => s.selectNode)
@@ -50,12 +50,11 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   }, [node, focus])
   if (!node) return null
 
-  const allElite = bannerRules(runBanner).allElite
-  const meta = nodeMeta(allElite && node.type === 'battle' ? 'elite' : node.type)
-  const summary = summarizeEncounter({ runSeed, runBanner, runMap }, nodeId)
+  const meta = nodeMeta(node.type)
+  const summary = summarizeEncounter({ runSeed, runDifficulty, runMap }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
-  const step = summary ? encounterThreat(node, bannerRules(runBanner).startThreat) : null
+  const step = summary ? encounterThreat(node, difficultyRules(runDifficulty).startThreat) : null
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw
   // `selectNode` makes, so the preview can never name the wrong ground.

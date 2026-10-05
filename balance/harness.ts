@@ -32,14 +32,19 @@ import { generateEncounter, type EncounterKind } from '../src/game/data/waves'
 import { pathLength } from '../src/game/data/maps'
 import { computeCombat } from '../src/game/engine/combat'
 import { GameEngine, type BehaviourStats, type EngineRules } from '../src/game/engine/engine'
-import { applyXp, evolveInto } from '../src/game/engine/leveling'
-import { perkChoices } from '../src/game/run/perks'
-import { availableEvolutions } from '../src/game/run/unlocks'
-
-/** The modelled player has earned no feats: feat-locked specs are closed (Phase 3b). */
-const NO_FEATS = (): boolean => false
-import { pendingPerkLevel } from '../src/game/run/perks'
-import { perkModsOf } from '../src/game/data/perks'
+import { applyXp } from '../src/game/engine/leveling'
+import {
+  ALL_SKILLS,
+  BUMP_STATS,
+  EVOLUTION_TO_SKILL,
+  PERK_TO_SKILL,
+  skillById,
+  skillFits,
+  skillModsOf,
+  STARTER_SKILLS,
+  type BumpStat,
+} from '../src/game/data/skills'
+import { MAX_SKILLS, pendingMilestone, poolFor, SKILL_MILESTONES, skillOffer, slotsFull, takeBump, takeSkill } from '../src/game/run/skills'
 import type {
   Archetype,
   EffectMods,
@@ -53,6 +58,11 @@ import type {
   Tactics,
   WaveDef,
 } from '../src/game/types'
+
+/** Every skill in the library — a veteran's pool (the §1–§5 benches). */
+export const FULL_SKILL_POOL: readonly string[] = ALL_SKILLS.map((k) => k.id)
+/** The pool a zero-meta player deals from: the nine starters (SK1). */
+export const STARTER_SKILL_POOL: readonly string[] = STARTER_SKILLS
 
 export const TIER2_NODES: TreeNode[] = ALL_NODES.filter((n) => n.tier === 2)
 /** Every open deployment tile on The Green Line (G1-2: tiles, not six circles). */
@@ -238,13 +248,15 @@ export interface BuildOptions {
   level?: number
   gearRarity?: ItemRarity
   seed?: number
-  /** Spec perks to hold, by id (Phase 3b). Overrides `perkSeed`. */
+  /**
+   * Retired spec perks to fold in, by id — each becomes the skill it maps to
+   * (`PERK_TO_SKILL`, SK1), while there is a slot for it.
+   */
   perks?: string[]
   /**
-   * Take a random base perk at every milestone the build's level has reached,
-   * off this seed — the depth-appropriate stand-in for the upgrade levels the
-   * old `depthUpgrades` bought. Omitted: no perks (the §1–§5 benches measure a
-   * spec as the tree defines it).
+   * Fill the build's free skill slot with one random Level 1 skill that fits
+   * it, off this seed — the skill a hero is picked or hired with (SK1).
+   * Omitted: only the skills the spec maps to.
    */
   perkSeed?: number
   /** Extra equipment overriding the generated set (used by the affix sweeps). */
@@ -253,9 +265,14 @@ export interface BuildOptions {
 }
 
 /**
- * Build a Sentinel for a tier-2 spec at a target level (default 20). It gains the
- * tier-1 branch at level 10 and the tier-2 spec at level 20, mirroring real play,
- * so a level-12 build has only its sub-archetype, etc.
+ * Build a hero for a tier-2 spec at a target level (default 20) — SK1: as the
+ * SKILLS that replaced that spec's evolutions (`EVOLUTION_TO_SKILL`): the
+ * sub-archetype's at the level-10 milestone, the specialization's at the
+ * level-15 one (the Level 3 skill). So "the Sharpshooter" on a bench is a Rogue
+ * holding Long Shot and Long Shot's specialization skill, which is the build a
+ * player who wanted that spec can make now. Every milestone its level has
+ * passed counts as settled. (`bannerman` maps to Heavy Blows — there is no
+ * Fighter aura any more, so §2 reads it as a damage hero, honestly.)
  */
 export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
   const spec = getNode(specId)
@@ -263,15 +280,36 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
   const level = opts.level ?? 20
   let s = createSentinel(spec.archetype)
   s = applyXp(s, xpForLevelApprox(level))
-  if (level >= 10) s = evolveInto(s, spec.parent!) // tier 1
-  if (level >= 20) s = evolveInto(s, specId) // tier 2
+  const skills: string[] = []
+  const add = (id: string | undefined) => {
+    const k = id ? skillById(id) : undefined
+    if (k && skillFits(k, spec.archetype) && !skills.includes(k.id) && skills.length < MAX_SKILLS) skills.push(k.id)
+  }
+  // With a seed, the two Level 1 skills a real hero holds by then: the one it
+  // was picked with, and its level-5 milestone's.
+  if (!opts.perks && opts.perkSeed != null) {
+    const r = new RNG(opts.perkSeed)
+    for (const _ of level >= 5 ? [0, 1] : [0]) {
+      const l1 = poolFor(FULL_SKILL_POOL, spec.archetype, 1, skills)
+      if (l1.length) add(r.pick(l1).id)
+    }
+  }
+  if (level >= 10) add(EVOLUTION_TO_SKILL[spec.parent!]) // the tier-1 evolution, as its skill
+  if (level >= 15) {
+    // The tier-2 evolution's skill arrives at the Level 3 milestone; a full
+    // hero swaps its first Level 1 skill out for it.
+    const k = skillById(EVOLUTION_TO_SKILL[specId] ?? '')
+    if (k && skills.length >= MAX_SKILLS && !skills.includes(k.id) && skillFits(k, spec.archetype)) skills.shift()
+    add(k?.id)
+  }
+  for (const p of opts.perks ?? []) add(PERK_TO_SKILL[p])
+  s = { ...s, skills, skillPicks: SKILL_MILESTONES.filter((l) => level >= l).length }
   if (opts.gearRarity) s = equipFullSet(s, opts.gearRarity, rng)
-  if (opts.perks) s = { ...s, perks: [...opts.perks] }
-  else if (opts.perkSeed != null) s = randomPerks(s, new RNG(opts.perkSeed))
   if (opts.mutations) s = { ...s, mutations: opts.mutations }
   if (opts.equipment) s = { ...s, equipment: { ...s.equipment, ...opts.equipment } }
   return s
 }
+
 
 /** A single-affix test item: one enchantment, no base stats, so the affix is the variable. */
 export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand'): Item {
@@ -976,120 +1014,94 @@ export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}
   return best ? wear(s, best.slot, item) : { hero: s, displaced: [] }
 }
 
-/** Auto-pick an evolution when one is owed (a real player always takes one). */
-export function autoEvolve(s: Sentinel, rng: RNG): Sentinel {
-  let out = s
-  for (let guard = 0; guard < 4; guard++) {
-    const owed =
-      (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
-    if (!owed) break
-    const options = availableEvolutions(out, NO_FEATS)
-    if (!options.length) break
-    out = evolveInto(out, rng.pick(options).id)
-  }
-  return out
-}
+/** The stat a class's damage reads — where the modelled player puts a bump. */
+const MAIN_STAT: Record<Archetype, BumpStat> = { fighter: 'str', rogue: 'dex', mystic: 'int' }
 
 /**
- * The "known answer" evolution: whichever child raises `heroDps` most. Draws
- * nothing from any RNG. The random pick above is what every gate reads; this
- * exists so the report can measure how *solved* the build layer is — the win
- * rate a spreadsheet player gets over a coin-flipper (Phase 3b).
+ * Every way a hero can settle its owed milestone (SK1): each skill on its
+ * offer (with each held skill as the one it replaces, when full), and each
+ * stat bump when one is on the table. Exactly the choices the store accepts.
  */
-export function bestEvolve(s: Sentinel): Sentinel {
-  let out = s
-  for (let guard = 0; guard < 4; guard++) {
-    const owed =
-      (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
-    if (!owed) break
-    const options = availableEvolutions(out, NO_FEATS)
-    if (!options.length) break
-    let best = options[0]
-    let bestDps = -Infinity
-    for (const o of options) {
-      const d = heroDps(evolveInto(out, o.id))
-      if (d > bestDps) { bestDps = d; best = o }
+function milestoneMoves(s: Sentinel, pool: readonly string[], seed: number): Sentinel[] {
+  const out: Sentinel[] = []
+  const offer = skillOffer(s, pool, seed)
+  for (const k of offer) {
+    if (slotsFull(s)) for (const d of s.skills ?? []) {
+      const t = takeSkill(s, k.id, pool, seed, d)
+      if (t) out.push(t)
     }
-    out = evolveInto(out, best.id)
-  }
-  return out
-}
-
-/**
- * An evolution with some picks pinned: `force[parentId]` names the child to
- * take at that node; anything unpinned is the usual coin flip. The oracle in
- * `meta-sweep.ts phase3b` pins each choice point in turn to find the picks a
- * run is measurably best off taking — the "known answer", measured rather than
- * guessed from a tooltip.
- */
-export function forcedEvolve(s: Sentinel, force: Record<string, string>, rng: RNG): Sentinel {
-  let out = s
-  for (let guard = 0; guard < 4; guard++) {
-    const owed =
-      (out.level >= 10 && out.branchPath.length === 1) || (out.level >= 20 && out.branchPath.length === 2)
-    if (!owed) break
-    const parent = out.branchPath[out.branchPath.length - 1]
-    const options = availableEvolutions(out, NO_FEATS)
-    if (!options.length) break
-    const pinned = force[parent]
-    out = evolveInto(out, pinned && options.some((o) => o.id === pinned) ? pinned : rng.pick(options).id)
-  }
-  return out
-}
-
-/**
- * Take every perk a hero owes, at random among the base options (Phase 3b).
- * Draws one pick per owed milestone off `rng`.
- */
-export function randomPerks(s: Sentinel, rng: RNG): Sentinel {
-  let out = s
-  for (let guard = 0; guard < 3 && pendingPerkLevel(out) !== null; guard++) {
-    const opts = perkChoices(out)
-    if (!opts.length) break
-    out = { ...out, perks: [...(out.perks ?? []), rng.pick(opts).id] }
-  }
-  return out
-}
-
-/**
- * The "known answer" perk: whichever option raises `heroDps` most. `heroDps`
- * reads damage × rate × crit only, so it is blind to most rules (a ward, a
- * regen, a volley) — which is the point of measuring it: a perk set whose
- * greedy pick wins by a mile is a solved choice.
- */
-export function bestPerks(s: Sentinel): Sentinel {
-  let out = s
-  for (let guard = 0; guard < 3 && pendingPerkLevel(out) !== null; guard++) {
-    const opts = perkChoices(out)
-    if (!opts.length) break
-    let best = opts[0]
-    let bestDps = -Infinity
-    for (const o of opts) {
-      const d = heroDps({ ...out, perks: [...(out.perks ?? []), o.id] })
-      if (d > bestDps) { bestDps = d; best = o }
+    else {
+      const t = takeSkill(s, k.id, pool, seed)
+      if (t) out.push(t)
     }
-    out = { ...out, perks: [...(out.perks ?? []), best.id] }
+  }
+  for (const st of BUMP_STATS) {
+    const t = takeBump(s, st, pool, seed)
+    if (t) out.push(t)
   }
   return out
 }
 
-/** Perks with some milestones pinned: `force['5:fighter']` names the pick there. */
-export function forcedPerks(s: Sentinel, force: Record<string, string>, rng: RNG): Sentinel {
+/**
+ * The coin-flipper (SK1): at every milestone it owes, a random skill from the
+ * offer while it has a free slot; once full, half the time a random swap and
+ * half the time the bump on its class's main stat. Every gate reads this — it
+ * prices the skill LEVEL, not a player's read of it. `seed` is the run seed
+ * the offers are hashed from (`run/skills.skillOffer`), `rng` the model's.
+ */
+export function randomSkills(s: Sentinel, rng: RNG, pool: readonly string[], seed: number): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 3 && pendingMilestone(out); guard++) {
+    const offer = skillOffer(out, pool, seed)
+    let next: Sentinel | null = null
+    if (offer.length && (!slotsFull(out) || rng.chance(0.5))) {
+      next = takeSkill(out, rng.pick(offer).id, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null)
+    }
+    out = next ?? takeBump(out, MAIN_STAT[out.archetype], pool, seed) ?? out
+  }
+  return out
+}
+
+/**
+ * The "known answer" (SK1): whichever move raises `heroDps` most — the
+ * spreadsheet player. `heroDps` reads damage × rate × crit only, so it is
+ * blind to holds, auras, burns and executes; the gap between this and the
+ * coin-flipper is how solved the skill layer is.
+ */
+export function bestSkills(s: Sentinel, pool: readonly string[], seed: number): Sentinel {
+  let out = s
+  for (let guard = 0; guard < 3 && pendingMilestone(out); guard++) {
+    const moves = milestoneMoves(out, pool, seed)
+    if (!moves.length) break
+    out = moves.reduce((a, b) => (heroDps(b) > heroDps(a) ? b : a))
+  }
+  return out
+}
+
+/**
+ * Milestones with some picks pinned: `force['10:rogue']` names the skill a
+ * Rogue takes at level 10 when its offer holds it (else the coin flip). The
+ * oracle in `meta-sweep.ts phase3b` pins each point in turn.
+ */
+export function forcedSkills(s: Sentinel, force: Record<string, string>, rng: RNG, pool: readonly string[], seed: number): Sentinel {
   let out = s
   for (let guard = 0; guard < 3; guard++) {
-    const level = pendingPerkLevel(out)
-    if (level === null) break
-    const opts = perkChoices(out)
-    if (!opts.length) break
-    const pinned = force[`${level}:${out.branchPath[level === 5 ? 0 : 1]}`]
-    const pick = pinned && opts.some((o) => o.id === pinned) ? pinned : rng.pick(opts).id
-    out = { ...out, perks: [...(out.perks ?? []), pick] }
+    const m = pendingMilestone(out)
+    if (!m) break
+    const pinned = force[`${m.level}:${out.archetype}`]
+    const offer = skillOffer(out, pool, seed)
+    if (pinned && offer.some((k) => k.id === pinned)) {
+      out = takeSkill(out, pinned, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null) ?? out
+      continue
+    }
+    out = randomSkills(out, rng, pool, seed)
+    break
   }
   return out
 }
 
-/** Re-exported for the benches that grade a perk's mods directly. */
-export { perkModsOf }
+/** Re-exported for the benches that grade a skill's mods directly. */
+export { skillModsOf }
 
 // ---- small stats helpers ----
 export const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)

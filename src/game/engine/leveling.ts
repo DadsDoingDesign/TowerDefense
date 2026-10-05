@@ -1,9 +1,7 @@
-import { childrenOf, getNode, type TreeNode } from '../data/archetypeTree'
+import { getNode } from '../data/archetypeTree'
 import type { Archetype, CoreStats, Sentinel } from '../types'
 
 export const MAX_LEVEL = 20
-export const TIER1_LEVEL = 10
-export const TIER2_LEVEL = 20
 
 /** Cumulative XP required to *reach* a given level (level 1 = 0). */
 export function xpToReach(level: number): number {
@@ -42,9 +40,9 @@ function applyGrowth(stats: CoreStats, archetype: Archetype): CoreStats {
 }
 
 /**
- * Given XP added, return a new Sentinel with levels applied. Does NOT auto-pick
- * evolutions — it only raises the level and stats; the store surfaces the
- * evolution choice when `evolutionPending` is true.
+ * Given XP added, return a new Sentinel with levels applied. It only raises
+ * the level and stats; a skill milestone it crosses is OWED, and the level-up
+ * surfaces offer it (`run/skills.pendingMilestone`).
  */
 export function applyXp(sentinel: Sentinel, addedXp: number): Sentinel {
   const xp = sentinel.xp + addedXp
@@ -56,42 +54,7 @@ export function applyXp(sentinel: Sentinel, addedXp: number): Sentinel {
   return { ...sentinel, xp, level: newLevel, stats }
 }
 
-/** Is this Sentinel currently owed an evolution choice? */
-export function evolutionPending(s: Sentinel): boolean {
-  if (s.level >= TIER1_LEVEL && s.branchPath.length === 1) return true
-  if (s.level >= TIER2_LEVEL && s.branchPath.length === 2) return true
-  return false
-}
-
-/** The evolution options for a Sentinel that is owed a choice (else empty). */
-export function evolutionOptions(s: Sentinel): TreeNode[] {
-  if (!evolutionPending(s)) return []
-  return childrenOf(s.branchPath[s.branchPath.length - 1])
-}
-
-/** Apply a chosen evolution node: extend the branch and grant its stats. */
-export function evolveInto(s: Sentinel, nodeId: string): Sentinel {
-  const node = getNode(nodeId)
-  const grant = node.grant ?? {}
-  return {
-    ...s,
-    branchPath: [...s.branchPath, nodeId],
-    stats: {
-      str: s.stats.str + (grant.stats?.str ?? 0),
-      dex: s.stats.dex + (grant.stats?.dex ?? 0),
-      int: s.stats.int + (grant.stats?.int ?? 0),
-    },
-    thorns: s.thorns + (grant.thorns ?? 0),
-    patience: s.patience + (grant.patience ?? 0),
-  }
-}
-
-/** Readable branch history, e.g. "Fighter → Knight → Bulwark". */
-export function branchLabel(s: Sentinel): string {
-  return s.branchPath.map((id) => getNode(id).name).join(' → ')
-}
-
-/** The current build's display name (deepest node). */
-export function buildName(s: Sentinel): string {
-  return getNode(s.branchPath[s.branchPath.length - 1]).name
+/** The hero's class name ("Fighter") — heroes no longer evolve (SK1). */
+export function buildName(s: Pick<Sentinel, 'archetype'>): string {
+  return getNode(s.archetype).name
 }

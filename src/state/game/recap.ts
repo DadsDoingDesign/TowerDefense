@@ -1,7 +1,7 @@
 import type { BattleResult } from '../../game/engine/engine'
 import { buildName } from '../../game/engine/leveling'
 import type { Item, Sentinel } from '../../game/types'
-import { MAX_BANNER, useMetaStore } from '../metaStore'
+import { lastProgress } from '../metaStore'
 import { useSettingsStore } from '../settingsStore'
 import type { GameData, RunRecap } from './types'
 
@@ -9,10 +9,10 @@ import type { GameData, RunRecap } from './types'
  * Assemble the run receipt (M14 / H23).
  *
  * Built at the moment the run ends, from the state that is still live, because
- * every path out of a finished run tears that state down. `nextBanner` is what
- * turns a win into a reason to play again: beating the campaign under Banner N
- * is what earns the right to be *asked* about Banner N+1 — an NG+ that changes
- * the rules rather than a difficulty slider.
+ * every path out of a finished run tears that state down. `progress` is what
+ * turns a run into a reason to play again (SK1): the Watch XP it earned, the
+ * skill cards it unlocked, and — for a win — the difficulty step it climbed.
+ * It is read off the settle that ran just before this (`grantRunRewards`).
  */
 export function buildRecap(
   st: GameData,
@@ -41,7 +41,6 @@ export function buildRecap(
       }
     })
     .sort((a, b) => b.damage - a.damage)
-  const unlockedBanners = useMetaStore.getState().sacrificeTier
   return {
     won: info.won,
     mode: st.mode,
@@ -51,7 +50,7 @@ export function buildRecap(
     assist: useSettingsStore.getState().assist,
     depth: info.depth,
     rounds: st.wins,
-    banner: st.runBanner,
+    difficulty: st.runDifficulty,
     marks: info.marks,
     kills: info.kills,
     goldLeft: st.gold,
@@ -59,8 +58,7 @@ export function buildRecap(
     heroes,
     leaks: result.leakDamage,
     enemiesLeaked: result.enemiesLeaked,
-    // Winning promotes you one rung, up to what the Watchtower has opened.
-    nextBanner: info.won ? Math.min(unlockedBanners, Math.min(MAX_BANNER, st.runBanner + 1)) : st.runBanner,
+    progress: lastProgress.run,
     spoils: info.spoils ?? [],
   }
 }

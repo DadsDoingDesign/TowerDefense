@@ -1,16 +1,16 @@
 /**
  * The terms of the run being set up on hero-pick: what its seed is, whether it
- * can be changed, whether a Vow can be sworn on it, and — on a Daily Watch —
+ * can be changed, whether its difficulty can be chosen, and — on a Daily Watch —
  * what committing a hero will cost.
  *
  * One pure table, read by BOTH the store (which enforces it) and every hero-pick
  * layout (which says it), so the screen cannot offer what the store refuses.
  * That is exactly what went wrong before: the Vow chips rendered on a Daily and
- * `setRunBanner` silently ignored them, and the seed field on a Daily quietly
+ * `setRunDifficulty` silently ignored them, and the seed field on a Daily quietly
  * turned the day's run into a custom-seed run.
  *
  * The rules themselves are the Daily's, from `daily.ts`: a Daily is one set of
- * standard rules for everyone that day — no hub, no Banner — so there is no Vow
+ * standard rules for everyone that day — no hub, no difficulty step — so there is no step
  * to choose and no seed to change. A player who wants their own seed starts an
  * ordinary run and types it there.
  */
@@ -25,8 +25,8 @@ export interface DailyClaim {
 /** What committing a hero to a Daily will be: the day's scored attempt, or practice. */
 export type DailyAttempt = 'scored' | 'practice'
 
-/** A Vow is a hub rule, and a Daily reads no hub: never on a Daily. */
-export const vowAllowed = (c: RunChallenge): boolean => c.kind !== 'daily'
+/** The difficulty step is a hub rule, and a Daily reads no hub: never on a Daily (SK1). */
+export const difficultyAllowed = (c: RunChallenge): boolean => c.kind !== 'daily'
 
 /** A Daily's seed IS the Daily; typing another one would make it a different run. */
 export const seedEditable = (c: RunChallenge): boolean => c.kind !== 'daily'
@@ -49,8 +49,8 @@ export interface RunTerms {
   seedName: string
   /** Whether the seed can be typed over. */
   editable: boolean
-  /** Whether a Vow can be sworn. */
-  vow: boolean
+  /** Whether the difficulty step can be chosen. */
+  difficulty: boolean
   /** On a Daily, what picking a hero spends. */
   attempt: DailyAttempt | null
   /**
@@ -68,13 +68,13 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
       seedLabel: `Daily · ${c.date}`,
       seedName: `Daily Watch ${c.date}, seed ${seed}. Today's seed is the same for everyone and cannot be changed.`,
       editable: false,
-      vow: false,
+      difficulty: false,
       attempt,
       lines: [
         attempt === 'scored'
           ? "Picking a hero uses today's one scored attempt."
           : "Today's scored attempt is used — this run is practice.",
-        'Standard rules: no Watchtower perks, no Vow.',
+        'Standard rules: no Watchtower bonuses, standard skills, no difficulty step.',
       ],
     }
   }
@@ -84,9 +84,9 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
       seedLabel: `Custom seed ${seed}`,
       seedName: `Custom seed ${seed}. Change the seed`,
       editable: true,
-      vow: true,
+      difficulty: true,
       attempt: null,
-      lines: ['Custom seed · not ranked.', "Pays Marks, but a win won't unlock a Vow."],
+      lines: ['Custom seed · not ranked.', "Pays Marks, but a win won't raise the difficulty or unlock a skill."],
     }
   }
   return {
@@ -94,7 +94,7 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
     seedLabel: `Seed ${seed}`,
     seedName: `Seed ${seed}, random. Play a set seed instead`,
     editable: true,
-    vow: true,
+    difficulty: true,
     attempt: null,
     lines: [],
   }
