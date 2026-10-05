@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { BUMP_LABEL, type BumpStat } from '../../game/data/skills'
+import { milestoneGrant } from '../../game/engine/leveling'
 import { pendingMilestone } from '../../game/run/skills'
-import type { Sentinel } from '../../game/types'
+import type { Archetype, Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import type { GameState } from '../../state/game/types'
 
@@ -115,6 +117,23 @@ export function settleFlashes(
     if (before && h.level > before.level) out[h.id] = { from: before.level, to: h.level, at: now }
   }
   return out
+}
+
+/**
+ * The stats a level-up paid beyond the level itself — the level-10 and
+ * level-15 grant (`engine/leveling.MILESTONE_GRANT`) — in the bump's own words,
+ * the class's main stat first: "+10 STR +3 DEX". Null when the levels between
+ * `from` (exclusive) and `to` crossed no grant. Thorns ride along unsaid, like
+ * every secondary number (they are on the Stats tab).
+ */
+export function grantWords(archetype: Archetype, from: number, to: number): string | null {
+  const sum = new Map<BumpStat, number>()
+  for (let l = from + 1; l <= to; l++) {
+    const g = milestoneGrant(archetype, l)
+    if (!g) continue
+    for (const [k, v] of Object.entries(g.stats) as [BumpStat, number][]) if (v) sum.set(k, (sum.get(k) ?? 0) + v)
+  }
+  return sum.size ? [...sum].map(([k, v]) => `+${v} ${BUMP_LABEL[k]}`).join(' ') : null
 }
 
 /** A flash still on screen at `now`. */

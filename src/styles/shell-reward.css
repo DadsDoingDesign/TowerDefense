@@ -233,6 +233,13 @@
   font-weight: 800;
   white-space: nowrap;
 }
+.sh-lvl-grant {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  white-space: nowrap;
+}
 .sh-lvl-opts {
   display: grid;
   gap: 6px;

@@ -7,7 +7,7 @@ import { itemName } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
 import { battleLayoutOf } from './live'
-import { rewardInPlace } from './levelUps'
+import { grantWords, rewardInPlace } from './levelUps'
 
 /**
  * A number that counts up to its value once, when it first appears. Instant
@@ -143,6 +143,7 @@ export function WaveCeremony() {
               {levelUps.map((h) => (
                 <li key={h.id}>
                   <Icon name="evolve" /> {h.name} → Lv {h.level}
+                  {grantWords(h.archetype, startLevels[h.id], h.level) && <small>{grantWords(h.archetype, startLevels[h.id], h.level)}</small>}
                 </li>
               ))}
             </ul>

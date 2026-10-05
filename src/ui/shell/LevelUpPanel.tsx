@@ -6,7 +6,7 @@ import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
-import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
+import { grantWords, putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 
 /**
  * SK1 — a hero's skill milestone, chosen in the Context panel (rule one)
@@ -59,6 +59,7 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   const held = (hero.skills ?? []).map((id) => skillById(id)).filter((k) => !!k)
   const chosen = picked?.kind === 'skill' ? skillById(picked.id) : undefined
   const hue = archetypeVar(hero.archetype)
+  const grant = grantWords(hero.archetype, m.level - 1, m.level)
 
   // The panel is ~150px of body on a phone: a pick brings what it does (and,
   // when full, the swap row) into view. The commit is pinned below.
@@ -106,6 +107,8 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
         <strong id="sh-lvl-head" style={{ color: hue }}>
           {hero.name}
         </strong>
+        {/* The level-10/15 grant, said beside the milestone (no new rule to learn). */}
+        {grant && <span className="sh-lvl-grant">{grant}</span>}
         <span className="sh-lvl-up">
           Level {m.level} <span aria-hidden="true">↑</span>
         </span>

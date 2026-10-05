@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createSentinel } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import type { Sentinel } from '../src/game/types'
-import { choiceOwed, FLASH_MS, flashLive, levelUpOpen, rewardInPlace, settleFlashes, waveLive } from '../src/ui/shell/levelUps'
+import { choiceOwed, FLASH_MS, flashLive, grantWords, levelUpOpen, rewardInPlace, settleFlashes, waveLive } from '../src/ui/shell/levelUps'
 
 /**
  * G3-2 / SK1 — the reward picked under the field, and level-ups handled on
@@ -89,5 +89,29 @@ describe('the badge (SK2: only a real choice wears one)', () => {
     expect(waveLive({ engine: {} as never, battlePhase: 'battle' })).toBe(true)
     expect(waveLive({ engine: null, battlePhase: 'setup' })).toBe(false)
     expect(waveLive({ engine: {} as never, battlePhase: 'setup' })).toBe(false)
+  })
+})
+
+describe('the level-10 and level-15 grant (SK1 tuning pass)', () => {
+  it('is paid with the level, once, on top of the level growth', () => {
+    const base = createSentinel('fighter')
+    const at9 = applyXp(base, xpToReach(9))
+    const at10 = applyXp(at9, xpToReach(10) - xpToReach(9))
+    // A plain level is +2 STR / +1 DEX for a Fighter; level 10 adds +10 STR +3 DEX and +6 thorns.
+    expect(at10.stats.str - at9.stats.str).toBe(2 + 10)
+    expect(at10.stats.dex - at9.stats.dex).toBe(1 + 3)
+    expect(at10.thorns - at9.thorns).toBe(6)
+    // One jump across both milestones pays both, exactly as two steps would.
+    const jump = applyXp(base, xpToReach(15))
+    const steps = applyXp(applyXp(base, xpToReach(12)), xpToReach(15) - xpToReach(12))
+    expect(jump.stats).toEqual(steps.stats)
+    expect(jump.thorns).toBe(steps.thorns)
+  })
+
+  it('is said in the bump’s own words, main stat first', () => {
+    expect(grantWords('fighter', 9, 10)).toBe('+10 STR +3 DEX')
+    expect(grantWords('rogue', 14, 15)).toBe('+13 DEX +4 STR')
+    expect(grantWords('mystic', 8, 16)).toBe('+23 INT +7 DEX')
+    expect(grantWords('mystic', 10, 14)).toBeNull()
   })
 })

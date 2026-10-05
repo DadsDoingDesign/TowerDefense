@@ -301,6 +301,10 @@
   font-weight: 700;
   animation: sh-cer-in 320ms cubic-bezier(0.2, 1.4, 0.4, 1) 200ms both;
 }
+.sh-ceremony-levels li small {
+  color: var(--accent);
+  font-weight: 800;
+}
 .sh-ceremony-roll {
   display: flex;
   flex-direction: column;
