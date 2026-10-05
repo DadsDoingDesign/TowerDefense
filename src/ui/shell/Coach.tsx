@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
 import { DANGER_COPY } from '../../game/data/hazards'
-import { BLOCK_COPY, ROOM_COPY, terrainRuleById } from '../../game/data/terrain'
+import { fieldConflicts } from '../../state/game/selectors'
+import { BLOCK_COPY, HELD_COPY, ROOM_COPY, terrainRuleById } from '../../game/data/terrain'
 import { commandsFor, WATCH_COMMANDS } from '../../game/data/commands'
 import { relicCommands } from '../../game/data/relics'
 import { TIER1_LEVEL } from '../../game/engine/leveling'
@@ -116,6 +117,10 @@ export function Coach() {
   const inPlace = useGameStore(rewardInPlace)
   // The engine's own flag: true from the first tick until the charge is spent.
   const commandUsed = useGameStore((s) => !!s.engine && s.engine.status === 'running' && !s.engine.commandReady)
+  // Weapon clearance: while a conflict holds the wave the strip says what to
+  // do; a tip beside it ("Move one hero if you like, then Next") would
+  // contradict the disabled button. The tip comes back once space is made.
+  const conflicted = useGameStore((s) => !s.lastResult && fieldConflicts(s).length > 0)
 
   // LS3: a tip is about something on screen, so it may only speak once its
   // idea is shown (`state/staging.ts`) — never ahead of the thing it names.
@@ -245,8 +250,16 @@ export function Coach() {
 
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
-    // that a hero stands too close to one that swings, `terrain.CLEARANCE`).
-    const base = fieldNote.kind === 'cursed' ? DANGER_COPY.cursed : fieldNote.kind === 'crowded' ? ROOM_COPY : BLOCK_COPY[fieldNote.kind]
+    // that a hero stands too close to one that swings, `terrain.CLEARANCE`;
+    // or that posts are held while a sub-wave is live).
+    const base =
+      fieldNote.kind === 'cursed'
+        ? DANGER_COPY.cursed
+        : fieldNote.kind === 'crowded'
+          ? ROOM_COPY
+          : fieldNote.kind === 'held'
+            ? HELD_COPY
+            : BLOCK_COPY[fieldNote.kind]
     // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
     const copy = fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
     return (
@@ -263,7 +276,7 @@ export function Coach() {
     )
   }
 
-  if (!tip || displayed !== tip.id) return null
+  if (!tip || displayed !== tip.id || conflicted) return null
 
   return (
     <aside className="sh-coach" role="status" aria-live="polite">

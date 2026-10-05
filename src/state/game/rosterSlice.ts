@@ -61,7 +61,11 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
 
   sortInventory: () => set({ inventory: sortItems(get().inventory) }),
 
+  // Crafting is gear too: while a sub-wave is live the item panel offers none
+  // of it, and the store refuses it here (a worn piece reforged mid-wave would
+  // be a gear change the fight never saw).
   dismantleItem: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { inventory, gold, dust, mode } = get()
     const item = inventory.find((i) => i.id === itemId)
     if (!item) return
@@ -74,6 +78,7 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   },
 
   reforge: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { gold } = get()
     const found = findItem(get().inventory, get().roster, itemId)
     if (!found) return
@@ -81,9 +86,11 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     if (gold < cost) return sfx('error')
     set(replaceItem(get().inventory, get().roster, itemId, reforgeItem(found.item, streams.rng)))
     set({ gold: gold - cost })
+    redressWearer(get, set, itemId)
   },
 
   upgradeItem: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { gold } = get()
     const found = findItem(get().inventory, get().roster, itemId)
     if (!found || !canUpgrade(found.item)) return
@@ -91,6 +98,7 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     if (gold < cost) return sfx('error')
     set(replaceItem(get().inventory, get().roster, itemId, upgradeRarity(found.item, streams.rng)))
     set({ gold: gold - cost })
+    redressWearer(get, set, itemId)
   },
 
   chooseEvolution: (sentinelId, nodeId) => {
@@ -131,4 +139,10 @@ function redress(get: GetState, set: SetState, sentinelId: string): void {
   if (!st.engine || !inBreather(st)) return
   const hero = st.roster.find((h) => h.id === sentinelId)
   if (hero && st.engine.regear(hero)) set({ hud: hudOf(st.engine) })
+}
+
+/** A worn piece reforged or raised in the breather reaches the fight too. */
+function redressWearer(get: GetState, set: SetState, itemId: string): void {
+  const wearer = get().roster.find((h) => Object.values(h.equipment).some((it) => it?.id === itemId))
+  if (wearer) redress(get, set, wearer.id)
 }

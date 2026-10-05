@@ -77,8 +77,18 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     const st = get()
     if (st.screen !== 'battle') return
     // Tiles only mean something while a hero can be put down: setup, or the
-    // breather's one move. A live wave ignores taps on the field.
+    // breather's one move. During a live sub-wave posts are held (the
+    // designer: "towers cannot be moved during rounds. only between"): a tap
+    // on a hero says so and opens its panel; any other tap does nothing.
     const breather = st.battlePhase === 'battle' && !!st.engine?.breather
+    if (st.battlePhase === 'battle' && st.engine && !breather) {
+      const rt = st.engine.status === 'running' ? st.engine.sentinelOnSlot(tileId) : undefined
+      if (!rt) return
+      set({ fieldNote: { tileId, kind: 'held', at: Date.now() } })
+      st.focusTower(rt.def.id)
+      sfx('error')
+      return
+    }
     if (!breather && (st.battlePhase !== 'setup' || st.engine)) return
     const tile = st.battleMap.tiles?.find((t) => t.id === tileId)
     // A blocked tile says why instead of doing nothing (G1-2).

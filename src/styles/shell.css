@@ -2486,10 +2486,21 @@
   color: var(--muted);
 }
 .sh-lock.compact {
+  /* Under the doll, in a column ~90px wide on a phone: the lock leads the
+     first line and the words break evenly ("Gear locks / during a wave"),
+     not one ragged word per line. */
+  display: block;
   min-height: 0;
   margin-top: 6px;
   font-size: var(--fs-micro);
-  line-height: 1.25;
+  line-height: 1.3;
+  text-align: center;
+  text-wrap: balance;
+}
+.sh-lock.compact .sh-lock-glyph {
+  display: inline-block;
+  margin: 0 5px 0 0;
+  vertical-align: -1px;
 }
 .sh-lock-glyph {
   position: relative;

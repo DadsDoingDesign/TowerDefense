@@ -792,8 +792,21 @@ export function BattleCanvas() {
       hoverSlot.current = hitTile(x, y)
     }
 
+    /**
+     * A live sub-wave: no tile takes a hero, but a tap on a posted one still
+     * answers ("During a wave — heroes hold their posts", `battleSlice.tapTile`)
+     * rather than doing nothing. No hover, no preview.
+     */
+    const liveWave = () => {
+      const st = useGameStore.getState()
+      return st.battlePhase === 'battle' && !!st.engine && !st.engine.breather
+    }
+
     const onPointerDown = (e: PointerEvent) => {
-      if (!tilesLive()) return
+      if (!tilesLive()) {
+        if (liveWave() && e.isPrimary) press = { id: e.pointerId, touch: e.pointerType !== 'mouse', zooming: false, mode: 'pending', x0: e.clientX, y0: e.clientY, t0: performance.now(), lastX: e.clientX, lastY: e.clientY }
+        return
+      }
       if (press && press.id !== e.pointerId) {
         // A second finger: this is a pinch, not a placement.
         press = null
@@ -818,13 +831,23 @@ export function BattleCanvas() {
     const onPointerUp = (e: PointerEvent) => {
       if (!press || press.id !== e.pointerId) return
       const wasTouch = press.touch
+      const { x0, y0 } = press
       // Q3: the zoom-touch and a pan choose nothing.
       const chooses = !press.zooming && press.mode !== 'pan'
       press = null
       const { x, y } = toLogical(e.clientX, e.clientY)
       if (wasTouch) hoverSlot.current = null
       if (!chooses) return
-      if (!tilesLive()) return
+      if (!tilesLive()) {
+        // A tap, not a drag, on a hero mid-wave — its tile or the figure
+        // standing up out of it — says why it stays put.
+        if (!liveWave() || Math.hypot(e.clientX - x0, e.clientY - y0) >= 12) return
+        const st = useGameStore.getState()
+        const T = st.battleMap.tile ?? 40
+        const hit = st.engine?.sentinels.find((s) => Math.abs(x - s.pos.x) <= T / 2 && y <= s.pos.y + T / 2 && y >= s.pos.y - T * 1.5)
+        if (hit) st.tapTile(hit.slotId)
+        return
+      }
       const tile = hitTile(x, y)
       if (!tile) {
         // Past the grid: the road where it runs on says so; the wood is mute.

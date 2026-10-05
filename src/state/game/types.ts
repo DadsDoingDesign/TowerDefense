@@ -296,9 +296,12 @@ export interface GameData {
    *
    * Q1: or the CURSED tile an armed hero is over / was just posted on, so the
    * strip says what standing there costs (`kind: 'cursed'`).
+   *
+   * Weapon clearance: `'crowded'` — too close to a hero that swings, with
+   * `line` naming who and with what; `'held'` — a posted hero tapped while a
+   * sub-wave is live, when posts cannot change.
    */
-  /** `line`: the note's own words, when it names someone (a crowded tile names who swings). */
-  fieldNote: { tileId: string | null; kind: TerrainKind | DangerKind | 'crowded'; at: number; line?: string } | null
+  fieldNote: { tileId: string | null; kind: TerrainKind | DangerKind | 'crowded' | 'held'; at: number; line?: string } | null
   /**
    * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
    * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast

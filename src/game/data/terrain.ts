@@ -320,6 +320,18 @@ export const ROOM_COPY = {
   line: 'Too close — a hero with a sword, axe or hammer swings all round it, so keep the tiles next to it clear.',
 }
 
+/**
+ * The coach line for a tap on a posted hero while a sub-wave is LIVE (the
+ * designer: "towers cannot be moved during rounds. only between"). Posts change
+ * in the setup and in the breather between sub-waves; mid-wave the tap says so
+ * instead of doing nothing. Its twin on the gear side is "Gear locks during a
+ * wave" (`DetailBand.GEAR_LOCK_LINE`).
+ */
+export const HELD_COPY = {
+  name: 'During a wave',
+  line: 'During a wave — heroes hold their posts. Move them between waves.',
+}
+
 /** The same reason, short, in a tile's name on the keyboard layer. */
 export const ROOM_REASON = 'a hero with a sword, axe or hammer swings all round it and needs the tiles beside it clear'
 

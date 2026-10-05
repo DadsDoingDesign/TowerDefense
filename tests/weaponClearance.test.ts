@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState, RNG } from '../src/game/core/rng'
-import { ITEM_BASES, heroSlotsFor } from '../src/game/data/items'
+import { generateItem, ITEM_BASES, heroSlotsFor } from '../src/game/data/items'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
-import { crowds, parseTileId, roomyTiles, tileId, withinClearance, type Post } from '../src/game/data/terrain'
+import { crowds, HELD_COPY, parseTileId, roomyTiles, tileId, withinClearance, type Post } from '../src/game/data/terrain'
 import { relicTeamMods, RELICS } from '../src/game/data/relics'
 import { computeCombat } from '../src/game/engine/combat'
 import { GameEngine, TICK } from '../src/game/engine/engine'
@@ -12,6 +12,7 @@ import { conflictCopy, conflictsAmong, equipWarning, roomLine, type Standing } f
 import { emptyPlacements } from '../src/game/run/map'
 import type { Archetype, GameMap, Item, ItemSlot, Sentinel } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
+import { deployTeam } from '../balance/harness'
 import { useGameStore } from '../src/state/gameStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 import { fieldConflicts, gearLocked } from '../src/state/game/selectors'
@@ -229,6 +230,55 @@ describe('the store: setup', () => {
   })
 })
 
+describe('the store: a live wave answers instead of ignoring', () => {
+  const start = () => {
+    setLayoutOrientation(() => 'landscape')
+    useGameStore.getState().beginCampaign(4242, STANDARD_RUN)
+    useGameStore.getState().pickStartingHero('rogue')
+    const st = useGameStore.getState()
+    const node = st.runMap.nodes.find((n) => st.reachableNodeIds.includes(n.id) && n.type === 'battle')!
+    useGameStore.setState({ screen: 'map', event: null, reachableNodeIds: [node.id], clearedNodeIds: [], currentWave: null })
+    useGameStore.getState().selectNode(node.id)
+    const m = useGameStore.getState().battleMap
+    const safe = m.slots.filter((s) => !m.tiles!.find((t) => t.id === s.id)!.danger)
+    const doyle = holding('rogue', 'Sword', 'Doyle')
+    const [a] = pairOf({ ...m, slots: safe })
+    useGameStore.setState({ roster: [doyle], inventory: [gear('Axe')], placements: { ...emptyPlacements(m), [a]: doyle.id } })
+    useGameStore.getState().startWave()
+    useGameStore.getState().engine!.step(TICK)
+    return { doyle, a, empty: safe.find((s) => s.id !== a && !withinClearance(s.id, a))!.id }
+  }
+
+  it('a tap on a posted hero mid-wave says posts are held, opens the hero, and moves nothing', () => {
+    const { doyle, a, empty } = start()
+    useGameStore.setState({ fieldNote: null })
+    useGameStore.getState().tapTile(empty)
+    expect(useGameStore.getState().fieldNote).toBeNull()
+    useGameStore.getState().tapTile(a)
+    const st = useGameStore.getState()
+    expect(st.fieldNote).toMatchObject({ tileId: a, kind: 'held' })
+    expect(st.shellSelection).toEqual({ kind: 'hero', id: doyle.id })
+    expect(st.selectedSentinelId).toBeNull()
+    expect(st.engine!.sentinelOnSlot(a)?.def.id).toBe(doyle.id)
+    expect(HELD_COPY.line.startsWith(HELD_COPY.name)).toBe(true)
+  })
+
+  it('crafting is gear too: reforge, raise and scrap all refuse mid-wave', () => {
+    const { doyle } = start()
+    const before = useGameStore.getState()
+    const worn = before.roster[0].equipment.mainHand!
+    const packed = before.inventory[0]
+    useGameStore.setState({ gold: 10_000 })
+    useGameStore.getState().reforge(worn.id)
+    useGameStore.getState().upgradeItem(worn.id)
+    useGameStore.getState().dismantleItem(packed.id)
+    const st = useGameStore.getState()
+    expect(st.gold).toBe(10_000)
+    expect(st.roster.find((h) => h.id === doyle.id)!.equipment.mainHand).toEqual(worn)
+    expect(st.inventory.map((i) => i.id)).toEqual([packed.id])
+  })
+})
+
 describe('the store: the breather', () => {
   const P = legacyPosts(FIRST_MAP.id)
   const at = (typeId: string, t: number, hpMult: number, group: number) => ({ typeId, at: t, hpMult, group })
@@ -300,6 +350,19 @@ describe('the store: the breather', () => {
     expect(fieldConflicts(useGameStore.getState())).toEqual([])
     useGameStore.getState().resumeSubWave()
     expect(e.breather).toBe(false)
+  })
+
+  it('a worn piece reforged in the breather reaches the fight too', () => {
+    const doyle = holding('rogue', 'Bow', 'Doyle')
+    const e = held([doyle], [P.s1])
+    enter(e, [doyle], [])
+    useGameStore.setState({ gold: 10_000 })
+    const bow = doyle.equipment.mainHand!
+    useGameStore.getState().reforge(bow.id)
+    const now = useGameStore.getState().roster[0].equipment.mainHand!
+    expect(now.id).toBe(bow.id)
+    expect(e.sentinelOnSlot(P.s1)!.def.equipment.mainHand).toEqual(now)
+    expect(e.inputLog.at(-1)).toMatchObject({ kind: 'gear', id: doyle.id })
   })
 
   it('a replay re-dresses the hero at the same tick and fights the same fight', () => {
@@ -419,5 +482,26 @@ describe('auto-equip on a drop waits for the wave to end', () => {
       for (const it of st.lastLoot) expect(worn.includes(it.id) || st.inventory.some((i) => i.id === it.id)).toBe(true)
       expect(st.inventory.length + worn.length).toBeGreaterThanOrEqual(bag)
     }
+  })
+})
+
+describe('every place the rule lives reads isMelee', () => {
+  it('the menu cinematic: a weapon\'s kind is its stream\'s first draw, whatever the rarity — so reading it early draws nothing new', () => {
+    const rarities = ['common', 'rare', 'epic', 'legendary', 'mythic'] as const
+    for (let seed = 1; seed < 400; seed++)
+      for (const damageType of ['physical', 'magic'] as const) {
+        const kinds = rarities.map((rarity) => generateItem(new RNG(seed), { slot: 'oneHand', rarity, allowCurse: false, damageType }).name)
+        const noun = (n: string) => Object.keys(ITEM_BASES).find((k) => n.includes(k))
+        expect(new Set(kinds.map(noun)).size).toBe(1)
+      }
+  })
+
+  it('the balance harness posts a hero with a sword clear of everyone, and lets two bows stand together', () => {
+    const swordsman = holding('rogue', 'Sword')
+    const team = [swordsman, holding('rogue', 'Bow'), holding('mystic', 'Wand'), holding('mystic', 'Staff')]
+    const out = deployTeam(FIRST_MAP, team.map((sentinel) => ({ sentinel, slotId: '' })))
+    const at = out.find((o) => o.sentinel.id === swordsman.id)!.slotId
+    for (const o of out) if (o.sentinel.id !== swordsman.id) expect(withinClearance(o.slotId, at)).toBe(false)
+    expect(conflictsAmong(out.map((o) => ({ hero: o.sentinel, tile: o.slotId })))).toEqual([])
   })
 })

@@ -218,7 +218,7 @@ function WaveBar() {
           {space ? (
             <MakeSpace head={space.head} fix={space.fix} />
           ) : held ? (
-            <StripCaption name="Held" now={moved ? 'Moved — send the next' : 'Move one hero'} tone="do" />
+            <StripCaption name="Held" now={moved ? 'Move made' : 'Move one hero'} tone="do" />
           ) : (
             <StripCaption
               name={waveName}
@@ -1464,34 +1464,37 @@ function ItemPanel({ item }: { item: Item }) {
             No prose line to go with it: the panel is ~176px wide with a pinned
             foot, and two more lines of explanation pushed the buttons they
             explain off the bottom of the scroll. */}
-        <div className="sh-craft">
-          <button
-            className="sh-btn small"
-            disabled={craft.purse < craft.reforgeCost}
-            onClick={craft.doReforge}
-            aria-label={`Reforge ${itemName(item)} — reroll its enchantments for ${moneyText(craft.reforgeCost, craft.currency)}`}
-          >
-            Reforge <Money amount={craft.reforgeCost} c={craft.currency} />
-          </button>
-          <button
-            className="sh-btn small"
-            disabled={!canUpgrade(item) || craft.purse < craft.upgradeCost}
-            onClick={craft.doUpgrade}
-            aria-label={
-              canUpgrade(item)
-                ? `Raise ${itemName(item)} one rarity tier for ${moneyText(craft.upgradeCost, craft.currency)}`
-                : `${itemName(item)} is already at the top rarity`
-            }
-          >
-            {canUpgrade(item) ? (
-              <>
-                Raise <Money amount={craft.upgradeCost} c={craft.currency} />
-              </>
-            ) : (
-              'Max rarity'
-            )}
-          </button>
-        </div>
+        {/* Mid-wave the whole item is locked (the foot says so): no crafting. */}
+        {!locked && (
+          <div className="sh-craft">
+            <button
+              className="sh-btn small"
+              disabled={craft.purse < craft.reforgeCost}
+              onClick={craft.doReforge}
+              aria-label={`Reforge ${itemName(item)} — reroll its enchantments for ${moneyText(craft.reforgeCost, craft.currency)}`}
+            >
+              Reforge <Money amount={craft.reforgeCost} c={craft.currency} />
+            </button>
+            <button
+              className="sh-btn small"
+              disabled={!canUpgrade(item) || craft.purse < craft.upgradeCost}
+              onClick={craft.doUpgrade}
+              aria-label={
+                canUpgrade(item)
+                  ? `Raise ${itemName(item)} one rarity tier for ${moneyText(craft.upgradeCost, craft.currency)}`
+                  : `${itemName(item)} is already at the top rarity`
+              }
+            >
+              {canUpgrade(item) ? (
+                <>
+                  Raise <Money amount={craft.upgradeCost} c={craft.currency} />
+                </>
+              ) : (
+                'Max rarity'
+              )}
+            </button>
+          </div>
+        )}
         {/*
          * Scrap lives HERE now, in the body beside the other things you can do
          * to an item, and it arms before it fires (Wave 1).
@@ -1504,7 +1507,7 @@ function ItemPanel({ item }: { item: Item }) {
          * shell's one destructive-confirm pattern) makes it a second decision
          * on a different control.
          */}
-        {!wearer && (
+        {!wearer && !locked && (
           <div className="sh-craft sh-scrap">
             <button
               className={`sh-btn small ${scrap.armed ? '' : 'quiet-danger'}`}
