@@ -300,8 +300,9 @@ td .det { color: var(--muted); display: block; margin-top: 3px; }
       return h('div', {}, done, shots, decisionControls(item.id, 'item', 'What should change?'));
     }
     if (item.reworked) return h('div', { class: 'done' }, h('span', { class: 'pill-re', text: `Reworked as ${item.reworked}` }), h('a', { href: `#item-${item.reworked}`, text: 'See round 2 ↑' }));
-    if (item.kind === 'question') return decisionControls(item.id, 'question', 'What should it be instead?');
-    return decisionControls(item.id, 'item', 'Approve as is, or tell me what to change and answer the questions.');
+    const pics = item.shots ? h('div', { class: 'thumbs' }, item.shots.map(sh => h('a', { class: 'thumb', href: sh.src, target: '_blank', rel: 'noopener', title: sh.caption }, h('img', { src: sh.src, alt: sh.caption, loading: 'lazy' }), h('span', { text: sh.caption })))) : null;
+    if (item.kind === 'question') return h('div', {}, pics, decisionControls(item.id, 'question', 'What should it be instead?'));
+    return h('div', {}, pics, decisionControls(item.id, 'item', 'Approve as is, or tell me what to change and answer the questions.'));
   }
 
   function renderPlan() {

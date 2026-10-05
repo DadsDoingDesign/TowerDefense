@@ -3,6 +3,11 @@
  "base": "main @ f3760d1",
  "streams": [
   {
+   "id": "round7",
+   "name": "Round 7 · the trade-route story",
+   "blurb": "Mockups for the new premise (private militias clearing trade routes), three rounds of design iteration, checked with Whales. These are concepts, not built yet. Approve, edit or reject each screen, and answer its questions in the note."
+  },
+  {
    "id": "round6",
    "name": "Round 6 · what the builders decided",
    "blurb": "No hero HP and the round-3 answers are built. The builders made these calls on the way; keep the default, change it, or drop it."
@@ -1593,7 +1598,293 @@
     "Map challenges, cursed ground and fight rolls depended on a counter shared across the page, so the same seed (including the Daily) could deal a different field after a fresh load. They come from the seed alone now, and saved runs keep their fields.",
     "Nothing to decide unless you'd rather Daily scores from before this fix were reset."
    ]
+  },
+  {
+   "id": "T0",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Direction: the night-lantern map",
+   "refs": [],
+   "proposal": [
+    "Three directions were tried: a pixel world map, cartographer's parchment, and a night map with lanterns.",
+    "Night lantern won. Every company's road stays readable on it (at least 4.7:1), it's the dark UI you already have with light added, and \"the route lights up\" is literal.",
+    "It borrows the daylight pixel terrain and the little cart from the pixel map, and the paper receipt for payouts and contract letters from the parchment one."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/r1-A-map.png",
+     "caption": "A · pixel map"
+    },
+    {
+     "src": "after/trade/r1-B-map.png",
+     "caption": "B · parchment"
+    },
+    {
+     "src": "after/trade/r1-C-map.png",
+     "caption": "C · night lantern"
+    },
+    {
+     "src": "after/trade/r1-A-stakes.png",
+     "caption": "A · stakes"
+    },
+    {
+     "src": "after/trade/r1-B-stakes.png",
+     "caption": "B · stakes"
+    },
+    {
+     "src": "after/trade/r1-C-stakes.png",
+     "caption": "C · stakes"
+    }
+   ],
+   "questions": [
+    "Night lantern: yes, or would you rather see more of A or B?"
+   ]
+  },
+  {
+   "id": "T1",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Menu over the trade map",
+   "refs": [],
+   "proposal": [
+    "Your company's name and gold sit over the map; the company roads glow brighter and carry more traffic as your standing grows.",
+    "Today's market price and the Sovereign Route (your charter) show under the map, with one big Choose a Contract button.",
+    "A first launch shows one faint road; a veteran's map is fully lit."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/1-menu-first.png",
+     "caption": "First launch"
+    },
+    {
+     "src": "after/trade/1-menu-mid.png",
+     "caption": "Mid-game"
+    },
+    {
+     "src": "after/trade/1-menu-vet.png",
+     "caption": "Veteran"
+    },
+    {
+     "src": "after/trade/1-menu-desk.png",
+     "caption": "Desk"
+    }
+   ]
+  },
+  {
+   "id": "T2",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Contract board",
+   "refs": [],
+   "proposal": [
+    "One card per company: crest, standing, the next unlock as a silhouette, the route's ground, the market tag, and a one-line contract letter."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/2-contracts.png",
+     "caption": "Contracts"
+    }
+   ]
+  },
+  {
+   "id": "T3",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Stakes: escort or carry cargo",
+   "refs": [],
+   "proposal": [
+    "Free escort on the left, carry cargo on the right. Crates add skills at milestones (+1 skill).",
+    "Danger is shown as pips, next to your own record (\"3 of 4 delivered\"), never as an invented probability.",
+    "A paper receipt shows what each city pays and your profit if the caravan arrives. Your purse for the road is set here."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/3-stakes.png",
+     "caption": "Staked"
+    },
+    {
+     "src": "after/trade/3-stakes-free.png",
+     "caption": "Free escort"
+    }
+   ],
+   "questions": [
+    "Standing caps how many crates you can stake (standing + 1). That isn't in the spec. Keep it?"
+   ]
+  },
+  {
+   "id": "T4",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "In a run: the caravan is the Gate",
+   "refs": [],
+   "proposal": [
+    "The Gate becomes your wagons. The header shows Cargo % instead of Gate HP; every raider that gets through steals 5%, and cities pay for what arrives."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/4b-battle.png",
+     "caption": "Battle"
+    },
+    {
+     "src": "after/trade/4-run.png",
+     "caption": "Route progress"
+    }
+   ],
+   "questions": [
+    "On a free escort, should Cargo % cut the escort fee? If not, leaks don't matter on free runs."
+   ]
+  },
+  {
+   "id": "T5",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Head home, or press on?",
+   "refs": [],
+   "proposal": [
+    "At each city: the payout lands, then the choice. Cash out (a sure amount) or press on (a bigger amount, with danger and your record, and what you'd lose)."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/5-payout.png",
+     "caption": "Checkpoint"
+    }
+   ],
+   "questions": [
+    "What does cashing out pay for leftover crates (the mockup says 30 each), and does it still earn standing and the contract skill?"
+   ]
+  },
+  {
+   "id": "T6",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Contract complete",
+   "refs": [],
+   "proposal": [
+    "The big payout, then unlock cards whose rarity rose with your stake."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/6-complete.png",
+     "caption": "Complete"
+    }
+   ]
+  },
+  {
+   "id": "T7",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Company HQ",
+   "refs": [],
+   "proposal": [
+    "Operations, Finance and HR as three offices, each with its upgrade track and per-run purchases."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/7-hq-ops.png",
+     "caption": "Operations"
+    },
+    {
+     "src": "after/trade/7-hq-finance.png",
+     "caption": "Finance"
+    },
+    {
+     "src": "after/trade/7-hq-hr.png",
+     "caption": "HR"
+    }
+   ]
+  },
+  {
+   "id": "T8",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Sealed crates (the item pull)",
+   "refs": [],
+   "proposal": [
+    "Spend gold on a random item unlock, with the odds shown plainly. A duplicate becomes a bonus item next run. It's framed as a gamble, secondary to playing."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/8-pull.png",
+     "caption": "Pull"
+    }
+   ]
+  },
+  {
+   "id": "T9",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "The Sovereign Route (charter)",
+   "refs": [],
+   "proposal": [
+    "Locked with a progress meter until everything is unlocked. Once open: one all-or-nothing contract, with each company's trade-off listed. It's the only source of the new top tier, Sovereign (cyan)."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/9-charter-locked.png",
+     "caption": "Locked"
+    },
+    {
+     "src": "after/trade/9-charter-open.png",
+     "caption": "Open"
+    }
+   ],
+   "questions": [
+    "Do all five companies' trade-offs apply at once, or do you pick some?",
+    "Does 'everything unlocked' include the HQ offices?"
+   ]
+  },
+  {
+   "id": "T10",
+   "stream": "round7",
+   "effort": "—",
+   "source": "claude",
+   "replaces": "your call",
+   "title": "Your militia banner",
+   "refs": [],
+   "proposal": [
+    "Name your company and pick a banner (shape and a dark field colour that never clashes with company colours). It flies on your wagons."
+   ],
+   "files": [],
+   "shots": [
+    {
+     "src": "after/trade/10-banner.png",
+     "caption": "Banner"
+    }
+   ],
+   "questions": [
+    "Militia names: free text, or picked from generated names? Free text needs moderation if it's ever shown to other players."
+   ]
   }
  ],
- "round": 6
+ "round": 7
 }

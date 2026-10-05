@@ -4,9 +4,132 @@ Branch `claude/whales-ui-critique-plan` · Whales project **Tower Defense Game**
 
 Whales critiqued 11 screens from one full run (menu → hero pick → run map → battle → spoils → merchant → defeat) on phone (390×844) and desk (1440×900). The designer confirmed every screen goal.
 
-**Status (round 6).** Rounds 1–3 and no hero HP are built; LS3 and LS4 (easy to pick up) are built too; try a first run in a private window. Round 6 lists the calls the builders made, for your review. Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
+**Status (round 7).** Trade-route story mockups are up for review. The classless heroes and the economy get built next (see docs/MERCENARY_COMPANY.md). Q2, Q6, Q7, Q9, Q11, Q13 and Q14 became the round-4 proposals (skill system, levels, exact stats, spreading fire), together with the Hall of Champions idea. Q15 is parked.
 
 Round-1 screenshots are in `shots/`; the latest build is in `after/`. `scripts/flow-shots.mjs` recaptures both.
+
+## Round 7 · the trade-route story
+
+Mockups for the new premise (private militias clearing trade routes), three rounds of design iteration, checked with Whales. These are concepts, not built yet. Approve, edit or reject each screen, and answer its questions in the note.
+
+### T0 · Direction: the night-lantern map
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Three directions were tried: a pixel world map, cartographer's parchment, and a night map with lanterns.
+- Night lantern won. Every company's road stays readable on it (at least 4.7:1), it's the dark UI you already have with light added, and "the route lights up" is literal.
+- It borrows the daylight pixel terrain and the little cart from the pixel map, and the paper receipt for payouts and contract letters from the parchment one.
+
+**Questions (answered by default when approved)**
+
+1. Night lantern: yes, or would you rather see more of A or B?
+
+### T1 · Menu over the trade map
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Your company's name and gold sit over the map; the company roads glow brighter and carry more traffic as your standing grows.
+- Today's market price and the Sovereign Route (your charter) show under the map, with one big Choose a Contract button.
+- A first launch shows one faint road; a veteran's map is fully lit.
+
+### T2 · Contract board
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- One card per company: crest, standing, the next unlock as a silhouette, the route's ground, the market tag, and a one-line contract letter.
+
+### T3 · Stakes: escort or carry cargo
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Free escort on the left, carry cargo on the right. Crates add skills at milestones (+1 skill).
+- Danger is shown as pips, next to your own record ("3 of 4 delivered"), never as an invented probability.
+- A paper receipt shows what each city pays and your profit if the caravan arrives. Your purse for the road is set here.
+
+**Questions (answered by default when approved)**
+
+1. Standing caps how many crates you can stake (standing + 1). That isn't in the spec. Keep it?
+
+### T4 · In a run: the caravan is the Gate
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- The Gate becomes your wagons. The header shows Cargo % instead of Gate HP; every raider that gets through steals 5%, and cities pay for what arrives.
+
+**Questions (answered by default when approved)**
+
+1. On a free escort, should Cargo % cut the escort fee? If not, leaks don't matter on free runs.
+
+### T5 · Head home, or press on?
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- At each city: the payout lands, then the choice. Cash out (a sure amount) or press on (a bigger amount, with danger and your record, and what you'd lose).
+
+**Questions (answered by default when approved)**
+
+1. What does cashing out pay for leftover crates (the mockup says 30 each), and does it still earn standing and the contract skill?
+
+### T6 · Contract complete
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- The big payout, then unlock cards whose rarity rose with your stake.
+
+### T7 · Company HQ
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Operations, Finance and HR as three offices, each with its upgrade track and per-run purchases.
+
+### T8 · Sealed crates (the item pull)
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Spend gold on a random item unlock, with the odds shown plainly. A duplicate becomes a bonus item next run. It's framed as a gamble, secondary to playing.
+
+### T9 · The Sovereign Route (charter)
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Locked with a progress meter until everything is unlocked. Once open: one all-or-nothing contract, with each company's trade-off listed. It's the only source of the new top tier, Sovereign (cyan).
+
+**Questions (answered by default when approved)**
+
+1. Do all five companies' trade-offs apply at once, or do you pick some?
+2. Does 'everything unlocked' include the HQ offices?
+
+### T10 · Your militia banner
+
+*Effort — · from Claude · awaiting your decision*
+
+**Proposed change**
+
+- Name your company and pick a banner (shape and a dark field colour that never clashes with company colours). It flies on your wagons.
+
+**Questions (answered by default when approved)**
+
+1. Militia names: free text, or picked from generated names? Free text needs moderation if it's ever shown to other players.
 
 ## Round 6 · what the builders decided
 
