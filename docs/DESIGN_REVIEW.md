@@ -2788,3 +2788,46 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   road's end, so on some fields it sits on open tiles a hero may stand on (it
   draws under heroes and takes no taps); the trade map menu (step 4) will
   give the board its night map strip.
+
+- **2026-10-05 — The mercenary company, step 4: the trade-map menu and your
+  militia's banner.** The menu's background is now the night-lantern trade map
+  (`ui/attract/TradeMap.tsx`): the HQ town, the five company roads lit by
+  standing and carrying traffic (1 + 0.75 × standing pulses, 8–14 s a road, a
+  wagon every third pulse from Standing 7), labels with standing and the
+  market tag, a locked "Sovereign Route" line for step 5, the banner over the
+  HQ. The attract battle and the still key art are retired. Rendered in the
+  running app at 390×844 @2x, 320×568 @2x and 1440×900 @2x for a first launch,
+  a mid save and a veteran (`~/fieldwatch-critique/tradmap/menu-r3-*`), under
+  reduced motion (`reduced-final-*`), the brighten frame by frame
+  (`brighten-r2-*`), the banner picker and its tip (`banner-final-*`,
+  `tip-final-*`), Settings (`settings-militia-*`) and the wagon on both fields
+  in both orientations (`wagon-final-*`), against the approved mockups
+  (`trade/r3/1-menu-*`, `10-banner`, `4b-battle`). The loop caught: (1) the
+  vignette and the desk's side wash were dropped by a stacking rule that also
+  made the shade a grid cell — fixed, the desk now matches `1-menu-desk`;
+  (2) the desk fanned its roads as on a phone (a "wide" test at 1.15× missed a
+  994×900 window) and clipped the Scrolls label at the top; (3) five road
+  glows stacked on the hub burned it white on a veteran's map — the glows now
+  start a few px out and the hub light is softer; (4) on a 320×568 phone the
+  labels piled up — they are placed best road first and nudged to the nearest
+  free spot, and a short map shows crest-and-number labels; (5) the bank chip
+  sat on the wordmark at 390 wide — a smaller wordmark there, and a
+  left-aligned head on narrow phones; (6) "Peppercorn Co. · Standing 5"
+  wrapped in the market ribbon — the crest already names the company, so it
+  says "Standing 5"; (7) the uncharted pins showed their company's colour rail
+  — they no longer give it away; (8) the picker's caption covered its banner;
+  (9) "Tower" and "Mark" are retired words (LS4) — the emblems are Keep,
+  Sword and Sun. The wagon moved off the field's open ground into the forest
+  margin where the road leaves (searched, not authored; `tests/caravan.test.ts`
+  holds 64 field layouts to it). Benchmark: the map reads like Slay the
+  Spire's act map crossed with Kingdom Rush's world map at night — your
+  progress is the picture, the CTA stays the heaviest thing on screen, and
+  every number on the map is also said in words. Scorecard: readability 4/5
+  (a 320×568 phone keeps only crest-and-number labels), hierarchy 4/5,
+  polish 4/5. Cost, measured under a 4× CPU throttle (dev build): one canvas
+  at 29–30 fps, 0.5–1.2 ms a frame on average (p95 ≤ 5.4 ms) on a phone and a
+  desk, no long task while it runs, and no frame at all hidden or under
+  reduced motion. (10) The terrain bake was one ~110 ms task on a desk (~190–
+  250 ms on a throttled phone, cold): it now writes packed pixels, skips the
+  shore test away from the sea, is cached per layout, and runs in ≤ 6 ms
+  slices while the menu is already usable; the map fades up when it lands.
