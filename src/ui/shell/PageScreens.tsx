@@ -296,7 +296,7 @@ export function PageScreen({
               // A2: the purse after this gold purchase, where you commit to it.
               after:
                 !confirm.armed && !selected.action.disabled && selected.action.cost?.currency === 'gold'
-                  ? `${gold - selected.action.cost.amount} left`
+                  ? `${(onHub ? bank : gold) - selected.action.cost.amount} left`
                   : undefined,
             }
           : receipt

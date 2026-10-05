@@ -2757,3 +2757,34 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   4/5, polish 4/5. Balance (not tuned): the committed report was stale (taken
   from one side of the SK1 merge); against a true 4a50bd4 baseline, Monte Carlo
   39% → 57%, first-timer 12% → 14%, adaptive 14% → 16%, invariants 38 → 50.
+
+- **2026-10-05 — The mercenary company, step 2: the economy core.** Gold is
+  the only currency (Marks became bank gold; dust went with the Endless
+  Forge), a run is a contract for one of five trade companies, standing per
+  company replaced the Watch level, and the Daily and Endless are gone.
+  Rendered in the running app at 390×844 @2x and 1440×900 @2x
+  (`~/fieldwatch-critique/economy/v5-*`: menu, first-timer menu and hero
+  pick, contract board, terms free and staked, the map with the road panel,
+  battle setup and live with the wagons, a city's payout, a cash-out, a
+  delivery and a fall; Watchtower and Codex) and compared with the approved
+  night-lantern mockups (`trade/r3/2`–`6`). The loop caught: (1) the city page
+  opened under the battle summary's "Continue" — the payout now waits behind
+  it, as the reward hand does, and the store refuses a march while a city's
+  question is open; (2) the road panel took ~300px of a phone's map (two
+  pills on their own rows) — one compact line now; (3) "Your 200-gold stake
+  is back, plus a fee" under a +300 payout hid the market's 60 — it now says
+  "with 60 more"; (4) the receipt's item-chance tag drew an atlas blade that
+  vanished on parchment — a pixel sword; the locked rung's padlock was dark on
+  dark in the mockups — it is light here; (5) a first-timer never sees the
+  board, so the hero pick now carries the contract chip ("Peppercorn Co. ·
+  escort to Pepperport · purse 60"); (6) the act bosses were "ACT BOSS" on the
+  map — they carry their city's name; (7) the Watchtower's Buy said "→ 0
+  left" from the purse — it reads the bank there. Benchmark: the city reads
+  like Slay the Spire's boss chest crossed with a push-your-luck table (Balatro's
+  cash-out) — the gold leads, the question is in the display serif, and each
+  door states its whole consequence in gold. Scorecard: readability 4/5 (the
+  phone's map is short under the road panel and a coach tip), hierarchy 4/5,
+  polish 4/5. Still open: the wagon is drawn inside the field beside the
+  road's end, so on some fields it sits on open tiles a hero may stand on (it
+  draws under heroes and takes no taps); the trade map menu (step 4) will
+  give the board its night map strip.
