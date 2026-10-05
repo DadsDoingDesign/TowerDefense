@@ -1175,7 +1175,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             id: 'hq',
             title: 'Headquarters',
             sub: `${moneyText(meta.bank, 'gold')} banked`,
-            icon: 'gold',
+            icon: 'base',
             immediate: true,
             body: ['Your militia’s three offices: HR, Finance and Operations. Gold from your bank buys upgrades that last.'],
             action: { label: 'Open', run: () => setView('hq') },

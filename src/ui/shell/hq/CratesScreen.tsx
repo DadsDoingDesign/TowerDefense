@@ -8,7 +8,6 @@ import { useSettingsStore } from '../../../state/settingsStore'
 import { itemIcon, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate } from '../../pixel'
-import { SkillCard } from '../SkillCards'
 import { MenuRow } from '../Page'
 import { ContractPage, Gold, PageTip, Slip } from '../contracts/parts'
 
@@ -95,11 +94,18 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
       {!taught && <PageTip>A crate is a gamble. Delivering a contract always unlocks an item.</PageTip>}
 
       {last && k && (
-        <div className="hq-pulled" role="status" aria-live="polite">
-          <SkillCard
-            kicker={last.duplicate ? 'Already yours · bonus item next contract' : 'New item unlocked'}
-            skill={{ name: last.kind, level: `${SLOT_WORD[k.slot]} · Level ${k.level}`, text: k.does }}
-          />
+        <div className={`hq-pulled${last.duplicate ? ' dup' : ''}`} role="status" aria-live="polite">
+          <span className="hq-pulled-icon" aria-hidden="true">
+            <Icon name={kindIcon(last.kind)} lg />
+          </span>
+          <span className="hq-pulled-text">
+            <span className="hq-pulled-k">{last.duplicate ? 'Already yours — a bonus item next contract' : 'New item unlocked'}</span>
+            <b>{last.kind}</b>
+            <small>
+              {SLOT_WORD[k.slot]} · Level {k.level}
+            </small>
+            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : k.does}</span>
+          </span>
         </div>
       )}
 
@@ -124,8 +130,15 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
           {lift > 0
             ? `Your standing with the companies moves ${lift} point${lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.`
             : 'Standing with any company moves the odds toward Levels 2 and 3.'}{' '}
-          A kind you don’t have yet: <b>{fresh}%</b>.
+          {fresh > 0 ? (
+            <>
+              A kind you don’t have yet: <b>{fresh}%</b>.
+            </>
+          ) : (
+            <b>You own every kind: each crate is a bonus item.</b>
+          )}
         </p>
+        {!can && <p className="hq-note">Your bank holds {bank.toLocaleString('en')} gold; a crate is {PULL_PRICE}.</p>}
       </section>
 
       <section className="hq-pool" aria-label="Some of what is in the crates">

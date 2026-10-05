@@ -77,6 +77,11 @@ export function ResultScreen() {
             </p>
           )}
           <p className="ct-sub">{sub}</p>
+          {home && (home.purseBack > 0 || home.road > 0) && (
+            <p className="ct-sub ct-home">
+              Purse returned {home.purseBack} · Road gold {home.road} → {home.roadBanked} banked ({home.pct}%)
+            </p>
+          )}
         </div>
       }
       cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
@@ -105,11 +110,7 @@ export function ResultScreen() {
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
           <SlipLine total label="To your bank" value={`+${deposit} gold`} />
-          {home && (home.purseBack > 0 || home.road > 0) && (
-            <p className="ct-slip-note">
-              Purse returned {home.purseBack} · Road gold {home.road} → {home.roadBanked} banked ({home.pct}%)
-            </p>
-          )}
+
           {contractBanked(c) === 0 && outcome === 'lost' && <p className="ct-slip-note">No city was reached, so none paid.</p>}
         </Slip>
       )}

@@ -30,7 +30,7 @@ import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { companyVar, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
-import { Crest } from '../../pixel'
+import { Crest, Lock } from '../../pixel'
 import { heroArt } from '../offers'
 import { ContractPage, Gold, PageTip } from '../contracts/parts'
 
@@ -179,13 +179,13 @@ function HrOffice() {
               </span>
             ) : (
               <span key={i} className="hq-hero locked">
-                <Icon name="deploy" />
+                <Lock scale={3} />
               </span>
             ),
           )}
         </div>
         <Row k="Now" v={dealSummary(deal.level)} />
-        {next && <Row k={`Level ${deal.level + 1}`} v={next.line} />}
+        {next && <Row k={`Level ${deal.level + 1}`} v={next.line.replace(/\.$/, '')} />}
         <BuyButton label={`Upgrade to level ${deal.level + 1}`} cost={deal.cost} can={deal.can} run={deal.buy} done="The best opening deal there is." />
       </Card>
       <Card title="Hiring Hall" line="A second Recruit stop on every map, and hires arrive trained for the depth you hire them at.">
