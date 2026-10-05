@@ -11,19 +11,13 @@ export const MAX_BASE_HP = 20
 export const START_GOLD = 60
 export const MAX_ROSTER = 5
 
-// Endless Watch starting pool + tuning.
-export const ENDLESS_START_GOLD = 200
-export const ENDLESS_START_DUST = 30
-export const ENDLESS_LIVES = 3
 
 export const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
 /** What a merchant charges for the hire on its shelf. */
 export const RECRUIT_PRICE = 80
-/** Gold / dust recovered when dismantling an item, by rarity. */
+/** Gold recovered when scrapping an item, by rarity (gold is the only currency). */
 const SCRAP_GOLD: Record<ItemRarity, number> = { common: 8, rare: 18, epic: 40, legendary: 75, mythic: 130 }
-const SCRAP_DUST: Record<ItemRarity, number> = { common: 2, rare: 4, epic: 8, legendary: 14, mythic: 22 }
 export const scrapGold = (item: Item): number => SCRAP_GOLD[item.rarity]
-export const scrapDust = (item: Item): number => SCRAP_DUST[item.rarity]
 
 /** Inventory sort: rarity (highest first), then kind, then name. */
 export function sortItems(items: Item[]): Item[] {
@@ -44,8 +38,6 @@ export interface ShelfEntry {
 
 /** A campaign merchant's luck at a map layer. */
 export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.04)
-/** An Endless merchant room's luck at a round. */
-export const endlessMerchantLuck = (round: number): number => Math.min(0.4, round * 0.03)
 
 /**
  * A merchant's four-item shelf.

@@ -65,9 +65,7 @@ describe('copy', () => {
   })
   it('money reads in words', () => {
     expect(moneyText(60, 'gold')).toBe('60 gold')
-    expect(moneyText(1, 'marks')).toBe('1 Mark')
-    expect(moneyText(3, 'marks')).toBe('3 Marks')
-    expect(moneyText(12, 'dust')).toBe('12 dust')
+    expect(moneyText(1)).toBe('1 gold')
   })
 })
 

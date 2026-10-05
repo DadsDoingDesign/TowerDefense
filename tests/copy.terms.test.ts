@@ -13,8 +13,10 @@ import { describe, expect, it } from 'vitest'
  *    never "the company" (the group is "your heroes");
  *  - the run's difficulty multiplier is **"Enemy strength +N%"**, never
  *    "Threat ×1.06" — "Threat" now names only the targeting order;
- *  - the meta currency is **Marks**; "Watch Marks" is said once, where it is
- *    explained ("Watch Marks (Marks)").
+ *  - gold is the only currency (the mercenary company): no **Marks**, and the
+ *    long game is **standing** with a company, not a "Watch level";
+ *  - the **Daily**, **Endless** and the **Vow** are gone: no player text names
+ *    them.
  *
  * Comments and code identifiers are not player-facing and are not checked.
  * The allow-list is short on purpose, and each entry says why.
@@ -30,10 +32,11 @@ const RULES: { name: string; bad: RegExp; allow?: (text: string) => boolean }[] 
   },
   { name: 'tower(s) — say "hero(es)"', bad: /\btowers?\b/i },
   {
-    // Case-sensitive: `company` is also an atlas icon key. Proper names that
-    // mean the group ("Full Company", "Free Companies") are fine.
-    name: 'the company — say "your heroes"',
-    bad: /\b([Tt]he|[Ww]hole|[Yy]our|[Aa]) company\b|\bcompany (is|full)\b|^Company\b/,
+    // Case-sensitive: `company` is also an atlas icon key. Since the
+    // mercenary company, "a company" is a TRADE company ("Pick a company") —
+    // the group of heroes is still never "the company" or "your company".
+    name: 'the company (your heroes) — say "your heroes"',
+    bad: /\b([Tt]he|[Ww]hole|[Yy]our) company\b|\bcompany (is|full)\b/,
   },
   {
     name: 'Threat as the difficulty — say "Enemy strength +N%"',
@@ -53,11 +56,13 @@ const RULES: { name: string; bad: RegExp; allow?: (text: string) => boolean }[] 
     // for designers (`data/skills.ts`), never printed.
     allow: (t) => /\bperk\b/.test(t),
   },
-  {
-    name: 'Watch Marks — say "Marks" (after the one explanation)',
-    bad: /\bWatch Marks?\b/,
-    allow: (t) => /Watch Marks \(Marks\)/.test(t),
-  },
+  // The mercenary company: gold is the only currency, standing replaced the
+  // Watch level, and the Daily, Endless and the Vow are gone.
+  { name: 'Marks — gold is the only currency', bad: /\bMarks?\b/ },
+  { name: 'Watch level — say "standing"', bad: /\bWatch level\b/i },
+  { name: 'Daily — removed', bad: /\bDaily\b/ },
+  { name: 'Endless — removed', bad: /\bEndless\b/ },
+  { name: 'Vow — say "stake"', bad: /\bVows?\b/ },
 ]
 
 function sources(dir: string): string[] {

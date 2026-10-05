@@ -15,7 +15,7 @@ import type { GameData } from './types'
  */
 export type StartWaveGate = Pick<
   GameData,
-  'screen' | 'runPhase' | 'mode' | 'currentWave' | 'lastResult' | 'engine' | 'battlePhase' | 'activeNodeId' | 'clearedNodeIds'
+  'screen' | 'runPhase' | 'currentWave' | 'lastResult' | 'engine' | 'battlePhase' | 'activeNodeId' | 'clearedNodeIds'
 >
 
 /**
@@ -39,11 +39,9 @@ export function canStartWave(s: StartWaveGate): boolean {
   if (s.lastResult) return false
   if (s.engine) return false
   if (s.battlePhase !== 'setup') return false
-  if (s.mode === 'campaign') {
-    // No node, no campaign wave: there is nothing to pay out into.
-    if (!s.activeNodeId) return false
-    if (s.clearedNodeIds.includes(s.activeNodeId)) return false
-  }
+  // No node, no wave: there is nothing to pay out into.
+  if (!s.activeNodeId) return false
+  if (s.clearedNodeIds.includes(s.activeNodeId)) return false
   return true
 }
 
@@ -59,7 +57,7 @@ export function canStartWave(s: StartWaveGate): boolean {
  * next settle paid it all over again.
  */
 export const isLiveRun = (s: Pick<GameData, 'runPhase' | 'screen' | 'runSettled'>): boolean =>
-  s.runPhase === 'active' && s.screen !== 'hub' && !s.runSettled
+  s.runPhase === 'active' && s.screen !== 'hub' && s.screen !== 'contracts' && !s.runSettled
 
 export const rarityColor = (r: ItemRarity) => RARITY[r].color
 
@@ -70,8 +68,8 @@ export const rarityColor = (r: ItemRarity) => RARITY[r].color
  * spawns with it and `finishBattle` prices the wave's XP with it, so the two
  * read one number.
  */
-export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'mode' | 'activeNodeId' | 'runMap'>): number {
-  const node = s.mode === 'campaign' && s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
+export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'activeNodeId' | 'runMap'>): number {
+  const node = s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
   return s.enemyHpMult * s.threat * nodeThreatMult(node?.type)
 }
 

@@ -3,6 +3,7 @@ import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 import { MAX_ROSTER as MAX_HEROES } from '../game/run/economy'
+import type { CompanyId } from '../game/data/companies'
 import type { IdeaId } from '../state/staging'
 
 /**
@@ -93,41 +94,31 @@ export const archetypeVar = (archetype: string): string =>
 export const ARCHETYPE_GLYPH: Readonly<Record<string, string>> = ARCHETYPE_GLYPH_TABLE
 
 /**
- * Currency marks, as TEXT — deprecated, and imported by nothing in the shell.
- * Every currency is drawn with its atlas cell ({@link CURRENCY_ICON}) and named
- * in words in prose ({@link CURRENCY_NAME}). Delete once nothing imports it.
- *
- * Wave 1: the shell used to print `⟡ 240` beside a pixel coin — two marks for
- * one currency, one of them a system-font glyph that ALSO meant "Merchant" on
- * the run map. One mark per currency now: the coin, the dust crystal, the
- * Watch Mark star.
+ * Gold is the only currency (the mercenary company): Marks and dust are gone.
+ * It is drawn with the pixel coin ({@link CURRENCY_ICON}) and named in words in
+ * prose ({@link CURRENCY_NAME}). In a run it is the PURSE; at home it is the
+ * BANK — the same gold, two places to keep it.
  */
-export const CURRENCY_GLYPH = { gold: '⟡', dust: '◈', marks: '✦' } as const
+export type Currency = 'gold'
 
-export type Currency = 'gold' | 'dust' | 'marks'
+/** The one drawn mark for the currency. */
+export const CURRENCY_ICON: Record<Currency, IconKey> = { gold: 'gold' }
 
-/** The one drawn mark for each currency. */
-export const CURRENCY_ICON: Record<Currency, IconKey> = { gold: 'gold', dust: 'dust', marks: 'marks' }
+/** The currency in words — what prose and accessible names say. */
+export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold' }
+
+/** "60 gold". Every amount carries its unit. */
+export const moneyText = (amount: number, _c: Currency = 'gold'): string => `${amount} gold`
 
 /**
- * The currency in words — what prose and accessible names say.
- *
- * LS4 — one name per thing: the meta currency is **Marks**. Its full name,
- * "Watch Marks", is said once, where it is first explained
- * ({@link MARKS_INTRO}), and nowhere else.
+ * A trade company's hue, as the CSS token the UI paints with (`--co-<id>` in
+ * global.css). A fill and a light, never text: a company's name is cream, and
+ * its crest and name always ride beside the colour.
  */
-export const CURRENCY_NAME: Record<Currency, string> = { gold: 'gold', dust: 'dust', marks: 'Marks' }
+export const companyVar = (id: CompanyId): string => `var(--co-${id})`
 
-/** "60 gold", "12 dust", "1 Mark". */
-export const moneyText = (amount: number, c: Currency): string =>
-  c === 'marks' ? `${amount} Mark${amount === 1 ? '' : 's'}` : `${amount} ${CURRENCY_NAME[c]}`
-
-/**
- * The one place the meta currency's full name is spoken (LS4): its first
- * explanation, on the run-end receipt and the Watchtower. Everywhere else says
- * "Marks".
- */
-export const MARKS_INTRO = 'Watch Marks (Marks) buy permanent upgrades in the Watchtower — they carry into every future run.'
+/** The bank and the purse, said once where they are first explained (LS4). */
+export const BANK_INTRO = 'Gold you bring home goes in the bank. Stakes and purses come out of it.'
 
 /**
  * Enemy strength, in words (LS4).
@@ -708,8 +699,20 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     line: 'Each one hits whatever walks inside its ring. What a hero does comes from its gear: a sword or axe swings up close, a bow or dagger strikes from far away, a wand or staff casts magic at a group, and a shield holds enemies on the road.',
   },
   post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave starts.' },
-  gate: { term: 'Gate', line: 'Your keep at the end of the road. Goblins that reach it hurt it; if it falls, the run ends.' },
-  gold: { term: 'Gold', line: 'Paid out by every fight. Spend it at a Merchant.' },
+  cargo: {
+    term: 'Cargo',
+    line: 'What your wagons carry, at the end of the road. Each raider that reaches them steals some. Every city pays for the share that arrives; at 0% the contract is lost.',
+  },
+  gold: { term: 'Gold', line: 'The only currency. Fights pay it on the road, and cities pay it into your bank. Spend it at a Merchant.' },
+  contract: {
+    term: 'Contract',
+    line: 'A trade company hires your militia to guard its road for one run. The road has three cities, one at the end of each act.',
+  },
+  escort: { term: 'Escort', line: 'A contract with no stake. Every city pays a fee and the last pays a bonus. Nothing to lose.' },
+  city: {
+    term: 'City',
+    line: 'Where an act ends. The caravan sells cargo there and you are paid. At the first two you may cash out and head home, or press on.',
+  },
   subwave: { term: 'Sub-wave', line: 'A wave comes in parts. Between them the fight pauses, and you may move one hero.' },
   speed: { term: 'Speed', line: 'Fast-forwards a fight: 1×, 2× or 3×.' },
   depth: { term: 'Depth', line: 'How far down the road you are. The boss waits at the end.' },
@@ -717,9 +720,9 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   command: { term: 'Watch Command', line: 'An order you give once per sub-wave, such as Rally Horn.' },
   strength: { term: 'Enemy strength', line: 'How much more HP every goblin has than at the start of the run. It rises at every stop.' },
   recruit: { term: 'Recruit', line: `A stop where a hero joins you. You can lead up to ${MAX_HEROES} heroes.` },
-  merchant: { term: 'Merchant', line: 'A stop that sells gear, a hire and Gate repair, for gold.' },
+  merchant: { term: 'Merchant', line: 'A stop that sells gear, a hire and a wagon repair (it wins back cargo), for gold.' },
   shrine: { term: 'Shrine', line: 'A bargain: a boon for all your heroes, paid for with a curse.' },
-  campfire: { term: 'Campfire', line: 'A stop to rest (the Gate mends) or to train a hero.' },
+  campfire: { term: 'Campfire', line: 'A stop to rest (stray cargo is rounded up) or to train a hero.' },
   elite: { term: 'Elite', line: 'A tougher fight whose spoils always include a relic.' },
   relic: { term: 'Relic', line: 'Helps all your heroes for the rest of the run.' },
   skill: {
@@ -727,14 +730,22 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     line: 'Something a hero does — attack faster, hold more enemies, burn what it hits. Each hero starts with one and holds up to three.',
     also: [
       { term: 'Skill level', line: 'Level 1, 2 or 3. A hero is offered three skills of one level at hero levels 5 (Level 1), 10 (Level 2) and 15 (Level 3). With three already, it swaps one out or takes +stats instead.' },
-      { term: 'Watch level', line: 'Every run earns Watch XP. Each Watch level unlocks one new skill and one new item for your heroes to be dealt.' },
       { term: 'Collection', line: 'Every skill and item you have unlocked. Heroes, loot and offers are dealt only from it.' },
     ],
   },
   danger: { term: 'Cursed ground', line: 'Skull tiles. A hero may stand there, but deals much less damage.' },
-  challenge: { term: 'Map challenge', line: 'A field changed for one fight — Flooded meadow (lakes) or Wildfire (flames).' },
-  marks: { term: 'Marks', line: 'Watch Marks (Marks): earned by every run, spent in the Watchtower on bonuses that carry into every run.' },
-  difficulty: { term: 'Difficulty', line: 'How hard your runs are. Each step makes enemies 8% stronger and adds one elite to each act. A win at your highest step raises it and unlocks a skill and an item; you can lower it before any run.' },
-  daily: { term: 'Daily Watch', line: 'One shared road a day. Your first try each day is scored.' },
-  endless: { term: 'Endless Watch', line: 'Wave after wave, with three retries.' },
+  challenge: {
+    term: 'Map challenge',
+    line: 'A field changed for one fight. Each road has its own ground: wildfire, flooded canals, quarry boulders or cursed ground.',
+  },
+  bank: { term: 'Bank', line: 'Your gold at home. Stakes and purses come out of it; city pay and what is left of a purse go back in.' },
+  purse: { term: 'Purse', line: 'Gold you take on the road. Merchants and repairs spend only the purse and what the run earns; the rest comes home.' },
+  standing: {
+    term: 'Standing',
+    line: 'How well a company knows your militia. Its contracts raise it. Each level unlocks a skill, and lets you carry one more crate.',
+  },
+  stake: {
+    term: 'Stake',
+    line: 'Crates of cargo you buy for a contract. More crates: tougher raiders, a bigger bonus, more item chances, and a skill at every milestone crate.',
+  },
 }

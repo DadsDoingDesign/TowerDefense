@@ -29,9 +29,9 @@ import {
   tileId,
 } from '../src/game/data/terrain'
 import { carryPlacements, emptyPlacements, meleeOf } from '../src/game/run/map'
-import { CHALLENGE_SHARE, endlessTerrainRule, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
+import { CHALLENGE_SHARE, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import type { GameMap, TerrainRuleId } from '../src/game/types'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
@@ -278,12 +278,6 @@ describe('which battles carry a map challenge', () => {
     expect(Math.abs(ruled / eligible - CHALLENGE_SHARE)).toBeLessThan(0.08)
     // With no route named, a battle draws from the open ground every road used to share.
     expect([...seen].sort()).toEqual([...OPEN_GROUND].sort())
-  })
-
-  it('endless: plain for the first rounds and every boss round', () => {
-    for (const r of [1, 2, 10, 20, 30]) expect(endlessTerrainRule(r, 5)).toBeNull()
-    const some = Array.from({ length: 40 }, (_, i) => endlessTerrainRule(i + 3, 5)).filter(Boolean)
-    expect(some.length).toBeGreaterThan(10)
   })
 })
 

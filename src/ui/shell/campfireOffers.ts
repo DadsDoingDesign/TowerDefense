@@ -95,7 +95,7 @@ export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
  */
 export function merchantServiceOffers(st: St): Offer[] {
   const m = st.merchant
-  if (!m || st.mode !== 'campaign') return []
+  if (!m) return []
   const out: Offer[] = []
   if (m.repair) {
     const r = m.repair

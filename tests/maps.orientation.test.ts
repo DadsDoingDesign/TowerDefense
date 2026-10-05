@@ -19,7 +19,7 @@ import type { Archetype, GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 

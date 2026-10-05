@@ -5,7 +5,6 @@ import type { MapNode } from '../src/game/data/runmap'
 import type { RewardCard } from '../src/game/data/rewards'
 import { classicHero } from '../src/game/data/sentinels'
 import { xpToReach } from '../src/game/engine/leveling'
-import { endlessRoundSpoils } from '../src/game/run/battle'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
 import { forkFires } from '../src/game/run/map'
 import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
@@ -16,7 +15,6 @@ import {
   ACT_LAYERS,
   ACT_STEPS,
   RUN_LAYERS,
-  THREAT_PER_ROUND,
   actOf,
   clearBonusGold,
   encounterThreat,
@@ -26,7 +24,6 @@ import {
   nodeKind,
   nodeThreatMult,
   threatAfterLayer,
-  threatAfterRound,
   threatAtLayer,
 } from '../src/game/run/threat'
 import { CAMPFIRE_REPAIR, canTrain, restAtCampfire, restGain, trainAtCampfire, xpToNextLevel } from '../src/game/run/campfire'
@@ -40,7 +37,7 @@ import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelf
 import { recruitSkill } from '../src/game/run/skills'
 import { STARTER_SKILLS } from '../src/game/data/skills'
 import { computeCombat } from '../src/game/engine/combat'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import type { Sentinel } from '../src/game/types'
 
 const node = (type: MapNode['type'], layer = 3): MapNode => ({ id: `n-${type}-${layer}`, type, layer, row: 0 }) as MapNode
@@ -86,11 +83,6 @@ describe('threat maths (game/run/threat)', () => {
     expect(mapKind(node('battle'))).toBe('normal')
     expect(encounterNode(node('miniboss', 4)).type).toBe('boss')
     expect(encounterNode(node('battle')).type).toBe('battle')
-  })
-
-  it('an Endless elite round compounds harder than a plain one', () => {
-    expect(threatAfterRound(1, false)).toBe(THREAT_PER_ROUND)
-    expect(threatAfterRound(1, true)).toBe(THREAT_PER_ROUND * 1.08)
   })
 
   it('purse and luck follow the map kind', () => {
@@ -319,46 +311,27 @@ describe('recruit scaling (game/run/recruits)', () => {
 
 describe('settle payout (game/run/settle)', () => {
   const facts = (over: Partial<SettleFacts> = {}): SettleFacts => ({
-    mode: 'campaign', depth: 3, kills: 10, wins: 0, difficulty: 0, challenge: STANDARD_RUN, ...over,
+    depth: 3, kills: 10, gold: 50, contract: null, challenge: STANDARD_RUN, ...over,
   })
 
-  it('pays nothing for a run that was never played', () => {
+  it('pays nothing for a run that was never played and never signed', () => {
     expect(runWasPlayed(facts({ depth: 0, kills: 0 }))).toBe(false)
-    expect(planPayout(facts({ depth: 0, kills: 0 }), 5)).toEqual({ kind: 'none' })
-    expect(planPayout(facts({ mode: 'endless', depth: 0, kills: 0 }), 5)).toEqual({ kind: 'none' })
+    expect(planPayout(facts({ depth: 0, kills: 0 }))).toEqual({ kind: 'none' })
   })
 
-  it('closes an abandoned scored Daily instead of paying it', () => {
-    const daily = { kind: 'daily' as const, date: '2026-09-29', scored: true }
-    expect(planPayout(facts({ depth: 0, kills: 0, challenge: daily }), 0)).toEqual({ kind: 'closeDaily', date: '2026-09-29' })
-  })
-
-  it('clamps a claimed difficulty step to what the save has reached (F8)', () => {
-    const plan = planPayout(facts({ difficulty: 5 }), 1)
-    expect(plan.kind === 'grant' && plan.grant.difficulty).toBe(1)
-  })
-
-  it('Endless settles through the same ledger, on rounds won', () => {
-    expect(planPayout(facts({ mode: 'endless', wins: 7 }), 0)).toEqual({
-      kind: 'grant',
-      grant: { mode: 'endless', depth: 7, won: false, kills: 10 },
-    })
+  it('a pre-contract run (an Endless one included) is owed its old Marks, as gold', () => {
+    const plan = planPayout(facts({ legacyGold: 56 }))
+    expect(plan.kind === 'grant' && plan.grant.deposit).toBe(56)
+    expect(plan.kind === 'grant' && plan.grant.contract).toBeNull()
   })
 
   it('a custom seed pays but is unranked', () => {
-    const plan = planPayout(facts({ challenge: { kind: 'seeded', date: null, scored: false } }), 0)
-    expect(plan.kind === 'grant' && plan.grant.ranked).toBe(false)
+    const plan = planPayout(facts({ challenge: { kind: 'seeded' } }))
+    expect(plan.kind === 'grant' && plan.grant.unranked).toBe(true)
   })
 })
 
 describe('run structure helpers', () => {
-  it('endless spoils: every 10th a boss, other 5ths elite', () => {
-    expect(endlessRoundSpoils(3)).toMatchObject({ isBoss: false, isElite: false, dustGain: 5, lootCount: 1 })
-    expect(endlessRoundSpoils(5)).toMatchObject({ isBoss: false, isElite: true, dustGain: 10, lootCount: 2 })
-    expect(endlessRoundSpoils(10)).toMatchObject({ isBoss: true, isElite: false, dustGain: 20, lootCount: 3 })
-    expect(endlessRoundSpoils(30).luck).toBe(0.45)
-  })
-
   it('the Crossroads fires on each act boss, and on nothing else', () => {
     expect(forkFires({ type: 'miniboss' })).toBe(true)
     for (const t of ['battle', 'elite', 'boss', 'campfire', 'merchant']) expect(forkFires({ type: t })).toBe(false)

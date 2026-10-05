@@ -4,7 +4,7 @@ import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { classicHero, nameCounterState, plainItem } from '../src/game/data/sentinels'
 import { heroDoes, kitName, lookOf } from '../src/game/data/gear'
 import { generateItem, heroStyle, ITEM_BASES, itemNoun } from '../src/game/data/items'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, DAILY_ITEM_POOL, ITEM_KINDS, itemPoolFor, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, ITEM_KINDS, itemPoolFor, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { STARTER_SKILLS } from '../src/game/data/skills'
 import { computeCombat, UNARMED } from '../src/game/engine/combat'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
@@ -92,7 +92,6 @@ describe('item kinds and pools', () => {
     for (const k of ITEM_KINDS) expect(ITEM_BASES[k.id]?.slot).toBe(k.slot)
     expect([...BASIC_ITEM_KINDS].sort()).toEqual(['Bow', 'Mail', 'Shield', 'Sword', 'Wand'])
     expect(UNLOCK_ITEM_KINDS.length + BASIC_ITEM_KINDS.length).toBe(ALL_ITEM_KINDS.length)
-    expect(DAILY_ITEM_POOL).toEqual(BASIC_ITEM_KINDS)
   })
 
   it('loot deals only unlocked kinds, one draw per pick — a forced kind takes the same draws', () => {

@@ -82,16 +82,3 @@ export function nodeHazardSeed(node: { id: string; type: string; layer?: number 
 }
 
 const FIGHTS = new Set(['battle', 'elite', 'boss', 'miniboss'])
-
-/** Endless rounds (removed with Endless in the next phase). */
-export function endlessTerrainRule(round: number, runSeed: number): TerrainRuleId | null {
-  if (round <= 2 || round % 10 === 0) return null
-  const u = unit(runSeed, 'terrain', 'endless', round)
-  if (u >= CHALLENGE_SHARE) return null
-  return OPEN_GROUND[Math.floor((u / CHALLENGE_SHARE) * OPEN_GROUND.length)] ?? null
-}
-
-/** Endless rounds lay their ground from the round, on the same terms. */
-export function endlessHazardSeed(round: number, runSeed: number): number {
-  return hashSeed(runSeed, 'hazard', 'endless', round)
-}

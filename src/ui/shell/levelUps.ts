@@ -67,7 +67,7 @@ export const useLevelUps = create<LevelUpState>(() => ({
 
 type RewardFacts = Pick<
   GameState,
-  'screen' | 'mode' | 'runPhase' | 'reward' | 'lastResult' | 'waveBeat' | 'engine' | 'crossroads' | 'runMap' | 'currentNodeId'
+  'screen' | 'runPhase' | 'reward' | 'lastResult' | 'waveBeat' | 'engine' | 'crossroads' | 'runMap' | 'currentNodeId'
 >
 
 /**
@@ -79,7 +79,7 @@ type RewardFacts = Pick<
  * `finishBattle` reads to choose the hand, so the page and the hand agree.
  */
 export function rewardInPlace(s: RewardFacts): boolean {
-  if (s.screen !== 'battle' || s.mode !== 'campaign' || s.runPhase !== 'active') return false
+  if (s.screen !== 'battle' || s.runPhase !== 'active') return false
   if (s.waveBeat || s.engine || s.crossroads) return false
   if (!s.reward || s.reward.length === 0) return false
   if (!s.lastResult || s.lastResult.status !== 'cleared') return false

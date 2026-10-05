@@ -8,7 +8,7 @@ import { InfoCard } from './Page'
  *
  * A feat is the game telling the player "you opened something", so it is said
  * where the run ends and names what it opened. The ids come from the settle
- * itself (`lastFeats`, written by `grantRunRewards`); subscribing to the
+ * itself (`lastFeats`, written by `settleContract`); subscribing to the
  * ledger re-renders the card the moment the settle lands. The result page is
  * already a polite live region, so the card is announced with the verdict.
  */
@@ -21,7 +21,7 @@ export function FeatsEarned() {
     <InfoCard
       lines={[
         feats.length === 1 ? 'Feat earned' : `${feats.length} feats earned`,
-        ...feats.map((a) => `${a.name} — ${moneyText(a.marks, 'marks')}. Opens: ${a.opens}.`),
+        ...feats.map((a) => `${a.name} — ${moneyText(a.gold)} to the bank. Opens: ${a.opens}.`),
         'Every feat and what is still open is in the Watchtower Codex.',
       ]}
     />

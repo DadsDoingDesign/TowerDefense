@@ -99,7 +99,7 @@ if (WHAT === 'all' || WHAT === 'banners') {
       [
         String(t),
         difficultyEffect(t).padEnd(14),
-        `×${difficultyRules(t).markMult}`,
+        `×${1 + 0.25 * t}`,
         ...cells.map((c) => `${pct(c.winRate)}/${c.marksPerRun.toFixed(0)}`),
       ].join(' | '),
     )

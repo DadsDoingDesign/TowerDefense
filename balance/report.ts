@@ -2348,7 +2348,7 @@ if (want(13)) {
   line('')
   line('**The intent is unchanged: every step must still be worth climbing.** Each step is')
   line('measured on the same paired seeds as §11 and §12, and the payout is `grantRunRewards`\'s')
-  line(`own formula (+${((difficultyRules(1).markMult - 1) * 100).toFixed(0)}% Marks a step), so the marks column is what the purse sees. **${BANNER_RUNS} runs a`)
+  line(`own formula (+${25}% Marks a step), so the marks column is what the purse sees. **${BANNER_RUNS} runs a`)
   line(`step**: the gate below asks for a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per step, and a ${HUB_RUNS}-run cell cannot resolve one.`)
   line('The modelled player is the zero-meta one (the nine starter skills); a step whose win')
   line('rate falls under 1% ends the climb — every step above it is at least as hard.')
@@ -2358,7 +2358,7 @@ if (want(13)) {
   const bannerRows: StepRow[] = []
   for (let t = 0; t <= MAX_DIFFICULTY; t++) {
     const c = hubCell(ZERO_META, BANNER_POLICY, difficultyRules(t), BANNER_RUNS)
-    bannerRows.push({ tier: t, effect: t === 0 ? 'standard' : difficultyEffect(t), mult: difficultyRules(t).markMult, win: c.winRate, marks: c.marks })
+    bannerRows.push({ tier: t, effect: t === 0 ? 'standard' : difficultyEffect(t), mult: 1 + 0.25 * t, win: c.winRate, marks: c.marks })
     if (c.winRate < 0.01) break
   }
   line('| Step | What it adds | ×marks | Win rate | **Marks / run** | Δ marks |')

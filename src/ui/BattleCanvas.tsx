@@ -51,6 +51,8 @@ import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
 import { reportFatal } from './fatal'
+import { companyById } from '../game/data/companies'
+import { drawCaravan } from '../game/render/renderer'
 import type { GameMap } from '../game/types'
 import {
   easeOutCubic,
@@ -539,6 +541,14 @@ export function BattleCanvas() {
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
       // Q1: the skulls on cursed ground — terrain too, under the hero on it.
       drawTerrainDanger(map, (x, y, v) => drawSkull(ctx, x, y, v))
+      // The caravan at the road's end (the mercenary company): its crates are
+      // the cargo still on board, so a leak is seen to take one away.
+      {
+        const hp = st.engine ? st.hud.baseHp : st.baseHp
+        const max = (st.engine ? st.hud.maxBaseHp : st.maxBaseHp) || 1
+        const co = st.contract ? companyById(st.contract.company).color : '#e0ac4c'
+        drawCaravan(ctx, map, { color: co, cargo: Math.max(0, hp) / max })
+      }
 
       const liveEngine = st.engine
       /** The hovered tile, when it is one a hero can stand on. */

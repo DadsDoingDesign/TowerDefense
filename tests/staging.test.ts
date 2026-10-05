@@ -14,7 +14,6 @@ import {
 } from '../src/state/staging'
 import { META_VERSION, migrateMeta, useMetaStore } from '../src/state/metaStore'
 import { LS3_TEACH_IDS, migrateSettings, SETTINGS_VERSION, TEACH_IDS, useSettingsStore } from '../src/state/settingsStore'
-import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 import { GLOSSARY } from '../src/ui/channels'
@@ -40,7 +39,6 @@ const MAP: StageState['runMap'] = {
 
 /** The first battle of a first run, before anything has happened. */
 const firstBattle = (patch: Partial<StageState> = {}): StageState => ({
-  mode: 'campaign',
   screen: 'battle',
   runMap: MAP,
   clearedNodeIds: ['s'],
@@ -115,7 +113,7 @@ describe('what a first run shows, and when', () => {
 
   it('the menu opens up with the first finished run', () => {
     expect(metaIdeas({ runsCompleted: 0 })).toEqual([])
-    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['marks', 'difficulty', 'daily', 'endless'])
+    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'stake'])
   })
 })
 
@@ -144,12 +142,10 @@ describe('the party row\'s open slot', () => {
 })
 
 describe('who is staged', () => {
-  it('a first run is a standard run with no finished run behind it', () => {
-    expect(startsFirstRun({ runsCompleted: 0 }, false, STANDARD_RUN)).toBe(true)
-    expect(startsFirstRun({ runsCompleted: 1 }, false, STANDARD_RUN)).toBe(false)
-    expect(startsFirstRun({ runsCompleted: 0 }, true, STANDARD_RUN)).toBe(false)
-    expect(startsFirstRun({ runsCompleted: 0 }, false, { kind: 'daily' })).toBe(false)
-    expect(startsFirstRun({ runsCompleted: 0 }, false, { kind: 'seeded' })).toBe(false)
+  it('a first run is a contract with no finished contract behind it', () => {
+    expect(startsFirstRun({ runsCompleted: 0 }, false)).toBe(true)
+    expect(startsFirstRun({ runsCompleted: 1 }, false)).toBe(false)
+    expect(startsFirstRun({ runsCompleted: 0 }, true)).toBe(false)
   })
 
   it('the menu is staged on the same terms', () => {
@@ -180,24 +176,43 @@ describe('the store: a first run is staged, a returning player is not', () => {
     expect(useGameStore.getState().firstRun).toBe(false)
   })
 
-  it('an Endless run is never staged', () => {
+  it('a first-timer’s Start a Run is one free escort for Peppercorn Co. — no board', () => {
     useMetaStore.getState().resetMeta()
-    useGameStore.getState().startEndless()
-    expect(useGameStore.getState().firstRun).toBe(false)
+    useGameStore.getState().openContracts()
+    const s = useGameStore.getState()
+    expect(s.screen).toBe('heroPick')
+    expect(s.firstRun).toBe(true)
+    expect(s.contract).toMatchObject({ company: 'spice', crates: 0, purse: 60, market: expect.any(Number) })
+    expect(s.board).toBeNull()
+  })
+
+  it('a first contract cannot cash out at a city; a returning player can', () => {
+    useMetaStore.getState().resetMeta()
+    useGameStore.getState().openContracts()
+    useGameStore.getState().pickStartingHero('pick-0')
+    const c = useGameStore.getState().contract!
+    useGameStore.setState({ contract: { ...c, paid: [40], cargoAt: [100], pending: 0 } })
+    useGameStore.getState().cashOut()
+    expect(useGameStore.getState().runPhase).toBe('active')
+    expect(useGameStore.getState().contract!.pending).toBe(0)
+    useGameStore.getState().pressOn()
+    expect(useGameStore.getState().contract!.pending).toBeNull()
   })
 })
 
 describe('persistence and validation', () => {
   it('`met` keeps known ideas only, each once, in the order met', () => {
     expect(readMet(['gear', 'nope', 7, 'gear', null, 'speed', { id: 'relic' }])).toEqual(['gear', 'speed'])
-    // SK1: perks and evolutions were met as skills, and the Vow as the difficulty.
-    expect(readMet(['perk', 'evolve', 'vow', 'gear'])).toEqual(['skill', 'difficulty', 'gear'])
+    // SK1: perks and evolutions were met as skills; the mercenary company: the
+    // Vow and the difficulty are the stake, the Gate the cargo, Marks the bank.
+    expect(readMet(['perk', 'evolve', 'vow', 'gear'])).toEqual(['skill', 'stake', 'gear'])
+    expect(readMet(['gate', 'marks', 'difficulty', 'daily', 'endless'])).toEqual(['cargo', 'bank', 'stake'])
     expect(readMet('gear')).toEqual([])
     expect(readMet(undefined)).toEqual([])
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(7)
+    expect(META_VERSION).toBe(8)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])
@@ -348,9 +363,11 @@ describe('the glossary', () => {
     expect(lines.at(-1)).toMatch(/more to meet on the road/)
     const all = glossaryOffer({ met: [], staged: false }).body as string[]
     // One line per idea, plus the extra lines an idea carries (SK1: Skill
-    // level and Watch level ride with Skill).
+    // level and the Collection ride with Skill).
     expect(all).toHaveLength(IDEAS.length + IDEAS.reduce((n, id) => n + (GLOSSARY[id].also?.length ?? 0), 0))
-    for (const term of ['Skill —', 'Skill level —', 'Difficulty —', 'Watch level —']) expect(all.some((l) => l.startsWith(term))).toBe(true)
+    // The mercenary company's terms, each in its one name.
+    for (const term of ['Skill —', 'Skill level —', 'Gold —', 'Purse —', 'Bank —', 'Standing —', 'Contract —', 'Escort —', 'Cargo —', 'City —', 'Stake —'])
+      expect(all.some((l) => l.startsWith(term)), term).toBe(true)
   })
 })
 

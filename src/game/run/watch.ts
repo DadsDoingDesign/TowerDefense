@@ -20,21 +20,15 @@ import { UNLOCK_ITEM_KINDS } from '../data/itemKinds'
 // ---------------------------------------------------------------------------
 
 /**
- * Watch XP a finished run earns: 15 a depth reached, 1 per 10 enemies felled,
- * and 60 for a win. An Endless round counts as 10.
+ * Watch XP a finished run earned: 15 a depth reached, 1 per 10 enemies felled,
+ * and 60 for a win. Kept for the meta migration and for the curve standing
+ * reuses (`run/standing.ts`); nothing earns Watch XP any more.
  *
  * Fitted to the harness's first-timer line (REPORT §11 — a zero-meta run dies
  * around depth 5–8 with ~150–300 kills): a first run earns ~90–150, a win
  * ~260. Watch level 2 costs 80, so the first card lands after the first run.
  */
-export const WATCH_XP = { perDepth: 15, killsPerXp: 10, win: 60, perRound: 10 } as const
-
-export function watchXpFor(r: { mode?: 'campaign' | 'endless'; depth: number; kills: number; won: boolean }): number {
-  const d = Math.max(0, Math.floor(r.depth || 0))
-  const k = Math.max(0, Math.floor(r.kills || 0))
-  const base = r.mode === 'endless' ? d * WATCH_XP.perRound : d * WATCH_XP.perDepth
-  return base + Math.floor(k / WATCH_XP.killsPerXp) + (r.won && r.mode !== 'endless' ? WATCH_XP.win : 0)
-}
+export const WATCH_XP = { perDepth: 15, killsPerXp: 10, win: 60 } as const
 
 /**
  * XP from Watch level `n` to `n + 1`: 80, then 20 more each level. So the
@@ -141,16 +135,14 @@ export function skillPoolFor(unlocked: readonly string[], achieved: (id: string)
   return ALL_SKILLS.filter((k) => have.has(k.id) || (FEAT_SKILLS[k.id] && achieved(FEAT_SKILLS[k.id]))).map((k) => k.id)
 }
 
-/**
- * The Daily Watch's pool: the starters, for everyone. A Daily reads no hub, so
- * the same seed deals the same heroes, skills and offers whatever a player
- * has unlocked.
- */
-export const DAILY_SKILL_POOL: readonly string[] = STARTER_SKILLS
-
 // ---------------------------------------------------------------------------
-// Difficulty — what replaced the Vow ladder
+// Difficulty — the dial a contract's stake turns (one step a crate)
 // ---------------------------------------------------------------------------
+//
+// SK1's difficulty steps replaced the Vow ladder; the mercenary company turned
+// the step into the stake (`contracts.stakeRules`): every crate carried is
+// one step — enemies 8% stronger and one more elite an act — and the payout
+// for it is the stake's (crate sales, the completion bonus, item chances).
 
 /** The highest difficulty step there is. */
 export const MAX_DIFFICULTY = 10
@@ -158,8 +150,6 @@ export const MAX_DIFFICULTY = 10
 export const STRENGTH_PER_STEP = 0.08
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
-/** Marks multiplier each step adds. */
-export const MARKS_PER_STEP = 0.25
 
 /** Everything a run needs to know about the difficulty step it is played at. */
 export interface DifficultyRules {
@@ -168,8 +158,6 @@ export interface DifficultyRules {
   startThreat: number
   /** Battle nodes in each act that become elites. */
   extraElites: number
-  /** Marks multiplier for the run. */
-  markMult: number
 }
 
 export const clampStep = (step: number): number => Math.max(0, Math.min(MAX_DIFFICULTY, Math.floor(Number.isFinite(step) ? step : 0)))
@@ -180,29 +168,12 @@ export function difficultyRules(step: number): DifficultyRules {
     step: s,
     startThreat: Math.round((1 + STRENGTH_PER_STEP * s) * 1000) / 1000,
     extraElites: s * ELITES_PER_STEP,
-    markMult: Math.round((1 + MARKS_PER_STEP * s) * 100) / 100,
   }
 }
 
 /** "Enemies 24% stronger · 3 more elites an act" — what a step does, in words. */
 export function difficultyEffect(step: number): string {
   const r = difficultyRules(step)
-  if (r.step === 0) return 'Standard enemies and elites.'
-  return `Enemies ${Math.round((r.startThreat - 1) * 100)}% stronger · ${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act`
-}
-
-/** A won run's score at its difficulty (the Daily's formula: depth ×100 + kills + 1000). */
-export const winScore = (depth: number, kills: number): number => Math.max(0, Math.floor(depth)) * 100 + Math.max(0, Math.floor(kills)) + 1000
-
-/**
- * What a WIN at `step` earns, given the save's top step and its best score
- * there. A win at the top step unlocks a card and raises the top a step; a win
- * below it unlocks a card only when it beats that step's best score.
- */
-export function winReward(v: { step: number; top: number; score: number; best: number | undefined }): { card: boolean; stepUp: boolean; newBest: boolean } {
-  const step = clampStep(v.step)
-  const top = clampStep(v.top)
-  const newBest = v.best === undefined || v.score > v.best
-  if (step >= top) return { card: true, stepUp: top < MAX_DIFFICULTY, newBest }
-  return { card: newBest, stepUp: false, newBest }
+  if (r.step === 0) return 'Standard raiders.'
+  return `Raiders ${Math.round((r.startThreat - 1) * 100)}% stronger · ${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act`
 }

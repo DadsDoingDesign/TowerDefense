@@ -38,8 +38,8 @@ export interface AssistProfile {
 
 const ASSIST: Record<AssistLevel, AssistProfile> = {
   off: { baseDamageMul: 1, label: 'Off', blurb: 'The game as it was written.' },
-  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'The Gate takes 40% less damage when something gets through.' },
-  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'The Gate takes 70% less damage when something gets through.' },
+  steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'Raiders who reach your wagons steal 40% less cargo.' },
+  sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'Raiders who reach your wagons steal 70% less cargo.' },
 }
 
 /**
@@ -84,6 +84,12 @@ export const TEACH_IDS = [
   // The classless rework: "what a hero does comes from its gear", said once on
   // the hero pick. New, so a returning player meets it too.
   'heroGear',
+  // The mercenary company: one tip each for the contract board, the stake,
+  // the purse and the cities' cash-out — each said once, where it opens.
+  'board',
+  'stakes',
+  'purse',
+  'cashOut',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>

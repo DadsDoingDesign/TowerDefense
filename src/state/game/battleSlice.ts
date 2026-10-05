@@ -10,12 +10,13 @@ import { relicCommands, relicTeamMods } from '../../game/data/relics'
 import { afterFightRelics, cartularyRelic, diaryXp, handSize, rewardHand } from '../../game/run/relics'
 import { battleRelicsWithheld } from '../../game/run/firstRun'
 import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
-import { applyBattleXp, combatSeed, endlessRoundSpoils, levelXpAwards } from '../../game/run/battle'
+import { applyBattleXp, combatSeed, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
-import { receiveItems, recruitSlate } from '../../game/run/recruits'
-import { challengeGrant } from '../../game/run/settle'
-import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer, threatAfterRound } from '../../game/run/threat'
+import { recruitSlate } from '../../game/run/recruits'
+import { contractGrant } from '../../game/run/settle'
+import { cargoPct, cityOfLayer, cityPay, stakeRules } from '../../game/run/contracts'
+import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
 import { orientationOf } from '../../game/data/maps'
 import { crowdedBy, crowds } from '../../game/data/terrain'
@@ -23,11 +24,11 @@ import { isMelee } from '../../game/engine/melee'
 import { noteEngineEvent } from '../combatNotes'
 import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
-import { difficultyRules, useMetaStore } from '../metaStore'
+import { useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
-import { runFactsFromState } from './settle'
+import { runFactsFromState, settleFactsFromState } from './settle'
 import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
 import { battleHpMult, canStartWave, fieldConflicts } from './selectors'
@@ -156,11 +157,11 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
 
   startWave: () => {
     const st = get()
-    const { battleMap, roster, placements, baseHp, maxBaseHp, mode, currentWave, tactics, runMods } = st
+    const { battleMap, roster, placements, baseHp, maxBaseHp, currentWave, tactics, runMods } = st
     // ---- the load-bearing invariant (C-1) --------------------------------
     // A wave that has already resolved can never be fought again, and a node
     // already in `clearedNodeIds` can never be re-fought. Both grants — gold,
-    // XP, threat, the reward pick, the endless win/round — hang off finishing
+    // XP, threat, the reward pick, a city's pay — hang off finishing
     // a wave, so re-entering one is how everything gets paid twice.
     //
     // These are guards on the ACTION rather than on any one screen, on
@@ -174,14 +175,13 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // holds the wave until the player makes space. The strip says so and the
     // button is disabled; this is the store's half of the same rule.
     if (fieldConflicts(st).length) return sfx('error')
-    // Both modes compound via Threat (H7): one difficulty model covers both.
     const effHpMult = battleHpMult(st)
     // The battle's combat rolls are pinned to (run seed, node, wave) — replaying
     // the same run replays the same fight, and no two nodes share a sequence.
     // A campaign wave without a node never reaches this line (`canStartWave`),
     // because `finishBattle` has nothing to pay a nodeless clear into (M-4).
-    const nodeKey = mode === 'endless' ? 'endless' : (st.activeNodeId ?? 'node')
-    const waveIndex = mode === 'endless' ? st.round : st.clearedNodeIds.length
+    const nodeKey = st.activeNodeId ?? 'node'
+    const waveIndex = st.clearedNodeIds.length
     const engine = new GameEngine({
       map: battleMap,
       wave: currentWave,
@@ -332,16 +332,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
        *
        * Hold the last frame of the fight on screen (the engine stays mounted,
        * which is what keeps it drawn), play the sting, raise the banner, and
-       * settle a beat later. The hold is short and skippable — this game is
-       * played in one-to-three-minute bursts.
-       *
-       * The status is read off the engine rather than off `result()`, which
-       * allocates the whole receipt; the settlement below builds that once.
+       * settle a beat later. The hold is short and skippable.
        */
       const status = st.engine.status === 'defeated' ? 'defeated' : 'cleared'
-      // A loss already has a voice — `leak` fired as the line broke — so the
-      // beat for it is shorter and its sound is the run/wave ending below,
-      // not a second thud on top of the one just heard.
       if (status === 'cleared') sfx('clear')
       set({ waveBeat: { status, startedAt: Date.now() } })
       beat.timer = setTimeout(
@@ -356,180 +349,81 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // Past the hold: the wave settles now, so the beat is over.
     set({ waveBeat: null })
     // The other half of the C-1 invariant: no node can be paid out twice.
-    // `startWave` should already have made this unreachable; it is repeated
-    // here because this is the function that hands out the money.
-    //
-    // Bailing has to leave a state with a way out of it (M-4). Dropping the
-    // engine but staying on the battle screen with an unresolvable wave is the
-    // soft-lock in another costume.
-    if (st.mode === 'campaign' && st.activeNodeId && st.clearedNodeIds.includes(st.activeNodeId)) {
-      set(abandonBattle(st.mode))
+    // Bailing has to leave a state with a way out of it (M-4).
+    if (st.activeNodeId && st.clearedNodeIds.includes(st.activeNodeId)) {
+      set(abandonBattle())
       return
     }
     const rawResult = st.engine.result()
     // Q10 — the Codex counts what fell, by kind, for the enemy info card.
-    // Past the no-node-pays-twice guard above, so a wave is tallied once.
     useMetaStore.getState().recordFelled(st.engine.killsByKey)
-    // The payout lands here, so the coin does too (H17): sting → hold →
-    // receipt, with the money on the receipt. It sounds when ANY currency
-    // lands, not just kill gold — see `clearBonusGold` (F12). (No 'confirm'
-    // on top: the `clear` sting already announced the win.) The two loss
-    // cases are sounded at their own branches below.
-    const settlingNode =
-      st.mode === 'campaign' && st.activeNodeId
-        ? st.runMap.nodes.find((n) => n.id === st.activeNodeId)
-        : undefined
+    const settlingNode = st.activeNodeId ? st.runMap.nodes.find((n) => n.id === st.activeNodeId) : undefined
     // Levels are a resource, not a clock (Phase 3b): the wave's raw XP decides
-    // who gets the share, `waveXp` decides how big the share is. The receipt
-    // prints the re-priced number, because it is the one the heroes received.
-    const endlessSpoils = st.mode === 'endless' ? endlessRoundSpoils(st.round) : null
+    // who gets the share, `waveXp` decides how big the share is.
     const result = {
       ...rawResult,
-      perSentinel: st.currentWave
-        ? levelXpAwards(rawResult.perSentinel, {
-            wave: st.currentWave,
-            hpMult: battleHpMult(st),
-            depth: settlingNode ? settlingNode.layer : st.round,
-            kind: settlingNode
-              ? mapKind(settlingNode)
-              : endlessSpoils?.isBoss
-                ? 'boss'
-                : endlessSpoils?.isElite
-                  ? 'elite'
-                  : 'normal',
-          })
-        : rawResult.perSentinel,
+      perSentinel:
+        st.currentWave && settlingNode
+          ? levelXpAwards(rawResult.perSentinel, {
+              wave: st.currentWave,
+              hpMult: battleHpMult(st),
+              depth: settlingNode.layer,
+              kind: mapKind(settlingNode),
+            })
+          : rawResult.perSentinel,
     }
     const nodePurse = settlingNode ? clearBonusGold(settlingNode) : 0
     if (result.status === 'cleared' && (result.goldEarned > 0 || nodePurse > 0)) sfx('coin')
     const totalKills = st.runKills + result.enemiesKilled
 
-    // XP applies in both modes and both outcomes; a skill milestone it crosses
-    // is owed and offered between rounds (SK1).
-    // The War Diary relic tops up the least-levelled hero on the field.
+    // XP applies in both outcomes; a skill milestone it crosses is owed and
+    // offered between rounds (SK1). The War Diary relic tops up the
+    // least-levelled hero on the field.
     const { roster: rosterXp } = applyBattleXp(st.roster, diaryXp(result.perSentinel, st.roster, st.relics))
 
-    if (st.mode === 'endless') {
-      if (result.status === 'cleared') {
-        const spoils = endlessRoundSpoils(st.round)
-        // Copy-spend-write-back: the counter is mutated in place (M9).
-        const pity = { ...st.lootPity }
-        const loot = Array.from({ length: spoils.lootCount }, () =>
-          generateItem(streams.rng, { luck: spoils.luck, roster: rosterXp, pity, kinds: st.itemPool }),
-        )
-        set({
-          // Loot drops into any empty slot it strictly improves; the rest
-          // goes to the pack. Nothing worn is ever replaced.
-          ...receiveItems(rosterXp, st.inventory, loot, st.relics),
-          lootPity: pity,
-          gold: st.gold + result.goldEarned,
-          dust: st.dust + spoils.dustGain,
-          baseHp: st.maxBaseHp,
-          // A new round is a new shelf. The stock survives closing the room
-          // (F5) precisely so it cannot be re-rolled on demand; this is the
-          // one place it is allowed to change.
-          merchant: null,
-          lastResult: result,
-          lastLoot: loot,
-          wins: st.wins + 1,
-          round: st.round + 1,
-          // The Watch closes in: every round survived compounds Threat, the
-          // same way clearing a campaign node does (H7).
-          threat: threatAfterRound(st.threat, spoils.isElite),
-          engine: null,
-          battlePhase: 'setup',
-          runKills: totalKills,
-        })
-      } else {
-        const lives = st.lives - 1
-        if (lives <= 0) {
-          // Endless pays through the SAME ledger as a campaign run (M13).
-          const marks = useMetaStore
-            .getState()
-            .grantRunRewards({ mode: 'endless', depth: st.wins, won: false, kills: totalKills, facts: runFactsFromState(st, false) })
-          // The run is over, and losing has a sound (M32).
-          sfx('defeat')
-          set({
-            roster: rosterXp,
-            gold: st.gold + result.goldEarned,
-            lives: 0,
-            runPhase: 'lost',
-            // Marks are granted right here, so the run is settled right here:
-            // nothing downstream may pay it a second time (M-1).
-            runSettled: true,
-            lastResult: result,
-            engine: null,
-            battlePhase: 'setup',
-            marksEarned: marks,
-            runKills: totalKills,
-          })
-        } else {
-          // A lost ROUND with lives still in hand is not the run ending, so
-          // it does not get the run's jingle — it gets the sound of something
-          // of yours falling, and the retry is one tap away.
-          sfx('down')
-          // A LOST round does not advance the Watch (H7): a life is a retry,
-          // not a skip — `round` and Threat stay where they were.
-          set({
-            roster: rosterXp,
-            gold: st.gold + result.goldEarned,
-            baseHp: st.maxBaseHp,
-            lives,
-            lastResult: result,
-            engine: null,
-            battlePhase: 'setup',
-            runKills: totalKills,
-          })
-        }
-      }
-      return
-    }
-
-    // ---- Campaign ----
     const { gold, inventory, runMap, activeNodeId } = st
-    // A campaign wave with no node has nothing to pay into and nothing to
-    // advance. Leave the battle rather than `return` with the engine mounted —
-    // the rAF loop would call this forever (M-4). `startWave` refuses this
-    // state outright; this is the belt to that braces.
+    // A wave with no node has nothing to pay into and nothing to advance.
+    // Leave the battle rather than `return` with the engine mounted (M-4).
     const node = activeNodeId ? runMap.nodes.find((n) => n.id === activeNodeId) : undefined
     if (!activeNodeId || !node) {
-      set(abandonBattle(st.mode))
+      set(abandonBattle())
       return
     }
 
     if (result.status === 'defeated') {
-      // The campaign has no lives: this wave loss IS the run loss (M32).
+      // The wagons fell: this wave loss IS the contract lost (M32). The cities
+      // already paid keep their pay, the purse comes home, unsold crates are lost.
       sfx('defeat')
       const depth = get().clearedNodeIds.length - 1
-      const marks = useMetaStore
+      const contract = st.contract ? { ...st.contract, pending: null, status: 'lost' as const } : null
+      const lost = { ...st, roster: rosterXp, contract, runKills: totalKills }
+      const deposit = useMetaStore
         .getState()
-        .grantRunRewards({ depth, won: false, kills: totalKills, difficulty: st.runDifficulty, ...challengeGrant(st.challenge), facts: runFactsFromState(st, false) })
+        .settleContract(contractGrant({ ...settleFactsFromState(lost, false), depth, kills: totalKills }, 'lost'))
       set({
         runPhase: 'lost',
-        // `grantRunRewards` just paid this run out; settling it here is what
-        // stops `returnToHub` off the defeat screen paying it again (M-1).
+        // The settle just paid this run out; settling it here is what stops
+        // `returnToHub` off the defeat screen paying it again (M-1).
         runSettled: true,
+        contract,
         lastResult: result,
-        // The receipt is built here, while everything it needs is still in
-        // hand (M14).
-        victory: buildRecap(st, result, { won: false, depth, marks, kills: totalKills }),
+        victory: buildRecap(lost, result, { outcome: 'lost', depth, kills: totalKills, deposit, baseHp: 0 }),
         baseHp: 0,
         engine: null,
         battlePhase: 'setup',
         runKills: totalKills,
-        marksEarned: marks,
       })
       return
     }
 
     // Advance the map.
-    const rules = difficultyRules(st.runDifficulty)
+    const rules = stakeRules(st.contract?.crates ?? 0)
     const cleared = [...get().clearedNodeIds, activeNodeId]
     const reachable = frontierFrom(runMap, activeNodeId, cleared)
     const wonRun = node.type === 'boss'
     if (wonRun) sfx('victory')
-    // An act boss down is a feat's fact; one felled without a scratch on the
-    // Gate is a better one (Phase 3b).
+    // An act boss down is a feat's fact; one felled without losing any cargo
+    // is a better one (Phase 3b).
     const actBoss = node.type === 'miniboss'
     const feats = {
       ...st.feats,
@@ -537,39 +431,46 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       flawlessBosses: st.feats.flawlessBosses + (actBoss && result.baseHpLeft >= st.baseHp ? 1 : 0),
       goldPeak: Math.max(st.feats.goldPeak, gold + result.goldEarned + clearBonusGold(node)),
     }
-    const marks = wonRun
+
+    // ---- a city (the mercenary company) ------------------------------------
+    // Each act boss is a city on the route. It pays for the cargo that
+    // arrives — its share of the crates, its fee, and at the destination the
+    // completion bonus — into the contract's ledger (banked at the settle, so
+    // a later fall keeps it). Cities 1 and 2 then wait on "cash out or press on".
+    const city = cityOfLayer(node.layer)
+    let contract = st.contract
+    if (contract && city != null && contract.paid.length === city) {
+      const cargo = cargoPct(result.baseHpLeft, st.maxBaseHp)
+      const pay = cityPay(contract, city, cargo)
+      contract = {
+        ...contract,
+        paid: [...contract.paid, pay.total],
+        cargoAt: [...contract.cargoAt, cargo],
+        pending: wonRun ? null : city,
+        status: wonRun ? 'delivered' : contract.status,
+      }
+    }
+
+    const delivered = { ...st, feats, roster: rosterXp, clearedNodeIds: cleared, contract, runKills: totalKills, gold: gold + result.goldEarned + clearBonusGold(node) }
+    const deposit = wonRun
       ? useMetaStore
           .getState()
-          .grantRunRewards({
-            depth: cleared.length - 1,
-            won: true,
-            kills: totalKills,
-            difficulty: st.runDifficulty,
-            ...challengeGrant(st.challenge),
-            facts: runFactsFromState({ ...st, feats, roster: rosterXp, clearedNodeIds: cleared }, true),
-          })
+          .settleContract(
+            contractGrant({ ...settleFactsFromState(delivered, true), depth: cleared.length - 1, kills: totalKills, facts: runFactsFromState(delivered, true) }, 'delivered'),
+          )
       : 0
-    // What the NODE costs and what the NODE pays: both follow the kind the map
-    // dealt (see `mapKind`).
     // Threat follows the road: the next stop is fought at the next layer's,
-    // from the difficulty step's starting Threat (SK1).
+    // from the stake's starting Threat.
     const nextThreat = threatAfterLayer(node.layer, rules.startThreat)
     const bonusGold = clearBonusGold(node)
     const luck = nodeClearLuck(node)
 
-    // Non-boss clears offer a card pick (attribute buff or item).
-    //
-    // Copy-spend-write-back for the pity counter (M9). The two halves differ
-    // in WHEN they spend it (F4): the boss's spoils go straight onto the
-    // recap, so the player receives all three and they charge here; the reward
-    // hand is an offer of which at most one card is taken, so it rolls with
-    // the drought's luck and `chooseReward` charges the card actually picked.
+    // Non-boss clears offer a card pick (copy-spend-write-back for pity, M9/F4).
     const pity = { ...st.lootPity }
     const handKind = node.type === 'miniboss' ? 'boss' : node.type === 'elite' ? 'elite' : 'battle'
     const reward = wonRun
       ? null
       : rewardHand(streams.rng, {
-          // An act boss's hand is three relics; an elite's always holds one.
           kind: handKind,
           luck,
           count: handSize({ thinPickings: false }),
@@ -595,19 +496,12 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
 
     // After each act boss, the Crossroads: recruit or mutate (Phase 3b).
     const fireFork = !wonRun && forkFires(node)
-    // Both halves of the fork are dealt HERE, from the seeded run stream, and
-    // then live in run state until the player answers (M8) — so the offer
-    // survives a snapshot unchanged and "aim at another hero" is not a reroll.
     const crossroads: Crossroads | null = fireFork
       ? {
           recruits: rosterXp.length < MAX_ROSTER ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
           mutations: rollMutationChoices(
             streams.rng,
-            // Nothing already on the company's books — the offer must not
-            // contain an option that is a no-op for the hero it lands on.
             [...new Set(rosterXp.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))],
-            // Three — one of each template (Phase 3b). The Strange Growth
-            // feat adds one.
             mutationOfferSize(false, featUnlocked('mutant')),
           ),
           mutationHeroId: null,
@@ -623,8 +517,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       lastResult: result,
       lastLoot: bossLoot,
       lootPity: pity,
+      contract,
       victory: wonRun
-        ? buildRecap(st, result, { won: true, depth: cleared.length - 1, marks, kills: totalKills, spoils: bossLoot, roster: rosterXp })
+        ? buildRecap(delivered, result, { outcome: 'delivered', depth: cleared.length - 1, kills: totalKills, deposit, spoils: bossLoot, roster: rosterXp, baseHp: result.baseHpLeft })
         : null,
       reward,
       crossroads,
@@ -634,15 +529,12 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       currentNodeId: activeNodeId,
       reachableNodeIds: reachable,
       runPhase: wonRun ? 'won' : 'active',
-      // The boss clear is the only campaign win, and it pays on the spot.
+      // The delivery is the only win, and it pays on the spot.
       runSettled: wonRun,
       engine: null,
-      // The wave is over, so the phase says so (C-1). Leaving it at 'battle'
-      // made the persisted post-wave state describe a fight still in progress
-      // and left the shell with no way out of a cleared wave.
+      // The wave is over, so the phase says so (C-1).
       battlePhase: 'setup',
       runKills: totalKills,
-      marksEarned: marks,
     })
   },
 
@@ -661,14 +553,12 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
   },
 
   continueAfterWave: () => {
-    // Endless returns to the Rooms screen; campaign returns to the node map.
+    // Back to the node map. A reward that has not been taken is still owed:
+    // leaving the summary is "I've read this", not "I forfeit my pick" — the
+    // reward board lives on the map screen, behind a city's payout if one is due.
     const st = get()
-    const dest = st.mode === 'endless' ? 'endless' : 'map'
-    // A reward that has not been taken is still owed. Leaving the summary is
-    // "I've read this", not "I forfeit my pick" — the campaign's reward board
-    // lives on the map screen, so it is waiting there.
     set({
-      screen: dest,
+      screen: 'map',
       activeNodeId: null,
       currentWave: null,
       lastResult: null,

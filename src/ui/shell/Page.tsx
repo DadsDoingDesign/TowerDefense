@@ -206,7 +206,7 @@ export function MenuRow({
   /** Set when the row is a purchase you cannot afford — it greys, not hides. */
   disabled?: boolean
   /** Tints the value to match its purse chip, so two currencies never blur. */
-  currency?: 'gold' | 'dust' | 'marks'
+  currency?: 'gold'
   /**
    * The offer's own accent, drawn as a 3px left edge — the same rail the
    * portrait chooser and the pack tiles use. Row choosers carried no rarity

@@ -19,8 +19,8 @@ import type { GameData, GameState } from './types'
 /** The state fields that constitute "the run". Changing any of them re-saves. */
 const SNAPSHOT_FIELDS = [
   'challenge',
+  'contract',
   'firstRun',
-  'mode',
   'runSeed',
   'screen',
   'runPhase',
@@ -37,10 +37,8 @@ const SNAPSHOT_FIELDS = [
   'maxBaseHp',
   'enemyHpMult',
   'threat',
-  'runDifficulty',
   'inventory',
   'runKills',
-  'marksEarned',
   // Persisted state, so a change to it has to be able to trigger a write (M9).
   // In practice it only ever moves alongside `inventory` / `reward` / `merchant`,
   // but a dirty-check that omits a snapshotted field is a latent stale save.
@@ -64,12 +62,7 @@ const SNAPSHOT_FIELDS = [
   'relics',
   'feats',
   'skillPool',
-  'dust',
-  'lives',
-  'wins',
-  'round',
-  'endlessRecruitCost',
-  'endlessRoom',
+  'itemPool',
 ] as const satisfies readonly (keyof GameData)[]
 
 /**

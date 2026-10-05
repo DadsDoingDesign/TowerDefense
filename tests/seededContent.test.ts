@@ -18,7 +18,7 @@ import { nameCounterState } from '../src/game/data/sentinels'
 import { generateRunMap } from '../src/game/data/runmap'
 import { combatSeed } from '../src/game/run/battle'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot } from '../src/state/runSnapshot'
 
@@ -61,7 +61,7 @@ describe('seeded content does not depend on the global id counter', () => {
 
   it('a seeded campaign deals the same challenges, cursed ground and combat seeds on a cold start and mid-session', () => {
     const seed = 90210
-    useGameStore.getState().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
+    useGameStore.getState().beginCampaign(seed, { kind: 'seeded' })
     const cold = dealt(seed)
     expect(cold.some((n) => n.rule)).toBe(true)
     expect(cold.some((n) => n.hazard != null)).toBe(true)
@@ -72,16 +72,16 @@ describe('seeded content does not depend on the global id counter', () => {
     useGameStore.getState().pickStartingHero('rogue')
     burn(59)
 
-    useGameStore.getState().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
+    useGameStore.getState().beginCampaign(seed, { kind: 'seeded' })
     expect(dealt(seed)).toEqual(cold)
   })
 
-  it('a Daily deals the same field on every attempt of the day', () => {
-    useGameStore.getState().startDaily()
+  it('a contract deals the same field from the same board seed, every time', () => {
+    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0, purse: 0 })
     const seed = useGameStore.getState().runSeed
     const first = dealt(seed)
     burn(311)
-    useGameStore.getState().startDaily()
+    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0, purse: 0 })
     expect(useGameStore.getState().runSeed).toBe(seed)
     expect(dealt(seed)).toEqual(first)
   })
@@ -90,7 +90,7 @@ describe('seeded content does not depend on the global id counter', () => {
 describe('saves dealt before the fix', () => {
   it('keep their counter-minted node ids, and so the ground they were dealt', () => {
     const seed = 777
-    useGameStore.getState().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
+    useGameStore.getState().beginCampaign(seed, { kind: 'seeded' })
     useGameStore.getState().pickStartingHero('fighter')
     const snap = captureRun(useGameStore.getState(), { rngLoot: 1, rngMap: 2, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
     // Rewrite every node id the way the old counter minted them.

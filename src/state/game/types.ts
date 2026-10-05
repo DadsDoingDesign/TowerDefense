@@ -11,17 +11,25 @@ import type { RewardCard } from '../../game/data/rewards'
 import type { ShrineOffer } from '../../game/data/shrines'
 import type { DangerKind, EffectMods, GameMap, HeroSlot, Item, Mutation, Placement, Sentinel, Tactics, TerrainKind, WaveDef } from '../../game/types'
 import type { AssistLevel } from '../settingsStore'
-import type { RunChallenge } from '../daily'
+import type { RunChallenge } from '../seeds'
 import type { RunProgress } from '../metaStore'
 import type { RunFeats } from '../../game/run/settle'
+import type { RunContract } from '../../game/run/contracts'
+import type { CompanyId } from '../../game/data/companies'
 import type { RunActions } from './runSlice'
 import type { BattleActions } from './battleSlice'
 import type { RosterActions } from './rosterSlice'
 import type { EventActions } from './eventsSlice'
-import type { EndlessActions } from './endlessSlice'
+import type { ContractActions } from './contractSlice'
 import type { ShellActions } from './shellSlice'
 
-export type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
+export type { RunContract }
+
+/**
+ * `contracts` is the contract board and its terms (the mercenary company): a
+ * page before a run, like the hub, and never a live run.
+ */
+export type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
 export type BattlePhase = 'setup' | 'battle'
 
 /**
@@ -60,11 +68,28 @@ export interface Crossroads {
   revealed?: { heroName: string; mutation: Mutation }
 }
 
-export type RunPhase = 'active' | 'won' | 'lost'
+/**
+ * `won` — the contract was delivered; `lost` — the wagons fell; `cashedOut` —
+ * the militia sold the last crates at a city and headed home.
+ */
+export type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
 export type Speed = 1 | 2 | 3
 export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
-export type GameMode = 'campaign' | 'endless'
-export type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
+
+/**
+ * The contract board while it is open (the `contracts` screen): which company
+ * is chosen, and the terms being set. Presentation — never snapshotted, and
+ * gone the moment a contract is signed.
+ */
+export interface ContractBoard {
+  /** The board's own seed: each company's contract deals its run seed from it. */
+  seed: number
+  company: CompanyId
+  /** `board`: pick a company; `terms`: escort or stake, and the purse. */
+  step: 'board' | 'terms'
+  crates: number
+  purse: number
+}
 
 export interface HudSnapshot {
   baseHp: number
@@ -88,7 +113,14 @@ export interface HudSnapshot {
  */
 export interface RunRecap {
   won: boolean
-  mode: GameMode
+  /** How the contract ended. */
+  outcome: 'delivered' | 'cashedOut' | 'lost'
+  /** The contract this run carried (null only for a run saved before contracts). */
+  contract: RunContract | null
+  /** Cargo, as a percentage, when the run ended. */
+  cargo: number
+  /** Gold this settle put in the bank: the purse that came home, and every city's pay. */
+  deposit: number
   /**
    * The deal this run was dealt from: map, loot, shrines, wave composition and
    * every combat roll. Seed a new run with it and you get the same deal.
@@ -108,11 +140,6 @@ export interface RunRecap {
    */
   assist: AssistLevel
   depth: number
-  /** Endless only: rounds survived. */
-  rounds: number
-  /** The difficulty step the run was played at (SK1). */
-  difficulty: number
-  marks: number
   kills: number
   goldLeft: number
   threat: number
@@ -123,12 +150,12 @@ export interface RunRecap {
   /** How many enemies reached the line in the last wave. The head count (F3). */
   enemiesLeaked: number
   /**
-   * SK1: what the settle did for the Watch's long game — Watch XP and levels,
-   * the skill cards unlocked, and whether the win climbed the difficulty.
-   * Null when the run was not paid out on this path.
+   * What the settle did for the long game — standing earned with the company,
+   * the skill cards and item kinds it unlocked. Null when the run was not paid
+   * out on this path.
    */
   progress: RunProgress | null
-  /** Daily Watch / custom seed — the receipt says which, beside the seed. */
+  /** A custom seed says so on the receipt, beside the seed. */
   challenge: RunChallenge
   /** Loot the boss dropped — held here rather than pushed into a dead run (M16). */
   spoils: Item[]
@@ -137,10 +164,7 @@ export interface RunRecap {
 export interface MerchantStock {
   items: { item: Item; price: number }[]
   recruit: { sentinel: Sentinel; price: number } | null
-  /**
-   * The Gate repair on this stall's counter (Phase 3b): null once bought, or
-   * on a stall that does not sell one (an Endless merchant room).
-   */
+  /** The wagon repair on this stall's counter (Phase 3b): null once bought. */
   repair?: { hp: number; price: number } | null
   /** How many times this stall's shelf has been rerolled (each costs more). */
   rerolls?: number
@@ -148,8 +172,6 @@ export interface MerchantStock {
 
 /** Every data field of the store. Actions live on the slice interfaces. */
 export interface GameData {
-  // Mode
-  mode: GameMode
   /**
    * The seed this run was dealt from. Every random thing in the run — map, loot,
    * shrines, each battle's combat rolls — derives from it, so quoting this one
@@ -171,12 +193,15 @@ export interface GameData {
    */
   runSettled: boolean
   /**
-   * The Banner this run is flying, 0–5 (H16 / M29). Chosen at the hero-pick
-   * screen, before the first node, out of the rungs the Watchtower has
-   * unlocked — and it applies to THIS run only.
+   * The contract this run is (the mercenary company): its company, stake,
+   * purse, market, and what its cities have paid. Null only on the hub and
+   * the board. The stake's crates are the run's difficulty step
+   * (`contracts.stakeRules`).
    */
-  runDifficulty: number
-  /** Daily Watch / custom seed / standard (Phase 1) — see `state/daily.ts`. */
+  contract: RunContract | null
+  /** The contract board, while it is open (presentation, not snapshotted). */
+  board: ContractBoard | null
+  /** A typed seed or the board's (Phase 1) — see `state/seeds.ts`. */
   challenge: RunChallenge
   /**
    * LS3: this is the player's first run, and it is staged — new ideas arrive
@@ -208,9 +233,8 @@ export interface GameData {
   /** Compounding campaign difficulty multiplier (1 = start of run). */
   threat: number
   inventory: Item[]
-  // Run tallies (for meta rewards)
+  // Run tallies (for the settle)
   runKills: number
-  marksEarned: number
   /**
    * Rarity pity for this run's loot (M9): unforced item rolls since the last
    * epic-or-better drop. It is run state, not RNG — the loot stream is seeded
@@ -269,25 +293,18 @@ export interface GameData {
   crossroads: Crossroads | null
   forkDone: boolean
 
-  // Endless Watch
-  dust: number
-  lives: number
-  wins: number
-  round: number
-  endlessRecruitCost: number
-  endlessRoom: EndlessRoom | null
-
   /**
    * SK1: the skill ids this run deals from — heroes on offer, hires, and every
-   * milestone offer. Fixed when the run begins (the player's unlocked cards,
-   * or the Daily's fixed pool) and snapshotted, so a resume deals the same.
+   * milestone offer. Fixed when the run begins (the player's unlocked cards)
+   * and snapshotted, so a resume deals the same. A DEALING pool: the route's
+   * company's cards appear twice (`contracts.weightPool`).
    */
   skillPool: string[]
   /**
    * The classless rework: the item KINDS this run deals from — rolled heroes,
    * hires, loot, the merchant and rewards. Fixed when the run begins (the
-   * basic five plus the player's unlocks, or the Daily's fixed pool) and
-   * snapshotted.
+   * basic five plus the player's unlocks), weighted to the route's company
+   * like the skill pool, and snapshotted.
    */
   itemPool: string[]
 
@@ -332,7 +349,7 @@ export interface GameData {
 export interface GameState
   extends GameData,
     RunActions,
-    EndlessActions,
+    ContractActions,
     BattleActions,
     EventActions,
     RosterActions,

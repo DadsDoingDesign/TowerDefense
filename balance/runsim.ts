@@ -52,6 +52,7 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
+import { DEFAULT_PURSE } from '../src/game/run/contracts'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
@@ -124,7 +125,7 @@ export function loadoutFor(label: string, upgrades: Record<string, number>): Loa
   const out: Loadout = {
     label,
     maxBaseHp: b.maxBaseHp,
-    startGold: b.startGold,
+    startGold: DEFAULT_PURSE + b.purseBonus,
     statBonus: b.statBonus,
     extraSentinels: b.extraSentinels,
     extraItems: b.extraItems,
@@ -744,7 +745,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
  * game actually pays rather than a second copy of it.
  */
 export function marksFor(cleared: number, won: boolean, banner: DifficultyRules, chronicler = 1): number {
-  return Math.round((cleared * 8 + (won ? 120 : 0)) * chronicler * banner.markMult)
+  return Math.round((cleared * 8 + (won ? 120 : 0)) * chronicler * (1 + 0.25 * banner.step))
 }
 
 // ---------------------------------------------------------------- §6's model

@@ -1,7 +1,7 @@
 /**
  * `useGameStore` — the ONE zustand store for a run, assembled from slices.
  *
- * Each slice (`runSlice`, `endlessSlice`, `battleSlice`, `eventsSlice`,
+ * Each slice (`runSlice`, `contractSlice`, `battleSlice`, `eventsSlice`,
  * `rosterSlice`, `shellSlice`) contributes a group of actions over the whole
  * `GameState`; the data fields are shared and initialised here. Pure rules the
  * actions apply live in `src/game/run/` (no zustand there), and process-wide
@@ -14,7 +14,7 @@ import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
 import { freshRunState } from './fresh'
 import { seedRunStreams } from './runtime'
 import { createRunSlice } from './runSlice'
-import { createEndlessSlice } from './endlessSlice'
+import { createContractSlice } from './contractSlice'
 import { createBattleSlice } from './battleSlice'
 import { createEventsSlice } from './eventsSlice'
 import { createRosterSlice } from './rosterSlice'
@@ -32,7 +32,6 @@ export const useGameStore = create<GameState>()((...a) => {
   const bootRoster = [createHero(), createHero(), createHero()]
   return {
     ...bootRun,
-    mode: 'campaign',
     runSeed: bootSeed,
     screen: 'hub',
     roster: bootRoster,
@@ -43,7 +42,7 @@ export const useGameStore = create<GameState>()((...a) => {
     inventory: [],
 
     ...createRunSlice(...a),
-    ...createEndlessSlice(...a),
+    ...createContractSlice(...a),
     ...createBattleSlice(...a),
     ...createEventsSlice(...a),
     ...createRosterSlice(...a),

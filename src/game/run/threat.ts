@@ -146,12 +146,6 @@ export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1
  */
 export const threatAfterLayer = (layer: number, start = 1): number => threatAtLayer(layer + 1, start)
 
-/**
- * Endless has its own, gentler step (H7). An Endless round is one wave and one
- * room, so the world escalates per round rather than per layer.
- */
-export const THREAT_PER_ROUND = 1.22
-
 /** The one Vow (Banner) rule the encounter kind reads (see `metaStore.DifficultyRules`). */
 export interface EncounterRules {
   allElite: boolean
@@ -189,9 +183,3 @@ export const nodeClearLuck = (node: MapNode): number => {
   return base + node.layer * 0.025
 }
 
-/**
- * Threat after surviving an Endless round: every round compounds, an elite
- * round (each fifth) a little harder (H7). A LOST round does not advance it.
- */
-export const threatAfterRound = (threat: number, isElite: boolean): number =>
-  threat * (isElite ? THREAT_PER_ROUND * 1.08 : THREAT_PER_ROUND)

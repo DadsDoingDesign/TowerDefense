@@ -118,6 +118,9 @@ export const cratesLeftAfter = (crates: number, citiesPaid: number): number => {
   return Math.max(0, left)
 }
 
+/** How a contract stands: open while the road goes on, then how it ended. */
+export type ContractStatus = 'open' | 'delivered' | 'cashedOut' | 'lost'
+
 /** The terms a contract was signed on — all a payout needs. */
 export interface ContractTerms {
   company: CompanyId
@@ -155,6 +158,45 @@ export function cityPay(t: ContractTerms, city: number, cargo = 100): CityPay {
   const bonus = city === CITY_COUNT - 1 ? Math.round(completionBonus(t.crates) * t.market * share) : 0
   return { sold, sales, fee, bonus, total: sales + fee + bonus }
 }
+
+/**
+ * A contract as the run carries it (snapshotted with the run): its terms, the
+ * purse it set out with, and what its cities have paid so far.
+ */
+export interface RunContract extends ContractTerms {
+  /** Gold taken from the bank for the road (merchants and repairs spend it). */
+  purse: number
+  /** What each city reached has paid, in order. Banked at the settle, so a fall keeps it. */
+  paid: number[]
+  /** The cargo (percent) the caravan reached each of those cities with — what its pay was scaled by. */
+  cargoAt: number[]
+  /** The city whose "cash out or press on" is waiting, or null. */
+  pending: number | null
+  /** What cashing out sold the last crates for (0 unless cashed out). */
+  cashOut: number
+  status: ContractStatus
+  /** True once the hero is committed and the bank has paid the stake and the purse. */
+  signed: boolean
+}
+
+export const freshContract = (t: ContractTerms, purse: number): RunContract => ({
+  company: t.company,
+  crates: clampCrates(t.crates),
+  market: t.market,
+  purse: Math.max(0, Math.floor(purse)),
+  paid: [],
+  cargoAt: [],
+  pending: null,
+  cashOut: 0,
+  status: 'open',
+  signed: false,
+})
+
+/** Everything the contract has earned for the bank: the cities' pay and any cash-out sale. */
+export const contractBanked = (c: Pick<RunContract, 'paid' | 'cashOut'>): number => c.paid.reduce((a, b) => a + b, 0) + c.cashOut
+
+/** The stake this contract cost the bank. */
+export const contractStake = (c: Pick<ContractTerms, 'crates'>): number => clampCrates(c.crates) * CRATE_PRICE
 
 /** The whole contract at full cargo: what each city pays, the stake, and the profit. */
 export function contractPlan(t: ContractTerms): { cities: CityPay[]; stake: number; total: number; profit: number; skills: number; items: number } {

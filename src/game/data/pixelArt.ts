@@ -48,6 +48,14 @@ export const COIN_PALETTE: Palette = { o: OUTLINE, y: '#f0c03a', Y: '#c48a1e', w
 export const LANTERN: PixelRows = ['..oo..', '.oooo.', 'oyyyyo', 'oywyyo', 'oyyyyo', '.oooo.']
 export const lanternPalette = (lit: boolean): Palette => ({ o: OUTLINE, y: lit ? '#f5c451' : '#4a3a26', w: lit ? '#fff3c0' : '#5a4830' })
 
+/** A padlock: something that opens later (a crate past the standing cap, a company not hiring yet). 8 × 9. */
+export const LOCK: PixelRows = ['..oooo..', '.oo..oo.', '.o....o.', 'oooooooo', 'occcccco', 'occoocco', 'occoocco', 'occcccco', 'oooooooo']
+export const LOCK_PALETTE: Palette = { o: OUTLINE, c: '#c9b48c' }
+
+/** A short sword — an item chance on a receipt. 10 × 10. */
+export const SWORD: PixelRows = ['........oo', '.......oso', '......oso.', '.....oso..', '.o..oso...', '.oooso....', '..oho.....', '.ohoo.....', 'oho.o.....', 'oo........']
+export const SWORD_PALETTE: Palette = { o: OUTLINE, s: '#d8dce6', h: '#a8703a' }
+
 /** A sealed scroll: a skill not yet shown. 12 × 12. */
 export const SCROLL: PixelRows = [
   '.oooooooooo.',

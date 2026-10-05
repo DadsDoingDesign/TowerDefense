@@ -87,9 +87,3 @@ export function itemPoolFor(unlocked: readonly string[]): string[] {
   return ITEM_KINDS.filter((k) => have.has(k.id)).map((k) => k.id)
 }
 
-/**
- * The Daily Watch's item pool: the basic set, for everyone — a Daily reads no
- * hub, so the same seed deals the same heroes and loot whatever a player has
- * unlocked (the skills' Daily pool is the starters, for the same reason).
- */
-export const DAILY_ITEM_POOL: readonly string[] = BASIC_ITEM_KINDS

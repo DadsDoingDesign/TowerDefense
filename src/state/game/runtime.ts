@@ -8,13 +8,13 @@
 import { streamRng } from '../../game/core/rng'
 import type { MetaBonuses } from '../metaStore'
 import { useMetaStore } from '../metaStore'
-import type { RunChallenge } from '../daily'
-import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
 import { hiresTrained } from '../../game/run/relics'
 import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
 import { recruitSkill } from '../../game/run/skills'
-import { DAILY_SKILL_POOL, skillPoolFor } from '../../game/run/watch'
-import { DAILY_ITEM_POOL, itemPoolFor } from '../../game/data/itemKinds'
+import { skillPoolFor } from '../../game/run/watch'
+import { itemPoolFor } from '../../game/data/itemKinds'
+import { kindCompany, skillCompany, weightPool } from '../../game/run/contracts'
+import type { CompanyId } from '../../game/data/companies'
 
 /**
  * Per-system RNG streams, all derived from the run seed (C1).
@@ -36,41 +36,33 @@ export function seedRunStreams(runSeed: number): void {
 }
 
 /**
- * Whether the live run reads the player's hub (Phase 1). A Daily Watch is
- * played under STANDARD rules — no hub bonuses, no unlocks — so that its seed
- * deals the same map, waves and offers to everyone who plays it that day. Every
- * run-logic read of the hub goes through {@link runBonuses} / {@link runUnlocked}.
+ * The hub as a run reads it (Phase 1). Every run-logic read of the hub goes
+ * through {@link runBonuses} / {@link runUnlocked}; since the Daily (which read
+ * no hub) is gone, every run reads it.
  */
-export const hub = { runUsesHub: true }
-const ZERO_BONUSES: MetaBonuses = { maxBaseHp: MAX_BASE_HP, startGold: START_GOLD, statBonus: 0, extraSentinels: 0, extraItems: 0, enemyHpMult: 1 }
-export const runBonuses = (): MetaBonuses => (hub.runUsesHub ? useMetaStore.getState().bonuses() : ZERO_BONUSES)
-export const runUnlocked = (id: string): boolean => hub.runUsesHub && useMetaStore.getState().unlocked(id)
-export const usesHub = (c: RunChallenge): boolean => c.kind !== 'daily'
-/**
- * Whether a feat-locked option is open to this run. The achievement ledger is
- * the Watchtower's (`metaStore`); a Daily Watch reads no hub.
- */
-export const featUnlocked = (achievementId: string): boolean =>
-  hub.runUsesHub && useMetaStore.getState().achieved(achievementId)
+export const runBonuses = (): MetaBonuses => useMetaStore.getState().bonuses()
+export const runUnlocked = (id: string): boolean => useMetaStore.getState().unlocked(id)
+/** Whether a feat-locked option is open to this run (the ledger is `metaStore`'s). */
+export const featUnlocked = (achievementId: string): boolean => useMetaStore.getState().achieved(achievementId)
 /** Whether a feat-locked relic may be dealt into this run's reward hands. */
 export const relicUnlocked = featUnlocked
 
 /**
  * SK1: the skill pool a run beginning now deals from — the player's unlocked
- * cards, or the Daily's fixed pool (a Daily reads no hub). Read ONCE, when the
- * run begins, and kept on the run (`skillPool`): a card unlocked at the end of
- * a run never changes the run it was earned in.
+ * cards, weighted to the route's company (`contracts.weightPool`). Read ONCE,
+ * when the run begins, and kept on the run (`skillPool`): a card unlocked at
+ * the end of a run never changes the run it was earned in.
  */
-export const startingSkillPool = (c: RunChallenge): string[] =>
-  usesHub(c) ? skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)) : [...DAILY_SKILL_POOL]
+export const startingSkillPool = (company: CompanyId | null): string[] =>
+  weightPool(skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)), company, skillCompany)
 
 /**
  * The classless rework: the item KINDS a run beginning now deals from — the
- * basic five plus the player's unlocked kinds, or the Daily's fixed pool.
- * Read once, kept on the run (`itemPool`), like the skill pool.
+ * basic five plus the player's unlocked kinds, weighted to the route's
+ * company. Read once, kept on the run (`itemPool`), like the skill pool.
  */
-export const startingItemPool = (c: RunChallenge): string[] =>
-  usesHub(c) ? itemPoolFor(useMetaStore.getState().items ?? []) : [...DAILY_ITEM_POOL]
+export const startingItemPool = (company: CompanyId | null): string[] =>
+  weightPool(itemPoolFor(useMetaStore.getState().items ?? []), company, kindCompany)
 
 /**
  * SK1: who deals a hire its first skill — the live run's seed and pool, set
@@ -139,7 +131,7 @@ export const session = { ownsRun: false }
 /**
  * Which way up the NEXT battle's field is drawn (Portrait battlefields).
  *
- * Read once, when a battle node is entered (`selectNode`, `endlessBeginWave`),
+ * Read once, when a battle node is entered (`selectNode`),
  * and stored on the run as the oriented `battleMap` — so a rotation mid-battle
  * never swaps the geometry under a posted company. The default reads the
  * window through the pure `chooseFieldOrientation`; with no window (the balance

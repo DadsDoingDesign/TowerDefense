@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
-import { difficultyRules } from '../../state/metaStore'
+import { stakeRules } from '../../game/run/contracts'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
@@ -37,7 +37,7 @@ export function RunMapView() {
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
-  const startThreat = useGameStore((s) => difficultyRules(s.runDifficulty).startThreat)
+  const startThreat = useGameStore((s) => stakeRules(s.contract?.crates ?? 0).startThreat)
   const focusedId = useMapFocus((s) => s.nodeId)
   const focus = useMapFocus((s) => s.focus)
 

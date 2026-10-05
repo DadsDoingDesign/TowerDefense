@@ -1,6 +1,8 @@
 /**
  * Run slice: starting, re-dealing, resuming and leaving a run, and walking the
- * run map (`selectNode`).
+ * run map (`selectNode`). A run is a contract (the mercenary company): it
+ * begins from the contract board (`contractSlice`), with a company, a stake
+ * and a purse, and the bank pays for it when the hero is committed.
  */
 import { newRunSeed, restoreIdCounter, streamRng } from '../../game/core/rng'
 import { startingKit } from '../../game/engine/kit'
@@ -10,7 +12,7 @@ import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
 import { carryPlacements, encounterNode } from '../../game/run/map'
-import { nodeHazardSeed, nodeTerrainRule } from '../../game/run/terrain'
+import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run/terrain'
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
 import { useSettingsStore } from '../settingsStore'
@@ -20,53 +22,69 @@ import { gearReturnedText } from '../../game/run/inventory'
 import { applyStatBonus, hubExtras, receiveItems, recruitSlate, scaledRecruit } from '../../game/run/recruits'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
+import { companyById, type CompanyId } from '../../game/data/companies'
+import { contractStake, DEFAULT_PURSE, freshContract, marketFor, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
-import { sfx } from '../../audio/audio'
-import { difficultyRules, MAX_DIFFICULTY, useMetaStore } from '../metaStore'
-import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
-import { difficultyAllowed, seedEditable } from '../runTerms'
+import { useMetaStore } from '../metaStore'
+import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds'
+import { seedEditable } from '../runTerms'
 import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, dealSkill, hub, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams, usesHub } from './runtime'
+import { clearBeatTimer, dealSkill, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
 
+/** What a contract is signed on, before the run deals anything from it. */
+export interface ContractOrder {
+  company: CompanyId
+  crates: number
+  purse: number
+}
+
+/** The route's ground, for every terrain read of this run (the node, the preview, the harness). */
+export const groundOf = (s: { contract: Pick<RunContract, 'company'> | null; firstRun: boolean }): GroundOpts => ({
+  firstRun: s.firstRun,
+  ...(s.contract ? { ground: companyById(s.contract.company).ground.rules } : {}),
+})
+
+/**
+ * The contract a run begins on when none is named: an escort on Rosethread's
+ * road, whose ground is the open ground every road used to share — the dev
+ * handle's quick start (`newRun`) and the store tests' default.
+ */
+export const QUICK_ORDER: ContractOrder = { company: 'silk', crates: 0, purse: DEFAULT_PURSE }
+
 export interface RunActions {
+  /** A quick start (dev handle, tests): {@link QUICK_ORDER} on a fresh seed, straight to the hero pick. */
   newRun: () => void
-  /** Start a campaign on a given seed (the one door `newRun`, the Daily and custom seeds share). */
-  beginCampaign: (runSeed: number, challenge: RunChallenge) => void
-  /** Today's Daily Watch: the UTC day's shared seed, standard rules. */
-  startDaily: () => void
+  /**
+   * Start a contract run on a given seed: the one door the contract board,
+   * a first-timer's free escort and a typed seed share. The bank is not
+   * touched until the hero is committed (`pickStartingHero`).
+   */
+  beginCampaign: (runSeed: number, challenge: RunChallenge, order?: ContractOrder) => void
   /**
    * Re-deal the run being set up from a typed seed (hero-pick only, before a
-   * hero is committed). Returns false when refused or the text is empty.
+   * hero is committed), on the same contract terms. Returns false when refused
+   * or the text is empty.
    */
   reseedRun: (input: string) => boolean
-  /**
-   * The way back from a typed seed: re-deal the run being set up from a fresh
-   * random seed, keeping its Vow. Same gate as `reseedRun`.
-   */
+  /** The way back from a typed seed: a fresh random seed, same terms. */
   randomizeRunSeed: () => boolean
-  /**
-   * Choose the difficulty step for the run being set up (SK1): any step from 0
-   * up to the save's top. Only legal on the hero-pick screen — never mid-run —
-   * and it re-deals the map, because a step turns battle nodes into elites.
-   */
-  setRunDifficulty: (step: number) => void
-  /** Start another run from the end screen, same difficulty (M15). */
+  /** Take another contract from the end screen: back to the board, the last terms set. */
   runAgain: () => void
   /**
    * Commit the hero pick: one of the three random heroes the pick deals
-   * (`run/heroes.heroChoices` — `pick-0` … `pick-2`), with exactly the gear
-   * and Level 1 skill its card showed.
+   * (`pick-0` … `pick-2`). This signs the contract: the bank pays the stake and
+   * the purse, and the purse becomes the run's gold.
    */
   pickStartingHero: (choiceId: string) => void
   returnToHub: () => void
   /**
    * Back out of the hero pick before any hero is committed. Nothing has begun:
-   * no payout, no finished run on the record (so a first run stays staged), and
-   * a Daily's scored attempt is only spent by `pickStartingHero`.
+   * no payout, no finished run on the record, and nothing taken from the bank.
+   * Back to the contract's terms (a first-timer's to the menu).
    */
   cancelHeroPick: () => void
   selectNode: (nodeId: string) => void
@@ -82,37 +100,46 @@ export interface RunActions {
 export const createRunSlice: Slice<RunActions> = (set, get) => ({
   newRun: () => get().beginCampaign(newRunSeed(), STANDARD_RUN),
 
-  beginCampaign: (runSeed, challenge) => {
-    // Starting a run destroys any saved one. Settle it first — the marks it
-    // earned are the player's either way (M-2).
+  beginCampaign: (runSeed, challenge, order = QUICK_ORDER) => {
+    // Starting a run destroys any saved one. Settle it first — what it earned
+    // is the player's either way (M-2).
     settleSavedRun(get, set)
-    // A Daily Watch reads no hub at all (standard rules), so the same seed
-    // deals the same map, waves and offers on every save.
-    hub.runUsesHub = usesHub(challenge)
     const b = runBonuses()
     // One seed per run, then every stream (map/loot/combat) hangs off it.
     seedRunStreams(runSeed)
     // LS3: a first run is staged. Decided here, once, and kept by the snapshot.
-    const firstRun = startsFirstRun(useMetaStore.getState().stats, useSettingsStore.getState().showEverything, challenge)
+    const firstRun = startsFirstRun(useMetaStore.getState().stats, useSettingsStore.getState().showEverything)
     const fresh = freshRunState(runSeed)
-    // SK1: the run's skill pool is read once, here, and kept on the run.
-    const skillPool = startingSkillPool(challenge)
-    // The classless rework: the item kinds the run deals, read once, likewise.
-    const itemPool = startingItemPool(challenge)
+    // The contract: its market is locked now, so crossing midnight mid-run
+    // changes nothing it pays.
+    const contract = freshContract({ company: order.company, crates: order.crates, market: marketFor(order.company, utcDateKey()) }, order.purse)
+    // The stake is the run's difficulty step: re-deal the map from the same
+    // seed with its elites (a hash of the seed, never a draw — the map stream
+    // is rewound, so an escort deals exactly the map an unstaked run did).
+    const rules = stakeRules(contract.crates)
+    streams.mapRng = streamRng(runSeed, 'map')
+    const dealt = dealRunMap(rules, runSeed)
+    // SK1: the run's pools are read once, here, weighted to the company.
+    const skillPool = startingSkillPool(contract.company)
+    const itemPool = startingItemPool(contract.company)
     skillRun.seed = runSeed
     skillRun.pool = skillPool
     skillRun.items = itemPool
     set({
       ...fresh,
+      ...dealt,
       // The map is post-processed, never re-dealt: no stream moves (LS3).
-      runMap: stageFirstRunMap(fresh.runMap, firstRun),
+      runMap: stageFirstRunMap(dealt.runMap, firstRun),
+      threat: rules.startThreat,
       firstRun,
-      mode: 'campaign',
       runSeed,
       challenge,
+      contract,
+      board: null,
       screen: 'heroPick',
       roster: [],
-      gold: b.startGold,
+      // The purse shows on the hero pick; the bank pays it when the hero is committed.
+      gold: contract.purse + b.purseBonus,
       baseHp: b.maxBaseHp,
       maxBaseHp: b.maxBaseHp,
       enemyHpMult: b.enemyHpMult,
@@ -121,91 +148,54 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       skillPool,
       itemPool,
     })
-    // SK1: a run opens at the save's top difficulty step — the player turns it
-    // down on the hero pick if they like. A Daily is always step 0.
-    if (difficultyAllowed(challenge)) get().setRunDifficulty(useMetaStore.getState().topDifficulty)
-  },
-
-  startDaily: () => {
-    const date = utcDateKey()
-    // Whether this is the day's scored attempt is decided when a hero is
-    // committed (`pickStartingHero`), not here: looking at today's map and
-    // backing out costs nothing, but a run that has begun is the attempt.
-    get().beginCampaign(dailySeed(date), { kind: 'daily', date, scored: false })
   },
 
   reseedRun: (input) => {
     const st = get()
-    // Never on a Daily (`seedEditable`): the day's seed IS the Daily, and this
-    // used to quietly turn today's run into an unranked custom-seed run.
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
+    if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge)) return false
     const seed = parseSeed(input)
     if (seed === null) return false
-    const step = st.runDifficulty
-    get().beginCampaign(seed, { kind: 'seeded', date: null, scored: false })
-    get().setRunDifficulty(step)
+    const { company, crates, purse } = st.contract
+    get().beginCampaign(seed, SEEDED_RUN, { company, crates, purse })
     return true
   },
 
   randomizeRunSeed: () => {
     const st = get()
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !seedEditable(st.challenge)) return false
-    const step = st.runDifficulty
-    get().newRun()
-    get().setRunDifficulty(step)
+    if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge)) return false
+    const { company, crates, purse } = st.contract
+    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company, crates, purse })
     return true
   },
 
-  setRunDifficulty: (step) => {
-    const st = get()
-    // A step is chosen before the march, never during it — and never on a
-    // Daily Watch, which is one set of rules for everyone.
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length || !difficultyAllowed(st.challenge)) return
-    const top = useMetaStore.getState().topDifficulty
-    const next = Math.max(0, Math.min(Math.min(MAX_DIFFICULTY, top), Math.floor(Number.isFinite(step) ? step : 0)))
-    if (next === st.runDifficulty) return
-    const rules = difficultyRules(next)
-    // Re-deal the map from the SAME run seed: a step turns battle nodes into
-    // elites, so the map is a function of the step. The map stream is rewound
-    // rather than advanced, so switching steps back and forth cannot be used
-    // to reroll the map — and which nodes become elites is a hash of the seed
-    // (`run/map.addDifficultyElites`), not a draw.
-    streams.mapRng = streamRng(st.runSeed, 'map')
-    const dealt = dealRunMap(rules, st.runSeed)
-    set({ runDifficulty: next, threat: rules.startThreat, ...dealt, runMap: stageFirstRunMap(dealt.runMap, st.firstRun) })
-    sfx('confirm')
-  },
-
   runAgain: () => {
-    // The end screen's second door (M15). Three taps through the hub is not a
-    // "one more run" loop; this is. The difficulty carries over, so a run you
-    // just lost at step 2 is retried at step 2 — and a win that raised the top
-    // step opens the next run at the new top.
-    const { runDifficulty: step, challenge, runSeed, runPhase } = get()
-    // A Daily is retried as today's Daily (practice once the attempt is
-    // spent); a custom seed replays the same seed.
-    if (challenge.kind === 'daily') return get().startDaily()
-    if (challenge.kind === 'seeded') get().beginCampaign(runSeed, challenge)
-    else get().newRun()
-    if (runPhase !== 'won') get().setRunDifficulty(step)
+    // The end screen's second door (M15): back to the board with the last
+    // contract's terms set, one tap from signing another.
+    const last = get().contract
+    get().openContracts(last ? { company: last.company, crates: last.crates, purse: last.purse } : undefined)
   },
 
   pickStartingHero: (choiceId) => {
     const st = get()
     // Once per run: a second pick would re-deal the extras off the loot stream.
-    if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return
+    if (st.screen !== 'heroPick' || st.roster.length || !st.contract) return
     const b = runBonuses()
-    // The leader is the card the player chose — its name, stats, gear and
-    // skill re-dealt off the same hashed generator the card was, with real
-    // ids. No run stream moves for it.
+    // Signing: the bank pays the stake and the purse. A bank that cannot (it
+    // changed in another tab since the terms were set) keeps the stake and
+    // shrinks the purse to what is left; a stake it cannot cover refuses.
+    const meta = useMetaStore.getState()
+    const stake = contractStake(st.contract)
+    if (meta.bank < stake) return
+    const purse = Math.min(st.contract.purse, Math.max(0, meta.bank - stake))
+    if (!meta.withdraw(stake + purse)) return
+    const contract: RunContract = { ...st.contract, purse, signed: true }
+    // The leader is the card the player chose — re-dealt off the same hashed
+    // generator the card was, with real ids. No run stream moves for it.
     const leader = chosenHero(st.runSeed, st.skillPool, st.itemPool, resolvePick(st.runSeed, st.skillPool, st.itemPool, choiceId), b.statBonus)
-    if (!leader) return
-    // Committing a hero to today's Daily claims the day's scored attempt —
-    // or finds it already claimed, and the run is practice.
-    const challenge =
-      st.challenge.kind === 'daily' && st.challenge.date
-        ? { ...st.challenge, scored: useMetaStore.getState().beginDaily(st.challenge.date) }
-        : st.challenge
+    if (!leader) {
+      meta.deposit(stake + purse)
+      return
+    }
     // The hub's extra heroes: random hires off the loot stream, named apart
     // from the leader.
     const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill, st.itemPool, [leader.name]).map((s) => applyStatBonus(s, b.statBonus))
@@ -214,19 +204,17 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // whoever they strictly improve; the rest go to the pack.
     const kit = startingKit(streams.rng, { extra: b.extraItems, roster: company, kinds: st.itemPool })
     const { roster, inventory } = receiveItems(company, st.inventory, kit)
-    // The feats ledger starts here, with the company as it marches out.
-    const feats = { ...freshFeats(), starter: heroStyle(leader), startSize: roster.length, goldPeak: get().gold }
-    set({ roster, inventory, challenge, screen: 'map', feats })
+    const gold = purse + b.purseBonus
+    // The feats ledger starts here, with the heroes as they march out.
+    const feats = { ...freshFeats(), starter: heroStyle(leader), startSize: roster.length, goldPeak: gold }
+    set({ roster, inventory, contract, gold, screen: 'map', feats })
     // SK1: the hero pick's tip ("Each hero comes with a skill") has been read.
     useSettingsStore.getState().markTaught('heroSkill')
     useSettingsStore.getState().markTaught('heroGear')
   },
 
-  // Leaving for the Watchtower ends the run, so it settles like any other end.
-  // This IS a mid-run quit — the shell's fallback escape offer dispatches it
-  // (ui/shell/offers.ts) — so the run has to be destroyed here, not merely
-  // paid. `settleSavedRun` retires it (M-1); the rest tears down the live
-  // battle so nothing is left pointing at a run that no longer exists.
+  // Leaving for the menu ends the run, so it settles like any other end: a
+  // fall — the cities' pay and the purse come home, unsold crates are lost.
   returnToHub: () => {
     settleSavedRun(get, set)
     set(leaveToHub())
@@ -236,10 +224,13 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const st = get()
     if (st.screen !== 'heroPick' || st.roster.length) return
     // `beginCampaign` already settled whatever run came before; this one never
-    // started, so it is dropped rather than settled (settling would pay it).
+    // started and took nothing from the bank, so it is dropped, not settled.
     clearSnapshot()
     session.ownsRun = false
+    const c = st.contract
     set(leaveToHub())
+    // Back to the terms it came from — a first-timer's free escort has none.
+    if (c && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates, purse: c.purse }, 'terms')
   },
 
   // ---- run snapshot (C3) ----
@@ -247,7 +238,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // A resume replaces the whole run, `waveBeat` included, so any hold still
     // outstanding from the session's previous run goes with it (F6).
     clearBeatTimer()
-    hub.runUsesHub = snap.mode === 'endless' || usesHub(snap.challenge)
     // Rebuild the seeded streams, then fast-forward each to where the run had
     // got to — a resume must not re-deal loot the player already saw.
     seedRunStreams(snap.runSeed)
@@ -256,28 +246,20 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     skillRun.items = snap.itemPool
     if (snap.rngLoot !== null) streams.rng.loadState(snap.rngLoot)
     if (snap.rngMap !== null) streams.mapRng.loadState(snap.rngMap)
-    // The dry counter is restored WITH the loot stream, never without it: the
-    // next drop is a function of both, so rewinding one alone resumes into a
-    // sequence the interrupted run would never have dealt (M9).
+    // The dry counter is restored WITH the loot stream, never without it (M9).
     const lootPity: RarityPity = { dry: snap.lootPity }
-    // The process-global counters move HERE, when the run really comes back —
-    // not when the save is merely loaded to be peeked at or settled.
+    // The process-global counters move HERE, when the run really comes back.
     restoreIdCounter(snap.idCounter)
     restoreNameCounters(snap.nameCounters)
 
     const battleMap = snapshotBattleMap(snap)
     // Only open tiles of the field the battle resumes on, each hero once, at
-    // most a full company (G1-2) — whatever the payload claims.
+    // most a full roster (G1-2) — whatever the payload claims.
     const rosterIds = new Set(snap.roster.map((s) => s.id))
     const placements: Placement = carryPlacements(snap.placements ?? {}, battleMap, (id) => rosterIds.has(id), MAX_ROSTER)
 
-    // Which side of the wave was the snapshot taken on? (C-1)
-    //
-    // `lastResult` is the only honest answer, and it is why it is part of the
-    // snapshot. A resolved wave has ALREADY moved the run on — node cleared,
-    // threat compounded, gold and XP paid, a reward dealt — so it must restore
-    // onto the summary, never onto a pre-battle setup screen that would offer
-    // the cleared wave up to be fought (and paid) again.
+    // Which side of the wave was the snapshot taken on? (C-1) `lastResult` is
+    // the only honest answer: a resolved wave has ALREADY moved the run on.
     const resolved = snap.lastResult !== null
     const enemiesTotal = snap.currentWave?.spawns.length ?? 0
     const hud = {
@@ -285,18 +267,15 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       baseHp: snap.baseHp,
       maxBaseHp: snap.maxBaseHp,
       enemiesTotal,
-      // A resolved wave reads as finished, not as one still to be fought.
       enemiesSpawned: resolved ? enemiesTotal : 0,
       goldEarned: resolved ? (snap.lastResult?.goldEarned ?? 0) : 0,
     }
 
     set({
-      mode: snap.mode,
       runSeed: snap.runSeed,
       screen: snap.screen,
       runPhase: snap.runPhase,
-      // A snapshot only ever exists for a run that was NOT settled, so taking
-      // one up un-retires this session (M-1).
+      // A snapshot only ever exists for a run that was NOT settled (M-1).
       runSettled: false,
       runMap: snap.runMap,
       currentNodeId: snap.currentNodeId,
@@ -313,7 +292,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       threat: snap.threat,
       inventory: snap.inventory,
       runKills: snap.runKills,
-      marksEarned: snap.marksEarned,
       lootPity,
       activeNodeId: snap.activeNodeId,
       currentWave: snap.currentWave,
@@ -329,52 +307,32 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       forkDone: snap.forkDone,
       skillPool: snap.skillPool,
       itemPool: snap.itemPool,
-      dust: snap.dust,
-      lives: snap.lives,
-      wins: snap.wins,
-      round: snap.round,
-      endlessRecruitCost: snap.endlessRecruitCost,
-      endlessRoom: snap.endlessRoom,
+      contract: snap.contract,
+      board: null,
       // The engine is deliberately NOT restored: a wave interrupted MID-fight
-      // resumes from its setup phase, fully re-fightable, rather than from a
-      // half-simulated state that would be neither the player's win nor their
-      // loss. A wave that had already RESOLVED is a different thing entirely
-      // and must not be re-offered — see `resolved` above.
+      // resumes from its setup phase, fully re-fightable.
       engine: null,
       battlePhase: 'setup',
       speed: 1,
       hud,
       lastResult: snap.lastResult,
       lastLoot: snap.lastLoot,
-      // A resumed run never lands mid-beat: the beat is presentation, it is
-      // not snapshotted, and whatever it was holding was settled before the
-      // snapshot was written (see `installRunPersistence`).
+      // A resumed run never lands mid-beat.
       waveBeat: null,
-      // Clamped to the ladder by the migration, and clamped again HERE to what
-      // this save has actually reached (F8) — the bypass `setRunDifficulty` refuses
-      // must not arrive through the back door. Downwards only: a resume may
-      // never grant a rung, and it may never quietly raise the difficulty of
-      // the run the player left.
-      runDifficulty: snap.challenge.kind === 'daily' ? 0 : Math.min(snap.runDifficulty, useMetaStore.getState().topDifficulty),
       challenge: snap.challenge,
       // LS3: a run saved before staging existed has none, and plays unstaged.
       firstRun: snap.firstRun === true,
-      // A snapshot only ever exists for a LIVE run, so there is no recap to
-      // restore — and leaving a stale one would show the last run's receipt
-      // over this one's first node.
+      // A snapshot only ever exists for a LIVE run, so there is no recap.
       victory: null,
       selectedSentinelId: null,
       ...CLEAR_SHELL,
-      // Round 3 (Q5): the load moved an off-hand item the off hand no longer
-      // takes back to the pack — say so, once (the receipt toast shows it).
+      // Round 3 (Q5): the load moved an off-hand item back to the pack — say so, once.
       gearNotice: snap.gearReturned?.length ? { text: gearReturnedText(snap.gearReturned), at: Date.now() } : null,
     })
   },
 
-  // Walking away from an interrupted run still SETTLES it. Losing the run to
-  // a backgrounded tab must not also cost the player the marks they earned —
-  // that was the second half of C3, and it is why this pays out rather than
-  // just deleting the key.
+  // Walking away from an interrupted run still SETTLES it (C3): the cities'
+  // pay and the purse come home.
   discardSavedRun: () => {
     settleSavedRun(get, set)
     set(leaveToHub())
@@ -383,26 +341,14 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   selectNode: (nodeId) => {
     const { reachableNodeIds, clearedNodeIds, runMap, roster, lootPity, event } = get()
     if (!reachableNodeIds.includes(nodeId)) return
-    // A cleared node is done, whatever `reachableNodeIds` says. Reachability
-    // is derived state and a bad snapshot can hand us a set that overlaps the
-    // cleared list; entering a cleared battle node from there lands on a
-    // battle screen whose only control — Start Wave — the store refuses (M-3).
+    // A cleared node is done, whatever `reachableNodeIds` says (M-3).
     if (clearedNodeIds.includes(nodeId)) return
+    // A city's cash-out choice is answered before the road goes on.
+    if (get().contract?.pending != null) return
     const node = runMap.nodes.find((n) => n.id === nodeId)
     if (!node) return
 
     // ---- a parked event is never left live behind you (F1) ---------------
-    //
-    // Tapping a special sets `event` and leaves the player on the map. If a tap
-    // elsewhere left that event standing, a later `leaveEvent` / `acceptRecruit`
-    // / `declineShrine` would `completeNode` a node the company is no longer on
-    // — marching the marker backwards and charging the special step twice.
-    //
-    // The guard goes on the ACTION, not on the screen covering it (same as the
-    // crossroads fork, F2). Re-tapping the open event's node is a no-op — it
-    // must never re-enter the branches below, which would re-roll the
-    // merchant's stock for free. Tapping ANOTHER node forfeits the special: it
-    // is not cleared, it charges nothing, and its offers die with it.
     if (event) {
       if (event.nodeId === nodeId) return
       set({ event: null, merchant: null, shrineOffer: null, recruitOptions: [] })
@@ -417,12 +363,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
         roster.length < MAX_ROSTER
           ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: RECRUIT_PRICE }
           : null
-      // The Gate repair is on every campaign counter (Phase 3b): the comeback.
+      // The wagon repair is on every counter (Phase 3b): the comeback.
       set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR }, rerolls: 0 } })
       return
     }
     if (node.type === 'campfire') {
-      // Nothing is rolled: a campfire is the same two choices every time.
       set({ event: { kind: 'campfire', nodeId } })
       return
     }
@@ -435,29 +380,16 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       return
     }
 
-    // Battle / elite / boss.
-    //
-    // The composition variant is seeded on (run seed, layer, row), so the node
-    // keeps the wave it was dealt across a save/resume, and two battle nodes
-    // standing in the same layer are two different fights rather than one
-    // fight offered twice (WS8).
-    // A difficulty step's extra elites are real elite NODES on the map
-    // the MAP dealt stays at its own depth. `nodeEncounter` is the one
-    // derivation — the map's preview reads the same one.
+    // Battle / elite / boss. The composition variant is seeded on (run seed,
+    // layer, row) (WS8); a stake's extra elites are real elite NODES on the map.
     const wave = nodeEncounter(encounterNode(node), get().runSeed)!
     const { baseHp, maxBaseHp } = get()
-    // The battle's orientation is chosen HERE, once, from the layout the
-    // player is holding (Portrait battlefields) — the field identity is the
-    // run's seeded one; only which twin is fought on changes. Its map challenge
-    // (G1-2) is the node's own, the same one the preview named, and so (Q1) is
-    // its danger ground and seeded obstacles — a hash of the node, no stream draw.
+    // The battle's orientation is chosen HERE, once (Portrait battlefields).
+    // Its map challenge is the node's own on this ROUTE's ground (the
+    // company's), and so (Q1) is its danger ground — a hash, no stream draw.
+    const ground = groundOf(get())
     const battleMap =
-      fieldFor(
-        fieldIdOf(get().battleMap),
-        nodeTerrainRule(node, get().runSeed, { firstRun: get().firstRun }),
-        layout.orientation(),
-        nodeHazardSeed(node, get().runSeed, { firstRun: get().firstRun }),
-      ) ??
+      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed, ground), layout.orientation(), nodeHazardSeed(node, get().runSeed, ground)) ??
       orientField(get().battleMap, layout.orientation())
     set({
       activeNodeId: nodeId,

@@ -30,10 +30,23 @@
  *   a restored one.
  */
 import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, DAILY_ITEM_POOL, isItemKind, itemPoolFor } from '../game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, itemPoolFor } from '../game/data/itemKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
 import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
-import { clampStep, DAILY_SKILL_POOL } from '../game/run/watch'
+import { clampStep } from '../game/run/watch'
+import { companyById, isCompanyId, type CompanyId } from '../game/data/companies'
+import {
+  cityOfLayer,
+  clampCrates,
+  CITY_COUNT,
+  freshContract,
+  kindCompany,
+  MARKET_MULT,
+  skillCompany,
+  weightPool,
+  type ContractStatus,
+  type RunContract,
+} from '../game/run/contracts'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
 import { settleOffHands } from '../game/run/inventory'
@@ -62,36 +75,43 @@ import type {
   TerrainRuleId,
   WaveDef,
 } from '../game/types'
-import type { RunFeats } from '../game/run/settle'
-import { migrateChallenge, type RunChallenge } from './daily'
+import type { RunFeats, SettleFacts } from '../game/run/settle'
+import { migrateChallenge, type RunChallenge } from './seeds'
 import { arr, bool, num, readJson, removeRaw, str, writeJson } from './storage'
 
 export const RUN_SNAPSHOT_KEY = 'fieldwatch-run'
 
 /**
- * A stored difficulty step, coerced onto the ladder (F8). A save written before
- * SK1 calls it `runBanner` — its Vow tier IS its difficulty step now.
- *
- * `Math.max(0, num(...))` was once the whole of it, with no ceiling, so a
- * payload saying 99 resumed as 99 and indexed past the end of the rung table.
- * One source of truth for the ceiling, shared with `difficultyRules`. Whether
- * the save has REACHED the step is a different question, asked where the answer
- * is known — see `resumeRun` in the game store.
+ * A stored difficulty step (v13–v14; `runBanner` before SK1), coerced onto
+ * the ladder (F8). Read only to price what a pre-contract run is owed.
  */
 const stepOf = (o: Record<string, unknown>): number => clampStep(num(o.runDifficulty ?? o.runBanner, 0))
+
+/**
+ * What a run saved before contracts is owed, in gold: the Watch Marks it would
+ * have paid, one for one (Marks became gold, the meta's v8). A campaign or
+ * Daily run: 8 a node cleared, ×1.25 a difficulty step; an Endless run: 8 a
+ * round and 20 every fifth. Paid only by a settle of such a payload.
+ */
+export function legacyGold(o: Record<string, unknown>, depth: number): number {
+  if (o.mode === 'endless') {
+    const r = Math.max(0, Math.floor(num(o.wins, 0)))
+    return r * 8 + Math.floor(r / 5) * 20
+  }
+  return Math.round(Math.max(0, depth) * 8 * (1 + 0.25 * stepOf(o)))
+}
 
 /**
  * Snapshot schema version (M11). Bump on any shape change and extend `migrate`;
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 14
+export const RUN_SNAPSHOT_VERSION = 15
 
-type GameMode = 'campaign' | 'endless'
-type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
-type RunPhase = 'active' | 'won' | 'lost'
+/** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
+type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
+type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
 type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
-type EndlessRoom = 'merchant' | 'forge' | 'shrine' | 'recruit'
 
 /**
  * The mid-map fork, as stored (v4).
@@ -113,16 +133,16 @@ interface CrossroadsSnap {
   revealed?: { heroName: string; mutation: Mutation }
 }
 
-const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'battle', 'endless']
-const MODES: readonly GameMode[] = ['campaign', 'endless']
-const PHASES: readonly RunPhase[] = ['active', 'won', 'lost']
+const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'battle']
+const PHASES: readonly RunPhase[] = ['active', 'won', 'lost', 'cashedOut']
+const STATUSES: readonly ContractStatus[] = ['open', 'delivered', 'cashedOut', 'lost']
 const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
 const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
   recruit: { sentinel: Sentinel; price: number } | null
-  /** v7: the Gate repair on the counter (null once bought). */
+  /** v7: the wagon repair on the counter (null once bought). */
   repair?: { hp: number; price: number } | null
   /** v7: rerolls taken at this stall. */
   rerolls?: number
@@ -133,7 +153,6 @@ export interface RunSnapshot {
   v: number
   savedAt: number
 
-  mode: GameMode
   runSeed: number
   screen: Screen
   runPhase: RunPhase
@@ -172,25 +191,24 @@ export interface RunSnapshot {
   enemyHpMult: number
   threat: number
   /**
-   * The difficulty step this run is played at (v13; `runBanner` v3–v12, the
-   * Vow tier, which IS the step now). It has to survive a reload: the step's
-   * starting Threat and extra elites are baked into the run, and the payout
-   * multiplier is read off it when the run settles.
+   * The contract (v15, the mercenary company): company, stake, market, purse,
+   * what the cities have paid and any cash-out waiting. A v14 payload is a run
+   * from before contracts: it resumes as a signed escort on Rosethread's road
+   * (whose ground is the open ground every road used to share), its passed
+   * cities paid nothing (none was owed then), its gold its purse.
    */
-  runDifficulty: number
+  contract: RunContract
   /**
-   * SK1 (v13): the skill ids this run deals from. A v12 payload has none and
-   * resumes on the starters (a Daily on its fixed pool) — the cards it could
-   * have dealt are not knowable from the save.
+   * SK1 (v13): the skill ids this run deals from, weighted to the contract's
+   * company (v15). A v12 payload has none and resumes on the starters.
    */
   skillPool: string[]
   /**
-   * The classless rework (v14): the item kinds this run deals from. A v13
-   * payload has none and resumes dealing EVERY kind — the run it was played
-   * as — and a Daily on its fixed pool.
+   * The classless rework (v14): the item kinds this run deals from, weighted
+   * like the skills. A v13 payload has none and resumes dealing EVERY kind.
    */
   itemPool: string[]
-  /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
+  /** A custom seed (v6). Anything else — a Daily included — resumes as a standard run. */
   challenge: RunChallenge
   /**
    * LS3: the run is the player's first, and staged. Optional on purpose — no
@@ -200,7 +218,6 @@ export interface RunSnapshot {
   firstRun?: boolean
   inventory: Item[]
   runKills: number
-  marksEarned: number
 
   activeNodeId: string | null
   currentWave: WaveDef | null
@@ -233,13 +250,6 @@ export interface RunSnapshot {
   gearReturned?: { hero: string; item: string }[]
   crossroads: CrossroadsSnap | null
   forkDone: boolean
-
-  dust: number
-  lives: number
-  wins: number
-  round: number
-  endlessRecruitCost: number
-  endlessRoom: EndlessRoom | null
 
   /**
    * Stream positions, so the resumed run continues rather than re-deals.
@@ -276,7 +286,6 @@ export interface RunSnapshot {
  * keeps this module free of any runtime import from the store (no cycle).
  */
 export interface RunStateSource {
-  mode: GameMode
   runSeed: number
   screen: Screen
   runPhase: RunPhase
@@ -293,7 +302,7 @@ export interface RunStateSource {
   maxBaseHp: number
   enemyHpMult: number
   threat: number
-  runDifficulty: number
+  contract: RunContract | null
   skillPool: string[]
   itemPool: string[]
   challenge: RunChallenge
@@ -301,7 +310,6 @@ export interface RunStateSource {
   firstRun?: boolean
   inventory: Item[]
   runKills: number
-  marksEarned: number
   activeNodeId: string | null
   currentWave: WaveDef | null
   tactics: Tactics
@@ -316,12 +324,6 @@ export interface RunStateSource {
   feats: RunFeats
   crossroads: CrossroadsSnap | null
   forkDone: boolean
-  dust: number
-  lives: number
-  wins: number
-  round: number
-  endlessRecruitCost: number
-  endlessRoom: EndlessRoom | null
 }
 
 /** RNG stream positions, supplied by the store (it owns the stream objects). */
@@ -338,7 +340,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
   return {
     v: RUN_SNAPSHOT_VERSION,
     savedAt: Date.now(),
-    mode: s.mode,
     runSeed: s.runSeed,
     screen: s.screen,
     runPhase: s.runPhase,
@@ -358,14 +359,15 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     maxBaseHp: s.maxBaseHp,
     enemyHpMult: s.enemyHpMult,
     threat: s.threat,
-    runDifficulty: s.runDifficulty,
+    // A live run always carries its contract; a source without one is a
+    // pre-contract run, captured as the escort it resumes as.
+    contract: s.contract ?? legacyContract(s.runMap, s.clearedNodeIds),
     skillPool: s.skillPool,
     itemPool: s.itemPool,
     challenge: s.challenge,
     firstRun: s.firstRun === true,
     inventory: s.inventory,
     runKills: s.runKills,
-    marksEarned: s.marksEarned,
     activeNodeId: s.activeNodeId,
     currentWave: s.currentWave,
     tactics: s.tactics,
@@ -380,12 +382,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     feats: s.feats,
     crossroads: s.crossroads,
     forkDone: s.forkDone,
-    dust: s.dust,
-    lives: s.lives,
-    wins: s.wins,
-    round: s.round,
-    endlessRecruitCost: s.endlessRecruitCost,
-    endlessRoom: s.endlessRoom,
     rngLoot: streams.rngLoot,
     rngMap: streams.rngMap,
     lootPity: streams.lootPity,
@@ -968,21 +964,60 @@ function normaliseSkills(s: Sentinel): void {
 }
 
 /**
- * The run's item pool (v14): known kinds, each once, always with the basic
- * five. A payload with none — a run saved before item unlocks — keeps dealing
- * every kind (what it was dealing), a Daily its fixed pool.
+ * The run's item pool (v14): known kinds, always with the basic five, weighted
+ * to the contract's company (v15 — rebuilt from the set, so a payload cannot
+ * weight a pool any other way). A payload with none — a run saved before item
+ * unlocks — keeps dealing every kind (what it was dealing).
  */
-function migrateItemPool(raw: unknown, challenge: RunChallenge): string[] {
+function migrateItemPool(raw: unknown, company: CompanyId): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
-  if (ids.length) return itemPoolFor(ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)))
-  return [...(challenge.kind === 'daily' ? DAILY_ITEM_POOL : ALL_ITEM_KINDS)]
+  const set = ids.length ? itemPoolFor(ids.filter((k) => !BASIC_ITEM_KINDS.includes(k))) : [...ALL_ITEM_KINDS]
+  return weightPool(set, company, kindCompany)
 }
 
-/** The run's skill pool: known ids, each once; a payload with none deals the starters. */
-function migrateSkillPool(raw: unknown, challenge: RunChallenge): string[] {
+/** The run's skill pool: known ids, weighted like the items; a payload with none deals the starters. */
+function migrateSkillPool(raw: unknown, company: CompanyId): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
-  if (ids.length) return ids
-  return [...(challenge.kind === 'daily' ? DAILY_SKILL_POOL : STARTER_SKILLS)]
+  return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany)
+}
+
+/** The escort a pre-contract run resumes as: Rosethread's open road, its passed cities paid nothing. */
+function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[]): RunContract {
+  const done = new Set(cleared)
+  const passed = runMap.nodes.filter((n) => done.has(n.id) && cityOfLayer(n.layer) != null && (n.type === 'miniboss' || n.type === 'boss')).length
+  const n = Math.min(CITY_COUNT, passed)
+  return { ...freshContract({ company: 'silk', crates: 0, market: 1 }, 0), paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
+}
+
+/**
+ * The contract, validated (v15). Every number it carries is gold the settle
+ * banks, so each is clamped: crates to the ladder, the market to 1 or
+ * {@link MARKET_MULT}, the purse and every city's pay to whole non-negative
+ * gold, at most one pay per city, and a pending city only where a city has
+ * paid and the road is still open. A payload with no readable contract is a
+ * pre-contract run ({@link legacyContract}).
+ */
+export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[]): RunContract {
+  if (!isObj(raw) || !isCompanyId(raw.company)) return legacyContract(runMap, cleared)
+  const gold = (x: unknown): number => Math.max(0, Math.min(MAX_MAGNITUDE, Math.floor(num(x, 0))))
+  const paid = arr<unknown>(raw.paid).slice(0, CITY_COUNT).map(gold)
+  // One cargo reading per city paid, each a whole percent 0–100.
+  const cargoRaw = arr<unknown>(raw.cargoAt)
+  const cargoAt = paid.map((_, i) => Math.max(0, Math.min(100, Math.round(num(cargoRaw[i], 100)))))
+  const status = str<ContractStatus>(raw.status, 'open', STATUSES)
+  const pending = Number.isInteger(raw.pending) && (raw.pending as number) === paid.length - 1 && paid.length < CITY_COUNT && status === 'open' ? (raw.pending as number) : null
+  return {
+    company: raw.company,
+    crates: clampCrates(num(raw.crates, 0)),
+    market: num(raw.market, 1) === MARKET_MULT ? MARKET_MULT : 1,
+    purse: gold(raw.purse),
+    paid,
+    cargoAt,
+    pending,
+    cashOut: status === 'cashedOut' ? gold(raw.cashOut) : 0,
+    status,
+    signed: raw.signed === true,
+  }
 }
 
 /**
@@ -995,6 +1030,9 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   const o = raw as Record<string, unknown>
   const version = num(o.v, 0)
   if (version > RUN_SNAPSHOT_VERSION) return null // written by a newer build
+  // The Endless Watch is gone (the mercenary company). Its saves cannot be
+  // played; `payoutFromRaw` still pays one what it earned (as gold).
+  if (o.mode === 'endless') return null
 
   // v0 → v1: no shipped v0 exists; the coercion below IS the migration, and any
   // future step slots in here before it.
@@ -1140,17 +1178,18 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   if (merchant && isObj(merchant) && (merchant as MerchantStock).recruit) migrateSkills([(merchant as MerchantStock).recruit!.sentinel], version)
   if (crossroads) migrateSkills(crossroads.recruits, version)
   const challenge = migrateChallenge(o.challenge)
+  const clearedIds = arr<string>(o.clearedNodeIds)
+  const contract = migrateContract(o.contract, runMap as RunMap, clearedIds)
 
   const snap: RunSnapshot = {
     v: RUN_SNAPSHOT_VERSION,
     savedAt: num(o.savedAt, 0),
-    mode: str<GameMode>(o.mode, 'campaign', MODES),
     runSeed: num(o.runSeed, 0),
     screen: str<Screen>(o.screen, 'map', SCREENS),
     runPhase: str<RunPhase>(o.runPhase, 'active', PHASES),
     runMap: { nodes: runMap.nodes as MapNode[], edges, layers: num(runMap.layers, 11) },
     currentNodeId,
-    clearedNodeIds: arr<string>(o.clearedNodeIds),
+    clearedNodeIds: clearedIds,
     reachableNodeIds: arr<string>(o.reachableNodeIds),
     // A parked event this build cannot open (an unknown kind, a missing node id)
     // is dropped: `coherent()` then lands the run on the map beside that node,
@@ -1173,12 +1212,9 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     maxBaseHp: Math.max(1, num(o.maxBaseHp, 20)),
     enemyHpMult: num(o.enemyHpMult, 1),
     threat: num(o.threat, 1),
-    // Clamped to the ladder on the way IN (F8): whether a value is in range is
-    // a property of the value, not of who happens to read it. A Daily is
-    // always step 0.
-    runDifficulty: challenge.kind === 'daily' ? 0 : stepOf(o),
-    skillPool: migrateSkillPool(o.skillPool, challenge),
-    itemPool: migrateItemPool(o.itemPool, challenge),
+    contract,
+    skillPool: migrateSkillPool(o.skillPool, contract.company),
+    itemPool: migrateItemPool(o.itemPool, contract.company),
     challenge,
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.
@@ -1189,7 +1225,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // it beside the new one.
     inventory: version < 6 && o.screen === 'heroPick' && roster.length === 0 ? [] : inventory,
     runKills: Math.max(0, num(o.runKills, 0)),
-    marksEarned: Math.max(0, num(o.marksEarned, 0)),
     activeNodeId: typeof o.activeNodeId === 'string' ? o.activeNodeId : null,
     currentWave,
     tactics: {
@@ -1223,12 +1258,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     forkDone: bool(o.forkDone, false),
     // v12's `evolutionQueue` is not read back: an owed choice is read off the
     // hero now (SK1), and evolutions are skills.
-    dust: Math.max(0, num(o.dust, 0)),
-    lives: Math.max(0, num(o.lives, 3)),
-    wins: Math.max(0, num(o.wins, 0)),
-    round: Math.max(1, num(o.round, 1)),
-    endlessRecruitCost: Math.max(0, num(o.endlessRecruitCost, 100)),
-    endlessRoom: (o.endlessRoom as EndlessRoom | null) ?? null,
     // 0 is a real stream position, so "absent" has to be null, not 0.
     rngLoot: typeof o.rngLoot === 'number' && Number.isFinite(o.rngLoot) ? o.rngLoot : null,
     rngMap: typeof o.rngMap === 'number' && Number.isFinite(o.rngMap) ? o.rngMap : null,
@@ -1245,7 +1274,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // has already been left, and offering it back would resurrect a settled one.
   if (snap.screen === 'hub') return null
 
-  const out = coherent(snap, version)
+  const out = coherent(snap)
   if (!out) return null
   // ---- round 3 (Q5): the off hand takes off-hand things only -------------
   // Not a version step: the shape is unchanged, and the rule is a property of
@@ -1302,7 +1331,7 @@ function migratePlacements(raw: unknown, fieldId: string, version: number): Plac
  * into a state with no exit. Resolve it into the coherent state it was clearly
  * one step away from, or return null and let the caller drop the save.
  */
-function coherent(snap: RunSnapshot, version: number): RunSnapshot | null {
+function coherent(snap: RunSnapshot): RunSnapshot | null {
   const known = new Set(snap.runMap.nodes.map((n) => n.id))
   // Ids the map does not have are noise from a partial write or an older map.
   snap.clearedNodeIds = [...new Set(snap.clearedNodeIds.filter((id) => known.has(id)))]
@@ -1321,31 +1350,23 @@ function coherent(snap: RunSnapshot, version: number): RunSnapshot | null {
     snap.recruitOptions = []
   }
 
-  /** Back to the between-fights screen for this mode, with no fight in hand. */
+  /** Back to the map, with no fight in hand. */
   const leaveBattle = () => {
-    snap.screen = snap.mode === 'endless' ? 'endless' : 'map'
+    snap.screen = 'map'
     snap.activeNodeId = null
     snap.currentWave = null
     snap.lastResult = null
     snap.lastLoot = []
   }
 
-  // A v1 endless payload cannot say which side of the wave it was taken on, and
-  // endless has no `clearedNodeIds` to ask instead. The rooms screen is right
-  // either way: `round` already counts the next wave to fight, so a resolved
-  // wave resumes at the following one and an unresolved wave resumes at itself.
-  if (version < RUN_SNAPSHOT_VERSION && snap.mode === 'endless' && snap.screen === 'battle') {
-    leaveBattle()
-  }
-
   if (snap.screen === 'battle') {
     const nodeIsSpent = !!snap.activeNodeId && cleared.has(snap.activeNodeId)
-    if (snap.mode === 'campaign' && nodeIsSpent && !snap.lastResult) {
+    if (nodeIsSpent && !snap.lastResult) {
       // The wave was fought and paid for; only the summary is missing. Land on
       // the map, exactly where dismissing that summary would have landed — any
       // reward it dealt is still pending and the map is where it is offered.
       leaveBattle()
-    } else if (snap.mode === 'campaign' && !snap.activeNodeId) {
+    } else if (!snap.activeNodeId) {
       // No node means nothing to pay a clear into: `finishBattle` has no branch
       // for it and used to spin on the finished engine forever (M-4).
       leaveBattle()
@@ -1367,19 +1388,11 @@ function coherent(snap: RunSnapshot, version: number): RunSnapshot | null {
   // The crossroads screen without a crossroads renders no board and no offers,
   // and the shell's escape row only reaches offer pages — so it is a dead end.
   if (snap.screen === 'crossroads' && !snap.crossroads) snap.screen = 'map'
-  // Mode and screen have to agree, or the run is showing the other half of the
-  // game's furniture.
-  if (snap.mode === 'campaign' && snap.screen === 'endless') snap.screen = 'map'
-  if (snap.mode === 'endless' && (snap.screen === 'map' || snap.screen === 'crossroads')) {
-    snap.screen = 'endless'
-    snap.crossroads = null
-  }
-  // Endless deals its whole watch up front, so it never has a hero left to pick.
-  if (snap.mode === 'endless' && snap.screen === 'heroPick') {
-    if (snap.roster.length === 0) return null
-    snap.screen = 'endless'
-  }
-  if (snap.mode === 'campaign') snap.endlessRoom = null
+  // A contract on the hero pick is not signed yet: nothing has left the bank.
+  // One past it is — a payload that says otherwise is read as signed, so its
+  // purse still comes home.
+  if (snap.screen !== 'heroPick' && snap.roster.length > 0) snap.contract.signed = true
+  if (snap.screen === 'heroPick' && snap.roster.length === 0) snap.contract.signed = false
   // Off the battle screen there is no active node, and leaving a spent one
   // behind is how a later `finishBattle` finds a node it must not pay again.
   if (snap.screen !== 'battle') {
@@ -1387,11 +1400,11 @@ function coherent(snap: RunSnapshot, version: number): RunSnapshot | null {
     snap.currentWave = null
   }
 
-  if (snap.mode === 'campaign' && snap.screen === 'map') {
+  if (snap.screen === 'map') {
     // Nowhere to march and nothing to collect is a map you can only stare at.
     // Reachability is derived, so rebuild it from where the run stands before
     // giving up on the run.
-    if (snap.reachableNodeIds.length === 0 && !snap.reward && !snap.event) {
+    if (snap.reachableNodeIds.length === 0 && !snap.reward && !snap.event && snap.contract.pending == null) {
       snap.reachableNodeIds = snap.runMap.edges
         .filter((e) => e.from === snap.currentNodeId)
         .map((e) => e.to)
@@ -1424,16 +1437,8 @@ function coherent(snap: RunSnapshot, version: number): RunSnapshot | null {
  * session's run" from "the run this session is holding in memory" — memory
  * stays authoritative for our own run.
  */
-export interface SnapshotPayout {
+export interface SnapshotPayout extends SettleFacts {
   runSeed: number
-  mode: GameMode
-  depth: number
-  kills: number
-  wins: number
-  /** The difficulty step the run was played at — it scales what the settle pays. */
-  difficulty: number
-  /** Daily / custom-seed facts: a scored Daily records, a custom seed is unranked. */
-  challenge: RunChallenge
 }
 
 /**
@@ -1464,14 +1469,22 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     ),
   )
 
+  const endless = o.mode === 'endless'
+  const depth = endless ? Math.max(0, Math.floor(num(o.wins, 0))) : Math.max(0, cleared.size - 1)
+  // A pre-contract payload (v14 or older, an Endless one included) has no
+  // contract to bank: it is owed the Marks it would have paid, as gold.
+  const legacy = num(o.v, 0) < 15 || endless
+  const contract = legacy || !Array.isArray(nodes) ? null : migrateContract(o.contract, { nodes: nodes as MapNode[] }, [...cleared])
+  // A contract parked on the hero pick took nothing from the bank.
+  if (contract && arr<unknown>(o.roster).length === 0) contract.signed = false
   return {
     runSeed: num(o.runSeed, 0),
-    mode: str<GameMode>(o.mode, 'campaign', MODES),
-    difficulty: stepOf(o),
     challenge: migrateChallenge(o.challenge),
-    depth: Math.max(0, cleared.size - 1),
+    depth,
     kills: Math.max(0, num(o.runKills, 0)),
-    wins: Math.max(0, num(o.wins, 0)),
+    gold: Math.max(0, Math.floor(num(o.gold, 0))),
+    contract,
+    ...(legacy ? { legacyGold: legacyGold(o, depth) } : {}),
   }
 }
 
@@ -1550,9 +1563,7 @@ export function clearSnapshot(): void {
 
 /** How far the snapshotted run had got — for the resume prompt's one line of copy. */
 export function describeSnapshot(snap: RunSnapshot): string {
-  if (snap.mode === 'endless') {
-    return `Endless Watch · round ${snap.round} · ${snap.lives} ${snap.lives === 1 ? 'life' : 'lives'} · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
-  }
   const depth = Math.max(0, snap.clearedNodeIds.length - 1)
-  return `Campaign · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold}g · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
+  const co = companyById(snap.contract.company)
+  return `${co.name} · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold} gold · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
 }

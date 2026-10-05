@@ -45,7 +45,6 @@ import { ACT_LAYERS } from '../../game/run/threat'
 /** Everything `previewEncounter` reads off the run — a slice of `GameState`. */
 export interface PreviewRun {
   runSeed: number
-  runDifficulty: number
   runMap: RunMap
 }
 
