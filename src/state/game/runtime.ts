@@ -12,6 +12,9 @@ import type { RunChallenge } from '../daily'
 import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
 import { hiresTrained } from '../../game/run/relics'
 import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
+import { recruitSkill } from '../../game/run/skills'
+import { DAILY_SKILL_POOL, skillPoolFor } from '../../game/run/watch'
+import type { Archetype } from '../../game/types'
 
 /**
  * Per-system RNG streams, all derived from the run seed (C1).
@@ -44,21 +47,37 @@ export const runBonuses = (): MetaBonuses => (hub.runUsesHub ? useMetaStore.getS
 export const runUnlocked = (id: string): boolean => hub.runUsesHub && useMetaStore.getState().unlocked(id)
 export const usesHub = (c: RunChallenge): boolean => c.kind !== 'daily'
 /**
- * Whether a feat-locked perk option is open to this run. The achievement ledger
- * is the Watchtower's (`metaStore`); a Daily Watch reads no hub, so its perk
- * options are the base two everywhere.
+ * Whether a feat-locked option is open to this run. The achievement ledger is
+ * the Watchtower's (`metaStore`); a Daily Watch reads no hub.
  */
 export const featUnlocked = (achievementId: string): boolean =>
   hub.runUsesHub && useMetaStore.getState().achieved(achievementId)
-export const perkUnlocked = featUnlocked
 /** Whether a feat-locked relic may be dealt into this run's reward hands. */
 export const relicUnlocked = featUnlocked
 
-/** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies). */
+/**
+ * SK1: the skill pool a run beginning now deals from — the player's unlocked
+ * cards, or the Daily's fixed pool (a Daily reads no hub). Read ONCE, when the
+ * run begins, and kept on the run (`skillPool`): a card unlocked at the end of
+ * a run never changes the run it was earned in.
+ */
+export const startingSkillPool = (c: RunChallenge): string[] =>
+  usesHub(c) ? skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)) : [...DAILY_SKILL_POOL]
+
+/**
+ * SK1: who deals a hire its first skill — the live run's seed and pool, set
+ * whenever a run begins or resumes. A hash of the hire's id, never a stream
+ * draw (`run/skills.recruitSkill`).
+ */
+export const skillRun: { seed: number; pool: readonly string[] } = { seed: 0, pool: [] }
+export const dealSkill = (heroId: string, archetype: Archetype): string | null => recruitSkill(skillRun.seed, heroId, archetype, skillRun.pool)
+
+/** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies), and its first skill. */
 export const recruitHub = (relics: readonly string[] = []) => ({
   statBonus: runBonuses().statBonus,
   // Free Companies, or the Mercenary Charter relic (Phase 3b).
   trained: hiresTrained(runUnlocked('freeCompanies'), relics),
+  skillFor: dealSkill,
 })
 
 /**

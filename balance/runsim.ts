@@ -1,7 +1,7 @@
 /**
  * ---------------------------------------------------------------------------
- * One campaign run, simulated — with the hub, the Banner and the route as
- * parameters (M19-f).
+ * One campaign run, simulated — with the hub, the difficulty step and the
+ * route as parameters (M19-f).
  * ---------------------------------------------------------------------------
  *
  * §11's "realistic first run" used to be a private function inside `report.ts`
@@ -26,9 +26,8 @@
  * numbers comparable to §11's rather than a second opinion.
  */
 import { RNG } from '../src/game/core/rng'
-import { ALL_NODES, childrenOf, getNode } from '../src/game/data/archetypeTree'
-import { allPerkPoints } from '../src/game/data/perks'
-import { specOpen } from '../src/game/run/unlocks'
+import { ALL_SKILLS, skillFits } from '../src/game/data/skills'
+import { heroChoices, recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
 import {
   creditPity,
   generateItem,
@@ -51,25 +50,24 @@ import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
-import { forkFires } from '../src/game/run/map'
+import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
 import { canTrain, forageAtCampfire, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
-import { bannerRules, useMetaStore, type BannerRules } from '../src/state/metaStore'
+import { useMetaStore } from '../src/state/metaStore'
+import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { createSentinel } from '../src/game/data/sentinels'
 import { autoEquipEmpty, recruitKit, wearKit, type EquipRules } from '../src/game/engine/kit'
 import {
-  autoEvolve,
-  bestEvolve,
-  forcedEvolve,
+  bestSkills,
+  forcedSkills,
+  randomSkills,
+  STARTER_SKILL_POOL,
   bestSlotGain,
   bestSlots,
   buildSpec,
   TIER2_NODES,
-  bestPerks,
-  forcedPerks,
-  randomPerks,
   equipAndDisplace,
   heroDps,
   ITEM_PRICE,
@@ -141,13 +139,11 @@ export function loadoutFor(label: string, upgrades: Record<string, number>): Loa
 
 export const ZERO_META: Loadout = loadoutFor('zero meta', {})
 
-/** `mapOptionsFor` in `gameStore`, with the same four lines. */
-export const mapOptionsFor = (m: Loadout, banner: BannerRules): MapOptions => ({
+/** `run/map.mapOptionsFor`, read off a loadout instead of the live hub. */
+export const mapOptionsFor = (m: Loadout): MapOptions => ({
   wideMap: m.wideMap,
   extraRecruit: m.extraRecruit,
   standingOrders: m.standingOrders,
-  noMerchants: banner.noMerchants,
-  noRecruits: banner.noRecruits,
 })
 
 // ------------------------------------------------------------ route policies
@@ -261,7 +257,13 @@ export const GATE_POLICY = 'best'
 // -------------------------------------------------------------- the run
 export interface SimOptions {
   meta?: Loadout
-  banner?: BannerRules
+  /** The difficulty step the run is played at (SK1; was the Banner). Default step 0. */
+  difficulty?: DifficultyRules
+  /**
+   * The skill pool the run deals from (SK1). Default: the nine starters — a
+   * zero-meta player has unlocked nothing.
+   */
+  skillPool?: readonly string[]
   policy?: RoutePolicy
   /**
    * Emulate a change to the `waves.ts` budget curve without editing it: an
@@ -271,13 +273,12 @@ export interface SimOptions {
    */
   curve?: (depth: number, kind: EncounterKind) => number
   /**
-   * How the modelled player answers a build choice (an evolution, and — where
-   * the game offers one — a level-up perk). `random` is the default and what
-   * every gate reads: it prices the *tier* rather than a player's read of it.
-   * `best` takes whichever option raises `heroDps` most — the "known answer"
-   * a spreadsheet player converges on. The gap between the two is the
-   * evolution best-vs-random spread: the wider it is, the more solved the
-   * build layer (Phase 3b review: 44% vs 28% before the perk rework).
+   * How the modelled player answers a skill milestone (SK1 — levels 5, 10,
+   * 15). `random` is the default and what every gate reads: it prices the
+   * skill LEVEL rather than a player's read of it. `best` takes whichever move
+   * raises `heroDps` most — the "known answer" a spreadsheet player converges
+   * on. The gap between the two is how solved the skill layer is. `force` pins
+   * picks by `${level}:${archetype}`.
    */
   build?: 'random' | 'best' | { force: Record<string, string> }
   /** Relics held from the first node (§15 grades the run-rule half this way). */
@@ -325,24 +326,20 @@ export interface RunOutcome {
 const ARCHS: Archetype[] = ['fighter', 'rogue', 'mystic']
 
 /**
- * Every build choice a run can be asked to make, keyed the way
- * `SimOptions.build.force` pins them: a tree node id → its children.
+ * Every skill choice a run can be asked to make, keyed the way
+ * `SimOptions.build.force` pins them: `${milestone level}:${class}` → the
+ * skills of that level the class may hold (SK1). From the full library, so
+ * the oracle can pin a card a zero-meta pool does not deal — the pin simply
+ * does not fire when the offer lacks it.
  */
 export function buildChoicePoints(): { id: string; archetype: Archetype; options: string[] }[] {
-  const evolutions = ALL_NODES.filter((n) => n.tier < 2).map((n) => ({
-    id: n.id,
-    archetype: n.archetype,
-    // Feat-locked specs are not an option for a zero-feat player.
-    options: childrenOf(n.id).filter((c) => specOpen(c.id, () => false)).map((c) => c.id),
-  }))
-  // Perk milestones (Phase 3b), keyed `5:fighter` / `15:marksman`. Only the
-  // base options: a zero-meta run has no feats.
-  const perks = allPerkPoints().map((pt) => ({
-    id: pt.key,
-    archetype: getNode(pt.line).archetype,
-    options: pt.options.filter((x) => !x.unlock).map((x) => x.id),
-  }))
-  return [...evolutions, ...perks]
+  const out: { id: string; archetype: Archetype; options: string[] }[] = []
+  for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
+    SKILL_MILESTONES.forEach((level, i) => {
+      out.push({ id: `${level}:${archetype}`, archetype, options: ALL_SKILLS.filter((k) => k.level === i + 1 && skillFits(k, archetype)).map((k) => k.id) })
+    })
+  }
+  return out
 }
 
 /** A body joining the company, carrying what the store hands it (`RECRUIT_KIT`). */
@@ -355,31 +352,30 @@ function applyStatBonus(s: Sentinel, n: number): Sentinel {
 }
 
 /**
- * Walk one campaign run: deal the map the hub and the Banner produce, route it
- * with `policy`, and fight / shop / hire the way the store does.
+ * Walk one campaign run: deal the map the hub and the difficulty step produce,
+ * route it with `policy`, and fight / shop / hire the way the store does.
  */
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   const meta = o.meta ?? ZERO_META
-  const banner = o.banner ?? bannerRules(0)
+  const banner = o.difficulty ?? difficultyRules(0)
   const policy = o.policy ?? POLICIES[0]
+  const pool = o.skillPool ?? STARTER_SKILL_POOL
 
   const rng = new RNG(seed)
   const force = typeof o.build === 'object' ? o.build.force : null
-  const evolveOnly = (s: Sentinel): Sentinel =>
-    o.build === 'best' ? bestEvolve(s) : force ? forcedEvolve(s, force, rng) : autoEvolve(s, rng)
-  // A level-up can owe an evolution AND a perk (the level-15 perk is chosen from
-  // the line the level-10 evolution picked), so the branch comes first.
-  const evolve = (s: Sentinel): Sentinel => {
-    const e = evolveOnly(s)
-    const p = o.build === 'best' ? bestPerks(e) : force ? forcedPerks(e, force, rng) : randomPerks(e, rng)
-    return p.level >= 20 ? evolveOnly(p) : p
-  }
+  // SK1: every owed skill milestone is settled where XP lands, as the store
+  // offers it (the run seed and the hero's id hash the offer).
+  const evolve = (s: Sentinel): Sentinel =>
+    o.build === 'best' ? bestSkills(s, pool, seed) : force ? forcedSkills(s, force, rng, pool, seed) : randomSkills(s, rng, pool, seed)
+  /** A body's first skill, dealt as `recruitSkill` deals it — a hash, no draw. */
+  const firstSkill = (s: Sentinel): Sentinel => withFirstSkill(s, recruitSkill(seed, s.id, s.archetype, pool))
   const levelByLayer: number[] = []
   let nodes = 0
   // The map rides its own stream, as it does in the game (`streams.mapRng`): a hub
   // unlock that reshapes the map must not re-deal every loot roll behind it, or
   // §12's "paired" cells are not paired at all (Phase 3b).
-  const map = generateRunMap(new RNG(hashSeed(seed, 'map')), mapOptionsFor(meta, banner))
+  // SK1: the step's extra elites, on the map, as `dealRunMap` adds them.
+  const map = addDifficultyElites(generateRunMap(new RNG(hashSeed(seed, 'map')), mapOptionsFor(meta)), banner.extraElites, seed, meta.standingOrders)
   const byId = new Map(map.nodes.map((n) => [n.id, n]))
   // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8).
   // Every §11/§12/§13 number is therefore an average over the field distribution
@@ -392,9 +388,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   // `engine/kit.ts`. The hub's extra Sentinels arrive bare, as
   // `pickStartingHero` makes them; Quartermaster's extra rolls go to whoever
   // they improve, and anything they unseat goes to the pack.
-  let roster: Sentinel[] = [applyStatBonus(createSentinel(archetype), meta.statBonus)]
+  // SK1: the leader is the hero pick's hero of that class, with its skill.
+  const pickSkill = heroChoices(seed, pool).find((c) => c.archetype === archetype)?.skill ?? null
+  let roster: Sentinel[] = [applyStatBonus(withFirstSkill(createSentinel(archetype), pickSkill), meta.statBonus)]
   for (let i = 0; i < meta.extraSentinels; i++) {
-    roster.push(applyStatBonus(recruitBody(ARCHS[i % 3], rng), meta.statBonus))
+    roster.push(applyStatBonus(firstSkill(recruitBody(ARCHS[i % 3], rng)), meta.statBonus))
   }
   /**
    * What the company owns but is not wearing. The store has always had one
@@ -446,7 +444,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
     // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
     // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
-    const base = withRelicStats(applyStatBonus(recruitBody(rng.pick(ARCHS), rng), meta.statBonus), relics)
+    const base = withRelicStats(applyStatBonus(firstSkill(recruitBody(rng.pick(ARCHS), rng)), meta.statBonus), relics)
     const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack, rules())
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
@@ -470,7 +468,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         gold -= GATE_REPAIR.price
         baseHp = repairGate(baseHp, meta.maxBaseHp)
       }
-      const stock = Array.from({ length: shelfSize(relics, banner.thinPickings) }, () =>
+      const stock = Array.from({ length: shelfSize(relics) }, () =>
         generateItem(rng, { luck, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false }),
       )
       for (let pass = 0; pass < 4; pass++) {
@@ -488,7 +486,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
       }
-      if (roster.length < MAX_ROSTER && gold >= RECRUIT_PRICE && !banner.noRecruits) {
+      if (roster.length < MAX_ROSTER && gold >= RECRUIT_PRICE) {
         gold -= RECRUIT_PRICE
         hire()
       }
@@ -550,11 +548,10 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
 
     // ---- battle / elite / boss ----
     // Two kinds, exactly as `finishBattle` reads them (M19-g): `kind` is the
-    // WAVE this node fields (a Banner may substitute an elite into it), `worth`
-    // is what the NODE itself costs and pays (Threat step, elite gold, card
-    // luck) and never moves with the Banner.
+    // WAVE this node fields, `worth` what the NODE itself costs and pays. Since
+    // SK1 a difficulty step's elites are elite NODES, so the two agree.
     const kind: EncounterKind =
-      node.type === 'boss' || node.type === 'miniboss' ? 'boss' : node.type === 'elite' || banner.allElite ? 'elite' : 'normal'
+      node.type === 'boss' || node.type === 'miniboss' ? 'boss' : node.type === 'elite' ? 'elite' : 'normal'
     const worth: EncounterKind = node.type === 'boss' || node.type === 'miniboss' ? 'boss' : node.type === 'elite' ? 'elite' : 'normal'
     const final = node.type === 'boss'
     if (final) bossThreat = threat
@@ -568,9 +565,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
-      // `gameStore.selectNode`: a Banner-made elite is drawn `eliteDepth`
-      // deeper; a map-dealt one stays at its own depth.
-      depth: node.layer + (kind === 'elite' && worth === 'normal' ? banner.eliteDepth : 0),
+      depth: node.layer,
       kind,
       map: nodeField,
       autoDeploy: true,
@@ -618,8 +613,8 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const cards = rewardHand(rng, {
       kind: handKind,
       luck: nodeClearLuck(node),
-      count: handSize({ thinPickings: banner.thinPickings }),
-      noBattleRelics: banner.thinPickings,
+      count: handSize({ thinPickings: false }),
+      noBattleRelics: false,
       held: relics,
       roster: rosterRefs(roster),
       pity,
@@ -681,11 +676,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
      * and a uniform draw is the honest way to say so — it prices the *tier*.
      */
     if (forkFires(node)) {
-      if (roster.length < MAX_ROSTER && !banner.noRecruits) {
+      if (roster.length < MAX_ROSTER) {
         hire()
       } else if (roster.length) {
         const held = [...new Set(roster.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))]
-        const offer = rollMutationChoices(rng, held, banner.thinPickings ? 2 : 3)
+        const offer = rollMutationChoices(rng, held, 3)
         if (offer.length) {
           const mutation = rng.pick(offer)
           // Aimed at the strongest carrier, which is the one thing about the
@@ -721,7 +716,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
  * nodes. Kept in one place so §13's ladder economy is priced with the payout the
  * game actually pays rather than a second copy of it.
  */
-export function marksFor(cleared: number, won: boolean, banner: BannerRules, chronicler = 1): number {
+export function marksFor(cleared: number, won: boolean, banner: DifficultyRules, chronicler = 1): number {
   return Math.round((cleared * 8 + (won ? 120 : 0)) * chronicler * banner.markMult)
 }
 

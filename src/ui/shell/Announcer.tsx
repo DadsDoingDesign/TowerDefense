@@ -74,12 +74,9 @@ export function Announcer() {
         const start = useBattleLedger.getState().startLevels
         for (const h of s.roster) {
           if (start[h.id] === undefined || h.level <= start[h.id]) continue
-          const owed = inPlace ? choiceOwed(h, s.evolutionQueue) : null
-          say(
-            `${h.name} reached level ${h.level}${
-              owed === 'evolve' ? ', with an evolution to choose on the roster' : owed === 'perk' ? ', with a perk to choose on the roster' : ''
-            }.`,
-          )
+          // SK1: a milestone is a skill to choose, from the hero's card.
+          const owed = choiceOwed(h)
+          say(`${h.name} reached level ${h.level}${owed ? ', with a skill to choose on its card' : ''}.`)
         }
       }
       prev = s

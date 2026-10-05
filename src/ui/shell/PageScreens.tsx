@@ -3,11 +3,14 @@ import { RARITY } from '../../game/data/items'
 import { itemName, MARKS_INTRO, moneyText, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { useGameStore } from '../../state/gameStore'
-import { bannerRules, useMetaStore } from '../../state/metaStore'
+import { useMetaStore } from '../../state/metaStore'
+import { watchLevelFor } from '../../game/run/watch'
 import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/settingsStore'
 import type { ShellContext } from './context'
-import { bannerLine, VOW, type Act, type Offer, type Price } from './offers'
-import { BannerPicker } from './BannerPicker'
+import { difficultyLine, type Act, type Offer, type Price } from './offers'
+import { DifficultyPicker } from './DifficultyPicker'
+import { ProgressEarned } from './ProgressEarned'
+import { SkillCards } from './SkillCards'
 import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
 import { AttractMode, useMenuMotion } from './AttractMode'
 import { DefeatReceipt } from './DefeatReceipt'
@@ -398,6 +401,7 @@ export function PageScreen({
           ) : null}
           {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
           <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+          {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
           {selected.info && (
             <p className="pg-info-line">
               {selected.info.label}
@@ -415,7 +419,7 @@ export function PageScreen({
       )}
 
       {/*
-        Hero-pick only, and self-gating: the Banner is the *other* half of the
+        Hero-pick only, and self-gating: the difficulty is the *other* half of the
         run-start decision and hero-pick is the only screen the store will
         accept it on.
 
@@ -429,13 +433,13 @@ export function PageScreen({
         choose-your-first-hero screen that shows a portrait, three stats and no
         explanation is not a choice.
 
-        The tie-breaker is who is looking at each half. `BannerPicker` renders
-        NOTHING until a rung is unlocked, so a first-time player — the only
+        The tie-breaker is who is looking at each half. `DifficultyPicker` renders
+        NOTHING until a win has raised the top step, so a first-time player — the only
         player who needs the ability sentence — never sees it at all; the player
         who does see it has already finished a run and knows the archetypes.
         The ability sentence goes first.
       */}
-      <BannerPicker />
+      <DifficultyPicker />
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
@@ -498,7 +502,9 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
   const primary = offers.find((o) => o.id === 'run')
   const rows = offers.filter((o) => o.id !== 'run')
   const stats = useMetaStore((s) => s.stats)
-  // `bestDepth`, `bestRound` and `bestBanner` were tracked every run and shown
+  const watchXp = useMetaStore((s) => s.watchXp)
+  const top = useMetaStore((s) => s.topDifficulty)
+  // `bestDepth`, `bestRound` and `bestDifficulty` were tracked every run and shown
   // only in the retired `HubScreen` — so the shipping UI recorded three lifetime
   // records and displayed none of them (M33). They are the reason to play again.
   const hasRecord = stats.bestDepth > 0 || stats.bestRound > 0 || stats.runsCompleted > 0
@@ -525,9 +531,11 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       {cinematic ? <div className="pg-cine-window" aria-hidden /> : <MenuKeyArt />}
       {hasRecord && (
         <div className="pg-records">
+          {/* SK1: the Watch level and the difficulty are the two numbers the
+              long game climbs; Endless's best round lives on its own row. */}
+          <Record label="Watch level" value={watchLevelFor(watchXp)} />
           <Record label="Best depth" value={stats.bestDepth} />
-          <Record label="Best round" value={stats.bestRound} />
-          <Record label={`Best ${VOW}`} value={stats.bestBanner} />
+          <Record label="Difficulty" value={top} />
           <Record label="Runs won" value={`${stats.runsWon}/${stats.runsCompleted}`} />
         </div>
       )}
@@ -733,6 +741,8 @@ export function ResultScreen() {
           first, and the offer reads as an option rather than as a verdict on
           the player. Loss only (F11); the control it explains is pinned in the
           foot so it does not have to be scrolled to. */}
+      {recap?.progress && <ProgressEarned progress={recap.progress} />}
+
       {/* Feats this run earned (Phase 3b): what the player opened, by name. */}
       <FeatsEarned />
 
@@ -747,7 +757,7 @@ export function ResultScreen() {
                 // and this line counts enemies (F2).
                 `${recap.kills} felled · ${recap.enemiesLeaked} reached the Gate`,
                 `${moneyText(recap.goldLeft, 'gold')} unspent · ${strengthText(recap.threat)} at the end`,
-                bannerLine(recap.banner),
+                difficultyLine(recap.difficulty),
               ]
             : []),
           MARKS_INTRO,
@@ -765,17 +775,9 @@ export function ResultScreen() {
         />
       )}
 
-      {/* Winning under Banner N is what earns the ask about N+1 (H16). Say so
-          on the screen that ends the run, or the ladder is invisible again. */}
-      {recap && recap.nextBanner > recap.banner && (
-        <InfoCard
-          lines={[
-            `Next: ${bannerLine(recap.nextBanner)}`,
-            `Swear it on the hero screen of your next run. It pays ×${bannerRules(recap.nextBanner).markMult} Marks.`,
-          ]}
-        />
-      )}
-
+      {/* SK1: what the run did for the long game — Watch XP, the skill cards
+          it unlocked, and the difficulty a win climbed. It sits with the feats,
+          right under who held the line: the reason to play the next run. */}
       {recap && (
         <InfoCard
           lines={[

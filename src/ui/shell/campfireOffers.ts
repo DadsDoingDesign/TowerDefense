@@ -11,7 +11,6 @@
 import { CAMPFIRE_FORAGE, CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
 import { GATE_REPAIR, rerollCost } from '../../game/run/economy'
 import { restockFree, shelfSize } from '../../game/run/relics'
-import { bannerRules } from '../../state/metaStore'
 import { buildName } from '../../game/engine/leveling'
 import type { useGameStore } from '../../state/gameStore'
 import { archetypeVar } from '../channels'
@@ -130,7 +129,7 @@ export function merchantServiceOffers(st: St): Offer[] {
     icon: 'loot',
     cost: { amount: cost, currency: 'gold' },
     dim: st.gold < cost,
-    body: [`The merchant lays out ${shelfSize(st.relics, bannerRules(st.runBanner).thinPickings)} new items. Each restock here costs 15 gold more than the last.`],
+    body: [`The merchant lays out ${shelfSize(st.relics)} new items. Each restock here costs 15 gold more than the last.`],
     action: {
       label: 'Restock',
       cost: { amount: cost, currency: 'gold' },

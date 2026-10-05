@@ -1,56 +1,67 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
-import { pendingPerkLevel } from '../../game/run/perks'
+import { pendingMilestone } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import type { GameState } from '../../state/game/types'
 
 /**
- * G3-2 — the reward and the level-ups are handled where the wave was fought.
+ * G3-2 / SK1 — level-ups, handled where the wave was fought.
  *
- * A normal campaign wave used to end in three hops: the "Wave cleared" receipt,
- * a Continue, then a separate Spoils page, with a level-up choice arriving as a
- * blocking modal on top of whichever of those happened to be showing. Now:
+ * A normal campaign wave ends with its reward hand filling the Selector row
+ * under the dimmed field (`rewardInPlace`). Level-ups ride beside it:
  *
- *  - the reward hand fills the Selector row under the dimmed field, the first
- *    card preselected so its detail is already in the Context panel, and
- *    "Take it" is the one primary action (`rewardInPlace`);
- *  - a hero who levelled glows on the roster with a "Lv 5 ↑" badge, and a tap
- *    opens its level-up (evolution, perk, or just what grew) in the Context
- *    panel instead of a modal. The badge stays — onto the run map and into the
- *    next battle — until the player has dealt with it.
+ *  - **A plain level** (nothing to choose) shows "+1 level" on the hero's card
+ *    for a moment and is gone — no badge to clear (SK2). The stats it grew are
+ *    on the hero's Stats tab like any other number.
+ *  - **A skill milestone** (levels 5, 10, 15 — `run/skills.pendingMilestone`)
+ *    is a real choice, so the hero's card wears a badge until it is made, on
+ *    the battle screen, on the run map and into the next battle. A tap opens
+ *    the choice in the Context panel (`LevelUpPanel`).
  *
- * Elite and boss spoils keep their standalone page, and the level-ups they pay
- * keep the modal (`EvolutionModal` / `PerkPicker`): those skip only the heroes
- * this module has taken over (`deferredToRoster`).
+ * **Between rounds only.** The designer: gear and heroes are locked while a
+ * wave is live. A hero who crosses a milestone during a fight is owed its
+ * choice when XP lands — when the wave settles — and if the badge is still up
+ * when the next wave starts, the choice waits: the panel says so and its
+ * commit is disabled until that wave (and its sub-waves) is over. The store's
+ * `chooseSkill` refuses a live wave too.
  *
- * View state, like `mapFocus`: never snapshotted, never read by the engine. A
- * resumed run starts with nothing here, and any choice still owed falls back to
- * the modal — the old contract — rather than being lost.
+ * The owed choice is read off the hero, never stored here, so a resumed run
+ * shows every badge it should. What lives here is view state, like
+ * `mapFocus`: the flashes, the "Later" a player tapped, and the reward card to
+ * hand back to — never snapshotted, never read by the engine.
  */
-export interface LevelUp {
-  /** Level before the wave (the earliest unseen one, if it levelled twice). */
+export interface LevelFlash {
+  /** The level before the wave, and after. */
   from: number
-  /** The hero as the wave found it — for "what grew" and the DPS delta. */
-  before: Sentinel
-  /** The player has opened it. A choice still owed keeps it open regardless. */
-  seen: boolean
+  to: number
+  /** When it was shown (ms, `Date.now()`), so it can fade on its own. */
+  at: number
 }
+
+/** How long "+1 level" stays on a card. */
+export const FLASH_MS = 3200
 
 interface LevelUpState {
   runSeed: number | null
   /** The roster as each wave began, by hero id. */
   waveStart: Record<string, Sentinel>
-  /** Heroes whose level-up is handled on the roster, by id. */
-  heroes: Record<string, LevelUp>
-  /** The last reward card looked at, so a finished level-up can hand back to it. */
+  /** Heroes that levelled in the wave that just settled, for the passing "+N level". */
+  flash: Record<string, LevelFlash>
+  /**
+   * Heroes whose owed choice the player put off ("Later"): tapping them opens
+   * their ordinary panel until the next wave settles. The badge stays.
+   */
+  later: Record<string, true>
+  /** The last reward card looked at, so a finished choice can hand back to it. */
   lastReward: string | null
 }
 
 export const useLevelUps = create<LevelUpState>(() => ({
   runSeed: null,
   waveStart: {},
-  heroes: {},
+  flash: {},
+  later: {},
   lastReward: null,
 }))
 
@@ -75,77 +86,55 @@ export function rewardInPlace(s: RewardFacts): boolean {
   return s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.type === 'battle'
 }
 
-/** The hero owes a permanent choice: an evolution, or a spec perk. */
-export function choiceOwed(hero: Sentinel, evolutionQueue: readonly string[]): 'evolve' | 'perk' | null {
-  if (evolutionQueue.includes(hero.id)) return 'evolve'
-  if (pendingPerkLevel(hero) !== null) return 'perk'
-  return null
+/** The hero owes a skill choice (SK1): its badge shows, and a tap opens it. */
+export function choiceOwed(hero: Pick<Sentinel, 'level' | 'skillPicks'>): 'skill' | null {
+  return pendingMilestone(hero) ? 'skill' : null
 }
 
-/** Whether the hero's badge shows (and its tap opens the level-up panel). */
-export function levelUpOpen(entry: LevelUp | undefined, hero: Sentinel, evolutionQueue: readonly string[]): boolean {
-  if (!entry) return false
-  return !entry.seen || choiceOwed(hero, evolutionQueue) !== null
+/** A wave is being fought right now — the choice waits until it is over. */
+export const waveLive = (s: Pick<GameState, 'engine' | 'battlePhase'>): boolean => !!s.engine && s.battlePhase === 'battle'
+
+/** Whether the hero's badge shows. */
+export function levelUpOpen(hero: Pick<Sentinel, 'level' | 'skillPicks'>): boolean {
+  return choiceOwed(hero) !== null
 }
 
 /**
- * Fold one settled wave into the roster's level-ups. Pure — the tracker below
- * and the tests both call it.
- *
- * `inPlace` waves (normal campaign clears) add or extend an entry for every
- * hero that levelled. Any other wave — elite, boss, endless, a loss — hands its
- * level-ups to the modal as before, so an entry for a hero that levelled there
- * is dropped: one hero's choice is never owned by both surfaces.
+ * Fold one settled wave into the passing "+N level" flashes. Pure — the
+ * tracker below and the tests both call it. Every hero that gained a level
+ * flashes; a hero that ALSO owes a choice wears its badge besides (derived).
  */
-export function settleLevelUps(
-  heroes: Record<string, LevelUp>,
+export function settleFlashes(
   waveStart: Record<string, Sentinel>,
   roster: readonly Sentinel[],
-  inPlace: boolean,
-): Record<string, LevelUp> {
-  const next = { ...heroes }
+  now: number,
+): Record<string, LevelFlash> {
+  const out: Record<string, LevelFlash> = {}
   for (const h of roster) {
     const before = waveStart[h.id]
-    if (!before || h.level <= before.level) continue
-    if (!inPlace) {
-      delete next[h.id]
-      continue
-    }
-    const had = next[h.id]
-    next[h.id] = had && !had.seen ? { ...had, seen: false } : { from: before.level, before, seen: false }
+    if (before && h.level > before.level) out[h.id] = { from: before.level, to: h.level, at: now }
   }
-  // A hero who left the company takes its badge with it.
-  for (const id of Object.keys(next)) if (!roster.some((h) => h.id === id)) delete next[id]
-  return next
+  return out
 }
 
-/** The modal skips these heroes: their choice is waiting on the roster. */
-export function deferredToRoster(id: string): boolean {
-  return !!useLevelUps.getState().heroes[id]
+/** A flash still on screen at `now`. */
+export const flashLive = (f: LevelFlash | undefined, now: number): boolean => !!f && now - f.at < FLASH_MS
+
+/** The player put the choice off: the hero's own panel opens on a tap, until the next wave settles. */
+export function putOff(heroId: string): void {
+  useLevelUps.setState({ later: { ...useLevelUps.getState().later, [heroId]: true } })
 }
 
-/**
- * The player has dealt with a hero's level-up: seen it, and made any choice it
- * owed. An entry with a choice still owed stays (and stays badged).
- */
-export function ackLevelUp(hero: Sentinel, evolutionQueue: readonly string[]): void {
-  const heroes = { ...useLevelUps.getState().heroes }
-  const entry = heroes[hero.id]
-  if (!entry) return
-  if (choiceOwed(hero, evolutionQueue) === null) delete heroes[hero.id]
-  else heroes[hero.id] = { ...entry, seen: true }
-  useLevelUps.setState({ heroes })
+/** Open the choice again (the Skills tab's "Choose now"). */
+export function takeUp(heroId: string): void {
+  const later = { ...useLevelUps.getState().later }
+  delete later[heroId]
+  useLevelUps.setState({ later })
 }
 
 /**
- * Watches the run: snapshots the roster as a wave starts and folds each settled
- * wave's level-ups in. Mounted once, by `RootShell`.
- *
- * A store subscription, not a render effect: `finishBattle` writes the roster,
- * the evolution queue and the result in ONE `set`, and the entry has to exist
- * before `EvolutionModal` renders that queue — or the modal would flash open
- * for a choice that belongs on the roster. Zustand calls subscribers inside
- * `set`, before React renders anything.
+ * Watches the run: snapshots the roster as a wave starts and turns each
+ * settled wave's level-ups into flashes. Mounted once, by `RootShell`.
  */
 export function useLevelUpTracker(): void {
   useEffect(() => {
@@ -154,14 +143,15 @@ export function useLevelUpTracker(): void {
       const lu = useLevelUps.getState()
       // A new run starts clean — hero ids are not promised unique across runs.
       if (lu.runSeed !== s.runSeed) {
-        useLevelUps.setState({ runSeed: s.runSeed, waveStart: {}, heroes: {}, lastReward: null })
+        useLevelUps.setState({ runSeed: s.runSeed, waveStart: {}, flash: {}, later: {}, lastReward: null })
       }
       if (!prev.engine && s.engine && s.screen === 'battle') {
         useLevelUps.setState({ waveStart: Object.fromEntries(s.roster.map((h) => [h.id, h])) })
       }
       if (!prev.lastResult && s.lastResult && s.screen === 'battle') {
-        const { heroes, waveStart } = useLevelUps.getState()
-        useLevelUps.setState({ heroes: settleLevelUps(heroes, waveStart, s.roster, rewardInPlace(s)), waveStart: {} })
+        const { waveStart } = useLevelUps.getState()
+        // A new settle re-opens any choice the player put off.
+        useLevelUps.setState({ flash: settleFlashes(waveStart, s.roster, Date.now()), waveStart: {}, later: {} })
       }
       prev = s
     })

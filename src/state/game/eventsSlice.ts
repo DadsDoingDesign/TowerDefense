@@ -7,11 +7,10 @@ import { merchantLuck, MAX_ROSTER, repairGate, rerollCost, rollMerchantShelf } f
 import { canTrain, forageAtCampfire, restAtCampfire, trainAtCampfire } from '../../game/run/campfire'
 import { receiveItems, withRecruits } from '../../game/run/recruits'
 import { applyRewardCard } from '../../game/run/rewards'
-import { applyBattleXp } from '../../game/run/battle'
 import { restockFree, shelfSize } from '../../game/run/relics'
 import { sfx, sfxRarity, sfxReward } from '../../audio/audio'
 import { CLEAR_SHELL } from './fresh'
-import { bannerRules, useMetaStore } from '../metaStore'
+import { useMetaStore } from '../metaStore'
 import { completeNode } from './nodes'
 import { runUnlocked, streams } from './runtime'
 import type { Slice } from './types'
@@ -106,7 +105,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     const hero = crossroads.recruits.find((s) => s.id === sentinelId)
     if (!hero || roster.length >= MAX_ROSTER) return
     set({
-      ...withRecruits(roster, get().evolutionQueue, [hero], get().inventory, get().relics),
+      ...withRecruits(roster, [hero], get().inventory, get().relics),
       crossroads: null,
       screen: 'map',
     })
@@ -173,7 +172,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (!merchant?.recruit || gold < merchant.recruit.price || roster.length >= MAX_ROSTER) return
     set({
       gold: gold - merchant.recruit.price,
-      ...withRecruits(roster, get().evolutionQueue, [merchant.recruit.sentinel], get().inventory, get().relics),
+      ...withRecruits(roster, [merchant.recruit.sentinel], get().inventory, get().relics),
       merchant: { ...merchant, recruit: null },
     })
   },
@@ -209,7 +208,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (!event) return
     const pick = recruitOptions.find((s) => s.id === sentinelId)
     if (pick && roster.length < MAX_ROSTER) {
-      set({ ...withRecruits(roster, get().evolutionQueue, [pick], get().inventory, get().relics) })
+      set({ ...withRecruits(roster, [pick], get().inventory, get().relics) })
     }
     completeNode(get, set, event.nodeId)
   },
@@ -230,15 +229,14 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   },
 
   campfireTrain: (sentinelId) => {
-    const { event, roster, evolutionQueue } = get()
+    const { event, roster } = get()
     if (event?.kind !== 'campfire') return
     const hero = roster.find((s) => s.id === sentinelId)
     if (!hero || !canTrain(hero)) return
     const trained = trainAtCampfire(hero)
-    const nextRoster = roster.map((s) => (s.id === sentinelId ? trained : s))
-    // A level that crosses 10 or 20 owes a branch choice, exactly as a wave's XP does.
-    const owed = applyBattleXp(nextRoster, []).evolutionQueue
-    set({ roster: nextRoster, evolutionQueue: [...new Set([...evolutionQueue, ...owed])] })
+    // A level that crosses a skill milestone owes its choice, exactly as a
+    // wave's XP does (SK1) — read off the hero, no queue.
+    set({ roster: roster.map((s) => (s.id === sentinelId ? trained : s)) })
     sfx('upgrade')
     completeNode(get, set, event.nodeId)
   },
@@ -261,13 +259,13 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   },
 
   rerollMerchant: () => {
-    const { merchant, gold, event, runMap, roster, lootPity, mode, relics, runBanner } = get()
+    const { merchant, gold, event, runMap, roster, lootPity, mode, relics } = get()
     if (!merchant || mode !== 'campaign' || event?.kind !== 'merchant') return
     // The Quartermaster's Seal makes the first restock at each stall free.
     const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0)
     if (gold < cost) return sfx('error')
     const node = runMap.nodes.find((n) => n.id === event.nodeId)
-    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics, bannerRules(runBanner).thinPickings) })
+    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics) })
     sfx('coin')
     set({ gold: gold - cost, merchant: { ...merchant, items, rerolls: (merchant.rerolls ?? 0) + 1 } })
   },

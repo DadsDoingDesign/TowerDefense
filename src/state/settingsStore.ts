@@ -67,7 +67,6 @@ export const TEACH_IDS = [
   'deploy',
   'equip',
   'threat',
-  'evolve',
   'subwave',
   'speed',
   'depth',
@@ -75,9 +74,13 @@ export const TEACH_IDS = [
   'command',
   'merchant',
   'relic',
-  'perk',
   'danger',
   'challenge',
+  // SK1: the hero pick's "each hero comes with a skill", and the first
+  // milestone's "pick a skill". New ideas, so a returning player sees them
+  // too; the perk and evolution tips they replace are dropped on load.
+  'heroSkill',
+  'skill',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>
@@ -89,7 +92,7 @@ export type TeachSeen = Record<TeachId, boolean>
  * the game is walked through it again. "Show the tips again" still brings
  * them all back.
  */
-export const LS3_TEACH_IDS: readonly TeachId[] = ['subwave', 'speed', 'depth', 'gear', 'command', 'merchant', 'relic', 'perk', 'danger', 'challenge']
+export const LS3_TEACH_IDS: readonly TeachId[] = ['subwave', 'speed', 'depth', 'gear', 'command', 'merchant', 'relic', 'danger', 'challenge']
 
 const NO_TEACH = Object.fromEntries(TEACH_IDS.map((id) => [id, false])) as TeachSeen
 

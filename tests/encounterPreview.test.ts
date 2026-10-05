@@ -1,3 +1,5 @@
+import { addDifficultyElites } from '../src/game/run/map'
+import { difficultyRules } from '../src/game/run/watch'
 import { describe, expect, it } from 'vitest'
 import { generateRunMap } from '../src/game/data/runmap'
 import { streamRng } from '../src/game/core/rng'
@@ -16,8 +18,8 @@ import {
  * node reachable, calls `selectNode` — the one call that generates a battle's
  * wave — and asserts the wave it put in `currentWave` is deep-equal to
  * `previewEncounter` for the same node. Many seeds, every fight node on each
- * map, and every Vow tier that changes what a node fields (tier 2 turns every
- * battle node into an elite encounter).
+ * map, and several difficulty steps (SK1: a step's extra elites are elite
+ * NODES on the map, so the preview reads them like any other elite).
  */
 function fightNodes(state: ReturnType<typeof useGameStore.getState>) {
   return state.runMap.nodes.filter((n) => n.type === 'battle' || n.type === 'elite' || n.type === 'boss')
@@ -28,13 +30,13 @@ describe('encounter preview == spawned encounter', () => {
   const TIERS = [0, 2, 5]
 
   for (const tier of TIERS) {
-    it(`matches selectNode for every fight node across ${SEEDS.length} seeds (Vow ${tier})`, () => {
+    it(`matches selectNode for every fight node across ${SEEDS.length} seeds (difficulty ${tier})`, () => {
       let checked = 0
       for (const seed of SEEDS) {
-        const runMap = generateRunMap(streamRng(seed, 'map'))
+        const runMap = addDifficultyElites(generateRunMap(streamRng(seed, 'map')), difficultyRules(tier).extraElites, seed)
         useGameStore.setState({
           runSeed: seed,
-          runBanner: tier,
+          runDifficulty: tier,
           runMap,
           mode: 'campaign',
           runPhase: 'active',
@@ -74,19 +76,37 @@ describe('encounter preview == spawned encounter', () => {
 
   it('returns null for non-fight nodes', () => {
     const runMap = generateRunMap(streamRng(5, 'map'))
-    const run = { runSeed: 5, runBanner: 0, runMap }
+    const run = { runSeed: 5, runDifficulty: 0, runMap }
     for (const n of runMap.nodes) {
       if (n.type === 'merchant' || n.type === 'shrine' || n.type === 'recruit' || n.type === 'start') {
         expect(previewEncounter(run, n.id)).toBeNull()
-        expect(encounterKindFor(n, 0)).toBeNull()
+        expect(encounterKindFor(n)).toBeNull()
       }
     }
   })
 
-  it('an all-elite Vow turns battle nodes into elite encounters, and only battle nodes', () => {
-    expect(encounterKindFor({ type: 'battle' }, 0)).toBe('normal')
-    expect(encounterKindFor({ type: 'battle' }, 2)).toBe('elite')
-    expect(encounterKindFor({ type: 'boss' }, 5)).toBe('boss')
+  it('a node fields its own kind: a battle is normal, an elite elite, a boss a boss', () => {
+    expect(encounterKindFor({ type: 'battle' })).toBe('normal')
+    expect(encounterKindFor({ type: 'elite' })).toBe('elite')
+    expect(encounterKindFor({ type: 'boss' })).toBe('boss')
+  })
+
+  it('a difficulty step turns battle nodes into elites on the map, one more per act per step', () => {
+    for (const seed of [3, 99, 4242]) {
+      const base = generateRunMap(streamRng(seed, 'map'))
+      const count = (m: typeof base) => m.nodes.filter((n) => n.type === 'elite').length
+      const fights = base.nodes.filter((n) => n.type === 'battle' && n.layer > 1).length
+      expect(addDifficultyElites(base, 0, seed)).toBe(base)
+      const two = addDifficultyElites(base, 2, seed)
+      expect(count(two) - count(base)).toBeGreaterThan(0)
+      expect(count(two) - count(base)).toBeLessThanOrEqual(Math.min(6, fights))
+      // The first layer is never an elite, and the same seed picks the same nodes.
+      expect(two.nodes.filter((n) => n.layer === 1).every((n) => n.type !== 'elite' || base.nodes.find((b) => b.id === n.id)!.type === 'elite')).toBe(true)
+      expect(addDifficultyElites(base, 2, seed)).toEqual(two)
+      // Nothing else on the map moved.
+      expect(two.edges).toEqual(base.edges)
+      expect(two.nodes.map((n) => n.id)).toEqual(base.nodes.map((n) => n.id))
+    }
   })
 
   it('names a damage type only when the wave leans on it', () => {

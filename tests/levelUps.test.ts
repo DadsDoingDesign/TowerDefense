@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createSentinel } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import type { Sentinel } from '../src/game/types'
-import { choiceOwed, levelUpOpen, rewardInPlace, settleLevelUps, type LevelUp } from '../src/ui/shell/levelUps'
+import { choiceOwed, FLASH_MS, flashLive, levelUpOpen, rewardInPlace, settleFlashes, waveLive } from '../src/ui/shell/levelUps'
 
 /**
- * G3-2 — the reward picked under the field, and level-ups handled on the
- * roster. These are the rules the Selector, the Context panel and the two
- * modals all read, so they are pinned here rather than by screenshot alone.
+ * G3-2 / SK1 — the reward picked under the field, and level-ups handled on
+ * the roster: a plain level flashes and is gone, a skill milestone wears a
+ * badge until it is chosen — between rounds only. These are the rules the
+ * Selector and the Context panel read, so they are pinned here.
  */
 
 const hero = (level: number, id = 'h1'): Sentinel => {
@@ -55,53 +56,38 @@ describe('rewardInPlace', () => {
   })
 })
 
-describe('settleLevelUps', () => {
-  it('badges a hero that levelled in a normal wave, remembering where it started', () => {
-    const before = hero(3)
-    const after = hero(4)
-    const out = settleLevelUps({}, { h1: before }, [after], true)
-    expect(out.h1).toMatchObject({ from: 3, seen: false })
-    expect(out.h1.before).toBe(before)
+describe('settleFlashes (SK2: a plain level-up says so in passing)', () => {
+  it('flashes every hero that levelled, from where it started', () => {
+    const out = settleFlashes({ h1: hero(3) }, [hero(4)], 1000)
+    expect(out.h1).toEqual({ from: 3, to: 4, at: 1000 })
   })
 
-  it('does nothing for a hero that did not level', () => {
-    expect(settleLevelUps({}, { h1: hero(3) }, [hero(3)], true)).toEqual({})
+  it('does nothing for a hero that did not level, or one that just joined', () => {
+    expect(settleFlashes({ h1: hero(3) }, [hero(3)], 0)).toEqual({})
+    expect(settleFlashes({}, [hero(4)], 0)).toEqual({})
   })
 
-  it('keeps the earliest start when an unseen level-up levels again', () => {
-    const first: LevelUp = { from: 2, before: hero(2), seen: false }
-    const out = settleLevelUps({ h1: first }, { h1: hero(3) }, [hero(4)], true)
-    expect(out.h1.from).toBe(2)
-  })
-
-  it('hands an elite or endless level-up back to the modal', () => {
-    const had: LevelUp = { from: 2, before: hero(2), seen: false }
-    expect(settleLevelUps({ h1: had }, { h1: hero(4) }, [hero(5)], false)).toEqual({})
-  })
-
-  it('drops a hero who left the company', () => {
-    const had: LevelUp = { from: 2, before: hero(2), seen: false }
-    expect(settleLevelUps({ gone: had }, {}, [hero(3)], true)).toEqual({})
+  it('fades on its own', () => {
+    const f = { from: 3, to: 4, at: 1000 }
+    expect(flashLive(f, 1000 + FLASH_MS - 1)).toBe(true)
+    expect(flashLive(f, 1000 + FLASH_MS)).toBe(false)
+    expect(flashLive(undefined, 0)).toBe(false)
   })
 })
 
-describe('the badge', () => {
-  it('stays until a plain level-up is seen', () => {
-    const h = hero(4)
-    expect(levelUpOpen({ from: 3, before: hero(3), seen: false }, h, [])).toBe(true)
-    expect(levelUpOpen({ from: 3, before: hero(3), seen: true }, h, [])).toBe(false)
+describe('the badge (SK2: only a real choice wears one)', () => {
+  it('shows exactly while a skill milestone is owed', () => {
+    expect(levelUpOpen(hero(4))).toBe(false)
+    expect(choiceOwed(hero(5))).toBe('skill')
+    expect(levelUpOpen(hero(5))).toBe(true)
+    expect(levelUpOpen({ ...hero(9), skillPicks: 1 })).toBe(false)
+    expect(levelUpOpen({ ...hero(10), skillPicks: 1 })).toBe(true)
+    expect(levelUpOpen({ ...hero(20), skillPicks: 3 })).toBe(false)
   })
 
-  it('stays, seen or not, while a choice is owed', () => {
-    const h = hero(5)
-    expect(choiceOwed(h, [])).toBe('perk')
-    expect(levelUpOpen({ from: 4, before: hero(4), seen: true }, h, [])).toBe(true)
-    const e = hero(10)
-    expect(choiceOwed(e, ['h1'])).toBe('evolve')
-    expect(levelUpOpen({ from: 9, before: hero(9), seen: true }, e, ['h1'])).toBe(true)
-  })
-
-  it('never shows without an entry', () => {
-    expect(levelUpOpen(undefined, hero(5), ['h1'])).toBe(false)
+  it('the choice waits for the wave: a live fight is not between rounds', () => {
+    expect(waveLive({ engine: {} as never, battlePhase: 'battle' })).toBe(true)
+    expect(waveLive({ engine: null, battlePhase: 'setup' })).toBe(false)
+    expect(waveLive({ engine: {} as never, battlePhase: 'setup' })).toBe(false)
   })
 })

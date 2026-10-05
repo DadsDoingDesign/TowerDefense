@@ -1,11 +1,15 @@
 import { canUpgrade, describeBase, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { getNode } from '../../game/data/archetypeTree'
+import { skillById, skillLevelLabel } from '../../game/data/skills'
+import { heroChoices } from '../../game/run/skills'
+import { peekName as peekNameOf } from '../../game/data/sentinels'
+import { difficultyEffect, difficultyRules, MAX_DIFFICULTY, watchLevelFor } from '../../game/run/watch'
 import { mutationName } from '../../game/data/mutations'
 import { buildName } from '../../game/engine/leveling'
 import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
-import { BANNER_RUNGS, MAX_BANNER, useMetaStore, UPGRADES } from '../../state/metaStore'
+import { useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { dailySeed, utcDateKey } from '../../state/daily'
 import { menuStaged } from '../../state/staging'
@@ -194,6 +198,12 @@ export interface Offer {
   /** Level pips for a levelled purchase (a Watchtower perk): `on` of `of`. */
   pips?: { on: number; of: number }
   /**
+   * SK1: a grid of small cards under the body — the Codex's skill library.
+   * A `locked` card is drawn as a silhouette: no name, no sentence, only how
+   * it opens.
+   */
+  cards?: { id: string; name: string; sub: string; text: string; locked?: boolean; group?: string }[]
+  /**
    * LS3: a menu entry the player has not opened yet — the one plain line that
    * says what opens it. The menu draws the row dimmed and inert, with this
    * line under its name.
@@ -359,9 +369,16 @@ function heroBits(s: Sentinel) {
 function heroBody(s: Sentinel): string[] {
   const p = computeCombat(s)
   const line = `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`
+  // SK1: every hire arrives with a skill — say which, in its one sentence.
+  const skills = skillLines(s)
   // LS3: with the stat row held back, the sentence that says what the hero
   // does leads — the same one the first pick shows.
-  return stagedRun() ? [getNode(s.branchPath[s.branchPath.length - 1] ?? s.archetype).ability, line] : [line]
+  return stagedRun() ? [getNode(s.archetype).ability, ...skills, line] : [...skills, line]
+}
+
+/** "Skill · Quick Hands — Attacks 15% faster." for every skill a hero holds. */
+export function skillLines(s: Pick<Sentinel, 'skills'>): string[] {
+  return (s.skills ?? []).map((id) => skillById(id)).filter((k) => !!k).map((k) => `Skill · ${k.name} — ${k.desc}`)
 }
 
 /**
@@ -610,26 +627,42 @@ function archetypeTiles(p: ReturnType<typeof computeCombat>): { caption: string;
   return out.slice(0, 3)
 }
 
+/**
+ * The hero pick (SK1): three heroes, one of each class, each with a name and
+ * one random Level 1 skill from the player's unlocked pool — rolled from the
+ * run seed (`run/skills.heroChoices`), so the same seed or Daily offers the
+ * same three. The class still decides how the hero fights; the skill is the
+ * twist on it, and it is in the row itself so the pick reads at a glance.
+ */
 function heroPickOffers(st: St, meta: Meta): Offer[] {
   const statBonus = meta.bonuses().statBonus
   // LS3: a first run picks a hero by what it DOES. The stat block, the trait
   // tiles and the line of secondary numbers (crit, thorns, patience) wait for
   // the hero's own Stats tab, where they are one tap away and read in context.
   const staged = st.firstRun && !useSettingsStore.getState().showEverything
+  const choices = heroChoices(st.runSeed, st.skillPool)
+  // The hub's extra heroes are named before the leader (`pickStartingHero`),
+  // so a class that one of them shares is named one further along.
+  const extras = st.challenge.kind === 'daily' ? 0 : meta.bonuses().extraSentinels
+  const peekName = (a: Archetype) => peekNameOf(a, Array.from({ length: extras }, (_, i) => ARCH_LIST[i % 3]).filter((x) => x === a).length)
   const picks: Offer[] = ARCH_LIST.map((a) => {
     const node = getNode(a)
-    const hero = previewHero(a, statBonus)
+    const skill = skillById(choices.find((c) => c.archetype === a)?.skill ?? '')
+    const hero = { ...previewHero(a, statBonus), skills: skill ? [skill.id] : [] }
     const p = computeCombat(hero)
+    const role = heroRole({ block: p.mods.block?.count ?? 0, splash: Math.round(p.splashRadius), range: Math.round(p.range) })
     return {
       id: `pick-${a}`,
-      title: node.name,
+      // The hero's own name, and its class: "Bran · Fighter".
+      title: `${peekName(a)} · ${node.name}`,
       // LS3: a first run chooses from three rows, each saying the hero's job in
       // plain words, rather than three bare portraits and one hero's line.
-      sub: staged ? undefined : 'Starting hero',
+      sub: staged ? undefined : skill ? skill.name : 'Starting hero',
       color: ARCH_COLOR[a],
       glyph: GLYPH[a],
+      // LS3: a first run's row says the hero's job, then its skill, in plain words.
       ...(staged
-        ? { rowArt: heroArt(a), note: heroRole({ block: p.mods.block?.count ?? 0, splash: Math.round(p.splashRadius), range: Math.round(p.range) }) }
+        ? { rowArt: heroArt(a), note: skill ? `${role} · ${skill.name}: ${skill.desc}` : role }
         : { portrait: { art: heroArt(a), color: ARCH_COLOR[a] } }),
       stats: staged
         ? undefined
@@ -647,6 +680,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       // picker below needs in order to be seen at all.
       body: [
         node.ability,
+        ...(skill ? [`Skill · ${skill.name} (${skillLevelLabel(1)}) — ${skill.desc}`] : []),
         `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`,
         ...(staged
           ? []
@@ -654,7 +688,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
               `${p.damageType === 'magic' ? 'Magic' : 'Physical'} · ${pct(p.critChance)} crit ×${p.critMult.toFixed(1)} · ${Math.round(p.thorns)} thorns · ${Math.round(p.patience)} patience${statBonus ? ` · +${statBonus} all stats (Watchtower)` : ''}`,
             ]),
       ],
-      action: { label: `Choose ${node.name}`, run: () => st.pickStartingHero(a) },
+      action: { label: `Choose ${peekName(a)}`, run: () => st.pickStartingHero(a) },
     }
   })
   // The way back to the menu: nothing is spent until a hero is chosen, the
@@ -1279,92 +1313,51 @@ function settingsOffers(s: Settings): Offer[] {
 }
 
 /**
- * The Banner ladder's unlock row — what Dark Sacrifice became (H16 / M29).
+ * The difficulty row in the Watchtower (SK1) — what the Vow row became.
  *
- * The copy that shipped here described the system it replaced, word for word:
- * "Permanent and irreversible… +1 to all starting stats, +10% Watch Marks —
- * and +15% enemy HP in every future run… There is no way back down a tier."
- * Not one clause of that is true any more. `metaStore` kept the old field name
- * (`sacrificeTier`) so every save migrates, but the number now means "highest
- * Banner UNLOCKED", unlocking applies nothing to anything, and
- * `bonuses().enemyHpMult` is hard-wired to 1.
- *
- * Rungs are **earned, not bought** (Phase 1): Banner N opens when a run flown
- * under Banner N−1 is won (`grantRunRewards`). This row used to sell the next
- * rung for 200 / 350 / 500 Watch Marks; it is information now, with no price
- * and no button, and the rung is flown — or not — per run, at hero-pick, by
- * {@link BannerPicker}.
+ * Information, with no price and no button: the step is chosen per run, on
+ * the hero pick (`DifficultyPicker`), and raised only by winning at the top
+ * step. Every number is read off `difficultyRules`.
  */
-export const BANNER_BLURB =
-  'A Vow is a bet you place at the start of a run: it takes a rule away and pays more Marks for the finish. It applies to that run only, and you pick it fresh every time.'
+export const DIFFICULTY_BLURB =
+  'Each difficulty step makes enemies 8% stronger and adds one elite to each act, and pays more Marks. A win at your highest step raises it and unlocks a skill; you can turn it down at the start of any run.'
 
-/**
- * The player-facing name of the difficulty ladder (Wave 1).
- *
- * "Banner" collided with the Banner item — a keepsake, drawn with the same
- * pennant — so one word meant a thing you carry and a rule you swear to. The
- * ladder is a Vow on screen now. Ids, store fields and save keys still say
- * banner/sacrifice, so every save migrates untouched.
- */
-export const VOW = 'Vow'
+/** "Difficulty 2 · Enemies 16% stronger · 2 more elites an act" — for receipts. */
+export const difficultyLine = (step: number): string => (step <= 0 ? 'Difficulty 0 — standard.' : `Difficulty ${step} · ${difficultyEffect(step)}`)
 
-/** "Banner 3 — Elite Watch" and what it does to the run, from the real rung data. */
-export const bannerLine = (tier: number): string =>
-  tier <= 0 || tier > MAX_BANNER
-    ? 'No Vow — the ordinary march.'
-    : `${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name} — ${BANNER_RUNGS[tier - 1].rule}`
-
-/** LS3: the Vow row before the first finished run — locked, one plain line. */
-function lockedVowOffer(): Offer {
+/** LS3: the difficulty row before the first finished run — locked, one plain line. */
+function lockedDifficultyOffer(): Offer {
   return {
-    id: 'sacrifice',
-    title: 'Vows',
+    id: 'difficulty',
+    title: 'Difficulty',
     sub: 'Locked',
     icon: PERK_ICON.sacrifice,
     dim: true,
     locked: OPENS_AFTER_FIRST_RUN,
-    body: [`${OPENS_AFTER_FIRST_RUN}. A Vow makes a run harder, and pays more for finishing it.`],
+    body: [`${OPENS_AFTER_FIRST_RUN}. Winning raises the difficulty a step, and each step unlocks a skill.`],
     action: { label: 'Locked', run: () => {}, disabled: true },
   }
 }
 
-function sacrificeOffer(meta: Meta): Offer {
-  const tier = meta.sacrificeTier
-  const maxed = tier >= MAX_BANNER
-  const next = maxed ? null : BANNER_RUNGS[tier]
-
-  if (maxed) {
-    return {
-      id: 'sacrifice',
-      title: 'Vows',
-      sub: `${MAX_BANNER}/${MAX_BANNER} unlocked`,
-      icon: PERK_ICON.sacrifice,
-      color: 'var(--accent)',
-      pips: { on: MAX_BANNER, of: MAX_BANNER },
-      body: [
-        'Every Vow is open. Choose one at the start of a run.',
-        BANNER_BLURB,
-        ...BANNER_RUNGS.map((r) => `${VOW} ${r.tier} · ${r.name} — ${r.rule} Pays ×${r.markMult}.`),
-      ],
-    }
-  }
-
-  const earnBy = tier === 0 ? `Win a run with no ${VOW}` : `Win a run under ${VOW} ${tier} · ${BANNER_RUNGS[tier - 1].name}`
+function difficultyOffer(meta: Meta): Offer {
+  const top = meta.topDifficulty
+  const best = meta.difficultyBest
   return {
-    id: 'sacrifice',
-    title: `${VOW} ${next!.tier} · ${next!.name}`,
-    sub: `${tier}/${MAX_BANNER} unlocked · win to unlock`,
+    id: 'difficulty',
+    title: `Difficulty ${top}`,
+    sub: top >= MAX_DIFFICULTY ? 'the top step' : `highest of ${MAX_DIFFICULTY}`,
     icon: PERK_ICON.sacrifice,
     color: 'var(--accent)',
-    pips: { on: tier, of: MAX_BANNER },
+    pips: { on: top, of: MAX_DIFFICULTY },
     body: [
-      `${earnBy} to unlock ${VOW} ${next!.tier} — ${next!.name}. Vows are earned by winning, never bought.`,
-      next!.rule,
-      `A run under it pays ×${next!.markMult} Marks. Vows stack: swearing ${next!.tier} swears every Vow below it too.`,
-      BANNER_BLURB,
-      tier > 0
-        ? `Already open: ${BANNER_RUNGS.slice(0, tier).map((r) => `${r.tier} ${r.name}`).join(' · ')}. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.`
-        : 'Nothing is unlocked yet, so every run is the ordinary march. Unlocking changes nothing on its own — no run gets harder until you choose to swear one.',
+      top === 0
+        ? 'Win a run to raise it to 1 and unlock a skill.'
+        : `Your highest is ${top}: ${difficultyEffect(top)}. A run opens there; turn it down on the hero screen.`,
+      DIFFICULTY_BLURB,
+      ...(top < MAX_DIFFICULTY ? [`Next: Difficulty ${top + 1} — ${difficultyEffect(top + 1)}, pays ×${difficultyRules(top + 1).markMult} Marks.`] : []),
+      ...Object.entries(best)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([step, score]) => `Best winning score at difficulty ${step}: ${score}.`),
     ],
   }
 }
@@ -1402,7 +1395,7 @@ function dailyOffer(meta: Meta, staged: boolean): Offer {
     color: 'var(--accent)',
     body: [
       `Seed ${dailySeed(date)} — the same map, waves and offers for every Watch today (UTC).`,
-      `Standard rules: no perks, no unlocks, no ${VOW}. The first run you commit a hero to each day is scored.`,
+      'Standard rules: no Watchtower bonuses, the starting skills only, no difficulty step. The first run you commit a hero to each day is scored.',
       status,
     ],
     action: { label: rec ? 'Practice' : 'Begin', run: () => useGameStore.getState().startDaily() },
@@ -1465,7 +1458,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           disabled: maxed || meta.watchMarks < cost,
         },
       }
-    }), staged ? lockedVowOffer() : sacrificeOffer(meta)]
+    }), staged ? lockedDifficultyOffer() : difficultyOffer(meta)]
   }
   return [
     {
@@ -1499,10 +1492,10 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     {
       id: 'codex',
       title: 'Codex',
-      sub: staged ? 'Glossary' : `${Object.keys(meta.achievements).length}/${ACHIEVEMENTS.length} feats`,
+      sub: staged ? 'Glossary' : `Watch level ${watchLevelFor(meta.watchXp)}`,
       icon: 'grimoire',
       immediate: true,
-      body: ['A glossary of every idea you have met, feats earned and still open, and every goblin, relic, specialization and perk the Watch has seen.'],
+      body: ['A glossary of every idea you have met, your skill library and Watch level, feats earned and still open, and every goblin and relic the Watch has seen.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
     staged
@@ -1517,6 +1510,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       : {
           id: 'endless',
           title: 'Endless Watch',
+          sub: meta.stats.bestRound > 0 ? `best round ${meta.stats.bestRound}` : undefined,
           icon: 'endless',
           color: 'var(--teal)',
           body: ['Three retries, escalating waves, rooms between each one.'],

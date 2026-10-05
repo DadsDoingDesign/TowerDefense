@@ -17,7 +17,7 @@
  * under `src/` may read `process`.
  */
 import * as H from '../src/game/data/hazards'
-import { bannerRules, MAX_BANNER } from '../src/state/metaStore'
+import { difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
 import type { Archetype } from '../src/game/types'
 import { mean } from './harness'
 import { monteCarloRun, POLICIES, simulateRun, ZERO_META } from './runsim'
@@ -55,11 +55,11 @@ if (WHAT.includes('fresh')) {
 if (WHAT.includes('banner')) {
   const p = POLICIES.find((x) => x.id === 'adaptive')!
   const rows: string[] = []
-  for (let t = 0; t <= MAX_BANNER; t++) {
+  for (let t = 0; t <= MAX_DIFFICULTY; t++) {
     const w: number[] = []
     const m: number[] = []
     for (let i = 0; i < N; i++) {
-      const r = simulateRun(9001 + i * 17, ARCHES[i % 3], { meta: ZERO_META, banner: bannerRules(t), policy: p })
+      const r = simulateRun(9001 + i * 17, ARCHES[i % 3], { meta: ZERO_META, difficulty: difficultyRules(t), policy: p })
       w.push(r.won ? 1 : 0)
       m.push(r.marks)
     }

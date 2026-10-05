@@ -13,7 +13,7 @@
  */
 import { RNG } from '../src/game/core/rng'
 import { generateRunMap } from '../src/game/data/runmap'
-import { BANNER_RUNGS, MAX_BANNER, bannerRules } from '../src/state/metaStore'
+import { difficultyEffect, MAX_DIFFICULTY, difficultyRules } from '../src/game/run/watch'
 import type { Archetype } from '../src/game/types'
 import { mean } from './harness'
 import { buildChoicePoints, monteCarloRun } from './runsim'
@@ -34,12 +34,12 @@ export interface Cell {
 
 /** Identical seeds and starting heroes in every cell, so cells are paired. */
 export function cell(n: number, meta: Loadout, bannerTier: number, policy: RoutePolicy): Cell {
-  const banner = bannerRules(bannerTier)
+  const banner = difficultyRules(bannerTier)
   const wins: number[] = []
   const marks: number[] = []
   const cleared: number[] = []
   for (let i = 0; i < n; i++) {
-    const r = simulateRun(9001 + i * 17, ARCHES[i % 3], { meta, banner, policy })
+    const r = simulateRun(9001 + i * 17, ARCHES[i % 3], { meta, difficulty: banner, policy })
     wins.push(r.won ? 1 : 0)
     marks.push(r.marks)
     cleared.push(r.cleared)
@@ -91,16 +91,15 @@ if (WHAT === 'all' || WHAT === 'unlocks') {
 }
 
 if (WHAT === 'all' || WHAT === 'banners') {
-  console.log(`\n=== Banner ladder (n=${N}/cell, zero meta) ===`)
-  console.log('banner | rule | mult | ' + POLICIES.map((p) => `${p.id} win/marks`).join(' | '))
-  for (let t = 0; t <= MAX_BANNER; t++) {
+  console.log(`\n=== difficulty steps (n=${N}/cell, zero meta) ===`)
+  console.log('step | effect | mult | ' + POLICIES.map((p) => `${p.id} win/marks`).join(' | '))
+  for (let t = 0; t <= MAX_DIFFICULTY; t++) {
     const cells = POLICIES.map((p) => cell(N, ZERO_META, t, p))
-    const rung = t === 0 ? null : BANNER_RUNGS[t - 1]
     console.log(
       [
         String(t),
-        (rung ? rung.name : '—').padEnd(14),
-        `×${bannerRules(t).markMult}`,
+        difficultyEffect(t).padEnd(14),
+        `×${difficultyRules(t).markMult}`,
         ...cells.map((c) => `${pct(c.winRate)}/${c.marksPerRun.toFixed(0)}`),
       ].join(' | '),
     )
@@ -115,35 +114,9 @@ if (WHAT === 'all' || WHAT === 'policies') {
   }
 }
 
-if (WHAT === 'rules') {
-  // Each Banner rule measured ALONE on top of Banner 0, so the ladder can be
-  // ordered by what each rule actually costs instead of by how it reads.
-  console.log(`\n=== single Banner rules (n=${N}/cell, zero meta) ===`)
-  const base = bannerRules(0)
-  const RULES: [string, Partial<typeof base>][] = [
-    ['none', {}],
-    ['thinPickings', { thinPickings: true }],
-    ['noMerchants (bare road)', { noMerchants: true }],
-    ['noRecruits', { noRecruits: true }],
-    ['allElite', { allElite: true }],
-    ['startThreat ×2', { startThreat: 2 }],
-  ]
-  console.log(['rule', ...POLICIES.map((p) => p.id)].join(' | '))
-  for (const [label, patch] of RULES) {
-    const banner = { ...base, ...patch }
-    const cells = POLICIES.map((p) => {
-      const wins: number[] = []
-      const marks: number[] = []
-      for (let i = 0; i < N; i++) {
-        const r = simulateRun(9001 + i * 17, ARCHES[i % 3], { banner, policy: p })
-        wins.push(r.won ? 1 : 0)
-        marks.push(r.marks)
-      }
-      return `${pct(mean(wins))}/${mean(marks).toFixed(0)}`
-    })
-    console.log([label.padEnd(24), ...cells].join(' | '))
-  }
-}
+// SK1: the single-rule table measured the retired Vow rules one at a time.
+// A difficulty step is one dial now (enemy strength + elites per act); its
+// cost per step is measured by the 'banner' sweep below and REPORT §13.
 
 if (WHAT === 'all' || WHAT === 'map') {
   console.log(`\n=== map shape (500 maps) ===`)

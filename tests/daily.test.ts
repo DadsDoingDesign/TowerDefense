@@ -78,10 +78,10 @@ describe('Daily Watch', () => {
   })
 
   it('flies no Banner', () => {
-    useMetaStore.setState({ sacrificeTier: 3 })
+    useMetaStore.setState({ topDifficulty: 3 })
     g().startDaily()
-    g().setRunBanner(2)
-    expect(g().runBanner).toBe(0)
+    g().setRunDifficulty(2)
+    expect(g().runDifficulty).toBe(0)
   })
 })
 

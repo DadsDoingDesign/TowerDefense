@@ -3,16 +3,11 @@
  * field's slots. Pure — the map stream and the hub's unlocks arrive as
  * arguments.
  */
-import type { RNG } from '../core/rng'
-import { generateRunMap, type MapOptions, type RunMap } from '../data/runmap'
+import { hashSeed, RNG } from '../core/rng'
+import { generateRunMap, type MapNode, type MapOptions, type RunMap } from '../data/runmap'
+import { actOf, ACTS } from './threat'
 import { crowdedBy, isMelee, type Post } from '../data/terrain'
 import type { GameMap, Placement, Sentinel } from '../types'
-
-/** The Banner rules the map shape reads (a subset of `metaStore.BannerRules`). */
-export interface MapBannerRules {
-  noMerchants: boolean
-  noRecruits: boolean
-}
 
 export const neighborsOf = (map: RunMap, nodeId: string): string[] =>
   map.edges.filter((e) => e.from === nodeId).map((e) => e.to)
@@ -22,17 +17,54 @@ export const frontierFrom = (map: RunMap, nodeId: string, cleared: readonly stri
   neighborsOf(map, nodeId).filter((id) => !cleared.includes(id))
 
 /**
- * The map shape a run is dealt, given what the hub has unlocked and which
- * Banner the run is flying. Unlocks widen it; Banners narrow it (H15 / H16).
+ * The map shape a run is dealt, given what the hub has unlocked. Unlocks widen
+ * it (H15). (The Vow ladder used to narrow it — no merchants, no recruiters;
+ * a difficulty step adds elites instead, {@link addDifficultyElites}.)
  */
-export function mapOptionsFor(banner: MapBannerRules, unlocked: (id: string) => boolean): MapOptions {
+export function mapOptionsFor(unlocked: (id: string) => boolean): MapOptions {
   return {
     wideMap: unlocked('cartographer'),
     extraRecruit: unlocked('freeCompanies'),
     standingOrders: unlocked('standingOrders'),
-    noMerchants: banner.noMerchants,
-    noRecruits: banner.noRecruits,
   }
+}
+
+/**
+ * SK1 — a difficulty step's "one more elite per act": turn `perAct` battle
+ * nodes in each act into elites, on the map, where the player can see them.
+ *
+ * Which ones is a hash of the run seed and the act (a fresh generator, never a
+ * draw on the map stream), so step 0 is untouched and switching steps on the
+ * hero pick cannot reroll anything else. The first layer stays a plain fight
+ * (a run never opens on an elite). Nodes that keep a way round them — every
+ * road in has another road out that is not an elite — go first, and with
+ * Standing Orders owned they are the only ones taken, so its promise holds.
+ */
+export function addDifficultyElites(map: RunMap, perAct: number, runSeed: number, standingOrders = false): RunMap {
+  if (perAct <= 0) return map
+  const nodes = map.nodes.map((n) => ({ ...n }))
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const outs = (id: string) => map.edges.filter((e) => e.from === id).map((e) => byId.get(e.to)!)
+  const ins = (id: string) => map.edges.filter((e) => e.to === id).map((e) => e.from)
+  const avoidable = (n: MapNode) => ins(n.id).every((p) => outs(p).some((o) => o.id !== n.id && o.type !== 'elite' && o.type !== 'miniboss' && o.type !== 'boss'))
+  for (let act = 1; act <= ACTS; act++) {
+    const rng = new RNG(hashSeed(runSeed, 'difficulty-elites', act))
+    const pool = nodes.filter((n) => n.type === 'battle' && n.layer > 1 && actOf(n.layer) === act)
+    // A fixed shuffle of the act's fights, then the avoidable ones first.
+    const order = pool.map((n) => ({ n, k: rng.next() })).sort((a, b) => a.k - b.k).map((x) => x.n)
+    let left = perAct
+    for (const pass of [true, false]) {
+      if (pass === false && standingOrders) break
+      for (const n of order) {
+        if (left <= 0) break
+        if (n.type !== 'battle') continue
+        if (pass && !avoidable(n)) continue
+        n.type = 'elite'
+        left--
+      }
+    }
+  }
+  return { ...map, nodes }
 }
 
 /** Deal a run map off the map stream and stand the company on its start node. */
