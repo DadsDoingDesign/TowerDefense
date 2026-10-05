@@ -760,7 +760,9 @@ function buildCharterBase(): Record<string, unknown> {
   const keep = useMetaStore.getState()
   devCharter.ready(20000)
   devCharter.own(2)
-  useGameStore.getState().signCharter()
+  // A fixed seed, so the fuzz lands on the same charter every run (signing
+  // itself is `tests/charter.test.ts`'s).
+  useGameStore.getState().beginCampaign(4242, { kind: 'standard' }, { company: null, charter: true, crates: 0, purse: 60 })
   useGameStore.getState().pickStartingHero('pick-0')
   const st = useGameStore.getState()
   st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
@@ -871,6 +873,14 @@ describe('v16 → v17: the Sovereign Route (the endgame charter)', () => {
     expect(snap.contract).toMatchObject({ charter: true, company: null, crates: 0, market: 1, pending: null, cashOut: 0, status: 'lost' })
     expect(snap.contract.paid).toEqual([0, 0, CHARTER_PAYOUT])
     expect(snap.contract.hq).toMatchObject({ focus: null, boost: 0 })
+  })
+
+  it('an unreadable contract over a map with a lost node is read as the old escort, without throwing (found by this fuzz)', () => {
+    const raw = structuredClone(base) as Record<string, unknown> & { runMap: { nodes: unknown[] } }
+    raw.runMap.nodes[3] = undefined
+    raw.contract = [null]
+    expect(() => migrateSnapshot(structuredClone(raw))).not.toThrow()
+    expect(() => payoutFromRaw(structuredClone(raw))).not.toThrow()
   })
 
   it('a v16 payload has no charter and no Sovereign kind: it loads as it always did', () => {

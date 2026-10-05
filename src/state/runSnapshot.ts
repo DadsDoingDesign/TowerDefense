@@ -1014,7 +1014,8 @@ function migrateRunHq(raw: unknown): RunHq {
 /** The escort a pre-contract run resumes as: Rosethread's open road, its passed cities paid nothing. */
 function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[]): RunContract {
   const done = new Set(cleared)
-  const passed = runMap.nodes.filter((n) => done.has(n.id) && cityOfLayer(n.layer) != null && (n.type === 'miniboss' || n.type === 'boss')).length
+  // A node the payload lost (null, a hole) is no city passed — and must not throw here.
+  const passed = runMap.nodes.filter((n) => !!n && done.has(n.id) && cityOfLayer(n.layer) != null && (n.type === 'miniboss' || n.type === 'boss')).length
   const n = Math.min(CITY_COUNT, passed)
   return { ...freshContract({ company: 'silk', crates: 0, market: 1 }, 0), paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
 }
