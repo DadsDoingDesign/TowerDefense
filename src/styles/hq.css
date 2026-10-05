@@ -1,0 +1,466 @@
+/**
+ * The HQ and the sealed crates (the mercenary company, build step 3) — the
+ * approved night-lantern mockups (`trade/r3/7-hq-*.png`, `8-pull.png`): dark
+ * panels with the gold accent, prices as full-size gold chips on their
+ * buttons, a parchment slip only where the world talks (the duplicate rule).
+ * Nothing goes below the 11px floor; numbers are tabular; every control is at
+ * least 44px tall.
+ */
+
+/* ------------------------------------------------------------ the head */
+.hq-keep {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+}
+
+/* ------------------------------------------------------------ tabs */
+.hq-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+.hq-tab {
+  min-height: 48px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.hq-tab.on {
+  background: var(--accent);
+  color: var(--ink-on-fill);
+}
+.hq-body {
+  display: grid;
+  gap: 10px;
+}
+
+/* ------------------------------------------------------------ cards */
+.hq-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  text-align: left;
+}
+.hq-card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.1;
+  color: var(--text);
+}
+.hq-line {
+  margin: -4px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.35;
+}
+.hq-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.4;
+}
+.hq-note b {
+  color: var(--text);
+}
+.hq-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sm);
+}
+.hq-kv span {
+  color: var(--muted);
+  flex: none;
+}
+.hq-kv b {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.hq-kv b.tone-good {
+  color: var(--good);
+  font-weight: 800;
+}
+.hq-big {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------ buttons */
+.hq-btn {
+  min-height: 56px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--panel-3);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.hq-btn small {
+  font-size: var(--fs-md);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+.hq-btn:disabled {
+  cursor: default;
+  color: var(--muted);
+  background: rgba(47, 36, 24, 0.6);
+  border-style: dashed;
+}
+.hq-btn:disabled small {
+  color: var(--muted);
+}
+.hq-acts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.hq-done {
+  margin: 0;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(111, 206, 136, 0.45);
+  background: rgba(111, 206, 136, 0.1);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ level pips */
+.hq-pips {
+  display: flex;
+  gap: 3px;
+}
+.hq-pips i {
+  flex: 1;
+  height: 6px;
+  border-radius: 2px;
+  background: rgba(233, 205, 150, 0.14);
+}
+.hq-pips i.on {
+  background: var(--accent);
+}
+
+/* ------------------------------------------------------------ HR */
+.hq-deal {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.hq-hero {
+  height: 72px;
+  border-radius: 8px;
+  background: var(--portrait);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.hq-hero img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.hq-hero.locked {
+  background: rgba(20, 14, 8, 0.5);
+  border: 1.5px dashed var(--line-strong);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------ Finance */
+.hq-cmp {
+  display: grid;
+  grid-template-columns: 112px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+.hq-cmp span {
+  color: var(--muted);
+}
+.hq-cmp i {
+  height: 10px;
+  border-radius: 3px;
+}
+.hq-cmp b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ Operations */
+.hq-slots {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.hq-slots i {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+}
+.hq-slots i.on {
+  background: var(--panel-3);
+  border-style: solid;
+}
+.hq-focus {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.hq-fc {
+  min-height: 60px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(20, 14, 8, 0.5);
+  border: 1.5px solid var(--line-strong);
+  color: var(--muted);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  cursor: pointer;
+}
+.hq-fc.on {
+  border-color: var(--co);
+  background: color-mix(in srgb, var(--co) 14%, #2f2418);
+  color: var(--text);
+}
+.hq-fc[aria-disabled='true'] {
+  cursor: default;
+}
+.hq-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.hq-steps span {
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.hq-steps span.on {
+  background: var(--accent-dim);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ------------------------------------------------------------ the crates */
+.hq-crate-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+.hq-crate-title .ct-title {
+  font-size: 30px;
+  color: var(--accent);
+}
+.hq-crate-title p {
+  margin: 4px 0 0;
+  font-size: var(--fs-md);
+  color: var(--text);
+  line-height: 1.3;
+}
+.hq-crate-art {
+  flex: none;
+  filter: drop-shadow(0 0 12px rgba(245, 196, 81, 0.45));
+  animation: hq-shake 2.4s ease-in-out infinite;
+}
+.hq-crate-art.opened {
+  animation: none;
+}
+@keyframes hq-shake {
+  0%,
+  86%,
+  100% {
+    transform: none;
+  }
+  89% {
+    transform: rotate(-4deg);
+  }
+  92% {
+    transform: rotate(4deg);
+  }
+  95% {
+    transform: rotate(-2deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hq-crate-art {
+    animation: none;
+  }
+}
+:root[data-reduced-motion='true'] .hq-crate-art {
+  animation: none;
+}
+.hq-pulled .pg-skill {
+  animation: hq-pop 450ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes hq-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hq-pulled .pg-skill {
+    animation: none;
+  }
+}
+.hq-odds {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  text-align: left;
+  display: grid;
+  gap: 0;
+}
+.hq-odds-h,
+.hq-odds-r {
+  display: grid;
+  grid-template-columns: 1fr 56px 72px;
+  align-items: center;
+  gap: 8px;
+}
+.hq-odds-h {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.hq-odds-h span:not(:first-child),
+.hq-odds-r span:not(:first-child) {
+  text-align: right;
+}
+.hq-odds-r {
+  min-height: 40px;
+  font-size: var(--fs-md);
+  border-bottom: 1px solid var(--line);
+}
+.hq-odds-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.hq-odds-n i {
+  font-style: normal;
+  background: var(--accent-text);
+  color: var(--ink-on-fill);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: var(--fs-micro);
+}
+.hq-odds-n small {
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.hq-odds-b {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.hq-odds-y {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hq-odds-y em {
+  font-style: normal;
+  font-size: var(--fs-micro);
+  color: var(--good);
+  margin-left: 3px;
+}
+.hq-odds .hq-note {
+  margin-top: 8px;
+}
+.hq-pool-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.hq-pool-it {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--panel);
+  border: 2px solid var(--line-strong);
+}
+.hq-pool-it small {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+.hq-pool-it.have {
+  border-style: dashed;
+}
+.hq-dup {
+  text-align: left;
+}
+.hq-dup-k {
+  margin: 0;
+  font-weight: 800;
+  color: var(--slip-ink);
+}
+.hq-dup-t {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--slip-ink);
+}

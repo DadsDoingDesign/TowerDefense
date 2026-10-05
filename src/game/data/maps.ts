@@ -244,12 +244,13 @@ const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.i
  * and — Q1 — the battle's danger ground and seeded obstacles over both when it
  * has a `hazard` seed (`data/hazards.ts`).
  */
-function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | null = null): GameMap {
+function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | null = null, cut = 0): GameMap {
   const laid = layTiles(def.path, [...def.pieces, ...(rule ? (def.rules[rule] ?? []) : [])])
-  const tiles = hazard == null ? laid : layHazards(laid, def.path, hazard, rule ? ROUTE_HAZARDS[rule] : undefined)
+  const rocks = hazard != null && cut > 0 ? cut : 0
+  const tiles = hazard == null ? laid : layHazards(laid, def.path, hazard, rule ? ROUTE_HAZARDS[rule] : undefined, rocks)
   const variant = rule != null || hazard != null
   return {
-    id: `${def.id}${rule ? `~${rule}` : ''}${hazard != null ? `~h${hazard}` : ''}`,
+    id: `${def.id}${rule ? `~${rule}` : ''}${hazard != null ? `~h${hazard}` : ''}${rocks ? `~r${rocks}` : ''}`,
     name: def.name,
     width: FIELD_W,
     height: FIELD_H,
@@ -260,6 +261,7 @@ function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | 
     tiles,
     ...(rule ? { terrainRule: rule } : {}),
     ...(hazard != null ? { hazardSeed: hazard } : {}),
+    ...(rocks ? { rocksCut: rocks } : {}),
     ...(variant ? { baseId: def.id } : {}),
   }
 }
@@ -387,6 +389,7 @@ function portraitTwin(m: GameMap): GameMap {
     ...(m.tiles ? { tile: m.tile, tiles: m.tiles.map((c) => ({ ...c, pos: t(c.pos), col: c.row, row: c.col })) } : {}),
     ...(m.terrainRule ? { terrainRule: m.terrainRule } : {}),
     ...(m.hazardSeed != null ? { hazardSeed: m.hazardSeed } : {}),
+    ...(m.rocksCut ? { rocksCut: m.rocksCut } : {}),
     ...(m.baseId ? { baseId: m.baseId } : {}),
     orientation: 'portrait',
     twinOf: m.id,
@@ -424,23 +427,26 @@ let hazardVariants: { key: string; map: GameMap }[] = []
 /**
  * The map a battle on `fieldId` is fought on: its base terrain plus the
  * challenge `rule` adds (G1-2), plus — Q1 — the danger ground and seeded
- * obstacles laid from `hazard` when there is one, drawn `orientation` up. A
- * pure lookup. An unknown field id returns null.
+ * obstacles laid from `hazard` when there is one (less `rocksCut` of the
+ * seeded boulders, the HQ's), drawn `orientation` up. A pure lookup. An unknown field id returns null.
  */
 export function fieldFor(
   fieldId: string,
   rule: TerrainRuleId | null,
   orientation: FieldOrientation,
   hazard: number | null = null,
+  rocksCut = 0,
 ): GameMap | null {
   const land = mapById(fieldId)
   if (!land) return null
   if (hazard != null) {
-    const key = `${fieldId}~${rule ?? ''}~h${hazard}~${orientation}`
+    const cut = Math.max(0, Math.floor(rocksCut || 0))
+    const r = cut ? `~r${cut}` : ''
+    const key = `${fieldId}~${rule ?? ''}~h${hazard}${r}~${orientation}`
     const hit = hazardVariants.find((e) => e.key === key)
     if (hit) return hit.map
-    const flatKey = `${fieldId}~${rule ?? ''}~h${hazard}~landscape`
-    const flat = hazardVariants.find((e) => e.key === flatKey)?.map ?? buildField(defById(fieldId)!, rule, hazard)
+    const flatKey = `${fieldId}~${rule ?? ''}~h${hazard}${r}~landscape`
+    const flat = hazardVariants.find((e) => e.key === flatKey)?.map ?? buildField(defById(fieldId)!, rule, hazard, cut)
     const m = orientation === 'landscape' ? flat : portraitTwin(flat)
     const add = [{ key, map: m }, ...(flatKey !== key && !hazardVariants.some((e) => e.key === flatKey) ? [{ key: flatKey, map: flat }] : [])]
     hazardVariants = [...add, ...hazardVariants].slice(0, HAZARD_CACHE)
@@ -465,7 +471,7 @@ export function fieldFor(
  * only the twin that is fought on.
  */
 export function orientField(map: GameMap, orientation: FieldOrientation): GameMap {
-  return fieldFor(fieldIdOf(map), map.terrainRule ?? null, orientation, map.hazardSeed ?? null) ?? map
+  return fieldFor(fieldIdOf(map), map.terrainRule ?? null, orientation, map.hazardSeed ?? null, map.rocksCut ?? 0) ?? map
 }
 
 /** The field's name with its map challenge, as the battle screen prints it (G1-2). */
@@ -474,7 +480,7 @@ export const fieldTitle = (map: GameMap): string =>
 
 /** The same field and orientation as `map`, under map challenge `rule` (or none). Keeps its Q1 hazards. */
 export function withTerrainRule(map: GameMap, rule: TerrainRuleId | null): GameMap {
-  return fieldFor(fieldIdOf(map), rule, orientationOf(map), map.hazardSeed ?? null) ?? map
+  return fieldFor(fieldIdOf(map), rule, orientationOf(map), map.hazardSeed ?? null, map.rocksCut ?? 0) ?? map
 }
 
 /**

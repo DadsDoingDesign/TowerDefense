@@ -79,7 +79,7 @@ export function codexOffers(v: CodexView): Offer[] {
     pips: { on: earned.length, of: ACHIEVEMENTS.length },
     // Every feat is listed, earned or not: a feat is a goal, and a goal you
     // cannot read is not one. What it opens is on the line too.
-    body: ACHIEVEMENTS.map((a) => `${v.achievements[a.id] ? '✓' : '○'} ${a.name} — ${a.feat} Opens: ${a.opens}. (${a.gold} gold)`),
+    body: ACHIEVEMENTS.map((a) => `${v.achievements[a.id] ? '✓' : '○'} ${a.name} — ${a.feat}${a.opens ? ` Opens: ${a.opens}.` : ''} (${a.gold} gold)`),
   }
 
   // Goblins by kind: the Codex records modded ids (a Warded Bomber is its own

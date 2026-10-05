@@ -4,8 +4,7 @@ import { generateItem, RARITY } from '../src/game/data/items'
 import { allMutations, mutationName } from '../src/game/data/mutations'
 import { allStatCards } from '../src/game/data/rewards'
 import { RNG } from '../src/game/core/rng'
-import { itemName, moneyText, NODE_ICON, PERK_ICON, ICON_ORDER } from '../src/ui/channels'
-import { UPGRADES } from '../src/state/metaStore'
+import { itemName, moneyText, NODE_ICON, ICON_ORDER } from '../src/ui/channels'
 
 describe('elite names', () => {
   it('put the goblin first and the modifier after it', () => {
@@ -70,12 +69,9 @@ describe('copy', () => {
 })
 
 describe('icon coverage', () => {
-  it('every map node type and every perk has its own atlas cell', () => {
+  it('every map node type has its own atlas cell', () => {
     for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'campfire', 'miniboss', 'boss']) {
       expect(ICON_ORDER).toContain(NODE_ICON[t])
     }
-    const perkIcons = [...UPGRADES.map((u) => PERK_ICON[u.id]), PERK_ICON.sacrifice]
-    expect(perkIcons.every(Boolean)).toBe(true)
-    expect(new Set(perkIcons).size).toBe(perkIcons.length)
   })
 })

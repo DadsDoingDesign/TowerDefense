@@ -10,6 +10,8 @@ import { MenuScreen, PageScreen } from './PageScreens'
 import { ResultScreen } from './contracts/ContractResult'
 import { ContractsScreen } from './contracts/ContractsScreen'
 import { CityScreen } from './contracts/CityScreen'
+import { HqScreen } from './hq/HqScreen'
+import { CratesScreen } from './hq/CratesScreen'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -22,6 +24,7 @@ import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
 import '../../styles/shell-reward.css'
 import '../../styles/contracts.css'
+import '../../styles/hq.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useStagingRecorder } from './staging'
 
@@ -33,10 +36,11 @@ import { useMenuStaged, useStagingRecorder } from './staging'
  * The one blocking overlay that survives is the evolution choice, which is
  * destructive and irreversible.
  */
-/** The Watchtower submenus have no board copy of their own. */
+/** The hub's submenus with no board copy of their own (the HQ and the crates draw their own heads). */
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
-  perks: { title: 'Watchtower', subtitle: 'Gold from your bank buys bonuses that carry into every run.' },
+  hq: {},
+  crates: {},
   codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
 }
@@ -52,13 +56,9 @@ export function RootShell() {
   useLevelUpTracker()
   // LS3: latch every idea the player meets, on every screen.
   useStagingRecorder()
-  // LS4: before the first finished contract the Watchtower is where a player
-  // first reads where their gold lives, so it says it in full, once.
+  // LS3: the HQ and the sealed crates open after the first finished contract.
   const menuStaged = useMenuStaged()
-  const metaCopy =
-    metaView === 'perks' && menuStaged
-      ? { ...META_COPY.perks, subtitle: 'Gold you bring home goes in your bank, and buys bonuses here that carry into every run.' }
-      : META_COPY[metaView]
+  const metaCopy = META_COPY[metaView]
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
   // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
@@ -115,6 +115,10 @@ export function RootShell() {
           <ContractsScreen />
         ) : ctx.stage === 'city' ? (
           <CityScreen />
+        ) : screen === 'hub' && metaView === 'hq' && !menuStaged ? (
+          <HqScreen onBack={() => setMetaView('menu')} />
+        ) : screen === 'hub' && metaView === 'crates' && !menuStaged ? (
+          <CratesScreen onBack={() => setMetaView('menu')} />
         ) : isMenu ? (
           <MenuScreen offers={offers} />
         ) : (

@@ -5,7 +5,6 @@
  * and a purse, and the bank pays for it when the hero is committed.
  */
 import { newRunSeed, restoreIdCounter, streamRng } from '../../game/core/rng'
-import { startingKit } from '../../game/engine/kit'
 import { restoreNameCounters } from '../../game/data/sentinels'
 import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
@@ -19,11 +18,13 @@ import { useSettingsStore } from '../settingsStore'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
-import { applyStatBonus, hubExtras, receiveItems, recruitSlate, scaledRecruit } from '../../game/run/recruits'
+import { hubExtras, recruitSlate, scaledRecruit } from '../../game/run/recruits'
+import { bonusItemsFor } from '../../game/run/hq'
+import { soldText, stow } from '../../game/run/inventory'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
-import { contractStake, DEFAULT_PURSE, freshContract, marketFor, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
+import { contractStake, DEFAULT_PURSE, earn, freshContract, marketFor, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
 import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds'
@@ -112,7 +113,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const fresh = freshRunState(runSeed)
     // The contract: its market is locked now, so crossing midnight mid-run
     // changes nothing it pays.
-    const contract = freshContract({ company: order.company, crates: order.crates, market: marketFor(order.company, utcDateKey()) }, order.purse)
+    // The HQ's terms for this run (pack slots, cleared boulders, company focus)
+    // are frozen on the contract now; its paid orders are spent at signing.
+    const hq = useMetaStore.getState().runHq()
+    const contract = freshContract({ company: order.company, crates: order.crates, market: marketFor(order.company, utcDateKey()) }, order.purse, hq)
     // The stake is the run's difficulty step: re-deal the map from the same
     // seed with its elites (a hash of the seed, never a draw — the map stream
     // is rewound, so an escort deals exactly the map an unstaked run did).
@@ -120,8 +124,9 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     streams.mapRng = streamRng(runSeed, 'map')
     const dealt = dealRunMap(rules, runSeed)
     // SK1: the run's pools are read once, here, weighted to the company.
-    const skillPool = startingSkillPool(contract.company)
-    const itemPool = startingItemPool(contract.company)
+    const focus = { company: hq.focus, boost: hq.boost }
+    const skillPool = startingSkillPool(contract.company, focus)
+    const itemPool = startingItemPool(contract.company, focus)
     skillRun.seed = runSeed
     skillRun.pool = skillPool
     skillRun.items = itemPool
@@ -139,7 +144,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       screen: 'heroPick',
       roster: [],
       // The purse shows on the hero pick; the bank pays it when the hero is committed.
-      gold: contract.purse + b.purseBonus,
+      gold: contract.purse,
       baseHp: b.maxBaseHp,
       maxBaseHp: b.maxBaseHp,
       enemyHpMult: b.enemyHpMult,
@@ -190,24 +195,28 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     if (!meta.withdraw(stake + purse)) return
     const contract: RunContract = { ...st.contract, purse, signed: true }
     // The leader is the card the player chose — re-dealt off the same hashed
-    // generator the card was, with real ids. No run stream moves for it.
-    const leader = chosenHero(st.runSeed, st.skillPool, st.itemPool, resolvePick(st.runSeed, st.skillPool, st.itemPool, choiceId), b.statBonus)
+    // generator the card was, with real ids, under the HQ's Opening deal. No
+    // run stream moves for it.
+    const leader = chosenHero(st.runSeed, st.skillPool, st.itemPool, resolvePick(st.runSeed, st.skillPool, st.itemPool, choiceId, b.deal), 0, b.deal)
     if (!leader) {
       meta.deposit(stake + purse)
       return
     }
-    // The hub's extra heroes: random hires off the loot stream, named apart
-    // from the leader.
-    const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill, st.itemPool, [leader.name]).map((s) => applyStatBonus(s, b.statBonus))
+    // The Opening deal's second hero: a random hire off the loot stream, named
+    // apart from the leader.
+    const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill, st.itemPool, [leader.name])
     const company = [leader, ...extra]
-    // The Quartermaster's extra rolls, from the run's kinds, dressed onto
-    // whoever they strictly improve; the rest go to the pack.
-    const kit = startingKit(streams.rng, { extra: b.extraItems, roster: company, kinds: st.itemPool })
-    const { roster, inventory } = receiveItems(company, st.inventory, kit)
-    const gold = purse + b.purseBonus
+    // Signing spends the HQ's orders (they are already on the contract's
+    // terms) and hands over the bonus items a sealed crate's duplicate owed:
+    // Rare pieces off their own hashed generator, into the pack.
+    const owed = meta.takeOrders()
+    const got = stow(st.inventory, bonusItemsFor(st.runSeed, owed.bonusItems), contract.hq.pack)
+    const roster = company
+    const inventory = got.inventory
+    const gold = purse + got.gold
     // The feats ledger starts here, with the heroes as they march out.
     const feats = { ...freshFeats(), starter: heroStyle(leader), startSize: roster.length, goldPeak: gold }
-    set({ roster, inventory, contract, gold, screen: 'map', feats })
+    set({ roster, inventory, contract: earn(contract, got.gold), gold, screen: 'map', feats, ...(got.sold.length ? { gearNotice: { text: soldText(got.sold, got.gold), at: Date.now() } } : {}) })
     // SK1: the hero pick's tip ("Each hero comes with a skill") has been read.
     useSettingsStore.getState().markTaught('heroSkill')
     useSettingsStore.getState().markTaught('heroGear')
@@ -389,7 +398,14 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // company's), and so (Q1) is its danger ground — a hash, no stream draw.
     const ground = groundOf(get())
     const battleMap =
-      fieldFor(fieldIdOf(get().battleMap), nodeTerrainRule(node, get().runSeed, ground), layout.orientation(), nodeHazardSeed(node, get().runSeed, ground)) ??
+      fieldFor(
+        fieldIdOf(get().battleMap),
+        nodeTerrainRule(node, get().runSeed, ground),
+        layout.orientation(),
+        nodeHazardSeed(node, get().runSeed, ground),
+        // The HQ's cleared boulders, frozen on the contract.
+        get().contract?.hq.rocks ?? 0,
+      ) ??
       orientField(get().battleMap, layout.orientation())
     set({
       activeNodeId: nodeId,

@@ -3,11 +3,10 @@
  * place a wave pays out (`finishBattle`) for both modes.
  */
 import { GameEngine } from '../../game/engine/engine'
-import { hashSeed, RNG } from '../../game/core/rng'
 import { teamKeepsakeMods } from '../../game/engine/combat'
 import { generateItem } from '../../game/data/items'
 import { relicCommands, relicTeamMods } from '../../game/data/relics'
-import { afterFightRelics, cartularyRelic, diaryXp, handSize, rewardHand } from '../../game/run/relics'
+import { afterFightRelics, diaryXp, handSize, rewardHand } from '../../game/run/relics'
 import { battleRelicsWithheld } from '../../game/run/firstRun'
 import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutations'
 import { applyBattleXp, combatSeed, levelXpAwards } from '../../game/run/battle'
@@ -15,7 +14,9 @@ import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
 import { recruitSlate } from '../../game/run/recruits'
 import { contractGrant } from '../../game/run/settle'
-import { cargoPct, cityOfLayer, cityPay, stakeRules } from '../../game/run/contracts'
+import { cargoPct, cityOfLayer, cityPay, earn, stakeRules } from '../../game/run/contracts'
+import { stow } from '../../game/run/inventory'
+import { packSale, packSlotsOf } from './purse'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer } from '../../game/run/threat'
 import { commandsFor, type CommandId } from '../../game/data/commands'
 import { orientationOf } from '../../game/data/maps'
@@ -29,7 +30,7 @@ import { assistProfile, useSettingsStore } from '../settingsStore'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
-import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, runUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
+import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
 import { battleHpMult, canStartWave, fieldConflicts } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
@@ -451,7 +452,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       }
     }
 
-    const delivered = { ...st, feats, roster: rosterXp, clearedNodeIds: cleared, contract, runKills: totalKills, gold: gold + result.goldEarned + clearBonusGold(node) }
+    // What the fight paid into the purse is road gold (`contract.earned`).
+    const fightGold = result.goldEarned + clearBonusGold(node)
+    const delivered = { ...st, feats, roster: rosterXp, clearedNodeIds: cleared, contract: earn(contract, fightGold), runKills: totalKills, gold: gold + fightGold }
     const deposit = wonRun
       ? useMetaStore
           .getState()
@@ -482,12 +485,6 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           pity,
           kinds: st.itemPool,
         })
-    // The Relic Cartulary: one more relic beside an act boss's hand, from its
-    // own seeded stream so the service re-deals nothing else in the run.
-    if (reward && handKind === 'boss' && runUnlocked('cartulary')) {
-      const extra = cartularyRelic(new RNG(hashSeed(st.runSeed, 'cartulary', node.layer)), { luck, held: st.relics, hand: reward, unlocked: relicUnlocked })
-      if (extra) reward.push(extra)
-    }
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
@@ -508,16 +505,22 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
         }
       : null
 
+    // Field Surgeon's Kit and the Tithe Box pay on every won fight; the purse's
+    // whole gain is road gold. An act boss's spoils go to the pack, and a full
+    // pack sells its cheapest pieces (the run's pack slots, `inventory.stow`).
+    const after = afterFightRelics(st.relics, { baseHp: result.baseHpLeft, maxBaseHp: st.maxBaseHp, gold: gold + result.goldEarned + bonusGold })
+    const stowed = wonRun ? { inventory, sold: [], gold: 0 } : stow(inventory, bossLoot, packSlotsOf(st))
+    const purse = { gold: after.gold, contract: earn(contract, after.gold - gold) }
     set({
       roster: rosterXp,
-      // Field Surgeon's Kit and the Tithe Box pay on every won fight.
-      ...afterFightRelics(st.relics, { baseHp: result.baseHpLeft, maxBaseHp: st.maxBaseHp, gold: gold + result.goldEarned + bonusGold }),
-      inventory: wonRun ? inventory : [...inventory, ...bossLoot],
+      baseHp: after.baseHp,
+      ...purse,
+      inventory: stowed.inventory,
+      ...packSale(purse, stowed.sold, stowed.gold),
       threat: nextThreat,
       lastResult: result,
       lastLoot: bossLoot,
       lootPity: pity,
-      contract,
       victory: wonRun
         ? buildRecap(delivered, result, { outcome: 'delivered', depth: cleared.length - 1, kills: totalKills, deposit, spoils: bossLoot, roster: rosterXp, baseHp: result.baseHpLeft })
         : null,

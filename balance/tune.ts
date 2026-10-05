@@ -19,28 +19,22 @@ import { cpus } from 'os'
 import { fileURLToPath } from 'url'
 import type { Archetype } from '../src/game/types'
 import { difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
-import { loadoutFor, monteCarloRun, POLICIES, simulateRun, ZERO_META } from './runsim'
+import { HQ_STATES, loadoutFor, monteCarloRun, POLICIES, simulateRun, ZERO_META, type HqState } from './runsim'
 
 const N = Number(process.argv[2]) || 240
 const WHAT = process.argv.slice(3).length ? process.argv.slice(3) : ['fresh', 'carto', 'mc']
 const ARCHES: Archetype[] = ['fighter', 'rogue', 'mystic']
-const HUB: [string, Record<string, number>][] = [
-  ["Cartographer's Table", { cartographer: 1 }],
-  ['Free Companies', { freeCompanies: 1 }],
-  ['Standing Orders', { standingOrders: 1 }],
-  ['all three unlocks', { cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
-  ['Field Kitchen + Relic Cartulary', { fieldKitchen: 1, cartulary: 1 }],
-  ['the full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
-  ['everything', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
-]
+/** The HQ states (`runsim.HQ_STATES`, without zero HQ). `carto` reads the Scouts 2 row. */
+const HUB = HQ_STATES.slice(1)
+const CARTO = HUB.find(([l]) => l.startsWith('Scouts'))!
 
 /** One cell's per-seed wins, keyed `state|policy`. */
 type Cells = Record<string, number[]>
 
 function cellsFor(): { key: string; run: (i: number) => number }[] {
   const out: { key: string; run: (i: number) => number }[] = []
-  const states: [string, Record<string, number>][] = [['zero', {}]]
-  if (WHAT.includes('carto')) states.push(HUB[0])
+  const states: [string, HqState][] = [['zero', { upgrades: {} }]]
+  if (WHAT.includes('carto')) states.push(CARTO)
   if (WHAT.includes('hub')) for (const h of HUB) if (!states.includes(h)) states.push(h)
   if (WHAT.includes('fresh') || WHAT.includes('carto') || WHAT.includes('hub')) {
     for (const [label, up] of states) {

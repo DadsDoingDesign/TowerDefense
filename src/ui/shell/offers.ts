@@ -1,4 +1,5 @@
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
+import { PULL_PRICE } from '../../game/run/hq'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { heroChoices, previewOf } from '../../game/run/heroes'
@@ -8,17 +9,16 @@ import { standingOf, topStanding } from '../../game/run/standing'
 import { COMPANY_IDS } from '../../game/data/companies'
 import { mutationName } from '../../game/data/mutations'
 import { computeCombat } from '../../game/engine/combat'
-import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
-import { useMetaStore, UPGRADES } from '../../state/metaStore'
+import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
+import { useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { menuStaged } from '../../state/staging'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
 import { codexOffers } from './codexOffers'
-import { ACHIEVEMENTS } from '../../game/data/achievements'
 import type { Item, ItemRarity, Sentinel } from '../../game/types'
 
 export interface Price {
@@ -536,7 +536,7 @@ function contextOffers(
   if (kind === 'merchant') return merchantOffers(st)
   if (kind === 'shrine') return shrineOffers(st)
   if (kind === 'recruit') return recruitOffers(st)
-  if (kind === 'campfire') return campfireOffers(st, runUnlocked('fieldKitchen'))
+  if (kind === 'campfire') return campfireOffers(st)
   return []
 }
 
@@ -567,7 +567,8 @@ function escapeOffer(st: St): Offer {
 type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
-export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
+/** The hub's pages: the menu's rows, and the HQ and the sealed crates (their own screens). */
+export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex'
 
 /**
  * ---------------------------------------------------------------------------
@@ -580,16 +581,17 @@ export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
  * hash of the run seed — the same seed or Daily deals the same three), and
  * each is shown as what it IS: what its gear makes it do, the gear, the skill.
  * Every word and number is derived from the exact hero `pickStartingHero`
- * will create (`previewOf` mints nothing), Watchtower stat perks included.
+ * will create (`previewOf` mints nothing), under the HQ's Opening deal.
  *
  * A first run (LS3) is dealt the same way from the basic five kinds, and its
  * cards hold the plain words only — no DPS, no stats.
  */
 function heroPickOffers(st: St, meta: Meta): Offer[] {
-  const statBonus = meta.bonuses().statBonus
+  // The HQ's Opening deal: the same deal `pickStartingHero` re-deals from.
+  const deal = meta.bonuses().deal
   const staged = st.firstRun && !useSettingsStore.getState().showEverything
-  const picks: Offer[] = heroChoices(st.runSeed, st.skillPool, st.itemPool).map((c) => {
-    const hero = previewOf(c, statBonus)
+  const picks: Offer[] = heroChoices(st.runSeed, st.skillPool, st.itemPool, deal).map((c) => {
+    const hero = previewOf(c)
     return {
       id: c.id,
       title: c.name,
@@ -1105,7 +1107,7 @@ function settingsOffers(s: Settings): Offer[] {
       icon: 'warn',
       color: 'var(--bad-text)',
       body: [
-        'Wipes your bank, Watchtower bonuses, standing, unlocked skills and items, and records.',
+        'Wipes your bank, HQ upgrades, standing, unlocked skills and items, and records.',
         'This cannot be undone. Nothing is kept and nothing is backed up.',
       ],
       action: {
@@ -1146,45 +1148,9 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   }
   if (view === 'settings') return [back, ...settingsOffers(settings)]
   if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
-  if (view === 'perks') {
-    // Priced in gold, paid from the bank (gold is the only currency). Build
-    // step 3 turns this list into the HQ's offices.
-    return [back, ...UPGRADES.map((u): Offer => {
-      const level = meta.upgrades[u.id] ?? 0
-      const maxed = level >= u.maxLevel
-      const cost = meta.upgradeCost(u.id)
-      // A service opened by a feat (Phase 3b): shown, priced, and locked until
-      // the feat is earned — the row says which one, so the goal is legible.
-      const feat = u.requires && !meta.achieved(u.requires) ? ACHIEVEMENTS.find((a) => a.id === u.requires) : undefined
-      if (feat) {
-        return {
-          id: u.id,
-          title: u.name,
-          sub: 'Locked',
-          icon: PERK_ICON[u.id] ?? 'boon',
-          dim: true,
-          body: [u.desc, `Opens with the feat ${feat.name}: ${feat.feat}`, `Then ${moneyText(cost, 'gold')}.`],
-          action: { label: `Locked — ${feat.name}`, run: () => {}, disabled: true },
-        }
-      }
-      return {
-        id: u.id,
-        title: u.name,
-        sub: `${level}/${u.maxLevel}`,
-        icon: PERK_ICON[u.id] ?? 'boon',
-        pips: { on: level, of: u.maxLevel },
-        cost: maxed ? undefined : { amount: cost, currency: 'gold' as const },
-        dim: !maxed && meta.bank < cost,
-        body: [u.desc, `Level ${level} of ${u.maxLevel}.`, maxed ? 'Fully upgraded.' : `Next level: ${moneyText(cost, 'gold')}, from your bank.`],
-        action: {
-          label: maxed ? 'Maxed' : 'Buy',
-          cost: maxed ? undefined : { amount: cost, currency: 'gold' as const },
-          run: () => meta.buyUpgrade(u.id),
-          disabled: maxed || meta.bank < cost,
-        },
-      }
-    })]
-  }
+  // The HQ and the sealed crates are pages of their own (`hq/HqScreen.tsx`,
+  // `hq/CratesScreen.tsx`); the Selector holds only the way back.
+  if (view === 'hq' || view === 'crates') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   return [
@@ -1200,17 +1166,30 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
         : ['Pick a company and a road. Escort for free, or stake cargo for a bigger payout.'],
       action: { label: 'Begin', run: () => game.openContracts() },
     },
-    {
-      id: 'perks',
-      title: 'Watchtower',
-      // The bank is met at the end of the first contract (LS3/LS4); a
-      // first-timer's menu does not name it before then.
-      sub: staged ? undefined : `${moneyText(meta.bank, 'gold')} banked`,
-      icon: 'gold',
-      immediate: true,
-      body: ['Spend gold from your bank on bonuses that carry into every run.'],
-      action: { label: 'Open', run: () => setView('perks') },
-    },
+    // LS3: the HQ and the sealed crates open after the first finished
+    // contract — a first-timer's menu names neither (nor the bank).
+    ...(staged
+      ? []
+      : [
+          {
+            id: 'hq',
+            title: 'Headquarters',
+            sub: `${moneyText(meta.bank, 'gold')} banked`,
+            icon: 'gold',
+            immediate: true,
+            body: ['Your militia’s three offices: HR, Finance and Operations. Gold from your bank buys upgrades that last.'],
+            action: { label: 'Open', run: () => setView('hq') },
+          } satisfies Offer,
+          {
+            id: 'crates',
+            title: 'Sealed crates',
+            sub: `${moneyText(PULL_PRICE, 'gold')} a crate`,
+            icon: 'loot',
+            immediate: true,
+            body: ['A side bet: one random item, yours for good. The odds are on the crate.'],
+            action: { label: 'Open', run: () => setView('crates') },
+          } satisfies Offer,
+        ]),
     {
       id: 'codex',
       title: 'Codex',

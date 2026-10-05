@@ -3,6 +3,7 @@
  * assembled from slices — each slice file owns a group of actions, and this
  * file owns the data every slice reads. See `store.ts` for how they combine.
  */
+import type { HomeGold } from '../../game/run/hq'
 import type { StateCreator } from 'zustand'
 import type { BattleResult, GameEngine } from '../../game/engine/engine'
 import type { RarityPity } from '../../game/data/items'
@@ -142,6 +143,10 @@ export interface RunRecap {
   depth: number
   kills: number
   goldLeft: number
+  /** What the run's purse put back in the bank (`hq.homeGold`); null for a run with no signed contract. */
+  home: HomeGold | null
+  /** Interest the bank earned on this contract (0 when lost). */
+  interest: number
   threat: number
   /** Per-Sentinel contribution, best first. */
   heroes: { id: string; name: string; build: string; level: number; kills: number; damage: number }[]

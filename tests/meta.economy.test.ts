@@ -98,7 +98,9 @@ describe('the settle plan', () => {
   })
   it('a signed contract walked away from before it was played sends its purse home', () => {
     const c = { ...freshContract({ company: 'art', crates: 2, market: 1 }, 60), signed: true }
-    expect(planPayout({ ...base, contract: c })).toEqual({ kind: 'deposit', amount: 80 })
+    expect(planPayout({ ...base, contract: c, gold: 60 })).toEqual({ kind: 'deposit', amount: 60 })
+    // Gold above the purse is the road's, whatever the ledger says: a quarter of it comes home.
+    expect(planPayout({ ...base, contract: c })).toEqual({ kind: 'deposit', amount: 60 + 5 })
   })
   it('a fall keeps the cities’ pay and the purse', () => {
     const c = { ...freshContract({ company: 'art', crates: 2, market: 1 }, 60), signed: true, paid: [150, 90], cargoAt: [100, 80] }

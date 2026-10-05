@@ -21,8 +21,8 @@ export function FeatsEarned() {
     <InfoCard
       lines={[
         feats.length === 1 ? 'Feat earned' : `${feats.length} feats earned`,
-        ...feats.map((a) => `${a.name} — ${moneyText(a.gold)} to the bank. Opens: ${a.opens}.`),
-        'Every feat and what is still open is in the Watchtower Codex.',
+        ...feats.map((a) => `${a.name} — ${moneyText(a.gold)} to the bank.${a.opens ? ` Opens: ${a.opens}.` : ''}`),
+        'Every feat and what is still open is in the Codex.',
       ]}
     />
   )

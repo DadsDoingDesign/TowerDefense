@@ -12,6 +12,7 @@ import { rollRecruitBody } from './heroes'
 import { ALL_ITEM_KINDS } from '../data/itemKinds'
 import type { Item, Sentinel } from '../types'
 import { equipRules, withRelicStats } from './relics'
+import { stow } from './inventory'
 
 /** Candidates on a recruit node, an Endless room or the Crossroads. */
 export const SLATE_SIZE = 3
@@ -125,17 +126,22 @@ export function withRecruits(
 /**
  * New items into the run: each drops into the empty slot it strictly improves
  * most, anywhere on the roster; the rest go to the pack. Never replaces
- * anything worn (`engine/kit.autoEquipEmpty`).
+ * anything worn (`engine/kit.autoEquipEmpty`). With `slots` (the run's pack
+ * slots), a full pack sells its cheapest pieces for scrap gold
+ * (`inventory.stow`): `sold` and `gold` say what went, for the purse and the
+ * receipt.
  */
 export function receiveItems(
   roster: Sentinel[],
   inventory: Item[],
   items: Item[],
   relics: readonly string[] = [],
-): { roster: Sentinel[]; inventory: Item[] } {
-  if (!items.length) return { roster, inventory }
+  slots = Infinity,
+): { roster: Sentinel[]; inventory: Item[]; sold: Item[]; gold: number } {
+  if (!items.length) return { roster, inventory, sold: [], gold: 0 }
   const r = autoEquipEmpty(roster, items, equipRules(relics))
-  return { roster: r.roster, inventory: [...inventory, ...r.rest] }
+  const s = stow(inventory, r.rest, slots)
+  return { roster: r.roster, inventory: s.inventory, sold: s.sold, gold: s.gold }
 }
 
 /** Deals a body its first skill (SK1) — `RecruitHub.skillFor`'s shape. */

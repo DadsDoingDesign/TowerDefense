@@ -129,21 +129,6 @@ export type HandKind = 'battle' | 'elite' | 'boss'
 /** How many cards a clear lays out: three, two under Vow 1 (Thin Pickings). */
 export const handSize = (opts: { thinPickings: boolean }): number => (opts.thinPickings ? 2 : 3)
 
-/**
- * The Relic Cartulary's extra card (a hub service opened by the First Light
- * feat): one more relic beside an act boss's hand — a wider pick, the same one
- * prize. It is dealt from its OWN stream (the caller derives one from the run
- * seed and the node), so owning the service never re-deals a single later roll
- * of the run: the only thing it changes is that there is one more card.
- */
-export function cartularyRelic(
-  rng: RNG,
-  opts: { luck: number; held: readonly string[]; hand: readonly RewardCard[]; unlocked?: (achievementId: string) => boolean },
-): RewardCard | null {
-  const pool = relicPool({ held: opts.held, unlocked: opts.unlocked })
-  return relicCard(rng, opts.luck, pool, new Set(opts.hand.flatMap((c) => (c.relic ? [c.relic] : []))))
-}
-
 export function rewardHand(
   rng: RNG,
   opts: {
