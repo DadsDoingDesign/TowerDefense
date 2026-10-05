@@ -2713,3 +2713,47 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   three cards, each saying what it does, one confirm — rather than a list of
   names. Scorecard: readability 4/5 (320px phones still scroll the swap row
   into view), hierarchy 4/5, polish 4/5.
+
+- **2026-10-05 — Classless heroes: a hero is its gear and skills.** The
+  designer: "we dont have a set class, its just 3 options with items and
+  skills you have unlocked applied randomly … both skills and items — they just
+  apply their effects and things will happen", and, on the copy, "thats the fun
+  of it dont say how it will mix". A hero is a name, base stats rolled ±1 around
+  what its weapon-hand trained, its items and its skills. The main hand decides
+  what it does (`data/gear.ts` over `items.ITEM_BASES`): Sword/Axe/Greatsword/
+  Warhammer swing (clearance), Bow/Dagger shoot, Wand/Rod/Sceptre/Staff/Grimoire
+  cast; a shield in the off hand holds (Buckler 1, Shield 2, new Pavise 3) and
+  adds thorns; the sprite is picked by the weapon (armoured / hooded / robed),
+  so a sword-hand is never drawn with a bow. Item kinds unlock like skills (the
+  basic five: Sword, Bow, Wand, Shield, Mail; one kind per Watch level and
+  card-paying win, through a generic `watch.rollFromPool`). The hero pick deals
+  three random heroes from the unlocked kinds and skills (`run/heroes.ts`,
+  hashed off `(runSeed, 'heroes')`); hires are random too. Rendered at 390×844
+  @2x and 1440×900 @2x (`~/fieldwatch-critique/classless/`: pick first-run /
+  returning / Daily, recruit, merchant hire, Collection both tabs, a win and a
+  loss that unlock items, a battle with a sword-and-shield and a
+  wand-and-pavise holding, the hero panel, the menu cinematic; `before/` has
+  the old pick). The loop caught: (1) Three columns on a desk: the page is a
+  ~560px column there too, so every card broke its sentence into two-word
+  lines — rows everywhere now, and all three still show with room. (2) Gear
+  chips printed generated names ("Bursting Wand of Precision") and the three
+  cards would not compare at a glance — chips name the kind; the full name is
+  one tap away on the gear panel. (3) Numbers on their own line pushed the
+  third card under the fold on a phone — DPS and reach share the name line,
+  and the head/body air shrinks on a hero page. (4) The difficulty chips sat
+  half under the body's fade, reading as hidden behind Back — the picker is
+  pinned in the foot above Back, compact: chips plus one line ("Win here: a new
+  skill, a new item, and difficulty 3."). (5) Roster cards cut "Dagger & Shi…"
+  — they name the weapon. (6) The first balance run showed two harness
+  artefacts, not balance: a nameless affix item in the main hand turned every
+  §4/§10 bench hero into a stone-thrower, and the modelled player, scoring on
+  `heroDps` (blind to reach, splash and holds), traded wands for swords and
+  shields for quivers; it now keeps each hero's job. Copy check: no card,
+  sentence or tip says how pieces combine; `tests/copy.terms.test.ts` now
+  forbids Fighter/Rogue/Mystic in player text. Benchmark: the pick now reads
+  like Slay the Spire's Neow / Balatro's deck select — three dealt options,
+  each fully stated, compared side by side. Scorecard: readability 4/5 (a
+  three-piece hero still wraps its chips to two lines on a phone), hierarchy
+  4/5, polish 4/5. Balance (not tuned): the committed report was stale (taken
+  from one side of the SK1 merge); against a true 4a50bd4 baseline, Monte Carlo
+  39% → 57%, first-timer 12% → 14%, adaptive 14% → 16%, invariants 38 → 50.
