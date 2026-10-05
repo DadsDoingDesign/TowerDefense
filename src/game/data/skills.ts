@@ -62,7 +62,7 @@ const L1: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'quick_hands', name: 'Quick Hands', level: 1, starter: true, desc: 'Attacks 15% faster.', mods: { rateMult: 1.15 }, from: 'The old Tempo path (+12% a level) and the Cleric perk Zeal' },
   { id: 'hard_hitter', name: 'Hard Hitter', level: 1, starter: true, desc: 'Hits 15% harder.', mods: { damageMult: 1.15 }, from: 'The old Onslaught path (+15% a level); perks Heavy Bash and Blood Pact' },
-  { id: 'keen_eye', name: 'Keen Eye', level: 1, starter: true, desc: 'Crits 10% more often.', mods: { critChanceAdd: 0.1 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
+  { id: 'keen_eye', name: 'Keen Eye', level: 1, starter: true, desc: 'Crits 10% more often, and crits deal 50% more.', mods: { critChanceAdd: 0.1, critMultAdd: 0.5 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'hold_fast', name: 'Hold Fast', level: 1, class: 'fighter', desc: 'Holds 3 enemies instead of 2.', mods: { block: { count: 3, radius: 72 } }, from: 'Fighter perk Hold Fast (level 5)' },
   { id: 'charge', name: 'Charge', level: 1, desc: 'Attacks 60% faster for the first 15 seconds of each wave.', mods: { openingRush: { rate: 0.6, dur: 15 } }, from: 'Fighter perk Charge; Rogue perk Ambush; the Opening Salvo mutation' },
@@ -78,11 +78,11 @@ const L1: Skill[] = [
 const L2: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'heavy_blows', name: 'Heavy Blows', level: 2, starter: true, desc: 'Hits 25% harder and attacks 10% faster.', mods: { damageMult: 1.25, rateMult: 1.1 }, from: 'The Warrior evolution (level 10)' },
-  { id: 'long_shot', name: 'Long Shot', level: 2, starter: true, desc: 'Reaches 50% farther, and every shot pierces 1 extra enemy.', mods: { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4 }, from: 'The Marksman evolution (level 10)' },
-  { id: 'finisher', name: 'Finisher', level: 2, starter: true, desc: 'Instantly kills enemies under 15% health, and crits 10% more often.', mods: { execute: 0.15, critChanceAdd: 0.1 }, from: 'The Assassin evolution (level 10)' },
+  { id: 'long_shot', name: 'Long Shot', level: 2, starter: true, desc: 'Reaches 50% farther, and every shot pierces 1 extra enemy, but hits 10% softer.', mods: { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4, damageMult: 0.9 }, from: 'The Marksman evolution (level 10)' },
+  { id: 'finisher', name: 'Finisher', level: 2, starter: true, desc: 'Instantly kills enemies under 15% health, crits 10% more often, and hits 10% harder.', mods: { execute: 0.15, critChanceAdd: 0.1, damageMult: 1.1 }, from: 'The Assassin evolution (level 10)' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'shield_wall', name: 'Shield Wall', level: 2, class: 'fighter', desc: 'Holds 4 enemies instead of 2, in a wider circle.', mods: { block: { count: 4, radius: 90 } }, from: 'Knight perk Shield Wall; the Juggernaut specialization' },
-  { id: 'anchor', name: 'Anchor', level: 2, class: 'fighter', desc: 'Holds 3 enemies, slows what it hits by 30% for 1.4 seconds, and its thorns hit 50% harder.', mods: { block: { count: 3, radius: 85 }, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 1.5 }, from: 'The Guard evolution (level 10)' },
+  { id: 'anchor', name: 'Anchor', level: 2, class: 'fighter', desc: 'Holds 3 enemies, slows what it hits by 30% for 1.4 seconds, and its thorns hit 3 times as hard.', mods: { block: { count: 3, radius: 85 }, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 3 }, from: 'The Guard evolution (level 10)' },
   // The Knight also held 3; that half of it lives in Hold Fast now, and the
   // hold is a Fighter's (see the header), so this one hits 10% harder instead.
   { id: 'stunning_bash', name: 'Stunning Bash', level: 2, desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
