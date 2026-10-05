@@ -67,7 +67,7 @@ export const idCounterState = (): number => idCounter
 /**
  * Run `fn` and then put the entity-id counter back exactly where it was.
  *
- * For simulations that are NOT the run — the menu's attract-mode battle — so
+ * For things that are NOT the run — the hero pick's previews and choices — so
  * the ids they mint cannot shift what a real run started afterwards is dealt.
  * Only sound for a self-contained sim: nothing `fn` creates may outlive it
  * alongside run entities, since its ids will be re-issued.

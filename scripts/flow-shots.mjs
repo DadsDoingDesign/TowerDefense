@@ -83,7 +83,7 @@ async function open(label, log) {
 /** Start a run and walk into the first battle; `shots` says whether to capture on the way. */
 async function toFirstBattle(p, shots) {
   if (shots) await p.shot('01-menu')
-  await p.tap('Start a Run', { wait: 1200 })
+  await p.tap('Take the free escort', { wait: 1200 })
   if (shots) await p.shot('02-hero-pick')
   await p.tap('Choose Fighter', { wait: 1500 })
   await p.tap('Battle, fought at Threat ×1 — you can march', { wait: 900 })
@@ -143,7 +143,7 @@ async function run(label) {
   //    after the first battle.
   for (let attempt = 1; attempt <= 6; attempt++) {
     const p = await open(label, log)
-    await p.tap('Start a Run', { wait: 1200 })
+    await p.tap('Take the free escort', { wait: 1200 })
     await p.tap('Choose Fighter', { wait: 1500 })
     let merchant = p.btn('Merchant — you can march here')
     if (!(await merchant.count())) {

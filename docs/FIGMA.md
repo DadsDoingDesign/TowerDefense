@@ -264,7 +264,7 @@ byte-for-byte the phone layout.
 | --- | --- | --- |
 | Phone portrait | < 700 wide | Unchanged: one 520px-capped column, four bands. |
 | Phone landscape | landscape, ≤ 500 tall, ≤ 950 wide, coarse pointer | Unchanged: the rotate prompt. |
-| Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; menu key art up to 420 tall. |
+| Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; the menu fills the screen over its trade map. |
 | Wide | ≥ 900 wide and ≥ 540 tall | Header one row across; Stage left spanning the height; Selector + Detail stacked in a right column `clamp(400px, 32vw, 468px)`. |
 
 **Wide, battle / run map** (1440×900):
@@ -289,10 +289,12 @@ byte-for-byte the phone layout.
   the stacked slots (narrow rail on Large UI), they cap at 76px.
 - **Run map** centred at ≤ 760px of the Stage.
 - **Pages** are a 600px column framed on the table (hairline sides, soft
-  shadow). The **Watchtower menu** is two columns: key art left (16:10, the
-  attract battle fitting itself; the still at an exact 2× from 1200×700), the
-  title / records / rows / Start a Run as a centred block right
-  (`clamp(320px, 30vw, 420px)`, 48px title).
+  shadow). The **menu** fills the screen over the trade map
+  (`ui/attract/TradeMap.tsx`): a left-hand column (`clamp(380px, 31vw,
+  460px)`, 52px title) holds the title, your militia, the bank, today's
+  market, the charter line, the tiles and the CTA, with your standing with
+  each company at its foot; the map takes the rest (mockup
+  `trade/r3/1-menu-desk.png`, CSS in `menu.css`).
 
 **Pointer and keyboard** (any width):
 

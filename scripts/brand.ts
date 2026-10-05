@@ -17,7 +17,6 @@
  * to this file):
  *  - `src/assets/brand/lockup.svg`, `lockup-stacked.svg`
  *  - `src/assets/brand/mark-16.png` (the pixel mark, 1×)
- *  - `src/assets/brand/keyart.png` (the menu diorama, 1 art px = 1 CSS px)
  *  - `public/icons/favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`,
  *    `icon-192.png`, `icon-512.png`, `icon-192-maskable.png`, `icon-512-maskable.png`
  *  - `public/social/og-image.png` (1200×630 — the 600×315 scene at exactly 2×)
@@ -388,21 +387,12 @@ interface Sprites {
   torch: Raster[]; tnt: Raster
   tree: Raster[]; treeFar: Raster[]; bush: Raster[]; rock: Raster[]
   mushroom: Raster; pumpkin: Raster; grass: Raster
-  tower: Raster
 }
 
 async function loadSprites(): Promise<Sprites> {
   const L = (f: string | Buffer) => Raster.load(f)
   const H = async (f: string) => halve(await L(f))
   const trees = await Promise.all(['tree1', 'tree2', 'tree3'].map((t) => L(`${SPR}/${t}.png`)))
-  // The watchtower on the ridge IS the mark: its tower, pole, pennant and lamp
-  // rasterised at 1.5× the 48 grid (72px), alpha-snapped so it stays pixel art.
-  const markSvg = await readFile(resolve(BRAND, 'mark.svg'), 'utf8')
-  const towerSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="72" height="72">
-    <path fill="#2a1a10" d="M18.3 38.3L19.3 20H16.9L22.85 11.17V5H24.15V11.17L30.1 20H27.7L28.7 38.22Z"/>
-    ${paths(markSvg).split('<path').filter((p) => /57a2b6|fff1c8/.test(p)).map((p) => '<path' + p).join('')}
-  </svg>`
-  const tower = harden(await L(await sharp(Buffer.from(towerSvg), { density: 72 * 1.5 }).resize(72, 72).png().toBuffer()))
   return {
     fighter: await H(`${SPR}/fighter.png`),
     rogue: await H(`${SPR}/rogue.png`),
@@ -418,54 +408,33 @@ async function loadSprites(): Promise<Sprites> {
     mushroom: await H(`${DECO}/deco_02.png`),
     pumpkin: await H(`${DECO}/deco_13.png`),
     grass: await H(`${SPR}/grass.png`),
-    tower,
   }
-}
-
-/**
- * Where the diorama's light sources are, in scene pixels, so the menu can lay
- * CSS-only ambience (lamp, torch flicker, star twinkle) exactly over them.
- * Written next to the PNG as `keyart.ts`; `MenuKeyArt.tsx` imports it.
- */
-interface SceneFx {
-  w: number
-  h: number
-  lamp: [number, number, number, number]
-  torches: [number, number][]
-  stars: [number, number][]
-  sparks: [number, number][]
 }
 
 interface SceneOpts {
   w: number
   h: number
-  /** Draw the sun-and-watchtower on the ridge (off when a lockup sits above it). */
-  emblem: boolean
   /** Horizon height above the bottom edge. The subject is laid out from it. */
   ground?: number
 }
 
 /**
- * The dusk diorama. Every coordinate is relative to the horizontal centre `cx`
- * and the horizon `hy` (a fixed 172px above the bottom), so the same function
- * renders the 488×272 menu art and the 600×315 social card: a bigger canvas
- * only grows sky and margin, never moves the subject.
+ * The dusk diorama of the 600×315 social card. Every coordinate is relative to
+ * the horizontal centre `cx` and the horizon `hy`, so a bigger canvas only
+ * grows sky and margin, never moves the subject.
  *
- * Composition (menu crop in mind — the focus lives in the centre 328×150):
- * a road comes out of the far wood on the right; a goblin column with torches
- * walks it toward the viewer; three heroes hold their circles beside it; on the
- * ridge the Watchtower stands against the setting sun with its lamp lit.
- * Trees and brush frame the two outer margins, which the narrowest phones crop.
+ * Composition: a road comes out of the far wood on the right; a goblin column
+ * with torches walks it toward the viewer; three heroes hold their circles
+ * beside it. Trees and brush frame the two outer margins. (It also drew the
+ * menu's key art, with the Watchtower on the ridge, until the menu became the
+ * trade map in the mercenary company's build step 4.)
  */
-function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
+function scene(S: Sprites, o: SceneOpts): Raster {
   const { w: W, h: H } = o
   const r = new Raster(W, H)
-  const fx: SceneFx = { w: W, h: H, lamp: [0, 0, 0, 0], torches: [], stars: [], sparks: [] }
   const cx = Math.floor(W / 2)
   const hy = H - (o.ground ?? 172)
   const sunX = cx - 14
-  const sunY = hy - 7
-  const sunR = 33
 
   // ── sky: banded, with a checker row between bands (pixel-art gradient)
   const SKY = ['#241619', '#2e1b1f', '#3a2025', '#492629', '#5b2e2d', '#703831', '#874534', '#a15536', '#bb6a3a', '#d3853f']
@@ -483,7 +452,6 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
     const x = Math.floor(hash(i, 1, 7) * W)
     const y = Math.floor(hash(i, 2, 7) * hy * 0.45)
     r.blend(x, y, hex(T.text), 0.5 + hash(i, 3, 7) * 0.5)
-    if (i % 4 === 0) fx.stars.push([x, y])
   }
   // Two long cloud streaks, lit gold along their undersides.
   const cloud = (x0: number, y0: number, len: number) => {
@@ -494,36 +462,18 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
       if (t > 0.25) r.blend(x0 + x, y0 + th, hex('#c77a44'), 0.8)
     }
   }
-  if (o.emblem) {
-    cloud(cx - 190, hy - 64, 120)
-    cloud(cx + 40, hy - 44, 150)
-    cloud(cx - 60, hy - 86, 70)
-  } else {
-    // The card's sky carries the lockup and the line; keep it clear above them.
-    cloud(cx - 250, hy - 16, 150)
-    cloud(cx + 120, hy - 12, 170)
-  }
+  // The card's sky carries the lockup and the line; keep it clear above them.
+  cloud(cx - 250, hy - 16, 150)
+  cloud(cx + 120, hy - 12, 170)
 
-  // ── sun halo + disc (the mark's disc; gold, reddening at the horizon)
-  if (o.emblem) {
-    for (let y = sunY - sunR - 18; y <= sunY + 4; y++)
-      for (let x = sunX - sunR - 18; x <= sunX + sunR + 18; x++) {
-        const d = Math.hypot(x - sunX, y - sunY)
-        if (d <= sunR) r.blend(x, y, y > sunY - 7 ? hex('#c98d3c') : hex(T.gold))
-        else if (d <= sunR + 3) r.blend(x, y, hex('#e7a24a'), 0.45)
-        else if (d <= sunR + 9) r.blend(x, y, hex('#d98e45'), 0.2)
-        else if (d <= sunR + 18 && (x + y) % 2 === 0) r.blend(x, y, hex('#d98e45'), 0.14)
-      }
-  } else {
-    // Without the emblem, keep the afterglow low on the horizon.
+  // ── the sun's afterglow, low on the horizon
     for (let y = hy - 30; y <= hy + 4; y++)
       for (let x = 0; x < W; x++) {
         const t = 1 - Math.abs(x - sunX) / (W * 0.5)
         if (t > 0) r.blend(x, y, hex('#e7a24a'), 0.18 * t * ((y - hy + 30) / 34))
       }
-  }
 
-  // ── far ridge with pine silhouettes; the watchtower stands on it
+  // ── far ridge with pine silhouettes
   const ridgeY = (x: number) => Math.round(hy + 2 + 3 * Math.sin(x / 37) + 2 * Math.sin(x / 11 + 1) - 3 * Math.exp(-(((x - sunX) / 50) ** 2)))
   for (let x = 0; x < W; x++) for (let y = ridgeY(x); y < hy + 14; y++) r.blend(x, y, hex('#2b1a17'))
   const farTrees: [number, number][] = [
@@ -534,13 +484,6 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
     const tr = S.treeFar[t]
     const x = cx + dx
     r.draw(tr, x - tr.w / 2, ridgeY(x) - tr.h + 4)
-  }
-  if (o.emblem) {
-    // Tower grid position: axis x23.5 of the 48 grid → 35px in the 72px raster.
-    const tx0 = sunX - 35, ty0 = ridgeY(sunX) + 5 - 56
-    r.draw(S.tower, tx0, ty0)
-    // The lamp: the mark's window (x22–25, y24–29.6 on the 48 grid) at 1.5×.
-    fx.lamp = [tx0 + 33, ty0 + 36, 5, 9]
   }
 
   // ── meadow: the game's grass tile at battle density, graded for dusk
@@ -672,7 +615,6 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
   for (const a of actors) {
     if (!a.torch) continue
     const tx = a.x + (a.flip ? a.torch[0] : -a.torch[0]), ty = a.y + a.torch[1]
-    fx.torches.push([tx, ty])
     for (let y = -26; y <= 26; y++)
       for (let x = -26; x <= 26; x++) {
         const d = Math.hypot(x, y)
@@ -683,7 +625,6 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
   // More of the horde: torch sparks where the road leaves the far wood.
   for (const [dx, dy] of [[168, 24], [176, 21], [186, 16], [196, 12], [206, 9], [214, 7]] as const) {
     const x = cx + dx, y = hy + dy
-    fx.sparks.push([x, y])
     r.blend(x, y, hex('#ffd27a'))
     for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) r.add(x + ax, y + ay, hex('#ff9a40'), 0.35)
   }
@@ -695,7 +636,7 @@ function scene(S: Sprites, o: SceneOpts): { r: Raster; fx: SceneFx } {
       const v = Math.max(0, Math.hypot(nx * 0.8, ny) - 0.75)
       if (v > 0) r.mul(x, y, [1 - v * 0.55, 1 - v * 0.6, 1 - v * 0.55])
     }
-  return { r, fx }
+  return r
 }
 
 // ─────────────────────────────────────────────────────────────────── main
@@ -738,25 +679,8 @@ for (const t of ICON_SET) {
 
 // Scenes
 const S = await loadSprites()
-const menu = scene(S, { w: 488, h: 272, emblem: true })
-await out(resolve(BRAND, 'keyart.png'), await menu.r.png(true))
-await out(
-  resolve(BRAND, 'keyart.ts'),
-  `/**
- * GENERATED by scripts/brand.ts — do not edit. Re-run \`npm run brand\`.
- *
- * The menu diorama and where its light sources sit, in scene pixels (one scene
- * pixel is one CSS pixel), so \`MenuKeyArt\` can lay CSS-only ambience exactly
- * over the lamp, the torches and the stars.
- */
-import src from './keyart.png'
-
-export const KEYART = { src, ...${JSON.stringify(menu.fx)} } as const
-`,
-)
-
 // Social card: the 600×315 scene at exactly 2×, lockup and line in the sky.
-const og = scene(S, { w: 600, h: 315, emblem: false, ground: 150 }).r.scale(2)
+const og = scene(S, { w: 600, h: 315, ground: 150 }).scale(2)
 const ogLock = lockups(markSvg, wm, T.text)
 const lockW = 700
 const lockH = Math.round((lockW / ogLock.hW) * 48)

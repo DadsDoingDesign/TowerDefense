@@ -108,7 +108,6 @@ for 17px running text. In the UI, headings stay live Crimson Text: the menu's
 | `public/icons/favicon.svg`, `favicon-32.png` | Tab icon: the pixel mark as crisp SVG rects, and 2× PNG |
 | `public/icons/apple-touch-icon.png` (180, opaque), `icon-192/512.png` (squircle), `icon-*-maskable.png` (disc within the 80% safe circle) | Home screen and PWA |
 | `public/social/og-image.png` | 1200×630 link preview (never precached) |
-| `src/assets/brand/keyart.png` + `keyart.ts` | Menu diorama and its light-source coordinates |
 
 Regenerate everything with `npm run brand` (`npm run icons` is an alias). The
 wordmark needs `pip install fonttools brotli` and `python3
@@ -117,21 +116,15 @@ scripts/brand-wordmark.py`, but only when the spacing changes. The page's
 `#201711`. `og:image` becomes an absolute URL at build time from `FW_SITE_URL`
 or Vercel's production URL (`build/siteMeta.ts`).
 
-### Key art (menu)
+### The menu (was: key art)
 
-`MenuKeyArt` shows a 488×272 dusk diorama composed by `scripts/brand.ts` from
-the game's own CC0 sprites at battle density (box-filtered ×½, as `pixmap.ts`
-does): a goblin column with torches on the road, three heroes on their circles,
-pines and brush at the margins, and **the mark itself on the ridge**. The
-Watchtower in front of the setting sun is the mark's disc and tower at 1.5×,
-alpha-snapped to pixels. The name is not repeated inside the art, because the
-page's title sits directly above it.
-
-One art pixel is one CSS pixel. The frame crops the scene and never scales it
-(whole-pixel placement via CSS `round()`), stops growing at 272px, and trims
-the foreground before the pennant on short frames. The lamp, the torches and a
-few stars get CSS-only ambience, all of it removed under reduced motion.
-`<MenuKeyArt>{live}</MenuKeyArt>` is the seam for a future attract-mode battle.
+The menu used to show a 488×272 dusk diorama from `scripts/brand.ts`, then a
+live attract-mode battle behind the whole page (Whales UI plan H1/Q12). Since
+the mercenary company's build step 4 the menu's background is the **trade
+map** (`src/ui/attract/TradeMap.tsx`): your HQ town at night and the five
+company roads, lit by your standing. Both the diorama and the attract battle
+were retired; `scripts/brand.ts` still composes the same dusk scene for the
+social card.
 
 ## Colour
 

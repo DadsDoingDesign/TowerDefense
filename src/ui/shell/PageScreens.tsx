@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { COMPANY_IDS } from '../../game/data/companies'
-import { standingOf, topStanding } from '../../game/run/standing'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import type { ShellContext } from './context'
 import { type Act, type Offer, type Price } from './offers'
 import { CollectionTabs, SkillCard, SkillCards } from './SkillCards'
 import { HeroCards } from './HeroCards'
-import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
-import { AttractMode, useMenuMotion } from './AttractMode'
 import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
-import { UpdateNotice } from '../UpdateNotice'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { RunSeed } from './RunSeed'
@@ -477,80 +472,3 @@ function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
     </span>
   )
 }
-
-/**
- * The Watchtower menu. The only page with no chooser — the rows *are* the
- * choices and the CTA is the one thing you came here to do.
- */
-export function MenuScreen({ offers }: { offers: Offer[] }) {
-  const primary = offers.find((o) => o.id === 'run')
-  const rows = offers.filter((o) => o.id !== 'run')
-  const stats = useMetaStore((s) => s.stats)
-  const standing = useMetaStore((s) => s.standing)
-  const bank = useMetaStore((s) => s.bank)
-  // The lifetime records are the reason to play again (M33).
-  const hasRecord = stats.bestDepth > 0 || stats.runsCompleted > 0
-  const best = topStanding(standing)
-  const companies = COMPANY_IDS.filter((c) => standingOf(standing, c) > 0).length
-  // H1-2: with motion allowed, the attract battle plays behind the WHOLE menu
-  // and the body keeps an empty window (`pg-cine-window`) where the shot is
-  // framed; under reduced motion the menu is exactly as before — the still
-  // key art in its frame.
-  const cinematic = useMenuMotion()
-
-  return (
-    <PageLayout
-      title="Fieldwatch"
-      subtitle="Hold the meadow against the goblin horde"
-      cta={primary?.action ? { label: 'Start a Run', run: primary.action.run } : undefined}
-      strip={<UpdateNotice />}
-      backdrop={
-        cinematic ? (
-          <MenuBackdrop>
-            <AttractMode />
-          </MenuBackdrop>
-        ) : undefined
-      }
-    >
-      {cinematic ? <div className="pg-cine-window" aria-hidden /> : <MenuKeyArt />}
-      {hasRecord && (
-        <div className="pg-records">
-          {/* The long game's numbers: standing (the best with any company, and
-              how many know you), the bank, and the record. */}
-          <Record label="Best standing" value={best} />
-          <Record label={companies === 1 ? 'Company' : 'Companies'} value={companies} />
-          <Record label="Banked" value={bank} />
-          <Record label="Delivered" value={`${stats.runsWon}/${stats.runsCompleted}`} />
-        </div>
-      )}
-      <div className="pg-rows">
-        {rows.map((o) => (
-          <MenuRow
-            key={o.id}
-            label={o.title}
-            // LS3: a locked entry says, in one plain line, what opens it.
-            value={o.locked ? undefined : o.cost ? priceNode(o.cost) : o.sub}
-            note={o.locked}
-            icon={o.icon}
-            glyph={o.glyph}
-            big
-            dim={!!o.locked}
-            locked={!!o.locked}
-            onClick={() => o.action?.run()}
-            tone={o.color === 'var(--bad-text)' ? 'danger' : 'default'}
-          />
-        ))}
-      </div>
-    </PageLayout>
-  )
-}
-
-function Record({ label, value }: { label: string; value: number | string }) {
-  return (
-    <span className="pg-record">
-      <b>{value}</b>
-      <span>{label}</span>
-    </span>
-  )
-}
-

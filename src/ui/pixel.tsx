@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { companyById, crestRows, UNKNOWN_EMBLEM, type CompanyId } from '../game/data/companies'
+import { bannerPalette, bannerRows, type BannerLook } from '../game/data/banner'
 import {
   COIN,
   COIN_PALETTE,
@@ -88,4 +89,9 @@ export const Lock = ({ scale = 2 }: { scale?: number }) => <Pixel rows={LOCK} pa
 /** A sealed scroll — a skill, shown before it is opened; flat when `sil` names a colour. */
 export const Scroll = ({ scale = 3, sil }: { scale?: number; sil?: string }) => (
   <Pixel rows={SCROLL} palette={sil ? silhouette(sil) : SCROLL_PALETTE} scale={scale} className="scroll" />
+)
+
+/** Your militia's banner: its shape, dark field and parchment charge, on a pole (`data/banner.ts`). */
+export const Banner = ({ look, scale = 2 }: { look: BannerLook; scale?: number }) => (
+  <Pixel rows={bannerRows(look.shape, look.charge)} palette={bannerPalette(look.tincture)} scale={scale} className="banner" />
 )

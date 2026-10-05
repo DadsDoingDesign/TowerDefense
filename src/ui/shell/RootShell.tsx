@@ -6,7 +6,9 @@ import { DetailBand } from './DetailBand'
 import { HeaderBand } from './HeaderBand'
 import { SelectorBand } from './SelectorBand'
 import { StageBand } from './StageBand'
-import { MenuScreen, PageScreen } from './PageScreens'
+import { PageScreen } from './PageScreens'
+import { MenuScreen } from './MenuScreen'
+import { MilitiaScreen } from './MilitiaScreen'
 import { ResultScreen } from './contracts/ContractResult'
 import { ContractsScreen } from './contracts/ContractsScreen'
 import { CityScreen } from './contracts/CityScreen'
@@ -22,6 +24,7 @@ import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
 import '../../styles/shell-reward.css'
 import '../../styles/contracts.css'
+import '../../styles/menu.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useStagingRecorder } from './staging'
 
@@ -39,6 +42,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   perks: { title: 'Watchtower', subtitle: 'Gold from your bank buys bonuses that carry into every run.' },
   codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
+  militia: { title: 'Your militia' },
 }
 
 export function RootShell() {
@@ -46,6 +50,11 @@ export function RootShell() {
   const screen = useGameStore((s) => s.screen)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const [metaView, setMetaView] = useState<MetaView>('menu')
+  // The banner picker returns to where it was opened from (the menu's tip, or Settings).
+  const beforeMilitia = useRef<MetaView>('menu')
+  useEffect(() => {
+    if (metaView !== 'militia') beforeMilitia.current = metaView
+  }, [metaView])
   const offers = useOffers(metaView, setMetaView)
   const battle = useBattleLayout()
   // G3-2: level-ups from a normal wave wait on the roster, not in a modal.
@@ -116,7 +125,9 @@ export function RootShell() {
         ) : ctx.stage === 'city' ? (
           <CityScreen />
         ) : isMenu ? (
-          <MenuScreen offers={offers} />
+          <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} />
+        ) : screen === 'hub' && metaView === 'militia' ? (
+          <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
         ) : (
           <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
         )}

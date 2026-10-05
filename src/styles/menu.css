@@ -1,0 +1,710 @@
+/**
+ * The menu over the trade map (the mercenary company, build step 4) and the
+ * militia's banner picker. Mockups `trade/r3/1-menu-{first,mid,vet}.png` and
+ * `10-banner.png`. Desk placement is in shell-wide.css (`1-menu-desk.png`).
+ *
+ * The map fills the whole screen; the menu floats over it. Text never sits on
+ * the map itself: the head and the sheet carry their own dark washes, and the
+ * rows are near-solid panels, so every line clears 4.5:1 whatever the map
+ * draws under it (`tests/contrast.test.ts` holds them over pure white).
+ */
+
+/* The page spans the whole screen; its content keeps the phone column. */
+.shell.shell-page:has(> .mn) {
+  max-width: none;
+}
+.mn {
+  --mn-col: max(var(--gutter), calc((100% - 520px) / 2));
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--night);
+}
+.mn > :not(.mn-map):not(.mn-shade) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------- the map */
+.mn-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.tm {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.tm-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  image-rendering: pixelated;
+  /* The map fades up when its terrain lands (it bakes in slices). */
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+.tm-canvas.is-ready {
+  opacity: 1;
+}
+:root[data-reduced-motion='true'] .tm-canvas {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-canvas {
+    transition: none;
+  }
+}
+.mn-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* A vignette that sinks the corners, so the eye lands on the hub. */
+  background: radial-gradient(120% 90% at 50% 55%, transparent 55%, rgba(8, 6, 4, 0.55) 100%);
+}
+
+/* The roads' labels: crisp HTML over the canvas. A label that is a button is
+   44px tall (the touch floor); its visible pill is the 32px face inside. */
+.tm-labels {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.tm-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.tm-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 10px 6px 9px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+/* The face: a dark pill with the company's colour as a rail. */
+.tm-pill::after {
+  content: '';
+  position: absolute;
+  inset: 6px 0;
+  z-index: -1;
+  border-radius: 8px;
+  background: rgba(20, 15, 10, 0.94);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 3px 0 0 var(--co, var(--line-strong));
+}
+.tm-pill .crest {
+  flex: none;
+}
+.tm-name {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.tm-lv {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.tm-label.is-new .tm-lv {
+  color: var(--text);
+  font-weight: 600;
+}
+.tm-mkt {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--market);
+  color: var(--market-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.tm-label.is-pin .tm-pill {
+  cursor: default;
+  min-height: 0;
+  color: var(--muted);
+}
+.tm-label.is-pin .tm-pill::after {
+  /* An uncharted road does not give away its company's colour. */
+  box-shadow: none;
+}
+.tm-label.is-pin .tm-name {
+  font-weight: 600;
+}
+.tm-label.is-bare .tm-pill {
+  padding: 10px 7px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tm-pill:not(:disabled):hover::after {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+.tm-pill:focus-visible {
+  outline: none;
+}
+.tm-pill:focus-visible::after {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* ------------------------------------------------------------- the head */
+.mn-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: calc(20px + var(--safe-top, 0px)) var(--mn-col) 30px;
+  text-align: center;
+  background: linear-gradient(rgba(16, 12, 8, 0.86) 66%, rgba(16, 12, 8, 0));
+}
+.mn .t-title {
+  font-size: 40px;
+  text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
+}
+.mn .t-sub {
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+.mn-bank {
+  position: absolute;
+  top: calc(12px + var(--safe-top, 0px));
+  right: max(12px, calc((100% - 560px) / 2));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(32, 23, 17, 0.92);
+  border: 1px solid var(--line-strong);
+  color: var(--accent-text);
+  font-weight: 700;
+  font-size: var(--fs-md);
+}
+.mn-bank-word {
+  display: none;
+  color: var(--accent-text);
+}
+/* A phone: the wordmark a step down, so the chip fits beside it. */
+@media (max-width: 479.98px) {
+  .mn .t-title {
+    font-size: 34px;
+  }
+  .mn-bank {
+    height: 32px;
+    padding: 0 10px;
+    font-size: var(--fs-sm);
+  }
+}
+/* A narrow one: the head goes left-aligned and the chip keeps the right. */
+@media (max-width: 389.98px) {
+  .mn-head {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .mn .t-title,
+  .mn .t-sub {
+    text-align: left;
+  }
+  .mn .t-title {
+    font-size: 30px;
+  }
+  .mn .t-sub {
+    font-size: var(--fs-sm);
+  }
+}
+/* Compact labels when the open area is short: the crest and the number. */
+.tm.is-compact .tm-name {
+  display: none;
+}
+
+/* The open area the map's roads fill. */
+.mn-window {
+  flex: 1 0 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- the sheet */
+.mn-sheet {
+  display: grid;
+  gap: 8px;
+  padding: 34px var(--mn-col) calc(16px + var(--safe-bottom, 0px));
+  background: linear-gradient(rgba(20, 15, 10, 0), rgba(20, 15, 10, 0.9) 30px, #1a130d 64px);
+}
+.mn-today {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(240, 196, 106, 0.18), rgba(240, 196, 106, 0.04)), #1a130d;
+  border: 1px solid rgba(240, 196, 106, 0.4);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+}
+button.mn-today {
+  cursor: pointer;
+}
+button.mn-today:disabled {
+  cursor: default;
+}
+.mn-today b {
+  color: var(--accent-text);
+}
+.mn-today .crest {
+  flex: none;
+}
+.mn-today-r {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-align: right;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.mn-today:not(:disabled):hover {
+    border-color: rgba(240, 196, 106, 0.7);
+  }
+}
+
+/* The charter (build step 5): a slim dashed-aqua progress line, never a card. */
+.mn-charter {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: rgba(20, 14, 8, 0.92);
+  border: 1px dashed rgba(56, 242, 232, 0.45);
+  color: var(--text);
+}
+.mn-charter b {
+  font-size: var(--fs-md);
+}
+.mn-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(233, 205, 150, 0.14);
+  overflow: hidden;
+}
+.mn-meter i {
+  display: block;
+  height: 100%;
+  background: #38f2e8;
+}
+.mn-charter-v {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The secondary places: one row of tiles, whatever the menu offers. */
+.mn-tiles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.mn-tile {
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(32, 23, 17, 0.94);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+}
+.mn-tile.is-locked {
+  color: var(--muted);
+  cursor: default;
+}
+.mn-tile.is-locked .fw-i {
+  filter: saturate(0.25) brightness(0.65);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mn-tile:not(.is-locked):hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: rgba(56, 41, 25, 0.96);
+  }
+}
+.mn-why {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+}
+.mn-why b {
+  color: var(--text);
+}
+.mn-locked {
+  margin-top: 0;
+  font-size: var(--fs-xs);
+}
+.mn .mn-cta {
+  height: 68px;
+  font-size: 26px;
+  box-shadow: inset 0 0 0 1px var(--cta-edge), var(--cta-lift), 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* The banner's one coach tip, after the first finished contract. */
+.mn-tip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  background: #2a1f14;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--text);
+}
+.mn-tip b {
+  color: var(--accent-text);
+}
+.mn-tip-go {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--cta-edge);
+  background: var(--cta);
+  color: var(--cta-ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+/* Desk only (shell-wide.css shows it). */
+.mn-standings {
+  display: none;
+}
+
+/* Short phones: the same trims the page skeleton makes. */
+@media (orientation: portrait) and (max-height: 700px) {
+  .mn-head {
+    padding-top: calc(12px + var(--safe-top, 0px));
+    padding-bottom: 22px;
+  }
+  .mn-sheet {
+    gap: 6px;
+    padding-top: 24px;
+  }
+  .mn-tile {
+    min-height: 56px;
+  }
+  .mn .mn-cta {
+    height: 60px;
+    font-size: 24px;
+  }
+}
+@media (orientation: portrait) and (max-height: 600px) {
+  /* The charter's line goes first: it is a long goal, not a choice. */
+  .mn-charter {
+    display: none;
+  }
+  .mn-tile .fw-i {
+    display: none;
+  }
+  .mn-tile {
+    min-height: 44px;
+  }
+}
+
+/* =========================================================== the militia */
+.mi .ct-body {
+  gap: 10px;
+  align-items: stretch;
+}
+.mi-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 10px;
+  background: #2a1f14;
+  border: 1px solid var(--accent);
+}
+.mi-name-v {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--text);
+}
+.mi-reroll {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: rgba(233, 205, 150, 0.08);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.mi-preview {
+  position: relative;
+  height: 168px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  /* The battle's meadow, in its own greens, with a road across it. */
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.06) 0 2px, transparent 3px) 0 0 / 28px 22px,
+    #6a9a48;
+}
+.mi-preview-road {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30px;
+  height: 34px;
+  background: #8f887c;
+  border-top: 3px solid #6a6359;
+  border-bottom: 3px solid #6a6359;
+}
+.mi-preview-cap {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(20, 15, 10, 0.92);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.mi-preview-flag {
+  position: absolute;
+  left: 7%;
+  bottom: 40px;
+}
+.mi-preview-cart {
+  position: absolute;
+  right: 12%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.mi-preview-crates {
+  display: flex;
+  gap: 3px;
+  margin-right: 8px;
+  margin-bottom: -3px;
+}
+.mi-opts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.mi-opts.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.mi-opt,
+.mi-swatch {
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+}
+.mi-opt {
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  border-radius: 10px;
+  background: #2a1f14;
+  border: 1px solid var(--line-strong);
+}
+.mi-opt.on {
+  background: #45311c;
+  border: 2px solid var(--accent);
+}
+.mi-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.mi-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.mi-swatch i {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.15;
+  max-height: 52px;
+  border-radius: 10px;
+  background: var(--sw);
+  border: 3px solid var(--paper);
+}
+.mi-swatch.on i {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.mi-swatch span {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+.mi-swatch.on span {
+  color: var(--text);
+}
+.mi-note {
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ================================================================== desk
+   `1-menu-desk.png`: the menu is a left-hand column over a dark wash, your
+   standing with each company at its foot, and the map takes the rest of the
+   screen. Kept here rather than in shell-wide.css because this sheet loads
+   after it; same breakpoint as the wide layout. */
+@media (min-width: 900px) and (min-height: 540px) {
+  .mn {
+    --mn-side: clamp(380px, 31vw, 460px);
+    display: grid;
+    grid-template-columns: var(--mn-side) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .mn-shade {
+    background:
+      linear-gradient(90deg, rgba(20, 15, 10, 0.97) 0, rgba(20, 15, 10, 0.97) calc(var(--mn-side) - 40px), rgba(20, 15, 10, 0) calc(var(--mn-side) + 80px)),
+      radial-gradient(110% 100% at 62% 55%, transparent 55%, rgba(8, 6, 4, 0.5) 100%);
+  }
+  .mn-head {
+    grid-column: 1;
+    grid-row: 1;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 36px 32px 16px;
+    text-align: left;
+    background: none;
+  }
+  .mn .t-title {
+    font-size: 52px;
+    text-align: left;
+  }
+  .mn .t-sub {
+    text-align: left;
+    color: var(--muted);
+  }
+  .mn-bank {
+    position: static;
+    margin-top: 10px;
+  }
+  .mn-bank-word {
+    display: inline;
+  }
+  .mn-window {
+    grid-column: 2;
+    grid-row: 1 / -1;
+  }
+  .mn-sheet {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 10px;
+    padding: 0 32px;
+    background: none;
+  }
+  .mn-standings {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: end;
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    padding: 24px 32px 32px;
+  }
+  .mn-eyebrow {
+    font-size: var(--fs-micro);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .mn-st {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-sm);
+    color: var(--text);
+  }
+  .mn-st-bar {
+    height: 6px;
+    margin-top: 5px;
+    border-radius: 3px;
+    background: rgba(233, 205, 150, 0.12);
+    overflow: hidden;
+  }
+  .mn-st-bar i {
+    display: block;
+    height: 100%;
+    background: var(--co);
+  }
+  .mn-st-n {
+    min-width: 2ch;
+    text-align: right;
+    color: var(--accent-text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .mn-st.is-locked {
+    color: var(--muted);
+  }
+  .mn-st.is-locked .mn-st-n {
+    color: var(--muted);
+  }
+}
