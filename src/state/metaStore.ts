@@ -19,6 +19,7 @@ import {
   standingFor,
   standingXpFor,
 } from '../game/run/standing'
+import { readMilitia, type Militia } from '../game/run/militia'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -257,6 +258,11 @@ interface MetaState {
   codex: Codex
   /** LS3: the ideas this player has met, in the order they first appeared (`state/staging.ts`). */
   met: IdeaId[]
+  /**
+   * Your militia's name and banner (build step 4) — null until it is raised,
+   * after the first finished contract. Validated on load (`run/militia.readMilitia`).
+   */
+  militia: Militia | null
   // actions
   upgradeCost: (id: string) => number
   buyUpgrade: (id: string) => void
@@ -279,6 +285,8 @@ interface MetaState {
   recordFelled: (byKey: Iterable<readonly [string, number]>) => void
   /** LS3 — note ideas as met. Known ids only, each once; a no-op when nothing is new. */
   recordMet: (ids: Iterable<IdeaId>) => void
+  /** Raise (or change) the militia's name and banner. An invalid one is ignored. */
+  setMilitia: (m: Militia) => void
   resetMeta: () => void
 }
 
@@ -345,7 +353,7 @@ export function dealItems(have: readonly string[], n: number, ...salt: (string |
 }
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'bank' | 'upgrades' | 'standing' | 'record' | 'skills' | 'items' | 'stats' | 'achievements' | 'codex' | 'met'>
+type PersistedMeta = Pick<MetaState, 'bank' | 'upgrades' | 'standing' | 'record' | 'skills' | 'items' | 'stats' | 'achievements' | 'codex' | 'met' | 'militia'>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -403,6 +411,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     achievements: migrateAchievements(o.achievements),
     codex: migrateCodex(o.codex),
     met: readMet(o.met),
+    militia: readMilitia(o.militia),
   }
 }
 
@@ -425,6 +434,7 @@ export const useMetaStore = create<MetaState>()(
       achievements: {},
       codex: freshCodex(),
       met: [],
+      militia: null,
 
       upgradeCost: (id) => {
         const u = UPGRADE_BY_ID.get(id)!
@@ -559,6 +569,11 @@ export const useMetaStore = create<MetaState>()(
         return banked
       },
 
+      setMilitia: (m) => {
+        const militia = readMilitia(m)
+        if (militia) set({ militia })
+      },
+
       bonuses: () => {
         const { upgrades } = get()
         const lvl = (id: string) => upgrades[id] ?? 0
@@ -585,6 +600,7 @@ export const useMetaStore = create<MetaState>()(
           achievements: {},
           codex: freshCodex(),
           met: [],
+          militia: null,
         }),
     }),
     {
@@ -602,6 +618,7 @@ export const useMetaStore = create<MetaState>()(
         achievements: s.achievements,
         codex: s.codex,
         met: s.met,
+        militia: s.militia,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is
