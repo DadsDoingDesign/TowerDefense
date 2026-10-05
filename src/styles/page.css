@@ -292,13 +292,18 @@
   flex: 1 0 0;
   min-width: 0;
   flex-direction: column;
+  align-items: center;
   gap: var(--gap-xs);
   padding: var(--gap-xs);
   border-radius: var(--r-sm);
   background: var(--surface);
 }
 .pg-tile-art {
-  width: 100%;
+  /* SK1 review: a fixed 56px picture, not the tile's full width. At full
+     width three tiles were ~150px squares of mostly empty parchment, pinned
+     above the CTA, and they squeezed the scrolling body — the run's skill
+     unlocks — down to two lines on a phone. */
+  width: 56px;
   aspect-ratio: 1;
   border-radius: var(--r-xs);
   background: var(--portrait);
@@ -1441,7 +1446,7 @@
 .pg-skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1451,7 +1456,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding: 7px 9px;
+  padding: 8px 10px;
   border-radius: var(--r-sm);
   background: var(--surface);
   border: 1px solid var(--line-strong);
@@ -1491,11 +1496,40 @@
 .pg-skill-shape {
   display: inline-grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 1px dashed var(--line-strong);
   color: var(--muted);
   font-size: var(--fs-micro);
   font-weight: 800;
+}
+/* The hero pick's one skill: the library card, a size up, full width. */
+.pg-skill-one {
+  width: 100%;
+  padding: 10px 12px;
+  gap: 4px;
+}
+.pg-skill-one .pg-skill-name {
+  font-size: var(--fs-md);
+}
+.pg-skill-one .pg-skill-text {
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.pg-skill-kicker {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+/* A run's new skill cards, stacked (the result screen). */
+.pg-unlocks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.pg-unlocks .pg-skill-top {
+  flex-wrap: wrap;
 }

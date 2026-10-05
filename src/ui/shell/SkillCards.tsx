@@ -44,3 +44,22 @@ export function SkillCards({ cards }: { cards: NonNullable<Offer['cards']> }) {
     </div>
   )
 }
+
+/**
+ * SK1 — the one skill a hero on offer arrives with (the hero pick), as a card
+ * of its own under the hero's name: "Skill · Level 1", its name, its sentence.
+ * The class says how the hero fights; this is the twist on it, and it has to
+ * read at a glance, not as the third line of a stat block.
+ */
+export function SkillCard({ skill, color, kicker = 'Skill' }: { skill: { name: string; level: string; text: string }; color?: string; kicker?: string }) {
+  return (
+    <div className="pg-skill pg-skill-one" style={color ? { borderLeftColor: color } : undefined}>
+      <span className="pg-skill-top">
+        <span className="pg-skill-kicker">{kicker}</span>
+        <b className="pg-skill-name">{skill.name}</b>
+        <span className="pg-skill-sub">{skill.level}</span>
+      </span>
+      <span className="pg-skill-text">{skill.text}</span>
+    </div>
+  )
+}

@@ -272,3 +272,28 @@ describe('Watch levels, cards and difficulty', () => {
     expect(winReward({ step: MAX_DIFFICULTY, top: MAX_DIFFICULTY, score: 1, best: 9 })).toMatchObject({ card: true, stepUp: false })
   })
 })
+
+describe('the skill library view (Codex)', () => {
+  it('lists every card by level; a locked card is a silhouette that says only how it opens', async () => {
+    const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
+    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], watchXp: 100, staged: false })
+    expect(o.cards).toHaveLength(ALL_SKILLS.length)
+    // A pip per card ran 33 dots off a phone's row: the count rides in `sub`.
+    expect(o.pips).toBeUndefined()
+    expect(o.sub).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
+    const locked = o.cards!.filter((c) => c.locked)
+    expect(locked).toHaveLength(ALL_SKILLS.length - STARTER_SKILLS.length - 1)
+    for (const c of locked) {
+      expect(c.name).toBe('Locked')
+      expect(ALL_SKILLS.some((k) => c.text.includes(k.desc))).toBe(false)
+    }
+    expect(new Set(o.cards!.map((c) => c.group))).toEqual(new Set(['Level 1', 'Level 2', 'Level 3']))
+  })
+
+  it('stays locked until the first run is over', async () => {
+    const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
+    const o = skillLibraryOffer({ achievements: {}, skills: [], watchXp: 0, staged: true })
+    expect(o.cards).toBeUndefined()
+    expect(o.sub).toBe('Locked')
+  })
+})

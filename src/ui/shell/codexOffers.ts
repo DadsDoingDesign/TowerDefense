@@ -114,7 +114,7 @@ const LIBRARY_LOCKED = 'Opens after your first run'
 /**
  * The skill library (SK1): every skill card, by level — the ones this Watch
  * has, named with their one sentence; the rest as silhouettes that say only
- * how they open ("Unlock by playing", or the feat). The Watch level and how
+ * how they open ("Unlocks at random as your Watch level rises", or the feat). The Watch level and how
  * far it is to the next card lead.
  */
 export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'watchXp' | 'staged'>): Offer {
@@ -137,7 +137,6 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
     title: 'Skill library',
     sub: `${have}/${ALL_SKILLS.length}`,
     icon: 'boon',
-    pips: { on: have, of: ALL_SKILLS.length },
     body: [
       `Watch level ${w.level} — ${w.into}/${w.need} Watch XP to the next. Every Watch level unlocks one skill card.`,
       'Every run earns Watch XP: 15 a depth, 1 per 10 enemies felled, 60 for a win. A win at your highest difficulty unlocks a card too.',
@@ -154,7 +153,7 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
         group,
         name: 'Locked',
         sub: k.class ? ARCHETYPES[k.class].name : 'Any hero',
-        text: feat ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.` : 'Unlock by playing.',
+        text: feat ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.` : 'Unlocks at random as your Watch level rises.',
         locked: true,
       }
     }),

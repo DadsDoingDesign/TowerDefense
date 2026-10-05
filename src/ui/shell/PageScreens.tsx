@@ -10,7 +10,7 @@ import type { ShellContext } from './context'
 import { difficultyLine, type Act, type Offer, type Price } from './offers'
 import { DifficultyPicker } from './DifficultyPicker'
 import { ProgressEarned } from './ProgressEarned'
-import { SkillCards } from './SkillCards'
+import { SkillCard, SkillCards } from './SkillCards'
 import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
 import { AttractMode, useMenuMotion } from './AttractMode'
 import { DefeatReceipt } from './DefeatReceipt'
@@ -400,6 +400,7 @@ export function PageScreen({
             </p>
           ) : null}
           {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+          {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
           <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
           {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
           {selected.info && (
@@ -715,6 +716,11 @@ export function ResultScreen() {
           answer. It leads the body for the same
           reason: measured at 390×844 the body shows ~370px, and everything
           under the second card is a scroll away. */}
+      {/* SK1: a win's first news is what it unlocked — the skill cards and the
+          difficulty climbed — so it leads the receipt. A loss leads with its
+          cause, and the long-game line follows the heroes (below). */}
+      {won && recap?.progress && <ProgressEarned progress={recap.progress} />}
+
       {recap && recap.heroes.length > 0 && (
         <div className="pg-recap">
           <div className="pg-recap-head">
@@ -741,7 +747,7 @@ export function ResultScreen() {
           first, and the offer reads as an option rather than as a verdict on
           the player. Loss only (F11); the control it explains is pinned in the
           foot so it does not have to be scrolled to. */}
-      {recap?.progress && <ProgressEarned progress={recap.progress} />}
+      {!won && recap?.progress && <ProgressEarned progress={recap.progress} />}
 
       {/* Feats this run earned (Phase 3b): what the player opened, by name. */}
       <FeatsEarned />

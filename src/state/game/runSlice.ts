@@ -213,6 +213,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // The feats ledger starts here, with the company as it marches out.
     const feats = { ...freshFeats(), starter: archetype, startSize: roster.length, goldPeak: get().gold }
     set({ roster, inventory, challenge, screen: 'map', feats })
+    // SK1: the hero pick's tip ("Each hero comes with a skill") has been read.
+    useSettingsStore.getState().markTaught('heroSkill')
   },
 
   // Leaving for the Watchtower ends the run, so it settles like any other end.

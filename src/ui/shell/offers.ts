@@ -203,6 +203,8 @@ export interface Offer {
    * it opens.
    */
   cards?: { id: string; name: string; sub: string; text: string; locked?: boolean; group?: string }[]
+  /** SK1: the one skill a hero on offer arrives with, as a card under its name (the hero pick). */
+  skill?: { name: string; level: string; text: string }
   /**
    * LS3: a menu entry the player has not opened yet — the one plain line that
    * says what opens it. The menu draws the row dimmed and inert, with this
@@ -348,6 +350,9 @@ function heroBits(s: Sentinel) {
     // Token, not `s.color`'s raw hex, so the colour-vision modes reach the
     // portrait rail as well as everything else (M34).
     portrait: { art: heroArt(s.archetype), color: archetypeVar(s.archetype) },
+    // SK1: a hire arrives with one skill — shown as its card, the way the hero
+    // pick shows the leader's (a hero with more lists them in the body).
+    skill: oneSkill(s),
     // LS3: a first run reads a hero by what it does, as on the first pick; the
     // stat block is one tap away on the hero's Stats tab.
     stats: stagedRun()
@@ -369,11 +374,18 @@ function heroBits(s: Sentinel) {
 function heroBody(s: Sentinel): string[] {
   const p = computeCombat(s)
   const line = `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`
-  // SK1: every hire arrives with a skill — say which, in its one sentence.
-  const skills = skillLines(s)
+  // SK1: every hire arrives with a skill. One is shown as its card
+  // (`heroBits`); more are listed here, each in its one sentence.
+  const skills = oneSkill(s) ? [] : skillLines(s)
   // LS3: with the stat row held back, the sentence that says what the hero
   // does leads — the same one the first pick shows.
   return stagedRun() ? [getNode(s.archetype).ability, ...skills, line] : [...skills, line]
+}
+
+/** The card for a hero holding exactly one skill (a hire, a fresh pick). */
+function oneSkill(s: Pick<Sentinel, 'skills'>): Offer['skill'] {
+  const k = s.skills?.length === 1 ? skillById(s.skills[0]) : undefined
+  return k ? { name: k.name, level: skillLevelLabel(k.level), text: k.desc } : undefined
 }
 
 /** "Skill · Quick Hands — Attacks 15% faster." for every skill a hero holds. */
@@ -595,39 +607,6 @@ export function previewHero(a: Archetype, statBonus: number): Sentinel {
 const pct = (v: number) => `${Math.round(v * 100)}%`
 
 /**
- * Up to three trait tiles, each one a fact about the hero this card will
- * actually hand you.
- *
- * Read off the COMPUTED profile rather than the tier-0 literals, so a tile and
- * the body line under it can never disagree — the base rate is 2.1/s and a
- * 12-DEX rogue's real rate is 2.6/s, and printing one above the other is a
- * smaller version of the same defect this is fixing. The list is in priority
- * order and sliced to three, so an archetype whose kit changes in
- * `archetypeTree.ts` re-tiles itself instead of lying.
- */
-function archetypeTiles(p: ReturnType<typeof computeCombat>): { caption: string; icon: IconKey }[] {
-  /*
-   * Eight tiles, eight glyphs, and five of the eight were on loan from
-   * something else: `⛊` was also the off-hand item kind, `⛨` was also body
-   * armour AND the Assist setting AND base integrity, `⚡` was also the Threat
-   * multiplier, `❋` was also the mystic archetype, and `◎`/`◉` were a pair of
-   * near-identical circles standing for two unrelated ideas. Every one of them
-   * now has a picture of its own — including the last of them, the Assist
-   * setting, which was still borrowing THIS row's `armour` helm until M8 and
-   * now draws `assist`.
-   */
-  const out: { caption: string; icon: IconKey }[] = []
-  if (p.mods.block) out.push({ caption: `Blocks ${p.mods.block.count}`, icon: 'block' })
-  if (p.critChance >= 0.15) out.push({ caption: `${pct(p.critChance)} crit`, icon: 'crit' })
-  if (p.damageType === 'magic') out.push({ caption: 'Magic damage', icon: 'magic' })
-  if (p.splashRadius > 0) out.push({ caption: `${Math.round(p.splashRadius)} splash`, icon: 'splash' })
-  if (p.rate >= 1.5) out.push({ caption: `${p.rate.toFixed(1)}/s attacks`, icon: 'haste' })
-  if (p.range >= 150) out.push({ caption: `${Math.round(p.range)} range`, icon: 'range' })
-  if (p.thorns >= 5) out.push({ caption: `${Math.round(p.thorns)} thorns`, icon: 'thorns' })
-  return out.slice(0, 3)
-}
-
-/**
  * The hero pick (SK1): three heroes, one of each class, each with a name and
  * one random Level 1 skill from the player's unlocked pool — rolled from the
  * run seed (`run/skills.heroChoices`), so the same seed or Daily offers the
@@ -662,7 +641,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       glyph: GLYPH[a],
       // LS3: a first run's row says the hero's job, then its skill, in plain words.
       ...(staged
-        ? { rowArt: heroArt(a), note: skill ? `${role} · ${skill.name}: ${skill.desc}` : role }
+        ? { rowArt: heroArt(a), note: skill ? `${role}. Skill: ${skill.name} — ${skill.desc}` : role }
         : { portrait: { art: heroArt(a), color: ARCH_COLOR[a] } }),
       stats: staged
         ? undefined
@@ -671,16 +650,14 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
             { label: 'DEX', value: hero.stats.dex },
             { label: 'INT', value: hero.stats.int },
           ],
-      // The trait tiles are numbers with names (thorns, crit, splash); the
-      // ability sentence says the same thing in words, and on a first pick it
-      // gets the room.
-      tiles: staged ? undefined : archetypeTiles(p),
-      // Three lines, not five: the tiles under the CTA carry the headline
-      // traits already, and every line here costs vertical room the Banner
-      // picker below needs in order to be seen at all.
+      // SK1: the skill is the twist on the class, so it gets a card of its
+      // own under the name — not a line inside the stat block. The old trait
+      // tiles (Blocks 2 · 8 thorns, pinned above the CTA) are gone: they
+      // repeated the body's numbers at 150px a tile and pushed the skill and
+      // the difficulty below the fold.
+      skill: !staged && skill ? { name: skill.name, level: skillLevelLabel(skill.level), text: skill.desc } : undefined,
       body: [
         node.ability,
-        ...(skill ? [`Skill · ${skill.name} (${skillLevelLabel(1)}) — ${skill.desc}`] : []),
         `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`,
         ...(staged
           ? []
@@ -785,7 +762,8 @@ function recruitOffers(st: St): Offer[] {
   const full = st.roster.length >= MAX_ROSTER
   const out: Offer[] = st.recruitOptions.map((s) => ({
     id: s.id,
-    title: s.name,
+    // The name and the class, as the hero pick says them ("Marek · Fighter").
+    title: `${s.name} · ${buildName(s)}`,
     sub: buildName(s),
     color: archetypeVar(s.archetype),
     glyph: GLYPH[s.archetype],
@@ -1033,7 +1011,7 @@ function crossroadsOffers(st: St): Offer[] {
   // ---- step 1: recruit, or aim ---------------------------------------------
   const out: Offer[] = cr.recruits.map((s) => ({
     id: s.id,
-    title: s.name,
+    title: `${s.name} · ${buildName(s)}`,
     sub: `Recruit · ${buildName(s)}`,
     color: archetypeVar(s.archetype),
     glyph: GLYPH[s.archetype],
@@ -1295,7 +1273,7 @@ function settingsOffers(s: Settings): Offer[] {
       icon: 'warn',
       color: 'var(--bad-text)',
       body: [
-        'Wipes Marks, perks, Vow unlocks and records.',
+        'Wipes Marks, Watchtower bonuses, unlocked skills, difficulty and records.',
         'This cannot be undone. Nothing is kept and nothing is backed up.',
       ],
       action: {

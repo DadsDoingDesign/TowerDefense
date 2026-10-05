@@ -35,7 +35,7 @@ import { useMenuStaged, useStagingRecorder } from './staging'
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   perks: { title: 'Watchtower', subtitle: 'Marks buy permanent bonuses that carry into every run.' },
-  codex: { title: 'Codex', subtitle: 'Feats to earn, and everything the Watch has met on the road.' },
+  codex: { title: 'Codex', subtitle: 'Your skill library, feats to earn, and everything the Watch has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
 }
 

@@ -1,4 +1,5 @@
 import { useGameStore } from '../../state/gameStore'
+import { useSettingsStore } from '../../state/settingsStore'
 
 /**
  * Which subject each band is showing. The whole app is a function of this —
@@ -56,6 +57,8 @@ export function useShellContext(): ShellContext {
   const screen = useGameStore((s) => s.screen)
   const mode = useGameStore((s) => s.mode)
   const runPhase = useGameStore((s) => s.runPhase)
+  // SK1 / LS3: the hero pick's one tip, until a hero has been picked once.
+  const skillTaught = useSettingsStore((s) => s.taught.heroSkill)
   const event = useGameStore((s) => s.event)
   const endlessRoom = useGameStore((s) => s.endlessRoom)
   const crossroads = useGameStore((s) => s.crossroads)
@@ -76,7 +79,12 @@ export function useShellContext(): ShellContext {
     return {
       stage: 'board',
       selector: 'offers',
-      board: { title: 'Choose your first hero', blurb: 'Your first hero. Recruit more along the road.' },
+      board: {
+        title: 'Choose your first hero',
+        // The pick's one tip (SK1): said once, where the skill first appears,
+        // then the plain line it replaces.
+        blurb: skillTaught ? 'Recruit more along the road.' : 'Each hero comes with a skill, and learns more as it levels up.',
+      },
       layout: 'page',
     }
   }

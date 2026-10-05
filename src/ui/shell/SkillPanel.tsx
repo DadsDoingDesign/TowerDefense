@@ -23,18 +23,8 @@ export function SkillPanel({ hero }: { hero: Sentinel }) {
       <p className="sh-line muted head">
         Skills · {held.length}/{MAX_SKILLS}
       </p>
-      {held.map((k) => (
-        <div className="sh-upgblock" key={k.id}>
-          <div className="sh-upg">
-            <div className="sh-upg-head">
-              <strong>{k.name}</strong>
-              <span className="sh-line muted">{skillLevelLabel(k.level)}</span>
-            </div>
-          </div>
-          <p className="sh-line">{k.desc}</p>
-        </div>
-      ))}
-      {held.length === 0 && <p className="sh-line muted">No skills yet.</p>}
+      {/* What is owed (or next) leads: on a phone the tab is ~150px tall, and
+          "choose it when this wave is over" must not sit under the fold. */}
       {owed ? (
         <div className="sh-upgblock">
           <p className="sh-line accent">
@@ -58,9 +48,21 @@ export function SkillPanel({ hero }: { hero: Sentinel }) {
         </p>
       ) : (
         <p className="sh-line muted">
-          <Icon name="boon" /> Every skill level reached.
+          <Icon name="boon" /> All three skill choices made.
         </p>
       )}
+      {held.map((k) => (
+        <div className="sh-upgblock" key={k.id}>
+          <div className="sh-upg">
+            <div className="sh-upg-head">
+              <strong>{k.name}</strong>
+              <span className="sh-line muted">{skillLevelLabel(k.level)}</span>
+            </div>
+          </div>
+          <p className="sh-line">{k.desc}</p>
+        </div>
+      ))}
+      {held.length === 0 && <p className="sh-line muted">No skills yet.</p>}
     </>
   )
 }

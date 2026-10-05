@@ -71,8 +71,8 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
 
   const level = skillLevelLabel(m.tier)
   const kicker = full
-    ? `${level} skill · ${hero.name} holds ${MAX_SKILLS} — swap one, or take +${amount} to a stat`
-    : `${level} skill · pick one${taught ? '' : ' — it stays for the run'}`
+    ? `${hero.name} holds ${MAX_SKILLS} skills. Pick a ${level} skill to swap in.`
+    : `Pick a ${level} skill${taught ? '.' : ` — ${hero.name} keeps it, and holds up to ${MAX_SKILLS}.`}`
 
   let label: string
   let name: string | undefined
@@ -83,8 +83,9 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
     ready = true
   } else if (chosen && full && !drop) label = 'Choose one to swap out'
   else if (chosen && full && drop) {
-    label = `Swap in ${chosen.name}`
-    name = `Swap ${skillById(drop)?.name} for ${chosen.name}`
+    // The commit names both halves of the swap: what leaves, what arrives.
+    label = `Swap ${skillById(drop)?.name} for ${chosen.name}`
+    name = label
     ready = true
   } else if (chosen) {
     label = `Learn ${chosen.name}`
@@ -135,9 +136,9 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
                   }}
                 >
                   <span className="sh-lvl-opt-name">{k.name}</span>
-                  {/* Names first, so all three fit the panel at once; the tap
-                      that picks one opens what it does. */}
-                  {on && <span className="sh-lvl-opt-blurb">{k.desc}</span>}
+                  {/* The choice has the band to itself (`.sh-detail.choosing`),
+                      so all three say what they do at once, side by side. */}
+                  <span className="sh-lvl-opt-blurb">{k.desc}</span>
                 </button>
               )
             })}
@@ -145,7 +146,7 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
         )}
         {full && chosen && (
           <div className="sh-lvl-swap" role="group" aria-label="Swap out">
-            <p className="sh-line muted">Swap out:</p>
+            <p className="sh-line muted">Swap out one of {hero.name}&rsquo;s skills:</p>
             {held.map((k) => (
               <button
                 key={k.id}
@@ -158,11 +159,12 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
                 {k.name}
               </button>
             ))}
+            {drop && <p className="sh-line muted">{skillById(drop)?.name} — {skillById(drop)?.desc} It leaves when you swap.</p>}
           </div>
         )}
         {bump && (
-          <div className="sh-lvl-bump" role="group" aria-label="Or take a stat bump">
-            <p className="sh-line muted">{offer.length ? 'Or train instead:' : 'Train:'}</p>
+          <div className="sh-lvl-bump" role="group" aria-label="Or take a stat boost">
+            <p className="sh-line muted">{offer.length ? 'Or take a stat boost instead:' : 'Take a stat boost:'}</p>
             {BUMP_STATS.map((st) => (
               <button
                 key={st}

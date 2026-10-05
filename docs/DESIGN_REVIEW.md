@@ -2580,3 +2580,46 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   passes by losing resolution, not by a real fix. Banner 2 pays 239 → 253 marks,
   widening Banner 3's shortfall (−7 → −22). The breather's move spread 1.05 →
   1.34/node (a ranged hero has more places to go).
+
+- **2026-10-05 — SK1 skills: the review loop on the finished UI.** Rendered
+  the whole loop in the running app at 390×844 @2x and 1440×900 @2x (plus
+  320×640 for the choice), `~/fieldwatch-critique/skills/final-*`: first-run
+  and returning hero pick, the difficulty picker, a "+2 levels" flash, the
+  level-5 offer, a milestone reached mid-wave, the full-slots swap and stat
+  boost, a recruit, the Daily pick, the Codex and its skill library, a win
+  that unlocks two cards and climbs a step, and a v12/v5 save resumed into
+  skills. The loop caught, and fixed:
+  (1) **The returning hero pick hid the skill.** The trait tiles ("Blocks 3",
+  "8 thorns") were ~150px parchment squares pinned above the CTA; the scroll
+  body was squeezed to two lines and the skill line sat below the fold. The
+  tiles are gone from the pick; the hero's skill is its own card under the name
+  ("SKILL Hard Hitter · Level 1 — Hits 15% harder."), and the difficulty row
+  now shows without scrolling. Page tiles everywhere draw a 56px picture, not
+  a full-width square (the result screen's Marks/Depth/Gate tiles were the
+  same defect). A hire shows its skill the same way, and its class in the
+  title ("Marek · Fighter").
+  (2) **The skill choice did not fit.** In a third of the Detail band one
+  option and a half showed; "Names first, the tap opens the sentence" meant a
+  player picked blind. While a choice is open it has the band to itself (gear
+  and pack step aside), the band grows to fit and the Stage gives up its
+  floor (96px); the three skills sit side by side as cards with their
+  sentences; on a short phone the spoils row waits. The swap names both
+  halves on the commit ("Swap Charge for Heavy Blows") and the skill being
+  dropped is said in full under the row; the stat bump is "Or take a stat
+  boost instead". Kickers carry one idea each.
+  (3) **The result screen buried the reward.** "New skill unlocked: …" was a
+  faded fourth line under the heroes table. A win now leads with each unlocked
+  skill as its card (kicker "New skill unlocked"), then the Watch XP and the
+  difficulty line.
+  Also: the skill library row drew 33 pips and pushed the Codex page sideways
+  (the count is in its sub now); a milestone reached mid-wave says "A skill to
+  choose when this wave is over" on the hero's Stats and Skills tabs (the
+  Skills tab leads with what is owed); the hero pick's one tip is its subtitle
+  ("Each hero comes with a skill, and learns more as it levels up.") until the
+  first hero is chosen. A Whales conformance pass flagged spacing off the
+  4/8/10/12 scale on the new cards (fixed) and "Unlock by playing." as no
+  path (now "Unlocks at random as your Watch level rises."). Benchmark: the
+  choice now reads like Slay the Spire's card reward / Hades' boon pick —
+  three cards, each saying what it does, one confirm — rather than a list of
+  names. Scorecard: readability 4/5 (320px phones still scroll the swap row
+  into view), hierarchy 4/5, polish 4/5.

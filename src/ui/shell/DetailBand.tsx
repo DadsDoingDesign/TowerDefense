@@ -78,9 +78,14 @@ import { useShown } from './staging'
 export function DetailBand({ offers }: { offers: Offer[] }) {
   // LS3: gear and the pack arrive with the first win's spoils. Until then the
   // context panel has the band to itself (`.sh-detail.no-gear`).
-  const gear = useShown('gear')
+  const shown = useShown('gear')
+  // SK1: a skill choice has the band to itself — three skills, a swap row and
+  // a stat bump do not fit a third of a phone, and gear is not what is being
+  // decided. The gear and pack return the moment the choice is made or put off.
+  const choosing = useSkillChoiceOpen()
+  const gear = shown && !choosing
   return (
-    <section className={`sh-detail${gear ? '' : ' no-gear'}`} id="sh-detail-panels">
+    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}`} id="sh-detail-panels">
       <ContextPanel offers={offers} />
       {gear && <GearColumn />}
       {gear && <PackColumn />}
@@ -393,6 +398,19 @@ function WaveBeatBar({ status }: { status: 'cleared' | 'defeated' }) {
  */
 const strandedInBattle = (s: Parameters<typeof canStartWave>[0]): boolean =>
   s.screen === 'battle' && s.runPhase === 'active' && !s.engine && !s.lastResult && !canStartWave(s)
+
+/** SK1: the Context panel is showing a hero's skill choice (see `ContextPanel`). */
+function useSkillChoiceOpen(): boolean {
+  const selection = useGameStore((s) => s.shellSelection)
+  const hero = useGameStore((s) => (s.shellSelection?.kind === 'hero' ? s.roster.find((h) => h.id === s.shellSelection!.id) : undefined))
+  const live = useGameStore(waveLive)
+  const later = useLevelUps((s) => s.later)
+  const screen = useGameStore((s) => s.screen)
+  const focusedNode = useMapFocus((s) => s.nodeId)
+  const stranded = useGameStore(strandedInBattle)
+  if (stranded || (screen === 'map' && focusedNode) || selection?.kind !== 'hero' || !hero) return false
+  return levelUpOpen(hero) && !live && !later[hero.id]
+}
 
 function ContextPanel({ offers }: { offers: Offer[] }) {
   const selection = useGameStore((s) => s.shellSelection)
@@ -936,6 +954,8 @@ function HeroStats({ hero }: { hero: Sentinel }) {
   // every enchantment on its gear, mutations, team keepsakes) lands in `p.mods`.
   const abilities = describeMods(p.mods)
   const skills = (hero.skills ?? []).map((id) => skillById(id)?.name).filter((n) => !!n)
+  const owed = levelUpOpen(hero)
+  const live = useGameStore(waveLive)
   /*
    * Heroes have no HP and are never hit. Thorns grind what a hero HOLDS, so
    * the row only means something on a blocker. `p.mods` is the fully merged
@@ -1011,6 +1031,13 @@ function HeroStats({ hero }: { hero: Sentinel }) {
       {skillsShown && skills.length > 0 && (
         <p className="sh-line accent">
           <Icon name="boon" /> Skills: {skills.join(' · ')}
+        </p>
+      )}
+      {/* SK1: a milestone reached mid-wave wears its badge; the choice itself
+          opens between rounds. Said here too, so a tap on the badge answers. */}
+      {owed && (
+        <p className="sh-line muted">
+          <Icon name="boon" /> {live ? 'A skill to choose when this wave is over.' : 'A skill to choose.'}
         </p>
       )}
 
