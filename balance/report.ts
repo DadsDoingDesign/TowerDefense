@@ -74,7 +74,7 @@ import {
   type RunOutcome,
 } from './runsim'
 import {
-  affixItem,
+  withMainAffix,
   AURA_TRIO,
   POST,
   bestSlots,
@@ -882,7 +882,7 @@ if (want(4)) {
     const deltas = {} as Record<ScenarioKey, number>
     for (const k of SCEN_KEYS) {
       const b = AFFIX_SCENARIOS[k].build
-      const withAffix: Sentinel = { ...b, equipment: { ...b.equipment, mainHand: affixItem(id, ench) } }
+      const withAffix: Sentinel = withMainAffix(b, id, ench)
       deltas[k] = benchStop(withAffix, k) - affixBase[k]
     }
     affixRows.push({ id, home: AFFIX_HOME[id], deltas })
@@ -1581,12 +1581,12 @@ if (want(10)) {
   for (const [id, e] of curseFound) {
     const dPhys =
       benchStop(
-        { ...AFFIX_SCENARIOS.phys.build, equipment: { ...AFFIX_SCENARIOS.phys.build.equipment, mainHand: affixItem(id, e) } },
+        withMainAffix(AFFIX_SCENARIOS.phys.build, id, e),
         'phys',
       ) - affixBase.phys
     const dMagic =
       benchStop(
-        { ...AFFIX_SCENARIOS.magic.build, equipment: { ...AFFIX_SCENARIOS.magic.build.equipment, mainHand: affixItem(id, e) } },
+        withMainAffix(AFFIX_SCENARIOS.magic.build, id, e),
         'magic',
       ) - affixBase.magic
     const worst = Math.min(dPhys, dMagic)

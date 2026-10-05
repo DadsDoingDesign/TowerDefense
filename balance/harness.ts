@@ -314,9 +314,21 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
 }
 
 
-/** A single-affix test item: one enchantment, no base stats, so the affix is the variable. */
-export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand'): Item {
-  return { id: `t_${id}`, name: id, slot, rarity: 'epic', base: {}, enchantments: [ench] }
+/**
+ * A single-affix test item: one enchantment, no base stats, so the affix is the
+ * variable. Named by `noun` when it replaces a weapon: since the classless
+ * rework the weapon in hand decides how the hero fights, so a nameless piece in
+ * the main hand would turn the bench hero into a stone-thrower.
+ */
+export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand', noun?: string): Item {
+  return { id: `t_${id}`, name: noun ? `${noun} (${id})` : id, slot, rarity: 'epic', base: {}, enchantments: [ench] }
+}
+
+/** `hero` with `ench` on an affix piece in place of its main hand, keeping its weapon's kind. */
+export function withMainAffix(hero: Sentinel, id: string, ench: Item['enchantments'][number]): Sentinel {
+  const main = hero.equipment.mainHand
+  const noun = main ? itemNoun(main) : undefined
+  return { ...hero, equipment: { ...hero.equipment, mainHand: affixItem(id, ench, main?.slot ?? 'oneHand', noun) } }
 }
 
 function xpForLevelApprox(level: number): number {
@@ -1011,6 +1023,22 @@ const wear = (s: Sentinel, slot: HeroSlot, item: Item): { hero: Sentinel; displa
 const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => wear(s, slot, item).hero
 
 /**
+ * Does wearing this keep the hero's JOB? (The classless rework.) The weapon
+ * now decides what a hero does, and {@link heroDps} reads damage × rate × crit
+ * only — blind to range, splash and holding. Scored on it alone, the modelled
+ * player traded every wand for a sword (a sword's base hit is bigger) and
+ * turned its casters into 96-reach swingers, and dropped shields for quivers.
+ * A player who drafted a caster keeps it casting, so a move counts only when
+ * the hero's style is unchanged (an unarmed hero may take any weapon) and its
+ * hold does not shrink.
+ */
+const keepsJob = (before: Sentinel, after: Sentinel): boolean => {
+  const style = heroStyle(before)
+  if (style && heroStyle(after) !== style) return false
+  return (computeCombat(after).mods.block?.count ?? 0) >= (computeCombat(before).mods.block?.count ?? 0)
+}
+
+/**
  * How much DPS `item` adds to `s` in the best slot it can occupy — measured by
  * the engine's own `computeCombat`, so a physical weapon is worth nothing to a
  * mystic and an off-type stat line cannot masquerade as an upgrade.
@@ -1020,7 +1048,10 @@ export function bestSlotGain(s: Sentinel, item: Item, rules: EquipRules = {}): n
   if (item.keepsake) return 0
   const now = heroDps(s)
   let gain = -Infinity
-  for (const slot of slotsFor(s, item, rules)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
+  for (const slot of slotsFor(s, item, rules)) {
+    const after = withItem(s, slot, item)
+    if (keepsJob(s, after)) gain = Math.max(gain, heroDps(after) - now)
+  }
   return gain
 }
 
@@ -1039,7 +1070,9 @@ export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}
   const now = heroDps(s)
   let best: { slot: HeroSlot; dps: number } | null = null
   for (const slot of slotsFor(s, item, rules)) {
-    const dps = heroDps(withItem(s, slot, item))
+    const after = withItem(s, slot, item)
+    if (!keepsJob(s, after)) continue
+    const dps = heroDps(after)
     if (dps > now && (!best || dps > best.dps)) best = { slot, dps }
   }
   return best ? wear(s, best.slot, item) : { hero: s, displaced: [] }

@@ -288,11 +288,15 @@ describe('every equip path respects the off-hand rule', () => {
     expect(equipAndDisplace(high, sword('s2', 6), TWIN).hero.equipment.offHand?.id).toBe('s2')
     expect(bestSlotGain(high, sword('s2', 6), TWIN)).toBeGreaterThan(0)
     // a two-hander goes in the main hand and empties the off hand
-    const dressed = { ...high, equipment: { ...high.equipment, offHand: shield() } }
+    // (a Quiver, not a shield: the model never trades away a hold)
+    const dressed = { ...high, equipment: { ...high.equipment, offHand: mk('quiver', 'Quiver', 'offHand') } }
     const r = equipAndDisplace(dressed, mk('gs', 'Greatsword', 'twoHand', { physDamage: 60 }), TWIN)
     expect(r.hero.equipment.mainHand?.id).toBe('gs')
     expect(r.hero.equipment.offHand).toBeNull()
-    expect(r.displaced.map((i) => i.id).sort()).toEqual(['main', 'shield'])
+    expect(r.displaced.map((i) => i.id).sort()).toEqual(['main', 'quiver'])
+    // …and a shield's hold is kept: the same swap with a shield is refused
+    const shielded = { ...high, equipment: { ...high.equipment, offHand: shield() } }
+    expect(equipAndDisplace(shielded, mk('gs2', 'Greatsword', 'twoHand', { physDamage: 60 }), TWIN).hero).toBe(shielded)
   })
 })
 
