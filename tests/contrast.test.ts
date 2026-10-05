@@ -113,56 +113,45 @@ describe('icon size tokens are whole multiples of the 16px sprite', () => {
 })
 
 /*
- * H1-2 (Whales UI plan): the Watchtower menu overlays the live attract battle.
- * The art moves and, since Q12, the scene is drawn from the day's seed — a
- * different field, foe and company every day — so these hold the menu's text
- * against PURE WHITE art, the brightest ground ANY frame of ANY day's scene
- * could put under it, rather than against one render. (Real loops of several
- * dates are also measured frame by frame in the DESIGN_REVIEW.md log; their
- * worst frames are far darker than this.)
+ * The menu over the trade map (the mercenary company, build step 4). The map
+ * moves, glows and differs with every save's standing, so the menu's text is
+ * held against PURE WHITE under its panels and washes — the brightest ground
+ * any frame of any map could put there — rather than against one render.
  */
-describe('the menu over its cinematic backdrop (H1-2)', () => {
-  const pageCss = readFileSync(join(ROOT, 'src/styles/page.css'), 'utf8')
-  const wideCss = readFileSync(join(ROOT, 'src/styles/shell-wide.css'), 'utf8')
+describe('the menu over the trade map', () => {
+  const menuCss = readFileSync(join(ROOT, 'src/styles/menu.css'), 'utf8')
   const WHITE: RGB = [255, 255, 255]
   const ruleBg = (selector: string): { rgb: RGB; a: number } => {
-    const at = pageCss.indexOf(`${selector} {`)
-    if (at < 0) throw new Error(`${selector} not found in page.css`)
-    const body = pageCss.slice(at, pageCss.indexOf('}', at))
+    const at = menuCss.indexOf(`${selector} {`)
+    if (at < 0) throw new Error(`${selector} not found in menu.css`)
+    const body = menuCss.slice(at, menuCss.indexOf('}', at))
     const m = body.match(/background:\s*(rgba\([^)]*\))/)
     if (!m) throw new Error(`${selector} has no rgba background`)
     return rgba(m[1])
   }
-  const alphaAt = (css: string, re: RegExp): number => {
-    const m = css.match(re)
-    if (!m) throw new Error(`stop not found: ${re}`)
-    return +m[1]
-  }
-  const ground = hex(token('bg'))
 
-  it('row labels and values clear 4.5:1 on a translucent row over pure white', () => {
-    const row = over(ruleBg('.pg.has-backdrop .pg-row'), WHITE)
-    for (const name of ['text', 'accent']) {
-      expect(ratio(hex(token(name)), row), `--${name} on a row over white`).toBeGreaterThanOrEqual(4.5)
-    }
+  it('the tiles clear 4.5:1 over pure white', () => {
+    const tile = over(ruleBg('.mn-tile'), WHITE)
+    for (const name of ['text', 'muted']) expect(ratio(hex(token(name)), tile), `--${name} on a tile`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the records pill clears 4.5:1 over pure white', () => {
-    const pill = over(ruleBg('.pg.has-backdrop .pg-records'), WHITE)
-    for (const name of ['muted', 'accent']) {
-      expect(ratio(hex(token(name)), pill), `--${name} on the records pill`).toBeGreaterThanOrEqual(4.5)
-    }
+  it('the road labels clear 4.5:1 over pure white', () => {
+    const pill = over(ruleBg('.tm-pill::after'), WHITE)
+    for (const name of ['text', 'muted', 'accent-text']) expect(ratio(hex(token(name)), pill), `--${name} on a label`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the tagline clears 4.5:1 and the wordmark 3:1 (large) under the washes over pure white', () => {
-    // Phone: the title wash at the tagline's depth (it only gets darker above).
-    const phone = alphaAt(pageCss, /rgba\(32, 23, 17, ([\d.]+)\) 112px/)
-    // Desk: the right-hand shade across the menu column.
-    const desk = alphaAt(wideCss, /rgba\(32, 23, 17, ([\d.]+)\) calc\(var\(--cine-col\) \+ 96px\)/)
-    for (const [where, a] of [['phone', phone], ['desk', desk]] as const) {
-      const g = over({ rgb: ground, a }, WHITE)
-      expect(ratio(hex(token('text')), g), `tagline (--text) on the ${where} wash`).toBeGreaterThanOrEqual(4.5)
-      expect(ratio(hex(token('accent')), g), `wordmark (--accent) on the ${where} wash`).toBeGreaterThanOrEqual(3)
-    }
+  it('the charter line clears 4.5:1 over pure white', () => {
+    const line = over(ruleBg('.mn-charter'), WHITE)
+    for (const name of ['text', 'muted']) expect(ratio(hex(token(name)), line), `--${name} on the charter line`).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the tagline clears 4.5:1 and the wordmark 3:1 (large) under the head wash over pure white', () => {
+    const m = menuCss.match(/\.mn-head \{[^}]*rgba\((\d+), (\d+), (\d+), ([\d.]+)\) (\d+)%/)
+    if (!m) throw new Error('the head wash was not found')
+    const wash = over({ rgb: [+m[1], +m[2], +m[3]], a: +m[4] }, WHITE)
+    expect(ratio(hex(token('text')), wash)).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('accent')), wash)).toBeGreaterThanOrEqual(3)
+    // The wash holds solid past the tagline (it ends ~95px into a ~150px head).
+    expect(+m[5]).toBeGreaterThanOrEqual(64)
   })
 })

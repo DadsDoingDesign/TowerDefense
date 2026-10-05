@@ -567,7 +567,7 @@ function escapeOffer(st: St): Offer {
 type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
-export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
+export type MetaView = 'menu' | 'perks' | 'settings' | 'codex' | 'militia'
 
 /**
  * ---------------------------------------------------------------------------
@@ -1144,7 +1144,22 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     body: ['Back to the menu.'],
     action: { label: 'Back', run: () => setView('menu') },
   }
-  if (view === 'settings') return [back, ...settingsOffers(settings)]
+  if (view === 'settings') {
+    // Your militia's name and banner (build step 4) — changed here, once raised.
+    const m = meta.militia
+    const militia: Offer = {
+      id: 'militia',
+      title: 'Your militia',
+      sub: m ? m.name : 'Not named yet',
+      icon: 'banner',
+      immediate: true,
+      body: ['Your militia’s name and banner. The banner flies over your wagons and your HQ.'],
+      action: { label: m ? 'Change' : 'Raise your banner', run: () => setView('militia') },
+    }
+    return [back, ...(m || !staged ? [militia] : []), ...settingsOffers(settings)]
+  }
+  // The banner picker draws itself (RootShell); it has no offers.
+  if (view === 'militia') return [back]
   if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   if (view === 'perks') {
     // Priced in gold, paid from the bank (gold is the only currency). Build

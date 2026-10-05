@@ -674,15 +674,6 @@ h1.sh-brand {
   flex-basis: 100%;
 }
 
-/* The menu: 64px of air (two 32px band pads) sat between the subtitle and the
-   key art (Phase 2). The art is the head's picture, so it sits close under it;
-   the frame is flexible, so the reclaimed height goes to the art. */
-.pg:has(.pg-body > .pg-art) .pg-head {
-  padding-bottom: 12px;
-}
-.pg-body:has(> .pg-art) {
-  padding-top: 4px;
-}
 /* Where the receipt sits: above the pinned CTA on a page (it used to land on
    the serif title), just under the header on the bands. Never over a control
    that takes a tap — and it takes none itself. */

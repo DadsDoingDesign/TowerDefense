@@ -1,5 +1,24 @@
 # Fieldwatch — next steps (paused 2026-09-30)
 
+## Update 2026-10-05: the mercenary company, step 4 (trade-map menu, militia banner)
+
+Built in parallel with step 3 (the HQ offices and the item pull), per `docs/MERCENARY_COMPANY.md` § Build order
+step 4:
+
+- **The menu is the trade map** (`src/ui/attract/`: `mapRules.ts` pure geometry and traffic, `paintMap.ts` the
+  pixels, `TradeMap.tsx` the canvas and labels; the layout `src/ui/shell/MenuScreen.tsx` + `src/styles/menu.css`).
+  It reads standing, the market of the day and `standing.charterProgress` (a locked "Sovereign Route" line until
+  step 5) through existing selectors; the menu's tiles are whatever `offers.ts` lists, so the HQ / Sealed Crates
+  rows step 3 adds appear as tiles with no menu change.
+- **The attract battle is retired**, with the still key art (`MenuKeyArt`, `keyart.png`) and its CSS.
+- **Your militia**: a generated name with a re-roll (no free text) and a banner (4 shapes, 6 dark field colours,
+  3 emblems) — `src/game/run/militia.ts`, `src/game/data/banner.ts`, `metaStore.militia` (validated on load),
+  the picker `src/ui/shell/MilitiaScreen.tsx` (`MetaView 'militia'`). Raised after the first finished contract
+  from one tip on the menu; changed later from Settings. **Step 3's HQ can link to it** with `setMetaView('militia')`.
+- **The wagon** now stands in the forest margin where the road leaves the field, with the banner beside it
+  (`render/caravan.caravanLayout`, held by `tests/caravan.test.ts` on every field, twin, challenge and hazard
+  layout).
+
 ## Update 2026-10-05: the mercenary company, step 2 (economy core)
 
 Built on `claude/whales-ui-critique-plan` (from `6506780`), per `docs/MERCENARY_COMPANY.md` § Build order step 2:

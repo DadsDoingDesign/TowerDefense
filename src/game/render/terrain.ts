@@ -39,7 +39,7 @@ import { darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
  * Sized for the Stage's extremes (a live wave on a 430×932 phone, the setup
  * Stage at 320×568, a 32:9 desk). The side the horde ENTERS from keeps only a
  * short run: `BattleCanvas` never shows past the field's edge there (the
- * column walks in from off-screen), and the attract camera stays close. The
+ * column walks in from off-screen). The
  * Gate's side and the two flanks get the room.
  */
 export interface WorldBox {
@@ -101,10 +101,10 @@ export function drawnRoad(map: GameMap): Vec2[] {
  * it is also the surface every sprite draws into at exactly 1.000 scale — and
  * blitted with a single `drawImage`.
  *
- * Two bakes, most recent first (Portrait battlefields): the menu's attract
- * battle draws a landscape field while a phone battle is fought on a portrait
- * twin, and a one-entry cache re-baked (and re-graded, pixel by pixel) the
- * whole map on every trip between them.
+ * Two bakes, most recent first (Portrait battlefields): a screen turned
+ * across the portrait breakpoint swaps a field for its twin and back, and a
+ * one-entry cache re-baked (and re-graded, pixel by pixel) the whole map on
+ * every trip between them.
  */
 const TERRAIN_CACHE_SIZE = 2
 let terrainCache: { key: string; canvas: HTMLCanvasElement }[] = []

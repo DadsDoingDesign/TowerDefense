@@ -50,6 +50,7 @@ import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
+import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { companyById } from '../game/data/companies'
 import { drawCaravan } from '../game/render/renderer'
@@ -547,7 +548,8 @@ export function BattleCanvas() {
         const hp = st.engine ? st.hud.baseHp : st.baseHp
         const max = (st.engine ? st.hud.maxBaseHp : st.maxBaseHp) || 1
         const co = st.contract ? companyById(st.contract.company).color : '#e0ac4c'
-        drawCaravan(ctx, map, { color: co, cargo: Math.max(0, hp) / max })
+        // Your militia's banner flies beside the wagon (build step 4).
+        drawCaravan(ctx, map, { color: co, cargo: Math.max(0, hp) / max, banner: useMetaStore.getState().militia })
       }
 
       const liveEngine = st.engine

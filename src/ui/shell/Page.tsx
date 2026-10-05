@@ -27,7 +27,6 @@ export function PageLayout({
   foot,
   strip,
   tone,
-  backdrop,
 }: {
   title: string
   subtitle?: string
@@ -90,15 +89,9 @@ export function PageLayout({
   strip?: ReactNode
   /** A distinct frame for an elite's spoils (Phase 2). */
   tone?: 'elite'
-  /**
-   * H1-2: a full-bleed layer painted behind every band — the Watchtower menu's
-   * live battle. The page gets `has-backdrop` and its bands overlay it.
-   */
-  backdrop?: ReactNode
 }) {
   return (
-    <div className={`pg${tone ? ` tone-${tone}` : ''}${backdrop ? ' has-backdrop' : ''}`}>
-      {backdrop}
+    <div className={`pg${tone ? ` tone-${tone}` : ''}`}>
       <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
         <h1 className="t-title" tabIndex={-1}>
           {title}
