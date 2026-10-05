@@ -1,13 +1,13 @@
 # Fieldwatch — the mercenary company (design spec, draft 1)
 
-Status: the designer's direction as of 2026-10-05. Numbers are placeholders, to be tuned "to what makes the game fun". **Open** marks a decision still to make.
+Status: the designer's direction as of 2026-10-05 (draft 2: the push-further list approved, open questions defaulted). Numbers are placeholders, to be tuned "to what makes the game fun". **Open** marks a decision still to make.
 
 ## Premise
 You run a private militia hired by trade companies to clear their trade routes of raiders. Each company trades different goods: Art, Spice, Metals & Stones, and more. Playing for a company raises your **standing** with it.
 
 ## One currency: gold
 - Gold is the only currency. It pays for services, the HQ, cargo stakes and item pulls. Marks and dust are gone.
-- **Open:** does your whole bank come with you into a run (merchants, repairs), or do you set out with a purse? See *Overlooked* 1.
+- **Default (overridable):** you set out with a **purse** you choose; the bank stays home and earns interest; what's left in the purse returns at the end.
 
 ## Contracts (a run = one company's route)
 - **Escort contract (no stake):** costs nothing.
@@ -30,7 +30,7 @@ You run a private militia hired by trade companies to clear their trade routes o
 - **Skills come only from playing.**
   - Each **standing level** with a company unlocks a random skill. Its rarity scales with how high that standing is.
   - **Finishing a contract** unlocks a skill and an item.
-  - **Open:** does a hero levelling up inside a run also count? Today, in-run levels 5/10/15 offer a choice from skills you've already unlocked.
+  - **Default:** "levelling up" means standing levels. In a run, hero levels 5/10/15 keep offering choices from skills you've already unlocked.
 - **Items** come from contracts (completion, and the stake's item chances) or from an **item pull**.
   - An item pull spends gold on a random item unlock. Your standing with companies lifts the rarity.
   - A duplicate becomes a **bonus item in your next run**.
@@ -63,7 +63,7 @@ You run a private militia hired by trade companies to clear their trade routes o
 1. **Bank vs. run purse.**
    - If the whole bank funds merchants mid-run, a rich player buys everything and runs get easy. That fights the stakes, and it fights interest too (spending drains the deposit).
    - Proposed: set out with a purse you choose. The bank stays home and earns interest. What's left in the purse returns at the end.
-2. **Hoarding vs. staking.** Interest must never beat staking, or the best play becomes "never stake". Cap interest per run, or pay interest only on completed contracts. The spec already says "complete run"; confirm whether that means a finished contract.
+2. **Hoarding vs. staking.** Default: interest pays only on finished contracts, and is capped so it never beats staking.
 3. **Never broke.** The free escort contract plus per-city pay means a losing streak still earns. Keep it so.
 4. **The pull's tone.** It's an in-game gamble with no real money: keep it that way, show the odds plainly, and handle duplicates well (the bonus item does this).
 5. **The charter's unlock condition** ("everything unlocked") is a long road. Show progress ("Charter: 74% of the catalogue") so it reads as a goal, not a secret.
@@ -72,10 +72,18 @@ You run a private militia hired by trade companies to clear their trade routes o
 8. **Removing the Daily** loses the "same seed for everyone" feature. Fine for now; the charter could have a weekly seed later.
 9. **First run (LS3):** a free escort contract from one company. Stakes, pulls and the HQ open after the first finished contract, each with one tip.
 
-## Proposed earlier, awaiting a decision
-- **The Gate is the caravan:** leaked enemies steal crates, so less sells at the next city.
-- **Cash out or press on** at each city.
-- **Market prices of the day** (needs rethinking now that the Daily is gone).
-- **Each route has its own ground:** Spice through wildfire, Metals & Stones through quarry boulders, Art along flooded canals.
-- **Your militia's name and banner.**
-- **One-line contract letters.**
+## Approved (2026-10-05: "i loove all these … go")
+1. **The Gate is the caravan.** What you defend is the cargo. Leaked enemies steal crates, so less sells at the next city. Every battle ties to the money.
+2. **Cash out or press on** at each city. Sell everything and head home, or keep going for the bigger payout. This is the push-your-luck moment.
+3. **Market prices.** Each day one good pays more ("Spice ×1.3 today"). It applies to every contract, now that the Daily is gone, and pulls players around the map.
+4. **Each route has its own ground.** Spice runs through wildfire country, Metals & Stones through quarries with boulders, Art along flooded canals. The existing map challenges become company flavour.
+5. **Your militia's banner.** Name your militia and pick a banner that flies on your Gate.
+6. **Contract letters.** One line of flavour before a run ("The Saffron Company seeks an escort to Saltmarsh…").
+
+## Build order
+1. Classless heroes and item unlocks (in progress).
+2. The economy core: gold only, purse/bank, companies and standing, contracts and checkpoint pay, stakes, cash out or press on, the Gate as caravan, market prices, route ground, contract letters. Endless and the Daily are removed.
+3. HQ offices (HR, Finance, Operations) and the item pull.
+4. The trade-map menu (from the chosen mockup direction), and the militia name and banner.
+5. The endgame charter.
+6. One tuning pass.
