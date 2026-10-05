@@ -39,7 +39,7 @@ result. Append a short note to the review log when you're done.
   no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.
 - Run store: `src/state/gameStore.ts` is a barrel — import `useGameStore` and
   the constants from there. The store is `src/state/game/`: ONE zustand store
-  combined from action slices (`runSlice`, `endlessSlice`, `battleSlice`,
+  combined from action slices (`runSlice`, `contractSlice`, `battleSlice`,
   `eventsSlice`, `rosterSlice`, `shellSlice`) over the data in `types.ts`;
   RNG streams, the hub flag, the wave-beat timer and session ownership live in
   `runtime.ts`; snapshot autosave in `persistence.ts`; settle-once in
@@ -64,9 +64,16 @@ result. Append a short note to the review log when you're done.
   BattleCanvas) needs lives in `src/styles/app.css`.
 - Skills (SK1): the library `src/game/data/skills.ts`; in-run rules (offers,
   slots, swap/bump, the hero pick, a hire's skill, old-save mapping)
-  `src/game/run/skills.ts`; Watch XP/levels, card unlocks and difficulty steps
+  `src/game/run/skills.ts`; the generic unlock roll (`rollFromPool`)
   `src/game/run/watch.ts`. Every skill roll is a fresh RNG hashed from (run
   seed, purpose, hero id) — never a draw on a run stream.
+- The mercenary company (spec: `docs/MERCENARY_COMPANY.md`): gold is the only
+  currency (purse for the run, bank at home, `metaStore.bank`). Companies
+  `src/game/data/companies.ts`; contracts, stakes, city pay and cash-out
+  `src/game/run/contracts.ts`; standing per company `src/game/run/standing.ts`;
+  the store side is `contractSlice`. A hero has no class: its role comes from
+  its gear (`src/game/data/gear.ts`); `archetype` survives only as an art key and
+  in old-save migration. The Daily and Endless modes were removed.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
