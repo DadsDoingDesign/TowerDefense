@@ -22,7 +22,7 @@
  *  - otherwise two battles in three, split evenly between the rules.
  */
 import { hashSeed, RNG } from '../core/rng'
-import { TERRAIN_RULE_IDS } from '../data/terrain'
+import { OPEN_GROUND } from '../data/companies'
 import type { TerrainRuleId } from '../types'
 import { calmGround, calmTerrain } from './firstRun'
 
@@ -34,6 +34,14 @@ import { calmGround, calmTerrain } from './firstRun'
  */
 export interface GroundOpts {
   firstRun?: boolean
+  /**
+   * The route's ground (the mercenary company): the map challenges a battle on
+   * this company's road may carry — Wildfire on Peppercorn's, Flooded canals on
+   * Easel House's, and so on (`data/companies.ts`). The draw is the same hash;
+   * only the list it picks from is the route's. Omitted: the open ground every
+   * road used to share (Flooded meadow or Wildfire).
+   */
+  ground?: readonly TerrainRuleId[]
 }
 
 /** Share of eligible battles that carry a map challenge. */
@@ -53,18 +61,8 @@ export function nodeTerrainRule(
   if (calmTerrain(node, !!opts.firstRun)) return null
   const u = unit(runSeed, 'terrain', node.id)
   if (u >= CHALLENGE_SHARE) return null
-  return TERRAIN_RULE_IDS[Math.floor((u / CHALLENGE_SHARE) * TERRAIN_RULE_IDS.length)] ?? null
-}
-
-/**
- * Endless rounds: the first two are plain, a boss round (every 10th) is plain,
- * and the rest follow the same two-in-three draw keyed on the round.
- */
-export function endlessTerrainRule(round: number, runSeed: number): TerrainRuleId | null {
-  if (round <= 2 || round % 10 === 0) return null
-  const u = unit(runSeed, 'terrain', 'endless', round)
-  if (u >= CHALLENGE_SHARE) return null
-  return TERRAIN_RULE_IDS[Math.floor((u / CHALLENGE_SHARE) * TERRAIN_RULE_IDS.length)] ?? null
+  const rules = opts.ground?.length ? opts.ground : OPEN_GROUND
+  return rules[Math.floor((u / CHALLENGE_SHARE) * rules.length)] ?? null
 }
 
 /**
@@ -83,9 +81,17 @@ export function nodeHazardSeed(node: { id: string; type: string; layer?: number 
   return hashSeed(runSeed, 'hazard', node.id)
 }
 
+const FIGHTS = new Set(['battle', 'elite', 'boss', 'miniboss'])
+
+/** Endless rounds (removed with Endless in the next phase). */
+export function endlessTerrainRule(round: number, runSeed: number): TerrainRuleId | null {
+  if (round <= 2 || round % 10 === 0) return null
+  const u = unit(runSeed, 'terrain', 'endless', round)
+  if (u >= CHALLENGE_SHARE) return null
+  return OPEN_GROUND[Math.floor((u / CHALLENGE_SHARE) * OPEN_GROUND.length)] ?? null
+}
+
 /** Endless rounds lay their ground from the round, on the same terms. */
 export function endlessHazardSeed(round: number, runSeed: number): number {
   return hashSeed(runSeed, 'hazard', 'endless', round)
 }
-
-const FIGHTS = new Set(['battle', 'elite', 'boss', 'miniboss'])

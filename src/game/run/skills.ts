@@ -67,19 +67,33 @@ export function nextMilestone(s: Pick<Sentinel, 'skillPicks'>): Milestone | null
   return i >= SKILL_MILESTONES.length ? null : { index: i, level: SKILL_MILESTONES[i], tier: (i + 1) as SkillLevel }
 }
 
-/** Draw `n` distinct entries of `src` off `rng`, kept in `src`'s order. */
+/**
+ * Draw `n` distinct entries of `src` off `rng`, kept in `src`'s order. An
+ * entry `src` holds more than once (a company's piece on its own route,
+ * `contracts.weightPool`) is that many times as likely to be drawn, and every
+ * copy leaves with it. With no repeats this is the draw it always was.
+ */
 export function drawDistinct<T>(rng: RNG, src: readonly T[], n: number): T[] {
-  const left = [...src]
+  let left = [...src]
   const picked = new Set<T>()
-  while (picked.size < n && left.length) picked.add(left.splice(Math.floor(rng.next() * left.length), 1)[0])
-  return src.filter((x) => picked.has(x))
+  while (picked.size < n && left.length) {
+    const x = left[Math.floor(rng.next() * left.length)]
+    picked.add(x)
+    left = left.filter((y) => y !== x)
+  }
+  return src.filter((x, i) => picked.has(x) && src.indexOf(x) === i)
 }
 
-/** The skills of `tier` in `pool`, in library order (any hero may hold any skill). */
+/**
+ * The skills of `tier` in `pool`, in library order (any hero may hold any
+ * skill) — each as many times as the pool holds it, so a weighted pool deals
+ * by weight. An unweighted pool lists each once, as it always did.
+ */
 export function poolFor(pool: readonly string[], tier: SkillLevel, except: readonly string[] = []): Skill[] {
-  const have = new Set(pool)
+  const count = new Map<string, number>()
+  for (const id of pool) count.set(id, (count.get(id) ?? 0) + 1)
   const skip = new Set(except)
-  return ALL_SKILLS.filter((k) => k.level === tier && have.has(k.id) && !skip.has(k.id))
+  return ALL_SKILLS.flatMap((k) => (k.level === tier && !skip.has(k.id) ? Array<Skill>(count.get(k.id) ?? 0).fill(k) : []))
 }
 
 /**

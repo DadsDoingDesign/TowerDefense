@@ -266,8 +266,13 @@ export interface TowerSlot {
 /** What fills a blocked deployment tile (G1-2, `data/terrain.ts`). */
 export type TerrainKind = 'lane' | 'forest' | 'rock' | 'water' | 'fire'
 
-/** A map challenge, as a terrain rule (G1-2): what the battle's field adds. */
-export type TerrainRuleId = 'flooded' | 'wildfire'
+/**
+ * A map challenge, as a terrain rule (G1-2): what the battle's field adds.
+ * `quarry` and `hexed` are route ground (the mercenary company): they add no
+ * authored pieces, they deepen the seeded layout — more boulders on Ironvein's
+ * quarry road, more cursed ground on Moonquill's (`data/hazards.ROUTE_HAZARDS`).
+ */
+export type TerrainRuleId = 'flooded' | 'wildfire' | 'quarry' | 'hexed'
 
 /**
  * One tile of the deployment grid, open or blocked. `col`/`row` are in the
