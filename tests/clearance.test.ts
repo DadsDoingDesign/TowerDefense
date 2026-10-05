@@ -13,16 +13,16 @@ import {
   clearanceOverlay,
   clearanceTiles,
   crowds,
-  isMelee,
-  isMeleeArchetype,
   parseTileId,
   ROOM_COPY,
   tileId,
   withinClearance,
 } from '../src/game/data/terrain'
 import { GameEngine, TICK } from '../src/game/engine/engine'
+import { isMelee } from '../src/game/engine/melee'
+import { ITEM_BASES, itemSwings } from '../src/game/data/items'
 import { carryPlacements, emptyPlacements, meleeOf } from '../src/game/run/map'
-import type { Archetype, GameMap, Sentinel } from '../src/game/types'
+import type { Archetype, GameMap, Item, ItemSlot, Sentinel } from '../src/game/types'
 import { STANDARD_RUN } from '../src/state/daily'
 import { useGameStore } from '../src/state/gameStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
@@ -30,12 +30,30 @@ import { useMetaStore } from '../src/state/metaStore'
 import { captureRun, migrateSnapshot } from '../src/state/runSnapshot'
 
 /*
- * A Fighter's clearance (the designer: "maybe melee towers have this rule since
- * they swing around them"). Only a melee hero keeps the 8 tiles round it clear;
- * ranged heroes may stand side by side. Pinned here: who is melee, the rule in
- * both directions, the store, save loading, the breather move, and the tiles
- * the placement overlay lights and outlines.
+ * A swinger's clearance (the designer: "maybe melee towers have this rule since
+ * they swing around them", then "equiping a sword might make it unsafe to use a
+ * tower where it is"). Only a hero that swings — a sword, axe, greatsword or
+ * warhammer in hand, or a skill that says so — keeps the 8 tiles round it
+ * clear; ranged heroes may stand side by side. Pinned here: who is melee, the
+ * rule in both directions, the store, the breather move, and the tiles the
+ * placement overlay lights and outlines. Conflicts, the gear lock and the
+ * skill hook are `weaponClearance.test.ts`.
  */
+
+/** A plain item named by its base noun. */
+const gear = (noun: string, slot: ItemSlot = ITEM_BASES[noun].slot): Item => ({
+  id: `it-${noun}-${Math.random().toString(36).slice(2, 8)}`,
+  name: `Plain ${noun}`,
+  slot,
+  rarity: 'common',
+  base: {},
+  enchantments: [],
+})
+/** A fresh hero holding `noun` in the main hand (nothing when null). */
+const holding = (a: Archetype, noun: string | null): Sentinel => {
+  const h = createSentinel(a)
+  return { ...h, equipment: { mainHand: noun ? gear(noun) : null, offHand: null, body: null } }
+}
 
 beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 3 } }))
 afterEach(() => setLayoutOrientation(null))
@@ -54,45 +72,58 @@ function pairOf(map: GameMap, avoid: string[] = []): [string, string] {
 }
 
 describe('who is melee', () => {
-  it('the Fighter line, and only it: the roots that hold enemies, at a close reach', () => {
-    const melee = BASE_ARCHETYPE_NODES.filter((n) => isMeleeArchetype(n.archetype)).map((n) => n.id)
-    expect(melee).toEqual(['fighter'])
-    for (const n of BASE_ARCHETYPE_NODES) {
-      // A melee root holds (block) and reaches ~100px; a ranged root does neither.
-      expect(n.mods?.block != null).toBe(isMeleeArchetype(n.archetype))
-      if (isMeleeArchetype(n.archetype)) expect(n.base!.range).toBeLessThanOrEqual(105)
-      else expect(n.base!.range).toBeGreaterThan(140)
-    }
-    expect(isMeleeArchetype('nope')).toBe(false)
+  it('the swinging weapons: Sword, Axe, Greatsword, Warhammer — and nothing else', () => {
+    const swing = Object.entries(ITEM_BASES).filter(([noun, b]) => itemSwings({ name: `Rare ${noun}`, slot: b.slot })).map(([n]) => n)
+    expect(swing.sort()).toEqual(['Axe', 'Greatsword', 'Sword', 'Warhammer'])
+    // Every swinger is a physical weapon of a main-hand or two-hand grip; the
+    // knife (either grip) and the bow do not swing.
+    for (const n of swing) expect(['main', 'twoHand']).toContain(ITEM_BASES[n].grip)
+    expect(itemSwings({ name: 'Rare Dagger', slot: 'oneHand' })).toBe(false)
+    expect(itemSwings({ name: 'Rare Bow', slot: 'twoHand' })).toBe(false)
+    // A noun only classifies an item of its own kind (a body piece "of the Sword" is not one).
+    expect(itemSwings({ name: 'Sword Mail', slot: 'body' })).toBe(false)
+    expect(itemSwings(null)).toBe(false)
   })
 
-  it('evolutions and specs never change it: every node keeps its root, and holds iff its root does', () => {
+  it('melee comes from what the hero holds, not its class', () => {
+    for (const a of ['fighter', 'rogue', 'mystic'] as const) {
+      expect(isMelee(holding(a, 'Sword'))).toBe(true)
+      expect(isMelee(holding(a, 'Warhammer'))).toBe(true)
+      expect(isMelee(holding(a, 'Bow'))).toBe(false)
+      expect(isMelee(holding(a, 'Dagger'))).toBe(false)
+      expect(isMelee(holding(a, 'Staff'))).toBe(false)
+      expect(isMelee(holding(a, 'Wand'))).toBe(false)
+      // Unarmed, or a shield alone: nothing to swing.
+      expect(isMelee(holding(a, null))).toBe(false)
+      expect(isMelee({ ...holding(a, null), equipment: { mainHand: null, offHand: gear('Shield'), body: null } })).toBe(false)
+    }
+    // A sword in the OFF hand (the Twinblade Harness) is still a sword being swung.
+    expect(isMelee({ ...holding('rogue', 'Dagger'), equipment: { mainHand: gear('Dagger'), offHand: gear('Sword', 'oneHand'), body: gear('Plate') } })).toBe(true)
+  })
+
+  it('evolutions never change it on their own: the same weapon, the same answer, down every path', () => {
     for (const n of ALL_NODES) {
       const path: string[] = []
       for (let at: string | null = n.id; at; at = getNode(at).parent) path.unshift(at)
-      expect(getNode(path[0]).archetype).toBe(n.archetype)
-      const hero = { ...createSentinel(n.archetype), branchPath: path }
-      expect(isMelee(hero)).toBe(isMeleeArchetype(n.archetype))
-      // The merged lineage holds exactly when the hero is melee.
-      expect(mergeMods(path.map((id) => getNode(id).mods)).block != null).toBe(isMelee(hero))
+      expect(isMelee({ ...holding(n.archetype, 'Sword'), branchPath: path })).toBe(true)
+      expect(isMelee({ ...holding(n.archetype, 'Bow'), branchPath: path })).toBe(false)
     }
   })
 
-  it('nothing else grants a hold to a ranged hero: perks, mutations, relics, gear', () => {
+  it('holding enemies stays the Fighter line\'s, whatever it holds — only the clearance moved', () => {
+    for (const n of BASE_ARCHETYPE_NODES) expect(n.mods?.block != null).toBe(n.archetype === 'fighter')
+    const archer = holding('fighter', 'Bow')
+    expect(isMelee(archer)).toBe(false)
+    expect(mergeMods(archer.branchPath.map((id) => getNode(id).mods)).block).toBeDefined()
+  })
+
+  it('nothing grants a hold to a ranged line: perks, mutations, relics, gear', () => {
     for (const pt of allPerkPoints())
-      for (const perk of pt.options) if (perk.mods.block) expect(isMeleeArchetype(getNode(pt.line).archetype)).toBe(true)
+      for (const perk of pt.options) if (perk.mods.block) expect(getNode(pt.line).archetype).toBe('fighter')
     for (const m of allMutations()) expect(m.mods.block).toBeUndefined()
     for (const m of relicTeamMods(RELICS.map((r) => r.id))) expect(m.block).toBeUndefined()
     const items = readFileSync(join(__dirname, '..', 'src', 'game', 'data', 'items.ts'), 'utf8')
     expect(/\bblock\s*:/.test(items)).toBe(false)
-  })
-
-  it('reads the root of the branch path, the node the attack comes from', () => {
-    const f = createSentinel('fighter')
-    expect(isMelee(f)).toBe(true)
-    expect(isMelee({ ...f, branchPath: ['fighter', 'guard', 'bannerman'] })).toBe(true)
-    expect(isMelee(createSentinel('rogue'))).toBe(false)
-    expect(isMelee(createSentinel('mystic'))).toBe(false)
   })
 })
 
@@ -109,10 +140,10 @@ describe('the rule', () => {
     expect(crowds('c5r5', true, 'c7r6', false)).toBe(false)
   })
 
-  it('the coach says why in plain words, naming the Fighter', () => {
+  it('the coach says why in plain words: the weapon, never the class', () => {
     expect(ROOM_COPY.line.startsWith(ROOM_COPY.name)).toBe(true)
-    expect(ROOM_COPY.line).toMatch(/Fighter/)
-    expect(ROOM_COPY.line).not.toMatch(/at least a tile apart/)
+    expect(ROOM_COPY.line).toMatch(/sword, axe or hammer/)
+    expect(ROOM_COPY.line).not.toMatch(/Fighter/)
   })
 
   it('the clearance is the 3 × 3 block on the lattice, clipped at the grid edge', () => {
@@ -191,7 +222,7 @@ describe('the store', () => {
 
   it('two ranged heroes post side by side; a Fighter may not join them, nor they it', () => {
     start()
-    const [fighter, rogue, mystic] = [createSentinel('fighter'), createSentinel('rogue'), createSentinel('mystic')]
+    const [fighter, rogue, mystic] = [holding('fighter', 'Sword'), holding('rogue', 'Bow'), holding('mystic', 'Wand')]
     useGameStore.setState({ roster: [fighter, rogue, mystic], placements: emptyPlacements(useGameStore.getState().battleMap) })
     const [a, b] = pairOf(safe())
     post(rogue, a)
@@ -215,37 +246,29 @@ describe('the store', () => {
     expect(useGameStore.getState().fieldNote).toMatchObject({ tileId: next.id, kind: 'crowded' })
   })
 
-  it('a save keeps two ranged heroes side by side, and benches whoever stood beside a Fighter', () => {
+  it('a save keeps two ranged heroes side by side', () => {
     start()
-    const [fighter, rogue, mystic] = [createSentinel('fighter'), createSentinel('rogue'), createSentinel('mystic')]
+    const [fighter, rogue, mystic] = [holding('fighter', 'Sword'), holding('rogue', 'Bow'), holding('mystic', 'Wand')]
     const map = safe()
     const [a, b] = pairOf(map)
-    const [c, d] = pairOf(map, [a, b])
     useGameStore.setState({ roster: [fighter, rogue, mystic], placements: { ...emptyPlacements(useGameStore.getState().battleMap), [a]: rogue.id, [b]: mystic.id } })
     const snap = captureRun(useGameStore.getState(), { rngLoot: 1, rngMap: 2, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
     const back = migrateSnapshot(JSON.parse(JSON.stringify(snap)))!
     useGameStore.getState().resumeRun(back)
     expect(useGameStore.getState().placements[a]).toBe(rogue.id)
     expect(useGameStore.getState().placements[b]).toBe(mystic.id)
-    // A payload with a ranged hero inside a Fighter's clearance: the first
-    // kept stays, the one too close goes back to the bench.
-    const raw = JSON.parse(JSON.stringify(snap)) as Record<string, unknown>
-    raw.placements = { [c]: fighter.id, [d]: rogue.id }
-    useGameStore.getState().resumeRun(migrateSnapshot(raw)!)
-    expect(useGameStore.getState().placements[c]).toBe(fighter.id)
-    expect(useGameStore.getState().placements[d]).toBeFalsy()
   })
 
-  it('carryPlacements reads melee off the roster', () => {
-    const [fighter, rogue] = [createSentinel('fighter'), createSentinel('rogue')]
-    const [a, b] = pairOf(FIRST_MAP)
+  it('meleeOf reads who swings off the roster', () => {
+    const [fighter, rogue] = [holding('fighter', 'Axe'), holding('rogue', 'Bow')]
     const melee = meleeOf([fighter, rogue])
     expect(melee(fighter.id)).toBe(true)
     expect(melee(rogue.id)).toBe(false)
-    const keep = () => true
-    expect(carryPlacements({ [a]: rogue.id, [b]: fighter.id }, FIRST_MAP, keep, 5, melee)[b]).toBeNull()
-    const two = createSentinel('mystic')
-    expect(carryPlacements({ [a]: rogue.id, [b]: two.id }, FIRST_MAP, keep, 5, meleeOf([rogue, two]))[b]).toBe(two.id)
+    expect(meleeOf([holding('fighter', null)])('x')).toBe(false)
+    // carryPlacements keeps both; the conflict is the battle's to show.
+    const [a, b] = pairOf(FIRST_MAP)
+    const kept = carryPlacements({ [a]: rogue.id, [b]: fighter.id }, FIRST_MAP, () => true, 5)
+    expect([kept[a], kept[b]]).toEqual([rogue.id, fighter.id])
   })
 })
 
@@ -255,7 +278,8 @@ describe('the breather move', () => {
     const e = new GameEngine({
       map: FIRST_MAP,
       wave: { index: 1, label: 't', spawns: [at('torch1', 0, 0.5, 0), at('torch1', 0, 0.5, 1)], isBoss: false },
-      placedSentinels: team.map(([a, slotId]) => ({ sentinel: createSentinel(a), slotId })),
+      // The Fighter swings a sword; the others hold their ranged weapons.
+      placedSentinels: team.map(([a, slotId]) => ({ sentinel: holding(a, a === 'fighter' ? 'Sword' : a === 'rogue' ? 'Bow' : 'Wand'), slotId })),
       baseHp: 200,
       maxBaseHp: 200,
       breathers: 'pause',

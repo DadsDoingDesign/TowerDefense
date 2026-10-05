@@ -19,7 +19,8 @@ import { RNG } from '../src/game/core/rng'
 import { ALL_NODES, getNode, type TreeNode } from '../src/game/data/archetypeTree'
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
 import { tileDamageMult } from '../src/game/data/hazards'
-import { crowdedBy, isMelee, parseTileId, withinClearance, type Post } from '../src/game/data/terrain'
+import { crowdedBy, parseTileId, withinClearance, type Post } from '../src/game/data/terrain'
+import { isMelee } from '../src/game/engine/melee'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { createSentinel } from '../src/game/data/sentinels'
@@ -524,7 +525,7 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
   const ranged = team.map((m, i) => ({ i, sentinel: m.sentinel, range: Math.round(computeCombat(m.sentinel).range) }))
   ranged.sort((a, b) => a.range - b.range || a.i - b.i)
   const taken = new Set<string>()
-  // A Fighter's clearance (`terrain.CLEARANCE`): nobody beside a melee hero;
+  // A swinger's clearance (`terrain.CLEARANCE`; `melee.isMelee`: what it holds): nobody beside it;
   // ranged heroes may stand side by side.
   const posts: Post[] = []
   const out: { sentinel: Sentinel; slotId: string }[] = new Array(team.length)

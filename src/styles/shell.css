@@ -376,6 +376,14 @@
 .sh-hero-tag.arm {
   color: var(--accent);
 }
+/* Weapon clearance: in a clearance conflict — "Make space" on the hero that
+   swings, "Too close" on whoever stands inside its zone. */
+.sh-hero-tag.on.clash {
+  color: var(--bad-text);
+}
+.sh-hero.placed:has(.sh-hero-tag.clash) {
+  border-color: color-mix(in srgb, var(--bad) 70%, var(--line));
+}
 .sh-offer-glyph {
   font-size: 16px;
   color: var(--accent);
@@ -2459,4 +2467,64 @@
 }
 .sh-wavebar {
   --muted-2: var(--muted);
+}
+
+/* ==========================================================================
+   Weapon clearance — gear locks during a wave
+   ==========================================================================
+   The designer: "items locked during rounds". Where the equip controls would
+   be, a small drawn lock and one calm line (not a warning: nothing is wrong).
+   The lock is drawn, not a glyph — the shell's marks come from the icon sheet
+   or CSS, never the system font. */
+.sh-lock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: var(--hit-min);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.sh-lock.compact {
+  /* Under the doll, in a column ~90px wide on a phone: the lock leads the
+     first line and the words break evenly ("Gear locks / during a wave"),
+     not one ragged word per line. */
+  display: block;
+  min-height: 0;
+  margin-top: 6px;
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  text-align: center;
+  text-wrap: balance;
+}
+.sh-lock.compact .sh-lock-glyph {
+  display: inline-block;
+  margin: 0 5px 0 0;
+  vertical-align: -1px;
+}
+.sh-lock-glyph {
+  position: relative;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.sh-lock-glyph::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+}
+/* A locked empty slot: there, but not offered. */
+.sh-slot:disabled {
+  cursor: default;
+  opacity: 0.55;
 }

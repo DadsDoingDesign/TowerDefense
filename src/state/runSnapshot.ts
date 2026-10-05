@@ -500,6 +500,8 @@ const MOD_STRUCT_FIELDS = {
 const MOD_BOOL_FIELDS = {
   thornsIgnite: true,
   burnSpreadOnDeath: true,
+  // Weapon clearance: the hook a skill sets to make its hero swing.
+  grantsMelee: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
   damageMult: true, rateMult: true, rangeMult: true, projSpeedMult: true,
@@ -508,7 +510,7 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   block: true, thornsMult: true, thornsIgnite: true, buffAura: true,
   lifedrain: true, trap: true,
   volley: true, critEvery: true, killRush: true, openingRush: true, leakWard: true,
-  burnSpreadOnDeath: true,
+  burnSpreadOnDeath: true, grantsMelee: true,
 }
 
 /**

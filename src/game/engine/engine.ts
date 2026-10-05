@@ -6,11 +6,12 @@ import { behaviourOf, RESIST_CAP } from '../data/behaviours'
 import { DEFAULT_COMMANDS, FLARE, HOLD, RALLY, type CommandId } from '../data/commands'
 import { ENEMY_MODS, ENEMY_TYPES, modKey } from '../data/enemies'
 import { tileDamageMult } from '../data/hazards'
-import { crowds, isMelee } from '../data/terrain'
+import { crowds } from '../data/terrain'
 import type { EffectMods, EnemyBehaviour, EnemyType, FocusMode, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 
 type Behaviour<K extends EnemyBehaviour['kind']> = Extract<EnemyBehaviour, { kind: K }>
 import { computeCombat, type CombatProfile } from './combat'
+import { isMelee } from './melee'
 
 /**
  * The one true simulation tick (seconds). The sim only ever advances in whole
@@ -60,6 +61,11 @@ export type BattleInput =
   | { tick: number; kind: 'move'; from: string; to: string }
   | { tick: number; kind: 'focus'; focus: FocusMode }
   | { tick: number; kind: 'resume' }
+  /**
+   * Gear changed in a breather (gear locks while a sub-wave is live): the
+   * hero's whole equipment as it now stands, so a replay re-dresses it.
+   */
+  | { tick: number; kind: 'gear'; id: string; equipment: Sentinel['equipment'] }
 
 /** A transient, sim-timed marker the renderer draws (`render/telegraphs.ts`). */
 export type TelegraphKind =
@@ -777,6 +783,11 @@ export class GameEngine {
         case 'resume':
           this.resume()
           break
+        case 'gear': {
+          const s = this.sentinels.find((x) => x.id === input.id)
+          if (s) this.regear({ ...s.def, equipment: input.equipment })
+          break
+        }
       }
     }
   }
@@ -857,7 +868,7 @@ export class GameEngine {
     const slotFrom = this.map.slots.find((s) => s.id === from)!
     // A Fighter's clearance (`terrain.CLEARANCE`): the move may not put either
     // hero too close to a third — nobody beside a melee hero, ranged heroes
-    // side by side allowed. Melee is read off the hero's root (`isMelee`).
+    // side by side allowed. Who swings is `melee.isMelee` (what it holds).
     for (const s of this.sentinels) {
       if (s === a || s === b) continue
       const m = isMelee(s.def)
@@ -869,6 +880,31 @@ export class GameEngine {
     this.behaviourStats.repositions++
     this.inputLog.push({ tick: this.tick, kind: 'move', from, to })
     this.onEvent?.('reposition')
+    return true
+  }
+
+  /**
+   * Gear changed between two sub-waves: re-dress the hero standing in the
+   * field as `def` (its new equipment). Only during a breather — gear is
+   * locked while a sub-wave is live — and it is NOT the breather's move: the
+   * move is a reposition; a gear change can be undone at any time. The
+   * profile is rebuilt at the hero's current Patience, and its trap follows
+   * its mods. No RNG draws. Logged, so a replay re-dresses it at the same tick.
+   */
+  regear(def: Sentinel): boolean {
+    if (!this.breather) return false
+    const s = this.sentinels.find((x) => x.id === def.id)
+    if (!s) return false
+    s.def = def
+    s.profile = computeCombat(def, { teamMods: this.teamMods, patienceMult: 1 + s.patienceStacks * PATIENCE_PER_STACK })
+    s.patienceMax = 3 + Math.floor(s.profile.patience / 5)
+    const trap = s.profile.mods.trap
+    const at = this.traps.findIndex((t) => t.srcId === s.id)
+    if (!trap && at >= 0) this.traps.splice(at, 1)
+    else if (trap && at < 0)
+      this.traps.push({ id: nextId('t'), pos: this.nearestPathPoint(s.pos), dps: trap.dps, slow: trap.slow, srcId: s.id, damageType: s.profile.damageType })
+    else if (trap && at >= 0) this.traps[at] = { ...this.traps[at], dps: trap.dps, slow: trap.slow, damageType: s.profile.damageType }
+    this.inputLog.push({ tick: this.tick, kind: 'gear', id: def.id, equipment: def.equipment })
     return true
   }
 

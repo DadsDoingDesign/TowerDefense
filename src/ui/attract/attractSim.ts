@@ -74,12 +74,13 @@ import { childrenOf, getNode } from '../../game/data/archetypeTree'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import { generateItem } from '../../game/data/items'
 import { fieldFor, legacyPostTile } from '../../game/data/maps'
-import { crowdedBy, isMeleeArchetype, type Post } from '../../game/data/terrain'
+import { crowdedBy, type Post } from '../../game/data/terrain'
+import { isMelee } from '../../game/engine/melee'
 import { ARCHETYPES } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
 import { applyXp, evolveInto, TIER1_LEVEL, TIER2_LEVEL, xpToReach } from '../../game/engine/leveling'
-import type { Archetype, Equipment, GameMap, ItemRarity, ItemSlot, Sentinel, TerrainRuleId, WaveDef } from '../../game/types'
+import type { Archetype, Equipment, GameMap, Item, ItemRarity, ItemSlot, Sentinel, TerrainRuleId, WaveDef } from '../../game/types'
 
 /** One member of the company. */
 export interface AttractHero {
@@ -225,8 +226,13 @@ export function composeScene(seed: number, take: number): AttractScenario {
 
   // Veterans, deeper for a deeper foe: level 12–20.
   const floor = Math.min(18, 8 + depth + (kind === 'boss' ? 1 : 0))
-  // The game's spacing rule: nobody beside a Fighter (`terrain.CLEARANCE`);
-  // ranged heroes may stand side by side.
+  // The game's spacing rule: nobody beside a hero that swings
+  // (`terrain.CLEARANCE`, `melee.isMelee`); ranged heroes may stand side by
+  // side. Who swings is what the hero holds — its main hand, rolled below
+  // from its own per-piece stream. The weapon's KIND is that stream's first
+  // draw whatever the rarity (`generateItem`: slot and rarity forced, no
+  // roster), so it is read here, before the rarity is drawn, at no cost to
+  // the scene's own draw order.
   const taken: Post[] = []
   const byNear = (p: Vec2, melee: boolean) =>
     map.slots
@@ -236,7 +242,7 @@ export function composeScene(seed: number, take: number): AttractScenario {
   const company: AttractHero[] = archetypes.map((archetype, i) => {
     // The holder stands on the roadside tile nearest the hold; the others on
     // one of the few tiles nearest it, so they fight as one group on camera.
-    const melee = isMeleeArchetype(archetype)
+    const melee = isMelee({ ...bareHero(archetype, i), equipment: { mainHand: attractItem(sc0, i, 'mainHand', 'rare', archetype), offHand: null, body: null } })
     const near = byNear(hold, melee)
     const pickFrom = i === 0 ? near.slice(0, 1) : near.filter((t) => t.d < 175).slice(0, 4)
     const slot = (pickFrom.length ? rng.pick(pickFrom) : near[0]).id
@@ -264,13 +270,27 @@ const GEAR_SLOT: Record<'mainHand' | 'offHand' | 'body', ItemSlot> = { mainHand:
 
 /** A company member, built without touching the name or id counters. */
 function attractHero(sc: AttractScenario, h: AttractHero, i: number): Sentinel {
-  const node = getNode(h.archetype)
-  const meta = ARCHETYPES[h.archetype]
-  let s: Sentinel = {
-    id: `attract-${i}-${h.archetype}`,
+  let s = bareHero(h.archetype, i)
+  if (h.level > 1) s = applyXp(s, xpToReach(h.level))
+  for (const id of h.branchPath.slice(1)) s = evolveInto(s, id)
+  const equipment: Equipment = { mainHand: null, offHand: null, body: null }
+  for (const slot of ['mainHand', 'offHand', 'body'] as const) {
+    const rarity = h.gear[slot]
+    if (!rarity) continue
+    equipment[slot] = attractItem(sc, i, slot, rarity, h.archetype)
+  }
+  return { ...s, equipment }
+}
+
+/** A company member at level 1 with nothing on, without touching the name or id counters. */
+function bareHero(archetype: Archetype, i: number): Sentinel {
+  const node = getNode(archetype)
+  const meta = ARCHETYPES[archetype]
+  return {
+    id: `attract-${i}-${archetype}`,
     name: meta.name,
-    archetype: h.archetype,
-    branchPath: [h.archetype],
+    archetype,
+    branchPath: [archetype],
     stats: { ...node.baseStats! },
     thorns: node.baseThorns!,
     patience: node.basePatience!,
@@ -280,27 +300,32 @@ function attractHero(sc: AttractScenario, h: AttractHero, i: number): Sentinel {
     color: node.color!,
     accent: node.accent!,
   }
-  if (h.level > 1) s = applyXp(s, xpToReach(h.level))
-  for (const id of h.branchPath.slice(1)) s = evolveInto(s, id)
-  // The gear is rolled from the scene seed with its own stream per piece, and
-  // renamed onto fixed ids — the generator mints from the global counter,
-  // which `withIsolatedIds` puts back, but its id would still depend on it.
-  const equipment: Equipment = { mainHand: null, offHand: null, body: null }
-  for (const slot of ['mainHand', 'offHand', 'body'] as const) {
-    const rarity = h.gear[slot]
-    if (!rarity) continue
-    const rng = new RNG(hashSeed('fieldwatch-attract-gear', sc.seed, sc.take, i, slot))
-    const item = withIsolatedIds(() =>
-      generateItem(rng, {
-        slot: GEAR_SLOT[slot],
-        rarity,
-        allowCurse: false,
-        ...(slot === 'mainHand' ? { damageType: node.base?.damageType ?? 'physical' } : {}),
-      }),
-    )
-    equipment[slot] = { ...item, id: `attract-${i}-${slot}` }
-  }
-  return { ...s, equipment }
+}
+
+/**
+ * One piece of a company member's gear. It is rolled from the scene seed with
+ * its own stream per piece, and renamed onto a fixed id — the generator mints
+ * from the global counter, which `withIsolatedIds` puts back, but its id
+ * would still depend on it. A main-hand weapon is of the hero's damage type.
+ */
+function attractItem(
+  sc: Pick<AttractScenario, 'seed' | 'take'>,
+  i: number,
+  slot: 'mainHand' | 'offHand' | 'body',
+  rarity: ItemRarity,
+  archetype: Archetype,
+): Item {
+  const node = getNode(archetype)
+  const rng = new RNG(hashSeed('fieldwatch-attract-gear', sc.seed, sc.take, i, slot))
+  const item = withIsolatedIds(() =>
+    generateItem(rng, {
+      slot: GEAR_SLOT[slot],
+      rarity,
+      allowCurse: false,
+      ...(slot === 'mainHand' ? { damageType: node.base?.damageType ?? 'physical' } : {}),
+    }),
+  )
+  return { ...item, id: `attract-${i}-${slot}` }
 }
 
 /** Each engine's private id counter (see `withOwnIds`). */

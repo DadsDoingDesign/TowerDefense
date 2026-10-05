@@ -323,6 +323,7 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     // A capability, not a magnitude: one source that has it is enough.
     if (m.thornsIgnite) out.thornsIgnite = true
     if (m.burnSpreadOnDeath) out.burnSpreadOnDeath = true
+    if (m.grantsMelee) out.grantsMelee = true
     out.burn = bestOf(out.burn, m.burn)
     out.chill = bestOf(out.chill, m.chill)
     out.shock = bestOf(out.shock, m.shock)

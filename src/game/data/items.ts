@@ -46,16 +46,16 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
 export type Grip = 'main' | 'either' | 'off' | 'twoHand' | 'body'
 
 /** Every item base the game generates (or once did), with its kind and grip. */
-export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip }>> = {
-  Sword: { slot: 'oneHand', grip: 'main' },
-  Axe: { slot: 'oneHand', grip: 'main' },
+export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip; swings?: true }>> = {
+  Sword: { slot: 'oneHand', grip: 'main', swings: true },
+  Axe: { slot: 'oneHand', grip: 'main', swings: true },
   Rod: { slot: 'oneHand', grip: 'main' },
   Sceptre: { slot: 'oneHand', grip: 'main' },
   Scepter: { slot: 'oneHand', grip: 'main' },
   Dagger: { slot: 'oneHand', grip: 'either' },
   Wand: { slot: 'oneHand', grip: 'either' },
-  Greatsword: { slot: 'twoHand', grip: 'twoHand' },
-  Warhammer: { slot: 'twoHand', grip: 'twoHand' },
+  Greatsword: { slot: 'twoHand', grip: 'twoHand', swings: true },
+  Warhammer: { slot: 'twoHand', grip: 'twoHand', swings: true },
   Bow: { slot: 'twoHand', grip: 'twoHand' },
   Staff: { slot: 'twoHand', grip: 'twoHand' },
   Grimoire: { slot: 'twoHand', grip: 'twoHand' },
@@ -74,6 +74,24 @@ export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip }>
   Relic: { slot: 'body', grip: 'body' },
   Beacon: { slot: 'body', grip: 'body' },
   Oath: { slot: 'body', grip: 'body' },
+}
+
+/**
+ * Does this item SWING — is it a heavy blade or a hammer that a hero sweeps all
+ * round itself? `swings` in {@link ITEM_BASES}: the physical weapons of the
+ * `main` and `twoHand` grips (Sword, Axe, Greatsword, Warhammer). Not the
+ * knife (a light, `either`-grip piece — thrown or stabbed, the Rogue's
+ * long-range strike), not the bow, and not the casters' one- and two-handers
+ * (Wand, Rod, Sceptre, Staff, Grimoire), which point rather than swing. A hero
+ * holding one keeps a clearance (`engine/melee.isMelee`). Like
+ * {@link gripOf}, a noun only classifies an item of its own kind, and a name
+ * with no known noun does not swing.
+ */
+export function itemSwings(item: Pick<Item, 'name' | 'slot'> | null | undefined): boolean {
+  if (!item) return false
+  const noun = itemNoun(item)
+  const base = noun ? ITEM_BASES[noun] : undefined
+  return !!base && base.slot === item.slot && !!base.swings
 }
 
 /** A kind's grip when the name carries no known noun. */

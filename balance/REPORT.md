@@ -270,13 +270,13 @@ meet every layer at the same Threat. Base HP (20) persists between nodes.
 - Runs: **300**
 - Win rate (boss falls): **66%**
 - Average depth reached: **11.3 / 12**
-- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:6  7:0  8:7  9:17  10:35  11:37  12:198
-- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:6  8:0  9:7  10:17  11:35  12:37
+- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:4  7:0  8:8  9:16  10:35  11:38  12:199
+- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:4  8:0  9:8  10:16  11:35  12:38
 - Distinct depths that killed at least one team: **5**
-- Deadliest single node: **depth 12** — **36%** of all lost runs end there
-- Boss attempts: **235**, boss kills: **37** (**16%** of arrivals)
+- Deadliest single node: **depth 12** — **38%** of all lost runs end there
+- Boss attempts: **237**, boss kills: **38** (**16%** of arrivals)
 - Mean Threat carried into the boss fight: **×4.4** (the exchange rate with §11 — see there)
-- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 73% · **kilnroad** n=147 (49%) win 59%
+- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 74% · **kilnroad** n=147 (49%) win 59%
 
 **Target win-rate band: 45%–60%** for a depth-appropriate team. That is the band where a
 run is worth finishing and losing is worth minding; the old 10–80% guardrail was a
@@ -492,52 +492,52 @@ its XP, gold and card — and nothing else.
 | Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |
 |---|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor — 10 forced battles, no shops, no hires, random card | 240 | **0%** | 5.5 | 6.5 | 1.0 | depth 6 | 32% |
-| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 240 | **0%** | 7.3 | 8.3 | 2.9 | depth 7 | 25% |
-| route: specials-first (the shipped heuristic) | 240 | **30%** | 9.8 | 4.6 | 4.5 | depth 10 | 25% |
-| route: battles-first | 240 | **23%** | 9.1 | 8.4 | 3.3 | depth 9 | 20% |
-| route: recruits, else battles | 240 | **26%** | 9.6 | 7.6 | 4.3 | depth 10 | 29% |
-| route: adaptive (reads the run state) | 240 | **39%** | 10.1 | 6.7 | 4.7 | depth 11 | 17% |
+| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 240 | **0%** | 7.3 | 8.3 | 2.9 | depth 9 | 27% |
+| route: specials-first (the shipped heuristic) | 240 | **33%** | 9.9 | 4.6 | 4.5 | depth 10 | 25% |
+| route: battles-first | 240 | **23%** | 9.1 | 8.4 | 3.4 | depth 9 | 18% |
+| route: recruits, else battles | 240 | **25%** | 9.6 | 7.6 | 4.3 | depth 10 | 28% |
+| route: adaptive (reads the run state) | 240 | **38%** | 10.1 | 6.7 | 4.7 | depth 11 | 19% |
 
 **The routing spread.** Same seeds, same starting heroes, same map — only the
 rule for choosing the next node changes:
 
 | Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |
 |---|--:|--:|--:|--:|
-| route: specials-first (the shipped heuristic) ← **gated (band)** | **30%** | 9.8 | 4.6 | ×8.1 |
+| route: specials-first (the shipped heuristic) ← **gated (band)** | **33%** | 9.9 | 4.6 | ×8.1 |
 | route: battles-first | **23%** | 9.1 | 8.4 | ×8.1 |
-| route: recruits, else battles | **26%** | 9.6 | 7.6 | ×8.1 |
-| route: adaptive (reads the run state) ← **gated (floor)** | **39%** | 10.1 | 6.7 | ×8.1 |
+| route: recruits, else battles | **25%** | 9.6 | 7.6 | ×8.1 |
+| route: adaptive (reads the run state) ← **gated (floor)** | **38%** | 10.1 | 6.7 | ×8.1 |
 
-Spread across the set: **23% – 39%** — 10 points between the line the report used to grade and the best one it can find.
+Spread across the set: **23% – 38%** — 6 points between the line the report used to grade and the best one it can find.
 
 Survival curve — share of fresh runs that clear each node:
 
 | Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor | 100% | 100% | 100% | 95% | 75% | 43% | 15% | 13% | 5% | 2% | 1% | 0% |
-| Strict + 2 recruits | 100% | 100% | 100% | 100% | 91% | 83% | 57% | 54% | 28% | 10% | 2% | 0% |
-| specials | 100% | 100% | 100% | 100% | 100% | 97% | 90% | 88% | 80% | 54% | 43% | 30% |
-| battles | 100% | 100% | 100% | 100% | 99% | 94% | 83% | 80% | 60% | 41% | 29% | 23% |
-| recruits | 100% | 100% | 100% | 100% | 99% | 98% | 92% | 90% | 73% | 44% | 33% | 26% |
-| adaptive | 100% | 100% | 100% | 100% | 99% | 97% | 91% | 90% | 82% | 66% | 49% | 39% |
+| Strict + 2 recruits | 100% | 100% | 100% | 100% | 91% | 83% | 59% | 55% | 28% | 10% | 2% | 0% |
+| specials | 100% | 100% | 100% | 100% | 100% | 98% | 91% | 89% | 80% | 54% | 45% | 33% |
+| battles | 100% | 100% | 100% | 100% | 99% | 94% | 83% | 79% | 61% | 44% | 28% | 23% |
+| recruits | 100% | 100% | 100% | 100% | 99% | 98% | 90% | 89% | 74% | 47% | 35% | 25% |
+| adaptive | 100% | 100% | 100% | 100% | 99% | 97% | 91% | 90% | 82% | 65% | 46% | 38% |
 
 Nodes-cleared histogram (strict): 0:0  1:0  2:1  3:12  4:47  5:76  6:68  7:4  8:20  9:8  10:2  11:2  12:0
-Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:1  4:0  5:6  6:17  7:6  8:19  9:61  10:26  11:33  12:71
+Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:1  4:0  5:5  6:15  7:6  8:22  9:61  10:21  11:31  12:78
 
 Average nodes cleared by starting archetype (gated line): 
-**fighter** 9.9, **rogue** 9.9, **mystic** 9.6.
+**fighter** 10.1, **rogue** 9.9, **mystic** 9.7.
 
 **Findings.**
 
-- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 30% when it does what the game offers.
-- **The largest single term in a fresh run is the route.** 10 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
-- **A stop is a price now, not a trap.** The specials-first line fights 3.8 fewer battles than the battles-first line and wins 7 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
+- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 33% when it does what the game offers.
+- **The largest single term in a fresh run is the route.** 6 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
+- **A stop is a price now, not a trap.** The specials-first line fights 3.8 fewer battles than the battles-first line and wins 10 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
 - The curve has a real bite at every node rather than one cliff: no single depth ends more than 25% of gated-line runs (depth 10 is the worst).
 - Depths 1–3 are not a wall — 100% of gated-line zero-meta runs clear depth 3 — and neither is any single later node.
 
 **Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through
 all twelve layers and wins 66% of the time; the zero-meta first run, played the
-way the game is actually laid out, wins 30% on the first-timer line and 39% on the best
+way the game is actually laid out, wins 33% on the first-timer line and 38% on the best
 one. The gap between those numbers is what the meta layer and the player's own
 learning are worth, and it is now a difference in *how much slack you have*, not
 the difference between a game and a grind gate.
@@ -550,16 +550,16 @@ equally hard on both sweeps.
 
 **The four gates.**
 
-1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **39%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
-2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **30%**.
-3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **30%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
-4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 66% against this sweep's best line at 39%, and §12 puts the same comparison on a like-for-like footing.
+1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **38%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
+2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **33%**.
+3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **33%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
+4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 66% against this sweep's best line at 38%, and §12 puts the same comparison on a like-for-like footing.
 
 The design *target* inside the band remains **15–25%** on the gated line. The band
 is wide partly because this is a Monte Carlo over 240 runs of a *modelled* player
 (1σ ≈ 3.2pt), and partly for a reason that belongs in the open.
 
-**The shipped number is 30%.** Two structural corrections moved it, and both were
+**The shipped number is 33%.** Two structural corrections moved it, and both were
 the harness being wrong rather than the game changing:
 
 | Correction | What it was |
@@ -613,14 +613,14 @@ two standard errors of that paired difference.
 
 | Hub state | specials | battles | recruits | adaptive | worst gated Δ |
 |---|--:|--:|--:|--:|--:|
-| zero meta | 30% (+0±0) | 22% (+0±0) | 26% (+0±0) | 40% (+0±0) | +0pt |
-| Cartographer's Table | 28% (−1±9) | 18% (−4±7) | 26% (−0±8) | 45% (+5±9) | −4pt |
-| Free Companies | 31% (+2±8) | 29% (+7±7) | 33% (+7±7) | 46% (+6±8) | +2pt |
-| Standing Orders | 30% (+0±3) | 23% (+1±1) | 26% (−0±2) | 39% (−1±2) | −1pt |
-| all three unlocks | 35% (+5±9) | 23% (+1±8) | 33% (+7±8) | 43% (+3±9) | +1pt |
-| Field Kitchen + Relic Cartulary | 28% (−2±3) | 21% (−1±3) | 24% (−2±3) | 39% (−1±3) | −2pt |
-| the full ramp | 60% (+31±8) | 62% (+40±9) | 58% (+32±9) | 75% (+35±8) | +31pt |
-| everything the hub sells | 65% (+35±9) | 63% (+41±9) | 62% (+36±9) | 74% (+34±9) | +34pt |
+| zero meta | 32% (+0±0) | 23% (+0±0) | 24% (+0±0) | 38% (+0±0) | +0pt |
+| Cartographer's Table | 28% (−5±9) | 18% (−5±7) | 26% (+1±8) | 40% (+3±9) | −5pt |
+| Free Companies | 30% (−2±7) | 26% (+3±7) | 32% (+8±7) | 42% (+4±8) | −2pt |
+| Standing Orders | 32% (−0±3) | 24% (+1±2) | 24% (−0±2) | 38% (+0±1) | −0pt |
+| all three unlocks | 36% (+4±9) | 25% (+2±8) | 36% (+12±8) | 44% (+6±9) | +2pt |
+| Field Kitchen + Relic Cartulary | 30% (−2±3) | 20% (−3±3) | 24% (−0±3) | 39% (+1±3) | −3pt |
+| the full ramp | 58% (+26±8) | 61% (+39±9) | 59% (+34±8) | 72% (+35±9) | +26pt |
+| everything the hub sells | 68% (+35±9) | 64% (+41±9) | 58% (+34±10) | 78% (+40±9) | +34pt |
 
 **The invariant.** No hub state — any unlock alone, all of them together, the ramp,
 or everything the hub sells — may measure below zero meta by more than the paired
@@ -631,7 +631,7 @@ worse, only that it did.
 
 At 210 runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; `FW_META_RUNS=500` halves it for a fit.
 
-**Does the campaign notice a team?** The full ramp is worth **+40pt** over zero meta at its best (specials +31, battles +40, recruits +32, adaptive +35). The gate asks for ≥ 8%: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.
+**Does the campaign notice a team?** The full ramp is worth **+39pt** over zero meta at its best (specials +26, battles +39, recruits +34, adaptive +35). The gate asks for ≥ 8%: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.
 
 **The breadth each unlock promises is checked separately**, because a horizontal
 unlock is not supposed to move the win rate at all — it is supposed to widen the
@@ -674,10 +674,10 @@ record a ladder keeps should measure skill, and a marks price measures grinding.
 
 | Banner | Rule it adds | ×marks | Win rate | **Marks / run** | Δ marks |
 |--:|---|--:|--:|--:|--:|
-| 0 · — (no Banner) | — | ×1 | 37% | **124.1** | — |
-| 1 · Thin Pickings | Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants lay out half their shelf, and the Crossroads offers two mutations. Half the build, same march. | ×1.4 | 29% | **158.2** | +34 |
-| 2 · Elite Watch | Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5. | ×2.5 | 24% | **253.2** | +95 |
-| 3 · Blood Price | No recruits, anywhere. The heroes you start with are the heroes you finish with. | ×4.6 | 1% | **231.6** | −22 |
+| 0 · — (no Banner) | — | ×1 | 37% | **124.6** | — |
+| 1 · Thin Pickings | Every clear offers two reward cards instead of three, only elites and act bosses deal relics, merchants lay out half their shelf, and the Crossroads offers two mutations. Half the build, same march. | ×1.4 | 32% | **162.6** | +38 |
+| 2 · Elite Watch | Every battle node is an elite drawn from one depth deeper: armoured, warded or swift, arriving faster — champion-led from depth 5. | ×2.5 | 23% | **249.7** | +87 |
+| 3 · Blood Price | No recruits, anywhere. The heroes you start with are the heroes you finish with. | ×4.6 | 1% | **231.6** | −18 |
 
 **Two invariants.**
 
@@ -689,7 +689,7 @@ record a ladder keeps should measure skill, and a marks price measures grinding.
    the ladder. This is the check the old ladder failed: its payout multipliers
    exactly cancelled the difficulty they added, so climbing was never worth it.
 
-Measured: the win rate falls at every rung (37% → 29% → 24% → 1%; the smallest step is 5.5pt) and the payout rises at every rung (124.1 → 158.2 → 253.2 → 231.6).
+Measured: the win rate falls at every rung (37% → 32% → 23% → 1%; the smallest step is 5.7pt) and the payout rises at every rung (124.6 → 162.6 → 249.7 → 231.6).
 
 **Re-priced for the tighter gate (Phase 1).** Two findings, measured at n=600 paired
 runs on the specials / battles / adaptive lines:
@@ -928,9 +928,9 @@ because a 20-HP base dies to the four points a 96%-stop wave puts through.
 | 8 | normal | Column | 0.00 | — |
 | 8 | elite | Plated Column | 0.00 | — |
 | 8 | elite | Warded Host | 0.00 | — |
-| 8 | elite | Swift Raid | 0.00 | — |
+| 8 | elite | Swift Raid | 0.43 | — |
 
-Widest unadapted spread: **×1.00** at  (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.
+Widest unadapted spread: **×8.57** at depth 8 elite (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.
 
 **What this gate is worth, stated plainly.** `budgetScale` is fitted *against*
 this number, so a green §14c is not independent evidence that the shapes are
@@ -1042,16 +1042,16 @@ paired seeds, against the same runs without it.
 | Epic | 2 | **+3.6pt** |
 | Legendary | 3 | **+5.4pt** |
 
-**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 38%):
+**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 37%):
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 40% | +2±9pt |
-| Field Surgeon's Kit | Common | The Gate recovers 2 after every fight you win. | 38% | +0±4pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 36% | −2±9pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 45% | +7±9pt |
-| Tithe Box | Common | +10 gold for every fight you win. | 39% | +1±4pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 39% | +1±7pt |
+| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 38% | +1±9pt |
+| Field Surgeon's Kit | Common | The Gate recovers 2 after every fight you win. | 39% | +2±4pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 40% | +3±9pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 47% | +10±9pt |
+| Tithe Box | Common | +10 gold for every fight you win. | 38% | +1±3pt |
+| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 38% | +1±7pt |
 
 **Declared, not dealt.** none — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
 
@@ -1081,10 +1081,10 @@ same heroes, same seeds — the two columns differ only in the thing the row nam
 
 | Champion | Phase | Triggered |
 |---|---|--:|
-| Warlord Grukk | war-cry at 66% / 33% (allies ×1.4 pace for 4s) | 22 |
-| Powderkeg King | TNT at the Gate every 8s (1 Gate each); every 4s below 50% | 164 lobs, 164.0 Gate damage |
-| The Colossus Keg | splits into two halves at 50% | 8 |
-| (all) | `bossPhase` events | 40 |
+| Warlord Grukk | war-cry at 66% / 33% (allies ×1.4 pace for 4s) | 20 |
+| Powderkeg King | TNT at the Gate every 8s (1 Gate each); every 4s below 50% | 167 lobs, 167.0 Gate damage |
+| The Colossus Keg | splits into two halves at 50% | 10 |
+| (all) | `bossPhase` events | 41 |
 
 ### 16c. Sub-waves — a partition of the node, not a different node
 
@@ -1099,19 +1099,19 @@ on both fields. Metric: **base HP lost** per node (lower is better), mean over t
 
 | Input policy | Base HP lost / node | vs the modelled player |
 |---|--:|--:|
-| Rally Horn — never | 1.40 | +0.09 |
-| Rally Horn — first tick of each sub-wave | 1.34 | +0.03 |
-| Rally Horn — when enough of the column is in reach (the modelled player) | 1.31 | — |
-| Rally Horn — on the last one or two bodies | 1.33 | +0.02 |
-| Targeting: Threat instead of First | 1.30 | −0.01 |
-| Breather: a fighter onto the first post | 1.15 | −0.16 |
-| Breather: weakest post → best-covered free post | 1.64 | +0.34 |
-| Breather: best hero → worst free post | 2.49 | +1.18 |
+| Rally Horn — never | 1.35 | +0.08 |
+| Rally Horn — first tick of each sub-wave | 1.31 | +0.03 |
+| Rally Horn — when enough of the column is in reach (the modelled player) | 1.27 | — |
+| Rally Horn — on the last one or two bodies | 1.33 | +0.05 |
+| Targeting: Threat instead of First | 1.27 | −0.01 |
+| Breather: a fighter onto the first post | 1.28 | +0.01 |
+| Breather: weakest post → best-covered free post | 1.23 | −0.04 |
+| Breather: best hero → worst free post | 2.54 | +1.27 |
 
-- **The Rally Horn** used at the best timing saves **0.09** base HP a node over never pressing it; **timing alone** (best vs worst of three) spans **0.03**.
-- **Targeting** (five orders) spans **0.48**/node.
-- **The breather's move** spans **1.34**/node across none / sponge / cover / uncover.
-- **Before Phase 3a** (continuous wave, no kit, no commands, no breathers) the targeting order was the only in-battle input, and its four orders spanned **0.48**/node on a baseline of 1.70 (**28%** of it). Now the best-vs-worst policy spread across every input is **1.34**/node on a baseline of 1.31 (**102%** of it).
+- **The Rally Horn** used at the best timing saves **0.08** base HP a node over never pressing it; **timing alone** (best vs worst of three) spans **0.05**.
+- **Targeting** (five orders) spans **0.46**/node.
+- **The breather's move** spans **1.31**/node across none / sponge / cover / uncover.
+- **Before Phase 3a** (continuous wave, no kit, no commands, no breathers) the targeting order was the only in-battle input, and its four orders spanned **0.68**/node on a baseline of 1.72 (**39%** of it). Now the best-vs-worst policy spread across every input is **1.37**/node on a baseline of 1.27 (**107%** of it).
 
 ### 16e. Status interactions — rules, measured on and off
 
@@ -1144,21 +1144,23 @@ difficulty on the live engine.
 
 | Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) |
 |---|---|--:|--:|--:|
-| The Green Line | landscape (`greenline`) | 48 | 100% | 1.10 |
-| The Green Line | portrait (`greenline-tall`) | 48 | 100% | 1.10 |
-| The Kiln Road | landscape (`kilnroad`) | 48 | 96% | 1.25 |
-| The Kiln Road | portrait (`kilnroad-tall`) | 48 | 96% | 1.25 |
+| The Green Line | landscape (`greenline`) | 48 | 100% | 0.96 |
+| The Green Line | portrait (`greenline-tall`) | 48 | 100% | 0.96 |
+| The Kiln Road | landscape (`kilnroad`) | 48 | 98% | 1.08 |
+| The Kiln Road | portrait (`kilnroad-tall`) | 48 | 98% | 1.08 |
 
 **The gates.** Path length within ±0.5%, the same slot ids, every slot's coverage within 2% at 96 / 150 / 168px, and on the battery a stop rate within 3pt and Gate HP lost within ±5% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.
 
 ## Verdict
 
-❌ **5 balance issue(s) detected:**
+❌ **7 balance issue(s) detected:**
 
 - Monte Carlo win rate 66% is outside the 45%–60% design band (6pt above the top of the band).
 - Mutation "Hoarfrost" claims "−70% damage per hit" but costs nothing measurable: its worst scenario is −2.1pt (`armour`). It is pure upside wearing a tradeoff label.
 - Mutation "Ricochet" claims "−35% damage per hit" but costs nothing measurable: its worst scenario is −2.1pt (`armour`). It is pure upside wearing a tradeoff label.
-- Banner 3 (Blood Price) is not worth flying: 231.6 marks a run against Banner 2's 253.2. The payout multiplier does not cover the difficulty the rung adds, so the ladder is a decoration.
+- Hub purchase "Field Kitchen + Relic Cartulary" LOWERS the win rate: 20% against zero meta's 23% on the battles line (Δ -3pt, beyond the ±3pt paired noise floor). A hub purchase may add breadth; it may never remove baseline viability.
+- Banner 3 (Blood Price) is not worth flying: 231.6 marks a run against Banner 2's 249.7. The payout multiplier does not cover the difficulty the rung adds, so the ladder is a decoration.
+- Composition variants at depth 8 elite span ×8.57 in base HP leaked against random unadapted teams (ceiling ×2.00). At that width the variant roll, not the deployment, is deciding the node.
 - §16a: behaviour "Bomber / Demolisher → charge lobbed at the Gate" never fired on its own bench — a behaviour that does nothing is decoration.
 
 _Several of these are expected to be red: they are the findings this rebuild was

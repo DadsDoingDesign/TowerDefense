@@ -99,12 +99,12 @@ export function drawSlot(
  * light outline, inset so neighbours read as separate squares; blocked tiles
  * get nothing, so they stay dark under the dim with their terrain showing. The
  * tile under the pointer (or the finger, while it is down) is lit harder. A
- * Fighter's clearance is drawn over the grid by {@link drawClearance}.
+ * swinger's clearance is drawn over the grid by {@link drawClearance}.
  *
  * Grid-fit: the tiles are the ground's own lattice (40px), the road runs
  * through its own tiles, so a lit tile is whole grass — nothing is cut out of
- * it. `crowded` tiles (too close to a Fighter who stays where it is — or, for
- * an armed Fighter, to anyone) are open ground but no place for this hero:
+ * it. `crowded` tiles (too close to a swinger who stays where it is — or, for
+ * an armed swinger, to anyone) are open ground but no place for this hero:
  * they stay dark too.
  *
  * Line widths have a floor in SCREEN px (read off `viewScale`) so the outline
@@ -180,12 +180,12 @@ export function drawTileGrid(
 }
 
 /**
- * A Fighter's clearance (`terrain.CLEARANCE`): the 3 × 3 block of tiles round
+ * A swinger's clearance (`terrain.CLEARANCE`): the 3 × 3 block of tiles round
  * a melee hero that no other hero may stand in, drawn exactly on the lattice.
  *
- * - `'full'` — round the tile an armed Fighter would land on: the answer to
- *   "what will this Fighter keep clear?" before the tap.
- * - `'faint'` — round each posted Fighter while any hero is armed, so the dark
+ * - `'full'` — round the tile an armed swinger would land on: the answer to
+ *   "what will this swinger keep clear?" before the tap.
+ * - `'faint'` — round each posted swinger while any hero is armed, so the dark
  *   tiles beside it say why they are dark. Never round a ranged hero.
  *
  * Red, but quiet: a thin solid edge and a whisper of fill over the dimmed
@@ -224,11 +224,13 @@ export function drawClearance(ctx: CanvasRenderingContext2D, map: GameMap, tileI
  * The clearance's name ({@link CLEARANCE_LABEL}), small, as a tab hugging the
  * zone's BOTTOM edge from inside: below the hero (a sprite is anchored at its
  * feet and grows upward, past the zone's top edge on the tall ones), inside
- * its reach ring (a Fighter's is ≥ 96px; the tab sits 40–60px out), and over
+ * its reach ring (every hero's is ≥ 96px; the tab sits 40–60px out), and over
  * the zone's own bottom row only — tiles no other hero can take — so it never
  * covers a lit tile the player might aim at. Drawn after the heroes so a hero
  * posted below the zone never hides it. It flips to the top edge only where
- * the zone runs off the bottom of the field.
+ * the zone runs off the bottom of the field. `side: 'under'` (a conflict with
+ * a hero standing in the zone's bottom row) hangs it just OUTSIDE the bottom
+ * edge instead, so it covers neither the hero it marks nor the one swinging.
  *
  * Its size is set in SCREEN px — 11 CSS px on the landing zone, 10 on a faint
  * one — against `cssScale`, the CSS px per field px the field is shown at right
@@ -242,6 +244,7 @@ export function drawClearanceLabel(
   tileId: string,
   strength: 'full' | 'faint',
   cssScale = getViewScale(),
+  side?: 'under' | 'inside',
 ): void {
   const t = map.tiles?.find((x) => x.id === tileId) ?? map.slots.find((s) => s.id === tileId)
   if (!t) return
@@ -269,7 +272,10 @@ export function drawClearanceLabel(
   const padX = px * 0.5
   const h = px * 1.45
   const below = t.pos.y + T * 1.5 <= map.height
-  const cy = below ? t.pos.y + T * 1.5 - h / 2 - 2 : t.pos.y - T * 1.5 + h / 2 + 2
+  // A conflict's zone (weapon clearance) with a hero in its bottom row: the
+  // label hangs outside the edge (`side`), clear of the hero it marks.
+  const under = side === 'under' && t.pos.y + T * 1.5 + h + 2 <= map.height
+  const cy = under ? t.pos.y + T * 1.5 + h / 2 + 2 : below ? t.pos.y + T * 1.5 - h / 2 - 2 : t.pos.y - T * 1.5 + h / 2 + 2
   const cx = t.pos.x
   roundRect(ctx, cx - tw / 2 - padX, cy - h / 2, tw + padX * 2, h, h / 2)
   ctx.fillStyle = `rgba(28, 10, 12, ${full ? 0.82 : 0.6})`
@@ -279,6 +285,49 @@ export function drawClearanceLabel(
   ctx.stroke()
   ctx.fillStyle = full ? 'rgba(255, 196, 196, 1)' : 'rgba(255, 190, 190, 0.7)'
   ctx.fillText(text, cx, cy + px * 0.04)
+  ctx.restore()
+}
+
+/**
+ * A hero standing inside someone's clearance — a CONFLICT (`run/clearance`):
+ * a gear change made a hero swing beside it. Its tile gets a solid red edge
+ * (the clearance's red, heavier than the zone's own edge) and a small round
+ * "!" badge at the tile's top-right corner, sized in screen px against the
+ * scale the field is shown at, like the zone's label. Drawn AFTER the heroes,
+ * so the mark is never hidden under the figure it marks. Steady: the strip
+ * below says what to do, the field only says where.
+ */
+export function drawConflictMark(ctx: CanvasRenderingContext2D, map: GameMap, tileId: string, cssScale = getViewScale()): void {
+  const t = map.tiles?.find((x) => x.id === tileId) ?? map.slots.find((s) => s.id === tileId)
+  if (!t) return
+  const T = map.tile ?? 40
+  const vs = Math.max(cssScale, 0.02)
+  const lw = Math.max(2, 2 / vs)
+  const inset = lw / 2 + Math.max(1, 1 / vs)
+  ctx.save()
+  roundRect(ctx, t.pos.x - T / 2 + inset, t.pos.y - T / 2 + inset, T - inset * 2, T - inset * 2, Math.min(6, T / 6))
+  ctx.lineWidth = lw + Math.max(1.5, 1.5 / vs)
+  ctx.strokeStyle = 'rgba(20, 8, 8, 0.55)'
+  ctx.stroke()
+  ctx.lineWidth = lw
+  ctx.strokeStyle = `rgba(${CLEARANCE_RGB}, 1)`
+  ctx.stroke()
+  // The badge: ~15 CSS px, never more than half a tile.
+  const r = Math.min(T * 0.26, 7.5 / vs)
+  const cx = t.pos.x + T / 2 - r * 0.55
+  const cy = t.pos.y - T / 2 + r * 0.55
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = `rgba(${CLEARANCE_RGB}, 1)`
+  ctx.fill()
+  ctx.lineWidth = Math.max(1, 1.25 / vs)
+  ctx.strokeStyle = 'rgba(28, 10, 12, 0.9)'
+  ctx.stroke()
+  ctx.fillStyle = '#fff4f0'
+  ctx.font = `900 ${(r * 1.45).toFixed(2)}px system-ui, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('!', cx, cy + r * 0.06)
   ctx.restore()
 }
 

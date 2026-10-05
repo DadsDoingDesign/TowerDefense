@@ -13,7 +13,9 @@ import type { HeroSlot } from '../../game/types'
 import { sfx } from '../../audio/audio'
 import { featUnlocked, perkUnlocked, streams } from './runtime'
 import { useMetaStore } from '../metaStore'
-import type { Slice } from './types'
+import type { GetState, SetState, Slice } from './types'
+import { gearLocked, inBreather } from './selectors'
+import { hudOf } from './battleSlice'
 
 export interface RosterActions {
   equipItem: (sentinelId: string, slot: HeroSlot, itemId: string) => void
@@ -32,24 +34,38 @@ export interface RosterActions {
 }
 
 export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
+  // Gear changes only between rounds (the designer: "items locked during
+  // rounds"): a live sub-wave refuses every equip, unequip and swap — the
+  // pack, the item panel and the keyboard all land here. In the breather the
+  // hero standing in the field is re-dressed too (`engine.regear`), and a
+  // change that makes someone swing beside another hero is allowed — it shows
+  // as a clearance conflict and holds the next sub-wave (`fieldConflicts`).
   equipItem: (sentinelId, slot, itemId) => {
-    const { roster, inventory, relics } = get()
-    const next = equipFromPack(roster, inventory, sentinelId, slot, itemId, equipRules(relics))
+    const st = get()
+    if (gearLocked(st)) return sfx('error')
+    const next = equipFromPack(st.roster, st.inventory, sentinelId, slot, itemId, equipRules(st.relics))
     if (!next) return
     set(next)
+    redress(get, set, sentinelId)
     sfx('equip')
   },
 
   unequipItem: (sentinelId, slot) => {
-    const { roster, inventory } = get()
-    const next = unequipToPack(roster, inventory, sentinelId, slot)
+    const st = get()
+    if (gearLocked(st)) return sfx('error')
+    const next = unequipToPack(st.roster, st.inventory, sentinelId, slot)
     if (!next) return
     set(next)
+    redress(get, set, sentinelId)
   },
 
   sortInventory: () => set({ inventory: sortItems(get().inventory) }),
 
+  // Crafting is gear too: while a sub-wave is live the item panel offers none
+  // of it, and the store refuses it here (a worn piece reforged mid-wave would
+  // be a gear change the fight never saw).
   dismantleItem: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { inventory, gold, dust, mode } = get()
     const item = inventory.find((i) => i.id === itemId)
     if (!item) return
@@ -62,6 +78,7 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   },
 
   reforge: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { gold } = get()
     const found = findItem(get().inventory, get().roster, itemId)
     if (!found) return
@@ -69,9 +86,11 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     if (gold < cost) return sfx('error')
     set(replaceItem(get().inventory, get().roster, itemId, reforgeItem(found.item, streams.rng)))
     set({ gold: gold - cost })
+    redressWearer(get, set, itemId)
   },
 
   upgradeItem: (itemId) => {
+    if (gearLocked(get())) return sfx('error')
     const { gold } = get()
     const found = findItem(get().inventory, get().roster, itemId)
     if (!found || !canUpgrade(found.item)) return
@@ -79,6 +98,7 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     if (gold < cost) return sfx('error')
     set(replaceItem(get().inventory, get().roster, itemId, upgradeRarity(found.item, streams.rng)))
     set({ gold: gold - cost })
+    redressWearer(get, set, itemId)
   },
 
   chooseEvolution: (sentinelId, nodeId) => {
@@ -106,3 +126,23 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     sfx('upgrade')
   },
 })
+
+/**
+ * A gear change in the breather reaches the fight: the hero standing in the
+ * field is re-dressed as the roster now has it (`engine.regear`, logged), and
+ * the HUD is re-read so the strip and the field re-check the clearance. A
+ * no-op in setup (the engine is built from the roster at Start Wave) and off
+ * the battle screen.
+ */
+function redress(get: GetState, set: SetState, sentinelId: string): void {
+  const st = get()
+  if (!st.engine || !inBreather(st)) return
+  const hero = st.roster.find((h) => h.id === sentinelId)
+  if (hero && st.engine.regear(hero)) set({ hud: hudOf(st.engine) })
+}
+
+/** A worn piece reforged or raised in the breather reaches the fight too. */
+function redressWearer(get: GetState, set: SetState, itemId: string): void {
+  const wearer = get().roster.find((h) => Object.values(h.equipment).some((it) => it?.id === itemId))
+  if (wearer) redress(get, set, wearer.id)
+}

@@ -29,13 +29,17 @@
  * half a big tile along the road.
  *
  * **Melee heroes keep a clearance** ({@link CLEARANCE}; "Tower Clearance" in
- * the designer's words, {@link CLEARANCE_LABEL} on the field): a Fighter
- * swings all round it, so the 3 × 3 block of tiles centred on its own — the 8
- * tiles beside it, diagonals included — holds no other hero. Ranged heroes
- * (Rogue, Mystic) may stand shoulder to shoulder; they still may not step into
- * a Fighter's clearance, and a Fighter may not be posted where its clearance
- * would take in another hero. Which heroes are melee is read off the
- * archetype tree ({@link isMelee}), never guessed from a sprite.
+ * the designer's words, {@link CLEARANCE_LABEL} on the field): a hero that
+ * swings swings all round it, so the 3 × 3 block of tiles centred on its own —
+ * the 8 tiles beside it, diagonals included — holds no other hero. Ranged
+ * heroes may stand shoulder to shoulder; they still may not step into a
+ * swinger's clearance, and a swinger may not be posted where its clearance
+ * would take in another hero. Who swings is read off what the hero HOLDS (a
+ * sword, axe, greatsword or warhammer) or a skill that grants it —
+ * `engine/melee.isMelee`, never the class and never a sprite. Gear changes
+ * between rounds, so a hero can start swinging where it stands: that is a
+ * clearance CONFLICT ({@link clearanceConflicts}, `run/clearance.ts`), shown on
+ * the field and holding the next wave until the player makes space.
  *
  * The portrait twin is the same grid transposed (14 columns × 24 rows between
  * the twin's 30px side pads), so a tile id names the same patch of ground
@@ -64,8 +68,7 @@
  * battle, and named in the node preview before the march.
  */
 import type { Vec2 } from '../core/vec'
-import type { Archetype, FieldTile, TerrainKind, TerrainRuleId } from '../types'
-import { getNode } from './archetypeTree'
+import type { FieldTile, TerrainKind, TerrainRuleId } from '../types'
 
 /** Edge of one deployment tile, in logical field px. */
 export const TILE = 40
@@ -108,31 +111,6 @@ export const CLEARANCE = 1
  */
 export const CLEARANCE_LABEL = 'Clearance'
 
-/**
- * Does a hero rooted in `archetype` fight in melee? True when the tier-0 node
- * its attack is read from HOLDS enemies (`mods.block`): it stands at the road's
- * edge and swings at what it holds, at a close reach (the Fighter: 96px, against
- * the Rogue's 168 and the Mystic's 150). That is the Fighter line, and only it:
- * every evolution inherits its root, and nothing in the tree, the perks, the
- * mutations or the gear grants a hold to a hero whose root lacks one
- * (`tests/clearance.test.ts` holds all of it).
- */
-export function isMeleeArchetype(archetype: Archetype | string): boolean {
-  try {
-    return getNode(archetype).mods?.block != null
-  } catch {
-    return false
-  }
-}
-
-/**
- * Is this hero melee? Read off the root of its branch path — the node
- * `computeCombat` reads its attack from — so an evolution or a spec, which
- * only ever extends the path, can never change the answer mid-run.
- */
-export const isMelee = (h: { archetype: Archetype; branchPath?: readonly string[] }): boolean =>
-  isMeleeArchetype(h.branchPath?.[0] ?? h.archetype)
-
 /** A hero on the grid, as the spacing rule sees it: where, and whether it swings. */
 export interface Post {
   tile: string
@@ -151,7 +129,7 @@ export function withinClearance(a: string, b: string): boolean {
 /**
  * Do two heroes stand too close? Only when at least one of them is melee and
  * they are within a clearance of each other: two ranged heroes may stand side
- * by side, but nobody stands beside a Fighter.
+ * by side, but nobody stands beside a hero that swings.
  */
 export function crowds(a: string, aMelee: boolean, b: string, bMelee: boolean): boolean {
   return (aMelee || bMelee) && withinClearance(a, b)
@@ -161,6 +139,24 @@ export function crowds(a: string, aMelee: boolean, b: string, bMelee: boolean): 
 export function crowdedBy<P extends Post>(tile: string, melee: boolean, posts: Iterable<P>): P | undefined {
   for (const o of posts) if (crowds(o.tile, o.melee, tile, melee)) return o
   return undefined
+}
+
+/**
+ * Every clearance conflict among heroes already standing: each melee post with
+ * the posts inside its clearance. A hero only ever POSTS clear (the store and
+ * the breather move refuse a crowding tile), so a conflict is what a gear
+ * change leaves behind — a hero starting to swing where it stands. Two melee
+ * heroes too close show up twice, once as each one's conflict. Empty when the
+ * field is clear.
+ */
+export function clearanceConflicts<P extends Post>(posts: readonly P[]): { melee: P; crowding: P[] }[] {
+  const out: { melee: P; crowding: P[] }[] = []
+  for (const m of posts) {
+    if (!m.melee) continue
+    const crowding = posts.filter((o) => o !== m && withinClearance(m.tile, o.tile))
+    if (crowding.length) out.push({ melee: m, crowding })
+  }
+  return out
 }
 
 /**
@@ -314,16 +310,30 @@ export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
 }
 
 /**
- * The coach line for a tile too close to a Fighter ({@link CLEARANCE}): the
- * reason in plain words, whichever of the two heroes is the Fighter.
+ * The coach line for a tile too close to a hero that swings ({@link CLEARANCE}):
+ * the reason in plain words, whichever of the two heroes swings. The store's
+ * note names the hero and its weapon when it can (`run/clearance.roomLine`);
+ * this is the general form.
  */
 export const ROOM_COPY = {
   name: 'Too close',
-  line: 'Too close — Fighters swing all around them, so keep the tiles next to a Fighter clear of other heroes.',
+  line: 'Too close — a hero with a sword, axe or hammer swings all round it, so keep the tiles next to it clear.',
+}
+
+/**
+ * The coach line for a tap on a posted hero while a sub-wave is LIVE (the
+ * designer: "towers cannot be moved during rounds. only between"). Posts change
+ * in the setup and in the breather between sub-waves; mid-wave the tap says so
+ * instead of doing nothing. Its twin on the gear side is "Gear locks during a
+ * wave" (`DetailBand.GEAR_LOCK_LINE`).
+ */
+export const HELD_COPY = {
+  name: 'During a wave',
+  line: 'During a wave — heroes hold their posts. Move them between waves.',
 }
 
 /** The same reason, short, in a tile's name on the keyboard layer. */
-export const ROOM_REASON = 'Fighters swing all around them and need the tiles beside them clear'
+export const ROOM_REASON = 'a hero with a sword, axe or hammer swings all round it and needs the tiles beside it clear'
 
 /** A map challenge, as a terrain rule. */
 export interface TerrainRule {

@@ -94,6 +94,15 @@
   font-family: var(--font-display);
   font-size: var(--fs-lg);
 }
+/* Weapon clearance: a held "Next ▶" waiting on a clearance conflict reads as
+   waiting — the disabled primary's own treatment, never the live teal. */
+.sh-command.next:disabled {
+  border-color: var(--cta);
+  background: var(--panel-3);
+  box-shadow: none;
+  color: var(--muted);
+  cursor: default;
+}
 
 /* ---------------------------------------------------------------- the Stage */
 .sh-stage .battle-canvas-wrap {
@@ -791,6 +800,70 @@ h1.sh-brand {
 .sh-wq-cap.do .sh-wq-now {
   color: var(--accent);
 }
+/* Weapon clearance — a hero swinging beside another holds the wave. The
+   caption turns to the clearance's red ("MAKE SPACE · Doyle swings a sword")
+   and the queue's row carries the fix in words, two lines at most; the
+   strip's edge says it too. Same two slots, same height: nothing moves. */
+.sh-space {
+  min-width: 0;
+}
+.sh-wq-cap.bad .sh-wq-name {
+  flex: 0 0 auto;
+  color: var(--bad-text);
+}
+.sh-wq-cap.bad .sh-wq-name .fw-i {
+  vertical-align: -4px;
+}
+.sh-wq-cap.bad .sh-wq-now {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-xs);
+}
+.sh-space-fix {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.25;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-wrap: pretty;
+}
+.sh-space-who {
+  display: none;
+}
+/* Narrow: "⚠ MAKE SPACE" alone on the caption line, and the whole reason —
+   "Doyle swings a sword — move a hero out of the red zone." — under it. */
+@container (max-width: 259.98px) {
+  .sh-wq-cap.bad .sh-wq-name {
+    display: inline;
+  }
+  .sh-wq-cap.bad .sh-wq-now {
+    display: none;
+  }
+  .sh-space-who {
+    display: inline;
+  }
+  .sh-space-do {
+    display: none;
+  }
+  .sh-space-fix {
+    -webkit-line-clamp: 3;
+  }
+}
+/* A collapsed band (portrait setup, a live or held wave) is sized to a one-row
+   strip; while a conflict holds the wave the strip needs its reason, so the
+   band gives it two more lines and the Stage gives them up — only for as long
+   as the conflict stands. */
+.shell.is-collapsed:has(.sh-space) {
+  --sh-wavebar-live-h: 82px;
+}
+.sh-wavebar.sh-wq-bar.conflict,
+.sh-wavebar.sh-wq-bar:has(.sh-space) {
+  border-color: color-mix(in srgb, var(--bad) 60%, var(--line));
+}
+
 /* The held sub-wave is a different moment; the strip says so at its edge. */
 .sh-wavebar.sh-wq-bar.held {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));

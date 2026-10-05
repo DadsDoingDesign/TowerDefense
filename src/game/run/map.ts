@@ -5,7 +5,8 @@
  */
 import type { RNG } from '../core/rng'
 import { generateRunMap, type MapOptions, type RunMap } from '../data/runmap'
-import { crowdedBy, isMelee, type Post } from '../data/terrain'
+import { isMelee } from '../engine/melee'
+import type { Post } from '../data/terrain'
 import type { GameMap, Placement, Sentinel } from '../types'
 
 /** The Banner rules the map shape reads (a subset of `metaStore.BannerRules`). */
@@ -57,36 +58,34 @@ export function emptyPlacements(map: GameMap): Placement {
  * The company's posts carried onto `map` (G1-2). A placement is keyed by tile
  * id, and the next battle's terrain can block a tile the company stood on (a
  * lake, a fire): that hero goes back to the bench rather than standing in it.
- * Only open tiles are kept, each hero at most once, at most `cap` heroes, and
- * never a hero too close to one already kept (a Fighter's clearance,
- * `terrain.CLEARANCE`: nobody beside a melee hero; ranged heroes side by side
- * are fine). `keep` filters hero ids (e.g. to the live roster); `melee` says
- * which of them swing (`meleeOf(roster)`).
+ * Only open tiles are kept, each hero at most once, at most `cap` heroes.
+ * `keep` filters hero ids (e.g. to the live roster).
+ *
+ * The clearance is NOT applied here (weapon clearance): a hero who took a
+ * sword at the merchant, or a save from before the rule, may stand beside
+ * someone now. Nobody is moved or benched behind the player's back — the
+ * battle opens with that clearance CONFLICT drawn on the field, and Start
+ * Wave waits until the player makes space (`run/clearance.ts`).
  */
 export function carryPlacements(
   prev: Placement,
   map: GameMap,
   keep: (sentinelId: string) => boolean,
   cap: number,
-  melee: (sentinelId: string) => boolean,
 ): Placement {
   const next = emptyPlacements(map)
   const seen = new Set<string>()
-  const kept: Post[] = []
   for (const [tileId, sentId] of Object.entries(prev ?? {})) {
     if (!sentId || typeof sentId !== 'string' || !Object.prototype.hasOwnProperty.call(next, tileId)) continue
     if (seen.has(sentId) || !keep(sentId)) continue
     if (seen.size >= cap) break
-    const m = melee(sentId)
-    if (crowdedBy(tileId, m, kept)) continue
     next[tileId] = sentId
     seen.add(sentId)
-    kept.push({ tile: tileId, melee: m })
   }
   return next
 }
 
-/** Which hero ids of `roster` fight in melee (`terrain.isMelee`); an unknown id does not. */
+/** Which hero ids of `roster` swing (`melee.isMelee`); an unknown id does not. */
 export function meleeOf(roster: readonly Sentinel[]): (sentinelId: string) => boolean {
   const melee = new Set(roster.filter(isMelee).map((h) => h.id))
   return (id) => melee.has(id)

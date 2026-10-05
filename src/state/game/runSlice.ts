@@ -9,7 +9,7 @@ import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { carryPlacements, encounterNode, meleeOf } from '../../game/run/map'
+import { carryPlacements, encounterNode } from '../../game/run/map'
 import { nodeHazardSeed, nodeTerrainRule } from '../../game/run/terrain'
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
@@ -242,7 +242,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // Only open tiles of the field the battle resumes on, each hero once, at
     // most a full company (G1-2) — whatever the payload claims.
     const rosterIds = new Set(snap.roster.map((s) => s.id))
-    const placements: Placement = carryPlacements(snap.placements ?? {}, battleMap, (id) => rosterIds.has(id), MAX_ROSTER, meleeOf(snap.roster))
+    const placements: Placement = carryPlacements(snap.placements ?? {}, battleMap, (id) => rosterIds.has(id), MAX_ROSTER)
 
     // Which side of the wave was the snapshot taken on? (C-1)
     //
@@ -437,7 +437,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       currentWave: wave,
       battleMap,
       // A hero posted on a tile this field blocks goes back to the bench.
-      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER, meleeOf(roster)),
+      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
       battlePhase: 'setup',
       screen: 'battle',
       selectedSentinelId: null,

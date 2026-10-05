@@ -4,6 +4,7 @@
  */
 import { RARITY } from '../../game/data/items'
 import type { ItemRarity } from '../../game/types'
+import { conflictsAmong, type ClearanceConflict, type Standing } from '../../game/run/clearance'
 import { nodeThreatMult } from '../../game/run/threat'
 import type { GameData } from './types'
 
@@ -73,3 +74,57 @@ export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'mode'
   const node = s.mode === 'campaign' && s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
   return s.enemyHpMult * s.threat * nodeThreatMult(node?.type)
 }
+
+/*
+ * ---------------------------------------------------------------------------
+ * Between rounds and during them (weapon clearance)
+ * ---------------------------------------------------------------------------
+ *
+ * The designer: "items locked during rounds, and towers cannot be moved during
+ * rounds. only between". A ROUND is a live sub-wave: the engine running and not
+ * held. Between rounds is the setup before a wave and the breather between two
+ * sub-waves; gear and posts change only there, so that is also the only place a
+ * clearance conflict can stand (`run/clearance.ts`).
+ */
+export type FieldGate = Pick<GameData, 'screen' | 'engine' | 'battlePhase' | 'roster' | 'placements' | 'battleMap'>
+
+/**
+ * Gear is locked: a sub-wave is live (or its clear is being held on screen).
+ * Equip, unequip and swap all refuse, wherever they come from. Merchants,
+ * rewards and every other page between nodes are never in a battle, so never
+ * locked.
+ */
+export const gearLocked = (s: Pick<GameData, 'screen' | 'engine'>): boolean =>
+  s.screen === 'battle' && !!s.engine && !s.engine.breather
+
+/** Is this the breather between two sub-waves? */
+export const inBreather = (s: Pick<GameData, 'screen' | 'engine' | 'battlePhase'>): boolean =>
+  s.screen === 'battle' && s.battlePhase === 'battle' && !!s.engine?.breather
+
+/**
+ * Who stands where on the field right now, between rounds: the setup posts, or
+ * the held engine's heroes in the breather (as the engine has them — moved and
+ * re-dressed). Empty during a live round and off the battle screen.
+ */
+export function fieldStanding(s: FieldGate): Standing[] {
+  if (s.screen !== 'battle') return []
+  if (s.engine) return inBreather(s) ? s.engine.sentinels.map((x) => ({ hero: x.def, tile: x.slotId })) : []
+  if (s.battlePhase !== 'setup') return []
+  const open = new Set(s.battleMap.slots.map((x) => x.id))
+  const byId = new Map(s.roster.map((h) => [h.id, h]))
+  const out: Standing[] = []
+  for (const [tile, id] of Object.entries(s.placements)) {
+    const hero = id ? byId.get(id) : undefined
+    if (hero && open.has(tile)) out.push({ hero, tile })
+  }
+  return out
+}
+
+/**
+ * The clearance conflicts standing on the field right now (between rounds).
+ * Any one holds the next wave: `startWave` and `resumeSubWave` refuse, and the
+ * wave strip says how to make space. Not part of `canStartWave` on purpose —
+ * that predicate says whether this ground can be fought AT ALL (its "no" is
+ * the stranded-battle exit); a conflict only says "not yet".
+ */
+export const fieldConflicts = (s: FieldGate): ClearanceConflict[] => conflictsAmong(fieldStanding(s))
