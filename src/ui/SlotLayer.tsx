@@ -36,7 +36,7 @@ export function slotPlace(map: GameMap, pos: Vec2): string {
     if (d < best.d) best = { i, d }
   }
   if (best.i === 0) return 'by the way in'
-  if (best.i >= pts.length - 2 && Math.hypot(map.base.x - pos.x, map.base.y - pos.y) < 260) return 'near the Gate'
+  if (best.i >= pts.length - 2 && Math.hypot(map.base.x - pos.x, map.base.y - pos.y) < 260) return 'near the wagons'
   return `by the ${ORDINAL[best.i - 1] ?? `${best.i}th`} bend`
 }
 

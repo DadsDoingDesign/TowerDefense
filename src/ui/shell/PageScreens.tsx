@@ -17,6 +17,7 @@ import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatR
 import { RunSeed } from './RunSeed'
 import { VolumeSlider } from './VolumeSlider'
 import { useStaged } from './staging'
+import { ContractChip } from './contracts/parts'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -183,6 +184,7 @@ export function PageScreen({
   // the purse in a run, the bank at home.
   const shortfall = (c: Price) => Math.max(0, c.amount - (onHub ? bank : gold))
   const heroPick = useGameStore((s) => s.screen === 'heroPick')
+  const contract = useGameStore((s) => s.contract)
   // LS3: a first run's hero-pick carries no seed chip — a seed is a thing to
   // share or replay, and a first run has neither yet.
   const staged = useStaged()
@@ -271,7 +273,7 @@ export function PageScreen({
       // Hero-pick prices nothing, so its title block carries the run's seed
       // and terms instead (`RunSeed`, a chip that never scrolls).
       resources={purse.size ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
-      strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
+      strip={inRunBoard && !titleOverride ? <PackStrip /> : heroPick && contract ? <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} /> : undefined}
       tone={ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}

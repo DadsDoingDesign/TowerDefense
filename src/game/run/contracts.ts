@@ -141,6 +141,13 @@ export interface CityPay {
   total: number
 }
 
+/**
+ * How much of the cargo `hp` of the wagons' HP is, in whole percent — for the
+ * copy that states an amount (a repair, a mend), at the standard 20-HP
+ * wagons unless the run's own maximum is known.
+ */
+export const cargoShare = (hp: number, max = 20): number => Math.round((100 * Math.max(0, hp)) / Math.max(1, max))
+
 /** Cargo as a whole percentage of the caravan's condition (the Gate's HP). */
 export const cargoPct = (hp: number, max: number): number =>
   max > 0 ? Math.max(0, Math.min(100, Math.round((100 * Math.max(0, hp)) / max))) : 0

@@ -126,12 +126,12 @@ export const RELICS: readonly Relic[] = [
   { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · all your heroes', downside: '−12% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
-  { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 enemies to reach the Gate each wave cost it nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
+  { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 raiders to reach your wagons each wave steal nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
   { id: 'hound_banner', name: 'Bloodhound Banner', rarity: 'rare', kind: 'rule', desc: 'Every 5th shot of every hero pierces 2 more enemies.', requires: 'volley', grant: { mods: { volley: { every: 5, pierce: 2 } } } },
   { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, all your heroes attack 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
   { id: 'veteran_cloak', name: "Veteran's Cloak", rarity: 'epic', kind: 'rule', desc: 'A kill makes that hero attack 25% faster for 1.5s.', requires: 'killRush', grant: { mods: { killRush: { rate: 0.25, dur: 1.5 } } }, unlock: 'act_two' },
   { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your heroes’ median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
-  { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'The Gate recovers 2 after every fight you win.', rule: 'fieldSurgeon' },
+  { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'After every fight you win, 10% of the cargo is rounded up.', rule: 'fieldSurgeon' },
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },
   { id: 'diary', name: 'War Diary', rarity: 'epic', kind: 'rule', desc: 'After every fight, the lowest-level hero on the field gains 50% more XP.', rule: 'warDiary' },
   { id: 'tithe', name: 'Tithe Box', rarity: 'common', kind: 'rule', desc: '+10 gold for every fight you win.', rule: 'titheBox' },

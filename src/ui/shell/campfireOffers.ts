@@ -10,6 +10,7 @@
  */
 import { lookVar } from '../channels'
 import { kitName } from '../../game/data/gear'
+import { cargoPct, cargoShare } from '../../game/run/contracts'
 import { heroLookArt } from './offers'
 import { CAMPFIRE_FORAGE, CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
 import { GATE_REPAIR, rerollCost } from '../../game/run/economy'
@@ -25,17 +26,20 @@ type St = ReturnType<typeof useGameStore.getState>
  * the choice is still "train someone, or waste the fire".
  */
 export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
-  const gain = restGain(st.baseHp, st.maxBaseHp)
+  // The Gate is the caravan: a rest rounds up cargo that scattered, said as
+  // the share of the cargo it wins back.
+  const gain = cargoShare(restGain(st.baseHp, st.maxBaseHp), st.maxBaseHp)
+  const now = cargoPct(st.baseHp, st.maxBaseHp)
   const rest: Offer = {
     id: 'campfire-rest',
     title: 'Rest by the fire',
-    sub: gain > 0 ? `Gate +${gain}` : 'Gate is full',
+    sub: gain > 0 ? `Cargo +${gain}%` : 'Cargo is whole',
     icon: 'base',
     body: [
-      `The Gate recovers ${CAMPFIRE_REPAIR}, up to its maximum (${st.baseHp}/${st.maxBaseHp} now).`,
+      `A night to round up stray cargo: +${cargoShare(CAMPFIRE_REPAIR, st.maxBaseHp)}%, up to all of it (${now}% now).`,
       'Resting spends the campfire. No one trains tonight.',
     ],
-    action: { label: gain > 0 ? `Rest — Gate +${gain}` : 'Rest anyway', run: () => st.campfireRest(), done: gain > 0 ? `Gate +${gain}` : undefined },
+    action: { label: gain > 0 ? `Rest — cargo +${gain}%` : 'Rest anyway', run: () => st.campfireRest(), done: gain > 0 ? `Cargo +${gain}%` : undefined },
   }
   const train: Offer[] = st.roster.map((s) => {
     const able = canTrain(s)
@@ -49,7 +53,7 @@ export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
         ? [
             `${s.name} (${kitName(s)}) gains a full level: +${xpToNextLevel(s)} XP.`,
             ...(s.level + 1 === 5 || s.level + 1 === 10 || s.level + 1 === 15 ? [`Level ${s.level + 1} brings a skill choice.`] : []),
-            'Training spends the campfire. The Gate does not rest.',
+            'Training spends the campfire. No stray cargo is rounded up.',
           ]
         : [`${s.name} is at the level cap. Training would do nothing.`],
       action: {
@@ -100,21 +104,21 @@ export function merchantServiceOffers(st: St): Offer[] {
   if (m.repair) {
     const r = m.repair
     const full = st.baseHp >= st.maxBaseHp
-    const gain = Math.min(r.hp, st.maxBaseHp - st.baseHp)
+    const gain = cargoShare(Math.min(r.hp, st.maxBaseHp - st.baseHp), st.maxBaseHp)
     out.push({
       id: 'merchant-repair',
-      title: 'Gate repair',
-      sub: full ? 'Gate is full' : `Gate +${gain}`,
+      title: 'Wagon repair',
+      sub: full ? 'Cargo is whole' : `Cargo +${gain}%`,
       icon: 'base',
       cost: { amount: r.price, currency: 'gold' },
       dim: st.gold < r.price || full,
-      body: [`Timber and nails: the Gate recovers ${GATE_REPAIR.hp}, up to its maximum (${st.baseHp}/${st.maxBaseHp} now). One per visit.`],
+      body: [`Timber, rope and a buyer for what was stolen: +${cargoShare(GATE_REPAIR.hp, st.maxBaseHp)}% cargo, up to all of it (${cargoPct(st.baseHp, st.maxBaseHp)}% now). One per visit.`],
       action: {
-        label: full ? 'Gate is full' : `Repair — Gate +${gain}`,
+        label: full ? 'Cargo is whole' : `Repair — cargo +${gain}%`,
         cost: { amount: r.price, currency: 'gold' },
         run: () => st.buyGateRepair(),
         disabled: full || st.gold < r.price,
-        done: `Gate +${gain}`,
+        done: `Cargo +${gain}%`,
       },
     })
   }

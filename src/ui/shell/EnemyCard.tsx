@@ -225,7 +225,7 @@ export function EnemyCard({
         </div>
         <div>
           <dt>
-            <Icon name="base" /> Gate
+            <Icon name="base" /> Wagons
           </dt>
           <dd>
             {d.gate == null ? unknown : <>−{d.gate}<small> base HP if it gets through</small></>}

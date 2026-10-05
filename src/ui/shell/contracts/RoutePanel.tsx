@@ -66,7 +66,7 @@ export function RoutePanel() {
         )}
         {next != null && (
           <span>
-            Next: {co.towns[next]} in {stopsToNext} stop{stopsToNext === 1 ? '' : 's'} pays <Gold n={nextPay} scale={1} />
+            Next: {co.towns[next]}, {stopsToNext} stop{stopsToNext === 1 ? '' : 's'} · <Gold n={nextPay} scale={1} />
           </span>
         )}
       </p>

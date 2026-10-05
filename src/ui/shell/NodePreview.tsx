@@ -5,6 +5,7 @@ import { encounterThreat } from '../../game/run/threat'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
+import { cargoShare } from '../../game/run/contracts'
 import { stakeRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
 import { NODE_ICON, strengthPct, strengthText } from '../channels'
@@ -17,7 +18,7 @@ const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and sometimes a hero for hire.',
   shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
   recruit: 'A hero looking for work. Take one on or walk on.',
-  campfire: `Rest (Gate +${CAMPFIRE_REPAIR}) or train one hero a full level. One of the two.`,
+  campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,
 }
 
 /**

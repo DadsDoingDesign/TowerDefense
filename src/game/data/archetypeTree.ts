@@ -159,7 +159,7 @@ const TIER1: TreeNode[] = [
   t1('cleric', 'mystic', 'Cleric', 'Empowers allies.', 'Makes the heroes around it hit harder.', { stats: { int: 7, str: 2 }, patience: 4 }, { buffAura: { damageMult: 1.15, radius: 130 } }),
   // The Warlock's old self-sacrifice (+15% damage for 15% of its HP) is folded
   // into its damage: with no hero HP there is nothing to sacrifice.
-  t1('warlock', 'mystic', 'Warlock', 'Life-drain.', 'Hits hard, and what it deals mends the Gate.', { stats: { int: 8, str: 2 }, patience: 2 }, { lifedrain: 0.2, damageMult: 1.5 }),
+  t1('warlock', 'mystic', 'Warlock', 'Life-drain.', 'Hits hard, and what it deals wins back cargo.', { stats: { int: 8, str: 2 }, patience: 2 }, { lifedrain: 0.2, damageMult: 1.5 }),
 ]
 
 // ---------------------------------------------------------------- Tier 2 (27)

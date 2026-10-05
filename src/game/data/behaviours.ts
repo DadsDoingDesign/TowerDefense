@@ -239,14 +239,14 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
     counter: 'burst it through the threshold, or chill it — slows still apply to the enraged pace',
   },
   sapper: {
-    label: 'Blows up at the Gate for extra damage',
+    label: 'Blows up at your wagons, stealing extra cargo',
     telegraph: 'lit fuse over it; blast ring where it goes off',
     counter: 'kill it on the approach, or hold it with a blocker: a held sapper goes off harmlessly and counts as the blocker\'s kill',
   },
   lob: {
-    label: 'Lobs a charge at the Gate when it gets close',
-    telegraph: 'target circle on the Gate while it winds up',
-    counter: 'kill it during the wind-up (Threat targeting), or before it gets near the Gate',
+    label: 'Lobs a charge at your wagons when it gets close',
+    telegraph: 'target circle on the wagons while it winds up',
+    counter: 'kill it during the wind-up (Threat targeting), or before it gets near the wagons',
   },
   split: {
     label: 'Breaks apart when destroyed',
@@ -269,8 +269,8 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
     counter: 'Flare or chill the column after the cry; save Rally Horn for the burst through a threshold',
   },
   kingLob: {
-    label: 'Lobs TNT at the Gate every few seconds, faster once wounded',
-    telegraph: 'large target circle on the Gate while it winds up',
+    label: 'Lobs TNT at your wagons every few seconds, faster once wounded',
+    telegraph: 'large target circle on the wagons while it winds up',
     counter: 'race it down: every second it lives is another throw',
   },
   bossSplit: {

@@ -190,7 +190,7 @@ describe('the classless rework’s combo skills', () => {
     expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
     expect(desc('split_shot')).toBe('Its attacks pass through 1 more enemy.')
     expect(desc('momentum')).toBe('Attacks 15% faster for each enemy it is holding.')
-    expect(desc('last_rites')).toBe('Every 5th kill it makes mends the Gate by 1.')
+    expect(desc('last_rites')).toBe('Every 5th kill it makes wins back 5% of the cargo.')
   })
 
   it('reach the combat profile exactly by their mods', () => {

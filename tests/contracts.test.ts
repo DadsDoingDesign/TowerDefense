@@ -33,6 +33,7 @@ import {
 } from '../src/game/run/contracts'
 import {
   cardFloor,
+  charterProgress,
   companyOpen,
   contractFloor,
   MAX_STANDING,
@@ -286,6 +287,14 @@ describe('standing', () => {
     const item = rollContractItem([], 'scrolls', 6, 'z')!
     expect(ITEM_KINDS.find((k) => k.id === item)!.level).toBe(3)
     expect(rollContractSkill([], 'spice', 0, 'w')).not.toBeNull()
+  })
+
+  it('the charter opens only when everything else is unlocked', () => {
+    const none = charterProgress({ skills: [], items: [], standing: {} })
+    expect(none).toEqual({ progress: 0, unlocked: false })
+    const top = Object.fromEntries(COMPANY_IDS.map((c) => [c, standingXpToReach(MAX_STANDING)]))
+    expect(charterProgress({ skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS], standing: top }).unlocked).toBe(true)
+    expect(charterProgress({ skills: [...RANDOM_UNLOCK_SKILLS], items: [], standing: top }).unlocked).toBe(false)
   })
 
   it('old Watch XP is spread evenly, and Moonquill opens at standing 3 anywhere', () => {

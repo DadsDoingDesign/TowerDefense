@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
+import { cargoPct } from '../../game/run/contracts'
 import { useBattleLedger } from '../battleLedger'
 import { useCombatNotes } from '../../state/combatNotes'
 import { battleLayoutOf } from './live'
@@ -66,7 +67,7 @@ export function Announcer() {
         // gets there from the layout and a screen reader does not.
         const inPlace = rewardInPlace(s)
         if (r.status === 'cleared') {
-          say(`Wave cleared. ${r.goldEarned} gold${r.enemiesLeaked ? `, ${r.enemiesLeaked} reached the Gate` : ''}.`)
+          say(`Wave cleared. ${r.goldEarned} gold${r.enemiesLeaked ? `, ${r.enemiesLeaked} reached the wagons` : ''}.`)
           if (inPlace) say(`Take one of ${s.reward!.length} rewards, below the field.`)
         } else if (s.runPhase === 'active') {
           say('Wave lost.')
@@ -92,7 +93,7 @@ export function Announcer() {
           hitT.current = null
           lastHit.current = Date.now()
           const h = useBattleLedger.getState().lastHit
-          if (h) say(`Gate hit — ${h.gate} of ${h.max}.`)
+          if (h) say(`Cargo stolen — ${cargoPct(h.gate, h.max)}% left.`)
         }
         const wait = HIT_GAP_MS - (Date.now() - lastHit.current)
         if (wait <= 0) speak()

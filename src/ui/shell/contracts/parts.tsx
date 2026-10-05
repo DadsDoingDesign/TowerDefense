@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { companyVar, moneyText } from '../../channels'
-import { Coin, Lantern } from '../../pixel'
+import { Coin, Crest, Lantern } from '../../pixel'
 
 /**
  * The trade pages' shared parts (the mercenary company, build step 2), drawn
@@ -149,6 +149,23 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
         ))}
       </ol>
     </div>
+  )
+}
+
+/**
+ * The contract being set up, on the hero pick: whose road, how much cargo, to
+ * where, and the purse — so a first-timer (who never sees the board) still
+ * reads that this run is a job for someone.
+ */
+export function ContractChip({ company, crates, purse }: { company: CompanyId; crates: number; purse: number }) {
+  const co = companyById(company)
+  return (
+    <p className="ct-contract-chip" style={{ '--co': companyVar(company) } as CSSProperties}>
+      <Crest company={company} scale={1} />
+      <span>
+        <b>{co.name}</b> · {crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'escort'} to {co.towns[2]} · purse <Gold n={purse} scale={1} />
+      </span>
+    </p>
   )
 }
 

@@ -1032,6 +1032,27 @@
   z-index: 1;
   filter: drop-shadow(0 0 5px var(--co));
 }
+.ct-contract-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: rgba(32, 23, 17, 0.9);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 3px 0 0 var(--co);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.ct-contract-chip b {
+  color: var(--text);
+}
+.ct-contract-chip .ct-gold {
+  color: var(--accent-text);
+  font-weight: 700;
+  vertical-align: -1px;
+}
 .sh-cargo-crate {
   display: inline-grid;
   place-items: center;
