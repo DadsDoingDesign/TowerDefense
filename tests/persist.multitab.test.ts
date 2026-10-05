@@ -34,22 +34,22 @@ function otherTabWrites(key: string, patch: (state: Record<string, unknown>) => 
 }
 
 describe('persisted stores follow other tabs', () => {
-  it('meta: marks earned in another tab are not overwritten by this one', () => {
-    useMetaStore.getState().grantMarks(5) // this tab saves once
+  it('meta: gold banked in another tab is not overwritten by this one', () => {
+    useMetaStore.getState().deposit(5) // this tab saves once
     otherTabWrites('fieldwatch-meta', (s) => {
-      s.watchMarks = 500
+      s.bank = 500
     })
-    expect(useMetaStore.getState().watchMarks).toBe(500)
-    useMetaStore.getState().grantMarks(10) // and a later save builds on it
+    expect(useMetaStore.getState().bank).toBe(500)
+    useMetaStore.getState().deposit(10) // and a later save builds on it
     const stored = JSON.parse(shim.data.get('fieldwatch-meta')!).state
-    expect(stored.watchMarks).toBe(510)
+    expect(stored.bank).toBe(510)
   })
 
   it('meta: a corrupt write from another tab lands as defaults, not NaN', () => {
     otherTabWrites('fieldwatch-meta', (s) => {
-      s.watchMarks = 'lots'
+      s.bank = 'lots'
     })
-    expect(useMetaStore.getState().watchMarks).toBe(0)
+    expect(useMetaStore.getState().bank).toBe(100)
   })
 
   it('settings: a change in another tab applies here', () => {
@@ -61,9 +61,9 @@ describe('persisted stores follow other tabs', () => {
   })
 
   it('ignores other keys', () => {
-    const before = useMetaStore.getState().watchMarks
-    shim.data.set('fieldwatch-meta', JSON.stringify({ state: { watchMarks: 999 }, version: 99 }))
+    const before = useMetaStore.getState().bank
+    shim.data.set('fieldwatch-meta', JSON.stringify({ state: { bank: 999 }, version: 99 }))
     shim.fire('some-other-key')
-    expect(useMetaStore.getState().watchMarks).toBe(before)
+    expect(useMetaStore.getState().bank).toBe(before)
   })
 })

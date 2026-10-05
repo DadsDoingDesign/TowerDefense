@@ -36,9 +36,8 @@ describe('encounter preview == spawned encounter', () => {
         const runMap = addDifficultyElites(generateRunMap(streamRng(seed, 'map')), difficultyRules(tier).extraElites, seed)
         useGameStore.setState({
           runSeed: seed,
-          runDifficulty: tier,
+          contract: null,
           runMap,
-          mode: 'campaign',
           runPhase: 'active',
           screen: 'map',
           event: null,

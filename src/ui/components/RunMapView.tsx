@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
-import { difficultyRules } from '../../state/metaStore'
+import { cityOfLayer, stakeRules } from '../../game/run/contracts'
+import { companyById } from '../../game/data/companies'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
@@ -37,7 +38,9 @@ export function RunMapView() {
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
-  const startThreat = useGameStore((s) => difficultyRules(s.runDifficulty).startThreat)
+  const startThreat = useGameStore((s) => stakeRules(s.contract?.crates ?? 0).startThreat)
+  // The act bosses are the route's cities (the mercenary company): named on the map.
+  const towns = useGameStore((s) => (s.contract ? companyById(s.contract.company).towns : null))
   const focusedId = useMapFocus((s) => s.nodeId)
   const focus = useMapFocus((s) => s.focus)
 
@@ -128,6 +131,8 @@ export function RunMapView() {
           // Under Banner 2 a "battle" node IS an elite — same glyph, same hue,
           // same word, or the map is drawing a wave the run will not field.
           const meta = nodeMeta(n.type)
+          const city = towns ? cityOfLayer(n.layer) : null
+          const town = city != null && (n.type === 'miniboss' || n.type === 'boss') ? towns![city] : null
           const isCleared = clearedSet.has(n.id)
           const isReachable = reachableSet.has(n.id)
           const isCurrent = n.id === currentNodeId
@@ -158,7 +163,7 @@ export function RunMapView() {
                  offers composes another ×1.05 on top. The chip has no room to
                  say so, but the accessible name does, and the offer itself
                  spells it out. */
-              aria-label={`${meta.label}${
+              aria-label={`${meta.label}${town ? `, ${town}` : ''}${
                 threat && strengthPct(threat) > 0
                   ? `, enemy strength ${strengthShort(threat)}`
                   : ''
@@ -180,7 +185,7 @@ export function RunMapView() {
               <span className="mn-glyph">
                 <Icon name={NODE_ICON[n.type] ?? 'depth'} />
               </span>
-              <span className="mn-label">{meta.label}</span>
+              <span className={`mn-label${town ? ' town' : ''}`}>{town ?? meta.label}</span>
               {/* Only on nodes you can actually choose between: the cost is
                   information for the fork in front of you, not decoration on
                   the twenty nodes behind and above it. */}

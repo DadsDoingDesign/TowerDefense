@@ -1,14 +1,12 @@
+import { cargoShare } from '../run/contracts'
 import type { CoreStats, EffectMods, Enchantment } from '../types'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
-/** One decimal, trailing ".0" trimmed — for small per-100 style numbers. */
-const num1 = (v: number) => v.toFixed(1).replace(/\.0$/, '')
 /**
  * Life-drain restores `damage × lifedrain × 0.02` base HP (engine.ts
  * LIFEDRAIN_SCALE). Quote it per 100 damage so the number is legible at the
  * 0.1–0.5 values the game actually rolls, instead of rounding to "0%" (H5).
  */
-const lifedrainPer100 = (lifedrain: number) => num1(lifedrain * 0.02 * 100)
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`
 const signPct = (mult: number) => {
   const d = mult - 1
@@ -95,7 +93,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.vsSlowed) out.push(`${pct(m.vsSlowed)} more to slowed enemies`)
   if (m.rushPerHeld) out.push(`${pct(m.rushPerHeld)} faster per enemy held`)
   if (m.goldPerKill) out.push(`+${m.goldPerKill} gold a kill`)
-  if (m.killMend) out.push(`every ${m.killMend.every}th kill mends the Gate by ${m.killMend.hp}`)
+  if (m.killMend) out.push(`every ${m.killMend.every}th kill wins back ${cargoShare(m.killMend.hp)}% of the cargo`)
   if (m.thornsMult && m.thornsMult !== 1) out.push(`${signPct(m.thornsMult)} thorns`)
   if (m.buffAura) {
     out.push(
@@ -104,7 +102,7 @@ export function describeMods(m: EffectMods): string[] {
         : `blessing reaches ${Math.round(m.buffAura.radius)}px`,
     )
   }
-  if (m.lifedrain) out.push(`life-drain: +${lifedrainPer100(m.lifedrain)} Gate HP per 100 damage`)
+  if (m.lifedrain) out.push(`life-drain: +${cargoShare(m.lifedrain * 0.02 * 100)}% cargo per 100 damage`)
   // Both numbers, and the honest count. `trap.slow` was merged, applied by
   // `engine.updateTraps` and described nowhere — the same defect as the
   // once-undescribed armour stat (F11). And "traps", plural, was wrong: the engine
@@ -122,7 +120,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.critEvery) out.push(`every ${ordinal(m.critEvery)} shot is a guaranteed crit`)
   if (m.killRush) out.push(`each kill: ${pct(m.killRush.rate)} faster attacks for ${m.killRush.dur}s`)
   if (m.openingRush) out.push(`first ${m.openingRush.dur}s of a wave: ${pct(m.openingRush.rate)} faster attacks`)
-  if (m.leakWard) out.push(`the first ${m.leakWard} leaks each wave cost the Gate nothing`)
+  if (m.leakWard) out.push(`the first ${m.leakWard} raiders to reach your wagons each wave steal nothing`)
   if (m.burnSpreadOnDeath) out.push('a burning enemy that dies spreads its fire to its neighbours')
   return out
 }

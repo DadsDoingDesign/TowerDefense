@@ -1,29 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { RARITY } from '../../game/data/items'
-import { itemName, MARKS_INTRO, moneyText, strengthText } from '../channels'
-import { Icon } from '../Icon'
+import { COMPANY_IDS } from '../../game/data/companies'
+import { standingOf, topStanding } from '../../game/run/standing'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
-import { watchLevelFor } from '../../game/run/watch'
-import { assistProfile, useSettingsStore, type AssistLevel } from '../../state/settingsStore'
 import type { ShellContext } from './context'
-import { difficultyLine, type Act, type Offer, type Price } from './offers'
-import { DifficultyPicker } from './DifficultyPicker'
-import { ProgressEarned } from './ProgressEarned'
+import { type Act, type Offer, type Price } from './offers'
 import { CollectionTabs, SkillCard, SkillCards } from './SkillCards'
 import { HeroCards } from './HeroCards'
 import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
 import { AttractMode, useMenuMotion } from './AttractMode'
-import { DefeatReceipt } from './DefeatReceipt'
 import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { UpdateNotice } from '../UpdateNotice'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { RunSeed } from './RunSeed'
-import { FeatsEarned } from './FeatsEarned'
 import { VolumeSlider } from './VolumeSlider'
 import { useStaged } from './staging'
+import { ContractChip } from './contracts/parts'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -184,19 +178,19 @@ export function PageScreen({
   const selection = useGameStore((s) => s.shellSelection)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const gold = useGameStore((s) => s.gold)
-  const dust = useGameStore((s) => s.dust)
-  // How far off an unaffordable price is, in the purse it is paid from (R2).
-  // Marks live in the meta store and are not shown on in-run boards, so a
-  // marks price keeps the plain "not enough yet".
-  const shortfall = (c: Price) =>
-    c.currency === 'gold' ? Math.max(0, c.amount - gold) : c.currency === 'dust' ? Math.max(0, c.amount - dust) : true
-  const heroPick = useGameStore((s) => s.screen === 'heroPick' && s.mode === 'campaign')
+  const bank = useMetaStore((s) => s.bank)
+  const onHub = useGameStore((s) => s.screen === 'hub')
+  // How far off an unaffordable price is, in the gold it is paid from (R2):
+  // the purse in a run, the bank at home.
+  const shortfall = (c: Price) => Math.max(0, c.amount - (onHub ? bank : gold))
+  const heroPick = useGameStore((s) => s.screen === 'heroPick')
+  const contract = useGameStore((s) => s.contract)
   // LS3: a first run's hero-pick carries no seed chip — a seed is a thing to
   // share or replay, and a first run has neither yet.
   const staged = useStaged()
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
-    (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless'),
+    (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
@@ -279,7 +273,7 @@ export function PageScreen({
       // Hero-pick prices nothing, so its title block carries the run's seed
       // and terms instead (`RunSeed`, a chip that never scrolls).
       resources={purse.size ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
-      strip={inRunBoard && !titleOverride ? <PackStrip /> : undefined}
+      strip={inRunBoard && !titleOverride ? <PackStrip /> : heroPick && contract ? <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} /> : undefined}
       tone={ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
@@ -302,7 +296,7 @@ export function PageScreen({
               // A2: the purse after this gold purchase, where you commit to it.
               after:
                 !confirm.armed && !selected.action.disabled && selected.action.cost?.currency === 'gold'
-                  ? `${gold - selected.action.cost.amount} left`
+                  ? `${(onHub ? bank : gold) - selected.action.cost.amount} left`
                   : undefined,
             }
           : receipt
@@ -330,7 +324,6 @@ export function PageScreen({
                 scrolling body its chips sat half under the body's fade, which
                 read as hidden behind the Back row. Self-gating — nothing until
                 a win has raised the top step, nothing on a Daily. */}
-            {heroPick && <DifficultyPicker compact />}
             {navs.length > 0 && (
               <div className="pg-rows">
                 {navs.map((o) => (
@@ -442,29 +435,6 @@ export function PageScreen({
         </div>
       )}
 
-      {/*
-        Hero-pick only, and self-gating: the difficulty is the *other* half of the
-        run-start decision and hero-pick is the only screen the store will
-        accept it on.
-
-        It used to sit ABOVE this detail block, on the reasoning that the hero's
-        three headline traits are pinned in the tile row and the CTA names the
-        hero, so the stat card was the half that could afford to be scrolled to.
-        Measured at Large UI, that was wrong in a way the tiles cannot cover:
-        all three body lines started below the fold, INCLUDING the one sentence
-        that says what the archetype actually does (F15). The tiles carry
-        numbers; nothing else on the screen says what a Mystic is. A
-        choose-your-first-hero screen that shows a portrait, three stats and no
-        explanation is not a choice.
-
-        The tie-breaker is who is looking at each half. `DifficultyPicker` renders
-        NOTHING until a win has raised the top step, so a first-time player — the only
-        player who needs the ability sentence — never sees it at all; the player
-        who does see it has already finished a run and knows the archetypes.
-        The ability sentence goes first.
-      */}
-      {!heroPick && <DifficultyPicker />}
-
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
           of the decision. It runs on the first tap and is never armed, which
@@ -497,24 +467,14 @@ export function PageScreen({
 function Resources({ show }: { show: ReadonlySet<Price['currency']> }) {
   const screen = useGameStore((s) => s.screen)
   const gold = useGameStore((s) => s.gold)
-  const dust = useGameStore((s) => s.dust)
-  const marks = useMetaStore((s) => s.watchMarks)
-
-  const chip = (c: Price['currency'], n: number, tone: string) => (
-    <span className={`pg-chip ${tone}`} key={c}>
-      <Money amount={n} c={c} />
-      {c === 'marks' && <span className="pg-chip-word">Marks</span>}
-    </span>
-  )
-
-  // The Watchtower's pages price everything in Watch Marks and nothing else.
-  if (screen === 'hub') return chip('marks', marks, 'gold')
+  const bank = useMetaStore((s) => s.bank)
+  if (!show.has('gold')) return null
+  // At home the gold is the bank's; in a run it is the purse.
   return (
-    <>
-      {show.has('gold') && chip('gold', gold, 'gold')}
-      {show.has('dust') && chip('dust', dust, 'teal')}
-      {show.has('marks') && chip('marks', marks, 'gold')}
-    </>
+    <span className="pg-chip gold">
+      <Money amount={screen === 'hub' ? bank : gold} c="gold" />
+      {screen === 'hub' && <span className="pg-chip-word">in the bank</span>}
+    </span>
   )
 }
 
@@ -526,12 +486,12 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
   const primary = offers.find((o) => o.id === 'run')
   const rows = offers.filter((o) => o.id !== 'run')
   const stats = useMetaStore((s) => s.stats)
-  const watchXp = useMetaStore((s) => s.watchXp)
-  const top = useMetaStore((s) => s.topDifficulty)
-  // `bestDepth`, `bestRound` and `bestDifficulty` were tracked every run and shown
-  // only in the retired `HubScreen` — so the shipping UI recorded three lifetime
-  // records and displayed none of them (M33). They are the reason to play again.
-  const hasRecord = stats.bestDepth > 0 || stats.bestRound > 0 || stats.runsCompleted > 0
+  const standing = useMetaStore((s) => s.standing)
+  const bank = useMetaStore((s) => s.bank)
+  // The lifetime records are the reason to play again (M33).
+  const hasRecord = stats.bestDepth > 0 || stats.runsCompleted > 0
+  const best = topStanding(standing)
+  const companies = COMPANY_IDS.filter((c) => standingOf(standing, c) > 0).length
   // H1-2: with motion allowed, the attract battle plays behind the WHOLE menu
   // and the body keeps an empty window (`pg-cine-window`) where the shot is
   // framed; under reduced motion the menu is exactly as before — the still
@@ -555,12 +515,12 @@ export function MenuScreen({ offers }: { offers: Offer[] }) {
       {cinematic ? <div className="pg-cine-window" aria-hidden /> : <MenuKeyArt />}
       {hasRecord && (
         <div className="pg-records">
-          {/* SK1: the Watch level and the difficulty are the two numbers the
-              long game climbs; Endless's best round lives on its own row. */}
-          <Record label="Watch level" value={watchLevelFor(watchXp)} />
-          <Record label="Best depth" value={stats.bestDepth} />
-          <Record label="Difficulty" value={top} />
-          <Record label="Runs won" value={`${stats.runsWon}/${stats.runsCompleted}`} />
+          {/* The long game's numbers: standing (the best with any company, and
+              how many know you), the bank, and the record. */}
+          <Record label="Best standing" value={best} />
+          <Record label={companies === 1 ? 'Company' : 'Companies'} value={companies} />
+          <Record label="Banked" value={bank} />
+          <Record label="Delivered" value={`${stats.runsWon}/${stats.runsCompleted}`} />
         </div>
       )}
       <div className="pg-rows">
@@ -594,287 +554,3 @@ function Record({ label, value }: { label: string; value: number | string }) {
   )
 }
 
-/**
- * The one place run-end copy is written. The shell used to say three different
- * things about the same ending — this screen, `StageBand`'s result card and
- * `DetailBand`'s run-over panel — and two of the three were unreachable. Those
- * are gone; if the wording changes, it changes here.
- */
-export function runEndCopy(mode: string, won: boolean, wins: number, depth: number) {
-  if (mode === 'endless') {
-    return {
-      title: 'The Watch Ends',
-      blurb: `You held out for ${wins} wave${wins === 1 ? '' : 's'} before the last life fell.`,
-    }
-  }
-  return won
-    ? { title: 'The Watch Holds', blurb: 'You reached the end of the road and broke the last stand.' }
-    : {
-        title: 'The Line Breaks',
-        blurb: `Your Gate fell after ${depth} stop${depth === 1 ? '' : 's'}. Permadeath: this run is over.`,
-      }
-}
-
-/**
- * Run end — the verdict, the receipt, and two doors (M14 / M15 / M33).
- *
- * The screen used to read four scalars off the live store and show three tiles.
- * Meanwhile `gameStore.buildRecap` was assembling a full `RunRecap` at the exact
- * moment the run ended — per-Sentinel kills, damage, build name, level and
- * whether they went down; the leak count; the run seed that reproduces the whole
- * run; the Banner it flew; the gold left on the table; the Threat it reached;
- * the boss's spoils — and putting it in `state.victory`, where **nothing in the
- * app ever read it**. A death that tells you nothing teaches nothing, so the
- * receipt is what this screen is now.
- *
- * `victory` is null for an Endless run (its end path does not build one), so
- * every recap block is optional and the old scalars stay the fallback.
- */
-export function ResultScreen() {
-  const runPhase = useGameStore((s) => s.runPhase)
-  const mode = useGameStore((s) => s.mode)
-  const wins = useGameStore((s) => s.wins)
-  const marksEarned = useGameStore((s) => s.marksEarned)
-  const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
-  const returnToHub = useGameStore((s) => s.returnToHub)
-  const runAgain = useGameStore((s) => s.runAgain)
-  const recap = useGameStore((s) => s.victory)
-  const baseHp = useGameStore((s) => s.baseHp)
-  const maxBaseHp = useGameStore((s) => s.maxBaseHp)
-  const assist = useSettingsStore((s) => s.assist)
-  const setAssist = useSettingsStore((s) => s.setAssist)
-  const won = runPhase === 'won'
-  const depth = recap?.depth ?? Math.max(0, clearedNodeIds.length - 1)
-  const marks = recap?.marks ?? marksEarned
-  const { title, blurb } = runEndCopy(mode, won, wins, depth)
-  const campaign = mode === 'campaign'
-  const base = Math.round(baseHp)
-  // An unlock is the run's headline news, won or lost: it leads the receipt.
-  const unlockedAny = !!recap?.progress && recap.progress.cards.length + (recap.progress.items?.length ?? 0) > 0
-
-  return (
-    <PageLayout
-      title={title}
-      subtitle={blurb}
-      // A run ending is news, not navigation — it arrives in answer to the last
-      // wave rather than being somewhere the player went, and until now the
-      // whole screen changed without a word to anyone who could not see it (F9).
-      live
-      // "One more run" is the loop, so it is the pinned control on a campaign
-      // ending — the Watchtower is one row away and is still a real exit, so
-      // no context loses its way out.
-      cta={campaign ? { label: 'Run again', run: runAgain } : { label: 'Return', run: returnToHub }}
-      // The other door, pinned. It used to trail a receipt that is five cards
-      // long: measured 116px below the fold at 390x844 and 355px at 360x640,
-      // on the one screen whose job is to offer two ways on (F13).
-      foot={
-        campaign || (!won && assist === 'off') ? (
-          <div className="pg-rows">
-            {/*
-              The assist control itself is PINNED on a loss, and its explanation
-              stays in the body above (F11).
-
-              Measured with it in the body: the receipt is five cards long, and
-              even after reclaiming the verdict circle the row sat 39px below
-              the fold at 390x844 and 83px below at 360x640 — an offer you have
-              to go looking for is the thing this finding is about. Pinning the
-              row and leaving the card where it reads means the offer is on
-              screen the moment the run ends, and the full "here is exactly what
-              changes and what does not" is one scroll up in the body rather
-              than a mystery. Splitting them is safe in a way it would not be
-              for a purchase: this is a settings toggle, instant, free and
-              reversible from the same row.
-            */}
-            {!won && assist === 'off' && (
-              /* `⛨` used to be the value here, and the same glyph was the Assist
-                 setting's mark, the armour stat, the body-armour item kind AND
-                 the base-intact tile below. The armour icon says the one thing
-                 this row means — less damage taken — and says it once. */
-              <MenuRow label="Turn on Assist · Steady" icon="armour" big onClick={() => setAssist('steady')} />
-            )}
-            {campaign && <MenuRow label="Return to the Watchtower" icon="back" big onClick={returnToHub} />}
-          </div>
-        ) : undefined
-      }
-      secondary={
-        <>
-          <Tile caption={`${marks} Marks earned`} icon="marks" />
-          <Tile caption={mode === 'endless' ? `${wins} waves` : `Depth ${depth}`} icon="depth" />
-          {/* The real number, not a verdict (F5). "Base intact" was printed for
-              any win, so surviving the Colossus on 1 of 20 read exactly like
-              finishing untouched — the one statistic that says how close the
-              run came, rounded away to a word. `baseHp` is the live final
-              value; the mark still reads win/loss at a glance.
-              A fallen base takes the WARNING mark rather than the skull: the
-              skull is the boss enemy's mark in the wave list, and one picture
-              meaning both "a Colossus is coming" and "your keep is gone" is the
-              collision this pass exists to remove. */}
-          <Tile caption={`Gate ${Math.max(0, base)}/${maxBaseHp}`} icon={base > 0 ? 'base' : 'warn'} />
-        </>
-      }
-    >
-      {/*
-        The verdict circle is a win-only flourish now.
-        On a defeat it was the third place the same news was told — the serif
-        title already says "The Line Breaks", the blurb spells out the depth,
-        and the tile row carries its own ☠ — and it was spending 112px of the
-        372px body on saying it a third time. Those 112px are what put the
-        assist offer below the fold on the one screen that is supposed to make
-        it findable (F11), and reclaiming them costs the screen nothing it was
-        not already saying twice.
-      */}
-      {/* The cause, named, before anything else (Phase 2): which goblins got
-          through, the hardest hit, the wave and the seed. */}
-      {!won && <DefeatReceipt />}
-
-      {won && (
-        <div className="pg-verdict win">
-          {/* Was `❖`, which also meant "shrine" and "evolution ready". The keep
-              is what holding the line actually means. */}
-          <Icon name="base" lg className="pg-verdict-glyph" />
-        </div>
-      )}
-
-      {/* Per-Sentinel contribution — computed by the engine every battle and
-          thrown away every battle until now. Best damage first, because "who
-          actually held the line" is the one question a receipt has to
-          answer. It leads the body for the same
-          reason: measured at 390×844 the body shows ~370px, and everything
-          under the second card is a scroll away. */}
-      {/* SK1: a win's first news is what it unlocked — the skill cards and the
-          difficulty climbed — so it leads the receipt. A loss leads with its
-          cause, and the long-game line follows the heroes (below). */}
-      {(won || unlockedAny) && recap?.progress && <ProgressEarned progress={recap.progress} />}
-
-      {recap && recap.heroes.length > 0 && (
-        <div className="pg-recap">
-          <div className="pg-recap-head">
-            <span>Your heroes</span>
-            <span>KILLS · DMG</span>
-          </div>
-          {recap.heroes.map((h) => (
-            <div className="pg-recap-row" key={h.id}>
-              <span className="pg-recap-name">
-                {h.name}
-                <span className="pg-recap-build">
-                  {h.build} · L{h.level}
-                </span>
-              </span>
-              <span className="pg-recap-num">
-                {h.kills} · {h.damage}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* After the receipt, not before it — the screen answers "what happened"
-          first, and the offer reads as an option rather than as a verdict on
-          the player. Loss only (F11); the control it explains is pinned in the
-          foot so it does not have to be scrolled to. */}
-      {!won && !unlockedAny && recap?.progress && <ProgressEarned progress={recap.progress} />}
-
-      {/* Feats this run earned (Phase 3b): what the player opened, by name. */}
-      <FeatsEarned />
-
-      {!won && <AssistCard assist={assist} />}
-
-      <InfoCard
-        lines={[
-          `${moneyText(marks, 'marks')} earned`,
-          ...(recap
-            ? [
-                // `enemiesLeaked`, not `leaks` — the latter is base-HP damage
-                // and this line counts enemies (F2).
-                `${recap.kills} felled · ${recap.enemiesLeaked} reached the Gate`,
-                `${moneyText(recap.goldLeft, 'gold')} unspent · ${strengthText(recap.threat)} at the end`,
-                difficultyLine(recap.difficulty),
-              ]
-            : []),
-          MARKS_INTRO,
-        ]}
-      />
-
-      {recap && recap.spoils.length > 0 && (
-        <InfoCard
-          lines={[
-            // Not "The Colossus dropped": the final fight fields up to three
-            // champions in a variant's order, and the spoils are the fight's.
-            `The last stand left ${recap.spoils.length} thing${recap.spoils.length === 1 ? '' : 's'} behind`,
-            ...recap.spoils.map((i) => `${itemName(i)} · ${RARITY[i.rarity].label}`),
-          ]}
-        />
-      )}
-
-      {/* SK1: what the run did for the long game — Watch XP, the skill cards
-          it unlocked, and the difficulty a win climbed. It sits with the feats,
-          right under who held the line: the reason to play the next run. */}
-      {recap && (
-        <InfoCard
-          lines={[
-            `Run seed ${recap.seed}${recap.challenge.kind === 'daily' ? ` · Daily Watch ${recap.challenge.date}${recap.challenge.scored ? ' (scored)' : ' (practice)'}` : recap.challenge.kind === 'seeded' ? ' · custom seed' : ''}`,
-            'The same seed deals the same map, loot and rolls.',
-          ]}
-        />
-      )}
-
-      {!campaign && (
-        <div className="pg-rows">
-          <MenuRow label="Return to the Watchtower" icon="back" big onClick={returnToHub} />
-        </div>
-      )}
-    </PageLayout>
-  )
-}
-
-/**
- * The assist dial, offered at the one moment it is relevant (F11).
- *
- * The dial has existed since M34 with good copy — and lived only as a row on
- * the Settings page, which is three taps away behind a menu a losing player has
- * no reason to open. Nothing anywhere ever mentioned it. Not after a loss, not
- * on this screen, which knows exactly how the run ended and how far it got.
- * With 76% of fresh runs ending at the first elite, that is the whole
- * accessibility feature sitting behind a door nobody is told about.
- *
- * The framing is the Celeste / Hades one (see
- * `gamedev-general/references/ui-ux-accessibility.md`), and every word of it is
- * a decision:
- *
- * - **No diagnosis.** It does not say the player struggled, or died a lot, or
- *   that this is for people who are finding it hard. It says the option exists.
- * - **No penalty and no asterisk.** Marks, loot and the Banner payout are
- *   untouched, and the copy says so — because the fear that it will quietly
- *   cost something is the main reason people refuse the option they need.
- * - **Exact, not vague.** "40% less damage when something gets through" rather
- *   than "makes the game easier", so taking it is an informed choice.
- * - **Not a modal, not a prompt, not a nag.** It is a card among the other
- *   cards on a screen the player is already reading, and it is gone the moment
- *   the dial is off `off`.
- *
- * It shows on a LOSS only. After a win it would be editorialising about a run
- * the player just succeeded at.
- */
-function AssistCard({ assist }: { assist: AssistLevel }) {
-  const steady = assistProfile('steady')
-  if (assist !== 'off') {
-    return (
-      <InfoCard
-        lines={[
-          `Assist is on — ${assistProfile(assist).label}.`,
-          assistProfile(assist).blurb,
-          'Change it or turn it off whenever you like, in Settings or mid-run.',
-        ]}
-      />
-    )
-  }
-  return (
-    <InfoCard
-      lines={[
-        'Assist is there if you want it.',
-        `${steady.label} — ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
-        'Nothing else moves: same waves, same loot, same Marks, same Vow payout. Change it whenever you like, mid-run included.',
-      ]}
-    />
-  )
-}

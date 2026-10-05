@@ -19,10 +19,11 @@ import {
 import { ALL_MAPS, fieldFor, fieldIdOf, FIRST_MAP, legacyPosts, orientField, withTerrainRule } from '../src/game/data/maps'
 import { nameCounterState, classicHero } from '../src/game/data/sentinels'
 import { layTiles, TERRAIN_RULE_IDS } from '../src/game/data/terrain'
+import { ROUTE_HAZARDS } from '../src/game/data/hazards'
 import { GameEngine, TICK } from '../src/game/engine/engine'
-import { endlessHazardSeed, nodeHazardSeed } from '../src/game/run/terrain'
+import { nodeHazardSeed } from '../src/game/run/terrain'
 import type { GameMap, SpawnEvent, TerrainRuleId } from '../src/game/types'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation, streams } from '../src/state/game/runtime'
@@ -41,7 +42,9 @@ beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stat
  * next-best ground. A hero on cursed ground deals `CURSED_DAMAGE_MULT` damage.
  */
 
-const RULES: (TerrainRuleId | null)[] = [null, ...TERRAIN_RULE_IDS]
+// The authored challenges lay the shipped levers. Route ground (`quarry`,
+// `hexed`) deepens them on purpose and is graded in tests/contracts.test.ts.
+const RULES: (TerrainRuleId | null)[] = [null, ...TERRAIN_RULE_IDS.filter((r) => !ROUTE_HAZARDS[r])]
 const SEEDS = Array.from({ length: 60 }, (_, i) => (i * 2654435761) >>> 0 || 1)
 
 describe('the layout', () => {
@@ -137,8 +140,6 @@ describe('the seed', () => {
       expect(nodeHazardSeed(n, 42)).not.toBe(nodeHazardSeed({ ...n, id: 'n3-2' }, 42))
     }
     for (const type of ['start', 'merchant', 'shrine', 'recruit', 'campfire']) expect(nodeHazardSeed({ id: 'x', type }, 42)).toBeNull()
-    expect(endlessHazardSeed(4, 9)).toBe(endlessHazardSeed(4, 9))
-    expect(endlessHazardSeed(4, 9)).not.toBe(endlessHazardSeed(5, 9))
   })
 })
 

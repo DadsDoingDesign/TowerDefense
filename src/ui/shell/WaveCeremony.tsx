@@ -1,3 +1,4 @@
+import { cargoPct } from '../../game/run/contracts'
 import { useEffect, useRef, useState } from 'react'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
@@ -56,10 +57,9 @@ export function WaveCeremony() {
   const result = useGameStore((s) => s.lastResult)
   const loot = useGameStore((s) => s.lastLoot)
   const roster = useGameStore((s) => s.roster)
-  const mode = useGameStore((s) => s.mode)
   const waveLabel = useGameStore((s) => s.currentWave?.label ?? '')
   const isBossWave = useGameStore((s) => !!s.currentWave?.isBoss)
-  const lives = useGameStore((s) => s.lives)
+  const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const startLevels = useBattleLedger((s) => s.startLevels)
   // G3-2: after a normal wave the reward hand is in the Selector and the
   // level-ups are on the roster, so the Stage says only the result — one line
@@ -113,7 +113,7 @@ export function WaveCeremony() {
     <div className={`sh-ceremony ${won ? 'won' : 'lost'} ${elite ? 'elite' : ''} ${settled ? 'settled' : 'beat'}`}>
       <div className="sh-ceremony-banner">
         <Icon name={won ? (elite ? 'crown' : 'wave') : 'warn'} />
-        <span>{won ? (elite ? 'Elite wave cleared' : 'Wave cleared') : mode === 'endless' ? 'The line broke' : 'The Gate fell'}</span>
+        <span>{won ? (elite ? 'Elite wave cleared' : 'Wave cleared') : 'The wagons fell'}</span>
       </div>
       {settled && (
         <div className="sh-ceremony-card">
@@ -128,14 +128,9 @@ export function WaveCeremony() {
               <b>{result!.enemiesKilled}</b> <small>felled</small>
             </span>
           </div>
-          {!won && mode === 'endless' && (
-            <p className="sh-ceremony-note">
-              A retry is spent and the Gate is rebuilt. {lives} {lives === 1 ? 'retry' : 'retries'} left.
-            </p>
-          )}
           {result!.enemiesLeaked > 0 && (
             <p className="sh-ceremony-note">
-              {result!.enemiesLeaked} reached the Gate · Gate {result!.baseHpLeft} left
+              {result!.enemiesLeaked} reached the wagons · cargo {cargoPct(result!.baseHpLeft, maxBaseHp)}%
             </p>
           )}
           {levelUps.length > 0 && (

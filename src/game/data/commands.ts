@@ -59,7 +59,7 @@ export const WATCH_COMMANDS: Record<CommandId, WatchCommand> = {
   hold: {
     id: 'hold',
     name: 'Hold the Line',
-    blurb: `The Gate ignores the next ${HOLD.leaks} goblins to reach it this sub-wave`,
+    blurb: `The next ${HOLD.leaks} raiders to reach your wagons steal nothing this sub-wave`,
   },
 }
 

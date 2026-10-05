@@ -1,5 +1,6 @@
 import { BattleCanvas } from '../BattleCanvas'
 import { RunMapView } from '../components/RunMapView'
+import { RoutePanel } from './contracts/RoutePanel'
 import type { ShellContext } from './context'
 import { BossPlate } from './BossPlate'
 import { WaveCeremony } from './WaveCeremony'
@@ -75,7 +76,13 @@ export function StageBand({ ctx }: { ctx: ShellContext }) {
           </div>
         </>
       )}
-      {ctx.stage === 'map' && <RunMapView />}
+      {ctx.stage === 'map' && (
+        <>
+          {/* The contract's road above the node map (the mercenary company). */}
+          <RoutePanel />
+          <RunMapView />
+        </>
+      )}
     </section>
   )
 }

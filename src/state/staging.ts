@@ -5,8 +5,8 @@
  * lot to learn." A first run met about twenty ideas at once — the Gate, gold,
  * Threat, three classes and their stats, gear with rarity and enchants, the
  * pack, relics, perks, evolutions, Watch Commands, battle speed, sub-waves,
- * danger tiles, map challenges, Vows, the Daily, Endless … (Perks and
- * evolutions are one idea now — skills — and the Vows are the difficulty.)
+ * danger tiles, map challenges, stakes, the purse … (Perks and evolutions are
+ * one idea now — skills.)
  *
  * This module is the one answer to "may this idea be on screen yet?". Pure —
  * no zustand, no React — so the rules are unit-tested (`tests/staging.test.ts`)
@@ -20,23 +20,27 @@
  *
  * **Who is staged.** A run is staged when it begins with no finished run on
  * the meta save and "Show everything from the start" off (`startsFirstRun`);
- * the Watchtower menu is staged on the same terms (`menuStaged`). A returning
+ * the menu is staged on the same terms (`menuStaged`): a first-timer takes one
+ * free escort, and the contract board, the stakes, the purse and the cash-out
+ * open after the first finished contract (the mercenary company). A returning
  * player — any finished run, or a run saved before staging existed — sees
  * everything from the start. Staging changes what is SHOWN; the four things it
  * holds back on the road itself live in `game/run/firstRun.ts`.
  */
 import type { MapNode, RunMap } from '../game/data/runmap'
-import type { RunChallenge } from './daily'
 
 /**
  * Every idea the game introduces, in roughly the order a first run meets them.
- * The first four are there from the first battle; the rest arrive later.
+ * The core ones are there from the first battle; the rest arrive later.
  */
 export const IDEAS = [
   'hero',
   'post',
-  'gate',
+  'cargo',
   'gold',
+  'contract',
+  'escort',
+  'city',
   'subwave',
   'speed',
   'depth',
@@ -52,15 +56,15 @@ export const IDEAS = [
   'skill',
   'danger',
   'challenge',
-  'marks',
-  'difficulty',
-  'daily',
-  'endless',
+  'bank',
+  'purse',
+  'standing',
+  'stake',
 ] as const
 export type IdeaId = (typeof IDEAS)[number]
 
-/** Met from the very first battle — never staged. */
-export const CORE_IDEAS: readonly IdeaId[] = ['hero', 'post', 'gate', 'gold']
+/** Met from the very first battle — never staged. A first run is an escort contract on a road of three cities. */
+export const CORE_IDEAS: readonly IdeaId[] = ['hero', 'post', 'cargo', 'gold', 'contract', 'escort', 'city']
 
 const KNOWN = new Set<string>(IDEAS)
 export const isIdea = (v: unknown): v is IdeaId => typeof v === 'string' && KNOWN.has(v)
@@ -71,11 +75,12 @@ export const isIdea = (v: unknown): v is IdeaId => typeof v === 'string' && KNOW
  */
 export function readMet(raw: unknown): IdeaId[] {
   if (!Array.isArray(raw)) return []
-  // SK1: a player who met perks or evolutions has met skills, and one who met
-  // the Vows has met the difficulty — the ideas they became.
+  // SK1: a player who met perks or evolutions has met skills. The mercenary
+  // company: the Gate is the cargo, Marks are the bank's gold, and the
+  // difficulty step (once the Vow) is the stake. The Daily and Endless went.
   return [...new Set(raw.map((x) => (typeof x === 'string' && x in RENAMED ? RENAMED[x] : x)).filter(isIdea))]
 }
-const RENAMED: Record<string, IdeaId> = { perk: 'skill', evolve: 'skill', vow: 'difficulty' }
+const RENAMED: Record<string, IdeaId> = { perk: 'skill', evolve: 'skill', vow: 'stake', difficulty: 'stake', gate: 'cargo', marks: 'bank' }
 
 /** The meta record's one field staging reads. */
 export interface StagingStats {
@@ -83,11 +88,11 @@ export interface StagingStats {
 }
 
 /** Whether a run beginning now is staged (a first run). */
-export function startsFirstRun(stats: StagingStats, showEverything: boolean, challenge: Pick<RunChallenge, 'kind'>): boolean {
-  return !showEverything && challenge.kind === 'standard' && !((stats.runsCompleted ?? 0) > 0)
+export function startsFirstRun(stats: StagingStats, showEverything: boolean): boolean {
+  return !showEverything && !((stats.runsCompleted ?? 0) > 0)
 }
 
-/** Whether the Watchtower menu is staged (difficulty, Daily and Endless locked). */
+/** Whether the menu is staged: one free escort, no board, no stakes, no purse, no cash-out. */
 export function menuStaged(stats: StagingStats, showEverything: boolean): boolean {
   return !showEverything && !((stats.runsCompleted ?? 0) > 0)
 }
@@ -99,7 +104,6 @@ const FIGHTS = new Set<MapNode['type']>(['battle', 'elite', 'miniboss', 'boss'])
 
 /** What `presentIdeas` reads — `GameData` satisfies it structurally. */
 export interface StageState {
-  mode: 'campaign' | 'endless'
   screen: string
   runMap: Pick<RunMap, 'nodes'>
   clearedNodeIds: readonly string[]
@@ -150,7 +154,7 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
     out.add('gear')
     out.add('command')
   }
-  if (s.mode === 'campaign' && s.threat > 1.001) out.add('strength')
+  if (s.threat > 1.001) out.add('strength')
 
   const byId = new Map(s.runMap.nodes.map((n) => [n.id, n]))
   const here = [...s.reachableNodeIds, ...(s.activeNodeId ? [s.activeNodeId] : [])].map((id) => byId.get(id)?.type)
@@ -164,9 +168,9 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
   return out
 }
 
-/** The ideas the meta save alone introduces: a finished run opens all four. */
+/** The ideas the meta save alone introduces: a finished contract opens all four. */
 export function metaIdeas(stats: StagingStats): IdeaId[] {
-  return (stats.runsCompleted ?? 0) > 0 ? ['marks', 'difficulty', 'daily', 'endless'] : []
+  return (stats.runsCompleted ?? 0) > 0 ? ['bank', 'purse', 'standing', 'stake'] : []
 }
 
 /** The one visibility rule. */

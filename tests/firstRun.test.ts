@@ -102,7 +102,7 @@ describe('RNG draw order (the store)', () => {
 
   const dealt = (runsCompleted: number, seed: number) => {
     useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted } })
-    useGameStore.getState().beginCampaign(seed, { kind: 'standard', date: null, scored: false })
+    useGameStore.getState().beginCampaign(seed, { kind: 'standard' })
     useGameStore.getState().pickStartingHero('rogue')
     const st = useGameStore.getState()
     return { st, map: streams.mapRng.saveState(), loot: streams.rng.saveState() }

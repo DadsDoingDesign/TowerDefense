@@ -11,7 +11,7 @@ import { isMelee, MELEE_LINE, swingWeapon } from '../src/game/engine/melee'
 import { conflictCopy, conflictsAmong, equipWarning, roomLine, type Standing } from '../src/game/run/clearance'
 import { emptyPlacements } from '../src/game/run/map'
 import type { Archetype, GameMap, Item, ItemSlot, Sentinel } from '../src/game/types'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { deployTeam } from '../balance/harness'
 import { useGameStore } from '../src/state/gameStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
@@ -453,8 +453,12 @@ describe('never stuck', () => {
 describe('auto-equip on a drop waits for the wave to end', () => {
   it('nothing reaches a hero mid-wave; the spoils land (worn or in the pack) once the wave is settled', () => {
     setLayoutOrientation(() => 'landscape')
-    useGameStore.getState().startEndless()
-    useGameStore.getState().endlessBeginWave()
+    useGameStore.getState().newRun()
+    useGameStore.getState().pickStartingHero('pick-0')
+    {
+      const s = useGameStore.getState()
+      s.selectNode(s.reachableNodeIds.find((id) => s.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? s.reachableNodeIds[0])
+    }
     const st0 = useGameStore.getState()
     const hero = st0.roster[0]
     // Free the body slot, so a drop has somewhere it could auto-equip.

@@ -3,6 +3,7 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap, TerrainRuleId } from '../types'
 import { layHazards } from './hazards'
 import { layTiles, parseTileId, patch, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
+import { ROUTE_HAZARDS } from './hazards'
 
 /**
  * The battlefields. Every landscape field is 960x560 logical px; the renderer
@@ -101,7 +102,8 @@ interface FieldDef {
   path: Vec2[]
   posts: Record<string, Vec2>
   pieces: readonly TerrainPiece[]
-  rules: Record<TerrainRuleId, readonly TerrainPiece[]>
+  /** Authored pieces per map challenge. Route ground (`quarry`, `hexed`) has none: it deepens the seeded layout instead. */
+  rules: Partial<Record<TerrainRuleId, readonly TerrainPiece[]>>
 }
 
 /*
@@ -243,8 +245,8 @@ const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.i
  * has a `hazard` seed (`data/hazards.ts`).
  */
 function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | null = null): GameMap {
-  const laid = layTiles(def.path, [...def.pieces, ...(rule ? def.rules[rule] : [])])
-  const tiles = hazard == null ? laid : layHazards(laid, def.path, hazard)
+  const laid = layTiles(def.path, [...def.pieces, ...(rule ? (def.rules[rule] ?? []) : [])])
+  const tiles = hazard == null ? laid : layHazards(laid, def.path, hazard, rule ? ROUTE_HAZARDS[rule] : undefined)
   const variant = rule != null || hazard != null
   return {
     id: `${def.id}${rule ? `~${rule}` : ''}${hazard != null ? `~h${hazard}` : ''}`,

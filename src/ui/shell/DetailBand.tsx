@@ -11,9 +11,7 @@ import {
   RARITY,
   heroSlotsFor,
   reforgeCost,
-  reforgeDust,
   upgradeCost,
-  upgradeDust,
 } from '../../game/data/items'
 // `describeBase` / `describeEnchant` are no longer imported here: the item
 // panel renders `itemBody` (offers.ts), which is the ONE producer of an item's
@@ -28,7 +26,7 @@ import { computeCombat, totalStats } from '../../game/engine/combat'
 import { MAX_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { equipRules } from '../../game/run/relics'
-import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
+import { canStartWave, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
 import {
   damageMark,
   dualWieldShort,
@@ -760,12 +758,11 @@ const asksFor = (label: string): string | null => {
  */
 function WaveComposition() {
   const wave = useGameStore((s) => s.currentWave)
-  const mode = useGameStore((s) => s.mode)
   const threat = useGameStore((s) => s.threat)
   const battleMap = useGameStore((s) => s.battleMap)
   if (!wave) return null
   const comp = waveComposition(wave).sort((a, b) => b.count - a.count)
-  const showThreat = mode === 'campaign' && threat > 1.001
+  const showThreat = threat > 1.001
   const asks = asksFor(wave.label)
 
   return (
@@ -1263,13 +1260,9 @@ function ItemPanel({ item }: { item: Item }) {
   const shellSelect = useGameStore((s) => s.shellSelect)
   const clearGearSlot = useGameStore((s) => s.clearGearSlot)
   const activateGearSlot = useGameStore((s) => s.activateGearSlot)
-  const mode = useGameStore((s) => s.mode)
   const gold = useGameStore((s) => s.gold)
-  const dust = useGameStore((s) => s.dust)
   const reforge = useGameStore((s) => s.reforge)
   const upgradeItemAction = useGameStore((s) => s.upgradeItem)
-  const forgeReforge = useGameStore((s) => s.endlessForgeReforge)
-  const forgeUpgrade = useGameStore((s) => s.endlessForgeUpgrade)
   const relics = useGameStore((s) => s.relics)
   // Gear only changes between rounds; during a live sub-wave the panel says so
   // instead of offering an equip the store would refuse.
@@ -1289,9 +1282,7 @@ function ItemPanel({ item }: { item: Item }) {
       },
       confirm: {
         label: 'Yes — scrap it',
-        note: `${itemName(item)} is destroyed for ${moneyText(scrapGold(item), 'gold')}${
-          mode === 'endless' ? ` and ${moneyText(scrapDust(item), 'dust')}` : ''
-        }. There is no undo.`,
+        note: `${itemName(item)} is destroyed for ${moneyText(scrapGold(item), 'gold')}. There is no undo.`,
       },
     },
     `scrap-${item.id}`,
@@ -1349,16 +1340,15 @@ function ItemPanel({ item }: { item: Item }) {
           : null
       : null
 
-  // Crafting is gold in the campaign and dust in endless — the Forge room is
-  // only one place you can reach an item, so the actions belong on the item.
-  const endless = mode === 'endless'
+  // Crafting is paid in gold from the purse (gold is the only currency; the
+  // Endless Forge's dust prices went with the Endless Watch).
   const craft = {
-    currency: (endless ? 'dust' : 'gold') as 'dust' | 'gold',
-    purse: endless ? dust : gold,
-    reforgeCost: endless ? reforgeDust(item) : reforgeCost(item),
-    upgradeCost: endless ? upgradeDust(item) : upgradeCost(item),
-    doReforge: () => (endless ? forgeReforge(item.id) : reforge(item.id)),
-    doUpgrade: () => (endless ? forgeUpgrade(item.id) : upgradeItemAction(item.id)),
+    currency: 'gold' as const,
+    purse: gold,
+    reforgeCost: reforgeCost(item),
+    upgradeCost: upgradeCost(item),
+    doReforge: () => reforge(item.id),
+    doUpgrade: () => upgradeItemAction(item.id),
   }
 
   return (
@@ -1529,7 +1519,7 @@ function ItemPanel({ item }: { item: Item }) {
               aria-label={
                 scrap.armed
                   ? 'Never mind — keep it'
-                  : `Scrap ${itemName(item)} for ${moneyText(scrapGold(item), 'gold')}${endless ? ` and ${moneyText(scrapDust(item), 'dust')}` : ''} — it is destroyed`
+                  : `Scrap ${itemName(item)} for ${moneyText(scrapGold(item), 'gold')} — it is destroyed`
               }
             >
               {scrap.armed ? (
@@ -1537,7 +1527,6 @@ function ItemPanel({ item }: { item: Item }) {
               ) : (
                 <>
                   Scrap <Money amount={scrapGold(item)} c="gold" />
-                  {endless ? <Money amount={scrapDust(item)} c="dust" /> : null}
                 </>
               )}
             </button>

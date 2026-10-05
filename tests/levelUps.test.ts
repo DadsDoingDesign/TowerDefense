@@ -48,7 +48,6 @@ describe('rewardInPlace', () => {
     ['the wave-clear beat', { waveBeat: { status: 'cleared', startedAt: 0 } }],
     ['a loss', { lastResult: { status: 'defeated' } }],
     ['no hand', { reward: null }],
-    ['endless', { mode: 'endless' }],
     ['the map (the page owns it there)', { screen: 'map' }],
     ['a fork pending', { crossroads: { recruits: [], mutations: [], mutationHeroId: null } }],
   ])('does not hold for %s', (_, over) => {

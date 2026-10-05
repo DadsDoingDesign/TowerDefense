@@ -259,8 +259,8 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   },
 
   rerollMerchant: () => {
-    const { merchant, gold, event, runMap, roster, lootPity, mode, relics } = get()
-    if (!merchant || mode !== 'campaign' || event?.kind !== 'merchant') return
+    const { merchant, gold, event, runMap, roster, lootPity, relics } = get()
+    if (!merchant || event?.kind !== 'merchant') return
     // The Quartermaster's Seal makes the first restock at each stall free.
     const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0)
     if (gold < cost) return sfx('error')

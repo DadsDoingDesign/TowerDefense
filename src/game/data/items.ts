@@ -796,8 +796,15 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // the one this generator has always made.
   const rosterAware = !!opts.roster && opts.roster.length > 0
   const allowed = (noun: string) => !kindSet || kindSet.has(noun)
+  // A kind the pool holds more than once (a company's piece on its own route,
+  // `run/contracts.weightPool`) is listed that many times, so the one pick
+  // below deals it by weight. An unweighted pool lists each kind once.
+  const kindCount = new Map<string, number>()
+  for (const k of opts.kinds ?? []) kindCount.set(k, (kindCount.get(k) ?? 0) + 1)
+  const times = (noun: string): number => (kindSet ? (kindCount.get(noun) ?? 0) : 1)
+  const byWeight = <T,>(list: readonly T[], nameOf: (x: T) => string): T[] => list.flatMap((x) => Array<T>(times(nameOf(x))).fill(x))
   const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
-  const inPool = typed.filter((w) => allowed(w.name))
+  const inPool = byWeight(typed, (w) => w.name)
   // A forced damage type the pool cannot meet falls back to any unlocked weapon.
   const handed = inPool.length ? inPool : WEAPONS.filter((w) => w.hands === slot && allowed(w.name))
   const handedList = handed.length ? handed : typed
@@ -805,7 +812,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     ? rng.pick(rosterAware ? weightedPool(handedList, (w) => demand[w.damageType]) : handedList)
     : undefined
   const pickNoun = (list: readonly string[]) => {
-    const ok = list.filter(allowed)
+    const ok = byWeight(list, (n) => n)
     return rng.pick(ok.length ? ok : list)
   }
   let noun = isWeapon ? weapon!.name : slot === 'offHand' ? pickNoun(OFFHANDS) : pickNoun(BODIES)
@@ -862,13 +869,6 @@ export function reforgeCost(item: Item): number {
 export function upgradeCost(item: Item): number {
   // Cost to reach the NEXT tier from this one (0 at the top tier).
   return { common: 50, rare: 90, epic: 150, legendary: 260, mythic: 0 }[item.rarity]
-}
-/** Dust costs used by the Endless Watch Forge. */
-export function reforgeDust(item: Item): number {
-  return { common: 4, rare: 7, epic: 12, legendary: 20, mythic: 32 }[item.rarity]
-}
-export function upgradeDust(item: Item): number {
-  return { common: 8, rare: 14, epic: 24, legendary: 40, mythic: 0 }[item.rarity]
 }
 export function canUpgrade(item: Item): boolean {
   return RARITY_ORDER.indexOf(item.rarity) < RARITY_ORDER.length - 1

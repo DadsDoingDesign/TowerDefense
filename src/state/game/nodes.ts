@@ -1,7 +1,7 @@
 import { applyBattleXp, stopXp } from '../../game/run/battle'
 import { frontierFrom } from '../../game/run/map'
 import { threatAfterLayer } from '../../game/run/threat'
-import { difficultyRules } from '../metaStore'
+import { stakeRules } from '../../game/run/contracts'
 import { CLEAR_SHELL } from './fresh'
 import type { GetState, SetState } from './types'
 
@@ -16,7 +16,7 @@ import type { GetState, SetState } from './types'
  * replayed snapshot cannot move the run on twice.
  */
 export function completeNode(get: GetState, set: SetState, nodeId: string): void {
-  const { runMap, clearedNodeIds, runDifficulty } = get()
+  const { runMap, clearedNodeIds, contract } = get()
   const alreadyCleared = clearedNodeIds.includes(nodeId)
   const node = runMap.nodes.find((n) => n.id === nodeId)
   // A node this map does not have, or one already consumed, is not a node to
@@ -47,7 +47,7 @@ export function completeNode(get: GetState, set: SetState, nodeId: string): void
     clearedNodeIds: cleared,
     currentNodeId: nodeId,
     reachableNodeIds: frontierFrom(runMap, nodeId, cleared),
-    threat: threatAfterLayer(node.layer, difficultyRules(runDifficulty).startThreat),
+    threat: threatAfterLayer(node.layer, stakeRules(contract?.crates ?? 0).startThreat),
     event: null,
     merchant: null,
     shrineOffer: null,

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { dailySeed } from '../src/state/daily'
+import { hashSeed } from '../src/game/core/rng'
+const dailySeed = (d: string): number => hashSeed('fieldwatch-daily', d)
 
 /**
  * The menu's attract-mode battle (Phase 4, H1-2, Q12).
@@ -170,7 +171,7 @@ describe('attract-mode battle', () => {
     const battle = readFileSync(join(ROOT, 'src/ui/attract/AttractBattle.tsx'), 'utf8')
     for (const src of [sim, battle]) expect(src).not.toMatch(/from '\.\.\/\.\.\/state\//)
     const gate = readFileSync(join(ROOT, 'src/ui/shell/AttractMode.tsx'), 'utf8')
-    expect(gate).toMatch(/dailySeed\(utcDateKey\(\)\)/)
+    expect(gate).toMatch(/hashSeed\('fieldwatch-daily', utcDateKey\(\)\)/)
     expect(gate).not.toMatch(/gameStore|metaStore/)
   })
 
@@ -195,7 +196,7 @@ describe('attract-mode battle', () => {
       const { useGameStore } = await import('../src/state/gameStore')
       for (const p of pins) p.mockRestore()
       if (withAttract) playAll(await import('../src/ui/attract/attractSim'))
-      const { STANDARD_RUN } = await import('../src/state/daily')
+      const { STANDARD_RUN } = await import('../src/state/seeds')
       const { idCounterState } = await import('../src/game/core/rng')
       const s = useGameStore.getState()
       s.beginCampaign(SEED, STANDARD_RUN)

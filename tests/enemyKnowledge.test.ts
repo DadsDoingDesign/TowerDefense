@@ -199,7 +199,7 @@ describe('the card’s contents (Q10)', () => {
 
   it('a known enemy adds its tricks, the counter, and its Gate cost', () => {
     const d = enemyCardData('tnt2', ctx('known'))!
-    expect(d.tricks).toEqual([{ label: 'Lobs a charge at the Gate when it gets close', counter: expect.stringMatching(/wind-up/) }])
+    expect(d.tricks).toEqual([{ label: 'Lobs a charge at your wagons when it gets close', counter: expect.stringMatching(/wind-up/) }])
     // Its leak (1) plus the one charge it can land on the Gate (1) — the old 2.
     expect(d.gate).toBe(2)
     expect(enemyCardData('torch1', ctx('known'))!.tricks).toEqual([])

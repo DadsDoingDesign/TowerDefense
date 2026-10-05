@@ -1,6 +1,24 @@
 # Fieldwatch — next steps (paused 2026-09-30)
 
-Where things stand when work paused, and what to do next, in order.
+## Update 2026-10-05: the mercenary company, step 2 (economy core)
+
+Built on `claude/whales-ui-critique-plan` (from `6506780`), per `docs/MERCENARY_COMPANY.md` § Build order step 2:
+gold only (bank and purse), five trade companies (crest, colour, goods, route ground, pool affinity), standing
+per company, contracts (escort / staked crates), cities that pay by Cargo % with cash out or press on, the
+market of the day, contract letters, and the Daily and Endless removed. Rules: `src/game/run/contracts.ts`,
+`src/game/run/standing.ts`, `src/game/data/companies.ts`; screens: `src/ui/shell/contracts/`. Balance report
+§13 is now "Stake tiers" (+ §13b, the routes as escorts); nothing was tuned.
+
+Next (spec step 3): the HQ offices (HR, Finance with interest on the bank, Operations) and the item pull. Hooks
+left for it and step 4–5: `metaStore.bank`, `CaravanLook.banner` (the wagon's banner slot),
+`standing.charterProgress`.
+
+Open from step 2: kill gold left in the purse comes home with it, so a run's bank net (~1,400 gold) dwarfs the
+contract's own pay (~90–240) — decide whether "what's left returns" should mean the purse only.
+
+---
+
+Where things stood when work paused on 2026-09-30, and what to do next, in order.
 
 ## What's live
 

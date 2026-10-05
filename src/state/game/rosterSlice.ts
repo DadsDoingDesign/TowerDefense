@@ -5,7 +5,7 @@
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
 import type { BumpStat } from '../../game/data/skills'
 import { takeBump, takeSkill } from '../../game/run/skills'
-import { scrapDust, scrapGold, sortItems } from '../../game/run/economy'
+import { scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
 import { equipRules } from '../../game/run/relics'
 import type { HeroSlot } from '../../game/types'
@@ -74,14 +74,11 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   // be a gear change the fight never saw).
   dismantleItem: (itemId) => {
     if (gearLocked(get())) return sfx('error')
-    const { inventory, gold, dust, mode } = get()
+    const { inventory, gold } = get()
     const item = inventory.find((i) => i.id === itemId)
     if (!item) return
-    set({
-      inventory: inventory.filter((i) => i.id !== itemId),
-      gold: gold + scrapGold(item),
-      dust: mode === 'endless' ? dust + scrapDust(item) : dust,
-    })
+    // Gold is the only currency: scrapping pays gold into the purse.
+    set({ inventory: inventory.filter((i) => i.id !== itemId), gold: gold + scrapGold(item) })
     sfx('coin')
   },
 

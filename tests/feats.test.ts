@@ -8,10 +8,9 @@ import { generateRunMap } from '../src/game/data/runmap'
 import { CAMPFIRE_FORAGE, campfireChoices, forageAtCampfire } from '../src/game/run/campfire'
 import { cartularyRelic, handSize, rewardHand } from '../src/game/run/relics'
 import { freshFeats, goblinKinds, runFacts } from '../src/game/run/settle'
-import { difficultyRules, endlessMarks, lastFeats, migrateMeta, useMetaStore } from '../src/state/metaStore'
+import { lastFeats, migrateMeta, NEW_BANK, useMetaStore } from '../src/state/metaStore'
 
 const facts = (over: Partial<RunFacts> = {}): RunFacts => ({
-  mode: 'campaign',
   won: false,
   starter: 'swing',
   hires: 1,
@@ -21,9 +20,7 @@ const facts = (over: Partial<RunFacts> = {}): RunFacts => ({
   actBosses: 0,
   mutated: false,
   goldPeak: 0,
-  difficulty: 0,
-  rounds: 0,
-  daily: false,
+  crates: 0,
   goblinsSeen: 0,
   ...over,
 })
@@ -41,22 +38,22 @@ describe('feats (data/achievements)', () => {
     expect(newlyEarned(f, { act_two: 1, first_light: 1, win_fighter: 1 }).map((a) => a.id)).toEqual([])
   })
 
-  it('Lone Wolf needs act 3 AND no hires; Endless Ten reads rounds, not depth', () => {
+  it('Lone Wolf needs act 3 AND no hires; the stake feats read crates delivered', () => {
     expect(newlyEarned(facts({ act: 3, hires: 0 }), {}).map((a) => a.id)).toContain('lone_wolf')
     expect(newlyEarned(facts({ act: 3, hires: 1 }), {}).map((a) => a.id)).not.toContain('lone_wolf')
-    expect(newlyEarned(facts({ mode: 'endless', rounds: 10 }), {}).map((a) => a.id)).toContain('endless_ten')
-    expect(newlyEarned(facts({ mode: 'campaign', rounds: 10 }), {}).map((a) => a.id)).not.toContain('endless_ten')
+    expect(newlyEarned(facts({ won: true, crates: 3 }), {}).map((a) => a.id)).toEqual(expect.arrayContaining(['vow_one', 'vow_three']))
+    expect(newlyEarned(facts({ won: false, crates: 3 }), {}).map((a) => a.id)).not.toContain('vow_one')
   })
 
-  it('every feat has a purse, and ids are unique', () => {
+  it('every feat has a purse of gold, and ids are unique', () => {
     expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length)
-    for (const a of ACHIEVEMENTS) expect(a.marks).toBeGreaterThan(0)
+    for (const a of ACHIEVEMENTS) expect(a.gold).toBeGreaterThan(0)
   })
 
   it('runFacts reads hires off the starting size, the act off the deepest layer, and a mutation off the roster', () => {
     const feats = { ...freshFeats(), starter: 'shoot' as const, startSize: 2, maxFielded: 4, actBosses: 1 }
     const f = runFacts({
-      mode: 'campaign', won: false, feats, deepestLayer: 9, difficulty: 1, wins: 0, dailyScored: false, goblinsSeen: 4,
+      won: false, feats, deepestLayer: 9, crates: 1, goblinsSeen: 4,
       roster: [{ mutations: [] }, { mutations: [{ key: 'x' } as never] }, { mutations: [] }],
     })
     expect(f.hires).toBe(1)
@@ -132,25 +129,26 @@ describe('horizontal services (campfire forage, relic cartulary, strange growth)
   })
 })
 
-describe('Watch Marks for feats and Endless (state/metaStore)', () => {
+describe('feats pay gold into the bank (state/metaStore)', () => {
   beforeEach(() => useMetaStore.getState().resetMeta())
 
   it('a feat pays its purse once, on top of the run, and lands in the ledger', () => {
     const f = facts({ actBosses: 1, act: 2 })
-    const before = useMetaStore.getState().watchMarks
-    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, facts: f })
-    const purse = ACHIEVEMENTS.find((a) => a.id === 'act_two')!.marks
-    expect(useMetaStore.getState().watchMarks - before).toBe(5 * 8 + purse)
+    const settle = () => useMetaStore.getState().settleContract({ depth: 5, won: false, kills: 0, contract: { company: 'art', crates: 0, status: 'lost' }, deposit: 40, facts: f })
+    const before = useMetaStore.getState().bank
+    settle()
+    const purse = ACHIEVEMENTS.find((a) => a.id === 'act_two')!.gold
+    expect(useMetaStore.getState().bank - before).toBe(40 + purse)
     expect(lastFeats.ids).toEqual(['act_two'])
     expect(useMetaStore.getState().achieved('act_two')).toBe(true)
-    const mid = useMetaStore.getState().watchMarks
-    useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, facts: f })
-    expect(useMetaStore.getState().watchMarks - mid).toBe(5 * 8)
+    const mid = useMetaStore.getState().bank
+    settle()
+    expect(useMetaStore.getState().bank - mid).toBe(40)
     expect(lastFeats.ids).toEqual([])
   })
 
   it('a feat-locked service cannot be bought before its feat, and can after', () => {
-    useMetaStore.setState({ watchMarks: 1000 })
+    useMetaStore.setState({ bank: 1000 })
     expect(useMetaStore.getState().purchasable('fieldKitchen')).toBe(false)
     useMetaStore.getState().buyUpgrade('fieldKitchen')
     expect(useMetaStore.getState().unlocked('fieldKitchen')).toBe(false)
@@ -159,29 +157,10 @@ describe('Watch Marks for feats and Endless (state/metaStore)', () => {
     expect(useMetaStore.getState().unlocked('fieldKitchen')).toBe(true)
   })
 
-  it('Endless pays per round, a bonus every fifth, multiplied by the best difficulty won', () => {
-    expect(endlessMarks(0, 0)).toBe(0)
-    expect(endlessMarks(4, 0)).toBe(32)
-    expect(endlessMarks(5, 0)).toBe(60)
-    expect(endlessMarks(10, 2)).toBe(Math.round(120 * difficultyRules(2).markMult))
-    expect(endlessMarks(Number.NaN, 1)).toBe(0)
-  })
-
-  it('the difficulty multiplier reaches Endless only once Ten Rounds is earned', () => {
-    useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, bestDifficulty: 2 } })
-    const pay = () => {
-      const a = useMetaStore.getState().watchMarks
-      useMetaStore.getState().grantRunRewards({ depth: 5, won: false, kills: 0, mode: 'endless' })
-      return useMetaStore.getState().watchMarks - a
-    }
-    expect(pay()).toBe(endlessMarks(5, 0))
-    useMetaStore.setState({ achievements: { endless_ten: 1 } })
-    expect(pay()).toBe(endlessMarks(5, 2))
-  })
-
-  it('v3 saves migrate to v4 with an empty ledger and Codex; junk is scrubbed', () => {
-    const m = migrateMeta({ watchMarks: 90, upgrades: { base: 1 }, topDifficulty: 1, stats: {} }, 3)
-    expect(m.watchMarks).toBe(90)
+  it('v3 saves migrate with an empty ledger and Codex; junk is scrubbed', () => {
+    const m = migrateMeta({ watchMarks: 190, upgrades: { base: 1 }, topDifficulty: 1, stats: {} }, 3)
+    expect(m.bank).toBe(190)
+    expect(migrateMeta({ watchMarks: 90 }, 3).bank).toBe(NEW_BANK)
     expect(m.achievements).toEqual({})
     expect(m.codex).toEqual({ enemies: [], relics: [], felled: {} })
     const junk = migrateMeta({ achievements: { act_two: 'x', nope: 1, first_light: -4 }, codex: { enemies: ['a', 'a', 3], relics: 'no' } }, 4)

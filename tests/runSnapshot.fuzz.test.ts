@@ -52,7 +52,9 @@ import { relicTeamMods } from '../src/game/data/relics'
 import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
-import { MAX_DIFFICULTY } from '../src/game/run/watch'
+import { CITY_COUNT, COMPANY_WEIGHT, kindCompany, MARKET_MULT, MAX_CRATES } from '../src/game/run/contracts'
+import { runDeposit } from '../src/game/run/settle'
+import { COMPANY_IDS } from '../src/game/data/companies'
 import { offHandAllowed } from '../src/game/run/inventory'
 import { equipRules } from '../src/game/run/relics'
 
@@ -127,6 +129,8 @@ function buildBase(): Record<string, unknown> {
     feats: { starter: 'swing', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
     merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: classicHero('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [classicHero('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
+    // v15: a staked contract one city in, so the fuzz lands on every field of it.
+    contract: { ...s.contract!, crates: 3, market: 1.3, paid: [180], cargoAt: [85], pending: 0, cashOut: 0 },
   })
   const snap = captureRun(useGameStore.getState(), {
     rngLoot: 7,
@@ -217,16 +221,30 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const m of snap.crossroads?.mutations ?? []) {
     assertFiniteCombat({ ...probe, mutations: [m] }, team, `${where} mutation ${m.id}`)
   }
-  for (const k of ['gold', 'baseHp', 'maxBaseHp', 'enemyHpMult', 'threat', 'runDifficulty', 'dust', 'lives', 'round'] as const) {
+  for (const k of ['gold', 'baseHp', 'maxBaseHp', 'enemyHpMult', 'threat'] as const) {
     if (!Number.isFinite(snap[k])) throw new Error(`${where}: ${k} = ${snap[k]}`)
   }
+  // v15: the contract — every number it carries is gold a settle banks.
+  const c = snap.contract
+  if (!COMPANY_IDS.includes(c.company)) throw new Error(`${where}: contract company ${c.company}`)
+  if (!Number.isInteger(c.crates) || c.crates < 0 || c.crates > MAX_CRATES) throw new Error(`${where}: crates ${c.crates}`)
+  if (c.market !== 1 && c.market !== MARKET_MULT) throw new Error(`${where}: market ${c.market}`)
+  for (const n of [c.purse, c.cashOut, ...c.paid]) if (!Number.isInteger(n) || n < 0 || n > 1e6) throw new Error(`${where}: contract gold ${n}`)
+  if (c.paid.length > CITY_COUNT || c.cargoAt.length !== c.paid.length) throw new Error(`${where}: contract cities`)
+  for (const n of c.cargoAt) if (!Number.isInteger(n) || n < 0 || n > 100) throw new Error(`${where}: cargo ${n}`)
+  if (c.pending !== null && c.pending !== c.paid.length - 1) throw new Error(`${where}: pending ${c.pending}`)
+  if (!Number.isFinite(runDeposit({ gold: snap.gold, contract: c }))) throw new Error(`${where}: deposit`)
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
-  // v14: the item pool is known kinds, each once, always holding the basic five.
-  if (!snap.itemPool.every(isItemKind) || new Set(snap.itemPool).size !== snap.itemPool.length) throw new Error(`${where}: bad item pool`)
+  // v14: the item pool is known kinds, always holding the basic five; v15:
+  // weighted — only the contract's company's kinds twice, nothing more.
+  if (!snap.itemPool.every(isItemKind)) throw new Error(`${where}: bad item pool`)
   if (!BASIC_ITEM_KINDS.every((k) => snap.itemPool.includes(k))) throw new Error(`${where}: item pool lost a basic kind`)
-  if (!Number.isInteger(snap.runDifficulty) || snap.runDifficulty < 0 || snap.runDifficulty > MAX_DIFFICULTY) throw new Error(`${where}: difficulty ${snap.runDifficulty}`)
+  for (const k of new Set(snap.itemPool)) {
+    const n = snap.itemPool.filter((x) => x === k).length
+    if (n !== (kindCompany(k) === c.company ? COMPANY_WEIGHT : 1)) throw new Error(`${where}: ${k} dealt ${n}x`)
+  }
   for (const s of heroes) {
     const ks = s.skills ?? []
     if (ks.length > MAX_SKILLS || new Set(ks).size !== ks.length) throw new Error(`${where}: ${s.id} skills ${ks}`)
@@ -500,7 +518,7 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
     expect(f.skills).toEqual(h.skills)
     for (const k of ['archetype', 'branchPath', 'color', 'accent']) expect(k in f).toBe(false)
     // A run saved before item unlocks keeps dealing every kind.
-    expect(snap!.itemPool).toEqual([...ALL_ITEM_KINDS])
+    expect([...new Set(snap!.itemPool)]).toEqual([...ALL_ITEM_KINDS])
     assertPlayable(snap!, 'v13')
   })
 
@@ -534,17 +552,17 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
     expect(snap.nameCounters).toEqual({ heroes: 9 })
   })
 
-  it('validates the item pool: unknown kinds dropped, basics always kept, a Daily on its fixed pool', () => {
+  it('validates the item pool: unknown kinds dropped, basics always kept, weighted to the contract', () => {
     const raw = buildBase() as Record<string, unknown>
     raw.itemPool = ['Axe', 'Axe', 'NotAKind', 7]
     const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
     expect(snap.itemPool).toEqual(expect.arrayContaining([...BASIC_ITEM_KINDS, 'Axe']))
-    expect(snap.itemPool).toHaveLength(BASIC_ITEM_KINDS.length + 1)
+    expect(new Set(snap.itemPool).size).toBe(BASIC_ITEM_KINDS.length + 1)
   })
 })
 
 describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
-  it('maps a grown hero onto skills, keeps the Vow as the difficulty, and drops the evolution queue', () => {
+  it('maps a grown hero onto skills, and drops the evolution queue', () => {
     const raw = buildBase() as Record<string, unknown> & { roster: (Sentinel & { perks?: string[] })[] }
     raw.v = 12
     const hero = raw.roster[0]
@@ -567,8 +585,7 @@ describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
     expect((h as { branchPath?: unknown }).branchPath).toBeUndefined()
     expect(h.stats.str).toBe(strBefore)
     expect((h as { perks?: unknown }).perks).toBeUndefined()
-    expect(snap!.runDifficulty).toBe(2)
-    expect(snap!.skillPool).toEqual([...STARTER_SKILLS])
+    expect([...new Set(snap!.skillPool)]).toEqual([...STARTER_SKILLS])
     expect((snap as unknown as Record<string, unknown>).evolutionQueue).toBeUndefined()
     assertPlayable(snap!, 'v12')
   })
@@ -658,5 +675,40 @@ describe('round 3 (Q5): the off hand takes off-hand things only', () => {
     const lost = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
     expect(lost.roster[1].equipment.offHand).toBeNull()
     expect(lost.gearReturned).toHaveLength(1)
+  })
+})
+
+describe('v14 → v15: the mercenary company (contracts; Daily and Endless removed)', () => {
+  it('a run from before contracts resumes as a signed escort on the open road, its passed cities paid nothing', () => {
+    const raw = buildBase() as Record<string, unknown>
+    raw.v = 14
+    delete raw.contract
+    raw.challenge = { kind: 'daily', date: '2026-10-01', scored: true }
+    raw.runDifficulty = 3
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(snap.challenge).toEqual({ kind: 'standard' })
+    expect(snap.contract).toMatchObject({ company: 'silk', crates: 0, purse: 0, signed: true, pending: null, status: 'open' })
+    expect(snap.contract.paid.every((p) => p === 0)).toBe(true)
+    assertPlayable(snap, 'v14 daily')
+  })
+
+  it('an Endless save cannot be played, but is paid what it earned, as gold', () => {
+    const raw: Record<string, unknown> = { ...(buildBase() as Record<string, unknown>), v: 14, mode: 'endless', wins: 12, runKills: 300, screen: 'endless' }
+    delete raw.contract
+    expect(migrateSnapshot(JSON.parse(JSON.stringify(raw)))).toBeNull()
+    const pay = payoutFromRaw(raw)!
+    expect(pay.contract).toBeNull()
+    expect(pay.depth).toBe(12)
+    expect(pay.legacyGold).toBe(12 * 8 + 2 * 20)
+    expect(runDeposit(pay)).toBe(136)
+  })
+
+  it('a contract still on the hero pick took nothing from the bank, and returns nothing', () => {
+    const raw = buildBase() as Record<string, unknown>
+    raw.roster = []
+    raw.screen = 'heroPick'
+    const pay = payoutFromRaw(JSON.parse(JSON.stringify(raw)))!
+    expect(pay.contract?.signed).toBe(false)
+    expect(runDeposit(pay)).toBe(0)
   })
 })

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { onSpritesReady } from '../../game/render/sprites'
-import { dailySeed, utcDateKey } from '../../state/daily'
+import { hashSeed } from '../../game/core/rng'
+import { utcDateKey } from '../../game/run/contracts'
 import { useSettingsStore } from '../../state/settingsStore'
 import { useMedia } from '../pointer'
 
@@ -56,7 +57,9 @@ export function AttractMode() {
   // Q12: the scene is drawn from today's Daily Watch seed (the UTC day), read
   // once per mount — everyone sees the same cinematic today, a new one
   // tomorrow, and a menu left open past midnight keeps the scene it opened on.
-  const [seed] = useState(() => dailySeed(utcDateKey()))
+  // The day's seed — the hash the Daily used to deal from, kept so the menu's
+  // battle is still the same for everyone on a given UTC day.
+  const [seed] = useState(() => hashSeed('fieldwatch-daily', utcDateKey()))
   const [inView, setInView] = useState(true)
   // A phone on its side is covered by the rotate prompt (the shell is only
   // visibility-hidden, so the observer still sees the frame): park there too.

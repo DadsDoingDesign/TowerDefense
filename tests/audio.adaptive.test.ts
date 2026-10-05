@@ -78,8 +78,6 @@ describe('low Gate', () => {
       engine: { enemies: [{ type: {} }, { type: { isBoss: true } }] },
       hud: { baseHp: 5, maxBaseHp: 20, enemiesAlive: 0 },
       speed: 2,
-      mode: 'campaign',
-      round: 1,
       clearedNodeIds: ['a', 'b', 'c'],
     })
     expect(i).toEqual({ alive: 2, boss: true, gate: 0.25, depth: 2, speed: 2 })

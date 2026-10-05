@@ -78,6 +78,28 @@
   --rogue: #4fae72;
   --mystic: #5b8cd6;
 
+  /* ---- The trade companies (the mercenary company; trade/NOTES.md § Palette).
+     FILLS and LIGHTS only — rails, crests, route light, crate bands — never body
+     text: names stay cream. Each clears AA as a fill on --panel-2 and sits at
+     ΔE2000 ≥ 13 from every reserved hue (rarity, cursed coral, clearance red,
+     gold, CTA teal). `data/companies.ts` carries the same hexes for the canvas;
+     `channels.companyVar` is how the UI names them. */
+  --co-spice: #c6e05a;
+  --co-art: #c6a4ff;
+  --co-metals: #5d8be2;
+  --co-silk: #dba5b9;
+  --co-scrolls: #e4e8f2;
+  /* The market-of-the-day tag: dark ink on a warm gold, 11.1:1. */
+  --market: #f0c46a;
+  --market-ink: #1b1409;
+  /* The parchment voice (contract letters, receipt slips): ink on --paper,
+     10.4:1 and 6.9:1 — the world talking, never UI chrome. */
+  --slip-ink: #3a2c14;
+  --slip-ink-2: #5a4526;
+  /* The night the trade pages sit in, and the lantern glow they are lit by. */
+  --night: #17110c;
+  --lantern: #ffe39a;
+
   --radius: 10px;
   --radius-sm: 6px;
 

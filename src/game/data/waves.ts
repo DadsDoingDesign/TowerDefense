@@ -1156,33 +1156,6 @@ function defaultLabel(depth: number, kind: EncounterKind, v: WaveVariant): strin
   return v.id === 'patrol' ? `Depth ${depth}` : `Depth ${depth} — ${v.label}`
 }
 
-/**
- * Endless Watch wave for a given round. Every 10th round is a boss, every 5th
- * an elite; difficulty ramps faster than the campaign (depth = round + 2).
- *
- * Because the boss budget is quoted off the depth *before* it, an Endless boss
- * round is now strictly harder than the round before it — which is what makes
- * its full heal, bonus dust and triple loot a reward rather than a rest (H7).
- */
-export function generateEndlessWave(round: number, runSeed = 0): WaveDef {
-  const kind: EncounterKind = round % 10 === 0 ? 'boss' : round % 5 === 0 ? 'elite' : 'normal'
-  // A boss round jumps two depths ahead of the march it interrupts. The
-  // campaign gets its boss step from Threat — clearing depth 9 multiplies it
-  // by 1.42 before the final node — but an Endless boss follows a round whose
-  // Threat step is smaller, so the step has to be in the depth instead. Without
-  // it, round 30's boss came out at 0.78× round 29's wave (H7's second half:
-  // the old boss did not scale AT ALL and was an order of magnitude weaker).
-  const depth = round + (kind === 'boss' ? 4 : 2)
-  // The Watch varies its shape too — same seed, same round, same wave, so a
-  // resumed Endless run faces the fight it was interrupted by. There is no
-  // sibling to rotate against: a round has no neighbours in its layer.
-  const seed = runSeed ? encounterSeed(runSeed, depth) : 0
-  const v = pickVariant(kind, depth, seed)
-  const tag = kind === 'elite' ? ` — Elite · ${v.label}` : kind === 'boss' ? ` — Boss${v.label ? ` · ${v.label}` : ''}` : v.id === 'patrol' ? '' : ` — ${v.label}`
-  const wave = generateEncounter(depth, kind, { seed, label: `Wave ${round}${tag}` })
-  return { ...wave, index: round }
-}
-
 /** Human-readable composition summary for the pre-wave preview. */
 export function waveComposition(wave: WaveDef): { typeId: string; count: number }[] {
   const counts = new Map<string, number>()

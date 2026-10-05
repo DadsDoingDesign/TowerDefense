@@ -69,7 +69,7 @@ export function ResumeRunPrompt() {
           </button>
           {armed && (
             <p className="fw-resume-body fw-resume-warn" role="alert">
-              The run ends here. You keep the Marks it earned; your heroes, the map and the pack are gone.
+              The contract ends here. You keep what its cities paid and the rest of your purse; unsold crates, your heroes, the map and the pack are gone.
             </p>
           )}
           {armed && (
@@ -81,7 +81,7 @@ export function ResumeRunPrompt() {
                 // A tap that was already travelling when this appeared is not a
                 // decision (same guard as the shell's armed confirms).
                 if (e.detail > 1 || Date.now() - armedAt.current < 400) return
-                // Abandoning still pays out the marks the run earned — see
+                // Abandoning still banks what the run earned — see
                 // `discardSavedRun`.
                 discardSavedRun()
                 setSnap(null)
@@ -99,7 +99,7 @@ export function ResumeRunPrompt() {
               setArmed((a) => !a)
             }}
           >
-            {armed ? 'Keep the run' : 'Abandon and collect Marks'}
+            {armed ? 'Keep the run' : 'Abandon and bank what it earned'}
           </button>
         </div>
       </div>

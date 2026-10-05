@@ -20,7 +20,6 @@ export function DefeatReceipt() {
   const runSeed = useGameStore((s) => s.runSeed)
   const waveLabel = useGameStore((s) => s.currentWave?.label ?? null)
   const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
-  const mode = useGameStore((s) => s.mode)
   const ledger = useBattleLedger()
   const ours = ledger.runSeed === runSeed
   const rows = ours ? leakRows(ledger.run).slice(0, 4) : []
@@ -45,7 +44,7 @@ export function DefeatReceipt() {
         </ul>
       ) : (
         <p className="pg-cause-line">
-          {leaked} reached the Gate{mode === 'campaign' ? '' : ' in the last wave'}.
+          {leaked} reached the wagons.
         </p>
       )}
       {ours && ledger.worst && (
@@ -54,7 +53,7 @@ export function DefeatReceipt() {
         </p>
       )}
       <p className="pg-cause-line muted">
-        {waveLabel ? `Last wave: ${waveLabel}` : mode === 'endless' ? 'Last wave' : `Depth ${depth}`} · Seed {runSeed}
+        {waveLabel ? `Last wave: ${waveLabel}` : `Depth ${depth}`} · Seed {runSeed}
       </p>
     </section>
   )

@@ -5,8 +5,13 @@ import { useSettingsStore } from '../../state/settingsStore'
  * Which subject each band is showing. The whole app is a function of this —
  * there is no navigation, only a change of context. See docs/FIGMA.md.
  */
-export type StageKind = 'battlefield' | 'map' | 'board' | 'result' | 'title'
-export type SelectorKind = 'party' | 'offers' | 'rooms' | 'menu'
+/**
+ * `contracts` is the contract board and its terms; `city` a city's payout and
+ * its "cash out or press on" (the mercenary company). Both are pages of their
+ * own (`ContractsScreen`, `CityScreen`), drawn like the result page.
+ */
+export type StageKind = 'battlefield' | 'map' | 'board' | 'result' | 'title' | 'contracts' | 'city'
+export type SelectorKind = 'party' | 'offers' | 'menu'
 
 export interface ShellContext {
   stage: StageKind
@@ -55,14 +60,13 @@ const checked = (c: ShellContext): ShellContext => {
 
 export function useShellContext(): ShellContext {
   const screen = useGameStore((s) => s.screen)
-  const mode = useGameStore((s) => s.mode)
   const runPhase = useGameStore((s) => s.runPhase)
   // SK1 / LS3: the hero pick's one tip, until a hero has been picked once.
   const skillTaught = useSettingsStore((s) => s.taught.heroSkill)
   // The classless rework's one tip: a hero is what it holds.
   const gearTaught = useSettingsStore((s) => s.taught.heroGear)
   const event = useGameStore((s) => s.event)
-  const endlessRoom = useGameStore((s) => s.endlessRoom)
+  const cityPending = useGameStore((s) => s.contract?.pending != null)
   const crossroads = useGameStore((s) => s.crossroads)
   const reward = useGameStore((s) => s.reward)
   // The node whose spoils these are — an elite's get their own frame (Phase 2).
@@ -75,6 +79,10 @@ export function useShellContext(): ShellContext {
 
   if (screen === 'hub') {
     return { stage: 'title', selector: 'menu', board: null, layout: 'page' }
+  }
+
+  if (screen === 'contracts') {
+    return { stage: 'contracts', selector: 'menu', board: null, layout: 'page' }
   }
 
   if (screen === 'heroPick') {
@@ -122,19 +130,11 @@ export function useShellContext(): ShellContext {
     }
   }
 
-  if (screen === 'endless') {
-    if (endlessRoom) return { stage: 'board', selector: 'offers', board: ROOM_BOARD[endlessRoom], layout: 'page' }
-    return {
-      stage: 'board',
-      selector: 'rooms',
-      board: { title: 'Endless Watch', blurb: 'Pick a room, then take the next wave.' },
-      layout: 'page',
-    }
-  }
-
   if (screen === 'map') {
+    // A city's payout comes first: what it paid, then cash out or press on.
+    if (cityPending) return { stage: 'city', selector: 'menu', board: null, layout: 'page' }
     // An event node parks a board over the map until you resolve it.
-    if (event && mode === 'campaign') {
+    if (event) {
       return { stage: 'board', selector: 'offers', board: EVENT_BOARD[event.kind], layout: 'page' }
     }
     // A post-wave reward pick is an offer board too.
@@ -193,9 +193,3 @@ const EVENT_BOARD = {
   campfire: { title: 'Campfire', blurb: 'One night at the fire, and one thing done with it. Choose one.' },
 } as const
 
-const ROOM_BOARD = {
-  merchant: { title: 'Merchant', blurb: 'Spend gold before the next wave.' },
-  forge: { title: 'Forge', blurb: 'Spend dust to reforge or upgrade.' },
-  shrine: { title: 'Shrine', blurb: 'A bargain with terms.' },
-  recruit: { title: 'Recruit', blurb: 'Add a hero to your side.' },
-} as const

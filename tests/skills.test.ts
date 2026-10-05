@@ -20,17 +20,8 @@ import {
   takeBump,
   takeSkill,
 } from '../src/game/run/skills'
-import {
-  DAILY_SKILL_POOL,
-  difficultyRules,
-  MAX_DIFFICULTY,
-  rollUnlock,
-  skillPoolFor,
-  watchLevelFor,
-  watchXpFor,
-  watchXpToReach,
-  winReward,
-} from '../src/game/run/watch'
+import { difficultyRules, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
+import { standingXpFor } from '../src/game/run/standing'
 import { classicHero } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { computeCombat } from '../src/game/engine/combat'
@@ -199,7 +190,7 @@ describe('the classless rework’s combo skills', () => {
     expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
     expect(desc('split_shot')).toBe('Its attacks pass through 1 more enemy.')
     expect(desc('momentum')).toBe('Attacks 15% faster for each enemy it is holding.')
-    expect(desc('last_rites')).toBe('Every 5th kill it makes mends the Gate by 1.')
+    expect(desc('last_rites')).toBe('Every 5th kill it makes wins back 5% of the cargo.')
   })
 
   it('reach the combat profile exactly by their mods', () => {
@@ -240,11 +231,10 @@ describe('old saves: perks and evolutions become skills', () => {
   })
 })
 
-describe('Watch levels, cards and difficulty', () => {
-  it('prices a run in Watch XP', () => {
-    expect(watchXpFor({ depth: 5, kills: 150, won: false })).toBe(75 + 15)
-    expect(watchXpFor({ depth: 12, kills: 400, won: true })).toBe(180 + 40 + 60)
-    expect(watchXpFor({ mode: 'endless', depth: 8, kills: 0, won: false })).toBe(80)
+describe('the unlock curve, cards and the stake’s difficulty', () => {
+  it('prices a contract in standing XP (the Watch XP formula, paid to one company)', () => {
+    expect(standingXpFor({ depth: 5, kills: 150, delivered: false })).toBe(75 + 15)
+    expect(standingXpFor({ depth: 12, kills: 400, delivered: true })).toBe(180 + 40 + 60)
   })
 
   it('levels fast early and slower late', () => {
@@ -271,22 +261,13 @@ describe('Watch levels, cards and difficulty', () => {
     expect(skillPoolFor([], () => false)).toEqual([...STARTER_SKILLS].sort((a, b) => ALL_POOL.indexOf(a) - ALL_POOL.indexOf(b)))
     expect(skillPoolFor(['charge'], () => false)).toContain('charge')
     expect(skillPoolFor([], (f) => f === 'win_fighter')).toContain('warden_of_ash')
-    expect(DAILY_SKILL_POOL).toEqual(STARTER_SKILLS)
   })
 
   it('adds 8% enemy strength and one elite an act per step', () => {
-    expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, extraElites: 0, markMult: 1 })
+    expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, extraElites: 0 })
     expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1.24, extraElites: 3 })
     expect(difficultyRules(99).step).toBe(MAX_DIFFICULTY)
     expect(difficultyRules(-2).step).toBe(0)
-    for (let s = 1; s <= MAX_DIFFICULTY; s++) expect(difficultyRules(s).markMult).toBeGreaterThan(difficultyRules(s - 1).markMult)
-  })
-
-  it('pays a card for a win at the top step, or for a new best below it', () => {
-    expect(winReward({ step: 2, top: 2, score: 1, best: 5000 })).toMatchObject({ card: true, stepUp: true })
-    expect(winReward({ step: 1, top: 2, score: 2400, best: 2500 })).toMatchObject({ card: false, stepUp: false })
-    expect(winReward({ step: 1, top: 2, score: 2600, best: 2500 })).toMatchObject({ card: true, stepUp: false, newBest: true })
-    expect(winReward({ step: MAX_DIFFICULTY, top: MAX_DIFFICULTY, score: 1, best: 9 })).toMatchObject({ card: true, stepUp: false })
   })
 })
 
@@ -294,7 +275,7 @@ describe('the skill library view (Codex)', () => {
   it('is a Collection with two tabs; a locked card is a silhouette that says only how it opens', async () => {
     const { skillLibraryOffer, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
     const { ITEM_KINDS, BASIC_ITEM_KINDS } = await import('../src/game/data/itemKinds')
-    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], watchXp: 100, staged: false })
+    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], staged: false })
     expect(o.tabs!.map((t) => t.label)).toEqual(['Skills', 'Items'])
     const skillsTab = o.tabs![0]
     const itemsTab = o.tabs![1]
@@ -320,7 +301,7 @@ describe('the skill library view (Codex)', () => {
 
   it('stays locked until the first run is over', async () => {
     const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
-    const o = skillLibraryOffer({ achievements: {}, skills: [], watchXp: 0, staged: true })
+    const o = skillLibraryOffer({ achievements: {}, skills: [], staged: true })
     expect(o.tabs).toBeUndefined()
     expect(o.sub).toBe('Locked')
   })

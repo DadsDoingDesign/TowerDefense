@@ -363,7 +363,7 @@ aura is graded beside a second hero.
 | L2:fighter | Snare | +51.4pt | −3.7pt | +8.0pt | **+18.6pt** | 91.3 |
 | L2:fighter | Wildfire | +51.4pt | +39.8pt | +49.3pt | **+46.8pt** | 91.3 |
 | L2:fighter | Blessing | +16.7pt | +2.4pt | +2.5pt | **+7.2pt** | 91.3 |
-| L2:fighter | Gate Siphon | +0.8pt | +1.2pt | +25.9pt | **+9.3pt** | 137.0 |
+| L2:fighter | Siphon | +0.8pt | +1.2pt | +25.9pt | **+9.3pt** | 137.0 |
 | L2:fighter | Killing Spree | +14.3pt | +0.0pt | +12.4pt | **+8.9pt** | 91.3 |
 | L2:fighter | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | 91.3 |
 | L2:fighter | Firebrand | +45.7pt | +0.4pt | +19.9pt | **+22.0pt** | 91.3 |
@@ -378,7 +378,7 @@ aura is graded beside a second hero.
 | L2:rogue | Snare | +4.3pt | +7.7pt | +6.0pt | **+6.0pt** | 130.4 |
 | L2:rogue | Wildfire | +34.8pt | +9.8pt | +22.9pt | **+22.5pt** | 130.4 |
 | L2:rogue | Blessing | +9.5pt | +8.1pt | +7.0pt | **+8.2pt** | 130.4 |
-| L2:rogue | Gate Siphon | +10.6pt | +16.3pt | +23.6pt | **+16.8pt** | 195.6 |
+| L2:rogue | Siphon | +10.6pt | +16.3pt | +23.6pt | **+16.8pt** | 195.6 |
 | L2:rogue | Killing Spree | +29.5pt | +12.2pt | +15.4pt | **+19.0pt** | 130.4 |
 | L2:rogue | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | 130.4 |
 | L2:rogue | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | 130.4 |
@@ -393,7 +393,7 @@ aura is graded beside a second hero.
 | L2:mystic | Snare | +1.4pt | +61.4pt | +50.7pt | **+37.9pt** | 47.3 |
 | L2:mystic | Wildfire | +1.4pt | +61.4pt | +48.8pt | **+37.2pt** | 47.3 |
 | L2:mystic | Blessing | +18.6pt | +8.1pt | +8.0pt | **+11.6pt** | 47.3 |
-| L2:mystic | Gate Siphon | +0.0pt | +58.1pt | +34.8pt | **+31.0pt** | 70.9 |
+| L2:mystic | Siphon | +0.0pt | +58.1pt | +34.8pt | **+31.0pt** | 70.9 |
 | L2:mystic | Killing Spree | +1.4pt | +56.5pt | +27.4pt | **+28.4pt** | 47.3 |
 | L2:mystic | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | 47.3 |
 | L2:mystic | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | 47.3 |
@@ -438,9 +438,9 @@ aura is graded beside a second hero.
 | L1:fighter | 14 | +19.6pt | Quick Hands | Cleave |
 | L1:rogue | 14 | +2.4pt | Quick Hands | Arc Spark |
 | L1:mystic | 14 | +16.5pt | Quick Hands | Hold Fast |
-| L2:fighter | 15 | +20.3pt | Gate Siphon | Wildfire |
-| L2:rogue | 15 | +6.8pt | Gate Siphon | Long Shot |
-| L2:mystic | 15 | +0.0pt | Gate Siphon | Shield Wall |
+| L2:fighter | 15 | +20.3pt | Siphon | Wildfire |
+| L2:rogue | 15 | +6.8pt | Siphon | Long Shot |
+| L2:mystic | 15 | +0.0pt | Siphon | Shield Wall |
 | L3:fighter | 11 | +1.6pt | Berserk | Stormcaller |
 | L3:rogue | 11 | +11.8pt | Berserk | Stormcaller |
 | L3:mystic | 11 | +0.0pt | Berserk | Berserk |
@@ -746,50 +746,68 @@ run. A card that promises forks has to produce forks:
 - `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign's dominant term.
 - **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.
 
-## 13. Difficulty steps (is climbing ever worth it?)
+## 13. Stake tiers (is carrying more cargo ever worth it?)
 
-**What changed (SK1).** The Banner (Vow) ladder is gone. Each rung took a RULE away —
-two reward cards, every battle an elite, no recruits — and was flown per run. A
-**difficulty step** is one dial instead: each step makes enemies **+8% stronger** (the
-run starts at that Threat) and turns **one more battle node per act into an elite**, on
-the map where the player can see it. A win at the top step raises it one step (and
-unlocks a skill card); the player can turn it down at the start of any run. A save's
-highest unlocked Vow became its top step.
+**What changed (the mercenary company).** A run is a contract now, and the difficulty
+step is its **stake**: every crate of cargo carried is one step — enemies **+8% stronger**
+and **one more elite an act**, on the map where the player can see it — and costs
+50 gold from the bank. Delivered, the crates pay: each city sells its share of them at
+100 gold a crate, the destination's completion bonus rises 40 gold a crate, a skill
+comes at every milestone crate and an item chance at every second one. Every city pays
+by the cargo that arrives (the wagons' HP). An escort (no crates) is paid a fee at each city.
 
-**The intent is unchanged: every step must still be worth climbing.** Each step is
-measured on the same paired seeds as §11 and §12, and the payout is `grantRunRewards`'s
-own formula (+25% Marks a step), so the marks column is what the purse sees. **600 runs a
-step**: the gate below asks for a 3pt cost per step, and a 210-run cell cannot resolve one.
-The modelled player is the zero-meta one (the nine starter skills); a step whose win
-rate falls under 1% ends the climb — every step above it is at least as hard.
+**The intent is the climb's: every tier must cost difficulty AND pay more.** Each tier is
+measured on the same paired seeds as §11 and §12, 600 runs a tier, on Rosethread's road (the
+open ground every route used to share, with its company weighting), at zero meta. The gold
+column is the bank's **net** change — everything banked (city pay, any cash-out sale, the
+purse's rest) less the stake and the purse taken — priced from the contract code itself
+(`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same
+roads: **always press on**, and **cash out under 50% cargo** at city 1 or 2.
 
-| Step | What it adds | ×marks | Win rate | **Marks / run** | Δ marks |
-|--:|---|--:|--:|--:|--:|
-| 0 | standard | ×1 | 18% | **92.9** | — |
-| 1 | Enemies 8% stronger · 1 more elite an act | ×1.25 | 21% | **123.0** | +30 |
-| 2 | Enemies 16% stronger · 2 more elites an act | ×1.5 | 17% | **140.1** | +17 |
-| 3 | Enemies 24% stronger · 3 more elites an act | ×1.75 | 16% | **158.2** | +18 |
-| 4 | Enemies 32% stronger · 4 more elites an act | ×2 | 14% | **173.1** | +15 |
-| 5 | Enemies 40% stronger · 5 more elites an act | ×2.25 | 13% | **189.8** | +17 |
-| 6 | Enemies 48% stronger · 6 more elites an act | ×2.5 | 12% | **210.1** | +20 |
-| 7 | Enemies 56% stronger · 7 more elites an act | ×2.75 | 12% | **228.0** | +18 |
-| 8 | Enemies 64% stronger · 8 more elites an act | ×3 | 9% | **233.1** | +5 |
-| 9 | Enemies 72% stronger · 9 more elites an act | ×3.25 | 8% | **245.0** | +12 |
-| 10 | Enemies 80% stronger · 10 more elites an act | ×3.5 | 9% | **268.3** | +23 |
+Two gold columns, because they answer different questions. **Contract pay** is what the stake
+controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds the purse's
+rest — kill gold, node purses and whatever the merchants did not take — less the purse taken.
 
-**Two invariants**, the ladder's own, kept:
+| Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |
+|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|
+| 0 | 0 | escort · standard raiders | 1/5 | 18% | 86.8 | 13% | **86.1** | — | 1489.1 |
+| 1 | 50 | Raiders 8% stronger · 1 more elite an act | 2/5 | 21% | 143.3 | 13% | **141.4** | +55 | 1622.2 |
+| 2 | 100 | Raiders 16% stronger · 2 more elites an act | 2/5 | 17% | 152.7 | 14% | **151.5** | +10 | 1613.9 |
+| 3 | 150 | Raiders 24% stronger · 3 more elites an act | 3/5 | 16% | 195.0 | 15% | **193.1** | +42 | 1626.8 |
+| 4 | 200 | Raiders 32% stronger · 4 more elites an act | 3/5 | 14% | 147.9 | 16% | **147.0** | −46 | 1540.3 |
+| 5 | 250 | Raiders 40% stronger · 5 more elites an act | 4/5 | 13% | 185.9 | 15% | **186.7** | +40 | 1510.0 |
+| 6 | 300 | Raiders 48% stronger · 6 more elites an act | 4/5 | 12% | 188.4 | 21% | **191.5** | +5 | 1520.7 |
+| 7 | 350 | Raiders 56% stronger · 7 more elites an act | 5/5 | 12% | 225.6 | 20% | **227.2** | +36 | 1506.6 |
+| 8 | 400 | Raiders 64% stronger · 8 more elites an act | 5/5 | 9% | 156.1 | 25% | **165.2** | −62 | 1376.2 |
 
-1. **Every step is a cost of at least 3pt.** A step that does not lower the win rate
-   is not harder, it is a bonus with a warning label.
-2. **Every step pays for itself.** Expected marks per run must rise at every step —
-   the check the old ladder failed: its payout multipliers cancelled the difficulty.
+**Two invariants**, the climb's own, kept:
 
-Measured: the win rate by step is 18% → 21% → 17% → 16% → 14% → 13% → 12% → 12% → 9% → 8% → 9% and marks per run 92.9 → 123.0 → 140.1 → 158.2 → 173.1 → 189.8 → 210.1 → 228.0 → 233.1 → 245.0 → 268.3.
+1. **Every crate is a cost of at least 3pt** of delivery rate (pressing on). A crate that
+   does not make the road harder is a bonus with a warning label.
+2. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every
+   tier — a stake whose payout does not cover the difficulty it adds is a trap.
 
-**Not measured here: what a win buys besides marks.** A win at the top step also
-unlocks a skill card (`run/watch.winReward`) — a widening of every later run's offers,
-not a number this table can price. It is the main reason to climb; the marks column
-only has to say the climb is never a loss.
+Measured: delivery by tier is 18% → 21% → 17% → 16% → 14% → 13% → 12% → 12% → 9%; contract pay (cash-out line) 86.1 → 141.4 → 151.5 → 193.1 → 147.0 → 186.7 → 191.5 → 227.2 → 165.2; bank net 1489.1 → 1622.2 → 1613.9 → 1626.8 → 1540.3 → 1510.0 → 1520.7 → 1506.6 → 1376.2.
+
+**Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone
+crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).
+That widens every later run's deals — not a number this table can price — so the gold column
+only has to say a bigger stake is never a loss.
+
+### 13b. The routes — each company's ground, as an escort
+
+Each company's road carries its own map challenges (`data/companies.ts`); its own skills and items are dealt ×2.
+Same seeds, same modelled player (adaptive, zero meta), an escort on each road, 210 runs a road.
+Reported, not gated: a hard road is a choice the board shows, not a defect — but a road far
+off the others is a lever for the tuning pass.
+
+| Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
+|---|---|--:|--:|--:|
+| Peppercorn Co. (Spice) | Wildfire | 16% | 82.9 | 1462.0 |
+| Easel House (Art) | Flooded canals | 17% | 84.0 | 1458.7 |
+| Ironvein (Metals & Stones) | Quarry boulders | 14% | 80.6 | 1452.5 |
+| Rosethread (Silk) | Fords and fires | 15% | 80.1 | 1425.3 |
+| Moonquill (Scrolls & Arcana) | Cursed ground | 19% | 88.5 | 1476.2 |
 
 ## 14. Run variety — battlefields and wave composition
 
@@ -1082,16 +1100,16 @@ paired seeds, against the same runs without it.
 | Epic | 2 | **+1.0pt** |
 | Legendary | 3 | **+6.9pt** |
 
-**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 19%):
+**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 18%):
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 21% | +3±7pt |
-| Field Surgeon's Kit | Common | The Gate recovers 2 after every fight you win. | 19% | +1±4pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 25% | +6±7pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 15% | −3±7pt |
-| Tithe Box | Common | +10 gold for every fight you win. | 21% | +2±4pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 20% | +1±6pt |
+| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 26% | +8±7pt |
+| Field Surgeon's Kit | Common | After every fight you win, 10% of the cargo is rounded up. | 17% | −1±5pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 25% | +7±6pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 16% | −2±7pt |
+| Tithe Box | Common | +10 gold for every fight you win. | 17% | −1±5pt |
+| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 17% | −1±5pt |
 
 **Declared, not dealt.** none — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
 
@@ -1110,7 +1128,7 @@ same heroes, same seeds — the two columns differ only in the thing the row nam
 | Torch Shaman → heal pulse | green ring pulses out from the shaman | Threat targeting | 167.4 HP healed | 10.2 | ✅ fires, counter works |
 | Torch Berserker → enrage | red flame over it below 40% health | a frost slow on the line | 75.0 % of enraged that reach the Gate | 62.5 | ✅ fires, counter works |
 | Sapper (and Fuse Whelp) → blast at the Gate | lit fuse over it; blast ring where it goes off | hold it: a blocking Fighter on the road (c12r10) instead of a Mystic | 16.0 extra Gate damage from blasts | 0.0 | ✅ fires, counter works |
-| Bomber / Demolisher → charge lobbed at the Gate | target circle on the Gate while it winds up | Threat targeting (kill it in the wind-up) | 0.0 Gate damage from charges | 0.0 | ❌ |
+| Bomber / Demolisher → charge lobbed at the Gate | target circle on the wagons while it winds up | Threat targeting (kill it in the wind-up) | 0.0 Gate damage from charges | 0.0 | ❌ |
 | Siege Barrel → splits into imps | crack mark on it; burst when it breaks | splash on the line | 12.5 % of imps that reach the Gate | 0.0 | ✅ fires, counter works |
 | Shieldbearer → resist aura | blue ring around the bearer, pip over every shielded goblin | Threat targeting | 274.0 damage the shield absorbed | 103.5 | ✅ fires, counter works |
 | Barrel Roller → vaults the first blocker | up-chevron until it has jumped; arc when it does | a second blocker downstream | 10.0 vaulters reaching the Gate | 6.3 | ✅ fires, counter works |
@@ -1231,15 +1249,15 @@ difficulty on the live engine.
 - Curse "Frenzied" (cx_frenzied) has no upside: its BEST scenario is +0.9pt (phys −0.3pt, magic +0.9pt). A curse is a dramatic affix bought with a downside; one that is inert or strictly bad is a downside bought with nothing.
 - First-timer line is a wall: the shipped heuristic wins only 14% at zero meta, below the 15% floor of its band. The line a first-timer walks has to be winnable, not only the best line.
 - Strict-floor difficulty is a cliff, not a curve: depth 6 alone ends 43% of zero-meta solo runs (max 40%).
-- Difficulty 1 is not harder: it wins 21% against difficulty 0's 18% — a cost of -3.2pt, under the 3pt every step must cost.
-- Difficulty 3 is not harder: it wins 16% against difficulty 2's 17% — a cost of 1.3pt, under the 3pt every step must cost.
-- Difficulty 4 is not harder: it wins 14% against difficulty 3's 16% — a cost of 2.3pt, under the 3pt every step must cost.
-- Difficulty 5 is not harder: it wins 13% against difficulty 4's 14% — a cost of 0.8pt, under the 3pt every step must cost.
-- Difficulty 6 is not harder: it wins 12% against difficulty 5's 13% — a cost of 0.7pt, under the 3pt every step must cost.
-- Difficulty 7 is not harder: it wins 12% against difficulty 6's 12% — a cost of 0.5pt, under the 3pt every step must cost.
-- Difficulty 8 is not harder: it wins 9% against difficulty 7's 12% — a cost of 2.8pt, under the 3pt every step must cost.
-- Difficulty 9 is not harder: it wins 8% against difficulty 8's 9% — a cost of 1.0pt, under the 3pt every step must cost.
-- Difficulty 10 is not harder: it wins 9% against difficulty 9's 8% — a cost of -1.3pt, under the 3pt every step must cost.
+- Stake 1 is not harder: it delivers 21% against 0 crates' 18% — a cost of -3.2pt, under the 3pt every crate must cost.
+- Stake 3 is not harder: it delivers 16% against 2 crates' 17% — a cost of 1.3pt, under the 3pt every crate must cost.
+- Stake 4 is not harder: it delivers 14% against 3 crates' 16% — a cost of 2.3pt, under the 3pt every crate must cost.
+- Stake 4 does not pay more: 147.0 gold of contract pay against 3 crates' 193.1. The crate's pay does not cover the difficulty it adds.
+- Stake 5 is not harder: it delivers 13% against 4 crates' 14% — a cost of 0.8pt, under the 3pt every crate must cost.
+- Stake 6 is not harder: it delivers 12% against 5 crates' 13% — a cost of 0.7pt, under the 3pt every crate must cost.
+- Stake 7 is not harder: it delivers 12% against 6 crates' 12% — a cost of 0.5pt, under the 3pt every crate must cost.
+- Stake 8 is not harder: it delivers 9% against 7 crates' 12% — a cost of 2.8pt, under the 3pt every crate must cost.
+- Stake 8 does not pay more: 165.2 gold of contract pay against 7 crates' 227.2. The crate's pay does not cover the difficulty it adds.
 - Composition variants at depth 8 elite span ×22.14 in base HP leaked against random unadapted teams (ceiling ×2.00). At that width the variant roll, not the deployment, is deciding the node.
 - Relic "Wildfire Pact" claims "−35% damage per hit · all your heroes" but costs nothing measurable: its worst bench is +0.0pt. A plain upgrade wearing a pact label.
 - Relic "Iron Vigil" claims "−12% damage · all your heroes" but costs nothing measurable: its worst bench is −1.7pt. A plain upgrade wearing a pact label.

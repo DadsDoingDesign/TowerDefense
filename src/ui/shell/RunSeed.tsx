@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
-import { useMetaStore } from '../../state/metaStore'
 import { runTerms, type RunTerms } from '../../state/runTerms'
 import '../../styles/run-seed.css'
 
@@ -30,12 +29,10 @@ import '../../styles/run-seed.css'
  */
 export function RunSeed() {
   const screen = useGameStore((s) => s.screen)
-  const mode = useGameStore((s) => s.mode)
   const runSeed = useGameStore((s) => s.runSeed)
   const challenge = useGameStore((s) => s.challenge)
-  const claim = useMetaStore((s) => s.daily)
-  if (screen !== 'heroPick' || mode !== 'campaign') return null
-  return <RunSeedStrip terms={runTerms(challenge, runSeed, claim)} />
+  if (screen !== 'heroPick') return null
+  return <RunSeedStrip terms={runTerms(challenge, runSeed)} />
 }
 
 function RunSeedStrip({ terms }: { terms: RunTerms }) {
@@ -134,9 +131,6 @@ function RunSeedStrip({ terms }: { terms: RunTerms }) {
               <LockMark />
               <span className="rs-chip-text">{terms.seedLabel}</span>
             </span>
-            {terms.attempt && (
-              <span className={`rs-pill ${terms.attempt}`}>{terms.attempt === 'scored' ? 'Scored' : 'Practice'}</span>
-            )}
           </>
         )}
       </div>

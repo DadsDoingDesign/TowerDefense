@@ -7,30 +7,20 @@
 export { useGameStore } from './game/store'
 export { flushRunSnapshot, installRunPersistence, peekSavedRun } from './game/persistence'
 export { canStartWave, rarityColor, type StartWaveGate } from './game/selectors'
-/** Whether THIS run may use a hub service (false on a Daily, which ignores the hub). */
+/** Whether THIS run may use a hub service. */
 export { runUnlocked } from './game/runtime'
 export type {
   BattlePhase,
   Crossroads,
-  EndlessRoom,
   EventKind,
-  GameMode,
   HeroTab,
+  RunContract,
   RunPhase,
   RunRecap,
   Screen,
   ShellSelection,
   Speed,
 } from './game/types'
-export {
-  ENDLESS_LIVES,
-  ENDLESS_START_DUST,
-  ENDLESS_START_GOLD,
-  MAX_BASE_HP,
-  MAX_ROSTER,
-  START_GOLD,
-  scrapDust,
-  scrapGold,
-} from '../game/run/economy'
-export { ACT_JUMP, THREAT_PER_ROUND, THREAT_STEP, threatAtLayer } from '../game/run/threat'
+export { MAX_BASE_HP, MAX_ROSTER, START_GOLD, scrapGold } from '../game/run/economy'
+export { ACT_JUMP, THREAT_STEP, threatAtLayer } from '../game/run/threat'
 export { placedSentinels } from '../game/run/map'

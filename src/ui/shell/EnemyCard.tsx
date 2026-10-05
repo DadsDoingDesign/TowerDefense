@@ -62,7 +62,6 @@ export function EnemyCard({
   const wave = useGameStore((s) => s.currentWave)
   const hpMult = useGameStore(battleHpMult)
   const threat = useGameStore((s) => s.threat)
-  const mode = useGameStore((s) => s.mode)
   const battleMap = useGameStore((s) => s.battleMap)
   const engine = useGameStore((s) => s.engine)
   // Re-render as the wave runs, so a kill mid-wave counts on an open card.
@@ -139,7 +138,7 @@ export function EnemyCard({
   if (!d) return null
   const unknown = <span className="sh-ec-q" aria-label="not learned yet">?</span>
   const hpText = d.hp ? (d.hp[0] === d.hp[1] ? `${d.hp[0]}` : `${d.hp[0]}–${d.hp[1]}`) : null
-  const showThreat = mode === 'campaign' && threat > 1.001
+  const showThreat = threat > 1.001
   const step = (dir: 1 | -1) => {
     if (!entries.length) return
     const i = idx < 0 ? 0 : (idx + dir + entries.length) % entries.length
@@ -226,7 +225,7 @@ export function EnemyCard({
         </div>
         <div>
           <dt>
-            <Icon name="base" /> Gate
+            <Icon name="base" /> Wagons
           </dt>
           <dd>
             {d.gate == null ? unknown : <>−{d.gate}<small> base HP if it gets through</small></>}

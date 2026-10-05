@@ -112,21 +112,3 @@ export function applyBattleXp(
   return { roster: roster.map((s) => applyXp(s, xpById.get(s.id) ?? 0)) }
 }
 
-/** What clearing an Endless round pays: every 10th is a boss, every other 5th an elite. */
-export function endlessRoundSpoils(round: number): {
-  isBoss: boolean
-  isElite: boolean
-  dustGain: number
-  lootCount: number
-  luck: number
-} {
-  const isBoss = round % 10 === 0
-  const isElite = !isBoss && round % 5 === 0
-  return {
-    isBoss,
-    isElite,
-    dustGain: 5 + (isElite ? 5 : 0) + (isBoss ? 15 : 0),
-    lootCount: isBoss ? 3 : isElite ? 2 : 1,
-    luck: Math.min(0.45, round * 0.03),
-  }
-}

@@ -96,7 +96,6 @@ export function Coach() {
   const markTaught = useSettingsStore((s) => s.markTaught)
 
   const screen = useGameStore((s) => s.screen)
-  const mode = useGameStore((s) => s.mode)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const roster = useGameStore((s) => s.roster)
   const placements = useGameStore((s) => s.placements)
@@ -180,19 +179,19 @@ export function Coach() {
     deployed,
     packCount: inventory.length,
     wearingAnything,
-    showThreat: mode === 'campaign' && threat > 1.001,
+    showThreat: threat > 1.001,
     threat,
     owesSkill: owesSkill && (onMap || inSetup || inPlace) ? owesSkill.name : undefined,
     danger: inSetup && !!battleMap.tiles?.some((t) => t.danger === 'cursed'),
     challenge: inSetup && rule ? { name: rule.name, blurb: rule.blurb } : undefined,
     elite: inSetup && nodeHere?.type === 'elite',
     relicOffered: inPlace && !!reward?.some((c) => c.kind === 'relic'),
-    command: mode === 'campaign' && inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
+    command: inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
     subwave: screen === 'battle' && battlePhase === 'battle' && breather && subwaveShown,
     speed: screen === 'battle' && battlePhase === 'battle' && breather && speedShown,
-    gear: gearShown && mode === 'campaign' && (inPlace || onMap),
-    depth: depthShown && mode === 'campaign' && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
-    merchant: mode === 'campaign' && onMap && reachable.some((id) => node(id)?.type === 'merchant'),
+    gear: gearShown && (inPlace || onMap),
+    depth: depthShown && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
+    merchant: onMap && reachable.some((id) => node(id)?.type === 'merchant'),
   })
 
   /*
@@ -466,9 +465,13 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'merchant',
         body: (
           <>
-            A <b>Merchant</b> is in reach: spend gold on gear, a hire or Gate repair.
+            A <b>Merchant</b> is in reach: spend your purse on gear, a hire or a wagon repair.
           </>
         ),
       }
+    // The trade pages' tips (board, stakes, purse, cash-out) are said on
+    // those pages themselves, not in the battle strip.
+    default:
+      return null
   }
 }

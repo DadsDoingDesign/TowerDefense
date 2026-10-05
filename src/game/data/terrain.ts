@@ -355,6 +355,16 @@ export const TERRAIN_RULES: Record<TerrainRuleId, TerrainRule> = {
     name: 'Wildfire',
     blurb: 'Patches of the field are burning. No hero can stand in the flames.',
   },
+  quarry: {
+    id: 'quarry',
+    name: 'Quarry boulders',
+    blurb: 'Boulders from the quarry lie across the field. Fewer tiles to post on.',
+  },
+  hexed: {
+    id: 'hexed',
+    name: 'Cursed ground',
+    blurb: 'More of the best ground near the road is cursed.',
+  },
 }
 
 export const TERRAIN_RULE_IDS = Object.keys(TERRAIN_RULES) as TerrainRuleId[]

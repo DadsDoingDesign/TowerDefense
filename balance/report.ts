@@ -54,11 +54,16 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '../src/state/gameStore'
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
-import { difficultyEffect, difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
+import { difficultyEffect, difficultyRules } from '../src/game/run/watch'
+import { BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
+import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
 import {
   loadoutFor,
   marksFor,
+  contractNet,
+  CASH_OUT_HALF,
+  PRESS_ON,
   policyById,
   MC_LAYERS,
   mcKind,
@@ -1742,6 +1747,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   const won = reached >= NODES
   return {
     reached,
+    contract: null,
     cleared: reached,
     won,
     battles: reached + 1,
@@ -2335,73 +2341,125 @@ if (want(12)) {
 
 // -------------------------------------------------------------- Sweep 13
 if (want(13)) {
-  // The difficulty climb's economy (SK1) — what the Banner ladder's §13 became.
-  line('## 13. Difficulty steps (is climbing ever worth it?)')
+  // The stake's economy (the mercenary company) — what the difficulty climb's
+  // §13 became, as the Banner ladder's §13 became the climb before it.
+  line('## 13. Stake tiers (is carrying more cargo ever worth it?)')
   line('')
-  line('**What changed (SK1).** The Banner (Vow) ladder is gone. Each rung took a RULE away —')
-  line('two reward cards, every battle an elite, no recruits — and was flown per run. A')
-  line('**difficulty step** is one dial instead: each step makes enemies **+8% stronger** (the')
-  line('run starts at that Threat) and turns **one more battle node per act into an elite**, on')
-  line('the map where the player can see it. A win at the top step raises it one step (and')
-  line('unlocks a skill card); the player can turn it down at the start of any run. A save\'s')
-  line('highest unlocked Vow became its top step.')
+  line('**What changed (the mercenary company).** A run is a contract now, and the difficulty')
+  line('step is its **stake**: every crate of cargo carried is one step — enemies **+8% stronger**')
+  line('and **one more elite an act**, on the map where the player can see it — and costs')
+  line(`${CRATE_PRICE} gold from the bank. Delivered, the crates pay: each city sells its share of them at`)
+  line(`${CRATE_VALUE} gold a crate, the destination's completion bonus rises ${BONUS_PER_CRATE} gold a crate, a skill`)
+  line('comes at every milestone crate and an item chance at every second one. Every city pays')
+  line('by the cargo that arrives (the wagons\' HP). An escort (no crates) is paid a fee at each city.')
   line('')
-  line('**The intent is unchanged: every step must still be worth climbing.** Each step is')
-  line('measured on the same paired seeds as §11 and §12, and the payout is `grantRunRewards`\'s')
-  line(`own formula (+${((difficultyRules(1).markMult - 1) * 100).toFixed(0)}% Marks a step), so the marks column is what the purse sees. **${BANNER_RUNS} runs a`)
-  line(`step**: the gate below asks for a ${(BANNER_MIN_COST * 100).toFixed(0)}pt cost per step, and a ${HUB_RUNS}-run cell cannot resolve one.`)
-  line('The modelled player is the zero-meta one (the nine starter skills); a step whose win')
-  line('rate falls under 1% ends the climb — every step above it is at least as hard.')
+  line('**The intent is the climb\'s: every tier must cost difficulty AND pay more.** Each tier is')
+  line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
+  line('open ground every route used to share, with its company weighting), at zero meta. The gold')
+  line('column is the bank\'s **net** change — everything banked (city pay, any cash-out sale, the')
+  line('purse\'s rest) less the stake and the purse taken — priced from the contract code itself')
+  line('(`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same')
+  line(`roads: **${PRESS_ON.label}**, and **${CASH_OUT_HALF.label}** at city 1 or 2.`)
   line('')
-  const BANNER_POLICY = POLICIES[policyIdx('adaptive')]
-  interface StepRow { tier: number; effect: string; mult: number; win: number; marks: number }
-  const bannerRows: StepRow[] = []
-  for (let t = 0; t <= MAX_DIFFICULTY; t++) {
-    const c = hubCell(ZERO_META, BANNER_POLICY, difficultyRules(t), BANNER_RUNS)
-    bannerRows.push({ tier: t, effect: t === 0 ? 'standard' : difficultyEffect(t), mult: difficultyRules(t).markMult, win: c.winRate, marks: c.marks })
-    if (c.winRate < 0.01) break
+  const STAKE_POLICY = POLICIES[policyIdx('adaptive')]
+  interface TierRow { crates: number; win: number; winCash: number; cashed: number; netPress: number; netCash: number; payPress: number; payCash: number }
+  const tierRows: TierRow[] = []
+  for (let c = 0; c <= MAX_CRATES; c++) {
+    const press: number[] = []
+    const cash: number[] = []
+    const payP: number[] = []
+    const payC: number[] = []
+    const won: number[] = []
+    const wonCash: number[] = []
+    const cashed: number[] = []
+    for (let i = 0; i < BANNER_RUNS; i++) {
+      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta: ZERO_META, policy: STAKE_POLICY, contract: { company: 'silk', crates: c } })
+      const a = contractNet(r, PRESS_ON)
+      const b = contractNet(r, CASH_OUT_HALF)
+      press.push(a.net)
+      cash.push(b.net)
+      payP.push(a.pay)
+      payC.push(b.pay)
+      won.push(a.delivered ? 1 : 0)
+      wonCash.push(b.delivered ? 1 : 0)
+      cashed.push(b.cashedOut ? 1 : 0)
+    }
+    tierRows.push({ crates: c, win: mean(won), winCash: mean(wonCash), cashed: mean(cashed), netPress: mean(press), netCash: mean(cash), payPress: mean(payP), payCash: mean(payC) })
+    if (mean(won) < 0.01) break
   }
-  line('| Step | What it adds | ×marks | Win rate | **Marks / run** | Δ marks |')
-  line('|--:|---|--:|--:|--:|--:|')
-  for (const r of bannerRows) {
-    const prev = r.tier > 0 ? bannerRows[r.tier - 1].marks : null
+  line('Two gold columns, because they answer different questions. **Contract pay** is what the stake')
+  line("controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds the purse's")
+  line('rest — kill gold, node purses and whatever the merchants did not take — less the purse taken.')
+  line('')
+  line('| Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |')
+  line('|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|')
+  for (const r of tierRows) {
+    const prev = r.crates > 0 ? tierRows[r.crates - 1].payCash : null
     line(
-      `| ${r.tier} | ${r.effect} | ×${r.mult} | ${pct(r.win)} | **${f1(r.marks)}** | ${prev === null ? '—' : `${r.marks - prev >= 0 ? '+' : '−'}${Math.abs(r.marks - prev).toFixed(0)}`} |`,
+      `| ${r.crates} | ${r.crates * CRATE_PRICE} | ${r.crates === 0 ? 'escort · standard raiders' : difficultyEffect(r.crates)} | ${dangerPips(r.crates)}/5 | ${pct(r.win)} | ${f1(r.payPress)} | ${pct(r.cashed)} | **${f1(r.payCash)}** | ${prev === null ? '—' : `${r.payCash - prev >= 0 ? '+' : '−'}${Math.abs(r.payCash - prev).toFixed(0)}`} | ${f1(r.netCash)} |`,
     )
   }
-  if (bannerRows.length <= MAX_DIFFICULTY) line(`| ${bannerRows.length}–${MAX_DIFFICULTY} | not measured: the step below already wins under 1% | | | | |`)
+  if (tierRows.length <= MAX_CRATES) line(`| ${tierRows.length}–${MAX_CRATES} | | not measured: the tier below already delivers under 1% | | | | | | | |`)
   line('')
-  line('**Two invariants**, the ladder\'s own, kept:')
+  line('**Two invariants**, the climb\'s own, kept:')
   line('')
-  line(`1. **Every step is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt.** A step that does not lower the win rate`)
-  line('   is not harder, it is a bonus with a warning label.')
-  line('2. **Every step pays for itself.** Expected marks per run must rise at every step —')
-  line('   the check the old ladder failed: its payout multipliers cancelled the difficulty.')
+  line(`1. **Every crate is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt** of delivery rate (pressing on). A crate that`)
+  line('   does not make the road harder is a bonus with a warning label.')
+  line('2. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every')
+  line('   tier — a stake whose payout does not cover the difficulty it adds is a trap.')
   line('')
-  for (let i = 1; i < bannerRows.length; i++) {
-    const cur = bannerRows[i]
-    const prev = bannerRows[i - 1]
+  for (let i = 1; i < tierRows.length; i++) {
+    const cur = tierRows[i]
+    const prev = tierRows[i - 1]
     if (prev.win - cur.win < BANNER_MIN_COST && prev.win >= 0.01) {
       failures.push(
-        `Difficulty ${cur.tier} is not harder: it wins ${pct(cur.win)} against difficulty ${prev.tier}'s ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every step must cost.`,
+        `Stake ${cur.crates} is not harder: it delivers ${pct(cur.win)} against ${prev.crates} crate${prev.crates === 1 ? '' : 's'}' ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every crate must cost.`,
       )
     }
-    if (cur.marks <= prev.marks) {
+    if (cur.payCash <= prev.payCash) {
       failures.push(
-        `Difficulty ${cur.tier} is not worth climbing: ${f1(cur.marks)} marks a run against difficulty ${prev.tier}'s ${f1(prev.marks)}. The payout multiplier does not cover the difficulty the step adds.`,
+        `Stake ${cur.crates} does not pay more: ${f1(cur.payCash)} gold of contract pay against ${prev.crates} crate${prev.crates === 1 ? '' : 's'}' ${f1(prev.payCash)}. The crate's pay does not cover the difficulty it adds.`,
       )
     }
   }
   line(
-    `Measured: the win rate by step is ${bannerRows.map((r) => pct(r.win)).join(' → ')} and marks per run ${bannerRows.map((r) => f1(r.marks)).join(' → ')}.`,
+    `Measured: delivery by tier is ${tierRows.map((r) => pct(r.win)).join(' → ')}; contract pay (cash-out line) ${tierRows.map((r) => f1(r.payCash)).join(' → ')}; bank net ${tierRows.map((r) => f1(r.netCash)).join(' → ')}.`,
   )
   line('')
-  line('**Not measured here: what a win buys besides marks.** A win at the top step also')
-  line('unlocks a skill card (`run/watch.winReward`) — a widening of every later run\'s offers,')
-  line('not a number this table can price. It is the main reason to climb; the marks column')
-  line('only has to say the climb is never a loss.')
+  line('**Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone')
+  line('crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).')
+  line('That widens every later run\'s deals — not a number this table can price — so the gold column')
+  line('only has to say a bigger stake is never a loss.')
   line('')
-  summary.push(`Difficulty steps (${BANNER_POLICY.id} route): ${bannerRows.map((r) => `D${r.tier} ${pct(r.win)} win / ${f1(r.marks)} marks`).join(' | ')}`)
+
+  // The routes: each company's ground, as an escort.
+  line('### 13b. The routes — each company\'s ground, as an escort')
+  line('')
+  line(`Each company's road carries its own map challenges (\`data/companies.ts\`); its own skills and items are dealt ×${COMPANY_WEIGHT}.`)
+  line(`Same seeds, same modelled player (adaptive, zero meta), an escort on each road, ${HUB_RUNS} runs a road.`)
+  line('Reported, not gated: a hard road is a choice the board shows, not a defect — but a road far')
+  line('off the others is a lever for the tuning pass.')
+  line('')
+  line('| Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |')
+  line('|---|---|--:|--:|--:|')
+  const routeRows: string[] = []
+  for (const co of COMPANIES) {
+    const won: number[] = []
+    const net: number[] = []
+    const pay: number[] = []
+    for (let i = 0; i < HUB_RUNS; i++) {
+      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta: ZERO_META, policy: STAKE_POLICY, contract: { company: co.id, crates: 0 } })
+      const x = contractNet(r, CASH_OUT_HALF)
+      won.push(r.won ? 1 : 0)
+      net.push(x.net)
+      pay.push(x.pay)
+    }
+    line(`| ${co.name} (${co.goods}) | ${co.ground.name} | ${pct(mean(won))} | ${f1(mean(pay))} | ${f1(mean(net))} |`)
+    routeRows.push(`${co.id} ${pct(mean(won))}`)
+  }
+  line('')
+  summary.push(`Stake tiers (${STAKE_POLICY.id} route, Rosethread; delivered / contract pay): ${tierRows.map((r) => `${r.crates}c ${pct(r.win)} / ${f1(r.payCash)}g`).join(' | ')}`)
+  summary.push(`Routes as escorts (delivered): ${routeRows.join(' | ')}`)
 }
 
 // -------------------------------------------------------------- Sweep 14

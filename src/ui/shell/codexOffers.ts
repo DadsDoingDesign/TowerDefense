@@ -15,7 +15,9 @@ import { ENEMY_TYPES } from '../../game/data/enemies'
 import { RELICS, relicSupported } from '../../game/data/relics'
 import { ALL_SKILLS, skillLevelLabel } from '../../game/data/skills'
 import { ITEM_KINDS, itemPoolFor } from '../../game/data/itemKinds'
-import { skillPoolFor, watchProgress } from '../../game/run/watch'
+import { skillPoolFor } from '../../game/run/watch'
+import { COMPANIES, type CompanyId } from '../../game/data/companies'
+import { standingProgress } from '../../game/run/standing'
 import type { Codex } from '../../state/metaStore'
 import { CORE_IDEAS, IDEAS } from '../../state/staging'
 import { GLOSSARY } from '../channels'
@@ -24,11 +26,12 @@ import type { Body, Offer } from './offers'
 export interface CodexView {
   achievements: Record<string, number>
   codex: Codex
-  /** SK1: the skill cards unlocked by Watch levels and wins, and lifetime Watch XP. */
+  /** The skill cards unlocked by standing levels and deliveries. */
   skills?: readonly string[]
-  /** The classless rework: the item kinds unlocked by Watch levels and wins. */
+  /** The item kinds unlocked by deliveries. */
   items?: readonly string[]
-  watchXp?: number
+  /** Standing XP per company (the mercenary company). */
+  standing?: Readonly<Partial<Record<CompanyId, number>>>
   /** LS3: the ideas the player has met. */
   met?: readonly string[]
   /** LS3: a first-timer's Codex lists only what they have met. */
@@ -72,11 +75,11 @@ export function codexOffers(v: CodexView): Offer[] {
     id: 'codex-feats',
     title: 'Feats',
     sub: `${earned.length}/${ACHIEVEMENTS.length}`,
-    icon: 'marks',
+    icon: 'crown',
     pips: { on: earned.length, of: ACHIEVEMENTS.length },
     // Every feat is listed, earned or not: a feat is a goal, and a goal you
     // cannot read is not one. What it opens is on the line too.
-    body: ACHIEVEMENTS.map((a) => `${v.achievements[a.id] ? '✓' : '○'} ${a.name} — ${a.feat} Opens: ${a.opens}. (${a.marks} Marks)`),
+    body: ACHIEVEMENTS.map((a) => `${v.achievements[a.id] ? '✓' : '○'} ${a.name} — ${a.feat} Opens: ${a.opens}. (${a.gold} gold)`),
   }
 
   // Goblins by kind: the Codex records modded ids (a Warded Bomber is its own
@@ -113,7 +116,7 @@ export function codexOffers(v: CodexView): Offer[] {
 /** LS3: the collection opens after the first run, said the same way as the Daily's. */
 const LIBRARY_LOCKED = 'Opens after your first run'
 /** What a silhouette says: the designer's words, and how. */
-export const UNLOCK_BY_PLAYING = 'Unlock by playing — at random, as your Watch level rises.'
+export const UNLOCK_BY_PLAYING = 'Unlock by playing — at random, as your standing with a company rises, or by delivering a contract.'
 
 const SLOT_GROUP: Record<string, string> = { oneHand: 'Weapons', twoHand: 'Weapons', offHand: 'Off hand', body: 'Body' }
 
@@ -125,7 +128,7 @@ const SLOT_GROUP: Record<string, string> = { oneHand: 'Weapons', twoHand: 'Weapo
  * the more a player unlocks, the more kinds of hero and loot a run can deal.
  * Each card says only what IT does (the designer: "dont say how it will mix").
  */
-export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'items' | 'watchXp' | 'staged'>): Offer {
+export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'items' | 'standing' | 'staged'>): Offer {
   const pool = new Set(skillPoolFor(v.skills ?? [], (id) => !!v.achievements[id]))
   const have = ALL_SKILLS.filter((k) => pool.has(k.id)).length
   const kinds = new Set(itemPoolFor(v.items ?? []))
@@ -141,7 +144,6 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
       body: [`${LIBRARY_LOCKED}: every skill and item your heroes can be dealt, and how to unlock the rest.`],
     }
   }
-  const w = watchProgress(v.watchXp ?? 0)
   const skillCards = ALL_SKILLS.map((k) => {
     const group = skillLevelLabel(k.level)
     if (pool.has(k.id)) return { id: k.id, group, name: k.name, sub: k.starter ? 'Starter' : 'Unlocked', text: k.desc }
@@ -166,8 +168,12 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
     sub: `${have + haveItems}/${ALL_SKILLS.length + ITEM_KINDS.length}`,
     icon: 'boon',
     body: [
-      `Watch level ${w.level} — ${w.into}/${w.need} Watch XP to the next. Every Watch level unlocks one skill and one item.`,
-      'Every run earns Watch XP: 15 a depth, 1 per 10 enemies felled, 60 for a win. A win at your highest difficulty unlocks one of each too.',
+      ...COMPANIES.map((c) => {
+        const p = standingProgress(v.standing?.[c.id] ?? 0)
+        return p.max ? `${c.name}: Standing ${p.standing}, the highest.` : `${c.name}: Standing ${p.standing} — ${p.into}/${p.need} to the next.`
+      }),
+      'A contract earns standing with its company: 15 a depth, 1 per 10 enemies felled, 60 for a delivery. Each standing level unlocks a skill, from that company’s cards first.',
+      'Delivering a contract unlocks a skill and an item, plus a skill per milestone crate and an item per two crates staked.',
       'Your heroes, loot and offers are dealt only from what you have.',
     ],
     tabs: [

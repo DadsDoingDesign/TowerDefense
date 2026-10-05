@@ -13,7 +13,6 @@
 import { setAudioOptions, setLowGate, sfx } from './audio'
 import { levelFor, LOW_GATE, musicIntensity, type IntensityInput } from './mix'
 import { playMusic, setMusicState, type MusicCue } from './music'
-import { endlessKeyLift } from './theme'
 import { useGameStore } from '../state/gameStore'
 import { useSettingsStore } from '../state/settingsStore'
 import { fieldIdOf } from '../game/data/maps'
@@ -45,7 +44,7 @@ export function cueFor(s: CueInput, musicVolume: number): MusicCue | null {
   if (s.runPhase === 'won') return 'victory'
   if (s.runPhase === 'lost') return 'defeat'
   if (s.screen === 'battle' && s.battlePhase === 'battle' && s.engine && s.runPhase === 'active') return 'battle'
-  if (s.screen === 'battle' || s.screen === 'map' || s.screen === 'crossroads' || s.screen === 'endless') return 'prep'
+  if (s.screen === 'battle' || s.screen === 'map' || s.screen === 'crossroads') return 'prep'
   return 'hub'
 }
 
@@ -60,8 +59,6 @@ export function intensityInput(s: {
   engine: unknown
   hud: { baseHp: number; maxBaseHp: number; enemiesAlive: number }
   speed: number
-  mode: string
-  round: number
   clearedNodeIds: string[]
 }): IntensityInput {
   const eng = (s.engine ?? null) as EngineView | null
@@ -71,7 +68,7 @@ export function intensityInput(s: {
     alive: enemies ? enemies.length : s.hud.enemiesAlive,
     boss: !!enemies?.some((e) => e.type?.isBoss),
     gate: max > 0 ? s.hud.baseHp / max : 1,
-    depth: s.mode === 'endless' ? s.round / 2 : Math.max(0, s.clearedNodeIds.length - 1),
+    depth: Math.max(0, s.clearedNodeIds.length - 1),
     speed: s.speed,
   }
 }
@@ -103,7 +100,7 @@ export function installMusicDirector(): void {
       level: live ? levelFor(musicIntensity(input)) : 1,
       boss: live && input.boss,
       field: s.battleMap ? fieldIdOf(s.battleMap) : 'greenline',
-      keyLift: s.mode === 'endless' ? endlessKeyLift(s.round) : 0,
+      keyLift: 0,
     })
     playMusic(cue)
 

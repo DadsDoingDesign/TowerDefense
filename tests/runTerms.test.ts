@@ -1,112 +1,59 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { dailySeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../src/state/daily'
+import { migrateChallenge, SEEDED_RUN, STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
-import { dailyAttempt, runTerms, seedEditable, difficultyAllowed } from '../src/state/runTerms'
+import { runTerms, seedEditable } from '../src/state/runTerms'
 
 /*
- * The hero-pick run terms (Q8): one table that the store enforces and every
- * hero-pick layout reads, so the screen cannot offer what the store refuses.
+ * The hero-pick run terms (Q8): one table that the store enforces and the
+ * hero-pick seed chip reads, so the screen cannot offer what the store refuses.
+ * The Daily (with its fixed seed and scored attempt) is gone; the stake that
+ * replaced the difficulty step is set on the contract board, before the pick.
  */
-
 const g = () => useGameStore.getState()
-const DAILY: RunChallenge = { kind: 'daily', date: '2026-09-30', scored: false }
-const SEEDED: RunChallenge = { kind: 'seeded', date: null, scored: false }
 
 describe('run terms (pure)', () => {
-  it('a Daily has no difficulty step and no seed to change; other runs have both', () => {
-    expect(difficultyAllowed(DAILY)).toBe(false)
-    expect(seedEditable(DAILY)).toBe(false)
-    for (const c of [STANDARD_RUN, SEEDED]) {
-      expect(difficultyAllowed(c)).toBe(true)
-      expect(seedEditable(c)).toBe(true)
-    }
-  })
-
-  it("a Daily is the scored attempt until that day's attempt is claimed", () => {
-    expect(dailyAttempt(DAILY, null)).toBe('scored')
-    // Yesterday's claim does not spend today's attempt.
-    expect(dailyAttempt(DAILY, { date: '2026-09-29', done: true })).toBe('scored')
-    // Claimed today — finished or still running — and the run is practice.
-    expect(dailyAttempt(DAILY, { date: '2026-09-30', done: true })).toBe('practice')
-    expect(dailyAttempt(DAILY, { date: '2026-09-30', done: false })).toBe('practice')
-    expect(dailyAttempt(STANDARD_RUN, null)).toBeNull()
-    expect(dailyAttempt(SEEDED, { date: '2026-09-30', done: true })).toBeNull()
-  })
-
-  it('says plainly what picking a hero spends on a Daily', () => {
-    const scored = runTerms(DAILY, 7, null)
-    expect(scored).toMatchObject({ seedLabel: 'Daily · 2026-09-30', editable: false, difficulty: false, attempt: 'scored' })
-    expect(scored.lines[0]).toBe("Picking a hero uses today's one scored attempt.")
-    expect(scored.lines.join(' ')).toMatch(/no difficulty step/)
-
-    const practice = runTerms(DAILY, 7, { date: '2026-09-30', done: true })
-    expect(practice.attempt).toBe('practice')
-    expect(practice.lines[0]).toMatch(/scored attempt is used.*practice/)
+  it('any contract’s seed can be typed over', () => {
+    for (const c of [STANDARD_RUN, SEEDED_RUN]) expect(seedEditable(c)).toBe(true)
   })
 
   it('labels a random seed and a custom seed, and names the chip for what it does', () => {
-    const std = runTerms(STANDARD_RUN, 93200335, null)
-    expect(std).toMatchObject({ seedLabel: 'Seed 93200335', editable: true, difficulty: true, attempt: null, lines: [] })
-    // The visible text leads the accessible name (label-in-name).
+    const std = runTerms(STANDARD_RUN, 93200335)
+    expect(std).toMatchObject({ seedLabel: 'Seed 93200335', editable: true, lines: [] })
     expect(std.seedName.startsWith(std.seedLabel)).toBe(true)
-
-    const custom = runTerms(SEEDED, 424242, null)
+    const custom = runTerms(SEEDED_RUN, 424242)
     expect(custom.seedLabel).toBe('Custom seed 424242')
     expect(custom.seedName.startsWith(custom.seedLabel)).toBe(true)
-    expect(custom.lines[0]).toMatch(/not ranked/)
+    expect(custom.lines.join(' ')).toMatch(/no standing/)
+  })
+
+  it('a Daily saved before the Daily was removed resumes as a standard run', () => {
+    expect(migrateChallenge({ kind: 'daily', date: '2026-09-30', scored: true })).toEqual(STANDARD_RUN)
+    expect(migrateChallenge({ kind: 'seeded' })).toEqual(SEEDED_RUN)
+    expect(migrateChallenge('junk')).toEqual(STANDARD_RUN)
   })
 })
 
-describe('run terms (store)', () => {
+describe('the store honours the terms', () => {
   beforeEach(() => {
     useMetaStore.getState().resetMeta()
+    useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 2 } })
   })
 
-  it('a typed seed never turns the Daily into a custom-seed run', () => {
-    g().startDaily()
-    expect(g().reseedRun('424242')).toBe(false)
-    expect(g().challenge.kind).toBe('daily')
-    expect(g().runSeed).toBe(dailySeed(utcDateKey()))
-    expect(g().randomizeRunSeed()).toBe(false)
-    expect(g().challenge.kind).toBe('daily')
-  })
-
-  it('no difficulty step on a Daily, even with steps reached', () => {
-    useMetaStore.setState({ topDifficulty: 3 })
-    g().startDaily()
-    g().setRunDifficulty(2)
-    expect(g().runDifficulty).toBe(0)
-  })
-
-  it('the terms the screen shows agree with what committing a hero does', () => {
-    g().startDaily()
-    expect(runTerms(g().challenge, g().runSeed, useMetaStore.getState().daily).attempt).toBe('scored')
-    g().pickStartingHero('fighter')
-    expect(g().challenge.scored).toBe(true)
-    // The next Daily start today says practice — and is practice.
-    g().startDaily()
-    expect(runTerms(g().challenge, g().runSeed, useMetaStore.getState().daily).attempt).toBe('practice')
-    g().pickStartingHero('fighter')
-    expect(g().challenge.scored).toBe(false)
-  })
-
-  it('a run opens at the top step; a custom seed has a way back to a random one, and keeps its step', () => {
-    useMetaStore.setState({ topDifficulty: 3 })
-    g().newRun()
-    expect(g().runDifficulty).toBe(3)
-    g().setRunDifficulty(2)
-    expect(g().reseedRun('424242')).toBe(true)
+  it('a typed seed re-deals the run on the same contract, marked custom', () => {
+    g().openContracts({ company: 'art', crates: 1, purse: 30 })
+    g().signContract()
+    expect(g().screen).toBe('heroPick')
+    expect(g().reseedRun('tuesday')).toBe(true)
     expect(g().challenge.kind).toBe('seeded')
-    expect(g().runDifficulty).toBe(2)
+    expect(g().contract).toMatchObject({ company: 'art', crates: 1, purse: 30, signed: false })
     expect(g().randomizeRunSeed()).toBe(true)
     expect(g().challenge.kind).toBe('standard')
-    expect(g().runSeed).not.toBe(424242)
-    expect(g().runDifficulty).toBe(2)
-    // Once a hero is committed, the seed is the run's.
-    g().pickStartingHero('rogue')
-    const seed = g().runSeed
-    expect(g().randomizeRunSeed()).toBe(false)
-    expect(g().runSeed).toBe(seed)
+  })
+
+  it('refuses a re-seed once a hero is committed', () => {
+    g().newRun()
+    g().pickStartingHero('pick-0')
+    expect(g().reseedRun('42')).toBe(false)
   })
 })

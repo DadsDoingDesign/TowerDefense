@@ -52,6 +52,8 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
+import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, CRATE_PRICE, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
@@ -124,7 +126,7 @@ export function loadoutFor(label: string, upgrades: Record<string, number>): Loa
   const out: Loadout = {
     label,
     maxBaseHp: b.maxBaseHp,
-    startGold: b.startGold,
+    startGold: DEFAULT_PURSE + b.purseBonus,
     statBonus: b.statBonus,
     extraSentinels: b.extraSentinels,
     extraItems: b.extraItems,
@@ -259,8 +261,18 @@ export const GATE_POLICY = 'best'
 // -------------------------------------------------------------- the run
 export interface SimOptions {
   meta?: Loadout
-  /** The difficulty step the run is played at (SK1; was the Banner). Default step 0. */
+  /** The difficulty step the run is played at (SK1; was the Banner). Default step 0. A contract's stake sets it. */
   difficulty?: DifficultyRules
+  /**
+   * The contract the run is (the mercenary company): its company's route ground
+   * and pool weighting, and its stake — the stake's crates ARE the difficulty
+   * step (`contracts.stakeRules`), and override `difficulty`. The cities'
+   * pay is recorded on the outcome (`RunOutcome.contract`) so a cash-out
+   * policy can be priced after the fact (`contractNet`). Omitted: the open
+   * road every route used to share, unweighted — exactly the run this model
+   * always played.
+   */
+  contract?: { company: CompanyId; crates: number }
   /**
    * The skill pool the run deals from (SK1). Default: the nine starters — a
    * zero-meta player has unlocked nothing.
@@ -317,8 +329,20 @@ export interface RunOutcome {
   battles: number
   roster: number
   bossThreat: number | null
-  /** Watch Marks this run banks, by `grantRunRewards`'s own formula. */
+  /** The old Watch Marks formula for this run (kept for the meta sweeps' old columns). */
   marks: number
+  /**
+   * The contract's ledger, when the run was one: what each city reached paid
+   * (at the cargo it arrived with), the purse's gold at that moment, and the
+   * gold left when the run ended. `contractNet` turns it into the bank's net.
+   */
+  contract: null | {
+    company: CompanyId
+    crates: number
+    purse: number
+    cities: { pay: number; cargo: number; gold: number }[]
+    goldEnd: number
+  }
   layers: number
   /** Which battlefield this run's seed dealt (WS8). */
   fieldId: string
@@ -376,10 +400,14 @@ export function modelledPick(seed: number, skillPool: readonly string[], itemPoo
 
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   const meta = o.meta ?? ZERO_META
-  const banner = o.difficulty ?? difficultyRules(0)
+  const k = o.contract ?? null
+  const banner = k ? stakeRules(k.crates) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
-  const pool = o.skillPool ?? STARTER_SKILL_POOL
-  const items = o.itemPool ?? BASIC_ITEM_KINDS
+  // A contract weights its company's pieces on its own road (`weightPool`), as the store does.
+  const pool = weightPool(o.skillPool ?? STARTER_SKILL_POOL, k?.company, skillCompany)
+  const items = weightPool(o.itemPool ?? BASIC_ITEM_KINDS, k?.company, kindCompany)
+  const ground = k ? { ground: companyById(k.company).ground.rules } : {}
+  const cities: { pay: number; cargo: number; gold: number }[] = []
   /** A body joining the company: a random hire from the run's kinds, named apart. */
   const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
 
@@ -584,9 +612,9 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     battles++
     // G1-2: the node's map challenge, exactly as `selectNode` deals it — the
     // company re-deploys best-first on whatever ground the terrain leaves.
-    const rule = nodeTerrainRule(node, seed)
+    const rule = nodeTerrainRule(node, seed, ground)
     // Q1: and its danger ground + seeded obstacles, from the same node hash.
-    const hazard = nodeHazardSeed(node, seed)
+    const hazard = nodeHazardSeed(node, seed, ground)
     const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard) ?? field) : field
     const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
     const m = runBattle({
@@ -618,6 +646,13 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     if (!m.cleared || baseHp <= 0) break
     clearedCount++
     reached = Math.max(reached, node.layer)
+    // A city (the mercenary company): it pays for the cargo that arrives, as
+    // `finishBattle` does — before the after-fight relics mend anything.
+    const city = cityOfLayer(node.layer)
+    if (k && city != null && (node.type === 'miniboss' || node.type === 'boss')) {
+      const cargo = cargoPct(baseHp, meta.maxBaseHp)
+      cities.push({ pay: cityPay({ company: k.company, crates: k.crates, market: 1 }, city, cargo).total, cargo, gold: gold + m.goldEarned + clearBonusGold(node) })
+    }
     if (final) { won = true; break }
 
     gold += m.goldEarned + clearBonusGold(node)
@@ -729,6 +764,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     roster: roster.length,
     bossThreat,
     marks: marksFor(clearedCount, won, banner, meta.markMult),
+    contract: k ? { company: k.company, crates: k.crates, purse: meta.startGold, cities, goldEnd: gold } : null,
     layers: map.layers,
     fieldId: field.id,
     starter: starterLook,
@@ -744,7 +780,42 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
  * game actually pays rather than a second copy of it.
  */
 export function marksFor(cleared: number, won: boolean, banner: DifficultyRules, chronicler = 1): number {
-  return Math.round((cleared * 8 + (won ? 120 : 0)) * chronicler * banner.markMult)
+  return Math.round((cleared * 8 + (won ? 120 : 0)) * chronicler * (1 + 0.25 * banner.step))
+}
+
+/**
+ * The modelled player's cash-out policy (the mercenary company): at city 1 or
+ * 2, head home when the wagons arrive with less than `below` percent of the
+ * cargo — a caravan that has lost half its load sells the rest and goes home
+ * rather than gambling it. `pressOn`: never cash out.
+ */
+export interface CashOutPolicy { id: string; label: string; below: number }
+export const PRESS_ON: CashOutPolicy = { id: 'press-on', label: 'always press on', below: 0 }
+export const CASH_OUT_HALF: CashOutPolicy = { id: 'cash-half', label: 'cash out under 50% cargo', below: 50 }
+
+/**
+ * What a contract run did to the bank, net: everything banked (the cities'
+ * pay, a cash-out sale, the purse's rest) less the stake and the purse it set
+ * out with. Under `policy` the run stops at the first city it cashes out at —
+ * priced from the same simulated road, so press-on and cash-out lines are
+ * paired by construction.
+ */
+export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): { net: number; pay: number; delivered: boolean; cashedOut: boolean } {
+  const c = out.contract
+  if (!c) return { net: 0, pay: 0, delivered: out.won, cashedOut: false }
+  const stake = c.crates * CRATE_PRICE
+  const outlay = stake + c.purse
+  let paid = 0
+  for (let i = 0; i < c.cities.length; i++) {
+    const city = c.cities[i]
+    paid += city.pay
+    const last = i === CITY_COUNT - 1
+    if (!last && city.cargo < policy.below) {
+      const sale = cashOutValue({ company: c.company, crates: c.crates, market: 1 }, i + 1, city.cargo)
+      return { net: paid + sale + city.gold - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
+    }
+  }
+  return { net: paid + c.goldEnd - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
 }
 
 // ---------------------------------------------------------------- §6's model

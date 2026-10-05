@@ -10,6 +10,7 @@ import {
   withTerrainRule,
 } from '../src/game/data/maps'
 import { generateRunMap } from '../src/game/data/runmap'
+import { OPEN_GROUND } from '../src/game/data/companies'
 import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import {
   crowds,
@@ -28,9 +29,9 @@ import {
   tileId,
 } from '../src/game/data/terrain'
 import { carryPlacements, emptyPlacements, meleeOf } from '../src/game/run/map'
-import { CHALLENGE_SHARE, endlessTerrainRule, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
+import { CHALLENGE_SHARE, nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import type { GameMap, TerrainRuleId } from '../src/game/types'
-import { STANDARD_RUN } from '../src/state/daily'
+import { STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
@@ -162,7 +163,8 @@ describe('the deployment grid', () => {
 
   it.each(ALL_MAPS.map((m) => [m.id] as const))('%s: each challenge adds its terrain and still leaves a real choice', (id) => {
     const plain = fieldFor(id, null, 'landscape')!
-    for (const rule of TERRAIN_RULE_IDS) {
+    // The authored challenges (route ground adds no authored pieces).
+    for (const rule of OPEN_GROUND) {
       const m = fieldFor(id, rule, 'landscape')!
       const kind = rule === 'flooded' ? 'water' : 'fire'
       const added = m.tiles!.filter((t) => t.block === kind)
@@ -274,13 +276,8 @@ describe('which battles carry a map challenge', () => {
     }
     expect(eligible).toBeGreaterThan(200)
     expect(Math.abs(ruled / eligible - CHALLENGE_SHARE)).toBeLessThan(0.08)
-    expect([...seen].sort()).toEqual([...TERRAIN_RULE_IDS].sort())
-  })
-
-  it('endless: plain for the first rounds and every boss round', () => {
-    for (const r of [1, 2, 10, 20, 30]) expect(endlessTerrainRule(r, 5)).toBeNull()
-    const some = Array.from({ length: 40 }, (_, i) => endlessTerrainRule(i + 3, 5)).filter(Boolean)
-    expect(some.length).toBeGreaterThan(10)
+    // With no route named, a battle draws from the open ground every road used to share.
+    expect([...seen].sort()).toEqual([...OPEN_GROUND].sort())
   })
 })
 

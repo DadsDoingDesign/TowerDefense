@@ -6,7 +6,10 @@ import { DetailBand } from './DetailBand'
 import { HeaderBand } from './HeaderBand'
 import { SelectorBand } from './SelectorBand'
 import { StageBand } from './StageBand'
-import { MenuScreen, PageScreen, ResultScreen } from './PageScreens'
+import { MenuScreen, PageScreen } from './PageScreens'
+import { ResultScreen } from './contracts/ContractResult'
+import { ContractsScreen } from './contracts/ContractsScreen'
+import { CityScreen } from './contracts/CityScreen'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -18,6 +21,7 @@ import '../../styles/shell.css'
 import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
 import '../../styles/shell-reward.css'
+import '../../styles/contracts.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useStagingRecorder } from './staging'
 
@@ -32,8 +36,8 @@ import { useMenuStaged, useStagingRecorder } from './staging'
 /** The Watchtower submenus have no board copy of their own. */
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
-  perks: { title: 'Watchtower', subtitle: 'Marks buy permanent bonuses that carry into every run.' },
-  codex: { title: 'Codex', subtitle: 'Your collection of skills and items, feats to earn, and everything the Watch has met on the road.' },
+  perks: { title: 'Watchtower', subtitle: 'Gold from your bank buys bonuses that carry into every run.' },
+  codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
 }
 
@@ -48,12 +52,12 @@ export function RootShell() {
   useLevelUpTracker()
   // LS3: latch every idea the player meets, on every screen.
   useStagingRecorder()
-  // LS4: before the first finished run the Watchtower is where a player first
-  // reads the currency's name, so it says it in full, once.
+  // LS4: before the first finished contract the Watchtower is where a player
+  // first reads where their gold lives, so it says it in full, once.
   const menuStaged = useMenuStaged()
   const metaCopy =
     metaView === 'perks' && menuStaged
-      ? { ...META_COPY.perks, subtitle: 'Watch Marks (Marks) buy permanent bonuses that carry into every run. Every run earns some.' }
+      ? { ...META_COPY.perks, subtitle: 'Gold you bring home goes in your bank, and buys bonuses here that carry into every run.' }
       : META_COPY[metaView]
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
@@ -107,6 +111,10 @@ export function RootShell() {
       <div className="shell shell-page">
         {ctx.stage === 'result' ? (
           <ResultScreen />
+        ) : ctx.stage === 'contracts' ? (
+          <ContractsScreen />
+        ) : ctx.stage === 'city' ? (
+          <CityScreen />
         ) : isMenu ? (
           <MenuScreen offers={offers} />
         ) : (

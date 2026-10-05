@@ -1,4 +1,5 @@
 import type { ItemSlot } from '../types'
+import type { CompanyId } from './companies'
 
 /**
  * ---------------------------------------------------------------------------
@@ -25,39 +26,48 @@ export interface ItemKind {
   /** One plain sentence: which hand, and what it makes its holder do. */
   does: string
   /** In everyone's pool from the first run. */
-  basic?: true  /**
-   * The trade company whose pool this kind leans to — unassigned for now; a
-   * later economy biases its unlock roll with it (`watch.rollFromPool`).
+  basic?: true
+  /**
+   * How far up the unlock track this kind sits, 1–3 — the item half of a
+   * skill's Level. A contract's unlock roll has a floor that rises with the
+   * stake (`run/standing.contractFloor`), so a big stake opens the heavier
+   * kinds first. Say it as "Level N", as a skill does.
    */
-  company?: string
+  level: 1 | 2 | 3
+  /**
+   * The trade company whose pool this kind belongs to (`data/companies.ts`):
+   * dealt more often on its routes (`run/contracts.weightPool`). Every kind
+   * names one.
+   */
+  company: CompanyId
 }
 
 export const ITEM_KINDS: readonly ItemKind[] = [
   // ---- weapons: what the hero does comes from these ------------------------
-  { id: 'Sword', slot: 'oneHand', basic: true, does: 'One hand. Swings at enemies up close.' },
-  { id: 'Bow', slot: 'twoHand', basic: true, does: 'Both hands. Shoots enemies from far away.' },
-  { id: 'Wand', slot: 'oneHand', basic: true, does: 'One hand, or the off hand. Casts magic that bursts on a group.' },
-  { id: 'Axe', slot: 'oneHand', does: 'One hand. Swings at enemies up close, a little slower than a sword.' },
-  { id: 'Dagger', slot: 'oneHand', does: 'One hand, or the off hand. Throws quick strikes from far away.' },
-  { id: 'Rod', slot: 'oneHand', does: 'One hand. Casts magic that bursts on a group.' },
-  { id: 'Sceptre', slot: 'oneHand', does: 'One hand. Casts magic that bursts on a group, a little quicker than a rod.' },
-  { id: 'Greatsword', slot: 'twoHand', does: 'Both hands. Swings up close, hits much harder, and swings a little slower.' },
-  { id: 'Warhammer', slot: 'twoHand', does: 'Both hands. Swings up close, hits much harder, and swings slower.' },
-  { id: 'Staff', slot: 'twoHand', does: 'Both hands. Casts magic that bursts on a group, and hits much harder.' },
-  { id: 'Grimoire', slot: 'twoHand', does: 'Both hands. Casts magic that bursts on a group, hits much harder, and casts a little quicker.' },
+  { id: 'Sword', slot: 'oneHand', level: 1, company: 'spice', basic: true, does: 'One hand. Swings at enemies up close.' },
+  { id: 'Bow', slot: 'twoHand', level: 1, company: 'art', basic: true, does: 'Both hands. Shoots enemies from far away.' },
+  { id: 'Wand', slot: 'oneHand', level: 1, company: 'scrolls', basic: true, does: 'One hand, or the off hand. Casts magic that bursts on a group.' },
+  { id: 'Axe', slot: 'oneHand', level: 1, company: 'spice', does: 'One hand. Swings at enemies up close, a little slower than a sword.' },
+  { id: 'Dagger', slot: 'oneHand', level: 1, company: 'spice', does: 'One hand, or the off hand. Throws quick strikes from far away.' },
+  { id: 'Rod', slot: 'oneHand', level: 1, company: 'silk', does: 'One hand. Casts magic that bursts on a group.' },
+  { id: 'Sceptre', slot: 'oneHand', level: 2, company: 'scrolls', does: 'One hand. Casts magic that bursts on a group, a little quicker than a rod.' },
+  { id: 'Greatsword', slot: 'twoHand', level: 3, company: 'metals', does: 'Both hands. Swings up close, hits much harder, and swings a little slower.' },
+  { id: 'Warhammer', slot: 'twoHand', level: 3, company: 'metals', does: 'Both hands. Swings up close, hits much harder, and swings slower.' },
+  { id: 'Staff', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts magic that bursts on a group, and hits much harder.' },
+  { id: 'Grimoire', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts magic that bursts on a group, hits much harder, and casts a little quicker.' },
   // ---- the off hand ----------------------------------------------------------
-  { id: 'Shield', slot: 'offHand', basic: true, does: 'Off hand. Holds 2 enemies on the road, and adds attack speed and crit.' },
-  { id: 'Buckler', slot: 'offHand', does: 'Off hand. Holds 1 enemy on the road, and adds attack speed and crit.' },
-  { id: 'Pavise', slot: 'offHand', does: 'Off hand. Holds 3 enemies on the road, and adds attack speed and crit.' },
-  { id: 'Tome', slot: 'offHand', does: 'Off hand. Adds attack speed and crit.' },
-  { id: 'Quiver', slot: 'offHand', does: 'Off hand. Adds attack speed and crit.' },
-  { id: 'Focus', slot: 'offHand', does: 'Off hand. Adds attack speed and crit.' },
+  { id: 'Shield', slot: 'offHand', level: 1, company: 'metals', basic: true, does: 'Off hand. Holds 2 enemies on the road, and adds attack speed and crit.' },
+  { id: 'Buckler', slot: 'offHand', level: 1, company: 'art', does: 'Off hand. Holds 1 enemy on the road, and adds attack speed and crit.' },
+  { id: 'Pavise', slot: 'offHand', level: 2, company: 'metals', does: 'Off hand. Holds 3 enemies on the road, and adds attack speed and crit.' },
+  { id: 'Tome', slot: 'offHand', level: 1, company: 'scrolls', does: 'Off hand. Adds attack speed and crit.' },
+  { id: 'Quiver', slot: 'offHand', level: 1, company: 'spice', does: 'Off hand. Adds attack speed and crit.' },
+  { id: 'Focus', slot: 'offHand', level: 2, company: 'art', does: 'Off hand. Adds attack speed and crit.' },
   // ---- the body --------------------------------------------------------------
-  { id: 'Mail', slot: 'body', basic: true, does: 'Body. Adds reach and a wider blast.' },
-  { id: 'Plate', slot: 'body', does: 'Body. Adds reach and a wider blast.' },
-  { id: 'Robe', slot: 'body', does: 'Body. Adds reach and a wider blast.' },
-  { id: 'Cloak', slot: 'body', does: 'Body. Adds reach and a wider blast.' },
-  { id: 'Aegis', slot: 'body', does: 'Body. Adds reach and a wider blast.' },
+  { id: 'Mail', slot: 'body', level: 1, company: 'metals', basic: true, does: 'Body. Adds reach and a wider blast.' },
+  { id: 'Plate', slot: 'body', level: 2, company: 'metals', does: 'Body. Adds reach and a wider blast.' },
+  { id: 'Robe', slot: 'body', level: 1, company: 'silk', does: 'Body. Adds reach and a wider blast.' },
+  { id: 'Cloak', slot: 'body', level: 1, company: 'art', does: 'Body. Adds reach and a wider blast.' },
+  { id: 'Aegis', slot: 'body', level: 3, company: 'silk', does: 'Body. Adds reach and a wider blast.' },
 ]
 
 const BY_ID = new Map(ITEM_KINDS.map((k) => [k.id, k]))
@@ -77,9 +87,3 @@ export function itemPoolFor(unlocked: readonly string[]): string[] {
   return ITEM_KINDS.filter((k) => have.has(k.id)).map((k) => k.id)
 }
 
-/**
- * The Daily Watch's item pool: the basic set, for everyone — a Daily reads no
- * hub, so the same seed deals the same heroes and loot whatever a player has
- * unlocked (the skills' Daily pool is the starters, for the same reason).
- */
-export const DAILY_ITEM_POOL: readonly string[] = BASIC_ITEM_KINDS

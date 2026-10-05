@@ -199,7 +199,7 @@ const MUTATIONS: MutTemplate[] = [
   {
     key: 'siphon',
     name: 'Siphon',
-    desc: 'Damage feeds the Gate: +0.5 Gate HP per 100 damage dealt — and every strike takes a moment to draw.',
+    desc: 'Damage wins back cargo: +2.5% of the cargo per 100 damage dealt — and every strike takes a moment to draw.',
     downside: '−40% attack speed',
     mods: { lifedrain: 0.25, rateMult: 0.6 },
   },

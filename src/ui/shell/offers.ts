@@ -1,15 +1,16 @@
-import { canUpgrade, describeBase, itemNoun, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
+import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { heroChoices, previewOf } from '../../game/run/heroes'
 import { heroDoes, kitName, lookOf } from '../../game/data/gear'
-import { difficultyEffect, difficultyRules, MAX_DIFFICULTY, watchLevelFor } from '../../game/run/watch'
+import { difficultyEffect } from '../../game/run/watch'
+import { standingOf, topStanding } from '../../game/run/standing'
+import { COMPANY_IDS } from '../../game/data/companies'
 import { mutationName } from '../../game/data/mutations'
 import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
 import { useMetaStore, UPGRADES } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
-import { dailySeed, utcDateKey } from '../../state/daily'
 import { menuStaged } from '../../state/staging'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, PERK_ICON, rarityVar, type IconKey } from '../channels'
@@ -22,7 +23,8 @@ import type { Item, ItemRarity, Sentinel } from '../../game/types'
 
 export interface Price {
   amount: number
-  currency: 'gold' | 'dust' | 'marks'
+  /** Gold is the only currency (the purse in a run, the bank at home). */
+  currency: 'gold'
 }
 
 /**
@@ -262,8 +264,6 @@ export interface HeroCardSpec {
  * was taken. The terms say so, because the old wording is still in players'
  * heads and "take it or leave it, it costs the same" is the new rule.
  *
- * Endless has its own round-by-round Threat and never charged either step, so
- * every call site stays guarded on the mode.
  */
 export const THREAT_FREE_CHOICE: string[] = [
   'Enemies get no stronger for taking it. Enemy strength rises with every stop you pass, whatever you take there.',
@@ -275,10 +275,9 @@ export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for taking i
 /**
  * LS3: the enemy-strength note rides on a choice only once the player has met
  * enemy strength — a first run's layer-1 recruit must not explain a number the
- * header has not shown yet. Endless has no road and never carries it.
+ * header has not shown yet.
  */
 function strengthNote(st: St, lines: string[]): string[] {
-  if (st.mode === 'endless') return []
   const met = !st.firstRun || useSettingsStore.getState().showEverything || st.threat > 1.001 || useMetaStore.getState().met.includes('strength')
   return met ? lines : []
 }
@@ -455,20 +454,15 @@ const offerDeps = (s: St) => ({
   firstRun: s.firstRun,
   threat: s.threat,
   runPhase: s.runPhase,
-  mode: s.mode,
   event: s.event,
-  endlessRoom: s.endlessRoom,
   crossroads: s.crossroads,
   reward: s.reward,
   merchant: s.merchant,
   shrineOffer: s.shrineOffer,
   recruitOptions: s.recruitOptions,
-  endlessRecruitCost: s.endlessRecruitCost,
   roster: s.roster,
   inventory: s.inventory,
   gold: s.gold,
-  dust: s.dust,
-  round: s.round,
 })
 
 /** The offers for the current context, in Selector order. */
@@ -534,16 +528,15 @@ function contextOffers(
   if (st.runPhase !== 'active') return []
   if (st.screen === 'heroPick') return heroPickOffers(st, meta)
   if (st.screen === 'crossroads' && st.crossroads) return crossroadsOffers(st)
-  if (st.screen === 'endless' && !st.endlessRoom) return roomOffers(st)
+  // A city's payout has its own page (`CityScreen`), and comes first.
+  if (st.contract?.pending != null) return []
   if (st.reward) return rewardOffers(st)
 
-  // In endless the room is authoritative; `event` belongs to the campaign map.
-  const kind = st.mode === 'endless' ? st.endlessRoom : st.event?.kind
+  const kind = st.event?.kind
   if (kind === 'merchant') return merchantOffers(st)
   if (kind === 'shrine') return shrineOffers(st)
   if (kind === 'recruit') return recruitOffers(st)
   if (kind === 'campfire') return campfireOffers(st, runUnlocked('fieldKitchen'))
-  if (kind === 'forge') return forgeOffers(st)
   return []
 }
 
@@ -563,30 +556,13 @@ function escapeOffer(st: St): Offer {
     action: { label: title, run },
   })
 
-  if (inEndlessRoom(st)) return exit('Leave', 'Head back to the rooms.', () => st.endlessCloseRoom())
   if (st.reward) return exit('Walk on', 'There is nothing here to take.', () => st.continueAfterWave())
   if (st.screen === 'crossroads') return exit('March on', 'Leave the crossroads behind.', () => st.finishCrossroads())
   if (st.event) return exit('Walk on', 'Leave the offers and continue.', () => st.leaveEvent())
-  // Nothing local left to close — the Watchtower is always reachable, and it
+  // Nothing local left to close — the menu is always reachable, and it
   // settles the run rather than dropping it.
-  return exit('Back to the Watchtower', 'End the run and return.', () => st.returnToHub())
+  return exit('Back to the menu', 'End the contract and head home.', () => st.returnToHub())
 }
-
-/**
- * Which set of store actions an offer should dispatch.
- *
- * `mode` is the only thing that decides this. `endlessRoom` used to stand in
- * for it, and it is not a mode flag — it is a *room*, and it survives leaving
- * endless. A stale one made a real campaign shrine dispatch
- * `endlessShrineAccept` (gold spent, node never cleared, threat tax never paid,
- * the event board still parked over the map) and gave a campaign recruit a ⟡100
- * price it then charged through `endlessRecruit`. Reading the mode means a
- * stale field can misprice nothing and misroute nothing; the room is only ever
- * asked *which* room, never *which game*.
- */
-const inEndless = (st: St): boolean => st.mode === 'endless'
-/** True only for an endless run that is standing inside a room. */
-const inEndlessRoom = (st: St): boolean => inEndless(st) && !!st.endlessRoom
 
 type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
@@ -610,7 +586,7 @@ export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
  * cards hold the plain words only — no DPS, no stats.
  */
 function heroPickOffers(st: St, meta: Meta): Offer[] {
-  const statBonus = st.challenge.kind === 'daily' ? 0 : meta.bonuses().statBonus
+  const statBonus = meta.bonuses().statBonus
   const staged = st.firstRun && !useSettingsStore.getState().showEverything
   const picks: Offer[] = heroChoices(st.runSeed, st.skillPool, st.itemPool).map((c) => {
     const hero = previewOf(c, statBonus)
@@ -652,7 +628,7 @@ function merchantOffers(st: St): Offer[] {
       label: 'Buy',
       cost: { amount: e.price, currency: 'gold' as const },
       done: `${itemName(e.item)} added to your pack`,
-      run: () => (inEndless(st) ? st.endlessBuyItem(e.item.id) : st.buyMerchantItem(e.item.id)),
+      run: () => st.buyMerchantItem(e.item.id),
       disabled: st.gold < e.price,
     },
   }))
@@ -673,8 +649,6 @@ function merchantOffers(st: St): Offer[] {
       ...heroBits(r.sentinel),
       // A merchant hire is one of the five choices that pays the choice tax, and
       // the merchant is a map special, so the visit step is already on the bill.
-      // (Endless merchants deal `recruit: null`, so this branch is campaign in
-      // practice — guarded anyway rather than relying on that.)
       body: [...heroBody(r.sentinel), ...strengthNote(st, THREAT_FREE_CHOICE)],
       action: {
         label: 'Recruit',
@@ -693,7 +667,7 @@ function merchantOffers(st: St): Offer[] {
 function shrineOffers(st: St): Offer[] {
   const s = st.shrineOffer
   if (!s) return []
-  const accept = inEndless(st) ? () => st.endlessShrineAccept() : () => st.acceptShrine()
+  const accept = () => st.acceptShrine()
   return [
     {
       id: 'shrine',
@@ -701,15 +675,10 @@ function shrineOffers(st: St): Offer[] {
       sub: 'Bargain',
       icon: 'shrine',
       // The third term the shrine never printed: accepting charges the choice
-      // tax on top of the curse (M5) — and standing here at all charges the
-      // ×1.13 visit, so walking away is cheaper rather than free. The endless
-      // room charges neither step (`endlessShrineAccept` does not touch
-      // `threat`), so the terms stay campaign-only or they become a new lie.
+      // tax on top of the curse (M5).
       body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...strengthNote(st, THREAT_FREE_CHOICE)],
       action: { label: 'Accept the terms', run: accept },
-      secondary: inEndless(st)
-        ? { label: 'Walk away', icon: 'back', run: () => st.endlessCloseRoom() }
-        : { label: 'Walk away', icon: 'back', run: () => st.declineShrine() },
+      secondary: { label: 'Walk away', icon: 'back', run: () => st.declineShrine() },
     },
   ]
 }
@@ -723,83 +692,20 @@ function recruitOffers(st: St): Offer[] {
     sub: kitName(s),
     color: heroLookVar(s),
     glyph: GLYPH[lookOf(s)],
-    cost: inEndless(st) ? { amount: st.endlessRecruitCost, currency: 'gold' as const } : undefined,
     hero: heroCard(s, stagedRun()),
     body: [
       ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
-      // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
-      // recruit node's own visit step; endless rooms pay neither.
       ...(full ? [] : strengthNote(st, THREAT_FREE_CHOICE)),
     ],
     action: {
-      // The tapped candidate's id goes to the store in both modes. Without it
-      // endless hires `recruitOptions[0]` whatever you picked, which made the
-      // whole screen a fake choice.
+      // The tapped candidate's id goes to the store.
       label: full ? 'No room for more heroes' : `Recruit ${s.name}`,
       done: `${s.name} joins your heroes`,
-      cost: inEndless(st) && !full ? { amount: st.endlessRecruitCost, currency: 'gold' } : undefined,
-      run: () => (inEndless(st) ? st.endlessRecruit(s.id) : st.acceptRecruit(s.id)),
-      disabled: full || (inEndless(st) ? st.gold < st.endlessRecruitCost : false),
+      run: () => st.acceptRecruit(s.id),
+      disabled: full,
     },
   }))
-  out.push(
-    inEndless(st)
-      ? { id: 'leave', title: 'Leave', icon: 'back', immediate: true, body: ['Head back to the rooms.'], action: { label: 'Leave', run: () => st.endlessCloseRoom() } }
-      : { id: 'skip', title: 'Walk on', icon: 'back', immediate: true, body: ['Turn the recruit away and march.'], action: { label: 'Walk on', run: () => st.skipRecruit() } },
-  )
-  return out
-}
-
-/**
- * The Forge sells two different things off one item at two different prices,
- * so both ride on the actions rather than on the Offer's single `cost` chip.
- * Both grey out when the dust is not there — the room used to show no price at
- * all and then silently do nothing when you tapped.
- */
-function forgeOffers(st: St): Offer[] {
-  const out: Offer[] = st.inventory.map((i) => ({
-    id: i.id,
-    title: itemName(i),
-    sub: RARITY[i.rarity].label,
-    rarity: i.rarity,
-    color: rarityVar(i.rarity),
-    icon: itemIcon(i),
-    mark: damageMark(i),
-    bodyIcons: true,
-    cost: { amount: reforgeDust(i), currency: 'dust' as const },
-    dim: st.dust < reforgeDust(i),
-    body: [
-      ...itemBody(i),
-      `Reforge for ${moneyText(reforgeDust(i), 'dust')} — rerolls every enchantment on it.`,
-      canUpgrade(i) ? `Raise rarity for ${moneyText(upgradeDust(i), 'dust')} — one tier up, base kept.` : 'Already at the top rarity — it cannot be raised.',
-      `You hold ${moneyText(st.dust, 'dust')}.`,
-    ],
-    action: {
-      label: 'Reforge',
-      run: () => st.endlessForgeReforge(i.id),
-      disabled: st.dust < reforgeDust(i),
-      cost: { amount: reforgeDust(i), currency: 'dust' as const },
-    },
-    secondary: canUpgrade(i)
-      ? {
-          label: 'Raise rarity',
-          icon: 'evolve',
-          run: () => st.endlessForgeUpgrade(i.id),
-          disabled: st.dust < upgradeDust(i),
-          cost: { amount: upgradeDust(i), currency: 'dust' as const },
-        }
-      : undefined,
-  }))
-  if (out.length === 0) {
-    out.push({
-      id: 'forge-empty',
-      title: 'Nothing to work',
-      sub: moneyText(st.dust, 'dust'),
-      icon: 'forge',
-      body: ['The pack is empty. Find or buy an item, then bring it back here.', `You hold ${moneyText(st.dust, 'dust')}.`],
-    })
-  }
-  out.push({ id: 'leave', title: 'Leave', icon: 'back', immediate: true, body: ['Head back to the rooms.'], action: { label: 'Leave', run: () => st.endlessCloseRoom() } })
+  out.push({ id: 'skip', title: 'Walk on', icon: 'back', immediate: true, body: ['Turn the recruit away and march.'], action: { label: 'Walk on', run: () => st.skipRecruit() } })
   return out
 }
 
@@ -1007,37 +913,8 @@ function crossroadsOffers(st: St): Offer[] {
   return out
 }
 
-function roomOffers(st: St): Offer[] {
-  const rooms = [
-    { id: 'merchant', title: 'Merchant', icon: 'merchant', body: ['Items for gold.'] },
-    { id: 'forge', title: 'Forge', icon: 'forge', body: ['Spend dust to reforge or raise rarity.'] },
-    { id: 'shrine', title: 'Shrine', icon: 'shrine', body: ['A bargain with terms.'] },
-    { id: 'recruit', title: 'Recruit', icon: 'recruit', body: ['Add a hero to your side.'] },
-  ] as const
-  const out: Offer[] = rooms.map((r) => ({
-    id: r.id,
-    title: r.title,
-    sub: 'Room',
-    icon: r.icon,
-    body: [...r.body],
-    action: { label: `Enter the ${r.title.toLowerCase()}`, run: () => st.endlessOpenRoom(r.id) },
-  }))
-  out.push({
-    id: 'wave',
-    title: `Wave ${st.round}`,
-    sub: 'Fight',
-    icon: 'wave',
-    color: 'var(--accent)',
-    body: ['Take the next wave. Rooms stay open between waves.'],
-    action: { label: 'Begin the wave', run: () => st.endlessBeginWave() },
-  })
-  return out
-}
-
 function leaveOffer(st: St): Offer {
-  return inEndless(st)
-    ? { id: 'leave', title: 'Leave', icon: 'back', immediate: true, body: ['Head back to the rooms.'], action: { label: 'Leave', run: () => st.endlessCloseRoom() } }
-    : { id: 'leave', title: 'March on', icon: 'back', immediate: true, body: ['Leave the offers and continue.'], action: { label: 'March on', run: () => st.leaveEvent() } }
+  return { id: 'leave', title: 'March on', icon: 'back', immediate: true, body: ['Leave the offers and continue.'], action: { label: 'March on', run: () => st.leaveEvent() } }
 }
 
 /**
@@ -1187,9 +1064,9 @@ function settingsOffers(s: Settings): Offer[] {
          * is exactly what changes, so the choice is informed rather than a
          * mystery dial.
          */
-        'Softens what the horde takes off your Gate when something reaches it.',
+        'Softens how much cargo a raider steals when one reaches your wagons.',
         assistProfile(s.assist).blurb,
-        'Nothing else moves: same waves, same loot, same Marks. Change it whenever you like, mid-run included.',
+        'Nothing else moves: same waves, same loot, same pay. Change it whenever you like, mid-run included.',
       ],
       action: {
         label: `Set to ${assistProfile(nextAssist(s.assist)).label}`,
@@ -1202,7 +1079,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: onOff(s.showEverything),
       icon: 'map',
       body: [
-        'Off: a first run introduces the game a piece at a time — gear after the first win, relics at the first elite, the Daily and Endless after the first run.',
+        'Off: a first contract introduces the game a piece at a time — gear after the first win, relics at the first elite, the contract board, stakes and purse after the first contract.',
         'On: every screen shows everything straight away, as it does for a returning player.',
       ],
       action: {
@@ -1228,7 +1105,7 @@ function settingsOffers(s: Settings): Offer[] {
       icon: 'warn',
       color: 'var(--bad-text)',
       body: [
-        'Wipes Marks, Watchtower bonuses, unlocked skills, difficulty and records.',
+        'Wipes your bank, Watchtower bonuses, standing, unlocked skills and items, and records.',
         'This cannot be undone. Nothing is kept and nothing is backed up.',
       ],
       action: {
@@ -1245,100 +1122,17 @@ function settingsOffers(s: Settings): Offer[] {
   ]
 }
 
-/**
- * The difficulty row in the Watchtower (SK1) — what the Vow row became.
- *
- * Information, with no price and no button: the step is chosen per run, on
- * the hero pick (`DifficultyPicker`), and raised only by winning at the top
- * step. Every number is read off `difficultyRules`.
- */
-export const DIFFICULTY_BLURB =
-  'Each difficulty step makes enemies 8% stronger and adds one elite to each act, and pays more Marks. A win at your highest step raises it and unlocks a skill and an item; you can turn it down at the start of any run.'
+/** "4 crates · Raiders 32% stronger · 4 more elites an act" — the stake, for receipts. */
+export const stakeLine = (crates: number): string =>
+  crates <= 0 ? 'Escort · standard raiders.' : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`
 
-/** "Difficulty 2 · Enemies 16% stronger · 2 more elites an act" — for receipts. */
-export const difficultyLine = (step: number): string => (step <= 0 ? 'Difficulty 0 — standard.' : `Difficulty ${step} · ${difficultyEffect(step)}`)
-
-/** LS3: the difficulty row before the first finished run — locked, one plain line. */
-function lockedDifficultyOffer(): Offer {
-  return {
-    id: 'difficulty',
-    title: 'Difficulty',
-    sub: 'Locked',
-    icon: PERK_ICON.sacrifice,
-    dim: true,
-    locked: OPENS_AFTER_FIRST_RUN,
-    body: [`${OPENS_AFTER_FIRST_RUN}. Winning raises the difficulty a step, and each step unlocks a skill and an item.`],
-    action: { label: 'Locked', run: () => {}, disabled: true },
-  }
-}
-
-function difficultyOffer(meta: Meta): Offer {
-  const top = meta.topDifficulty
-  const best = meta.difficultyBest
-  return {
-    id: 'difficulty',
-    title: `Difficulty ${top}`,
-    sub: top >= MAX_DIFFICULTY ? 'the top step' : `highest of ${MAX_DIFFICULTY}`,
-    icon: PERK_ICON.sacrifice,
-    color: 'var(--accent)',
-    pips: { on: top, of: MAX_DIFFICULTY },
-    body: [
-      top === 0
-        ? 'Win a run to raise it to 1 and unlock a skill and an item.'
-        : `Your highest is ${top}: ${difficultyEffect(top)}. A run opens there; turn it down on the hero screen.`,
-      DIFFICULTY_BLURB,
-      ...(top < MAX_DIFFICULTY ? [`Next: Difficulty ${top + 1} — ${difficultyEffect(top + 1)}, pays ×${difficultyRules(top + 1).markMult} Marks.`] : []),
-      ...Object.entries(best)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([step, score]) => `Best winning score at difficulty ${step}: ${score}.`),
-    ],
-  }
-}
-
-/**
- * Daily Watch (Phase 1): the UTC day's shared seed under standard rules, one
- * scored attempt a day. Kept to one row on purpose — the UI lane restyles it.
- */
-/** LS3: what opens the Daily, Endless and the Vows — said the same way on all three. */
-export const OPENS_AFTER_FIRST_RUN = 'Opens after your first run'
-
-function dailyOffer(meta: Meta, staged: boolean): Offer {
-  if (staged) {
-    return {
-      id: 'daily',
-      title: 'Daily Watch',
-      icon: 'map',
-      dim: true,
-      locked: OPENS_AFTER_FIRST_RUN,
-      body: [`${OPENS_AFTER_FIRST_RUN}: one shared road a day, the same for everyone.`],
-    }
-  }
-  const date = utcDateKey()
-  const rec = meta.daily?.date === date ? meta.daily : null
-  const status = !rec
-    ? "Today's scored attempt is unplayed."
-    : !rec.done
-      ? "Today's scored attempt is under way — another start today is practice."
-      : `Today: ${rec.won ? 'won' : `depth ${rec.depth}`}, score ${rec.score}. Another start today is practice.`
-  return {
-    id: 'daily',
-    title: 'Daily Watch',
-    sub: date,
-    icon: 'map',
-    color: 'var(--accent)',
-    body: [
-      `Seed ${dailySeed(date)} — the same map, waves and offers for every Watch today (UTC).`,
-      'Standard rules: no Watchtower bonuses, the starting skills only, no difficulty step. The first run you commit a hero to each day is scored.',
-      status,
-    ],
-    action: { label: rec ? 'Practice' : 'Begin', run: () => useGameStore.getState().startDaily() },
-  }
-}
+/** LS3: what opens after a first contract — said the same way everywhere. */
+export const OPENS_AFTER_FIRST_RUN = 'Opens after your first contract'
 
 function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v: MetaView) => void): Offer[] {
   const game = useGameStore.getState()
-  // LS3: until the first run is finished the menu holds back what a first
-  // run has not met: the Vows, the Daily Watch and Endless.
+  // LS3: until the first contract is finished the menu holds back what a
+  // first contract has not met (the board, stakes, purse; the bank's name).
   const staged = menuStaged(meta.stats, settings.showEverything)
   // Going back is a choice like any other, so it rides in the Selector rather
   // than as a floating button over the Stage.
@@ -1347,12 +1141,14 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     title: 'Back',
     icon: 'back',
     immediate: true,
-    body: ['Back to the Watchtower menu.'],
+    body: ['Back to the menu.'],
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') return [back, ...settingsOffers(settings)]
   if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   if (view === 'perks') {
+    // Priced in gold, paid from the bank (gold is the only currency). Build
+    // step 3 turns this list into the HQ's offices.
     return [back, ...UPGRADES.map((u): Offer => {
       const level = meta.upgrades[u.id] ?? 0
       const maxed = level >= u.maxLevel
@@ -1367,7 +1163,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           sub: 'Locked',
           icon: PERK_ICON[u.id] ?? 'boon',
           dim: true,
-          body: [u.desc, `Opens with the feat ${feat.name}: ${feat.feat}`, `Then ${moneyText(cost, 'marks')}.`],
+          body: [u.desc, `Opens with the feat ${feat.name}: ${feat.feat}`, `Then ${moneyText(cost, 'gold')}.`],
           action: { label: `Locked — ${feat.name}`, run: () => {}, disabled: true },
         }
       }
@@ -1377,78 +1173,53 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
         sub: `${level}/${u.maxLevel}`,
         icon: PERK_ICON[u.id] ?? 'boon',
         pips: { on: level, of: u.maxLevel },
-        cost: maxed ? undefined : { amount: cost, currency: 'marks' as const },
-        dim: !maxed && meta.watchMarks < cost,
-        body: [
-          u.desc,
-          `Level ${level} of ${u.maxLevel}.`,
-          maxed ? 'Fully upgraded.' : `Next level: ${moneyText(cost, 'marks')}.`,
-        ],
+        cost: maxed ? undefined : { amount: cost, currency: 'gold' as const },
+        dim: !maxed && meta.bank < cost,
+        body: [u.desc, `Level ${level} of ${u.maxLevel}.`, maxed ? 'Fully upgraded.' : `Next level: ${moneyText(cost, 'gold')}, from your bank.`],
         action: {
           label: maxed ? 'Maxed' : 'Buy',
-          cost: maxed ? undefined : { amount: cost, currency: 'marks' as const },
+          cost: maxed ? undefined : { amount: cost, currency: 'gold' as const },
           run: () => meta.buyUpgrade(u.id),
-          disabled: maxed || meta.watchMarks < cost,
+          disabled: maxed || meta.bank < cost,
         },
       }
-    }), staged ? lockedDifficultyOffer() : difficultyOffer(meta)]
+    })]
   }
+  const best = topStanding(meta.standing)
+  const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   return [
     {
       id: 'run',
       title: 'Start a Run',
-      sub: 'Campaign',
-      /*
-       * `wave` before (M8). One pennant was carrying four unrelated meanings —
-       * the incoming wave, the wave-clear beat, "post a Sentinel on a slot" and
-       * this — and the Hub's primary action is the least wave-like of them: a
-       * run is not a wave, it is a walk from node to node down a fresh map.
-       * `depth` is that map's own marker, and it was a dead cell until now.
-       */
+      sub: staged ? 'Your first contract' : 'Contract board',
+      // `depth` is the map's own marker: a run is a walk down a road (M8).
       icon: 'depth',
       color: 'var(--accent)',
-      body: ['A fresh map, fresh heroes. Permadeath — one loss ends it.'],
-      action: { label: 'Begin', run: () => game.newRun() },
+      body: staged
+        ? ['Peppercorn Co. needs an escort for its spice. Free — every city on the road pays you.']
+        : ['Pick a company and a road. Escort for free, or stake cargo for a bigger payout.'],
+      action: { label: 'Begin', run: () => game.openContracts() },
     },
-    dailyOffer(meta, staged),
     {
       id: 'perks',
       title: 'Watchtower',
-      // Marks are met at the end of the first run (LS3/LS4); a first-timer's
-      // menu does not name them before then.
-      sub: staged && meta.watchMarks === 0 ? undefined : moneyText(meta.watchMarks, 'marks'),
-      icon: 'marks',
+      // The bank is met at the end of the first contract (LS3/LS4); a
+      // first-timer's menu does not name it before then.
+      sub: staged ? undefined : `${moneyText(meta.bank, 'gold')} banked`,
+      icon: 'gold',
       immediate: true,
-      body: ['Spend Marks on permanent bonuses that carry between runs.'],
+      body: ['Spend gold from your bank on bonuses that carry into every run.'],
       action: { label: 'Open', run: () => setView('perks') },
     },
     {
       id: 'codex',
       title: 'Codex',
-      sub: staged ? 'Glossary' : `Watch level ${watchLevelFor(meta.watchXp)}`,
+      sub: staged || !bestCo ? 'Glossary' : `Standing ${best}`,
       icon: 'grimoire',
       immediate: true,
-      body: ['A glossary of every idea you have met, your collection of skills and items and your Watch level, feats earned and still open, and every goblin and relic the Watch has seen.'],
+      body: ['A glossary of every idea you have met, your collection of skills and items, your standing with each company, feats earned and still open, and every goblin and relic your militia has seen.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
-    staged
-      ? {
-          id: 'endless',
-          title: 'Endless Watch',
-          icon: 'endless',
-          dim: true,
-          locked: OPENS_AFTER_FIRST_RUN,
-          body: [`${OPENS_AFTER_FIRST_RUN}: wave after wave, for as long as the Gate holds.`],
-        }
-      : {
-          id: 'endless',
-          title: 'Endless Watch',
-          sub: meta.stats.bestRound > 0 ? `best round ${meta.stats.bestRound}` : undefined,
-          icon: 'endless',
-          color: 'var(--teal)',
-          body: ['Three retries, escalating waves, rooms between each one.'],
-          action: { label: 'Begin', run: () => game.startEndless() },
-        },
     {
       id: 'settings',
       title: 'Settings',

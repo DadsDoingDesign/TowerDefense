@@ -35,6 +35,7 @@ import {
   type ProcKind,
 } from './fx'
 import { baseAnchor } from './overlays'
+import { caravanSpot } from './caravan'
 
 /** Where the differ sends what it finds. Defaults to the real `fx.ts` layer. */
 export interface FxSink {
@@ -330,6 +331,8 @@ export class FxDiffer {
 
   private prevLeakHeads = 0
   private prevStatus: string = 'running'
+  /** The wagons' HP last tick: a drop is cargo stolen, said over the wagon as "−5% cargo". */
+  private prevHp = NaN
 
   /** Arm the differ for a fresh engine (one differ per battle / wave). */
   constructor(
@@ -338,6 +341,7 @@ export class FxDiffer {
   ) {
     this.prevLeakHeads = engine.leakCount
     this.prevStatus = engine.status
+    this.prevHp = engine.baseHp
     for (const f of engine.floaters) this.seenFloaters.add(f.id)
   }
 
@@ -821,6 +825,16 @@ export class FxDiffer {
     }
 
     // --- 7. the base ---------------------------------------------------------
+    // The Gate is the caravan (the mercenary company): what a leak cost is
+    // said where the crates are, in the share of the cargo it stole.
+    if (engine.maxBaseHp > 0 && engine.baseHp < this.prevHp - 1e-9) {
+      const pct = Math.round((100 * (this.prevHp - Math.max(0, engine.baseHp))) / engine.maxBaseHp)
+      if (pct > 0) {
+        const at = caravanSpot(engine.map)
+        this.sink.fxFloater(at.x, at.y - 34, `−${pct}% cargo`, '#ef8368', FLOAT_WORD)
+      }
+    }
+    this.prevHp = engine.baseHp
     this.sink.fxBaseFrac(Math.max(0, engine.baseHp) / engine.maxBaseHp)
     if (engine.status === 'defeated' && this.prevStatus !== 'defeated') {
       const a = baseAnchor(engine.map)

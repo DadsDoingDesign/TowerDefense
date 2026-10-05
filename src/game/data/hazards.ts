@@ -37,7 +37,7 @@
  */
 import { RNG } from '../core/rng'
 import type { Vec2 } from '../core/vec'
-import type { DangerKind, FieldTile, GameMap } from '../types'
+import type { DangerKind, FieldTile, GameMap, TerrainRuleId } from '../types'
 
 // ---- the levers (Q1 balance: tune ONLY these) ------------------------------
 
@@ -65,6 +65,24 @@ export const HAZARD_LEVERS = {
   obstacles: 6,
   /** …drawn from this many best distinct patches after the cursed ones. */
   obstaclePool: 12,
+}
+
+/**
+ * Route ground (the mercenary company): what a company's own map challenge adds
+ * to the seeded layout, on top of {@link HAZARD_LEVERS}. Ironvein's quarry road
+ * lays more boulders; Moonquill's road curses more of the best ground. Read
+ * only when the battle carries that rule, so every other field lays exactly
+ * what it laid before.
+ */
+export interface HazardBoost {
+  obstacles?: number
+  obstaclePool?: number
+  dangerTiles?: number
+  dangerPool?: number
+}
+export const ROUTE_HAZARDS: Partial<Record<TerrainRuleId, HazardBoost>> = {
+  quarry: { obstacles: 4, obstaclePool: 8 },
+  hexed: { dangerTiles: 2, dangerPool: 4 },
 }
 
 /** The shipped values, by name, for the UI copy and the tests. */
@@ -156,11 +174,17 @@ export const patchesTouch = (p: Patch, q: Patch): boolean =>
  * G1-2's tiles were — and the pools and counts ({@link HAZARD_LEVERS}) are
  * drawn from that list exactly as they were drawn from tiles.
  */
-export function layHazards(tiles: readonly FieldTile[], path: readonly Vec2[], seed: number): FieldTile[] {
+export function layHazards(tiles: readonly FieldTile[], path: readonly Vec2[], seed: number, boost: HazardBoost = {}): FieldTile[] {
   const rng = new RNG(seed)
   const ranked = rankPatches(tiles, path)
 
-  const L = HAZARD_LEVERS
+  const B = HAZARD_LEVERS
+  const L = {
+    dangerTiles: B.dangerTiles + (boost.dangerTiles ?? 0),
+    dangerPool: B.dangerPool + (boost.dangerPool ?? 0),
+    obstacles: B.obstacles + (boost.obstacles ?? 0),
+    obstaclePool: B.obstaclePool + (boost.obstaclePool ?? 0),
+  }
   const cursed: Patch[] = []
   const pool = ranked.slice(0, L.dangerPool)
   for (let i = 0; i < L.dangerTiles && pool.length; i++) {
