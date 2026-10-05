@@ -18,6 +18,13 @@ export interface RewardTarget {
   relics: string[]
 }
 
+/** What taking a card did that the target does not hold: a full pack's sale (`inventory.stow`). */
+export interface RewardTaken extends RewardTarget {
+  sold: Item[]
+  /** Scrap gold the sale paid into the purse. */
+  gold: number
+}
+
 /**
  * The run after taking `card`.
  *
@@ -27,13 +34,15 @@ export interface RewardTarget {
  * an item, since a stat card is not a drop either. The input pity object is
  * never mutated (M9): a fresh copy is credited and returned.
  */
-export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget {
+export function applyRewardCard(t: RewardTarget, card: RewardCard, slots = Infinity): RewardTaken {
   const { roster, inventory, runMods, lootPity, relics } = t
   let nextRoster = roster
   let nextInv = inventory
   let nextMods = runMods
   let nextPity = lootPity
   let nextRelics = relics
+  let sold: Item[] = []
+  let gold = 0
   if (card.kind === 'relic' && card.relic) {
     // A relic is held once: a second copy of a held relic grants nothing.
     // Its team mods are read off `relics` every wave; its flat stats land on
@@ -44,10 +53,13 @@ export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget
     }
   } else if (card.kind === 'item' && card.item) {
     // Into an empty slot it strictly improves, if the company has one;
-    // otherwise the pack. Never over anything already worn.
-    const got = receiveItems(roster, inventory, [card.item], relics)
+    // otherwise the pack — a full one sells its cheapest piece. Never over
+    // anything already worn.
+    const got = receiveItems(roster, inventory, [card.item], relics, slots)
     nextRoster = got.roster
     nextInv = got.inventory
+    sold = got.sold
+    gold = got.gold
     nextPity = { ...lootPity }
     creditPity(nextPity, card.item.rarity)
   } else if (card.grant) {
@@ -65,5 +77,5 @@ export function applyRewardCard(t: RewardTarget, card: RewardCard): RewardTarget
     }))
     if (g.mods) nextMods = [...runMods, g.mods]
   }
-  return { roster: nextRoster, inventory: nextInv, runMods: nextMods, lootPity: nextPity, relics: nextRelics }
+  return { roster: nextRoster, inventory: nextInv, runMods: nextMods, lootPity: nextPity, relics: nextRelics, sold, gold }
 }

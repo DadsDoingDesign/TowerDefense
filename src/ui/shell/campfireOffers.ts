@@ -12,7 +12,7 @@ import { lookVar } from '../channels'
 import { kitName } from '../../game/data/gear'
 import { cargoPct, cargoShare } from '../../game/run/contracts'
 import { heroLookArt } from './offers'
-import { CAMPFIRE_FORAGE, CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
+import { CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
 import { GATE_REPAIR, rerollCost } from '../../game/run/economy'
 import { restockFree, shelfSize } from '../../game/run/relics'
 import type { useGameStore } from '../../state/gameStore'
@@ -25,7 +25,7 @@ type St = ReturnType<typeof useGameStore.getState>
  * a full Gate is offered but says it would restore nothing, rather than hiding:
  * the choice is still "train someone, or waste the fire".
  */
-export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
+export function campfireOffers(st: St): Offer[] {
   // The Gate is the caravan: a rest rounds up cargo that scattered, said as
   // the share of the cargo it wins back.
   const gain = cargoShare(restGain(st.baseHp, st.maxBaseHp), st.maxBaseHp)
@@ -72,25 +72,12 @@ export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
     body: ['Leave the fire unlit and march.'],
     action: { label: 'Walk on', run: () => st.leaveEvent() },
   }
-  // The Field Kitchen's third choice (a hub service, opened by reaching Act II).
-  const forage: Offer[] = fieldKitchen
-    ? [
-        {
-          id: 'campfire-forage',
-          title: 'Forage the road',
-          sub: `+${CAMPFIRE_FORAGE} gold`,
-          icon: 'gold',
-          body: [`The Field Kitchen's crew scours the verge: +${CAMPFIRE_FORAGE} gold.`, 'Foraging spends the campfire. No rest, no training.'],
-          action: { label: `Forage — +${CAMPFIRE_FORAGE} gold`, run: () => st.campfireForage(), done: `+${CAMPFIRE_FORAGE} gold` },
-        },
-      ]
-    : []
   // The page preselects the first row, so lead with the useful choice: the
   // rest on a hurt Gate, a trainable hero on a full one. A full Gate used to
   // open on "Rest by the fire — Gate is full" with "Rest anyway" as the big
   // button, i.e. one tap from wasting the fire.
   const trainable = train.some((o) => !o.action?.disabled)
-  return gain > 0 || !trainable ? [rest, ...train, ...forage, walk] : [...train, rest, ...forage, walk]
+  return gain > 0 || !trainable ? [rest, ...train, walk] : [...train, rest, walk]
 }
 
 /**

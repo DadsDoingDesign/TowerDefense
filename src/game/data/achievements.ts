@@ -50,16 +50,16 @@ export interface Achievement {
   name: string
   /** The feat, in the player's words. */
   feat: string
-  /** What it opens — shown on the Codex and wherever the locked thing is. */
-  opens: string
+  /** What it opens — shown on the Codex and wherever the locked thing is. Absent: it pays gold only. */
+  opens?: string
   /** One-off gold for earning it, paid into the bank. */
   gold: number
   check: (f: RunFacts) => boolean
 }
 
 export const ACHIEVEMENTS: readonly Achievement[] = [
-  { id: 'act_two', name: 'Into the Second Act', feat: 'Defeat an act boss.', opens: "Relic: Veteran's Cloak · Watchtower: Field Kitchen", gold: 40, check: (f) => f.actBosses >= 1 },
-  { id: 'first_light', name: 'First Light', feat: 'Deliver a contract.', opens: 'Watchtower: Relic Cartulary', gold: 120, check: (f) => f.won },
+  { id: 'act_two', name: 'Into the Second Act', feat: 'Defeat an act boss.', opens: "Relic: Veteran's Cloak", gold: 40, check: (f) => f.actBosses >= 1 },
+  { id: 'first_light', name: 'First Light', feat: 'Deliver a contract.', gold: 120, check: (f) => f.won },
   // The ids keep their class-era names: saves hold them. The feat is what the
   // first hero HELD (its weapon) when the march began — there are no classes.
   { id: 'win_fighter', name: 'Hold the Line', feat: 'Win with a first hero who swings a sword, axe or hammer.', opens: 'Skill card: Warden of Ash (Level 3)', gold: 80, check: (f) => f.won && f.starter === 'swing' },

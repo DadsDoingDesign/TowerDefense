@@ -17,7 +17,7 @@ import { difficultyEffect, MAX_DIFFICULTY, difficultyRules } from '../src/game/r
 import type { Archetype } from '../src/game/types'
 import { mean } from './harness'
 import { buildChoicePoints, monteCarloRun } from './runsim'
-import { loadoutFor, POLICIES, simulateRun, ZERO_META, type Loadout, type RoutePolicy } from './runsim'
+import { HQ_STATES, loadoutFor, POLICIES, simulateRun, ZERO_META, type Loadout, type RoutePolicy } from './runsim'
 
 const N = Number(process.argv[2]) || 120
 const WHAT = process.argv[3] ?? 'all'
@@ -60,16 +60,8 @@ export function pairedSe(a: number[], b: number[]): number {
   return Math.sqrt(v / d.length)
 }
 
-const UNLOCK_CELLS: [string, Record<string, number>][] = [
-  ['zero meta', {}],
-  ["Cartographer's Table", { cartographer: 1 }],
-  ['Free Companies', { freeCompanies: 1 }],
-  ['Standing Orders', { standingOrders: 1 }],
-  ['all three unlocks', { cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
-  ['Field Kitchen + Relic Cartulary', { fieldKitchen: 1, cartulary: 1 }],
-  ['full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
-  ['everything', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
-]
+/** The HQ states, as §12 grades them (`runsim.HQ_STATES`). */
+const UNLOCK_CELLS = HQ_STATES
 
 if (WHAT === 'all' || WHAT === 'unlocks') {
   console.log(`\n=== hub states (n=${N}/cell, paired seeds) ===`)

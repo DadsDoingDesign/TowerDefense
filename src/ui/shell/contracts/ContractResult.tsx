@@ -41,7 +41,10 @@ export function ResultScreen() {
   const paidAll = c ? c.paid.reduce((a, b) => a + b, 0) : 0
   const stake = c ? contractStake(c) : 0
   const lost = c && outcome === 'lost' ? cratesLeftAfter(c.crates, c.paid.length) : 0
-  const purseHome = recap?.goldLeft ?? 0
+  // The purse's split (the road-gold share): what was left of the purse comes
+  // home in full; of the road's gold, only a share does.
+  const home = recap?.home ?? null
+  const interest = recap?.interest ?? 0
   const dest = co?.towns[CITY_COUNT - 1] ?? 'the end of the road'
   const town = co && c ? co.towns[Math.max(0, c.paid.length - 1)] : ''
 
@@ -74,6 +77,11 @@ export function ResultScreen() {
             </p>
           )}
           <p className="ct-sub">{sub}</p>
+          {home && (home.purseBack > 0 || home.road > 0) && (
+            <p className="ct-sub ct-home">
+              Purse returned {home.purseBack} · Road gold {home.road} → {home.roadBanked} banked ({home.pct}%)
+            </p>
+          )}
         </div>
       }
       cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
@@ -97,9 +105,12 @@ export function ResultScreen() {
             <SlipLine key={co.towns[i]} label={co.towns[i]} note={c.cargoAt[i] != null && c.cargoAt[i] < 100 ? `at ${c.cargoAt[i]}% cargo` : undefined} value={<Gold n={p} />} />
           ))}
           {c.cashOut > 0 && <SlipLine label="The last crates, sold cheap" value={<Gold n={c.cashOut} />} />}
-          {purseHome > 0 && <SlipLine label="Your purse, home again" value={<Gold n={purseHome} />} />}
+          {home && home.purseBack > 0 && <SlipLine label="Purse returned" value={<Gold n={home.purseBack} />} />}
+          {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
+          {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
           <SlipLine total label="To your bank" value={`+${deposit} gold`} />
+
           {contractBanked(c) === 0 && outcome === 'lost' && <p className="ct-slip-note">No city was reached, so none paid.</p>}
         </Slip>
       )}

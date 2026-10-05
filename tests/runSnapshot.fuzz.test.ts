@@ -52,7 +52,8 @@ import { relicTeamMods } from '../src/game/data/relics'
 import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
-import { CITY_COUNT, COMPANY_WEIGHT, kindCompany, MARKET_MULT, MAX_CRATES } from '../src/game/run/contracts'
+import { CITY_COUNT, kindCompany, MARKET_MULT, MAX_CRATES, weightPool } from '../src/game/run/contracts'
+import { FOCUS_STEP, homeGold, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE } from '../src/game/run/hq'
 import { runDeposit } from '../src/game/run/settle'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { offHandAllowed } from '../src/game/run/inventory'
@@ -130,7 +131,18 @@ function buildBase(): Record<string, unknown> {
     merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: classicHero('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [classicHero('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
     // v15: a staked contract one city in, so the fuzz lands on every field of it.
-    contract: { ...s.contract!, crates: 3, market: 1.3, paid: [180], cargoAt: [85], pending: 0, cashOut: 0 },
+    contract: {
+      ...s.contract!,
+      crates: 3,
+      market: 1.3,
+      paid: [180],
+      cargoAt: [85],
+      pending: 0,
+      cashOut: 0,
+      // v16: the road's gold so far, and the HQ's terms frozen on the run.
+      earned: 140,
+      hq: { rocks: 2, focus: 'metals', boost: 30, pack: 8 },
+    },
   })
   const snap = captureRun(useGameStore.getState(), {
     rngLoot: 7,
@@ -234,17 +246,26 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const n of c.cargoAt) if (!Number.isInteger(n) || n < 0 || n > 100) throw new Error(`${where}: cargo ${n}`)
   if (c.pending !== null && c.pending !== c.paid.length - 1) throw new Error(`${where}: pending ${c.pending}`)
   if (!Number.isFinite(runDeposit({ gold: snap.gold, contract: c }))) throw new Error(`${where}: deposit`)
+  // v16: the road's gold and the HQ's terms, each within what the HQ sells.
+  if (!Number.isInteger(c.earned) || c.earned < 0 || c.earned > 1e6) throw new Error(`${where}: earned ${c.earned}`)
+  const hq = c.hq
+  if (!Number.isInteger(hq.rocks) || hq.rocks < 0 || hq.rocks > MAX_ROCKS_CUT) throw new Error(`${where}: rocks ${hq.rocks}`)
+  if (!Number.isInteger(hq.pack) || hq.pack < PACK_BASE || hq.pack > MAX_PACK) throw new Error(`${where}: pack ${hq.pack}`)
+  if (hq.focus !== null && !COMPANY_IDS.includes(hq.focus)) throw new Error(`${where}: focus ${hq.focus}`)
+  if (hq.boost < 0 || hq.boost > MAX_FOCUS_BOOST || hq.boost % FOCUS_STEP !== 0 || (hq.focus === null && hq.boost !== 0)) throw new Error(`${where}: boost ${hq.boost}`)
+  const home = homeGold({ purse: c.purse, earned: c.earned, gold: snap.gold })
+  if (home.purseBack > c.purse || home.purseBack + home.road !== Math.floor(snap.gold)) throw new Error(`${where}: purse split`)
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
   // v14: the item pool is known kinds, always holding the basic five; v15:
-  // weighted — only the contract's company's kinds twice, nothing more.
+  // weighted to the contract's company — and (v16) its HQ focus — exactly as
+  // a run beginning on those terms weights it, nothing more.
   if (!snap.itemPool.every(isItemKind)) throw new Error(`${where}: bad item pool`)
   if (!BASIC_ITEM_KINDS.every((k) => snap.itemPool.includes(k))) throw new Error(`${where}: item pool lost a basic kind`)
-  for (const k of new Set(snap.itemPool)) {
-    const n = snap.itemPool.filter((x) => x === k).length
-    if (n !== (kindCompany(k) === c.company ? COMPANY_WEIGHT : 1)) throw new Error(`${where}: ${k} dealt ${n}x`)
-  }
+  const expectPool = weightPool([...new Set(snap.itemPool)], c.company, kindCompany, { company: hq.focus, boost: hq.boost })
+  if (expectPool.length !== snap.itemPool.length || [...new Set(snap.itemPool)].some((k) => expectPool.filter((x) => x === k).length !== snap.itemPool.filter((x) => x === k).length))
+    throw new Error(`${where}: item pool weighting`)
   for (const s of heroes) {
     const ks = s.skills ?? []
     if (ks.length > MAX_SKILLS || new Set(ks).size !== ks.length) throw new Error(`${where}: ${s.id} skills ${ks}`)

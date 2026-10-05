@@ -17,21 +17,11 @@ import type { Sentinel } from '../types'
 /** Gate HP a rest restores. About a third of a fresh Gate: a real save, not a reset. */
 export const CAMPFIRE_REPAIR = 7
 
-/**
- * Gold a forage finds — the Field Kitchen's third choice (a hub service opened
- * by the Act II feat). About one merchant item: a real alternative to a level,
- * never a better one on a hurt Gate.
+/*
+ * The Field Kitchen's third choice (forage the road for gold) retired with the
+ * Watchtower (the HQ, build step 3): road gold mostly stays on the road now,
+ * so a forage was a weak stop, and the HQ keeps to its three offices.
  */
-export const CAMPFIRE_FORAGE = 40
-
-export type CampfireChoice = 'rest' | 'train' | 'forage'
-
-/** What a campfire offers: rest or train, and forage once the Field Kitchen is bought. */
-export const campfireChoices = (fieldKitchen: boolean): CampfireChoice[] =>
-  fieldKitchen ? ['rest', 'train', 'forage'] : ['rest', 'train']
-
-/** The purse after foraging at a campfire. */
-export const forageAtCampfire = (gold: number): number => Math.max(0, gold) + CAMPFIRE_FORAGE
 
 /** The Gate after resting at a campfire. Never above its maximum. */
 export function restAtCampfire(baseHp: number, maxBaseHp: number): number {

@@ -21,6 +21,7 @@ import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { stakeCap } from '../../../state/game/contractSlice'
+import { ROAD_SHARE } from '../../../game/run/hq'
 import { companyVar } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
@@ -338,7 +339,7 @@ function Terms({ company, crates, purse }: { company: CompanyId; crates: number;
       <label className="ct-purse">
         <span>
           <b>Purse for the road</b>
-          <small>Spend it in the run; the rest comes home.</small>
+          <small>What is left comes home, with {Math.round(ROAD_SHARE * 100)}% of the road’s gold.</small>
         </span>
         <span className="ct-purse-pick">
           <Gold n={purse} />
@@ -351,7 +352,7 @@ function Terms({ company, crates, purse }: { company: CompanyId; crates: number;
           </select>
         </span>
       </label>
-      {!taught.purse && <PageTip>The bank stays home. The purse is all you can spend on the road — merchants, repairs, hires.</PageTip>}
+      {!taught.purse && <PageTip>The bank stays home and earns interest. The purse is all you can spend on the road — merchants, repairs, hires.</PageTip>}
     </ContractPage>
   )
 }

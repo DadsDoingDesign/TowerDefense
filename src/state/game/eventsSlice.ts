@@ -4,7 +4,7 @@
  */
 import { creditPity } from '../../game/data/items'
 import { merchantLuck, MAX_ROSTER, repairGate, rerollCost, rollMerchantShelf } from '../../game/run/economy'
-import { canTrain, forageAtCampfire, restAtCampfire, trainAtCampfire } from '../../game/run/campfire'
+import { canTrain, restAtCampfire, trainAtCampfire } from '../../game/run/campfire'
 import { receiveItems, withRecruits } from '../../game/run/recruits'
 import { applyRewardCard } from '../../game/run/rewards'
 import { restockFree, shelfSize } from '../../game/run/relics'
@@ -12,7 +12,8 @@ import { sfx, sfxRarity, sfxReward } from '../../audio/audio'
 import { CLEAR_SHELL } from './fresh'
 import { useMetaStore } from '../metaStore'
 import { completeNode } from './nodes'
-import { runUnlocked, streams } from './runtime'
+import { streams } from './runtime'
+import { packSale, packSlotsOf, roadPays } from './purse'
 import type { Slice } from './types'
 
 export interface EventActions {
@@ -43,8 +44,6 @@ export interface EventActions {
   campfireRest: () => void
   /** Campfire: one hero gains a full level, and the stop is spent. */
   campfireTrain: (sentinelId: string) => void
-  /** Campfire with the Field Kitchen: forage `CAMPFIRE_FORAGE` gold, and the stop is spent. */
-  campfireForage: () => void
   /** Buy the merchant's Gate repair (once per visit). */
   buyGateRepair: () => void
   /** Reroll the merchant's four-item shelf, at `rerollCost(rerolls)`. */
@@ -67,7 +66,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     if (card.kind !== 'item' || !card.item) sfx('upgrade')
     // The pity counter moves for the card actually taken, and only if it is an
     // item (F4) — see `applyRewardCard`.
-    const next = applyRewardCard({ roster, inventory, runMods, lootPity, relics }, card)
+    const next = applyRewardCard({ roster, inventory, runMods, lootPity, relics }, card, packSlotsOf(get()))
     if (card.kind === 'relic' && card.relic) useMetaStore.getState().recordCodex({ relics: [card.relic] })
     // Applying a reward returns to the map — or to the mid-map fork if it fired.
     set({
@@ -76,6 +75,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
       runMods: next.runMods,
       lootPity: next.lootPity,
       relics: next.relics,
+      ...packSale(get(), next.sold, next.gold),
       reward: null,
       screen: get().crossroads ? 'crossroads' : 'map',
       activeNodeId: null,
@@ -159,9 +159,13 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     // Coin first, then the tier's sting, so it reads as "paid, and look what for".
     sfx('coin')
     sfxRarity(entry.item.rarity)
+    const got = receiveItems(roster, inventory, [entry.item], get().relics, packSlotsOf(get()))
+    const paid = { gold: gold - entry.price, contract: get().contract }
     set({
-      gold: gold - entry.price,
-      ...receiveItems(roster, inventory, [entry.item], get().relics),
+      ...paid,
+      roster: got.roster,
+      inventory: got.inventory,
+      ...packSale(paid, got.sold, got.gold),
       lootPity: pity,
       merchant: { ...merchant, items: merchant.items.filter((e) => e.item.id !== itemId) },
     })
@@ -190,10 +194,12 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     // Only a GAIN of coin sounds (F12): a shrine that takes gold is paying for
     // something else, and that something has its own voice.
     if ((eff.goldDelta ?? 0) > 0) sfx('coin')
+    const delta = eff.goldDelta ?? 0
     set({
       roster: eff.roster ?? roster,
       baseHp: newBaseHp,
-      gold: Math.max(0, gold + (eff.goldDelta ?? 0)),
+      // A shrine's gift is road gold; its price is spending.
+      ...(delta > 0 ? roadPays(get(), delta) : { gold: Math.max(0, gold + delta) }),
     })
     completeNode(get, set, event.nodeId)
   },
@@ -238,15 +244,6 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     // wave's XP does (SK1) — read off the hero, no queue.
     set({ roster: roster.map((s) => (s.id === sentinelId ? trained : s)) })
     sfx('upgrade')
-    completeNode(get, set, event.nodeId)
-  },
-
-  campfireForage: () => {
-    const { event, gold, feats } = get()
-    if (event?.kind !== 'campfire' || !runUnlocked('fieldKitchen')) return
-    const next = forageAtCampfire(gold)
-    set({ gold: next, feats: { ...feats, goldPeak: Math.max(feats.goldPeak, next) } })
-    sfx('coin')
     completeNode(get, set, event.nodeId)
   },
 

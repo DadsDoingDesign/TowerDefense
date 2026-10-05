@@ -34,6 +34,7 @@ import { skillById } from '../data/skills'
 import { itemKindById } from '../data/itemKinds'
 import { ACT_LAYERS, ACTS } from './threat'
 import { difficultyRules, type DifficultyRules } from './watch'
+import { BASE_RUN_HQ, FOCUS_MAX_SHARE, type RunHq } from './hq'
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders the designer will tune: "to what makes it fun")
@@ -184,9 +185,17 @@ export interface RunContract extends ContractTerms {
   status: ContractStatus
   /** True once the hero is committed and the bank has paid the stake and the purse. */
   signed: boolean
+  /**
+   * Gold the road has paid into the purse so far (fights, shrines, sales) —
+   * what splits the purse's gold into the purse you brought and the road's
+   * gold at the end (`hq.homeGold`).
+   */
+  earned: number
+  /** What the HQ gave this run, frozen when it began (`hq.runHqFor`). */
+  hq: RunHq
 }
 
-export const freshContract = (t: ContractTerms, purse: number): RunContract => ({
+export const freshContract = (t: ContractTerms, purse: number, hq: RunHq = BASE_RUN_HQ): RunContract => ({
   company: t.company,
   crates: clampCrates(t.crates),
   market: t.market,
@@ -197,7 +206,15 @@ export const freshContract = (t: ContractTerms, purse: number): RunContract => (
   cashOut: 0,
   status: 'open',
   signed: false,
+  earned: 0,
+  hq: { ...hq },
 })
+
+/** The contract after the road paid `gold` more into the purse (a gain only; null stays null). */
+export function earn<C extends RunContract | null>(c: C, gold: number): C {
+  const n = Math.max(0, Math.floor(Number.isFinite(gold) ? gold : 0))
+  return c && n > 0 ? ({ ...c, earned: c.earned + n } as C) : c
+}
 
 /** Everything the contract has earned for the bank: the cities' pay and any cash-out sale. */
 export const contractBanked = (c: Pick<RunContract, 'paid' | 'cashOut'>): number => c.paid.reduce((a, b) => a + b, 0) + c.cashOut
@@ -243,9 +260,10 @@ export const marketFor = (company: CompanyId, dateKey: string): number => (marke
 
 /**
  * The purse is gold you take from the bank for the road. Merchants and
- * repairs spend only the purse and what the run earns; what is left comes
- * home at the end, win or lose. The bank stays home (the HQ's Finance office
- * pays interest on it, build step 3).
+ * repairs spend only the purse and what the run earns. At the end, win or
+ * lose, what is left of the purse comes home in full, and a share of the gold
+ * the road paid comes with it (`hq.homeGold`). The bank stays home and the
+ * HQ's Finance office pays interest on it.
  */
 export const PURSE_STEPS: readonly number[] = [0, 30, 60, 100, 150, 200]
 /** The purse a first contract carries, and the default: the old starting gold. */
@@ -281,12 +299,39 @@ export const kindCompany = (id: string): CompanyId | undefined => itemKindById(i
  * are dealt about twice as often while every other piece still appears. With
  * no company the pool is returned as it was, so an unweighted run deals
  * exactly what it always dealt, draw for draw.
+ *
+ * **Company focus** (the HQ's Operations): `focus` raises ONE company's share
+ * of the pool by `boost` percentage points (never past `hq.FOCUS_MAX_SHARE`).
+ * The shares are kept in whole multiplicities at {@link FOCUS_SCALE}× so a
+ * step lands within a fraction of a point of what the HQ card says. With no
+ * focus (or a company with no piece in this pool) the pool is exactly the
+ * unfocused one, draw for draw.
  */
-export function weightPool(pool: readonly string[], company: CompanyId | null | undefined, companyOf: (id: string) => CompanyId | undefined): string[] {
+export function weightPool(
+  pool: readonly string[],
+  company: CompanyId | null | undefined,
+  companyOf: (id: string) => CompanyId | undefined,
+  focus?: { company: CompanyId | null; boost: number } | null,
+): string[] {
   const once = [...new Set(pool)]
-  if (!company) return once
-  return once.flatMap((id) => (companyOf(id) === company ? Array<string>(COMPANY_WEIGHT).fill(id) : [id]))
+  const weight = (id: string) => (company && companyOf(id) === company ? COMPANY_WEIGHT : 1)
+  const plain = () => (company ? once.flatMap((id) => Array<string>(weight(id)).fill(id)) : once)
+  if (!focus?.company || !(focus.boost > 0)) return plain()
+  const mine = (id: string) => companyOf(id) === focus.company
+  const a = once.filter(mine).reduce((t, id) => t + weight(id), 0)
+  const b = once.filter((id) => !mine(id)).reduce((t, id) => t + weight(id), 0)
+  if (!a || !b) return plain()
+  const target = Math.min(FOCUS_MAX_SHARE / 100, a / (a + b) + focus.boost / 100)
+  const k = (target * b) / (1 - target) / a
+  return once.flatMap((id) => Array<string>(mine(id) ? Math.max(1, Math.round(weight(id) * FOCUS_SCALE * k)) : weight(id) * FOCUS_SCALE).fill(id))
 }
+
+/** The resolution company focus is kept at: every unfocused entry ×20. */
+export const FOCUS_SCALE = 20
+
+/** A company's share of a dealing pool (0–1), as dealt by multiplicity. */
+export const poolShare = (pool: readonly string[], company: CompanyId, companyOf: (id: string) => CompanyId | undefined): number =>
+  pool.length ? pool.filter((id) => companyOf(id) === company).length / pool.length : 0
 
 // ---------------------------------------------------------------------------
 // Contract letters

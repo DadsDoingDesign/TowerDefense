@@ -11,6 +11,8 @@
  * expected to fail today, it fails loudly rather than being tuned to pass.
  */
 import { writeFileSync } from 'fs'
+import { HQ_UPGRADES, INTEREST, ROAD_SHARE } from '../src/game/run/hq'
+import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
@@ -77,6 +79,8 @@ import {
   type Loadout,
   type RoutePolicy,
   type RunOutcome,
+  HQ_STATES,
+  type HqState,
 } from './runsim'
 import {
   withMainAffix,
@@ -2058,7 +2062,7 @@ if (want(11)) {
 // -------------------------------------------------------------- Sweep 12
 if (want(12)) {
   // The hub — new (M19-f). The sweep that would have stopped the Cartographer.
-  line('## 12. What the hub sells (does a purchase ever make the game worse?)')
+  line('## 12. What the HQ sells (does a purchase ever make the game worse?)')
   line('')
   line('**Why this exists.** `Cartographer\'s Table` shipped as a 120-mark horizontal')
   line('unlock whose card promised *"longer runs, wider forks, more routes worth arguing')
@@ -2071,8 +2075,14 @@ if (want(12)) {
   line('from. Every invariant in this report was green while that was true, because')
   line('nothing here had ever simulated a run with a hub behind it.')
   line('')
+  line('**The HQ (build step 3) replaced the hub.** Its three offices — HR (the Opening deal, the')
+  line('Hiring Hall), Finance (interest) and Operations (pack slots, boulders, company focus, the')
+  line('scouts) — are graded here on the same gate. The modelled player makes the sensible')
+  line('choices: each office alone at its top level, then everything, orders paid, with the focus')
+  line('on Ironvein (the shield and mail company). Finance pays gold, not power, and is priced in §13.')
+  line('')
   line('Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the')
-  line('comparison against zero meta is paired and the noise mostly cancels; the ± column is')
+  line('comparison against zero HQ is paired and the noise mostly cancels; the ± column is')
   line('two standard errors of that paired difference.')
   line('')
 
@@ -2149,18 +2159,10 @@ function pairedTolerance(a: number[], b: number[]): number {
   return 2 * Math.sqrt(v / d.length)
 }
 
-const HUB_STATES: [string, Record<string, number>][] = [
-  ['zero meta', {}],
-  ["Cartographer's Table", { cartographer: 1 }],
-  ['Free Companies', { freeCompanies: 1 }],
-  ['Standing Orders', { standingOrders: 1 }],
-  ['all three unlocks', { cartographer: 1, freeCompanies: 1, standingOrders: 1 }],
-  // Phase 3b: the two feat-opened services, graded together (one row, to hold
-  // §12's wall time): more choices at a campfire and an act boss, never less.
-  ['Field Kitchen + Relic Cartulary', { fieldKitchen: 1, cartulary: 1 }],
-  ['the full ramp', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1 }],
-  ['everything the hub sells', { base: 2, gold: 2, stats: 2, roster: 1, loot: 1, cartographer: 1, freeCompanies: 1, standingOrders: 1, fieldKitchen: 1, cartulary: 1 }],
-]
+/** The HQ states §12 grades — `runsim.HQ_STATES`, shared with `meta-sweep` and `tune`. */
+const HUB_STATES: [string, HqState][] = HQ_STATES
+const ZERO_LABEL = HQ_STATES[0][0]
+const DEAL_TOP_LABEL = HQ_STATES.find(([l]) => l.startsWith('Opening deal 5'))![0]
 
 if (want(12)) {
   const hubZero: Record<string, HubCell> = {}
@@ -2173,7 +2175,7 @@ if (want(12)) {
     // The zero-meta row IS the baseline — same loadout, same seeds — so it is
     // reused rather than replayed.
     const cells =
-      label === 'zero meta'
+      label === ZERO_LABEL
         ? POLICIES.map((p) => hubZero[p.id])
         : POLICIES.map((p) => hubCell(loadoutFor(label, upgrades), p))
     hubCells.set(label, cells)
@@ -2190,15 +2192,15 @@ if (want(12)) {
       const tol = Math.max(HUB_TOLERANCE, pairedTolerance(cells[i].wins, hubZero[POLICIES[i].id].wins))
       if (deltas[i] + tol < 0) {
         failures.push(
-          `Hub purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero meta's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). A hub purchase may add breadth; it may never remove baseline viability.`,
+          `HQ purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero HQ's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). An HQ purchase may add breadth; it may never remove baseline viability.`,
         )
       }
     }
     line(`| ${label} | ${cellText.join(' | ')} | ${worst === Infinity ? '—' : `${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`} |`)
   }
   line('')
-  line('**The invariant.** No hub state — any unlock alone, all of them together, the ramp,')
-  line('or everything the hub sells — may measure below zero meta by more than the paired')
+  line('**The invariant.** No HQ state — any office alone, or everything the HQ sells — may')
+  line('measure below zero HQ by more than the paired')
   line(`noise floor (2 s.e., minimum ${pct(HUB_TOLERANCE)}) on any of the gated routing lines`)
   line(`(${HUB_GATED_POLICIES.join(', ')}). This is the check that makes the Cartographer class of`)
   line('defect impossible to ship green: it does not care *why* a purchase made the run')
@@ -2211,24 +2213,24 @@ if (want(12)) {
   {
     // Does the campaign notice a team at all? Zero meta against the full ramp, one
     // model, identical seeds — the comparison the §11 ceiling's rationale wanted.
-    const rampCells = hubCells.get('the full ramp')!
+    const rampCells = hubCells.get(DEAL_TOP_LABEL)!
     const edges = HUB_GATED_POLICIES.map((id) => {
       const i = POLICIES.findIndex((x) => x.id === id)
       return rampCells[i].winRate - hubZero[id].winRate
     })
     const bestEdge = Math.max(...edges)
     line(
-      `**Does the campaign notice a team?** The full ramp is worth **+${(bestEdge * 100).toFixed(0)}pt** over zero meta at its best (${HUB_GATED_POLICIES.map((id, i) => `${id} +${(edges[i] * 100).toFixed(0)}`).join(', ')}). The gate asks for ≥ ${pct(FRESH_TEAM_EDGE)}: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.`,
+      `**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+${(bestEdge * 100).toFixed(0)}pt** over zero HQ at its best (${HUB_GATED_POLICIES.map((id, i) => `${id} +${(edges[i] * 100).toFixed(0)}`).join(', ')}). The gate asks for ≥ ${pct(FRESH_TEAM_EDGE)}: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.`,
     )
     line('')
     if (bestEdge < FRESH_TEAM_EDGE) {
       failures.push(
-        `The campaign does not notice whether the player brought a team: the entire hub ramp is worth ${(bestEdge * 100).toFixed(0)}pt of win rate (needs ≥ ${pct(FRESH_TEAM_EDGE)}). Every purchase is cosmetic.`,
+        `The campaign does not notice whether the player brought a team: the whole Opening deal is worth ${(bestEdge * 100).toFixed(0)}pt of win rate (needs ≥ ${pct(FRESH_TEAM_EDGE)}). Every purchase is cosmetic.`,
       )
     }
   }
-  line('**The breadth each unlock promises is checked separately**, because a horizontal')
-  line('unlock is not supposed to move the win rate at all — it is supposed to widen the')
+  line('**The breadth each service promises is checked separately**, because a horizontal')
+  line('service is not supposed to move the win rate at all — it is supposed to widen the')
   line('run. A card that promises forks has to produce forks:')
   line('')
   const MAP_SAMPLES = 500
@@ -2279,10 +2281,10 @@ if (want(12)) {
   line(`| Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |`)
   line('|---|--:|--:|--:|--:|--:|')
   for (const [label, sh] of [
-    ['default (zero meta)', shapeBase],
-    ["Cartographer's Table", shapeWide],
-    ['Standing Orders', shapeCamp],
-    ['Free Companies', shapeHire],
+    ['default (zero HQ)', shapeBase],
+    ['Scouts 2 (wider roads)', shapeWide],
+    ['Scouts 1 (a way round every ambush)', shapeCamp],
+    ['Hiring Hall', shapeHire],
   ] as [string, MapShape][]) {
     line(`| ${label} | ${f1(sh.layers)} | ${pct(sh.noChoice)} | ${pct(sh.mixed)} | ${pct(sh.forcedElites)} | ${f1(sh.specials)} |`)
   }
@@ -2291,43 +2293,40 @@ if (want(12)) {
   const WIDE_FORK_TARGET = 0.5
   if (shapeWide.layers !== shapeBase.layers) {
     failures.push(
-      `Cartographer's Table changes the LENGTH of the run (${f1(shapeBase.layers)} → ${f1(shapeWide.layers)} layers). A longer map is a compounding Threat increase and a bigger boss budget; an unlock may widen the march, never lengthen it.`,
+      `Scouts 2 changes the LENGTH of the run (${f1(shapeBase.layers)} → ${f1(shapeWide.layers)} layers). A longer map is a compounding Threat increase and a bigger boss budget; an unlock may widen the march, never lengthen it.`,
     )
   }
   if (shapeWide.noChoice > shapeBase.noChoice * WIDE_FORK_TARGET) {
     failures.push(
-      `Cartographer's Table does not deliver the forks its card sells: steps with no choice ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} (needs ≤ ${pct(shapeBase.noChoice * WIDE_FORK_TARGET)}).`,
+      `Scouts 2 does not deliver the forks its card sells: steps with no choice ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} (needs ≤ ${pct(shapeBase.noChoice * WIDE_FORK_TARGET)}).`,
     )
   }
   if (shapeCamp.forcedElites > 0) {
     failures.push(
-      `Standing Orders does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
+      `Scouts 1 does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
     )
   }
   if (shapeHire.specials <= shapeBase.specials) {
-    failures.push(`Free Companies adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
+    failures.push(`The Hiring Hall adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
   }
-  line('**Findings.**')
-  line('')
-  line(
-    `- \`Cartographer's Table\` is now width, not length: same ${f1(shapeBase.layers)} layers, same boss budget, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)} and mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.`,
-  )
-  line(
-    `- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries ${f1(shapeBase.specials - shapeWide.specials)} fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.`,
-  )
-  line(
-    '- **A fight-first player reads the Gate bar.** On the three-act road the wide map hands the battles-first line ~0.8 more fights a run (layers 2, 3, 6 and 7 are fought a quarter to a third more often), and the model used to walk into every one of them however low the Gate was, a campfire one fork away included: Cartographer read −6pt at n=210 and −3.5 ±4.2 at n=600, dying in act 3\'s plain battles. Every fixed-table line now does what the adaptive line always did — at or below 60% of the Gate it takes the fire, or a merchant\'s repair it can pay for, when the road offers one — and the unlock reads −0 / +0 / +6 / +6pt at n=600 (specials / battles / recruits / adaptive). The map was not changed: giving every road on a wide map a way to the pre-boss campfire was tried and cost the stop-first line 3pt (it trades a fight\'s XP for a rest it did not need).',
-  )
-  line(
-    `- \`Standing Orders\` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them ${pct(shapeBase.forcedElites)} → ${pct(shapeCamp.forcedElites)}.`,
-  )
-  line(
-    '- `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign\'s dominant term.',
-  )
-  line(
-    '- **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.',
-  )
-  line('')
+  {
+    const at = (label: string) => hubCells.get(label)!
+    const best = (label: string) => Math.max(...HUB_GATED_POLICIES.map((id) => { const i = POLICIES.findIndex((x) => x.id === id); return at(label)[i].winRate - hubZero[id].winRate }))
+    const sign = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(0)}pt`
+    line('**Findings.**')
+    line('')
+    line(
+      `- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same ${f1(shapeBase.layers)} layers, choiceless steps ${pct(shapeBase.noChoice)} → ${pct(shapeWide.noChoice)}, mixed forks ${pct(shapeBase.mixed)} → ${pct(shapeWide.mixed)}, and Elites with no way past ${pct(shapeBase.forcedElites)} → ${pct(shapeCamp.forcedElites)}. Best line ${sign(best('Scouts 2'))}.`,
+    )
+    line(
+      `- **The Opening deal is where the power is, and it is bounded:** five levels, ${HQ_UPGRADES.find((u) => u.id === 'deal')!.costs.reduce((a, b) => a + b, 0).toLocaleString('en')} gold in all, worth ${sign(best(DEAL_TOP_LABEL))} at its best and then finished (levels 1–3 alone: ${sign(best(HUB_STATES[1][0]))}). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.`,
+    )
+    line(
+      `- **Pack slots, boulders and focus** are levers on the run's texture, not its odds: ${sign(best('Pack slots 10'))}, ${sign(best('Fewer boulders 3 + clear order'))} and ${sign(best('Focus Ironvein +60%'))} at their best. Boulders keep a floor of ${MIN_OBSTACLES} a field whatever is bought — they are a balance lever, and the tuning pass owns that number.`,
+    )
+    line(`- **Everything the HQ sells** reads ${sign(best('everything the HQ sells'))} at its best.`)
+    line('')
+  }
   summary.push(
     `Hub (n=${HUB_RUNS}/cell, gated lines ${HUB_GATED_POLICIES.join('/')}): ${HUB_STATES.map(([label]) => {
       const cells = hubCells.get(label)!
@@ -2355,9 +2354,9 @@ if (want(13)) {
   line('')
   line('**The intent is the climb\'s: every tier must cost difficulty AND pay more.** Each tier is')
   line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
-  line('open ground every route used to share, with its company weighting), at zero meta. The gold')
+  line('open ground every route used to share, with its company weighting), at zero HQ. The gold')
   line('column is the bank\'s **net** change — everything banked (city pay, any cash-out sale, the')
-  line('purse\'s rest) less the stake and the purse taken — priced from the contract code itself')
+  line(`purse's rest and ${Math.round(ROAD_SHARE * 100)}% of the road's gold, \`hq.homeGold\`) less the stake and the purse taken — priced from the contract code itself`)
   line('(`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same')
   line(`roads: **${PRESS_ON.label}**, and **${CASH_OUT_HALF.label}** at city 1 or 2.`)
   line('')
@@ -2388,8 +2387,8 @@ if (want(13)) {
     if (mean(won) < 0.01) break
   }
   line('Two gold columns, because they answer different questions. **Contract pay** is what the stake')
-  line("controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds the purse's")
-  line('rest — kill gold, node purses and whatever the merchants did not take — less the purse taken.')
+  line("controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds what the purse")
+  line(`brings home — what is left of it in full, and ${Math.round(ROAD_SHARE * 100)}% of the road's gold (kill gold, node purses, sales) — less the purse taken.`)
   line('')
   line('| Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |')
   line('|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|')
@@ -2426,6 +2425,19 @@ if (want(13)) {
     `Measured: delivery by tier is ${tierRows.map((r) => pct(r.win)).join(' → ')}; contract pay (cash-out line) ${tierRows.map((r) => f1(r.payCash)).join(' → ')}; bank net ${tierRows.map((r) => f1(r.netCash)).join(' → ')}.`,
   )
   line('')
+  {
+    // Finance's cap against the stake (reported, not gated): interest must
+    // never out-earn carrying cargo, so the top cap is set under the smallest
+    // stake's expected gain over the escort.
+    const escort = tierRows[0].payCash
+    const gains = tierRows.slice(1).map((r) => r.payCash - escort)
+    const cap = Math.max(...INTEREST.map((t) => t.cap))
+    const least = gains.length ? Math.min(...gains) : 0
+    line(
+      `**Bank vs. stake (reported, not gated).** The bank's interest is capped at ${cap} gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
+    )
+    line('')
+  }
   line('**Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone')
   line('crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).')
   line('That widens every later run\'s deals — not a number this table can price — so the gold column')

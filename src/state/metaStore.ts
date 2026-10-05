@@ -11,6 +11,31 @@ import { UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
 import { clampCrates, deliveryUnlocks, type StakeRecord } from '../game/run/contracts'
 import {
+  dealRules,
+  earnsInterest,
+  foldOldHub,
+  hqCost,
+  hqLevel,
+  hqMax,
+  FOCUS_ORDER_PRICE,
+  interestFor,
+  isHqId,
+  MAX_BONUS_ITEMS,
+  NO_ORDERS,
+  PULL_PRICE,
+  pullLift,
+  ROCK_ORDER_PRICE,
+  rollPull,
+  runHqFor,
+  scoutsAt,
+  type DealRules,
+  type HqOrders,
+  type PullResult,
+  type RunHq,
+} from '../game/run/hq'
+import { isItemKind } from '../game/data/itemKinds'
+import { newRunSeed } from '../game/core/rng'
+import {
   dealMany,
   rollContractItem,
   rollContractSkill,
@@ -22,100 +47,11 @@ import {
 import { readMilitia, type Militia } from '../game/run/militia'
 
 /**
- * What a hub purchase *does* to the game (H15).
- *
- *  - `ramp` makes the player stronger, bounded on purpose: every ramp line caps
- *    in one or two purchases — a first-week leg-up, not a permanent power budget.
- *  - `unlock` makes the *run* wider — more map, more stops, more choices —
- *    without making the player stronger at any of them.
- *
- * Bought with gold from the bank since the mercenary company (gold is the only
- * currency). Build step 3 replaces this list with the HQ's offices.
+ * The HQ (build step 3) replaced the Watchtower's list of hub purchases. Its
+ * offices, prices and effects are pure rules in `game/run/hq.ts`; this store
+ * keeps the levels bought (`upgrades`, keyed by `HqId`), the company in focus,
+ * the orders paid for the next contract, and the sealed crates' ledger.
  */
-export type UpgradeKind = 'ramp' | 'unlock'
-
-export interface MetaUpgrade {
-  id: string
-  name: string
-  desc: string
-  maxLevel: number
-  baseCost: number
-  step: number
-  kind: UpgradeKind
-  /**
-   * The feat that makes this purchasable (Phase 3b). A horizontal service is
-   * opened by PLAYING — the achievement — and then bought with gold; the ramp
-   * needs nothing.
-   */
-  requires?: string
-}
-
-export const UPGRADES: MetaUpgrade[] = [
-  // ── the onboarding ramp — bounded on purpose ─────────────────────────────
-  // `base` makes the wagons sturdier: a raider who reaches them steals a
-  // smaller share of the cargo (the Gate's HP is the cargo's condition).
-  { id: 'base', name: 'Reinforced Wagons', desc: 'Raiders who reach your wagons steal less cargo', maxLevel: 2, baseCost: 60, step: 40, kind: 'ramp' },
-  { id: 'gold', name: 'War Chest', desc: '+25 gold in every purse, on top of what you take', maxLevel: 2, baseCost: 50, step: 30, kind: 'ramp' },
-  { id: 'stats', name: 'Seasoned Recruits', desc: '+1 to all stats on every hero you start with or hire', maxLevel: 2, baseCost: 80, step: 50, kind: 'ramp' },
-  { id: 'roster', name: 'Reserve Squad', desc: 'Begin each run with an extra hero', maxLevel: 1, baseCost: 150, step: 150, kind: 'ramp' },
-  { id: 'loot', name: 'Quartermaster', desc: 'Begin each run with an extra item', maxLevel: 1, baseCost: 70, step: 60, kind: 'ramp' },
-
-  // ── horizontal unlocks — these widen the run, they do not strengthen you ──
-  //
-  // All three are graded by the harness on TWO gates (§12): the breadth their
-  // card promises has to show up in the generated map, and none of them — alone
-  // or in any combination — may lower the measured win rate.
-  {
-    id: 'cartographer',
-    name: "Cartographer's Table",
-    desc: 'Your scouts map every fork they can find: three or four roads a layer and never a corridor — the route becomes an argument, not a queue',
-    maxLevel: 1,
-    baseCost: 120,
-    step: 0,
-    kind: 'unlock',
-  },
-  {
-    id: 'freeCompanies',
-    name: 'Hiring Hall',
-    desc: 'A second Recruit stop on every map, and hires arrive trained for the depth you hire them at',
-    maxLevel: 1,
-    baseCost: 180,
-    step: 0,
-    kind: 'unlock',
-  },
-  {
-    id: 'standingOrders',
-    name: 'Scout Reports',
-    desc: 'Your scouts pick the fights: no Elite ever stands on a road with no way around it — every ambush has a way past, if you would rather spend the march elsewhere',
-    maxLevel: 1,
-    baseCost: 160,
-    step: 0,
-    kind: 'unlock',
-  },
-  // ── Phase 3b: services opened by a feat, then bought.
-  {
-    id: 'fieldKitchen',
-    name: 'Field Kitchen',
-    desc: 'Every campfire offers a third choice: forage the road for 40 gold instead of resting or training',
-    maxLevel: 1,
-    baseCost: 220,
-    step: 0,
-    kind: 'unlock',
-    requires: 'act_two',
-  },
-  {
-    id: 'cartulary',
-    name: 'Relic Cartulary',
-    desc: 'An act boss lays out four relics instead of three — the same prize, a wider pick',
-    maxLevel: 1,
-    baseCost: 260,
-    step: 0,
-    kind: 'unlock',
-    requires: 'first_light',
-  },
-]
-const UPGRADE_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]))
-
 /**
  * What a Banner rung used to cost, kept ONLY so {@link migrateMeta} can refund
  * it: rung N cost `200 + 150·(N−1)` (v1 saves could hold rungs 4–5).
@@ -183,15 +119,14 @@ function migrateRecord(raw: unknown): Record<string, StakeRecord> {
   return out
 }
 
-/** Bonuses the meta layer grants to each new run. */
+/** What the HQ grants each new run. */
 export interface MetaBonuses {
   maxBaseHp: number
-  /** Gold the War Chest adds to every purse, free. */
-  purseBonus: number
-  statBonus: number
+  /** HR's Opening deal at its top level: a second hero marches with the first. */
   extraSentinels: number
-  extraItems: number
   enemyHpMult: number
+  /** HR's Opening deal: how the hero pick is dealt. */
+  deal: DealRules
 }
 
 /**
@@ -211,8 +146,10 @@ export interface RunProgress {
   contractCards: string[]
   /** Item kinds the delivery unlocked: the contract's own first, then the stake's item chances. */
   items: string[]
-  /** Gold the settle put in the bank (the purse home, the cities' pay, feats). */
+  /** Gold the settle put in the bank (the purse home, the road's share, the cities' pay, feats, interest). */
   deposit: number
+  /** Interest the bank earned on this contract (Finance; 0 on a lost contract). */
+  interest: number
   /** True on a custom seed: it paid its gold, and earned nothing else. */
   unranked: boolean
 }
@@ -235,10 +172,26 @@ export interface ContractSettle {
   facts?: RunFacts
 }
 
+/** The sealed crates' ledger: the save's crate seed and how many have been opened. */
+export interface CrateLedger {
+  seed: number
+  opened: number
+}
+
 interface MetaState {
   /** Gold at home (the mercenary company): stakes and purses come out of it; city pay and the purse's rest go back in. */
   bank: number
+  /** HQ levels bought, by `HqId` (`game/run/hq.ts`). */
   upgrades: Record<string, number>
+  /** The company in focus (Operations), or null. One at a time. */
+  focus: CompanyId | null
+  /** Orders paid for the next contract (Operations): spent when a contract is signed. */
+  orders: HqOrders
+  /** Item kinds owed to the next run as bonus items (a sealed crate's duplicate). */
+  bonusItems: string[]
+  crates: CrateLedger
+  /** What the bank's interest paid on the last finished contract (null: none yet). */
+  lastInterest: number | null
   /** Standing XP per company (`run/standing.ts`): standing levels are read off it. */
   standing: Record<CompanyId, number>
   /** Contracts finished and delivered, by crates carried — "your record" on the stakes screen. */
@@ -264,10 +217,26 @@ interface MetaState {
    */
   militia: Militia | null
   // actions
-  upgradeCost: (id: string) => number
-  buyUpgrade: (id: string) => void
-  /** True once this hub unlock has been bought. */
+  /** The next level's price, or null when it is maxed or unknown. */
+  upgradeCost: (id: string) => number | null
+  /** Buy the next level of an HQ purchase from the bank. False when refused. */
+  buyUpgrade: (id: string) => boolean
+  /**
+   * Whether a map or hire service is open, by its old hub name — the HQ's
+   * levels behind `run/map.mapOptionsFor` and the hires (`cartographer`,
+   * `standingOrders`: the Scouts; `freeCompanies`: the Hiring Hall).
+   */
   unlocked: (id: string) => boolean
+  /** Put a company in focus (or none). Free; one company at a time. */
+  setFocus: (company: CompanyId | null) => void
+  /** Pay for an order for the next contract. False when refused. */
+  buyOrder: (order: keyof HqOrders) => boolean
+  /** What the HQ gives a contract beginning now (orders included, none spent). */
+  runHq: () => RunHq
+  /** Spend the orders on a signed contract, and hand over the bonus items owed. */
+  takeOrders: () => { orders: HqOrders; bonusItems: string[] }
+  /** Open a sealed crate: pay, roll, unlock or owe a bonus item. Null when refused. */
+  openCrate: () => PullResult | null
   /** Take gold out of the bank. False — and nothing taken — when the bank cannot cover it. */
   withdraw: (n: number) => boolean
   /** Put gold in the bank. */
@@ -277,8 +246,6 @@ interface MetaState {
   bonuses: () => MetaBonuses
   /** True once a feat is earned. */
   achieved: (id: string) => boolean
-  /** Whether a hub purchase's feat (if it has one) is earned. */
-  purchasable: (id: string) => boolean
   /** Add to the Codex. Ids are deduplicated; order of first sighting is kept. */
   recordCodex: (seen: Partial<Omit<Codex, 'felled'>>) => void
   /** Q10 — add one settled wave's kills (by registry key) to the Codex's felled tally. */
@@ -322,8 +289,34 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  * difficulty steps, the Daily record and the Endless best are dropped with the
  * systems they recorded (the stake replaces the step); `bestDifficulty`
  * becomes `bestStake` from 0, because a step won is not a crate carried.
+ *
+ * v9 — the HQ (build step 3). The Watchtower's purchases fold into the
+ * offices (`hq.foldOldHub`): the Hiring Hall is kept, Scout Reports (and the
+ * Cartographer's Table with it) become the Scouts, and everything else is
+ * refunded to the bank at what it cost. New: the focus, the orders, the bonus
+ * items owed and the sealed crates' ledger, all empty.
  */
-export const META_VERSION = 8
+export const META_VERSION = 9
+
+/** The orders a save holds, as booleans. */
+const migrateOrders = (raw: unknown): HqOrders => {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return { rocks: o.rocks === true, focus: o.focus === true }
+}
+
+/** HQ levels: known purchases only, whole, within each one's range. */
+function migrateHq(raw: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const [k, v] of Object.entries(raw)) if (isHqId(k)) out[k] = Math.max(0, Math.min(hqMax(k), Math.floor(v)))
+  return out
+}
+
+/** The crates' ledger: a whole positive seed (0: none drawn yet) and a whole count. */
+function migrateCrates(raw: unknown): CrateLedger {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const seed = Math.floor(num(o.seed, 0))
+  return { seed: seed > 0 && seed <= 0xffffffff ? seed : 0, opened: Math.max(0, Math.min(1e6, Math.floor(num(o.opened, 0)))) }
+}
 
 /** The Watch XP a pre-SK1 save is credited (v6): 1 per 10 kills, 60 per win, 45 per run. */
 export function retroWatchXp(stats: { totalKills: number; runsWon: number; runsCompleted: number }): number {
@@ -353,7 +346,10 @@ export function dealItems(have: readonly string[], n: number, ...salt: (string |
 }
 
 /** Persisted slice — the only part of the store that survives a reload. */
-type PersistedMeta = Pick<MetaState, 'bank' | 'upgrades' | 'standing' | 'record' | 'skills' | 'items' | 'stats' | 'achievements' | 'codex' | 'met' | 'militia'>
+type PersistedMeta = Pick<
+  MetaState,
+  'bank' | 'upgrades' | 'focus' | 'orders' | 'bonusItems' | 'crates' | 'lastInterest' | 'standing' | 'record' | 'skills' | 'items' | 'stats' | 'achievements' | 'codex' | 'met' | 'militia'
+>
 
 /**
  * Bring any stored payload up to the current shape, defaulting EVERY numeric
@@ -364,10 +360,11 @@ type PersistedMeta = Pick<MetaState, 'bank' | 'upgrades' | 'standing' | 'record'
 export function migrateMeta(persisted: unknown, version: number): PersistedMeta {
   const o = (persisted && typeof persisted === 'object' ? persisted : {}) as Record<string, unknown>
   const rawStats = (o.stats && typeof o.stats === 'object' ? o.stats : {}) as Record<string, unknown>
-  const upgrades = numRecord(o.upgrades)
-  for (const u of UPGRADES) {
-    if (upgrades[u.id] != null) upgrades[u.id] = Math.max(0, Math.min(u.maxLevel, Math.floor(upgrades[u.id])))
-  }
+  // v9: the Watchtower's purchases fold into the HQ's offices; the rest is
+  // refunded to the bank (only on a real version step — `merge` calls this on
+  // every load).
+  const fold = version < 9 ? foldOldHub(numRecord(o.upgrades)) : null
+  const upgrades = fold ? migrateHq(fold.levels as Record<string, number>) : migrateHq(numRecord(o.upgrades))
   // v3: Banner rungs were bought with marks until then; every one is given back
   // (as gold now). Only on a real version step — `merge` calls this with
   // META_VERSION on every load, and a refund there would pay on every boot.
@@ -395,14 +392,21 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
   let items = Array.isArray(o.items) ? [...new Set(o.items.filter((x): x is string => typeof x === 'string' && kinds.has(x)))] : []
   if (version < 7 && items.length === 0) items = dealItems([], watchLevelFor(watchXp) - 1, 'v7', stats.runsCompleted)
   // v8: Marks become gold; the Watch XP is spread over the companies.
-  const bank =
+  const bank0 =
     version < 8
       ? Math.max(NEW_BANK, Math.floor(Math.max(0, num(o.watchMarks, 0)) + refund))
       : Math.max(0, Math.floor(num(o.bank, NEW_BANK)))
+  const bank = Math.min(1e9, bank0 + (fold?.refund ?? 0))
   const standing = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
+  const lastInterest = o.lastInterest == null ? null : Math.max(0, Math.min(1e6, Math.floor(num(o.lastInterest, 0))))
   return {
     bank,
     upgrades,
+    focus: isCompanyId(o.focus) ? o.focus : null,
+    orders: migrateOrders(o.orders),
+    bonusItems: Array.isArray(o.bonusItems) ? o.bonusItems.filter(isItemKind).slice(0, MAX_BONUS_ITEMS) : [],
+    crates: migrateCrates(o.crates),
+    lastInterest,
     standing,
     record: migrateRecord(o.record),
     skills,
@@ -426,6 +430,11 @@ export const useMetaStore = create<MetaState>()(
     (set, get) => ({
       bank: NEW_BANK,
       upgrades: {},
+      focus: null,
+      orders: { ...NO_ORDERS },
+      bonusItems: [],
+      crates: { seed: 0, opened: 0 },
+      lastInterest: null,
       standing: freshStanding(),
       record: {},
       skills: [],
@@ -436,33 +445,84 @@ export const useMetaStore = create<MetaState>()(
       met: [],
       militia: null,
 
-      upgradeCost: (id) => {
-        const u = UPGRADE_BY_ID.get(id)!
-        const level = get().upgrades[id] ?? 0
-        return u.baseCost + u.step * level
-      },
+      upgradeCost: (id) => (isHqId(id) ? hqCost(id, hqLevel(get().upgrades, id)) : null),
 
       buyUpgrade: (id) => {
-        const u = UPGRADE_BY_ID.get(id)
-        if (!u) return
+        if (!isHqId(id)) return false
         const { bank, upgrades } = get()
-        const level = upgrades[id] ?? 0
-        if (level >= u.maxLevel) return
-        // A service behind a feat cannot be bought before the feat.
-        if (!get().purchasable(id)) return sfx('error')
-        const cost = get().upgradeCost(id)
-        if (bank < cost) return sfx('error')
+        const level = hqLevel(upgrades, id)
+        const cost = hqCost(id, level)
+        if (cost == null) return false
+        if (bank < cost) {
+          sfx('error')
+          return false
+        }
         set({ bank: bank - cost, upgrades: { ...upgrades, [id]: level + 1 } })
         sfx('confirm')
+        return true
       },
 
-      unlocked: (id) => (get().upgrades[id] ?? 0) > 0,
+      unlocked: (id) => {
+        const u = get().upgrades
+        const scouts = scoutsAt(hqLevel(u, 'scouting'))
+        if (id === 'cartographer') return scouts.wideMap
+        if (id === 'standingOrders') return scouts.standingOrders
+        if (id === 'freeCompanies') return hqLevel(u, 'hiring') > 0
+        return false
+      },
 
       achieved: (id) => !!get().achievements[id],
 
-      purchasable: (id) => {
-        const u = UPGRADE_BY_ID.get(id)
-        return !!u && (!u.requires || !!get().achievements[u.requires])
+      setFocus: (company) => {
+        const next = company && isCompanyId(company) ? company : null
+        if (next !== get().focus) set({ focus: next })
+      },
+
+      buyOrder: (order) => {
+        const { bank, orders, focus } = get()
+        if (orders[order]) return false
+        // A focus order needs a company in focus to push.
+        if (order === 'focus' && !focus) return false
+        const price = order === 'rocks' ? ROCK_ORDER_PRICE : FOCUS_ORDER_PRICE
+        if (bank < price) {
+          sfx('error')
+          return false
+        }
+        set({ bank: bank - price, orders: { ...orders, [order]: true } })
+        sfx('confirm')
+        return true
+      },
+
+      runHq: () => {
+        const { upgrades, focus, orders } = get()
+        return runHqFor(upgrades, focus, orders)
+      },
+
+      takeOrders: () => {
+        const { orders, bonusItems } = get()
+        set({ orders: { ...NO_ORDERS }, bonusItems: [] })
+        return { orders, bonusItems }
+      },
+
+      openCrate: () => {
+        const { bank, crates, items, standing, bonusItems } = get()
+        if (bank < PULL_PRICE) {
+          sfx('error')
+          return null
+        }
+        // The save's crates are seeded once, at the first one opened; crate n
+        // is a hash of (that seed, n) — its own stream, never a run's.
+        const seed = crates.seed || newRunSeed() >>> 0 || 1
+        const have = Array.isArray(items) ? items : []
+        const got = rollPull(seed, crates.opened, pullLift(standing), have)
+        set({
+          bank: bank - PULL_PRICE,
+          crates: { seed, opened: crates.opened + 1 },
+          items: got.duplicate ? have : [...have, got.kind],
+          bonusItems: got.duplicate ? [...bonusItems, got.kind].slice(0, MAX_BONUS_ITEMS) : bonusItems,
+        })
+        sfx('coin')
+        return got
       },
 
       withdraw: (n) => {
@@ -507,7 +567,14 @@ export const useMetaStore = create<MetaState>()(
         const runsDone = num(stats.runsCompleted, 0) + 1
         const featGold = feats.reduce((a, f) => a + f.gold, 0)
         lastFeats.ids = feats.map((f) => f.id)
-        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold
+        // Finance: a finished contract (delivered or cashed out, never lost)
+        // earns interest on the gold left at home — the bank before this
+        // settle's deposit lands — capped per contract (`hq.INTEREST`). A
+        // custom seed earns none, as it earns no standing.
+        const status = contract?.status ?? 'lost'
+        const paysInterest = !!contract && !unranked && earnsInterest(status)
+        const interest = paysInterest ? interestFor(num(get().bank, 0), hqLevel(get().upgrades, 'rate')) : 0
+        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest
 
         // ---- standing with the company, and what it unlocks ----------------
         const company = contract && isCompanyId(contract.company) ? contract.company : null
@@ -537,7 +604,7 @@ export const useMetaStore = create<MetaState>()(
           : []
         const items = company ? dealMany(haveItems, owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
 
-        lastProgress.run = { company, xp, standingBefore: before, standingAfter: after, standingCards, contractCards, items, deposit: banked, unranked: !!company && unranked }
+        lastProgress.run = { company, xp, standingBefore: before, standingAfter: after, standingCards, contractCards, items, deposit: banked, interest, unranked: !!company && unranked }
 
         // The record: every finished contract at its stake, and whether it arrived.
         const record = { ...get().record }
@@ -553,6 +620,7 @@ export const useMetaStore = create<MetaState>()(
         // NaN permanently (M11).
         set({
           bank: Math.max(0, num(get().bank, 0)) + banked,
+          ...(paysInterest ? { lastInterest: interest } : {}),
           standing: company && xp ? { ...standingXp, [company]: xpBefore + xp } : standingXp,
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
@@ -575,16 +643,14 @@ export const useMetaStore = create<MetaState>()(
       },
 
       bonuses: () => {
-        const { upgrades } = get()
-        const lvl = (id: string) => upgrades[id] ?? 0
+        const deal = dealRules(hqLevel(get().upgrades, 'deal'))
         return {
-          maxBaseHp: BASE_MAX_HP + lvl('base') * 5,
-          purseBonus: lvl('gold') * 25,
-          statBonus: lvl('stats'),
-          extraSentinels: lvl('roster'),
-          extraItems: lvl('loot'),
-          // Nothing the hub sells makes the world harder. The stake does.
+          // Nothing the HQ sells makes the wagons sturdier or the world harder:
+          // the stake is the difficulty dial, and Assist softens a leak.
+          maxBaseHp: BASE_MAX_HP,
+          extraSentinels: deal.second ? 1 : 0,
           enemyHpMult: 1,
+          deal,
         }
       },
 
@@ -592,6 +658,11 @@ export const useMetaStore = create<MetaState>()(
         set({
           bank: NEW_BANK,
           upgrades: {},
+          focus: null,
+          orders: { ...NO_ORDERS },
+          bonusItems: [],
+          crates: { seed: 0, opened: 0 },
+          lastInterest: null,
           standing: freshStanding(),
           record: {},
           skills: [],
@@ -610,6 +681,11 @@ export const useMetaStore = create<MetaState>()(
       partialize: (s) => ({
         bank: s.bank,
         upgrades: s.upgrades,
+        focus: s.focus,
+        orders: s.orders,
+        bonusItems: s.bonusItems,
+        crates: s.crates,
+        lastInterest: s.lastInterest,
         standing: s.standing,
         record: s.record,
         skills: s.skills,

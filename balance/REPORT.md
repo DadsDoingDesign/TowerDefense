@@ -687,7 +687,7 @@ recruits 20 → 20, adaptive 28 → 31. Every fixed-table line also reads its Ga
 | budget curve front-loaded | 42% → **47%** | 53% → 55% | wrong direction |
 | enemy speed ×1.5, boss 0.86 | 45% → 30% | 50% | §4 censors, §6 concentration 74% |
 
-## 12. What the hub sells (does a purchase ever make the game worse?)
+## 12. What the HQ sells (does a purchase ever make the game worse?)
 
 **Why this exists.** `Cartographer's Table` shipped as a 120-mark horizontal
 unlock whose card promised *"longer runs, wider forks, more routes worth arguing
@@ -700,23 +700,30 @@ opt-out short of `resetMeta`. The fully-bought hub was the *worst* state to play
 from. Every invariant in this report was green while that was true, because
 nothing here had ever simulated a run with a hub behind it.
 
+**The HQ (build step 3) replaced the hub.** Its three offices — HR (the Opening deal, the
+Hiring Hall), Finance (interest) and Operations (pack slots, boulders, company focus, the
+scouts) — are graded here on the same gate. The modelled player makes the sensible
+choices: each office alone at its top level, then everything, orders paid, with the focus
+on Ironvein (the shield and mail company). Finance pays gold, not power, and is priced in §13.
+
 Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the
-comparison against zero meta is paired and the noise mostly cancels; the ± column is
+comparison against zero HQ is paired and the noise mostly cancels; the ± column is
 two standard errors of that paired difference.
 
 | Hub state | specials | battles | recruits | adaptive | worst gated Δ |
 |---|--:|--:|--:|--:|--:|
-| zero meta | 14% (+0±0) | 8% (+0±0) | 8% (+0±0) | 18% (+0±0) | +0pt |
-| Cartographer's Table | 17% (+3±6) | 8% (−0±5) | 9% (+1±5) | 23% (+5±8) | −0pt |
-| Free Companies | 16% (+2±6) | 9% (+1±5) | 12% (+5±5) | 24% (+7±6) | +1pt |
-| Standing Orders | 15% (+1±4) | 11% (+3±3) | 5% (−2±3) | 20% (+2±4) | −2pt |
-| all three unlocks | 17% (+3±7) | 7% (−1±5) | 10% (+2±6) | 20% (+3±7) | −1pt |
-| Field Kitchen + Relic Cartulary | 15% (+1±3) | 9% (+0±3) | 6% (−2±2) | 16% (−1±4) | −2pt |
-| the full ramp | 34% (+20±7) | 28% (+20±7) | 22% (+14±6) | 37% (+19±8) | +14pt |
-| everything the hub sells | 38% (+24±7) | 21% (+13±7) | 24% (+17±7) | 41% (+23±8) | +13pt |
+| zero HQ | 14% (+0±0) | 8% (+0±0) | 8% (+0±0) | 18% (+0±0) | +0pt |
+| Opening deal 3 (dressed, Rare body, pick 1 of 4) | 19% (+5±5) | 11% (+3±4) | 10% (+3±5) | 19% (+1±5) | +1pt |
+| Opening deal 5 (+ Level 2 skill, a second hero) | 23% (+10±7) | 13% (+5±6) | 18% (+10±6) | 23% (+6±7) | +5pt |
+| Hiring Hall | 17% (+3±6) | 9% (+1±5) | 13% (+5±5) | 21% (+4±6) | +1pt |
+| Scouts 2 | 14% (+0±6) | 8% (−0±5) | 10% (+3±6) | 19% (+1±7) | −0pt |
+| Pack slots 10 | 13% (−0±4) | 10% (+1±3) | 8% (+0±2) | 18% (+0±3) | −0pt |
+| Fewer boulders 3 + clear order | 12% (−2±4) | 9% (+0±4) | 7% (−1±3) | 14% (−4±4) | −4pt |
+| Focus Ironvein +60% | 12% (−1±3) | 10% (+1±3) | 7% (−0±3) | 18% (+0±4) | −1pt |
+| everything the HQ sells | 24% (+10±7) | 11% (+3±5) | 12% (+5±6) | 27% (+9±8) | +3pt |
 
-**The invariant.** No hub state — any unlock alone, all of them together, the ramp,
-or everything the hub sells — may measure below zero meta by more than the paired
+**The invariant.** No HQ state — any office alone, or everything the HQ sells — may
+measure below zero HQ by more than the paired
 noise floor (2 s.e., minimum 3%) on any of the gated routing lines
 (specials, battles, recruits, adaptive). This is the check that makes the Cartographer class of
 defect impossible to ship green: it does not care *why* a purchase made the run
@@ -724,27 +731,25 @@ worse, only that it did.
 
 At 210 runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; `FW_META_RUNS=500` halves it for a fit.
 
-**Does the campaign notice a team?** The full ramp is worth **+20pt** over zero meta at its best (specials +20, battles +20, recruits +14, adaptive +19). The gate asks for ≥ 8%: below that the hub is cosmetic, and a campaign that cannot tell a level-1 solo hero from a hub-equipped company is not measuring the player's decisions either.
+**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+10pt** over zero HQ at its best (specials +10, battles +5, recruits +10, adaptive +6). The gate asks for ≥ 8%: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.
 
-**The breadth each unlock promises is checked separately**, because a horizontal
-unlock is not supposed to move the win rate at all — it is supposed to widen the
+**The breadth each service promises is checked separately**, because a horizontal
+service is not supposed to move the win rate at all — it is supposed to widen the
 run. A card that promises forks has to produce forks:
 
 | Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |
 |---|--:|--:|--:|--:|--:|
-| default (zero meta) | 13.0 | 38% | 53% | 28% | 13.7 |
-| Cartographer's Table | 13.0 | 0% | 81% | 0% | 14.3 |
-| Standing Orders | 13.0 | 34% | 56% | 0% | 13.7 |
-| Free Companies | 13.0 | 38% | 54% | 29% | 14.1 |
+| default (zero HQ) | 13.0 | 38% | 53% | 28% | 13.7 |
+| Scouts 2 (wider roads) | 13.0 | 0% | 81% | 0% | 14.3 |
+| Scouts 1 (a way round every ambush) | 13.0 | 34% | 56% | 0% | 13.7 |
+| Hiring Hall | 13.0 | 38% | 54% | 29% | 14.1 |
 
 **Findings.**
 
-- `Cartographer's Table` is now width, not length: same 13.0 layers, same boss budget, choiceless steps 38% → 0% and mixed forks 53% → 81%. The old version moved both the *wrong way* (49% → 52% and 25% → 21%) while making the run 4.6× harder at the boss — it charged for breadth and delivered neither.
-- **The wide map pays for its roads.** Extra forks put a stop-greedy route into more stops, and a stop is worth negative to a fresh run, so width-for-free measured −9±5pt (n=500) on the first-timer line. A wide map now carries -0.7 fewer special tiles per map than a default one — one merchant and one shrine off the cap, both still guaranteed to appear once — and reads +1 to +2pt on every line instead. That trade is the honest shape of a horizontal unlock: breadth of *route* bought with density of *stops*, not with the player's win rate.
-- **A fight-first player reads the Gate bar.** On the three-act road the wide map hands the battles-first line ~0.8 more fights a run (layers 2, 3, 6 and 7 are fought a quarter to a third more often), and the model used to walk into every one of them however low the Gate was, a campfire one fork away included: Cartographer read −6pt at n=210 and −3.5 ±4.2 at n=600, dying in act 3's plain battles. Every fixed-table line now does what the adaptive line always did — at or below 60% of the Gate it takes the fire, or a merchant's repair it can pay for, when the road offers one — and the unlock reads −0 / +0 / +6 / +6pt at n=600 (specials / battles / recruits / adaptive). The map was not changed: giving every road on a wide map a way to the pre-boss campfire was tried and cost the stop-first line 3pt (it trades a fight's XP for a rest it did not need).
-- `Standing Orders` no longer sells a second prep node in a layer the run walks one node of (worth −2 to +5pt, i.e. nothing). It opens a road around every ambush: Elites with no way past them 28% → 0%.
-- `Free Companies` is the only unlock with a win-rate signature, and it should be: it is the one that changes the roster, which every other sweep in this report agrees is the campaign's dominant term.
-- **The ramp is where the power is, and it is bounded.** The full ramp — two levels of base, gold and stats, one extra Sentinel, one extra item, ~700 marks — is worth about +20pt, and then it is finished. That is the shape the doctrine asks for: a bounded onboarding runway, not a treadmill.
+- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 38% → 0%, mixed forks 53% → 81%, and Elites with no way past 28% → 0%. Best line +3pt.
+- **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +10pt at its best and then finished (levels 1–3 alone: +5pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
+- **Pack slots, boulders and focus** are levers on the run's texture, not its odds: +1pt, +0pt and +1pt at their best. Boulders keep a floor of 2 a field whatever is bought — they are a balance lever, and the tuning pass owns that number.
+- **Everything the HQ sells** reads +10pt at its best.
 
 ## 13. Stake tiers (is carrying more cargo ever worth it?)
 
@@ -758,27 +763,27 @@ by the cargo that arrives (the wagons' HP). An escort (no crates) is paid a fee 
 
 **The intent is the climb's: every tier must cost difficulty AND pay more.** Each tier is
 measured on the same paired seeds as §11 and §12, 600 runs a tier, on Rosethread's road (the
-open ground every route used to share, with its company weighting), at zero meta. The gold
+open ground every route used to share, with its company weighting), at zero HQ. The gold
 column is the bank's **net** change — everything banked (city pay, any cash-out sale, the
-purse's rest) less the stake and the purse taken — priced from the contract code itself
+purse's rest and 25% of the road's gold, `hq.homeGold`) less the stake and the purse taken — priced from the contract code itself
 (`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same
 roads: **always press on**, and **cash out under 50% cargo** at city 1 or 2.
 
 Two gold columns, because they answer different questions. **Contract pay** is what the stake
-controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds the purse's
-rest — kill gold, node purses and whatever the merchants did not take — less the purse taken.
+controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds what the purse
+brings home — what is left of it in full, and 25% of the road's gold (kill gold, node purses, sales) — less the purse taken.
 
 | Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |
 |--:|--:|---|--:|--:|--:|--:|--:|--:|--:|
-| 0 | 0 | escort · standard raiders | 1/5 | 18% | 86.8 | 13% | **86.1** | — | 1489.1 |
-| 1 | 50 | Raiders 8% stronger · 1 more elite an act | 2/5 | 21% | 143.3 | 13% | **141.4** | +55 | 1622.2 |
-| 2 | 100 | Raiders 16% stronger · 2 more elites an act | 2/5 | 17% | 152.7 | 14% | **151.5** | +10 | 1613.9 |
-| 3 | 150 | Raiders 24% stronger · 3 more elites an act | 3/5 | 16% | 195.0 | 15% | **193.1** | +42 | 1626.8 |
-| 4 | 200 | Raiders 32% stronger · 4 more elites an act | 3/5 | 14% | 147.9 | 16% | **147.0** | −46 | 1540.3 |
-| 5 | 250 | Raiders 40% stronger · 5 more elites an act | 4/5 | 13% | 185.9 | 15% | **186.7** | +40 | 1510.0 |
-| 6 | 300 | Raiders 48% stronger · 6 more elites an act | 4/5 | 12% | 188.4 | 21% | **191.5** | +5 | 1520.7 |
-| 7 | 350 | Raiders 56% stronger · 7 more elites an act | 5/5 | 12% | 225.6 | 20% | **227.2** | +36 | 1506.6 |
-| 8 | 400 | Raiders 64% stronger · 8 more elites an act | 5/5 | 9% | 156.1 | 25% | **165.2** | −62 | 1376.2 |
+| 0 | 0 | escort · standard raiders | 1/5 | 18% | 87.4 | 12% | **86.6** | — | 407.4 |
+| 1 | 50 | Raiders 8% stronger · 1 more elite an act | 2/5 | 18% | 138.1 | 13% | **136.3** | +50 | 464.5 |
+| 2 | 100 | Raiders 16% stronger · 2 more elites an act | 2/5 | 19% | 158.0 | 13% | **156.6** | +20 | 485.6 |
+| 3 | 150 | Raiders 24% stronger · 3 more elites an act | 3/5 | 15% | 190.8 | 14% | **189.5** | +33 | 510.9 |
+| 4 | 200 | Raiders 32% stronger · 4 more elites an act | 3/5 | 14% | 148.8 | 17% | **149.4** | −40 | 462.8 |
+| 5 | 250 | Raiders 40% stronger · 5 more elites an act | 4/5 | 14% | 187.9 | 16% | **188.3** | +39 | 487.7 |
+| 6 | 300 | Raiders 48% stronger · 6 more elites an act | 4/5 | 12% | 188.3 | 19% | **190.9** | +3 | 490.6 |
+| 7 | 350 | Raiders 56% stronger · 7 more elites an act | 5/5 | 11% | 217.6 | 21% | **219.2** | +28 | 508.1 |
+| 8 | 400 | Raiders 64% stronger · 8 more elites an act | 5/5 | 10% | 165.7 | 24% | **172.9** | −46 | 446.8 |
 
 **Two invariants**, the climb's own, kept:
 
@@ -787,7 +792,9 @@ rest — kill gold, node purses and whatever the merchants did not take — less
 2. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every
    tier — a stake whose payout does not cover the difficulty it adds is a trap.
 
-Measured: delivery by tier is 18% → 21% → 17% → 16% → 14% → 13% → 12% → 12% → 9%; contract pay (cash-out line) 86.1 → 141.4 → 151.5 → 193.1 → 147.0 → 186.7 → 191.5 → 227.2 → 165.2; bank net 1489.1 → 1622.2 → 1613.9 → 1626.8 → 1540.3 → 1510.0 → 1520.7 → 1506.6 → 1376.2.
+Measured: delivery by tier is 18% → 18% → 19% → 15% → 14% → 14% → 12% → 11% → 10%; contract pay (cash-out line) 86.6 → 136.3 → 156.6 → 189.5 → 149.4 → 188.3 → 190.9 → 219.2 → 172.9; bank net 407.4 → 464.5 → 485.6 → 510.9 → 462.8 → 487.7 → 490.6 → 508.1 → 446.8.
+
+**Bank vs. stake (reported, not gated).** The bank's interest is capped at 40 gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +50, 2c +70, 3c +103, 4c +63, 5c +102, 6c +104, 7c +133, 8c +86 — the least is +50 gold, 10 above the cap.
 
 **Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone
 crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).
@@ -803,11 +810,11 @@ off the others is a lever for the tuning pass.
 
 | Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
 |---|---|--:|--:|--:|
-| Peppercorn Co. (Spice) | Wildfire | 16% | 82.9 | 1462.0 |
-| Easel House (Art) | Flooded canals | 17% | 84.0 | 1458.7 |
-| Ironvein (Metals & Stones) | Quarry boulders | 14% | 80.6 | 1452.5 |
-| Rosethread (Silk) | Fords and fires | 15% | 80.1 | 1425.3 |
-| Moonquill (Scrolls & Arcana) | Cursed ground | 19% | 88.5 | 1476.2 |
+| Peppercorn Co. (Spice) | Wildfire | 15% | 79.5 | 387.3 |
+| Easel House (Art) | Flooded canals | 17% | 83.4 | 388.3 |
+| Ironvein (Metals & Stones) | Quarry boulders | 18% | 85.3 | 396.3 |
+| Rosethread (Silk) | Fords and fires | 16% | 82.3 | 383.3 |
+| Moonquill (Scrolls & Arcana) | Cursed ground | 18% | 84.4 | 396.2 |
 
 ## 14. Run variety — battlefields and wave composition
 
@@ -1104,12 +1111,12 @@ paired seeds, against the same runs without it.
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 26% | +8±7pt |
+| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 22% | +4±7pt |
 | Field Surgeon's Kit | Common | After every fight you win, 10% of the cargo is rounded up. | 17% | −1±5pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 25% | +7±6pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 16% | −2±7pt |
-| Tithe Box | Common | +10 gold for every fight you win. | 17% | −1±5pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 17% | −1±5pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 23% | +5±7pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 20% | +2±7pt |
+| Tithe Box | Common | +10 gold for every fight you win. | 19% | +1±5pt |
+| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 20% | +2±4pt |
 
 **Declared, not dealt.** none — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
 
@@ -1249,15 +1256,15 @@ difficulty on the live engine.
 - Curse "Frenzied" (cx_frenzied) has no upside: its BEST scenario is +0.9pt (phys −0.3pt, magic +0.9pt). A curse is a dramatic affix bought with a downside; one that is inert or strictly bad is a downside bought with nothing.
 - First-timer line is a wall: the shipped heuristic wins only 14% at zero meta, below the 15% floor of its band. The line a first-timer walks has to be winnable, not only the best line.
 - Strict-floor difficulty is a cliff, not a curve: depth 6 alone ends 43% of zero-meta solo runs (max 40%).
-- Stake 1 is not harder: it delivers 21% against 0 crates' 18% — a cost of -3.2pt, under the 3pt every crate must cost.
-- Stake 3 is not harder: it delivers 16% against 2 crates' 17% — a cost of 1.3pt, under the 3pt every crate must cost.
-- Stake 4 is not harder: it delivers 14% against 3 crates' 16% — a cost of 2.3pt, under the 3pt every crate must cost.
-- Stake 4 does not pay more: 147.0 gold of contract pay against 3 crates' 193.1. The crate's pay does not cover the difficulty it adds.
-- Stake 5 is not harder: it delivers 13% against 4 crates' 14% — a cost of 0.8pt, under the 3pt every crate must cost.
-- Stake 6 is not harder: it delivers 12% against 5 crates' 13% — a cost of 0.7pt, under the 3pt every crate must cost.
-- Stake 7 is not harder: it delivers 12% against 6 crates' 12% — a cost of 0.5pt, under the 3pt every crate must cost.
-- Stake 8 is not harder: it delivers 9% against 7 crates' 12% — a cost of 2.8pt, under the 3pt every crate must cost.
-- Stake 8 does not pay more: 165.2 gold of contract pay against 7 crates' 227.2. The crate's pay does not cover the difficulty it adds.
+- Stake 1 is not harder: it delivers 18% against 0 crates' 18% — a cost of -0.5pt, under the 3pt every crate must cost.
+- Stake 2 is not harder: it delivers 19% against 1 crate' 18% — a cost of -0.8pt, under the 3pt every crate must cost.
+- Stake 4 is not harder: it delivers 14% against 3 crates' 15% — a cost of 1.2pt, under the 3pt every crate must cost.
+- Stake 4 does not pay more: 149.4 gold of contract pay against 3 crates' 189.5. The crate's pay does not cover the difficulty it adds.
+- Stake 5 is not harder: it delivers 14% against 4 crates' 14% — a cost of 0.2pt, under the 3pt every crate must cost.
+- Stake 6 is not harder: it delivers 12% against 5 crates' 14% — a cost of 1.8pt, under the 3pt every crate must cost.
+- Stake 7 is not harder: it delivers 11% against 6 crates' 12% — a cost of 1.2pt, under the 3pt every crate must cost.
+- Stake 8 is not harder: it delivers 10% against 7 crates' 11% — a cost of 0.7pt, under the 3pt every crate must cost.
+- Stake 8 does not pay more: 172.9 gold of contract pay against 7 crates' 219.2. The crate's pay does not cover the difficulty it adds.
 - Composition variants at depth 8 elite span ×22.14 in base HP leaked against random unadapted teams (ceiling ×2.00). At that width the variant roll, not the deployment, is deciding the node.
 - Relic "Wildfire Pact" claims "−35% damage per hit · all your heroes" but costs nothing measurable: its worst bench is +0.0pt. A plain upgrade wearing a pact label.
 - Relic "Iron Vigil" claims "−12% damage · all your heroes" but costs nothing measurable: its worst bench is −1.7pt. A plain upgrade wearing a pact label.

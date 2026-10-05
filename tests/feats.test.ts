@@ -5,8 +5,7 @@ import { skillPoolFor } from '../src/game/run/watch'
 import { mutationOfferSize, MUTATION_OFFER_SIZE } from '../src/game/data/mutations'
 import { RNG } from '../src/game/core/rng'
 import { generateRunMap } from '../src/game/data/runmap'
-import { CAMPFIRE_FORAGE, campfireChoices, forageAtCampfire } from '../src/game/run/campfire'
-import { cartularyRelic, handSize, rewardHand } from '../src/game/run/relics'
+import { handSize, rewardHand } from '../src/game/run/relics'
 import { freshFeats, goblinKinds, runFacts } from '../src/game/run/settle'
 import { lastFeats, migrateMeta, NEW_BANK, useMetaStore } from '../src/state/metaStore'
 
@@ -82,27 +81,12 @@ describe('feat-locked skill cards (SK1)', () => {
   })
 })
 
-describe('horizontal services (campfire forage, relic cartulary, strange growth)', () => {
-  it('the Field Kitchen adds a third campfire choice worth CAMPFIRE_FORAGE gold', () => {
-    expect(campfireChoices(false)).toEqual(['rest', 'train'])
-    expect(campfireChoices(true)).toEqual(['rest', 'train', 'forage'])
-    expect(forageAtCampfire(12)).toBe(12 + CAMPFIRE_FORAGE)
-    expect(forageAtCampfire(-5)).toBe(CAMPFIRE_FORAGE)
-  })
-
-  it('the Relic Cartulary adds one relic to an act boss hand, off its own stream, never a duplicate', () => {
+describe('horizontal services (strange growth, the wide map)', () => {
+  it('an act boss lays out a hand of three relics', () => {
     expect(handSize({ thinPickings: false })).toBe(3)
     expect(handSize({ thinPickings: true })).toBe(2)
-    const rng = new RNG(3)
-    const hand = rewardHand(rng, { kind: 'boss', luck: 0.3, count: handSize({ thinPickings: false }), held: [] })
-    const after = rng.next()
-    const extra = cartularyRelic(new RNG(99), { luck: 0.3, held: [], hand })
-    expect(extra?.kind).toBe('relic')
-    expect(hand.map((c) => c.relic)).not.toContain(extra!.relic)
-    // The main stream is untouched: the same hand rolled again leaves it where it was.
-    const rng2 = new RNG(3)
-    rewardHand(rng2, { kind: 'boss', luck: 0.3, count: 3, held: [] })
-    expect(rng2.next()).toBe(after)
+    const hand = rewardHand(new RNG(3), { kind: 'boss', luck: 0.3, count: handSize({ thinPickings: false }), held: [] })
+    expect(hand.filter((c) => c.kind === 'relic').length).toBe(3)
   })
 
   it('Strange Growth offers one more mutation', () => {
@@ -147,19 +131,19 @@ describe('feats pay gold into the bank (state/metaStore)', () => {
     expect(lastFeats.ids).toEqual([])
   })
 
-  it('a feat-locked service cannot be bought before its feat, and can after', () => {
-    useMetaStore.setState({ bank: 1000 })
-    expect(useMetaStore.getState().purchasable('fieldKitchen')).toBe(false)
-    useMetaStore.getState().buyUpgrade('fieldKitchen')
+  it('the retired services cannot be bought and are never open', () => {
+    useMetaStore.setState({ bank: 1000, achievements: { act_two: 1, first_light: 1 } })
+    expect(useMetaStore.getState().buyUpgrade('fieldKitchen')).toBe(false)
+    expect(useMetaStore.getState().buyUpgrade('cartulary')).toBe(false)
     expect(useMetaStore.getState().unlocked('fieldKitchen')).toBe(false)
-    useMetaStore.setState({ achievements: { act_two: 1 } })
-    useMetaStore.getState().buyUpgrade('fieldKitchen')
-    expect(useMetaStore.getState().unlocked('fieldKitchen')).toBe(true)
+    expect(useMetaStore.getState().unlocked('cartulary')).toBe(false)
+    expect(useMetaStore.getState().bank).toBe(1000)
   })
 
   it('v3 saves migrate with an empty ledger and Codex; junk is scrubbed', () => {
     const m = migrateMeta({ watchMarks: 190, upgrades: { base: 1 }, topDifficulty: 1, stats: {} }, 3)
-    expect(m.bank).toBe(190)
+    // 190 marks as gold, and (v9) the Reinforced Wagons level refunded: 60.
+    expect(m.bank).toBe(190 + 60)
     expect(migrateMeta({ watchMarks: 90 }, 3).bank).toBe(NEW_BANK)
     expect(m.achievements).toEqual({})
     expect(m.codex).toEqual({ enemies: [], relics: [], felled: {} })

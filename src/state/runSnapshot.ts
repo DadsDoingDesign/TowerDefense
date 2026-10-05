@@ -47,6 +47,7 @@ import {
   type ContractStatus,
   type RunContract,
 } from '../game/run/contracts'
+import { BASE_RUN_HQ, FOCUS_STEP, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE, type RunHq } from '../game/run/hq'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
 import { settleOffHands } from '../game/run/inventory'
@@ -105,8 +106,12 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * Snapshot schema version (M11). Bump on any shape change and extend `migrate`;
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
+ *
+ * v16 — the HQ (build step 3): the contract carries `earned` (the road's gold
+ * so far, for the road-gold share) and `hq` (pack slots, cleared boulders,
+ * company focus — frozen when the run began).
  */
-export const RUN_SNAPSHOT_VERSION = 15
+export const RUN_SNAPSHOT_VERSION = 16
 
 /** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
 type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
@@ -408,7 +413,7 @@ export function snapshotBattleMap(snap: RunSnapshot): GameMap {
   // The battle comes back on the twin it was saved on, whatever the viewport
   // is now: orientation is fixed for the duration of a battle — and so is its
   // map challenge (G1-2).
-  const map = fieldFor(snap.battleMapId, snap.terrainRule ?? null, snap.fieldOrientation, snap.hazardSeed ?? null)
+  const map = fieldFor(snap.battleMapId, snap.terrainRule ?? null, snap.fieldOrientation, snap.hazardSeed ?? null, snap.contract?.hq.rocks ?? 0)
   if (!map) throw new Error(`run snapshot names an unknown battle map: ${snap.battleMapId}`)
   return map
 }
@@ -969,16 +974,34 @@ function normaliseSkills(s: Sentinel): void {
  * weight a pool any other way). A payload with none — a run saved before item
  * unlocks — keeps dealing every kind (what it was dealing).
  */
-function migrateItemPool(raw: unknown, company: CompanyId): string[] {
+function migrateItemPool(raw: unknown, company: CompanyId, hq: RunHq): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
   const set = ids.length ? itemPoolFor(ids.filter((k) => !BASIC_ITEM_KINDS.includes(k))) : [...ALL_ITEM_KINDS]
-  return weightPool(set, company, kindCompany)
+  return weightPool(set, company, kindCompany, { company: hq.focus, boost: hq.boost })
 }
 
-/** The run's skill pool: known ids, weighted like the items; a payload with none deals the starters. */
-function migrateSkillPool(raw: unknown, company: CompanyId): string[] {
+/** The run's skill pool: known ids, weighted like the items (company focus too, v16); a payload with none deals the starters. */
+function migrateSkillPool(raw: unknown, company: CompanyId, hq: RunHq): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
-  return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany)
+  return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany, { company: hq.focus, boost: hq.boost })
+}
+
+/**
+ * The HQ's terms a run carries (v16), clamped to what the HQ can sell: whole
+ * cleared boulders, a focus only on a real company and in whole steps, pack
+ * slots between the base and the top. A payload without them (v15) gets the
+ * base terms — what a run had before the HQ.
+ */
+function migrateRunHq(raw: unknown): RunHq {
+  if (!isObj(raw)) return { ...BASE_RUN_HQ }
+  const focus = isCompanyId(raw.focus) ? raw.focus : null
+  const steps = Math.max(0, Math.min(MAX_FOCUS_BOOST / FOCUS_STEP, Math.round(num(raw.boost, 0) / FOCUS_STEP)))
+  return {
+    rocks: Math.max(0, Math.min(MAX_ROCKS_CUT, Math.floor(num(raw.rocks, 0)))),
+    focus,
+    boost: focus ? steps * FOCUS_STEP : 0,
+    pack: Math.max(PACK_BASE, Math.min(MAX_PACK, Math.floor(num(raw.pack, PACK_BASE)))),
+  }
 }
 
 /** The escort a pre-contract run resumes as: Rosethread's open road, its passed cities paid nothing. */
@@ -997,7 +1020,7 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
  * paid and the road is still open. A payload with no readable contract is a
  * pre-contract run ({@link legacyContract}).
  */
-export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[]): RunContract {
+export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[], purseNow = 0): RunContract {
   if (!isObj(raw) || !isCompanyId(raw.company)) return legacyContract(runMap, cleared)
   const gold = (x: unknown): number => Math.max(0, Math.min(MAX_MAGNITUDE, Math.floor(num(x, 0))))
   const paid = arr<unknown>(raw.paid).slice(0, CITY_COUNT).map(gold)
@@ -1017,6 +1040,10 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     cashOut: status === 'cashedOut' ? gold(raw.cashOut) : 0,
     status,
     signed: raw.signed === true,
+    // v16: the road's gold so far. A v15 run (no ledger) is read as though
+    // none of its purse was spent: every gold above the purse is the road's.
+    earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
+    hq: migrateRunHq(raw.hq),
   }
 }
 
@@ -1179,7 +1206,8 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   if (crossroads) migrateSkills(crossroads.recruits, version)
   const challenge = migrateChallenge(o.challenge)
   const clearedIds = arr<string>(o.clearedNodeIds)
-  const contract = migrateContract(o.contract, runMap as RunMap, clearedIds)
+  const gold = Math.max(0, num(o.gold, 0)) + refund
+  const contract = migrateContract(o.contract, runMap as RunMap, clearedIds, gold)
 
   const snap: RunSnapshot = {
     v: RUN_SNAPSHOT_VERSION,
@@ -1207,14 +1235,14 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     hazardSeed,
     roster,
     placements,
-    gold: Math.max(0, num(o.gold, 0)) + refund,
+    gold,
     baseHp: num(o.baseHp, 1),
     maxBaseHp: Math.max(1, num(o.maxBaseHp, 20)),
     enemyHpMult: num(o.enemyHpMult, 1),
     threat: num(o.threat, 1),
     contract,
-    skillPool: migrateSkillPool(o.skillPool, contract.company),
-    itemPool: migrateItemPool(o.itemPool, contract.company),
+    skillPool: migrateSkillPool(o.skillPool, contract.company, contract.hq),
+    itemPool: migrateItemPool(o.itemPool, contract.company, contract.hq),
     challenge,
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.
@@ -1474,7 +1502,7 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
   // A pre-contract payload (v14 or older, an Endless one included) has no
   // contract to bank: it is owed the Marks it would have paid, as gold.
   const legacy = num(o.v, 0) < 15 || endless
-  const contract = legacy || !Array.isArray(nodes) ? null : migrateContract(o.contract, { nodes: nodes as MapNode[] }, [...cleared])
+  const contract = legacy || !Array.isArray(nodes) ? null : migrateContract(o.contract, { nodes: nodes as MapNode[] }, [...cleared], Math.max(0, Math.floor(num(o.gold, 0))))
   // A contract parked on the hero pick took nothing from the bank.
   if (contract && arr<unknown>(o.roster).length === 0) contract.signed = false
   return {

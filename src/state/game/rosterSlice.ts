@@ -2,6 +2,7 @@
  * Roster slice: equipment, the pack, the forge (campaign gold prices), and
  * the skill choices heroes make at their milestones (SK1).
  */
+import { roadPays } from './purse'
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
 import type { BumpStat } from '../../game/data/skills'
 import { takeBump, takeSkill } from '../../game/run/skills'
@@ -74,11 +75,11 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
   // be a gear change the fight never saw).
   dismantleItem: (itemId) => {
     if (gearLocked(get())) return sfx('error')
-    const { inventory, gold } = get()
+    const { inventory } = get()
     const item = inventory.find((i) => i.id === itemId)
     if (!item) return
-    // Gold is the only currency: scrapping pays gold into the purse.
-    set({ inventory: inventory.filter((i) => i.id !== itemId), gold: gold + scrapGold(item) })
+    // Gold is the only currency: scrapping pays gold into the purse (road gold).
+    set({ inventory: inventory.filter((i) => i.id !== itemId), ...roadPays(get(), scrapGold(item)) })
     sfx('coin')
   },
 

@@ -85,6 +85,13 @@ export const ROUTE_HAZARDS: Partial<Record<TerrainRuleId, HazardBoost>> = {
   hexed: { dangerTiles: 2, dangerPool: 4 },
 }
 
+/**
+ * The fewest seeded boulder patches a field ever lays, whatever the HQ has
+ * cleared (`run/hq.rocksCut`): obstacles are a balance lever, so buying them
+ * away thins the field but never empties it.
+ */
+export const MIN_OBSTACLES = 2
+
 /** The shipped values, by name, for the UI copy and the tests. */
 export const CURSED_DAMAGE_MULT = HAZARD_LEVERS.cursedDamageMult
 export const DANGER_TILES = HAZARD_LEVERS.dangerTiles
@@ -165,7 +172,7 @@ export const patchesTouch = (p: Patch, q: Patch): boolean =>
 
 /**
  * Lay a battle's danger ground and seeded obstacles over a laid (landscape)
- * grid. Returns a NEW tile list; open tiles only are ever touched, so the lane,
+ * grid, `cut` of the seeded boulders cleared by the HQ. Returns a NEW tile list; open tiles only are ever touched, so the lane,
  * the forest frame, authored rock and a challenge's lakes/fire are kept.
  *
  * Grid-fit: the unit is a 2 × 2 PATCH of open tiles. Every such patch is
@@ -174,15 +181,20 @@ export const patchesTouch = (p: Patch, q: Patch): boolean =>
  * G1-2's tiles were — and the pools and counts ({@link HAZARD_LEVERS}) are
  * drawn from that list exactly as they were drawn from tiles.
  */
-export function layHazards(tiles: readonly FieldTile[], path: readonly Vec2[], seed: number, boost: HazardBoost = {}): FieldTile[] {
+export function layHazards(tiles: readonly FieldTile[], path: readonly Vec2[], seed: number, boost: HazardBoost = {}, cut = 0): FieldTile[] {
   const rng = new RNG(seed)
   const ranked = rankPatches(tiles, path)
 
   const B = HAZARD_LEVERS
+  // The HQ's cleared boulders come off the seeded count, down to its floor; a
+  // route's own extra boulders (its ground) are never cleared. Fewer rocks are
+  // the SAME draws stopped early, so a cleared field is the same field with
+  // its last-laid boulders gone — and cut 0 lays exactly what it always laid.
+  const seeded = Math.max(Math.min(B.obstacles, MIN_OBSTACLES), B.obstacles - Math.max(0, Math.floor(cut)))
   const L = {
     dangerTiles: B.dangerTiles + (boost.dangerTiles ?? 0),
     dangerPool: B.dangerPool + (boost.dangerPool ?? 0),
-    obstacles: B.obstacles + (boost.obstacles ?? 0),
+    obstacles: seeded + (boost.obstacles ?? 0),
     obstaclePool: B.obstaclePool + (boost.obstaclePool ?? 0),
   }
   const cursed: Patch[] = []

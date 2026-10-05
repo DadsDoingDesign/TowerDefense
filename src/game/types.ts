@@ -316,6 +316,8 @@ export interface GameMap {
    * from (`data/hazards.ts`). Absent on a field without them.
    */
   hazardSeed?: number
+  /** Seeded boulder patches the HQ cleared from it (`run/hq.rocksCut`). Absent: none. */
+  rocksCut?: number
   /**
    * The seeded field this map is a variant of (a terrain rule on it). Absent
    * on the base fields; see `maps.fieldIdOf`.

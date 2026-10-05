@@ -3,8 +3,39 @@
  * roster and inventory and returns the next pair (or null when refused), so the
  * store's actions are a guard, a call and a `set`.
  */
-import { HERO_SLOTS, heroSlotsFor, type EquipRules } from '../data/items'
+import { HERO_SLOTS, heroSlotsFor, RARITY_ORDER, type EquipRules } from '../data/items'
 import type { Equipment, HeroSlot, Item, Sentinel } from '../types'
+import { scrapGold } from './economy'
+
+/**
+ * Pack slots (the HQ's Operations office): how many loose items the pack holds.
+ *
+ * When loot arrives at a full pack, the **cheapest** pieces are sold for their
+ * scrap gold — the arrivals and what was already there, judged together — so
+ * a better drop never vanishes because a worse one was in the way. Only as
+ * many are sold as arrived: moving gear you already own off a hero is never
+ * refused and never sells anything (a pack over its slots from that sells its
+ * extras the next time loot arrives). Ties go to the oldest piece in the pack.
+ */
+export function stow(pack: readonly Item[], arriving: readonly Item[], slots: number): { inventory: Item[]; sold: Item[]; gold: number } {
+  if (!arriving.length) return { inventory: [...pack], sold: [], gold: 0 }
+  const all = [...pack, ...arriving]
+  const over = Math.min(arriving.length, Math.max(0, all.length - Math.max(0, Math.floor(slots))))
+  if (!over) return { inventory: all, sold: [], gold: 0 }
+  const order = all
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => scrapGold(a.item) - scrapGold(b.item) || RARITY_ORDER.indexOf(a.item.rarity) - RARITY_ORDER.indexOf(b.item.rarity) || a.i - b.i)
+  const out = new Set(order.slice(0, over).map((x) => x.item.id))
+  const sold = all.filter((x) => out.has(x.id))
+  return { inventory: all.filter((x) => !out.has(x.id)), sold, gold: sold.reduce((t, x) => t + scrapGold(x), 0) }
+}
+
+/** The receipt for a full pack's sale: "Pack full: sold the Axe for 8 gold". */
+export function soldText(sold: readonly Pick<Item, 'name'>[], gold: number): string {
+  if (!sold.length) return ''
+  const what = sold.length === 1 ? `the ${sold[0].name.replace(/\b(Common|Rare|Epic|Legendary|Mythic) /, '')}` : `${sold.length} pieces`
+  return `Pack full: sold ${what} for ${gold} gold`
+}
 
 /** An item by id, whether it is in the pack or worn by anyone on the roster. */
 export function findItem(inventory: readonly Item[], roster: readonly Sentinel[], itemId: string): { item: Item } | null {

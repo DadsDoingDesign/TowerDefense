@@ -34,6 +34,7 @@ import { generateItem, ITEM_BASES, type HeroStyle } from '../data/items'
 import { lookOf } from '../data/gear'
 import { BASE_PATIENCE, BASE_THORNS, createHero, HERO_NAMES, nextName, styleStats } from '../data/sentinels'
 import { poolFor } from './skills'
+import { BASE_DEAL, type DealRules } from './hq'
 import type { CoreStats, Equipment, Item, ItemRarity, Sentinel } from '../types'
 
 /** Which kinds a hero is dealt (nouns from the pool). */
@@ -107,9 +108,9 @@ export function rollBase(rng: RNG, style: HeroStyle | null): { stats: CoreStats;
  * level-1 splash bolt is 16 damage at 0.8/s; flat weapon damage is the only
  * lever that lifts it — `engine/kit.ts` has the measurement).
  */
-export function pickRarity(kind: string, piece: keyof Equipment): ItemRarity {
+export function pickRarity(kind: string, piece: keyof Equipment, deal: Pick<DealRules, 'rareBody'> = BASE_DEAL): ItemRarity {
   if (piece === 'offHand') return 'rare'
-  if (piece === 'body') return 'common'
+  if (piece === 'body') return deal.rareBody ? 'rare' : 'common'
   return ITEM_BASES[kind]?.style === 'cast' ? 'epic' : 'common'
 }
 
@@ -139,16 +140,29 @@ export interface HeroChoice {
   plan: GearPlan
 }
 
+/** Heroes on a new militia's pick. The HQ's Opening deal can add a fourth (`hq.DEAL_STEPS`). */
 export const PICK_SIZE = 3
+/** The most heroes a pick ever deals. */
+export const MAX_PICK = 4
 
-function dealChoices(runSeed: number, skillPool: readonly string[], itemPool: readonly string[]): HeroChoice[] {
+/**
+ * The pick, dealt under the HQ's Opening deal (`hq.dealRules`). Level 0 is the
+ * base deal, draw for draw. A deal is a pure function of the seed and its
+ * level: a dressed deal spends the same off-hand and body coins (it always
+ * passes them, so its extra pieces move the heroes after it), a fourth hero
+ * is dealt after the first three, and the Level 2 skill is a second hashed
+ * generator that moves nothing else.
+ */
+function dealChoices(runSeed: number, skillPool: readonly string[], itemPool: readonly string[], deal: DealRules = BASE_DEAL): HeroChoice[] {
   const rng = new RNG(hashSeed(runSeed, 'heroes'))
   const used = new Set<string>()
   const names = new Set<string>()
   const skills = new Set<string>()
   const out: HeroChoice[] = []
-  for (let i = 0; i < PICK_SIZE; i++) {
-    const plan = rollGearPlan(rng, itemPool, { usedMains: used })
+  const size = Math.max(1, Math.min(MAX_PICK, Math.floor(deal.pick) || PICK_SIZE))
+  const chances = deal.dressed ? { offChance: 1, bodyChance: 1 } : {}
+  for (let i = 0; i < size; i++) {
+    const plan = rollGearPlan(rng, itemPool, { usedMains: used, ...chances })
     used.add(plan.main)
     const base = rollBase(rng, ITEM_BASES[plan.main].style ?? null)
     const freeNames = HERO_NAMES.filter((n) => !names.has(n))
@@ -159,8 +173,17 @@ function dealChoices(runSeed: number, skillPool: readonly string[], itemPool: re
     const from = fresh.length ? fresh : l1
     const k = from.length ? from[Math.floor(rng.next() * from.length)] : null
     if (k) skills.add(k.id)
-    const equipment = dressPlan(rng, plan, pickRarity, itemPool)
+    const equipment = dressPlan(rng, plan, (kind, piece) => pickRarity(kind, piece, deal), itemPool)
     out.push({ id: `pick-${i}`, name, ...base, equipment, skill: k?.id ?? null, plan })
+  }
+  // The Opening deal's Level 2 skill: one hero, chosen by a hash, swaps its
+  // Level 1 skill for a Level 2 one from the run's pool (none held by another
+  // hero of the pick). Off its own generator — the deal above is untouched.
+  if (deal.skill2 && out.length) {
+    const r2 = new RNG(hashSeed(runSeed, 'heroes', 'skill2'))
+    const who = Math.floor(r2.next() * out.length)
+    const l2 = poolFor(skillPool, 2).filter((x) => !out.some((c) => c.skill === x.id))
+    if (l2.length) out[who] = { ...out[who], skill: l2[Math.floor(r2.next() * l2.length)].id }
   }
   return out
 }
@@ -171,20 +194,27 @@ function dealChoices(runSeed: number, skillPool: readonly string[], itemPool: re
  * three. Preview items carry isolated ids: calling this on every render mints
  * nothing.
  */
-export function heroChoices(runSeed: number, skillPool: readonly string[], itemPool: readonly string[]): HeroChoice[] {
-  return withIsolatedIds(() => dealChoices(runSeed, skillPool, itemPool))
+export function heroChoices(runSeed: number, skillPool: readonly string[], itemPool: readonly string[], deal: DealRules = BASE_DEAL): HeroChoice[] {
+  return withIsolatedIds(() => dealChoices(runSeed, skillPool, itemPool, deal))
 }
 
 /**
  * The hero a choice becomes when it is chosen: the same name, stats, skill and
  * gear, re-dealt off the same hashed generator with real ids (so the items are
- * exactly the ones the card showed). `statBonus` is the Watchtower's.
+ * exactly the ones the card showed), under the same Opening deal.
  */
-export function chosenHero(runSeed: number, skillPool: readonly string[], itemPool: readonly string[], id: string, statBonus = 0): Sentinel | null {
+export function chosenHero(
+  runSeed: number,
+  skillPool: readonly string[],
+  itemPool: readonly string[],
+  id: string,
+  statBonus = 0,
+  deal: DealRules = BASE_DEAL,
+): Sentinel | null {
   const idx = Number(/^pick-(\d)$/.exec(id)?.[1] ?? NaN)
-  if (!Number.isInteger(idx) || idx < 0 || idx >= PICK_SIZE) return null
-  const c = dealChoices(runSeed, skillPool, itemPool)[idx]
-  return previewOf(c, statBonus, createHero)
+  if (!Number.isInteger(idx) || idx < 0 || idx >= MAX_PICK) return null
+  const c = dealChoices(runSeed, skillPool, itemPool, deal)[idx]
+  return c ? previewOf(c, statBonus, createHero) : null
 }
 
 /** A choice as a Sentinel. `make` is `createHero` for a real hero; the default mints nothing. */
@@ -229,8 +259,8 @@ export function rollRecruitBody(rng: RNG, itemPool: readonly string[], taken: It
  * scripts and the store tests that picked "the Fighter": it names the first
  * dealt hero drawn that way, else the first hero. The UI never sends one.
  */
-export function resolvePick(runSeed: number, skillPool: readonly string[], itemPool: readonly string[], idOrLook: string): string {
+export function resolvePick(runSeed: number, skillPool: readonly string[], itemPool: readonly string[], idOrLook: string, deal: DealRules = BASE_DEAL): string {
   if (/^pick-\d$/.test(idOrLook)) return idOrLook
-  const dealt = heroChoices(runSeed, skillPool, itemPool)
+  const dealt = heroChoices(runSeed, skillPool, itemPool, deal)
   return (dealt.find((c) => lookOf(previewOf(c)) === idOrLook) ?? dealt[0]).id
 }

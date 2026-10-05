@@ -5,14 +5,16 @@
  * settling it pays.
  *
  * Since the mercenary company a run is a contract, and its settle banks gold:
- * what is left of the purse comes home whatever happened, the cities' pay is
- * kept even after a fall, and unsold crates are lost.
+ * what is left of the purse comes home whatever happened (with a share of the
+ * road's gold, `hq.homeGold`), the cities' pay is kept even after a fall, and
+ * unsold crates are lost.
  */
 import type { RunChallenge } from '../../state/seeds'
 import type { RunFacts } from '../data/achievements'
 import type { Sentinel } from '../types'
 import type { HeroStyle } from '../data/items'
 import { contractBanked, type RunContract } from './contracts'
+import { homeGold, homeTotal } from './hq'
 import { actOf } from './threat'
 
 /**
@@ -85,14 +87,15 @@ export interface SettleFacts {
 export const runWasPlayed = (f: Pick<SettleFacts, 'depth' | 'kills'>): boolean => f.depth > 0 || f.kills > 0
 
 /**
- * What the bank gets back from a run: once the contract is signed, the
- * purse's rest and everything the cities paid. A run with no contract (saved
- * before contracts) is owed its old Marks as gold.
+ * What the bank gets back from a run: once the contract is signed, what is
+ * left of the purse in full, a share of the road's gold (`hq.homeGold` — the
+ * designer's road-gold tax), and everything the cities paid. A run with no
+ * contract (saved before contracts) is owed its old Marks as gold.
  */
 export function runDeposit(f: Pick<SettleFacts, 'gold' | 'contract' | 'legacyGold'>): number {
   if (!f.contract) return Math.max(0, Math.round(f.legacyGold ?? 0))
   if (!f.contract.signed) return 0
-  return Math.max(0, Math.round(f.gold)) + contractBanked(f.contract)
+  return homeTotal(homeGold({ purse: f.contract.purse, earned: f.contract.earned, gold: f.gold })) + contractBanked(f.contract)
 }
 
 /** The arguments `metaStore.settleContract` takes, as a settle builds them. */

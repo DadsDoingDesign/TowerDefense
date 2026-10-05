@@ -113,7 +113,7 @@ describe('what a first run shows, and when', () => {
 
   it('the menu opens up with the first finished run', () => {
     expect(metaIdeas({ runsCompleted: 0 })).toEqual([])
-    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'stake'])
+    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'stake', 'hq', 'crates'])
   })
 })
 
@@ -212,7 +212,7 @@ describe('persistence and validation', () => {
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(8)
+    expect(META_VERSION).toBe(9)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])

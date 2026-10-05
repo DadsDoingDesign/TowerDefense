@@ -42,7 +42,7 @@ import {
 import { rollMutationChoices } from '../src/game/data/mutations'
 import type { RewardCard } from '../src/game/data/rewards'
 import { relicTeamMods } from '../src/game/data/relics'
-import { afterFightRelics, cartularyRelic, diaryXp, handSize, hiresTrained, equipRules, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
+import { afterFightRelics, diaryXp, handSize, hiresTrained, equipRules, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
 import { fieldFor, pickBattleMap } from '../src/game/data/maps'
@@ -57,7 +57,9 @@ import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
-import { canTrain, forageAtCampfire, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
+import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
+import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, type DealRules, type HqOrders } from '../src/game/run/hq'
+import { stow } from '../src/game/run/inventory'
 import { useMetaStore } from '../src/state/metaStore'
 import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
@@ -79,7 +81,6 @@ import {
   RECRUIT_PRICE,
   runBattle,
   scaledRecruitLevel,
-  startingItems,
   PLAYER,
   type PlayerPolicy,
 } from './harness'
@@ -89,59 +90,94 @@ export const NODES = RUN_LAYERS - 1
 
 // ---------------------------------------------------------------- hub state
 /**
- * Everything the hub grants a run, read from the **real store** rather than
- * re-derived here: `bonuses()` for the ramp and `unlocked()` for the three
- * horizontal unlocks, exactly as `newRun` / `pickStartingHero` / `mapOptionsFor`
- * read them. A sweep that re-implements the hub cannot catch the hub drifting.
+ * Everything the HQ grants a run, read from the **real store** rather than
+ * re-derived here: `bonuses()` for the Opening deal, `runHq()` for the run's
+ * terms (pack slots, cleared boulders, focus) and `unlocked()` for the map and
+ * hire services, exactly as `beginCampaign` / `pickStartingHero` /
+ * `mapOptionsFor` read them. A sweep that re-implements the HQ cannot catch
+ * the HQ drifting.
  */
 export interface Loadout {
   label: string
   maxBaseHp: number
+  /** The purse the run sets out with. */
   startGold: number
-  statBonus: number
   extraSentinels: number
-  extraItems: number
+  /** HR's Opening deal. */
+  deal: DealRules
+  /** Pack slots (Operations). */
+  pack: number
+  /** Seeded boulders cleared from every field (Operations). */
+  rocks: number
+  /** Company focus (Operations): the company and its boost in points. */
+  focus: { company: CompanyId | null; boost: number } | null
   /**
    * Hub multiplier on the run's payout. Always 1 since the Chronicler line was
-   * removed (a currency rebate is correct on every horizon and changes no run);
-   * kept as a parameter so §13's ladder economy can be priced against a hub
-   * that ever sells one again, and so the fit fails loudly if it does.
+   * removed; kept as a parameter so a payout multiplier fails loudly if one is
+   * ever sold again.
    */
   markMult: number
   wideMap: boolean
   extraRecruit: boolean
   standingOrders: boolean
-  /** Field Kitchen (Phase 3b): campfires also offer a forage for gold. */
-  fieldKitchen: boolean
-  /** Relic Cartulary (Phase 3b): an act boss lays out one relic more. */
-  cartulary: boolean
 }
 
-/** Build a {@link Loadout} by asking the live meta store what these levels buy. */
-export function loadoutFor(label: string, upgrades: Record<string, number>): Loadout {
-  const prev = useMetaStore.getState().upgrades
-  useMetaStore.setState({ upgrades })
+/** An HQ state for a sweep: levels bought, the company in focus, and the orders paid. */
+export interface HqState {
+  upgrades: Record<string, number>
+  focus?: CompanyId | null
+  orders?: Partial<HqOrders>
+}
+
+/** Build a {@link Loadout} by asking the live meta store what this HQ state buys. */
+export function loadoutFor(label: string, hq: HqState | Record<string, number>): Loadout {
+  const st: HqState = 'upgrades' in hq && typeof hq.upgrades === 'object' ? (hq as HqState) : { upgrades: hq as Record<string, number> }
+  const prev = useMetaStore.getState()
+  const keep = { upgrades: prev.upgrades, focus: prev.focus, orders: prev.orders }
+  useMetaStore.setState({ upgrades: st.upgrades, focus: st.focus ?? null, orders: { ...NO_ORDERS, ...st.orders } })
   const s = useMetaStore.getState()
   const b = s.bonuses()
+  const hqRun = s.runHq()
   const out: Loadout = {
     label,
     maxBaseHp: b.maxBaseHp,
-    startGold: DEFAULT_PURSE + b.purseBonus,
-    statBonus: b.statBonus,
+    startGold: DEFAULT_PURSE,
     extraSentinels: b.extraSentinels,
-    extraItems: b.extraItems,
+    deal: b.deal,
+    pack: hqRun.pack,
+    rocks: hqRun.rocks,
+    focus: hqRun.focus ? { company: hqRun.focus, boost: hqRun.boost } : null,
     markMult: 1,
     wideMap: s.unlocked('cartographer'),
     extraRecruit: s.unlocked('freeCompanies'),
     standingOrders: s.unlocked('standingOrders'),
-    fieldKitchen: s.unlocked('fieldKitchen'),
-    cartulary: s.unlocked('cartulary'),
   }
-  useMetaStore.setState({ upgrades: prev })
+  useMetaStore.setState(keep)
   return out
 }
 
-export const ZERO_META: Loadout = loadoutFor('zero meta', {})
+/**
+ * The HQ states the sweeps measure (§12, `meta-sweep`, `tune`). The modelled
+ * player's choices are the sensible ones: each office alone at its top level,
+ * then everything — orders paid, and the focus on Ironvein (the shield and
+ * mail company: the pieces a first militia leans on).
+ */
+export const HQ_STATES: [string, HqState][] = [
+  ['zero HQ', { upgrades: {} }],
+  ['Opening deal 3 (dressed, Rare body, pick 1 of 4)', { upgrades: { deal: 3 } }],
+  ['Opening deal 5 (+ Level 2 skill, a second hero)', { upgrades: { deal: 5 } }],
+  ['Hiring Hall', { upgrades: { hiring: 1 } }],
+  ['Scouts 2', { upgrades: { scouting: 2 } }],
+  ['Pack slots 10', { upgrades: { pack: 4 } }],
+  ['Fewer boulders 3 + clear order', { upgrades: { rocks: 3 }, orders: { rocks: true } }],
+  ['Focus Ironvein +60%', { upgrades: { focus: 3 }, focus: 'metals', orders: { focus: true } }],
+  [
+    'everything the HQ sells',
+    { upgrades: { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }, focus: 'metals', orders: { rocks: true, focus: true } },
+  ],
+]
+
+export const ZERO_META: Loadout = loadoutFor('zero meta', { upgrades: {} })
 
 /** `run/map.mapOptionsFor`, read off a loadout instead of the live hub. */
 export const mapOptionsFor = (m: Loadout): MapOptions => ({
@@ -340,8 +376,10 @@ export interface RunOutcome {
     company: CompanyId
     crates: number
     purse: number
-    cities: { pay: number; cargo: number; gold: number }[]
+    cities: { pay: number; cargo: number; gold: number; earned: number }[]
     goldEnd: number
+    /** Gold the road paid into the purse by the end (the road-gold share is taken on it). */
+    earned: number
   }
   layers: number
   /** Which battlefield this run's seed dealt (WS8). */
@@ -377,10 +415,6 @@ export function buildChoicePoints(): { id: string; archetype: Archetype; options
 const rosterRefs = (roster: Sentinel[]): RosterRef[] => roster
 
 
-function applyStatBonus(s: Sentinel, n: number): Sentinel {
-  if (!n) return s
-  return { ...s, stats: { str: s.stats.str + n, dex: s.stats.dex + n, int: s.stats.int + n } }
-}
 
 /**
  * Walk one campaign run: deal the map the hub and the difficulty step produce,
@@ -394,8 +428,8 @@ function applyStatBonus(s: Sentinel, n: number): Sentinel {
  * that rotate `prefer` through the three looks still play every kind of
  * leader a third of the time, and §11's per-leader rows keep their meaning.
  */
-export function modelledPick(seed: number, skillPool: readonly string[], itemPool: readonly string[], prefer: Archetype): string {
-  return resolvePick(seed, skillPool, itemPool, prefer)
+export function modelledPick(seed: number, skillPool: readonly string[], itemPool: readonly string[], prefer: Archetype, deal: DealRules = BASE_DEAL): string {
+  return resolvePick(seed, skillPool, itemPool, prefer, deal)
 }
 
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
@@ -404,10 +438,10 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   const banner = k ? stakeRules(k.crates) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
   // A contract weights its company's pieces on its own road (`weightPool`), as the store does.
-  const pool = weightPool(o.skillPool ?? STARTER_SKILL_POOL, k?.company, skillCompany)
-  const items = weightPool(o.itemPool ?? BASIC_ITEM_KINDS, k?.company, kindCompany)
+  const pool = weightPool(o.skillPool ?? STARTER_SKILL_POOL, k?.company, skillCompany, meta.focus)
+  const items = weightPool(o.itemPool ?? BASIC_ITEM_KINDS, k?.company, kindCompany, meta.focus)
   const ground = k ? { ground: companyById(k.company).ground.rules } : {}
-  const cities: { pay: number; cargo: number; gold: number }[] = []
+  const cities: { pay: number; cargo: number; gold: number; earned: number }[] = []
   /** A body joining the company: a random hire from the run's kinds, named apart. */
   const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
 
@@ -441,11 +475,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   // The classless rework: the leader is one of the hero pick's three random
   // heroes (`modelledPick`), with exactly the gear and skill its card shows —
   // `chosenHero`, the store's own function.
-  const leader = chosenHero(seed, pool, items, modelledPick(seed, pool, items, archetype), meta.statBonus)!
+  const leader = chosenHero(seed, pool, items, modelledPick(seed, pool, items, archetype, meta.deal), 0, meta.deal)!
   const starterLook = lookOf(leader)
   let roster: Sentinel[] = [leader]
   for (let i = 0; i < meta.extraSentinels; i++) {
-    roster.push(applyStatBonus(firstSkill(recruitBody(rng, roster)), meta.statBonus))
+    roster.push(firstSkill(recruitBody(rng, roster)))
   }
   /**
    * What the company owns but is not wearing. The store has always had one
@@ -454,33 +488,30 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
    * A hire now dresses out of the pack with the store's own empty-slot rule.
    */
   let pack: Item[] = []
+  let gold = meta.startGold
   /** Relics taken this run (Phase 3b) — the store's `relics`. Declared here,
    *  before the kit is dressed, because the equip rule reads it (R3-2). */
   let relics: string[] = [...(o.startRelics ?? [])]
   /** The run's equip rules: whether the Twinblade Harness is held (the DEX check is per hero). */
   const rules = (): EquipRules => equipRules(relics)
+  /** Gold the road paid into the purse (`contract.earned`): the road-gold share is taken on it. */
+  let earned = 0
+  /**
+   * The new piece goes on, and what it unseats goes to the pack — a full pack
+   * (the HQ's pack slots) sells its cheapest pieces into the purse, as
+   * `inventory.stow` does in the store.
+   */
   const equipOn = (h: number, item: Item) => {
     const r = equipAndDisplace(roster[h], item, rules())
     roster[h] = r.hero
-    pack.push(...r.displaced)
-  }
-  // The Quartermaster's extra rolls go to whoever they improve (the leader
-  // already wears its card's gear).
-  const kit = startingItems(rng, meta.extraItems, rosterRefs(roster), items)
-  for (const item of kit) {
-    let best = -Infinity
-    let who = 0
-    for (let h = 0; h < roster.length; h++) {
-      const g = bestSlotGain(roster[h], item, rules())
-      if (g > best) { best = g; who = h }
-    }
-    if (best > 0) equipOn(who, item)
-    else pack.push(item)
+    const st = stow(pack, r.displaced, meta.pack)
+    pack = st.inventory
+    gold += st.gold
+    earned += st.gold
   }
 
   // A relic held from the first node has already landed its flat stats.
   for (const id of o.startRelics ?? []) roster = takeRelicOn(roster, id)
-  let gold = meta.startGold
   let baseHp = meta.maxBaseHp
   let threat = banner.startThreat
   let reached = 0
@@ -498,7 +529,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
     // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
     // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
-    const base = withRelicStats(applyStatBonus(firstSkill(recruitBody(rng, roster)), meta.statBonus), relics)
+    const base = withRelicStats(firstSkill(recruitBody(rng, roster)), relics)
     const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack, rules())
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
@@ -568,6 +599,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         roster = eff.roster ?? roster
         baseHp = Math.max(1, baseHp + (eff.baseHpDelta ?? 0))
         gold = Math.max(0, gold + (eff.goldDelta ?? 0))
+        earned += Math.max(0, eff.goldDelta ?? 0)
       }
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
       roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))
@@ -585,11 +617,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         if (!canTrain(roster[h])) continue
         if (who < 0 || heroDps(roster[h]) > heroDps(roster[who])) who = h
       }
-      // With the Field Kitchen a healthy company forages only when training
-      // would do nothing: measured, a level beats 40 gold at every point of the
-      // run for this model, so a forage-when-broke rule read −1pt on §12.
       if (hurt) baseHp = restAtCampfire(baseHp, meta.maxBaseHp)
-      else if (meta.fieldKitchen && who < 0) gold = forageAtCampfire(gold)
       else if (who < 0) baseHp = restAtCampfire(baseHp, meta.maxBaseHp)
       else roster[who] = evolve(trainAtCampfire(roster[who]))
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
@@ -615,7 +643,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const rule = nodeTerrainRule(node, seed, ground)
     // Q1: and its danger ground + seeded obstacles, from the same node hash.
     const hazard = nodeHazardSeed(node, seed, ground)
-    const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard) ?? field) : field
+    const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard, meta.rocks) ?? field) : field
     const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
@@ -651,13 +679,16 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const city = cityOfLayer(node.layer)
     if (k && city != null && (node.type === 'miniboss' || node.type === 'boss')) {
       const cargo = cargoPct(baseHp, meta.maxBaseHp)
-      cities.push({ pay: cityPay({ company: k.company, crates: k.crates, market: 1 }, city, cargo).total, cargo, gold: gold + m.goldEarned + clearBonusGold(node) })
+      const fight = m.goldEarned + clearBonusGold(node)
+      cities.push({ pay: cityPay({ company: k.company, crates: k.crates, market: 1 }, city, cargo).total, cargo, gold: gold + fight, earned: earned + fight })
     }
     if (final) { won = true; break }
 
+    const before = gold
     gold += m.goldEarned + clearBonusGold(node)
     // Field Surgeon's Kit and the Tithe Box (`finishBattle` applies the same rule).
     ;({ baseHp, gold } = afterFightRelics(relics, { baseHp, maxBaseHp: meta.maxBaseHp, gold }))
+    earned += gold - before
     // Levels are a resource (Phase 3b): the store re-prices a wave's raw XP
     // with `levelXpAwards`, and so does this.
     const awards = levelXpAwards(
@@ -681,11 +712,6 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       pity,
       kinds: items,
     })
-    // The Relic Cartulary's extra card, off its own stream exactly as the store deals it.
-    if (handKind === 'boss' && meta.cartulary) {
-      const extra = cartularyRelic(new RNG(hashSeed(seed, 'cartulary', node.layer)), { luck: nodeClearLuck(node), held: relics, hand: cards })
-      if (extra) cards.push(extra)
-    }
     let bestItem: { item: Item; gain: number; hero: number; frac: number } | null = null
     for (const c of cards) {
       if (c.kind !== 'item' || !c.item) continue
@@ -764,7 +790,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     roster: roster.length,
     bossThreat,
     marks: marksFor(clearedCount, won, banner, meta.markMult),
-    contract: k ? { company: k.company, crates: k.crates, purse: meta.startGold, cities, goldEnd: gold } : null,
+    contract: k ? { company: k.company, crates: k.crates, purse: meta.startGold, cities, goldEnd: gold, earned } : null,
     layers: map.layers,
     fieldId: field.id,
     starter: starterLook,
@@ -795,8 +821,8 @@ export const CASH_OUT_HALF: CashOutPolicy = { id: 'cash-half', label: 'cash out 
 
 /**
  * What a contract run did to the bank, net: everything banked (the cities'
- * pay, a cash-out sale, the purse's rest) less the stake and the purse it set
- * out with. Under `policy` the run stops at the first city it cashes out at —
+ * pay, a cash-out sale, the purse's rest and the road-gold share,
+ * `hq.homeGold`) less the stake and the purse it set out with. Under `policy` the run stops at the first city it cashes out at —
  * priced from the same simulated road, so press-on and cash-out lines are
  * paired by construction.
  */
@@ -805,6 +831,8 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
   if (!c) return { net: 0, pay: 0, delivered: out.won, cashedOut: false }
   const stake = c.crates * CRATE_PRICE
   const outlay = stake + c.purse
+  // What the purse brings home: its rest in full, a share of the road's gold.
+  const home = (gold: number, earned: number) => homeTotal(homeGold({ purse: c.purse, earned, gold }))
   let paid = 0
   for (let i = 0; i < c.cities.length; i++) {
     const city = c.cities[i]
@@ -812,10 +840,10 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
     const last = i === CITY_COUNT - 1
     if (!last && city.cargo < policy.below) {
       const sale = cashOutValue({ company: c.company, crates: c.crates, market: 1 }, i + 1, city.cargo)
-      return { net: paid + sale + city.gold - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
+      return { net: paid + sale + home(city.gold, city.earned) - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
     }
   }
-  return { net: paid + c.goldEnd - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
+  return { net: paid + home(c.goldEnd, c.earned) - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
 }
 
 // ---------------------------------------------------------------- §6's model

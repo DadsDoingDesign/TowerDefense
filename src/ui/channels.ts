@@ -1,4 +1,5 @@
 import { DUAL_WIELD_DEX, gripOf, ITEM_NOUN_RE, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
+import { ROAD_SHARE } from '../game/run/hq'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
@@ -279,27 +280,6 @@ export const NODE_ICON: Record<string, IconKey> = {
   campfire: 'auraHeal',
   miniboss: 'boss',
   boss: 'crown',
-}
-
-/**
- * One mark per Watchtower perk (Wave 1) — all nine used to share `boon`, so the
- * list was nine identical green pluses. Where a perk IS an existing concept the
- * concept's own mark is reused (the Gate, the loot chest, the recruit); the rest
- * got cells of their own.
- */
-export const PERK_ICON: Record<string, IconKey> = {
-  base: 'base',
-  gold: 'coffer',
-  stats: 'seasoned',
-  roster: 'company',
-  loot: 'loot',
-  cartographer: 'map',
-  freeCompanies: 'recruit',
-  standingOrders: 'orders',
-  // Phase 3b horizontal unlocks: the campfire's heal mark, the relic's own.
-  fieldKitchen: 'auraHeal',
-  cartulary: 'relic',
-  sacrifice: 'vow',
 }
 
 /**
@@ -703,7 +683,11 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     term: 'Cargo',
     line: 'What your wagons carry, at the end of the road. Each raider that reaches them steals some. Every city pays for the share that arrives; at 0% the contract is lost.',
   },
-  gold: { term: 'Gold', line: 'The only currency. Fights pay it on the road, and cities pay it into your bank. Spend it at a Merchant.' },
+  gold: {
+    term: 'Gold',
+    line: 'The only currency. Fights pay it on the road, and cities pay it into your bank. Spend it at a Merchant.',
+    also: [{ term: 'Road gold', line: `Gold the road pays into your purse. When the run ends, ${Math.round(ROAD_SHARE * 100)}% of what is left of it comes home.` }],
+  },
   contract: {
     term: 'Contract',
     line: 'A trade company hires your militia to guard its road for one run. The road has three cities, one at the end of each act.',
@@ -738,8 +722,15 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     term: 'Map challenge',
     line: 'A field changed for one fight. Each road has its own ground: wildfire, flooded canals, quarry boulders or cursed ground.',
   },
-  bank: { term: 'Bank', line: 'Your gold at home. Stakes and purses come out of it; city pay and what is left of a purse go back in.' },
-  purse: { term: 'Purse', line: 'Gold you take on the road. Merchants and repairs spend only the purse and what the run earns; the rest comes home.' },
+  bank: {
+    term: 'Bank',
+    line: `Your gold at home. Stakes and purses come out of it; city pay, what is left of your purse and ${Math.round(ROAD_SHARE * 100)}% of the road gold go back in.`,
+    also: [{ term: 'Interest', line: 'Gold left in the bank earns a little each time you finish a contract. Never on a lost one.' }],
+  },
+  purse: {
+    term: 'Purse',
+    line: 'Gold you take on the road. Spending comes out of it first. What is left of it comes home in full.',
+  },
   standing: {
     term: 'Standing',
     line: 'How well a company knows your militia. Its contracts raise it. Each level unlocks a skill, and lets you carry one more crate.',
@@ -747,5 +738,17 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   stake: {
     term: 'Stake',
     line: 'Crates of cargo you buy for a contract. More crates: tougher raiders, a bigger bonus, more item chances, and a skill at every milestone crate.',
+  },
+  hq: {
+    term: 'Headquarters',
+    line: 'Your militia’s three offices. HR deals better first heroes; Finance pays interest on your bank; Operations buys pack slots, clears boulders and sets a company focus.',
+    also: [
+      { term: 'Company focus', line: 'One company at a time: its skills and items fill more of what you are dealt, on every road.' },
+      { term: 'Order', line: 'An HQ purchase for your next contract only.' },
+    ],
+  },
+  crates: {
+    term: 'Sealed crate',
+    line: 'Gold for one random item kind, yours for good. One you already own comes as a bonus item in your next contract.',
   },
 }

@@ -49,20 +49,23 @@ export const relicUnlocked = featUnlocked
 
 /**
  * SK1: the skill pool a run beginning now deals from — the player's unlocked
- * cards, weighted to the route's company (`contracts.weightPool`). Read ONCE,
+ * cards, weighted to the route's company and the HQ's focus (`contracts.weightPool`). Read ONCE,
  * when the run begins, and kept on the run (`skillPool`): a card unlocked at
  * the end of a run never changes the run it was earned in.
  */
-export const startingSkillPool = (company: CompanyId | null): string[] =>
-  weightPool(skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)), company, skillCompany)
+export const startingSkillPool = (company: CompanyId | null, focus?: RunFocus): string[] =>
+  weightPool(skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)), company, skillCompany, focus)
 
 /**
  * The classless rework: the item KINDS a run beginning now deals from — the
  * basic five plus the player's unlocked kinds, weighted to the route's
  * company. Read once, kept on the run (`itemPool`), like the skill pool.
  */
-export const startingItemPool = (company: CompanyId | null): string[] =>
-  weightPool(itemPoolFor(useMetaStore.getState().items ?? []), company, kindCompany)
+export const startingItemPool = (company: CompanyId | null, focus?: RunFocus): string[] =>
+  weightPool(itemPoolFor(useMetaStore.getState().items ?? []), company, kindCompany, focus)
+
+/** The HQ's company focus as a run carries it (`RunHq.focus` / `boost`). */
+export type RunFocus = { company: CompanyId | null; boost: number } | null
 
 /**
  * SK1: who deals a hire its first skill — the live run's seed and pool, set
@@ -75,7 +78,8 @@ export const dealSkill = (heroId: string): string | null => recruitSkill(skillRu
 
 /** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies), and its first skill. */
 export const recruitHub = (relics: readonly string[] = []) => ({
-  statBonus: runBonuses().statBonus,
+  // Nothing the HQ sells raises a hire's stats (Seasoned Recruits retired).
+  statBonus: 0,
   // Free Companies, or the Mercenary Charter relic (Phase 3b).
   trained: hiresTrained(runUnlocked('freeCompanies'), relics),
   skillFor: dealSkill,

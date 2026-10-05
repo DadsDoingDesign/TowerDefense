@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { homeGold, homeTotal } from '../src/game/run/hq'
 import { useGameStore } from '../src/state/gameStore'
 import { NEW_BANK, useMetaStore } from '../src/state/metaStore'
 import { cashOutValue, cityPay, CRATE_PRICE } from '../src/game/run/contracts'
@@ -100,7 +101,11 @@ describe('a contract, in the store', () => {
     g().cashOut()
     expect(g().runPhase).toBe('cashedOut')
     expect(g().contract!.status).toBe('cashedOut')
-    expect(useMetaStore.getState().bank - before).toBeGreaterThanOrEqual(c.paid[0] + sale + gold)
+    // The purse comes home with a share of the road's gold (`hq.homeGold`);
+    // interest and any feat's gold land on top.
+    const home = homeTotal(homeGold({ purse: c.purse, earned: c.earned, gold }))
+    expect(home).toBeLessThan(gold)
+    expect(useMetaStore.getState().bank - before).toBeGreaterThanOrEqual(c.paid[0] + sale + home)
     expect(useMetaStore.getState().stats.runsCompleted).toBe(runsBefore + 1)
     // Settled once: leaving does not pay it again.
     const after = useMetaStore.getState().bank

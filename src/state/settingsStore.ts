@@ -90,6 +90,10 @@ export const TEACH_IDS = [
   'stakes',
   'purse',
   'cashOut',
+  // The HQ (build step 3): one tip for the headquarters, one for the sealed
+  // crates — each said once, the first time the page opens.
+  'hq',
+  'crates',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>
