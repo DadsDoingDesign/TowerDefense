@@ -5,15 +5,16 @@
  * argument, so the store and the balance harness price a hire identically.
  */
 import type { RNG } from '../core/rng'
-import { autoEquipEmpty, recruitKit, wearKit } from '../engine/kit'
+import { autoEquipEmpty } from '../engine/kit'
 import { applyXp, xpToReach } from '../engine/leveling'
 import { withFirstSkill } from './skills'
-import { createSentinel, startingRoster } from '../data/sentinels'
-import type { Archetype, Item, Sentinel } from '../types'
+import { rollRecruitBody } from './heroes'
+import { ALL_ITEM_KINDS } from '../data/itemKinds'
+import type { Item, Sentinel } from '../types'
 import { equipRules, withRelicStats } from './relics'
 
-/** Every archetype, in the order every recruit slate is dealt. */
-export const RECRUIT_ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
+/** Candidates on a recruit node, an Endless room or the Crossroads. */
+export const SLATE_SIZE = 3
 
 /** The hub bonuses a starting company reads (a subset of `metaStore.MetaBonuses`). */
 export interface CompanyBonuses {
@@ -32,7 +33,9 @@ export interface RecruitHub {
    * over the run's seed and skill pool. A hash of the hire's id, never a draw
    * on the loot stream, so dealing it moves no other roll. Absent: no skill.
    */
-  skillFor?: (heroId: string, archetype: Archetype) => string | null
+  skillFor?: (heroId: string) => string | null
+  /** The run's unlocked item kinds — what a hire can be rolled carrying. Absent: every kind. */
+  itemPool?: readonly string[]
 }
 
 export function applyStatBonus(s: Sentinel, n: number): Sentinel {
@@ -41,12 +44,13 @@ export function applyStatBonus(s: Sentinel, n: number): Sentinel {
 }
 
 /**
- * A body joining the company, carrying what `RECRUIT_KIT` hands it (a common
- * weapon of its own damage type). Every Sentinel who joins after the leader —
- * hub extras, hires, candidates — comes through here.
+ * A body joining the company: a random hero from the run's unlocked kinds
+ * (`heroes.rollRecruitBody` — a common weapon, maybe a common off-hand piece),
+ * named off the shared pool clear of `taken`. Every Sentinel who joins after
+ * the leader — hub extras, hires, candidates — comes through here.
  */
-export function armedSentinel(rng: RNG, archetype: Archetype): Sentinel {
-  return wearKit(createSentinel(archetype), recruitKit(rng, archetype))
+export function armedSentinel(rng: RNG, itemPool: readonly string[] = ALL_ITEM_KINDS, taken: Iterable<string> = []): Sentinel {
+  return rollRecruitBody(rng, itemPool, taken)
 }
 
 /**
@@ -79,20 +83,22 @@ export function recruitTargetLevel(roster: readonly Pick<Sentinel, 'level'>[], t
  * and the endless fallback hire), so applying the hub's stat bonus here covers
  * all five sites at once and cannot be forgotten by the next one that is added.
  */
-export function scaledRecruit(rng: RNG, archetype: Archetype, roster: readonly Sentinel[], hub: RecruitHub): Sentinel {
+export function scaledRecruit(rng: RNG, roster: readonly Sentinel[], hub: RecruitHub, taken: Iterable<string> = roster.map((h) => h.name)): Sentinel {
   // Armed, not dressed: the rest of their kit comes out of the pack when they
   // join (`withRecruits`). A hire used to arrive with nothing at all while the
   // balance harness priced every hire as carrying a full opening kit.
-  const armed = applyStatBonus(armedSentinel(rng, archetype), hub.statBonus)
-  const base = withFirstSkill(armed, hub.skillFor?.(armed.id, archetype) ?? null)
+  const armed = applyStatBonus(armedSentinel(rng, hub.itemPool, taken), hub.statBonus)
+  const base = withFirstSkill(armed, hub.skillFor?.(armed.id) ?? null)
   if (!roster.length) return base
   const target = recruitTargetLevel(roster, hub.trained)
   return target <= 1 ? base : applyXp(base, xpToReach(target))
 }
 
-/** One scaled candidate per archetype — the recruit node / room / crossroads slate. */
+/** Three random candidates — the recruit node / room / crossroads slate. Named apart from each other and the roster. */
 export function recruitSlate(rng: RNG, roster: readonly Sentinel[], hub: RecruitHub): Sentinel[] {
-  return RECRUIT_ARCHETYPES.map((a) => scaledRecruit(rng, a, roster, hub))
+  const out: Sentinel[] = []
+  for (let i = 0; i < SLATE_SIZE; i++) out.push(scaledRecruit(rng, roster, hub, [...roster, ...out].map((h) => h.name)))
+  return out
 }
 
 /**
@@ -133,21 +139,24 @@ export function receiveItems(
 }
 
 /** Deals a body its first skill (SK1) — `RecruitHub.skillFor`'s shape. */
-export type SkillDealer = (heroId: string, archetype: Archetype) => string | null
+export type SkillDealer = (heroId: string) => string | null
 
-/** The hub's extra Sentinels, armed, cycling fighter → rogue → mystic, each with its first skill. */
-export function hubExtras(rng: RNG, n: number, skillFor?: SkillDealer): Sentinel[] {
+/** The hub's extra Sentinels: random hires from the run's kinds, each with its first skill. */
+export function hubExtras(rng: RNG, n: number, skillFor?: SkillDealer, itemPool: readonly string[] = ALL_ITEM_KINDS, taken: string[] = []): Sentinel[] {
   const extra: Sentinel[] = []
   for (let i = 0; i < n; i++) {
-    const s = armedSentinel(rng, RECRUIT_ARCHETYPES[i % 3])
-    extra.push(withFirstSkill(s, skillFor?.(s.id, s.archetype) ?? null))
+    const s = armedSentinel(rng, itemPool, [...taken, ...extra.map((h) => h.name)])
+    extra.push(withFirstSkill(s, skillFor?.(s.id) ?? null))
   }
   return extra
 }
 
-/** Endless starting roster including any meta bonuses (extra Sentinels + flat stats), each with its first skill. */
-export function buildStartingRoster(rng: RNG, bonuses: CompanyBonuses, skillFor?: SkillDealer): Sentinel[] {
-  const extra = hubExtras(rng, bonuses.extraSentinels, skillFor)
-  const core = startingRoster().map((s) => withFirstSkill(s, skillFor?.(s.id, s.archetype) ?? null))
-  return [...core, ...extra].map((s) => applyStatBonus(s, bonuses.statBonus))
+/**
+ * Endless's starting company: three random heroes plus any extra the hub
+ * grants, each a hire off the loot stream with its first skill, then the
+ * hub's flat stats.
+ */
+export function buildStartingRoster(rng: RNG, bonuses: CompanyBonuses, skillFor?: SkillDealer, itemPool: readonly string[] = ALL_ITEM_KINDS): Sentinel[] {
+  const company = hubExtras(rng, SLATE_SIZE + bonuses.extraSentinels, skillFor, itemPool)
+  return company.map((s) => applyStatBonus(s, bonuses.statBonus))
 }

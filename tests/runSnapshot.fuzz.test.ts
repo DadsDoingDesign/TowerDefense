@@ -28,7 +28,7 @@ const mem = vi.hoisted(() => {
 import { RNG, idCounterState, nextId } from '../src/game/core/rng'
 import { generateItem } from '../src/game/data/items'
 import { allMutations } from '../src/game/data/mutations'
-import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
+import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import { computeCombat, teamKeepsakeMods } from '../src/game/engine/combat'
 import type { EffectMods, Item, Sentinel } from '../src/game/types'
 import { peekSavedRun, useGameStore } from '../src/state/gameStore'
@@ -49,7 +49,8 @@ import {
   type RunSnapshot,
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
-import { skillById, skillFits, STARTER_SKILLS } from '../src/game/data/skills'
+import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
 import { MAX_DIFFICULTY } from '../src/game/run/watch'
 import { offHandAllowed } from '../src/game/run/inventory'
@@ -106,7 +107,7 @@ function buildBase(): Record<string, unknown> {
   // on a Mystic nowhere near the Twinblade Harness's DEX — so every load of the
   // base exercises the move to the pack, and every mutation lands on it too.
   const extra: Sentinel = {
-    ...createSentinel('mystic'),
+    ...classicHero('mystic'),
     equipment: { mainHand: null, offHand: { ...epic('oneHand'), name: 'Heavy Sword' }, body: null },
   }
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
@@ -123,9 +124,9 @@ function buildBase(): Record<string, unknown> {
     // Phase 3b: relics held (a stat one, a rule one, a team capability) and the feats ledger.
     // …and the Twinblade Harness under its pre-round-3 id, `ambidextrous`.
     relics: ['ledger', 'charter', 'warding_stone', 'ambidextrous'],
-    feats: { starter: 'fighter', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
-    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: createSentinel('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
-    crossroads: { recruits: [createSentinel('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
+    feats: { starter: 'swing', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
+    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: classicHero('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
+    crossroads: { recruits: [classicHero('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
   })
   const snap = captureRun(useGameStore.getState(), {
     rngLoot: 7,
@@ -192,7 +193,7 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
     ...(snap.merchant?.items.map((e) => e.item) ?? []),
     ...(snap.reward?.flatMap((c) => (c.item ? [c.item] : [])) ?? []),
   ]
-  const probe = createSentinel('fighter')
+  const probe = classicHero('fighter')
   for (const it of items) {
     const slot = it.slot === 'body' ? 'body' : it.slot === 'offHand' ? 'offHand' : 'mainHand'
     assertFiniteCombat({ ...probe, equipment: { ...probe.equipment, [slot]: it } }, team, `${where} item ${it.id}`)
@@ -222,17 +223,22 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
+  // v14: the item pool is known kinds, each once, always holding the basic five.
+  if (!snap.itemPool.every(isItemKind) || new Set(snap.itemPool).size !== snap.itemPool.length) throw new Error(`${where}: bad item pool`)
+  if (!BASIC_ITEM_KINDS.every((k) => snap.itemPool.includes(k))) throw new Error(`${where}: item pool lost a basic kind`)
   if (!Number.isInteger(snap.runDifficulty) || snap.runDifficulty < 0 || snap.runDifficulty > MAX_DIFFICULTY) throw new Error(`${where}: difficulty ${snap.runDifficulty}`)
   for (const s of heroes) {
     const ks = s.skills ?? []
     if (ks.length > MAX_SKILLS || new Set(ks).size !== ks.length) throw new Error(`${where}: ${s.id} skills ${ks}`)
     for (const id of ks) {
       const k = skillById(id)
-      if (!k || !skillFits(k, s.archetype)) throw new Error(`${where}: ${s.id} holds ${id}`)
+      if (!k) throw new Error(`${where}: ${s.id} holds ${id}`)
     }
     const picks = s.skillPicks ?? 0
     if (!Number.isInteger(picks) || picks < 0 || picks > 3) throw new Error(`${where}: ${s.id} skillPicks ${picks}`)
-    if (s.branchPath.length !== 1 || s.branchPath[0] !== s.archetype) throw new Error(`${where}: ${s.id} path ${s.branchPath}`)
+    // v14: no class left on a hero, and its profile builds from its gear.
+    for (const k of ['archetype', 'branchPath', 'color', 'accent']) if (k in s) throw new Error(`${where}: ${s.id} kept ${k}`)
+    if (!Number.isFinite(computeCombat(s).dps)) throw new Error(`${where}: ${s.id} dps`)
     skillOffer(s, snap.skillPool, snap.runSeed)
   }
   // v7: the merchant's Gate repair and reroll count both reach arithmetic.
@@ -422,7 +428,7 @@ describe('run snapshot fuzz', () => {
     const raw = structuredClone(base) as Record<string, unknown>
     raw.runSeed = 424242
     raw.idCounter = 1_000_000
-    raw.nameCounters = { fighter: 500, rogue: 500, mystic: 500 }
+    raw.nameCounters = { heroes: 500 }
     mem.set(RUN_SNAPSHOT_KEY, JSON.stringify(raw))
     const idBefore = idCounterState()
     const namesBefore = nameCounterState()
@@ -432,7 +438,7 @@ describe('run snapshot fuzz', () => {
     expect(nameCounterState()).toEqual(namesBefore)
     useGameStore.getState().resumeRun(snap!)
     expect(idCounterState()).toBeGreaterThanOrEqual(1_000_000)
-    expect(nameCounterState().fighter).toBeGreaterThanOrEqual(500)
+    expect(nameCounterState().heroes).toBeGreaterThanOrEqual(500)
     expect(nextId()).not.toBe('e0')
   })
 })
@@ -464,6 +470,79 @@ describe('v6 → v7: the skill tree became spec perks', () => {
   })
 })
 
+describe('v13 → v14: heroes lose their class (the classless rework)', () => {
+  /** A v13 hero: a class, a tree path and two hues, as that build saved it. */
+  const legacy = (h: Sentinel, archetype: string, equipment = h.equipment) => ({
+    ...h,
+    archetype,
+    branchPath: [archetype],
+    color: '#d9743f',
+    accent: '#f0a868',
+    equipment,
+  })
+
+  it('drops the class, keeps gear and skills, and hands an old Fighter with a free off hand a plain Shield', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; recruitOptions: Sentinel[] }
+    raw.v = 13
+    delete raw.itemPool
+    const h = raw.roster[0]
+    const sword = { id: 'sw1', name: 'Keen Sword', slot: 'oneHand' as const, rarity: 'rare' as const, base: { physDamage: 9 }, enchantments: [] }
+    raw.roster = [
+      legacy(h, 'fighter', { mainHand: sword, offHand: null, body: null }) as unknown as Sentinel,
+    ]
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    const f = snap!.roster[0]
+    expect(f.equipment.mainHand?.id).toBe('sw1')
+    expect(f.equipment.offHand?.name).toBe('Shield')
+    // The shield holds 2 (a held hold skill adds on top).
+    expect(computeCombat({ ...f, skills: [] }).mods.block?.count).toBe(2)
+    expect(f.skills).toEqual(h.skills)
+    for (const k of ['archetype', 'branchPath', 'color', 'accent']) expect(k in f).toBe(false)
+    // A run saved before item unlocks keeps dealing every kind.
+    expect(snap!.itemPool).toEqual([...ALL_ITEM_KINDS])
+    assertPlayable(snap!, 'v13')
+  })
+
+  it('a Fighter whose off hand was full keeps it and loses the hold; a two-hander gets no shield', () => {
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[] }
+    raw.v = 13
+    const h = raw.roster[0]
+    const tome = { id: 'tm', name: 'Tome', slot: 'offHand' as const, rarity: 'common' as const, base: {}, enchantments: [] }
+    const great = { id: 'gs', name: 'Greatsword', slot: 'twoHand' as const, rarity: 'common' as const, base: { physDamage: 10 }, enchantments: [] }
+    raw.roster = [
+      legacy(h, 'fighter', { mainHand: null, offHand: tome, body: null }) as unknown as Sentinel,
+      legacy({ ...h, id: 'h2' }, 'fighter', { mainHand: great, offHand: null, body: null }) as unknown as Sentinel,
+      legacy({ ...h, id: 'h3' }, 'rogue', { mainHand: null, offHand: null, body: null }) as unknown as Sentinel,
+    ]
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(snap.roster[0].equipment.offHand?.id).toBe('tm')
+    expect(computeCombat({ ...snap.roster[0], skills: [] }).mods.block).toBeUndefined()
+    expect(snap.roster[1].equipment.offHand).toBeNull()
+    // Only Fighters held: an old Rogue is not handed a shield.
+    expect(snap.roster[2].equipment.offHand).toBeNull()
+    assertPlayable(snap, 'v13 full hands')
+  })
+
+  it('reads a v13 feats ledger’s class as the style it fought with, and sums the old name counters', () => {
+    const raw = buildBase() as Record<string, unknown>
+    raw.v = 13
+    raw.feats = { starter: 'mystic', startSize: 1, maxFielded: 1, actBosses: 0, flawlessBosses: 0, goldPeak: 0 }
+    raw.nameCounters = { fighter: 3, rogue: 2, mystic: 4 }
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(snap.feats.starter).toBe('cast')
+    expect(snap.nameCounters).toEqual({ heroes: 9 })
+  })
+
+  it('validates the item pool: unknown kinds dropped, basics always kept, a Daily on its fixed pool', () => {
+    const raw = buildBase() as Record<string, unknown>
+    raw.itemPool = ['Axe', 'Axe', 'NotAKind', 7]
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))!
+    expect(snap.itemPool).toEqual(expect.arrayContaining([...BASIC_ITEM_KINDS, 'Axe']))
+    expect(snap.itemPool).toHaveLength(BASIC_ITEM_KINDS.length + 1)
+  })
+})
+
 describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
   it('maps a grown hero onto skills, keeps the Vow as the difficulty, and drops the evolution queue', () => {
     const raw = buildBase() as Record<string, unknown> & { roster: (Sentinel & { perks?: string[] })[] }
@@ -472,7 +551,8 @@ describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
     delete hero.skills
     delete hero.skillPicks
     hero.level = 16
-    hero.branchPath = ['fighter', 'guard']
+    ;(hero as Sentinel & { branchPath?: string[]; archetype?: string }).branchPath = ['fighter', 'guard']
+    ;(hero as Sentinel & { archetype?: string }).archetype = 'fighter'
     hero.perks = ['f5_second_wind']
     raw.runBanner = 2
     delete raw.runDifficulty
@@ -484,7 +564,7 @@ describe('v12 → v13: perks and evolutions became skills (SK1)', () => {
     const h = snap!.roster[0]
     expect(h.skills).toEqual(['hold_fast', 'anchor'])
     expect(h.skillPicks).toBe(2)
-    expect(h.branchPath).toEqual(['fighter'])
+    expect((h as { branchPath?: unknown }).branchPath).toBeUndefined()
     expect(h.stats.str).toBe(strBefore)
     expect((h as { perks?: unknown }).perks).toBeUndefined()
     expect(snap!.runDifficulty).toBe(2)

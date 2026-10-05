@@ -45,7 +45,7 @@ const TIER0: TreeNode[] = [
     parent: null,
     archetype: 'fighter',
     blurb: 'Frontline bruiser who holds the line.',
-    ability: 'Blocks up to 2 enemies at close range.',
+    ability: 'Heavy blows up close.',
     base: {
       damage: 26,
       range: 96,
@@ -59,7 +59,8 @@ const TIER0: TreeNode[] = [
     baseStats: { str: 12, dex: 6, int: 3 },
     baseThorns: 8,
     basePatience: 5,
-    mods: { block: { count: 2, radius: 72 } },
+    // No `block` here any more: a hero holds enemies because a SHIELD is in
+    // its off hand (`items.shieldHold`), not because of a class.
     ...HUES.fighter,
   },
   {
@@ -343,6 +344,20 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
     out.killRush = bestOf(out.killRush, m.killRush)
     out.openingRush = bestOf(out.openingRush, m.openingRush)
     if (m.leakWard) out.leakWard = (out.leakWard ?? 0) + m.leakWard
+    // The classless rework's self-contained effects: counts and fractions add,
+    // a radius and a burn keep the best, a mend keeps the shortest cadence.
+    if (m.holdAdd) out.holdAdd = (out.holdAdd ?? 0) + m.holdAdd
+    if (m.holdRadius) out.holdRadius = Math.max(out.holdRadius ?? 0, m.holdRadius)
+    if (m.goldPerKill) out.goldPerKill = (out.goldPerKill ?? 0) + m.goldPerKill
+    if (m.vsHeld) out.vsHeld = (out.vsHeld ?? 0) + m.vsHeld
+    if (m.vsSlowed) out.vsSlowed = (out.vsSlowed ?? 0) + m.vsSlowed
+    if (m.rushPerHeld) out.rushPerHeld = (out.rushPerHeld ?? 0) + m.rushPerHeld
+    out.thornsBurn = bestOf(out.thornsBurn, m.thornsBurn)
+    if (m.killMend) {
+      out.killMend = out.killMend
+        ? { every: Math.min(out.killMend.every, m.killMend.every), hp: Math.max(out.killMend.hp, m.killMend.hp) }
+        : m.killMend
+    }
   }
   return out
 }

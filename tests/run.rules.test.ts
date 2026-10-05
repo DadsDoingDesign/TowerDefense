@@ -3,7 +3,7 @@ import { idCounterState, restoreIdCounter, streamRng } from '../src/game/core/rn
 import { newRarityPity, generateItem } from '../src/game/data/items'
 import type { MapNode } from '../src/game/data/runmap'
 import type { RewardCard } from '../src/game/data/rewards'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { xpToReach } from '../src/game/engine/leveling'
 import { endlessRoundSpoils } from '../src/game/run/battle'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
@@ -41,7 +41,7 @@ import { recruitSkill } from '../src/game/run/skills'
 import { STARTER_SKILLS } from '../src/game/data/skills'
 import { computeCombat } from '../src/game/engine/combat'
 import { STANDARD_RUN } from '../src/state/daily'
-import type { Archetype, Sentinel } from '../src/game/types'
+import type { Sentinel } from '../src/game/types'
 
 const node = (type: MapNode['type'], layer = 3): MapNode => ({ id: `n-${type}-${layer}`, type, layer, row: 0 }) as MapNode
 
@@ -151,7 +151,7 @@ describe('campfire (game/run/campfire)', () => {
   })
 
   it('train is exactly one level, from wherever the XP stands; the cap cannot train', () => {
-    const s = createSentinel('rogue')
+    const s = classicHero('rogue')
     const t = trainAtCampfire(s)
     expect(t.level).toBe(s.level + 1)
     expect(t.xp).toBe(xpToReach(s.level + 1))
@@ -215,7 +215,7 @@ describe('levels are a resource (game/run/battle)', () => {
 })
 
 describe('merchant shelf (game/run/economy)', () => {
-  const roster = [createSentinel('rogue')]
+  const roster = [classicHero('rogue')]
   const shelfFrom = (seed: number) => {
     const ids = idCounterState()
     const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), roster, pity: newRarityPity() })
@@ -246,7 +246,7 @@ describe('merchant shelf (game/run/economy)', () => {
 })
 
 describe('reward application (game/run/rewards)', () => {
-  const base = () => ({ roster: [createSentinel('fighter'), createSentinel('mystic')], inventory: [], runMods: [], lootPity: { dry: 4 }, relics: [] as string[] })
+  const base = () => ({ roster: [classicHero('fighter'), classicHero('mystic')], inventory: [], runMods: [], lootPity: { dry: 4 }, relics: [] as string[] })
 
   it('a stat card buffs the whole company and appends its team mods', () => {
     const t = base()
@@ -288,29 +288,31 @@ describe('recruit scaling (game/run/recruits)', () => {
   })
 
   it('a hire arrives at the target level with the hub stat bonus', () => {
-    const veteran = (level: number): Sentinel => ({ ...createSentinel('fighter'), level, xp: xpToReach(level) })
+    const veteran = (level: number): Sentinel => ({ ...classicHero('fighter'), level, xp: xpToReach(level) })
     const roster = [veteran(10), veteran(10), veteran(12)]
-    const plain = scaledRecruit(streamRng(1, 'loot'), 'rogue', roster, { statBonus: 0, trained: false })
+    const plain = scaledRecruit(streamRng(1, 'loot'), roster, { statBonus: 0, trained: false })
     expect(plain.level).toBe(7)
-    const trained = scaledRecruit(streamRng(1, 'loot'), 'rogue', roster, { statBonus: 0, trained: true })
+    const trained = scaledRecruit(streamRng(1, 'loot'), roster, { statBonus: 0, trained: true })
     expect(trained.level).toBe(10)
-    const fresh = scaledRecruit(streamRng(1, 'loot'), 'rogue', [], { statBonus: 2, trained: false })
-    const bare = scaledRecruit(streamRng(1, 'loot'), 'rogue', [], { statBonus: 0, trained: false })
+    const fresh = scaledRecruit(streamRng(1, 'loot'), [], { statBonus: 2, trained: false })
+    const bare = scaledRecruit(streamRng(1, 'loot'), [], { statBonus: 0, trained: false })
     expect(fresh.level).toBe(1)
     expect(fresh.stats.str).toBe(bare.stats.str + 2)
     // Armed on arrival.
     expect(plain.equipment.mainHand).toBeTruthy()
   })
 
-  it('the slate is one per archetype and deterministic in the stream', () => {
+  it('the slate is three random hires, deterministic in the stream, from the run’s kinds only', () => {
+    const kinds = ['Sword', 'Bow', 'Wand', 'Shield', 'Mail']
     const deal = () => {
       // Names come off a process-wide, forward-only counter, so compare what
-      // the STREAM decides: archetype, weapon and its rolled numbers.
-      const slate = recruitSlate(streamRng(8, 'loot'), [], { statBonus: 0, trained: false })
-      return slate.map((s) => ({ a: s.archetype, w: s.equipment.mainHand?.name, base: s.equipment.mainHand?.base }))
+      // the STREAM decides: the gear and its rolled numbers, and the stats.
+      const slate = recruitSlate(streamRng(8, 'loot'), [], { statBonus: 0, trained: false, itemPool: kinds })
+      return slate.map((s) => ({ w: s.equipment.mainHand?.name, off: s.equipment.offHand?.name ?? null, base: s.equipment.mainHand?.base, stats: s.stats }))
     }
     const a = deal()
-    expect(a.map((s) => s.a)).toEqual(['fighter', 'rogue', 'mystic'])
+    expect(a).toHaveLength(3)
+    for (const h of a) expect(kinds.some((k) => h.w?.includes(k))).toBe(true)
     expect(deal()).toEqual(a)
   })
 })
@@ -388,20 +390,20 @@ describe('settle pays once (through the store)', () => {
 
 describe('skills in the run (game/run/skills, SK1)', () => {
   it('skill mods reach the combat profile; an unknown id is harmless', () => {
-    const base = createSentinel('rogue')
+    const base = classicHero('rogue')
     expect(computeCombat({ ...base, skills: ['charge'] }).mods.openingRush).toEqual({ rate: 0.6, dur: 15 })
     expect(computeCombat({ ...base, skills: ['not-a-skill'] }).dps).toBe(computeCombat(base).dps)
   })
 
   it('a hire arrives with one Level 1 skill, dealt by hash: the loot stream is untouched', () => {
     const hub = { statBonus: 0, trained: false }
-    const deal = (skillFor?: (id: string, a: Archetype) => string | null) => {
+    const deal = (skillFor?: (id: string) => string | null) => {
       const rng = new RNG(31)
       const slate = recruitSlate(rng, [], { ...hub, skillFor })
       return { slate, next: rng.next() }
     }
     const plain = deal()
-    const skilled = deal((id, a) => recruitSkill(7, id, a, STARTER_SKILLS))
+    const skilled = deal((id) => recruitSkill(7, id, STARTER_SKILLS))
     expect(skilled.next).toBe(plain.next)
     for (const s of skilled.slate) expect(s.skills).toHaveLength(1)
     for (const s of plain.slate) expect(s.skills).toBeUndefined()
@@ -431,7 +433,7 @@ describe('relics (data/relics + game/run/relics)', () => {
   it('team mods and stat grants reach the company, hires included', () => {
     expect(relicTeamMods(['warding_stone'])).toEqual([{ leakWard: 2 }])
     expect(relicTeamMods(['ember_urn'])).toEqual(ENGINE_CAPABILITIES.burnSpreadOnDeath ? [{ burnSpreadOnDeath: true }] : [])
-    const s = createSentinel('fighter')
+    const s = classicHero('fighter')
     const g = withRelicStats(s, ['ledger', 'hourglass'])
     expect(g.stats.str).toBe(s.stats.str + 3)
     expect(g.patience).toBe(s.patience + 5)
@@ -457,7 +459,7 @@ describe('relics (data/relics + game/run/relics)', () => {
   })
 
   it('the reward hand: a battle mixes, an elite always holds a relic, an act boss is all relics', () => {
-    const roster = [{ archetype: 'rogue' as const }]
+    const roster = [classicHero('rogue')]
     for (let seed = 1; seed < 40; seed++) {
       const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, count: 3, held: [], roster })
       expect(battle.some((c) => c.kind === 'item')).toBe(true)
@@ -470,7 +472,7 @@ describe('relics (data/relics + game/run/relics)', () => {
   })
 
   it('taking a relic card adds it once and lands its stats', () => {
-    const t = { roster: [createSentinel('mystic')], inventory: [], runMods: [], lootPity: { dry: 0 }, relics: [] as string[] }
+    const t = { roster: [classicHero('mystic')], inventory: [], runMods: [], lootPity: { dry: 0 }, relics: [] as string[] }
     const card: RewardCard = { id: 'r', kind: 'relic', title: '', desc: '', rarity: 'common', relic: 'ledger' }
     const once = applyRewardCard(t, card)
     expect(once.relics).toEqual(['ledger'])

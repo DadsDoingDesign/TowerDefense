@@ -265,7 +265,7 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0)
     if (gold < cost) return sfx('error')
     const node = runMap.nodes.find((n) => n.id === event.nodeId)
-    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics) })
+    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics), kinds: get().itemPool })
     sfx('coin')
     set({ gold: gold - cost, merchant: { ...merchant, items, rerolls: (merchant.rerolls ?? 0) + 1 } })
   },

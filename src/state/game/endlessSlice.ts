@@ -15,13 +15,13 @@ import {
   rollMerchantShelf,
 } from '../../game/run/economy'
 import { findItem, replaceItem } from '../../game/run/inventory'
-import { buildStartingRoster, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit, withRecruits } from '../../game/run/recruits'
+import { buildStartingRoster, receiveItems, recruitSlate, scaledRecruit, withRecruits } from '../../game/run/recruits'
 import type { Item } from '../../game/types'
 import type { RNG } from '../../game/core/rng'
 import { sfx, sfxRarity } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { CLEAR_SHELL, freshHud, freshRunState } from './fresh'
-import { dealSkill, hub, layout, recruitHub, seedRunStreams, skillRun, startingSkillPool, streams } from './runtime'
+import { dealSkill, hub, layout, recruitHub, seedRunStreams, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { carryPlacements } from '../../game/run/map'
 import { endlessHazardSeed, endlessTerrainRule } from '../../game/run/terrain'
@@ -50,13 +50,13 @@ export interface EndlessActions {
  * No pity is threaded on purpose: these are forced-rarity/luck-0.1 opening
  * items, not the drought the pity timer exists to end.
  */
-function endlessInventory(rng: RNG, extra: number, roster: readonly RosterRef[]): Item[] {
+function endlessInventory(rng: RNG, extra: number, roster: readonly RosterRef[], kinds: readonly string[]): Item[] {
   const items = [
-    generateItem(rng, { slot: 'oneHand', rarity: 'common', roster }),
-    generateItem(rng, { slot: 'body', rarity: 'common', roster }),
-    generateItem(rng, { slot: 'offHand', rarity: 'rare', roster }),
+    generateItem(rng, { slot: 'oneHand', rarity: 'common', roster, kinds }),
+    generateItem(rng, { slot: 'body', rarity: 'common', roster, kinds }),
+    generateItem(rng, { slot: 'offHand', rarity: 'rare', roster, kinds }),
   ]
-  for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1, roster }))
+  for (let i = 0; i < extra; i++) items.push(generateItem(rng, { luck: 0.1, roster, kinds }))
   return items
 }
 
@@ -74,9 +74,12 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     // SK1: Endless reads the hub, so it deals from the player's skill pool;
     // every hero it starts with (and every hire) arrives with one Level 1 skill.
     const skillPool = startingSkillPool({ kind: 'standard', date: null, scored: false })
+    // The classless rework: three random heroes from the player's item kinds.
+    const itemPool = startingItemPool({ kind: 'standard', date: null, scored: false })
     skillRun.seed = runSeed
     skillRun.pool = skillPool
-    const roster = buildStartingRoster(streams.rng, b, dealSkill)
+    skillRun.items = itemPool
+    const roster = buildStartingRoster(streams.rng, b, dealSkill, itemPool)
     set({
       // The same shared reset as `newRun` (m-2): neither entry point may
       // inherit the other's leftovers.
@@ -90,7 +93,8 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
       maxBaseHp: b.maxBaseHp,
       enemyHpMult: b.enemyHpMult,
       skillPool,
-      ...receiveItems(roster, [], endlessInventory(streams.rng, b.extraItems, roster)),
+      itemPool,
+      ...receiveItems(roster, [], endlessInventory(streams.rng, b.extraItems, roster, itemPool)),
     })
   },
 
@@ -119,7 +123,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
       }
       // An offer, so the drought's luck applies but the counter is not spent;
       // `endlessBuyItem` charges it on the sale (F4).
-      const items = rollMerchantShelf(streams.rng, { luck: endlessMerchantLuck(get().round), roster, pity: lootPity })
+      const items = rollMerchantShelf(streams.rng, { luck: endlessMerchantLuck(get().round), roster, pity: lootPity, kinds: get().itemPool })
       set({ endlessRoom: 'merchant', merchant: { items, recruit: null } })
     } else if (room === 'shrine') {
       set({ endlessRoom: 'shrine', shrineOffer: rollShrine(streams.rng) })
@@ -187,7 +191,7 @@ export const createEndlessSlice: Slice<EndlessActions> = (set, get) => ({
     // first when no id was supplied (legacy callers).
     const chosen = candidateId ? recruitOptions.find((s) => s.id === candidateId) : undefined
     if (candidateId && !chosen) return
-    const pick = chosen ?? recruitOptions[0] ?? scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub())
+    const pick = chosen ?? recruitOptions[0] ?? scaledRecruit(streams.rng, roster, recruitHub())
     set({
       gold: gold - endlessRecruitCost,
       ...withRecruits(roster, [pick], get().inventory, get().relics),

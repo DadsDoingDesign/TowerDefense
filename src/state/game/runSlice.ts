@@ -3,8 +3,8 @@
  * run map (`selectNode`).
  */
 import { newRunSeed, restoreIdCounter, streamRng } from '../../game/core/rng'
-import { startingKit, wearKit } from '../../game/engine/kit'
-import { createSentinel, restoreNameCounters } from '../../game/data/sentinels'
+import { startingKit } from '../../game/engine/kit'
+import { restoreNameCounters } from '../../game/data/sentinels'
 import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
@@ -17,16 +17,17 @@ import { useSettingsStore } from '../settingsStore'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
-import { applyStatBonus, hubExtras, receiveItems, recruitSlate, RECRUIT_ARCHETYPES, scaledRecruit } from '../../game/run/recruits'
-import { heroChoices, withFirstSkill } from '../../game/run/skills'
-import type { Archetype, Placement } from '../../game/types'
+import { applyStatBonus, hubExtras, receiveItems, recruitSlate, scaledRecruit } from '../../game/run/recruits'
+import { chosenHero, resolvePick } from '../../game/run/heroes'
+import { heroStyle } from '../../game/data/items'
+import type { Placement } from '../../game/types'
 import { sfx } from '../../audio/audio'
 import { difficultyRules, MAX_DIFFICULTY, useMetaStore } from '../metaStore'
 import { dailySeed, parseSeed, STANDARD_RUN, utcDateKey, type RunChallenge } from '../daily'
 import { difficultyAllowed, seedEditable } from '../runTerms'
 import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, dealSkill, hub, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingSkillPool, streams, usesHub } from './runtime'
+import { clearBeatTimer, dealSkill, hub, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams, usesHub } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
@@ -56,10 +57,11 @@ export interface RunActions {
   /** Start another run from the end screen, same difficulty (M15). */
   runAgain: () => void
   /**
-   * Commit the hero pick (SK1): the hero of this class the pick offers, with
-   * the Level 1 skill it was offered with (`run/skills.heroChoices`).
+   * Commit the hero pick: one of the three random heroes the pick deals
+   * (`run/heroes.heroChoices` — `pick-0` … `pick-2`), with exactly the gear
+   * and Level 1 skill its card showed.
    */
-  pickStartingHero: (archetype: Archetype) => void
+  pickStartingHero: (choiceId: string) => void
   returnToHub: () => void
   /**
    * Back out of the hero pick before any hero is committed. Nothing has begun:
@@ -95,8 +97,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const fresh = freshRunState(runSeed)
     // SK1: the run's skill pool is read once, here, and kept on the run.
     const skillPool = startingSkillPool(challenge)
+    // The classless rework: the item kinds the run deals, read once, likewise.
+    const itemPool = startingItemPool(challenge)
     skillRun.seed = runSeed
     skillRun.pool = skillPool
+    skillRun.items = itemPool
     set({
       ...fresh,
       // The map is post-processed, never re-dealt: no stream moves (LS3).
@@ -114,6 +119,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // The kit is dealt in `pickStartingHero`, FOR the hero picked there.
       inventory: [],
       skillPool,
+      itemPool,
     })
     // SK1: a run opens at the save's top difficulty step — the player turns it
     // down on the hero pick if they like. A Daily is always step 0.
@@ -184,37 +190,36 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     if (runPhase !== 'won') get().setRunDifficulty(step)
   },
 
-  pickStartingHero: (archetype) => {
+  pickStartingHero: (choiceId) => {
     const st = get()
-    // Once per run: a second pick would re-deal the kit off the loot stream.
+    // Once per run: a second pick would re-deal the extras off the loot stream.
     if (st.screen !== 'heroPick' || st.mode !== 'campaign' || st.roster.length) return
     const b = runBonuses()
+    // The leader is the card the player chose — its name, stats, gear and
+    // skill re-dealt off the same hashed generator the card was, with real
+    // ids. No run stream moves for it.
+    const leader = chosenHero(st.runSeed, st.skillPool, st.itemPool, resolvePick(st.runSeed, st.skillPool, st.itemPool, choiceId), b.statBonus)
+    if (!leader) return
     // Committing a hero to today's Daily claims the day's scored attempt —
     // or finds it already claimed, and the run is practice.
     const challenge =
       st.challenge.kind === 'daily' && st.challenge.date
         ? { ...st.challenge, scored: useMetaStore.getState().beginDaily(st.challenge.date) }
         : st.challenge
-    // SK1: the leader arrives with the Level 1 skill the pick offered it — a
-    // hash of the run seed, not a draw, so no stream below moves.
-    const choice = heroChoices(st.runSeed, st.skillPool).find((c) => c.archetype === archetype)
-    if (!choice) return
-    // The hub's extras are armed BEFORE the leader is created (id / name order).
-    const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill)
-    const company = [withFirstSkill(createSentinel(archetype), choice.skill), ...extra].map((s) => applyStatBonus(s, b.statBonus))
-    // The opening kit is dealt NOW, for the hero just picked — a Mystic is
-    // not handed a Sword — and WORN, not left in the pack. The balance
-    // harness calls the same two functions (`engine/kit.ts`), so the run it
-    // grades is the run this deals.
-    const kit = startingKit(streams.rng, archetype, { extra: b.extraItems, roster: company })
-    const leader = wearKit(company[0], kit)
-    const worn = new Set([leader.equipment.mainHand, leader.equipment.offHand, leader.equipment.body].map((i) => i?.id))
-    const { roster, inventory } = receiveItems([leader, ...company.slice(1)], st.inventory, kit.filter((i) => !worn.has(i.id)))
+    // The hub's extra heroes: random hires off the loot stream, named apart
+    // from the leader.
+    const extra = hubExtras(streams.rng, b.extraSentinels, dealSkill, st.itemPool, [leader.name]).map((s) => applyStatBonus(s, b.statBonus))
+    const company = [leader, ...extra]
+    // The Quartermaster's extra rolls, from the run's kinds, dressed onto
+    // whoever they strictly improve; the rest go to the pack.
+    const kit = startingKit(streams.rng, { extra: b.extraItems, roster: company, kinds: st.itemPool })
+    const { roster, inventory } = receiveItems(company, st.inventory, kit)
     // The feats ledger starts here, with the company as it marches out.
-    const feats = { ...freshFeats(), starter: archetype, startSize: roster.length, goldPeak: get().gold }
+    const feats = { ...freshFeats(), starter: heroStyle(leader), startSize: roster.length, goldPeak: get().gold }
     set({ roster, inventory, challenge, screen: 'map', feats })
     // SK1: the hero pick's tip ("Each hero comes with a skill") has been read.
     useSettingsStore.getState().markTaught('heroSkill')
+    useSettingsStore.getState().markTaught('heroGear')
   },
 
   // Leaving for the Watchtower ends the run, so it settles like any other end.
@@ -248,6 +253,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     seedRunStreams(snap.runSeed)
     skillRun.seed = snap.runSeed
     skillRun.pool = snap.skillPool
+    skillRun.items = snap.itemPool
     if (snap.rngLoot !== null) streams.rng.loadState(snap.rngLoot)
     if (snap.rngMap !== null) streams.mapRng.loadState(snap.rngMap)
     // The dry counter is restored WITH the loot stream, never without it: the
@@ -322,6 +328,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       crossroads: snap.crossroads,
       forkDone: snap.forkDone,
       skillPool: snap.skillPool,
+      itemPool: snap.itemPool,
       dust: snap.dust,
       lives: snap.lives,
       wins: snap.wins,
@@ -405,10 +412,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // An OFFER: `rollMerchantShelf` rolls with the drought's luck but leaves
       // the pity counter alone; `buyMerchantItem` charges it on the sale (F4).
       const relics = get().relics
-      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics) })
+      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics), kinds: get().itemPool })
       const recruit =
         roster.length < MAX_ROSTER
-          ? { sentinel: scaledRecruit(streams.rng, streams.rng.pick(RECRUIT_ARCHETYPES), roster, recruitHub(relics)), price: RECRUIT_PRICE }
+          ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: RECRUIT_PRICE }
           : null
       // The Gate repair is on every campaign counter (Phase 3b): the comeback.
       set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR }, rerolls: 0 } })

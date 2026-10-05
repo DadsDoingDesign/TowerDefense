@@ -5,7 +5,7 @@ import {
   GENERATED_BASES,
   ITEM_BASES,
   OFF_HAND_SHARE,
-  damageTypeOf,
+  heroDamageType,
   dualWieldCheck,
   generateItem,
   gripOf,
@@ -13,13 +13,13 @@ import {
   offHandShare,
 } from '../src/game/data/items'
 import { LEGACY_RELIC_IDS, RELICS, relicPool } from '../src/game/data/relics'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { computeCombat } from '../src/game/engine/combat'
-import { autoEquipEmpty, emptySlotGain, KIT, startingKit, wearKit } from '../src/game/engine/kit'
+import { autoEquipEmpty, emptySlotGain } from '../src/game/engine/kit'
 import { equipFromPack, gearReturnedText, offHandAllowed, settleOffHands, wearItem } from '../src/game/run/inventory'
 import { receiveItems, withRecruits } from '../src/game/run/recruits'
 import { equipRules } from '../src/game/run/relics'
-import { bestSlotGain, equipAndDisplace } from '../balance/harness'
+import { bestSlotGain, equipAndDisplace, freshHero } from '../balance/harness'
 import type { Archetype, Item, ItemSlot, Sentinel } from '../src/game/types'
 
 /** A hand-built item named by a real base noun, so its grip is the base's. */
@@ -40,7 +40,7 @@ const greatsword = (id = 'gs') => mk(id, 'Greatsword', 'twoHand', { physDamage: 
 
 /** A hero with a given OWN DEX, a sword in the main hand and nothing else. */
 const withDex = (a: Archetype, dex: number, main: Item | null = sword('main', 6)): Sentinel => {
-  const h = createSentinel(a)
+  const h = classicHero(a)
   return { ...h, stats: { ...h.stats, dex }, equipment: { mainHand: main, offHand: null, body: null } }
 }
 
@@ -114,13 +114,13 @@ describe('the off-hand item class (round 3, Q5)', () => {
       let offPieces = 0
       let ownTypeLight = 0
       for (let i = 0; i < 600; i++) {
-        const it = generateItem(rng, { roster: [{ archetype: a }] })
+        const it = generateItem(rng, { roster: [classicHero(a)] })
         if (it.keepsake || !heroSlotsFor(it, hero).includes('offHand')) continue
         const g = gripOf(it)
         if (g === 'off') offPieces++
         if (g === 'either') {
           const dt = it.base.physDamage ? 'physical' : 'magic'
-          if (dt === damageTypeOf(a)) ownTypeLight++
+          if (dt === heroDamageType(classicHero(a))) ownTypeLight++
         }
       }
       // archetype-blind off-hand pieces for everyone…
@@ -149,7 +149,7 @@ describe('the Twinblade Harness and its DEX check (round 3, Q4)', () => {
 
   it('is a real bar: nobody starts a run on it', () => {
     for (const a of ['fighter', 'rogue', 'mystic'] as const) {
-      expect(dualWieldCheck(createSentinel(a), TWIN).ok, a).toBe(false)
+      expect(dualWieldCheck(classicHero(a), TWIN).ok, a).toBe(false)
     }
   })
 
@@ -265,9 +265,7 @@ describe('every equip path respects the off-hand rule', () => {
 
   it("the opening kit: the off-hand piece is an off-hand item, and it is worn there", () => {
     for (const a of ['fighter', 'rogue', 'mystic'] as const) {
-      expect(KIT[a][2].slot).toBe('offHand')
-      const kit = startingKit(new RNG(3), a)
-      const hero = wearKit({ ...createSentinel(a), equipment: { mainHand: null, offHand: null, body: null } }, kit)
+      const hero = freshHero(a, new RNG(3))
       expect(gripOf(hero.equipment.offHand!)).toBe('off')
       expect(offHandAllowed(hero)).toBe(true)
     }
@@ -290,11 +288,15 @@ describe('every equip path respects the off-hand rule', () => {
     expect(equipAndDisplace(high, sword('s2', 6), TWIN).hero.equipment.offHand?.id).toBe('s2')
     expect(bestSlotGain(high, sword('s2', 6), TWIN)).toBeGreaterThan(0)
     // a two-hander goes in the main hand and empties the off hand
-    const dressed = { ...high, equipment: { ...high.equipment, offHand: shield() } }
+    // (a Quiver, not a shield: the model never trades away a hold)
+    const dressed = { ...high, equipment: { ...high.equipment, offHand: mk('quiver', 'Quiver', 'offHand') } }
     const r = equipAndDisplace(dressed, mk('gs', 'Greatsword', 'twoHand', { physDamage: 60 }), TWIN)
     expect(r.hero.equipment.mainHand?.id).toBe('gs')
     expect(r.hero.equipment.offHand).toBeNull()
-    expect(r.displaced.map((i) => i.id).sort()).toEqual(['main', 'shield'])
+    expect(r.displaced.map((i) => i.id).sort()).toEqual(['main', 'quiver'])
+    // …and a shield's hold is kept: the same swap with a shield is refused
+    const shielded = { ...high, equipment: { ...high.equipment, offHand: shield() } }
+    expect(equipAndDisplace(shielded, mk('gs2', 'Greatsword', 'twoHand', { physDamage: 60 }), TWIN).hero).toBe(shielded)
   })
 })
 

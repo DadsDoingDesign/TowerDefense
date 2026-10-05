@@ -1,5 +1,5 @@
 import type { BattleResult } from '../../game/engine/engine'
-import { buildName } from '../../game/engine/leveling'
+import { kitName } from '../../game/data/gear'
 import type { Item, Sentinel } from '../../game/types'
 import { lastProgress } from '../metaStore'
 import { useSettingsStore } from '../settingsStore'
@@ -34,7 +34,7 @@ export function buildRecap(
       return {
         id: p.id,
         name: s?.name ?? p.id,
-        build: s ? buildName(s) : '—',
+        build: s ? kitName(s) : '—',
         level: s?.level ?? 1,
         kills: p.kills,
         damage: Math.round(p.damageDealt),

@@ -10,7 +10,7 @@ import {
   withTerrainRule,
 } from '../src/game/data/maps'
 import { generateRunMap } from '../src/game/data/runmap'
-import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
+import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import {
   crowds,
   distToPolyline,
@@ -332,8 +332,8 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     const first = st0.runMap.nodes.find((n) => st0.reachableNodeIds.includes(n.id) && n.type === 'battle')!
     enter(first.id)
     const sword = { id: 'sw', name: 'Plain Sword', slot: 'oneHand' as const, rarity: 'common' as const, base: {}, enchantments: [] }
-    const fighter = createSentinel('fighter')
-    useGameStore.setState({ roster: [{ ...fighter, equipment: { ...fighter.equipment, mainHand: sword } }, createSentinel('rogue')], placements: emptyPlacements(useGameStore.getState().battleMap) })
+    const fighter = classicHero('fighter')
+    useGameStore.setState({ roster: [{ ...fighter, equipment: { ...fighter.equipment, mainHand: sword } }, classicHero('rogue')], placements: emptyPlacements(useGameStore.getState().battleMap) })
     const st = useGameStore.getState()
     const [a, b] = st.roster
     const safe = st.battleMap.slots.filter((s) => !st.battleMap.tiles!.find((t) => t.id === s.id)!.danger)

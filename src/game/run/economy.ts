@@ -59,9 +59,12 @@ export const endlessMerchantLuck = (round: number): number => Math.min(0.4, roun
  * Deterministic in the stream: the same loot-stream position deals the same
  * shelf (item ids aside, which come from the process-wide id counter).
  */
-export function rollMerchantShelf(rng: RNG, opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number }): ShelfEntry[] {
+export function rollMerchantShelf(
+  rng: RNG,
+  opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[] },
+): ShelfEntry[] {
   return Array.from({ length: opts.size ?? 4 }, () => {
-    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false })
+    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
     return { item, price: ITEM_PRICE[item.rarity] }
   })
 }

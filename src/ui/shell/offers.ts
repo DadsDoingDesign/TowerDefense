@@ -1,12 +1,10 @@
-import { canUpgrade, describeBase, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
+import { canUpgrade, describeBase, itemNoun, RARITY, reforgeDust, upgradeDust } from '../../game/data/items'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
-import { getNode } from '../../game/data/archetypeTree'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
-import { heroChoices } from '../../game/run/skills'
-import { peekName as peekNameOf } from '../../game/data/sentinels'
+import { heroChoices, previewOf } from '../../game/run/heroes'
+import { heroDoes, kitName, lookOf } from '../../game/data/gear'
 import { difficultyEffect, difficultyRules, MAX_DIFFICULTY, watchLevelFor } from '../../game/run/watch'
 import { mutationName } from '../../game/data/mutations'
-import { buildName } from '../../game/engine/leveling'
 import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, runUnlocked, useGameStore } from '../../state/gameStore'
 import { useMetaStore, UPGRADES } from '../../state/metaStore'
@@ -19,9 +17,8 @@ import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
 import { codexOffers } from './codexOffers'
-import { heroRole } from './heroPickFacts'
 import { ACHIEVEMENTS } from '../../game/data/achievements'
-import type { Archetype, Item, Sentinel } from '../../game/types'
+import type { Item, ItemRarity, Sentinel } from '../../game/types'
 
 export interface Price {
   amount: number
@@ -203,8 +200,19 @@ export interface Offer {
    * it opens.
    */
   cards?: { id: string; name: string; sub: string; text: string; locked?: boolean; group?: string }[]
+  /**
+   * The Collection's tabs (Skills | Items): each a set of `cards`, drawn with
+   * a tab bar over the grid (`CollectionTabs`).
+   */
+  tabs?: { id: string; label: string; count: string; cards: NonNullable<Offer['cards']> }[]
   /** SK1: the one skill a hero on offer arrives with, as a card under its name (the hero pick). */
   skill?: { name: string; level: string; text: string }
+  /**
+   * The classless rework: a hero drawn as a full comparison card (the hero
+   * pick, a recruit slate) — what its gear makes it do, the gear, its skill.
+   * When every choice on a page carries one, the page draws `HeroCards`.
+   */
+  hero?: HeroCardSpec
   /**
    * LS3: a menu entry the player has not opened yet — the one plain line that
    * says what opens it. The menu draws the row dimmed and inert, with this
@@ -225,6 +233,20 @@ export interface Offer {
    * Offer action — dragging it is not a commit — so it rides here instead.
    */
   sliders?: { id: string; label: string; value: number; set: (v: number) => void; preview?: 'click' | 'coin' | 'toggle' }[]
+}
+
+/** One hero card (`HeroCards.tsx`). Every field is derived from the hero itself. */
+export interface HeroCardSpec {
+  /** The sprite its weapon picks (`gear.lookOf`). */
+  art: string
+  /** The look's hue token, for the card's rail. */
+  color: string
+  /** What its gear makes it do, in plain words (`gear.heroDoes`). */
+  does: string
+  gear: { id: string; name: string; rarity: ItemRarity; icon: IconKey }[]
+  skill?: { name: string; level: string; text: string }
+  /** "49 DPS · 96 reach" — held back on a staged first run. */
+  numbers?: string
 }
 
 /**
@@ -270,12 +292,10 @@ function strengthNote(st: St, lines: string[]): string[] {
  * resolvable from the same one-line function. The three cards you look at for
  * the whole of a battle were the least illustrated thing in the game.
  */
-export const heroArt = (archetype: string) => `assets/sprites/tinyswords/${archetype}.png`
-const ARCH_COLOR: Record<string, string> = {
-  fighter: 'var(--fighter)',
-  rogue: 'var(--rogue)',
-  mystic: 'var(--mystic)',
-}
+export const heroArt = (look: string) => `assets/sprites/tinyswords/${look}.png`
+/** A hero's sprite and hue: picked by what it holds (there is no class). */
+export const heroLookArt = (h: Pick<Sentinel, 'equipment'>): string => heroArt(lookOf(h))
+export const heroLookVar = (h: Pick<Sentinel, 'equipment'>): string => archetypeVar(lookOf(h))
 
 /**
  * `✦` used to mean five different things at once - rogue, Watch Marks,
@@ -349,7 +369,7 @@ function heroBits(s: Sentinel) {
   return {
     // Token, not `s.color`'s raw hex, so the colour-vision modes reach the
     // portrait rail as well as everything else (M34).
-    portrait: { art: heroArt(s.archetype), color: archetypeVar(s.archetype) },
+    portrait: { art: heroLookArt(s), color: heroLookVar(s) },
     // SK1: a hire arrives with one skill — shown as its card, the way the hero
     // pick shows the leader's (a hero with more lists them in the body).
     skill: oneSkill(s),
@@ -379,7 +399,27 @@ function heroBody(s: Sentinel): string[] {
   const skills = oneSkill(s) ? [] : skillLines(s)
   // LS3: with the stat row held back, the sentence that says what the hero
   // does leads — the same one the first pick shows.
-  return stagedRun() ? [getNode(s.archetype).ability, ...skills, line] : [...skills, line]
+  return stagedRun() ? [`${heroDoes(s)}.`, ...skills, line] : [`${heroDoes(s)}.`, ...skills, line]
+}
+
+/** A hero as a comparison card: what its gear does, the gear, its skill (and its numbers, after the first run). */
+export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
+  const p = computeCombat(s)
+  const k = s.skills?.length ? skillById(s.skills[0]) : undefined
+  const gear = [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]
+    .filter((i): i is Item => !!i)
+    // The kind, not the generated name: "Wand", not "Swift Wand of Precision" —
+    // the kind is what decides what the hero does, and three cards side by side
+    // must read in one glance. The full name is on the gear panel once picked.
+    .map((i) => ({ id: i.id, name: itemNoun(i) ?? itemName(i), rarity: i.rarity, icon: itemIcon(i) }))
+  return {
+    art: heroLookArt(s),
+    color: heroLookVar(s),
+    does: heroDoes(s),
+    gear,
+    skill: k ? { name: k.name, level: skillLevelLabel(k.level), text: k.desc } : undefined,
+    numbers: staged ? undefined : `${Math.round(p.dps)} DPS · ${Math.round(p.range)} reach`,
+  }
 }
 
 /** The card for a hero holding exactly one skill (a hire, a fresh pick). */
@@ -555,117 +595,33 @@ export type MetaView = 'menu' | 'perks' | 'settings' | 'codex'
 
 /**
  * ---------------------------------------------------------------------------
- * Hero pick, from the real tree (H11).
+ * The hero pick: three random heroes (the classless rework)
  * ---------------------------------------------------------------------------
  *
- * The tiles used to be hand-written literals and three of the nine advertised
- * mechanics that do not exist: "+4 dodge" (there is no dodge stat anywhere in
- * the engine), "+6 armour" against a real `physDefAdd` of 20, "+6 speed"
- * matching no stat at all, and all three mystic tiles ("Chain arc", "Chills",
- * "Ally buff") describing tier-1/tier-2 branch abilities a LEVEL-ONE mystic
- * does not have — `shock`, `chill` and `buffAura` first appear on Stormcaller,
- * Cryomancer and Cleric. The base stat block was duplicated as literals too,
- * so it could drift from `archetypeTree.ts` silently.
+ * The designer: "we dont have a set class, its just 3 options with items and
+ * skills you have unlocked applied randomly". Each of the three is rolled from
+ * the run's unlocked item kinds and skill pool (`run/heroes.heroChoices`, a
+ * hash of the run seed — the same seed or Daily deals the same three), and
+ * each is shown as what it IS: what its gear makes it do, the gear, the skill.
+ * Every word and number is derived from the exact hero `pickStartingHero`
+ * will create (`previewOf` mints nothing), Watchtower stat perks included.
  *
- * Everything on the card now comes from the tier-0 node and from
- * `computeCombat` on a preview of the exact Sentinel `pickStartingHero` will
- * build, Watchtower stat perks included. If a number here is wrong, the tree is
- * wrong.
- */
-const ARCH_LIST: Archetype[] = ['fighter', 'rogue', 'mystic']
-
-/**
- * The Sentinel `pickStartingHero` is about to create, without creating it.
- *
- * Deliberately NOT `createSentinel`: that mutates the process-global name and
- * id counters, and this runs on every render of the hero-pick page — previewing
- * a hero would burn a name the hero then does not get. It mirrors the same
- * fields (`sentinels.ts` `createSentinel` + `gameStore` `applyStatBonus`).
- *
- * Exported for the H3-2 hero-pick variants (`HeroPickVariants.tsx`), so they
- * preview the same Sentinel this screen does rather than a second copy.
- */
-export function previewHero(a: Archetype, statBonus: number): Sentinel {
-  const node = getNode(a)
-  const b = node.baseStats!
-  return {
-    id: `preview-${a}`,
-    name: node.name,
-    archetype: a,
-    branchPath: [a],
-    stats: { str: b.str + statBonus, dex: b.dex + statBonus, int: b.int + statBonus },
-    thorns: node.baseThorns!,
-    patience: node.basePatience!,
-    level: 1,
-    xp: 0,
-    equipment: { mainHand: null, offHand: null, body: null },
-    color: node.color!,
-    accent: node.accent!,
-  }
-}
-
-const pct = (v: number) => `${Math.round(v * 100)}%`
-
-/**
- * The hero pick (SK1): three heroes, one of each class, each with a name and
- * one random Level 1 skill from the player's unlocked pool — rolled from the
- * run seed (`run/skills.heroChoices`), so the same seed or Daily offers the
- * same three. The class still decides how the hero fights; the skill is the
- * twist on it, and it is in the row itself so the pick reads at a glance.
+ * A first run (LS3) is dealt the same way from the basic five kinds, and its
+ * cards hold the plain words only — no DPS, no stats.
  */
 function heroPickOffers(st: St, meta: Meta): Offer[] {
-  const statBonus = meta.bonuses().statBonus
-  // LS3: a first run picks a hero by what it DOES. The stat block, the trait
-  // tiles and the line of secondary numbers (crit, thorns, patience) wait for
-  // the hero's own Stats tab, where they are one tap away and read in context.
+  const statBonus = st.challenge.kind === 'daily' ? 0 : meta.bonuses().statBonus
   const staged = st.firstRun && !useSettingsStore.getState().showEverything
-  const choices = heroChoices(st.runSeed, st.skillPool)
-  // The hub's extra heroes are named before the leader (`pickStartingHero`),
-  // so a class that one of them shares is named one further along.
-  const extras = st.challenge.kind === 'daily' ? 0 : meta.bonuses().extraSentinels
-  const peekName = (a: Archetype) => peekNameOf(a, Array.from({ length: extras }, (_, i) => ARCH_LIST[i % 3]).filter((x) => x === a).length)
-  const picks: Offer[] = ARCH_LIST.map((a) => {
-    const node = getNode(a)
-    const skill = skillById(choices.find((c) => c.archetype === a)?.skill ?? '')
-    const hero = { ...previewHero(a, statBonus), skills: skill ? [skill.id] : [] }
-    const p = computeCombat(hero)
-    const role = heroRole({ block: p.mods.block?.count ?? 0, splash: Math.round(p.splashRadius), range: Math.round(p.range) })
+  const picks: Offer[] = heroChoices(st.runSeed, st.skillPool, st.itemPool).map((c) => {
+    const hero = previewOf(c, statBonus)
     return {
-      id: `pick-${a}`,
-      // The hero's own name, and its class: "Bran · Fighter".
-      title: `${peekName(a)} · ${node.name}`,
-      // LS3: a first run chooses from three rows, each saying the hero's job in
-      // plain words, rather than three bare portraits and one hero's line.
-      sub: staged ? undefined : skill ? skill.name : 'Starting hero',
-      color: ARCH_COLOR[a],
-      glyph: GLYPH[a],
-      // LS3: a first run's row says the hero's job, then its skill, in plain words.
-      ...(staged
-        ? { rowArt: heroArt(a), note: skill ? `${role}. Skill: ${skill.name} — ${skill.desc}` : role }
-        : { portrait: { art: heroArt(a), color: ARCH_COLOR[a] } }),
-      stats: staged
-        ? undefined
-        : [
-            { label: 'STR', value: hero.stats.str },
-            { label: 'DEX', value: hero.stats.dex },
-            { label: 'INT', value: hero.stats.int },
-          ],
-      // SK1: the skill is the twist on the class, so it gets a card of its
-      // own under the name — not a line inside the stat block. The old trait
-      // tiles (Blocks 2 · 8 thorns, pinned above the CTA) are gone: they
-      // repeated the body's numbers at 150px a tile and pushed the skill and
-      // the difficulty below the fold.
-      skill: !staged && skill ? { name: skill.name, level: skillLevelLabel(skill.level), text: skill.desc } : undefined,
-      body: [
-        node.ability,
-        `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`,
-        ...(staged
-          ? []
-          : [
-              `${p.damageType === 'magic' ? 'Magic' : 'Physical'} · ${pct(p.critChance)} crit ×${p.critMult.toFixed(1)} · ${Math.round(p.thorns)} thorns · ${Math.round(p.patience)} patience${statBonus ? ` · +${statBonus} all stats (Watchtower)` : ''}`,
-            ]),
-      ],
-      action: { label: `Choose ${peekName(a)}`, run: () => st.pickStartingHero(a) },
+      id: c.id,
+      title: c.name,
+      sub: kitName(hero),
+      color: heroLookVar(hero),
+      hero: heroCard(hero, staged),
+      body: [],
+      action: { label: `Choose ${c.name}`, run: () => st.pickStartingHero(c.id) },
     }
   })
   // The way back to the menu: nothing is spent until a hero is chosen, the
@@ -704,15 +660,15 @@ function merchantOffers(st: St): Offer[] {
     const r = m.recruit
     out.push({
       id: r.sentinel.id,
-      // The class rides in the row's own label: a merchant row is a line of
-      // text, and "Sable" alone did not say this was a hero for hire, let alone
-      // which kind (Wave 1).
-      title: `${r.sentinel.name} · ${buildName(r.sentinel)} for hire`,
-      sub: buildName(r.sentinel),
-      rowArt: heroArt(r.sentinel.archetype),
+      // What they carry rides in the row's own label: a merchant row is a line
+      // of text, and "Sable" alone did not say this was a hero for hire, let
+      // alone what kind (Wave 1). There is no class: the kit is the kind.
+      title: `${r.sentinel.name} · ${kitName(r.sentinel)} for hire`,
+      sub: kitName(r.sentinel),
+      rowArt: heroLookArt(r.sentinel),
       dim: st.gold < r.price,
-      color: archetypeVar(r.sentinel.archetype),
-      glyph: GLYPH[r.sentinel.archetype],
+      color: heroLookVar(r.sentinel),
+      glyph: GLYPH[lookOf(r.sentinel)],
       cost: { amount: r.price, currency: 'gold' },
       ...heroBits(r.sentinel),
       // A merchant hire is one of the five choices that pays the choice tax, and
@@ -762,15 +718,14 @@ function recruitOffers(st: St): Offer[] {
   const full = st.roster.length >= MAX_ROSTER
   const out: Offer[] = st.recruitOptions.map((s) => ({
     id: s.id,
-    // The name and the class, as the hero pick says them ("Marek · Fighter").
-    title: `${s.name} · ${buildName(s)}`,
-    sub: buildName(s),
-    color: archetypeVar(s.archetype),
-    glyph: GLYPH[s.archetype],
+    // A hire is shown as the hero pick shows a hero: one comparison card each.
+    title: s.name,
+    sub: kitName(s),
+    color: heroLookVar(s),
+    glyph: GLYPH[lookOf(s)],
     cost: inEndless(st) ? { amount: st.endlessRecruitCost, currency: 'gold' as const } : undefined,
-    ...heroBits(s),
+    hero: heroCard(s, stagedRun()),
     body: [
-      ...heroBody(s),
       ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
       // Campaign hires pay the choice tax (`acceptRecruit`) on top of the
       // recruit node's own visit step; endless rooms pay neither.
@@ -1011,10 +966,10 @@ function crossroadsOffers(st: St): Offer[] {
   // ---- step 1: recruit, or aim ---------------------------------------------
   const out: Offer[] = cr.recruits.map((s) => ({
     id: s.id,
-    title: `${s.name} · ${buildName(s)}`,
-    sub: `Recruit · ${buildName(s)}`,
-    color: archetypeVar(s.archetype),
-    glyph: GLYPH[s.archetype],
+    title: `${s.name} · ${kitName(s)}`,
+    sub: `Recruit · ${kitName(s)}`,
+    color: heroLookVar(s),
+    glyph: GLYPH[lookOf(s)],
     ...heroBits(s),
     // A stranger and one of your own are the same sprite in the same coloured
     // frame; the corner mark is what tells the two halves of this fork apart
@@ -1036,7 +991,7 @@ function crossroadsOffers(st: St): Offer[] {
       id: `mutate-${h.id}`,
       title: h.name,
       sub: 'Mutate',
-      color: archetypeVar(h.archetype),
+      color: heroLookVar(h),
       icon: 'mutate',
       ...heroBits(h),
       portrait: { ...heroBits(h).portrait, badge: 'mutate' },
@@ -1298,7 +1253,7 @@ function settingsOffers(s: Settings): Offer[] {
  * step. Every number is read off `difficultyRules`.
  */
 export const DIFFICULTY_BLURB =
-  'Each difficulty step makes enemies 8% stronger and adds one elite to each act, and pays more Marks. A win at your highest step raises it and unlocks a skill; you can turn it down at the start of any run.'
+  'Each difficulty step makes enemies 8% stronger and adds one elite to each act, and pays more Marks. A win at your highest step raises it and unlocks a skill and an item; you can turn it down at the start of any run.'
 
 /** "Difficulty 2 · Enemies 16% stronger · 2 more elites an act" — for receipts. */
 export const difficultyLine = (step: number): string => (step <= 0 ? 'Difficulty 0 — standard.' : `Difficulty ${step} · ${difficultyEffect(step)}`)
@@ -1312,7 +1267,7 @@ function lockedDifficultyOffer(): Offer {
     icon: PERK_ICON.sacrifice,
     dim: true,
     locked: OPENS_AFTER_FIRST_RUN,
-    body: [`${OPENS_AFTER_FIRST_RUN}. Winning raises the difficulty a step, and each step unlocks a skill.`],
+    body: [`${OPENS_AFTER_FIRST_RUN}. Winning raises the difficulty a step, and each step unlocks a skill and an item.`],
     action: { label: 'Locked', run: () => {}, disabled: true },
   }
 }
@@ -1329,7 +1284,7 @@ function difficultyOffer(meta: Meta): Offer {
     pips: { on: top, of: MAX_DIFFICULTY },
     body: [
       top === 0
-        ? 'Win a run to raise it to 1 and unlock a skill.'
+        ? 'Win a run to raise it to 1 and unlock a skill and an item.'
         : `Your highest is ${top}: ${difficultyEffect(top)}. A run opens there; turn it down on the hero screen.`,
       DIFFICULTY_BLURB,
       ...(top < MAX_DIFFICULTY ? [`Next: Difficulty ${top + 1} — ${difficultyEffect(top + 1)}, pays ×${difficultyRules(top + 1).markMult} Marks.`] : []),
@@ -1473,7 +1428,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       sub: staged ? 'Glossary' : `Watch level ${watchLevelFor(meta.watchXp)}`,
       icon: 'grimoire',
       immediate: true,
-      body: ['A glossary of every idea you have met, your skill library and Watch level, feats earned and still open, and every goblin and relic the Watch has seen.'],
+      body: ['A glossary of every idea you have met, your collection of skills and items and your Watch level, feats earned and still open, and every goblin and relic the Watch has seen.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
     staged

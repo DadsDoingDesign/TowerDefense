@@ -1,28 +1,35 @@
 import { describe, expect, it } from 'vitest'
 import { useGameStore } from '../src/state/gameStore'
+import { heroChoices } from '../src/game/run/heroes'
+import { heroDamageType } from '../src/game/data/items'
+import type { Item } from '../src/game/types'
 
 /**
- * The opening kit through the real store: dealt AFTER the pick, for the hero
- * picked, and worn — not left in the pack (it used to be both roster-blind
- * and unequipped, while the balance harness modelled it worn).
+ * The opening kit through the real store (the classless rework): the leader
+ * walks out wearing EXACTLY the gear its card showed — `heroChoices` previews
+ * it, `pickStartingHero` re-deals it with real ids — and nothing it was dealt
+ * sits unworn in the pack.
  */
 describe('campaign opening kit', () => {
-  it.each(['fighter', 'rogue', 'mystic'] as const)('%s walks out wearing an on-type kit', (arch) => {
+  it.each([0, 1, 2])('pick-%i walks out wearing the gear its card showed', (i) => {
     const s = useGameStore.getState()
     s.newRun()
     expect(useGameStore.getState().screen).toBe('heroPick')
     expect(useGameStore.getState().inventory).toEqual([])
-    useGameStore.getState().pickStartingHero(arch)
+    const st0 = useGameStore.getState()
+    const card = heroChoices(st0.runSeed, st0.skillPool, st0.itemPool)[i]
+    useGameStore.getState().pickStartingHero(`pick-${i}`)
     const st = useGameStore.getState()
     const hero = st.roster[0]
-    expect(hero.archetype).toBe(arch)
+    expect(hero.name).toBe(card.name)
+    expect(hero.skills).toEqual(card.skill ? [card.skill] : undefined)
+    const strip = (it: Item | null) => (it ? { ...it, id: '' } : null)
+    for (const slot of ['mainHand', 'offHand', 'body'] as const) expect(strip(hero.equipment[slot])).toEqual(strip(card.equipment[slot]))
     const w = hero.equipment.mainHand!
     expect(w).toBeTruthy()
-    expect(hero.equipment.body).toBeTruthy()
-    expect(hero.equipment.offHand).toBeTruthy()
-    if (arch === 'mystic') expect(w.base.magDamage ?? 0).toBeGreaterThan(0)
+    // The weapon's damage is the damage the hero deals with it.
+    if (heroDamageType(hero) === 'magic') expect(w.base.magDamage ?? 0).toBeGreaterThan(0)
     else expect(w.base.physDamage ?? 0).toBeGreaterThan(0)
-    // Nothing the kit dealt is sitting unworn in the pack.
     expect(st.inventory).toEqual([])
   })
 

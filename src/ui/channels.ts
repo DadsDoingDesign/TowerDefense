@@ -1,5 +1,6 @@
 import { DUAL_WIELD_DEX, gripOf, ITEM_NOUN_RE, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
+import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 import { MAX_ROSTER as MAX_HEROES } from '../game/run/economy'
 import type { IdeaId } from '../state/staging'
@@ -72,6 +73,8 @@ export const rarityRank = (r: ItemRarity): number => RARITY_ORDER.indexOf(r) + 1
  * The archetype hue as a token. `sentinel.color` is the same value as a raw
  * hex; going through the token is what lets the colour-vision modes move it.
  */
+/** A hero's hue token: its LOOK, which its weapon picks (`gear.lookOf`) — there is no class. */
+export const lookVar = (hero: Pick<Item, never> & { equipment: Parameters<typeof lookOf>[0]['equipment'] }): string => archetypeVar(lookOf(hero))
 export const archetypeVar = (archetype: string): string =>
   archetype === 'fighter' || archetype === 'rogue' || archetype === 'mystic' ? `var(--${archetype})` : 'var(--line-strong)'
 
@@ -388,6 +391,7 @@ const NOUN_ICON: Record<string, IconKey> = {
   Tome: 'grimoire',
   Shield: 'shield',
   Buckler: 'shield',
+  Pavise: 'shield',
   Quiver: 'quiver',
   Focus: 'orb',
   Plate: 'plate',
@@ -435,7 +439,7 @@ export const GRIP_NAME: Record<Grip, string> = {
 }
 
 /** What the off hand takes without the relic. */
-export const OFF_HAND_TAKES = 'knives, wands, shields, bucklers, tomes, quivers and foci'
+export const OFF_HAND_TAKES = 'knives, wands, shields, bucklers, pavises, tomes, quivers and foci'
 /** What the Twinblade Harness adds to it, for a hero who passes its check. */
 export const TWINBLADE_TAKES = 'a sword, axe, rod or sceptre'
 /** The relic's name, as every surface prints it. */
@@ -699,7 +703,10 @@ export const itemName = (item: Pick<Item, 'name'>): string =>
  * The coach's tips say the same things in the moment; these are what stays.
  */
 export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { term: string; line: string }[] }> = {
-  hero: { term: 'Heroes', line: 'Your fighters. Each one hits whatever walks inside its ring.' },
+  hero: {
+    term: 'Heroes',
+    line: 'Each one hits whatever walks inside its ring. What a hero does comes from its gear: a sword or axe swings up close, a bow or dagger strikes from far away, a wand or staff casts magic at a group, and a shield holds enemies on the road.',
+  },
   post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave starts.' },
   gate: { term: 'Gate', line: 'Your keep at the end of the road. Goblins that reach it hurt it; if it falls, the run ends.' },
   gold: { term: 'Gold', line: 'Paid out by every fight. Spend it at a Merchant.' },
@@ -720,13 +727,14 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     line: 'Something a hero does — attack faster, hold more enemies, burn what it hits. Each hero starts with one and holds up to three.',
     also: [
       { term: 'Skill level', line: 'Level 1, 2 or 3. A hero is offered three skills of one level at hero levels 5 (Level 1), 10 (Level 2) and 15 (Level 3). With three already, it swaps one out or takes +stats instead.' },
-      { term: 'Watch level', line: 'Every run earns Watch XP. Each Watch level unlocks one new skill card for your heroes to be offered.' },
+      { term: 'Watch level', line: 'Every run earns Watch XP. Each Watch level unlocks one new skill and one new item for your heroes to be dealt.' },
+      { term: 'Collection', line: 'Every skill and item you have unlocked. Heroes, loot and offers are dealt only from it.' },
     ],
   },
   danger: { term: 'Cursed ground', line: 'Skull tiles. A hero may stand there, but deals much less damage.' },
   challenge: { term: 'Map challenge', line: 'A field changed for one fight — Flooded meadow (lakes) or Wildfire (flames).' },
   marks: { term: 'Marks', line: 'Watch Marks (Marks): earned by every run, spent in the Watchtower on bonuses that carry into every run.' },
-  difficulty: { term: 'Difficulty', line: 'How hard your runs are. Each step makes enemies 8% stronger and adds one elite to each act. A win at your highest step raises it and unlocks a skill; you can lower it before any run.' },
+  difficulty: { term: 'Difficulty', line: 'How hard your runs are. Each step makes enemies 8% stronger and adds one elite to each act. A win at your highest step raises it and unlocks a skill and an item; you can lower it before any run.' },
   daily: { term: 'Daily Watch', line: 'One shared road a day. Your first try each day is scored.' },
   endless: { term: 'Endless Watch', line: 'Wave after wave, with three retries.' },
 }

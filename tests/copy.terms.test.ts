@@ -43,6 +43,17 @@ const RULES: { name: string; bad: RegExp; allow?: (text: string) => boolean }[] 
     allow: (t) => t.trim() === 'Threat' || /Threats first|Threat targeting/.test(t),
   },
   {
+    // The classless rework: there are no classes. A hero is what it holds —
+    // "swings a sword", "shoots a bow", "casts magic". The old names survive
+    // only as the legacy evolution tree's node names (data the balance benches
+    // build from, never shown) — `archetypeTree.ts` is allowed by file below.
+    name: 'Fighter / Rogue / Mystic — say what the hero holds',
+    bad: /\b(Fighters?|Rogues?|Mystics?)\b/,
+    // A skill's `from` line — which retired perk it replaced — is provenance
+    // for designers (`data/skills.ts`), never printed.
+    allow: (t) => /\bperk\b/.test(t),
+  },
+  {
     name: 'Watch Marks — say "Marks" (after the one explanation)',
     bad: /\bWatch Marks?\b/,
     allow: (t) => /Watch Marks \(Marks\)/.test(t),
@@ -90,6 +101,8 @@ describe('one name per thing (LS4)', () => {
     it(`no player-facing string uses a retired name: ${rule.name}`, () => {
       const hits = all
         .filter((s) => rule.bad.test(s.text) && !(rule.allow?.(s.text) ?? false))
+        // The legacy evolution tree: node names the balance benches read, never shown.
+        .filter((s) => !(rule.name.startsWith('Fighter') && s.file === join('game', 'data', 'archetypeTree.ts')))
         .map((s) => `${s.file}:${s.line}  ${s.text.trim().slice(0, 100)}`)
       expect(hits).toEqual([])
     })

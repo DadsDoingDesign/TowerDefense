@@ -14,7 +14,7 @@ import { hiresTrained } from '../../game/run/relics'
 import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
 import { recruitSkill } from '../../game/run/skills'
 import { DAILY_SKILL_POOL, skillPoolFor } from '../../game/run/watch'
-import type { Archetype } from '../../game/types'
+import { DAILY_ITEM_POOL, itemPoolFor } from '../../game/data/itemKinds'
 
 /**
  * Per-system RNG streams, all derived from the run seed (C1).
@@ -65,12 +65,21 @@ export const startingSkillPool = (c: RunChallenge): string[] =>
   usesHub(c) ? skillPoolFor(useMetaStore.getState().skills, (id) => useMetaStore.getState().achieved(id)) : [...DAILY_SKILL_POOL]
 
 /**
+ * The classless rework: the item KINDS a run beginning now deals from — the
+ * basic five plus the player's unlocked kinds, or the Daily's fixed pool.
+ * Read once, kept on the run (`itemPool`), like the skill pool.
+ */
+export const startingItemPool = (c: RunChallenge): string[] =>
+  usesHub(c) ? itemPoolFor(useMetaStore.getState().items ?? []) : [...DAILY_ITEM_POOL]
+
+/**
  * SK1: who deals a hire its first skill — the live run's seed and pool, set
  * whenever a run begins or resumes. A hash of the hire's id, never a stream
- * draw (`run/skills.recruitSkill`).
+ * draw (`run/skills.recruitSkill`). `items` is the run's item pool, which a
+ * hire is rolled from.
  */
-export const skillRun: { seed: number; pool: readonly string[] } = { seed: 0, pool: [] }
-export const dealSkill = (heroId: string, archetype: Archetype): string | null => recruitSkill(skillRun.seed, heroId, archetype, skillRun.pool)
+export const skillRun: { seed: number; pool: readonly string[]; items: readonly string[] } = { seed: 0, pool: [], items: [] }
+export const dealSkill = (heroId: string): string | null => recruitSkill(skillRun.seed, heroId, skillRun.pool)
 
 /** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies), and its first skill. */
 export const recruitHub = (relics: readonly string[] = []) => ({
@@ -78,6 +87,7 @@ export const recruitHub = (relics: readonly string[] = []) => ({
   // Free Companies, or the Mercenary Charter relic (Phase 3b).
   trained: hiresTrained(runUnlocked('freeCompanies'), relics),
   skillFor: dealSkill,
+  itemPool: skillRun.items,
 })
 
 /**

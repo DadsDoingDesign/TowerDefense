@@ -197,7 +197,7 @@ describe('persistence and validation', () => {
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(6)
+    expect(META_VERSION).toBe(7)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])

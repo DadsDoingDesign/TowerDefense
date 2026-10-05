@@ -116,6 +116,7 @@ export function freshRunState(runSeed: number) {
     endlessRoom: null,
     selectedSentinelId: null,
     skillPool: [] as string[],
+    itemPool: [] as string[],
     ...CLEAR_SHELL,
   } satisfies Partial<GameData>
 }

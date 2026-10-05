@@ -1,5 +1,5 @@
-import { getNode } from '../data/archetypeTree'
-import type { Archetype, CoreStats, Sentinel } from '../types'
+import { heroStyle, type HeroStyle } from '../data/items'
+import type { CoreStats, Sentinel } from '../types'
 
 export const MAX_LEVEL = 20
 
@@ -24,14 +24,20 @@ export function levelProgress(sentinel: Sentinel): number {
   return Math.max(0, Math.min(1, (sentinel.xp - cur) / (next - cur)))
 }
 
-const GROWTH: Record<Archetype, Partial<CoreStats>> = {
-  fighter: { str: 2, dex: 1 },
-  rogue: { dex: 2, str: 1 },
-  mystic: { int: 2, dex: 1 },
+/**
+ * What a level adds, by what the hero is fighting WITH when it levels (there
+ * is no class): a sword-hand grows strong, a bow- or knife-hand quick, a
+ * caster clever — the three old class growths. Bare hands grow evenly.
+ */
+const GROWTH: Record<HeroStyle | 'none', Partial<CoreStats>> = {
+  swing: { str: 2, dex: 1 },
+  shoot: { dex: 2, str: 1 },
+  cast: { int: 2, dex: 1 },
+  none: { str: 1, dex: 1, int: 1 },
 }
 
-function applyGrowth(stats: CoreStats, archetype: Archetype): CoreStats {
-  const g = GROWTH[archetype]
+function applyGrowth(stats: CoreStats, style: HeroStyle | null): CoreStats {
+  const g = GROWTH[style ?? 'none']
   return {
     str: stats.str + (g.str ?? 0),
     dex: stats.dex + (g.dex ?? 0),
@@ -48,13 +54,9 @@ export function applyXp(sentinel: Sentinel, addedXp: number): Sentinel {
   const xp = sentinel.xp + addedXp
   const newLevel = levelForXp(xp)
   let stats = sentinel.stats
+  const style = heroStyle(sentinel)
   for (let l = sentinel.level + 1; l <= newLevel; l++) {
-    stats = applyGrowth(stats, sentinel.archetype)
+    stats = applyGrowth(stats, style)
   }
   return { ...sentinel, xp, level: newLevel, stats }
-}
-
-/** The hero's class name ("Fighter") — heroes no longer evolve (SK1). */
-export function buildName(s: Pick<Sentinel, 'archetype'>): string {
-  return getNode(s.archetype).name
 }

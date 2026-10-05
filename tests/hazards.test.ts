@@ -17,7 +17,7 @@ import {
   tileDamageMult,
 } from '../src/game/data/hazards'
 import { ALL_MAPS, fieldFor, fieldIdOf, FIRST_MAP, legacyPosts, orientField, withTerrainRule } from '../src/game/data/maps'
-import { nameCounterState, createSentinel } from '../src/game/data/sentinels'
+import { nameCounterState, classicHero } from '../src/game/data/sentinels'
 import { layTiles, TERRAIN_RULE_IDS } from '../src/game/data/terrain'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import { endlessHazardSeed, nodeHazardSeed } from '../src/game/run/terrain'
@@ -156,7 +156,7 @@ function fight(map: GameMap, spawns: SpawnEvent[], seconds: number, breathers: '
   const e = new GameEngine({
     map,
     wave: { index: 1, label: 't', spawns, isBoss: false },
-    placedSentinels: [{ sentinel: createSentinel('rogue'), slotId: P.s1 }],
+    placedSentinels: [{ sentinel: classicHero('rogue'), slotId: P.s1 }],
     baseHp: 500,
     maxBaseHp: 500,
     seed: 7,

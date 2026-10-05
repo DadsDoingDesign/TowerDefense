@@ -85,11 +85,17 @@ export function describeMods(m: EffectMods): string[] {
   // Only meaningful alongside a burn, and it changes WHO burns rather than by
   // how much — so it is its own line rather than a qualifier smuggled into the
   // one above (C2).
-  if (m.thornsIgnite && m.burn) out.push('thorns set every blocked enemy alight')
+  if (m.thornsIgnite && m.burn) out.push('thorns set every held enemy alight')
+  if (m.thornsBurn) out.push(`thorns burn what it holds for ${m.thornsBurn.dps}/s`)
   if (m.chill) out.push(`chills ${pct(m.chill.slow)} for ${m.chill.dur}s`)
   if (m.shock) out.push(`chains to ${m.shock.chains} for ${pct(m.shock.dmgFrac)}`)
   if (m.stunChance) out.push(`${pct(m.stunChance)} to stun ${m.stunDur ?? 0.5}s`)
-  if (m.block) out.push(`blocks ${m.block.count} enemies`)
+  if (m.block) out.push(`holds ${m.block.count} ${m.block.count === 1 ? 'enemy' : 'enemies'} on the road`)
+  if (m.vsHeld) out.push(`${pct(m.vsHeld)} more to held enemies`)
+  if (m.vsSlowed) out.push(`${pct(m.vsSlowed)} more to slowed enemies`)
+  if (m.rushPerHeld) out.push(`${pct(m.rushPerHeld)} faster per enemy held`)
+  if (m.goldPerKill) out.push(`+${m.goldPerKill} gold a kill`)
+  if (m.killMend) out.push(`every ${m.killMend.every}th kill mends the Gate by ${m.killMend.hp}`)
   if (m.thornsMult && m.thornsMult !== 1) out.push(`${signPct(m.thornsMult)} thorns`)
   if (m.buffAura) {
     out.push(

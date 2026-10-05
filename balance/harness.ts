@@ -23,8 +23,9 @@ import { crowdedBy, parseTileId, withinClearance, type Post } from '../src/game/
 import { isMelee } from '../src/game/engine/melee'
 import type { CommandId } from '../src/game/data/commands'
 import { ALL_MAPS, FIRST_MAP, legacyPosts } from '../src/game/data/maps'
-import { createSentinel } from '../src/game/data/sentinels'
-import { generateItem, heroSlotsFor, type RosterRef } from '../src/game/data/items'
+import { CLASSIC_KIT, classicHero } from '../src/game/data/sentinels'
+import { generateItem, heroSlotsFor, heroStyle, itemNoun, type HeroStyle, type RosterRef } from '../src/game/data/items'
+import { lookOf } from '../src/game/data/gear'
 import { startingKit, wearKit, type EquipRules } from '../src/game/engine/kit'
 import { recruitTargetLevel } from '../src/game/run/recruits'
 import { wearItem } from '../src/game/run/inventory'
@@ -39,7 +40,6 @@ import {
   EVOLUTION_TO_SKILL,
   PERK_TO_SKILL,
   skillById,
-  skillFits,
   skillModsOf,
   STARTER_SKILLS,
   type BumpStat,
@@ -265,7 +265,10 @@ export interface BuildOptions {
 }
 
 /**
- * Build a hero for a tier-2 spec at a target level (default 20) — SK1: as the
+ * Build a hero for a tier-2 spec at a target level (default 20). There are no
+ * classes: the spec's old class is rebuilt from its gear (`classicHero` — a
+ * sword and shield, a dagger, a wand, so it fights exactly as that class
+ * did), and its growth is SK1's: as the
  * SKILLS that replaced that spec's evolutions (`EVOLUTION_TO_SKILL`): the
  * sub-archetype's at the level-10 milestone, the specialization's at the
  * level-15 one (the Level 3 skill). So "the Sharpshooter" on a bench is a Rogue
@@ -278,19 +281,19 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
   const spec = getNode(specId)
   const rng = new RNG(opts.seed ?? 1)
   const level = opts.level ?? 20
-  let s = createSentinel(spec.archetype)
+  let s = classicHero(spec.archetype)
   s = applyXp(s, xpForLevelApprox(level))
   const skills: string[] = []
   const add = (id: string | undefined) => {
     const k = id ? skillById(id) : undefined
-    if (k && skillFits(k, spec.archetype) && !skills.includes(k.id) && skills.length < MAX_SKILLS) skills.push(k.id)
+    if (k && !skills.includes(k.id) && skills.length < MAX_SKILLS) skills.push(k.id)
   }
   // With a seed, the two Level 1 skills a real hero holds by then: the one it
   // was picked with, and its level-5 milestone's.
   if (!opts.perks && opts.perkSeed != null) {
     const r = new RNG(opts.perkSeed)
     for (const _ of level >= 5 ? [0, 1] : [0]) {
-      const l1 = poolFor(FULL_SKILL_POOL, spec.archetype, 1, skills)
+      const l1 = poolFor(FULL_SKILL_POOL, 1, skills)
       if (l1.length) add(r.pick(l1).id)
     }
   }
@@ -299,7 +302,7 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
     // The tier-2 evolution's skill arrives at the Level 3 milestone; a full
     // hero swaps its first Level 1 skill out for it.
     const k = skillById(EVOLUTION_TO_SKILL[specId] ?? '')
-    if (k && skills.length >= MAX_SKILLS && !skills.includes(k.id) && skillFits(k, spec.archetype)) skills.shift()
+    if (k && skills.length >= MAX_SKILLS && !skills.includes(k.id)) skills.shift()
     add(k?.id)
   }
   for (const p of opts.perks ?? []) add(PERK_TO_SKILL[p])
@@ -311,9 +314,21 @@ export function buildSpec(specId: string, opts: BuildOptions = {}): Sentinel {
 }
 
 
-/** A single-affix test item: one enchantment, no base stats, so the affix is the variable. */
-export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand'): Item {
-  return { id: `t_${id}`, name: id, slot, rarity: 'epic', base: {}, enchantments: [ench] }
+/**
+ * A single-affix test item: one enchantment, no base stats, so the affix is the
+ * variable. Named by `noun` when it replaces a weapon: since the classless
+ * rework the weapon in hand decides how the hero fights, so a nameless piece in
+ * the main hand would turn the bench hero into a stone-thrower.
+ */
+export function affixItem(id: string, ench: Item['enchantments'][number], slot: ItemSlot = 'oneHand', noun?: string): Item {
+  return { id: `t_${id}`, name: noun ? `${noun} (${id})` : id, slot, rarity: 'epic', base: {}, enchantments: [ench] }
+}
+
+/** `hero` with `ench` on an affix piece in place of its main hand, keeping its weapon's kind. */
+export function withMainAffix(hero: Sentinel, id: string, ench: Item['enchantments'][number]): Sentinel {
+  const main = hero.equipment.mainHand
+  const noun = main ? itemNoun(main) : undefined
+  return { ...hero, equipment: { ...hero.equipment, mainHand: affixItem(id, ench, main?.slot ?? 'oneHand', noun) } }
 }
 
 function xpForLevelApprox(level: number): number {
@@ -322,11 +337,29 @@ function xpForLevelApprox(level: number): number {
   return 40 * l + 8 * l * (l - 1)
 }
 
+/**
+ * The off-hand piece a bench hero is dressed in when its kit has none: never
+ * a shield, which would hand it a hold its old class never had.
+ */
+const BENCH_OFF: Record<string, string> = { fighter: 'Shield', rogue: 'Quiver', mystic: 'Tome' }
+
+/**
+ * A full set at `rarity`. The KINDS are the hero's own (its weapon keeps it
+ * what it is — a random weapon would turn a sword-hand into a caster); each
+ * forced kind still takes the noun draw, so the rolls behind it are where
+ * they always were.
+ */
 export function equipFullSet(s: Sentinel, rarity: ItemRarity, rng: RNG): Sentinel {
   const equipment = { ...s.equipment }
+  const look = lookOf(s)
   const kinds: Record<HeroSlot, ItemSlot> = { mainHand: 'oneHand', offHand: 'offHand', body: 'body' }
+  const force: Record<HeroSlot, string | undefined> = {
+    mainHand: (s.equipment.mainHand && itemNoun(s.equipment.mainHand)) || CLASSIC_KIT[look].main,
+    offHand: (s.equipment.offHand && itemNoun(s.equipment.offHand)) || BENCH_OFF[look],
+    body: undefined,
+  }
   for (const slot of ['mainHand', 'offHand', 'body'] as HeroSlot[]) {
-    equipment[slot] = generateItem(rng, { slot: kinds[slot], rarity })
+    equipment[slot] = generateItem(rng, { slot: kinds[slot], rarity, kind: force[slot] })
   }
   return { ...s, equipment }
 }
@@ -450,9 +483,10 @@ function repositionAt(engine: GameEngine, policy: PlayerPolicy): void {
     .sort((a, b) => a.d - b.d)
   if (order.length < 2) return
   const first = order[0].s
-  const fighter = order.find((o) => o.s.def.archetype === 'fighter')?.s
+  // The sponge is whoever HOLDS the road (a shield, or a hold skill).
+  const holder = order.find((o) => !!o.s.profile.mods.block)?.s
   if (policy.reposition === 'sponge') {
-    if (fighter && first.def.archetype !== 'fighter') engine.moveHero(fighter.slotId, first.slotId)
+    if (holder && !first.profile.mods.block) engine.moveHero(holder.slotId, first.slotId)
     return
   }
   // Q1: cursed ground is worth what it leaves after the curse (see `deployTeam`).
@@ -904,13 +938,22 @@ export const SEEDS = [11, 137, 409, 1013, 2411, 5171, 7919]
  * hero was picked and left it in the pack, while this modelled it worn. Both
  * now call `startingKit` after the pick and `wearKit` onto the hero.
  */
-export function startingItems(rng: RNG, archetype: Archetype, extra = 0, roster?: readonly RosterRef[]): Item[] {
-  return startingKit(rng, archetype, { extra, roster })
+export function startingItems(rng: RNG, extra = 0, roster?: readonly RosterRef[], kinds?: readonly string[]): Item[] {
+  return startingKit(rng, { extra, roster, kinds })
 }
 
-/** A level-1 hero of the given archetype wearing the real opening kit. */
+/**
+ * A level-1 hero of the old class `archetype` stood for, dressed the way a
+ * PICKED hero arrives (`heroes.pickRarity`): a common weapon of its kind (Epic
+ * for a caster), a rare off-hand piece, a common body.
+ */
 export function freshHero(archetype: Archetype, rng: RNG): Sentinel {
-  return wearKit(createSentinel(archetype), startingKit(rng, archetype))
+  const bare = classicHero(archetype)
+  const kit = CLASSIC_KIT[archetype]
+  const main = generateItem(rng, { kind: kit.main, rarity: archetype === 'mystic' ? 'epic' : 'common', allowCurse: false })
+  const body = generateItem(rng, { slot: 'body', rarity: 'common', allowCurse: false })
+  const off = generateItem(rng, { kind: kit.off ?? BENCH_OFF[archetype], rarity: 'rare', allowCurse: false })
+  return wearKit({ ...bare, equipment: { mainHand: null, offHand: null, body: null } }, [main, body, off])
 }
 
 // ---- the shop and the map, as a real first run meets them -----------------
@@ -980,6 +1023,22 @@ const wear = (s: Sentinel, slot: HeroSlot, item: Item): { hero: Sentinel; displa
 const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => wear(s, slot, item).hero
 
 /**
+ * Does wearing this keep the hero's JOB? (The classless rework.) The weapon
+ * now decides what a hero does, and {@link heroDps} reads damage × rate × crit
+ * only — blind to range, splash and holding. Scored on it alone, the modelled
+ * player traded every wand for a sword (a sword's base hit is bigger) and
+ * turned its casters into 96-reach swingers, and dropped shields for quivers.
+ * A player who drafted a caster keeps it casting, so a move counts only when
+ * the hero's style is unchanged (an unarmed hero may take any weapon) and its
+ * hold does not shrink.
+ */
+const keepsJob = (before: Sentinel, after: Sentinel): boolean => {
+  const style = heroStyle(before)
+  if (style && heroStyle(after) !== style) return false
+  return (computeCombat(after).mods.block?.count ?? 0) >= (computeCombat(before).mods.block?.count ?? 0)
+}
+
+/**
  * How much DPS `item` adds to `s` in the best slot it can occupy — measured by
  * the engine's own `computeCombat`, so a physical weapon is worth nothing to a
  * mystic and an off-type stat line cannot masquerade as an upgrade.
@@ -989,7 +1048,10 @@ export function bestSlotGain(s: Sentinel, item: Item, rules: EquipRules = {}): n
   if (item.keepsake) return 0
   const now = heroDps(s)
   let gain = -Infinity
-  for (const slot of slotsFor(s, item, rules)) gain = Math.max(gain, heroDps(withItem(s, slot, item)) - now)
+  for (const slot of slotsFor(s, item, rules)) {
+    const after = withItem(s, slot, item)
+    if (keepsJob(s, after)) gain = Math.max(gain, heroDps(after) - now)
+  }
   return gain
 }
 
@@ -1008,14 +1070,17 @@ export function equipAndDisplace(s: Sentinel, item: Item, rules: EquipRules = {}
   const now = heroDps(s)
   let best: { slot: HeroSlot; dps: number } | null = null
   for (const slot of slotsFor(s, item, rules)) {
-    const dps = heroDps(withItem(s, slot, item))
+    const after = withItem(s, slot, item)
+    if (!keepsJob(s, after)) continue
+    const dps = heroDps(after)
     if (dps > now && (!best || dps > best.dps)) best = { slot, dps }
   }
   return best ? wear(s, best.slot, item) : { hero: s, displaced: [] }
 }
 
-/** The stat a class's damage reads — where the modelled player puts a bump. */
-const MAIN_STAT: Record<Archetype, BumpStat> = { fighter: 'str', rogue: 'dex', mystic: 'int' }
+/** The stat a hero's damage reads, by what it holds — where the modelled player puts a bump. */
+const MAIN_STAT: Record<HeroStyle, BumpStat> = { swing: 'str', shoot: 'dex', cast: 'int' }
+const mainStat = (s: Sentinel): BumpStat => MAIN_STAT[heroStyle(s) ?? 'swing']
 
 /**
  * Every way a hero can settle its owed milestone (SK1): each skill on its
@@ -1057,7 +1122,7 @@ export function randomSkills(s: Sentinel, rng: RNG, pool: readonly string[], see
     if (offer.length && (!slotsFull(out) || rng.chance(0.5))) {
       next = takeSkill(out, rng.pick(offer).id, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null)
     }
-    out = next ?? takeBump(out, MAIN_STAT[out.archetype], pool, seed) ?? out
+    out = next ?? takeBump(out, mainStat(out), pool, seed) ?? out
   }
   return out
 }
@@ -1080,7 +1145,8 @@ export function bestSkills(s: Sentinel, pool: readonly string[], seed: number): 
 
 /**
  * Milestones with some picks pinned: `force['10:rogue']` names the skill a
- * Rogue takes at level 10 when its offer holds it (else the coin flip). The
+ * hero with the hooded look (a bow or a dagger in hand, `gear.lookOf`) takes
+ * at level 10 when its offer holds it (else the coin flip). The
  * oracle in `meta-sweep.ts phase3b` pins each point in turn.
  */
 export function forcedSkills(s: Sentinel, force: Record<string, string>, rng: RNG, pool: readonly string[], seed: number): Sentinel {
@@ -1088,7 +1154,7 @@ export function forcedSkills(s: Sentinel, force: Record<string, string>, rng: RN
   for (let guard = 0; guard < 3; guard++) {
     const m = pendingMilestone(out)
     if (!m) break
-    const pinned = force[`${m.level}:${out.archetype}`]
+    const pinned = force[`${m.level}:${lookOf(out)}`]
     const offer = skillOffer(out, pool, seed)
     if (pinned && offer.some((k) => k.id === pinned)) {
       out = takeSkill(out, pinned, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null) ?? out

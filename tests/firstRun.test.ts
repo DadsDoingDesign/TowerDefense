@@ -130,7 +130,7 @@ describe('RNG draw order (the store)', () => {
       expect(first.loot).toBe(back.loot)
       // The same hero, the same kit: only the road's staging differs. (Ids and
       // names come off process-wide counters, so compare what was DEALT.)
-      const kit = (s: typeof first.st) => s.roster.map((h) => [h.archetype, h.stats, h.equipment.mainHand?.name, h.equipment.offHand?.name, h.equipment.body?.name])
+      const kit = (s: typeof first.st) => s.roster.map((h) => [h.name, h.stats, h.equipment.mainHand?.name, h.equipment.offHand?.name, h.equipment.body?.name])
       expect(kit(first.st)).toEqual(kit(back.st))
       expect(first.st.runMap.edges.length).toBe(back.st.runMap.edges.length)
       expect(first.st.runMap.nodes.map((n) => [n.layer, n.row])).toEqual(back.st.runMap.nodes.map((n) => [n.layer, n.row]))

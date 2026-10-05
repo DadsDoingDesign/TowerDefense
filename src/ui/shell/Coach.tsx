@@ -327,6 +327,7 @@ export function pickTip(s: TipFacts): Tip | null {
       }
     // Said on the hero pick itself, which has no coach strip (`offers.ts`).
     case 'heroSkill':
+    case 'heroGear':
       return null
     case 'danger':
       return {
@@ -413,7 +414,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'equip',
         body: (
           <>
-            Items you win land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one.
+            Items you win land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one — what a hero holds is what it does.
           </>
         ),
       }

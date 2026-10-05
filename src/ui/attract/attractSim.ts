@@ -54,8 +54,8 @@
  * starts afterwards differ from the same seed started cold — different ids in
  * the snapshot, a different name on the first hero. So:
  *
- *  - the company is built here from the archetype tree directly, never through
- *    `createSentinel`, and carries fixed `attract-*` ids (its gear too);
+ *  - the company is built here directly, never through `createHero`, and
+ *    carries fixed `attract-*` ids (its gear too);
  *  - the engine is constructed and stepped inside `withOwnIds`: it mints from
  *    its OWN counter (from 0, carried across calls), and the global counter
  *    is put back after every call. So the sim's ids are the same on every
@@ -76,7 +76,7 @@ import { generateItem } from '../../game/data/items'
 import { fieldFor, legacyPostTile } from '../../game/data/maps'
 import { crowdedBy, type Post } from '../../game/data/terrain'
 import { isMelee } from '../../game/engine/melee'
-import { ARCHETYPES } from '../../game/data/sentinels'
+import { BASE_THORNS, HERO_NAMES, plainItem } from '../../game/data/sentinels'
 import { generateEncounter, type EncounterKind } from '../../game/data/waves'
 import { GameEngine, TICK } from '../../game/engine/engine'
 import { applyXp, xpToReach } from '../../game/engine/leveling'
@@ -93,6 +93,12 @@ import type { Archetype, Equipment, GameMap, Item, ItemRarity, ItemSlot, Sentine
 
 /** One member of the company. */
 export interface AttractHero {
+  /**
+   * The look the scene drew for this member. There are no classes: it is read
+   * as a WEAPON FAMILY when the company is dressed (`ATTRACT_KIT` — a sword
+   * and shield, a dagger, a wand), and the scene's draws are exactly the ones
+   * it has always made, so every date still deals the scene it did.
+   */
   archetype: Archetype
   /** Tree node ids, tier 0 → current (`['fighter', 'knight']`), read as skills. */
   branchPath: readonly string[]
@@ -277,38 +283,51 @@ export function composeScene(seed: number, take: number): AttractScenario {
 
 const GEAR_SLOT: Record<'mainHand' | 'offHand' | 'body', ItemSlot> = { mainHand: 'oneHand', offHand: 'offHand', body: 'body' }
 
+/**
+ * What each drawn look is dressed in (the classless rework): the weapon makes
+ * the hero what it is, so the scene's armoured member carries a sword AND a
+ * shield (it holds the road, as the old Fighter did — always, whatever the
+ * off-hand roll), the hooded one a dagger, the robed one a wand.
+ */
+export const ATTRACT_KIT: Readonly<Record<Archetype, { main: string; off: string | null }>> = {
+  fighter: { main: 'Sword', off: 'Shield' },
+  rogue: { main: 'Dagger', off: null },
+  mystic: { main: 'Wand', off: null },
+}
+
 /** A company member, built without touching the name or id counters. */
 function attractHero(sc: AttractScenario, h: AttractHero, i: number): Sentinel {
   let s = bareHero(h.archetype, i)
-  if (h.level > 1) s = applyXp(s, xpToReach(h.level))
-  const grown = migrateGrowth({ archetype: h.archetype, level: s.level, branchPath: h.branchPath, stats: s.stats })
-  s = { ...s, skills: grown.skills, skillPicks: grown.skillPicks, stats: grown.stats }
   const equipment: Equipment = { mainHand: null, offHand: null, body: null }
+  const kit = ATTRACT_KIT[h.archetype]
   for (const slot of ['mainHand', 'offHand', 'body'] as const) {
     const rarity = h.gear[slot]
-    if (!rarity) continue
-    equipment[slot] = attractItem(sc, i, slot, rarity, h.archetype)
+    if (rarity) equipment[slot] = attractItem(sc, i, slot, rarity, h.archetype)
   }
-  return { ...s, equipment }
+  // A member the scene dealt no weapon (or the armoured one no off hand)
+  // still holds its kit, as a plain stat-less piece: the weapon is what makes
+  // it fight the way the scene was drawn (the authored fallback carries none).
+  if (!equipment.mainHand) equipment.mainHand = plainItem(`attract-${i}-mainHand`, kit.main, 'oneHand')
+  if (!equipment.offHand && kit.off) equipment.offHand = plainItem(`attract-${i}-offHand`, kit.off, 'offHand')
+  // Dressed BEFORE it levels: a level's growth follows what the hero holds.
+  s = { ...s, equipment }
+  if (h.level > 1) s = applyXp(s, xpToReach(h.level))
+  const grown = migrateGrowth({ archetype: h.archetype, level: s.level, branchPath: h.branchPath, stats: s.stats })
+  return { ...s, skills: grown.skills, skillPicks: grown.skillPicks, stats: grown.stats }
 }
 
 /** A company member at level 1 with nothing on, without touching the name or id counters. */
 function bareHero(archetype: Archetype, i: number): Sentinel {
   const node = getNode(archetype)
-  const meta = ARCHETYPES[archetype]
   return {
     id: `attract-${i}-${archetype}`,
-    name: meta.name,
-    archetype,
-    branchPath: [archetype],
+    name: HERO_NAMES[i % HERO_NAMES.length],
     stats: { ...node.baseStats! },
-    thorns: node.baseThorns!,
+    thorns: BASE_THORNS,
     patience: node.basePatience!,
     level: 1,
     xp: 0,
     equipment: { mainHand: null, offHand: null, body: null },
-    color: node.color!,
-    accent: node.accent!,
   }
 }
 
@@ -316,7 +335,9 @@ function bareHero(archetype: Archetype, i: number): Sentinel {
  * One piece of a company member's gear. It is rolled from the scene seed with
  * its own stream per piece, and renamed onto a fixed id — the generator mints
  * from the global counter, which `withIsolatedIds` puts back, but its id
- * would still depend on it. A main-hand weapon is of the hero's damage type.
+ * would still depend on it. A main-hand weapon or an off-hand shield is the
+ * kind `ATTRACT_KIT` dresses the look in; forcing a kind still takes the
+ * noun draw, so each piece's enchantments roll from where they always did.
  */
 function attractItem(
   sc: Pick<AttractScenario, 'seed' | 'take'>,
@@ -332,7 +353,8 @@ function attractItem(
       slot: GEAR_SLOT[slot],
       rarity,
       allowCurse: false,
-      ...(slot === 'mainHand' ? { damageType: node.base?.damageType ?? 'physical' } : {}),
+      ...(slot === 'mainHand' ? { damageType: node.base?.damageType ?? 'physical', kind: ATTRACT_KIT[archetype].main } : {}),
+      ...(slot === 'offHand' && ATTRACT_KIT[archetype].off ? { kind: ATTRACT_KIT[archetype].off! } : {}),
     }),
   )
   return { ...item, id: `attract-${i}-${slot}` }

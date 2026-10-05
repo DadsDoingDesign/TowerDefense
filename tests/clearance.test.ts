@@ -1,13 +1,12 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
-import { ALL_NODES, BASE_ARCHETYPE_NODES, getNode, mergeMods } from '../src/game/data/archetypeTree'
+import { BASE_ARCHETYPE_NODES } from '../src/game/data/archetypeTree'
+import { computeCombat } from '../src/game/engine/combat'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { allMutations } from '../src/game/data/mutations'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { RELICS, relicTeamMods } from '../src/game/data/relics'
-import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
+import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import {
   CLEARANCE_LABEL,
   clearanceOverlay,
@@ -51,7 +50,7 @@ const gear = (noun: string, slot: ItemSlot = ITEM_BASES[noun].slot): Item => ({
 })
 /** A fresh hero holding `noun` in the main hand (nothing when null). */
 const holding = (a: Archetype, noun: string | null): Sentinel => {
-  const h = createSentinel(a)
+  const h = classicHero(a)
   return { ...h, equipment: { mainHand: noun ? gear(noun) : null, offHand: null, body: null } }
 }
 
@@ -101,31 +100,36 @@ describe('who is melee', () => {
     expect(isMelee({ ...holding('rogue', 'Dagger'), equipment: { mainHand: gear('Dagger'), offHand: gear('Sword', 'oneHand'), body: gear('Plate') } })).toBe(true)
   })
 
-  it('evolutions never change it on their own: the same weapon, the same answer, down every path', () => {
-    for (const n of ALL_NODES) {
-      const path: string[] = []
-      for (let at: string | null = n.id; at; at = getNode(at).parent) path.unshift(at)
-      expect(isMelee({ ...holding(n.archetype, 'Sword'), branchPath: path })).toBe(true)
-      expect(isMelee({ ...holding(n.archetype, 'Bow'), branchPath: path })).toBe(false)
-    }
+  it('a hold comes from a shield in the off hand — a bigger shield holds more — and never decides who swings', () => {
+    const withOff = (noun: string | null, main = 'Bow'): Sentinel => ({ ...holding('rogue', main), equipment: { mainHand: gear(main), offHand: noun ? gear(noun) : null, body: null } })
+    expect(computeCombat(withOff(null, 'Sword')).mods.block).toBeUndefined()
+    expect(computeCombat(withOff('Buckler', 'Sword')).mods.block?.count).toBe(1)
+    expect(computeCombat(withOff('Shield', 'Sword')).mods.block?.count).toBe(2)
+    expect(computeCombat(withOff('Pavise', 'Sword')).mods.block?.count).toBe(3)
+    expect(computeCombat(withOff('Tome', 'Wand')).mods.block).toBeUndefined()
+    // A wand-hand with a shield holds the road and does not swing.
+    const caster = withOff('Shield', 'Wand')
+    expect(computeCombat(caster).mods.block?.count).toBe(2)
+    expect(isMelee(caster)).toBe(false)
+    // No class node carries a hold any more.
+    for (const n of BASE_ARCHETYPE_NODES) expect(n.mods?.block).toBeUndefined()
   })
 
-  it('holding enemies stays the Fighter line\'s, whatever it holds — only the clearance moved', () => {
-    for (const n of BASE_ARCHETYPE_NODES) expect(n.mods?.block != null).toBe(n.archetype === 'fighter')
-    const archer = holding('fighter', 'Bow')
-    expect(isMelee(archer)).toBe(false)
-    expect(mergeMods(archer.branchPath.map((id) => getNode(id).mods)).block).toBeDefined()
+  it('a hold skill adds to the shield, or is the whole hold without one', () => {
+    const sword = holding('fighter', 'Sword')
+    const shielded: Sentinel = { ...sword, equipment: { ...sword.equipment, offHand: gear('Shield') } }
+    expect(computeCombat({ ...shielded, skills: ['hold_fast'] }).mods.block?.count).toBe(3)
+    expect(computeCombat({ ...shielded, skills: ['shield_wall'] }).mods.block).toEqual({ count: 4, radius: 90 })
+    expect(computeCombat({ ...sword, skills: ['hold_fast'] }).mods.block?.count).toBe(1)
   })
 
-  it('nothing else grants a hold to a ranged hero: skills, mutations, relics, gear', () => {
-    // SK1: a skill that holds is offered only to a Fighter, so no skill turns
-    // a Rogue or Mystic into a melee hero.
-    for (const k of ALL_SKILLS) if (k.mods.block) expect(k.class).toBe('fighter')
+  it('nothing else grants a hold: mutations, relics, enchantments', () => {
     for (const m of allMutations()) expect(m.mods.block).toBeUndefined()
     for (const m of relicTeamMods(RELICS.map((r) => r.id))) expect(m.block).toBeUndefined()
-    const items = readFileSync(join(__dirname, '..', 'src', 'game', 'data', 'items.ts'), 'utf8')
-    expect(/\bblock\s*:/.test(items)).toBe(false)
+    // Skills hold only through `holdAdd`; the base hold is the shield's.
+    for (const k of ALL_SKILLS) expect(k.mods.block).toBeUndefined()
   })
+
 })
 
 describe('the rule', () => {

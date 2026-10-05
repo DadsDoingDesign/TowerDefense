@@ -10,7 +10,7 @@ import {
   STUDY_KILLS_BOSS,
 } from '../src/game/data/enemyKnowledge'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { WaveDef } from '../src/game/types'
 import { migrateMeta, useMetaStore } from '../src/state/metaStore'
@@ -139,9 +139,9 @@ describe('the engine’s kill tally (Q10)', () => {
       map: FIRST_MAP,
       wave,
       placedSentinels: [
-        { sentinel: createSentinel('rogue'), slotId: P.s1 },
-        { sentinel: createSentinel('mystic'), slotId: P.s2 },
-        { sentinel: createSentinel('fighter'), slotId: P.s3 },
+        { sentinel: classicHero('rogue'), slotId: P.s1 },
+        { sentinel: classicHero('mystic'), slotId: P.s2 },
+        { sentinel: classicHero('fighter'), slotId: P.s3 },
       ],
       baseHp: 200,
       maxBaseHp: 200,

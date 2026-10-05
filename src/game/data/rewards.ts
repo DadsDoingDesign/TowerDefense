@@ -251,6 +251,8 @@ export function generateRewardCards(
      * the player picks an item card — see `creditPity` (F4).
      */
     pity?: RarityPity
+    /** The run's unlocked item kinds. */
+    kinds?: readonly string[]
   } = {},
 ): RewardCard[] {
   const count = opts.count ?? 3
@@ -263,7 +265,7 @@ export function generateRewardCards(
   const usedStats = new Set<string>()
   return kinds.map((k) => {
     if (k === 'item') {
-      const item = generateItem(rng, { luck, roster: opts.roster, pity: opts.pity, commitPity: false })
+      const item = generateItem(rng, { luck, roster: opts.roster, pity: opts.pity, commitPity: false, kinds: opts.kinds })
       return { id: nextId('rw'), kind: 'item', title: item.name, desc: '', rarity: item.rarity, item }
     }
     const rarity = pickCardRarity(rng, luck)

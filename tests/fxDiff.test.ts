@@ -155,7 +155,7 @@ describe('FxDiffer on synthetic ticks', () => {
   it('reports a shot fired and the defeat once', () => {
     const eng = fakeEngine()
     const hero = {
-      id: 's1', fireFlash: 0, procFlash: 0, pos: { x: 5, y: 5 }, aimAngle: 0.3, def: { accent: '#fff' },
+      id: 's1', fireFlash: 0, procFlash: 0, pos: { x: 5, y: 5 }, aimAngle: 0.3, def: { equipment: { mainHand: null, offHand: null, body: null } },
       profile: { mods: {}, thorns: 0, damageType: 'physical' }, blockIds: [] as string[],
     }
     eng.sentinels.push(hero)

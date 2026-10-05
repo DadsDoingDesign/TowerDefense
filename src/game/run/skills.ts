@@ -11,7 +11,7 @@
  * stream re-deals every item after it. So nothing here draws from a run
  * stream. Every roll is a FRESH generator seeded by a hash of what it is for:
  *
- *  - the three heroes on offer: `(runSeed, 'heroes')`;
+ *  - the three heroes on offer: `(runSeed, 'heroes')` (`run/heroes.ts`);
  *  - a hire's skill: `(runSeed, 'recruit-skill', heroId)`;
  *  - a milestone's offer: `(runSeed, 'skills', heroId, milestoneLevel)`.
  *
@@ -27,7 +27,6 @@ import {
   EVOLUTION_TO_SKILL,
   PERK_TO_SKILL,
   skillById,
-  skillFits,
   type BumpStat,
   type Skill,
   type SkillLevel,
@@ -50,7 +49,7 @@ export interface Milestone {
   tier: SkillLevel
 }
 
-type Grower = Pick<Sentinel, 'id' | 'archetype' | 'level' | 'skills' | 'skillPicks'>
+type Grower = Pick<Sentinel, 'id' | 'level' | 'skills' | 'skillPicks'>
 
 const done = (s: Pick<Sentinel, 'skillPicks'>): number => Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(s.skillPicks ?? 0)))
 
@@ -69,29 +68,29 @@ export function nextMilestone(s: Pick<Sentinel, 'skillPicks'>): Milestone | null
 }
 
 /** Draw `n` distinct entries of `src` off `rng`, kept in `src`'s order. */
-function drawDistinct<T>(rng: RNG, src: readonly T[], n: number): T[] {
+export function drawDistinct<T>(rng: RNG, src: readonly T[], n: number): T[] {
   const left = [...src]
   const picked = new Set<T>()
   while (picked.size < n && left.length) picked.add(left.splice(Math.floor(rng.next() * left.length), 1)[0])
   return src.filter((x) => picked.has(x))
 }
 
-/** The skills of `tier` this class may hold, from `pool`, in library order. */
-export function poolFor(pool: readonly string[], archetype: Archetype, tier: SkillLevel, except: readonly string[] = []): Skill[] {
+/** The skills of `tier` in `pool`, in library order (any hero may hold any skill). */
+export function poolFor(pool: readonly string[], tier: SkillLevel, except: readonly string[] = []): Skill[] {
   const have = new Set(pool)
   const skip = new Set(except)
-  return ALL_SKILLS.filter((k) => k.level === tier && have.has(k.id) && !skip.has(k.id) && skillFits(k, archetype))
+  return ALL_SKILLS.filter((k) => k.level === tier && have.has(k.id) && !skip.has(k.id))
 }
 
 /**
  * The skills a hero is offered at its owed milestone: up to three of that
- * milestone's level, from the run's pool, that fit its class and that it does
- * not already hold. Empty when nothing is owed.
+ * milestone's level, from the run's pool, that it does not already hold.
+ * Empty when nothing is owed.
  */
 export function skillOffer(hero: Grower, pool: readonly string[], runSeed: number): Skill[] {
   const m = pendingMilestone(hero)
   if (!m) return []
-  const cands = poolFor(pool, hero.archetype, m.tier, hero.skills ?? [])
+  const cands = poolFor(pool, m.tier, hero.skills ?? [])
   return drawDistinct(new RNG(hashSeed(runSeed, 'skills', hero.id, m.level)), cands, OFFER_SIZE)
 }
 
@@ -141,38 +140,9 @@ export function takeBump<T extends Grower & Pick<Sentinel, 'stats'>>(hero: T, st
 // Dealing a hero its first skill
 // ---------------------------------------------------------------------------
 
-/** The three classes the hero pick deals, in its order. */
-export const PICK_ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
-
-export interface HeroChoice {
-  archetype: Archetype
-  /** The Level 1 skill this hero arrives with (null only if the pool has none for it). */
-  skill: string | null
-}
-
-/**
- * The three heroes a run's hero pick offers: one of each class, each with one
- * random Level 1 skill from the pool. A pure function of the seed and the pool
- * — the same seed (a Daily, a typed seed) offers the same three. The three
- * skills are distinct whenever the pool allows, so the pick is a choice of
- * skill as well as of class.
- */
-export function heroChoices(runSeed: number, pool: readonly string[]): HeroChoice[] {
-  const rng = new RNG(hashSeed(runSeed, 'heroes'))
-  const used = new Set<string>()
-  return PICK_ARCHETYPES.map((archetype) => {
-    const fits = poolFor(pool, archetype, 1)
-    const fresh = fits.filter((k) => !used.has(k.id))
-    const from = fresh.length ? fresh : fits
-    const k = from.length ? from[Math.floor(rng.next() * from.length)] : null
-    if (k) used.add(k.id)
-    return { archetype, skill: k?.id ?? null }
-  })
-}
-
-/** The Level 1 skill a hire arrives with: one random card from the pool that fits it. */
-export function recruitSkill(runSeed: number, heroId: string, archetype: Archetype, pool: readonly string[]): string | null {
-  const fits = poolFor(pool, archetype, 1)
+/** The Level 1 skill a hire arrives with: one random Level 1 card from the pool. */
+export function recruitSkill(runSeed: number, heroId: string, pool: readonly string[]): string | null {
+  const fits = poolFor(pool, 1)
   if (!fits.length) return null
   return fits[Math.floor(new RNG(hashSeed(runSeed, 'recruit-skill', heroId)).next() * fits.length)].id
 }
@@ -211,7 +181,7 @@ export interface LegacyGrowth {
  * `skillPicks` counts the old CHOICES made at 5, 10 and 15, so a hero that had
  * not yet chosen its level-15 perk is still owed its level-15 skill.
  */
-export function migrateGrowth(h: LegacyGrowth): { skills: string[]; skillPicks: number; stats: CoreStats; branchPath: string[] } {
+export function migrateGrowth(h: LegacyGrowth): { skills: string[]; skillPicks: number; stats: CoreStats } {
   const perks = h.perks ?? []
   const path = h.branchPath ?? []
   const steps: { skill: string | undefined; tier: SkillLevel }[] = []
@@ -223,11 +193,11 @@ export function migrateGrowth(h: LegacyGrowth): { skills: string[]; skillPicks: 
   const stats = { ...h.stats }
   for (const s of steps) {
     const k = s.skill ? skillById(s.skill) : undefined
-    if (k && skillFits(k, h.archetype) && !skills.includes(k.id) && skills.length < MAX_SKILLS) skills.push(k.id)
+    if (k && !skills.includes(k.id) && skills.length < MAX_SKILLS) skills.push(k.id)
     else stats[MAIN_STAT[h.archetype]] += BUMP_AMOUNT[s.tier]
   }
   const old = (perks.length >= 1 ? 1 : 0) + (path.length >= 2 ? 1 : 0) + (perks.length >= 2 ? 1 : 0)
   const reached = SKILL_MILESTONES.filter((l) => h.level >= l).length
   const skillPicks = Math.max(Math.floor(h.skillPicks ?? 0), Math.min(reached, old))
-  return { skills, skillPicks: Math.min(SKILL_MILESTONES.length, skillPicks), stats, branchPath: [h.archetype] }
+  return { skills, skillPicks: Math.min(SKILL_MILESTONES.length, skillPicks), stats }
 }

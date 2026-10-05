@@ -8,17 +8,16 @@
  * action per offer, a price on anything that spends, and the numbers quoted
  * from the rule that applies them (`run/campfire.ts`, `run/economy.ts`).
  */
+import { lookVar } from '../channels'
+import { kitName } from '../../game/data/gear'
+import { heroLookArt } from './offers'
 import { CAMPFIRE_FORAGE, CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
 import { GATE_REPAIR, rerollCost } from '../../game/run/economy'
 import { restockFree, shelfSize } from '../../game/run/relics'
-import { buildName } from '../../game/engine/leveling'
 import type { useGameStore } from '../../state/gameStore'
-import { archetypeVar } from '../channels'
 import type { Offer } from './offers'
 
 type St = ReturnType<typeof useGameStore.getState>
-
-const heroArt = (archetype: string) => `assets/sprites/tinyswords/${archetype}.png`
 
 /**
  * Rest or train — one of the two, and the stop is spent either way. A rest on
@@ -44,13 +43,12 @@ export function campfireOffers(st: St, fieldKitchen = false): Offer[] {
       id: `campfire-train-${s.id}`,
       title: `Train ${s.name}`,
       sub: able ? `Level ${s.level} → ${s.level + 1}` : 'Already level 20',
-      color: archetypeVar(s.archetype),
-      rowArt: heroArt(s.archetype),
+      color: lookVar(s),
+      rowArt: heroLookArt(s),
       body: able
         ? [
-            `${s.name} (${buildName(s)}) gains a full level: +${xpToNextLevel(s)} XP.`,
-            ...(s.level + 1 === 5 || s.level + 1 === 15 ? [`Level ${s.level + 1} brings a perk choice.`] : []),
-            ...(s.level + 1 === 10 || s.level + 1 === 20 ? [`Level ${s.level + 1} brings an evolution.`] : []),
+            `${s.name} (${kitName(s)}) gains a full level: +${xpToNextLevel(s)} XP.`,
+            ...(s.level + 1 === 5 || s.level + 1 === 10 || s.level + 1 === 15 ? [`Level ${s.level + 1} brings a skill choice.`] : []),
             'Training spends the campfire. The Gate does not rest.',
           ]
         : [`${s.name} is at the level cap. Training would do nothing.`],
