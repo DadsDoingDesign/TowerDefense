@@ -7,7 +7,8 @@ You run a private militia hired by trade companies to clear their trade routes o
 
 ## One currency: gold
 - Gold is the only currency. It pays for services, the HQ, cargo stakes and item pulls. Marks and dust are gone.
-- **Default (overridable):** you set out with a **purse** you choose; the bank stays home and earns interest; what's left in the purse returns at the end.
+- **Default (overridable):** you set out with a **purse** you choose; the bank stays home and earns interest.
+- **Decided (2026-10-05): road gold comes home, taxed.** At the end of a run what is left of the purse returns in full (spending comes out of the purse first); of the gold the road paid into it (fights, shrines, sales), **25%** comes home and the rest stays on the road. City pay and contract payouts are banked in full. The result screen says it plainly: "Purse returned 40 · Road gold 412 → 103 banked (25%)". The share is `hq.ROAD_SHARE`, tunable.
 
 ## Contracts (a run = one company's route)
 - **Escort contract (no stake):** costs nothing.
@@ -50,27 +51,35 @@ You run a private militia hired by trade companies to clear their trade routes o
 - **The Daily:** replaced by the charter.
 - **The Banner/Vow ladder and difficulty steps:** replaced by stakes.
 
-## The mercenary company (HQ upgrades)
-- **HR office:** better odds on your opening hero deal. Each level improves your initial picks.
-- **Finance office:** a bank. Gold left on deposit earns interest at the end of each completed run. Upgrades raise the rate.
+## The mercenary company (HQ upgrades) — built in step 3
+Rules: `src/game/run/hq.ts`. Screens: `src/ui/shell/hq/`. Every price is a placeholder for the tuning pass.
+- **HR office:**
+  - **Opening deal** (150 / 300 / 500 / 800 / 1,200): 1 every hero comes with body armour, and an off-hand piece if a hand is free; 2 body armour arrives Rare; 3 pick 1 of 4; 4 one of them starts with a Level 2 skill; 5 a second hero marches with the one you pick.
+  - **Hiring Hall** (180): the old hub service, kept — a second Recruit stop, hires trained to depth.
+- **Finance office:** gold left in the bank earns interest at the end of each **finished** contract (delivered or cashed out; never a lost one, never a custom seed), on the bank before the run's deposit lands. 2% / 2.5% / 3% / 4% (200 / 400 / 700), capped at 20 / 25 / 30 / 40 gold a contract — every cap fills at 1,000 banked. **Why 40 at most:** the smallest stake (one crate) adds +50 to +55 gold to a contract's expected pay over the escort (REPORT §13) and +90 delivered; a 50 cap tied the measured one-crate gain, so the top is 40 and the bank never out-earns a stake. The page shows the next payout and the last one.
 - **Operations:**
-  - **Pack slots:** buy more backpack slots.
-  - **Obstacles:** pay to clear obstacles for one run, or upgrade to reduce them permanently.
-  - **Company focus:** pay to weight a run's spawns further toward one company, or upgrade the default focus.
-    - Spreading focus across companies must never cancel out ("+1% to all three does nothing"). Focus is therefore **one company at a time**, with meaningful steps (e.g. its share of the pool +15% / +30% / +45%).
+  - **Pack slots:** 6, up to 10 (150 / 250 / 350 / 450). A full pack sells its cheapest piece for scrap gold when loot arrives (only as many as arrived; moving your own gear never sells anything).
+  - **Boulders:** each field lays 6 seeded boulder patches. "Fewer for good" takes 1 away a level (250 / 450 / 700); an order clears 2 more for one contract (60). At least 2 always stand, and a quarry road's own extra boulders are never cleared.
+  - **Company focus:** one company at a time (free to switch). +15 / +30 / +45 percentage points of its share of the run's skill and item pools (250 / 500 / 800), and an order adds +15 for one contract (50). Never past 90% — other companies' pieces always still turn up.
+  - **Scouts:** the old Scout Reports (level 1: every ambush has a way around) and Cartographer's Table (level 2: three or four roads a layer), 150 / 200.
+- **Orders** are paid at the HQ and spent when the next contract is signed; the run's HQ terms are frozen on its contract.
+- **The old hub:** Hiring Hall and Scout Reports (+ Cartographer) fold in; Reinforced Wagons, War Chest, Seasoned Recruits, Reserve Squad, Quartermaster, Field Kitchen and Relic Cartulary are retired and refunded to the bank at what they cost (meta v9).
+
+## Sealed crates (the item pull) — built in step 3
+- 500 gold a crate (about one finished run's savings). Odds by Level: 70 / 22 / 8%, and every standing level you hold (all companies together, up to 30) moves a point off Level 1 (two thirds to Level 2, one third to Level 3). Within a Level, every unlockable kind is equally likely; the page shows the chance of a kind you don't have.
+- A duplicate is a **Rare bonus item** of that kind in your next contract's pack.
+- Each crate is a hash of the save's crate seed and its number — its own stream.
 
 ## Overlooked: decide or design for
-1. **Bank vs. run purse.**
-   - If the whole bank funds merchants mid-run, a rich player buys everything and runs get easy. That fights the stakes, and it fights interest too (spending drains the deposit).
-   - Proposed: set out with a purse you choose. The bank stays home and earns interest. What's left in the purse returns at the end.
-2. **Hoarding vs. staking.** Default: interest pays only on finished contracts, and is capped so it never beats staking.
+1. **Bank vs. run purse.** Decided: a purse you choose; the bank stays home and earns interest; the purse's rest returns in full, and 25% of the road's gold with it (see One currency).
+2. **Hoarding vs. staking.** Built: interest pays only on finished contracts, capped at 40 a contract (under one crate's +50 expected gain).
 3. **Never broke.** The free escort contract plus per-city pay means a losing streak still earns. Keep it so.
 4. **The pull's tone.** It's an in-game gamble with no real money: keep it that way, show the odds plainly, and handle duplicates well (the bonus item does this).
 5. **The charter's unlock condition** ("everything unlocked") is a long road. Show progress ("Charter: 74% of the catalogue") so it reads as a goal, not a secret.
 6. **The top item tier** needs a name and a colour that clash with nothing: rarity colours, company colours, cursed ground, the clearance red.
 7. **Obstacles are a balance lever** (they were the main one after the finer grid). Price obstacle removal so it doesn't trivialise routes.
 8. **Removing the Daily** loses the "same seed for everyone" feature. Fine for now; the charter could have a weekly seed later.
-9. **First run (LS3):** a free escort contract from one company. Stakes, pulls and the HQ open after the first finished contract, each with one tip.
+9. **First run (LS3):** a free escort contract from one company. Stakes, pulls and the HQ open after the first finished contract, each with one tip. (Built: the HQ and the crates are hidden from a first-timer's menu and each page says one tip, once.)
 
 ## Approved (2026-10-05: "i loove all these … go")
 1. **The Gate is the caravan.** What you defend is the cargo. Leaked enemies steal crates, so less sells at the next city. Every battle ties to the money.

@@ -2788,3 +2788,36 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   road's end, so on some fields it sits on open tiles a hero may stand on (it
   draws under heroes and takes no taps); the trade map menu (step 4) will
   give the board its night map strip.
+
+- **2026-10-05 — The mercenary company, step 3: the HQ and sealed crates.**
+  The designer's call first: road gold comes home taxed — what is left of the
+  purse returns in full (spending comes out of the purse first), 25% of the
+  gold the road paid comes with it, city pay is banked in full
+  (`run/hq.homeGold`). The Watchtower became the HQ, one page with three
+  offices behind tabs (mockups `trade/r3/7-hq-*.png`): HR (Opening deal, five
+  levels; Hiring Hall), Finance (interest on finished contracts, capped
+  20–40 a contract, the next and last payout shown, a bank-vs-stake bar),
+  Operations (pack slots 6→10, boulders for good or for one contract, one
+  company in focus, scouts). Sealed crates follow `8-pull.png`: the framing
+  leads, odds by Level with Base / Yours columns, some of what is inside, the
+  duplicate rule on its own slip. Rendered in the running app at 390×844 @2x
+  and 1440×900 @2x (`~/fieldwatch-critique/hq/v1–v3-*`: menu returning and
+  first-timer, each office, the HQ's tip, the crates before, after a new kind
+  and after a duplicate, the cash-out receipt, the pick of four). The loop
+  caught: (1) the crate's result reused the skill card and its long kicker
+  squeezed the kind's name to "A / xe" — it is its own card now, kicker on a
+  line of its own, and a duplicate says where the bonus lands; (2) with every
+  kind owned the odds note read "a kind you don't have yet: 0%" — it says
+  each crate is a bonus item, and a short bank says what it holds; (3) HR's
+  locked fourth hero was a tiny deploy glyph — a padlock; (4) the result's
+  purse sentence sat under the slip repeating its lines — it is in the head
+  now, under the gold ("Purse returned 40 · Road gold 412 → 103 banked
+  (25%)"), and the slip itemises it; (5) "Your company" broke the one-name
+  rule (`copy.terms.test`) — "Your militia"; (6) the first balance run put
+  the one-crate stake's expected gain at +50, tying the 50 cap I had set —
+  the top cap is 40 now. Benchmark: the offices read like Hades' House
+  Contractor (one card, one effect, the price on the button); the crates like
+  Balatro's booster — a side bet with its odds printed. Scorecard:
+  readability 4/5 (Operations is four cards on a phone, one scroll),
+  hierarchy 4/5, polish 4/5. Still open: the pick of four scrolls on a
+  phone; the militia name and banner on the HQ head are step 4's.

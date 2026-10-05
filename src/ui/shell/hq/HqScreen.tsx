@@ -17,6 +17,7 @@ import {
   interestTerms,
   packSlots,
   PACK_BASE,
+  ratePct,
   ROCK_ORDER_CUT,
   ROCK_ORDER_PRICE,
   rocksCut,
@@ -225,7 +226,7 @@ function FinanceOffice() {
         <p className="hq-big" aria-label={moneyText(bank)}>
           <Gold n={bank} scale={3} />
         </p>
-        <Row k="Interest" v={`${Math.round(now.rate * 100)}% per finished contract`} />
+        <Row k="Interest" v={`${ratePct(now.rate)} per finished contract`} />
         <Row k="Most per contract" v={`${now.cap} gold`} />
         <Row k="Next contract" v={`+${payout} gold`} tone="good" />
         {last != null && <Row k="Last contract" v={`+${last} gold`} />}
@@ -233,7 +234,7 @@ function FinanceOffice() {
           You set out with a purse; the rest stays here and earns. A lost contract earns nothing. Interest is capped, so staking cargo always pays more.
         </p>
         <BuyButton
-          label={next ? `Raise the rate to ${Math.round(next.rate * 100)}% · most ${next.cap}` : 'Maxed'}
+          label={next ? `Raise the rate to ${ratePct(next.rate)} · most ${next.cap}` : 'Maxed'}
           cost={rate.cost}
           can={rate.can}
           run={rate.buy}

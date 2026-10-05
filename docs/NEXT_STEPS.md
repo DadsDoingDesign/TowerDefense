@@ -1,5 +1,19 @@
 # Fieldwatch — next steps (paused 2026-09-30)
 
+## Update 2026-10-05: the mercenary company, step 3 (HQ and sealed crates)
+
+Built on `claude/whales-ui-critique-plan` (from `2127773`), per `docs/MERCENARY_COMPANY.md` § The mercenary company:
+road gold comes home taxed (the purse's rest in full, 25% of the road's gold), the HQ's three offices (HR's
+Opening deal and Hiring Hall; Finance interest on finished contracts, capped 20–40; Operations' pack slots,
+boulders, one-company focus and scouts) and sealed crates (500 gold, odds by Level lifted by standing, a duplicate
+is a Rare bonus item next contract). Rules: `src/game/run/hq.ts`; screens: `src/ui/shell/hq/`. The old hub is
+folded or refunded (meta v9); run snapshot v16. Balance §12 grades the HQ; nothing was tuned.
+
+Next: step 4 (the trade-map menu, militia name and banner — in progress in parallel) and step 5 (the charter;
+`standing.charterProgress` is untouched). Open from step 3: pulls and orders are not in the harness's money
+model; the 4-hero pick scrolls on a phone.
+
+
 ## Update 2026-10-05: the mercenary company, step 2 (economy core)
 
 Built on `claude/whales-ui-critique-plan` (from `6506780`), per `docs/MERCENARY_COMPANY.md` § Build order step 2:
@@ -13,8 +27,7 @@ Next (spec step 3): the HQ offices (HR, Finance with interest on the bank, Opera
 left for it and step 4–5: `metaStore.bank`, `CaravanLook.banner` (the wagon's banner slot),
 `standing.charterProgress`.
 
-Open from step 2: kill gold left in the purse comes home with it, so a run's bank net (~1,400 gold) dwarfs the
-contract's own pay (~90–240) — decide whether "what's left returns" should mean the purse only.
+Open from step 2 (closed in step 3): kill gold left in the purse came home in full — now only 25% of the road's gold does.
 
 ---
 

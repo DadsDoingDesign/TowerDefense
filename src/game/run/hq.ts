@@ -192,19 +192,23 @@ export function dealSummary(level: number): string {
  * Interest by Finance level: a rate on the gold left in the bank, and the most
  * one contract can pay. Every cap is reached at {@link INTEREST_FULL_AT} gold.
  *
- * **Why 50 at most.** The smallest stake — one crate, 50 gold — adds about
+ * **Why 40 at most.** The smallest stake — one crate, 50 gold — adds +50 to
  * +55 gold to a contract's expected pay over the free escort (REPORT §13,
- * cash-out line, delivery ~20%), and +90 when it is delivered (it sells for
- * 100 and adds 40 to the completion bonus). So even the top cap is below what
- * one crate adds, on average and on delivery: the bank never out-earns a
- * stake, and the bank only pays on contracts you finish.
+ * cash-out line, delivery ~18%; the two latest runs), and +90 when it is
+ * delivered (it sells for 100 and adds 40 to the completion bonus). A cap of
+ * 50 tied the measured one-crate gain, so the top cap is 40: a 10-gold margin
+ * under the smallest stake on average, less than half of it on delivery. The
+ * bank never out-earns a stake, and it only pays on contracts you finish.
  */
 export const INTEREST: readonly { rate: number; cap: number }[] = [
   { rate: 0.02, cap: 20 },
+  { rate: 0.025, cap: 25 },
   { rate: 0.03, cap: 30 },
   { rate: 0.04, cap: 40 },
-  { rate: 0.05, cap: 50 },
 ]
+
+/** A rate as the page prints it: "2.5%". */
+export const ratePct = (rate: number): string => `${+(rate * 100).toFixed(1)}%`
 /** The bank at which every rate meets its cap. */
 export const INTEREST_FULL_AT = 1000
 

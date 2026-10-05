@@ -2434,7 +2434,7 @@ if (want(13)) {
     const cap = Math.max(...INTEREST.map((t) => t.cap))
     const least = gains.length ? Math.min(...gains) : 0
     line(
-      `**Bank vs. stake (reported, not gated).** The bank's interest is capped at ${cap} gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? ', above the cap' : `, **under the cap: the bank out-earns that stake**`}.`,
+      `**Bank vs. stake (reported, not gated).** The bank's interest is capped at ${cap} gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
     )
     line('')
   }
