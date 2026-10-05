@@ -2637,3 +2637,36 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Open: the default heroes' sprites paint their weapon in (a Fighter always
   shows a sword), so a Fighter holding a dagger looks armed for a clearance it
   does not keep — `loadout.ts` only has art for the placeholder pack.
+- **2026-10-05 — Weapon clearance, finished and verified in the running game.**
+  The paused branch was driven end to end in the dev build by a Playwright
+  script (real taps and the real Equip / Start Wave buttons), at 390×844 @2x and
+  1440×900 @2x (`~/fieldwatch-critique/weapon-clearance/final/`: equip warning,
+  conflict with Start Wave held and the store refusing too, the swinger's panel,
+  resolved by a move, a refused mid-wave move, the live gear lock, the breather,
+  its equip warning, its conflict with Next held, and its fix by the one move).
+  Every piece behaved as the 09-30 entry says. The loop caught five more. (1)
+  A tap on a hero during a live sub-wave did nothing at all — the one place
+  "towers cannot be moved during rounds" is felt said nothing. It now flashes
+  the tile, opens the hero and the coach strip says "During a wave — heroes
+  hold their posts. Move them between waves." (the canvas hit-tests the figure,
+  not only its tile, since a sprite stands up out of it). (2) Reforge, Raise
+  and Scrap were still offered mid-wave, and a worn piece reforged in the
+  breather changed the roster but not the fight. Crafting now refuses while
+  gear is locked (hidden in the panel; the foot's lock says why), and in the
+  breather a reforged or raised worn piece re-dresses its hero through the
+  logged `engine.regear`. (3) In the breather the coach's "Move one hero if you
+  like, then Next" sat over a disabled Next; tips wait while a conflict holds
+  the wave. (4) The compact "Gear locks during a wave" under the phone's doll
+  broke one word per line; it balances onto two with the lock leading. (5)
+  "Held · Moved — send the ne…" ellipsised on a phone; it reads "Move made".
+  Scorecard: readability 4/5, functional colour 5/5, polish 4/5. Still open:
+  the default sprites paint their weapon in (a Rogue with a sword is drawn with
+  a bow); on desk the "Make space" reason sits in the bottom-right strip, far
+  from a conflict at the field's left edge (the zone, the "!" and both party
+  cards carry it there). Balance (`balance/REPORT.md`, not tuned): Monte Carlo
+  66% → 66%; first-timer line 30% → 33% (band 15–35%); invariants 5 → 7 — the
+  new two are a hub purchase at exactly the −3pt noise floor (Field Kitchen +
+  Relic Cartulary, battles line) and the depth-8 elite variant spread ×1.00 →
+  ×8.57 (Swift Raid leaks 0.43 base HP where it leaked 0.00: a ratio over a
+  near-zero base). Both move because the modelled player's posts now follow
+  what each hero holds.
