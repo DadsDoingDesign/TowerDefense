@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { lookOf } from '../src/game/data/gear'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { withinClearance } from '../src/game/data/terrain'
 
@@ -16,7 +17,7 @@ const NEAR_GATE = (() => {
   return [...FIRST_MAP.slots].sort((a, b) => Math.hypot(a.pos.x - plant.x, a.pos.y - plant.y) - Math.hypot(b.pos.x - plant.x, b.pos.y - plant.y))[0].id
 })()
 import { ENEMY_TYPES, leakCeiling } from '../src/game/data/enemies'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { generateEncounter, nodeEncounter, subWaveCount } from '../src/game/data/waves'
 import { commandsFor, HOLD, RALLY } from '../src/game/data/commands'
 import { relicById, relicCommands, relicSupported, relicTeamMods } from '../src/game/data/relics'
@@ -60,7 +61,7 @@ function engineFor(
   return new GameEngine({
     map: FIRST_MAP,
     wave: wave(spawns),
-    placedSentinels: team.map(([a, slotId]) => ({ sentinel: createSentinel(a), slotId })),
+    placedSentinels: team.map(([a, slotId]) => ({ sentinel: classicHero(a), slotId })),
     baseHp: opts.baseHp ?? 200,
     maxBaseHp: opts.baseHp ?? 200,
     teamMods: opts.teamMods,
@@ -343,7 +344,7 @@ describe('sub-waves and the breather (Phase 3a)', () => {
     expect(e.moveHero(P.s1, beside.id)).toBe(false)
     expect(e.moveHero(P.s1, P.s4)).toBe(true)
     expect(e.moveHero(P.s2, P.s5)).toBe(false) // one move per breather
-    expect(e.sentinelOnSlot(P.s4)?.def.archetype).toBe('rogue')
+    expect(lookOf(e.sentinelOnSlot(P.s4)!.def)).toBe('rogue')
     e.resume()
     runOut(e)
     expect(e.status).toBe('cleared')
@@ -426,7 +427,7 @@ describe('determinism with inputs (Phase 3a)', () => {
     const e = new GameEngine({
       map: FIRST_MAP,
       wave: w,
-      placedSentinels: team.map(([a, slotId]) => ({ sentinel: createSentinel(a), slotId })),
+      placedSentinels: team.map(([a, slotId]) => ({ sentinel: classicHero(a), slotId })),
       baseHp: 200,
       maxBaseHp: 200,
       enemyHpMult: 2,
@@ -470,7 +471,7 @@ describe('determinism with inputs (Phase 3a)', () => {
     const replay = new GameEngine({
       map: FIRST_MAP,
       wave: w,
-      placedSentinels: team.map(([arch, slotId]) => ({ sentinel: createSentinel(arch), slotId })),
+      placedSentinels: team.map(([arch, slotId]) => ({ sentinel: classicHero(arch), slotId })),
       baseHp: 200,
       maxBaseHp: 200,
       enemyHpMult: 2,

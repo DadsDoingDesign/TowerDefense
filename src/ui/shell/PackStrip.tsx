@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { lookVar } from '../channels'
+import { heroLookArt } from './offers'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
-import { archetypeVar, itemIcon, itemName, RARITY_INITIAL, rarityVar } from '../channels'
+import { itemIcon, itemName, RARITY_INITIAL, rarityVar } from '../channels'
 import { Icon } from '../Icon'
-import { heroArt } from './offers'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -48,9 +49,9 @@ export function PackStrip() {
           <span
             key={h.id}
             className={`pg-strip-hero ${fresh.has(h.id) ? 'fresh' : ''}`}
-            style={{ background: archetypeVar(h.archetype) }}
+            style={{ background: lookVar(h) }}
           >
-            <img src={heroArt(h.archetype)} alt="" />
+            <img src={heroLookArt(h)} alt="" />
           </span>
         ))}
       </span>

@@ -6,7 +6,8 @@
  */
 import type { RunChallenge } from '../../state/daily'
 import type { RunFacts } from '../data/achievements'
-import type { Archetype, Sentinel } from '../types'
+import type { Sentinel } from '../types'
+import type { HeroStyle } from '../data/items'
 import { actOf } from './threat'
 
 /**
@@ -14,7 +15,8 @@ import { actOf } from './threat'
  * read back off the finished run's roster and map. Snapshotted with the run.
  */
 export interface RunFeats {
-  starter: Archetype | null
+  /** What the first hero fought with when the march began (its weapon's style). */
+  starter: HeroStyle | null
   /** Company size when the march began (the leader plus any hub extras). */
   startSize: number
   maxFielded: number

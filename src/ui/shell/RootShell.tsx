@@ -13,8 +13,6 @@ import { Announcer } from './Announcer'
 import { ReceiptToast } from './PackStrip'
 import { Shortcuts } from './Shortcuts'
 import { useOffers, type MetaView } from './offers'
-import { HeroPickVariantScreen } from './HeroPickVariants'
-import { heroPickVariant } from './heroPickFacts'
 import '../../styles/page.css'
 import '../../styles/shell.css'
 import '../../styles/shell-live.css'
@@ -35,15 +33,9 @@ import { useMenuStaged, useStagingRecorder } from './staging'
 const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   perks: { title: 'Watchtower', subtitle: 'Marks buy permanent bonuses that carry into every run.' },
-  codex: { title: 'Codex', subtitle: 'Your skill library, feats to earn, and everything the Watch has met on the road.' },
+  codex: { title: 'Codex', subtitle: 'Your collection of skills and items, feats to earn, and everything the Watch has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
 }
-
-/**
- * H3-2: `?heropick=cards|compare|recommend` tries a hero-pick direction from
- * docs/JTBD-hero-pick.md. Read once; absent or unknown means today's screen.
- */
-const HERO_PICK_VARIANT = heroPickVariant()
 
 export function RootShell() {
   const ctx = useShellContext()
@@ -117,9 +109,6 @@ export function RootShell() {
           <ResultScreen />
         ) : isMenu ? (
           <MenuScreen offers={offers} />
-        ) : screen === 'heroPick' && HERO_PICK_VARIANT ? (
-          // H3-2 hero-pick directions, behind a URL switch (see above).
-          <HeroPickVariantScreen ctx={ctx} variant={HERO_PICK_VARIANT} />
         ) : (
           <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
         )}

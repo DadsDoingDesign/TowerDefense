@@ -13,6 +13,7 @@
  */
 import { hashSeed, RNG } from '../core/rng'
 import { ALL_SKILLS, FEAT_SKILLS, RANDOM_UNLOCK_SKILLS, STARTER_SKILLS } from '../data/skills'
+import { UNLOCK_ITEM_KINDS } from '../data/itemKinds'
 
 // ---------------------------------------------------------------------------
 // Watch XP and Watch levels
@@ -70,15 +71,65 @@ export function watchProgress(xp: number): { level: number; into: number; need: 
 // ---------------------------------------------------------------------------
 
 /**
- * One random card still locked, or null when every random card is open.
- * `salt` seeds it (the meta store passes the run count and the card count),
- * so the roll is a pure function of the save — no stream, nothing to reroll.
+ * ---------------------------------------------------------------------------
+ * The one unlock roll — generic on purpose
+ * ---------------------------------------------------------------------------
+ *
+ * "Unlock one random thing still locked, from pool P, at tier >= R" — the
+ * shape every unlock in the game takes, whatever pays for it. Today two
+ * SOURCES feed it (a Watch level, a card-paying win) and two POOLS sit behind
+ * it (skill cards, item kinds); a later economy can add sources (a company's
+ * standing, a contract, an item pull) or narrow a pool (one company's cards,
+ * `Skill.company` / `ItemKind.company`) by passing a different `pool`,
+ * `filter` or `minTier`, without touching the roll. Pure: the result is a
+ * function of the save and the `salt` (the meta store passes the source's name,
+ * the run count and a counter), so nothing can be rerolled.
+ */
+export interface UnlockRoll<T extends string = string> {
+  /** Everything this source could ever open, in a stable order. */
+  pool: readonly T[]
+  /** What is open already (never dealt again). */
+  have: readonly string[]
+  /** The tier of an entry (a skill's level; an item kind has none: 1). */
+  tierOf?: (id: T) => number
+  /** Deal only entries at this tier or above. */
+  minTier?: number
+  /** Any further narrowing (one company's entries, say). */
+  filter?: (id: T) => boolean
+  /** Hash parts that name this roll: the pool's own tag first. */
+  salt: readonly (string | number)[]
+}
+
+/** One random entry of `pool` still locked (and passing the filters), or null. */
+export function rollFromPool<T extends string>(r: UnlockRoll<T>): T | null {
+  const have = new Set(r.have)
+  const min = r.minTier ?? -Infinity
+  const locked = r.pool.filter((id) => !have.has(id) && (r.tierOf ? r.tierOf(id) : 1) >= min && (!r.filter || r.filter(id)))
+  if (!locked.length) return null
+  return locked[Math.floor(new RNG(hashSeed(...r.salt)).next() * locked.length)]
+}
+
+const skillLevelOf = (id: string): number => ALL_SKILLS.find((k) => k.id === id)?.level ?? 1
+
+/**
+ * One random skill card still locked, or null when every random card is open
+ * (`rollFromPool` over the random cards). `salt` seeds it.
  */
 export function rollUnlock(unlocked: readonly string[], ...salt: (string | number)[]): string | null {
-  const have = new Set(unlocked)
-  const locked = RANDOM_UNLOCK_SKILLS.filter((id) => !have.has(id))
-  if (!locked.length) return null
-  return locked[Math.floor(new RNG(hashSeed('skill-unlock', ...salt)).next() * locked.length)]
+  return rollFromPool({ pool: RANDOM_UNLOCK_SKILLS, have: unlocked, tierOf: skillLevelOf, salt: ['skill-unlock', ...salt] })
+}
+
+/**
+ * One random item KIND still locked, or null when every kind is open — the
+ * item half of the shared unlock track (the classless rework). Each Watch
+ * level and each card-paying win deals one skill card AND one item kind while
+ * both remain (`metaStore.grantRunRewards`), so both grow at the pace SK1 set
+ * for skills: fast early (Watch level 2 costs 80 XP, about one run), slower
+ * later (each level costs 20 XP more). The 17 kinds run out around Watch
+ * level 15 for a player who also wins; the 27 random skill cards go on longer.
+ */
+export function rollItemUnlock(unlocked: readonly string[], ...salt: (string | number)[]): string | null {
+  return rollFromPool({ pool: UNLOCK_ITEM_KINDS, have: unlocked, salt: ['item-unlock', ...salt] })
 }
 
 /**

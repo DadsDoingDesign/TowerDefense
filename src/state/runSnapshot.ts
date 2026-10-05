@@ -29,8 +29,9 @@
  *   reload, and without it a freshly generated item could collide with the id of
  *   a restored one.
  */
-import { getNode } from '../game/data/archetypeTree'
-import { isSkillId, skillById, skillFits, STARTER_SKILLS } from '../game/data/skills'
+import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, DAILY_ITEM_POOL, isItemKind, itemPoolFor } from '../game/data/itemKinds'
+import { gripOf, type HeroStyle } from '../game/data/items'
 import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
 import { clampStep, DAILY_SKILL_POOL } from '../game/run/watch'
 import { MYTHIC_EDGE } from '../game/data/items'
@@ -84,7 +85,7 @@ const stepOf = (o: Record<string, unknown>): number => clampStep(num(o.runDiffic
  * every numeric field is defensively defaulted on the way in so a save written
  * by an older build can never inject `undefined` into arithmetic.
  */
-export const RUN_SNAPSHOT_VERSION = 13
+export const RUN_SNAPSHOT_VERSION = 14
 
 type GameMode = 'campaign' | 'endless'
 type Screen = 'hub' | 'heroPick' | 'map' | 'crossroads' | 'battle' | 'endless'
@@ -183,6 +184,12 @@ export interface RunSnapshot {
    * have dealt are not knowable from the save.
    */
   skillPool: string[]
+  /**
+   * The classless rework (v14): the item kinds this run deals from. A v13
+   * payload has none and resumes dealing EVERY kind — the run it was played
+   * as — and a Daily on its fixed pool.
+   */
+  itemPool: string[]
   /** Daily Watch / custom seed (v6). A v1–v5 payload is a standard run. */
   challenge: RunChallenge
   /**
@@ -257,9 +264,9 @@ export interface RunSnapshot {
   /** Process-global entity-id counter at save time. */
   idCounter: number
   /**
-   * Per-archetype name counters at save time. Another process-global that resets
+   * The hero-name counter at save time. Another process-global that resets
    * on reload: without it a Sentinel recruited after a resume re-uses a name
-   * already on the roster (m-4).
+   * already on the roster (m-4). (Per class before v14; summed on the way in.)
    */
   nameCounters: NameCounters
 }
@@ -288,6 +295,7 @@ export interface RunStateSource {
   threat: number
   runDifficulty: number
   skillPool: string[]
+  itemPool: string[]
   challenge: RunChallenge
   /** LS3 — optional so a source that predates staging still satisfies it. */
   firstRun?: boolean
@@ -352,6 +360,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     threat: s.threat,
     runDifficulty: s.runDifficulty,
     skillPool: s.skillPool,
+    itemPool: s.itemPool,
     challenge: s.challenge,
     firstRun: s.firstRun === true,
     inventory: s.inventory,
@@ -411,6 +420,9 @@ export function snapshotBattleMap(snap: RunSnapshot): GameMap {
 // ------------------------------------------------------------------ migrate
 
 const ARCHETYPES: readonly Archetype[] = ['fighter', 'rogue', 'mystic']
+const STYLES: readonly HeroStyle[] = ['swing', 'shoot', 'cast']
+/** What each old class fought with — a v13 feats ledger's starter becomes this. */
+const CLASS_STYLE: Readonly<Record<Archetype, HeroStyle>> = { fighter: 'swing', rogue: 'shoot', mystic: 'cast' }
 
 /*
  * ---- the vocabulary a stored payload is allowed to name (F2/F3) -----------
@@ -491,6 +503,9 @@ const MOD_STRUCT_FIELDS = {
   volley: ['every', 'pierce'],
   killRush: ['rate', 'dur'],
   openingRush: ['rate', 'dur'],
+  // The classless rework's thorn burn and Gate mend.
+  thornsBurn: ['dps', 'dur'],
+  killMend: ['every', 'hp'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -513,6 +528,8 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   lifedrain: true, trap: true,
   volley: true, critEvery: true, killRush: true, openingRush: true, leakWard: true,
   burnSpreadOnDeath: true, grantsMelee: true,
+  holdAdd: true, holdRadius: true, goldPerKill: true, vsHeld: true, vsSlowed: true,
+  thornsBurn: true, rushPerHeld: true, killMend: true,
 }
 
 /**
@@ -674,32 +691,17 @@ const validStats = (raw: unknown): boolean =>
 
 const validEquipSlot = (raw: unknown): boolean => raw === null || raw === undefined || validItem(raw)
 
-/** A node id the archetype tree has — `getNode` throws on anything else. */
-const knownNode = (id: unknown): boolean => {
-  if (!isStr(id)) return false
-  try {
-    getNode(id)
-    return true
-  } catch {
-    return false
-  }
-}
-
 /** A Sentinel `combat.ts` can build a profile from without hitting `undefined`. */
 function validSentinel(raw: unknown): raw is Sentinel {
   if (!isObj(raw)) return false
   if (!isStr(raw.id) || !isStr(raw.name)) return false
-  if (!ARCHETYPES.includes(raw.archetype as Archetype)) return false
-  // `computeCombat` reads the attack and mods off `getNode(branchPath[0])`: an
-  // empty path, an unknown id or a root with no base throws (or NaNs) on the
-  // first frame of the resumed battle. (A pre-SK1 path carries its evolutions
-  // too; they are known nodes, and the v13 migration turns them into skills.)
-  const path = raw.branchPath
-  if (!Array.isArray(path) || path.length === 0 || !path.every(knownNode)) return false
-  if (!getNode(path[0] as string).base) return false
+  // The classless rework (v14): a hero has no class. `computeCombat` reads
+  // the attack off the weapon in hand, so nothing here needs a class, a tree
+  // path or a hue; an older save's `archetype` / `branchPath` / `color` /
+  // `accent` are read once by the v14 migration and dropped.
+  if (raw.archetype !== undefined && !ARCHETYPES.includes(raw.archetype as Archetype)) return false
   if (!validStats(raw.stats)) return false
   if (!isStat(raw.thorns) || !isStat(raw.patience) || !isNum(raw.level) || !isNum(raw.xp)) return false
-  if (!isStr(raw.color) || !isStr(raw.accent)) return false
   if (raw.mutations !== undefined && !(Array.isArray(raw.mutations) && raw.mutations.every(validMutation))) return false
   if (raw.upgrades !== undefined && !(isObj(raw.upgrades) && Object.values(raw.upgrades).every(isStat))) return false
   // v7–v12: spec perks are ids — only the shape is checked; the v13 migration
@@ -754,7 +756,13 @@ function migrateFeats(raw: unknown): RunFeats {
   const o = (isObj(raw) ? raw : {}) as Record<string, unknown>
   const count = (x: unknown) => Math.max(0, Math.floor(num(x, 0)))
   return {
-    starter: ARCHETYPES.includes(o.starter as Archetype) ? (o.starter as Archetype) : null,
+    // v14: the leader's STYLE (what it held), not a class. A v7–v13 class
+    // maps to the style that class fought with.
+    starter: STYLES.includes(o.starter as HeroStyle)
+      ? (o.starter as HeroStyle)
+      : ARCHETYPES.includes(o.starter as Archetype)
+        ? CLASS_STYLE[o.starter as Archetype]
+        : null,
     startSize: count(o.startSize),
     maxFielded: count(o.maxFielded),
     actBosses: count(o.actBosses),
@@ -763,12 +771,17 @@ function migrateFeats(raw: unknown): RunFeats {
   }
 }
 
-/** Name counters, defensively defaulted — a bad one must not stall name issuance. */
+/**
+ * The name counter, defensively defaulted — a bad one must not stall name
+ * issuance. A v13 save kept one counter per class; their sum is how many
+ * names it handed out.
+ */
 function migrateNameCounters(raw: unknown): NameCounters {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  const out = { fighter: 0, rogue: 0, mystic: 0 } as NameCounters
-  for (const a of ARCHETYPES) out[a] = Math.max(0, num(o[a], 0))
-  return out
+  if (o.heroes !== undefined) return { heroes: Math.max(0, Math.floor(num(o.heroes, 0))) }
+  let n = 0
+  for (const a of ARCHETYPES) n += Math.max(0, Math.floor(num(o[a], 0)))
+  return { heroes: n }
 }
 
 /**
@@ -894,27 +907,75 @@ function stripSentinels(list: Sentinel[]): void {
  */
 function migrateSkills(list: Sentinel[], version: number): void {
   for (const s of list) {
-    const raw = s as Sentinel & { perks?: string[] }
+    const raw = s as LegacySentinel
     if (version < 13) {
-      const m = migrateGrowth({ archetype: s.archetype, level: s.level, branchPath: s.branchPath, perks: raw.perks, skills: s.skills, skillPicks: s.skillPicks, stats: s.stats })
+      const archetype = ARCHETYPES.includes(raw.archetype as Archetype) ? (raw.archetype as Archetype) : 'fighter'
+      const m = migrateGrowth({ archetype, level: s.level, branchPath: raw.branchPath, perks: raw.perks, skills: s.skills, skillPicks: s.skillPicks, stats: s.stats })
       s.skills = m.skills
       s.skillPicks = m.skillPicks
       s.stats = m.stats
-      s.branchPath = m.branchPath
     }
     delete raw.perks
+    if (version < 14) migrateClassless(raw)
     normaliseSkills(s)
   }
 }
+
+/** A hero as an older build saved it: a class, a tree path and two hues. */
+type LegacySentinel = Sentinel & { perks?: string[]; archetype?: string; branchPath?: string[]; color?: string; accent?: string }
+
+/**
+ * The classless rework (v13 → v14). A hero keeps its gear, skills, stats and
+ * level; its class is dropped. Holding enemies comes from a shield in the off
+ * hand now, so an old Fighter — whose hold was its class's — is handed a plain
+ * common Shield IF its off hand is empty and its main hand leaves one free;
+ * it holds 2, exactly as before. A Fighter whose off hand was full (or who
+ * held a two-hander) keeps what it held and loses the hold. Every skill it
+ * had stays: none is class-locked any more, and every old "holds N" skill is
+ * now "holds that many more", so a Fighter with a Shield holds the same N.
+ */
+function migrateClassless(raw: LegacySentinel): void {
+  if (raw.archetype === 'fighter' && isObj(raw.equipment) && !raw.equipment.offHand) {
+    const main = raw.equipment.mainHand
+    if (!main || (main.slot !== 'twoHand' && gripOf(main) !== 'twoHand')) {
+      raw.equipment = { ...raw.equipment, offHand: legacyShield(raw.id) }
+    }
+  }
+  delete raw.archetype
+  delete raw.branchPath
+  delete raw.color
+  delete raw.accent
+}
+
+/** The plain Shield an old Fighter is handed (v14): a common one, the middle of the common roll. */
+const legacyShield = (heroId: string): Item => ({
+  id: `itm-v14-${heroId}`,
+  name: 'Shield',
+  slot: 'offHand',
+  rarity: 'common',
+  base: { attackSpeed: 0.06, critChance: 0.045 },
+  enchantments: [],
+})
+
 function normaliseSkills(s: Sentinel): void {
-  const kept = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id) && skillFits(skillById(id)!, s.archetype)).slice(0, MAX_SKILLS)
+  // Any hero may hold any skill (no classes): known ids, each once, at most three.
+  const kept = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id)).slice(0, MAX_SKILLS)
   if (kept.length) s.skills = kept
   else delete s.skills
   const picks = Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(num(s.skillPicks, 0))))
   if (picks) s.skillPicks = picks
   else delete s.skillPicks
-  // A path is the class alone since SK1; anything after it is gone above.
-  s.branchPath = [s.archetype]
+}
+
+/**
+ * The run's item pool (v14): known kinds, each once, always with the basic
+ * five. A payload with none — a run saved before item unlocks — keeps dealing
+ * every kind (what it was dealing), a Daily its fixed pool.
+ */
+function migrateItemPool(raw: unknown, challenge: RunChallenge): string[] {
+  const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
+  if (ids.length) return itemPoolFor(ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)))
+  return [...(challenge.kind === 'daily' ? DAILY_ITEM_POOL : ALL_ITEM_KINDS)]
 }
 
 /** The run's skill pool: known ids, each once; a payload with none deals the starters. */
@@ -1117,6 +1178,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // always step 0.
     runDifficulty: challenge.kind === 'daily' ? 0 : stepOf(o),
     skillPool: migrateSkillPool(o.skillPool, challenge),
+    itemPool: migrateItemPool(o.itemPool, challenge),
     challenge,
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.

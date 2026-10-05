@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import type { Sentinel } from '../src/game/types'
 import { choiceOwed, FLASH_MS, flashLive, levelUpOpen, rewardInPlace, settleFlashes, waveLive } from '../src/ui/shell/levelUps'
@@ -12,7 +12,7 @@ import { choiceOwed, FLASH_MS, flashLive, levelUpOpen, rewardInPlace, settleFlas
  */
 
 const hero = (level: number, id = 'h1'): Sentinel => {
-  const s = createSentinel('fighter')
+  const s = classicHero('fighter')
   return { ...applyXp({ ...s, xp: 0, level: 1 }, xpToReach(level)), id }
 }
 

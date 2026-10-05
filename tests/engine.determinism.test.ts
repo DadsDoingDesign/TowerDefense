@@ -3,7 +3,7 @@ import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 
 /** G1-2: the old build circles, as the tiles nearest where they stood. */
 const P = legacyPosts(FIRST_MAP.id)
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, MAX_STEPS_PER_FRAME, TICK } from '../src/game/engine/engine'
 import type { Archetype } from '../src/game/types'
@@ -24,7 +24,7 @@ function fight(seed: number, ticksPerFrame: number) {
   const engine = new GameEngine({
     map: FIRST_MAP,
     wave: generateEncounter(4, 'normal', { seed }),
-    placedSentinels: TEAM.map(([a, slotId]) => ({ sentinel: createSentinel(a), slotId })),
+    placedSentinels: TEAM.map(([a, slotId]) => ({ sentinel: classicHero(a), slotId })),
     baseHp: 20,
     maxBaseHp: 20,
     seed,

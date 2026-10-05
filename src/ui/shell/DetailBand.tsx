@@ -1,4 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { lookVar } from '../channels'
+import { heroDoes } from '../../game/data/gear'
 import {
   canUpgrade,
   dualWieldCheck,
@@ -23,12 +25,11 @@ import { skillById } from '../../game/data/skills'
 import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
 import { computeCombat, totalStats } from '../../game/engine/combat'
-import { buildName, MAX_LEVEL } from '../../game/engine/leveling'
+import { MAX_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { equipRules } from '../../game/run/relics'
 import { canStartWave, scrapDust, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
 import {
-  archetypeVar,
   damageMark,
   dualWieldShort,
   effectIcon,
@@ -956,7 +957,7 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
       <div className="sh-context-head">
         {/* The hue comes from a token, not from `hero.color`'s raw hex, so the
             colour-vision modes in global.css can move it (M34). */}
-        <strong style={{ color: archetypeVar(hero.archetype) }}>{hero.name}</strong>
+        <strong style={{ color: lookVar(hero) }}>{hero.name}</strong>
         <span className={`sh-context-sub ${danger ? 'sh-cursed' : ''}`}>DPS {Math.round(profile.dps * groundMult)}</span>
       </div>
       {danger && (
@@ -1044,9 +1045,9 @@ function HeroStats({ hero }: { hero: Sentinel }) {
 
   return (
     <>
-      <p className="sh-line muted">
-        {buildName(hero)} · Level {hero.level}/{MAX_LEVEL}
-      </p>
+      {/* No class: the hero's job, said by what it holds (the classless rework). */}
+      <p className="sh-line">{heroDoes(hero)}.</p>
+      <p className="sh-line muted">Level {hero.level}/{MAX_LEVEL}</p>
       {/*
        * One naming for the three stats everywhere: STR / DEX / INT, the words
        * the hero cards, recruit offers and shrine terms already use. This panel
@@ -1789,7 +1790,7 @@ function GearColumn() {
         {hero && <span className="sh-gear-who">{hero.name}</span>}
       </div>
       {hero ? (
-        <div className={`sh-gear-slots sh-doll${ambi ? ' ambi' : ''}`} style={{ '--doll-hue': archetypeVar(hero.archetype) } as CSSProperties}>
+        <div className={`sh-gear-slots sh-doll${ambi ? ' ambi' : ''}`} style={{ '--doll-hue': lookVar(hero) } as CSSProperties}>
           {/* The body model: decoration under the slots, never a target. */}
           <span className="sh-doll-fig" aria-hidden="true">
             <i className="sh-doll-head" />

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { lookOf } from '../game/data/gear'
+import { lookHue } from '../game/data/sentinels'
 import { computeCombat } from '../game/engine/combat'
 import { MAX_STEPS_PER_FRAME, TICK, type GameEngine } from '../game/engine/engine'
 import {
@@ -544,7 +546,7 @@ export function BattleCanvas() {
       if (phase === 'battle' && liveEngine) {
         // Show ranges faintly while the fight runs.
         for (const s of liveEngine.sentinels) {
-          drawRange(ctx, s.pos, s.profile.range, s.def.accent)
+          drawRange(ctx, s.pos, s.profile.range, lookHue(lookOf(s.def)).accent)
         }
         // Breather: the open tiles light up as places a hero can move to —
         // faintly until a hero is picked up, fully once one is (G1-2).
@@ -573,7 +575,7 @@ export function BattleCanvas() {
             if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
             labels = [...faint.map((tile) => ({ tile, strength: 'faint' as const })), ...(lay.landing ? [{ tile: lay.landing, strength: 'full' as const }] : [])]
           }
-          if (picked && lit && hoverOpen) drawRange(ctx, hoverOpen.pos, picked.profile.range, picked.def.accent)
+          if (picked && lit && hoverOpen) drawRange(ctx, hoverOpen.pos, picked.profile.range, lookHue(lookOf(picked.def)).accent)
         }
         for (const z of conflictZones) drawClearance(ctx, map, z, 'full')
         drawBattleEntities(ctx, liveEngine)
@@ -620,11 +622,11 @@ export function BattleCanvas() {
           if (armed && hoverOpen && p.sentinel.id === armed.id) continue
           const slot = map.slots.find((s) => s.id === p.slotId)!
           const profile = computeCombat(p.sentinel)
-          drawRange(ctx, slot.pos, profile.range, p.sentinel.accent)
+          drawRange(ctx, slot.pos, profile.range, lookHue(lookOf(p.sentinel)).accent)
         }
         // The range the armed hero WOULD have on the tile under the pointer or
         // finger — the answer to "what does this tile see?" before committing.
-        if (armed && lit) drawRange(ctx, lit.pos, computeCombat(armed).range, armed.accent)
+        if (armed && lit) drawRange(ctx, lit.pos, computeCombat(armed).range, lookHue(lookOf(armed)).accent)
         // Heroes stand back to front (by where their feet are), so two ranged
         // heroes side by side overlap the way the eye expects.
         const standAt = (q: (typeof placed)[number]) => map.slots.find((s) => s.id === q.slotId)!.pos
@@ -635,9 +637,9 @@ export function BattleCanvas() {
           const ds: DrawSentinel = {
             id: p.sentinel.id,
             pos: { x: slot.pos.x + (lean.get(p)?.x ?? 0), y: slot.pos.y + (lean.get(p)?.y ?? 0) },
-            archetype: p.sentinel.archetype,
-            color: p.sentinel.color,
-            accent: p.sentinel.accent,
+            // The look comes from the weapon (there is no class).
+            archetype: lookOf(p.sentinel),
+            ...lookHue(lookOf(p.sentinel)),
             range: profile.range,
             aimAngle: 0,
             fireFlash: 0,

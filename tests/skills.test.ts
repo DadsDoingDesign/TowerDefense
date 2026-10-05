@@ -5,14 +5,13 @@ import {
   FEAT_SKILLS,
   PERK_TO_SKILL,
   RANDOM_UNLOCK_SKILLS,
+  COMBO_SKILLS,
   skillById,
-  skillFits,
   STARTER_SKILLS,
 } from '../src/game/data/skills'
 import { ALL_NODES } from '../src/game/data/archetypeTree'
 import {
   bumpOffered,
-  heroChoices,
   migrateGrowth,
   nextMilestone,
   pendingMilestone,
@@ -32,19 +31,19 @@ import {
   watchXpToReach,
   winReward,
 } from '../src/game/run/watch'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { computeCombat } from '../src/game/engine/combat'
 import { isMelee } from '../src/game/engine/melee'
 import type { Archetype, Sentinel } from '../src/game/types'
 
 const ALL_POOL = ALL_SKILLS.map((k) => k.id)
-const at = (a: Archetype, level: number, extra: Partial<Sentinel> = {}): Sentinel => ({ ...applyXp(createSentinel(a), xpToReach(level)), ...extra })
+const at = (a: Archetype, level: number, extra: Partial<Sentinel> = {}): Sentinel => ({ ...applyXp(classicHero(a), xpToReach(level)), ...extra })
 
 describe('the skill library (SK1)', () => {
-  it('is 12 / 12 / 9 across the three levels, every id unique', () => {
+  it('is 14 / 15 / 11 across the three levels, every id unique', () => {
     const by = (l: number) => ALL_SKILLS.filter((k) => k.level === l).length
-    expect([by(1), by(2), by(3)]).toEqual([12, 12, 9])
+    expect([by(1), by(2), by(3)]).toEqual([14, 15, 11])
     expect(new Set(ALL_SKILLS.map((k) => k.id)).size).toBe(ALL_SKILLS.length)
   })
 
@@ -52,7 +51,6 @@ describe('the skill library (SK1)', () => {
     for (const l of [1, 2, 3]) {
       const s = ALL_SKILLS.filter((k) => k.starter && k.level === l)
       expect(s).toHaveLength(3)
-      expect(s.every((k) => !k.class)).toBe(true)
     }
     expect(STARTER_SKILLS).toHaveLength(9)
   })
@@ -71,12 +69,12 @@ describe('the skill library (SK1)', () => {
     }
   })
 
-  it('keeps holding enemies on the Fighter: no skill makes a Rogue or Mystic melee', () => {
-    for (const k of ALL_SKILLS) if (k.mods.block || k.mods.thornsMult) expect(k.class).toBe('fighter')
+  it('is open to anyone: no skill decides who swings, whatever it holds', () => {
     for (const a of ['rogue', 'mystic'] as const) {
-      const h = { ...createSentinel(a), skills: ALL_SKILLS.filter((k) => skillFits(k, a)).map((k) => k.id) }
-      expect(computeCombat(h).mods.block).toBeUndefined()
-      expect(isMelee(h)).toBe(false)
+      for (const k of ALL_SKILLS) {
+        const h = { ...classicHero(a), skills: [k.id] }
+        expect(isMelee(h), k.id).toBe(false)
+      }
     }
   })
 
@@ -86,12 +84,11 @@ describe('the skill library (SK1)', () => {
     for (const n of ALL_NODES.filter((n) => n.tier > 0)) {
       const k = skillById(EVOLUTION_TO_SKILL[n.id])
       expect(k, n.id).toBeDefined()
-      expect(skillFits(k!, n.archetype), n.id).toBe(true)
     }
   })
 
   it('folds a skill into combat exactly by its mods', () => {
-    const base = createSentinel('rogue')
+    const base = classicHero('rogue')
     const a = computeCombat(base)
     const b = computeCombat({ ...base, skills: ['quick_hands'] })
     expect(b.rate / a.rate).toBeCloseTo(1.15, 5)
@@ -112,7 +109,7 @@ describe('milestones and offers', () => {
     expect(nextMilestone({ skillPicks: 2 })).toMatchObject({ level: 15, tier: 3 })
   })
 
-  it('offers three distinct skills of the tier that fit the class and are not held', () => {
+  it('offers three distinct skills of the tier that are not held, to anyone', () => {
     for (const a of ['fighter', 'rogue', 'mystic'] as const) {
       for (const picks of [0, 1, 2]) {
         const h = at(a, 16, { skillPicks: picks, skills: ['quick_hands'] })
@@ -121,7 +118,6 @@ describe('milestones and offers', () => {
         expect(new Set(offer.map((k) => k.id)).size).toBe(3)
         for (const k of offer) {
           expect(k.level).toBe(picks + 1)
-          expect(skillFits(k, a)).toBe(true)
           expect(k.id).not.toBe('quick_hands')
         }
       }
@@ -172,24 +168,46 @@ describe('milestones and offers', () => {
   })
 })
 
-describe('the hero pick and hires', () => {
-  it('offers one of each class, each with a distinct Level 1 skill, the same for the same seed', () => {
-    const a = heroChoices(77, STARTER_SKILLS)
-    expect(a.map((c) => c.archetype)).toEqual(['fighter', 'rogue', 'mystic'])
-    expect(new Set(a.map((c) => c.skill)).size).toBe(3)
-    for (const c of a) expect(skillById(c.skill!)!.level).toBe(1)
-    expect(heroChoices(77, STARTER_SKILLS)).toEqual(a)
-    const seen = new Set<string>()
-    for (let s = 0; s < 30; s++) seen.add(heroChoices(s, ALL_POOL).map((c) => c.skill).join())
-    expect(seen.size).toBeGreaterThan(10)
+describe('hires', () => {
+  it('gives a hire a Level 1 skill from the pool, by hash', () => {
+    for (let i = 0; i < 20; i++) {
+      const id = recruitSkill(9, `sent${i}`, ALL_POOL)!
+      expect(skillById(id)!.level).toBe(1)
+      expect(recruitSkill(9, `sent${i}`, ALL_POOL)).toBe(id)
+    }
+  })
+})
+
+describe('the classless rework’s combo skills', () => {
+  it('are seven, spread over all three levels, each one sentence about itself only', () => {
+    expect(COMBO_SKILLS).toHaveLength(7)
+    const levels = new Set(COMBO_SKILLS.map((id) => skillById(id)!.level))
+    expect([...levels].sort()).toEqual([1, 2, 3])
+    for (const id of COMBO_SKILLS) {
+      const k = skillById(id)!
+      expect(RANDOM_UNLOCK_SKILLS).toContain(id)
+      // Self-contained: no sentence names another piece or hints at a mix.
+      expect(k.desc).not.toMatch(/\b(shield|sword|bow|wand|staff|dagger|with a|while holding|pairs?|combo|best with|for each hero)\b/i)
+    }
   })
 
-  it('gives a hire a Level 1 skill that fits its class', () => {
-    for (let i = 0; i < 20; i++) {
-      const id = recruitSkill(9, `sent${i}`, 'mystic', ALL_POOL)!
-      expect(skillById(id)!.level).toBe(1)
-      expect(skillFits(skillById(id)!, 'mystic')).toBe(true)
-    }
+  it('say exactly what they do', () => {
+    const desc = (id: string) => skillById(id)!.desc
+    expect(desc('bounty')).toBe('Each kill it makes pays 1 more gold.')
+    expect(desc('pin_down')).toBe('Its hits deal 30% more to enemies that are being held.')
+    expect(desc('cold_snap')).toBe('Its hits deal 25% more to slowed enemies.')
+    expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
+    expect(desc('split_shot')).toBe('Its attacks pass through 1 more enemy.')
+    expect(desc('momentum')).toBe('Attacks 15% faster for each enemy it is holding.')
+    expect(desc('last_rites')).toBe('Every 5th kill it makes mends the Gate by 1.')
+  })
+
+  it('reach the combat profile exactly by their mods', () => {
+    const h = classicHero('rogue')
+    expect(computeCombat({ ...h, skills: ['split_shot'] }).mods.pierce).toBe(1)
+    expect(computeCombat({ ...h, skills: ['bounty'] }).mods.goldPerKill).toBe(1)
+    expect(computeCombat({ ...h, skills: ['last_rites'] }).mods.killMend).toEqual({ every: 5, hp: 1 })
+    expect(computeCombat({ ...h, skills: ['momentum'] }).mods.rushPerHeld).toBe(0.15)
   })
 })
 
@@ -202,7 +220,6 @@ describe('old saves: perks and evolutions become skills', () => {
     // Berserker (level 20) had no slot left: a Level 3 bump on STR.
     expect(m.stats.str).toBe(28)
     expect(m.skillPicks).toBe(3)
-    expect(m.branchPath).toEqual(['fighter'])
   })
 
   it('keeps a choice the old hero still owed', () => {
@@ -219,7 +236,7 @@ describe('old saves: perks and evolutions become skills', () => {
   })
 
   it('leaves a hero with nothing to migrate alone', () => {
-    expect(migrateGrowth({ archetype: 'fighter', level: 3, branchPath: ['fighter'], stats })).toEqual({ skills: [], skillPicks: 0, stats, branchPath: ['fighter'] })
+    expect(migrateGrowth({ archetype: 'fighter', level: 3, branchPath: ['fighter'], stats })).toEqual({ skills: [], skillPicks: 0, stats })
   })
 })
 
@@ -274,26 +291,37 @@ describe('Watch levels, cards and difficulty', () => {
 })
 
 describe('the skill library view (Codex)', () => {
-  it('lists every card by level; a locked card is a silhouette that says only how it opens', async () => {
-    const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
-    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], watchXp: 100, staged: false })
-    expect(o.cards).toHaveLength(ALL_SKILLS.length)
+  it('is a Collection with two tabs; a locked card is a silhouette that says only how it opens', async () => {
+    const { skillLibraryOffer, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
+    const { ITEM_KINDS, BASIC_ITEM_KINDS } = await import('../src/game/data/itemKinds')
+    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], watchXp: 100, staged: false })
+    expect(o.tabs!.map((t) => t.label)).toEqual(['Skills', 'Items'])
+    const skillsTab = o.tabs![0]
+    const itemsTab = o.tabs![1]
+    expect(skillsTab.cards).toHaveLength(ALL_SKILLS.length)
+    expect(itemsTab.cards).toHaveLength(ITEM_KINDS.length)
     // A pip per card ran 33 dots off a phone's row: the count rides in `sub`.
     expect(o.pips).toBeUndefined()
-    expect(o.sub).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
-    const locked = o.cards!.filter((c) => c.locked)
+    expect(skillsTab.count).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
+    expect(itemsTab.count).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
+    for (const c of itemsTab.cards.filter((c) => c.locked)) {
+      expect(c.name).toBe('Locked')
+      expect(c.text).toBe(UNLOCK_BY_PLAYING)
+    }
+    const o2 = { cards: skillsTab.cards }
+    const locked = o2.cards.filter((c) => c.locked)
     expect(locked).toHaveLength(ALL_SKILLS.length - STARTER_SKILLS.length - 1)
     for (const c of locked) {
       expect(c.name).toBe('Locked')
       expect(ALL_SKILLS.some((k) => c.text.includes(k.desc))).toBe(false)
     }
-    expect(new Set(o.cards!.map((c) => c.group))).toEqual(new Set(['Level 1', 'Level 2', 'Level 3']))
+    expect(new Set(o2.cards.map((c) => c.group))).toEqual(new Set(['Level 1', 'Level 2', 'Level 3']))
   })
 
   it('stays locked until the first run is over', async () => {
     const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
     const o = skillLibraryOffer({ achievements: {}, skills: [], watchXp: 0, staged: true })
-    expect(o.cards).toBeUndefined()
+    expect(o.tabs).toBeUndefined()
     expect(o.sub).toBe('Locked')
   })
 })

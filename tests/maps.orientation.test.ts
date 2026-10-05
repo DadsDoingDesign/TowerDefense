@@ -12,7 +12,7 @@ import {
   pickBattleMap,
   PORTRAIT_MAPS,
 } from '../src/game/data/maps'
-import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
+import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { Archetype, GameMap } from '../src/game/types'
@@ -96,7 +96,7 @@ describe('portrait twins', () => {
         map,
         wave: generateEncounter(5, 'normal', { seed }),
         // G1-2: the old circle ids, as each field's nearest open tiles.
-        placedSentinels: team.map(([a, post]) => ({ sentinel: createSentinel(a), slotId: legacyPostTile(fieldIdOf(map), post)! })),
+        placedSentinels: team.map(([a, post]) => ({ sentinel: classicHero(a), slotId: legacyPostTile(fieldIdOf(map), post)! })),
         baseHp: 20,
         maxBaseHp: 20,
         seed,

@@ -283,6 +283,13 @@ export interface GameData {
    * or the Daily's fixed pool) and snapshotted, so a resume deals the same.
    */
   skillPool: string[]
+  /**
+   * The classless rework: the item KINDS this run deals from — rolled heroes,
+   * hires, loot, the merchant and rewards. Fixed when the run begins (the
+   * basic five plus the player's unlocks, or the Daily's fixed pool) and
+   * snapshotted.
+   */
+  itemPool: string[]
 
   // UI
   selectedSentinelId: string | null

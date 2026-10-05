@@ -3,6 +3,8 @@
  * proc rings, muzzle flashes and walk/roll cycles. Tier/elite plaques are in
  * `plaques.ts`.
  */
+import { lookOf } from '../data/gear'
+import { lookHue } from '../data/sentinels'
 import type { Vec2 } from '../core/vec'
 import { ARCHETYPE_GLYPH } from '../data/glyphs'
 import type { RtEnemy, RtSentinel } from '../engine/engine'
@@ -108,9 +110,9 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
   return {
     id: s.id,
     pos: s.pos,
-    archetype: s.def.archetype,
-    color: s.def.color,
-    accent: s.def.accent,
+    // The look comes from the weapon (there is no class): `gear.lookOf`.
+    archetype: lookOf(s.def),
+    ...lookHue(lookOf(s.def)),
     range: s.profile.range,
     aimAngle: s.aimAngle,
     fireFlash: s.fireFlash,

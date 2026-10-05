@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState, RNG } from '../src/game/core/rng'
 import { generateItem, ITEM_BASES, heroSlotsFor } from '../src/game/data/items'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
-import { createSentinel, nameCounterState } from '../src/game/data/sentinels'
+import { classicHero, nameCounterState } from '../src/game/data/sentinels'
 import { crowds, HELD_COPY, parseTileId, roomyTiles, tileId, withinClearance, type Post } from '../src/game/data/terrain'
 import { relicTeamMods, RELICS } from '../src/game/data/relics'
 import { computeCombat } from '../src/game/engine/combat'
@@ -45,7 +45,7 @@ const gear = (noun: string, slot: ItemSlot = ITEM_BASES[noun].slot): Item => ({
   enchantments: [],
 })
 const holding = (a: Archetype, noun: string | null, name?: string): Sentinel => {
-  const h = createSentinel(a)
+  const h = classicHero(a)
   return { ...h, ...(name ? { name } : {}), equipment: { mainHand: noun ? gear(noun) : null, offHand: null, body: null } }
 }
 
@@ -87,7 +87,7 @@ describe('the skill hook', () => {
 describe('what each class can hold', () => {
   it('no item is class-locked: every class can wield every weapon kind, so a Mystic can carry a sword', () => {
     for (const a of ['fighter', 'rogue', 'mystic'] as const) {
-      const h = createSentinel(a)
+      const h = classicHero(a)
       for (const [noun, b] of Object.entries(ITEM_BASES)) {
         if (b.slot === 'body') continue
         expect(heroSlotsFor({ name: noun, slot: b.slot }, h).length).toBeGreaterThan(0)

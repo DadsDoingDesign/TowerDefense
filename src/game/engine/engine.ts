@@ -7,6 +7,8 @@ import { DEFAULT_COMMANDS, FLARE, HOLD, RALLY, type CommandId } from '../data/co
 import { ENEMY_MODS, ENEMY_TYPES, modKey } from '../data/enemies'
 import { tileDamageMult } from '../data/hazards'
 import { crowds } from '../data/terrain'
+import { lookOf } from '../data/gear'
+import { lookHue } from '../data/sentinels'
 import type { EffectMods, EnemyBehaviour, EnemyType, FocusMode, GameMap, Sentinel, Tactics, WaveDef } from '../types'
 
 type Behaviour<K extends EnemyBehaviour['kind']> = Extract<EnemyBehaviour, { kind: K }>
@@ -1326,7 +1328,7 @@ export class GameEngine {
           if (s.profile.thorns > 0) this.damageEnemy(e, s.profile.thorns * dt, s.id, false, s.profile.damageType, true)
           if (e.hp > 0) this.igniteFromThorns(s, e)
         }
-        if (grinding) this.onEvent?.('melee', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
+        if (grinding) this.onEvent?.('melee', { arch: lookOf(s.def), x: this.fieldX(s.pos.x) })
       }
     }
     this.retargetDirty = false
@@ -1392,9 +1394,11 @@ export class GameEngine {
     if (m.killRush && this.elapsed < s.rushUntil) rate *= 1 + m.killRush.rate
     // Rally Horn (Phase 3a) is an attack-SPEED buff: it shortens this reload and nothing else.
     if (this.elapsed < this.rallyUntil) rate *= RALLY.rateMult
+    // Momentum: faster for each enemy this hero is holding right now.
+    if (m.rushPerHeld && s.blockIds.length) rate *= 1 + m.rushPerHeld * s.blockIds.length
     s.cooldown = 1 / rate
     s.fireFlash = 1
-    this.onEvent?.('shoot', { arch: s.def.archetype, x: this.fieldX(s.pos.x) })
+    this.onEvent?.('shoot', { arch: lookOf(s.def), x: this.fieldX(s.pos.x) })
     // The crit roll is ALWAYS drawn, so a cadence crit never shifts the combat
     // stream for anything that fires after it.
     const rolled = this.rng.chance(s.profile.critChance)
@@ -1413,7 +1417,7 @@ export class GameEngine {
       speed: s.profile.projectileSpeed,
       splashRadius: s.profile.splashRadius,
       pierce: (s.profile.mods.pierce ?? 0) + volley,
-      color: s.def.accent,
+      color: lookHue(lookOf(s.def)).accent,
       mods: s.profile.mods,
       lifedrain: s.profile.mods.lifedrain ?? 0,
     })
@@ -1703,7 +1707,12 @@ export class GameEngine {
       this.killEnemy(e, p.srcId)
       return
     }
-    const dealt = this.damageEnemy(e, p.damage, p.srcId, p.isCrit, p.damageType, false)
+    // Pin Down / Cold Snap: this hero's hits land harder on a held or a
+    // slowed enemy — read off the target as the hit lands.
+    let amount = p.damage
+    if (p.mods.vsHeld && e.blockedBy) amount *= 1 + p.mods.vsHeld
+    if (p.mods.vsSlowed && this.elapsed < e.chillUntil && e.chillSlow > 0) amount *= 1 + p.mods.vsSlowed
+    const dealt = this.damageEnemy(e, amount, p.srcId, p.isCrit, p.damageType, false)
 
     // On-hit statuses (only if the enemy is still alive).
     if (e.hp > 0) {
@@ -1833,8 +1842,11 @@ export class GameEngine {
    * was rebuilt to close (see `archetypeTree.ts`).
    */
   private igniteFromThorns(s: RtSentinel, e: RtEnemy): void {
-    const burn = s.profile.mods.burn
-    if (!s.profile.mods.thornsIgnite || !burn) return
+    const m = s.profile.mods
+    // Firebrand's own thorn burn first; otherwise the hero's hit burn, if a
+    // source says its thorns carry it (`thornsIgnite`, Warden of Ash).
+    const burn = m.thornsBurn ?? (m.thornsIgnite ? m.burn : undefined)
+    if (!burn) return
     if (this.writeBurn(e, burn, s.id, s.profile.damageType)) s.procFlash = 1
   }
 
@@ -1935,6 +1947,13 @@ export class GameEngine {
       if (s) {
         s.kills++
         if (s.profile.mods.killRush) s.rushUntil = this.elapsed + s.profile.mods.killRush.dur
+        // Bounty: this hero's kills pay more gold.
+        if (s.profile.mods.goldPerKill) this.goldEarned += s.profile.mods.goldPerKill
+        // Last Rites: every Nth kill it makes mends the Gate.
+        const mend = s.profile.mods.killMend
+        if (mend && mend.every > 0 && s.kills % Math.round(mend.every) === 0 && this.baseHp > 0) {
+          this.baseHp = Math.min(this.maxBaseHp, this.baseHp + mend.hp)
+        }
         const xp = Math.round(e.maxHp * 0.2) + e.reward
         this.xpGained.set(srcId, (this.xpGained.get(srcId) ?? 0) + xp)
       }
@@ -2086,7 +2105,7 @@ export class GameEngine {
   /** Who struck and where, for a hit's sound. Reads only. */
   private hitPayload(p: RtProjectile): EngineEventPayload {
     const src = this.sentinels.find((x) => x.id === p.srcId)
-    return { arch: src?.def.archetype, x: this.fieldX(p.pos.x) }
+    return { arch: src ? lookOf(src.def) : undefined, x: this.fieldX(p.pos.x) }
   }
 
   private spawnFloater(pos: Vec2, text: string, color: string, big: boolean): void {

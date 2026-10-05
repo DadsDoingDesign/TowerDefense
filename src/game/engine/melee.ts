@@ -22,8 +22,10 @@
  * That is also what makes a clearance conflict always fixable — taking the
  * weapon off is a legal move whenever gear is (see `run/clearance.ts`).
  *
- * Holding enemies (`mods.block`) is untouched: it stays the Fighter line's
- * combat mechanic. This is only the placement rule.
+ * Holding enemies (`mods.block`) is a separate thing: it comes from a SHIELD
+ * in the off hand (the classless rework, `items.shieldHold`) or a hold skill,
+ * and never makes a hero swing — a wand-hand with a shield holds the road and
+ * keeps no clearance. This is only the placement rule.
  *
  * EVERY caller asks {@link isMelee}: the store's posting and breather move,
  * the engine's `moveHero`, `carryPlacements`, the balance harness's modelled

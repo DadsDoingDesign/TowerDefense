@@ -415,7 +415,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
         // Copy-spend-write-back: the counter is mutated in place (M9).
         const pity = { ...st.lootPity }
         const loot = Array.from({ length: spoils.lootCount }, () =>
-          generateItem(streams.rng, { luck: spoils.luck, roster: rosterXp, pity }),
+          generateItem(streams.rng, { luck: spoils.luck, roster: rosterXp, pity, kinds: st.itemPool }),
         )
         set({
           // Loot drops into any empty slot it strictly improves; the rest
@@ -579,6 +579,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
           unlocked: relicUnlocked,
           roster: rosterXp,
           pity,
+          kinds: st.itemPool,
         })
     // The Relic Cartulary: one more relic beside an act boss's hand, from its
     // own seeded stream so the service re-deals nothing else in the run.
@@ -589,7 +590,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
-      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity }))
+      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity, kinds: st.itemPool }))
       : []
 
     // After each act boss, the Crossroads: recruit or mutate (Phase 3b).

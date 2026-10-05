@@ -3,7 +3,7 @@ import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 
 /** G1-2: the old build circles, as the tiles nearest where they stood. */
 const P = legacyPosts(FIRST_MAP.id)
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { EffectMods, Sentinel, WaveDef } from '../src/game/types'
@@ -49,7 +49,7 @@ describe('rule capabilities (engine)', () => {
     // One continuous wave (no sub-wave breathers), so a solo rogue cannot clear
     // it and a cadence's extra damage has bodies left to land on.
     const wave = generateEncounter(3, 'normal', { subWaves: false })
-    const rogue = createSentinel('rogue')
+    const rogue = classicHero('rogue')
     const a = run({ team: [{ sentinel: rogue, slotId: P.s3 }], wave })
     const b = run({ team: [{ sentinel: withPerkMods(rogue, { critEvery: 3 }), slotId: P.s3 }], wave })
     const c = run({ team: [{ sentinel: withPerkMods(rogue, { volley: { every: 2, pierce: 99 } }), slotId: P.s3 }], wave })
@@ -60,7 +60,7 @@ describe('rule capabilities (engine)', () => {
 
   it('openingRush and killRush make a hero fire more', () => {
     const wave = generateEncounter(4, 'normal')
-    const rogue = createSentinel('rogue')
+    const rogue = classicHero('rogue')
     const shots = (s: Sentinel) => run({ team: [{ sentinel: s, slotId: P.s3 }], wave }).sentinels[0].shots
     const base = shots(rogue)
     expect(shots(withPerkMods(rogue, { openingRush: { rate: 1, dur: 30 } }))).toBeGreaterThan(base)

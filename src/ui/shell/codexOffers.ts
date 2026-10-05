@@ -14,7 +14,7 @@ import { ACHIEVEMENTS } from '../../game/data/achievements'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import { RELICS, relicSupported } from '../../game/data/relics'
 import { ALL_SKILLS, skillLevelLabel } from '../../game/data/skills'
-import { ARCHETYPES } from '../../game/data/sentinels'
+import { ITEM_KINDS, itemPoolFor } from '../../game/data/itemKinds'
 import { skillPoolFor, watchProgress } from '../../game/run/watch'
 import type { Codex } from '../../state/metaStore'
 import { CORE_IDEAS, IDEAS } from '../../state/staging'
@@ -26,6 +26,8 @@ export interface CodexView {
   codex: Codex
   /** SK1: the skill cards unlocked by Watch levels and wins, and lifetime Watch XP. */
   skills?: readonly string[]
+  /** The classless rework: the item kinds unlocked by Watch levels and wins. */
+  items?: readonly string[]
   watchXp?: number
   /** LS3: the ideas the player has met. */
   met?: readonly string[]
@@ -108,54 +110,69 @@ export function codexOffers(v: CodexView): Offer[] {
   return [glossaryOffer(v), skillLibraryOffer(v), feats, goblins, relics]
 }
 
-/** LS3: the library opens after the first run, said the same way as the Daily's. */
+/** LS3: the collection opens after the first run, said the same way as the Daily's. */
 const LIBRARY_LOCKED = 'Opens after your first run'
+/** What a silhouette says: the designer's words, and how. */
+export const UNLOCK_BY_PLAYING = 'Unlock by playing — at random, as your Watch level rises.'
+
+const SLOT_GROUP: Record<string, string> = { oneHand: 'Weapons', twoHand: 'Weapons', offHand: 'Off hand', body: 'Body' }
 
 /**
- * The skill library (SK1): every skill card, by level — the ones this Watch
- * has, named with their one sentence; the rest as silhouettes that say only
- * how they open ("Unlocks at random as your Watch level rises", or the feat). The Watch level and how
- * far it is to the next card lead.
+ * The Collection (the classless rework; was SK1's skill library): two tabs,
+ * Skills and Items. What this Watch has is named with its one sentence; the
+ * rest are silhouettes that say only how they open. A hero is rolled from
+ * these — its gear from the item kinds, its skill from the skill cards — so
+ * the more a player unlocks, the more kinds of hero and loot a run can deal.
+ * Each card says only what IT does (the designer: "dont say how it will mix").
  */
-export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'watchXp' | 'staged'>): Offer {
+export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'items' | 'watchXp' | 'staged'>): Offer {
   const pool = new Set(skillPoolFor(v.skills ?? [], (id) => !!v.achievements[id]))
   const have = ALL_SKILLS.filter((k) => pool.has(k.id)).length
+  const kinds = new Set(itemPoolFor(v.items ?? []))
+  const haveItems = ITEM_KINDS.filter((k) => kinds.has(k.id)).length
   if (v.staged) {
     return {
       id: 'codex-skills',
-      title: 'Skill library',
+      title: 'Collection',
       sub: 'Locked',
       icon: 'boon',
       dim: true,
       note: LIBRARY_LOCKED,
-      body: [`${LIBRARY_LOCKED}: every skill your heroes can be offered, and how to unlock the rest.`],
+      body: [`${LIBRARY_LOCKED}: every skill and item your heroes can be dealt, and how to unlock the rest.`],
     }
   }
   const w = watchProgress(v.watchXp ?? 0)
+  const skillCards = ALL_SKILLS.map((k) => {
+    const group = skillLevelLabel(k.level)
+    if (pool.has(k.id)) return { id: k.id, group, name: k.name, sub: k.starter ? 'Starter' : 'Unlocked', text: k.desc }
+    const feat = k.feat ? ACHIEVEMENTS.find((a) => a.id === k.feat) : undefined
+    return {
+      id: k.id,
+      group,
+      name: 'Locked',
+      sub: '',
+      text: feat ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.` : UNLOCK_BY_PLAYING,
+      locked: true,
+    }
+  })
+  const itemCards = ITEM_KINDS.map((k) => {
+    const group = SLOT_GROUP[k.slot]
+    if (kinds.has(k.id)) return { id: `kind-${k.id}`, group, name: k.id, sub: k.basic ? 'Basic' : 'Unlocked', text: k.does }
+    return { id: `kind-${k.id}`, group, name: 'Locked', sub: '', text: UNLOCK_BY_PLAYING, locked: true }
+  })
   return {
     id: 'codex-skills',
-    title: 'Skill library',
-    sub: `${have}/${ALL_SKILLS.length}`,
+    title: 'Collection',
+    sub: `${have + haveItems}/${ALL_SKILLS.length + ITEM_KINDS.length}`,
     icon: 'boon',
     body: [
-      `Watch level ${w.level} — ${w.into}/${w.need} Watch XP to the next. Every Watch level unlocks one skill card.`,
-      'Every run earns Watch XP: 15 a depth, 1 per 10 enemies felled, 60 for a win. A win at your highest difficulty unlocks a card too.',
-      'Your heroes are offered skills only from the cards you have.',
+      `Watch level ${w.level} — ${w.into}/${w.need} Watch XP to the next. Every Watch level unlocks one skill and one item.`,
+      'Every run earns Watch XP: 15 a depth, 1 per 10 enemies felled, 60 for a win. A win at your highest difficulty unlocks one of each too.',
+      'Your heroes, loot and offers are dealt only from what you have.',
     ],
-    cards: ALL_SKILLS.map((k) => {
-      const group = skillLevelLabel(k.level)
-      if (pool.has(k.id)) {
-        return { id: k.id, group, name: k.name, sub: k.class ? ARCHETYPES[k.class].name : 'Any hero', text: k.desc }
-      }
-      const feat = k.feat ? ACHIEVEMENTS.find((a) => a.id === k.feat) : undefined
-      return {
-        id: k.id,
-        group,
-        name: 'Locked',
-        sub: k.class ? ARCHETYPES[k.class].name : 'Any hero',
-        text: feat ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.` : 'Unlocks at random as your Watch level rises.',
-        locked: true,
-      }
-    }),
+    tabs: [
+      { id: 'skills', label: 'Skills', count: `${have}/${ALL_SKILLS.length}`, cards: skillCards },
+      { id: 'items', label: 'Items', count: `${haveItems}/${ITEM_KINDS.length}`, cards: itemCards },
+    ],
   }
 }

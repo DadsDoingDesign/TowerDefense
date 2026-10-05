@@ -13,7 +13,7 @@ import { difficultyRules, endlessMarks, lastFeats, migrateMeta, useMetaStore } f
 const facts = (over: Partial<RunFacts> = {}): RunFacts => ({
   mode: 'campaign',
   won: false,
-  starter: 'fighter',
+  starter: 'swing',
   hires: 1,
   maxFielded: 2,
   act: 1,
@@ -33,8 +33,8 @@ describe('feats (data/achievements)', () => {
     expect(newlyEarned(facts(), {})).toEqual([])
   })
 
-  it('a fighter win earns the win feats, and a feat already held is never earned twice', () => {
-    const f = facts({ won: true, starter: 'fighter', actBosses: 2, act: 3 })
+  it('a sword-hand win earns the win feats, and a feat already held is never earned twice', () => {
+    const f = facts({ won: true, starter: 'swing', actBosses: 2, act: 3 })
     const ids = newlyEarned(f, {}).map((a) => a.id)
     expect(ids).toEqual(expect.arrayContaining(['act_two', 'first_light', 'win_fighter']))
     expect(ids).not.toContain('win_rogue')
@@ -54,7 +54,7 @@ describe('feats (data/achievements)', () => {
   })
 
   it('runFacts reads hires off the starting size, the act off the deepest layer, and a mutation off the roster', () => {
-    const feats = { ...freshFeats(), starter: 'rogue' as const, startSize: 2, maxFielded: 4, actBosses: 1 }
+    const feats = { ...freshFeats(), starter: 'shoot' as const, startSize: 2, maxFielded: 4, actBosses: 1 }
     const f = runFacts({
       mode: 'campaign', won: false, feats, deepestLayer: 9, difficulty: 1, wins: 0, dailyScored: false, goblinsSeen: 4,
       roster: [{ mutations: [] }, { mutations: [{ key: 'x' } as never] }, { mutations: [] }],
@@ -62,7 +62,7 @@ describe('feats (data/achievements)', () => {
     expect(f.hires).toBe(1)
     expect(f.act).toBe(3)
     expect(f.mutated).toBe(true)
-    expect(f.starter).toBe('rogue')
+    expect(f.starter).toBe('shoot')
   })
 
   it('a Codex counts goblin KINDS: a modded sighting is the same goblin', () => {

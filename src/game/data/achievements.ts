@@ -1,4 +1,4 @@
-import type { Archetype } from '../types'
+import type { HeroStyle } from './items'
 
 /**
  * ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ import type { Archetype } from '../types'
  * were no content unlocks and no achievements at all — nothing to do on run
  * forty that you had not done on run twelve.
  *
- * A feat is a thing you did — win with each starter, reach act 3 without
+ * A feat is a thing you did — win with each kind of first hero, reach act 3 without
  * hiring, clear an act boss without a scratch on the Gate — and it opens a new
  * way to play: a skill card, a relic, a Watchtower service.
  * Nothing here is a bigger number. Each also pays a one-off purse of Watch
@@ -23,8 +23,8 @@ import type { Archetype } from '../types'
 export interface RunFacts {
   mode: 'campaign' | 'endless'
   won: boolean
-  /** The first hero's archetype (campaign). */
-  starter: Archetype | null
+  /** What the first hero fought with as the march began — its weapon's style (campaign). */
+  starter: HeroStyle | null
   /** Heroes the company hired over the run (hub extras do not count). */
   hires: number
   /** The most heroes fielded in one wave. */
@@ -64,10 +64,12 @@ export interface Achievement {
 export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'act_two', name: 'Into the Second Act', feat: 'Defeat an act boss.', opens: "Relic: Veteran's Cloak · Watchtower: Field Kitchen", marks: 40, check: (f) => f.actBosses >= 1 },
   { id: 'first_light', name: 'First Light', feat: 'Win a campaign.', opens: 'Watchtower: Relic Cartulary', marks: 120, check: (f) => f.mode === 'campaign' && f.won },
-  { id: 'win_fighter', name: 'Hold the Line', feat: 'Win with a Fighter as your first hero.', opens: 'Skill card: Warden of Ash (Level 3, Fighter)', marks: 80, check: (f) => f.won && f.starter === 'fighter' },
-  { id: 'win_rogue', name: 'Nothing Wasted', feat: 'Win with a Rogue as your first hero.', opens: 'Skill card: Hexblade (Level 3, Rogue)', marks: 80, check: (f) => f.won && f.starter === 'rogue' },
-  { id: 'win_mystic', name: 'The Long Watch', feat: 'Win with a Mystic as your first hero.', opens: 'Skill card: Stormcaller (Level 3, Mystic)', marks: 80, check: (f) => f.won && f.starter === 'mystic' },
-  { id: 'lone_wolf', name: 'Lone Wolf', feat: 'Reach act 3 without hiring a single hero.', opens: 'Skill card: Riposte (Level 1, Fighter)', marks: 100, check: (f) => f.mode === 'campaign' && f.act >= 3 && f.hires === 0 },
+  // The ids keep their class-era names: saves hold them. The feat is what the
+  // first hero HELD (its weapon) when the march began — there are no classes.
+  { id: 'win_fighter', name: 'Hold the Line', feat: 'Win with a first hero who swings a sword, axe or hammer.', opens: 'Skill card: Warden of Ash (Level 3)', marks: 80, check: (f) => f.won && f.starter === 'swing' },
+  { id: 'win_rogue', name: 'Nothing Wasted', feat: 'Win with a first hero who shoots a bow or throws daggers.', opens: 'Skill card: Hexblade (Level 3)', marks: 80, check: (f) => f.won && f.starter === 'shoot' },
+  { id: 'win_mystic', name: 'The Long Watch', feat: 'Win with a first hero who casts magic.', opens: 'Skill card: Stormcaller (Level 3)', marks: 80, check: (f) => f.won && f.starter === 'cast' },
+  { id: 'lone_wolf', name: 'Lone Wolf', feat: 'Reach act 3 without hiring a single hero.', opens: 'Skill card: Riposte (Level 1)', marks: 100, check: (f) => f.mode === 'campaign' && f.act >= 3 && f.hires === 0 },
   { id: 'full_company', name: 'Full Company', feat: 'Field five heroes in one wave.', opens: 'Relic: Mercenary Charter', marks: 40, check: (f) => f.maxFielded >= 5 },
   { id: 'flawless_boss', name: 'Not a Scratch', feat: 'Beat an act boss without the Gate losing any HP.', opens: 'Nothing — a feat for its own sake', marks: 60, check: (f) => f.flawlessBosses >= 1 },
   { id: 'mutant', name: 'Strange Growth', feat: 'Win with a mutated hero among your heroes.', opens: 'The Crossroads offers one more mutation', marks: 60, check: (f) => f.won && f.mutated },

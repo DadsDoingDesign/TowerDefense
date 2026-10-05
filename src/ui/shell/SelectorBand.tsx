@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { lookVar } from '../channels'
+import { kitName } from '../../game/data/gear'
+import { lookOf } from '../../game/data/gear'
+import { heroLookArt } from './offers'
 import { computeCombat } from '../../game/engine/combat'
-import { buildName, levelProgress } from '../../game/engine/leveling'
+import { levelProgress } from '../../game/engine/leveling'
 import { DANGER_COPY, tileDamageMult } from '../../game/data/hazards'
 import type { Sentinel } from '../../game/types'
 import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
-import { archetypeVar, ARCHETYPE_GLYPH, markLabel } from '../channels'
+import { ARCHETYPE_GLYPH, markLabel } from '../channels'
 import { Icon } from '../Icon'
-import { heroArt, type Offer } from './offers'
+import { type Offer } from './offers'
 import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
@@ -136,7 +140,7 @@ function PartyCards() {
         const ground = screen === 'battle' && placed ? tileDamageMult(battleMap, slotOf(s.id)!) : 1
         const cursed = ground !== 1
         const dps = Math.round(profile.dps * ground)
-        const hue = archetypeVar(s.archetype)
+        const hue = lookVar(s)
         const clash = swingers.has(s.id) ? 'swing' : tooClose.has(s.id) ? 'close' : null
         const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         // "Swings — needs clearance", in words, for whoever swings (what it holds or a skill).
@@ -154,7 +158,7 @@ function PartyCards() {
                colour-vision modes can move it (M34). */
             style={{ '--rail': hue } as CSSProperties}
             aria-pressed={selected}
-            aria-label={`${s.name}, ${buildName(s)} level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
+            aria-label={`${s.name}, ${kitName(s)}, level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
               lvlUp ? `, ${levelUpWords(s)}` : ''
             }`}
             onClick={() => {
@@ -179,12 +183,12 @@ function PartyCards() {
               mode. Portrait plus mark, not portrait instead of mark.
             */}
             <span className="sh-hero-glyph" style={{ background: hue }} aria-hidden="true">
-              <img className="sh-hero-art" src={heroArt(s.archetype)} alt="" />
-              <span className="sh-hero-arch">{ARCHETYPE_GLYPH[s.archetype]}</span>
+              <img className="sh-hero-art" src={heroLookArt(s)} alt="" />
+              <span className="sh-hero-arch">{ARCHETYPE_GLYPH[lookOf(s)]}</span>
             </span>
             <span className="sh-hero-name">{s.name}</span>
             <span className="sh-hero-sub">
-              {buildName(s)} · {s.level}
+              {kitName(s)} · {s.level}
             </span>
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
@@ -339,13 +343,13 @@ function PartyStrip() {
           <button
             key={h.id}
             className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
-            style={{ '--rail': archetypeVar(h.archetype) } as CSSProperties}
+            style={{ '--rail': lookVar(h) } as CSSProperties}
             aria-pressed={selected}
             aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
             onClick={() => shellSelect({ kind: 'hero', id: h.id })}
           >
             <span className="sh-mate-art" aria-hidden="true">
-              <img src={heroArt(h.archetype)} alt="" />
+              <img src={heroLookArt(h)} alt="" />
             </span>
             <span className="sh-mate-name">{h.name}</span>
             {lvlUp ? <LevelBadge /> : <span className="sh-mate-lv">Lv {h.level}</span>}

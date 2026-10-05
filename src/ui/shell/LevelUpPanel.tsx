@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { lookVar } from '../channels'
 import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillLevelLabel, type BumpStat } from '../../game/data/skills'
 import { bumpAmount, bumpOffered, MAX_SKILLS, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
-import { archetypeVar } from '../channels'
 import { Icon } from '../Icon'
 import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 
@@ -58,7 +58,7 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   const amount = bumpAmount(m)
   const held = (hero.skills ?? []).map((id) => skillById(id)).filter((k) => !!k)
   const chosen = picked?.kind === 'skill' ? skillById(picked.id) : undefined
-  const hue = archetypeVar(hero.archetype)
+  const hue = lookVar(hero)
 
   // The panel is ~150px of body on a phone: a pick brings what it does (and,
   // when full, the swap row) into view. The commit is pinned below.

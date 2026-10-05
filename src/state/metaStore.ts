@@ -13,10 +13,12 @@ import {
   rollUnlock,
   watchLevelFor,
   watchXpFor,
+  rollItemUnlock,
   winReward,
   winScore,
 } from '../game/run/watch'
 import { RANDOM_UNLOCK_SKILLS } from '../game/data/skills'
+import { UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 
 /**
  * What a hub purchase *does* to the game (H15).
@@ -284,6 +286,8 @@ export interface RunProgress {
   levelAfter: number
   /** Skill cards unlocked by this settle, in order (Watch levels first, then the win). */
   cards: string[]
+  /** Item kinds unlocked by this settle, in order (the classless rework's item track). */
+  items: string[]
   /** Why the win did or did not pay a card (null when the run was not a ranked win). */
   win: null | { step: number; card: boolean; stepUp: boolean; newBest: boolean; score: number; best: number | null }
 }
@@ -308,6 +312,12 @@ interface MetaState {
    * feat, so neither is stored. Validated against the library on load.
    */
   skills: string[]
+  /**
+   * Item KINDS unlocked by Watch levels and wins, in unlock order (the
+   * classless rework, `data/itemKinds.ts`). The basic five are everyone's and
+   * are not stored. Validated against the kind list on load.
+   */
+  items: string[]
   stats: MetaStats
   /** Today's (or the last played day's) scored Daily Watch attempt. */
   daily: DailyRecord | null
@@ -414,8 +424,13 @@ const freshStats = (): MetaStats => ({
  * ({@link retroWatchXp}) and one card per Watch level that buys, so a veteran
  * does not start the new progression from nothing. The Codex's spec and perk
  * lists are dropped with the systems they recorded.
+ *
+ * v7 — the classless rework: item KINDS unlock like skill cards. `items` is
+ * added; a save that has played is granted one kind per Watch level it holds
+ * past the first ({@link dealItems}, salt 'v7'), the same pace a new player
+ * meets them at. Its skill cards are untouched.
  */
-export const META_VERSION = 6
+export const META_VERSION = 7
 
 /**
  * The Watch XP a pre-SK1 save is credited (v6): 1 per 10 kills, 60 per win,
@@ -436,10 +451,21 @@ function dealCards(have: readonly string[], n: number, ...salt: (string | number
   return out.slice(have.length)
 }
 
+/** The item kinds a fresh unlock run of `n` steps deals onto `have`, in order. */
+export function dealItems(have: readonly string[], n: number, ...salt: (string | number)[]): string[] {
+  const out = [...have]
+  for (let i = 0; i < n; i++) {
+    const c = rollItemUnlock(out, ...salt, i)
+    if (!c) break
+    out.push(c)
+  }
+  return out.slice(have.length)
+}
+
 /** Persisted slice — the only part of the store that survives a reload. */
 type PersistedMeta = Pick<
   MetaState,
-  'watchMarks' | 'upgrades' | 'topDifficulty' | 'difficultyBest' | 'watchXp' | 'skills' | 'stats' | 'daily' | 'achievements' | 'codex' | 'met'
+  'watchMarks' | 'upgrades' | 'topDifficulty' | 'difficultyBest' | 'watchXp' | 'skills' | 'items' | 'stats' | 'daily' | 'achievements' | 'codex' | 'met'
 >
 
 /**
@@ -490,6 +516,11 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     watchXp = retroWatchXp(stats)
     skills = [...skills, ...dealCards(skills, watchLevelFor(watchXp) - 1, 'v6', stats.runsCompleted)]
   }
+  // v7: item kinds, each once, known ones only, in unlock order. A save from
+  // before item unlocks is granted one kind per Watch level past the first.
+  const kinds = new Set(UNLOCK_ITEM_KINDS)
+  let items = Array.isArray(o.items) ? [...new Set(o.items.filter((x): x is string => typeof x === 'string' && kinds.has(x)))] : []
+  if (version < 7 && items.length === 0) items = dealItems([], watchLevelFor(watchXp) - 1, 'v7', stats.runsCompleted)
   const difficultyBest: Record<string, number> = {}
   for (const [k, v] of Object.entries(numRecord(o.difficultyBest))) {
     const step = Number(k)
@@ -502,6 +533,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     difficultyBest,
     watchXp,
     skills,
+    items,
     stats,
     daily: migrateDaily(o.daily),
     achievements: migrateAchievements(o.achievements),
@@ -528,6 +560,7 @@ export const useMetaStore = create<MetaState>()(
       difficultyBest: {},
       watchXp: 0,
       skills: [],
+      items: [],
       stats: freshStats(),
       daily: null,
       achievements: {},
@@ -640,6 +673,9 @@ export const useMetaStore = create<MetaState>()(
         const levelAfter = watchLevelFor(xpBefore + xp)
         const have = get().skills
         const cards = dealCards(have, levelAfter - levelBefore, 'level', runsDone, levelBefore)
+        // The classless rework: each Watch level deals an item kind too.
+        const haveItems = Array.isArray(get().items) ? get().items : []
+        const items = dealItems(haveItems, levelAfter - levelBefore, 'level', runsDone, levelBefore)
         // A WIN at the top step climbs it and pays a card; a win below it pays a
         // card only for a new best score there. Not on a custom seed (shoppable)
         // or a Daily (standard rules, no difficulty step).
@@ -651,12 +687,15 @@ export const useMetaStore = create<MetaState>()(
           const score = winScore(num(depth, 0), num(kills, 0))
           const prev = best[String(flown)]
           const r = winReward({ step: flown, top, score, best: prev })
-          if (r.card) cards.push(...dealCards([...have, ...cards], 1, 'win', runsDone, flown))
+          if (r.card) {
+            cards.push(...dealCards([...have, ...cards], 1, 'win', runsDone, flown))
+            items.push(...dealItems([...haveItems, ...items], 1, 'win', runsDone, flown))
+          }
           if (r.stepUp) nextTop = Math.min(MAX_DIFFICULTY, top + 1)
           if (r.newBest) nextBest = { ...best, [String(flown)]: score }
           win = { step: flown, card: r.card, stepUp: r.stepUp, newBest: r.newBest, score, best: prev ?? null }
         }
-        lastProgress.run = { xp, levelBefore, levelAfter, cards, win }
+        lastProgress.run = { xp, levelBefore, levelAfter, cards, items, win }
 
         // Every read is coerced: this is `x + n` arithmetic over a persisted
         // record, and one field arriving as `undefined` from an older save
@@ -667,6 +706,7 @@ export const useMetaStore = create<MetaState>()(
           difficultyBest: nextBest,
           watchXp: xpBefore + xp,
           skills: cards.length ? [...have, ...cards] : have,
+          items: items.length ? [...haveItems, ...items] : haveItems,
           daily: dailyNext,
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
@@ -701,7 +741,7 @@ export const useMetaStore = create<MetaState>()(
       },
 
       resetMeta: () =>
-        set({ watchMarks: 0, upgrades: {}, topDifficulty: 0, difficultyBest: {}, watchXp: 0, skills: [], stats: freshStats(), daily: null, achievements: {}, codex: freshCodex(), met: [] }),
+        set({ watchMarks: 0, upgrades: {}, topDifficulty: 0, difficultyBest: {}, watchXp: 0, skills: [], items: [], stats: freshStats(), daily: null, achievements: {}, codex: freshCodex(), met: [] }),
     }),
     {
       name: 'fieldwatch-meta',
@@ -714,6 +754,7 @@ export const useMetaStore = create<MetaState>()(
         difficultyBest: s.difficultyBest,
         watchXp: s.watchXp,
         skills: s.skills,
+        items: s.items,
         stats: s.stats,
         daily: s.daily,
         achievements: s.achievements,

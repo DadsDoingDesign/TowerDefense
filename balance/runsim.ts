@@ -26,8 +26,11 @@
  * numbers comparable to §11's rather than a second opinion.
  */
 import { RNG } from '../src/game/core/rng'
-import { ALL_SKILLS, skillFits } from '../src/game/data/skills'
-import { heroChoices, recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
+import { ALL_SKILLS } from '../src/game/data/skills'
+import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
+import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
+import { BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { lookOf } from '../src/game/data/gear'
 import {
   creditPity,
   generateItem,
@@ -57,8 +60,7 @@ import { useMetaStore } from '../src/state/metaStore'
 import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
-import { createSentinel } from '../src/game/data/sentinels'
-import { autoEquipEmpty, recruitKit, wearKit, type EquipRules } from '../src/game/engine/kit'
+import { autoEquipEmpty, type EquipRules } from '../src/game/engine/kit'
 import {
   bestSkills,
   forcedSkills,
@@ -264,6 +266,12 @@ export interface SimOptions {
    * zero-meta player has unlocked nothing.
    */
   skillPool?: readonly string[]
+  /**
+   * The item kinds the run deals from (the classless rework): rolled heroes,
+   * hires and every drop. Default: the basic five — a zero-meta player has
+   * unlocked nothing.
+   */
+  itemPool?: readonly string[]
   policy?: RoutePolicy
   /**
    * Emulate a change to the `waves.ts` budget curve without editing it: an
@@ -278,7 +286,7 @@ export interface SimOptions {
    * skill LEVEL rather than a player's read of it. `best` takes whichever move
    * raises `heroDps` most — the "known answer" a spreadsheet player converges
    * on. The gap between the two is how solved the skill layer is. `force` pins
-   * picks by `${level}:${archetype}`.
+   * picks by `${level}:${look}` (the look its weapon gives it, `gear.lookOf`).
    */
   build?: 'random' | 'best' | { force: Record<string, string> }
   /** Relics held from the first node (§15 grades the run-rule half this way). */
@@ -314,7 +322,7 @@ export interface RunOutcome {
   layers: number
   /** Which battlefield this run's seed dealt (WS8). */
   fieldId: string
-  /** The starting hero's archetype. */
+  /** The leader's LOOK — the old class its weapon draws it as (a sword-hand is `fighter`). */
   starter: Archetype
   /** Nodes consumed that were fights (battle / elite / boss), and all nodes consumed. */
   fights: number
@@ -323,7 +331,6 @@ export interface RunOutcome {
   levelByLayer: number[]
 }
 
-const ARCHS: Archetype[] = ['fighter', 'rogue', 'mystic']
 
 /**
  * Every skill choice a run can be asked to make, keyed the way
@@ -336,15 +343,15 @@ export function buildChoicePoints(): { id: string; archetype: Archetype; options
   const out: { id: string; archetype: Archetype; options: string[] }[] = []
   for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
     SKILL_MILESTONES.forEach((level, i) => {
-      out.push({ id: `${level}:${archetype}`, archetype, options: ALL_SKILLS.filter((k) => k.level === i + 1 && skillFits(k, archetype)).map((k) => k.id) })
+      // Any hero may hold any skill (no classes); the point is keyed by look.
+      out.push({ id: `${level}:${archetype}`, archetype, options: ALL_SKILLS.filter((k) => k.level === i + 1).map((k) => k.id) })
     })
   }
   return out
 }
 
-/** A body joining the company, carrying what the store hands it (`RECRUIT_KIT`). */
-const recruitBody = (a: Archetype, rng: RNG): Sentinel => wearKit(createSentinel(a), recruitKit(rng, a))
-const rosterRefs = (roster: Sentinel[]): RosterRef[] => roster.map((s) => ({ archetype: s.archetype }))
+const rosterRefs = (roster: Sentinel[]): RosterRef[] => roster
+
 
 function applyStatBonus(s: Sentinel, n: number): Sentinel {
   if (!n) return s
@@ -355,11 +362,26 @@ function applyStatBonus(s: Sentinel, n: number): Sentinel {
  * Walk one campaign run: deal the map the hub and the difficulty step produce,
  * route it with `policy`, and fight / shop / hire the way the store does.
  */
+/**
+ * Which of the three dealt heroes the modelled player takes (the classless
+ * rework): the first whose LOOK — the old class its weapon draws it as — is
+ * `prefer`, else the first dealt. On a zero-meta deal (the basic five kinds)
+ * the three always hold a sword, a bow and a wand, one each, so the callers
+ * that rotate `prefer` through the three looks still play every kind of
+ * leader a third of the time, and §11's per-leader rows keep their meaning.
+ */
+export function modelledPick(seed: number, skillPool: readonly string[], itemPool: readonly string[], prefer: Archetype): string {
+  return resolvePick(seed, skillPool, itemPool, prefer)
+}
+
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   const meta = o.meta ?? ZERO_META
   const banner = o.difficulty ?? difficultyRules(0)
   const policy = o.policy ?? POLICIES[0]
   const pool = o.skillPool ?? STARTER_SKILL_POOL
+  const items = o.itemPool ?? BASIC_ITEM_KINDS
+  /** A body joining the company: a random hire from the run's kinds, named apart. */
+  const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
 
   const rng = new RNG(seed)
   const force = typeof o.build === 'object' ? o.build.force : null
@@ -368,7 +390,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   const evolve = (s: Sentinel): Sentinel =>
     o.build === 'best' ? bestSkills(s, pool, seed) : force ? forcedSkills(s, force, rng, pool, seed) : randomSkills(s, rng, pool, seed)
   /** A body's first skill, dealt as `recruitSkill` deals it — a hash, no draw. */
-  const firstSkill = (s: Sentinel): Sentinel => withFirstSkill(s, recruitSkill(seed, s.id, s.archetype, pool))
+  const firstSkill = (s: Sentinel): Sentinel => withFirstSkill(s, recruitSkill(seed, s.id, pool))
   const levelByLayer: number[] = []
   let nodes = 0
   // The map rides its own stream, as it does in the game (`streams.mapRng`): a hub
@@ -388,11 +410,14 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   // `engine/kit.ts`. The hub's extra Sentinels arrive bare, as
   // `pickStartingHero` makes them; Quartermaster's extra rolls go to whoever
   // they improve, and anything they unseat goes to the pack.
-  // SK1: the leader is the hero pick's hero of that class, with its skill.
-  const pickSkill = heroChoices(seed, pool).find((c) => c.archetype === archetype)?.skill ?? null
-  let roster: Sentinel[] = [applyStatBonus(withFirstSkill(createSentinel(archetype), pickSkill), meta.statBonus)]
+  // The classless rework: the leader is one of the hero pick's three random
+  // heroes (`modelledPick`), with exactly the gear and skill its card shows —
+  // `chosenHero`, the store's own function.
+  const leader = chosenHero(seed, pool, items, modelledPick(seed, pool, items, archetype), meta.statBonus)!
+  const starterLook = lookOf(leader)
+  let roster: Sentinel[] = [leader]
   for (let i = 0; i < meta.extraSentinels; i++) {
-    roster.push(applyStatBonus(firstSkill(recruitBody(ARCHS[i % 3], rng)), meta.statBonus))
+    roster.push(applyStatBonus(firstSkill(recruitBody(rng, roster)), meta.statBonus))
   }
   /**
    * What the company owns but is not wearing. The store has always had one
@@ -411,9 +436,10 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     roster[h] = r.hero
     pack.push(...r.displaced)
   }
-  const kit = startingItems(rng, archetype, meta.extraItems, rosterRefs(roster))
-  roster[0] = wearKit(roster[0], kit)
-  for (const item of kit.slice(3)) {
+  // The Quartermaster's extra rolls go to whoever they improve (the leader
+  // already wears its card's gear).
+  const kit = startingItems(rng, meta.extraItems, rosterRefs(roster), items)
+  for (const item of kit) {
     let best = -Infinity
     let who = 0
     for (let h = 0; h < roster.length; h++) {
@@ -444,7 +470,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
     // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
     // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
-    const base = withRelicStats(applyStatBonus(firstSkill(recruitBody(rng.pick(ARCHS), rng)), meta.statBonus), relics)
+    const base = withRelicStats(applyStatBonus(firstSkill(recruitBody(rng, roster)), meta.statBonus), relics)
     const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack, rules())
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
@@ -469,7 +495,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
         baseHp = repairGate(baseHp, meta.maxBaseHp)
       }
       const stock = Array.from({ length: shelfSize(relics) }, () =>
-        generateItem(rng, { luck, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false }),
+        generateItem(rng, { luck, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false, kinds: items }),
       )
       for (let pass = 0; pass < 4; pass++) {
         let best: { item: Item; gain: number; hero: number } | null = null
@@ -618,6 +644,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       held: relics,
       roster: rosterRefs(roster),
       pity,
+      kinds: items,
     })
     // The Relic Cartulary's extra card, off its own stream exactly as the store deals it.
     if (handKind === 'boss' && meta.cartulary) {
@@ -704,7 +731,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     marks: marksFor(clearedCount, won, banner, meta.markMult),
     layers: map.layers,
     fieldId: field.id,
-    starter: archetype,
+    starter: starterLook,
     fights: battles,
     nodes,
     levelByLayer,

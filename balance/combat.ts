@@ -14,7 +14,7 @@ import { hashSeed, RNG } from '../src/game/core/rng'
 import { BEHAVIOUR_INFO, COLOSSUS_SPLIT, GRUKK_WARCRY, KING_LOB } from '../src/game/data/behaviours'
 import { ALL_MAPS, pickBattleMap } from '../src/game/data/maps'
 import { encounterSeed, generateEncounter, subWaveCount, variantsFor, type EncounterKind } from '../src/game/data/waves'
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
 import type { BehaviourStats, EngineRules } from '../src/game/engine/engine'
 import type { Archetype, EffectMods, FocusMode, Sentinel, WaveDef } from '../src/game/types'
 import {
@@ -75,7 +75,7 @@ function bench(o: BenchOpts): { stop: number; stats: BehaviourStats } {
 }
 
 const hero = (a: Archetype, level = 6): Sentinel => {
-  let s = createSentinel(a)
+  let s = classicHero(a)
   s = { ...s, level, stats: { str: s.stats.str + level, dex: s.stats.dex + level, int: s.stats.int + level } }
   return s
 }

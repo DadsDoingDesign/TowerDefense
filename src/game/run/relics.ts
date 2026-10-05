@@ -154,6 +154,8 @@ export function rewardHand(
     unlocked?: (achievementId: string) => boolean
     roster?: readonly RosterRef[]
     pity?: RarityPity
+    /** The run's unlocked item kinds (an item card deals only these). */
+    kinds?: readonly string[]
     /** Vow 1 (Thin Pickings): a plain battle deals no relic. */
     noBattleRelics?: boolean
   },
@@ -170,7 +172,7 @@ export function rewardHand(
       const c = relicCard(rng, opts.luck, pool, used)
       if (c) return c
     }
-    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: opts.pity, commitPity: false })
+    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: opts.pity, commitPity: false, kinds: opts.kinds })
     return { id: nextId('rw'), kind: 'item', title: item.name, desc: '', rarity: item.rarity, item }
   })
 }

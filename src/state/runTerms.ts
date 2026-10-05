@@ -74,7 +74,7 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
         attempt === 'scored'
           ? "Picking a hero uses today's one scored attempt."
           : "Today's scored attempt is used — this run is practice.",
-        'Standard rules: no Watchtower bonuses, standard skills, no difficulty step.',
+        'Standard rules: no Watchtower bonuses, the starting skills and items, no difficulty step.',
       ],
     }
   }
@@ -86,7 +86,7 @@ export function runTerms(c: RunChallenge, seed: number, claim: DailyClaim | null
       editable: true,
       difficulty: true,
       attempt: null,
-      lines: ['Custom seed · not ranked.', "Pays Marks, but a win won't raise the difficulty or unlock a skill."],
+      lines: ['Custom seed · not ranked.', "Pays Marks, but a win won't raise the difficulty or unlock anything."],
     }
   }
   return {

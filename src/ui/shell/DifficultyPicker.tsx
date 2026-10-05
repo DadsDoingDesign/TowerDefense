@@ -23,7 +23,7 @@ import { difficultyAllowed } from '../../state/runTerms'
  * from what the run does. It renders nothing until a win has raised the top
  * step, and nothing on a Daily (standard rules).
  */
-export function DifficultyPicker() {
+export function DifficultyPicker({ compact = false }: { compact?: boolean } = {}) {
   const screen = useGameStore((s) => s.screen)
   const mode = useGameStore((s) => s.mode)
   const step = useGameStore((s) => s.runDifficulty)
@@ -49,8 +49,17 @@ export function DifficultyPicker() {
   const steps = Array.from({ length: top + 1 }, (_, i) => i)
   const atTop = step >= top
 
+  // Compact (the hero pick's pinned foot): the chips and ONE line — the rule
+  // that decides whether this run's win unlocks anything. The enemy numbers
+  // ride on each chip, so the card that repeated them is dropped here.
+  const rule = atTop
+    ? top < MAX_DIFFICULTY
+      ? `Win here: a new skill, a new item, and difficulty ${top + 1}.`
+      : 'The top of the climb: every win here unlocks a skill and an item.'
+    : `Below your highest: a win unlocks only if it beats your best here${best !== undefined ? ` (${best})` : ''}.`
+
   return (
-    <section className="pg-banner">
+    <section className={`pg-banner${compact ? ' compact' : ''}`}>
       <div className="pg-banner-head">
         <span className="pg-banner-label">Difficulty</span>
         <span className="pg-banner-mult">{step === 0 ? 'standard pay' : `pays ×${rules.markMult} Marks`}</span>
@@ -74,20 +83,18 @@ export function DifficultyPicker() {
         })}
       </div>
 
+      {compact ? (
+        <p className="pg-banner-note">{rule}</p>
+      ) : (
       <div className="pg-card">
         <p className="pg-card-title">
           Difficulty {step}
           {atTop ? ' · your highest' : ''}
         </p>
         <p className="pg-card-body">{step === 0 ? 'Standard enemies and elites.' : `${difficultyEffect(step)} (on top of the usual).`}</p>
-        <p className="pg-card-body accent">
-          {atTop
-            ? top < MAX_DIFFICULTY
-              ? `Win here to unlock a skill and raise your highest difficulty to ${top + 1}.`
-              : 'The top of the climb: every win here unlocks a skill.'
-            : `Below your highest: a win unlocks a skill only if it beats your best score here${best !== undefined ? ` (${best})` : ''}.`}
-        </p>
+        <p className="pg-card-body accent">{rule}</p>
       </div>
+      )}
     </section>
   )
 }

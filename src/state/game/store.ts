@@ -9,7 +9,7 @@
  */
 import { create } from 'zustand'
 import { newRunSeed } from '../../game/core/rng'
-import { startingRoster } from '../../game/data/sentinels'
+import { createHero } from '../../game/data/sentinels'
 import { MAX_BASE_HP, START_GOLD } from '../../game/run/economy'
 import { freshRunState } from './fresh'
 import { seedRunStreams } from './runtime'
@@ -28,7 +28,8 @@ export const useGameStore = create<GameState>()((...a) => {
   // `mapRng`), then the roster (which spends entity ids). Nothing may move
   // between them.
   const bootRun = freshRunState(bootSeed)
-  const bootRoster = startingRoster()
+  // Three bare bodies, as the boot roster always was (the hub never shows them).
+  const bootRoster = [createHero(), createHero(), createHero()]
   return {
     ...bootRun,
     mode: 'campaign',

@@ -10,7 +10,8 @@ import type { ShellContext } from './context'
 import { difficultyLine, type Act, type Offer, type Price } from './offers'
 import { DifficultyPicker } from './DifficultyPicker'
 import { ProgressEarned } from './ProgressEarned'
-import { SkillCard, SkillCards } from './SkillCards'
+import { CollectionTabs, SkillCard, SkillCards } from './SkillCards'
+import { HeroCards } from './HeroCards'
 import { MenuBackdrop, MenuKeyArt } from './MenuKeyArt'
 import { AttractMode, useMenuMotion } from './AttractMode'
 import { DefeatReceipt } from './DefeatReceipt'
@@ -263,8 +264,10 @@ export function PageScreen({
   }
 
   // A chooser only makes sense with more than one thing to choose between.
-  const asPortraits = choices.length > 1 && choices.every((o) => o.portrait)
-  const asRows = choices.length > 1 && !asPortraits
+  // Heroes as comparison cards (the hero pick, a recruit slate) come first.
+  const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
+  const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
+  const asRows = choices.length > 1 && !asPortraits && !asHeroes
 
   return (
     <PageLayout
@@ -321,12 +324,21 @@ export function PageScreen({
       // They are what an offer board's second footer slot is for, and they are
       // exactly the rows that kept measuring below the fold (F14).
       foot={
-        navs.length > 0 ? (
-          <div className="pg-rows">
-            {navs.map((o) => (
-              <MenuRow key={o.id} label={o.title} value={o.sub} icon={o.icon} glyph={o.glyph} onClick={() => o.action?.run()} />
-            ))}
-          </div>
+        navs.length > 0 || heroPick ? (
+          <>
+            {/* The hero pick's difficulty rides PINNED, above Back: in the
+                scrolling body its chips sat half under the body's fade, which
+                read as hidden behind the Back row. Self-gating — nothing until
+                a win has raised the top step, nothing on a Daily. */}
+            {heroPick && <DifficultyPicker compact />}
+            {navs.length > 0 && (
+              <div className="pg-rows">
+                {navs.map((o) => (
+                  <MenuRow key={o.id} label={o.title} value={o.sub} icon={o.icon} glyph={o.glyph} onClick={() => o.action?.run()} />
+                ))}
+              </div>
+            )}
+          </>
         ) : undefined
       }
     >
@@ -353,6 +365,8 @@ export function PageScreen({
           onSelect={pick}
         />
       )}
+
+      {asHeroes && <HeroCards items={choices} selectedId={selected?.id ?? null} onSelect={pick} />}
 
       {/* With a row chooser the list comes first — reading a detail for
           something you have not picked yet reads backwards. */}
@@ -382,7 +396,15 @@ export function PageScreen({
         </div>
       )}
 
-      {selected && (
+      {selected && asHeroes && (selected.body.length > 0 || selected.warn) && (
+        <div className="pg-detail" ref={detailRef}>
+          {/* Everything about the hero is on its card; what is left is the
+              terms of taking it (a full company, the enemy-strength note). */}
+          <InfoCard lines={selected.body} warn={selected.warn} />
+        </div>
+      )}
+
+      {selected && !asHeroes && (
         <div className="pg-detail" ref={detailRef}>
           {!asRows && (
             <p className="pg-name" style={selected.color ? { color: selected.color } : undefined}>
@@ -403,6 +425,7 @@ export function PageScreen({
           {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
           <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
           {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
+          {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
           {selected.info && (
             <p className="pg-info-line">
               {selected.info.label}
@@ -440,7 +463,7 @@ export function PageScreen({
         who does see it has already finished a run and knows the archetypes.
         The ability sentence goes first.
       */}
-      <DifficultyPicker />
+      {!heroPick && <DifficultyPicker />}
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
@@ -626,6 +649,8 @@ export function ResultScreen() {
   const { title, blurb } = runEndCopy(mode, won, wins, depth)
   const campaign = mode === 'campaign'
   const base = Math.round(baseHp)
+  // An unlock is the run's headline news, won or lost: it leads the receipt.
+  const unlockedAny = !!recap?.progress && recap.progress.cards.length + (recap.progress.items?.length ?? 0) > 0
 
   return (
     <PageLayout
@@ -719,7 +744,7 @@ export function ResultScreen() {
       {/* SK1: a win's first news is what it unlocked — the skill cards and the
           difficulty climbed — so it leads the receipt. A loss leads with its
           cause, and the long-game line follows the heroes (below). */}
-      {won && recap?.progress && <ProgressEarned progress={recap.progress} />}
+      {(won || unlockedAny) && recap?.progress && <ProgressEarned progress={recap.progress} />}
 
       {recap && recap.heroes.length > 0 && (
         <div className="pg-recap">
@@ -747,7 +772,7 @@ export function ResultScreen() {
           first, and the offer reads as an option rather than as a verdict on
           the player. Loss only (F11); the control it explains is pinned in the
           foot so it does not have to be scrolled to. */}
-      {!won && recap?.progress && <ProgressEarned progress={recap.progress} />}
+      {!won && !unlockedAny && recap?.progress && <ProgressEarned progress={recap.progress} />}
 
       {/* Feats this run earned (Phase 3b): what the player opened, by name. */}
       <FeatsEarned />

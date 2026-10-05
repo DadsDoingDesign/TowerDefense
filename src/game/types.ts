@@ -1,6 +1,12 @@
 import type { Vec2 } from './core/vec'
 
-/** The three base archetypes. Sub-archetypes/specializations arrive in M2. */
+/**
+ * The three old classes. Heroes have NO class any more (the classless rework,
+ * `data/gear.ts`): what a hero does comes from what it holds. This key
+ * survives only as the ART a hero is drawn with — the sprite family and hue
+ * picked by its weapon (`gear.lookOf`) — plus the legacy evolution tree the
+ * balance benches build from, and old saves' migration.
+ */
 export type Archetype = 'fighter' | 'rogue' | 'mystic'
 
 /** Core stats. STR→physical damage, DEX→speed/crit, INT→magic damage. Heroes have no HP. */
@@ -57,8 +63,16 @@ export interface EffectMods {
   stunDur?: number
   /** Instantly kill targets below this HP fraction (assassin). */
   execute?: number
-  /** This Sentinel halts up to `count` enemies within `radius` (fighter line). */
+  /**
+   * This Sentinel halts up to `count` enemies within `radius`. Its base comes
+   * from a SHIELD in the off hand (`items.shieldHold`); `computeCombat` adds
+   * {@link holdAdd} onto it and writes the final hold here.
+   */
   block?: { count: number; radius: number }
+  /** Holds this many MORE enemies (a hold skill). Sums. With no shield it is the whole hold. */
+  holdAdd?: number
+  /** The hold circle's radius, at least (best of). */
+  holdRadius?: number
   /** Multiplies the Sentinel's Thorns reflect. */
   thornsMult?: number
   /**
@@ -108,6 +122,22 @@ export interface EffectMods {
    * hero swing. It changes nothing in the fight itself.
    */
   grantsMelee?: boolean
+
+  // ---- self-contained effects whose interactions emerge in play ------------
+  // (the classless rework's skills). Each is read in exactly one place in
+  // `engine.ts` and is off unless a source grants it.
+  /** Each kill this hero makes pays this much more gold. */
+  goldPerKill?: number
+  /** This hero's hits deal this fraction more to an enemy being held. */
+  vsHeld?: number
+  /** This hero's hits deal this fraction more to a slowed enemy. */
+  vsSlowed?: number
+  /** This hero's thorns set what it holds burning (its own burn, not its hits'). */
+  thornsBurn?: { dps: number; dur: number }
+  /** This hero attacks this fraction faster for each enemy it is holding. */
+  rushPerHeld?: number
+  /** Every `every`th kill this hero makes mends the Gate by `hp`. */
+  killMend?: { every: number; hp: number }
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
@@ -182,20 +212,17 @@ export interface Equipment {
 export interface Sentinel {
   id: string
   name: string
-  archetype: Archetype
   /**
-   * Node ids from the archetype tree. Always just the class (`['fighter']`)
-   * since skills replaced evolutions (SK1); a save with a longer path is
-   * migrated to skills on load (`run/skills.migrateGrowth`).
+   * Base stats, rolled modestly per hero when it is dealt (`run/heroes.ts`).
+   * There is no class: the weapon decides how the hero fights (`data/gear.ts`).
    */
-  branchPath: string[]
   stats: CoreStats
   /** Secondary: damage per second ground into every enemy this Sentinel holds. */
   thorns: number
   /** Secondary: scales stat gain the longer a wave goes on. */
   patience: number
   // NOTE: the base attack is NOT stored here — combat.ts reads it live from the
-  // tier-0 archetype node, so evolutions/gear never desync from a stale copy (L1).
+  // weapon in hand (`combat.styleBase`), so a swapped weapon never desyncs (L1).
   level: number
   xp: number
   equipment: Equipment
@@ -218,8 +245,6 @@ export interface Sentinel {
    * (`runSnapshot.migrateSnapshot`) and the field is dropped.
    */
   upgrades?: Record<string, number>
-  color: string
-  accent: string
 }
 
 /** A free grant of upgrade-path levels carried by an item or mutation. */

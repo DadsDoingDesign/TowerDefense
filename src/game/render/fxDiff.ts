@@ -10,6 +10,8 @@
  * effects themselves go to `fx.ts` through an injectable `FxSink`, which is
  * what lets `tests/fxDiff.test.ts` drive it on synthetic engine snapshots.
  */
+import { lookOf } from '../data/gear'
+import { lookHue } from '../data/sentinels'
 import { takenMult, TICK, type GameEngine, type RtSentinel } from '../engine/engine'
 import type { EffectMods } from '../types'
 import {
@@ -626,7 +628,7 @@ export class FxDiffer {
 
     // --- 2. shots fired ------------------------------------------------------
     for (const s of engine.sentinels) {
-      if (s.fireFlash === 1) this.sink.fxMuzzle(s.id, s.pos.x, s.pos.y, s.aimAngle, s.def.accent)
+      if (s.fireFlash === 1) this.sink.fxMuzzle(s.id, s.pos.x, s.pos.y, s.aimAngle, lookHue(lookOf(s.def)).accent)
     }
 
     // --- 3. impacts ----------------------------------------------------------

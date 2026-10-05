@@ -59,6 +59,8 @@ export function useShellContext(): ShellContext {
   const runPhase = useGameStore((s) => s.runPhase)
   // SK1 / LS3: the hero pick's one tip, until a hero has been picked once.
   const skillTaught = useSettingsStore((s) => s.taught.heroSkill)
+  // The classless rework's one tip: a hero is what it holds.
+  const gearTaught = useSettingsStore((s) => s.taught.heroGear)
   const event = useGameStore((s) => s.event)
   const endlessRoom = useGameStore((s) => s.endlessRoom)
   const crossroads = useGameStore((s) => s.crossroads)
@@ -81,9 +83,14 @@ export function useShellContext(): ShellContext {
       selector: 'offers',
       board: {
         title: 'Choose your first hero',
-        // The pick's one tip (SK1): said once, where the skill first appears,
-        // then the plain line it replaces.
-        blurb: skillTaught ? 'Recruit more along the road.' : 'Each hero comes with a skill, and learns more as it levels up.',
+        // The pick's one tip: said once, where it first matters, then the
+        // plain line it replaces. What a hero does comes from its gear (the
+        // classless rework) — there are no classes to learn.
+        blurb: !gearTaught
+          ? 'A hero is what it holds, plus one skill.'
+          : skillTaught
+            ? 'Recruit more along the road.'
+            : 'Each hero comes with a skill, and learns more as it levels up.',
       },
       layout: 'page',
     }

@@ -1,8 +1,36 @@
 import { clamp } from '../core/vec'
 import { getNode, mergeMods } from '../data/archetypeTree'
-import { offHandShare } from '../data/items'
+import { heroStyle, offHandShare, shieldHold, shieldThorns, type HeroStyle } from '../data/items'
 import { skillModsOf } from '../data/skills'
-import type { CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
+import { STYLE_LOOK } from '../data/gear'
+import type { AttackProfile, CoreStats, EffectMods, Equipment, Item, Sentinel } from '../types'
+
+/**
+ * The attack each STYLE fights with — what a class used to decide, now read
+ * off the weapon (`items.heroStyle`; the tree node is `gear.STYLE_LOOK`'s). The numbers are the three old tier-0
+ * profiles, unchanged, so a sword fights as the Fighter did, a bow or a knife
+ * as the Rogue, a wand or a staff as the Mystic.
+ */
+/**
+ * Bare hands: a hero holding no weapon throws stones — weak, short, physical.
+ * It never swings (no clearance) and it is never where a run is meant to be.
+ */
+export const UNARMED: AttackProfile = {
+  damage: 8,
+  range: 110,
+  rate: 1,
+  projectileSpeed: 560,
+  splashRadius: 0,
+  critChance: 0.05,
+  critMult: 1.5,
+  damageType: 'physical',
+}
+
+/** The base attack a style fights with (null: unarmed). */
+export const styleBase = (style: HeroStyle | null): AttackProfile => (style ? getNode(STYLE_LOOK[style]).base! : UNARMED)
+
+/** The hold circle a shield's hold uses (the old Fighter's). */
+export const HOLD_RADIUS = 72
 
 /** Gather team-wide EffectMods from every equipped keepsake across a roster. */
 export function teamKeepsakeMods(roster: Sentinel[]): EffectMods[] {
@@ -17,6 +45,8 @@ export function teamKeepsakeMods(roster: Sentinel[]): EffectMods[] {
 
 /** Everything the engine needs to run a Sentinel's attacks and role effects. */
 export interface CombatProfile {
+  /** What the hero does, from its weapon (null: unarmed). */
+  style: HeroStyle | null
   damage: number
   range: number
   rate: number
@@ -110,20 +140,31 @@ export interface CombatContext {
 }
 
 /**
- * Fold a Sentinel's class, skills, mutations, gear, stats, and (optional)
- * Patience/team mods into a ready-to-use combat profile.
+ * Fold a Sentinel's gear, skills, mutations, stats, and (optional)
+ * Patience/team mods into a ready-to-use combat profile. There is no class:
+ * the WEAPON decides the attack ({@link styleBase}) and a SHIELD the hold.
  */
 export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfile {
-  const tier0 = getNode(s.branchPath[0])
-  const base = tier0.base!
+  const style = heroStyle(s)
+  const base = styleBase(style)
 
   const gear = gearOf(s.equipment)
   const mutationMods = s.mutations?.map((m) => m.mods) ?? []
   // Skills (SK1) are the one way a hero grows: they sit where the evolution
-  // nodes and the spec perks used to. The class's own node (the Fighter's
-  // hold) is the only tree node a hero carries.
+  // nodes and the spec perks used to.
   const skillMods = skillModsOf(s)
-  const mods = mergeMods([tier0.mods, ...skillMods, ...mutationMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  // A shield in the off hand holds enemies on the road; a bigger one holds more.
+  const held = shieldHold(s.equipment.offHand)
+  const shieldMods: EffectMods | undefined = held ? { block: { count: held, radius: HOLD_RADIUS } } : undefined
+  const mods = mergeMods([shieldMods, ...skillMods, ...mutationMods, ...gear.mods, ...(ctx.teamMods ?? [])])
+  // A hold skill adds onto the shield's hold — or, with no shield, is the hold.
+  const extra = mods.holdAdd ?? 0
+  if (mods.block || extra > 0) {
+    mods.block = {
+      count: (mods.block?.count ?? 0) + extra,
+      radius: Math.max(mods.block?.radius ?? HOLD_RADIUS, mods.holdRadius ?? 0),
+    }
+  }
 
   const pMult = ctx.patienceMult ?? 1
   // Intended (L9d): Patience is a percentage buff on the unit's TOTAL core stats,
@@ -143,7 +184,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const critChance = clamp(base.critChance + st.dex * 0.004 + (mods.critChanceAdd ?? 0) + gear.critChance, 0, 0.95)
   const critMult = base.critMult + (mods.critMultAdd ?? 0)
   const splashRadius = base.splashRadius + (mods.splashAdd ?? 0) + gear.splashAdd
-  const thorns = (s.thorns + gear.thorns) * (mods.thornsMult ?? 1)
+  const thorns = (s.thorns + gear.thorns + shieldThorns(s.equipment.offHand)) * (mods.thornsMult ?? 1)
   // "of Patience" gear was accumulated and then dropped on the floor (H10).
   const patience = s.patience + gear.patience
 
@@ -151,6 +192,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const dps = damage * rate * avgCrit
 
   return {
+    style,
     damage,
     range,
     rate,

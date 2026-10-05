@@ -1,4 +1,50 @@
+import { useState } from 'react'
 import type { Offer } from './offers'
+
+/**
+ * The Collection (the classless rework): Skills | Items, one grid at a time.
+ * A real tab list — arrow keys move between tabs, the panel is labelled by
+ * its tab — and each tab carries its count, so "how much have I found" reads
+ * without opening it.
+ */
+export function CollectionTabs({ tabs }: { tabs: NonNullable<Offer['tabs']> }) {
+  const [open, setOpen] = useState(tabs[0]?.id ?? '')
+  const cur = tabs.find((t) => t.id === open) ?? tabs[0]
+  if (!cur) return null
+  const move = (dir: number) => {
+    const i = tabs.findIndex((t) => t.id === cur.id)
+    const next = tabs[(i + dir + tabs.length) % tabs.length]
+    setOpen(next.id)
+    document.getElementById(`pg-tab-${next.id}`)?.focus()
+  }
+  return (
+    <div className="pg-coll">
+      <div className="pg-coll-tabs" role="tablist" aria-label="Collection">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            id={`pg-tab-${t.id}`}
+            role="tab"
+            aria-selected={t.id === cur.id}
+            aria-controls={`pg-tabpanel-${t.id}`}
+            tabIndex={t.id === cur.id ? 0 : -1}
+            className={`pg-coll-tab ${t.id === cur.id ? 'sel' : ''}`}
+            onClick={() => setOpen(t.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowRight') move(1)
+              else if (e.key === 'ArrowLeft') move(-1)
+            }}
+          >
+            {t.label} <span className="pg-coll-count">{t.count}</span>
+          </button>
+        ))}
+      </div>
+      <div id={`pg-tabpanel-${cur.id}`} role="tabpanel" aria-labelledby={`pg-tab-${cur.id}`}>
+        <SkillCards cards={cur.cards} />
+      </div>
+    </div>
+  )
+}
 
 /**
  * SK1 — the skill library as cards, grouped by level (the Codex). An unlocked

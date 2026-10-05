@@ -81,6 +81,9 @@ export const TEACH_IDS = [
   // too; the perk and evolution tips they replace are dropped on load.
   'heroSkill',
   'skill',
+  // The classless rework: "what a hero does comes from its gear", said once on
+  // the hero pick. New, so a returning player meets it too.
+  'heroGear',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>

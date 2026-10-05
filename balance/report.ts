@@ -18,7 +18,6 @@ import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLe
 import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
-import { recruitKit, wearKit } from '../src/game/engine/kit'
 import { HAZARD_LEVERS } from '../src/game/data/hazards'
 /**
  * Q1 exploration knob (Node-only, like `FW_META_RUNS`): `FW_HAZARDS=mult,dangerTiles,
@@ -31,12 +30,14 @@ if (process.env.FW_HAZARDS) {
   const [a, b, c, d, e] = process.env.FW_HAZARDS.split(',').map(Number)
   Object.assign(HAZARD_LEVERS, { cursedDamageMult: a, dangerTiles: b, dangerPool: c, obstacles: d, obstaclePool: e })
 }
-import { createSentinel } from '../src/game/data/sentinels'
+import { classicHero } from '../src/game/data/sentinels'
+import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
+import { BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
-import { ALL_SKILLS, skillFits } from '../src/game/data/skills'
-import { heroChoices, recruitSkill, withFirstSkill } from '../src/game/run/skills'
+import { ALL_SKILLS } from '../src/game/data/skills'
+import { recruitSkill, withFirstSkill } from '../src/game/run/skills'
 import {
   encounterSeed,
   generateEncounter,
@@ -63,6 +64,7 @@ import {
   mcKind,
   mcLevel,
   mcRarity,
+  modelledPick,
   monteCarloRun,
   POLICIES,
   simulateRun,
@@ -81,7 +83,6 @@ import {
   STARTER_SKILL_POOL,
   heroDps,
   equipIfBetter,
-  freshHero,
   makeWave,
   MAP_FACTS,
   maxLeak,
@@ -1255,7 +1256,7 @@ if (want(7)) {
       line: generateEncounter(depth, 'normal', { subWaves: false }),
     }
   }
-  const ally = (level: number) => applyXp(createSentinel('fighter'), xpToReach(level))
+  const ally = (level: number) => applyXp(classicHero('fighter'), xpToReach(level))
   function skillTeam(hero: Sentinel, aura: boolean, level: number): { sentinel: Sentinel; slotId: string }[] {
     if (!aura) return [{ sentinel: hero, slotId: POST.s3 }]
     return [
@@ -1267,11 +1268,11 @@ if (want(7)) {
     const level = tier === 1 ? 9 : tier === 2 ? 14 : 19
     const depth = tier === 1 ? 4 : tier === 2 ? 6 : 8
     for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
-      const options = ALL_SKILLS.filter((k) => k.level === tier && skillFits(k, archetype))
+      const options = ALL_SKILLS.filter((k) => k.level === tier)
       const point = `L${tier}:${archetype}`
       // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a
       // wave the hero cannot kill, which flattens a bench into a plateau.
-      const base = applyXp(createSentinel(archetype), xpToReach(level))
+      const base = applyXp(classicHero(archetype), xpToReach(level))
       const benches = skillBenches(depth)
       // Two pressures per point: one for a lone hero, one for a hero beside an
       // ally (the aura skills), each scaled so the skill-less team stops ~half.
@@ -1685,9 +1686,9 @@ type FreshResult = RunOutcome
 // ---- Model A: the strict floor (unchanged) --------------------------------
 function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): FreshResult {
   const rng = new RNG(seed)
-  // SK1: the hero pick's hero of that class, with its starter skill.
-  const pickSkill = heroChoices(seed, STARTER_SKILL_POOL).find((c) => c.archetype === archetype)?.skill ?? null
-  let roster: Sentinel[] = [withFirstSkill(freshHero(archetype, rng), pickSkill)]
+  // The classless rework: the hero pick's dealt hero of that look, wearing
+  // its card's gear and skill (the store's own `chosenHero`).
+  let roster: Sentinel[] = [chosenHero(seed, STARTER_SKILL_POOL, BASIC_ITEM_KINDS, modelledPick(seed, STARTER_SKILL_POOL, BASIC_ITEM_KINDS, archetype))!]
   let gold = START_GOLD
   let baseHp = MAX_BASE_HP
   let reached = 0
@@ -1699,9 +1700,8 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   for (let depth = 1; depth <= NODES; depth++) {
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
       // A recruit node hands over a fresh level-1 body.
-      const a = rng.pick(['fighter', 'rogue', 'mystic'] as Archetype[])
-      const body = wearKit(createSentinel(a), recruitKit(rng, a))
-      roster = [...roster, withFirstSkill(body, recruitSkill(seed, body.id, a, STARTER_SKILL_POOL))]
+      const body = rollRecruitBody(rng, BASIC_ITEM_KINDS, roster.map((h) => h.name))
+      roster = [...roster, withFirstSkill(body, recruitSkill(seed, body.id, STARTER_SKILL_POOL))]
     }
     const kind = mcKind(depth)
     const threat = threatAtLayer(depth) * nodeThreatMult(depth === NODES ? 'boss' : kind === 'elite' ? 'elite' : 'battle')

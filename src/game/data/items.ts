@@ -1,6 +1,5 @@
 import { nextId, RNG } from '../core/rng'
-import type { Archetype, Enchantment, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
-import { getNode } from './archetypeTree'
+import type { Enchantment, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
 
 export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic']
 
@@ -45,22 +44,43 @@ export const HERO_SLOT_LABEL: Record<HeroSlot, string> = {
  */
 export type Grip = 'main' | 'either' | 'off' | 'twoHand' | 'body'
 
+/**
+ * What a weapon makes its holder DO (the classless rework): `swing` up close,
+ * `shoot` from range, or `cast` magic. A hero's style is its main hand's
+ * (`heroStyle`); there is no class any more, so this table IS the role table.
+ */
+export type HeroStyle = 'swing' | 'shoot' | 'cast'
+
+interface BaseInfo {
+  slot: ItemSlot
+  grip: Grip
+  swings?: true
+  /** The style a weapon gives its holder (weapons only). */
+  style?: HeroStyle
+  /** Enemies a shield holds on the road (off-hand shields only). */
+  hold?: number
+  /** Thorns a shield adds — the damage a second it grinds into what it holds. */
+  thorns?: number
+}
+
 /** Every item base the game generates (or once did), with its kind and grip. */
-export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip; swings?: true }>> = {
-  Sword: { slot: 'oneHand', grip: 'main', swings: true },
-  Axe: { slot: 'oneHand', grip: 'main', swings: true },
-  Rod: { slot: 'oneHand', grip: 'main' },
-  Sceptre: { slot: 'oneHand', grip: 'main' },
-  Scepter: { slot: 'oneHand', grip: 'main' },
-  Dagger: { slot: 'oneHand', grip: 'either' },
-  Wand: { slot: 'oneHand', grip: 'either' },
-  Greatsword: { slot: 'twoHand', grip: 'twoHand', swings: true },
-  Warhammer: { slot: 'twoHand', grip: 'twoHand', swings: true },
-  Bow: { slot: 'twoHand', grip: 'twoHand' },
-  Staff: { slot: 'twoHand', grip: 'twoHand' },
-  Grimoire: { slot: 'twoHand', grip: 'twoHand' },
-  Shield: { slot: 'offHand', grip: 'off' },
-  Buckler: { slot: 'offHand', grip: 'off' },
+export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
+  Sword: { slot: 'oneHand', grip: 'main', swings: true, style: 'swing' },
+  Axe: { slot: 'oneHand', grip: 'main', swings: true, style: 'swing' },
+  Rod: { slot: 'oneHand', grip: 'main', style: 'cast' },
+  Sceptre: { slot: 'oneHand', grip: 'main', style: 'cast' },
+  Scepter: { slot: 'oneHand', grip: 'main', style: 'cast' },
+  Dagger: { slot: 'oneHand', grip: 'either', style: 'shoot' },
+  Wand: { slot: 'oneHand', grip: 'either', style: 'cast' },
+  Greatsword: { slot: 'twoHand', grip: 'twoHand', swings: true, style: 'swing' },
+  Warhammer: { slot: 'twoHand', grip: 'twoHand', swings: true, style: 'swing' },
+  Bow: { slot: 'twoHand', grip: 'twoHand', style: 'shoot' },
+  Staff: { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
+  Grimoire: { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
+  // A shield in the off hand holds enemies on the road; a bigger one holds more.
+  Buckler: { slot: 'offHand', grip: 'off', hold: 1, thorns: 3 },
+  Shield: { slot: 'offHand', grip: 'off', hold: 2, thorns: 6 },
+  Pavise: { slot: 'offHand', grip: 'off', hold: 3, thorns: 9 },
   Tome: { slot: 'offHand', grip: 'off' },
   Quiver: { slot: 'offHand', grip: 'off' },
   Focus: { slot: 'offHand', grip: 'off' },
@@ -75,6 +95,37 @@ export const ITEM_BASES: Readonly<Record<string, { slot: ItemSlot; grip: Grip; s
   Beacon: { slot: 'body', grip: 'body' },
   Oath: { slot: 'body', grip: 'body' },
 }
+
+/** The base an item is, when its noun is known AND matches its kind. */
+export function baseOf(item: Pick<Item, 'name' | 'slot'> | null | undefined): BaseInfo | undefined {
+  if (!item) return undefined
+  const noun = itemNoun(item)
+  const base = noun ? ITEM_BASES[noun] : undefined
+  return base && base.slot === item.slot ? base : undefined
+}
+
+/** The style a weapon gives its holder, or null for anything that is not one. */
+export const itemStyle = (item: Pick<Item, 'name' | 'slot'> | null | undefined): HeroStyle | null => baseOf(item)?.style ?? null
+
+/**
+ * What a hero DOES — its main hand's style; with nothing there, a light weapon
+ * in the off hand (a knife or a wand); otherwise null (unarmed: it throws
+ * stones, `combat.UNARMED`).
+ */
+export function heroStyle(hero: Pick<Sentinel, 'equipment'>): HeroStyle | null {
+  return itemStyle(hero.equipment.mainHand) ?? itemStyle(hero.equipment.offHand)
+}
+
+/** Physical for swords, axes, bows and knives; magic for wands, rods, staves and grimoires. */
+export const styleDamageType = (style: HeroStyle | null): DamageType => (style === 'cast' ? 'magic' : 'physical')
+
+/** The damage type a hero deals, read off what it holds. */
+export const heroDamageType = (hero: Pick<Sentinel, 'equipment'>): DamageType => styleDamageType(heroStyle(hero))
+
+/** How many enemies a shield holds (0 for anything else). */
+export const shieldHold = (item: Pick<Item, 'name' | 'slot'> | null | undefined): number => baseOf(item)?.hold ?? 0
+/** The thorns a shield adds (0 for anything else). */
+export const shieldThorns = (item: Pick<Item, 'name' | 'slot'> | null | undefined): number => baseOf(item)?.thorns ?? 0
 
 /**
  * Does this item SWING — is it a heavy blade or a hammer that a hero sweeps all
@@ -103,7 +154,7 @@ const KIND_GRIP: Record<ItemSlot, Grip> = { oneHand: 'main', twoHand: 'twoHand',
  * order only breaks ties at one position (`Greatsword` before `Sword`).
  */
 export const ITEM_NOUN_RE =
-  /(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
+  /(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Pavise|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
 
 /** The base noun an item is named by, if the name carries one. */
 export const itemNoun = (item: Pick<Item, 'name'>): string | undefined => ITEM_NOUN_RE.exec(item.name)?.[0]
@@ -223,7 +274,7 @@ const WEAPONS: WeaponType[] = [
   { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0 },
   { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
 ]
-const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus']
+const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus', 'Pavise']
 const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis']
 const KEEPSAKES = ['Banner', 'Standard', 'Relic', 'Beacon', 'Oath']
 
@@ -518,13 +569,11 @@ const pickRarity = (rng: RNG): ItemRarity => {
  * `critChance`, `rangeMult` and `splashAdd` are archetype-blind in the engine,
  * so those slots have no dead half to weight away.
  */
-export interface RosterRef {
-  archetype: Archetype
-}
+export type RosterRef = Pick<Sentinel, 'equipment'>
 
 /**
- * How rare an off-archetype roll gets, as a fraction of an on-archetype one.
- * At 0.45 a mono-mystic roster still sees a physical one-hander about a third
+ * How rare an off-type roll gets, as a fraction of an on-type one.
+ * At 0.45 an all-caster roster still sees a physical one-hander about a third
  * of the time (3 × 0.45 against 3 × 1.0) instead of half. A roster split evenly
  * between the two damage types resolves to equal weights, i.e. exactly today's
  * table — mixed teams are not "corrected" at all.
@@ -538,20 +587,17 @@ const OFF_TYPE_FLOOR = 0.45
  */
 const WEIGHT_RES = 8
 
-/** Damage type per archetype, read from the tree so there is one authority. */
-export const damageTypeOf = (a: Archetype): 'physical' | 'magic' => getNode(a).base?.damageType ?? 'physical'
-
 export type DamageType = 'physical' | 'magic'
 
 /**
- * A weight in (0, 1] for each damage type, given who is on the field.
- * Undefined/empty roster ⇒ 1 for both ⇒ every pool below is left untouched and
- * the generator behaves exactly as it did before this change.
+ * A weight in (0, 1] for each damage type, given who is on the field — each
+ * hero's type read off what it holds (`heroDamageType`). Undefined/empty
+ * roster ⇒ 1 for both ⇒ every pool below is left untouched.
  */
 function typeDemand(roster: readonly RosterRef[] | undefined): Record<DamageType, number> {
   if (!roster || roster.length === 0) return { physical: 1, magic: 1 }
   let phys = 0
-  for (const s of roster) if (damageTypeOf(s.archetype) === 'physical') phys++
+  for (const s of roster) if (heroDamageType(s) === 'physical') phys++
   const share = phys / roster.length
   return {
     physical: OFF_TYPE_FLOOR + (1 - OFF_TYPE_FLOOR) * share,
@@ -576,8 +622,8 @@ function weightedPool<T>(items: readonly T[], weight: (item: T) => number): read
  * way whoever wears them.
  */
 const ENCHANT_AFFINITY: Record<string, DamageType> = {
-  might: 'physical', // STR: damage on a fighter/rogue, nothing on a mystic (heroes have no HP)
-  insight: 'magic', // INT: damage on a mystic, nothing at all on anyone else
+  might: 'physical', // STR: damage on a hero with a physical weapon, nothing on a caster (heroes have no HP)
+  insight: 'magic', // INT: damage on a caster, nothing at all on anyone else
 }
 
 // ---------------------------------------------------------------------------
@@ -663,6 +709,19 @@ export interface GenerateOpts {
   damageType?: DamageType
   /** `false` never rolls a curse (the opening kit — a trade is the player's to make). */
   allowCurse?: boolean
+  /**
+   * The item KINDS this roll may deal (the run's unlocked pool, `run/watch`'s
+   * item track): every slot and noun pick is made from the kinds in it, so
+   * loot, the merchant and rewards deal only what the player has unlocked.
+   * Each pick still takes exactly one draw. Omitted: every kind.
+   */
+  kinds?: readonly string[]
+  /**
+   * Force the noun (a hero's rolled gear, a migration). Its slot is the kind's;
+   * the noun draw is still TAKEN, so the stream moves exactly as an unforced
+   * roll of that slot would.
+   */
+  kind?: string
 }
 
 /**
@@ -709,8 +768,14 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // so every item behind it rolls from the same stream position; it just
   // never lands unless a caller asks for one (the old saves' keepsakes still
   // work — `teamKeepsakeMods`).
-  const isKeepsake = opts.slot === undefined && rng.chance(opts.keepsakeChance ?? 0)
-  const slot: ItemSlot = opts.slot ?? rng.pick(['oneHand', 'oneHand', 'twoHand', 'offHand', 'body', 'body'] as ItemSlot[])
+  const forced = opts.kind && ITEM_BASES[opts.kind] ? opts.kind : undefined
+  const kindSet = opts.kinds ? new Set(opts.kinds) : null
+  const forcedSlot = forced ? ITEM_BASES[forced].slot : opts.slot
+  const isKeepsake = forcedSlot === undefined && rng.chance(opts.keepsakeChance ?? 0)
+  // Only slots the pool has a kind for (the basic set covers all four).
+  const SLOT_DEAL: ItemSlot[] = ['oneHand', 'oneHand', 'twoHand', 'offHand', 'body', 'body']
+  const dealable = kindSet ? SLOT_DEAL.filter((sl) => GENERATED_BASES[sl].some((n) => kindSet.has(n))) : SLOT_DEAL
+  const slot: ItemSlot = forcedSlot ?? rng.pick(dealable.length ? dealable : SLOT_DEAL)
 
   if (isKeepsake) {
     const noun = rng.pick(KEEPSAKES)
@@ -730,11 +795,24 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // With no roster the pools are the literal arrays, so the draw is byte-for-byte
   // the one this generator has always made.
   const rosterAware = !!opts.roster && opts.roster.length > 0
-  const handed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
-  const weapon = isWeapon
-    ? rng.pick(rosterAware ? weightedPool(handed, (w) => demand[w.damageType]) : handed)
+  const allowed = (noun: string) => !kindSet || kindSet.has(noun)
+  const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
+  const inPool = typed.filter((w) => allowed(w.name))
+  // A forced damage type the pool cannot meet falls back to any unlocked weapon.
+  const handed = inPool.length ? inPool : WEAPONS.filter((w) => w.hands === slot && allowed(w.name))
+  const handedList = handed.length ? handed : typed
+  let weapon = isWeapon
+    ? rng.pick(rosterAware ? weightedPool(handedList, (w) => demand[w.damageType]) : handedList)
     : undefined
-  const noun = isWeapon ? weapon!.name : slot === 'offHand' ? rng.pick(OFFHANDS) : rng.pick(BODIES)
+  const pickNoun = (list: readonly string[]) => {
+    const ok = list.filter(allowed)
+    return rng.pick(ok.length ? ok : list)
+  }
+  let noun = isWeapon ? weapon!.name : slot === 'offHand' ? pickNoun(OFFHANDS) : pickNoun(BODIES)
+  if (forced) {
+    noun = forced
+    if (isWeapon) weapon = WEAPONS.find((w) => w.name === forced) ?? weapon
+  }
   const enchantPool = rosterAware
     ? weightedPool(ENCHANTS, (e) => {
         const affinity = ENCHANT_AFFINITY[e.id]
