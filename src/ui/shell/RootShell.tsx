@@ -14,6 +14,7 @@ import { ContractsScreen } from './contracts/ContractsScreen'
 import { CityScreen } from './contracts/CityScreen'
 import { HqScreen } from './hq/HqScreen'
 import { CratesScreen } from './hq/CratesScreen'
+import { CharterScreen } from './charter/CharterScreen'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -28,6 +29,7 @@ import '../../styles/shell-reward.css'
 import '../../styles/contracts.css'
 import '../../styles/menu.css'
 import '../../styles/hq.css'
+import '../../styles/charter.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useStagingRecorder } from './staging'
 
@@ -44,6 +46,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   menu: {},
   hq: {},
   crates: {},
+  charter: {},
   codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
   militia: { title: 'Your militia' },
@@ -128,8 +131,10 @@ export function RootShell() {
           <HqScreen onBack={() => setMetaView('menu')} />
         ) : screen === 'hub' && metaView === 'crates' && !menuStaged ? (
           <CratesScreen onBack={() => setMetaView('menu')} />
+        ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
+          <CharterScreen onBack={() => setMetaView('menu')} />
         ) : isMenu ? (
-          <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} />
+          <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
         ) : screen === 'hub' && metaView === 'militia' ? (
           <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
         ) : (

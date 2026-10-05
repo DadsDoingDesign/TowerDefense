@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { DEFAULT_BANNER } from '../../game/data/banner'
 import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
-import { charterProgress, companyOpen, standingOf } from '../../game/run/standing'
+import { companyOpen, standingOf } from '../../game/run/standing'
+import { CHARTER_FEE, CHARTER_NAME, charterDoor } from '../../game/run/charter'
 import { militiaTagline } from '../../game/run/militia'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
-import { Banner, Crest, Lock } from '../pixel'
+import { Banner, Crest, Lock, SovereignCrest } from '../pixel'
 import { useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import { TradeMap } from '../attract/TradeMap'
@@ -43,11 +44,11 @@ export function useMenuMotion(): boolean {
  *
  * Reads only existing selectors: standing (`metaStore.standing`), the market
  * of the day (`contracts.marketOfDay`), the charter's progress
- * (`standing.charterProgress`, a locked hint until build step 5) and the
+ * (`charter.charterDoor`: the Sovereign Route's meter, or its open door) and the
  * militia (`metaStore.militia`). The rows are the menu offers (`offers.ts`),
  * whatever they are, drawn as tiles.
  */
-export function MenuScreen({ offers, onMilitia }: { offers: Offer[]; onMilitia: () => void }) {
+export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; onMilitia: () => void; onCharter: () => void }) {
   const primary = offers.find((o) => o.id === 'run')
   const tiles = offers.filter((o) => o.id !== 'run')
   const xp = useMetaStore((s) => s.standing)
@@ -64,7 +65,7 @@ export function MenuScreen({ offers, onMilitia }: { offers: Offer[]; onMilitia: 
   const roads = useMemo(() => roadViews({ standing, hiring, firstRun: staged, first: FIRST_COMPANY }), [standing, hiring, staged])
   // Read once per mount: a menu left open past midnight keeps its day.
   const [hot] = useState<CompanyId>(() => marketOfDay(utcDateKey()))
-  const charter = useMemo(() => charterProgress({ skills, items, standing: xp }), [skills, items, xp])
+  const charter = useMemo(() => charterDoor({ skills, items: items ?? [] }), [skills, items])
   const hiringCount = COMPANY_IDS.filter((c) => hiring[c]).length
   const allLit = COMPANY_IDS.every((c) => standing[c] > 0)
   // A road's label: the free escort on a first launch, that company's contracts after.
@@ -116,19 +117,37 @@ export function MenuScreen({ offers, onMilitia }: { offers: Offer[]; onMilitia: 
       </span>
     </button>
   )
-  // The charter (build step 5): a locked hint with its progress, so the goal reads as a goal.
+  // The charter (build step 5): locked, its meter and what opens it, so the
+  // goal reads as a goal; open, the way to its contract. Either way it leads
+  // to the charter's page.
   const pct = Math.floor(charter.progress * 100)
-  const charterLine = staged ? null : (
-    <div className="mn-charter" role="group" aria-label={`Sovereign Route: ${pct}% unlocked. It opens when everything else is unlocked.`}>
+  const charterLine = staged ? null : charter.open ? (
+    <button type="button" className="mn-charter mn-charter-btn is-open" onClick={onCharter} aria-label={`${CHARTER_NAME}: open. Charter it for ${CHARTER_FEE} gold.`}>
+      <SovereignCrest scale={1} />
+      <b aria-hidden="true">{CHARTER_NAME}</b>
+      <span className="mn-charter-v" aria-hidden="true">
+        Open · <Gold n={CHARTER_FEE} scale={1} />
+      </span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      className="mn-charter mn-charter-btn"
+      onClick={onCharter}
+      aria-label={`${CHARTER_NAME}: ${pct}% unlocked. It opens when every skill and item is unlocked.`}
+    >
       <Lock scale={2} />
-      <b aria-hidden="true">Sovereign Route</b>
+      <b aria-hidden="true">{CHARTER_NAME}</b>
       <span className="mn-meter" aria-hidden="true">
         <i style={{ width: `${Math.max(2, pct)}%` }} />
       </span>
       <span className="mn-charter-v" aria-hidden="true">
-        {pct}% unlocked
+        {pct}%
       </span>
-    </div>
+      <span className="mn-charter-why" aria-hidden="true">
+        Opens when every skill and item is unlocked
+      </span>
+    </button>
   )
   const locked = tiles.filter((o) => o.locked)
   const why = staged ? (

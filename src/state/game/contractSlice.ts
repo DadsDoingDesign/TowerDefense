@@ -14,11 +14,13 @@ import {
   clampPurse,
   CRATE_PRICE,
   crateCap,
+  DEFAULT_PURSE,
   defaultPurse,
   marketOfDay,
   utcDateKey,
 } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
+import { CHARTER_FEE, charterDoor } from '../../game/run/charter'
 import { contractGrant } from '../../game/run/settle'
 import { sfx } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
@@ -51,6 +53,13 @@ export interface ContractActions {
   setPurse: (purse: number) => void
   /** Sign the contract on the board's terms: on to the hero pick. */
   signContract: () => void
+  /**
+   * Sponsor the Sovereign Route (the endgame charter): on to the hero pick,
+   * with the default purse. Refused while the door is shut or the bank cannot
+   * pay the fee. The fee leaves the bank when the hero is committed, as a
+   * stake does.
+   */
+  signCharter: () => void
   /** At a city: keep going for the bigger payout. */
   pressOn: () => void
   /**
@@ -66,6 +75,15 @@ type Meta = ReturnType<typeof useMetaStore.getState>
 /** The most crates this save can stake with `company`: its standing cap, and what the bank can pay. */
 export function stakeCap(meta: Pick<Meta, 'standing' | 'bank'>, company: CompanyId): number {
   return Math.min(crateCap(standingOf(meta.standing, company)), Math.floor(Math.max(0, meta.bank) / CRATE_PRICE))
+}
+
+/** The purse a Sovereign Route sets out with: the default one, if the bank can fund it past the fee. */
+export const charterPurse = (bank: number): number => clampPurse(DEFAULT_PURSE, Math.max(0, bank) - CHARTER_FEE)
+
+/** Whether this save may sponsor the Sovereign Route now: the door open, the fee in the bank, and no first contract pending. */
+export function charterOpen(meta: Pick<Meta, 'skills' | 'items' | 'bank' | 'stats'>): boolean {
+  if (menuStaged(meta.stats, useSettingsStore.getState().showEverything)) return false
+  return charterDoor({ skills: meta.skills, items: meta.items ?? [] }).open && meta.bank >= CHARTER_FEE
 }
 
 /** The company the board opens on: the one asked for, today's market, or the first that hires. */
@@ -91,7 +109,7 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
       get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: FIRST_COMPANY, crates: 0, purse: defaultPurse(meta.bank) })
       return
     }
-    const company = boardCompany(meta, terms?.company)
+    const company = boardCompany(meta, terms?.company ?? undefined)
     const board = clampBoard(
       { seed: newRunSeed(), company, step, crates: terms?.crates ?? 0, purse: terms?.purse ?? defaultPurse(meta.bank) },
       meta,
@@ -147,6 +165,12 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
     get().beginCampaign(hashSeed(b.seed, 'contract', b.company), STANDARD_RUN, { company: terms.company, crates: terms.crates, purse: terms.purse })
   },
 
+  signCharter: () => {
+    const meta = useMetaStore.getState()
+    if (!charterOpen(meta)) return sfx('error')
+    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: null, charter: true, crates: 0, purse: charterPurse(meta.bank) })
+  },
+
   pressOn: () => {
     const c = get().contract
     if (!c || c.pending == null || c.status !== 'open') return
@@ -158,8 +182,9 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
   cashOut: () => {
     const st = get()
     const c = st.contract
-    // A first contract cannot cash out (LS3): its cities only pay.
-    if (!c || c.pending == null || c.status !== 'open' || st.runSettled || st.firstRun) return
+    // A first contract cannot cash out (LS3): its cities only pay. Nor can the
+    // Sovereign Route: all or nothing.
+    if (!c || c.pending == null || c.status !== 'open' || st.runSettled || st.firstRun || c.charter) return
     const sale = cashOutValue(c, c.paid.length, cargoPct(st.baseHp, st.maxBaseHp))
     const contract = { ...c, cashOut: sale, pending: null, status: 'cashedOut' as const }
     const next = { ...st, contract }

@@ -38,7 +38,8 @@ export function CityScreen() {
   const cashOut = useGameStore((s) => s.cashOut)
   const record = useMetaStore((s) => s.record)
   const taught = useSettingsStore((s) => s.taught.cashOut)
-  if (!c || c.pending == null) return null
+  // The Sovereign Route's cities are waypoints: none waits on this page.
+  if (!c || c.pending == null || !c.company) return null
 
   const co = companyById(c.company)
   const city = c.pending

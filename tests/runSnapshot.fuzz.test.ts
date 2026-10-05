@@ -50,9 +50,12 @@ import {
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
 import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
-import { CITY_COUNT, kindCompany, MARKET_MULT, MAX_CRATES, weightPool } from '../src/game/run/contracts'
+import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/run/contracts'
+import { CHARTER_PAYOUT, SOVEREIGN_DILUTION } from '../src/game/run/charter'
+import { ROUTE_HAZARDS } from '../src/game/data/hazards'
+import { devCharter } from '../src/state/devCharter'
 import { FOCUS_STEP, homeGold, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE } from '../src/game/run/hq'
 import { runDeposit } from '../src/game/run/settle'
 import { COMPANY_IDS } from '../src/game/data/companies'
@@ -186,7 +189,9 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   if (hz !== null && !(Number.isInteger(hz) && hz >= 0 && hz <= 0xffffffff)) throw new Error(`${where}: hazard seed ${hz}`)
   if ((field.hazardSeed ?? null) !== hz) throw new Error(`${where}: field hazard ${field.hazardSeed} ≠ ${hz}`)
   const cursed = (field.tiles ?? []).filter((t) => t.danger)
-  if (cursed.length > DANGER_TILES * 4 || cursed.some((t) => t.block)) throw new Error(`${where}: bad danger ground`)
+  // A route's own ground may curse more (Moonquill's, the Sovereign Route's).
+  const cursedMax = DANGER_TILES + (field.terrainRule ? (ROUTE_HAZARDS[field.terrainRule]?.dangerTiles ?? 0) : 0)
+  if (cursed.length > cursedMax * 4 || cursed.some((t) => t.block)) throw new Error(`${where}: bad danger ground`)
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
@@ -238,7 +243,15 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   }
   // v15: the contract — every number it carries is gold a settle banks.
   const c = snap.contract
-  if (!COMPANY_IDS.includes(c.company)) throw new Error(`${where}: contract company ${c.company}`)
+  // v17: a Sovereign Route is no company's, carries no crates and no market,
+  // never waits on a cash-out, pays nothing at its waypoints and at most the
+  // charter's payout at its destination, and deals for no company.
+  if (c.charter) {
+    if (c.company !== null || c.crates !== 0 || c.market !== 1 || c.pending !== null || c.cashOut !== 0) throw new Error(`${where}: charter terms`)
+    if (c.paid.some((n, i) => (i < CITY_COUNT - 1 ? n !== 0 : n > CHARTER_PAYOUT))) throw new Error(`${where}: charter pay ${c.paid}`)
+    if (c.hq.focus !== null || c.hq.boost !== 0) throw new Error(`${where}: charter focus`)
+    if (c.status === 'cashedOut') throw new Error(`${where}: a charter cashed out`)
+  } else if (!c.company || !COMPANY_IDS.includes(c.company)) throw new Error(`${where}: contract company ${c.company}`)
   if (!Number.isInteger(c.crates) || c.crates < 0 || c.crates > MAX_CRATES) throw new Error(`${where}: crates ${c.crates}`)
   if (c.market !== 1 && c.market !== MARKET_MULT) throw new Error(`${where}: market ${c.market}`)
   for (const n of [c.purse, c.cashOut, ...c.paid]) if (!Number.isInteger(n) || n < 0 || n > 1e6) throw new Error(`${where}: contract gold ${n}`)
@@ -263,7 +276,7 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // a run beginning on those terms weights it, nothing more.
   if (!snap.itemPool.every(isItemKind)) throw new Error(`${where}: bad item pool`)
   if (!BASIC_ITEM_KINDS.every((k) => snap.itemPool.includes(k))) throw new Error(`${where}: item pool lost a basic kind`)
-  const expectPool = weightPool([...new Set(snap.itemPool)], c.company, kindCompany, { company: hq.focus, boost: hq.boost })
+  const expectPool = runItemPool([...new Set(snap.itemPool)], c.company, { company: hq.focus, boost: hq.boost })
   if (expectPool.length !== snap.itemPool.length || [...new Set(snap.itemPool)].some((k) => expectPool.filter((x) => x === k).length !== snap.itemPool.filter((x) => x === k).length))
     throw new Error(`${where}: item pool weighting`)
   for (const s of heroes) {
@@ -731,5 +744,145 @@ describe('v14 → v15: the mercenary company (contracts; Daily and Endless remov
     const pay = payoutFromRaw(JSON.parse(JSON.stringify(raw)))!
     expect(pay.contract?.signed).toBe(false)
     expect(runDeposit(pay)).toBe(0)
+  })
+})
+
+// ------------------------------------------------------- the Sovereign Route
+
+/**
+ * A real Sovereign Route snapshot (v17), built the way the game builds one:
+ * the door opened and the bank funded (the dev handle), the charter signed,
+ * a hero committed (the fee paid), the first fight entered on the route's own
+ * ground — with two Sovereign kinds owned, so the item pool carries the tier
+ * at its low weight, and a Sovereign piece worn and on the merchant's shelf.
+ */
+function buildCharterBase(): Record<string, unknown> {
+  const keep = useMetaStore.getState()
+  devCharter.ready(20000)
+  devCharter.own(2)
+  useGameStore.getState().signCharter()
+  useGameStore.getState().pickStartingHero('pick-0')
+  const st = useGameStore.getState()
+  st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
+  const rng = new RNG(4321)
+  const s = useGameStore.getState()
+  const brand = generateItem(rng, { kind: 'Saffron Brand', rarity: 'rare' })
+  useGameStore.setState({
+    roster: [{ ...s.roster[0], equipment: { ...s.roster[0].equipment, mainHand: brand } }],
+    merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], recruit: null, repair: { hp: 5, price: 70 }, rerolls: 0 },
+    // A charter one waypoint in: it paid nothing there, and waits on nothing.
+    contract: { ...s.contract!, paid: [0], cargoAt: [90], earned: 60 },
+  })
+  const snap = captureRun(useGameStore.getState(), { rngLoot: 3, rngMap: 5, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
+  useMetaStore.setState({ skills: keep.skills, items: keep.items, bank: keep.bank, stats: keep.stats, sovereign: keep.sovereign })
+  return JSON.parse(JSON.stringify(snap))
+}
+
+describe('v16 → v17: the Sovereign Route (the endgame charter)', () => {
+  let base: Record<string, unknown>
+  beforeAll(() => {
+    base = buildCharterBase()
+  })
+
+  it('a charter snapshot loads and is fully playable, on its own ground, at its own weight', () => {
+    const snap = migrateSnapshot(structuredClone(base))!
+    expect(snap).not.toBeNull()
+    assertPlayable(snap, 'charter base')
+    expect(snap.contract).toMatchObject({ charter: true, company: null, crates: 0, market: 1, pending: null, signed: true })
+    expect(snap.terrainRule).toBe('sovereign')
+    expect(snapshotBattleMap(snap).terrainRule).toBe('sovereign')
+    // Two Sovereign kinds owned: each listed once for every SOVEREIGN_DILUTION of any other kind.
+    const sov = snap.itemPool.filter(isSovereignKind)
+    expect(new Set(sov)).toEqual(new Set(SOVEREIGN_ITEM_KINDS.slice(0, 2)))
+    expect(snap.itemPool.filter((k) => k === 'Sword').length).toBe(SOVEREIGN_DILUTION * snap.itemPool.filter((k) => k === sov[0]).length)
+    expect(describeSnapshot(snap)).toMatch(/^Sovereign Route · depth/)
+  })
+
+  it('every single-field mutation of a charter loads without throwing, and never pays more than the charter', () => {
+    const all = paths(base)
+    const failures: string[] = []
+    let accepted = 0
+    let cases = 0
+    for (const p of all) {
+      for (const v of VALUES) {
+        cases++
+        const raw = mutate(base, p, v)
+        try {
+          const snap = migrateSnapshot(raw)
+          if (snap) {
+            accepted++
+            assertPlayable(snap, show(p, v))
+          }
+          const pay = payoutFromRaw(raw)
+          if (pay) {
+            for (const [k, n] of Object.entries(pay)) if (typeof n === 'number' && !Number.isFinite(n)) throw new Error(`payout.${k} = ${n}`)
+            if (pay.contract?.charter && runDeposit(pay) > CHARTER_PAYOUT + pay.gold) throw new Error(`a charter paid ${runDeposit(pay)}`)
+          }
+        } catch (e) {
+          if (failures.length < 25) failures.push(`${show(p, v)} -> ${String(e).slice(0, 160)}`)
+        }
+      }
+    }
+    expect(failures, failures.join('\n')).toEqual([])
+    expect(cases).toBeGreaterThan(5000)
+    expect(accepted).toBeGreaterThan(cases * 0.3)
+  })
+
+  it('random multi-field mutations of a charter never throw either', () => {
+    const all = paths(base)
+    let seed = 31
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+    const failures: string[] = []
+    for (let i = 0; i < 2000; i++) {
+      let raw: unknown = base
+      const applied: string[] = []
+      for (let j = 0; j < 3; j++) {
+        const p = all[Math.floor(rnd() * all.length)]
+        const v = VALUES[Math.floor(rnd() * VALUES.length)]
+        try {
+          raw = mutate(raw, p, v)
+          applied.push(show(p, v))
+        } catch {
+          /* the path no longer exists after an earlier mutation */
+        }
+      }
+      try {
+        const snap = migrateSnapshot(raw)
+        if (snap) assertPlayable(snap, applied.join(' & '))
+        payoutFromRaw(raw)
+      } catch (e) {
+        if (failures.length < 10) failures.push(`${applied.join(' & ')} -> ${String(e).slice(0, 160)}`)
+      }
+    }
+    expect(failures, failures.join('\n')).toEqual([])
+  })
+
+  it('a payload that inflates a charter’s pay, crates or market is read as the charter it is', () => {
+    const raw = structuredClone(base) as Record<string, unknown> & { contract: Record<string, unknown> }
+    raw.contract.paid = [900, 900, 999999]
+    raw.contract.cargoAt = [100, 100, 100]
+    raw.contract.crates = 8
+    raw.contract.market = 1.3
+    raw.contract.pending = 1
+    raw.contract.cashOut = 5000
+    raw.contract.status = 'cashedOut'
+    raw.contract.hq = { rocks: 0, focus: 'metals', boost: 45, pack: 6 }
+    const snap = migrateSnapshot(raw)!
+    expect(snap.contract).toMatchObject({ charter: true, company: null, crates: 0, market: 1, pending: null, cashOut: 0, status: 'lost' })
+    expect(snap.contract.paid).toEqual([0, 0, CHARTER_PAYOUT])
+    expect(snap.contract.hq).toMatchObject({ focus: null, boost: 0 })
+  })
+
+  it('a v16 payload has no charter and no Sovereign kind: it loads as it always did', () => {
+    const raw = structuredClone(base) as Record<string, unknown> & { contract: Record<string, unknown> }
+    raw.v = 16
+    delete raw.contract.charter
+    raw.contract.company = 'silk'
+    raw.itemPool = [...ALL_ITEM_KINDS]
+    raw.terrainRule = 'flooded'
+    const snap = migrateSnapshot(raw)!
+    expect(snap.contract.charter).toBeUndefined()
+    expect(snap.contract.company).toBe('silk')
+    expect(snap.itemPool.some(isSovereignKind)).toBe(false)
   })
 })

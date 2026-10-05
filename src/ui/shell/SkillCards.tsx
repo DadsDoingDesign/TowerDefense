@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Offer } from './offers'
+import { SovereignMark } from './charter/SovereignParts'
 
 /**
  * The Collection (the classless rework): Skills | Items, one grid at a time.
@@ -59,18 +60,23 @@ export function SkillCards({ cards }: { cards: NonNullable<Offer['cards']> }) {
       {groups.map((g) => {
         const of = cards.filter((c) => (c.group ?? '') === g)
         const open = of.filter((c) => !c.locked).length
+        const sov = of.some((c) => c.tier === 'sovereign')
         return (
-          <section key={g} className="pg-skills-group" aria-label={`${g}: ${open} of ${of.length} unlocked`}>
+          <section key={g} className={`pg-skills-group${sov ? ' sov' : ''}`} aria-label={`${g}: ${open} of ${of.length} unlocked`}>
             {g && (
               <p className="pg-skills-head">
-                {g} <span>
+                <span className="pg-skills-name">
+                  {sov && <SovereignMark />}
+                  {g}
+                </span>{' '}
+                <span>
                   {open}/{of.length}
                 </span>
               </p>
             )}
             <ul className="pg-skills-grid">
               {of.map((c) => (
-                <li key={c.id} className={`pg-skill ${c.locked ? 'locked' : ''}`}>
+                <li key={c.id} className={`pg-skill ${c.locked ? 'locked' : ''}${c.tier === 'sovereign' ? ' sov' : ''}`}>
                   <span className="pg-skill-top">
                     {c.locked && (
                       <span className="pg-skill-shape" aria-hidden="true">

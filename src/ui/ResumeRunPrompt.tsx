@@ -69,7 +69,9 @@ export function ResumeRunPrompt() {
           </button>
           {armed && (
             <p className="fw-resume-body fw-resume-warn" role="alert">
-              The contract ends here. You keep what its cities paid and the rest of your purse; unsold crates, your heroes, the map and the pack are gone.
+              {snap.contract.charter
+                ? 'The charter ends here, and its fee is lost. You keep the rest of your purse; your heroes, the map and the pack are gone.'
+                : 'The contract ends here. You keep what its cities paid and the rest of your purse; unsold crates, your heroes, the map and the pack are gone.'}
             </p>
           )}
           {armed && (

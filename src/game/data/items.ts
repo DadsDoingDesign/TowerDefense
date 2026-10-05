@@ -89,6 +89,12 @@ export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
   Robe: { slot: 'body', grip: 'body' },
   Cloak: { slot: 'body', grip: 'body' },
   Aegis: { slot: 'body', grip: 'body' },
+  // The Sovereign tier (Level 4, `itemKinds.ts`): dealt only once owned.
+  'Saffron Brand': { slot: 'oneHand', grip: 'main', swings: true, style: 'swing' },
+  'Moonquill Codex': { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
+  'Gilded Easel': { slot: 'offHand', grip: 'off', hold: 4, thorns: 12 },
+  'Ironheart Plate': { slot: 'body', grip: 'body' },
+  'Silkwind Cloak': { slot: 'body', grip: 'body' },
   Banner: { slot: 'body', grip: 'body' },
   Standard: { slot: 'body', grip: 'body' },
   Relic: { slot: 'body', grip: 'body' },
@@ -154,7 +160,7 @@ const KIND_GRIP: Record<ItemSlot, Grip> = { oneHand: 'main', twoHand: 'twoHand',
  * order only breaks ties at one position (`Greatsword` before `Sword`).
  */
 export const ITEM_NOUN_RE =
-  /(Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Pavise|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
+  /(Saffron Brand|Moonquill Codex|Gilded Easel|Ironheart Plate|Silkwind Cloak|Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Pavise|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
 
 /** The base noun an item is named by, if the name carries one. */
 export const itemNoun = (item: Pick<Item, 'name'>): string | undefined => ITEM_NOUN_RE.exec(item.name)?.[0]
@@ -258,6 +264,26 @@ interface WeaponType {
   hands: 'oneHand' | 'twoHand'
   speedBias: number
 }
+
+/**
+ * The Sovereign tier's nouns (Level 4, `itemKinds.SOVEREIGN_ITEM_KINDS`). A
+ * roll with no `kinds` pool never deals one — it deals exactly what it dealt
+ * before the tier existed, draw for draw — and a roll with a pool deals one
+ * only when the pool names it (an owned kind, `run/charter.sovereignPool`).
+ */
+export const SOVEREIGN_NOUNS: ReadonlySet<string> = new Set(['Saffron Brand', 'Moonquill Codex', 'Gilded Easel', 'Ironheart Plate', 'Silkwind Cloak'])
+
+/**
+ * What a Sovereign kind does beyond its slot's base: one fixed edge, added
+ * after the name is composed (as a Mythic's edge is), labelled "Sovereign".
+ * The Gilded Easel's is its grip (holds 4, `ITEM_BASES`), so it has none here.
+ */
+export const SOVEREIGN_EDGE: Readonly<Record<string, Enchantment>> = {
+  'Saffron Brand': { id: 'sov_brand', label: 'Sovereign', mods: { burn: { dps: 20, dur: 3 } } },
+  'Moonquill Codex': { id: 'sov_codex', label: 'Sovereign', mods: { shock: { chains: 2, dmgFrac: 0.5 } } },
+  'Ironheart Plate': { id: 'sov_plate', label: 'Sovereign', mods: { damageMult: 1.15 } },
+  'Silkwind Cloak': { id: 'sov_cloak', label: 'Sovereign', mods: { rateMult: 1.15 } },
+}
 const WEAPONS: WeaponType[] = [
   // one-hand: modest damage, can pair with an off-hand. Dagger and Wand are
   // light enough to BE the off-hand (at OFF_HAND_SHARE) — see `ITEM_BASES`.
@@ -273,9 +299,12 @@ const WEAPONS: WeaponType[] = [
   { name: 'Bow', damageType: 'physical', hands: 'twoHand', speedBias: 0.04 },
   { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0 },
   { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
+  // The Sovereign tier: a sword's handling, a grimoire's.
+  { name: 'Saffron Brand', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
+  { name: 'Moonquill Codex', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
 ]
-const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus', 'Pavise']
-const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis']
+const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus', 'Pavise', 'Gilded Easel']
+const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis', 'Ironheart Plate', 'Silkwind Cloak']
 const KEEPSAKES = ['Banner', 'Standard', 'Relic', 'Beacon', 'Oath']
 
 /**
@@ -795,15 +824,17 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // With no roster the pools are the literal arrays, so the draw is byte-for-byte
   // the one this generator has always made.
   const rosterAware = !!opts.roster && opts.roster.length > 0
-  const allowed = (noun: string) => !kindSet || kindSet.has(noun)
+  // With no pool, the Sovereign tier is never dealt: every kind it lists
+  // existed before the tier, so the draws are the ones they always were.
+  const allowed = (noun: string) => (kindSet ? kindSet.has(noun) : !SOVEREIGN_NOUNS.has(noun))
   // A kind the pool holds more than once (a company's piece on its own route,
   // `run/contracts.weightPool`) is listed that many times, so the one pick
   // below deals it by weight. An unweighted pool lists each kind once.
   const kindCount = new Map<string, number>()
   for (const k of opts.kinds ?? []) kindCount.set(k, (kindCount.get(k) ?? 0) + 1)
-  const times = (noun: string): number => (kindSet ? (kindCount.get(noun) ?? 0) : 1)
+  const times = (noun: string): number => (kindSet ? (kindCount.get(noun) ?? 0) : SOVEREIGN_NOUNS.has(noun) ? 0 : 1)
   const byWeight = <T,>(list: readonly T[], nameOf: (x: T) => string): T[] => list.flatMap((x) => Array<T>(times(nameOf(x))).fill(x))
-  const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType))
+  const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType) && (kindSet || !SOVEREIGN_NOUNS.has(w.name)))
   const inPool = byWeight(typed, (w) => w.name)
   // A forced damage type the pool cannot meet falls back to any unlocked weapon.
   const handed = inPool.length ? inPool : WEAPONS.filter((w) => w.hands === slot && allowed(w.name))
@@ -838,6 +869,8 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   // upgrade path (`grantUpgrade`); the paths are spec perks now (Phase 3b), so
   // the same level's value rides on the item as an enchantment instead.
   if (rarity === 'mythic') ench.push(mythicEdge(slot))
+  // A Sovereign kind carries its own edge, whatever its rarity.
+  if (SOVEREIGN_EDGE[noun]) ench.push({ ...SOVEREIGN_EDGE[noun], mods: { ...SOVEREIGN_EDGE[noun].mods } })
   return {
     id: nextId('itm'),
     name: name.trim(),
@@ -880,7 +913,9 @@ export function reforgeItem(item: Item, rng: RNG): Item {
   const pool = item.keepsake ? KEEPSAKE_ENCHANTS : ENCHANTS
   const count = item.keepsake ? Math.max(1, cfg.enchants) : cfg.enchants
   const ench = rollEnchantments(pool, count, cfg.budget, rng)
-  return { ...item, enchantments: ench, name: renameFor(item, ench) }
+  // A Sovereign kind's edge is the kind's, not a roll: it survives a reforge.
+  const edge = item.enchantments.filter((e) => e.id.startsWith('sov_'))
+  return { ...item, enchantments: [...ench, ...edge], name: renameFor(item, ench) }
 }
 
 /** Upgrade an item's rarity one tier: more base budget + an extra enchant slot. */

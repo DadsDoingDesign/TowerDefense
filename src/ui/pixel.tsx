@@ -1,5 +1,6 @@
 import { memo } from 'react'
-import { companyById, crestRows, UNKNOWN_EMBLEM, type CompanyId } from '../game/data/companies'
+import { companyById, crestRows, SOVEREIGN_EMBLEM, UNKNOWN_EMBLEM, type CompanyId } from '../game/data/companies'
+import { SOVEREIGN_COLOR } from '../game/run/charter'
 import { bannerPalette, bannerRows, type BannerLook } from '../game/data/banner'
 import {
   COIN,
@@ -67,6 +68,17 @@ export function Crest({ company, scale = 2, locked = false }: { company: Company
   return <Pixel rows={crestRows(locked ? UNKNOWN_EMBLEM : co.emblem)} palette={pal} scale={scale} className="crest" />
 }
 
+/** The Sovereign Route's crest: a crown on a shield in the Sovereign cyan (the endgame charter). */
+export function SovereignCrest({ scale = 2 }: { scale?: number }) {
+  const base = SOVEREIGN_COLOR
+  const pal: Palette = { o: OUTLINE, c: base, l: shade(base, 0.35), d: shade(base, -0.3), p: '#f3e7d0', g: '#e0ac4c' }
+  return <Pixel rows={crestRows(SOVEREIGN_EMBLEM)} palette={pal} scale={scale} className="crest sovereign" />
+}
+
+/** A contract's crest: its company's, or the Sovereign Route's crown. */
+export const RouteCrest = ({ company, scale = 2 }: { company: CompanyId | null; scale?: number }) =>
+  company ? <Crest company={company} scale={scale} /> : <SovereignCrest scale={scale} />
+
 /** A cargo crate banded in its company's colour, or an empty slot. */
 export function Crate({ color = '#c6e05a', scale = 3, ghost = false }: { color?: string; scale?: number; ghost?: boolean }) {
   return <Pixel rows={CRATE} palette={ghost ? GHOST_CRATE : cratePalette(color)} scale={scale} className={ghost ? 'crate ghost' : 'crate'} />
@@ -80,8 +92,10 @@ export const Lantern = ({ lit, scale = 3 }: { lit: boolean; scale?: number }) =>
   <Pixel rows={LANTERN} palette={lanternPalette(lit)} scale={scale} className={lit ? 'lantern lit' : 'lantern'} />
 )
 
-/** A short sword: an item. */
-export const Sword = ({ scale = 2 }: { scale?: number }) => <Pixel rows={SWORD} palette={SWORD_PALETTE} scale={scale} className="sword" />
+/** A short sword: an item — flat when `sil` names a colour (a locked one). */
+export const Sword = ({ scale = 2, sil }: { scale?: number; sil?: string }) => (
+  <Pixel rows={SWORD} palette={sil ? silhouette(sil) : SWORD_PALETTE} scale={scale} className="sword" />
+)
 
 /** A padlock — opens later. Light on the dark panels (the mockups' lock was dark on dark). */
 export const Lock = ({ scale = 2 }: { scale?: number }) => <Pixel rows={LOCK} palette={LOCK_PALETTE} scale={scale} className="lock" />

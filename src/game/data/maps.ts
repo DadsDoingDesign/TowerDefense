@@ -2,7 +2,7 @@ import { streamRng } from '../core/rng'
 import type { Vec2 } from '../core/vec'
 import type { GameMap, TerrainRuleId } from '../types'
 import { layHazards } from './hazards'
-import { layTiles, parseTileId, patch, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
+import { COMPOSITE_RULES, layTiles, parseTileId, patch, TERRAIN_RULES, TILE, type TerrainPiece } from './terrain'
 import { ROUTE_HAZARDS } from './hazards'
 
 /**
@@ -244,8 +244,12 @@ const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.i
  * and — Q1 — the battle's danger ground and seeded obstacles over both when it
  * has a `hazard` seed (`data/hazards.ts`).
  */
+/** A field's authored pieces under a challenge — a composite one's are its parts', in order. */
+const rulePieces = (def: FieldDef, rule: TerrainRuleId): readonly TerrainPiece[] =>
+  (COMPOSITE_RULES[rule] ?? [rule]).flatMap((r) => def.rules[r] ?? [])
+
 function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | null = null, cut = 0): GameMap {
-  const laid = layTiles(def.path, [...def.pieces, ...(rule ? (def.rules[rule] ?? []) : [])])
+  const laid = layTiles(def.path, [...def.pieces, ...(rule ? rulePieces(def, rule) : [])])
   const rocks = hazard != null && cut > 0 ? cut : 0
   const tiles = hazard == null ? laid : layHazards(laid, def.path, hazard, rule ? ROUTE_HAZARDS[rule] : undefined, rocks)
   const variant = rule != null || hazard != null

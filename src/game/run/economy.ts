@@ -53,11 +53,13 @@ export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.0
  */
 export function rollMerchantShelf(
   rng: RNG,
-  opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[] },
+  opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[]; priceMult?: number },
 ): ShelfEntry[] {
+  // The road's price multiplier (the Sovereign Route's merchants charge double, `run/charter`).
+  const mult = opts.priceMult ?? 1
   return Array.from({ length: opts.size ?? 4 }, () => {
     const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
-    return { item, price: ITEM_PRICE[item.rarity] }
+    return { item, price: Math.round(ITEM_PRICE[item.rarity] * mult) }
   })
 }
 
@@ -81,5 +83,7 @@ export const GATE_REPAIR = { hp: 5, price: 35 } as const
 /** The Gate after buying a merchant repair (capped at its maximum). */
 export const repairGate = (baseHp: number, maxBaseHp: number): number => Math.min(maxBaseHp, baseHp + GATE_REPAIR.hp)
 
-/** What rerolling a merchant's shelf costs after `rerolls` rerolls at this stall. */
-export const rerollCost = (rerolls: number): number => 20 + 15 * Math.max(0, Math.floor(rerolls))
+/** What rerolling a merchant's shelf costs after `rerolls` rerolls at this stall (× the road's price multiplier). */
+export const rerollCost = (rerolls: number, mult = 1): number => Math.round((20 + 15 * Math.max(0, Math.floor(rerolls))) * mult)
+/** How much dearer each restock at a stall is than the last. */
+export const REROLL_STEP = 15

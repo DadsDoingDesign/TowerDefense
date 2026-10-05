@@ -150,6 +150,12 @@ export const companyById = (id: CompanyId): Company => BY_ID.get(id)!
 /** The company a first-timer's one free escort is for. */
 export const FIRST_COMPANY: CompanyId = 'spice'
 
+/**
+ * The Sovereign Route's emblem (the endgame charter): a crown — no company's
+ * road, so no company's crest. Drawn on the same shield in the Sovereign cyan.
+ */
+export const SOVEREIGN_EMBLEM: readonly string[] = ['........', 'g..gg..g', 'gg.gg.gg', 'gggggggg', 'gpggggpg', 'gggggggg', '.oooooo.', '........']
+
 /** A locked company's emblem: a question mark. */
 export const UNKNOWN_EMBLEM: readonly string[] = ['..pppp..', '.pp..pp.', '.....pp.', '....pp..', '...pp...', '...pp...', '........', '...pp...']
 

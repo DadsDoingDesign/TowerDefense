@@ -25,6 +25,7 @@ import { hashSeed, RNG } from '../core/rng'
 import { OPEN_GROUND } from '../data/companies'
 import type { TerrainRuleId } from '../types'
 import { calmGround, calmTerrain } from './firstRun'
+import { CHARTER_GROUND } from './charter'
 
 /**
  * LS3: a first run fights its first two depths on plain ground and meets its
@@ -42,6 +43,12 @@ export interface GroundOpts {
    * road used to share (Flooded meadow or Wildfire).
    */
   ground?: readonly TerrainRuleId[]
+  /**
+   * The Sovereign Route (the endgame charter): EVERY fight — the first, the
+   * elites and the bosses too — is fought on the route's own ground
+   * (`charter.CHARTER_GROUND`, every company's at once). No draw is taken.
+   */
+  charter?: boolean
 }
 
 /** Share of eligible battles that carry a map challenge. */
@@ -56,6 +63,7 @@ export function nodeTerrainRule(
   runSeed: number,
   opts: GroundOpts = {},
 ): TerrainRuleId | null {
+  if (opts.charter) return FIGHTS.has(node.type) ? CHARTER_GROUND : null
   if (node.type !== 'battle' && node.type !== 'elite') return null
   if (node.layer <= 1) return null
   if (calmTerrain(node, !!opts.firstRun)) return null

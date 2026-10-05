@@ -30,23 +30,24 @@
  *   a restored one.
  */
 import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, itemPoolFor } from '../game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
 import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
 import { clampStep } from '../game/run/watch'
-import { companyById, isCompanyId, type CompanyId } from '../game/data/companies'
+import { isCompanyId, type CompanyId } from '../game/data/companies'
 import {
   cityOfLayer,
   clampCrates,
   CITY_COUNT,
   freshContract,
-  kindCompany,
   MARKET_MULT,
+  runItemPool,
   skillCompany,
   weightPool,
   type ContractStatus,
   type RunContract,
 } from '../game/run/contracts'
+import { CHARTER_PAYOUT, routeOf } from '../game/run/charter'
 import { BASE_RUN_HQ, FOCUS_STEP, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE, type RunHq } from '../game/run/hq'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
@@ -110,8 +111,13 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * v16 — the HQ (build step 3): the contract carries `earned` (the road's gold
  * so far, for the road-gold share) and `hq` (pack slots, cleared boulders,
  * company focus — frozen when the run began).
+ *
+ * v17 — the Sovereign Route (build step 5): a contract may be a charter
+ * (`charter: true`, no company, no crates, waypoints that pay nothing, a
+ * destination that pays at most the charter's payout), and an item pool may
+ * hold an owned Sovereign kind at its low weight. A v16 payload is neither.
  */
-export const RUN_SNAPSHOT_VERSION = 16
+export const RUN_SNAPSHOT_VERSION = 17
 
 /** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
 type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
@@ -974,14 +980,15 @@ function normaliseSkills(s: Sentinel): void {
  * weight a pool any other way). A payload with none — a run saved before item
  * unlocks — keeps dealing every kind (what it was dealing).
  */
-function migrateItemPool(raw: unknown, company: CompanyId, hq: RunHq): string[] {
+function migrateItemPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
-  const set = ids.length ? itemPoolFor(ids.filter((k) => !BASIC_ITEM_KINDS.includes(k))) : [...ALL_ITEM_KINDS]
-  return weightPool(set, company, kindCompany, { company: hq.focus, boost: hq.boost })
+  const set = ids.length ? ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)) : [...ALL_ITEM_KINDS]
+  // v17: an owned Sovereign kind deals at its low weight (`contracts.runItemPool`).
+  return runItemPool(set, company, { company: hq.focus, boost: hq.boost })
 }
 
 /** The run's skill pool: known ids, weighted like the items (company focus too, v16); a payload with none deals the starters. */
-function migrateSkillPool(raw: unknown, company: CompanyId, hq: RunHq): string[] {
+function migrateSkillPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
   const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
   return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany, { company: hq.focus, boost: hq.boost })
 }
@@ -1021,6 +1028,7 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
  * pre-contract run ({@link legacyContract}).
  */
 export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[], purseNow = 0): RunContract {
+  if (isObj(raw) && raw.charter === true) return migrateCharter(raw, purseNow)
   if (!isObj(raw) || !isCompanyId(raw.company)) return legacyContract(runMap, cleared)
   const gold = (x: unknown): number => Math.max(0, Math.min(MAX_MAGNITUDE, Math.floor(num(x, 0))))
   const paid = arr<unknown>(raw.paid).slice(0, CITY_COUNT).map(gold)
@@ -1044,6 +1052,40 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     // none of its purse was spent: every gold above the purse is the road's.
     earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
     hq: migrateRunHq(raw.hq),
+  }
+}
+
+/**
+ * A Sovereign Route (v17, the endgame charter), validated: no company, no
+ * crates, no market, no cash-out. Its waypoints pay nothing and its
+ * destination at most the charter's payout, so a payload can claim no more
+ * gold than the route pays; it never waits on a cash-out, and it deals for no
+ * company (no HQ focus).
+ */
+function migrateCharter(raw: Record<string, unknown>, purseNow: number): RunContract {
+  const gold = (x: unknown): number => Math.max(0, Math.min(MAX_MAGNITUDE, Math.floor(num(x, 0))))
+  const paid = arr<unknown>(raw.paid)
+    .slice(0, CITY_COUNT)
+    .map((x, i) => (i === CITY_COUNT - 1 ? Math.min(CHARTER_PAYOUT, gold(x)) : 0))
+  const cargoRaw = arr<unknown>(raw.cargoAt)
+  const cargoAt = paid.map((_, i) => Math.max(0, Math.min(100, Math.round(num(cargoRaw[i], 100)))))
+  const read = str<ContractStatus>(raw.status, 'open', STATUSES)
+  const hq = migrateRunHq(raw.hq)
+  return {
+    charter: true,
+    company: null,
+    crates: 0,
+    market: 1,
+    purse: gold(raw.purse),
+    paid,
+    cargoAt,
+    pending: null,
+    cashOut: 0,
+    // A charter cannot be cashed out: a payload that says so fell.
+    status: read === 'cashedOut' ? 'lost' : read,
+    signed: raw.signed === true,
+    earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
+    hq: { ...hq, focus: null, boost: 0 },
   }
 }
 
@@ -1592,6 +1634,6 @@ export function clearSnapshot(): void {
 /** How far the snapshotted run had got — for the resume prompt's one line of copy. */
 export function describeSnapshot(snap: RunSnapshot): string {
   const depth = Math.max(0, snap.clearedNodeIds.length - 1)
-  const co = companyById(snap.contract.company)
+  const co = routeOf(snap.contract)
   return `${co.name} · depth ${depth}/${Math.max(1, snap.runMap.layers - 1)} · ${snap.gold} gold · ${snap.roster.length} ${snap.roster.length === 1 ? 'hero' : 'heroes'}`
 }

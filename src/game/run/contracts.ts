@@ -31,10 +31,11 @@
 import { hashSeed } from '../core/rng'
 import { COMPANY_IDS, companyById, type CompanyId } from '../data/companies'
 import { skillById } from '../data/skills'
-import { itemKindById } from '../data/itemKinds'
+import { itemKindById, itemPoolFor } from '../data/itemKinds'
 import { ACT_LAYERS, ACTS } from './threat'
 import { difficultyRules, type DifficultyRules } from './watch'
 import { BASE_RUN_HQ, FOCUS_MAX_SHARE, type RunHq } from './hq'
+import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, sovereignPool } from './charter'
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders the designer will tune: "to what makes it fun")
@@ -124,11 +125,18 @@ export type ContractStatus = 'open' | 'delivered' | 'cashedOut' | 'lost'
 
 /** The terms a contract was signed on — all a payout needs. */
 export interface ContractTerms {
-  company: CompanyId
-  /** Crates staked (0: an escort). */
+  /** The company whose road it is; null on the Sovereign Route, which is no company's. */
+  company: CompanyId | null
+  /** Crates staked (0: an escort, and always 0 on the Sovereign Route). */
   crates: number
-  /** The market multiplier locked when the contract was signed (1, or {@link MARKET_MULT}). */
+  /** The market multiplier locked when the contract was signed (1, or {@link MARKET_MULT}; always 1 on the Sovereign Route). */
   market: number
+  /**
+   * The Sovereign Route (the endgame charter, `run/charter.ts`): sponsored
+   * with a fee, no crates, no city pay, no cash-out, and one big payout at the
+   * destination.
+   */
+  charter?: boolean
 }
 
 export interface CityPay {
@@ -159,6 +167,12 @@ export const cargoPct = (hp: number, max: number): number =>
  * too, so an escort's battles still matter.
  */
 export function cityPay(t: ContractTerms, city: number, cargo = 100): CityPay {
+  // The Sovereign Route: the cities are waypoints, and the destination pays
+  // the charter's payout in full — all or nothing, whatever cargo arrives.
+  if (t.charter) {
+    const bonus = city === CITY_COUNT - 1 ? CHARTER_PAYOUT : 0
+    return { sold: 0, sales: 0, fee: 0, bonus, total: bonus }
+  }
   const share = Math.max(0, Math.min(100, cargo)) / 100
   const sold = cratesSoldAt(t.crates, city)
   const sales = Math.round(sold * CRATE_VALUE * t.market * share)
@@ -196,9 +210,10 @@ export interface RunContract extends ContractTerms {
 }
 
 export const freshContract = (t: ContractTerms, purse: number, hq: RunHq = BASE_RUN_HQ): RunContract => ({
-  company: t.company,
-  crates: clampCrates(t.crates),
-  market: t.market,
+  ...(t.charter ? { charter: true } : {}),
+  company: t.charter ? null : t.company,
+  crates: t.charter ? 0 : clampCrates(t.crates),
+  market: t.charter ? 1 : t.market,
   purse: Math.max(0, Math.floor(purse)),
   paid: [],
   cargoAt: [],
@@ -219,19 +234,20 @@ export function earn<C extends RunContract | null>(c: C, gold: number): C {
 /** Everything the contract has earned for the bank: the cities' pay and any cash-out sale. */
 export const contractBanked = (c: Pick<RunContract, 'paid' | 'cashOut'>): number => c.paid.reduce((a, b) => a + b, 0) + c.cashOut
 
-/** The stake this contract cost the bank. */
-export const contractStake = (c: Pick<ContractTerms, 'crates'>): number => clampCrates(c.crates) * CRATE_PRICE
+/** What this contract cost the bank to sign: its stake, or the Sovereign Route's fee. */
+export const contractStake = (c: Pick<ContractTerms, 'crates' | 'charter'>): number => (c.charter ? CHARTER_FEE : clampCrates(c.crates) * CRATE_PRICE)
 
 /** The whole contract at full cargo: what each city pays, the stake, and the profit. */
 export function contractPlan(t: ContractTerms): { cities: CityPay[]; stake: number; total: number; profit: number; skills: number; items: number } {
   const cities = Array.from({ length: CITY_COUNT }, (_, i) => cityPay(t, i, 100))
   const total = cities.reduce((a, c) => a + c.total, 0)
-  const stake = clampCrates(t.crates) * CRATE_PRICE
-  return { cities, stake, total, profit: total - stake, ...deliveryUnlocks(t.crates) }
+  const stake = contractStake(t)
+  return { cities, stake, total, profit: total - stake, ...(t.charter ? { skills: 0, items: 0 } : deliveryUnlocks(t.crates)) }
 }
 
 /** What cashing out sells the crates still on the wagons for, at `cargo` percent. */
 export function cashOutValue(t: ContractTerms, citiesPaid: number, cargo = 100): number {
+  if (t.charter) return 0
   const share = Math.max(0, Math.min(100, cargo)) / 100
   return Math.round(cratesLeftAfter(t.crates, citiesPaid) * CRATE_VALUE * t.market * CASH_OUT_RATE * share)
 }
@@ -252,7 +268,7 @@ export function utcDateKey(now: Date = new Date()): string {
 export const marketOfDay = (dateKey: string): CompanyId => COMPANY_IDS[hashSeed('fieldwatch-market', dateKey) % COMPANY_IDS.length]
 
 /** The market multiplier a contract for `company` signs at on `dateKey`. */
-export const marketFor = (company: CompanyId, dateKey: string): number => (marketOfDay(dateKey) === company ? MARKET_MULT : 1)
+export const marketFor = (company: CompanyId | null, dateKey: string): number => (company && marketOfDay(dateKey) === company ? MARKET_MULT : 1)
 
 // ---------------------------------------------------------------------------
 // The purse
@@ -326,6 +342,21 @@ export function weightPool(
   return once.flatMap((id) => Array<string>(mine(id) ? Math.max(1, Math.round(weight(id) * FOCUS_SCALE * k)) : weight(id) * FOCUS_SCALE).fill(id))
 }
 
+/**
+ * A run's item DEALING pool from the kinds it may deal (the basic five are
+ * added): weighted to the route's company and the HQ's focus
+ * ({@link weightPool}), then with any owned Sovereign kind at its low weight
+ * (`charter.sovereignPool`). The store, the snapshot's rebuild and the harness
+ * all build it here, so they cannot drift.
+ */
+export function runItemPool(
+  kinds: readonly string[],
+  company: CompanyId | null | undefined,
+  focus?: { company: CompanyId | null; boost: number } | null,
+): string[] {
+  return sovereignPool(weightPool(itemPoolFor(kinds), company, kindCompany, focus))
+}
+
 /** The resolution company focus is kept at: every unfocused entry ×20. */
 export const FOCUS_SCALE = 20
 
@@ -337,14 +368,15 @@ export const poolShare = (pool: readonly string[], company: CompanyId, companyOf
 // Contract letters
 // ---------------------------------------------------------------------------
 
-/** The route's three towns. */
-export const routeTowns = (company: CompanyId): readonly [string, string, string] => companyById(company).towns
+/** The route's three towns: a company's, or the Sovereign Route's (`company` null). */
+export const routeTowns = (company: CompanyId | null): readonly [string, string, string] => (company ? companyById(company).towns : CHARTER_TOWNS)
 
 /**
  * One line of flavour for a contract, from the company and its destination —
  * a hash of the contract's seed picks which of the company's lines.
  */
-export function contractLetter(company: CompanyId, seed: number): string {
+export function contractLetter(company: CompanyId | null, seed: number): string {
+  if (!company) return `Your own charter: every good the five companies trade, by ${CHARTER_TOWNS[0]} and ${CHARTER_TOWNS[1]} to ${CHARTER_TOWNS[2]}.`
   const co = companyById(company)
   const line = co.letters[hashSeed(seed, 'letter', company) % co.letters.length]
   const [c1, c2, dest] = co.towns

@@ -1,6 +1,7 @@
 import { fieldTitle } from '../../game/data/maps'
 import { cargoPct } from '../../game/run/contracts'
-import { companyById } from '../../game/data/companies'
+import { routeOf } from '../../game/run/charter'
+import { SovereignCrest } from '../pixel'
 import { MAX_BASE_HP, useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
 import { Crate } from '../pixel'
@@ -25,6 +26,8 @@ export function HeaderBand() {
   const gold = useGameStore((s) => s.gold)
   const threat = useGameStore((s) => s.threat)
   const company = useGameStore((s) => s.contract?.company ?? null)
+  const charter = useGameStore((s) => !!s.contract?.charter)
+  const hasContract = useGameStore((s) => !!s.contract)
   // The map's own length. "Depth 3" says nothing about how far there is left to
   // go; "Depth 3/10" is the difference between pacing a run and guessing at it
   // (M6).
@@ -79,6 +82,15 @@ export function HeaderBand() {
           <span className="sh-chip-of">/{lastLayer}</span>
         </span>
         )}
+        {charter && (
+          /* The in-run marker (the endgame charter): this road is your own. */
+          <span className="sh-chip sov" role="img" aria-label="Sovereign Route: all or nothing">
+            <SovereignCrest scale={1} />
+            <span className="sh-chip-sov" aria-hidden="true">
+              Sovereign
+            </span>
+          </span>
+        )}
         {threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the
              coach strip says it out loud once (WS9 — `Coach`, tip `threat`). */
@@ -96,7 +108,7 @@ export function HeaderBand() {
         <span className="sh-base" role="img" aria-label={`Cargo ${cargo}%`}>
           {/* The crate, in the route's colour: the cargo is what the wagons carry. */}
           <span className="sh-base-glyph sh-cargo-crate">
-            <Crate color={company ? companyById(company).color : '#e0ac4c'} scale={1} />
+            <Crate color={hasContract ? routeOf({ company, charter }).color : '#e0ac4c'} scale={1} />
           </span>
           {/* The word, visibly (Wave 1): the bar says WHAT it measures. */}
           <span className="sh-base-word" aria-hidden="true">

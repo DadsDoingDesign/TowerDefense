@@ -71,9 +71,10 @@ function pairOf(map: GameMap, avoid: string[] = []): [string, string] {
 }
 
 describe('who is melee', () => {
-  it('the swinging weapons: Sword, Axe, Greatsword, Warhammer — and nothing else', () => {
+  it('the swinging weapons: Sword, Axe, Greatsword, Warhammer, the Saffron Brand — and nothing else', () => {
     const swing = Object.entries(ITEM_BASES).filter(([noun, b]) => itemSwings({ name: `Rare ${noun}`, slot: b.slot })).map(([n]) => n)
-    expect(swing.sort()).toEqual(['Axe', 'Greatsword', 'Sword', 'Warhammer'])
+    // The Saffron Brand is the Sovereign tier's sword (the endgame charter).
+    expect(swing.sort()).toEqual(['Axe', 'Greatsword', 'Saffron Brand', 'Sword', 'Warhammer'])
     // Every swinger is a physical weapon of a main-hand or two-hand grip; the
     // knife (either grip) and the bow do not swing.
     for (const n of swing) expect(['main', 'twoHand']).toContain(ITEM_BASES[n].grip)

@@ -3,7 +3,7 @@ import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
 import { cityOfLayer, stakeRules } from '../../game/run/contracts'
-import { companyById } from '../../game/data/companies'
+import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
 import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
@@ -40,7 +40,7 @@ export function RunMapView() {
   const selectNode = useGameStore((s) => s.selectNode)
   const startThreat = useGameStore((s) => stakeRules(s.contract?.crates ?? 0).startThreat)
   // The act bosses are the route's cities (the mercenary company): named on the map.
-  const towns = useGameStore((s) => (s.contract ? companyById(s.contract.company).towns : null))
+  const towns = useGameStore((s) => (s.contract ? routeOf(s.contract).towns : null))
   const focusedId = useMapFocus((s) => s.nodeId)
   const focus = useMapFocus((s) => s.focus)
 

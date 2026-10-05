@@ -398,7 +398,10 @@ export interface WaveVariant {
  * through this, so the campaign's teaching ramp — torches, then bombers, then
  * armour — survives having four shapes instead of one.
  */
-function gate(mix: FactionMix, depth: number): FactionMix {
+function gate(mix: FactionMix, depth: number, muster = false): FactionMix {
+  // The Sovereign Route's muster (the endgame charter): every clan from the
+  // first fight — the teaching ramp is for a first road, not the last one.
+  if (muster) return { ...mix }
   return {
     torch: mix.torch,
     tnt: depth >= 2 ? mix.tnt : 0,
@@ -763,7 +766,7 @@ const SHAPES: Record<ScheduleShape, { barrel: [number, number]; torch: [number, 
  * same is true of the variant: it decides the mix, the tier and the count, and
  * the solve pays the bill.
  */
-function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVariant, specialists = true): Rank[] {
+function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVariant, specialists = true, muster = false): Rank[] {
   const bump = kind === 'elite' ? 1 : 0
   const tier = clampTier(1 + Math.floor((depth - 1) / 2.5) + bump + v.tierBump)
   /**
@@ -790,7 +793,7 @@ function roster(depth: number, kind: EncounterKind, budget: number, v: WaveVaria
    * corrections.
    */
   const heavyTier = clampTier(tier + 1)
-  const mix = gate(v.mixAt ? v.mixAt(depth) : v.mix, depth)
+  const mix = gate(v.mixAt ? v.mixAt(depth) : v.mix, depth, muster)
   // A modified column is built out of the modifier's own registry keys, so the
   // spawn ids the preview groups by are the ones it can describe.
   const id = (fam: string, t: number) => modKey(`${fam}${t}`, v.mod)
@@ -903,6 +906,12 @@ export interface EncounterOptions {
    * pass it (`BENCH_RULES`); every shipped call site takes the default.
    */
   subWaves?: boolean
+  /**
+   * The Sovereign Route's muster (the endgame charter): every goblin clan —
+   * torches, bombers and armour — may march from the first fight, rather than
+   * arriving one at a time (`gate`). Omitted: the teaching ramp, as ever.
+   */
+  muster?: boolean
 }
 
 /**
@@ -931,6 +940,8 @@ export interface NodeEncounterRules {
   allElite: boolean
   /** How many depths deeper a rule-made elite is drawn (an elite the map dealt is not). */
   eliteDepth: number
+  /** The Sovereign Route: every clan marches from the first fight ({@link EncounterOptions.muster}). */
+  muster?: boolean
 }
 const NO_ENCOUNTER_RULES: NodeEncounterRules = { allElite: false, eliteDepth: 0 }
 
@@ -940,6 +951,8 @@ export interface NodeEncounterSpec {
   depth: number
   seed: number
   sibling: number
+  /** The Sovereign Route's muster (only ever `true`; absent on every other road). */
+  muster?: true
 }
 
 /**
@@ -968,6 +981,7 @@ export function nodeEncounterSpec(
     depth: node.layer + (vowElite ? rules.eliteDepth : 0),
     seed: encounterSeed(runSeed, node.layer),
     sibling: node.row,
+    ...(rules.muster ? { muster: true as const } : {}),
   }
 }
 
@@ -978,7 +992,7 @@ export function nodeEncounter(
   rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
 ): WaveDef | null {
   const spec = nodeEncounterSpec(node, runSeed, rules)
-  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling }) : null
+  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling, muster: spec.muster }) : null
 }
 
 export function generateEncounter(depth: number, kind: EncounterKind, opts: EncounterOptions = {}): WaveDef {
@@ -1020,7 +1034,7 @@ export function generateEncounter(depth: number, kind: EncounterKind, opts: Enco
     ? Math.max(MIN_HP_MULT, champBudget / champs.reduce((a, id) => a + hpOf(id), 0))
     : 0
 
-  const ranks = roster(depth, kind, budget - champBudget, v, opts.subWaves !== false)
+  const ranks = roster(depth, kind, budget - champBudget, v, opts.subWaves !== false, !!opts.muster)
   const hpMult = Math.max(MIN_HP_MULT, (budget - champBudget) / Math.max(1, rosterHp(ranks, hpOf)))
 
   const spawns = schedule(ranks, window, hpMult)

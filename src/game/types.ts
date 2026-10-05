@@ -272,7 +272,12 @@ export type TerrainKind = 'lane' | 'forest' | 'rock' | 'water' | 'fire'
  * authored pieces, they deepen the seeded layout — more boulders on Ironvein's
  * quarry road, more cursed ground on Moonquill's (`data/hazards.ROUTE_HAZARDS`).
  */
-export type TerrainRuleId = 'flooded' | 'wildfire' | 'quarry' | 'hexed'
+/**
+ * A map challenge. `sovereign` is the Sovereign Route's own ground (the
+ * endgame charter): every company's at once — the fire and the lakes, the
+ * quarry's boulders and the cursed ground (`run/charter.ts`).
+ */
+export type TerrainRuleId = 'flooded' | 'wildfire' | 'quarry' | 'hexed' | 'sovereign'
 
 /**
  * One tile of the deployment grid, open or blocked. `col`/`row` are in the

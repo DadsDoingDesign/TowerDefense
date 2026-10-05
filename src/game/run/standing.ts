@@ -175,22 +175,6 @@ export function rollContractItem(have: readonly string[], company: CompanyId, cr
   })
 }
 
-/**
- * The endgame charter's door (build step 5 — a hook, nothing reads it yet):
- * it opens only when everything else is unlocked — every random skill card,
- * every item kind, and the highest standing with every company. `progress` is
- * the share of that catalogue a save holds, for the "Charter: 74%" meter the
- * spec asks for, so the goal reads as a goal rather than a secret.
- */
-export function charterProgress(v: { skills: readonly string[]; items: readonly string[]; standing: StandingXp }): { progress: number; unlocked: boolean } {
-  const skills = RANDOM_UNLOCK_SKILLS.filter((id) => v.skills.includes(id)).length
-  const items = UNLOCK_ITEM_KINDS.filter((id) => v.items.includes(id)).length
-  const levels = COMPANY_IDS.reduce((a, c) => a + standingOf(v.standing, c), 0)
-  const have = skills + items + levels
-  const need = RANDOM_UNLOCK_SKILLS.length + UNLOCK_ITEM_KINDS.length + COMPANY_IDS.length * MAX_STANDING
-  return { progress: have / need, unlocked: have >= need }
-}
-
 /** `n` rolls of `roll`, each onto what the ones before it opened. */
 export function dealMany(have: readonly string[], n: number, roll: (have: readonly string[], i: number) => string | null): string[] {
   const out: string[] = []

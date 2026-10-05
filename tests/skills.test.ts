@@ -273,7 +273,7 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
 
 describe('the skill library view (Codex)', () => {
   it('is a Collection with two tabs; a locked card is a silhouette that says only how it opens', async () => {
-    const { skillLibraryOffer, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
+    const { skillLibraryOffer, UNLOCK_BY_CHARTER, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
     const { ITEM_KINDS, BASIC_ITEM_KINDS } = await import('../src/game/data/itemKinds')
     const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], staged: false })
     expect(o.tabs!.map((t) => t.label)).toEqual(['Skills', 'Items'])
@@ -285,10 +285,12 @@ describe('the skill library view (Codex)', () => {
     expect(o.pips).toBeUndefined()
     expect(skillsTab.count).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
     expect(itemsTab.count).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
+    // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
     for (const c of itemsTab.cards.filter((c) => c.locked)) {
       expect(c.name).toBe('Locked')
-      expect(c.text).toBe(UNLOCK_BY_PLAYING)
+      expect(c.text).toBe(c.tier === 'sovereign' ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)
     }
+    expect(itemsTab.cards.filter((c) => c.tier === 'sovereign').map((c) => c.group)).toEqual(Array(5).fill('Sovereign'))
     const o2 = { cards: skillsTab.cards }
     const locked = o2.cards.filter((c) => c.locked)
     expect(locked).toHaveLength(ALL_SKILLS.length - STARTER_SKILLS.length - 1)

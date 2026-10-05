@@ -37,6 +37,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const runSeed = useGameStore((s) => s.runSeed)
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const company = useGameStore((s) => s.contract?.company ?? null)
+  const charter = useGameStore((s) => !!s.contract?.charter)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
   const selectNode = useGameStore((s) => s.selectNode)
@@ -54,7 +55,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   if (!node) return null
 
   const meta = nodeMeta(node.type)
-  const summary = summarizeEncounter({ runSeed, runMap }, nodeId)
+  const summary = summarizeEncounter({ runSeed, runMap, muster: charter }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
   const step = summary ? encounterThreat(node, stakeRules(crates).startThreat) : null
@@ -63,7 +64,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   // `selectNode` makes, so the preview can never name the wrong ground.
   // LS3: a first run's first two depths are plain ground — the same answer.
   // The ground is the route's (its company's), as `selectNode` deals it.
-  const rule = summary ? nodeTerrainRule(node, runSeed, groundOf({ firstRun, contract: company ? { company } : null })) : null
+  const rule = summary ? nodeTerrainRule(node, runSeed, groundOf({ firstRun, contract: charter ? { company: null, charter } : company ? { company } : null })) : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">

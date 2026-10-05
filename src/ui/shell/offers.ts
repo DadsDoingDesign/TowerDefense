@@ -1,4 +1,6 @@
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
+import { isSovereignKind } from '../../game/data/itemKinds'
+import { SOVEREIGN_TIER } from '../../game/run/charter'
 import { PULL_PRICE } from '../../game/run/hq'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
@@ -201,7 +203,7 @@ export interface Offer {
    * A `locked` card is drawn as a silhouette: no name, no sentence, only how
    * it opens.
    */
-  cards?: { id: string; name: string; sub: string; text: string; locked?: boolean; group?: string }[]
+  cards?: { id: string; name: string; sub: string; text: string; locked?: boolean; group?: string; tier?: 'sovereign' }[]
   /**
    * The Collection's tabs (Skills | Items): each a set of `cards`, drawn with
    * a tab bar over the grid (`CollectionTabs`).
@@ -353,6 +355,9 @@ export function itemBody(item: Item): Body {
     })
   }
   if (item.keepsake) out.push({ text: KEEPSAKE_TAG, tone: 'accent' })
+  // The Sovereign tier (the endgame charter): its name, beside its rarity.
+  const noun = itemNoun(item)
+  if (noun && isSovereignKind(noun)) out.push({ text: `${SOVEREIGN_TIER} tier`, tone: 'accent' })
   // Which hand it fits (round 3, Q5) — every item surface says so, and says
   // what a knife or wand is worth from the off hand.
   const hand = item.keepsake ? null : handLine(item)
@@ -561,14 +566,14 @@ function escapeOffer(st: St): Offer {
   if (st.event) return exit('Walk on', 'Leave the offers and continue.', () => st.leaveEvent())
   // Nothing local left to close — the menu is always reachable, and it
   // settles the run rather than dropping it.
-  return exit('Back to the menu', 'End the contract and head home.', () => st.returnToHub())
+  return exit('Back to the menu', st.contract?.charter ? 'End the charter and head home. Its fee is lost.' : 'End the contract and head home.', () => st.returnToHub())
 }
 
 type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
 /** The hub's pages: the menu's rows, and the HQ and the sealed crates (their own screens). */
-export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia'
+export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia' | 'charter'
 
 /**
  * ---------------------------------------------------------------------------
@@ -1125,8 +1130,12 @@ function settingsOffers(s: Settings): Offer[] {
 }
 
 /** "4 crates · Raiders 32% stronger · 4 more elites an act" — the stake, for receipts. */
-export const stakeLine = (crates: number): string =>
-  crates <= 0 ? 'Escort · standard raiders.' : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`
+export const stakeLine = (crates: number, charter = false): string =>
+  charter
+    ? 'Sovereign Route · every goblin clan from the first fight.'
+    : crates <= 0
+      ? 'Escort · standard raiders.'
+      : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`
 
 /** LS3: what opens after a first contract — said the same way everywhere. */
 export const OPENS_AFTER_FIRST_RUN = 'Opens after your first contract'
@@ -1165,7 +1174,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   // The HQ and the sealed crates are pages of their own (`hq/HqScreen.tsx`,
   // `hq/CratesScreen.tsx`); the Selector holds only the way back.
-  if (view === 'hq' || view === 'crates') return [back]
+  if (view === 'hq' || view === 'crates' || view === 'charter') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   return [

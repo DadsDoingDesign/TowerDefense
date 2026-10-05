@@ -62,6 +62,7 @@ export const IDEAS = [
   'stake',
   'hq',
   'crates',
+  'sovereign',
 ] as const
 export type IdeaId = (typeof IDEAS)[number]
 
@@ -172,7 +173,7 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
 
 /** The ideas the meta save alone introduces: a finished contract opens these (the HQ and the crates with them). */
 export function metaIdeas(stats: StagingStats): IdeaId[] {
-  return (stats.runsCompleted ?? 0) > 0 ? ['bank', 'purse', 'standing', 'stake', 'hq', 'crates'] : []
+  return (stats.runsCompleted ?? 0) > 0 ? ['bank', 'purse', 'standing', 'stake', 'hq', 'crates', 'sovereign'] : []
 }
 
 /** The one visibility rule. */

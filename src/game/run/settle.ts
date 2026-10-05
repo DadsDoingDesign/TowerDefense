@@ -103,7 +103,7 @@ export interface RunGrant {
   depth: number
   won: boolean
   kills: number
-  contract: { company: RunContract['company']; crates: number; status: 'delivered' | 'cashedOut' | 'lost' } | null
+  contract: { company: RunContract['company']; crates: number; status: 'delivered' | 'cashedOut' | 'lost'; charter?: boolean } | null
   deposit: number
   unranked?: boolean
   facts?: RunFacts
@@ -121,7 +121,7 @@ export function contractGrant(f: SettleFacts, status: 'delivered' | 'cashedOut' 
     depth: f.depth,
     won: status === 'delivered',
     kills: f.kills,
-    contract: f.contract ? { company: f.contract.company, crates: f.contract.crates, status } : null,
+    contract: f.contract ? { company: f.contract.company, crates: f.contract.crates, status, ...(f.contract.charter ? { charter: true } : {}) } : null,
     deposit: runDeposit(f),
     unranked: f.challenge.kind === 'seeded',
     ...(f.facts ? { facts: f.facts } : {}),

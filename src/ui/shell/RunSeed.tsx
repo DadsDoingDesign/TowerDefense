@@ -31,8 +31,9 @@ export function RunSeed() {
   const screen = useGameStore((s) => s.screen)
   const runSeed = useGameStore((s) => s.runSeed)
   const challenge = useGameStore((s) => s.challenge)
+  const charter = useGameStore((s) => !!s.contract?.charter)
   if (screen !== 'heroPick') return null
-  return <RunSeedStrip terms={runTerms(challenge, runSeed)} />
+  return <RunSeedStrip terms={runTerms(challenge, runSeed, charter)} />
 }
 
 function RunSeedStrip({ terms }: { terms: RunTerms }) {

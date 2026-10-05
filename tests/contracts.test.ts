@@ -3,6 +3,7 @@ import { RNG } from '../src/game/core/rng'
 import { COMPANIES, COMPANY_IDS, companyById, crestRows } from '../src/game/data/companies'
 import { ALL_SKILLS, RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { ITEM_KINDS, UNLOCK_ITEM_KINDS, itemPoolFor } from '../src/game/data/itemKinds'
+import { charterDoor } from '../src/game/run/charter'
 import { generateItem } from '../src/game/data/items'
 import { drawDistinct, poolFor } from '../src/game/run/skills'
 import {
@@ -33,7 +34,6 @@ import {
 } from '../src/game/run/contracts'
 import {
   cardFloor,
-  charterProgress,
   companyOpen,
   contractFloor,
   MAX_STANDING,
@@ -289,12 +289,10 @@ describe('standing', () => {
     expect(rollContractSkill([], 'spice', 0, 'w')).not.toBeNull()
   })
 
-  it('the charter opens only when everything else is unlocked', () => {
-    const none = charterProgress({ skills: [], items: [], standing: {} })
-    expect(none).toEqual({ progress: 0, unlocked: false })
-    const top = Object.fromEntries(COMPANY_IDS.map((c) => [c, standingXpToReach(MAX_STANDING)]))
-    expect(charterProgress({ skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS], standing: top }).unlocked).toBe(true)
-    expect(charterProgress({ skills: [...RANDOM_UNLOCK_SKILLS], items: [], standing: top }).unlocked).toBe(false)
+  it('the charter opens only when every skill and item is unlocked (standing does not count)', () => {
+    expect(charterDoor({ skills: [], items: [] })).toMatchObject({ progress: 0, open: false })
+    expect(charterDoor({ skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] }).open).toBe(true)
+    expect(charterDoor({ skills: [...RANDOM_UNLOCK_SKILLS], items: [] }).open).toBe(false)
   })
 
   it('old Watch XP is spread evenly, and Moonquill opens at standing 3 anywhere', () => {

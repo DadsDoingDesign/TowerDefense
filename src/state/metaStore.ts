@@ -7,7 +7,8 @@ import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
 import { rollItemUnlock, rollUnlock, watchLevelFor } from '../game/run/watch'
 import { RANDOM_UNLOCK_SKILLS } from '../game/data/skills'
-import { UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
+import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
+import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
 import { clampCrates, deliveryUnlocks, type StakeRecord } from '../game/run/contracts'
 import {
@@ -119,6 +120,25 @@ function migrateRecord(raw: unknown): Record<string, StakeRecord> {
   return out
 }
 
+/** The Sovereign Route's record: charters finished (delivered or fallen), and delivered. */
+export interface CharterRecord {
+  runs: number
+  delivered: number
+}
+
+/** The charter record: whole, with delivered ≤ runs. */
+function migrateCharters(raw: unknown): CharterRecord {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const runs = Math.max(0, Math.min(1e6, Math.floor(num(o.runs, 0))))
+  return { runs, delivered: Math.max(0, Math.min(runs, Math.floor(num(o.delivered, 0)))) }
+}
+
+/** The Sovereign kinds owned: known ones, each once, in unlock order. */
+const migrateSovereign = (raw: unknown): string[] => {
+  const known = new Set(SOVEREIGN_ITEM_KINDS)
+  return Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
+}
+
 /** What the HQ grants each new run. */
 export interface MetaBonuses {
   maxBaseHp: number
@@ -134,8 +154,12 @@ export interface MetaBonuses {
  * result screen). Process-local, like `lastFeats`.
  */
 export interface RunProgress {
-  /** The company the contract was for (null: a run from before contracts). */
+  /** The company the contract was for (null: a run from before contracts, or the Sovereign Route). */
   company: CompanyId | null
+  /** The Sovereign Route (the endgame charter). */
+  charter: boolean
+  /** The Sovereign item kind a delivered charter unlocked (null: none, or every one already owned). */
+  sovereign: string | null
   /** Standing XP the run earned with it. */
   xp: number
   standingBefore: number
@@ -162,8 +186,12 @@ export interface ContractSettle {
   kills: number
   /** The contract was delivered. */
   won: boolean
-  /** The company, stake and how it ended; null for a run with no contract (a save from before contracts). */
-  contract: { company: CompanyId; crates: number; status: 'delivered' | 'cashedOut' | 'lost' } | null
+  /**
+   * The company, stake and how it ended; null for a run with no contract (a
+   * save from before contracts). The Sovereign Route has no company and is
+   * marked `charter`.
+   */
+  contract: { company: CompanyId | null; crates: number; status: 'delivered' | 'cashedOut' | 'lost'; charter?: boolean } | null
   /** Gold back to the bank: what is left of the purse, the cities' pay, any cash-out sale. */
   deposit: number
   /** A custom seed: pays its gold, earns no standing and unlocks nothing. */
@@ -204,6 +232,14 @@ interface MetaState {
   skills: string[]
   /** Item KINDS unlocked by deliveries, in unlock order. The basic five are everyone's. */
   items: string[]
+  /**
+   * The Sovereign tier's kinds owned (Level 4), in unlock order: one per
+   * delivered Sovereign Route (`run/charter.rollSovereign`). Dealt at a low
+   * weight in every run once owned; never from a sealed crate.
+   */
+  sovereign: string[]
+  /** The Sovereign Route's record (the endgame charter). */
+  charters: CharterRecord
   stats: MetaStats
   /** Feats earned (Phase 3b): achievement id → the run count it was earned on. */
   achievements: Record<string, number>
@@ -295,8 +331,11 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  * Cartographer's Table with it) become the Scouts, and everything else is
  * refunded to the bank at what it cost. New: the focus, the orders, the bonus
  * items owed and the sealed crates' ledger, all empty.
+ *
+ * v10 — the Sovereign Route (build step 5): the Sovereign kinds owned and the
+ * charter record, both empty. Nothing else moves.
  */
-export const META_VERSION = 9
+export const META_VERSION = 10
 
 /** The orders a save holds, as booleans. */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -348,7 +387,24 @@ export function dealItems(have: readonly string[], n: number, ...salt: (string |
 /** Persisted slice — the only part of the store that survives a reload. */
 type PersistedMeta = Pick<
   MetaState,
-  'bank' | 'upgrades' | 'focus' | 'orders' | 'bonusItems' | 'crates' | 'lastInterest' | 'standing' | 'record' | 'skills' | 'items' | 'stats' | 'achievements' | 'codex' | 'met' | 'militia'
+  | 'bank'
+  | 'upgrades'
+  | 'focus'
+  | 'orders'
+  | 'bonusItems'
+  | 'crates'
+  | 'lastInterest'
+  | 'standing'
+  | 'record'
+  | 'skills'
+  | 'items'
+  | 'sovereign'
+  | 'charters'
+  | 'stats'
+  | 'achievements'
+  | 'codex'
+  | 'met'
+  | 'militia'
 >
 
 /**
@@ -411,6 +467,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     record: migrateRecord(o.record),
     skills,
     items,
+    sovereign: migrateSovereign(o.sovereign),
+    charters: migrateCharters(o.charters),
     stats,
     achievements: migrateAchievements(o.achievements),
     codex: migrateCodex(o.codex),
@@ -439,6 +497,8 @@ export const useMetaStore = create<MetaState>()(
       record: {},
       skills: [],
       items: [],
+      sovereign: [],
+      charters: { runs: 0, delivered: 0 },
       stats: freshStats(),
       achievements: {},
       codex: freshCodex(),
@@ -604,11 +664,33 @@ export const useMetaStore = create<MetaState>()(
           : []
         const items = company ? dealMany(haveItems, owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
 
-        lastProgress.run = { company, xp, standingBefore: before, standingAfter: after, standingCards, contractCards, items, deposit: banked, interest, unranked: !!company && unranked }
+        // The Sovereign Route (the endgame charter): a delivery unlocks one
+        // Sovereign kind still locked — a hash of the charter count, never a
+        // run stream. A custom seed unlocks nothing, as ever.
+        const charter = !!contract?.charter
+        const charters = migrateCharters(get().charters)
+        const owned = migrateSovereign(get().sovereign)
+        const sovereign = charter && won && contract?.status === 'delivered' && !unranked ? rollSovereign(owned, charters.delivered, runsDone) : null
 
-        // The record: every finished contract at its stake, and whether it arrived.
+        lastProgress.run = {
+          company,
+          charter,
+          sovereign,
+          xp,
+          standingBefore: before,
+          standingAfter: after,
+          standingCards,
+          contractCards,
+          items,
+          deposit: banked,
+          interest,
+          unranked: (!!company || charter) && unranked,
+        }
+
+        // The record: every finished contract at its stake, and whether it
+        // arrived. A charter has its own record — it is no stake.
         const record = { ...get().record }
-        if (contract) {
+        if (contract && !charter) {
           const key = String(crates)
           const cur = record[key] ?? { runs: 0, delivered: 0 }
           record[key] = { runs: cur.runs + 1, delivered: cur.delivered + (won ? 1 : 0) }
@@ -625,6 +707,8 @@ export const useMetaStore = create<MetaState>()(
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
           items: items.length ? [...haveItems, ...items] : haveItems,
+          ...(charter ? { charters: { runs: charters.runs + 1, delivered: charters.delivered + (won ? 1 : 0) } } : {}),
+          ...(sovereign ? { sovereign: [...owned, sovereign] } : {}),
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
             bestDepth: Math.max(num(stats.bestDepth, 0), d),
@@ -667,6 +751,8 @@ export const useMetaStore = create<MetaState>()(
           record: {},
           skills: [],
           items: [],
+          sovereign: [],
+          charters: { runs: 0, delivered: 0 },
           stats: freshStats(),
           achievements: {},
           codex: freshCodex(),
@@ -690,6 +776,8 @@ export const useMetaStore = create<MetaState>()(
         record: s.record,
         skills: s.skills,
         items: s.items,
+        sovereign: s.sovereign,
+        charters: s.charters,
         stats: s.stats,
         achievements: s.achievements,
         codex: s.codex,

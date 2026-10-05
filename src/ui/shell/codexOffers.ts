@@ -14,7 +14,8 @@ import { ACHIEVEMENTS } from '../../game/data/achievements'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import { RELICS, relicSupported } from '../../game/data/relics'
 import { ALL_SKILLS, skillLevelLabel } from '../../game/data/skills'
-import { ITEM_KINDS, itemPoolFor } from '../../game/data/itemKinds'
+import { ITEM_KINDS, itemPoolFor, SOVEREIGN_LEVEL } from '../../game/data/itemKinds'
+import { SOVEREIGN_TIER } from '../../game/run/charter'
 import { skillPoolFor } from '../../game/run/watch'
 import { COMPANIES, type CompanyId } from '../../game/data/companies'
 import { standingProgress } from '../../game/run/standing'
@@ -30,6 +31,8 @@ export interface CodexView {
   skills?: readonly string[]
   /** The item kinds unlocked by deliveries. */
   items?: readonly string[]
+  /** The Sovereign kinds owned (the endgame charter). */
+  sovereign?: readonly string[]
   /** Standing XP per company (the mercenary company). */
   standing?: Readonly<Partial<Record<CompanyId, number>>>
   /** LS3: the ideas the player has met. */
@@ -117,6 +120,8 @@ export function codexOffers(v: CodexView): Offer[] {
 const LIBRARY_LOCKED = 'Opens after your first run'
 /** What a silhouette says: the designer's words, and how. */
 export const UNLOCK_BY_PLAYING = 'Unlock by playing — at random, as your standing with a company rises, or by delivering a contract.'
+/** What a Sovereign silhouette says: the one way it opens. */
+export const UNLOCK_BY_CHARTER = 'Unlock by delivering a Sovereign Route — one Sovereign item each time.'
 
 const SLOT_GROUP: Record<string, string> = { oneHand: 'Weapons', twoHand: 'Weapons', offHand: 'Off hand', body: 'Body' }
 
@@ -128,10 +133,10 @@ const SLOT_GROUP: Record<string, string> = { oneHand: 'Weapons', twoHand: 'Weapo
  * the more a player unlocks, the more kinds of hero and loot a run can deal.
  * Each card says only what IT does (the designer: "dont say how it will mix").
  */
-export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'items' | 'standing' | 'staged'>): Offer {
+export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' | 'items' | 'sovereign' | 'standing' | 'staged'>): Offer {
   const pool = new Set(skillPoolFor(v.skills ?? [], (id) => !!v.achievements[id]))
   const have = ALL_SKILLS.filter((k) => pool.has(k.id)).length
-  const kinds = new Set(itemPoolFor(v.items ?? []))
+  const kinds = new Set(itemPoolFor([...(v.items ?? []), ...(v.sovereign ?? [])]))
   const haveItems = ITEM_KINDS.filter((k) => kinds.has(k.id)).length
   if (v.staged) {
     return {
@@ -158,6 +163,12 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
     }
   })
   const itemCards = ITEM_KINDS.map((k) => {
+    // The Sovereign tier (Level 4) is its own group, in its cyan, last.
+    if (k.level === SOVEREIGN_LEVEL) {
+      const tier = 'sovereign' as const
+      if (kinds.has(k.id)) return { id: `kind-${k.id}`, group: SOVEREIGN_TIER, name: k.id, sub: 'Yours', text: k.does, tier }
+      return { id: `kind-${k.id}`, group: SOVEREIGN_TIER, name: 'Locked', sub: '', text: UNLOCK_BY_CHARTER, locked: true, tier }
+    }
     const group = SLOT_GROUP[k.slot]
     if (kinds.has(k.id)) return { id: `kind-${k.id}`, group, name: k.id, sub: k.basic ? 'Basic' : 'Unlocked', text: k.does }
     return { id: `kind-${k.id}`, group, name: 'Locked', sub: '', text: UNLOCK_BY_PLAYING, locked: true }
@@ -174,6 +185,7 @@ export function skillLibraryOffer(v: Pick<CodexView, 'achievements' | 'skills' |
       }),
       'A contract earns standing with its company: 15 a depth, 1 per 10 enemies felled, 60 for a delivery. Each standing level unlocks a skill, from that company’s cards first.',
       'Delivering a contract unlocks a skill and an item, plus a skill per milestone crate and an item per two crates staked.',
+      'Sovereign items, the top tier, unlock only by delivering a Sovereign Route.',
       'Your heroes, loot and offers are dealt only from what you have.',
     ],
     tabs: [

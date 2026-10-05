@@ -83,6 +83,9 @@ export interface HazardBoost {
 export const ROUTE_HAZARDS: Partial<Record<TerrainRuleId, HazardBoost>> = {
   quarry: { obstacles: 4, obstaclePool: 8 },
   hexed: { dangerTiles: 2, dangerPool: 4 },
+  // The Sovereign Route (the endgame charter): Ironvein's boulders AND
+  // Moonquill's cursed ground, on every field.
+  sovereign: { obstacles: 4, obstaclePool: 8, dangerTiles: 2, dangerPool: 4 },
 }
 
 /**

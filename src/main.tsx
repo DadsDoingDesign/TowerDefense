@@ -10,6 +10,7 @@ import { initSettings, initTheme, useSettingsStore } from './state/settingsStore
 import { flushRunSnapshot, installRunPersistence, useGameStore } from './state/gameStore'
 import { onAppHidden, onAppVisible } from './state/lifecycle'
 import { useMetaStore } from './state/metaStore'
+import { devCharter } from './state/devCharter'
 import { registerServiceWorker } from './pwa'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { reportFatal } from './ui/fatal'
@@ -79,6 +80,8 @@ if (import.meta.env.DEV) {
   w.__music = musicStatus
   // Who reached the Gate (Phase 2 defeat receipt), for harness assertions.
   ;(window as unknown as { __ledger: typeof useBattleLedger }).__ledger = useBattleLedger
+  // The Sovereign Route's door and a funded bank, in one call (`state/devCharter.ts`).
+  ;(window as unknown as { __charter: typeof devCharter }).__charter = devCharter
 }
 
 registerServiceWorker()

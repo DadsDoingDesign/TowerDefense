@@ -67,6 +67,7 @@ export function useShellContext(): ShellContext {
   const gearTaught = useSettingsStore((s) => s.taught.heroGear)
   const event = useGameStore((s) => s.event)
   const cityPending = useGameStore((s) => s.contract?.pending != null)
+  const charter = useGameStore((s) => !!s.contract?.charter)
   const crossroads = useGameStore((s) => s.crossroads)
   const reward = useGameStore((s) => s.reward)
   // The node whose spoils these are — an elite's get their own frame (Phase 2).
@@ -135,7 +136,9 @@ export function useShellContext(): ShellContext {
     if (cityPending) return { stage: 'city', selector: 'menu', board: null, layout: 'page' }
     // An event node parks a board over the map until you resolve it.
     if (event) {
-      return { stage: 'board', selector: 'offers', board: EVENT_BOARD[event.kind], layout: 'page' }
+      // The Sovereign Route's merchants charge double (Rosethread's condition): the board says so.
+      const board = event.kind === 'merchant' && charter ? CHARTER_MERCHANT : EVENT_BOARD[event.kind]
+      return { stage: 'board', selector: 'offers', board, layout: 'page' }
     }
     // A post-wave reward pick is an offer board too.
     if (reward) {
@@ -184,6 +187,8 @@ const LOST_BOARD = {
   title: 'Off the Path',
   blurb: 'Your heroes lost their bearings here, and this part of the run cannot be shown. Take the way on below.',
 } as const
+
+const CHARTER_MERCHANT = { title: 'Merchant', blurb: 'Every price here is double, on the Sovereign Route.' } as const
 
 const EVENT_BOARD = {
   // "Three offers" over a board of four items and a hire (Wave 1).

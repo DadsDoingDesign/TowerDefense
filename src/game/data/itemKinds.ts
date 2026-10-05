@@ -32,8 +32,13 @@ export interface ItemKind {
    * skill's Level. A contract's unlock roll has a floor that rises with the
    * stake (`run/standing.contractFloor`), so a big stake opens the heavier
    * kinds first. Say it as "Level N", as a skill does.
+   *
+   * **Level 4 is the Sovereign tier** (the endgame charter, build step 5): a
+   * kind that only a delivered Sovereign Route unlocks (`run/charter.ts`),
+   * never a contract, a standing level or a sealed crate. Shown in cyan
+   * (`SOVEREIGN_COLOR`) with the initial "S".
    */
-  level: 1 | 2 | 3
+  level: 1 | 2 | 3 | 4
   /**
    * The trade company whose pool this kind belongs to (`data/companies.ts`):
    * dealt more often on its routes (`run/contracts.weightPool`). Every kind
@@ -68,20 +73,42 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   { id: 'Robe', slot: 'body', level: 1, company: 'silk', does: 'Body. Adds reach and a wider blast.' },
   { id: 'Cloak', slot: 'body', level: 1, company: 'art', does: 'Body. Adds reach and a wider blast.' },
   { id: 'Aegis', slot: 'body', level: 3, company: 'silk', does: 'Body. Adds reach and a wider blast.' },
+  // ---- the Sovereign tier (Level 4): one per company, a delivered charter each --
+  { id: 'Saffron Brand', slot: 'oneHand', level: 4, company: 'spice', does: 'One hand. Swings up close, and every hit burns for 20 a second for 3 seconds.' },
+  { id: 'Gilded Easel', slot: 'offHand', level: 4, company: 'art', does: 'Off hand. Holds 4 enemies on the road, and adds attack speed and crit.' },
+  { id: 'Ironheart Plate', slot: 'body', level: 4, company: 'metals', does: 'Body. Adds reach, a wider blast, and 15% damage.' },
+  { id: 'Silkwind Cloak', slot: 'body', level: 4, company: 'silk', does: 'Body. Adds reach, a wider blast, and 15% attack speed.' },
+  { id: 'Moonquill Codex', slot: 'twoHand', level: 4, company: 'scrolls', does: 'Both hands. Casts magic that bursts on a group, hits much harder, and jumps to 2 more enemies.' },
 ]
 
 const BY_ID = new Map(ITEM_KINDS.map((k) => [k.id, k]))
 export const itemKindById = (id: string): ItemKind | undefined => BY_ID.get(id)
 export const isItemKind = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)
 
+/** The top tier: Level 4 kinds, dealt only once a delivered Sovereign Route has unlocked them. */
+export const SOVEREIGN_LEVEL = 4
+/** Whether a kind is of the Sovereign tier. */
+export const isSovereignKind = (id: string): boolean => BY_ID.get(id)?.level === SOVEREIGN_LEVEL
+
 /** The five kinds every player has from the first run: Sword, Bow, Wand, Shield, Mail. */
 export const BASIC_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.basic).map((k) => k.id)
-/** The kinds the Watch track unlocks, one at a time, at random. */
-export const UNLOCK_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => !k.basic).map((k) => k.id)
-/** Every kind — what a run saved before item unlocks keeps dealing. */
-export const ALL_ITEM_KINDS: readonly string[] = ITEM_KINDS.map((k) => k.id)
+/**
+ * The kinds contracts, standing and sealed crates unlock, one at a time, at
+ * random: Levels 1–3. Never the Sovereign tier.
+ */
+export const UNLOCK_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => !k.basic && k.level < SOVEREIGN_LEVEL).map((k) => k.id)
+/** The Sovereign tier, in collection order: each opens with one delivered Sovereign Route. */
+export const SOVEREIGN_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.level === SOVEREIGN_LEVEL).map((k) => k.id)
+/**
+ * Every kind of Levels 1–3 — what a run saved before item unlocks keeps
+ * dealing. Never the Sovereign tier: those deal only once owned.
+ */
+export const ALL_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.level < SOVEREIGN_LEVEL).map((k) => k.id)
 
-/** The kinds a run deals: the basic set plus every unlocked kind, in collection order. */
+/**
+ * The kinds a run deals: the basic set plus every unlocked kind, in collection
+ * order. A Sovereign kind is in it only when `unlocked` names it.
+ */
 export function itemPoolFor(unlocked: readonly string[]): string[] {
   const have = new Set([...BASIC_ITEM_KINDS, ...unlocked])
   return ITEM_KINDS.filter((k) => have.has(k.id)).map((k) => k.id)

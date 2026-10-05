@@ -1,6 +1,10 @@
 import { RARITY } from '../../../game/data/items'
 import { companyById } from '../../../game/data/companies'
+import { SOVEREIGN_ITEM_KINDS } from '../../../game/data/itemKinds'
 import { CITY_COUNT, contractBanked, contractStake, cratesLeftAfter } from '../../../game/run/contracts'
+import { CHARTER_FEE, CHARTER_NAME, routeOf } from '../../../game/run/charter'
+import { useMetaStore } from '../../../state/metaStore'
+import { SovereignReveal } from '../charter/SovereignParts'
 import { useGameStore } from '../../../state/gameStore'
 import { assistProfile, useSettingsStore, type AssistLevel } from '../../../state/settingsStore'
 import { itemName, strengthText } from '../../channels'
@@ -21,6 +25,9 @@ import { ContractPage, Gold, Slip, SlipLine } from './parts'
  *  - **Cashed out** — the gold banked, the cities' receipt, the standing kept.
  *  - **The wagons fell** — the cause first (`DefeatReceipt`), then what was
  *    kept (the cities' pay and the purse) and what was lost (unsold crates).
+ *  - **The Sovereign Route** (the endgame charter) — delivered, the payout
+ *    leads and the Sovereign item it unlocked is revealed as its card; fallen,
+ *    the head says plainly that the fee is lost.
  *
  * Every number is read off the run's receipt (`state.victory`, built at the
  * settle), so the page cannot disagree with what the bank received.
@@ -35,7 +42,10 @@ export function ResultScreen() {
   const setAssist = useSettingsStore((s) => s.setAssist)
   const outcome = recap?.outcome ?? (runPhase === 'won' ? 'delivered' : runPhase === 'cashedOut' ? 'cashedOut' : 'lost')
   const c = recap?.contract ?? null
-  const co = c ? companyById(c.company) : null
+  const charter = !!c?.charter
+  const co = c?.company ? companyById(c.company) : null
+  const route = c ? routeOf(c) : null
+  const owned = useMetaStore((s) => s.sovereign.length)
   const depth = recap?.depth ?? Math.max(0, clearedNodeIds.length - 1)
   const deposit = recap?.deposit ?? 0
   const paidAll = c ? c.paid.reduce((a, b) => a + b, 0) : 0
@@ -45,15 +55,27 @@ export function ResultScreen() {
   // home in full; of the road's gold, only a share does.
   const home = recap?.home ?? null
   const interest = recap?.interest ?? 0
-  const dest = co?.towns[CITY_COUNT - 1] ?? 'the end of the road'
-  const town = co && c ? co.towns[Math.max(0, c.paid.length - 1)] : ''
+  const dest = route?.towns[CITY_COUNT - 1] ?? 'the end of the road'
+  const town = route && c ? route.towns[Math.max(0, c.paid.length - 1)] : ''
 
-  const eyebrow =
-    outcome === 'delivered' ? `${dest} · contract fulfilled` : outcome === 'cashedOut' ? `${town} · headed home` : co ? `${co.name} · contract lost` : 'Contract lost'
+  const eyebrow = charter
+    ? outcome === 'delivered'
+      ? `${dest} · the charter is paid`
+      : `${CHARTER_NAME} · charter lost`
+    : outcome === 'delivered'
+      ? `${dest} · contract fulfilled`
+      : outcome === 'cashedOut'
+        ? `${town} · headed home`
+        : co
+          ? `${co.name} · contract lost`
+          : 'Contract lost'
   const title = outcome === 'delivered' ? 'Delivered' : outcome === 'cashedOut' ? 'Cashed out' : 'The wagons fell'
   const lead = outcome === 'delivered' ? (c?.paid[CITY_COUNT - 1] ?? deposit) : deposit
-  const sub =
-    outcome === 'delivered'
+  const sub = charter
+    ? outcome === 'delivered'
+      ? `The ${CHARTER_NAME} paid ${paidAll.toLocaleString('en')} gold · ${(paidAll - CHARTER_FEE).toLocaleString('en')} after its ${CHARTER_FEE.toLocaleString('en')} fee.`
+      : `Raiders took the last of the cargo after ${depth} stop${depth === 1 ? '' : 's'}. The cities on this road pay nothing.`
+    : outcome === 'delivered'
       ? stake > 0
         ? `This contract paid ${paidAll} gold in all · ${paidAll - stake} profit after your stake.`
         : `This contract paid ${paidAll} gold in all.`
@@ -63,7 +85,7 @@ export function ResultScreen() {
 
   return (
     <ContractPage
-      className={`ct-result ${outcome}`}
+      className={`ct-result ${outcome}${charter ? ' charter' : ''}`}
       label={title}
       head={
         <div className="ct-result-head" role="status" aria-live="polite">
@@ -71,15 +93,16 @@ export function ResultScreen() {
           <h1 className="ct-title lg" tabIndex={-1}>
             {title}
           </h1>
-          {(outcome !== 'lost' || deposit > 0) && (
+          {charter && outcome === 'lost' && <p className="ct-fee-lost">The {CHARTER_FEE.toLocaleString('en')} gold fee is lost</p>}
+          {(outcome !== 'lost' || (deposit > 0 && !charter)) && (
             <p className="ct-big" aria-label={`${outcome === 'delivered' ? '' : 'banked '}${lead} gold`}>
-              <Coin scale={4} />+{lead} gold
+              <Coin scale={4} />+{lead.toLocaleString('en')} gold
             </p>
           )}
           <p className="ct-sub">{sub}</p>
           {home && (home.purseBack > 0 || home.road > 0) && (
             <p className="ct-sub ct-home">
-              Purse returned {home.purseBack} · Road gold {home.road} → {home.roadBanked} banked ({home.pct}%)
+              Purse returned {home.purseBack.toLocaleString('en')} · Road gold {home.road.toLocaleString('en')} → {home.roadBanked.toLocaleString('en')} banked ({home.pct}%)
             </p>
           )}
         </div>
@@ -96,22 +119,30 @@ export function ResultScreen() {
       {outcome === 'lost' && <DefeatReceipt />}
 
       {/* A delivery's first news is what it unlocked. */}
+      {charter && outcome === 'delivered' && recap?.progress && !recap.progress.unranked && (
+        <SovereignReveal kind={recap.progress.sovereign} owned={owned} of={SOVEREIGN_ITEM_KINDS.length} />
+      )}
       {recap?.progress && <UnlocksEarned progress={recap.progress} crates={c?.crates ?? 0} />}
       {recap?.progress && <StandingEarned progress={recap.progress} />}
 
-      {c && co && (
+      {c && route && (
         <Slip eyebrow="Banked · in gold" className="ct-receipt">
-          {c.paid.map((p, i) => (
-            <SlipLine key={co.towns[i]} label={co.towns[i]} note={c.cargoAt[i] != null && c.cargoAt[i] < 100 ? `at ${c.cargoAt[i]}% cargo` : undefined} value={<Gold n={p} />} />
-          ))}
+          {c.paid.map((p, i) =>
+            charter ? (
+              i === CITY_COUNT - 1 && <SlipLine key={route.towns[i]} label={route.towns[i]} note="the charter's payout" value={<Gold n={p} />} />
+            ) : (
+              <SlipLine key={route.towns[i]} label={route.towns[i]} note={c.cargoAt[i] != null && c.cargoAt[i] < 100 ? `at ${c.cargoAt[i]}% cargo` : undefined} value={<Gold n={p} />} />
+            ),
+          )}
           {c.cashOut > 0 && <SlipLine label="The last crates, sold cheap" value={<Gold n={c.cashOut} />} />}
           {home && home.purseBack > 0 && <SlipLine label="Purse returned" value={<Gold n={home.purseBack} />} />}
-          {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
+          {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road.toLocaleString('en')} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
-          <SlipLine total label="To your bank" value={`+${deposit} gold`} />
+          <SlipLine total label="To your bank" value={`+${deposit.toLocaleString('en')} gold`} />
 
-          {contractBanked(c) === 0 && outcome === 'lost' && <p className="ct-slip-note">No city was reached, so none paid.</p>}
+          {contractBanked(c) === 0 && outcome === 'lost' && !charter && <p className="ct-slip-note">No city was reached, so none paid.</p>}
+          {charter && outcome === 'lost' && <p className="ct-slip-note">The charter fee, {CHARTER_FEE.toLocaleString('en')} gold, was paid when you signed. A fall keeps none of it.</p>}
         </Slip>
       )}
 
@@ -154,7 +185,7 @@ export function ResultScreen() {
         <InfoCard
           lines={[
             `${recap.kills} felled · ${recap.enemiesLeaked} reached the wagons in the last wave · cargo ${recap.cargo}%`,
-            `${c ? stakeLine(c.crates) : ''} ${strengthText(recap.threat)} at the end`.trim(),
+            `${c ? stakeLine(c.crates, charter) : ''} ${strengthText(recap.threat)} at the end`.trim(),
             `Run seed ${recap.seed}${recap.challenge.kind === 'seeded' ? ' · custom seed' : ''} — the same seed deals the same map, loot and rolls.`,
           ]}
         />

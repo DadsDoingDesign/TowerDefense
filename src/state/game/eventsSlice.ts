@@ -8,6 +8,7 @@ import { canTrain, restAtCampfire, trainAtCampfire } from '../../game/run/campfi
 import { receiveItems, withRecruits } from '../../game/run/recruits'
 import { applyRewardCard } from '../../game/run/rewards'
 import { restockFree, shelfSize } from '../../game/run/relics'
+import { priceMultOf } from '../../game/run/charter'
 import { sfx, sfxRarity, sfxReward } from '../../audio/audio'
 import { CLEAR_SHELL } from './fresh'
 import { useMetaStore } from '../metaStore'
@@ -259,10 +260,11 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     const { merchant, gold, event, runMap, roster, lootPity, relics } = get()
     if (!merchant || event?.kind !== 'merchant') return
     // The Quartermaster's Seal makes the first restock at each stall free.
-    const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0)
+    const mult = priceMultOf(get().contract)
+    const cost = restockFree(relics, merchant.rerolls ?? 0) ? 0 : rerollCost(merchant.rerolls ?? 0, mult)
     if (gold < cost) return sfx('error')
     const node = runMap.nodes.find((n) => n.id === event.nodeId)
-    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics), kinds: get().itemPool })
+    const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node?.layer ?? 0), roster, pity: lootPity, size: shelfSize(relics), kinds: get().itemPool, priceMult: mult })
     sfx('coin')
     set({ gold: gold - cost, merchant: { ...merchant, items, rerolls: (merchant.rerolls ?? 0) + 1 } })
   },

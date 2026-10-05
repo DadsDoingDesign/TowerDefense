@@ -13,7 +13,8 @@ import { kitName } from '../../game/data/gear'
 import { cargoPct, cargoShare } from '../../game/run/contracts'
 import { heroLookArt } from './offers'
 import { CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
-import { GATE_REPAIR, rerollCost } from '../../game/run/economy'
+import { GATE_REPAIR, REROLL_STEP, rerollCost } from '../../game/run/economy'
+import { priceMultOf } from '../../game/run/charter'
 import { restockFree, shelfSize } from '../../game/run/relics'
 import type { useGameStore } from '../../state/gameStore'
 import type { Offer } from './offers'
@@ -110,7 +111,8 @@ export function merchantServiceOffers(st: St): Offer[] {
     })
   }
   // The Quartermaster's Seal makes the first restock at each stall free.
-  const cost = restockFree(st.relics, m.rerolls ?? 0) ? 0 : rerollCost(m.rerolls ?? 0)
+  const mult = priceMultOf(st.contract)
+  const cost = restockFree(st.relics, m.rerolls ?? 0) ? 0 : rerollCost(m.rerolls ?? 0, mult)
   out.push({
     id: 'merchant-reroll',
     title: 'Restock the shelf',
@@ -118,7 +120,7 @@ export function merchantServiceOffers(st: St): Offer[] {
     icon: 'loot',
     cost: { amount: cost, currency: 'gold' },
     dim: st.gold < cost,
-    body: [`The merchant lays out ${shelfSize(st.relics)} new items. Each restock here costs 15 gold more than the last.`],
+    body: [`The merchant lays out ${shelfSize(st.relics)} new items. Each restock here costs ${REROLL_STEP * mult} gold more than the last.`],
     action: {
       label: 'Restock',
       cost: { amount: cost, currency: 'gold' },

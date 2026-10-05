@@ -447,7 +447,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
         ...contract,
         paid: [...contract.paid, pay.total],
         cargoAt: [...contract.cargoAt, cargo],
-        pending: wonRun ? null : city,
+        // The Sovereign Route's cities are waypoints: nothing to cash out.
+        pending: wonRun || contract.charter ? null : city,
         status: wonRun ? 'delivered' : contract.status,
       }
     }

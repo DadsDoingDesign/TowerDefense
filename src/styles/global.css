@@ -89,6 +89,12 @@
   --co-metals: #5d8be2;
   --co-silk: #dba5b9;
   --co-scrolls: #e4e8f2;
+  /* The Sovereign tier and route (the endgame charter; trade/NOTES.md §
+     Palette): an electric aqua at ΔE2000 ≥ 20 from every rarity, company and
+     reserved hue, 9.7:1 on --panel-2. Always with its initial "S" or the
+     crown crest beside it. */
+  --sovereign: #38f2e8;
+  --sovereign-ink: #0b2423;
   /* The market-of-the-day tag: dark ink on a warm gold, 11.1:1. */
   --market: #f0c46a;
   --market-ink: #1b1409;

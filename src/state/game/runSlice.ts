@@ -24,6 +24,7 @@ import { soldText, stow } from '../../game/run/inventory'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
+import { encounterRulesOf, priceMultOf, routePrice } from '../../game/run/charter'
 import { contractStake, DEFAULT_PURSE, earn, freshContract, marketFor, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
@@ -38,15 +39,22 @@ import type { Slice } from './types'
 
 /** What a contract is signed on, before the run deals anything from it. */
 export interface ContractOrder {
-  company: CompanyId
+  /** The company whose road it is; null on the Sovereign Route. */
+  company: CompanyId | null
   crates: number
   purse: number
+  /** The Sovereign Route (the endgame charter, `run/charter.ts`). */
+  charter?: boolean
 }
 
-/** The route's ground, for every terrain read of this run (the node, the preview, the harness). */
-export const groundOf = (s: { contract: Pick<RunContract, 'company'> | null; firstRun: boolean }): GroundOpts => ({
+/**
+ * The route's ground, for every terrain read of this run (the node, the
+ * preview, the harness): its company's, or — on the Sovereign Route — every
+ * company's on every field.
+ */
+export const groundOf = (s: { contract: Pick<RunContract, 'company' | 'charter'> | null; firstRun: boolean }): GroundOpts => ({
   firstRun: s.firstRun,
-  ...(s.contract ? { ground: companyById(s.contract.company).ground.rules } : {}),
+  ...(s.contract?.charter ? { charter: true } : s.contract?.company ? { ground: companyById(s.contract.company).ground.rules } : {}),
 })
 
 /**
@@ -116,7 +124,13 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // The HQ's terms for this run (pack slots, cleared boulders, company focus)
     // are frozen on the contract now; its paid orders are spent at signing.
     const hq = useMetaStore.getState().runHq()
-    const contract = freshContract({ company: order.company, crates: order.crates, market: marketFor(order.company, utcDateKey()) }, order.purse, hq)
+    const charter = !!order.charter
+    const contract = freshContract(
+      { company: charter ? null : order.company, crates: order.crates, market: charter ? 1 : marketFor(order.company, utcDateKey()), ...(charter ? { charter } : {}) },
+      order.purse,
+      // The Sovereign Route deals for no company: no HQ focus either.
+      charter ? { ...hq, focus: null, boost: 0 } : hq,
+    )
     // The stake is the run's difficulty step: re-deal the map from the same
     // seed with its elites (a hash of the seed, never a draw — the map stream
     // is rewound, so an escort deals exactly the map an unstaked run did).
@@ -124,7 +138,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     streams.mapRng = streamRng(runSeed, 'map')
     const dealt = dealRunMap(rules, runSeed)
     // SK1: the run's pools are read once, here, weighted to the company.
-    const focus = { company: hq.focus, boost: hq.boost }
+    const focus = { company: contract.hq.focus, boost: contract.hq.boost }
     const skillPool = startingSkillPool(contract.company, focus)
     const itemPool = startingItemPool(contract.company, focus)
     skillRun.seed = runSeed
@@ -157,7 +171,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
 
   reseedRun: (input) => {
     const st = get()
-    if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge)) return false
+    // The Sovereign Route is never played on a chosen seed (`runTerms.seedEditable`).
+    if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge, !!st.contract.charter)) return false
     const seed = parseSeed(input)
     if (seed === null) return false
     const { company, crates, purse } = st.contract
@@ -168,8 +183,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   randomizeRunSeed: () => {
     const st = get()
     if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge)) return false
-    const { company, crates, purse } = st.contract
-    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company, crates, purse })
+    const { company, crates, purse, charter } = st.contract
+    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company, crates, purse, ...(charter ? { charter } : {}) })
     return true
   },
 
@@ -177,7 +192,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // The end screen's second door (M15): back to the board with the last
     // contract's terms set, one tap from signing another.
     const last = get().contract
-    get().openContracts(last ? { company: last.company, crates: last.crates, purse: last.purse } : undefined)
+    // After a Sovereign Route, the board opens on its default company.
+    get().openContracts(last?.company ? { company: last.company, crates: last.crates, purse: last.purse } : undefined)
   },
 
   pickStartingHero: (choiceId) => {
@@ -238,8 +254,9 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     session.ownsRun = false
     const c = st.contract
     set(leaveToHub())
-    // Back to the terms it came from — a first-timer's free escort has none.
-    if (c && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates, purse: c.purse }, 'terms')
+    // Back to the terms it came from — a first-timer's free escort has none,
+    // and the Sovereign Route's are on the menu's charter page.
+    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates, purse: c.purse }, 'terms')
   },
 
   // ---- run snapshot (C3) ----
@@ -367,13 +384,22 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       // An OFFER: `rollMerchantShelf` rolls with the drought's luck but leaves
       // the pity counter alone; `buyMerchantItem` charges it on the sale (F4).
       const relics = get().relics
-      const items = rollMerchantShelf(streams.rng, { luck: merchantLuck(node.layer), roster, pity: lootPity, size: shelfSize(relics), kinds: get().itemPool })
+      // The road's prices: the Sovereign Route's merchants charge double (Rosethread's trade-off).
+      const contract = get().contract
+      const items = rollMerchantShelf(streams.rng, {
+        luck: merchantLuck(node.layer),
+        roster,
+        pity: lootPity,
+        size: shelfSize(relics),
+        kinds: get().itemPool,
+        priceMult: priceMultOf(contract),
+      })
       const recruit =
         roster.length < MAX_ROSTER
-          ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: RECRUIT_PRICE }
+          ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: routePrice(RECRUIT_PRICE, contract) }
           : null
       // The wagon repair is on every counter (Phase 3b): the comeback.
-      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR }, rerolls: 0 } })
+      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
       return
     }
     if (node.type === 'campfire') {
@@ -391,7 +417,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
 
     // Battle / elite / boss. The composition variant is seeded on (run seed,
     // layer, row) (WS8); a stake's extra elites are real elite NODES on the map.
-    const wave = nodeEncounter(encounterNode(node), get().runSeed)!
+    // The Sovereign Route musters every goblin clan from the first fight.
+    const wave = nodeEncounter(encounterNode(node), get().runSeed, encounterRulesOf(get().contract))!
     const { baseHp, maxBaseHp } = get()
     // The battle's orientation is chosen HERE, once (Portrait battlefields).
     // Its map challenge is the node's own on this ROUTE's ground (the

@@ -12,8 +12,7 @@ import { hiresTrained } from '../../game/run/relics'
 import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
 import { recruitSkill } from '../../game/run/skills'
 import { skillPoolFor } from '../../game/run/watch'
-import { itemPoolFor } from '../../game/data/itemKinds'
-import { kindCompany, skillCompany, weightPool } from '../../game/run/contracts'
+import { runItemPool, skillCompany, weightPool } from '../../game/run/contracts'
 import type { CompanyId } from '../../game/data/companies'
 
 /**
@@ -59,10 +58,11 @@ export const startingSkillPool = (company: CompanyId | null, focus?: RunFocus): 
 /**
  * The classless rework: the item KINDS a run beginning now deals from — the
  * basic five plus the player's unlocked kinds, weighted to the route's
- * company. Read once, kept on the run (`itemPool`), like the skill pool.
+ * company, and any Sovereign kind owned at its low weight (`contracts.runItemPool`).
+ * Read once, kept on the run (`itemPool`), like the skill pool.
  */
 export const startingItemPool = (company: CompanyId | null, focus?: RunFocus): string[] =>
-  weightPool(itemPoolFor(useMetaStore.getState().items ?? []), company, kindCompany, focus)
+  runItemPool([...(useMetaStore.getState().items ?? []), ...(useMetaStore.getState().sovereign ?? [])], company, focus)
 
 /** The HQ's company focus as a run carries it (`RunHq.focus` / `boost`). */
 export type RunFocus = { company: CompanyId | null; boost: number } | null

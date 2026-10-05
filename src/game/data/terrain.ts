@@ -365,6 +365,22 @@ export const TERRAIN_RULES: Record<TerrainRuleId, TerrainRule> = {
     name: 'Cursed ground',
     blurb: 'More of the best ground near the road is cursed.',
   },
+  sovereign: {
+    id: 'sovereign',
+    name: 'Sovereign ground',
+    blurb: 'Fire, lakes, more boulders and more cursed ground, all on one field.',
+  },
+}
+
+/**
+ * The challenges a composite one lays together: the Sovereign Route's ground
+ * is every company's (`run/charter.ts`). A field's authored pieces for each
+ * are laid in this order, and each one's seeded boost is added
+ * (`hazards.ROUTE_HAZARDS`).
+ */
+export const COMPOSITE_RULES: Partial<Record<TerrainRuleId, readonly TerrainRuleId[]>> = {
+  // The fire first, so where a burning patch and a lake meet, the lake keeps its shape.
+  sovereign: ['wildfire', 'flooded', 'quarry', 'hexed'],
 }
 
 export const TERRAIN_RULE_IDS = Object.keys(TERRAIN_RULES) as TerrainRuleId[]

@@ -9,8 +9,12 @@
  */
 import type { RunChallenge, RunKind } from './seeds'
 
-/** Any contract's seed can be typed over on the hero pick (the old Daily's could not). */
-export const seedEditable = (_c: RunChallenge): boolean => true
+/**
+ * Any contract's seed can be typed over on the hero pick (the old Daily's
+ * could not) — except the Sovereign Route's: its payout is too big to hand to
+ * a seed someone already knows.
+ */
+export const seedEditable = (_c: RunChallenge, charter = false): boolean => !charter
 
 export interface RunTerms {
   kind: RunKind
@@ -27,7 +31,16 @@ export interface RunTerms {
   lines: string[]
 }
 
-export function runTerms(c: RunChallenge, seed: number): RunTerms {
+export function runTerms(c: RunChallenge, seed: number, charter = false): RunTerms {
+  if (charter) {
+    return {
+      kind: c.kind,
+      seedLabel: `Seed ${seed}`,
+      seedName: `Seed ${seed}, random. The Sovereign Route is always dealt a random seed`,
+      editable: false,
+      lines: [],
+    }
+  }
   if (c.kind === 'seeded') {
     return {
       kind: c.kind,

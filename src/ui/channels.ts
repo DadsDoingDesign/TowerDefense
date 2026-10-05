@@ -118,6 +118,17 @@ export const moneyText = (amount: number, _c: Currency = 'gold'): string => `${a
  */
 export const companyVar = (id: CompanyId): string => `var(--co-${id})`
 
+/**
+ * The Sovereign tier and the Sovereign Route (the endgame charter): one cyan
+ * (`--sovereign`, `charter.SOVEREIGN_COLOR`), its initial and its name — a
+ * fill and a light like a company's colour, never body text on its own.
+ */
+export const SOVEREIGN_VAR = 'var(--sovereign)'
+export { SOVEREIGN_INITIAL, SOVEREIGN_TIER } from '../game/run/charter'
+
+/** A contract's colour token: its company's, or the Sovereign cyan on the Sovereign Route. */
+export const routeVar = (company: CompanyId | null): string => (company ? companyVar(company) : SOVEREIGN_VAR)
+
 /** The bank and the purse, said once where they are first explained (LS4). */
 export const BANK_INTRO = 'Gold you bring home goes in the bank. Stakes and purses come out of it.'
 
@@ -347,6 +358,12 @@ export const markLabel = (k: IconKey | null | undefined): string => (k ? (ICON_L
 const NOUN_RE = ITEM_NOUN_RE
 
 const NOUN_ICON: Record<string, IconKey> = {
+  // The Sovereign tier draws as its everyday cousin; the cyan tier mark says the rest.
+  'Saffron Brand': 'blade',
+  'Moonquill Codex': 'grimoire',
+  'Gilded Easel': 'shield',
+  'Ironheart Plate': 'plate',
+  'Silkwind Cloak': 'cloth',
   Greatsword: 'greatblade',
   Sword: 'blade',
   Axe: 'axe',
@@ -750,5 +767,10 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   crates: {
     term: 'Sealed crate',
     line: 'Gold for one random item kind, yours for good. One you already own comes as a bonus item in your next contract.',
+  },
+  sovereign: {
+    term: 'Sovereign Route',
+    line: 'The endgame charter: your own road, sponsored from your bank. It opens once every skill and item is unlocked. Every company sets a condition, there is no city pay, and a fall loses the fee. Delivered, it pays a fortune and a Sovereign item.',
+    also: [{ term: 'Sovereign tier', line: 'The top tier of items, marked S in cyan. Each one unlocks only by delivering a Sovereign Route; once yours, it turns up now and then on every road.' }],
   },
 }
