@@ -20,7 +20,8 @@ import type { Offer } from './offers'
  *   ⚔ Sword · ⛨ Shield · ▣ Mail        ← each KIND, rarity on its own rail
  *   SKILL Quick Hands — Attacks 15% faster.
  *
- * A column of three compact cards on a phone, three columns on a wide screen.
+ * Three compact rows, on a phone and on a desk alike (the page is a ~560px
+ * column there too, where three columns broke every line into two words).
  * Each card is ONE button: its accessible name is everything printed on it,
  * so a screen-reader user compares the same facts a sighted one does.
  */

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { lookVar } from '../channels'
-import { kitName } from '../../game/data/gear'
+import { kitName, weaponName } from '../../game/data/gear'
 import { lookOf } from '../../game/data/gear'
 import { heroLookArt } from './offers'
 import { computeCombat } from '../../game/engine/combat'
@@ -188,7 +188,7 @@ function PartyCards() {
             </span>
             <span className="sh-hero-name">{s.name}</span>
             <span className="sh-hero-sub">
-              {kitName(s)} · {s.level}
+              {weaponName(s)} · {s.level}
             </span>
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />

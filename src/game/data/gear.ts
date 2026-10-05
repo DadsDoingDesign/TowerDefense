@@ -93,3 +93,9 @@ export function kitName(hero: Pick<Sentinel, 'equipment'>): string {
   const parts = [mainHand, offHand].filter((i): i is Item => !!i).map((i) => itemNoun(i) ?? 'Gear')
   return parts.length ? parts.join(' & ') : 'Unarmed'
 }
+
+/** The weapon a hero fights with, as one word ("Sword", "Bow"), or "Unarmed" — a roster card's sub-line. */
+export function weaponName(hero: Pick<Sentinel, 'equipment'>): string {
+  const w = styleWeapon(hero)
+  return w ? (itemNoun(w) ?? 'Weapon') : 'Unarmed'
+}
