@@ -52,7 +52,8 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
-import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, CRATE_PRICE, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractStake, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
@@ -308,7 +309,14 @@ export interface SimOptions {
    * road every route used to share, unweighted — exactly the run this model
    * always played.
    */
-  contract?: { company: CompanyId; crates: number }
+  contract?: { company: CompanyId | null; crates: number; charter?: boolean }
+  /**
+   * The Sovereign Route's trade-offs, one switch each (all on by default on a
+   * charter): its ground on every fight, the merchants' double prices, and
+   * the muster of every goblin clan. §18 turns them off one at a time to
+   * price each.
+   */
+  charterParts?: { ground?: boolean; prices?: boolean; muster?: boolean }
   /**
    * The skill pool the run deals from (SK1). Default: the nine starters — a
    * zero-meta player has unlocked nothing.
@@ -373,8 +381,9 @@ export interface RunOutcome {
    * gold left when the run ended. `contractNet` turns it into the bank's net.
    */
   contract: null | {
-    company: CompanyId
+    company: CompanyId | null
     crates: number
+    charter?: boolean
     purse: number
     cities: { pay: number; cargo: number; gold: number; earned: number }[]
     goldEnd: number
@@ -435,12 +444,20 @@ export function modelledPick(seed: number, skillPool: readonly string[], itemPoo
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   const meta = o.meta ?? ZERO_META
   const k = o.contract ?? null
-  const banner = k ? stakeRules(k.crates) : (o.difficulty ?? difficultyRules(0))
+  const charter = !!k?.charter
+  const parts = { ground: true, prices: true, muster: true, ...o.charterParts }
+  const banner = k ? stakeRules(charter ? 0 : k.crates) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
-  // A contract weights its company's pieces on its own road (`weightPool`), as the store does.
-  const pool = weightPool(o.skillPool ?? STARTER_SKILL_POOL, k?.company, skillCompany, meta.focus)
-  const items = weightPool(o.itemPool ?? BASIC_ITEM_KINDS, k?.company, kindCompany, meta.focus)
-  const ground = k ? { ground: companyById(k.company).ground.rules } : {}
+  // A contract weights its company's pieces on its own road (`weightPool`), as
+  // the store does; the Sovereign Route deals for no company and no focus, and
+  // any owned Sovereign kind at its low weight (`contracts.runItemPool`).
+  const focus = charter ? null : meta.focus
+  const pool = weightPool(o.skillPool ?? STARTER_SKILL_POOL, k?.company, skillCompany, focus)
+  const items = sovereignPool(weightPool(o.itemPool ?? BASIC_ITEM_KINDS, k?.company, kindCompany, focus))
+  const ground = charter ? (parts.ground ? { charter: true } : {}) : k?.company ? { ground: companyById(k.company).ground.rules } : {}
+  // Rosethread's trade-off: every merchant price doubles on the Sovereign Route.
+  const price = (n: number) => (charter && parts.prices ? routePrice(n, { company: null, charter: true }) : n)
+  const muster = charter && parts.muster
   const cities: { pay: number; cargo: number; gold: number; earned: number }[] = []
   /** A body joining the company: a random hire from the run's kinds, named apart. */
   const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
@@ -549,8 +566,8 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       // plus a hire at 80g.
       const luck = Math.min(0.4, node.layer * 0.04)
       // The counter's Gate repair, bought when the Gate is hurting (Phase 3b).
-      if (baseHp <= meta.maxBaseHp * 0.65 && gold >= GATE_REPAIR.price) {
-        gold -= GATE_REPAIR.price
+      if (baseHp <= meta.maxBaseHp * 0.65 && gold >= price(GATE_REPAIR.price)) {
+        gold -= price(GATE_REPAIR.price)
         baseHp = repairGate(baseHp, meta.maxBaseHp)
       }
       const stock = Array.from({ length: shelfSize(relics) }, () =>
@@ -559,20 +576,20 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       for (let pass = 0; pass < 4; pass++) {
         let best: { item: Item; gain: number; hero: number } | null = null
         for (const it of stock) {
-          if (ITEM_PRICE[it.rarity] > gold) continue
+          if (price(ITEM_PRICE[it.rarity]) > gold) continue
           for (let h = 0; h < roster.length; h++) {
             const g = bestSlotGain(roster[h], it, rules())
             if (g > 0 && (!best || g > best.gain)) best = { item: it, gain: g, hero: h }
           }
         }
         if (!best) break
-        gold -= ITEM_PRICE[best.item.rarity]
+        gold -= price(ITEM_PRICE[best.item.rarity])
         stock.splice(stock.indexOf(best.item), 1)
         equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
       }
-      if (roster.length < MAX_ROSTER && gold >= RECRUIT_PRICE) {
-        gold -= RECRUIT_PRICE
+      if (roster.length < MAX_ROSTER && gold >= price(RECRUIT_PRICE)) {
+        gold -= price(RECRUIT_PRICE)
         hire()
       }
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
@@ -668,6 +685,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       tactics: o.focus ? { focus: o.focus } : undefined,
       rules: o.rules,
       subWaves: o.subWaves,
+      muster,
     })
     o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
     baseHp = m.baseHpLeft
@@ -680,7 +698,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     if (k && city != null && (node.type === 'miniboss' || node.type === 'boss')) {
       const cargo = cargoPct(baseHp, meta.maxBaseHp)
       const fight = m.goldEarned + clearBonusGold(node)
-      cities.push({ pay: cityPay({ company: k.company, crates: k.crates, market: 1 }, city, cargo).total, cargo, gold: gold + fight, earned: earned + fight })
+      cities.push({ pay: cityPay({ company: k.company, crates: k.crates, market: 1, charter }, city, cargo).total, cargo, gold: gold + fight, earned: earned + fight })
     }
     if (final) { won = true; break }
 
@@ -790,7 +808,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     roster: roster.length,
     bossThreat,
     marks: marksFor(clearedCount, won, banner, meta.markMult),
-    contract: k ? { company: k.company, crates: k.crates, purse: meta.startGold, cities, goldEnd: gold, earned } : null,
+    contract: k ? { company: k.company, crates: charter ? 0 : k.crates, ...(charter ? { charter } : {}), purse: meta.startGold, cities, goldEnd: gold, earned } : null,
     layers: map.layers,
     fieldId: field.id,
     starter: starterLook,
@@ -829,7 +847,8 @@ export const CASH_OUT_HALF: CashOutPolicy = { id: 'cash-half', label: 'cash out 
 export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): { net: number; pay: number; delivered: boolean; cashedOut: boolean } {
   const c = out.contract
   if (!c) return { net: 0, pay: 0, delivered: out.won, cashedOut: false }
-  const stake = c.crates * CRATE_PRICE
+  // What signing cost the bank: the stake, or the Sovereign Route's fee.
+  const stake = contractStake(c)
   const outlay = stake + c.purse
   // What the purse brings home: its rest in full, a share of the road's gold.
   const home = (gold: number, earned: number) => homeTotal(homeGold({ purse: c.purse, earned, gold }))
@@ -838,7 +857,8 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
     const city = c.cities[i]
     paid += city.pay
     const last = i === CITY_COUNT - 1
-    if (!last && city.cargo < policy.below) {
+    // The Sovereign Route cannot be cashed out: all or nothing.
+    if (!last && city.cargo < policy.below && !c.charter) {
       const sale = cashOutValue({ company: c.company, crates: c.crates, market: 1 }, i + 1, city.cargo)
       return { net: paid + sale + home(city.gold, city.earned) - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
     }

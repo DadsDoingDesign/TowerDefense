@@ -1,5 +1,18 @@
 # Fieldwatch — next steps (paused 2026-09-30)
 
+## Update 2026-10-05: the mercenary company, step 5 (the Sovereign Route)
+
+The endgame charter is built (`docs/MERCENARY_COMPANY.md` § Built in step 5): the **Sovereign Route** opens once every
+skill card and every Level 1–3 item kind is unlocked; a 5,000 gold fee, all or nothing (waypoint cities, no cash-out, a
+fall loses the fee), 20,000 gold and one **Sovereign** item (Level 4, cyan, "S") on delivery. Five trade-offs at once
+(fire, lakes, quarry boulders and cursed ground on every fight; merchants charge double), every goblin clan from the
+first fight, pools dealt for no company. Rules `src/game/run/charter.ts`; page `src/ui/shell/charter/`; meta v10, run
+snapshot v17. `standing.charterProgress` is retired for `charter.charterDoor`. Balance §18 measures it (not tuned): a
+late-game company delivers it about 23% of the time against a 25% break-even.
+
+Open for the designer: the fee and payout (EV is about break-even today); whether the muster should stay (it measured
+as no cost); whether a charter should earn standing; a purse picker on the charter page (it takes the default purse).
+
 ## Update 2026-10-05: the mercenary company, step 4 (trade-map menu, militia banner)
 
 Built in parallel with step 3 (the HQ offices and the item pull), per `docs/MERCENARY_COMPANY.md` § Build order

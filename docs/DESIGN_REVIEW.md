@@ -2863,3 +2863,36 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   readability 4/5 (Operations is four cards on a phone, one scroll),
   hierarchy 4/5, polish 4/5. Still open: the pick of four scrolls on a
   phone; the militia name and banner on the HQ head are step 4's.
+- **2026-10-05 — The mercenary company, step 5: the Sovereign Route (the
+  endgame charter).** Built from the approved mockups `trade/r3/9-charter-
+  locked.png` and `9-charter-open.png`: the menu's charter line (a cyan meter
+  and "Opens when every skill and item is unlocked", or, open, the crown crest
+  and the fee), the charter page (locked: the meter with its two parts; open:
+  the three terms, the five companies' conditions one line each, the
+  Sovereign unlock with the kinds still to win, the road's terms, the fee on
+  the CTA), the in-run marker (a cyan route panel — waypoints, "only
+  Highcharter pays 20,000" — and a SOVEREIGN chip in the header), the result
+  (the payout leads, then the Sovereign item as its own cyan card; a fall
+  says "The 5,000 gold fee is lost" under the title) and the Collection's
+  Sovereign group. Rendered in the running app at 390×844 @2x and 1440×900
+  @2x (`~/fieldwatch-critique/charter/final-*`). The loop caught: (1) the
+  terms row's 5,000 and 20,000 were caught by a label rule and drawn small
+  and muted — the rule is scoped to the label now; (2) the trade-off lines
+  wrapped to two lines on a phone — each is one short line now ("Fire covers
+  part of every field."); (3) "where every price is ×2" said Rosethread's
+  rule twice — gone; (4) the Sovereign unlock sat below the road's terms,
+  under the fold — it comes first now, and the finish cell says "+ a S item";
+  (5) the disabled "Opens at 100%" kept the teal CTA edge — it is a plain
+  panel now; (6) where a burning patch met a lake the fire drew over the
+  water — lakes are laid last; (7) Collection names broke mid-word under a
+  long "Weapon · Sovereign" sub — the sub is "Yours"; (8) the run map's
+  route line wrapped and covered the first map row — shortened; (9) the
+  receipt's 21911 and 5406 had no separators — they do now; (10) the
+  merchant said nothing of the doubled prices — its board says so on this
+  road. Benchmark: the page reads like a Hades Pact of Punishment card set
+  laid out as a contract — every condition one line, the reward and the risk
+  above them; the reveal is Balatro's voucher moment in the tier's colour.
+  Scorecard: readability 4/5 (the open page scrolls on a phone below the
+  conditions), hierarchy 4/5, polish 4/5. Balance §18 (not tuned): a
+  late-game company delivers 23% (27% with every Sovereign item) against a
+  25% break-even; the fee is about 7.6 good runs.

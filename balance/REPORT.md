@@ -1216,6 +1216,42 @@ difficulty on the live engine.
 
 **The gates.** Path length within ±0.5%, the same slot ids, every slot's coverage within 2% at 96 / 150 / 168px, and on the battery a stop rate within 3pt and Gate HP lost within ±5% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.
 
+## 18. The Sovereign Route (the endgame charter)
+
+**What it is.** The endgame charter (`run/charter.ts`): it opens once every skill card and every Level 1–3 item kind is
+unlocked. A **5,000 gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the
+destination pays **20,000 gold** whatever the cargo, and one Sovereign item kind unlocks. It deals every pool the
+player owns for no company (no route weighting, no HQ focus), and every company sets a condition at once:
+
+- **Peppercorn Co.: Wildfire on every field.** Fire covers part of every field.
+- **Easel House: The canals flood.** Lakes cover some of the best ground.
+- **Ironvein: Quarry boulders.** 4 more boulders a field. They can’t be cleared.
+- **Rosethread: Merchants charge double.** Every merchant price is twice as much.
+- **Moonquill: More cursed ground.** 2 more cursed patches on every field.
+- And every goblin clan marches from the first fight (the muster).
+
+**The company.** A strong late-game militia: every skill card a contract can unlock (36, feat cards aside), every Level 1–3
+item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3, the scouts) — the save that
+opens the door. The adaptive route, 210 runs a row on the paired seeds of §12–§13.
+
+| Road | Delivered | Bank net a run (gold) |
+|---|--:|--:|
+| Escort on Rosethread's road (for scale) | 27% | 603 |
+| 4 crates on Rosethread's road (a good run, for scale) | 20% | 658 |
+| **Sovereign Route** · no Sovereign item owned | 23% | 80 |
+| **Sovereign Route** · all five Sovereign items owned | 27% | 838 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 28% | 942 |
+| Sovereign Route without Rosethread's double prices | 27% | 813 |
+| Sovereign Route without the muster (the usual clan ramp) | 23% | −13 |
+
+**The charter's delivery rate for this company: 23%** (27% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 25% delivery rate; measured, a charter is worth **+80 gold** to the bank on average (the fee, the purse and the road's share included).
+
+**The fee against savings.** The same company banks 603 gold net from an escort and 658 from a 4-crate contract (cash-out line), so the 5,000 fee is about **7.6 good runs** of savings.
+
+**Each condition, lifted one at a time** (delivery against the full charter's 23%): without the ground 28% (+4.3pt), without the double prices 27% (+3.3pt), without the muster 23% (−0.5pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+
+_Not tuned. The fee, the payout and the conditions are the designer's to set; this section exists so the tuning pass starts from a number._
+
 ## Verdict
 
 ❌ **50 balance issue(s) detected:**

@@ -34,7 +34,8 @@ if (process.env.FW_HAZARDS) {
 }
 import { classicHero } from '../src/game/data/sentinels'
 import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
-import { BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { CHARTER_FEE, CHARTER_PAYOUT, TRADE_OFFS } from '../src/game/run/charter'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
@@ -3402,6 +3403,72 @@ if (want(17)) {
   line('')
   line(`**The gates.** Path length within ±${(TWIN_MAX_LENGTH_DIFF * 100).toFixed(1)}%, the same slot ids, every slot's coverage within ${(TWIN_MAX_COVERAGE_DIFF * 100).toFixed(0)}% at ${TWIN_RANGES.join(' / ')}px, and on the battery a stop rate within ${(TWIN_MAX_STOP_DIFF * 100).toFixed(0)}pt and Gate HP lost within ±${(TWIN_MAX_LEAK_DIFF * 100).toFixed(0)}% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.`)
   line('')
+}
+
+// -------------------------------------------------------------- Sweep 18
+if (want(18)) {
+  // The Sovereign Route (the endgame charter, build step 5): how often a strong
+  // late-game company delivers it, what it is worth to the bank, and what each
+  // company's trade-off costs. Reported, not gated: the fee and the payout are
+  // placeholders the tuning pass owns.
+  line('## 18. The Sovereign Route (the endgame charter)')
+  line('')
+  line(`**What it is.** The endgame charter (\`run/charter.ts\`): it opens once every skill card and every Level 1–3 item kind is`)
+  line(`unlocked. A **${CHARTER_FEE.toLocaleString('en')} gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the`)
+  line(`destination pays **${CHARTER_PAYOUT.toLocaleString('en')} gold** whatever the cargo, and one Sovereign item kind unlocks. It deals every pool the`)
+  line('player owns for no company (no route weighting, no HQ focus), and every company sets a condition at once:')
+  line('')
+  for (const t of TRADE_OFFS) line(`- **${COMPANIES.find((c) => c.id === t.company)!.name}: ${t.rule}.** ${t.line}`)
+  line('- And every goblin clan marches from the first fight (the muster).')
+  line('')
+  const LATE_HQ = { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }
+  const late = loadoutFor('late game', { upgrades: LATE_HQ })
+  const lateSkills = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
+  const lateItems = [...ALL_ITEM_KINDS]
+  const lateOwned = [...ALL_ITEM_KINDS, ...SOVEREIGN_ITEM_KINDS]
+  const CH_POLICY = POLICIES[policyIdx('adaptive')]
+  line(`**The company.** A strong late-game militia: every skill card a contract can unlock (${lateSkills.length}, feat cards aside), every Level 1–3`)
+  line('item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3, the scouts) — the save that')
+  line(`opens the door. The adaptive route, ${HUB_RUNS} runs a row on the paired seeds of §12–§13.`)
+  line('')
+  interface ChRow { label: string; won: number; net: number }
+  const chRows: ChRow[] = []
+  const measure = (label: string, o: Parameters<typeof simulateRun>[2]) => {
+    const won: number[] = []
+    const net: number[] = []
+    for (let i = 0; i < HUB_RUNS; i++) {
+      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta: late, policy: CH_POLICY, skillPool: lateSkills, itemPool: lateItems, ...o })
+      const x = contractNet(r, o?.contract?.charter ? PRESS_ON : CASH_OUT_HALF)
+      won.push(r.won ? 1 : 0)
+      net.push(x.net)
+    }
+    const row = { label, won: mean(won), net: mean(net) }
+    chRows.push(row)
+    return row
+  }
+  const escort = measure("Escort on Rosethread's road (for scale)", { contract: { company: 'silk', crates: 0 } })
+  const staked = measure("4 crates on Rosethread's road (a good run, for scale)", { contract: { company: 'silk', crates: 4 } })
+  const charter = { company: null, crates: 0, charter: true } as const
+  const none = measure('**Sovereign Route** · no Sovereign item owned', { contract: charter })
+  const all = measure('**Sovereign Route** · all five Sovereign items owned', { contract: charter, itemPool: lateOwned })
+  const noGround = measure('Sovereign Route without its ground (fire, lakes, boulders, curses)', { contract: charter, charterParts: { ground: false } })
+  const noPrices = measure("Sovereign Route without Rosethread's double prices", { contract: charter, charterParts: { prices: false } })
+  const noMuster = measure('Sovereign Route without the muster (the usual clan ramp)', { contract: charter, charterParts: { muster: false } })
+  line('| Road | Delivered | Bank net a run (gold) |')
+  line('|---|--:|--:|')
+  for (const r of chRows) line(`| ${r.label} | ${pct(r.won)} | ${r.net >= 0 ? '' : '−'}${Math.abs(r.net).toFixed(0)} |`)
+  line('')
+  const breakEven = CHARTER_FEE / CHARTER_PAYOUT
+  const goodRuns = staked.net > 0 ? CHARTER_FEE / staked.net : NaN
+  line(`**The charter's delivery rate for this company: ${pct(none.won)}** (${pct(all.won)} once all five Sovereign items are owned). The payout is ${(CHARTER_PAYOUT / CHARTER_FEE).toFixed(0)}× the fee, so the charter breaks even at a ${pct(breakEven)} delivery rate; measured, a charter is worth **${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} gold** to the bank on average (the fee, the purse and the road's share included).`)
+  line('')
+  line(`**The fee against savings.** The same company banks ${escort.net.toFixed(0)} gold net from an escort and ${staked.net.toFixed(0)} from a 4-crate contract (cash-out line), so the ${CHARTER_FEE.toLocaleString('en')} fee is about **${Number.isFinite(goodRuns) ? goodRuns.toFixed(1) : '—'} good runs** of savings.`)
+  line('')
+  line(`**Each condition, lifted one at a time** (delivery against the full charter's ${pct(none.won)}): without the ground ${pct(noGround.won)} (${pp(noGround.won - none.won)}), without the double prices ${pct(noPrices.won)} (${pp(noPrices.won - none.won)}), without the muster ${pct(noMuster.won)} (${pp(noMuster.won - none.won)}). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at ${HUB_RUNS} runs a row the paired noise is several points, so read the signs, not the decimals.`)
+  line('')
+  line('_Not tuned. The fee, the payout and the conditions are the designer\'s to set; this section exists so the tuning pass starts from a number._')
+  line('')
+  summary.push(`Sovereign Route (late-game company): delivered ${pct(none.won)} (all five Sovereign items ${pct(all.won)}), bank net ${none.net.toFixed(0)} a charter; break-even ${pct(breakEven)}; lifting each: ground ${pp(noGround.won - none.won)}, prices ${pp(noPrices.won - none.won)}, muster ${pp(noMuster.won - none.won)}`)
 }
 
 // -------------------------------------------------------------- Summary

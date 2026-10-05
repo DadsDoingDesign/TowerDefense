@@ -569,6 +569,8 @@ export interface RunBattleOptions {
   rules?: Partial<EngineRules>
   /** `false`: generate the node as one continuous wave (the pre-3a shape; see `BENCH_RULES`). */
   subWaves?: boolean
+  /** The Sovereign Route's muster: every goblin clan from the first fight (`waves` `muster`). */
+  muster?: boolean
   /**
    * G1-2: ignore the team's `slotId`s and post the company the way a competent
    * player does on the tile grid ({@link deployTeam}). Every "the modelled
@@ -638,6 +640,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
       sibling: opts.variantSibling,
       variantId: opts.variantId,
       subWaves: opts.subWaves,
+      muster: opts.muster,
     })
   if (opts.pressure != null && opts.pressure !== 1) wave = scaleWave(wave, opts.pressure, opts.pressureModel)
   const engine = new GameEngine({

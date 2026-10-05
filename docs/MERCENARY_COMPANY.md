@@ -46,6 +46,23 @@ You run a private militia hired by trade companies to clear their trade routes o
 - **The only source of the top item tier.** Each top-tier item unlocks by completing a charter.
 - The route spawns **every item and enemy**. Each company imposes a **trade-off** you must handle; one constraint per company is proposed.
 
+### Built in step 5: the Sovereign Route
+Rules: `src/game/run/charter.ts`. Screens: `src/ui/shell/charter/` (the page), the menu line, the route panel and header chip in the run, the result screen. Every number is a placeholder for the tuning pass (REPORT §18 measures them).
+- **Name:** the **Sovereign Route**. Its top tier is **Sovereign** (item Level 4), cyan `#38f2e8`, initial **S**.
+- **The door:** every random skill card and every item kind of Levels 1–3 unlocked (`charterDoor`). Standing and the HQ do not count; feat cards follow their feats and are not in it. The menu shows the meter and "Opens when every skill and item is unlocked"; the page shows its two parts.
+- **The contract:** a **5,000 gold** fee from the bank (paid when the hero is committed, as a stake is). No crates, no market, no company. The three cities (Freemark, Crownwater, Highcharter) are waypoints that pay nothing, there is no cash-out, and a fall loses the fee (the purse still comes home as on any road). Delivered, Highcharter pays **20,000 gold** whatever the cargo, and one Sovereign kind still locked unlocks. A charter is always dealt a random seed.
+- **Every good, every raider:** the run deals from every pool you own with no company weighting and no HQ focus; every goblin clan marches from the first fight (`waves` `muster`; the teaching ramp is lifted).
+- **The five trade-offs, all at once:**
+  - Peppercorn Co.: **Wildfire on every field.** Fire covers part of every field.
+  - Easel House: **The canals flood.** Lakes cover some of the best ground.
+  - Ironvein: **Quarry boulders.** 4 more boulders a field. They can't be cleared.
+  - Rosethread: **Merchants charge double.** Every merchant price is twice as much.
+  - Moonquill: **More cursed ground.** 2 more cursed patches on every field.
+
+  The four ground rules are one map challenge, `sovereign` (`data/terrain.COMPOSITE_RULES`), laid on every fight including the first and the bosses.
+- **The Sovereign tier** (`data/itemKinds.ts`): Saffron Brand (Peppercorn, one-hand sword: every hit burns 20 a second for 3 seconds), Gilded Easel (Easel House, off-hand shield: holds 4), Ironheart Plate (Ironvein, body: +15% damage), Silkwind Cloak (Rosethread, body: +15% attack speed), Moonquill Codex (Moonquill, two-hand caster: jumps to 2 more enemies). Once owned, each is dealt in loot, at merchants and on rolled heroes at a quarter of an ordinary kind's weight; sealed crates never deal one.
+- **Saves:** meta v10 (`sovereign`, `charters`), run snapshot v17 (a charter contract, validated). Dev handle: `window.__charter.ready()`, `.fund(n)`, `.own(n)`.
+
 ## Removed
 - **Endless mode:** removed for now.
 - **The Daily:** replaced by the charter.
@@ -94,5 +111,5 @@ Rules: `src/game/run/hq.ts`. Screens: `src/ui/shell/hq/`. Every price is a place
 2. The economy core: gold only, purse/bank, companies and standing, contracts and checkpoint pay, stakes, cash out or press on, the Gate as caravan, market prices, route ground, contract letters. Endless and the Daily are removed.
 3. HQ offices (HR, Finance, Operations) and the item pull.
 4. The trade-map menu (from the chosen mockup direction), and the militia name and banner.
-5. The endgame charter.
+5. The endgame charter (built: the Sovereign Route).
 6. One tuning pass.
