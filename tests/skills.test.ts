@@ -263,9 +263,9 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
     expect(skillPoolFor([], (f) => f === 'win_fighter')).toContain('warden_of_ash')
   })
 
-  it('adds 8% enemy strength and one elite an act per step', () => {
+  it('adds 19% enemy strength and one elite an act per step', () => {
     expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, extraElites: 0 })
-    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1.24, extraElites: 3 })
+    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1.57, extraElites: 3 })
     expect(difficultyRules(99).step).toBe(MAX_DIFFICULTY)
     expect(difficultyRules(-2).step).toBe(0)
   })

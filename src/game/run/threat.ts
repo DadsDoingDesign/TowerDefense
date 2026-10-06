@@ -92,6 +92,23 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * is left at ×1.20 so the depth-6 elite stays the wall §11 measures; the
  * regenerated REPORT is the measurement.
  *
+ * ---- re-anchored on contract delivery (October audit, designer item 1) -----
+ *
+ * §6's 45–60% band was retired as a gate (it models a specialist team the
+ * contract game never fields); the run-level gates read contract delivery
+ * (REPORT §13): a zero-meta escort 20–30%, a veteran's escort 35–55%, its max
+ * stake 10–20%. On [1.12, 1.2, 1.25] a zero-meta escort delivered 19.8% and
+ * the veteran 26% (n=400, the fields-per-act harness). The road is eased and
+ * the final boss made the run's real last fight — the "boss kills ≥ 10% of
+ * arrivals" gate is kept, and an easier road alone took it to 7.5%:
+ *
+ *   steps                boss   §6 MC  boss kills  zero esc  veteran  vet 8c  (n=400, stake 0.15–0.19)
+ *   [1.12, 1.2, 1.25]    0.55   50%    9.6%        19.8%     26.0%    10.8%
+ *   [1.10, 1.17, 1.22]   0.55   61%    7.5%        19.8%     31.8%    17.3%
+ *   [1.08, 1.15, 1.20]   0.62   67%    7.4%        25.8%     35.8%    18.0%
+ *   [1.06, 1.13, 1.18]   0.80   68%   12.0%        28.7%     40.5%    18.5%
+ *   [1.06, 1.13, 1.18]   0.85   68%   12.4%        26.7%     43.5%    16.0%   ← shipped (n=600)
+ *
  * Two things decided the shape. §11's strict floor (one hero, every layer a
  * battle) walks into a wall at the depth-6 elite: with the ×1.08 act jump and a
  * ×1.1 elite, 43–44% of those runs ended there against a 40% gate, so the act
@@ -105,7 +122,7 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * siege pressure there — it cleared ×3.4 at the old ×1.83 — and holds ×2.2 up
  * to a layer-8 Threat of ×3.3).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.25]
+export const ACT_STEPS: readonly [number, number, number] = [1.06, 1.13, 1.18]
 export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]
@@ -135,7 +152,8 @@ export function threatAtLayer(layer: number, start = 1): number {
  *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
  *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
  *    and card luck are paid for by the composition alone now;
- *  - the **final boss** fights at ×0.55 of its layer: it fields all three
+ *  - the **final boss** fights at ×0.85 of its layer (×0.55 until the October
+ *    audit's re-anchor; see `ACT_STEPS`): it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -145,7 +163,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  * substitutes an encounter, never a node (M19-g).
  */
 export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
-  type === 'boss' ? 0.55 : 1
+  type === 'boss' ? 0.85 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>

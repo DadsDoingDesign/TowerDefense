@@ -29,7 +29,7 @@ import { RNG } from '../src/game/core/rng'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
 import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
-import { BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { lookOf } from '../src/game/data/gear'
 import {
   creditPity,
@@ -181,6 +181,36 @@ export const HQ_STATES: [string, HqState][] = [
 ]
 
 export const ZERO_META: Loadout = loadoutFor('zero meta', { upgrades: {} })
+
+/**
+ * The **veteran** company the run-level gates read (REPORT §13c and §18): the
+ * HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3,
+ * the scouts — no company in focus, so no route is favoured), every random
+ * skill card a contract can unlock (feat cards aside) and every Level 1–3 item
+ * kind. It is the save that opens the Sovereign Route; §18 called it the
+ * "late-game company" before the contract gates were anchored on it.
+ */
+export const VETERAN_HQ: HqState = { upgrades: { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 } }
+export const VETERAN: Loadout = loadoutFor('veteran', VETERAN_HQ)
+export const VETERAN_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
+export const VETERAN_ITEMS: readonly string[] = [...ALL_ITEM_KINDS]
+/**
+ * `simulateRun` options for a veteran's contract (`crates` 0 is an escort) on
+ * `company`'s road. A veteran **reads its offers**: it settles each skill
+ * milestone with the move that raises its DPS most (`build: 'best'`), where
+ * every other line rolls the pick at random. Measured on the October audit's
+ * paired seeds, a fully unlocked company that picks at random delivered no more
+ * than a zero-meta escort (17.5% against 17.8%, n=400): 36 cards dealt three at
+ * a time, several of them dead on a lone hero (REPORT §7), dilute a random
+ * pick. A veteran is the player who has learned which card to take.
+ */
+export const veteranRun = (crates: number, company: CompanyId = 'silk'): SimOptions => ({
+  meta: VETERAN,
+  skillPool: VETERAN_SKILLS,
+  itemPool: VETERAN_ITEMS,
+  contract: { company, crates },
+  build: 'best',
+})
 
 /** `run/map.mapOptionsFor`, read off a loadout instead of the live hub. */
 export const mapOptionsFor = (m: Loadout): MapOptions => ({

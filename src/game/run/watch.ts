@@ -141,20 +141,31 @@ export function skillPoolFor(unlocked: readonly string[], achieved: (id: string)
 //
 // SK1's difficulty steps replaced the Vow ladder; the mercenary company turned
 // the step into the stake (`contracts.stakeRules`): every crate carried is
-// one step — enemies 8% stronger and one more elite an act — and the payout
+// one step — enemies 19% stronger and one more elite an act — and the payout
 // for it is the stake's (crate sales, the completion bonus, item chances).
 
 /** The highest difficulty step there is. */
 export const MAX_DIFFICULTY = 10
-/** Enemy strength each step adds (on the run's starting Threat). */
-export const STRENGTH_PER_STEP = 0.08
+/**
+ * Enemy strength each step adds (on the run's starting Threat). 0.08 → **0.19**
+ * (October audit, designer item 1). At 0.08 a crate cost nothing measurable:
+ * the veteran's ladder (§13c, which carries the scouts, so every stake elite
+ * has a way round it) read 29.5% → 19.8% over eight crates, steps of −16% to
+ * +13% relative inside a ±2.5pt paired noise, and REPORT §13 failed six of
+ * eight "every crate costs" checks. The economy audit proposed 0.15; with the
+ * eased road below (`threat.ACT_STEPS`) 0.15 left the veteran's max stake at
+ * 18–20% against its 10–20% band, so 0.19 puts it mid-band. Measured at n=600
+ * (`tune.ts 600 contract`): veteran 39% → 17% over eight crates (≈10% a crate
+ * on the fit), zero meta 27% → 6.5% (≈16% a crate).
+ */
+export const STRENGTH_PER_STEP = 0.19
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
 
 /** Everything a run needs to know about the difficulty step it is played at. */
 export interface DifficultyRules {
   step: number
-  /** The Threat the run starts at: 1 + 8% a step. */
+  /** The Threat the run starts at: 1 + 19% a step. */
   startThreat: number
   /** Battle nodes in each act that become elites. */
   extraElites: number

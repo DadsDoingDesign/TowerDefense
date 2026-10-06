@@ -6,7 +6,9 @@
  *     what  any of `fresh` (§11's four routing lines, zero meta), `carto`
  *           (§12's Cartographer's Table against zero meta, all four lines),
  *           `hub` (every §12 hub state), `banner` (§13's Vow ladder on the
- *           adaptive line), `mc` (§6's Monte Carlo, n = 300 unless given);
+ *           adaptive line), `mc` (§6's Monte Carlo, n = 300 unless given),
+ *           `contract` (§13's contract-delivery gates: the zero-meta stake
+ *           ladder and the veteran's, 0–8 crates on Rosethread's road, adaptive);
  *           default `fresh carto mc`
  *
  * Every cell uses §11/§12's own seeds (`9001 + i·17`, starter `i % 3`), so the
@@ -19,7 +21,8 @@ import { cpus } from 'os'
 import { fileURLToPath } from 'url'
 import type { Archetype } from '../src/game/types'
 import { difficultyRules, MAX_DIFFICULTY } from '../src/game/run/watch'
-import { HQ_STATES, loadoutFor, monteCarloRun, POLICIES, simulateRun, ZERO_META, type HqState } from './runsim'
+import { MAX_CRATES } from '../src/game/run/contracts'
+import { HQ_STATES, loadoutFor, monteCarloRun, POLICIES, simulateRun, veteranRun, ZERO_META, type HqState } from './runsim'
 
 const N = Number(process.argv[2]) || 240
 const WHAT = process.argv.slice(3).length ? process.argv.slice(3) : ['fresh', 'carto', 'mc']
@@ -51,6 +54,16 @@ function cellsFor(): { key: string; run: (i: number) => number }[] {
       out.push({ key: `banner|B${t}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { difficulty: banner, policy: adaptive }).won ? 1 : 0) })
     }
   }
+  // `contract`: both ladders, every tier. `ends`: only the gated ends (the
+  // zero-meta escort, the veteran's escort and its max stake) — a quick read.
+  if (WHAT.includes('contract') || WHAT.includes('ends')) {
+    const adaptive = POLICIES.find((p) => p.id === 'adaptive')!
+    const ends = !WHAT.includes('contract')
+    for (let c = 0; c <= MAX_CRATES; c++) {
+      if (!ends || c === 0) out.push({ key: `zero|c${c}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { meta: ZERO_META, policy: adaptive, contract: { company: 'silk', crates: c } }).won ? 1 : 0) })
+      if (!ends || c === 0 || c === MAX_CRATES) out.push({ key: `vet|c${c}`, run: (i) => (simulateRun(9001 + i * 17, ARCHES[i % 3], { ...veteranRun(c), policy: adaptive }).won ? 1 : 0) })
+    }
+  }
   return out
 }
 
@@ -65,7 +78,14 @@ if (shard !== undefined) {
   if (WHAT.includes('mc')) {
     res['mc'] = []
     const mcN = Number(process.env.TUNE_MC) || 300
-    for (let r = k; r < mcN; r += of) res['mc'].push(monteCarloRun(r).won ? 1 : 0)
+    res['mcAt'] = []
+    res['mcKill'] = []
+    for (let r = k; r < mcN; r += of) {
+      const o = monteCarloRun(r)
+      res['mc'].push(o.won ? 1 : 0)
+      res['mcAt'].push(o.finalAttempt ? 1 : 0)
+      res['mcKill'].push(o.finalKill ? 1 : 0)
+    }
   }
   process.stdout.write(JSON.stringify(res))
 } else {
@@ -94,7 +114,11 @@ if (shard !== undefined) {
     return out
   }
   console.log(`n=${N} (${K} shards, ${((Date.now() - t0) / 1000).toFixed(0)}s)`)
-  if (merged['mc']) console.log(`§6 Monte Carlo: ${pct(m(merged['mc']))} (n=${merged['mc'].length})`)
+  if (merged['mc']) {
+    const at = merged['mcAt'].reduce((x, y) => x + y, 0)
+    const kill = merged['mcKill'].reduce((x, y) => x + y, 0)
+    console.log(`§6 Monte Carlo: ${pct(m(merged['mc']))} (n=${merged['mc'].length}); the boss kills ${kill}/${at} = ${pct(at ? kill / at : 0)} of arrivals`)
+  }
   const bannerKeys = Object.keys(merged).filter((k) => k.startsWith('banner|')).sort()
   if (bannerKeys.length) {
     console.log(`Vow ladder (adaptive): ${bannerKeys.map((k, i) => {
@@ -102,7 +126,22 @@ if (shard !== undefined) {
       return `${k.split('|')[1]} ${pct(w)}${i ? ` (−${((m(merged[bannerKeys[i - 1]]) - w) * 100).toFixed(1)})` : ''}`
     }).join(' | ')}`)
   }
-  const states = [...new Set(Object.keys(merged).filter((k) => k.includes('|') && !k.startsWith('banner|')).map((k) => k.split('|')[0]))]
+  for (const who of ['zero', 'vet']) {
+    if (!merged[`${who}|c0`]) continue
+    const tiers = Array.from({ length: MAX_CRATES + 1 }, (_, c) => c).filter((c) => merged[`${who}|c${c}`])
+    const cells = tiers.map((c) => bySeed(`${who}|c${c}`))
+    console.log(`${who === 'zero' ? 'zero-meta' : 'veteran'} ladder (adaptive, Rosethread): ${cells.map((a, j) => {
+      const w = m(a)
+      const c = tiers[j]
+      if (!j) return `0c ${pct(w)} ±${(Math.sqrt(w * (1 - w) / a.length) * 100).toFixed(1)}`
+      const p = cells[j - 1]
+      const d = a.map((x, i) => p[i] - x)
+      const md = m(d)
+      const se = Math.sqrt(m(d.map((x) => (x - md) ** 2)) / d.length)
+      return `${c}c ${pct(w)} (−${(md * 100).toFixed(1)} ±${(se * 100).toFixed(1)}, ${m(p) ? ((md / m(p)) * 100).toFixed(0) : '—'}% rel)`
+    }).join(' | ')}`)
+  }
+  const states = [...new Set(Object.keys(merged).filter((k) => k.includes('|') && !k.startsWith('banner|') && !/^(zero|vet)\|c\d/.test(k)).map((k) => k.split('|')[0]))]
   for (const st of states) {
     const row = POLICIES.map((p) => {
       const a = bySeed(`${st}|${p.id}`)
