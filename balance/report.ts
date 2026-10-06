@@ -1261,19 +1261,42 @@ if (want(7)) {
   line('**What this replaced.** §7 measured the spec perks — one of two at levels 5 and 15, by')
   line('line. Skills replaced the perks AND the evolutions (SK1): a hero holds up to three, and')
   line('at levels 5, 10 and 15 it is offered three of one skill level (Level 1, 2, 3) from the')
-  line('player\'s unlocked pool. So a choice point is a (skill level, class) pair, and every skill')
-  line('that class may hold at that level is an option on it.')
+  line('player\'s unlocked pool. There are no classes (the classless rework): any hero may be dealt')
+  line('any skill, and what a skill does on a hero follows from what that hero holds. So a choice')
+  line('point is a (skill level, kit) pair — the three kits a hero is drawn as: a sword and a')
+  line('shield, a knife, a wand — and every skill of that level is an option on it.')
   line('')
-  line('**How each skill is graded.** A representative hero of the class — level 9 for a Level 1')
-  line('skill, 14 for Level 2, 19 for Level 3, no gear and no other skill — takes the skill alone,')
-  line('and is graded by **stop rate** on three waves of its depth (4, 6 or 8): a `swarm` of runts,')
-  line('an `armour` column (Plated elite) and a `line` (the depth\'s normal wave). Each point\'s waves')
-  line('are first scaled so the hero **without** a skill stops about half of each — a bench at 0%')
-  line('or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
+  line('**How each skill is graded.** A representative hero of the kit — level 9 for a Level 1')
+  line('skill, 14 for Level 2, 19 for Level 3, stat-less gear and no other skill — takes the skill')
+  line('alone, and is graded by **stop rate** on three waves of its depth (4, 6 or 8): a `swarm` of')
+  line('runts, an `armour` column (Plated elite) and a `line` (the depth\'s normal wave). Each point\'s')
+  line('waves are first scaled so the hero **without** a skill stops about half of each — a bench at')
+  line('0% or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
   line('aura is graded beside a second hero.')
   line('')
+  line('**Two more benches, because some skills only show beside another piece (the tuning pass).**')
+  line('The classless rework added skills that are self-contained effects meant to meet other')
+  line('pieces in play — "its hits deal 25% more to slowed enemies", "each kill it makes pays 1')
+  line('more gold". A lone hero on a stop-rate bench cannot see either: nobody slows, nobody')
+  line('holds, and stop rate does not read gold. They read +0.0pt everywhere and were failed as')
+  line('dead. So every skill is also graded on:')
+  line('')
+  line('- `partner` — the `line` wave, with the hero beside a **partner who holds and slows** (a')
+  line('  sword-and-shield hero of the same level carrying Frostbite), re-scaled so the pair stops')
+  line('  about half. This is where a skill that reads holds or slows (Pin Down, Cold Snap) shows.')
+  line('- `gold` — the `line` wave\'s kill gold, as a share of what the hero earns without the skill')
+  line('  (reported in pt of that gold). Only a skill that pays gold moves it.')
+  line('')
+  line('**The dead gate reads across kits.** Skills are dealt at random whatever the hero holds — the')
+  line('designer: "they just apply their effects and things will happen" — so a hold skill on a hero')
+  line('with no shield waits for one, by design. A skill is **dead** when it moves no bench by')
+  line(`+${(0.02 * 100).toFixed(1)}pt on ANY kit; a kit on which it reads nothing is reported in the table, not`)
+  line('failed. The solved gate stays per point: a choice is made for one hero, holding what it holds.')
+  line('')
   const SKILL_SEEDS = SEEDS.slice(0, 3)
-  interface SkillRow { point: string; skill: string; name: string; d: Record<string, number>; mean: number; dps: number }
+  /** The three kits a hero is drawn as (`sentinels.CLASSIC_KIT`), named by what it holds. */
+  const KIT_NAME: Record<Archetype, string> = { fighter: 'Sword & Shield', rogue: 'Dagger', mystic: 'Wand' }
+  interface SkillRow { point: string; skill: string; name: string; d: Record<string, number>; partner: number; gold: number; mean: number; dps: number }
   const skillRows: SkillRow[] = []
   const skillPointSummary: { point: string; gap: number; greedy: string; measured: string; options: number }[] = []
   const SKILL_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
@@ -1293,12 +1316,21 @@ if (want(7)) {
       { sentinel: ally(level), slotId: AURA_TRIO.allies[0] },
     ]
   }
+  /** The partner bench's second hero: it holds (a shield) and slows (Frostbite). */
+  const partner = (level: number): Sentinel => ({ ...applyXp(classicHero('fighter'), xpToReach(level)), skills: ['frostbite'] })
+  const partnerTeam = (hero: Sentinel, level: number) => [
+    { sentinel: hero, slotId: AURA_TRIO.support },
+    { sentinel: partner(level), slotId: AURA_TRIO.allies[0] },
+  ]
+  /** Mean kill gold `team` earns off `wave` at `hpMult`, on the stop-rate bench's terms. */
+  const benchGold = (team: { sentinel: Sentinel; slotId: string }[], wave: WaveDef, hpMult: number): number =>
+    mean(SKILL_SEEDS.map((seed) => runBattle({ team, depth: wave.index || 6, wave, baseHp: maxLeak(wave) + 2, enemyHpMult: hpMult, maxSeconds: 200, rules: BENCH_RULES, seed }).goldEarned))
   for (const tier of [1, 2, 3] as const) {
     const level = tier === 1 ? 9 : tier === 2 ? 14 : 19
     const depth = tier === 1 ? 4 : tier === 2 ? 6 : 8
     for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
       const options = ALL_SKILLS.filter((k) => k.level === tier)
-      const point = `L${tier}:${archetype}`
+      const point = `L${tier} · ${KIT_NAME[archetype]}`
       // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a
       // wave the hero cannot kill, which flattens a bench into a plateau.
       const base = applyXp(classicHero(archetype), xpToReach(level))
@@ -1329,6 +1361,17 @@ if (want(7)) {
       }
       const soloBase = baseRate(false)
       const auraBase = pressure.aura ? baseRate(true) : null
+      // The partner bench: the `line` wave, re-scaled so the skill-less pair stops about half.
+      let plo = 0.02
+      let phi = 60
+      for (let it = 0; it < 9; it++) {
+        const mid = Math.sqrt(plo * phi)
+        if (stopRate(partnerTeam(base, level), benches.line, SKILL_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES }) > 0.5) plo = mid
+        else phi = mid
+      }
+      const partnerPr = Math.sqrt(plo * phi)
+      const partnerBase = stopRate(partnerTeam(base, level), benches.line, SKILL_SEEDS, { enemyHpMult: partnerPr, rules: BENCH_RULES })
+      const goldBase = benchGold(skillTeam(base, false, level), benches.line, pressure.solo.line)
       const rows: SkillRow[] = []
       for (const k of options) {
         const aura = !!k.mods.buffAura
@@ -1337,7 +1380,9 @@ if (want(7)) {
         const b = aura ? auraBase! : soloBase
         const d: Record<string, number> = {}
         for (const key of SKILL_BENCH_KEYS) d[key] = stopRate(skillTeam(hero, aura, level), benches[key], SKILL_SEEDS, { enemyHpMult: pr[key], rules: BENCH_RULES }) - b[key]
-        rows.push({ point, skill: k.id, name: k.name, d, mean: mean(SKILL_BENCH_KEYS.map((key) => d[key])), dps: heroDps(hero) })
+        const partnerD = stopRate(partnerTeam(hero, level), benches.line, SKILL_SEEDS, { enemyHpMult: partnerPr, rules: BENCH_RULES }) - partnerBase
+        const goldD = goldBase > 0 ? benchGold(skillTeam(hero, false, level), benches.line, pressure.solo.line) / goldBase - 1 : 0
+        rows.push({ point, skill: k.id, name: k.name, d, partner: partnerD, gold: goldD, mean: mean(SKILL_BENCH_KEYS.map((key) => d[key])), dps: heroDps(hero) })
       }
       skillRows.push(...rows)
       const top = [...rows].sort((a, b) => b.mean - a.mean)
@@ -1345,10 +1390,10 @@ if (want(7)) {
       skillPointSummary.push({ point, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, options: rows.length })
     }
   }
-  line('| Point | Skill | `swarm` | `armour` | `line` | Mean | heroDps |')
-  line('|---|---|--:|--:|--:|--:|--:|')
+  line('| Point | Skill | `swarm` | `armour` | `line` | Mean | `partner` | `gold` | heroDps |')
+  line('|---|---|--:|--:|--:|--:|--:|--:|--:|')
   for (const r of skillRows) {
-    line(`| ${r.point} | ${r.name} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
+    line(`| ${r.point} | ${r.name} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${pp(r.partner)} | ${pp(r.gold)} | ${f1(r.dps)} |`)
   }
   line('')
   line('| Point | Options | Lead of the best over the runner-up | The greedy (heroDps) pick | The measured best |')
@@ -1360,16 +1405,26 @@ if (want(7)) {
   /** The best option at a point may not lead the runner-up by more than this on the mean. */
   const SKILL_GAP_CEILING = 0.2
   const greedyRight = skillPointSummary.filter((p) => p.greedy === p.measured).length
-  line(`**Invariants.** Every skill moves at least one bench by ≥ ${pp(SKILL_EDGE)} (none is dead), and no`)
-  line(`point's best skill leads its runner-up by more than ${pp(SKILL_GAP_CEILING)} on the mean (none is solved by`)
-  line(`a mile). An offer deals three of a point's options at random, so a solved point would make`)
+  const bestOf = (r: SkillRow) => Math.max(...SKILL_BENCH_KEYS.map((k) => r.d[k]), r.partner, r.gold)
+  // Dead is read across kits: a skill's best bench on the hero it suits best.
+  const skillBest = new Map<string, { name: string; best: number; where: string }>()
+  for (const r of skillRows) {
+    const b = bestOf(r)
+    const cur = skillBest.get(r.skill)
+    if (!cur || b > cur.best) skillBest.set(r.skill, { name: r.name, best: b, where: r.point })
+  }
+  const waiting = skillRows.filter((r) => bestOf(r) < SKILL_EDGE)
+  line(`**Invariants.** Every skill moves at least one bench by ≥ ${pp(SKILL_EDGE)} on at least one kit (none is`)
+  line(`dead), and no point's best skill leads its runner-up by more than ${pp(SKILL_GAP_CEILING)} on the mean (none is`)
+  line(`solved by a mile). An offer deals three of a point's options at random, so a solved point would make`)
   line(`every offer that holds the answer a non-choice. Reported, not gated: how often the`)
   line(`heroDps-greedy pick — the "read the tooltip" answer — is the measured best one: **${greedyRight} of`)
   line(`${skillPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave.`)
   line('')
-  for (const r of skillRows) {
-    const best = Math.max(...SKILL_BENCH_KEYS.map((k) => r.d[k]))
-    if (best < SKILL_EDGE) failures.push(`Skill "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(SKILL_EDGE)}).`)
+  line(`**Waiting for a piece (reported, not gated):** ${waiting.length ? waiting.map((r) => `${r.name} at ${r.point} (best ${pp(bestOf(r))})`).join(', ') : '_none_'}. Each of these moves a bench on another kit; on this one it waits for what it needs (a shield to hold with, someone to slow for it).`)
+  line('')
+  for (const [, s] of skillBest) {
+    if (s.best < SKILL_EDGE) failures.push(`Skill "${s.name}" is dead: its best bench on any kit moves only ${pp(s.best)} (${s.where}; needs ≥ ${pp(SKILL_EDGE)}).`)
   }
   for (const p of skillPointSummary) {
     if (p.gap > SKILL_GAP_CEILING) failures.push(`Skills at ${p.point} are solved: ${p.measured} leads the runner-up by ${pp(p.gap)} on the three-bench mean (ceiling ${pp(SKILL_GAP_CEILING)}).`)
