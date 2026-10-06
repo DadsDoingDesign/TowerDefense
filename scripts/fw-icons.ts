@@ -2301,7 +2301,7 @@ const SRC = (...p: string[]) => resolve(dirname(fileURLToPath(import.meta.url)),
 
 /**
  * The atlas and the app must agree about which cell is which, and nothing in a
- * PNG can say so. `channels.ts` carries the same list as `ICON_ORDER`, and this
+ * PNG can say so. `game/data/iconAtlas.ts` carries the same list as `ICON_ORDER` (re-exported by `channels.ts`), and this
  * compares the two — a reordered icon here without the matching edit there would
  * otherwise ship silently as N wrong pictures.
  *
@@ -2324,19 +2324,21 @@ const checkConsumers = async () => {
   const rows = Math.ceil(ICONS.length / COLS)
   const mine = ICONS.map(([k]) => k)
 
-  const channels = await readFile(SRC('src', 'ui', 'channels.ts'), 'utf8')
+  // The order lives in `game/data/iconAtlas.ts` (the canvas draws gear from the
+  // sheet too); `channels.ts` re-exports it.
+  const channels = await readFile(SRC('src', 'game', 'data', 'iconAtlas.ts'), 'utf8')
   const block = /export const ICON_ORDER = \[([\s\S]*?)\] as const/.exec(channels)
-  if (!block) throw new Error('channels.ts has no ICON_ORDER array to check against')
+  if (!block) throw new Error('iconAtlas.ts has no ICON_ORDER array to check against')
   const declared = [...block[1].matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1])
   if (declared.length !== mine.length || declared.some((k, i) => k !== mine[i])) {
     throw new Error(
-      `ICON_ORDER disagrees with the atlas.\n  channels.ts: ${declared.join(' ')}\n  fw-icons.ts: ${mine.join(' ')}`,
+      `ICON_ORDER disagrees with the atlas.\n  iconAtlas.ts: ${declared.join(' ')}\n  fw-icons.ts: ${mine.join(' ')}`,
     )
   }
   const cols = /export const ICON_COLS = (\d+)/.exec(channels)
-  if (!cols || Number(cols[1]) !== COLS) throw new Error(`channels.ts ICON_COLS is ${cols?.[1]}, atlas is ${COLS}`)
+  if (!cols || Number(cols[1]) !== COLS) throw new Error(`iconAtlas.ts ICON_COLS is ${cols?.[1]}, atlas is ${COLS}`)
   const rowsTs = /export const ICON_ROWS = (\d+)/.exec(channels)
-  if (!rowsTs || Number(rowsTs[1]) !== rows) throw new Error(`channels.ts ICON_ROWS is ${rowsTs?.[1]}, atlas is ${rows}`)
+  if (!rowsTs || Number(rowsTs[1]) !== rows) throw new Error(`iconAtlas.ts ICON_ROWS is ${rowsTs?.[1]}, atlas is ${rows}`)
 
   const css = await readFile(SRC('src', 'styles', 'global.css'), 'utf8')
   const cssCols = /--fw-i-cols:\s*(\d+)/.exec(css)
@@ -2351,7 +2353,7 @@ const checkConsumers = async () => {
     throw new Error('global.css .fw-i background-size does not read --fw-i-cols / --fw-i-rows')
   }
 
-  console.log(`consumers agree: ${mine.length} keys, ${COLS}x${rows} grid (channels.ts + global.css)`)
+  console.log(`consumers agree: ${mine.length} keys, ${COLS}x${rows} grid (iconAtlas.ts + global.css)`)
 }
 
 async function main() {
