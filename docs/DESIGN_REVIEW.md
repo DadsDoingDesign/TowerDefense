@@ -3159,5 +3159,5 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   stylesheet link from `index.html`, so the splash fell back to Georgia — the
   base stylesheet is imported by the boot entry again. The run header's
   "MERCHANT MERCENARIES" fits its own row at 360px. Still open (designer): the
-  Watchtower mark was drawn for Fieldwatch; the home-screen label is
-  "Mercenaries". Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
+  Watchtower mark was drawn for Fieldwatch. The short name (home-screen
+  label) is "Merch&Mercs", the designer's. Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.

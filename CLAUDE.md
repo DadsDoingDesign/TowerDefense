@@ -8,9 +8,11 @@ the meadow-defence era's name). Use **Merchant Mercenaries** in every
 player-facing string, the store listing, page meta and marketing. Older docs,
 commits and the Whales review history say Fieldwatch: read them as the same game.
 
-- **Home-screen label: "Mercenaries".** The full name truncates under an icon,
-  so the iOS `CFBundleDisplayName`, the manifest `short_name` and
-  `apple-mobile-web-app-title` use the short form. The App Store name is the
+- **Short name: "Merch&Mercs"** (the designer's, 2026-10-06; no spaces around
+  the ampersand). The full name truncates under an icon, so the iOS
+  `CFBundleDisplayName`, the manifest `short_name` and
+  `apple-mobile-web-app-title` use it — escaped as `&amp;` in the plist and HTML.
+  Use it wherever a short form is needed. The App Store name is the
   full one (set in App Store Connect).
 - **iOS bundle id: `com.dadsdoingdesign.merchantmercenaries`** (permanent once
   registered with Apple).
