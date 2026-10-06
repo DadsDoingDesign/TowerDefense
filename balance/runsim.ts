@@ -45,7 +45,9 @@ import { relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, diaryXp, handSize, hiresTrained, equipRules, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
-import { fieldFor, pickBattleMap } from '../src/game/data/maps'
+import { fieldFor, mapById } from '../src/game/data/maps'
+import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
+import type { GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
@@ -391,7 +393,7 @@ export interface RunOutcome {
     earned: number
   }
   layers: number
-  /** Which battlefield this run's seed dealt (WS8). */
+  /** Which battlefield this run's seed dealt for act 1 (WS8); later acts deal their own (`run/fields`). */
   fieldId: string
   /** The leader's LOOK — the old class its weapon draws it as (a sword-hand is `fighter`). */
   starter: Archetype
@@ -441,6 +443,14 @@ export function modelledPick(seed: number, skillPool: readonly string[], itemPoo
   return resolvePick(seed, skillPool, itemPool, prefer, deal)
 }
 
+/** Best-coverage-first posts on a base field, worked out once per field. */
+const slotsByField = new Map<string, string[]>()
+export function slotsOn(m: GameMap): string[] {
+  let out = slotsByField.get(m.id)
+  if (!out) slotsByField.set(m.id, (out = bestSlots(m)))
+  return out
+}
+
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   const meta = o.meta ?? ZERO_META
   const k = o.contract ?? null
@@ -478,10 +488,13 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   // SK1: the step's extra elites, on the map, as `dealRunMap` adds them.
   const map = addDifficultyElites(generateRunMap(new RNG(hashSeed(seed, 'map')), mapOptionsFor(meta)), banner.extraElites, seed, meta.standingOrders)
   const byId = new Map(map.nodes.map((n) => [n.id, n]))
-  // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8).
-  // Every §11/§12/§13 number is therefore an average over the field distribution
+  // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8),
+  // and — the road changes country at every city — each later act's own field,
+  // dealt by the store's own rule (`run/fields.groundFor`) at the act's first
+  // fight. Every §11/§12/§13 number is therefore an average over the fields
   // the game actually produces, rather than a measurement of one map.
-  const field = pickBattleMap(seed)
+  let road: FieldState = { fieldId: actFieldId(seed, 1), fieldAct: 1 }
+  const field = mapById(road.fieldId)!
 
   // ---- the company, as `newRun` + `pickStartingHero` deal it ----
   // The kit is dealt AFTER the pick, for the company that exists, and the
@@ -537,10 +550,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
   let bossThreat: number | null = null
   let won = false
   const pity: RarityPity = newRarityPity()
-  // Filled best-coverage-first on whichever field this run drew. This used to be
-  // the literal `['s3','s4','s2','s5','s1']` — a Green Line fact hardcoded as a
-  // constant, which on the second map names three of its five worst slots.
-  const heroSlots = bestSlots(field)
+  // Filled best-coverage-first on whichever field the act is fought on. This
+  // used to be the literal `['s3','s4','s2','s5','s1']` — a Green Line fact
+  // hardcoded as a constant, which on the second map names three of its five
+  // worst slots. The modelled company re-posts best-first on every field.
+  const heroSlots = slotsOn(field)
 
   const hire = () => {
     const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
@@ -660,8 +674,11 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     const rule = nodeTerrainRule(node, seed, ground)
     // Q1: and its danger ground + seeded obstacles, from the same node hash.
     const hazard = nodeHazardSeed(node, seed, ground)
-    const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard, meta.rocks) ?? field) : field
-    const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
+    // The act's field (`run/fields`): new ground at each act's first fight.
+    road = groundFor(seed, road, node.layer)
+    const actField = mapById(road.fieldId) ?? field
+    const nodeField = rule || hazard != null ? (fieldFor(actField.id, rule, 'landscape', hazard, meta.rocks) ?? actField) : actField
+    const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : actField === field ? heroSlots : slotsOn(actField)
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
       depth: node.layer,
@@ -911,8 +928,10 @@ export function monteCarloRun(
   const runRng = new RNG(hashSeed(r, 'mcteam'))
   const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
   const specIds = Array.from({ length: teamSize }, () => runRng.pick(TIER2_NODES).id)
-  const field = pickBattleMap(hashSeed(r, 'mc'))
-  const slots = bestSlots(field)
+  // Act 1's field, then each act's own, by the store's rule (`run/fields`).
+  const mcSeed = hashSeed(r, 'mc')
+  let ground: FieldState = { fieldId: actFieldId(mcSeed, 1), fieldAct: 1 }
+  const field = mapById(ground.fieldId)!
   let baseHp = MAX_BASE_HP
   let reached = 0
   let died = 0
@@ -921,6 +940,9 @@ export function monteCarloRun(
   let finalKill = false
   let timeouts = 0
   for (let depth = 1; depth <= MC_LAYERS; depth++) {
+    ground = groundFor(mcSeed, ground, depth)
+    const actField = mapById(ground.fieldId) ?? field
+    const slots = slotsOn(actField)
     const team = specIds.slice(0, mcCompany(depth, specIds.length)).map((id, i) => ({
       sentinel: buildSpec(id, {
         level: mcLevel(depth),
@@ -942,7 +964,7 @@ export function monteCarloRun(
       team,
       depth,
       kind,
-      map: fieldFor(field.id, rule, 'landscape', hazard) ?? field,
+      map: fieldFor(actField.id, rule, 'landscape', hazard) ?? actField,
       autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),
