@@ -82,7 +82,8 @@ export function CityScreen() {
       head={
         <>
           <p className="ct-eyebrow">
-            Act {city + 1} boss down · {town} market
+            {/* The arrival beat (October audit 3.11): the caravan made it, then the pay. */}
+            The caravan reaches {town} · act {city + 1}
           </p>
           <h1 className="ct-big" tabIndex={-1}>
             <Coin scale={4} />+{here.total} gold

@@ -8,7 +8,7 @@ You run a private militia hired by trade companies to clear their trade routes o
 ## One currency: gold
 - Gold is the only currency. It pays for services, the HQ, cargo stakes and item pulls. Marks and dust are gone.
 - **Default (overridable):** you set out with a **purse** you choose; the bank stays home and earns interest.
-- **Decided (2026-10-05): road gold comes home, taxed.** At the end of a run what is left of the purse returns in full (spending comes out of the purse first); of the gold the road paid into it (fights, shrines, sales), **25%** comes home and the rest stays on the road. City pay and contract payouts are banked in full. The result screen says it plainly: "Purse returned 40 · Road gold 412 → 103 banked (25%)". The share is `hq.ROAD_SHARE`, tunable.
+- **Decided (2026-10-05): road gold comes home, taxed.** At the end of a run what is left of the purse returns in full (spending comes out of the purse first); of the gold the road paid into it (fights, shrines, sales), **25%** comes home and the rest stays on the road. City pay and contract payouts are banked in full. The result screen says it plainly: "Purse returned 40 · Road gold 412 → 103 banked (25%)". The share is `hq.ROAD_SHARE`, tunable. **October audit default:** a *fallen* contract banks only `hq.LOST_ROAD_SHARE` (**10%**) of the road's gold, so a fall costs something and "press on" is a real risk (see `docs/AUDIT_2026-10.md` §4, lane 1).
 
 ## Contracts (a run = one company's route)
 - **Escort contract (no stake):** costs nothing.
@@ -25,7 +25,9 @@ You run a private militia hired by trade companies to clear their trade routes o
   - the first sells enough cargo to recoup your stake;
   - the second pays earnings;
   - the end pays the big reward.
-- **Losing** keeps whatever was already paid at cities reached. Unsold cargo is lost.
+- **Losing** keeps whatever was already paid at cities reached and the purse's rest. Unsold cargo is lost, and most of the road's gold stays on the road (10% comes home, not 25%).
+- **Cashing out** (October audit) sells the crates still on the wagons at **full** value (`CASH_OUT_RATE` 1) and banks the road's gold at the full share; you give up the completion bonus, the item chances and the contract skill. The city screen prices all three outcomes (cash out, deliver, fall) with `settle.cityTrade`, and when nothing is at risk it says so instead of staging the choice. A first contract is offered the choice from its second city.
+- **Crate sales** (October audit): the first city sells half the load (rounded up), then the destination half of the rest (rounded up), and the second city what remains, so a bigger stake never pays less.
 
 ## Unlocks
 - **Skills come only from playing.**
