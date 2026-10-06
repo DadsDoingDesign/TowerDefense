@@ -1,7 +1,8 @@
 /**
  * Balance report generator. Runs a battery of sweeps against the real engine and
  * writes balance/REPORT.md plus a console summary. Exits non-zero if any balance
- * invariant is violated, so it can gate CI.
+ * invariant is violated — unless `BALANCE_INVARIANTS=warn`, which CI sets to
+ * report them as warnings instead (see `verdict.ts`).
  *
  *   npx tsx balance/report.ts        (or: npm run balance)
  *
@@ -10,12 +11,13 @@
  * measurement — it is a green light with nothing behind it. Where a sweep is
  * expected to fail today, it fails loudly rather than being tuned to pass.
  */
-import { writeFileSync } from 'fs'
-import { HQ_UPGRADES, INTEREST, ROAD_SHARE } from '../src/game/run/hq'
+import { appendFileSync, writeFileSync } from 'fs'
+import { BASE_INTEREST, HQ_UPGRADES, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
 import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
@@ -57,9 +59,10 @@ import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '.
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
 import { difficultyEffect, difficultyRules, LAST_LEG } from '../src/game/run/watch'
-import { BONUS_PER_CRATE, CITY_CRATE_VALUE, COMPANY_WEIGHT, CRATE_PRICE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
+import { ADVANCE, BONUS_PER_CRATE, CITY_CRATE_VALUE, COMPANY_WEIGHT, CRATE_PRICE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
 import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
+import { balanceVerdict, invariantMode } from './verdict'
 import {
   loadoutFor,
   marksFor,
@@ -75,7 +78,10 @@ import {
   monteCarloRun,
   POLICIES,
   simulateRun,
+  slotsOn,
   ZERO_META,
+  VETERAN,
+  veteranRun,
   type Loadout,
   type RoutePolicy,
   type RunOutcome,
@@ -1220,7 +1226,14 @@ if (want(6)) {
   )
   line('')
 
-  /** The band the design is aiming for, not a smoke test. */
+  /**
+   * The band this sweep used to gate on. **Retired as a gate (October audit,
+   * designer item 1)**: it models a depth-scaled 3–5 specialist team the
+   * contract game does not produce — a company is one hero plus who it hires
+   * on the road — so pulling the Threat curve toward it pulled against the
+   * first-timer floor and the stake ladder. The run-level gates now read
+   * contract delivery (§13). The band is still printed, as information.
+   */
   const TARGET_WIN_BAND: [number, number] = [0.45, 0.6]
   /** Deaths must not all land on one or two nodes. */
   const MIN_DEATH_SPREAD = 3
@@ -1229,10 +1242,11 @@ if (want(6)) {
   /** The final boss must actually be a boss. */
   const TARGET_BOSS_KILL_SHARE = 0.1
   line(
-    `**Target win-rate band: ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}** for a depth-appropriate team. That is the band where a`,
+    `**The old target band, ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}, is reported, not gated** (October audit). It was the band for a`,
   )
-  line('run is worth finishing and losing is worth minding; the old 10–80% guardrail was a')
-  line('smoke test that a completely degenerate curve could pass. The current game is')
+  line('depth-appropriate 3–5 specialist team, and the contract game does not produce that team: a company is one')
+  line('hero plus whoever it hires on the road, so pulling the Threat curve toward this band pulled against the')
+  line('first-timer floor and the stake ladder. The run-level gates read **contract delivery** now (§13). The current game is')
   const bandGap =
     winRate > TARGET_WIN_BAND[1]
       ? `${((winRate - TARGET_WIN_BAND[1]) * 100).toFixed(0)}pt above the top of the band`
@@ -1248,11 +1262,6 @@ if (want(6)) {
   line(`${MIN_DEATH_SPREAD} distinct depths, no single node may end more than ${pct(MAX_DEATH_CONCENTRATION)} of lost runs, and`)
   line(`the boss must kill a nonzero share of the teams that reach it (design target ≥ ${pct(TARGET_BOSS_KILL_SHARE)}).`)
   line('')
-  if (winRate < TARGET_WIN_BAND[0] || winRate > TARGET_WIN_BAND[1]) {
-    failures.push(
-      `Monte Carlo win rate ${pct(winRate)} is outside the ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])} design band (${bandGap}).`,
-    )
-  }
   if (deathSpread < MIN_DEATH_SPREAD) {
     failures.push(
       `Difficulty curve is degenerate: runs end at only ${deathSpread} distinct depth(s) (need ≥ ${MIN_DEATH_SPREAD}). ${histogram(deathDepths, NODES)}`,
@@ -1275,7 +1284,7 @@ if (want(6)) {
       `The boss kills only ${pct(bossKillShare)} of the teams that reach it, below the ${pct(TARGET_BOSS_KILL_SHARE)} design target.`,
     )
   }
-  summary.push(`Monte Carlo: ${pct(winRate)} win rate (target ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}), avg depth ${f1(avgDepth)}/${NODES}, deaths on ${deathSpread} depths, boss kills ${pct(bossKillShare)}`)
+  summary.push(`Monte Carlo: ${pct(winRate)} win rate (old band ${pct(TARGET_WIN_BAND[0])}–${pct(TARGET_WIN_BAND[1])}, reported only), avg depth ${f1(avgDepth)}/${NODES}, deaths on ${deathSpread} depths, boss kills ${pct(bossKillShare)}`)
 }
 
 // -------------------------------------------------------------- Sweep 7
@@ -1298,6 +1307,13 @@ if (want(7)) {
   line('waves are first scaled so the hero **without** a skill stops about half of each — a bench at')
   line('0% or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
   line('aura is graded beside a second hero.')
+  line('')
+  line('**Level 3 is fitted harder** (October audit). Fitted on the bare hero, every strong Level 3')
+  line('skill stopped all three benches outright — Berserk, Bulwark, Warden of Ash and Stormcaller')
+  line('each read +59.3pt on the mystic, the bench\'s own ceiling — so the point could not rank them')
+  line('and its "solved" gate read +0.0pt. A Level 3 point\'s benches are now scaled so a hero holding')
+  line('the level\'s first starter, **Berserk**, stops about half; every skill is still graded against')
+  line('the bare hero at that pressure, so the bare hero sits low and the top skills have room above it.')
   line('')
   line('**Two more benches, because some skills only show beside another piece (the tuning pass).**')
   line('The classless rework added skills that are self-contained effects meant to meet other')
@@ -1325,6 +1341,8 @@ if (want(7)) {
   const skillRows: SkillRow[] = []
   const skillPointSummary: { point: string; gap: number; greedy: string; measured: string; options: number }[] = []
   const SKILL_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
+  /** The skill a Level 3 point's benches are fitted on (see `pressureFor`). */
+  const SKILL_ANCHOR = 'berserk'
   function skillBenches(depth: number): Record<(typeof SKILL_BENCH_KEYS)[number], WaveDef> {
     return {
       swarm: makeWave([{ typeId: 'torch1', count: 40 + depth * 5, hpMult: 1 + depth * 0.4, gap: 0.3 }], 'swarm'),
@@ -1362,6 +1380,16 @@ if (want(7)) {
       const benches = skillBenches(depth)
       // Two pressures per point: one for a lone hero, one for a hero beside an
       // ally (the aura skills), each scaled so the skill-less team stops ~half.
+      //
+      // Level 3 is fitted on an ANCHOR instead (October audit): fitted on the
+      // bare hero, every strong Level 3 skill stopped 100% of all three benches
+      // — Berserk, Bulwark, Warden of Ash and Stormcaller each read +59.3pt on
+      // the mystic, the bench's ceiling — so the point could not rank them and
+      // its "solved" gate read +0.0pt. A Level 3 skill is the strongest thing a
+      // hero holds, so its bench is set where a hero holding the level's first
+      // starter (`SKILL_ANCHOR`, Berserk) stops about half: the bare hero then
+      // sits low, and every skill has room above it.
+      const fitHero = tier === 3 ? { ...base, skills: [SKILL_ANCHOR] } : base
       const pressureFor = (aura: boolean): Record<string, number> => {
         const out: Record<string, number> = {}
         for (const k of SKILL_BENCH_KEYS) {
@@ -1369,7 +1397,7 @@ if (want(7)) {
           let hi = 60
           for (let it = 0; it < 9; it++) {
             const mid = Math.sqrt(lo * hi)
-            const r = stopRate(skillTeam(base, aura, level), benches[k], SKILL_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
+            const r = stopRate(skillTeam(fitHero, aura, level), benches[k], SKILL_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES })
             if (r > 0.5) lo = mid
             else hi = mid
           }
@@ -1803,10 +1831,14 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   let reached = 0
   let bossThreat: number | null = null
   let runMods: EffectMods[] = []
-  // Same field and same variant keys the seed would deal a real run (WS8).
-  const field = pickBattleMap(seed)
-  const heroSlots = bestSlots(field)
+  // Same fields and same variant keys the seed would deal a real run (WS8):
+  // act 1's field, then each act's own (`run/fields`).
+  let ground: FieldState = { fieldId: actFieldId(seed, 1), fieldAct: 1 }
+  const field = mapById(ground.fieldId)!
   for (let depth = 1; depth <= NODES; depth++) {
+    ground = groundFor(seed, ground, depth)
+    const actField = mapById(ground.fieldId) ?? field
+    const heroSlots = slotsOn(actField)
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
       // A recruit node hands over a fresh level-1 body.
       const body = rollRecruitBody(rng, BASIC_ITEM_KINDS, roster.map((h) => h.name))
@@ -1819,7 +1851,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
       team: roster.map((s, i) => ({ sentinel: s, slotId: heroSlots[i] })),
       depth,
       kind,
-      map: field,
+      map: actField,
       autoDeploy: true,
       variantSeed: encounterSeed(seed, depth),
       enemyHpMult: threat,
@@ -2175,11 +2207,13 @@ if (want(12)) {
   line('from. Every invariant in this report was green while that was true, because')
   line('nothing here had ever simulated a run with a hub behind it.')
   line('')
-  line('**The HQ (build step 3) replaced the hub.** Its three offices — HR (the Opening deal, the')
-  line('Hiring Hall), Finance (interest) and Operations (pack slots, boulders, company focus, the')
-  line('scouts) — are graded here on the same gate. The modelled player makes the sensible')
-  line('choices: each office alone at its top level, then everything, orders paid, with the focus')
-  line('on Ironvein (the shield and mail company). Finance pays gold, not power, and is priced in §13.')
+  line('**The HQ (build step 3) replaced the hub.** Its offices — HR (the Opening deal, the')
+  line('Hiring Hall) and Operations (pack slots, company focus, the scouts) — are graded here on')
+  line('the same gate. The modelled player makes the sensible choices: each purchase alone at its')
+  line('top level, then everything, orders paid, with the focus on Ironvein (the shield and mail')
+  line('company). October 2026: the Finance office (its levels paid back in about 260 runs) and')
+  line('"Fewer boulders" (it measured −4pt here) were cut and refunded; the bank keeps its free')
+  line('base interest, priced against the stake in §13.')
   line('')
   line('Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the')
   line('comparison against zero HQ is paired and the noise mostly cancels; the ± column is')
@@ -2236,8 +2270,57 @@ const HUB_RUNS = Number(process.env.FW_META_RUNS) || 210
  * 600 (about +30s of runtime) and the gate reads the point estimate.
  */
 const BANNER_RUNS = Number(process.env.FW_BANNER_RUNS) || 600
-/** The smallest win-rate cost a difficulty step may have over the step below it. */
-const BANNER_MIN_COST = 0.03
+/**
+ * The smallest share of the tier below's delivery rate a crate must cost
+ * (October audit, designer item 1). It replaced "≥ 3pt per crate", which is
+ * infeasible on a ladder that must also reach a 10–20% max stake: at 15%
+ * delivery a 3pt step is a 20% relative cut, so eight such steps cannot fit
+ * under a 20–30% escort. Read off the ladder's log-linear fit (`ladderFit`),
+ * because one step's paired s.e. at 600 runs (≈2pt) is larger than an 8% step
+ * (1–3pt): a per-step point estimate would pass or fail on the resample.
+ */
+const CRATE_MIN_REL_COST = 0.08
+/** The run-level gates on contract delivery (October audit, designer item 1). */
+const ZERO_ESCORT_BAND: [number, number] = [0.2, 0.3]
+const VETERAN_ESCORT_BAND: [number, number] = [0.35, 0.55]
+const VETERAN_MAX_STAKE_BAND: [number, number] = [0.1, 0.2]
+/** §13c's sample size a tier (the veteran's ladder). */
+const VETERAN_RUNS = Number(process.env.FW_VETERAN_RUNS) || BANNER_RUNS
+
+/**
+ * A stake ladder's per-crate relative cost: the weighted least-squares slope of
+ * ln(delivery) on crates (weights n·p/(1−p), the inverse variance of a log
+ * share), as `1 − e^slope`, with its 1σ.
+ */
+function ladderFit(rates: number[], n: number): { cost: number; se: number } {
+  const pts = rates.map((p, x) => ({ x, p: Math.min(1 - 0.5 / n, Math.max(0.5 / n, p)) }))
+  const w = pts.map(({ p }) => (n * p) / (1 - p))
+  const y = pts.map(({ p }) => Math.log(p))
+  const sw = w.reduce((a, b) => a + b, 0)
+  const xm = pts.reduce((a, { x }, i) => a + w[i] * x, 0) / sw
+  const ym = y.reduce((a, v, i) => a + w[i] * v, 0) / sw
+  let sxx = 0
+  let sxy = 0
+  pts.forEach(({ x }, i) => {
+    sxx += w[i] * (x - xm) ** 2
+    sxy += w[i] * (x - xm) * (y[i] - ym)
+  })
+  const b = sxy / sxx
+  return { cost: 1 - Math.exp(b), se: Math.exp(b) / Math.sqrt(sxx) }
+}
+/** The paired standard error of `a − b` (two 0/1 vectors on the same seeds). */
+function pairedSe(a: number[], b: number[]): number {
+  const d = a.map((x, i) => x - b[i])
+  const m = mean(d)
+  return Math.sqrt(mean(d.map((x) => (x - m) ** 2)) / d.length)
+}
+/** A share's binomial 1σ at n. */
+const shareSe = (p: number, n: number) => Math.sqrt((p * (1 - p)) / n)
+/** "inside the band by more than 1σ" / "inside, within 1σ of its edge" / "outside". */
+function bandRead(p: number, se: number, band: [number, number]): string {
+  if (p < band[0] || p > band[1]) return '**outside the band**'
+  return p - se >= band[0] && p + se <= band[1] ? 'inside the band by more than 1σ' : 'inside the band, **within 1σ of its edge**'
+}
 
 interface HubCell { winRate: number; wins: number[]; marks: number }
 function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS): HubCell {
@@ -2422,7 +2505,7 @@ if (want(12)) {
       `- **The Opening deal is where the power is, and it is bounded:** five levels, ${HQ_UPGRADES.find((u) => u.id === 'deal')!.costs.reduce((a, b) => a + b, 0).toLocaleString('en')} gold in all, worth ${sign(best(DEAL_TOP_LABEL))} at its best and then finished (levels 1–3 alone: ${sign(best(HUB_STATES[1][0]))}). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.`,
     )
     line(
-      `- **Pack slots, boulders and focus** are levers on the run's texture, not its odds: ${sign(best('Pack slots 10'))}, ${sign(best('Fewer boulders 3 + clear order'))} and ${sign(best('Focus Ironvein +60%'))} at their best. Boulders keep a floor of ${MIN_OBSTACLES} a field whatever is bought — they are a balance lever, and the tuning pass owns that number.`,
+      `- **Pack slots and focus** are levers on the run's texture, not its odds: ${sign(best('Pack slots 10'))} and ${sign(best('Focus Ironvein +60%'))} at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of ${MIN_OBSTACLES} a field — a balance lever the tuning pass owns.`,
     )
     line(`- **Everything the HQ sells** reads ${sign(best('everything the HQ sells'))} at its best.`)
     line('')
@@ -2458,12 +2541,12 @@ if (want(13)) {
   line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
   line('open ground every route used to share, with its company weighting), at zero HQ. The gold')
   line('column is the bank\'s **net** change — everything banked (city pay, any cash-out sale, the')
-  line(`purse's rest and ${Math.round(ROAD_SHARE * 100)}% of the road's gold, \`hq.homeGold\`) less the stake and the purse taken — priced from the contract code itself`)
+  line(`road's gold at ${Math.round(ROAD_SHARE * 100)}%, \`hq.homeGold\`) less the stake — the purse is the company's ${ADVANCE}-gold advance, never the bank's — priced from the contract code itself`)
   line('(`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same')
   line(`roads: **${PRESS_ON.label}**, and **${CASH_OUT_HALF.label}** at city 1 or 2.`)
   line('')
   const STAKE_POLICY = POLICIES[policyIdx('adaptive')]
-  interface TierRow { crates: number; win: number; winCash: number; cashed: number; netPress: number; netCash: number; payPress: number; payCash: number }
+  interface TierRow { crates: number; win: number; winCash: number; cashed: number; netPress: number; netCash: number; payPress: number; payCash: number; won: number[] }
   const tierRows: TierRow[] = []
   for (let c = 0; c <= MAX_CRATES; c++) {
     const press: number[] = []
@@ -2485,12 +2568,12 @@ if (want(13)) {
       wonCash.push(b.delivered ? 1 : 0)
       cashed.push(b.cashedOut ? 1 : 0)
     }
-    tierRows.push({ crates: c, win: mean(won), winCash: mean(wonCash), cashed: mean(cashed), netPress: mean(press), netCash: mean(cash), payPress: mean(payP), payCash: mean(payC) })
+    tierRows.push({ crates: c, win: mean(won), winCash: mean(wonCash), cashed: mean(cashed), netPress: mean(press), netCash: mean(cash), payPress: mean(payP), payCash: mean(payC), won })
     if (mean(won) < 0.01) break
   }
   line('Two gold columns, because they answer different questions. **Contract pay** is what the stake')
   line("controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds what the purse")
-  line(`brings home — what is left of it in full, and ${Math.round(ROAD_SHARE * 100)}% of the road's gold (kill gold, node purses, sales) — less the purse taken.`)
+  line(`brings home: ${Math.round(ROAD_SHARE * 100)}% of the road's gold (kill gold, node purses, sales). The company's ${ADVANCE}-gold advance is spent first and never banked.`)
   line('')
   line('| Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |')
   line('|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|')
@@ -2502,21 +2585,49 @@ if (want(13)) {
   }
   if (tierRows.length <= MAX_CRATES) line(`| ${tierRows.length}–${MAX_CRATES} | | not measured: the tier below already delivers under 1% | | | | | | | |`)
   line('')
-  line('**Two invariants**, the climb\'s own, kept:')
+  line('**The invariants.** The run-level gates read **contract delivery** (October audit, designer item 1):')
   line('')
-  line(`1. **Every crate is a cost of at least ${(BANNER_MIN_COST * 100).toFixed(0)}pt** of delivery rate (pressing on). A crate that`)
-  line('   does not make the road harder is a bonus with a warning label.')
-  line('2. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every')
-  line('   tier — a stake whose payout does not cover the difficulty it adds is a trap.')
+  line(`1. **A zero-meta escort delivers ${pct(ZERO_ESCORT_BAND[0])}–${pct(ZERO_ESCORT_BAND[1])}** — the 0-crate row, the free contract every first`)
+  line('   militia signs. (§11 keeps its own first-timer floor and ceiling on the shipped routing lines.)')
+  line(`2. **Every crate costs at least ${pct(CRATE_MIN_REL_COST)} of the tier below's delivery rate**, read off the ladder's log-linear`)
+  line('   fit, and **no crate measurably makes the road easier** (a rise beyond twice its paired s.e., §12\'s noise floor). This replaced')
+  line('   "≥ 3pt per crate", which no ladder that ends at a 10–20% max stake can meet: at 15% delivery a 3pt')
+  line('   step is a 20% cut. The fit, not each step, carries the floor because one step\'s paired s.e. at')
+  line(`   ${BANNER_RUNS} runs (≈2pt) is larger than an 8% step (1–3pt).`)
+  line('3. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every')
+  line('   tier — a stake whose payout does not cover the difficulty it adds is a trap. (Kept as it was.)')
   line('')
+  line('Gates 2 and 3 hold on this ladder and on the veteran\'s (§13c); the veteran\'s escort and max stake have bands of their own.')
+  line('')
+  {
+    const z = tierRows[0].win
+    const se = shareSe(z, BANNER_RUNS)
+    line(`**Zero-meta escort: ${pct(z)}** (±${(se * 100).toFixed(1)}pt, 1σ) against ${pct(ZERO_ESCORT_BAND[0])}–${pct(ZERO_ESCORT_BAND[1])} — ${bandRead(z, se, ZERO_ESCORT_BAND)}.`)
+    line('')
+    if (z < ZERO_ESCORT_BAND[0] || z > ZERO_ESCORT_BAND[1]) {
+      failures.push(`A zero-meta escort delivers ${pct(z)}, outside its ${pct(ZERO_ESCORT_BAND[0])}–${pct(ZERO_ESCORT_BAND[1])} band.`)
+    }
+  }
+  const ladderGates = (who: string, rows: { crates: number; win: number; won: number[] }[], n: number) => {
+    if (rows.length < 3) return
+    const fit = ladderFit(rows.map((r) => r.win), n)
+    line(`**${who}: each crate costs ${pct(fit.cost)} of the tier below's delivery** on the fit (±${(fit.se * 100).toFixed(1)}pt, 1σ; floor ${pct(CRATE_MIN_REL_COST)}). Step by step: ${rows.slice(1).map((r, i) => `${r.crates}c ${pp(rows[i].win - r.win)} ±${(pairedSe(rows[i].won, r.won) * 100).toFixed(1)}`).join(' · ')} (a cost per crate, paired 1σ).`)
+    line('')
+    if (fit.cost < CRATE_MIN_REL_COST) {
+      failures.push(`${who}: a crate costs ${pct(fit.cost)} of the tier below's delivery on the ladder's fit — under the ${pct(CRATE_MIN_REL_COST)} every crate must cost.`)
+    }
+    for (let i = 1; i < rows.length; i++) {
+      const rise = rows[i].win - rows[i - 1].win
+      const se = pairedSe(rows[i].won, rows[i - 1].won)
+      if (rise > 2 * se) {
+        failures.push(`${who}: stake ${rows[i].crates} delivers ${pct(rows[i].win)} against ${rows[i - 1].crates} crate${rows[i - 1].crates === 1 ? '' : 's'}' ${pct(rows[i - 1].win)} — easier by ${(rise * 100).toFixed(1)}pt, beyond twice its paired s.e. (${(2 * se * 100).toFixed(1)}pt). A crate that makes the road easier is a bonus with a warning label.`)
+      }
+    }
+  }
+  ladderGates('Zero-meta ladder', tierRows, BANNER_RUNS)
   for (let i = 1; i < tierRows.length; i++) {
     const cur = tierRows[i]
     const prev = tierRows[i - 1]
-    if (prev.win - cur.win < BANNER_MIN_COST && prev.win >= 0.01) {
-      failures.push(
-        `Stake ${cur.crates} is not harder: it delivers ${pct(cur.win)} against ${prev.crates} crate${prev.crates === 1 ? '' : 's'}' ${pct(prev.win)} — a cost of ${((prev.win - cur.win) * 100).toFixed(1)}pt, under the ${(BANNER_MIN_COST * 100).toFixed(0)}pt every crate must cost.`,
-      )
-    }
     if (cur.payCash <= prev.payCash) {
       failures.push(
         `Stake ${cur.crates} does not pay more: ${f1(cur.payCash)} gold of contract pay against ${prev.crates} crate${prev.crates === 1 ? '' : 's'}' ${f1(prev.payCash)}. The crate's pay does not cover the difficulty it adds.`,
@@ -2528,15 +2639,15 @@ if (want(13)) {
   )
   line('')
   {
-    // Finance's cap against the stake (reported, not gated): interest must
-    // never out-earn carrying cargo, so the top cap is set under the smallest
-    // stake's expected gain over the escort.
+    // The bank's interest cap against the stake (reported, not gated):
+    // interest must never out-earn carrying cargo, so the cap is set under the
+    // smallest stake's expected gain over the escort.
     const escort = tierRows[0].payCash
     const gains = tierRows.slice(1).map((r) => r.payCash - escort)
-    const cap = Math.max(...INTEREST.map((t) => t.cap))
+    const cap = BASE_INTEREST.cap
     const least = gains.length ? Math.min(...gains) : 0
     line(
-      `**Bank vs. stake (reported, not gated).** The bank's interest is capped at ${cap} gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
+      `**Bank vs. stake (reported, not gated).** The bank's free interest is capped at ${cap} gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
     )
     line('')
   }
@@ -2545,6 +2656,52 @@ if (want(13)) {
   line('That widens every later run\'s deals — not a number this table can price — so the gold column')
   line('only has to say a bigger stake is never a loss.')
   line('')
+
+  // 13c (printed before 13b's routes, which are reported only): the veteran.
+  line('### 13c. The veteran\'s contracts (gated)')
+  line('')
+  line('**The veteran** is the company §18 calls the late-game company: the HQ bought out (Opening deal 5, the Hiring')
+  line('Hall, pack slots 10, focus 3, the scouts), every skill card a contract can unlock and every Level 1–3 item kind')
+  line(`(\`runsim.VETERAN\`). It **reads its offers** — each skill milestone takes the move that raises its DPS most (\`build: 'best'\`):`)
+  line('picking at random from 36 cards, several dead on a lone hero (§7), the same company delivered no more than a zero-meta')
+  line(`escort. Same seeds and road as the ladder above, the adaptive route, ${VETERAN_RUNS} runs a tier. It carries the scouts, so every`)
+  line('stake elite stands where the map leaves a way round it: what a crate costs the veteran is the raiders\' strength.')
+  line('')
+  const vetRows: { crates: number; win: number; won: number[]; payCash: number; netCash: number }[] = []
+  for (let c = 0; c <= MAX_CRATES; c++) {
+    const won: number[] = []
+    const pay: number[] = []
+    const net: number[] = []
+    for (let i = 0; i < VETERAN_RUNS; i++) {
+      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { ...veteranRun(c), policy: STAKE_POLICY })
+      const x = contractNet(r, CASH_OUT_HALF)
+      won.push(r.won ? 1 : 0)
+      pay.push(x.pay)
+      net.push(x.net)
+    }
+    vetRows.push({ crates: c, win: mean(won), won, payCash: mean(pay), netCash: mean(net) })
+  }
+  line('| Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |')
+  line('|--:|--:|--:|--:|--:|')
+  for (const r of vetRows) line(`| ${r.crates} | ${pct(r.win)} | ${(shareSe(r.win, VETERAN_RUNS) * 100).toFixed(1)}pt | ${f1(r.payCash)} | ${f1(r.netCash)} |`)
+  line('')
+  const vEsc = vetRows[0].win
+  const vMax = vetRows[vetRows.length - 1].win
+  line(`**Veteran escort: ${pct(vEsc)}** against ${pct(VETERAN_ESCORT_BAND[0])}–${pct(VETERAN_ESCORT_BAND[1])} — ${bandRead(vEsc, shareSe(vEsc, VETERAN_RUNS), VETERAN_ESCORT_BAND)}. **Max stake (${MAX_CRATES} crates): ${pct(vMax)}** against ${pct(VETERAN_MAX_STAKE_BAND[0])}–${pct(VETERAN_MAX_STAKE_BAND[1])} — ${bandRead(vMax, shareSe(vMax, VETERAN_RUNS), VETERAN_MAX_STAKE_BAND)}. The veteran's escort leads the zero-meta escort by ${pp(vEsc - tierRows[0].win)}: what the meta layer and the player's read are worth.`)
+  line('')
+  if (vEsc < VETERAN_ESCORT_BAND[0] || vEsc > VETERAN_ESCORT_BAND[1]) {
+    failures.push(`A veteran's escort delivers ${pct(vEsc)}, outside its ${pct(VETERAN_ESCORT_BAND[0])}–${pct(VETERAN_ESCORT_BAND[1])} band.`)
+  }
+  if (vMax < VETERAN_MAX_STAKE_BAND[0] || vMax > VETERAN_MAX_STAKE_BAND[1]) {
+    failures.push(`A veteran's max stake (${MAX_CRATES} crates) delivers ${pct(vMax)}, outside its ${pct(VETERAN_MAX_STAKE_BAND[0])}–${pct(VETERAN_MAX_STAKE_BAND[1])} band.`)
+  }
+  ladderGates("Veteran's ladder", vetRows, VETERAN_RUNS)
+  for (let i = 1; i < vetRows.length; i++) {
+    if (vetRows[i].payCash <= vetRows[i - 1].payCash) {
+      failures.push(`Veteran's ladder: stake ${vetRows[i].crates} does not pay more: ${f1(vetRows[i].payCash)} gold of contract pay against ${vetRows[i - 1].crates} crate${vetRows[i - 1].crates === 1 ? '' : 's'}' ${f1(vetRows[i - 1].payCash)}.`)
+    }
+  }
+  summary.push(`Contract delivery: zero-meta escort ${pct(tierRows[0].win)} (gate ${pct(ZERO_ESCORT_BAND[0])}–${pct(ZERO_ESCORT_BAND[1])}); veteran escort ${pct(vEsc)} (${pct(VETERAN_ESCORT_BAND[0])}–${pct(VETERAN_ESCORT_BAND[1])}); veteran ${MAX_CRATES} crates ${pct(vMax)} (${pct(VETERAN_MAX_STAKE_BAND[0])}–${pct(VETERAN_MAX_STAKE_BAND[1])}); per crate ${pct(ladderFit(tierRows.map((r) => r.win), BANNER_RUNS).cost)} zero-meta / ${pct(ladderFit(vetRows.map((r) => r.win), VETERAN_RUNS).cost)} veteran (≥ ${pct(CRATE_MIN_REL_COST)})`)
 
   // The routes: each company's ground, as an escort.
   line('### 13b. The routes — each company\'s ground, as an escort')
@@ -3536,21 +3693,22 @@ if (want(18)) {
   line('')
   line(`**What it is.** The endgame charter (\`run/charter.ts\`): it opens once every skill card and every Level 1–3 item kind is`)
   line(`unlocked. A **${CHARTER_FEE.toLocaleString('en')} gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the`)
-  line(`destination pays **${CHARTER_PAYOUT.toLocaleString('en')} gold** whatever the cargo, and one Sovereign item kind unlocks. It deals every pool the`)
-  line('player owns for no company (no route weighting, no HQ focus), and every company sets a condition at once:')
+  line(`destination pays **${CHARTER_PAYOUT.toLocaleString('en')} gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns`)
+  line('standing with all five companies — each what an escort that ended the same way earns with its one (`standing.charterStandingXp`;')
+  line('not priced in gold below). It deals every pool the player owns for no company (no route weighting, no HQ focus), and every')
+  line('company sets a condition at once:')
   line('')
   for (const t of TRADE_OFFS) line(`- **${COMPANIES.find((c) => c.id === t.company)!.name}: ${t.rule}.** ${t.line}`)
   line(`- And every goblin clan marches from the first fight, ${MUSTER_PCT}% stronger and stealing ${MUSTER_PCT}% more (the muster).`)
   line('')
-  const LATE_HQ = { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }
-  const late = loadoutFor('late game', { upgrades: LATE_HQ })
+  // The veteran of §13c (`runsim.VETERAN`): the save that opens the door.
   const lateSkills = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
   const lateItems = [...ALL_ITEM_KINDS]
   const lateOwned = [...ALL_ITEM_KINDS, ...SOVEREIGN_ITEM_KINDS]
   const CH_POLICY = POLICIES[policyIdx('adaptive')]
   line(`**The company.** A strong late-game militia: every skill card a contract can unlock (${lateSkills.length}, feat cards aside), every Level 1–3`)
-  line('item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3, the scouts) — the save that')
-  line(`opens the door. The adaptive route, ${HUB_RUNS} runs a row on the paired seeds of §12–§13.`)
+  line('item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3, the scouts) — the save that')
+  line(`opens the door — §13c's **veteran**, who reads its skill offers (\`build: 'best'\`). The adaptive route, ${HUB_RUNS} runs a row on the paired seeds of §12–§13.`)
   line('')
   interface ChRow { label: string; won: number; net: number }
   const chRows: ChRow[] = []
@@ -3558,7 +3716,7 @@ if (want(18)) {
     const won: number[] = []
     const net: number[] = []
     for (let i = 0; i < HUB_RUNS; i++) {
-      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta: late, policy: CH_POLICY, skillPool: lateSkills, itemPool: lateItems, ...o })
+      const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { ...veteranRun(0), meta: VETERAN, policy: CH_POLICY, skillPool: lateSkills, itemPool: lateItems, ...o })
       const x = contractNet(r, o?.contract?.charter ? PRESS_ON : CASH_OUT_HALF)
       won.push(r.won ? 1 : 0)
       net.push(x.net)
@@ -3581,7 +3739,7 @@ if (want(18)) {
   line('')
   const breakEven = CHARTER_FEE / CHARTER_PAYOUT
   const goodRuns = staked.net > 0 ? CHARTER_FEE / staked.net : NaN
-  line(`**The charter's delivery rate for this company: ${pct(none.won)}** (${pct(all.won)} once all five Sovereign items are owned). The payout is ${(CHARTER_PAYOUT / CHARTER_FEE).toFixed(0)}× the fee, so the charter breaks even at a ${pct(breakEven)} delivery rate; measured, a charter is worth **${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} gold** to the bank on average (the fee, the purse and the road's share included).`)
+  line(`**The charter's delivery rate for this company: ${pct(none.won)}** (${pct(all.won)} once all five Sovereign items are owned). The payout is ${(CHARTER_PAYOUT / CHARTER_FEE).toFixed(0)}× the fee, so the charter breaks even at a ${pct(breakEven)} delivery rate; measured, a charter is worth **${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} gold** to the bank on average (the fee and the road's share included; the advance is the company's).`)
   line('')
   line(`**The fee against savings.** The same company banks ${escort.net.toFixed(0)} gold net from an escort and ${staked.net.toFixed(0)} from a 4-crate contract (cash-out line), so the ${CHARTER_FEE.toLocaleString('en')} fee is about **${Number.isFinite(goodRuns) ? goodRuns.toFixed(1) : '—'} good runs** of savings.`)
   line('')
@@ -3622,13 +3780,19 @@ if (SECTIONS) console.log(out)
 console.log('=== Fieldwatch Balance ===')
 for (const s of summary) console.log(s)
 console.log(SECTIONS ? `Sections ${[...SECTIONS].sort((a, b) => a - b).join(', ')} written to ${outPath.pathname}` : `Report written to balance/REPORT.md`)
-if (failures.length) {
-  console.log(`\n❌ ${failures.length} invariant(s) failed:`)
-  for (const fmsg of failures) console.log('  - ' + fmsg)
-  process.exit(1)
-} else {
-  console.log('\n✅ All balance invariants passed.')
+// The verdict, and how it exits: a failed invariant fails the run unless CI
+// opted into BALANCE_INVARIANTS=warn (see verdict.ts). REPORT.md is already
+// written above and reads the same in either mode.
+const verdict = balanceVerdict(failures, invariantMode(process.env))
+for (const l of verdict.console) console.log(l)
+if (verdict.stepSummary && process.env.GITHUB_STEP_SUMMARY) {
+  try {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, verdict.stepSummary + '\n')
+  } catch (err) {
+    console.warn('Could not write the job summary:', err)
+  }
 }
+if (verdict.exitCode) process.exit(verdict.exitCode)
 
 // ---- helpers ----
 function baseStatTotal(it: Item): number {
@@ -3641,7 +3805,8 @@ function baseStatTotal(it: Item): number {
     (b.attackSpeed ?? 0) * 100 +
     (b.critChance ?? 0) * 100 +
     (b.rangeMult ?? 0) * 100 +
-    (b.splashAdd ?? 0)
+    (b.splashAdd ?? 0) +
+    (b.damagePct ?? 0) * 100
   )
 }
 

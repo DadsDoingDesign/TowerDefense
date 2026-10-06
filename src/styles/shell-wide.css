@@ -125,6 +125,23 @@
     height: 76px;
   }
 
+  /* -- 3.4 (Oct 2026): the held sub-wave on a desk ------------------------
+     Beside the field the strip has the side rail's whole width, and "Next ▶"
+     sat in it at 87×44 — the turn's one next step, smaller than the queue's
+     portraits. It takes the primary's size here, and the instruction it
+     answers ("Move one hero") is read at body size, not as an 11px caption. */
+  .shell:not(.shell-page) .sh-command.next {
+    min-width: 160px;
+    min-height: 56px;
+    padding: 0 24px;
+    font-size: var(--fs-xl);
+  }
+  .shell:not(.shell-page) .sh-wq-cap.do .sh-wq-now {
+    font-size: var(--fs-md);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
   /* -- the "?" keyboard sheet (Shortcuts.tsx) ------------------------------ */
   .shell:not(.shell-page) > .sh-keys {
     display: block;

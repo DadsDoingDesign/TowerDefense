@@ -86,10 +86,9 @@ export interface ContractBoard {
   /** The board's own seed: each company's contract deals its run seed from it. */
   seed: number
   company: CompanyId
-  /** `board`: pick a company; `terms`: escort or stake, and the purse. */
+  /** `board`: pick a company; `terms`: escort or stake. */
   step: 'board' | 'terms'
   crates: number
-  purse: number
 }
 
 export interface HudSnapshot {
@@ -120,7 +119,7 @@ export interface RunRecap {
   contract: RunContract | null
   /** Cargo, as a percentage, when the run ended. */
   cargo: number
-  /** Gold this settle put in the bank: the purse that came home, and every city's pay. */
+  /** Gold this settle put in the bank: the road's share, every city's pay (and an older save's purse). */
   deposit: number
   /**
    * The deal this run was dealt from: map, loot, shrines, wave composition and
@@ -229,6 +228,12 @@ export interface GameData {
 
   // Persistent run resources
   battleMap: GameMap
+  /**
+   * The act whose field `battleMap` is (`run/fields`): each act is fought on
+   * its own field, dealt when the first fight of the act is entered, and the
+   * company starts that fight on the bench. Snapshotted.
+   */
+  fieldAct: number
   roster: Sentinel[]
   placements: Placement
   gold: number
@@ -347,8 +352,17 @@ export interface GameData {
    * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
    * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast
    * says it once. Presentation — not snapshotted, cleared with the shell.
+   * Also the slot for any one-off notice: `tone: 'warn'` marks a problem the
+   * player should know about (a refused save, `state/saveHealth.ts`).
    */
-  gearNotice: { text: string; at: number } | null
+  gearNotice: { text: string; at: number; tone?: 'warn' } | null
+  /**
+   * The arrival note for the first fight on a new act's field — the field's
+   * name ("New ground: The Kiln Road — post your heroes"). Set by `selectNode`
+   * when the ground changes; gone once a hero is posted, on "Got it", or with
+   * the rest of the shell. Presentation — not snapshotted.
+   */
+  newGround: string | null
 }
 
 export interface GameState

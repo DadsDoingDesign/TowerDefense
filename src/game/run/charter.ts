@@ -21,6 +21,9 @@
  *    cities are waypoints), no cash-out, and a fall loses the fee. Delivered,
  *    the destination pays {@link CHARTER_PAYOUT} in full — cargo does not
  *    scale it — and one Sovereign item kind unlocks ({@link rollSovereign}).
+ *  - **Standing with all five** (`standing.charterStandingXp`, October 2026): the
+ *    road is every company's, so it earns standing with each of them — as much
+ *    as an escort run that ended the same way earns with its one company.
  *  - **Every good, every raider**: the run deals from every pool you own with
  *    no company bias (no route weighting, no HQ focus), and every goblin clan
  *    marches from the first fight (`waves` `muster`).

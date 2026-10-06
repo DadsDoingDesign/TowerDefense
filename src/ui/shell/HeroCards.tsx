@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Icon } from '../Icon'
 import { RARITY } from '../../game/data/items'
-import { rarityVar } from '../channels'
+import { railStyle, rarityVar } from '../channels'
 import type { Offer } from './offers'
 
 /**
@@ -35,7 +35,7 @@ export function HeroCards({ items, selectedId, onSelect }: { items: Offer[]; sel
           <button
             key={o.id}
             className={`pg-hero ${sel ? 'sel' : ''}`}
-            style={{ '--rail': h.color } as CSSProperties}
+            style={railStyle(h.color) as CSSProperties}
             aria-pressed={sel}
             onClick={() => onSelect(o.id)}
           >
@@ -51,7 +51,7 @@ export function HeroCards({ items, selectedId, onSelect }: { items: Offer[]; sel
             </span>
             <span className="pg-hero-gear">
               {h.gear.map((g) => (
-                <span key={g.id} className="pg-hero-piece" style={{ '--rail': rarityVar(g.rarity) } as CSSProperties}>
+                <span key={g.id} className="pg-hero-piece" style={railStyle(rarityVar(g.rarity)) as CSSProperties}>
                   <Icon name={g.icon} />
                   <span className="pg-hero-piece-name">{g.name}</span>
                   {/* The rarity as a word for screen readers and colour-blind

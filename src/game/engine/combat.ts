@@ -74,6 +74,8 @@ interface GearContribution {
   critChance: number
   rangeMult: number
   splashAdd: number
+  /** Summed `damagePct` (a Tome, a Plate): a multiplier on the hero's damage. */
+  damagePct: number
   mods: EffectMods[]
 }
 
@@ -88,6 +90,7 @@ function emptyGear(): GearContribution {
     critChance: 0,
     rangeMult: 0,
     splashAdd: 0,
+    damagePct: 0,
     mods: [],
   }
 }
@@ -109,6 +112,7 @@ function addItem(acc: GearContribution, item: Item | null, share = 1): void {
   acc.critChance += b.critChance ?? 0
   acc.rangeMult += b.rangeMult ?? 0
   acc.splashAdd += b.splashAdd ?? 0
+  acc.damagePct += b.damagePct ?? 0
   for (const e of item.enchantments) {
     if (e.stats) {
       acc.stats.str += e.stats.str ?? 0
@@ -178,7 +182,7 @@ export function computeCombat(s: Sentinel, ctx: CombatContext = {}): CombatProfi
   const isPhys = base.damageType === 'physical'
   const damageStat = isPhys ? st.str : st.int
   const flat = isPhys ? gear.flatPhys : gear.flatMag
-  const damage = (base.damage + flat) * (1 + damageStat * 0.04) * (mods.damageMult ?? 1)
+  const damage = (base.damage + flat) * (1 + damageStat * 0.04) * (mods.damageMult ?? 1) * (1 + gear.damagePct)
   const rate = base.rate * (1 + st.dex * 0.02) * (mods.rateMult ?? 1) * (1 + gear.atkSpeed)
   const range = base.range * ((mods.rangeMult ?? 1) + gear.rangeMult)
   const critChance = clamp(base.critChance + st.dex * 0.004 + (mods.critChanceAdd ?? 0) + gear.critChance, 0, 0.95)

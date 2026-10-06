@@ -9,6 +9,8 @@ import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
 import { cargoShare } from '../../game/run/contracts'
 import { contractRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
+import { fieldIdOf } from '../../game/data/maps'
+import { fieldName, groundFor } from '../../game/run/fields'
 import { NODE_ICON, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { resistHint, summarizeEncounter } from './encounterPreview'
@@ -45,6 +47,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const focus = useMapFocus((s) => s.focus)
 
   const firstRun = useGameStore((s) => s.firstRun)
+  const fieldId = useGameStore((s) => fieldIdOf(s.battleMap))
+  const fieldAct = useGameStore((s) => s.fieldAct)
   const node = runMap.nodes.find((n) => n.id === nodeId)
   const canMarch = !!node && reachable.includes(nodeId) && !cleared.includes(nodeId)
 
@@ -67,6 +71,9 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   // LS3: a first run's first two depths are plain ground — the same answer.
   // The ground is the route's (its company's), as `selectNode` deals it.
   const rule = summary ? nodeTerrainRule(node, runSeed, groundOf({ firstRun, contract: charter ? { company: null, charter } : company ? { company } : null })) : null
+  // A new act's first fight is on new ground (`run/fields`) — the same pure
+  // rule `selectNode` deals it by — and the company starts it on the bench.
+  const ground = summary ? groundFor(runSeed, { fieldId, fieldAct }, node.layer) : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -83,6 +90,11 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
           {meta.label} · Depth {node.layer}
           {rule ? ` · ${TERRAIN_RULES[rule].name}` : ''}
         </p>
+        {ground?.fresh && (
+          <p className="sh-line sh-node-ground">
+            <Icon name="map" /> <b>New ground: {fieldName(ground.fieldId)}.</b> Heroes start on the bench.
+          </p>
+        )}
         {rule && (
           <p className="sh-line sh-node-terrain">
             <Icon name="warn" /> <b>{TERRAIN_RULES[rule].name}.</b> {TERRAIN_RULES[rule].blurb}

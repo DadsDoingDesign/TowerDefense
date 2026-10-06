@@ -479,3 +479,103 @@ dev server and the production preview was used for the menu and the Codex.
   not pushed.
 - Next (for a later lane): the open review items above, and the build-spread
   watch item (the oracle-vs-random gap is ~30pt out of sample).
+
+---
+
+# October audit, lane B — re-anchored gates, item identities, never-taken options
+
+Designer items 1, 4a and 9 of `docs/AUDIT_2026-10.md` §4. Base: the
+integration branch with lanes 1–4, C (a field per act), A and D merged.
+Reads are `tune.ts` on paired seeds (`9001 + i·17`) unless marked REPORT
+(the full `npm run balance`). Before = the committed REPORT at c8bda01 (50
+invariants failing); after = the REPORT committed with this lane (38).
+
+## The new gates (balance/report.ts §6, §13, §13c)
+
+| Gate | Before | After (REPORT) | 1σ |
+|---|--:|--:|--:|
+| §6 Monte Carlo 45–60% | 61% (failing) | 68% — **retired as a gate**, still printed | — |
+| Zero-meta escort 20–30% (§13, 0 crates, adaptive, Rosethread) | 21% | **28%** | 1.8pt (inside by > 1σ) |
+| Veteran escort 35–55% (§13c, runsim.VETERAN) | 30% (§18's row, random picks) | **41%** | 2.0pt |
+| Veteran max stake (8 crates) 10–20% | — (not measured) | **17%** | 1.5pt |
+| Every crate ≥ 8% of the tier below (log-linear fit) | "≥ 3pt a crate" failed 6 of 8 | zero meta **15%** ±1.1, veteran **11%** ±0.8 | — |
+| No crate easier beyond 2 paired s.e. | — | none | — |
+| §11 first-timer floor ≥ 15% / ceiling ≤ 35% | 16% | **22%** | 2.7pt |
+| §11 best line ≥ 15% | 19% | **27%** (adaptive) | — |
+| §6 boss kills ≥ 10% of arrivals (kept) | 10% (9.85, failing) | **12%** | — |
+
+The veteran is §18's late-game company (HQ bought out, every random skill
+card, every L1–3 item kind), and it **reads its offers** (`build: 'best'`).
+With random picks the same company delivered 17.5% against a zero-meta
+escort's 17.8% (n=400): 36 cards dealt three at a time, several dead on a
+lone hero, dilute a random pick.
+
+The per-crate gate is read off the ladder's fit because one step's paired
+s.e. at 600 runs is ≈2pt — larger than an 8% step (1–3pt). Measured at n=600
+on the veteran's ladder, single steps read from −7% to +28% relative around a
+fitted ≈11%.
+
+## Levers moved
+
+| Lever | Before | After | Why / read |
+|---|--:|--:|---|
+| `watch.STRENGTH_PER_STEP` | 0.08 | **0.19** | At 0.08 the veteran's ladder was 29.5% → 19.8% over 8 crates, steps inside the noise. 0.15 (the economy audit's figure) left the veteran's max stake at 18–20%; 0.17 at 18.5%; 0.19 → 16–17%. |
+| `threat.ACT_STEPS` | [1.12, 1.2, 1.25] | **[1.06, 1.13, 1.18]** | Zero-meta escort 19.8% → 26.7%, veteran 26% → 40–43% (n=400 → 600). The first-timer line 14.5% → 22.7%. |
+| `threat.nodeThreatMult('boss')` | ×0.55 | **×0.85** | The eased road alone took the boss's kill share to 7.5% (gate ≥ 10%): ×0.62 → 7.4%, ×0.80 → 12.0%, ×0.85 → 12.4%. |
+| Bounty (skill) | +1 gold a kill | **+3** | Item 9. A stop-rate bench cannot see gold; §7 now lists it as graded in gold. |
+| Tithe Box (relic) `TITHE_GOLD` | 10 | **25** | Item 9. Whole runs: −1 ±6pt (paired, n=150) — gold does not move the win rate. |
+| Field Surgeon's Kit `SURGEON_HEAL` | 2 (10%) | **4 (20%)** | Item 9. Whole runs: +1 ±6pt. |
+| Iron Vigil | −12% damage | **−35%** | The designer's −25% read a worst bench of −1.2 to −1.4pt (its thorns and patience pay it back); −30% −1.6pt; −35% **−2.8pt** (gate: a pact must cost ≥ 2pt). Mean still +6.1pt. |
+| Wildfire Pact | −35% damage a hit | **−50%** | Worst bench +0.0 → **−5.6pt**; mean +7.2 → +3.4pt. |
+| Bloodletting | +70% dmg / −34% speed | **+90% / −30%** | Epic stat relics +1.0pt → **+3.3pt** (Rare +2.0pt): the ladder is monotone. |
+| Whetstone Pact | +32% speed | **+36%** | +40% erased its cost (worst −0.4pt); +36% keeps −5.6pt. |
+| Cleave (L1) | splash 20 | **14** (−30%) | §7 reads it unchanged (+43.0 → +42.7pt on the fighter): any splash on a lone melee hero is the whole bench. L1:fighter's lead 19.6 → 19.3pt (under the 20pt ceiling either way). |
+| Wildfire (L2) | burn 12, splash 15 | **burn 10, splash 13** (≈ −15%) | L2:fighter's lead 20.3 → **19.3pt** (gate ≤ 20pt: now passing). |
+| §7 Level 3 bench (harness) | fitted on the bare hero | **fitted on a hero holding Berserk** | Every strong L3 skill read the +59.3pt ceiling. Now fighter and rogue rank (Stormcaller leads the rogue point by 25.5pt — a new, real finding); on the mystic two hold skills (Bulwark, Warden of Ash) still stop every bench. |
+| Harness equip rule (`keepsJob`) | keeps a hold | **keeps a hold, a blast and a reach** | With item identities the DPS-greedy model swapped Mail for Plate and Staff for Grimoire because `dps` cannot see splash or range. |
+
+Not moved: the swift elite's `budgetScale` (the ×22 variant spread is a §14
+finding the contract gates did not need), the stake elites' placement
+(`map.addDifficultyElites`; the veteran owns the scouts, so its stake elites
+are avoidable whatever the order), and anything in lanes A, C and D.
+
+## Item kinds (designer item 4a)
+
+Each kind rolls one identity (table in `items.ts` above `WEAPONS`). Set on a
+scratch §7-style bench: a level-10 hero of each look with the kind at Rare
+(enchantments stripped), each bench fitted so the slot's basic kind stops
+half; three roll seeds × three battle seeds, so ±5pt is noise. Final reads
+(stop rate, mean of `swarm` / `armour` / `line`):
+
+| Slot | Kind (mean stop %) |
+|---|---|
+| One hand, swing | Sword 50 · Axe 52 |
+| One hand, cast | Wand 59 · Rod 61 · Sceptre 61 |
+| Two hand, swing | Greatsword 45 · Warhammer 50 |
+| Two hand, cast | Staff 53 · Grimoire 53 (Staff wins the swarm, Grimoire the armour and line) |
+| Shoot | Bow 52 · Dagger 43 (one-handed: it leaves the off hand free) |
+| Shields (fighter / rogue / mystic) | Shield 52 / 50 / 46 · Buckler 28 / 33 / 38 · Pavise 46 / 54 / 59 |
+| Off hand, no hold | Tome 12 / 14 / 26 · Quiver 11 / 15 / 17 · Focus 11 / 14 / 17 |
+| Body (fighter / rogue / mystic) | Mail 52 / 52 / 47 · Cloak 22 / 57 / 40 · Robe 61 / 50 / 53 · Plate 31 / 50 / 63 · Aegis 32 / 58 / 43 |
+
+A lone hero's bench prizes a hold above everything, so a shield beats any
+non-shield off hand there (as it did when Tome, Quiver and Focus rolled a
+shield's numbers); within each family the kinds now trade. Reach (Cloak) is
+the weakest axis the engine has (see the `reach` affix's comment) and stays
+the build-dependent pick: best on the rogue, worst on the fighter.
+
+First reads on the veteran after the item change, before `keepsJob` and the
+tuning above: 29.5% → 24.0% (n=400) — the DPS-greedy model was trading its
+blast and reach away, which `keepsJob` now refuses.
+
+## Still red that this lane owns or touched
+
+- §7: L3:rogue is solved by Stormcaller (+25.5pt), visible only now that the
+  L3 bench discriminates; Momentum, Cold Snap, Firebrand, Pin Down, Riposte
+  and Keen Eye are dead on their benches (unchanged).
+- §11 strict floor: depth 6 ends 46% of solo runs (was 43%; gate 40%).
+- §13 / §13c "every crate pays more": dips at 4 and 8 crates on both ladders
+  (and 6 on zero meta) — `contracts.cratesSoldAt`, lane A's (the audit's 1.2
+  was reverted for this reason).
+- Tithe Box and Field Surgeon still measure ≈0 on whole-run win rate: gold
+  and cargo do not convert into deliveries on the modelled line.

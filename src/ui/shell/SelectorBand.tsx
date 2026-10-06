@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { lookVar } from '../channels'
+import { lookVar, railStyle } from '../channels'
 import { kitName, weaponName } from '../../game/data/gear'
 import { lookOf } from '../../game/data/gear'
 import { heroLookArt } from './offers'
@@ -17,6 +17,7 @@ import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type Leve
 import { useMapFocus } from './mapFocus'
 import { openSlotShown } from '../../state/staging'
 import { useShown, useStaged } from './staging'
+import { commitOneTap, describeOneTap, useOneTap } from './oneTap'
 import { isMelee, MELEE_LINE } from '../../game/engine/melee'
 import { conflictedIds } from '../../game/run/clearance'
 import { fieldConflicts } from '../../state/game/selectors'
@@ -156,7 +157,7 @@ function PartyCards() {
             className={`sh-hero ${selected ? 'selected' : ''} ${placed ? 'placed' : ''} ${lvlUp ? 'levelled' : ''}`}
             /* Hue through a token rather than `s.color`'s raw hex, so the
                colour-vision modes can move it (M34). */
-            style={{ '--rail': hue } as CSSProperties}
+            style={railStyle(hue) as CSSProperties}
             aria-pressed={selected}
             aria-label={`${s.name}, ${kitName(s)}, level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
               lvlUp ? `, ${levelUpWords(s)}` : ''
@@ -259,19 +260,33 @@ function useFlashes(): Record<string, LevelFlash> {
  * The Selector after a cleared normal wave: the company as a compact strip
  * (so a level-up can glow where the heroes are) over the reward hand.
  *
- * The first card is preselected, so its detail and "Take it" are already in
- * the Context panel below — the one-interaction rule with the first tap done
- * for you. Tapping the selected card again keeps it: the reward's only button
- * must not vanish on a double tap.
+ * One tap TAKES a card (October 2026, the designer's call on audit §4 item
+ * 8): a reward is the most frequent choice in a run and the cheapest, and
+ * select-then-confirm doubled its taps. Reading a card first is still one
+ * gesture away — hold it (touch), hover it (mouse) or focus it (keyboard) and
+ * its detail fills the Context panel; letting go of a hold takes nothing. The
+ * press rules are `press.ts`; the wiring is `oneTap.tsx`.
+ *
+ * The first card's detail is shown to begin with, so the Context panel is
+ * never empty; that card is marked as the one being read, not as chosen.
  */
 function RewardSelector({ offers }: { offers: Offer[] }) {
   const reward = useGameStore((s) => s.reward)
   const selection = useGameStore((s) => s.shellSelection)
   const cards = offers.filter((o) => reward?.some((c) => c.id === o.id))
   const firstId = cards[0]?.id ?? null
+  const { bind, pressing } = useOneTap({
+    surface: cards.map((o) => o.id).join(' '),
+    commit: (id) => {
+      const o = cards.find((c) => c.id === id)
+      if (o) commitOneTap(o)
+    },
+    inspect: (id) => pickReward(id),
+    disabled: (id) => !!cards.find((c) => c.id === id)?.action?.disabled,
+  })
 
-  // Preselect once per hand. Nothing selected yet is the only case: a hero or
-  // a level-up the player opened is theirs to leave.
+  // Show the first card's detail once per hand. Nothing selected yet is the
+  // only case: a hero or a level-up the player opened is theirs to leave.
   useEffect(() => {
     if (!firstId) return
     if (useGameStore.getState().shellSelection) return
@@ -283,27 +298,26 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
       <PartyStrip />
       <div className="sh-reward-row" role="group" aria-label="Spoils — take one">
         {cards.map((o) => {
-          const selected = selection?.kind === 'offer' && selection.id === o.id
+          const looking = selection?.kind === 'offer' && selection.id === o.id
+          const mark = o.mark ? markLabel(o.mark) : null
           return (
             <button
               key={o.id}
-              className={`sh-offer sh-reward ${selected ? 'selected' : ''}`}
-              style={o.color ? ({ '--rail': o.color } as CSSProperties) : undefined}
-              aria-pressed={selected}
-              onClick={() => pickReward(o.id)}
+              className={`sh-offer sh-reward onetap ${looking ? 'looking' : ''} ${pressing === o.id ? 'pressing' : ''}`}
+              style={o.color ? (railStyle(o.color) as CSSProperties) : undefined}
+              // The deed, not a toggle: activating it takes the card.
+              aria-label={`${o.oneTap?.label ?? o.title}${mark ? `, ${mark}` : ''}`}
+              // What a hold shows, for a screen reader on reaching the card.
+              aria-description={describeOneTap(o)}
+              {...bind(o.id)}
             >
-              <span className="sh-reward-icon">
+              <span className="sh-reward-icon" aria-hidden="true">
                 {o.icon && <Icon name={o.icon} lg />}
-                {o.mark &&
-                  (markLabel(o.mark) ? (
-                    <span className="sh-reward-mark" role="img" aria-label={markLabel(o.mark)}>
-                      <Icon name={o.mark} />
-                    </span>
-                  ) : (
-                    <span className="sh-reward-mark">
-                      <Icon name={o.mark} />
-                    </span>
-                  ))}
+                {o.mark && (
+                  <span className="sh-reward-mark">
+                    <Icon name={o.mark} />
+                  </span>
+                )}
               </span>
               <span className="sh-offer-name">{o.title}</span>
               <span className="sh-reward-sub">
@@ -318,7 +332,7 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
   )
 }
 
-/** Show a reward card's detail (and its "Take it") in the Context panel. */
+/** Show a reward card's detail in the Context panel (a hold, a hover, keyboard focus). */
 function pickReward(id: string) {
   useLevelUps.setState({ lastReward: id })
   useGameStore.setState({ shellSelection: { kind: 'offer', id }, selectedSentinelId: null, gearSlot: null })
@@ -343,7 +357,7 @@ function PartyStrip() {
           <button
             key={h.id}
             className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
-            style={{ '--rail': lookVar(h) } as CSSProperties}
+            style={railStyle(lookVar(h)) as CSSProperties}
             aria-pressed={selected}
             aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
             onClick={() => shellSelect({ kind: 'hero', id: h.id })}

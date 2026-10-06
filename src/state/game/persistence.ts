@@ -30,6 +30,7 @@ const SNAPSHOT_FIELDS = [
   'reachableNodeIds',
   'event',
   'battleMap',
+  'fieldAct',
   'roster',
   'placements',
   'gold',

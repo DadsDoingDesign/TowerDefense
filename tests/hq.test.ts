@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   BASE_DEAL,
+  BASE_INTEREST,
   crateKinds,
+  cratesOpenFor,
   dealRules,
   earnsInterest,
   focusBoost,
@@ -12,7 +14,6 @@ import {
   homeTotal,
   hqCost,
   HQ_UPGRADES,
-  INTEREST,
   INTEREST_FULL_AT,
   interestFor,
   packSlots,
@@ -23,9 +24,10 @@ import {
   pullLift,
   pullNewChance,
   pullOdds,
+  refundRetiredHq,
+  RETIRED_HQ,
+  RETIRED_ROCK_ORDER,
   ROAD_SHARE,
-  ROCK_ORDER_PRICE,
-  rocksCut,
   rollPull,
   runHqFor,
   NO_ORDERS,
@@ -39,7 +41,7 @@ import { generateItem, ITEM_BASES } from '../src/game/data/items'
 import { RNG } from '../src/game/core/rng'
 import { fieldFor, FIRST_MAP } from '../src/game/data/maps'
 import { MIN_OBSTACLES, OBSTACLES } from '../src/game/data/hazards'
-import { NEW_BANK, migrateMeta, useMetaStore } from '../src/state/metaStore'
+import { META_VERSION, NEW_BANK, migrateMeta, useMetaStore } from '../src/state/metaStore'
 import { useGameStore } from '../src/state/gameStore'
 import { scrapGold } from '../src/game/run/economy'
 
@@ -77,6 +79,19 @@ describe('road gold comes home, taxed', () => {
     }
     expect(homeGold({ purse: NaN, earned: Infinity, gold: -4 })).toMatchObject({ purseBack: 0, road: 0, roadBanked: 0 })
   })
+
+  it('the company’s advance is split off the same way, and none of it is banked', () => {
+    // A 60 advance, 20 spent at a merchant, 412 earned on the road.
+    const h = homeGold({ purse: 60, earned: 412, gold: 60 - 20 + 412, advance: true })
+    expect(h).toMatchObject({ purse: 60, advance: true, purseBack: 40, road: 412, roadBanked: 103 })
+    expect(homeTotal(h)).toBe(103)
+    // Spent first: an advance spent whole leaves every gold in hand the road's.
+    expect(homeTotal(homeGold({ purse: 60, earned: 100, gold: 100, advance: true }))).toBe(25)
+    // Untouched and nothing earned: nothing comes home.
+    expect(homeTotal(homeGold({ purse: 60, earned: 0, gold: 60, advance: true }))).toBe(0)
+    // No flag is the old rule: an older save's bank purse comes home in full.
+    expect(homeTotal(homeGold({ purse: 60, earned: 0, gold: 60 }))).toBe(60)
+  })
 })
 
 describe('the offices: prices and levels', () => {
@@ -98,35 +113,46 @@ describe('the offices: prices and levels', () => {
     expect(dealRules(99)).toEqual(dealRules(5))
   })
 
-  it('Finance: interest is the rate on the bank, capped per contract, full at 1,000 gold', () => {
-    INTEREST.forEach((t, lvl) => {
-      expect(interestFor(INTEREST_FULL_AT, lvl)).toBe(t.cap)
-      expect(interestFor(INTEREST_FULL_AT * 10, lvl)).toBe(t.cap)
-      expect(interestFor(500, lvl)).toBe(Math.floor(500 * t.rate))
-    })
-    expect(interestFor(-50, 0)).toBe(0)
+  it('the bank: a plain 2% on finished contracts, capped at 20, full at 1,000 gold — nothing to buy', () => {
+    expect(BASE_INTEREST).toEqual({ rate: 0.02, cap: 20 })
+    expect(interestFor(INTEREST_FULL_AT)).toBe(BASE_INTEREST.cap)
+    expect(interestFor(INTEREST_FULL_AT * 10)).toBe(BASE_INTEREST.cap)
+    expect(interestFor(500)).toBe(10)
+    expect(interestFor(-50)).toBe(0)
     expect(earnsInterest('delivered') && earnsInterest('cashedOut')).toBe(true)
     expect(earnsInterest('lost')).toBe(false)
   })
 
-  it('Finance: the top cap never beats the smallest stake (one crate, delivered)', () => {
+  it('the bank’s cap never beats the smallest stake (one crate, delivered)', () => {
     const escort = contractPlan({ company: 'spice', crates: 0, market: 1 }).profit
     const one = contractPlan({ company: 'spice', crates: 1, market: 1 }).profit - escort
-    expect(Math.max(...INTEREST.map((t) => t.cap))).toBeLessThan(one)
+    expect(BASE_INTEREST.cap).toBeLessThan(one)
   })
 
-  it('Operations: pack slots, boulders and focus steps', () => {
+  it('October 2026: the Finance office and "Fewer boulders" are gone; Operations sells three things', () => {
+    expect(HQ_UPGRADES.map((u) => u.id)).toEqual(['deal', 'hiring', 'pack', 'focus', 'scouting'])
+    expect(HQ_UPGRADES.filter((u) => u.office === 'ops').map((u) => u.id)).toEqual(['pack', 'focus', 'scouting'])
+    expect(hqCost('rate' as never, 0)).toBeNull()
+    expect(hqCost('rocks' as never, 0)).toBeNull()
+  })
+
+  it('Operations: pack slots and focus steps; a contract signed now clears no boulders', () => {
     expect(packSlots(0)).toBe(PACK_BASE)
     expect(packSlots(4)).toBe(PACK_BASE + 4)
     expect(packSlots(40)).toBe(PACK_BASE + 4)
-    expect(rocksCut(0, false)).toBe(0)
-    expect(rocksCut(3, true)).toBe(5)
     expect(focusBoost(0, false)).toBe(0)
     expect(focusBoost(3, false)).toBe(3 * FOCUS_STEP)
     expect(focusBoost(3, true)).toBe(4 * FOCUS_STEP)
     expect(runHqFor({}, null, NO_ORDERS)).toEqual({ rocks: 0, focus: null, boost: 0, pack: PACK_BASE })
+    // A save's leftover "Fewer boulders" levels do nothing any more.
+    expect(runHqFor({ rocks: 3 }, null, NO_ORDERS).rocks).toBe(0)
     // No company in focus: no boost, whatever was bought.
-    expect(runHqFor({ focus: 3 }, null, { rocks: false, focus: true }).boost).toBe(0)
+    expect(runHqFor({ focus: 3 }, null, { focus: true }).boost).toBe(0)
+  })
+
+  it('the staggered reveal’s HQ-side gates: crates at the first delivery', () => {
+    expect(cratesOpenFor(0)).toBe(false)
+    expect(cratesOpenFor(1)).toBe(true)
   })
 })
 
@@ -274,8 +300,8 @@ describe('the HQ in the store', () => {
       useMetaStore.getState().settleContract({ depth: 3, kills: 0, won: status === 'delivered', contract: { company: 'art', crates: 0, status }, deposit: 100, unranked })
     const b0 = useMetaStore.getState().bank
     settle('cashedOut')
-    expect(useMetaStore.getState().bank - b0).toBe(100 + interestFor(800, 0))
-    expect(useMetaStore.getState().lastInterest).toBe(interestFor(800, 0))
+    expect(useMetaStore.getState().bank - b0).toBe(100 + interestFor(800))
+    expect(useMetaStore.getState().lastInterest).toBe(interestFor(800))
     const b1 = useMetaStore.getState().bank
     settle('lost')
     expect(useMetaStore.getState().bank - b1).toBe(100)
@@ -289,20 +315,21 @@ describe('the HQ in the store', () => {
     expect(m.buyOrder('focus')).toBe(false) // no company in focus yet
     m.setFocus('metals')
     m.buyUpgrade('focus')
-    expect(useMetaStore.getState().buyOrder('rocks')).toBe(true)
-    expect(useMetaStore.getState().buyOrder('rocks')).toBe(false) // once per contract
     expect(useMetaStore.getState().buyOrder('focus')).toBe(true)
-    expect(useMetaStore.getState().bank).toBe(5000 - 250 - ROCK_ORDER_PRICE - 50)
+    expect(useMetaStore.getState().buyOrder('focus')).toBe(false) // once per contract
+    // The boulder order is gone.
+    expect(useMetaStore.getState().buyOrder('rocks' as never)).toBe(false)
+    expect(useMetaStore.getState().bank).toBe(5000 - 250 - 50)
     const g = useGameStore.getState
-    g().beginCampaign(4242, { kind: 'standard' }, { company: 'art', crates: 0, purse: 60 })
-    expect(g().contract!.hq).toEqual({ rocks: 2, focus: 'metals', boost: 30, pack: PACK_BASE })
+    g().beginCampaign(4242, { kind: 'standard' }, { company: 'art', crates: 0 })
+    expect(g().contract!.hq).toEqual({ rocks: 0, focus: 'metals', boost: 30, pack: PACK_BASE })
     // Backing out of the pick spends nothing.
     g().cancelHeroPick()
-    expect(useMetaStore.getState().orders).toEqual({ rocks: true, focus: true })
-    g().beginCampaign(4242, { kind: 'standard' }, { company: 'art', crates: 0, purse: 60 })
+    expect(useMetaStore.getState().orders).toEqual({ focus: true })
+    g().beginCampaign(4242, { kind: 'standard' }, { company: 'art', crates: 0 })
     g().pickStartingHero('pick-0')
     expect(useMetaStore.getState().orders).toEqual(NO_ORDERS)
-    expect(g().contract!.hq.rocks).toBe(2)
+    expect(g().contract!.hq.boost).toBe(30)
     expect(g().contract!.earned).toBe(0)
   })
 
@@ -319,7 +346,7 @@ describe('the HQ in the store', () => {
     expect(useMetaStore.getState().bonusItems).toEqual([dup.kind])
     expect(itemKindById(dup.kind)).toBeTruthy()
     const g = useGameStore.getState
-    g().beginCampaign(77, { kind: 'standard' }, { company: 'silk', crates: 0, purse: 60 })
+    g().beginCampaign(77, { kind: 'standard' }, { company: 'silk', crates: 0 })
     g().pickStartingHero('pick-0')
     expect(useMetaStore.getState().bonusItems).toEqual([])
     const bonus = g().inventory.find((i) => i.name.includes(dup.kind))
@@ -350,5 +377,24 @@ describe('the HQ in the store', () => {
     expect(now.bonusItems).toEqual(['Axe'])
     expect(now.crates).toEqual({ seed: 0, opened: 2 })
     expect(migrateMeta({}, 9).bank).toBe(NEW_BANK)
+  })
+
+  it('migration v10 → v11: Finance’s levels, "Fewer boulders" and an unspent boulder order are refunded', () => {
+    expect(META_VERSION).toBe(11)
+    const old = { deal: 2, rate: 3, rocks: 2, pack: 1 }
+    const refund = 200 + 400 + 700 + (250 + 450) + RETIRED_ROCK_ORDER
+    expect(refundRetiredHq(old, { rocks: true, focus: true })).toBe(refund)
+    expect(RETIRED_HQ.rate.reduce((a, b) => a + b, 0)).toBe(1300)
+    const m = migrateMeta({ bank: 300, upgrades: old, orders: { rocks: true, focus: true }, stats: { runsCompleted: 9 } }, 10)
+    expect(m.bank).toBe(300 + refund)
+    // The retired ids are dropped; what is kept is kept; the focus order survives.
+    expect(m.upgrades).toEqual({ deal: 2, pack: 1 })
+    expect(m.orders).toEqual({ focus: true })
+    // A v9 save holds them too; levels past the top are refunded only up to the top.
+    expect(migrateMeta({ bank: 0, upgrades: { rate: 9 } }, 9).bank).toBe(1300)
+    // Once: a current save is never refunded again (merge runs on every load).
+    expect(migrateMeta({ bank: 300, upgrades: old, orders: { rocks: true } }, META_VERSION).bank).toBe(300)
+    // A pre-v9 save's purchases fold at v9 and never held these.
+    expect(migrateMeta({ bank: 300, upgrades: { rate: 3 }, stats: { runsCompleted: 4 } }, 8).bank).toBe(300)
   })
 })

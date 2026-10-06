@@ -85,9 +85,9 @@ const L1: Skill[] = [
   { id: 'arc_spark', name: 'Arc Spark', level: 1, company: 'scrolls', desc: 'Every hit jumps to 1 more enemy for 45% of its damage.', mods: { shock: { chains: 1, dmgFrac: 0.45 } }, from: 'Mystic perk Arc Spark (level 5)' },
   { id: 'frostbite', name: 'Frostbite', level: 1, company: 'scrolls', desc: 'Every hit slows its target by 25% for 1.5 seconds.', mods: { chill: { slow: 0.25, dur: 1.5 } }, from: 'Mystic perk Frostbite; the Hoarfrost mutation' },
   { id: 'long_reach', name: 'Long Reach', level: 1, company: 'art', desc: 'Reaches 20% farther.', mods: { rangeMult: 1.2 }, from: 'The Marksman evolution’s reach (×1.5 there)' },
-  { id: 'cleave', name: 'Cleave', level: 1, company: 'metals', desc: 'Every hit also strikes enemies within 20 of its target.', mods: { splashAdd: 20 }, from: 'Warrior perk Cleave (+14 splash); the Blasting Powder mutation' },
+  { id: 'cleave', name: 'Cleave', level: 1, company: 'metals', desc: 'Every hit also strikes enemies within 14 of its target.', mods: { splashAdd: 14 }, from: 'Warrior perk Cleave (+14 splash); the Blasting Powder mutation' },
   // ---- the classless rework: self-contained effects that meet in play -------
-  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill it makes pays 1 more gold.', mods: { goldPerKill: 1 }, from: 'New with the classless rework' },
+  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill it makes pays 3 more gold.', mods: { goldPerKill: 3 }, from: 'New with the classless rework' },
   { id: 'pin_down', name: 'Pin Down', level: 1, company: 'art', desc: 'Its hits deal 30% more to enemies that are being held.', mods: { vsHeld: 0.3 }, from: 'New with the classless rework' },
   { id: 'riposte', name: 'Riposte', level: 1, company: 'metals', feat: 'lone_wolf', desc: 'Enemies it holds take 80% more thorn damage.', mods: { thornsMult: 1.8 }, from: 'Fighter perk Riposte (was behind the same feat)' },
 ]

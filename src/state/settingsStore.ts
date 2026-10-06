@@ -84,16 +84,25 @@ export const TEACH_IDS = [
   // The classless rework: "what a hero does comes from its gear", said once on
   // the hero pick. New, so a returning player meets it too.
   'heroGear',
-  // The mercenary company: one tip each for the contract board, the stake,
-  // the purse and the cities' cash-out — each said once, where it opens.
+  // The mercenary company: one tip each for the contract board, the stake and
+  // the cities' cash-out — each said once, where it opens. (The purse's tip
+  // went with the purse picker, October 2026: every contract carries the
+  // company's advance.)
   'board',
   'stakes',
-  'purse',
   'cashOut',
   // The HQ (build step 3): one tip for the headquarters, one for the sealed
   // crates — each said once, the first time the page opens.
   'hq',
   'crates',
+  // October 2026 (audit designer item 8): rewards and the campfire commit on
+  // a tap. "Tap to take · hold to look", said once, on the first such board.
+  // New for everyone: a returning player is the one who expects a confirm.
+  'oneTap',
+  // The staggered reveal (October 2026): the market of the day and company
+  // focus each say one tip, the first time they show (from the fifth contract).
+  'market',
+  'focus',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>
@@ -169,6 +178,13 @@ interface SettingsState {
   showEverything: boolean
   setShowEverything: (v: boolean) => void
   /**
+   * Oct 2026 (2.3): a held sub-wave counts down on Next and sends the next
+   * sub-wave itself unless the player touches the field (`autoContinue.ts`).
+   * On by default; off, Next waits as it always did.
+   */
+  autoContinue: boolean
+  setAutoContinue: (v: boolean) => void
+  /**
    * "Calm audio" (Phase-2 accessibility): the score without drums, a gentler
    * limiter, and the effects brought forward — for sensory sensitivity, for
    * playing at night, for anyone the fight music is too much for.
@@ -204,8 +220,9 @@ const prefersReducedMotion =
 /**
  * Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`,
  * `monoAudio`. 4: `showEverything`, and the LS3 tips (see {@link LS3_TEACH_IDS}).
+ * 5: `autoContinue` (a missing key reads as on).
  */
-export const SETTINGS_VERSION = 4
+export const SETTINGS_VERSION = 5
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
@@ -213,7 +230,17 @@ const ASSIST_LEVELS = ['off', 'steady', 'sure'] as const
 
 type PersistedSettings = Pick<
   SettingsState,
-  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught' | 'calmAudio' | 'monoAudio' | 'showEverything'
+  | 'audio'
+  | 'reducedMotion'
+  | 'highContrast'
+  | 'uiScale'
+  | 'vision'
+  | 'assist'
+  | 'taught'
+  | 'calmAudio'
+  | 'monoAudio'
+  | 'showEverything'
+  | 'autoContinue'
 >
 
 /**
@@ -260,6 +287,8 @@ export function migrateSettings(persisted: unknown, version: number, metaRaw: ()
     calmAudio: bool(o.calmAudio, false),
     monoAudio: bool(o.monoAudio, false),
     showEverything: bool(o.showEverything, false),
+    // v4 and earlier never had it: held waves continue themselves by default.
+    autoContinue: bool(o.autoContinue, true),
   }
 }
 
@@ -319,6 +348,8 @@ export const useSettingsStore = create<SettingsState>()(
       showEverything: false,
 
       setShowEverything: (v) => set({ showEverything: v }),
+      autoContinue: true,
+      setAutoContinue: (v) => set({ autoContinue: v }),
 
       setCalmAudio: (v) => {
         set({ calmAudio: v })
@@ -412,6 +443,7 @@ export const useSettingsStore = create<SettingsState>()(
         calmAudio: s.calmAudio,
         monoAudio: s.monoAudio,
         showEverything: s.showEverything,
+        autoContinue: s.autoContinue,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

@@ -2,12 +2,20 @@ import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { cargoPct } from '../../game/run/contracts'
 import { useBattleLedger } from '../battleLedger'
-import { useCombatNotes } from '../../state/combatNotes'
+import { NOTE_FRESH_MS, useCombatNotes } from '../../state/combatNotes'
 import { battleLayoutOf } from './live'
 import { choiceOwed, rewardInPlace } from './levelUps'
 
 /** Gate hits are spoken at most this often; the latest count wins. */
 const HIT_GAP_MS = 1600
+
+/**
+ * The last note (`combatNotes`) actually spoken, across mounts. A one-tap
+ * commit on a page (the campfire) leaves the page shell, whose Announcer
+ * unmounts before its queue flushes; the bands' Announcer mounting a moment
+ * later reads this and still owes the note.
+ */
+let spokenNote = 0
 
 /**
  * The battle's ONE polite voice (Phase 2, finding 6).
@@ -39,6 +47,7 @@ export function Announcer() {
   const hitT = useRef<number | null>(null)
 
   useEffect(() => {
+    let noteDue = 0
     const say = (msg: string) => {
       queue.current.push(msg)
       if (flushT.current !== null) return
@@ -46,6 +55,7 @@ export function Announcer() {
         flushT.current = null
         const joined = queue.current.join(' ')
         queue.current = []
+        if (noteDue > spokenNote) spokenNote = noteDue
         // Clear first so the same sentence twice in a row is still spoken.
         setText('')
         window.setTimeout(() => setText(joined), 40)
@@ -104,9 +114,15 @@ export function Announcer() {
 
     // Phase 3a: boss phases, the sub-wave breather and Watch Commands, as
     // sentences (`state/combatNotes.ts`), through this one region.
-    let prevNote = useCombatNotes.getState().seq
+    const sayNote = (n: { seq: number; text: string }) => {
+      noteDue = n.seq
+      say(n.text)
+    }
+    const owed = useCombatNotes.getState()
+    if (owed.seq > spokenNote && owed.text && Date.now() - owed.at < NOTE_FRESH_MS) sayNote(owed)
+    let prevNote = owed.seq
     const unNotes = useCombatNotes.subscribe((n) => {
-      if (n.seq !== prevNote && n.text) say(n.text)
+      if (n.seq !== prevNote && n.text) sayNote(n)
       prevNote = n.seq
     })
 
@@ -116,6 +132,11 @@ export function Announcer() {
       unNotes()
       if (flushT.current !== null) window.clearTimeout(flushT.current)
       if (hitT.current !== null) window.clearTimeout(hitT.current)
+      // Reset, not just cleared: a re-run of this effect (StrictMode, a
+      // remount) found the stale id still set and never flushed again.
+      flushT.current = null
+      hitT.current = null
+      queue.current = []
     }
   }, [])
 

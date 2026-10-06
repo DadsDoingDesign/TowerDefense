@@ -21,8 +21,11 @@
  *
  * **Cash out or press on** at cities 1 and 2: sell what is left on the
  * wagons at {@link CASH_OUT_RATE} of its value and head home — standing kept,
- * no completion bonus, no item chances, no contract skill — or keep going.
- * Losing keeps what the cities already paid; unsold crates are lost.
+ * the road's gold banked at the full share, no completion bonus, no item
+ * chances, no contract skill — or keep going. Losing keeps what the cities
+ * already paid, but unsold crates are lost and most of the road's gold stays
+ * on the road (`hq.LOST_ROAD_SHARE`): that is what pressing on risks
+ * (`settle.cityTrade` prices the choice).
  *
  * Pure: no store, no React, no DOM, no run-stream draw. Every roll here is a
  * hash of its own parts (RNG draw order is behaviour). The store, the UI and
@@ -56,14 +59,25 @@ export const CRATE_VALUE = 100
 export const CITY_CRATE_VALUE: readonly [number, number, number] = [100, 130, 400]
 /** The absolute ceiling on a stake, whatever the standing. */
 export const MAX_CRATES = 8
-/** The flat fee every city pays the escort, at full cargo. */
-export const ESCORT_FEE = 40
+/**
+ * The flat fee every city pays the escort, at full cargo. 40 → 60 in the
+ * October audit: a fall now leaves most of the road's gold behind
+ * (`hq.LOST_ROAD_SHARE`), which cut an escort's bank net from ~407 to ~269 in
+ * the harness; city pay is banked win or lose, so a bigger fee puts that income
+ * back where the spec wants it — in the contract, not the road.
+ */
+export const ESCORT_FEE = 60
 /** The destination's completion bonus: a base, and more for every crate carried. */
 export const BONUS_BASE = 150
 /** 40 → 20 (the tuning pass): the destination's crate carries the big reward now. */
 export const BONUS_PER_CRATE = 20
-/** What a city pays for the crates still on the wagons when you cash out. */
-export const CASH_OUT_RATE = 0.5
+/**
+ * What a city pays for the crates still on the wagons when you cash out: their
+ * full value (October audit 1.1). At 0.5 a cash-out was worth 0 gold more often
+ * than not, so "head home" was never a choice; what you give up now is the
+ * completion bonus, the item chances and the contract skill.
+ */
+export const CASH_OUT_RATE = 1
 /** Today's good sells for this much more (crate sales and the completion bonus). */
 export const MARKET_MULT = 1.3
 /** The crates that are milestones: each one reached adds one more skill on delivery. */
@@ -73,6 +87,16 @@ export const COMPANY_WEIGHT = 2
 
 /** The cities on every route: one per act boss. */
 export const CITY_COUNT = ACTS
+
+/**
+ * Stakes open per company at this standing with it (the staggered reveal,
+ * October 2026): below it a company offers the escort only. A first-timer's
+ * company is escort-only for its first two or so contracts, so stakes arrive
+ * once the road is known.
+ */
+export const STAKES_OPEN_AT = 2
+/** Whether a company takes a stake from a militia at `standing` with it. */
+export const stakesOpen = (standing: number): boolean => Math.floor(Math.max(0, standing)) >= STAKES_OPEN_AT
 
 /** The most crates a stake may carry at `standing` with that company: standing + 1. */
 export const crateCap = (standing: number): number => Math.max(1, Math.min(MAX_CRATES, Math.floor(Math.max(0, standing)) + 1))
@@ -213,8 +237,16 @@ export function cityPay(t: ContractTerms, city: number, cargo = 100): CityPay {
  * purse it set out with, and what its cities have paid so far.
  */
 export interface RunContract extends ContractTerms {
-  /** Gold taken from the bank for the road (merchants and repairs spend it). */
+  /** The gold the road set out with (merchants and repairs spend it). */
   purse: number
+  /**
+   * The purse is the company's advance ({@link ADVANCE}), not the bank's: it
+   * is never taken from the bank and never comes home (`hq.homeGold`). Every
+   * contract signed now carries one. Absent or false: a contract an older
+   * save signed with a purse taken from the bank — its rest comes home in
+   * full, exactly as it always did.
+   */
+  advance?: boolean
   /** What each city reached has paid, in order. Banked at the settle, so a fall keeps it. */
   paid: number[]
   /** The cargo (percent) the caravan reached each of those cities with — what its pay was scaled by. */
@@ -236,12 +268,14 @@ export interface RunContract extends ContractTerms {
   hq: RunHq
 }
 
-export const freshContract = (t: ContractTerms, purse: number, hq: RunHq = BASE_RUN_HQ): RunContract => ({
+/** A contract signed now: its terms, the company's advance as its purse, and the HQ's terms. */
+export const freshContract = (t: ContractTerms, hq: RunHq = BASE_RUN_HQ): RunContract => ({
   ...(t.charter ? { charter: true } : {}),
   company: t.charter ? null : t.company,
   crates: t.charter ? 0 : clampCrates(t.crates),
   market: t.charter ? 1 : t.market,
-  purse: Math.max(0, Math.floor(purse)),
+  purse: ADVANCE,
+  advance: true,
   paid: [],
   cargoAt: [],
   pending: null,
@@ -261,6 +295,9 @@ export function earn<C extends RunContract | null>(c: C, gold: number): C {
 /** Everything the contract has earned for the bank: the cities' pay and any cash-out sale. */
 export const contractBanked = (c: Pick<RunContract, 'paid' | 'cashOut'>): number => c.paid.reduce((a, b) => a + b, 0) + c.cashOut
 
+/** What signing takes from the bank: the stake (or the charter's fee), and the purse only when it is not the company's advance. */
+export const signingCost = (c: Pick<RunContract, 'crates' | 'charter' | 'purse' | 'advance'>): number => contractStake(c) + (c.advance ? 0 : Math.max(0, Math.floor(c.purse)))
+
 /** What this contract cost the bank to sign: its stake, or the Sovereign Route's fee. */
 export const contractStake = (c: Pick<ContractTerms, 'crates' | 'charter'>): number => (c.charter ? CHARTER_FEE : clampCrates(c.crates) * CRATE_PRICE)
 
@@ -271,6 +308,18 @@ export function contractPlan(t: ContractTerms): { cities: CityPay[]; stake: numb
   const stake = contractStake(t)
   return { cities, stake, total, profit: total - stake, ...(t.charter ? { skills: 0, items: 0 } : deliveryUnlocks(t.crates)) }
 }
+
+/**
+ * May the contract waiting at city `c.pending` cash out? Never on the Sovereign
+ * Route (all or nothing). A first contract (LS3) learns at its first city that
+ * cities pay, and is offered the choice from its second (October audit 1.5):
+ * the push-your-luck moment is the game's headline, and the first run is the
+ * one that decides whether a player stays.
+ */
+export const canCashOut = (c: Pick<RunContract, 'pending' | 'charter'>, firstRun: boolean): boolean =>
+  c.pending != null && !c.charter && (!firstRun || c.pending >= FIRST_RUN_CASH_OUT_CITY)
+/** The first city (0-based) a first contract may cash out at. */
+export const FIRST_RUN_CASH_OUT_CITY = 1
 
 /** What cashing out sells the crates still on the wagons for, at `cargo` percent. */
 export function cashOutValue(t: ContractTerms, citiesPaid: number, cargo = 100): number {
@@ -294,39 +343,32 @@ export function utcDateKey(now: Date = new Date()): string {
  */
 export const marketOfDay = (dateKey: string): CompanyId => COMPANY_IDS[hashSeed('fieldwatch-market', dateKey) % COMPANY_IDS.length]
 
-/** The market multiplier a contract for `company` signs at on `dateKey`. */
-export const marketFor = (company: CompanyId | null, dateKey: string): number => (company && marketOfDay(dateKey) === company ? MARKET_MULT : 1)
+/**
+ * The market of the day shows — and pays — from this many finished contracts
+ * (the staggered reveal, October 2026). Before it, every contract signs at 1.
+ */
+export const MARKET_FROM_RUN = 5
+/** Whether the market of the day is open to a militia with `runsCompleted` finished contracts. */
+export const marketOpen = (runsCompleted: number): boolean => Math.floor(Math.max(0, Number.isFinite(runsCompleted) ? runsCompleted : 0)) >= MARKET_FROM_RUN
+
+/** The market multiplier a contract for `company` signs at on `dateKey` (1 while the market is not open). */
+export const marketFor = (company: CompanyId | null, dateKey: string, open = true): number => (open && company && marketOfDay(dateKey) === company ? MARKET_MULT : 1)
 
 // ---------------------------------------------------------------------------
-// The purse
+// The purse: the company's advance
 // ---------------------------------------------------------------------------
 
 /**
- * The purse is gold you take from the bank for the road. Merchants and
- * repairs spend only the purse and what the run earns. At the end, win or
- * lose, what is left of the purse comes home in full, and a share of the gold
- * the road paid comes with it (`hq.homeGold`). The bank stays home and the
- * HQ's Finance office pays interest on it.
+ * Every contract sets out with the company's advance: {@link ADVANCE} gold in
+ * the purse that is NOT taken from the bank (October 2026; the purse you
+ * picked from the bank is gone — a purse of 0 was nearly always best, because
+ * spending came out of it first). Merchants and repairs spend the purse and
+ * what the run earns. At the end the advance stays with the company (it was
+ * never yours): only the road's gold comes home, at the road share
+ * (`hq.homeGold`, `hq.roadShareFor`). The Sovereign Route gets the same
+ * advance.
  */
-export const PURSE_STEPS: readonly number[] = [0, 30, 60, 100, 150, 200]
-/** The purse a first contract carries, and the default: the old starting gold. */
-export const DEFAULT_PURSE = 60
-
-/** The purse sizes the bank can fund. */
-export const purseOptions = (bank: number): number[] => PURSE_STEPS.filter((p) => p <= Math.max(0, bank))
-
-/** The default purse: the largest step at or under both the bank and {@link DEFAULT_PURSE}. */
-export const defaultPurse = (bank: number): number => {
-  const fit = PURSE_STEPS.filter((p) => p <= Math.min(Math.max(0, bank), DEFAULT_PURSE))
-  return fit[fit.length - 1] ?? 0
-}
-
-/** A requested purse, clamped to a step the bank (after the stake) can fund. */
-export function clampPurse(purse: number, bank: number): number {
-  const ok = purseOptions(bank)
-  const want = Number.isFinite(purse) ? purse : 0
-  return ok.filter((p) => p <= want).pop() ?? 0
-}
+export const ADVANCE = 60
 
 // ---------------------------------------------------------------------------
 // Pool affinity

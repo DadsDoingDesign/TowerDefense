@@ -37,6 +37,30 @@ export interface TipFacts {
   depth?: { depth: number; last: number }
   /** A merchant is in reach on the run map. */
   merchant: boolean
+  /**
+   * Oct 2026 (2.5): a wave is live (an engine is fighting, breathers
+   * included). A tip that comes due now waits for the next pause in setup —
+   * unless the coach row was held open for this whole wave
+   * (`holdCoachRow`), and then only a live wave's own tips may use it.
+   */
+  live?: boolean
+  /** The coach row was held open when this wave went live (`holdCoachRow`). */
+  rowHeld?: boolean
+}
+
+/** The tips a live wave may show: each teaches a control that exists only in its breathers. */
+export const LIVE_TIP_IDS = ['subwave', 'speed'] as const satisfies readonly TeachId[]
+
+/**
+ * Whether the coach row is held open for the WHOLE of a wave that is about to
+ * go live (2.5). The Stage is the row's only donor, so a tip appearing at a
+ * breather or a leak pushed the field down ~45px mid-fight. The row either
+ * opens with the wave — when one of the breather lessons is still to teach
+ * and the wave has a breather to teach it at — and stays open until the wave
+ * ends, or it does not appear during the wave at all.
+ */
+export function holdCoachRow(f: { taught: Pick<Record<TeachId, boolean>, 'subwave' | 'speed'>; subWaves: number }): boolean {
+  return f.subWaves > 1 && (!f.taught.subwave || !f.taught.speed)
 }
 
 /**
@@ -49,6 +73,13 @@ export interface TipFacts {
  */
 export function pickTipId(s: TipFacts): TeachId | null {
   const t = s.taught
+  // 2.5: never move the Stage during a live wave. Everything else waits for
+  // the wave to end; the breather lessons speak only in a row held open from
+  // the wave's start.
+  if (s.live) {
+    if (!s.rowHeld) return null
+    return LIVE_TIP_IDS.find((id) => !t[id] && s[id]) ?? null
+  }
   if (!t.skill && s.owesSkill) return 'skill'
   if (!t.danger && s.danger) return 'danger'
   if (!t.challenge && s.challenge) return 'challenge'

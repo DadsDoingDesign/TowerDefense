@@ -2897,6 +2897,225 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   late-game company delivers 23% (27% with every Sovereign item) against a
   25% break-even; the fee is about 7.6 good runs.
 
+- **2026-10-06 — Lane 4 (technical): the boot splash, lazy hub pages, the
+  save notice.** Rendered with Playwright against `vite preview` (390, 360,
+  768 and 1280 wide). The splash is the menu's own wordmark on its shade band,
+  at the menu's exact position on every breakpoint (title rects match the
+  menu's to the pixel at 360/390/768/1280), plus three pulsing gold marks; the
+  menu then grows around the same title, so the swap reads as the map arriving
+  rather than a screen change (CLS 0 across the swap, was 0.0001). First pass
+  had the title on flat `#201711` — the menu's darker head band then "dropped
+  in" over it; the band is part of the splash now. Reduced motion stills the
+  marks; a quiet "Still loading" line appears only after 15 s. Fast 3G + 4×
+  CPU, median of 5: first contentful paint 3.17 s → 1.67 s (the wordmark, in
+  Crimson Text thanks to the preload); menu up 3.33 s → 3.31 s (the lazy
+  pages take 10 KB gzip off a 252 KB entry, so the menu itself is not much
+  sooner — the win is that something good is on screen at half the time). A
+  refused save now says so once in the toast slot with the warn mark:
+  "Progress isn't being saved on this device: …" — first pass read as four
+  lines on a phone for the private-browsing reason; the reason is one short
+  clause now. Scorecard: readability 4/5, hierarchy 5/5, polish 4/5.
+
+- **2026-10-06 — Whales conformance (October audit lane 3, with 2.3 and
+  2.5).** Built against the Whales house rules recorded in
+  `docs/whales-critique/` and the October audit's findings. Rarity and
+  archetype hues as TEXT have their own steps (`--rarity-*-text`,
+  `--fighter|rogue|mystic-text`, both colour-vision ramps too), read through
+  `--rail-text` (`railStyle`/`railText`); `contrast.test.ts` holds every one
+  at >= 5:1 on `--panel-3` and the strongest wash. Wave cleared: "Take it"
+  is in the wave strip's action slot at CTA height, last in reading order.
+  Settings shows no primary (a setting's flip is `quiet`). Desk holds: Next
+  at 160x56, the instruction at 15px. Pages: one band pad from head to body;
+  the bottom fade only while there is more to scroll; short boards keep the
+  CTA under their content; run-end exits in one 44px dual row; event boards
+  lose the subtitle and carry the purse on the pack strip. No text under
+  11px. The run map scrolls so the reachable row is whole. The shrine's
+  curse is the card's warning line. Reward alternatives have neutral rails.
+  Held sub-waves count down on Next (a ring, 4 s) and continue themselves
+  unless the field or a hero is touched; never on the hold the tip teaches,
+  never with the tab hidden; a setting turns it off. Coach tips that come
+  due mid-wave wait; when a breather lesson is still to teach, the row is
+  held open for the whole wave at a fixed height. Rendered in the running
+  app at 390x844 @2x and 1440x900 with `scripts/whales-scan.mjs` (36
+  screens) and a hold driver; read by eye. The loop caught: (1) the strip's
+  caption beside the full-size commit ellipsised to "DEPTH…" — the name
+  steps aside there (the header carries the depth); (2) the context head's
+  hero name was the archetype FILL at 3.9:1 — the archetypes got text steps
+  too; (3) the shrine's curse, once the warning line, out-shouted the boon —
+  a card with a cost sets its lead as a title; (4) "Got it" on the sub-wave
+  tip started the countdown on the very hold it was teaching — the tip
+  state is read as the hold begins; (5) the strip letter and reward-row
+  padding I added sat off the spacing scale — 4px now. Measured: the
+  Stage's box held one value for every live frame of a wave with the row
+  held (phone 121:529, desk 105:795) and without it; a countdown hold
+  continued itself, a touched or hidden-tab hold did not. Scan totals,
+  before → after: contrast 15→4 (two are the merchant's real "more below"
+  fade, one a mid-animation level flash), text under 11px 11→0, reading
+  order 4→0, chrome over 30% 3→1 (run lost 40.4→30.4%; merchant 32.9→22.3%),
+  headline 32→3 (the scan now skips one-line label·value pairs), selected
+  5→2. Benchmark: the reward hand now reads like Slay the Spire's card
+  reward — equal cards, one lifted, one big commit under them; the hold
+  countdown is Clash Royale's auto-continue rhythm with Hades' "touch to
+  take over". Scorecard: readability 4/5, hierarchy 5/5 on the battle
+  bands (4/5 on pages: run-end's head still wraps its purse line), polish
+  4/5. Still open: the city receipt (3.11, the economy lane's), run-end's
+  "+60 gold" outranking its title by design, and Whales itself — re-critique
+  these screens when it is reachable.
+
+- **2026-10-06 — October audit, lanes 1 and 2: push your luck, and a field
+  that warns.** (`docs/AUDIT_2026-10.md`.) Economy: a fall banks 10% of the
+  road's gold instead of 25% (`hq.LOST_ROAD_SHARE`), cash-out sells the last
+  crates at full value, the escort fee is 60, and act 3 steps ×1.25. The
+  city page now prices all three outcomes with the settle's own rules
+  (`settle.cityTrade`): "You bank 375" / "Deliver, and you bank 685+" /
+  "Fall, and you bank 330: … 45 of the road's gold stays on the road" —
+  where the old page compared 0 against everything. With nothing at risk it
+  says so and shows one compact CTA. It opens on an arrival beat ("The
+  caravan reaches Saltmarsh"). Field: the wagons' last stretch (4 tiles of
+  road before the Gate) is a faint dashed red lane during a wave and beats
+  red with a ring at the Gate while a raider is on it; while a hero is armed
+  the three open tiles covering the most road for THAT hero carry a gold
+  star (`run/placement`, tested on every shipped field). The caravan is
+  baked once per look. Rendered at 390x844 @2x in the running app (setup
+  with a hero armed; a live wave forced to reach the wagons; both city
+  states) and read by eye. The loop caught: (1) the first stretch (2.5
+  tiles, 0.13 alpha) was invisible where the Gate sits on the Stage's edge —
+  4 tiles and a stronger wash now; (2) the no-choice city left 360px between
+  its tip and its CTA — compact page; (3) run end's "Road gold 0 → 0" line
+  wrapped the head past 30% chrome — it shows only when the road paid.
+  The first harness run (act 3 ×1.23, destination-first crate sales) fixed
+  the first-timer wall but put §6 a point over its band and moved the
+  stake-pay dips; the crate order is restored and act 3 is ×1.25.
+  Benchmark: the stars are Kingdom Rush's lit plots / Backpack Battles'
+  wanted cells; the last stretch is Slay the Spire's intent — the threat
+  shown before it lands; the city receipt is Balatro's cash-out lines.
+  Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
+  stake curve and §6 band for the designer to re-anchor (audit §4).
+
+- **2026-10-06 — The road changes country at every city (a new field each
+  act).** The October audit's designer item 7: with one field a run, posts
+  carried over and every fight after the first came down to Start / Next /
+  Take. Each act is now fought on its own battlefield (`run/fields.ts`: act 1
+  is the field the seed always dealt; a later act is a hash of (seed, act),
+  never a stream draw, never the act before it), and the company comes off
+  its posts at the act's first fight; within an act posts carry as before.
+  The route's ground and the per-node danger ground still apply, and the
+  phone still fights the portrait twin. Said three times, each once and in
+  its place: the city page's rail ("New ground ahead: The Kiln Road"), the
+  run map's preview of that fight ("New ground: … Heroes start on the
+  bench."), and the setup's coach row ("New ground: The Kiln Road — post
+  your heroes", setup only, so it never moves the Stage in a live wave; gone
+  once a hero is posted). Rendered in the running app at 390×844 @2x and
+  1440×900 across the act-1 boss: the city, the map preview, the act-2 setup
+  (new field, the company on the bench, the note) and a live act-2 wave. The
+  loop caught: (1) the city line wrapped to two lines on a phone
+  ("Next ground: … Your heroes start on the bench.") — it is one line now,
+  and the bench is said where it matters, in the setup; (2) the preview line
+  pushed the map challenge below the fold of the Context panel — shortened.
+  Benchmark: Kingdom Rush's next-stage map reveal and BTD6's map-per-round
+  set — every act opens with a placement puzzle again rather than a replay
+  of the last one. Scorecard: readability 4/5 (the city page is long on a
+  phone; the new line sits above the fold), hierarchy 4/5, polish 4/5.
+  Harness (FW_SECTIONS=11,13, 120 runs, before → after): first-timer line
+  12% → 12%, adaptive 18% → 21%, battles-first 11% → 3%, escort delivery
+  18% → 19%, the routes 15–19% → 15–23%. The harness re-posts best-first at
+  every fight, so it measures the new ground, not the decisions it brings.
+
+- **2026-10-06 — Item kinds get one identity each (October audit, designer
+  item 4a).** Robe, Cloak, Plate and Aegis used to roll Mail's numbers, and
+  Tome, Quiver and Focus one another's; every kind now rolls one stat of its
+  own (`items.ts`, the identity table above `WEAPONS`), and its Codex line
+  says only that: "Body. Makes every hit harder." (Plate), "Off hand. Holds 3
+  enemies on the road, but its holder attacks slower." (Pavise). Rendered the
+  Codex's Items tab in the running app at 390×844 @2x with every kind
+  unlocked: all 22 lines fit their cards (the longest, Wand, Dagger and
+  Greatsword, wrap to four lines, the same as the Sovereign cards beside
+  them); no line names another piece. Benchmark: Slay the Spire's relic and
+  card text — one effect, stated plainly, never the combo. Scorecard:
+  readability 4/5 (the weapon lines are a sentence long on a phone),
+  hierarchy 4/5, polish 4/5. The numbers behind each line and their bench
+  reads are in `docs/TUNING_LOG.md`, "October audit, lane B".
+
+- **2026-10-06 — One-tap commits for rewards and the campfire (audit §4,
+  designer item 8).** The designer overrode shell rule one for these two
+  cheap choices (FIGMA.md § One-tap commits). A tap, click, Enter or Space
+  on a reward card (in place, or on the Spoils page) or on the campfire's
+  rest or train commits it. A 350 ms touch hold, a mouse hover (after a
+  120 ms rest) or keyboard focus shows the detail, and releasing a hold
+  takes nothing. Accidental-commit guards are pure and tested
+  (`ui/shell/press.ts`): more than 8 px of travel is a scroll, and a press
+  within 250 ms of the surface appearing is ignored. "Take it" left the
+  wave strip, and the campfire lost its Rest/Train CTA. The first one-tap
+  board shows "Tap to take · hold to look" ("Click to take · hover to
+  look" under a mouse) until the first one-tap commit. Rendered in the
+  running app at 390x844 @2x (touch) and 1440x900, with real touches: the
+  reward hand before and after, a CDP hold (detail shown, reward still
+  open), one tap (item in the pack, toast), the campfire before and after.
+  The Spoils page was checked the same way. Guards were verified live: a
+  30 px drag across a card and a tap 24 ms after the campfire rows
+  appeared both left the board open. Keyboard was verified on the desk:
+  Tab shows the detail, Enter takes the card. The loop caught three bugs:
+  (1) a Spoils-page or campfire commit returned to the map with no
+  feedback at all, because the page shell's receipt toast and Announcer
+  unmounted before they spoke. They now carry a fresh receipt across the
+  swap, which also fixes the old Spoils-page "Take it" path. (2) The
+  Announcer's effect cleanup left a stale timer id, so a remount
+  (StrictMode) never flushed again. (3) A mouse moving from the third
+  card to the Context panel swept the detail to whichever card it
+  crossed; hover now waits 120 ms. Whales scan, 36 screens, before (c8bda01)
+  against after: no rule got worse on the touched screens. Wave cleared
+  and the campfire went from one primary ("Take it" / "Train …") to none.
+  The cards are the choice and the strip keeps the moment. The reward
+  card's off-scale 7 px foot is now 8. Totals: contrast 4→4, size 0→0,
+  order 0→0, primary 0→0, hit 286→284, spacing 512→508. The selected
+  3→4 is the hero pick's rolled heroes, not this change. Benchmark: Slay the
+  Spire's card reward (click a card to take it, hover to read), and
+  Marvel Snap / Hearthstone mobile's press-and-hold to inspect. Taps per
+  later battle node (node, March, Start, reward) went from 5 (4 if the
+  preselected card was wanted) to 4, and a campfire from 2 to 1.
+  Scorecard: readability 4/5, hierarchy 4/5 (the hint sits at the
+  strip's end, below the cards it explains), polish 4/5. Still open: the
+  strip's right slot is empty once the hint is spent. That is deliberate
+  (no CTA, no chrome), but worth a Whales re-critique.
+
+- **2026-10-06 — The designer's pass (audit §4 items 2, 3, 4b, 5, 6): the
+  company advance, a two-office HQ, standing bonus items, the charter's new
+  terms, a staggered run-2 reveal.** The purse picker is gone: every contract
+  carries the company's 60-gold advance, never the bank's and never banked
+  (old saves' bank purses settle as signed). The HQ is HR + Operations (pack
+  slots, focus, scouts); Finance's levels and "Fewer boulders" are refunded at
+  meta v11, and the free 2%/20 interest is one quiet line under the HQ's tabs.
+  A standing level past the card pool pays a Rare bonus item for the next
+  contract, shown as its own card on the receipt. The charter costs 4,000,
+  pays 24,000 and earns standing with all five companies, win or lose. The
+  menu, the terms and the HQ now open in beats — HQ at 500 banked (latched),
+  crates at the first delivery, stakes at standing 2 with that company, market
+  and focus at the fifth contract — and every locked place says what opens it.
+  Rendered in the running app at 390x844 @2x (menu at run 1, 2, the 500 latch
+  and run 5; terms escort-only and staked; the board's market tip; HQ HR, Ops
+  with focus locked and open; crates; charter; the hero pick's chip; a
+  cash-out receipt with two bonus items; a charter fall) and at 1440x900
+  (menu, HQ, terms), read by eye. The loop caught: (1) the locked market line
+  wrapped to four lines — one line with a count now; (2) the bank's rule
+  wrapped "up to / 20" — a headline ("next finished contract +12") over the
+  rule; (3) the charter's standing as five full rows pushed the slip off the
+  first screen — five crest chips; (4) the receipt's "Advance 50 repaid to
+  Ironvein" head line put the cash-out head at 30.4% chrome — the advance is a
+  slip line now (28.6%); (5) the standing card promised "Crate 2 can ride"
+  below the stakes gate — it says when stakes open; (6) "The company advances"
+  broke LS4's one-name rule ("the company" is your heroes) — the terms name the
+  hiring company ("Easel House advances 60 gold for the road"). Whales rules on
+  the new screens: contrast 0 except the accepted scroll fade, size 0, order 0,
+  chrome under 30%; the stock 22-screen scan is unchanged (merchant fade only).
+  Harness (FW_SECTIONS=12,13,18, n=120): the HQ grid still never lowers the win
+  rate past noise (Opening deal 5 +6pt); bank interest's 20 sits 36 under the
+  smallest stake's +56; the charter is now +2,090 gold a run against an
+  escort's +555 (was +80 vs +603), breaking even at a 17% delivery rate.
+  Benchmark: the reveal is Hades' Mirror/Contractor arriving after the first
+  escapes, each with one line; the advance is Slay the Spire's fixed starting
+  gold. Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
+  charter may now be too generous for the tuning pass; the stake curve.
+
 - **2026-10-05 — The tuning pass (the mercenary company).** Every balance
   invariant was red-or-green against a game that no longer had classes,
   perks, the Banner or Marks; 50 failed. Six benches were re-aimed at what the

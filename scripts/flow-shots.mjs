@@ -104,9 +104,11 @@ async function winFirstBattle(p, shots) {
   if (shots) await p.shot('05-wave-in-progress')
   for (let i = 0; i < 6; i++) {
     const done = await p
-      // A normal wave's reward is picked in place (G3-2): its "Take it" is the
-      // way on. An elite's still ends on Continue → the Spoils page.
-      .btn(/^Continue$|^Take it$/)
+      // A normal wave's reward is picked in place (G3-2) and taken with one
+      // tap on a card (October 2026). An elite's still ends on Continue → the
+      // Spoils page, whose rows also take on one tap.
+      .page.locator('.sh-reward-row .sh-reward, button:text-is("Continue")')
+      .first()
       .waitFor({ state: 'visible', timeout: 12000 })
       .then(() => true, () => false)
     if (done) break
@@ -118,14 +120,17 @@ async function winFirstBattle(p, shots) {
   if (await p.btn(/^Continue$/).count()) {
     await p.tap(/^Continue$/, { wait: 1500 })
     if (shots) await p.shot('07-spoils')
-    await p.tap(/· to pack|· relic/, { wait: 500 })
+    // One tap on a row takes it.
+    await p.page.locator('.pg-body .pg-row.onetap').first().click().catch(() => {})
   } else {
-    // In place: the first card is already showing; read the second.
-    await p.page.locator('.sh-selector .sh-reward').nth(1).click().catch(() => {})
+    // In place: the first card's detail is already showing; hover the second
+    // to read it (a hover never takes), then one tap takes it.
+    await p.page.locator('.sh-reward-row .sh-reward').nth(1).hover().catch(() => {})
     await p.page.waitForTimeout(500)
     if (shots) await p.shot('07-spoils')
+    await p.page.locator('.sh-reward-row .sh-reward').nth(1).click().catch(() => {})
   }
-  await p.tap('Take it', { wait: 1500 })
+  await p.page.waitForTimeout(1500)
 }
 
 async function run(label) {

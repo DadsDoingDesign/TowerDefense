@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { assertRarityTokensMatch } from '../channels'
 import { Coach } from './Coach'
@@ -9,12 +9,6 @@ import { StageBand } from './StageBand'
 import { PageScreen } from './PageScreens'
 import { MenuScreen } from './MenuScreen'
 import { MilitiaScreen } from './MilitiaScreen'
-import { ResultScreen } from './contracts/ContractResult'
-import { ContractsScreen } from './contracts/ContractsScreen'
-import { CityScreen } from './contracts/CityScreen'
-import { HqScreen } from './hq/HqScreen'
-import { CratesScreen } from './hq/CratesScreen'
-import { CharterScreen } from './charter/CharterScreen'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -31,7 +25,52 @@ import '../../styles/menu.css'
 import '../../styles/hq.css'
 import '../../styles/charter.css'
 import { useLevelUpTracker } from './levelUps'
-import { useMenuStaged, useStagingRecorder } from './staging'
+import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
+
+/*
+ * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
+ * first screen — that is the menu, or a battle on a resumed run — so the entry
+ * script no longer carries them, and the first paint is that much sooner on a
+ * slow link. The service worker precaches every chunk Rollup emits
+ * (`build/pwa.ts`: the critical set), so they still open offline.
+ *
+ * They are fetched on idle right after the first screen is up (`usePagePrefetch`),
+ * so a tap almost never waits on one, and an open tab never asks the network for
+ * a chunk a newer deploy has since replaced.
+ */
+const PAGES = {
+  result: () => import('./contracts/ContractResult'),
+  contracts: () => import('./contracts/ContractsScreen'),
+  city: () => import('./contracts/CityScreen'),
+  hq: () => import('./hq/HqScreen'),
+  crates: () => import('./hq/CratesScreen'),
+  charter: () => import('./charter/CharterScreen'),
+}
+const ResultScreen = lazy(() => PAGES.result().then((m) => ({ default: m.ResultScreen })))
+const ContractsScreen = lazy(() => PAGES.contracts().then((m) => ({ default: m.ContractsScreen })))
+const CityScreen = lazy(() => PAGES.city().then((m) => ({ default: m.CityScreen })))
+const HqScreen = lazy(() => PAGES.hq().then((m) => ({ default: m.HqScreen })))
+const CratesScreen = lazy(() => PAGES.crates().then((m) => ({ default: m.CratesScreen })))
+const CharterScreen = lazy(() => PAGES.charter().then((m) => ({ default: m.CharterScreen })))
+
+/** Warm every lazy page once, when the browser is next idle after mount. */
+function usePagePrefetch(): void {
+  useEffect(() => {
+    const run = () => {
+      for (const load of Object.values(PAGES)) load().catch(() => {})
+    }
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(run, { timeout: 4000 })
+      return () => w.cancelIdleCallback?.(id)
+    }
+    const t = window.setTimeout(run, 1500)
+    return () => window.clearTimeout(t)
+  }, [])
+}
 
 /**
  * The whole game in one screen. Four bands at fixed heights; every surface the
@@ -70,7 +109,9 @@ export function RootShell() {
   useStagingRecorder()
   // LS3: the HQ and the sealed crates open after the first finished contract.
   const menuStaged = useMenuStaged()
+  const reveal = useReveal()
   const metaCopy = META_COPY[metaView]
+  usePagePrefetch()
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
   // lived in two places before and could disagree silently (DESIGN_SYSTEM 3.1);
@@ -121,25 +162,29 @@ export function RootShell() {
     const isMenu = screen === 'hub' && metaView === 'menu'
     return (
       <div className="shell shell-page">
-        {ctx.stage === 'result' ? (
-          <ResultScreen />
-        ) : ctx.stage === 'contracts' ? (
-          <ContractsScreen />
-        ) : ctx.stage === 'city' ? (
-          <CityScreen />
-        ) : screen === 'hub' && metaView === 'hq' && !menuStaged ? (
-          <HqScreen onBack={() => setMetaView('menu')} />
-        ) : screen === 'hub' && metaView === 'crates' && !menuStaged ? (
-          <CratesScreen onBack={() => setMetaView('menu')} />
-        ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
-          <CharterScreen onBack={() => setMetaView('menu')} />
-        ) : isMenu ? (
-          <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
-        ) : screen === 'hub' && metaView === 'militia' ? (
-          <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
-        ) : (
-          <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
-        )}
+        {/* While a page chunk is still on its way, the page frame stays up and
+            empty — no spinner to flash, nothing to shift when it lands. */}
+        <Suspense fallback={null}>
+          {ctx.stage === 'result' ? (
+            <ResultScreen />
+          ) : ctx.stage === 'contracts' ? (
+            <ContractsScreen />
+          ) : ctx.stage === 'city' ? (
+            <CityScreen />
+          ) : screen === 'hub' && metaView === 'hq' && !menuStaged && reveal.hq ? (
+            <HqScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'crates' && !menuStaged && reveal.crates ? (
+            <CratesScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
+            <CharterScreen onBack={() => setMetaView('menu')} />
+          ) : isMenu ? (
+            <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
+          ) : screen === 'hub' && metaView === 'militia' ? (
+            <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
+          ) : (
+            <PageScreen ctx={ctx} offers={offers} {...metaCopy} />
+          )}
+        </Suspense>
         <Announcer />
         <ReceiptToast />
       </div>

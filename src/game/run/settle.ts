@@ -5,16 +5,17 @@
  * settling it pays.
  *
  * Since the mercenary company a run is a contract, and its settle banks gold:
- * what is left of the purse comes home whatever happened (with a share of the
- * road's gold, `hq.homeGold`), the cities' pay is kept even after a fall, and
- * unsold crates are lost.
+ * a share of the road's gold comes home whatever happened (`hq.homeGold`; the
+ * company's advance never does, a purse an older save took from the bank comes
+ * home in full), the cities' pay is kept even after a fall, and unsold crates
+ * are lost.
  */
 import type { RunChallenge } from '../../state/seeds'
 import type { RunFacts } from '../data/achievements'
 import type { Sentinel } from '../types'
 import type { HeroStyle } from '../data/items'
-import { contractBanked, type RunContract } from './contracts'
-import { homeGold, homeTotal } from './hq'
+import { cashOutValue, CITY_COUNT, cityPay, contractBanked, type RunContract } from './contracts'
+import { homeGold, homeTotal, LOST_ROAD_SHARE, ROAD_SHARE, roadShareFor, type HomeGold } from './hq'
 import { actOf } from './threat'
 
 /**
@@ -92,10 +93,67 @@ export const runWasPlayed = (f: Pick<SettleFacts, 'depth' | 'kills'>): boolean =
  * designer's road-gold tax), and everything the cities paid. A run with no
  * contract (saved before contracts) is owed its old Marks as gold.
  */
-export function runDeposit(f: Pick<SettleFacts, 'gold' | 'contract' | 'legacyGold'>): number {
+export function runDeposit(f: Pick<SettleFacts, 'gold' | 'contract' | 'legacyGold'>, status?: RunGrantStatus): number {
   if (!f.contract) return Math.max(0, Math.round(f.legacyGold ?? 0))
   if (!f.contract.signed) return 0
-  return homeTotal(homeGold({ purse: f.contract.purse, earned: f.contract.earned, gold: f.gold })) + contractBanked(f.contract)
+  return homeTotal(contractHome(f.contract, f.gold, roadShareFor(status))) + contractBanked(f.contract)
+}
+
+/** A contract's purse split at `gold` in hand (`hq.homeGold`), the advance flag carried. */
+export const contractHome = (c: Pick<RunContract, 'purse' | 'earned' | 'advance'>, gold: number, share = ROAD_SHARE): HomeGold =>
+  homeGold({ purse: c.purse, earned: c.earned, gold, advance: c.advance }, share)
+
+/** How a settled contract ended. A fall banks less of the road's gold (`hq.LOST_ROAD_SHARE`). */
+export type RunGrantStatus = 'delivered' | 'cashedOut' | 'lost'
+
+/**
+ * "Cash out or press on", priced (October audit 1.4) — what the city screen
+ * states, from the same rules the settle pays by, so the two cannot drift.
+ *
+ *  - `now`: banked if you cash out here — the cities' pay, the last crates
+ *    sold and the road's gold at the full share (and the rest of a purse an
+ *    older save took from the bank; never the company's advance).
+ *  - `fall`: banked if you press on and fall — the cities' pay, the road's
+ *    gold at the fallen share, and no crates.
+ *  - `deliver`: banked if you deliver from here at today's cargo — every city
+ *    still ahead paid at `cargo`, and the road's gold you hold now at the full
+ *    share (the road pays more on the way, so it is a floor).
+ *  - `atRisk`: `now − fall`, what pressing on puts on the line. 0 means there
+ *    is nothing to lose, and the screen says so rather than staging a choice.
+ */
+export interface CityTrade {
+  now: number
+  fall: number
+  deliver: number
+  atRisk: number
+  /** The crate sale cashing out makes. */
+  sale: number
+  /** The road's gold in the purse now, and what each ending banks of it. */
+  road: number
+  roadIfCashed: number
+  roadIfFallen: number
+}
+
+export function cityTrade(c: RunContract, gold: number, cargo: number): CityTrade {
+  const banked = contractBanked(c)
+  const sale = cashOutValue(c, c.paid.length, cargo)
+  const cashed = contractHome(c, gold, ROAD_SHARE)
+  const fallen = contractHome(c, gold, LOST_ROAD_SHARE)
+  const city = c.pending ?? Math.max(0, c.paid.length - 1)
+  let ahead = 0
+  for (let i = city + 1; i < CITY_COUNT; i++) ahead += cityPay(c, i, cargo).total
+  const now = banked + sale + homeTotal(cashed)
+  const fall = banked + homeTotal(fallen)
+  return {
+    now,
+    fall,
+    deliver: banked + ahead + homeTotal(cashed),
+    atRisk: Math.max(0, now - fall),
+    sale,
+    road: cashed.road,
+    roadIfCashed: cashed.roadBanked,
+    roadIfFallen: fallen.roadBanked,
+  }
 }
 
 /** The arguments `metaStore.settleContract` takes, as a settle builds them. */
@@ -111,18 +169,18 @@ export interface RunGrant {
 
 export type PayoutPlan =
   | { kind: 'none' }
-  /** A signed contract abandoned before it was played: its purse (and stake's nothing) goes home. */
+  /** A signed contract abandoned before it was played: what its purse sends home (none of an advance). */
   | { kind: 'deposit'; amount: number }
   | { kind: 'grant'; grant: RunGrant }
 
 /** The grant a finished contract makes, however it finished. */
-export function contractGrant(f: SettleFacts, status: 'delivered' | 'cashedOut' | 'lost'): RunGrant {
+export function contractGrant(f: SettleFacts, status: RunGrantStatus): RunGrant {
   return {
     depth: f.depth,
     won: status === 'delivered',
     kills: f.kills,
     contract: f.contract ? { company: f.contract.company, crates: f.contract.crates, status, ...(f.contract.charter ? { charter: true } : {}) } : null,
-    deposit: runDeposit(f),
+    deposit: runDeposit(f, status),
     unranked: f.challenge.kind === 'seeded',
     ...(f.facts ? { facts: f.facts } : {}),
   }

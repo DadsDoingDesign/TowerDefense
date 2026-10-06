@@ -45,3 +45,6 @@ docs/ui-audit/
 # Agent worktrees
 .claude/worktrees/
 balance/REPORT.sections.md
+
+# Whales-rule scan output (scripts/whales-scan.mjs)
+whales-scan-out/

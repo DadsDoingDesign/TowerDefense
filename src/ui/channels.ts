@@ -1,5 +1,6 @@
 import { DUAL_WIELD_DEX, gripOf, ITEM_NOUN_RE, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
-import { ROAD_SHARE } from '../game/run/hq'
+import { interestLine, LOST_ROAD_SHARE, ROAD_SHARE } from '../game/run/hq'
+import { ADVANCE, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
@@ -41,6 +42,33 @@ import type { IdeaId } from '../state/staging'
 
 /** The rarity ramp as CSS custom properties, so the vision modes can re-tint. */
 export const rarityVar = (r: ItemRarity): string => `var(--rarity-${r})`
+
+/**
+ * The same ramp as TEXT (Oct 2026 audit, 3.1): each step lifted to >= 5:1 on
+ * the panels and washes it is written on. Use it wherever rarity colours a
+ * word — an item's name, the rarity word, a slot's letter — and keep
+ * `rarityVar` for rails, pips and borders.
+ */
+export const rarityTextVar = (r: ItemRarity): string => `var(--rarity-${r}-text)`
+
+/** A token with a text step of its own: the rarity ramp and the three archetype hues. */
+const TEXT_STEP_RE = /^var\(--(rarity-[a-z]+|fighter|rogue|mystic)\)$/
+
+/**
+ * The inline style for a surface tinted by `color`: `--rail` for its fills
+ * and `--rail-text` for any word drawn in it (CSS reads
+ * `var(--rail-text, var(--rail))`). A rarity or archetype token gets its
+ * text step; any other colour is its own text colour. Always setting both
+ * matters: a nested surface that set only `--rail` would inherit its parent's
+ * `--rail-text`.
+ */
+export const railStyle = (color: string): Record<'--rail' | '--rail-text', string> => {
+  const m = color.match(TEXT_STEP_RE)
+  return { '--rail': color, '--rail-text': m ? `var(--${m[1]}-text)` : color }
+}
+
+/** `color` as a text colour: a rarity token's text step, anything else as is. */
+export const railText = (color: string): string => railStyle(color)['--rail-text']
 
 /**
  * Dev-only guard that `--rarity-*` still equals `RARITY[r].color`. It reads the
@@ -130,7 +158,7 @@ export { SOVEREIGN_INITIAL, SOVEREIGN_TIER } from '../game/run/charter'
 export const routeVar = (company: CompanyId | null): string => (company ? companyVar(company) : SOVEREIGN_VAR)
 
 /** The bank and the purse, said once where they are first explained (LS4). */
-export const BANK_INTRO = 'Gold you bring home goes in the bank. Stakes and purses come out of it.'
+export const BANK_INTRO = 'Gold you bring home goes in the bank. Stakes come out of it.'
 
 /**
  * Enemy strength, in words (LS4).
@@ -703,7 +731,12 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   gold: {
     term: 'Gold',
     line: 'The only currency. Fights pay it on the road, and cities pay it into your bank. Spend it at a Merchant.',
-    also: [{ term: 'Road gold', line: `Gold the road pays into your purse. When the run ends, ${Math.round(ROAD_SHARE * 100)}% of what is left of it comes home.` }],
+    also: [
+      {
+        term: 'Road gold',
+        line: `Gold the road pays into your purse. When the run ends, ${Math.round(ROAD_SHARE * 100)}% of what is left of it comes home (${Math.round(LOST_ROAD_SHARE * 100)}% if the contract fell).`,
+      },
+    ],
   },
   contract: {
     term: 'Contract',
@@ -741,16 +774,16 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   },
   bank: {
     term: 'Bank',
-    line: `Your gold at home. Stakes and purses come out of it; city pay, what is left of your purse and ${Math.round(ROAD_SHARE * 100)}% of the road gold go back in.`,
-    also: [{ term: 'Interest', line: 'Gold left in the bank earns a little each time you finish a contract. Never on a lost one.' }],
+    line: `Your gold at home. Stakes come out of it; city pay and ${Math.round(ROAD_SHARE * 100)}% of the road gold go back in.`,
+    also: [{ term: 'Interest', line: interestLine() }],
   },
   purse: {
     term: 'Purse',
-    line: 'Gold you take on the road. Spending comes out of it first. What is left of it comes home in full.',
+    line: `The gold you carry on the road. Every contract sets out with a ${ADVANCE}-gold advance from the trade company that hires you — not from your bank. Spending comes out of the advance first; what is left of it is repaid when the run ends.`,
   },
   standing: {
     term: 'Standing',
-    line: 'How well a company knows your militia. Its contracts raise it. Each level unlocks a skill, and lets you carry one more crate.',
+    line: `How well a company knows your militia. Its contracts raise it. Each level unlocks a skill (a Rare bonus item once every skill is yours), and lets you carry one more crate. Stakes open at Standing ${STAKES_OPEN_AT}.`,
   },
   stake: {
     term: 'Stake',
@@ -758,11 +791,8 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   },
   hq: {
     term: 'Headquarters',
-    line: 'Your militia’s three offices. HR deals better first heroes; Finance pays interest on your bank; Operations buys pack slots, clears boulders and sets a company focus.',
-    also: [
-      { term: 'Company focus', line: 'One company at a time: its skills and items fill more of what you are dealt, on every road.' },
-      { term: 'Order', line: 'An HQ purchase for your next contract only.' },
-    ],
+    line: 'Your militia’s two offices. HR deals better first heroes; Operations buys pack slots, trains the scouts and sets a company focus.',
+    also: [{ term: 'Order', line: 'An HQ purchase for your next contract only.' }],
   },
   crates: {
     term: 'Sealed crate',
@@ -772,5 +802,13 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
     term: 'Sovereign Route',
     line: 'The endgame charter: your own road, sponsored from your bank. It opens once every skill and item is unlocked. Every company sets a condition, there is no city pay, and a fall loses the fee. Delivered, it pays a fortune and a Sovereign item.',
     also: [{ term: 'Sovereign tier', line: 'The top tier of items, marked S in cyan. Each one unlocks only by delivering a Sovereign Route; once yours, it turns up now and then on every road.' }],
+  },
+  market: {
+    term: 'Market of the day',
+    line: `Each day one company’s good sells for ×${MARKET_MULT}: its crate sales and its completion bonus. The price is locked when you sign.`,
+  },
+  focus: {
+    term: 'Company focus',
+    line: 'One company at a time: its skills and items fill more of what you are dealt, on every road. Set at the HQ.',
   },
 }

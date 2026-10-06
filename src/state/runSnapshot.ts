@@ -56,6 +56,7 @@ import { equipRules } from '../game/run/relics'
 import { allMutations } from '../game/data/mutations'
 import { ENEMY_TYPES } from '../game/data/enemies'
 import { fieldFor, FIRST_MAP, fieldIdOf, legacyPostTile, mapById, orientationOf, type FieldOrientation } from '../game/data/maps'
+import { inferredFieldAct, validFieldAct } from '../game/run/fields'
 import { fineFromCoarse, parseTileId, terrainRuleById } from '../game/data/terrain'
 import type { NameCounters } from '../game/data/sentinels'
 import { shrineById, type ShrineOffer } from '../game/data/shrines'
@@ -193,6 +194,12 @@ export interface RunSnapshot {
    * resumes onto exactly the ground it was fought on.
    */
   hazardSeed?: number | null
+  /**
+   * The act whose field `battleMapId` is (`run/fields`: a new field each act).
+   * No version step: a save from before the rule has none, and its field is
+   * honoured for the rest of the act it stands in (`fields.inferredFieldAct`).
+   */
+  fieldAct: number
   roster: Sentinel[]
   /** v10: keyed by deployment TILE id (`c{col}r{row}`); ≤ v9 by circle id `s0`…`s5`. */
   placements: Placement
@@ -306,6 +313,8 @@ export interface RunStateSource {
   reachableNodeIds: string[]
   event: { kind: EventKind; nodeId: string } | null
   battleMap: GameMap
+  /** Optional so a source that predates field-per-act still satisfies it. */
+  fieldAct?: number
   roster: Sentinel[]
   placements: Placement
   gold: number
@@ -363,6 +372,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     fieldOrientation: s.battleMap ? orientationOf(s.battleMap) : 'landscape',
     terrainRule: s.battleMap?.terrainRule ?? null,
     hazardSeed: s.battleMap?.hazardSeed ?? null,
+    fieldAct: validFieldAct(s.fieldAct) ?? inferredFieldAct(s.runMap.nodes.find((n) => n.id === (s.activeNodeId ?? s.currentNodeId))?.layer),
     roster: s.roster,
     placements: s.placements,
     gold: s.gold,
@@ -635,7 +645,7 @@ const optNum = (x: unknown): boolean => x === undefined || x === null || isStat(
  * new base stat that this file forgets fails the compile here.
  */
 const ITEM_BASE_KEYS: Record<keyof Item['base'], true> = {
-  physDamage: true, magDamage: true, attackSpeed: true, critChance: true, rangeMult: true, splashAdd: true,
+  physDamage: true, magDamage: true, attackSpeed: true, critChance: true, rangeMult: true, splashAdd: true, damagePct: true,
 }
 
 /**
@@ -1017,7 +1027,9 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
   // A node the payload lost (null, a hole) is no city passed — and must not throw here.
   const passed = runMap.nodes.filter((n) => !!n && done.has(n.id) && cityOfLayer(n.layer) != null && (n.type === 'miniboss' || n.type === 'boss')).length
   const n = Math.min(CITY_COUNT, passed)
-  return { ...freshContract({ company: 'silk', crates: 0, market: 1 }, 0), paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
+  // Its gold was its own (no advance existed): purse 0, every gold the road's.
+  const { advance: _advance, ...c } = freshContract({ company: 'silk', crates: 0, market: 1 })
+  return { ...c, purse: 0, paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
 }
 
 /**
@@ -1027,6 +1039,12 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
  * gold, at most one pay per city, and a pending city only where a city has
  * paid and the road is still open. A payload with no readable contract is a
  * pre-contract run ({@link legacyContract}).
+ *
+ * `advance` (October 2026) is read as a strict boolean and kept only when
+ * true: a contract signed with the company's advance banks none of its purse,
+ * while a run saved before the advance (no field) settles exactly as it was
+ * signed — its purse taken from the bank, its rest home in full. No version
+ * step: an absent field already means the old rule.
  */
 export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[], purseNow = 0): RunContract {
   if (isObj(raw) && raw.charter === true) return migrateCharter(raw, purseNow)
@@ -1043,6 +1061,7 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     crates: clampCrates(num(raw.crates, 0)),
     market: num(raw.market, 1) === MARKET_MULT ? MARKET_MULT : 1,
     purse: gold(raw.purse),
+    ...(raw.advance === true ? { advance: true } : {}),
     paid,
     cargoAt,
     pending,
@@ -1078,6 +1097,7 @@ function migrateCharter(raw: Record<string, unknown>, purseNow: number): RunCont
     crates: 0,
     market: 1,
     purse: gold(raw.purse),
+    ...(raw.advance === true ? { advance: true } : {}),
     paid,
     cargoAt,
     pending: null,
@@ -1276,6 +1296,15 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     fieldOrientation: str<FieldOrientation>(o.fieldOrientation, 'landscape', ORIENTATIONS),
     terrainRule,
     hazardSeed,
+    // Field-per-act: a stored act this build can hold, else (a save from
+    // before the rule, or a value no run could have written) the act of the
+    // node the run stands on, so its field is honoured for the rest of that act.
+    fieldAct:
+      validFieldAct(o.fieldAct) ??
+      inferredFieldAct(
+        (runMap.nodes as MapNode[]).find((n) => n.id === (typeof o.activeNodeId === 'string' ? o.activeNodeId : currentNodeId))?.layer ??
+          (runMap.nodes as MapNode[]).find((n) => n.id === currentNodeId)?.layer,
+      ),
     roster,
     placements,
     gold,

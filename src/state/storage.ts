@@ -37,14 +37,77 @@ export function readRaw(key: string): string | null {
   }
 }
 
-/** Returns false when the write was refused (blocked storage, quota) — never throws. */
+// ------------------------------------------------------------ write failures
+/*
+ * A refused write used to be invisible. `writeRaw` returned false and the
+ * zustand adapter below threw the false away, so a full quota or a private
+ * window lost the meta bank — every run's savings — with nothing said. Every
+ * write in the app comes through `writeRaw`, so this is where a failure is
+ * noticed; `state/saveHealth.ts` turns the first one into a notice.
+ */
+
+/** Why a write was refused, in the player's terms (see `saveHealth.ts`). */
+export type SaveFailReason = 'blocked' | 'quota' | 'error'
+
+export interface SaveFailure {
+  key: string
+  reason: SaveFailReason
+}
+
+let firstFailure: SaveFailure | null = null
+const failListeners = new Set<(f: SaveFailure) => void>()
+
+/** Quota errors differ by engine: the DOMException name, or the legacy codes (22, Firefox's 1014). */
+function isQuotaError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const e = err as { name?: unknown; code?: unknown }
+  return e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014
+}
+
+/** Record a refused write. Only the session's FIRST failure is announced. */
+function noteWriteFailure(key: string, reason: SaveFailReason): void {
+  if (firstFailure) return
+  firstFailure = { key, reason }
+  for (const cb of [...failListeners]) {
+    try {
+      cb(firstFailure)
+    } catch {
+      /* a listener's own trouble must not turn a failed save into a crash */
+    }
+  }
+}
+
+/** The first write this session that storage refused, or null while every write has landed. */
+export const saveFailure = (): SaveFailure | null => firstFailure
+
+/**
+ * Hear about the session's first refused write. A failure that already
+ * happened (say, during boot, before the listener was installed) is delivered
+ * at once. Returns the unsubscribe function.
+ */
+export function onSaveFailure(cb: (f: SaveFailure) => void): () => void {
+  failListeners.add(cb)
+  if (firstFailure) cb(firstFailure)
+  return () => {
+    failListeners.delete(cb)
+  }
+}
+
+/**
+ * Returns false when the write was refused (blocked storage, quota) — never
+ * throws. A refusal is recorded for the save notice (`onSaveFailure`).
+ */
 export function writeRaw(key: string, value: string): boolean {
   try {
     const s = store()
-    if (!s) return false
+    if (!s) {
+      noteWriteFailure(key, 'blocked')
+      return false
+    }
     s.setItem(key, value)
     return true
-  } catch {
+  } catch (err) {
+    noteWriteFailure(key, isQuotaError(err) ? 'quota' : 'error')
     return false
   }
 }
@@ -69,11 +132,15 @@ export function readJson<T>(key: string): T | null {
 }
 
 export function writeJson(key: string, value: unknown): boolean {
+  let text: string
   try {
-    return writeRaw(key, JSON.stringify(value))
+    text = JSON.stringify(value)
   } catch {
+    // Unserialisable (a cycle, a BigInt): the save is lost all the same.
+    noteWriteFailure(key, 'error')
     return false
   }
+  return writeRaw(key, text)
 }
 
 /**
@@ -101,6 +168,9 @@ export function onStorageKeyChange(key: string, cb: () => void): void {
  * a `set()` call. This adapter cannot throw, and it treats a corrupted value as
  * missing — which is what keeps a hand-mangled save degrading to defaults
  * instead of crashing (M11).
+ *
+ * `setItem` has to return void to zustand, which has nothing to do with a
+ * refusal anyway; `writeRaw` records it for the save notice instead.
  */
 export const safePersistStorage = {
   getItem: (name: string): string | null => readRaw(name),

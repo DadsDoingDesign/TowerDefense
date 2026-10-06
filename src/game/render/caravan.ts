@@ -166,26 +166,33 @@ export function caravanLayout(map: GameMap): Vec2 {
 /** Where the wagon stands (its centre) — the cargo floater rises from here. */
 export const caravanSpot = (map: GameMap): Vec2 => caravanLayout(map)
 
-export function drawCaravan(ctx: CanvasRenderingContext2D, map: GameMap, look: CaravanLook): void {
-  const at = caravanLayout(map)
-  const x0 = Math.round(at.x - WAGON_W / 2)
-  const y0 = Math.round(at.y - WAGON_H / 2)
+/**
+ * The caravan's pixels — wagon, load and banner — baked once per look
+ * (October audit 4.4). They were re-rasterised every frame: the pixel runs,
+ * the banner rows and both palettes rebuilt, then several hundred `fillRect`s,
+ * which made the caravan one of the hottest functions on a throttled phone.
+ * Now a look (crate colour, crates on board, banner) is drawn once into a
+ * small canvas at {@link BAKE} device px per field px, and each frame is one
+ * `drawImage` with smoothing off — the same nearest-neighbour pixels.
+ *
+ * The bake's origin is the caravan box's top-left; the ground shadows stay
+ * live vector (cheap, and they sit under the bake).
+ */
+const BAKE = 3
+const BAKES = new Map<string, HTMLCanvasElement>()
+const BAKE_MAX = 24
+
+function bakeKey(look: CaravanLook, full: number): string {
+  const b = look.banner ?? DEFAULT_BANNER
+  return `${look.color}|${full}|${b.shape}|${b.charge}|${b.tincture}`
+}
+
+/** The caravan's pixels drawn at `(x0, y0)` (the wagon's top-left), straight to `ctx`. */
+function drawPixels(ctx: CanvasRenderingContext2D, look: CaravanLook, full: number, x0: number, y0: number): void {
   const ground = y0 + WAGON_H
   const flagX = x0 + WAGON_W + FLAG_GAP
-  ctx.save()
-  // A trodden patch under the caravan, so it stands in a clearing rather than
-  // on the treetops, then the contact shadow every object on the field has.
-  ctx.fillStyle = 'rgba(74, 56, 34, 0.55)'
-  ctx.beginPath()
-  ctx.ellipse(at.x + (FLAG_GAP + FLAG_W) / 2, ground - 8, (WAGON_W + FLAG_W) * 0.56, 16, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = 'rgba(0,0,0,0.26)'
-  ctx.beginPath()
-  ctx.ellipse(at.x + 6, ground - 6, WAGON_W * 0.46, 7, 0, 0, Math.PI * 2)
-  ctx.fill()
   blit(ctx, WAGON, WAGON_PALETTE, x0, y0, WAGON_UNIT)
   // The load: one crate per third of the cargo still on board.
-  const full = Math.max(0, Math.min(SLOTS, Math.ceil(look.cargo * SLOTS - 1e-6)))
   const cw = CRATE[0].length * CRATE_UNIT
   const bedLeft = x0 + 7 * WAGON_UNIT
   const bedW = WAGON_W - 8 * WAGON_UNIT
@@ -197,5 +204,53 @@ export function drawCaravan(ctx: CanvasRenderingContext2D, map: GameMap, look: C
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.fillRect(flagX - 1, ground - 2, 6, 2)
   blit(ctx, bannerRows(b.shape, b.charge), bannerPalette(b.tincture), flagX, ground - FLAG_H, BANNER_UNIT)
+}
+
+/** The baked look, or null where there is no DOM (tests) — then the caller draws live. */
+function bakeFor(look: CaravanLook, full: number): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null
+  const key = bakeKey(look, full)
+  const hit = BAKES.get(key)
+  if (hit) return hit
+  const w = CARAVAN_BOX.right - CARAVAN_BOX.left
+  const h = CARAVAN_BOX.bottom - CARAVAN_BOX.top
+  const cv = document.createElement('canvas')
+  cv.width = Math.ceil(w * BAKE)
+  cv.height = Math.ceil(h * BAKE)
+  const cx = cv.getContext('2d')
+  if (!cx) return null
+  cx.imageSmoothingEnabled = false
+  cx.scale(BAKE, BAKE)
+  // The wagon's top-left sits at (-left, -top) inside the box.
+  drawPixels(cx, look, full, -CARAVAN_BOX.left - WAGON_W / 2, -CARAVAN_BOX.top - WAGON_H / 2)
+  if (BAKES.size >= BAKE_MAX) BAKES.delete(BAKES.keys().next().value as string)
+  BAKES.set(key, cv)
+  return cv
+}
+
+export function drawCaravan(ctx: CanvasRenderingContext2D, map: GameMap, look: CaravanLook): void {
+  const at = caravanLayout(map)
+  const x0 = Math.round(at.x - WAGON_W / 2)
+  const y0 = Math.round(at.y - WAGON_H / 2)
+  const ground = y0 + WAGON_H
+  ctx.save()
+  // A trodden patch under the caravan, so it stands in a clearing rather than
+  // on the treetops, then the contact shadow every object on the field has.
+  ctx.fillStyle = 'rgba(74, 56, 34, 0.55)'
+  ctx.beginPath()
+  ctx.ellipse(at.x + (FLAG_GAP + FLAG_W) / 2, ground - 8, (WAGON_W + FLAG_W) * 0.56, 16, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(0,0,0,0.26)'
+  ctx.beginPath()
+  ctx.ellipse(at.x + 6, ground - 6, WAGON_W * 0.46, 7, 0, 0, Math.PI * 2)
+  ctx.fill()
+  const full = Math.max(0, Math.min(SLOTS, Math.ceil(look.cargo * SLOTS - 1e-6)))
+  const bake = bakeFor(look, full)
+  if (bake) {
+    ctx.imageSmoothingEnabled = false
+    const bx = x0 + WAGON_W / 2 + CARAVAN_BOX.left
+    const by = y0 + WAGON_H / 2 + CARAVAN_BOX.top
+    ctx.drawImage(bake, bx, by, CARAVAN_BOX.right - CARAVAN_BOX.left, CARAVAN_BOX.bottom - CARAVAN_BOX.top)
+  } else drawPixels(ctx, look, full, x0, y0)
   ctx.restore()
 }
