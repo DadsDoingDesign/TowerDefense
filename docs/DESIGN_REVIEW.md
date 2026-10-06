@@ -2991,3 +2991,41 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   shown before it lands; the city receipt is Balatro's cash-out lines.
   Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
   stake curve and §6 band for the designer to re-anchor (audit §4).
+
+- **2026-10-06 — The designer's pass (audit §4 items 2, 3, 4b, 5, 6): the
+  company advance, a two-office HQ, standing bonus items, the charter's new
+  terms, a staggered run-2 reveal.** The purse picker is gone: every contract
+  carries the company's 60-gold advance, never the bank's and never banked
+  (old saves' bank purses settle as signed). The HQ is HR + Operations (pack
+  slots, focus, scouts); Finance's levels and "Fewer boulders" are refunded at
+  meta v11, and the free 2%/20 interest is one quiet line under the HQ's tabs.
+  A standing level past the card pool pays a Rare bonus item for the next
+  contract, shown as its own card on the receipt. The charter costs 4,000,
+  pays 24,000 and earns standing with all five companies, win or lose. The
+  menu, the terms and the HQ now open in beats — HQ at 500 banked (latched),
+  crates at the first delivery, stakes at standing 2 with that company, market
+  and focus at the fifth contract — and every locked place says what opens it.
+  Rendered in the running app at 390x844 @2x (menu at run 1, 2, the 500 latch
+  and run 5; terms escort-only and staked; the board's market tip; HQ HR, Ops
+  with focus locked and open; crates; charter; the hero pick's chip; a
+  cash-out receipt with two bonus items; a charter fall) and at 1440x900
+  (menu, HQ, terms), read by eye. The loop caught: (1) the locked market line
+  wrapped to four lines — one line with a count now; (2) the bank's rule
+  wrapped "up to / 20" — a headline ("next finished contract +12") over the
+  rule; (3) the charter's standing as five full rows pushed the slip off the
+  first screen — five crest chips; (4) the receipt's "Advance 50 repaid to
+  Ironvein" head line put the cash-out head at 30.4% chrome — the advance is a
+  slip line now (28.6%); (5) the standing card promised "Crate 2 can ride"
+  below the stakes gate — it says when stakes open; (6) "The company advances"
+  broke LS4's one-name rule ("the company" is your heroes) — the terms name the
+  hiring company ("Easel House advances 60 gold for the road"). Whales rules on
+  the new screens: contrast 0 except the accepted scroll fade, size 0, order 0,
+  chrome under 30%; the stock 22-screen scan is unchanged (merchant fade only).
+  Harness (FW_SECTIONS=12,13,18, n=120): the HQ grid still never lowers the win
+  rate past noise (Opening deal 5 +6pt); bank interest's 20 sits 36 under the
+  smallest stake's +56; the charter is now +2,090 gold a run against an
+  escort's +555 (was +80 vs +603), breaking even at a 17% delivery rate.
+  Benchmark: the reveal is Hades' Mirror/Contractor arriving after the first
+  escapes, each with one line; the advance is Slay the Spire's fixed starting
+  gold. Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
+  charter may now be too generous for the tuning pass; the stake curve.
