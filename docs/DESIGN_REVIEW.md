@@ -3146,3 +3146,41 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
   closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
   readability 4/5, hierarchy 4/5, polish 4/5.
+
+- **2026-10-06 — The coach is a hint pill; the header loses the wordmark.**
+  The player: the "Got it" banner was a chore that moved the content, and
+  "get rid of the name fieldwatch too in the header. we need the space". The
+  coach row (and the held-open empty row of audit 2.5) is gone from every band
+  layout; tips, field notes and the new-ground note float as one dark pill
+  over the Stage's top or bottom edge (`pointer-events: none`), fade in, stay
+  2.5 s + 60 ms a word (cap 9 s, paused while the tab is hidden), fade out and
+  mark themselves taught; the words go through the Announcer. The header is
+  one row (depth · strength · cargo · gold): 76/68/62.6 → 44/40/38 at
+  390/375/320 (53 at 320 once depth and strength are both up), desk 60 → 52.
+  Rendered in the running app at 320×568, 375×667, 390×844 @2x touch,
+  430×932 and 1440×900, with the Stage's box logged every frame of a whole
+  first battle: one box from setup through the breather to the last enemy
+  (390: 0,44,390×606 — it was 121→76→121 as the row came and went; 320:
+  0,38,320×356; 1440: 0,52,979×848). The loop caught: (1) the strip tips on
+  the bottom edge sat on the wagons on every portrait field — a bottom-edge
+  tip moves to the top while the field is in play and the wagons are low;
+  (2) on the run map the bottom edge is the stops you can march to — map
+  tips float on top, below the receipt toast when one is up; (3) on the 375
+  and 320 reward screens the gear tip covered "Wave cleared" — a Stage under
+  240px holds the ceremony alone and the tip waits for the map, and tips wait
+  out the 700 ms re-layout so none flashes; (4) a tip that left on its own
+  remounted for its fade and was announced twice — the fade is decided in
+  render; (5) at 360–390 with depth, strength and a 4-digit purse the cargo
+  block overflowed into the gold — the chips slim below 390, the word "Cargo"
+  steps aside under 150px (container query), and depth AND strength under
+  360 (or Large UI under 430) take two tight rows; (6) the pill's 7/9px
+  padding broke the spacing scale. Whales: pill text 12px, --text ~13:1 and
+  --accent-text ~8:1 on its wash; the scan (38 screens, two new: the setup
+  pill on each viewport) has no new violation — contrast 1 → 2 is the
+  merchant's accepted scroll fade on desk (its stock is random), chrome drops
+  on every battle and map screen (390 setup 9.7% → 5.9%). Benchmark: Kingdom
+  Rush's and Bloons' first-run hints are transient callouts over the field
+  that never reflow the HUD; Clash Royale's header is one row of numbers.
+  Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: 60 ms a
+  word is quick (a 20-word tip gets 3.7 s); the receipt toast still sits by
+  `--sh-header-min`, 7px into a two-row 320 header.
