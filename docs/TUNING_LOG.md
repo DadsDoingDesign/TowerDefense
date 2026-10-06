@@ -135,6 +135,37 @@ curses) +5.7pt, the double prices +2.3pt, the muster +4.3pt (n=600). Before
 the pass the untuned report read the ground +4.3, the prices +3.3 and the
 muster −0.5pt (n=210).
 
+## Step 2, last — the boss share and the cap
+
+The first full report (all else green) failed one gate: the final boss
+killed 9% of the teams that reached it (§6 floor 10%). Every multiplier that
+killed more slogged a seed past 600s. The slogs are real 13–19 minute fights
+(run 108's final boss 1,159s, a defeat; run 260 789s / 908s, cleared), so
+the harness cap went 600 → 1800s (109a334) and the boss went ×0.42 → ×0.44
+(657360e): §6 57.3%, boss kills 20/192 (10.4%), no timeouts. The final boss is
+in every staked run, so stake tiers 3, 7 and 8 were re-probed alone.
+
+## Final numbers (pass 2)
+
+| Metric | Before (1b43846) | After |
+|---|--:|--:|
+| Invariants failing | 50 | **0** (REPORT.md, full run) |
+| §6 Monte Carlo (45–60%) | 57% | 57.3% |
+| §6 final-boss kills of arrivals (≥10%) | 12% | 10.4% |
+| §11 first-timer (15–35%, aim 20–28) | 14% | 25.4% (n=600: 27.7%) |
+| §11 battles / recruits / adaptive | 10 / 8 / 16% | 18 / 20 / 34% (n=600: 16.7 / 19.0 / 33.5%) |
+| §11 strict floor's worst node (≤40%) | 43% | 35% |
+| Stake delivery 0→8 crates | 18 → 18 → 19 → 15 → 14 → 14 → 12 → 11 → 10% | 33.5 → 27.5 → 23.2 → 18.7 → 15.5 → 10.0 → 6.5 → 0.7% (8: unmeasured, <1% below it) |
+| Stake pay, cash line | 87 → 136 → 157 → 190 → 149 → 188 → 191 → 219 → 173 | 119 → 162 → 176 → 210 → 257 → 274 → 313 → 329 |
+| Smallest stake gain vs interest cap 40 | +50 | +43 |
+| Charter delivery (no / all Sovereign items) | 23 / 27% | 29 / 32% (report, n=210; n=600: 27 / 29%) |
+| Charter bank net a run | +80 | +3,597 (report; n=600: +2,929) |
+| Charter fee in good runs | 7.6 | 9.0 (report; n=600: 8.5) |
+| Muster cost (lifted) | −0.5pt | +4.3pt (report; n=600: +3.3) |
+
+Report runtime grew to ~50 minutes single-core (§12 alone ~60 core-minutes
+at n=210: runs are longer — bigger companies, harder act 3, the 1800s cap).
+
 ---
 
 # Tuning pass 1 — first-timer line, Cartographer's Table, final review
