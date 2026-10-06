@@ -3,6 +3,7 @@ import { hashSeed } from '../../../game/core/rng'
 import { COMPANIES, companyById, type CompanyId } from '../../../game/data/companies'
 import { RANDOM_UNLOCK_SKILLS } from '../../../game/data/skills'
 import {
+  ADVANCE,
   CRATE_PRICE,
   contractLetter,
   contractPlan,
@@ -10,9 +11,10 @@ import {
   dangerPips,
   isMilestone,
   marketFor,
+  MARKET_MULT,
   MAX_CRATES,
-  purseOptions,
   recordAt,
+  STAKES_OPEN_AT,
   utcDateKey,
 } from '../../../game/run/contracts'
 import { cardFloor, companyOpen, MAX_STANDING, standingOf, standingProgress } from '../../../game/run/standing'
@@ -21,7 +23,9 @@ import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { stakeCap } from '../../../state/game/contractSlice'
+import { stakesShown } from '../../../state/staging'
 import { ROAD_SHARE } from '../../../game/run/hq'
+import { useReveal } from '../staging'
 import { companyVar } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
@@ -34,13 +38,19 @@ import { ContractPage, DangerPips, Gold, GroundChip, MarketTag, PageTip, Slip, S
  * Two steps on one screen, the way the mockups draw them: pick a company (its
  * ground, today's market, your standing, its letter, what the next standing
  * level unlocks), then the terms — the free escort or a stake of crates, what
- * the road pays at every city, and the purse you take. Every number is read
- * off `run/contracts.ts`; the store clamps whatever the page asks for.
+ * the road pays at every city, and the company's advance for the road. Every
+ * number is read off `run/contracts.ts`; the store clamps whatever the page
+ * asks for.
+ *
+ * The staggered reveal (October 2026): a company takes stakes from standing
+ * {@link STAKES_OPEN_AT} with it (escort only before, and the terms say when
+ * they open), and the market of the day shows from the fifth finished
+ * contract (`state/staging.revealOf`).
  */
 export function ContractsScreen() {
   const board = useGameStore((s) => s.board)
   if (!board) return null
-  return board.step === 'terms' ? <Terms company={board.company} crates={board.crates} purse={board.purse} /> : <Board selected={board.company} seed={board.seed} />
+  return board.step === 'terms' ? <Terms company={board.company} crates={board.crates} /> : <Board selected={board.company} seed={board.seed} />
 }
 
 function BankChip() {
@@ -69,8 +79,15 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
   const standing = useMetaStore((s) => s.standing)
   const skills = useMetaStore((s) => s.skills)
   const pick = useGameStore((s) => s.boardPick)
-  const terms = useGameStore((s) => s.boardTerms)
+  const toTerms = useGameStore((s) => s.boardTerms)
   const taught = useSettingsStore((s) => s.taught.board)
+  const taughtMarket = useSettingsStore((s) => s.taught.market)
+  const reveal = useReveal()
+  // The market's one tip is read once the terms are opened with it showing.
+  const terms = () => {
+    if (reveal.market) useSettingsStore.getState().markTaught('market')
+    toTerms()
+  }
   const today = utcDateKey()
   const co = companyById(selected)
   const xp = standing[selected] ?? 0
@@ -95,11 +112,14 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
       cta={{ label: 'Read the terms', run: terms, heavy: true, disabled: !companyOpen(selected, standing) }}
     >
       {!taught && <PageTip>Each company pays your militia to guard its road. The free escort is always on offer.</PageTip>}
+      {taught && reveal.market && !taughtMarket && (
+        <PageTip>New: the market of the day. One company’s good sells for ×{MARKET_MULT} today — its crates and its completion bonus.</PageTip>
+      )}
       <div className="ct-list" role="radiogroup" aria-label="Company">
         {COMPANIES.map((c) => {
           const open = companyOpen(c.id, standing)
           const s = standingOf(standing, c.id)
-          const market = marketFor(c.id, today)
+          const market = marketFor(c.id, today, reveal.market)
           return (
             <button
               key={c.id}
@@ -163,8 +183,10 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
             </>
           ) : (
             <>
-              <b>Next: Standing {prog.standing + 1}</b>
-              <span>Every skill is unlocked · one more crate</span>
+              <b>Next: a Rare bonus item</b>
+              <span>
+                at Standing {prog.standing + 1} · every skill is unlocked · {prog.need - prog.into} more standing XP
+              </span>
             </>
           )}
         </span>
@@ -178,20 +200,22 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
 // The terms
 // ---------------------------------------------------------------------------
 
-function Terms({ company, crates, purse }: { company: CompanyId; crates: number; purse: number }) {
+function Terms({ company, crates }: { company: CompanyId; crates: number }) {
   const meta = useMetaStore()
   const setCrates = useGameStore((s) => s.setCrates)
-  const setPurse = useGameStore((s) => s.setPurse)
   const sign = useGameStore((s) => s.signContract)
   const taught = useSettingsStore((s) => s.taught)
+  const showEverything = useSettingsStore((s) => s.showEverything)
+  const reveal = useReveal()
   const co = companyById(company)
-  const market = marketFor(company, utcDateKey())
+  const market = marketFor(company, utcDateKey(), reveal.market)
   const standing = standingOf(meta.standing, company)
   const standingCap = crateCap(standing)
+  // Stakes open per company at standing 2 with it (the staggered reveal).
+  const stakesOpen = stakesShown(meta.standing, company, showEverything)
   const cap = stakeCap(meta, company)
   const plan = contractPlan({ company, crates, market })
   const stake = crates * CRATE_PRICE
-  const purses = purseOptions(meta.bank - stake)
   const rec = recordAt(meta.record, crates)
   const staked = crates > 0
   const [c1, c2, dest] = co.towns
@@ -244,21 +268,34 @@ function Terms({ company, crates, purse }: { company: CompanyId; crates: number;
           <b>Escort</b>
           <span>Paid at every city. Nothing to lose.</span>
         </button>
-        <button
-          className={`ct-mode staked${staked ? ' on' : ''}`}
-          role="radio"
-          aria-checked={staked}
-          aria-disabled={cap < 1}
-          onClick={() => cap >= 1 && setCrates(staked ? crates : Math.min(cap, 2))}
-        >
-          <span className="ct-mode-k">Staked</span>
-          <b>Carry cargo</b>
-          <span>Bigger bonus, more loot, tougher raiders.</span>
-        </button>
+        {stakesOpen ? (
+          <button
+            className={`ct-mode staked${staked ? ' on' : ''}`}
+            role="radio"
+            aria-checked={staked}
+            aria-disabled={cap < 1}
+            onClick={() => cap >= 1 && setCrates(staked ? crates : Math.min(cap, 2))}
+          >
+            <span className="ct-mode-k">Staked</span>
+            <b>Carry cargo</b>
+            <span>Bigger bonus, more loot, tougher raiders.</span>
+          </button>
+        ) : (
+          <button className="ct-mode staked locked" role="radio" aria-checked={false} aria-disabled="true" aria-label={`Staked: stakes open at Standing ${STAKES_OPEN_AT} with ${co.name}`}>
+            <span className="ct-mode-k">
+              <Lock /> Staked
+            </span>
+            <b>Carry cargo</b>
+            <span>
+              Stakes open at Standing {STAKES_OPEN_AT} with {co.name}
+            </span>
+          </button>
+        )}
       </div>
 
-      {!taught.stakes && <PageTip>Each crate costs {CRATE_PRICE} gold and makes the road harder. Delivered, every crate pays more.</PageTip>}
+      {stakesOpen && !taught.stakes && <PageTip>Each crate costs {CRATE_PRICE} gold and makes the road harder. Delivered, every crate pays more.</PageTip>}
 
+      {stakesOpen && (
       <div className="ct-ladder" style={{ '--co': companyVar(company) } as CSSProperties}>
         <div className="ct-ladder-head">
           <span className="ct-eyebrow">Your stake · {CRATE_PRICE} gold a crate</span>
@@ -319,6 +356,7 @@ function Terms({ company, crates, purse }: { company: CompanyId; crates: number;
           {cap < standingCap && <span className="ct-lockline">Your bank covers {cap} crate{cap === 1 ? '' : 's'}.</span>}
         </div>
       </div>
+      )}
 
       <Slip eyebrow="What it pays · in gold" className="ct-pay">
         <SlipLine label={c1} note={staked && sold[0] ? 'stake back + fee' : 'escort fee'} value={<Gold n={plan.cities[0].total} />} />
@@ -336,23 +374,17 @@ function Terms({ company, crates, purse }: { company: CompanyId; crates: number;
         <p className="ct-slip-note">Each city pays for the share of cargo that arrives.</p>
       </Slip>
 
-      <label className="ct-purse">
+      <div className="ct-advance">
         <span>
-          <b>Purse for the road</b>
-          <small>What is left comes home, with {Math.round(ROAD_SHARE * 100)}% of the road’s gold.</small>
+          <b>
+            {co.name} advances {ADVANCE} gold for the road
+          </b>
+          <small>Not from your bank. Spend it on the road; what is left is repaid. {Math.round(ROAD_SHARE * 100)}% of the road’s gold comes home.</small>
         </span>
-        <span className="ct-purse-pick">
-          <Gold n={purse} />
-          <select value={purse} onChange={(e) => setPurse(Number(e.target.value))} aria-label="Purse for the road, in gold">
-            {purses.map((p) => (
-              <option key={p} value={p}>
-                {p} gold
-              </option>
-            ))}
-          </select>
+        <span className="ct-advance-v">
+          <Gold n={ADVANCE} />
         </span>
-      </label>
-      {!taught.purse && <PageTip>The bank stays home and earns interest. The purse is all you can spend on the road — merchants, repairs, hires.</PageTip>}
+      </div>
     </ContractPage>
   )
 }

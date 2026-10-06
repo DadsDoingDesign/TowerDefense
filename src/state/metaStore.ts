@@ -25,7 +25,7 @@ import {
   NO_ORDERS,
   PULL_PRICE,
   pullLift,
-  ROCK_ORDER_PRICE,
+  refundRetiredHq,
   rollPull,
   runHqFor,
   scoutsAt,
@@ -37,11 +37,13 @@ import {
 import { isItemKind } from '../game/data/itemKinds'
 import { newRunSeed } from '../game/core/rng'
 import {
+  charterStandingXp,
   dealMany,
   rollContractItem,
   rollContractSkill,
   rollStandingCard,
   spreadWatchXp,
+  standingBonusKind,
   standingFor,
   standingXpFor,
 } from '../game/run/standing'
@@ -166,13 +168,23 @@ export interface RunProgress {
   standingAfter: number
   /** Skill cards the standing levels unlocked, in order. */
   standingCards: string[]
+  /**
+   * Standing levels crossed once the card pool was exhausted: each pays a Rare
+   * bonus item of `kind` in the next contract's pack (October 2026).
+   */
+  standingBonus: { company: CompanyId; standing: number; kind: string }[]
+  /**
+   * The Sovereign Route's standing with each of the five companies (it earns
+   * with all of them); null on a company's contract.
+   */
+  standingAll: { company: CompanyId; before: number; after: number }[] | null
   /** Skill cards the delivery unlocked: the contract's own first, then one per milestone crate. */
   contractCards: string[]
   /** Item kinds the delivery unlocked: the contract's own first, then the stake's item chances. */
   items: string[]
   /** Gold the settle put in the bank (the purse home, the road's share, the cities' pay, feats, interest). */
   deposit: number
-  /** Interest the bank earned on this contract (Finance; 0 on a lost contract). */
+  /** Interest the bank earned on this contract (`hq.BASE_INTEREST`; 0 on a lost contract). */
   interest: number
   /** True on a custom seed: it paid its gold, and earned nothing else. */
   unranked: boolean
@@ -334,13 +346,21 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  *
  * v10 — the Sovereign Route (build step 5): the Sovereign kinds owned and the
  * charter record, both empty. Nothing else moves.
+ *
+ * v11 — the October 2026 designer pass. The Finance office's interest levels
+ * and "Fewer boulders" (the permanent levels and the one-contract order) are
+ * cut, and refunded to the bank at what they cost (`hq.refundRetiredHq`) —
+ * the same pattern as the retired hub's refund at v9. The bank keeps the free
+ * base interest. Nothing else moves: the staggered reveal's latches are the
+ * `met` list a save already holds, so a player who met the HQ or the crates
+ * keeps them.
  */
-export const META_VERSION = 10
+export const META_VERSION = 11
 
-/** The orders a save holds, as booleans. */
+/** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { rocks: o.rocks === true, focus: o.focus === true }
+  return { focus: o.focus === true }
 }
 
 /** HQ levels: known purchases only, whole, within each one's range. */
@@ -421,6 +441,10 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
   // every load).
   const fold = version < 9 ? foldOldHub(numRecord(o.upgrades)) : null
   const upgrades = fold ? migrateHq(fold.levels as Record<string, number>) : migrateHq(numRecord(o.upgrades))
+  // v11: Finance's levels and "Fewer boulders" (and an unspent boulder order)
+  // are refunded. A v9/v10 save is the only one that can hold them; again only
+  // on a real version step.
+  const retired = version >= 9 && version < 11 ? refundRetiredHq(numRecord(o.upgrades), o.orders) : 0
   // v3: Banner rungs were bought with marks until then; every one is given back
   // (as gold now). Only on a real version step — `merge` calls this with
   // META_VERSION on every load, and a refund there would pay on every boot.
@@ -452,7 +476,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     version < 8
       ? Math.max(NEW_BANK, Math.floor(Math.max(0, num(o.watchMarks, 0)) + refund))
       : Math.max(0, Math.floor(num(o.bank, NEW_BANK)))
-  const bank = Math.min(1e9, bank0 + (fold?.refund ?? 0))
+  const bank = Math.min(1e9, bank0 + (fold?.refund ?? 0) + retired)
   const standing = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
   const lastInterest = o.lastInterest == null ? null : Math.max(0, Math.min(1e6, Math.floor(num(o.lastInterest, 0))))
   return {
@@ -540,10 +564,10 @@ export const useMetaStore = create<MetaState>()(
 
       buyOrder: (order) => {
         const { bank, orders, focus } = get()
-        if (orders[order]) return false
+        if (order !== 'focus' || orders[order]) return false
         // A focus order needs a company in focus to push.
-        if (order === 'focus' && !focus) return false
-        const price = order === 'rocks' ? ROCK_ORDER_PRICE : FOCUS_ORDER_PRICE
+        if (!focus) return false
+        const price = FOCUS_ORDER_PRICE
         if (bank < price) {
           sfx('error')
           return false
@@ -627,17 +651,19 @@ export const useMetaStore = create<MetaState>()(
         const runsDone = num(stats.runsCompleted, 0) + 1
         const featGold = feats.reduce((a, f) => a + f.gold, 0)
         lastFeats.ids = feats.map((f) => f.id)
-        // Finance: a finished contract (delivered or cashed out, never lost)
+        // The bank: a finished contract (delivered or cashed out, never lost)
         // earns interest on the gold left at home — the bank before this
-        // settle's deposit lands — capped per contract (`hq.INTEREST`). A
-        // custom seed earns none, as it earns no standing.
+        // settle's deposit lands — capped per contract (`hq.BASE_INTEREST`, a
+        // plain rule since the Finance office was cut). A custom seed earns
+        // none, as it earns no standing.
         const status = contract?.status ?? 'lost'
         const paysInterest = !!contract && !unranked && earnsInterest(status)
-        const interest = paysInterest ? interestFor(num(get().bank, 0), hqLevel(get().upgrades, 'rate')) : 0
+        const interest = paysInterest ? interestFor(num(get().bank, 0)) : 0
         const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest
 
         // ---- standing with the company, and what it unlocks ----------------
         const company = contract && isCompanyId(contract.company) ? contract.company : null
+        const charter = !!contract?.charter
         const ranked = !!company && !unranked
         const standingXp = { ...freshStanding(), ...get().standing }
         const xpBefore = company ? Math.max(0, num(standingXp[company], 0)) : 0
@@ -646,13 +672,30 @@ export const useMetaStore = create<MetaState>()(
         const after = standingFor(xpBefore + xp)
         const have = get().skills
         const haveItems = Array.isArray(get().items) ? get().items : []
+        // The Sovereign Route earns standing with all five companies — each
+        // what an escort that ended the same way earns with its one (October
+        // 2026). A custom seed earns none.
+        const gains: Partial<Record<CompanyId, number>> = charter && !unranked ? charterStandingXp({ depth: d, kills: k, delivered: won }) : company && xp ? { [company]: xp } : {}
+        const nextStanding = { ...standingXp }
         // One card per standing level crossed, each at that level's floor,
-        // the company's own cards first.
+        // the company's own cards first. Once the card pool is exhausted, a
+        // level pays a Rare bonus item for the next contract instead — a hash
+        // of its own parts, never a run stream.
         const standingCards: string[] = []
-        if (company) {
-          for (let s = before + 1; s <= after; s++) {
-            const c = rollStandingCard([...have, ...standingCards], company, s, runsDone)
-            if (c) standingCards.push(c)
+        const standingBonus: RunProgress['standingBonus'] = []
+        const standingAll: NonNullable<RunProgress['standingAll']> = []
+        for (const c of COMPANY_IDS) {
+          const gain = gains[c] ?? 0
+          if (!gain) continue
+          const from = Math.max(0, num(standingXp[c], 0))
+          const lvBefore = standingFor(from)
+          const lvAfter = standingFor(from + gain)
+          nextStanding[c] = from + gain
+          if (charter) standingAll.push({ company: c, before: lvBefore, after: lvAfter })
+          for (let s = lvBefore + 1; s <= lvAfter; s++) {
+            const card = rollStandingCard([...have, ...standingCards], c, s, runsDone)
+            if (card) standingCards.push(card)
+            else standingBonus.push({ company: c, standing: s, kind: standingBonusKind(haveItems, c, s, runsDone) })
           }
         }
         // A delivery: the contract's skill and item, a skill per milestone
@@ -667,7 +710,6 @@ export const useMetaStore = create<MetaState>()(
         // The Sovereign Route (the endgame charter): a delivery unlocks one
         // Sovereign kind still locked — a hash of the charter count, never a
         // run stream. A custom seed unlocks nothing, as ever.
-        const charter = !!contract?.charter
         const charters = migrateCharters(get().charters)
         const owned = migrateSovereign(get().sovereign)
         const sovereign = charter && won && contract?.status === 'delivered' && !unranked ? rollSovereign(owned, charters.delivered, runsDone) : null
@@ -676,10 +718,13 @@ export const useMetaStore = create<MetaState>()(
           company,
           charter,
           sovereign,
-          xp,
+          // The Sovereign Route's XP is the same with each of the five.
+          xp: charter ? (Object.values(gains)[0] ?? 0) : xp,
           standingBefore: before,
           standingAfter: after,
           standingCards,
+          standingBonus,
+          standingAll: charter ? standingAll : null,
           contractCards,
           items,
           deposit: banked,
@@ -703,7 +748,10 @@ export const useMetaStore = create<MetaState>()(
         set({
           bank: Math.max(0, num(get().bank, 0)) + banked,
           ...(paysInterest ? { lastInterest: interest } : {}),
-          standing: company && xp ? { ...standingXp, [company]: xpBefore + xp } : standingXp,
+          standing: nextStanding,
+          // A standing level past the card pool owes a Rare bonus item to the
+          // next contract (`hq.bonusItemsFor`), as a sealed crate's duplicate does.
+          ...(standingBonus.length ? { bonusItems: [...get().bonusItems, ...standingBonus.map((b) => b.kind)].slice(0, MAX_BONUS_ITEMS) } : {}),
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
           items: items.length ? [...haveItems, ...items] : haveItems,

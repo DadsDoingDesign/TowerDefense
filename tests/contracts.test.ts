@@ -3,16 +3,16 @@ import { RNG } from '../src/game/core/rng'
 import { COMPANIES, COMPANY_IDS, companyById, crestRows } from '../src/game/data/companies'
 import { ALL_SKILLS, RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { ITEM_KINDS, UNLOCK_ITEM_KINDS, itemPoolFor } from '../src/game/data/itemKinds'
-import { charterDoor } from '../src/game/run/charter'
+import { CHARTER_FEE, CHARTER_PAYOUT, charterDoor } from '../src/game/run/charter'
 import { generateItem } from '../src/game/data/items'
 import { drawDistinct, poolFor } from '../src/game/run/skills'
 import {
+  ADVANCE,
   canCashOut,
   ESCORT_FEE,
   cashOutValue,
   cityOfLayer,
   cityPay,
-  clampPurse,
   COMPANY_WEIGHT,
   contractLetter,
   contractPlan,
@@ -21,21 +21,27 @@ import {
   cratesLeftAfter,
   cratesSoldAt,
   dangerPips,
-  defaultPurse,
   deliveryUnlocks,
   kindCompany,
   MARKET_MULT,
   marketFor,
   marketOfDay,
   MAX_CRATES,
+  MARKET_FROM_RUN,
+  marketOpen,
   milestonesAt,
   recordAt,
+  freshContract,
+  signingCost,
+  STAKES_OPEN_AT,
+  stakesOpen,
   skillCompany,
   stakeRules,
   weightPool,
 } from '../src/game/run/contracts'
 import {
   cardFloor,
+  charterStandingXp,
   companyOpen,
   contractFloor,
   MAX_STANDING,
@@ -213,12 +219,36 @@ describe('contracts: stakes and cities', () => {
     }
   })
 
-  it('the purse never exceeds the bank', () => {
-    expect(defaultPurse(1000)).toBe(60)
-    expect(defaultPurse(45)).toBe(30)
-    expect(defaultPurse(0)).toBe(0)
-    expect(clampPurse(150, 120)).toBe(100)
-    expect(clampPurse(150, 1000)).toBe(150)
+  it('every contract carries the company’s advance; signing takes only the stake (an older save’s bank purse too)', () => {
+    expect(ADVANCE).toBe(60)
+    const c = freshContract({ company: 'art', crates: 3, market: 1 })
+    expect(c).toMatchObject({ purse: ADVANCE, advance: true })
+    expect(signingCost(c)).toBe(3 * CRATE_PRICE)
+    expect(signingCost({ ...c, advance: false })).toBe(3 * CRATE_PRICE + ADVANCE)
+    // The Sovereign Route gets the same advance; signing takes its fee.
+    const s = freshContract({ company: null, crates: 0, market: 1, charter: true })
+    expect(s).toMatchObject({ purse: ADVANCE, advance: true })
+    expect(signingCost(s)).toBe(CHARTER_FEE)
+  })
+
+  it('the staggered reveal: stakes at standing 2 with the company, the market from the fifth contract', () => {
+    expect(STAKES_OPEN_AT).toBe(2)
+    expect([0, 1, 2, 3].map(stakesOpen)).toEqual([false, false, true, true])
+    expect(MARKET_FROM_RUN).toBe(5)
+    expect([0, 4, 5, 9].map(marketOpen)).toEqual([false, false, true, true])
+    const hot = marketOfDay('2026-10-06')
+    expect(marketFor(hot, '2026-10-06')).toBe(MARKET_MULT)
+    expect(marketFor(hot, '2026-10-06', false)).toBe(1)
+  })
+
+  it('the charter: 4,000 in, 24,000 out, and standing with all five as a same-ending escort earns with one', () => {
+    expect(CHARTER_FEE).toBe(4000)
+    expect(CHARTER_PAYOUT).toBe(24000)
+    const run = { depth: 12, kills: 640, delivered: true }
+    const all = charterStandingXp(run)
+    expect(Object.keys(all).sort()).toEqual([...COMPANY_IDS].sort())
+    for (const c of COMPANY_IDS) expect(all[c]).toBe(standingXpFor(run))
+    expect(charterStandingXp({ ...run, delivered: false }).spice).toBe(standingXpFor({ ...run, delivered: false }))
   })
 
   it('the record reads escorts alone, and stakes at this many crates or more', () => {

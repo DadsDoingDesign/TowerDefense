@@ -77,11 +77,11 @@ describe('seeded content does not depend on the global id counter', () => {
   })
 
   it('a contract deals the same field from the same board seed, every time', () => {
-    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0, purse: 0 })
+    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0 })
     const seed = useGameStore.getState().runSeed
     const first = dealt(seed)
     burn(311)
-    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0, purse: 0 })
+    useGameStore.getState().beginCampaign(4040, { kind: 'standard' }, { company: 'art', crates: 0 })
     expect(useGameStore.getState().runSeed).toBe(seed)
     expect(dealt(seed)).toEqual(first)
   })

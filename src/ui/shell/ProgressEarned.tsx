@@ -14,6 +14,11 @@ import { SkillCard } from './SkillCards'
  * card and item kind it unlocked — each as the card itself, labelled by what
  * paid for it (the contract, a stake milestone, a standing level) — and the
  * standing it earned with the company. Each card says only what IT does.
+ *
+ * October 2026: a standing level past the card pool pays a Rare bonus item for
+ * the next contract, shown here as its own card ("Standing 7 with Ironvein: a
+ * Rare bonus item for your next contract"), and the Sovereign Route's standing
+ * is shown for all five companies.
  */
 const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 
@@ -25,11 +30,13 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
     .map((x) => ({ ...x, k: skillById(x.id) }))
     .filter((x) => !!x.k)
   const kinds = p.items.map((id, i) => ({ id, kicker: i === 0 ? 'Contract' : 'Item chance', k: itemKindById(id) })).filter((x) => !!x.k)
+  const bonus = (p.standingBonus ?? []).map((b) => ({ ...b, k: itemKindById(b.kind), co: companyById(b.company) })).filter((x) => !!x.k)
   const n = skills.length + kinds.length
-  if (!n) return null
+  if (!n && !bonus.length) return null
   const floor = contractFloor(crates)
+  const names = [...skills.map((x) => x.k!.name), ...kinds.map((x) => x.id), ...bonus.map((b) => `a Rare ${b.kind} for your next contract`)]
   return (
-    <section className="pg-unlocks" aria-label={`${n} new unlock${n === 1 ? '' : 's'}: ${[...skills.map((x) => x.k!.name), ...kinds.map((x) => x.id)].join(', ')}`}>
+    <section className="pg-unlocks" aria-label={`${n + bonus.length} new unlock${n + bonus.length === 1 ? '' : 's'}: ${names.join(', ')}`}>
       {kinds.length > 0 && <p className="ct-eyebrow left">{kinds.length === 1 ? 'New item unlocked' : `${kinds.length} items unlocked`}</p>}
       {kinds.map((x) => (
         <SkillCard key={x.id} kicker={x.kicker} skill={{ name: x.id, level: `${SLOT_WORD[x.k!.slot]} · Level ${x.k!.level}`, text: x.k!.does }} />
@@ -43,7 +50,19 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
       {skills.map((x) => (
         <SkillCard key={`${x.kicker}-${x.id}`} kicker={x.kicker} skill={{ name: x.k!.name, level: skillLevelLabel(x.k!.level), text: x.k!.desc }} />
       ))}
-      <p className="pg-unlocks-note">Your next heroes, loot and offers can deal {n === 1 ? 'it' : 'them'}.</p>
+      {n > 0 && <p className="pg-unlocks-note">Your next heroes, loot and offers can deal {n === 1 ? 'it' : 'them'}.</p>}
+      {bonus.length > 0 && <p className="ct-eyebrow left">{bonus.length === 1 ? 'A bonus item for your next contract' : `${bonus.length} bonus items for your next contract`}</p>}
+      {bonus.map((b) => (
+        <SkillCard
+          key={`bonus-${b.company}-${b.standing}`}
+          kicker={`Standing ${b.standing}`}
+          skill={{
+            name: `Rare ${b.kind}`,
+            level: `${SLOT_WORD[b.k!.slot]} · Rare bonus item`,
+            text: `Standing ${b.standing} with ${b.co.name}: a Rare bonus item for your next contract. Every skill is already yours.`,
+          }}
+        />
+      ))}
     </section>
   )
 }
@@ -51,6 +70,7 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
 /** The company's standing after the settle: the crest, the level, and what the next one opens. */
 export function StandingEarned({ progress: p }: { progress: RunProgress }) {
   const xp = useMetaStore((s) => (p.company ? (s.standing[p.company] ?? 0) : 0))
+  if (p.standingAll?.length) return <StandingAllEarned progress={p} />
   if (!p.company) return null
   const co = companyById(p.company)
   const prog = standingProgress(xp)
@@ -76,5 +96,35 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
         {up ? `${p.standingBefore}→${p.standingAfter}` : p.standingAfter}
       </span>
     </div>
+  )
+}
+
+/**
+ * The Sovereign Route's standing (October 2026): the road is every company's,
+ * so it earns the same XP with all five — one line, then each company's level.
+ */
+function StandingAllEarned({ progress: p }: { progress: RunProgress }) {
+  const all = p.standingAll ?? []
+  return (
+    <section className="ct-stand-all" aria-label={`+${p.xp} standing XP with all five companies`}>
+      <p className="ct-eyebrow left">+{p.xp} standing XP with all five companies</p>
+      {all.map((s) => {
+        const co = companyById(s.company)
+        const up = s.after > s.before
+        return (
+          <div key={s.company} className="ct-stand sm" style={{ '--co': companyVar(s.company) } as CSSProperties}>
+            <Crest company={s.company} scale={1} />
+            <span className="ct-stand-text">
+              <b>
+                {co.name} · Standing {s.after}
+              </b>
+            </span>
+            <span className="ct-stand-lv" aria-label={up ? `Standing ${s.before} to ${s.after}` : `Standing ${s.after}`}>
+              {up ? `${s.before}→${s.after}` : s.after}
+            </span>
+          </div>
+        )
+      })}
+    </section>
   )
 }

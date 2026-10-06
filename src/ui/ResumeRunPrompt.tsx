@@ -69,9 +69,10 @@ export function ResumeRunPrompt() {
           </button>
           {armed && (
             <p className="fw-resume-body fw-resume-warn" role="alert">
+              {/* The company's advance never comes home; an older save's purse does. */}
               {snap.contract.charter
-                ? 'The charter ends here, and its fee is lost. You keep the rest of your purse; your heroes, the map and the pack are gone.'
-                : 'The contract ends here. You keep what its cities paid and the rest of your purse; unsold crates, your heroes, the map and the pack are gone.'}
+                ? `The charter ends here, and its fee is lost. You keep ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; your heroes, the map and the pack are gone.`
+                : `The contract ends here. You keep what its cities paid and ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; unsold crates, your heroes, the map and the pack are gone.`}
             </p>
           )}
           {armed && (

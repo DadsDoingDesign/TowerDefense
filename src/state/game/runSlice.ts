@@ -1,8 +1,9 @@
 /**
  * Run slice: starting, re-dealing, resuming and leaving a run, and walking the
  * run map (`selectNode`). A run is a contract (the mercenary company): it
- * begins from the contract board (`contractSlice`), with a company, a stake
- * and a purse, and the bank pays for it when the hero is committed.
+ * begins from the contract board (`contractSlice`), with a company and a stake,
+ * and the bank pays the stake when the hero is committed. The purse is the
+ * company's advance (`contracts.ADVANCE`): it never leaves the bank.
  */
 import { newRunSeed, restoreIdCounter, streamRng } from '../../game/core/rng'
 import { restoreNameCounters } from '../../game/data/sentinels'
@@ -25,7 +26,7 @@ import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { encounterRulesOf, priceMultOf, routePrice } from '../../game/run/charter'
-import { contractStake, DEFAULT_PURSE, earn, freshContract, marketFor, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
+import { earn, freshContract, marketFor, marketOpen, signingCost, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
 import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds'
@@ -42,7 +43,6 @@ export interface ContractOrder {
   /** The company whose road it is; null on the Sovereign Route. */
   company: CompanyId | null
   crates: number
-  purse: number
   /** The Sovereign Route (the endgame charter, `run/charter.ts`). */
   charter?: boolean
 }
@@ -62,7 +62,7 @@ export const groundOf = (s: { contract: Pick<RunContract, 'company' | 'charter'>
  * road, whose ground is the open ground every road used to share — the dev
  * handle's quick start (`newRun`) and the store tests' default.
  */
-export const QUICK_ORDER: ContractOrder = { company: 'silk', crates: 0, purse: DEFAULT_PURSE }
+export const QUICK_ORDER: ContractOrder = { company: 'silk', crates: 0 }
 
 export interface RunActions {
   /** A quick start (dev handle, tests): {@link QUICK_ORDER} on a fresh seed, straight to the hero pick. */
@@ -85,8 +85,8 @@ export interface RunActions {
   runAgain: () => void
   /**
    * Commit the hero pick: one of the three random heroes the pick deals
-   * (`pick-0` … `pick-2`). This signs the contract: the bank pays the stake and
-   * the purse, and the purse becomes the run's gold.
+   * (`pick-0` … `pick-2`). This signs the contract: the bank pays the stake,
+   * and the company's advance becomes the run's gold.
    */
   pickStartingHero: (choiceId: string) => void
   returnToHub: () => void
@@ -125,9 +125,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // are frozen on the contract now; its paid orders are spent at signing.
     const hq = useMetaStore.getState().runHq()
     const charter = !!order.charter
+    // The market of the day pays from the fifth finished contract (the
+    // staggered reveal); before that every contract signs at 1.
+    const market = !charter && (marketOpen(useMetaStore.getState().stats.runsCompleted) || useSettingsStore.getState().showEverything) ? marketFor(order.company, utcDateKey()) : 1
     const contract = freshContract(
-      { company: charter ? null : order.company, crates: order.crates, market: charter ? 1 : marketFor(order.company, utcDateKey()), ...(charter ? { charter } : {}) },
-      order.purse,
+      { company: charter ? null : order.company, crates: order.crates, market, ...(charter ? { charter } : {}) },
       // The Sovereign Route deals for no company: no HQ focus either.
       charter ? { ...hq, focus: null, boost: 0 } : hq,
     )
@@ -157,7 +159,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       board: null,
       screen: 'heroPick',
       roster: [],
-      // The purse shows on the hero pick; the bank pays it when the hero is committed.
+      // The company's advance shows on the hero pick; it is never the bank's.
       gold: contract.purse,
       baseHp: b.maxBaseHp,
       maxBaseHp: b.maxBaseHp,
@@ -175,16 +177,16 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge, !!st.contract.charter)) return false
     const seed = parseSeed(input)
     if (seed === null) return false
-    const { company, crates, purse } = st.contract
-    get().beginCampaign(seed, SEEDED_RUN, { company, crates, purse })
+    const { company, crates } = st.contract
+    get().beginCampaign(seed, SEEDED_RUN, { company, crates })
     return true
   },
 
   randomizeRunSeed: () => {
     const st = get()
     if (st.screen !== 'heroPick' || st.roster.length || !st.contract || !seedEditable(st.challenge)) return false
-    const { company, crates, purse, charter } = st.contract
-    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company, crates, purse, ...(charter ? { charter } : {}) })
+    const { company, crates, charter } = st.contract
+    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company, crates, ...(charter ? { charter } : {}) })
     return true
   },
 
@@ -193,7 +195,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // contract's terms set, one tap from signing another.
     const last = get().contract
     // After a Sovereign Route, the board opens on its default company.
-    get().openContracts(last?.company ? { company: last.company, crates: last.crates, purse: last.purse } : undefined)
+    get().openContracts(last?.company ? { company: last.company, crates: last.crates } : undefined)
   },
 
   pickStartingHero: (choiceId) => {
@@ -201,21 +203,24 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // Once per run: a second pick would re-deal the extras off the loot stream.
     if (st.screen !== 'heroPick' || st.roster.length || !st.contract) return
     const b = runBonuses()
-    // Signing: the bank pays the stake and the purse. A bank that cannot (it
-    // changed in another tab since the terms were set) keeps the stake and
-    // shrinks the purse to what is left; a stake it cannot cover refuses.
+    // Signing: the bank pays the stake (or the charter's fee). The purse is
+    // the company's advance and leaves the bank untouched. A contract an older
+    // save set up before the advance still takes its purse from the bank, as
+    // it was set — shrunk to what is left; a stake the bank cannot cover
+    // refuses (it changed in another tab since the terms were set).
     const meta = useMetaStore.getState()
-    const stake = contractStake(st.contract)
+    const stake = signingCost({ ...st.contract, purse: 0 })
     if (meta.bank < stake) return
-    const purse = Math.min(st.contract.purse, Math.max(0, meta.bank - stake))
-    if (!meta.withdraw(stake + purse)) return
+    const purse = st.contract.advance ? st.contract.purse : Math.min(st.contract.purse, Math.max(0, meta.bank - stake))
+    const taken = signingCost({ ...st.contract, purse })
+    if (!meta.withdraw(taken)) return
     const contract: RunContract = { ...st.contract, purse, signed: true }
     // The leader is the card the player chose — re-dealt off the same hashed
     // generator the card was, with real ids, under the HQ's Opening deal. No
     // run stream moves for it.
     const leader = chosenHero(st.runSeed, st.skillPool, st.itemPool, resolvePick(st.runSeed, st.skillPool, st.itemPool, choiceId, b.deal), 0, b.deal)
     if (!leader) {
-      meta.deposit(stake + purse)
+      meta.deposit(taken)
       return
     }
     // The Opening deal's second hero: a random hire off the loot stream, named
@@ -239,7 +244,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   },
 
   // Leaving for the menu ends the run, so it settles like any other end: a
-  // fall — the cities' pay and the purse come home, unsold crates are lost.
+  // fall — the cities' pay and the road's share come home, unsold crates are lost.
   returnToHub: () => {
     settleSavedRun(get, set)
     set(leaveToHub())
@@ -256,7 +261,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     set(leaveToHub())
     // Back to the terms it came from — a first-timer's free escort has none,
     // and the Sovereign Route's are on the menu's charter page.
-    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates, purse: c.purse }, 'terms')
+    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates }, 'terms')
   },
 
   // ---- run snapshot (C3) ----

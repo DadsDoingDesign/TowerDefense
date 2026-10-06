@@ -279,7 +279,7 @@ export function PageScreen({
         eventBoard ? (
           <PackStrip gold={purse.has('gold') ? gold : undefined} />
         ) : heroPick && contract ? (
-          <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} />
+          <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} advance={!!contract.advance} />
         ) : undefined
       }
       // 3.5: a short board keeps its CTA under its content instead of pinning

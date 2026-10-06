@@ -84,16 +84,21 @@ export const TEACH_IDS = [
   // The classless rework: "what a hero does comes from its gear", said once on
   // the hero pick. New, so a returning player meets it too.
   'heroGear',
-  // The mercenary company: one tip each for the contract board, the stake,
-  // the purse and the cities' cash-out — each said once, where it opens.
+  // The mercenary company: one tip each for the contract board, the stake and
+  // the cities' cash-out — each said once, where it opens. (The purse's tip
+  // went with the purse picker, October 2026: every contract carries the
+  // company's advance.)
   'board',
   'stakes',
-  'purse',
   'cashOut',
   // The HQ (build step 3): one tip for the headquarters, one for the sealed
   // crates — each said once, the first time the page opens.
   'hq',
   'crates',
+  // The staggered reveal (October 2026): the market of the day and company
+  // focus each say one tip, the first time they show (from the fifth contract).
+  'market',
+  'focus',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>

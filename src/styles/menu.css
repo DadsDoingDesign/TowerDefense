@@ -283,6 +283,15 @@ button.mn-today:disabled {
   color: var(--muted);
   text-align: right;
 }
+/* The market before it opens (the staggered reveal): quiet, dashed, a count to go. */
+.mn-today.is-locked {
+  background: rgba(20, 14, 8, 0.92);
+  border: 1px dashed var(--line-strong);
+}
+.mn-today.is-locked b {
+  color: var(--muted);
+  font-weight: 600;
+}
 @media (hover: hover) and (pointer: fine) {
   button.mn-today:not(:disabled):hover {
     border-color: rgba(240, 196, 106, 0.7);

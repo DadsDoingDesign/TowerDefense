@@ -202,6 +202,18 @@
   font-size: var(--fs-md);
   line-height: 28px;
 }
+/* October 2026: the charter earns standing with all five, win or lose. */
+.ch-standing {
+  margin: 0;
+  padding: 0 4px;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+}
+.ch-standing b {
+  color: var(--text);
+}
 .ch-offs,
 .ch-road,
 .ch-unlock {

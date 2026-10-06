@@ -20,7 +20,7 @@ export const CAMPFIRE_REPAIR = 7
 /*
  * The Field Kitchen's third choice (forage the road for gold) retired with the
  * Watchtower (the HQ, build step 3): road gold mostly stays on the road now,
- * so a forage was a weak stop, and the HQ keeps to its three offices.
+ * so a forage was a weak stop, and the HQ keeps to its offices.
  */
 
 /** The Gate after resting at a campfire. Never above its maximum. */

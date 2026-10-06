@@ -1017,7 +1017,9 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
   // A node the payload lost (null, a hole) is no city passed — and must not throw here.
   const passed = runMap.nodes.filter((n) => !!n && done.has(n.id) && cityOfLayer(n.layer) != null && (n.type === 'miniboss' || n.type === 'boss')).length
   const n = Math.min(CITY_COUNT, passed)
-  return { ...freshContract({ company: 'silk', crates: 0, market: 1 }, 0), paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
+  // Its gold was its own (no advance existed): purse 0, every gold the road's.
+  const { advance: _advance, ...c } = freshContract({ company: 'silk', crates: 0, market: 1 })
+  return { ...c, purse: 0, paid: Array<number>(n).fill(0), cargoAt: Array<number>(n).fill(100), signed: true }
 }
 
 /**
@@ -1027,6 +1029,12 @@ function legacyContract(runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[
  * gold, at most one pay per city, and a pending city only where a city has
  * paid and the road is still open. A payload with no readable contract is a
  * pre-contract run ({@link legacyContract}).
+ *
+ * `advance` (October 2026) is read as a strict boolean and kept only when
+ * true: a contract signed with the company's advance banks none of its purse,
+ * while a run saved before the advance (no field) settles exactly as it was
+ * signed — its purse taken from the bank, its rest home in full. No version
+ * step: an absent field already means the old rule.
  */
 export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cleared: readonly string[], purseNow = 0): RunContract {
   if (isObj(raw) && raw.charter === true) return migrateCharter(raw, purseNow)
@@ -1043,6 +1051,7 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     crates: clampCrates(num(raw.crates, 0)),
     market: num(raw.market, 1) === MARKET_MULT ? MARKET_MULT : 1,
     purse: gold(raw.purse),
+    ...(raw.advance === true ? { advance: true } : {}),
     paid,
     cargoAt,
     pending,
@@ -1078,6 +1087,7 @@ function migrateCharter(raw: Record<string, unknown>, purseNow: number): RunCont
     crates: 0,
     market: 1,
     purse: gold(raw.purse),
+    ...(raw.advance === true ? { advance: true } : {}),
     paid,
     cargoAt,
     pending: null,

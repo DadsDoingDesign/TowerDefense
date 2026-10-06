@@ -1,7 +1,8 @@
 import type { BattleResult } from '../../game/engine/engine'
 import { kitName } from '../../game/data/gear'
 import { cargoPct } from '../../game/run/contracts'
-import { homeGold, roadShareFor } from '../../game/run/hq'
+import { roadShareFor } from '../../game/run/hq'
+import { contractHome } from '../../game/run/settle'
 import type { Item, Sentinel } from '../../game/types'
 import { lastProgress } from '../metaStore'
 import { useSettingsStore } from '../settingsStore'
@@ -64,7 +65,7 @@ export function buildRecap(
     goldLeft: st.gold,
     // The purse's split (the road-gold share): what was left of the purse, and
     // the road's gold and the share of it banked — the settle's own numbers.
-    home: st.contract?.signed ? homeGold({ purse: st.contract.purse, earned: st.contract.earned, gold: st.gold }, roadShareFor(info.outcome)) : null,
+    home: st.contract?.signed ? contractHome(st.contract, st.gold, roadShareFor(info.outcome)) : null,
     interest: lastProgress.run?.interest ?? 0,
     threat: st.threat,
     heroes,

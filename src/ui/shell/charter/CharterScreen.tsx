@@ -11,7 +11,7 @@ import {
   TRADE_OFFS,
 } from '../../../game/run/charter'
 import { useGameStore } from '../../../state/gameStore'
-import { charterPurse } from '../../../state/game/contractSlice'
+import { ADVANCE } from '../../../game/run/contracts'
 import { useMetaStore } from '../../../state/metaStore'
 import { companyVar, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
@@ -28,7 +28,9 @@ import { SovereignMark, sovereignIcon } from './SovereignParts'
  * CTA says when it opens.
  *
  * **Open**: the contract. The three terms first (the fee, what finishing
- * pays, what a fall pays), then every company's condition in one line each,
+ * pays, what a fall pays — October 2026: the fee 4,000, the payout 24,000, and
+ * standing with all five companies either way), then every company's
+ * condition in one line each,
  * then the road's own terms, then the Sovereign unlock — what is still to
  * win. The fee is on the button. Everything here is read off the pure rules
  * (`run/charter.ts`), so the page cannot promise what the road does not do.
@@ -144,9 +146,12 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
             </div>
             <div className="risk">
               <span>If you fall</span>
-              <b>Nothing</b>
+              <b>No gold</b>
             </div>
           </div>
+          <p className="ch-standing">
+            <b>Standing with all five companies</b>, win or lose: each earns what an escort that ended the same way earns with its one.
+          </p>
 
           <section className="ch-offs" aria-label="Every company sets a condition">
             <p className="ct-eyebrow left">Every company sets a condition</p>
@@ -200,7 +205,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
                 <li key={line}>{line}</li>
               ))}
               <li>
-                By {CHARTER_TOWNS[0]} and {CHARTER_TOWNS[1]} to {CHARTER_TOWNS[2]}, with a purse of <Gold n={charterPurse(bank)} scale={1} />.
+                By {CHARTER_TOWNS[0]} and {CHARTER_TOWNS[1]} to {CHARTER_TOWNS[2]}, with the <Gold n={ADVANCE} scale={1} /> advance every contract carries.
               </li>
             </ul>
           </section>
