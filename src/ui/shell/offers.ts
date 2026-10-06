@@ -1,6 +1,6 @@
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
-import { SOVEREIGN_TIER } from '../../game/run/charter'
+import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
 import { PULL_PRICE } from '../../game/run/hq'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
@@ -1132,7 +1132,7 @@ function settingsOffers(s: Settings): Offer[] {
 /** "4 crates · Raiders 32% stronger · 4 more elites an act" — the stake, for receipts. */
 export const stakeLine = (crates: number, charter = false): string =>
   charter
-    ? 'Sovereign Route · every goblin clan from the first fight.'
+    ? `Sovereign Route · every goblin clan from the first fight, ${MUSTER_PCT}% stronger.`
     : crates <= 0
       ? 'Escort · standard raiders.'
       : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`

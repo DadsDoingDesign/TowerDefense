@@ -67,11 +67,19 @@ export const CHARTER_FEE = 5000
 /** What a delivered Sovereign Route pays at its destination: four fees. */
 export const CHARTER_PAYOUT = 20000
 /**
- * The muster's teeth: every raider on the Sovereign Route is this much
- * stronger (its starting Threat), on top of every clan marching from the
- * first fight. 1 = flavour only.
+ * The muster's teeth (the tuning pass): every raider on the Sovereign Route is
+ * this much stronger — its HP, and what it steals when it reaches the wagons —
+ * on top of every clan marching from the first fight. The clans alone cost
+ * nothing measurable (REPORT §18: −0.5pt lifted, i.e. none — the teaching
+ * ramp only holds bombers back at depth 1 and armour to depth 2, fights a
+ * late-game company walks through). Measured on §18's company (600 paired
+ * runs): without the muster 30.3% delivered; ×1.25 18.5% (the muster would be
+ * the whole charter); ×1.07 26.0% — a condition worth about 4pt, like each of
+ * the others is meant to be.
  */
-export const MUSTER_STRENGTH = 1
+export const MUSTER_STRENGTH = 1.07
+/** The muster's strength, as the copy says it ("7%"). */
+export const MUSTER_PCT = Math.round((MUSTER_STRENGTH - 1) * 100)
 /** Rosethread's trade-off: every merchant price on the route is this many times as much. */
 export const CHARTER_PRICE_MULT = 2
 /**
@@ -140,7 +148,7 @@ export const TRADE_OFFS: readonly TradeOff[] = [
 /** What the route deals and fields, said once on the contract screen. */
 export const CHARTER_TERMS: readonly string[] = [
   'Deals every item and skill you own, for no company.',
-  'Every goblin clan marches from the first fight.',
+  `Every goblin clan marches from the first fight, ${MUSTER_PCT}% stronger, and steals ${MUSTER_PCT}% more.`,
   'No crates, no city pay, no cashing out. The cities are waypoints.',
 ]
 

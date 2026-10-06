@@ -34,7 +34,7 @@ if (process.env.FW_HAZARDS) {
 import { classicHero } from '../src/game/data/sentinels'
 import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
-import { CHARTER_FEE, CHARTER_PAYOUT, TRADE_OFFS } from '../src/game/run/charter'
+import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game/run/charter'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
@@ -3540,7 +3540,7 @@ if (want(18)) {
   line('player owns for no company (no route weighting, no HQ focus), and every company sets a condition at once:')
   line('')
   for (const t of TRADE_OFFS) line(`- **${COMPANIES.find((c) => c.id === t.company)!.name}: ${t.rule}.** ${t.line}`)
-  line('- And every goblin clan marches from the first fight (the muster).')
+  line(`- And every goblin clan marches from the first fight, ${MUSTER_PCT}% stronger and stealing ${MUSTER_PCT}% more (the muster).`)
   line('')
   const LATE_HQ = { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }
   const late = loadoutFor('late game', { upgrades: LATE_HQ })
@@ -3574,7 +3574,7 @@ if (want(18)) {
   const all = measure('**Sovereign Route** · all five Sovereign items owned', { contract: charter, itemPool: lateOwned })
   const noGround = measure('Sovereign Route without its ground (fire, lakes, boulders, curses)', { contract: charter, charterParts: { ground: false } })
   const noPrices = measure("Sovereign Route without Rosethread's double prices", { contract: charter, charterParts: { prices: false } })
-  const noMuster = measure('Sovereign Route without the muster (the usual clan ramp)', { contract: charter, charterParts: { muster: false } })
+  const noMuster = measure('Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1)', { contract: charter, charterParts: { muster: false } })
   line('| Road | Delivered | Bank net a run (gold) |')
   line('|---|--:|--:|')
   for (const r of chRows) line(`| ${r.label} | ${pct(r.won)} | ${r.net >= 0 ? '' : '−'}${Math.abs(r.net).toFixed(0)} |`)
