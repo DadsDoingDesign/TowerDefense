@@ -57,7 +57,7 @@ import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
-import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
+import { GATE_REPAIR, merchantLuck, repairGate } from '../src/game/run/economy'
 import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
 import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, type DealRules, type HqOrders } from '../src/game/run/hq'
 import { stow } from '../src/game/run/inventory'
@@ -564,7 +564,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       // Four items rolled the way `selectNode` rolls them — with the roster's
       // damage-type demand and the run's drought luck — at the store's prices,
       // plus a hire at 80g.
-      const luck = Math.min(0.4, node.layer * 0.04)
+      const luck = merchantLuck(node.layer)
       // The counter's Gate repair, bought when the Gate is hurting (Phase 3b).
       if (baseHp <= meta.maxBaseHp * 0.65 && gold >= price(GATE_REPAIR.price)) {
         gold -= price(GATE_REPAIR.price)

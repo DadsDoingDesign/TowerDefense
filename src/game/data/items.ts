@@ -246,15 +246,24 @@ export function heroSlotsFor(
   }
 }
 
+/**
+ * `dropWeight` is the share of an unforced roll (loot, a merchant's shelf) at
+ * each rarity before luck bumps it. 56 / 28 / 11 / 4 / 1 → 46 / 32 / 15 / 5 / 2
+ * (the tuning pass): a run that fights its way through gets dressed from what it
+ * finds — §11's fight-first lines read 11.7 → 20.4% (battles) and 21.7 → 28.3%
+ * (adaptive), the first-timer line 17.9 → 20.0%, n=240 — while the §6 Monte
+ * Carlo, whose gear is forced by depth, cannot move. Forced rarities (the hero
+ * pick, sealed crates, contract items) are untouched.
+ */
 export const RARITY: Record<
   ItemRarity,
   { label: string; budget: number; enchants: number; color: string; dropWeight: number }
 > = {
-  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 56 },
-  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 28 },
-  epic: { label: 'Epic', budget: 2.8, enchants: 2, color: '#c67ab0', dropWeight: 11 },
-  legendary: { label: 'Legendary', budget: 3.7, enchants: 3, color: '#f0b868', dropWeight: 4 },
-  mythic: { label: 'Mythic', budget: 5.0, enchants: 4, color: '#ef6a3a', dropWeight: 1 },
+  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 46 },
+  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 32 },
+  epic: { label: 'Epic', budget: 2.8, enchants: 2, color: '#c67ab0', dropWeight: 15 },
+  legendary: { label: 'Legendary', budget: 3.7, enchants: 3, color: '#f0b868', dropWeight: 5 },
+  mythic: { label: 'Mythic', budget: 5.0, enchants: 4, color: '#ef6a3a', dropWeight: 2 },
 }
 
 // ---- weapon subtypes give damage a physical/magic identity + a hand cost ----
