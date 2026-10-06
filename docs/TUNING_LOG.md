@@ -33,6 +33,46 @@ Explored and reverted: a marginal-coverage deployment (spread the team along
 the road) — MC 57 → 45%, first-timer 14 → 8%, boulders still negative.
 
 
+## Step 2 — core difficulty
+
+Read with `tune.ts 240 fresh mc` (§6 n=300); first-timer = §11's `specials` line.
+
+| Commit | Lever | §6 | first-timer | battles | recruits | adaptive |
+|---|---|--:|--:|--:|--:|--:|
+| (base after step 1) | — | 59.7% | 17.9% | 12.9% | 8.8% | 20.0% |
+| 6c764e9 | caster weapons ×1.6 flat; the pick's caster weapon Epic → Rare | 63.7% | 17.9% | 11.7% | 10.4% | 21.7% |
+| 8566b33 | loot rarity weights 56/28/11/4/1 → 46/32/15/5/2 | 63.7% | 20.0% | 20.4% | 15.8% | 28.3% |
+| 9e7c1ab | a hire's weapon is Rare | 63.7% | 25.4% | 20.4% | 18.3% | 32.9% |
+| 5d0bba3 | act 3 ×1.29 → ×1.40 a layer; final boss ×0.55 → ×0.45 | 57.7% | 25.4% | 19.6% | 17.5% | 31.3% |
+
+(The last row includes step 3's Anchor / Keen Eye / Finisher, which were in
+the tree when the curve was fitted; the commit's message has the full table.)
+
+Tried and dropped: `XP_PER_DEPTH` 55 → 65 (first-timer 17.9 → 15.4, noise),
+`STOP_XP_SHARE` 0.55 → 0.85 (+1.3pt), merchant luck ×1.5 (+0.0pt) — a first
+run is short of gear and hires, not levels. Act 3 at ×1.40 with the final boss
+at ×0.55 put three §6 final bosses past the 600s cap; at ×1.42 / ×0.43 and
+×1.36 / ×0.50 / elite ×1.15 one depth-11 wave stalled (three holders, a shaman
+out-healing them: 139k HP healed in 600s). ×1.40 / ×0.45 has none in §6's 300.
+
+## Step 3 — every choice real (skills)
+
+| Commit | Lever | Before → after |
+|---|---|---|
+| 65f33ed | Anchor's thorns ×1.5 → ×3 | L2 Sword & Shield solved (Wildfire +20.3pt) → +17.4pt |
+| ad69f99 | Keen Eye + crits deal 50% more; Finisher + hits 10% harder | Keen Eye on Sword & Shield +0.0 → +2.8pt; Finisher +0.5 → +2.5pt (Wand +1.3 → +20.6) |
+| bf3853c | Blessing 15% → 25% | §2 Sword & Shield + Blessing +9.8% → +21%, Wand +20% |
+
+## Step 7 (done early: the fast benches)
+
+| Commit | Lever | Before → after |
+|---|---|---|
+| 93f85be | Vengeful ×1.6 → ×1.3 damage | knife +4.1 → −6.4pt, wand +26.2 → +9.8pt |
+| 54b4646 | Erratic ×0.82 → ×0.75 damage | knife +0.4 → −8.1pt, wand +9.0 → +6.9pt |
+| 9da7e13 | Wildfire Pact 80/s −35% → 50/s −40% | worst +0.0 → −5.6pt (armour), best +17.3pt (magic) |
+| 5bea787 | Iron Vigil −12% → −20% damage | worst −1.7 → −7.7pt |
+| 96b17d5 | variant budget scales (Swarm 0.95, Bombard 1.12, Column 1.2; Warded 1.1, Swift 0.86) | §14c normal ×5.67 → ×1.75, elite ×2.52 → ×1.51 |
+
 ---
 
 # Tuning pass 1 — first-timer line, Cartographer's Table, final review
