@@ -102,18 +102,16 @@ export function ResultScreen() {
             </p>
           )}
           <p className="ct-sub">{sub}</p>
-          {home && (home.purseBack > 0 || home.road > 0) && (
+          {home && ((home.purseBack > 0 && !home.advance) || home.road > 0) && (
             <p className="ct-sub ct-home">
               {/* Oct 2026: the road part only when the road paid, and a fall says
                   why its share is smaller (`hq.LOST_ROAD_SHARE`). The company's
                   advance never comes home: it is named as the company's, not
                   as gold returned. An older save's purse still comes home. */}
+              {/* The advance's repayment is on the slip, not here: one line keeps
+                  the head under the 30% chrome budget. */}
               {[
-                home.purseBack > 0
-                  ? home.advance
-                    ? `Advance ${home.purseBack.toLocaleString('en')} repaid${co ? ` to ${co.name}` : ''}`
-                    : `Purse returned ${home.purseBack.toLocaleString('en')}`
-                  : '',
+                home.purseBack > 0 && !home.advance ? `Purse returned ${home.purseBack.toLocaleString('en')}` : '',
                 home.road > 0
                   ? `Road gold ${home.road.toLocaleString('en')} → ${home.roadBanked.toLocaleString('en')} banked (${home.pct}%${outcome === 'lost' ? ', the contract fell' : ''})`
                   : '',
@@ -165,6 +163,9 @@ export function ResultScreen() {
           )}
           {c.cashOut > 0 && <SlipLine label="The last crates, sold" value={<Gold n={c.cashOut} />} />}
           {home && !home.advance && home.purseBack > 0 && <SlipLine label="Purse returned" value={<Gold n={home.purseBack} />} />}
+          {home && home.advance && home.purseBack > 0 && (
+            <SlipLine label="The advance" note={`${home.purseBack.toLocaleString('en')} repaid${co ? ` to ${co.name}` : ''}`} value={<Gold n={0} />} />
+          )}
           {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road.toLocaleString('en')} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
