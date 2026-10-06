@@ -35,6 +35,8 @@ import {
   type ProcKind,
 } from './fx'
 import { baseAnchor } from './overlays'
+import { deliveryOfRt, leadEffect, type Delivery, type HitEffect } from './attackLook'
+import { swingSide } from './projectiles'
 import { caravanSpot } from './caravan'
 
 /** Where the differ sends what it finds. Defaults to the real `fx.ts` layer. */
@@ -172,6 +174,17 @@ interface PSnap {
   hasBurn: boolean
   hasExecute: boolean
   hasStun: boolean
+  /**
+   * How the hit is DRAWN (`attackLook`): a melee hero's projectile is its blow,
+   * and lands as a blade arc centred on the hero, never as a shot's spray.
+   */
+  delivery: Delivery
+  /** The lead on-hit effect — the ink and the particles of the impact. */
+  effect: HitEffect | null
+  damageType: 'physical' | 'magic'
+  /** The shooter's position when the shot was in flight (a swing's centre, a siphon's home). */
+  sx: number
+  sy: number
 }
 
 const PIERCE_RADIUS = 60 // mirrors GameEngine.PIERCE_RADIUS (private there)
@@ -312,6 +325,8 @@ export class FxDiffer {
   private readonly goneClaimed = new Set<string>()
   /** Scratch for the attrition pass: sentinels by id, and each enemy's blocker. */
   private readonly sentById = new Map<string, RtSentinel>()
+  /** Scratch for `snapBefore`: the shooters by id, to tag each shot with its delivery. */
+  private readonly srcById = new Map<string, RtSentinel>()
   private readonly blockerOf = new Map<string, string>()
 
   /**
@@ -408,7 +423,10 @@ export class FxDiffer {
       this.snapById.set(e.id, snap)
     }
     this.pSnap.length = 0
+    this.srcById.clear()
+    for (const s of engine.sentinels) this.srcById.set(s.id, s)
     for (const p of engine.projectiles) {
+      const src = this.srcById.get(p.srcId)
       this.pSnap.push({
         id: p.id,
         x: p.pos.x,
@@ -424,6 +442,11 @@ export class FxDiffer {
         hasBurn: !!p.mods.burn,
         hasExecute: !!p.mods.execute,
         hasStun: !!p.mods.stunChance,
+        delivery: src ? deliveryOfRt(src) : 'bolt',
+        effect: leadEffect(p.mods, p.lifedrain),
+        damageType: p.damageType,
+        sx: src ? src.pos.x : p.pos.x,
+        sy: src ? src.pos.y : p.pos.y,
       })
     }
     this.prevStatus = engine.status
@@ -632,7 +655,7 @@ export class FxDiffer {
 
     // --- 2. shots fired ------------------------------------------------------
     for (const s of engine.sentinels) {
-      if (s.fireFlash === 1) this.sink.fxMuzzle(s.id, s.pos.x, s.pos.y, s.aimAngle, lookHue(lookOf(s.def)).accent)
+      if (s.fireFlash === 1) this.sink.fxMuzzle(s.id, s.pos.x, s.pos.y, s.aimAngle, lookHue(lookOf(s.def)).accent, deliveryOfRt(s))
     }
 
     // --- 3. impacts ----------------------------------------------------------
@@ -728,7 +751,18 @@ export class FxDiffer {
         }
       }
       if (anyHit || p.targetId === null) {
-        this.sink.fxImpact(ix, iy, dirx, diry, { crit: p.crit, splash: p.splash })
+        // Drawn as the weapon delivered it, in its effect's ink (`attackLook`).
+        this.sink.fxImpact(ix, iy, dirx, diry, {
+          crit: p.crit,
+          splash: p.splash,
+          delivery: p.delivery,
+          effect: p.effect,
+          damageType: p.damageType,
+          pierce: p.pierce > 0,
+          srcX: p.sx,
+          srcY: p.sy,
+          side: swingSide(p.id),
+        })
         if (p.crit) this.sink.fxHitstop(0.045, speed)
       }
 

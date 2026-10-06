@@ -3146,3 +3146,51 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
   closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
   readability 4/5, hierarchy 4/5, polish 4/5.
+
+- **2026-10-06 — A sword swings, a bow shoots, and the hero holds its gear.**
+  The designer: "if a weapon is melee it shouldnt fire projectiles, and the
+  items should display on the character and then the projectiles should match
+  the effects of the weapon and melle if it has effects should show too".
+  Every hit is still a projectile in the engine (its flight is the damage
+  timing; the engine, `npm run balance` and the determinism tests are
+  untouched). What is DRAWN now comes from the weapon (`render/attackLook`):
+  a sword, axe, greatsword or warhammer (or a skill's `grantsMelee`) draws no
+  projectile at all — its flight is a blade crescent swept round the hero
+  through the target, landing as the hit lands, held a beat as a fading mark
+  at 3× — and the hero leans into it instead of recoiling, with no muzzle
+  flash; a bow fires a shafted, fletched arrow; a knife spins; a wand, staff,
+  rod, sceptre or grimoire throws a bolt, violet when it carries no element;
+  bare hands throw a pebble. One effect palette inks the trail, the swing and
+  the impact, each effect with its own SHAPE: burn sheds embers, chill strings
+  frost shards and drops spinning shards and a cold ring, shock drags a
+  yellow-white crackle and throws three crackles, a siphon twists a red double
+  helix and pulls red motes back to the hero; pierce sends an arrow ghost on
+  through; splash keeps its ring. The heroes carry their real items
+  (`render/gearMarks`): the atlas cell of the weapon in the right fist and the
+  off-hand piece in the left, pixel-doubled once and blitted 1:1; where the
+  Tiny Swords art paints a weapon the hero is not holding, that weapon is cut
+  out of the idle strip before the bake (a knight with an axe holds an axe; a
+  knight with only a shield holds no sword) and the attack strip, which swings
+  the painted one, is not played — the item itself lunges. An enchanted weapon
+  glints at its tip in its ink. The roster card prints the weapon's icon beside
+  its name. Rendered: a scratch harness through the real draw code (every hero
+  kit, every delivery × effect in flight, swings at 35/70/100%, impacts at +30
+  and +120 ms, phone view and 3× inspection) and the running app at 390×844
+  @2x (freeze-frame close-ups of a flaming sword, frost axe, shocking hammer,
+  plain/shocking/piercing bow, plain/frost wand, flaming staff, vampiric
+  dagger, unarmed; reduced motion) and 1440×900. The loop caught: (1) the
+  first held icons sat beside the painted sword — two weapons in one hand —
+  hence the cut; (2) a stroked arc at the target read as a comet, not a slash
+  — it is a filled crescent, fullest behind the leading edge; (3) the arc and
+  bursts landed at the goblin's feet (its position) — lifted onto the body;
+  (4) glints and trails were sub-pixel at phone scale — enlarged, with an ink
+  halo; (5) shock and chill were two pale blues — shock's core is yellow-white
+  now; (6) the painted sword's glint chased the lunge and the attack frames —
+  pinned to the idle tip. Frame cost, 4× CPU, phone, live depth-6 elite wave,
+  interleaved A/B against aa03551 (3 × 3 runs each, dev): p50 5.8 → 6.4 ms,
+  p95 17.2 → 17.3 ms, 24.9 → 24.7 fps. Benchmark: Kingdom Rush's barracks
+  swing at the target rather than shoot it, and its mage bolts read by colour
+  alone — here each element is also a shape. Scorecard: readability 4/5,
+  hierarchy 4/5, polish 4/5. Still open: the body piece is not drawn (no
+  silhouette on these chibis); the roster portraits are still the look's
+  painted art (the card's sub-line carries the real weapon's icon).

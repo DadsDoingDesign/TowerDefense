@@ -135,6 +135,29 @@ describe('FxDiffer on synthetic ticks', () => {
     expect(r.names()).not.toContain('fxDotEnemy')
   })
 
+  it("a melee hero's hit lands as a swing from where it stands, in its weapon's effect", () => {
+    const eng = fakeEngine()
+    const e = enemy('en1')
+    eng.enemies.push(e)
+    const sword = { id: 'w1', name: 'Frost Sword', slot: 'oneHand', rarity: 'rare', base: {}, enchantments: [] }
+    eng.sentinels.push({
+      id: 's1', fireFlash: 0, procFlash: 0, pos: { x: 40, y: 100 }, aimAngle: 0, def: { equipment: { mainHand: sword, offHand: null, body: null } },
+      profile: { mods: {}, thorns: 0, damageType: 'physical' }, blockIds: [] as string[],
+    })
+    eng.projectiles.push({
+      id: 'p1', pos: { x: 90, y: 100 }, toPos: { x: 100, y: 100 }, isCrit: false, splashRadius: 0, srcId: 's1', damageType: 'physical',
+      targetId: 'en1', mods: { chill: { slow: 0.2, dur: 1 } }, pierce: 0, lifedrain: 0,
+    })
+    const r = recorder()
+    const d = new FxDiffer(asEngine(eng), r.sink)
+    d.snapBefore(asEngine(eng))
+    eng.projectiles.length = 0
+    e.hp -= 12
+    d.diffAfter(asEngine(eng), 1)
+    const impact = r.calls.find((c) => c.fn === 'fxImpact')
+    expect(impact?.args[4]).toMatchObject({ delivery: 'swing', effect: 'chill', srcX: 40, srcY: 100 })
+  })
+
   it('splits vanished enemies into leaks (furthest along) and kills by the leak head count', () => {
     const eng = fakeEngine()
     eng.enemies.push(enemy('near', { distance: 10 }), enemy('far', { distance: 900 }))
