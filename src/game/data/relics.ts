@@ -122,8 +122,15 @@ export const RELICS: readonly Relic[] = [
   // bench at every size short of a cliff, and a last stand has no HP to read.
   { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+90% damage, +8 Thorns, −30% attack speed · all your heroes', downside: '−30% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.9, rateMult: 0.7 } } },
   { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · all your heroes', downside: '−12% attack speed · all your heroes', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
-  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −50% damage per hit · all your heroes', downside: '−50% damage per hit · all your heroes', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.5 } } },
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −35% damage · all your heroes', downside: '−35% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.65 } } },
+  // 80/s, −35% → 50/s, −40% (the tuning pass): on §15's benches the pact cost
+  // nothing anywhere (worst +0.0pt) — 80/s of burn dwarfed the stat-less bench
+  // heroes' own hits, so the bill never came due. Now −5.6pt on the armour
+  // column and +17.3pt on the splash wand: a pact for a line that spreads it.
+  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 50/s over 3s, −40% damage per hit · all your heroes', downside: '−40% damage per hit · all your heroes', grant: { mods: { burn: { dps: 50, dur: 3 }, damageMult: 0.6 } } },
+  // −12% → −20% damage (the tuning pass): its worst bench read −1.7pt, under
+  // the 2pt a pact's bill must cost somewhere. Now −7.7pt on the splash wand
+  // (nothing it holds pays a caster back) and +27.8pt on the swarm.
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −20% damage · all your heroes', downside: '−20% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.8 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 raiders to reach your wagons each wave steal nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },

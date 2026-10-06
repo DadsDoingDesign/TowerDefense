@@ -6,6 +6,8 @@ import { RARITY } from '../../game/data/items'
 import type { ItemRarity } from '../../game/types'
 import { conflictsAmong, type ClearanceConflict, type Standing } from '../../game/run/clearance'
 import { nodeThreatMult } from '../../game/run/threat'
+import { legMult } from '../../game/run/watch'
+import { contractRules } from '../../game/run/contracts'
 import type { GameData } from './types'
 
 /**
@@ -64,13 +66,21 @@ export const rarityColor = (r: ItemRarity) => RARITY[r].color
 /**
  * The HP multiplier the current fight's enemies carry: the hub's (always 1
  * today), the run's Threat, and — on a campaign node — what the node's own type
- * adds (`nodeThreatMult`: the final boss ×0.55; an elite ×1). `startWave`
+ * adds (`nodeThreatMult`: the final boss ×0.44; an elite ×1), and the
+ * stake's last leg (`watch.legMult`: act 3 of a staked road). `startWave`
  * spawns with it and `finishBattle` prices the wave's XP with it, so the two
  * read one number.
  */
-export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'activeNodeId' | 'runMap'>): number {
+export function battleHpMult(s: Pick<GameData, 'enemyHpMult' | 'threat' | 'activeNodeId' | 'runMap' | 'contract'>): number {
   const node = s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
-  return s.enemyHpMult * s.threat * nodeThreatMult(node?.type)
+  return s.enemyHpMult * s.threat * nodeThreatMult(node?.type) * (node ? legMult(contractRules(s.contract), node.layer) : 1)
+}
+
+/** What a raider who reaches the wagons steals in the current fight, ×: the stake's last leg and the muster. */
+export function battleTheftMult(s: Pick<GameData, 'activeNodeId' | 'runMap' | 'contract'>): number {
+  const node = s.activeNodeId ? s.runMap.nodes.find((n) => n.id === s.activeNodeId) : undefined
+  const rules = contractRules(s.contract)
+  return rules.leakMult * (node ? legMult(rules, node.layer) : 1)
 }
 
 /*

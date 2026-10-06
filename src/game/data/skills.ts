@@ -72,7 +72,11 @@ const L1: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'quick_hands', name: 'Quick Hands', level: 1, company: 'spice', starter: true, desc: 'Attacks 15% faster.', mods: { rateMult: 1.15 }, from: 'The old Tempo path (+12% a level) and the Cleric perk Zeal' },
   { id: 'hard_hitter', name: 'Hard Hitter', level: 1, company: 'metals', starter: true, desc: 'Hits 15% harder.', mods: { damageMult: 1.15 }, from: 'The old Onslaught path (+15% a level); perks Heavy Bash and Blood Pact' },
-  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crits 10% more often.', mods: { critChanceAdd: 0.1 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
+  // + crits deal 50% more (the tuning pass): on a sword-and-shield hero (5% base
+  // crit) it read +0.0pt on every bench — the only starter that was nothing on
+  // a starting kit. Sword & Shield +0.0 → +2.8pt mean (armour +8.3), Dagger
+  // +7.3 → +12.5, Wand +0.9 → +1.2.
+  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crits 10% more often, and crits deal 50% more.', mods: { critChanceAdd: 0.1, critMultAdd: 0.5 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'hold_fast', name: 'Hold Fast', level: 1, company: 'metals', desc: 'Holds 1 more enemy.', mods: { holdAdd: 1 }, from: 'Fighter perk Hold Fast (level 5)' },
   { id: 'charge', name: 'Charge', level: 1, company: 'spice', desc: 'Attacks 60% faster for the first 15 seconds of each wave.', mods: { openingRush: { rate: 0.6, dur: 15 } }, from: 'Fighter perk Charge; Rogue perk Ambush; the Opening Salvo mutation' },
@@ -92,16 +96,28 @@ const L2: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'heavy_blows', name: 'Heavy Blows', level: 2, company: 'metals', starter: true, desc: 'Hits 25% harder and attacks 10% faster.', mods: { damageMult: 1.25, rateMult: 1.1 }, from: 'The Warrior evolution (level 10)' },
   { id: 'long_shot', name: 'Long Shot', level: 2, company: 'art', starter: true, desc: 'Reaches 50% farther, and every shot pierces 1 extra enemy.', mods: { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4 }, from: 'The Marksman evolution (level 10)' },
-  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, and crits 10% more often.', mods: { execute: 0.15, critChanceAdd: 0.1 }, from: 'The Assassin evolution (level 10)' },
+  // + hits 10% harder (the tuning pass): a Level 2 starter that read +0.5pt on
+  // a sword-and-shield hero and +1.3pt on a wand. Sword & Shield +0.5 → +2.5pt
+  // mean, Dagger +4.3 → +9.6, Wand +1.3 → +20.6.
+  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, crits 10% more often, and hits 10% harder.', mods: { execute: 0.15, critChanceAdd: 0.1, damageMult: 1.1 }, from: 'The Assassin evolution (level 10)' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'shield_wall', name: 'Shield Wall', level: 2, company: 'metals', desc: 'Holds 2 more enemies, in a wider circle.', mods: { holdAdd: 2, holdRadius: 90 }, from: 'Knight perk Shield Wall; the Juggernaut specialization' },
-  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits by 30% for 1.4 seconds, and its thorns hit 50% harder.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 1.5 }, from: 'The Guard evolution (level 10)' },
+  // Thorns ×1.5 → ×3 (the tuning pass): on a sword-and-shield hero Wildfire led
+  // this level by +20.3pt (§7, ceiling 20) and nothing a holder holds paid like
+  // it; Anchor is the holder's own answer. Sword & Shield Anchor +15.4 → +29.4pt,
+  // the level’s lead 20.3 → 17.4pt (Dagger +5.0 → +7.4, Wand unchanged).
+  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits by 30% for 1.4 seconds, and its thorns hit 3 times as hard.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 3 }, from: 'The Guard evolution (level 10)' },
   // The Knight also held 3; that half of it lives in Hold Fast now, and the
   // hold is a Fighter's (see the header), so this one hits 10% harder instead.
   { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
   { id: 'snare', name: 'Snare', level: 2, company: 'silk', desc: 'Buries a snare by the path that burns 14 a second and slows 30%, and its own hits slow 20%.', mods: { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }, from: 'The Trickster evolution (level 10); the Saboteur' },
-  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 10 a second for 3 seconds, and splashes 13 wider.', mods: { burn: { dps: 10, dur: 3 }, splashAdd: 13 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
-  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 15% harder.', mods: { buffAura: { damageMult: 1.15, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
+  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 12 a second for 3 seconds, and splashes 15 wider.', mods: { burn: { dps: 12, dur: 3 }, splashAdd: 15 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
+  // 15% → 25% (the tuning pass). §2 grades an aura skill against the same hero
+  // holding its level's damage skill: at 15% a sword-and-shield hero's Blessing
+  // held ×21.65 against Heavy Blows' ×19.72 (+9.8%, gate +10%), and at 20% the
+  // wand's read +9.7%. At 25%: Wand +20%, Sword & Shield +21%; §7's Level 2 is
+  // not solved by it (+13.6 / +15.1 / +14.1pt mean by kit).
+  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 25% harder.', mods: { buffAura: { damageMult: 1.25, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
   { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder, and every 100 damage it deals wins back 2% of the cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
   { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2 seconds.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },
   { id: 'cold_snap', name: 'Cold Snap', level: 2, company: 'silk', desc: 'Its hits deal 25% more to slowed enemies.', mods: { vsSlowed: 0.25 }, from: 'New with the classless rework' },

@@ -571,6 +571,8 @@ export interface RunBattleOptions {
   subWaves?: boolean
   /** The Sovereign Route's muster: every goblin clan from the first fight (`waves` `muster`). */
   muster?: boolean
+  /** What a leak steals, as a multiplier on its Gate damage (a stake's raiders steal more, `DifficultyRules.leakMult`). */
+  baseDamageMul?: number
   /**
    * G1-2: ignore the team's `slotId`s and post the company the way a competent
    * player does on the tile grid ({@link deployTeam}). Every "the modelled
@@ -593,8 +595,34 @@ export interface RunBattleOptions {
  * Q1: a tile of cursed ground is worth its coverage × `CURSED_DAMAGE_MULT` —
  * the player reads the curse as the damage it costs, and posts there only when
  * the view is still worth it after paying.
+ *
+ * **A hero that holds stands where its hold reaches the road (the tuning
+ * pass).** The engine holds an enemy only inside the hold circle
+ * (`block.radius`, 72px for a shield), but this model posted a shield-bearer on
+ * the tile that SEES the most road at its reach — often the inside of a bend
+ * 90–110px off the lane, where it held nothing. Seeded boulders are laid on the
+ * best-ranked patches, so they had been hiding the defect by taking those
+ * tiles: buying boulders away read −3.5 ±3.1pt on the adaptive line at n=600
+ * (−1.3 / −0.8 / −1.3 on the others), and a depth-9 fight lost 5.54 → 6.53
+ * Gate HP as cut 0 → 4. A holder now takes the best tile within its hold
+ * radius of the road when one is free (and falls back to plain coverage when
+ * none is). After: −0.7 / +0.5 / +0.0 / −1.0pt (noise), depth-9 4.89 → 5.03.
  */
 const coverageCache = new Map<string, Record<string, number>>()
+/** The distance from `pos` to the nearest point of the road `path`. */
+export function roadDistance(path: readonly { x: number; y: number }[], pos: { x: number; y: number }): number {
+  let best = Infinity
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]
+    const b = path[i]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const l2 = dx * dx + dy * dy
+    const t = l2 > 0 ? Math.max(0, Math.min(1, ((pos.x - a.x) * dx + (pos.y - a.y) * dy) / l2)) : 0
+    best = Math.min(best, Math.hypot(pos.x - (a.x + t * dx), pos.y - (a.y + t * dy)))
+  }
+  return best
+}
 export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; slotId: string }[]): { sentinel: Sentinel; slotId: string }[] {
   const ranged = team.map((m, i) => ({ i, sentinel: m.sentinel, range: Math.round(computeCombat(m.sentinel).range) }))
   ranged.sort((a, b) => a.range - b.range || a.i - b.i)
@@ -616,10 +644,19 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
     }
     const worth = (id: string) => cov![id] * tileDamageMult(map, id)
     const melee = isMelee(h.sentinel)
+    // A hero that HOLDS stands where its hold reaches the road (see below).
+    const hold = computeCombat(h.sentinel).mods.block
+    const holdsRoad = (pos: { x: number; y: number }) => !hold || roadDistance(map.path, pos) <= hold.radius
     let best: string | null = null
+    let bestHolds = false
     for (const s of map.slots) {
       if (taken.has(s.id) || crowdedBy(s.id, melee, posts)) continue
-      if (best === null || worth(s.id) > worth(best) || (worth(s.id) === worth(best) && s.id < best)) best = s.id
+      const holds = holdsRoad(s.pos)
+      if (best !== null && bestHolds && !holds) continue
+      if (best === null || (holds && !bestHolds) || worth(s.id) > worth(best) || (worth(s.id) === worth(best) && s.id < best)) {
+        best = s.id
+        bestHolds = holds
+      }
     }
     taken.add(best!)
     posts.push({ tile: best!, melee })
@@ -655,6 +692,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     seed: opts.seed ?? 42,
     commands: opts.commands,
     rules: opts.rules,
+    baseDamageMul: opts.baseDamageMul,
   })
   const player = opts.player ?? NO_INPUT
   const commandId = player.commandId ?? engine.commands[0]

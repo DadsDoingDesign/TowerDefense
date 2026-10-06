@@ -2,11 +2,12 @@ import { useEffect } from 'react'
 import { nodeMeta } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
+import { legMult } from '../../game/run/watch'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
 import { cargoShare } from '../../game/run/contracts'
-import { stakeRules } from '../../game/run/contracts'
+import { contractRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
 import { fieldIdOf } from '../../game/data/maps'
 import { fieldName, groundFor } from '../../game/run/fields'
@@ -62,7 +63,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const summary = summarizeEncounter({ runSeed, runMap, muster: charter }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
-  const step = summary ? encounterThreat(node, stakeRules(crates).startThreat) : null
+  const rules = contractRules({ crates, charter })
+  const step = summary ? encounterThreat(node, rules.startThreat) * legMult(rules, node.layer) : null
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw
   // `selectNode` makes, so the preview can never name the wrong ground.

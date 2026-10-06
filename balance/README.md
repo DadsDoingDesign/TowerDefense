@@ -306,7 +306,7 @@ unhindered walk down The Green Line gives him.
 - **The clock is out of the measurement.** §6 used a 70-second cap and booked a
   capped battle as a loss; re-measured with no cap, 38 of 72 "deaths" in a
   150-run sample were the clock, mostly at the boss (honest pre-3a win rate
-  73%, not 50%). `maxSeconds` is now a **per-sub-wave** safety net (600s in §6
+  73%, not 50%). `maxSeconds` is now a **per-sub-wave** safety net (`runsim.BATTLE_CAP`, 600s then 1800s since the tuning pass — real slogs ran past 600, see its note — in §6
   and the run simulator) and §6 gates on it firing **zero** times. A cap sized
   for one continuous wave also silently truncated the later sub-waves of every
   other bench, which is why `runBattle` resets it at each sub-wave.
@@ -331,6 +331,29 @@ unhindered walk down The Green Line gives him.
     (`FW_RELIC_RUNS`, 150). A relic whose rule needs an engine capability that
     has not shipped (`ENGINE_CAPABILITIES`, e.g. `burnSpreadOnDeath`) must be
     out of the pool; the gate fails if one is dealt.
+
+### The tuning pass (the mercenary company) — benches re-targeted
+
+Classes, perks, evolutions and the Banner are gone; a hero is its gear and its
+skills. Six benches measured things the game no longer has, and were re-aimed
+(each its own commit, `docs/TUNING_LOG.md` pass 2):
+
+- **§2** grades the aura SKILLS (Blessing, Rally) on a wand and a sword and
+  shield against the same hero holding its level's damage skill — not four
+  retired support specs (the Bannerman's aura had no skill to become).
+- **§4** re-pinned to the classless subjects (phys ×0.25, magic ×0.8;
+  baselines 37% / 36%); `reach` graded on `phys`.
+- **§7** keys a choice point by kit (Sword & Shield, Dagger, Wand), adds a
+  `partner` bench (beside a holder that slows) and a `gold` bench, and fails a
+  skill as dead only when it is dead on every kit — skills are dealt whatever
+  the hero holds, by design. The solved gate stays per point.
+- **§14c** raises each node's pressure until its canonical shape leaks ≥ 2
+  Gate HP before it reads a ratio (it read ×22 over a near-zero clamp).
+- **§16a**'s bomber bench fields bombers that live to throw (×5 HP).
+- **Deployment**: a hero that holds stands where its hold reaches the road
+  (boulders had been hiding that the model posted shield-bearers out of reach).
+- **Pairing**: every simulated run mints ids from its own counter, so a seed
+  is dealt the same skills wherever it is played.
 
 ## Invariants (fail the run)
 

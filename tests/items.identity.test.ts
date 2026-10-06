@@ -75,7 +75,8 @@ describe('item kinds: one identity each', () => {
       const rng = new RNG(seed)
       rng.next()
       if (kind === 'Sword') return { physDamage: round(rng.range(5, 8)), attackSpeed: 0.05 }
-      if (kind === 'Wand') return { magDamage: round(rng.range(5, 8)), attackSpeed: 0.06 }
+      // A caster's hit carries the tuning pass's ×1.6 (`items.CASTER_HIT`).
+      if (kind === 'Wand') return { magDamage: Math.round(round(rng.range(5, 8)) * 1.6), attackSpeed: 0.06 }
       if (kind === 'Bow') return { physDamage: round(rng.range(9, 13)), attackSpeed: 0.04 }
       if (kind === 'Shield') return { attackSpeed: rng.range(0.04, 0.08), critChance: rng.range(0.03, 0.06) }
       return { rangeMult: rng.range(0.06, 0.12), splashAdd: round(rng.range(8, 16)) }

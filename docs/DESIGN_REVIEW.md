@@ -3115,3 +3115,34 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   escapes, each with one line; the advance is Slay the Spire's fixed starting
   gold. Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
   charter may now be too generous for the tuning pass; the stake curve.
+
+- **2026-10-05 — The tuning pass (the mercenary company).** Every balance
+  invariant was red-or-green against a game that no longer had classes,
+  perks, the Banner or Marks; 50 failed. Six benches were re-aimed at what the
+  game has now (§2 grades the aura skills, §4 re-pinned, §7 per kit with a
+  partner and a gold bench, §14c measured where shapes leak, §16a's bombers
+  live to throw, the modelled player posts shield-bearers where the hold
+  reaches the road, and every simulated run mints its own ids), then the game
+  was tuned one lever a commit (`docs/TUNING_LOG.md`, pass 2). The player sees:
+  a caster's weapon is Rare on the hero pick (its flat damage is ×1.6 now, so
+  the leader is as strong as the Epic one was), a hire's weapon is Rare, loot
+  lands a little higher, act 3 climbs harder and the final boss is lighter;
+  Keen Eye, Finisher, Anchor and Blessing say their new numbers; two curses
+  and two pacts cost what they claim; a crate makes the road past the second
+  city stronger and greedier ("3 more elites an act · Past the second city,
+  raiders 34% stronger and steal 34% more"), the cities pay 100 / 130 / 400 a
+  crate with one crate riding to the destination; the Sovereign Route costs
+  7,000, pays 35,000, and its muster is 7% stronger. Rendered in the running
+  app at 390×844 @2x and 1440×900 @2x (scratch shots: the hero pick with a
+  Rare staff, a recruit slate, the contract terms at 1 / 3 / 8 crates, the
+  charter page and its road terms, the Codex skills, a reward hand with the
+  two pacts). The loop caught one thing: the stake line said "On the last
+  leg", a place the board never names — it says "Past the second city" now.
+  At 8 crates it reads "raiders 450% stronger": true, and meant to read as a
+  dare. On a desk the 3-crate line breaks its last word ("more") onto a
+  second line — left, the line is generated per stake. Still open
+  (designer): a held champion with a weak company is a 13–19 minute slog in
+  the game (no clock) — the harness met it as §6's cap, now 1800s; a hire's
+  wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
+  closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
+  readability 4/5, hierarchy 4/5, polish 4/5.

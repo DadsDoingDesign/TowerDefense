@@ -1,4 +1,174 @@
-# Tuning log — first-timer line, Cartographer's Table, final review
+# Tuning log
+
+Checkpointed logs of the tuning lanes, newest first. Every experiment is
+recorded (change, command, numbers, keep/revert) and committed with the lever
+it belongs to.
+
+---
+
+# Tuning pass 2 — the mercenary company (2026-10-05)
+
+Base: `main` @ 1b43846 (grid-fit, weapon clearance, SK1 skills, classless
+heroes, the mercenary-company economy, the HQ, sealed crates, the trade-map
+menu, the Sovereign Route). Untuned: **50 invariants fail**, §6 Monte Carlo
+57% (band 45–60%), first-timer line 14% (band 15–35%, aim 20–28%), adaptive 16%.
+
+Tools: `FW_SECTIONS=…` for one section (§4/§10 7s, §7 11s, §14 10s, §16 26s,
+§15 110s), `balance/tune.ts` for §6/§11/§12 on four cores (`240 fresh mc`
+≈ 90s), and an uncommitted copy of it (`scratch/_tune.ts`, `state=<prefix>`
+for one HQ row).
+
+## Step 1 — re-target the benches (each its own commit)
+
+| Commit | Bench | What it measured | What it measures now | Before → after |
+|---|---|---|---|---|
+| daca170 | §4 affix pins | Sharpshooter / Stormcaller rebuilt from gear sat on the band floor (18% / 22%) | pins ×0.8→×0.25, ×1.2→×0.8 (37% / 36%); `reach` graded on `phys` | 9 dead affixes → 0; §10 curse fails 5 → 2; §15 relic ladder inverted → ordered |
+| 0ffac20 | §7 skills | points by class; a lone hero could not see holds, slows or gold | points by kit (Sword & Shield / Dagger / Wand); `partner` and `gold` benches; dead = dead on every kit | 19 fails → 1 (L2 Sword & Shield solved by Wildfire, +20.3pt) |
+| a9631bb | §2 supports | four retired support specs; the Bannerman's aura had no skill | Blessing / Rally on a wand and a sword-and-shield vs the same hero's damage starter | Bannerman fail → Sword & Shield + Blessing +9.8% (one rung short) |
+| 1d5abd3 | §16a bomber | ×3 HP column died before any bomber reached throwing range | ×5 HP | never fired → 5.3 Gate dmg without counter, 0.0 with |
+| 5d0ed84 | §14c variety | leak ratio over a 0.05 clamp (teams leaked ~0) | each node's pressure raised until its canonical shape leaks ≥ 2 HP | ×22.14 (clamp) → elite ×2.52, normal ×5.67 (real, game-side) |
+| be11ff2 | deployment (harness) | shield-bearers posted 90–110px off the lane, holding nothing; boulders hid it | a holder takes the best tile within its hold radius of the road | boulders adaptive −3.5 ±3.1 → −1.0 ±3.3 (n=600); MC 56.7 → 59.7%; first-timer 15.0 → 17.3% |
+
+Explored and reverted: a marginal-coverage deployment (spread the team along
+the road) — MC 57 → 45%, first-timer 14 → 8%, boulders still negative.
+
+
+## Step 2 — core difficulty
+
+Read with `tune.ts 240 fresh mc` (§6 n=300); first-timer = §11's `specials` line.
+
+| Commit | Lever | §6 | first-timer | battles | recruits | adaptive |
+|---|---|--:|--:|--:|--:|--:|
+| (base after step 1) | — | 59.7% | 17.9% | 12.9% | 8.8% | 20.0% |
+| 6c764e9 | caster weapons ×1.6 flat; the pick's caster weapon Epic → Rare | 63.7% | 17.9% | 11.7% | 10.4% | 21.7% |
+| 8566b33 | loot rarity weights 56/28/11/4/1 → 46/32/15/5/2 | 63.7% | 20.0% | 20.4% | 15.8% | 28.3% |
+| 9e7c1ab | a hire's weapon is Rare | 63.7% | 25.4% | 20.4% | 18.3% | 32.9% |
+| 5d0bba3 | act 3 ×1.29 → ×1.40 a layer; final boss ×0.55 → ×0.45 | 57.7% | 25.4% | 19.6% | 17.5% | 31.3% |
+
+(The last row includes step 3's Anchor / Keen Eye / Finisher, which were in
+the tree when the curve was fitted; the commit's message has the full table.)
+
+Tried and dropped: `XP_PER_DEPTH` 55 → 65 (first-timer 17.9 → 15.4, noise),
+`STOP_XP_SHARE` 0.55 → 0.85 (+1.3pt), merchant luck ×1.5 (+0.0pt) — a first
+run is short of gear and hires, not levels. Act 3 at ×1.40 with the final boss
+at ×0.55 put three §6 final bosses past the 600s cap; at ×1.42 / ×0.43 and
+×1.36 / ×0.50 / elite ×1.15 one depth-11 wave stalled (three holders, a shaman
+out-healing them: 139k HP healed in 600s). ×1.40 / ×0.45 has none in §6's 300.
+
+## Step 3 — every choice real (skills)
+
+| Commit | Lever | Before → after |
+|---|---|---|
+| 65f33ed | Anchor's thorns ×1.5 → ×3 | L2 Sword & Shield solved (Wildfire +20.3pt) → +17.4pt |
+| ad69f99 | Keen Eye + crits deal 50% more; Finisher + hits 10% harder | Keen Eye on Sword & Shield +0.0 → +2.8pt; Finisher +0.5 → +2.5pt (Wand +1.3 → +20.6) |
+| bf3853c | Blessing 15% → 25% | §2 Sword & Shield + Blessing +9.8% → +21%, Wand +20% |
+
+## Step 7 (done early: the fast benches)
+
+| Commit | Lever | Before → after |
+|---|---|---|
+| 93f85be | Vengeful ×1.6 → ×1.3 damage | knife +4.1 → −6.4pt, wand +26.2 → +9.8pt |
+| 54b4646 | Erratic ×0.82 → ×0.75 damage | knife +0.4 → −8.1pt, wand +9.0 → +6.9pt |
+| 9da7e13 | Wildfire Pact 80/s −35% → 50/s −40% | worst +0.0 → −5.6pt (armour), best +17.3pt (magic) |
+| 5bea787 | Iron Vigil −12% → −20% damage | worst −1.7 → −7.7pt |
+| 96b17d5 | variant budget scales (Swarm 0.95, Bombard 1.12, Column 1.2; Warded 1.1, Swift 0.86) | §14c normal ×5.67 → ×1.75, elite ×2.52 → ×1.51 |
+
+## Step 2, continued — the slog, and runs that were not paired
+
+- c45e296: after the variant refit the final boss at ×0.45 ran one §6 run
+  past the 600s cap (a Colossus held by a Warden of Ash, ground down for 13
+  minutes). ×0.42 has none in §6's 300. Act 3 ×1.38–1.42 with ×0.42–0.45 is
+  chaotic in which seed slogs (runs 108, 257, 112 in different configs);
+  heavier danger ground (4 cursed, 8 boulders) took §6 to 56.3% but slogged
+  run 112. **A held champion with a weak team is a real slog in the game
+  (no clock), not only in the harness** — designer item.
+- 7d35355 (harness): skill offers hash the hero's id, and ids came off the
+  process-global counter — the same seed in one process was re-dealt by
+  whatever ran before it. One stake tier read 23.2% and 25.3% on identical
+  rules. simulateRun / monteCarloRun now run on their own id counter; the
+  scratch tools and the report read the same numbers. (§6 never depended on
+  it: 58.0% before and after.)
+
+## Step 4 — stakes
+
+Tools: `scratch/_stakedump.ts` simulates the ladder once and dumps each run's
+cities (cargo, purse); `scratch/_payeval.py` prices any pay rule offline on a
+dump; `scratch/_tier.ts` probes one tier's delivery for candidate strengths
+(tiers are independent, so each is fitted alone).
+
+| Try | Delivery 0→8 crates (%) | Pay (cash line) | Verdict |
+|---|---|---|---|
+| +8% / crate (base) | 31 → 28 → 27 → 27 → 25 → 23 → 23 → 21 → 19 | dips at 4, 8 | cost 0–2pt |
+| +15% HP / crate | 32 → 28 → 25 → 23 → 22 → 21 → 17 → 18 → 16 | dips at 4, 6, 8 | cost ~2pt |
+| +15% HP and theft / crate | 32 → 24 → 19 → 15 → 12 → 9 → 7 → 6 → 4 | — | tail flattens |
+| table HP+theft whole road (×1.08…×4) | 32 → 31 → 27 → 19 → 13 → 10 → 4 → 0.7 | collapses from 4 (city 2 reach 90 → 16%) | pay gate impossible |
+| last leg only (act 3), table | 32 → 28 → 23 → 19 → 15 → 9 → 5 → 0.8 | rises with the new city pay | **kept** (02b06a5) |
+
+Pay (53f06ae), priced on the kept ladder: old rules 118 / 165 / 195 / 242 /
+200 / 229 / 249 / 279 (dip at 4); 100/130/350 with one crate at the
+destination 118 / 161 / 167 / 204 / 244 / 264 / 304 / 329; **100/130/400**
+118 / 161 / 175 / 212 / 249 / 268 / 305 / 330 (kept). Escort → 1 crate +43
+(interest cap 40 stays under it). Cash-out under 50% cargo is right in ~80%
+of the runs that take it (from 2 crates), −5 to −19 gold on average.
+
+## Step 5 — economy sanity
+
+- Interest cap 40 < smallest stake gain +43 (was +50; the docs say why).
+- Sealed crate 500 ≈ one run's savings (escort ~510 net, 4 crates ~640 at
+  zero HQ): unchanged.
+- Road share 25%: unchanged.
+- HQ purchases (§12): see the final report.
+
+## Step 6 — the charter (`scratch/_charter.ts`, 600 paired runs)
+
+| Setting | Delivered (no / all Sovereign items) | Bank net a charter |
+|---|--:|--:|
+| after steps 1–4, muster flavour, 5,000 / 20,000 | 36% / 40% (n=210) | +2,693 |
+| muster ×1.25 | 18.5% / 22.2% | −916 |
+| without the muster | 30.3% | — |
+| **muster ×1.07**, 5,000 / 20,000 | 26.0% / 28.3% | +619 |
+| **muster ×1.07, 7,000 / 35,000** (kept) | 26.0% / 28.3% | **+2,519 / +3,344** |
+
+Fee 7,000 ≈ 8.6 good runs (this company banks 814 from 4 crates). Each
+condition lifted (n=300, after the pass): the ground (fire, lakes, boulders,
+curses) +5.7pt, the double prices +2.3pt, the muster +4.3pt (n=600). Before
+the pass the untuned report read the ground +4.3, the prices +3.3 and the
+muster −0.5pt (n=210).
+
+## Step 2, last — the boss share and the cap
+
+The first full report (all else green) failed one gate: the final boss
+killed 9% of the teams that reached it (§6 floor 10%). Every multiplier that
+killed more slogged a seed past 600s. The slogs are real 13–19 minute fights
+(run 108's final boss 1,159s, a defeat; run 260 789s / 908s, cleared), so
+the harness cap went 600 → 1800s (109a334) and the boss went ×0.42 → ×0.44
+(657360e): §6 57.3%, boss kills 20/192 (10.4%), no timeouts. The final boss is
+in every staked run, so stake tiers 3, 7 and 8 were re-probed alone.
+
+## Final numbers (pass 2)
+
+| Metric | Before (1b43846) | After |
+|---|--:|--:|
+| Invariants failing | 50 | **0** (REPORT.md, full run) |
+| §6 Monte Carlo (45–60%) | 57% | 57.3% |
+| §6 final-boss kills of arrivals (≥10%) | 12% | 10.4% |
+| §11 first-timer (15–35%, aim 20–28) | 14% | 25.4% (n=600: 27.7%) |
+| §11 battles / recruits / adaptive | 10 / 8 / 16% | 18 / 20 / 34% (n=600: 16.7 / 19.0 / 33.5%) |
+| §11 strict floor's worst node (≤40%) | 43% | 35% |
+| Stake delivery 0→8 crates | 18 → 18 → 19 → 15 → 14 → 14 → 12 → 11 → 10% | 33.5 → 27.5 → 23.2 → 18.7 → 15.5 → 10.0 → 6.5 → 0.7% (8: unmeasured, <1% below it) |
+| Stake pay, cash line | 87 → 136 → 157 → 190 → 149 → 188 → 191 → 219 → 173 | 119 → 162 → 176 → 210 → 257 → 274 → 313 → 329 |
+| Smallest stake gain vs interest cap 40 | +50 | +43 |
+| Charter delivery (no / all Sovereign items) | 23 / 27% | 29 / 32% (report, n=210; n=600: 27 / 29%) |
+| Charter bank net a run | +80 | +3,597 (report; n=600: +2,929) |
+| Charter fee in good runs | 7.6 | 9.0 (report; n=600: 8.5) |
+| Muster cost (lifted) | −0.5pt | +4.3pt (report; n=600: +3.3) |
+
+Report runtime grew to ~50 minutes single-core (§12 alone ~60 core-minutes
+at n=210: runs are longer — bigger companies, harder act 3, the 1800s cap).
+
+---
+
+# Tuning pass 1 — first-timer line, Cartographer's Table, final review
 
 A checkpointed progress log for the last, time-boxed tuning lane. Every
 experiment is recorded here (change, command, numbers, keep/revert) and

@@ -1,7 +1,7 @@
 import { applyBattleXp, stopXp } from '../../game/run/battle'
 import { frontierFrom } from '../../game/run/map'
 import { threatAfterLayer } from '../../game/run/threat'
-import { stakeRules } from '../../game/run/contracts'
+import { contractRules } from '../../game/run/contracts'
 import { CLEAR_SHELL } from './fresh'
 import type { GetState, SetState } from './types'
 
@@ -47,7 +47,7 @@ export function completeNode(get: GetState, set: SetState, nodeId: string): void
     clearedNodeIds: cleared,
     currentNodeId: nodeId,
     reachableNodeIds: frontierFrom(runMap, nodeId, cleared),
-    threat: threatAfterLayer(node.layer, stakeRules(contract?.crates ?? 0).startThreat),
+    threat: threatAfterLayer(node.layer, contractRules(contract).startThreat),
     event: null,
     merchant: null,
     shrineOffer: null,

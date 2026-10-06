@@ -416,10 +416,11 @@ export function refundRetiredHq(upgrades: Readonly<Record<string, number>>, orde
 // ---------------------------------------------------------------------------
 
 /**
- * One crate's price. Priced against play: a finished escort run banks ~450
- * gold (`HQ_UPGRADES`), and a delivered contract opens an item kind for free,
- * so a crate is about a run's savings for one roll that may be a duplicate —
- * playing stays the surer way to unlock gear, and the crate is a side bet.
+ * One crate's price. Priced against play: a zero-HQ escort banks ~510 gold
+ * net and a 4-crate contract ~640 (REPORT §13, after the tuning pass), and a
+ * delivered contract opens an item kind for free, so a crate is about one
+ * run's savings for one roll that may be a duplicate — playing stays the
+ * surer way to unlock gear, and the crate is a side bet. Checked, unchanged.
  */
 export const PULL_PRICE = 500
 

@@ -25,6 +25,7 @@ import {
   CHARTER_TOWNS,
   charterDoor,
   encounterRulesOf,
+  MUSTER_STRENGTH,
   rollSovereign,
   routeOf,
   routePrice,
@@ -32,7 +33,7 @@ import {
   SOVEREIGN_DILUTION,
   TRADE_OFFS,
 } from '../src/game/run/charter'
-import { ADVANCE, cashOutValue, cityPay, CITY_COUNT, contractPlan, contractStake, runItemPool } from '../src/game/run/contracts'
+import { ADVANCE, cashOutValue, cityPay, CITY_COUNT, contractPlan, contractRules, contractStake, runItemPool, stakeRules } from '../src/game/run/contracts'
 import { STANDING_XP, standingXpFor } from '../src/game/run/standing'
 import { crateKinds, MAX_BONUS_ITEMS, rollPull } from '../src/game/run/hq'
 import { encounterNode } from '../src/game/run/map'
@@ -213,6 +214,14 @@ describe('the contract', () => {
     }
     // A field's hazard seed comes off the node hash, as on every road.
     expect(nodeHazardSeed({ id: 'n1-0', type: 'battle', layer: 1 }, 5, { charter: true })).toEqual(expect.any(Number))
+  })
+
+  it('the muster makes every raider stronger and greedier, from the first fight; a stake never does', () => {
+    const t = { company: null, crates: 0, charter: true } as const
+    expect(MUSTER_STRENGTH).toBeGreaterThan(1)
+    expect(contractRules(t)).toMatchObject({ startThreat: MUSTER_STRENGTH, leakMult: MUSTER_STRENGTH, lastLeg: 1, extraElites: 0 })
+    for (let c = 0; c <= 8; c++) expect(contractRules({ crates: c })).toEqual(stakeRules(c))
+    expect(contractRules(null)).toEqual(stakeRules(0))
   })
 
   it('musters every goblin clan from the first fight, and its road fields every goblin kind', () => {

@@ -62,20 +62,35 @@ export const SOVEREIGN_INITIAL = 'S'
 export const SOVEREIGN_TIER = 'Sovereign'
 
 /**
- * The sponsorship fee, from the bank. A finished escort banks about 300–400
- * gold and a good staked one about 500 (REPORT §13), so the fee is about ten
- * good runs of savings. October 2026: at 5,000 / 20,000 the harness measured a
- * charter at +80 gold against an escort's +603 (REPORT §18) — a trophy, not a
- * contract — and the designer pass moved it to 4,000 / 24,000. The tuning pass
- * then eased the road (a veteran charter delivers ~35%), which put 4,000 /
- * 24,000 at +4,691 a run against an escort's +625: a farm; 5,000 / 18,000 still read
- * +2,046 against +581. 5,000 / 16,000 breaks even at ~31% and lands near
- * twice an escort — the endgame's jackpot,
- * still a real gamble, before the standing it earns with all five companies.
+ * The sponsorship fee, from the bank: about nine good runs of savings. 5,000
+ * → 7,000 (the tuning pass): the company that opens the door banks ~670 gold
+ * net from an escort and ~810 from a 4-crate contract (REPORT §18), so 5,000
+ * was about six good runs.
  */
-export const CHARTER_FEE = 5000
-/** What a delivered Sovereign Route pays at its destination: 3.2 fees. */
-export const CHARTER_PAYOUT = 16000
+export const CHARTER_FEE = 7000
+/**
+ * What a delivered Sovereign Route pays at its destination: five fees. 20,000
+ * (four fees) → 35,000 (the tuning pass): at four fees the charter broke even
+ * at 25% delivery and the door's company delivered 23–27%, so its expected
+ * value was about nothing — a gamble with no reason to take it. At five fees
+ * it breaks even at 20%; that company delivers 26% (28% with every Sovereign
+ * item), worth about +2,000 a charter on average and 35,000 on the day.
+ */
+export const CHARTER_PAYOUT = 35000
+/**
+ * The muster's teeth (the tuning pass): every raider on the Sovereign Route is
+ * this much stronger — its HP, and what it steals when it reaches the wagons —
+ * on top of every clan marching from the first fight. The clans alone cost
+ * nothing measurable (REPORT §18: −0.5pt lifted, i.e. none — the teaching
+ * ramp only holds bombers back at depth 1 and armour to depth 2, fights a
+ * late-game company walks through). Measured on §18's company (600 paired
+ * runs): without the muster 30.3% delivered; ×1.25 18.5% (the muster would be
+ * the whole charter); ×1.07 26.0% — a condition worth about 4pt, like each of
+ * the others is meant to be.
+ */
+export const MUSTER_STRENGTH = 1.07
+/** The muster's strength, as the copy says it ("7%"). */
+export const MUSTER_PCT = Math.round((MUSTER_STRENGTH - 1) * 100)
 /** Rosethread's trade-off: every merchant price on the route is this many times as much. */
 export const CHARTER_PRICE_MULT = 2
 /**
@@ -144,7 +159,7 @@ export const TRADE_OFFS: readonly TradeOff[] = [
 /** What the route deals and fields, said once on the contract screen. */
 export const CHARTER_TERMS: readonly string[] = [
   'Deals every item and skill you own, for no company.',
-  'Every goblin clan marches from the first fight.',
+  `Every goblin clan marches from the first fight, ${MUSTER_PCT}% stronger, and steals ${MUSTER_PCT}% more.`,
   'No crates, no city pay, no cashing out. The cities are waypoints.',
 ]
 

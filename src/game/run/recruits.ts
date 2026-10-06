@@ -46,7 +46,7 @@ export function applyStatBonus(s: Sentinel, n: number): Sentinel {
 
 /**
  * A body joining the company: a random hero from the run's unlocked kinds
- * (`heroes.rollRecruitBody` — a common weapon, maybe a common off-hand piece),
+ * (`heroes.rollRecruitBody` — a Rare weapon, maybe a common off-hand piece),
  * named off the shared pool clear of `taken`. Every Sentinel who joins after
  * the leader — hub extras, hires, candidates — comes through here.
  */

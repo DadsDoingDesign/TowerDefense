@@ -122,7 +122,9 @@ describe('contracts: stakes and cities', () => {
 
   it('every crate is a difficulty step and more danger, never less', () => {
     for (let c = 1; c <= MAX_CRATES; c++) {
-      expect(stakeRules(c).startThreat).toBeGreaterThan(stakeRules(c - 1).startThreat)
+      // Every crate makes the last leg's raiders stronger and greedier (the tuning pass).
+      expect(stakeRules(c).lastLeg).toBeGreaterThan(stakeRules(c - 1).lastLeg)
+      expect(stakeRules(c).startThreat).toBe(1)
       expect(stakeRules(c).extraElites).toBeGreaterThan(stakeRules(c - 1).extraElites)
       expect(dangerPips(c)).toBeGreaterThanOrEqual(dangerPips(c - 1))
     }
@@ -135,6 +137,8 @@ describe('contracts: stakes and cities', () => {
       expect(cratesSoldAt(c, 0) + cratesSoldAt(c, 1) + cratesSoldAt(c, 2)).toBe(c)
       expect(cityPay(terms(c), 0).sales).toBeGreaterThanOrEqual(c * CRATE_PRICE)
       expect(cratesLeftAfter(c, 3)).toBe(0)
+      // One crate (from two) rides to the destination: the big reward.
+      expect(cratesSoldAt(c, 2)).toBe(c >= 2 ? 1 : 0)
     }
   })
 
@@ -241,9 +245,9 @@ describe('contracts: stakes and cities', () => {
     expect(marketFor(hot, '2026-10-06', false)).toBe(1)
   })
 
-  it('the charter: 5,000 in, 16,000 out, and standing with all five as a same-ending escort earns with one', () => {
-    expect(CHARTER_FEE).toBe(5000)
-    expect(CHARTER_PAYOUT).toBe(16000)
+  it('the charter: 7,000 in, 35,000 out, and standing with all five as a same-ending escort earns with one', () => {
+    expect(CHARTER_FEE).toBe(7000)
+    expect(CHARTER_PAYOUT).toBe(35000)
     const run = { depth: 12, kills: 640, delivered: true }
     const all = charterStandingXp(run)
     expect(Object.keys(all).sort()).toEqual([...COMPANY_IDS].sort())

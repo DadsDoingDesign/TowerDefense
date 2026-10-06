@@ -27,7 +27,7 @@ import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { encounterRulesOf, priceMultOf, routePrice } from '../../game/run/charter'
-import { earn, freshContract, marketFor, marketOpen, signingCost, stakeRules, utcDateKey, type RunContract } from '../../game/run/contracts'
+import { contractRules, earn, freshContract, marketFor, marketOpen, signingCost, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
 import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds'
@@ -137,7 +137,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // The stake is the run's difficulty step: re-deal the map from the same
     // seed with its elites (a hash of the seed, never a draw — the map stream
     // is rewound, so an escort deals exactly the map an unstaked run did).
-    const rules = stakeRules(contract.crates)
+    const rules = contractRules(contract)
     streams.mapRng = streamRng(runSeed, 'map')
     const dealt = dealRunMap(rules, runSeed)
     // SK1: the run's pools are read once, here, weighted to the company.

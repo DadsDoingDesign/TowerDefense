@@ -246,15 +246,24 @@ export function heroSlotsFor(
   }
 }
 
+/**
+ * `dropWeight` is the share of an unforced roll (loot, a merchant's shelf) at
+ * each rarity before luck bumps it. 56 / 28 / 11 / 4 / 1 → 46 / 32 / 15 / 5 / 2
+ * (the tuning pass): a run that fights its way through gets dressed from what it
+ * finds — §11's fight-first lines read 11.7 → 20.4% (battles) and 21.7 → 28.3%
+ * (adaptive), the first-timer line 17.9 → 20.0%, n=240 — while the §6 Monte
+ * Carlo, whose gear is forced by depth, cannot move. Forced rarities (the hero
+ * pick, sealed crates, contract items) are untouched.
+ */
 export const RARITY: Record<
   ItemRarity,
   { label: string; budget: number; enchants: number; color: string; dropWeight: number }
 > = {
-  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 56 },
-  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 28 },
-  epic: { label: 'Epic', budget: 2.8, enchants: 2, color: '#c67ab0', dropWeight: 11 },
-  legendary: { label: 'Legendary', budget: 3.7, enchants: 3, color: '#f0b868', dropWeight: 4 },
-  mythic: { label: 'Mythic', budget: 5.0, enchants: 4, color: '#ef6a3a', dropWeight: 1 },
+  common: { label: 'Common', budget: 1.0, enchants: 0, color: '#c3b291', dropWeight: 46 },
+  rare: { label: 'Rare', budget: 1.7, enchants: 1, color: '#5fb0c4', dropWeight: 32 },
+  epic: { label: 'Epic', budget: 2.8, enchants: 2, color: '#c67ab0', dropWeight: 15 },
+  legendary: { label: 'Legendary', budget: 3.7, enchants: 3, color: '#f0b868', dropWeight: 5 },
+  mythic: { label: 'Mythic', budget: 5.0, enchants: 4, color: '#ef6a3a', dropWeight: 2 },
 }
 
 // ---- weapon subtypes give damage a physical/magic identity + a hand cost ----
@@ -548,11 +557,18 @@ const CURSE_ENCHANTS: EnchantTemplate[] = [
   // every build a quarter of its rate.
   { id: 'cx_wild', label: 'Wild', roll: () => ({ mods: { critChanceAdd: 0.25, critMultAdd: 0.9, rateMult: 0.75, splashAdd: -70 } }) },
   // Area for damage — the one curse that was already a real tradeoff.
-  { id: 'cx_erratic', label: 'Erratic', roll: () => ({ mods: { splashAdd: 34, damageMult: 0.82 } }) },
+  // ×0.82 → ×0.75 damage (the tuning pass): on the re-pinned §10 benches the
+  // classless knife-thrower read −0.3 → +0.4pt — the splash paid for the cut
+  // on a swarm. Now −8.1pt on it, +6.9pt on the splash wand.
+  { id: 'cx_erratic', label: 'Erratic', roll: () => ({ mods: { splashAdd: 34, damageMult: 0.75 } }) },
   // Damage for crit, priced so the clamp can never hide it: −100% crit chance
   // means *never crits*, which costs a Sharpshooter ~46% of its damage and a
   // low-crit mystic ~5%. Now it is a real question of who wears it.
-  { id: 'cx_vengeful', label: 'Vengeful', roll: () => ({ mods: { damageMult: 1.6, critChanceAdd: -1 } }) },
+  // ×1.6 → ×1.3 damage (the tuning pass): the classless knife-thrower crits
+  // ~48% for ×2 (its crit factor ~1.48), so ×1.6 was +8% on the very build the
+  // clause is meant to cost — §10 read +0.9 / +4.1pt on it, no downside
+  // anywhere. Now −6.4pt there and +9.8pt on the low-crit wand.
+  { id: 'cx_vengeful', label: 'Vengeful', roll: () => ({ mods: { damageMult: 1.3, critChanceAdd: -1 } }) },
 ]
 const CURSE_CHANCE = 0.2
 
@@ -577,6 +593,18 @@ function rollEnchantments(pool: readonly EnchantTemplate[], count: number, budge
   }
   return chosen
 }
+
+/**
+ * A caster's weapon carries this much more flat damage than a blade or a bow of
+ * the same rarity (the tuning pass). A wand, rod, staff or grimoire fires a
+ * splash bolt at 0.8 a second where a bow looses 2.1, so the same flat roll per
+ * HIT was a third of the damage per second: a hire with a Common wand read 34
+ * DPS on its card against a bow's ~110–135, and a Common caster drop was the
+ * weakest weapon in every hand. ×1.6 lifts a Common wand's flat 6.5 → 10.4.
+ * The hero pick's caster weapon drops Epic → Rare with it (`heroes.pickRarity`),
+ * which lands within a point of the old Epic wand's damage.
+ */
+export const CASTER_HIT = 1.6
 
 /**
  * What an off-hand or body KIND rolls from its slot's two draws (see the
@@ -618,7 +646,7 @@ function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType, 
     // a positive bias scales with rarity, a negative one is the weapon class's
     // fixed handling cost and never grows.
     const atkSpeed = w.speedBias >= 0 ? w.speedBias * budget : w.speedBias
-    const base: Item['base'] = w.damageType === 'physical' ? { physDamage: dmg, attackSpeed: atkSpeed } : { magDamage: dmg, attackSpeed: atkSpeed }
+    const base: Item['base'] = w.damageType === 'physical' ? { physDamage: dmg, attackSpeed: atkSpeed } : { magDamage: Math.round(dmg * CASTER_HIT), attackSpeed: atkSpeed }
     if (!atkSpeed) delete base.attackSpeed
     const e = w.edge
     if (e?.splashAdd) base.splashAdd = round(lerp(e.splashAdd[0], e.splashAdd[1], t) * budget)

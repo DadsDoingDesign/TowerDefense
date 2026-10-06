@@ -15,7 +15,6 @@ import { appendFileSync, writeFileSync } from 'fs'
 import { BASE_INTEREST, HQ_UPGRADES, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
-import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
 import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
@@ -37,7 +36,7 @@ if (process.env.FW_HAZARDS) {
 import { classicHero } from '../src/game/data/sentinels'
 import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
-import { CHARTER_FEE, CHARTER_PAYOUT, TRADE_OFFS } from '../src/game/run/charter'
+import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game/run/charter'
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
@@ -59,8 +58,8 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '../src/state/gameStore'
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
-import { difficultyEffect, difficultyRules, STRENGTH_PER_STEP } from '../src/game/run/watch'
-import { ADVANCE, BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
+import { difficultyEffect, difficultyRules, LAST_LEG } from '../src/game/run/watch'
+import { ADVANCE, BONUS_PER_CRATE, CITY_CRATE_VALUE, COMPANY_WEIGHT, CRATE_PRICE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
 import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
 import { balanceVerdict, invariantMode } from './verdict'
@@ -118,7 +117,7 @@ import {
   stopRate,
   stat,
   std,
-  SUPPORT_SPEC_IDS,
+  equipFullSet,
   SUPPORT_SPECS,
   SWARM_PRESSURE,
   TIER2_NODES,
@@ -419,8 +418,14 @@ if (want(2)) {
   )
   line('The carriers are a **blocking** Berserker and a Sharpshooter, with the real')
   line(`\`MAX_BASE_HP\` of ${MAX_BASE_HP}. (Heroes have no HP since the no-HP pass: every support aura is a damage buff now.)`)
-  line('Each support is graded against a *generic damage tower of its own archetype* in the')
-  line('same slot, so "a third body" cannot masquerade as support value.')
+  line('There are no support classes any more (the classless rework): a hero supports because it')
+  line('holds an **aura skill** — Blessing (Level 2) or Rally (Level 3). Each is graded on a')
+  line('level-20 Epic-geared hero of two kits (a wand; a sword and shield) against the *same hero*')
+  line('holding its level\'s damage skill instead (Heavy Blows / Berserk), in the same slot — so the')
+  line('aura has to pay for the damage it took the slot of, and "a third body" cannot masquerade')
+  line('as support value. (The old rows graded the Bannerman, Radiant, Templar and Oracle specs;')
+  line('the Bannerman\'s aura had no skill to become, so it was a damage tower graded against a')
+  line('damage tower.)')
   line('')
 
   const SUP_SEEDS = SEEDS.slice(0, 4)
@@ -490,12 +495,13 @@ if (want(2)) {
   interface SupRow {
     label: string
     kind: 'control' | 'filler' | 'support'
-    arch: Archetype | null
+    /** The filler a support is graded against (`kit · level`). */
+    arch: string | null
     ceilings: number[]
     score: number
     swarm: number
   }
-  function supRow(label: string, kind: SupRow['kind'], arch: Archetype | null, third: Sentinel | null): SupRow {
+  function supRow(label: string, kind: SupRow['kind'], arch: string | null, third: Sentinel | null): SupRow {
     const ceilings = SUP_SHAPES.map((sh) => threatCeiling(third, sh))
     const score = ceilings.every((c) => c > 0)
       ? Math.exp(ceilings.reduce((a, c) => a + Math.log(c), 0) / ceilings.length)
@@ -503,24 +509,43 @@ if (want(2)) {
     return { label, kind, arch, ceilings, score, swarm: swarmCeiling(third) }
   }
 
-  const fighterFiller = buildSpec('weaponmaster', { gearRarity: 'epic', seed: 5 })
-  const mysticFiller = buildSpec('pyromancer', { gearRarity: 'epic', seed: 5 })
-  const supRows: SupRow[] = [
-    supRow('_(two carriers, empty slot)_', 'control', null, null),
-    supRow('_filler_ — Weaponmaster (fighter DPS)', 'filler', 'fighter', fighterFiller),
-    supRow('_filler_ — Pyromancer (mystic DPS)', 'filler', 'mystic', mysticFiller),
-    ...SUPPORT_SPEC_IDS.map((id) =>
-      supRow(getNode(id).name, 'support', getNode(id).archetype, buildSpec(id, { gearRarity: 'epic', seed: 5 })),
-    ),
+  /*
+   * **What a support is now (the tuning pass).** There are no classes, so there
+   * are no support SPECS: Bannerman, Radiant, Templar and Oracle were tree
+   * nodes, and `buildSpec` rebuilt them from the skills their evolutions became —
+   * the Bannerman's aura had no skill (it became Heavy Blows, a damage line), so
+   * the old row graded a damage tower against a damage tower and failed at +10%.
+   * A hero supports now because it holds an AURA SKILL (Blessing at Level 2,
+   * Rally at Level 3), and what that skill costs is the skill it took the slot
+   * of. So each aura skill is graded on a level-20 Epic-geared hero of two kits —
+   * a wand (the old Mystic supports' chassis) and a sword and shield (the
+   * Bannerman's) — against the SAME hero holding its level's damage starter
+   * (Heavy Blows / Berserk) in the same slot.
+   */
+  const SUP_KITS: { look: Archetype; name: string }[] = [
+    { look: 'mystic', name: 'Wand' },
+    { look: 'fighter', name: 'Sword & Shield' },
   ]
-  const fillerScore: Record<string, number> = {
-    fighter: supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!.score,
-    mystic: supRows.find((r) => r.kind === 'filler' && r.arch === 'mystic')!.score,
+  const SUP_SKILLS: { aura: string; filler: string; level: string }[] = [
+    { aura: 'blessing', filler: 'heavy_blows', level: 'Level 2' },
+    { aura: 'rally', filler: 'berserk', level: 'Level 3' },
+  ]
+  const supHero = (look: Archetype, skill: string): Sentinel =>
+    equipFullSet({ ...applyXp(classicHero(look), xpToReach(20)), skills: [skill] }, 'epic', new RNG(5))
+  const skillName = (id: string) => ALL_SKILLS.find((k) => k.id === id)!.name
+  const supRows: SupRow[] = [supRow('_(two carriers, empty slot)_', 'control', null, null)]
+  for (const kit of SUP_KITS) {
+    for (const s of SUP_SKILLS) {
+      const key = `${kit.name} · ${s.level}`
+      supRows.push(supRow(`_filler_ — ${kit.name} + ${skillName(s.filler)} (${s.level} damage)`, 'filler', key, supHero(kit.look, s.filler)))
+      supRows.push(supRow(`${kit.name} + ${skillName(s.aura)}`, 'support', key, supHero(kit.look, s.aura)))
+    }
   }
+  const fillerScore: Record<string, number> = Object.fromEntries(supRows.filter((r) => r.kind === 'filler').map((r) => [r.arch!, r.score]))
 
   {
     const ctrl = supRows.find((r) => r.kind === 'control')!
-    const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!
+    const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'Sword & Shield · Level 3')!
     md[CONTROL_NOTE_AT] =
       `**What the change did to the control:** the empty slot reads ×${f2(ctrl.score)} and the fighter ` +
       `filler ×${f2(fFill.score)} — a generic damage tower is worth **+${(((fFill.score / ctrl.score) - 1) * 100).toFixed(0)}%** Threat instead of the +0% ` +
@@ -528,7 +553,7 @@ if (want(2)) {
       `has something to stand on.`
   }
   line(
-    `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs own-archetype filler | _(old swarm-blob ladder)_ |`,
+    `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs the same hero's damage skill | _(old swarm-blob ladder)_ |`,
   )
   line(`|---|${'--:|'.repeat(SUP_SHAPES.length)}--:|--:|--:|`)
   for (const r of supRows) {
@@ -566,9 +591,9 @@ if (want(2)) {
     ;(r.score >= bar * SUPPORT_MARGIN ? beaten : notBeaten).push(txt)
   }
   line(
-    `- Supports that beat a plain damage tower of their own archetype by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
+    `- Aura skills that beat the same hero holding its level's damage skill by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
   )
-  line(`- Supports that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
+  line(`- Aura skills that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
   line('')
   line('**Aegis, Bulwark and Warden of Ash left this table in the no-HP pass.** They were')
   line('graded as supports for a shield aura (Aegis, Bulwark) and a hold that ate the melee')
@@ -582,11 +607,11 @@ if (want(2)) {
     const bar = fillerScore[r.arch!] ?? 0
     if (!(r.score >= bar * SUPPORT_MARGIN)) {
       failures.push(
-        `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than a generic ${r.arch} damage tower in the same slot (×${f2(bar)}). Its support kit is not paying for the DPS it costs.`,
+        `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than the same hero (${r.arch}) holding its level's damage skill instead (×${f2(bar)}). The aura is not paying for the damage it costs.`,
       )
     }
   }
-  summary.push(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: fighter ×${f2(fillerScore.fighter)}, mystic ×${f2(fillerScore.mystic)}`)
+  summary.push(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: ${Object.entries(fillerScore).map(([k, v]) => `${k} ×${f2(v)}`).join(', ')}`)
 }
 
 // -------------------------------------------------------------- Sweep 3
@@ -692,7 +717,21 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * 73 / 60 / 56 / 48 / 43%); ×1.6 is the lightest pin that puts it back in band
  * with every endure affix clear of the floor by two quanta.
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 1.2, endure: 1.6 }
+/*
+ * **`phys` ×0.8 → ×0.25 and `magic` ×1.2 → ×0.8 (the tuning pass).** The
+ * classless rework moved both SUBJECTS: a Sharpshooter is now a stat-less
+ * Dagger with Long Shot, a Stormcaller a stat-less Wand with Wildfire and
+ * Stormcaller. At the old pins the baselines read 18% and 22% — inside the band
+ * but on its floor, where nine affixes read +0.5 to +2.0pt and failed as dead
+ * (might, heavy, ruin, flaming, insight, precision, cruelty, swift, piercing),
+ * and the curse bench (§10) could not see Wild, Reckless or Frenzied cost or
+ * pay anything. `phys` is a swarm a single-target thrower leaks by count, so it
+ * barely answers HP: ×0.5 read 21%. Swept ×0.5 / ×0.25 and ×0.8 for `magic`;
+ * ×0.25 / ×0.8 put both near the old fit (37% / 36%), and every affix reads
+ * ≥ +2.0pt on its home bench there. Re-derive these the same way when the
+ * subject or the curve moves again.
+ */
+const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.8, endure: 1.6 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
@@ -870,7 +909,12 @@ if (want(4)) {
     // swept. `magic` is non-monotone in range (see below), which is why it was not
     // the home before — the roll graded here is fixed (seed 500), so the number is
     // stable, but read it knowing that.
-    reach: 'magic',
+    // `magic` → `phys` (the tuning pass). The re-pin below moved `magic` to a
+    // 36% baseline and `reach` read −0.3pt there (+2.1pt at the old pin): the
+    // non-monotone answer this note warned about. The classless Sharpshooter
+    // throws a knife (168px, ×1.5 with Long Shot), not the old 479px bow, so on
+    // `phys` range is no longer saturated: +6.4pt at the shipped pin.
+    reach: 'phys',
     patience: 'endure',
     cruelty: 'phys',
     ruin: 'phys',
@@ -1251,15 +1295,17 @@ if (want(7)) {
   line('**What this replaced.** §7 measured the spec perks — one of two at levels 5 and 15, by')
   line('line. Skills replaced the perks AND the evolutions (SK1): a hero holds up to three, and')
   line('at levels 5, 10 and 15 it is offered three of one skill level (Level 1, 2, 3) from the')
-  line('player\'s unlocked pool. So a choice point is a (skill level, class) pair, and every skill')
-  line('that class may hold at that level is an option on it.')
+  line('player\'s unlocked pool. There are no classes (the classless rework): any hero may be dealt')
+  line('any skill, and what a skill does on a hero follows from what that hero holds. So a choice')
+  line('point is a (skill level, kit) pair — the three kits a hero is drawn as: a sword and a')
+  line('shield, a knife, a wand — and every skill of that level is an option on it.')
   line('')
-  line('**How each skill is graded.** A representative hero of the class — level 9 for a Level 1')
-  line('skill, 14 for Level 2, 19 for Level 3, no gear and no other skill — takes the skill alone,')
-  line('and is graded by **stop rate** on three waves of its depth (4, 6 or 8): a `swarm` of runts,')
-  line('an `armour` column (Plated elite) and a `line` (the depth\'s normal wave). Each point\'s waves')
-  line('are first scaled so the hero **without** a skill stops about half of each — a bench at 0%')
-  line('or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
+  line('**How each skill is graded.** A representative hero of the kit — level 9 for a Level 1')
+  line('skill, 14 for Level 2, 19 for Level 3, stat-less gear and no other skill — takes the skill')
+  line('alone, and is graded by **stop rate** on three waves of its depth (4, 6 or 8): a `swarm` of')
+  line('runts, an `armour` column (Plated elite) and a `line` (the depth\'s normal wave). Each point\'s')
+  line('waves are first scaled so the hero **without** a skill stops about half of each — a bench at')
+  line('0% or 100% cannot see a skill at all. A blessing needs someone to reach, so a skill with an')
   line('aura is graded beside a second hero.')
   line('')
   line('**Level 3 is fitted harder** (October audit). Fitted on the bare hero, every strong Level 3')
@@ -1269,8 +1315,29 @@ if (want(7)) {
   line('the level\'s first starter, **Berserk**, stops about half; every skill is still graded against')
   line('the bare hero at that pressure, so the bare hero sits low and the top skills have room above it.')
   line('')
+  line('**Two more benches, because some skills only show beside another piece (the tuning pass).**')
+  line('The classless rework added skills that are self-contained effects meant to meet other')
+  line('pieces in play — "its hits deal 25% more to slowed enemies", "each kill it makes pays 1')
+  line('more gold". A lone hero on a stop-rate bench cannot see either: nobody slows, nobody')
+  line('holds, and stop rate does not read gold. They read +0.0pt everywhere and were failed as')
+  line('dead. So every skill is also graded on:')
+  line('')
+  line('- `partner` — the `line` wave, with the hero beside a **partner who holds and slows** (a')
+  line('  sword-and-shield hero of the same level carrying Frostbite), re-scaled so the pair stops')
+  line('  about half. This is where a skill that reads holds or slows (Pin Down, Cold Snap) shows.')
+  line('- `gold` — the `line` wave\'s kill gold, as a share of what the hero earns without the skill')
+  line('  (reported in pt of that gold). Only a skill that pays gold moves it.')
+  line('')
+  line('**The dead gate reads across kits.** Skills are dealt at random whatever the hero holds — the')
+  line('designer: "they just apply their effects and things will happen" — so a hold skill on a hero')
+  line('with no shield waits for one, by design. A skill is **dead** when it moves no bench by')
+  line(`+${(0.02 * 100).toFixed(1)}pt on ANY kit; a kit on which it reads nothing is reported in the table, not`)
+  line('failed. The solved gate stays per point: a choice is made for one hero, holding what it holds.')
+  line('')
   const SKILL_SEEDS = SEEDS.slice(0, 3)
-  interface SkillRow { point: string; skill: string; name: string; d: Record<string, number>; mean: number; dps: number }
+  /** The three kits a hero is drawn as (`sentinels.CLASSIC_KIT`), named by what it holds. */
+  const KIT_NAME: Record<Archetype, string> = { fighter: 'Sword & Shield', rogue: 'Dagger', mystic: 'Wand' }
+  interface SkillRow { point: string; skill: string; name: string; d: Record<string, number>; partner: number; gold: number; mean: number; dps: number }
   const skillRows: SkillRow[] = []
   const skillPointSummary: { point: string; gap: number; greedy: string; measured: string; options: number }[] = []
   const SKILL_BENCH_KEYS = ['swarm', 'armour', 'line'] as const
@@ -1292,12 +1359,21 @@ if (want(7)) {
       { sentinel: ally(level), slotId: AURA_TRIO.allies[0] },
     ]
   }
+  /** The partner bench's second hero: it holds (a shield) and slows (Frostbite). */
+  const partner = (level: number): Sentinel => ({ ...applyXp(classicHero('fighter'), xpToReach(level)), skills: ['frostbite'] })
+  const partnerTeam = (hero: Sentinel, level: number) => [
+    { sentinel: hero, slotId: AURA_TRIO.support },
+    { sentinel: partner(level), slotId: AURA_TRIO.allies[0] },
+  ]
+  /** Mean kill gold `team` earns off `wave` at `hpMult`, on the stop-rate bench's terms. */
+  const benchGold = (team: { sentinel: Sentinel; slotId: string }[], wave: WaveDef, hpMult: number): number =>
+    mean(SKILL_SEEDS.map((seed) => runBattle({ team, depth: wave.index || 6, wave, baseHp: maxLeak(wave) + 2, enemyHpMult: hpMult, maxSeconds: 200, rules: BENCH_RULES, seed }).goldEarned))
   for (const tier of [1, 2, 3] as const) {
     const level = tier === 1 ? 9 : tier === 2 ? 14 : 19
     const depth = tier === 1 ? 4 : tier === 2 ? 6 : 8
     for (const archetype of ['fighter', 'rogue', 'mystic'] as const) {
       const options = ALL_SKILLS.filter((k) => k.level === tier)
-      const point = `L${tier}:${archetype}`
+      const point = `L${tier} · ${KIT_NAME[archetype]}`
       // No gear: a rolled `vampiric` affix heals the Gate off damage dealt to a
       // wave the hero cannot kill, which flattens a bench into a plateau.
       const base = applyXp(classicHero(archetype), xpToReach(level))
@@ -1338,6 +1414,17 @@ if (want(7)) {
       }
       const soloBase = baseRate(false)
       const auraBase = pressure.aura ? baseRate(true) : null
+      // The partner bench: the `line` wave, re-scaled so the skill-less pair stops about half.
+      let plo = 0.02
+      let phi = 60
+      for (let it = 0; it < 9; it++) {
+        const mid = Math.sqrt(plo * phi)
+        if (stopRate(partnerTeam(base, level), benches.line, SKILL_SEEDS, { enemyHpMult: mid, rules: BENCH_RULES }) > 0.5) plo = mid
+        else phi = mid
+      }
+      const partnerPr = Math.sqrt(plo * phi)
+      const partnerBase = stopRate(partnerTeam(base, level), benches.line, SKILL_SEEDS, { enemyHpMult: partnerPr, rules: BENCH_RULES })
+      const goldBase = benchGold(skillTeam(base, false, level), benches.line, pressure.solo.line)
       const rows: SkillRow[] = []
       for (const k of options) {
         const aura = !!k.mods.buffAura
@@ -1346,7 +1433,9 @@ if (want(7)) {
         const b = aura ? auraBase! : soloBase
         const d: Record<string, number> = {}
         for (const key of SKILL_BENCH_KEYS) d[key] = stopRate(skillTeam(hero, aura, level), benches[key], SKILL_SEEDS, { enemyHpMult: pr[key], rules: BENCH_RULES }) - b[key]
-        rows.push({ point, skill: k.id, name: k.name, d, mean: mean(SKILL_BENCH_KEYS.map((key) => d[key])), dps: heroDps(hero) })
+        const partnerD = stopRate(partnerTeam(hero, level), benches.line, SKILL_SEEDS, { enemyHpMult: partnerPr, rules: BENCH_RULES }) - partnerBase
+        const goldD = goldBase > 0 ? benchGold(skillTeam(hero, false, level), benches.line, pressure.solo.line) / goldBase - 1 : 0
+        rows.push({ point, skill: k.id, name: k.name, d, partner: partnerD, gold: goldD, mean: mean(SKILL_BENCH_KEYS.map((key) => d[key])), dps: heroDps(hero) })
       }
       skillRows.push(...rows)
       const top = [...rows].sort((a, b) => b.mean - a.mean)
@@ -1354,10 +1443,10 @@ if (want(7)) {
       skillPointSummary.push({ point, gap: top.length > 1 ? top[0].mean - top[1].mean : 0, greedy: greedy.name, measured: top[0].name, options: rows.length })
     }
   }
-  line('| Point | Skill | `swarm` | `armour` | `line` | Mean | heroDps |')
-  line('|---|---|--:|--:|--:|--:|--:|')
+  line('| Point | Skill | `swarm` | `armour` | `line` | Mean | `partner` | `gold` | heroDps |')
+  line('|---|---|--:|--:|--:|--:|--:|--:|--:|')
   for (const r of skillRows) {
-    line(`| ${r.point} | ${r.name} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${f1(r.dps)} |`)
+    line(`| ${r.point} | ${r.name} | ${pp(r.d.swarm)} | ${pp(r.d.armour)} | ${pp(r.d.line)} | **${pp(r.mean)}** | ${pp(r.partner)} | ${pp(r.gold)} | ${f1(r.dps)} |`)
   }
   line('')
   line('| Point | Options | Lead of the best over the runner-up | The greedy (heroDps) pick | The measured best |')
@@ -1369,29 +1458,26 @@ if (want(7)) {
   /** The best option at a point may not lead the runner-up by more than this on the mean. */
   const SKILL_GAP_CEILING = 0.2
   const greedyRight = skillPointSummary.filter((p) => p.greedy === p.measured).length
-  line(`**Invariants.** Every skill moves at least one bench by ≥ ${pp(SKILL_EDGE)} (none is dead), and no`)
-  line(`point's best skill leads its runner-up by more than ${pp(SKILL_GAP_CEILING)} on the mean (none is solved by`)
-  line(`a mile). An offer deals three of a point's options at random, so a solved point would make`)
+  const bestOf = (r: SkillRow) => Math.max(...SKILL_BENCH_KEYS.map((k) => r.d[k]), r.partner, r.gold)
+  // Dead is read across kits: a skill's best bench on the hero it suits best.
+  const skillBest = new Map<string, { name: string; best: number; where: string }>()
+  for (const r of skillRows) {
+    const b = bestOf(r)
+    const cur = skillBest.get(r.skill)
+    if (!cur || b > cur.best) skillBest.set(r.skill, { name: r.name, best: b, where: r.point })
+  }
+  const waiting = skillRows.filter((r) => bestOf(r) < SKILL_EDGE)
+  line(`**Invariants.** Every skill moves at least one bench by ≥ ${pp(SKILL_EDGE)} on at least one kit (none is`)
+  line(`dead), and no point's best skill leads its runner-up by more than ${pp(SKILL_GAP_CEILING)} on the mean (none is`)
+  line(`solved by a mile). An offer deals three of a point's options at random, so a solved point would make`)
   line(`every offer that holds the answer a non-choice. Reported, not gated: how often the`)
   line(`heroDps-greedy pick — the "read the tooltip" answer — is the measured best one: **${greedyRight} of`)
   line(`${skillPointSummary.length}** points. A low number is the goal: it means the answer depends on the wave.`)
   line('')
-  // A skill whose only effect is gold (Bounty) cannot move a stop-rate bench by
-  // construction — the bench has no purse — so "dead" is not a question this
-  // bench can answer about it. It is listed with its price instead; its gold
-  // reaches the run through `engine.goldEarned` like any kill's.
-  const goldOnly = (id: string) => {
-    const mods = ALL_SKILLS.find((k) => k.id === id)?.mods ?? {}
-    return Object.keys(mods).length > 0 && Object.keys(mods).every((m) => m === 'goldPerKill')
-  }
-  const economy = ALL_SKILLS.filter((k) => goldOnly(k.id))
-  if (economy.length) {
-    line(`**Graded in gold, not here:** ${economy.map((k) => `${k.name} (+${k.mods.goldPerKill} gold a kill)`).join(', ')}. A stop-rate bench has no purse, so it reads +0.0pt by construction and is not held to the dead-skill floor.`)
-    line('')
-  }
-  for (const r of skillRows) {
-    const best = Math.max(...SKILL_BENCH_KEYS.map((k) => r.d[k]))
-    if (best < SKILL_EDGE && !goldOnly(r.skill)) failures.push(`Skill "${r.name}" (${r.point}) is dead: its best bench moves only ${pp(best)} (needs ≥ ${pp(SKILL_EDGE)}).`)
+  line(`**Waiting for a piece (reported, not gated):** ${waiting.length ? waiting.map((r) => `${r.name} at ${r.point} (best ${pp(bestOf(r))})`).join(', ') : '_none_'}. Each of these moves a bench on another kit; on this one it waits for what it needs (a shield to hold with, someone to slow for it).`)
+  line('')
+  for (const [, s] of skillBest) {
+    if (s.best < SKILL_EDGE) failures.push(`Skill "${s.name}" is dead: its best bench on any kit moves only ${pp(s.best)} (${s.where}; needs ≥ ${pp(SKILL_EDGE)}).`)
   }
   for (const p of skillPointSummary) {
     if (p.gap > SKILL_GAP_CEILING) failures.push(`Skills at ${p.point} are solved: ${p.measured} leads the runner-up by ${pp(p.gap)} on the three-bench mean (ceiling ${pp(SKILL_GAP_CEILING)}).`)
@@ -1701,7 +1787,7 @@ if (want(11)) {
   line('depth-scaled gear sets and upgrade purchases on every tower. A real first run does')
   line(`not: \`pickStartingHero\` hands the player **one level-1 hero**, \`START_GOLD\` = ${START_GOLD},`)
   line('and the opening kit `engine/kit.ts` deals **after the pick** and has the hero **wear**')
-  line('(a weapon of the hero\'s own damage type — common, or epic for a Mystic — a common body,')
+  line('(a weapon of the hero\'s own damage type — common, or rare for a caster — a common body,')
   line('a rare off-hand; the harness and the store call the same function). Every Sentinel who')
   line('joins later arrives carrying one common on-type weapon and dresses its empty slots out')
   line('of the pack. The zero-meta baseline had never been simulated, so nobody knew whether it')
@@ -2442,12 +2528,14 @@ if (want(13)) {
   line('## 13. Stake tiers (is carrying more cargo ever worth it?)')
   line('')
   line('**What changed (the mercenary company).** A run is a contract now, and the difficulty')
-  line(`step is its **stake**: every crate of cargo carried is one step — enemies **+${Math.round(STRENGTH_PER_STEP * 100)}% stronger**`)
-  line('and **one more elite an act**, on the map where the player can see it — and costs')
-  line(`${CRATE_PRICE} gold from the bank. Delivered, the crates pay: each city sells its share of them at`)
-  line(`${CRATE_VALUE} gold a crate, the destination's completion bonus rises ${BONUS_PER_CRATE} gold a crate, a skill`)
-  line('comes at every milestone crate and an item chance at every second one. Every city pays')
-  line('by the cargo that arrives (the wagons\' HP). An escort (no crates) is paid a fee at each city.')
+  line('step is its **stake**: every crate of cargo carried is one step — **one more elite an act**, on')
+  line('the map where the player can see it, and raiders on the road\'s **last leg** (act 3) stronger and')
+  line(`greedier (${LAST_LEG.slice(1).map((x) => `+${Math.round(x * 100)}%`).join(' / ')} HP and theft at 1–${LAST_LEG.length - 1} crates) — and costs`)
+  line(`${CRATE_PRICE} gold from the bank. Delivered, the crates pay: the first city sells half the load at ${CITY_CRATE_VALUE[0]} gold`)
+  line(`a crate (the stake back), the second the rest but one at ${CITY_CRATE_VALUE[1]}, and one crate rides to the destination,`)
+  line(`which pays ${CITY_CRATE_VALUE[2]} for it and a completion bonus that rises ${BONUS_PER_CRATE} gold a crate; a skill comes at`)
+  line('every milestone crate and an item chance at every second one. Every city pays by the cargo')
+  line('that arrives (the wagons\' HP). An escort (no crates) is paid a fee at each city.')
   line('')
   line('**The intent is the climb\'s: every tier must cost difficulty AND pay more.** Each tier is')
   line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
@@ -2780,11 +2868,11 @@ if (want(14)) {
    * across variants, so the comparison is paired.
    */
   const VARIETY_TEAMS = 14
-  function variantLeak(depth: number, kind: EncounterKind, variantId: string): number {
+  function variantLeak(depth: number, kind: EncounterKind, variantId: string, pressure = 1): number {
     const rr = new RNG(77)
     const level = mcLevel(depth)
     const rarity: ItemRarity = mcRarity(depth)
-    const threat = threatAtLayer(depth)
+    const threat = threatAtLayer(depth) * pressure
     const wave = generateEncounter(depth, kind, { variantId })
     const ml = maxLeak(wave)
     const out: number[] = []
@@ -3071,10 +3159,30 @@ if (want(14)) {
   line('|--:|---|---|--:|--:|')
   let worstLeakRatio = 1
   let worstLeakCell = ''
+  /**
+   * **The bench must leak to grade a leak ratio (the tuning pass).** At the
+   * road's Threat the classless §6-shaped teams put almost nothing through a
+   * depth-8 node — Plated Column 0.14 base HP, Warded Host 0.00, Swift Raid
+   * 1.11 — and the ratio was read over that near-zero floor (clamped at 0.05):
+   * ×22.14, a number about the clamp, not the shapes. Trap 2 again: a scenario
+   * whose control cannot fail. So each node's pressure is raised on a ×1.15
+   * Threat ladder until its CANONICAL shape (the first) puts through at least
+   * {@link VARIETY_LEAK_FLOOR} of base HP, and every shape of that node is then
+   * measured at that one pressure — paired, as before.
+   */
+  const VARIETY_LEAK_FLOOR = 2
+  const varietyPins: string[] = []
   for (const depth of [8]) {
     for (const kind of ['normal', 'elite'] as EncounterKind[]) {
       const vs = variantsFor(kind, depth)
-      const leaks = vs.map((v) => variantLeak(depth, kind, v.id))
+      let pressure = 1
+      let canon = variantLeak(depth, kind, vs[0].id, pressure)
+      while (canon < VARIETY_LEAK_FLOOR && pressure < 20) {
+        pressure *= 1.15
+        canon = variantLeak(depth, kind, vs[0].id, pressure)
+      }
+      varietyPins.push(`depth ${depth} ${kind} ×${f2(pressure)}`)
+      const leaks = [canon, ...vs.slice(1).map((v) => variantLeak(depth, kind, v.id, pressure))]
       for (let i = 0; i < vs.length; i++) {
         line(
           `| ${depth} | ${kind} | ${vs[i].label || vs[i].id} | ${leaks[i].toFixed(2)} | ${leaks[0] > 0 ? `×${f2(leaks[i] / leaks[0])}` : '—'} |`,
@@ -3100,7 +3208,7 @@ if (want(14)) {
    */
   const MAX_LEAK_RATIO = 2
   line(
-    `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.`,
+    `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely. Pressure over the road's Threat, raised until the canonical shape leaks ≥ ${VARIETY_LEAK_FLOOR} base HP: ${varietyPins.join(', ')}.`,
   )
   line('')
   line('**What this gate is worth, stated plainly.** `budgetScale` is fitted *against*')
@@ -3591,7 +3699,7 @@ if (want(18)) {
   line('company sets a condition at once:')
   line('')
   for (const t of TRADE_OFFS) line(`- **${COMPANIES.find((c) => c.id === t.company)!.name}: ${t.rule}.** ${t.line}`)
-  line('- And every goblin clan marches from the first fight (the muster).')
+  line(`- And every goblin clan marches from the first fight, ${MUSTER_PCT}% stronger and stealing ${MUSTER_PCT}% more (the muster).`)
   line('')
   // The veteran of §13c (`runsim.VETERAN`): the save that opens the door.
   const lateSkills = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
@@ -3624,7 +3732,7 @@ if (want(18)) {
   const all = measure('**Sovereign Route** · all five Sovereign items owned', { contract: charter, itemPool: lateOwned })
   const noGround = measure('Sovereign Route without its ground (fire, lakes, boulders, curses)', { contract: charter, charterParts: { ground: false } })
   const noPrices = measure("Sovereign Route without Rosethread's double prices", { contract: charter, charterParts: { prices: false } })
-  const noMuster = measure('Sovereign Route without the muster (the usual clan ramp)', { contract: charter, charterParts: { muster: false } })
+  const noMuster = measure('Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1)', { contract: charter, charterParts: { muster: false } })
   line('| Road | Delivered | Bank net a run (gold) |')
   line('|---|--:|--:|')
   for (const r of chRows) line(`| ${r.label} | ${pct(r.won)} | ${r.net >= 0 ? '' : '−'}${Math.abs(r.net).toFixed(0)} |`)
@@ -3637,7 +3745,7 @@ if (want(18)) {
   line('')
   line(`**Each condition, lifted one at a time** (delivery against the full charter's ${pct(none.won)}): without the ground ${pct(noGround.won)} (${pp(noGround.won - none.won)}), without the double prices ${pct(noPrices.won)} (${pp(noPrices.won - none.won)}), without the muster ${pct(noMuster.won)} (${pp(noMuster.won - none.won)}). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at ${HUB_RUNS} runs a row the paired noise is several points, so read the signs, not the decimals.`)
   line('')
-  line('_Not tuned. The fee, the payout and the conditions are the designer\'s to set; this section exists so the tuning pass starts from a number._')
+  line('_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster\'s strength (×1.07, which the clans alone did not have). The five conditions are the designer\'s and are as built._')
   line('')
   summary.push(`Sovereign Route (late-game company): delivered ${pct(none.won)} (all five Sovereign items ${pct(all.won)}), bank net ${none.net.toFixed(0)} a charter; break-even ${pct(breakEven)}; lifting each: ground ${pp(noGround.won - none.won)}, prices ${pp(noPrices.won - none.won)}, muster ${pp(noMuster.won - none.won)}`)
 }

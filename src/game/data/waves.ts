@@ -133,10 +133,11 @@ const BUDGET_RATIO_DECAY = 0.8
 const ELITE_BUDGET = 0.8
 /**
  * …and the variant it fields prices itself on top of this (WS8): the three
- * elite shapes carry `budgetScale` 1.03 / 1.25 / 0.96, so a Warded Host — a
- * bomber host whose armour is a magic ward rather than plate — is sold ~30%
- * more HP than a Swift Raid of the same nominal budget, because measured
- * against random depth-8 lines it puts ~35% less through the base per point.
+ * elite shapes carry `budgetScale` 1.03 / 1.1 / 0.86 (1.03 / 1.25 / 0.96 until
+ * the tuning pass re-measured §14c at a pressure where the shapes leak), so a
+ * Warded Host — a bomber host whose armour is a magic ward rather than plate —
+ * is sold ~28% more HP than a Swift Raid of the same nominal budget, because
+ * measured against random depth-8 lines it puts less through the base per point.
  * `ELITE_BUDGET` remains what an elite costs *as a kind*; the scale is what a
  * particular shape is worth. See §14c of the balance report.
  *
@@ -480,7 +481,11 @@ const NORMAL_VARIANTS: readonly WaveVariant[] = [
     // depth-8 lines stop every other shape outright, and the Swarm was the one
     // shape that still leaked (0.21–0.25 Gate a fight against 0 for its
     // siblings), which §14c reads as a ×4–5 spread. At 1.0 it leaks 0.07 (×1.4).
-    budgetScale: 1.0,
+    // 1.0 → 0.95 (the tuning pass, with Bombard 1.02 → 1.12 and Column 1.25 →
+    // 1.2): §14c, re-measured where the canonical shape leaks ≥ 2 Gate HP, read
+    // Bombard 0.54 against Swarm 3.04 (×5.67). Now Patrol 3.29 · Swarm 3.75 ·
+    // Bombard 3.36 · Column 2.14 (×1.75), §14b's HP spread 26%.
+    budgetScale: 0.95,
   },
   {
     id: 'bombard',
@@ -492,7 +497,7 @@ const NORMAL_VARIANTS: readonly WaveVariant[] = [
     tierBump: 0,
     mod: null,
     shape: 'back-load',
-    budgetScale: 1.02,
+    budgetScale: 1.12,
   },
   {
     id: 'column',
@@ -504,7 +509,7 @@ const NORMAL_VARIANTS: readonly WaveVariant[] = [
     tierBump: 0,
     mod: null,
     shape: 'lead-armour',
-    budgetScale: 1.25,
+    budgetScale: 1.2,
   },
 ]
 
@@ -595,7 +600,7 @@ const ELITE_VARIANTS: readonly WaveVariant[] = [
     tierBump: 0,
     mod: 'warded',
     shape: 'even',
-    budgetScale: 1.25,
+    budgetScale: 1.1,
   },
   {
     id: 'swift',
@@ -607,7 +612,7 @@ const ELITE_VARIANTS: readonly WaveVariant[] = [
     tierBump: 0,
     mod: 'swift',
     shape: 'front-load',
-    budgetScale: 0.96,
+    budgetScale: 0.86,
   },
 ]
 

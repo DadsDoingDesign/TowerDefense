@@ -14,7 +14,7 @@ import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
 import { recruitSlate } from '../../game/run/recruits'
 import { contractGrant } from '../../game/run/settle'
-import { cargoPct, cityOfLayer, cityPay, earn, stakeRules } from '../../game/run/contracts'
+import { cargoPct, cityOfLayer, cityPay, contractRules, earn } from '../../game/run/contracts'
 import { stow } from '../../game/run/inventory'
 import { packSale, packSlotsOf } from './purse'
 import { clearBonusGold, mapKind, nodeClearLuck, threatAfterLayer } from '../../game/run/threat'
@@ -32,7 +32,7 @@ import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
 import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
-import { battleHpMult, canStartWave, fieldConflicts } from './selectors'
+import { battleHpMult, battleTheftMult, canStartWave, fieldConflicts } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
 export interface BattleActions {
@@ -204,7 +204,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       // next wave, not the next run. That makes the dial part of the run's
       // reproducibility contract, which is why the recap records it next to
       // the seed (F6).
-      baseDamageMul: assistProfile(useSettingsStore.getState().assist).baseDamageMul,
+      // …and a stake's last leg (and the muster) steals more, on top.
+      baseDamageMul: assistProfile(useSettingsStore.getState().assist).baseDamageMul * battleTheftMult(st),
       // Audio hears every event; the Announcer hears the few a player must be
       // told about (boss phases, the breather, a command) — `combatNotes.ts`.
       onEvent: (e, p) => {
@@ -418,7 +419,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     }
 
     // Advance the map.
-    const rules = stakeRules(st.contract?.crates ?? 0)
+    const rules = contractRules(st.contract)
     const cleared = [...get().clearedNodeIds, activeNodeId]
     const reachable = frontierFrom(runMap, activeNodeId, cleared)
     const wonRun = node.type === 'boss'

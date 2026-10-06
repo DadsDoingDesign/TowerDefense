@@ -25,7 +25,7 @@
  * the Banner ladder *with the same simulator*, which is what makes their
  * numbers comparable to §11's rather than a second opinion.
  */
-import { RNG } from '../src/game/core/rng'
+import { RNG, withOwnIds } from '../src/game/core/rng'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
 import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
@@ -54,17 +54,17 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
-import { ADVANCE, cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractStake, kindCompany, signingCost, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { ADVANCE, cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractRules, contractStake, kindCompany, signingCost, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
 import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
-import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
+import { GATE_REPAIR, merchantLuck, repairGate } from '../src/game/run/economy'
 import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
 import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, ROAD_SHARE, roadShareFor, type DealRules, type HqOrders } from '../src/game/run/hq'
 import { stow } from '../src/game/run/inventory'
 import { useMetaStore } from '../src/state/metaStore'
-import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
+import { difficultyRules, legMult, type DifficultyRules } from '../src/game/run/watch'
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { autoEquipEmpty, type EquipRules } from '../src/game/engine/kit'
@@ -87,6 +87,22 @@ import {
   PLAYER,
   type PlayerPolicy,
 } from './harness'
+
+/**
+ * The per-sub-wave safety cap every simulated battle runs under (Phase 3a: "a
+ * cap, not a clock" — set far above any real clear so a timeout can never be
+ * what ends a run, and REPORT §6 gates on it firing never).
+ *
+ * 600 → 1800s (the tuning pass). Real clears passed 600s: a company of
+ * holders in damage curses holds a Colossus Keg (or a shaman-healed column) at
+ * its posts and grinds it down — §6 run 108's final boss took 1,159s and ended
+ * in a defeat, run 260's depth 11 and 12 took 789s and 908s and were cleared.
+ * At 600s those fights were booked as losses by the clock, and which seed
+ * slogged moved with every curve change (runs 108, 257, 260, 112). The slog
+ * is the game's (it has no clock), and is reported to the designer; the cap
+ * only has to stay above it.
+ */
+export const BATTLE_CAP = 1800
 
 /** The campaign is ten nodes deep on a default map; a wide map is longer. */
 export const NODES = RUN_LAYERS - 1
@@ -482,12 +498,27 @@ export function slotsOn(m: GameMap): string[] {
   return out
 }
 
+/**
+ * Every simulated run mints its entity ids from its OWN counter, starting at 0
+ * (the tuning pass). Skill offers, a hire's skill and the hero pick hash the
+ * hero's id (`run/skills`), and the global counter stood wherever the process
+ * had left it — so the same seed played twice in one process, or after another
+ * section of the report, was dealt different skills. That re-dealt every
+ * paired cell (§12's states, §13's tiers) behind its own back: one stake tier
+ * read 23.2% and 25.3% delivered on the same rules, a run apart. Now a run is
+ * a pure function of its seed and options, wherever it is played.
+ */
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
+  return withOwnIds({ n: 0 }, () => simulateRunOnce(seed, archetype, o))
+}
+
+function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): RunOutcome {
   const meta = o.meta ?? ZERO_META
   const k = o.contract ?? null
   const charter = !!k?.charter
   const parts = { ground: true, prices: true, muster: true, ...o.charterParts }
-  const banner = k ? stakeRules(charter ? 0 : k.crates) : (o.difficulty ?? difficultyRules(0))
+  // A charter's muster is its strength too (`contracts.contractRules`); §18 lifts it with the rest of the muster.
+  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter })) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
   // A contract weights its company's pieces on its own road (`weightPool`), as
   // the store does; the Sovereign Route deals for no company and no focus, and
@@ -609,7 +640,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       // Four items rolled the way `selectNode` rolls them — with the roster's
       // damage-type demand and the run's drought luck — at the store's prices,
       // plus a hire at 80g.
-      const luck = Math.min(0.4, node.layer * 0.04)
+      const luck = merchantLuck(node.layer)
       // The counter's Gate repair, bought when the Gate is hurting (Phase 3b).
       if (baseHp <= meta.maxBaseHp * 0.65 && gold >= price(GATE_REPAIR.price)) {
         gold -= price(GATE_REPAIR.price)
@@ -720,20 +751,22 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
       // composition variants the shipped game would deal it (WS8).
       variantSeed: encounterSeed(seed, node.layer),
       variantSibling: node.row,
-      enemyHpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1),
+      enemyHpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1) * legMult(banner, node.layer),
       baseHp,
       teamMods: relicTeamMods(relics),
       // A cap, not a clock: the game has no timeout, and sub-waves (Phase 3a)
       // run their groups back to back, so a node now takes longer end to end.
       // Set far above any real clear so a timeout can never be the thing that
       // ends a run (the M19 lesson — every loss was once the clock).
-      maxSeconds: o.maxSeconds ?? 600,
+      maxSeconds: o.maxSeconds ?? BATTLE_CAP,
       seed: seed * 131 + node.layer,
       player: o.player ?? PLAYER,
       tactics: o.focus ? { focus: o.focus } : undefined,
       rules: o.rules,
       subWaves: o.subWaves,
       muster,
+      // A stake's last leg (and the muster) steals more (`DifficultyRules`).
+      baseDamageMul: banner.leakMult * legMult(banner, node.layer),
     })
     o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
     baseHp = m.baseHpLeft
@@ -759,7 +792,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     // with `levelXpAwards`, and so does this.
     const awards = levelXpAwards(
       m.perSentinel.map((p) => ({ id: p.id, xpGained: p.xp })),
-      { wave: m.wave, hpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1), depth: node.layer, kind: worth },
+      { wave: m.wave, hpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1) * legMult(banner, node.layer), depth: node.layer, kind: worth },
     )
     const xpById = new Map(diaryXp(awards, roster, relics).map((p) => [p.id, p.xpGained]))
     roster = roster.map((s) => evolve(applyXp(s, xpById.get(s.id) ?? 0)))
@@ -956,9 +989,17 @@ export interface McOutcome {
   timeouts: number
 }
 
+/** One §6 run on its own id counter, as {@link simulateRun}: a pure function of `r`. */
 export function monteCarloRun(
   r: number,
   o: { curve?: (depth: number, kind: EncounterKind) => number; player?: PlayerPolicy; rules?: Partial<EngineRules> } = {},
+): McOutcome {
+  return withOwnIds({ n: 0 }, () => monteCarloRunOnce(r, o))
+}
+
+function monteCarloRunOnce(
+  r: number,
+  o: { curve?: (depth: number, kind: EncounterKind) => number; player?: PlayerPolicy; rules?: Partial<EngineRules> },
 ): McOutcome {
   const runRng = new RNG(hashSeed(r, 'mcteam'))
   const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
@@ -1008,7 +1049,7 @@ export function monteCarloRun(
       // LOSS: re-measured with no cap, most "boss kills" were the clock — the
       // champions had simply not arrived. The game has no timeout; the cap is
       // now a per-sub-wave safety net and REPORT §6 gates on it firing never.
-      maxSeconds: 600,
+      maxSeconds: BATTLE_CAP,
       seed: r * 100 + depth,
       // The modelled player spends the Rally Horn when the fight is on.
       player: o.player ?? PLAYER,
