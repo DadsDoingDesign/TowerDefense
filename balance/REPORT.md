@@ -1264,8 +1264,8 @@ difficulty on the live engine.
 ## 18. The Sovereign Route (the endgame charter)
 
 **What it is.** The endgame charter (`run/charter.ts`): it opens once every skill card and every Level 1–3 item kind is
-unlocked. A **4,000 gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the
-destination pays **24,000 gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns
+unlocked. A **5,000 gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the
+destination pays **16,000 gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns
 standing with all five companies — each what an escort that ended the same way earns with its one (`standing.charterStandingXp`;
 not priced in gold below). It deals every pool the player owns for no company (no route weighting, no HQ focus), and every
 company sets a condition at once:
@@ -1285,15 +1285,15 @@ opens the door — §13c's **veteran**, who reads its skill offers (`build: 'bes
 |---|--:|--:|
 | Escort on Rosethread's road (for scale) | 42% | 625 |
 | 4 crates on Rosethread's road (a good run, for scale) | 25% | 606 |
-| **Sovereign Route** · no Sovereign item owned | 35% | 4691 |
-| **Sovereign Route** · all five Sovereign items owned | 39% | 5620 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 36% | 4933 |
-| Sovereign Route without Rosethread's double prices | 37% | 5193 |
-| Sovereign Route without the muster (the usual clan ramp) | 38% | 5391 |
+| **Sovereign Route** · no Sovereign item owned | 35% | 910 |
+| **Sovereign Route** · all five Sovereign items owned | 39% | 1535 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 36% | 1076 |
+| Sovereign Route without Rosethread's double prices | 37% | 1260 |
+| Sovereign Route without the muster (the usual clan ramp) | 38% | 1382 |
 
-**The charter's delivery rate for this company: 35%** (39% once all five Sovereign items are owned). The payout is 6× the fee, so the charter breaks even at a 17% delivery rate; measured, a charter is worth **+4691 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 35%** (39% once all five Sovereign items are owned). The payout is 3× the fee, so the charter breaks even at a 31% delivery rate; measured, a charter is worth **+910 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 625 gold net from an escort and 606 from a 4-crate contract (cash-out line), so the 4,000 fee is about **6.6 good runs** of savings.
+**The fee against savings.** The same company banks 625 gold net from an escort and 606 from a 4-crate contract (cash-out line), so the 5,000 fee is about **8.3 good runs** of savings.
 
 **Each condition, lifted one at a time** (delivery against the full charter's 35%): without the ground 36% (+1.0pt), without the double prices 37% (+1.9pt), without the muster 38% (+2.9pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
