@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { assertRarityTokensMatch } from '../channels'
-import { Coach } from './Coach'
 import { DetailBand } from './DetailBand'
 import { HeaderBand } from './HeaderBand'
 import { SelectorBand } from './SelectorBand'
@@ -198,9 +197,9 @@ export function RootShell() {
   return (
     <div className={cls} data-battle={battle.layout}>
       <HeaderBand />
-      {/* First-run teaching, in its own grid row so it never covers the Stage
-          and never shifts a control (WS9). Renders nothing once taught. */}
-      <Coach />
+      {/* First-run teaching floats over the Stage's edge as a hint pill
+          (`Coach`, rendered by `StageBand`): no row of its own, so the Stage
+          keeps one box for the whole battle. */}
       <StageBand ctx={ctx} />
       {/* No `ctx`: this band is the party row — except after a cleared normal
           wave, when the reward hand joins it (G3-2), which is what `offers`

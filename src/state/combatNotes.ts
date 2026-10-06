@@ -43,6 +43,15 @@ export function announceCommit(text: string, toast?: string): void {
   useCombatNotes.setState((s) => ({ seq: s.seq + 1, text, at: Date.now(), toast }))
 }
 
+/**
+ * A coach hint, said (October 2026). The hint pill over the Stage is not a
+ * live region — it floats in and fades out on its own — so its words reach a
+ * screen reader through this one polite voice instead.
+ */
+export function announceHint(text: string): void {
+  say(text)
+}
+
 /** Map one engine event to a sentence, or to nothing (most events are silent here). */
 export function noteEngineEvent(e: string, p?: { name?: string; phase?: number }): void {
   if (e === 'bossPhase') {

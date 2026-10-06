@@ -14,7 +14,11 @@
  *
  * The budget they add up to:
  *
- *     header + coach + STAGE + selector + detail  ==  100dvh
+ *     header + STAGE + selector + detail  ==  100dvh
+ *
+ * (There was a fifth row, the coach strip, between the header and the Stage.
+ * October 2026: the coach is a hint pill floating over the Stage's edge and
+ * takes no row — see § coach hint pill.)
  *
  * The Stage is the only `1fr`, so it absorbs the slack — which also means it is
  * the only band that can be squeezed to nothing when the other four ask for
@@ -57,13 +61,11 @@
   /* An explicit single column: without it the Selector's scrolling row sizes
      to max-content and drags the other three bands off the viewport. */
   grid-template-columns: minmax(0, 1fr);
-  /* Five rows, not four: row 2 is the coach strip (WS9). Every band names the
-     row it sits in, so when no tip is live row 2 has no child, resolves to 0px
-     and the layout is byte-identical to the four-band one. Placing them by
-     source order instead would silently promote the Stage into the `auto` row
-     the moment a tip appeared - and the Stage is the only band that must have
-     the `1fr`. */
-  grid-template-rows: auto auto minmax(var(--sh-stage-min), 1fr) auto auto;
+  /* Four rows, one per band, and every band names the row it sits in: the
+     Stage is the only band that must have the `1fr`, and anything else that
+     renders in the shell (the announcer, the toast) is positioned, not a row.
+     The coach strip's row (WS9) is gone — the coach floats over the Stage. */
+  grid-template-rows: auto minmax(var(--sh-stage-min), 1fr) auto auto;
   height: 100dvh;
   max-width: 520px;
   margin: 0 auto;
@@ -78,17 +80,14 @@
 .sh-header {
   grid-row: 1;
 }
-.sh-coach {
+.sh-stage {
   grid-row: 2;
 }
-.sh-stage {
+.sh-selector {
   grid-row: 3;
 }
-.sh-selector {
-  grid-row: 4;
-}
 .sh-detail {
-  grid-row: 5;
+  grid-row: 4;
 }
 
 /* ---------------------------------------------------------------- band 1 */
@@ -1444,36 +1443,89 @@
   font-weight: 700;
 }
 
-/* ========================================================= coach marks (WS9)
-   First-run teaching. One idea at a time, in the band where the idea lives,
-   dismissible, and never shown twice - the seen flags live in `settingsStore`
-   so they outlast the run that taught them.
+/* ===================================================== coach hint pill (WS9)
+   First-run teaching, one idea at a time, never shown twice (the seen flags
+   live in `settingsStore`).
 
-   It is its own grid row rather than an overlay, because the two rules that
-   matter here are that the Stage is never covered and that nothing moves under
-   a finger already coming down. A row appears above the Stage, the Stage gives
-   up the height (it is the only `1fr` band), and every control below it stays
-   exactly where it was. */
+   October 2026: it is NOT a row any more. It was a grid row above the Stage
+   with a "Got it" button — every tip pushed the field down and its leaving
+   pulled it back, and every lesson was a chore to close. Now it is a compact
+   pill that floats over one EDGE of the Stage (`.top` / `.bottom`, chosen per
+   tip in `coachRules.tipWhere`), takes no layout space, takes no pointer
+   (a finger lands on the field under it), and fades out on its own. The
+   Stage keeps one box for the whole battle.
+
+   Contrast: the ground is a near-opaque dark wash, so the text is measured
+   against it, not against the field: --text on it is ~13:1, --accent-text
+   ~8:1, whatever grass or road is underneath. */
 .sh-coach {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  /* Tight on purpose: this row takes its height from the Stage, and the deploy
-     tip is live at exactly the moment the player needs to see the field. */
-  padding: var(--sh-coach-pad) 12px;
-  padding-left: max(12px, var(--safe-left));
-  padding-right: max(12px, var(--safe-right));
-  background: var(--accent-dim);
-  border-bottom: 1px solid var(--line-strong);
+  padding: 8px 12px 8px 10px;
+  border-radius: 14px;
+  background: rgba(20, 13, 7, 0.9);
+  border: 1px solid rgba(224, 172, 76, 0.42);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  opacity: 1;
+  /* `top` too: it steps down for the toast or the plate, and back, smoothly. */
+  transition:
+    opacity var(--sh-pill-fade) ease,
+    top var(--sh-pill-fade) ease;
+  animation: sh-pill-down var(--sh-pill-fade) ease-out both;
+}
+.sh-coach.bottom {
+  top: auto;
+  bottom: 8px;
+  animation-name: sh-pill-up;
+}
+/* A field note answers a tap that was refused: the danger edge, same ground. */
+.sh-coach.note {
+  border-color: rgba(239, 131, 104, 0.6);
+}
+.sh-coach.out {
+  opacity: 0;
+}
+/* Clear of the champion's plate, and of the zoom-to-place line (Q3)… */
+.sh-stage:has(.sh-bossplate) .sh-coach.top {
+  top: calc(var(--sh-bossplate-h) + 6px);
+}
+.sh-stage:has(.place-zoom-hint) .sh-coach.top {
+  top: 40px;
+}
+/* …and of the receipt toast, which drops in just under the header. */
+.shell:has(.pg-toast) .sh-coach.top {
+  top: 52px;
+}
+@keyframes sh-pill-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes sh-pill-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes sh-pill-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* Reduced motion: no slide — a plain fade. (The in-game Reduce motion
+   setting goes further: app.css makes every animation instant.) */
+@media (prefers-reduced-motion: reduce) {
+  .sh-coach,
+  .sh-coach.bottom {
+    animation-name: sh-pill-fade;
+  }
 }
 .sh-coach-glyph {
   flex: 0 0 auto;
-  /* 16px, not 32. The 32px version measured 579.9px of bands in a 568px
-     viewport at 320 Large — dm-reach caught it — because the coach strip is
-     sized by its tallest child and 32px of icon is 12px taller than the 15px
-     text line it replaced. The strip is one line of type; the mark next to it
-     is a line-height thing, not a tile. */
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--accent);
 }
 .sh-coach-text {
@@ -1485,39 +1537,7 @@
   text-wrap: pretty;
 }
 .sh-coach-text b {
-  color: var(--accent);
-}
-/* "Got it" rather than a glyph (M8): `✕` is the renderer's mark for a Sentinel
-   that has fallen, red on dark, on the same screen and in the same phase. The
-   button keeps the 44px square as its FLOOR and grows sideways for the word -
-   `min-width` not `width`, and `white-space: nowrap` so it never becomes two
-   stacked syllables when the strip is squeezed. */
-.sh-coach-dismiss {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  min-width: var(--hit-min);
-  height: var(--hit-min);
-  min-height: var(--hit-min);
-  padding: 0 10px;
-  margin: -6px -6px -6px 0;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
-}
-/* The 44px square must not be what sets the strip's height once the strip is
-   being squeezed — negative margins let it keep its target while the text
-   decides how tall the row is. */
-.sh-coach-dismiss {
-  margin: calc(0px - var(--sh-coach-pad)) calc(0px - var(--sh-coach-pad)) calc(0px - var(--sh-coach-pad)) 0;
-}
-.sh-coach-dismiss:hover {
-  color: var(--text);
+  color: var(--accent-text);
 }
 
 /* ============================================ rarity without colour (M27c)
@@ -1532,6 +1552,14 @@
 }
 .sh-tile-rar,
 .sh-slot-rar {
+  --sh-pill-fade: 220ms;
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 8px;
+  translate: -50% 0;
+  width: max-content;
+  max-width: min(calc(100% - 16px), 400px);
   position: absolute;
   top: 1px;
   left: 3px;
@@ -1556,6 +1584,7 @@
 }
 .sh-slot {
   position: relative;
+  margin: 0;
 }
 .sh-slot-rar {
   top: 2px;
@@ -1793,7 +1822,6 @@
     --sh-detail-h: 186px;
     --sh-header-min: 62px;
     --sh-header-pad: 6px;
-    --sh-coach-pad: 4px;
     --sh-card-glyph: 26px;
     --sh-card-pad: 6px;
     --sh-selrow-pad: 6px;
@@ -1843,7 +1871,7 @@
 }
 @media (orientation: landscape) and (min-height: 501px) and (max-height: 720px) {
   .shell {
-    grid-template-rows: auto auto minmax(140px, 1fr) auto auto;
+    grid-template-rows: auto minmax(140px, 1fr) auto auto;
   }
   /* Both forms, or the `:has()` rule above (more specific) keeps the fixed
      battle height here and the band stops giving ground on a short viewport. */

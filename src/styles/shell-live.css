@@ -9,7 +9,7 @@
  * collapses to the wave strip alone and the Stage — the only `1fr` row — takes
  * every pixel it gave up:
  *
- *     header + coach + STAGE + selector + wave strip  ==  100dvh
+ *     header + STAGE + selector + wave strip  ==  100dvh
  *
  * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
  * The field is width-bound on every portrait phone (the lane runs edge to edge),
@@ -1281,34 +1281,4 @@ h1.sh-brand {
   font-weight: 800;
   line-height: 1.3;
   text-align: center;
-}
-
-/* ==========================================================================
-   2.5 (Oct 2026) — the coach row never moves the Stage mid-wave
-   ==========================================================================
-   A row held open for a live wave (`holdCoachRow`) is one fixed height from
-   the wave's first frame to its last — two lines of tip — whatever it says,
-   or nothing: a tip taught mid-wave leaves it open and quiet. */
-.sh-coach.held {
-  height: calc(2 * 1.35 * var(--fs-xs) + 2 * var(--sh-coach-pad) + 1px);
-  overflow: hidden;
-}
-.sh-coach.held .sh-coach-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.sh-coach.held.empty {
-  background: var(--panel);
-}
-/* With no row held, a field note during a live wave is said in the strip's
-   caption slot for its few seconds — one line, the strip's own height. */
-.sh-wq-cap.note .sh-wq-name {
-  flex: 0 0 auto;
-  color: var(--bad-text);
-}
-.sh-wq-cap.note .sh-wq-now {
-  text-transform: none;
-  letter-spacing: 0;
 }
