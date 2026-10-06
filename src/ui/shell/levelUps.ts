@@ -68,7 +68,8 @@ export const useLevelUps = create<LevelUpState>(() => ({
 type RewardFacts = Pick<
   GameState,
   'screen' | 'runPhase' | 'reward' | 'lastResult' | 'waveBeat' | 'engine' | 'crossroads' | 'runMap' | 'currentNodeId'
->
+> &
+  Partial<Pick<GameState, 'contract'>>
 
 /**
  * The reward is picked in place, under the field — a cleared NORMAL campaign
@@ -82,6 +83,11 @@ export function rewardInPlace(s: RewardFacts): boolean {
   if (s.screen !== 'battle' || s.runPhase !== 'active') return false
   if (s.waveBeat || s.engine || s.crossroads) return false
   if (!s.reward || s.reward.length === 0) return false
+  // A city's payout comes first and takes no offers (`offers.contextOffers`):
+  // a hand in place would be an empty row with no way on. The strip's Continue
+  // leads to the city instead (October 2026: a cleared field must never leave
+  // the player with nothing to tap).
+  if (s.contract?.pending != null) return false
   if (!s.lastResult || s.lastResult.status !== 'cleared') return false
   return s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.type === 'battle'
 }
