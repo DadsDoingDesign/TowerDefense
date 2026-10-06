@@ -5,8 +5,10 @@
  *  - the Stage dims and says the result in one line; the field stays visible
  *    around it (the Stage is sacred: nothing hides it, the fight is just over);
  *  - the Selector holds the company as a compact strip over the reward hand;
- *  - the Context panel holds the picked card's detail and "Take it", or a
- *    levelled hero's choice (`LevelUpPanel`).
+ *  - a tap on a card takes it (one-tap, October 2026); a hold, hover or
+ *    keyboard focus puts its detail in the Context panel instead, which
+ *    otherwise holds the first card's detail, or a levelled hero's choice
+ *    (`LevelUpPanel`).
  * A hero with a level-up waiting glows and wears a "Lv 5 ↑" badge on every
  * roster surface (the strip here, the party row on the map and in setup).
  */
@@ -135,7 +137,7 @@
   min-width: 96px;
   width: auto;
   gap: 4px;
-  padding: 8px 6px 7px;
+  padding: 8px 6px;
   /* 3.9 (Oct 2026): the alternatives are equal weight — a neutral top edge.
      Three different rarity rails competed with the selected card's ring;
      rarity still reads on every card from its pips and word. */
@@ -145,8 +147,13 @@
     box-shadow 120ms ease;
 }
 /* Only the card being read is coloured — its own rarity on the top edge, the
-   gold ring — and lifted off the row. */
-.sh-offer.sh-reward.selected {
+   gold ring — and lifted off the row. With one-tap rewards (October 2026)
+   that is the card whose detail the Context panel holds (`.looking`: the
+   first one to begin with, then whatever was held, hovered or focused), not
+   a choice waiting for a confirm. */
+.sh-offer.sh-reward.looking {
+  background: var(--panel-2);
+  border-color: var(--accent);
   border-top-color: var(--rail, var(--accent));
   transform: translateY(-2px);
   box-shadow:

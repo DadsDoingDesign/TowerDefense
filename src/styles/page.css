@@ -1543,3 +1543,74 @@
 .pg-card:has(> .pg-card-warn) > .pg-card-title {
   font-weight: 700;
 }
+
+/* ==========================================================================
+   One-tap options (October 2026; the designer's call on audit §4 item 8)
+   ==========================================================================
+   A reward card (in place and on the Spoils page) and the campfire's rest
+   and train commit on the tap; a hold, hover or keyboard focus shows the
+   detail (`ui/shell/oneTap.tsx`). Shared here because the reward hand lives
+   in the bands and the boards in pages, and both load this sheet. */
+.onetap {
+  /* A long press is a look: no callout, no text selection, and no
+     double-tap-to-zoom wait on the tap that commits. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+}
+/* The hold, shown filling while the finger is down: a thin bar across the
+   foot of the option that completes as the detail lands (`HOLD_MS`). A short
+   tap commits long before it is half-drawn. */
+.onetap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+.onetap.pressing::after {
+  animation: onetap-hold 350ms linear forwards;
+}
+@keyframes onetap-hold {
+  to {
+    transform: scaleX(1);
+  }
+}
+.onetap.pressing {
+  filter: brightness(1.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  .onetap.pressing::after {
+    animation: none;
+  }
+}
+/* A one-tap row that cannot be taken stays focusable and readable (a tap
+   shows why), so it greys by colour, as `:disabled` rows do. */
+.pg-row.onetap[aria-disabled='true'] {
+  color: var(--dim);
+}
+
+/* "Tap to take · hold to look" — said once, until the first one-tap commit. */
+.onetap-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--muted);
+}
+.onetap-hint b {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+/* On a board it heads the rows it explains. */
+.onetap-hint.pg-hint {
+  padding: 0 4px 8px;
+}
+

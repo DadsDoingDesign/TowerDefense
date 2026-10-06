@@ -68,6 +68,7 @@ import { Tap, tapWord } from '../pointer'
 import { fieldTitle, orientationOf } from '../../game/data/maps'
 import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
 import { LevelUpPanel } from './LevelUpPanel'
+import { OneTapHint, useOneTapUntaught } from './oneTap'
 import { levelUpOpen, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { useShown } from './staging'
 import { conflictCopy, equipWarning } from '../../game/run/clearance'
@@ -96,7 +97,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
       {/* The battle's action bar is a SIBLING of the context panel, not one of
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
-      <WaveBar offers={offers} />
+      <WaveBar />
     </section>
   )
 }
@@ -120,7 +121,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
  * render an enabled action the store then refuses. The deployment gate below is
  * a stricter rule laid on top of it, which is allowed; nothing here relaxes it.
  */
-function WaveBar({ offers }: { offers: Offer[] }) {
+function WaveBar() {
   const screen = useGameStore((s) => s.screen)
   const runPhase = useGameStore((s) => s.runPhase)
   const battlePhase = useGameStore((s) => s.battlePhase)
@@ -142,8 +143,8 @@ function WaveBar({ offers }: { offers: Offer[] }) {
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
-  // 3.2: the reward being read — its commit lives in this strip (below).
-  const pickedReward = useGameStore((s) => (s.shellSelection?.kind === 'offer' ? s.shellSelection.id : null))
+  // One-tap rewards: the strip carries the how-to once (below).
+  const oneTapUntaught = useOneTapUntaught()
   const battleMap = useGameStore((s) => s.battleMap)
   // Weapon clearance: a hero swinging beside another holds the next wave
   // (`run/clearance`). Read off the same inputs the strip already follows —
@@ -172,15 +173,15 @@ function WaveBar({ offers }: { offers: Offer[] }) {
 
   if (lastResult && (battlePhase !== 'battle' || !hasEngine)) {
     /*
-     * 3.2 (Oct 2026; Whales round 1 and 2): with the reward hand in place the
-     * commit is HERE, in the strip's action slot, at full CTA height — not in
-     * the Context panel above, where "Take it" was smaller than the reward
-     * cards and this strip rendered after it, so the one next step was neither
-     * the loudest thing nor the last. The Context panel keeps the detail
-     * (`OfferPanel` drops its own button while the hand is in place), and
-     * the strip's old caption ("take a reward to march on") is the button.
+     * One-tap rewards (October 2026, the designer's call on audit §4 item 8):
+     * with the reward hand in place a tap on a card TAKES it, so there is no
+     * commit here any more — a "Take it" that does what the tap already did
+     * is chrome. The strip's action slot says how the hand works, once
+     * ("Tap to take · hold to look"), until the first one-tap commit; after
+     * that the caption has the strip to itself. The Context panel keeps the
+     * detail of the card being read (`OfferPanel`, no button in place).
      */
-    const reward = inPlace ? offers.find((o) => o.id === pickedReward && o.action) : undefined
+    const hint = inPlace && oneTapUntaught
     return (
       <div className={`sh-wavebar sh-wq-bar${inPlace ? ' commit' : ''}`}>
         {/* No live region here any more (Phase 2): `Announcer` owns the one
@@ -194,13 +195,7 @@ function WaveBar({ offers }: { offers: Offer[] }) {
           </p>
         </div>
         {inPlace ? (
-          <button
-            className="sh-btn primary sh-commit"
-            disabled={!reward || reward.action!.disabled}
-            onClick={() => reward?.action?.run()}
-          >
-            {reward ? reward.action!.label : 'Pick a reward'}
-          </button>
+          hint ? <OneTapHint verb="take" className="sh-wq-hint" /> : null
         ) : (
           <button className="sh-btn primary" onClick={continueAfterWave}>
             Continue
@@ -1624,10 +1619,11 @@ function OfferPanel({ offer }: { offer: Offer }) {
   // Same arm-then-fire confirm the page CTA uses, so a destructive offer is
   // never one tap whichever band it is read in.
   const confirm = useArmedAction(offer.action, offer.id)
-  // 3.2: a reward card in place is committed from the wave strip (`WaveBar`),
-  // at full CTA size and last in reading order; this panel is its detail.
+  // A reward card in place is taken by a tap on the card itself (one-tap,
+  // October 2026); this panel is only its detail, so it carries no button.
+  // Any other one-tap offer is the same.
   const inPlace = useGameStore(rewardInPlace)
-  const primary = offer.action && !inPlace
+  const primary = offer.action && !inPlace && !offer.oneTap
   return (
     <div className="sh-context">
       <div className="sh-context-head">
