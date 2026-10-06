@@ -2709,11 +2709,11 @@ if (want(14)) {
    * across variants, so the comparison is paired.
    */
   const VARIETY_TEAMS = 14
-  function variantLeak(depth: number, kind: EncounterKind, variantId: string): number {
+  function variantLeak(depth: number, kind: EncounterKind, variantId: string, pressure = 1): number {
     const rr = new RNG(77)
     const level = mcLevel(depth)
     const rarity: ItemRarity = mcRarity(depth)
-    const threat = threatAtLayer(depth)
+    const threat = threatAtLayer(depth) * pressure
     const wave = generateEncounter(depth, kind, { variantId })
     const ml = maxLeak(wave)
     const out: number[] = []
@@ -3000,10 +3000,30 @@ if (want(14)) {
   line('|--:|---|---|--:|--:|')
   let worstLeakRatio = 1
   let worstLeakCell = ''
+  /**
+   * **The bench must leak to grade a leak ratio (the tuning pass).** At the
+   * road's Threat the classless §6-shaped teams put almost nothing through a
+   * depth-8 node — Plated Column 0.14 base HP, Warded Host 0.00, Swift Raid
+   * 1.11 — and the ratio was read over that near-zero floor (clamped at 0.05):
+   * ×22.14, a number about the clamp, not the shapes. Trap 2 again: a scenario
+   * whose control cannot fail. So each node's pressure is raised on a ×1.15
+   * Threat ladder until its CANONICAL shape (the first) puts through at least
+   * {@link VARIETY_LEAK_FLOOR} of base HP, and every shape of that node is then
+   * measured at that one pressure — paired, as before.
+   */
+  const VARIETY_LEAK_FLOOR = 2
+  const varietyPins: string[] = []
   for (const depth of [8]) {
     for (const kind of ['normal', 'elite'] as EncounterKind[]) {
       const vs = variantsFor(kind, depth)
-      const leaks = vs.map((v) => variantLeak(depth, kind, v.id))
+      let pressure = 1
+      let canon = variantLeak(depth, kind, vs[0].id, pressure)
+      while (canon < VARIETY_LEAK_FLOOR && pressure < 20) {
+        pressure *= 1.15
+        canon = variantLeak(depth, kind, vs[0].id, pressure)
+      }
+      varietyPins.push(`depth ${depth} ${kind} ×${f2(pressure)}`)
+      const leaks = [canon, ...vs.slice(1).map((v) => variantLeak(depth, kind, v.id, pressure))]
       for (let i = 0; i < vs.length; i++) {
         line(
           `| ${depth} | ${kind} | ${vs[i].label || vs[i].id} | ${leaks[i].toFixed(2)} | ${leaks[0] > 0 ? `×${f2(leaks[i] / leaks[0])}` : '—'} |`,
@@ -3029,7 +3049,7 @@ if (want(14)) {
    */
   const MAX_LEAK_RATIO = 2
   line(
-    `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely.`,
+    `Widest unadapted spread: **×${f2(worstLeakRatio)}** at ${worstLeakCell} (ceiling ×${f2(MAX_LEAK_RATIO)}). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely. Pressure over the road's Threat, raised until the canonical shape leaks ≥ ${VARIETY_LEAK_FLOOR} base HP: ${varietyPins.join(', ')}.`,
   )
   line('')
   line('**What this gate is worth, stated plainly.** `budgetScale` is fitted *against*')
