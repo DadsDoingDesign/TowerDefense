@@ -94,7 +94,32 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * siege pressure there — it cleared ×3.4 at the old ×1.83 — and holds ×2.2 up
  * to a layer-8 Threat of ×3.3).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.29]
+/*
+ * ---- refitted in the tuning pass (the mercenary company) -------------------
+ *
+ * The run-side levers that pass shipped first (caster weapons ×1.6, richer
+ * loot, Rare-weapon hires, the deployment fix) lifted the first runs and left
+ * §6 at 63.7% (band 45–60). Act 3 is where §6 loses and where the first run
+ * fights least (it walks stops and meets the bosses), so the act-3 step is the
+ * dial; the final boss gives back most of what the steeper act would add to it,
+ * because its HP is a stall risk, not a difficulty: at ×1.40 and a ×0.55 boss,
+ * three §6 final bosses ran past the 600s cap (healed or held, never killed).
+ * Measured with `tune.ts 240 fresh mc` (§6 n=300; timeouts over §6's 300 runs):
+ *
+ *   act 3, boss          §6 win  first-timer / adaptive  timeouts
+ *   1.29, ×0.55          63.7%     25.4 / 32.9%             0
+ *   1.34, ×0.55          59.7%     24.2 / 34.6%             —
+ *   1.40, ×0.55          53.3%     22.9 / 27.1%             3 (final boss)
+ *   1.40, ×0.40          59.0%     26.3 / 31.3%             —
+ *   1.42, ×0.43          56.0%     23.3 / 27.1%             1 (a held depth-11 wave a shaman out-healed)
+ *   1.36, ×0.50, elite ×1.15  59.3%  26.3 / 34.6%          1 (same)
+ *   1.40, ×0.45          57.7%     25.4 / 31.3%             0   ← shipped
+ *
+ * (The skill levers of the same pass — Anchor, Keen Eye, Finisher — are in
+ * every row from 1.40/×0.55 down.) §11's strict floor ends 36% of its runs at
+ * depth 6 on this curve (gate 40%; 43% before the pass).
+ */
+export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.4]
 export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]
@@ -124,7 +149,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
  *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
  *    and card luck are paid for by the composition alone now;
- *  - the **final boss** fights at ×0.55 of its layer: it fields all three
+ *  - the **final boss** fights at ×0.45 of its layer (×0.55 before the tuning pass): it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -134,7 +159,9 @@ export function threatAtLayer(layer: number, start = 1): number {
  * substitutes an encounter, never a node (M19-g).
  */
 export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
-  type === 'boss' ? 0.55 : 1
+  // ×0.55 → ×0.45 with the steeper act 3 (the tuning pass, see ACT_STEPS): the
+  // final boss's Threat is ×5.0 where it was ×4.4, not ×6.2.
+  type === 'boss' ? 0.45 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>
