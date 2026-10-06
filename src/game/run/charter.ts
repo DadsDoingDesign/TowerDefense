@@ -21,6 +21,9 @@
  *    cities are waypoints), no cash-out, and a fall loses the fee. Delivered,
  *    the destination pays {@link CHARTER_PAYOUT} in full — cargo does not
  *    scale it — and one Sovereign item kind unlocks ({@link rollSovereign}).
+ *  - **Standing with all five** (`standing.charterStandingXp`, October 2026): the
+ *    road is every company's, so it earns standing with each of them — as much
+ *    as an escort run that ended the same way earns with its one company.
  *  - **Every good, every raider**: the run deals from every pool you own with
  *    no company bias (no route weighting, no HQ focus), and every goblin clan
  *    marches from the first fight (`waves` `muster`).
@@ -59,13 +62,15 @@ export const SOVEREIGN_INITIAL = 'S'
 export const SOVEREIGN_TIER = 'Sovereign'
 
 /**
- * The sponsorship fee, from the bank. A finished escort banks about 400
- * gold and a good staked one about 500 (REPORT §13), so the fee is ten good
- * runs of savings.
+ * The sponsorship fee, from the bank. A finished escort banks about 300–400
+ * gold and a good staked one about 500 (REPORT §13), so the fee is about ten
+ * good runs of savings. October 2026: 5,000 → 4,000 (with the payout raised to
+ * 24,000) — at 5,000 / 20,000 the harness measured a charter at +80 gold
+ * against an escort's +603 (REPORT §18), so it was a trophy, not a contract.
  */
-export const CHARTER_FEE = 5000
-/** What a delivered Sovereign Route pays at its destination: four fees. */
-export const CHARTER_PAYOUT = 20000
+export const CHARTER_FEE = 4000
+/** What a delivered Sovereign Route pays at its destination: six fees. */
+export const CHARTER_PAYOUT = 24000
 /** Rosethread's trade-off: every merchant price on the route is this many times as much. */
 export const CHARTER_PRICE_MULT = 2
 /**

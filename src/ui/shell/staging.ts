@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
-import { ideaShown, menuStaged, metaIdeas, presentIdeas, type IdeaId } from '../../state/staging'
+import { ideaShown, menuStaged, metaIdeas, presentIdeas, revealOf, type IdeaId, type Reveal, type RevealFacts } from '../../state/staging'
 import type { GameState } from '../../state/game/types'
 
 /**
@@ -33,6 +33,29 @@ export function useMenuStaged(): boolean {
   return menuStaged({ runsCompleted: runs }, showEverything)
 }
 
+/** What the meta save has to say to the staggered reveal. */
+export function revealFacts(meta: ReturnType<typeof useMetaStore.getState>): RevealFacts {
+  return {
+    runsCompleted: meta.stats.runsCompleted,
+    runsWon: meta.stats.runsWon,
+    bank: meta.bank,
+    standing: meta.standing,
+    met: meta.met,
+    hqOwned: Object.values(meta.upgrades ?? {}).some((n) => n > 0),
+  }
+}
+
+/** The staggered reveal (`state/staging.revealOf`): what the menu, HQ and contract pages may show yet. */
+export function useReveal(): Reveal {
+  const runsCompleted = useMetaStore((s) => s.stats.runsCompleted)
+  const runsWon = useMetaStore((s) => s.stats.runsWon)
+  const bank = useMetaStore((s) => s.bank)
+  const met = useMetaStore((s) => s.met)
+  const hqOwned = useMetaStore((s) => Object.values(s.upgrades ?? {}).some((n) => n > 0))
+  const showEverything = useSettingsStore((s) => s.showEverything)
+  return revealOf({ runsCompleted, runsWon, bank, met, hqOwned }, showEverything)
+}
+
 /**
  * The latch: every idea the run (or the meta save) has brought to the table is
  * written to `met`, once. Mounted once, at the shell's root, so it runs on
@@ -43,7 +66,7 @@ export function useStagingRecorder(): void {
     const record = () => {
       const g = useGameStore.getState()
       const meta = useMetaStore.getState()
-      const seen = [...metaIdeas(meta.stats), ...(g.runPhase === 'active' && g.screen !== 'hub' ? presentIdeas(g) : [])]
+      const seen = [...metaIdeas(revealFacts(meta)), ...(g.runPhase === 'active' && g.screen !== 'hub' ? presentIdeas(g) : [])]
       if (seen.some((id) => !meta.met.includes(id))) meta.recordMet(seen)
     }
     record()
@@ -69,7 +92,8 @@ export function useStagingRecorder(): void {
         record()
     })
     const offMeta = useMetaStore.subscribe((s, prev) => {
-      if (s.stats !== prev.stats) record()
+      // The bank and standing open the HQ and the stakes (the staggered reveal).
+      if (s.stats !== prev.stats || s.bank !== prev.bank || s.standing !== prev.standing || s.upgrades !== prev.upgrades) record()
     })
     return () => {
       offGame()

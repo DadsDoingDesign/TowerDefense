@@ -1,14 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RANDOM_UNLOCK_SKILLS, skillById } from '../src/game/data/skills'
-import { itemKindById, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { BASIC_ITEM_KINDS, itemKindById, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { watchLevelFor } from '../src/game/run/watch'
-import { standingFor, standingXpFor, standingXpToReach } from '../src/game/run/standing'
+import { standingBonusKind, standingFor, standingXpFor, standingXpToReach } from '../src/game/run/standing'
 import { cityTrade, contractGrant, planPayout, runDeposit } from '../src/game/run/settle'
-import { LOST_ROAD_SHARE, ROAD_SHARE } from '../src/game/run/hq'
-import { freshContract } from '../src/game/run/contracts'
+import { LOST_ROAD_SHARE, MAX_BONUS_ITEMS, ROAD_SHARE } from '../src/game/run/hq'
+import { ADVANCE, freshContract, type ContractTerms, type RunContract } from '../src/game/run/contracts'
 import { STANDARD_RUN, SEEDED_RUN } from '../src/state/seeds'
 import { lastProgress, legacyBannerRefund, META_VERSION, migrateMeta, NEW_BANK, retroWatchXp, useMetaStore } from '../src/state/metaStore'
+
+/**
+ * A contract an older save signed before the company's advance: its purse was
+ * taken from the bank and its rest comes home in full. Kept so the old rule is
+ * proven to settle exactly as it did.
+ */
+const bankPurse = (t: ContractTerms, purse: number): RunContract => ({ ...freshContract(t), purse, advance: false })
 
 /** The mercenary company: the bank, standing, and what a finished contract pays. */
 const contract = (crates: number, status: 'delivered' | 'cashedOut' | 'lost', company = 'metals' as const) => ({ company, crates, status })
@@ -34,6 +41,32 @@ describe('the ledger: settleContract', () => {
     expect(p.standingCards).toHaveLength(p.standingAfter - p.standingBefore)
     // The company's own cards come first.
     for (const id of p.standingCards) expect(skillById(id)!.company).toBe('metals')
+  })
+
+  it('a standing level past the card pool pays a Rare bonus item for the next contract, deterministically', () => {
+    // Every card a level could deal is already unlocked.
+    useMetaStore.setState({ skills: [...RANDOM_UNLOCK_SKILLS], items: ['Pavise'] })
+    const run = { depth: 12, kills: 400, won: true, contract: contract(0, 'delivered'), deposit: 0 }
+    useMetaStore.getState().settleContract(run)
+    const p = lastProgress.run!
+    const levels = p.standingAfter - p.standingBefore
+    expect(levels).toBeGreaterThan(0)
+    expect(p.standingCards).toEqual([])
+    expect(p.standingBonus.map((b) => b.standing)).toEqual(Array.from({ length: levels }, (_, i) => p.standingBefore + 1 + i))
+    for (const b of p.standingBonus) {
+      expect(b.company).toBe('metals')
+      // One of the kinds you own (the basic five, or an unlocked one), never a Sovereign one.
+      expect([...BASIC_ITEM_KINDS, 'Pavise']).toContain(b.kind)
+      // A hash of its own parts: the same level of the same save pays the same kind.
+      expect(standingBonusKind(['Pavise'], 'metals', b.standing, 1)).toBe(b.kind)
+    }
+    expect(useMetaStore.getState().bonusItems).toEqual(p.standingBonus.map((b) => b.kind))
+    // The company's own kinds come first when it has one you own.
+    const own = BASIC_ITEM_KINDS.filter((k) => itemKindById(k)!.company === 'metals')
+    if (own.length) for (let s = 1; s <= 10; s++) expect(itemKindById(standingBonusKind([], 'metals', s, 7))!.company).toBe('metals')
+    // At most MAX_BONUS_ITEMS wait for the next contract.
+    for (let i = 0; i < 6; i++) useMetaStore.getState().settleContract({ ...run, kills: 2000 })
+    expect(useMetaStore.getState().bonusItems.length).toBeLessThanOrEqual(MAX_BONUS_ITEMS)
   })
 
   it('a delivery unlocks the contract’s skill and item, plus a skill per milestone and the stake’s item chances', () => {
@@ -95,16 +128,16 @@ describe('the ledger: settleContract', () => {
 describe('the settle plan', () => {
   const base = { depth: 0, kills: 0, gold: 80, challenge: STANDARD_RUN }
   it('an unsigned contract takes and returns nothing', () => {
-    expect(planPayout({ ...base, contract: freshContract({ company: 'art', crates: 2, market: 1 }, 60) })).toEqual({ kind: 'none' })
+    expect(planPayout({ ...base, contract: freshContract({ company: 'art', crates: 2, market: 1 }) })).toEqual({ kind: 'none' })
   })
-  it('a signed contract walked away from before it was played sends its purse home', () => {
-    const c = { ...freshContract({ company: 'art', crates: 2, market: 1 }, 60), signed: true }
+  it('a signed contract walked away from before it was played sends its purse home (an older save’s bank purse)', () => {
+    const c = { ...bankPurse({ company: 'art', crates: 2, market: 1 }, 60), signed: true }
     expect(planPayout({ ...base, contract: c, gold: 60 })).toEqual({ kind: 'deposit', amount: 60 })
     // Gold above the purse is the road's, whatever the ledger says: a quarter of it comes home.
     expect(planPayout({ ...base, contract: c })).toEqual({ kind: 'deposit', amount: 60 + 5 })
   })
   it('a fall keeps the cities’ pay and the purse', () => {
-    const c = { ...freshContract({ company: 'art', crates: 2, market: 1 }, 60), signed: true, paid: [150, 90], cargoAt: [100, 80] }
+    const c = { ...bankPurse({ company: 'art', crates: 2, market: 1 }, 60), signed: true, paid: [150, 90], cargoAt: [100, 80] }
     expect(runDeposit({ gold: 30, contract: c })).toBe(270)
     const g = contractGrant({ ...base, depth: 9, gold: 30, contract: c }, 'lost')
     expect(g.deposit).toBe(270)
@@ -112,7 +145,7 @@ describe('the settle plan', () => {
   })
   it('a fall banks less of the road’s gold than a finished contract (the stake in pressing on)', () => {
     // Purse 60 kept whole, 400 of road gold in hand.
-    const c = { ...freshContract({ company: 'art', crates: 0, market: 1 }, 60), signed: true, earned: 400, paid: [40] }
+    const c = { ...bankPurse({ company: 'art', crates: 0, market: 1 }, 60), signed: true, earned: 400, paid: [40] }
     const lost = contractGrant({ ...base, depth: 6, gold: 460, contract: c }, 'lost')
     const cashed = contractGrant({ ...base, depth: 6, gold: 460, contract: c }, 'cashedOut')
     expect(cashed.deposit).toBe(40 + 60 + Math.floor(400 * ROAD_SHARE))
@@ -122,7 +155,7 @@ describe('the settle plan', () => {
     expect(runDeposit({ gold: 460, contract: c })).toBe(cashed.deposit)
   })
   it('cityTrade prices the choice by the settle’s own rules', () => {
-    const c = { ...freshContract({ company: 'art', crates: 4, market: 1 }, 60), signed: true, earned: 300, paid: [240], cargoAt: [100], pending: 0 }
+    const c = { ...bankPurse({ company: 'art', crates: 4, market: 1 }, 60), signed: true, earned: 300, paid: [240], cargoAt: [100], pending: 0 }
     const t = cityTrade(c, 360, 100)
     // Cash out: the cities' pay, the 2 crates left at full value, the purse and 25% of the road.
     expect(t.sale).toBe(200)
@@ -131,8 +164,29 @@ describe('the settle plan', () => {
     expect(t.atRisk).toBe(t.now - t.fall)
     expect(t.deliver).toBeGreaterThan(t.now)
     // Nothing on the wagons and no road gold yet: nothing to lose.
-    const bare = { ...freshContract({ company: 'art', crates: 0, market: 1 }, 0), signed: true, paid: [40], cargoAt: [100], pending: 0 }
+    const bare = { ...bankPurse({ company: 'art', crates: 0, market: 1 }, 0), signed: true, paid: [40], cargoAt: [100], pending: 0 }
     expect(cityTrade(bare, 0, 100).atRisk).toBe(0)
+  })
+  it('the company’s advance: every contract carries it, and none of it ever comes home', () => {
+    const fresh = freshContract({ company: 'art', crates: 2, market: 1 })
+    expect(fresh).toMatchObject({ purse: ADVANCE, advance: true })
+    // Walked away before it was played, the advance untouched: nothing banked.
+    const c = { ...fresh, signed: true }
+    expect(planPayout({ ...base, contract: c, gold: ADVANCE })).toEqual({ kind: 'none' })
+    // Spending comes out of the advance first: the rest of the gold is the road's.
+    // 60 advance, 40 spent, 400 earned: 420 in hand, 20 of it the advance's.
+    const road = { ...c, earned: 400, paid: [40] }
+    const cashed = contractGrant({ ...base, depth: 6, gold: 420, contract: road }, 'cashedOut')
+    const lost = contractGrant({ ...base, depth: 6, gold: 420, contract: road }, 'lost')
+    expect(cashed.deposit).toBe(40 + Math.floor(400 * ROAD_SHARE))
+    expect(lost.deposit).toBe(40 + Math.floor(400 * LOST_ROAD_SHARE))
+    // The same road on an older save's bank purse banks the purse's rest too.
+    const old = { ...road, advance: false }
+    expect(contractGrant({ ...base, depth: 6, gold: 420, contract: old }, 'cashedOut').deposit).toBe(cashed.deposit + 20)
+    // The city prices the choice the same way: no advance in "now" or "fall".
+    const t = cityTrade({ ...road, pending: 0, cargoAt: [100] }, 420, 100)
+    expect(t.now).toBe(40 + t.sale + Math.floor(400 * ROAD_SHARE))
+    expect(t.fall).toBe(40 + Math.floor(400 * LOST_ROAD_SHARE))
   })
   it('a custom seed’s grant is unranked; a pre-contract run is owed its old Marks as gold', () => {
     expect(contractGrant({ ...base, challenge: SEEDED_RUN, contract: null }, 'lost').unranked).toBe(true)

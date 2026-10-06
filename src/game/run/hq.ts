@@ -3,22 +3,27 @@
  * The mercenary company's headquarters (build step 3)
  * ---------------------------------------------------------------------------
  *
- * The HQ replaces the Watchtower: one place, three offices, every purchase
+ * The HQ replaces the Watchtower: one place, two offices, every purchase
  * paid from the bank (`metaStore.bank`) and kept for good.
  *
  *  - **HR** — the opening deal: better first heroes ({@link DEAL_STEPS}), and
  *    the Hiring Hall (the old hub service, folded in).
- *  - **Finance** — the bank: gold left at home earns interest at the end of
- *    every FINISHED contract (delivered or cashed out, never lost), capped per
- *    contract so it never out-earns a stake ({@link INTEREST}).
- *  - **Operations** — pack slots, fewer boulders on the fields, company focus
- *    (one company at a time), and the scouts (the old map services, folded in).
+ *  - **Operations** — pack slots, company focus (one company at a time), and
+ *    the scouts (the old map services, folded in).
+ *
+ * The October 2026 designer pass cut the Finance office (its levels paid back
+ * in about 260 runs) and "Fewer boulders" (the harness measured it making runs
+ * 4pt harder); both are refunded by the meta migration ({@link refundRetiredHq}).
+ * The bank keeps the free base interest as a plain rule ({@link BASE_INTEREST}).
  *
  * Also here, because it is the HQ's ledger too:
  *
- *  - **Road gold** ({@link homeGold}): what is left of the purse comes home in
- *    full; of the gold the road paid, only {@link ROAD_SHARE} does. City pay is
- *    banked in full by the contract (`run/contracts`).
+ *  - **Road gold** ({@link homeGold}): of the gold the road paid, only
+ *    {@link ROAD_SHARE} comes home. The company's advance (`contracts.ADVANCE`)
+ *    never does; a purse an older save took from the bank comes home in full.
+ *    City pay is banked in full by the contract (`run/contracts`).
+ *  - **When the HQ opens** ({@link HQ_OPENS_AT}) and when company focus shows
+ *    ({@link FOCUS_FROM_RUN}): the staggered run-2 reveal (`state/staging`).
  *  - **Sealed crates** (the item pull, {@link rollPull}): a gamble on a random
  *    item kind, its odds lifted by standing; a duplicate is a bonus item in the
  *    next run.
@@ -66,7 +71,12 @@ export const roadShareFor = (status?: 'open' | 'delivered' | 'cashedOut' | 'lost
 export interface HomeGold {
   /** The purse it set out with. */
   purse: number
-  /** What is left of that purse — home in full. */
+  /**
+   * The purse was the company's advance (`contracts.ADVANCE`), not the bank's:
+   * what is left of it goes back to the company and none of it is banked.
+   */
+  advance: boolean
+  /** What is left of that purse — home in full, unless it was an advance. */
   purseBack: number
   /** Gold the road paid that is still in the purse. */
   road: number
@@ -80,6 +90,13 @@ export interface HomeGold {
  * Split a run's gold into the purse it set out with and the gold the road
  * paid, and say what comes home.
  *
+ * **The advance** (October 2026): every contract now sets out with the
+ * company's advance instead of a purse taken from the bank. It is split off
+ * the same way, but it never comes home — it was never the bank's — so only
+ * the road's share is banked ({@link homeTotal}). A contract an older save
+ * signed with a purse from the bank (`advance` false) settles exactly as it
+ * always did: its purse's rest comes home in full.
+ *
  * **Spending comes out of the purse first.** A merchant is paid from the purse
  * you brought before any gold the road paid you, so `purseBack` is the purse
  * less everything spent (never below 0), and the rest of the gold in hand is
@@ -88,25 +105,28 @@ export interface HomeGold {
  * happened in, and no payload can claim more of its gold is purse than the
  * purse it set out with.
  */
-export function homeGold(v: { purse: number; earned: number; gold: number }, share = ROAD_SHARE): HomeGold {
+export function homeGold(v: { purse: number; earned: number; gold: number; advance?: boolean }, share = ROAD_SHARE): HomeGold {
   const purse = whole(v.purse)
   const gold = whole(v.gold)
   const spent = Math.max(0, purse + whole(v.earned) - gold)
   const purseBack = Math.min(gold, Math.max(0, purse - spent))
   const road = gold - purseBack
   const s = Math.max(0, Math.min(1, share))
-  return { purse, purseBack, road, roadBanked: Math.floor(road * s), pct: Math.round(s * 100) }
+  return { purse, advance: v.advance === true, purseBack, road, roadBanked: Math.floor(road * s), pct: Math.round(s * 100) }
 }
 
+/** What is left of the purse that the bank gets back: all of it, or none of an advance. */
+export const purseHome = (h: Pick<HomeGold, 'purseBack'> & { advance?: boolean }): number => (h.advance ? 0 : h.purseBack)
+
 /** Everything a run's purse puts back in the bank. */
-export const homeTotal = (h: Pick<HomeGold, 'purseBack' | 'roadBanked'>): number => h.purseBack + h.roadBanked
+export const homeTotal = (h: Pick<HomeGold, 'purseBack' | 'roadBanked'> & { advance?: boolean }): number => purseHome(h) + h.roadBanked
 
 // ---------------------------------------------------------------------------
 // The offices and their prices
 // ---------------------------------------------------------------------------
 
-export type HqId = 'deal' | 'hiring' | 'rate' | 'pack' | 'rocks' | 'focus' | 'scouting'
-export type Office = 'hr' | 'finance' | 'ops'
+export type HqId = 'deal' | 'hiring' | 'pack' | 'focus' | 'scouting'
+export type Office = 'hr' | 'ops'
 
 export interface HqUpgrade {
   id: HqId
@@ -121,17 +141,18 @@ export interface HqUpgrade {
  * Every permanent HQ purchase. Placeholders the tuning pass will move; what
  * each was priced against is beside it.
  *
- * A finished escort run banks roughly 450 gold under the road-gold share (the
- * cities' ~90 + a quarter of ~1,400 road gold, REPORT §13), so the HQ's whole
- * catalogue (~8,800) is twenty-odd runs of saving, and no single level costs
- * more than three runs.
+ * A finished escort run banks roughly 300–450 gold under the road-gold share
+ * (REPORT §13), so the HQ's whole catalogue (~6,700) is twenty-odd runs of
+ * saving, and no single level costs more than three runs.
+ *
+ * October 2026: Finance's interest levels and "Fewer boulders" are gone
+ * ({@link RETIRED_HQ}, refunded); Operations keeps the three purchases with a
+ * felt effect — pack slots, company focus and the scouts.
  */
 export const HQ_UPGRADES: readonly HqUpgrade[] = [
   { id: 'deal', office: 'hr', name: 'Opening deal', costs: [150, 300, 500, 800, 1200] },
   { id: 'hiring', office: 'hr', name: 'Hiring Hall', costs: [180] },
-  { id: 'rate', office: 'finance', name: 'Interest', costs: [200, 400, 700] },
   { id: 'pack', office: 'ops', name: 'Pack slots', costs: [150, 250, 350, 450] },
-  { id: 'rocks', office: 'ops', name: 'Fewer boulders', costs: [250, 450, 700] },
   { id: 'focus', office: 'ops', name: 'Company focus', costs: [250, 500, 800] },
   { id: 'scouting', office: 'ops', name: 'Scouts', costs: [150, 200] },
 ]
@@ -198,43 +219,47 @@ export function dealSummary(level: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Finance — interest on the bank
+// The bank's interest — a plain rule (the Finance office was cut)
 // ---------------------------------------------------------------------------
 
 /**
- * Interest by Finance level: a rate on the gold left in the bank, and the most
- * one contract can pay. Every cap is reached at {@link INTEREST_FULL_AT} gold.
+ * The bank's interest: a rate on the gold left at home, and the most one
+ * contract can pay. Free, with nothing to buy (October 2026: the Finance
+ * office's levels paid back in about 260 runs, so they were cut and refunded).
+ * The cap is reached at {@link INTEREST_FULL_AT} gold.
  *
- * **Why 40 at most.** The smallest stake — one crate, 50 gold — adds +50 to
- * +55 gold to a contract's expected pay over the free escort (REPORT §13,
- * cash-out line, delivery ~18%; the two latest runs), and +90 when it is
- * delivered (it sells for 100 and adds 40 to the completion bonus). A cap of
- * 50 tied the measured one-crate gain, so the top cap is 40: a 10-gold margin
- * under the smallest stake on average, less than half of it on delivery. The
- * bank never out-earns a stake, and it only pays on contracts you finish.
+ * **Why 20.** The smallest stake — one crate, 50 gold — adds about +50 gold to
+ * a contract's expected pay over the free escort (REPORT §13) and +90 when it
+ * is delivered. The bank never out-earns a stake, and it only pays on
+ * contracts you finish.
  */
-export const INTEREST: readonly { rate: number; cap: number }[] = [
-  { rate: 0.02, cap: 20 },
-  { rate: 0.025, cap: 25 },
-  { rate: 0.03, cap: 30 },
-  { rate: 0.04, cap: 40 },
-]
+export const BASE_INTEREST: { readonly rate: number; readonly cap: number } = { rate: 0.02, cap: 20 }
 
-/** A rate as the page prints it: "2.5%". */
+/** A rate as the page prints it: "2%". */
 export const ratePct = (rate: number): string => `${+(rate * 100).toFixed(1)}%`
-/** The bank at which every rate meets its cap. */
+/** The bank at which the rate meets its cap. */
 export const INTEREST_FULL_AT = 1000
 
-export const interestTerms = (level: number): { rate: number; cap: number } => INTEREST[Math.min(INTEREST.length - 1, whole(level))]
-
 /** What a finished contract pays on `bank` gold left at home. */
-export function interestFor(bank: number, level: number): number {
-  const t = interestTerms(level)
-  return Math.min(t.cap, Math.floor(whole(bank) * t.rate))
+export function interestFor(bank: number): number {
+  return Math.min(BASE_INTEREST.cap, Math.floor(whole(bank) * BASE_INTEREST.rate))
 }
 
 /** Which ends earn interest: a finished contract, never a lost one. */
 export const earnsInterest = (status: 'delivered' | 'cashedOut' | 'lost' | 'open'): boolean => status === 'delivered' || status === 'cashedOut'
+
+/** The bank's rule, in one line, wherever the bank is shown. */
+export const interestLine = (): string =>
+  `Your bank earns ${ratePct(BASE_INTEREST.rate)} each time you finish a contract, up to ${BASE_INTEREST.cap} gold. A lost contract earns none.`
+
+// ---------------------------------------------------------------------------
+// The staggered reveal (October 2026): when the HQ and company focus open
+// ---------------------------------------------------------------------------
+
+/** The HQ opens the first time the bank holds this much (and stays open: a latch, `state/staging`). */
+export const HQ_OPENS_AT = 500
+/** Company focus shows from this many finished contracts. */
+export const FOCUS_FROM_RUN = 5
 
 // ---------------------------------------------------------------------------
 // Operations
@@ -243,17 +268,6 @@ export const earnsInterest = (status: 'delivered' | 'cashedOut' | 'lost' | 'open
 /** Pack slots a new militia has; each Pack slots level adds one. */
 export const PACK_BASE = 6
 export const packSlots = (level: number): number => PACK_BASE + Math.min(hqMax('pack'), whole(level))
-
-/**
- * Boulders. Every battle's field lays {@link OBSTACLES} seeded boulder patches
- * (`data/hazards.ts`); each "Fewer boulders" level takes one away for good,
- * and a paid order clears {@link ROCK_ORDER_CUT} more for one contract. The
- * field always keeps `hazards.MIN_OBSTACLES` of them, and a quarry road's own
- * extra boulders (its route ground) are never cleared.
- */
-export const ROCK_ORDER_CUT = 2
-export const ROCK_ORDER_PRICE = 60
-export const rocksCut = (level: number, ordered: boolean): number => Math.min(hqMax('rocks'), whole(level)) + (ordered ? ROCK_ORDER_CUT : 0)
 
 /**
  * Company focus: ONE company at a time. Each level adds {@link FOCUS_STEP}
@@ -276,19 +290,21 @@ export const scoutsAt = (level: number): { standingOrders: boolean; wideMap: boo
 
 /** The orders a run can be sent out with, paid for once, at the HQ. */
 export interface HqOrders {
-  /** Clear {@link ROCK_ORDER_CUT} more boulders from every field of the next contract. */
-  rocks: boolean
   /** One more focus step for the next contract. */
   focus: boolean
 }
-export const NO_ORDERS: HqOrders = { rocks: false, focus: false }
+export const NO_ORDERS: HqOrders = { focus: false }
 
 /**
  * What the HQ gives one run, frozen on its contract when the run begins — a
  * purchase made while a run is saved never changes that run.
  */
 export interface RunHq {
-  /** Seeded boulder patches cleared from every field. */
+  /**
+   * Seeded boulder patches cleared from every field. Always 0 for a contract
+   * signed now ("Fewer boulders" was cut, October 2026); a run an older save
+   * signed keeps what it was sent out with.
+   */
   rocks: number
   /** The focused company, or null. */
   focus: CompanyId | null
@@ -302,15 +318,18 @@ export const BASE_RUN_HQ: RunHq = { rocks: 0, focus: null, boost: 0, pack: PACK_
 /** The run terms the HQ gives a contract beginning now. */
 export function runHqFor(levels: Readonly<Record<string, number>>, focus: CompanyId | null, orders: HqOrders): RunHq {
   return {
-    rocks: rocksCut(hqLevel(levels, 'rocks'), orders.rocks),
+    rocks: 0,
     focus,
     boost: focus ? focusBoost(hqLevel(levels, 'focus'), orders.focus) : 0,
     pack: packSlots(hqLevel(levels, 'pack')),
   }
 }
 
-/** The most a run's HQ terms can hold — the snapshot's clamp. */
-export const MAX_ROCKS_CUT = 3 + ROCK_ORDER_CUT
+/**
+ * The most a run's HQ terms can hold — the snapshot's clamp. Boulders: what a
+ * run an older save signed could carry (3 levels and a 2-patch order).
+ */
+export const MAX_ROCKS_CUT = 5
 export const MAX_FOCUS_BOOST = FOCUS_STEP * 4
 export const MAX_PACK = PACK_BASE + 4
 
@@ -364,6 +383,35 @@ export function foldOldHub(old: Readonly<Record<string, number>>): { levels: HqL
 }
 
 // ---------------------------------------------------------------------------
+// Retired in October 2026: the Finance office and "Fewer boulders"
+// ---------------------------------------------------------------------------
+
+/**
+ * What each retired purchase's levels cost, for the refund (meta v11):
+ * Finance's interest levels (`rate`) and "Fewer boulders" (`rocks`).
+ */
+export const RETIRED_HQ: Readonly<Record<string, readonly number[]>> = {
+  rate: [200, 400, 700],
+  rocks: [250, 450, 700],
+}
+/** What the retired one-contract boulder order cost. */
+export const RETIRED_ROCK_ORDER = 60
+
+/**
+ * The meta migration's refund (v11): every retired level bought, at what it
+ * cost, and a boulder order paid for but not yet spent.
+ */
+export function refundRetiredHq(upgrades: Readonly<Record<string, number>>, orders: unknown): number {
+  let refund = 0
+  for (const [id, costs] of Object.entries(RETIRED_HQ)) {
+    const n = Math.min(costs.length, whole(upgrades[id]))
+    for (let k = 0; k < n; k++) refund += costs[k]
+  }
+  const o = orders && typeof orders === 'object' ? (orders as Record<string, unknown>) : {}
+  return refund + (o.rocks === true ? RETIRED_ROCK_ORDER : 0)
+}
+
+// ---------------------------------------------------------------------------
 // Sealed crates — the item pull
 // ---------------------------------------------------------------------------
 
@@ -374,6 +422,9 @@ export function foldOldHub(old: Readonly<Record<string, number>>): { levels: HqL
  * playing stays the surer way to unlock gear, and the crate is a side bet.
  */
 export const PULL_PRICE = 500
+
+/** The sealed crates open after the first DELIVERED contract (the staggered reveal, `state/staging`). */
+export const cratesOpenFor = (delivered: number): boolean => whole(delivered) >= 1
 
 /** The odds of each Level, in whole percent, before standing lifts them. */
 export const PULL_BASE: readonly [number, number, number] = [70, 22, 8]

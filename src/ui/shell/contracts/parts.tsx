@@ -162,16 +162,18 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
 /**
  * The contract being set up, on the hero pick: whose road, how much cargo, to
  * where, and the purse — so a first-timer (who never sees the board) still
- * reads that this run is a job for someone.
+ * reads that this run is a job for someone. The purse is the company's
+ * advance on every contract signed now (October 2026), and says so.
  */
-export function ContractChip({ company, crates, purse }: { company: CompanyId | null; crates: number; purse: number }) {
+export function ContractChip({ company, crates, purse, advance = false }: { company: CompanyId | null; crates: number; purse: number; advance?: boolean }) {
+  const word = advance ? 'advance' : 'purse'
   if (!company) {
     // The Sovereign Route: no company's, every good, the fee already on the charter page.
     return (
       <p className="ct-contract-chip sovereign" style={{ '--co': SOVEREIGN_VAR } as CSSProperties}>
         <SovereignCrest scale={1} />
         <span>
-          <b>{CHARTER_NAME}</b> · every good to {CHARTER_TOWNS[2]} · purse <Gold n={purse} scale={1} />
+          <b>{CHARTER_NAME}</b> · every good to {CHARTER_TOWNS[2]} · {word} <Gold n={purse} scale={1} />
         </span>
       </p>
     )
@@ -181,7 +183,7 @@ export function ContractChip({ company, crates, purse }: { company: CompanyId | 
     <p className="ct-contract-chip" style={{ '--co': companyVar(company) } as CSSProperties}>
       <Crest company={company} scale={1} />
       <span>
-        <b>{co.name}</b> · {crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'escort'} to {co.towns[2]} · purse <Gold n={purse} scale={1} />
+        <b>{co.name}</b> · {crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'escort'} to {co.towns[2]} · {word} <Gold n={purse} scale={1} />
       </span>
     </p>
   )

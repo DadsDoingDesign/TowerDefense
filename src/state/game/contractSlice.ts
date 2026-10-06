@@ -7,26 +7,14 @@
  */
 import { hashSeed, newRunSeed } from '../../game/core/rng'
 import { COMPANY_IDS, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
-import {
-  canCashOut,
-  cargoPct,
-  cashOutValue,
-  clampCrates,
-  clampPurse,
-  CRATE_PRICE,
-  crateCap,
-  DEFAULT_PURSE,
-  defaultPurse,
-  marketOfDay,
-  utcDateKey,
-} from '../../game/run/contracts'
+import { canCashOut, cargoPct, cashOutValue, clampCrates, CRATE_PRICE, crateCap, marketOfDay, marketOpen, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
 import { CHARTER_FEE, charterDoor } from '../../game/run/charter'
 import { contractGrant } from '../../game/run/settle'
 import { sfx } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { useSettingsStore } from '../settingsStore'
-import { menuStaged } from '../staging'
+import { menuStaged, stakesShown } from '../staging'
 import { STANDARD_RUN } from '../seeds'
 import { buildRecap } from './recap'
 import { settleFactsFromState } from './settle'
@@ -36,10 +24,10 @@ import type { ContractBoard, Slice } from './types'
 export interface ContractActions {
   /**
    * "Start a Run": the contract board. A first-timer (LS3) skips it — one free
-   * escort for Peppercorn Co., straight to the hero pick; the board, the
-   * stakes, the purse and the cash-out open after the first finished
-   * contract. `terms` pre-sets the board (the end screen's "another
-   * contract"); `step` opens it on the terms.
+   * escort for Peppercorn Co., straight to the hero pick; the board and the
+   * cash-out open after the first finished contract, stakes per company at
+   * standing 2 with it (the staggered reveal). `terms` pre-sets the board (the
+   * end screen's "another contract"); `step` opens it on the terms.
    */
   openContracts: (terms?: Partial<ContractOrder>, step?: ContractBoard['step']) => void
   /** Choose a company on the board. */
@@ -50,22 +38,20 @@ export interface ContractActions {
   boardBack: () => void
   /** Set the stake (0: the free escort), clamped to the standing cap and the bank. */
   setCrates: (crates: number) => void
-  /** Set the purse, clamped to what the bank holds after the stake. */
-  setPurse: (purse: number) => void
   /** Sign the contract on the board's terms: on to the hero pick. */
   signContract: () => void
   /**
    * Sponsor the Sovereign Route (the endgame charter): on to the hero pick,
-   * with the default purse. Refused while the door is shut or the bank cannot
-   * pay the fee. The fee leaves the bank when the hero is committed, as a
-   * stake does.
+   * with the company advance every contract carries. Refused while the door
+   * is shut or the bank cannot pay the fee. The fee leaves the bank when the
+   * hero is committed, as a stake does.
    */
   signCharter: () => void
   /** At a city: keep going for the bigger payout. */
   pressOn: () => void
   /**
-   * At a city: sell the crates still on the wagons at half their value and
-   * head home. Standing earned so far is kept; no completion bonus, no item
+   * At a city: sell the crates still on the wagons at full value and head
+   * home. Standing earned so far is kept; no completion bonus, no item
    * chances, no contract skill.
    */
   cashOut: () => void
@@ -73,13 +59,15 @@ export interface ContractActions {
 
 type Meta = ReturnType<typeof useMetaStore.getState>
 
-/** The most crates this save can stake with `company`: its standing cap, and what the bank can pay. */
+/**
+ * The most crates this save can stake with `company`: none until stakes open
+ * with it (standing 2, the staggered reveal), then its standing cap and what
+ * the bank can pay.
+ */
 export function stakeCap(meta: Pick<Meta, 'standing' | 'bank'>, company: CompanyId): number {
+  if (!stakesShown(meta.standing, company, useSettingsStore.getState().showEverything)) return 0
   return Math.min(crateCap(standingOf(meta.standing, company)), Math.floor(Math.max(0, meta.bank) / CRATE_PRICE))
 }
-
-/** The purse a Sovereign Route sets out with: the default one, if the bank can fund it past the fee. */
-export const charterPurse = (bank: number): number => clampPurse(DEFAULT_PURSE, Math.max(0, bank) - CHARTER_FEE)
 
 /** Whether this save may sponsor the Sovereign Route now: the door open, the fee in the bank, and no first contract pending. */
 export function charterOpen(meta: Pick<Meta, 'skills' | 'items' | 'bank' | 'stats'>): boolean {
@@ -87,18 +75,18 @@ export function charterOpen(meta: Pick<Meta, 'skills' | 'items' | 'bank' | 'stat
   return charterDoor({ skills: meta.skills, items: meta.items ?? [] }).open && meta.bank >= CHARTER_FEE
 }
 
-/** The company the board opens on: the one asked for, today's market, or the first that hires. */
-function boardCompany(meta: Pick<Meta, 'standing'>, want?: CompanyId): CompanyId {
+/** The company the board opens on: the one asked for, today's market (once it is open), or the first that hires. */
+function boardCompany(meta: Pick<Meta, 'standing' | 'stats'>, want?: CompanyId): CompanyId {
   const open = COMPANY_IDS.filter((c) => companyOpen(c, meta.standing))
   if (want && open.includes(want)) return want
   const hot = marketOfDay(utcDateKey())
-  return open.includes(hot) ? hot : (open[0] ?? FIRST_COMPANY)
+  const market = marketOpen(meta.stats.runsCompleted) || useSettingsStore.getState().showEverything
+  return market && open.includes(hot) ? hot : (open[0] ?? FIRST_COMPANY)
 }
 
-/** A board with its stake and purse clamped to what this save may set. */
+/** A board with its stake clamped to what this save may set. */
 function clampBoard(b: ContractBoard, meta: Pick<Meta, 'standing' | 'bank'>): ContractBoard {
-  const crates = clampCrates(b.crates, stakeCap(meta, b.company))
-  return { ...b, crates, purse: clampPurse(b.purse, meta.bank - crates * CRATE_PRICE) }
+  return { ...b, crates: clampCrates(b.crates, stakeCap(meta, b.company)) }
 }
 
 export const createContractSlice: Slice<ContractActions> = (set, get) => ({
@@ -106,13 +94,13 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
     const meta = useMetaStore.getState()
     if (menuStaged(meta.stats, useSettingsStore.getState().showEverything)) {
       // LS3: the first contract is one free escort — no board, no stakes, no
-      // purse choice, no market. The purse is the default one.
-      get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: FIRST_COMPANY, crates: 0, purse: defaultPurse(meta.bank) })
+      // market. The purse is the company's advance, as on every contract.
+      get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: FIRST_COMPANY, crates: 0 })
       return
     }
     const company = boardCompany(meta, terms?.company ?? undefined)
     const board = clampBoard(
-      { seed: newRunSeed(), company, step, crates: terms?.crates ?? 0, purse: terms?.purse ?? defaultPurse(meta.bank) },
+      { seed: newRunSeed(), company, step, crates: terms?.crates ?? 0 },
       meta,
     )
     set({ screen: 'contracts', board, shellSelection: null })
@@ -147,14 +135,6 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
     useSettingsStore.getState().markTaught('stakes')
   },
 
-  setPurse: (purse) => {
-    const b = get().board
-    if (!b) return
-    const meta = useMetaStore.getState()
-    set({ board: { ...b, purse: clampPurse(purse, meta.bank - b.crates * CRATE_PRICE) } })
-    useSettingsStore.getState().markTaught('purse')
-  },
-
   signContract: () => {
     const b = get().board
     if (!b) return
@@ -163,13 +143,13 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
     const terms = clampBoard(b, meta)
     useSettingsStore.getState().markTaught('board')
     // Each company's contract on this board deals its own seed.
-    get().beginCampaign(hashSeed(b.seed, 'contract', b.company), STANDARD_RUN, { company: terms.company, crates: terms.crates, purse: terms.purse })
+    get().beginCampaign(hashSeed(b.seed, 'contract', b.company), STANDARD_RUN, { company: terms.company, crates: terms.crates })
   },
 
   signCharter: () => {
     const meta = useMetaStore.getState()
     if (!charterOpen(meta)) return sfx('error')
-    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: null, charter: true, crates: 0, purse: charterPurse(meta.bank) })
+    get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: null, charter: true, crates: 0 })
   },
 
   pressOn: () => {

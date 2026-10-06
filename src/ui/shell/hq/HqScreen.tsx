@@ -1,32 +1,27 @@
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { COMPANIES, companyById, type CompanyId } from '../../../game/data/companies'
 import { itemPoolFor } from '../../../game/data/itemKinds'
-import { contractPlan, crateCap, kindCompany, poolShare, weightPool } from '../../../game/run/contracts'
+import { kindCompany, poolShare, weightPool } from '../../../game/run/contracts'
 import {
+  BASE_INTEREST,
   DEAL_STEPS,
   dealSummary,
+  FOCUS_FROM_RUN,
   FOCUS_ORDER_PRICE,
   FOCUS_STEP,
   focusBoost,
   hqCost,
   hqLevel,
   hqMax,
-  INTEREST,
-  INTEREST_FULL_AT,
   interestFor,
-  interestTerms,
   packSlots,
   PACK_BASE,
   ratePct,
-  ROCK_ORDER_CUT,
-  ROCK_ORDER_PRICE,
-  rocksCut,
   scoutsAt,
   type HqId,
   type Office,
 } from '../../../game/run/hq'
-import { MIN_OBSTACLES, OBSTACLES } from '../../../game/data/hazards'
-import { companyOpen, topStanding } from '../../../game/run/standing'
+import { companyOpen } from '../../../game/run/standing'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { companyVar, moneyText } from '../../channels'
@@ -34,13 +29,19 @@ import { Icon } from '../../Icon'
 import { Crest, Lock } from '../../pixel'
 import { heroArt } from '../offers'
 import { ContractPage, Gold, PageTip } from '../contracts/parts'
+import { useReveal } from '../staging'
 
 /**
  * The mercenary company's headquarters (build step 3; mockups
- * `trade/r3/7-hq-hr.png`, `7-hq-finance.png`, `7-hq-ops.png`): one page, three
- * offices behind tabs. Every card is one purchase or one order, says what it
- * does in one line, and shows its price on its button. Every number is read
- * off `game/run/hq.ts`; the store refuses whatever the bank cannot pay.
+ * `trade/r3/7-hq-hr.png`, `7-hq-ops.png`): one page, two offices behind tabs,
+ * and the bank's one rule (its free interest) under the tabs. Every card is
+ * one purchase or one order, says what it does in one line, and shows its
+ * price on its button. Every number is read off `game/run/hq.ts`; the store
+ * refuses whatever the bank cannot pay.
+ *
+ * October 2026: the Finance office (its levels paid back in ~260 runs) and
+ * "Fewer boulders" (−4pt measured) are gone; Operations keeps pack slots,
+ * company focus (shown from the fifth finished contract) and the scouts.
  */
 export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initial?: Office }) {
   const [office, setOffice] = useState<Office>(initial)
@@ -48,7 +49,6 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
   const taught = useSettingsStore((s) => s.taught.hq)
   const OFFICES: [Office, string][] = [
     ['hr', 'HR'],
-    ['finance', 'Finance'],
     ['ops', 'Operations'],
   ]
   return (
@@ -68,7 +68,7 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
               <h1 className="ct-title" tabIndex={-1}>
                 Headquarters
               </h1>
-              <span>Your militia · 3 offices</span>
+              <span>Your militia · 2 offices</span>
             </span>
           </div>
           <span className="ct-chip" title="Your bank">
@@ -96,8 +96,9 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
         ))}
       </div>
       {!taught && <PageTip>Everything here is paid from your bank and lasts for good. An order lasts one contract.</PageTip>}
+      <BankLine bank={bank} />
       <div className="hq-body" role="tabpanel" id={`hq-panel-${office}`} aria-labelledby={`hq-tab-${office}`}>
-        {office === 'hr' ? <HrOffice /> : office === 'finance' ? <FinanceOffice /> : <OpsOffice />}
+        {office === 'hr' ? <HrOffice /> : <OpsOffice />}
       </div>
     </ContractPage>
   )
@@ -197,60 +198,26 @@ function HrOffice() {
 }
 
 // ---------------------------------------------------------------------------
-// Finance
+// The bank: its one rule, where the bank is shown
 // ---------------------------------------------------------------------------
 
-function FinanceOffice() {
-  const bank = useMetaStore((s) => s.bank)
+/**
+ * The bank's free interest (`hq.BASE_INTEREST`), a plain rule since the
+ * Finance office was cut: the rate, the cap, and what the next finished
+ * contract pays on the bank as it stands.
+ */
+function BankLine({ bank }: { bank: number }) {
   const last = useMetaStore((s) => s.lastInterest)
-  const standing = useMetaStore((s) => s.standing)
-  const rate = useBuy('rate')
-  const now = interestTerms(rate.level)
-  const next = INTEREST[rate.level + 1]
-  const payout = interestFor(bank, rate.level)
-  // Bank vs. stake: the most interest pays against what the smallest stake and
-  // the biggest you may carry add to a delivered contract, at full cargo.
-  const escort = contractPlan({ company: 'spice', crates: 0, market: 1 }).profit
-  const one = contractPlan({ company: 'spice', crates: 1, market: 1 }).profit - escort
-  const most = crateCap(topStanding(standing))
-  const big = contractPlan({ company: 'spice', crates: most, market: 1 }).profit - escort
-  const top = Math.max(big, one, now.cap)
-  const bars: [string, number, string][] = [
-    ['Interest, at most', now.cap, 'var(--accent)'],
-    ['1-crate stake', one, 'var(--co-spice)'],
-    ...(most > 1 ? ([[`${most}-crate stake`, big, 'var(--co-spice)']] as [string, number, string][]) : []),
-  ]
   return (
-    <>
-      <Card title="The bank" line="Gold left here earns interest each time you finish a contract.">
-        <p className="hq-big" aria-label={moneyText(bank)}>
-          <Gold n={bank} scale={3} />
-        </p>
-        <Row k="Interest" v={`${ratePct(now.rate)} per finished contract`} />
-        <Row k="Most per contract" v={`${now.cap} gold`} />
-        <Row k="Next contract" v={`+${payout} gold`} tone="good" />
-        {last != null && <Row k="Last contract" v={`+${last} gold`} />}
-        <p className="hq-note">
-          You set out with a purse; the rest stays here and earns. A lost contract earns nothing. Interest is capped, so staking cargo always pays more.
-        </p>
-        <BuyButton
-          label={next ? `Raise the rate to ${ratePct(next.rate)} · most ${next.cap}` : 'Maxed'}
-          cost={rate.cost}
-          can={rate.can}
-          run={rate.buy}
-          done={`The top rate. It fills at ${INTEREST_FULL_AT.toLocaleString('en')} gold banked.`}
-        />
-      </Card>
-      <Card title="Bank vs. stake" line="What one delivered contract adds each way, in gold.">
-        {bars.map(([label, n, color]) => (
-          <div className="hq-cmp" key={label}>
-            <span>{label}</span>
-            <i style={{ width: `${Math.max(4, (100 * n) / top)}%`, background: color }} />
-            <b>+{n}</b>
-          </div>
-        ))}
-      </Card>
-    </>
+    <p className="hq-bankline" role="note">
+      <span>
+        <b>Bank interest</b> · next finished contract <b className="tone-good">+{interestFor(bank)}</b>
+      </span>
+      <small>
+        {ratePct(BASE_INTEREST.rate)} of the bank each finished contract, up to {BASE_INTEREST.cap}
+        {last != null ? ` · last +${last}` : ''}. Free.
+      </small>
+    </p>
   )
 }
 
@@ -260,13 +227,9 @@ function FinanceOffice() {
 
 function OpsOffice() {
   const pack = useBuy('pack')
-  const rocks = useBuy('rocks')
   const scouts = useBuy('scouting')
-  const orders = useMetaStore((s) => s.orders)
-  const bank = useMetaStore((s) => s.bank)
-  const buyOrder = useMetaStore((s) => s.buyOrder)
+  const reveal = useReveal()
   const slots = packSlots(pack.level)
-  const fields = Math.max(Math.min(OBSTACLES, MIN_OBSTACLES), OBSTACLES - rocksCut(rocks.level, orders.rocks))
   const scoutNow = scoutsAt(scouts.level)
   return (
     <>
@@ -279,19 +242,7 @@ function OpsOffice() {
         <BuyButton label={`Add a slot · ${slots + 1} of ${PACK_BASE + pack.max}`} cost={pack.cost} can={pack.can} run={pack.buy} done={`${slots} slots: the biggest pack there is.`} />
       </Card>
 
-      <Card title="Boulders" line={`Rocks that block where heroes can stand. Each field lays ${OBSTACLES}; at least ${MIN_OBSTACLES} always stand.`}>
-        <Row k="Your next fields" v={`${fields} boulders`} />
-        <div className="hq-acts">
-          {orders.rocks ? (
-            <p className="hq-done">Cleared for your next contract.</p>
-          ) : (
-            <BuyButton wide={false} label={`Clear ${ROCK_ORDER_CUT} for one contract`} cost={ROCK_ORDER_PRICE} can={bank >= ROCK_ORDER_PRICE} run={() => buyOrder('rocks')} done="" />
-          )}
-          <BuyButton wide={false} label={`Fewer for good · ${rocks.level}/${rocks.max}`} cost={rocks.cost} can={rocks.can} run={rocks.buy} done={`${rocks.max} fewer, for good.`} />
-        </div>
-      </Card>
-
-      <FocusCard />
+      {reveal.focus ? <FocusCard /> : <FocusLocked />}
 
       <Card title="Scouts" line="Your scouts map the road before you march.">
         <Row k="Level 1" v={scoutNow.standingOrders ? '✓ Every ambush has a way around' : 'Every ambush has a way around'} />
@@ -299,6 +250,20 @@ function OpsOffice() {
         <BuyButton label={`Train the scouts · level ${scouts.level + 1}`} cost={scouts.cost} can={scouts.can} run={scouts.buy} done="Fully trained." />
       </Card>
     </>
+  )
+}
+
+/** Company focus before it shows (the staggered reveal): what it is, and when it opens. */
+function FocusLocked() {
+  const runs = useMetaStore((s) => s.stats.runsCompleted)
+  return (
+    <section className="hq-card is-locked" aria-label={`Company focus: opens after your ${FOCUS_FROM_RUN}th finished contract`}>
+      <h2>
+        <Lock scale={2} /> Company focus
+      </h2>
+      <p className="hq-line">One company at a time. Its skills and items fill more of the pool, on every road.</p>
+      <Row k={`Opens after your ${FOCUS_FROM_RUN}th finished contract`} v={`${Math.min(runs, FOCUS_FROM_RUN)} of ${FOCUS_FROM_RUN}`} />
+    </section>
   )
 }
 
@@ -315,6 +280,8 @@ function FocusCard() {
   const orders = useMetaStore((s) => s.orders)
   const bank = useMetaStore((s) => s.bank)
   const buyOrder = useMetaStore((s) => s.buyOrder)
+  const taught = useSettingsStore((s) => s.taught.focus)
+  const learn = () => useSettingsStore.getState().markTaught('focus')
   const f = useBuy('focus')
   const boost = focusBoost(f.level, orders.focus)
   const co = focus ? companyById(focus) : null
@@ -323,6 +290,7 @@ function FocusCard() {
   const after = focus ? Math.round(100 * poolShare(weightPool(pool, null, kindCompany, { company: focus, boost }), focus, kindCompany)) : 0
   return (
     <Card title="Company focus" line="One company at a time. Its skills and items fill more of the pool, on every road.">
+      {!taught && <PageTip>New: pick a company’s crest. Its skills and items turn up more often, on every road. Switching is free.</PageTip>}
       <div className="hq-focus" role="radiogroup" aria-label="Company in focus">
         {COMPANIES.map((c) => {
           const open = companyOpen(c.id, standing)
@@ -334,7 +302,11 @@ function FocusCard() {
               aria-disabled={!open}
               className={`hq-fc${focus === c.id ? ' on' : ''}`}
               style={{ '--co': companyVar(c.id) } as CSSProperties}
-              onClick={() => open && setFocus(focus === c.id ? null : (c.id as CompanyId))}
+              onClick={() => {
+                if (!open) return
+                setFocus(focus === c.id ? null : (c.id as CompanyId))
+                learn()
+              }}
               title={open ? c.name : `${c.name} opens at Standing ${c.opensAt} with any company`}
             >
               <Crest company={c.id} scale={1} locked={!open} />

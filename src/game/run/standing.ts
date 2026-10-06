@@ -15,12 +15,20 @@
  * and one item kind, plus the stake's item chances and milestone skills, at a
  * floor that rises with the stake ({@link contractFloor}).
  *
+ * **Past the card pool** (October 2026): once every card a standing level
+ * could deal is unlocked, the level pays a **Rare bonus item** for the next
+ * contract instead ({@link standingBonusKind}) — the sealed crate's duplicate
+ * mechanism (`hq.bonusItemsFor`), so a level is never paid with nothing.
+ *
+ * **The Sovereign Route** earns standing with all five companies at once
+ * ({@link charterStandingXp}).
+ *
  * Every unlock goes through `watch.rollFromPool` — one generic roll, fed a
  * pool, a filter and a floor — and every roll is a hash of its salt, never a
  * run-stream draw.
  */
 import { ALL_SKILLS, RANDOM_UNLOCK_SKILLS } from '../data/skills'
-import { ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../data/itemKinds'
+import { BASIC_ITEM_KINDS, ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../data/itemKinds'
 import { COMPANY_IDS, companyById, type CompanyId } from '../data/companies'
 import { rollFromPool, watchLevelCost } from './watch'
 
@@ -38,6 +46,17 @@ export function standingXpFor(r: { depth: number; kills: number; delivered: bool
   const d = Math.max(0, Math.floor(r.depth || 0))
   const k = Math.max(0, Math.floor(r.kills || 0))
   return d * STANDING_XP.perDepth + Math.floor(k / STANDING_XP.killsPerXp) + (r.delivered ? STANDING_XP.delivered : 0)
+}
+
+/**
+ * The standing XP a Sovereign Route earns, per company (October 2026): the
+ * road is every company's, so each of the five gets what an escort that ended
+ * the same way earns with its one company — a delivery's with the delivery
+ * bonus, a fall's without it.
+ */
+export function charterStandingXp(r: { depth: number; kills: number; delivered: boolean }): Record<CompanyId, number> {
+  const xp = standingXpFor(r)
+  return Object.fromEntries(COMPANY_IDS.map((c) => [c, xp])) as Record<CompanyId, number>
 }
 
 /**
@@ -147,6 +166,25 @@ export function rollStandingCard(have: readonly string[], company: CompanyId, st
     floor: cardFloor(standing),
     salt: ['standing-card', company, standing, ...salt],
   })
+}
+
+/**
+ * The kind of the Rare bonus item a standing level pays once the card pool is
+ * exhausted (`rollStandingCard` returned null): one of the kinds you own — the
+ * company's own first, then any, then the basic five — a hash of its own
+ * parts, never a run stream. The bonus item itself is dealt into the next
+ * contract's pack (`hq.bonusItemsFor`), as a sealed crate's duplicate is.
+ */
+export function standingBonusKind(haveItems: readonly string[], company: CompanyId, standing: number, ...salt: (string | number)[]): string {
+  const owned = new Set([...BASIC_ITEM_KINDS, ...haveItems])
+  // Levels 1–3 only, in the catalogue's stable order: never a Sovereign kind.
+  const pool = ITEM_KINDS.filter((k) => owned.has(k.id) && k.level <= 3).map((k) => k.id)
+  const s = ['standing-bonus', company, standing, ...salt]
+  return (
+    rollFromPool({ pool, have: [], filter: (id) => kindCo(id) === company, salt: s }) ??
+    rollFromPool({ pool, have: [], salt: s }) ??
+    BASIC_ITEM_KINDS[0]
+  )
 }
 
 /** A skill card a delivered contract unlocks (the contract's own, or a milestone's). */
