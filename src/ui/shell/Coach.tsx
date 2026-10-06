@@ -264,6 +264,11 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
    */
   const fieldNote = useGameStore((s) => s.fieldNote)
   const clearFieldNote = useGameStore((s) => s.clearFieldNote)
+  // A note is about this field: off the battle screen it is spent, so it can
+  // never greet the next fight.
+  useEffect(() => {
+    if (fieldNote && screen !== 'battle') clearFieldNote()
+  }, [fieldNote, screen, clearFieldNote])
 
   /*
    * Field-per-act (`run/fields`): the first fight on a new act's field says
