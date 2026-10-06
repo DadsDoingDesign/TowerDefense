@@ -1,8 +1,9 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useRef, type CSSProperties, type ReactNode } from 'react'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { companyVar, moneyText, SOVEREIGN_VAR } from '../../channels'
 import { Coin, Crest, Lantern, SovereignCrest } from '../../pixel'
 import { CHARTER_NAME, CHARTER_TOWNS } from '../../../game/run/charter'
+import { useMoreBelow } from '../Page'
 
 /**
  * The trade pages' shared parts (the mercenary company, build step 2), drawn
@@ -31,10 +32,15 @@ export function ContractPage({
   /** The page's accessible name when the head has no plain heading text. */
   label?: string
 }) {
+  // The body's bottom fade only while there is more to scroll (3.5).
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg ct ${className ?? ''}`} style={heat != null ? ({ '--heat': heat.toFixed(2) } as CSSProperties) : undefined} aria-label={label}>
       <div className="pg-band pg-head ct-head">{head}</div>
-      <div className="pg-band pg-body ct-body">{children}</div>
+      <div className={`pg-band pg-body ct-body${more ? ' more' : ''}`} ref={bodyRef}>
+        {children}
+      </div>
       {foot && <div className="pg-band pg-foot ct-foot">{foot}</div>}
       {cta && (
         <div className="pg-band pg-cta-band">

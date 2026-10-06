@@ -32,3 +32,24 @@ export const useMapFocus = create<MapFocus>((set) => ({
  * Same figure and same reasoning as `CONFIRM_SETTLE_MS` in PageScreens.
  */
 export const MARCH_SETTLE_MS = 400
+
+/**
+ * Where the run map scrolls to so the reachable row is fully on screen (Oct
+ * 2026 audit, 3.7). The old rule put the CURRENT node 65% down the box, which
+ * on a phone — the route panel takes ~85px of the Stage above the map — left
+ * the reachable row (one layer up, ~104px higher) cut by the box's top edge,
+ * most visibly after a win. Now: the span from the top of the reachable row
+ * to the bottom of the current node is centred in the box when it fits, and
+ * when it does not the reachable row wins — it is the decision in front of the
+ * player. `above`/`below` are how far a node's box (label, threat chip, ring)
+ * reaches past its centre. Pure, unit-tested.
+ */
+export function frontierScrollTop(f: { curY: number; reachYs: readonly number[]; box: number; above?: number; below?: number }): number {
+  const above = f.above ?? 64
+  const below = f.below ?? 56
+  const top = Math.min(f.curY, ...f.reachYs) - above
+  const bottom = f.curY + below
+  const span = bottom - top
+  const at = span <= f.box ? top - (f.box - span) / 2 : top
+  return Math.max(0, Math.round(at))
+}

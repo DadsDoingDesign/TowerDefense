@@ -85,6 +85,52 @@ describe('text tokens clear WCAG AA on every ground the shell paints', () => {
     }
   })
 
+  // Oct 2026 audit, 3.1: rarity as TEXT (an item's name, the rarity word, the
+  // doll's letter) read the fill ramp and fell to 3.09-4.38:1. Every text step
+  // must clear 5:1 on `--panel-3` (the selected card) and on the strongest
+  // wash, in the default palette and in both colour-vision ramps.
+  const RARITIES = ['common', 'rare', 'epic', 'legendary', 'mythic'] as const
+  const STRONG = grounds['surface-strong over panel-2']
+  /** The `--name` value inside a later `:root[data-…]` block that names `selector`. */
+  const blockToken = (selector: string, name: string): string => {
+    const at = css.indexOf(selector)
+    if (at < 0) throw new Error(`${selector} not found in global.css`)
+    const body = css.slice(at, css.indexOf('\n}', at))
+    const m = body.match(new RegExp(`--${name}:\\s*([^;]+);`))
+    if (!m) throw new Error(`--${name} is not defined under ${selector}`)
+    return m[1].trim()
+  }
+  const palettes: Record<string, (name: string) => string> = {
+    default: token,
+    'deuter/protan': (n) => blockToken(":root[data-vision='protan'] {", n),
+    tritan: (n) => blockToken(":root[data-vision='tritan'] {", n),
+  }
+  for (const [pal, read] of Object.entries(palettes)) {
+    it(`--rarity-*-text clear 5:1 on --panel-3 and the strong wash (${pal})`, () => {
+      for (const r of RARITIES) {
+        const fg = hex(read(`rarity-${r}-text`))
+        expect(ratio(fg, grounds['panel-3']), `--rarity-${r}-text on panel-3 (${pal})`).toBeGreaterThanOrEqual(5)
+        expect(ratio(fg, STRONG), `--rarity-${r}-text on the strong wash (${pal})`).toBeGreaterThanOrEqual(5)
+      }
+    })
+  }
+
+  it('--teal-text clears 4.5:1 on --panel-3 and the strong wash; --teal (a fill) 3:1', () => {
+    for (const g of [grounds['panel-3'], STRONG]) {
+      expect(ratio(hex(token('teal-text')), g)).toBeGreaterThanOrEqual(4.5)
+      expect(ratio(hex(token('teal')), g)).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  // `--dim` marks a control that is not available now. WCAG 1.4.3 exempts an
+  // inactive control's text, but the price on an unaffordable row is still
+  // read to decide whether to save, so it holds AA on every opaque panel; on
+  // the strongest wash (a disabled chip at most) the large-text 3:1 floor.
+  it('--dim holds 4.5:1 on --panel-3 and 3:1 on the strong wash', () => {
+    expect(ratio(hex(token('dim')), grounds['panel-3'])).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('dim')), STRONG)).toBeGreaterThanOrEqual(3)
+  })
+
   it('the muted ramp keeps its order: text > muted > muted-2 > dim', () => {
     const l = (n: string) => lum(hex(token(n)))
     expect(l('text')).toBeGreaterThan(l('muted'))

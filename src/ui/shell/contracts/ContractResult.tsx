@@ -11,7 +11,8 @@ import { itemName, strengthText } from '../../channels'
 import { Coin } from '../../pixel'
 import { DefeatReceipt } from '../DefeatReceipt'
 import { FeatsEarned } from '../FeatsEarned'
-import { InfoCard, MenuRow } from '../Page'
+import { InfoCard } from '../Page'
+import { Icon } from '../../Icon'
 import { StandingEarned, UnlocksEarned } from '../ProgressEarned'
 import { stakeLine } from '../offers'
 import { ContractPage, Gold, Slip, SlipLine } from './parts'
@@ -108,10 +109,22 @@ export function ResultScreen() {
         </div>
       }
       cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
+      /*
+       * Oct 2026 (3.5): the exits are ONE row of two quiet buttons — the
+       * mobile system's dual action footer. As two 56px picture rows they
+       * stacked 134px of chrome on the run-end screen (40% of a phone with
+       * the head), above the one next step.
+       */
       foot={
-        <div className="pg-rows">
-          {outcome === 'lost' && assist === 'off' && <MenuRow label="Turn on Assist · Steady" icon="armour" big onClick={() => setAssist('steady')} />}
-          <MenuRow label="Back to the menu" icon="back" big onClick={returnToHub} />
+        <div className="pg-dual">
+          {outcome === 'lost' && assist === 'off' && (
+            <button className="pg-dual-btn" onClick={() => setAssist('steady')}>
+              <Icon name="assist" /> Assist: Steady
+            </button>
+          )}
+          <button className="pg-dual-btn" onClick={returnToHub}>
+            <Icon name="back" /> Back to the menu
+          </button>
         </div>
       }
     >

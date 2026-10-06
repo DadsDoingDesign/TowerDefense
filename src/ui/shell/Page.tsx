@@ -1,8 +1,8 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { ItemRarity } from '../../game/types'
 import { RARITY } from '../../game/data/items'
 import { Icon } from '../Icon'
-import { effectIcon, markLabel, RARITY_INITIAL, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
+import { effectIcon, markLabel, RARITY_INITIAL, railStyle, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
 import { Money } from './Money'
 import { lineMark, lineText, type Body } from './offers'
 
@@ -27,6 +27,7 @@ export function PageLayout({
   foot,
   strip,
   tone,
+  compact = false,
 }: {
   title: string
   subtitle?: string
@@ -61,6 +62,8 @@ export function PageLayout({
     cost?: { amount: number; currency: Currency }
     /** A quiet consequence after the price — "62 left" on a Buy (Whales UI plan A2). */
     after?: string
+    /** A setting's flip, not a step forward (3.3): the secondary treatment. */
+    quiet?: boolean
   }
   /**
    * Announce this page's title block when it appears (F9).
@@ -89,9 +92,19 @@ export function PageLayout({
   strip?: ReactNode
   /** A distinct frame for an elite's spoils (Phase 2). */
   tone?: 'elite'
+  /**
+   * Oct 2026 (3.5): a short board keeps its exits and CTA right under its
+   * content, and the column's slack goes below the CTA instead of between the
+   * choice and its commit (measured 120-360px on the shrine, the campfire and
+   * the hero pick). A long board is unchanged: the body scrolls and the CTA
+   * sits at the bottom. Off wherever the CTA can arm (see `PageScreen`).
+   */
+  compact?: boolean
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const more = useMoreBelow(bodyRef)
   return (
-    <div className={`pg${tone ? ` tone-${tone}` : ''}`}>
+    <div className={`pg${tone ? ` tone-${tone}` : ''}${compact ? ' compact' : ''}`}>
       <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
         <h1 className="t-title" tabIndex={-1}>
           {title}
@@ -101,7 +114,9 @@ export function PageLayout({
         {strip}
       </div>
 
-      <div className="pg-band pg-body">{children}</div>
+      <div className={`pg-band pg-body${more ? ' more' : ''}`} ref={bodyRef}>
+        {children}
+      </div>
 
       {secondary && <div className="pg-band pg-secondary">{secondary}</div>}
 
@@ -142,7 +157,7 @@ export function PageLayout({
       */}
       {cta && (
         <div className="pg-band pg-cta-band">
-          <button className={`pg-cta ${cta.danger ? 'danger' : ''}`} disabled={cta.disabled} onClick={cta.run}>
+          <button className={`pg-cta${cta.danger ? ' danger' : cta.quiet ? ' quiet' : ''}`} disabled={cta.disabled} onClick={cta.run}>
             {cta.label}
             {cta.cost && (
               <>
@@ -169,6 +184,44 @@ export function PageLayout({
       )}
     </div>
   )
+}
+
+/**
+ * Whether a scrolling page body has more below its visible edge (3.5). The
+ * body's bottom fade means "more below", so it is drawn only while that is
+ * true: a body that fits, or one scrolled to its end, shows every row at full
+ * strength (the fade used to dim the merchant's last row and the run-end
+ * recap's heroes when there was nothing more to scroll to).
+ */
+export function useMoreBelow(ref: RefObject<HTMLElement>): boolean {
+  const [more, setMore] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 2)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    // The box (a resize) and each child (an image landing, a card growing).
+    const ro = new ResizeObserver(check)
+    const watch = () => {
+      ro.observe(el)
+      for (const c of Array.from(el.children)) ro.observe(c)
+    }
+    watch()
+    // Content swapped without either box changing size (a row selected, a
+    // detail card replaced): re-watch the new children and check again.
+    const mo = new MutationObserver(() => {
+      watch()
+      check()
+    })
+    mo.observe(el, { childList: true, subtree: true, characterData: true })
+    return () => {
+      el.removeEventListener('scroll', check)
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [ref])
+  return more
 }
 
 /** A full-width tappable row: label left, value or icon right. */
@@ -261,7 +314,7 @@ export function MenuRow({
   return (
     <button
       className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`}
-      style={rail ? ({ '--rail': rail } as CSSProperties) : undefined}
+      style={rail ? (railStyle(rail) as CSSProperties) : undefined}
       onClick={locked ? undefined : onClick}
       disabled={locked ? undefined : !onClick || disabled}
       aria-disabled={locked || undefined}
@@ -330,7 +383,7 @@ export function MenuRow({
 export function RarityTag({ rarity, suffix }: { rarity: ItemRarity; suffix?: string }) {
   const n = rarityRank(rarity)
   return (
-    <span className="rar-tag" style={{ '--rail': rarityVar(rarity) } as CSSProperties}>
+    <span className="rar-tag" style={railStyle(rarityVar(rarity)) as CSSProperties}>
       <span className="rar-tag-pips" aria-hidden="true">
         {Array.from({ length: n }, (_, i) => (
           <i key={i} />
@@ -514,7 +567,7 @@ export function PortraitRow({
         <button
           key={it.id}
           className={`pg-portrait ${selectedId === it.id ? 'sel' : ''}`}
-          style={{ '--rail': it.color } as CSSProperties}
+          style={railStyle(it.color) as CSSProperties}
           onClick={() => onSelect(it.id)}
           aria-pressed={selectedId === it.id}
           /*

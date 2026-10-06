@@ -454,26 +454,27 @@ h1.sh-brand {
   gap: 3px;
   overflow: hidden;
 }
+/* 3.6 (Oct 2026): the rarity letter was an 8px glyph tucked into the tile's
+   corner — under the 11px floor. It rides BESIDE the picture now, at the
+   floor, so the tile is a little wider rather than the letter smaller. */
 .pg-strip-tile {
   position: relative;
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px 0 3px;
   border-radius: 4px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-bottom: 2px solid var(--rail);
 }
 .pg-strip-rar {
-  position: absolute;
-  top: -1px;
-  left: 1px;
-  font-size: 8px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   line-height: 1;
-  color: var(--rail);
+  color: var(--rail-text, var(--rail));
 }
 .pg-strip-more,
 .pg-strip-empty {
@@ -501,6 +502,16 @@ h1.sh-brand {
   height: 22px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+/* The purse at the end of the row (3.5) — the gold chip's job, in the strip. */
+.pg-strip-gold {
+  flex: 0 0 auto;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
 }
 .pg-strip-tile.fresh,
 .pg-strip-hero.fresh {
@@ -743,9 +754,10 @@ h1.sh-brand {
   display: flex;
   min-width: 0;
   gap: 0.4em;
-  margin-bottom: 1px;
+  margin-bottom: 0;
+  align-items: baseline;
   font-size: var(--fs-micro);
-  /* 11px caps + 1px + a 32px portrait = the 44px row (46 of 48 at Large UI). */
+  /* 12px moment + a 32px portrait = the 44px row (46 of 48 at Large UI). */
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -761,12 +773,17 @@ h1.sh-brand {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 3.10 (Oct 2026): the moment is the news ("4 left", "Move one hero"), so it
+   outranks the wave's name beside it — a size up, not just a shade lighter
+   (both were 11px/700 caps). The caption line loses its 1px gap below to
+   keep the strip's 44px row. */
 .sh-wq-now {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
+  font-size: var(--fs-xs);
 }
 .sh-wq-now::before {
   content: '·';
@@ -1197,4 +1214,37 @@ h1.sh-brand {
    tracks, so one track is all it needs. */
 .sh-detail.no-gear {
   grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* ==========================================================================
+   3.2 (Oct 2026) — the reward's commit in the strip
+   ==========================================================================
+   With the reward hand in place the wave strip's action slot holds "Take it"
+   at full CTA height (`--cta-h`) — the loudest control on the screen and the
+   last thing in reading order. The strip grows into the Detail band's panel
+   row (the band's own height is unchanged, so the Stage does not move), and
+   that row lost the panel's own 44px button in exchange. */
+.sh-wavebar.commit {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.sh-wavebar.commit .sh-btn.sh-commit {
+  flex: 0 0 auto;
+  min-width: 168px;
+  min-height: var(--cta-h);
+  padding: 0 20px;
+  font-size: 24px;
+}
+@media (max-width: 379.98px) {
+  .sh-wavebar.commit .sh-btn.sh-commit {
+    min-width: 132px;
+  }
+}
+/* The header's Depth chip already names the wave; beside a full-size commit
+   the strip keeps the moment ("Wave cleared") whole rather than "DEPTH…". */
+.sh-wavebar.commit .sh-wq-name {
+  display: none;
+}
+.sh-wavebar.commit .sh-wq-now::before {
+  content: none;
 }

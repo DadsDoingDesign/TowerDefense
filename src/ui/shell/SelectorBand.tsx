@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { lookVar } from '../channels'
+import { lookVar, railStyle } from '../channels'
 import { kitName, weaponName } from '../../game/data/gear'
 import { lookOf } from '../../game/data/gear'
 import { heroLookArt } from './offers'
@@ -156,7 +156,7 @@ function PartyCards() {
             className={`sh-hero ${selected ? 'selected' : ''} ${placed ? 'placed' : ''} ${lvlUp ? 'levelled' : ''}`}
             /* Hue through a token rather than `s.color`'s raw hex, so the
                colour-vision modes can move it (M34). */
-            style={{ '--rail': hue } as CSSProperties}
+            style={railStyle(hue) as CSSProperties}
             aria-pressed={selected}
             aria-label={`${s.name}, ${kitName(s)}, level ${s.level}, ${dps} DPS — ${state}${swings}${clashWords}${
               lvlUp ? `, ${levelUpWords(s)}` : ''
@@ -288,7 +288,7 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
             <button
               key={o.id}
               className={`sh-offer sh-reward ${selected ? 'selected' : ''}`}
-              style={o.color ? ({ '--rail': o.color } as CSSProperties) : undefined}
+              style={o.color ? (railStyle(o.color) as CSSProperties) : undefined}
               aria-pressed={selected}
               onClick={() => pickReward(o.id)}
             >
@@ -343,7 +343,7 @@ function PartyStrip() {
           <button
             key={h.id}
             className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
-            style={{ '--rail': lookVar(h) } as CSSProperties}
+            style={railStyle(lookVar(h)) as CSSProperties}
             aria-pressed={selected}
             aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
             onClick={() => shellSelect({ kind: 'hero', id: h.id })}

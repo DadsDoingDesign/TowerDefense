@@ -127,7 +127,8 @@
 
 /* The reward hand: three cards that share the row. */
 .sh-reward-row {
-  padding-bottom: 1px;
+  /* Room for the selected card's lift and its ring (3.9). */
+  padding: 3px 1px;
 }
 .sh-offer.sh-reward {
   flex: 1 1 0;
@@ -135,6 +136,27 @@
   width: auto;
   gap: 4px;
   padding: 8px 6px 7px;
+  /* 3.9 (Oct 2026): the alternatives are equal weight — a neutral top edge.
+     Three different rarity rails competed with the selected card's ring;
+     rarity still reads on every card from its pips and word. */
+  border-top-color: var(--line-strong);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+/* Only the card being read is coloured — its own rarity on the top edge, the
+   gold ring — and lifted off the row. */
+.sh-offer.sh-reward.selected {
+  border-top-color: var(--rail, var(--accent));
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 2px 0 rgba(0, 0, 0, 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-offer.sh-reward {
+    transition: none;
+  }
 }
 .sh-reward-icon {
   position: relative;

@@ -530,7 +530,7 @@
   border-radius: 50%;
   background: var(--good);
   color: #17100a;
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   display: grid;
   place-items: center;

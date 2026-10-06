@@ -43,6 +43,33 @@ import type { IdeaId } from '../state/staging'
 export const rarityVar = (r: ItemRarity): string => `var(--rarity-${r})`
 
 /**
+ * The same ramp as TEXT (Oct 2026 audit, 3.1): each step lifted to >= 5:1 on
+ * the panels and washes it is written on. Use it wherever rarity colours a
+ * word — an item's name, the rarity word, a slot's letter — and keep
+ * `rarityVar` for rails, pips and borders.
+ */
+export const rarityTextVar = (r: ItemRarity): string => `var(--rarity-${r}-text)`
+
+/** A token with a text step of its own: the rarity ramp and the three archetype hues. */
+const TEXT_STEP_RE = /^var\(--(rarity-[a-z]+|fighter|rogue|mystic)\)$/
+
+/**
+ * The inline style for a surface tinted by `color`: `--rail` for its fills
+ * and `--rail-text` for any word drawn in it (CSS reads
+ * `var(--rail-text, var(--rail))`). A rarity or archetype token gets its
+ * text step; any other colour is its own text colour. Always setting both
+ * matters: a nested surface that set only `--rail` would inherit its parent's
+ * `--rail-text`.
+ */
+export const railStyle = (color: string): Record<'--rail' | '--rail-text', string> => {
+  const m = color.match(TEXT_STEP_RE)
+  return { '--rail': color, '--rail-text': m ? `var(--${m[1]}-text)` : color }
+}
+
+/** `color` as a text colour: a rarity token's text step, anything else as is. */
+export const railText = (color: string): string => railStyle(color)['--rail-text']
+
+/**
  * Dev-only guard that `--rarity-*` still equals `RARITY[r].color`. It reads the
  * *computed* token, so it also catches a token that was deleted or misspelt.
  * Skipped when a colour-vision mode is on, where disagreeing is the point.

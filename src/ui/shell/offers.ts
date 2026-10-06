@@ -89,6 +89,13 @@ export interface Act {
    * next offer in the list and buy it on a second tap (Wave 1).
    */
   done?: string
+  /**
+   * Oct 2026 (3.3): the action changes a setting rather than moving the game
+   * on (Mute, Turn on, Make it large). The page draws its pinned control in
+   * the quiet secondary treatment — a page whose only CTA is a toggle has no
+   * next step, so it shows no primary.
+   */
+  quiet?: boolean
 }
 
 /**
@@ -683,7 +690,11 @@ function shrineOffers(st: St): Offer[] {
       icon: 'shrine',
       // The third term the shrine never printed: accepting charges the choice
       // tax on top of the curse (M5).
-      body: [`Boon — ${s.boon}`, `Curse — ${s.curse}`, ...strengthNote(st, THREAT_FREE_CHOICE)],
+      // Oct 2026 (3.8): the curse is stated as loudly as the gift — it rides
+      // as the card's `warn` (the boon's size, the danger ink, the warning
+      // mark, right under the boon) instead of a muted body line under it.
+      body: [`Boon — ${s.boon}`, ...strengthNote(st, THREAT_FREE_CHOICE)],
+      warn: `Curse — ${s.curse}`,
       action: { label: 'Accept the terms', run: accept },
       secondary: { label: 'Walk away', icon: 'back', run: () => st.declineShrine() },
     },
@@ -981,7 +992,7 @@ function settingsOffers(s: Settings): Offer[] {
         'Mute silences everything at once.',
       ],
       sliders: audioDials(s),
-      action: { label: s.audio.muted ? 'Unmute' : 'Mute', run: () => s.toggleMute() },
+      action: { label: s.audio.muted ? 'Unmute' : 'Mute', run: () => s.toggleMute(), quiet: true },
     },
     {
       id: 'calmAudio',
@@ -992,7 +1003,7 @@ function settingsOffers(s: Settings): Offer[] {
         'The score without its drums, a softer master limiter, and the effects a little further forward than the music.',
         'Every warning still plays — only the pulse goes.',
       ],
-      action: { label: s.calmAudio ? 'Turn off' : 'Turn on', run: () => s.setCalmAudio(!s.calmAudio) },
+      action: { label: s.calmAudio ? 'Turn off' : 'Turn on', run: () => s.setCalmAudio(!s.calmAudio), quiet: true },
     },
     {
       id: 'monoAudio',
@@ -1000,7 +1011,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: onOff(s.monoAudio),
       icon: 'mono',
       body: ['Folds the stereo mix to one channel, so nothing is lost to a single earbud or one ear.'],
-      action: { label: s.monoAudio ? 'Turn off' : 'Turn on', run: () => s.setMonoAudio(!s.monoAudio) },
+      action: { label: s.monoAudio ? 'Turn off' : 'Turn on', run: () => s.setMonoAudio(!s.monoAudio), quiet: true },
     },
     {
       id: 'motion',
@@ -1008,7 +1019,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: onOff(s.reducedMotion),
       icon: 'motion',
       body: ['Cuts animation and screen shake.'],
-      action: { label: s.reducedMotion ? 'Turn off' : 'Turn on', run: () => s.setReducedMotion(!s.reducedMotion) },
+      action: { label: s.reducedMotion ? 'Turn off' : 'Turn on', run: () => s.setReducedMotion(!s.reducedMotion), quiet: true },
     },
     {
       id: 'contrast',
@@ -1016,7 +1027,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: onOff(s.highContrast),
       icon: 'contrast',
       body: ['Stronger borders and text contrast throughout.'],
-      action: { label: s.highContrast ? 'Turn off' : 'Turn on', run: () => s.setHighContrast(!s.highContrast) },
+      action: { label: s.highContrast ? 'Turn off' : 'Turn on', run: () => s.setHighContrast(!s.highContrast), quiet: true },
     },
     {
       id: 'scale',
@@ -1030,6 +1041,7 @@ function settingsOffers(s: Settings): Offer[] {
       action: {
         label: s.uiScale === 'large' ? 'Normal size' : 'Make it large',
         run: () => s.setUiScale(s.uiScale === 'large' ? 'normal' : 'large'),
+        quiet: true,
       },
     },
     {
@@ -1045,6 +1057,7 @@ function settingsOffers(s: Settings): Offer[] {
       action: {
         label: `Switch to ${VISION_LABEL[nextVision(s.vision)]}`,
         run: () => s.setVision(nextVision(s.vision)),
+        quiet: true,
       },
     },
     {
@@ -1078,6 +1091,7 @@ function settingsOffers(s: Settings): Offer[] {
       action: {
         label: `Set to ${assistProfile(nextAssist(s.assist)).label}`,
         run: () => s.setAssist(nextAssist(s.assist)),
+        quiet: true,
       },
     },
     {
@@ -1092,6 +1106,7 @@ function settingsOffers(s: Settings): Offer[] {
       action: {
         label: s.showEverything ? 'Introduce things as they come' : 'Show everything',
         run: () => s.setShowEverything(!s.showEverything),
+        quiet: true,
       },
     },
     {
@@ -1103,7 +1118,7 @@ function settingsOffers(s: Settings): Offer[] {
         'The one-line hints that appear the first time something new matters — posting a hero, gear, enemy strength, the merchant, relics, evolutions.',
         'Bring them back for another pass, or for whoever picks the game up on this device next.',
       ],
-      action: { label: 'Show the tips again', run: () => s.resetTeaching() },
+      action: { label: 'Show the tips again', run: () => s.resetTeaching(), quiet: true },
     },
     {
       id: 'reset',
