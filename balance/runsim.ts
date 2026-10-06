@@ -25,7 +25,7 @@
  * the Banner ladder *with the same simulator*, which is what makes their
  * numbers comparable to §11's rather than a second opinion.
  */
-import { RNG } from '../src/game/core/rng'
+import { RNG, withOwnIds } from '../src/game/core/rng'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
 import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
@@ -441,7 +441,21 @@ export function modelledPick(seed: number, skillPool: readonly string[], itemPoo
   return resolvePick(seed, skillPool, itemPool, prefer, deal)
 }
 
+/**
+ * Every simulated run mints its entity ids from its OWN counter, starting at 0
+ * (the tuning pass). Skill offers, a hire's skill and the hero pick hash the
+ * hero's id (`run/skills`), and the global counter stood wherever the process
+ * had left it — so the same seed played twice in one process, or after another
+ * section of the report, was dealt different skills. That re-dealt every
+ * paired cell (§12's states, §13's tiers) behind its own back: one stake tier
+ * read 23.2% and 25.3% delivered on the same rules, a run apart. Now a run is
+ * a pure function of its seed and options, wherever it is played.
+ */
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
+  return withOwnIds({ n: 0 }, () => simulateRunOnce(seed, archetype, o))
+}
+
+function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): RunOutcome {
   const meta = o.meta ?? ZERO_META
   const k = o.contract ?? null
   const charter = !!k?.charter
@@ -904,9 +918,17 @@ export interface McOutcome {
   timeouts: number
 }
 
+/** One §6 run on its own id counter, as {@link simulateRun}: a pure function of `r`. */
 export function monteCarloRun(
   r: number,
   o: { curve?: (depth: number, kind: EncounterKind) => number; player?: PlayerPolicy; rules?: Partial<EngineRules> } = {},
+): McOutcome {
+  return withOwnIds({ n: 0 }, () => monteCarloRunOnce(r, o))
+}
+
+function monteCarloRunOnce(
+  r: number,
+  o: { curve?: (depth: number, kind: EncounterKind) => number; player?: PlayerPolicy; rules?: Partial<EngineRules> },
 ): McOutcome {
   const runRng = new RNG(hashSeed(r, 'mcteam'))
   const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
