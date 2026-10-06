@@ -5,7 +5,23 @@ system. Every token matches `src/styles/global.css` and `docs/DESIGN_SYSTEM.md`.
 
 **File:** https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite
 
-Two pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
+## Current: page `Audit.16.06.26` — `?node-id=2149-2083`
+
+**Start here.** This page rebuilds the whole design system from `main @ 6588e6a`
+(2026-10-06): tokens, styles, components and screens, exactly as the code ships.
+It supersedes everything below, which is kept as history. The page's own
+`Cover · Read me` frame explains the layout.
+
+| Area | What's in it |
+| --- | --- |
+| Variables | Four local collections. **Fieldwatch · Color**: modes Default, Deuter/Protan, Tritan, High contrast. **Fieldwatch · Type**: modes Default and Large UI. **Fieldwatch · Layout**: space, radius, icon sizes. **Fieldwatch · Shell**: band heights at 390×844, ≤800h, ≤700h, ≤600h. Each variable has WEB code syntax `var(--x)` and a USE FOR / NOT FOR / WHERE description. The older `Fieldwatch Tokens` collection is superseded. |
+| Styles | 32 text styles, bound to the Type variables (Display, Title, Heading, Button, Row, Body, Card, Caption, Eyebrow, Label, Number, Slip). 14 effect styles (Elevation, Ring, Glow, Rail). |
+| Foundations | Plates for Color (every token's use), Icons (all 96 atlas keys, each with meaning and use), Type, Space · Radius · Elevation, and Sprites. |
+| Components 01–10 | About 150 components and sets, grouped by shell band and page family. Each set has a Spec block (source file, CSS class, USE FOR, AUDIT notes). Every variant is labelled under itself with what that state means; the same text is the variant's description. |
+| Screens | Built only from instances: D Battle (12), C Run (8), A Watchtower (16), B Contract (4), E End (4), all at 390×844. W Desktop: 3 screens at 1440×900. |
+| Audit / Findings | 44 findings with severity and `file:line`, plus the visual issues seen in a full capture of `main`. |
+
+Older pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
 (the mobile system, the flow board, and the Root Shell redesign).
 
 Read the sections in two halves. `FieldWatch`, `01 · Mobile UI System` and
@@ -166,7 +182,7 @@ eye is on the field. Reduced motion: the 260 ms height transition is instant.
 
 | Band (live) | 390×844 | 375×667 | 320×568 | Holds |
 | --- | --- | --- | --- | --- |
-| Header | 76 | 68 | 63 | Run state (unchanged) |
+| Header | 76 | 68 | 62 | Run state (unchanged) |
 | Stage | **574** (was 332) | **419** | **331** | Field and the map round it, `.sh-stage-top`, `.sh-stage-center` |
 | Selector | 126 | 112 | 106 | Party (unchanged) |
 | Wave strip | 68 | 68 | 68 | caption (name · N left) over the **enemy queue** · **CommandSlot** · Speed |
