@@ -122,7 +122,9 @@ function buildBase(): Record<string, unknown> {
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
   useGameStore.setState({
     roster: [hero, extra],
-    inventory: [...s.inventory, epic('twoHand')],
+    // Item identities (October audit): a Tome rolls `damagePct`, a base stat the
+    // validators must hold too. Its own stream, so no draw above moves.
+    inventory: [...s.inventory, epic('twoHand'), generateItem(new RNG(77), { kind: 'Tome', rarity: 'epic' })],
     runKills: 25,
     runMods,
     reward: [
@@ -478,6 +480,9 @@ describe('run snapshot fuzz', () => {
     const a = structuredClone(base) as { inventory: { base: Record<string, unknown> }[] }
     a.inventory[0].base = { physDamage: 'lots' }
     expect(migrateSnapshot(a)).toBeNull()
+    const t = structuredClone(base) as { inventory: { base: Record<string, unknown> }[] }
+    t.inventory[0].base = { damagePct: 'lots' }
+    expect(migrateSnapshot(t)).toBeNull()
     const b = structuredClone(base) as { roster: { equipment: { mainHand: { enchantments: { mods?: unknown }[] } } }[] }
     b.roster[0].equipment.mainHand.enchantments[0].mods = { damageMult: 'NaN?' }
     expect(migrateSnapshot(b)).toBeNull()

@@ -1038,7 +1038,13 @@ const withItem = (s: Sentinel, slot: HeroSlot, item: Item): Sentinel => wear(s, 
 const keepsJob = (before: Sentinel, after: Sentinel): boolean => {
   const style = heroStyle(before)
   if (style && heroStyle(after) !== style) return false
-  return (computeCombat(after).mods.block?.count ?? 0) >= (computeCombat(before).mods.block?.count ?? 0)
+  const a = computeCombat(after)
+  const b = computeCombat(before)
+  // Item identities (October audit): a Plate out-DPSes a Mail and a Grimoire a
+  // Staff, because `dps` cannot see the blast or the reach they give up. The
+  // modelled player reads the card: it never trades away a hold, a blast or a
+  // reach it already has for DPS (the 1e-9 forgives float noise).
+  return (a.mods.block?.count ?? 0) >= (b.mods.block?.count ?? 0) && a.splashRadius >= b.splashRadius - 1e-9 && a.range >= b.range - 1e-9
 }
 
 /**

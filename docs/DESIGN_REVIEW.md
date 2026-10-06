@@ -3020,3 +3020,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   12% → 12%, adaptive 18% → 21%, battles-first 11% → 3%, escort delivery
   18% → 19%, the routes 15–19% → 15–23%. The harness re-posts best-first at
   every fight, so it measures the new ground, not the decisions it brings.
+
+- **2026-10-06 — Item kinds get one identity each (October audit, designer
+  item 4a).** Robe, Cloak, Plate and Aegis used to roll Mail's numbers, and
+  Tome, Quiver and Focus one another's; every kind now rolls one stat of its
+  own (`items.ts`, the identity table above `WEAPONS`), and its Codex line
+  says only that: "Body. Makes every hit harder." (Plate), "Off hand. Holds 3
+  enemies on the road, but its holder attacks slower." (Pavise). Rendered the
+  Codex's Items tab in the running app at 390×844 @2x with every kind
+  unlocked: all 22 lines fit their cards (the longest, Wand, Dagger and
+  Greatsword, wrap to four lines, the same as the Sovereign cards beside
+  them); no line names another piece. Benchmark: Slay the Spire's relic and
+  card text — one effect, stated plainly, never the combo. Scorecard:
+  readability 4/5 (the weapon lines are a sentence long on a phone),
+  hierarchy 4/5, polish 4/5. The numbers behind each line and their bench
+  reads are in `docs/TUNING_LOG.md`, "October audit, lane B".

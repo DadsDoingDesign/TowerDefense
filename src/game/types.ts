@@ -193,6 +193,8 @@ export interface Item {
     rangeMult?: number
     /** Flat splash-radius add in px. Body. */
     splashAdd?: number
+    /** Damage bonus fraction (e.g. 0.08 = +8% damage, whatever the damage type). Tome, Plate. */
+    damagePct?: number
   }
   enchantments: Enchantment[]
   /** Keepsakes (a trinket variant) buff the whole team instead of one Sentinel. */

@@ -645,7 +645,7 @@ const optNum = (x: unknown): boolean => x === undefined || x === null || isStat(
  * new base stat that this file forgets fails the compile here.
  */
 const ITEM_BASE_KEYS: Record<keyof Item['base'], true> = {
-  physDamage: true, magDamage: true, attackSpeed: true, critChance: true, rangeMult: true, splashAdd: true,
+  physDamage: true, magDamage: true, attackSpeed: true, critChance: true, rangeMult: true, splashAdd: true, damagePct: true,
 }
 
 /**
