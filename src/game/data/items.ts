@@ -511,7 +511,11 @@ const CURSE_ENCHANTS: EnchantTemplate[] = [
   // Damage for crit, priced so the clamp can never hide it: −100% crit chance
   // means *never crits*, which costs a Sharpshooter ~46% of its damage and a
   // low-crit mystic ~5%. Now it is a real question of who wears it.
-  { id: 'cx_vengeful', label: 'Vengeful', roll: () => ({ mods: { damageMult: 1.6, critChanceAdd: -1 } }) },
+  // ×1.6 → ×1.3 damage (the tuning pass): the classless knife-thrower crits
+  // ~48% for ×2 (its crit factor ~1.48), so ×1.6 was +8% on the very build the
+  // clause is meant to cost — §10 read +0.9 / +4.1pt on it, no downside
+  // anywhere. Now −6.4pt there and +9.8pt on the low-crit wand.
+  { id: 'cx_vengeful', label: 'Vengeful', roll: () => ({ mods: { damageMult: 1.3, critChanceAdd: -1 } }) },
 ]
 const CURSE_CHANCE = 0.2
 
