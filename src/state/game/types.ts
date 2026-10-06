@@ -229,6 +229,12 @@ export interface GameData {
 
   // Persistent run resources
   battleMap: GameMap
+  /**
+   * The act whose field `battleMap` is (`run/fields`): each act is fought on
+   * its own field, dealt when the first fight of the act is entered, and the
+   * company starts that fight on the bench. Snapshotted.
+   */
+  fieldAct: number
   roster: Sentinel[]
   placements: Placement
   gold: number
@@ -351,6 +357,13 @@ export interface GameData {
    * player should know about (a refused save, `state/saveHealth.ts`).
    */
   gearNotice: { text: string; at: number; tone?: 'warn' } | null
+  /**
+   * The arrival note for the first fight on a new act's field — the field's
+   * name ("New ground: The Kiln Road — post your heroes"). Set by `selectNode`
+   * when the ground changes; gone once a hero is posted, on "Got it", or with
+   * the rest of the shell. Presentation — not snapshotted.
+   */
+  newGround: string | null
 }
 
 export interface GameState

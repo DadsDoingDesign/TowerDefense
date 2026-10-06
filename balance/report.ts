@@ -17,7 +17,8 @@ import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
 import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
@@ -78,6 +79,7 @@ import {
   monteCarloRun,
   POLICIES,
   simulateRun,
+  slotsOn,
   ZERO_META,
   type Loadout,
   type RoutePolicy,
@@ -1706,10 +1708,14 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
   let reached = 0
   let bossThreat: number | null = null
   let runMods: EffectMods[] = []
-  // Same field and same variant keys the seed would deal a real run (WS8).
-  const field = pickBattleMap(seed)
-  const heroSlots = bestSlots(field)
+  // Same fields and same variant keys the seed would deal a real run (WS8):
+  // act 1's field, then each act's own (`run/fields`).
+  let ground: FieldState = { fieldId: actFieldId(seed, 1), fieldAct: 1 }
+  const field = mapById(ground.fieldId)!
   for (let depth = 1; depth <= NODES; depth++) {
+    ground = groundFor(seed, ground, depth)
+    const actField = mapById(ground.fieldId) ?? field
+    const heroSlots = slotsOn(actField)
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
       // A recruit node hands over a fresh level-1 body.
       const body = rollRecruitBody(rng, BASIC_ITEM_KINDS, roster.map((h) => h.name))
@@ -1722,7 +1728,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
       team: roster.map((s, i) => ({ sentinel: s, slotId: heroSlots[i] })),
       depth,
       kind,
-      map: field,
+      map: actField,
       autoDeploy: true,
       variantSeed: encounterSeed(seed, depth),
       enemyHpMult: threat,

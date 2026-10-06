@@ -34,6 +34,8 @@ export interface ShellActions {
   noteCrowded: (tileId: string, swinger?: Sentinel) => void
   /** Retire the blocked-tile note (the strip's "Got it", or its timeout). */
   clearFieldNote: () => void
+  /** The new-ground arrival note has been read (or a hero posted): put it away. */
+  clearNewGround: () => void
   /**
    * Q1: a hero was just posted or moved onto `tileId`; if that tile is cursed
    * ground, the coach strip says what it costs (and the canvas flashes it). A
@@ -102,6 +104,9 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
   },
   clearFieldNote: () => {
     if (get().fieldNote) set({ fieldNote: null })
+  },
+  clearNewGround: () => {
+    if (get().newGround) set({ newGround: null })
   },
   noteDanger: (tileId) => {
     const kind = dangerAt(get().battleMap, tileId)

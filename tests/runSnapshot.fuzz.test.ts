@@ -38,6 +38,7 @@ import { withTerrainRule } from '../src/game/data/maps'
 import { parseTileId } from '../src/game/data/terrain'
 import { DANGER_TILES } from '../src/game/data/hazards'
 import { emptyPlacements } from '../src/game/run/map'
+import { validFieldAct } from '../src/game/run/fields'
 import {
   RUN_SNAPSHOT_KEY,
   RUN_SNAPSHOT_VERSION,
@@ -94,7 +95,9 @@ function buildBase(): Record<string, unknown> {
   {
     const cur = useGameStore.getState()
     const field = withTerrainRule(cur.battleMap, 'wildfire')
-    useGameStore.setState({ battleMap: field, placements: { ...emptyPlacements(field), [field.slots[5].id]: cur.roster[0].id } })
+    // Field-per-act: a field act that is not the default one, so mutations
+    // land on `fieldAct` too (`run/fields`).
+    useGameStore.setState({ battleMap: field, fieldAct: 2, placements: { ...emptyPlacements(field), [field.slots[5].id]: cur.roster[0].id } })
   }
 
   const rng = new RNG(1234)
@@ -188,6 +191,8 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   const hz = snap.hazardSeed ?? null
   if (hz !== null && !(Number.isInteger(hz) && hz >= 0 && hz <= 0xffffffff)) throw new Error(`${where}: hazard seed ${hz}`)
   if ((field.hazardSeed ?? null) !== hz) throw new Error(`${where}: field hazard ${field.hazardSeed} ≠ ${hz}`)
+  // Field-per-act: the act the field belongs to is always a real act.
+  if (validFieldAct(snap.fieldAct) === null) throw new Error(`${where}: field act ${snap.fieldAct}`)
   const cursed = (field.tiles ?? []).filter((t) => t.danger)
   // A route's own ground may curse more (Moonquill's, the Sovereign Route's).
   const cursedMax = DANGER_TILES + (field.terrainRule ? (ROUTE_HAZARDS[field.terrainRule]?.dangerTiles ?? 0) : 0)
@@ -359,6 +364,8 @@ describe('run snapshot fuzz', () => {
     expect(snap!.hazardSeed).toEqual(expect.any(Number))
     expect(snapshotBattleMap(snap!).tiles!.filter((t) => t.danger === 'cursed')).toHaveLength(DANGER_TILES * 4)
     expect(Object.values(snap!.placements)).toHaveLength(1)
+    // …and the act its field belongs to (field-per-act).
+    expect(snap!.fieldAct).toBe(2)
   })
 
   it('every single-field mutation loads without throwing and never yields NaN combat', () => {

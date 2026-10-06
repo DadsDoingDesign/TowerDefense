@@ -1089,3 +1089,11 @@
     opacity: 1;
   }
 }
+
+/* Field-per-act: the next act's ground, under the "still ahead" line. */
+.ct-next-ground {
+  margin-top: -6px;
+}
+.ct-next-ground b {
+  color: var(--text);
+}
