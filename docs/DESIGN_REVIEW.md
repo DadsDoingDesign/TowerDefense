@@ -2896,3 +2896,22 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   conditions), hierarchy 4/5, polish 4/5. Balance §18 (not tuned): a
   late-game company delivers 23% (27% with every Sovereign item) against a
   25% break-even; the fee is about 7.6 good runs.
+
+- **2026-10-06 — Lane 4 (technical): the boot splash, lazy hub pages, the
+  save notice.** Rendered with Playwright against `vite preview` (390, 360,
+  768 and 1280 wide). The splash is the menu's own wordmark on its shade band,
+  at the menu's exact position on every breakpoint (title rects match the
+  menu's to the pixel at 360/390/768/1280), plus three pulsing gold marks; the
+  menu then grows around the same title, so the swap reads as the map arriving
+  rather than a screen change (CLS 0 across the swap, was 0.0001). First pass
+  had the title on flat `#201711` — the menu's darker head band then "dropped
+  in" over it; the band is part of the splash now. Reduced motion stills the
+  marks; a quiet "Still loading" line appears only after 15 s. Fast 3G + 4×
+  CPU, median of 5: first contentful paint 3.17 s → 1.67 s (the wordmark, in
+  Crimson Text thanks to the preload); menu up 3.33 s → 3.31 s (the lazy
+  pages take 10 KB gzip off a 252 KB entry, so the menu itself is not much
+  sooner — the win is that something good is on screen at half the time). A
+  refused save now says so once in the toast slot with the warn mark:
+  "Progress isn't being saved on this device: …" — first pass read as four
+  lines on a phone for the private-browsing reason; the reason is one short
+  clause now. Scorecard: readability 4/5, hierarchy 5/5, polish 4/5.
