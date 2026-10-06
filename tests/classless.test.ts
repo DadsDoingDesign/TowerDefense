@@ -10,7 +10,7 @@ import { computeCombat, UNARMED } from '../src/game/engine/combat'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import { generateEncounter } from '../src/game/data/waves'
-import { chosenHero, heroChoices, pickRarity, previewOf, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
+import { chosenHero, heroChoices, HIRE_WEAPON, pickRarity, previewOf, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
 import { rollFromPool, rollItemUnlock, rollUnlock } from '../src/game/run/watch'
 import { dealItems, migrateMeta } from '../src/state/metaStore'
 import type { EffectMods, Item, Sentinel, WaveDef } from '../src/game/types'
@@ -191,12 +191,14 @@ describe('the hero pick: three random heroes', () => {
     }
   })
 
-  it('a hire is a random hero from the run’s kinds, armed: a common weapon, maybe an off hand, no body', () => {
+  it('a hire is a random hero from the run’s kinds, armed: a Rare weapon, maybe an off hand, no body', () => {
     const rng = streamRng(5, 'loot')
     for (let i = 0; i < 60; i++) {
       const h = rollRecruitBody(rng, BASIC_ITEM_KINDS)
       expect(BASIC_ITEM_KINDS).toContain(nounOf(h.equipment.mainHand))
-      expect(h.equipment.mainHand?.rarity).toBe('common')
+      expect(h.equipment.mainHand?.rarity).toBe(HIRE_WEAPON)
+      expect(HIRE_WEAPON).toBe('rare')
+      if (h.equipment.offHand) expect(h.equipment.offHand.rarity).toBe('common')
       expect(h.equipment.body).toBeNull()
     }
   })

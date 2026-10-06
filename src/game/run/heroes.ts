@@ -244,15 +244,26 @@ function previewHero(spec: Parameters<typeof createHero>[0] = {}): Sentinel {
 
 /**
  * A hire, rolled off `rng` (the loot stream) from the run's item pool: a
- * common weapon, maybe a common off-hand piece, no body (a hire arrives armed,
- * not dressed — the pack dresses it, `recruits.withRecruits`), and base stats
- * a little either side of its weapon-hand's. Named off the shared pool,
- * skipping anyone in `taken`.
+ * {@link HIRE_WEAPON} weapon, maybe a common off-hand piece, no body (a hire
+ * arrives armed, not dressed — the pack dresses it, `recruits.withRecruits`),
+ * and base stats a little either side of its weapon-hand's. Named off the
+ * shared pool, skipping anyone in `taken`.
  */
+/**
+ * The rarity a hire's weapon arrives at: Rare (the tuning pass; it was Common).
+ * A hire is a veteran of somewhere else — it arrives three levels behind the
+ * company — and it used to arrive carrying the weakest weapon in the game.
+ * A first run hires most of its company (§11's first-timer line fields 4.5
+ * heroes and fights 4.5 battles), so its hires WERE its strength: 20.0 → 25.4%
+ * on that line, adaptive 28.3 → 32.9% (n=240), and the §6 Monte Carlo, which
+ * hires nobody, cannot move. The Rare's one affix is rolled like any drop.
+ */
+export const HIRE_WEAPON: ItemRarity = 'rare'
+
 export function rollRecruitBody(rng: RNG, itemPool: readonly string[], taken: Iterable<string> = []): Sentinel {
   const plan = rollGearPlan(rng, itemPool, { offChance: RECRUIT_OFF_CHANCE, bodyChance: 0 })
   const base = rollBase(rng, ITEM_BASES[plan.main].style ?? null)
-  const equipment = dressPlan(rng, plan, () => 'common', itemPool)
+  const equipment = dressPlan(rng, plan, (_k, piece) => (piece === 'mainHand' ? HIRE_WEAPON : 'common'), itemPool)
   return createHero({ ...base, equipment, name: nextName(taken) })
 }
 
