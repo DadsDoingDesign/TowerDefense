@@ -103,7 +103,11 @@ export function ResultScreen() {
           <p className="ct-sub">{sub}</p>
           {home && (home.purseBack > 0 || home.road > 0) && (
             <p className="ct-sub ct-home">
-              Purse returned {home.purseBack.toLocaleString('en')} · Road gold {home.road.toLocaleString('en')} → {home.roadBanked.toLocaleString('en')} banked ({home.pct}%)
+              {/* Oct 2026: the road part only when the road paid, and a fall says
+                  why its share is smaller (`hq.LOST_ROAD_SHARE`). */}
+              Purse returned {home.purseBack.toLocaleString('en')}
+              {home.road > 0 &&
+                ` · Road gold ${home.road.toLocaleString('en')} → ${home.roadBanked.toLocaleString('en')} banked (${home.pct}%${outcome === 'lost' ? ', the contract fell' : ''})`}
             </p>
           )}
         </div>

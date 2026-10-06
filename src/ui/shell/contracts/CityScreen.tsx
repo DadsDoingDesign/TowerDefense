@@ -77,7 +77,9 @@ export function CityScreen() {
 
   return (
     <ContractPage
-      className="ct-city"
+      // A city with no choice to make is a short board: its one CTA sits right
+      // under the receipt rather than at the foot of an empty column (3.5).
+      className={`ct-city${!choose || nothingToLose ? ' compact' : ''}`}
       label={`${town}: paid ${here.total} gold`}
       head={
         <>
