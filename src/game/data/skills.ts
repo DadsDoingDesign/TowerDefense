@@ -72,7 +72,11 @@ const L1: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'quick_hands', name: 'Quick Hands', level: 1, company: 'spice', starter: true, desc: 'Attacks 15% faster.', mods: { rateMult: 1.15 }, from: 'The old Tempo path (+12% a level) and the Cleric perk Zeal' },
   { id: 'hard_hitter', name: 'Hard Hitter', level: 1, company: 'metals', starter: true, desc: 'Hits 15% harder.', mods: { damageMult: 1.15 }, from: 'The old Onslaught path (+15% a level); perks Heavy Bash and Blood Pact' },
-  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crits 10% more often.', mods: { critChanceAdd: 0.1 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
+  // + crits deal 50% more (the tuning pass): on a sword-and-shield hero (5% base
+  // crit) it read +0.0pt on every bench — the only starter that was nothing on
+  // a starting kit. Sword & Shield +0.0 → +2.8pt mean (armour +8.3), Dagger
+  // +7.3 → +12.5, Wand +0.9 → +1.2.
+  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crits 10% more often, and crits deal 50% more.', mods: { critChanceAdd: 0.1, critMultAdd: 0.5 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'hold_fast', name: 'Hold Fast', level: 1, company: 'metals', desc: 'Holds 1 more enemy.', mods: { holdAdd: 1 }, from: 'Fighter perk Hold Fast (level 5)' },
   { id: 'charge', name: 'Charge', level: 1, company: 'spice', desc: 'Attacks 60% faster for the first 15 seconds of each wave.', mods: { openingRush: { rate: 0.6, dur: 15 } }, from: 'Fighter perk Charge; Rogue perk Ambush; the Opening Salvo mutation' },
@@ -92,7 +96,10 @@ const L2: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'heavy_blows', name: 'Heavy Blows', level: 2, company: 'metals', starter: true, desc: 'Hits 25% harder and attacks 10% faster.', mods: { damageMult: 1.25, rateMult: 1.1 }, from: 'The Warrior evolution (level 10)' },
   { id: 'long_shot', name: 'Long Shot', level: 2, company: 'art', starter: true, desc: 'Reaches 50% farther, and every shot pierces 1 extra enemy.', mods: { rangeMult: 1.5, pierce: 1, projSpeedMult: 1.4 }, from: 'The Marksman evolution (level 10)' },
-  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, and crits 10% more often.', mods: { execute: 0.15, critChanceAdd: 0.1 }, from: 'The Assassin evolution (level 10)' },
+  // + hits 10% harder (the tuning pass): a Level 2 starter that read +0.5pt on
+  // a sword-and-shield hero and +1.3pt on a wand. Sword & Shield +0.5 → +2.5pt
+  // mean, Dagger +4.3 → +9.6, Wand +1.3 → +20.6.
+  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, crits 10% more often, and hits 10% harder.', mods: { execute: 0.15, critChanceAdd: 0.1, damageMult: 1.1 }, from: 'The Assassin evolution (level 10)' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'shield_wall', name: 'Shield Wall', level: 2, company: 'metals', desc: 'Holds 2 more enemies, in a wider circle.', mods: { holdAdd: 2, holdRadius: 90 }, from: 'Knight perk Shield Wall; the Juggernaut specialization' },
   // Thorns ×1.5 → ×3 (the tuning pass): on a sword-and-shield hero Wildfire led
