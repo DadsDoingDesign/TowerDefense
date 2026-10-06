@@ -54,7 +54,7 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
-import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractStake, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { ADVANCE, cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractStake, kindCompany, signingCost, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
 import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
@@ -103,7 +103,7 @@ export const NODES = RUN_LAYERS - 1
 export interface Loadout {
   label: string
   maxBaseHp: number
-  /** The purse the run sets out with. */
+  /** The purse the run sets out with: the company's advance (`contracts.ADVANCE`), never the bank's. */
   startGold: number
   extraSentinels: number
   /** HR's Opening deal. */
@@ -144,7 +144,7 @@ export function loadoutFor(label: string, hq: HqState | Record<string, number>):
   const out: Loadout = {
     label,
     maxBaseHp: b.maxBaseHp,
-    startGold: DEFAULT_PURSE,
+    startGold: ADVANCE,
     extraSentinels: b.extraSentinels,
     deal: b.deal,
     pack: hqRun.pack,
@@ -172,11 +172,10 @@ export const HQ_STATES: [string, HqState][] = [
   ['Hiring Hall', { upgrades: { hiring: 1 } }],
   ['Scouts 2', { upgrades: { scouting: 2 } }],
   ['Pack slots 10', { upgrades: { pack: 4 } }],
-  ['Fewer boulders 3 + clear order', { upgrades: { rocks: 3 }, orders: { rocks: true } }],
   ['Focus Ironvein +60%', { upgrades: { focus: 3 }, focus: 'metals', orders: { focus: true } }],
   [
     'everything the HQ sells',
-    { upgrades: { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }, focus: 'metals', orders: { rocks: true, focus: true } },
+    { upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 }, focus: 'metals', orders: { focus: true } },
   ],
 ]
 
@@ -184,13 +183,13 @@ export const ZERO_META: Loadout = loadoutFor('zero meta', { upgrades: {} })
 
 /**
  * The **veteran** company the run-level gates read (REPORT §13c and §18): the
- * HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3,
+ * HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3,
  * the scouts — no company in focus, so no route is favoured), every random
  * skill card a contract can unlock (feat cards aside) and every Level 1–3 item
  * kind. It is the save that opens the Sovereign Route; §18 called it the
  * "late-game company" before the contract gates were anchored on it.
  */
-export const VETERAN_HQ: HqState = { upgrades: { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 } }
+export const VETERAN_HQ: HqState = { upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 } }
 export const VETERAN: Loadout = loadoutFor('veteran', VETERAN_HQ)
 export const VETERAN_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
 export const VETERAN_ITEMS: readonly string[] = [...ALL_ITEM_KINDS]
@@ -417,6 +416,8 @@ export interface RunOutcome {
     crates: number
     charter?: boolean
     purse: number
+    /** The purse is the company's advance (every contract signed now): never the bank's, never banked. */
+    advance?: boolean
     cities: { pay: number; cargo: number; gold: number; earned: number }[]
     goldEnd: number
     /** Gold the road paid into the purse by the end (the road-gold share is taken on it). */
@@ -855,7 +856,7 @@ export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = 
     roster: roster.length,
     bossThreat,
     marks: marksFor(clearedCount, won, banner, meta.markMult),
-    contract: k ? { company: k.company, crates: charter ? 0 : k.crates, ...(charter ? { charter } : {}), purse: meta.startGold, cities, goldEnd: gold, earned } : null,
+    contract: k ? { company: k.company, crates: charter ? 0 : k.crates, ...(charter ? { charter } : {}), purse: meta.startGold, advance: true, cities, goldEnd: gold, earned } : null,
     layers: map.layers,
     fieldId: field.id,
     starter: starterLook,
@@ -886,8 +887,10 @@ export const CASH_OUT_HALF: CashOutPolicy = { id: 'cash-half', label: 'cash out 
 
 /**
  * What a contract run did to the bank, net: everything banked (the cities'
- * pay, a cash-out sale, the purse's rest and the road-gold share,
- * `hq.homeGold`) less the stake and the purse it set out with. Under `policy` the run stops at the first city it cashes out at —
+ * pay, a cash-out sale and the road-gold share, `hq.homeGold`) less what
+ * signing took from the bank (`contracts.signingCost`: the stake — and the
+ * purse only when it was not the company's advance, which never leaves the
+ * bank and never comes home). Under `policy` the run stops at the first city it cashes out at —
  * priced from the same simulated road, so press-on and cash-out lines are
  * paired by construction.
  */
@@ -896,10 +899,11 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
   if (!c) return { net: 0, pay: 0, delivered: out.won, cashedOut: false }
   // What signing cost the bank: the stake, or the Sovereign Route's fee.
   const stake = contractStake(c)
-  const outlay = stake + c.purse
-  // What the purse brings home: its rest in full, a share of the road's gold.
-  // A fall banks less of the road's gold than a finished contract (`hq.roadShareFor`).
-  const home = (gold: number, earned: number, share = ROAD_SHARE) => homeTotal(homeGold({ purse: c.purse, earned, gold }, share))
+  const outlay = signingCost(c)
+  // What the purse brings home: a share of the road's gold (and the rest of a
+  // purse taken from the bank; never the company's advance). A fall banks less
+  // of the road's gold than a finished contract (`hq.roadShareFor`).
+  const home = (gold: number, earned: number, share = ROAD_SHARE) => homeTotal(homeGold({ purse: c.purse, earned, gold, advance: c.advance }, share))
   let paid = 0
   for (let i = 0; i < c.cities.length; i++) {
     const city = c.cities[i]

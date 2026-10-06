@@ -3,6 +3,8 @@ import { migrateChallenge, SEEDED_RUN, STANDARD_RUN } from '../src/state/seeds'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { runTerms, seedEditable } from '../src/state/runTerms'
+import { ADVANCE, STAKES_OPEN_AT } from '../src/game/run/contracts'
+import { standingXpToReach } from '../src/game/run/standing'
 
 /*
  * The hero-pick run terms (Q8): one table that the store enforces and the
@@ -41,12 +43,13 @@ describe('the store honours the terms', () => {
   })
 
   it('a typed seed re-deals the run on the same contract, marked custom', () => {
-    g().openContracts({ company: 'art', crates: 1, purse: 30 })
+    useMetaStore.setState({ standing: { ...useMetaStore.getState().standing, art: standingXpToReach(STAKES_OPEN_AT) } })
+    g().openContracts({ company: 'art', crates: 1 })
     g().signContract()
     expect(g().screen).toBe('heroPick')
     expect(g().reseedRun('tuesday')).toBe(true)
     expect(g().challenge.kind).toBe('seeded')
-    expect(g().contract).toMatchObject({ company: 'art', crates: 1, purse: 30, signed: false })
+    expect(g().contract).toMatchObject({ company: 'art', crates: 1, purse: ADVANCE, advance: true, signed: false })
     expect(g().randomizeRunSeed()).toBe(true)
     expect(g().challenge.kind).toBe('standard')
   })

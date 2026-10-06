@@ -21,13 +21,25 @@
  * **Who is staged.** A run is staged when it begins with no finished run on
  * the meta save and "Show everything from the start" off (`startsFirstRun`);
  * the menu is staged on the same terms (`menuStaged`): a first-timer takes one
- * free escort, and the contract board, the stakes, the purse and the cash-out
- * open after the first finished contract (the mercenary company). A returning
- * player — any finished run, or a run saved before staging existed — sees
- * everything from the start. Staging changes what is SHOWN; the four things it
- * holds back on the road itself live in `game/run/firstRun.ts`.
+ * free escort, and the contract board and the cash-out open after the first
+ * finished contract (the mercenary company). Staging changes what is SHOWN;
+ * the four things it holds back on the road itself live in
+ * `game/run/firstRun.ts`.
+ *
+ * **The staggered reveal** (October 2026, {@link revealOf}): run 2 no longer
+ * opens everything at once. The HQ opens the first time the bank holds
+ * `hq.HQ_OPENS_AT` gold (latched in `met`, so it stays open); the sealed
+ * crates after the first DELIVERED contract (latched too); stakes per company
+ * at `contracts.STAKES_OPEN_AT` standing with it (`stakesShown`); the market
+ * of the day and company focus from the `contracts.MARKET_FROM_RUN`th
+ * finished contract. A save that met the HQ or the crates before the stagger
+ * keeps them (the latch is the same `met` entry).
  */
 import type { MapNode, RunMap } from '../game/data/runmap'
+import { COMPANY_IDS, type CompanyId } from '../game/data/companies'
+import { marketOpen, stakesOpen } from '../game/run/contracts'
+import { cratesOpenFor, FOCUS_FROM_RUN, HQ_OPENS_AT } from '../game/run/hq'
+import { standingOf, type StandingXp } from '../game/run/standing'
 
 /**
  * Every idea the game introduces, in roughly the order a first run meets them.
@@ -63,6 +75,8 @@ export const IDEAS = [
   'hq',
   'crates',
   'sovereign',
+  'market',
+  'focus',
 ] as const
 export type IdeaId = (typeof IDEAS)[number]
 
@@ -95,7 +109,7 @@ export function startsFirstRun(stats: StagingStats, showEverything: boolean): bo
   return !showEverything && !((stats.runsCompleted ?? 0) > 0)
 }
 
-/** Whether the menu is staged: one free escort, no board, no stakes, no purse, no cash-out. */
+/** Whether the menu is staged: one free escort, no board, no stakes, no cash-out. */
 export function menuStaged(stats: StagingStats, showEverything: boolean): boolean {
   return !showEverything && !((stats.runsCompleted ?? 0) > 0)
 }
@@ -171,9 +185,67 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
   return out
 }
 
-/** The ideas the meta save alone introduces: a finished contract opens these (the HQ and the crates with them). */
-export function metaIdeas(stats: StagingStats): IdeaId[] {
-  return (stats.runsCompleted ?? 0) > 0 ? ['bank', 'purse', 'standing', 'stake', 'hq', 'crates', 'sovereign'] : []
+/** What the meta save holds that the staggered reveal reads. */
+export interface RevealFacts extends StagingStats {
+  /** Contracts delivered (`stats.runsWon`). */
+  runsWon?: number
+  bank?: number
+  standing?: StandingXp
+  /** The ideas already met — the HQ's and the crates' latches. */
+  met?: readonly string[]
+  /** Any HQ level bought (a save that bought one has met the HQ, whatever `met` says). */
+  hqOwned?: boolean
+}
+
+/** What the menu, the HQ and the contract pages may show yet (the staggered reveal). */
+export interface Reveal {
+  /** The HQ: the first time the bank holds `hq.HQ_OPENS_AT`, then for good. */
+  hq: boolean
+  /** The sealed crates: after the first delivered contract, then for good. */
+  crates: boolean
+  /** The market of the day: from the `contracts.MARKET_FROM_RUN`th finished contract. */
+  market: boolean
+  /** Company focus (the HQ's Operations): from the `hq.FOCUS_FROM_RUN`th finished contract. */
+  focus: boolean
+}
+
+export const ALL_REVEALED: Reveal = { hq: true, crates: true, market: true, focus: true }
+
+/** The staggered reveal. "Show everything from the start" opens it all. */
+export function revealOf(v: RevealFacts, showEverything: boolean): Reveal {
+  if (showEverything) return ALL_REVEALED
+  const runs = v.runsCompleted ?? 0
+  const met = v.met ?? []
+  return {
+    hq: met.includes('hq') || !!v.hqOwned || (runs > 0 && (v.bank ?? 0) >= HQ_OPENS_AT),
+    crates: met.includes('crates') || cratesOpenFor(v.runsWon ?? 0),
+    market: marketOpen(runs),
+    focus: runs >= FOCUS_FROM_RUN,
+  }
+}
+
+/** Whether stakes show (and may be set) on `company`'s terms: at `contracts.STAKES_OPEN_AT` standing with it. */
+export function stakesShown(standing: StandingXp, company: CompanyId, showEverything: boolean): boolean {
+  return showEverything || stakesOpen(standingOf(standing, company))
+}
+
+/**
+ * The ideas the meta save alone introduces. A finished contract opens the
+ * bank, the purse, standing and the charter's goal; the rest arrive with the
+ * staggered reveal: the HQ at {@link HQ_OPENS_AT} banked, the crates at the
+ * first delivery, the stake at standing 2 with any company, the market and
+ * focus at run {@link FOCUS_FROM_RUN}. Each is latched into `met` once seen.
+ */
+export function metaIdeas(v: RevealFacts): IdeaId[] {
+  if (!((v.runsCompleted ?? 0) > 0)) return []
+  const r = revealOf(v, false)
+  const out: IdeaId[] = ['bank', 'purse', 'standing', 'sovereign']
+  if (r.hq) out.push('hq')
+  if (r.crates) out.push('crates')
+  if (v.standing && COMPANY_IDS.some((c) => stakesOpen(standingOf(v.standing!, c)))) out.push('stake')
+  if (r.market) out.push('market')
+  if (r.focus) out.push('focus')
+  return out
 }
 
 /** The one visibility rule. */

@@ -86,10 +86,9 @@ export interface ContractBoard {
   /** The board's own seed: each company's contract deals its run seed from it. */
   seed: number
   company: CompanyId
-  /** `board`: pick a company; `terms`: escort or stake, and the purse. */
+  /** `board`: pick a company; `terms`: escort or stake. */
   step: 'board' | 'terms'
   crates: number
-  purse: number
 }
 
 export interface HudSnapshot {
@@ -120,7 +119,7 @@ export interface RunRecap {
   contract: RunContract | null
   /** Cargo, as a percentage, when the run ended. */
   cargo: number
-  /** Gold this settle put in the bank: the purse that came home, and every city's pay. */
+  /** Gold this settle put in the bank: the road's share, every city's pay (and an older save's purse). */
   deposit: number
   /**
    * The deal this run was dealt from: map, loot, shrines, wave composition and

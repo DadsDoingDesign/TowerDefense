@@ -5,16 +5,17 @@
  * settling it pays.
  *
  * Since the mercenary company a run is a contract, and its settle banks gold:
- * what is left of the purse comes home whatever happened (with a share of the
- * road's gold, `hq.homeGold`), the cities' pay is kept even after a fall, and
- * unsold crates are lost.
+ * a share of the road's gold comes home whatever happened (`hq.homeGold`; the
+ * company's advance never does, a purse an older save took from the bank comes
+ * home in full), the cities' pay is kept even after a fall, and unsold crates
+ * are lost.
  */
 import type { RunChallenge } from '../../state/seeds'
 import type { RunFacts } from '../data/achievements'
 import type { Sentinel } from '../types'
 import type { HeroStyle } from '../data/items'
 import { cashOutValue, CITY_COUNT, cityPay, contractBanked, type RunContract } from './contracts'
-import { homeGold, homeTotal, LOST_ROAD_SHARE, ROAD_SHARE, roadShareFor } from './hq'
+import { homeGold, homeTotal, LOST_ROAD_SHARE, ROAD_SHARE, roadShareFor, type HomeGold } from './hq'
 import { actOf } from './threat'
 
 /**
@@ -95,8 +96,12 @@ export const runWasPlayed = (f: Pick<SettleFacts, 'depth' | 'kills'>): boolean =
 export function runDeposit(f: Pick<SettleFacts, 'gold' | 'contract' | 'legacyGold'>, status?: RunGrantStatus): number {
   if (!f.contract) return Math.max(0, Math.round(f.legacyGold ?? 0))
   if (!f.contract.signed) return 0
-  return homeTotal(homeGold({ purse: f.contract.purse, earned: f.contract.earned, gold: f.gold }, roadShareFor(status))) + contractBanked(f.contract)
+  return homeTotal(contractHome(f.contract, f.gold, roadShareFor(status))) + contractBanked(f.contract)
 }
+
+/** A contract's purse split at `gold` in hand (`hq.homeGold`), the advance flag carried. */
+export const contractHome = (c: Pick<RunContract, 'purse' | 'earned' | 'advance'>, gold: number, share = ROAD_SHARE): HomeGold =>
+  homeGold({ purse: c.purse, earned: c.earned, gold, advance: c.advance }, share)
 
 /** How a settled contract ended. A fall banks less of the road's gold (`hq.LOST_ROAD_SHARE`). */
 export type RunGrantStatus = 'delivered' | 'cashedOut' | 'lost'
@@ -106,9 +111,10 @@ export type RunGrantStatus = 'delivered' | 'cashedOut' | 'lost'
  * states, from the same rules the settle pays by, so the two cannot drift.
  *
  *  - `now`: banked if you cash out here — the cities' pay, the last crates
- *    sold, the purse's rest and the road's gold at the full share.
- *  - `fall`: banked if you press on and fall — the cities' pay and the purse's
- *    rest, the road's gold at the fallen share, and no crates.
+ *    sold and the road's gold at the full share (and the rest of a purse an
+ *    older save took from the bank; never the company's advance).
+ *  - `fall`: banked if you press on and fall — the cities' pay, the road's
+ *    gold at the fallen share, and no crates.
  *  - `deliver`: banked if you deliver from here at today's cargo — every city
  *    still ahead paid at `cargo`, and the road's gold you hold now at the full
  *    share (the road pays more on the way, so it is a floor).
@@ -131,8 +137,8 @@ export interface CityTrade {
 export function cityTrade(c: RunContract, gold: number, cargo: number): CityTrade {
   const banked = contractBanked(c)
   const sale = cashOutValue(c, c.paid.length, cargo)
-  const cashed = homeGold({ purse: c.purse, earned: c.earned, gold }, ROAD_SHARE)
-  const fallen = homeGold({ purse: c.purse, earned: c.earned, gold }, LOST_ROAD_SHARE)
+  const cashed = contractHome(c, gold, ROAD_SHARE)
+  const fallen = contractHome(c, gold, LOST_ROAD_SHARE)
   const city = c.pending ?? Math.max(0, c.paid.length - 1)
   let ahead = 0
   for (let i = city + 1; i < CITY_COUNT; i++) ahead += cityPay(c, i, cargo).total
@@ -163,7 +169,7 @@ export interface RunGrant {
 
 export type PayoutPlan =
   | { kind: 'none' }
-  /** A signed contract abandoned before it was played: its purse (and stake's nothing) goes home. */
+  /** A signed contract abandoned before it was played: what its purse sends home (none of an advance). */
   | { kind: 'deposit'; amount: number }
   | { kind: 'grant'; grant: RunGrant }
 

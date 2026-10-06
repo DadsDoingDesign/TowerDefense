@@ -6,6 +6,7 @@ import { useGameStore } from '../../state/gameStore'
 import { itemIcon, itemName, RARITY_INITIAL, railStyle, rarityVar } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
+import { NOTE_FRESH_MS, useCombatNotes } from '../../state/combatNotes'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -100,8 +101,42 @@ function useFresh(ids: string[]): Set<string> {
  * The one polite announcement for it; the in-body receipt line it replaces
  * used to be below the fold on a small phone.
  */
+type ToastMsg = { text: string; key: number; hold?: number; notice?: boolean; warn?: boolean; quiet?: boolean }
+
+/**
+ * The last receipt posted, across mounts. A choice taken on a PAGE (a spoils
+ * card, the campfire) returns to the map, which swaps the page shell for the
+ * bands: the toast that saw the landing unmounts a frame later and the one
+ * that mounts next never saw it. It still shows it, while it is fresh.
+ */
+let carried: { msg: ToastMsg; at: number } | null = null
+
 export function ReceiptToast() {
-  const [msg, setMsg] = useState<{ text: string; key: number; hold?: number; notice?: boolean; warn?: boolean } | null>(null)
+  const [msg, setMsg] = useState<ToastMsg | null>(null)
+  const post = (m: ToastMsg) => {
+    carried = { msg: m, at: Date.now() }
+    setMsg(m)
+  }
+  useEffect(() => {
+    const c = carried
+    if (!c || Date.now() - c.at >= NOTE_FRESH_MS) return
+    // A beat after mount, so the live region announces it as a change.
+    const t = setTimeout(() => setMsg(c.msg), 60)
+    return () => clearTimeout(t)
+  }, [])
+  /*
+   * October 2026: a one-tap commit whose landing nothing else shows — a boon,
+   * a relic, a night at the campfire — is seen here too. Visual only
+   * (`quiet`): the Announcer already says it, and two polite regions on one
+   * sentence read as one garbled one.
+   */
+  useEffect(() => {
+    let seen = useCombatNotes.getState().seq
+    return useCombatNotes.subscribe((n) => {
+      if (n.seq !== seen && n.toast) post({ text: n.toast, key: n.at, quiet: true })
+      seen = n.seq
+    })
+  }, [])
   useEffect(() => {
     /*
      * Round 3 (Q5): a resumed save's off-hand item moved back to the pack.
@@ -150,7 +185,7 @@ export function ReceiptToast() {
       } else if (items.length > 1) parts.push(`${items.length} items added`)
       for (const h of addedHeroes) parts.push(`${h.name} joins your heroes`)
       prev = s
-      if (parts.length) setMsg({ text: parts.join(' · '), key: Date.now() })
+      if (parts.length) post({ text: parts.join(' · '), key: Date.now() })
     })
   }, [])
   useEffect(() => {
@@ -165,7 +200,7 @@ export function ReceiptToast() {
   return (
     <div className="pg-toast-wrap" role="status" aria-live="polite">
       {msg && (
-        <p className="pg-toast" key={msg.key}>
+        <p className="pg-toast" key={msg.key} aria-hidden={msg.quiet || undefined}>
           <Icon name={msg.warn ? 'warn' : msg.notice ? 'back' : 'boon'} /> {msg.text}
         </p>
       )}

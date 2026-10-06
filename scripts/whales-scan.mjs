@@ -257,6 +257,43 @@ async function placeHero(p, vp) {
   return p.page.getByRole('button', { name: /Start Wave/ }).first().isEnabled().catch(() => false)
 }
 
+/**
+ * One-tap rewards (October 2026): a reward card commits on the tap, and a
+ * hold (touch) or a hover (mouse) shows its detail without taking it. There
+ * is no "Take it" any more, in place or on the Spoils page.
+ */
+const REWARD_CARDS = '.sh-reward-row .sh-reward, .pg-body .pg-row.onetap'
+const rewardShown = (p) => p.page.locator(REWARD_CARDS).first().isVisible().catch(() => false)
+/** Read a card without taking it: a real touch hold on a phone, a hover on a desk. */
+async function lookAtReward(p, vp, i) {
+  const card = p.page.locator(REWARD_CARDS).nth(i)
+  if (!VIEWPORTS[vp].hasTouch) {
+    await card.hover().catch(() => {})
+    await p.page.waitForTimeout(400)
+    return
+  }
+  const b = await card.boundingBox().catch(() => null)
+  if (!b) return
+  const cdp = await p.ctx.newCDPSession(p.page)
+  const pt = { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt] })
+  await p.page.waitForTimeout(500)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await p.page.waitForTimeout(300)
+}
+/** Take a reward: one real tap (or click) on a card. */
+async function takeReward(p, vp, i = 0) {
+  const card = p.page.locator(REWARD_CARDS).nth(i)
+  try {
+    if (VIEWPORTS[vp].hasTouch) await card.tap({ timeout: 6000 })
+    else await card.click({ timeout: 6000 })
+    await p.page.waitForTimeout(1600)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function startRun(p, vp, shots) {
   await p.tap('Take the free escort', { wait: 1400 })
   if (shots) {
@@ -289,7 +326,7 @@ async function fightFirst(p, vp, shots, log) {
   if (shots) await capture(p, vp, '06-live-wave')
   let held = false
   for (let i = 0; i < 40; i++) {
-    const done = await p.btn(/^Continue$|^Take it$/).isVisible().catch(() => false)
+    const done = (await p.btn(/^Continue$/).isVisible().catch(() => false)) || (await rewardShown(p))
     if (done) break
     const next = p.btn('Send the next sub-wave')
     if (await next.isVisible().catch(() => false)) {
@@ -305,11 +342,11 @@ async function fightFirst(p, vp, shots, log) {
     await p.tap(/^Continue$/, { wait: 1400 })
     if (shots) await capture(p, vp, '08b-spoils-page')
   } else {
-    await p.page.locator('.sh-selector .sh-reward').nth(1).click().catch(() => {})
-    await p.page.waitForTimeout(500)
-    if (shots) await capture(p, vp, '08b-spoils-second-card')
+    // In place: the first card's detail is showing; hold (or hover) the second.
+    await lookAtReward(p, vp, 1)
+    if (shots) await capture(p, vp, '08b-spoils-second-card', 'second card held (touch) / hovered (mouse) — one-tap rewards')
   }
-  await p.tap('Take it', { wait: 1600 })
+  if (!(await takeReward(p, vp, 1))) log.push('could not take a reward')
   await p.tipOff()
 }
 

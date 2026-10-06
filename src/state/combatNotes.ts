@@ -14,11 +14,34 @@ import { WATCH_COMMANDS, isCommandId } from '../game/data/commands'
 interface CombatNotes {
   seq: number
   text: string
+  /** When it was said (`Date.now()`): a voice mounted a moment later may still owe it. */
+  at: number
+  /**
+   * Also shown, briefly, as the receipt toast (`ReceiptToast`) — visual only,
+   * since this region already speaks it. Set for a one-tap commit whose
+   * landing nothing else shows (a boon, a relic, a night at the campfire).
+   */
+  toast?: string
 }
 
-export const useCombatNotes = create<CombatNotes>(() => ({ seq: 0, text: '' }))
+export const useCombatNotes = create<CombatNotes>(() => ({ seq: 0, text: '', at: 0 }))
 
-const say = (text: string) => useCombatNotes.setState((s) => ({ seq: s.seq + 1, text }))
+const say = (text: string) => useCombatNotes.setState((s) => ({ seq: s.seq + 1, text, at: Date.now(), toast: undefined }))
+
+/**
+ * How long a note stays owed to a voice that mounts after it was said. A
+ * one-tap commit on a page (the campfire) swaps the page shell for the
+ * bands, which unmounts the Announcer that heard it before it could speak.
+ */
+export const NOTE_FRESH_MS = 1500
+
+/**
+ * A one-tap commit, said (October 2026). Outside combat, but through the
+ * same single polite voice — the Announcer is mounted on every screen.
+ */
+export function announceCommit(text: string, toast?: string): void {
+  useCombatNotes.setState((s) => ({ seq: s.seq + 1, text, at: Date.now(), toast }))
+}
 
 /** Map one engine event to a sentence, or to nothing (most events are silent here). */
 export function noteEngineEvent(e: string, p?: { name?: string; phase?: number }): void {

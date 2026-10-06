@@ -12,7 +12,7 @@
  * expected to fail today, it fails loudly rather than being tuned to pass.
  */
 import { appendFileSync, writeFileSync } from 'fs'
-import { HQ_UPGRADES, INTEREST, ROAD_SHARE } from '../src/game/run/hq'
+import { BASE_INTEREST, HQ_UPGRADES, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { getNode } from '../src/game/data/archetypeTree'
@@ -60,7 +60,7 @@ import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '.
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
 import { difficultyEffect, difficultyRules, STRENGTH_PER_STEP } from '../src/game/run/watch'
-import { BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
+import { ADVANCE, BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
 import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
 import { balanceVerdict, invariantMode } from './verdict'
@@ -2121,11 +2121,13 @@ if (want(12)) {
   line('from. Every invariant in this report was green while that was true, because')
   line('nothing here had ever simulated a run with a hub behind it.')
   line('')
-  line('**The HQ (build step 3) replaced the hub.** Its three offices — HR (the Opening deal, the')
-  line('Hiring Hall), Finance (interest) and Operations (pack slots, boulders, company focus, the')
-  line('scouts) — are graded here on the same gate. The modelled player makes the sensible')
-  line('choices: each office alone at its top level, then everything, orders paid, with the focus')
-  line('on Ironvein (the shield and mail company). Finance pays gold, not power, and is priced in §13.')
+  line('**The HQ (build step 3) replaced the hub.** Its offices — HR (the Opening deal, the')
+  line('Hiring Hall) and Operations (pack slots, company focus, the scouts) — are graded here on')
+  line('the same gate. The modelled player makes the sensible choices: each purchase alone at its')
+  line('top level, then everything, orders paid, with the focus on Ironvein (the shield and mail')
+  line('company). October 2026: the Finance office (its levels paid back in about 260 runs) and')
+  line('"Fewer boulders" (it measured −4pt here) were cut and refunded; the bank keeps its free')
+  line('base interest, priced against the stake in §13.')
   line('')
   line('Each cell is `FW_META_RUNS` runs on **identical seeds and starting heroes**, so the')
   line('comparison against zero HQ is paired and the noise mostly cancels; the ± column is')
@@ -2417,7 +2419,7 @@ if (want(12)) {
       `- **The Opening deal is where the power is, and it is bounded:** five levels, ${HQ_UPGRADES.find((u) => u.id === 'deal')!.costs.reduce((a, b) => a + b, 0).toLocaleString('en')} gold in all, worth ${sign(best(DEAL_TOP_LABEL))} at its best and then finished (levels 1–3 alone: ${sign(best(HUB_STATES[1][0]))}). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.`,
     )
     line(
-      `- **Pack slots, boulders and focus** are levers on the run's texture, not its odds: ${sign(best('Pack slots 10'))}, ${sign(best('Fewer boulders 3 + clear order'))} and ${sign(best('Focus Ironvein +60%'))} at their best. Boulders keep a floor of ${MIN_OBSTACLES} a field whatever is bought — they are a balance lever, and the tuning pass owns that number.`,
+      `- **Pack slots and focus** are levers on the run's texture, not its odds: ${sign(best('Pack slots 10'))} and ${sign(best('Focus Ironvein +60%'))} at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of ${MIN_OBSTACLES} a field — a balance lever the tuning pass owns.`,
     )
     line(`- **Everything the HQ sells** reads ${sign(best('everything the HQ sells'))} at its best.`)
     line('')
@@ -2451,7 +2453,7 @@ if (want(13)) {
   line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
   line('open ground every route used to share, with its company weighting), at zero HQ. The gold')
   line('column is the bank\'s **net** change — everything banked (city pay, any cash-out sale, the')
-  line(`purse's rest and ${Math.round(ROAD_SHARE * 100)}% of the road's gold, \`hq.homeGold\`) less the stake and the purse taken — priced from the contract code itself`)
+  line(`road's gold at ${Math.round(ROAD_SHARE * 100)}%, \`hq.homeGold\`) less the stake — the purse is the company's ${ADVANCE}-gold advance, never the bank's — priced from the contract code itself`)
   line('(`run/contracts.cityPay`, `cashOutValue`). The modelled player plays two lines on the same')
   line(`roads: **${PRESS_ON.label}**, and **${CASH_OUT_HALF.label}** at city 1 or 2.`)
   line('')
@@ -2483,7 +2485,7 @@ if (want(13)) {
   }
   line('Two gold columns, because they answer different questions. **Contract pay** is what the stake')
   line("controls: the cities' pay and any cash-out sale, less the stake. **Bank net** adds what the purse")
-  line(`brings home — what is left of it in full, and ${Math.round(ROAD_SHARE * 100)}% of the road's gold (kill gold, node purses, sales) — less the purse taken.`)
+  line(`brings home: ${Math.round(ROAD_SHARE * 100)}% of the road's gold (kill gold, node purses, sales). The company's ${ADVANCE}-gold advance is spent first and never banked.`)
   line('')
   line('| Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |')
   line('|--:|--:|---|--:|--:|--:|--:|--:|--:|--:|')
@@ -2549,15 +2551,15 @@ if (want(13)) {
   )
   line('')
   {
-    // Finance's cap against the stake (reported, not gated): interest must
-    // never out-earn carrying cargo, so the top cap is set under the smallest
-    // stake's expected gain over the escort.
+    // The bank's interest cap against the stake (reported, not gated):
+    // interest must never out-earn carrying cargo, so the cap is set under the
+    // smallest stake's expected gain over the escort.
     const escort = tierRows[0].payCash
     const gains = tierRows.slice(1).map((r) => r.payCash - escort)
-    const cap = Math.max(...INTEREST.map((t) => t.cap))
+    const cap = BASE_INTEREST.cap
     const least = gains.length ? Math.min(...gains) : 0
     line(
-      `**Bank vs. stake (reported, not gated).** The bank's interest is capped at ${cap} gold a finished contract at its top rate. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
+      `**Bank vs. stake (reported, not gated).** The bank's free interest is capped at ${cap} gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): ${gains.map((g, i) => `${i + 1}c +${g.toFixed(0)}`).join(', ')} — the least is +${least.toFixed(0)} gold${least > cap ? `, ${(least - cap).toFixed(0)} above the cap` : `, **at or under the cap: the bank ties or out-earns that stake**`}.`,
     )
     line('')
   }
@@ -2571,7 +2573,7 @@ if (want(13)) {
   line('### 13c. The veteran\'s contracts (gated)')
   line('')
   line('**The veteran** is the company §18 calls the late-game company: the HQ bought out (Opening deal 5, the Hiring')
-  line('Hall, pack slots 10, boulders 3, the scouts), every skill card a contract can unlock and every Level 1–3 item kind')
+  line('Hall, pack slots 10, focus 3, the scouts), every skill card a contract can unlock and every Level 1–3 item kind')
   line(`(\`runsim.VETERAN\`). It **reads its offers** — each skill milestone takes the move that raises its DPS most (\`build: 'best'\`):`)
   line('picking at random from 36 cards, several dead on a lone hero (§7), the same company delivered no more than a zero-meta')
   line(`escort. Same seeds and road as the ladder above, the adaptive route, ${VETERAN_RUNS} runs a tier. It carries the scouts, so every`)
@@ -3583,8 +3585,10 @@ if (want(18)) {
   line('')
   line(`**What it is.** The endgame charter (\`run/charter.ts\`): it opens once every skill card and every Level 1–3 item kind is`)
   line(`unlocked. A **${CHARTER_FEE.toLocaleString('en')} gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the`)
-  line(`destination pays **${CHARTER_PAYOUT.toLocaleString('en')} gold** whatever the cargo, and one Sovereign item kind unlocks. It deals every pool the`)
-  line('player owns for no company (no route weighting, no HQ focus), and every company sets a condition at once:')
+  line(`destination pays **${CHARTER_PAYOUT.toLocaleString('en')} gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns`)
+  line('standing with all five companies — each what an escort that ended the same way earns with its one (`standing.charterStandingXp`;')
+  line('not priced in gold below). It deals every pool the player owns for no company (no route weighting, no HQ focus), and every')
+  line('company sets a condition at once:')
   line('')
   for (const t of TRADE_OFFS) line(`- **${COMPANIES.find((c) => c.id === t.company)!.name}: ${t.rule}.** ${t.line}`)
   line('- And every goblin clan marches from the first fight (the muster).')
@@ -3595,7 +3599,7 @@ if (want(18)) {
   const lateOwned = [...ALL_ITEM_KINDS, ...SOVEREIGN_ITEM_KINDS]
   const CH_POLICY = POLICIES[policyIdx('adaptive')]
   line(`**The company.** A strong late-game militia: every skill card a contract can unlock (${lateSkills.length}, feat cards aside), every Level 1–3`)
-  line('item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, boulders 3, the scouts) — the save that')
+  line('item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3, the scouts) — the save that')
   line(`opens the door — §13c's **veteran**, who reads its skill offers (\`build: 'best'\`). The adaptive route, ${HUB_RUNS} runs a row on the paired seeds of §12–§13.`)
   line('')
   interface ChRow { label: string; won: number; net: number }
@@ -3627,7 +3631,7 @@ if (want(18)) {
   line('')
   const breakEven = CHARTER_FEE / CHARTER_PAYOUT
   const goodRuns = staked.net > 0 ? CHARTER_FEE / staked.net : NaN
-  line(`**The charter's delivery rate for this company: ${pct(none.won)}** (${pct(all.won)} once all five Sovereign items are owned). The payout is ${(CHARTER_PAYOUT / CHARTER_FEE).toFixed(0)}× the fee, so the charter breaks even at a ${pct(breakEven)} delivery rate; measured, a charter is worth **${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} gold** to the bank on average (the fee, the purse and the road's share included).`)
+  line(`**The charter's delivery rate for this company: ${pct(none.won)}** (${pct(all.won)} once all five Sovereign items are owned). The payout is ${(CHARTER_PAYOUT / CHARTER_FEE).toFixed(0)}× the fee, so the charter breaks even at a ${pct(breakEven)} delivery rate; measured, a charter is worth **${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} gold** to the bank on average (the fee and the road's share included; the advance is the company's).`)
   line('')
   line(`**The fee against savings.** The same company banks ${escort.net.toFixed(0)} gold net from an escort and ${staked.net.toFixed(0)} from a 4-crate contract (cash-out line), so the ${CHARTER_FEE.toLocaleString('en')} fee is about **${Number.isFinite(goodRuns) ? goodRuns.toFixed(1) : '—'} good runs** of savings.`)
   line('')

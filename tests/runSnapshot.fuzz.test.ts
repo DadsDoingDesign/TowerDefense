@@ -57,7 +57,7 @@ import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/ru
 import { CHARTER_PAYOUT, SOVEREIGN_DILUTION } from '../src/game/run/charter'
 import { ROUTE_HAZARDS } from '../src/game/data/hazards'
 import { devCharter } from '../src/state/devCharter'
-import { FOCUS_STEP, homeGold, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE } from '../src/game/run/hq'
+import { FOCUS_STEP, homeGold, homeTotal, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE } from '../src/game/run/hq'
 import { runDeposit } from '../src/game/run/settle'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { offHandAllowed } from '../src/game/run/inventory'
@@ -150,6 +150,9 @@ function buildBase(): Record<string, unknown> {
       // v16: the road's gold so far, and the HQ's terms frozen on the run.
       earned: 140,
       hq: { rocks: 2, focus: 'metals', boost: 30, pack: 8 },
+      // October 2026: the purse is the company's advance (never banked).
+      purse: 60,
+      advance: true,
     },
   })
   const snap = captureRun(useGameStore.getState(), {
@@ -273,8 +276,12 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   if (!Number.isInteger(hq.pack) || hq.pack < PACK_BASE || hq.pack > MAX_PACK) throw new Error(`${where}: pack ${hq.pack}`)
   if (hq.focus !== null && !COMPANY_IDS.includes(hq.focus)) throw new Error(`${where}: focus ${hq.focus}`)
   if (hq.boost < 0 || hq.boost > MAX_FOCUS_BOOST || hq.boost % FOCUS_STEP !== 0 || (hq.focus === null && hq.boost !== 0)) throw new Error(`${where}: boost ${hq.boost}`)
-  const home = homeGold({ purse: c.purse, earned: c.earned, gold: snap.gold })
+  // October 2026: `advance` is absent (an older save's bank purse) or exactly true.
+  if (c.advance !== undefined && c.advance !== true) throw new Error(`${where}: advance ${String(c.advance)}`)
+  const home = homeGold({ purse: c.purse, earned: c.earned, gold: snap.gold, advance: c.advance })
   if (home.purseBack > c.purse || home.purseBack + home.road !== Math.floor(snap.gold)) throw new Error(`${where}: purse split`)
+  // The advance never comes home: the deposit is at most the road's share and the cities' pay.
+  if (c.advance && homeTotal(home) !== home.roadBanked) throw new Error(`${where}: an advance banked`)
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
@@ -774,7 +781,7 @@ function buildCharterBase(): Record<string, unknown> {
   devCharter.own(2)
   // A fixed seed, so the fuzz lands on the same charter every run (signing
   // itself is `tests/charter.test.ts`'s).
-  useGameStore.getState().beginCampaign(4242, { kind: 'standard' }, { company: null, charter: true, crates: 0, purse: 60 })
+  useGameStore.getState().beginCampaign(4242, { kind: 'standard' }, { company: null, charter: true, crates: 0 })
   useGameStore.getState().pickStartingHero('pick-0')
   const st = useGameStore.getState()
   st.selectNode(st.reachableNodeIds.find((id) => st.runMap.nodes.find((n) => n.id === id)?.type === 'battle') ?? st.reachableNodeIds[0])
@@ -906,5 +913,40 @@ describe('v16 → v17: the Sovereign Route (the endgame charter)', () => {
     expect(snap.contract.charter).toBeUndefined()
     expect(snap.contract.company).toBe('silk')
     expect(snap.itemPool.some(isSovereignKind)).toBe(false)
+  })
+})
+
+describe('October 2026: the company’s advance (no version step)', () => {
+  it('a run signed with the advance keeps it, and banks none of it', () => {
+    const raw = buildBase() as Record<string, unknown> & { contract: Record<string, unknown> }
+    const snap = migrateSnapshot(structuredClone(raw))!
+    expect(snap.contract).toMatchObject({ purse: 60, advance: true })
+    assertPlayable(snap, 'advance base')
+    const pay = payoutFromRaw(structuredClone(raw))!
+    expect(pay.contract!.advance).toBe(true)
+  })
+
+  it('a run saved before the advance (no field) settles exactly as it was signed: its purse comes home', () => {
+    const raw = buildBase() as Record<string, unknown> & { contract: Record<string, unknown> }
+    delete raw.contract.advance
+    raw.gold = 180
+    const snap = migrateSnapshot(structuredClone(raw))!
+    expect(snap.contract.advance).toBeUndefined()
+    assertPlayable(snap, 'no advance')
+    const old = runDeposit({ gold: snap.gold, contract: { ...snap.contract, paid: [] } })
+    const now = runDeposit({ gold: snap.gold, contract: { ...snap.contract, paid: [], advance: true } })
+    // The difference is exactly what is left of the purse.
+    const left = Math.min(snap.gold, Math.max(0, snap.contract.purse - Math.max(0, snap.contract.purse + snap.contract.earned - snap.gold)))
+    expect(left).toBeGreaterThan(0)
+    expect(old - now).toBe(left)
+  })
+
+  it('anything but a strict true reads as the old rule', () => {
+    for (const v of ['yes', 1, 'true', {}, [true], null, false]) {
+      const raw = buildBase() as Record<string, unknown> & { contract: Record<string, unknown> }
+      raw.contract.advance = v
+      const snap = migrateSnapshot(structuredClone(raw))!
+      expect(snap.contract.advance).toBeUndefined()
+    }
   })
 })

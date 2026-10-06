@@ -93,6 +93,9 @@ every other surface becomes a state of those bands rather than a place you go.
 
 1. **One interaction.** Tap a card in the Selector, its detail fills the Context
    panel. Learn it once and it works for heroes, items, offers, rooms and perks.
+   *Exception (October 2026, the designer's call):* a reward card and the
+   campfire's rest and train commit on the tap itself; holding, hovering or
+   focusing one shows its detail instead. See § One-tap commits below.
 2. **The Stage is sacred.** Nothing covers the battlefield or the map — no
    sheet, no drawer, no scrim.
 3. **The pack is permanent.** The right column is your inventory in battle, on
@@ -153,6 +156,46 @@ select-then-confirm. Rule one exists so consequential choices show their detail
 before you commit; a back button has no detail worth reading and the second tap
 was pure friction. Offers opt in with `immediate`, and anything that spends,
 grants or destroys is forbidden from setting it.
+
+### One-tap commits — the exception to rule one (October 2026)
+
+The designer approved this (audit `AUDIT_2026-10.md` §4, designer item 8). It
+overrides rule one for exactly two surfaces: **rewards** (the hand dealt in
+place after a cleared wave, and the Spoils page after an elite or a boss) and
+**the campfire** (rest, or train one hero). They are the most frequent choices
+in a run and the cheapest, and select-then-confirm doubled their taps.
+
+| Input | What it does on a one-tap option |
+| --- | --- |
+| Tap · click · Enter · Space | **Commits it.** The reward goes to the pack (the receipt toast says so) or the fire is spent, and the Announcer says what happened. |
+| Press and hold (touch, 350 ms) | Shows its detail in the Context panel (or the board's detail block). Letting go does **not** commit. |
+| Hover (a fine pointer, after a 120 ms rest) | Shows its detail. |
+| Keyboard focus | Shows its detail; the option's `aria-description` carries the same text for a screen reader. |
+
+The rules that keep a tap honest are pure and unit-tested (`ui/shell/press.ts`,
+`tests/press.test.ts`): a press that travels more than 8 px is a scroll, a
+press held 350 ms is a look, and a press that starts within 250 ms of the
+surface appearing is ignored (the tail of a double-tap on the last screen). The
+wiring is `ui/shell/oneTap.tsx`; an offer opts in with `Offer.oneTap`, whose
+`label` is the option's accessible name as the deed ("Take Bow — two-handed
+weapon, Common").
+
+There is no "Take it", "Rest" or "Train" button any more: a button that does
+what the tap already did is chrome. "Walk on" stays as its own row. The first
+one-tap board says how it works once — "Tap to take · hold to look" ("Click to
+take · hover to look" under a mouse) — until the first one-tap commit
+(`taught.oneTap`).
+
+Everything that spends gold, is permanent or destroys stays select-then-confirm:
+the merchant, the shrine, a recruit, the hero pick, skill picks and the city's
+cash-out. `oneTap` is forbidden on them, as `immediate` is.
+
+Taps per battle node once the posts carry over (every fight after the first),
+from the map and back: tap the node, March, Start Wave, then the reward.
+**Before:** the reward was 2 taps (pick the card, "Take it"), or 1 if you
+wanted the preselected first card — 5 taps (4 at best). **After:** any card is
+1 tap — 4. The first fight adds the same 2 posting taps either way. A campfire
+goes from 2 taps (pick, then "Rest" or "Train") to 1.
 
 ## Live wave layout (Phase 2) — the contract the other lanes drop into
 

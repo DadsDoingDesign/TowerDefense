@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  ALL_REVEALED,
   CORE_IDEAS,
   IDEAS,
   ideaShown,
@@ -8,10 +9,14 @@ import {
   openSlotShown,
   presentIdeas,
   readMet,
+  revealOf,
+  stakesShown,
   startsFirstRun,
   type IdeaId,
   type StageState,
 } from '../src/state/staging'
+import { HQ_OPENS_AT } from '../src/game/run/hq'
+import { standingXpToReach } from '../src/game/run/standing'
 import { META_VERSION, migrateMeta, useMetaStore } from '../src/state/metaStore'
 import { LS3_TEACH_IDS, migrateSettings, SETTINGS_VERSION, TEACH_IDS, useSettingsStore } from '../src/state/settingsStore'
 import { useGameStore } from '../src/state/gameStore'
@@ -111,9 +116,57 @@ describe('what a first run shows, and when', () => {
     for (const id of IDEAS) expect(ideaShown(id, false, [], presentIdeas(firstBattle()))).toBe(true)
   })
 
-  it('the menu opens up with the first finished run', () => {
+  it('the menu opens up with the first finished run — then the staggered reveal (October 2026)', () => {
     expect(metaIdeas({ runsCompleted: 0 })).toEqual([])
-    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'stake', 'hq', 'crates', 'sovereign'])
+    // Run 2 no longer opens everything: the bank, the purse, standing and the charter's goal.
+    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'sovereign'])
+    // The HQ at 500 banked, the crates at the first delivery, the stake at standing 2 with any company.
+    expect(metaIdeas({ runsCompleted: 1, bank: HQ_OPENS_AT })).toContain('hq')
+    expect(metaIdeas({ runsCompleted: 1, bank: HQ_OPENS_AT - 1 })).not.toContain('hq')
+    expect(metaIdeas({ runsCompleted: 1, runsWon: 1 })).toContain('crates')
+    expect(metaIdeas({ runsCompleted: 2, standing: { art: standingXpToReach(1) } })).not.toContain('stake')
+    expect(metaIdeas({ runsCompleted: 2, standing: { art: standingXpToReach(2) } })).toContain('stake')
+    // The market and company focus from the fifth finished contract.
+    expect(metaIdeas({ runsCompleted: 4 })).not.toContain('market')
+    expect(metaIdeas({ runsCompleted: 5 })).toEqual(expect.arrayContaining(['market', 'focus']))
+  })
+
+  it('revealOf: each gate, its latch, and "Show everything" opening it all', () => {
+    const r = (v: Parameters<typeof revealOf>[0]) => revealOf(v, false)
+    // A first-timer and a run-2 player with 100 in the bank: nothing yet.
+    expect(r({ runsCompleted: 0, bank: 9999 })).toEqual({ hq: false, crates: false, market: false, focus: false })
+    expect(r({ runsCompleted: 1, bank: 100 })).toEqual({ hq: false, crates: false, market: false, focus: false })
+    // The HQ the first time the bank holds 500 — and it stays open once met (the latch).
+    expect(r({ runsCompleted: 1, bank: 500 }).hq).toBe(true)
+    expect(r({ runsCompleted: 3, bank: 40, met: ['hq'] }).hq).toBe(true)
+    // A save that bought an HQ level has met the HQ.
+    expect(r({ runsCompleted: 3, bank: 40, hqOwned: true }).hq).toBe(true)
+    // The crates at the first delivered contract (a fall or a cash-out does not open them), latched.
+    expect(r({ runsCompleted: 3, runsWon: 0 }).crates).toBe(false)
+    expect(r({ runsCompleted: 3, runsWon: 1 }).crates).toBe(true)
+    expect(r({ runsCompleted: 3, met: ['crates'] }).crates).toBe(true)
+    // The market and focus at five finished contracts.
+    expect(r({ runsCompleted: 4 })).toMatchObject({ market: false, focus: false })
+    expect(r({ runsCompleted: 5 })).toMatchObject({ market: true, focus: true })
+    // "Show everything from the start" opens every gate.
+    expect(revealOf({ runsCompleted: 0 }, true)).toEqual(ALL_REVEALED)
+    // Stakes, per company, at standing 2 with it.
+    expect(stakesShown({ art: standingXpToReach(1) }, 'art', false)).toBe(false)
+    expect(stakesShown({ art: standingXpToReach(2) }, 'art', false)).toBe(true)
+    expect(stakesShown({ art: standingXpToReach(2) }, 'spice', false)).toBe(false)
+    expect(stakesShown({}, 'spice', true)).toBe(true)
+  })
+
+  it('the HQ latch: a bank that falls back under 500 keeps the HQ open once it was met', () => {
+    useMetaStore.getState().resetMeta()
+    useMetaStore.setState({ bank: 520, stats: { ...useMetaStore.getState().stats, runsCompleted: 2 } })
+    useMetaStore.getState().recordMet(metaIdeas({ runsCompleted: 2, bank: 520 }))
+    expect(useMetaStore.getState().met).toContain('hq')
+    useMetaStore.setState({ bank: 20 })
+    const m = useMetaStore.getState()
+    expect(revealOf({ runsCompleted: 2, bank: m.bank, met: m.met }, false).hq).toBe(true)
+    // The latch is the persisted `met` list, validated on load.
+    expect(migrateMeta({ met: ['hq', 'market', 'nope'] }, META_VERSION).met).toEqual(['hq', 'market'])
   })
 })
 
@@ -212,7 +265,7 @@ describe('persistence and validation', () => {
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(10)
+    expect(META_VERSION).toBe(11)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])

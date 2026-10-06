@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { homeGold, homeTotal } from '../src/game/run/hq'
 import { useGameStore } from '../src/state/gameStore'
 import { NEW_BANK, useMetaStore } from '../src/state/metaStore'
-import { cashOutValue, cityPay, CRATE_PRICE } from '../src/game/run/contracts'
+import { ADVANCE, cashOutValue, cityPay, CRATE_PRICE, STAKES_OPEN_AT } from '../src/game/run/contracts'
+import { standingXpToReach } from '../src/game/run/standing'
+import { useSettingsStore } from '../src/state/settingsStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
 
 /** The contract in the store: signing, a city's pay, cash out, and a fall. */
@@ -60,8 +62,8 @@ describe('a contract, in the store', () => {
   })
 
   it('the board clamps the stake to the standing cap and the bank, and signing takes nothing until the hero', () => {
-    g().openContracts({ company: 'metals', crates: 6, purse: 100 })
-    expect(g().board!.crates).toBe(1) // standing 0 with Ironvein: one crate
+    g().openContracts({ company: 'metals', crates: 6 })
+    expect(g().board!.crates).toBe(0) // standing 0 with Ironvein: escort only until standing 2
     g().boardPick('art')
     g().setCrates(6)
     expect(g().board!.crates).toBe(6)
@@ -69,22 +71,47 @@ describe('a contract, in the store', () => {
     expect(g().screen).toBe('heroPick')
     expect(useMetaStore.getState().bank).toBe(1000)
     g().pickStartingHero('pick-0')
-    expect(useMetaStore.getState().bank).toBe(1000 - 6 * CRATE_PRICE - 100)
-    expect(g().contract).toMatchObject({ company: 'art', crates: 6, purse: 100, signed: true })
-    expect(g().gold).toBe(100)
+    // The stake leaves the bank; the purse is the company's advance and does not.
+    expect(useMetaStore.getState().bank).toBe(1000 - 6 * CRATE_PRICE)
+    expect(g().contract).toMatchObject({ company: 'art', crates: 6, purse: ADVANCE, advance: true, signed: true })
+    expect(g().gold).toBe(ADVANCE)
+  })
+
+  it('stakes open per company at standing 2 with it (the staggered reveal)', () => {
+    const at = (xp: number) => {
+      useMetaStore.setState({ standing: { spice: 0, art: 0, metals: xp, silk: 0, scrolls: 0 } })
+      g().openContracts({ company: 'metals' }, 'terms')
+      g().setCrates(2)
+      return g().board!.crates
+    }
+    expect(at(standingXpToReach(1))).toBe(0)
+    expect(at(standingXpToReach(STAKES_OPEN_AT))).toBe(2)
+    // "Show everything from the start" opens them at any standing.
+    useSettingsStore.setState({ showEverything: true })
+    expect(at(0)).toBe(1)
+    useSettingsStore.setState({ showEverything: false })
+  })
+
+  it('an older save’s contract set up before the advance still takes its purse from the bank', () => {
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 2 })
+    useGameStore.setState({ contract: { ...g().contract!, purse: 100, advance: false }, gold: 100 })
+    g().pickStartingHero('pick-0')
+    expect(useMetaStore.getState().bank).toBe(1000 - 2 * CRATE_PRICE - 100)
+    expect(g().contract).toMatchObject({ purse: 100, signed: true })
+    expect(g().contract!.advance).toBeFalsy()
   })
 
   it('backing out of the hero pick returns to the terms, with nothing spent', () => {
-    g().openContracts({ company: 'art', crates: 2, purse: 60 })
+    g().openContracts({ company: 'art', crates: 2 })
     g().signContract()
     g().cancelHeroPick()
     expect(g().screen).toBe('contracts')
-    expect(g().board).toMatchObject({ company: 'art', crates: 2, purse: 60, step: 'terms' })
+    expect(g().board).toMatchObject({ company: 'art', crates: 2, step: 'terms' })
     expect(useMetaStore.getState().bank).toBe(1000)
   })
 
   it('the first city pays by the cargo that arrives, then waits on cash out or press on; cashing out banks it once', () => {
-    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 4, purse: 60 })
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 4 })
     g().pickStartingHero('pick-0')
     useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
     walk(() => g().contract!.pending != null)
@@ -101,9 +128,9 @@ describe('a contract, in the store', () => {
     g().cashOut()
     expect(g().runPhase).toBe('cashedOut')
     expect(g().contract!.status).toBe('cashedOut')
-    // The purse comes home with a share of the road's gold (`hq.homeGold`);
-    // interest and any feat's gold land on top.
-    const home = homeTotal(homeGold({ purse: c.purse, earned: c.earned, gold }))
+    // A share of the road's gold comes home (`hq.homeGold`; the advance stays
+    // with the company); interest and any feat's gold land on top.
+    const home = homeTotal(homeGold({ purse: c.purse, earned: c.earned, gold, advance: c.advance }))
     expect(home).toBeLessThan(gold)
     expect(useMetaStore.getState().bank - before).toBeGreaterThanOrEqual(c.paid[0] + sale + home)
     expect(useMetaStore.getState().stats.runsCompleted).toBe(runsBefore + 1)
@@ -117,7 +144,7 @@ describe('a contract, in the store', () => {
   it('a delivery pays all three cities and deals the contract’s unlocks', () => {
     // A fixed seed: the walk fights at a sliver of HP, and a seed it can lose
     // (a lobbed charge) would make this a coin flip.
-    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 2, purse: 60 })
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 2 })
     g().pickStartingHero('pick-0')
     useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 18 })) })
     walk(() => g().runPhase !== 'active', 0.001)
@@ -130,7 +157,7 @@ describe('a contract, in the store', () => {
   })
 
   it('a fall keeps what the cities paid, and loses the unsold crates', () => {
-    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 4, purse: 60 })
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 4 })
     g().pickStartingHero('pick-0')
     useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
     walk(() => g().contract!.pending != null)

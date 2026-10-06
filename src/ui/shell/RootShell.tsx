@@ -25,7 +25,7 @@ import '../../styles/menu.css'
 import '../../styles/hq.css'
 import '../../styles/charter.css'
 import { useLevelUpTracker } from './levelUps'
-import { useMenuStaged, useStagingRecorder } from './staging'
+import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -109,6 +109,7 @@ export function RootShell() {
   useStagingRecorder()
   // LS3: the HQ and the sealed crates open after the first finished contract.
   const menuStaged = useMenuStaged()
+  const reveal = useReveal()
   const metaCopy = META_COPY[metaView]
   usePagePrefetch()
 
@@ -170,9 +171,9 @@ export function RootShell() {
             <ContractsScreen />
           ) : ctx.stage === 'city' ? (
             <CityScreen />
-          ) : screen === 'hub' && metaView === 'hq' && !menuStaged ? (
+          ) : screen === 'hub' && metaView === 'hq' && !menuStaged && reveal.hq ? (
             <HqScreen onBack={() => setMetaView('menu')} />
-          ) : screen === 'hub' && metaView === 'crates' && !menuStaged ? (
+          ) : screen === 'hub' && metaView === 'crates' && !menuStaged && reveal.crates ? (
             <CratesScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
             <CharterScreen onBack={() => setMetaView('menu')} />

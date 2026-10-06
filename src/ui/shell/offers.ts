@@ -1,7 +1,7 @@
-import { describeBase, itemNoun, RARITY } from '../../game/data/items'
+import { describeBase, gripOf, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { SOVEREIGN_TIER } from '../../game/run/charter'
-import { PULL_PRICE } from '../../game/run/hq'
+import { HQ_OPENS_AT, PULL_PRICE } from '../../game/run/hq'
 import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { heroChoices, previewOf } from '../../game/run/heroes'
@@ -14,9 +14,10 @@ import { computeCombat } from '../../game/engine/combat'
 import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
-import { menuStaged } from '../../state/staging'
+import { menuStaged, revealOf } from '../../state/staging'
+import { revealFacts } from './staging'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, GRIP_NAME, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
@@ -187,6 +188,23 @@ export interface Offer {
    * Anything that spends, grants or destroys must never set this.
    */
   immediate?: boolean
+  /**
+   * October 2026 (the designer's call, audit §4 item 8): a CHEAP choice that
+   * commits on the tap — a reward card, the campfire. Unlike `immediate` it
+   * has a detail worth reading, so a hold (touch), a hover (mouse) or
+   * keyboard focus shows it without committing (`oneTap.tsx`). Never on
+   * anything that spends gold, is permanent, or destroys.
+   */
+  oneTap?: {
+    /** The option's accessible name, as the deed: "Take Bow — two-handed weapon, Common". */
+    label: string
+    /**
+     * What the Announcer says once it is done, also shown as the receipt
+     * toast. Omitted where the receipt toast already says it (an item landing
+     * in the pack).
+     */
+    said?: string
+  }
   /**
    * Character offers render as the design's portrait chooser — the selected
    * one grows and takes a rail in its own colour. Without this the page falls
@@ -768,7 +786,20 @@ function rewardOffers(st: St): Offer[] {
     // every card.
     info: c.grant?.mods ? { label: 'How effects stack', lines: STACKING_RULES } : undefined,
     action: { label: 'Take it', run: () => st.chooseReward(c.id) },
+    // One tap takes it (October 2026); a hold, hover or focus reads it first.
+    oneTap: rewardTap(c),
   }))
+}
+
+/** A reward card's one-tap name and its sentence once taken. */
+function rewardTap(c: NonNullable<St['reward']>[number]): NonNullable<Offer['oneTap']> {
+  const title = c.item ? itemName(c.item) : c.title
+  const what = c.item ? GRIP_NAME[gripOf(c.item)] : c.kind === 'relic' ? 'a relic for all your heroes' : 'for all your heroes'
+  const downside = c.downside ? `. Downside: ${c.downside}` : ''
+  return {
+    label: `Take ${title} — ${what}, ${RARITY[c.rarity].label}${downside}`,
+    said: c.item ? undefined : `Took ${title}.`,
+  }
 }
 
 /**
@@ -1112,7 +1143,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: onOff(s.showEverything),
       icon: 'map',
       body: [
-        'Off: a first contract introduces the game a piece at a time — gear after the first win, relics at the first elite, the contract board, stakes and purse after the first contract.',
+        'Off: the game introduces itself a piece at a time — gear after the first win, relics at the first elite, the contract board after the first contract, then the HQ, sealed crates, stakes, the market and company focus as you go.',
         'On: every screen shows everything straight away, as it does for a returning player.',
       ],
       action: {
@@ -1166,6 +1197,9 @@ export const stakeLine = (crates: number, charter = false): string =>
 
 /** LS3: what opens after a first contract — said the same way everywhere. */
 export const OPENS_AFTER_FIRST_RUN = 'Opens after your first contract'
+/** The staggered reveal (October 2026): when the HQ and the sealed crates open, said the same way everywhere. */
+export const HQ_OPENS_LINE = `Opens when your bank first holds ${HQ_OPENS_AT.toLocaleString('en')} gold`
+export const CRATES_OPEN_LINE = 'Opens after your first delivered contract'
 
 function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v: MetaView) => void): Offer[] {
   const game = useGameStore.getState()
@@ -1204,6 +1238,9 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   if (view === 'hq' || view === 'crates' || view === 'charter') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
+  // The staggered reveal (October 2026): the HQ and the crates keep their
+  // tiles, locked, with the one line that says what opens them.
+  const reveal = revealOf(revealFacts(meta), settings.showEverything)
   return [
     {
       id: 'run',
@@ -1217,8 +1254,9 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
         : ['Pick a company and a road. Escort for free, or stake cargo for a bigger payout.'],
       action: { label: 'Begin', run: () => game.openContracts() },
     },
-    // LS3: the HQ and the sealed crates open after the first finished
-    // contract — a first-timer's menu names neither (nor the bank).
+    // LS3: a first-timer's menu names neither the HQ nor the sealed crates
+    // (nor the bank). After it, each shows as a tile — locked, with what
+    // opens it, until the staggered reveal opens it.
     ...(staged
       ? []
       : [
@@ -1228,8 +1266,9 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             sub: `${moneyText(meta.bank, 'gold')} banked`,
             icon: 'base',
             immediate: true,
-            body: ['Your militia’s three offices: HR, Finance and Operations. Gold from your bank buys upgrades that last.'],
+            body: ['Your militia’s two offices: HR and Operations. Gold from your bank buys upgrades that last.'],
             action: { label: 'Open', run: () => setView('hq') },
+            ...(reveal.hq ? {} : { locked: HQ_OPENS_LINE }),
           } satisfies Offer,
           {
             id: 'crates',
@@ -1239,6 +1278,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             immediate: true,
             body: ['A side bet: one random item, yours for good. The odds are on the crate.'],
             action: { label: 'Open', run: () => setView('crates') },
+            ...(reveal.crates ? {} : { locked: CRATES_OPEN_LINE }),
           } satisfies Offer,
         ]),
     {

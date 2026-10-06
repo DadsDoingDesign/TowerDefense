@@ -3035,3 +3035,83 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   readability 4/5 (the weapon lines are a sentence long on a phone),
   hierarchy 4/5, polish 4/5. The numbers behind each line and their bench
   reads are in `docs/TUNING_LOG.md`, "October audit, lane B".
+
+- **2026-10-06 — One-tap commits for rewards and the campfire (audit §4,
+  designer item 8).** The designer overrode shell rule one for these two
+  cheap choices (FIGMA.md § One-tap commits). A tap, click, Enter or Space
+  on a reward card (in place, or on the Spoils page) or on the campfire's
+  rest or train commits it. A 350 ms touch hold, a mouse hover (after a
+  120 ms rest) or keyboard focus shows the detail, and releasing a hold
+  takes nothing. Accidental-commit guards are pure and tested
+  (`ui/shell/press.ts`): more than 8 px of travel is a scroll, and a press
+  within 250 ms of the surface appearing is ignored. "Take it" left the
+  wave strip, and the campfire lost its Rest/Train CTA. The first one-tap
+  board shows "Tap to take · hold to look" ("Click to take · hover to
+  look" under a mouse) until the first one-tap commit. Rendered in the
+  running app at 390x844 @2x (touch) and 1440x900, with real touches: the
+  reward hand before and after, a CDP hold (detail shown, reward still
+  open), one tap (item in the pack, toast), the campfire before and after.
+  The Spoils page was checked the same way. Guards were verified live: a
+  30 px drag across a card and a tap 24 ms after the campfire rows
+  appeared both left the board open. Keyboard was verified on the desk:
+  Tab shows the detail, Enter takes the card. The loop caught three bugs:
+  (1) a Spoils-page or campfire commit returned to the map with no
+  feedback at all, because the page shell's receipt toast and Announcer
+  unmounted before they spoke. They now carry a fresh receipt across the
+  swap, which also fixes the old Spoils-page "Take it" path. (2) The
+  Announcer's effect cleanup left a stale timer id, so a remount
+  (StrictMode) never flushed again. (3) A mouse moving from the third
+  card to the Context panel swept the detail to whichever card it
+  crossed; hover now waits 120 ms. Whales scan, 36 screens, before (c8bda01)
+  against after: no rule got worse on the touched screens. Wave cleared
+  and the campfire went from one primary ("Take it" / "Train …") to none.
+  The cards are the choice and the strip keeps the moment. The reward
+  card's off-scale 7 px foot is now 8. Totals: contrast 4→4, size 0→0,
+  order 0→0, primary 0→0, hit 286→284, spacing 512→508. The selected
+  3→4 is the hero pick's rolled heroes, not this change. Benchmark: Slay the
+  Spire's card reward (click a card to take it, hover to read), and
+  Marvel Snap / Hearthstone mobile's press-and-hold to inspect. Taps per
+  later battle node (node, March, Start, reward) went from 5 (4 if the
+  preselected card was wanted) to 4, and a campfire from 2 to 1.
+  Scorecard: readability 4/5, hierarchy 4/5 (the hint sits at the
+  strip's end, below the cards it explains), polish 4/5. Still open: the
+  strip's right slot is empty once the hint is spent. That is deliberate
+  (no CTA, no chrome), but worth a Whales re-critique.
+
+- **2026-10-06 — The designer's pass (audit §4 items 2, 3, 4b, 5, 6): the
+  company advance, a two-office HQ, standing bonus items, the charter's new
+  terms, a staggered run-2 reveal.** The purse picker is gone: every contract
+  carries the company's 60-gold advance, never the bank's and never banked
+  (old saves' bank purses settle as signed). The HQ is HR + Operations (pack
+  slots, focus, scouts); Finance's levels and "Fewer boulders" are refunded at
+  meta v11, and the free 2%/20 interest is one quiet line under the HQ's tabs.
+  A standing level past the card pool pays a Rare bonus item for the next
+  contract, shown as its own card on the receipt. The charter costs 4,000,
+  pays 24,000 and earns standing with all five companies, win or lose. The
+  menu, the terms and the HQ now open in beats — HQ at 500 banked (latched),
+  crates at the first delivery, stakes at standing 2 with that company, market
+  and focus at the fifth contract — and every locked place says what opens it.
+  Rendered in the running app at 390x844 @2x (menu at run 1, 2, the 500 latch
+  and run 5; terms escort-only and staked; the board's market tip; HQ HR, Ops
+  with focus locked and open; crates; charter; the hero pick's chip; a
+  cash-out receipt with two bonus items; a charter fall) and at 1440x900
+  (menu, HQ, terms), read by eye. The loop caught: (1) the locked market line
+  wrapped to four lines — one line with a count now; (2) the bank's rule
+  wrapped "up to / 20" — a headline ("next finished contract +12") over the
+  rule; (3) the charter's standing as five full rows pushed the slip off the
+  first screen — five crest chips; (4) the receipt's "Advance 50 repaid to
+  Ironvein" head line put the cash-out head at 30.4% chrome — the advance is a
+  slip line now (28.6%); (5) the standing card promised "Crate 2 can ride"
+  below the stakes gate — it says when stakes open; (6) "The company advances"
+  broke LS4's one-name rule ("the company" is your heroes) — the terms name the
+  hiring company ("Easel House advances 60 gold for the road"). Whales rules on
+  the new screens: contrast 0 except the accepted scroll fade, size 0, order 0,
+  chrome under 30%; the stock 22-screen scan is unchanged (merchant fade only).
+  Harness (FW_SECTIONS=12,13,18, n=120): the HQ grid still never lowers the win
+  rate past noise (Opening deal 5 +6pt); bank interest's 20 sits 36 under the
+  smallest stake's +56; the charter is now +2,090 gold a run against an
+  escort's +555 (was +80 vs +603), breaking even at a 17% delivery rate.
+  Benchmark: the reveal is Hades' Mirror/Contractor arriving after the first
+  escapes, each with one line; the advance is Slay the Spire's fixed starting
+  gold. Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
+  charter may now be too generous for the tuning pass; the stake curve.
