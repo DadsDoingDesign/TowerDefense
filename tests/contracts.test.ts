@@ -8,6 +8,7 @@ import { generateItem } from '../src/game/data/items'
 import { drawDistinct, poolFor } from '../src/game/run/skills'
 import {
   canCashOut,
+  ESCORT_FEE,
   cashOutValue,
   cityOfLayer,
   cityPay,
@@ -144,9 +145,9 @@ describe('contracts: stakes and cities', () => {
   it('an escort is paid a fee at every city and a bonus at the end, all scaled by cargo', () => {
     const full = contractPlan(terms(0))
     expect(full.stake).toBe(0)
-    expect(full.cities.map((x) => x.fee)).toEqual([40, 40, 40])
+    expect(full.cities.map((x) => x.fee)).toEqual([ESCORT_FEE, ESCORT_FEE, ESCORT_FEE])
     expect(full.cities[2].bonus).toBeGreaterThan(0)
-    expect(cityPay(terms(0), 1, 50).total).toBe(20)
+    expect(cityPay(terms(0), 1, 50).total).toBe(ESCORT_FEE / 2)
     expect(cityPay(terms(4), 0, 85).total).toBeLessThan(cityPay(terms(4), 0, 100).total)
   })
 
@@ -158,13 +159,8 @@ describe('contracts: stakes and cities', () => {
     expect(cashOutValue(terms(0), 1)).toBe(0)
   })
 
-  it('a bigger stake never pays less at any city, and the destination always has cargo from 2 crates', () => {
-    for (let c = 1; c <= MAX_CRATES; c++) {
-      expect(cratesSoldAt(c, 2)).toBeGreaterThanOrEqual(cratesSoldAt(c - 1, 2))
-      expect(contractPlan(terms(c)).total).toBeGreaterThan(contractPlan(terms(c - 1)).total)
-      if (c >= 2) expect(cratesSoldAt(c, 2)).toBeGreaterThan(0)
-    }
-    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => cratesSoldAt(c, 2))).toEqual([0, 0, 1, 1, 1, 1, 2, 2, 2])
+  it('a bigger stake pays more if delivered', () => {
+    for (let c = 1; c <= MAX_CRATES; c++) expect(contractPlan(terms(c)).total).toBeGreaterThan(contractPlan(terms(c - 1)).total)
   })
 
   it('a first contract may cash out from its second city; the Sovereign Route never', () => {

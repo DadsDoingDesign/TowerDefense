@@ -27,7 +27,7 @@ You run a private militia hired by trade companies to clear their trade routes o
   - the end pays the big reward.
 - **Losing** keeps whatever was already paid at cities reached and the purse's rest. Unsold cargo is lost, and most of the road's gold stays on the road (10% comes home, not 25%).
 - **Cashing out** (October audit) sells the crates still on the wagons at **full** value (`CASH_OUT_RATE` 1) and banks the road's gold at the full share; you give up the completion bonus, the item chances and the contract skill. The city screen prices all three outcomes (cash out, deliver, fall) with `settle.cityTrade`, and when nothing is at risk it says so instead of staging the choice. A first contract is offered the choice from its second city.
-- **Crate sales** (October audit): the first city sells half the load (rounded up), then the destination half of the rest (rounded up), and the second city what remains, so a bigger stake never pays less.
+- **Escort fee** (October audit): 60 a city (was 40), so the contract — banked win or lose — carries more of a run's income now that a fall leaves most of the road's gold behind.
 
 ## Unlocks
 - **Skills come only from playing.**

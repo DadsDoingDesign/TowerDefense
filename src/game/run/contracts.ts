@@ -50,8 +50,14 @@ export const CRATE_PRICE = 50
 export const CRATE_VALUE = 100
 /** The absolute ceiling on a stake, whatever the standing. */
 export const MAX_CRATES = 8
-/** The flat fee every city pays the escort, at full cargo. */
-export const ESCORT_FEE = 40
+/**
+ * The flat fee every city pays the escort, at full cargo. 40 → 60 in the
+ * October audit: a fall now leaves most of the road's gold behind
+ * (`hq.LOST_ROAD_SHARE`), which cut an escort's bank net from ~407 to ~269 in
+ * the harness; city pay is banked win or lose, so a bigger fee puts that income
+ * back where the spec wants it — in the contract, not the road.
+ */
+export const ESCORT_FEE = 60
 /** The destination's completion bonus: a base, and more for every crate carried. */
 export const BONUS_BASE = 150
 export const BONUS_PER_CRATE = 40
@@ -112,17 +118,19 @@ export const cityOfLayer = (layer: number): number | null =>
 /**
  * How many crates city `city` sells: half the load at the first (rounded up,
  * so the sale always recoups the stake — a crate sells for twice its price),
- * then the destination takes half of what is left (rounded up) and the second
- * city the rest. The destination is served first so that a bigger stake never
- * pays less (October audit 1.2): the old order left no crate for the
- * destination on small stakes, and contract pay dipped at 4 and 8 crates.
- * By stake 0–8 the destination sells 0, 0, 1, 1, 1, 1, 2, 2, 2.
+ * half of what is left at the second, the rest at the destination.
+ *
+ * (October audit 1.2 tried serving the destination before the second city;
+ * the harness measured it moving the expected-pay dips from stakes 4 and 8 to
+ * 2 and 6, because the destination is the city reached least. Reverted: with
+ * cash-out at full value the crates left on the wagons are no longer wasted,
+ * and the stake curve is the tuning pass's to re-anchor.)
  */
 export function cratesSoldAt(crates: number, city: number): number {
   const c = clampCrates(crates)
   const first = Math.ceil(c / 2)
-  const destination = Math.ceil((c - first) / 2)
-  return [first, c - first - destination, destination][city] ?? 0
+  const second = Math.ceil((c - first) / 2)
+  return [first, second, c - first - second][city] ?? 0
 }
 
 /** Crates still on the wagons after `citiesPaid` cities have sold theirs. */
