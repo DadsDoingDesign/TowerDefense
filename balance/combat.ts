@@ -140,10 +140,17 @@ export function runCombatDepth(): CombatDepthResult {
     rows.push({ name: 'Sapper (and Fuse Whelp) → blast at the Gate', kind: 'sapper', fired: open.stats.sapperBlasts, base: open.stats.sapperDamage, counter: held.stats.sapperDamage, unit: 'extra Gate damage from blasts', lowerIsBetter: true, counterLabel: `hold it: a blocking Fighter on the road (${POST.s5}) instead of a Mystic` })
   }
   // Bomber — Threat targeting picks it out of the column and kills it in the wind-up.
+  //
+  // ×3 → ×5 HP (the tuning pass). Since the classless rework the bench heroes
+  // are their kits (a knife, a wand), and at ×3 the column died before any
+  // bomber reached its throwing range: 0.0 lobs started on 6 seeds, on both
+  // policies, so the row failed as "never fired". Swept ×3/4/5/6/8: first-in-lane
+  // lobs 0 / 3.3 / 5.3 / 6 / 6 a fight, Threat targeting 0 / 0 / 0 / 1.7 / 4 —
+  // ×5 is the heaviest wave where the counter still stops every throw.
   {
     const w = makeWave([
-      { typeId: 'torch2', count: 12, hpMult: 3, gap: 0.6 },
-      { typeId: 'tnt2', count: 6, hpMult: 3, gap: 1.2, delay: -7 },
+      { typeId: 'torch2', count: 12, hpMult: 5, gap: 0.6 },
+      { typeId: 'tnt2', count: 6, hpMult: 5, gap: 1.2, delay: -7 },
     ])
     const team = post([[hero('rogue'), POST.s1], [hero('mystic'), POST.s2], [hero('rogue'), POST.s3]])
     const a = bench({ team, wave: w, focus: 'first' })
