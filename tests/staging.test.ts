@@ -23,7 +23,22 @@ import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 import { GLOSSARY } from '../src/ui/channels'
 import { glossaryOffer } from '../src/ui/shell/codexOffers'
-import { holdCoachRow, pickTipId, type TipFacts } from '../src/ui/shell/coachRules'
+import {
+  noteWhere,
+  pickPill,
+  pickTipId,
+  PILL_BASE_MS,
+  PILL_FADE_MS,
+  PILL_MAX_MS,
+  PILL_PER_WORD_MS,
+  pillDurationMs,
+  stageCrowded,
+  TIP_GAP_MS,
+  tipWhere,
+  wagonsLow,
+  wordCount,
+  type TipFacts,
+} from '../src/ui/shell/coachRules'
 
 /**
  * LS3 — teach in layers. What a first run shows when, what is persisted and
@@ -399,27 +414,80 @@ describe('one tip per new idea (the coach)', () => {
     expect(pickTipId(facts({ gear: true, showThreat: true, threat: 1.12 }))).toBe('gear')
   })
 
-  // Oct 2026 audit, 2.5: a tip never moves the Stage during a live wave.
+  // Oct 2026 audit, 2.5: nothing new floats over a field being fought on.
   it('a tip that comes due mid-wave waits for the wave to end', () => {
     // Enemy strength rises mid-run; during a live wave it waits…
     expect(pickTipId(facts({ live: true, showThreat: true, threat: 1.12 }))).toBeNull()
     // …and speaks at the next non-live moment.
     expect(pickTipId(facts({ live: false, showThreat: true, threat: 1.12 }))).toBe('threat')
-    // The breather lessons wait too, unless the row was held open for the wave…
-    expect(pickTipId(facts({ live: true, subwave: true }))).toBeNull()
-    expect(pickTipId(facts({ live: true, rowHeld: true, subwave: true }))).toBe('subwave')
-    expect(pickTipId(facts({ live: true, rowHeld: true, speed: true }))).toBe('speed')
-    // …and a held row is still only theirs: nothing else jumps the wave.
-    expect(pickTipId(facts({ live: true, rowHeld: true, gear: true, showThreat: true, threat: 1.2 }))).toBeNull()
+    // The breather lessons are the live wave's own: they speak in its pause…
+    expect(pickTipId(facts({ live: true, subwave: true }))).toBe('subwave')
+    expect(pickTipId(facts({ live: true, speed: true }))).toBe('speed')
+    expect(pickTipId(facts({ live: true, taught: { ...none, subwave: true }, subwave: true, speed: true }))).toBe('speed')
+    // …and only they: nothing else jumps the wave.
+    expect(pickTipId(facts({ live: true, gear: true, showThreat: true, threat: 1.2 }))).toBeNull()
+  })
+})
+
+// October 2026: the coach is a hint pill over the Stage — no row, no "Got it".
+describe('the hint pill', () => {
+  it('a field note pre-empts a tip at once, and the new-ground note outranks a tip', () => {
+    expect(pickPill({ note: false, ground: false, tip: 'deploy' })).toEqual({ kind: 'tip', id: 'deploy' })
+    expect(pickPill({ note: true, ground: false, tip: 'deploy' })).toEqual({ kind: 'note' })
+    expect(pickPill({ note: true, ground: true, tip: 'deploy' })).toEqual({ kind: 'note' })
+    expect(pickPill({ note: false, ground: true, tip: 'deploy' })).toEqual({ kind: 'ground' })
+    expect(pickPill({ note: false, ground: false, tip: null })).toBeNull()
   })
 
-  it('the row is held open for a whole wave only while a breather lesson is still to teach', () => {
-    const t = (subwave: boolean, speed: boolean) => ({ subwave, speed })
-    expect(holdCoachRow({ taught: t(false, false), subWaves: 2 })).toBe(true)
-    expect(holdCoachRow({ taught: t(true, false), subWaves: 3 })).toBe(true)
-    expect(holdCoachRow({ taught: t(true, true), subWaves: 3 })).toBe(false)
-    // A wave with no breather has nothing to teach there.
-    expect(holdCoachRow({ taught: t(false, false), subWaves: 1 })).toBe(false)
+  it('stays long enough to read, and never outstays its cap', () => {
+    expect(pillDurationMs('')).toBe(PILL_BASE_MS)
+    const short = pillDurationMs('Tap your hero, then a glowing tile on the field.')
+    const long = pillDurationMs('Items you win land in your pack. Tap a slot under Gear to wear one — what a hero holds is what it does.')
+    expect(short).toBe(PILL_BASE_MS + 10 * PILL_PER_WORD_MS)
+    expect(long).toBeGreaterThan(short)
+    // "—" is not a word.
+    expect(wordCount('New ground: The Kiln Road — post your heroes.')).toBe(8)
+    for (const n of [0, 1, 5, 20, 60, 200, 5000]) {
+      const d = pillDurationMs(Array.from({ length: n }, () => 'word').join(' '))
+      expect(d).toBeGreaterThanOrEqual(PILL_BASE_MS)
+      expect(d).toBeLessThanOrEqual(PILL_MAX_MS)
+    }
+    expect(pillDurationMs('word '.repeat(5000))).toBe(PILL_MAX_MS)
+    // A tip leaves room before the next one (F10), and fades quickly.
+    expect(TIP_GAP_MS).toBeGreaterThan(PILL_FADE_MS)
+  })
+
+  it('floats next to what it teaches, never over it', () => {
+    // The wave strip, the party row and the gear are below the Stage: bottom edge.
+    for (const id of ['subwave', 'speed', 'command', 'skill', 'gear', 'equip', 'relic'] as const) expect(tipWhere(id)).toBe('bottom')
+    // The field and the header's chips: top edge.
+    for (const id of ['deploy', 'danger', 'challenge', 'threat', 'depth', 'merchant'] as const) expect(tipWhere(id)).toBe('top')
+    // A note about a tile near the top of the field floats at the bottom.
+    expect(noteWhere(40, 960)).toBe('bottom')
+    expect(noteWhere(600, 960)).toBe('top')
+    expect(noteWhere(null, 960)).toBe('top')
+    expect(noteWhere(40, 0)).toBe('top')
+    // …and a bottom-edge tip never sits on the wagons while the field is in play.
+    expect(wagonsLow(900, 960)).toBe(true)
+    expect(wagonsLow(400, 560)).toBe(false)
+    expect(wagonsLow(undefined, 960)).toBe(false)
+    expect(tipWhere('subwave', { wagonsLow: true })).toBe('top')
+    expect(tipWhere('threat', { wagonsLow: true })).toBe('top')
+    // On the run map the bottom edge is the stops you can march to: top, always.
+    expect(tipWhere('gear', { onMap: true })).toBe('top')
+    expect(tipWhere('gear')).toBe('bottom')
+  })
+
+  it('never shares a short Stage with the wave-clear ceremony', () => {
+    expect(stageCrowded({ settled: true, stageH: 88 })).toBe(true)
+    expect(stageCrowded({ settled: true, stageH: 309 })).toBe(false)
+    expect(stageCrowded({ settled: false, stageH: 88 })).toBe(false)
+    // Not measured yet: no verdict.
+    expect(stageCrowded({ settled: true, stageH: 0 })).toBe(false)
+    const none = Object.fromEntries(TEACH_IDS.map((id) => [id, false])) as TipFacts['taught']
+    const base: TipFacts = { taught: none, inSetup: false, deployed: 0, packCount: 0, wearingAnything: true, showThreat: false, threat: 1, danger: false, elite: false, relicOffered: false, subwave: false, speed: false, gear: true, merchant: false }
+    expect(pickTipId(base)).toBe('gear')
+    expect(pickTipId({ ...base, ceremonyCrowded: true })).toBeNull()
   })
 })
 
