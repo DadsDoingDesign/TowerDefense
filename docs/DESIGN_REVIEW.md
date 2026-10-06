@@ -2896,3 +2896,32 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   conditions), hierarchy 4/5, polish 4/5. Balance §18 (not tuned): a
   late-game company delivers 23% (27% with every Sovereign item) against a
   25% break-even; the fee is about 7.6 good runs.
+
+- **2026-10-06 — The road changes country at every city (a new field each
+  act).** The October audit's designer item 7: with one field a run, posts
+  carried over and every fight after the first came down to Start / Next /
+  Take. Each act is now fought on its own battlefield (`run/fields.ts`: act 1
+  is the field the seed always dealt; a later act is a hash of (seed, act),
+  never a stream draw, never the act before it), and the company comes off
+  its posts at the act's first fight; within an act posts carry as before.
+  The route's ground and the per-node danger ground still apply, and the
+  phone still fights the portrait twin. Said three times, each once and in
+  its place: the city page's rail ("New ground ahead: The Kiln Road"), the
+  run map's preview of that fight ("New ground: … Heroes start on the
+  bench."), and the setup's coach row ("New ground: The Kiln Road — post
+  your heroes", setup only, so it never moves the Stage in a live wave; gone
+  once a hero is posted). Rendered in the running app at 390×844 @2x and
+  1440×900 across the act-1 boss: the city, the map preview, the act-2 setup
+  (new field, the company on the bench, the note) and a live act-2 wave. The
+  loop caught: (1) the city line wrapped to two lines on a phone
+  ("Next ground: … Your heroes start on the bench.") — it is one line now,
+  and the bench is said where it matters, in the setup; (2) the preview line
+  pushed the map challenge below the fold of the Context panel — shortened.
+  Benchmark: Kingdom Rush's next-stage map reveal and BTD6's map-per-round
+  set — every act opens with a placement puzzle again rather than a replay
+  of the last one. Scorecard: readability 4/5 (the city page is long on a
+  phone; the new line sits above the fold), hierarchy 4/5, polish 4/5.
+  Harness (FW_SECTIONS=11,13, 120 runs, before → after): first-timer line
+  12% → 12%, adaptive 18% → 21%, battles-first 11% → 3%, escort delivery
+  18% → 19%, the routes 15–19% → 15–23%. The harness re-posts best-first at
+  every fight, so it measures the new ground, not the decisions it brings.

@@ -26,6 +26,7 @@ You run a private militia hired by trade companies to clear their trade routes o
   - the second pays earnings;
   - the end pays the big reward.
 - **Losing** keeps whatever was already paid at cities reached. Unsold cargo is lost.
+- **Decided (2026-10-06): the road changes country at every city.** Each act is fought on its own battlefield. Act 1 is the field the seed always dealt; each later act's field is a fresh hash of (run seed, act) that never repeats the act before it (`run/fields.ts`). The company's route ground (wildfire, quarry, flooded…) still applies, and each fight still lays its own danger ground. When the first fight of a new act is entered, every hero comes off their post to the bench; within an act, posts carry from fight to fight as before. The city page says what is coming ("New ground ahead: The Kiln Road"), the run map's preview of that fight says "New ground", and its setup opens with "New ground: The Kiln Road — post your heroes". Why: with one field a run, posts carried over and every fight after the first came down to Start / Next / Take (October audit §4, designer item 7).
 
 ## Unlocks
 - **Skills come only from playing.**
