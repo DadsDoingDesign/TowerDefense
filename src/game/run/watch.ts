@@ -213,10 +213,10 @@ export function difficultyRules(step: number): DifficultyRules {
 /** The multiplier a fight on `layer` takes from the step's last leg (1 before it). */
 export const legMult = (rules: Pick<DifficultyRules, 'lastLeg'>, layer: number): number => (actOf(layer) >= ACTS ? rules.lastLeg : 1)
 
-/** "1 more elite an act · On the last leg, raiders 10% stronger and steal 10% more" — what a step does, in words. */
+/** "1 more elite an act · Past the second city, raiders 12% stronger and steal 12% more" — what a step does, in words. */
 export function difficultyEffect(step: number): string {
   const r = difficultyRules(step)
   if (r.step === 0) return 'Standard raiders.'
   const pct = Math.round((r.lastLeg - 1) * 100)
-  return `${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act · On the last leg, raiders ${pct}% stronger and steal ${pct}% more`
+  return `${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act · Past the second city, raiders ${pct}% stronger and steal ${pct}% more`
 }
