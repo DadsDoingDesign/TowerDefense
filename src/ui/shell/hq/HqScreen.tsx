@@ -211,12 +211,12 @@ function BankLine({ bank }: { bank: number }) {
   return (
     <p className="hq-bankline" role="note">
       <span>
-        <b>Bank interest</b> · {ratePct(BASE_INTEREST.rate)} each finished contract, up to {BASE_INTEREST.cap}
+        <b>Bank interest</b> · next finished contract <b className="tone-good">+{interestFor(bank)}</b>
       </span>
-      <span className="hq-bankline-v">
-        Next <b className="tone-good">+{interestFor(bank)}</b>
-        {last != null && <> · last +{last}</>}
-      </span>
+      <small>
+        {ratePct(BASE_INTEREST.rate)} of the bank each finished contract, up to {BASE_INTEREST.cap}
+        {last != null ? ` · last +${last}` : ''}. Free.
+      </small>
     </p>
   )
 }

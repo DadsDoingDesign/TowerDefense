@@ -287,6 +287,8 @@ button.mn-today:disabled {
 .mn-today.is-locked {
   background: rgba(20, 14, 8, 0.92);
   border: 1px dashed var(--line-strong);
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 .mn-today.is-locked b {
   color: var(--muted);

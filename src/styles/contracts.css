@@ -650,7 +650,7 @@
 }
 .ct-advance b {
   color: var(--text);
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
 }
 .ct-advance small {
   font-size: var(--fs-xs);
@@ -912,12 +912,31 @@
   display: grid;
   gap: 4px;
 }
-.ct-stand.sm {
-  padding: 4px 12px;
-  min-height: 44px;
+.ct-stand-five {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
 }
-.ct-stand.sm .ct-stand-lv {
+.ct-stand-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 0 3px 0 var(--co);
+}
+.ct-stand-chip b {
+  font-family: var(--font-display);
   font-size: 21px;
+  line-height: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ct-stand-chip.up b {
+  color: var(--accent-text);
 }
 
 /* ------------------------------------------------------------ the run's route panel */

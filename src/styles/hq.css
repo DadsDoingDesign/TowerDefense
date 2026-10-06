@@ -52,10 +52,8 @@
 /* The free interest, one quiet line under the tabs (the Finance office was cut). */
 .hq-bankline {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 2px 12px;
+  flex-direction: column;
+  gap: 2px;
   margin: 0;
   padding: 8px 12px;
   border-radius: 10px;
@@ -72,8 +70,8 @@
   color: var(--good);
   font-variant-numeric: tabular-nums;
 }
-.hq-bankline-v {
-  font-variant-numeric: tabular-nums;
+.hq-bankline small {
+  font-size: var(--fs-xs);
 }
 
 /* ------------------------------------------------------------ cards */

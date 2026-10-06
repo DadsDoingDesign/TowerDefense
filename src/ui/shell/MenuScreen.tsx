@@ -103,9 +103,11 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
   const today = !staged && !reveal.market ? (
     <div className="mn-today is-locked" role="note" aria-label={`Market of the day: opens after ${MARKET_FROM_RUN} finished contracts. ${Math.min(runs, MARKET_FROM_RUN)} of ${MARKET_FROM_RUN} so far.`}>
       <Lock scale={2} />
-      <b aria-hidden="true">Market of the day</b>
+      <span aria-hidden="true">
+        <b>Market of the day</b> · after {MARKET_FROM_RUN} contracts
+      </span>
       <span className="mn-today-r" aria-hidden="true">
-        Opens after {MARKET_FROM_RUN} contracts · {Math.min(runs, MARKET_FROM_RUN)}/{MARKET_FROM_RUN}
+        {Math.min(runs, MARKET_FROM_RUN)}/{MARKET_FROM_RUN}
       </span>
     </div>
   ) : staged ? (

@@ -379,7 +379,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
           <b>
             {co.name} advances {ADVANCE} gold for the road
           </b>
-          <small>Not from your bank. Spend it on the road; what is left is repaid. {Math.round(ROAD_SHARE * 100)}% of the road’s gold comes home.</small>
+          <small>Not from your bank, and repaid at the end. {Math.round(ROAD_SHARE * 100)}% of the road’s gold comes home.</small>
         </span>
         <span className="ct-advance-v">
           <Gold n={ADVANCE} />

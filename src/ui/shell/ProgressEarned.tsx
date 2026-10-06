@@ -3,6 +3,7 @@ import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { itemKindById } from '../../game/data/itemKinds'
 import { companyById } from '../../game/data/companies'
 import { contractFloor, MAX_STANDING, standingProgress } from '../../game/run/standing'
+import { STAKES_OPEN_AT } from '../../game/run/contracts'
 import type { RunProgress } from '../../state/metaStore'
 import { useMetaStore } from '../../state/metaStore'
 import { companyVar } from '../channels'
@@ -86,7 +87,11 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
           {p.unranked
             ? 'A custom seed earns no standing.'
             : up
-              ? `+${p.xp} standing XP. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
+              ? p.standingAfter < STAKES_OPEN_AT
+                ? `+${p.xp} standing XP. Stakes open at Standing ${STAKES_OPEN_AT}.`
+                : p.standingBefore < STAKES_OPEN_AT
+                  ? `+${p.xp} standing XP. Stakes are open on its road: up to ${Math.min(8, p.standingAfter + 1)} crates.`
+                  : `+${p.xp} standing XP. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
               : prog.max
                 ? `+${p.xp} standing XP. The highest standing there is.`
                 : `+${p.xp} standing XP · ${prog.need - prog.into} to Standing ${Math.min(MAX_STANDING, prog.standing + 1)}`}
@@ -108,23 +113,24 @@ function StandingAllEarned({ progress: p }: { progress: RunProgress }) {
   return (
     <section className="ct-stand-all" aria-label={`+${p.xp} standing XP with all five companies`}>
       <p className="ct-eyebrow left">+{p.xp} standing XP with all five companies</p>
-      {all.map((s) => {
-        const co = companyById(s.company)
-        const up = s.after > s.before
-        return (
-          <div key={s.company} className="ct-stand sm" style={{ '--co': companyVar(s.company) } as CSSProperties}>
-            <Crest company={s.company} scale={1} />
-            <span className="ct-stand-text">
-              <b>
-                {co.name} · Standing {s.after}
-              </b>
+      <div className="ct-stand-five">
+        {all.map((s) => {
+          const co = companyById(s.company)
+          const up = s.after > s.before
+          return (
+            <span
+              key={s.company}
+              className={`ct-stand-chip${up ? ' up' : ''}`}
+              style={{ '--co': companyVar(s.company) } as CSSProperties}
+              role="img"
+              aria-label={up ? `${co.name}: Standing ${s.before} to ${s.after}` : `${co.name}: Standing ${s.after}`}
+            >
+              <Crest company={s.company} scale={1} />
+              <b>{up ? `${s.before}→${s.after}` : s.after}</b>
             </span>
-            <span className="ct-stand-lv" aria-label={up ? `Standing ${s.before} to ${s.after}` : `Standing ${s.after}`}>
-              {up ? `${s.before}→${s.after}` : s.after}
-            </span>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </section>
   )
 }
