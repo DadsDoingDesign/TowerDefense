@@ -162,8 +162,8 @@ export function skillPoolFor(unlocked: readonly string[], achieved: (id: string)
 // runs, the adaptive line, zero HQ, Rosethread's road — REPORT §13's cell):
 //
 //   crates      0     1     2     3     4     5     6     7     8
-//   last leg   ×1  ×1.12 ×1.22 ×1.34 ×1.5  ×1.74 ×2.1  ×4    ×5
-//   delivered 32.2  27.7  23.2  19.2  14.7   9.0   5.0   0.8   0.3%
+//   last leg   ×1  ×1.12 ×1.22 ×1.36 ×1.5  ×1.74 ×2.1  ×4.5  ×5.5
+//   delivered 33.5  27.5  23.2  18.7  15.5  10.0   6.5   0.7   0.3%
 //
 // The top crates are a dare, not a road: a zero-HQ company all but never
 // brings 7 or 8 crates home, and sells them at the first two cities instead.
@@ -177,7 +177,7 @@ export const MAX_DIFFICULTY = 10
  * AND what one who reaches the wagons steals. Index = step; a step past the
  * table repeats its last.
  */
-export const LAST_LEG: readonly number[] = [0, 0.12, 0.22, 0.34, 0.5, 0.74, 1.1, 3, 4]
+export const LAST_LEG: readonly number[] = [0, 0.12, 0.22, 0.36, 0.5, 0.74, 1.1, 3.5, 4.5]
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
 
