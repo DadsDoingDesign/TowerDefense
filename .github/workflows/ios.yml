@@ -1,8 +1,10 @@
 name: iOS
 
-# Builds the iOS app on GitHub's Macs and sends it to TestFlight. Run it by hand
-# (Actions → iOS → Run workflow): every run is a new TestFlight build, and macOS
-# minutes are the expensive kind.
+# Builds the iOS app on GitHub's Macs and sends it to TestFlight. Every run is a
+# new TestFlight build and macOS minutes are the expensive kind, so it only runs
+# when asked: push a tag (`git tag ios-<n> && git push origin ios-<n>`), or use
+# Actions → iOS → Run workflow (that button only appears once this file is on
+# the repo's default branch).
 #
 # Signing is Xcode's automatic, cloud-managed signing, driven by an App Store
 # Connect API key — no certificates or profiles live in the repo. Repository
@@ -15,6 +17,8 @@ name: iOS
 # time requires it.
 
 on:
+  push:
+    tags: ['ios-*']
   workflow_dispatch:
     inputs:
       upload:
@@ -70,12 +74,13 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
-      - name: Export${{ inputs.upload && ' and upload to TestFlight' || '' }}
+      - name: Export (and upload to TestFlight unless switched off)
         run: |
           OPTS="$RUNNER_TEMP/ExportOptions.plist"
           cp ios/ExportOptions.plist "$OPTS"
           plutil -replace teamID -string "$APPLE_TEAM_ID" "$OPTS"
-          if [ "${{ inputs.upload }}" != "true" ]; then
+          # A tag push has no inputs: it uploads.
+          if [ "${{ inputs.upload }}" = "false" ]; then
             plutil -replace destination -string export "$OPTS"
           fi
           xcodebuild -exportArchive \
