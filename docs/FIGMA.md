@@ -19,6 +19,7 @@ It supersedes everything below, which is kept as history. The page's own
 | Foundations | Plates for Color (every token's use), Icons (all 96 atlas keys, each with meaning and use), Type, Space · Radius · Elevation, and Sprites. |
 | Components 01–10 | About 150 components and sets, grouped by shell band and page family. Each set has a Spec block (source file, CSS class, USE FOR, AUDIT notes). Every variant is labelled under itself with what that state means; the same text is the variant's description. |
 | Screens | Built only from instances: D Battle (12), C Run (8), A Watchtower (16), B Contract (4), E End (4), all at 390×844. W Desktop: 3 screens at 1440×900. |
+| X Edge cases | 15 screens at the limits: five heroes (the Selector scrolls), a full 10-slot pack, a long wave queue (+N chip), long names, Large UI, the 320×568 tier, nothing affordable, roster full, toasts over content, every header chip at once, the longest militia name with an 8-digit bank, and the High contrast and Tritan modes. Magenta dashed boxes are annotations, not UI. |
 | Audit / Findings | 44 findings with severity and `file:line`, plus the visual issues seen in a full capture of `main`. |
 
 Older pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
