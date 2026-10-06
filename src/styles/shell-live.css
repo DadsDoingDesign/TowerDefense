@@ -464,7 +464,7 @@ h1.sh-brand {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 0 4px 0 3px;
+  padding: 0 4px;
   border-radius: 4px;
   background: var(--panel-2);
   border: 1px solid var(--line);

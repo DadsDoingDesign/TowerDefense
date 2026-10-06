@@ -1468,7 +1468,7 @@
 }
 @media (orientation: portrait) and (max-height: 660px), (orientation: landscape) and (max-height: 720px) {
   .pg {
-    --pg-split: 6px;
+    --pg-split: 8px;
   }
 }
 .pg-head {
@@ -1526,7 +1526,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   padding: 0 10px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
@@ -1535,10 +1535,6 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   white-space: nowrap;
-}
-.pg-dual-btn > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* 3.8 — a card with a cost (the shrine's curse, a mutation's downside) states

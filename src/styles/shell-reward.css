@@ -128,7 +128,7 @@
 /* The reward hand: three cards that share the row. */
 .sh-reward-row {
   /* Room for the selected card's lift and its ring (3.9). */
-  padding: 3px 1px;
+  padding: 4px 0;
 }
 .sh-offer.sh-reward {
   flex: 1 1 0;
