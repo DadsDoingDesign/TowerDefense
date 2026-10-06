@@ -571,6 +571,8 @@ export interface RunBattleOptions {
   subWaves?: boolean
   /** The Sovereign Route's muster: every goblin clan from the first fight (`waves` `muster`). */
   muster?: boolean
+  /** What a leak steals, as a multiplier on its Gate damage (a stake's raiders steal more, `DifficultyRules.leakMult`). */
+  baseDamageMul?: number
   /**
    * G1-2: ignore the team's `slotId`s and post the company the way a competent
    * player does on the tile grid ({@link deployTeam}). Every "the modelled
@@ -690,6 +692,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     seed: opts.seed ?? 42,
     commands: opts.commands,
     rules: opts.rules,
+    baseDamageMul: opts.baseDamageMul,
   })
   const player = opts.player ?? NO_INPUT
   const commandId = player.commandId ?? engine.commands[0]

@@ -14,6 +14,7 @@
 import { hashSeed, RNG } from '../core/rng'
 import { ALL_SKILLS, FEAT_SKILLS, RANDOM_UNLOCK_SKILLS, STARTER_SKILLS } from '../data/skills'
 import { UNLOCK_ITEM_KINDS } from '../data/itemKinds'
+import { actOf, ACTS } from './threat'
 
 // ---------------------------------------------------------------------------
 // Watch XP and Watch levels
@@ -141,39 +142,81 @@ export function skillPoolFor(unlocked: readonly string[], achieved: (id: string)
 //
 // SK1's difficulty steps replaced the Vow ladder; the mercenary company turned
 // the step into the stake (`contracts.stakeRules`): every crate carried is
-// one step — enemies 8% stronger and one more elite an act — and the payout
-// for it is the stake's (crate sales, the completion bonus, item chances).
+// one step — one more elite an act, and raiders on the road's LAST LEG (past
+// the second city) stronger and greedier — and the payout for it is the
+// stake's (crate sales, the completion bonus, item chances).
+//
+// ---- why the last leg (the tuning pass) ------------------------------------
+//
+// A stake had to be a wager both ways (REPORT §13): every crate must cost at
+// least 3pt of delivery AND pay more on average than the crate below. At +8%
+// strength a crate cost 0–2pt (delivery 18 → 18 → 19 → 15 → 14 → 14 → 12 →
+// 11 → 10%). Strength on the WHOLE road cannot do both: it costs delivery by
+// costing the second city too, and a crate's pay is mostly the first two
+// cities' sales — measured with HP and theft ×1.08…×4 from the first fight,
+// delivery fell 32 → 31 → 27 → 19 → 13 → 10 → 4 → 0.7% but the second city's
+// reach fell 90 → 16% with it, and pay fell from tier 4 on. Concentrated on
+// the last leg, the danger sits on the cargo still riding to the destination:
+// the second city's reach holds at ~90–95% and delivery falls ~4pt a crate.
+// Fitted per tier (each tier's runs depend only on its own entry; 600 paired
+// runs, the adaptive line, zero HQ, Rosethread's road — REPORT §13's cell):
+//
+//   crates      0     1     2     3     4     5     6     7     8
+//   last leg   ×1  ×1.12 ×1.22 ×1.34 ×1.5  ×1.74 ×2.1  ×4    ×5
+//   delivered 32.2  27.7  23.2  19.2  14.7   9.0   5.0   0.8   0.3%
+//
+// The top crates are a dare, not a road: a zero-HQ company all but never
+// brings 7 or 8 crates home, and sells them at the first two cities instead.
+// Delivery cannot fall 3pt a crate for eight crates from 32% without the last
+// ones landing near zero.
 
 /** The highest difficulty step there is. */
 export const MAX_DIFFICULTY = 10
-/** Enemy strength each step adds (on the run's starting Threat). */
-export const STRENGTH_PER_STEP = 0.08
+/**
+ * How much stronger the raiders on the last leg are at each step — their HP
+ * AND what one who reaches the wagons steals. Index = step; a step past the
+ * table repeats its last.
+ */
+export const LAST_LEG: readonly number[] = [0, 0.12, 0.22, 0.34, 0.5, 0.74, 1.1, 3, 4]
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
 
 /** Everything a run needs to know about the difficulty step it is played at. */
 export interface DifficultyRules {
   step: number
-  /** The Threat the run starts at: 1 + 8% a step. */
+  /** The Threat the run starts at (1 for every stake; the Sovereign Route's muster sets its own). */
   startThreat: number
+  /** What a leak steals everywhere, as a multiple of the raider's own (1 but for the muster). */
+  leakMult: number
+  /** On the last leg (act 3): raiders' HP and what they steal, ×this. */
+  lastLeg: number
   /** Battle nodes in each act that become elites. */
   extraElites: number
 }
 
 export const clampStep = (step: number): number => Math.max(0, Math.min(MAX_DIFFICULTY, Math.floor(Number.isFinite(step) ? step : 0)))
 
+/** A step's last-leg strength (`LAST_LEG`). */
+export const lastLegStrength = (step: number): number => LAST_LEG[Math.min(LAST_LEG.length - 1, clampStep(step))]
+
 export function difficultyRules(step: number): DifficultyRules {
   const s = clampStep(step)
   return {
     step: s,
-    startThreat: Math.round((1 + STRENGTH_PER_STEP * s) * 1000) / 1000,
+    startThreat: 1,
+    leakMult: 1,
+    lastLeg: Math.round((1 + lastLegStrength(s)) * 1000) / 1000,
     extraElites: s * ELITES_PER_STEP,
   }
 }
 
-/** "Enemies 24% stronger · 3 more elites an act" — what a step does, in words. */
+/** The multiplier a fight on `layer` takes from the step's last leg (1 before it). */
+export const legMult = (rules: Pick<DifficultyRules, 'lastLeg'>, layer: number): number => (actOf(layer) >= ACTS ? rules.lastLeg : 1)
+
+/** "1 more elite an act · On the last leg, raiders 10% stronger and steal 10% more" — what a step does, in words. */
 export function difficultyEffect(step: number): string {
   const r = difficultyRules(step)
   if (r.step === 0) return 'Standard raiders.'
-  return `Raiders ${Math.round((r.startThreat - 1) * 100)}% stronger · ${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act`
+  const pct = Math.round((r.lastLeg - 1) * 100)
+  return `${r.extraElites} more elite${r.extraElites === 1 ? '' : 's'} an act · On the last leg, raiders ${pct}% stronger and steal ${pct}% more`
 }

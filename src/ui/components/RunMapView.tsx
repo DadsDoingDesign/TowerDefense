@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
-import { cityOfLayer, stakeRules } from '../../game/run/contracts'
+import { legMult, type DifficultyRules } from '../../game/run/watch'
+import { cityOfLayer, contractRules } from '../../game/run/contracts'
 import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
@@ -21,8 +22,8 @@ import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
  */
 const FIGHT_NODES = new Set(['battle', 'elite', 'miniboss', 'boss'])
 
-const nodeThreat = (n: { type: MapNode['type']; layer: number }, startThreat: number): number | null =>
-  FIGHT_NODES.has(n.type) ? Math.round(encounterThreat(n, startThreat) * 10) / 10 : null
+const nodeThreat = (n: { type: MapNode['type']; layer: number }, rules: DifficultyRules): number | null =>
+  FIGHT_NODES.has(n.type) ? Math.round(encounterThreat(n, rules.startThreat) * legMult(rules, n.layer) * 10) / 10 : null
 
 const GAP = 104 // vertical px between layers
 const PAD_X = 44
@@ -38,7 +39,9 @@ export function RunMapView() {
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const currentNodeId = useGameStore((s) => s.currentNodeId)
   const selectNode = useGameStore((s) => s.selectNode)
-  const startThreat = useGameStore((s) => stakeRules(s.contract?.crates ?? 0).startThreat)
+  const crates = useGameStore((s) => s.contract?.crates ?? 0)
+  const charter = useGameStore((s) => !!s.contract?.charter)
+  const rules = contractRules({ crates, charter })
   // The act bosses are the route's cities (the mercenary company): named on the map.
   const towns = useGameStore((s) => (s.contract ? routeOf(s.contract).towns : null))
   const focusedId = useMapFocus((s) => s.nodeId)
@@ -143,7 +146,7 @@ export function RunMapView() {
               : isReachable
                 ? 'reachable'
                 : 'locked'
-          const threat = nodeThreat(n, startThreat)
+          const threat = nodeThreat(n, rules)
           const isFocused = focusedId === n.id
           return (
             <button

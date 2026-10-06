@@ -114,7 +114,9 @@ describe('contracts: stakes and cities', () => {
 
   it('every crate is a difficulty step and more danger, never less', () => {
     for (let c = 1; c <= MAX_CRATES; c++) {
-      expect(stakeRules(c).startThreat).toBeGreaterThan(stakeRules(c - 1).startThreat)
+      // Every crate makes the last leg's raiders stronger and greedier (the tuning pass).
+      expect(stakeRules(c).lastLeg).toBeGreaterThan(stakeRules(c - 1).lastLeg)
+      expect(stakeRules(c).startThreat).toBe(1)
       expect(stakeRules(c).extraElites).toBeGreaterThan(stakeRules(c - 1).extraElites)
       expect(dangerPips(c)).toBeGreaterThanOrEqual(dangerPips(c - 1))
     }

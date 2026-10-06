@@ -66,6 +66,12 @@ export const SOVEREIGN_TIER = 'Sovereign'
 export const CHARTER_FEE = 5000
 /** What a delivered Sovereign Route pays at its destination: four fees. */
 export const CHARTER_PAYOUT = 20000
+/**
+ * The muster's teeth: every raider on the Sovereign Route is this much
+ * stronger (its starting Threat), on top of every clan marching from the
+ * first fight. 1 = flavour only.
+ */
+export const MUSTER_STRENGTH = 1
 /** Rosethread's trade-off: every merchant price on the route is this many times as much. */
 export const CHARTER_PRICE_MULT = 2
 /**

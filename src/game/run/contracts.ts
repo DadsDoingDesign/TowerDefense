@@ -35,7 +35,7 @@ import { itemKindById, itemPoolFor } from '../data/itemKinds'
 import { ACT_LAYERS, ACTS } from './threat'
 import { difficultyRules, type DifficultyRules } from './watch'
 import { BASE_RUN_HQ, FOCUS_MAX_SHARE, type RunHq } from './hq'
-import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, sovereignPool } from './charter'
+import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, MUSTER_STRENGTH, sovereignPool } from './charter'
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders the designer will tune: "to what makes it fun")
@@ -73,6 +73,15 @@ export const clampCrates = (crates: number, cap = MAX_CRATES): number =>
 
 /** What a stake does to the road: the old difficulty step, one step a crate. */
 export const stakeRules = (crates: number): DifficultyRules => difficultyRules(clampCrates(crates))
+
+/**
+ * What a signed contract does to the road: its stake's step, or, on the
+ * Sovereign Route (no crates), the muster's strength (`charter.MUSTER_STRENGTH`).
+ * Every caller that starts or previews a run's Threat reads this, so a
+ * charter's raiders are as strong on the map preview as in the fight.
+ */
+export const contractRules = (c: Pick<ContractTerms, 'crates' | 'charter'> | null | undefined): DifficultyRules =>
+  c?.charter ? { ...difficultyRules(0), startThreat: MUSTER_STRENGTH, leakMult: MUSTER_STRENGTH } : stakeRules(c?.crates ?? 0)
 
 /** Danger, as 1–5 pips — how hard the road is at this load. Never a probability. */
 export const dangerPips = (crates: number): number => Math.min(5, 1 + Math.ceil(clampCrates(crates) / 2))

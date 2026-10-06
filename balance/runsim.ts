@@ -52,7 +52,7 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
-import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractStake, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractRules, contractStake, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
 import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
@@ -62,7 +62,7 @@ import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game
 import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, type DealRules, type HqOrders } from '../src/game/run/hq'
 import { stow } from '../src/game/run/inventory'
 import { useMetaStore } from '../src/state/metaStore'
-import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
+import { difficultyRules, legMult, type DifficultyRules } from '../src/game/run/watch'
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { autoEquipEmpty, type EquipRules } from '../src/game/engine/kit'
@@ -460,7 +460,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   const k = o.contract ?? null
   const charter = !!k?.charter
   const parts = { ground: true, prices: true, muster: true, ...o.charterParts }
-  const banner = k ? stakeRules(charter ? 0 : k.crates) : (o.difficulty ?? difficultyRules(0))
+  // A charter's muster is its strength too (`contracts.contractRules`); §18 lifts it with the rest of the muster.
+  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter })) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
   // A contract weights its company's pieces on its own road (`weightPool`), as
   // the store does; the Sovereign Route deals for no company and no focus, and
@@ -686,7 +687,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       // composition variants the shipped game would deal it (WS8).
       variantSeed: encounterSeed(seed, node.layer),
       variantSibling: node.row,
-      enemyHpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1),
+      enemyHpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1) * legMult(banner, node.layer),
       baseHp,
       teamMods: relicTeamMods(relics),
       // A cap, not a clock: the game has no timeout, and sub-waves (Phase 3a)
@@ -700,6 +701,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       rules: o.rules,
       subWaves: o.subWaves,
       muster,
+      // A stake's last leg (and the muster) steals more (`DifficultyRules`).
+      baseDamageMul: banner.leakMult * legMult(banner, node.layer),
     })
     o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
     baseHp = m.baseHpLeft
@@ -725,7 +728,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     // with `levelXpAwards`, and so does this.
     const awards = levelXpAwards(
       m.perSentinel.map((p) => ({ id: p.id, xpGained: p.xp })),
-      { wave: m.wave, hpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1), depth: node.layer, kind: worth },
+      { wave: m.wave, hpMult: threat * nodeThreatMult(node.type) * (o.curve?.(node.layer, kind) ?? 1) * legMult(banner, node.layer), depth: node.layer, kind: worth },
     )
     const xpById = new Map(diaryXp(awards, roster, relics).map((p) => [p.id, p.xpGained]))
     roster = roster.map((s) => evolve(applyXp(s, xpById.get(s.id) ?? 0)))

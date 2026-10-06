@@ -20,7 +20,7 @@ import {
   takeBump,
   takeSkill,
 } from '../src/game/run/skills'
-import { difficultyRules, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
+import { difficultyRules, LAST_LEG, legMult, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
 import { standingXpFor } from '../src/game/run/standing'
 import { classicHero } from '../src/game/data/sentinels'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
@@ -263,9 +263,11 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
     expect(skillPoolFor([], (f) => f === 'win_fighter')).toContain('warden_of_ash')
   })
 
-  it('adds 8% enemy strength and one elite an act per step', () => {
-    expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, extraElites: 0 })
-    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1.24, extraElites: 3 })
+  it('adds one elite an act and a stronger, greedier last leg per step', () => {
+    expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, leakMult: 1, lastLeg: 1, extraElites: 0 })
+    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1, leakMult: 1, lastLeg: 1 + LAST_LEG[3], extraElites: 3 })
+    expect(legMult(difficultyRules(3), 8)).toBe(1)
+    expect(legMult(difficultyRules(3), 9)).toBe(1 + LAST_LEG[3])
     expect(difficultyRules(99).step).toBe(MAX_DIFFICULTY)
     expect(difficultyRules(-2).step).toBe(0)
   })
