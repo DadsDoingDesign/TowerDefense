@@ -301,7 +301,7 @@ unhindered walk down The Green Line gives him.
 - **The clock is out of the measurement.** §6 used a 70-second cap and booked a
   capped battle as a loss; re-measured with no cap, 38 of 72 "deaths" in a
   150-run sample were the clock, mostly at the boss (honest pre-3a win rate
-  73%, not 50%). `maxSeconds` is now a **per-sub-wave** safety net (600s in §6
+  73%, not 50%). `maxSeconds` is now a **per-sub-wave** safety net (`runsim.BATTLE_CAP`, 600s then 1800s since the tuning pass — real slogs ran past 600, see its note — in §6
   and the run simulator) and §6 gates on it firing **zero** times. A cap sized
   for one continuous wave also silently truncated the later sub-waves of every
   other bench, which is why `runBattle` resets it at each sub-wave.

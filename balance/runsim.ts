@@ -86,6 +86,22 @@ import {
   type PlayerPolicy,
 } from './harness'
 
+/**
+ * The per-sub-wave safety cap every simulated battle runs under (Phase 3a: "a
+ * cap, not a clock" — set far above any real clear so a timeout can never be
+ * what ends a run, and REPORT §6 gates on it firing never).
+ *
+ * 600 → 1800s (the tuning pass). Real clears passed 600s: a company of
+ * holders in damage curses holds a Colossus Keg (or a shaman-healed column) at
+ * its posts and grinds it down — §6 run 108's final boss took 1,159s and ended
+ * in a defeat, run 260's depth 11 and 12 took 789s and 908s and were cleared.
+ * At 600s those fights were booked as losses by the clock, and which seed
+ * slogged moved with every curve change (runs 108, 257, 260, 112). The slog
+ * is the game's (it has no clock), and is reported to the designer; the cap
+ * only has to stay above it.
+ */
+export const BATTLE_CAP = 1800
+
 /** The campaign is ten nodes deep on a default map; a wide map is longer. */
 export const NODES = RUN_LAYERS - 1
 
@@ -694,7 +710,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       // run their groups back to back, so a node now takes longer end to end.
       // Set far above any real clear so a timeout can never be the thing that
       // ends a run (the M19 lesson — every loss was once the clock).
-      maxSeconds: o.maxSeconds ?? 600,
+      maxSeconds: o.maxSeconds ?? BATTLE_CAP,
       seed: seed * 131 + node.layer,
       player: o.player ?? PLAYER,
       tactics: o.focus ? { focus: o.focus } : undefined,
@@ -976,7 +992,7 @@ function monteCarloRunOnce(
       // LOSS: re-measured with no cap, most "boss kills" were the clock — the
       // champions had simply not arrived. The game has no timeout; the cap is
       // now a per-sub-wave safety net and REPORT §6 gates on it firing never.
-      maxSeconds: 600,
+      maxSeconds: BATTLE_CAP,
       seed: r * 100 + depth,
       // The modelled player spends the Rally Horn when the fight is on.
       player: o.player ?? PLAYER,
