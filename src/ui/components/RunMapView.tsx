@@ -6,7 +6,7 @@ import { cityOfLayer, stakeRules } from '../../game/run/contracts'
 import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
-import { MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
+import { frontierScrollTop, MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
 
 /**
  * The Threat a fight on this node is fought at (M5, re-based in Phase 3b).
@@ -88,15 +88,28 @@ export function RunMapView() {
   })
   const nodePos = new Map(runMap.nodes.map((n) => [n.id, posOf(n.layer, n.ny)]))
 
-  // Auto-scroll so the reachable frontier is visible.
+  // The scroll box's own height: the Stage settles after the battle shell
+  // hands it back, so the first measurement after a win can be stale.
+  const [boxH, setBoxH] = useState(0)
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const measure = () => setBoxH(el.clientHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Auto-scroll so the reachable frontier is fully visible (3.7).
   useEffect(() => {
     const scroll = scrollRef.current
     const cur = runMap.nodes.find((n) => n.id === currentNodeId)
-    if (!scroll || !cur) return
-    const y = posOf(cur.layer, cur.ny).y
-    scroll.scrollTo({ top: Math.max(0, y - scroll.clientHeight * 0.65), behavior: 'smooth' })
+    if (!scroll || !cur || !boxH) return
+    const reachYs = runMap.nodes.filter((n) => reachable.includes(n.id)).map((n) => posOf(n.layer, n.ny).y)
+    scroll.scrollTo({ top: frontierScrollTop({ curY: posOf(cur.layer, cur.ny).y, reachYs, box: boxH }), behavior: 'smooth' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentNodeId, innerW])
+  }, [currentNodeId, innerW, boxH, reachable])
 
   const clearedSet = new Set(cleared)
   const reachableSet = new Set(reachable)

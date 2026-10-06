@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import type { ShellContext } from './context'
+import { railText } from '../channels'
 import { type Act, type Offer, type Price } from './offers'
 import { CollectionTabs, SkillCard, SkillCards } from './SkillCards'
 import { HeroCards } from './HeroCards'
@@ -239,7 +240,12 @@ export function PageScreen({
   }
 
   const title = titleOverride ?? ctx.board?.title ?? 'Fieldwatch'
-  const subtitle = subtitleOverride ?? ctx.board?.blurb
+  // Oct 2026 (3.5): an in-run event board (merchant, shrine, campfire, a
+  // recruit, the Crossroads) carries no subtitle — its title and the pack
+  // strip are the head, and the board's own detail says the rest. The flavour
+  // line cost a row of chrome on every stop of every run.
+  const eventBoard = inRunBoard && !titleOverride
+  const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
   // page that spends one currency does not need the other. Reading the prices
@@ -267,8 +273,20 @@ export function PageScreen({
       live={!titleOverride && ctx.board?.live}
       // Hero-pick prices nothing, so its title block carries the run's seed
       // and terms instead (`RunSeed`, a chip that never scrolls).
-      resources={purse.size ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
-      strip={inRunBoard && !titleOverride ? <PackStrip /> : heroPick && contract ? <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} /> : undefined}
+      // On an event board the purse rides on the pack strip's row (3.5).
+      resources={purse.size && !eventBoard ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
+      strip={
+        eventBoard ? (
+          <PackStrip gold={purse.has('gold') ? gold : undefined} />
+        ) : heroPick && contract ? (
+          <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} />
+        ) : undefined
+      }
+      // 3.5: a short board keeps its CTA under its content instead of pinning
+      // it to the bottom of an empty column — except while the selected action
+      // can ARM (`confirm`): there the CTA stays pinned, so arming (which adds
+      // the notice and the confirm above it) moves nothing under the finger.
+      compact={!selected?.action?.confirm}
       tone={ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
@@ -286,6 +304,9 @@ export function PageScreen({
               },
               disabled: selected.action.disabled,
               danger: confirm.danger,
+              // 3.3: a setting's flip is not a step forward — it takes the quiet
+              // treatment, so the page never shows a primary that goes nowhere.
+              quiet: selected.action.quiet,
               // Armed, the CTA is the way back out ("Never mind") and carries no price.
               cost: confirm.armed ? undefined : selected.action.cost,
               // A2: the purse after this gold purchase, where you commit to it.
@@ -395,7 +416,7 @@ export function PageScreen({
       {selected && !asHeroes && (
         <div className="pg-detail" ref={detailRef}>
           {!asRows && (
-            <p className="pg-name" style={selected.color ? { color: selected.color } : undefined}>
+            <p className="pg-name" style={selected.color ? { color: railText(selected.color) } : undefined}>
               {selected.title}
             </p>
           )}
@@ -405,7 +426,7 @@ export function PageScreen({
               price, so this line is where both read in full. */}
           {asRows && selected.rarity ? (
             <p className="pg-rarity-line">
-              <b style={selected.color ? { color: selected.color } : undefined}>{selected.title}</b>{' '}
+              <b style={selected.color ? { color: railText(selected.color) } : undefined}>{selected.title}</b>{' '}
               <RarityTag rarity={selected.rarity} />
             </p>
           ) : null}

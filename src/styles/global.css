@@ -43,8 +43,9 @@
   /* A DIMMED state — disabled, unaffordable, spent — as a colour rather than as
      `opacity`. Opacity dragged whole controls to 1.0-2.5:1 (the merchant's
      unaffordable prices, disabled CTAs); this still reads as "not now" beside
-     `--muted` but holds 4.5:1 on `--panel-2`, the ground those rows sit on. */
-  --dim: #b39a78;
+     `--muted` but holds 4.5:1 on `--panel-2`, the ground those rows sit on,
+     and on `--panel-3` (Oct 2026, 3.1: it was 4.45 there). */
+  --dim: #b9a17f;
   --accent: #e0ac4c;
   --accent-dim: rgba(224, 172, 76, 0.16);
   /* Gold as TEXT on the stacked parchment washes of the lower bands (round-2
@@ -63,9 +64,10 @@
      on the `--surface` wash — it fails AA at body size in the one place where
      failing is worst. It stays the FILL colour (bars, rules, solid buttons,
      where 3:1 is the bar); anything that spells out a warning uses `--bad-text`
-     (5.85 on `--panel`, 4.83 on `--surface`). Same for small teal strings. */
+     (5.85 on `--panel`, 4.83 on `--surface`). Same for small teal strings:
+     `--teal-text` holds 4.5:1 on the strongest wash too (Oct 2026, 3.1). */
   --bad-text: #ef8368;
-  --teal-text: #6cb4c8;
+  --teal-text: #7dc0d2;
 
   /* Parchment / wood surface inks */
   --paper: #ece0c8;
@@ -77,6 +79,12 @@
   --fighter: #d9743f;
   --rogue: #4fae72;
   --mystic: #5b8cd6;
+  /* The hues as TEXT (a hero's name in its own colour) — the fills above fell
+     to 3.9:1 on the context head (Oct 2026, 3.1). >= 4.5:1 on `--panel-3` and
+     the strongest wash; tests/contrast.test.ts holds them. */
+  --fighter-text: #e7a785;
+  --rogue-text: #7cc396;
+  --mystic-text: #98b7e5;
 
   /* ---- The trade companies (the mercenary company; trade/NOTES.md § Palette).
      FILLS and LIGHTS only — rails, crests, route light, crate bands — never body
@@ -154,6 +162,17 @@
   --rarity-epic: #c67ab0;
   --rarity-legendary: #f0b868;
   --rarity-mythic: #ef6a3a;
+  /* The ramp as TEXT (Oct 2026 audit, 3.1). The fills above are for rails,
+     pips and borders; as an item name or a rarity word they fell under AA —
+     Epic 4.08:1 on the context head, Mythic 3.09:1 on the strong wash. Each
+     text step is the same hue lifted to >= 5:1 on `--panel-3` and on the
+     strongest wash (held by tests/contrast.test.ts). Text reads
+     `var(--rail-text, var(--rail))`; a rarity surface sets both. */
+  --rarity-common-text: #cbbca0;
+  --rarity-rare-text: #8ec7d5;
+  --rarity-epic-text: #e0acd4;
+  --rarity-legendary-text: #f0b868;
+  --rarity-mythic-text: #ffa58a;
 
   /* Focus (M27a) — one ring, everywhere. */
   --focus-ring: var(--accent);
@@ -314,12 +333,20 @@ button:disabled {
   --rarity-epic: #d79ad2;
   --rarity-legendary: #f3c069;
   --rarity-mythic: #ff9d5c;
+  --rarity-common-text: #cbbda0;
+  --rarity-rare-text: #7ec8e3;
+  --rarity-epic-text: #dfaedb;
+  --rarity-legendary-text: #f3c069;
+  --rarity-mythic-text: #ffa970;
   --good: #7fd8ff;
   --bad: #ff9d5c;
   --bad-text: #ffb083;
   --fighter: #f0a868;
   --rogue: #7fd8ff;
   --mystic: #b79ce8;
+  --fighter-text: #f0a868;
+  --rogue-text: #7fd8ff;
+  --mystic-text: #c2aaeb;
 }
 :root[data-vision='tritan'] {
   /* Blue/yellow confusions: separate on red↔cyan-green instead. */
@@ -328,12 +355,20 @@ button:disabled {
   --rarity-epic: #e58ab0;
   --rarity-legendary: #ef8a5c;
   --rarity-mythic: #d0453f;
+  --rarity-common-text: #cbbda0;
+  --rarity-rare-text: #75cdbe;
+  --rarity-epic-text: #e8acd8;
+  --rarity-legendary-text: #f6b27e;
+  --rarity-mythic-text: #ffaba0;
   --good: #57c2b0;
   --bad: #e05a63;
   --bad-text: #f5808a;
   --fighter: #e05a63;
   --rogue: #57c2b0;
   --mystic: #9aa6e8;
+  --fighter-text: #eda1a6;
+  --rogue-text: #75cdbe;
+  --mystic-text: #a6b1eb;
 }
 
 /* ================================================== the icon atlas (P3) ----

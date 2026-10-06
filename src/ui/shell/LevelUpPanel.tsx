@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { lookVar } from '../channels'
+import { lookVar, railText } from '../channels'
 import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillLevelLabel, type BumpStat } from '../../game/data/skills'
 import { bumpAmount, bumpOffered, MAX_SKILLS, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
@@ -103,7 +103,7 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   return (
     <div className="sh-context sh-lvl" role="group" aria-labelledby="sh-lvl-head">
       <div className="sh-context-head">
-        <strong id="sh-lvl-head" style={{ color: hue }}>
+        <strong id="sh-lvl-head" style={{ color: railText(hue) }}>
           {hero.name}
         </strong>
         <span className="sh-lvl-up">

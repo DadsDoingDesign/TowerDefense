@@ -655,13 +655,12 @@
    looked cut off behind "March on" rather than scrolled. The fade is exactly the
    band's bottom padding, so a body that does NOT overflow fades only empty
    space; any more and it greys out real content (the run-end recap did). */
-.pg-body {
+/* Oct 2026 (3.5): only while there IS more below (`useMoreBelow` sets
+   `.more`). Drawn on every body, the fade dimmed real rows that had nowhere
+   further to scroll — the merchant's last service, the run-end heroes. */
+.pg-body.more {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--band-pad)), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 calc(100% - var(--band-pad)), transparent 100%);
-}
-.pg-body:not(:has(> :nth-child(2))) {
-  -webkit-mask-image: none;
-  mask-image: none;
 }
 
 /* ============================================================ safe area (M1)
@@ -1341,11 +1340,15 @@
 .pg-hero-skill b {
   color: var(--text);
 }
+/* 3.10 (Oct 2026): the kicker names what follows, so it may not read weaker
+   than it — it was 11px/400 gold over a 12px/700 skill name. Same size as the
+   name now, heavier, in the text ink; the caps and tracking keep it a label. */
 .pg-hero-kicker {
-  font-size: var(--fs-micro);
-  letter-spacing: 0.12em;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text);
 }
 .pg-hero-nums {
   font-size: var(--fs-micro);
@@ -1446,4 +1449,97 @@
 }
 .pg:has(.pg-heroes) .pg-body {
   padding-top: 6px;
+}
+
+/* ==================================================== page rhythm (Oct 2026)
+   3.5 — the head-to-body gap is ONE band pad, not two. The head's bottom
+   padding and the body's top padding were both `--band-pad`, so a title sat
+   64px above its first row (40 and 24 on the short tiers). The one gap is
+   split between the two bands, so the head (chrome) holds only half of it.
+   The body keeps its own bottom padding: the room its "more below" fade
+   draws in. */
+.pg {
+  --pg-split: calc(var(--band-pad) / 2);
+}
+@media (orientation: portrait) and (max-height: 800px) {
+  .pg {
+    --pg-split: 10px;
+  }
+}
+@media (orientation: portrait) and (max-height: 660px), (orientation: landscape) and (max-height: 720px) {
+  .pg {
+    --pg-split: 8px;
+  }
+}
+.pg-head {
+  padding-bottom: var(--pg-split);
+}
+.pg-head + .pg-body {
+  padding-top: var(--pg-split);
+}
+
+/* A short board (`PageLayout compact`): the body is only as tall as what it
+   holds, the exits and the CTA follow it, and the column's slack goes BELOW
+   the CTA. Nothing renders after the CTA, so reading order still ends on it.
+   A board that does not fit is unchanged — the body shrinks and scrolls and
+   the slack is zero. */
+.pg.compact > .pg-body {
+  flex: 0 1 auto;
+}
+.pg.compact::after {
+  content: '';
+  flex: 1 1 0;
+  order: 9;
+}
+.pg.compact > .pg-body:not(.more) {
+  padding-bottom: var(--gap);
+}
+.pg.compact > .pg-cta-band {
+  padding-top: var(--gap);
+}
+
+/* 3.3 — a pinned control that changes a setting rather than moving the game
+   on (Mute, Turn on, Make it large). Same place and height as the CTA, so the
+   page reads the same, but no teal: a page whose only action is a toggle has
+   no next step, so it shows no primary. */
+.pg-cta.quiet {
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-xl);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* 3.5 — the dual exit footer (the mobile system's `Action Footer · Dual`):
+   two quiet buttons in one 44px row above the CTA, instead of two 56px
+   picture rows stacked. One exit takes the whole row. */
+.pg-dual {
+  display: flex;
+  gap: var(--gap-xs);
+  width: 100%;
+}
+.pg-dual-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 3.8 — a card with a cost (the shrine's curse, a mutation's downside) states
+   the gift and the cost as a pair: the lead is set as a title, the cost right
+   under it at the same size in the danger ink with its warning mark. */
+.pg-card:has(> .pg-card-warn) > .pg-card-title {
+  font-weight: 700;
 }

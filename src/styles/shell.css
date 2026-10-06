@@ -894,7 +894,7 @@
 .sh-slot-mark {
   font-size: var(--fs-lg);
   line-height: 1;
-  color: var(--rail, var(--muted));
+  color: var(--rail-text, var(--rail, var(--muted)));
 }
 /* I1: what a slot is wearing, at 2x — the 16px sprite under an 11px label was
    the smallest picture in the shell. 32 still fits the ~70px slot at 390x844. */
@@ -1274,7 +1274,7 @@
   border-radius: var(--r-md);
   border: 1px solid var(--rail, var(--line));
   background: var(--surface);
-  color: var(--rail, var(--text));
+  color: var(--rail-text, var(--rail, var(--text)));
   font-size: var(--fs-md);
   cursor: pointer;
 }
@@ -1539,7 +1539,7 @@
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
-  color: var(--rail, var(--muted-2));
+  color: var(--rail-text, var(--rail, var(--muted-2)));
 }
 .sh-tile-pips {
   position: absolute;
@@ -2191,12 +2191,13 @@
   padding: 2px 8px;
   line-height: 1;
 }
+/* 3.10: `--muted` on the speed button's raised fill measured 4.43:1 on a desk. */
 .sh-speed-word {
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text);
 }
 .sh-speed-val {
   font-size: var(--fs-sm);
@@ -2304,7 +2305,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--rail);
+  color: var(--rail-text, var(--rail));
   font-weight: 700;
   white-space: nowrap;
 }
@@ -2452,7 +2453,8 @@
 .sh-chip-of {
   color: var(--muted-2);
   font-weight: 400;
-  font-size: 0.85em;
+  /* The 11px floor holds even inside a small chip (3.6: 0.85em was 9.35px). */
+  font-size: max(var(--fs-micro), 0.85em);
 }
 
 /* Round-2 re-check (Whales): the lower bands stack two parchment washes, so

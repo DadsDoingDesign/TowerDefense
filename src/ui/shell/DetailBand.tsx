@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { lookVar } from '../channels'
+import { lookVar, railStyle, railText } from '../channels'
 import { heroDoes } from '../../game/data/gear'
 import {
   canUpgrade,
@@ -41,6 +41,7 @@ import {
   OFF_HAND_TAKES,
   RARITY_INITIAL,
   rarityRank,
+  rarityTextVar,
   rarityVar,
   TWINBLADE,
   TWINBLADE_TAKES,
@@ -57,6 +58,7 @@ import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
+import { fieldNoteCopy, useCoachRow } from './Coach'
 // G2-2 — the wave strip's enemy queue.
 import { WaveQueue } from './WaveQueue'
 import { lineUp, queueFor } from './enemyQueue'
@@ -94,7 +96,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
       {/* The battle's action bar is a SIBLING of the context panel, not one of
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
-      <WaveBar />
+      <WaveBar offers={offers} />
     </section>
   )
 }
@@ -118,7 +120,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
  * render an enabled action the store then refuses. The deployment gate below is
  * a stricter rule laid on top of it, which is allowed; nothing here relaxes it.
  */
-function WaveBar() {
+function WaveBar({ offers }: { offers: Offer[] }) {
   const screen = useGameStore((s) => s.screen)
   const runPhase = useGameStore((s) => s.runPhase)
   const battlePhase = useGameStore((s) => s.battlePhase)
@@ -140,11 +142,17 @@ function WaveBar() {
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
+  // 3.2: the reward being read — its commit lives in this strip (below).
+  const pickedReward = useGameStore((s) => (s.shellSelection?.kind === 'offer' ? s.shellSelection.id : null))
   const battleMap = useGameStore((s) => s.battleMap)
   // Weapon clearance: a hero swinging beside another holds the next wave
   // (`run/clearance`). Read off the same inputs the strip already follows —
   // the posts, the roster's gear, and the held engine (re-read on `hud`).
   const conflicts = fieldConflicts({ screen, engine, battlePhase, roster, placements, battleMap })
+  // 2.5: with no coach row held open for this wave, a field note (a tap on a
+  // held post, a blocked tile in a breather) is said here, in the caption.
+  const fieldNote = useGameStore((s) => s.fieldNote)
+  const coachRowHeld = useCoachRow((s) => s.held)
   // LS3: speed arrives once the first sub-wave is down; the Watch Command
   // after the first battle. `CommandSlot`'s "Next" is not staged — it is how a
   // breather ends.
@@ -163,8 +171,18 @@ function WaveBar() {
   const waveName = currentWave?.label ?? 'Wave'
 
   if (lastResult && (battlePhase !== 'battle' || !hasEngine)) {
+    /*
+     * 3.2 (Oct 2026; Whales round 1 and 2): with the reward hand in place the
+     * commit is HERE, in the strip's action slot, at full CTA height — not in
+     * the Context panel above, where "Take it" was smaller than the reward
+     * cards and this strip rendered after it, so the one next step was neither
+     * the loudest thing nor the last. The Context panel keeps the detail
+     * (`OfferPanel` drops its own button while the hand is in place), and
+     * the strip's old caption ("take a reward to march on") is the button.
+     */
+    const reward = inPlace ? offers.find((o) => o.id === pickedReward && o.action) : undefined
     return (
-      <div className="sh-wavebar sh-wq-bar">
+      <div className={`sh-wavebar sh-wq-bar${inPlace ? ' commit' : ''}`}>
         {/* No live region here any more (Phase 2): `Announcer` owns the one
             polite voice for the whole battle — wave start, Gate hits, the
             clear, level-ups — so two regions can never read over each other. */}
@@ -173,13 +191,17 @@ function WaveBar() {
           <StripCaption name={waveName} now={lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} />
           <p className="sh-wq sh-wq-gold">
             <Money amount={lastResult.goldEarned} c="gold" /> earned
-            {/* G3-2: the reward is picked right here, and "Take it" in the
-                Context panel is the way on — a Continue beside it would be a
-                second primary that skips the pick. */}
-            {inPlace && <> · take a reward to march on</>}
           </p>
         </div>
-        {!inPlace && (
+        {inPlace ? (
+          <button
+            className="sh-btn primary sh-commit"
+            disabled={!reward || reward.action!.disabled}
+            onClick={() => reward?.action?.run()}
+          >
+            {reward ? reward.action!.label : 'Pick a reward'}
+          </button>
+        ) : (
           <button className="sh-btn primary" onClick={continueAfterWave}>
             Continue
           </button>
@@ -197,6 +219,7 @@ function WaveBar() {
     const moved = held && !!engine?.subWaveState().moved
     const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
     const space = held && conflicts.length ? conflictCopy(conflicts, { moveLeft: !moved, breather: true }) : null
+    const note = fieldNote && !coachRowHeld ? fieldNoteCopy(fieldNote) : null
     return (
       <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
         {/*
@@ -221,6 +244,8 @@ function WaveBar() {
         <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
           {space ? (
             <MakeSpace head={space.head} fix={space.fix} />
+          ) : note ? (
+            <StripCaption name={note.name} now={note.line.slice(note.name.length).replace(/^\s*[—–-]\s*/, '')} tone="note" />
           ) : held ? (
             <StripCaption name="Held" now={moved ? 'Move made' : 'Move one hero'} tone="do" />
           ) : (
@@ -382,7 +407,7 @@ function MakeSpace({ head, fix }: { head: string; fix: string }) {
  * rather than a readout. The held instruction is also spoken, by `Announcer`
  * (`combatNotes`), and the Next button's name carries the sub-wave count.
  */
-function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' }) {
+function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' | 'note' }) {
   return (
     <p className={`sh-wq-cap${tone ? ` ${tone}` : ''}`}>
       <span className="sh-wq-name">{name}</span>
@@ -954,7 +979,7 @@ function HeroPanel({ hero }: { hero: Sentinel }) {
       <div className="sh-context-head">
         {/* The hue comes from a token, not from `hero.color`'s raw hex, so the
             colour-vision modes in global.css can move it (M34). */}
-        <strong style={{ color: lookVar(hero) }}>{hero.name}</strong>
+        <strong style={{ color: railText(lookVar(hero)) }}>{hero.name}</strong>
         <span className={`sh-context-sub ${danger ? 'sh-cursed' : ''}`}>DPS {Math.round(profile.dps * groundMult)}</span>
       </div>
       {danger && (
@@ -1362,7 +1387,7 @@ function ItemPanel({ item }: { item: Item }) {
         <span className="sh-context-icon" aria-hidden="true">
           <Icon name={itemIcon(item)} />
         </span>
-        <strong style={{ color: rarityVar(item.rarity) }}>{itemName(item)}</strong>
+        <strong style={{ color: rarityTextVar(item.rarity) }}>{itemName(item)}</strong>
       </div>
       <div className="sh-context-body">
         {/* The rarity in its own hue with a pip count, on its own line: in the
@@ -1599,10 +1624,14 @@ function OfferPanel({ offer }: { offer: Offer }) {
   // Same arm-then-fire confirm the page CTA uses, so a destructive offer is
   // never one tap whichever band it is read in.
   const confirm = useArmedAction(offer.action, offer.id)
+  // 3.2: a reward card in place is committed from the wave strip (`WaveBar`),
+  // at full CTA size and last in reading order; this panel is its detail.
+  const inPlace = useGameStore(rewardInPlace)
+  const primary = offer.action && !inPlace
   return (
     <div className="sh-context">
       <div className="sh-context-head">
-        <strong style={offer.color ? { color: offer.color } : undefined}>{offer.title}</strong>
+        <strong style={offer.color ? { color: railText(offer.color) } : undefined}>{offer.title}</strong>
         {offer.sub && <span className="sh-context-sub">{offer.sub}</span>}
       </div>
       <div className="sh-context-body">
@@ -1630,7 +1659,7 @@ function OfferPanel({ offer }: { offer: Offer }) {
         )}
       </div>
       <div className="sh-context-foot">
-        {offer.action && (
+        {primary && offer.action && (
           <button className="sh-btn primary" disabled={offer.action.disabled} onClick={confirm.fire}>
             {confirm.label}
             {offer.action.cost && !confirm.armed ? (
@@ -1796,7 +1825,7 @@ function GearColumn() {
                 key={hs}
                 disabled={locked && !worn}
                 className={`sh-slot sh-doll-slot sh-doll-${hs} ${worn ? 'filled' : 'empty'}${active ? ' active' : ''}${dual ? ' dual' : ''}`}
-                style={worn ? ({ '--rail': rarityVar(worn.rarity) } as CSSProperties) : undefined}
+                style={worn ? (railStyle(rarityVar(worn.rarity)) as CSSProperties) : undefined}
                 onClick={() => {
                   if (worn) {
                     shellSelect({ kind: 'item', id: worn.id })
@@ -1927,7 +1956,7 @@ function PackColumn() {
           <button
             key={i.id}
             className={`sh-tile ${selection?.kind === 'item' && selection.id === i.id ? 'selected' : ''}`}
-            style={{ '--rail': rarityVar(i.rarity) } as CSSProperties}
+            style={railStyle(rarityVar(i.rarity)) as CSSProperties}
             /* The tile used to say what it was ONLY in `title` and its border
                hue — nothing for a touch player and nothing for a colour-blind
                one. Now: a real accessible name, the rarity initial, and a pip

@@ -2915,3 +2915,49 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   "Progress isn't being saved on this device: …" — first pass read as four
   lines on a phone for the private-browsing reason; the reason is one short
   clause now. Scorecard: readability 4/5, hierarchy 5/5, polish 4/5.
+
+- **2026-10-06 — Whales conformance (October audit lane 3, with 2.3 and
+  2.5).** Built against the Whales house rules recorded in
+  `docs/whales-critique/` and the October audit's findings. Rarity and
+  archetype hues as TEXT have their own steps (`--rarity-*-text`,
+  `--fighter|rogue|mystic-text`, both colour-vision ramps too), read through
+  `--rail-text` (`railStyle`/`railText`); `contrast.test.ts` holds every one
+  at >= 5:1 on `--panel-3` and the strongest wash. Wave cleared: "Take it"
+  is in the wave strip's action slot at CTA height, last in reading order.
+  Settings shows no primary (a setting's flip is `quiet`). Desk holds: Next
+  at 160x56, the instruction at 15px. Pages: one band pad from head to body;
+  the bottom fade only while there is more to scroll; short boards keep the
+  CTA under their content; run-end exits in one 44px dual row; event boards
+  lose the subtitle and carry the purse on the pack strip. No text under
+  11px. The run map scrolls so the reachable row is whole. The shrine's
+  curse is the card's warning line. Reward alternatives have neutral rails.
+  Held sub-waves count down on Next (a ring, 4 s) and continue themselves
+  unless the field or a hero is touched; never on the hold the tip teaches,
+  never with the tab hidden; a setting turns it off. Coach tips that come
+  due mid-wave wait; when a breather lesson is still to teach, the row is
+  held open for the whole wave at a fixed height. Rendered in the running
+  app at 390x844 @2x and 1440x900 with `scripts/whales-scan.mjs` (36
+  screens) and a hold driver; read by eye. The loop caught: (1) the strip's
+  caption beside the full-size commit ellipsised to "DEPTH…" — the name
+  steps aside there (the header carries the depth); (2) the context head's
+  hero name was the archetype FILL at 3.9:1 — the archetypes got text steps
+  too; (3) the shrine's curse, once the warning line, out-shouted the boon —
+  a card with a cost sets its lead as a title; (4) "Got it" on the sub-wave
+  tip started the countdown on the very hold it was teaching — the tip
+  state is read as the hold begins; (5) the strip letter and reward-row
+  padding I added sat off the spacing scale — 4px now. Measured: the
+  Stage's box held one value for every live frame of a wave with the row
+  held (phone 121:529, desk 105:795) and without it; a countdown hold
+  continued itself, a touched or hidden-tab hold did not. Scan totals,
+  before → after: contrast 15→4 (two are the merchant's real "more below"
+  fade, one a mid-animation level flash), text under 11px 11→0, reading
+  order 4→0, chrome over 30% 3→1 (run lost 40.4→30.4%; merchant 32.9→22.3%),
+  headline 32→3 (the scan now skips one-line label·value pairs), selected
+  5→2. Benchmark: the reward hand now reads like Slay the Spire's card
+  reward — equal cards, one lifted, one big commit under them; the hold
+  countdown is Clash Royale's auto-continue rhythm with Hades' "touch to
+  take over". Scorecard: readability 4/5, hierarchy 5/5 on the battle
+  bands (4/5 on pages: run-end's head still wraps its purse line), polish
+  4/5. Still open: the city receipt (3.11, the economy lane's), run-end's
+  "+60 gold" outranking its title by design, and Whales itself — re-critique
+  these screens when it is reachable.

@@ -3,8 +3,9 @@ import { lookVar } from '../channels'
 import { heroLookArt } from './offers'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
-import { itemIcon, itemName, RARITY_INITIAL, rarityVar } from '../channels'
+import { itemIcon, itemName, RARITY_INITIAL, railStyle, rarityVar } from '../channels'
 import { Icon } from '../Icon'
+import { Money } from './Money'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -19,11 +20,13 @@ import { Icon } from '../Icon'
  *
  * Read-only. Managing gear is the Detail band's job, one tap away on the map.
  */
-export function PackStrip() {
+export function PackStrip({ gold }: { gold?: number }) {
   const inventory = useGameStore((s) => s.inventory)
   const roster = useGameStore((s) => s.roster)
   const fresh = useFresh(inventory.map((i) => i.id).concat(roster.map((h) => h.id)))
-  const shown = inventory.slice(-8)
+  // The tiles carry their rarity letter beside the picture (3.6), so they are
+  // wider; each hero and the purse take a tile's room from the row.
+  const shown = inventory.slice(-Math.max(2, 8 - roster.length - (gold != null ? 2 : 0)))
   return (
     <div className="pg-strip" aria-label={`Pack: ${inventory.length} ${inventory.length === 1 ? 'item' : 'items'}. Heroes: ${roster.map((h) => h.name).join(', ')}.`} role="group">
       <span className="pg-strip-label" aria-hidden="true">
@@ -35,7 +38,7 @@ export function PackStrip() {
           <span
             key={i.id}
             className={`pg-strip-tile ${fresh.has(i.id) ? 'fresh' : ''}`}
-            style={{ '--rail': rarityVar(i.rarity) } as CSSProperties}
+            style={railStyle(rarityVar(i.rarity)) as CSSProperties}
             title={`${itemName(i)} · ${RARITY[i.rarity].label}`}
           >
             <Icon name={itemIcon(i)} />
@@ -55,6 +58,14 @@ export function PackStrip() {
           </span>
         ))}
       </span>
+      {/* Oct 2026 (3.5): on an event board the purse rides at the end of this
+          row instead of a chip of its own under the title — one row of chrome
+          rather than two, and the gold sits beside what it buys. */}
+      {gold != null && (
+        <span className="pg-strip-gold">
+          <Money amount={gold} c="gold" />
+        </span>
+      )}
     </div>
   )
 }
