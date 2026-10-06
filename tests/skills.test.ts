@@ -265,9 +265,10 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
 
   it('adds one elite an act and a stronger, greedier last leg per step', () => {
     expect(difficultyRules(0)).toEqual({ step: 0, startThreat: 1, leakMult: 1, lastLeg: 1, extraElites: 0 })
-    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1, leakMult: 1, lastLeg: 1 + LAST_LEG[3], extraElites: 3 })
+    expect(difficultyRules(3)).toMatchObject({ step: 3, startThreat: 1, leakMult: 1, extraElites: 3 })
+    expect(difficultyRules(3).lastLeg).toBeCloseTo(1 + LAST_LEG[3], 6)
     expect(legMult(difficultyRules(3), 8)).toBe(1)
-    expect(legMult(difficultyRules(3), 9)).toBe(1 + LAST_LEG[3])
+    expect(legMult(difficultyRules(3), 9)).toBeCloseTo(1 + LAST_LEG[3], 6)
     expect(difficultyRules(99).step).toBe(MAX_DIFFICULTY)
     expect(difficultyRules(-2).step).toBe(0)
   })

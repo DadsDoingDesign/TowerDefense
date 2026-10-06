@@ -65,9 +65,9 @@ Rules: `src/game/run/charter.ts`. Screens: `src/ui/shell/charter/` (the page), t
 
 ### Tuned (the tuning pass, 2026-10-05)
 REPORT §13, §18 and `docs/TUNING_LOG.md` (pass 2) have the measurements.
-- **What a crate does to the road:** one more elite an act (as built), and the raiders on the **last leg** — act 3, past the second city — stronger and greedier: their HP and what a raider who reaches the wagons steals, ×1.12 / 1.22 / 1.34 / 1.5 / 1.74 / 2.1 / 4 / 5 at 1–8 crates (`watch.LAST_LEG`). It was +8% strength on the whole road a crate, and a crate cost 0–2pt of delivery; strength on the whole road also costs the second city, which is where a stake is paid. Delivery for a zero-HQ company: 32 → 28 → 23 → 19 → 15 → 9 → 5 → 1%. The top crates are a dare.
+- **What a crate does to the road:** one more elite an act (as built), and the raiders on the **last leg** — act 3, past the second city — stronger and greedier: their HP and what a raider who reaches the wagons steals, ×1.12 / 1.22 / 1.36 / 1.5 / 1.74 / 2.1 / 4.5 / 5.5 at 1–8 crates (`watch.LAST_LEG`). It was +8% strength on the whole road a crate, and a crate cost 0–2pt of delivery; strength on the whole road also costs the second city, which is where a stake is paid. Delivery for a zero-HQ company: 34 → 28 → 23 → 19 → 16 → 10 → 7 → 1%. The top crates are a dare.
 - **What the cities pay:** the first sells half the load (rounded up) at **100** a crate (the stake back), the second the rest but one at **130**, and **one crate** rides to the destination, which pays **400** for it and a completion bonus of 150 + **20** a crate (`contracts.CITY_CRATE_VALUE`, `cratesSoldAt`; it was 100 everywhere, half of what was left after the first city went to the destination, and +40 a crate). Expected pay now rises with every crate. A cash-out still sells what is left at 50 a crate (half of 100).
-- **The Sovereign Route:** 7,000 fee, 35,000 payout, the muster 7% stronger (above). The door's company delivers ~26% (28% with every Sovereign item): about +2,500 a charter on average.
+- **The Sovereign Route:** 7,000 fee, 35,000 payout, the muster 7% stronger (above). The door's company delivers ~27% (29% with every Sovereign item): about +2,900 a charter on average; the fee is ~8.5 of its good runs.
 - **Unchanged after checking:** road-gold share 25%, interest caps 20–40, sealed crates 500.
 
 ## Removed
