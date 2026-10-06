@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { lookVar, railStyle } from '../channels'
-import { kitName, weaponName } from '../../game/data/gear'
+import { itemIcon, lookVar, railStyle } from '../channels'
+import { kitName, styleWeapon, weaponName } from '../../game/data/gear'
 import { lookOf } from '../../game/data/gear'
 import { heroLookArt } from './offers'
 import { computeCombat } from '../../game/engine/combat'
@@ -189,6 +189,10 @@ function PartyCards() {
             </span>
             <span className="sh-hero-name">{s.name}</span>
             <span className="sh-hero-sub">
+              {/* The weapon it really holds — the picture it carries on the
+                  field too (`render/gearMarks`), since the portrait's painted
+                  weapon is the look's, not the hero's. */}
+              {styleWeapon(s) && <Icon name={itemIcon(styleWeapon(s)!)} />}
               {weaponName(s)} · {s.level}
             </span>
             <span className="sh-hero-xp">
