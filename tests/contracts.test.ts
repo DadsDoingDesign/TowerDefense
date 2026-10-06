@@ -241,9 +241,9 @@ describe('contracts: stakes and cities', () => {
     expect(marketFor(hot, '2026-10-06', false)).toBe(1)
   })
 
-  it('the charter: 4,000 in, 24,000 out, and standing with all five as a same-ending escort earns with one', () => {
-    expect(CHARTER_FEE).toBe(4000)
-    expect(CHARTER_PAYOUT).toBe(24000)
+  it('the charter: 5,000 in, 16,000 out, and standing with all five as a same-ending escort earns with one', () => {
+    expect(CHARTER_FEE).toBe(5000)
+    expect(CHARTER_PAYOUT).toBe(16000)
     const run = { depth: 12, kills: 640, delivered: true }
     const all = charterStandingXp(run)
     expect(Object.keys(all).sort()).toEqual([...COMPANY_IDS].sort())

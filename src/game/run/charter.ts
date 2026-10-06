@@ -64,13 +64,18 @@ export const SOVEREIGN_TIER = 'Sovereign'
 /**
  * The sponsorship fee, from the bank. A finished escort banks about 300–400
  * gold and a good staked one about 500 (REPORT §13), so the fee is about ten
- * good runs of savings. October 2026: 5,000 → 4,000 (with the payout raised to
- * 24,000) — at 5,000 / 20,000 the harness measured a charter at +80 gold
- * against an escort's +603 (REPORT §18), so it was a trophy, not a contract.
+ * good runs of savings. October 2026: at 5,000 / 20,000 the harness measured a
+ * charter at +80 gold against an escort's +603 (REPORT §18) — a trophy, not a
+ * contract — and the designer pass moved it to 4,000 / 24,000. The tuning pass
+ * then eased the road (a veteran charter delivers ~35%), which put 4,000 /
+ * 24,000 at +4,691 a run against an escort's +625: a farm; 5,000 / 18,000 still read
+ * +2,046 against +581. 5,000 / 16,000 breaks even at ~31% and lands near
+ * twice an escort — the endgame's jackpot,
+ * still a real gamble, before the standing it earns with all five companies.
  */
-export const CHARTER_FEE = 4000
-/** What a delivered Sovereign Route pays at its destination: six fees. */
-export const CHARTER_PAYOUT = 24000
+export const CHARTER_FEE = 5000
+/** What a delivered Sovereign Route pays at its destination: 3.2 fees. */
+export const CHARTER_PAYOUT = 16000
 /** Rosethread's trade-off: every merchant price on the route is this many times as much. */
 export const CHARTER_PRICE_MULT = 2
 /**

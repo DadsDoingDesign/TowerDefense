@@ -28,7 +28,7 @@ import { SovereignMark, sovereignIcon } from './SovereignParts'
  * CTA says when it opens.
  *
  * **Open**: the contract. The three terms first (the fee, what finishing
- * pays, what a fall pays — October 2026: the fee 4,000, the payout 24,000, and
+ * pays, what a fall pays — October 2026: the fee 5,000, the payout 16,000, and
  * standing with all five companies either way), then every company's
  * condition in one line each,
  * then the road's own terms, then the Sovereign unlock — what is still to
