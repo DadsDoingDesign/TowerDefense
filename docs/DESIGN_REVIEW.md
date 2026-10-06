@@ -2961,3 +2961,33 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   4/5. Still open: the city receipt (3.11, the economy lane's), run-end's
   "+60 gold" outranking its title by design, and Whales itself — re-critique
   these screens when it is reachable.
+
+- **2026-10-06 — October audit, lanes 1 and 2: push your luck, and a field
+  that warns.** (`docs/AUDIT_2026-10.md`.) Economy: a fall banks 10% of the
+  road's gold instead of 25% (`hq.LOST_ROAD_SHARE`), cash-out sells the last
+  crates at full value, the escort fee is 60, and act 3 steps ×1.25. The
+  city page now prices all three outcomes with the settle's own rules
+  (`settle.cityTrade`): "You bank 375" / "Deliver, and you bank 685+" /
+  "Fall, and you bank 330: … 45 of the road's gold stays on the road" —
+  where the old page compared 0 against everything. With nothing at risk it
+  says so and shows one compact CTA. It opens on an arrival beat ("The
+  caravan reaches Saltmarsh"). Field: the wagons' last stretch (4 tiles of
+  road before the Gate) is a faint dashed red lane during a wave and beats
+  red with a ring at the Gate while a raider is on it; while a hero is armed
+  the three open tiles covering the most road for THAT hero carry a gold
+  star (`run/placement`, tested on every shipped field). The caravan is
+  baked once per look. Rendered at 390x844 @2x in the running app (setup
+  with a hero armed; a live wave forced to reach the wagons; both city
+  states) and read by eye. The loop caught: (1) the first stretch (2.5
+  tiles, 0.13 alpha) was invisible where the Gate sits on the Stage's edge —
+  4 tiles and a stronger wash now; (2) the no-choice city left 360px between
+  its tip and its CTA — compact page; (3) run end's "Road gold 0 → 0" line
+  wrapped the head past 30% chrome — it shows only when the road paid.
+  The first harness run (act 3 ×1.23, destination-first crate sales) fixed
+  the first-timer wall but put §6 a point over its band and moved the
+  stake-pay dips; the crate order is restored and act 3 is ×1.25.
+  Benchmark: the stars are Kingdom Rush's lit plots / Backpack Battles'
+  wanted cells; the last stretch is Slay the Spire's intent — the threat
+  shown before it lands; the city receipt is Balatro's cash-out lines.
+  Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: the
+  stake curve and §6 band for the designer to re-anchor (audit §4).
