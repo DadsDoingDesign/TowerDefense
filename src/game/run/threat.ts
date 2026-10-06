@@ -165,7 +165,38 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * every row from 1.40/×0.55 down.) §11's strict floor ends 36% of its runs at
  * depth 6 on this curve (gate 40%; 43% before the pass).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.4]
+/*
+ * ---- refitted in the merged tuning pass (main's model, the October gates) --
+ *
+ * The merge kept main's curve ([1.12, 1.2, 1.4], final boss ×0.44) and the
+ * October branch's gates (REPORT §13 / §13c): a zero-meta escort delivers
+ * 20–30%, a veteran's 35–55%. On the merged game (item identities, a field
+ * per act) the zero-meta escort read 32.8% and the final boss killed 7.9% of
+ * arrivals (gate ≥ 10%), with one §6 battle on the cap (run 257's depth-11
+ * wave). The veteran's lead is ~10pt and does not move with the curve's
+ * shape, so the window is narrow: both escorts clear their band by 1σ only
+ * with the zero-meta one at ~26–28%. Each row is 600 paired runs (§6 n=300;
+ * the content levers of the same pass — Blessing, Rally, Stormcaller,
+ * Bloodletting — are in the rows from ×1.17 down):
+ *
+ *   steps                boss   §6 MC  boss kills  timeouts  zero esc  veteran
+ *   [1.12, 1.2,  1.4 ]   0.44   46.7%    7.9%        1        32.8%     43.2%
+ *   [1.12, 1.2,  1.4 ]   0.50   44.3%   12.5%        1        30.5%     42.5%
+ *   [1.12, 1.2,  1.44]   0.44   43.0%   13.4%        1        30.7%     41.8%
+ *   [1.16, 1.2,  1.4 ]   0.48   40.7%   12.2%        0        29.0%     38.2%
+ *   [1.18, 1.2,  1.4 ]   0.48   38.0%   15.6%        0        25.8%     37.3%
+ *   [1.17, 1.2,  1.4 ]   0.44   44.0%    9.0%        0        27.7%     36.2%
+ *   [1.2,  1.2,  1.34]   0.5    41.3%   13.9%        0        26.7%     37.0%
+ *   [1.19, 1.2,  1.36]   0.48   42.0%   12.5%        0        27.0%     38.2%   ← shipped
+ *
+ * Act 1 is the dial: it is where a zero-meta company dies and a veteran's
+ * (the Opening deal's second hero) does not, and act 3 eases to hand the
+ * veteran back what act 1's compounding took. §16d's Rally Horn value (gate
+ * 0.05–3 base HP) is noise-level and curve-chaotic: −0.34 to +0.77 across the
+ * curves tried; +0.66 on the shipped one. §11's strict floor ends 33% of its
+ * runs at depth 6 here (gate 40%; 40.4% on the merge).
+ */
+export const ACT_STEPS: readonly [number, number, number] = [1.19, 1.2, 1.36]
 export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]
@@ -195,7 +226,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
  *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
  *    and card luck are paid for by the composition alone now;
- *  - the **final boss** fights at ×0.44 of its layer (×0.55 before the tuning pass): it fields all three
+ *  - the **final boss** fights at ×0.48 of its layer (×0.55 before the tuning pass, ×0.44 before the merged one): it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -206,8 +237,9 @@ export function threatAtLayer(layer: number, start = 1): number {
  */
 export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
   // ×0.55 → ×0.44 with the steeper act 3 (the tuning pass, see ACT_STEPS): the
-  // final boss's Threat is ×4.9 where it was ×4.4, not ×6.2.
-  type === 'boss' ? 0.44 : 1
+  // final boss's Threat is ×4.9 where it was ×4.4, not ×6.2. ×0.44 → ×0.48 in
+  // the merged tuning pass (its kills of arrivals 7.9% → 12.5%; see ACT_STEPS).
+  type === 'boss' ? 0.48 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>

@@ -169,6 +169,26 @@ export function skillPoolFor(unlocked: readonly string[], achieved: (id: string)
 // brings 7 or 8 crates home, and sells them at the first two cities instead.
 // Delivery cannot fall 3pt a crate for eight crates from 32% without the last
 // ones landing near zero.
+//
+// ---- re-fitted in the merged tuning pass (the October gates) ----------------
+//
+// The October audit re-anchored the stake's gates: a veteran's max stake (8
+// crates, `runsim.VETERAN`, REPORT §13c) delivers 10–20%, and every crate
+// costs ≥ 8% of the tier below's delivery on the ladder's log-linear fit (the
+// 3pt-a-crate floor above could not coexist with a 10–20% max stake). On the
+// merged road the table above left the veteran's 7 and 8 crates at 1–2% (the
+// dare). The last leg is the same model with a gentler table, each tier
+// fitted alone on 600 paired runs (adaptive, Rosethread's road):
+//
+//   crates      0     1     2     3     4     5     6     7     8
+//   last leg   ×1  ×1.10 ×1.14 ×1.27 ×1.35 ×1.43 ×1.54 ×1.64 ×1.74
+//   zero meta  27.0  24.0  20.8  16.3  15.7  14.3  11.8   8.7   6.5%   (fit ≈13% a crate)
+//   veteran    38.2  32.0  29.7  26.2  23.0  20.0  18.5  15.0  13.5%   (fit ≈12% a crate)
+//
+// Tier 2 is the softest step on purpose: its one extra crate is the one that
+// rides to the destination, so its pay rises only by what that crate brings
+// home — at ×1.18 the zero-meta ladder's 2-crate pay sat 3 gold over the
+// 1-crate's (190 vs 187); at ×1.14, 8 gold (195).
 
 /** The highest difficulty step there is. */
 export const MAX_DIFFICULTY = 10
@@ -177,7 +197,7 @@ export const MAX_DIFFICULTY = 10
  * AND what one who reaches the wagons steals. Index = step; a step past the
  * table repeats its last.
  */
-export const LAST_LEG: readonly number[] = [0, 0.12, 0.22, 0.36, 0.5, 0.74, 1.1, 3.5, 4.5]
+export const LAST_LEG: readonly number[] = [0, 0.1, 0.14, 0.27, 0.35, 0.43, 0.54, 0.64, 0.74]
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
 
