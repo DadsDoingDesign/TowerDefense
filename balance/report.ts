@@ -3745,7 +3745,7 @@ if (want(18)) {
   line('')
   line(`**Each condition, lifted one at a time** (delivery against the full charter's ${pct(none.won)}): without the ground ${pct(noGround.won)} (${pp(noGround.won - none.won)}), without the double prices ${pct(noPrices.won)} (${pp(noPrices.won - none.won)}), without the muster ${pct(noMuster.won)} (${pp(noMuster.won - none.won)}). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at ${HUB_RUNS} runs a row the paired noise is several points, so read the signs, not the decimals.`)
   line('')
-  line('_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster\'s strength (×1.07, which the clans alone did not have). The five conditions are the designer\'s and are as built._')
+  line(`_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster\'s strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → ${CHARTER_PAYOUT.toLocaleString('en')}, so a charter nets about 1.5–3× this company\'s escort (${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} against +${escort.net.toFixed(0)}: ${escort.net > 0 ? (none.net / escort.net).toFixed(1) : '—'}×) and breaks even within a few points of its delivery rate. The five conditions are the designer\'s and are as built._`)
   line('')
   summary.push(`Sovereign Route (late-game company): delivered ${pct(none.won)} (all five Sovereign items ${pct(all.won)}), bank net ${none.net.toFixed(0)} a charter; break-even ${pct(breakEven)}; lifting each: ground ${pp(noGround.won - none.won)}, prices ${pp(noPrices.won - none.won)}, muster ${pp(noMuster.won - none.won)}`)
 }
