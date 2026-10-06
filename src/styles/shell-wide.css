@@ -49,14 +49,14 @@
     flex-direction: row;
     align-items: center;
     gap: 28px;
-    min-height: 60px;
+    min-height: 52px;
     padding-top: var(--sh-header-pad);
     padding-bottom: var(--sh-header-pad);
     /* room for the "?" shortcuts button pinned at the right */
     padding-right: 72px;
   }
-  .shell:not(.shell-page) > .sh-header > .sh-header-row.sub {
-    flex: 1;
+  /* No wordmark (October 2026): the run state is the whole row. */
+  .shell:not(.shell-page) > .sh-header > .sh-header-row {
     gap: 24px;
   }
   .shell:not(.shell-page) .sh-base-bar {
@@ -158,7 +158,8 @@
 .sh-keys {
   display: none;
   position: fixed;
-  top: calc(10px + var(--safe-top, 0px));
+  /* Centred on the 52px wide header. */
+  top: calc(6px + var(--safe-top, 0px));
   right: max(14px, var(--safe-right, 0px));
   z-index: 30;
 }

@@ -49,9 +49,9 @@
   --sh-wavebar-h: 56px;
   --sh-detail-pad-y: 10px;
   --sh-detail-pad-b: 12px;
-  --sh-header-min: 76px;
-  --sh-header-pad: 10px;
-  --sh-coach-pad: 6px;
+  /* One row of run state, no wordmark (October 2026; it was 76 over two rows). */
+  --sh-header-min: 44px;
+  --sh-header-pad: 8px;
   --sh-card-gap: 3px;
   --sh-card-glyph: 30px;
   --sh-card-pad: 8px;
@@ -90,30 +90,104 @@
   grid-row: 4;
 }
 
-/* ---------------------------------------------------------------- band 1 */
+/* ---------------------------------------------------------------- band 1
+   One row: depth · (sovereign) · strength · cargo · gold. The cargo block is
+   the only one that gives ground — its bar shrinks first — so the chips and
+   the gold always read whole. No wordmark (October 2026): the title screen
+   carries the name. */
 .sh-header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
   padding: var(--sh-header-pad) 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   min-height: var(--sh-header-min);
 }
 .sh-header-row {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.sh-header-row.sub {
-  justify-content: space-between;
+.sh-header-row > .sh-chip,
+.sh-header-row > .sh-res {
+  flex: 0 0 auto;
 }
-.sh-brand {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  font-size: 18px;
+/* The cargo block takes the room the chips leave (its own content does not
+   size it, so it can be queried). With depth and strength beside it on a
+   phone, the visible word "Cargo" steps aside before the bar would shrink
+   past reading: the crate, the bar and the percentage stay, and the accessible
+   name still says "Cargo 100%". The first battle has no chips and keeps it. */
+.sh-header-row > .sh-base {
+  flex: 1 1 0;
+  container: sh-cargo / inline-size;
+}
+@container sh-cargo (max-width: 150px) {
+  .sh-base-word {
+    display: none;
+  }
+}
+/* A phone's row: a little less air between the pieces, and slimmer chips
+   below 390, so depth, strength, cargo and a four-digit purse share one row
+   down to 360 wide. */
+@media (max-width: 699.98px) {
+  .sh-header-row {
+    gap: 6px;
+  }
+}
+@media (max-width: 389.98px) {
+  .sh-header-row > .sh-chip,
+  .sh-header-row .sh-chip.gold {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+/* Too narrow for one row — depth AND strength on a phone under 360, or on
+   Large UI under 430, or the Sovereign chip on any phone: two rows, tight —
+   the chips and the purse, then the cargo across the whole width (51-59px,
+   was 62-76 with the wordmark). Chosen by the viewport and by which chips the
+   run has, never by a number's width, so it cannot flip mid-battle. Depth
+   alone (the first win) still fits one row at 320. */
+@media (max-width: 359.98px) {
+  .sh-header-row:has(> .sh-chip ~ .sh-chip) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-base {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 429.98px) {
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-base {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 699.98px) {
+  .sh-header-row:has(> .sh-chip.sov) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  .sh-header-row:has(> .sh-chip.sov) > .sh-base {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+/* The bands' heading: a real, focusable h1 with an aria-label and no visible
+   box. Placed off-screen like the announcer — not clipped (global.css). */
+.sh-screen-h {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 300px;
+  height: 1em;
+  margin: 0;
 }
 .sh-chip {
   font-size: var(--fs-micro);
@@ -160,6 +234,8 @@
 }
 .sh-base-bar {
   flex: 1;
+  /* The one part of the header row that gives ground; never to nothing. */
+  min-width: 24px;
   max-width: 160px;
   height: 7px;
   border-radius: 999px;
@@ -180,6 +256,7 @@
 .sh-res {
   display: flex;
   gap: 6px;
+  margin-left: auto;
 }
 
 /* ---------------------------------------------------------------- band 2 */
@@ -1459,6 +1536,14 @@
    against it, not against the field: --text on it is ~13:1, --accent-text
    ~8:1, whatever grass or road is underneath. */
 .sh-coach {
+  --sh-pill-fade: 220ms;
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 8px;
+  translate: -50% 0;
+  width: max-content;
+  max-width: min(calc(100% - 16px), 400px);
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -1531,6 +1616,7 @@
 .sh-coach-text {
   flex: 1 1 auto;
   min-width: 0;
+  margin: 0;
   font-size: var(--fs-xs);
   line-height: 1.35;
   color: var(--text);
@@ -1552,14 +1638,6 @@
 }
 .sh-tile-rar,
 .sh-slot-rar {
-  --sh-pill-fade: 220ms;
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  top: 8px;
-  translate: -50% 0;
-  width: max-content;
-  max-width: min(calc(100% - 16px), 400px);
   position: absolute;
   top: 1px;
   left: 3px;
@@ -1584,7 +1662,6 @@
 }
 .sh-slot {
   position: relative;
-  margin: 0;
 }
 .sh-slot-rar {
   top: 2px;
@@ -1761,6 +1838,11 @@
    `scratchpad/dm-reach.mjs` across the whole device matrix at both UI scales
    and in both contrast modes.
 
+   October 2026: the coach term is gone (the coach floats over the Stage and
+   takes no row) and the header is one row (76/68/62 -> 44/40/38), so every
+   tier now leaves the Stage ~60-110px more than its floor. The tokens below
+   were not lowered to match: the slack is the Stage's. */
+
    What is NOT given up, because it is the design (docs/FIGMA.md):
    the four bands, the uncovered Stage, and the permanent pack. What gives
    ground instead is density — a shorter Stage, tighter cards, a shallower
@@ -1788,9 +1870,8 @@
     --sh-stage-min: 124px;
     --sh-selector-h: 112px;
     --sh-detail-h: 206px;
-    --sh-header-min: 68px;
-    --sh-header-pad: 8px;
-    --sh-coach-pad: 5px;
+    --sh-header-min: 40px;
+    --sh-header-pad: 7px;
     --sh-card-gap: 2px;
     --sh-card-glyph: 27px;
     --sh-card-pad: 7px;
@@ -1820,7 +1901,7 @@
     --sh-stage-min: 88px;
     --sh-selector-h: 106px;
     --sh-detail-h: 186px;
-    --sh-header-min: 62px;
+    --sh-header-min: 38px;
     --sh-header-pad: 6px;
     --sh-card-glyph: 26px;
     --sh-card-pad: 6px;

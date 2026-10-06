@@ -12,6 +12,8 @@
  *     header + STAGE + selector + wave strip  ==  100dvh
  *
  * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
+ * (October 2026: the one-row header gives the Stage ~25-32px more on top of
+ * these, and the coach no longer takes a row — see shell.css.)
  * The field is width-bound on every portrait phone (the lane runs edge to edge),
  * so on the tall ones more of the map round it shows (grid-fit: one continuous
  * map, no apron); on the short ones the field itself grows to full width.
@@ -351,11 +353,8 @@
 }
 
 /* ------------------------------------------------------------ a11y (F6) */
-/* The bands' heading is the brand word, now an <h1>; keep its look. */
-h1.sh-brand {
-  margin: 0;
-  line-height: 1.2;
-}
+/* The bands' heading is an off-screen <h1> now (`.sh-screen-h`, shell.css):
+   the FIELDWATCH wordmark it used to wear left the in-run header. */
 /* Headings take PROGRAMMATIC focus on a screen change (tabindex -1); they are
    not controls, so no ring. */
 .shell h1[tabindex='-1']:focus,
