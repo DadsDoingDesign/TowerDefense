@@ -90,7 +90,7 @@ function useFresh(ids: string[]): Set<string> {
  * used to be below the fold on a small phone.
  */
 export function ReceiptToast() {
-  const [msg, setMsg] = useState<{ text: string; key: number; hold?: number; notice?: boolean } | null>(null)
+  const [msg, setMsg] = useState<{ text: string; key: number; hold?: number; notice?: boolean; warn?: boolean } | null>(null)
   useEffect(() => {
     /*
      * Round 3 (Q5): a resumed save's off-hand item moved back to the pack.
@@ -100,7 +100,8 @@ export function ReceiptToast() {
      * that caught it is unmounted a frame later. The one that mounts next
      * reads the still-pending notice and says it.
      */
-    const sayNotice = (n: { text: string; at: number }) => setMsg({ text: n.text, key: n.at, hold: 6000, notice: true })
+    const sayNotice = (n: { text: string; at: number; tone?: 'warn' }) =>
+      setMsg({ text: n.text, key: n.at, hold: 6000, notice: true, warn: n.tone === 'warn' })
     const pending = useGameStore.getState().gearNotice
     if (pending) sayNotice(pending)
     let prev = useGameStore.getState()
@@ -154,7 +155,7 @@ export function ReceiptToast() {
     <div className="pg-toast-wrap" role="status" aria-live="polite">
       {msg && (
         <p className="pg-toast" key={msg.key}>
-          <Icon name={msg.notice ? 'back' : 'boon'} /> {msg.text}
+          <Icon name={msg.warn ? 'warn' : msg.notice ? 'back' : 'boon'} /> {msg.text}
         </p>
       )}
     </div>

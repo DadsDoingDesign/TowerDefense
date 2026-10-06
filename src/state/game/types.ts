@@ -347,8 +347,10 @@ export interface GameData {
    * Round 3 (Q5): what a resumed save had in an off hand that no longer takes
    * it, now back in the pack (`runSnapshot.gearReturned`). The receipt toast
    * says it once. Presentation — not snapshotted, cleared with the shell.
+   * Also the slot for any one-off notice: `tone: 'warn'` marks a problem the
+   * player should know about (a refused save, `state/saveHealth.ts`).
    */
-  gearNotice: { text: string; at: number } | null
+  gearNotice: { text: string; at: number; tone?: 'warn' } | null
 }
 
 export interface GameState

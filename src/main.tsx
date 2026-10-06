@@ -8,6 +8,7 @@ import { preloadSprites } from './game/render/sprites'
 import { applyThemeCss, artOverride, setActiveTheme } from './game/render/themes'
 import { initSettings, initTheme, useSettingsStore } from './state/settingsStore'
 import { flushRunSnapshot, installRunPersistence, useGameStore } from './state/gameStore'
+import { installSaveHealth } from './state/saveHealth'
 import { onAppHidden, onAppVisible } from './state/lifecycle'
 import { useMetaStore } from './state/metaStore'
 import { devCharter } from './state/devCharter'
@@ -28,6 +29,9 @@ preloadSprites()
 preloadAudioSamples()
 // Persist the run between waves and on the way out (C3).
 installRunPersistence()
+// Say so when a save is refused, and ask for persistent storage once a run has
+// settled and the bank holds something worth keeping (Lane 4.5).
+installSaveHealth()
 // Music follows the game: a live wave gets the battle cue, everything else gets
 // the hub cue. The score itself is generated (src/audio/music.ts) — no track
 // files, so nothing to precache and no licence to verify.
