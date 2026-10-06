@@ -112,7 +112,12 @@ const L2: Skill[] = [
   { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
   { id: 'snare', name: 'Snare', level: 2, company: 'silk', desc: 'Buries a snare by the path that burns 14 a second and slows 30%, and its own hits slow 20%.', mods: { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }, from: 'The Trickster evolution (level 10); the Saboteur' },
   { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 12 a second for 3 seconds, and splashes 15 wider.', mods: { burn: { dps: 12, dur: 3 }, splashAdd: 15 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
-  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 15% harder.', mods: { buffAura: { damageMult: 1.15, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
+  // 15% → 25% (the tuning pass). §2 grades an aura skill against the same hero
+  // holding its level's damage skill: at 15% a sword-and-shield hero's Blessing
+  // held ×21.65 against Heavy Blows' ×19.72 (+9.8%, gate +10%), and at 20% the
+  // wand's read +9.7%. At 25%: Wand +20%, Sword & Shield +21%; §7's Level 2 is
+  // not solved by it (+13.6 / +15.1 / +14.1pt mean by kit).
+  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 25% harder.', mods: { buffAura: { damageMult: 1.25, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
   { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder, and every 100 damage it deals wins back 2% of the cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
   { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2 seconds.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },
   { id: 'cold_snap', name: 'Cold Snap', level: 2, company: 'silk', desc: 'Its hits deal 25% more to slowed enemies.', mods: { vsSlowed: 0.25 }, from: 'New with the classless rework' },
