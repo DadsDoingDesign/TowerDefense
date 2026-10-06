@@ -59,13 +59,21 @@ export const SOVEREIGN_INITIAL = 'S'
 export const SOVEREIGN_TIER = 'Sovereign'
 
 /**
- * The sponsorship fee, from the bank. A finished escort banks about 400
- * gold and a good staked one about 500 (REPORT §13), so the fee is ten good
- * runs of savings.
+ * The sponsorship fee, from the bank: about nine good runs of savings. 5,000
+ * → 7,000 (the tuning pass): the company that opens the door banks ~670 gold
+ * net from an escort and ~810 from a 4-crate contract (REPORT §18), so 5,000
+ * was about six good runs.
  */
-export const CHARTER_FEE = 5000
-/** What a delivered Sovereign Route pays at its destination: four fees. */
-export const CHARTER_PAYOUT = 20000
+export const CHARTER_FEE = 7000
+/**
+ * What a delivered Sovereign Route pays at its destination: five fees. 20,000
+ * (four fees) → 35,000 (the tuning pass): at four fees the charter broke even
+ * at 25% delivery and the door's company delivered 23–27%, so its expected
+ * value was about nothing — a gamble with no reason to take it. At five fees
+ * it breaks even at 20%; that company delivers 26% (28% with every Sovereign
+ * item), worth about +2,000 a charter on average and 35,000 on the day.
+ */
+export const CHARTER_PAYOUT = 35000
 /**
  * The muster's teeth (the tuning pass): every raider on the Sovereign Route is
  * this much stronger — its HP, and what it steals when it reaches the wagons —
