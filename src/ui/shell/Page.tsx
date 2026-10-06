@@ -5,6 +5,7 @@ import { Icon } from '../Icon'
 import { effectIcon, markLabel, RARITY_INITIAL, railStyle, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
 import { Money } from './Money'
 import { lineMark, lineText, type Body } from './offers'
+import type { OneTapProps } from './oneTap'
 
 /**
  * The page skeleton from the Figma mobile system: a serif title block, a body
@@ -243,6 +244,10 @@ export function MenuRow({
   big,
   note,
   locked,
+  press,
+  pressing,
+  name,
+  description,
 }: {
   label: string
   value?: ReactNode
@@ -310,15 +315,32 @@ export function MenuRow({
    * reader user can reach the line), and a press does nothing.
    */
   locked?: boolean
+  /**
+   * October 2026: a one-tap row (`useOneTap`) — a tap commits, a hold, hover
+   * or keyboard focus shows its detail. Its handlers replace `onClick`, it is
+   * never `disabled` (a refused tap still shows the detail), and `selected`
+   * then means "the row being read", so it is not a toggle (no
+   * `aria-pressed`).
+   */
+  press?: OneTapProps
+  /** The finger is on this one-tap row (before a hold lands). */
+  pressing?: boolean
+  /** An accessible name that says the deed ("Rest by the fire — cargo +35%"). */
+  name?: string
+  /** The row's detail, for a screen reader on reaching it (a one-tap row's hold). */
+  description?: string
 }) {
   return (
     <button
-      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}`}
+      className={`pg-row ${tone === 'danger' ? 'danger' : ''} ${selected ? 'sel' : ''} ${rail ? 'railed' : ''} ${dim ? 'dim' : ''} ${big ? 'big' : ''}${press ? ' onetap' : ''}${pressing ? ' pressing' : ''}`}
       style={rail ? (railStyle(rail) as CSSProperties) : undefined}
-      onClick={locked ? undefined : onClick}
-      disabled={locked ? undefined : !onClick || disabled}
-      aria-disabled={locked || undefined}
-      aria-pressed={selected}
+      onClick={locked || press ? undefined : onClick}
+      disabled={locked || press ? undefined : !onClick || disabled}
+      aria-disabled={locked || (press && disabled) || undefined}
+      aria-pressed={press ? undefined : selected}
+      aria-label={name}
+      aria-description={description}
+      {...press}
     >
       {(icon || glyph || art) && (
         <span className="pg-row-icon">

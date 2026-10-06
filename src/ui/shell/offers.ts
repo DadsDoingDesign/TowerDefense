@@ -1,4 +1,4 @@
-import { describeBase, itemNoun, RARITY } from '../../game/data/items'
+import { describeBase, gripOf, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { SOVEREIGN_TIER } from '../../game/run/charter'
 import { PULL_PRICE } from '../../game/run/hq'
@@ -16,7 +16,7 @@ import { useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { menuStaged } from '../../state/staging'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, GRIP_NAME, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
@@ -187,6 +187,23 @@ export interface Offer {
    * Anything that spends, grants or destroys must never set this.
    */
   immediate?: boolean
+  /**
+   * October 2026 (the designer's call, audit §4 item 8): a CHEAP choice that
+   * commits on the tap — a reward card, the campfire. Unlike `immediate` it
+   * has a detail worth reading, so a hold (touch), a hover (mouse) or
+   * keyboard focus shows it without committing (`oneTap.tsx`). Never on
+   * anything that spends gold, is permanent, or destroys.
+   */
+  oneTap?: {
+    /** The option's accessible name, as the deed: "Take Bow — two-handed weapon, Common". */
+    label: string
+    /**
+     * What the Announcer says once it is done, also shown as the receipt
+     * toast. Omitted where the receipt toast already says it (an item landing
+     * in the pack).
+     */
+    said?: string
+  }
   /**
    * Character offers render as the design's portrait chooser — the selected
    * one grows and takes a rail in its own colour. Without this the page falls
@@ -768,7 +785,20 @@ function rewardOffers(st: St): Offer[] {
     // every card.
     info: c.grant?.mods ? { label: 'How effects stack', lines: STACKING_RULES } : undefined,
     action: { label: 'Take it', run: () => st.chooseReward(c.id) },
+    // One tap takes it (October 2026); a hold, hover or focus reads it first.
+    oneTap: rewardTap(c),
   }))
+}
+
+/** A reward card's one-tap name and its sentence once taken. */
+function rewardTap(c: NonNullable<St['reward']>[number]): NonNullable<Offer['oneTap']> {
+  const title = c.item ? itemName(c.item) : c.title
+  const what = c.item ? GRIP_NAME[gripOf(c.item)] : c.kind === 'relic' ? 'a relic for all your heroes' : 'for all your heroes'
+  const downside = c.downside ? `. Downside: ${c.downside}` : ''
+  return {
+    label: `Take ${title} — ${what}, ${RARITY[c.rarity].label}${downside}`,
+    said: c.item ? undefined : `Took ${title}.`,
+  }
 }
 
 /**

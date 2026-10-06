@@ -14,6 +14,7 @@ import { RunSeed } from './RunSeed'
 import { VolumeSlider } from './VolumeSlider'
 import { useStaged } from './staging'
 import { ContractChip } from './contracts/parts'
+import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -239,6 +240,36 @@ export function PageScreen({
     if (selection?.kind !== 'offer' || selection.id !== id) shellSelect({ kind: 'offer', id })
   }
 
+  /*
+   * One-tap choices (October 2026; the designer's call on audit §4 item 8):
+   * a reward card on the Spoils page and the campfire's rest and train commit
+   * on the tap. A hold (touch), a hover (mouse) or keyboard focus shows the
+   * row's detail instead — the same detail block a pick fills — and the
+   * page has no CTA for them: a button that repeats what the tap did is
+   * chrome. Everything that spends, is permanent or destroys keeps `pick`
+   * and the pinned CTA.
+   */
+  const oneTapUntaught = useOneTapUntaught()
+  const hasOneTap = choices.some((o) => o.oneTap)
+  const spoils = useGameStore((s) => !!s.reward)
+  const oneTap = useOneTap({
+    surface: choices.map((o) => o.id).join(' '),
+    commit: (id) => {
+      const o = choices.find((c) => c.id === id)
+      if (o) commitOneTap(o)
+    },
+    inspect: (id, how) => {
+      // A hover reads in place; a hold or keyboard focus brings the detail
+      // into view, as a pick does. Hovering must never scroll the page.
+      if (how === 'hover') {
+        if (selection?.kind !== 'offer' || selection.id !== id) shellSelect({ kind: 'offer', id })
+        return
+      }
+      pick(id)
+    },
+    disabled: (id) => !!choices.find((c) => c.id === id)?.action?.disabled,
+  })
+
   const title = titleOverride ?? ctx.board?.title ?? 'Fieldwatch'
   // Oct 2026 (3.5): an in-run event board (merchant, shrine, campfire, a
   // recruit, the Crossroads) carries no subtitle — its title and the pack
@@ -262,7 +293,8 @@ export function PageScreen({
   // Heroes as comparison cards (the hero pick, a recruit slate) come first.
   const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
   const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
-  const asRows = choices.length > 1 && !asPortraits && !asHeroes
+  // A one-tap choice is always a row, even alone: the row IS its commit.
+  const asRows = (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
 
   return (
     <PageLayout
@@ -291,7 +323,7 @@ export function PageScreen({
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
-        selected?.action
+        selected?.action && !selected.oneTap
           ? {
               label: confirm.label,
               run: () => {
@@ -379,6 +411,10 @@ export function PageScreen({
 
       {/* With a row chooser the list comes first — reading a detail for
           something you have not picked yet reads backwards. */}
+      {/* The how-to for a one-tap board, once (until the first one-tap
+          commit anywhere): "Tap to take · hold to look". */}
+      {asRows && hasOneTap && oneTapUntaught && <OneTapHint verb={spoils ? 'take' : 'choose'} className="pg-hint" />}
+
       {asRows && (
         <div className="pg-rows">
           {choices.map((o) => (
@@ -400,6 +436,15 @@ export function PageScreen({
               pips={o.pips}
               onClick={() => pick(o.id)}
               selected={o.id === selected?.id}
+              {...(o.oneTap
+                ? {
+                    press: oneTap.bind(o.id),
+                    pressing: oneTap.pressing === o.id,
+                    name: o.oneTap.label,
+                    description: describeOneTap(o),
+                    disabled: o.action?.disabled,
+                  }
+                : {})}
             />
           ))}
         </div>

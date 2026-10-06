@@ -94,6 +94,10 @@ export const TEACH_IDS = [
   // crates — each said once, the first time the page opens.
   'hq',
   'crates',
+  // October 2026 (audit designer item 8): rewards and the campfire commit on
+  // a tap. "Tap to take · hold to look", said once, on the first such board.
+  // New for everyone: a returning player is the one who expects a confirm.
+  'oneTap',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>
