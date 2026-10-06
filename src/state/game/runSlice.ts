@@ -10,7 +10,8 @@ import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { carryPlacements, encounterNode } from '../../game/run/map'
+import { carryPlacements, emptyPlacements, encounterNode } from '../../game/run/map'
+import { groundFor } from '../../game/run/fields'
 import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run/terrain'
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
@@ -309,6 +310,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       reachableNodeIds: snap.reachableNodeIds,
       event: snap.event,
       battleMap,
+      fieldAct: snap.fieldAct,
       roster: snap.roster,
       placements,
       gold: snap.gold,
@@ -424,9 +426,13 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // Its map challenge is the node's own on this ROUTE's ground (the
     // company's), and so (Q1) is its danger ground — a hash, no stream draw.
     const ground = groundOf(get())
+    // The road changes country at every city (`run/fields`): the first fight
+    // of a new act is fought on that act's field — a hash of (seed, act), no
+    // stream draw — and the company starts it on the bench.
+    const field = groundFor(get().runSeed, { fieldId: fieldIdOf(get().battleMap), fieldAct: get().fieldAct }, node.layer)
     const battleMap =
       fieldFor(
-        fieldIdOf(get().battleMap),
+        field.fieldId,
         nodeTerrainRule(node, get().runSeed, ground),
         layout.orientation(),
         nodeHazardSeed(node, get().runSeed, ground),
@@ -438,8 +444,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       activeNodeId: nodeId,
       currentWave: wave,
       battleMap,
-      // A hero posted on a tile this field blocks goes back to the bench.
-      placements: carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
+      fieldAct: field.fieldAct,
+      // New ground: everyone back to the bench, to be posted afresh. Within an
+      // act the posts carry, and a hero on a tile this field blocks goes back.
+      placements: field.fresh ? emptyPlacements(battleMap) : carryPlacements(get().placements, battleMap, (id) => roster.some((h) => h.id === id), MAX_ROSTER),
       battlePhase: 'setup',
       screen: 'battle',
       selectedSentinelId: null,
@@ -447,6 +455,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       lastLoot: [],
       hud: { ...freshHud(), baseHp, maxBaseHp, enemiesTotal: wave.spawns.length },
       ...CLEAR_SHELL,
+      // The arrival note, said in the coach row in setup (`Coach`).
+      newGround: field.fresh ? battleMap.name : null,
     })
   },
 })

@@ -23,6 +23,7 @@ export const CLEAR_SHELL = {
   detailOpen: false,
   fieldNote: null as GameData['fieldNote'],
   gearNotice: null as GameData['gearNotice'],
+  newGround: null as GameData['newGround'],
 } satisfies Partial<GameData>
 
 export function freshHud(): HudSnapshot {
@@ -81,6 +82,8 @@ export function freshRunState(runSeed: number) {
     ...dealRunMap(),
     event: null,
     battleMap,
+    // Act 1's field (`run/fields`): the next act deals its own.
+    fieldAct: 1,
     placements: emptyPlacements(battleMap),
     threat: 1,
     runKills: 0,
