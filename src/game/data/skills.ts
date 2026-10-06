@@ -95,7 +95,11 @@ const L2: Skill[] = [
   { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, and crits 10% more often.', mods: { execute: 0.15, critChanceAdd: 0.1 }, from: 'The Assassin evolution (level 10)' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'shield_wall', name: 'Shield Wall', level: 2, company: 'metals', desc: 'Holds 2 more enemies, in a wider circle.', mods: { holdAdd: 2, holdRadius: 90 }, from: 'Knight perk Shield Wall; the Juggernaut specialization' },
-  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits by 30% for 1.4 seconds, and its thorns hit 50% harder.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 1.5 }, from: 'The Guard evolution (level 10)' },
+  // Thorns ×1.5 → ×3 (the tuning pass): on a sword-and-shield hero Wildfire led
+  // this level by +20.3pt (§7, ceiling 20) and nothing a holder holds paid like
+  // it; Anchor is the holder's own answer. Sword & Shield Anchor +15.4 → +29.4pt,
+  // the level’s lead 20.3 → 17.4pt (Dagger +5.0 → +7.4, Wand unchanged).
+  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits by 30% for 1.4 seconds, and its thorns hit 3 times as hard.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 3 }, from: 'The Guard evolution (level 10)' },
   // The Knight also held 3; that half of it lives in Hold Fast now, and the
   // hold is a Fighter's (see the header), so this one hits 10% harder instead.
   { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
