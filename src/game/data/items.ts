@@ -507,7 +507,10 @@ const CURSE_ENCHANTS: EnchantTemplate[] = [
   // every build a quarter of its rate.
   { id: 'cx_wild', label: 'Wild', roll: () => ({ mods: { critChanceAdd: 0.25, critMultAdd: 0.9, rateMult: 0.75, splashAdd: -70 } }) },
   // Area for damage — the one curse that was already a real tradeoff.
-  { id: 'cx_erratic', label: 'Erratic', roll: () => ({ mods: { splashAdd: 34, damageMult: 0.82 } }) },
+  // ×0.82 → ×0.75 damage (the tuning pass): on the re-pinned §10 benches the
+  // classless knife-thrower read −0.3 → +0.4pt — the splash paid for the cut
+  // on a swarm. Now −8.1pt on it, +6.9pt on the splash wand.
+  { id: 'cx_erratic', label: 'Erratic', roll: () => ({ mods: { splashAdd: 34, damageMult: 0.75 } }) },
   // Damage for crit, priced so the clamp can never hide it: −100% crit chance
   // means *never crits*, which costs a Sharpshooter ~46% of its damage and a
   // low-crit mystic ~5%. Now it is a real question of who wears it.
