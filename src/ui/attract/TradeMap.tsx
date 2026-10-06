@@ -3,6 +3,7 @@ import { companyById, type CompanyId } from '../../game/data/companies'
 import type { BannerLook } from '../../game/data/banner'
 import { Crest } from '../pixel'
 import { useMedia } from '../pointer'
+import { readJson, writeJson } from '../../state/storage'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
 import { BRIGHTEN_MS, brightenEase, buildGeometry, makeTraffic, MAP_FPS, STILL_T, type MapGeometry, type Rect, type RoadView } from './mapRules'
 
@@ -42,13 +43,8 @@ import { BRIGHTEN_MS, brightenEase, buildGeometry, makeTraffic, MAP_FPS, STILL_T
 const SEEN_KEY = 'fieldwatch-map-seen'
 
 function readSeen(): Partial<Record<CompanyId, number>> | null {
-  try {
-    const raw = localStorage.getItem(SEEN_KEY)
-    const o = raw ? (JSON.parse(raw) as unknown) : null
-    return o && typeof o === 'object' ? (o as Partial<Record<CompanyId, number>>) : null
-  } catch {
-    return null
-  }
+  const o = readJson<unknown>(SEEN_KEY)
+  return o && typeof o === 'object' ? (o as Partial<Record<CompanyId, number>>) : null
 }
 
 /** Frame timings, for the performance check (dev builds only: `window.__tradeMapPerf()`). */
@@ -117,11 +113,8 @@ export function TradeMap({
   })
   const lightKey = roads.map((r) => `${r.company}:${r.light}`).join(',')
   useEffect(() => {
-    try {
-      localStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries(roads.map((r) => [r.company, r.light]))))
-    } catch {
-      /* private mode: the brighten just never plays */
-    }
+    // Refused in private mode: the brighten just never plays.
+    writeJson(SEEN_KEY, Object.fromEntries(roads.map((r) => [r.company, r.light])))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightKey])
 

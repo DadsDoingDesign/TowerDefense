@@ -20,6 +20,8 @@
  *  - `public/icons/favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`,
  *    `icon-192.png`, `icon-512.png`, `icon-192-maskable.png`, `icon-512-maskable.png`
  *  - `public/social/og-image.png` (1200×630 — the 600×315 scene at exactly 2×)
+ *  - `ios/App/App/Assets.xcassets/`: the App Store icon (1024, opaque) and the
+ *    launch image (2732², shown aspect-fill while the game loads)
  *  - `docs/brand/identity-sheet.png` (the review sheet BRAND.md points at)
  *
  * No web-fetched and no generated-by-model imagery anywhere: every pixel is
@@ -36,6 +38,7 @@ const BRAND = resolve(ROOT, 'src/assets/brand')
 const ICONS = resolve(ROOT, 'public/icons')
 const SOCIAL = resolve(ROOT, 'public/social')
 const DOCS = resolve(ROOT, 'docs/brand')
+const XCASSETS = resolve(ROOT, 'ios/App/App/Assets.xcassets')
 const SPR = resolve(ROOT, 'public/assets/sprites/tinyswords')
 const DECO = resolve(ROOT, 'public/assets/deco/tinyswords')
 
@@ -675,6 +678,17 @@ const ICON_SET = [
 ]
 for (const t of ICON_SET) {
   await out(resolve(ICONS, t.file), await sharp(Buffer.from(iconSvg(markSvg, t.size, t.inset, t.shape))).png({ compressionLevel: 9 }).toBuffer())
+}
+
+// iOS app (Capacitor). The App Store rejects an icon with any alpha, so the
+// alpha channel is dropped, not just left opaque. The launch image is cropped
+// to the screen's shape (aspect-fill), so the disc sits small in the middle,
+// where every phone keeps it.
+const APP_ICON = await sharp(Buffer.from(iconSvg(markSvg, 1024, 0.68, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
+await out(resolve(XCASSETS, 'AppIcon.appiconset/AppIcon-512@2x.png'), APP_ICON)
+const LAUNCH = await sharp(Buffer.from(iconSvg(markSvg, 2732, 0.16, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
+for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+  await out(resolve(XCASSETS, 'Splash.imageset', f), LAUNCH)
 }
 
 // Scenes

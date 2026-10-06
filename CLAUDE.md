@@ -81,6 +81,14 @@ result. Append a short note to the review log when you're done.
   page. The precache is derived from the files the DEFAULT theme draws across
   its per-role fallback chain (`themeAssetPaths` in `sprites.ts`) plus
   whatever the emitted code names — see `planPrecache`.
+- iOS app (Capacitor 8, SPM): `capacitor.config.ts` + `ios/` wrap the same
+  `dist/`. Entry is `src/boot.ts`, which restores saves from native
+  Preferences (`src/native.ts`) BEFORE `main.tsx` loads — stores read storage
+  at import time. Every `writeRaw`/`removeRaw` is mirrored there, so all
+  storage must go through `state/storage.ts`. No service worker in the app.
+  The App Store icon and launch image come from `scripts/brand.ts`. Builds run
+  only on GitHub (`.github/workflows/ios.yml`, manual → TestFlight): the
+  local Mac can't run a current Xcode. Refresh `ios/` with `npx cap sync ios`.
 - Run snapshot load/validation: `src/state/runSnapshot.ts` — every field a
   save can put into arithmetic is validated, and `tests/runSnapshot.fuzz.test.ts`
   mutates a real snapshot ~15k ways to prove it. Extend the validators (and the
