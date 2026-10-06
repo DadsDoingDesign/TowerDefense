@@ -3146,3 +3146,18 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
   closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
   readability 4/5, hierarchy 4/5, polish 4/5.
+- **2026-10-06 — Renamed to Merchant Mercenaries (and the iOS shell).** The
+  name runs twice Fieldwatch's length, so it was checked where it is set large:
+  the menu head at 360/390/430/1440, the run header band at the same widths,
+  the boot splash (production build, script off) and the social card. The loop
+  caught three things. On one line the menu title ran into the bank chip from
+  430px phones up through tablets — it is stacked ("Merchant" over
+  "Mercenaries") at every size now, and the splash matches it line for line.
+  The social card's line, re-set from the meadow tagline to "Sellswords for
+  hire", was scaled to the old line's WIDTH and outshouted the name — it is
+  sized by height now. And the new boot entry (`src/boot.ts`) had dropped the
+  stylesheet link from `index.html`, so the splash fell back to Georgia — the
+  base stylesheet is imported by the boot entry again. The run header's
+  "MERCHANT MERCENARIES" fits its own row at 360px. Still open (designer): the
+  Watchtower mark was drawn for Fieldwatch; the home-screen label is
+  "Mercenaries". Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.

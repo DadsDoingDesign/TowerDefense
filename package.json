@@ -1,9 +1,9 @@
 {
-  "name": "fieldwatch",
+  "name": "merchant-mercenaries",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Fieldwatch — a roguelite tower-defense autobattler (working title)",
+  "description": "Merchant Mercenaries — a roguelite tower-defense autobattler (formerly Fieldwatch)",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:checks && tsc -b && vite build",

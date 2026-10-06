@@ -73,7 +73,7 @@ export function HeaderBand() {
         {/* The bands' heading (Phase 2): focus lands here when the screen
             changes, and its name says which screen it is. */}
         <h1 className="sh-brand" tabIndex={-1} aria-label={screen === 'battle' ? `Battle — ${mapName}` : 'Run map'}>
-          FIELDWATCH
+          MERCHANT MERCENARIES
         </h1>
         {depthShown && (
         <span className="sh-chip" role="img" aria-label={`Depth ${depth} of ${lastLayer}`}>

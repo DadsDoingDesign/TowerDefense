@@ -270,7 +270,7 @@ export function PageScreen({
     disabled: (id) => !!choices.find((c) => c.id === id)?.action?.disabled,
   })
 
-  const title = titleOverride ?? ctx.board?.title ?? 'Fieldwatch'
+  const title = titleOverride ?? ctx.board?.title ?? 'Merchant Mercenaries'
   // Oct 2026 (3.5): an in-run event board (merchant, shrine, campfire, a
   // recruit, the Crossroads) carries no subtitle — its title and the pack
   // strip are the head, and the board's own detail says the rest. The flavour

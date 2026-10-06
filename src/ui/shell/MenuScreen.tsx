@@ -197,7 +197,9 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
 
       <header className="mn-head">
         <h1 className="t-title" tabIndex={-1}>
-          Fieldwatch
+          {/* Stacked at every size: on one line the name runs into the bank
+              chip from 430px phones up through tablets. */}
+          <span className="mn-title-line">Merchant</span> <span className="mn-title-line">Mercenaries</span>
         </h1>
         <p className="t-sub">{militiaTagline(militia)}</p>
         {/* The bank is named after the first contract (LS3/LS4). */}

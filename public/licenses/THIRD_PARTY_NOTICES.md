@@ -1,6 +1,6 @@
 # Third-party notices
 
-Fieldwatch is proprietary software (see `LICENSE`). It includes the third-party
+Merchant Mercenaries is proprietary software (see `LICENSE`). It includes the third-party
 components below, each under its own licence. This file lives in
 `public/licenses/` so it ships with every build at `/licenses/THIRD_PARTY_NOTICES.md`.
 

@@ -1,4 +1,31 @@
-# Fieldwatch — project notes for Claude
+# Merchant Mercenaries (formerly Fieldwatch) — project notes for Claude
+
+## Name — Merchant Mercenaries, as of 2026-10-06
+
+The game was renamed from **Fieldwatch** to **Merchant Mercenaries** on 6 October
+2026, the designer's choice (it fits the trade-road premise; "Fieldwatch" was
+the meadow-defence era's name). Use **Merchant Mercenaries** in every
+player-facing string, the store listing, page meta and marketing. Older docs,
+commits and the Whales review history say Fieldwatch: read them as the same game.
+
+- **Home-screen label: "Mercenaries".** The full name truncates under an icon,
+  so the iOS `CFBundleDisplayName`, the manifest `short_name` and
+  `apple-mobile-web-app-title` use the short form. The App Store name is the
+  full one (set in App Store Connect).
+- **iOS bundle id: `com.dadsdoingdesign.merchantmercenaries`** (permanent once
+  registered with Apple).
+- **The menu title is stacked** ("Merchant" over "Mercenaries") at every size; on
+  one line it runs into the bank chip. The boot splash in `index.html` matches.
+- **Wordmark / lockups / social card:** `scripts/brand-wordmark.py` outlines the
+  name from Crimson Text (`pip install fonttools brotli`), then `npm run brand`.
+  The social-card line is "Sellswords for hire". The **mark (the watchtower) is
+  unchanged** — a mark for the new name is open work, not decided.
+- **Deliberately still `fieldwatch` — do not rename:** localStorage keys
+  (`fieldwatch-*`; renaming them silently wipes every player's save), the
+  service-worker cache prefix, the `fieldwatch` art pack/theme id, the `fw-`
+  CSS/file prefixes and `fw-icons`, the GitHub repo (DadsDoingDesign/TowerDefense),
+  local folders, and docs that record history. The Whales product is still
+  filed as "Tower Defense Game" (Whales has no rename).
 
 A roguelite tower-defense autobattler. Vite + React + TypeScript + Canvas 2D +
 Zustand. Art direction: **Tiny Swords** (Pixel Frog) — **old CC0 build only**;

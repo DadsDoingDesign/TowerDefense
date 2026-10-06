@@ -1,4 +1,11 @@
-# Fieldwatch — brand & UI guide
+# Merchant Mercenaries (formerly Fieldwatch) — brand & UI guide
+
+> **Renamed 2026-10-06.** The game is now **Merchant Mercenaries**. The wordmark,
+> lockups, social card (line: "Sellswords for hire"), page meta and app names are
+> updated; the home-screen label is **"Mercenaries"**. The mark below — the
+> Watchtower — was drawn for Fieldwatch and is kept for now; a mark for the new
+> name is open work. Where this guide says Fieldwatch, read Merchant Mercenaries.
+> Details: `CLAUDE.md` § Name.
 
 A **warm, storybook, medieval tower-defense**. The UI is tactile parchment and
 wood framing lush pixel battlefields — cozy, but with stakes. Everything reads

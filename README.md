@@ -1,4 +1,7 @@
-# Fieldwatch
+# Merchant Mercenaries
+
+_Formerly **Fieldwatch** — renamed 6 October 2026. The repo, folders, storage keys and
+other internal ids still say `fieldwatch` on purpose; see `CLAUDE.md` § Name._
 
 A roguelite tower-defense autobattler (working title), inspired by the class-tree
 autobattler _Doomfields_ and reimagined as a Slay-the-Spire-style tower defense.

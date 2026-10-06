@@ -179,6 +179,9 @@
   font-size: 40px;
   text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
 }
+.mn-title-line {
+  display: block;
+}
 .mn .t-sub {
   color: var(--text);
   font-size: var(--fs-md);

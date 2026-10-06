@@ -3,8 +3,8 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // The iOS app wraps the same Vite build the web serves (`dist/`).
 // `appId` is permanent once the app exists in App Store Connect.
 const config: CapacitorConfig = {
-  appId: 'com.dadsdoingdesign.fieldwatch',
-  appName: 'Fieldwatch',
+  appId: 'com.dadsdoingdesign.merchantmercenaries',
+  appName: 'Merchant Mercenaries',
   webDir: 'dist',
   backgroundColor: '#201711',
   ios: {
