@@ -1,4 +1,41 @@
-# Tuning log — first-timer line, Cartographer's Table, final review
+# Tuning log
+
+Checkpointed logs of the tuning lanes, newest first. Every experiment is
+recorded (change, command, numbers, keep/revert) and committed with the lever
+it belongs to.
+
+---
+
+# Tuning pass 2 — the mercenary company (2026-10-05)
+
+Base: `main` @ 1b43846 (grid-fit, weapon clearance, SK1 skills, classless
+heroes, the mercenary-company economy, the HQ, sealed crates, the trade-map
+menu, the Sovereign Route). Untuned: **50 invariants fail**, §6 Monte Carlo
+57% (band 45–60%), first-timer line 14% (band 15–35%, aim 20–28%), adaptive 16%.
+
+Tools: `FW_SECTIONS=…` for one section (§4/§10 7s, §7 11s, §14 10s, §16 26s,
+§15 110s), `balance/tune.ts` for §6/§11/§12 on four cores (`240 fresh mc`
+≈ 90s), and an uncommitted copy of it (`scratch/_tune.ts`, `state=<prefix>`
+for one HQ row).
+
+## Step 1 — re-target the benches (each its own commit)
+
+| Commit | Bench | What it measured | What it measures now | Before → after |
+|---|---|---|---|---|
+| daca170 | §4 affix pins | Sharpshooter / Stormcaller rebuilt from gear sat on the band floor (18% / 22%) | pins ×0.8→×0.25, ×1.2→×0.8 (37% / 36%); `reach` graded on `phys` | 9 dead affixes → 0; §10 curse fails 5 → 2; §15 relic ladder inverted → ordered |
+| 0ffac20 | §7 skills | points by class; a lone hero could not see holds, slows or gold | points by kit (Sword & Shield / Dagger / Wand); `partner` and `gold` benches; dead = dead on every kit | 19 fails → 1 (L2 Sword & Shield solved by Wildfire, +20.3pt) |
+| a9631bb | §2 supports | four retired support specs; the Bannerman's aura had no skill | Blessing / Rally on a wand and a sword-and-shield vs the same hero's damage starter | Bannerman fail → Sword & Shield + Blessing +9.8% (one rung short) |
+| 1d5abd3 | §16a bomber | ×3 HP column died before any bomber reached throwing range | ×5 HP | never fired → 5.3 Gate dmg without counter, 0.0 with |
+| 5d0ed84 | §14c variety | leak ratio over a 0.05 clamp (teams leaked ~0) | each node's pressure raised until its canonical shape leaks ≥ 2 HP | ×22.14 (clamp) → elite ×2.52, normal ×5.67 (real, game-side) |
+| be11ff2 | deployment (harness) | shield-bearers posted 90–110px off the lane, holding nothing; boulders hid it | a holder takes the best tile within its hold radius of the road | boulders adaptive −3.5 ±3.1 → −1.0 ±3.3 (n=600); MC 56.7 → 59.7%; first-timer 15.0 → 17.3% |
+
+Explored and reverted: a marginal-coverage deployment (spread the team along
+the road) — MC 57 → 45%, first-timer 14 → 8%, boulders still negative.
+
+
+---
+
+# Tuning pass 1 — first-timer line, Cartographer's Table, final review
 
 A checkpointed progress log for the last, time-boxed tuning lane. Every
 experiment is recorded here (change, command, numbers, keep/revert) and
