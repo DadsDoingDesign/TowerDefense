@@ -43,15 +43,25 @@ import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, MUSTER_STRENGTH, sovereignP
 
 /** What one cargo crate costs to stake. */
 export const CRATE_PRICE = 50
-/** What one crate sells for at a city, at full cargo: twice its price. */
+/** What one crate sells for at the first city, at full cargo: twice its price (and what a cash-out sale is half of). */
 export const CRATE_VALUE = 100
+/**
+ * What one crate sells for at each city, at full cargo (the tuning pass): the
+ * first recoups the stake, the second pays earnings, the destination pays the
+ * big reward. It was 100 at every city, so a crate that rode to the
+ * destination was worth 100 × the delivery chance against its 50-gold price:
+ * the stakes whose next crate landed there (4 and 8) paid LESS than the stake
+ * below (REPORT §13: 189 → 149 and 219 → 173). See {@link cratesSoldAt}.
+ */
+export const CITY_CRATE_VALUE: readonly [number, number, number] = [100, 130, 400]
 /** The absolute ceiling on a stake, whatever the standing. */
 export const MAX_CRATES = 8
 /** The flat fee every city pays the escort, at full cargo. */
 export const ESCORT_FEE = 40
 /** The destination's completion bonus: a base, and more for every crate carried. */
 export const BONUS_BASE = 150
-export const BONUS_PER_CRATE = 40
+/** 40 → 20 (the tuning pass): the destination's crate carries the big reward now. */
+export const BONUS_PER_CRATE = 20
 /** What a city pays for the crates still on the wagons when you cash out. */
 export const CASH_OUT_RATE = 0.5
 /** Today's good sells for this much more (crate sales and the completion bonus). */
@@ -113,13 +123,21 @@ export const cityOfLayer = (layer: number): number | null =>
 /**
  * How many crates city `city` sells: half the load at the first (rounded up,
  * so the sale always recoups the stake — a crate sells for twice its price),
- * half of what is left at the second, the rest at the destination.
+ * ONE at the destination (from two crates on), and the rest at the second.
+ *
+ * The destination took "the rest" until the tuning pass (half of what was
+ * left after the first), so every second crate rode to the end, where only a
+ * delivered caravan sells it. A stake must cost delivery at every crate
+ * (§13), so a crate whose value hangs on delivery cannot also pay more at
+ * every crate; one crate — the big reward, {@link CITY_CRATE_VALUE} — rides
+ * the last leg, and what a cash-out at the second city gives up is that crate
+ * and the completion bonus.
  */
 export function cratesSoldAt(crates: number, city: number): number {
   const c = clampCrates(crates)
   const first = Math.ceil(c / 2)
-  const second = Math.ceil((c - first) / 2)
-  return [first, second, c - first - second][city] ?? 0
+  const last = c >= 2 ? 1 : 0
+  return [first, c - first - last, last][city] ?? 0
 }
 
 /** Crates still on the wagons after `citiesPaid` cities have sold theirs. */
@@ -184,7 +202,7 @@ export function cityPay(t: ContractTerms, city: number, cargo = 100): CityPay {
   }
   const share = Math.max(0, Math.min(100, cargo)) / 100
   const sold = cratesSoldAt(t.crates, city)
-  const sales = Math.round(sold * CRATE_VALUE * t.market * share)
+  const sales = Math.round(sold * CITY_CRATE_VALUE[city] * t.market * share)
   const fee = Math.round(ESCORT_FEE * share)
   const bonus = city === CITY_COUNT - 1 ? Math.round(completionBonus(t.crates) * t.market * share) : 0
   return { sold, sales, fee, bonus, total: sales + fee + bonus }

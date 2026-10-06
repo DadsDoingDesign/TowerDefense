@@ -129,6 +129,8 @@ describe('contracts: stakes and cities', () => {
       expect(cratesSoldAt(c, 0) + cratesSoldAt(c, 1) + cratesSoldAt(c, 2)).toBe(c)
       expect(cityPay(terms(c), 0).sales).toBeGreaterThanOrEqual(c * CRATE_PRICE)
       expect(cratesLeftAfter(c, 3)).toBe(0)
+      // One crate (from two) rides to the destination: the big reward.
+      expect(cratesSoldAt(c, 2)).toBe(c >= 2 ? 1 : 0)
     }
   })
 

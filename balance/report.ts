@@ -56,8 +56,8 @@ import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_JUMP, MAX_BASE_HP, START_GOLD, THREAT_STEP, threatAtLayer } from '../src/state/gameStore'
 import { levelXpAwards } from '../src/game/run/battle'
 import { nodeThreatMult } from '../src/game/run/threat'
-import { difficultyEffect, difficultyRules } from '../src/game/run/watch'
-import { BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
+import { difficultyEffect, difficultyRules, LAST_LEG } from '../src/game/run/watch'
+import { BONUS_PER_CRATE, CITY_CRATE_VALUE, COMPANY_WEIGHT, CRATE_PRICE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
 import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
 import {
@@ -2445,12 +2445,14 @@ if (want(13)) {
   line('## 13. Stake tiers (is carrying more cargo ever worth it?)')
   line('')
   line('**What changed (the mercenary company).** A run is a contract now, and the difficulty')
-  line('step is its **stake**: every crate of cargo carried is one step — enemies **+8% stronger**')
-  line('and **one more elite an act**, on the map where the player can see it — and costs')
-  line(`${CRATE_PRICE} gold from the bank. Delivered, the crates pay: each city sells its share of them at`)
-  line(`${CRATE_VALUE} gold a crate, the destination's completion bonus rises ${BONUS_PER_CRATE} gold a crate, a skill`)
-  line('comes at every milestone crate and an item chance at every second one. Every city pays')
-  line('by the cargo that arrives (the wagons\' HP). An escort (no crates) is paid a fee at each city.')
+  line('step is its **stake**: every crate of cargo carried is one step — **one more elite an act**, on')
+  line('the map where the player can see it, and raiders on the road\'s **last leg** (act 3) stronger and')
+  line(`greedier (${LAST_LEG.slice(1).map((x) => `+${Math.round(x * 100)}%`).join(' / ')} HP and theft at 1–${LAST_LEG.length - 1} crates) — and costs`)
+  line(`${CRATE_PRICE} gold from the bank. Delivered, the crates pay: the first city sells half the load at ${CITY_CRATE_VALUE[0]} gold`)
+  line(`a crate (the stake back), the second the rest but one at ${CITY_CRATE_VALUE[1]}, and one crate rides to the destination,`)
+  line(`which pays ${CITY_CRATE_VALUE[2]} for it and a completion bonus that rises ${BONUS_PER_CRATE} gold a crate; a skill comes at`)
+  line('every milestone crate and an item chance at every second one. Every city pays by the cargo')
+  line('that arrives (the wagons\' HP). An escort (no crates) is paid a fee at each city.')
   line('')
   line('**The intent is the climb\'s: every tier must cost difficulty AND pay more.** Each tier is')
   line(`measured on the same paired seeds as §11 and §12, ${BANNER_RUNS} runs a tier, on Rosethread's road (the`)
