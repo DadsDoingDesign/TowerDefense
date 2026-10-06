@@ -14,7 +14,6 @@ import { writeFileSync } from 'fs'
 import { HQ_UPGRADES, INTEREST, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
-import { getNode } from '../src/game/data/archetypeTree'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
 import { ALL_MAPS, FIRST_MAP, legacyPostTile, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
 import { TILE } from '../src/game/data/terrain'
@@ -112,7 +111,7 @@ import {
   stopRate,
   stat,
   std,
-  SUPPORT_SPEC_IDS,
+  equipFullSet,
   SUPPORT_SPECS,
   SWARM_PRESSURE,
   TIER2_NODES,
@@ -413,8 +412,14 @@ if (want(2)) {
   )
   line('The carriers are a **blocking** Berserker and a Sharpshooter, with the real')
   line(`\`MAX_BASE_HP\` of ${MAX_BASE_HP}. (Heroes have no HP since the no-HP pass: every support aura is a damage buff now.)`)
-  line('Each support is graded against a *generic damage tower of its own archetype* in the')
-  line('same slot, so "a third body" cannot masquerade as support value.')
+  line('There are no support classes any more (the classless rework): a hero supports because it')
+  line('holds an **aura skill** — Blessing (Level 2) or Rally (Level 3). Each is graded on a')
+  line('level-20 Epic-geared hero of two kits (a wand; a sword and shield) against the *same hero*')
+  line('holding its level\'s damage skill instead (Heavy Blows / Berserk), in the same slot — so the')
+  line('aura has to pay for the damage it took the slot of, and "a third body" cannot masquerade')
+  line('as support value. (The old rows graded the Bannerman, Radiant, Templar and Oracle specs;')
+  line('the Bannerman\'s aura had no skill to become, so it was a damage tower graded against a')
+  line('damage tower.)')
   line('')
 
   const SUP_SEEDS = SEEDS.slice(0, 4)
@@ -484,12 +489,13 @@ if (want(2)) {
   interface SupRow {
     label: string
     kind: 'control' | 'filler' | 'support'
-    arch: Archetype | null
+    /** The filler a support is graded against (`kit · level`). */
+    arch: string | null
     ceilings: number[]
     score: number
     swarm: number
   }
-  function supRow(label: string, kind: SupRow['kind'], arch: Archetype | null, third: Sentinel | null): SupRow {
+  function supRow(label: string, kind: SupRow['kind'], arch: string | null, third: Sentinel | null): SupRow {
     const ceilings = SUP_SHAPES.map((sh) => threatCeiling(third, sh))
     const score = ceilings.every((c) => c > 0)
       ? Math.exp(ceilings.reduce((a, c) => a + Math.log(c), 0) / ceilings.length)
@@ -497,24 +503,43 @@ if (want(2)) {
     return { label, kind, arch, ceilings, score, swarm: swarmCeiling(third) }
   }
 
-  const fighterFiller = buildSpec('weaponmaster', { gearRarity: 'epic', seed: 5 })
-  const mysticFiller = buildSpec('pyromancer', { gearRarity: 'epic', seed: 5 })
-  const supRows: SupRow[] = [
-    supRow('_(two carriers, empty slot)_', 'control', null, null),
-    supRow('_filler_ — Weaponmaster (fighter DPS)', 'filler', 'fighter', fighterFiller),
-    supRow('_filler_ — Pyromancer (mystic DPS)', 'filler', 'mystic', mysticFiller),
-    ...SUPPORT_SPEC_IDS.map((id) =>
-      supRow(getNode(id).name, 'support', getNode(id).archetype, buildSpec(id, { gearRarity: 'epic', seed: 5 })),
-    ),
+  /*
+   * **What a support is now (the tuning pass).** There are no classes, so there
+   * are no support SPECS: Bannerman, Radiant, Templar and Oracle were tree
+   * nodes, and `buildSpec` rebuilt them from the skills their evolutions became —
+   * the Bannerman's aura had no skill (it became Heavy Blows, a damage line), so
+   * the old row graded a damage tower against a damage tower and failed at +10%.
+   * A hero supports now because it holds an AURA SKILL (Blessing at Level 2,
+   * Rally at Level 3), and what that skill costs is the skill it took the slot
+   * of. So each aura skill is graded on a level-20 Epic-geared hero of two kits —
+   * a wand (the old Mystic supports' chassis) and a sword and shield (the
+   * Bannerman's) — against the SAME hero holding its level's damage starter
+   * (Heavy Blows / Berserk) in the same slot.
+   */
+  const SUP_KITS: { look: Archetype; name: string }[] = [
+    { look: 'mystic', name: 'Wand' },
+    { look: 'fighter', name: 'Sword & Shield' },
   ]
-  const fillerScore: Record<string, number> = {
-    fighter: supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!.score,
-    mystic: supRows.find((r) => r.kind === 'filler' && r.arch === 'mystic')!.score,
+  const SUP_SKILLS: { aura: string; filler: string; level: string }[] = [
+    { aura: 'blessing', filler: 'heavy_blows', level: 'Level 2' },
+    { aura: 'rally', filler: 'berserk', level: 'Level 3' },
+  ]
+  const supHero = (look: Archetype, skill: string): Sentinel =>
+    equipFullSet({ ...applyXp(classicHero(look), xpToReach(20)), skills: [skill] }, 'epic', new RNG(5))
+  const skillName = (id: string) => ALL_SKILLS.find((k) => k.id === id)!.name
+  const supRows: SupRow[] = [supRow('_(two carriers, empty slot)_', 'control', null, null)]
+  for (const kit of SUP_KITS) {
+    for (const s of SUP_SKILLS) {
+      const key = `${kit.name} · ${s.level}`
+      supRows.push(supRow(`_filler_ — ${kit.name} + ${skillName(s.filler)} (${s.level} damage)`, 'filler', key, supHero(kit.look, s.filler)))
+      supRows.push(supRow(`${kit.name} + ${skillName(s.aura)}`, 'support', key, supHero(kit.look, s.aura)))
+    }
   }
+  const fillerScore: Record<string, number> = Object.fromEntries(supRows.filter((r) => r.kind === 'filler').map((r) => [r.arch!, r.score]))
 
   {
     const ctrl = supRows.find((r) => r.kind === 'control')!
-    const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'fighter')!
+    const fFill = supRows.find((r) => r.kind === 'filler' && r.arch === 'Sword & Shield · Level 3')!
     md[CONTROL_NOTE_AT] =
       `**What the change did to the control:** the empty slot reads ×${f2(ctrl.score)} and the fighter ` +
       `filler ×${f2(fFill.score)} — a generic damage tower is worth **+${(((fFill.score / ctrl.score) - 1) * 100).toFixed(0)}%** Threat instead of the +0% ` +
@@ -522,7 +547,7 @@ if (want(2)) {
       `has something to stand on.`
   }
   line(
-    `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs own-archetype filler | _(old swarm-blob ladder)_ |`,
+    `| Third tower | ${SUP_SHAPES.map((s) => s.name).join(' | ')} | **Hold ceiling** (geo-mean Threat) | vs the same hero's damage skill | _(old swarm-blob ladder)_ |`,
   )
   line(`|---|${'--:|'.repeat(SUP_SHAPES.length)}--:|--:|--:|`)
   for (const r of supRows) {
@@ -560,9 +585,9 @@ if (want(2)) {
     ;(r.score >= bar * SUPPORT_MARGIN ? beaten : notBeaten).push(txt)
   }
   line(
-    `- Supports that beat a plain damage tower of their own archetype by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
+    `- Aura skills that beat the same hero holding its level's damage skill by ≥${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}%: ${beaten.length ? beaten.join(', ') : '_none_'}.`,
   )
-  line(`- Supports that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
+  line(`- Aura skills that do **not**: ${notBeaten.length ? notBeaten.join(', ') : '_none_'}.`)
   line('')
   line('**Aegis, Bulwark and Warden of Ash left this table in the no-HP pass.** They were')
   line('graded as supports for a shield aura (Aegis, Bulwark) and a hold that ate the melee')
@@ -576,11 +601,11 @@ if (want(2)) {
     const bar = fillerScore[r.arch!] ?? 0
     if (!(r.score >= bar * SUPPORT_MARGIN)) {
       failures.push(
-        `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than a generic ${r.arch} damage tower in the same slot (×${f2(bar)}). Its support kit is not paying for the DPS it costs.`,
+        `Support "${r.label}" holds Threat ×${f2(r.score)} — not the required ${((SUPPORT_MARGIN - 1) * 100).toFixed(0)}% better than the same hero (${r.arch}) holding its level's damage skill instead (×${f2(bar)}). The aura is not paying for the damage it costs.`,
       )
     }
   }
-  summary.push(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: fighter ×${f2(fillerScore.fighter)}, mystic ×${f2(fillerScore.mystic)}`)
+  summary.push(`Support hold ceilings (geo-mean Threat): ${supRows.filter((r) => r.kind === 'support').map((r) => `${r.label} ×${f2(r.score)}`).join(', ')} | fillers: ${Object.entries(fillerScore).map(([k, v]) => `${k} ×${f2(v)}`).join(', ')}`)
 }
 
 // -------------------------------------------------------------- Sweep 3
