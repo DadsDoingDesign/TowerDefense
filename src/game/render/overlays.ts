@@ -665,3 +665,95 @@ export function drawReticle(ctx: CanvasRenderingContext2D, pos: Vec2, r: number)
   }
   ctx.restore()
 }
+
+/**
+ * The wagons' last stretch (October audit 2.1, `run/placement.lastStretch`):
+ * the final run of road before the Gate, drawn ON the road during a live wave
+ * so the place cargo is lost is a place on the screen before it happens.
+ *
+ * Calm, it is a faint warm-red wash along the lane — present, never loud
+ * (feedback that fires constantly stops meaning anything). When a raider is on
+ * it (`threatened`), it beats red and a ring opens at the Gate: the warning
+ * arrives BEFORE the leak, where today every leak's feedback arrived after.
+ * With reduced motion the threatened state holds still at its brightest.
+ */
+export function drawLastStretch(
+  ctx: CanvasRenderingContext2D,
+  path: { pointAt(d: number): Vec2 },
+  stretch: { from: number; to: number },
+  threatened: boolean,
+  gate: Vec2,
+): void {
+  const vs = Math.max(getViewScale(), 0.02)
+  const beat = threatened ? (fxReducedMotion() ? 1 : 0.5 + 0.5 * Math.sin(fxNow() * 9)) : 0
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  for (let d = stretch.from, first = true; d <= stretch.to + 0.01; d += 6, first = false) {
+    const p = path.pointAt(Math.min(d, stretch.to))
+    if (first) ctx.moveTo(p.x, p.y)
+    else ctx.lineTo(p.x, p.y)
+  }
+  // A road-wide wash, then a thin bright core so it reads on dirt and grass alike.
+  ctx.lineWidth = 34
+  ctx.strokeStyle = threatened ? `rgba(226, 60, 48, ${0.34 + 0.3 * beat})` : 'rgba(224, 96, 72, 0.18)'
+  ctx.stroke()
+  ctx.setLineDash([Math.max(6, 6 / vs), Math.max(5, 5 / vs)])
+  ctx.lineWidth = Math.max(2, 2 / vs)
+  ctx.strokeStyle = threatened ? `rgba(255, 210, 196, ${0.6 + 0.4 * beat})` : 'rgba(255, 190, 170, 0.5)'
+  ctx.stroke()
+  ctx.setLineDash([])
+  if (threatened) {
+    ctx.globalAlpha = 0.35 + 0.5 * beat
+    ctx.strokeStyle = '#e0463a'
+    ctx.lineWidth = Math.max(2, 2 / vs)
+    ctx.beginPath()
+    ctx.arc(gate.x, gate.y, 26 + 8 * beat, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/**
+ * A "best ground" star on a tile (October audit 2.4, `run/placement.bestTiles`):
+ * a gold five-point star at the tile's top-right corner, with a dark halo so it
+ * reads on any ground, and the tile itself lit a touch harder. Rank 0 is the
+ * best tile and pulses; the others hold still. Sized with a floor in screen px
+ * (11 CSS px across) so it is legible on a phone's ~22 CSS px tiles.
+ */
+export function drawBestTile(ctx: CanvasRenderingContext2D, map: GameMap, tileId: string, rank: number): void {
+  const t = map.tiles?.find((x) => x.id === tileId) ?? map.slots.find((s) => s.id === tileId)
+  if (!t) return
+  const T = map.tile ?? 40
+  const vs = Math.max(getViewScale(), 0.02)
+  const pulse = rank === 0 && !fxReducedMotion() ? 0.5 + 0.5 * Math.sin(animNow() * 4) : 1
+  const inset = Math.max(1.5, 1.5 / vs)
+  ctx.save()
+  roundRect(ctx, t.pos.x - T / 2 + inset, t.pos.y - T / 2 + inset, T - inset * 2, T - inset * 2, Math.min(6, T / 5))
+  ctx.fillStyle = `rgba(255, 214, 120, ${0.16 + 0.12 * pulse})`
+  ctx.fill()
+  ctx.lineWidth = Math.max(1.5, 1.5 / vs)
+  ctx.strokeStyle = `rgba(255, 220, 140, ${0.75 + 0.25 * pulse})`
+  ctx.stroke()
+  const r = Math.min(T * 0.3, Math.max(6, 5.5 / vs))
+  const cx = t.pos.x + T / 2 - r * 0.7
+  const cy = t.pos.y - T / 2 + r * 0.7
+  ctx.beginPath()
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5
+    const rr = i % 2 === 0 ? r : r * 0.45
+    const x = cx + Math.cos(a) * rr
+    const y = cy + Math.sin(a) * rr
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(2.5, 2.5 / vs)
+  ctx.strokeStyle = 'rgba(20, 12, 6, 0.85)'
+  ctx.stroke()
+  ctx.fillStyle = rank === 0 ? '#ffd56a' : '#f0c46a'
+  ctx.fill()
+  ctx.restore()
+}
