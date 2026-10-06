@@ -686,7 +686,21 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * 73 / 60 / 56 / 48 / 43%); ×1.6 is the lightest pin that puts it back in band
  * with every endure affix clear of the floor by two quanta.
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.8, magic: 1.2, endure: 1.6 }
+/*
+ * **`phys` ×0.8 → ×0.25 and `magic` ×1.2 → ×0.8 (the tuning pass).** The
+ * classless rework moved both SUBJECTS: a Sharpshooter is now a stat-less
+ * Dagger with Long Shot, a Stormcaller a stat-less Wand with Wildfire and
+ * Stormcaller. At the old pins the baselines read 18% and 22% — inside the band
+ * but on its floor, where nine affixes read +0.5 to +2.0pt and failed as dead
+ * (might, heavy, ruin, flaming, insight, precision, cruelty, swift, piercing),
+ * and the curse bench (§10) could not see Wild, Reckless or Frenzied cost or
+ * pay anything. `phys` is a swarm a single-target thrower leaks by count, so it
+ * barely answers HP: ×0.5 read 21%. Swept ×0.5 / ×0.25 and ×0.8 for `magic`;
+ * ×0.25 / ×0.8 put both near the old fit (37% / 36%), and every affix reads
+ * ≥ +2.0pt on its home bench there. Re-derive these the same way when the
+ * subject or the curve moves again.
+ */
+const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.8, endure: 1.6 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
@@ -864,7 +878,12 @@ if (want(4)) {
     // swept. `magic` is non-monotone in range (see below), which is why it was not
     // the home before — the roll graded here is fixed (seed 500), so the number is
     // stable, but read it knowing that.
-    reach: 'magic',
+    // `magic` → `phys` (the tuning pass). The re-pin below moved `magic` to a
+    // 36% baseline and `reach` read −0.3pt there (+2.1pt at the old pin): the
+    // non-monotone answer this note warned about. The classless Sharpshooter
+    // throws a knife (168px, ×1.5 with Long Shot), not the old 479px bow, so on
+    // `phys` range is no longer saturated: +6.4pt at the shipped pin.
+    reach: 'phys',
     patience: 'endure',
     cruelty: 'phys',
     ruin: 'phys',
