@@ -192,13 +192,13 @@ export function dealSummary(level: number): string {
  * Interest by Finance level: a rate on the gold left in the bank, and the most
  * one contract can pay. Every cap is reached at {@link INTEREST_FULL_AT} gold.
  *
- * **Why 40 at most.** The smallest stake — one crate, 50 gold — adds +50 to
- * +55 gold to a contract's expected pay over the free escort (REPORT §13,
- * cash-out line, delivery ~18%; the two latest runs), and +90 when it is
- * delivered (it sells for 100 and adds 40 to the completion bonus). A cap of
- * 50 tied the measured one-crate gain, so the top cap is 40: a 10-gold margin
- * under the smallest stake on average, less than half of it on delivery. The
- * bank never out-earns a stake, and it only pays on contracts you finish.
+ * **Why 40 at most.** The smallest stake — one crate, 50 gold — adds +43
+ * gold to a contract's expected pay over the free escort (REPORT §13, cash-out
+ * line, after the tuning pass: 118 → 161), and +70 when it is delivered (it
+ * sells for 100 at the first city and adds 20 to the completion bonus). It
+ * was +50 to +55 before the pass, and a cap of 50 tied it; at 40 the bank
+ * still never out-earns a stake on average (checked, reported, in §13), and
+ * it only pays on contracts you finish.
  */
 export const INTEREST: readonly { rate: number; cap: number }[] = [
   { rate: 0.02, cap: 20 },
@@ -355,10 +355,11 @@ export function foldOldHub(old: Readonly<Record<string, number>>): { levels: HqL
 // ---------------------------------------------------------------------------
 
 /**
- * One crate's price. Priced against play: a finished escort run banks ~450
- * gold (`HQ_UPGRADES`), and a delivered contract opens an item kind for free,
- * so a crate is about a run's savings for one roll that may be a duplicate —
- * playing stays the surer way to unlock gear, and the crate is a side bet.
+ * One crate's price. Priced against play: a zero-HQ escort banks ~510 gold
+ * net and a 4-crate contract ~640 (REPORT §13, after the tuning pass), and a
+ * delivered contract opens an item kind for free, so a crate is about one
+ * run's savings for one roll that may be a duplicate — playing stays the
+ * surer way to unlock gear, and the crate is a side bet. Checked, unchanged.
  */
 export const PULL_PRICE = 500
 

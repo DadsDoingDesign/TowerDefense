@@ -73,6 +73,67 @@ out-healing them: 139k HP healed in 600s). ×1.40 / ×0.45 has none in §6's 300
 | 5bea787 | Iron Vigil −12% → −20% damage | worst −1.7 → −7.7pt |
 | 96b17d5 | variant budget scales (Swarm 0.95, Bombard 1.12, Column 1.2; Warded 1.1, Swift 0.86) | §14c normal ×5.67 → ×1.75, elite ×2.52 → ×1.51 |
 
+## Step 2, continued — the slog, and runs that were not paired
+
+- c45e296: after the variant refit the final boss at ×0.45 ran one §6 run
+  past the 600s cap (a Colossus held by a Warden of Ash, ground down for 13
+  minutes). ×0.42 has none in §6's 300. Act 3 ×1.38–1.42 with ×0.42–0.45 is
+  chaotic in which seed slogs (runs 108, 257, 112 in different configs);
+  heavier danger ground (4 cursed, 8 boulders) took §6 to 56.3% but slogged
+  run 112. **A held champion with a weak team is a real slog in the game
+  (no clock), not only in the harness** — designer item.
+- 7d35355 (harness): skill offers hash the hero's id, and ids came off the
+  process-global counter — the same seed in one process was re-dealt by
+  whatever ran before it. One stake tier read 23.2% and 25.3% on identical
+  rules. simulateRun / monteCarloRun now run on their own id counter; the
+  scratch tools and the report read the same numbers. (§6 never depended on
+  it: 58.0% before and after.)
+
+## Step 4 — stakes
+
+Tools: `scratch/_stakedump.ts` simulates the ladder once and dumps each run's
+cities (cargo, purse); `scratch/_payeval.py` prices any pay rule offline on a
+dump; `scratch/_tier.ts` probes one tier's delivery for candidate strengths
+(tiers are independent, so each is fitted alone).
+
+| Try | Delivery 0→8 crates (%) | Pay (cash line) | Verdict |
+|---|---|---|---|
+| +8% / crate (base) | 31 → 28 → 27 → 27 → 25 → 23 → 23 → 21 → 19 | dips at 4, 8 | cost 0–2pt |
+| +15% HP / crate | 32 → 28 → 25 → 23 → 22 → 21 → 17 → 18 → 16 | dips at 4, 6, 8 | cost ~2pt |
+| +15% HP and theft / crate | 32 → 24 → 19 → 15 → 12 → 9 → 7 → 6 → 4 | — | tail flattens |
+| table HP+theft whole road (×1.08…×4) | 32 → 31 → 27 → 19 → 13 → 10 → 4 → 0.7 | collapses from 4 (city 2 reach 90 → 16%) | pay gate impossible |
+| last leg only (act 3), table | 32 → 28 → 23 → 19 → 15 → 9 → 5 → 0.8 | rises with the new city pay | **kept** (02b06a5) |
+
+Pay (53f06ae), priced on the kept ladder: old rules 118 / 165 / 195 / 242 /
+200 / 229 / 249 / 279 (dip at 4); 100/130/350 with one crate at the
+destination 118 / 161 / 167 / 204 / 244 / 264 / 304 / 329; **100/130/400**
+118 / 161 / 175 / 212 / 249 / 268 / 305 / 330 (kept). Escort → 1 crate +43
+(interest cap 40 stays under it). Cash-out under 50% cargo is right in ~80%
+of the runs that take it (from 2 crates), −5 to −19 gold on average.
+
+## Step 5 — economy sanity
+
+- Interest cap 40 < smallest stake gain +43 (was +50; the docs say why).
+- Sealed crate 500 ≈ one run's savings (escort ~510 net, 4 crates ~640 at
+  zero HQ): unchanged.
+- Road share 25%: unchanged.
+- HQ purchases (§12): see the final report.
+
+## Step 6 — the charter (`scratch/_charter.ts`, 600 paired runs)
+
+| Setting | Delivered (no / all Sovereign items) | Bank net a charter |
+|---|--:|--:|
+| after steps 1–4, muster flavour, 5,000 / 20,000 | 36% / 40% (n=210) | +2,693 |
+| muster ×1.25 | 18.5% / 22.2% | −916 |
+| without the muster | 30.3% | — |
+| **muster ×1.07**, 5,000 / 20,000 | 26.0% / 28.3% | +619 |
+| **muster ×1.07, 7,000 / 35,000** (kept) | 26.0% / 28.3% | **+2,519 / +3,344** |
+
+Fee 7,000 ≈ 8.6 good runs (this company banks 814 from 4 crates). The ground
+(fire, lakes, boulders, curses) measured −0.5…+0.5pt lifted: it costs a
+late-game company nothing — reported for the designer, not changed (each
+condition is the designer's).
+
 ---
 
 # Tuning pass 1 — first-timer line, Cartographer's Table, final review
