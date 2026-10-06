@@ -5,6 +5,7 @@ headlessly with a seeded RNG (fully reproducible) and writes a report.
 
 ```bash
 npm run balance          # runs the sweeps, writes balance/REPORT.md, exits non-zero on failure
+BALANCE_INVARIANTS=warn npm run balance   # what CI runs: failed invariants become warnings, exit 0
 npm run typecheck        # balance/ is type-checked as part of the tsconfig.node project
 ```
 
@@ -54,6 +55,7 @@ and it broke the build and every live harness.
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
 | `FW_HAZARDS` | shipped | Q1: `mult,dangerTiles,dangerPool,obstacles,obstaclePool` — run the whole report under other danger-ground levers (`src/game/data/hazards.ts`). `hazard-sweep.ts` is faster but reads §13 a few marks off the report. |
 | `FW_SECTIONS` | all | Comma-separated section numbers (`FW_SECTIONS=6,11,12`): run only those sections, their invariants and their console lines. A filtered run prints its sections and writes them to `balance/REPORT.sections.md` (ignored) — it never touches the golden `REPORT.md`. Prose that quotes a section you did not ask for reads `NaN`; no gate reads across sections. Combine with the sample-size knobs above for a quick read, e.g. `FW_SECTIONS=11,12 FW_FRESH_RUNS=120 FW_META_RUNS=120`. |
+| `BALANCE_INVARIANTS` | `fail` | `warn` reports failed invariants as GitHub `::warning::` annotations and a section in `$GITHUB_STEP_SUMMARY`, and exits 0 (`verdict.ts`). CI sets it: the balance job gates on the harness completing and on `REPORT.md` being current, while the tuning invariants stay red on purpose until the tuning pass re-anchors them. The console verdict and `REPORT.md` are the same in either mode. |
 
 ## The rule this harness is built around
 

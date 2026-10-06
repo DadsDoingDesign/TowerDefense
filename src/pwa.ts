@@ -15,7 +15,20 @@
  * {@link applyUpdate}, which it should only do where a reload costs nothing
  * (the menu, never mid-wave). {@link isUpdateReady} / {@link onUpdateReady}
  * are the signal the UI reads to offer that.
+ *
+ * ## Looking for one
+ *
+ * The browser checks `sw.js` on a navigation, and an installed game is rarely
+ * navigated: a standalone window is opened once and then switched to and from
+ * for days. So the page also asks (`reg.update()`) whenever it comes back into
+ * view, at most once per {@link UPDATE_CHECK_MS}. Asking only finds and
+ * installs the new build — it still WAITS, exactly as above.
  */
+
+import { onAppVisible } from './state/lifecycle'
+
+/** The least time between two update checks the page asks for. */
+export const UPDATE_CHECK_MS = 30 * 60 * 1000
 
 let waiting: ServiceWorker | null = null
 const listeners = new Set<() => void>()
@@ -74,6 +87,31 @@ function watch(reg: ServiceWorkerRegistration): void {
   })
 }
 
+/**
+ * A throttled update check: returns the function to call whenever the page
+ * becomes visible. Pure over its inputs so the throttle is unit-testable.
+ * Never throws; a failed check (offline, a 404 on sw.js) is retried at the next
+ * visible after the interval, like any other.
+ */
+export function updateChecker(
+  reg: Pick<ServiceWorkerRegistration, 'update'>,
+  now: () => number = Date.now,
+  every = UPDATE_CHECK_MS,
+): () => void {
+  // Registering has just checked, so the first ask is one interval out.
+  let last = now()
+  return () => {
+    const t = now()
+    if (t - last < every) return
+    last = t
+    try {
+      void Promise.resolve(reg.update()).catch(() => {})
+    } catch {
+      /* an invalid-state registration: nothing to update */
+    }
+  }
+}
+
 export function registerServiceWorker(): void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
 
@@ -103,7 +141,10 @@ export function registerServiceWorker(): void {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register(url)
-      .then(watch)
+      .then((reg) => {
+        watch(reg)
+        onAppVisible(updateChecker(reg))
+      })
       .catch((err) => {
         // A refused registration (file:// , no HTTPS, storage blocked) costs the
         // offline mode and nothing else — the game still runs.

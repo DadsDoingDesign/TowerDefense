@@ -275,6 +275,36 @@ const cachedShell = () =>
     )
     .catch(() => null)
 
+/* ---------------------------------------------------- the navigation deadline
+ * Network-first with no deadline meant a weak connection — one bar, a train,
+ * a captive portal that never answers — held the launch on a blank page for as
+ * long as the browser's own timeout, 30 s and more, while a whole working build
+ * sat in this cache. Now the network gets NAV_TIMEOUT_MS; after that the cached
+ * shell answers, if there is one. With none (a first visit), the page keeps
+ * waiting on the network, exactly as before.
+ *
+ * The cached shell is THIS worker's build, so this never mixes builds and never
+ * hurries an update: a newer build still installs in the background and waits
+ * (src/pwa.ts). Its shell write above still runs when the slow answer lands. */
+const NAV_TIMEOUT_MS = 4000
+
+const navigationResponse = (network) =>
+  new Promise((resolve) => {
+    let done = false
+    const settle = (r) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      resolve(r)
+    }
+    const timer = setTimeout(() => {
+      cachedShell().then((r) => {
+        if (r) settle(r) // else: no shell to fall back to — keep waiting
+      })
+    }, NAV_TIMEOUT_MS)
+    network.then(settle, () => cachedShell().then((r) => settle(r || Response.error())))
+  })
+
 self.addEventListener('fetch', (e) => {
   const req = e.request
   if (req.method !== 'GET') return
@@ -284,25 +314,25 @@ self.addEventListener('fetch', (e) => {
   // Navigations fall back to the cached shell, which is what makes a cold
   // offline launch work at all.
   if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (looksLikeApp(res)) {
-            const copy = res.clone()
-            // Cloned first, checked second: the check consumes a clone, and the
-            // response still has to reach the page intact either way.
-            res
-              .clone()
-              .text()
-              .then((t) => {
-                if (isThisBuildsShell(t)) caches.open(CACHE).then((c) => c.put(SHELL, copy)).catch(() => {})
-              })
-              .catch(() => {})
-          }
-          return res
-        })
-        .catch(() => cachedShell().then((r) => r || Response.error())),
-    )
+    const network = fetch(req).then((res) => {
+      if (looksLikeApp(res)) {
+        const copy = res.clone()
+        // Cloned first, checked second: the check consumes a clone, and the
+        // response still has to reach the page intact either way.
+        res
+          .clone()
+          .text()
+          .then((t) => {
+            if (isThisBuildsShell(t)) caches.open(CACHE).then((c) => c.put(SHELL, copy)).catch(() => {})
+          })
+          .catch(() => {})
+      }
+      return res
+    })
+    e.respondWith(navigationResponse(network))
+    // A network answer that lost the race still refreshes the shell above;
+    // keep the worker alive until it lands.
+    e.waitUntil(network.catch(() => {}))
     return
   }
 
