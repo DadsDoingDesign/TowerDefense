@@ -81,9 +81,9 @@ const L1: Skill[] = [
   { id: 'arc_spark', name: 'Arc Spark', level: 1, company: 'scrolls', desc: 'Every hit jumps to 1 more enemy for 45% of its damage.', mods: { shock: { chains: 1, dmgFrac: 0.45 } }, from: 'Mystic perk Arc Spark (level 5)' },
   { id: 'frostbite', name: 'Frostbite', level: 1, company: 'scrolls', desc: 'Every hit slows its target by 25% for 1.5 seconds.', mods: { chill: { slow: 0.25, dur: 1.5 } }, from: 'Mystic perk Frostbite; the Hoarfrost mutation' },
   { id: 'long_reach', name: 'Long Reach', level: 1, company: 'art', desc: 'Reaches 20% farther.', mods: { rangeMult: 1.2 }, from: 'The Marksman evolution’s reach (×1.5 there)' },
-  { id: 'cleave', name: 'Cleave', level: 1, company: 'metals', desc: 'Every hit also strikes enemies within 20 of its target.', mods: { splashAdd: 20 }, from: 'Warrior perk Cleave (+14 splash); the Blasting Powder mutation' },
+  { id: 'cleave', name: 'Cleave', level: 1, company: 'metals', desc: 'Every hit also strikes enemies within 14 of its target.', mods: { splashAdd: 14 }, from: 'Warrior perk Cleave (+14 splash); the Blasting Powder mutation' },
   // ---- the classless rework: self-contained effects that meet in play -------
-  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill it makes pays 1 more gold.', mods: { goldPerKill: 1 }, from: 'New with the classless rework' },
+  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill it makes pays 3 more gold.', mods: { goldPerKill: 3 }, from: 'New with the classless rework' },
   { id: 'pin_down', name: 'Pin Down', level: 1, company: 'art', desc: 'Its hits deal 30% more to enemies that are being held.', mods: { vsHeld: 0.3 }, from: 'New with the classless rework' },
   { id: 'riposte', name: 'Riposte', level: 1, company: 'metals', feat: 'lone_wolf', desc: 'Enemies it holds take 80% more thorn damage.', mods: { thornsMult: 1.8 }, from: 'Fighter perk Riposte (was behind the same feat)' },
 ]
@@ -100,7 +100,7 @@ const L2: Skill[] = [
   // hold is a Fighter's (see the header), so this one hits 10% harder instead.
   { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
   { id: 'snare', name: 'Snare', level: 2, company: 'silk', desc: 'Buries a snare by the path that burns 14 a second and slows 30%, and its own hits slow 20%.', mods: { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }, from: 'The Trickster evolution (level 10); the Saboteur' },
-  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 12 a second for 3 seconds, and splashes 15 wider.', mods: { burn: { dps: 12, dur: 3 }, splashAdd: 15 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
+  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 10 a second for 3 seconds, and splashes 13 wider.', mods: { burn: { dps: 10, dur: 3 }, splashAdd: 13 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
   { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 15% harder.', mods: { buffAura: { damageMult: 1.15, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
   { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder, and every 100 damage it deals wins back 2% of the cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
   { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2 seconds.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },

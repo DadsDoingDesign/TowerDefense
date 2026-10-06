@@ -115,15 +115,15 @@ export const RELICS: readonly Relic[] = [
   { id: 'hourglass', name: 'Watch Hourglass', rarity: 'common', kind: 'stat', desc: '+5 Patience · every hero, hires included', grant: { patience: 5 } },
   { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed · all your heroes', grant: { mods: { rateMult: 1.07 } } },
   { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage · all your heroes', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
-  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+32% attack speed, no crits · all your heroes', downside: 'your heroes never crit', grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } } },
+  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+36% attack speed, no crits · all your heroes', downside: 'your heroes never crit', grant: { mods: { rateMult: 1.36, critChanceAdd: -1 } } },
   // Bloodletting and Iron Vigil sold hero HP (−22% / +60%), which went with hero
   // HP; each now pays in a number §15 can see. Close Quarters (−18% range) and
   // Last Rampart (below 35% HP) were cut: the range bill measured +0.0pt on every
   // bench at every size short of a cliff, and a last stand has no HP to read.
-  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · all your heroes', downside: '−34% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
+  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+90% damage, +8 Thorns, −30% attack speed · all your heroes', downside: '−30% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.9, rateMult: 0.7 } } },
   { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · all your heroes', downside: '−12% attack speed · all your heroes', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
-  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −35% damage per hit · all your heroes', downside: '−35% damage per hit · all your heroes', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } } },
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · all your heroes', downside: '−12% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
+  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 80/s over 3s, −50% damage per hit · all your heroes', downside: '−50% damage per hit · all your heroes', grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.5 } } },
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −35% damage · all your heroes', downside: '−35% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.65 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 raiders to reach your wagons each wave steal nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
@@ -131,10 +131,10 @@ export const RELICS: readonly Relic[] = [
   { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, all your heroes attack 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
   { id: 'veteran_cloak', name: "Veteran's Cloak", rarity: 'epic', kind: 'rule', desc: 'A kill makes that hero attack 25% faster for 1.5s.', requires: 'killRush', grant: { mods: { killRush: { rate: 0.25, dur: 1.5 } } }, unlock: 'act_two' },
   { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your heroes’ median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
-  { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'After every fight you win, 10% of the cargo is rounded up.', rule: 'fieldSurgeon' },
+  { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'After every fight you win, 20% of the cargo is rounded up.', rule: 'fieldSurgeon' },
   { id: 'seal', name: "Quartermaster's Seal", rarity: 'rare', kind: 'rule', desc: 'Merchants lay out a fifth item, and your first restock at each one is free.', rule: 'quartermaster' },
   { id: 'diary', name: 'War Diary', rarity: 'epic', kind: 'rule', desc: 'After every fight, the lowest-level hero on the field gains 50% more XP.', rule: 'warDiary' },
-  { id: 'tithe', name: 'Tithe Box', rarity: 'common', kind: 'rule', desc: '+10 gold for every fight you win.', rule: 'titheBox' },
+  { id: 'tithe', name: 'Tithe Box', rarity: 'common', kind: 'rule', desc: '+25 gold for every fight you win.', rule: 'titheBox' },
   // Dual-wielding as a bonus (R3-2), made an object with a stat check (round 3,
   // Q4). Without it the off hand holds off-hand things only — knives, wands,
   // shields, bucklers, tomes, quivers, foci (`items.ITEM_BASES`), a knife or

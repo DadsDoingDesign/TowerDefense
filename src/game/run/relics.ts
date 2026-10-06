@@ -10,9 +10,9 @@ import type { RewardCard } from '../data/rewards'
 import type { ItemRarity, Sentinel } from '../types'
 
 /** Gate a won fight restores under Field Surgeon's Kit. */
-export const SURGEON_HEAL = 2
+export const SURGEON_HEAL = 4
 /** Gold a won fight pays under the Tithe Box. */
-export const TITHE_GOLD = 10
+export const TITHE_GOLD = 25
 /** XP multiplier for the lowest-level hero on the field under the War Diary. */
 export const DIARY_XP = 1.5
 

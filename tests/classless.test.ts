@@ -222,7 +222,7 @@ describe('the combo skills, in the engine', () => {
     const r = classicHero('rogue')
     const a = run([r], wave())
     const b = run([{ ...r, skills: ['bounty'] }], wave())
-    expect(b.goldEarned - a.goldEarned).toBe(b.sentinels[0].kills)
+    expect(b.goldEarned - a.goldEarned).toBe(3 * b.sentinels[0].kills)
   })
 
   it('Pin Down and Cold Snap: hits land harder on held and on slowed enemies — and do nothing alone', () => {

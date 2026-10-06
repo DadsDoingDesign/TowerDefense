@@ -184,7 +184,7 @@ describe('the classless rework’s combo skills', () => {
 
   it('say exactly what they do', () => {
     const desc = (id: string) => skillById(id)!.desc
-    expect(desc('bounty')).toBe('Each kill it makes pays 1 more gold.')
+    expect(desc('bounty')).toBe('Each kill it makes pays 3 more gold.')
     expect(desc('pin_down')).toBe('Its hits deal 30% more to enemies that are being held.')
     expect(desc('cold_snap')).toBe('Its hits deal 25% more to slowed enemies.')
     expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
@@ -196,7 +196,7 @@ describe('the classless rework’s combo skills', () => {
   it('reach the combat profile exactly by their mods', () => {
     const h = classicHero('rogue')
     expect(computeCombat({ ...h, skills: ['split_shot'] }).mods.pierce).toBe(1)
-    expect(computeCombat({ ...h, skills: ['bounty'] }).mods.goldPerKill).toBe(1)
+    expect(computeCombat({ ...h, skills: ['bounty'] }).mods.goldPerKill).toBe(3)
     expect(computeCombat({ ...h, skills: ['last_rites'] }).mods.killMend).toEqual({ every: 5, hp: 1 })
     expect(computeCombat({ ...h, skills: ['momentum'] }).mods.rushPerHeld).toBe(0.15)
   })
