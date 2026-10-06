@@ -129,10 +129,11 @@ of the runs that take it (from 2 crates), −5 to −19 gold on average.
 | **muster ×1.07**, 5,000 / 20,000 | 26.0% / 28.3% | +619 |
 | **muster ×1.07, 7,000 / 35,000** (kept) | 26.0% / 28.3% | **+2,519 / +3,344** |
 
-Fee 7,000 ≈ 8.6 good runs (this company banks 814 from 4 crates). The ground
-(fire, lakes, boulders, curses) measured −0.5…+0.5pt lifted: it costs a
-late-game company nothing — reported for the designer, not changed (each
-condition is the designer's).
+Fee 7,000 ≈ 8.6 good runs (this company banks 814 from 4 crates). Each
+condition lifted (n=300, after the pass): the ground (fire, lakes, boulders,
+curses) +5.7pt, the double prices +2.3pt, the muster +4.3pt (n=600). Before
+the pass the untuned report read the ground +4.3, the prices +3.3 and the
+muster −0.5pt (n=210).
 
 ---
 
