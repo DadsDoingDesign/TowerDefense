@@ -104,14 +104,18 @@ export function rollBase(rng: RNG, style: HeroStyle | null): { stats: CoreStats;
 /**
  * The rarity each piece of a PICKED hero arrives at — the old opening kit's
  * table, now by what the piece is: a common weapon, a rare off-hand, a common
- * body. A caster's weapon is Epic, for the reason the old Mystic's was (a
+ * body. A caster's weapon is Rare, for the reason the old Mystic's was Epic (a
  * level-1 splash bolt is 16 damage at 0.8/s; flat weapon damage is the only
- * lever that lifts it — `engine/kit.ts` has the measurement).
+ * lever that lifts it — `engine/kit.ts` has the measurement). It was Epic until
+ * every caster weapon's flat damage rose ×`items.CASTER_HIT` (the tuning pass):
+ * a Rare wand now carries what the Epic one did (pick L1 60 DPS against 72 —
+ * the Epic's second affix is the difference — where the wand leader was the
+ * strongest of the three, §11 nodes cleared 9.9 against 8.6 / 8.8).
  */
 export function pickRarity(kind: string, piece: keyof Equipment, deal: Pick<DealRules, 'rareBody'> = BASE_DEAL): ItemRarity {
   if (piece === 'offHand') return 'rare'
   if (piece === 'body') return deal.rareBody ? 'rare' : 'common'
-  return ITEM_BASES[kind]?.style === 'cast' ? 'epic' : 'common'
+  return ITEM_BASES[kind]?.style === 'cast' ? 'rare' : 'common'
 }
 
 /** Generate the items of a plan off `rng`, at `rarity(kind, piece)`. No curses. */

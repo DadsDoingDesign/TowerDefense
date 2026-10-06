@@ -528,6 +528,18 @@ function rollEnchantments(pool: readonly EnchantTemplate[], count: number, budge
   return chosen
 }
 
+/**
+ * A caster's weapon carries this much more flat damage than a blade or a bow of
+ * the same rarity (the tuning pass). A wand, rod, staff or grimoire fires a
+ * splash bolt at 0.8 a second where a bow looses 2.1, so the same flat roll per
+ * HIT was a third of the damage per second: a hire with a Common wand read 34
+ * DPS on its card against a bow's ~110–135, and a Common caster drop was the
+ * weakest weapon in every hand. ×1.6 lifts a Common wand's flat 6.5 → 10.4.
+ * The hero pick's caster weapon drops Epic → Rare with it (`heroes.pickRarity`),
+ * which lands within a point of the old Epic wand's damage.
+ */
+export const CASTER_HIT = 1.6
+
 function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType): Item['base'] {
   if (slot === 'oneHand' || slot === 'twoHand') {
     const w = weapon!
@@ -541,7 +553,7 @@ function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType):
     const atkSpeed = w.speedBias >= 0 ? w.speedBias * budget : w.speedBias
     return w.damageType === 'physical'
       ? { physDamage: dmg, attackSpeed: atkSpeed }
-      : { magDamage: dmg, attackSpeed: atkSpeed }
+      : { magDamage: Math.round(dmg * CASTER_HIT), attackSpeed: atkSpeed }
   }
   if (slot === 'offHand') {
     // "Precision" slot — attack speed + crit, useful on every tower

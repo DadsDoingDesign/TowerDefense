@@ -1759,7 +1759,7 @@ if (want(11)) {
   line('depth-scaled gear sets and upgrade purchases on every tower. A real first run does')
   line(`not: \`pickStartingHero\` hands the player **one level-1 hero**, \`START_GOLD\` = ${START_GOLD},`)
   line('and the opening kit `engine/kit.ts` deals **after the pick** and has the hero **wear**')
-  line('(a weapon of the hero\'s own damage type — common, or epic for a Mystic — a common body,')
+  line('(a weapon of the hero\'s own damage type — common, or rare for a caster — a common body,')
   line('a rare off-hand; the harness and the store call the same function). Every Sentinel who')
   line('joins later arrives carrying one common on-type weapon and dresses its empty slots out')
   line('of the pack. The zero-meta baseline had never been simulated, so nobody knew whether it')
