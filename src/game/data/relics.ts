@@ -127,7 +127,10 @@ export const RELICS: readonly Relic[] = [
   // heroes' own hits, so the bill never came due. Now −5.6pt on the armour
   // column and +17.3pt on the splash wand: a pact for a line that spreads it.
   { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 50/s over 3s, −40% damage per hit · all your heroes', downside: '−40% damage per hit · all your heroes', grant: { mods: { burn: { dps: 50, dur: 3 }, damageMult: 0.6 } } },
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage · all your heroes', downside: '−12% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } } },
+  // −12% → −20% damage (the tuning pass): its worst bench read −1.7pt, under
+  // the 2pt a pact's bill must cost somewhere. Now −7.7pt on the splash wand
+  // (nothing it holds pays a caster back) and +27.8pt on the swarm.
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −20% damage · all your heroes', downside: '−20% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.8 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 raiders to reach your wagons each wave steal nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
