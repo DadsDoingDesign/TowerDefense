@@ -59,7 +59,7 @@ import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, repairGate } from '../src/game/run/economy'
 import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
-import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, type DealRules, type HqOrders } from '../src/game/run/hq'
+import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, ROAD_SHARE, roadShareFor, type DealRules, type HqOrders } from '../src/game/run/hq'
 import { stow } from '../src/game/run/inventory'
 import { useMetaStore } from '../src/state/metaStore'
 import { difficultyRules, type DifficultyRules } from '../src/game/run/watch'
@@ -851,7 +851,8 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
   const stake = contractStake(c)
   const outlay = stake + c.purse
   // What the purse brings home: its rest in full, a share of the road's gold.
-  const home = (gold: number, earned: number) => homeTotal(homeGold({ purse: c.purse, earned, gold }))
+  // A fall banks less of the road's gold than a finished contract (`hq.roadShareFor`).
+  const home = (gold: number, earned: number, share = ROAD_SHARE) => homeTotal(homeGold({ purse: c.purse, earned, gold }, share))
   let paid = 0
   for (let i = 0; i < c.cities.length; i++) {
     const city = c.cities[i]
@@ -863,7 +864,7 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
       return { net: paid + sale + home(city.gold, city.earned) - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
     }
   }
-  return { net: paid + home(c.goldEnd, c.earned) - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
+  return { net: paid + home(c.goldEnd, c.earned, roadShareFor(out.won ? 'delivered' : 'lost')) - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
 }
 
 // ---------------------------------------------------------------- §6's model

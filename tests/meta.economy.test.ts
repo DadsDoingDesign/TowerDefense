@@ -4,7 +4,8 @@ import { itemKindById, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { watchLevelFor } from '../src/game/run/watch'
 import { standingFor, standingXpFor, standingXpToReach } from '../src/game/run/standing'
-import { contractGrant, planPayout, runDeposit } from '../src/game/run/settle'
+import { cityTrade, contractGrant, planPayout, runDeposit } from '../src/game/run/settle'
+import { LOST_ROAD_SHARE, ROAD_SHARE } from '../src/game/run/hq'
 import { freshContract } from '../src/game/run/contracts'
 import { STANDARD_RUN, SEEDED_RUN } from '../src/state/seeds'
 import { lastProgress, legacyBannerRefund, META_VERSION, migrateMeta, NEW_BANK, retroWatchXp, useMetaStore } from '../src/state/metaStore'
@@ -108,6 +109,30 @@ describe('the settle plan', () => {
     const g = contractGrant({ ...base, depth: 9, gold: 30, contract: c }, 'lost')
     expect(g.deposit).toBe(270)
     expect(g.won).toBe(false)
+  })
+  it('a fall banks less of the road’s gold than a finished contract (the stake in pressing on)', () => {
+    // Purse 60 kept whole, 400 of road gold in hand.
+    const c = { ...freshContract({ company: 'art', crates: 0, market: 1 }, 60), signed: true, earned: 400, paid: [40] }
+    const lost = contractGrant({ ...base, depth: 6, gold: 460, contract: c }, 'lost')
+    const cashed = contractGrant({ ...base, depth: 6, gold: 460, contract: c }, 'cashedOut')
+    expect(cashed.deposit).toBe(40 + 60 + Math.floor(400 * ROAD_SHARE))
+    expect(lost.deposit).toBe(40 + 60 + Math.floor(400 * LOST_ROAD_SHARE))
+    expect(LOST_ROAD_SHARE).toBeLessThan(ROAD_SHARE)
+    // A walk-away before the run was played is not a fall: the full share.
+    expect(runDeposit({ gold: 460, contract: c })).toBe(cashed.deposit)
+  })
+  it('cityTrade prices the choice by the settle’s own rules', () => {
+    const c = { ...freshContract({ company: 'art', crates: 4, market: 1 }, 60), signed: true, earned: 300, paid: [240], cargoAt: [100], pending: 0 }
+    const t = cityTrade(c, 360, 100)
+    // Cash out: the cities' pay, the 2 crates left at full value, the purse and 25% of the road.
+    expect(t.sale).toBe(200)
+    expect(t.now).toBe(240 + 200 + 60 + Math.floor(300 * ROAD_SHARE))
+    expect(t.fall).toBe(240 + 60 + Math.floor(300 * LOST_ROAD_SHARE))
+    expect(t.atRisk).toBe(t.now - t.fall)
+    expect(t.deliver).toBeGreaterThan(t.now)
+    // Nothing on the wagons and no road gold yet: nothing to lose.
+    const bare = { ...freshContract({ company: 'art', crates: 0, market: 1 }, 0), signed: true, paid: [40], cargoAt: [100], pending: 0 }
+    expect(cityTrade(bare, 0, 100).atRisk).toBe(0)
   })
   it('a custom seed’s grant is unranked; a pre-contract run is owed its old Marks as gold', () => {
     expect(contractGrant({ ...base, challenge: SEEDED_RUN, contract: null }, 'lost').unranked).toBe(true)

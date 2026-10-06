@@ -1,16 +1,16 @@
 import { companyById } from '../../../game/data/companies'
 import {
+  canCashOut,
   cargoPct,
-  cashOutValue,
   CITY_COUNT,
   cityPay,
-  contractBanked,
   contractStake,
   cratesLeftAfter,
   dangerPips,
   deliveryUnlocks,
   recordAt,
 } from '../../../game/run/contracts'
+import { cityTrade } from '../../../game/run/settle'
 import { ACT_LAYERS, RUN_LAYERS } from '../../../game/run/threat'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
@@ -24,15 +24,20 @@ import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } fr
  * The gold leads: what this city paid, and why ("your stake is back, plus a
  * fee"). The receipt slip itemises it, the route rail shows what is ahead, and
  * then the one question, in the display serif: head home, or press on? Two
- * cards, each with the whole of its consequence in gold — what you leave with
- * now, what you could leave with, the danger and your own record at this
- * stake. A first contract cannot cash out (LS3): its cities just pay.
+ * cards, each with the whole of its consequence in gold — what you bank now,
+ * what delivering would bank, what a fall would bank, the danger and your own
+ * record at this stake (`settle.cityTrade`, the settle's own numbers). When a
+ * fall would bank as much as cashing out, there is nothing to weigh, and the
+ * page says so instead of staging a choice. A first contract learns at its
+ * first city that cities pay, and gets the choice from its second (LS3,
+ * October audit 1.5).
  */
 export function CityScreen() {
   const c = useGameStore((s) => s.contract)
   const baseHp = useGameStore((s) => s.baseHp)
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const firstRun = useGameStore((s) => s.firstRun)
+  const gold = useGameStore((s) => s.gold)
   const layer = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.layer ?? 0)
   const pressOn = useGameStore((s) => s.pressOn)
   const cashOut = useGameStore((s) => s.cashOut)
@@ -50,11 +55,14 @@ export function CityScreen() {
   const left = cratesLeftAfter(c.crates, city + 1)
   const staked = c.crates > 0
   const stake = contractStake(c)
-  const sale = cashOutValue(c, c.paid.length, cargoNow)
-  const banked = contractBanked(c)
+  // The choice, priced by the settle's own rules: what cashing out banks now,
+  // what a fall banks, what delivering banks (`settle.cityTrade`).
+  const trade = cityTrade(c, gold, cargoNow)
+  const choose = canCashOut(c, firstRun)
+  const nothingToLose = trade.atRisk <= 0
   // What pressing on could still pay, at the cargo the caravan has now.
   const ahead = Array.from({ length: CITY_COUNT - city - 1 }, (_, i) => cityPay(c, city + 1 + i, cargoNow))
-  const could = banked + ahead.reduce((a, p) => a + p.total, 0)
+  const roadLost = trade.roadIfCashed - trade.roadIfFallen
   const unlocks = deliveryUnlocks(c.crates)
   const rec = recordAt(record, c.crates)
   const stopsLeft = Math.max(0, RUN_LAYERS - 1 - layer)
@@ -82,7 +90,7 @@ export function CityScreen() {
           <p className="ct-msg">{msg}</p>
         </>
       }
-      cta={firstRun ? { label: `Press on to ${co.towns[city + 1]}`, run: pressOn, heavy: true } : undefined}
+      cta={!choose || nothingToLose ? { label: `Press on to ${co.towns[city + 1]}`, run: pressOn, heavy: true } : undefined}
     >
       <Slip>
         {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
@@ -121,21 +129,30 @@ export function CityScreen() {
         Still ahead: {stopsLeft} stop{stopsLeft === 1 ? '' : 's'}, {bossesLeft} boss{bossesLeft === 1 ? '' : 'es'}
       </p>
 
-      {firstRun ? (
-        <PageTip>Every city on the road pays as the caravan reaches it. From your next contract you may also cash out here and head home.</PageTip>
+      {!choose ? (
+        <PageTip>Every city on the road pays as the caravan reaches it. From the next city you may cash out here and head home.</PageTip>
+      ) : nothingToLose ? (
+        <PageTip>
+          Nothing on the wagons is at risk yet, so there is nothing to weigh: press on. Once the road has paid you, a fall leaves most of that gold behind.
+        </PageTip>
       ) : (
         <>
           <h2 className="ct-q">Head home, or press on?</h2>
-          {!taught && <PageTip>Cashing out sells what is left at half price and ends the contract. Pressing on risks it for the full payout.</PageTip>}
+          {!taught && (
+            <PageTip>
+              Cash out to bank everything now. Press on for the bigger payout, but a fall loses the unsold crates and most of the road's gold.
+            </PageTip>
+          )}
           <div className="ct-choices">
             <div className="ct-ch out">
               <span className="ct-ch-k">Sure thing</span>
               <span className="ct-ch-t">Cash out</span>
-              <span className="ct-ch-s">You leave with</span>
-              <span className="ct-ch-v">{banked + sale} gold</span>
+              <span className="ct-ch-s">You bank</span>
+              <span className="ct-ch-v">{trade.now} gold</span>
               <p>
-                {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} cheap. ` : ''}
-                No completion bonus, no item chances, no contract skill. Standing so far is kept.
+                {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} for ${trade.sale}. ` : ''}
+                {trade.road > 0 ? `${trade.roadIfCashed} of the road's gold comes home. ` : ''}
+                No completion bonus, no item chances, no contract skill.
               </p>
               <button className="ct-go" onClick={cashOut}>
                 {left > 0 ? 'Sell & head home' : 'Head home'}
@@ -144,8 +161,8 @@ export function CityScreen() {
             <div className="ct-ch on">
               <span className="ct-ch-k">Bigger payout</span>
               <span className="ct-ch-t">Press on</span>
-              <span className="ct-ch-s">You could leave with</span>
-              <span className="ct-ch-v">{could} gold</span>
+              <span className="ct-ch-s">Deliver, and you bank</span>
+              <span className="ct-ch-v">{trade.deliver}+ gold</span>
               <span className="ct-ch-loot">
                 + {unlocks.items} item{unlocks.items === 1 ? '' : 's'}, {unlocks.skills} skill{unlocks.skills === 1 ? '' : 's'}
               </span>
@@ -156,7 +173,8 @@ export function CityScreen() {
                 Cargo {cargoNow}%{rec.runs > 0 ? ` · you’ve delivered ${rec.delivered} of ${rec.runs} like this` : ''}
               </span>
               <p className="ct-ch-risk">
-                {left > 0 ? `Fall, and the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost. ` : 'Fall, and the bonus is lost. '}You keep {banked}.
+                Fall, and you bank {trade.fall}: {left > 0 ? `the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost` : 'the bonus is lost'}
+                {roadLost > 0 ? `, and ${roadLost} of the road's gold stays on the road` : ''}.
               </p>
               <button className="ct-go primary" onClick={pressOn}>
                 Press on

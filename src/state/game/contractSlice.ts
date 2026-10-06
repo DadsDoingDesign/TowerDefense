@@ -8,6 +8,7 @@
 import { hashSeed, newRunSeed } from '../../game/core/rng'
 import { COMPANY_IDS, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import {
+  canCashOut,
   cargoPct,
   cashOutValue,
   clampCrates,
@@ -182,9 +183,9 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
   cashOut: () => {
     const st = get()
     const c = st.contract
-    // A first contract cannot cash out (LS3): its cities only pay. Nor can the
-    // Sovereign Route: all or nothing.
-    if (!c || c.pending == null || c.status !== 'open' || st.runSettled || st.firstRun || c.charter) return
+    // A first contract cannot cash out at its first city (LS3: there it learns
+    // that cities pay), nor can the Sovereign Route: all or nothing.
+    if (!c || c.pending == null || c.status !== 'open' || st.runSettled || !canCashOut(c, st.firstRun)) return
     const sale = cashOutValue(c, c.paid.length, cargoPct(st.baseHp, st.maxBaseHp))
     const contract = { ...c, cashOut: sale, pending: null, status: 'cashedOut' as const }
     const next = { ...st, contract }

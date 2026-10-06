@@ -7,6 +7,7 @@ import { charterDoor } from '../src/game/run/charter'
 import { generateItem } from '../src/game/data/items'
 import { drawDistinct, poolFor } from '../src/game/run/skills'
 import {
+  canCashOut,
   cashOutValue,
   cityOfLayer,
   cityPay,
@@ -149,12 +150,30 @@ describe('contracts: stakes and cities', () => {
     expect(cityPay(terms(4), 0, 85).total).toBeLessThan(cityPay(terms(4), 0, 100).total)
   })
 
-  it('cash out sells what is left at half its value, scaled by cargo', () => {
+  it('cash out sells what is left at its full value, scaled by cargo', () => {
     const t = terms(4)
     expect(cratesLeftAfter(4, 1)).toBe(2)
-    expect(cashOutValue(t, 1, 100)).toBe(100)
-    expect(cashOutValue(t, 1, 50)).toBe(50)
+    expect(cashOutValue(t, 1, 100)).toBe(200)
+    expect(cashOutValue(t, 1, 50)).toBe(100)
     expect(cashOutValue(terms(0), 1)).toBe(0)
+  })
+
+  it('a bigger stake never pays less at any city, and the destination always has cargo from 2 crates', () => {
+    for (let c = 1; c <= MAX_CRATES; c++) {
+      expect(cratesSoldAt(c, 2)).toBeGreaterThanOrEqual(cratesSoldAt(c - 1, 2))
+      expect(contractPlan(terms(c)).total).toBeGreaterThan(contractPlan(terms(c - 1)).total)
+      if (c >= 2) expect(cratesSoldAt(c, 2)).toBeGreaterThan(0)
+    }
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => cratesSoldAt(c, 2))).toEqual([0, 0, 1, 1, 1, 1, 2, 2, 2])
+  })
+
+  it('a first contract may cash out from its second city; the Sovereign Route never', () => {
+    const at = (pending: number | null, charter?: boolean) => ({ pending, ...(charter ? { charter } : {}) })
+    expect(canCashOut(at(0), true)).toBe(false)
+    expect(canCashOut(at(1), true)).toBe(true)
+    expect(canCashOut(at(0), false)).toBe(true)
+    expect(canCashOut(at(1, true), false)).toBe(false)
+    expect(canCashOut(at(null), false)).toBe(false)
   })
 
   it('the market lifts sales and the bonus, not the fee', () => {

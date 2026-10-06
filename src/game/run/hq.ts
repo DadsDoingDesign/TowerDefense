@@ -49,6 +49,19 @@ const whole = (n: unknown): number => {
  */
 export const ROAD_SHARE = 0.25
 
+/**
+ * The share of the road's gold a FALLEN contract brings home (October audit
+ * 1.3, a default the tuning pass owns). A fall still keeps every city's pay and
+ * what is left of the purse — never broke — but most of what the road paid
+ * stays on the road. That gap is the stake in "cash out or press on": cashing
+ * out banks the road's gold at {@link ROAD_SHARE}, a fall at this.
+ */
+export const LOST_ROAD_SHARE = 0.1
+
+/** The road-gold share a contract that ended this way brings home. */
+export const roadShareFor = (status?: 'open' | 'delivered' | 'cashedOut' | 'lost'): number =>
+  status === 'lost' ? LOST_ROAD_SHARE : ROAD_SHARE
+
 /** What a run's purse is worth to the bank when it ends. */
 export interface HomeGold {
   /** The purse it set out with. */

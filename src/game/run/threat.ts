@@ -78,8 +78,16 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  *   [1.12, 1.15, 1.31] ×1.08 1.1  55.0%     12.7 / 21.0%        1.5pt
  *   [1.12, 1.17, 1.23] ×1.08 1.1  60.0%     16.0 / 27.7%        4.7pt
  *   [1.12, 1.20, 1.28] ×1   1.0   58.0%     15.0 / 24.3%       −1.5pt
- *   [1.12, 1.20, 1.29] ×1   1.0   57.0%     14.5 / 23.3%        0.8pt   ← shipped (Swarm budget 1.0);
- *                                  the full report reads 57% · 13 / 20% · 4pt
+ *   [1.12, 1.20, 1.29] ×1   1.0   57.0%     14.5 / 23.3%        0.8pt   (Swarm budget 1.0);
+ *                                  the full report read 57% · 13 / 20% · 4pt
+ *   [1.12, 1.20, 1.23] ×1   1.0     —        —                    —     ← shipped (October audit 1.6)
+ *
+ * October audit 1.6: act 3 had become the whole run — adaptive survival fell
+ * 79% at depth 8 to 65 / 39 / 25 / 16% over the last act, a zero-meta escort
+ * delivered 14–18% and the first-timer gate failed (14% vs a 15% floor). Act
+ * 3's step is eased to ×1.23, the act-3 value of the [1.12, 1.17, 1.23] row
+ * above (16.0 / 27.7% on §11). Act 2 is left at ×1.20 so the depth-6 elite
+ * stays the wall §11 measures; the regenerated REPORT is the measurement.
  *
  * Two things decided the shape. §11's strict floor (one hero, every layer a
  * battle) walks into a wall at the depth-6 elite: with the ×1.08 act jump and a
@@ -94,7 +102,7 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * siege pressure there — it cleared ×3.4 at the old ×1.83 — and holds ×2.2 up
  * to a layer-8 Threat of ×3.3).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.29]
+export const ACT_STEPS: readonly [number, number, number] = [1.12, 1.2, 1.23]
 export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]

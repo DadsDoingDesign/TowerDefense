@@ -21,8 +21,11 @@
  *
  * **Cash out or press on** at cities 1 and 2: sell what is left on the
  * wagons at {@link CASH_OUT_RATE} of its value and head home — standing kept,
- * no completion bonus, no item chances, no contract skill — or keep going.
- * Losing keeps what the cities already paid; unsold crates are lost.
+ * the road's gold banked at the full share, no completion bonus, no item
+ * chances, no contract skill — or keep going. Losing keeps what the cities
+ * already paid, but unsold crates are lost and most of the road's gold stays
+ * on the road (`hq.LOST_ROAD_SHARE`): that is what pressing on risks
+ * (`settle.cityTrade` prices the choice).
  *
  * Pure: no store, no React, no DOM, no run-stream draw. Every roll here is a
  * hash of its own parts (RNG draw order is behaviour). The store, the UI and
@@ -52,8 +55,13 @@ export const ESCORT_FEE = 40
 /** The destination's completion bonus: a base, and more for every crate carried. */
 export const BONUS_BASE = 150
 export const BONUS_PER_CRATE = 40
-/** What a city pays for the crates still on the wagons when you cash out. */
-export const CASH_OUT_RATE = 0.5
+/**
+ * What a city pays for the crates still on the wagons when you cash out: their
+ * full value (October audit 1.1). At 0.5 a cash-out was worth 0 gold more often
+ * than not, so "head home" was never a choice; what you give up now is the
+ * completion bonus, the item chances and the contract skill.
+ */
+export const CASH_OUT_RATE = 1
 /** Today's good sells for this much more (crate sales and the completion bonus). */
 export const MARKET_MULT = 1.3
 /** The crates that are milestones: each one reached adds one more skill on delivery. */
@@ -104,13 +112,17 @@ export const cityOfLayer = (layer: number): number | null =>
 /**
  * How many crates city `city` sells: half the load at the first (rounded up,
  * so the sale always recoups the stake — a crate sells for twice its price),
- * half of what is left at the second, the rest at the destination.
+ * then the destination takes half of what is left (rounded up) and the second
+ * city the rest. The destination is served first so that a bigger stake never
+ * pays less (October audit 1.2): the old order left no crate for the
+ * destination on small stakes, and contract pay dipped at 4 and 8 crates.
+ * By stake 0–8 the destination sells 0, 0, 1, 1, 1, 1, 2, 2, 2.
  */
 export function cratesSoldAt(crates: number, city: number): number {
   const c = clampCrates(crates)
   const first = Math.ceil(c / 2)
-  const second = Math.ceil((c - first) / 2)
-  return [first, second, c - first - second][city] ?? 0
+  const destination = Math.ceil((c - first) / 2)
+  return [first, c - first - destination, destination][city] ?? 0
 }
 
 /** Crates still on the wagons after `citiesPaid` cities have sold theirs. */
@@ -244,6 +256,18 @@ export function contractPlan(t: ContractTerms): { cities: CityPay[]; stake: numb
   const stake = contractStake(t)
   return { cities, stake, total, profit: total - stake, ...(t.charter ? { skills: 0, items: 0 } : deliveryUnlocks(t.crates)) }
 }
+
+/**
+ * May the contract waiting at city `c.pending` cash out? Never on the Sovereign
+ * Route (all or nothing). A first contract (LS3) learns at its first city that
+ * cities pay, and is offered the choice from its second (October audit 1.5):
+ * the push-your-luck moment is the game's headline, and the first run is the
+ * one that decides whether a player stays.
+ */
+export const canCashOut = (c: Pick<RunContract, 'pending' | 'charter'>, firstRun: boolean): boolean =>
+  c.pending != null && !c.charter && (!firstRun || c.pending >= FIRST_RUN_CASH_OUT_CITY)
+/** The first city (0-based) a first contract may cash out at. */
+export const FIRST_RUN_CASH_OUT_CITY = 1
 
 /** What cashing out sells the crates still on the wagons for, at `cargo` percent. */
 export function cashOutValue(t: ContractTerms, citiesPaid: number, cargo = 100): number {
