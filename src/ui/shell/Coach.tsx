@@ -13,7 +13,8 @@ import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
 import { rewardInPlace, waveLive } from './levelUps'
 import { useShown } from './staging'
-import { pickTipId, type TipFacts } from './coachRules'
+import { holdCoachRow, pickTipId, type TipFacts } from './coachRules'
+import { create } from 'zustand'
 
 /**
  * First-run teaching (WS9).
@@ -91,6 +92,27 @@ const COACH_GAP_MS = 9000
 const FIELD_NOTE_MS = 4500
 const inSetupOrBreather = (screen: string, phase: string) => screen === 'battle' && (phase === 'setup' || phase === 'battle')
 
+/**
+ * Whether the coach row is held open for the live wave (2.5, `holdCoachRow`).
+ * View state, read by the wave strip: with no row held, a field note that
+ * comes during a live wave is said in the strip instead of opening the row.
+ */
+export const useCoachRow = create<{ held: boolean }>(() => ({ held: false }))
+
+/** A field note's words: its name, and the line that starts with it. */
+export function fieldNoteCopy(fieldNote: NonNullable<ReturnType<typeof useGameStore.getState>['fieldNote']>): { name: string; line: string } {
+  const base =
+    fieldNote.kind === 'cursed'
+      ? DANGER_COPY.cursed
+      : fieldNote.kind === 'crowded'
+        ? ROOM_COPY
+        : fieldNote.kind === 'held'
+          ? HELD_COPY
+          : BLOCK_COPY[fieldNote.kind]
+  // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
+  return fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
+}
+
 export function Coach() {
   const taught = useSettingsStore((s) => s.taught)
   const markTaught = useSettingsStore((s) => s.markTaught)
@@ -102,6 +124,8 @@ export function Coach() {
   const inventory = useGameStore((s) => s.inventory)
   const threat = useGameStore((s) => s.threat)
   const live = useGameStore(waveLive)
+  const engine = useGameStore((s) => s.engine)
+  const subWaveCount = useGameStore((s) => s.hud.subWaveCount)
   const speed = useGameStore((s) => s.speed)
   const breather = useGameStore((s) => s.hud.breather)
   const subWave = useGameStore((s) => s.hud.subWave)
@@ -173,7 +197,23 @@ export function Coach() {
   const command = WATCH_COMMANDS[commandsFor(relicCommands(relics))[0]]
   const rule = terrainRuleById(battleMap.terrainRule)
 
+  /*
+   * 2.5 — decided ONCE, as the wave goes live (keyed on the engine), so the
+   * row neither opens nor closes until the wave is over: a lesson taught
+   * mid-wave leaves the row open and quiet rather than letting the Stage grow
+   * back under the fight. Derived in render (a ref, idempotent) so the first
+   * live frame already has the right layout.
+   */
+  const heldFor = useRef<{ engine: unknown; held: boolean }>({ engine: null, held: false })
+  if (live && heldFor.current.engine !== engine) heldFor.current = { engine, held: holdCoachRow({ taught, subWaves: subWaveCount }) }
+  const rowHeld = live && heldFor.current.held
+  useEffect(() => {
+    if (useCoachRow.getState().held !== rowHeld) useCoachRow.setState({ held: rowHeld })
+  }, [rowHeld])
+
   const tip = pickTip({
+    live,
+    rowHeld,
     taught,
     inSetup,
     deployed,
@@ -244,22 +284,15 @@ export function Coach() {
     return () => clearTimeout(t)
   }, [fieldNote, clearFieldNote])
 
-  if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
+  // During a live wave with no row held the note is the wave strip's to say
+  // (`WaveBar`), so the Stage never moves under the fight (2.5).
+  if (fieldNote && inSetupOrBreather(screen, battlePhase) && (!live || rowHeld)) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
     // that a hero stands too close to one that swings, `terrain.CLEARANCE`;
     // or that posts are held while a sub-wave is live).
-    const base =
-      fieldNote.kind === 'cursed'
-        ? DANGER_COPY.cursed
-        : fieldNote.kind === 'crowded'
-          ? ROOM_COPY
-          : fieldNote.kind === 'held'
-            ? HELD_COPY
-            : BLOCK_COPY[fieldNote.kind]
-    // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
-    const copy = fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
+    const copy = fieldNoteCopy(fieldNote)
     return (
-      <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
+      <aside className={`sh-coach sh-coach-note${rowHeld ? ' held' : ''}`} role="status" aria-live="polite">
         <Icon name="warn" className="sh-coach-glyph" />
         <p className="sh-coach-text" key={fieldNote.at}>
           <b>{copy.name}</b>
@@ -272,10 +305,13 @@ export function Coach() {
     )
   }
 
-  if (!tip || displayed !== tip.id || conflicted) return null
+  if (!tip || displayed !== tip.id || conflicted) {
+    // The row held open for this wave stays open, quiet, until it ends.
+    return rowHeld ? <aside className="sh-coach held empty" aria-hidden="true" /> : null
+  }
 
   return (
-    <aside className="sh-coach" role="status" aria-live="polite">
+    <aside className={`sh-coach${rowHeld ? ' held' : ''}`} role="status" aria-live="polite">
       <Icon name={tip.icon} className="sh-coach-glyph" />
       <p className="sh-coach-text">{tip.body}</p>
       {/*

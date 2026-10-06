@@ -58,6 +58,7 @@ import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
+import { fieldNoteCopy, useCoachRow } from './Coach'
 // G2-2 — the wave strip's enemy queue.
 import { WaveQueue } from './WaveQueue'
 import { lineUp, queueFor } from './enemyQueue'
@@ -148,6 +149,10 @@ function WaveBar({ offers }: { offers: Offer[] }) {
   // (`run/clearance`). Read off the same inputs the strip already follows —
   // the posts, the roster's gear, and the held engine (re-read on `hud`).
   const conflicts = fieldConflicts({ screen, engine, battlePhase, roster, placements, battleMap })
+  // 2.5: with no coach row held open for this wave, a field note (a tap on a
+  // held post, a blocked tile in a breather) is said here, in the caption.
+  const fieldNote = useGameStore((s) => s.fieldNote)
+  const coachRowHeld = useCoachRow((s) => s.held)
   // LS3: speed arrives once the first sub-wave is down; the Watch Command
   // after the first battle. `CommandSlot`'s "Next" is not staged — it is how a
   // breather ends.
@@ -214,6 +219,7 @@ function WaveBar({ offers }: { offers: Offer[] }) {
     const moved = held && !!engine?.subWaveState().moved
     const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
     const space = held && conflicts.length ? conflictCopy(conflicts, { moveLeft: !moved, breather: true }) : null
+    const note = fieldNote && !coachRowHeld ? fieldNoteCopy(fieldNote) : null
     return (
       <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
         {/*
@@ -238,6 +244,8 @@ function WaveBar({ offers }: { offers: Offer[] }) {
         <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
           {space ? (
             <MakeSpace head={space.head} fix={space.fix} />
+          ) : note ? (
+            <StripCaption name={note.name} now={note.line.slice(note.name.length).replace(/^\s*[—–-]\s*/, '')} tone="note" />
           ) : held ? (
             <StripCaption name="Held" now={moved ? 'Move made' : 'Move one hero'} tone="do" />
           ) : (
@@ -399,7 +407,7 @@ function MakeSpace({ head, fix }: { head: string; fix: string }) {
  * rather than a readout. The held instruction is also spoken, by `Announcer`
  * (`combatNotes`), and the Next button's name carries the sub-wave count.
  */
-function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' }) {
+function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' | 'note' }) {
   return (
     <p className={`sh-wq-cap${tone ? ` ${tone}` : ''}`}>
       <span className="sh-wq-name">{name}</span>

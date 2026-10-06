@@ -169,6 +169,13 @@ interface SettingsState {
   showEverything: boolean
   setShowEverything: (v: boolean) => void
   /**
+   * Oct 2026 (2.3): a held sub-wave counts down on Next and sends the next
+   * sub-wave itself unless the player touches the field (`autoContinue.ts`).
+   * On by default; off, Next waits as it always did.
+   */
+  autoContinue: boolean
+  setAutoContinue: (v: boolean) => void
+  /**
    * "Calm audio" (Phase-2 accessibility): the score without drums, a gentler
    * limiter, and the effects brought forward — for sensory sensitivity, for
    * playing at night, for anyone the fight music is too much for.
@@ -204,8 +211,9 @@ const prefersReducedMotion =
 /**
  * Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`,
  * `monoAudio`. 4: `showEverything`, and the LS3 tips (see {@link LS3_TEACH_IDS}).
+ * 5: `autoContinue` (a missing key reads as on).
  */
-export const SETTINGS_VERSION = 4
+export const SETTINGS_VERSION = 5
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
@@ -213,7 +221,17 @@ const ASSIST_LEVELS = ['off', 'steady', 'sure'] as const
 
 type PersistedSettings = Pick<
   SettingsState,
-  'audio' | 'reducedMotion' | 'highContrast' | 'uiScale' | 'vision' | 'assist' | 'taught' | 'calmAudio' | 'monoAudio' | 'showEverything'
+  | 'audio'
+  | 'reducedMotion'
+  | 'highContrast'
+  | 'uiScale'
+  | 'vision'
+  | 'assist'
+  | 'taught'
+  | 'calmAudio'
+  | 'monoAudio'
+  | 'showEverything'
+  | 'autoContinue'
 >
 
 /**
@@ -260,6 +278,8 @@ export function migrateSettings(persisted: unknown, version: number, metaRaw: ()
     calmAudio: bool(o.calmAudio, false),
     monoAudio: bool(o.monoAudio, false),
     showEverything: bool(o.showEverything, false),
+    // v4 and earlier never had it: held waves continue themselves by default.
+    autoContinue: bool(o.autoContinue, true),
   }
 }
 
@@ -319,6 +339,8 @@ export const useSettingsStore = create<SettingsState>()(
       showEverything: false,
 
       setShowEverything: (v) => set({ showEverything: v }),
+      autoContinue: true,
+      setAutoContinue: (v) => set({ autoContinue: v }),
 
       setCalmAudio: (v) => {
         set({ calmAudio: v })
@@ -412,6 +434,7 @@ export const useSettingsStore = create<SettingsState>()(
         calmAudio: s.calmAudio,
         monoAudio: s.monoAudio,
         showEverything: s.showEverything,
+        autoContinue: s.autoContinue,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

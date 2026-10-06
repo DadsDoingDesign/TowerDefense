@@ -1095,6 +1095,18 @@ function settingsOffers(s: Settings): Offer[] {
       },
     },
     {
+      // Oct 2026 (2.3): held sub-waves continue themselves (`autoContinue.ts`).
+      id: 'autoContinue',
+      title: 'Held waves continue',
+      sub: onOff(s.autoContinue),
+      icon: 'wave',
+      body: [
+        'Between sub-waves the fight holds for your one move. On: if you leave the field alone, a ring on Next counts four seconds and the next sub-wave goes in by itself. Touch the field or a hero and it waits for you.',
+        'Off: every hold waits for Next.',
+      ],
+      action: { label: s.autoContinue ? 'Turn off' : 'Turn on', run: () => s.setAutoContinue(!s.autoContinue), quiet: true },
+    },
+    {
       id: 'everything',
       title: 'Show everything from the start',
       sub: onOff(s.showEverything),

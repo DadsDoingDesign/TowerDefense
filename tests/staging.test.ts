@@ -18,7 +18,7 @@ import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 import { GLOSSARY } from '../src/ui/channels'
 import { glossaryOffer } from '../src/ui/shell/codexOffers'
-import { pickTipId, type TipFacts } from '../src/ui/shell/coachRules'
+import { holdCoachRow, pickTipId, type TipFacts } from '../src/ui/shell/coachRules'
 
 /**
  * LS3 — teach in layers. What a first run shows when, what is persisted and
@@ -232,8 +232,8 @@ describe('persistence and validation', () => {
     expect(useMetaStore.getState().met).toEqual([])
   })
 
-  it('settings v4: "Show everything" is a boolean that defaults off', () => {
-    expect(SETTINGS_VERSION).toBe(4)
+  it('settings v4+: "Show everything" is a boolean that defaults off', () => {
+    expect(SETTINGS_VERSION).toBe(5)
     const none = () => null
     expect(migrateSettings({}, 4, none).showEverything).toBe(false)
     expect(migrateSettings({ showEverything: true }, 4, none).showEverything).toBe(true)
@@ -344,6 +344,29 @@ describe('one tip per new idea (the coach)', () => {
     expect(pickTipId(facts({ inSetup: true, deployed: 1, elite: true, danger: true }))).toBe('danger')
     // The first win's reward: the gear lesson before the enemy-strength one.
     expect(pickTipId(facts({ gear: true, showThreat: true, threat: 1.12 }))).toBe('gear')
+  })
+
+  // Oct 2026 audit, 2.5: a tip never moves the Stage during a live wave.
+  it('a tip that comes due mid-wave waits for the wave to end', () => {
+    // Enemy strength rises mid-run; during a live wave it waits…
+    expect(pickTipId(facts({ live: true, showThreat: true, threat: 1.12 }))).toBeNull()
+    // …and speaks at the next non-live moment.
+    expect(pickTipId(facts({ live: false, showThreat: true, threat: 1.12 }))).toBe('threat')
+    // The breather lessons wait too, unless the row was held open for the wave…
+    expect(pickTipId(facts({ live: true, subwave: true }))).toBeNull()
+    expect(pickTipId(facts({ live: true, rowHeld: true, subwave: true }))).toBe('subwave')
+    expect(pickTipId(facts({ live: true, rowHeld: true, speed: true }))).toBe('speed')
+    // …and a held row is still only theirs: nothing else jumps the wave.
+    expect(pickTipId(facts({ live: true, rowHeld: true, gear: true, showThreat: true, threat: 1.2 }))).toBeNull()
+  })
+
+  it('the row is held open for a whole wave only while a breather lesson is still to teach', () => {
+    const t = (subwave: boolean, speed: boolean) => ({ subwave, speed })
+    expect(holdCoachRow({ taught: t(false, false), subWaves: 2 })).toBe(true)
+    expect(holdCoachRow({ taught: t(true, false), subWaves: 3 })).toBe(true)
+    expect(holdCoachRow({ taught: t(true, true), subWaves: 3 })).toBe(false)
+    // A wave with no breather has nothing to teach there.
+    expect(holdCoachRow({ taught: t(false, false), subWaves: 1 })).toBe(false)
   })
 })
 
