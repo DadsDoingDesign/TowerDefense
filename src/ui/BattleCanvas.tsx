@@ -10,6 +10,7 @@ import {
   drawField,
   drawRange,
   drawSentinel,
+  heroLook,
   drawPlacementDim,
   drawSlot,
   drawBlockedFlash,
@@ -678,6 +679,8 @@ export function BattleCanvas() {
             procFlash: 0,
             patienceStacks: 0,
             blocking: false,
+            // What it carries, at its hands, before the wave as during it.
+            ...heroLook(p.sentinel),
           }
           drawSentinel(ctx, ds)
         }

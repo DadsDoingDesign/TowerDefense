@@ -8,10 +8,12 @@ import { lookHue } from '../data/sentinels'
 import type { Vec2 } from '../core/vec'
 import { ARCHETYPE_GLYPH } from '../data/glyphs'
 import type { RtEnemy, RtSentinel } from '../engine/engine'
-import type { Archetype } from '../types'
+import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
+import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, type HeroGear } from './gearMarks'
+import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
 import { pixmap, quarterTurns } from './pixmap'
 import { artFor, getSprite } from './sprites'
 import { getActiveStyle } from './themes'
@@ -41,6 +43,21 @@ export interface DrawSentinel {
   procFlash: number
   patienceStacks: number
   blocking: boolean
+  /**
+   * What the hero actually carries (`gearMarks.heroGear`), drawn at its hands.
+   * Undefined draws the figure alone (the theme preview).
+   */
+  gear?: HeroGear
+  /**
+   * How its hits arrive (`attackLook.deliveryOf`). A `swing` lunges at the
+   * target and draws no muzzle flash — a sword has no barrel.
+   */
+  delivery?: Delivery
+}
+
+/** The gear and delivery fields of a {@link DrawSentinel}, for a hero off the roster. */
+export function heroLook(hero: Sentinel): { gear: HeroGear; delivery: Delivery } {
+  return { gear: heroGearCached(hero), delivery: deliveryCached(hero) }
 }
 
 /**
@@ -119,6 +136,8 @@ export function sentinelFromRt(s: RtSentinel): DrawSentinel {
     procFlash: s.procFlash,
     patienceStacks: s.patienceStacks,
     blocking: s.blockIds.length > 0,
+    gear: heroGearCached(s.def),
+    delivery: deliveryOfRt(s),
   }
 }
 
@@ -271,17 +290,27 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     ctx.stroke()
   }
 
+  // What the hero really carries (`gearMarks`). When the art paints a weapon the
+  // hero is NOT holding, the idle strip is drawn with it cut out and the real
+  // item goes in the fist — and the attack strip, which swings the painted
+  // weapon, is not played: the item itself makes the move (`reach` below).
+  const rig = rigFor(art?.pack, s.archetype)
+  const gear = s.gear
+  const cut = !!gear && unpaints(rig, gear)
+  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
+
   const towerPm = (() => {
     if (!art) return null
-    const firing = s.fireFlash > 0.05 && !!atk
+    const firing = s.fireFlash > 0.05 && !!atk && ownArt
     const anim = firing ? 'atk' : 'idle'
     const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
     // heroStrip returns the bare body when nothing is equipped, so the
     // un-geared path is exactly what it was before the compositor existed.
-    const strip =
+    const body =
       heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
       ((firing ? atk : idle) ?? idle ?? atk)
-    if (!strip) return null
+    if (!body) return null
+    const strip = cut && anim === 'idle' ? unpaintedStrip(body, rig, frames) : body
     const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
     if (!pm) return null
     const frame = firing
@@ -289,6 +318,12 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
       : loopFrame(animNow(), frames, 6, s.pos.x * 0.05)
     return { pm, frame }
   })()
+
+  // A swing reaches: the weapon (and only the weapon) lunges along the aim
+  // while the blow is out. Everything else carries its weapon at rest.
+  const swing = s.delivery === 'swing'
+  const reach = Math.max(0, Math.min(1, s.fireFlash)) * (swing ? 8 : 3)
+  const still = fxReducedMotion()
 
   if (towerPm) {
     groundRing()
@@ -304,6 +339,10 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     // Anchored at the FEET (bottom edge at y = 8), so the taller attack frames
     // grow upward — a raised sword — instead of sinking the character.
     blitPixmap(ctx, towerPm.pm, towerPm.frame, 0, 8)
+    if (gear) {
+      drawOffHand(ctx, rig, gear)
+      drawMainHand(ctx, rig, gear, Math.round(Math.cos(s.aimAngle) * reach), Math.round(Math.sin(s.aimAngle) * reach), animNow(), still, ownArt && s.fireFlash > 0.05 && !!atk)
+    }
   } else if (staticSpr) {
     groundRing()
     const pm = pixmap(staticSpr, { scale: unitPixmapScale(art!.spriteScale), ring: true })
@@ -372,7 +411,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
 
   // Muzzle flash, over the art, at the barrel. Kept under reduced motion (it is
   // a 90 ms state tell, not travel) but the recoil and sparks are not.
-  drawMuzzle(ctx, fs.muzzle, fs.muzzleAngle, s.accent)
+  if (!swing) drawMuzzle(ctx, fs.muzzle, fs.muzzleAngle, s.accent)
 
   // Patience pips (top-right of token)
   if (s.patienceStacks > 0) {

@@ -43,6 +43,8 @@ import { ANIM_FRAMES } from './anim'
 import { pixmap, type Pixmap } from './pixmap'
 import { artFor, getSprite } from './sprites'
 import { unitPixmapScale } from './frame'
+import { inkOf, type Delivery, type EffectInk, type HitEffect } from './attackLook'
+import { drawSlashArc, SWING_LIFT } from './projectiles'
 
 // ── budget ──────────────────────────────────────────────────────────────────
 
@@ -140,6 +142,14 @@ const CHUNK = 3
 const RING = 4
 const SMOKE = 5
 const SHEET = 6
+/** A frost shard: a small spinning diamond (chill). */
+const SHARD = 7
+/** A short jagged spark line (shock). `rot` is its direction, `vrot` its seed. */
+const CRACKLE = 8
+/** A melee blow's lingering blade arc. (x, y) is the HERO, `r` the reach, `rot` the mid angle, `vrot` the side. */
+const SLASH = 9
+/** An arrow that punched through: a fading arrow ghost flying on. */
+const GHOST = 10
 
 interface P {
   k: number
@@ -155,6 +165,8 @@ interface P {
   g: number
   d: number
   col: string
+  /** The ink a slash is drawn in (null for every other kind). */
+  ink: EffectInk | null
   rot: number
   vrot: number
   sheet: number
@@ -163,7 +175,7 @@ interface P {
 
 const pool: P[] = []
 for (let i = 0; i < MAX_PARTICLES; i++) {
-  pool.push({ k: 0, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, r: 1, r2: 1, a: 1, g: 0, d: 0, col: '#fff', rot: 0, vrot: 0, sheet: -1, fps: 12 })
+  pool.push({ k: 0, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, r: 1, r2: 1, a: 1, g: 0, d: 0, col: '#fff', ink: null, rot: 0, vrot: 0, sheet: -1, fps: 12 })
 }
 let pn = 0
 
@@ -717,12 +729,23 @@ export function fxAdvance(dtReal: number): void {
 
 // ── emitters ────────────────────────────────────────────────────────────────
 
-/** A Sentinel fires: muzzle flash, three sparks, and the shooter's own recoil. */
-export function fxMuzzle(id: string, x: number, y: number, angle: number, color: string): void {
+/**
+ * A Sentinel fires: muzzle flash, three sparks, and the shooter's own recoil.
+ *
+ * A SWING has no muzzle: the hero leans INTO the blow instead of recoiling
+ * from it (2.6 px toward the target, the same decay), throws no sparks, and
+ * the blade arc at the target is the whole event (`projectiles.drawSwing`).
+ */
+export function fxMuzzle(id: string, x: number, y: number, angle: number, color: string, delivery: Delivery = 'bolt'): void {
   const s = sfx(id)
   s.muzzle = MUZZLE_SECONDS
   s.muzzleAngle = angle
   if (reducedMotion) return
+  if (delivery === 'swing') {
+    s.rx = Math.cos(angle) * 2.6
+    s.ry = Math.sin(angle) * 2.6
+    return
+  }
   // Item 7: the player recoils when firing. 2.2 logical px, gone in ~0.1s.
   s.rx = -Math.cos(angle) * 2.2
   s.ry = -Math.sin(angle) * 2.2
@@ -743,12 +766,67 @@ export function fxMuzzle(id: string, x: number, y: number, angle: number, color:
  * (ring + sparks + dust), short-held, and — because it is thrown *outward along
  * the shot* — never sitting flat on top of the character it hit.
  */
-export function fxImpact(x: number, y: number, dx: number, dy: number, opts: { crit?: boolean; splash?: number; color?: string }): void {
+export interface ImpactOpts {
+  crit?: boolean
+  splash?: number
+  color?: string
+  /** How the hit arrived (`attackLook.Delivery`). A `swing` lands as a blade arc, not a spray. */
+  delivery?: Delivery
+  /** The hit's lead on-hit effect: its ink colours the sparks and it throws its own particles. */
+  effect?: HitEffect | null
+  /** The hit's damage type (a magic hit sparks violet when it carries no effect). */
+  damageType?: 'physical' | 'magic'
+  /** The shot pierces on: an arrow ghost (or a streak) carries on past the target. */
+  pierce?: boolean
+  /** Where the blow or shot came from — a swing's arc centre, a siphon's destination. */
+  srcX?: number
+  srcY?: number
+  /** A swing's sweep direction (`projectiles.swingSide`), so the mark matches the blow. */
+  side?: 1 | -1
+}
+
+export function fxImpact(x: number, y: number, dx: number, dy: number, opts: ImpactOpts): void {
   fxStats.impacts++
   if (reducedMotion) return
   const crit = !!opts.crit
-  const col = crit ? '#ffd166' : (opts.color ?? '#fff3d6')
+  const delivery = opts.delivery
+  const ink = delivery ? inkOf(delivery, opts.damageType ?? 'physical', opts.effect ?? null) : null
+  const col = crit ? '#ffd166' : (opts.color ?? (ink && (opts.effect || opts.damageType === 'magic') ? ink.spark : '#fff3d6'))
   const dirA = Math.atan2(dy, dx)
+  // The effect blooms on the BODY, not at the feet the position marks.
+  if (opts.effect) effectBurst(x, y - 10, dirA, opts.effect, opts.srcX, opts.srcY)
+  if (opts.pierce) {
+    const g = take()
+    if (g) {
+      init(g, delivery === 'arrow' ? GHOST : SPARK, x, y, Math.cos(dirA) * 420, Math.sin(dirA) * 420, 0.16, 2.2, 0, '#f2e6c8')
+      g.d = 2.5
+    }
+  }
+  if (delivery === 'swing' && ink && opts.srcX !== undefined && opts.srcY !== undefined) {
+    // The blow's mark: the full blade arc, held a beat and fading, so the swing
+    // still reads at 3x where its in-flight sweep lasts a frame or two.
+    const sl = take()
+    if (sl) {
+      const R = Math.hypot(x - opts.srcX, y - opts.srcY)
+      init(sl, SLASH, opts.srcX, opts.srcY - SWING_LIFT, 0, 0, crit ? 0.3 : 0.24, R, 0, col)
+      sl.ink = ink
+      sl.rot = Math.atan2(y - opts.srcY, x - opts.srcX)
+      sl.vrot = opts.side ?? 1
+      sl.a = crit ? 1 : 0
+    }
+    // A blade throws a short fan of chips off the struck side, not a spray.
+    const n = degrade(crit ? 5 : 3)
+    for (let i = 0; i < n; i++) {
+      const p = take()
+      if (!p) break
+      const a = dirA + rnd(-0.7, 0.7)
+      const sp = rnd(50, crit ? 160 : 110)
+      init(p, SPARK, x, y - SWING_LIFT, Math.cos(a) * sp, Math.sin(a) * sp, rnd(0.1, 0.2), crit ? 2.4 : 1.8, 0, col)
+      p.g = 120
+      p.d = 4
+    }
+    return
+  }
 
   const ring = take()
   if (ring) {
@@ -775,6 +853,74 @@ export function fxImpact(x: number, y: number, dx: number, dy: number, opts: { c
   if (opts.splash && opts.splash > 0) {
     sheetBurst(x, y, FX_EXPLOSION, 1, 20)
     fxTrauma(0.07, 0.34)
+  }
+}
+
+/**
+ * The on-hit effect, made visible where it landed — one burst per effect, each
+ * with its own SHAPE (colour is never the only channel, `attackLook`):
+ *
+ *  - burn: embers that lift off the body and wink out;
+ *  - chill: frost shards (spinning diamonds) that fall, and a cold ring;
+ *  - shock: three short crackles thrown off the body;
+ *  - drain: red motes drawn back toward the hero that struck — the siphon;
+ *  - stun / execute: a few sparks in their ink (their proc ring says the rest).
+ */
+function effectBurst(x: number, y: number, dirA: number, effect: HitEffect, srcX?: number, srcY?: number): void {
+  const ink = inkOf('bolt', 'physical', effect)
+  if (effect === 'burn') {
+    for (let i = 0; i < degrade(7); i++) {
+      const p = take()
+      if (!p) break
+      init(p, EMBER, x + rnd(-7, 7), y - rnd(0, 8), rnd(-30, 30) + Math.cos(dirA) * 20, rnd(-80, -30), rnd(0.45, 0.75), rnd(2.4, 3.6), 0, i % 2 ? ink.glow : ink.core)
+      p.g = -30
+      p.d = 1.6
+    }
+  } else if (effect === 'chill') {
+    for (let i = 0; i < degrade(5); i++) {
+      const p = take()
+      if (!p) break
+      const a = dirA + rnd(-1.6, 1.6)
+      const sp = rnd(45, 110)
+      init(p, SHARD, x, y - 3, Math.cos(a) * sp, Math.sin(a) * sp - 50, rnd(0.4, 0.6), rnd(3.2, 4.4), 0, i % 2 ? ink.glow : ink.core)
+      p.g = 260
+      p.d = 1.5
+      p.rot = rnd(0, Math.PI)
+      p.vrot = rnd(-10, 10)
+    }
+    const r = take()
+    if (r) {
+      init(r, RING, x, y, 0, 0, 0.26, 5, 0, ink.glow)
+      r.r2 = 18
+    }
+  } else if (effect === 'shock') {
+    for (let i = 0; i < degrade(3); i++) {
+      const p = take()
+      if (!p) break
+      init(p, CRACKLE, x, y - 4, 0, 0, rnd(0.16, 0.24), rnd(14, 20), 0, ink.spark)
+      p.rot = dirA + (i - 1) * 1.9 + rnd(-0.4, 0.4)
+      p.vrot = (Math.random() * 65535) | 0
+    }
+  } else if (effect === 'drain') {
+    const tx = srcX ?? x
+    const ty = srcY ?? y
+    for (let i = 0; i < degrade(5); i++) {
+      const p = take()
+      if (!p) break
+      const life = rnd(0.38, 0.55)
+      const ox = x + rnd(-6, 6)
+      const oy = y - rnd(0, 8)
+      // Aimed to arrive most of the way home as it fades.
+      init(p, EMBER, ox, oy, ((tx - ox) / life) * 0.7 + rnd(-20, 20), ((ty - 20 - oy) / life) * 0.7 + rnd(-20, 20), life, rnd(2.2, 3.2), 0, i % 2 ? ink.glow : ink.spark)
+    }
+  } else {
+    for (let i = 0; i < degrade(3); i++) {
+      const p = take()
+      if (!p) break
+      const a = rnd(0, Math.PI * 2)
+      init(p, SPARK, x, y - 4, Math.cos(a) * rnd(30, 80), Math.sin(a) * rnd(30, 80), rnd(0.15, 0.28), 1.6, 0, ink.spark)
+      p.d = 3
+    }
   }
 }
 
@@ -1053,6 +1199,7 @@ function init(p: P, k: number, x: number, y: number, vx: number, vy: number, lif
   p.g = 0
   p.d = 0
   p.col = col
+  p.ink = null
   p.rot = 0
   p.vrot = 0
   p.sheet = -1
@@ -1225,6 +1372,71 @@ export function drawFxParticles(ctx: CanvasRenderingContext2D): void {
         ctx.beginPath()
         ctx.arc(p.x, p.y, rr, 0, Math.PI * 2)
         ctx.stroke()
+        break
+      }
+      case SHARD: {
+        ctx.globalAlpha = fade
+        ctx.fillStyle = p.col
+        const c = Math.cos(p.rot)
+        const sn = Math.sin(p.rot)
+        const r = p.r
+        ctx.beginPath()
+        ctx.moveTo(p.x + c * r, p.y + sn * r)
+        ctx.lineTo(p.x - sn * r * 0.55, p.y + c * r * 0.55)
+        ctx.lineTo(p.x - c * r, p.y - sn * r)
+        ctx.lineTo(p.x + sn * r * 0.55, p.y - c * r * 0.55)
+        ctx.closePath()
+        ctx.fill()
+        break
+      }
+      case CRACKLE: {
+        // Three jagged segments outward along `rot`, re-rolled a few times over its life.
+        let h = (p.vrot + Math.floor(p.t * 40) * 2654435761) >>> 0
+        const c = Math.cos(p.rot)
+        const sn = Math.sin(p.rot)
+        ctx.beginPath()
+        ctx.moveTo(p.x, p.y)
+        for (let j = 1; j <= 3; j++) {
+          h = (h * 1664525 + 1013904223) >>> 0
+          const o = (h / 4294967296 - 0.5) * 7
+          const d = (p.r * j) / 3
+          ctx.lineTo(p.x + c * d - sn * o, p.y + sn * d + c * o)
+        }
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.globalAlpha = fade * 0.65
+        ctx.strokeStyle = '#bfe9ff'
+        ctx.lineWidth = 4.2
+        ctx.stroke()
+        ctx.globalAlpha = fade
+        ctx.strokeStyle = p.col
+        ctx.lineWidth = 1.8
+        ctx.stroke()
+        break
+      }
+      case SLASH: {
+        if (p.ink) drawSlashArc(ctx, p.x, p.y, p.r, p.rot, p.vrot < 0 ? -1 : 1, 1, fade * fade, p.ink, p.a > 0)
+        break
+      }
+      case GHOST: {
+        const sp = Math.hypot(p.vx, p.vy) || 1
+        const ux = p.vx / sp
+        const uy = p.vy / sp
+        ctx.globalAlpha = fade * 0.8
+        ctx.strokeStyle = '#d9b77e'
+        ctx.lineWidth = 2
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(p.x - ux * 16, p.y - uy * 16)
+        ctx.lineTo(p.x + ux * 6, p.y + uy * 6)
+        ctx.stroke()
+        ctx.fillStyle = '#eef3f6'
+        ctx.beginPath()
+        ctx.moveTo(p.x + ux * 10, p.y + uy * 10)
+        ctx.lineTo(p.x + ux * 4 - uy * 3.5, p.y + uy * 4 + ux * 3.5)
+        ctx.lineTo(p.x + ux * 4 + uy * 3.5, p.y + uy * 4 - ux * 3.5)
+        ctx.closePath()
+        ctx.fill()
         break
       }
       case SHEET: {
