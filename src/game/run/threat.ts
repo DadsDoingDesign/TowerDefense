@@ -113,7 +113,16 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  *   1.40, ×0.40          59.0%     26.3 / 31.3%             —
  *   1.42, ×0.43          56.0%     23.3 / 27.1%             1 (a held depth-11 wave a shaman out-healed)
  *   1.36, ×0.50, elite ×1.15  59.3%  26.3 / 34.6%          1 (same)
- *   1.40, ×0.45          57.7%     25.4 / 31.3%             0   ← shipped
+ *   1.40, ×0.45          57.7%     25.4 / 31.3%             0
+ *
+ * …and after the variant refit (`waves.ts` budget scales) ×0.45 put one §6
+ * final boss back over the cap (a Colossus held by a Warden of Ash for 13
+ * minutes): a held champion with a weak team is a slog, not a loss, so the
+ * final boss's HP is the dial, and ×1.38–1.40 with ×0.42–0.45 is chaotic in
+ * which of 300 seeds slogs (×1.38/×0.45: run 257; ×1.38 act 2 ×1.21/×0.42:
+ * runs 108 and 257; heavier danger ground on top: run 112):
+ *
+ *   1.40, ×0.42          58.0%     24.2 / 33.3%             0   ← shipped
  *
  * (The skill levers of the same pass — Anchor, Keen Eye, Finisher — are in
  * every row from 1.40/×0.55 down.) §11's strict floor ends 36% of its runs at
@@ -149,7 +158,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
  *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
  *    and card luck are paid for by the composition alone now;
- *  - the **final boss** fights at ×0.45 of its layer (×0.55 before the tuning pass): it fields all three
+ *  - the **final boss** fights at ×0.42 of its layer (×0.55 before the tuning pass): it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -159,9 +168,9 @@ export function threatAtLayer(layer: number, start = 1): number {
  * substitutes an encounter, never a node (M19-g).
  */
 export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
-  // ×0.55 → ×0.45 with the steeper act 3 (the tuning pass, see ACT_STEPS): the
-  // final boss's Threat is ×5.0 where it was ×4.4, not ×6.2.
-  type === 'boss' ? 0.45 : 1
+  // ×0.55 → ×0.42 with the steeper act 3 (the tuning pass, see ACT_STEPS): the
+  // final boss's Threat is ×4.7 where it was ×4.4, not ×6.2.
+  type === 'boss' ? 0.42 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>

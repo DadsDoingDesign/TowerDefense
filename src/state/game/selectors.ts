@@ -64,7 +64,7 @@ export const rarityColor = (r: ItemRarity) => RARITY[r].color
 /**
  * The HP multiplier the current fight's enemies carry: the hub's (always 1
  * today), the run's Threat, and — on a campaign node — what the node's own type
- * adds (`nodeThreatMult`: the final boss ×0.45; an elite ×1). `startWave`
+ * adds (`nodeThreatMult`: the final boss ×0.42; an elite ×1). `startWave`
  * spawns with it and `finishBattle` prices the wave's XP with it, so the two
  * read one number.
  */
