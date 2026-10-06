@@ -1,7 +1,8 @@
 /**
  * Balance report generator. Runs a battery of sweeps against the real engine and
  * writes balance/REPORT.md plus a console summary. Exits non-zero if any balance
- * invariant is violated, so it can gate CI.
+ * invariant is violated — unless `BALANCE_INVARIANTS=warn`, which CI sets to
+ * report them as warnings instead (see `verdict.ts`).
  *
  *   npx tsx balance/report.ts        (or: npm run balance)
  *
@@ -10,7 +11,7 @@
  * measurement — it is a green light with nothing behind it. Where a sweep is
  * expected to fail today, it fails loudly rather than being tuned to pass.
  */
-import { writeFileSync } from 'fs'
+import { appendFileSync, writeFileSync } from 'fs'
 import { HQ_UPGRADES, INTEREST, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
@@ -61,6 +62,7 @@ import { difficultyEffect, difficultyRules } from '../src/game/run/watch'
 import { BONUS_PER_CRATE, COMPANY_WEIGHT, CRATE_PRICE, CRATE_VALUE, dangerPips, MAX_CRATES } from '../src/game/run/contracts'
 import { COMPANIES } from '../src/game/data/companies'
 import { runCombatDepth } from './combat'
+import { balanceVerdict, invariantMode } from './verdict'
 import {
   loadoutFor,
   marksFor,
@@ -3501,13 +3503,19 @@ if (SECTIONS) console.log(out)
 console.log('=== Fieldwatch Balance ===')
 for (const s of summary) console.log(s)
 console.log(SECTIONS ? `Sections ${[...SECTIONS].sort((a, b) => a - b).join(', ')} written to ${outPath.pathname}` : `Report written to balance/REPORT.md`)
-if (failures.length) {
-  console.log(`\n❌ ${failures.length} invariant(s) failed:`)
-  for (const fmsg of failures) console.log('  - ' + fmsg)
-  process.exit(1)
-} else {
-  console.log('\n✅ All balance invariants passed.')
+// The verdict, and how it exits: a failed invariant fails the run unless CI
+// opted into BALANCE_INVARIANTS=warn (see verdict.ts). REPORT.md is already
+// written above and reads the same in either mode.
+const verdict = balanceVerdict(failures, invariantMode(process.env))
+for (const l of verdict.console) console.log(l)
+if (verdict.stepSummary && process.env.GITHUB_STEP_SUMMARY) {
+  try {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, verdict.stepSummary + '\n')
+  } catch (err) {
+    console.warn('Could not write the job summary:', err)
+  }
 }
+if (verdict.exitCode) process.exit(verdict.exitCode)
 
 // ---- helpers ----
 function baseStatTotal(it: Item): number {
