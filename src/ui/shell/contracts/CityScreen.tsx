@@ -16,6 +16,7 @@ import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { Coin, Crate } from '../../pixel'
+import { NextGround } from '../NextGround'
 import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } from './parts'
 
 /**
@@ -120,6 +121,7 @@ export function CityScreen() {
       <p className="ct-left">
         Still ahead: {stopsLeft} stop{stopsLeft === 1 ? '' : 's'}, {bossesLeft} boss{bossesLeft === 1 ? '' : 'es'}
       </p>
+      <NextGround city={city} />
 
       {firstRun ? (
         <PageTip>Every city on the road pays as the caravan reaches it. From your next contract you may also cash out here and head home.</PageTip>

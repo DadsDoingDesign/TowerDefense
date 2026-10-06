@@ -244,6 +244,20 @@ export function Coach() {
     return () => clearTimeout(t)
   }, [fieldNote, clearFieldNote])
 
+  /*
+   * Field-per-act (`run/fields`): the first fight on a new act's field says
+   * so, plainly, in setup — the company is on the bench and this is not the
+   * ground it left. Like a field note it skips the quiet window (it is about
+   * this fight, now) and outranks the tips; it is never shown in a live wave,
+   * so it can never move the Stage under the fight, and it goes as soon as a
+   * hero is posted — the arrival is answered by doing.
+   */
+  const newGround = useGameStore((s) => s.newGround)
+  const clearNewGround = useGameStore((s) => s.clearNewGround)
+  useEffect(() => {
+    if (newGround && deployed > 0) clearNewGround()
+  }, [newGround, deployed, clearNewGround])
+
   if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
     // that a hero stands too close to one that swings, `terrain.CLEARANCE`;
@@ -266,6 +280,20 @@ export function Coach() {
           {copy.line.slice(copy.name.length)}
         </p>
         <button className="sh-coach-dismiss" onClick={clearFieldNote} aria-label="Got it — hide this note" data-sfx="close">
+          Got it
+        </button>
+      </aside>
+    )
+  }
+
+  if (newGround && inSetup && deployed === 0 && !conflicted) {
+    return (
+      <aside className="sh-coach sh-coach-ground" role="status" aria-live="polite">
+        <Icon name="map" className="sh-coach-glyph" />
+        <p className="sh-coach-text">
+          <b>New ground: {newGround}</b> — post your heroes.
+        </p>
+        <button className="sh-coach-dismiss" onClick={clearNewGround} aria-label="Got it — hide this note" data-sfx="close">
           Got it
         </button>
       </aside>
