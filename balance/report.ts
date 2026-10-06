@@ -730,8 +730,16 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * ×0.25 / ×0.8 put both near the old fit (37% / 36%), and every affix reads
  * ≥ +2.0pt on its home bench there. Re-derive these the same way when the
  * subject or the curve moves again.
+ *
+ * **`magic` ×0.8 → ×0.7 (the merged tuning pass).** The subject moved again:
+ * Stormcaller's chains went 3 jumps at 60% → 2 at 45% (§7 found it solving
+ * Level 3), and at ×0.8 the baseline fell 36% → 30%, where Frenzied's flurry
+ * read −0.2pt on its best bench and failed §10 as a curse with no upside.
+ * Swept ×0.8 / 0.75 / 0.7 / 0.65 / 0.6: 30 / 32 / 40 / 42 / 46%; ×0.7 is the
+ * nearest to the old fit from above (Frenzied +7.3pt there; every affix and
+ * curse green).
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.8, endure: 1.6 }
+const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.7, endure: 1.6 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
