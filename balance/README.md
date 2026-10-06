@@ -19,7 +19,7 @@ every later run a different team, so two configs could not be compared on paired
 seeds. Measured while fitting the composition variants, the same battlefield read
 61% and 48% across two configs that never touched it.
 
-Runtime is around **8 minutes** on one core (§12 is ~5 of it, §13 ~1; `FW_SECTIONS` runs a subset). It was 26 seconds before §12 and §13, which
+Runtime is around **35 minutes** on one core as of the October audit (§13's two stake ladders — zero meta and the veteran's, 600 runs a tier — are a third of it; `FW_SECTIONS` runs a subset, and `tune.ts` reads the same cells on every core). It was 26 seconds before §12 and §13, which
 simulate whole runs rather than single waves: the hub sweep alone plays 4,200
 campaigns. That is the price of measuring a *run*-level defect, and the defects
 it was written for had been invisible to every wave-level sweep in the suite.
