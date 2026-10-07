@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none">
+  <title>Merchant Mercenaries</title>
+  <!--
+    The mark: the Dripping Seal (concept 29, refined). Designed in Figma — file TD-Game-Roguelite,
+    page Audit.16.06.26, section LOGO ONLY, component "Mark / 29 refined · Dripping Seal" — and adjusted
+    there by the designer on 2026-10-06. Exported verbatim; edit it in Figma and re-export rather than
+    by hand. scripts/brand.ts builds every icon, the favicon, the launch image and the lockups from it.
+    Layers, back to front: wax (seal, ring, drips, drip shine) · coin (edge, face, inner ring) ·
+    sword (blade, fuller, crossguard, grip, pommel — the ring's colour) · shine.
+  -->
+  <path d="M120 17.7604C139.44 15.6004 152.4 30.7204 169.68 32.8804C189.12 37.2004 195.6 56.6404 204.24 71.7604C217.2 89.0404 210.72 108.48 215.04 125.76C217.2 145.2 204.24 158.16 193.44 173.28C180.48 188.4 161.04 190.56 143.76 199.2C126.48 207.84 109.2 201.36 91.92 197.04C72.48 192.72 61.68 177.6 48.72 164.64C33.6 149.52 31.44 132.24 27.12 114.96C22.8 95.5204 35.76 80.4004 42.24 63.1204C50.88 45.8404 68.16 39.3604 85.44 28.5604C96.24 22.0804 109.2 17.7604 120 17.7604Z" fill="#B23A2C"/>
+  <circle cx="120" cy="112.8" r="73.44" fill="#982F22"/>
+  <path d="M64.7998 172.8C79.1998 182.4 91.1998 187.2 95.9998 192C98.3998 206.4 95.9998 216 88.7998 225.6C81.5998 235.2 67.1998 232.8 67.1998 220.8C67.1998 208.8 64.7998 192 64.7998 172.8Z" fill="#B23A2C"/>
+  <path d="M148.8 193.6C158.4 193.6 168 188.8 172.8 184C172.8 196 172.8 203.2 168 208C163.2 215.2 151.2 215.2 151.2 208C151.2 203.2 148.8 198.4 148.8 193.6Z" fill="#B23A2C"/>
+  <circle cx="79.1999" cy="220.8" r="4.8" fill="#E9806A"/>
+  <circle cx="120" cy="115" r="57.6" fill="#A8772A"/>
+  <circle cx="120" cy="110.4" r="57.6" fill="#E0AC4C"/>
+  <circle cx="120" cy="110.4" r="46.08" stroke="#A8772A" stroke-width="4.03"/>
+  <path d="M106.926 108.832H134.609V152.162L120.767 179.244L106.926 152.162V108.832Z" fill="#982F22"/>
+  <rect x="118.21" y="116.054" width="5.11537" height="31.294" rx="1.44" fill="#7E2419"/>
+  <rect x="90.0137" y="91.9814" width="61.5073" height="16.8506" rx="4" fill="#982F22"/>
+  <rect x="113.546" y="69.7158" width="14.4434" height="24.0723" rx="2.4" fill="#982F22"/>
+  <circle cx="120.768" cy="62.4931" r="11.7353" fill="#982F22"/>
+  <path d="M57.6001 57.6004C69.6001 38.4004 88.8001 28.8004 108 26.4004" stroke="#E9806A" stroke-width="7.68" stroke-linecap="round"/>
+</svg>

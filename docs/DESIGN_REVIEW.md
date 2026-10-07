@@ -3161,3 +3161,15 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   "MERCHANT MERCENARIES" fits its own row at 360px. Still open (designer): the
   Watchtower mark was drawn for Fieldwatch. The short name (home-screen
   label) is "Merch&Mercs", the designer's. Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
+- **2026-10-06 — The Dripping Seal becomes the mark.** Four rounds in Figma
+  (6, 20, 10 and 10 concepts) and three notes from the designer led to concept
+  29 refined, which the designer then adjusted by hand in Figma. Exported
+  verbatim to `src/assets/brand/seal.svg`; `scripts/brand.ts` now builds every
+  icon, the favicon, the launch image, the lockups and the social card from it.
+  Checked: the iOS 1024 master against the Figma component (same ground, seal
+  frame at 800/1024, no alpha); maskable icons keep the drips inside the 80%
+  circle; the favicon at 16px still reads as a red disc with a gold heart. The
+  loop caught one thing: Figma's export puts `fill="none"` on the `<svg>`
+  itself, so the inner coin ring filled black once unwrapped — the seal is now
+  wrapped in a `fill="none"` group. Scorecard: readability 5/5, hierarchy 4/5,
+  polish 4/5.

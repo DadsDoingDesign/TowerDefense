@@ -20,8 +20,16 @@ commits and the Whales review history say Fieldwatch: read them as the same game
   one line it runs into the bank chip. The boot splash in `index.html` matches.
 - **Wordmark / lockups / social card:** `scripts/brand-wordmark.py` outlines the
   name from Crimson Text (`pip install fonttools brotli`), then `npm run brand`.
-  The social-card line is "Sellswords for hire". The **mark (the watchtower) is
-  unchanged** — a mark for the new name is open work, not decided.
+  The social-card line is "Sellswords for hire".
+- **The mark is the Dripping Seal** (adopted 2026-10-06): a red wax seal, still
+  dripping, with a gold coin at its heart and a sword in the ring's red whose
+  crossguard melts into the ring. Designed and hand-adjusted by the designer in
+  Figma (TD-Game-Roguelite → page Audit.16.06.26 → section LOGO ONLY → component
+  "Mark / 29 refined · Dripping Seal"; colours in the "Merch&Mercs · Logo"
+  variables) and exported verbatim to `src/assets/brand/seal.svg`. Change it in
+  Figma, re-export, then `npm run brand` — every icon (iOS, PWA, apple-touch,
+  favicon), the launch image, the lockups and the social card come from it. The
+  Watchtower (`mark.svg`, `mark-mono.svg`) is retired and unused.
 - **Deliberately still `fieldwatch` — do not rename:** localStorage keys
   (`fieldwatch-*`; renaming them silently wipes every player's save), the
   service-worker cache prefix, the `fieldwatch` art pack/theme id, the `fw-`

@@ -2,10 +2,14 @@
 
 > **Renamed 2026-10-06.** The game is now **Merchant Mercenaries**. The wordmark,
 > lockups, social card (line: "Sellswords for hire"), page meta and app names are
-> updated; the short name (home-screen label) is **"Merch&Mercs"**. The mark below — the
-> Watchtower — was drawn for Fieldwatch and is kept for now; a mark for the new
-> name is open work. Where this guide says Fieldwatch, read Merchant Mercenaries.
-> Details: `CLAUDE.md` § Name.
+> updated; the short name (home-screen label) is **"Merch&Mercs"**. Where this guide
+> says Fieldwatch, read Merchant Mercenaries. Details: `CLAUDE.md` § Name.
+>
+> **New mark, 2026-10-06: the Dripping Seal** (`src/assets/brand/seal.svg`, from the
+> designer's Figma component). It replaces the Watchtower described in § Identity
+> below, which is kept here as history only; the pixel favicon is gone too (the
+> favicon is the seal, vector). Chosen over four rounds of concepts in Figma
+> (section LOGO ONLY): 46 concepts, then the designer's own edits.
 
 A **warm, storybook, medieval tower-defense**. The UI is tactile parchment and
 wood framing lush pixel battlefields — cozy, but with stakes. Everything reads
