@@ -46,7 +46,7 @@ Supports still read low here on purpose and are graded in §2.
 | Reaper | rogue | offense | 2580.0 ±0.0 | 1621.2 | ✓ | 1.43× |
 | Sharpshooter | rogue | offense | 2322.0 ±0.0 | 1150.5 | ✓ | 1.29× |
 | Arbalest | rogue | offense | 2322.0 ±0.0 | 1150.5 | ✓ | 1.29× |
-| Stormcaller | mystic | offense | 2322.0 ±105.3 | 474.0 | ✓ | 1.29× |
+| Stormcaller | mystic | offense | 2064.0 ±0.0 | 474.0 | ✓ | 1.14× |
 | Bulwark | fighter | offense | 1978.0 ±60.8 | 482.9 | ✓ | 1.10× |
 | Saboteur | rogue | offense | 1892.0 ±60.8 | 1150.5 | ✓ | 1.05× |
 | Venomancer | rogue | offense | 1892.0 ±60.8 | 1150.5 | ✓ | 1.05× |
@@ -54,20 +54,20 @@ Supports still read low here on purpose and are graded in §2.
 | Aegis | fighter | offense | 1763.0 ±60.8 | 439.0 | ✓ | 0.98× |
 | Warden of Ash | fighter | offense | 1720.0 ±60.8 | 439.0 | ✓ | 0.95× |
 | Juggernaut | fighter | offense | 1634.0 ±60.8 | 603.6 | ✓ | 0.90× |
+| Radiant | mystic | support | 1591.0 ±60.8 | 351.1 | ✓ | 0.88× |
+| Templar | mystic | support | 1591.0 ±60.8 | 351.1 | ✓ | 0.88× |
+| Oracle | mystic | support | 1591.0 ±60.8 | 351.1 | ✓ | 0.88× |
 | Soulflay | mystic | offense | 1591.0 ±60.8 | 526.6 | ✓ | 0.88× |
 | Doomcaller | mystic | offense | 1591.0 ±60.8 | 526.6 | ✓ | 0.88× |
 | Pyromancer | mystic | offense | 1419.0 ±0.0 | 351.1 | ✓ | 0.79× |
 | Cryomancer | mystic | offense | 1419.0 ±0.0 | 351.1 | ✓ | 0.79× |
-| Radiant | mystic | support | 1419.0 ±0.0 | 351.1 | ✓ | 0.79× |
-| Templar | mystic | support | 1419.0 ±0.0 | 351.1 | ✓ | 0.79× |
-| Oracle | mystic | support | 1419.0 ±0.0 | 351.1 | ✓ | 0.79× |
 | Berserker | fighter | offense | 1290.0 ±0.0 | 1056.3 | ✓ | 0.71× |
 | Bannerman | fighter | support | 1204.0 ±60.8 | 603.6 | ✓ | 0.67× |
 | Weaponmaster | fighter | offense | 1118.0 ±121.6 | 962.7 | ✓ | 0.62× |
 | Vanguard ⚠️ | fighter | offense | 559.0 ±219.3 | 482.9 | ✓ | 0.31× |
 | Sentinel of Order ⚠️ | fighter | offense | 559.0 ±219.3 | 482.9 | ✓ | 0.31× |
 
-Offense builds — mean **1849.0**, median **1806.0**, σ **619.9**, measured spread **5.08×** (max/min) against an analytic spread of **4.62×**.
+Offense builds — mean **1837.8**, median **1806.0**, σ **613.5**, measured spread **5.08×** (max/min) against an analytic spread of **4.62×**.
 
 The ⚠️ flag is now the same rule the invariant is: a build over 2× or under 0.5×
 the median. It used to be mean ± 2σ of a distribution the scenario had already
@@ -142,18 +142,18 @@ damage tower.)
 |---|--:|--:|--:|--:|--:|--:|
 | _(two carriers, empty slot)_ | ×4.05 | ×4.05 | ×4.65 | **×4.24** | — | ×0 |
 | _filler_ — Wand + Heavy Blows (Level 2 damage) | ×8.14 | ×6.15 | ×18.82 | **×9.80** | — | ×0 |
-| Wand + Blessing | ×8.14 | ×7.08 | ×21.64 | **×10.76** | +10% | ×0 |
+| Wand + Blessing | ×8.14 | ×7.08 | ×24.89 | **×11.28** | +15% | ×0 |
 | _filler_ — Wand + Berserk (Level 3 damage) | ×9.36 | ×6.15 | ×21.64 | **×10.76** | — | ×0 |
-| Wand + Rally | ×7.08 | ×8.14 | ×24.89 | **×11.28** | +5% | ×0 |
+| Wand + Rally | ×12.38 | ×8.14 | ×28.63 | **×14.24** | +32% | ×0 |
 | _filler_ — Sword & Shield + Heavy Blows (Level 2 damage) | ×5.35 | ×32.92 | ×16.37 | **×14.23** | — | ×0 |
-| Sword & Shield + Blessing | ×7.08 | ×7.08 | ×21.64 | **×10.27** | -28% | ×0 |
+| Sword & Shield + Blessing | ×8.14 | ×43.54 | ×24.89 | **×20.66** | +45% | ×0 |
 | _filler_ — Sword & Shield + Berserk (Level 3 damage) | ×7.08 | ×32.92 | ×16.37 | **×15.63** | — | ×0 |
-| Sword & Shield + Rally | ×7.08 | ×43.54 | ×24.89 | **×19.72** | +26% | ×0 |
+| Sword & Shield + Rally | ×9.36 | ×50.07 | ×24.89 | **×22.68** | +45% | ×0 |
 
 **Findings.**
 
-- Aura skills that beat the same hero holding its level's damage skill by ≥10%: Sword & Shield + Rally (×19.72 vs a ×15.63 filler).
-- Aura skills that do **not**: Wand + Blessing (×10.76 vs a ×9.80 filler), Wand + Rally (×11.28 vs a ×10.76 filler), Sword & Shield + Blessing (×10.27 vs a ×14.23 filler).
+- Aura skills that beat the same hero holding its level's damage skill by ≥10%: Wand + Blessing (×11.28 vs a ×9.80 filler), Wand + Rally (×14.24 vs a ×10.76 filler), Sword & Shield + Blessing (×20.66 vs a ×14.23 filler), Sword & Shield + Rally (×22.68 vs a ×15.63 filler).
+- Aura skills that do **not**: _none_.
 
 **Aegis, Bulwark and Warden of Ash left this table in the no-HP pass.** They were
 graded as supports for a shield aura (Aegis, Bulwark) and a hold that ate the melee
@@ -190,10 +190,10 @@ read negative, and nothing failed.
 | Scenario | Build | Wave | Measured length | Baseline stop rate | Resolution (1 leak / 1 seed) | Tests |
 |---|---|---|--:|--:|--:|---|
 | `phys` | Sharpshooter (no gear) | depth 8, ×1.5 swarm | 44.1s | 37% | +0.1pt | physical scaling, single-target |
-| `magic` | Stormcaller (no gear) | depth 6, ×1.5 swarm | 42.9s | 36% | +0.1pt | INT scaling, splash + crowd control |
+| `magic` | Stormcaller (no gear) | depth 6, ×1.5 swarm | 42.9s | 40% | +0.1pt | INT scaling, splash + crowd control |
 | `endure` | Weaponmaster (no gear, blocks) | twenty Siege Barrels, ×3 HP, one every 4s | 113.0s | 44% | +0.6pt | a long grind — anything that ramps with time |
 
-Each scenario is **pinned** to the pressure it was fitted at (`BENCH_PIN`: phys ×0.25, magic ×0.8, endure ×1.6), so a change to the campaign's difficulty curve moves the game without silently moving the bench every affix is graded on — and the baselines above must stay inside 15%–75%, which is checked.
+Each scenario is **pinned** to the pressure it was fitted at (`BENCH_PIN`: phys ×0.25, magic ×0.7, endure ×1.6), so a change to the campaign's difficulty curve moves the game without silently moving the bench every affix is graded on — and the baselines above must stay inside 15%–75%, which is checked.
 
 Each affix is rolled at legendary budget and equipped **alone** (an item with no
 base stats), so the affix is the only variable. Every affix is measured in all
@@ -201,22 +201,22 @@ three scenarios; it is *graded* on the one it is designed for.
 
 | Enchantment | Graded on | Uplift there | Verdict | `phys` | `magic` | `endure` |
 |---|:-:|--:|:-:|--:|--:|--:|
-| frost | `magic` | **+42.3pt** | ✅ | +5.9pt | +42.3pt | −6.9pt |
-| bursting | `endure` | **+41.3pt** | ✅ | +12.1pt | +18.0pt | +41.3pt |
-| vampiric | `phys` | **+19.8pt** | ✅ | +19.8pt | +12.4pt | +51.2pt |
+| frost | `magic` | **+45.1pt** | ✅ | +5.9pt | +45.1pt | −6.9pt |
+| bursting | `endure` | **+41.3pt** | ✅ | +12.1pt | +17.9pt | +41.3pt |
+| vampiric | `phys` | **+19.8pt** | ✅ | +19.8pt | +13.0pt | +51.2pt |
 | might | `phys` | **+17.3pt** | ✅ | +17.3pt | +0.0pt | +8.1pt |
 | shocking | `phys` | **+17.1pt** | ✅ | +17.1pt | +0.0pt | +30.6pt |
-| flaming | `phys` | **+15.3pt** | ✅ | +15.3pt | +27.5pt | +6.9pt |
-| heavy | `phys` | **+14.5pt** | ✅ | +14.5pt | +18.3pt | +11.3pt |
+| flaming | `phys` | **+15.3pt** | ✅ | +15.3pt | +27.2pt | +6.9pt |
+| heavy | `phys` | **+14.5pt** | ✅ | +14.5pt | +10.6pt | +11.3pt |
 | piercing | `phys` | **+14.3pt** | ✅ | +14.3pt | +0.0pt | +51.9pt |
-| insight | `magic` | **+10.3pt** | ✅ | +0.0pt | +10.3pt | +0.0pt |
-| ruin | `phys` | **+9.7pt** | ✅ | +9.7pt | +4.8pt | +6.9pt |
-| precision | `phys` | **+8.0pt** | ✅ | +8.0pt | +9.4pt | +6.3pt |
-| cruelty | `phys` | **+7.3pt** | ✅ | +7.3pt | +6.3pt | +6.9pt |
-| swift | `phys` | **+6.8pt** | ✅ | +6.8pt | +16.8pt | +10.0pt |
-| reach | `phys` | **+6.4pt** | ✅ | +6.4pt | −0.3pt | −3.1pt |
+| ruin | `phys` | **+9.7pt** | ✅ | +9.7pt | +4.3pt | +6.9pt |
+| precision | `phys` | **+8.0pt** | ✅ | +8.0pt | +6.9pt | +6.3pt |
+| cruelty | `phys` | **+7.3pt** | ✅ | +7.3pt | +5.1pt | +6.9pt |
+| swift | `phys` | **+6.8pt** | ✅ | +6.8pt | +13.9pt | +10.0pt |
+| reach | `phys` | **+6.4pt** | ✅ | +6.4pt | −3.0pt | −3.1pt |
+| insight | `magic` | **+6.0pt** | ✅ | +0.0pt | +6.0pt | +0.0pt |
 | executioner | `endure` | **+5.0pt** | ✅ | +1.6pt | +0.0pt | +5.0pt |
-| patience | `endure` | **+2.5pt** | ⚠️ marginal | +2.9pt | +2.0pt | +2.5pt |
+| patience | `endure` | **+2.5pt** | ⚠️ marginal | +2.9pt | +0.2pt | +2.5pt |
 
 **⚠️ marginal** means the uplift clears the +2.0pt floor by less than 2 of its bench's own quanta — the pass is real but it is being carried by one or two leaked bodies, and it should not be read as a measurement. Currently: patience (+2.5pt on `endure`, quantum +0.6pt). This is reported, not failed: the honest response to a number the bench cannot resolve is to say so, not to widen the floor until it looks clean or narrow it until it breaks.
 
@@ -249,14 +249,14 @@ which is exactly how the old ladder ended up censored.
 
 A depth-8 team (Vanguard / Sharpshooter / Pyromancer lines at level 16 — tier 1, where the
 XP curve (§9) puts a depth-8 company, with L20 two layers deeper — Epic gear and random spec perks)
-faces depth-8 waves at the Threat a real depth-8 fight is fought at (×2.91) with the real
+faces depth-8 waves at the Threat a real depth-8 fight is fought at (×3.49) with the real
 base of 20. 4 seeds per rung.
 
 | Siege pressure | Enemies | Cleared | Base HP left ± |
 |--:|--:|:-:|--:|
 | ×1.00 | 46 | 4/4 | 20.0 ±0.0 |
 | ×1.50 | 46 | 4/4 | 20.0 ±0.0 |
-| ×2.20 | 46 | 4/4 | 20.0 ±0.0 |
+| ×2.20 | 46 | 4/4 | 11.8 ±2.5 |
 | ×3.40 | 92 | 0/4 | 0.0 ±0.0 |
 
 Standard depth-8 team holds up to **siege pressure ×2.20**.
@@ -270,27 +270,27 @@ means the depth-8 encounter is not an encounter for a depth-8 team.
 Random teams (3–5 specs) play all twelve layers of the three acts — an act boss on
 layers 4 and 8, the final boss on 12, an elite mid-way through acts 2 and 3. Team **power
 scales with depth** (level ≈ 2.5·depth, the curve `levelXpAwards` pays; gear rarity improving)
-to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×1.12 a layer, ×1 more
+to mirror real progression. Threat is the real road curve (`threatAtLayer`: ×1.19 a layer, ×1 more
 per act) — it no longer compounds on choices, so this model and the routed first run in §11
 meet every layer at the same Threat. Base HP (20) persists between nodes.
 **Win** = the boss falls.
 
 - Runs: **300**
-- Win rate (boss falls): **47%**
-- Average depth reached: **10.5 / 12**
-- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:1  7:0  8:56  9:25  10:66  11:12  12:140
-- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:1  8:0  9:56  10:25  11:66  12:12
+- Win rate (boss falls): **42%**
+- Average depth reached: **10.3 / 12**
+- Depth distribution: 0:0  1:0  2:0  3:0  4:0  5:0  6:6  7:0  8:72  9:20  10:58  11:18  12:126
+- Runs ended at each depth: 0:0  1:0  2:0  3:0  4:0  5:0  6:0  7:6  8:0  9:72  10:20  11:58  12:18
 - Distinct depths that killed at least one team: **5**
-- Deadliest single node: **depth 11** — **41%** of all lost runs end there
-- Boss attempts: **152**, boss kills: **12** (**8%** of arrivals)
-- Mean Threat carried into the boss fight: **×4.9** (the exchange rate with §11 — see there)
-- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 52% · **kilnroad** n=147 (49%) win 41%
+- Deadliest single node: **depth 9** — **41%** of all lost runs end there
+- Boss attempts: **144**, boss kills: **18** (**13%** of arrivals)
+- Mean Threat carried into the boss fight: **×5.7** (the exchange rate with §11 — see there)
+- Battlefields drawn, and what each one wins: **greenline** n=153 (51%) win 46% · **kilnroad** n=147 (49%) win 38%
 
 **The old target band, 45%–60%, is reported, not gated** (October audit). It was the band for a
 depth-appropriate 3–5 specialist team, and the contract game does not produce that team: a company is one
 hero plus whoever it hires on the road, so pulling the Threat curve toward this band pulled against the
 first-timer floor and the stake ladder. The run-level gates read **contract delivery** now (§13). The current game is
-**inside the band** (47% vs 45%–60%).
+**3pt below the bottom of the band** (42% vs 45%–60%).
 
 **Distribution shape matters as much as the rate.** A curve where every death
 lands on the same two elite nodes and the boss kills nobody is degenerate even at
@@ -299,7 +299,7 @@ invariants guard the shape — deaths must spread across at least
 3 distinct depths, no single node may end more than 60% of lost runs, and
 the boss must kill a nonzero share of the teams that reach it (design target ≥ 10%).
 
-- Battles that hit the harness cap instead of ending: **1** (must be 0 — the game has no clock, so neither may the measurement)
+- Battles that hit the harness cap instead of ending: **0** (must be 0 — the game has no clock, so neither may the measurement)
 
 ## 7. Skills (is any skill dead, and is any level solved?)
 
@@ -397,7 +397,7 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Sword & Shield | Stunning Bash | +0.0pt | +0.0pt | +11.9pt | **+4.0pt** | +1.5pt | +28.8pt | 100.4 |
 | L2 · Sword & Shield | Snare | +51.4pt | −3.7pt | +8.0pt | **+18.6pt** | −1.5pt | +15.5pt | 91.3 |
 | L2 · Sword & Shield | Wildfire | +51.4pt | +39.8pt | +49.3pt | **+46.8pt** | +26.4pt | +117.1pt | 91.3 |
-| L2 · Sword & Shield | Blessing | +29.0pt | +9.3pt | +2.5pt | **+13.6pt** | +4.5pt | +44.7pt | 91.3 |
+| L2 · Sword & Shield | Blessing | +37.1pt | +9.3pt | +9.5pt | **+18.6pt** | +11.4pt | +51.1pt | 91.3 |
 | L2 · Sword & Shield | Siphon | +0.8pt | +1.2pt | +25.9pt | **+9.3pt** | +12.1pt | +59.5pt | 137.0 |
 | L2 · Sword & Shield | Killing Spree | +14.3pt | +0.0pt | +12.4pt | **+8.9pt** | +3.0pt | +31.6pt | 91.3 |
 | L2 · Sword & Shield | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +1.0pt | +0.0pt | 91.3 |
@@ -412,7 +412,7 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Dagger | Stunning Bash | +1.4pt | +7.7pt | +8.0pt | **+5.7pt** | +1.0pt | +17.0pt | 143.5 |
 | L2 · Dagger | Snare | +4.3pt | +7.7pt | +6.0pt | **+6.0pt** | −2.5pt | +14.5pt | 130.4 |
 | L2 · Dagger | Wildfire | +34.8pt | +9.8pt | +22.9pt | **+22.5pt** | +20.9pt | +53.5pt | 130.4 |
-| L2 · Dagger | Blessing | +29.0pt | +7.3pt | +9.0pt | **+15.1pt** | +7.0pt | +0.9pt | 130.4 |
+| L2 · Dagger | Blessing | +35.2pt | +11.4pt | +17.4pt | **+21.3pt** | +11.9pt | +41.3pt | 130.4 |
 | L2 · Dagger | Siphon | +10.6pt | +16.3pt | +23.6pt | **+16.8pt** | +17.4pt | +41.3pt | 195.6 |
 | L2 · Dagger | Killing Spree | +29.5pt | +12.2pt | +15.4pt | **+19.0pt** | +5.0pt | +35.4pt | 130.4 |
 | L2 · Dagger | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +3.0pt | +0.0pt | 130.4 |
@@ -427,7 +427,7 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Wand | Stunning Bash | +0.0pt | +26.8pt | +35.8pt | **+20.9pt** | +1.0pt | +137.8pt | 52.0 |
 | L2 · Wand | Snare | +1.4pt | +61.4pt | +50.7pt | **+37.9pt** | −4.5pt | +179.9pt | 47.3 |
 | L2 · Wand | Wildfire | +1.4pt | +61.4pt | +48.8pt | **+37.2pt** | +6.0pt | +174.1pt | 47.3 |
-| L2 · Wand | Blessing | +20.5pt | +13.0pt | +9.0pt | **+14.1pt** | +9.0pt | +130.5pt | 47.3 |
+| L2 · Wand | Blessing | +37.6pt | +16.3pt | +14.9pt | **+22.9pt** | +9.0pt | +134.8pt | 47.3 |
 | L2 · Wand | Siphon | +0.0pt | +58.1pt | +34.8pt | **+31.0pt** | +10.4pt | +134.8pt | 70.9 |
 | L2 · Wand | Killing Spree | +1.4pt | +56.5pt | +27.4pt | **+28.4pt** | +6.5pt | +94.2pt | 47.3 |
 | L2 · Wand | Cold Snap | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.5pt | +0.0pt | 47.3 |
@@ -439,34 +439,34 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L3 · Sword & Shield | Volley | +24.2pt | +20.9pt | +24.8pt | **+23.3pt** | +12.4pt | +79.6pt | 114.5 |
 | L3 · Sword & Shield | Bulwark | +7.9pt | +19.2pt | +10.1pt | **+12.4pt** | +7.8pt | +20.1pt | 114.5 |
 | L3 · Sword & Shield | Reaper | +1.2pt | +5.7pt | +1.6pt | **+2.8pt** | +2.3pt | +5.3pt | 137.4 |
-| L3 · Sword & Shield | Rally | +1.7pt | +2.4pt | +7.0pt | **+3.7pt** | +3.1pt | +15.7pt | 114.5 |
+| L3 · Sword & Shield | Rally | +2.9pt | −0.3pt | +7.8pt | **+3.4pt** | +9.3pt | +33.6pt | 114.5 |
 | L3 · Sword & Shield | Momentum | +4.6pt | +5.4pt | +7.4pt | **+5.8pt** | +2.3pt | +26.2pt | 114.5 |
 | L3 · Sword & Shield | Last Rites | +2.5pt | +1.0pt | +1.6pt | **+1.7pt** | +1.2pt | +0.0pt | 114.5 |
 | L3 · Sword & Shield | Warden of Ash | +39.2pt | +38.7pt | +43.0pt | **+40.3pt** | +22.1pt | +127.1pt | 114.5 |
 | L3 · Sword & Shield | Hexblade | +1.2pt | +3.0pt | −0.8pt | **+1.2pt** | −1.9pt | −4.4pt | 114.5 |
-| L3 · Sword & Shield | Stormcaller | +66.3pt | +40.4pt | +43.8pt | **+50.2pt** | +20.5pt | +136.3pt | 154.6 |
+| L3 · Sword & Shield | Stormcaller | +22.5pt | +24.9pt | +25.6pt | **+24.3pt** | +10.5pt | +84.3pt | 154.6 |
 | L3 · Dagger | Berserk | +63.3pt | +12.5pt | +17.1pt | **+30.9pt** | +5.4pt | +73.3pt | 290.9 |
 | L3 · Dagger | Weaponmaster | +64.2pt | +14.1pt | +19.0pt | **+32.4pt** | +6.2pt | +79.4pt | 281.3 |
 | L3 · Dagger | Volley | +60.8pt | +20.5pt | +9.3pt | **+30.2pt** | +10.9pt | +34.2pt | 166.3 |
 | L3 · Dagger | Bulwark | +11.3pt | +11.4pt | +8.5pt | **+10.4pt** | +8.9pt | +39.7pt | 166.3 |
 | L3 · Dagger | Reaper | +0.0pt | +9.8pt | +7.4pt | **+5.7pt** | +1.9pt | +34.2pt | 199.5 |
-| L3 · Dagger | Rally | +12.5pt | +9.4pt | +9.7pt | **+10.5pt** | +7.0pt | +37.0pt | 166.3 |
+| L3 · Dagger | Rally | +26.7pt | +12.1pt | +13.6pt | **+17.5pt** | +12.4pt | +68.2pt | 166.3 |
 | L3 · Dagger | Momentum | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 166.3 |
 | L3 · Dagger | Last Rites | +2.9pt | +0.3pt | +0.4pt | **+1.2pt** | +0.8pt | +0.0pt | 166.3 |
 | L3 · Dagger | Warden of Ash | +67.1pt | +26.6pt | +27.1pt | **+40.3pt** | +15.1pt | +113.9pt | 166.3 |
 | L3 · Dagger | Hexblade | +1.7pt | +5.4pt | +6.2pt | **+4.4pt** | +0.4pt | +26.4pt | 166.3 |
-| L3 · Dagger | Stormcaller | +68.3pt | +65.3pt | +63.6pt | **+65.7pt** | +39.1pt | +260.9pt | 224.4 |
+| L3 · Dagger | Stormcaller | +68.3pt | +58.6pt | +41.1pt | **+56.0pt** | +18.2pt | +173.0pt | 224.4 |
 | L3 · Wand | Berserk | +25.0pt | +26.6pt | +43.0pt | **+31.5pt** | +16.7pt | +678.6pt | 103.7 |
 | L3 · Wand | Weaponmaster | +20.4pt | +19.2pt | +25.2pt | **+21.6pt** | +7.0pt | +415.5pt | 91.4 |
 | L3 · Wand | Volley | +1.2pt | −0.3pt | +6.6pt | **+2.5pt** | +0.0pt | +117.9pt | 59.2 |
 | L3 · Wand | Bulwark | +78.8pt | +74.4pt | +80.2pt | **+77.8pt** | +48.4pt | +1317.9pt | 59.2 |
 | L3 · Wand | Reaper | +0.0pt | +2.7pt | +6.6pt | **+3.1pt** | +6.2pt | +111.9pt | 71.1 |
-| L3 · Wand | Rally | +15.4pt | +12.5pt | +11.2pt | **+13.0pt** | +8.1pt | +145.2pt | 59.2 |
+| L3 · Wand | Rally | +47.9pt | +15.2pt | +14.3pt | **+25.8pt** | +14.0pt | +429.8pt | 59.2 |
 | L3 · Wand | Momentum | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 59.2 |
 | L3 · Wand | Last Rites | +2.5pt | +0.0pt | +0.0pt | **+0.8pt** | +0.0pt | +0.0pt | 59.2 |
 | L3 · Wand | Warden of Ash | +78.8pt | +74.4pt | +80.2pt | **+77.8pt** | +36.8pt | +1317.9pt | 59.2 |
 | L3 · Wand | Hexblade | +50.0pt | +40.1pt | +57.4pt | **+49.1pt** | +19.4pt | +966.7pt | 59.2 |
-| L3 · Wand | Stormcaller | +78.8pt | +64.3pt | +80.2pt | **+74.4pt** | +22.5pt | +1317.9pt | 80.0 |
+| L3 · Wand | Stormcaller | +71.7pt | +45.1pt | +67.1pt | **+61.3pt** | +15.9pt | +1129.8pt | 80.0 |
 
 | Point | Options | Lead of the best over the runner-up | The greedy (heroDps) pick | The measured best |
 |---|--:|--:|---|---|
@@ -476,8 +476,8 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Sword & Shield | 15 | +17.4pt | Siphon | Wildfire |
 | L2 · Dagger | 15 | +6.8pt | Siphon | Long Shot |
 | L2 · Wand | 15 | +0.0pt | Siphon | Shield Wall |
-| L3 · Sword & Shield | 11 | +9.8pt | Berserk | Stormcaller |
-| L3 · Dagger | 11 | +25.5pt | Berserk | Stormcaller |
+| L3 · Sword & Shield | 11 | +16.0pt | Berserk | Warden of Ash |
+| L3 · Dagger | 11 | +15.7pt | Berserk | Stormcaller |
 | L3 · Wand | 11 | +0.0pt | Berserk | Bulwark |
 
 **Invariants.** Every skill moves at least one bench by ≥ +2.0pt on at least one kit (none is
@@ -557,11 +557,11 @@ where a crit penalty has nothing to bite), and graded on the same stop rate as �
 
 | Curse | Rolled mods | `phys` | `magic` | Worst case | Verdict |
 |---|---|--:|--:|--:|---|
-| Vengeful (`cx_vengeful`) | `{"damageMult":1.3,"critChanceAdd":-1}` | −6.4pt | +9.8pt | −6.4pt | real tradeoff |
-| Wild (`cx_wild`) | `{"critChanceAdd":0.25,"critMultAdd":0.9,"rateMult":0.75,"splashAdd":-70}` | +9.1pt | −16.3pt | −16.3pt | real tradeoff |
-| Reckless (`cx_reckless`) | `{"damageMult":1.3,"splashAdd":-45}` | +8.6pt | −5.4pt | −5.4pt | real tradeoff |
-| Erratic (`cx_erratic`) | `{"splashAdd":34,"damageMult":0.75}` | −8.1pt | +6.9pt | −8.1pt | real tradeoff |
-| Frenzied (`cx_frenzied`) | `{"rateMult":2,"damageMult":0.65,"critChanceAdd":-1}` | −8.7pt | +7.6pt | −8.7pt | real tradeoff |
+| Vengeful (`cx_vengeful`) | `{"damageMult":1.3,"critChanceAdd":-1}` | −6.4pt | +5.8pt | −6.4pt | real tradeoff |
+| Wild (`cx_wild`) | `{"critChanceAdd":0.25,"critMultAdd":0.9,"rateMult":0.75,"splashAdd":-70}` | +9.1pt | −19.3pt | −19.3pt | real tradeoff |
+| Reckless (`cx_reckless`) | `{"damageMult":1.3,"splashAdd":-45}` | +8.6pt | −15.4pt | −15.4pt | real tradeoff |
+| Erratic (`cx_erratic`) | `{"splashAdd":34,"damageMult":0.75}` | −8.1pt | +3.6pt | −8.1pt | real tradeoff |
+| Frenzied (`cx_frenzied`) | `{"rateMult":2,"damageMult":0.65,"critChanceAdd":-1}` | −8.7pt | +7.3pt | −8.7pt | real tradeoff |
 
 **Two invariants, not one.** A curse must (a) not be a net upgrade in every
 scenario — the original check — and (b) actually be a *trade*: at least +2.0pt of
@@ -621,75 +621,75 @@ its XP, gold and card — and nothing else.
 
 | Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |
 |---|--:|--:|--:|--:|--:|--:|--:|
-| Strict floor — 10 forced battles, no shops, no hires, random card | 240 | **0%** | 5.3 | 6.3 | 1.0 | depth 6 | 40% |
-| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 240 | **0%** | 7.4 | 8.4 | 3.0 | depth 9 | 41% |
-| route: specials-first (the shipped heuristic) | 240 | **26%** | 9.7 | 4.5 | 4.6 | depth 10 | 27% |
-| route: battles-first | 240 | **18%** | 8.9 | 8.2 | 3.4 | depth 9 | 27% |
-| route: recruits, else battles | 240 | **18%** | 9.2 | 7.4 | 4.3 | depth 10 | 28% |
-| route: adaptive (reads the run state) | 240 | **37%** | 10.0 | 6.6 | 4.7 | depth 10 | 22% |
+| Strict floor — 10 forced battles, no shops, no hires, random card | 240 | **0%** | 5.0 | 6.0 | 1.0 | depth 6 | 33% |
+| Strict floor + 2 free level-1 recruits (depths 3 and 6) | 240 | **0%** | 7.0 | 8.1 | 3.0 | depth 7 | 37% |
+| route: specials-first (the shipped heuristic) | 240 | **25%** | 9.5 | 4.4 | 4.5 | depth 10 | 23% |
+| route: battles-first | 240 | **14%** | 8.4 | 7.8 | 3.3 | depth 9 | 25% |
+| route: recruits, else battles | 240 | **18%** | 8.9 | 7.1 | 4.3 | depth 10 | 28% |
+| route: adaptive (reads the run state) | 240 | **28%** | 9.6 | 6.4 | 4.6 | depth 10 | 20% |
 
 **The routing spread.** Same seeds, same starting heroes, same map — only the
 rule for choosing the next node changes:
 
 | Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |
 |---|--:|--:|--:|--:|
-| route: specials-first (the shipped heuristic) ← **gated (band)** | **26%** | 9.7 | 4.5 | ×11.2 |
-| route: battles-first | **18%** | 8.9 | 8.2 | ×11.2 |
-| route: recruits, else battles | **18%** | 9.2 | 7.4 | ×11.2 |
-| route: adaptive (reads the run state) ← **gated (floor)** | **37%** | 10.0 | 6.6 | ×11.2 |
+| route: specials-first (the shipped heuristic) ← **gated (band)** | **25%** | 9.5 | 4.4 | ×12.0 |
+| route: battles-first | **14%** | 8.4 | 7.8 | ×12.0 |
+| route: recruits, else battles | **18%** | 8.9 | 7.1 | ×12.0 |
+| route: adaptive (reads the run state) ← **gated (floor)** | **28%** | 9.6 | 6.4 | ×12.0 |
 
-Spread across the set: **18% – 37%** — 11 points between the line the report used to grade and the best one it can find.
+Spread across the set: **14% – 28%** — 3 points between the line the report used to grade and the best one it can find.
 
 Survival curve — share of fresh runs that clear each node:
 
 | Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Strict floor | 100% | 100% | 99% | 96% | 80% | 40% | 6% | 5% | 2% | 0% | 0% | 0% |
-| Strict + 2 recruits | 100% | 100% | 100% | 100% | 98% | 95% | 63% | 60% | 19% | 4% | 0% | 0% |
-| specials | 100% | 100% | 100% | 100% | 100% | 98% | 92% | 88% | 77% | 50% | 41% | 26% |
-| battles | 100% | 100% | 100% | 99% | 98% | 93% | 84% | 82% | 55% | 35% | 25% | 18% |
-| recruits | 100% | 100% | 100% | 100% | 100% | 97% | 89% | 87% | 65% | 38% | 26% | 18% |
-| adaptive | 100% | 100% | 100% | 100% | 100% | 98% | 92% | 91% | 78% | 56% | 45% | 37% |
+| Strict floor | 100% | 100% | 99% | 96% | 64% | 31% | 3% | 3% | 2% | 0% | 0% | 0% |
+| Strict + 2 recruits | 100% | 100% | 100% | 100% | 96% | 90% | 53% | 50% | 13% | 3% | 1% | 0% |
+| specials | 100% | 100% | 100% | 100% | 100% | 96% | 89% | 84% | 72% | 49% | 40% | 25% |
+| battles | 100% | 100% | 100% | 98% | 96% | 87% | 75% | 73% | 47% | 27% | 20% | 14% |
+| recruits | 100% | 100% | 100% | 100% | 98% | 94% | 86% | 84% | 60% | 33% | 23% | 18% |
+| adaptive | 100% | 100% | 100% | 100% | 99% | 95% | 88% | 86% | 73% | 53% | 38% | 28% |
 
-Nodes-cleared histogram (strict): 0:0  1:0  2:2  3:7  4:39  5:97  6:81  7:1  8:8  9:4  10:1  11:0  12:0
-Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:1  4:0  5:4  6:14  7:9  8:27  9:65  10:22  11:36  12:62
+Nodes-cleared histogram (strict): 0:0  1:0  2:2  3:8  4:76  5:80  6:66  7:2  8:2  9:4  10:0  11:0  12:0
+Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:1  4:0  5:9  6:17  7:12  8:28  9:55  10:22  11:36  12:60
 
 Average nodes cleared by starting archetype (gated line): 
-**fighter** 9.5, **rogue** 9.4, **mystic** 10.2.
+**fighter** 9.1, **rogue** 9.4, **mystic** 10.0.
 
 **Findings.**
 
-- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 26% when it does what the game offers.
-- **The largest single term in a fresh run is the route.** 11 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
-- **A stop is a price now, not a trap.** The specials-first line fights 3.6 fewer battles than the battles-first line and wins 8 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
-- The curve has a real bite at every node rather than one cliff: no single depth ends more than 27% of gated-line runs (depth 10 is the worst).
+- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 25% when it does what the game offers.
+- **The largest single term in a fresh run is the route.** 3 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
+- **A stop is a price now, not a trap.** The specials-first line fights 3.3 fewer battles than the battles-first line and wins 11 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
+- The curve has a real bite at every node rather than one cliff: no single depth ends more than 23% of gated-line runs (depth 10 is the worst).
 - Depths 1–3 are not a wall — 100% of gated-line zero-meta runs clear depth 3 — and neither is any single later node.
 
 **Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through
-all twelve layers and wins 47% of the time; the zero-meta first run, played the
-way the game is actually laid out, wins 26% on the first-timer line and 37% on the best
+all twelve layers and wins 42% of the time; the zero-meta first run, played the
+way the game is actually laid out, wins 25% on the first-timer line and 28% on the best
 one. The gap between those numbers is what the meta layer and the player's own
 learning are worth, and it is now a difference in *how much slack you have*, not
 the difference between a game and a grind gate.
 
 **The two bands meet the boss at the same Threat.** §6 and a routed first run both fight
-every layer at `threatAtLayer`, so the final boss is ×4.9 in §6 and ×11.2 on the first-timer line —
+every layer at `threatAtLayer`, so the final boss is ×5.7 in §6 and ×12.0 on the first-timer line —
 the exchange-rate problem the old special step was introduced to narrow (a routed run used to
 meet the boss at ×11–15 against §6's ×30) is gone by construction: a wave-table dial now lands
 equally hard on both sweeps.
 
 **The four gates.**
 
-1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **37%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
-2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **26%**.
-3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **26%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
-4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 47% against this sweep's best line at 37%, and §12 puts the same comparison on a like-for-like footing.
+1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **28%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
+2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **25%**.
+3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **25%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
+4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 42% against this sweep's best line at 28%, and §12 puts the same comparison on a like-for-like footing.
 
 The design *target* inside the band remains **15–25%** on the gated line. The band
 is wide partly because this is a Monte Carlo over 240 runs of a *modelled* player
 (1σ ≈ 3.2pt), and partly for a reason that belongs in the open.
 
-**The shipped number is 26%.** Two structural corrections moved it, and both were
+**The shipped number is 25%.** Two structural corrections moved it, and both were
 the harness being wrong rather than the game changing:
 
 | Correction | What it was |
@@ -751,14 +751,14 @@ two standard errors of that paired difference.
 
 | Hub state | specials | battles | recruits | adaptive | worst gated Δ |
 |---|--:|--:|--:|--:|--:|
-| zero HQ | 27% (+0±0) | 18% (+0±0) | 19% (+0±0) | 37% (+0±0) | +0pt |
-| Opening deal 3 (dressed, Rare body, pick 1 of 4) | 32% (+6±7) | 20% (+3±6) | 28% (+10±6) | 39% (+2±7) | +2pt |
-| Opening deal 5 (+ Level 2 skill, a second hero) | 36% (+9±8) | 32% (+15±8) | 33% (+15±8) | 47% (+10±9) | +9pt |
-| Hiring Hall | 36% (+9±7) | 17% (−1±6) | 25% (+6±6) | 31% (−5±8) | −5pt |
-| Scouts 2 | 25% (−2±9) | 16% (−2±7) | 25% (+6±7) | 35% (−2±9) | −2pt |
-| Pack slots 10 | 27% (+0±0) | 18% (+0±0) | 19% (+0±0) | 37% (+0±0) | +0pt |
-| Focus Ironvein +60% | 26% (−0±4) | 17% (−0±4) | 15% (−3±4) | 35% (−1±4) | −3pt |
-| everything the HQ sells | 42% (+16±9) | 30% (+12±8) | 29% (+10±8) | 47% (+10±9) | +10pt |
+| zero HQ | 25% (+0±0) | 13% (+0±0) | 18% (+0±0) | 29% (+0±0) | +0pt |
+| Opening deal 3 (dressed, Rare body, pick 1 of 4) | 30% (+4±6) | 16% (+3±5) | 22% (+5±6) | 33% (+5±7) | +3pt |
+| Opening deal 5 (+ Level 2 skill, a second hero) | 27% (+1±8) | 30% (+16±7) | 28% (+10±8) | 40% (+11±8) | +1pt |
+| Hiring Hall | 31% (+6±6) | 16% (+3±6) | 20% (+3±6) | 30% (+1±8) | +1pt |
+| Scouts 2 | 21% (−4±8) | 10% (−3±6) | 16% (−2±7) | 30% (+2±9) | −4pt |
+| Pack slots 10 | 25% (+0±0) | 13% (+0±0) | 18% (+0±0) | 29% (+0±0) | +0pt |
+| Focus Ironvein +60% | 21% (−4±4) | 13% (+0±4) | 17% (−0±4) | 28% (−1±5) | −4pt |
+| everything the HQ sells | 34% (+9±8) | 23% (+10±7) | 26% (+8±8) | 41% (+13±9) | +8pt |
 
 **The invariant.** No HQ state — any office alone, or everything the HQ sells — may
 measure below zero HQ by more than the paired
@@ -769,7 +769,7 @@ worse, only that it did.
 
 At 210 runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; `FW_META_RUNS=500` halves it for a fit.
 
-**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+15pt** over zero HQ at its best (specials +9, battles +15, recruits +15, adaptive +10). The gate asks for ≥ 8%: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.
+**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+16pt** over zero HQ at its best (specials +1, battles +16, recruits +10, adaptive +11). The gate asks for ≥ 8%: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.
 
 **The breadth each service promises is checked separately**, because a horizontal
 service is not supposed to move the win rate at all — it is supposed to widen the
@@ -784,17 +784,17 @@ run. A card that promises forks has to produce forks:
 
 **Findings.**
 
-- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 38% → 0%, mixed forks 53% → 81%, and Elites with no way past 28% → 0%. Best line +6pt.
-- **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +15pt at its best and then finished (levels 1–3 alone: +10pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
-- **Pack slots and focus** are levers on the run's texture, not its odds: +0pt and −0pt at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of 2 a field — a balance lever the tuning pass owns.
-- **Everything the HQ sells** reads +16pt at its best.
+- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 38% → 0%, mixed forks 53% → 81%, and Elites with no way past 28% → 0%. Best line +2pt.
+- **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +16pt at its best and then finished (levels 1–3 alone: +5pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
+- **Pack slots and focus** are levers on the run's texture, not its odds: +0pt and +0pt at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of 2 a field — a balance lever the tuning pass owns.
+- **Everything the HQ sells** reads +13pt at its best.
 
 ## 13. Stake tiers (is carrying more cargo ever worth it?)
 
 **What changed (the mercenary company).** A run is a contract now, and the difficulty
 step is its **stake**: every crate of cargo carried is one step — **one more elite an act**, on
 the map where the player can see it, and raiders on the road's **last leg** (act 3) stronger and
-greedier (+12% / +22% / +36% / +50% / +74% / +110% / +350% / +450% HP and theft at 1–8 crates) — and costs
+greedier (+10% / +14% / +27% / +35% / +43% / +54% / +64% / +74% HP and theft at 1–8 crates) — and costs
 50 gold from the bank. Delivered, the crates pay: the first city sells half the load at 100 gold
 a crate (the stake back), the second the rest but one at 130, and one crate rides to the destination,
 which pays 400 for it and a completion bonus that rises 20 gold a crate; a skill comes at
@@ -815,15 +815,15 @@ brings home: 25% of the road's gold (kill gold, node purses, sales). The company
 
 | Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |
 |--:|--:|---|--:|--:|--:|--:|--:|--:|--:|
-| 0 | 0 | escort · standard raiders | 1/5 | 33% | 154.7 | 6% | **154.2** | — | 456.8 |
-| 1 | 50 | 1 more elite an act · Past the second city, raiders 12% stronger and steal 12% more | 2/5 | 28% | 200.1 | 6% | **199.1** | +45 | 478.4 |
-| 2 | 100 | 2 more elites an act · Past the second city, raiders 22% stronger and steal 22% more | 2/5 | 22% | 207.0 | 6% | **208.7** | +10 | 464.9 |
-| 3 | 150 | 3 more elites an act · Past the second city, raiders 36% stronger and steal 36% more | 3/5 | 19% | 246.9 | 5% | **248.4** | +40 | 502.4 |
-| 4 | 200 | 4 more elites an act · Past the second city, raiders 50% stronger and steal 50% more | 3/5 | 15% | 289.6 | 6% | **291.1** | +43 | 529.7 |
-| 5 | 250 | 5 more elites an act · Past the second city, raiders 74% stronger and steal 74% more | 4/5 | 9% | 307.7 | 6% | **309.5** | +18 | 518.6 |
-| 6 | 300 | 6 more elites an act · Past the second city, raiders 110% stronger and steal 110% more | 4/5 | 5% | 341.6 | 6% | **343.5** | +34 | 525.4 |
-| 7 | 350 | 7 more elites an act · Past the second city, raiders 350% stronger and steal 350% more | 5/5 | 1% | 363.4 | 6% | **365.3** | +22 | 518.6 |
-| 8–8 | | not measured: the tier below already delivers under 1% | | | | | | | |
+| 0 | 0 | escort · standard raiders | 1/5 | 27% | 141.3 | 8% | **139.4** | — | 406.8 |
+| 1 | 50 | 1 more elite an act · Past the second city, raiders 10% stronger and steal 10% more | 2/5 | 24% | 188.9 | 8% | **186.6** | +47 | 440.9 |
+| 2 | 100 | 2 more elites an act · Past the second city, raiders 14% stronger and steal 14% more | 2/5 | 21% | 196.3 | 8% | **195.1** | +8 | 444.8 |
+| 3 | 150 | 3 more elites an act · Past the second city, raiders 27% stronger and steal 27% more | 3/5 | 16% | 228.3 | 8% | **227.0** | +32 | 460.0 |
+| 4 | 200 | 4 more elites an act · Past the second city, raiders 35% stronger and steal 35% more | 3/5 | 16% | 283.8 | 8% | **283.3** | +56 | 517.8 |
+| 5 | 250 | 5 more elites an act · Past the second city, raiders 43% stronger and steal 43% more | 4/5 | 14% | 319.7 | 8% | **321.1** | +38 | 550.0 |
+| 6 | 300 | 6 more elites an act · Past the second city, raiders 54% stronger and steal 54% more | 4/5 | 12% | 362.0 | 8% | **361.2** | +40 | 575.5 |
+| 7 | 350 | 7 more elites an act · Past the second city, raiders 64% stronger and steal 64% more | 5/5 | 9% | 392.3 | 8% | **392.4** | +31 | 592.0 |
+| 8 | 400 | 8 more elites an act · Past the second city, raiders 74% stronger and steal 74% more | 5/5 | 7% | 435.0 | 8% | **434.7** | +42 | 623.6 |
 
 **The invariants.** The run-level gates read **contract delivery** (October audit, designer item 1):
 
@@ -839,13 +839,13 @@ brings home: 25% of the road's gold (kill gold, node purses, sales). The company
 
 Gates 2 and 3 hold on this ladder and on the veteran's (§13c); the veteran's escort and max stake have bands of their own.
 
-**Zero-meta escort: 33%** (±1.9pt, 1σ) against 20%–30% — **outside the band**.
+**Zero-meta escort: 27%** (±1.8pt, 1σ) against 20%–30% — inside the band by more than 1σ.
 
-**Zero-meta ladder: each crate costs 23% of the tier below's delivery** on the fit (±1.4pt, 1σ; floor 8%). Step by step: 1c +4.5pt ±1.9 · 2c +6.8pt ±1.7 · 3c +2.3pt ±1.6 · 4c +4.0pt ±1.3 · 5c +5.8pt ±1.2 · 6c +4.5pt ±1.0 · 7c +4.3pt ±0.9 (a cost per crate, paired 1σ).
+**Zero-meta ladder: each crate costs 14% of the tier below's delivery** on the fit (±1.1pt, 1σ; floor 8%). Step by step: 1c +3.0pt ±1.8 · 2c +3.2pt ±1.6 · 3c +4.5pt ±1.4 · 4c +0.7pt ±1.3 · 5c +1.3pt ±1.1 · 6c +2.5pt ±0.9 · 7c +3.2pt ±0.8 · 8c +2.2pt ±0.8 (a cost per crate, paired 1σ).
 
-Measured: delivery by tier is 33% → 28% → 22% → 19% → 15% → 9% → 5% → 1%; contract pay (cash-out line) 154.2 → 199.1 → 208.7 → 248.4 → 291.1 → 309.5 → 343.5 → 365.3; bank net 456.8 → 478.4 → 464.9 → 502.4 → 529.7 → 518.6 → 525.4 → 518.6.
+Measured: delivery by tier is 27% → 24% → 21% → 16% → 16% → 14% → 12% → 9% → 7%; contract pay (cash-out line) 139.4 → 186.6 → 195.1 → 227.0 → 283.3 → 321.1 → 361.2 → 392.4 → 434.7; bank net 406.8 → 440.9 → 444.8 → 460.0 → 517.8 → 550.0 → 575.5 → 592.0 → 623.6.
 
-**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +45, 2c +54, 3c +94, 4c +137, 5c +155, 6c +189, 7c +211 — the least is +45 gold, 25 above the cap.
+**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +47, 2c +56, 3c +88, 4c +144, 5c +182, 6c +222, 7c +253, 8c +295 — the least is +47 gold, 27 above the cap.
 
 **Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone
 crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).
@@ -863,19 +863,19 @@ stake elite stands where the map leaves a way round it: what a crate costs the v
 
 | Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |
 |--:|--:|--:|--:|--:|
-| 0 | 43% | 2.0pt | 193.4 | 617.8 |
-| 1 | 36% | 2.0pt | 239.1 | 630.6 |
-| 2 | 32% | 1.9pt | 299.4 | 671.5 |
-| 3 | 27% | 1.8pt | 324.0 | 665.3 |
-| 4 | 21% | 1.6pt | 364.6 | 670.6 |
-| 5 | 16% | 1.5pt | 386.0 | 659.5 |
-| 6 | 9% | 1.2pt | 423.3 | 657.5 |
-| 7 | 3% | 0.7pt | 433.1 | 616.2 |
-| 8 | 2% | 0.5pt | 497.2 | 671.3 |
+| 0 | 38% | 2.0pt | 182.8 | 575.0 |
+| 1 | 32% | 1.9pt | 229.7 | 591.6 |
+| 2 | 30% | 1.9pt | 286.1 | 642.5 |
+| 3 | 26% | 1.8pt | 317.8 | 649.3 |
+| 4 | 23% | 1.7pt | 375.2 | 692.8 |
+| 5 | 20% | 1.6pt | 407.9 | 709.0 |
+| 6 | 19% | 1.6pt | 473.4 | 765.1 |
+| 7 | 15% | 1.5pt | 502.9 | 774.2 |
+| 8 | 14% | 1.4pt | 568.2 | 827.9 |
 
-**Veteran escort: 43%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 2%** against 10%–20% — **outside the band**. The veteran's escort leads the zero-meta escort by +10.3pt: what the meta layer and the player's read are worth.
+**Veteran escort: 38%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 14%** against 10%–20% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +11.2pt: what the meta layer and the player's read are worth.
 
-**Veteran's ladder: each crate costs 22% of the tier below's delivery** on the fit (±1.0pt, 1σ; floor 8%). Step by step: 1c +7.0pt ±2.1 · 2c +4.0pt ±1.9 · 3c +5.3pt ±1.5 · 4c +6.3pt ±1.2 · 5c +4.7pt ±1.1 · 6c +6.5pt ±1.1 · 7c +6.5pt ±1.0 · 8c +1.3pt ±0.5 (a cost per crate, paired 1σ).
+**Veteran's ladder: each crate costs 12% of the tier below's delivery** on the fit (±0.9pt, 1σ; floor 8%). Step by step: 1c +6.2pt ±2.1 · 2c +2.3pt ±1.8 · 3c +3.5pt ±1.5 · 4c +3.2pt ±1.5 · 5c +3.0pt ±1.2 · 6c +1.5pt ±1.0 · 7c +3.5pt ±1.0 · 8c +1.5pt ±1.0 (a cost per crate, paired 1σ).
 
 ### 13b. The routes — each company's ground, as an escort
 
@@ -886,11 +886,11 @@ off the others is a lever for the tuning pass.
 
 | Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
 |---|---|--:|--:|--:|
-| Peppercorn Co. (Spice) | Wildfire | 38% | 162.1 | 493.5 |
-| Easel House (Art) | Flooded canals | 32% | 160.8 | 465.1 |
-| Ironvein (Metals & Stones) | Quarry boulders | 37% | 160.5 | 477.1 |
-| Rosethread (Silk) | Fords and fires | 37% | 160.5 | 482.7 |
-| Moonquill (Scrolls & Arcana) | Cursed ground | 34% | 157.3 | 465.6 |
+| Peppercorn Co. (Spice) | Wildfire | 28% | 142.6 | 413.8 |
+| Easel House (Art) | Flooded canals | 25% | 137.9 | 402.2 |
+| Ironvein (Metals & Stones) | Quarry boulders | 28% | 144.9 | 425.6 |
+| Rosethread (Silk) | Fords and fires | 29% | 141.0 | 413.4 |
+| Moonquill (Scrolls & Arcana) | Cursed ground | 30% | 143.9 | 424.0 |
 
 ## 14. Run variety — battlefields and wave composition
 
@@ -1063,15 +1063,15 @@ because a 20-HP base dies to the four points a 96%-stop wave puts through.
 
 | Depth | Kind | Variant | Base HP leaked (mean of 14 teams × 2 fields) | vs the canonical shape |
 |--:|---|---|--:|--:|
-| 8 | normal | Patrol | 3.01 | ×1.00 |
-| 8 | normal | Swarm | 3.00 | ×1.00 |
-| 8 | normal | Bombard | 5.22 | ×1.73 |
-| 8 | normal | Column | 5.62 | ×1.86 |
-| 8 | elite | Plated Column | 2.36 | ×1.00 |
-| 8 | elite | Warded Host | 1.71 | ×0.73 |
-| 8 | elite | Swift Raid | 3.12 | ×1.32 |
+| 8 | normal | Patrol | 3.33 | ×1.00 |
+| 8 | normal | Swarm | 3.68 | ×1.10 |
+| 8 | normal | Bombard | 5.10 | ×1.53 |
+| 8 | normal | Column | 5.04 | ×1.51 |
+| 8 | elite | Plated Column | 2.71 | ×1.00 |
+| 8 | elite | Warded Host | 1.96 | ×0.72 |
+| 8 | elite | Swift Raid | 3.48 | ×1.28 |
 
-Widest unadapted spread: **×1.87** at depth 8 normal (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely. Pressure over the road's Threat, raised until the canonical shape leaks ≥ 2 base HP: depth 8 normal ×1.32, depth 8 elite ×1.32.
+Widest unadapted spread: **×1.77** at depth 8 elite (ceiling ×2.00). Measured on **fixed** teams that cannot counter-pick, so it is the ceiling on what the shape is worth against a player who ignores the preview entirely. Pressure over the road's Threat, raised until the canonical shape leaks ≥ 2 base HP: depth 8 normal ×1.15, depth 8 elite ×1.15.
 
 **What this gate is worth, stated plainly.** `budgetScale` is fitted *against*
 this number, so a green §14c is not independent evidence that the shapes are
@@ -1156,43 +1156,43 @@ paired seeds, against the same runs without it.
 | `swarm` | 90 tiny fast runners — a pure rate/splash test | 40% |
 | `armour` | 12 Siege Barrels, 30% physical resist, ×1.8 HP | 39% |
 | `line` | a depth-8 wave at ×1.25 swarm pressure | 29% |
-| `magic` | a splash mystic — the half of the roster a STR card cannot reach | 36% |
+| `magic` | a splash mystic — the half of the roster a STR card cannot reach | 30% |
 
 6 seeds per cell.
 
 | Relic | Kind | Rarity | `swarm` | `armour` | `line` | `magic` | Mean | Worst | Stated downside |
 |---|---|---|--:|--:|--:|--:|--:|--:|---|
 | Drillmaster's Ledger | stat | Common | +1.1pt | +2.8pt | +1.2pt | +2.1pt | **+1.8pt** | +1.1pt | — |
-| Watch Hourglass | stat | Common | +1.1pt | +2.8pt | +1.4pt | +0.5pt | **+1.4pt** | +0.5pt | — |
-| Hunting Horn | stat | Rare | +4.4pt | +1.4pt | +1.2pt | +2.1pt | **+2.3pt** | +1.2pt | — |
-| Keen Whetstone | stat | Rare | +0.0pt | +5.6pt | +2.3pt | +4.0pt | **+3.0pt** | +0.0pt | — |
-| Whetstone Pact | stat | Epic | +12.2pt | −5.6pt | −0.4pt | +18.8pt | **+6.3pt** | −5.6pt | your heroes never crit |
-| Bloodletting | stat | Epic | −6.7pt | +13.9pt | +3.9pt | +17.0pt | **+7.0pt** | −6.7pt | −30% attack speed · all your heroes |
-| Executioner’s Oath | stat | Legendary | −3.3pt | +18.1pt | +1.6pt | +0.5pt | **+4.2pt** | −3.3pt | −12% attack speed · all your heroes |
-| Wildfire Pact | stat | Legendary | +0.0pt | −5.6pt | −0.6pt | +17.3pt | **+2.8pt** | −5.6pt | −40% damage per hit · all your heroes |
-| Iron Vigil | stat | Legendary | +27.8pt | +4.2pt | +2.1pt | −7.7pt | **+6.6pt** | −7.7pt | −20% damage · all your heroes |
+| Watch Hourglass | stat | Common | +1.1pt | +2.8pt | +1.4pt | +0.4pt | **+1.4pt** | +0.4pt | — |
+| Hunting Horn | stat | Rare | +4.4pt | +1.4pt | +1.2pt | +1.6pt | **+2.2pt** | +1.2pt | — |
+| Keen Whetstone | stat | Rare | +0.0pt | +5.6pt | +2.3pt | +2.9pt | **+2.7pt** | +0.0pt | — |
+| Whetstone Pact | stat | Epic | +12.2pt | −5.6pt | −0.4pt | +12.1pt | **+4.6pt** | −5.6pt | your heroes never crit |
+| Bloodletting | stat | Epic | −8.9pt | +4.2pt | +1.0pt | +8.0pt | **+1.1pt** | −8.9pt | −34% attack speed · all your heroes |
+| Executioner’s Oath | stat | Legendary | −3.3pt | +18.1pt | +1.6pt | −2.0pt | **+3.6pt** | −3.3pt | −12% attack speed · all your heroes |
+| Wildfire Pact | stat | Legendary | +0.0pt | −5.6pt | −0.6pt | +20.0pt | **+3.5pt** | −5.6pt | −40% damage per hit · all your heroes |
+| Iron Vigil | stat | Legendary | +27.8pt | +4.2pt | +2.1pt | −6.2pt | **+7.0pt** | −6.2pt | −20% damage · all your heroes |
 | Warding Stone | rule | Rare | +2.2pt | +16.7pt | +2.3pt | +1.5pt | **+5.7pt** | +1.5pt | — |
 | Bloodhound Banner | rule | Rare | +13.3pt | +8.3pt | +1.9pt | +0.0pt | **+5.9pt** | +0.0pt | — |
-| Ambush Drum | rule | Rare | +7.8pt | +2.8pt | +2.3pt | +11.9pt | **+6.2pt** | +2.3pt | — |
-| Veteran's Cloak | rule | Epic | +8.9pt | +1.4pt | +1.4pt | +7.0pt | **+4.6pt** | +1.4pt | — |
+| Ambush Drum | rule | Rare | +7.8pt | +2.8pt | +2.3pt | +10.7pt | **+5.9pt** | +2.3pt | — |
+| Veteran's Cloak | rule | Epic | +8.9pt | +1.4pt | +1.4pt | +8.8pt | **+5.1pt** | +1.4pt | — |
 
 | Rarity (stat relics) | Relics | Mean value |
 |---|--:|--:|
 | Common | 2 | **+1.6pt** |
-| Rare | 2 | **+2.6pt** |
-| Epic | 2 | **+6.6pt** |
-| Legendary | 3 | **+4.5pt** |
+| Rare | 2 | **+2.4pt** |
+| Epic | 2 | **+2.8pt** |
+| Legendary | 3 | **+4.7pt** |
 
-**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 40%):
+**The run-rule relics, on whole runs.** Each held from the first node, 150 paired runs on the adaptive line, against the same runs without it (zero meta 31%):
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 35% | −5±8pt |
-| Field Surgeon's Kit | Common | After every fight you win, 20% of the cargo is rounded up. | 41% | +1±3pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 37% | −3±9pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 39% | −1±9pt |
-| Tithe Box | Common | +25 gold for every fight you win. | 39% | −1±3pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 41% | +1±5pt |
+| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 35% | +4±8pt |
+| Field Surgeon's Kit | Common | After every fight you win, 20% of the cargo is rounded up. | 32% | +1±4pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 32% | +1±8pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 28% | −3±8pt |
+| Tithe Box | Common | +25 gold for every fight you win. | 29% | −1±3pt |
+| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 31% | +1±4pt |
 
 **Declared, not dealt.** none — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
 
@@ -1223,7 +1223,7 @@ same heroes, same seeds — the two columns differ only in the thing the row nam
 | Champion | Phase | Triggered |
 |---|---|--:|
 | Warlord Grukk | war-cry at 66% / 33% (allies ×1.4 pace for 4s) | 21 |
-| Powderkeg King | TNT at the Gate every 8s (1 Gate each); every 4s below 50% | 113 lobs, 113.0 Gate damage |
+| Powderkeg King | TNT at the Gate every 8s (1 Gate each); every 4s below 50% | 110 lobs, 110.0 Gate damage |
 | The Colossus Keg | splits into two halves at 50% | 10 |
 | (all) | `bossPhase` events | 41 |
 
@@ -1240,19 +1240,19 @@ on both fields. Metric: **base HP lost** per node (lower is better), mean over t
 
 | Input policy | Base HP lost / node | vs the modelled player |
 |---|--:|--:|
-| Rally Horn — never | 2.68 | +0.47 |
-| Rally Horn — first tick of each sub-wave | 2.23 | +0.02 |
-| Rally Horn — when enough of the column is in reach (the modelled player) | 2.21 | — |
-| Rally Horn — on the last one or two bodies | 2.90 | +0.69 |
-| Targeting: Threat instead of First | 2.15 | −0.06 |
-| Breather: a fighter onto the first post | 2.40 | +0.19 |
-| Breather: weakest post → best-covered free post | 3.63 | +1.42 |
-| Breather: best hero → worst free post | 3.73 | +1.52 |
+| Rally Horn — never | 3.05 | +0.66 |
+| Rally Horn — first tick of each sub-wave | 2.56 | +0.17 |
+| Rally Horn — when enough of the column is in reach (the modelled player) | 2.38 | — |
+| Rally Horn — on the last one or two bodies | 2.50 | +0.11 |
+| Targeting: Threat instead of First | 2.70 | +0.32 |
+| Breather: a fighter onto the first post | 2.58 | +0.20 |
+| Breather: weakest post → best-covered free post | 3.40 | +1.02 |
+| Breather: best hero → worst free post | 4.76 | +2.37 |
 
-- **The Rally Horn** used at the best timing saves **0.47** base HP a node over never pressing it; **timing alone** (best vs worst of three) spans **0.69**.
+- **The Rally Horn** used at the best timing saves **0.66** base HP a node over never pressing it; **timing alone** (best vs worst of three) spans **0.17**.
 - **Targeting** (five orders) spans **0.71**/node.
-- **The breather's move** spans **1.52**/node across none / sponge / cover / uncover.
-- **Before Phase 3a** (continuous wave, no kit, no commands, no breathers) the targeting order was the only in-battle input, and its four orders spanned **2.22**/node on a baseline of 4.37 (**51%** of it). Now the best-vs-worst policy spread across every input is **1.58**/node on a baseline of 2.21 (**71%** of it).
+- **The breather's move** spans **2.37**/node across none / sponge / cover / uncover.
+- **Before Phase 3a** (continuous wave, no kit, no commands, no breathers) the targeting order was the only in-battle input, and its four orders spanned **1.97**/node on a baseline of 5.00 (**39%** of it). Now the best-vs-worst policy spread across every input is **2.38**/node on a baseline of 2.38 (**100%** of it).
 
 ### 16e. Status interactions — rules, measured on and off
 
@@ -1285,10 +1285,10 @@ difficulty on the live engine.
 
 | Field | Orientation | Fights | Stopped (cleared) | Gate HP lost (mean) |
 |---|---|--:|--:|--:|
-| The Green Line | landscape (`greenline`) | 48 | 98% | 0.63 |
-| The Green Line | portrait (`greenline-tall`) | 48 | 98% | 0.63 |
-| The Kiln Road | landscape (`kilnroad`) | 48 | 96% | 1.13 |
-| The Kiln Road | portrait (`kilnroad-tall`) | 48 | 96% | 1.13 |
+| The Green Line | landscape (`greenline`) | 48 | 96% | 0.65 |
+| The Green Line | portrait (`greenline-tall`) | 48 | 96% | 0.65 |
+| The Kiln Road | landscape (`kilnroad`) | 48 | 94% | 1.85 |
+| The Kiln Road | portrait (`kilnroad-tall`) | 48 | 94% | 1.85 |
 
 **The gates.** Path length within ±0.5%, the same slot ids, every slot's coverage within 2% at 96 / 150 / 168px, and on the battery a stop rate within 3pt and Gate HP lost within ±5% of the landscape field. The twins are an isometry of the originals, so the geometry reads 0 by construction and the battery reads identical fights: what these gates really hold is **the engine's isotropy** — a future rule that treats x and y differently (a lob that falls "down", a spawn edge that assumes the left) turns them red instead of quietly making one device class easier.
 
@@ -1296,7 +1296,7 @@ difficulty on the live engine.
 
 **What it is.** The endgame charter (`run/charter.ts`): it opens once every skill card and every Level 1–3 item kind is
 unlocked. A **7,000 gold** fee from the bank, no crates, waypoint cities that pay nothing, no cash-out; delivered, the
-destination pays **35,000 gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns
+destination pays **30,000 gold** whatever the cargo, and one Sovereign item kind unlocks. Win or lose it earns
 standing with all five companies — each what an escort that ended the same way earns with its one (`standing.charterStandingXp`;
 not priced in gold below). It deals every pool the player owns for no company (no route weighting, no HQ focus), and every
 company sets a condition at once:
@@ -1314,36 +1314,22 @@ opens the door — §13c's **veteran**, who reads its skill offers (`build: 'bes
 
 | Road | Delivered | Bank net a run (gold) |
 |---|--:|--:|
-| Escort on Rosethread's road (for scale) | 46% | 630 |
-| 4 crates on Rosethread's road (a good run, for scale) | 20% | 661 |
-| **Sovereign Route** · no Sovereign item owned | 30% | 3626 |
-| **Sovereign Route** · all five Sovereign items owned | 32% | 4649 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 39% | 7013 |
-| Sovereign Route without Rosethread's double prices | 32% | 4510 |
-| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 34% | 5159 |
+| Escort on Rosethread's road (for scale) | 38% | 562 |
+| 4 crates on Rosethread's road (a good run, for scale) | 18% | 635 |
+| **Sovereign Route** · no Sovereign item owned | 26% | 1140 |
+| **Sovereign Route** · all five Sovereign items owned | 30% | 2443 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 33% | 3173 |
+| Sovereign Route without Rosethread's double prices | 26% | 1024 |
+| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 35% | 3897 |
 
-**The charter's delivery rate for this company: 30%** (32% once all five Sovereign items are owned). The payout is 5× the fee, so the charter breaks even at a 20% delivery rate; measured, a charter is worth **+3626 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 26%** (30% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+1140 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 630 gold net from an escort and 661 from a 4-crate contract (cash-out line), so the 7,000 fee is about **10.6 good runs** of savings.
+**The fee against savings.** The same company banks 562 gold net from an escort and 635 from a 4-crate contract (cash-out line), so the 7,000 fee is about **11.0 good runs** of savings.
 
-**Each condition, lifted one at a time** (delivery against the full charter's 30%): without the ground 39% (+9.5pt), without the double prices 32% (+2.4pt), without the muster 34% (+4.3pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+**Each condition, lifted one at a time** (delivery against the full charter's 26%): without the ground 33% (+6.7pt), without the double prices 26% (−0.5pt), without the muster 35% (+9.0pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
-_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have). The five conditions are the designer's and are as built._
+_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+1140 against +562: 2.0×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
 
 ## Verdict
 
-❌ **10 balance issue(s) detected:**
-
-- Support "Wand + Blessing" holds Threat ×10.76 — not the required 10% better than the same hero (Wand · Level 2) holding its level's damage skill instead (×9.80). The aura is not paying for the damage it costs.
-- Support "Wand + Rally" holds Threat ×11.28 — not the required 10% better than the same hero (Wand · Level 3) holding its level's damage skill instead (×10.76). The aura is not paying for the damage it costs.
-- Support "Sword & Shield + Blessing" holds Threat ×10.27 — not the required 10% better than the same hero (Sword & Shield · Level 2) holding its level's damage skill instead (×14.23). The aura is not paying for the damage it costs.
-- 1 Monte Carlo battle(s) ended on the harness cap rather than a win or a loss — the clock is deciding runs again.
-- The boss kills only 8% of the teams that reach it, below the 10% design target.
-- Skills at L3 · Dagger are solved: Stormcaller leads the runner-up by +25.5pt on the three-bench mean (ceiling +20.0pt).
-- Strict-floor difficulty is a cliff, not a curve: depth 6 alone ends 40% of zero-meta solo runs (max 40%).
-- A zero-meta escort delivers 33%, outside its 20%–30% band.
-- A veteran's max stake (8 crates) delivers 2%, outside its 10%–20% band.
-- Relic rarity ladder is inverted: Legendary stat relics mean +4.5pt, below Epic at +6.6pt. Rarity is the only signal the offer gives before the pick.
-
-_Several of these are expected to be red: they are the findings this rebuild was
-written to surface. They are deliberately **not** tuned to pass._
+✅ **All balance invariants passed.**
