@@ -3146,3 +3146,89 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
   closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
   readability 4/5, hierarchy 4/5, polish 4/5.
+
+- **2026-10-06 — A sword swings, a bow shoots, and the hero holds its gear.**
+  The designer: "if a weapon is melee it shouldnt fire projectiles, and the
+  items should display on the character and then the projectiles should match
+  the effects of the weapon and melle if it has effects should show too".
+  Every hit is still a projectile in the engine (its flight is the damage
+  timing; the engine, `npm run balance` and the determinism tests are
+  untouched). What is DRAWN now comes from the weapon (`render/attackLook`):
+  a sword, axe, greatsword or warhammer (or a skill's `grantsMelee`) draws no
+  projectile at all — its flight is a blade crescent swept round the hero
+  through the target, landing as the hit lands, held a beat as a fading mark
+  at 3× — and the hero leans into it instead of recoiling, with no muzzle
+  flash; a bow fires a shafted, fletched arrow; a knife spins; a wand, staff,
+  rod, sceptre or grimoire throws a bolt, violet when it carries no element;
+  bare hands throw a pebble. One effect palette inks the trail, the swing and
+  the impact, each effect with its own SHAPE: burn sheds embers, chill strings
+  frost shards and drops spinning shards and a cold ring, shock drags a
+  yellow-white crackle and throws three crackles, a siphon twists a red double
+  helix and pulls red motes back to the hero; pierce sends an arrow ghost on
+  through; splash keeps its ring. The heroes carry their real items
+  (`render/gearMarks`): the atlas cell of the weapon in the right fist and the
+  off-hand piece in the left, pixel-doubled once and blitted 1:1; where the
+  Tiny Swords art paints a weapon the hero is not holding, that weapon is cut
+  out of the idle strip before the bake (a knight with an axe holds an axe; a
+  knight with only a shield holds no sword) and the attack strip, which swings
+  the painted one, is not played — the item itself lunges. An enchanted weapon
+  glints at its tip in its ink. The roster card prints the weapon's icon beside
+  its name. Rendered: a scratch harness through the real draw code (every hero
+  kit, every delivery × effect in flight, swings at 35/70/100%, impacts at +30
+  and +120 ms, phone view and 3× inspection) and the running app at 390×844
+  @2x (freeze-frame close-ups of a flaming sword, frost axe, shocking hammer,
+  plain/shocking/piercing bow, plain/frost wand, flaming staff, vampiric
+  dagger, unarmed; reduced motion) and 1440×900. The loop caught: (1) the
+  first held icons sat beside the painted sword — two weapons in one hand —
+  hence the cut; (2) a stroked arc at the target read as a comet, not a slash
+  — it is a filled crescent, fullest behind the leading edge; (3) the arc and
+  bursts landed at the goblin's feet (its position) — lifted onto the body;
+  (4) glints and trails were sub-pixel at phone scale — enlarged, with an ink
+  halo; (5) shock and chill were two pale blues — shock's core is yellow-white
+  now; (6) the painted sword's glint chased the lunge and the attack frames —
+  pinned to the idle tip. Frame cost, 4× CPU, phone, live depth-6 elite wave,
+  interleaved A/B against aa03551 (3 × 3 runs each, dev): p50 5.8 → 6.4 ms,
+  p95 17.2 → 17.3 ms, 24.9 → 24.7 fps. Benchmark: Kingdom Rush's barracks
+  swing at the target rather than shoot it, and its mage bolts read by colour
+  alone — here each element is also a shape. Scorecard: readability 4/5,
+  hierarchy 4/5, polish 4/5. Still open: the body piece is not drawn (no
+  silhouette on these chibis); the roster portraits are still the look's
+  painted art (the card's sub-line carries the real weapon's icon).
+
+- **2026-10-06 — The coach is a hint pill; the header loses the wordmark.**
+  The player: the "Got it" banner was a chore that moved the content, and
+  "get rid of the name fieldwatch too in the header. we need the space". The
+  coach row (and the held-open empty row of audit 2.5) is gone from every band
+  layout; tips, field notes and the new-ground note float as one dark pill
+  over the Stage's top or bottom edge (`pointer-events: none`), fade in, stay
+  2.5 s + 60 ms a word (cap 9 s, paused while the tab is hidden), fade out and
+  mark themselves taught; the words go through the Announcer. The header is
+  one row (depth · strength · cargo · gold): 76/68/62.6 → 44/40/38 at
+  390/375/320 (53 at 320 once depth and strength are both up), desk 60 → 52.
+  Rendered in the running app at 320×568, 375×667, 390×844 @2x touch,
+  430×932 and 1440×900, with the Stage's box logged every frame of a whole
+  first battle: one box from setup through the breather to the last enemy
+  (390: 0,44,390×606 — it was 121→76→121 as the row came and went; 320:
+  0,38,320×356; 1440: 0,52,979×848). The loop caught: (1) the strip tips on
+  the bottom edge sat on the wagons on every portrait field — a bottom-edge
+  tip moves to the top while the field is in play and the wagons are low;
+  (2) on the run map the bottom edge is the stops you can march to — map
+  tips float on top, below the receipt toast when one is up; (3) on the 375
+  and 320 reward screens the gear tip covered "Wave cleared" — a Stage under
+  240px holds the ceremony alone and the tip waits for the map, and tips wait
+  out the 700 ms re-layout so none flashes; (4) a tip that left on its own
+  remounted for its fade and was announced twice — the fade is decided in
+  render; (5) at 360–390 with depth, strength and a 4-digit purse the cargo
+  block overflowed into the gold — the chips slim below 390, the word "Cargo"
+  steps aside under 150px (container query), and depth AND strength under
+  360 (or Large UI under 430) take two tight rows; (6) the pill's 7/9px
+  padding broke the spacing scale. Whales: pill text 12px, --text ~13:1 and
+  --accent-text ~8:1 on its wash; the scan (38 screens, two new: the setup
+  pill on each viewport) has no new violation — contrast 1 → 2 is the
+  merchant's accepted scroll fade on desk (its stock is random), chrome drops
+  on every battle and map screen (390 setup 9.7% → 5.9%). Benchmark: Kingdom
+  Rush's and Bloons' first-run hints are transient callouts over the field
+  that never reflow the HUD; Clash Royale's header is one row of numbers.
+  Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: 60 ms a
+  word is quick (a 20-word tip gets 3.7 s); the receipt toast still sits by
+  `--sh-header-min`, 7px into a two-row 320 header.

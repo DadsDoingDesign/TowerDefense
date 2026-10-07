@@ -730,8 +730,16 @@ const affixSeeds = [11, 137, 409, 1013, 2411, 5171, 7919, 23]
  * ×0.25 / ×0.8 put both near the old fit (37% / 36%), and every affix reads
  * ≥ +2.0pt on its home bench there. Re-derive these the same way when the
  * subject or the curve moves again.
+ *
+ * **`magic` ×0.8 → ×0.7 (the merged tuning pass).** The subject moved again:
+ * Stormcaller's chains went 3 jumps at 60% → 2 at 45% (§7 found it solving
+ * Level 3), and at ×0.8 the baseline fell 36% → 30%, where Frenzied's flurry
+ * read −0.2pt on its best bench and failed §10 as a curse with no upside.
+ * Swept ×0.8 / 0.75 / 0.7 / 0.65 / 0.6: 30 / 32 / 40 / 42 / 46%; ×0.7 is the
+ * nearest to the old fit from above (Frenzied +7.3pt there; every affix and
+ * curse green).
  */
-const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.8, endure: 1.6 }
+const BENCH_PIN: Record<string, number> = { phys: 0.25, magic: 0.7, endure: 1.6 }
 /** A bench that has drifted out of this band cannot resolve an affix at all. */
 const BENCH_BAND: [number, number] = [0.15, 0.75]
 const AFFIX_SCENARIOS = {
@@ -3450,6 +3458,13 @@ if (want(15)) {
    * the cells have to be quieter to resolve one.
    */
   const CARD_SEEDS = [11, 137, 409, 1013, 2411, 5171]
+  /**
+   * The relics' `magic` bench keeps its own pin. It shared `BENCH_PIN.magic`
+   * until the merged tuning pass re-pinned the affix bench ×0.8 → ×0.7 (§4's
+   * Stormcaller lost a chain jump); the relics were fitted at ×0.8, and moving
+   * the affix bench must not silently re-grade them.
+   */
+  const RELIC_MAGIC_PIN = 0.8
   /** How far a stated tradeoff must move a bench, in each direction, to be one. */
   const CARD_EDGE = 0.02
   /** …and how far below zero a relic's average may sit before it is a punishment. */
@@ -3463,7 +3478,7 @@ if (want(15)) {
       label: 'magic',
       wave: AFFIX_SCENARIOS.magic.wave,
       hero: AFFIX_SCENARIOS.magic.build,
-      pin: BENCH_PIN.magic,
+      pin: RELIC_MAGIC_PIN,
       blurb: 'a splash mystic — the half of the roster a STR card cannot reach',
     },
   ]
@@ -3745,7 +3760,7 @@ if (want(18)) {
   line('')
   line(`**Each condition, lifted one at a time** (delivery against the full charter's ${pct(none.won)}): without the ground ${pct(noGround.won)} (${pp(noGround.won - none.won)}), without the double prices ${pct(noPrices.won)} (${pp(noPrices.won - none.won)}), without the muster ${pct(noMuster.won)} (${pp(noMuster.won - none.won)}). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at ${HUB_RUNS} runs a row the paired noise is several points, so read the signs, not the decimals.`)
   line('')
-  line('_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster\'s strength (×1.07, which the clans alone did not have). The five conditions are the designer\'s and are as built._')
+  line(`_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster\'s strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → ${CHARTER_PAYOUT.toLocaleString('en')}, so a charter nets about 1.5–3× this company\'s escort (${none.net >= 0 ? '+' : '−'}${Math.abs(none.net).toFixed(0)} against +${escort.net.toFixed(0)}: ${escort.net > 0 ? (none.net / escort.net).toFixed(1) : '—'}×) and breaks even within a few points of its delivery rate. The five conditions are the designer\'s and are as built._`)
   line('')
   summary.push(`Sovereign Route (late-game company): delivered ${pct(none.won)} (all five Sovereign items ${pct(all.won)}), bank net ${none.net.toFixed(0)} a charter; break-even ${pct(breakEven)}; lifting each: ground ${pp(noGround.won - none.won)}, prices ${pp(noPrices.won - none.won)}, muster ${pp(noMuster.won - none.won)}`)
 }

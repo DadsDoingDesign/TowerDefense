@@ -18,23 +18,53 @@ import type { GameEngine } from '../engine/engine'
 import { drawFxDecals, drawFxFloaters, drawFxParticles } from './fx'
 import { animNow } from './frame'
 import { clipBeforeGate, drawAura, drawBaseFx, drawReticle } from './overlays'
-import { drawProjectile, drawTrap } from './projectiles'
+import { drawProjectile, drawSwing, drawTrap, type ShotLook } from './projectiles'
+import { deliveryOfRt } from './attackLook'
+import { fxReducedMotion } from './fx'
+import type { RtProjectile, RtSentinel } from '../engine/engine'
 import { drawTelegraphs } from './telegraphs'
 import { backToFront, drawEnemy, drawSentinel, sentinelFromRt, shoulderNudge } from './units'
 
 export { entrySide, fitView, setPresentationTime, setViewScale, stageView, type StageView, type View } from './frame'
 export { drawField, drawTerrainDanger, drawTerrainFlames, playRect, worldOf } from './terrain'
-export { backToFront, shoulderNudge, drawEnemy, drawSentinel, sentinelFromRt, type DrawSentinel } from './units'
+export { backToFront, shoulderNudge, drawEnemy, drawSentinel, heroLook, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
 export { drawCaravan, caravanSpot, type CaravanLook } from './caravan'
 export { baseAnchor, drawBaseFx, drawBestTile, drawBlockedFlash, drawClearance, drawClearanceLabel, drawConflictMark, drawLastStretch, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'
-export { drawProjectile, drawTrap } from './projectiles'
+export { drawProjectile, drawSwing, drawTrap } from './projectiles'
 export { blitCensus } from './blit'
 export { hexToRgba, mix, roundRect } from './paint'
 export { drawThemePreview } from './preview'
 
 /** Scratch for `drawBattleEntities`; cleared and refilled, never reallocated. */
 const targeted = new Set<string>()
+const shooters = new Map<string, RtSentinel>()
+const shotLook: ShotLook = { delivery: 'bolt', now: 0, still: false }
+
+/**
+ * Every hit in flight. Each one travels as a projectile in the engine; what
+ * is DRAWN is the weapon's (`attackLook`): a melee hero's hit is a blade arc
+ * at its target and NEVER a shot (`projectiles.drawSwing`), everything else
+ * flies as its weapon throws it — arrow, knife, bolt or stone. A shot whose
+ * shooter is gone (it left the field mid-flight) keeps flying as a bolt.
+ */
+export function drawShots(
+  ctx: CanvasRenderingContext2D,
+  engine: { sentinels: readonly RtSentinel[]; projectiles: readonly RtProjectile[] },
+  now: number,
+  still: boolean,
+): void {
+  shooters.clear()
+  for (const s of engine.sentinels) shooters.set(s.id, s)
+  shotLook.now = now
+  shotLook.still = still
+  for (const p of engine.projectiles) {
+    const src = shooters.get(p.srcId)
+    shotLook.delivery = src ? deliveryOfRt(src) : 'bolt'
+    if (src && shotLook.delivery === 'swing') drawSwing(ctx, p, src.pos, still)
+    else drawProjectile(ctx, p, shotLook)
+  }
+}
 
 /** Convenience: draw a whole running battle from an engine. */
 export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEngine): void {
@@ -81,7 +111,7 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
     const o = lean.get(s)
     drawSentinel(ctx, o && (o.x || o.y) ? { ...d, pos: { x: d.pos.x + o.x, y: d.pos.y + o.y } } : d)
   }
-  for (const p of engine.projectiles) drawProjectile(ctx, p)
+  drawShots(ctx, engine, now, fxReducedMotion())
 
   // Impact debris, chain-lightning arcs, explosions.
   drawFxParticles(ctx)
