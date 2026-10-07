@@ -39,9 +39,13 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-      ARCHIVE: ${{ runner.temp }}/Fieldwatch.xcarchive
     steps:
+      # The `runner` context is not allowed in a job's `env:` (GitHub rejects
+      # the whole file), so the temp paths are set here.
+      - name: Temp paths
+        run: |
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          echo "ARCHIVE=$RUNNER_TEMP/MerchantMercenaries.xcarchive" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
