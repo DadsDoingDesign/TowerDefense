@@ -1,5 +1,6 @@
 import type { CompanyId } from './companies'
 import type { CoreStats, EffectMods } from '../types'
+import type { IconKey } from './iconAtlas'
 
 /**
  * ---------------------------------------------------------------------------
@@ -295,4 +296,60 @@ export const EVOLUTION_TO_SKILL: Readonly<Record<string, string>> = {
   soulflay: 'gate_siphon',
   plaguebringer: 'wildfire',
   doomcaller: 'gate_siphon',
+}
+
+/**
+ * A skill's lead effect as a picture and a word or two — the pick-one strip's
+ * token (`ui/shell/PickStrip.tsx`), which carries no name: "Speed +15%",
+ * "Burn", "Hold". Read off the mods in a fixed order, so a skill with several
+ * leads with the one its sentence leads with. A number rides only where the
+ * mod IS the number (the three plain multipliers); everything else is the word,
+ * and the card under the strip says the rest.
+ */
+export interface SkillHeadline {
+  icon: IconKey
+  label: string
+  value?: string
+}
+
+const pct = (mult: number) => `+${Math.round((mult - 1) * 100)}%`
+
+const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][] = [
+  ['rateMult', (m) => ({ icon: 'haste', label: 'Speed', value: pct(m.rateMult!) })],
+  ['damageMult', (m) => ({ icon: 'damage', label: 'Dmg', value: pct(m.damageMult!) })],
+  ['rangeMult', (m) => ({ icon: 'range', label: 'Reach', value: pct(m.rangeMult!) })],
+  ['critChanceAdd', () => ({ icon: 'crit', label: 'Crit' })],
+  ['critMultAdd', () => ({ icon: 'crit', label: 'Crit' })],
+  ['critEvery', () => ({ icon: 'crit', label: 'Crit' })],
+  ['burn', () => ({ icon: 'burn', label: 'Burn' })],
+  ['chill', () => ({ icon: 'chill', label: 'Chill' })],
+  ['shock', () => ({ icon: 'shock', label: 'Shock' })],
+  ['stunChance', () => ({ icon: 'stun', label: 'Stun' })],
+  ['execute', () => ({ icon: 'execute', label: 'Execute' })],
+  ['lifedrain', () => ({ icon: 'lifedrain', label: 'Drain' })],
+  ['splashAdd', () => ({ icon: 'splash', label: 'Splash' })],
+  ['pierce', () => ({ icon: 'pierce', label: 'Pierce' })],
+  ['volley', () => ({ icon: 'projectile', label: 'Volley' })],
+  ['projSpeedMult', () => ({ icon: 'projectile', label: 'Shots' })],
+  ['block', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdAdd', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdRadius', () => ({ icon: 'block', label: 'Hold' })],
+  ['thornsMult', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['thornsIgnite', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['trap', () => ({ icon: 'trap', label: 'Trap' })],
+  ['buffAura', () => ({ icon: 'auraBuff', label: 'Aura' })],
+  ['killRush', () => ({ icon: 'haste', label: 'Rush' })],
+  ['openingRush', () => ({ icon: 'haste', label: 'Rush' })],
+  ['leakWard', () => ({ icon: 'hp', label: 'Ward' })],
+  ['vsHeld', () => ({ icon: 'damage', label: 'Vs held' })],
+  ['vsSlowed', () => ({ icon: 'chill', label: 'Vs slowed' })],
+  ['thornsBurn', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['rushPerHeld', () => ({ icon: 'haste', label: 'Rush' })],
+  ['killMend', () => ({ icon: 'hp', label: 'Mend' })],
+  ['goldPerKill', () => ({ icon: 'gold', label: 'Bounty' })],
+]
+
+export function skillHeadline(skill: Pick<Skill, 'mods'>): SkillHeadline {
+  for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return read(skill.mods)
+  return { icon: 'boon', label: 'Skill' }
 }

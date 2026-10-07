@@ -1,73 +1,98 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '../Icon'
 import { RARITY } from '../../game/data/items'
 import { railStyle, rarityVar } from '../channels'
 import type { Offer } from './offers'
+import { PickCard, PickSection, PickStrip, stepId, type PickFact, type PickTokenSpec } from './PickStrip'
+import { SkillCard } from './SkillCards'
 
 /**
  * ---------------------------------------------------------------------------
- * Three heroes, side by side (the classless rework)
+ * Heroes to choose from: pick one, then read (the hero pick, a recruit slate)
  * ---------------------------------------------------------------------------
  *
  * The designer: "its just 3 options with items and skills you have unlocked
  * applied randomly". With no class to name, a hero is read off three things —
- * what its gear makes it DO, the gear itself, and its skill — and the pick is
- * a comparison of three of those. Portraits you tap one at a time hid two of
- * the three heroes at any moment; here every card carries all of it at once:
+ * what its gear makes it DO, the gear itself, and its skill.
  *
- *   [look]  Bran             49 DPS · 96 reach   ← numbers: returning players only
- *           Swings a sword up close · holds 2 enemies with its shield
- *   ⚔ Sword · ⛨ Shield · ▣ Mail        ← each KIND, rarity on its own rail
- *   SKILL Quick Hands — Attacks 15% faster.
- *
- * Three compact rows, on a phone and on a desk alike (the page is a ~560px
- * column there too, where three columns broke every line into two words).
- * Each card is ONE button: its accessible name is everything printed on it,
- * so a screen-reader user compares the same facts a sighted one does.
+ * October 2026 (Figma "Pick one, then read"): the three stacked comparison
+ * cards became a strip of three sprite tokens, each with its DPS — the one
+ * deciding number, side by side — and ONE card below for the focused hero,
+ * always in the same order: its look, kit and name; DPS, reach and what it
+ * holds or hits; what it does; its gear as the equipment slots; its skill.
+ * Flipping tokens compares them with the eye held still. A staged first run
+ * holds the numbers back: its tokens say the weapon and its card the words.
  */
-export function HeroCards({ items, selectedId, onSelect }: { items: Offer[]; selectedId: string | null; onSelect: (id: string) => void }) {
+export function HeroCards({
+  items,
+  selectedId,
+  onSelect,
+  children,
+}: {
+  items: Offer[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  /** The terms of taking the focused hero (a full company, the strength note), at the card's foot. */
+  children?: ReactNode
+}) {
+  const focused = items.find((o) => o.id === selectedId) ?? items[0]
+  if (!focused) return null
+  const h = focused.hero!
+  const tokens: PickTokenSpec[] = items.map((o) => {
+    const c = o.hero!
+    return {
+      id: o.id,
+      art: <img src={c.art} alt="" />,
+      label: c.facts ? 'DPS' : (o.sub ?? ''),
+      value: c.facts?.dps,
+      name: [o.title, o.sub, c.facts ? `${c.facts.dps} DPS` : c.does].filter(Boolean).join(', '),
+      rail: c.color,
+    }
+  })
+  const facts: PickFact[] | undefined = h.facts && [
+    { label: 'DPS', value: h.facts.dps },
+    { label: 'Reach', value: h.facts.reach },
+    { label: h.facts.third.label, value: h.facts.third.value },
+  ]
+
   return (
-    <div className="pg-heroes" role="group" aria-label="Choose one hero">
-      {items.map((o) => {
-        const h = o.hero!
-        const sel = selectedId === o.id
-        return (
-          <button
-            key={o.id}
-            className={`pg-hero ${sel ? 'sel' : ''}`}
-            style={railStyle(h.color) as CSSProperties}
-            aria-pressed={sel}
-            onClick={() => onSelect(o.id)}
-          >
-            <span className="pg-hero-head">
-              <img className="pg-hero-art" src={h.art} alt="" />
-              <span className="pg-hero-id">
-                <span className="pg-hero-top">
-                  <b className="pg-hero-name">{o.title}</b>
-                  {h.numbers && <span className="pg-hero-nums">{h.numbers}</span>}
+    <div className="pk rail">
+      <PickStrip label="Choose one hero" tokens={tokens} focused={focused.id} onFocus={onSelect} />
+      <PickCard
+        className="pk-hero"
+        style={railStyle(h.color) as CSSProperties}
+        art={<img src={h.art} alt="" />}
+        kicker={focused.sub}
+        name={focused.title}
+        index={items.indexOf(focused)}
+        count={items.length}
+        onStep={(d) => onSelect(stepId(items, focused.id, d) ?? focused.id)}
+        facts={facts}
+        noun="hero"
+      >
+        <p className="pk-does">{h.does}.</p>
+        <PickSection title="Gear">
+          <div className="pk-slots">
+            {h.slots.map((s) => (
+              <span
+                key={s.slot}
+                className={`pk-slot${s.piece ? '' : ' empty'}`}
+                style={s.piece ? ({ '--pk-rar': rarityVar(s.piece.rarity) } as CSSProperties) : undefined}
+              >
+                <span className="pk-slot-box" aria-hidden="true">
+                  {s.piece ? <Icon name={s.piece.icon} lg /> : '+'}
                 </span>
-                <span className="pg-hero-does">{h.does}</span>
+                <span className="pk-slot-k">{s.slot}</span>
+                {/* The rarity as a word for screen readers and colour-blind
+                    players; the slot's frame carries the hue. */}
+                <span className="pk-slot-v">{s.piece ? `${s.piece.name} · ${RARITY[s.piece.rarity].label}` : 'free'}</span>
               </span>
-            </span>
-            <span className="pg-hero-gear">
-              {h.gear.map((g) => (
-                <span key={g.id} className="pg-hero-piece" style={railStyle(rarityVar(g.rarity)) as CSSProperties}>
-                  <Icon name={g.icon} />
-                  <span className="pg-hero-piece-name">{g.name}</span>
-                  {/* The rarity as a word for screen readers and colour-blind
-                      players; the rail carries the hue. */}
-                  <span className="pg-hero-piece-rar">{RARITY[g.rarity].label}</span>
-                </span>
-              ))}
-            </span>
-            {h.skill && (
-              <span className="pg-hero-skill">
-                <span className="pg-hero-kicker">Skill</span> <b>{h.skill.name}</b> — {h.skill.text}
-              </span>
-            )}
-          </button>
-        )
-      })}
+            ))}
+          </div>
+        </PickSection>
+        {h.skill && <SkillCard skill={h.skill} color={h.color} />}
+        {children}
+      </PickCard>
     </div>
   )
 }

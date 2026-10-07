@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Outline the Fieldwatch wordmark from the shipped Crimson Text Bold face.
+Outline the Merchant Mercenaries wordmark from the shipped Crimson Text Bold face.
 
     pip install fonttools brotli        # one-off; not a project dependency
     python3 scripts/brand-wordmark.py   # rewrites src/assets/brand/wordmark.svg
@@ -26,14 +26,15 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 FONT = os.path.join(ROOT, 'src', 'assets', 'fonts', 'crimson-text-700.woff2')
 OUT = os.path.join(ROOT, 'src', 'assets', 'brand', 'wordmark.svg')
 
-TEXT = 'Fieldwatch'
+TEXT = 'Merchant Mercenaries'
 # Everything is in font units (1024 per em).
 TRACK = -8  # a logotype at display size wants a touch tighter than the text setting
 KERN = {
-    'Fi': 4,  # the F's arm already overhangs the i; opening it keeps the dot clear
-    'dw': -6,
-    'wa': -14,  # the w's right diagonal leaves a wedge of air before the a's bowl
-    'tc': -4,
+    'rc': -6,  # the r's arm leaves a notch of air before the round c
+    'ch': -2,
+    'nt': -4,
+    'Me': -4,  # the M's right stem sits close; the bowl of e wants to tuck in
+    'ce': -4,
 }
 
 
@@ -65,9 +66,9 @@ def outline(font_file, text, track, kern, out, title, note):
     print(f'outlined: {os.path.relpath(out, ROOT)} ({w:.0f}x{h:.0f} font units)')
 
 
-outline(FONT, TEXT, TRACK, KERN, OUT, 'Fieldwatch', 'Crimson Text Bold')
+outline(FONT, TEXT, TRACK, KERN, OUT, 'Merchant Mercenaries', 'Crimson Text Bold')
 # The line under the lockup on the social card. Set, not drawn: running text.
 outline(os.path.join(ROOT, 'src', 'assets', 'fonts', 'crimson-text-600.woff2'),
-        'Hold the meadow against the goblin horde', 0, {},
+        'Guard the road, bank the gold.', 0, {},
         os.path.join(ROOT, 'src', 'assets', 'brand', 'tagline.svg'),
-        'Hold the meadow against the goblin horde', 'Crimson Text SemiBold')
+        'Guard the road, bank the gold.', 'Crimson Text SemiBold')

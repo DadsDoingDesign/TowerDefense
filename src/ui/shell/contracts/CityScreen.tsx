@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { companyById } from '../../../game/data/companies'
 import {
   canCashOut,
@@ -17,7 +18,13 @@ import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { Coin, Crate } from '../../pixel'
 import { NextGround } from '../NextGround'
+import { Icon } from '../../Icon'
+import { PickCard, PickStrip } from '../PickStrip'
+import { companyVar } from '../../channels'
 import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } from './parts'
+
+/** The two ways on from a city: cash out here, or press on. */
+type Way = 'out' | 'on'
 
 /**
  * A city — an act boss down (mockup `trade/r3/5-payout.png`).
@@ -25,7 +32,8 @@ import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } fr
  * The gold leads: what this city paid, and why ("your stake is back, plus a
  * fee"). The receipt slip itemises it, the route rail shows what is ahead, and
  * then the one question, in the display serif: head home, or press on? Two
- * cards, each with the whole of its consequence in gold — what you bank now,
+ * tokens and ONE card for the focused way (pick one, then read — October
+ * 2026), the card holding the whole of its consequence in gold — what you bank now,
  * what delivering would bank, what a fall would bank, the danger and your own
  * record at this stake (`settle.cityTrade`, the settle's own numbers). When a
  * fall would bank as much as cashing out, there is nothing to weigh, and the
@@ -44,6 +52,9 @@ export function CityScreen() {
   const cashOut = useGameStore((s) => s.cashOut)
   const record = useMetaStore((s) => s.record)
   const taught = useSettingsStore((s) => s.taught.cashOut)
+  // The focused way. Pressing on leads, as it does on every city with nothing
+  // to weigh: ending the contract is never what a habitual tap does.
+  const [way, setWay] = useState<Way>('on')
   // The Sovereign Route's cities are waypoints: none waits on this page.
   if (!c || c.pending == null || !c.company) return null
 
@@ -94,7 +105,22 @@ export function CityScreen() {
           <p className="ct-msg">{msg}</p>
         </>
       }
-      cta={!choose || nothingToLose ? { label: `Press on to ${co.towns[city + 1]}`, run: pressOn, heavy: true } : undefined}
+      // The choice is a pick, then the CTA that names it (October 2026): the
+      // focused way's verb, with what it banks.
+      cta={
+        !choose || nothingToLose || way === 'on'
+          ? { label: `Press on to ${co.towns[city + 1]}`, run: pressOn, heavy: true }
+          : {
+              label: (
+                <>
+                  {left > 0 ? 'Sell & head home' : 'Head home'} <small className="ct-cta-cost"><Gold n={trade.now} /></small>
+                </>
+              ),
+              name: `${left > 0 ? 'Sell and head home' : 'Head home'}, banking ${trade.now} gold`,
+              run: cashOut,
+              heavy: true,
+            }
+      }
     >
       <Slip>
         {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
@@ -148,43 +174,68 @@ export function CityScreen() {
               Cash out to bank everything now. Press on for the bigger payout, but a fall loses the unsold crates and most of the road's gold.
             </PageTip>
           )}
-          <div className="ct-choices">
-            <div className="ct-ch out">
-              <span className="ct-ch-k">Sure thing</span>
-              <span className="ct-ch-t">Cash out</span>
-              <span className="ct-ch-s">You bank</span>
-              <span className="ct-ch-v">{trade.now} gold</span>
-              <p>
-                {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} for ${trade.sale}. ` : ''}
-                {trade.road > 0 ? `${trade.roadIfCashed} of the road's gold comes home. ` : ''}
-                No completion bonus, no item chances, no contract skill.
-              </p>
-              <button className="ct-go" onClick={cashOut}>
-                {left > 0 ? 'Sell & head home' : 'Head home'}
-              </button>
-            </div>
-            <div className="ct-ch on">
-              <span className="ct-ch-k">Bigger payout</span>
-              <span className="ct-ch-t">Press on</span>
-              <span className="ct-ch-s">Deliver, and you bank</span>
-              <span className="ct-ch-v">{trade.deliver}+ gold</span>
-              <span className="ct-ch-loot">
-                + {unlocks.items} item{unlocks.items === 1 ? '' : 's'}, {unlocks.skills} skill{unlocks.skills === 1 ? '' : 's'}
-              </span>
-              <span className="ct-ch-odds">
-                Danger <DangerPips n={dangerPips(c.crates)} />
-              </span>
-              <span className="ct-ch-odds">
-                Cargo {cargoNow}%{rec.runs > 0 ? ` · you’ve delivered ${rec.delivered} of ${rec.runs} like this` : ''}
-              </span>
-              <p className="ct-ch-risk">
-                Fall, and you bank {trade.fall}: {left > 0 ? `the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost` : 'the bonus is lost'}
-                {roadLost > 0 ? `, and ${roadLost} of the road's gold stays on the road` : ''}.
-              </p>
-              <button className="ct-go primary" onClick={pressOn}>
-                Press on
-              </button>
-            </div>
+          <div className="pk">
+            <PickStrip
+              label="Head home, or press on"
+              tokens={[
+                { id: 'out', art: <Icon name="gold" lg />, label: 'Bank', value: trade.now, name: `Cash out: bank ${trade.now} gold now` },
+                {
+                  id: 'on',
+                  art: <Crate color={co.color} scale={3} />,
+                  label: 'Bank',
+                  value: `${trade.deliver}+`,
+                  name: `Press on: deliver, and bank ${trade.deliver} gold or more`,
+                  rail: companyVar(c.company),
+                },
+              ]}
+              focused={way}
+              onFocus={(id) => setWay(id as Way)}
+            />
+            {way === 'out' ? (
+              <PickCard
+                className="ct-pk-way out"
+                kicker="Sure thing"
+                name="Cash out"
+                index={0}
+                count={2}
+                onStep={() => setWay('on')}
+                noun="choice"
+                facts={[
+                  { label: 'You bank', value: `${trade.now} gold`, tone: 'accent' },
+                  { label: 'Loot', value: 'none' },
+                  { label: 'Risk', value: 'none', tone: 'good' },
+                ]}
+              >
+                <p className="pk-does">
+                  {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} for ${trade.sale}. ` : ''}
+                  {trade.road > 0 ? `${trade.roadIfCashed} of the road's gold comes home. ` : ''}
+                  No completion bonus, no item chances, no contract skill.
+                </p>
+              </PickCard>
+            ) : (
+              <PickCard
+                className="ct-pk-way on"
+                kicker="Bigger payout"
+                name="Press on"
+                index={1}
+                count={2}
+                onStep={() => setWay('out')}
+                noun="choice"
+                facts={[
+                  { label: 'Delivered', value: `${trade.deliver}+ gold`, tone: 'accent' },
+                  { label: 'Loot', value: `${unlocks.items} item${unlocks.items === 1 ? '' : 's'}, ${unlocks.skills} skill${unlocks.skills === 1 ? '' : 's'}` },
+                  { label: 'Danger', value: <DangerPips n={dangerPips(c.crates)} /> },
+                ]}
+              >
+                <p className="pk-does">
+                  Cargo {cargoNow}%{rec.runs > 0 ? ` · you’ve delivered ${rec.delivered} of ${rec.runs} like this` : ''}.
+                </p>
+                <p className="pk-risk">
+                  Fall, and you bank {trade.fall}: {left > 0 ? `the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost` : 'the bonus is lost'}
+                  {roadLost > 0 ? `, and ${roadLost} of the road's gold stays on the road` : ''}.
+                </p>
+              </PickCard>
+            )}
           </div>
         </>
       )}

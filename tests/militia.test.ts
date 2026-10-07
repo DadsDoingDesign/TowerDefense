@@ -34,8 +34,8 @@ describe('the militia’s name', () => {
   })
 
   it('reads under the wordmark', () => {
-    expect(militiaTagline({ name: 'The Ashford Company' })).toBe('The Ashford Company · sellswords for hire')
-    expect(militiaTagline(null)).toBe('Sellswords for hire')
+    expect(militiaTagline({ name: 'The Ashford Company' })).toBe('The Ashford Company · guard the road, bank the gold')
+    expect(militiaTagline(null)).toBe('Guard the road, bank the gold')
   })
 })
 

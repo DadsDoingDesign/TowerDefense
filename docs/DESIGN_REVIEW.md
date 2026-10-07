@@ -3232,3 +3232,53 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: 60 ms a
   word is quick (a 20-word tip gets 3.7 s); the receipt toast still sits by
   `--sh-header-min`, 7px into a two-row 320 header.
+
+- **2026-10-07 — Pick one, then read; Merchant Mercenaries; company logos.**
+  The Figma proposal ("Pick one, then read", Audit page) landed on every
+  choose-one surface that does not commit on the tap: the contract board, the
+  hero pick, a recruit, a city's cash-out-or-press-on and the skill
+  milestone. One component (`ui/shell/PickStrip.tsx`, `styles/pick.css`): a
+  strip of picture tokens with ONE label + number and no name (company logo +
+  "Rep: 2", hero sprite + "DPS 126", a skill's lead effect + "Speed +15%"),
+  and the focused option's card below in a fixed recipe (head, up to three
+  facts, what it does, specifics) with a CTA that names it ("Read
+  Peppercorn's terms", "Choose Sorrel", "Learn Hard Hitter"). Tokens are a
+  radio group (← → ↑ ↓ Home End, one tab stop); tapping focuses and never
+  commits. Desk (≥900): the strip is a rail beside the card in an 800px
+  column, the CTA under the card. The spoils and the campfire keep main's
+  one-tap commit. Rendered in the running app at 390×844 and 1440×900
+  (board, a locked company focused, hero pick first-run and returning,
+  recruit, city with each way focused, skill choice, the stat boost). The
+  loop caught: (1) fact values truncated ("Cursed grou…", "1 item, 1 …") —
+  facts wrap now; (2) the city's coin token read as a flat yellow square —
+  the gold icon at 32px; (3) gear icons at 16px were lost in 44px slots —
+  32px; (4) the head art box was a pale parchment square under a dark card —
+  dark well like the facts; (5) on desk the CTA ran under the rail — it is
+  indented under the card. Decisions: the city focuses "Press on" first, so
+  a habitual tap on the pinned CTA never ends a contract; a skill milestone
+  opens with its first skill focused (opening the milestone and the named
+  CTA are the two acts); the seed chip left the hero pick (the designer's
+  review: a seed is not public). Benchmark: Slay the Spire's and Hades'
+  choose-one screens show every option's deciding fact side by side and one
+  full description at a time. Scorecard: readability 4/5, hierarchy 5/5,
+  polish 4/5. Still open: the returning city page is long on a 390 phone
+  (the card's risk line sits at the fade until scrolled); a full company's
+  recruit tokens are all one sprite when the three carry the same weapon.
+
+- **2026-10-07 — A tap reads a reward; the CTA takes it.** The designer:
+  "tapping an item to try to change which stats are previewed after winning a
+  round auto-selects it." Main's one-tap rewards took the card on the very
+  tap a player made to compare it, and a hold to look is not something a
+  player reaches for first. The reward cards (in place after a wave, and the
+  elite/boss Spoils page) are select-then-take again: a tap selects the card
+  (gold ring, detail in the Context panel, gear preview), and the wave strip's
+  full-height CTA — or the Spoils page's pinned CTA — names it: "Take Cruel
+  Bow". The campfire keeps the one-tap commit. Verified in the running app at
+  390×844 and 1440×900 by script, not by eye: tapping a second card leaves
+  `reward` set (wave strip and Spoils page), and the CTA takes the card it
+  names ("Take Twinblade Harness"). The loop caught: the longest name wraps
+  the strip CTA to two lines at 390 — kept (22px, two balanced lines, still
+  the loudest control); the font steps to 19px under 380. Scorecard:
+  readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
+  card reward and Hades' boon pick both read on hover/select and commit on a
+  separate, deliberate act.

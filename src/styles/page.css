@@ -1243,118 +1243,6 @@
    plain words, the gear itself (a rail per piece in its rarity's hue), its
    skill, and (after the first run) its numbers. A column on a phone, three
    columns on a wide page. */
-.pg-heroes {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--gap-xs);
-  width: 100%;
-}
-/* Rows on every screen: the page is a ~560px column on a desk too, where
-   three columns broke every line into two words. Three rows of one line
-   each compare as easily, and on a desk all three show with room to spare. */
-
-.pg-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--rail, var(--line-strong));
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-.pg-hero.sel {
-  background: var(--panel-3);
-  box-shadow: inset 0 0 0 2px var(--accent);
-}
-.pg-hero:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.pg-hero-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.pg-hero-art {
-  flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--r-sm);
-  border: 2px solid var(--rail, var(--line-strong));
-  background: var(--portrait);
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.pg-hero-id {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.pg-hero-name {
-  font-size: var(--fs-md);
-  line-height: 1.2;
-}
-.pg-hero-does {
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  color: var(--text);
-}
-.pg-hero-gear {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.pg-hero-piece {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 24px;
-  padding: 2px 8px 2px 4px;
-  border-radius: var(--r-xs);
-  border-left: 3px solid var(--rail, var(--line-strong));
-  background: var(--surface-strong);
-  font-size: var(--fs-xs);
-  white-space: nowrap;
-  max-width: 100%;
-}
-.pg-hero-piece-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pg-hero-piece-rar {
-  color: var(--muted);
-  font-size: var(--fs-micro);
-}
-.pg-hero-skill {
-  font-size: var(--fs-xs);
-  line-height: 1.35;
-  color: var(--muted);
-}
-.pg-hero-skill b {
-  color: var(--text);
-}
-/* 3.10 (Oct 2026): the kicker names what follows, so it may not read weaker
-   than it — it was 11px/400 gold over a 12px/700 skill name. Same size as the
-   name now, heavier, in the text ink; the caps and tracking keep it a label. */
-.pg-hero-kicker {
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-.pg-hero-nums {
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
 
 /* The Collection's two tabs (Skills | Items), each with its count. */
 .pg-coll {
@@ -1411,26 +1299,6 @@
   font-size: var(--fs-xs);
   color: var(--muted);
 }
-.pg-hero-head {
-  align-items: flex-start;
-}
-.pg-hero-art {
-  width: 40px;
-  height: 40px;
-}
-.pg-hero-id {
-  flex: 1 1 auto;
-}
-.pg-hero-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.pg-hero {
-  gap: 6px;
-  padding: 8px 10px;
-}
 /* Compact difficulty: the head and the rule share one line; chips are one line each. */
 .pg-banner.compact {
   gap: 4px;
@@ -1441,14 +1309,6 @@
   gap: 6px;
   min-width: 0;
   max-width: none;
-}
-/* A page of hero cards spends its height on the cards: the head and body
-   trade their air for the third card (phones), never the content. */
-.pg:has(.pg-heroes) .pg-head {
-  padding-bottom: 10px;
-}
-.pg:has(.pg-heroes) .pg-body {
-  padding-top: 6px;
 }
 
 /* ==================================================== page rhythm (Oct 2026)

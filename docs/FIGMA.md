@@ -5,7 +5,26 @@ system. Every token matches `src/styles/global.css` and `docs/DESIGN_SYSTEM.md`.
 
 **File:** https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite
 
-Two pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
+## Current: page `Audit.16.06.26` — `?node-id=2149-2083`
+
+**Start here.** This page rebuilds the whole design system from `main @ 6588e6a`
+(2026-10-06): tokens, styles, components and screens, exactly as the code ships.
+It supersedes everything below, which is kept as history. The page's own
+`Cover · Read me` frame explains the layout.
+
+| Area | What's in it |
+| --- | --- |
+| Variables | Four local collections. **Merchant Mercenaries · Color**: modes Default, Deuter/Protan, Tritan, High contrast. **Merchant Mercenaries · Type**: modes Default and Large UI. **Merchant Mercenaries · Layout**: space, radius, icon sizes. **Merchant Mercenaries · Shell**: band heights at 390×844, ≤800h, ≤700h, ≤600h. Each variable has WEB code syntax `var(--x)` and a USE FOR / NOT FOR / WHERE description. The older `Fieldwatch Tokens` collection is superseded. |
+| Styles | 32 text styles, bound to the Type variables (Display, Title, Heading, Button, Row, Body, Card, Caption, Eyebrow, Label, Number, Slip). 14 effect styles (Elevation, Ring, Glow, Rail). |
+| Foundations | Plates for Color (every token's use), Icons (all 96 atlas keys as vector components — one shape per colour, traced pixel-exact from `fw-icons.png` — each with meaning and use), Type, Space · Radius · Elevation, and Sprites. |
+| Components 01–10 | About 150 components and sets, grouped by shell band and page family. Each set has a Spec block (source file, CSS class, USE FOR, AUDIT notes). Every variant is labelled under itself with what that state means; the same text is the variant's description. |
+| Screens | Built only from instances: D Battle (12), C Run (8), A Watchtower (16), B Contract (4), E End (4), all at 390×844. W Desktop: 3 screens at 1440×900. |
+| X Edge cases | 15 screens at the limits: five heroes (the Selector scrolls), a full 10-slot pack, a long wave queue (+N chip), long names, Large UI, the 320×568 tier, nothing affordable, roster full, toasts over content, every header chip at once, the longest militia name with an 8-digit bank, and the High contrast and Tritan modes. Magenta dashed boxes are annotations, not UI. |
+| Audit / Findings | 44 findings with severity and `file:line`, plus the visual issues seen in a full capture of `main`. |
+| Brand (Oct 2026) | The game is **Merchant Mercenaries** (short name *MerchMercs*, tagline “Guard the road, bank the gold.” (it replaced “Sellswords for hire”, which said *for hire* twice; the menu subtitle still reads “… · sellswords for hire” in code, `militiaTagline`)). The mark is the **Dripping Seal**: red wax, a gold coin and a sword whose crossguard runs into the ring. It is the chosen concept, *29 refined*, in the `LOGO ONLY` section. A **Brand Lockup** set (Stacked · Horizontal · Short) in Components / 08 Menu replaces the Fieldwatch wordmark on every menu screen and in the rotate prompt. The run header carries no wordmark, as on main. The four variable collections are renamed to `Merchant Mercenaries · …`. The repo itself still uses *Fieldwatch* (`index.html`, `manifest.webmanifest`, `package.json`, `docs/BRAND.md`): those change when the rename lands in code. |
+| Proposal · Pick one, then read | **Built in the game (October 2026)** as `ui/shell/PickStrip.tsx` on the contract board, hero pick, recruit, city payout and skill choice; the reward cards (after a wave, and the elite/boss spoils) are select-then-take with a CTA that names the card ("Take Cruel Bow"); only the campfire commits on the tap. One pattern for every choose-one surface: hero pick, contract board, recruit, elite/boss spoils, city payout and skill choice. Options sit in one row as small Pick Tokens (a new component set: Default, Focused, Seen, Unavailable, Locked). One focused option shows below in a fixed recipe: head, three key facts, what it does, specifics, and a compare line against the option looked at before. Tapping focuses and never commits; the CTA names the choice. Each surface has a before → after pair; there is also a desk master–detail. Revised after the first review: tokens are pictures with one label + number and no name (a new Company Logo set gives each company its own pixel logo), gear is drawn as the in-game equipment slots and skills as the Skill card, and the compare line, the Seen dot and the swipe hint are gone. |
+
+Older pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
 (the mobile system, the flow board, and the Root Shell redesign).
 
 Read the sections in two halves. `FieldWatch`, `01 · Mobile UI System` and

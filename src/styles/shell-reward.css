@@ -5,10 +5,10 @@
  *  - the Stage dims and says the result in one line; the field stays visible
  *    around it (the Stage is sacred: nothing hides it, the fight is just over);
  *  - the Selector holds the company as a compact strip over the reward hand;
- *  - a tap on a card takes it (one-tap, October 2026); a hold, hover or
- *    keyboard focus puts its detail in the Context panel instead, which
- *    otherwise holds the first card's detail, or a levelled hero's choice
- *    (`LevelUpPanel`).
+ *  - a tap on a card selects it: its detail fills the Context panel and the
+ *    wave strip's CTA names it ("Take Cruel Bow"); only the CTA takes it.
+ *    The panel otherwise holds the first card's detail, or a levelled
+ *    hero's choice (`LevelUpPanel`).
  * A hero with a level-up waiting glows and wears a "Lv 5 ↑" badge on every
  * roster surface (the strip here, the party row on the map and in setup).
  */
@@ -146,12 +146,10 @@
     transform 120ms ease,
     box-shadow 120ms ease;
 }
-/* Only the card being read is coloured — its own rarity on the top edge, the
-   gold ring — and lifted off the row. With one-tap rewards (October 2026)
-   that is the card whose detail the Context panel holds (`.looking`: the
-   first one to begin with, then whatever was held, hovered or focused), not
-   a choice waiting for a confirm. */
-.sh-offer.sh-reward.looking {
+/* Only the selected card is coloured — its own rarity on the top edge, the
+   gold ring — and lifted off the row: the card the Context panel reads and
+   the strip's "Take …" names. A tap selects; only the CTA takes. */
+.sh-offer.sh-reward.selected {
   background: var(--panel-2);
   border-color: var(--accent);
   border-top-color: var(--rail, var(--accent));
@@ -262,79 +260,6 @@
   font-weight: 800;
   white-space: nowrap;
 }
-.sh-lvl-opts {
-  display: grid;
-  gap: 6px;
-  margin: 2px 0 4px;
-}
-.sh-lvl-opt {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px;
-  min-height: var(--hit-min);
-  padding: 5px 9px;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--line-strong);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-.sh-lvl-opt[aria-pressed='true'] {
-  background: var(--panel-2);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-.sh-lvl-opt-name {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-.sh-lvl-opt-blurb {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  line-height: var(--lh-body);
-}
-.sh-lvl-deltas {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 2px 12px;
-  margin: 4px 0 2px;
-}
-.sh-lvl-deltas > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
-}
-.sh-lvl-deltas dt {
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.sh-lvl-deltas dd {
-  margin: 0;
-  color: var(--muted);
-}
-.sh-lvl-deltas .up b {
-  color: var(--good);
-}
-.sh-lvl-deltas .down b {
-  color: var(--bad-text);
-}
-.sh-lvl-deltas span {
-  font-size: var(--fs-micro);
-}
-.sh-lvl-deltas .up span {
-  color: var(--good);
-}
-.sh-lvl-deltas .down span {
-  color: var(--bad-text);
-}
 
 /* ---------------------------------------------- SK1: the skill choice */
 /* The swap row (a full hero) and the stat bump: small chips, three to a row,
@@ -418,22 +343,8 @@
     animation: none;
   }
 }
-
-/* SK1: the choice has the Detail band to itself (`DetailBand` drops the gear
-   and pack columns while it is open), so the three skills sit side by side as
-   cards, each saying what it does — no tap needed to read one. */
-.sh-detail.choosing .sh-lvl-opts {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.sh-detail.choosing .sh-lvl-opt {
-  justify-content: flex-start;
-  padding: 8px 10px;
-}
-.sh-detail.choosing .sh-lvl-opt-blurb {
-  color: var(--muted);
-}
 /* …and it grows to fit the choice (the field above is between rounds and
-   dimmed): the kicker, the three cards, the swap row and the stat bump all on
+   dimmed): the kicker, the strip and its card, the swap or stat row all on
    screen at once, with the commit. The Stage keeps its floor. */
 .sh-detail.choosing,
 .sh-detail.choosing:has(> .sh-wavebar) {

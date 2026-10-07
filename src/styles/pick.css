@@ -1,0 +1,391 @@
+/**
+ * Pick one, then read (`ui/shell/PickStrip.tsx`; Figma "Proposal · Pick one,
+ * then read"). A strip of picture tokens — no names, one label + number — and
+ * the focused option's card below it in a fixed recipe. On a desk the strip
+ * stands as a rail beside the card.
+ */
+
+/* ------------------------------------------------------------ the pair */
+.pk {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------ the strip */
+.pk-strip {
+  display: grid;
+  grid-template-columns: repeat(var(--pk-n, 3), minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+.pk-tok {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  min-width: 0;
+  height: 84px;
+  padding: 6px 7px 6px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: inset 0 -3px 0 var(--pk-rail, transparent);
+  cursor: pointer;
+}
+.pk-tok[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--panel-3);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    inset 0 -3px 0 var(--pk-rail, transparent),
+    0 0 14px rgba(224, 172, 76, 0.22);
+}
+/* The caret: the focused token points at the card it opened. */
+.pk-tok[aria-checked='true']::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-top: 5px solid var(--accent);
+}
+.pk-tok:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.pk-tok.locked {
+  border-style: dashed;
+  background: rgba(20, 14, 8, 0.45);
+  box-shadow: none;
+}
+.pk-tok.locked[aria-checked='true'] {
+  border-style: solid;
+}
+.pk-tok.locked .pk-label,
+.pk-tok.locked .pk-value,
+.pk-tok.unavailable .pk-label {
+  color: var(--muted);
+}
+.pk-art {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+.pk-art > img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pk-art .px {
+  width: 40px;
+  height: 40px;
+}
+.pk-tok.locked .pk-art,
+.pk-tok.unavailable .pk-art {
+  opacity: 0.6;
+}
+.pk-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--fs-micro);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.pk-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--text);
+}
+.pk-value {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.pk-tok[aria-checked='true'] .pk-value {
+  color: var(--accent-text);
+}
+.pk-value.warn,
+.pk-tok[aria-checked='true'] .pk-value.warn {
+  color: var(--bad-text);
+}
+
+/* ------------------------------------------------------------ the card */
+.pk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.pk-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pk-head-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-sm);
+  background: rgba(20, 14, 8, 0.55);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.pk-head-art > img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pk-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pk-kicker {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.pk-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--text);
+}
+.pk-pager {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pk-step {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pk-step:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+.pk-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.pk-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 9px 7px;
+  border-radius: var(--r-sm);
+  background: rgba(20, 14, 8, 0.45);
+}
+.pk-fact dt {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-fact dd {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.pk-fact.good dd {
+  color: var(--good);
+}
+.pk-fact.bad dd {
+  color: var(--bad-text);
+}
+.pk-fact.accent dd {
+  color: var(--accent-text);
+}
+.pk-fact.hot dd {
+  color: #e9806a;
+}
+.pk-does {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text);
+}
+.pk-risk {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--bad-text);
+}
+.pk-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pk-sec-k {
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pk-sec-v {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pk-sec-v b {
+  color: var(--text);
+}
+
+/* The equipment slots (Main · Off hand · Body), as the gear panel draws them. */
+.pk-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.pk-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+.pk-slot-box {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--pk-rar, var(--line-strong));
+  background: rgba(20, 14, 8, 0.5);
+  color: var(--text);
+}
+.pk-slot.empty .pk-slot-box {
+  border-style: dashed;
+  border-width: 1.5px;
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
+.pk-slot-k {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.pk-slot-v {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------- inside the Context panel
+   The skill milestone's strip lives in the shell's detail band, where height
+   is the scarce thing: shorter tokens, a tighter card. */
+.pk.compact {
+  gap: 10px;
+}
+.pk.compact .pk-tok {
+  height: 66px;
+  padding: 4px 6px 5px;
+}
+.pk.compact .pk-art .px,
+.pk.compact .pk-art > svg {
+  width: 28px;
+  height: 28px;
+}
+.pk.compact .pk-card {
+  gap: 8px;
+  padding: 9px 12px 11px;
+}
+.pk.compact .pk-name {
+  font-size: 19px;
+}
+
+/* ------------------------------------------------------------ the desk rail */
+@media (min-width: 900px) and (min-height: 540px) {
+  /* A pick page takes a wider column than a plain page: the rail and the
+     card sit side by side. */
+  .shell.shell-page:has(.pk.rail) {
+    max-width: 800px;
+  }
+  .pk.rail {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+  /* The CTA (and a pinned way out) sits under the card, not under the rail. */
+  .shell.shell-page:has(.pk.rail) .pg-cta-band,
+  .shell.shell-page:has(.pk.rail) .pg-foot {
+    padding-left: calc(var(--gutter) + 96px + 16px);
+  }
+  .pk.rail .pk-strip {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .pk.rail .pk-tok {
+    height: 78px;
+  }
+  /* The card is beside the rail, not under it: the gold ring alone marks focus. */
+  .pk.rail .pk-tok::after {
+    content: none;
+  }
+  .pk-card {
+    padding: 14px 18px 16px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pk-tok:hover:not([aria-checked='true']) {
+    border-color: var(--accent-dim);
+    background: var(--panel-2);
+  }
+  .pk-step:hover {
+    color: var(--accent-text);
+  }
+}

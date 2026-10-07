@@ -1,9 +1,11 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { hashSeed } from '../../../game/core/rng'
 import { COMPANIES, companyById, type CompanyId } from '../../../game/data/companies'
+import { TERRAIN_RULES } from '../../../game/data/terrain'
 import { RANDOM_UNLOCK_SKILLS } from '../../../game/data/skills'
 import {
   ADVANCE,
+  CITY_COUNT,
   CRATE_PRICE,
   contractLetter,
   contractPlan,
@@ -30,6 +32,7 @@ import { companyVar } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
 import { ContractPage, DangerPips, Gold, GroundChip, MarketTag, PageTip, Slip, SlipLine } from './parts'
+import { PickCard, PickStrip, stepId, type PickFact, type PickTokenSpec } from '../PickStrip'
 
 /**
  * The contract board and its terms (the mercenary company; mockups
@@ -83,16 +86,53 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
   const taught = useSettingsStore((s) => s.taught.board)
   const taughtMarket = useSettingsStore((s) => s.taught.market)
   const reveal = useReveal()
+  // The focused company. A company not open yet can be focused — its card says
+  // when it opens — but never picked: the store keeps the last open one.
+  const [peek, setPeek] = useState<CompanyId>(selected)
+  const focus = (id: string) => {
+    const c = id as CompanyId
+    setPeek(c)
+    if (companyOpen(c, standing)) pick(c)
+  }
   // The market's one tip is read once the terms are opened with it showing.
   const terms = () => {
     if (reveal.market) useSettingsStore.getState().markTaught('market')
     toTerms()
   }
   const today = utcDateKey()
-  const co = companyById(selected)
-  const xp = standing[selected] ?? 0
+  const co = companyById(peek)
+  const open = companyOpen(peek, standing)
+  const xp = standing[peek] ?? 0
   const prog = standingProgress(xp)
   const skillsLeft = RANDOM_UNLOCK_SKILLS.some((id) => !skills.includes(id))
+  const market = marketFor(peek, today, reveal.market)
+  const index = COMPANIES.findIndex((c) => c.id === peek)
+
+  const tokens: PickTokenSpec[] = COMPANIES.map((c) => {
+    const ok = companyOpen(c.id, standing)
+    const s = standingOf(standing, c.id)
+    return {
+      id: c.id,
+      art: <Crest company={c.id} locked={!ok} />,
+      label: 'Rep:',
+      value: ok ? s : '—',
+      name: ok ? `${c.name}, ${c.goods}: standing ${s}` : `${c.name}: opens at Standing ${c.opensAt} with any company`,
+      state: ok ? undefined : 'locked',
+      rail: ok ? companyVar(c.id) : undefined,
+    }
+  })
+
+  const facts: PickFact[] = open
+    ? [
+        { label: 'Rep', value: standingOf(standing, peek) },
+        ...(reveal.market ? [{ label: 'Market', value: market > 1 ? `×${market} today` : 'steady', tone: market > 1 ? ('accent' as const) : undefined }] : []),
+        { label: 'Ground', value: <GroundChip company={peek} /> },
+      ]
+    : [
+        { label: 'Rep', value: '—' },
+        { label: 'Opens at', value: `Standing ${co.opensAt}` },
+        { label: 'Ground', value: <GroundChip company={peek} /> },
+      ]
 
   return (
     <ContractPage
@@ -109,92 +149,87 @@ function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
           <BankChip />
         </div>
       }
-      cta={{ label: 'Read the terms', run: terms, heavy: true, disabled: !companyOpen(selected, standing) }}
+      cta={
+        open
+          ? { label: `Read ${shortName(co.name)}’s terms`, run: terms, heavy: true }
+          : { label: `Opens at Standing ${co.opensAt}`, run: () => {}, heavy: true, disabled: true }
+      }
     >
       {!taught && <PageTip>Each company pays your militia to guard its road. The free escort is always on offer.</PageTip>}
       {taught && reveal.market && !taughtMarket && (
         <PageTip>New: the market of the day. One company’s good sells for ×{MARKET_MULT} today — its crates and its completion bonus.</PageTip>
       )}
-      <div className="ct-list" role="radiogroup" aria-label="Company">
-        {COMPANIES.map((c) => {
-          const open = companyOpen(c.id, standing)
-          const s = standingOf(standing, c.id)
-          const market = marketFor(c.id, today, reveal.market)
-          return (
-            <button
-              key={c.id}
-              className={`ct-co${c.id === selected ? ' sel' : ''}${open ? '' : ' locked'}`}
-              style={{ '--co': companyVar(c.id) } as CSSProperties}
-              role="radio"
-              aria-checked={c.id === selected}
-              aria-disabled={!open}
-              onClick={() => open && pick(c.id)}
-            >
-              <Crest company={c.id} locked={!open} />
-              <span className="ct-co-main">
-                <span className="ct-co-name">
-                  <b>{c.name}</b> <span className="ct-co-goods">· {c.goods}</span>
-                </span>
-                <span className="ct-co-meta">
-                  {open ? <GroundChip company={c.id} /> : <span className="ct-co-goods">Opens at Standing {c.opensAt} with any company</span>}
-                  {open && market > 1 && <MarketTag mult={market} />}
-                </span>
+      <div className="pk rail">
+        <PickStrip label="Company" tokens={tokens} focused={peek} onFocus={focus} />
+        <PickCard
+          className="ct-pk"
+          style={{ '--co': companyVar(peek) } as CSSProperties}
+          art={<Crest company={peek} locked={!open} scale={3} />}
+          kicker={`${co.goods} road · ${CITY_COUNT} cities`}
+          name={co.name}
+          index={index}
+          count={COMPANIES.length}
+          onStep={(d) => focus(stepId(COMPANIES, peek, d) ?? peek)}
+          facts={facts}
+          noun="company"
+        >
+          <p className="pk-does">
+            {open ? groundLine(peek) : `Hires once you hold Standing ${co.opensAt} with any company. ${groundLine(peek)}`}
+          </p>
+          {open && (
+            <div className="ct-letter">
+              <p className="ct-letter-from">A letter from {co.name}</p>
+              <p className="ct-letter-line">“{contractLetter(peek, hashSeed(seed, 'contract', peek))}”</p>
+              <span className="ct-letter-seal">
+                <Crest company={peek} />
               </span>
-              <span className="ct-co-lv">
-                {open ? (
+            </div>
+          )}
+          {open && (
+            <div className="ct-next">
+              <span className="ct-next-stone" aria-hidden="true">
+                <Scroll sil="#5a4a36" />
+                <b>?</b>
+              </span>
+              <span className="ct-next-text">
+                {prog.max ? (
                   <>
-                    <b>{s}</b>
-                    <span>Standing</span>
+                    <b>Standing {MAX_STANDING} with {co.name}</b>
+                    <span>The highest there is.</span>
+                  </>
+                ) : skillsLeft ? (
+                  <>
+                    <b>Next: a random skill</b>
+                    <span>
+                      at Standing {prog.standing + 1} · {prog.need - prog.into} more standing XP
+                    </span>
                   </>
                 ) : (
-                  <Lock scale={3} />
+                  <>
+                    <b>Next: a Rare bonus item</b>
+                    <span>
+                      at Standing {prog.standing + 1} · every skill is unlocked · {prog.need - prog.into} more standing XP
+                    </span>
+                  </>
                 )}
               </span>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="ct-letter">
-        <p className="ct-letter-from">A letter from {co.name}</p>
-        <p className="ct-letter-line">“{contractLetter(selected, hashSeed(seed, 'contract', selected))}”</p>
-        <span className="ct-letter-seal">
-          <Crest company={selected} />
-        </span>
-      </div>
-
-      <div className="ct-next">
-        <span className="ct-next-stone" aria-hidden="true">
-          <Scroll sil="#5a4a36" />
-          <b>?</b>
-        </span>
-        <span className="ct-next-text">
-          {prog.max ? (
-            <>
-              <b>Standing {MAX_STANDING} with {co.name}</b>
-              <span>The highest there is.</span>
-            </>
-          ) : skillsLeft ? (
-            <>
-              <b>Next: a random skill</b>
-              <span>
-                at Standing {prog.standing + 1} · {prog.need - prog.into} more standing XP
-              </span>
-            </>
-          ) : (
-            <>
-              <b>Next: a Rare bonus item</b>
-              <span>
-                at Standing {prog.standing + 1} · every skill is unlocked · {prog.need - prog.into} more standing XP
-              </span>
-            </>
+              {!prog.max && skillsLeft && cardFloor(prog.standing + 1) > 1 && <span className="ct-level">Level {cardFloor(prog.standing + 1)}+</span>}
+            </div>
           )}
-        </span>
-        {!prog.max && skillsLeft && cardFloor(prog.standing + 1) > 1 && <span className="ct-level">Level {cardFloor(prog.standing + 1)}+</span>}
+        </PickCard>
       </div>
     </ContractPage>
   )
 }
+
+/** "Peppercorn Co." → "Peppercorn", for a CTA that names the company. */
+const shortName = (name: string) => name.replace(/ Co\.$/, '')
+
+/** What the company's ground does to a field, in the terrain rules' own words. */
+const groundLine = (id: CompanyId) =>
+  companyById(id)
+    .ground.rules.map((r) => TERRAIN_RULES[r].blurb)
+    .join(' ')
 
 // ---------------------------------------------------------------------------
 // The terms

@@ -1,4 +1,4 @@
-import { describeBase, gripOf, itemNoun, RARITY } from '../../game/data/items'
+import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
 import { HQ_OPENS_AT, PULL_PRICE } from '../../game/run/hq'
@@ -17,7 +17,7 @@ import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } fr
 import { menuStaged, revealOf } from '../../state/staging'
 import { revealFacts } from './staging'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, GRIP_NAME, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
@@ -272,10 +272,14 @@ export interface HeroCardSpec {
   color: string
   /** What its gear makes it do, in plain words (`gear.heroDoes`). */
   does: string
-  gear: { id: string; name: string; rarity: ItemRarity; icon: IconKey }[]
+  /** The three equipment slots in the gear panel's order; `piece` is empty for a free hand. */
+  slots: { slot: string; piece?: { name: string; rarity: ItemRarity; icon: IconKey } }[]
   skill?: { name: string; level: string; text: string }
-  /** "49 DPS · 96 reach" — held back on a staged first run. */
-  numbers?: string
+  /**
+   * The three key facts — DPS, reach, and how many it holds or hits — for the
+   * pick-one card, and the DPS for its token. Held back on a staged first run.
+   */
+  facts?: { dps: number; reach: number; third: { label: string; value: string } }
 }
 
 /**
@@ -435,19 +439,33 @@ function heroBody(s: Sentinel): string[] {
 export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
   const p = computeCombat(s)
   const k = s.skills?.length ? skillById(s.skills[0]) : undefined
-  const gear = [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]
-    .filter((i): i is Item => !!i)
-    // The kind, not the generated name: "Wand", not "Swift Wand of Precision" —
-    // the kind is what decides what the hero does, and three cards side by side
-    // must read in one glance. The full name is on the gear panel once picked.
-    .map((i) => ({ id: i.id, name: itemNoun(i) ?? itemName(i), rarity: i.rarity, icon: itemIcon(i) }))
+  // The kind, not the generated name: "Wand", not "Swift Wand of Precision" —
+  // the kind is what decides what the hero does, and three cards side by side
+  // must read in one glance. The full name is on the gear panel once picked.
+  const piece = (i: Item) => ({ name: itemNoun(i) ?? itemName(i), rarity: i.rarity, icon: itemIcon(i) })
+  const { mainHand, offHand, body } = s.equipment
+  // What it holds, as the engine counts it: the shield's hold plus any hold skill.
+  const hold = p.mods.block?.count ?? 0
   return {
     art: heroLookArt(s),
     color: heroLookVar(s),
     does: heroDoes(s),
-    gear,
+    slots: [
+      { slot: 'Main', piece: mainHand ? piece(mainHand) : undefined },
+      { slot: 'Off hand', piece: offHand ? piece(offHand) : undefined },
+      { slot: 'Body', piece: body ? piece(body) : undefined },
+    ],
     skill: k ? { name: k.name, level: skillLevelLabel(k.level), text: k.desc } : undefined,
-    numbers: staged ? undefined : `${Math.round(p.dps)} DPS · ${Math.round(p.range)} reach`,
+    facts: staged
+      ? undefined
+      : {
+          dps: Math.round(p.dps),
+          reach: Math.round(p.range),
+          // A shield's hold is the deciding third number; without one, how many it hits.
+          third: hold
+            ? { label: 'Holds', value: `${hold} ${hold === 1 ? 'enemy' : 'enemies'}` }
+            : { label: 'Targets', value: p.style === 'cast' ? 'a group' : 'one' },
+        },
   }
 }
 
@@ -785,21 +803,12 @@ function rewardOffers(st: St): Offer[] {
     // behind an ⓘ like the hero panel's (Phase 2) instead of a paragraph on
     // every card.
     info: c.grant?.mods ? { label: 'How effects stack', lines: STACKING_RULES } : undefined,
-    action: { label: 'Take it', run: () => st.chooseReward(c.id) },
-    // One tap takes it (October 2026); a hold, hover or focus reads it first.
-    oneTap: rewardTap(c),
+    // Select, then take (the designer, October 2026: "can it only be on the
+    // cta that the item is selected"). Main's one-tap reward took the card on
+    // the tap a player made to compare its stats; a tap now only reads it, and
+    // the CTA names the card it takes.
+    action: { label: `Take ${c.item ? itemName(c.item) : c.title}`, run: () => st.chooseReward(c.id) },
   }))
-}
-
-/** A reward card's one-tap name and its sentence once taken. */
-function rewardTap(c: NonNullable<St['reward']>[number]): NonNullable<Offer['oneTap']> {
-  const title = c.item ? itemName(c.item) : c.title
-  const what = c.item ? GRIP_NAME[gripOf(c.item)] : c.kind === 'relic' ? 'a relic for all your heroes' : 'for all your heroes'
-  const downside = c.downside ? `. Downside: ${c.downside}` : ''
-  return {
-    label: `Take ${title} — ${what}, ${RARITY[c.rarity].label}${downside}`,
-    said: c.item ? undefined : `Took ${title}.`,
-  }
 }
 
 /**

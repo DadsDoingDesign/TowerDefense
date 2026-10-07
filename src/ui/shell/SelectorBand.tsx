@@ -17,7 +17,6 @@ import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type Leve
 import { useMapFocus } from './mapFocus'
 import { openSlotShown } from '../../state/staging'
 import { useShown, useStaged } from './staging'
-import { commitOneTap, describeOneTap, useOneTap } from './oneTap'
 import { isMelee, MELEE_LINE } from '../../game/engine/melee'
 import { conflictedIds } from '../../game/run/clearance'
 import { fieldConflicts } from '../../state/game/selectors'
@@ -264,31 +263,20 @@ function useFlashes(): Record<string, LevelFlash> {
  * The Selector after a cleared normal wave: the company as a compact strip
  * (so a level-up can glow where the heroes are) over the reward hand.
  *
- * One tap TAKES a card (October 2026, the designer's call on audit §4 item
- * 8): a reward is the most frequent choice in a run and the cheapest, and
- * select-then-confirm doubled its taps. Reading a card first is still one
- * gesture away — hold it (touch), hover it (mouse) or focus it (keyboard) and
- * its detail fills the Context panel; letting go of a hold takes nothing. The
- * press rules are `press.ts`; the wiring is `oneTap.tsx`.
+ * Select, then take. A tap on a card only READS it — its detail fills the
+ * Context panel, so its stats can be compared card by card — and the take is
+ * the wave strip's CTA, which names the card ("Take Cruel Bow"). Main's
+ * one-tap reward (October 2026) took the card on the tap a player made to
+ * look at it; the designer asked for the commit to live on the CTA alone.
  *
- * The first card's detail is shown to begin with, so the Context panel is
- * never empty; that card is marked as the one being read, not as chosen.
+ * The first card is preselected, so the Context panel is never empty and the
+ * CTA already names a card; tapping another moves both.
  */
 function RewardSelector({ offers }: { offers: Offer[] }) {
   const reward = useGameStore((s) => s.reward)
   const selection = useGameStore((s) => s.shellSelection)
   const cards = offers.filter((o) => reward?.some((c) => c.id === o.id))
   const firstId = cards[0]?.id ?? null
-  const { bind, pressing } = useOneTap({
-    surface: cards.map((o) => o.id).join(' '),
-    commit: (id) => {
-      const o = cards.find((c) => c.id === id)
-      if (o) commitOneTap(o)
-    },
-    inspect: (id) => pickReward(id),
-    disabled: (id) => !!cards.find((c) => c.id === id)?.action?.disabled,
-  })
-
   // Show the first card's detail once per hand. Nothing selected yet is the
   // only case: a hero or a level-up the player opened is theirs to leave.
   useEffect(() => {
@@ -300,20 +288,20 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
   return (
     <section className="sh-selector sh-selector-reward" aria-label="Spoils">
       <PartyStrip />
-      <div className="sh-reward-row" role="group" aria-label="Spoils — take one">
+      <div className="sh-reward-row" role="group" aria-label="Spoils — pick one, then take it">
         {cards.map((o) => {
-          const looking = selection?.kind === 'offer' && selection.id === o.id
+          const selected = selection?.kind === 'offer' && selection.id === o.id
           const mark = o.mark ? markLabel(o.mark) : null
           return (
             <button
               key={o.id}
-              className={`sh-offer sh-reward onetap ${looking ? 'looking' : ''} ${pressing === o.id ? 'pressing' : ''}`}
+              className={`sh-offer sh-reward ${selected ? 'selected' : ''}`}
               style={o.color ? (railStyle(o.color) as CSSProperties) : undefined}
-              // The deed, not a toggle: activating it takes the card.
-              aria-label={`${o.oneTap?.label ?? o.title}${mark ? `, ${mark}` : ''}`}
-              // What a hold shows, for a screen reader on reaching the card.
-              aria-description={describeOneTap(o)}
-              {...bind(o.id)}
+              // A toggle that reads the card; the strip's CTA takes it.
+              aria-pressed={selected}
+              aria-label={`${o.title}${mark ? `, ${mark}` : ''}`}
+              data-sfx="toggle"
+              onClick={() => pickReward(o.id)}
             >
               <span className="sh-reward-icon" aria-hidden="true">
                 {o.icon && <Icon name={o.icon} lg />}
@@ -336,7 +324,7 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
   )
 }
 
-/** Show a reward card's detail in the Context panel (a hold, a hover, keyboard focus). */
+/** Show a reward card's detail in the Context panel, and aim the strip's "Take" at it. */
 function pickReward(id: string) {
   useLevelUps.setState({ lastReward: id })
   useGameStore.setState({ shellSelection: { kind: 'offer', id }, selectedSentinelId: null, gearSlot: null })
