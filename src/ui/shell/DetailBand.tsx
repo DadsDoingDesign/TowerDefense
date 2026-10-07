@@ -52,7 +52,7 @@ import {
 import { Icon } from '../Icon'
 import { Money } from './Money'
 import { SkillPanel } from './SkillPanel'
-import { NodePreviewPanel } from './NodePreview'
+import { MarchBar, NodePreviewPanel } from './NodePreview'
 import { useMapFocus } from './mapFocus'
 import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
@@ -75,8 +75,9 @@ import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/sele
 
 /**
  * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
- * permanent (rule three): it is on screen in battle, on the map and at the
- * merchant, so buying an item means watching it land.
+ * on screen in battle and at the merchant, so buying an item means watching it
+ * land. The run map (Oct 2026) is the stop's card and its full-width CTA
+ * (`MarchBar`) alone: no gear, no pack, and no party row above.
  */
 export function DetailBand({ offers }: { offers: Offer[] }) {
   // LS3: gear and the pack arrive with the first win's spoils. Until then the
@@ -86,7 +87,10 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
   // a stat bump do not fit a third of a phone, and gear is not what is being
   // decided. The gear and pack return the moment the choice is made or put off.
   const choosing = useSkillChoiceOpen()
-  const gear = shown && !choosing
+  // The run map (Oct 2026, the designer's mark-up): the stop's card and its
+  // CTA, nothing else — gear and the pack are tended at the next fight's setup.
+  const onMap = useGameStore((s) => s.screen === 'map')
+  const gear = shown && !choosing && !onMap
   return (
     <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}`} id="sh-detail-panels">
       <ContextPanel offers={offers} />
@@ -96,6 +100,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
       <WaveBar offers={offers} />
+      <MarchBar />
     </section>
   )
 }

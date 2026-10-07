@@ -13,6 +13,7 @@ import { fieldIdOf } from '../../game/data/maps'
 import { fieldName, groundFor } from '../../game/run/fields'
 import { NODE_ICON, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
+import { tapWord } from '../pointer'
 import { resistHint, summarizeEncounter } from './encounterPreview'
 import { useMapFocus } from './mapFocus'
 
@@ -33,7 +34,9 @@ const SPECIAL_BLURB: Record<string, string> = {
  * `tests/encounterPreview.test.ts`): the variant's name and what it asks for,
  * the elite modifier every enemy wears, the head count, any champions, and a
  * damage-type hint, and the Threat it is fought at. For a special stop it says
- * what the stop is. The march is a separate button.
+ * what the stop is. The march is a separate control: the full-width
+ * {@link MarchBar} under this panel (Oct 2026: the map is the card and its CTA,
+ * no party row and no gear beside it).
  */
 export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const runMap = useGameStore((s) => s.runMap)
@@ -43,7 +46,6 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const charter = useGameStore((s) => !!s.contract?.charter)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
-  const selectNode = useGameStore((s) => s.selectNode)
   const focus = useMapFocus((s) => s.focus)
 
   const firstRun = useGameStore((s) => s.firstRun)
@@ -135,22 +137,43 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         )}
         {!canMarch && <p className="sh-line muted">Out of reach from where you stand.</p>}
       </div>
-      <div className="sh-context-foot">
-        <button className="sh-btn" onClick={() => focus(null)}>
-          Back
-        </button>
-        {canMarch && (
-          <button
-            className="sh-btn primary"
-            onClick={() => {
-              focus(null)
-              selectNode(nodeId)
-            }}
-          >
-            March
-          </button>
-        )}
-      </div>
+    </div>
+  )
+}
+
+/**
+ * The run map's one CTA, full width under the Context panel like every page's
+ * (Oct 2026). It names the focused stop — "March to Patrol" — and commits the
+ * march; with nothing focused, or a stop out of reach, it waits and says why.
+ */
+export function MarchBar() {
+  const screen = useGameStore((s) => s.screen)
+  const runMap = useGameStore((s) => s.runMap)
+  const runSeed = useGameStore((s) => s.runSeed)
+  const charter = useGameStore((s) => !!s.contract?.charter)
+  const reachable = useGameStore((s) => s.reachableNodeIds)
+  const cleared = useGameStore((s) => s.clearedNodeIds)
+  const selectNode = useGameStore((s) => s.selectNode)
+  const nodeId = useMapFocus((s) => s.nodeId)
+  const focus = useMapFocus((s) => s.focus)
+  if (screen !== 'map') return null
+  const node = nodeId ? runMap.nodes.find((n) => n.id === nodeId) : undefined
+  const canMarch = !!node && reachable.includes(node.id) && !cleared.includes(node.id)
+  const name = node ? (summarizeEncounter({ runSeed, runMap, muster: charter }, node.id)?.variant ?? nodeMeta(node.type).label) : null
+  return (
+    <div className="sh-marchbar">
+      <button
+        type="button"
+        className="pg-cta"
+        disabled={!canMarch}
+        onClick={() => {
+          if (!node || !canMarch) return
+          focus(null)
+          selectNode(node.id)
+        }}
+      >
+        {canMarch ? `March to ${name}` : node ? 'Out of reach' : `${tapWord()} a stop to march`}
+      </button>
     </div>
   )
 }

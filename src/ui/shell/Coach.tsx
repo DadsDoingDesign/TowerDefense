@@ -204,7 +204,9 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     wearingAnything,
     showThreat: threat > 1.001,
     threat,
-    owesSkill: owesSkill && (onMap || inSetup || inPlace) ? owesSkill.name : undefined,
+    // The run map has no party row and no gear (Oct 2026): the skill and gear
+    // lessons wait for the fight's setup, where the hero cards and slots are.
+    owesSkill: owesSkill && (inSetup || inPlace) ? owesSkill.name : undefined,
     danger: inSetup && !!battleMap.tiles?.some((t) => t.danger === 'cursed'),
     challenge: inSetup && rule ? { name: rule.name, blurb: rule.blurb } : undefined,
     elite: inSetup && nodeHere?.type === 'elite',
@@ -212,7 +214,7 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     command: inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
     subwave: screen === 'battle' && battlePhase === 'battle' && breather && subwaveShown,
     speed: screen === 'battle' && battlePhase === 'battle' && breather && speedShown,
-    gear: gearShown && (inPlace || onMap),
+    gear: gearShown && (inPlace || inSetup),
     depth: depthShown && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
     merchant: onMap && reachable.some((id) => node(id)?.type === 'merchant'),
   })

@@ -509,6 +509,19 @@
   grid-template-rows: minmax(0, 1fr) auto;
   height: calc(var(--sh-detail-h) + var(--sh-wavebar-h) + var(--safe-bottom));
 }
+/* The run map (Oct 2026): the stop's card over one full-width CTA, as on every
+   page. No party row above and no gear or pack beside it, so the map keeps the
+   room they took. */
+.sh-detail:has(> .sh-marchbar) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: 10px;
+  height: calc(var(--sh-detail-h) + var(--safe-bottom));
+}
+.sh-marchbar {
+  grid-column: 1 / -1;
+  padding-bottom: var(--safe-bottom);
+}
 .sh-context,
 .sh-gear,
 .sh-pack {

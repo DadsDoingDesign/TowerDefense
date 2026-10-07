@@ -3304,3 +3304,16 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   one parchment card for what it holds. Still open: the desk column has an
   empty band between the notice and the tiles (as drawn in B2); the locked
   signpost's padlock is small at scale 2.
+
+- **2026-10-07 — The run map is the stop and its CTA.** The designer marked
+  up the map on a phone: no party row, no gear or pack beside the stop's
+  card, and the CTA full width as elsewhere. The map now has the Context
+  panel (the stop's preview) over one full-width `pg-cta`, "March to Patrol"
+  (`MarchBar`; "Tap a stop to march" with nothing focused, "Out of reach" for
+  a stop beyond the frontier); the Back/March pair is gone. Heroes are
+  posted, geared and levelled at the fight's setup, so the gear and skill
+  coach tips moved there too — the loop caught the gear tip still saying "Tap
+  a slot under Gear" over a map with no gear. Verified in the running app at
+  390×844, 375×667 and 1440×900. Scorecard: readability 5/5, hierarchy 5/5,
+  polish 4/5. Still open: on a 375×667 phone a long stop description scrolls
+  inside the card.
