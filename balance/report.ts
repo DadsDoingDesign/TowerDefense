@@ -3458,6 +3458,13 @@ if (want(15)) {
    * the cells have to be quieter to resolve one.
    */
   const CARD_SEEDS = [11, 137, 409, 1013, 2411, 5171]
+  /**
+   * The relics' `magic` bench keeps its own pin. It shared `BENCH_PIN.magic`
+   * until the merged tuning pass re-pinned the affix bench ×0.8 → ×0.7 (§4's
+   * Stormcaller lost a chain jump); the relics were fitted at ×0.8, and moving
+   * the affix bench must not silently re-grade them.
+   */
+  const RELIC_MAGIC_PIN = 0.8
   /** How far a stated tradeoff must move a bench, in each direction, to be one. */
   const CARD_EDGE = 0.02
   /** …and how far below zero a relic's average may sit before it is a punishment. */
@@ -3471,7 +3478,7 @@ if (want(15)) {
       label: 'magic',
       wave: AFFIX_SCENARIOS.magic.wave,
       hero: AFFIX_SCENARIOS.magic.build,
-      pin: BENCH_PIN.magic,
+      pin: RELIC_MAGIC_PIN,
       blurb: 'a splash mystic — the half of the roster a STR card cannot reach',
     },
   ]
