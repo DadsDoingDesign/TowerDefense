@@ -50,6 +50,8 @@ describe('rewardInPlace', () => {
     ['no hand', { reward: null }],
     ['the map (the page owns it there)', { screen: 'map' }],
     ['a fork pending', { crossroads: { recruits: [], mutations: [], mutationHeroId: null } }],
+    // October 2026: a city's payout takes no offers, so an in-place hand would be an empty row with no way on.
+    ['a city payout waiting', { contract: { pending: 0 } }],
   ])('does not hold for %s', (_, over) => {
     expect(rewardInPlace(settled(over))).toBe(false)
   })

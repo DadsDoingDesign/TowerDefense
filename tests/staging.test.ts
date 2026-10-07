@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  ALL_REVEALED,
   CORE_IDEAS,
   IDEAS,
   ideaShown,
@@ -8,17 +9,36 @@ import {
   openSlotShown,
   presentIdeas,
   readMet,
+  revealOf,
+  stakesShown,
   startsFirstRun,
   type IdeaId,
   type StageState,
 } from '../src/state/staging'
+import { HQ_OPENS_AT } from '../src/game/run/hq'
+import { standingXpToReach } from '../src/game/run/standing'
 import { META_VERSION, migrateMeta, useMetaStore } from '../src/state/metaStore'
 import { LS3_TEACH_IDS, migrateSettings, SETTINGS_VERSION, TEACH_IDS, useSettingsStore } from '../src/state/settingsStore'
 import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 import { GLOSSARY } from '../src/ui/channels'
 import { glossaryOffer } from '../src/ui/shell/codexOffers'
-import { pickTipId, type TipFacts } from '../src/ui/shell/coachRules'
+import {
+  noteWhere,
+  pickPill,
+  pickTipId,
+  PILL_BASE_MS,
+  PILL_FADE_MS,
+  PILL_MAX_MS,
+  PILL_PER_WORD_MS,
+  pillDurationMs,
+  stageCrowded,
+  TIP_GAP_MS,
+  tipWhere,
+  wagonsLow,
+  wordCount,
+  type TipFacts,
+} from '../src/ui/shell/coachRules'
 
 /**
  * LS3 — teach in layers. What a first run shows when, what is persisted and
@@ -111,9 +131,57 @@ describe('what a first run shows, and when', () => {
     for (const id of IDEAS) expect(ideaShown(id, false, [], presentIdeas(firstBattle()))).toBe(true)
   })
 
-  it('the menu opens up with the first finished run', () => {
+  it('the menu opens up with the first finished run — then the staggered reveal (October 2026)', () => {
     expect(metaIdeas({ runsCompleted: 0 })).toEqual([])
-    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'stake', 'hq', 'crates', 'sovereign'])
+    // Run 2 no longer opens everything: the bank, the purse, standing and the charter's goal.
+    expect(metaIdeas({ runsCompleted: 1 })).toEqual(['bank', 'purse', 'standing', 'sovereign'])
+    // The HQ at 500 banked, the crates at the first delivery, the stake at standing 2 with any company.
+    expect(metaIdeas({ runsCompleted: 1, bank: HQ_OPENS_AT })).toContain('hq')
+    expect(metaIdeas({ runsCompleted: 1, bank: HQ_OPENS_AT - 1 })).not.toContain('hq')
+    expect(metaIdeas({ runsCompleted: 1, runsWon: 1 })).toContain('crates')
+    expect(metaIdeas({ runsCompleted: 2, standing: { art: standingXpToReach(1) } })).not.toContain('stake')
+    expect(metaIdeas({ runsCompleted: 2, standing: { art: standingXpToReach(2) } })).toContain('stake')
+    // The market and company focus from the fifth finished contract.
+    expect(metaIdeas({ runsCompleted: 4 })).not.toContain('market')
+    expect(metaIdeas({ runsCompleted: 5 })).toEqual(expect.arrayContaining(['market', 'focus']))
+  })
+
+  it('revealOf: each gate, its latch, and "Show everything" opening it all', () => {
+    const r = (v: Parameters<typeof revealOf>[0]) => revealOf(v, false)
+    // A first-timer and a run-2 player with 100 in the bank: nothing yet.
+    expect(r({ runsCompleted: 0, bank: 9999 })).toEqual({ hq: false, crates: false, market: false, focus: false })
+    expect(r({ runsCompleted: 1, bank: 100 })).toEqual({ hq: false, crates: false, market: false, focus: false })
+    // The HQ the first time the bank holds 500 — and it stays open once met (the latch).
+    expect(r({ runsCompleted: 1, bank: 500 }).hq).toBe(true)
+    expect(r({ runsCompleted: 3, bank: 40, met: ['hq'] }).hq).toBe(true)
+    // A save that bought an HQ level has met the HQ.
+    expect(r({ runsCompleted: 3, bank: 40, hqOwned: true }).hq).toBe(true)
+    // The crates at the first delivered contract (a fall or a cash-out does not open them), latched.
+    expect(r({ runsCompleted: 3, runsWon: 0 }).crates).toBe(false)
+    expect(r({ runsCompleted: 3, runsWon: 1 }).crates).toBe(true)
+    expect(r({ runsCompleted: 3, met: ['crates'] }).crates).toBe(true)
+    // The market and focus at five finished contracts.
+    expect(r({ runsCompleted: 4 })).toMatchObject({ market: false, focus: false })
+    expect(r({ runsCompleted: 5 })).toMatchObject({ market: true, focus: true })
+    // "Show everything from the start" opens every gate.
+    expect(revealOf({ runsCompleted: 0 }, true)).toEqual(ALL_REVEALED)
+    // Stakes, per company, at standing 2 with it.
+    expect(stakesShown({ art: standingXpToReach(1) }, 'art', false)).toBe(false)
+    expect(stakesShown({ art: standingXpToReach(2) }, 'art', false)).toBe(true)
+    expect(stakesShown({ art: standingXpToReach(2) }, 'spice', false)).toBe(false)
+    expect(stakesShown({}, 'spice', true)).toBe(true)
+  })
+
+  it('the HQ latch: a bank that falls back under 500 keeps the HQ open once it was met', () => {
+    useMetaStore.getState().resetMeta()
+    useMetaStore.setState({ bank: 520, stats: { ...useMetaStore.getState().stats, runsCompleted: 2 } })
+    useMetaStore.getState().recordMet(metaIdeas({ runsCompleted: 2, bank: 520 }))
+    expect(useMetaStore.getState().met).toContain('hq')
+    useMetaStore.setState({ bank: 20 })
+    const m = useMetaStore.getState()
+    expect(revealOf({ runsCompleted: 2, bank: m.bank, met: m.met }, false).hq).toBe(true)
+    // The latch is the persisted `met` list, validated on load.
+    expect(migrateMeta({ met: ['hq', 'market', 'nope'] }, META_VERSION).met).toEqual(['hq', 'market'])
   })
 })
 
@@ -212,7 +280,7 @@ describe('persistence and validation', () => {
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(10)
+    expect(META_VERSION).toBe(11)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])
@@ -232,8 +300,8 @@ describe('persistence and validation', () => {
     expect(useMetaStore.getState().met).toEqual([])
   })
 
-  it('settings v4: "Show everything" is a boolean that defaults off', () => {
-    expect(SETTINGS_VERSION).toBe(4)
+  it('settings v4+: "Show everything" is a boolean that defaults off', () => {
+    expect(SETTINGS_VERSION).toBe(5)
     const none = () => null
     expect(migrateSettings({}, 4, none).showEverything).toBe(false)
     expect(migrateSettings({ showEverything: true }, 4, none).showEverything).toBe(true)
@@ -344,6 +412,82 @@ describe('one tip per new idea (the coach)', () => {
     expect(pickTipId(facts({ inSetup: true, deployed: 1, elite: true, danger: true }))).toBe('danger')
     // The first win's reward: the gear lesson before the enemy-strength one.
     expect(pickTipId(facts({ gear: true, showThreat: true, threat: 1.12 }))).toBe('gear')
+  })
+
+  // Oct 2026 audit, 2.5: nothing new floats over a field being fought on.
+  it('a tip that comes due mid-wave waits for the wave to end', () => {
+    // Enemy strength rises mid-run; during a live wave it waits…
+    expect(pickTipId(facts({ live: true, showThreat: true, threat: 1.12 }))).toBeNull()
+    // …and speaks at the next non-live moment.
+    expect(pickTipId(facts({ live: false, showThreat: true, threat: 1.12 }))).toBe('threat')
+    // The breather lessons are the live wave's own: they speak in its pause…
+    expect(pickTipId(facts({ live: true, subwave: true }))).toBe('subwave')
+    expect(pickTipId(facts({ live: true, speed: true }))).toBe('speed')
+    expect(pickTipId(facts({ live: true, taught: { ...none, subwave: true }, subwave: true, speed: true }))).toBe('speed')
+    // …and only they: nothing else jumps the wave.
+    expect(pickTipId(facts({ live: true, gear: true, showThreat: true, threat: 1.2 }))).toBeNull()
+  })
+})
+
+// October 2026: the coach is a hint pill over the Stage — no row, no "Got it".
+describe('the hint pill', () => {
+  it('a field note pre-empts a tip at once, and the new-ground note outranks a tip', () => {
+    expect(pickPill({ note: false, ground: false, tip: 'deploy' })).toEqual({ kind: 'tip', id: 'deploy' })
+    expect(pickPill({ note: true, ground: false, tip: 'deploy' })).toEqual({ kind: 'note' })
+    expect(pickPill({ note: true, ground: true, tip: 'deploy' })).toEqual({ kind: 'note' })
+    expect(pickPill({ note: false, ground: true, tip: 'deploy' })).toEqual({ kind: 'ground' })
+    expect(pickPill({ note: false, ground: false, tip: null })).toBeNull()
+  })
+
+  it('stays long enough to read, and never outstays its cap', () => {
+    expect(pillDurationMs('')).toBe(PILL_BASE_MS)
+    const short = pillDurationMs('Tap your hero, then a glowing tile on the field.')
+    const long = pillDurationMs('Items you win land in your pack. Tap a slot under Gear to wear one — what a hero holds is what it does.')
+    expect(short).toBe(PILL_BASE_MS + 10 * PILL_PER_WORD_MS)
+    expect(long).toBeGreaterThan(short)
+    // "—" is not a word.
+    expect(wordCount('New ground: The Kiln Road — post your heroes.')).toBe(8)
+    for (const n of [0, 1, 5, 20, 60, 200, 5000]) {
+      const d = pillDurationMs(Array.from({ length: n }, () => 'word').join(' '))
+      expect(d).toBeGreaterThanOrEqual(PILL_BASE_MS)
+      expect(d).toBeLessThanOrEqual(PILL_MAX_MS)
+    }
+    expect(pillDurationMs('word '.repeat(5000))).toBe(PILL_MAX_MS)
+    // A tip leaves room before the next one (F10), and fades quickly.
+    expect(TIP_GAP_MS).toBeGreaterThan(PILL_FADE_MS)
+  })
+
+  it('floats next to what it teaches, never over it', () => {
+    // The wave strip, the party row and the gear are below the Stage: bottom edge.
+    for (const id of ['subwave', 'speed', 'command', 'skill', 'gear', 'equip', 'relic'] as const) expect(tipWhere(id)).toBe('bottom')
+    // The field and the header's chips: top edge.
+    for (const id of ['deploy', 'danger', 'challenge', 'threat', 'depth', 'merchant'] as const) expect(tipWhere(id)).toBe('top')
+    // A note about a tile near the top of the field floats at the bottom.
+    expect(noteWhere(40, 960)).toBe('bottom')
+    expect(noteWhere(600, 960)).toBe('top')
+    expect(noteWhere(null, 960)).toBe('top')
+    expect(noteWhere(40, 0)).toBe('top')
+    // …and a bottom-edge tip never sits on the wagons while the field is in play.
+    expect(wagonsLow(900, 960)).toBe(true)
+    expect(wagonsLow(400, 560)).toBe(false)
+    expect(wagonsLow(undefined, 960)).toBe(false)
+    expect(tipWhere('subwave', { wagonsLow: true })).toBe('top')
+    expect(tipWhere('threat', { wagonsLow: true })).toBe('top')
+    // On the run map the bottom edge is the stops you can march to: top, always.
+    expect(tipWhere('gear', { onMap: true })).toBe('top')
+    expect(tipWhere('gear')).toBe('bottom')
+  })
+
+  it('never shares a short Stage with the wave-clear ceremony', () => {
+    expect(stageCrowded({ settled: true, stageH: 88 })).toBe(true)
+    expect(stageCrowded({ settled: true, stageH: 309 })).toBe(false)
+    expect(stageCrowded({ settled: false, stageH: 88 })).toBe(false)
+    // Not measured yet: no verdict.
+    expect(stageCrowded({ settled: true, stageH: 0 })).toBe(false)
+    const none = Object.fromEntries(TEACH_IDS.map((id) => [id, false])) as TipFacts['taught']
+    const base: TipFacts = { taught: none, inSetup: false, deployed: 0, packCount: 0, wearingAnything: true, showThreat: false, threat: 1, danger: false, elite: false, relicOffered: false, subwave: false, speed: false, gear: true, merchant: false }
+    expect(pickTipId(base)).toBe('gear')
+    expect(pickTipId({ ...base, ceremonyCrowded: true })).toBeNull()
   })
 })
 

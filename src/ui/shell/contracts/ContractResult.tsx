@@ -11,7 +11,8 @@ import { itemName, strengthText } from '../../channels'
 import { Coin } from '../../pixel'
 import { DefeatReceipt } from '../DefeatReceipt'
 import { FeatsEarned } from '../FeatsEarned'
-import { InfoCard, MenuRow } from '../Page'
+import { InfoCard } from '../Page'
+import { Icon } from '../../Icon'
 import { StandingEarned, UnlocksEarned } from '../ProgressEarned'
 import { stakeLine } from '../offers'
 import { ContractPage, Gold, Slip, SlipLine } from './parts'
@@ -24,7 +25,8 @@ import { ContractPage, Gold, Slip, SlipLine } from './parts'
  *    contract, a stake milestone, a standing level), then the standing card.
  *  - **Cashed out** — the gold banked, the cities' receipt, the standing kept.
  *  - **The wagons fell** — the cause first (`DefeatReceipt`), then what was
- *    kept (the cities' pay and the purse) and what was lost (unsold crates).
+ *    kept (the cities' pay and the road's share) and what was lost (unsold
+ *    crates). The company's advance is never banked.
  *  - **The Sovereign Route** (the endgame charter) — delivered, the payout
  *    leads and the Sovereign item it unlocked is revealed as its card; fallen,
  *    the head says plainly that the fee is lost.
@@ -100,18 +102,43 @@ export function ResultScreen() {
             </p>
           )}
           <p className="ct-sub">{sub}</p>
-          {home && (home.purseBack > 0 || home.road > 0) && (
+          {home && ((home.purseBack > 0 && !home.advance) || home.road > 0) && (
             <p className="ct-sub ct-home">
-              Purse returned {home.purseBack.toLocaleString('en')} · Road gold {home.road.toLocaleString('en')} → {home.roadBanked.toLocaleString('en')} banked ({home.pct}%)
+              {/* Oct 2026: the road part only when the road paid, and a fall says
+                  why its share is smaller (`hq.LOST_ROAD_SHARE`). The company's
+                  advance never comes home: it is named as the company's, not
+                  as gold returned. An older save's purse still comes home. */}
+              {/* The advance's repayment is on the slip, not here: one line keeps
+                  the head under the 30% chrome budget. */}
+              {[
+                home.purseBack > 0 && !home.advance ? `Purse returned ${home.purseBack.toLocaleString('en')}` : '',
+                home.road > 0
+                  ? `Road gold ${home.road.toLocaleString('en')} → ${home.roadBanked.toLocaleString('en')} banked (${home.pct}%${outcome === 'lost' ? ', the contract fell' : ''})`
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           )}
         </div>
       }
       cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
+      /*
+       * Oct 2026 (3.5): the exits are ONE row of two quiet buttons — the
+       * mobile system's dual action footer. As two 56px picture rows they
+       * stacked 134px of chrome on the run-end screen (40% of a phone with
+       * the head), above the one next step.
+       */
       foot={
-        <div className="pg-rows">
-          {outcome === 'lost' && assist === 'off' && <MenuRow label="Turn on Assist · Steady" icon="armour" big onClick={() => setAssist('steady')} />}
-          <MenuRow label="Back to the menu" icon="back" big onClick={returnToHub} />
+        <div className="pg-dual">
+          {outcome === 'lost' && assist === 'off' && (
+            <button className="pg-dual-btn" onClick={() => setAssist('steady')}>
+              <Icon name="assist" /> Assist: Steady
+            </button>
+          )}
+          <button className="pg-dual-btn" onClick={returnToHub}>
+            <Icon name="back" /> Back to the menu
+          </button>
         </div>
       }
     >
@@ -134,8 +161,11 @@ export function ResultScreen() {
               <SlipLine key={route.towns[i]} label={route.towns[i]} note={c.cargoAt[i] != null && c.cargoAt[i] < 100 ? `at ${c.cargoAt[i]}% cargo` : undefined} value={<Gold n={p} />} />
             ),
           )}
-          {c.cashOut > 0 && <SlipLine label="The last crates, sold cheap" value={<Gold n={c.cashOut} />} />}
-          {home && home.purseBack > 0 && <SlipLine label="Purse returned" value={<Gold n={home.purseBack} />} />}
+          {c.cashOut > 0 && <SlipLine label="The last crates, sold" value={<Gold n={c.cashOut} />} />}
+          {home && !home.advance && home.purseBack > 0 && <SlipLine label="Purse returned" value={<Gold n={home.purseBack} />} />}
+          {home && home.advance && home.purseBack > 0 && (
+            <SlipLine label="The advance" note={`${home.purseBack.toLocaleString('en')} repaid${co ? ` to ${co.name}` : ''}`} value={<Gold n={0} />} />
+          )}
           {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road.toLocaleString('en')} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}

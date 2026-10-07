@@ -100,8 +100,11 @@ and reports a `BattleResult` (gold, per-Sentinel kills/damage/XP, base HP left) 
 
 ## Compounding difficulty (Threat)
 
-A campaign run is one continuous, escalating defense: base HP, tower placements,
-roster, gear, and evolutions all persist across nodes. A **Threat** multiplier
+A campaign run is one continuous, escalating defense: base HP, roster, gear, and
+evolutions all persist across nodes. Hero posts carry from fight to fight within
+an act, but **the road changes country at every city**: each act is fought on its
+own battlefield (`src/game/run/fields.ts`), and the company starts that act's
+first fight on the bench, to be posted afresh. A **Threat** multiplier
 compounds as you clear nodes (more for elites) and as you gain power (shrines,
 recruits), scaling enemy HP so the opposition keeps pace with your growing
 strength. Threat is shown on the map header and in the pre-wave preview.

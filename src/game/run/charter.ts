@@ -21,6 +21,9 @@
  *    cities are waypoints), no cash-out, and a fall loses the fee. Delivered,
  *    the destination pays {@link CHARTER_PAYOUT} in full — cargo does not
  *    scale it — and one Sovereign item kind unlocks ({@link rollSovereign}).
+ *  - **Standing with all five** (`standing.charterStandingXp`, October 2026): the
+ *    road is every company's, so it earns standing with each of them — as much
+ *    as an escort run that ended the same way earns with its one company.
  *  - **Every good, every raider**: the run deals from every pool you own with
  *    no company bias (no route weighting, no HQ focus), and every goblin clan
  *    marches from the first fight (`waves` `muster`).
@@ -66,14 +69,21 @@ export const SOVEREIGN_TIER = 'Sovereign'
  */
 export const CHARTER_FEE = 7000
 /**
- * What a delivered Sovereign Route pays at its destination: five fees. 20,000
- * (four fees) → 35,000 (the tuning pass): at four fees the charter broke even
- * at 25% delivery and the door's company delivered 23–27%, so its expected
- * value was about nothing — a gamble with no reason to take it. At five fees
- * it breaks even at 20%; that company delivers 26% (28% with every Sovereign
- * item), worth about +2,000 a charter on average and 35,000 on the day.
+ * What a delivered Sovereign Route pays at its destination: about four and a
+ * quarter fees. 20,000 (four fees) → 35,000 (the tuning pass): at four fees the
+ * charter broke even at 25% delivery and the door's company delivered 23–27%,
+ * so its expected value was about nothing — a gamble with no reason to take it.
+ *
+ * 35,000 → 30,000 (the merged tuning pass). The designer wants the endgame's
+ * jackpot: clearly better than an escort for a veteran, not a farm — a bank
+ * net a charter of about 1.5–3× the same company's escort, and a break-even
+ * within ~8pt of its delivery rate. On the merged road that company delivers
+ * 27.5% (n=600; REPORT §18's 210 runs read 26%) and banks +575 from an
+ * escort; at 35,000 a charter netted +2,912 (5×, break-even 20%). At 30,000:
+ * break-even 23.3%, about +1,540 a charter (2.7×; the report's sample +1,140,
+ * 2.0×) — and it also earns standing with all five companies.
  */
-export const CHARTER_PAYOUT = 35000
+export const CHARTER_PAYOUT = 30000
 /**
  * The muster's teeth (the tuning pass): every raider on the Sovereign Route is
  * this much stronger — its HP, and what it steals when it reaches the wagons —

@@ -34,6 +34,12 @@ result. Append a short note to the review log when you're done.
   `overlays.ts` (slots, ranges, reticles, base gate), `projectiles.ts`,
   `blit.ts` (the 1:1 sprite blit + census), `paint.ts` (colour helpers) and
   `frame.ts` (presentation clock, view scale). Import from `renderer`.
+  What a hit LOOKS like is `attackLook.ts` (pure: delivery by weapon — a
+  melee hero's hit is a blade arc, never a drawn projectile — and the one
+  on-hit effect palette); the hero's real weapon/off-hand on the figure is
+  `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
+  cut when the hero holds something else). The atlas order and item-noun →
+  icon table live in `src/game/data/iconAtlas.ts` (re-exported by `channels`).
 - FX: `src/game/render/fx.ts` draws effects; `fxDiff.ts` derives them from the
   engine tick by tick — one `FxDiffer` per battle, created by `BattleCanvas`,
   no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.

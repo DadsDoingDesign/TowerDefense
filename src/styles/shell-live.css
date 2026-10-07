@@ -9,9 +9,11 @@
  * collapses to the wave strip alone and the Stage — the only `1fr` row — takes
  * every pixel it gave up:
  *
- *     header + coach + STAGE + selector + wave strip  ==  100dvh
+ *     header + STAGE + selector + wave strip  ==  100dvh
  *
  * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
+ * (October 2026: the one-row header gives the Stage ~25-32px more on top of
+ * these, and the coach no longer takes a row — see shell.css.)
  * The field is width-bound on every portrait phone (the lane runs edge to edge),
  * so on the tall ones more of the map round it shows (grid-fit: one continuous
  * map, no apron); on the short ones the field itself grows to full width.
@@ -351,11 +353,8 @@
 }
 
 /* ------------------------------------------------------------ a11y (F6) */
-/* The bands' heading is the brand word, now an <h1>; keep its look. */
-h1.sh-brand {
-  margin: 0;
-  line-height: 1.2;
-}
+/* The bands' heading is an off-screen <h1> now (`.sh-screen-h`, shell.css):
+   the FIELDWATCH wordmark it used to wear left the in-run header. */
 /* Headings take PROGRAMMATIC focus on a screen change (tabindex -1); they are
    not controls, so no ring. */
 .shell h1[tabindex='-1']:focus,
@@ -454,26 +453,27 @@ h1.sh-brand {
   gap: 3px;
   overflow: hidden;
 }
+/* 3.6 (Oct 2026): the rarity letter was an 8px glyph tucked into the tile's
+   corner — under the 11px floor. It rides BESIDE the picture now, at the
+   floor, so the tile is a little wider rather than the letter smaller. */
 .pg-strip-tile {
   position: relative;
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
   border-radius: 4px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-bottom: 2px solid var(--rail);
 }
 .pg-strip-rar {
-  position: absolute;
-  top: -1px;
-  left: 1px;
-  font-size: 8px;
+  font-size: var(--fs-micro);
   font-weight: 800;
   line-height: 1;
-  color: var(--rail);
+  color: var(--rail-text, var(--rail));
 }
 .pg-strip-more,
 .pg-strip-empty {
@@ -501,6 +501,16 @@ h1.sh-brand {
   height: 22px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+/* The purse at the end of the row (3.5) — the gold chip's job, in the strip. */
+.pg-strip-gold {
+  flex: 0 0 auto;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
 }
 .pg-strip-tile.fresh,
 .pg-strip-hero.fresh {
@@ -743,9 +753,10 @@ h1.sh-brand {
   display: flex;
   min-width: 0;
   gap: 0.4em;
-  margin-bottom: 1px;
+  margin-bottom: 0;
+  align-items: baseline;
   font-size: var(--fs-micro);
-  /* 11px caps + 1px + a 32px portrait = the 44px row (46 of 48 at Large UI). */
+  /* 12px moment + a 32px portrait = the 44px row (46 of 48 at Large UI). */
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -761,12 +772,17 @@ h1.sh-brand {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 3.10 (Oct 2026): the moment is the news ("4 left", "Move one hero"), so it
+   outranks the wave's name beside it — a size up, not just a shade lighter
+   (both were 11px/700 caps). The caption line loses its 1px gap below to
+   keep the strip's 44px row. */
 .sh-wq-now {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
+  font-size: var(--fs-xs);
 }
 .sh-wq-now::before {
   content: '·';
@@ -1197,4 +1213,71 @@ h1.sh-brand {
    tracks, so one track is all it needs. */
 .sh-detail.no-gear {
   grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* ==========================================================================
+   One-tap rewards (October 2026) — the strip after a cleared wave
+   ==========================================================================
+   3.2 put "Take it" here at full CTA height. With one-tap rewards a tap on a
+   card takes it, so the strip holds no commit: it keeps the moment ("Wave
+   cleared · 32 earned") and, until the first one-tap commit, says how the
+   hand works ("Tap to take · hold to look") where the button was. The strip
+   keeps its height either way, so nothing in the band moves when the hint
+   is spent. */
+.sh-wavebar.commit {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.sh-wavebar .sh-wq-hint {
+  flex: 0 1 auto;
+  max-width: 60%;
+  text-align: right;
+}
+/* The header's Depth chip already names the wave; after a cleared wave the
+   strip keeps the moment ("Wave cleared") whole rather than "DEPTH…". */
+.sh-wavebar.commit .sh-wq-name {
+  display: none;
+}
+.sh-wavebar.commit .sh-wq-now::before {
+  content: none;
+}
+
+/* ==========================================================================
+   2.3 (Oct 2026) — a held sub-wave counts down on Next
+   ==========================================================================
+   A ring that empties over four seconds, beside the label, in the button's
+   own ink; when it is gone the next sub-wave goes in (`autoContinue.ts`).
+   Reduced motion: the whole seconds left, no moving ring. */
+.sh-command.next.counting {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.sh-next-ring {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  transform: rotate(-90deg);
+}
+.sh-next-ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc((1 - var(--frac, 1)) * 100);
+  transition: stroke-dashoffset 100ms linear;
+}
+.sh-next-count {
+  flex: 0 0 auto;
+  min-width: 1.4em;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  font-family: system-ui, sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
 }

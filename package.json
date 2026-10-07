@@ -6,7 +6,8 @@
   "description": "Fieldwatch — a roguelite tower-defense autobattler (working title)",
   "scripts": {
     "dev": "vite",
-    "build": "npm run fw-icons:check && npm run anchors:check && tsc -b && vite build",
+    "build": "npm run build:checks && tsc -b && vite build",
+    "build:checks": "npm run fw-icons:check && npm run anchors:check",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "balance": "tsx balance/report.ts",

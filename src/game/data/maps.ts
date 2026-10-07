@@ -512,7 +512,9 @@ export function chooseFieldOrientation(viewportW: number, viewportH: number): Fi
 }
 
 /**
- * Which battlefield a run is fought on — drawn from the run seed, once.
+ * Which battlefield a run's FIRST act is fought on — drawn from the run seed,
+ * once. Each later act deals its own field (`run/fields.actFieldId`): the
+ * road changes country at every city.
  *
  * It rides its own derived stream (`field`) rather than the map stream, for the
  * same reason every other stream is separate (C1): dealing one more number here

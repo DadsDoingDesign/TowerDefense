@@ -29,7 +29,7 @@ import { RNG, withOwnIds } from '../src/game/core/rng'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
 import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
-import { BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { lookOf } from '../src/game/data/gear'
 import {
   creditPity,
@@ -45,21 +45,23 @@ import { relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, diaryXp, handSize, hiresTrained, equipRules, rewardHand, shelfSize, takeRelicOn, withRelicStats } from '../src/game/run/relics'
 import { generateRunMap, type MapNode, type MapOptions } from '../src/game/data/runmap'
 import { rollShrine } from '../src/game/data/shrines'
-import { fieldFor, pickBattleMap } from '../src/game/data/maps'
+import { fieldFor, mapById } from '../src/game/data/maps'
+import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
+import type { GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
-import { cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractRules, contractStake, DEFAULT_PURSE, kindCompany, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
+import { ADVANCE, cargoPct, cashOutValue, CITY_COUNT, cityOfLayer, cityPay, contractRules, contractStake, kindCompany, signingCost, skillCompany, stakeRules, weightPool } from '../src/game/run/contracts'
 import { routePrice, sovereignPool } from '../src/game/run/charter'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { levelXpAwards, stopXp } from '../src/game/run/battle'
 import { addDifficultyElites, forkFires } from '../src/game/run/map'
 import { GATE_REPAIR, merchantLuck, repairGate } from '../src/game/run/economy'
 import { canTrain, restAtCampfire, restGain, trainAtCampfire } from '../src/game/run/campfire'
-import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, type DealRules, type HqOrders } from '../src/game/run/hq'
+import { BASE_DEAL, homeGold, homeTotal, NO_ORDERS, ROAD_SHARE, roadShareFor, type DealRules, type HqOrders } from '../src/game/run/hq'
 import { stow } from '../src/game/run/inventory'
 import { useMetaStore } from '../src/state/metaStore'
 import { difficultyRules, legMult, type DifficultyRules } from '../src/game/run/watch'
@@ -117,7 +119,7 @@ export const NODES = RUN_LAYERS - 1
 export interface Loadout {
   label: string
   maxBaseHp: number
-  /** The purse the run sets out with. */
+  /** The purse the run sets out with: the company's advance (`contracts.ADVANCE`), never the bank's. */
   startGold: number
   extraSentinels: number
   /** HR's Opening deal. */
@@ -158,7 +160,7 @@ export function loadoutFor(label: string, hq: HqState | Record<string, number>):
   const out: Loadout = {
     label,
     maxBaseHp: b.maxBaseHp,
-    startGold: DEFAULT_PURSE,
+    startGold: ADVANCE,
     extraSentinels: b.extraSentinels,
     deal: b.deal,
     pack: hqRun.pack,
@@ -186,15 +188,44 @@ export const HQ_STATES: [string, HqState][] = [
   ['Hiring Hall', { upgrades: { hiring: 1 } }],
   ['Scouts 2', { upgrades: { scouting: 2 } }],
   ['Pack slots 10', { upgrades: { pack: 4 } }],
-  ['Fewer boulders 3 + clear order', { upgrades: { rocks: 3 }, orders: { rocks: true } }],
   ['Focus Ironvein +60%', { upgrades: { focus: 3 }, focus: 'metals', orders: { focus: true } }],
   [
     'everything the HQ sells',
-    { upgrades: { deal: 5, hiring: 1, rate: 3, pack: 4, rocks: 3, focus: 3, scouting: 2 }, focus: 'metals', orders: { rocks: true, focus: true } },
+    { upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 }, focus: 'metals', orders: { focus: true } },
   ],
 ]
 
 export const ZERO_META: Loadout = loadoutFor('zero meta', { upgrades: {} })
+
+/**
+ * The **veteran** company the run-level gates read (REPORT §13c and §18): the
+ * HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3,
+ * the scouts — no company in focus, so no route is favoured), every random
+ * skill card a contract can unlock (feat cards aside) and every Level 1–3 item
+ * kind. It is the save that opens the Sovereign Route; §18 called it the
+ * "late-game company" before the contract gates were anchored on it.
+ */
+export const VETERAN_HQ: HqState = { upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 } }
+export const VETERAN: Loadout = loadoutFor('veteran', VETERAN_HQ)
+export const VETERAN_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => !s.feat).map((s) => s.id)
+export const VETERAN_ITEMS: readonly string[] = [...ALL_ITEM_KINDS]
+/**
+ * `simulateRun` options for a veteran's contract (`crates` 0 is an escort) on
+ * `company`'s road. A veteran **reads its offers**: it settles each skill
+ * milestone with the move that raises its DPS most (`build: 'best'`), where
+ * every other line rolls the pick at random. Measured on the October audit's
+ * paired seeds, a fully unlocked company that picks at random delivered no more
+ * than a zero-meta escort (17.5% against 17.8%, n=400): 36 cards dealt three at
+ * a time, several of them dead on a lone hero (REPORT §7), dilute a random
+ * pick. A veteran is the player who has learned which card to take.
+ */
+export const veteranRun = (crates: number, company: CompanyId = 'silk'): SimOptions => ({
+  meta: VETERAN,
+  skillPool: VETERAN_SKILLS,
+  itemPool: VETERAN_ITEMS,
+  contract: { company, crates },
+  build: 'best',
+})
 
 /** `run/map.mapOptionsFor`, read off a loadout instead of the live hub. */
 export const mapOptionsFor = (m: Loadout): MapOptions => ({
@@ -401,13 +432,15 @@ export interface RunOutcome {
     crates: number
     charter?: boolean
     purse: number
+    /** The purse is the company's advance (every contract signed now): never the bank's, never banked. */
+    advance?: boolean
     cities: { pay: number; cargo: number; gold: number; earned: number }[]
     goldEnd: number
     /** Gold the road paid into the purse by the end (the road-gold share is taken on it). */
     earned: number
   }
   layers: number
-  /** Which battlefield this run's seed dealt (WS8). */
+  /** Which battlefield this run's seed dealt for act 1 (WS8); later acts deal their own (`run/fields`). */
   fieldId: string
   /** The leader's LOOK — the old class its weapon draws it as (a sword-hand is `fighter`). */
   starter: Archetype
@@ -455,6 +488,14 @@ const rosterRefs = (roster: Sentinel[]): RosterRef[] => roster
  */
 export function modelledPick(seed: number, skillPool: readonly string[], itemPool: readonly string[], prefer: Archetype, deal: DealRules = BASE_DEAL): string {
   return resolvePick(seed, skillPool, itemPool, prefer, deal)
+}
+
+/** Best-coverage-first posts on a base field, worked out once per field. */
+const slotsByField = new Map<string, string[]>()
+export function slotsOn(m: GameMap): string[] {
+  let out = slotsByField.get(m.id)
+  if (!out) slotsByField.set(m.id, (out = bestSlots(m)))
+  return out
 }
 
 /**
@@ -509,10 +550,13 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   // SK1: the step's extra elites, on the map, as `dealRunMap` adds them.
   const map = addDifficultyElites(generateRunMap(new RNG(hashSeed(seed, 'map')), mapOptionsFor(meta)), banner.extraElites, seed, meta.standingOrders)
   const byId = new Map(map.nodes.map((n) => [n.id, n]))
-  // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8).
-  // Every §11/§12/§13 number is therefore an average over the field distribution
+  // The battlefield this seed deals, exactly as `freshRunState` deals it (WS8),
+  // and — the road changes country at every city — each later act's own field,
+  // dealt by the store's own rule (`run/fields.groundFor`) at the act's first
+  // fight. Every §11/§12/§13 number is therefore an average over the fields
   // the game actually produces, rather than a measurement of one map.
-  const field = pickBattleMap(seed)
+  let road: FieldState = { fieldId: actFieldId(seed, 1), fieldAct: 1 }
+  const field = mapById(road.fieldId)!
 
   // ---- the company, as `newRun` + `pickStartingHero` deal it ----
   // The kit is dealt AFTER the pick, for the company that exists, and the
@@ -568,10 +612,11 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   let bossThreat: number | null = null
   let won = false
   const pity: RarityPity = newRarityPity()
-  // Filled best-coverage-first on whichever field this run drew. This used to be
-  // the literal `['s3','s4','s2','s5','s1']` — a Green Line fact hardcoded as a
-  // constant, which on the second map names three of its five worst slots.
-  const heroSlots = bestSlots(field)
+  // Filled best-coverage-first on whichever field the act is fought on. This
+  // used to be the literal `['s3','s4','s2','s5','s1']` — a Green Line fact
+  // hardcoded as a constant, which on the second map names three of its five
+  // worst slots. The modelled company re-posts best-first on every field.
+  const heroSlots = slotsOn(field)
 
   const hire = () => {
     const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
@@ -691,8 +736,11 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     const rule = nodeTerrainRule(node, seed, ground)
     // Q1: and its danger ground + seeded obstacles, from the same node hash.
     const hazard = nodeHazardSeed(node, seed, ground)
-    const nodeField = rule || hazard != null ? (fieldFor(field.id, rule, 'landscape', hazard, meta.rocks) ?? field) : field
-    const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : heroSlots
+    // The act's field (`run/fields`): new ground at each act's first fight.
+    road = groundFor(seed, road, node.layer)
+    const actField = mapById(road.fieldId) ?? field
+    const nodeField = rule || hazard != null ? (fieldFor(actField.id, rule, 'landscape', hazard, meta.rocks) ?? actField) : actField
+    const nodeSlots = rule || hazard != null ? bestSlots(nodeField) : actField === field ? heroSlots : slotsOn(actField)
     const m = runBattle({
       team: roster.slice(0, MAX_ROSTER).map((s, i) => ({ sentinel: s, slotId: nodeSlots[i] })),
       depth: node.layer,
@@ -841,7 +889,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     roster: roster.length,
     bossThreat,
     marks: marksFor(clearedCount, won, banner, meta.markMult),
-    contract: k ? { company: k.company, crates: charter ? 0 : k.crates, ...(charter ? { charter } : {}), purse: meta.startGold, cities, goldEnd: gold, earned } : null,
+    contract: k ? { company: k.company, crates: charter ? 0 : k.crates, ...(charter ? { charter } : {}), purse: meta.startGold, advance: true, cities, goldEnd: gold, earned } : null,
     layers: map.layers,
     fieldId: field.id,
     starter: starterLook,
@@ -872,8 +920,10 @@ export const CASH_OUT_HALF: CashOutPolicy = { id: 'cash-half', label: 'cash out 
 
 /**
  * What a contract run did to the bank, net: everything banked (the cities'
- * pay, a cash-out sale, the purse's rest and the road-gold share,
- * `hq.homeGold`) less the stake and the purse it set out with. Under `policy` the run stops at the first city it cashes out at —
+ * pay, a cash-out sale and the road-gold share, `hq.homeGold`) less what
+ * signing took from the bank (`contracts.signingCost`: the stake — and the
+ * purse only when it was not the company's advance, which never leaves the
+ * bank and never comes home). Under `policy` the run stops at the first city it cashes out at —
  * priced from the same simulated road, so press-on and cash-out lines are
  * paired by construction.
  */
@@ -882,9 +932,11 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
   if (!c) return { net: 0, pay: 0, delivered: out.won, cashedOut: false }
   // What signing cost the bank: the stake, or the Sovereign Route's fee.
   const stake = contractStake(c)
-  const outlay = stake + c.purse
-  // What the purse brings home: its rest in full, a share of the road's gold.
-  const home = (gold: number, earned: number) => homeTotal(homeGold({ purse: c.purse, earned, gold }))
+  const outlay = signingCost(c)
+  // What the purse brings home: a share of the road's gold (and the rest of a
+  // purse taken from the bank; never the company's advance). A fall banks less
+  // of the road's gold than a finished contract (`hq.roadShareFor`).
+  const home = (gold: number, earned: number, share = ROAD_SHARE) => homeTotal(homeGold({ purse: c.purse, earned, gold, advance: c.advance }, share))
   let paid = 0
   for (let i = 0; i < c.cities.length; i++) {
     const city = c.cities[i]
@@ -896,7 +948,7 @@ export function contractNet(out: RunOutcome, policy: CashOutPolicy = PRESS_ON): 
       return { net: paid + sale + home(city.gold, city.earned) - outlay, pay: paid + sale - stake, delivered: false, cashedOut: true }
     }
   }
-  return { net: paid + home(c.goldEnd, c.earned) - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
+  return { net: paid + home(c.goldEnd, c.earned, roadShareFor(out.won ? 'delivered' : 'lost')) - outlay, pay: paid - stake, delivered: out.won, cashedOut: false }
 }
 
 // ---------------------------------------------------------------- §6's model
@@ -952,8 +1004,10 @@ function monteCarloRunOnce(
   const runRng = new RNG(hashSeed(r, 'mcteam'))
   const teamSize = 3 + Math.floor(runRng.next() * 3) // 3..5
   const specIds = Array.from({ length: teamSize }, () => runRng.pick(TIER2_NODES).id)
-  const field = pickBattleMap(hashSeed(r, 'mc'))
-  const slots = bestSlots(field)
+  // Act 1's field, then each act's own, by the store's rule (`run/fields`).
+  const mcSeed = hashSeed(r, 'mc')
+  let ground: FieldState = { fieldId: actFieldId(mcSeed, 1), fieldAct: 1 }
+  const field = mapById(ground.fieldId)!
   let baseHp = MAX_BASE_HP
   let reached = 0
   let died = 0
@@ -962,6 +1016,9 @@ function monteCarloRunOnce(
   let finalKill = false
   let timeouts = 0
   for (let depth = 1; depth <= MC_LAYERS; depth++) {
+    ground = groundFor(mcSeed, ground, depth)
+    const actField = mapById(ground.fieldId) ?? field
+    const slots = slotsOn(actField)
     const team = specIds.slice(0, mcCompany(depth, specIds.length)).map((id, i) => ({
       sentinel: buildSpec(id, {
         level: mcLevel(depth),
@@ -983,7 +1040,7 @@ function monteCarloRunOnce(
       team,
       depth,
       kind,
-      map: fieldFor(field.id, rule, 'landscape', hazard) ?? field,
+      map: fieldFor(actField.id, rule, 'landscape', hazard) ?? actField,
       autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),

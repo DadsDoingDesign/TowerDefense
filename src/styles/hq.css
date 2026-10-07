@@ -22,7 +22,7 @@
 /* ------------------------------------------------------------ tabs */
 .hq-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   padding: 4px;
   border-radius: 12px;
@@ -48,6 +48,32 @@
   gap: 10px;
 }
 
+/* ------------------------------------------------------------ the bank's rule */
+/* The free interest, one quiet line under the tabs (the Finance office was cut). */
+.hq-bankline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.35;
+}
+.hq-bankline b {
+  color: var(--text);
+}
+.hq-bankline .tone-good {
+  color: var(--good);
+  font-variant-numeric: tabular-nums;
+}
+.hq-bankline small {
+  font-size: var(--fs-xs);
+}
+
 /* ------------------------------------------------------------ cards */
 .hq-card {
   display: grid;
@@ -64,6 +90,13 @@
   font-size: 21px;
   line-height: 1.1;
   color: var(--text);
+}
+/* A card the staggered reveal has not opened yet: what it is, and when it opens. */
+.hq-card.is-locked h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
 }
 .hq-line {
   margin: -4px 0 0;

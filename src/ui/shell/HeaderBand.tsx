@@ -18,6 +18,11 @@ import { useShown } from './staging'
  * carry (brand + currency chip) was unreachable and is gone — the menu is a
  * page, and its bank chip lives in the page title block.
  *
+ * October 2026: no wordmark. "FIELDWATCH" took the whole first row on every
+ * phone; the run state now fits one row (depth, strength, cargo, gold) and
+ * the Stage gets the height back. The heading the shell focuses on a screen
+ * change is still here, off-screen.
+ *
  * The mercenary company: the Gate is the caravan, so its bar reads CARGO and a
  * percentage — the share of the cargo still on the wagons, which is what every
  * city pays by. Gold here is the PURSE (the bank stays home).
@@ -67,20 +72,24 @@ export function HeaderBand() {
   // line), in the context panel and in the wave bar. It lives in the wave bar
   // only now, beside the wave's name and its progress.
 
+  const screenName = screen === 'battle' ? `Battle — ${mapName}` : 'Run map'
+
   return (
     <header className="sh-header" aria-label="Run status">
+      {/* The bands' heading (Phase 2): focus lands here when the screen
+          changes, and its name says which screen it is. October 2026: it no
+          longer shows the FIELDWATCH wordmark — the title screen carries the
+          name, and a phone needs the room — so it sits off-screen (placed,
+          not clipped: see the note in global.css), still a real, focusable h1
+          whose name is its aria-label. */}
+      <h1 className="sh-screen-h" tabIndex={-1} aria-label={screenName} />
       <div className="sh-header-row">
-        {/* The bands' heading (Phase 2): focus lands here when the screen
-            changes, and its name says which screen it is. */}
-        <h1 className="sh-brand" tabIndex={-1} aria-label={screen === 'battle' ? `Battle — ${mapName}` : 'Run map'}>
-          FIELDWATCH
-        </h1>
         {depthShown && (
-        <span className="sh-chip" role="img" aria-label={`Depth ${depth} of ${lastLayer}`}>
-          {/* H2: "Depth 1" is the heading and "/12" the context. */}
-          <b className="sh-chip-lead">Depth {depth}</b>
-          <span className="sh-chip-of">/{lastLayer}</span>
-        </span>
+          <span className="sh-chip depth" role="img" aria-label={`Depth ${depth} of ${lastLayer}`}>
+            {/* H2: "Depth 1" is the heading and "/12" the context. */}
+            <b className="sh-chip-lead">Depth {depth}</b>
+            <span className="sh-chip-of">/{lastLayer}</span>
+          </span>
         )}
         {charter && (
           /* The in-run marker (the endgame charter): this road is your own. */
@@ -93,7 +102,7 @@ export function HeaderBand() {
         )}
         {threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the
-             coach strip says it out loud once (WS9 — `Coach`, tip `threat`). */
+             coach pill says it out loud once (WS9 — `Coach`, tip `threat`). */
           <span
             className="sh-chip threat"
             role="img"
@@ -102,9 +111,6 @@ export function HeaderBand() {
             <Icon name="threat" /> {strengthShort(threat)}
           </span>
         )}
-      </div>
-
-      <div className="sh-header-row sub">
         <span className="sh-base" role="img" aria-label={`Cargo ${cargo}%`}>
           {/* The crate, in the route's colour: the cargo is what the wagons carry. */}
           <span className="sh-base-glyph sh-cargo-crate">

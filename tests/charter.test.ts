@@ -33,8 +33,9 @@ import {
   SOVEREIGN_DILUTION,
   TRADE_OFFS,
 } from '../src/game/run/charter'
-import { cashOutValue, cityPay, CITY_COUNT, contractPlan, contractRules, contractStake, runItemPool, stakeRules } from '../src/game/run/contracts'
-import { crateKinds, rollPull } from '../src/game/run/hq'
+import { ADVANCE, cashOutValue, cityPay, CITY_COUNT, contractPlan, contractRules, contractStake, runItemPool, stakeRules } from '../src/game/run/contracts'
+import { STANDING_XP, standingXpFor } from '../src/game/run/standing'
+import { crateKinds, MAX_BONUS_ITEMS, rollPull } from '../src/game/run/hq'
 import { encounterNode } from '../src/game/run/map'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
 import { ITEM_PRICE, RECRUIT_PRICE } from '../src/game/run/economy'
@@ -312,7 +313,7 @@ describe('the Sovereign Route, in the store', () => {
     expect(g().screen).toBe('hub')
   })
 
-  it('signs onto the hero pick with nothing spent; the fee and purse leave the bank with the hero; backing out returns it all', () => {
+  it('signs onto the hero pick with nothing spent; the fee leaves the bank with the hero (the purse is the company’s advance); backing out returns it all', () => {
     devCharter.ready(CHARTER_FEE + 1000)
     g().signCharter()
     expect(g().screen).toBe('heroPick')
@@ -324,10 +325,11 @@ describe('the Sovereign Route, in the store', () => {
     expect(g().screen).toBe('hub')
     expect(meta().bank).toBe(CHARTER_FEE + 1000)
     g().signCharter()
-    const purse = g().contract!.purse
+    expect(g().contract).toMatchObject({ purse: ADVANCE, advance: true })
     g().pickStartingHero('pick-0')
-    expect(meta().bank).toBe(1000 - purse)
+    expect(meta().bank).toBe(1000)
     expect(g().contract!.signed).toBe(true)
+    expect(g().gold).toBeGreaterThanOrEqual(ADVANCE)
   })
 
   it('deals for no company, at double the merchant’s prices, on Sovereign ground', () => {
@@ -359,7 +361,7 @@ describe('the Sovereign Route, in the store', () => {
 
   it('delivered: pays the charter, unlocks one Sovereign kind, records it, and never waits on a cash-out', () => {
     devCharter.ready()
-    g().beginCampaign(1234, { kind: 'standard' }, { company: null, charter: true, crates: 0, purse: 60 })
+    g().beginCampaign(1234, { kind: 'standard' }, { company: null, charter: true, crates: 0 })
     g().pickStartingHero('pick-0')
     useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 18 })) })
     const bank0 = meta().bank
@@ -375,24 +377,43 @@ describe('the Sovereign Route, in the store', () => {
     expect(meta().sovereign).toHaveLength(1)
     expect(g().victory!.progress).toMatchObject({ charter: true, sovereign: meta().sovereign[0], company: null })
     expect(meta().charters).toEqual({ runs: 1, delivered: 1 })
-    // A charter is no stake: the stake record is untouched, and no standing moved.
+    // A charter is no stake: the stake record is untouched.
     expect(meta().record).toEqual({})
-    expect(Object.values(meta().standing).every((x) => x === 0)).toBe(true)
+    // October 2026: it earns standing with all five companies — each a
+    // delivered escort's standing XP with its one company.
+    const p = g().victory!.progress!
+    const xp = Object.values(meta().standing)
+    expect(new Set(xp).size).toBe(1)
+    expect(xp[0]).toBe(p.xp)
+    expect(p.xp).toBeGreaterThanOrEqual(STANDING_XP.delivered)
+    expect(p.standingAll).toHaveLength(COMPANY_IDS.length)
+    // Every card is already unlocked (the door), so each level crossed pays a
+    // Rare bonus item for the next contract instead.
+    const levels = p.standingAll!.reduce((a, s) => a + s.after - s.before, 0)
+    expect(levels).toBeGreaterThan(0)
+    expect(p.standingCards).toEqual([])
+    expect(p.standingBonus).toHaveLength(levels)
+    expect(meta().bonusItems).toHaveLength(Math.min(MAX_BONUS_ITEMS, levels))
   })
 
-  it('fallen: the fee is lost; the purse comes home as on any road', () => {
+  it('fallen: the fee is lost; the road’s share comes home as on any road, and a fall’s standing with all five', () => {
     devCharter.ready()
-    g().beginCampaign(1234, { kind: 'standard' }, { company: null, charter: true, crates: 0, purse: 60 })
+    g().beginCampaign(1234, { kind: 'standard' }, { company: null, charter: true, crates: 0 })
     g().pickStartingHero('pick-0')
     const bank0 = meta().bank
     walk(() => false, 80)
     expect(g().runPhase).toBe('lost')
     expect(g().contract!.status).toBe('lost')
-    // Nothing but the purse's share comes back; the fee (already paid) is gone.
+    // Nothing but the road's share comes back; the fee (already paid) is gone.
     expect(meta().bank - bank0).toBeLessThan(CHARTER_FEE)
     expect(meta().sovereign).toHaveLength(0)
     expect(meta().charters).toEqual({ runs: 1, delivered: 0 })
     expect(g().victory!.outcome).toBe('lost')
+    // The fall's standing (no delivery bonus), the same with every company.
+    const xp = Object.values(meta().standing)
+    expect(new Set(xp).size).toBe(1)
+    expect(xp[0]).toBe(g().victory!.progress!.xp)
+    expect(xp[0]).toBe(standingXpFor({ depth: g().victory!.depth, kills: g().victory!.kills, delivered: false }))
   })
 
   it('the meta save validates the Sovereign kinds and the charter record (v10), and an old save has neither', () => {

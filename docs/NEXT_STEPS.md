@@ -1,5 +1,14 @@
 # Fieldwatch — next steps (paused 2026-09-30)
 
+## Update 2026-10-06: the October audit
+
+A holistic audit (loop and feel, economy, Whales-rule UI conformance, technical health) and its plan are in
+`docs/AUDIT_2026-10.md`; §6 there lists what shipped. In short: a fall now forfeits most of the road's gold and
+cash-out pays in full, so "cash out or press on" is a real choice; the field warns before a leak and stars the best
+ground; held sub-waves continue themselves; the UI clears the recorded Whales rules on 36 screens; CI is on v5
+actions with a balance gate that can hold. Balance today: 50 invariants fail (as before, a different 50) — the
+first-timer line passes at 16%, §6 reads 61%. The designer's list is §4 of the audit.
+
 ## Update 2026-10-05: the mercenary company, step 5 (the Sovereign Route)
 
 The endgame charter is built (`docs/MERCENARY_COMPANY.md` § Built in step 5): the **Sovereign Route** opens once every

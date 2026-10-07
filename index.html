@@ -60,9 +60,130 @@
       content="Fieldwatch: pixel-art heroes guard a meadow road at dusk as a goblin column with torches approaches."
     />
     <title>Fieldwatch</title>
+
+    <!-- The boot splash (Lane 4.3). The bundle is ~250 KB gzipped, so on a slow
+         link the page used to stay empty for seconds. This paints with the first
+         stylesheet instead, and React's createRoot replaces it with the first
+         screen. The wordmark sits where the menu's does on a phone, so the menu
+         grows around it. Static and self-contained: no requests of its own. -->
+    <style>
+      .fw-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 0;
+        background: #201711;
+        color: #f3e7d0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      /* The menu head's shade band, so the menu's map arrives under it. */
+      .fw-splash::before {
+        content: '';
+        position: absolute;
+        inset: 0 0 auto;
+        height: calc(108px + env(safe-area-inset-top, 0px));
+        background: linear-gradient(rgba(16, 12, 8, 0.86) 66%, rgba(16, 12, 8, 0));
+      }
+      .fw-splash-title {
+        position: relative;
+        margin: 0;
+        font: 700 40px/1 'Crimson Text', Georgia, 'Times New Roman', serif;
+        letter-spacing: 0.06em;
+        color: #e0ac4c;
+        text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
+      }
+      .fw-splash-marks {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: flex;
+        gap: 8px;
+        transform: translate(-50%, -50%);
+      }
+      .fw-splash-marks i {
+        width: 8px;
+        height: 8px;
+        background: #f0c46a;
+        opacity: 0.25;
+        animation: fw-splash-pulse 1.2s steps(2, jump-none) infinite;
+      }
+      .fw-splash-marks i:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .fw-splash-marks i:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      .fw-splash-late {
+        position: absolute;
+        top: calc(50% + 24px);
+        left: 16px;
+        right: 16px;
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.35;
+        text-align: center;
+        color: #d4c0a0;
+        visibility: hidden;
+        animation: fw-splash-late 0s 15s forwards;
+      }
+      @keyframes fw-splash-pulse {
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes fw-splash-late {
+        to {
+          visibility: visible;
+        }
+      }
+      @media (max-width: 479.98px) {
+        .fw-splash-title {
+          font-size: 34px;
+        }
+      }
+      @media (max-width: 389.98px) {
+        .fw-splash {
+          align-items: flex-start;
+        }
+        .fw-splash-title {
+          font-size: 30px;
+        }
+      }
+      @media (min-width: 900px) and (min-height: 540px) {
+        .fw-splash {
+          align-items: flex-start;
+          padding: 36px 32px 0 33px;
+        }
+        .fw-splash::before {
+          display: none;
+        }
+        .fw-splash-title {
+          font-size: 52px;
+        }
+      }
+      @media (orientation: portrait) and (max-height: 700px) {
+        .fw-splash {
+          padding-top: calc(12px + env(safe-area-inset-top, 0px));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .fw-splash-marks i {
+          animation: none;
+          opacity: 0.6;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="fw-splash" role="status" aria-label="Loading Fieldwatch">
+        <p class="fw-splash-title">Fieldwatch</p>
+        <div class="fw-splash-marks" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span class="fw-splash-late">Still loading. A slow connection can take a little while.</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

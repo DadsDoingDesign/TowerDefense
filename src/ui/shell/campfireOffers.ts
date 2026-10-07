@@ -41,6 +41,12 @@ export function campfireOffers(st: St): Offer[] {
       'Resting spends the campfire. No one trains tonight.',
     ],
     action: { label: gain > 0 ? `Rest — cargo +${gain}%` : 'Rest anyway', run: () => st.campfireRest(), done: gain > 0 ? `Cargo +${gain}%` : undefined },
+    // One tap rests (October 2026): the fire is a cheap, reversible-in-spirit
+    // choice, and a hold, hover or focus reads it first (`oneTap.tsx`). Not on
+    // whole cargo: there a rest restores nothing and only wastes the fire, so
+    // it keeps the select-then-confirm "Rest anyway" rather than spending the
+    // stop on a stray tap.
+    ...(gain > 0 ? { oneTap: { label: `Rest by the fire — cargo +${gain}%`, said: `Rested by the fire. Cargo +${gain}%.` } } : {}),
   }
   const train: Offer[] = st.roster.map((s) => {
     const able = canTrain(s)
@@ -63,6 +69,9 @@ export function campfireOffers(st: St): Offer[] {
         disabled: !able,
         done: able ? `${s.name} reached level ${s.level + 1}` : undefined,
       },
+      oneTap: able
+        ? { label: `Train ${s.name} — level ${s.level} to ${s.level + 1}`, said: `${s.name} trained to level ${s.level + 1}.` }
+        : { label: `Train ${s.name} — already level 20, training would do nothing` },
     }
   })
   const walk: Offer = {
@@ -73,10 +82,10 @@ export function campfireOffers(st: St): Offer[] {
     body: ['Leave the fire unlit and march.'],
     action: { label: 'Walk on', run: () => st.leaveEvent() },
   }
-  // The page preselects the first row, so lead with the useful choice: the
-  // rest on a hurt Gate, a trainable hero on a full one. A full Gate used to
-  // open on "Rest by the fire — Gate is full" with "Rest anyway" as the big
-  // button, i.e. one tap from wasting the fire.
+  // The page shows the first row's detail, so lead with the useful choice:
+  // the rest on a hurt Gate, a trainable hero on a full one. A full Gate used
+  // to open on "Rest by the fire — Gate is full" with "Rest anyway" as the
+  // big button, i.e. one tap from wasting the fire.
   const trainable = train.some((o) => !o.action?.disabled)
   return gain > 0 || !trainable ? [rest, ...train, walk] : [...train, rest, walk]
 }

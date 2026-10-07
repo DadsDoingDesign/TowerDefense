@@ -5,6 +5,7 @@ headlessly with a seeded RNG (fully reproducible) and writes a report.
 
 ```bash
 npm run balance          # runs the sweeps, writes balance/REPORT.md, exits non-zero on failure
+BALANCE_INVARIANTS=warn npm run balance   # what CI runs: failed invariants become warnings, exit 0
 npm run typecheck        # balance/ is type-checked as part of the tsconfig.node project
 ```
 
@@ -18,7 +19,7 @@ every later run a different team, so two configs could not be compared on paired
 seeds. Measured while fitting the composition variants, the same battlefield read
 61% and 48% across two configs that never touched it.
 
-Runtime is around **8 minutes** on one core (§12 is ~5 of it, §13 ~1; `FW_SECTIONS` runs a subset). It was 26 seconds before §12 and §13, which
+Runtime is around **35 minutes** on one core as of the October audit (§13's two stake ladders — zero meta and the veteran's, 600 runs a tier — are a third of it; `FW_SECTIONS` runs a subset, and `tune.ts` reads the same cells on every core). It was 26 seconds before §12 and §13, which
 simulate whole runs rather than single waves: the hub sweep alone plays 4,200
 campaigns. That is the price of measuring a *run*-level defect, and the defects
 it was written for had been invisible to every wave-level sweep in the suite.
@@ -37,6 +38,8 @@ npx tsx balance/meta-sweep.ts 1 map         # map shape: forks, stops, forced el
 npx tsx balance/hazard-sweep.ts mc+banner 300 0.75,1,3,3,10   # Q1 danger-ground levers vs §6 / §11 / §13
 npx tsx balance/fit-curve.ts 170 2.7 1.44 0.515 200   # a candidate waves.ts curve, against §6 AND §11
 npx tsx balance/tune.ts 600 fresh carto mc             # §11 lines, §12 Cartographer and §6 at n=600, on every core
+npx tsx balance/tune.ts 600 ends fresh mc              # the contract gates' ends (zero-meta escort, veteran escort + 8 crates), §11, §6 + boss kills
+npx tsx balance/tune.ts 600 contract                   # both stake ladders, every tier, with each step's paired s.e.
 ```
 
 ### Node-only exploration knobs
@@ -51,9 +54,11 @@ and it broke the build and every live harness.
 |---|---|---|
 | `FW_META_RUNS` | `210` | §12/§13 sample size per cell. Raised from 150 in WS8: composition variants and a second battlefield add per-run variance that paired seeds cannot cancel, and at 150 the hub and Banner ladders were failing on resolution rather than on the game. `500` halves the floor for a fit. |
 | `FW_FRESH_RUNS` | `240` | §11 sample size. Raised from 120 when the first-timer line gained a floor gate (15%): at 120 a ~20% line sat one σ (≈3.7pt) off it. 240 is 1σ ≈ 2.6pt; `480` drops it to ≈ 1.8pt for a fit. |
+| `FW_VETERAN_RUNS` | `FW_BANNER_RUNS` | §13c's sample size per tier (the veteran's ladder, 0–8 crates). |
 | `FW_BANNER_RUNS` | `600` | §13 sample size per rung (Phase 1). The Banner gate asks every rung to cost ≥ 3pt, and a 210-run paired cell (±5pt) cannot resolve that: Thin Pickings read −1pt at 210 and −6.2±5.0pt at 600 on the same model. |
 | `FW_HAZARDS` | shipped | Q1: `mult,dangerTiles,dangerPool,obstacles,obstaclePool` — run the whole report under other danger-ground levers (`src/game/data/hazards.ts`). `hazard-sweep.ts` is faster but reads §13 a few marks off the report. |
 | `FW_SECTIONS` | all | Comma-separated section numbers (`FW_SECTIONS=6,11,12`): run only those sections, their invariants and their console lines. A filtered run prints its sections and writes them to `balance/REPORT.sections.md` (ignored) — it never touches the golden `REPORT.md`. Prose that quotes a section you did not ask for reads `NaN`; no gate reads across sections. Combine with the sample-size knobs above for a quick read, e.g. `FW_SECTIONS=11,12 FW_FRESH_RUNS=120 FW_META_RUNS=120`. |
+| `BALANCE_INVARIANTS` | `fail` | `warn` reports failed invariants as GitHub `::warning::` annotations and a section in `$GITHUB_STEP_SUMMARY`, and exits 0 (`verdict.ts`). CI sets it: the balance job gates on the harness completing and on `REPORT.md` being current, while the tuning invariants stay red on purpose until the tuning pass re-anchors them. The console verdict and `REPORT.md` are the same in either mode. |
 
 ## The rule this harness is built around
 
@@ -367,8 +372,31 @@ skills. Six benches measured things the game no longer has, and were re-aimed
 - The pressure ceiling **finds a break point** inside the ladder, and that break
   point lands in the ×2–×8 design band. A censored ladder is a failure: an
   invariant that cannot fail is not an invariant.
-- Monte Carlo win rate inside the **45–60%** design band. (Not the old 10–80%
-  smoke test, which a completely degenerate curve passes.)
+- ~~Monte Carlo win rate inside the **45–60%** design band.~~ **Retired as a gate
+  (October audit, designer item 1)** and still printed in §6: it modelled a
+  depth-scaled 3–5 specialist team the contract game never fields, so pulling
+  the Threat curve toward it pulled against the first-timer floor and the stake
+  ladder. The run-level gates read contract delivery instead (below).
+- **Contract delivery (§13, October audit).** The run-level gates, anchored on
+  what the contract game produces:
+  - a **zero-meta escort** (the 0-crate row of §13's ladder: adaptive route,
+    Rosethread's road, zero HQ) delivers **20–30%**;
+  - a **veteran's escort** delivers **35–55%**, and its **max stake (8 crates)**
+    delivers **10–20%** (§13c). The veteran is `runsim.VETERAN` — §18's
+    late-game company: the HQ bought out, every random skill card and every
+    Level 1–3 item kind — and it reads its offers (`build: 'best'`): picking at
+    random from 36 cards, the same company delivered no more than a zero-meta
+    escort;
+  - **every crate costs ≥ 8% of the tier below's delivery** (relative), on both
+    ladders. It replaced "≥ 3pt per crate", which no ladder ending at a 10–20%
+    max stake can meet (at 15% delivery a 3pt step is a 20% cut). It is read
+    off the ladder's log-linear fit (`ladderFit`) because one step's paired s.e.
+    at 600 runs (≈2pt) is larger than an 8% step; alongside it, **no crate may
+    make the road easier by more than twice its paired s.e.** (§12's noise floor);
+  - **every crate pays more** (contract pay on the cash-out line), on both
+    ladders — the old §13 gate, kept.
+  The §11 first-timer floor (≥ 15%) and ceiling (≤ 35%) stand as they were.
+  Each band line prints its 1σ and says whether the reading clears it.
 - Monte Carlo deaths spread across ≥ 3 distinct depths, no single node ends more
   than 60% of lost runs, and the boss kills a nonzero share of the teams that
   reach it (design target ≥ 10%).
@@ -409,7 +437,9 @@ skills. Six benches measured things the game no longer has, and were re-aimed
   may not change the *length* of the run and must at least halve the share of
   choiceless steps; `Standing Orders` must leave no Elite standing on a road with
   no way around it; `Free Companies` must add a hiring stop.
-- **Every Banner rung is a wager.** A rung must cost **at least 3pt** of win
+- _(History — superseded by the contract-delivery gates above: the Banner
+  ladder became the stake ladder, and its 3pt floor the 8% relative one.)_
+  **Every Banner rung is a wager.** A rung must cost **at least 3pt** of win
   rate over the rung below it (a rung that does not is a mandatory bonus, not a
   bet — nobody would fly the rung below it again), and expected **marks per run
   must rise at every step of the ladder** (a rung whose payout does not cover

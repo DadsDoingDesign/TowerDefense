@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { HERO_SLOTS } from '../../game/data/items'
 import { DANGER_COPY } from '../../game/data/hazards'
 import { fieldConflicts } from '../../state/game/selectors'
@@ -6,6 +6,7 @@ import { BLOCK_COPY, HELD_COPY, ROOM_COPY, terrainRuleById } from '../../game/da
 import { commandsFor, WATCH_COMMANDS } from '../../game/data/commands'
 import { relicCommands } from '../../game/data/relics'
 import { pendingMilestone } from '../../game/run/skills'
+import { announceHint } from '../../state/combatNotes'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore, type TeachId } from '../../state/settingsStore'
 import { Icon } from '../Icon'
@@ -13,57 +14,58 @@ import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
 import { rewardInPlace, waveLive } from './levelUps'
 import { useShown } from './staging'
-import { pickTipId, type TipFacts } from './coachRules'
+import {
+  noteWhere,
+  pickPill,
+  pickTipId,
+  pillDurationMs,
+  PILL_FADE_MS,
+  SETTLE_QUIET_MS,
+  stageCrowded,
+  TIP_GAP_MS,
+  tipWhere,
+  wagonsLow,
+  type PillWhere,
+  type TipFacts,
+} from './coachRules'
 
 /**
- * First-run teaching (WS9).
+ * First-run teaching (WS9), as a hint pill over the Stage (October 2026).
  *
  * The game had none — no tutorial, no coach marks, no glossary, no first-run
- * flags anywhere in the tree — and it opens onto a 27-node evolution tree, a
- * Threat multiplier, Patience, keepsakes and enchant stacking. Everything was
- * learn-by-autopsy.
+ * flags anywhere in the tree — and it opens onto a company, a road, gear,
+ * enemy strength and a Watch Command. Everything was learn-by-autopsy.
  *
- * The rules this follows, in order of how much they cost to break:
+ * It used to be a grid row between the header and the Stage with a "Got it"
+ * button. The player's verdict: a banner they constantly had to close, that
+ * moved the content around. Both were true — the Stage was the row's only
+ * donor, so every tip pushed the field down ~45–74px and its leaving pulled
+ * it back, and a lesson that had to be dismissed was a chore on top of the
+ * lesson. So the rules this follows now, in order of how much they cost to
+ * break:
  *
- * 1. **One idea at a time — and one idea at a time in the same PLACE.**
- *    `pickTipId` returns at most one tip, ever. It is a priority list, not a
- *    queue that drains: the most urgent live tip wins and the rest wait for
- *    their own moment.
- *
- *    That was honoured per moment and broken per screen. A fresh run starts
- *    with three unworn items, so the instant the player follows the deploy tip
- *    the deploy tip retires itself (rule three) and the equip tip fills the
- *    exact same strip about two seconds later. Two different lessons, same
- *    place, no gap: it does not read as "well done, here is the next idea", it
- *    reads as one bar that keeps nagging — and for a screen-reader user it is
- *    two `aria-live` announcements on top of each other. `COACH_GAP_MS` below
- *    makes the strip go quiet in between, so the second tip arrives as a new
- *    thought rather than as more of the same one (F10).
- * 2. **In context, at the moment of need.** Each tip is bound to the state that
- *    makes it true — the deploy tip only while nothing is deployed, the enemy
- *    strength tip only once its chip is actually on screen, the evolution tip
- *    only when a hero is within two levels of the choice.
- *
- *    LS3 made this the whole first-run teaching: the first run shows an idea
- *    only when it matters (`state/staging.ts`), and each staged idea has ONE
- *    tip here, said the first time the idea is on screen and never again —
- *    sub-waves and speed at the first breather, gear and the pack at the first
- *    win's spoils, the Watch Command in the second fight's setup, the road's
- *    depth and the first merchant on the map, relics at the first elite, perks
- *    at a hero's first choice, cursed ground and map challenges on the first
- *    field that has them. The ORDER lives in `coachRules.ts`, pure and tested.
- * 3. **Teach by doing, then get out of the way.** A tip whose lesson the player
- *    has just performed marks itself seen without being dismissed — deploy a
- *    hero and the deploy tip is finished with, equip anything and the equip tip
- *    is finished with. Nobody should have to close a hint about a thing they
- *    have already done.
- * 4. **Skippable, and permanently so.** "Got it" marks it seen; the flags live in
- *    `settingsStore` so they outlive the run, and Settings carries a "Show the
- *    tips again" row for anyone who wants them back.
- *
- * It renders into its own grid row above the Stage (see `.sh-coach` in
- * shell.css) rather than as an overlay, so it never covers the battlefield
- * (rule two of the shell) and never moves a control under a finger.
+ * 1. **It takes no layout space.** The pill floats over an EDGE of the Stage
+ *    (`.sh-coach` in shell.css), `pointer-events: none`, so a finger lands on
+ *    the field under it, and the Stage keeps one box for the whole battle.
+ * 2. **It needs no tap.** It fades in, stays long enough to read
+ *    (`pillDurationMs`: a floor plus a little per word, capped; the clock
+ *    stops while the tab is hidden), fades out and marks its tip taught. The
+ *    flags live in `settingsStore` so they outlive the run, and Settings
+ *    carries a "Show the tips again" row.
+ * 3. **One idea at a time, with a gap.** `pickTipId` returns at most one tip
+ *    — a priority list, not a queue. When one leaves, the next waits
+ *    `TIP_GAP_MS` so it arrives as a new thought, not the same hint changing
+ *    its words (F10).
+ * 4. **In context, at the moment of need.** Each tip is bound to the state
+ *    that makes it true, and may speak only once its idea is on screen
+ *    (`state/staging.ts`). A live wave hears only its breather lessons.
+ * 5. **Teach by doing.** A lesson performed (a hero posted, an item worn, the
+ *    speed changed) marks its tip taught at once, and the pill goes.
+ * 6. **Never over what it teaches.** A tip about the party row, the wave strip
+ *    or the gear floats on the Stage's BOTTOM edge, next to them; a tip about
+ *    the field or the header on the top edge (`tipWhere`, `noteWhere`).
+ * 7. **Heard, too.** Its words go through the one polite voice (`Announcer`,
+ *    via `announceHint`); the pill itself is not a live region.
  */
 interface Tip {
   id: TeachId
@@ -71,27 +73,46 @@ interface Tip {
   body: ReactNode
 }
 
-/**
- * How long the strip stays empty after one tip leaves before another may take
- * its place.
- *
- * Long enough that the player looks away and back — the point is that the strip
- * is visibly EMPTY in between, so the next tip is a new thing appearing rather
- * than the same bar changing its words. Short enough that the second lesson is
- * still in the moment it belongs to: the equip tip is most useful before the
- * first wave, so the answer here is a pause, not a different beat in the run.
- *
- * It gates the first tip after any other tip, not just the deploy/equip pair —
- * the same collision is available to every future pair, and the rule "one idea
- * at a time" should not have to be re-derived for each of them.
- */
-const COACH_GAP_MS = 9000
+/** A field note's words: its name, and the line that starts with it. */
+export function fieldNoteCopy(fieldNote: NonNullable<ReturnType<typeof useGameStore.getState>['fieldNote']>): { name: string; line: string } {
+  const base =
+    fieldNote.kind === 'cursed'
+      ? DANGER_COPY.cursed
+      : fieldNote.kind === 'crowded'
+        ? ROOM_COPY
+        : fieldNote.kind === 'held'
+          ? HELD_COPY
+          : BLOCK_COPY[fieldNote.kind]
+  // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
+  return fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
+}
 
-/** How long a blocked-tile note stays in the strip (G1-2). */
-const FIELD_NOTE_MS = 4500
-const inSetupOrBreather = (screen: string, phase: string) => screen === 'battle' && (phase === 'setup' || phase === 'battle')
+/** One thing the pill can hold. `key` changes when the content is a new thing. */
+interface PillItem {
+  key: string
+  icon: IconKey
+  where: PillWhere
+  tone?: 'note'
+  body: ReactNode
+  /** Called once the pill has stayed its time and faded out. */
+  done: () => void
+}
 
-export function Coach() {
+/** The Stage's height, kept current (the reward-in-place layout shrinks it). */
+function useHeight(el: RefObject<HTMLElement | null>): number {
+  const [h, setH] = useState(0)
+  useEffect(() => {
+    const node = el.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setH(Math.round(node.getBoundingClientRect().height)))
+    ro.observe(node)
+    return () => ro.disconnect()
+  }, [el])
+  return h
+}
+
+export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
+  const stageH = useHeight(stage)
   const taught = useSettingsStore((s) => s.taught)
   const markTaught = useSettingsStore((s) => s.markTaught)
 
@@ -137,7 +158,7 @@ export function Coach() {
   const inSetup = screen === 'battle' && battlePhase === 'setup' && !settled
   const onMap = screen === 'map'
 
-  // Rule 3: a lesson performed is a lesson learnt. Doing this in an effect
+  // Rule 5: a lesson performed is a lesson learnt. Doing this in an effect
   // rather than inside `pickTip` keeps the picker pure and keeps the write
   // out of the render pass.
   useEffect(() => {
@@ -174,6 +195,8 @@ export function Coach() {
   const rule = terrainRuleById(battleMap.terrainRule)
 
   const tip = pickTip({
+    live,
+    ceremonyCrowded: stageCrowded({ settled: screen === 'battle' && settled, stageH }),
     taught,
     inSetup,
     deployed,
@@ -195,27 +218,30 @@ export function Coach() {
   })
 
   /*
-   * The quiet window (rule one, F10).
+   * The quiet window (rule three, F10).
    *
-   * What the strip renders is `displayed`, NOT the picker's live answer. That
-   * indirection is the whole mechanism: the moment the picker moves off what is
-   * on screen, the strip goes empty on that same render — the replacement never
-   * gets a frame — and the window opens. Deciding it in an effect instead would
-   * let the next tip paint once before the gate closed on it, which is the flash
-   * this exists to remove.
-   *
-   * The waiting tip is not queued. When the window closes the strip asks the
-   * picker again, so `pickTip` stays the single source of what matters right
-   * now — a tip whose moment has passed in the meantime never arrives late.
+   * What the pill shows is `displayed`, NOT the picker's live answer. The
+   * moment the picker moves off what is on screen, the pill empties on that
+   * same render — the replacement never gets a frame — and the window opens.
+   * The waiting tip is not queued: when the window closes the pill asks the
+   * picker again, so `pickTip` stays the single source of what matters now.
    */
   const [displayed, setDisplayed] = useState<TeachId | null>(null)
   const quietUntil = useRef(0)
+
+  // The wave-clear beat: the Stage re-lays out for the reward (and may come
+  // out too short for a pill, `stageCrowded`), so no tip speaks until it has
+  // settled — or one would flash up and go. Declared before the effect below
+  // so the window is open by the time it asks.
+  useEffect(() => {
+    if (settled) quietUntil.current = Math.max(quietUntil.current, Date.now() + SETTLE_QUIET_MS)
+  }, [settled])
 
   useEffect(() => {
     const id = tip?.id ?? null
     if (id === displayed) return
     if (displayed !== null) {
-      quietUntil.current = Date.now() + COACH_GAP_MS
+      quietUntil.current = Date.now() + TIP_GAP_MS
       setDisplayed(null)
       return
     }
@@ -225,89 +251,178 @@ export function Coach() {
       return
     }
     // Nothing else is guaranteed to re-render when the window closes — the
-    // store can sit still for the whole nine seconds — so wake up and ask.
+    // store can sit still the whole time — so wake up and ask.
     const t = setTimeout(() => setDisplayed(tip?.id ?? null), wait + 20)
     return () => clearTimeout(t)
   }, [tip?.id, displayed])
 
   /*
-   * G1-2: a tap on a blocked tile says why, here, instead of doing nothing.
-   * It outranks any tip and skips the quiet window — it is an answer to
-   * something the player just did, not a lesson — and it clears itself after
-   * a few seconds (or on "Got it", or on the next good tap).
+   * G1-2: a tap on a blocked tile says why. It pre-empts any tip, at once —
+   * it is an answer to something the player just did, not a lesson — and it
+   * goes on its own (or on the next good tap). Any moment of a battle: the
+   * pill moves nothing, so a note in a live wave costs the fight no room.
    */
   const fieldNote = useGameStore((s) => s.fieldNote)
   const clearFieldNote = useGameStore((s) => s.clearFieldNote)
+  // A note is about this field: off the battle screen it is spent, so it can
+  // never greet the next fight.
   useEffect(() => {
-    if (!fieldNote) return
-    const t = setTimeout(clearFieldNote, FIELD_NOTE_MS)
-    return () => clearTimeout(t)
-  }, [fieldNote, clearFieldNote])
+    if (fieldNote && screen !== 'battle') clearFieldNote()
+  }, [fieldNote, screen, clearFieldNote])
 
-  if (fieldNote && inSetupOrBreather(screen, battlePhase)) {
+  /*
+   * Field-per-act (`run/fields`): the first fight on a new act's field says
+   * so, plainly, in setup — the company is on the bench and this is not the
+   * ground it left. It outranks the tips, and it goes on its own or as soon
+   * as a hero is posted — the arrival is answered by doing.
+   */
+  const newGround = useGameStore((s) => s.newGround)
+  const clearNewGround = useGameStore((s) => s.clearNewGround)
+  useEffect(() => {
+    if (newGround && deployed > 0) clearNewGround()
+  }, [newGround, deployed, clearNewGround])
+
+  const noteLive = !!fieldNote && screen === 'battle'
+  const groundLive = !!newGround && inSetup && deployed === 0 && !conflicted
+  const tipLive = tip && displayed === tip.id && !conflicted ? tip : null
+  const pick = pickPill({ note: noteLive, ground: groundLive, tip: tipLive?.id ?? null })
+
+  let item: PillItem | null = null
+  if (pick?.kind === 'note' && fieldNote) {
     // Q1: the note is a blocked tile's reason, or cursed ground's cost (or,
     // that a hero stands too close to one that swings, `terrain.CLEARANCE`;
     // or that posts are held while a sub-wave is live).
-    const base =
-      fieldNote.kind === 'cursed'
-        ? DANGER_COPY.cursed
-        : fieldNote.kind === 'crowded'
-          ? ROOM_COPY
-          : fieldNote.kind === 'held'
-            ? HELD_COPY
-            : BLOCK_COPY[fieldNote.kind]
-    // A crowded tile names who swings, and with what (`run/clearance.roomLine`).
-    const copy = fieldNote.line?.startsWith(base.name) ? { name: base.name, line: fieldNote.line } : base
-    return (
-      <aside className="sh-coach sh-coach-note" role="status" aria-live="polite">
-        <Icon name="warn" className="sh-coach-glyph" />
-        <p className="sh-coach-text" key={fieldNote.at}>
+    const copy = fieldNoteCopy(fieldNote)
+    const tileY = fieldNote.tileId ? battleMap.tiles?.find((t) => t.id === fieldNote.tileId)?.pos.y : null
+    item = {
+      key: `note:${fieldNote.at}`,
+      icon: 'warn',
+      tone: 'note',
+      where: noteWhere(tileY, battleMap.height),
+      body: (
+        <>
           <b>{copy.name}</b>
           {copy.line.slice(copy.name.length)}
-        </p>
-        <button className="sh-coach-dismiss" onClick={clearFieldNote} aria-label="Got it — hide this note" data-sfx="close">
-          Got it
-        </button>
-      </aside>
-    )
+        </>
+      ),
+      done: clearFieldNote,
+    }
+  } else if (pick?.kind === 'ground' && newGround) {
+    item = {
+      key: `ground:${newGround}`,
+      icon: 'map',
+      where: 'top',
+      body: (
+        <>
+          <b>New ground: {newGround}</b> — post your heroes.
+        </>
+      ),
+      done: clearNewGround,
+    }
+  } else if (pick?.kind === 'tip' && tipLive) {
+    const id = tipLive.id
+    // While the field is in play, a bottom-edge tip never sits on the wagons.
+    const inPlay = inSetup || (screen === 'battle' && battlePhase === 'battle' && breather)
+    const low = inPlay && wagonsLow(battleMap.path[battleMap.path.length - 1]?.y, battleMap.height)
+    item = { key: `tip:${id}`, icon: tipLive.icon, where: tipWhere(id, { wagonsLow: low, onMap }), body: tipLive.body, done: () => markTaught(id) }
   }
 
-  if (!tip || displayed !== tip.id || conflicted) return null
+  /*
+   * A pill whose subject went away (the lesson performed, the setup over)
+   * fades rather than blinking out: the last item is kept as a ghost for the
+   * fade. A NEW item replaces whatever is up at once — a field note must not
+   * wait on a fading tip.
+   */
+  // Decided in render, not in an effect: an effect would let one commit render
+  // nothing between the item and its ghost, and the pill would remount (and be
+  // said again) instead of fading. The write is idempotent — `until` is set once.
+  const last = useRef<{ item: PillItem; until: number } | null>(null)
+  if (item) last.current = { item, until: 0 }
+  else if (last.current && last.current.until === 0) last.current.until = Date.now() + PILL_FADE_MS
+  const ghost = !item && last.current && Date.now() < last.current.until ? last.current.item : null
+  const [, wake] = useState(0)
+  useEffect(() => {
+    if (!ghost) return
+    // Re-render once the fade is over, so the ghost is dropped.
+    const t = setTimeout(() => wake((n) => n + 1), PILL_FADE_MS + 20)
+    return () => clearTimeout(t)
+  }, [ghost?.key])
+
+  const shown = item ?? ghost
+  if (!shown) return null
+  return <HintPill key={shown.key} item={shown} leaving={!item} />
+}
+
+/**
+ * The pill itself: fades in, says its words once through the Announcer, stays
+ * `pillDurationMs` of VISIBLE time (a hidden tab stops the clock), fades out,
+ * then reports done. `leaving` (its subject went away first) fades it at once.
+ */
+function HintPill({ item, leaving }: { item: PillItem; leaving: boolean }) {
+  const text = useRef<HTMLParagraphElement>(null)
+  const [duration, setDuration] = useState<number | null>(null)
+  const [out, setOut] = useState(false)
+  const done = useRef(item.done)
+  done.current = item.done
+  // Said once per pill, even when StrictMode runs the effect twice.
+  const said = useRef(false)
+
+  // Read the words as rendered (`<Tap />` says Tap or Click), say them once,
+  // and time the pill by them.
+  useLayoutEffect(() => {
+    const words = text.current?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+    setDuration(pillDurationMs(words))
+    if (words && !said.current) announceHint(words)
+    said.current = true
+  }, [])
+
+  useEffect(() => {
+    if (duration === null || leaving || out) return
+    let remaining = duration
+    let started = 0
+    let t: number | null = null
+    const expire = () => {
+      t = null
+      setOut(true)
+    }
+    const arm = () => {
+      started = performance.now()
+      t = window.setTimeout(expire, remaining)
+    }
+    const pause = () => {
+      if (t === null) return
+      window.clearTimeout(t)
+      t = null
+      remaining -= performance.now() - started
+    }
+    const onVis = () => (document.hidden ? pause() : t === null && arm())
+    if (!document.hidden) arm()
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      pause()
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [duration, leaving, out])
+
+  // Faded out on its own: the tip is taught, the note retired.
+  useEffect(() => {
+    if (!out) return
+    const t = window.setTimeout(() => done.current(), PILL_FADE_MS)
+    return () => window.clearTimeout(t)
+  }, [out])
 
   return (
-    <aside className="sh-coach" role="status" aria-live="polite">
-      <Icon name={tip.icon} className="sh-coach-glyph" />
-      <p className="sh-coach-text">{tip.body}</p>
-      {/*
-       * "Got it", not `✕` (M8).
-       *
-       * `✕` used to mean something else on this screen: the renderer drew a red ✕
-       * over a Sentinel that had fallen (before heroes lost their HP), and both were red on
-       * dark, both are reachable during setup, and one of them is a control.
-       * A glyph that means "a hero is dead" and "close this" at the same time
-       * on the same screen is worse than no glyph.
-       *
-       * The word is also the better button on its own terms: it says what
-       * pressing it asserts (I have read this) rather than what it does to the
-       * strip, it is the same string the accessible name already carried, and
-       * it makes the target self-evidently tappable in a way a 12px glyph never
-       * is. `aria-label` stays because the visible word alone does not say what
-       * is being got.
-       */}
-      <button
-        className="sh-coach-dismiss"
-        onClick={() => markTaught(tip.id)}
-        aria-label="Got it — hide this tip"
-        data-sfx="close"
-      >
-        Got it
-      </button>
+    <aside className={`sh-coach ${item.where}${item.tone ? ` ${item.tone}` : ''}${out || leaving ? ' out' : ''}`}>
+      <Icon name={item.icon} className="sh-coach-glyph" />
+      <p className="sh-coach-text" ref={text}>
+        {item.body}
+      </p>
     </aside>
   )
 }
 
 /**
- * The tip `pickTipId` (`coachRules.ts`) names, as the strip renders it. The
+ * The tip `pickTipId` (`coachRules.ts`) names, as the pill renders it. The
  * ORDER lives there, pure and tested; this is only the words and the picture.
  */
 export function pickTip(s: TipFacts): Tip | null {
@@ -324,7 +439,7 @@ export function pickTip(s: TipFacts): Tip | null {
           </>
         ),
       }
-    // Said on the hero pick itself, which has no coach strip (`offers.ts`).
+    // Said on the hero pick itself, which has no coach pill (`offers.ts`).
     case 'heroSkill':
     case 'heroGear':
       return null
@@ -470,7 +585,7 @@ export function pickTip(s: TipFacts): Tip | null {
         ),
       }
     // The trade pages' tips (board, stakes, purse, cash-out) are said on
-    // those pages themselves, not in the battle strip.
+    // those pages themselves, not in the battle's pill.
     default:
       return null
   }

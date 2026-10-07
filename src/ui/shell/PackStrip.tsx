@@ -3,8 +3,10 @@ import { lookVar } from '../channels'
 import { heroLookArt } from './offers'
 import { RARITY } from '../../game/data/items'
 import { useGameStore } from '../../state/gameStore'
-import { itemIcon, itemName, RARITY_INITIAL, rarityVar } from '../channels'
+import { itemIcon, itemName, RARITY_INITIAL, railStyle, rarityVar } from '../channels'
 import { Icon } from '../Icon'
+import { Money } from './Money'
+import { NOTE_FRESH_MS, useCombatNotes } from '../../state/combatNotes'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -19,11 +21,13 @@ import { Icon } from '../Icon'
  *
  * Read-only. Managing gear is the Detail band's job, one tap away on the map.
  */
-export function PackStrip() {
+export function PackStrip({ gold }: { gold?: number }) {
   const inventory = useGameStore((s) => s.inventory)
   const roster = useGameStore((s) => s.roster)
   const fresh = useFresh(inventory.map((i) => i.id).concat(roster.map((h) => h.id)))
-  const shown = inventory.slice(-8)
+  // The tiles carry their rarity letter beside the picture (3.6), so they are
+  // wider; each hero and the purse take a tile's room from the row.
+  const shown = inventory.slice(-Math.max(2, 8 - roster.length - (gold != null ? 2 : 0)))
   return (
     <div className="pg-strip" aria-label={`Pack: ${inventory.length} ${inventory.length === 1 ? 'item' : 'items'}. Heroes: ${roster.map((h) => h.name).join(', ')}.`} role="group">
       <span className="pg-strip-label" aria-hidden="true">
@@ -35,7 +39,7 @@ export function PackStrip() {
           <span
             key={i.id}
             className={`pg-strip-tile ${fresh.has(i.id) ? 'fresh' : ''}`}
-            style={{ '--rail': rarityVar(i.rarity) } as CSSProperties}
+            style={railStyle(rarityVar(i.rarity)) as CSSProperties}
             title={`${itemName(i)} · ${RARITY[i.rarity].label}`}
           >
             <Icon name={itemIcon(i)} />
@@ -55,6 +59,14 @@ export function PackStrip() {
           </span>
         ))}
       </span>
+      {/* Oct 2026 (3.5): on an event board the purse rides at the end of this
+          row instead of a chip of its own under the title — one row of chrome
+          rather than two, and the gold sits beside what it buys. */}
+      {gold != null && (
+        <span className="pg-strip-gold">
+          <Money amount={gold} c="gold" />
+        </span>
+      )}
     </div>
   )
 }
@@ -89,8 +101,42 @@ function useFresh(ids: string[]): Set<string> {
  * The one polite announcement for it; the in-body receipt line it replaces
  * used to be below the fold on a small phone.
  */
+type ToastMsg = { text: string; key: number; hold?: number; notice?: boolean; warn?: boolean; quiet?: boolean }
+
+/**
+ * The last receipt posted, across mounts. A choice taken on a PAGE (a spoils
+ * card, the campfire) returns to the map, which swaps the page shell for the
+ * bands: the toast that saw the landing unmounts a frame later and the one
+ * that mounts next never saw it. It still shows it, while it is fresh.
+ */
+let carried: { msg: ToastMsg; at: number } | null = null
+
 export function ReceiptToast() {
-  const [msg, setMsg] = useState<{ text: string; key: number; hold?: number; notice?: boolean } | null>(null)
+  const [msg, setMsg] = useState<ToastMsg | null>(null)
+  const post = (m: ToastMsg) => {
+    carried = { msg: m, at: Date.now() }
+    setMsg(m)
+  }
+  useEffect(() => {
+    const c = carried
+    if (!c || Date.now() - c.at >= NOTE_FRESH_MS) return
+    // A beat after mount, so the live region announces it as a change.
+    const t = setTimeout(() => setMsg(c.msg), 60)
+    return () => clearTimeout(t)
+  }, [])
+  /*
+   * October 2026: a one-tap commit whose landing nothing else shows — a boon,
+   * a relic, a night at the campfire — is seen here too. Visual only
+   * (`quiet`): the Announcer already says it, and two polite regions on one
+   * sentence read as one garbled one.
+   */
+  useEffect(() => {
+    let seen = useCombatNotes.getState().seq
+    return useCombatNotes.subscribe((n) => {
+      if (n.seq !== seen && n.toast) post({ text: n.toast, key: n.at, quiet: true })
+      seen = n.seq
+    })
+  }, [])
   useEffect(() => {
     /*
      * Round 3 (Q5): a resumed save's off-hand item moved back to the pack.
@@ -100,7 +146,8 @@ export function ReceiptToast() {
      * that caught it is unmounted a frame later. The one that mounts next
      * reads the still-pending notice and says it.
      */
-    const sayNotice = (n: { text: string; at: number }) => setMsg({ text: n.text, key: n.at, hold: 6000, notice: true })
+    const sayNotice = (n: { text: string; at: number; tone?: 'warn' }) =>
+      setMsg({ text: n.text, key: n.at, hold: 6000, notice: true, warn: n.tone === 'warn' })
     const pending = useGameStore.getState().gearNotice
     if (pending) sayNotice(pending)
     let prev = useGameStore.getState()
@@ -138,7 +185,7 @@ export function ReceiptToast() {
       } else if (items.length > 1) parts.push(`${items.length} items added`)
       for (const h of addedHeroes) parts.push(`${h.name} joins your heroes`)
       prev = s
-      if (parts.length) setMsg({ text: parts.join(' · '), key: Date.now() })
+      if (parts.length) post({ text: parts.join(' · '), key: Date.now() })
     })
   }, [])
   useEffect(() => {
@@ -153,8 +200,8 @@ export function ReceiptToast() {
   return (
     <div className="pg-toast-wrap" role="status" aria-live="polite">
       {msg && (
-        <p className="pg-toast" key={msg.key}>
-          <Icon name={msg.notice ? 'back' : 'boon'} /> {msg.text}
+        <p className="pg-toast" key={msg.key} aria-hidden={msg.quiet || undefined}>
+          <Icon name={msg.warn ? 'warn' : msg.notice ? 'back' : 'boon'} /> {msg.text}
         </p>
       )}
     </div>

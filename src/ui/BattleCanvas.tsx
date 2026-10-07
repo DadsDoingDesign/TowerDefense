@@ -10,6 +10,7 @@ import {
   drawField,
   drawRange,
   drawSentinel,
+  heroLook,
   drawPlacementDim,
   drawSlot,
   drawBlockedFlash,
@@ -53,7 +54,8 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { drawCaravan } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch } from '../game/render/renderer'
+import { bestTiles, inLastStretch, lastStretch } from '../game/run/placement'
 import type { GameMap } from '../game/types'
 import {
   easeOutCubic,
@@ -177,6 +179,8 @@ export function BattleCanvas() {
    * down (touch) — the armed hero's range is previewed there (G1-2).
    */
   const hoverSlot = useRef<string | null>(null)
+  /** The armed hero's starred tiles, recomputed only when the hero, the field or the free ground changes. */
+  const best = useRef<{ map: GameMap | null; key: string; ids: string[] }>({ map: null, key: '', ids: [] })
   /** The field's CSS rect inside the wrap — what the DOM slot layer rides on. */
   const [field, setFieldState] = useState<FieldRect | null>(null)
   /** Q3: the field is zoomed for posting (drives the drag hint). */
@@ -556,6 +560,14 @@ export function BattleCanvas() {
       /** The hovered tile, when it is one a hero can stand on. */
       const hoverOpen = hoverSlot.current && map.slots.find((s) => s.id === hoverSlot.current)
       if (phase === 'battle' && liveEngine) {
+        // The wagons' last stretch (October audit 2.1): marked on the road
+        // during the fight, beating red the moment a raider is on it — the
+        // warning lands BEFORE the leak (`run/placement`).
+        {
+          const stretch = lastStretch(liveEngine.path, map.base)
+          const threatened = liveEngine.enemies.some((e) => inLastStretch(stretch, e.distance))
+          drawLastStretch(ctx, liveEngine.path, stretch, threatened, baseAnchor(map))
+        }
         // Show ranges faintly while the fight runs.
         for (const s of liveEngine.sentinels) {
           drawRange(ctx, s.pos, s.profile.range, lookHue(lookOf(s.def)).accent)
@@ -624,6 +636,15 @@ export function BattleCanvas() {
         if (armed) {
           drawPlacementDim(ctx, sv.w, sv.h, sv.x0, sv.y0)
           drawTileGrid(ctx, map, { hover: lit ? lit.id : null, crowded: lay.crowded })
+          // Best ground (October audit 2.4): the open tiles that cover the most
+          // road for THIS hero, the last stretch counting double, get a star.
+          const taken = new Set(placed.filter((p) => p.sentinel.id !== armed.id).map((p) => p.slotId))
+          const key = `${armed.id}|${computeCombat(armed).range}|${[...taken].sort().join(',')}|${[...lay.crowded].sort().join(',')}`
+          if (best.current.map !== map || best.current.key !== key) {
+            const open = (map.tiles ?? []).filter((t) => !t.block && !taken.has(t.id) && !lay.crowded.has(t.id))
+            best.current = { map, key, ids: bestTiles(map, open, computeCombat(armed).range) }
+          }
+          best.current.ids.forEach((id, rank) => drawBestTile(ctx, map, id, rank))
           for (const z of faintZones) drawClearance(ctx, map, z, 'faint')
           if (lay.landing) drawClearance(ctx, map, lay.landing, 'full')
         }
@@ -658,6 +679,8 @@ export function BattleCanvas() {
             procFlash: 0,
             patienceStacks: 0,
             blocking: false,
+            // What it carries, at its hands, before the wave as during it.
+            ...heroLook(p.sentinel),
           }
           drawSentinel(ctx, ds)
         }

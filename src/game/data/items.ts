@@ -271,7 +271,15 @@ interface WeaponType {
   name: string
   damageType: 'physical' | 'magic'
   hands: 'oneHand' | 'twoHand'
+  /**
+   * Attack speed. A positive bias scales with rarity; a negative one is the
+   * weapon class's fixed handling cost and never grows (L9c).
+   */
   speedBias: number
+  /** Flat damage per budget point, low–high (default 5–8 one-handed, 9–13 two-handed). */
+  dmg?: readonly [number, number]
+  /** The kind's identity beyond damage and speed, per budget point, low–high. */
+  edge?: Partial<Record<'splashAdd' | 'rangeMult' | 'critChance', readonly [number, number]>>
 }
 
 /**
@@ -293,21 +301,63 @@ export const SOVEREIGN_EDGE: Readonly<Record<string, Enchantment>> = {
   'Ironheart Plate': { id: 'sov_plate', label: 'Sovereign', mods: { damageMult: 1.15 } },
   'Silkwind Cloak': { id: 'sov_cloak', label: 'Sovereign', mods: { rateMult: 1.15 } },
 }
+/*
+ * ---- one stat identity per kind (October audit, designer item 4a) ----------
+ *
+ * Many kinds used to share a base: Robe, Cloak, Plate and Aegis rolled exactly
+ * what Mail rolled, Tome, Quiver and Focus exactly what one another rolled, and
+ * two weapons of a style differed only by a speed bias of 0.01–0.12. A kind is
+ * a card in the collection (`itemKinds.ts`), so two cards in one slot that roll
+ * the same numbers are one card printed twice. Each kind now rolls ONE clear
+ * identity — a trade inside its slot's budget, not a free upgrade:
+ *
+ *   slot      kind        identity (per budget point; speed is attack speed)
+ *   one hand  Sword       damage 5–8, speed +5%           (basic: unchanged)
+ *             Axe         damage 4–7, cleave: splash 8–14
+ *             Dagger      damage 4–7, speed +15%          (and the off hand)
+ *             Wand        damage 5–8, speed +6%           (basic: unchanged)
+ *             Rod         damage 5–8, reach +10–18%
+ *             Sceptre     damage 5–8, crit +8–14%
+ *   two hand  Bow         damage 9–13, speed +4%          (basic: unchanged)
+ *             Greatsword  damage 9–13, reach +10–16%, speed −5% (fixed)
+ *             Warhammer   damage 12–17, speed −12% (fixed): the heaviest hit
+ *             Staff       damage 8–12, a wider burst: splash 5–10
+ *             Grimoire    damage 9–13, speed +12%
+ *   off hand  Shield      holds 2; speed 4–8%, crit 3–6%  (basic: unchanged)
+ *             Buckler     holds 1; speed 14–22%, crit 8–12%: less hold, more tempo
+ *             Pavise      holds 3; speed −20% (fixed): a wall, and slow behind it
+ *             Tome        damage +8–16%
+ *             Quiver      speed +10–20%
+ *             Focus       crit +8–16%
+ *   body      Mail        reach 6–12%, splash 8–16        (basic: unchanged)
+ *             Cloak       reach 20–36%
+ *             Robe        splash 12–24
+ *             Plate       damage +5–10%
+ *             Aegis       speed +7–14%
+ *
+ * The basic five (Sword, Bow, Wand, Shield, Mail) roll exactly what they did,
+ * so a zero-meta run is untouched. Every slot still takes the SAME number of
+ * draws whatever the kind (one for a weapon, two for an off hand or a body —
+ * a kind with one number discards the other draw), so the stream behind an
+ * item never moves with its kind. The Sovereign tier keeps its own edges.
+ * The magnitudes were set against each other on stop-rate benches (TUNING_LOG,
+ * "Item kinds"); `tests/items.identity.test.ts` holds the rule.
+ */
 const WEAPONS: WeaponType[] = [
   // one-hand: modest damage, can pair with an off-hand. Dagger and Wand are
   // light enough to BE the off-hand (at OFF_HAND_SHARE) — see `ITEM_BASES`.
   { name: 'Sword', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
-  { name: 'Axe', damageType: 'physical', hands: 'oneHand', speedBias: 0.02 },
-  { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.12 },
+  { name: 'Axe', damageType: 'physical', hands: 'oneHand', speedBias: 0, dmg: [4, 7], edge: { splashAdd: [8, 14] } },
+  { name: 'Dagger', damageType: 'physical', hands: 'oneHand', speedBias: 0.15, dmg: [4, 7] },
   { name: 'Wand', damageType: 'magic', hands: 'oneHand', speedBias: 0.06 },
-  { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0.03 },
-  { name: 'Sceptre', damageType: 'magic', hands: 'oneHand', speedBias: 0.04 },
+  { name: 'Rod', damageType: 'magic', hands: 'oneHand', speedBias: 0, edge: { rangeMult: [0.1, 0.18] } },
+  { name: 'Sceptre', damageType: 'magic', hands: 'oneHand', speedBias: 0, edge: { critChance: [0.08, 0.14] } },
   // two-hand: bigger damage, but fills both hands
-  { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05 },
-  { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.08 },
+  { name: 'Greatsword', damageType: 'physical', hands: 'twoHand', speedBias: -0.05, edge: { rangeMult: [0.1, 0.16] } },
+  { name: 'Warhammer', damageType: 'physical', hands: 'twoHand', speedBias: -0.12, dmg: [12, 17] },
   { name: 'Bow', damageType: 'physical', hands: 'twoHand', speedBias: 0.04 },
-  { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0 },
-  { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
+  { name: 'Staff', damageType: 'magic', hands: 'twoHand', speedBias: 0, dmg: [8, 12], edge: { splashAdd: [5, 10] } },
+  { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.12 },
   // The Sovereign tier: a sword's handling, a grimoire's.
   { name: 'Saffron Brand', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
   { name: 'Moonquill Codex', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
@@ -556,32 +606,70 @@ function rollEnchantments(pool: readonly EnchantTemplate[], count: number, budge
  */
 export const CASTER_HIT = 1.6
 
-function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType): Item['base'] {
+/**
+ * What an off-hand or body KIND rolls from its slot's two draws (see the
+ * identity table above `WEAPONS`). `a` and `b` are the two draws in [0, 1), in
+ * stream order; a kind that has one number discards the other draw. Absent
+ * (the basic Shield and Mail, the keepsakes, a hand-built noun): the slot's
+ * classic pair.
+ */
+const lerp = (lo: number, hi: number, t: number) => lo + t * (hi - lo)
+type ArmourRoll = (a: number, b: number, budget: number) => Item['base']
+/** A Pavise's handling cost: a fixed −20% attack speed that rarity never deepens (L9c's rule). */
+const PAVISE_DRAG = -0.2
+const OFFHAND_ROLL: Readonly<Record<string, ArmourRoll>> = {
+  Buckler: (a, b, k) => ({ attackSpeed: lerp(0.14, 0.22, a) * k, critChance: lerp(0.08, 0.12, b) * k }),
+  Pavise: () => ({ attackSpeed: PAVISE_DRAG }),
+  Tome: (a, _b, k) => ({ damagePct: lerp(0.08, 0.16, a) * k }),
+  Quiver: (a, _b, k) => ({ attackSpeed: lerp(0.1, 0.2, a) * k }),
+  Focus: (_a, b, k) => ({ critChance: lerp(0.08, 0.16, b) * k }),
+}
+const BODY_ROLL: Readonly<Record<string, ArmourRoll>> = {
+  Cloak: (a, _b, k) => ({ rangeMult: lerp(0.2, 0.36, a) * k }),
+  Robe: (_a, b, k) => ({ splashAdd: round(lerp(12, 24, b) * k) }),
+  Plate: (a, _b, k) => ({ damagePct: lerp(0.05, 0.1, a) * k }),
+  Aegis: (a, _b, k) => ({ attackSpeed: lerp(0.07, 0.14, a) * k }),
+}
+
+function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType, noun?: string): Item['base'] {
   if (slot === 'oneHand' || slot === 'twoHand') {
     const w = weapon!
     // two-handers hit noticeably harder in exchange for the off-hand slot
-    const dmg = round(rng.range(slot === 'twoHand' ? 9 : 5, slot === 'twoHand' ? 13 : 8) * budget)
+    const [lo, hi] = w.dmg ?? (slot === 'twoHand' ? [9, 13] : [5, 8])
+    // ONE draw whatever the kind: the kind's edge reads the same draw's place
+    // in its range (a better-made Axe cleaves wider as well as cutting deeper).
+    const t = rng.next()
+    const dmg = round((lo + t * (hi - lo)) * budget)
     // L9c: `speedBias * budget` scaled the *penalty* on two-handers, so a Mythic
     // Warhammer (−0.08 × 5.0 = −40% attack speed) swung slower than a Common one
     // (−0.08 × 1.0 = −8%). Rarity is a budget, and a budget may only buy upside:
     // a positive bias scales with rarity, a negative one is the weapon class's
     // fixed handling cost and never grows.
     const atkSpeed = w.speedBias >= 0 ? w.speedBias * budget : w.speedBias
-    return w.damageType === 'physical'
-      ? { physDamage: dmg, attackSpeed: atkSpeed }
-      : { magDamage: Math.round(dmg * CASTER_HIT), attackSpeed: atkSpeed }
+    const base: Item['base'] = w.damageType === 'physical' ? { physDamage: dmg, attackSpeed: atkSpeed } : { magDamage: Math.round(dmg * CASTER_HIT), attackSpeed: atkSpeed }
+    if (!atkSpeed) delete base.attackSpeed
+    const e = w.edge
+    if (e?.splashAdd) base.splashAdd = round(lerp(e.splashAdd[0], e.splashAdd[1], t) * budget)
+    if (e?.rangeMult) base.rangeMult = lerp(e.rangeMult[0], e.rangeMult[1], t) * budget
+    if (e?.critChance) base.critChance = lerp(e.critChance[0], e.critChance[1], t) * budget
+    return base
   }
+  // Two draws, in this order, for every off-hand and body kind.
+  const a = rng.next()
+  const b = rng.next()
+  const own = noun ? (slot === 'offHand' ? OFFHAND_ROLL : BODY_ROLL)[noun] : undefined
+  if (own) return own(a, b, budget)
   if (slot === 'offHand') {
     // "Precision" slot — attack speed + crit, useful on every tower
     return {
-      attackSpeed: rng.range(0.04, 0.08) * budget,
-      critChance: rng.range(0.03, 0.06) * budget,
+      attackSpeed: lerp(0.04, 0.08, a) * budget,
+      critChance: lerp(0.03, 0.06, b) * budget,
     }
   }
   // body — the "Amplifier" slot: reach + area, useful on every tower
   return {
-    rangeMult: rng.range(0.06, 0.12) * budget,
-    splashAdd: round(rng.range(8, 16) * budget),
+    rangeMult: lerp(0.06, 0.12, a) * budget,
+    splashAdd: round(lerp(8, 16, b) * budget),
   }
 }
 
@@ -904,7 +992,7 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
     name: name.trim(),
     slot,
     rarity,
-    base: baseFor(slot, cfg.budget, rng, weapon),
+    base: baseFor(slot, cfg.budget, rng, weapon, noun),
     enchantments: ench,
   }
 }
@@ -952,7 +1040,7 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
   const next = RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1]
   const cfg = RARITY[next]
   const scale = cfg.budget / RARITY[item.rarity].budget
-  const floatKeys = new Set(['attackSpeed', 'critChance', 'rangeMult'])
+  const floatKeys = new Set(['attackSpeed', 'critChance', 'rangeMult', 'damagePct'])
   const base: Item['base'] = { ...item.base }
   for (const k of Object.keys(base) as (keyof Item['base'])[]) {
     if (base[k] == null) continue
@@ -1009,6 +1097,7 @@ export function describeBase(item: Item): string[] {
   const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
   if (b.physDamage) out.push(`+${b.physDamage} Physical Damage`)
   if (b.magDamage) out.push(`+${b.magDamage} Magic Damage`)
+  if (b.damagePct) out.push(`+${Math.round(b.damagePct * 100)}% Damage`)
   if (b.attackSpeed) out.push(`${signed(Math.round(b.attackSpeed * 100))}% Attack Speed`)
   if (b.critChance) out.push(`+${Math.round(b.critChance * 100)}% Crit Chance`)
   if (b.rangeMult) out.push(`+${Math.round(b.rangeMult * 100)}% Range`)

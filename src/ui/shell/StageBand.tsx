@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import { BattleCanvas } from '../BattleCanvas'
 import { RunMapView } from '../components/RunMapView'
 import { RoutePanel } from './contracts/RoutePanel'
 import type { ShellContext } from './context'
 import { BossPlate } from './BossPlate'
 import { WaveCeremony } from './WaveCeremony'
+import { Coach } from './Coach'
 
 /**
  * Band 2 — the subject. Rule two of the shell: nothing ever covers this. No
@@ -61,10 +63,17 @@ import { WaveCeremony } from './WaveCeremony'
  *
  * The command button is NOT here: it is an action, and every action lives in
  * band 4 — see `CommandSlot` in the wave strip. docs/FIGMA.md § Live wave layout.
+ *
+ * The one thing that floats over an edge of the Stage is the coach's hint pill
+ * (`Coach`, October 2026): a line of first-run teaching that takes no layout
+ * space, takes no tap (`pointer-events: none` — a finger lands on the field
+ * under it) and fades on its own. It replaced a grid row that pushed the
+ * field down whenever a tip appeared.
  */
 export function StageBand({ ctx }: { ctx: ShellContext }) {
+  const stage = useRef<HTMLElement>(null)
   return (
-    <section className={`sh-stage stage-${ctx.stage}`}>
+    <section className={`sh-stage stage-${ctx.stage}`} ref={stage}>
       {ctx.stage === 'battlefield' && (
         <>
           <BattleCanvas />
@@ -83,6 +92,7 @@ export function StageBand({ ctx }: { ctx: ShellContext }) {
           <RunMapView />
         </>
       )}
+      <Coach stage={stage} />
     </section>
   )
 }

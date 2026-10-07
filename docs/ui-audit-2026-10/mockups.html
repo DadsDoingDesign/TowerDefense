@@ -1,0 +1,1075 @@
+<meta charset="utf-8">
+<title>Fieldwatch Borrow Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@600;700&family=Rubik:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a long field-manual page — audit up top, then 20 numbered phone plates in loop order, each a 300px handset beside its notes.
+   Single deliberate dark look: it borrows the game's own grounds so every mockup sits in the colours it would ship in. */
+:root {
+  color-scheme: dark;
+  /* game tokens (src/styles/global.css) */
+  --bg: #201711; --bg-2: #2a1f16; --panel: #2f2418; --panel-2: #3a2c1c; --panel-3: #46331f;
+  --line: rgba(233,205,150,.12); --line-strong: rgba(233,205,150,.24);
+  --text: #f3e7d0; --muted: #d4c0a0; --muted-2: #a8916f;
+  --accent: #e0ac4c; --accent-text: #f0c46a; --accent-dim: rgba(224,172,76,.16);
+  --teal: #57a2b6; --teal-edge: #86c6d6; --cta-ink: #1b1409;
+  --good: #6fce88; --bad: #d0563a; --bad-text: #ef8368; --info: #6fb0d8;
+  --r-common: #c3b291; --r-rare: #5fb0c4; --r-epic: #c67ab0; --r-legend: #f0b868; --r-myth: #ef6a3a;
+  /* page tokens */
+  --page: #17110c; --page-ink: #efe3cb; --page-mute: #b9a585; --rule: rgba(233,205,150,.14);
+  --display: 'Crimson Text', Georgia, 'Times New Roman', serif;
+  --ui: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--page); color: var(--page-ink); }
+body { font: 15px/1.55 var(--ui); padding-inline: 20px; padding-block: 40px 80px; margin: 0; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 72px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: .005em; }
+h1 { font-size: clamp(40px, 6vw, 68px); line-height: 1; color: var(--accent-text); }
+h2 { font-size: clamp(28px, 3.4vw, 38px); line-height: 1.1; }
+h3 { font-size: 22px; line-height: 1.2; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent-text); }
+.eyebrow { font: 600 12px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 18px; color: var(--page-mute); max-width: 62ch; }
+.hero { display: grid; gap: 18px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); padding-block-end: 40px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--page-mute); }
+.meta b { color: var(--page-ink); font-weight: 600; }
+section { display: grid; gap: 28px; }
+.sec-head { display: grid; gap: 10px; }
+
+/* ---------- audit: current screens ---------- */
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: 18px; }
+.shot { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.shot img { width: 100%; border-radius: 14px; border: 1px solid var(--rule); display: block; }
+.shot figcaption { font-size: 13px; color: var(--page-mute); }
+.shot figcaption b { color: var(--page-ink); display: block; font-weight: 600; }
+.issues { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px 28px; counter-reset: iss; padding: 0; margin: 0; list-style: none; }
+.issues li { counter-increment: iss; display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding-block: 12px; border-top: 1px solid var(--rule); min-width: 0; }
+.issues li::before { content: "P" counter(iss); font: 700 13px/1.6 var(--ui); color: var(--bad-text); }
+.issues b { color: var(--page-ink); font-weight: 600; }
+.issues span { color: var(--page-mute); font-size: 14px; }
+
+/* ---------- research ---------- */
+.studios { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.studio { background: var(--bg-2); border: 1px solid var(--rule); border-radius: 16px; padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.studio h3 { color: var(--accent-text); }
+.studio .games { font-size: 12.5px; color: var(--page-mute); }
+.studio ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.studio li { font-size: 14px; color: var(--page-mute); padding-left: 14px; position: relative; }
+.studio li::before { content: ""; position: absolute; left: 0; top: .62em; width: 6px; height: 6px; background: var(--accent); transform: rotate(45deg); }
+.studio li b { color: var(--page-ink); font-weight: 600; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; }
+.rule { border-top: 3px solid var(--accent); padding-top: 12px; display: grid; gap: 6px; align-content: start; }
+.rule b { font-family: var(--display); font-size: 20px; line-height: 1.15; }
+.rule span { font-size: 14px; color: var(--page-mute); }
+
+/* ---------- plates ---------- */
+.chapter { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.chapter .eyebrow { color: var(--teal-edge); }
+.plates { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 580px), 1fr)); gap: 56px 40px; }
+.plate { display: flex; gap: 24px; align-items: flex-start; min-width: 0; }
+.notes { display: grid; gap: 12px; min-width: 0; flex: 1; }
+.num { font: 700 13px/1 var(--ui); color: var(--accent); letter-spacing: .1em; }
+.from { display: flex; flex-wrap: wrap; gap: 6px; }
+.from span { font-size: 12px; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.from span.sc { border-color: rgba(224,172,76,.45); }
+.from span.ri { border-color: rgba(198,122,176,.5); }
+.from span.rg { border-color: rgba(95,176,196,.5); }
+.notes dl { margin: 0; display: grid; gap: 10px; }
+.notes dt { font: 600 11px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); }
+.notes dd { margin: 4px 0 0; font-size: 14px; color: var(--page-mute); }
+.notes dd b { color: var(--page-ink); font-weight: 600; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.tags span { padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.04); color: var(--page-mute); }
+.tags .hi { color: var(--good); } .tags .md { color: var(--accent-text); } .tags .lo { color: var(--muted-2); }
+@media (max-width: 640px) { .plate { flex-direction: column; align-items: center; } .notes { width: 100%; } }
+
+/* ---------- roadmap ---------- */
+.road { overflow-x: auto; }
+.road table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+.road th, .road td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.road th { font: 600 11px/1.2 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); }
+.road td { color: var(--page-mute); }
+.road td b { color: var(--page-ink); font-weight: 600; }
+.road .wk { font-family: var(--display); font-size: 18px; color: var(--accent-text); white-space: nowrap; }
+
+/* ===================================================================
+   THE HANDSET — everything inside .scr is a mockup of the game
+   =================================================================== */
+.phone { flex: none; width: 300px; height: 640px; padding: 7px; border-radius: 38px; background: #0b0705; box-shadow: 0 0 0 1px rgba(233,205,150,.16), 0 30px 60px -20px rgba(0,0,0,.7); }
+.scr { position: relative; width: 100%; height: 100%; border-radius: 31px; overflow: hidden; background: var(--bg); color: var(--text); font: 12px/1.3 var(--ui); display: flex; flex-direction: column; }
+.scr * { line-height: 1.25; }
+.px { image-rendering: pixelated; }
+.ic { display: inline-block; flex: none; width: var(--s, 16px); height: var(--s, 16px); background-image: url(assets/fw-icons.png); background-repeat: no-repeat; background-size: calc(var(--s, 16px) * 8) calc(var(--s, 16px) * 12); image-rendering: pixelated; vertical-align: -3px; }
+.mono { font-variant-numeric: tabular-nums; }
+
+/* slim header — one 38px row (P1) */
+.hud { height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: linear-gradient(var(--bg-2), var(--bg)); border-bottom: 1px solid var(--line); font-weight: 700; z-index: 3; }
+.hud .gold { display: flex; align-items: center; gap: 4px; color: var(--accent-text); font-size: 14px; }
+.hud .cargo { flex: 1; display: flex; align-items: center; gap: 5px; min-width: 0; }
+.hud .bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(0,0,0,.45); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.hud .bar i { display: block; height: 100%; background: var(--good); border-radius: 4px; }
+.hud .depth { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+.skulls { display: inline-flex; gap: 1px; }
+.skulls i { width: 7px; height: 7px; border-radius: 2px; background: var(--bad); }
+.skulls i.off { background: rgba(255,255,255,.14); }
+
+.stage { position: relative; flex: none; overflow: hidden; background: #6c7a3a; }
+.map { position: absolute; left: 0; top: 0; width: 300px; }
+.map > img { display: block; width: 100%; image-rendering: pixelated; }
+.ov { position: absolute; transform: translate(-50%, -50%); }
+.dim::after { content: ""; position: absolute; inset: 0; background: rgba(16,10,6,.55); }
+
+.band { flex: none; background: var(--bg); border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 8px; align-items: center; }
+.fill { flex: 1; }
+.btn { border: 0; font: 800 15px/1 var(--ui); border-radius: 12px; padding: 0 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--cta-ink); background: var(--teal); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 3px 0 rgba(0,0,0,.45); }
+.btn.gold { background: linear-gradient(#f3c86d, #d99a35); }
+.btn.green { background: linear-gradient(#86dc9c, #4fae6a); }
+.btn.ghost { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong), 0 3px 0 rgba(0,0,0,.35); }
+.btn.sm { height: 34px; font-size: 12.5px; border-radius: 10px; padding: 0 10px; }
+.btn.big { height: 54px; font-size: 18px; font-family: var(--display); letter-spacing: .01em; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; background: rgba(20,13,8,.82); border: 1px solid var(--line-strong); font-weight: 600; font-size: 11px; white-space: nowrap; color: var(--text); }
+.chip.good { color: var(--good); } .chip.bad { color: var(--bad-text); } .chip.gold { color: var(--accent-text); }
+.badge { position: absolute; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e2443a; color: #fff; font: 800 11px/18px var(--ui); text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+.badge.up { background: var(--good); color: var(--cta-ink); }
+
+/* hero cards (the "hand") */
+.hand { display: flex; gap: 8px; }
+.hcard { position: relative; width: 62px; height: 76px; border-radius: 12px; background: linear-gradient(var(--panel-2), var(--panel)); box-shadow: inset 0 0 0 2px var(--line-strong), 0 3px 0 rgba(0,0,0,.4); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; }
+.hcard img { width: 40px; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); image-rendering: pixelated; }
+.hcard .lv { position: absolute; top: 4px; left: 5px; font: 800 10px/1 var(--ui); color: var(--accent-text); }
+.hcard .nm { font: 700 10.5px/1 var(--ui); }
+.hcard .xp { width: 46px; height: 4px; border-radius: 2px; background: rgba(0,0,0,.5); margin-top: 4px; overflow: hidden; }
+.hcard .xp i { display: block; height: 100%; background: var(--info); }
+.hcard.sel { box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 3px rgba(224,172,76,.25), 0 3px 0 rgba(0,0,0,.4); transform: translateY(-6px); }
+.hcard.used { opacity: .5; }
+.hcard.next { width: 46px; height: 60px; opacity: .9; }
+.r-c { --rc: var(--r-common); } .r-r { --rc: var(--r-rare); } .r-e { --rc: var(--r-epic); } .r-l { --rc: var(--r-legend); } .r-m { --rc: var(--r-myth); }
+
+/* range ring + glow tiles */
+.ring { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); border: 2px dashed rgba(255,255,255,.75); background: rgba(255,255,255,.08); }
+.tile { position: absolute; width: 22px; height: 22px; transform: translate(-50%, -50%); border-radius: 5px; border: 2px solid var(--accent); background: rgba(224,172,76,.28); box-shadow: 0 0 10px rgba(240,196,106,.6); }
+.tile .st { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font: 800 9px/1 var(--ui); color: var(--accent-text); white-space: nowrap; text-shadow: 0 1px 0 #000; }
+.sprite { position: absolute; transform: translate(-50%, -78%); image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0,0,0,.35)); }
+.ghost { opacity: .55; filter: drop-shadow(0 0 6px rgba(240,196,106,.9)); }
+.hatch { position: absolute; background: repeating-linear-gradient(45deg, rgba(208,86,58,.45) 0 4px, transparent 4px 9px); border: 1px solid rgba(239,131,104,.7); border-radius: 6px; }
+.road-hl { position: absolute; background: rgba(240,196,106,.5); border-radius: 4px; box-shadow: 0 0 8px rgba(240,196,106,.8); }
+.pointer { position: absolute; width: 34px; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.callout { position: absolute; background: rgba(20,13,8,.9); border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 9px; font-size: 11px; color: var(--text); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.callout b { color: var(--accent-text); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg); border-top: 1px solid var(--line-strong); border-radius: 18px 18px 0 0; padding: 12px; display: grid; gap: 10px; box-shadow: 0 -12px 30px rgba(0,0,0,.5); }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); justify-self: center; }
+.label { font: 700 10px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-2); }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 6px; height: 6px; border-radius: 50%; background: var(--rc, var(--accent)); }
+.pips i.off { background: rgba(255,255,255,.15); }
+
+/* item / offer card */
+.ocard { position: relative; border-radius: 14px; padding: 10px; background: linear-gradient(color-mix(in srgb, var(--rc) 14%, var(--panel-2)), var(--panel)); box-shadow: inset 0 0 0 2px var(--rc), 0 4px 0 rgba(0,0,0,.4); display: grid; gap: 6px; align-content: start; }
+.ocard .tier { font: 800 9.5px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--rc); }
+.ocard .nm { font: 700 12.5px/1.15 var(--ui); }
+.delta { display: flex; align-items: center; gap: 4px; font: 600 11px/1.2 var(--ui); }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad-text); } .delta.eq { color: var(--muted-2); }
+.flag { position: absolute; top: -9px; right: 8px; padding: 3px 7px; border-radius: 6px; font: 800 9.5px/1 var(--ui); letter-spacing: .06em; }
+.flag.up { background: var(--good); color: var(--cta-ink); }
+.flag.side { background: var(--panel-3); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.flag.new { background: #e2443a; color: #fff; }
+.slotbox { width: 40px; height: 40px; border-radius: 10px; background: rgba(0,0,0,.3); box-shadow: inset 0 0 0 2px var(--rc, var(--line-strong)); display: grid; place-items: center; position: relative; }
+.slotbox.empty { box-shadow: inset 0 0 0 2px var(--line); background: rgba(0,0,0,.18); }
+
+/* tab bar */
+.tabbar { flex: none; height: 64px; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 6px 8px; background: linear-gradient(var(--bg-2), #160f0a); border-top: 1px solid var(--line-strong); }
+.tab { position: relative; display: grid; justify-items: center; gap: 3px; font: 600 9.5px/1 var(--ui); color: var(--muted-2); width: 52px; }
+.tab.on { color: var(--accent-text); }
+.tab.main { transform: translateY(-14px); }
+.tab.main .disc { width: 66px; height: 66px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(#f3c86d, #d99a35); box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 4px 0 #7a4f17, 0 0 0 4px var(--bg); }
+
+@keyframes bob { 0%,100% { transform: translate(0,0); } 50% { transform: translate(0,-3px); } }
+@keyframes drag { 0% { left: 22%; top: 100%; opacity: 0; } 15% { opacity: 1; } 70% { left: 50%; top: 58%; opacity: 1; } 100% { left: 50%; top: 58%; opacity: 0; } }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 6px rgba(240,196,106,.5); } 50% { box-shadow: 0 0 16px rgba(240,196,106,1); } }
+@keyframes pop { 0% { transform: translate(-50%,-50%) scale(.85); } 40% { transform: translate(-50%,-50%) scale(1.1); } 100% { transform: translate(-50%,-50%) scale(1); } }
+.bob { animation: bob 1.6s ease-in-out infinite; }
+.tile.best { animation: pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .bob, .tile.best, .anim-drag { animation: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">Fieldwatch · UI audit · October 2026</span>
+  <h1>Fieldwatch Borrow Book</h1>
+  <p class="lede">An audit of how Supercell, Riot and the best mobile roguelites lay out their screens and handle choices, items and placement. It ends with 20 mockups of what Fieldwatch could borrow so that each battle, build and march round needs fewer words and fewer taps.</p>
+  <div class="meta"><span>Branch <b>claude/compassionate-johnson-pzt0qc</b> off <b>main @ 1b43846</b></span><span>Captured on a <b>390 × 844</b> phone</span><span>Mockups use the game's own tokens, icon atlas, sprites and battlefield renders</span></div>
+</header>
+
+<!-- ============================ AUDIT ============================ -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Part 1 · Where we are</span>
+    <h2>The current loop, screen by screen</h2>
+    <p class="lede">Captured from a real run of today's build. The four-band Root Shell already does a lot right: the field is never covered, there is one CTA and the art direction holds. The friction comes from <b>prose standing in for feedback</b>, <b>every option being shown at once</b> and <b>controls packed into small columns</b>.</p>
+  </div>
+  <div class="shots">
+    <figure class="shot"><img src="current/01-home.png" alt="Home screen: world map with contract banner, Codex and Settings buttons, Take the free escort CTA"><figcaption><b>Home</b>Four equal-weight boxes. The CTA reads "Take the free escort".</figcaption></figure>
+    <figure class="shot"><img src="current/02-hero-pick.png" alt="Hero pick: three text-heavy hero cards"><figcaption><b>Hero pick</b>Three paragraphs of gear and skill text, with no picture of how each hero plays.</figcaption></figure>
+    <figure class="shot"><img src="current/03-run-map.png" alt="Run map: four battle nodes, preview panel with text"><figcaption><b>Run map</b>You see one row ahead. Threat is shown as "+70%". The preview fills the whole lower half.</figcaption></figure>
+    <figure class="shot"><img src="current/04-placement.png" alt="Placement: about 150 tiles glowing"><figcaption><b>Placement</b>About 150 tiles glow at once. A coach banner pushes the field down.</figcaption></figure>
+    <figure class="shot"><img src="current/05-hero-selected.png" alt="Hero selected: Stats and Skills tabs in a panel, Undeploy button"><figcaption><b>Hero selected</b>The tabbed panel squeezes the field to a third of the screen. The skill shows as a sentence.</figcaption></figure>
+    <figure class="shot"><img src="current/06-subwave-held.png" alt="Sub-wave held: paragraph banner, Next and Speed buttons"><figcaption><b>Sub-wave held</b>A two-line paragraph explains the pause. The enemy queue is one 24px icon.</figcaption></figure>
+    <figure class="shot"><img src="current/07-spoils.png" alt="Spoils: three loot cards, then a three-column detail, gear and pack row"><figcaption><b>Spoils</b>Names are truncated ("Swift Shi…"), nothing compares against what the hero wears, and it takes two taps to take an item.</figcaption></figure>
+  </div>
+  <ol class="issues">
+    <li><div><b>Coach text instead of coaching.</b> <span>13 one-time tips, shown one at a time, such as "Items you win land in your pack. Tap a slot under Gear…". Each takes 60–90px and pushes the field down while it's up.</span></div></li>
+    <li><div><b>Placement has no guidance.</b> <span>Every legal tile glows the same. The range ring and the value of a tile only show after you commit.</span></div></li>
+    <li><div><b>The Selector band is mostly empty.</b> <span>With one or two heroes, a 126px band holds a single 92px card.</span></div></li>
+    <li><div><b>The header spends a row on the wordmark.</b> <span>"FIELDWATCH" and a full-width cargo bar take 76px on every screen.</span></div></li>
+    <li><div><b>Enemy intent is hidden.</b> <span>The wave is one icon with "×8" and a "Details" button. Armour, speed and sub-wave structure are invisible.</span></div></li>
+    <li><div><b>Gear and skill effects can't be seen.</b> <span>Nothing on the field shows a skill or affix firing, so "+9% crit" is something you have to trust.</span></div></li>
+    <li><div><b>Loot asks you to compare in your head.</b> <span>There's no "vs equipped" delta, no slot-fit hint and no fast equip. Pack, doll and detail share 360px.</span></div></li>
+    <li><div><b>The economy is explained in prose.</b> <span>Purse vs bank, road tax, interest capped at 40 and city pay are taught in text strings, never in a receipt.</span></div></li>
+    <li><div><b>Threat is an abstract percentage.</b> <span>"+70%", "+380%" and "+530%" next to nodes can't be compared at a glance.</span></div></li>
+    <li><div><b>Rewards land with no ceremony.</b> <span>Wave clear is a static ribbon. Gold, XP and level-ups don't move into the counters they fill.</span></div></li>
+  </ol>
+</section>
+
+<!-- ============================ RESEARCH ============================ -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Part 2 · What the best do</span>
+    <h2>Three schools of mobile game UI</h2>
+    <p class="lede">The full write-up with sources is in <code>AUDIT.md</code> next to this page. These are the patterns that matter for a portrait autobattler.</p>
+  </div>
+  <div class="studios">
+    <article class="studio">
+      <h3>Supercell</h3>
+      <div class="games">Clash Royale · Clash of Clans · Brawl Stars · Boom Beach · Hay Day · Squad Busters · mo.co · Clash Mini · CR Merge Tactics</div>
+      <ul>
+        <li><b>Bottom half is the thumb zone.</b> Every control in CR lives in the bottom band; the arena is the top 75%.</li>
+        <li><b>Battle is the centre tab</b> and the default. In 2025 a mode switcher was placed right beside it because buried modes went unplayed.</li>
+        <li><b>Drag or tap-tap to deploy, with no confirm.</b> A ghost preview, a red no-deploy zone, snap to grid. Placing is instant.</li>
+        <li><b>Hand plus "Next" card.</b> Players plan one step ahead without opening a screen.</li>
+        <li><b>Strict colour roles.</b> Yellow is the main action, green is upgrade, red is a badge or something you can't afford, blue is chrome.</li>
+        <li><b>Rewards fly into counters.</b> Coins arc into the total and the number counts up. Tap-to-reveal drops are decided before the animation plays.</li>
+        <li><b>Features unlock by milestone.</b> One popup per session at most; everything else is a badge.</li>
+        <li><b>One nudge during an autobattle</b> (Boom Beach flare). The player gets a single meaningful input, not micromanagement.</li>
+      </ul>
+    </article>
+    <article class="studio">
+      <h3>Riot Games</h3>
+      <div class="games">Teamfight Tactics (+ mobile) · Legends of Runeterra / Path of Champions · League · Wild Rift · Valorant</div>
+      <ul>
+        <li><b>Put a cause next to its effect.</b> TFT moved Buy XP, Level and Odds side by side because players never connected them.</li>
+        <li><b>"Tough choices, not touch execution."</b> Auto star-up and auto-combine remove busywork.</li>
+        <li><b>Preview before commit.</b> Item recipes appear while dragging. LoR's Oracle's Eye shows the outcome. PoC shop items are shown already attached.</li>
+        <li><b>Trait tracker.</b> "2/4" breakpoints with tier colours, live as units move.</li>
+        <li><b>Pick 1 of 3 with a reroll per card</b> and a hide toggle to look at the board while you decide.</li>
+        <li><b>Owned-unit glow in the shop.</b> Your roster's matches stand out without you having to remember them.</li>
+        <li><b>Ask for the gold, show the maths.</b> Hovering gold shows next round's income. Valorant shows a "min next round" figure.</li>
+        <li><b>Visual impact should match gameplay impact</b> (League VFX style guide), with brightness contrast as the main tool.</li>
+      </ul>
+    </article>
+    <article class="studio">
+      <h3>Mobile roguelites</h3>
+      <div class="games">Balatro · Slay the Spire · Kingdom Rush · Bloons TD 6 · Super Auto Pets · Hades · Vampire Survivors · Archero · Backpack Battles · Loop Hero · Ball x Pit · Thronefall</div>
+      <ul>
+        <li><b>Scoring is a performance.</b> Balatro explains every number by playing it: chips, then mult, with each joker wiggling as it fires.</li>
+        <li><b>A ring around the tower</b> (Kingdom Rush). Tap a plot and options with prices circle your thumb. Tap outside to cancel.</li>
+        <li><b>Panel opposite the selection</b> (BTD6), with three upgrade tracks shown as pips and a one-tap targeting toggle.</li>
+        <li><b>Intents</b> (StS). Show what is coming before you commit.</li>
+        <li><b>Rarity frame + slot icon + NEW/UPGRADE badge</b> (Hades). Fit and power read before any text.</li>
+        <li><b>Freeze, drag to merge, fixed shop layout</b> (SAP, Balatro). The shop reads the same every time.</li>
+        <li><b>Skip always pays something</b> (StS bowl, Balatro tags, VS XP).</li>
+        <li><b>Don't gate core info, and keep destructive drop zones away from reorder drags</b> (Balatro's sell-zone patches).</li>
+      </ul>
+    </article>
+  </div>
+  <div class="sec-head" style="margin-top:8px"><span class="eyebrow">The five rules the mockups follow</span></div>
+  <div class="rules">
+    <div class="rule"><b>Show it, don't caption it</b><span>Replace every coach sentence with a ghost, a glow, a delta or a receipt.</span></div>
+    <div class="rule"><b>One gesture per verb</b><span>Drag to place, equip and merge. Tap to select. Hold to inspect. No select-then-confirm unless it spends.</span></div>
+    <div class="rule"><b>Preview before commit</b><span>Range, coverage, stat deltas and merge results are visible while the finger is still down.</span></div>
+    <div class="rule"><b>Field on top, thumbs at the bottom</b><span>The stage gets 65–85% of the height. Every control sits in the bottom band.</span></div>
+    <div class="rule"><b>Rewards travel</b><span>Gold, XP and loot visibly move into the counter, bar or slot they change.</span></div>
+  </div>
+</section>
+
+<!-- ============================ MOCKUPS ============================ -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Part 3 · Twenty borrowings</span>
+    <h2>Twenty mockups, in the order a run plays</h2>
+    <p class="lede">Each plate names its sources, the problem it fixes (P-numbers from Part 1) and the interaction cost. The phones are static frames, with a few looping cues where motion is the point.</p>
+  </div>
+
+  <!-- ---------- Chapter A ---------- -->
+  <div class="chapter"><span class="eyebrow">A · Home and run start</span><h3>Get from launch to the field in two taps</h3></div>
+  <div class="plates">
+
+    <!-- 01 HOME -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud" style="height:44px"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">1,240</span></span><span class="fill"></span><span class="chip"><i class="ic" data-ic="company" style="--s:14px"></i>Militia · Lv 6</span></div>
+        <div class="stage" style="flex:1"><div class="map"><img src="assets/world-map.png" alt=""></div>
+          <div class="callout" style="left:14px;right:14px;bottom:30px;display:grid;gap:8px;padding:10px">
+            <div style="display:flex;align-items:center;gap:8px"><i class="ic" data-ic="orders" style="--s:24px"></i><div style="flex:1"><div style="font-weight:700;font-size:13px">Peppercorn Co.</div><div style="color:var(--muted);font-size:11px">Escort · 3 cities · pays at each</div></div><span class="chip gold"><i class="ic" data-ic="gold" style="--s:12px"></i>40 / city</span></div>
+            <div style="display:flex;gap:5px;justify-content:center"><span class="pips" style="--rc:var(--accent)"><i></i><i class="off"></i><i class="off"></i></span><span style="font-size:10px;color:var(--muted-2)">swipe for 2 more contracts</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i class="ic" data-ic="map" style="--s:24px"></i>Codex</div>
+          <div class="tab"><i class="ic" data-ic="company" style="--s:24px"></i>Company<span class="badge up" style="top:-6px;right:6px">↑</span></div>
+          <div class="tab main on"><span class="disc"><i class="ic" data-ic="battle" style="--s:34px"></i></span><span style="font:800 12px/1 var(--ui)">MARCH</span></div>
+          <div class="tab"><i class="ic" data-ic="coffer" style="--s:24px"></i>Bank</div>
+          <div class="tab"><i class="ic" data-ic="settings" style="--s:24px"></i>Settings<span class="badge" style="top:-6px;right:8px">1</span></div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">01 · HOME</span>
+        <h3>One gold button in the thumb, contracts beside it</h3>
+        <div class="from"><span class="sc">Clash Royale battle tab</span><span class="sc">CR Game Mode Switcher</span><span class="sc">Brawl Stars Play button</span></div>
+        <dl>
+          <dt>Today</dt><dd>Codex, Settings, a contract banner and a CTA all compete. The CTA says "Take the free escort", which is the system's word for it, not the player's.</dd>
+          <dt>Change</dt><dd>A bottom tab bar with a raised gold <b>March</b> disc in the centre, the default tab. The contract sits as a swipeable card right above it, so changing mode never leaves Home. A green ↑ badge means something can be upgraded; red is reserved for new things.</dd>
+          <dt>Interaction</dt><dd>Launch → March is <b>1 tap</b>. Swipe the card to switch contracts.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P4</span></div>
+      </div>
+    </div>
+
+    <!-- 02 HERO PICK -->
+    <div class="plate">
+      <div class="phone"><div class="scr" style="background:radial-gradient(120% 60% at 50% 30%, #3b2c1b, var(--bg))">
+        <div style="padding:16px 14px 0;text-align:center"><div class="label">Choose your first hero</div></div>
+        <div style="position:relative;height:250px;display:grid;place-items:center">
+          <div style="position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle, rgba(224,172,76,.3), transparent 70%)"></div>
+          <img src="assets/fighter.png" alt="" class="px bob" style="width:150px;position:relative">
+          <img src="assets/rogue.png" alt="" class="px" style="position:absolute;left:-22px;top:90px;width:70px;opacity:.35">
+          <img src="assets/mystic.png" alt="" class="px" style="position:absolute;right:-18px;top:96px;width:70px;opacity:.35">
+        </div>
+        <div style="text-align:center;display:grid;gap:6px;padding:0 16px">
+          <div style="font:700 28px/1 var(--display)">Aldre</div>
+          <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap"><span class="chip"><i class="ic" data-ic="blade" style="--s:14px"></i>Melee</span><span class="chip"><i class="ic" data-ic="block" style="--s:14px"></i>Holds 2</span><span class="chip gold"><i class="ic" data-ic="haste" style="--s:14px"></i>Quick Hands</span></div>
+        </div>
+        <div style="padding:12px 22px;display:grid;gap:7px">
+          <div style="display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px"><span class="label">Damage</span><div class="hud" style="all:unset"><div style="height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:55%;height:100%;background:var(--bad)"></i></div></div></div>
+          <div style="display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px"><span class="label">Range</span><div style="height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:20%;height:100%;background:var(--info)"></i></div></div>
+          <div style="display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px"><span class="label">Hold</span><div style="height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:85%;height:100%;background:var(--good)"></i></div></div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:6px;padding:4px 0 10px"><span class="pips"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div class="band" style="margin-top:auto;border:0"><button class="btn big gold fill">Take Aldre</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">02 · HERO PICK</span>
+        <h3>A showcase you swipe, not three paragraphs</h3>
+        <div class="from"><span class="sc">Brawl Stars brawler stage</span><span class="rg">Hades boon icons</span><span class="sc">Supercell "icons over words"</span></div>
+        <dl>
+          <dt>Today</dt><dd>Three stacked cards, each with 3–5 lines of gear rarity and skill prose. The hero art is a 40px thumbnail.</dd>
+          <dt>Change</dt><dd>The hero stands centre stage at full size with neighbours peeking from the sides. Three icon chips (<b>role, hold, skill</b>) and three bars cover what the prose said. Gear rarity moves to a long-press.</dd>
+          <dt>Interaction</dt><dd>Swipe to browse, then <b>1 tap</b> to take. Long-press a chip for the keyword's exact text.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P1, P7</span></div>
+      </div>
+    </div>
+
+    <!-- 03 RUN MAP -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">60</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>0/12</span></div>
+        <div style="flex:1;position:relative;background:radial-gradient(80% 50% at 50% 60%, #2c2117, #1a120c);overflow:hidden">
+          <svg viewBox="0 0 286 470" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+            <g stroke="rgba(233,205,150,.28)" stroke-width="2" stroke-dasharray="4 5" fill="none">
+              <path d="M143 440 L80 370 M143 440 L206 370 M80 370 L60 295 M80 370 L143 295 M206 370 L143 295 M206 370 L230 295 M60 295 L80 220 M143 295 L80 220 M143 295 L206 220 M230 295 L206 220 M80 220 L110 140 M206 220 L176 140 M110 140 L143 60 M176 140 L143 60"/>
+            </g>
+            <path d="M143 440 L206 370 L143 295 L80 220 L110 140 L143 60" stroke="#f0c46a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9"/>
+          </svg>
+          <!-- nodes -->
+          <div class="ov" style="left:50%;top:93.6%"><div class="slotbox" style="--rc:var(--teal)"><i class="ic" data-ic="start" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:28%;top:78.7%"><div class="slotbox" style="--rc:var(--r-common)"><i class="ic" data-ic="battle" style="--s:24px"></i></div><span class="skulls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:-11px"><i></i><i class="off"></i><i class="off"></i></span></div>
+          <div class="ov" style="left:72%;top:78.7%"><div class="slotbox" style="--rc:var(--accent);box-shadow:inset 0 0 0 2px var(--accent),0 0 0 4px rgba(224,172,76,.3)"><i class="ic" data-ic="battle" style="--s:24px"></i></div><span class="skulls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:-11px"><i></i><i class="off"></i><i class="off"></i></span></div>
+          <div class="ov" style="left:21%;top:62.8%"><div class="slotbox" style="--rc:var(--good)"><i class="ic" data-ic="shrine" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:50%;top:62.8%"><div class="slotbox" style="--rc:var(--r-legend)"><i class="ic" data-ic="merchant" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:80%;top:62.8%"><div class="slotbox" style="--rc:var(--r-epic)"><i class="ic" data-ic="elite" style="--s:24px"></i></div><span class="skulls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:-11px"><i></i><i></i><i></i></span></div>
+          <div class="ov" style="left:28%;top:46.8%"><div class="slotbox" style="--rc:var(--r-rare)"><i class="ic" data-ic="recruit" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:72%;top:46.8%"><div class="slotbox" style="--rc:var(--r-common)"><i class="ic" data-ic="battle" style="--s:24px"></i></div><span class="skulls" style="position:absolute;left:50%;transform:translateX(-50%);bottom:-11px"><i></i><i></i><i class="off"></i></span></div>
+          <div class="ov" style="left:38.5%;top:29.8%"><div class="slotbox" style="--rc:var(--good)"><i class="ic" data-ic="auraHeal" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:61.5%;top:29.8%"><div class="slotbox" style="--rc:var(--r-common)"><i class="ic" data-ic="battle" style="--s:24px"></i></div></div>
+          <div class="ov" style="left:50%;top:12.8%;text-align:center"><div class="slotbox" style="--rc:var(--r-myth);width:52px;height:52px"><i class="ic" data-ic="boss" style="--s:32px"></i></div><div class="chip bad" style="margin-top:4px">Saltmarsh</div></div>
+          <!-- peek bubble -->
+          <div class="callout" style="right:6px;top:52%;width:150px;display:grid;gap:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><b>Patrol</b><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+            <div style="display:flex;gap:4px;align-items:center"><img src="assets/torch1.png" class="px" style="width:22px" alt=""><span class="mono">×6</span><img src="assets/tnt1.png" class="px" style="width:24px" alt=""><span class="mono">×2</span><i class="ic" data-ic="armour" style="--s:14px;margin-left:auto"></i></div>
+            <div style="display:flex;gap:6px;color:var(--muted)"><i class="ic" data-ic="gold" style="--s:14px"></i><span class="mono">+32</span><i class="ic" data-ic="loot" style="--s:14px"></i><span>1 of 3</span></div>
+            <div style="font-size:10px;color:var(--accent-text);font-weight:700">Tap again to march</div>
+          </div>
+          <div style="position:absolute;left:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;width:120px"><span class="chip" style="font-size:9.5px">Planned route</span></div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">03 · RUN MAP</span>
+        <h3>The whole act on one screen, with intent on every node</h3>
+        <div class="from"><span class="rg">Slay the Spire map</span><span class="ri">Path of Champions: boss always visible</span><span class="ri">TFT round tracker icons</span></div>
+        <dl>
+          <dt>Today</dt><dd>You see one row of choices ahead. Threat is "+70%". Choosing a node fills the whole lower half with a text preview and a Back / March pair.</dd>
+          <dt>Change</dt><dd>The act scrolls vertically with the boss pinned on top. Threat becomes <b>1–5 skull pips</b> you can compare at a glance. Tapping a node opens a small peek on the map itself (enemy icons, armour mark, gold and loot); tapping again marches. Your planned route draws in gold.</dd>
+          <dt>Interaction</dt><dd><b>2 taps</b> as today, but the field of view goes from 4 nodes to the whole act and the lower half isn't covered.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P5, P9</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- Chapter B ---------- -->
+  <div class="chapter"><span class="eyebrow">B · Setup and placement</span><h3>Make the first good placement obvious</h3></div>
+  <div class="plates">
+
+    <!-- 04 ARENA FIRST -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div class="stage" style="height:440px"><div class="map"><img src="assets/field-empty.png" alt=""></div>
+          <div style="position:absolute;right:8px;top:8px;display:grid;gap:6px;justify-items:end"><span class="chip"><i class="ic" data-ic="wave" style="--s:14px"></i>2 sub-waves</span></div>
+        </div>
+        <div class="band" style="flex:1;align-items:flex-end;padding-bottom:14px">
+          <div style="display:grid;gap:4px;justify-items:center"><span class="label" style="font-size:8.5px">Next</span><div class="hcard next" style="background:linear-gradient(#4a2620,#2f1a14)"><img src="assets/torch1.png" alt="" style="width:34px;top:6px"><span class="nm mono" style="font-size:10px">×8</span></div></div>
+          <div class="hand fill" style="justify-content:center">
+            <div class="hcard sel"><span class="lv">1</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span><span class="xp"><i style="width:40%"></i></span></div>
+            <div class="hcard"><span class="lv">1</span><img src="assets/rogue.png" alt=""><span class="nm">Sable</span><span class="xp"><i style="width:10%"></i></span></div>
+            <div class="hcard" style="opacity:.35;box-shadow:inset 0 0 0 2px var(--line)"><span class="nm" style="font-size:18px;margin-bottom:22px;color:var(--muted-2)">+</span></div>
+          </div>
+          <button class="btn gold" style="height:76px;width:62px;flex-direction:column;gap:2px;font-size:13px"><i class="ic" data-ic="battle" style="--s:24px"></i>Fight</button>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">04 · BATTLE SETUP</span>
+        <h3>Arena on top, a hand of heroes underneath</h3>
+        <div class="from"><span class="sc">Clash Royale battle HUD</span><span class="sc">CR "Next" card</span><span class="ri">TFT mobile collapsed tracker</span></div>
+        <dl>
+          <dt>Today</dt><dd>Header, coach banner, Selector band and wave strip leave the field 52% of the screen. The Selector holds one card in a band built for five.</dd>
+          <dt>Change</dt><dd>The header collapses to one 40px row: gold, cargo bar, depth and threat pips. The field takes <b>~70%</b>. Heroes become a CR-style hand. The wave becomes a "Next" card on the left, and <b>Fight</b> is a gold button where the thumb rests.</dd>
+          <dt>Interaction</dt><dd>Everything you touch during setup sits in the bottom 160px.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P3, P4</span></div>
+      </div>
+    </div>
+
+    <!-- 05 DRAG TO DEPLOY -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div class="stage" style="height:440px"><div class="map"><img src="assets/field-empty.png" alt="">
+          <div class="hatch" style="left:0;top:0;width:15%;height:100%;opacity:.55"></div>
+          <div class="hatch" style="left:86%;top:0;width:14%;height:100%;opacity:.55"></div>
+          <div class="road-hl" style="left:30%;top:46.3%;width:26%;height:2.4%"></div>
+          <div class="road-hl" style="left:53.5%;top:21%;width:3%;height:27%"></div>
+          <div class="road-hl" style="left:30%;top:47%;width:3%;height:24%"></div>
+          <div class="road-hl" style="left:30%;top:69.5%;width:39%;height:2.4%"></div>
+          <div class="ring" style="left:49%;top:58.5%;width:150px;height:150px"></div>
+          <div class="tile" style="left:41%;top:35%"><span class="st">★★</span></div>
+          <div class="tile" style="left:75%;top:59%"><span class="st">★★</span></div>
+          <div class="tile" style="left:64%;top:35%"><span class="st">★</span></div>
+          <div class="tile" style="left:51%;top:78.5%"><span class="st">★</span></div>
+          <div class="tile best" style="left:49%;top:58.5%;background:rgba(240,196,106,.55)"><span class="st">★★★</span></div>
+          <img src="assets/fighter.png" alt="" class="sprite ghost" style="left:49%;top:58.5%;width:44px">
+        </div>
+          <div class="callout" style="left:50%;top:84%;transform:translateX(-50%);white-space:nowrap;display:flex;gap:8px;align-items:center"><i class="ic" data-ic="range" style="--s:14px"></i>Covers <b>3 bends</b> · <b class="mono">41%</b> of road</div>
+        </div>
+        <div class="band" style="flex:1;align-items:flex-end;padding-bottom:14px">
+          <div class="hand fill" style="justify-content:center">
+            <div class="hcard sel" style="opacity:.4"><span class="lv">1</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span><span class="xp"><i style="width:40%"></i></span></div>
+            <div class="hcard"><span class="lv">1</span><img src="assets/rogue.png" alt=""><span class="nm">Sable</span><span class="xp"><i style="width:10%"></i></span></div>
+          </div>
+          <img src="assets/pointer_01.png" alt="" class="pointer" style="left:136px;top:322px;transform:rotate(-12deg)">
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">05 · DRAG TO DEPLOY</span>
+        <h3>Five starred tiles and a live coverage read, not 150 glowing squares</h3>
+        <div class="from"><span class="sc">Clash Royale ghost drag</span><span class="sc">CoC red no-deploy zone</span><span class="rg">BTD6 range circle</span><span class="rg">Backpack Battles adjacency stars</span><span class="ri">LoR Oracle's Eye</span></div>
+        <dl>
+          <dt>Today</dt><dd>Tap a hero, then pick from roughly 150 identical glowing tiles. The range ring and the tile's worth show only after placing.</dd>
+          <dt>Change</dt><dd>Drag the card onto the field. While your finger is down you see a <b>ghost and a range ring</b>, the road segments in range light up, and a chip reads "Covers 3 bends · 41% of road". The best 5 tiles for <i>this</i> hero are starred, though any legal tile still works. Forest is hatched red.</dd>
+          <dt>Interaction</dt><dd><b>1 drag</b> (tap-tap still works for accessibility). Lift to place. Drag back to the hand to cancel.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: very high</span><span>Effort: M</span><span>Fixes P2</span></div>
+      </div>
+    </div>
+
+    <!-- 06 RADIAL RING -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div class="stage" style="height:440px"><div class="map dim" style="position:absolute"><img src="assets/field-empty.png" alt=""></div>
+          <div class="map" style="z-index:2;height:441px">
+            <div class="ring" style="left:49%;top:58.5%;width:150px;height:150px;border-style:solid;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.05)"></div>
+            <img src="assets/fighter.png" alt="" class="sprite" style="left:49%;top:58.5%;width:44px">
+            <!-- ring buttons -->
+            <div class="ov" style="left:49%;top:43%;display:grid;justify-items:center;gap:2px"><div class="slotbox" style="--rc:var(--accent);border-radius:50%;background:var(--panel-2)"><i class="ic" data-ic="equip" style="--s:22px"></i></div><span class="chip" style="font-size:9px;padding:2px 6px">Gear</span></div>
+            <div class="ov" style="left:73%;top:52%;display:grid;justify-items:center;gap:2px"><div class="slotbox" style="--rc:var(--good);border-radius:50%;background:var(--panel-2)"><i class="ic" data-ic="evolve" style="--s:22px"></i><span class="badge up" style="top:-6px;right:-6px">+</span></div><span class="chip" style="font-size:9px;padding:2px 6px">Skill</span></div>
+            <div class="ov" style="left:68%;top:73%;display:grid;justify-items:center;gap:2px"><div class="slotbox" style="--rc:var(--line-strong);border-radius:50%;background:var(--panel-2)"><i class="ic" data-ic="threat" style="--s:22px"></i></div><span class="chip" style="font-size:9px;padding:2px 6px">First</span></div>
+            <div class="ov" style="left:30%;top:73%;display:grid;justify-items:center;gap:2px"><div class="slotbox" style="--rc:var(--line-strong);border-radius:50%;background:var(--panel-2)"><i class="ic" data-ic="drag" style="--s:22px"></i></div><span class="chip" style="font-size:9px;padding:2px 6px">Move</span></div>
+            <div class="ov" style="left:25%;top:52%;display:grid;justify-items:center;gap:2px"><div class="slotbox" style="--rc:var(--bad);border-radius:50%;background:var(--panel-2)"><i class="ic" data-ic="back" style="--s:22px"></i></div><span class="chip" style="font-size:9px;padding:2px 6px">Recall</span></div>
+          </div>
+          <div class="callout" style="left:10px;right:10px;top:10px;display:flex;align-items:center;gap:8px;z-index:3"><b style="font-size:13px">Aldre</b><span style="color:var(--muted)">Lv 3</span><span style="flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:70%;height:100%;background:var(--info)"></i></span><span class="mono" style="color:var(--accent-text);font-weight:700">88 DPS</span></div>
+        </div>
+        <div class="band" style="flex:1;align-items:flex-end;padding-bottom:14px">
+          <div class="hand fill" style="justify-content:center"><div class="hcard used"><span class="lv">3</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span><span class="xp"><i style="width:70%"></i></span></div><div class="hcard"><span class="lv">1</span><img src="assets/rogue.png" alt=""><span class="nm">Sable</span><span class="xp"><i style="width:10%"></i></span></div></div>
+          <button class="btn gold" style="height:76px;width:62px;flex-direction:column;gap:2px;font-size:13px"><i class="ic" data-ic="battle" style="--s:24px"></i>Fight</button>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">06 · HERO RING</span>
+        <h3>Tap a hero on the field: its options circle your thumb</h3>
+        <div class="from"><span class="rg">Kingdom Rush tower ring</span><span class="rg">BTD6 panel-opposite</span><span class="ri">Wild Rift "+" level-up badge</span></div>
+        <dl>
+          <dt>Today</dt><dd>Selecting a deployed hero opens a tall Stats/Skills tab panel with a full-width "Undeploy" button, and the field shrinks to a third of the screen.</dd>
+          <dt>Change</dt><dd>A ring of five verbs appears around the hero: <b>Gear, Skill, Target, Move, Recall</b>. The ring lives on the field, so the field never shrinks. A green "+" marks an unspent skill pick. The name, level, XP and DPS strip appears on whichever side is away from the hero.</dd>
+          <dt>Interaction</dt><dd><b>1 tap</b> opens the ring; tap outside to close. Recall is the only red button and asks for a hold.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P3, P7</span></div>
+      </div>
+    </div>
+
+    <!-- 07 TARGET TOGGLE -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div class="stage" style="height:406px"><div class="map"><img src="assets/field-live.png" alt="">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:20%;top:30%;width:34px">
+          <img src="assets/tnt1.png" alt="" class="sprite" style="left:40%;top:27%;width:38px">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:70%;top:68%;width:34px">
+          <!-- reticle on Strong target -->
+          <div class="ov" style="left:40%;top:23%;width:44px;height:44px;border:2px solid var(--bad-text);border-radius:50%;box-shadow:0 0 0 3px rgba(208,86,58,.3)"></div>
+          <div class="ov" style="left:40%;top:14%"><span class="chip bad" style="font-size:9.5px">Armoured · 120 HP</span></div>
+        </div></div>
+        <div class="sheet" style="position:relative;border-radius:0;box-shadow:none;flex:1;align-content:start">
+          <div style="display:flex;align-items:center;gap:8px"><img src="assets/fighter.png" class="px" alt="" style="width:30px"><b style="font-size:13px">Aldre targets</b></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            <div class="ocard" style="--rc:var(--line-strong);padding:7px;justify-items:center;text-align:center"><i class="ic" data-ic="start" style="--s:20px"></i><span style="font-weight:700;font-size:10.5px">First</span></div>
+            <div class="ocard" style="--rc:var(--accent);padding:7px;justify-items:center;text-align:center"><i class="ic" data-ic="hp" style="--s:20px"></i><span style="font-weight:700;font-size:10.5px">Strong</span></div>
+            <div class="ocard" style="--rc:var(--line-strong);padding:7px;justify-items:center;text-align:center"><i class="ic" data-ic="base" style="--s:20px"></i><span style="font-weight:700;font-size:10.5px">Closest</span></div>
+            <div class="ocard" style="--rc:var(--line-strong);padding:7px;justify-items:center;text-align:center"><i class="ic" data-ic="patience" style="--s:20px"></i><span style="font-weight:700;font-size:10.5px">Hold</span></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">The ring shows what <b style="color:var(--text)">Strong</b> picks right now. Applies next wave.</div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">07 · TARGETING</span>
+        <h3>Tactics as one tap that shows its target</h3>
+        <div class="from"><span class="rg">BTD6 First / Last / Close / Strong</span><span class="ri">Wild Rift target lock</span><span class="ri">LoR outcome preview</span></div>
+        <dl>
+          <dt>Today</dt><dd>Focus priority and hold-fire live in a tab you have to find, and nothing shows what a setting does to the fight.</dd>
+          <dt>Change</dt><dd>The ring's Target button opens four icon tiles. As each one is highlighted, the field draws a reticle on the enemy that rule would pick, with a short "why" chip ("Armoured · 120 HP").</dd>
+          <dt>Interaction</dt><dd><b>2 taps</b> from the field. Tapping the ring button again cycles without opening the sheet.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P6</span></div>
+      </div>
+    </div>
+
+    <!-- 08 WAVE INTENT -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span><span class="skulls"><i></i><i class="off"></i><i class="off"></i></span></div>
+        <div style="flex:none;display:flex;gap:4px;padding:6px 8px;background:rgba(0,0,0,.35);border-bottom:1px solid var(--line);align-items:stretch">
+          <div style="flex:3;border-radius:8px;background:var(--panel-2);box-shadow:inset 0 0 0 2px var(--accent);padding:4px 6px;display:flex;align-items:center;gap:4px"><span class="label" style="font-size:8px">1</span><img src="assets/torch1.png" class="px" style="width:20px" alt=""><span class="mono" style="font-weight:700">×6</span><i class="ic" data-ic="haste" style="--s:12px;margin-left:auto"></i></div>
+          <div style="flex:2;border-radius:8px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line-strong);padding:4px 6px;display:flex;align-items:center;gap:4px"><span class="label" style="font-size:8px">2</span><img src="assets/tnt1.png" class="px" style="width:22px" alt=""><span class="mono" style="font-weight:700">×2</span><i class="ic" data-ic="armour" style="--s:12px;margin-left:auto"></i></div>
+          <div style="width:36px;border-radius:8px;background:#3b1c16;box-shadow:inset 0 0 0 1px rgba(239,131,104,.5);display:grid;place-items:center"><i class="ic" data-ic="splash" style="--s:16px"></i></div>
+        </div>
+        <div class="stage" style="height:400px"><div class="map"><img src="assets/field-empty.png" alt="">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:19%;top:4%;width:30px;opacity:.55">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:19%;top:12%;width:30px;opacity:.4">
+          <div class="ov" style="left:19%;top:2%;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:12px solid var(--accent)"></div>
+        </div>
+          <div class="callout" style="left:52px;top:44px;width:190px;display:grid;gap:5px">
+            <div style="display:flex;align-items:center;gap:6px"><img src="assets/tnt1.png" class="px" style="width:28px" alt=""><b style="font-size:12.5px">Barrel Bomber</b></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap"><span class="chip"><i class="ic" data-ic="armour" style="--s:12px"></i>Armoured</span><span class="chip bad"><i class="ic" data-ic="splash" style="--s:12px"></i>Explodes</span></div>
+            <div style="font-size:10.5px;color:var(--muted)">Blunt hits do half. Bring <b>pierce</b> or magic.</div>
+          </div>
+          <div class="ov chip gold" style="left:74%;top:7%"><i class="ic" data-ic="gold" style="--s:12px"></i>Call early +6</div>
+        </div>
+        <div class="band" style="flex:1"><div class="hand fill"><div class="hcard used"><span class="lv">3</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span></div><div class="hcard used"><span class="lv">1</span><img src="assets/rogue.png" alt=""><span class="nm">Sable</span></div></div><button class="btn gold" style="height:76px;width:62px;flex-direction:column;gap:2px;font-size:13px"><i class="ic" data-ic="battle" style="--s:24px"></i>Fight</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">08 · WAVE INTENT</span>
+        <h3>Show what's coming as icons, before you place</h3>
+        <div class="from"><span class="rg">Slay the Spire intents</span><span class="ri">TFT round tracker</span><span class="rg">Kingdom Rush skull and early call</span><span class="ri">LoR keyword chips</span></div>
+        <dl>
+          <dt>Today</dt><dd>The wave is a 24px icon with "×8" and a "Details" button. Armour, speed, explosions and the sub-wave split are invisible until they hurt you.</dd>
+          <dt>Change</dt><dd>A thin rail under the header splits the wave into its sub-waves, with an icon for each trait. Faded ghosts and a gold arrow mark where the road enters. Long-press a segment for a keyword card that says what beats it. The gold chip pays a bonus for calling the wave early.</dd>
+          <dt>Interaction</dt><dd><b>0 taps</b> to read, long-press for detail.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: S</span><span>Fixes P5</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- Chapter C ---------- -->
+  <div class="chapter"><span class="eyebrow">C · The wave</span><h3>Let the fight breathe and explain itself</h3></div>
+  <div class="plates">
+
+    <!-- 09 LIVE HUD -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">104</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="chip" style="padding:3px 7px"><span class="mono">5</span>&nbsp;left</span></div>
+        <div class="stage" style="flex:1"><div class="map" style="top:0"><img src="assets/field-live.png" alt="" style="height:560px;width:auto;max-width:none;margin-left:-6px">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:54%;top:15%;width:32px">
+          <img src="assets/torch1.png" alt="" class="sprite" style="left:79%;top:15%;width:32px">
+          <img src="assets/tnt1.png" alt="" class="sprite" style="left:39%;top:31%;width:36px">
+          <img src="assets/rogue.png" alt="" class="sprite" style="left:30%;top:58%;width:38px">
+        </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:68px;background:linear-gradient(transparent, rgba(16,10,6,.85))"></div>
+          <div style="position:absolute;left:10px;bottom:10px;display:flex;gap:6px">
+            <div class="slotbox" style="--rc:var(--accent);width:44px;height:44px;border-radius:50%;background:var(--panel-2)"><img src="assets/fighter.png" class="px" alt="" style="width:30px"><svg viewBox="0 0 44 44" style="position:absolute;inset:-3px;width:50px;height:50px" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="none" stroke="var(--info)" stroke-width="3" stroke-dasharray="80 126" transform="rotate(-90 22 22)"/></svg></div>
+            <div class="slotbox" style="--rc:var(--line-strong);width:44px;height:44px;border-radius:50%;background:var(--panel-2)"><img src="assets/rogue.png" class="px" alt="" style="width:28px"></div>
+          </div>
+          <div style="position:absolute;right:10px;bottom:10px;display:flex;gap:6px">
+            <button class="btn ghost sm" style="width:44px;height:44px;border-radius:50%;padding:0" aria-label="Pause"><span style="display:flex;gap:4px"><i style="width:4px;height:14px;background:var(--text);border-radius:1px"></i><i style="width:4px;height:14px;background:var(--text);border-radius:1px"></i></span></button>
+            <button class="btn sm" style="height:44px;border-radius:22px;padding:0 14px;font-size:15px">2×</button>
+          </div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">09 · LIVE WAVE</span>
+        <h3>During the wave, the field gets almost everything</h3>
+        <div class="from"><span class="sc">Clash Royale arena</span><span class="sc">mo.co clean HUD</span><span class="rg">Balatro speed setting</span><span class="rg">SAP fast-forward</span></div>
+        <dl>
+          <dt>Today</dt><dd>The live layout already collapses the Detail band, which is good. The Selector band of hero cards and the wave strip still take 194px while nothing in them can be used.</dd>
+          <dt>Change</dt><dd>Only the header remains, now with an "N left" chip. Hero portraits become round <b>XP-ring badges</b> floating at bottom-left. Pause and a 1×/2×/3× pill float at bottom-right. The field fills about 88% of the screen.</dd>
+          <dt>Interaction</dt><dd>Tap a portrait to open the hero ring (06). Pause lets you inspect any unit with a long-press.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P3</span></div>
+      </div>
+    </div>
+
+    <!-- 10 ONE MOVE -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">116</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="chip" style="padding:3px 7px">1 / 2 held</span></div>
+        <div class="stage" style="height:406px"><div class="map"><img src="assets/field-live.png" alt="">
+          <img src="assets/rogue.png" alt="" class="sprite" style="left:30%;top:58%;width:38px;opacity:.45">
+          <div class="ov" style="left:43%;top:44%;width:80px;height:3px;background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 10px);transform:translate(-50%,-50%) rotate(-38deg)"></div>
+          <div class="tile best" style="left:58%;top:28%"><span class="st">★★★</span></div>
+          <img src="assets/rogue.png" alt="" class="sprite ghost" style="left:58%;top:28%;width:38px">
+          <div class="ring" style="left:58%;top:28%;width:130px;height:130px"></div>
+        </div>
+          <div class="ov" style="left:50%;top:84%;display:flex;align-items:center;gap:8px;background:rgba(20,13,8,.9);border:2px solid var(--accent);border-radius:999px;padding:6px 12px 6px 6px;animation:none;transform:translate(-50%,-50%)"><span style="width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(#f3c86d,#d99a35)"><i class="ic" data-ic="drag" style="--s:16px"></i></span><b style="font-size:12px">1 free move</b><span style="color:var(--muted);font-size:11px">drag any hero</span></div>
+        </div>
+        <div class="band" style="flex:1;gap:10px">
+          <div style="display:flex;align-items:center;gap:6px"><img src="assets/tnt1.png" class="px" alt="" style="width:26px"><span class="mono" style="font-weight:700">×2</span><i class="ic" data-ic="armour" style="--s:14px"></i></div>
+          <button class="btn gold fill" style="position:relative">Send next ▶<svg viewBox="0 0 24 24" style="width:20px;height:20px" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(27,20,9,.25)" stroke-width="3"/><circle cx="12" cy="12" r="9" fill="none" stroke="#1b1409" stroke-width="3" stroke-dasharray="40 57" transform="rotate(-90 12 12)"/></svg></button>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">10 · SUB-WAVE HOLD</span>
+        <h3>The pause is a token you spend, not a paragraph</h3>
+        <div class="from"><span class="sc">Boom Beach flare</span><span class="rg">Kingdom Rush rally point</span><span class="sc">Clash Mini "hero moves once"</span></div>
+        <dl>
+          <dt>Today</dt><dd>A two-line banner explains that the fight is paused and you can move one hero, then "Next". The next sub-wave is a tiny icon.</dd>
+          <dt>Change</dt><dd>A gold <b>"1 free move"</b> token pulses over the field. Dragging a hero shows the same ghost, ring and stars as placement (05), and a dashed line from its old tile. The next sub-wave's icons sit next to <b>Send next</b>. An optional auto-send ring fills for players who don't want to stop.</dd>
+          <dt>Interaction</dt><dd><b>1 drag + 1 tap</b>, or 1 tap to skip the move.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P1, P5</span></div>
+      </div>
+    </div>
+
+    <!-- 11 PROC POPS -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">104</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="chip" style="padding:3px 7px"><span class="mono">3</span>&nbsp;left</span></div>
+        <div class="stage" style="height:300px"><div class="map" style="top:-40px"><img src="assets/field-live.png" alt="">
+          <img src="assets/tnt1.png" alt="" class="sprite" style="left:54%;top:50%;width:36px">
+          <div class="ov chip gold" style="left:60%;top:28%;font-size:12px;box-shadow:0 0 12px rgba(240,196,106,.6)"><i class="ic" data-ic="crit" style="--s:14px"></i>CRIT ×2</div>
+          <div class="ov chip" style="left:36%;top:33%;color:var(--r-rare)"><i class="ic" data-ic="haste" style="--s:14px"></i>Swift</div>
+          <div class="ov" style="left:54%;top:41%;font:800 18px/1 var(--ui);color:#fff;text-shadow:0 2px 0 #000,0 0 6px var(--bad)">−46</div>
+        </div></div>
+        <div style="flex:1;background:var(--bg);padding:10px 12px;display:grid;gap:8px;align-content:start;border-top:1px solid var(--line)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="label">Wave 1 · Damage receipt</span><span style="font-size:10px;color:var(--muted-2)">tap a line</span></div>
+          <div style="display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center">
+            <img src="assets/mystic.png" class="px" alt="" style="width:28px">
+            <div style="display:grid;gap:4px">
+              <div style="display:flex;gap:4px;align-items:center;font:700 12px/1 var(--ui)" class="mono"><span style="padding:3px 6px;border-radius:5px;background:#24435a;color:#9fd2f0">412</span><span style="color:var(--muted-2)">+</span><span style="padding:3px 6px;border-radius:5px;background:#24435a;color:#9fd2f0">96 gear</span><span style="color:var(--muted-2)">×</span><span style="padding:3px 6px;border-radius:5px;background:#5a2424;color:#f09f9f">1.15</span><span style="margin-left:auto;font-size:15px;color:var(--accent-text)">584</span></div>
+              <div style="height:6px;border-radius:3px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:68%;height:100%;background:linear-gradient(90deg,#5fb0c4 0 70%,#d0563a 70%)"></i></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center">
+            <img src="assets/rogue.png" class="px" alt="" style="width:26px">
+            <div style="display:grid;gap:4px">
+              <div style="display:flex;gap:4px;align-items:center;font:700 12px/1 var(--ui)" class="mono"><span style="padding:3px 6px;border-radius:5px;background:#24435a;color:#9fd2f0">230</span><span style="color:var(--muted-2)">+</span><span style="padding:3px 6px;border-radius:5px;background:#24435a;color:#9fd2f0">18 gear</span><span style="color:var(--muted-2)">×</span><span style="padding:3px 6px;border-radius:5px;background:#5a2424;color:#f09f9f">1.00</span><span style="margin-left:auto;font-size:15px;color:var(--accent-text)">248</span></div>
+              <div style="height:6px;border-radius:3px;background:rgba(0,0,0,.4);overflow:hidden"><i style="display:block;width:29%;height:100%;background:#5fb0c4"></i></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;padding:7px 9px;border-radius:10px;background:var(--accent-dim);font-size:11px"><i class="ic" data-ic="crit" style="--s:14px"></i><span><b style="color:var(--accent-text)">Keen Eye</b> fired 9 times · added 71</span></div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">11 · PROCS AND RECEIPTS</span>
+        <h3>Every affix fires visibly, then gets credited</h3>
+        <div class="from"><span class="rg">Balatro chips × mult</span><span class="rg">Balatro joker wiggle</span><span class="rg">BTD6 pop count</span><span class="ri">League: visual impact = gameplay impact</span></div>
+        <dl>
+          <dt>Today</dt><dd>A "+9% crit" affix or "Quick Hands" skill does its work silently. After the wave there's a gold total and an XP number, but nothing ties damage back to choices.</dd>
+          <dt>Change</dt><dd>In the fight, the source's icon pops over the hero when it fires (CRIT ×2, Swift). Bigger effects get bigger pops; cosmetic hits stay quiet. After the wave, a Balatro-style receipt shows <b>base + gear × skill</b> per hero, and the day's best proc is called out.</dd>
+          <dt>Interaction</dt><dd>Passive. Tap a receipt line to see which item contributed. A toggle in Settings turns pops off.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: very high</span><span>Effort: M</span><span>Fixes P6</span></div>
+      </div>
+    </div>
+
+    <!-- 12 CEREMONY -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud" style="position:relative"><span class="gold" style="text-shadow:0 0 10px rgba(240,196,106,.9)"><i class="ic" data-ic="gold"></i><span class="mono">124</span><span style="color:var(--good);font-size:11px">+32</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span></div>
+        <div class="stage dim" style="flex:1"><div class="map"><img src="assets/field-live.png" alt="" style="height:540px;width:auto;max-width:none;margin-left:-50px"></div>
+          <!-- coin arc -->
+          <svg viewBox="0 0 286 400" style="position:absolute;inset:0;width:100%;height:100%;z-index:2" aria-hidden="true"><path d="M140 170 C 90 90, 40 40, 24 -6" stroke="rgba(240,196,106,.45)" stroke-width="2" stroke-dasharray="3 5" fill="none"/></svg>
+          <img src="assets/pickup_gold.png" class="px" alt="" style="position:absolute;left:58px;top:58px;width:26px;z-index:2">
+          <img src="assets/pickup_gold.png" class="px" alt="" style="position:absolute;left:86px;top:104px;width:30px;z-index:2">
+          <img src="assets/pickup_gold.png" class="px" alt="" style="position:absolute;left:28px;top:20px;width:22px;z-index:2">
+          <div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:3;display:grid;justify-items:center;gap:10px;width:250px">
+            <div style="font:700 30px/1 var(--display);color:var(--accent-text);text-shadow:0 3px 0 #000">Wave cleared</div>
+            <div style="display:flex;gap:6px"><span class="chip gold" style="font-size:13px"><i class="ic" data-ic="gold" style="--s:14px"></i><span class="mono">+32</span></span><span class="chip" style="font-size:13px;color:#9fd2f0"><span class="mono">+115</span> XP</span><span class="chip" style="font-size:13px"><span class="mono">8</span> felled</span></div>
+            <!-- chest -->
+            <div style="position:relative;width:120px;height:120px;display:grid;place-items:center;margin-top:6px">
+              <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(95,176,196,.55),transparent 65%)"></div>
+              <div style="position:absolute;inset:-10px;background:repeating-conic-gradient(rgba(95,176,196,.25) 0 8deg,transparent 8deg 24deg);border-radius:50%;mask:radial-gradient(circle,#000 30%,transparent 70%);-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%)"></div>
+              <i class="ic" data-ic="coffer" style="--s:72px;position:relative"></i>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center"><span class="pips" style="--rc:var(--r-rare)"><i></i><i></i><i class="off"></i><i class="off"></i></span><b style="color:var(--r-rare);font-size:12px">RARE!</b><span style="color:var(--muted);font-size:11px">tap to push your luck</span></div>
+          </div>
+        </div>
+        <div class="band" style="padding:10px 12px 14px">
+          <div class="hcard" style="width:auto;flex:1;height:56px;flex-direction:row;justify-content:flex-start;gap:8px;padding:0 10px"><img src="assets/fighter.png" alt="" style="position:static;transform:none;width:34px"><div style="display:grid;gap:4px;flex:1"><div style="display:flex;justify-content:space-between"><b style="font-size:12px">Aldre</b><b style="color:var(--good);font-size:11px">LEVEL 3!</b></div><span class="xp" style="width:100%;height:6px"><i style="width:100%;background:var(--good)"></i></span></div></div>
+          <button class="btn ghost sm" style="height:56px">Skip</button>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">12 · WAVE-CLEAR CEREMONY</span>
+        <h3>Gold flies home, XP fills, the loot bag gets tapped open</h3>
+        <div class="from"><span class="sc">Supercell coins-to-counter</span><span class="sc">CR Lucky Drop</span><span class="sc">Brawl Stars Starr Drop</span><span class="rg">Vampire Survivors chest</span></div>
+        <dl>
+          <dt>Today</dt><dd>"Wave cleared" sits over a dimmed map with three numbers. Gold changes in the header without motion, and a level-up has no beat of its own.</dd>
+          <dt>Change</dt><dd>Coins arc from the field into the header, and the counter rolls with a green +32. The XP bar fills on the hero card and bursts at a level-up. Loot arrives as a bag: each tap can raise its rarity pips, and the result is <b>decided before the animation</b>. Skip fast-forwards the whole sequence.</dd>
+          <dt>Interaction</dt><dd>About 1.5 s on its own, plus up to 3 optional taps. Skip is always there.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P10</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- Chapter D ---------- -->
+  <div class="chapter"><span class="eyebrow">D · Rewards and build</span><h3>Make every item decision a one-glance comparison</h3></div>
+  <div class="plates">
+
+    <!-- 13 LOOT PICK -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">124</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span></div>
+        <div style="padding:12px 12px 6px;text-align:center"><div style="font:700 22px/1 var(--display)">Pick one</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Compared with what your heroes wear now</div></div>
+        <div style="display:grid;gap:12px;padding:8px 12px;flex:1;align-content:start">
+          <div class="ocard r-r" style="grid-template-columns:44px 1fr auto;align-items:center"><span class="flag up">UPGRADE ▲</span><div class="slotbox"><i class="ic" data-ic="shield" style="--s:26px"></i></div><div style="display:grid;gap:3px"><span class="tier">Rare · off hand</span><span class="nm">Swift Shield</span><span class="delta up"><i class="ic" data-ic="haste" style="--s:12px"></i>+10% attack speed</span><span class="delta up"><i class="ic" data-ic="crit" style="--s:12px"></i>+9% crit</span></div><div style="display:grid;justify-items:center;gap:2px"><img src="assets/fighter.png" class="px" alt="" style="width:30px"><span style="font-size:9px;color:var(--muted)">Aldre</span><span class="mono" style="font:800 11px/1 var(--ui);color:var(--good)">+14 DPS</span></div></div>
+          <div class="ocard r-l" style="grid-template-columns:44px 1fr auto;align-items:center"><span class="flag up">UPGRADE ▲</span><div class="slotbox"><i class="ic" data-ic="blade" style="--s:26px"></i></div><div style="display:grid;gap:3px"><span class="tier">Legendary · main hand</span><span class="nm">Ruinous Sword of Insight</span><span class="delta up"><i class="ic" data-ic="damage" style="--s:12px"></i>+38 damage</span><span class="delta down"><i class="ic" data-ic="haste" style="--s:12px"></i>−8% attack speed</span></div><div style="display:grid;justify-items:center;gap:2px"><img src="assets/fighter.png" class="px" alt="" style="width:30px"><span style="font-size:9px;color:var(--muted)">Aldre</span><span class="mono" style="font:800 11px/1 var(--ui);color:var(--good)">+41 DPS</span></div></div>
+          <div class="ocard r-c" style="grid-template-columns:44px 1fr auto;align-items:center;opacity:.92"><span class="flag side">SAME</span><div class="slotbox"><i class="ic" data-ic="plate" style="--s:26px"></i></div><div style="display:grid;gap:3px"><span class="tier">Common · body</span><span class="nm">Mail</span><span class="delta eq">Same as Aldre's · 3rd copy</span><span class="delta up" style="color:var(--r-rare)"><i class="ic" data-ic="evolve" style="--s:12px"></i>Merges to Rare</span></div><div style="display:grid;justify-items:center;gap:2px"><i class="ic" data-ic="loot" style="--s:22px"></i><span style="font-size:9px;color:var(--muted)">to pack</span></div></div>
+        </div>
+        <div class="band" style="gap:8px"><button class="btn ghost sm" style="height:46px;flex:0 0 96px;flex-direction:column;gap:1px;font-size:11px">Skip<span style="color:var(--accent-text);font-size:10.5px">+12 gold</span></button><button class="btn gold fill">Equip on Aldre</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">13 · LOOT PICK</span>
+        <h3>Pick one of three, already compared and already aimed</h3>
+        <div class="from"><span class="rg">Hades boon rows</span><span class="rg">Loop Hero green/red arrows</span><span class="sc">CR green "+N"</span><span class="rg">StS Singing Bowl skip</span></div>
+        <dl>
+          <dt>Today</dt><dd>Three narrow cards over a three-column split of detail, doll and pack. Names truncate ("Swift Shi…"), nothing is compared, and "Take it" sends to the pack.</dd>
+          <dt>Change</dt><dd>Full-width rows, each with a rarity frame, a slot icon and an <b>UPGRADE ▲ / SAME</b> flag. Each row shows <b>green/red deltas against what's equipped</b> and names the hero it suits best, with a DPS change. The CTA equips directly. Skip pays gold. A third copy says it will merge (15).</dd>
+          <dt>Interaction</dt><dd><b>2 taps</b> (pick, equip) or 1 to skip. Long-press a row for the full affix text.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: very high</span><span>Effort: M</span><span>Fixes P7</span></div>
+      </div>
+    </div>
+
+    <!-- 14 DRAG GEAR -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">124</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>2/12</span></div>
+        <div style="flex:1;position:relative;background:radial-gradient(100% 70% at 50% 40%, #3a2b1b, var(--bg));display:grid;place-items:center">
+          <!-- doll -->
+          <div style="position:relative;width:220px;height:270px">
+            <img src="assets/fighter.png" class="px" alt="" style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:150px;opacity:.95">
+            <div class="slotbox r-c" style="position:absolute;left:84px;top:0"><i class="ic" data-ic="plate" style="--s:24px"></i><span style="position:absolute;bottom:-14px;font-size:9px;color:var(--muted)">Body</span></div>
+            <div class="slotbox r-c" style="position:absolute;left:0;top:120px"><i class="ic" data-ic="blade" style="--s:24px"></i><span style="position:absolute;bottom:-14px;font-size:9px;color:var(--muted)">Main</span></div>
+            <div class="slotbox r-r" style="position:absolute;right:0;top:120px;transform:scale(1.18);box-shadow:inset 0 0 0 2px var(--good),0 0 0 4px rgba(111,206,136,.35),0 0 18px rgba(111,206,136,.6)"><i class="ic" data-ic="shield" style="--s:24px;opacity:.35"></i></div>
+          </div>
+          <div class="callout" style="left:12px;right:12px;top:12px;display:grid;gap:4px">
+            <div style="display:flex;justify-content:space-between"><b style="font-size:12.5px;color:var(--text)">Aldre · Lv 3</b><span class="mono" style="font-weight:800">88 → <span style="color:var(--good)">102 DPS ▲</span></span></div>
+            <div style="display:flex;gap:10px;font-size:10.5px"><span class="delta up">+10% atk speed</span><span class="delta up">+9% crit</span><span class="delta eq">hold 2 → 2</span></div>
+          </div>
+          <!-- dragged item -->
+          <div class="ocard r-r" style="position:absolute;right:30px;top:244px;padding:6px;transform:rotate(-6deg);box-shadow:inset 0 0 0 2px var(--rc),0 12px 20px rgba(0,0,0,.6)"><i class="ic" data-ic="shield" style="--s:30px"></i></div>
+          <img src="assets/pointer_01.png" alt="" class="pointer" style="right:22px;top:270px">
+        </div>
+        <div style="flex:none;padding:8px 12px 12px;border-top:1px solid var(--line);display:grid;gap:6px;background:var(--bg-2)">
+          <div style="display:flex;justify-content:space-between"><span class="label">Pack · 5 / 12</span><span class="label" style="color:var(--accent-text)">Sort ⇅</span></div>
+          <div style="display:flex;gap:6px">
+            <div class="slotbox r-r" style="opacity:.3"><i class="ic" data-ic="shield" style="--s:24px"></i></div>
+            <div class="slotbox r-l"><i class="ic" data-ic="greatblade" style="--s:24px"></i></div>
+            <div class="slotbox r-e"><i class="ic" data-ic="wand" style="--s:24px"></i><span class="badge up" style="top:-6px;right:-6px">▲</span></div>
+            <div class="slotbox r-c"><i class="ic" data-ic="bow" style="--s:24px"></i></div>
+            <div class="slotbox r-c"><i class="ic" data-ic="cloth" style="--s:24px"></i></div>
+            <div class="slotbox empty"></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">14 · DRAG TO EQUIP</span>
+        <h3>Drag gear onto the hero; the slot and the gain light up</h3>
+        <div class="from"><span class="ri">TFT drag item onto unit</span><span class="ri">TFT mobile item panel</span><span class="ri">PoC items shown attached</span><span class="rg">Loop Hero deltas</span></div>
+        <dl>
+          <dt>Today</dt><dd>To equip, you tap a gear slot, the pack filters, then you tap the item. The doll, pack and detail columns are each about 120px wide.</dd>
+          <dt>Change</dt><dd>The hero takes the screen with three slots on the paper doll. The pack becomes a tray at the bottom. Picking up an item lights the slot it fits in green and previews <b>88 → 102 DPS ▲</b> with the per-stat deltas before you let go. A green ▲ on a pack tile means it beats what <i>some</i> hero wears.</dd>
+          <dt>Interaction</dt><dd><b>1 drag</b>. Drop on a hero card in the hand to equip without opening the doll.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P7</span></div>
+      </div>
+    </div>
+
+    <!-- 15 MERGE -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">124</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>2/12</span></div>
+        <div style="flex:1;display:grid;place-items:center;background:radial-gradient(80% 50% at 50% 45%, rgba(95,176,196,.18), var(--bg))">
+          <div style="display:grid;justify-items:center;gap:16px">
+            <div style="display:flex;gap:10px;align-items:center">
+              <div class="slotbox r-c" style="width:54px;height:54px"><i class="ic" data-ic="plate" style="--s:32px"></i></div>
+              <span style="font:800 18px/1 var(--ui);color:var(--muted-2)">+</span>
+              <div class="slotbox r-c" style="width:54px;height:54px"><i class="ic" data-ic="plate" style="--s:32px"></i></div>
+              <span style="font:800 18px/1 var(--ui);color:var(--muted-2)">+</span>
+              <div class="slotbox r-c" style="width:54px;height:54px;transform:translate(-4px,-10px) rotate(-8deg);box-shadow:inset 0 0 0 2px var(--rc),0 10px 16px rgba(0,0,0,.6)"><i class="ic" data-ic="plate" style="--s:32px"></i></div>
+            </div>
+            <svg viewBox="0 0 20 30" style="width:20px;height:30px" aria-hidden="true"><path d="M10 0 V24 M3 17 L10 26 L17 17" stroke="var(--r-rare)" stroke-width="3" fill="none"/></svg>
+            <div class="ocard r-r" style="width:200px;justify-items:center;text-align:center;padding:14px">
+              <span class="flag new">NEW</span>
+              <div class="slotbox r-r" style="width:64px;height:64px;box-shadow:inset 0 0 0 2px var(--rc),0 0 22px rgba(95,176,196,.6)"><i class="ic" data-ic="plate" style="--s:40px"></i></div>
+              <span class="tier">Rare · body</span><span class="nm" style="font-size:15px">Mail</span>
+              <span class="pips" style="--rc:var(--r-rare)"><i></i><i></i><i class="off"></i><i class="off"></i></span>
+              <span class="delta up" style="justify-content:center"><i class="ic" data-ic="armour" style="--s:12px"></i>Armour 12 → 21</span>
+              <span class="delta up" style="justify-content:center">+1 affix slot</span>
+            </div>
+          </div>
+        </div>
+        <div class="band"><span style="font-size:11px;color:var(--muted);flex:1">3 Commons of the same kind merge into one Rare. Your pack goes from 7 to 5.</span><button class="btn gold" style="padding:0 18px">Merge</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">15 · MERGE TRIPLES</span>
+        <h3>Three of a kind become one better thing</h3>
+        <div class="from"><span class="rg">Archero 3-merge</span><span class="rg">Super Auto Pets drag-to-merge</span><span class="ri">TFT auto star-up</span><span class="rg">Ball x Pit Fusion</span></div>
+        <dl>
+          <dt>Today</dt><dd>Fusing is a Context panel state ("Item Fusable") you only see after selecting the right tile. Duplicate commons pile up in a 12-slot pack.</dd>
+          <dt>Change</dt><dd>When a third copy lands, the three tiles glow and lean together in the tray. Dragging one onto another (or tapping the glow) shows the <b>result card before you commit</b>: rarity pips, stat jumps, and the pack count going down. An Auto-merge setting does it on pickup, TFT-style.</dd>
+          <dt>Interaction</dt><dd><b>1 drag or 1 tap</b>. Undo is free until you leave the screen.</dd>
+        </dl>
+        <div class="tags"><span class="md">Impact: medium</span><span>Effort: S</span><span>Fixes P7</span></div>
+      </div>
+    </div>
+
+    <!-- 16 SKILL PICK -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">124</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>2/12</span></div>
+        <div class="stage dim" style="height:160px"><div class="map" style="top:-150px"><img src="assets/field-live.png" alt=""></div>
+          <div style="position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center"><div><img src="assets/mystic.png" class="px" alt="" style="width:56px"><div style="font:700 22px/1 var(--display);color:var(--accent-text)">Cael reached level 5</div><div style="font-size:11px;color:var(--muted)">Pick a skill · 2 of 3 slots used</div></div></div>
+          <button class="btn ghost sm" style="position:absolute;right:8px;top:8px;z-index:3;height:30px"><i class="ic" data-ic="vision" style="--s:14px"></i>Peek</button>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 10px 8px;align-content:start">
+          <div class="ocard r-r" style="justify-items:center;text-align:center;padding:10px 6px;gap:7px"><div class="slotbox r-r" style="border-radius:50%"><i class="ic" data-ic="chill" style="--s:26px"></i></div><span class="nm" style="font-size:12px">Frostbite</span><span style="font-size:10.5px;color:var(--muted)">Hits slow by <b style="color:var(--text)">20%</b></span><span class="chip" style="font-size:9px;padding:2px 6px;color:var(--good)">Pairs: Splash</span><span style="margin-top:auto;font-size:9.5px;color:var(--muted-2)">↻ 1 reroll</span></div>
+          <div class="ocard r-e" style="justify-items:center;text-align:center;padding:10px 6px;gap:7px;transform:translateY(-6px);box-shadow:inset 0 0 0 2px var(--rc),0 0 0 3px rgba(198,122,176,.3),0 6px 0 rgba(0,0,0,.4)"><span class="flag up" style="right:50%;transform:translateX(50%)">FITS ▲</span><div class="slotbox r-e" style="border-radius:50%"><i class="ic" data-ic="splash" style="--s:26px"></i></div><span class="nm" style="font-size:12px">Chain Burst</span><span style="font-size:10.5px;color:var(--muted)">Kills splash <b style="color:var(--text)">40%</b> to 3</span><span class="chip" style="font-size:9px;padding:2px 6px;color:var(--good)">vs Swarm</span><span style="margin-top:auto;font-size:9.5px;color:var(--muted-2)">↻ 1 reroll</span></div>
+          <div class="ocard r-c" style="justify-items:center;text-align:center;padding:10px 6px;gap:7px"><div class="slotbox r-c" style="border-radius:50%"><i class="ic" data-ic="range" style="--s:26px"></i></div><span class="nm" style="font-size:12px">Long Sight</span><span style="font-size:10.5px;color:var(--muted)">Range <b style="color:var(--text)">+15%</b></span><span class="chip" style="font-size:9px;padding:2px 6px">Upgrades L1</span><span style="margin-top:auto;font-size:9.5px;color:var(--muted-2)">↻ 1 reroll</span></div>
+        </div>
+        <div class="band"><button class="btn ghost sm" style="height:46px;flex-direction:column;gap:1px;font-size:11px">Skip<span style="color:#9fd2f0;font-size:10px">+60 XP</span></button><button class="btn gold fill">Learn Chain Burst</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">16 · SKILL PICK</span>
+        <h3>A level-up is an event with three cards and a peek</h3>
+        <div class="from"><span class="ri">TFT augments: per-card reroll, hide toggle</span><span class="rg">Vampire Survivors level-up</span><span class="rg">Hades rarity frames</span><span class="ri">Wild Rift "+" badge</span></div>
+        <dl>
+          <dt>Today</dt><dd>The Skills tab says "Next skill at level 5 — a choice of three Level 1 skills." The pick itself happens in the Context panel.</dd>
+          <dt>Change</dt><dd>A green "+" on the hero (06) opens three tall cards with a rarity frame, an icon, a 4-word effect and a fit chip ("vs Swarm", "Pairs: Splash"), driven by the next wave's intents (08). Each card has <b>one reroll</b>. <b>Peek</b> hides the cards so you can look at the board. Skip pays XP.</dd>
+          <dt>Interaction</dt><dd><b>2 taps</b>. The "+" waits, so you can pick between waves.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: S</span><span>Fixes P1, P6</span></div>
+      </div>
+    </div>
+
+    <!-- 17 MERCHANT -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">146</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>3/12</span></div>
+        <div style="padding:12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)"><i class="ic" data-ic="merchant" style="--s:34px"></i><div style="flex:1"><div style="font:700 20px/1 var(--display)">Merchant</div><div style="font-size:10.5px;color:var(--muted)">Drag pack items onto the counter to sell</div></div></div>
+        <div style="padding:12px;display:grid;gap:10px;flex:1;align-content:start">
+          <div class="label">Gear</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="ocard r-e" style="justify-items:center;padding:8px 4px;gap:4px;box-shadow:inset 0 0 0 2px var(--rc),0 0 14px rgba(111,206,136,.45),0 4px 0 rgba(0,0,0,.4)"><span class="flag up">▲ Cael</span><i class="ic" data-ic="orb" style="--s:30px"></i><span class="nm" style="font-size:10.5px">Storm Orb</span><span class="chip gold" style="font-size:10px;padding:2px 6px"><i class="ic" data-ic="gold" style="--s:10px"></i>55</span></div>
+            <div class="ocard r-r" style="justify-items:center;padding:8px 4px;gap:4px"><i class="ic" data-ic="bow" style="--s:30px"></i><span class="nm" style="font-size:10.5px">Hunter Bow</span><span class="chip gold" style="font-size:10px;padding:2px 6px"><i class="ic" data-ic="gold" style="--s:10px"></i>40</span></div>
+            <div class="ocard r-c" style="justify-items:center;padding:8px 4px;gap:4px;outline:2px dashed var(--info);outline-offset:2px"><span class="flag side" style="background:#24435a;color:#9fd2f0">FROZEN</span><i class="ic" data-ic="plate" style="--s:30px"></i><span class="nm" style="font-size:10.5px">Mail</span><span class="chip gold" style="font-size:10px;padding:2px 6px"><i class="ic" data-ic="gold" style="--s:10px"></i>18</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div class="label" style="margin-bottom:6px">Recruit</div><div class="ocard r-r" style="grid-template-columns:auto 1fr;align-items:center;padding:8px"><img src="assets/rogue.png" class="px" alt="" style="width:30px"><div style="display:grid;gap:3px"><span class="nm" style="font-size:11px">Sable · bow</span><span class="chip gold" style="font-size:10px;padding:2px 6px;justify-self:start"><i class="ic" data-ic="gold" style="--s:10px"></i>70</span></div></div></div>
+            <div><div class="label" style="margin-bottom:6px">Service</div><div class="ocard r-c" style="--rc:var(--line-strong);grid-template-columns:auto 1fr;align-items:center;padding:8px"><i class="ic" data-ic="forge" style="--s:28px"></i><div style="display:grid;gap:3px"><span class="nm" style="font-size:11px">Reforge one</span><span class="chip gold" style="font-size:10px;padding:2px 6px;justify-self:start"><i class="ic" data-ic="gold" style="--s:10px"></i>25</span></div></div></div>
+          </div>
+          <div style="border:2px dashed var(--line-strong);border-radius:12px;padding:9px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;background:rgba(0,0,0,.18)"><i class="ic" data-ic="coffer" style="--s:20px"></i>Counter · sells for half</div>
+        </div>
+        <div class="band"><button class="btn ghost sm" style="height:46px;gap:6px">↻ Reroll <span class="mono" style="color:var(--accent-text)">6</span></button><button class="btn sm ghost" style="height:46px;width:46px;padding:0" aria-label="Freeze"><img src="assets/icon_lock_regular.png" class="px" alt="" style="width:26px"></button><button class="btn gold fill">March on</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">17 · MERCHANT</span>
+        <h3>The same five shelves every visit, plus freeze and owned-glow</h3>
+        <div class="from"><span class="rg">Balatro fixed shop</span><span class="rg">Super Auto Pets freeze</span><span class="ri">TFT owned-unit glow</span><span class="sc">CR Merge Tactics drag-to-sell</span></div>
+        <dl>
+          <dt>Today</dt><dd>Merchant offers appear as a row of cards in the Selector, read one at a time through the Context panel.</dd>
+          <dt>Change</dt><dd>A fixed anatomy: <b>3 gear · 1 recruit · 1 service</b>. Items that upgrade one of your heroes glow and name that hero (▲ Cael). Freeze keeps an item through rerolls. Rerolls cost more each time. Selling is a drag from the pack tray onto the counter, well away from the buy shelves.</dd>
+          <dt>Interaction</dt><dd>Buy is <b>1 tap</b> on the price (it flies to the pack), sell is <b>1 drag</b>, freeze is a tap on the lock.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P7, P8</span></div>
+      </div>
+    </div>
+
+    <!-- 18 ROLES TRACKER -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">92</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>4/12</span><span class="skulls"><i></i><i></i><i class="off"></i></span></div>
+        <div class="stage" style="height:440px"><div class="map"><img src="assets/field-empty.png" alt="">
+          <img src="assets/fighter.png" alt="" class="sprite" style="left:49%;top:58.5%;width:40px">
+          <img src="assets/rogue.png" alt="" class="sprite" style="left:41%;top:35%;width:34px">
+        </div>
+          <div style="position:absolute;left:6px;top:8px;display:grid;gap:5px">
+            <div class="chip good" style="justify-content:flex-start;gap:6px"><i class="ic" data-ic="block" style="--s:14px"></i>Hold <span class="mono">2/2</span></div>
+            <div class="chip good" style="justify-content:flex-start;gap:6px"><i class="ic" data-ic="projectile" style="--s:14px"></i>Ranged <span class="mono">1/1</span></div>
+            <div class="chip bad" style="justify-content:flex-start;gap:6px;box-shadow:0 0 0 2px rgba(208,86,58,.4)"><i class="ic" data-ic="splash" style="--s:14px"></i>Splash <span class="mono">0/1</span></div>
+            <div class="chip" style="justify-content:flex-start;gap:6px;opacity:.6"><i class="ic" data-ic="pierce" style="--s:14px"></i>Pierce <span class="mono">0/1</span></div>
+          </div>
+          <div class="callout" style="left:106px;top:62px;width:170px;display:grid;gap:5px">
+            <b>Splash 0/1</b>
+            <span style="color:var(--muted);font-size:10.5px">Sub-wave 1 is a <b style="color:var(--text)">swarm of 12</b>. Nothing hits groups, so expect leaks.</span>
+            <span style="font-size:10.5px;color:var(--accent-text);font-weight:700">2 items in your pack fix this →</span>
+          </div>
+        </div>
+        <div class="band" style="flex:1"><div class="hand fill"><div class="hcard used"><span class="lv">3</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span></div><div class="hcard used"><span class="lv">2</span><img src="assets/rogue.png" alt=""><span class="nm">Sable</span></div></div><button class="btn gold" style="height:76px;width:62px;flex-direction:column;gap:2px;font-size:13px"><i class="ic" data-ic="battle" style="--s:24px"></i>Fight</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">18 · ROLES TRACKER</span>
+        <h3>What your gear adds up to, against what's coming</h3>
+        <div class="from"><span class="ri">TFT trait tracker and breakpoints</span><span class="ri">LoR keyword glossary</span><span class="ri">TFT item role tags</span></div>
+        <dl>
+          <dt>Today</dt><dd>A hero's role comes from its gear, but nothing adds the team up. Players find out they lacked splash when a swarm leaks.</dd>
+          <dt>Change</dt><dd>During setup a column of pills on the field's edge reads <b>Hold 2/2, Ranged 1/1, Splash 0/1</b>. Each target is set by the next wave's intents (08). A red pill explains the risk in one line and links to the pack or merchant items that fix it. No new mechanic: this is a lens over the gear roles that already exist.</dd>
+          <dt>Interaction</dt><dd><b>0 taps</b> to read. 1 tap on a red pill filters the pack.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: M</span><span>Fixes P5, P6</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- Chapter E ---------- -->
+  <div class="chapter"><span class="eyebrow">E · Economy and learning</span><h3>Teach with receipts and hands, not sentences</h3></div>
+  <div class="plates">
+
+    <!-- 19 RECEIPT -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold" style="text-shadow:0 0 10px rgba(240,196,106,.9)"><i class="ic" data-ic="gold"></i><span class="mono">176</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:82%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>4/12</span></div>
+        <div style="flex:1;display:grid;place-items:center;padding:14px;background:radial-gradient(80% 60% at 50% 30%, #3b2c1b, var(--bg))">
+          <div style="width:100%;background:var(--paper, #ece0c8);color:#4a3a1e;border-radius:6px 6px 2px 2px;padding:16px 16px 14px;display:grid;gap:9px;box-shadow:0 18px 30px rgba(0,0,0,.5);clip-path:polygon(0 0,100% 0,100% 96%,95% 100%,90% 96%,85% 100%,80% 96%,75% 100%,70% 96%,65% 100%,60% 96%,55% 100%,50% 96%,45% 100%,40% 96%,35% 100%,30% 96%,25% 100%,20% 96%,15% 100%,10% 96%,5% 100%,0 96%)">
+            <div style="text-align:center"><div style="font:700 22px/1 var(--display)">Saltmarsh</div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6a5738;margin-top:3px">City pay · Peppercorn Co.</div></div>
+            <div style="border-top:1px dashed rgba(74,58,30,.4)"></div>
+            <div class="mono" style="display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px;font-weight:600">
+              <span>Contract pay</span><span>+40</span>
+              <span>Waves cleared (3)</span><span>+68</span>
+              <span>Cargo kept 82%</span><span>+12</span>
+              <span style="display:flex;align-items:center;gap:6px">Interest <span style="display:inline-flex;gap:2px">
+                <i style="width:7px;height:7px;border-radius:50%;background:#c48d2e"></i><i style="width:7px;height:7px;border-radius:50%;background:#c48d2e"></i><i style="width:7px;height:7px;border-radius:50%;background:#c48d2e"></i><i style="width:7px;height:7px;border-radius:50%;background:rgba(74,58,30,.2)"></i></span></span><span>+12</span>
+              <span style="color:#a0412a">Road tax 10%</span><span style="color:#a0412a">−13</span>
+            </div>
+            <div style="border-top:2px solid #4a3a1e;padding-top:7px;display:flex;justify-content:space-between;font:700 18px/1 var(--display)"><span>To purse</span><span class="mono">+119</span></div>
+            <div style="font-size:10.5px;background:rgba(74,58,30,.1);border-radius:6px;padding:6px 8px;color:#4a3a1e">Interest is 1 per 10 held, up to 40. <b>Hold 4 more</b> for +1 next city.</div>
+          </div>
+        </div>
+        <div class="band"><button class="btn ghost sm" style="height:46px;gap:6px"><i class="ic" data-ic="coffer" style="--s:16px"></i>Bank 50</button><button class="btn gold fill">Keep marching</button></div>
+      </div></div>
+      <div class="notes">
+        <span class="num">19 · CASH-OUT RECEIPT</span>
+        <h3>The economy explained by a receipt you read every city</h3>
+        <div class="from"><span class="rg">Balatro cash-out lines</span><span class="ri">TFT gold hover breakdown</span><span class="ri">Valorant "min next round"</span></div>
+        <dl>
+          <dt>Today</dt><dd>City pay, road tax, interest (capped at 40), purse vs bank and cash-out are each taught in a sentence somewhere. The result lands as one number.</dd>
+          <dt>Change</dt><dd>A paper receipt in the game's parchment style: each line is a rule, in the order it applies. Interest shows as coin pips toward the cap. One "hold 4 more" nudge teaches the strategy. Tapping the gold counter at any time opens the same breakdown for the next payout.</dd>
+          <dt>Interaction</dt><dd>Read and go: <b>1 tap</b>. "Bank" is the only other choice on the screen.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: high</span><span>Effort: S</span><span>Fixes P8</span></div>
+      </div>
+    </div>
+
+    <!-- 20 COACH HAND -->
+    <div class="plate">
+      <div class="phone"><div class="scr">
+        <div class="hud"><span class="gold"><i class="ic" data-ic="gold"></i><span class="mono">60</span></span><span class="cargo"><i class="ic" data-ic="base" style="--s:14px"></i><span class="bar"><i style="width:100%"></i></span></span><span class="depth"><i class="ic" data-ic="depth" style="--s:12px"></i>1/12</span></div>
+        <div class="stage" style="height:440px"><div class="map"><img src="assets/field-empty.png" alt="">
+          <div class="tile best" style="left:49%;top:58.5%;width:28px;height:28px"></div>
+          <img src="assets/fighter.png" alt="" class="sprite ghost" style="left:49%;top:58.5%;width:40px;opacity:.35">
+          <svg viewBox="0 0 300 441" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true"><path d="M70 470 C 90 380, 120 300, 147 262" stroke="rgba(240,196,106,.8)" stroke-width="3" stroke-dasharray="6 6" fill="none"/></svg>
+        </div>
+          <img src="assets/pointer_01.png" alt="" class="pointer anim-drag" style="position:absolute;width:38px;animation:drag 2.6s ease-in-out infinite;left:50%;top:58%">
+          <div class="ov chip" style="left:50%;top:7%;font-size:13px;padding:6px 12px;background:rgba(20,13,8,.92)">Drag Aldre onto the <b style="color:var(--accent-text)">&nbsp;star</b></div>
+        </div>
+        <div class="band" style="flex:1;align-items:flex-end;padding-bottom:14px">
+          <div class="hand fill" style="justify-content:center"><div class="hcard sel"><span class="lv">1</span><img src="assets/fighter.png" alt=""><span class="nm">Aldre</span><span class="xp"><i style="width:0"></i></span></div>
+            <div class="hcard" style="opacity:.5;box-shadow:inset 0 0 0 2px var(--line)"><img src="assets/icon_lock_regular.png" alt="" style="width:26px;top:12px"><span class="nm" style="font-size:9px;color:var(--muted-2);text-align:center">Recruit<br>at depth 2</span></div>
+          </div>
+          <button class="btn gold" style="height:76px;width:62px;flex-direction:column;gap:2px;font-size:13px;filter:grayscale(1);opacity:.45"><i class="ic" data-ic="battle" style="--s:24px"></i>Fight</button>
+        </div>
+      </div></div>
+      <div class="notes">
+        <span class="num">20 · COACHING</span>
+        <h3>A ghost hand, three words, and features that arrive when they're needed</h3>
+        <div class="from"><span class="sc">CR / CoC tutorial hand</span><span class="sc">CR arena-gated features</span><span class="sc">mo.co hub that fills</span><span class="rg">Dome Keeper (what not to gate)</span></div>
+        <dl>
+          <dt>Today</dt><dd>13 one-time "Got it" tips, two or three lines each, push the layout down while they show and explain things like "what a hero holds is what it does".</dd>
+          <dt>Change</dt><dd>A looping ghost hand <b>performs</b> the next action (card → star) with at most five words on screen. Fight stays disabled until the one required action is done. Systems the run hasn't reached yet (recruit slot, pack, merchant reroll) show padlocks with "at depth N" and appear with a NEW badge. Core info (gold, cargo, wave) is never gated.</dd>
+          <dt>Interaction</dt><dd>The tutorial is the game. The hand disappears after the first successful drag and never returns for that verb.</dd>
+        </dl>
+        <div class="tags"><span class="hi">Impact: very high</span><span>Effort: M</span><span>Fixes P1</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ROADMAP ============================ -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">Part 4 · Order of work</span>
+    <h2>Where to start</h2>
+    <p class="lede">Ordered by how much they simplify the loop for each unit of effort. Each phase ships on its own and passes the design-review loop in <code>docs/DESIGN_REVIEW.md</code> before the next.</p>
+  </div>
+  <div class="road"><table>
+    <thead><tr><th>Phase</th><th>Mockups</th><th>Why first</th><th>Touches</th></tr></thead>
+    <tbody>
+      <tr><td class="wk">1 · Read</td><td><b>08</b> wave intent · <b>13</b> loot compare · <b>19</b> receipt · <b>16</b> skill pick</td><td>Mostly presentation of data the store already has. Biggest clarity gain, lowest risk.</td><td><code>WaveQueue.tsx</code>, <code>DetailBand.tsx</code>, <code>offers.ts</code>, <code>settle.ts</code> payout plan, <code>SkillCards.tsx</code></td></tr>
+      <tr><td class="wk">2 · Place</td><td><b>05</b> drag to deploy · <b>20</b> coach hand · <b>10</b> one move</td><td>Fixes the first 30 seconds of every run. Shares one ghost, ring and star renderer.</td><td><code>SlotLayer.tsx</code>, <code>BattleCanvas.tsx</code>, <code>overlays.ts</code>, <code>Coach.tsx</code></td></tr>
+      <tr><td class="wk">3 · Frame</td><td><b>04</b> arena-first · <b>09</b> live HUD · <b>06</b> hero ring · <b>07</b> targeting</td><td>Re-budgets the four bands, so it goes after the content is settled.</td><td><code>RootShell.tsx</code>, <code>shell.css</code>, <code>live.ts</code></td></tr>
+      <tr><td class="wk">4 · Feel</td><td><b>11</b> procs and receipts · <b>12</b> ceremony</td><td>The "fun" layer. Needs a per-source damage ledger and FX budget.</td><td><code>fxDiff.ts</code>, <code>fx.ts</code>, <code>battleLedger.ts</code>, <code>WaveCeremony.tsx</code>, audio</td></tr>
+      <tr><td class="wk">5 · Build</td><td><b>14</b> drag equip · <b>15</b> merge · <b>17</b> merchant · <b>18</b> roles</td><td>Deeper changes to the pack and shop. Do them once 13 has shown which comparisons players read.</td><td><code>inventory.ts</code>, <code>economy.ts</code>, <code>contractSlice</code></td></tr>
+      <tr><td class="wk">6 · Shell</td><td><b>01</b> home · <b>02</b> hero pick · <b>03</b> run map</td><td>Front door and map. Highest visual change; best done with the art pass.</td><td><code>RunMapView.tsx</code>, shell Title/Menu states</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</div>
+
+<script>
+// Paint each <i data-ic="key"> from the game's own 8x12 icon atlas (order = ICON_ORDER in src/ui/channels.ts).
+(function () {
+  var ORDER = ['burn','chill','shock','stun','execute','lifedrain','crit','splash','block','thorns','pierce','armour','damage','range','haste','hp','auraHeal','auraBuff','auraShield','trap','sacrifice','projectile','patience','curse','blade','dagger','axe','wand','sceptre','greatblade','hammer','bow','staff','grimoire','shield','quiver','orb','plate','cloth','banner','relic','beacon','phys','magic','gold','dust','marks','keepsake','shrine','forge','merchant','recruit','wave','boss','evolve','mutate','threat','base','depth','back','soundOn','soundOff','settings','warn','boon','loot','slow','weaken','assist','equip','deploy','frail','shorten','drag','shrink','nocrit','blunt','auraWeaken','battle','start','elite','crown','endless','coffer','seasoned','company','map','orders','vow','motion','contrast','scale','vision','tips','calm','mono'];
+  document.querySelectorAll('[data-ic]').forEach(function (el) {
+    var i = ORDER.indexOf(el.getAttribute('data-ic'));
+    if (i < 0) return;
+    el.style.backgroundPosition = 'calc(var(--s, 16px) * ' + -(i % 8) + ') calc(var(--s, 16px) * ' + -Math.floor(i / 8) + ')';
+    el.setAttribute('aria-hidden', 'true');
+  });
+})();
+</script>
