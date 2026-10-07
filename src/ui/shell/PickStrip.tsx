@@ -11,8 +11,9 @@ import { useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from '
  * systematically below making it quick to focus on each option 1 by 1 and then
  * compare that way. the tabs shouldnt look like tabs necessarily".
  *
- * So every choose-one surface — the contract board, the hero pick, a recruit,
- * a city's cash-out-or-press-on, a skill milestone — is the same three parts:
+ * So every choose-one surface — the hero pick, a recruit, a city's
+ * cash-out-or-press-on, a skill milestone — is the same three parts (the
+ * contract board became the menu's map and notice, Figma "B2"):
  *
  *   [tok] [TOK] [tok] [tok]      ← `PickStrip`: a picture + ONE label/number,
  *          ▾                        no name, so nothing in the strip truncates

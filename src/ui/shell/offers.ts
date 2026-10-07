@@ -647,7 +647,7 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       color: heroLookVar(hero),
       hero: heroCard(hero, staged),
       body: [],
-      action: { label: `Choose ${c.name}`, run: () => st.pickStartingHero(c.id) },
+      action: { label: `Choose ${c.name}`, run: () => st.marchOut(c.id) },
     }
   })
   // The way back to the menu: nothing is spent until a hero is chosen, the
@@ -1254,13 +1254,13 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     {
       id: 'run',
       title: 'Start a Run',
-      sub: staged ? 'Your first contract' : 'Contract board',
+      sub: staged ? 'Your first contract' : 'The focused road’s terms',
       // `depth` is the map's own marker: a run is a walk down a road (M8).
       icon: 'depth',
       color: 'var(--accent)',
       body: staged
         ? ['Peppercorn Co. needs an escort for its spice. Free — every city on the road pays you.']
-        : ['Pick a company and a road. Escort for free, or stake cargo for a bigger payout.'],
+        : ['Tap a signpost to pick a road, then read its terms. Escort for free, or stake cargo for a bigger payout.'],
       action: { label: 'Begin', run: () => game.openContracts() },
     },
     // LS3: a first-timer's menu names neither the HQ nor the sealed crates

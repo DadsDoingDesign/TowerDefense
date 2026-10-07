@@ -11,7 +11,7 @@ import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
 import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { carryPlacements, emptyPlacements, encounterNode } from '../../game/run/map'
+import { carryPlacements, emptyPlacements, encounterNode, firstFightOf } from '../../game/run/map'
 import { groundFor } from '../../game/run/fields'
 import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run/terrain'
 import { stageFirstRunMap } from '../../game/run/firstRun'
@@ -82,7 +82,7 @@ export interface RunActions {
   reseedRun: (input: string) => boolean
   /** The way back from a typed seed: a fresh random seed, same terms. */
   randomizeRunSeed: () => boolean
-  /** Take another contract from the end screen: back to the board, the last terms set. */
+  /** Take another contract from the end screen: the last company's terms, its stake set. */
   runAgain: () => void
   /**
    * Commit the hero pick: one of the three random heroes the pick deals
@@ -90,6 +90,12 @@ export interface RunActions {
    * and the company's advance becomes the run's gold.
    */
   pickStartingHero: (choiceId: string) => void
+  /**
+   * The hero pick's CTA (Oct 2026, Figma "B2"): commit the hero, then march
+   * straight into the road's first fight — the middle of the first layer's
+   * plain battles ({@link firstFightOf}). The map comes after its spoils.
+   */
+  marchOut: (choiceId: string) => void
   returnToHub: () => void
   /**
    * Back out of the hero pick before any hero is committed. Nothing has begun:
@@ -192,10 +198,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   },
 
   runAgain: () => {
-    // The end screen's second door (M15): back to the board with the last
-    // contract's terms set, one tap from signing another.
+    // The end screen's second door (M15): the last contract's terms, its
+    // stake set, one tap from signing another.
     const last = get().contract
-    // After a Sovereign Route, the board opens on its default company.
+    // After a Sovereign Route, the terms open on the menu's focused road.
     get().openContracts(last?.company ? { company: last.company, crates: last.crates } : undefined)
   },
 
@@ -244,6 +250,15 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     useSettingsStore.getState().markTaught('heroGear')
   },
 
+  marchOut: (choiceId) => {
+    get().pickStartingHero(choiceId)
+    const st = get()
+    // Refused (the bank changed in another tab): still on the pick.
+    if (st.screen !== 'map' || !st.roster.length) return
+    const first = firstFightOf(st.runMap, st.reachableNodeIds)
+    if (first) get().selectNode(first)
+  },
+
   // Leaving for the menu ends the run, so it settles like any other end: a
   // fall — the cities' pay and the road's share come home, unsold crates are lost.
   returnToHub: () => {
@@ -262,7 +277,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     set(leaveToHub())
     // Back to the terms it came from — a first-timer's free escort has none,
     // and the Sovereign Route's are on the menu's charter page.
-    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates }, 'terms')
+    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates })
   },
 
   // ---- run snapshot (C3) ----

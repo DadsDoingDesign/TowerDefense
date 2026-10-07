@@ -18,6 +18,18 @@ export const frontierFrom = (map: RunMap, nodeId: string, cleared: readonly stri
   neighborsOf(map, nodeId).filter((id) => !cleared.includes(id))
 
 /**
+ * The fight a run opens on (Oct 2026: the hero pick marches straight into it):
+ * of the reachable battles, the one nearest the map's middle, ties to the
+ * upper. A fixed choice, no RNG — the map is already dealt. Null if nothing
+ * reachable is a plain battle.
+ */
+export function firstFightOf(map: RunMap, reachable: readonly string[]): string | null {
+  const fights = map.nodes.filter((n) => reachable.includes(n.id) && n.type === 'battle')
+  if (!fights.length) return null
+  return fights.reduce((a, b) => (Math.abs(b.ny - 0.5) < Math.abs(a.ny - 0.5) - 1e-9 ? b : a)).id
+}
+
+/**
  * The map shape a run is dealt, given what the hub has unlocked. Unlocks widen
  * it (H15). (The Vow ladder used to narrow it — no merchants, no recruiters;
  * a difficulty step adds elites instead, {@link addDifficultyElites}.)

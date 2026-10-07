@@ -3282,3 +3282,25 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
   card reward and Hades' boon pick both read on hover/select and commit on a
   separate, deliberate act.
+
+- **2026-10-07 — The home is the contract board (Figma B2).** The designer
+  chose option B ("the board is the selection view"), themed, with the market
+  chip; then "contract, then hero selection, then start on first fight, then
+  go to map". The trade map's labels became wooden signposts (logo + Rep N,
+  a gold ×1.3 on today's market road, a padlock on a closed road); a tap
+  focuses the road and the parchment notice under the map turns to it (wax
+  seal, road and cities, letter, Market / Ground / Rep or Locked chips). The
+  CTA names the company and opens its terms; back keeps the road focused; the
+  hero's CTA marches into the first layer's middle fight. Verified in the
+  running app at 390×844, 375×667 and 1440×900 by script: every focus state,
+  a locked road, the market day, terms → back, hero pick → battle (screen
+  `battle`, layer 1). The loop caught: the 26px wordmark overflowed beside the
+  bank (now fluid, 20–26px); the desk head's instruction widened the seal's
+  grid column; the pager squeezed the kicker into two lines (moved to the
+  title row); the pin overlapped the kicker on short phones; and the
+  letters open with "X seeks an escort", so the title is the company's name.
+  Scorecard: readability 4/5, hierarchy 5/5, polish 4/5. Benchmark: Slay the
+  Spire's and Inscryption's maps choose by touching the place itself, with
+  one parchment card for what it holds. Still open: the desk column has an
+  empty band between the notice and the tiles (as drawn in B2); the locked
+  signpost's padlock is small at scale 2.

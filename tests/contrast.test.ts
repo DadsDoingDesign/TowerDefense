@@ -181,9 +181,15 @@ describe('the menu over the trade map', () => {
     for (const name of ['text', 'muted']) expect(ratio(hex(token(name)), tile), `--${name} on a tile`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the road labels clear 4.5:1 over pure white', () => {
-    const pill = over(ruleBg('.tm-pill::after'), WHITE)
-    for (const name of ['text', 'muted', 'accent-text']) expect(ratio(hex(token(name)), pill), `--${name} on a label`).toBeGreaterThanOrEqual(4.5)
+  it('the road signposts clear 4.5:1: lettering on the wood (lit or not), the market chip, and a locked plate over pure white', () => {
+    for (const wood of ['sign-wood', 'sign-wood-on']) expect(ratio(hex(token('sign-ink')), hex(token(wood))), `--sign-ink on --${wood}`).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('market-ink')), hex(token('market')))).toBeGreaterThanOrEqual(4.5)
+    const pin = over(ruleBg('.tm-label.is-pin .tm-pill::after'), WHITE)
+    expect(ratio(hex(token('muted')), pin), '--muted on a locked plate').toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the contract notice’s ink clears 4.5:1 on its paper', () => {
+    for (const ink of ['paper-ink', 'paper-ink-2']) expect(ratio(hex(token(ink)), hex(token('paper'))), `--${ink} on --paper`).toBeGreaterThanOrEqual(4.5)
   })
 
   it('the charter line clears 4.5:1 over pure white', () => {

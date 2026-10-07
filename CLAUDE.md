@@ -98,10 +98,14 @@ result. Append a short note to the review log when you're done.
   `anchors.generated.ts`; `anchors:check` in the build also fails if any gear
   piece would overhang a hero cell.
 - Pick one, then read: every choose-one surface that does not commit on the
-  tap (contract board, hero pick, recruit, city payout, skill milestone) is a
+  tap (hero pick, recruit, city payout, skill milestone) is a
   `PickStrip` of picture tokens + one `PickCard` for the focused option
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
+  The contract board is the HOME (Figma B2): the trade map's signposts focus a
+  road (`homeFocus`), the notice under the map is that company's, and its CTA
+  opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes
+  straight into the first fight; the run map follows its spoils.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

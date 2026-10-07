@@ -23,18 +23,18 @@ import type { ContractBoard, Slice } from './types'
 
 export interface ContractActions {
   /**
-   * "Start a Run": the contract board. A first-timer (LS3) skips it — one free
-   * escort for Peppercorn Co., straight to the hero pick; the board and the
-   * cash-out open after the first finished contract, stakes per company at
-   * standing 2 with it (the staggered reveal). `terms` pre-sets the board (the
-   * end screen's "another contract"); `step` opens it on the terms.
+   * "Start a Run": a company's terms. The menu's map is the board (Oct 2026,
+   * Figma "B2"): its focused road names the company, and this opens that
+   * company's terms — `terms.company` if it hires, else the focused road if it
+   * hires, else the default (`homeCompany`). A first-timer (LS3) skips the
+   * terms — one free escort for Peppercorn Co., straight to the hero pick;
+   * stakes per company open at standing 2 with it (the staggered reveal).
+   * `terms.crates` pre-sets the stake (the end screen's "another contract").
    */
-  openContracts: (terms?: Partial<ContractOrder>, step?: ContractBoard['step']) => void
-  /** Choose a company on the board. */
-  boardPick: (company: CompanyId) => void
-  /** From the board to the chosen company's terms. */
-  boardTerms: () => void
-  /** One step back: terms → board → menu. */
+  openContracts: (terms?: Partial<ContractOrder>) => void
+  /** Focus a road on the menu's map: its signpost lights, its notice shows. Never signs. */
+  focusRoad: (company: CompanyId) => void
+  /** From the terms back to the menu, the road still focused. */
   boardBack: () => void
   /** Set the stake (0: the free escort), clamped to the standing cap and the bank. */
   setCrates: (crates: number) => void
@@ -75,10 +75,15 @@ export function charterOpen(meta: Pick<Meta, 'skills' | 'items' | 'bank' | 'stat
   return charterDoor({ skills: meta.skills, items: meta.items ?? [] }).open && meta.bank >= CHARTER_FEE
 }
 
-/** The company the board opens on: the one asked for, today's market (once it is open), or the first that hires. */
-function boardCompany(meta: Pick<Meta, 'standing' | 'stats'>, want?: CompanyId): CompanyId {
+/**
+ * The road the menu focuses when none is chosen, and the terms a bare "Start a
+ * Run" opens: the one asked for (if it hires), today's market (once it is
+ * open), or the first that hires.
+ */
+export function homeCompany(meta: { standing: Meta['standing']; stats: { runsCompleted: number } }, ...want: (CompanyId | null | undefined)[]): CompanyId {
   const open = COMPANY_IDS.filter((c) => companyOpen(c, meta.standing))
-  if (want && open.includes(want)) return want
+  const asked = want.find((c) => c && open.includes(c))
+  if (asked) return asked
   const hot = marketOfDay(utcDateKey())
   const market = marketOpen(meta.stats.runsCompleted) || useSettingsStore.getState().showEverything
   return market && open.includes(hot) ? hot : (open[0] ?? FIRST_COMPANY)
@@ -90,7 +95,7 @@ function clampBoard(b: ContractBoard, meta: Pick<Meta, 'standing' | 'bank'>): Co
 }
 
 export const createContractSlice: Slice<ContractActions> = (set, get) => ({
-  openContracts: (terms, step = 'board') => {
+  openContracts: (terms) => {
     const meta = useMetaStore.getState()
     if (menuStaged(meta.stats, useSettingsStore.getState().showEverything)) {
       // LS3: the first contract is one free escort — no board, no stakes, no
@@ -98,32 +103,21 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
       get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: FIRST_COMPANY, crates: 0 })
       return
     }
-    const company = boardCompany(meta, terms?.company ?? undefined)
-    const board = clampBoard(
-      { seed: newRunSeed(), company, step, crates: terms?.crates ?? 0 },
-      meta,
-    )
-    set({ screen: 'contracts', board, shellSelection: null })
-  },
-
-  boardPick: (company) => {
-    const b = get().board
-    const meta = useMetaStore.getState()
-    if (!b || !companyOpen(company, meta.standing)) return
-    set({ board: clampBoard({ ...b, company }, meta) })
-  },
-
-  boardTerms: () => {
-    const b = get().board
-    if (!b) return
-    set({ board: { ...b, step: 'terms' } })
+    const company = homeCompany(meta, terms?.company, get().homeFocus)
+    const board = clampBoard({ seed: newRunSeed(), company, crates: terms?.crates ?? 0 }, meta)
+    set({ screen: 'contracts', board, homeFocus: company, shellSelection: null })
+    // The board's one tip ("each company pays your militia…") has been read.
     useSettingsStore.getState().markTaught('board')
+  },
+
+  focusRoad: (company) => {
+    if (!COMPANY_IDS.includes(company) || get().homeFocus === company) return
+    set({ homeFocus: company })
   },
 
   boardBack: () => {
     const b = get().board
-    if (b?.step === 'terms') return set({ board: { ...b, step: 'board' } })
-    set({ screen: 'hub', board: null })
+    set({ screen: 'hub', board: null, ...(b ? { homeFocus: b.company } : {}) })
   },
 
   setCrates: (crates) => {

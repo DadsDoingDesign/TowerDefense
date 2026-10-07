@@ -106,6 +106,14 @@
   /* The market-of-the-day tag: dark ink on a warm gold, 11.1:1. */
   --market: #f0c46a;
   --market-ink: #1b1409;
+  /* The road signposts and the contract notice (Figma "B2"): wood and paper. */
+  --sign-wood: #6b4526;
+  --sign-wood-on: #7d5330;
+  --sign-rim: #2e1c0e;
+  --sign-ink: #f6e8cc;
+  --paper: #ece0c8;
+  --paper-ink: #3a2c14;
+  --paper-ink-2: #5a4526;
   /* The parchment voice (contract letters, receipt slips): ink on --paper,
      10.4:1 and 6.9:1 — the world talking, never UI chrome. */
   --slip-ink: #3a2c14;
