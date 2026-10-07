@@ -1216,22 +1216,31 @@
 }
 
 /* ==========================================================================
-   One-tap rewards (October 2026) — the strip after a cleared wave
+   3.2 (Oct 2026) — the reward's commit in the strip
    ==========================================================================
-   3.2 put "Take it" here at full CTA height. With one-tap rewards a tap on a
-   card takes it, so the strip holds no commit: it keeps the moment ("Wave
-   cleared · 32 earned") and, until the first one-tap commit, says how the
-   hand works ("Tap to take · hold to look") where the button was. The strip
-   keeps its height either way, so nothing in the band moves when the hint
-   is spent. */
+   With the reward hand in place the wave strip's action slot holds the take —
+   "Take Cruel Bow", naming the selected card — at full CTA height
+   (`--cta-h`): the loudest control on the screen and the last thing in
+   reading order. A tap on a card only reads it. (Main's one-tap rewards held
+   a hint here instead; the designer moved the commit back to the CTA.) */
 .sh-wavebar.commit {
   padding-top: 6px;
   padding-bottom: 6px;
 }
-.sh-wavebar .sh-wq-hint {
+.sh-wavebar.commit .sh-btn.sh-commit {
   flex: 0 1 auto;
-  max-width: 60%;
-  text-align: right;
+  min-width: 168px;
+  max-width: 62%;
+  min-height: var(--cta-h);
+  padding: 0 20px;
+  font-size: 22px;
+  line-height: 1.1;
+}
+@media (max-width: 379.98px) {
+  .sh-wavebar.commit .sh-btn.sh-commit {
+    min-width: 132px;
+    font-size: 19px;
+  }
 }
 /* The header's Depth chip already names the wave; after a cleared wave the
    strip keeps the moment ("Wave cleared") whole rather than "DEPTH…". */

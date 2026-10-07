@@ -237,8 +237,9 @@ export function PageScreen({
 
   /*
    * One-tap choices (October 2026; the designer's call on audit §4 item 8):
-   * a reward card on the Spoils page and the campfire's rest and train commit
-   * on the tap. A hold (touch), a hover (mouse) or keyboard focus shows the
+   * the campfire's rest and train commit on the tap. (Reward cards did too,
+   * until the designer moved their commit back to the CTA: a tap to compare
+   * an item's stats took it.) A hold (touch), a hover (mouse) or keyboard focus shows the
    * row's detail instead — the same detail block a pick fills — and the
    * page has no CTA for them: a button that repeats what the tap did is
    * chrome. Everything that spends, is permanent or destroys keeps `pick`
@@ -246,7 +247,6 @@ export function PageScreen({
    */
   const oneTapUntaught = useOneTapUntaught()
   const hasOneTap = choices.some((o) => o.oneTap)
-  const spoils = useGameStore((s) => !!s.reward)
   const oneTap = useOneTap({
     surface: choices.map((o) => o.id).join(' '),
     commit: (id) => {
@@ -417,7 +417,7 @@ export function PageScreen({
           something you have not picked yet reads backwards. */}
       {/* The how-to for a one-tap board, once (until the first one-tap
           commit anywhere): "Tap to take · hold to look". */}
-      {asRows && hasOneTap && oneTapUntaught && <OneTapHint verb={spoils ? 'take' : 'choose'} className="pg-hint" />}
+      {asRows && hasOneTap && oneTapUntaught && <OneTapHint verb="choose" className="pg-hint" />}
 
       {asRows && (
         <div className="pg-rows">

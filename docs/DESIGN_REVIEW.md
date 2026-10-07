@@ -3264,3 +3264,21 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   polish 4/5. Still open: the returning city page is long on a 390 phone
   (the card's risk line sits at the fade until scrolled); a full company's
   recruit tokens are all one sprite when the three carry the same weapon.
+
+- **2026-10-07 — A tap reads a reward; the CTA takes it.** The designer:
+  "tapping an item to try to change which stats are previewed after winning a
+  round auto-selects it." Main's one-tap rewards took the card on the very
+  tap a player made to compare it, and a hold to look is not something a
+  player reaches for first. The reward cards (in place after a wave, and the
+  elite/boss Spoils page) are select-then-take again: a tap selects the card
+  (gold ring, detail in the Context panel, gear preview), and the wave strip's
+  full-height CTA — or the Spoils page's pinned CTA — names it: "Take Cruel
+  Bow". The campfire keeps the one-tap commit. Verified in the running app at
+  390×844 and 1440×900 by script, not by eye: tapping a second card leaves
+  `reward` set (wave strip and Spoils page), and the CTA takes the card it
+  names ("Take Twinblade Harness"). The loop caught: the longest name wraps
+  the strip CTA to two lines at 390 — kept (22px, two balanced lines, still
+  the loudest control); the font steps to 19px under 380. Scorecard:
+  readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
+  card reward and Hades' boon pick both read on hover/select and commit on a
+  separate, deliberate act.

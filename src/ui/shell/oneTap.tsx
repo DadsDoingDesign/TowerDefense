@@ -9,9 +9,10 @@ import { lineText, type Offer } from './offers'
  * One-tap commits (October 2026; the designer's call on audit §4 item 8).
  *
  * Shell rule one is select-then-confirm: tap a card, read its detail in the
- * Context panel, then commit. For the two most frequent cheap choices — a
- * reward card and the campfire — that doubled the taps on the screens a run
- * passes through most, so these two commit on the tap itself:
+ * Context panel, then commit. For the campfire's rest and train — cheap and
+ * frequent — that doubled the taps, so they commit on the tap itself. (Reward
+ * cards did too, until the designer moved their commit back to the CTA: the
+ * tap a player made to compare an item's stats took it.)
  *
  *  - **tap / click / Enter / Space** on an option commits it;
  *  - **hold** (touch, `HOLD_MS`) shows its detail, and letting go does not
@@ -21,9 +22,8 @@ import { lineText, type Offer } from './offers'
  * The press rules (tap vs hold vs drag vs too soon) are `press.ts`, pure and
  * unit-tested. This file only gathers the numbers from real events.
  *
- * Everything that spends gold, is permanent or destroys — the merchant, the
- * shrine, a recruit, the hero pick, skill picks, the city's cash-out — stays
- * select-then-confirm. An offer opts in with `Offer.oneTap`.
+ * Everything else — the rewards, the merchant, the shrine, a recruit, the
+ * hero pick, skill picks, the city's cash-out — stays select-then-confirm. An offer opts in with `Offer.oneTap`.
  */
 
 export type InspectHow = 'hold' | 'hover' | 'focus' | 'refused'
@@ -195,8 +195,7 @@ export function useOneTap(o: {
 
 /**
  * Run a one-tap offer: the deed, the lesson learnt (the hint is spent by
- * doing it), and the sentence. An item reward says nothing here — its
- * landing is the receipt toast's ("Bow added to your pack"), which speaks.
+ * doing it), and the sentence the offer carries.
  */
 export function commitOneTap(offer: Offer): void {
   if (!offer.action || offer.action.disabled) return

@@ -1,4 +1,4 @@
-import { describeBase, gripOf, itemNoun, RARITY } from '../../game/data/items'
+import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
 import { HQ_OPENS_AT, PULL_PRICE } from '../../game/run/hq'
@@ -17,7 +17,7 @@ import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } fr
 import { menuStaged, revealOf } from '../../state/staging'
 import { revealFacts } from './staging'
 import { useShallow } from 'zustand/react/shallow'
-import { archetypeVar, ARCHETYPE_GLYPH, damageMark, GRIP_NAME, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
+import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
@@ -803,21 +803,12 @@ function rewardOffers(st: St): Offer[] {
     // behind an ⓘ like the hero panel's (Phase 2) instead of a paragraph on
     // every card.
     info: c.grant?.mods ? { label: 'How effects stack', lines: STACKING_RULES } : undefined,
-    action: { label: 'Take it', run: () => st.chooseReward(c.id) },
-    // One tap takes it (October 2026); a hold, hover or focus reads it first.
-    oneTap: rewardTap(c),
+    // Select, then take (the designer, October 2026: "can it only be on the
+    // cta that the item is selected"). Main's one-tap reward took the card on
+    // the tap a player made to compare its stats; a tap now only reads it, and
+    // the CTA names the card it takes.
+    action: { label: `Take ${c.item ? itemName(c.item) : c.title}`, run: () => st.chooseReward(c.id) },
   }))
-}
-
-/** A reward card's one-tap name and its sentence once taken. */
-function rewardTap(c: NonNullable<St['reward']>[number]): NonNullable<Offer['oneTap']> {
-  const title = c.item ? itemName(c.item) : c.title
-  const what = c.item ? GRIP_NAME[gripOf(c.item)] : c.kind === 'relic' ? 'a relic for all your heroes' : 'for all your heroes'
-  const downside = c.downside ? `. Downside: ${c.downside}` : ''
-  return {
-    label: `Take ${title} — ${what}, ${RARITY[c.rarity].label}${downside}`,
-    said: c.item ? undefined : `Took ${title}.`,
-  }
 }
 
 /**
