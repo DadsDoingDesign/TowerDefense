@@ -1,7 +1,7 @@
 {
-  "name": "Fieldwatch",
-  "short_name": "Fieldwatch",
-  "description": "Hold the meadow against the goblin horde. A roguelite tower-defense autobattler: post your company, then watch the fight play out.",
+  "name": "Merchant Mercenaries",
+  "short_name": "MerchMercs",
+  "description": "Guard the road, bank the gold. A roguelite tower-defense autobattler: trade companies hire your mercenaries to see their caravans through goblin country.",
   "start_url": "./",
   "scope": "./",
   "id": "./",

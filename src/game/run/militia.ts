@@ -74,5 +74,10 @@ export function readMilitia(raw: unknown): Militia | null {
   return { name: o.name, shape: o.shape, tincture: o.tincture, charge: o.charge }
 }
 
-/** The line under the menu's wordmark: "The Ashford Company · sellswords for hire". */
-export const militiaTagline = (m: Pick<Militia, 'name'> | null): string => (m ? `${m.name} · sellswords for hire` : 'Sellswords for hire')
+/**
+ * The line under the menu's name: "The Ashford Company · guard the road, bank the gold".
+ * The tagline (Oct 2026) replaced "Sellswords for hire", which said "for hire" twice
+ * and nothing about the job: guard a company's road, bring its gold home.
+ */
+export const TAGLINE = 'Guard the road, bank the gold'
+export const militiaTagline = (m: Pick<Militia, 'name'> | null): string => (m ? `${m.name} · ${TAGLINE.toLowerCase()}` : TAGLINE)

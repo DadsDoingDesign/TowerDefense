@@ -1,6 +1,8 @@
-# Fieldwatch — project notes for Claude
+# Merchant Mercenaries (repo: fieldwatch) — project notes for Claude
 
-A roguelite tower-defense autobattler. Vite + React + TypeScript + Canvas 2D +
+A roguelite tower-defense autobattler, formerly Fieldwatch (renamed Oct 2026:
+see `docs/BRAND.md`; storage keys and the `fieldwatch` sprite pack keep the old
+id on purpose). Vite + React + TypeScript + Canvas 2D +
 Zustand. Art direction: **Tiny Swords** (Pixel Frog) — **old CC0 build only**;
 the `tinyswords` sprite pack/theme is the default. Never import files from the
 current Tiny Swords download (not CC0); `npx tsx scripts/harvest-cc0.ts --check`

@@ -175,8 +175,21 @@
   text-align: center;
   background: linear-gradient(rgba(16, 12, 8, 0.86) 66%, rgba(16, 12, 8, 0));
 }
+/* The seal over the name: the stacked lockup (docs/BRAND.md). The vector mark
+   is drawn at 56 (its floor is 40); it takes no shadow or glow. */
+.mn-mark {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 2px;
+}
+/* The name is cream on dark wood, as in the lockup — the gold is the seal's. */
 .mn .t-title {
   font-size: 40px;
+  /* The lockup's tracking: “Merchant Mercenaries” is long, and .06em adds a
+     full em across it — enough to wrap on a 390 phone. */
+  letter-spacing: 0;
+  color: var(--text);
   text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
 }
 .mn .t-sub {
@@ -226,6 +239,10 @@
   }
   .mn .t-title {
     font-size: 30px;
+  }
+  .mn-mark {
+    width: 44px;
+    height: 44px;
   }
   .mn .t-sub {
     font-size: var(--fs-sm);
@@ -432,6 +449,10 @@ button.mn-today:disabled {
   .mn-head {
     padding-top: calc(12px + var(--safe-top, 0px));
     padding-bottom: 22px;
+  }
+  .mn-mark {
+    width: 40px;
+    height: 40px;
   }
   .mn-sheet {
     gap: 6px;
@@ -643,8 +664,13 @@ button.mn-today:disabled {
     background: none;
   }
   .mn .t-title {
-    font-size: 52px;
+    /* “Merchant Mercenaries” is ~9.6 em wide: it fits the side column at this size. */
+    font-size: clamp(30px, 2.6vw, 38px);
     text-align: left;
+  }
+  .mn-mark {
+    width: 64px;
+    height: 64px;
   }
   .mn .t-sub {
     text-align: left;

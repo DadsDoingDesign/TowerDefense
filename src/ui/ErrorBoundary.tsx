@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('Fieldwatch crashed:', error, info.componentStack)
+    console.error('Merchant Mercenaries crashed:', error, info.componentStack)
     // The run is the expensive thing in the room. Get it to disk before doing
     // anything else, and only then look for a checkpoint to offer.
     let snapshot: RunSnapshot | null = null
