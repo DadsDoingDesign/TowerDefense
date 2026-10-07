@@ -7,8 +7,10 @@ import {
   RANDOM_UNLOCK_SKILLS,
   COMBO_SKILLS,
   skillById,
+  skillHeadline,
   STARTER_SKILLS,
 } from '../src/game/data/skills'
+import { ICON_ORDER } from '../src/game/data/iconAtlas'
 import { ALL_NODES } from '../src/game/data/archetypeTree'
 import {
   bumpOffered,
@@ -309,5 +311,20 @@ describe('the skill library view (Codex)', () => {
     const o = skillLibraryOffer({ achievements: {}, skills: [], staged: true })
     expect(o.tabs).toBeUndefined()
     expect(o.sub).toBe('Locked')
+  })
+})
+
+describe('skill headlines (the pick-one strip\'s tokens)', () => {
+  it('gives every skill a real lead effect and an icon on the sheet', () => {
+    for (const k of ALL_SKILLS) {
+      const h = skillHeadline(k)
+      expect(h.label, k.id).not.toBe('Skill')
+      expect(ICON_ORDER as readonly string[], k.id).toContain(h.icon)
+    }
+  })
+
+  it('carries a number only where the mod is the number', () => {
+    expect(skillHeadline(skillById('quick_hands')!)).toEqual({ icon: 'haste', label: 'Speed', value: '+15%' })
+    expect(skillHeadline(skillById('hard_hitter')!)).toEqual({ icon: 'damage', label: 'Dmg', value: '+15%' })
   })
 })

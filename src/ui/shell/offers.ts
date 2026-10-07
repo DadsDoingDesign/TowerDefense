@@ -272,10 +272,14 @@ export interface HeroCardSpec {
   color: string
   /** What its gear makes it do, in plain words (`gear.heroDoes`). */
   does: string
-  gear: { id: string; name: string; rarity: ItemRarity; icon: IconKey }[]
+  /** The three equipment slots in the gear panel's order; `piece` is empty for a free hand. */
+  slots: { slot: string; piece?: { name: string; rarity: ItemRarity; icon: IconKey } }[]
   skill?: { name: string; level: string; text: string }
-  /** "49 DPS · 96 reach" — held back on a staged first run. */
-  numbers?: string
+  /**
+   * The three key facts — DPS, reach, and how many it holds or hits — for the
+   * pick-one card, and the DPS for its token. Held back on a staged first run.
+   */
+  facts?: { dps: number; reach: number; third: { label: string; value: string } }
 }
 
 /**
@@ -435,19 +439,33 @@ function heroBody(s: Sentinel): string[] {
 export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
   const p = computeCombat(s)
   const k = s.skills?.length ? skillById(s.skills[0]) : undefined
-  const gear = [s.equipment.mainHand, s.equipment.offHand, s.equipment.body]
-    .filter((i): i is Item => !!i)
-    // The kind, not the generated name: "Wand", not "Swift Wand of Precision" —
-    // the kind is what decides what the hero does, and three cards side by side
-    // must read in one glance. The full name is on the gear panel once picked.
-    .map((i) => ({ id: i.id, name: itemNoun(i) ?? itemName(i), rarity: i.rarity, icon: itemIcon(i) }))
+  // The kind, not the generated name: "Wand", not "Swift Wand of Precision" —
+  // the kind is what decides what the hero does, and three cards side by side
+  // must read in one glance. The full name is on the gear panel once picked.
+  const piece = (i: Item) => ({ name: itemNoun(i) ?? itemName(i), rarity: i.rarity, icon: itemIcon(i) })
+  const { mainHand, offHand, body } = s.equipment
+  // What it holds, as the engine counts it: the shield's hold plus any hold skill.
+  const hold = p.mods.block?.count ?? 0
   return {
     art: heroLookArt(s),
     color: heroLookVar(s),
     does: heroDoes(s),
-    gear,
+    slots: [
+      { slot: 'Main', piece: mainHand ? piece(mainHand) : undefined },
+      { slot: 'Off hand', piece: offHand ? piece(offHand) : undefined },
+      { slot: 'Body', piece: body ? piece(body) : undefined },
+    ],
     skill: k ? { name: k.name, level: skillLevelLabel(k.level), text: k.desc } : undefined,
-    numbers: staged ? undefined : `${Math.round(p.dps)} DPS · ${Math.round(p.range)} reach`,
+    facts: staged
+      ? undefined
+      : {
+          dps: Math.round(p.dps),
+          reach: Math.round(p.range),
+          // A shield's hold is the deciding third number; without one, how many it hits.
+          third: hold
+            ? { label: 'Holds', value: `${hold} ${hold === 1 ? 'enemy' : 'enemies'}` }
+            : { label: 'Targets', value: p.style === 'cast' ? 'a group' : 'one' },
+        },
   }
 }
 
