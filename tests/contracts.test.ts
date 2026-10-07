@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RNG } from '../src/game/core/rng'
-import { COMPANIES, COMPANY_IDS, companyById, crestRows } from '../src/game/data/companies'
+import { COMPANIES, COMPANY_IDS, COMPANY_LOGOS, companyById, crestRows } from '../src/game/data/companies'
 import { ALL_SKILLS, RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { ITEM_KINDS, UNLOCK_ITEM_KINDS, itemPoolFor } from '../src/game/data/itemKinds'
 import { CHARTER_FEE, CHARTER_PAYOUT, charterDoor } from '../src/game/run/charter'
@@ -352,3 +352,23 @@ describe('standing', () => {
     expect(companyOpen('spice', {})).toBe(true)
   })
 })
+
+describe('company logos', () => {
+  it('every company (and the locked padlock) has a 16×16 logo whose palette covers every pixel', () => {
+    for (const key of [...COMPANY_IDS, 'locked' as const]) {
+      const logo = COMPANY_LOGOS[key]
+      expect(logo.rows).toHaveLength(16)
+      for (const row of logo.rows) {
+        expect(row).toHaveLength(16)
+        for (const ch of row) if (ch !== '.') expect(logo.palette[ch], `${key}: key ${ch}`).toMatch(/^#[0-9a-f]{6}$/)
+      }
+    }
+  })
+
+  it('no two companies share a logo, and each is drawn in its own colour', () => {
+    const drawn = new Set(COMPANY_IDS.map((id) => COMPANY_LOGOS[id].rows.join('/')))
+    expect(drawn.size).toBe(COMPANY_IDS.length)
+    for (const c of COMPANIES) expect(Object.values(COMPANY_LOGOS[c.id].palette)).toContain(c.color)
+  })
+})
+

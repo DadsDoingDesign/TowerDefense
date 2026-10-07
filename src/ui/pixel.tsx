@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { companyById, crestRows, SOVEREIGN_EMBLEM, UNKNOWN_EMBLEM, type CompanyId } from '../game/data/companies'
+import { COMPANY_LOGOS, crestRows, SOVEREIGN_EMBLEM, type CompanyId } from '../game/data/companies'
 import { SOVEREIGN_COLOR } from '../game/run/charter'
 import { bannerPalette, bannerRows, type BannerLook } from '../game/data/banner'
 import {
@@ -53,19 +53,16 @@ export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className }
   )
 })
 
-/** A company's crest: its emblem on a shield in its colour (or a locked "?"). */
+/**
+ * A company's mark: its own 16 × 16 logo (`COMPANY_LOGOS`) — a chili for
+ * Peppercorn, an easel for Easel House, a pickaxe on ore for Ironvein, a spool
+ * for Rosethread, a moon and quill for Moonquill — or the padlock for one not
+ * met yet. (It was a shared shield with a small emblem until the October 2026
+ * design review; the name `Crest` stays so every call site keeps working.)
+ */
 export function Crest({ company, scale = 2, locked = false }: { company: CompanyId; scale?: number; locked?: boolean }) {
-  const co = companyById(company)
-  const base = locked ? '#5a4a36' : co.color
-  const pal: Palette = {
-    o: OUTLINE,
-    c: base,
-    l: shade(base, 0.35),
-    d: shade(base, -0.3),
-    p: locked ? '#8a7656' : '#f3e7d0',
-    g: locked ? '#6d5a40' : '#e0ac4c',
-  }
-  return <Pixel rows={crestRows(locked ? UNKNOWN_EMBLEM : co.emblem)} palette={pal} scale={scale} className="crest" />
+  const logo = COMPANY_LOGOS[locked ? 'locked' : company]
+  return <Pixel rows={logo.rows} palette={logo.palette} scale={scale} className={`crest logo${locked ? ' locked' : ''}`} />
 }
 
 /** The Sovereign Route's crest: a crown on a shield in the Sovereign cyan (the endgame charter). */

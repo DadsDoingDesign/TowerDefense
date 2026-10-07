@@ -160,6 +160,158 @@ export const SOVEREIGN_EMBLEM: readonly string[] = ['........', 'g..gg..g', 'gg.
 export const UNKNOWN_EMBLEM: readonly string[] = ['..pppp..', '.pp..pp.', '.....pp.', '....pp..', '...pp...', '...pp...', '........', '...pp...']
 
 /**
+ * Each company's own logo (October 2026, the design review): one 16 × 16
+ * pixel mark per company, drawn in its colour with the icon atlas's
+ * `#161c2e` outline, so a company can be told apart by shape alone — a token
+ * or a map pill can drop the name and nothing truncates. They replaced the
+ * shared heater shield (`crestRows` + `emblem`, kept for the Sovereign crest)
+ * on every surface that names a company. Same art as the Figma "Company Logo"
+ * set. `locked` is the padlock for a company not met yet.
+ *
+ * Pure data, like the crest: `ui/pixel.tsx` draws it.
+ */
+export interface CompanyLogo {
+  /** 16 rows of 16 palette keys; `.` is transparent. */
+  readonly rows: readonly string[]
+  readonly palette: Readonly<Record<string, string>>
+}
+
+export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> = {
+  spice: {
+    // a chili pepper with a green stem
+    rows: [
+      '................',
+      '..........oo....',
+      '.........oGGo...',
+      '........oGgGo...',
+      '......ooogGo....',
+      '.....ohhhooo....',
+      '....ohllhhhdo...',
+      '...ohlhhhhhdo...',
+      '...ohlhhhhddo...',
+      '..ohhhhhhddo....',
+      '..ohhhhhdddo....',
+      '.ohhhhhddo......',
+      '.ohhhhddo.......',
+      '.ohhddoo........',
+      '..oddo..........',
+      '...oo...........',
+    ],
+    palette: { G: '#276740', d: '#8fa83a', g: '#38b251', h: '#c6e05a', l: '#fffce7', o: '#161c2e' },
+  },
+  art: {
+    // an easel holding a painted canvas
+    rows: [
+      '.......oo.......',
+      '......oWWo......',
+      '..oooooooooooo..',
+      '..ohhhhhhhhhho..',
+      '..ohlhhhhhrrho..',
+      '..ohhhhhhrrrho..',
+      '..ohhyyhhhhhho..',
+      '..ohyyyhhbbhho..',
+      '..ohhhhhbbbddo..',
+      '..ohddddddddo...',
+      '..oooooooooooo..',
+      '....owo..owo....',
+      '...owo....owo...',
+      '...owo....owo...',
+      '..owo......owo..',
+      '..ooo......ooo..',
+    ],
+    palette: { W: '#866353', b: '#5d8be2', d: '#8d6fd0', h: '#c6a4ff', l: '#fffce7', o: '#161c2e', r: '#f76666', w: '#a38250', y: '#ffed44' },
+  },
+  metals: {
+    // a pickaxe over an ore rock with a vein
+    rows: [
+      '................',
+      '..ooooooo.......',
+      '.osssssssoo.....',
+      '..oooowWosso....',
+      '......owWooso...',
+      '.......owWoso...',
+      '.......owWo.o...',
+      '.....oooowWo....',
+      '...oorrrrowWo...',
+      '..orrhhrrrowWo..',
+      '.orrrrhhrrrowo..',
+      '.orRrrrhrRrroo..',
+      '.orrRrrrrrRrro..',
+      '.oRRrRRRrRRRro..',
+      '..oRRRRRRRRRo...',
+      '...ooooooooo....',
+    ],
+    palette: { R: '#6f5a48', W: '#866353', h: '#5d8be2', o: '#161c2e', r: '#9e8776', s: '#bac1c8', w: '#a38250' },
+  },
+  silk: {
+    // a spool of silk with a needle through the thread
+    rows: [
+      '................',
+      '...oooooooooo...',
+      '...owwwwwwwwo...',
+      '...oooooooooo...',
+      '....ohhhhhho....',
+      '....ohlhhhdo..o.',
+      '....ohhhhhdo.oso',
+      '....ohlhhhdooso.',
+      '....ohhhhhdoso..',
+      '....ohlhhhdso...',
+      '....ohhhhhsdo...',
+      '....ohhhhsddo...',
+      '...oooooooooo...',
+      '...owwwwwwwwo...',
+      '...oooooooooo...',
+      '................',
+    ],
+    palette: { d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
+  },
+  scrolls: {
+    // a crescent moon behind a quill
+    rows: [
+      '................',
+      '.....ooo......o.',
+      '...oommoo....oho',
+      '..ommMMoo...ohho',
+      '.ommMoo....ohlho',
+      '.omMo.....ohlhdo',
+      'omMo.....ohlhdo.',
+      'omMo....ohlhdo..',
+      'omMo...ohlhdo...',
+      'omMo..ohlhdo....',
+      '.omMo.ohhdo.....',
+      '.ommMoohdo......',
+      '..ommMoooo......',
+      '...oommoo.......',
+      '.....ooo........',
+      '................',
+    ],
+    palette: { M: '#d08c41', d: '#a9b0c4', h: '#e4e8f2', l: '#fffce7', m: '#ffed44', o: '#161c2e' },
+  },
+  locked: {
+    // a padlock
+    rows: [
+      '................',
+      '.....oooooo.....',
+      '....ossssssoo...',
+      '...osooooooso...',
+      '...oso....oso...',
+      '...oso....oso...',
+      '..oooooooooooo..',
+      '..ohhhhhhhhhho..',
+      '..ohlhhhhhhhdo..',
+      '..ohhhhoohhhdo..',
+      '..ohhhhoohhhdo..',
+      '..ohhhhhohhhdo..',
+      '..ohhhhhhhhhdo..',
+      '..odddddddddo...',
+      '..oooooooooooo..',
+      '................',
+    ],
+    palette: { d: '#4b5563', h: '#737f8e', l: '#fffce7', o: '#161c2e', s: '#bac1c8' },
+  },
+}
+
+/**
  * The crest's pixel rows: a 16 × 18 heater shield (`o` outline, `l` light top,
  * `c` field, `d` shaded right edge) with the 8 × 8 emblem set into it.
  */
