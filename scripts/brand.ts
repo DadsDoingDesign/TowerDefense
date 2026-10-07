@@ -1,14 +1,14 @@
 /**
- * The Merchant Mercenaries identity (formerly Fieldwatch), rendered (Phase 4).
+ * The Merchant Mercenaries identity, rendered (Phase 4; renamed from Fieldwatch, Oct 2026).
  *
  *   npm run brand            # rewrite every generated brand file
  *
  * Sources of truth, all hand-authored:
- *  - `src/assets/brand/seal.svg` — the mark, the Dripping Seal: drawn in Figma and
- *    exported verbatim (2026-10-06; see the comment in that file). It replaced
- *    the Fieldwatch-era Watchtower (`mark.svg` / `mark-mono.svg`, now unused).
+ *  - `src/assets/brand/mark.svg` / `mark-mono.svg` — the vector mark, the Dripping Seal (48-unit grid)
  *  - `src/assets/brand/wordmark.svg` — Crimson Text Bold outlined by
  *    `scripts/brand-wordmark.py` (kerned by eye; see that file)
+ *  - `PIXEL_MARK` below — the 16×16 reduction, drawn on the grid, for every
+ *    size at which the vector turns to mud (favicons, in-game)
  *  - `scene()` below — the dusk diorama, composed from the game's own CC0
  *    Tiny Swords sprites (old public-domain build, already in the repo)
  *
@@ -16,7 +16,7 @@
  * dev dependency — the same contract as `scripts/icons.ts`, which now defers
  * to this file):
  *  - `src/assets/brand/lockup.svg`, `lockup-stacked.svg`
- *  - `src/assets/brand/mark-16.png` (the seal at 16px)
+ *  - `src/assets/brand/mark-16.png` (the pixel mark, 1×)
  *  - `public/icons/favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`,
  *    `icon-192.png`, `icon-512.png`, `icon-192-maskable.png`, `icon-512-maskable.png`
  *  - `public/social/og-image.png` (1200×630 — the 600×315 scene at exactly 2×)
@@ -224,16 +224,90 @@ const hash = (x: number, y: number, s = 0): number => {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-// ─────────────────────────────────────────────────────────────── the mark
+// ─────────────────────────────────────────────────────────────── pixel mark
 
-/** An SVG's drawing without its wrapper, title or comments (the seal is drawn on a 240 frame). */
-const inner = (svg: string) =>
-  svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<title>[\s\S]*?<\/title>/, '').replace(/<!--[\s\S]*?-->/g, '').trim()
+/**
+ * The mark at 16×16, drawn — not scaled. Below ~40px the vector's shine, inner
+ * ring and the sword's fuller fall between pixels, so this reduction keeps the
+ * three things that carry the idea — the red wax with its drips, the gold coin,
+ * the sword — and gives the sword a pommel, a short guard and a two-pixel blade
+ * so it reads as a sword and not as a cross.
+ *
+ * Same convention as the icon atlas (`scripts/fw-icons.ts`): interior only,
+ * inside rows/cols 1..14; `outline()` then rings it in the Tiny Swords
+ * `#161C2E`, so it sits beside the atlas icons as one family.
+ */
+const PIXEL_MARK = [
+  '................',
+  '....RRRRRRR.....',
+  '...RwwRRRRRRR...',
+  '..RwrrGrrGrrRR..',
+  '..RrrGGrrGGrrR..',
+  '.RRrGrrrrrrGrRR.',
+  '.RrrGGGrrGGGrrR.',
+  '.RrrGGGrrGGGrrR.',
+  '.RrrgGGrrGGgrrR.',
+  '.RRrrgGrrGgrrRR.',
+  '..RrrrggggrrrR..',
+  '..RRrrrrrrrrRR..',
+  '...RRRRRRRRRR...',
+  '....RR....RR....',
+  '....RR.....R....',
+  '................',
+]
+const PIXEL_PAL: Record<string, string> = {
+  R: '#b23a2c', // the wax
+  r: '#982f22', // the pressed ring, and the sword in it
+  G: T.gold, // the coin
+  g: '#a8772a', // the coin's lower edge
+  w: '#e9806a', // the wet shine
+  K: T.outline,
+}
 
-/** The seal's drawing, drips included, cropped square — for the favicon and the size ladder. */
-const SEAL_CROP = '11 14 220 220'
+function outline(g: string[]): string[] {
+  return g.map((row, y) =>
+    row
+      .split('')
+      .map((c, x) => {
+        if (c !== '.') return c
+        const hit = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+          const n = g[y + dy]?.[x + dx]
+          return n !== undefined && n !== '.'
+        })
+        return hit ? 'K' : '.'
+      })
+      .join(''),
+  )
+}
+
+function pixelRaster(g: string[]): Raster {
+  const r = new Raster(g[0].length, g.length)
+  g.forEach((row, y) => row.split('').forEach((c, x) => c !== '.' && r.blend(x, y, hex(PIXEL_PAL[c]))))
+  return r
+}
+
+/** The pixel mark as SVG rects, merged into horizontal runs; crisp at 16 and 32. */
+function pixelSvg(g: string[], bg?: string): string {
+  let body = ''
+  g.forEach((row, y) => {
+    let x = 0
+    while (x < row.length) {
+      const c = row[x]
+      let n = 1
+      while (row[x + n] === c) n++
+      if (c !== '.') body += `<rect x="${x}" y="${y}" width="${n}" height="1" fill="${PIXEL_PAL[c]}"/>`
+      x += n
+    }
+  })
+  const back = bg ? `<rect width="16" height="16" rx="3" fill="${bg}"/>` : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges"><title>Merchant Mercenaries</title>${back}${body}</svg>\n`
+}
 
 // ────────────────────────────────────────────────────────────── vector mark
+
+/** Everything a mark draws: the root <svg>'s content without its title and comments. */
+const paths = (svg: string) =>
+  svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').replace(/<title>[\s\S]*?<\/title>/g, '').replace(/<!--[\s\S]*?-->/g, '').trim()
 
 interface Wordmark { d: string; x: number; y: number; w: number; h: number; cap: number }
 function parseWordmark(svg: string): Wordmark {
@@ -244,31 +318,32 @@ function parseWordmark(svg: string): Wordmark {
 }
 
 /**
- * Lockups. `mark` is the seal already placed on the 48-unit grid (1/5 of its
- * 240 frame). The wordmark's cap height is 20 units with its baseline at y≈35,
- * so the word sits level with the coin. Gap: 10 units, the clear-space unit
- * (see BRAND.md).
+ * Lockups. The seal's pressed ring is centred at y22.56 on the 48 grid; the
+ * wordmark's cap height is 16 units and its caps are centred on that ring, so
+ * the name reads as stamped beside the seal. Gap: 8 units from the wax's right
+ * edge (x43). Clear space: see BRAND.md.
  */
-function lockups(mark: string, wm: Wordmark, word: string) {
-  const s = 20 / wm.cap
+function lockups(markSvg: string, wm: Wordmark, word: string, markFill?: string) {
+  const s = 16 / wm.cap
+  const mark = markFill ? paths(markSvg).replace(/fill="[^"]+"/g, `fill="${markFill}"`) : paths(markSvg)
   const wordW = wm.w * s
-  // Horizontal: mark 48 wide (disc spans 2..46), gap 10 from the disc edge.
-  const hx = 46 + 10 - wm.x * s
-  const hW = Math.ceil(46 + 10 + wordW + 2)
+  // Horizontal: the seal's wax spans x5..43; the word starts 8 units after it.
+  const hx = 43 + 8 - wm.x * s
+  const hW = Math.ceil(43 + 8 + wordW + 2)
   const horizontal = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${hW} 48" width="${hW * 2}" height="96">
   <title>Merchant Mercenaries</title>
-  <!-- Generated by scripts/brand.ts from seal.svg + wordmark.svg. Clear space: 10 units on every side. -->
+  <!-- Generated by scripts/brand.ts from mark.svg + wordmark.svg. Clear space: 11 units (half the disc) on every side. -->
   ${mark}
-  <path fill="${word}" d="${wm.d}" transform="translate(${hx.toFixed(2)} 35.05) scale(${s.toFixed(5)})"/>
+  <path fill="${word}" d="${wm.d}" transform="translate(${hx.toFixed(2)} ${(22.56 + 8).toFixed(2)}) scale(${s.toFixed(5)})"/>
 </svg>
 `
-  // Stacked: mark centred over the word; word cap height 16 (80%), 6 units below the disc.
+  // Stacked: the seal centred over the word; word cap height 16, 6 units below the drips (y46.4).
   const ss = 16 / wm.cap
   const sW = Math.ceil(wm.w * ss + 4)
   const sx = (sW - wm.w * ss) / 2 - wm.x * ss
   const stacked = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sW} 68" width="${sW * 2}" height="136">
   <title>Merchant Mercenaries</title>
-  <!-- Generated by scripts/brand.ts from seal.svg + wordmark.svg. -->
+  <!-- Generated by scripts/brand.ts from mark.svg + wordmark.svg. -->
   <g transform="translate(${((sW - 48) / 2).toFixed(2)} 0)">${mark}</g>
   <path fill="${word}" d="${wm.d}" transform="translate(${sx.toFixed(2)} ${(46 + 6 + 16).toFixed(2)}) scale(${ss.toFixed(5)})"/>
 </svg>
@@ -281,14 +356,16 @@ const svgPng = (svg: string, w: number, h = w) =>
   sharp(Buffer.from(svg), { density: 72 * 8 }).resize(w, h, { fit: 'fill' }).png().toBuffer()
 
 /**
- * App-icon art: the seal over a dusk glow on dark wood — the same ground and
- * proportions as the 1024 master in Figma ("App icon / 29 refined"), where the
- * seal's 240 frame spans 800 of 1024. `inset` is the fraction of the tile that
- * frame spans.
+ * App-icon art. The seal over a warm glow on dark wood (the designer's “Icon /
+ * Ground (dark wood)”). `inset` is the fraction of the tile the seal's height
+ * spans (wax top to the long drip's tip: 43 of the 48 units).
  */
-function iconSvg(seal: string, size: number, inset: number, shape: 'square' | 'squircle'): string {
-  const k = (size * inset) / 240
-  const o = (size - 240 * k) / 2
+function iconSvg(markSvg: string, size: number, inset: number, shape: 'square' | 'squircle'): string {
+  const d = size * inset
+  const k = d / 43 // the seal is 43 units tall (y3.5 → 46.4)
+  const ox = size / 2 - 24 * k
+  // Optical centre: the drips are light; centre on the wax, a hair below the middle.
+  const oy = size / 2 - 23 * k + size * 0.01
   const r = size * 0.225
   const clip =
     shape === 'squircle'
@@ -297,11 +374,13 @@ function iconSvg(seal: string, size: number, inset: number, shape: 'square' | 's
       : `<clipPath id="t"><rect width="${size}" height="${size}"/></clipPath>`
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>${clip}
-    <radialGradient id="g" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#4a2e1c"/><stop offset=".55" stop-color="${T.bg2}"/><stop offset="1" stop-color="${T.bg}"/></radialGradient>
+    <radialGradient id="g" cx="50%" cy="44%" r="55%"><stop offset="0" stop-color="#4a2e1c"/><stop offset=".55" stop-color="${T.bg2}"/><stop offset="1" stop-color="${T.bg}"/></radialGradient>
   </defs>
   <g clip-path="url(#t)">
     <rect width="${size}" height="${size}" fill="url(#g)"/>
-    <g transform="translate(${o} ${o}) scale(${k})">${seal}</g>
+    <g transform="translate(${ox} ${oy}) scale(${k})">
+      ${paths(markSvg)}
+    </g>
   </g>
 </svg>`
 }
@@ -568,13 +647,8 @@ function scene(S: Sprites, o: SceneOpts): Raster {
 // ─────────────────────────────────────────────────────────────────── main
 
 await Promise.all([BRAND, ICONS, SOCIAL, DOCS].map((d) => mkdir(d, { recursive: true })))
-// Figma's export sets fill="none" on the <svg> itself (the inner ring is a bare stroke); keep it on a group.
-const seal = `<g fill="none">${inner(await readFile(resolve(BRAND, 'seal.svg'), 'utf8'))}</g>`
-/** The seal on the lockups' 48-unit grid. */
-const seal48 = `<g transform="scale(0.2)">${seal}</g>`
-/** The seal alone, cropped to its drawing, at a pixel size. */
-const sealAt = (size: number) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="${SEAL_CROP}">${seal}</svg>`
+const markSvg = await readFile(resolve(BRAND, 'mark.svg'), 'utf8')
+const monoSvg = await readFile(resolve(BRAND, 'mark-mono.svg'), 'utf8')
 const wm = parseWordmark(await readFile(resolve(BRAND, 'wordmark.svg'), 'utf8'))
 const out = async (file: string, data: Buffer | string) => {
   await writeFile(file, data)
@@ -582,38 +656,40 @@ const out = async (file: string, data: Buffer | string) => {
 }
 
 // Lockups
-const L = lockups(seal48, wm, T.text)
+const L = lockups(markSvg, wm, T.text)
 await out(resolve(BRAND, 'lockup.svg'), L.horizontal)
 await out(resolve(BRAND, 'lockup-stacked.svg'), L.stacked)
 
-// Favicon: the seal itself, cropped to its drawing — vector, plus PNGs for
-// browsers that do not take SVG favicons.
-await out(resolve(ICONS, 'favicon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${SEAL_CROP}"><title>Merchant Mercenaries</title>${seal}</svg>\n`)
-const fav16 = await svgPng(sealAt(16), 16)
-await out(resolve(BRAND, 'mark-16.png'), fav16)
-await out(resolve(ICONS, 'favicon-32.png'), await svgPng(sealAt(32), 32))
+// Pixel mark
+const px = outline(PIXEL_MARK)
+const px1 = pixelRaster(px)
+await out(resolve(BRAND, 'mark-16.png'), await px1.png())
+await out(resolve(ICONS, 'favicon.svg'), pixelSvg(px))
+await out(resolve(ICONS, 'favicon-32.png'), await px1.scale(2).png())
 
-// App icons. 0.78 is the Figma master's proportion (the seal's frame spans 800 of 1024).
+// App icons (vector — at 180px and up the full mark has room)
 const ICON_SET = [
-  { file: 'icon-192.png', size: 192, inset: 0.78, shape: 'squircle' as const },
-  { file: 'icon-512.png', size: 512, inset: 0.78, shape: 'squircle' as const },
-  // Maskable: full-bleed ground, and the seal (drips included) inside the 80% safe circle.
-  { file: 'icon-192-maskable.png', size: 192, inset: 0.66, shape: 'square' as const },
-  { file: 'icon-512-maskable.png', size: 512, inset: 0.66, shape: 'square' as const },
+  // The seal fills ~78% of the tile, as on the designer's 1024 master (800 of 1024).
+  { file: 'icon-192.png', size: 192, inset: 0.76, shape: 'squircle' as const },
+  { file: 'icon-512.png', size: 512, inset: 0.76, shape: 'squircle' as const },
+  // Maskable: full-bleed ground, and the whole seal (drips included) inside the
+  // 80% safe circle with room to spare (its height is 60% of the tile).
+  { file: 'icon-192-maskable.png', size: 192, inset: 0.6, shape: 'square' as const },
+  { file: 'icon-512-maskable.png', size: 512, inset: 0.6, shape: 'square' as const },
   // iOS masks it itself and composites alpha onto black: opaque, full-bleed.
-  { file: 'apple-touch-icon.png', size: 180, inset: 0.78, shape: 'square' as const },
+  { file: 'apple-touch-icon.png', size: 180, inset: 0.72, shape: 'square' as const },
 ]
 for (const t of ICON_SET) {
-  await out(resolve(ICONS, t.file), await sharp(Buffer.from(iconSvg(seal, t.size, t.inset, t.shape))).png({ compressionLevel: 9 }).toBuffer())
+  await out(resolve(ICONS, t.file), await sharp(Buffer.from(iconSvg(markSvg, t.size, t.inset, t.shape))).png({ compressionLevel: 9 }).toBuffer())
 }
 
 // iOS app (Capacitor). The App Store rejects an icon with any alpha, so the
 // alpha channel is dropped, not just left opaque. The launch image is cropped
 // to the screen's shape (aspect-fill), so the seal sits small in the middle,
 // where every phone keeps it.
-const APP_ICON = await sharp(Buffer.from(iconSvg(seal, 1024, 800 / 1024, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
+const APP_ICON = await sharp(Buffer.from(iconSvg(markSvg, 1024, 0.76, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
 await out(resolve(XCASSETS, 'AppIcon.appiconset/AppIcon-512@2x.png'), APP_ICON)
-const LAUNCH = await sharp(Buffer.from(iconSvg(seal, 2732, 0.2, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
+const LAUNCH = await sharp(Buffer.from(iconSvg(markSvg, 2732, 0.18, 'square'))).removeAlpha().png({ compressionLevel: 9 }).toBuffer()
 for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
   await out(resolve(XCASSETS, 'Splash.imageset', f), LAUNCH)
 }
@@ -622,17 +698,15 @@ for (const f of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x
 const S = await loadSprites()
 // Social card: the 600×315 scene at exactly 2×, lockup and line in the sky.
 const og = scene(S, { w: 600, h: 315, ground: 150 }).scale(2)
-const ogLock = lockups(seal48, wm, T.text)
-const lockW = 700
+const ogLock = lockups(markSvg, wm, T.text)
+const lockW = 960
 const lockH = Math.round((lockW / ogLock.hW) * 48)
 const ogBase = sharp(await og.png())
 const lockPng = await svgPng(ogLock.horizontal, lockW, lockH)
 const tagline = await readFile(resolve(BRAND, 'tagline.svg'), 'utf8')
 const tl = parseWordmark(tagline)
-// Sized by height (the old 640px-wide line's), not width: a short line set to a
-// fixed width would outshout the name above it.
-const tagH = 34
-const tagW = Math.round((tagH / tl.h) * tl.w)
+const tagW = 520
+const tagH = Math.round((tagW / tl.w) * tl.h)
 const tagSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${tl.x} ${tl.y} ${tl.w} ${tl.h}" width="${tagW}" height="${tagH}"><path fill="${T.gold}" d="${tl.d}"/></svg>`
 await out(
   resolve(SOCIAL, 'og-image.png'),
@@ -650,33 +724,39 @@ await out(
   const W = 1400
   const cell = (label: string, x: number, y: number) =>
     `<text x="${x}" y="${y}" font-family="DejaVu Sans, sans-serif" font-size="13" fill="#b89e7e">${label}</text>`
+  const monoOn = (c: string) => monoSvg.replace(/currentColor/g, c)
   const blocks: OverlayOptions[] = []
   let labels = ''
   const put = async (buf: Buffer, x: number, y: number, label?: string) => {
     blocks.push({ input: buf, left: x, top: y })
     if (label) labels += cell(label, x, y - 10)
   }
-  // Row 1: the seal on its three grounds, and the app-icon master
-  await put(await svgPng(sealAt(200), 200), 40, 80, 'The seal · on dark wood')
-  await put(await sharp(Buffer.from(iconSvg(seal, 200, 0.78, 'square'))).png().toBuffer(), 290, 80, 'App icon (1024 master)')
-  await put(await svgPng(sealAt(200), 200), 540, 80, 'On parchment')
-  await put(await svgPng(sealAt(200), 200), 790, 80, 'On white (print)')
-  // Reduction ladder
+  // Row 1: the mark in its three colour ways at 200px
+  await put(await svgPng(markSvg, 200), 40, 80, 'Full colour · on dark wood')
+  await put(await svgPng(monoOn(T.gold), 200), 290, 80, 'One colour · gold')
+  await put(await svgPng(monoOn(T.ink), 200), 540, 80, 'One colour · ink on parchment')
+  await put(await svgPng(monoOn('#000000'), 200), 790, 80, 'One colour · black (print)')
+  // Reduction ladder, vector vs pixel
   let x = 1040
   for (const s of [64, 32, 16]) {
-    await put(await svgPng(sealAt(s), s), x, 80, s === 64 ? 'Vector 64 / 32 / 16' : undefined)
+    await put(await svgPng(markSvg, s), x, 80, s === 64 ? 'Vector 64 / 32 / 16' : undefined)
     x += s + 16
   }
+  x = 1040
+  await put(await px1.png(), x, 190, 'Pixel 16 · 1× 2× 4× 8×')
+  await put(await px1.scale(2).png(), x + 28, 190)
+  await put(await px1.scale(4).png(), x + 72, 190)
+  await put(await px1.scale(8).png(), x + 148, 170)
   // Row 2: lockups
   await put(await svgPng(L.horizontal, 520, Math.round((520 / L.hW) * 48)), 40, 330, 'Primary lockup · horizontal')
   await put(await svgPng(L.stacked, 220, Math.round((220 / L.sW) * 68)), 620, 330, 'Stacked')
-  const inkLock = lockups(seal48, wm, T.ink)
-  await put(await svgPng(inkLock.horizontal, 400, Math.round((400 / inkLock.hW) * 48)), 900, 358, 'Lockup · on parchment')
+  const inkLock = lockups(monoSvg.replace(/currentColor/g, T.ink), wm, T.ink)
+  await put(await svgPng(inkLock.horizontal, 400, Math.round((400 / inkLock.hW) * 48)), 900, 358, 'One colour lockup · on parchment')
   // Row 3: app icons + favicon
   x = 40
   for (const t of ICON_SET) {
     const s = t.size > 200 ? 160 : 120
-    await put(await sharp(Buffer.from(iconSvg(seal, s, t.inset, t.shape))).png().toBuffer(), x, 580, t.file.replace('.png', ''))
+    await put(await sharp(Buffer.from(iconSvg(markSvg, s, t.inset, t.shape))).png().toBuffer(), x, 580, t.file.replace('.png', ''))
     if (t.shape === 'square' && t.file.includes('maskable')) {
       // overlay the 80% safe zone circle
       const sz = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}"><circle cx="${s / 2}" cy="${s / 2}" r="${s * 0.4}" fill="none" stroke="#6fce88" stroke-dasharray="4 3" stroke-width="1.5"/></svg>`
@@ -684,15 +764,15 @@ await out(
     }
     x += s + 40
   }
-  await put(await svgPng(sealAt(32), 32), x, 560, 'favicon 32 · 16')
-  await put(fav16, x + 60, 560)
+  await put(await px1.scale(2).png(), x, 560, 'favicon 32 · 16')
+  await put(await px1.png(), x + 60, 560)
   // A mock browser tab on light and dark chrome
   const tab = (bg: string, fg: string) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="36"><rect width="220" height="36" rx="8" fill="${bg}"/><text x="40" y="23" font-family="DejaVu Sans, sans-serif" font-size="13" fill="${fg}">Merchant Mercenaries</text></svg>`
   await put(await sharp(Buffer.from(tab('#f1f1f1', '#222'))).png().toBuffer(), x, 640, 'Tab · light / dark')
-  blocks.push({ input: fav16, left: x + 14, top: 650 })
+  blocks.push({ input: await px1.png(), left: x + 14, top: 650 })
   await put(await sharp(Buffer.from(tab('#35363a', '#eee'))).png().toBuffer(), x, 690)
-  blocks.push({ input: fav16, left: x + 14, top: 700 })
+  blocks.push({ input: await px1.png(), left: x + 14, top: 700 })
 
   const H = 780
   const bgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">

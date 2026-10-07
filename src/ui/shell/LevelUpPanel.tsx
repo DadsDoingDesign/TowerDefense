@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { lookVar, railText } from '../channels'
-import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillLevelLabel, type BumpStat } from '../../game/data/skills'
+import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillHeadline, skillLevelLabel, type BumpStat } from '../../game/data/skills'
+import { computeCombat } from '../../game/engine/combat'
 import { bumpAmount, bumpOffered, MAX_SKILLS, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
+import { PickCard, PickStrip, type PickFact, type PickTokenSpec } from './PickStrip'
 
 /**
  * SK1 — a hero's skill milestone, chosen in the Context panel (rule one)
@@ -19,8 +21,11 @@ import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
  * hero takes +N to one stat instead. The stat bump also fills an offer the
  * pool cannot: there are always three things to choose from.
  *
- * Select, THEN confirm — a permanent pick is never one tap. Never during a
- * live wave: the commit waits for the wave (and its sub-waves) to end.
+ * Pick one, then read (October 2026): the three skills and the stat boost sit
+ * as tokens in a strip, and the focused one's card says what it does and what
+ * it does to the hero's numbers. Focus, THEN confirm — a token never commits;
+ * the CTA names the pick. Never during a live wave: the commit waits for the
+ * wave (and its sub-waves) to end.
  */
 export function LevelUpPanel({ hero }: { hero: Sentinel }) {
   const m = pendingMilestone(hero)
@@ -29,7 +34,8 @@ export function LevelUpPanel({ hero }: { hero: Sentinel }) {
   return <SkillChoice key={`${hero.id}:${m.level}`} hero={hero} />
 }
 
-type Pick = { kind: 'skill'; id: string } | { kind: 'bump'; stat: BumpStat } | null
+/** The focused token: one of the offered skills, or the stat boost. */
+type Focus = { kind: 'skill'; id: string } | { kind: 'bump' }
 
 /** Dealt with: hand back to the reward card that was showing, if there is one. */
 function handBack() {
@@ -40,6 +46,9 @@ function handBack() {
   }
 }
 
+const tokenId = (f: Focus) => (f.kind === 'bump' ? 'bump' : `skill:${f.id}`)
+const focusOf = (id: string): Focus => (id === 'bump' ? { kind: 'bump' } : { kind: 'skill', id: id.slice('skill:'.length) })
+
 function SkillChoice({ hero }: { hero: Sentinel }) {
   const m = pendingMilestone(hero)!
   const pool = useGameStore((s) => s.skillPool)
@@ -49,25 +58,30 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   const chooseStatBump = useGameStore((s) => s.chooseStatBump)
   const taught = useSettingsStore((s) => s.taught.skill)
   const markTaught = useSettingsStore((s) => s.markTaught)
-  const [picked, setPicked] = useState<Pick>(null)
-  const [drop, setDrop] = useState<string | null>(null)
 
   const offer = skillOffer(hero, pool, runSeed)
   const bump = bumpOffered(hero, pool, runSeed)
   const full = slotsFull(hero)
   const amount = bumpAmount(m)
   const held = (hero.skills ?? []).map((id) => skillById(id)).filter((k) => !!k)
-  const chosen = picked?.kind === 'skill' ? skillById(picked.id) : undefined
   const hue = lookVar(hero)
 
-  // The panel is ~150px of body on a phone: a pick brings what it does (and,
-  // when full, the swap row) into view. The commit is pinned below.
+  // Pick one, then read (October 2026): the offer is a strip of tokens — the
+  // skill's lead effect as a picture and a word, the stat boost as one more —
+  // and the focused one's card below. The first is focused as the panel opens,
+  // so the card is never empty; nothing is learned until the CTA, which names it.
+  const focusList: Focus[] = [...offer.map((k) => ({ kind: 'skill' as const, id: k.id })), ...(bump ? [{ kind: 'bump' as const }] : [])]
+  const [focus, setFocus] = useState<Focus | null>(focusList[0] ?? null)
+  const [stat, setStat] = useState<BumpStat | null>(null)
+  const [drop, setDrop] = useState<string | null>(null)
+  const chosen = focus?.kind === 'skill' ? skillById(focus.id) : undefined
+
+  // The panel is ~150px of body on a phone: a swap or stat row brings itself
+  // into view when it opens. The commit is pinned below.
   const bodyRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const body = bodyRef.current
-    const target = drop || !full || picked?.kind !== 'skill' ? body?.querySelector<HTMLElement>('[aria-pressed="true"]') : body?.querySelector<HTMLElement>('.sh-lvl-swap')
-    target?.scrollIntoView({ block: 'nearest' })
-  }, [picked, drop, full])
+    bodyRef.current?.querySelector<HTMLElement>('.sh-lvl-swap, .sh-lvl-bump')?.scrollIntoView({ block: 'nearest' })
+  }, [focus, drop, stat])
 
   const level = skillLevelLabel(m.tier)
   const kicker = full
@@ -78,9 +92,9 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   let name: string | undefined
   let ready = false
   if (live) label = 'After this wave'
-  else if (picked?.kind === 'bump') {
-    label = `Take +${amount} ${BUMP_LABEL[picked.stat]}`
-    ready = true
+  else if (focus?.kind === 'bump') {
+    label = stat ? `Take +${amount} ${BUMP_LABEL[stat]}` : 'Choose a stat'
+    ready = !!stat
   } else if (chosen && full && !drop) label = 'Choose one to swap out'
   else if (chosen && full && drop) {
     // The commit names both halves of the swap: what leaves, what arrives.
@@ -93,11 +107,37 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
   } else label = 'Choose a skill'
 
   const commit = () => {
-    if (!ready || live || !picked) return
+    if (!ready || live || !focus) return
     markTaught('skill')
-    if (picked.kind === 'bump') chooseStatBump(hero.id, picked.stat)
-    else chooseSkill(hero.id, picked.id, drop)
+    if (focus.kind === 'bump') {
+      if (stat) chooseStatBump(hero.id, stat)
+    } else chooseSkill(hero.id, focus.id, drop)
     handBack()
+  }
+  const refocus = (id: string) => {
+    setFocus(focusOf(id))
+    setDrop(null)
+  }
+
+  // What the focused skill does to the numbers a hero is read by — shown only
+  // where it moves them (a burn or a hold says so in its sentence instead).
+  const before = computeCombat(hero)
+  const after = chosen ? computeCombat({ ...hero, skills: [...(hero.skills ?? []).filter((id) => id !== drop), chosen.id] }) : before
+  const facts: PickFact[] = []
+  if (Math.round(after.dps) !== Math.round(before.dps)) facts.push({ label: 'DPS', value: `${Math.round(before.dps)} → ${Math.round(after.dps)}`, tone: after.dps > before.dps ? 'good' : 'bad' })
+  if (Math.round(after.range) !== Math.round(before.range)) facts.push({ label: 'Reach', value: `${Math.round(before.range)} → ${Math.round(after.range)}`, tone: after.range > before.range ? 'good' : 'bad' })
+
+  const tokens: PickTokenSpec[] = [
+    ...offer.map((k) => {
+      const h = skillHeadline(k)
+      return { id: `skill:${k.id}`, art: <Icon name={h.icon} lg />, label: h.label, value: h.value, name: `${k.name}: ${k.desc}` }
+    }),
+    ...(bump ? [{ id: 'bump', art: <Icon name="boon" lg />, label: 'Stat', value: `+${amount}`, name: `Or a stat boost: plus ${amount} to one stat` }] : []),
+  ]
+  const at = focus ? focusList.findIndex((f) => tokenId(f) === tokenId(focus)) : -1
+  const step = (d: number) => {
+    const next = focusList[(at + d + focusList.length) % focusList.length]
+    if (next) refocus(tokenId(next))
   }
 
   return (
@@ -119,78 +159,52 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
             <Icon name="warn" /> Choices are made between rounds — this one opens when the wave is over.
           </p>
         )}
-        {offer.length > 0 && (
-          <div className="sh-lvl-opts" role="group" aria-label={`${level} skills`}>
-            {offer.map((k) => {
-              const on = picked?.kind === 'skill' && picked.id === k.id
-              return (
-                <button
-                  key={k.id}
-                  className="sh-lvl-opt"
-                  style={{ borderLeftColor: hue }}
-                  aria-pressed={on}
-                  data-sfx="toggle"
-                  onClick={() => {
-                    setPicked({ kind: 'skill', id: k.id })
-                    setDrop(null)
-                  }}
-                >
-                  <span className="sh-lvl-opt-name">{k.name}</span>
-                  {/* The choice has the band to itself (`.sh-detail.choosing`),
-                      so all three say what they do at once, side by side. */}
-                  <span className="sh-lvl-opt-blurb">{k.desc}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {full && chosen && (
-          <div className="sh-lvl-swap" role="group" aria-label="Swap out">
-            <p className="sh-line muted">Swap out one of {hero.name}&rsquo;s skills:</p>
-            {held.map((k) => (
-              <button
-                key={k.id}
-                className="sh-lvl-chip"
-                aria-pressed={drop === k.id}
-                data-sfx="toggle"
-                aria-label={`Swap out ${k.name}: ${k.desc}`}
-                onClick={() => setDrop(k.id)}
-              >
-                {k.name}
-              </button>
-            ))}
-            {drop && <p className="sh-line muted">{skillById(drop)?.name} — {skillById(drop)?.desc} It leaves when you swap.</p>}
-          </div>
-        )}
-        {bump && (
-          <div className="sh-lvl-bump" role="group" aria-label="Or take a stat boost">
-            <p className="sh-line muted">{offer.length ? 'Or take a stat boost instead:' : 'Take a stat boost:'}</p>
-            {BUMP_STATS.map((st) => (
-              <button
-                key={st}
-                className="sh-lvl-chip"
-                aria-pressed={picked?.kind === 'bump' && picked.stat === st}
-                data-sfx="toggle"
-                aria-label={`Plus ${amount} ${BUMP_LABEL[st]}: ${BUMP_WHAT[st]}`}
-                onClick={() => {
-                  setPicked({ kind: 'bump', stat: st })
-                  setDrop(null)
-                }}
-              >
-                +{amount} {BUMP_LABEL[st]}
-              </button>
-            ))}
-            {picked?.kind === 'bump' && (
-              <p className="sh-line muted">
-                {BUMP_LABEL[picked.stat]} raises {BUMP_WHAT[picked.stat]}.
-              </p>
+        {focus && (
+          <div className="pk compact">
+            <PickStrip label={`${level} skills`} tokens={tokens} focused={tokenId(focus)} onFocus={refocus} />
+            {chosen ? (
+              <PickCard kicker={`Skill · ${level}`} name={chosen.name} index={at} count={focusList.length} onStep={step} facts={facts} noun="choice" style={{ borderLeft: `3px solid ${hue}` }}>
+                <p className="pk-does">{chosen.desc}</p>
+                {full && (
+                  <div className="sh-lvl-swap" role="group" aria-label="Swap out">
+                    <p className="sh-line muted">Swap out one of {hero.name}&rsquo;s skills:</p>
+                    {held.map((k) => (
+                      <button
+                        key={k.id}
+                        className="sh-lvl-chip"
+                        aria-pressed={drop === k.id}
+                        data-sfx="toggle"
+                        aria-label={`Swap out ${k.name}: ${k.desc}`}
+                        onClick={() => setDrop(k.id)}
+                      >
+                        {k.name}
+                      </button>
+                    ))}
+                    {drop && <p className="sh-line muted">{skillById(drop)?.name} — {skillById(drop)?.desc} It leaves when you swap.</p>}
+                  </div>
+                )}
+                {held.length > 0 && !full && <p className="pk-sec-v">Has: {held.map((k) => k.name).join(' · ')}</p>}
+              </PickCard>
+            ) : (
+              <PickCard kicker="Instead of a skill" name={`+${amount} to one stat`} index={at} count={focusList.length} onStep={step} noun="choice" style={{ borderLeft: `3px solid ${hue}` }}>
+                <div className="sh-lvl-bump" role="group" aria-label="Which stat">
+                  {BUMP_STATS.map((st) => (
+                    <button
+                      key={st}
+                      className="sh-lvl-chip"
+                      aria-pressed={stat === st}
+                      data-sfx="toggle"
+                      aria-label={`Plus ${amount} ${BUMP_LABEL[st]}: ${BUMP_WHAT[st]}`}
+                      onClick={() => setStat(st)}
+                    >
+                      +{amount} {BUMP_LABEL[st]}
+                    </button>
+                  ))}
+                </div>
+                <p className="pk-does">{stat ? `${BUMP_LABEL[stat]} raises ${BUMP_WHAT[stat]}.` : 'STR raises physical damage, DEX attack speed and crit, INT magic damage.'}</p>
+              </PickCard>
             )}
           </div>
-        )}
-        {held.length > 0 && !(full && chosen) && (
-          <p className="sh-line muted">
-            Has: {held.map((k) => k.name).join(' · ')}
-          </p>
         )}
       </div>
       <div className="sh-context-foot sh-lvl-foot">

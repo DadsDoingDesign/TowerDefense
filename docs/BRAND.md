@@ -1,15 +1,4 @@
-# Merchant Mercenaries (formerly Fieldwatch) — brand & UI guide
-
-> **Renamed 2026-10-06.** The game is now **Merchant Mercenaries**. The wordmark,
-> lockups, social card (line: "Sellswords for hire"), page meta and app names are
-> updated; the short name (home-screen label) is **"Merch&Mercs"**. Where this guide
-> says Fieldwatch, read Merchant Mercenaries. Details: `CLAUDE.md` § Name.
->
-> **New mark, 2026-10-06: the Dripping Seal** (`src/assets/brand/seal.svg`, from the
-> designer's Figma component). It replaces the Watchtower described in § Identity
-> below, which is kept here as history only; the pixel favicon is gone too (the
-> favicon is the seal, vector). Chosen over four rounds of concepts in Figma
-> (section LOGO ONLY): 46 concepts, then the designer's own edits.
+# Merchant Mercenaries — brand & UI guide
 
 A **warm, storybook, medieval tower-defense**. The UI is tactile parchment and
 wood framing lush pixel battlefields — cozy, but with stakes. Everything reads
@@ -19,7 +8,13 @@ The rule of thumb: **no cool blue-grey chrome**. Grounds are warm dark wood;
 panels are parchment, wood, or warm-dark slate; the one bright interactive
 colour is the Tiny Swords **teal**, with **gold** for value/emphasis.
 
-## Identity — the mark, the wordmark, the key art
+## Identity — the name, the mark, the wordmark
+
+The game is **Merchant Mercenaries** — short name **MerchMercs** (home screens,
+anywhere the full name cannot fit), tagline **“Guard the road, bank the gold.”**
+It was called *Fieldwatch* until October 2026; the repo, the package, the sprite
+pack id (`fieldwatch`) and every storage key and cache prefix (`fieldwatch-*`)
+keep the old name on purpose — renaming them would orphan players' saves.
 
 Review sheet: `docs/brand/identity-sheet.png`. Every file below is generated
 or hand-written in this repo: no web-fetched images, no model-generated
@@ -28,85 +23,71 @@ the SIL OFL 1.1 (see `public/licenses/THIRD_PARTY_NOTICES.md`).
 
 ### The idea
 
-**The Watchtower on the meadow rim, against a dusk sun, its lamp lit.** The
-field is the horizon, the watch is the tower, and the lit window says someone
-is on watch. The Watchtower is also the player's home screen, so the mark
-names a place in the game rather than inventing a symbol. There is no hidden
-second reading: it is a tower at sunset, and it should look like one at a glance.
+**The Dripping Seal.** A red wax seal pressed on a trade contract, a gold coin
+at its heart and a sword in the wax: the pay, the blade and the bond — the
+whole name in one object. The trade companies hire you by contract; the seal is
+what makes it binding, the coin is what they pay, the sword is what you bring.
+It came out of four rounds of concepts in the Figma file (`LOGO ONLY`, concept
+29 refined, after the designer's three notes: the sword sits inside the gold,
+in the ring's own red, and only the crossguard's arms reach out to the ring).
 
-Routes tried and dropped: a tower standing on a mound (read as a chess rook,
-and shrank to a speck in a square icon); a deck-and-eaves watchtower (a cross
-at 16px); a shield-and-lantern monogram (the shield is the genre's default,
-and the old placeholder icon was exactly that).
-
-### Construction (`src/assets/brand/mark.svg`, 48-unit grid)
+### Construction (`src/assets/brand/mark.svg`, drawn on a 240 grid, set at 0.2 on the 48 grid)
 
 | Part | Geometry | Why |
 |---|---|---|
-| Disc | circle c(24,24) r22 | The sun. It is the container, so the mark is square and survives any crop. |
-| Horizon | quadratic (0,39.5) → ctrl (24,30.6) → (48,39.5), crest y35.05 | A mound, not a flat line: the tower stands on a rise, and the disc reads as setting. |
-| Tower | axis x23.5, body 8.4 → 10.4 wide, eaves 13.2 at y20, apex y10.2 | Stocky enough to hold at 32px. The eaves overhang 2.4 each side, enough to read as a roof but not so much that it turns into a pine. |
-| Pole + pennant | pole 1.3 wide to y5; swallowtail y5 → 8.8, tip x31.9 | Life and wind; it is also the asymmetry that stops the silhouette looking like a chess piece. |
-| Window | arched, 3 × 5.6 | The lamp. In one colour it becomes an island of ink inside the tower. |
-
-Optical corrections: the tower axis sits 0.5 left of centre to balance the
-pennant's mass on the right; the pennant is kept 2.7 units inside the disc so
-no gold sliver thins to a hairline; the icons nudge the disc 1% below centre
-because its visible mass is the top 80%.
-
-The gold is one compound path (disc minus tower minus hill), so the mark is a
-single-ink shape by construction; the full-colour version only adds the cream
-lamp and the teal pennant on top.
+| Wax | an irregular blob x26→215, `#b23a2c`, with two drips (the long one carries a shine dot) | Hand-pressed, not a perfect disc: it reads as wax at a glance, and the drips stop it from reading as a coin or a badge. |
+| Ring | circle c(120,112.8) r73.44, `#982f22` | Where the stamp pressed: one solid red, the same value the sword uses. |
+| Coin | face r57.6 `#e0ac4c` over an edge `#a8772a` dropped 4.6, struck ring r46.08 | The pay, in the game's own gold (`--accent`). |
+| Sword | pommel, grip, crossguard and a blade with a fuller, all in the ring's red | Sits on the gold; one colour with the wax so the seal stays one object. |
+| Shine | a round-capped stroke top left, `#e9806a` | Wet wax: the only highlight. No glow, no stroke, no shadow on the mark. |
 
 ### The pixel mark (`PIXEL_MARK` in `scripts/brand.ts`, 16×16)
 
-Below about 40px the vector's pole, pennant and window fall between pixels. The
-reduction is **drawn on the grid**, not scaled: it keeps the three things that
-carry the idea (disc, tower, horizon), thickens the tower from 18% to 36% of
-the disc, and uses the icon atlas's convention: interior art inside rows and
-columns 1–14, ringed by `outline()` in the Tiny Swords `#161C2E`. So it sits
-beside `fw-icons.png` as one family. Display it at 16 or 32 CSS px only
-(integer multiples), with `image-rendering: pixelated`.
+Below about 40px the vector's shine, struck ring and fuller fall between pixels.
+The reduction is **drawn on the grid**, not scaled: the wax with its drips, the
+gold coin, and a sword with a pommel, a short guard and a two-pixel blade (so it
+reads as a sword, not a cross). It uses the icon atlas's convention: interior
+art inside rows and columns 1–14, ringed by `outline()` in the Tiny Swords
+`#161C2E`, so it sits beside `fw-icons.png` as one family. Display it at 16 or
+32 CSS px only (integer multiples), with `image-rendering: pixelated`.
 
 ### Colour ways
 
 | Use | Mark | Wordmark |
 |---|---|---|
-| **On dark wood** (default: app, menu, social) | Full colour: gold `--accent` disc, cream `#fff1c8` lamp, teal `--teal` pennant | Cream `--text` |
-| **On parchment** | One colour, ink `--ink` (`mark-mono.svg` with `color: var(--ink)`) | Ink `--ink` |
-| **One colour** (print, emboss, a stamp, a watermark) | `mark-mono.svg` in any single ink; black or white for print | Same ink |
+| **On dark wood** (default: app, menu, social) | Full colour | Cream `--text`; the tagline in gold `--accent` |
+| **On parchment** | One colour, ink `--ink` (`mark-mono.svg`: the coin knocked out, the sword and struck ring left standing) | Ink `--ink` |
+| **One colour** (print, emboss, a stamp, a watermark) | `mark-mono.svg` in any single ink | Same ink |
 
-Do not recolour the full-colour mark onto parchment: gold on `--paper` is
-under 2:1. Do not add a stroke, glow or shadow to the mark. The silhouette is
-transparent, so the tower and the hill are always the ground the mark sits on.
-The app icons fill them with a deeper wood (`#170f0a`) so the disc reads as a
-whole circle on a launcher.
+The full-colour seal is safe on parchment too (the wax is dark enough), but the
+one-colour version is the stamp's natural form. The app icons set the seal on
+the designer's dark-wood ground with a warm glow.
 
 ### The wordmark and the lockups
 
 `wordmark.svg` is **Crimson Text Bold outlined**, not live text, by
-`scripts/brand-wordmark.py` (fontTools). Outlines, because the lockup must render
-identically where our `@font-face` cannot load: sharp/librsvg rasterising the
-social card, email, store listings, a press kit. It is spaced by eye (tracking
-−8/1000, plus four pair adjustments), because the font's own kerning is tuned
-for 17px running text. In the UI, headings stay live Crimson Text: the menu's
-`<h1>` is text a screen reader and a translator can use.
+`scripts/brand-wordmark.py` (fontTools), with tracking −8/1000 and a few pair
+adjustments. Outlines, because the lockup must render identically where our
+`@font-face` cannot load: sharp/librsvg rasterising the social card, email,
+store listings, a press kit. In the UI the name stays live Crimson Text: the
+menu's `<h1>` is text a screen reader and a translator can use, drawn under the
+seal (the stacked lockup) with no extra tracking so it fits a 390 phone at 34px.
 
-- `lockup.svg` (**primary, horizontal**): the wordmark's **baseline sits on the
-  mark's horizon crest** and its cap height is 20 units (≈45% of the disc), so
-  the word stands on the same ground as the tower. Gap: 10 units from the disc.
-- `lockup-stacked.svg`: for square or tall spaces (a splash, a store tile).
-  Mark centred over the word, cap height 16.
+- `lockup.svg` (**primary, horizontal**): the seal, then the name with its caps
+  centred on the seal's pressed ring, cap height 16 units, 8 units from the wax.
+- `lockup-stacked.svg`: the seal centred over the name, for square or tall
+  spaces (the menu, a splash, a store tile).
 - Mark alone: avatars, favicons, app icons, anywhere the name is already said.
+- `tagline.svg`: “Guard the road, bank the gold.” in Crimson Text SemiBold, set
+  under the lockup on the social card.
 
 ### Clear space and minimum size
 
-- **Clear space:** half the disc's radius (11 units on the 48 grid, i.e. 23% of
-  the mark's height) on every side, for the mark and for both lockups. Nothing
-  (type, frame edge, other logos) enters it.
-- **Minimum size:** the vector mark at **40px**. Below that, use the pixel mark
-  at 16 or 32px, never a scaled vector. The horizontal lockup at **120px wide**
-  (the wordmark's counters close below that); smaller than that, use the mark alone.
+- **Clear space:** a quarter of the seal's height on every side, for the mark
+  and both lockups.
+- **Minimum size:** the vector seal at **40px**. Below that, the pixel mark at
+  16 or 32px, never a scaled vector. The horizontal lockup at **200px wide** (the
+  name is long); smaller than that, use the stacked lockup or the mark alone.
 
 ### Files and where they are used
 

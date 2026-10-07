@@ -3173,3 +3173,150 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   itself, so the inner coin ring filled black once unwrapped — the seal is now
   wrapped in a `fill="none"` group. Scorecard: readability 5/5, hierarchy 4/5,
   polish 4/5.
+
+- **2026-10-06 — A sword swings, a bow shoots, and the hero holds its gear.**
+  The designer: "if a weapon is melee it shouldnt fire projectiles, and the
+  items should display on the character and then the projectiles should match
+  the effects of the weapon and melle if it has effects should show too".
+  Every hit is still a projectile in the engine (its flight is the damage
+  timing; the engine, `npm run balance` and the determinism tests are
+  untouched). What is DRAWN now comes from the weapon (`render/attackLook`):
+  a sword, axe, greatsword or warhammer (or a skill's `grantsMelee`) draws no
+  projectile at all — its flight is a blade crescent swept round the hero
+  through the target, landing as the hit lands, held a beat as a fading mark
+  at 3× — and the hero leans into it instead of recoiling, with no muzzle
+  flash; a bow fires a shafted, fletched arrow; a knife spins; a wand, staff,
+  rod, sceptre or grimoire throws a bolt, violet when it carries no element;
+  bare hands throw a pebble. One effect palette inks the trail, the swing and
+  the impact, each effect with its own SHAPE: burn sheds embers, chill strings
+  frost shards and drops spinning shards and a cold ring, shock drags a
+  yellow-white crackle and throws three crackles, a siphon twists a red double
+  helix and pulls red motes back to the hero; pierce sends an arrow ghost on
+  through; splash keeps its ring. The heroes carry their real items
+  (`render/gearMarks`): the atlas cell of the weapon in the right fist and the
+  off-hand piece in the left, pixel-doubled once and blitted 1:1; where the
+  Tiny Swords art paints a weapon the hero is not holding, that weapon is cut
+  out of the idle strip before the bake (a knight with an axe holds an axe; a
+  knight with only a shield holds no sword) and the attack strip, which swings
+  the painted one, is not played — the item itself lunges. An enchanted weapon
+  glints at its tip in its ink. The roster card prints the weapon's icon beside
+  its name. Rendered: a scratch harness through the real draw code (every hero
+  kit, every delivery × effect in flight, swings at 35/70/100%, impacts at +30
+  and +120 ms, phone view and 3× inspection) and the running app at 390×844
+  @2x (freeze-frame close-ups of a flaming sword, frost axe, shocking hammer,
+  plain/shocking/piercing bow, plain/frost wand, flaming staff, vampiric
+  dagger, unarmed; reduced motion) and 1440×900. The loop caught: (1) the
+  first held icons sat beside the painted sword — two weapons in one hand —
+  hence the cut; (2) a stroked arc at the target read as a comet, not a slash
+  — it is a filled crescent, fullest behind the leading edge; (3) the arc and
+  bursts landed at the goblin's feet (its position) — lifted onto the body;
+  (4) glints and trails were sub-pixel at phone scale — enlarged, with an ink
+  halo; (5) shock and chill were two pale blues — shock's core is yellow-white
+  now; (6) the painted sword's glint chased the lunge and the attack frames —
+  pinned to the idle tip. Frame cost, 4× CPU, phone, live depth-6 elite wave,
+  interleaved A/B against aa03551 (3 × 3 runs each, dev): p50 5.8 → 6.4 ms,
+  p95 17.2 → 17.3 ms, 24.9 → 24.7 fps. Benchmark: Kingdom Rush's barracks
+  swing at the target rather than shoot it, and its mage bolts read by colour
+  alone — here each element is also a shape. Scorecard: readability 4/5,
+  hierarchy 4/5, polish 4/5. Still open: the body piece is not drawn (no
+  silhouette on these chibis); the roster portraits are still the look's
+  painted art (the card's sub-line carries the real weapon's icon).
+
+- **2026-10-06 — The coach is a hint pill; the header loses the wordmark.**
+  The player: the "Got it" banner was a chore that moved the content, and
+  "get rid of the name fieldwatch too in the header. we need the space". The
+  coach row (and the held-open empty row of audit 2.5) is gone from every band
+  layout; tips, field notes and the new-ground note float as one dark pill
+  over the Stage's top or bottom edge (`pointer-events: none`), fade in, stay
+  2.5 s + 60 ms a word (cap 9 s, paused while the tab is hidden), fade out and
+  mark themselves taught; the words go through the Announcer. The header is
+  one row (depth · strength · cargo · gold): 76/68/62.6 → 44/40/38 at
+  390/375/320 (53 at 320 once depth and strength are both up), desk 60 → 52.
+  Rendered in the running app at 320×568, 375×667, 390×844 @2x touch,
+  430×932 and 1440×900, with the Stage's box logged every frame of a whole
+  first battle: one box from setup through the breather to the last enemy
+  (390: 0,44,390×606 — it was 121→76→121 as the row came and went; 320:
+  0,38,320×356; 1440: 0,52,979×848). The loop caught: (1) the strip tips on
+  the bottom edge sat on the wagons on every portrait field — a bottom-edge
+  tip moves to the top while the field is in play and the wagons are low;
+  (2) on the run map the bottom edge is the stops you can march to — map
+  tips float on top, below the receipt toast when one is up; (3) on the 375
+  and 320 reward screens the gear tip covered "Wave cleared" — a Stage under
+  240px holds the ceremony alone and the tip waits for the map, and tips wait
+  out the 700 ms re-layout so none flashes; (4) a tip that left on its own
+  remounted for its fade and was announced twice — the fade is decided in
+  render; (5) at 360–390 with depth, strength and a 4-digit purse the cargo
+  block overflowed into the gold — the chips slim below 390, the word "Cargo"
+  steps aside under 150px (container query), and depth AND strength under
+  360 (or Large UI under 430) take two tight rows; (6) the pill's 7/9px
+  padding broke the spacing scale. Whales: pill text 12px, --text ~13:1 and
+  --accent-text ~8:1 on its wash; the scan (38 screens, two new: the setup
+  pill on each viewport) has no new violation — contrast 1 → 2 is the
+  merchant's accepted scroll fade on desk (its stock is random), chrome drops
+  on every battle and map screen (390 setup 9.7% → 5.9%). Benchmark: Kingdom
+  Rush's and Bloons' first-run hints are transient callouts over the field
+  that never reflow the HUD; Clash Royale's header is one row of numbers.
+  Scorecard: readability 4/5, hierarchy 4/5, polish 4/5. Still open: 60 ms a
+  word is quick (a 20-word tip gets 3.7 s); the receipt toast still sits by
+  `--sh-header-min`, 7px into a two-row 320 header.
+
+- **2026-10-07 — Pick one, then read; Merchant Mercenaries; company logos.**
+  The Figma proposal ("Pick one, then read", Audit page) landed on every
+  choose-one surface that does not commit on the tap: the contract board, the
+  hero pick, a recruit, a city's cash-out-or-press-on and the skill
+  milestone. One component (`ui/shell/PickStrip.tsx`, `styles/pick.css`): a
+  strip of picture tokens with ONE label + number and no name (company logo +
+  "Rep: 2", hero sprite + "DPS 126", a skill's lead effect + "Speed +15%"),
+  and the focused option's card below in a fixed recipe (head, up to three
+  facts, what it does, specifics) with a CTA that names it ("Read
+  Peppercorn's terms", "Choose Sorrel", "Learn Hard Hitter"). Tokens are a
+  radio group (← → ↑ ↓ Home End, one tab stop); tapping focuses and never
+  commits. Desk (≥900): the strip is a rail beside the card in an 800px
+  column, the CTA under the card. The spoils and the campfire keep main's
+  one-tap commit. Rendered in the running app at 390×844 and 1440×900
+  (board, a locked company focused, hero pick first-run and returning,
+  recruit, city with each way focused, skill choice, the stat boost). The
+  loop caught: (1) fact values truncated ("Cursed grou…", "1 item, 1 …") —
+  facts wrap now; (2) the city's coin token read as a flat yellow square —
+  the gold icon at 32px; (3) gear icons at 16px were lost in 44px slots —
+  32px; (4) the head art box was a pale parchment square under a dark card —
+  dark well like the facts; (5) on desk the CTA ran under the rail — it is
+  indented under the card. Decisions: the city focuses "Press on" first, so
+  a habitual tap on the pinned CTA never ends a contract; a skill milestone
+  opens with its first skill focused (opening the milestone and the named
+  CTA are the two acts); the seed chip left the hero pick (the designer's
+  review: a seed is not public). Benchmark: Slay the Spire's and Hades'
+  choose-one screens show every option's deciding fact side by side and one
+  full description at a time. Scorecard: readability 4/5, hierarchy 5/5,
+  polish 4/5. Still open: the returning city page is long on a 390 phone
+  (the card's risk line sits at the fade until scrolled); a full company's
+  recruit tokens are all one sprite when the three carry the same weapon.
+
+- **2026-10-07 — A tap reads a reward; the CTA takes it.** The designer:
+  "tapping an item to try to change which stats are previewed after winning a
+  round auto-selects it." Main's one-tap rewards took the card on the very
+  tap a player made to compare it, and a hold to look is not something a
+  player reaches for first. The reward cards (in place after a wave, and the
+  elite/boss Spoils page) are select-then-take again: a tap selects the card
+  (gold ring, detail in the Context panel, gear preview), and the wave strip's
+  full-height CTA — or the Spoils page's pinned CTA — names it: "Take Cruel
+  Bow". The campfire keeps the one-tap commit. Verified in the running app at
+  390×844 and 1440×900 by script, not by eye: tapping a second card leaves
+  `reward` set (wave strip and Spoils page), and the CTA takes the card it
+  names ("Take Twinblade Harness"). The loop caught: the longest name wraps
+  the strip CTA to two lines at 390 — kept (22px, two balanced lines, still
+  the loudest control); the font steps to 19px under 380. Scorecard:
+  readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
+  card reward and Hades' boon pick both read on hover/select and commit on a
+  separate, deliberate act.
+
+- **2026-10-07 — main merged into the iOS branch; main's brand wins.** Both
+  branches had rebranded in parallel. main's (merged later, PR #10) is the one
+  kept: short name MerchMercs (now also the iOS `CFBundleDisplayName`), the
+  tagline "Guard the road, bank the gold.", and `mark.svg` as the seal's
+  source. `scripts/brand.ts` keeps the iOS outputs: the 1024 App Store icon
+  (seal at 0.76 of the tile, alpha removed) and the 2732² launch image (seal at
+  0.18, centred, so every phone's aspect-fill crop keeps it). Rendered: the
+  icon at 256 and the launch image cropped to a phone's shape; the built app at
+  390×844 boots through `src/boot.ts` with no console errors. The web icons it
+  regenerates are byte-identical to main's. `seal.svg` is no longer read.

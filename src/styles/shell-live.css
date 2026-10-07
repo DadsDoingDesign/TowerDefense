@@ -9,9 +9,11 @@
  * collapses to the wave strip alone and the Stage — the only `1fr` row — takes
  * every pixel it gave up:
  *
- *     header + coach + STAGE + selector + wave strip  ==  100dvh
+ *     header + STAGE + selector + wave strip  ==  100dvh
  *
  * 390x844: Stage 332 -> ~560. 375x667: ~170 -> ~390. 320x568: ~120 -> ~330.
+ * (October 2026: the one-row header gives the Stage ~25-32px more on top of
+ * these, and the coach no longer takes a row — see shell.css.)
  * The field is width-bound on every portrait phone (the lane runs edge to edge),
  * so on the tall ones more of the map round it shows (grid-fit: one continuous
  * map, no apron); on the short ones the field itself grows to full width.
@@ -351,11 +353,8 @@
 }
 
 /* ------------------------------------------------------------ a11y (F6) */
-/* The bands' heading is the brand word, now an <h1>; keep its look. */
-h1.sh-brand {
-  margin: 0;
-  line-height: 1.2;
-}
+/* The bands' heading is an off-screen <h1> now (`.sh-screen-h`, shell.css):
+   the FIELDWATCH wordmark it used to wear left the in-run header. */
 /* Headings take PROGRAMMATIC focus on a screen change (tabindex -1); they are
    not controls, so no ring. */
 .shell h1[tabindex='-1']:focus,
@@ -1217,22 +1216,31 @@ h1.sh-brand {
 }
 
 /* ==========================================================================
-   One-tap rewards (October 2026) — the strip after a cleared wave
+   3.2 (Oct 2026) — the reward's commit in the strip
    ==========================================================================
-   3.2 put "Take it" here at full CTA height. With one-tap rewards a tap on a
-   card takes it, so the strip holds no commit: it keeps the moment ("Wave
-   cleared · 32 earned") and, until the first one-tap commit, says how the
-   hand works ("Tap to take · hold to look") where the button was. The strip
-   keeps its height either way, so nothing in the band moves when the hint
-   is spent. */
+   With the reward hand in place the wave strip's action slot holds the take —
+   "Take Cruel Bow", naming the selected card — at full CTA height
+   (`--cta-h`): the loudest control on the screen and the last thing in
+   reading order. A tap on a card only reads it. (Main's one-tap rewards held
+   a hint here instead; the designer moved the commit back to the CTA.) */
 .sh-wavebar.commit {
   padding-top: 6px;
   padding-bottom: 6px;
 }
-.sh-wavebar .sh-wq-hint {
+.sh-wavebar.commit .sh-btn.sh-commit {
   flex: 0 1 auto;
-  max-width: 60%;
-  text-align: right;
+  min-width: 168px;
+  max-width: 62%;
+  min-height: var(--cta-h);
+  padding: 0 20px;
+  font-size: 22px;
+  line-height: 1.1;
+}
+@media (max-width: 379.98px) {
+  .sh-wavebar.commit .sh-btn.sh-commit {
+    min-width: 132px;
+    font-size: 19px;
+  }
 }
 /* The header's Depth chip already names the wave; after a cleared wave the
    strip keeps the moment ("Wave cleared") whole rather than "DEPTH…". */
@@ -1281,34 +1289,4 @@ h1.sh-brand {
   font-weight: 800;
   line-height: 1.3;
   text-align: center;
-}
-
-/* ==========================================================================
-   2.5 (Oct 2026) — the coach row never moves the Stage mid-wave
-   ==========================================================================
-   A row held open for a live wave (`holdCoachRow`) is one fixed height from
-   the wave's first frame to its last — two lines of tip — whatever it says,
-   or nothing: a tip taught mid-wave leaves it open and quiet. */
-.sh-coach.held {
-  height: calc(2 * 1.35 * var(--fs-xs) + 2 * var(--sh-coach-pad) + 1px);
-  overflow: hidden;
-}
-.sh-coach.held .sh-coach-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.sh-coach.held.empty {
-  background: var(--panel);
-}
-/* With no row held, a field note during a live wave is said in the strip's
-   caption slot for its few seconds — one line, the strip's own height. */
-.sh-wq-cap.note .sh-wq-name {
-  flex: 0 0 auto;
-  color: var(--bad-text);
-}
-.sh-wq-cap.note .sh-wq-now {
-  text-transform: none;
-  letter-spacing: 0;
 }

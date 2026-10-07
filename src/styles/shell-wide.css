@@ -36,9 +36,10 @@
     --sh-side-w: clamp(400px, 32vw, 468px);
     max-width: none;
     grid-template-columns: minmax(0, 1fr) var(--sh-side-w);
-    /* header · coach · selector · detail. The Stage spans the last two rows
-       of the left column; the detail row is the one that takes the slack. */
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    /* header · selector · detail. The Stage spans the last two rows of the
+       left column; the detail row is the one that takes the slack. (The coach
+       row is gone: the coach floats over the Stage, October 2026.) */
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
   /* -- band 1: one row across the whole width -------------------------------- */
@@ -48,29 +49,24 @@
     flex-direction: row;
     align-items: center;
     gap: 28px;
-    min-height: 60px;
+    min-height: 52px;
     padding-top: var(--sh-header-pad);
     padding-bottom: var(--sh-header-pad);
     /* room for the "?" shortcuts button pinned at the right */
     padding-right: 72px;
   }
-  .shell:not(.shell-page) > .sh-header > .sh-header-row.sub {
-    flex: 1;
+  /* No wordmark (October 2026): the run state is the whole row. */
+  .shell:not(.shell-page) > .sh-header > .sh-header-row {
     gap: 24px;
   }
   .shell:not(.shell-page) .sh-base-bar {
     max-width: 320px;
   }
 
-  .shell:not(.shell-page) > .sh-coach {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
   /* -- band 2: the Stage, left, full height -------------------------------- */
   .shell:not(.shell-page) > .sh-stage {
     grid-column: 1;
-    grid-row: 3 / 5;
+    grid-row: 2 / 4;
     border-bottom: 0;
     border-right: 1px solid var(--line);
   }
@@ -90,14 +86,14 @@
   /* -- band 3: the party row, top of the right column ---------------------- */
   .shell:not(.shell-page) > .sh-selector {
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 2;
   }
 
   /* -- band 4: the Detail band fills the rest of the right column ---------- */
   .shell:not(.shell-page) > .sh-detail,
   .shell:not(.shell-page) > .sh-detail:has(> .sh-wavebar) {
     grid-column: 2;
-    grid-row: 4;
+    grid-row: 3;
     height: auto;
     min-height: 0;
   }
@@ -162,7 +158,8 @@
 .sh-keys {
   display: none;
   position: fixed;
-  top: calc(10px + var(--safe-top, 0px));
+  /* Centred on the 52px wide header. */
+  top: calc(6px + var(--safe-top, 0px));
   right: max(14px, var(--safe-right, 0px));
   z-index: 30;
 }

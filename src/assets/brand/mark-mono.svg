@@ -1,9 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
   <title>Merchant Mercenaries</title>
   <!--
-    One-colour mark. Same geometry as mark.svg; the pennant is a knock-out and the lamp is a
-    solid island, so the whole idea survives a single ink. Fill is currentColor: set `color`
-    (gold on dark wood, ink on parchment, black or white for print and emboss).
+    One-colour mark. Same geometry as mark.svg: the wax and drips in one ink, the coin knocked
+    out of it, and the sword (with its crossguard running into the wax) and the struck ring left
+    standing in the hole. Fill is currentColor: set `color` (gold on dark wood, ink on parchment,
+    black or white for print and emboss).
   -->
-  <path fill="currentColor" d="M6.55 37.4A22 22 0 1 1 41.45 37.4Q35.07 35.68 28.7 35.22L27.7 20H30.1L24.15 11.17V8.8H31.9L29.5 6.9L31.9 5H22.85V11.17L16.9 20H19.3L18.3 35.3Q12.43 35.82 6.55 37.4ZM22 29.6V25.5A1.5 1.5 0 0 1 25 25.5V29.6Z"/>
+  <defs>
+    <mask id="mm-mono-coin" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">
+      <rect width="240" height="240" fill="#fff"/>
+      <circle cx="120" cy="110.4" r="57.6" fill="#000"/>
+      <circle cx="120" cy="110.4" r="46.08" fill="none" stroke="#fff" stroke-width="4.03"/>
+      <path fill="#fff" d="M106.93 108.83H134.61V152.16L120.77 179.24L106.93 152.16Z"/>
+      <rect x="90.01" y="91.98" width="61.51" height="16.85" rx="4" fill="#fff"/>
+      <rect x="113.55" y="69.72" width="14.44" height="24.07" rx="2.4" fill="#fff"/>
+      <circle cx="120.77" cy="62.49" r="11.74" fill="#fff"/>
+    </mask>
+  </defs>
+  <g transform="scale(0.2)" fill="currentColor">
+    <g mask="url(#mm-mono-coin)">
+      <path d="M120 17.76C139.44 15.6 152.4 30.72 169.68 32.88C189.12 37.2 195.6 56.64 204.24 71.76C217.2 89.04 210.72 108.48 215.04 125.76C217.2 145.2 204.24 158.16 193.44 173.28C180.48 188.4 161.04 190.56 143.76 199.2C126.48 207.84 109.2 201.36 91.92 197.04C72.48 192.72 61.68 177.6 48.72 164.64C33.6 149.52 31.44 132.24 27.12 114.96C22.8 95.52 35.76 80.4 42.24 63.12C50.88 45.84 68.16 39.36 85.44 28.56C96.24 22.08 109.2 17.76 120 17.76Z"/>
+    </g>
+    <path d="M64.8 172.8C79.2 182.4 91.2 187.2 96 192C98.4 206.4 96 216 88.8 225.6C81.6 235.2 67.2 232.8 67.2 220.8C67.2 208.8 64.8 192 64.8 172.8Z"/>
+    <path d="M148.8 193.6C158.4 193.6 168 188.8 172.8 184C172.8 196 172.8 203.2 168 208C163.2 215.2 151.2 215.2 151.2 208C151.2 203.2 148.8 198.4 148.8 193.6Z"/>
+  </g>
 </svg>

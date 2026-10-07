@@ -70,7 +70,8 @@ async function open(label, log) {
       return false
     }
   }
-  const tipOff = () => btn('Got it').click({ timeout: 800 }).catch(() => {})
+  // The coach is a hint pill (October 2026): no "Got it" — it fades on its own.
+  const tipOff = () => page.waitForFunction(() => !document.querySelector('.sh-coach'), null, { timeout: 9600 }).catch(() => {})
   const shot = async (name) => {
     await page.screenshot({ path: path.join(OUT, `${label}-${name}.png`) })
     log.push(`shot ${name}`)

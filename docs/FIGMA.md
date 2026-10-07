@@ -5,7 +5,26 @@ system. Every token matches `src/styles/global.css` and `docs/DESIGN_SYSTEM.md`.
 
 **File:** https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite
 
-Two pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
+## Current: page `Audit.16.06.26` — `?node-id=2149-2083`
+
+**Start here.** This page rebuilds the whole design system from `main @ 6588e6a`
+(2026-10-06): tokens, styles, components and screens, exactly as the code ships.
+It supersedes everything below, which is kept as history. The page's own
+`Cover · Read me` frame explains the layout.
+
+| Area | What's in it |
+| --- | --- |
+| Variables | Four local collections. **Merchant Mercenaries · Color**: modes Default, Deuter/Protan, Tritan, High contrast. **Merchant Mercenaries · Type**: modes Default and Large UI. **Merchant Mercenaries · Layout**: space, radius, icon sizes. **Merchant Mercenaries · Shell**: band heights at 390×844, ≤800h, ≤700h, ≤600h. Each variable has WEB code syntax `var(--x)` and a USE FOR / NOT FOR / WHERE description. The older `Fieldwatch Tokens` collection is superseded. |
+| Styles | 32 text styles, bound to the Type variables (Display, Title, Heading, Button, Row, Body, Card, Caption, Eyebrow, Label, Number, Slip). 14 effect styles (Elevation, Ring, Glow, Rail). |
+| Foundations | Plates for Color (every token's use), Icons (all 96 atlas keys as vector components — one shape per colour, traced pixel-exact from `fw-icons.png` — each with meaning and use), Type, Space · Radius · Elevation, and Sprites. |
+| Components 01–10 | About 150 components and sets, grouped by shell band and page family. Each set has a Spec block (source file, CSS class, USE FOR, AUDIT notes). Every variant is labelled under itself with what that state means; the same text is the variant's description. |
+| Screens | Built only from instances: D Battle (12), C Run (8), A Watchtower (16), B Contract (4), E End (4), all at 390×844. W Desktop: 3 screens at 1440×900. |
+| X Edge cases | 15 screens at the limits: five heroes (the Selector scrolls), a full 10-slot pack, a long wave queue (+N chip), long names, Large UI, the 320×568 tier, nothing affordable, roster full, toasts over content, every header chip at once, the longest militia name with an 8-digit bank, and the High contrast and Tritan modes. Magenta dashed boxes are annotations, not UI. |
+| Audit / Findings | 44 findings with severity and `file:line`, plus the visual issues seen in a full capture of `main`. |
+| Brand (Oct 2026) | The game is **Merchant Mercenaries** (short name *MerchMercs*, tagline “Guard the road, bank the gold.” (it replaced “Sellswords for hire”, which said *for hire* twice; the menu subtitle still reads “… · sellswords for hire” in code, `militiaTagline`)). The mark is the **Dripping Seal**: red wax, a gold coin and a sword whose crossguard runs into the ring. It is the chosen concept, *29 refined*, in the `LOGO ONLY` section. A **Brand Lockup** set (Stacked · Horizontal · Short) in Components / 08 Menu replaces the Fieldwatch wordmark on every menu screen and in the rotate prompt. The run header carries no wordmark, as on main. The four variable collections are renamed to `Merchant Mercenaries · …`. The repo itself still uses *Fieldwatch* (`index.html`, `manifest.webmanifest`, `package.json`, `docs/BRAND.md`): those change when the rename lands in code. |
+| Proposal · Pick one, then read | **Built in the game (October 2026)** as `ui/shell/PickStrip.tsx` on the contract board, hero pick, recruit, city payout and skill choice; the reward cards (after a wave, and the elite/boss spoils) are select-then-take with a CTA that names the card ("Take Cruel Bow"); only the campfire commits on the tap. One pattern for every choose-one surface: hero pick, contract board, recruit, elite/boss spoils, city payout and skill choice. Options sit in one row as small Pick Tokens (a new component set: Default, Focused, Seen, Unavailable, Locked). One focused option shows below in a fixed recipe: head, three key facts, what it does, specifics, and a compare line against the option looked at before. Tapping focuses and never commits; the CTA names the choice. Each surface has a before → after pair; there is also a desk master–detail. Revised after the first review: tokens are pictures with one label + number and no name (a new Company Logo set gives each company its own pixel logo), gear is drawn as the in-game equipment slots and skills as the Skill card, and the compare line, the Seen dot and the swipe hint are gone. |
+
+Older pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
 (the mobile system, the flow board, and the Root Shell redesign).
 
 Read the sections in two halves. `FieldWatch`, `01 · Mobile UI System` and
@@ -84,7 +103,7 @@ every other surface becomes a state of those bands rather than a place you go.
 
 | Band | Height | Holds |
 | --- | --- | --- |
-| **Header** | 76 | Run state — depth, base, gold, dust, threat |
+| **Header** | 44 (was 76) | Run state in ONE row — depth, enemy strength, cargo, gold. No wordmark (October 2026) |
 | **Stage** | 388 | The subject: battlefield · map · board · result · title |
 | **Selector** | 126 | The row of choosable things — party, offers, rooms, menu |
 | **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 |
@@ -97,7 +116,9 @@ every other surface becomes a state of those bands rather than a place you go.
    campfire's rest and train commit on the tap itself; holding, hovering or
    focusing one shows its detail instead. See § One-tap commits below.
 2. **The Stage is sacred.** Nothing covers the battlefield or the map — no
-   sheet, no drawer, no scrim.
+   sheet, no drawer, no scrim. The one thing that floats over an edge of it is
+   the coach's hint pill (§ The coach hint pill): it takes no tap and no
+   layout, and it fades on its own.
 3. **The pack is permanent.** The right column is your inventory in battle, on
    the map, at the merchant. Buying an item means watching it land.
 4. **Modals are for regret only.** The one blocking overlay left is a
@@ -197,6 +218,70 @@ wanted the preselected first card — 5 taps (4 at best). **After:** any card is
 1 tap — 4. The first fight adds the same 2 posting taps either way. A campfire
 goes from 2 taps (pick, then "Rest" or "Train") to 1.
 
+### The header — one row, no wordmark (October 2026)
+
+The player's call: "get rid of the name fieldwatch too in the header. we need
+the space." The in-run header no longer shows FIELDWATCH (the title screen
+keeps it). Its heading — the `h1` the shell focuses on a screen change, named
+"Battle — <field>" or "Run map" — is still there, off-screen. What is left is
+one row: **Depth** · (Sovereign) · **enemy strength** · **cargo** (crate, word,
+bar, %) · **gold**. The cargo block is the only part that gives ground: its bar
+shrinks first, then the visible word "Cargo" steps aside (a container query at
+150px; the crate, the bar and the % stay, and the accessible name still says
+"Cargo 100%").
+
+| Header | 430×932 | 390×844 | 375×667 | 360×740 | 320×568 | 1440×900 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before | 76 | 76 | 68 | 76 | 62.6 | 60 |
+| After, first battle (cargo + gold) | **44** | **44** | **40** | **44** | **38** | **52** |
+| After, depth + strength + 4-digit gold | 44 | 44 | 40 | 44 | **53** (two rows) | 52 |
+
+Two rows only where one cannot hold the pieces legibly — depth AND strength on
+a phone under 360 wide, Large UI under 430, or the Sovereign chip on any phone:
+the chips and the purse, then the cargo across the width. That choice is made
+by the viewport and by which chips the run has, never by a number's width, so
+it cannot flip in the middle of a fight.
+
+### The coach hint pill (October 2026)
+
+The player's call: "im not a fan of the banner with the X that i constantly
+have to remove its moving around content and annoying to have a chore." The
+coach was a grid row between the header and the Stage with a "Got it" button;
+every tip pushed the field down 45–74px and its leaving pulled it back, and
+during a live wave the row was sometimes held open, empty, at a fixed height.
+
+It is now a **hint pill** (`Coach.tsx`, rules in `coachRules.ts`):
+
+- **No layout.** It floats over one edge of the Stage (`position: absolute`
+  inside `.sh-stage`), `pointer-events: none` — a finger lands on the field
+  under it. There is no coach row in any band layout (phone, tablet, desk);
+  the Stage keeps one box for a whole battle.
+- **No tap.** It fades in, stays `pillDurationMs` — 2.5 s + 60 ms a word,
+  capped at 9 s, with the clock stopped while the tab is hidden — fades out and
+  marks its tip taught. Reduced motion: a plain fade (no slide); the in-game
+  Reduce motion setting makes it instant.
+- **Next to what it teaches, never over it.** Tips about the party row, the
+  wave strip or the gear (`skill`, `relic`, `command`, `subwave`, `speed`,
+  `gear`, `equip`) float on the Stage's **bottom** edge; tips about the field
+  or the header's chips on the **top** edge (`tipWhere`). While the field is in
+  play a bottom-edge tip moves to the top if the wagons are down there
+  (`wagonsLow`) — on a portrait field they always are. A top pill clears the
+  champion's plate and the zoom-to-place line.
+- **Field notes** (a tap on a tile that will not take a hero) and the
+  **new-ground** note use the same pill and pre-empt a tip at once
+  (`pickPill`); a note about a tile in the top third of the field floats on the
+  bottom edge (`noteWhere`). The new-ground note also goes when a hero is posted.
+- **One at a time**, `TIP_GAP_MS` (4 s) apart; a live wave hears only its
+  breather lessons; tips wait out the wave-clear beat, and on a Stage too short
+  for the ceremony and a pill (`CEREMONY_ROOM_PX`, the 375 and 320 reward
+  screens) they wait for the run map.
+- **Heard.** The words go through the one polite voice (`Announcer`, via
+  `announceHint`); the pill is not a live region.
+- **Look.** A dark wash (`rgba(20,13,7,.9)`) with a gold hairline (a field note:
+  the danger hairline), radius 14, max `min(100% − 16px, 400px)`, the tip's icon
+  and one to three lines of `--fs-xs` (12px) text — `--text` ~13:1 and
+  `--accent-text` ~8:1 on it, whatever is under it.
+
 ## Live wave layout (Phase 2) — the contract the other lanes drop into
 
 Setup keeps the four bands as budgeted in `shell.css`. When a wave goes live the
@@ -209,10 +294,16 @@ eye is on the field. Reduced motion: the 260 ms height transition is instant.
 
 | Band (live) | 390×844 | 375×667 | 320×568 | Holds |
 | --- | --- | --- | --- | --- |
-| Header | 76 | 68 | 63 | Run state (unchanged) |
-| Stage | **574** (was 332) | **419** | **331** | Field and the map round it, `.sh-stage-top`, `.sh-stage-center` |
+| Header | 44 (was 76) | 40 (68) | 38 (63) | Run state, one row (§ The header) |
+| Stage | **606** (was 332, then 574) | **447** (419) | **356** (331) | Field and the map round it, `.sh-stage-top`, `.sh-stage-center`, the coach pill over an edge |
 | Selector | 126 | 112 | 106 | Party (unchanged) |
 | Wave strip | 68 | 68 | 68 | caption (name · N left) over the **enemy queue** · **CommandSlot** · Speed |
+
+The Stage's box is the same from setup through every breather to the last
+enemy (measured per frame, October 2026: 390×844 `0,44,390×606`; 375×667
+`0,40,375×447`; 320×568 `0,38,320×356`; 1440×900 `0,52,979×848`) — no coach
+row opens or closes over it any more. It changes only when the wave settles
+and the reward hand opens the Detail band.
 
 The field is fit to the Stage wrap's **content box**. On the phone column a
 battle is fought on the field's **portrait twin** (620×960 logical, the
@@ -308,12 +399,11 @@ byte-for-byte the phone layout.
 | Phone portrait | < 700 wide | Unchanged: one 520px-capped column, four bands. |
 | Phone landscape | landscape, ≤ 500 tall, ≤ 950 wide, coarse pointer | Unchanged: the rotate prompt. |
 | Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; the menu fills the screen over its trade map. |
-| Wide | ≥ 900 wide and ≥ 540 tall | Header one row across; Stage left spanning the height; Selector + Detail stacked in a right column `clamp(400px, 32vw, 468px)`. |
+| Wide | ≥ 900 wide and ≥ 540 tall | Header one row across (52, no wordmark); Stage left spanning the height; Selector + Detail stacked in a right column `clamp(400px, 32vw, 468px)`. The coach pill floats over the Stage's edge, as on a phone. |
 
 **Wide, battle / run map** (1440×900):
 
-    ┌──────────────────────────────── header 60 ────────────────────── ? ┐
-    ├──────────────────────────────── coach (when a tip is live) ────────┤
+    ┌──────────────────────────────── header 52 ────────────────────── ? ┐
     │                                        │ Selector 126 (party row)   │
     │   STAGE  980×840                       ├────────────────────────────┤
     │   field 960×560 at exactly 1:1         │ Detail — context · gear ·  │

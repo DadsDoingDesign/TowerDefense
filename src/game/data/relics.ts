@@ -120,7 +120,14 @@ export const RELICS: readonly Relic[] = [
   // HP; each now pays in a number §15 can see. Close Quarters (−18% range) and
   // Last Rampart (below 35% HP) were cut: the range bill measured +0.0pt on every
   // bench at every size short of a cliff, and a last stand has no HP to read.
-  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+90% damage, +8 Thorns, −30% attack speed · all your heroes', downside: '−30% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.9, rateMult: 0.7 } } },
+  //
+  // +70% / −34% → +90% / −30% (October audit, item 9: Epic read under Rare on
+  // that branch's bench) → back to +70% / −34% (the merged tuning pass). On the
+  // merged §15 bench the raise read +7.0pt mean beside Whetstone Pact's +6.3, so
+  // Epic (+6.6pt) sat ABOVE Legendary (+4.5pt) — the ladder inverted the other
+  // way. At +70% / −34% Bloodletting reads +1.1pt and the stat ladder is
+  // +1.6 / +2.6 / +3.7 / +4.5pt (Epic still above Rare, via Whetstone's +36%).
+  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · all your heroes', downside: '−34% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
   { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · all your heroes', downside: '−12% attack speed · all your heroes', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
   // 80/s, −35% → 50/s, −40% (the tuning pass): on §15's benches the pact cost
   // nothing anywhere (worst +0.0pt) — 80/s of burn dwarfed the stat-less bench

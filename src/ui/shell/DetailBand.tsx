@@ -58,7 +58,6 @@ import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
-import { fieldNoteCopy, useCoachRow } from './Coach'
 // G2-2 — the wave strip's enemy queue.
 import { WaveQueue } from './WaveQueue'
 import { lineUp, queueFor } from './enemyQueue'
@@ -68,7 +67,6 @@ import { Tap, tapWord } from '../pointer'
 import { fieldTitle, orientationOf } from '../../game/data/maps'
 import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
 import { LevelUpPanel } from './LevelUpPanel'
-import { OneTapHint, useOneTapUntaught } from './oneTap'
 import { levelUpOpen, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { useShown } from './staging'
 import { conflictCopy, equipWarning } from '../../game/run/clearance'
@@ -97,7 +95,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
       {/* The battle's action bar is a SIBLING of the context panel, not one of
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
-      <WaveBar />
+      <WaveBar offers={offers} />
     </section>
   )
 }
@@ -121,7 +119,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
  * render an enabled action the store then refuses. The deployment gate below is
  * a stricter rule laid on top of it, which is allowed; nothing here relaxes it.
  */
-function WaveBar() {
+function WaveBar({ offers }: { offers: Offer[] }) {
   const screen = useGameStore((s) => s.screen)
   const runPhase = useGameStore((s) => s.runPhase)
   const battlePhase = useGameStore((s) => s.battlePhase)
@@ -143,17 +141,13 @@ function WaveBar() {
   const detailOpen = useGameStore((s) => s.detailOpen)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
-  // One-tap rewards: the strip carries the how-to once (below).
-  const oneTapUntaught = useOneTapUntaught()
+  // The reward card being read — the strip's CTA takes it (below).
+  const pickedReward = useGameStore((s) => (s.shellSelection?.kind === 'offer' ? s.shellSelection.id : null))
   const battleMap = useGameStore((s) => s.battleMap)
   // Weapon clearance: a hero swinging beside another holds the next wave
   // (`run/clearance`). Read off the same inputs the strip already follows —
   // the posts, the roster's gear, and the held engine (re-read on `hud`).
   const conflicts = fieldConflicts({ screen, engine, battlePhase, roster, placements, battleMap })
-  // 2.5: with no coach row held open for this wave, a field note (a tap on a
-  // held post, a blocked tile in a breather) is said here, in the caption.
-  const fieldNote = useGameStore((s) => s.fieldNote)
-  const coachRowHeld = useCoachRow((s) => s.held)
   // LS3: speed arrives once the first sub-wave is down; the Watch Command
   // after the first battle. `CommandSlot`'s "Next" is not staged — it is how a
   // breather ends.
@@ -173,15 +167,15 @@ function WaveBar() {
 
   if (lastResult && (battlePhase !== 'battle' || !hasEngine)) {
     /*
-     * One-tap rewards (October 2026, the designer's call on audit §4 item 8):
-     * with the reward hand in place a tap on a card TAKES it, so there is no
-     * commit here any more — a "Take it" that does what the tap already did
-     * is chrome. The strip's action slot says how the hand works, once
-     * ("Tap to take · hold to look"), until the first one-tap commit; after
-     * that the caption has the strip to itself. The Context panel keeps the
-     * detail of the card being read (`OfferPanel`, no button in place).
+     * 3.2 (Oct 2026; Whales round 1 and 2): with the reward hand in place the
+     * commit is HERE, in the strip's action slot, at full CTA height — the
+     * loudest control on the screen and the last in reading order — and it
+     * names the card it takes. A tap on a card only reads it (the designer,
+     * after main's one-tap rewards took a card on the tap meant to compare
+     * its stats: "can it only be on the cta that the item is selected").
+     * The Context panel keeps the detail (`OfferPanel` has no button in place).
      */
-    const hint = inPlace && oneTapUntaught
+    const reward = inPlace ? offers.find((o) => o.id === pickedReward && o.action) : undefined
     return (
       <div className={`sh-wavebar sh-wq-bar${inPlace ? ' commit' : ''}`}>
         {/* No live region here any more (Phase 2): `Announcer` owns the one
@@ -195,7 +189,14 @@ function WaveBar() {
           </p>
         </div>
         {inPlace ? (
-          hint ? <OneTapHint verb="take" className="sh-wq-hint" /> : null
+          <button
+            className="sh-btn primary sh-commit"
+            disabled={!reward || reward.action!.disabled}
+            aria-label={reward ? `${reward.action!.label}, ${reward.sub ?? ''}`.replace(/, $/, '') : undefined}
+            onClick={() => reward?.action?.run()}
+          >
+            {reward ? reward.action!.label : 'Pick a reward'}
+          </button>
         ) : (
           <button className="sh-btn primary" onClick={continueAfterWave}>
             Continue
@@ -214,7 +215,6 @@ function WaveBar() {
     const moved = held && !!engine?.subWaveState().moved
     const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
     const space = held && conflicts.length ? conflictCopy(conflicts, { moveLeft: !moved, breather: true }) : null
-    const note = fieldNote && !coachRowHeld ? fieldNoteCopy(fieldNote) : null
     return (
       <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
         {/*
@@ -239,8 +239,6 @@ function WaveBar() {
         <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
           {space ? (
             <MakeSpace head={space.head} fix={space.fix} />
-          ) : note ? (
-            <StripCaption name={note.name} now={note.line.slice(note.name.length).replace(/^\s*[—–-]\s*/, '')} tone="note" />
           ) : held ? (
             <StripCaption name="Held" now={moved ? 'Move made' : 'Move one hero'} tone="do" />
           ) : (
@@ -402,7 +400,7 @@ function MakeSpace({ head, fix }: { head: string; fix: string }) {
  * rather than a readout. The held instruction is also spoken, by `Announcer`
  * (`combatNotes`), and the Next button's name carries the sub-wave count.
  */
-function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' | 'note' }) {
+function StripCaption({ name, now, tone }: { name: string; now: ReactNode; tone?: 'do' }) {
   return (
     <p className={`sh-wq-cap${tone ? ` ${tone}` : ''}`}>
       <span className="sh-wq-name">{name}</span>
@@ -1619,9 +1617,9 @@ function OfferPanel({ offer }: { offer: Offer }) {
   // Same arm-then-fire confirm the page CTA uses, so a destructive offer is
   // never one tap whichever band it is read in.
   const confirm = useArmedAction(offer.action, offer.id)
-  // A reward card in place is taken by a tap on the card itself (one-tap,
-  // October 2026); this panel is only its detail, so it carries no button.
-  // Any other one-tap offer is the same.
+  // A reward card in place is taken from the wave strip's CTA (`WaveBar`), at
+  // full CTA size and last in reading order; this panel is only its detail.
+  // A one-tap offer (the campfire) carries no button either.
   const inPlace = useGameStore(rewardInPlace)
   const primary = offer.action && !inPlace && !offer.oneTap
   return (

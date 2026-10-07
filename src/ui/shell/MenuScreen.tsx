@@ -12,6 +12,7 @@ import { Icon } from '../Icon'
 import { Banner, Crest, Lock, SovereignCrest } from '../pixel'
 import { useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
+import markUrl from '../../assets/brand/mark.svg'
 import { TradeMap } from '../attract/TradeMap'
 import { roadViews, type Rect } from '../attract/mapRules'
 import { Gold } from './contracts/parts'
@@ -196,10 +197,12 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
       <div className="mn-shade" aria-hidden="true" />
 
       <header className="mn-head">
+        {/* The brand (Oct 2026): the Dripping Seal over the name — the stacked
+            lockup. The name stays live text (an h1 a screen reader and a
+            translator can use); the seal is decoration beside it. */}
+        <img className="mn-mark" src={markUrl} alt="" width={56} height={56} aria-hidden="true" />
         <h1 className="t-title" tabIndex={-1}>
-          {/* Stacked at every size: on one line the name runs into the bank
-              chip from 430px phones up through tablets. */}
-          <span className="mn-title-line">Merchant</span> <span className="mn-title-line">Mercenaries</span>
+          Merchant Mercenaries
         </h1>
         <p className="t-sub">{militiaTagline(militia)}</p>
         {/* The bank is named after the first contract (LS3/LS4). */}

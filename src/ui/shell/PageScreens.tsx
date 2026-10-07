@@ -10,9 +10,7 @@ import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
-import { RunSeed } from './RunSeed'
 import { VolumeSlider } from './VolumeSlider'
-import { useStaged } from './staging'
 import { ContractChip } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
 
@@ -182,9 +180,6 @@ export function PageScreen({
   const shortfall = (c: Price) => Math.max(0, c.amount - (onHub ? bank : gold))
   const heroPick = useGameStore((s) => s.screen === 'heroPick')
   const contract = useGameStore((s) => s.contract)
-  // LS3: a first run's hero-pick carries no seed chip — a seed is a thing to
-  // share or replay, and a first run has neither yet.
-  const staged = useStaged()
   // The pack + company strip rides on every in-run event page (Phase 2).
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
@@ -242,8 +237,9 @@ export function PageScreen({
 
   /*
    * One-tap choices (October 2026; the designer's call on audit §4 item 8):
-   * a reward card on the Spoils page and the campfire's rest and train commit
-   * on the tap. A hold (touch), a hover (mouse) or keyboard focus shows the
+   * the campfire's rest and train commit on the tap. (Reward cards did too,
+   * until the designer moved their commit back to the CTA: a tap to compare
+   * an item's stats took it.) A hold (touch), a hover (mouse) or keyboard focus shows the
    * row's detail instead — the same detail block a pick fills — and the
    * page has no CTA for them: a button that repeats what the tap did is
    * chrome. Everything that spends, is permanent or destroys keeps `pick`
@@ -251,7 +247,6 @@ export function PageScreen({
    */
   const oneTapUntaught = useOneTapUntaught()
   const hasOneTap = choices.some((o) => o.oneTap)
-  const spoils = useGameStore((s) => !!s.reward)
   const oneTap = useOneTap({
     surface: choices.map((o) => o.id).join(' '),
     commit: (id) => {
@@ -303,10 +298,10 @@ export function PageScreen({
       // Announced only where the board is an outcome — today, the Crossroads
       // reveal. `titleOverride` is a Watchtower submenu, which is navigation.
       live={!titleOverride && ctx.board?.live}
-      // Hero-pick prices nothing, so its title block carries the run's seed
-      // and terms instead (`RunSeed`, a chip that never scrolls).
+      // Hero-pick prices nothing, and carries no seed chip (October 2026, the
+      // designer's review of the pick-one proposal: a seed is not public).
       // On an event board the purse rides on the pack strip's row (3.5).
-      resources={purse.size && !eventBoard ? <Resources show={purse} /> : heroPick && !staged ? <RunSeed /> : undefined}
+      resources={purse.size && !eventBoard ? <Resources show={purse} /> : undefined}
       strip={
         eventBoard ? (
           <PackStrip gold={purse.has('gold') ? gold : undefined} />
@@ -407,13 +402,22 @@ export function PageScreen({
         />
       )}
 
-      {asHeroes && <HeroCards items={choices} selectedId={selected?.id ?? null} onSelect={pick} />}
+      {/* Heroes: pick one, then read — a sprite strip and the focused hero's
+          card; the terms of taking it (a full company, the strength note)
+          ride at the card's foot. */}
+      {asHeroes && (
+        <div className="pg-detail" ref={detailRef}>
+          <HeroCards items={choices} selectedId={selected?.id ?? null} onSelect={pick}>
+            {selected && (selected.body.length > 0 || selected.warn) ? <InfoCard lines={selected.body} warn={selected.warn} /> : null}
+          </HeroCards>
+        </div>
+      )}
 
       {/* With a row chooser the list comes first — reading a detail for
           something you have not picked yet reads backwards. */}
       {/* The how-to for a one-tap board, once (until the first one-tap
           commit anywhere): "Tap to take · hold to look". */}
-      {asRows && hasOneTap && oneTapUntaught && <OneTapHint verb={spoils ? 'take' : 'choose'} className="pg-hint" />}
+      {asRows && hasOneTap && oneTapUntaught && <OneTapHint verb="choose" className="pg-hint" />}
 
       {asRows && (
         <div className="pg-rows">
@@ -447,14 +451,6 @@ export function PageScreen({
                 : {})}
             />
           ))}
-        </div>
-      )}
-
-      {selected && asHeroes && (selected.body.length > 0 || selected.warn) && (
-        <div className="pg-detail" ref={detailRef}>
-          {/* Everything about the hero is on its card; what is left is the
-              terms of taking it (a full company, the enemy-strength note). */}
-          <InfoCard lines={selected.body} warn={selected.warn} />
         </div>
       )}
 

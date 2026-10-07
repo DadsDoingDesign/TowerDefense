@@ -1,43 +1,8 @@
-# Merchant Mercenaries (formerly Fieldwatch) — project notes for Claude
+# Merchant Mercenaries (repo: fieldwatch) — project notes for Claude
 
-## Name — Merchant Mercenaries, as of 2026-10-06
-
-The game was renamed from **Fieldwatch** to **Merchant Mercenaries** on 6 October
-2026, the designer's choice (it fits the trade-road premise; "Fieldwatch" was
-the meadow-defence era's name). Use **Merchant Mercenaries** in every
-player-facing string, the store listing, page meta and marketing. Older docs,
-commits and the Whales review history say Fieldwatch: read them as the same game.
-
-- **Short name: "Merch&Mercs"** (the designer's, 2026-10-06; no spaces around
-  the ampersand). The full name truncates under an icon, so the iOS
-  `CFBundleDisplayName`, the manifest `short_name` and
-  `apple-mobile-web-app-title` use it — escaped as `&amp;` in the plist and HTML.
-  Use it wherever a short form is needed. The App Store name is the
-  full one (set in App Store Connect).
-- **iOS bundle id: `com.dadsdoingdesign.merchantmercenaries`** (permanent once
-  registered with Apple).
-- **The menu title is stacked** ("Merchant" over "Mercenaries") at every size; on
-  one line it runs into the bank chip. The boot splash in `index.html` matches.
-- **Wordmark / lockups / social card:** `scripts/brand-wordmark.py` outlines the
-  name from Crimson Text (`pip install fonttools brotli`), then `npm run brand`.
-  The social-card line is "Sellswords for hire".
-- **The mark is the Dripping Seal** (adopted 2026-10-06): a red wax seal, still
-  dripping, with a gold coin at its heart and a sword in the ring's red whose
-  crossguard melts into the ring. Designed and hand-adjusted by the designer in
-  Figma (TD-Game-Roguelite → page Audit.16.06.26 → section LOGO ONLY → component
-  "Mark / 29 refined · Dripping Seal"; colours in the "Merch&Mercs · Logo"
-  variables) and exported verbatim to `src/assets/brand/seal.svg`. Change it in
-  Figma, re-export, then `npm run brand` — every icon (iOS, PWA, apple-touch,
-  favicon), the launch image, the lockups and the social card come from it. The
-  Watchtower (`mark.svg`, `mark-mono.svg`) is retired and unused.
-- **Deliberately still `fieldwatch` — do not rename:** localStorage keys
-  (`fieldwatch-*`; renaming them silently wipes every player's save), the
-  service-worker cache prefix, the `fieldwatch` art pack/theme id, the `fw-`
-  CSS/file prefixes and `fw-icons`, the GitHub repo (DadsDoingDesign/TowerDefense),
-  local folders, and docs that record history. The Whales product is still
-  filed as "Tower Defense Game" (Whales has no rename).
-
-A roguelite tower-defense autobattler. Vite + React + TypeScript + Canvas 2D +
+A roguelite tower-defense autobattler, formerly Fieldwatch (renamed Oct 2026:
+see `docs/BRAND.md`; storage keys and the `fieldwatch` sprite pack keep the old
+id on purpose). Vite + React + TypeScript + Canvas 2D +
 Zustand. Art direction: **Tiny Swords** (Pixel Frog) — **old CC0 build only**;
 the `tinyswords` sprite pack/theme is the default. Never import files from the
 current Tiny Swords download (not CC0); `npx tsx scripts/harvest-cc0.ts --check`
@@ -71,6 +36,12 @@ result. Append a short note to the review log when you're done.
   `overlays.ts` (slots, ranges, reticles, base gate), `projectiles.ts`,
   `blit.ts` (the 1:1 sprite blit + census), `paint.ts` (colour helpers) and
   `frame.ts` (presentation clock, view scale). Import from `renderer`.
+  What a hit LOOKS like is `attackLook.ts` (pure: delivery by weapon — a
+  melee hero's hit is a blade arc, never a drawn projectile — and the one
+  on-hit effect palette); the hero's real weapon/off-hand on the figure is
+  `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
+  cut when the hero holds something else). The atlas order and item-noun →
+  icon table live in `src/game/data/iconAtlas.ts` (re-exported by `channels`).
 - FX: `src/game/render/fx.ts` draws effects; `fxDiff.ts` derives them from the
   engine tick by tick — one `FxDiffer` per battle, created by `BattleCanvas`,
   no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.
@@ -119,7 +90,9 @@ result. Append a short note to the review log when you're done.
   its per-role fallback chain (`themeAssetPaths` in `sprites.ts`) plus
   whatever the emitted code names — see `planPrecache`.
 - iOS app (Capacitor 8, SPM): `capacitor.config.ts` + `ios/` wrap the same
-  `dist/`. Entry is `src/boot.ts`, which restores saves from native
+  `dist/`. Bundle id `com.dadsdoingdesign.merchantmercenaries` (permanent once
+  registered with Apple); home-screen name `CFBundleDisplayName` is the short
+  name, MerchMercs (`docs/BRAND.md`). Entry is `src/boot.ts`, which restores saves from native
   Preferences (`src/native.ts`) BEFORE `main.tsx` loads — stores read storage
   at import time. Every `writeRaw`/`removeRaw` is mirrored there, so all
   storage must go through `state/storage.ts`. No service worker in the app.
@@ -134,6 +107,11 @@ result. Append a short note to the review log when you're done.
   PACK by `npm run anchors` (`scripts/anchors.ts` + `anchors-lib.ts`) into
   `anchors.generated.ts`; `anchors:check` in the build also fails if any gear
   piece would overhang a hero cell.
+- Pick one, then read: every choose-one surface that does not commit on the
+  tap (contract board, hero pick, recruit, city payout, skill milestone) is a
+  `PickStrip` of picture tokens + one `PickCard` for the focused option
+  (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
+  it for a new one; a token focuses, the CTA names the choice and commits.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

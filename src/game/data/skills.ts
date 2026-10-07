@@ -1,5 +1,6 @@
 import type { CompanyId } from './companies'
 import type { CoreStats, EffectMods } from '../types'
+import type { IconKey } from './iconAtlas'
 
 /**
  * ---------------------------------------------------------------------------
@@ -117,7 +118,16 @@ const L2: Skill[] = [
   // held ×21.65 against Heavy Blows' ×19.72 (+9.8%, gate +10%), and at 20% the
   // wand's read +9.7%. At 25%: Wand +20%, Sword & Shield +21%; §7's Level 2 is
   // not solved by it (+13.6 / +15.1 / +14.1pt mean by kit).
-  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 25% harder.', mods: { buffAura: { damageMult: 1.25, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
+  // 25% → 40% (the merged tuning pass): with item identities the §2 carriers
+  // rolled weaker (the empty slot holds ×4.24, was ×6.45), the third hero's own
+  // damage carries more of the hold, and at 25% Blessing read +10% (wand) and
+  // −28% (sword and shield) against Heavy Blows. §2 is bimodal in the elite
+  // column (a sword-and-shield hold either kills the column or is walked past:
+  // ×7–8 or ×43–50), so it was scanned on a grid, Blessing / Rally, wand and
+  // sword-and-shield against the fillers: 30/40% +21 / +5 / +32 / +32%;
+  // 35/45% +15 / +5 / +39 / +26%; 40/50% +15 / +32 / +45 / +45% (kept: every
+  // neighbour from 38/48 to 44/54 passes); 45/55% +15 / +21 / +39 / +45%.
+  { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 40% harder.', mods: { buffAura: { damageMult: 1.4, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
   { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder, and every 100 damage it deals wins back 2% of the cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
   { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2 seconds.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },
   { id: 'cold_snap', name: 'Cold Snap', level: 2, company: 'silk', desc: 'Its hits deal 25% more to slowed enemies.', mods: { vsSlowed: 0.25 }, from: 'New with the classless rework' },
@@ -134,13 +144,23 @@ const L3: Skill[] = [
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'bulwark', name: 'Bulwark', level: 3, company: 'metals', desc: 'Holds 3 more enemies and slows what it hits by 45% for 2 seconds.', mods: { holdAdd: 3, holdRadius: 95, chill: { slow: 0.45, dur: 2 } }, from: 'The Bulwark and Aegis specializations; Guard perk Frozen Ground' },
   { id: 'reaper', name: 'Reaper', level: 3, company: 'scrolls', desc: 'Instantly kills enemies under 28% health, and hits 20% harder.', mods: { execute: 0.28, damageMult: 1.2 }, from: 'The Reaper specialization; Deathdealer and Nightblade' },
-  { id: 'rally', name: 'Rally', level: 3, company: 'art', desc: 'Heroes near it hit 35% harder.', mods: { buffAura: { damageMult: 1.35, radius: 150 } }, from: 'The Templar specialization; Radiant and Oracle' },
+  // 35% → 50% (the merged tuning pass; see Blessing): at 35% the wand's Rally
+  // read +5% against the same hero holding Berserk (gate +10%); at 50% +32%,
+  // the sword and shield's +45%.
+  { id: 'rally', name: 'Rally', level: 3, company: 'art', desc: 'Heroes near it hit 50% harder.', mods: { buffAura: { damageMult: 1.5, radius: 150 } }, from: 'The Templar specialization; Radiant and Oracle' },
   { id: 'momentum', name: 'Momentum', level: 3, company: 'spice', desc: 'Attacks 15% faster for each enemy it is holding.', mods: { rushPerHeld: 0.15 }, from: 'New with the classless rework' },
   { id: 'last_rites', name: 'Last Rites', level: 3, company: 'silk', desc: 'Every 5th kill it makes wins back 5% of the cargo.', mods: { killMend: { every: 5, hp: 1 } }, from: 'New with the classless rework' },
   // ---- opened by a feat (the specializations that used to be) ----------------
   { id: 'warden_of_ash', name: 'Warden of Ash', level: 3, company: 'metals', feat: 'win_fighter', desc: 'Holds 2 more enemies, its thorns hit 3 times as hard, and its hits and thorns set enemies burning for 26 a second.', mods: { holdAdd: 2, holdRadius: 90, thornsMult: 3, burn: { dps: 26, dur: 3 }, thornsIgnite: true }, from: 'The Warden of Ash specialization (was behind the same feat)' },
   { id: 'hexblade', name: 'Hexblade', level: 3, company: 'silk', feat: 'win_rogue', desc: 'Every hit has a 20% chance to stun for 0.7 seconds, and slows its target by 45% for 1.6 seconds.', mods: { stunChance: 0.2, stunDur: 0.7, chill: { slow: 0.45, dur: 1.6 } }, from: 'The Hexblade specialization (was behind the same feat)' },
-  { id: 'stormcaller', name: 'Stormcaller', level: 3, company: 'scrolls', feat: 'win_mystic', desc: 'Every hit jumps to 3 more enemies for 60% of its damage, and hits 35% harder.', mods: { shock: { chains: 3, dmgFrac: 0.6 }, damageMult: 1.35 }, from: 'The Stormcaller specialization; Elementalist perk Static Field (behind the feat that opened Doomcaller)' },
+  // 3 jumps at 60% → 2 at 45% (the merged tuning pass). Once §7's Level 3
+  // bench could rank (fitted on a hero holding Berserk), Stormcaller solved
+  // the Dagger point: +65.7pt against Warden of Ash's +40.3 (lead +25.5,
+  // ceiling +20). Its damage was not the lever (×1.35 → ×1.15 moved the lead
+  // 0.4pt): the chains are. 2 at 50% read +18.2 / +13.4 (Dagger / Sword &
+  // Shield, where Warden of Ash leads), 2 at 40% +12.4 / +17.0, 2 at 45%
+  // +15.7 / +16.0 — neither point solved, and it still tops the Dagger point.
+  { id: 'stormcaller', name: 'Stormcaller', level: 3, company: 'scrolls', feat: 'win_mystic', desc: 'Every hit jumps to 2 more enemies for 45% of its damage, and hits 35% harder.', mods: { shock: { chains: 2, dmgFrac: 0.45 }, damageMult: 1.35 }, from: 'The Stormcaller specialization; Elementalist perk Static Field (behind the feat that opened Doomcaller)' },
 ]
 
 export const ALL_SKILLS: readonly Skill[] = [...L1, ...L2, ...L3]
@@ -276,4 +296,60 @@ export const EVOLUTION_TO_SKILL: Readonly<Record<string, string>> = {
   soulflay: 'gate_siphon',
   plaguebringer: 'wildfire',
   doomcaller: 'gate_siphon',
+}
+
+/**
+ * A skill's lead effect as a picture and a word or two — the pick-one strip's
+ * token (`ui/shell/PickStrip.tsx`), which carries no name: "Speed +15%",
+ * "Burn", "Hold". Read off the mods in a fixed order, so a skill with several
+ * leads with the one its sentence leads with. A number rides only where the
+ * mod IS the number (the three plain multipliers); everything else is the word,
+ * and the card under the strip says the rest.
+ */
+export interface SkillHeadline {
+  icon: IconKey
+  label: string
+  value?: string
+}
+
+const pct = (mult: number) => `+${Math.round((mult - 1) * 100)}%`
+
+const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][] = [
+  ['rateMult', (m) => ({ icon: 'haste', label: 'Speed', value: pct(m.rateMult!) })],
+  ['damageMult', (m) => ({ icon: 'damage', label: 'Dmg', value: pct(m.damageMult!) })],
+  ['rangeMult', (m) => ({ icon: 'range', label: 'Reach', value: pct(m.rangeMult!) })],
+  ['critChanceAdd', () => ({ icon: 'crit', label: 'Crit' })],
+  ['critMultAdd', () => ({ icon: 'crit', label: 'Crit' })],
+  ['critEvery', () => ({ icon: 'crit', label: 'Crit' })],
+  ['burn', () => ({ icon: 'burn', label: 'Burn' })],
+  ['chill', () => ({ icon: 'chill', label: 'Chill' })],
+  ['shock', () => ({ icon: 'shock', label: 'Shock' })],
+  ['stunChance', () => ({ icon: 'stun', label: 'Stun' })],
+  ['execute', () => ({ icon: 'execute', label: 'Execute' })],
+  ['lifedrain', () => ({ icon: 'lifedrain', label: 'Drain' })],
+  ['splashAdd', () => ({ icon: 'splash', label: 'Splash' })],
+  ['pierce', () => ({ icon: 'pierce', label: 'Pierce' })],
+  ['volley', () => ({ icon: 'projectile', label: 'Volley' })],
+  ['projSpeedMult', () => ({ icon: 'projectile', label: 'Shots' })],
+  ['block', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdAdd', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdRadius', () => ({ icon: 'block', label: 'Hold' })],
+  ['thornsMult', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['thornsIgnite', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['trap', () => ({ icon: 'trap', label: 'Trap' })],
+  ['buffAura', () => ({ icon: 'auraBuff', label: 'Aura' })],
+  ['killRush', () => ({ icon: 'haste', label: 'Rush' })],
+  ['openingRush', () => ({ icon: 'haste', label: 'Rush' })],
+  ['leakWard', () => ({ icon: 'hp', label: 'Ward' })],
+  ['vsHeld', () => ({ icon: 'damage', label: 'Vs held' })],
+  ['vsSlowed', () => ({ icon: 'chill', label: 'Vs slowed' })],
+  ['thornsBurn', () => ({ icon: 'thorns', label: 'Thorns' })],
+  ['rushPerHeld', () => ({ icon: 'haste', label: 'Rush' })],
+  ['killMend', () => ({ icon: 'hp', label: 'Mend' })],
+  ['goldPerKill', () => ({ icon: 'gold', label: 'Bounty' })],
+]
+
+export function skillHeadline(skill: Pick<Skill, 'mods'>): SkillHeadline {
+  for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return read(skill.mods)
+  return { icon: 'boon', label: 'Skill' }
 }

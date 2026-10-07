@@ -1,7 +1,7 @@
 {
   "name": "Merchant Mercenaries",
-  "short_name": "Merch&Mercs",
-  "description": "Sellswords for hire. A roguelite tower-defense autobattler: take a trade company's contract, post your heroes along its road, then watch them hold it.",
+  "short_name": "MerchMercs",
+  "description": "Guard the road, bank the gold. A roguelite tower-defense autobattler: trade companies hire your mercenaries to see their caravans through goblin country.",
   "start_url": "./",
   "scope": "./",
   "id": "./",

@@ -213,7 +213,9 @@ async function open(vp, log) {
   const tap = async (name, { exact = false, force = false, wait = 700, timeout = 6000 } = {}) => {
     try { await btn(name, exact).click({ timeout, force }); await page.waitForTimeout(wait); return true } catch { log.push(`tap failed: ${name}`); return false }
   }
-  const tipOff = () => btn('Got it').click({ timeout: 600 }).catch(() => {})
+  // The coach is a hint pill (October 2026): no "Got it" to tap — it fades on
+  // its own. Wait it out (its cap is 9 s) so a capture shows the screen, not the lesson.
+  const tipOff = () => page.waitForFunction(() => !document.querySelector('.sh-coach'), null, { timeout: 9600 }).catch(() => {})
   await page.goto(BASE)
   await page.waitForTimeout(2500)
   return { ctx, page, btn, tap, tipOff }
@@ -311,7 +313,9 @@ async function fightFirst(p, vp, shots, log) {
   if (shots) await capture(p, vp, '04-run-map')
   await p.tap(/Battle.*you can march here/, { wait: 900 })
   if (shots) await capture(p, vp, '04b-run-map-preview')
-  await p.tap('March', { exact: true, wait: 2600 })
+  await p.tap('March', { exact: true, wait: shots ? 1800 : 2600 })
+  // The first tip, as the pill floats over the field (contrast, size, chrome).
+  if (shots) await capture(p, vp, '05t-setup-tip-pill', 'the deploy tip, floating over the Stage')
   await p.tipOff()
   if (shots) await capture(p, vp, '05-battle-setup')
   await p.tap(/on the bench|— selected/, { wait: 600 })
@@ -335,6 +339,9 @@ async function fightFirst(p, vp, shots, log) {
     }
     await p.page.waitForTimeout(800)
   }
+  // Tips wait out the wave-clear beat (coachRules.SETTLE_QUIET_MS), so let
+  // one arrive before waiting it out.
+  await p.page.waitForTimeout(1000)
   await p.tipOff()
   await p.page.waitForTimeout(500)
   if (shots) await capture(p, vp, '08-wave-cleared-spoils')
