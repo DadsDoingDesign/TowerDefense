@@ -3282,3 +3282,50 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
   card reward and Hades' boon pick both read on hover/select and commit on a
   separate, deliberate act.
+
+- **2026-10-07 — The home is the contract board (Figma B2).** The designer
+  chose option B ("the board is the selection view"), themed, with the market
+  chip; then "contract, then hero selection, then start on first fight, then
+  go to map". The trade map's labels became wooden signposts (logo + Rep N,
+  a gold ×1.3 on today's market road, a padlock on a closed road); a tap
+  focuses the road and the parchment notice under the map turns to it (wax
+  seal, road and cities, letter, Market / Ground / Rep or Locked chips). The
+  CTA names the company and opens its terms; back keeps the road focused; the
+  hero's CTA marches into the first layer's middle fight. Verified in the
+  running app at 390×844, 375×667 and 1440×900 by script: every focus state,
+  a locked road, the market day, terms → back, hero pick → battle (screen
+  `battle`, layer 1). The loop caught: the 26px wordmark overflowed beside the
+  bank (now fluid, 20–26px); the desk head's instruction widened the seal's
+  grid column; the pager squeezed the kicker into two lines (moved to the
+  title row); the pin overlapped the kicker on short phones; and the
+  letters open with "X seeks an escort", so the title is the company's name.
+  Scorecard: readability 4/5, hierarchy 5/5, polish 4/5. Benchmark: Slay the
+  Spire's and Inscryption's maps choose by touching the place itself, with
+  one parchment card for what it holds. Still open: the desk column has an
+  empty band between the notice and the tiles (as drawn in B2); the locked
+  signpost's padlock is small at scale 2.
+
+- **2026-10-07 — The run map is the stop and its CTA.** The designer marked
+  up the map on a phone: no party row, no gear or pack beside the stop's
+  card, and the CTA full width as elsewhere. The map now has the Context
+  panel (the stop's preview) over one full-width `pg-cta`, "March to Patrol"
+  (`MarchBar`; "Tap a stop to march" with nothing focused, "Out of reach" for
+  a stop beyond the frontier); the Back/March pair is gone. Heroes are
+  posted, geared and levelled at the fight's setup, so the gear and skill
+  coach tips moved there too — the loop caught the gear tip still saying "Tap
+  a slot under Gear" over a map with no gear. Verified in the running app at
+  390×844, 375×667 and 1440×900. Scorecard: readability 5/5, hierarchy 5/5,
+  polish 4/5. Still open: on a 375×667 phone a long stop description scrolls
+  inside the card.
+
+- **2026-10-07 — A way out of the run.** The designer: "there's no way to
+  abandon a run in that map view". There had been none since the Root Shell:
+  only a reload and the resume prompt. The run header now opens with a back
+  arrow (44px target, 32px chip face) on the map and in every fight; it opens
+  a dialog that says what leaving costs and leaves only on its second,
+  separate button ("Leave and bank what it earned" → `returnToHub`, settled
+  as a fall). Esc, a tap outside, or "Keep marching" closes it. The loop also
+  caught the "X joins your heroes" toast firing for the hero just picked, on
+  top of the route panel — the hero pick's deal is no longer announced.
+  Verified at 390×844, 375×667 and 1440×900: leave from the map and from a
+  fight lands on the home with the run settled.

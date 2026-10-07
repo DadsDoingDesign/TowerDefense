@@ -69,8 +69,9 @@
   background: radial-gradient(120% 90% at 50% 55%, transparent 55%, rgba(8, 6, 4, 0.55) 100%);
 }
 
-/* The roads' labels: crisp HTML over the canvas. A label that is a button is
-   44px tall (the touch floor); its visible pill is the 32px face inside. */
+/* The roads' signposts (Figma "B2 · Road Signpost"): crisp HTML over the
+   canvas. A signpost is a 44px-tall button (the touch floor); its visible
+   face is the wooden plate inside, on a short post down to the road's end. */
 .tm-labels {
   position: absolute;
   inset: 0;
@@ -85,76 +86,98 @@
   pointer-events: auto;
   white-space: nowrap;
 }
+.tm-label.is-on {
+  z-index: 2;
+}
 .tm-pill {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 44px;
-  padding: 6px 10px 6px 9px;
+  padding: 6px 9px 6px 8px;
   border: 0;
   background: none;
-  color: var(--text);
+  color: var(--sign-ink);
   font: inherit;
   cursor: pointer;
 }
-/* The face: a dark pill with the company's colour as a rail. */
+/* The plate: planed wood, the grain as two soft bands, a dark rim. */
 .tm-pill::after {
   content: '';
   position: absolute;
   inset: 6px 0;
   z-index: -1;
-  border-radius: 8px;
-  background: rgba(20, 15, 10, 0.94);
-  border: 1px solid var(--line-strong);
-  box-shadow: inset 3px 0 0 var(--co, var(--line-strong));
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.14) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.28) calc(100% - 3px)),
+    repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.07) 7px 9px),
+    var(--sign-wood);
+  border: 1px solid var(--sign-rim);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
-.tm-pill .crest {
+/* The post: a stub of the same wood under the plate. */
+.tm-pill::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 4px;
+  height: 7px;
+  translate: -50% 0;
+  z-index: -2;
+  background: var(--sign-rim);
+}
+.tm-pill .crest,
+.tm-pill .lock {
   flex: none;
-}
-.tm-name {
-  font-size: var(--fs-sm);
-  font-weight: 700;
 }
 .tm-lv {
   font-size: var(--fs-sm);
   font-weight: 700;
-  color: var(--accent-text);
   font-variant-numeric: tabular-nums;
-}
-.tm-label.is-new .tm-lv {
-  color: var(--text);
-  font-weight: 600;
 }
 .tm-mkt {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 4px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 3px;
   background: var(--market);
   color: var(--market-ink);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 800;
 }
+/* Focused: the plate is lit — a gold rim and a glow; the notice is its road's. */
+.tm-label.is-on .tm-pill::after {
+  border: 2px solid var(--market);
+  background:
+    linear-gradient(180deg, rgba(255, 230, 180, 0.22) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.22) calc(100% - 3px)),
+    repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.06) 7px 9px),
+    var(--sign-wood-on);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(240, 196, 106, 0.55);
+}
+/* Locked: a charred, unlettered plate — the road does not give away its company. */
 .tm-label.is-pin .tm-pill {
-  cursor: default;
-  min-height: 0;
   color: var(--muted);
 }
 .tm-label.is-pin .tm-pill::after {
-  /* An uncharted road does not give away its company's colour. */
-  box-shadow: none;
+  background: rgba(20, 15, 10, 0.94);
+  border: 1px dashed var(--line-strong);
 }
-.tm-label.is-pin .tm-name {
-  font-weight: 600;
+.tm-label.is-pin.is-on .tm-pill::after {
+  border: 2px solid var(--market);
 }
 .tm-label.is-bare .tm-pill {
+  min-height: 0;
   padding: 10px 7px;
+  cursor: default;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tm-pill:not(:disabled):hover::after {
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  .tm-label:not(.is-on) .tm-pill:not(:disabled):hover::after {
+    border-color: color-mix(in srgb, var(--market) 70%, transparent);
   }
 }
 .tm-pill:focus-visible {
@@ -165,41 +188,50 @@
   outline-offset: var(--focus-offset);
 }
 
-/* ------------------------------------------------------------- the head */
+/* ------------------------------------------------------------- the head
+   Figma "B2 · Home Header": the seal and the name on one line, the militia's
+   name under it, the bank on the right. No tagline: the map says it. */
 .mn-head {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px;
-  padding: calc(20px + var(--safe-top, 0px)) var(--mn-col) 30px;
-  text-align: center;
-  background: linear-gradient(rgba(16, 12, 8, 0.86) 66%, rgba(16, 12, 8, 0));
+  column-gap: 10px;
+  padding: calc(12px + var(--safe-top, 0px)) var(--mn-col) 24px;
+  background: linear-gradient(rgba(16, 12, 8, 0.86) 68%, rgba(16, 12, 8, 0));
 }
-/* The seal over the name: the stacked lockup (docs/BRAND.md). The vector mark
-   is drawn at 56 (its floor is 40); it takes no shadow or glow. */
+/* The vector mark takes no shadow or glow; its floor is 40 (docs/BRAND.md). */
 .mn-mark {
   display: block;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 2px;
+  width: 44px;
+  height: 44px;
+}
+.mn-names {
+  min-width: 0;
 }
 /* The name is cream on dark wood, as in the lockup — the gold is the seal's. */
 .mn .t-title {
-  font-size: 40px;
-  /* The lockup's tracking: “Merchant Mercenaries” is long, and .06em adds a
-     full em across it — enough to wrap on a 390 phone. */
+  margin: 0;
+  font-size: clamp(20px, 5.6vw, 26px);
+  line-height: 1.05;
   letter-spacing: 0;
+  white-space: nowrap;
   color: var(--text);
   text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
 }
-.mn .t-sub {
+.mn-militia {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
   color: var(--text);
-  font-size: var(--fs-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Desk only: the column's instruction, beside the bank. */
+.mn-pick {
+  display: none;
 }
 .mn-bank {
-  position: absolute;
-  top: calc(12px + var(--safe-top, 0px));
-  right: max(12px, calc((100% - 560px) / 2));
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -212,45 +244,21 @@
   font-weight: 700;
   font-size: var(--fs-md);
 }
-.mn-bank-word {
-  display: none;
-  color: var(--accent-text);
+.mn-head .fw-update {
+  grid-column: 1 / -1;
+  margin-top: 8px;
 }
-/* A phone: the wordmark a step down, so the chip fits beside it. */
-@media (max-width: 479.98px) {
-  .mn .t-title {
-    font-size: 34px;
+/* A narrow phone: the name a step down so the bank keeps its place. */
+@media (max-width: 389.98px) {
+  .mn-mark {
+    width: 40px;
+    height: 40px;
   }
   .mn-bank {
     height: 32px;
     padding: 0 10px;
     font-size: var(--fs-sm);
   }
-}
-/* A narrow one: the head goes left-aligned and the chip keeps the right. */
-@media (max-width: 389.98px) {
-  .mn-head {
-    align-items: flex-start;
-    text-align: left;
-  }
-  .mn .t-title,
-  .mn .t-sub {
-    text-align: left;
-  }
-  .mn .t-title {
-    font-size: 30px;
-  }
-  .mn-mark {
-    width: 44px;
-    height: 44px;
-  }
-  .mn .t-sub {
-    font-size: var(--fs-sm);
-  }
-}
-/* Compact labels when the open area is short: the crest and the number. */
-.tm.is-compact .tm-name {
-  display: none;
 }
 
 /* The open area the map's roads fill. */
@@ -263,64 +271,184 @@
 /* ------------------------------------------------------------- the sheet */
 .mn-sheet {
   display: grid;
-  gap: 8px;
-  padding: 34px var(--mn-col) calc(16px + var(--safe-bottom, 0px));
-  background: linear-gradient(rgba(20, 15, 10, 0), rgba(20, 15, 10, 0.9) 30px, #1a130d 64px);
-}
-.mn-today {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  width: 100%;
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, rgba(240, 196, 106, 0.18), rgba(240, 196, 106, 0.04)), #1a130d;
-  border: 1px solid rgba(240, 196, 106, 0.4);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-md);
-  text-align: left;
-}
-button.mn-today {
-  cursor: pointer;
-}
-button.mn-today:disabled {
-  cursor: default;
-}
-.mn-today b {
-  color: var(--accent-text);
-}
-.mn-today .crest {
-  flex: none;
-}
-.mn-today-r {
-  margin-left: auto;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  text-align: right;
-}
-/* The market before it opens (the staggered reveal): quiet, dashed, a count to go. */
-.mn-today.is-locked {
-  background: rgba(20, 14, 8, 0.92);
-  border: 1px dashed var(--line-strong);
-  font-size: var(--fs-sm);
-  color: var(--muted);
-}
-.mn-today.is-locked b {
-  color: var(--muted);
-  font-weight: 600;
-}
-@media (hover: hover) and (pointer: fine) {
-  button.mn-today:not(:disabled):hover {
-    border-color: rgba(240, 196, 106, 0.7);
-  }
+  gap: 10px;
+  padding: 26px var(--mn-col) calc(16px + var(--safe-bottom, 0px));
+  background: linear-gradient(rgba(20, 15, 10, 0), rgba(20, 15, 10, 0.9) 22px, #1a130d 56px);
 }
 
-/* The charter (build step 5): a slim dashed-aqua progress line, never a card. */
+/* The coach line: one at a time (the board, then the market). */
+.mn-coach {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(20, 15, 10, 0.94);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--text);
+}
+.mn-coach b {
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------- the notice
+   Figma "B2 · Contract Notice": a parchment sheet pinned under the map, sealed
+   in the focused company's colour with its logo. */
+.mn-notice {
+  position: relative;
+  padding: 16px 14px 12px;
+  border-radius: 3px;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(120, 90, 50, 0.16) 100%),
+    var(--paper);
+  border: 1px solid #c8b48c;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.45);
+  color: var(--paper-ink);
+}
+/* The pin. */
+.mn-notice::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 7px;
+  height: 7px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: var(--paper-ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.mn-seal {
+  position: absolute;
+  top: -14px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--co) 80%, #fff) 0, var(--co) 45%, color-mix(in srgb, var(--co) 70%, #000) 100%);
+  border: 2px solid color-mix(in srgb, var(--co) 55%, #000);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+.mn-kicker {
+  margin: 0;
+  padding-right: 44px;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper-ink-2);
+}
+.mn-notice-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mn-pager {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--paper-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.mn-step {
+  width: 32px;
+  height: 32px;
+  margin: -2px 0;
+  border: 0;
+  background: none;
+  color: var(--paper-ink);
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.mn-step:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--paper-ink);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+.mn-notice-t {
+  min-width: 0;
+  margin: 2px 0 4px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--paper-ink);
+}
+.mn-route {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--paper-ink-2);
+}
+.mn-route i {
+  margin: 0 6px;
+  font-style: normal;
+  font-size: 9px;
+  color: var(--paper-ink);
+}
+.mn-letter {
+  margin: 6px 0 9px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--paper-ink-2);
+}
+.mn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(58, 44, 20, 0.5);
+  font-size: var(--fs-xs);
+  color: var(--paper-ink);
+}
+.mn-chip b {
+  font-weight: 800;
+}
+.mn-chip.is-market {
+  background: var(--market);
+  border-color: #a8812c;
+  color: var(--market-ink);
+}
+.mn-chip.is-ground {
+  background: var(--paper-ink);
+  border-color: var(--paper-ink);
+  color: var(--sign-ink);
+  font-weight: 700;
+}
+.mn-chip.is-ground::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--gr);
+}
+.mn-chip.is-locked {
+  border-style: dashed;
+  font-weight: 700;
+}
+
+/* The Sovereign Route, once open: a slim aqua line, never a card. */
 .mn-charter {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   min-height: 44px;
@@ -329,20 +457,12 @@ button.mn-today:disabled {
   background: rgba(20, 14, 8, 0.92);
   border: 1px dashed rgba(56, 242, 232, 0.45);
   color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .mn-charter b {
   font-size: var(--fs-md);
-}
-.mn-meter {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(233, 205, 150, 0.14);
-  overflow: hidden;
-}
-.mn-meter i {
-  display: block;
-  height: 100%;
-  background: #38f2e8;
 }
 .mn-charter-v {
   font-size: var(--fs-xs);
@@ -351,7 +471,8 @@ button.mn-today:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-/* The secondary places: one row of tiles, whatever the menu offers. */
+/* The secondary places: one row of tiles, whatever the menu offers. A locked
+   one wears a padlock; its reason is its name for a screen reader and its title. */
 .mn-tiles {
   display: grid;
   grid-auto-flow: column;
@@ -359,7 +480,8 @@ button.mn-today:disabled {
   gap: 6px;
 }
 .mn-tile {
-  min-height: 68px;
+  position: relative;
+  min-height: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -384,28 +506,20 @@ button.mn-today:disabled {
 .mn-tile.is-locked .fw-i {
   filter: saturate(0.25) brightness(0.65);
 }
+.mn-tile > .lock {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+}
 @media (hover: hover) and (pointer: fine) {
   .mn-tile:not(.is-locked):hover {
     border-color: color-mix(in srgb, var(--accent) 55%, transparent);
     background: rgba(56, 41, 25, 0.96);
   }
 }
-.mn-why {
-  margin-top: 2px;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  text-align: center;
-}
-.mn-why b {
-  color: var(--text);
-}
-.mn-locked {
-  margin-top: 0;
-  font-size: var(--fs-xs);
-}
 .mn .mn-cta {
-  height: 68px;
-  font-size: 26px;
+  height: 64px;
+  font-size: 24px;
   box-shadow: inset 0 0 0 1px var(--cta-edge), var(--cta-lift), 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
@@ -423,6 +537,9 @@ button.mn-today:disabled {
   line-height: 1.35;
   color: var(--text);
 }
+.mn-tip p {
+  margin: 0;
+}
 .mn-tip b {
   color: var(--accent-text);
 }
@@ -439,37 +556,39 @@ button.mn-today:disabled {
   cursor: pointer;
 }
 
-/* Desk only (shell-wide.css shows it). */
-.mn-standings {
-  display: none;
-}
-
 /* Short phones: the same trims the page skeleton makes. */
-@media (orientation: portrait) and (max-height: 700px) {
-  .mn-head {
-    padding-top: calc(12px + var(--safe-top, 0px));
-    padding-bottom: 22px;
-  }
-  .mn-mark {
-    width: 40px;
-    height: 40px;
-  }
+@media (orientation: portrait) and (max-height: 760px) {
   .mn-sheet {
-    gap: 6px;
-    padding-top: 24px;
+    gap: 8px;
+    padding-top: 20px;
+  }
+  .mn-notice {
+    padding: 15px 12px 10px;
+  }
+  .mn-notice-t {
+    font-size: 20px;
+  }
+  .mn-letter {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .mn-tile {
-    min-height: 56px;
+    min-height: 54px;
   }
   .mn .mn-cta {
-    height: 60px;
-    font-size: 24px;
+    height: 56px;
+    font-size: 22px;
   }
 }
-@media (orientation: portrait) and (max-height: 600px) {
-  /* The charter's line goes first: it is a long goal, not a choice. */
-  .mn-charter {
+@media (orientation: portrait) and (max-height: 640px) {
+  /* The letter goes first: the chips carry the facts. */
+  .mn-letter {
     display: none;
+  }
+  .mn-route {
+    margin-bottom: 8px;
   }
   .mn-tile .fw-i {
     display: none;
@@ -638,16 +757,16 @@ button.mn-today:disabled {
 }
 
 /* ================================================================== desk
-   `1-menu-desk.png`: the menu is a left-hand column over a dark wash, your
-   standing with each company at its foot, and the map takes the rest of the
-   screen. Kept here rather than in shell-wide.css because this sheet loads
-   after it; same breakpoint as the wide layout. */
+   Figma "B2 · desk": the column holds the head, the notice, the tiles and the
+   CTA; the map — the picker — takes the rest of the screen. Kept here rather
+   than in shell-wide.css because this sheet loads after it; same breakpoint
+   as the wide layout. */
 @media (min-width: 900px) and (min-height: 540px) {
   .mn {
     --mn-side: clamp(380px, 31vw, 460px);
     display: grid;
     grid-template-columns: var(--mn-side) minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .mn-shade {
     background:
@@ -657,31 +776,41 @@ button.mn-today:disabled {
   .mn-head {
     grid-column: 1;
     grid-row: 1;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 36px 32px 16px;
-    text-align: left;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'mark names names'
+      'pick pick bank';
+    row-gap: 18px;
+    padding: 36px 32px 20px;
     background: none;
   }
-  .mn .t-title {
-    /* “Merchant Mercenaries” is ~9.6 em wide: it fits the side column at this size. */
-    font-size: clamp(30px, 2.6vw, 38px);
-    text-align: left;
-  }
   .mn-mark {
-    width: 64px;
-    height: 64px;
+    grid-area: mark;
+    width: 52px;
+    height: 52px;
   }
-  .mn .t-sub {
-    text-align: left;
+  .mn-names {
+    grid-area: names;
+  }
+  .mn .t-title {
+    font-size: clamp(24px, 2.1vw, 30px);
+  }
+  .mn-militia {
+    color: var(--muted);
+  }
+  .mn-pick {
+    grid-area: pick;
+    display: block;
+    margin: 0;
+    font-size: var(--fs-micro);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: var(--muted);
   }
   .mn-bank {
-    position: static;
-    margin-top: 10px;
-  }
-  .mn-bank-word {
-    display: inline;
+    grid-area: bank;
+    justify-self: end;
   }
   .mn-window {
     grid-column: 2;
@@ -690,58 +819,18 @@ button.mn-today:disabled {
   .mn-sheet {
     grid-column: 1;
     grid-row: 2;
-    gap: 10px;
-    padding: 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    padding: 6px 32px 32px;
     background: none;
   }
-  .mn-standings {
-    grid-column: 1;
-    grid-row: 3;
-    align-self: end;
-    display: grid;
-    gap: 10px;
-    min-height: 0;
-    overflow: auto;
-    padding: 24px 32px 32px;
+  .mn-notice {
+    margin-top: 8px;
   }
-  .mn-eyebrow {
-    font-size: var(--fs-micro);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 700;
-  }
-  .mn-st {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    font-size: var(--fs-sm);
-    color: var(--text);
-  }
-  .mn-st-bar {
-    height: 6px;
-    margin-top: 5px;
-    border-radius: 3px;
-    background: rgba(233, 205, 150, 0.12);
-    overflow: hidden;
-  }
-  .mn-st-bar i {
-    display: block;
-    height: 100%;
-    background: var(--co);
-  }
-  .mn-st-n {
-    min-width: 2ch;
-    text-align: right;
-    color: var(--accent-text);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .mn-st.is-locked {
-    color: var(--muted);
-  }
-  .mn-st.is-locked .mn-st-n {
-    color: var(--muted);
+  /* The places and the CTA stand at the column's foot. */
+  .mn-tiles {
+    margin-top: auto;
   }
 }

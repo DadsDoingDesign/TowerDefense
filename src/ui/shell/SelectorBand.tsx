@@ -59,7 +59,11 @@ export function SelectorBand({ offers }: { offers: Offer[] }) {
   // `rewardInPlace` holds only in the `bands` battle context, so the invariant
   // above (bands => party) still decides everything else.
   const inPlace = useGameStore(rewardInPlace)
+  // The run map has no party row (Oct 2026): the stop's card and its CTA take
+  // the room, and the heroes are posted, geared and levelled at the fight.
+  const onMap = useGameStore((s) => s.screen === 'map')
   if (inPlace) return <RewardSelector offers={offers} />
+  if (onMap) return null
   return <PartySelector />
 }
 

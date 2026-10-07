@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import type { BannerLook } from '../../game/data/banner'
-import { Crest } from '../pixel'
+import { Crest, Lock } from '../pixel'
 import { useMedia } from '../pointer'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
 import { BRIGHTEN_MS, brightenEase, buildGeometry, makeTraffic, MAP_FPS, STILL_T, type MapGeometry, type Rect, type RoadView } from './mapRules'
@@ -82,10 +82,11 @@ export function TradeMap({
   open,
   motion,
   firstRun,
+  focused = null,
   onPick,
 }: {
   roads: RoadView[]
-  /** Today's market (the label carries "×1.3 today"), or null. */
+  /** Today's market (its signpost carries "×1.3"), or null. */
   market: { company: CompanyId; mult: number } | null
   banner: BannerLook
   /** The part of the map the menu leaves open, CSS px from the map's top-left. */
@@ -93,7 +94,9 @@ export function TradeMap({
   /** False under reduced motion: one still frame. */
   motion: boolean
   firstRun: boolean
-  /** Tap a road's label: open its company's contracts. */
+  /** The road whose signpost is lit: its notice is the one under the map. */
+  focused?: CompanyId | null
+  /** Tap a road's signpost: focus it (the menu's notice follows). Never signs. */
   onPick?: (company: CompanyId) => void
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -279,16 +282,20 @@ export function TradeMap({
         style={geo ? { width: (geo.W * k) / (size?.dpr ?? 1), height: (geo.H * k) / (size?.dpr ?? 1) } : undefined}
       />
       {geo && open && (
-        <Labels geo={geo} roads={roads} market={market} cssPerPx={cssPerPx} open={open} firstRun={firstRun} onPick={onPick} />
+        <Labels geo={geo} roads={roads} market={market} cssPerPx={cssPerPx} open={open} firstRun={firstRun} focused={focused} onPick={onPick} />
       )}
     </div>
   )
 }
 
 /**
- * The roads' labels, as crisp HTML over the canvas: the company's crest, its
- * goods and your standing — and today's market on the road it names. A road
- * that hires is a button that opens its contracts; an uncharted one is a pin.
+ * The roads' signposts (Oct 2026, Figma "B2 · Road Signpost"), as crisp HTML
+ * over the canvas: a wooden plate at each road's end with the company's logo
+ * and your standing ("Rep 2"), today's market as a gold "×1.3" on the road it
+ * names, a padlock and "—" on a road not hiring yet. The map IS the contract
+ * board: a tap focuses that road — its signpost lights and the notice under
+ * the map turns to it — and never signs. A first launch's uncharted roads are
+ * bare pins: there is only the one road to take.
  */
 function Labels({
   geo,
@@ -297,6 +304,7 @@ function Labels({
   cssPerPx,
   open,
   firstRun,
+  focused,
   onPick,
 }: {
   geo: MapGeometry
@@ -305,6 +313,7 @@ function Labels({
   cssPerPx: number
   open: Rect
   firstRun: boolean
+  focused: CompanyId | null
   onPick?: (company: CompanyId) => void
 }) {
   const ref = useRef<HTMLUListElement>(null)
@@ -354,27 +363,35 @@ function Labels({
         const top = (y - 8) * cssPerPx
         const style = { left, top, '--co': co.color } as CSSProperties
         const hot = !firstRun && market?.company === r.company
-        // Placement priority: the market's road, then by standing, the uncharted last.
-        const prio = (hot ? 100 : 0) + (v.state === 'uncharted' ? 0 : 10 + v.standing)
-        if (v.state === 'uncharted') {
+        const on = focused === r.company
+        const locked = v.state === 'uncharted'
+        // Placement priority: the focused road, the market's, then by standing, the uncharted last.
+        const prio = (on ? 1000 : 0) + (hot ? 100 : 0) + (locked ? 0 : 10 + v.standing)
+        if (locked && firstRun) {
           return (
-            <li key={r.company} className={`tm-label is-pin${firstRun ? ' is-bare' : ''}`} data-x={left} data-y={top} data-p={prio} style={style}>
+            <li key={r.company} className="tm-label is-pin is-bare" data-x={left} data-y={top} data-p={prio} style={style}>
               <span className="tm-pill" role="img" aria-label="An uncharted road, not hiring yet">
-                <Crest company={r.company} scale={1} locked />
-                {!firstRun && <span className="tm-name">Uncharted</span>}
+                <Lock scale={2} />
               </span>
             </li>
           )
         }
-        const lv = v.state === 'lit' ? String(v.standing) : 'Hiring'
-        const name = `${co.goods}, ${v.state === 'lit' ? `standing ${v.standing}` : 'hiring'}${hot ? `, pays ×${market!.mult} today` : ''}`
+        const name = locked
+          ? `${co.name}: not hiring yet, opens at Standing ${co.opensAt}`
+          : `${co.name}, ${co.goods} road: standing ${v.standing}${hot ? `, ${co.goods.toLowerCase()} sells ×${market!.mult} today` : ''}`
         return (
-          <li key={r.company} className={`tm-label${v.state === 'lit' ? '' : ' is-new'}`} data-x={left} data-y={top} data-p={prio} style={style}>
-            <button type="button" className="tm-pill" onClick={() => onPick?.(r.company)} aria-label={`${name}: see its contracts`} disabled={!onPick}>
-              <Crest company={r.company} scale={1} />
-              <span className="tm-name">{co.goods}</span>
-              <span className="tm-lv">{lv}</span>
-              {hot && <span className="tm-mkt">×{market!.mult} today</span>}
+          <li
+            key={r.company}
+            className={`tm-label${locked ? ' is-pin' : v.state === 'lit' ? '' : ' is-new'}${on ? ' is-on' : ''}${hot ? ' is-hot' : ''}`}
+            data-x={left}
+            data-y={top}
+            data-p={prio}
+            style={style}
+          >
+            <button type="button" className="tm-pill" onClick={() => onPick?.(r.company)} aria-label={name} aria-pressed={on} disabled={!onPick}>
+              {locked ? <Lock scale={2} /> : <Crest company={r.company} scale={1} />}
+              <span className="tm-lv">{locked ? '—' : `Rep ${v.standing}`}</span>
+              {hot && <span className="tm-mkt">×{market!.mult}</span>}
             </button>
           </li>
         )

@@ -78,16 +78,16 @@ export type Speed = 1 | 2 | 3
 export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
 
 /**
- * The contract board while it is open (the `contracts` screen): which company
- * is chosen, and the terms being set. Presentation — never snapshotted, and
- * gone the moment a contract is signed.
+ * A company's terms while they are open (the `contracts` screen): which
+ * company, and the stake being set. Presentation — never snapshotted, and gone
+ * the moment a contract is signed. Since the home became the board (Oct 2026,
+ * Figma "B2"), the company is chosen on the menu's map and this is the terms
+ * page alone.
  */
 export interface ContractBoard {
   /** The board's own seed: each company's contract deals its run seed from it. */
   seed: number
   company: CompanyId
-  /** `board`: pick a company; `terms`: escort or stake. */
-  step: 'board' | 'terms'
   crates: number
 }
 
@@ -205,6 +205,12 @@ export interface GameData {
   contract: RunContract | null
   /** The contract board, while it is open (presentation, not snapshotted). */
   board: ContractBoard | null
+  /**
+   * The road focused on the menu's map (presentation, not snapshotted): its
+   * signpost is lit and the notice under the map is its company's. Null: the
+   * default (`contractSlice.homeCompany`). Any company, a locked one too.
+   */
+  homeFocus: CompanyId | null
   /** A typed seed or the board's (Phase 1) — see `state/seeds.ts`. */
   challenge: RunChallenge
   /**

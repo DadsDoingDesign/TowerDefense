@@ -61,10 +61,11 @@ describe('a contract, in the store', () => {
     useMetaStore.setState({ bank: 1000, stats: { ...useMetaStore.getState().stats, runsCompleted: 3 }, standing: { spice: 0, art: 2000, metals: 0, silk: 0, scrolls: 0 } })
   })
 
-  it('the board clamps the stake to the standing cap and the bank, and signing takes nothing until the hero', () => {
+  it('the terms clamp the stake to the standing cap and the bank, and signing takes nothing until the hero', () => {
     g().openContracts({ company: 'metals', crates: 6 })
     expect(g().board!.crates).toBe(0) // standing 0 with Ironvein: escort only until standing 2
-    g().boardPick('art')
+    g().boardBack()
+    g().openContracts({ company: 'art' })
     g().setCrates(6)
     expect(g().board!.crates).toBe(6)
     g().signContract()
@@ -80,7 +81,7 @@ describe('a contract, in the store', () => {
   it('stakes open per company at standing 2 with it (the staggered reveal)', () => {
     const at = (xp: number) => {
       useMetaStore.setState({ standing: { spice: 0, art: 0, metals: xp, silk: 0, scrolls: 0 } })
-      g().openContracts({ company: 'metals' }, 'terms')
+      g().openContracts({ company: 'metals' })
       g().setCrates(2)
       return g().board!.crates
     }
@@ -90,6 +91,39 @@ describe('a contract, in the store', () => {
     useSettingsStore.setState({ showEverything: true })
     expect(at(0)).toBe(1)
     useSettingsStore.setState({ showEverything: false })
+  })
+
+  it('the menu is the board: a focused road opens its terms, and back keeps it focused', () => {
+    useMetaStore.setState({ standing: { spice: 0, art: standingXpToReach(2), metals: 0, silk: 0, scrolls: 0 } })
+    useGameStore.setState({ screen: 'hub', board: null, homeFocus: null })
+    // A road not hiring yet (the Scriptorium opens at Standing 3) can be focused; its terms cannot be opened.
+    g().focusRoad('scrolls')
+    expect(g().homeFocus).toBe('scrolls')
+    expect(g().screen).toBe('hub')
+    g().focusRoad('art')
+    g().openContracts()
+    expect(g().screen).toBe('contracts')
+    expect(g().board!.company).toBe('art')
+    g().boardBack()
+    expect(g().screen).toBe('hub')
+    expect(g().board).toBeNull()
+    expect(g().homeFocus).toBe('art')
+    // A company asked for that does not hire falls back to the focus.
+    g().openContracts({ company: 'scrolls' })
+    expect(g().board!.company).toBe('art')
+  })
+
+  it('choosing the hero marches straight into the first layer’s middle fight', () => {
+    g().openContracts({ company: 'art' })
+    g().signContract()
+    const { runMap, reachableNodeIds } = g()
+    const first = runMap.nodes.filter((n) => reachableNodeIds.includes(n.id) && n.type === 'battle')
+    g().marchOut('pick-0')
+    expect(g().screen).toBe('battle')
+    expect(g().battlePhase).toBe('setup')
+    const at = runMap.nodes.find((n) => n.id === g().activeNodeId)!
+    expect(at.layer).toBe(1)
+    expect(Math.abs(at.ny - 0.5)).toBe(Math.min(...first.map((n) => Math.abs(n.ny - 0.5))))
   })
 
   it('an older save’s contract set up before the advance still takes its purse from the bank', () => {
@@ -106,7 +140,7 @@ describe('a contract, in the store', () => {
     g().signContract()
     g().cancelHeroPick()
     expect(g().screen).toBe('contracts')
-    expect(g().board).toMatchObject({ company: 'art', crates: 2, step: 'terms' })
+    expect(g().board).toMatchObject({ company: 'art', crates: 2 })
     expect(useMetaStore.getState().bank).toBe(1000)
   })
 

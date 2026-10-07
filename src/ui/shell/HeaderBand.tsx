@@ -8,6 +8,7 @@ import { Crate } from '../pixel'
 import { Money } from './Money'
 import { strengthPct, strengthShort, strengthText } from '../channels'
 import { useShown } from './staging'
+import { LeaveRun } from './LeaveRun'
 
 /**
  * Band 1 — run state, and nothing else. It never holds a control that changes
@@ -84,6 +85,7 @@ export function HeaderBand() {
           whose name is its aria-label. */}
       <h1 className="sh-screen-h" tabIndex={-1} aria-label={screenName} />
       <div className="sh-header-row">
+        {hasContract && <LeaveRun />}
         {depthShown && (
           <span className="sh-chip depth" role="img" aria-label={`Depth ${depth} of ${lastLayer}`}>
             {/* H2: "Depth 1" is the heading and "/12" the context. */}

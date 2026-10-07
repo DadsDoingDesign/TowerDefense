@@ -157,7 +157,9 @@ export function ReceiptToast() {
         sayNotice(s.gearNotice)
         return
       }
-      if (s.runPhase !== 'active') {
+      // The hero pick deals the whole company: the heroes you just chose are
+      // not news, and the toast would sit on the road's panel (Oct 2026).
+      if (s.runPhase !== 'active' || prev.screen === 'heroPick') {
         prev = s
         return
       }

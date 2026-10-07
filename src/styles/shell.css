@@ -114,6 +114,42 @@
 .sh-header-row > .sh-res {
   flex: 0 0 auto;
 }
+/* The way out of the run (Oct 2026): a quiet back arrow at the row's head —
+   a chip-sized face inside a 44px touch target. */
+.sh-leave {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px -6px -8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.sh-leave-face {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+.sh-leave:focus-visible {
+  outline: none;
+}
+.sh-leave:focus-visible .sh-leave-face {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-leave:hover .sh-leave-face {
+    border-color: var(--accent-dim);
+  }
+}
 /* The cargo block takes the room the chips leave (its own content does not
    size it, so it can be queried). With depth and strength beside it on a
    phone, the visible word "Cargo" steps aside before the bar would shrink
@@ -508,6 +544,19 @@
 .sh-detail:has(> .sh-wavebar) {
   grid-template-rows: minmax(0, 1fr) auto;
   height: calc(var(--sh-detail-h) + var(--sh-wavebar-h) + var(--safe-bottom));
+}
+/* The run map (Oct 2026): the stop's card over one full-width CTA, as on every
+   page. No party row above and no gear or pack beside it, so the map keeps the
+   room they took. */
+.sh-detail:has(> .sh-marchbar) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: 10px;
+  height: calc(var(--sh-detail-h) + var(--safe-bottom));
+}
+.sh-marchbar {
+  grid-column: 1 / -1;
+  padding-bottom: var(--safe-bottom);
 }
 .sh-context,
 .sh-gear,

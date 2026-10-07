@@ -34,6 +34,7 @@ export const useGameStore = create<GameState>()((...a) => {
     ...bootRun,
     runSeed: bootSeed,
     screen: 'hub',
+    homeFocus: null,
     roster: bootRoster,
     gold: START_GOLD,
     baseHp: MAX_BASE_HP,
