@@ -3329,3 +3329,13 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   top of the route panel — the hero pick's deal is no longer announced.
   Verified at 390×844, 375×667 and 1440×900: leave from the map and from a
   fight lands on the home with the run settled.
+
+- **2026-10-08 — A row's detail opens under the row.** The designer, on the
+  Settings page: "helper text should expand below each selection". Every row
+  chooser (Settings, the Codex, the merchant's shelf, the HQ lists) used to
+  show the selected row's detail after the whole list, far from the row on a
+  long page. The detail now hangs under its row as one gold-edged piece
+  (`.pg-detail.inline`); a portrait chooser keeps it under the strip.
+  Verified at 390×844, 375×667 and 1440×900 on Settings (Assist; Sound with
+  its sliders) and on a merchant's shelf. Scorecard: readability 5/5,
+  hierarchy 5/5, polish 4/5.
