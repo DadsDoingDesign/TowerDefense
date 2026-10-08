@@ -648,6 +648,32 @@
   background: var(--panel-3);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+/* Oct 2026 (the designer: "helper text should expand below each selection"):
+   on a row chooser the selected row opens downward — its detail hangs under
+   it as one piece, the same gold edge carried round both. */
+.pg-row.sel:has(+ .pg-detail.inline) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow:
+    inset 1px 0 0 var(--accent),
+    inset -1px 0 0 var(--accent),
+    inset 0 1px 0 var(--accent);
+}
+.pg-rows > .pg-detail.inline {
+  align-items: stretch;
+  margin-top: calc(-1 * var(--gap));
+  padding: 2px var(--gap-sm) var(--gap-sm);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  background: var(--panel-3);
+  box-shadow:
+    inset 1px 0 0 var(--accent),
+    inset -1px 0 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
+  scroll-margin-bottom: var(--gap);
+}
+.pg-detail.inline > .pg-card {
+  background: rgba(20, 14, 8, 0.35);
+}
 
 /* When the body scrolls, fade its bottom edge so a half-cut row reads as
    "more below" rather than as a clipping bug. */

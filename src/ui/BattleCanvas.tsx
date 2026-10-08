@@ -300,6 +300,15 @@ export function BattleCanvas() {
      * put together. Handing the same resize to the compositor costs the main
      * thread nothing and is the operation hardware acceleration exists to do.
      */
+    /**
+     * Repaint now, inside the resize, rather than on the next frame. Setting a
+     * canvas's size clears it, and a `ResizeObserver` callback lands after this
+     * frame's rAF and before its paint — so a resize left the field BLANK for
+     * a frame, and while the Detail band animates open or shut (a hero's
+     * details on the field) that was every frame of the slide: a flicker.
+     * Bound to `step` once it exists; a zero-length step draws and banks nothing.
+     */
+    let paintNow: (() => void) | null = null
     const resize = () => {
       const rect = wrap.getBoundingClientRect()
       // The playable rect fits the wrap's CONTENT box: the Stage reserves a
@@ -327,7 +336,8 @@ export function BattleCanvas() {
       svMap = map
       const bw = sv.w * sv.density
       const bh = sv.h * sv.density
-      if (canvas.width !== bw || canvas.height !== bh) {
+      const cleared = canvas.width !== bw || canvas.height !== bh
+      if (cleared) {
         canvas.width = bw
         canvas.height = bh
       }
@@ -350,6 +360,7 @@ export function BattleCanvas() {
         setZoomOn(false)
         showView(fit)
       }
+      if (cleared) paintNow?.()
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -706,6 +717,14 @@ export function BattleCanvas() {
       ctx.fillStyle = GRADE
       ctx.fillRect(sv.x0, sv.y0, sv.w, sv.h)
       ctx.globalCompositeOperation = 'source-over'
+    }
+
+    paintNow = () => {
+      try {
+        step(last)
+      } catch (err) {
+        reportFatal(err, 'battle-loop')
+      }
     }
 
     const frame = (now: number) => {

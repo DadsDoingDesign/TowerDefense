@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import type { ShellContext } from './context'
@@ -291,6 +291,45 @@ export function PageScreen({
   // A one-tap choice is always a row, even alone: the row IS its commit.
   const asRows = (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
 
+  // The selected offer's detail. On a row chooser it opens under its row.
+  const detail = selected ? (
+    <div className={`pg-detail${asRows ? ' inline' : ''}`} ref={detailRef}>
+      {!asRows && (
+        <p className="pg-name" style={selected.color ? { color: railText(selected.color) } : undefined}>
+          {selected.title}
+        </p>
+      )}
+      {/* The full name with its rarity in its own hue and pip count. A long
+          generated name ("Ruinous Bow of Precision") is cut short in its
+          row, and merchant and Forge rows spend their value slot on the
+          price, so this line is where both read in full. */}
+      {asRows && selected.rarity ? (
+        <p className="pg-rarity-line">
+          <b style={selected.color ? { color: railText(selected.color) } : undefined}>{selected.title}</b>{' '}
+          <RarityTag rarity={selected.rarity} />
+        </p>
+      ) : null}
+      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
+      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
+      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
+      {selected.info && (
+        <p className="pg-info-line">
+          {selected.info.label}
+          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
+        </p>
+      )}
+      {selected.sliders?.length ? (
+        <div className="pg-sliders">
+          {selected.sliders.map((d) => (
+            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  ) : null
+
   return (
     <PageLayout
       title={title}
@@ -422,75 +461,44 @@ export function PageScreen({
       {asRows && (
         <div className="pg-rows">
           {choices.map((o) => (
-            <MenuRow
-              key={o.id}
-              label={o.title}
-              value={
-                o.cost ? priceNode(o.cost, o.dim ? shortfall(o.cost) : false) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
-              }
-              currency={o.cost?.currency}
-              rail={o.color}
-              icon={o.icon}
-              mark={o.mark}
-              glyph={o.glyph}
-              art={o.rowArt}
-              note={o.note}
-              big={!!o.note}
-              dim={o.dim}
-              pips={o.pips}
-              onClick={() => pick(o.id)}
-              selected={o.id === selected?.id}
-              {...(o.oneTap
-                ? {
-                    press: oneTap.bind(o.id),
-                    pressing: oneTap.pressing === o.id,
-                    name: o.oneTap.label,
-                    description: describeOneTap(o),
-                    disabled: o.action?.disabled,
-                  }
-                : {})}
-            />
+            <Fragment key={o.id}>
+              <MenuRow
+                label={o.title}
+                value={
+                  o.cost ? priceNode(o.cost, o.dim ? shortfall(o.cost) : false) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
+                }
+                currency={o.cost?.currency}
+                rail={o.color}
+                icon={o.icon}
+                mark={o.mark}
+                glyph={o.glyph}
+                art={o.rowArt}
+                note={o.note}
+                big={!!o.note}
+                dim={o.dim}
+                pips={o.pips}
+                onClick={() => pick(o.id)}
+                selected={o.id === selected?.id}
+                {...(o.oneTap
+                  ? {
+                      press: oneTap.bind(o.id),
+                      pressing: oneTap.pressing === o.id,
+                      name: o.oneTap.label,
+                      description: describeOneTap(o),
+                      disabled: o.action?.disabled,
+                    }
+                  : {})}
+              />
+              {o.id === selected?.id && detail}
+            </Fragment>
           ))}
         </div>
       )}
 
-      {selected && !asHeroes && (
-        <div className="pg-detail" ref={detailRef}>
-          {!asRows && (
-            <p className="pg-name" style={selected.color ? { color: railText(selected.color) } : undefined}>
-              {selected.title}
-            </p>
-          )}
-          {/* The full name with its rarity in its own hue and pip count. A long
-              generated name ("Ruinous Bow of Precision") is cut short in its
-              row, and merchant and Forge rows spend their value slot on the
-              price, so this line is where both read in full. */}
-          {asRows && selected.rarity ? (
-            <p className="pg-rarity-line">
-              <b style={selected.color ? { color: railText(selected.color) } : undefined}>{selected.title}</b>{' '}
-              <RarityTag rarity={selected.rarity} />
-            </p>
-          ) : null}
-          {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
-          {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
-          <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
-          {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
-          {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
-          {selected.info && (
-            <p className="pg-info-line">
-              {selected.info.label}
-              <InfoToggle label={selected.info.label} lines={selected.info.lines} />
-            </p>
-          )}
-          {selected.sliders?.length ? (
-            <div className="pg-sliders">
-              {selected.sliders.map((d) => (
-                <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      )}
+      {/* A row chooser opens the detail under the row it belongs to (Oct
+          2026, the designer: "helper text should expand below each
+          selection"); a portrait chooser keeps it under the strip. */}
+      {selected && !asHeroes && !asRows && detail}
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle
