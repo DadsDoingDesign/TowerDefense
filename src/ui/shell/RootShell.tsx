@@ -45,6 +45,7 @@ const PAGES = {
   hq: () => import('./hq/HqScreen'),
   crates: () => import('./hq/CratesScreen'),
   charter: () => import('./charter/CharterScreen'),
+  codex: () => import('./codex/CodexScreen'),
 }
 const ResultScreen = lazy(() => PAGES.result().then((m) => ({ default: m.ResultScreen })))
 const ContractsScreen = lazy(() => PAGES.contracts().then((m) => ({ default: m.ContractsScreen })))
@@ -52,6 +53,7 @@ const CityScreen = lazy(() => PAGES.city().then((m) => ({ default: m.CityScreen 
 const HqScreen = lazy(() => PAGES.hq().then((m) => ({ default: m.HqScreen })))
 const CratesScreen = lazy(() => PAGES.crates().then((m) => ({ default: m.CratesScreen })))
 const CharterScreen = lazy(() => PAGES.charter().then((m) => ({ default: m.CharterScreen })))
+const CodexScreen = lazy(() => PAGES.codex().then((m) => ({ default: m.CodexScreen })))
 
 /** Warm every lazy page once, when the browser is next idle after mount. */
 function usePagePrefetch(): void {
@@ -86,7 +88,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   hq: {},
   crates: {},
   charter: {},
-  codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
+  codex: { title: 'Codex', subtitle: 'Every item, skill, goblin, relic and feat your militia has found.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
   militia: { title: 'Your militia' },
 }
@@ -177,6 +179,8 @@ export function RootShell() {
             <CratesScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
             <CharterScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'codex' ? (
+            <CodexScreen onBack={() => setMetaView('menu')} />
           ) : isMenu ? (
             <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
           ) : screen === 'hub' && metaView === 'militia' ? (

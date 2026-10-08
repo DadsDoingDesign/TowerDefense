@@ -1,0 +1,595 @@
+/**
+ * The Codex (`ui/shell/codex/CodexScreen.tsx`): a collection in the manner of
+ * Supercell's — chunky framed tiles in a grid, a level hue per frame, black
+ * silhouettes for what is still locked, a red dot for what is new. Phone: a
+ * 4-up grid and the card as a sheet. Desk: a wide grid and the card beside it.
+ */
+.shell.shell-page:has(> .cx) {
+  max-width: none;
+}
+.cx {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+.cx-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+}
+.cx-head {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: calc(12px + var(--safe-top, 0px)) var(--gutter) 4px;
+}
+.cx-iconbtn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(47, 36, 24, 0.9);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  cursor: pointer;
+}
+.cx-title {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 2px 0 #000;
+}
+.cx-total {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin: 6px var(--gutter) 10px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: #120c07;
+  border: 1px solid var(--line-strong);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.cx-total b {
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.cx-bar {
+  height: 10px;
+  border-radius: 6px;
+  background: #3a2a1a;
+  box-shadow: inset 0 1px 2px #000;
+  overflow: hidden;
+}
+.cx-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(#ffe08a, #e0a83c);
+}
+
+/* ------------------------------------------------------------ the tabs */
+.cx-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 var(--gutter) 8px;
+}
+.cx-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 60px;
+  padding: 7px 2px 6px;
+  border-radius: 12px;
+  background: #2a1e14;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.cx-tab small {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cx-tab.on {
+  background: linear-gradient(#5a4126, #3b2a19);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 12px rgba(240, 196, 106, 0.3);
+}
+.cx-tab.on small {
+  color: var(--accent-text);
+}
+.cx-tab:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.cx-dot {
+  position: absolute;
+  top: -5px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #d8402f;
+  border: 2px solid var(--bg);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+/* ------------------------------------------------------------ the body */
+.cx-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--gutter) calc(20px + var(--safe-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+.cx-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 2px 8px;
+}
+.cx-sec-head h2 {
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sec, var(--text)) 70%, var(--text));
+}
+.cx-rule {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sec, var(--line-strong)), transparent);
+  opacity: 0.6;
+}
+.cx-n {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cx-locked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------ a tile */
+.cx-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.cx-tile {
+  position: relative;
+  aspect-ratio: 1 / 1.12;
+  padding: 3px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(var(--lv), color-mix(in srgb, var(--lv) 55%, #000));
+  box-shadow: 0 3px 0 #000, inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.cx-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-radius: 9px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--lv) 38%, #2b1f14) 0, #21170f 70%);
+}
+.cx-art {
+  display: grid;
+  place-items: center;
+  height: 58%;
+}
+.cx-art .fw-i {
+  transform: scale(1.5);
+}
+.cx-art canvas {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+}
+.cx-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 3px 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8) 40%);
+  text-shadow: 0 1px 0 #000;
+  overflow-wrap: anywhere;
+}
+.cx-lv {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--lv);
+  color: #140d07;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 1px 0 #000;
+}
+.cx-co {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.cx-new {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 2;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #d8402f;
+  border: 2px solid var(--bg);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  transform: rotate(8deg);
+}
+.cx-tile.locked {
+  background: linear-gradient(#3a3026, #241b12);
+  box-shadow: 0 3px 0 #000;
+}
+.cx-tile.locked .cx-in {
+  background: #17110b;
+}
+.cx-tile.locked .cx-art {
+  filter: brightness(0) opacity(0.5);
+}
+.cx-tile.locked .cx-name {
+  color: var(--muted);
+  background: none;
+  text-shadow: none;
+}
+.cx-tile.locked .lock {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.cx-tile.on {
+  outline: 3px solid #fff;
+  outline-offset: 1px;
+}
+.cx-tile:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cx-tile:hover {
+    filter: brightness(1.12);
+  }
+  .cx-tab:not(.on):hover {
+    border-color: var(--accent-dim);
+  }
+}
+
+/* ------------------------------------------------------------ feats */
+.cx-feats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cx-feat {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #2a1e14;
+  border: 1px solid var(--line-strong);
+}
+.cx-medal {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe9a8, #e0a83c 55%, #8a5a18);
+  box-shadow: 0 2px 0 #000;
+}
+.cx-feat.no .cx-medal {
+  background: #2f261c;
+}
+.cx-feat.no .cx-medal .fw-i {
+  filter: brightness(0) opacity(0.5);
+}
+.cx-feat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.cx-feat-text b {
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+.cx-feat-text small {
+  font-size: var(--fs-xs);
+  color: var(--accent-text);
+}
+.cx-gold {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-weight: 900;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.cx-gold small {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  color: var(--good);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ------------------------------------------------------------ the card */
+.cx-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: calc(20px + var(--safe-top, 0px)) 16px calc(20px + var(--safe-bottom, 0px));
+  background: rgba(8, 5, 3, 0.74);
+  overflow-y: auto;
+}
+.cx-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 4px;
+  border-radius: 18px;
+  background: linear-gradient(var(--lv), color-mix(in srgb, var(--lv) 45%, #000));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+}
+.cx-card.locked {
+  background: linear-gradient(#4a3c2c, #241b12);
+}
+.cx-card-in {
+  position: relative;
+  padding: 14px 16px 16px;
+  border-radius: 15px;
+  background: #2a1e14;
+}
+.cx-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d8402f;
+  border: 2px solid #000;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.cx-card-art {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  margin: 6px auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--lv) 45%, #2b1f14), #1a120b 72%);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--lv) 60%, transparent);
+}
+.cx-card-art .fw-i {
+  transform: scale(3);
+}
+.cx-card-art canvas {
+  width: 104px;
+  height: 104px;
+  image-rendering: pixelated;
+}
+.cx-card.locked .cx-card-art > :not(.lock) {
+  filter: brightness(0) opacity(0.5);
+}
+.cx-card-art .lock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+.cx-card-name {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--text);
+}
+.cx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.cx-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 12px;
+  background: #3b2b1b;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+.cx-chip.lv {
+  background: var(--lv);
+  border: 0;
+  color: #140d07;
+}
+.cx-card.locked .cx-chip.lv {
+  background: #3b2b1b;
+  color: var(--text);
+}
+.cx-does {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #1a120b;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+.cx-how {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--muted);
+}
+.cx-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+.cx-pager button {
+  width: 48px;
+  height: 44px;
+  border-radius: 12px;
+  background: #3b2b1b;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.cx-pager span {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cx-gloss {
+  max-width: 460px;
+}
+.cx-gloss .cx-card-name {
+  margin: 4px 0 12px;
+}
+.cx-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.cx-terms dt {
+  font-weight: 800;
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+}
+.cx-terms dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------ desk */
+.cx.is-desk .cx-main {
+  max-width: none;
+  margin: 0;
+  padding: 0 12px 0 24px;
+}
+.cx.is-desk .cx-tabs {
+  grid-template-columns: repeat(5, minmax(0, 150px));
+}
+.cx.is-desk .cx-grid {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+.cx-side {
+  flex: none;
+  width: 400px;
+  padding: 24px 28px;
+  border-left: 1px solid var(--line);
+  background: #160f09;
+  overflow-y: auto;
+}
+.cx-side .cx-card {
+  max-width: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cx-card {
+    animation: cx-pop 0.16s ease-out;
+  }
+  @keyframes cx-pop {
+    from {
+      transform: scale(0.94);
+      opacity: 0;
+    }
+  }
+}
+:root[data-reduced-motion='true'] .cx-card {
+  animation: none;
+}
