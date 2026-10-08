@@ -21,7 +21,6 @@ import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
-import { codexOffers } from './codexOffers'
 import type { Item, ItemRarity, Sentinel } from '../../game/types'
 
 export interface Price {
@@ -1241,10 +1240,9 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   }
   // The banner picker draws itself (RootShell); it has no offers.
   if (view === 'militia') return [back]
-  if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   // The HQ and the sealed crates are pages of their own (`hq/HqScreen.tsx`,
   // `hq/CratesScreen.tsx`); the Selector holds only the way back.
-  if (view === 'hq' || view === 'crates' || view === 'charter') return [back]
+  if (view === 'hq' || view === 'crates' || view === 'charter' || view === 'codex') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   // The staggered reveal (October 2026): the HQ and the crates keep their
@@ -1296,7 +1294,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       sub: staged || !bestCo ? 'Glossary' : `Standing ${best}`,
       icon: 'grimoire',
       immediate: true,
-      body: ['A glossary of every idea you have met, your collection of skills and items, your standing with each company, feats earned and still open, and every goblin and relic your militia has seen.'],
+      body: ['Every item, skill, goblin, relic and feat your militia has found, and the ones still to find — plus the glossary.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
     {

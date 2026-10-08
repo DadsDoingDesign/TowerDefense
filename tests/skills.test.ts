@@ -276,41 +276,56 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
   })
 })
 
-describe('the skill library view (Codex)', () => {
-  it('is a Collection with two tabs; a locked card is a silhouette that says only how it opens', async () => {
-    const { skillLibraryOffer, UNLOCK_BY_CHARTER, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
+describe('the Codex collection (items and skills)', () => {
+  it('deals a tile for every skill and item; a locked tile is a silhouette that says only how it opens', async () => {
+    const { codexModel, UNLOCK_BY_CHARTER, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codex/codexModel')
     const { ITEM_KINDS, BASIC_ITEM_KINDS } = await import('../src/game/data/itemKinds')
-    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], staged: false })
-    expect(o.tabs!.map((t) => t.label)).toEqual(['Skills', 'Items'])
-    const skillsTab = o.tabs![0]
-    const itemsTab = o.tabs![1]
-    expect(skillsTab.cards).toHaveLength(ALL_SKILLS.length)
-    expect(itemsTab.cards).toHaveLength(ITEM_KINDS.length)
-    // A pip per card ran 33 dots off a phone's row: the count rides in `sub`.
-    expect(o.pips).toBeUndefined()
-    expect(skillsTab.count).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
-    expect(itemsTab.count).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
+    const tabs = codexModel({ achievements: {}, codex: { enemies: [], relics: [], felled: {} }, skills: ['charge'], items: ['Axe'], staged: false })
+    expect(tabs.map((t) => t.label)).toEqual(['Items', 'Skills', 'Goblins', 'Relics', 'Feats'])
+    const [items, skills] = tabs
+    const itemTiles = items.sections.flatMap((s) => s.entries)
+    const skillTiles = skills.sections.flatMap((s) => s.entries)
+    expect(itemTiles).toHaveLength(ITEM_KINDS.length)
+    expect(skillTiles).toHaveLength(ALL_SKILLS.length)
+    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
+    expect(`${items.have}/${items.total}`).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
     // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
-    for (const c of itemsTab.cards.filter((c) => c.locked)) {
-      expect(c.name).toBe('Locked')
-      expect(c.text).toBe(c.tier === 'sovereign' ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)
+    const sovereign = items.sections.find((s) => s.title === 'Sovereign')!
+    expect(sovereign.entries).toHaveLength(5)
+    for (const e of itemTiles.filter((e) => e.locked)) {
+      expect(e.name).toBe('???')
+      expect(e.how).toBe(sovereign.entries.includes(e) ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)
     }
-    expect(itemsTab.cards.filter((c) => c.tier === 'sovereign').map((c) => c.group)).toEqual(Array(5).fill('Sovereign'))
-    const o2 = { cards: skillsTab.cards }
-    const locked = o2.cards.filter((c) => c.locked)
+    const locked = skillTiles.filter((e) => e.locked)
     expect(locked).toHaveLength(ALL_SKILLS.length - STARTER_SKILLS.length - 1)
-    for (const c of locked) {
-      expect(c.name).toBe('Locked')
-      expect(ALL_SKILLS.some((k) => c.text.includes(k.desc))).toBe(false)
+    for (const e of locked) {
+      expect(e.name).toBe('???')
+      expect(e.does).toBe('')
+      expect(ALL_SKILLS.some((k) => e.how.includes(k.desc))).toBe(false)
     }
-    expect(new Set(o2.cards.map((c) => c.group))).toEqual(new Set(['Level 1', 'Level 2', 'Level 3']))
+    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3'])
+    // Every tile has a picture from the atlas.
+    for (const e of [...itemTiles, ...skillTiles]) expect(ICON_ORDER as readonly string[], e.id).toContain(e.icon)
   })
 
-  it('stays locked until the first run is over', async () => {
-    const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
-    const o = skillLibraryOffer({ achievements: {}, skills: [], staged: true })
-    expect(o.tabs).toBeUndefined()
-    expect(o.sub).toBe('Locked')
+  it('holds the collection back until the first run is over', async () => {
+    const { codexModel, LIBRARY_LOCKED } = await import('../src/ui/shell/codex/codexModel')
+    const tabs = codexModel({ achievements: {}, codex: { enemies: [], relics: [], felled: {} }, skills: [], staged: true })
+    expect(tabs[0].locked).toBe(LIBRARY_LOCKED)
+    expect(tabs[1].locked).toBe(LIBRARY_LOCKED)
+    expect(tabs[0].sections).toHaveLength(0)
+    // Goblins, relics and feats are there from the start.
+    expect(tabs.slice(2).every((t) => !t.locked)).toBe(true)
+  })
+
+  it('records a goblin once met, and never names one that has not been', async () => {
+    const { codexModel } = await import('../src/ui/shell/codex/codexModel')
+    const tabs = codexModel({ achievements: {}, codex: { enemies: ['torch1_plated'], relics: [], felled: { torch2: 7 } }, staged: false })
+    const goblins = tabs[2].sections.flatMap((s) => s.entries)
+    expect(goblins).toHaveLength(15)
+    expect(goblins.filter((g) => !g.locked).map((g) => g.id)).toEqual(['goblin:torch1', 'goblin:torch2'])
+    expect(goblins.find((g) => g.id === 'goblin:torch2')!.how).toMatch(/^Studied/)
+    for (const g of goblins.filter((g) => g.locked)) expect(g.name).toBe('???')
   })
 })
 

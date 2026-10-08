@@ -22,7 +22,7 @@ import { LS3_TEACH_IDS, migrateSettings, SETTINGS_VERSION, TEACH_IDS, useSetting
 import { useGameStore } from '../src/state/gameStore'
 import { captureRun, migrateSnapshot, RUN_SNAPSHOT_VERSION } from '../src/state/runSnapshot'
 import { GLOSSARY } from '../src/ui/channels'
-import { glossaryOffer } from '../src/ui/shell/codexOffers'
+import { glossaryLines } from '../src/ui/shell/codex/codexModel'
 import {
   noteWhere,
   pickPill,
@@ -500,12 +500,12 @@ describe('the glossary', () => {
   })
 
   it('a first-timer’s glossary lists only what they have met; a returning player’s lists all', () => {
-    const first = glossaryOffer({ met: ['gear'], staged: true })
-    const lines = first.body as string[]
+    const first = glossaryLines({ met: ['gear'], staged: true })
+    const lines = first.lines.map((l) => `${l.term} — ${l.line}`)
     expect(lines.some((l) => l.startsWith('Gear and pack'))).toBe(true)
     expect(lines.some((l) => l.startsWith('Relic'))).toBe(false)
-    expect(lines.at(-1)).toMatch(/more to meet on the road/)
-    const all = glossaryOffer({ met: [], staged: false }).body as string[]
+    expect(first.waiting).toBeGreaterThan(0)
+    const all = glossaryLines({ met: [], staged: false }).lines.map((l) => `${l.term} — ${l.line}`)
     // One line per idea, plus the extra lines an idea carries (SK1: Skill
     // level and the Collection ride with Skill).
     expect(all).toHaveLength(IDEAS.length + IDEAS.reduce((n, id) => n + (GLOSSARY[id].also?.length ?? 0), 0))

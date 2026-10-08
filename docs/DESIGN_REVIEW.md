@@ -3350,3 +3350,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   390×844, four toggles: before, the field's mean brightness fell from 133 to
   1–3 for 3–8 frames per toggle; after, it slides 138 ↔ 116 with no blank
   frame.
+
+- **2026-10-08 — The Codex is a collection grid.** The designer: "make the
+  codex a neat icon grid of items and skills and so on — look at Supercell";
+  mockups approved in chat. The Codex is its own page now
+  (`ui/shell/codex/`): one bar for the whole set (Collected 33/116), five icon
+  tabs with counts and a red dot for what is new, and each tab sections of
+  framed tiles — the level's hue on the frame, its badge in the corner, the
+  company's logo opposite, a black silhouette under a padlock for what is
+  still locked, a tilted NEW tag for what was unlocked since the last look.
+  A tap opens the tile's card (a sheet on a phone, a panel beside the grid on
+  a desk) with ‹ › through the tab. Feats are a list of medals; the glossary
+  is the "?" in the head. Verified in the running app at 390×844, 375×667 and
+  1440×900: every tab, a card, a locked card, the glossary, and a first run.
+  The loop caught: a first run opened on the locked Items tab (it now opens on
+  the first tab with something in it); a relic's downside read as a fragment
+  ("…no crits your heroes never crit") — it is now "Cost: …". Benchmark:
+  Clash Royale's card collection and Brawl Stars' brawler grid — framed tiles
+  by rarity, silhouettes for the unfound, a per-set count. Scorecard:
+  readability 5/5, hierarchy 5/5, polish 4/5. Still open: every relic shares
+  one icon (relics have no art of their own yet).

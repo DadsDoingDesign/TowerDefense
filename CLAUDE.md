@@ -106,6 +106,11 @@ result. Append a short note to the review log when you're done.
   road (`homeFocus`), the notice under the map is that company's, and its CTA
   opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes
   straight into the first fight; the run map follows its spoils.
+- The Codex (`src/ui/shell/codex/`): a Supercell-style collection — the pure
+  `codexModel.ts` (five tabs of tiles: items, skills, goblins, relics, feats;
+  tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
+  `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
+  on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the
