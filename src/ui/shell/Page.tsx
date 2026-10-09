@@ -27,6 +27,7 @@ export function PageLayout({
   live,
   foot,
   strip,
+  brand,
   tone,
   compact = false,
 }: {
@@ -91,6 +92,8 @@ export function PageLayout({
   foot?: ReactNode
   /** The pack + company strip on event pages (Phase 2) — buying is seen to land. */
   strip?: ReactNode
+  /** A page's brand over its title (the hero pick's contract banner, Oct 2026). */
+  brand?: ReactNode
   /** A distinct frame for an elite's spoils (Phase 2). */
   tone?: 'elite'
   /**
@@ -106,7 +109,8 @@ export function PageLayout({
   const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg${tone ? ` tone-${tone}` : ''}${compact ? ' compact' : ''}`}>
-      <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
+      <div className={`pg-band pg-head${brand ? ' has-brand' : ''}`} {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
+        {brand}
         <h1 className="t-title" tabIndex={-1}>
           {title}
         </h1>

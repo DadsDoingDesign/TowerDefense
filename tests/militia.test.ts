@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { BANNER_H, BANNER_SHAPES, BANNER_W, bannerRows, CHARGE_IDS, TINCTURES } from '../src/game/data/banner'
+import { BANNER_H, BANNER_SHAPES, BANNER_W, bannerRows, CHARGE_IDS, METAL_IDS, PATTERNS, TINCTURES } from '../src/game/data/banner'
 import { COMPANIES } from '../src/game/data/companies'
-import { isMilitiaName, militiaName, militiaTagline, readMilitia, rerollName } from '../src/game/run/militia'
+import { isMilitiaName, militiaName, militiaTagline, randomBanner, readMilitia, rerollName } from '../src/game/run/militia'
+import { checkCompanyName, isProfane } from '../src/game/run/nameFilter'
 import { migrateMeta, META_VERSION } from '../src/state/metaStore'
 
 /* Your militia's name and banner (build step 4). */
 describe('the militia’s name', () => {
-  it('is generated, never typed: every name the generator deals passes its own check', () => {
+  it('the generator’s names pass its own check — and the typed-name filter', () => {
     const seen = new Set<string>()
     for (let s = 0; s < 2000; s++) {
       const n = militiaName(s)
       expect(isMilitiaName(n), n).toBe(true)
+      expect(checkCompanyName(n).ok, n).toBe(true)
       seen.add(n)
     }
     // Plenty of variety to re-roll through.
@@ -25,7 +27,7 @@ describe('the militia’s name', () => {
     }
   })
 
-  it('free text never passes', () => {
+  it('the generator’s own grammar check still refuses anything it could not deal', () => {
     for (const bad of ['', 'The', 'Ashford Company', 'The Ashford', 'The Ashford Company!', 'The Bums Company', 'The Ashford <b>Company</b>', 'the ashford company', 42, null])
       expect(isMilitiaName(bad)).toBe(false)
     expect(isMilitiaName('The Ashford Company')).toBe(true)
@@ -40,15 +42,31 @@ describe('the militia’s name', () => {
 })
 
 describe('the banner', () => {
-  it('every shape and mark draws on a 13 × 20 pole with cloth, rim and charge', () => {
+  it('every shape, pattern, emblem and metal draws on a 13 × 20 pole', () => {
     for (const shape of BANNER_SHAPES) {
       for (const charge of CHARGE_IDS) {
-        const rows = bannerRows(shape, charge)
+        const rows = bannerRows({ shape, charge, tincture: 'navy' })
         expect(rows).toHaveLength(BANNER_H)
         expect(rows.every((r) => r.length === BANNER_W)).toBe(true)
         const all = rows.join('')
-        for (const ch of ['o', 'w', 'g', 'c', 'r', 'p']) expect(all.includes(ch), `${shape}/${charge} ${ch}`).toBe(true)
+        for (const ch of ['o', 'w', 'g', 'c', 'r']) expect(all.includes(ch), `${shape}/${charge} ${ch}`).toBe(true)
+        // Every emblem but "none" shows on every shape.
+        expect(all.includes('p'), `${shape}/${charge} emblem`).toBe(charge !== 'none')
       }
+    }
+    // Every pattern but plain puts its colour on the cloth of every shape.
+    for (const shape of BANNER_SHAPES)
+      for (const pattern of PATTERNS) expect(bannerRows({ shape, pattern, tincture: 'navy', charge: 'none' }).join('').includes('d'), `${shape}/${pattern}`).toBe(pattern !== 'plain')
+    // The shapes are all different cloth.
+    expect(new Set(BANNER_SHAPES.map((shape) => bannerRows({ shape, tincture: 'navy', charge: 'none' }).join(''))).size).toBe(BANNER_SHAPES.length)
+    expect(METAL_IDS.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('a random flag never puts a pattern in its field’s own colour', () => {
+    for (let s = 0; s < 300; s++) {
+      const b = randomBanner(s)
+      expect(b.tincture2).not.toBe(b.tincture)
+      expect(b.charge).not.toBe('none')
     }
   })
 
@@ -67,14 +85,47 @@ describe('the banner', () => {
   })
 })
 
+describe('a typed company name', () => {
+  it('takes any clean name, tidied', () => {
+    expect(checkCompanyName('  The   Iron  Hounds ')).toEqual({ ok: true, name: 'The Iron Hounds' })
+    for (const n of ['Rook & Rye', "O'Malley's Blades", 'Les Épées Grises', 'Company 7', 'The Spice Guard', 'Peacock Lances', 'Horsemen of Ash', 'Thorny Wardens', 'The Therapists', 'Kestrelholt Watch', 'Classic Blades'])
+      expect(checkCompanyName(n).ok, n).toBe(true)
+  })
+  it('refuses empty, too long, odd characters and no letters — saying why', () => {
+    for (const bad of ['', 'ab', 'x'.repeat(40), 'The <b> Company', '1234', 42, null]) {
+      const c = checkCompanyName(bad)
+      expect(c.ok, String(bad)).toBe(false)
+      if (!c.ok) expect(c.why.length).toBeGreaterThan(0)
+    }
+  })
+  it('refuses profanity through leetspeak, spacing and stretched letters, and never repeats the word', () => {
+    // Built from fragments so the test file reads clean too.
+    const f = 'f' + 'uck'
+    const s = 'sh' + 'it'
+    for (const bad of [f, `The ${f}ers`, 'F u c k'.replace('c', 'c'), `${f.replace('u', 'uuu')} co`, s.replace('i', '1') + ' Lances', `The A${'ss'} Company`, `a$${'$'} blades`, 'B1' + 'tch Guard']) {
+      expect(isProfane(bad), bad).toBe(true)
+      const c = checkCompanyName(bad)
+      expect(c.ok).toBe(false)
+      if (!c.ok) expect(c.why.toLowerCase()).not.toContain(f)
+    }
+  })
+})
+
 describe('the save', () => {
   const good = { name: 'The Ashford Company', shape: 'swallow', tincture: 'navy', charge: 'keep' }
-  it('a valid militia survives a load', () => {
-    expect(readMilitia(good)).toEqual(good)
-    expect(migrateMeta({ militia: good }, META_VERSION).militia).toEqual(good)
+  const full = { ...good, pattern: 'plain', tincture2: 'sable', metal: 'parchment' }
+  it('an older save’s company loads as a plain flag in parchment', () => {
+    expect(readMilitia(good)).toEqual(full)
+    expect(migrateMeta({ militia: good }, META_VERSION).militia).toEqual(full)
+  })
+  it('a typed name and a full flag survive a load', () => {
+    const typed = { name: 'Rook & Rye', shape: 'gonfalon', tincture: 'crimson', charge: 'star', pattern: 'quarterly', tincture2: 'navy', metal: 'gold' }
+    expect(readMilitia(typed)).toEqual(typed)
+    // An unknown newer part drops to its default rather than losing the company.
+    expect(readMilitia({ ...typed, pattern: 'zigzag', metal: 'mithril' })).toMatchObject({ pattern: 'plain', metal: 'parchment' })
   })
   it('anything else loads as none', () => {
-    for (const bad of [null, 'x', { ...good, name: 'Free text' }, { ...good, shape: 'kite' }, { ...good, tincture: '#ff0000' }, { ...good, charge: 1 }]) {
+    for (const bad of [null, 'x', { ...good, name: '' }, { ...good, name: 'The ' + 'f' + 'uck Lances' }, { ...good, shape: 'kite' }, { ...good, tincture: '#ff0000' }, { ...good, charge: 1 }]) {
       expect(readMilitia(bad)).toBeNull()
       expect(migrateMeta({ militia: bad }, META_VERSION).militia).toBeNull()
     }

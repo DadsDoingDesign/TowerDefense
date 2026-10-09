@@ -219,13 +219,42 @@
   text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
 }
 .mn-militia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 24px;
   margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.mn-militia > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.mn-militia .banner {
+  flex: none;
+  height: 20px;
+  width: auto;
+}
+.mn-militia:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mn-militia:hover > span {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 /* Desk only: the column's instruction, beside the bank. */
 .mn-pick {
@@ -318,33 +347,24 @@
   background: var(--paper-ink);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
-.mn-seal {
-  position: absolute;
-  top: -14px;
-  right: -8px;
+.mn-notice-head {
   display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--co) 80%, #fff) 0, var(--co) 45%, color-mix(in srgb, var(--co) 70%, #000) 100%);
-  border: 2px solid color-mix(in srgb, var(--co) 55%, #000);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  margin-bottom: 4px;
+}
+.mn-notice-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .mn-kicker {
-  margin: 0;
-  padding-right: 44px;
   font-size: var(--fs-micro);
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--paper-ink-2);
-}
-.mn-notice-h {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 .mn-pager {
   display: inline-flex;
@@ -374,7 +394,7 @@
 }
 .mn-notice-t {
   min-width: 0;
-  margin: 2px 0 4px;
+  margin: 1px 0 0;
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
@@ -523,39 +543,6 @@
   box-shadow: inset 0 0 0 1px var(--cta-edge), var(--cta-lift), 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
-/* The banner's one coach tip, after the first finished contract. */
-.mn-tip {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px 8px 12px;
-  border-radius: 10px;
-  background: #2a1f14;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  font-size: var(--fs-sm);
-  line-height: 1.35;
-  color: var(--text);
-}
-.mn-tip p {
-  margin: 0;
-}
-.mn-tip b {
-  color: var(--accent-text);
-}
-.mn-tip-go {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--cta-edge);
-  background: var(--cta);
-  color: var(--cta-ink);
-  font: inherit;
-  font-weight: 700;
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
 /* Short phones: the same trims the page skeleton makes. */
 @media (orientation: portrait) and (max-height: 760px) {
   .mn-sheet {
@@ -602,38 +589,6 @@
 .mi .ct-body {
   gap: 10px;
   align-items: stretch;
-}
-.mi-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 6px 6px 6px 16px;
-  border-radius: 10px;
-  background: #2a1f14;
-  border: 1px solid var(--accent);
-}
-.mi-name-v {
-  flex: 1;
-  min-width: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 1.1;
-  color: var(--text);
-}
-.mi-reroll {
-  flex: none;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line-strong);
-  background: rgba(233, 205, 150, 0.08);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  cursor: pointer;
 }
 .mi-preview {
   position: relative;
@@ -687,75 +642,6 @@
   margin-right: 8px;
   margin-bottom: -3px;
 }
-.mi-opts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.mi-opts.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.mi-opt,
-.mi-swatch {
-  font: inherit;
-  cursor: pointer;
-  color: var(--text);
-}
-.mi-opt {
-  display: grid;
-  place-items: center;
-  min-height: 72px;
-  border-radius: 10px;
-  background: #2a1f14;
-  border: 1px solid var(--line-strong);
-}
-.mi-opt.on {
-  background: #45311c;
-  border: 2px solid var(--accent);
-}
-.mi-swatches {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-}
-.mi-swatch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-.mi-swatch i {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1.15;
-  max-height: 52px;
-  border-radius: 10px;
-  background: var(--sw);
-  border: 3px solid var(--paper);
-}
-.mi-swatch.on i {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
-}
-.mi-swatch span {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--muted);
-}
-.mi-swatch.on span {
-  color: var(--text);
-}
-.mi-note {
-  margin-top: 4px;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  text-align: center;
-}
-
 /* ================================================================== desk
    Figma "B2 · desk": the column holds the head, the notice, the tiles and the
    CTA; the map — the picker — takes the rest of the screen. Kept here rather

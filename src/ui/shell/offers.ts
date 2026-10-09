@@ -1225,7 +1225,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') {
-    // Your militia's name and banner (build step 4) — changed here, once raised.
+    // Your militia's name and flag — founded on a new game's first screen, changed here.
     const m = meta.militia
     const militia: Offer = {
       id: 'militia',
@@ -1233,10 +1233,10 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       sub: m ? m.name : 'Not named yet',
       icon: 'banner',
       immediate: true,
-      body: ['Your militia’s name and banner. The banner flies over your wagons and your HQ.'],
-      action: { label: m ? 'Change' : 'Raise your banner', run: () => setView('militia') },
+      body: ['Your militia’s name and flag. The flag flies over your wagons and your HQ.'],
+      action: { label: m ? 'Change' : 'Found your militia', run: () => setView('militia') },
     }
-    return [back, ...(m || !staged ? [militia] : []), ...settingsOffers(settings)]
+    return [back, militia, ...settingsOffers(settings)]
   }
   // The banner picker draws itself (RootShell); it has no offers.
   if (view === 'militia') return [back]

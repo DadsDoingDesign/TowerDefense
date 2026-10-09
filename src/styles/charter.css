@@ -453,9 +453,6 @@
 .ct-route.sovereign .ct-route-top b {
   color: var(--text);
 }
-.ct-contract-chip.sovereign {
-  border-color: rgba(56, 242, 232, 0.4);
-}
 
 /* ------------------------------------------------------------ the menu line */
 .mn-charter-btn {

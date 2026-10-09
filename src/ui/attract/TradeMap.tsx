@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { companyById, type CompanyId } from '../../game/data/companies'
-import type { BannerLook } from '../../game/data/banner'
+import { bannerKey, type BannerLook } from '../../game/data/banner'
 import { Crest, Lock } from '../pixel'
 import { useMedia } from '../pointer'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
@@ -194,10 +194,10 @@ export function TradeMap({
       live = false
     }
   }, [geo])
-  const bannerKey = `${banner.shape}/${banner.tincture}/${banner.charge}`
+  const flagKey = bannerKey(banner)
   const pixels = useMemo(
     () => (geo && terrain?.geo === geo ? bakePixels(geo, terrain.canvas, roads, banner) : null),
-    [geo, terrain, lightKey, bannerKey], // eslint-disable-line react-hooks/exhaustive-deps
+    [geo, terrain, lightKey, flagKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const traffic = useMemo(() => makeTraffic(roads), [lightKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const sprites = useMemo(() => new Map(roads.map((r) => [r.company, glowSprite(companyById(r.company).color, k)])), [k]) // eslint-disable-line react-hooks/exhaustive-deps

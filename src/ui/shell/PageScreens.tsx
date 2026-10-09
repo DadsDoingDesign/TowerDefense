@@ -11,7 +11,7 @@ import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { VolumeSlider } from './VolumeSlider'
-import { ContractChip } from './contracts/parts'
+import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
 
 /**
@@ -174,6 +174,7 @@ export function PageScreen({
   const shellSelect = useGameStore((s) => s.shellSelect)
   const gold = useGameStore((s) => s.gold)
   const bank = useMetaStore((s) => s.bank)
+  const militia = useMetaStore((s) => s.militia)
   const onHub = useGameStore((s) => s.screen === 'hub')
   // How far off an unaffordable price is, in the gold it is paid from (R2):
   // the purse in a run, the bank at home.
@@ -344,8 +345,19 @@ export function PageScreen({
       strip={
         eventBoard ? (
           <PackStrip gold={purse.has('gold') ? gold : undefined} />
-        ) : heroPick && contract ? (
-          <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} advance={!!contract.advance} />
+        ) : undefined
+      }
+      // The hero pick is branded to the contract: the hiring company's cloth
+      // over the title, your militia's flag under it (Oct 2026).
+      brand={
+        heroPick && contract ? (
+          <ContractBanner
+            company={contract.company}
+            crates={contract.crates}
+            purse={contract.purse}
+            advance={!!contract.advance}
+            militia={militia ? { name: militia.name, look: militia } : null}
+          />
         ) : undefined
       }
       // 3.5: a short board keeps its CTA under its content instead of pinning

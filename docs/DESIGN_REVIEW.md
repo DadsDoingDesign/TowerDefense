@@ -3370,3 +3370,59 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   by rarity, silhouettes for the unfound, a per-set count. Scorecard:
   readability 5/5, hierarchy 5/5, polish 4/5. Still open: every relic shares
   one icon (relics have no art of their own yet).
+
+- **2026-10-09 — Found your militia first; a real flag builder.** The
+  designer: the first thing in a new game is creating your company, with a
+  fuller flag builder (designs, colours, shapes) "like a Mario Kart carousel
+  you can swipe or click to open all options", any name through a profanity
+  filter, then the map; no recruit slot on the hero bar; the trader's icon on
+  the left of a road's notice. Built: a new game opens on "Found your
+  militia" (the game's one name for the player's band — "your company" is a
+  retired term, held by `tests/copy.terms.test.ts`). Six carousel rows —
+  shape (9), field (14), pattern (12), pattern colour (14), emblem (16),
+  metal (3) — each wrapping round, swiped or stepped, the middle tapped for a
+  grid of every option; a large preview of the flag on its wagon, "Surprise
+  me", and a typed name with dice. The filter undoes leetspeak, spacing and
+  stretched letters and matches short stems only as whole words. Verified in
+  the running app at 390×844, 375×667 and 1440×900: first screen, swipes,
+  the grid, a refused name, founding → the map, editing, a fight's hero bar.
+  The loop caught: the filter refused generated names across a word gap
+  ("…holt Watch") and over-squeezed a short stem ("Therapists"), and capped
+  "Free Company" names at 26 — now per-word, run-length-aware, 32; and the
+  grid's emblems were too small to read at ×3 (now ×4). Benchmark: Mario
+  Kart's kart builder (one part per row, turned in place, the whole kart
+  previewed above). Scorecard: readability 4/5, hierarchy 4/5, polish 4/5.
+  Still open: the side items of a row are small on a desk's wide column.
+
+- **2026-10-09 — The hero pick flies the contract's colours.** The designer:
+  "this screen should feel more branded to the company — the top should have
+  the company flag I'm repping". The contract chip became a hung standard:
+  the hiring company's cloth on a rod with gold finials, its foot cut in
+  three points, in the company's colour with its seal, "Under contract", its
+  name and the terms in dark ink; your militia's own flag and name under it
+  ("Rook & Rye, flying for Peppercorn Co."). The Sovereign Route hangs its
+  cyan and crown. Verified at 390×844, 375×667 and 1440×900 for Peppercorn
+  (escort), Ironvein (a stake) and the Sovereign Route. The loop caught the
+  terms breaking between "advance" and its coin (now held together) and the
+  banner crowding the hero card on a 667px phone (a size down there).
+  Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
+
+- **2026-10-09 — Each builder row shows only its own part.** The designer:
+  every row drew the whole flag with one part swapped, so the rows read as
+  "3 of the same thing"; "only show the parts that are selected — it's
+  assembled at the top". Now: Shape is bare cloth (slate, no emblem), the two
+  colour rows are swatches, Pattern is the division alone on a stone tile
+  (`banner.patternRows`), Emblem is the mark alone in the chosen metal (a
+  struck-through ring for none), Metal is a coin. The assembled flag lives
+  only in the preview over the wagon. Verified at 390×844 and 1440×900, rows
+  and the all-options grids. Scorecard: readability 5/5, hierarchy 5/5,
+  polish 4/5.
+
+- **2026-10-09 — The road notice hangs the company's flag.** The designer:
+  the notice's company icon should be on the left and be a flag. The round
+  wax seal became `CompanyFlag` — the hero pick's hung banner in small: a
+  rod with gold finials, the company's cloth in its colour with its logo,
+  the foot cut in three points; a road not hiring yet hangs grey cloth with
+  the lock. It heads the notice on the left, beside the kicker and name.
+  Verified at 390×844, 375×667 and 1440×900 for an open, a focused and a
+  locked road.

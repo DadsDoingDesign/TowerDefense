@@ -7,7 +7,7 @@ import { computeCombat } from '../../game/engine/combat'
 import { levelProgress } from '../../game/engine/leveling'
 import { DANGER_COPY, tileDamageMult } from '../../game/data/hazards'
 import type { Sentinel } from '../../game/types'
-import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
+import { useGameStore } from '../../state/gameStore'
 import { ARCHETYPE_GLYPH, markLabel } from '../channels'
 import { Icon } from '../Icon'
 import { type Offer } from './offers'
@@ -15,8 +15,6 @@ import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
 import { useMapFocus } from './mapFocus'
-import { openSlotShown } from '../../state/staging'
-import { useShown, useStaged } from './staging'
 import { isMelee, MELEE_LINE } from '../../game/engine/melee'
 import { conflictedIds } from '../../game/run/clearance'
 import { fieldConflicts } from '../../state/game/selectors'
@@ -117,11 +115,6 @@ function PartyCards() {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const flash = useFlashes()
   const battleMap = useGameStore((s) => s.battleMap)
-  // LS3: "recruit a hero" names a stop the first run has not reached yet, and
-  // the first battle is only "post a hero, start the wave".
-  const recruitShown = useShown('recruit')
-  const staged = useStaged()
-  const openSlot = useGameStore((s) => openSlotShown(staged, recruitShown, s))
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
@@ -207,13 +200,9 @@ function PartyCards() {
           </button>
         )
       })}
-      {roster.length < MAX_ROSTER && openSlot && (
-        <div className="sh-hero empty" aria-hidden>
-          <span className="sh-hero-glyph ghost">+</span>
-          <span className="sh-hero-name muted">Open slot</span>
-          <span className="sh-hero-sub">recruit a hero</span>
-        </div>
-      )}
+      {/* No "Open slot · recruit a hero" card (Oct 2026, the designer): it
+          looked like a button, and a hero is only ever hired at a recruit
+          stop on the map. */}
     </>
   )
 }
