@@ -3406,3 +3406,14 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   terms breaking between "advance" and its coin (now held together) and the
   banner crowding the hero card on a 667px phone (a size down there).
   Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
+
+- **2026-10-09 — Each builder row shows only its own part.** The designer:
+  every row drew the whole flag with one part swapped, so the rows read as
+  "3 of the same thing"; "only show the parts that are selected — it's
+  assembled at the top". Now: Shape is bare cloth (slate, no emblem), the two
+  colour rows are swatches, Pattern is the division alone on a stone tile
+  (`banner.patternRows`), Emblem is the mark alone in the chosen metal (a
+  struck-through ring for none), Metal is a coin. The assembled flag lives
+  only in the preview over the wagon. Verified at 390×844 and 1440×900, rows
+  and the all-options grids. Scorecard: readability 5/5, hierarchy 5/5,
+  polish 4/5.

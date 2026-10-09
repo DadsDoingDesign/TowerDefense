@@ -269,6 +269,18 @@ export function bannerRows(look: BannerLook): PixelRows {
   return out.map((r) => r.join(''))
 }
 
+/**
+ * A pattern on its own, as an 11 × 12 tile (`c` the field, `d` the pattern's
+ * colour): what the builder's Pattern row shows, so the row shows that one
+ * part and not the whole flag again.
+ */
+export function patternRows(pattern: Pattern): PixelRows {
+  const clothH = 12
+  return Array.from({ length: clothH }, (_, j) =>
+    Array.from({ length: BANNER_W - 2 }, (_, i) => (inPattern(pattern, i + 2, j + 1, clothH) ? 'd' : 'c')).join(''),
+  )
+}
+
 /** The flag's palette: its tinctures, its metal on the emblem and the edge, a wooden pole. */
 export function bannerPalette(look: BannerLook): Palette {
   const b = fullBanner(look)

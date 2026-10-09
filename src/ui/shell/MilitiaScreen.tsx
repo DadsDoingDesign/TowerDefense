@@ -12,8 +12,19 @@ import {
   SHAPE_NAMES,
   TINCTURE_IDS,
   TINCTURE_NAMES,
-  type BannerLook,
+  TINCTURES,
+  CHARGES,
+  METALS,
+  patternRows,
+  type BannerShape,
+  type Charge,
+  type Metal,
+  type Pattern,
+  type Tincture,
 } from '../../game/data/banner'
+
+/** A pattern shown on its own: a mid and a light stone, so the division reads whatever your colours. */
+const PATTERN_SWATCH = { c: '#4b4238', d: '#c9bfae' }
 import { CRATE, cratePalette, WAGON, WAGON_PALETTE } from '../../game/data/pixelArt'
 import { militiaName, randomBanner, rerollName, type Militia } from '../../game/run/militia'
 import { checkCompanyName, NAME_MAX } from '../../game/run/nameFilter'
@@ -78,12 +89,29 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
     onDone()
   }
 
-  // What each carousel shows: the whole flag with that one part swapped in.
-  const preview = (part: Part, id: string, scale = 3) => {
-    const b: BannerLook = { ...look, [part]: id }
-    // A pattern colour reads only on a divided field: show it on halves.
-    if (part === 'tincture2' && look.pattern === 'plain') b.pattern = 'pale'
-    return <Banner look={b} scale={scale} />
+  // What each carousel shows: ONLY its own part (the designer: "only show the
+  // parts that are selected — it's assembled at the top"). The shape as bare
+  // cloth, a colour as a swatch, a pattern on its own tile, the emblem alone
+  // in the chosen metal, a metal as a coin.
+  const preview = (part: Part, id: string, big = false) => {
+    const k = big ? 4 : 3
+    switch (part) {
+      case 'shape':
+        return <Banner look={{ shape: id as BannerShape, tincture: 'slate', charge: 'none', metal: 'parchment' }} scale={k} />
+      case 'tincture':
+      case 'tincture2':
+        return <span className={`co-swatch${big ? ' big' : ''}`} style={{ background: TINCTURES[id as Tincture] }} />
+      case 'pattern':
+        return <Pixel rows={patternRows(id as Pattern)} palette={PATTERN_SWATCH} scale={big ? 5 : 4} className="co-pattern" />
+      case 'charge':
+        return id === 'none' ? (
+          <span className={`co-none${big ? ' big' : ''}`} />
+        ) : (
+          <Pixel rows={CHARGES[id as Charge]} palette={{ p: METALS[look.metal] }} scale={big ? 9 : 7} className="co-emblem" />
+        )
+      case 'metal':
+        return <span className={`co-metal${big ? ' big' : ''}`} style={{ background: METALS[id as Metal] }} />
+    }
   }
   const partOf = (id: Part) => PARTS.find((p) => p.id === id)!
 
@@ -176,7 +204,7 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
             label={partOf(open).label}
             options={partOf(open).options}
             value={String(look[open])}
-            render={(o) => preview(open, o.id, 4)}
+            render={(o) => preview(open, o.id, true)}
             onPick={(id) => (set(open, id), setOpen(null))}
             onClose={() => setOpen(null)}
           />
