@@ -111,6 +111,14 @@ result. Append a short note to the review log when you're done.
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
+- Your militia (the player's band): founded on a new game's FIRST screen
+  (`RootShell` shows `MilitiaScreen mode="create"` while `metaStore.militia`
+  is null), edited from Settings or by tapping its name on the home. The flag
+  is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
+  metal — one `bannerRows(look)` for SVG and both canvases); the builder rows
+  are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
+  `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
+  save and fills an older flag's missing parts.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

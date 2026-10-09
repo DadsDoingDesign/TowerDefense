@@ -104,5 +104,5 @@ export const Scroll = ({ scale = 3, sil }: { scale?: number; sil?: string }) => 
 
 /** Your militia's banner: its shape, dark field and parchment charge, on a pole (`data/banner.ts`). */
 export const Banner = ({ look, scale = 2 }: { look: BannerLook; scale?: number }) => (
-  <Pixel rows={bannerRows(look.shape, look.charge)} palette={bannerPalette(look.tincture)} scale={scale} className="banner" />
+  <Pixel rows={bannerRows(look)} palette={bannerPalette(look)} scale={scale} className="banner" />
 )

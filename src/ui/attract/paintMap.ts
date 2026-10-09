@@ -320,7 +320,7 @@ function drawHub(ctx: CanvasRenderingContext2D, geo: MapGeometry, banner: Banner
   // Your militia's banner flies over the HQ.
   const bx = hx + 8
   const by = hy - 21
-  for (const r of pixelRuns(bannerRows(banner.shape, banner.charge), bannerPalette(banner.tincture))) {
+  for (const r of pixelRuns(bannerRows(banner), bannerPalette(banner))) {
     ctx.fillStyle = r.fill
     ctx.fillRect(bx + r.x, by + r.y, r.w, 1)
   }

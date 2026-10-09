@@ -26,6 +26,7 @@ import '../../styles/hq.css'
 import '../../styles/charter.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
+import { useMetaStore } from '../../state/metaStore'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -97,6 +98,8 @@ export function RootShell() {
   const ctx = useShellContext()
   const screen = useGameStore((s) => s.screen)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  // No militia yet: a new game founds one before anything else.
+  const militia = useMetaStore((s) => s.militia)
   const [metaView, setMetaView] = useState<MetaView>('menu')
   // The banner picker returns to where it was opened from (the menu's tip, or Settings).
   const beforeMilitia = useRef<MetaView>('menu')
@@ -181,6 +184,10 @@ export function RootShell() {
             <CharterScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'codex' ? (
             <CodexScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && !militia ? (
+            // A new game's first screen (Oct 2026): found your militia — its
+            // name and flag — then the map.
+            <MilitiaScreen mode="create" onDone={() => setMetaView('menu')} />
           ) : isMenu ? (
             <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
           ) : screen === 'hub' && metaView === 'militia' ? (

@@ -24,7 +24,7 @@
 import type { GameMap } from '../types'
 import type { Vec2 } from '../core/vec'
 import { CRATE, cratePalette, pixelRuns, WAGON, WAGON_PALETTE, type Palette, type PixelRows } from '../data/pixelArt'
-import { BANNER_H, BANNER_W, bannerPalette, bannerRows, DEFAULT_BANNER, type BannerLook } from '../data/banner'
+import { BANNER_H, BANNER_W, bannerKey, bannerPalette, bannerRows, DEFAULT_BANNER, type BannerLook } from '../data/banner'
 
 export interface CaravanLook {
   /** The route's company colour — the crates' band. */
@@ -184,7 +184,7 @@ const BAKE_MAX = 24
 
 function bakeKey(look: CaravanLook, full: number): string {
   const b = look.banner ?? DEFAULT_BANNER
-  return `${look.color}|${full}|${b.shape}|${b.charge}|${b.tincture}`
+  return `${look.color}|${full}|${bannerKey(b)}`
 }
 
 /** The caravan's pixels drawn at `(x0, y0)` (the wagon's top-left), straight to `ctx`. */
@@ -203,7 +203,7 @@ function drawPixels(ctx: CanvasRenderingContext2D, look: CaravanLook, full: numb
   const b = look.banner ?? DEFAULT_BANNER
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.fillRect(flagX - 1, ground - 2, 6, 2)
-  blit(ctx, bannerRows(b.shape, b.charge), bannerPalette(b.tincture), flagX, ground - FLAG_H, BANNER_UNIT)
+  blit(ctx, bannerRows(b), bannerPalette(b), flagX, ground - FLAG_H, BANNER_UNIT)
 }
 
 /** The baked look, or null where there is no DOM (tests) — then the caller draws live. */

@@ -113,19 +113,10 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
     return () => ro.disconnect()
   }, [])
 
-  // One coach line at a time, the most pressing first: the banner, the board, the market.
+  // One coach line at a time, the most pressing first: the board, the market.
+  // (The company is founded before the menu is ever shown, so it needs no tip.)
   const tip =
-    staged ? null : !militia ? (
-      <div className="mn-tip" role="note">
-        <Banner look={DEFAULT_BANNER} scale={2} />
-        <p>
-          <b>Your militia has earned a name.</b> Pick one and raise your banner: it flies over your wagons.
-        </p>
-        <button type="button" className="mn-tip-go" onClick={onMilitia}>
-          Raise it
-        </button>
-      </div>
-    ) : !taught.board ? (
+    staged ? null : !taught.board ? (
       <p className="mn-coach" role="note">
         Each company pays your militia to guard its road. <Tap /> a signpost to read its notice.
       </p>
@@ -172,7 +163,13 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
           <h1 className="t-title" tabIndex={-1}>
             Merchant Mercenaries
           </h1>
-          {militia && <p className="mn-militia">{militia.name}</p>}
+          {/* Your militia: its flag and name, a tap from its builder. */}
+          {militia && (
+            <button type="button" className="mn-militia" onClick={onMilitia} aria-label={`${militia.name}: edit your militia`}>
+              <Banner look={militia} scale={1} />
+              <span>{militia.name}</span>
+            </button>
+          )}
         </div>
         {!staged && <p className="mn-pick">Pick a road — <Tap lower /> a signpost</p>}
         {/* The bank is named after the first contract (LS3/LS4). */}
@@ -264,14 +261,18 @@ function ContractNotice({
   const i = COMPANY_IDS.indexOf(company)
   return (
     <section className="mn-notice" style={{ '--co': co.color } as CSSProperties} aria-label={`Notice: ${co.name}`} aria-live="polite">
-      <span className="mn-seal" aria-hidden="true">
-        <Crest company={company} scale={2} locked={!open} />
-      </span>
-      <p className="mn-kicker">
-        Notice · {co.goods} road · {CITY_COUNT} cities
-      </p>
-      <div className="mn-notice-h">
-        <h2 className="mn-notice-t">{co.name}</h2>
+      {/* The company's seal on the LEFT, beside its name (the designer: the
+          trader's icon belongs on the left when a road is opened). */}
+      <div className="mn-notice-head">
+        <span className="mn-seal" aria-hidden="true">
+          <Crest company={company} scale={2} locked={!open} />
+        </span>
+        <span className="mn-notice-id">
+          <span className="mn-kicker">
+            Notice · {co.goods} road · {CITY_COUNT} cities
+          </span>
+          <h2 className="mn-notice-t">{co.name}</h2>
+        </span>
         {onStep && (
           <span className="mn-pager">
             <button type="button" className="mn-step" aria-label="Previous road" onClick={() => onStep(-1)}>

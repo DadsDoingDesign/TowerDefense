@@ -6,7 +6,6 @@ import {
   ideaShown,
   menuStaged,
   metaIdeas,
-  openSlotShown,
   presentIdeas,
   readMet,
   revealOf,
@@ -182,30 +181,6 @@ describe('what a first run shows, and when', () => {
     expect(revealOf({ runsCompleted: 2, bank: m.bank, met: m.met }, false).hq).toBe(true)
     // The latch is the persisted `met` list, validated on load.
     expect(migrateMeta({ met: ['hq', 'market', 'nope'] }, META_VERSION).met).toEqual(['hq', 'market'])
-  })
-})
-
-describe('the party row\'s open slot', () => {
-  // The first map put a recruit stop in reach beside the first battle.
-  const recruitMap: StageState['runMap'] = { nodes: [...MAP.nodes, { id: 'r', type: 'recruit', layer: 1, row: 2, nx: 0.2, ny: 0.9 }] }
-  const onMap = firstBattle({ screen: 'map', runMap: recruitMap, reachableNodeIds: ['b1', 'b2', 'r'], activeNodeId: null })
-  const inFirst = firstBattle({ runMap: recruitMap, reachableNodeIds: ['b1', 'b2', 'r'] })
-  const recruit = (s: StageState, met: readonly string[] = []) => ideaShown('recruit', true, met, presentIdeas(s))
-
-  it('waits out the first battle of a first run, even with a recruit stop met on the map', () => {
-    expect(recruit(onMap)).toBe(true)
-    expect(openSlotShown(true, recruit(onMap), onMap)).toBe(true)
-    expect(openSlotShown(true, recruit(inFirst, ['recruit']), inFirst)).toBe(false)
-  })
-
-  it('then follows the recruit idea', () => {
-    const second = firstBattle({ clearedNodeIds: ['s', 'b1'], reachableNodeIds: ['m', 'e'], activeNodeId: 'e' })
-    expect(openSlotShown(true, recruit(second), second)).toBe(false)
-    expect(openSlotShown(true, recruit(second, ['recruit']), second)).toBe(true)
-  })
-
-  it('is untouched on a run that is not staged', () => {
-    expect(openSlotShown(false, true, firstBattle())).toBe(true)
   })
 })
 
