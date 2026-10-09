@@ -1,7 +1,8 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { companyVar, moneyText, SOVEREIGN_VAR } from '../../channels'
-import { Coin, Crest, Lantern, SovereignCrest } from '../../pixel'
+import { Banner, Coin, Crest, Lantern, SovereignCrest } from '../../pixel'
+import type { BannerLook } from '../../../game/data/banner'
 import { CHARTER_NAME, CHARTER_TOWNS } from '../../../game/run/charter'
 import { useMoreBelow } from '../Page'
 
@@ -160,32 +161,58 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
 }
 
 /**
- * The contract being set up, on the hero pick: whose road, how much cargo, to
- * where, and the purse — so a first-timer (who never sees the board) still
- * reads that this run is a job for someone. The purse is the company's
- * advance on every contract signed now (October 2026), and says so.
+ * The hero pick's brand (Oct 2026; the designer: "this screen should feel more
+ * branded to the company — the top should have the company flag I'm
+ * repping"). The hiring company's cloth hangs from a rod across the head, in
+ * its colour, with its seal, its name and the contract's terms; your own
+ * militia's flag and name sit under it — who you fly for. The Sovereign
+ * Route's cloth is its cyan and crown.
  */
-export function ContractChip({ company, crates, purse, advance = false }: { company: CompanyId | null; crates: number; purse: number; advance?: boolean }) {
+export function ContractBanner({
+  company,
+  crates,
+  purse,
+  advance = false,
+  militia,
+}: {
+  company: CompanyId | null
+  crates: number
+  purse: number
+  advance?: boolean
+  militia: { name: string; look: BannerLook } | null
+}) {
+  const co = company ? companyById(company) : null
   const word = advance ? 'advance' : 'purse'
-  if (!company) {
-    // The Sovereign Route: no company's, every good, the fee already on the charter page.
-    return (
-      <p className="ct-contract-chip sovereign" style={{ '--co': SOVEREIGN_VAR } as CSSProperties}>
-        <SovereignCrest scale={1} />
-        <span>
-          <b>{CHARTER_NAME}</b> · every good to {CHARTER_TOWNS[2]} · {word} <Gold n={purse} scale={1} />
-        </span>
-      </p>
-    )
-  }
-  const co = companyById(company)
+  const terms = co
+    ? `${crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'Escort'} to ${co.towns[2]}`
+    : `Every good to ${CHARTER_TOWNS[2]}`
   return (
-    <p className="ct-contract-chip" style={{ '--co': companyVar(company) } as CSSProperties}>
-      <Crest company={company} scale={1} />
-      <span>
-        <b>{co.name}</b> · {crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'escort'} to {co.towns[2]} · {word} <Gold n={purse} scale={1} />
-      </span>
-    </p>
+    <div className={`ct-banner${co ? '' : ' sovereign'}`} style={{ '--co': co ? co.color : SOVEREIGN_VAR } as CSSProperties}>
+      <span className="ct-banner-rod" aria-hidden="true" />
+      <div className="ct-banner-cloth">
+        <span className="ct-banner-seal" aria-hidden="true">
+          {company ? <Crest company={company} scale={3} /> : <SovereignCrest scale={3} />}
+        </span>
+        <span className="ct-banner-text">
+          <span className="ct-banner-k">{co ? 'Under contract' : 'Your own charter'}</span>
+          <b className="ct-banner-name">{co ? co.name : CHARTER_NAME}</b>
+          <span className="ct-banner-terms">
+            {terms} ·{' '}
+            <span className="ct-banner-adv">
+              {word} <Gold n={purse} scale={1} />
+            </span>
+          </span>
+        </span>
+      </div>
+      {militia && (
+        <p className="ct-banner-us">
+          <Banner look={militia.look} scale={1} />
+          <span>
+            <b>{militia.name}</b>, flying for {co ? co.name : 'no company but its own'}
+          </span>
+        </p>
+      )}
+    </div>
   )
 }
 

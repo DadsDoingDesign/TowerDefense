@@ -3393,3 +3393,16 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Kart's kart builder (one part per row, turned in place, the whole kart
   previewed above). Scorecard: readability 4/5, hierarchy 4/5, polish 4/5.
   Still open: the side items of a row are small on a desk's wide column.
+
+- **2026-10-09 — The hero pick flies the contract's colours.** The designer:
+  "this screen should feel more branded to the company — the top should have
+  the company flag I'm repping". The contract chip became a hung standard:
+  the hiring company's cloth on a rod with gold finials, its foot cut in
+  three points, in the company's colour with its seal, "Under contract", its
+  name and the terms in dark ink; your militia's own flag and name under it
+  ("Rook & Rye, flying for Peppercorn Co."). The Sovereign Route hangs its
+  cyan and crown. Verified at 390×844, 375×667 and 1440×900 for Peppercorn
+  (escort), Ironvein (a stake) and the Sovereign Route. The loop caught the
+  terms breaking between "advance" and its coin (now held together) and the
+  banner crowding the hero card on a 667px phone (a size down there).
+  Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
