@@ -3417,3 +3417,12 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   only in the preview over the wagon. Verified at 390×844 and 1440×900, rows
   and the all-options grids. Scorecard: readability 5/5, hierarchy 5/5,
   polish 4/5.
+
+- **2026-10-09 — The road notice hangs the company's flag.** The designer:
+  the notice's company icon should be on the left and be a flag. The round
+  wax seal became `CompanyFlag` — the hero pick's hung banner in small: a
+  rod with gold finials, the company's cloth in its colour with its logo,
+  the foot cut in three points; a road not hiring yet hangs grey cloth with
+  the lock. It heads the notice on the left, beside the kicker and name.
+  Verified at 390×844, 375×667 and 1440×900 for an open, a focused and a
+  locked road.

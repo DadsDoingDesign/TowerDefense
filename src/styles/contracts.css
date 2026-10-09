@@ -909,6 +909,60 @@
   z-index: 1;
   filter: drop-shadow(0 0 5px var(--co));
 }
+/* A trade company's small hung flag (Oct 2026): the notice's left, the hero
+   pick's banner in small. */
+.co-flag {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 52px;
+}
+.co-flag-rod {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(#8a5a32, #5c3a1e);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.co-flag-rod::before,
+.co-flag-rod::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  width: 7px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe08a, #e0a83c 60%, #8a5a18);
+}
+.co-flag-rod::before {
+  left: -3px;
+}
+.co-flag-rod::after {
+  right: -3px;
+}
+.co-flag-cloth {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 52px;
+  margin-top: -1px;
+  padding-bottom: 8px;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.14)),
+    linear-gradient(rgba(255, 255, 255, 0.16), transparent 45%),
+    var(--co);
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 83% 100%, 66.6% 82%, 50% 100%, 33.3% 82%, 16.6% 100%, 0 82%);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+}
+.co-flag.locked .co-flag-cloth {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), transparent 45%),
+    #6c675f;
+}
+
 /* The hero pick's contract banner (Oct 2026): the hiring company's cloth on
    a rod across the head, its seal, name and terms in dark ink on its colour,
    the cloth's foot cut in three points; your militia's flag under it. */

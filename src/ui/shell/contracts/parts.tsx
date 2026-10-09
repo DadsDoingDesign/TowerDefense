@@ -161,6 +161,24 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
 }
 
 /**
+ * A trade company's small hung flag (Oct 2026; the designer: the company's
+ * icon on a road's notice should be a flag, on the left). A rod with gold
+ * finials, the company's cloth in its colour with its logo, the foot cut in
+ * three points — the hero pick's banner, in small. A road not hiring yet
+ * hangs a grey cloth with the locked mark.
+ */
+export function CompanyFlag({ company, locked = false }: { company: CompanyId; locked?: boolean }) {
+  return (
+    <span className={`co-flag${locked ? ' locked' : ''}`} style={{ '--co': companyById(company).color } as CSSProperties} aria-hidden="true">
+      <span className="co-flag-rod" />
+      <span className="co-flag-cloth">
+        <Crest company={company} scale={2} locked={locked} />
+      </span>
+    </span>
+  )
+}
+
+/**
  * The hero pick's brand (Oct 2026; the designer: "this screen should feel more
  * branded to the company — the top should have the company flag I'm
  * repping"). The hiring company's cloth hangs from a rod across the head, in

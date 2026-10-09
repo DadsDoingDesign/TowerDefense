@@ -12,13 +12,13 @@ import { homeCompany } from '../../state/game/contractSlice'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
-import { Banner, Crest, Lock, SovereignCrest } from '../pixel'
+import { Banner, Lock, SovereignCrest } from '../pixel'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import markUrl from '../../assets/brand/mark.svg'
 import { TradeMap } from '../attract/TradeMap'
 import { roadViews, type Rect } from '../attract/mapRules'
-import { Gold } from './contracts/parts'
+import { CompanyFlag, Gold } from './contracts/parts'
 import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
 
@@ -261,12 +261,10 @@ function ContractNotice({
   const i = COMPANY_IDS.indexOf(company)
   return (
     <section className="mn-notice" style={{ '--co': co.color } as CSSProperties} aria-label={`Notice: ${co.name}`} aria-live="polite">
-      {/* The company's seal on the LEFT, beside its name (the designer: the
-          trader's icon belongs on the left when a road is opened). */}
+      {/* The company's flag on the LEFT, beside its name (the designer: the
+          trader's icon belongs on the left when a road is opened, as a flag). */}
       <div className="mn-notice-head">
-        <span className="mn-seal" aria-hidden="true">
-          <Crest company={company} scale={2} locked={!open} />
-        </span>
+        <CompanyFlag company={company} locked={!open} />
         <span className="mn-notice-id">
           <span className="mn-kicker">
             Notice · {co.goods} road · {CITY_COUNT} cities
