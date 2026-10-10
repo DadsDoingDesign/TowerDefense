@@ -21,6 +21,7 @@ import {
   TINCTURES,
   type BannerShape,
   type Charge,
+  type Metal,
   type Pattern,
 } from '../../game/data/banner'
 import { militiaName, randomBanner, rerollName, type Militia } from '../../game/run/militia'
@@ -42,8 +43,13 @@ const PAIR_OPTIONS: CarouselOption[] = COLOUR_PAIRS.map(([a, b], i) => ({ id: St
 
 type Wheel = 'shape' | 'charge'
 
-/** The three soldiers under the flag: one body, three faces. */
-const SKINS = ['#e0b48a', '#b07a52', '#7a4e32'] as const
+/** The three soldiers under the flag: a swordsman, a spearman, an archer, each his own face. */
+const TROOP = [
+  { kind: 'sword', skin: '#b07a52' },
+  { kind: 'spear', skin: '#e0b48a' },
+  { kind: 'bow', skin: '#7a4e32' },
+] as const
+const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
 
 /**
  * Your militia: its name and its flag (Oct 2026; the designer: "the first
@@ -60,10 +66,12 @@ const SKINS = ['#e0b48a', '#b07a52', '#7a4e32'] as const
  * subset: banner = pattern, icon = colour"; then "make these horizontal
  * carousels and add a dice in the top"): the FLAG wheel with its pattern
  * carousel, the EMBLEM wheel with the colour pairs (a circle split in the
- * field's and the pattern's colour) and the metal; the dice on the preview
+ * field's and the pattern's colour) and the metal ("same as the colour
+ * selection"); the dice on the preview
  * rolls a whole flag. The preview is the flag over three of your soldiers in
- * its colours ("show some soldiers instead of the cart … they all adjust
- * colours and maybe pattern on shield"). Nothing is saved until the CTA.
+ * its colours — a swordsman, a spearman and an archer ("show some soldiers
+ * instead of the cart … they all adjust colours and maybe pattern on shield";
+ * "make them three different dudes"). Nothing is saved until the CTA.
  */
 export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; mode?: 'create' | 'edit' }) {
   const saved = useMetaStore((s) => s.militia)
@@ -165,8 +173,8 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
           <Banner look={look} scale={5} />
         </div>
         <div className="co-troop" aria-hidden="true">
-          {SKINS.map((skin) => (
-            <Pixel key={skin} rows={soldierRows(look)} palette={soldierPalette(look, skin)} scale={3} />
+          {TROOP.map((t) => (
+            <Pixel key={t.kind} rows={soldierRows(look, t.kind)} palette={soldierPalette(look, t.skin)} scale={3} />
           ))}
         </div>
       </div>
@@ -197,23 +205,13 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
               return <span className="co-pair" style={{ background: `linear-gradient(135deg, ${TINCTURES[a]} 50%, ${TINCTURES[b]} 50%)`, boxShadow: `0 0 0 2px ${METALS[look.metal]}, 0 2px 0 3px rgba(0, 0, 0, 0.4)` }} />
             }}
           />
-          <div className="co-metals">
-            <span className="fw-label">Metal</span>
-            <span role="radiogroup" aria-label="Emblem metal" className="co-metal-row">
-              {METAL_IDS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={look.metal === id}
-                  aria-label={METAL_NAMES[id]}
-                  className={`co-metal${look.metal === id ? ' on' : ''}`}
-                  style={{ background: METALS[id] }}
-                  onClick={() => set({ metal: id })}
-                />
-              ))}
-            </span>
-          </div>
+          <PartCarousel
+            label="Metal"
+            options={METAL_OPTIONS}
+            value={look.metal}
+            onPick={(id) => set({ metal: id as Metal })}
+            render={(o) => <span className="co-coin" style={{ background: METALS[o.id as Metal] }} />}
+          />
         </section>
       </div>
 

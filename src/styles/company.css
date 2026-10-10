@@ -296,18 +296,18 @@
   height: 26px;
   border-radius: 50%;
 }
-.co-metals {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-.co-metal-row {
-  display: flex;
-  gap: 8px;
-  padding-right: 4px;
+/* A metal, as a round coin: the metal row is a carousel like the colours. */
+.co-coin {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.35),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(0, 0, 0, 0.55),
+    0 2px 0 3px rgba(0, 0, 0, 0.4);
 }
 
 /* ------------------------------------------------------------ every option */
@@ -444,26 +444,4 @@
 .co-none.big {
   width: 50px;
   height: 50px;
-}
-.co-metal {
-  display: block;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid rgba(0, 0, 0, 0.55);
-  box-shadow:
-    inset 4px 4px 0 rgba(255, 255, 255, 0.35),
-    inset -4px -4px 0 rgba(0, 0, 0, 0.25),
-    0 2px 0 rgba(0, 0, 0, 0.45);
-}
-.co-metal.on {
-  box-shadow:
-    0 0 0 2px #241a11,
-    0 0 0 4px var(--accent);
-}
-.co-metal:focus-visible {
-  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
-  outline-offset: 4px;
 }

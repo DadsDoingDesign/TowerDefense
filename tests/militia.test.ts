@@ -11,6 +11,7 @@ import {
   pairIndex,
   PATTERNS,
   SOLDIER_H,
+  SOLDIER_KINDS,
   SOLDIER_W,
   soldierRows,
   TINCTURES,
@@ -110,18 +111,22 @@ describe('the banner', () => {
   })
 
   it('the soldiers wear the flag: its field, its pattern on tabard and shield, its emblem', () => {
-    const plain = soldierRows({ shape: 'square', tincture: 'navy', pattern: 'plain', charge: 'none' })
-    expect(plain).toHaveLength(SOLDIER_H)
-    for (const r of plain) expect(r).toHaveLength(SOLDIER_W)
-    const all = plain.join('')
-    expect(all).toContain('c')
-    expect(all).not.toContain('d')
-    expect(all).not.toContain('p')
-    for (const pattern of PATTERNS.filter((p) => p !== 'plain')) {
-      expect(soldierRows({ shape: 'square', tincture: 'navy', pattern, charge: 'none' }).join(''), pattern).toContain('d')
-    }
-    for (const charge of CHARGE_IDS.filter((c) => c !== 'none')) {
-      expect(soldierRows({ shape: 'square', tincture: 'navy', pattern: 'plain', charge }).join(''), charge).toContain('p')
+    // Three different soldiers.
+    const look = { shape: 'square', tincture: 'navy', pattern: 'plain', charge: 'none' } as const
+    expect(new Set(SOLDIER_KINDS.map((k) => soldierRows(look, k).join(''))).size).toBe(SOLDIER_KINDS.length)
+    for (const kind of SOLDIER_KINDS) {
+      const plain = soldierRows(look, kind)
+      expect(plain).toHaveLength(SOLDIER_H)
+      for (const r of plain) expect(r).toHaveLength(SOLDIER_W)
+      const all = plain.join('')
+      expect(all).toContain('c')
+      expect(all).not.toContain('p')
+      for (const pattern of PATTERNS.filter((p) => p !== 'plain')) {
+        expect(soldierRows({ ...look, pattern }, kind).join(''), `${kind} ${pattern}`).toContain('d')
+      }
+      for (const charge of CHARGE_IDS.filter((c) => c !== 'none')) {
+        expect(soldierRows({ ...look, charge }, kind).join(''), `${kind} ${charge}`).toContain('p')
+      }
     }
   })
 

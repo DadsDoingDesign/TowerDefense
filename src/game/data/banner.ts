@@ -349,17 +349,21 @@ export const bannerKey = (look: BannerLook): string => {
 }
 
 /**
- * One of your soldiers, in the flag's colours (Oct 2026; the designer: "show
- * some soldiers instead of the cart — they all adjust colours and maybe
- * pattern on shield with what you pick"). A spearman, 18 × 24: a helm and
- * spearhead in the metal, a tabard in the field divided by the pattern, and a
- * heater shield on his arm carrying the field, the pattern, the emblem and a
- * metal rim. `o` outline, `m` metal, `w` wood, `s` skin, `c` field, `d`
- * pattern, `b` boots, `l` legs, `p` the emblem.
+ * Your soldiers, in the flag's colours (Oct 2026; the designer: "show some
+ * soldiers instead of the cart — they all adjust colours and maybe pattern on
+ * shield with what you pick", then "make them three different dudes"). Three
+ * kinds, 18 × 24: a SWORDSMAN (blade raised, a plume in the pattern's
+ * colour), a SPEARMAN (spear upright) and an ARCHER (a hood in the field's
+ * colour, a bow). Each wears a tabard in the field divided by the pattern and
+ * carries a heater shield with the field, the pattern, the emblem and a metal
+ * rim. `o` outline, `m` metal, `w` wood, `s` skin, `c` field, `d` pattern,
+ * `b` leather, `l` legs, `p` the emblem.
  */
+export const SOLDIER_KINDS = ['sword', 'spear', 'bow'] as const
+export type SoldierKind = (typeof SOLDIER_KINDS)[number]
 export const SOLDIER_W = 18
 export const SOLDIER_H = 24
-export function soldierRows(look: BannerLook): PixelRows {
+export function soldierRows(look: BannerLook, kind: SoldierKind = 'spear'): PixelRows {
   const { pattern, charge } = fullBanner(look)
   const g: string[][] = Array.from({ length: SOLDIER_H }, () => Array<string>(SOLDIER_W).fill('.'))
   const put = (x: number, y: number, ch: string) => {
@@ -370,17 +374,26 @@ export function soldierRows(look: BannerLook): PixelRows {
   }
   // A cloth coordinate for a point (u, v) of any patch, so a patch takes the flag's pattern.
   const cloth = (u: number, v: number) => inPattern(pattern, 2 + Math.round(u * (BANNER_W - 3)), 1 + Math.round(v * 14), 15)
-  // The spear, held upright at his side.
-  put(2, 1, 'm')
-  fill(1, 3, 2, 2, 'm')
-  put(2, 3, 'm')
-  fill(2, 2, 4, 22, 'w')
-  // Helm and face.
-  fill(7, 9, 3, 3, 'm')
-  fill(6, 10, 4, 5, 'm')
+  if (kind === 'spear') {
+    // The spear, held upright at his side.
+    put(2, 1, 'm')
+    fill(1, 3, 2, 2, 'm')
+    put(2, 3, 'm')
+    fill(2, 2, 4, 22, 'w')
+  } else if (kind === 'bow') {
+    // The bow, its belly to the left, the string taut down his side.
+    for (const [x, y] of [[3, 4], [2, 5], [1, 6], [1, 7], [1, 8], [1, 9], [1, 10], [1, 11], [1, 12], [1, 13], [2, 14], [3, 15]] as const) put(x, y, 'w')
+    fill(3, 3, 5, 14, 'm')
+  }
+  // Helm (or hood) and face.
+  const head = kind === 'bow' ? 'c' : 'm'
+  fill(7, 9, 3, 3, head)
+  fill(6, 10, 4, 5, head)
   fill(7, 9, 6, 7, 's')
-  put(6, 6, 'm')
-  put(10, 6, 'm')
+  put(6, 6, head)
+  put(10, 6, head)
+  if (kind === 'bow') put(8, 2, 'c') // the hood's point
+  if (kind === 'sword') fill(8, 9, 1, 2, 'd') // the plume, in the pattern's colour
   // The tabard, in the field divided by the pattern; a belt across it.
   for (let y = 8; y <= 15; y++) for (let x = 5; x <= 11; x++) put(x, y, cloth((x - 5) / 6, (y - 8) / 7) ? 'd' : 'c')
   fill(5, 11, 12, 12, 'b')
@@ -388,6 +401,12 @@ export function soldierRows(look: BannerLook): PixelRows {
   put(4, 8, 'c')
   fill(3, 4, 9, 9, 'c')
   put(3, 10, 's')
+  if (kind === 'sword') {
+    // The sword, raised: blade in the metal, a leather hilt and guard.
+    fill(3, 3, 2, 7, 'm')
+    fill(2, 4, 8, 8, 'b')
+    put(3, 9, 'b')
+  }
   // Legs and boots.
   fill(6, 7, 16, 19, 'l')
   fill(9, 10, 16, 19, 'l')
@@ -420,7 +439,7 @@ export function soldierRows(look: BannerLook): PixelRows {
   return out.map((r) => r.map((c) => (c === 'e' ? 'm' : c)).join(''))
 }
 
-/** A soldier's palette: the flag's colours and metal, and his own skin. */
+/** A soldier's palette: the flag's colours and metal, and his own skin. A plain flag's pattern colour still plumes the swordsman. */
 export function soldierPalette(look: BannerLook, skin = '#e0b48a'): Palette {
   const b = fullBanner(look)
   return { o: OUTLINE, m: METALS[b.metal], w: '#6b4526', s: skin, c: TINCTURES[b.tincture], d: TINCTURES[b.tincture2], b: '#3a2416', l: '#4a3a2a', p: METALS[b.metal] }

@@ -3454,3 +3454,8 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   cloth, the cut flag a step towards the pole. A test checks every emblem
   lands whole on every shape; verified in the builder's preview for nine
   shape and emblem pairs.
+  Then "make them three different dudes; the metals should be a circle,
+  not an oval, and the same as the colour selection": the troop is a
+  swordsman (blade raised, a plume in the pattern's colour), a spearman and
+  a hooded archer with a bow (`SOLDIER_KINDS`), each his own face; the metal
+  is a carousel of round coins like the colour pairs. Verified at 390×844.
