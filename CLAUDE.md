@@ -115,7 +115,8 @@ result. Append a short note to the review log when you're done.
   (`RootShell` shows `MilitiaScreen mode="create"` while `metaStore.militia`
   is null), edited from Settings or by tapping its name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
-  metal — one `bannerRows(look)` for SVG and both canvases); the builder rows
+  metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
+  dresses the builder preview's soldiers in it); the builder's wheels and carousels
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.

@@ -21,6 +21,7 @@ import { hashSeed, RNG } from '../core/rng'
 import {
   BANNER_SHAPES,
   CHARGE_IDS,
+  COLOUR_PAIRS,
   isBannerShape,
   isCharge,
   isMetal,
@@ -28,7 +29,6 @@ import {
   isTincture,
   METAL_IDS,
   PATTERNS,
-  TINCTURE_IDS,
   type BannerLook,
 } from '../data/banner'
 import { checkCompanyName } from './nameFilter'
@@ -110,12 +110,12 @@ export function readMilitia(raw: unknown): Militia | null {
 export function randomBanner(seed: number): BannerLook {
   const r = new RNG(hashSeed('militia-banner', seed))
   const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(r.next() * xs.length)]
-  const tincture = pick(TINCTURE_IDS)
+  const [tincture, tincture2] = pick(COLOUR_PAIRS)
   return {
     shape: pick(BANNER_SHAPES),
     tincture,
     pattern: r.next() < 0.3 ? 'plain' : pick(PATTERNS.filter((p) => p !== 'plain')),
-    tincture2: pick(TINCTURE_IDS.filter((t) => t !== tincture)),
+    tincture2,
     charge: pick(CHARGE_IDS.filter((c) => c !== 'none')),
     metal: pick(METAL_IDS),
   }

@@ -963,9 +963,13 @@
     #6c675f;
 }
 
-/* The hero pick's contract banner (Oct 2026): the hiring company's cloth on
-   a rod across the head, its seal, name and terms in dark ink on its colour,
-   the cloth's foot cut in three points; your militia's flag under it. */
+/* The hero pick's contract banner (Oct 2026). The designer, on the first
+   cut (the cloth flooded in the company's colour, dark ink, a zig-zag foot,
+   your militia in a pill): "the big banner is better but it's kind of tacky".
+   Now a heraldic standard: dark wool dyed with a little of the company's
+   colour, the colour itself kept for the trim, the kicker and the seal's
+   ring; one point at the foot; the seal hung over the rod; your militia's
+   flag and name under it, plain. */
 .pg-head.has-brand {
   gap: 6px;
 }
@@ -980,15 +984,15 @@
   align-items: center;
   width: 100%;
   max-width: 440px;
-  margin: 0 auto 2px;
+  margin: 8px auto 2px;
 }
 .ct-banner-rod {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: 7px;
-  border-radius: 4px;
-  background: linear-gradient(#8a5a32, #5c3a1e);
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(#8a5a32, #4a2e17);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
 }
 .ct-banner-rod::before,
@@ -996,67 +1000,93 @@
   content: '';
   position: absolute;
   top: -3px;
-  width: 11px;
-  height: 13px;
+  width: 10px;
+  height: 12px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #ffe08a, #e0a83c 60%, #8a5a18);
 }
 .ct-banner-rod::before {
-  left: -5px;
+  left: -4px;
 }
 .ct-banner-rod::after {
-  right: -5px;
+  right: -4px;
 }
 .ct-banner-cloth {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  --foot: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  width: calc(100% - 20px);
+  gap: 4px;
+  width: calc(100% - 28px);
   margin-top: -2px;
-  padding: 12px 16px 26px;
+  padding: 0 22px 40px;
+  box-sizing: border-box;
+  text-align: center;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+}
+/* The trim (the company's colour) and, inside it, the dyed wool. */
+.ct-banner-cloth::before,
+.ct-banner-cloth::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  clip-path: var(--foot);
+}
+.ct-banner-cloth::before {
+  inset: 0;
+  background: var(--co);
+}
+.ct-banner-cloth::after {
+  inset: 0 3px 4px;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.1), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.12)),
-    linear-gradient(rgba(255, 255, 255, 0.14), transparent 40%),
-    var(--co);
-  color: #1b1409;
-  text-align: left;
-  /* The foot cut in three points, as a hung standard. */
-  clip-path: polygon(0 0, 100% 0, 100% 84%, 83% 100%, 66.6% 84%, 50% 100%, 33.3% 84%, 16.6% 100%, 0 84%);
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+    linear-gradient(90deg, rgba(0, 0, 0, 0.22), transparent 14%, transparent 86%, rgba(0, 0, 0, 0.22)),
+    linear-gradient(rgba(255, 255, 255, 0.06), transparent 50%),
+    color-mix(in srgb, var(--co) 16%, #1a120b);
 }
 .ct-banner-seal {
   display: grid;
   place-items: center;
   width: 60px;
   height: 60px;
+  margin: -12px 0 4px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #3a2a1a, #1b1409 70%);
+  background: radial-gradient(circle at 40% 35%, #3a2a1a, #140e08 72%);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.18),
-    0 2px 0 rgba(0, 0, 0, 0.35);
-}
-.ct-banner-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+    0 0 0 2px var(--co),
+    0 0 0 4px #140e08,
+    0 3px 6px rgba(0, 0, 0, 0.5);
 }
 .ct-banner-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--fs-micro);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  opacity: 0.8;
+  color: var(--co);
+}
+.ct-banner-k::before,
+.ct-banner-k::after {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
 }
 .ct-banner-name {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
+  color: #f6ead2;
 }
 .ct-banner-terms {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--muted);
 }
 .ct-banner-terms .ct-gold {
   vertical-align: -1px;
@@ -1064,44 +1094,48 @@
 }
 .ct-banner-adv {
   white-space: nowrap;
-}
-/* Short phones: the cloth a size down, so the hero card keeps its room. */
-@media (orientation: portrait) and (max-height: 700px) {
-  .ct-banner-cloth {
-    padding: 8px 14px 20px;
-    gap: 10px;
-  }
-  .ct-banner-seal {
-    width: 48px;
-    height: 48px;
-  }
-  .ct-banner-seal .crest {
-    transform: scale(0.8);
-  }
-  .ct-banner-name {
-    font-size: 22px;
-  }
-  .ct-banner-us {
-    margin-top: 4px;
-  }
-  .pg-head.has-brand .t-title {
-    font-size: 24px;
-    margin-top: 0;
-  }
+  font-weight: 800;
+  color: var(--accent-text);
 }
 .ct-banner-us {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: 8px 0 0;
+  gap: 10px;
+  margin: 10px 0 0;
   font-size: var(--fs-sm);
+  line-height: 1.25;
   color: var(--muted);
+  text-align: left;
 }
 .ct-banner-us b {
   color: var(--text);
 }
 .ct-banner-us .banner {
   flex: none;
+}
+/* Short phones: the standard a size down, so the hero card keeps its room. */
+@media (orientation: portrait) and (max-height: 700px) {
+  .ct-banner-cloth {
+    padding-bottom: 32px;
+  }
+  .ct-banner-seal {
+    width: 48px;
+    height: 48px;
+    margin: -10px 0 2px;
+  }
+  .ct-banner-seal .crest {
+    transform: scale(0.8);
+  }
+  .ct-banner-name {
+    font-size: 24px;
+  }
+  .ct-banner-us {
+    margin-top: 6px;
+  }
+  .pg-head.has-brand .t-title {
+    font-size: 24px;
+    margin-top: 0;
+  }
 }
 .sh-cargo-crate {
   display: inline-grid;

@@ -3426,3 +3426,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   the lock. It heads the notice on the left, beside the kicker and name.
   Verified at 390×844, 375×667 and 1440×900 for an open, a focused and a
   locked road.
+
+- **Oct 2026 · Flag builder, compact; contract banner, restyled.** The
+  designer on the six-row builder: "takes up too much space — two vertical
+  carousels (banner shape + icon shape), under each a subset: banner =
+  pattern, icon = colour (a circle split in the two colours)"; then "make
+  these horizontal carousels, put a dice in the top", and "show some
+  soldiers instead of the cart … they adjust colours and pattern on shield".
+  Now two columns: the FLAG wheel (vertical, neighbours peeking, ▲ ▼, tap
+  the middle for every shape) over a pattern carousel; the EMBLEM wheel over
+  a carousel of twelve colour pairs (`COLOUR_PAIRS`, a split circle rimmed
+  in the metal) and the metal. The dice on the preview rolls a whole flag;
+  the preview is the flag over three spearmen (`soldierRows`) whose tabards
+  take the field and pattern and whose shields carry pattern, emblem and
+  metal. The whole builder fits a 390×844 screen without scrolling. The hero
+  pick's banner ("the big banner is better but kind of tacky") is now a
+  heraldic standard: dark wool dyed with the company's colour, the colour
+  kept for the trim, kicker and seal ring, one point at the foot, the seal
+  hung over the rod, your militia plain beneath. Verified at 390×844,
+  375×667 and 1440×900: open, swiped, dice, all-options sheet, a bad name,
+  edit, and the hero pick.

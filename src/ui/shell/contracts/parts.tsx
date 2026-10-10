@@ -181,10 +181,11 @@ export function CompanyFlag({ company, locked = false }: { company: CompanyId; l
 /**
  * The hero pick's brand (Oct 2026; the designer: "this screen should feel more
  * branded to the company — the top should have the company flag I'm
- * repping"). The hiring company's cloth hangs from a rod across the head, in
- * its colour, with its seal, its name and the contract's terms; your own
- * militia's flag and name sit under it — who you fly for. The Sovereign
- * Route's cloth is its cyan and crown.
+ * repping"; then "the big banner is better but it's kind of tacky"). The
+ * hiring company's standard hangs from a rod across the head: dark wool
+ * dyed with its colour, trimmed in it, its seal hung over the rod, its name
+ * and the contract's terms; your own militia's flag and name sit under it —
+ * who you fly for. The Sovereign Route's is its cyan and crown.
  */
 export function ContractBanner({
   company,
@@ -211,22 +212,22 @@ export function ContractBanner({
         <span className="ct-banner-seal" aria-hidden="true">
           {company ? <Crest company={company} scale={3} /> : <SovereignCrest scale={3} />}
         </span>
-        <span className="ct-banner-text">
-          <span className="ct-banner-k">{co ? 'Under contract' : 'Your own charter'}</span>
-          <b className="ct-banner-name">{co ? co.name : CHARTER_NAME}</b>
-          <span className="ct-banner-terms">
-            {terms} ·{' '}
-            <span className="ct-banner-adv">
-              {word} <Gold n={purse} scale={1} />
-            </span>
+        <span className="ct-banner-k">{co ? 'Under contract' : 'Your own charter'}</span>
+        <b className="ct-banner-name">{co ? co.name : CHARTER_NAME}</b>
+        <span className="ct-banner-terms">
+          {terms} ·{' '}
+          <span className="ct-banner-adv">
+            {word} <Gold n={purse} scale={1} />
           </span>
         </span>
       </div>
       {militia && (
         <p className="ct-banner-us">
-          <Banner look={militia.look} scale={1} />
+          <Banner look={militia.look} scale={2} />
           <span>
-            <b>{militia.name}</b>, flying for {co ? co.name : 'no company but its own'}
+            <b>{militia.name}</b>
+            <br />
+            flying for {co ? co.name : 'no company but its own'}
           </span>
         </p>
       )}
