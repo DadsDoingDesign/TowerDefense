@@ -5,6 +5,7 @@ import {
   BANNER_W,
   bannerRows,
   CHARGE_IDS,
+  CHARGES,
   COLOUR_PAIRS,
   METAL_IDS,
   pairIndex,
@@ -83,6 +84,16 @@ describe('the banner', () => {
       expect(b.charge).not.toBe('none')
       // The builder offers colours as pairs; a random flag flies one of them.
       expect(pairIndex(b)).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('every emblem lands whole on every shape — none is cut off by the cloth', () => {
+    for (const shape of BANNER_SHAPES) {
+      for (const charge of CHARGE_IDS) {
+        const want = CHARGES[charge].join('').split('p').length - 1
+        const got = bannerRows({ shape, tincture: 'navy', charge }).join('').split('p').length - 1
+        expect(got, `${charge} on ${shape}`).toBe(want)
+      }
     }
   })
 

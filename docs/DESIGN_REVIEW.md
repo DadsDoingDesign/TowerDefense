@@ -3446,3 +3446,11 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   hung over the rod, your militia plain beneath. Verified at 390×844,
   375×667 and 1440×900: open, swiped, dice, all-options sheet, a bad name,
   edit, and the hero pick.
+  Then "some of the icons need to be moved to be centred on certain flag
+  shapes and not to be cut off": the notched flag lost a pixel or two of
+  eleven emblems to its notch. Each shape now sets its emblem in the middle
+  of its own body (`CHARGE_AT`): the pennant and the notched flag low and
+  left beside the point and the notch, the standard lower down its longer
+  cloth, the cut flag a step towards the pole. A test checks every emblem
+  lands whole on every shape; verified in the builder's preview for nine
+  shape and emblem pairs.

@@ -259,6 +259,27 @@ function inPattern(pattern: Pattern, x: number, y: number, clothH: number): bool
 }
 
 /**
+ * Where each shape sets its 5 × 5 emblem (its top-left cell): in the middle of
+ * the cloth's body, clear of the edge — the designer: "some of the icons need
+ * to be moved to be centred on certain flag shapes and not to be cut off".
+ * The pennant and the notched flag set it low and left, beside the point and
+ * the notch; the standard sets it lower down its longer cloth; the cut flag
+ * sets it a step towards the pole, where its cloth is. `tests/militia.test.ts`
+ * checks every emblem lands whole on every shape.
+ */
+const CHARGE_AT: Record<BannerShape, readonly [number, number]> = {
+  swallow: [5, 4],
+  square: [5, 4],
+  pennant: [3, 6],
+  tri: [4, 4],
+  gonfalon: [5, 4],
+  shield: [5, 4],
+  notch: [3, 6],
+  wave: [5, 4],
+  tall: [5, 7],
+}
+
+/**
  * The flag's pixel rows: `o` the pole's outline, `w` its wood, `g` the gold
  * finial, `c` the field, `d` the pattern, `r` the metal edge, `p` the emblem.
  */
@@ -285,8 +306,7 @@ export function bannerRows(look: BannerLook): PixelRows {
       else if (inPattern(pattern, x, y, clothH)) out[y][x] = 'd'
     }
   }
-  const ox = shape === 'pennant' ? 3 : 5
-  const oy = shape === 'tall' ? 5 : 4
+  const [ox, oy] = CHARGE_AT[shape]
   CHARGES[charge].forEach((r, j) =>
     r.split('').forEach((ch, i) => {
       const at = out[oy + j]?.[ox + i]
