@@ -76,6 +76,33 @@ export const TINCTURE_NAMES: Record<Tincture, string> = {
   ash: 'Ash',
 }
 
+/**
+ * The colour pairs the builder offers (Oct 2026; the designer: "icon = colour —
+ * a circle with the split two colour pairs that the flag and pattern will
+ * be"): each is the field and the pattern's colour, chosen together. Twelve
+ * pairs a herald would sign off on — the save still holds the two tinctures,
+ * so an older flag in any two keeps them (no pair shows as chosen).
+ */
+export const COLOUR_PAIRS: readonly (readonly [Tincture, Tincture])[] = [
+  ['navy', 'crimson'],
+  ['crimson', 'sable'],
+  ['forest', 'ochre'],
+  ['teal', 'navy'],
+  ['sable', 'rust'],
+  ['indigo', 'plum'],
+  ['wine', 'sable'],
+  ['slate', 'ash'],
+  ['umber', 'moss'],
+  ['ochre', 'umber'],
+  ['plum', 'wine'],
+  ['ash', 'sable'],
+]
+/** Which pair a flag flies, or -1 when its two colours are not one of the pairs. */
+export const pairIndex = (look: BannerLook): number => {
+  const b = fullBanner(look)
+  return COLOUR_PAIRS.findIndex(([a, c]) => a === b.tincture && c === b.tincture2)
+}
+
 /** The patterns that divide the field: where the pattern's colour lies. */
 export const PATTERNS = ['plain', 'pale', 'fess', 'quarterly', 'bend', 'chevron', 'barry', 'paly', 'cross', 'saltire', 'chief', 'pall'] as const
 export type Pattern = (typeof PATTERNS)[number]
@@ -232,6 +259,27 @@ function inPattern(pattern: Pattern, x: number, y: number, clothH: number): bool
 }
 
 /**
+ * Where each shape sets its 5 × 5 emblem (its top-left cell): in the middle of
+ * the cloth's body, clear of the edge — the designer: "some of the icons need
+ * to be moved to be centred on certain flag shapes and not to be cut off".
+ * The pennant and the notched flag set it low and left, beside the point and
+ * the notch; the standard sets it lower down its longer cloth; the cut flag
+ * sets it a step towards the pole, where its cloth is. `tests/militia.test.ts`
+ * checks every emblem lands whole on every shape.
+ */
+const CHARGE_AT: Record<BannerShape, readonly [number, number]> = {
+  swallow: [5, 4],
+  square: [5, 4],
+  pennant: [3, 6],
+  tri: [4, 4],
+  gonfalon: [5, 4],
+  shield: [5, 4],
+  notch: [3, 6],
+  wave: [5, 4],
+  tall: [5, 7],
+}
+
+/**
  * The flag's pixel rows: `o` the pole's outline, `w` its wood, `g` the gold
  * finial, `c` the field, `d` the pattern, `r` the metal edge, `p` the emblem.
  */
@@ -258,8 +306,7 @@ export function bannerRows(look: BannerLook): PixelRows {
       else if (inPattern(pattern, x, y, clothH)) out[y][x] = 'd'
     }
   }
-  const ox = shape === 'pennant' ? 3 : 5
-  const oy = shape === 'tall' ? 5 : 4
+  const [ox, oy] = CHARGE_AT[shape]
   CHARGES[charge].forEach((r, j) =>
     r.split('').forEach((ch, i) => {
       const at = out[oy + j]?.[ox + i]
@@ -299,4 +346,101 @@ export function bannerPalette(look: BannerLook): Palette {
 export const bannerKey = (look: BannerLook): string => {
   const b = fullBanner(look)
   return `${b.shape}|${b.tincture}|${b.pattern}|${b.tincture2}|${b.charge}|${b.metal}`
+}
+
+/**
+ * Your soldiers, in the flag's colours (Oct 2026; the designer: "show some
+ * soldiers instead of the cart — they all adjust colours and maybe pattern on
+ * shield with what you pick", then "make them three different dudes"). Three
+ * kinds, 18 × 24: a SWORDSMAN (blade raised, a plume in the pattern's
+ * colour), a SPEARMAN (spear upright) and an ARCHER (a hood in the field's
+ * colour, a bow). Each wears a tabard in the field divided by the pattern and
+ * carries a heater shield with the field, the pattern, the emblem and a metal
+ * rim. `o` outline, `m` metal, `w` wood, `s` skin, `c` field, `d` pattern,
+ * `b` leather, `l` legs, `p` the emblem.
+ */
+export const SOLDIER_KINDS = ['sword', 'spear', 'bow'] as const
+export type SoldierKind = (typeof SOLDIER_KINDS)[number]
+export const SOLDIER_W = 18
+export const SOLDIER_H = 24
+export function soldierRows(look: BannerLook, kind: SoldierKind = 'spear'): PixelRows {
+  const { pattern, charge } = fullBanner(look)
+  const g: string[][] = Array.from({ length: SOLDIER_H }, () => Array<string>(SOLDIER_W).fill('.'))
+  const put = (x: number, y: number, ch: string) => {
+    if (g[y]?.[x] !== undefined) g[y][x] = ch
+  }
+  const fill = (x0: number, x1: number, y0: number, y1: number, ch: string) => {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, ch)
+  }
+  // A cloth coordinate for a point (u, v) of any patch, so a patch takes the flag's pattern.
+  const cloth = (u: number, v: number) => inPattern(pattern, 2 + Math.round(u * (BANNER_W - 3)), 1 + Math.round(v * 14), 15)
+  if (kind === 'spear') {
+    // The spear, held upright at his side.
+    put(2, 1, 'm')
+    fill(1, 3, 2, 2, 'm')
+    put(2, 3, 'm')
+    fill(2, 2, 4, 22, 'w')
+  } else if (kind === 'bow') {
+    // The bow, its belly to the left, the string taut down his side.
+    for (const [x, y] of [[3, 4], [2, 5], [1, 6], [1, 7], [1, 8], [1, 9], [1, 10], [1, 11], [1, 12], [1, 13], [2, 14], [3, 15]] as const) put(x, y, 'w')
+    fill(3, 3, 5, 14, 'm')
+  }
+  // Helm (or hood) and face.
+  const head = kind === 'bow' ? 'c' : 'm'
+  fill(7, 9, 3, 3, head)
+  fill(6, 10, 4, 5, head)
+  fill(7, 9, 6, 7, 's')
+  put(6, 6, head)
+  put(10, 6, head)
+  if (kind === 'bow') put(8, 2, 'c') // the hood's point
+  if (kind === 'sword') fill(8, 9, 1, 2, 'd') // the plume, in the pattern's colour
+  // The tabard, in the field divided by the pattern; a belt across it.
+  for (let y = 8; y <= 15; y++) for (let x = 5; x <= 11; x++) put(x, y, cloth((x - 5) / 6, (y - 8) / 7) ? 'd' : 'c')
+  fill(5, 11, 12, 12, 'b')
+  // The spear arm.
+  put(4, 8, 'c')
+  fill(3, 4, 9, 9, 'c')
+  put(3, 10, 's')
+  if (kind === 'sword') {
+    // The sword, raised: blade in the metal, a leather hilt and guard.
+    fill(3, 3, 2, 7, 'm')
+    fill(2, 4, 8, 8, 'b')
+    put(3, 9, 'b')
+  }
+  // Legs and boots.
+  fill(6, 7, 16, 19, 'l')
+  fill(9, 10, 16, 19, 'l')
+  fill(5, 7, 20, 21, 'b')
+  fill(9, 11, 20, 21, 'b')
+  // The shield: a heater, rimmed in the metal, the field and pattern inside, the emblem on it.
+  const shield: [number, number, number][] = [
+    [9, 10, 16], [10, 10, 16], [11, 10, 16], [12, 10, 16], [13, 10, 16], [14, 10, 16], [15, 11, 15], [16, 12, 14], [17, 13, 13],
+  ]
+  for (const [y, x0, x1] of shield) for (let x = x0; x <= x1; x++) put(x, y, 'e')
+  for (const [y, x0, x1] of shield) {
+    for (let x = x0; x <= x1; x++) {
+      const up = shield.find((r) => r[0] === y - 1)
+      const down = shield.find((r) => r[0] === y + 1)
+      const edge = x === x0 || x === x1 || !up || !down || x < down[1] || x > down[2]
+      if (!edge) put(x, y, cloth((x - 11) / 4, (y - 10) / 5) ? 'd' : 'c')
+    }
+  }
+  CHARGES[charge].forEach((r, j) =>
+    r.split('').forEach((ch, i) => {
+      const at = g[10 + j]?.[11 + i]
+      if (ch === 'p' && (at === 'c' || at === 'd')) g[10 + j][11 + i] = 'p'
+    }),
+  )
+  // The outline: every empty cell beside the figure.
+  const out = g.map((r) => r.slice())
+  for (let y = 0; y < SOLDIER_H; y++)
+    for (let x = 0; x < SOLDIER_W; x++)
+      if (g[y][x] === '.' && [g[y - 1]?.[x], g[y + 1]?.[x], g[y][x - 1], g[y][x + 1]].some((c) => c !== undefined && c !== '.')) out[y][x] = 'o'
+  return out.map((r) => r.map((c) => (c === 'e' ? 'm' : c)).join(''))
+}
+
+/** A soldier's palette: the flag's colours and metal, and his own skin. A plain flag's pattern colour still plumes the swordsman. */
+export function soldierPalette(look: BannerLook, skin = '#e0b48a'): Palette {
+  const b = fullBanner(look)
+  return { o: OUTLINE, m: METALS[b.metal], w: '#6b4526', s: skin, c: TINCTURES[b.tincture], d: TINCTURES[b.tincture2], b: '#3a2416', l: '#4a3a2a', p: METALS[b.metal] }
 }

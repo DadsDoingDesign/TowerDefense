@@ -1,84 +1,98 @@
 /**
  * The company builder (`ui/shell/MilitiaScreen.tsx`, `company/FlagCarousel.tsx`):
- * the name, a large preview of the flag on its wagon, and six carousel rows in
- * the manner of a kart builder — the chosen part large in the middle, its
- * neighbours shrinking away either side, ‹ › at the ends. Tapping the middle
- * opens every option as a grid (`.fc-sheet`).
+ * the name, a preview of the flag over three soldiers in its colours, and two
+ * columns — the flag and the emblem — each a vertical wheel (the chosen part
+ * large in the middle, its neighbours peeking) over a small horizontal
+ * carousel. Tapping a wheel's middle opens every option as a grid (`.fc-sheet`).
  */
 
-/* ------------------------------------------------------------ the name */
-.co-name {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.co-k {
-  font-size: var(--fs-micro);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.co-name-row {
+/* ------------------------------------------------------------ the name
+   The header is the name: the screen's title, typed in place. A dashed rule
+   under it says it can be written on; the dice beside it rolls one. */
+.ct-hdr.co-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
   gap: 8px;
 }
-.co-input {
+.ct-hdr.co-head:has(.ct-back) {
+  grid-template-columns: auto minmax(0, 1fr) 44px;
+}
+.co-title-input {
   min-width: 0;
   height: 48px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line-strong);
-  background: #1a120b;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px dashed var(--line-strong);
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
 }
-.co-input:focus-visible {
-  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
-  outline-offset: 1px;
+.co-title-input::placeholder {
+  color: var(--dim);
 }
-.co-input[aria-invalid='true'] {
-  border-color: var(--bad);
+.co-title-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.co-title-input:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.co-title-input[aria-invalid='true'] {
+  border-bottom-color: var(--bad);
 }
 .co-dice,
 .co-surprise {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border-radius: 10px;
   border: 1px solid var(--line-strong);
   background: rgba(47, 36, 24, 0.9);
   color: var(--accent-text);
   font: inherit;
-  font-weight: 700;
   cursor: pointer;
 }
 .co-dice {
-  height: 48px;
+  width: 44px;
+  height: 44px;
 }
+/* Said only when the name is refused: no hint under a field that needs none. */
 .co-why {
-  min-height: 1.3em;
+  grid-column: 1 / -1;
   font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.co-why.bad {
-  color: var(--bad-text);
   font-weight: 700;
+  color: var(--bad-text);
 }
 
 /* ------------------------------------------------------------ the preview */
 .co-preview {
-  height: 176px;
+  flex: none;
+  height: 136px;
 }
-.co-preview .mi-preview-cap {
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.co-preview .mi-preview-road {
+  bottom: 16px;
+  height: 30px;
+}
+.co-preview .mi-preview-flag {
+  left: auto;
+  right: 58%;
+  bottom: 30px;
+}
+/* Three of your soldiers in the flag's colours, on the road beside it. */
+.co-troop {
+  position: absolute;
+  left: 46%;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+}
+.co-troop > :nth-child(2) {
+  margin-bottom: 6px;
 }
 /* The flag stirs in the wind (and holds still under reduced motion). */
 .co-wave .banner {
@@ -98,128 +112,176 @@
     animation: none;
   }
 }
+/* The dice in the preview's corner: a whole new flag. */
 .co-surprise {
-  align-self: flex-end;
-  height: 40px;
-  margin-top: -6px;
-  padding: 0 14px;
-  font-size: var(--fs-sm);
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  background: rgba(20, 15, 10, 0.88);
 }
 
-/* ------------------------------------------------------------ a carousel row */
-.co-rows {
+/* ------------------------------------------------------------ the two columns
+   The flag on the left, the emblem on the right: each a vertical wheel over
+   its own small horizontal carousel (the pattern; the colours). */
+.co-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.co-col {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-.fc {
-  padding: 8px 6px 6px;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 8px 10px 10px;
   border-radius: 12px;
   background: #241a11;
   border: 1px solid var(--line);
 }
-.fc-head {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+.fw,
+.fw-part {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.fw-part {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+/* The label and value are the shared `.field-k` / `.field-v` (global.css). */
+.fw-head {
+  display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 0 8px 2px;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
 }
-.fc-label {
-  font-size: var(--fs-micro);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.fc-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 800;
-  color: var(--accent-text);
-}
-.fc-n {
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.fc-track {
+.fw-body {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: minmax(0, 1fr) 40px;
   align-items: center;
+  gap: 4px;
 }
-.fc-step {
-  width: 40px;
-  height: 64px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 26px;
-  font-weight: 900;
-  cursor: pointer;
-}
-.fc-step:disabled {
-  color: var(--dim);
-  cursor: default;
-}
-.fc-strip {
+.fw-strip,
+.fw-row {
   position: relative;
-  height: 76px;
   overflow: hidden;
-  touch-action: pan-y;
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
-  /* The ends fade, so the row reads as one that goes on round. */
-  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
 }
-.fc-strip:focus-visible {
+.fw-strip {
+  height: 140px;
+  touch-action: pan-x;
+  mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
+}
+.fw-row {
+  height: 48px;
+  touch-action: pan-y;
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+}
+.fw-strip:focus-visible,
+.fw-row:focus-visible {
   outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
   outline-offset: -2px;
   border-radius: 10px;
 }
-.fc-item {
+.fw-item,
+.fw-chip {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 50%;
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 68px;
   border-radius: 10px;
+  pointer-events: none;
   transition:
     transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.22s ease;
-  pointer-events: none;
 }
-.fc-item.on {
-  background: radial-gradient(circle at 50% 45%, rgba(240, 196, 106, 0.22), transparent 70%);
-  box-shadow:
-    inset 0 0 0 2px var(--accent),
-    0 0 14px rgba(240, 196, 106, 0.3);
+.fw-item {
+  width: 76px;
+  height: 84px;
 }
-.fc-strip.is-dragging .fc-item {
+.fw-chip {
+  width: 40px;
+  height: 40px;
+}
+.fw-item.on,
+.fw-chip.on {
+  background: radial-gradient(circle at 50% 45%, rgba(240, 196, 106, 0.2), transparent 70%);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.is-dragging > .fw-item,
+.is-dragging > .fw-chip {
   transition: none;
 }
-.fc.is-off .fc-strip {
-  opacity: 0.35;
-  cursor: default;
-}
-.fc.is-off .fc-value {
-  color: var(--muted);
-  font-weight: 600;
-}
-:root[data-reduced-motion='true'] .fc-item {
+:root[data-reduced-motion='true'] :is(.fw-item, .fw-chip) {
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fc-item {
+  .fw-item,
+  .fw-chip {
     transition: none;
   }
+}
+.fw-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fw-step {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: #1a120b;
+  color: var(--text);
+  cursor: pointer;
+}
+.fw-track {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
+  align-items: center;
+}
+.fw-nudge {
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+}
+/* A colour pair: one circle split between the field and the pattern's colour, rimmed in the metal. */
+.co-pair {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+/* A metal, as a round coin: the metal row is a carousel like the colours. */
+.co-coin {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.35),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(0, 0, 0, 0.55),
+    0 2px 0 3px rgba(0, 0, 0, 0.4);
 }
 
 /* ------------------------------------------------------------ every option */
@@ -308,7 +370,8 @@
   outline-offset: 2px;
 }
 @media (hover: hover) and (pointer: fine) {
-  .fc-step:not(:disabled):hover,
+  .fw-step:hover,
+  .fw-nudge:hover,
   .co-dice:hover,
   .co-surprise:hover {
     color: var(--text);
@@ -319,27 +382,11 @@
   }
 }
 
-/* The first screen of a new game: the page is the whole welcome. */
-.co-build.is-create .ct-title {
-  font-size: 28px;
-}
 
 /* ------------------------------------------------------------ one part, alone
    Each row shows only its own part; the assembled flag is the preview above. */
-.co-swatch {
-  display: block;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 2px solid rgba(236, 224, 200, 0.55);
-  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.22), 0 2px 0 rgba(0, 0, 0, 0.45);
-}
-.co-swatch.big {
-  width: 56px;
-  height: 56px;
-}
 .co-pattern {
-  border: 2px solid rgba(236, 224, 200, 0.55);
+  border: 1px solid rgba(236, 224, 200, 0.55);
   border-radius: 4px;
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
@@ -367,19 +414,4 @@
 .co-none.big {
   width: 50px;
   height: 50px;
-}
-.co-metal {
-  display: block;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.55);
-  box-shadow:
-    inset 4px 4px 0 rgba(255, 255, 255, 0.35),
-    inset -4px -4px 0 rgba(0, 0, 0, 0.25),
-    0 2px 0 rgba(0, 0, 0, 0.45);
-}
-.co-metal.big {
-  width: 54px;
-  height: 54px;
 }

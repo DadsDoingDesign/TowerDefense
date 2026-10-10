@@ -283,6 +283,29 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ================================================ a field's label and value
+   One look for "what this is" and "what it is set to" wherever a control
+   names its part and its current choice (docs/DESIGN_SYSTEM.md § 8, rule 4):
+   the label small, upper case, muted; the value the same size on every row,
+   bold, in the accent. A new picker uses these, not a local copy. */
+.field-k {
+  flex: none;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.field-v {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--accent-text);
+}
+
 /* ======================================================== focus ring (M27a)
    The shipping shell had ZERO `:focus-visible` rules — the only two in the
    codebase were on two components the shell never mounted.

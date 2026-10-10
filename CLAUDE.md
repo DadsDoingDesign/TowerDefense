@@ -115,7 +115,8 @@ result. Append a short note to the review log when you're done.
   (`RootShell` shows `MilitiaScreen mode="create"` while `metaStore.militia`
   is null), edited from Settings or by tapping its name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
-  metal — one `bannerRows(look)` for SVG and both canvases); the builder rows
+  metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
+  dresses the builder preview's soldiers in it); the builder's wheels and carousels
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.
@@ -126,6 +127,17 @@ result. Append a short note to the review log when you're done.
   glyph) and `channels.ts` re-exports it — `game/` must not import `ui/`.
 
 ## Conventions
+
+- **Everything has a job.** Every element on a screen can name its one job;
+  an element that cannot goes, and no two elements do the same job. Each
+  shared part's job is in `docs/DESIGN_SYSTEM.md` § 8, "Parts and their
+  jobs", and a new part gets its row there before it ships.
+- **Design system usage rules: `docs/DESIGN_SYSTEM.md` § 8.** They cover one
+  title, saying a fact once, no standing hints, `.field-k` / `.field-v` for
+  every label and value, the shared choose-one parts, one primary CTA, and
+  tokens over literals. Breaking a rule needs a strong, stated need and the
+  designer's approval, recorded in that section's exceptions table. Never
+  break one silently.
 
 - Sprite pack files are role-named; add new roles to `ROLE_NAMES` in
   `sprites.ts` or they won't preload — and add them to the pack's entry in

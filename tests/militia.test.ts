@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { BANNER_H, BANNER_SHAPES, BANNER_W, bannerRows, CHARGE_IDS, METAL_IDS, PATTERNS, TINCTURES } from '../src/game/data/banner'
+import {
+  BANNER_H,
+  BANNER_SHAPES,
+  BANNER_W,
+  bannerRows,
+  CHARGE_IDS,
+  CHARGES,
+  COLOUR_PAIRS,
+  METAL_IDS,
+  pairIndex,
+  PATTERNS,
+  SOLDIER_H,
+  SOLDIER_KINDS,
+  SOLDIER_W,
+  soldierRows,
+  TINCTURES,
+} from '../src/game/data/banner'
 import { COMPANIES } from '../src/game/data/companies'
 import { isMilitiaName, militiaName, militiaTagline, randomBanner, readMilitia, rerollName } from '../src/game/run/militia'
 import { checkCompanyName, isProfane } from '../src/game/run/nameFilter'
@@ -67,6 +83,50 @@ describe('the banner', () => {
       const b = randomBanner(s)
       expect(b.tincture2).not.toBe(b.tincture)
       expect(b.charge).not.toBe('none')
+      // The builder offers colours as pairs; a random flag flies one of them.
+      expect(pairIndex(b)).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('every emblem lands whole on every shape — none is cut off by the cloth', () => {
+    for (const shape of BANNER_SHAPES) {
+      for (const charge of CHARGE_IDS) {
+        const want = CHARGES[charge].join('').split('p').length - 1
+        const got = bannerRows({ shape, tincture: 'navy', charge }).join('').split('p').length - 1
+        expect(got, `${charge} on ${shape}`).toBe(want)
+      }
+    }
+  })
+
+  it('the colour pairs are twelve distinct pairs of two different tinctures', () => {
+    expect(COLOUR_PAIRS).toHaveLength(12)
+    expect(new Set(COLOUR_PAIRS.map((p) => p.join('|'))).size).toBe(COLOUR_PAIRS.length)
+    for (const [a, b] of COLOUR_PAIRS) {
+      expect(a).not.toBe(b)
+      expect(TINCTURES[a]).toBeDefined()
+      expect(TINCTURES[b]).toBeDefined()
+    }
+    // A flag in two colours that are no pair (an older save's) shows none chosen.
+    expect(pairIndex({ shape: 'square', tincture: 'navy', tincture2: 'navy', charge: 'none' })).toBe(-1)
+  })
+
+  it('the soldiers wear the flag: its field, its pattern on tabard and shield, its emblem', () => {
+    // Three different soldiers.
+    const look = { shape: 'square', tincture: 'navy', pattern: 'plain', charge: 'none' } as const
+    expect(new Set(SOLDIER_KINDS.map((k) => soldierRows(look, k).join(''))).size).toBe(SOLDIER_KINDS.length)
+    for (const kind of SOLDIER_KINDS) {
+      const plain = soldierRows(look, kind)
+      expect(plain).toHaveLength(SOLDIER_H)
+      for (const r of plain) expect(r).toHaveLength(SOLDIER_W)
+      const all = plain.join('')
+      expect(all).toContain('c')
+      expect(all).not.toContain('p')
+      for (const pattern of PATTERNS.filter((p) => p !== 'plain')) {
+        expect(soldierRows({ ...look, pattern }, kind).join(''), `${kind} ${pattern}`).toContain('d')
+      }
+      for (const charge of CHARGE_IDS.filter((c) => c !== 'none')) {
+        expect(soldierRows({ ...look, charge }, kind).join(''), `${kind} ${charge}`).toContain('p')
+      }
     }
   })
 

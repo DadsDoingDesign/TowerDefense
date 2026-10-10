@@ -38,6 +38,13 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
 - [ ] Grounding shadows, a subtle vignette or lighting — the scene has depth.
 - [ ] The frame is composed: a clear focal area, framed edges, breathing room.
 
+**Usage rules** (`docs/DESIGN_SYSTEM.md` § 8)
+- [ ] Everything has a job: name each element's job; cut what has none, and
+      merge two elements that do the same job.
+- [ ] One title, each fact said once, no standing hints; labels and values
+      are `.field-k` / `.field-v`; choose-one surfaces use the shared parts.
+      Any break is in the exceptions table with the designer's approval.
+
 **Polish**
 - [ ] Consistent pixel scale / `image-rendering: pixelated`; no blurring.
 - [ ] Nothing clipped, mis-anchored, or z-fighting.
@@ -3426,3 +3433,57 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   the lock. It heads the notice on the left, beside the kicker and name.
   Verified at 390×844, 375×667 and 1440×900 for an open, a focused and a
   locked road.
+
+- **Oct 2026 · Flag builder, compact; contract banner, restyled.** The
+  designer on the six-row builder: "takes up too much space — two vertical
+  carousels (banner shape + icon shape), under each a subset: banner =
+  pattern, icon = colour (a circle split in the two colours)"; then "make
+  these horizontal carousels, put a dice in the top", and "show some
+  soldiers instead of the cart … they adjust colours and pattern on shield".
+  Now two columns: the FLAG wheel (vertical, neighbours peeking, ▲ ▼, tap
+  the middle for every shape) over a pattern carousel; the EMBLEM wheel over
+  a carousel of twelve colour pairs (`COLOUR_PAIRS`, a split circle rimmed
+  in the metal) and the metal. The dice on the preview rolls a whole flag;
+  the preview is the flag over three spearmen (`soldierRows`) whose tabards
+  take the field and pattern and whose shields carry pattern, emblem and
+  metal. The whole builder fits a 390×844 screen without scrolling. The hero
+  pick's banner ("the big banner is better but kind of tacky") is now a
+  heraldic standard: dark wool dyed with the company's colour, the colour
+  kept for the trim, kicker and seal ring, one point at the foot, the seal
+  hung over the rod, your militia plain beneath. Verified at 390×844,
+  375×667 and 1440×900: open, swiped, dice, all-options sheet, a bad name,
+  edit, and the hero pick.
+  Then "some of the icons need to be moved to be centred on certain flag
+  shapes and not to be cut off": the notched flag lost a pixel or two of
+  eleven emblems to its notch. Each shape now sets its emblem in the middle
+  of its own body (`CHARGE_AT`): the pennant and the notched flag low and
+  left beside the point and the notch, the standard lower down its longer
+  cloth, the cut flag a step towards the pole. A test checks every emblem
+  lands whole on every shape; verified in the builder's preview for nine
+  shape and emblem pairs.
+  Then "make them three different dudes; the metals should be a circle,
+  not an oval, and the same as the colour selection": the troop is a
+  swordsman (blade raised, a plume in the pattern's colour), a spearman and
+  a hooded archer with a bow (`SOLDIER_KINDS`), each his own face; the metal
+  is a carousel of round coins like the colour pairs. Verified at 390×844.
+  Then, on the builder's head ("the top had redundant info, the header can
+  be the input; don't need helper text — labels and selections consistent
+  in size and colour; make sure we have design system rules on how things
+  are intended to be used"): the header is the name input with the dice
+  beside it. The title, the subtitle, the "Militia name" label, the helper
+  line and the preview's name caption are gone, and a refusal shows under
+  the name only when there is one. Every picker row uses the new shared
+  `.field-k` / `.field-v`. The usage rules are now written down in
+  `docs/DESIGN_SYSTEM.md` § 8, with approval needed to break one, and the
+  checklist above checks them.
+  "Everything has a job": this is now rule 0 of § 8, with a table of
+  every shared part's one job and what it is not for. The builder passes it
+  element by element:
+  - the header is the name;
+  - each dice rolls what it sits by (the name; the whole flag);
+  - the dashed rule says the name can be written on;
+  - the wheels pick the main parts, and their middles open them all;
+  - the carousels pick the smaller parts;
+  - each field label names a part and states its choice;
+  - the preview shows the result, and the soldiers wear it;
+  - the CTA commits.
