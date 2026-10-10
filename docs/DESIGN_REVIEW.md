@@ -38,6 +38,11 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
 - [ ] Grounding shadows, a subtle vignette or lighting — the scene has depth.
 - [ ] The frame is composed: a clear focal area, framed edges, breathing room.
 
+**Usage rules** (`docs/DESIGN_SYSTEM.md` § 8)
+- [ ] One title, each fact said once, no standing hints; labels and values
+      are `.field-k` / `.field-v`; choose-one surfaces use the shared parts.
+      Any break is in the exceptions table with the designer's approval.
+
 **Polish**
 - [ ] Consistent pixel scale / `image-rendering: pixelated`; no blurring.
 - [ ] Nothing clipped, mis-anchored, or z-fighting.
@@ -3459,3 +3464,13 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   swordsman (blade raised, a plume in the pattern's colour), a spearman and
   a hooded archer with a bow (`SOLDIER_KINDS`), each his own face; the metal
   is a carousel of round coins like the colour pairs. Verified at 390×844.
+  Then, on the builder's head ("the top had redundant info, the header can
+  be the input; don't need helper text — labels and selections consistent
+  in size and colour; make sure we have design system rules on how things
+  are intended to be used"): the header is the name input with the dice
+  beside it. The title, the subtitle, the "Militia name" label, the helper
+  line and the preview's name caption are gone, and a refusal shows under
+  the name only when there is one. Every picker row uses the new shared
+  `.field-k` / `.field-v`. The usage rules are now written down in
+  `docs/DESIGN_SYSTEM.md` § 8, with approval needed to break one, and the
+  checklist above checks them.

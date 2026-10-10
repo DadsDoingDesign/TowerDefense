@@ -6,68 +6,67 @@
  * carousel. Tapping a wheel's middle opens every option as a grid (`.fc-sheet`).
  */
 
-/* ------------------------------------------------------------ the name */
-.co-name {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.co-k {
-  font-size: var(--fs-micro);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.co-name-row {
+/* ------------------------------------------------------------ the name
+   The header is the name: the screen's title, typed in place. A dashed rule
+   under it says it can be written on; the dice beside it rolls one. */
+.ct-hdr.co-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
   gap: 8px;
 }
-.co-input {
+.ct-hdr.co-head:has(.ct-back) {
+  grid-template-columns: auto minmax(0, 1fr) 44px;
+}
+.co-title-input {
   min-width: 0;
   height: 48px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line-strong);
-  background: #1a120b;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px dashed var(--line-strong);
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
 }
-.co-input:focus-visible {
-  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
-  outline-offset: 1px;
+.co-title-input::placeholder {
+  color: var(--dim);
 }
-.co-input[aria-invalid='true'] {
-  border-color: var(--bad);
+.co-title-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.co-title-input:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.co-title-input[aria-invalid='true'] {
+  border-bottom-color: var(--bad);
 }
 .co-dice,
 .co-surprise {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border-radius: 10px;
   border: 1px solid var(--line-strong);
   background: rgba(47, 36, 24, 0.9);
   color: var(--accent-text);
   font: inherit;
-  font-weight: 700;
   cursor: pointer;
 }
 .co-dice {
-  height: 48px;
+  width: 44px;
+  height: 44px;
 }
+/* Said only when the name is refused: no hint under a field that needs none. */
 .co-why {
-  min-height: 1.3em;
+  grid-column: 1 / -1;
   font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.co-why.bad {
-  color: var(--bad-text);
   font-weight: 700;
+  color: var(--bad-text);
 }
 
 /* ------------------------------------------------------------ the preview */
@@ -94,12 +93,6 @@
 }
 .co-troop > :nth-child(2) {
   margin-bottom: 6px;
-}
-.co-preview .mi-preview-cap {
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 /* The flag stirs in the wind (and holds still under reduced motion). */
 .co-wave .banner {
@@ -159,32 +152,13 @@
   padding-top: 8px;
   border-top: 1px solid var(--line);
 }
+/* The label and value are the shared `.field-k` / `.field-v` (global.css). */
 .fw-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
-}
-.fw-label {
-  flex: none;
-  font-size: var(--fs-micro);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.fw-value,
-.fw-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 800;
-  color: var(--accent-text);
-}
-.fw-sub {
-  font-size: var(--fs-xs);
-  color: var(--text);
 }
 .fw-body {
   display: grid;
@@ -408,10 +382,6 @@
   }
 }
 
-/* The first screen of a new game: the page is the whole welcome. */
-.co-build.is-create .ct-title {
-  font-size: 28px;
-}
 
 /* ------------------------------------------------------------ one part, alone
    Each row shows only its own part; the assembled flag is the preview above. */

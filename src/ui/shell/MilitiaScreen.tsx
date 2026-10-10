@@ -59,8 +59,8 @@ const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
  *
  * `create`: the first screen of a new game — no way back, and "Found the
  * militia" goes to the map (the home). `edit`: from Settings or the home, with
- * a back that changes nothing. The name is typed (checked by `run/nameFilter`)
- * or rolled with the dice. The flag is two columns under a preview of it on
+ * a back that changes nothing. The header is the name: typed (checked by
+ * `run/nameFilter`) or rolled with the dice. The flag is two columns under a preview of it on
  * its wagon (the designer, on the six-row builder: "this takes up too much
  * space … two vertical carousels, banner shape + icon shape; under each a
  * subset: banner = pattern, icon = colour"; then "make these horizontal
@@ -119,19 +119,36 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
     <ContractPage
       className={`mi co-build${mode === 'create' ? ' is-create' : ''}`}
       label="Your militia"
+      // The header IS the name (the designer: "the top had redundant info —
+      // the header can be the input; don't need helper text"): no title over
+      // it, no label, no hint; only a reason under it when the name is refused.
       head={
-        <div className="ct-hdr">
+        <div className="ct-hdr co-head">
           {mode === 'edit' && (
             <button className="ct-back" onClick={onDone} aria-label="Back, without changing anything">
               <Icon name="back" />
             </button>
           )}
-          <div className="ct-who">
-            <h1 className="ct-title" tabIndex={-1}>
-              {mode === 'create' ? 'Found your militia' : 'Your militia'}
-            </h1>
-            <span>Its name, and the flag over your wagons</span>
-          </div>
+          <input
+            className="co-title-input"
+            value={typed}
+            maxLength={NAME_MAX}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Name your militia"
+            onChange={(e) => setTyped(e.target.value)}
+            aria-label="Militia name"
+            aria-invalid={!check.ok}
+            aria-describedby={check.ok ? undefined : 'co-name-why'}
+          />
+          <button type="button" className="co-dice" onClick={roll} aria-label="Roll a name">
+            <DiceIcon />
+          </button>
+          {!check.ok && (
+            <span id="co-name-why" className="co-why" role="alert">
+              {check.why}
+            </span>
+          )}
         </div>
       }
       cta={{
@@ -141,33 +158,10 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
         disabled: !check.ok,
       }}
     >
-      <label className="co-name">
-        <span className="co-k">Militia name</span>
-        <span className="co-name-row">
-          <input
-            className="co-input"
-            value={typed}
-            maxLength={NAME_MAX}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => setTyped(e.target.value)}
-            aria-invalid={!check.ok}
-            aria-describedby="co-name-why"
-          />
-          <button type="button" className="co-dice" onClick={roll} aria-label="Roll a name">
-            <DiceIcon />
-          </button>
-        </span>
-        <span id="co-name-why" className={`co-why${check.ok ? '' : ' bad'}`} aria-live="polite">
-          {check.ok ? 'Type any name, or roll one.' : check.why}
-        </span>
-      </label>
-
       <div className="mi-preview co-preview">
         <button type="button" className="co-surprise" onClick={surprise} aria-label="Surprise me: a whole new flag">
           <DiceIcon />
         </button>
-        <span className="mi-preview-cap" aria-hidden="true">{check.ok ? check.name : 'Your militia'}</span>
         <div className="mi-preview-road" aria-hidden="true" />
         <div className="mi-preview-flag co-wave" aria-hidden="true">
           <Banner look={look} scale={5} />

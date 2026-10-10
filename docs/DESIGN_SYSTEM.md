@@ -300,3 +300,62 @@ inconsistent in weight.
 | Coarse pointer | `(pointer: coarse)` | `min-height: 44px` on all controls |
 | Reduced motion | `:root[data-reduced-motion='true']` | Animations disabled |
 | High contrast | `:root[data-contrast='high']` | Brighter text, stronger borders |
+
+## 8. Usage rules — how the parts are meant to be used
+
+Sections 1–7 say what the parts **are**; this section says how they are
+**meant to be used**. These rules are the contract every screen keeps.
+
+**Breaking a rule takes a strong, stated need and the designer's approval.**
+Write the need in the PR, get approval, and record the break in the
+exceptions table below with its date and reason. A design review that finds
+an unrecorded break fixes the screen; it does not add the break to the
+table after the fact. Changing a rule follows the same path: propose it,
+agree it, then edit this section.
+
+1. **One title per screen.** The header says what the screen is. On a
+   screen that edits one thing, the header *is* that thing, written in
+   place: the militia builder's header is the militia's name as an input.
+   No subtitle restates the title.
+2. **Say a fact once.** If the header shows a name, no caption, label or
+   badge on the same screen repeats it.
+3. **No standing hints.** Text under a control appears only when it has
+   something to say, such as a refusal, an error or a consequence ("That
+   name isn't allowed"). A self-evident control (a text field, a dice, a
+   carousel) carries no helper line.
+4. **A field's label and value look the same everywhere.** Use `.field-k`
+   for the label and `.field-v` for the current choice (both in
+   `global.css`). Every picker shows its current value: same size, weight
+   and colour on every row, with no local copy and no row that skips its
+   value. Older surfaces still carry about sixteen local eyebrow-label
+   copies (`.co-k`, `.pk-kicker`, `.hq-pulled-k` and others) that predate
+   this rule. Move each one to `.field-*` when that surface is next
+   touched.
+5. **Choose-one surfaces.**
+   - A choice that commits through a CTA is a `PickStrip` of picture tokens
+     plus one `PickCard` (`src/ui/shell/PickStrip.tsx`).
+   - In a builder:
+     - a part with many visual options is a `FlagWheel`;
+     - a smaller part subordinate to it is a `PartCarousel`;
+     - "see all" is an `OptionGrid` sheet.
+
+   All three live in `src/ui/shell/company/FlagCarousel.tsx`. Reuse these
+   components; don't invent a sixth way to pick one thing.
+6. **One primary CTA per screen.** It sits full width in the bottom band
+   and names the action ("Found the militia", "Choose Vesper"). A secondary
+   action is never styled as primary.
+7. **Tokens, not literals.** Colours come from the `:root` tokens, type
+   sizes from `--fs-*`, and spacing from `--gap-*` / `--r-*`. A table
+   several surfaces must agree on lives in `src/ui/channels.ts` (CLAUDE.md).
+8. **Touch and focus.** Every control is at least 44 px on a coarse
+   pointer, a real `<button>` or `<input>`, and shows a visible focus ring
+   (`--focus-ring`). An icon-only button has an `aria-label`.
+9. **Copy says "Tap" through `<Tap />` / `tapWord()`**, and player-facing
+   text never says "your company": the player's band is the militia
+   (`tests/copy.terms.test.ts`).
+
+### Exceptions (approved breaks)
+
+| Date | Where | Rule | Need | Approved by |
+|---|---|---|---|---|
+| — | — | — | — | — |

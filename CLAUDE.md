@@ -128,6 +128,13 @@ result. Append a short note to the review log when you're done.
 
 ## Conventions
 
+- **Design system usage rules: `docs/DESIGN_SYSTEM.md` § 8.** They cover one
+  title, saying a fact once, no standing hints, `.field-k` / `.field-v` for
+  every label and value, the shared choose-one parts, one primary CTA, and
+  tokens over literals. Breaking a rule needs a strong, stated need and the
+  designer's approval, recorded in that section's exceptions table. Never
+  break one silently.
+
 - Sprite pack files are role-named; add new roles to `ROLE_NAMES` in
   `sprites.ts` or they won't preload — and add them to the pack's entry in
   `PACK_ROLES` too: each pack declares exactly what it ships, and each role is

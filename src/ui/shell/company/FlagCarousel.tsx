@@ -87,8 +87,8 @@ export function FlagWheel<T extends CarouselOption>({
   return (
     <div className="fw">
       <div className="fw-head">
-        <span className="fw-label">{label}</span>
-        <span className="fw-value">{cur.name}</span>
+        <span className="field-k">{label}</span>
+        <span className="field-v">{cur.name}</span>
       </div>
       <div className="fw-body">
         <div
@@ -195,8 +195,8 @@ export function PartCarousel<T extends CarouselOption>({
   return (
     <div className="fw-part">
       <div className="fw-head">
-        <span className="fw-label">{label}</span>
-        <span className="fw-sub">{found < 0 ? 'Your own' : options[at].name}</span>
+        <span className="field-k">{label}</span>
+        <span className="field-v">{found < 0 ? 'Your own' : options[at].name}</span>
       </div>
       <div className="fw-track">
         <button type="button" className="fw-nudge" onClick={() => step(-1)} aria-label={`Previous ${label.toLowerCase()}`}>
