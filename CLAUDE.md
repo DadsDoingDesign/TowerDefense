@@ -128,6 +128,10 @@ result. Append a short note to the review log when you're done.
 
 ## Conventions
 
+- **Everything has a job.** Every element on a screen can name its one job;
+  an element that cannot goes, and no two elements do the same job. Each
+  shared part's job is in `docs/DESIGN_SYSTEM.md` § 8, "Parts and their
+  jobs", and a new part gets its row there before it ships.
 - **Design system usage rules: `docs/DESIGN_SYSTEM.md` § 8.** They cover one
   title, saying a fact once, no standing hints, `.field-k` / `.field-v` for
   every label and value, the shared choose-one parts, one primary CTA, and

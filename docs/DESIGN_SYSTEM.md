@@ -303,8 +303,9 @@ inconsistent in weight.
 
 ## 8. Usage rules — how the parts are meant to be used
 
-Sections 1–7 say what the parts **are**; this section says how they are
-**meant to be used**. These rules are the contract every screen keeps.
+Sections 1–7 say what the parts **are**; this section says what each one is
+**for** and how it is meant to be used. **Everything has a job.** These rules
+are the contract every screen keeps.
 
 **Breaking a rule takes a strong, stated need and the designer's approval.**
 Write the need in the PR, get approval, and record the break in the
@@ -313,6 +314,12 @@ an unrecorded break fixes the screen; it does not add the break to the
 table after the fact. Changing a rule follows the same path: propose it,
 agree it, then edit this section.
 
+0. **Everything has a job.** Every element on a screen can name its one job,
+   and the table below gives each shared part's job. An element that cannot
+   name one goes. Two elements doing the same job on one screen are one too
+   many. A part is used only for its job: a CTA never navigates back, and a
+   tip never stands in for an error. The rules after this one all follow
+   from it.
 1. **One title per screen.** The header says what the screen is. On a
    screen that edits one thing, the header *is* that thing, written in
    place: the militia builder's header is the militia's name as an input.
@@ -353,6 +360,33 @@ agree it, then edit this section.
 9. **Copy says "Tap" through `<Tap />` / `tapWord()`**, and player-facing
    text never says "your company": the player's band is the militia
    (`tests/copy.terms.test.ts`).
+
+### Parts and their jobs
+
+| Part | Its one job | Not for |
+|---|---|---|
+| Screen header (`PageLayout` / `ContractPage` head) | Names the screen, or *is* the one thing the screen edits (the militia's name) | Instructions, stats, a second title |
+| Primary CTA (the bottom band) | Commits the screen's one action and names it | Going back; a second action |
+| Back (`.ct-back`) | Leaves without changing anything | Saving or confirming |
+| `LeaveRun` | Abandons the run, after a confirm | Anything short of abandoning |
+| `PickStrip` + `PickCard` | Chooses one of several: a token focuses it, the CTA commits it | Settings that apply on tap |
+| `MenuRow` (inline detail) | A setting or list choice that applies on tap; its detail opens under the selected row | Choices that need a CTA |
+| `FlagWheel` | The main part of a builder, with many visual options; its middle opens them all | Small sets (use a `PartCarousel`) |
+| `PartCarousel` | A smaller part under a wheel, applied on tap | The main part of a builder |
+| `OptionGrid` sheet | Shows every option of a part at once: pick one, it closes | Anything but "see all" |
+| `.field-k` / `.field-v` | Names a part and states its current choice | Headings, kickers, body copy |
+| Dice | Rolls the thing it sits on or beside (the name; the whole flag) | Any other shortcut |
+| Refusal line (`.co-why`) | Says why an input is refused, only while it is | Hints, tips |
+| `PageTip` / `Coach` | Teaches once, the first time it matters | A standing hint; an error |
+| `Slip` / `SlipLine` | A receipt: what is paid, owed or earned, item by item | Prose |
+| `Gold` | An amount of gold, the only currency | Other numbers |
+| `RarityTag` | An item's rarity, in the shared rarity tokens | Any other ranking |
+| `CompanyFlag` | A trading company's identity on a road or notice | The player's militia (that is its own flag, `Banner`) |
+| `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
+| `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
+| Decoration (rods, finials, cloth, meadow) | Sets the scene at the margins | Carrying information alone; sitting on the play field |
+
+A new part gets a row here, with its job, before it ships.
 
 ### Exceptions (approved breaks)
 

@@ -39,6 +39,8 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
 - [ ] The frame is composed: a clear focal area, framed edges, breathing room.
 
 **Usage rules** (`docs/DESIGN_SYSTEM.md` § 8)
+- [ ] Everything has a job: name each element's job; cut what has none, and
+      merge two elements that do the same job.
 - [ ] One title, each fact said once, no standing hints; labels and values
       are `.field-k` / `.field-v`; choose-one surfaces use the shared parts.
       Any break is in the exceptions table with the designer's approval.
@@ -3474,3 +3476,14 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   `.field-k` / `.field-v`. The usage rules are now written down in
   `docs/DESIGN_SYSTEM.md` § 8, with approval needed to break one, and the
   checklist above checks them.
+  "Everything has a job": this is now rule 0 of § 8, with a table of
+  every shared part's one job and what it is not for. The builder passes it
+  element by element:
+  - the header is the name;
+  - each dice rolls what it sits by (the name; the whole flag);
+  - the dashed rule says the name can be written on;
+  - the wheels pick the main parts, and their middles open them all;
+  - the carousels pick the smaller parts;
+  - each field label names a part and states its choice;
+  - the preview shows the result, and the soldiers wear it;
+  - the CTA commits.
