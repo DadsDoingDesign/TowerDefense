@@ -17,7 +17,9 @@ import {
   TINCTURES,
 } from '../src/game/data/banner'
 import { COMPANIES } from '../src/game/data/companies'
-import { isMilitiaName, militiaName, militiaTagline, randomBanner, readMilitia, rerollName } from '../src/game/run/militia'
+import { flyingMilitia, isMilitiaName, militiaName, militiaTagline, randomBanner, readMilitia, rerollName } from '../src/game/run/militia'
+import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
+import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { checkCompanyName, isProfane } from '../src/game/run/nameFilter'
 import { migrateMeta, META_VERSION } from '../src/state/metaStore'
 
@@ -190,5 +192,15 @@ describe('the save', () => {
       expect(migrateMeta({ militia: bad }, META_VERSION).militia).toBeNull()
     }
     expect(migrateMeta({}, 7).militia).toBeNull()
+  })
+})
+
+describe('the militia flies with the Sovereign Route', () => {
+  const m = { name: 'The Brass Riders', shape: 'swallow', tincture: 'navy', charge: 'keep' } as const
+  it('a saved militia stays hidden until the road opens, then flies', () => {
+    expect(flyingMilitia(m, { skills: [], items: [] })).toBeNull()
+    expect(flyingMilitia(m, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS].slice(1) })).toBeNull()
+    expect(flyingMilitia(m, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })).toBe(m)
+    expect(flyingMilitia(null, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })).toBeNull()
   })
 })

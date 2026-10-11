@@ -57,9 +57,11 @@ const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
  * out flag builder … like a Mario Kart carousel … then you can make any name
  * you want but use a profanity filter").
  *
- * `create`: the first screen of a new game — no way back, and "Found the
- * militia" goes to the map (the home). `edit`: from Settings or the home, with
- * a back that changes nothing. The header is the name: typed (checked by
+ * `create`: when the Sovereign Route first opens (the full run, your own
+ * road — not a new game's first screen any more: "at the start let's just get
+ * into the gameplay loop"); "Found the militia" goes on to its charter, and
+ * the back goes home. `edit`: from Settings or the home, with a back that
+ * changes nothing. The header is the name: typed (checked by
  * `run/nameFilter`) or rolled with the dice. The flag is two columns under a preview of it on
  * its wagon (the designer, on the six-row builder: "this takes up too much
  * space … two vertical carousels, banner shape + icon shape; under each a
@@ -73,7 +75,7 @@ const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
  * instead of the cart … they all adjust colours and maybe pattern on shield";
  * "make them three different dudes"). Nothing is saved until the CTA.
  */
-export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; mode?: 'create' | 'edit' }) {
+export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () => void; onBack?: () => void; mode?: 'create' | 'edit' }) {
   const saved = useMetaStore((s) => s.militia)
   const setMilitia = useMetaStore((s) => s.setMilitia)
   // A fresh name and flag to start from: a UI roll, not a run stream.
@@ -124,8 +126,8 @@ export function MilitiaScreen({ onDone, mode = 'edit' }: { onDone: () => void; m
       // it, no label, no hint; only a reason under it when the name is refused.
       head={
         <div className="ct-hdr co-head">
-          {mode === 'edit' && (
-            <button className="ct-back" onClick={onDone} aria-label="Back, without changing anything">
+          {(mode === 'edit' || onBack) && (
+            <button className="ct-back" onClick={onBack ?? onDone} aria-label="Back, without changing anything">
               <Icon name="back" />
             </button>
           )}

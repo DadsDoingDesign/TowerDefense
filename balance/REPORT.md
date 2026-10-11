@@ -543,9 +543,9 @@ it replaces, so the map can carry more of them: the target is **55–60% fights*
 free layers (act bosses excluded — every route fights those). Stops still never crowd a layer
 — at most two, and every free layer keeps at least one fight.
 
-- Fights (battle or elite) among free-layer nodes: **58%** (band 50%–63%; target 55–60%)
-- Avg special tiles per map: **13.7**
-- Per type per map: merchant 2.98, shrine 2.01, recruit 1.79, campfire 4.47, elite 2.41
+- Fights (battle or elite) among free-layer nodes: **57%** (band 50%–63%; target 55–60%)
+- Avg special tiles per map: **13.1**
+- Per type per map: merchant 2.64, shrine 2.01, recruit 1.51, campfire 4.53, elite 2.41
 - Max stops in a single layer (any map): **2** · free layers with no fight: **0**
 
 ## 10. Curse affixes (are the tradeoffs real?)
@@ -623,22 +623,22 @@ its XP, gold and card — and nothing else.
 |---|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor — 10 forced battles, no shops, no hires, random card | 240 | **0%** | 5.0 | 6.0 | 1.0 | depth 6 | 33% |
 | Strict floor + 2 free level-1 recruits (depths 3 and 6) | 240 | **0%** | 7.0 | 8.1 | 3.0 | depth 7 | 37% |
-| route: specials-first (the shipped heuristic) | 240 | **25%** | 9.5 | 4.4 | 4.5 | depth 10 | 23% |
-| route: battles-first | 240 | **14%** | 8.4 | 7.8 | 3.3 | depth 9 | 25% |
-| route: recruits, else battles | 240 | **18%** | 8.9 | 7.1 | 4.3 | depth 10 | 28% |
-| route: adaptive (reads the run state) | 240 | **28%** | 9.6 | 6.4 | 4.6 | depth 10 | 20% |
+| route: specials-first (the shipped heuristic) | 240 | **27%** | 9.7 | 5.1 | 4.5 | depth 10 | 22% |
+| route: battles-first | 240 | **14%** | 8.5 | 8.1 | 3.2 | depth 9 | 24% |
+| route: recruits, else battles | 240 | **16%** | 9.0 | 7.6 | 4.1 | depth 9 | 25% |
+| route: adaptive (reads the run state) | 240 | **29%** | 9.6 | 7.0 | 4.6 | depth 9 | 21% |
 
 **The routing spread.** Same seeds, same starting heroes, same map — only the
 rule for choosing the next node changes:
 
 | Route | Win rate | Nodes cleared | Battles fought | Boss met at Threat |
 |---|--:|--:|--:|--:|
-| route: specials-first (the shipped heuristic) ← **gated (band)** | **25%** | 9.5 | 4.4 | ×12.0 |
-| route: battles-first | **14%** | 8.4 | 7.8 | ×12.0 |
-| route: recruits, else battles | **18%** | 8.9 | 7.1 | ×12.0 |
-| route: adaptive (reads the run state) ← **gated (floor)** | **28%** | 9.6 | 6.4 | ×12.0 |
+| route: specials-first (the shipped heuristic) ← **gated (band)** | **27%** | 9.7 | 5.1 | ×12.0 |
+| route: battles-first | **14%** | 8.5 | 8.1 | ×12.0 |
+| route: recruits, else battles | **16%** | 9.0 | 7.6 | ×12.0 |
+| route: adaptive (reads the run state) ← **gated (floor)** | **29%** | 9.6 | 7.0 | ×12.0 |
 
-Spread across the set: **14% – 28%** — 3 points between the line the report used to grade and the best one it can find.
+Spread across the set: **14% – 29%** — 3 points between the line the report used to grade and the best one it can find.
 
 Survival curve — share of fresh runs that clear each node:
 
@@ -646,28 +646,28 @@ Survival curve — share of fresh runs that clear each node:
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor | 100% | 100% | 99% | 96% | 64% | 31% | 3% | 3% | 2% | 0% | 0% | 0% |
 | Strict + 2 recruits | 100% | 100% | 100% | 100% | 96% | 90% | 53% | 50% | 13% | 3% | 1% | 0% |
-| specials | 100% | 100% | 100% | 100% | 100% | 96% | 89% | 84% | 72% | 49% | 40% | 25% |
-| battles | 100% | 100% | 100% | 98% | 96% | 87% | 75% | 73% | 47% | 27% | 20% | 14% |
-| recruits | 100% | 100% | 100% | 100% | 98% | 94% | 86% | 84% | 60% | 33% | 23% | 18% |
-| adaptive | 100% | 100% | 100% | 100% | 99% | 95% | 88% | 86% | 73% | 53% | 38% | 28% |
+| specials | 100% | 100% | 100% | 100% | 99% | 96% | 91% | 87% | 77% | 55% | 43% | 27% |
+| battles | 100% | 100% | 100% | 99% | 98% | 90% | 75% | 73% | 49% | 30% | 20% | 14% |
+| recruits | 100% | 100% | 100% | 99% | 99% | 96% | 87% | 83% | 58% | 35% | 24% | 16% |
+| adaptive | 100% | 100% | 100% | 99% | 99% | 97% | 90% | 89% | 68% | 52% | 37% | 29% |
 
 Nodes-cleared histogram (strict): 0:0  1:0  2:2  3:8  4:76  5:80  6:66  7:2  8:2  9:4  10:0  11:0  12:0
-Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:1  4:0  5:9  6:17  7:12  8:28  9:55  10:22  11:36  12:60
+Nodes-cleared histogram (gated line): 0:0  1:0  2:0  3:0  4:2  5:7  6:13  7:10  8:24  9:53  10:29  11:38  12:64
 
 Average nodes cleared by starting archetype (gated line): 
-**fighter** 9.1, **rogue** 9.4, **mystic** 10.0.
+**fighter** 9.6, **rogue** 9.8, **mystic** 9.8.
 
 **Findings.**
 
-- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 25% when it does what the game offers.
+- The strict floor is a fiction, and an expensive one: the same campaign, same seeds, same starting hero, wins 0% when the model refuses to spend gold, hire or read a card, and 27% when it does what the game offers.
 - **The largest single term in a fresh run is the route.** 3 points separate the best line from the shipped heuristic — more than any wave-table dial in the fit table below, and more than the entire hub unlock track is worth (§12).
-- **A stop is a price now, not a trap.** The specials-first line fights 3.3 fewer battles than the battles-first line and wins 11 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
-- The curve has a real bite at every node rather than one cliff: no single depth ends more than 23% of gated-line runs (depth 10 is the worst).
+- **A stop is a price now, not a trap.** The specials-first line fights 3.0 fewer battles than the battles-first line and wins 13 points more. Threat no longer bills a stop or a choice (Phase 3b), so what a stop costs is the fight it replaces — its XP, gold and reward card — and what it pays is its offer: a campfire's Gate or level, a merchant's repair and shelf, a hire.
+- The curve has a real bite at every node rather than one cliff: no single depth ends more than 22% of gated-line runs (depth 10 is the worst).
 - Depths 1–3 are not a wall — 100% of gated-line zero-meta runs clear depth 3 — and neither is any single later node.
 
 **Read it against §6.** The Monte Carlo fields a depth-scaled 3–5 tower team through
 all twelve layers and wins 42% of the time; the zero-meta first run, played the
-way the game is actually laid out, wins 25% on the first-timer line and 28% on the best
+way the game is actually laid out, wins 27% on the first-timer line and 29% on the best
 one. The gap between those numbers is what the meta layer and the player's own
 learning are worth, and it is now a difference in *how much slack you have*, not
 the difference between a game and a grind gate.
@@ -680,16 +680,16 @@ equally hard on both sweeps.
 
 **The four gates.**
 
-1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **28%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
-2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **25%**.
-3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **25%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
-4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 42% against this sweep's best line at 28%, and §12 puts the same comparison on a like-for-like footing.
+1. **Floor — winnable played well:** the best line in the set must win ≥ 15%. Measured **29%** (adaptive). Below this, the honest advice to a losing player is "go grind the hub", which is the genre's cardinal sin.
+2. **Ceiling — still hard for a first-timer:** the shipped heuristic line must win ≤ 35%. Measured **27%**.
+3. **Floor — a first-timer can win too:** the same first-timer line must win ≥ 15%. Measured **27%**. Gate 1 only asks that *good* play wins; nothing asked whether the line a first-timer actually walks can, and it sat at 14% — under its own band — with every invariant green. A first run the player loses nine times in ten is an instruction to farm the hub by another name.
+4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins 42% against this sweep's best line at 29%, and §12 puts the same comparison on a like-for-like footing.
 
 The design *target* inside the band remains **15–25%** on the gated line. The band
 is wide partly because this is a Monte Carlo over 240 runs of a *modelled* player
 (1σ ≈ 3.2pt), and partly for a reason that belongs in the open.
 
-**The shipped number is 25%.** Two structural corrections moved it, and both were
+**The shipped number is 27%.** Two structural corrections moved it, and both were
 the harness being wrong rather than the game changing:
 
 | Correction | What it was |
@@ -751,14 +751,14 @@ two standard errors of that paired difference.
 
 | Hub state | specials | battles | recruits | adaptive | worst gated Δ |
 |---|--:|--:|--:|--:|--:|
-| zero HQ | 25% (+0±0) | 13% (+0±0) | 18% (+0±0) | 29% (+0±0) | +0pt |
-| Opening deal 3 (dressed, Rare body, pick 1 of 4) | 30% (+4±6) | 16% (+3±5) | 22% (+5±6) | 33% (+5±7) | +3pt |
-| Opening deal 5 (+ Level 2 skill, a second hero) | 27% (+1±8) | 30% (+16±7) | 28% (+10±8) | 40% (+11±8) | +1pt |
-| Hiring Hall | 31% (+6±6) | 16% (+3±6) | 20% (+3±6) | 30% (+1±8) | +1pt |
-| Scouts 2 | 21% (−4±8) | 10% (−3±6) | 16% (−2±7) | 30% (+2±9) | −4pt |
-| Pack slots 10 | 25% (+0±0) | 13% (+0±0) | 18% (+0±0) | 29% (+0±0) | +0pt |
-| Focus Ironvein +60% | 21% (−4±4) | 13% (+0±4) | 17% (−0±4) | 28% (−1±5) | −4pt |
-| everything the HQ sells | 34% (+9±8) | 23% (+10±7) | 26% (+8±8) | 41% (+13±9) | +8pt |
+| zero HQ | 28% (+0±0) | 14% (+0±0) | 15% (+0±0) | 29% (+0±0) | +0pt |
+| Opening deal 3 (dressed, Rare body, pick 1 of 4) | 27% (−0±5) | 13% (−0±5) | 17% (+1±6) | 33% (+4±7) | −0pt |
+| Opening deal 5 (+ Level 2 skill, a second hero) | 38% (+10±8) | 26% (+12±8) | 27% (+11±8) | 38% (+9±8) | +9pt |
+| Hiring Hall | 30% (+3±7) | 13% (−0±6) | 19% (+3±6) | 29% (+0±8) | −0pt |
+| Scouts 2 | 27% (−0±8) | 13% (−0±6) | 13% (−2±6) | 36% (+7±9) | −2pt |
+| Pack slots 10 | 28% (+0±0) | 14% (+0±0) | 15% (+0±0) | 29% (+0±0) | +0pt |
+| Focus Ironvein +60% | 27% (−1±4) | 14% (+0±2) | 13% (−2±4) | 26% (−3±4) | −3pt |
+| everything the HQ sells | 35% (+7±9) | 23% (+10±7) | 31% (+16±8) | 45% (+16±9) | +7pt |
 
 **The invariant.** No HQ state — any office alone, or everything the HQ sells — may
 measure below zero HQ by more than the paired
@@ -769,7 +769,7 @@ worse, only that it did.
 
 At 210 runs a cell the paired noise floor is ±3–8pt, which resolves a defect of the size that shipped (−33pt) with room to spare but not a 2pt drift; `FW_META_RUNS=500` halves it for a fit.
 
-**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+16pt** over zero HQ at its best (specials +1, battles +16, recruits +10, adaptive +11). The gate asks for ≥ 8%: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.
+**Does the campaign notice a team?** The Opening deal at its top (a dressed pick of four, a Level 2 skill, a second hero) is worth **+12pt** over zero HQ at its best (specials +10, battles +12, recruits +11, adaptive +9). The gate asks for ≥ 8%: below that the HQ is cosmetic, and a campaign that cannot tell a level-1 solo hero from an HQ-equipped company is not measuring the player's decisions either.
 
 **The breadth each service promises is checked separately**, because a horizontal
 service is not supposed to move the win rate at all — it is supposed to widen the
@@ -777,17 +777,17 @@ run. A card that promises forks has to produce forks:
 
 | Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |
 |---|--:|--:|--:|--:|--:|
-| default (zero HQ) | 13.0 | 38% | 53% | 28% | 13.7 |
-| Scouts 2 (wider roads) | 13.0 | 0% | 81% | 0% | 14.3 |
-| Scouts 1 (a way round every ambush) | 13.0 | 34% | 56% | 0% | 13.7 |
-| Hiring Hall | 13.0 | 38% | 54% | 29% | 14.1 |
+| default (zero HQ) | 13.0 | 40% | 53% | 29% | 13.1 |
+| Scouts 2 (wider roads) | 13.0 | 5% | 80% | 0% | 13.9 |
+| Scouts 1 (a way round every ambush) | 13.0 | 36% | 57% | 0% | 13.1 |
+| Hiring Hall | 13.0 | 40% | 54% | 28% | 13.6 |
 
 **Findings.**
 
-- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 38% → 0%, mixed forks 53% → 81%, and Elites with no way past 28% → 0%. Best line +2pt.
-- **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +16pt at its best and then finished (levels 1–3 alone: +5pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
+- **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 40% → 5%, mixed forks 53% → 80%, and Elites with no way past 29% → 0%. Best line +7pt.
+- **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +12pt at its best and then finished (levels 1–3 alone: +4pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
 - **Pack slots and focus** are levers on the run's texture, not its odds: +0pt and +0pt at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of 2 a field — a balance lever the tuning pass owns.
-- **Everything the HQ sells** reads +13pt at its best.
+- **Everything the HQ sells** reads +16pt at its best.
 
 ## 13. Stake tiers (is carrying more cargo ever worth it?)
 
@@ -815,15 +815,15 @@ brings home: 25% of the road's gold (kill gold, node purses, sales). The company
 
 | Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |
 |--:|--:|---|--:|--:|--:|--:|--:|--:|--:|
-| 0 | 0 | escort · standard raiders | 1/5 | 27% | 141.3 | 8% | **139.4** | — | 406.8 |
-| 1 | 50 | 1 more elite an act · Past the second city, raiders 10% stronger and steal 10% more | 2/5 | 24% | 188.9 | 8% | **186.6** | +47 | 440.9 |
-| 2 | 100 | 2 more elites an act · Past the second city, raiders 14% stronger and steal 14% more | 2/5 | 21% | 196.3 | 8% | **195.1** | +8 | 444.8 |
-| 3 | 150 | 3 more elites an act · Past the second city, raiders 27% stronger and steal 27% more | 3/5 | 16% | 228.3 | 8% | **227.0** | +32 | 460.0 |
-| 4 | 200 | 4 more elites an act · Past the second city, raiders 35% stronger and steal 35% more | 3/5 | 16% | 283.8 | 8% | **283.3** | +56 | 517.8 |
-| 5 | 250 | 5 more elites an act · Past the second city, raiders 43% stronger and steal 43% more | 4/5 | 14% | 319.7 | 8% | **321.1** | +38 | 550.0 |
-| 6 | 300 | 6 more elites an act · Past the second city, raiders 54% stronger and steal 54% more | 4/5 | 12% | 362.0 | 8% | **361.2** | +40 | 575.5 |
-| 7 | 350 | 7 more elites an act · Past the second city, raiders 64% stronger and steal 64% more | 5/5 | 9% | 392.3 | 8% | **392.4** | +31 | 592.0 |
-| 8 | 400 | 8 more elites an act · Past the second city, raiders 74% stronger and steal 74% more | 5/5 | 7% | 435.0 | 8% | **434.7** | +42 | 623.6 |
+| 0 | 0 | escort · standard raiders | 1/5 | 28% | 146.7 | 9% | **145.3** | — | 407.9 |
+| 1 | 50 | 1 more elite an act · Past the second city, raiders 10% stronger and steal 10% more | 2/5 | 25% | 194.3 | 8% | **193.5** | +48 | 456.8 |
+| 2 | 100 | 2 more elites an act · Past the second city, raiders 14% stronger and steal 14% more | 2/5 | 25% | 227.1 | 8% | **227.5** | +34 | 493.1 |
+| 3 | 150 | 3 more elites an act · Past the second city, raiders 27% stronger and steal 27% more | 3/5 | 21% | 258.2 | 7% | **260.2** | +33 | 507.8 |
+| 4 | 200 | 4 more elites an act · Past the second city, raiders 35% stronger and steal 35% more | 3/5 | 20% | 310.4 | 7% | **311.8** | +52 | 553.0 |
+| 5 | 250 | 5 more elites an act · Past the second city, raiders 43% stronger and steal 43% more | 4/5 | 16% | 338.2 | 7% | **340.4** | +29 | 565.8 |
+| 6 | 300 | 6 more elites an act · Past the second city, raiders 54% stronger and steal 54% more | 4/5 | 14% | 386.3 | 7% | **387.5** | +47 | 601.7 |
+| 7 | 350 | 7 more elites an act · Past the second city, raiders 64% stronger and steal 64% more | 5/5 | 14% | 437.7 | 7% | **440.2** | +53 | 653.6 |
+| 8 | 400 | 8 more elites an act · Past the second city, raiders 74% stronger and steal 74% more | 5/5 | 12% | 479.6 | 7% | **481.4** | +41 | 682.0 |
 
 **The invariants.** The run-level gates read **contract delivery** (October audit, designer item 1):
 
@@ -839,13 +839,13 @@ brings home: 25% of the road's gold (kill gold, node purses, sales). The company
 
 Gates 2 and 3 hold on this ladder and on the veteran's (§13c); the veteran's escort and max stake have bands of their own.
 
-**Zero-meta escort: 27%** (±1.8pt, 1σ) against 20%–30% — inside the band by more than 1σ.
+**Zero-meta escort: 28%** (±1.8pt, 1σ) against 20%–30% — inside the band by more than 1σ.
 
-**Zero-meta ladder: each crate costs 14% of the tier below's delivery** on the fit (±1.1pt, 1σ; floor 8%). Step by step: 1c +3.0pt ±1.8 · 2c +3.2pt ±1.6 · 3c +4.5pt ±1.4 · 4c +0.7pt ±1.3 · 5c +1.3pt ±1.1 · 6c +2.5pt ±0.9 · 7c +3.2pt ±0.8 · 8c +2.2pt ±0.8 (a cost per crate, paired 1σ).
+**Zero-meta ladder: each crate costs 10% of the tier below's delivery** on the fit (±1.0pt, 1σ; floor 8%). Step by step: 1c +2.3pt ±1.6 · 2c +0.3pt ±1.5 · 3c +3.8pt ±1.5 · 4c +1.5pt ±1.2 · 5c +3.7pt ±1.0 · 6c +2.3pt ±0.9 · 7c −0.3pt ±0.7 · 8c +2.3pt ±0.7 (a cost per crate, paired 1σ).
 
-Measured: delivery by tier is 27% → 24% → 21% → 16% → 16% → 14% → 12% → 9% → 7%; contract pay (cash-out line) 139.4 → 186.6 → 195.1 → 227.0 → 283.3 → 321.1 → 361.2 → 392.4 → 434.7; bank net 406.8 → 440.9 → 444.8 → 460.0 → 517.8 → 550.0 → 575.5 → 592.0 → 623.6.
+Measured: delivery by tier is 28% → 25% → 25% → 21% → 20% → 16% → 14% → 14% → 12%; contract pay (cash-out line) 145.3 → 193.5 → 227.5 → 260.2 → 311.8 → 340.4 → 387.5 → 440.2 → 481.4; bank net 407.9 → 456.8 → 493.1 → 507.8 → 553.0 → 565.8 → 601.7 → 653.6 → 682.0.
 
-**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +47, 2c +56, 3c +88, 4c +144, 5c +182, 6c +222, 7c +253, 8c +295 — the least is +47 gold, 27 above the cap.
+**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +48, 2c +82, 3c +115, 4c +166, 5c +195, 6c +242, 7c +295, 8c +336 — the least is +48 gold, 28 above the cap.
 
 **Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone
 crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).
@@ -863,19 +863,19 @@ stake elite stands where the map leaves a way round it: what a crate costs the v
 
 | Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |
 |--:|--:|--:|--:|--:|
-| 0 | 38% | 2.0pt | 182.8 | 575.0 |
-| 1 | 32% | 1.9pt | 229.7 | 591.6 |
-| 2 | 30% | 1.9pt | 286.1 | 642.5 |
-| 3 | 26% | 1.8pt | 317.8 | 649.3 |
-| 4 | 23% | 1.7pt | 375.2 | 692.8 |
-| 5 | 20% | 1.6pt | 407.9 | 709.0 |
-| 6 | 19% | 1.6pt | 473.4 | 765.1 |
-| 7 | 15% | 1.5pt | 502.9 | 774.2 |
-| 8 | 14% | 1.4pt | 568.2 | 827.9 |
+| 0 | 38% | 2.0pt | 181.5 | 549.2 |
+| 1 | 37% | 2.0pt | 238.3 | 609.5 |
+| 2 | 33% | 1.9pt | 302.7 | 662.9 |
+| 3 | 30% | 1.9pt | 342.2 | 682.3 |
+| 4 | 25% | 1.8pt | 393.6 | 710.3 |
+| 5 | 23% | 1.7pt | 431.8 | 738.0 |
+| 6 | 20% | 1.6pt | 489.7 | 775.5 |
+| 7 | 17% | 1.5pt | 524.1 | 794.6 |
+| 8 | 15% | 1.5pt | 587.1 | 846.6 |
 
-**Veteran escort: 38%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 14%** against 10%–20% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +11.2pt: what the meta layer and the player's read are worth.
+**Veteran escort: 38%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 15%** against 10%–20% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +10.0pt: what the meta layer and the player's read are worth.
 
-**Veteran's ladder: each crate costs 12% of the tier below's delivery** on the fit (±0.9pt, 1σ; floor 8%). Step by step: 1c +6.2pt ±2.1 · 2c +2.3pt ±1.8 · 3c +3.5pt ±1.5 · 4c +3.2pt ±1.5 · 5c +3.0pt ±1.2 · 6c +1.5pt ±1.0 · 7c +3.5pt ±1.0 · 8c +1.5pt ±1.0 (a cost per crate, paired 1σ).
+**Veteran's ladder: each crate costs 11% of the tier below's delivery** on the fit (±0.8pt, 1σ; floor 8%). Step by step: 1c +0.7pt ±1.8 · 2c +3.8pt ±1.7 · 3c +2.8pt ±1.7 · 4c +5.0pt ±1.3 · 5c +2.0pt ±1.1 · 6c +3.3pt ±1.1 · 7c +3.2pt ±1.0 · 8c +1.8pt ±0.9 (a cost per crate, paired 1σ).
 
 ### 13b. The routes — each company's ground, as an escort
 
@@ -886,11 +886,11 @@ off the others is a lever for the tuning pass.
 
 | Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
 |---|---|--:|--:|--:|
-| Peppercorn Co. (Spice) | Wildfire | 28% | 142.6 | 413.8 |
-| Easel House (Art) | Flooded canals | 25% | 137.9 | 402.2 |
-| Ironvein (Metals & Stones) | Quarry boulders | 28% | 144.9 | 425.6 |
-| Rosethread (Silk) | Fords and fires | 29% | 141.0 | 413.4 |
-| Moonquill (Scrolls & Arcana) | Cursed ground | 30% | 143.9 | 424.0 |
+| Peppercorn Co. (Spice) | Wildfire | 25% | 142.1 | 395.8 |
+| Easel House (Art) | Flooded canals | 29% | 147.2 | 427.0 |
+| Ironvein (Metals & Stones) | Quarry boulders | 24% | 138.5 | 390.1 |
+| Rosethread (Silk) | Fords and fires | 29% | 148.6 | 416.6 |
+| Moonquill (Scrolls & Arcana) | Cursed ground | 25% | 141.0 | 390.7 |
 
 ## 14. Run variety — battlefields and wave composition
 
@@ -1187,12 +1187,12 @@ paired seeds, against the same runs without it.
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 35% | +4±8pt |
-| Field Surgeon's Kit | Common | After every fight you win, 20% of the cargo is rounded up. | 32% | +1±4pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 32% | +1±8pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 28% | −3±8pt |
-| Tithe Box | Common | +25 gold for every fight you win. | 29% | −1±3pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 31% | +1±4pt |
+| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 31% | −1±9pt |
+| Field Surgeon's Kit | Common | After every fight you win, 20% of the cargo is rounded up. | 32% | +1±3pt |
+| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 25% | −6±9pt |
+| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 32% | +1±9pt |
+| Tithe Box | Common | +25 gold for every fight you win. | 31% | +0±4pt |
+| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 27% | −4±5pt |
 
 **Declared, not dealt.** none — relics whose rule belongs to the combat lane's engine. `ENGINE_CAPABILITIES` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.
 
@@ -1314,21 +1314,21 @@ opens the door — §13c's **veteran**, who reads its skill offers (`build: 'bes
 
 | Road | Delivered | Bank net a run (gold) |
 |---|--:|--:|
-| Escort on Rosethread's road (for scale) | 38% | 562 |
-| 4 crates on Rosethread's road (a good run, for scale) | 18% | 635 |
-| **Sovereign Route** · no Sovereign item owned | 26% | 1140 |
-| **Sovereign Route** · all five Sovereign items owned | 30% | 2443 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 33% | 3173 |
-| Sovereign Route without Rosethread's double prices | 26% | 1024 |
-| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 35% | 3897 |
+| Escort on Rosethread's road (for scale) | 35% | 532 |
+| 4 crates on Rosethread's road (a good run, for scale) | 18% | 630 |
+| **Sovereign Route** · no Sovereign item owned | 24% | 542 |
+| **Sovereign Route** · all five Sovereign items owned | 36% | 4022 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 29% | 1993 |
+| Sovereign Route without Rosethread's double prices | 29% | 1881 |
+| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 29% | 2005 |
 
-**The charter's delivery rate for this company: 26%** (30% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+1140 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 24%** (36% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+542 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 562 gold net from an escort and 635 from a 4-crate contract (cash-out line), so the 7,000 fee is about **11.0 good runs** of savings.
+**The fee against savings.** The same company banks 532 gold net from an escort and 630 from a 4-crate contract (cash-out line), so the 7,000 fee is about **11.1 good runs** of savings.
 
-**Each condition, lifted one at a time** (delivery against the full charter's 26%): without the ground 33% (+6.7pt), without the double prices 26% (−0.5pt), without the muster 35% (+9.0pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+**Each condition, lifted one at a time** (delivery against the full charter's 24%): without the ground 29% (+4.8pt), without the double prices 29% (+4.3pt), without the muster 29% (+4.8pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
-_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+1140 against +562: 2.0×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
+_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+542 against +532: 1.0×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
 
 ## Verdict
 

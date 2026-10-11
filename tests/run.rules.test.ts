@@ -6,7 +6,7 @@ import type { RewardCard } from '../src/game/data/rewards'
 import { classicHero } from '../src/game/data/sentinels'
 import { xpToReach } from '../src/game/engine/leveling'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
-import { forkFires } from '../src/game/run/map'
+import { firstFightOf, forkFires, makeRun, openingNodeOf } from '../src/game/run/map'
 import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
 import { applyRewardCard } from '../src/game/run/rewards'
 import { planPayout, runWasPlayed, type SettleFacts } from '../src/game/run/settle'
@@ -30,7 +30,7 @@ import { CAMPFIRE_REPAIR, canTrain, restAtCampfire, restGain, trainAtCampfire, x
 import { GATE_REPAIR, repairGate, rerollCost } from '../src/game/run/economy'
 import { levelXpAwards, STOP_XP_SHARE, stopXp, waveRawXp, waveXp } from '../src/game/run/battle'
 import { encounterNode } from '../src/game/run/map'
-import { generateRunMap } from '../src/game/data/runmap'
+import { generateRunMap, OPENING_LAYER } from '../src/game/data/runmap'
 import { RNG } from '../src/game/core/rng'
 import { ENGINE_CAPABILITIES, RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
@@ -93,6 +93,33 @@ describe('threat maths (game/run/threat)', () => {
     expect(nodeClearLuck(node('battle', 2))).toBeCloseTo(0.05)
     expect(nodeClearLuck(node('elite', 2))).toBeCloseTo(0.2)
     expect(nodeClearLuck(node('boss', 12))).toBeCloseTo(0.65)
+  })
+})
+
+describe('the opening fight is the start (data/runmap, run/map)', () => {
+  it('every road opens on one plain battle, the only road out of the start', () => {
+    for (const wideMap of [false, true]) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const run = makeRun(new RNG(seed), { wideMap })
+        const row = run.runMap.nodes.filter((n) => n.layer === OPENING_LAYER)
+        expect(row).toHaveLength(1)
+        expect(row[0].type).toBe('battle')
+        expect(run.reachableNodeIds).toEqual([row[0].id])
+        expect(openingNodeOf(run.runMap)).toBe(row[0])
+        // The hero pick marches into it.
+        expect(firstFightOf(run.runMap, run.reachableNodeIds)).toBe(row[0].id)
+        // The first fork is the layer after: every node on it is a road out of the opening.
+        const next = run.runMap.nodes.filter((n) => n.layer === OPENING_LAYER + 1)
+        for (const n of next) expect(run.runMap.edges.some((e) => e.from === row[0].id && e.to === n.id)).toBe(true)
+      }
+    }
+  })
+
+  it('an older map, whose first layer forked, has no opening node', () => {
+    const map = generateRunMap(new RNG(7))
+    const opener = openingNodeOf(map)!
+    const older = { ...map, nodes: [...map.nodes, { ...opener, id: 'n-old', row: 1, ny: 0.8 }] }
+    expect(openingNodeOf(older)).toBeNull()
   })
 })
 

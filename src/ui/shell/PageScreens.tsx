@@ -1,3 +1,4 @@
+import { useMilitia } from './useMilitia'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
@@ -174,7 +175,7 @@ export function PageScreen({
   const shellSelect = useGameStore((s) => s.shellSelect)
   const gold = useGameStore((s) => s.gold)
   const bank = useMetaStore((s) => s.bank)
-  const militia = useMetaStore((s) => s.militia)
+  const militia = useMilitia()
   const onHub = useGameStore((s) => s.screen === 'hub')
   // How far off an unaffordable price is, in the gold it is paid from (R2):
   // the purse in a run, the bank at home.

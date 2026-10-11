@@ -473,6 +473,46 @@
   left: 0;
   pointer-events: none;
 }
+/* Cleared ground and the country ahead: everything up to the row you stand
+   on is cleared, warm and quiet; above it, darker, hatched, "not cleared
+   yet". The line between them is where the next fight is picked. */
+.rm-zone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+.rm-zone.danger {
+  top: 0;
+  background:
+    repeating-linear-gradient(135deg, rgba(208, 86, 58, 0.06) 0 6px, transparent 6px 14px),
+    linear-gradient(rgba(10, 6, 4, 0.34), rgba(10, 6, 4, 0.18));
+  border-bottom: 1px dashed rgba(239, 131, 104, 0.45);
+}
+.rm-zone.cleared {
+  bottom: 0;
+  background: linear-gradient(rgba(111, 206, 136, 0.07), rgba(111, 206, 136, 0.02));
+}
+.rm-zone-tag {
+  position: absolute;
+  z-index: 1;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(20, 15, 10, 0.92);
+  line-height: 1.2;
+  pointer-events: none;
+}
+.rm-zone-tag.danger {
+  left: 8px;
+  color: var(--bad-text);
+  border: 1px solid rgba(239, 131, 104, 0.45);
+}
+.rm-zone-tag.cleared {
+  right: 8px;
+  color: var(--good);
+  border: 1px solid rgba(111, 206, 136, 0.4);
+}
 
 .map-node {
   position: absolute;

@@ -4,7 +4,7 @@
  * arguments.
  */
 import { hashSeed, RNG } from '../core/rng'
-import { generateRunMap, type MapNode, type MapOptions, type RunMap } from '../data/runmap'
+import { generateRunMap, OPENING_LAYER, type MapNode, type MapOptions, type RunMap } from '../data/runmap'
 import { actOf, ACTS } from './threat'
 import { isMelee } from '../engine/melee'
 import type { Post } from '../data/terrain'
@@ -19,14 +19,26 @@ export const frontierFrom = (map: RunMap, nodeId: string, cleared: readonly stri
 
 /**
  * The fight a run opens on (Oct 2026: the hero pick marches straight into it):
- * of the reachable battles, the one nearest the map's middle, ties to the
- * upper. A fixed choice, no RNG — the map is already dealt. Null if nothing
- * reachable is a plain battle.
+ * the opening fight, the only road out of the start. On an older map, whose
+ * first layer forked, the reachable battle nearest the map's middle, ties to
+ * the upper. A fixed choice, no RNG — the map is already dealt. Null if
+ * nothing reachable is a plain battle.
  */
 export function firstFightOf(map: RunMap, reachable: readonly string[]): string | null {
   const fights = map.nodes.filter((n) => reachable.includes(n.id) && n.type === 'battle')
   if (!fights.length) return null
   return fights.reduce((a, b) => (Math.abs(b.ny - 0.5) < Math.abs(a.ny - 0.5) - 1e-9 ? b : a)).id
+}
+
+/**
+ * The run's opening fight — the one battle on {@link OPENING_LAYER}, the only
+ * road out of the start — or null on a map dealt before it existed (an older
+ * save, whose first layer was a fork). The map draws this node as the start
+ * and hides the bare start node behind it.
+ */
+export function openingNodeOf(map: RunMap): MapNode | null {
+  const row = map.nodes.filter((n) => n.layer === OPENING_LAYER)
+  return row.length === 1 && row[0].type === 'battle' ? row[0] : null
 }
 
 /**

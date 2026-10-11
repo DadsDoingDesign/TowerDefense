@@ -1,3 +1,4 @@
+import { flyingMilitia } from '../../game/run/militia'
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
@@ -1225,16 +1226,17 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') {
-    // Your militia's name and flag — founded on a new game's first screen, changed here.
-    const m = meta.militia
+    // Your militia's name and flag — founded when the Sovereign Route opens, changed here.
+    const m = flyingMilitia(meta.militia, meta)
+    if (!m) return [back, ...settingsOffers(settings)]
     const militia: Offer = {
       id: 'militia',
       title: 'Your militia',
-      sub: m ? m.name : 'Not named yet',
+      sub: m.name,
       icon: 'banner',
       immediate: true,
       body: ['Your militia’s name and flag. The flag flies over your wagons and your HQ.'],
-      action: { label: m ? 'Change' : 'Found your militia', run: () => setView('militia') },
+      action: { label: 'Change', run: () => setView('militia') },
     }
     return [back, militia, ...settingsOffers(settings)]
   }

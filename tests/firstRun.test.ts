@@ -21,7 +21,12 @@ describe('merchants from the second stop', () => {
   it('a first run has no merchant before layer 2, and keeps its merchants wherever the road has room', () => {
     let moved = 0
     for (const seed of SEEDS) {
-      const map = generateRunMap(new RNG(seed))
+      // A road opens on one fight now (`OPENING_LAYER`), so a fresh deal never
+      // puts a merchant on layer 1; the rule still guards a road whose first
+      // stop is one — made here by turning the opening fight into a merchant.
+      const dealt = generateRunMap(new RNG(seed))
+      expect(dealt.nodes.some((n) => n.type === 'merchant' && n.layer < FIRST_MERCHANT_LAYER)).toBe(false)
+      const map = seed % 2 ? dealt : { ...dealt, nodes: dealt.nodes.map((n) => (n.layer === 1 ? { ...n, type: 'merchant' as const } : n)) }
       const staged = stageFirstRunMap(map, true)
       expect(staged.nodes.some((n) => n.type === 'merchant' && n.layer < FIRST_MERCHANT_LAYER)).toBe(false)
       const count = (m: typeof map) => m.nodes.filter((n) => n.type === 'merchant').length

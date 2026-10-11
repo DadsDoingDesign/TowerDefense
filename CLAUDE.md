@@ -105,15 +105,21 @@ result. Append a short note to the review log when you're done.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a
   road (`homeFocus`), the notice under the map is that company's, and its CTA
   opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes
-  straight into the first fight; the run map follows its spoils.
+  straight into the opening fight: the one battle on `OPENING_LAYER`
+  (`data/runmap.ts`), the only road out of the start, which the map draws AS
+  its Start (`openingNodeOf`). The first fork is the layer after it, and the
+  map shades the ground at and below your row as cleared, above as not.
 - The Codex (`src/ui/shell/codex/`): a Supercell-style collection — the pure
   `codexModel.ts` (five tabs of tiles: items, skills, goblins, relics, feats;
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
-- Your militia (the player's band): founded on a new game's FIRST screen
-  (`RootShell` shows `MilitiaScreen mode="create"` while `metaStore.militia`
-  is null), edited from Settings or by tapping its name on the home. The flag
+- Your militia (the player's band): founded when the Sovereign Route opens
+  (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
+  on the charter page while `metaStore.militia` is null). A new game goes
+  straight into the loop, and a militia an older save founded stays hidden
+  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, edit it from Settings or by tapping its
+  name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
   dresses the builder preview's soldiers in it); the builder's wheels and carousels
