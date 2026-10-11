@@ -1,3 +1,4 @@
+import { useMilitia } from './useMilitia'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { hashSeed } from '../../game/core/rng'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
@@ -64,7 +65,7 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
   const bank = useMetaStore((s) => s.bank)
   const skills = useMetaStore((s) => s.skills)
   const items = useMetaStore((s) => s.items)
-  const militia = useMetaStore((s) => s.militia)
+  const militia = useMilitia()
   const runs = useMetaStore((s) => s.stats.runsCompleted)
   const openContracts = useGameStore((s) => s.openContracts)
   const focusRoad = useGameStore((s) => s.focusRoad)

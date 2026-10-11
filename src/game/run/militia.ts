@@ -31,6 +31,7 @@ import {
   PATTERNS,
   type BannerLook,
 } from '../data/banner'
+import { charterDoor } from './charter'
 import { checkCompanyName } from './nameFilter'
 
 const STEMS = [
@@ -128,3 +129,15 @@ export function randomBanner(seed: number): BannerLook {
  */
 export const TAGLINE = 'Guard the road, bank the gold'
 export const militiaTagline = (m: Pick<Militia, 'name'> | null): string => (m ? `${m.name} · ${TAGLINE.toLowerCase()}` : TAGLINE)
+
+/**
+ * The militia the game SHOWS: the saved one, but only once the Sovereign Route
+ * has opened (Oct 2026; the designer: "not have a user pick their own company
+ * stuff until they unlock the full run"). A save that founded a militia before
+ * that rule keeps it, and it flies again when the road opens; until then the
+ * hero pick, the home and the wagons show none (the wagons fly the default flag).
+ */
+export function flyingMilitia<T>(militia: T | null, unlocks: { skills: readonly string[]; items?: readonly string[] | null }): T | null {
+  if (!militia) return null
+  return charterDoor({ skills: unlocks.skills, items: unlocks.items ?? [] }).open ? militia : null
+}

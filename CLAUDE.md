@@ -117,7 +117,8 @@ result. Append a short note to the review log when you're done.
 - Your militia (the player's band): founded when the Sovereign Route opens
   (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
   on the charter page while `metaStore.militia` is null). A new game goes
-  straight into the loop. Once founded, edit it from Settings or by tapping its
+  straight into the loop, and a militia an older save founded stays hidden
+  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, edit it from Settings or by tapping its
   name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`

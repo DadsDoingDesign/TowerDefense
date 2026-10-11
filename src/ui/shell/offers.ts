@@ -1,3 +1,4 @@
+import { flyingMilitia } from '../../game/run/militia'
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
@@ -1226,7 +1227,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   }
   if (view === 'settings') {
     // Your militia's name and flag — founded when the Sovereign Route opens, changed here.
-    const m = meta.militia
+    const m = flyingMilitia(meta.militia, meta)
     if (!m) return [back, ...settingsOffers(settings)]
     const militia: Offer = {
       id: 'militia',

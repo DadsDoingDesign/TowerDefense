@@ -3516,3 +3516,10 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Verified at 390×844: a new game's home; the hero pick; the battle
   (layer 1, the opening); the map after the opening and at depth 5; and the
   Sovereign Route with no militia (found, then charter).
+  Then, from the designer's phone ("I still see this": the old banner and a
+  militia line on the hero pick): main had not taken the change yet, and a
+  save that founded its militia under the old first screen would still have
+  flown it. `flyingMilitia` now shows a saved militia only once the
+  Sovereign Route is open. The hero pick, the home, Settings and the wagons
+  all read it. Verified with such a save: the home shows no militia, and the
+  hero pick shows the compact banner alone.
