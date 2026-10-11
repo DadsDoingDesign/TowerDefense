@@ -384,6 +384,7 @@ agree it, then edit this section.
 | `CompanyFlag` | A trading company's identity on a road or notice | The player's militia (that is its own flag, `Banner`) |
 | `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
+| Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above) | Marking which nodes you can reach (the node states do that) |
 | Decoration (rods, finials, cloth, meadow) | Sets the scene at the margins | Carrying information alone; sitting on the play field |
 
 A new part gets a row here, with its job, before it ships.

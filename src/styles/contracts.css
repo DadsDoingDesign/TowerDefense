@@ -969,7 +969,9 @@
    Now a heraldic standard: dark wool dyed with a little of the company's
    colour, the colour itself kept for the trim, the kicker and the seal's
    ring; one point at the foot; the seal hung over the rod; your militia's
-   flag and name under it, plain. */
+   flag and name under it, plain (once you have one: the militia is founded
+   with the Sovereign Route). Then "they take up too much space": the seal
+   sits beside the name and terms, not over them — half the height. */
 .pg-head.has-brand {
   gap: 6px;
 }
@@ -1012,18 +1014,18 @@
   right: -4px;
 }
 .ct-banner-cloth {
-  --foot: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+  --foot: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
   position: relative;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 4px;
+  column-gap: 12px;
   width: calc(100% - 28px);
   margin-top: -2px;
-  padding: 0 22px 40px;
+  padding: 0 18px 26px 14px;
   box-sizing: border-box;
-  text-align: center;
+  text-align: left;
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
 }
 /* The trim (the company's colour) and, inside it, the dyed wool. */
@@ -1046,11 +1048,13 @@
     color-mix(in srgb, var(--co) 16%, #1a120b);
 }
 .ct-banner-seal {
+  grid-row: span 3;
+  align-self: start;
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 60px;
-  margin: -12px 0 4px;
+  width: 52px;
+  height: 52px;
+  margin-top: -8px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #3a2a1a, #140e08 72%);
   box-shadow:
@@ -1068,7 +1072,6 @@
   text-transform: uppercase;
   color: var(--co);
 }
-.ct-banner-k::before,
 .ct-banner-k::after {
   content: '';
   width: 18px;
@@ -1076,9 +1079,12 @@
   background: currentColor;
   opacity: 0.6;
 }
+.ct-banner-k {
+  margin-top: 8px;
+}
 .ct-banner-name {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1;
   color: #f6ead2;
@@ -1116,18 +1122,17 @@
 /* Short phones: the standard a size down, so the hero card keeps its room. */
 @media (orientation: portrait) and (max-height: 700px) {
   .ct-banner-cloth {
-    padding-bottom: 32px;
+    padding-bottom: 22px;
   }
   .ct-banner-seal {
-    width: 48px;
-    height: 48px;
-    margin: -10px 0 2px;
+    width: 44px;
+    height: 44px;
   }
   .ct-banner-seal .crest {
     transform: scale(0.8);
   }
   .ct-banner-name {
-    font-size: 24px;
+    font-size: 22px;
   }
   .ct-banner-us {
     margin-top: 6px;

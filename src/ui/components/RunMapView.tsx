@@ -4,6 +4,7 @@ import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
 import { legMult, type DifficultyRules } from '../../game/run/watch'
 import { cityOfLayer, contractRules } from '../../game/run/contracts'
+import { openingNodeOf } from '../../game/run/map'
 import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { Icon } from '../Icon'
@@ -82,14 +83,34 @@ export function RunMapView() {
     return () => ro.disconnect()
   }, [])
 
+  /*
+   * The opening fight IS the start (Oct 2026; the designer: "the start is what
+   * the first battle is, and where it should stay"): the bare start node and
+   * its one road are not drawn, and the opening fight is drawn as the Start,
+   * on the bottom row. An older map (its first layer forked) draws as before.
+   */
+  const opening = openingNodeOf(runMap)
+  const base = opening ? opening.layer : 0
+  const shown = opening ? runMap.nodes.filter((n) => n.layer >= base) : runMap.nodes
+  const shownIds = new Set(shown.map((n) => n.id))
+
   const layers = runMap.layers
-  const height = (layers - 1) * GAP + PAD_Y * 2
+  const height = (layers - 1 - base) * GAP + PAD_Y * 2
 
   const posOf = (layer: number, ny: number) => ({
     x: PAD_X + ny * (innerW - PAD_X * 2),
     y: PAD_Y + (layers - 1 - layer) * GAP,
   })
   const nodePos = new Map(runMap.nodes.map((n) => [n.id, posOf(n.layer, n.ny)]))
+
+  /*
+   * Cleared ground and the country ahead (the designer: "you are clearing out
+   * an area first — show the row you select from, and below, as cleared, and
+   * the area above as danger, not cleared yet"). The line sits halfway between
+   * your row and the next.
+   */
+  const here = runMap.nodes.find((n) => n.id === currentNodeId)
+  const frontierY = here ? Math.max(0, posOf(Math.max(here.layer, base), 0).y - GAP / 2) : null
 
   // The scroll box's own height: the Stage settles after the battle shell
   // hands it back, so the first measurement after a win can be stale.
@@ -120,8 +141,21 @@ export function RunMapView() {
   return (
     <div className="run-map-scroll" ref={scrollRef}>
       <div className="run-map-inner" ref={innerRef} style={{ height }}>
+        {frontierY != null && frontierY > 0 && (
+          <>
+            <div className="rm-zone danger" style={{ height: frontierY }} aria-hidden="true" />
+            <div className="rm-zone cleared" style={{ top: frontierY }} aria-hidden="true" />
+            {/* The tags sit ON the line: halfway between two rows, where no node is. */}
+            <span className="rm-zone-tag danger field-k" style={{ top: frontierY }}>
+              ↑ Not cleared yet
+            </span>
+            <span className="rm-zone-tag cleared field-k" style={{ top: frontierY }}>
+              Cleared ↓
+            </span>
+          </>
+        )}
         <svg className="run-map-edges" width={innerW} height={height}>
-          {runMap.edges.map((e, i) => {
+          {runMap.edges.filter((e) => shownIds.has(e.from) && shownIds.has(e.to)).map((e, i) => {
             const a = nodePos.get(e.from)!
             const b = nodePos.get(e.to)!
             const active = clearedSet.has(e.from) && (clearedSet.has(e.to) || reachableSet.has(e.to))
@@ -142,11 +176,13 @@ export function RunMapView() {
           })}
         </svg>
 
-        {runMap.nodes.map((n) => {
+        {shown.map((n) => {
           const p = nodePos.get(n.id)!
           // Under Banner 2 a "battle" node IS an elite — same glyph, same hue,
           // same word, or the map is drawing a wave the run will not field.
-          const meta = nodeMeta(n.type)
+          // The opening fight wears the start's look and name.
+          const isOpening = n.id === opening?.id
+          const meta = nodeMeta(isOpening ? 'start' : n.type)
           const city = towns ? cityOfLayer(n.layer) : null
           const town = city != null && (n.type === 'miniboss' || n.type === 'boss') ? towns![city] : null
           const isCleared = clearedSet.has(n.id)
@@ -164,7 +200,7 @@ export function RunMapView() {
           return (
             <button
               key={n.id}
-              className={`map-node ${state} type-${n.type} ${isFocused ? 'focused' : ''}`}
+              className={`map-node ${state} type-${isOpening ? 'start' : n.type} ${isFocused ? 'focused' : ''}`}
               style={{ left: p.x, top: p.y, borderColor: meta.color }}
               disabled={!isReachable}
               aria-pressed={isReachable ? isFocused : undefined}
@@ -199,7 +235,7 @@ export function RunMapView() {
                   ♛ ⟡ ❖ ＋, system-font characters in whatever face the phone
                   had, and `⟡` doubled as the gold mark. */}
               <span className="mn-glyph">
-                <Icon name={NODE_ICON[n.type] ?? 'depth'} />
+                <Icon name={NODE_ICON[isOpening ? 'start' : n.type] ?? 'depth'} />
               </span>
               <span className={`mn-label${town ? ' town' : ''}`}>{town ?? meta.label}</span>
               {/* Only on nodes you can actually choose between: the cost is

@@ -3487,3 +3487,32 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - each field label names a part and states its choice;
   - the preview shows the result, and the soldiers wear it;
   - the CTA commits.
+
+- **Oct 2026 · Into the loop first; the opening fight is the start.** The
+  designer had three asks:
+  - The militia and the banner "take up too much space": don't found the
+    militia "until they unlock the full run, where they get to open their
+    own trade company".
+  - "At the start let's just get into the gameplay loop."
+  - "The first battle auto-picks into the tree; the start is what the first
+    battle is, and where it should stay … show the row you select from, and
+    below, as cleared, and the area above as danger, not cleared yet."
+
+  What changed:
+  - **New game:** it opens on the home. The militia builder now runs from
+    the Sovereign Route's page the first time it opens. There, it has a back
+    button, and "Found the militia" goes on to the charter.
+  - **Settings:** the militia row shows only once a militia exists.
+  - **Contract banner:** the seal sits beside the name and terms, which
+    roughly halves the banner's height. The militia line shows only once you
+    have a militia.
+  - **The road:** it opens on one plain battle (`OPENING_LAYER`), the only
+    road out of the start. The hero pick marches into it, the map draws it
+    as the Start, and the first fork is the next row.
+  - **Map zones:** the ground at and below your row is shaded as cleared;
+    above it is darker and hatched. "↑ Not cleared yet" and "Cleared ↓" sit
+    on the line between the two, where no node is.
+
+  Verified at 390×844: a new game's home; the hero pick; the battle
+  (layer 1, the opening); the map after the opening and at depth 5; and the
+  Sovereign Route with no militia (found, then charter).

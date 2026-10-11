@@ -210,7 +210,7 @@ export function ContractBanner({
       <span className="ct-banner-rod" aria-hidden="true" />
       <div className="ct-banner-cloth">
         <span className="ct-banner-seal" aria-hidden="true">
-          {company ? <Crest company={company} scale={3} /> : <SovereignCrest scale={3} />}
+          {company ? <Crest company={company} scale={2} /> : <SovereignCrest scale={2} />}
         </span>
         <span className="ct-banner-k">{co ? 'Under contract' : 'Your own charter'}</span>
         <b className="ct-banner-name">{co ? co.name : CHARTER_NAME}</b>

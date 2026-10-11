@@ -106,14 +106,24 @@ export interface MapOptions {
 
 /**
  * Build a Slay-the-Spire-style branching DAG in three ACTS (Phase 3b): a start
- * node, then per act three free layers of 2–4 nodes and a single act-boss
- * layer every route funnels through. Edges only connect adjacent layers,
+ * node and the opening fight ({@link OPENING_LAYER}), then per act free layers
+ * of 2–4 nodes and a single act-boss layer every route funnels through. Edges only connect adjacent layers,
  * forward-only, and every node is reachable with at least one outgoing edge.
  *
  * The act bosses are single-node layers on purpose: an act is a chapter, and a
  * chapter ends in the same fight for everyone. What differs is how the company
  * arrives — which is the route's whole job.
  */
+/**
+ * The layer of the run's OPENING fight (Oct 2026; the designer: "the first
+ * battle auto-picks into the tree — the start is what the first battle is, and
+ * where it should stay … you are clearing out an area first"). It holds one
+ * plain battle, the only road out of the start: the hero pick marches straight
+ * into it (`marchOut`), and the map draws it AS the start
+ * (`run/map.ts` `openingNodeOf`). The first fork is the layer after it.
+ */
+export const OPENING_LAYER = 1
+
 export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number): RunMap {
   /**
    * **The run is the same length whatever the hub has bought.** Every map has
@@ -129,8 +139,13 @@ export function generateRunMap(rng: RNG, opts: MapOptions = {}, layers?: number)
 
   // Middle layers. A wide map forks harder — 3–4 nodes a layer instead of 2–4 —
   // so a route is a real choice rather than a corridor with occasional doors.
-  // An act-boss layer holds one node: the act's closing fight.
+  // An act-boss layer holds one node: the act's closing fight. So does the
+  // opening layer: the run's first battle, which the map draws as its start.
   for (let layer = 1; layer < layerCount - 1; layer++) {
+    if (layer === OPENING_LAYER) {
+      nodesByLayer.push([mkNode('battle', layer, 0, 0.5)])
+      continue
+    }
     if (isActBossLayer(layer)) {
       nodesByLayer.push([mkNode('miniboss', layer, 0, 0.5)])
       continue
@@ -263,7 +278,7 @@ const isFight = (n: MapNode): boolean => n.type === 'battle' || n.type === 'elit
 function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {}): void {
   const last = nodesByLayer.length - 1
   const middle: MapNode[] = []
-  for (let l = 1; l < last; l++) if (!isActBossLayer(l)) middle.push(...nodesByLayer[l])
+  for (let l = 1; l < last; l++) if (!isActBossLayer(l) && l !== OPENING_LAYER) middle.push(...nodesByLayer[l])
 
   // A Vow that forbids a stop sets its cap to zero.
   const caps = { ...SPECIAL_CAPS }
@@ -289,7 +304,8 @@ function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {})
   // same-type specials, and at most MAX_SPECIALS_PER_LAYER stops a layer with at
   // least one fight left in it — so "fight here" is always one of the roads.
   for (let l = 1; l < last; l++) {
-    if (isActBossLayer(l)) continue
+    // The opening fight stays a fight; an act boss is already typed.
+    if (isActBossLayer(l) || l === OPENING_LAYER) continue
     const row = nodesByLayer[l]
     let specialsThisLayer = 0
     // A wide layer keeps two fights: its extra road is a fork, not another stop.
