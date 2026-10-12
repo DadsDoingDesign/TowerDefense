@@ -564,8 +564,15 @@ export function BattleCanvas() {
         const hp = st.engine ? st.hud.baseHp : st.baseHp
         const max = (st.engine ? st.hud.maxBaseHp : st.maxBaseHp) || 1
         const co = st.contract ? routeOf(st.contract).color : '#e0ac4c'
-        // Your militia's banner flies beside the wagon (build step 4).
-        drawCaravan(ctx, map, { color: co, cargo: Math.max(0, hp) / max, banner: flyingMilitia(useMetaStore.getState().militia, useMetaStore.getState()) })
+        // The flag of whoever the run is for: the hiring company's standard,
+        // or on your own road (the Sovereign Route) your militia's banner.
+        const company = st.contract?.company ?? null
+        drawCaravan(ctx, map, {
+          color: co,
+          cargo: Math.max(0, hp) / max,
+          company,
+          banner: company ? null : flyingMilitia(useMetaStore.getState().militia, useMetaStore.getState()),
+        })
       }
 
       const liveEngine = st.engine

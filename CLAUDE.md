@@ -122,7 +122,10 @@ result. Append a short note to the review log when you're done.
   name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
-  dresses the builder preview's soldiers in it); the builder's wheels and carousels
+  dresses the builder preview's soldiers in it). The battle wagon flies the
+  flag of whoever the run is for: the hiring company's standard
+  (`data/companyStandard.ts`), your militia's banner only on the Sovereign
+  Route. The builder's wheels and carousels
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.

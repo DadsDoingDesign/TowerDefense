@@ -381,7 +381,7 @@ agree it, then edit this section.
 | `Slip` / `SlipLine` | A receipt: what is paid, owed or earned, item by item | Prose |
 | `Gold` | An amount of gold, the only currency | Other numbers |
 | `RarityTag` | An item's rarity, in the shared rarity tokens | Any other ranking |
-| `CompanyFlag` | A trading company's identity on a road or notice | The player's militia (that is its own flag, `Banner`) |
+| `CompanyFlag` (UI) / `companyStandard` (canvas) | A trading company's identity: on its road and notice, and over the wagon on its contract | The player's militia (that is its own flag, `Banner`) |
 | `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
 | Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above) | Marking which nodes you can reach (the node states do that) |

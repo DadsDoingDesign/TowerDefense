@@ -3523,3 +3523,14 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Sovereign Route is open. The hero pick, the home, Settings and the wagons
   all read it. Verified with such a save: the home shows no militia, and the
   hero pick shows the compact banner alone.
+
+- **Oct 2026 · The wagon flies the flag of whoever the run is for.** The
+  designer: "make sure the flag on the cart is representative of who the
+  company is for that run". The battle wagon flew your militia's banner (or
+  the default navy one) on every contract. Now, on a company's contract, it
+  flies that company's standard (`data/companyStandard.ts`): its colour,
+  edged a shade darker, with its logo and a three-pointed foot. It matches
+  the road notice's `CompanyFlag` and the crates' colour band. On your own
+  road, the Sovereign Route, your militia's banner still flies. The standard
+  is 19 × 30 cells at 2 px, so it fits the banner's box and the caravan's
+  layout does not move. Verified in battle for all five companies.
