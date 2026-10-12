@@ -369,6 +369,8 @@ agree it, then edit this section.
 | Primary CTA (the bottom band) | Commits the screen's one action and names it | Going back; a second action |
 | Back (`.ct-back`) | Leaves without changing anything | Saving or confirming |
 | `LeaveRun` | Abandons the run, after a confirm | Anything short of abandoning |
+| A hero, tapped (its card on the bar, or posted on the field) | In setup, picks the hero up: its posts glow, and the next tap posts or moves it | Opening its details (that is the Details button). During a live wave, posts are held, so the tap reads instead |
+| Details button (battle strip) | Opens and closes the selected hero's details in setup | Selecting or arming anything |
 | `PickStrip` + `PickCard` | Chooses one of several: a token focuses it, the CTA commits it | Settings that apply on tap |
 | `MenuRow` (inline detail) | A setting or list choice that applies on tap; its detail opens under the selected row | Choices that need a CTA |
 | `FlagWheel` | The main part of a builder, with many visual options; its middle opens them all | Small sets (use a `PartCarousel`) |

@@ -104,7 +104,13 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       return
     }
     if (st.selectedSentinelId) st.placeOnSlot(tileId)
-    else if (st.placements[tileId]) st.focusTower(st.placements[tileId]!)
+    // A posted hero, tapped with nobody in hand, is PICKED UP — the same
+    // gesture, and the same result, as its card on the bar: the posts glow and
+    // the next tap moves it (Oct 2026; the designer: "sometimes there is a
+    // details button and other times clicking my tower opens the details —
+    // confusing when I need to click to place it too"). It used to open the
+    // hero's panel instead; reading a hero is the Details button's job.
+    else if (st.placements[tileId]) st.shellSelect({ kind: 'hero', id: st.placements[tileId]! })
   },
 
   placeOnSlot: (slotId) => {

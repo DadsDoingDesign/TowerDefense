@@ -48,9 +48,10 @@ export interface ShellActions {
 }
 
 export const createShellSlice: Slice<ShellActions> = (set, get) => ({
-  // Tapping a placed tower on the field puts that hero in the Context panel
-  // on its Upgrades tab. Deliberately leaves `selectedSentinelId`
-  // alone — tapping a tower inspects it, it does not pick it up.
+  // Tapping a placed tower DURING A LIVE WAVE puts that hero in the Context
+  // panel on its Upgrades tab: posts are held then, so the tap can only read.
+  // Deliberately leaves `selectedSentinelId` alone. (In setup a tap on a
+  // posted hero picks it up instead — `battleSlice.tapTile`.)
   focusTower: (sentinelId) =>
     set({
       shellSelection: { kind: 'hero', id: sentinelId },
