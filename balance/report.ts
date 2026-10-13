@@ -2237,6 +2237,8 @@ if (want(12)) {
 
 /** How far below zero-meta a purchase may measure before it is a defect. */
 const HUB_TOLERANCE = 0.03
+/** Fresh seeds a flagged §12 cell is re-measured on before it fails (Oct 2026). */
+const HUB_CONFIRM_RUNS = Number(process.env.FW_HUB_CONFIRM_RUNS) || 600
 /**
  * The lines the hub gate is read off: **all of them**.
  *
@@ -2336,10 +2338,10 @@ function bandRead(p: number, se: number, band: [number, number]): string {
 }
 
 interface HubCell { winRate: number; wins: number[]; marks: number }
-function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS): HubCell {
+function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS, from = 0): HubCell {
   const wins: number[] = []
   const marks: number[] = []
-  for (let i = 0; i < runs; i++) {
+  for (let i = from; i < from + runs; i++) {
     const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta, difficulty: banner, policy })
     wins.push(r.won ? 1 : 0)
     marks.push(r.marks)
@@ -2365,6 +2367,8 @@ if (want(12)) {
   for (const p of POLICIES) hubZero[p.id] = hubCell(ZERO_META, p)
 
   const hubCells = new Map<string, HubCell[]>()
+  /** Flagged cells the confirmation run cleared (see the gate below). */
+  const hubConfirmed: string[] = []
   line(`| Hub state | ${POLICIES.map((p) => p.id).join(' | ')} | worst gated Δ |`)
   line(`|---|${'--:|'.repeat(POLICIES.length)}--:|`)
   for (const [label, upgrades] of HUB_STATES) {
@@ -2387,14 +2391,32 @@ if (want(12)) {
       worst = Math.min(worst, deltas[i])
       const tol = Math.max(HUB_TOLERANCE, pairedTolerance(cells[i].wins, hubZero[POLICIES[i].id].wins))
       if (deltas[i] + tol < 0) {
-        failures.push(
-          `HQ purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero HQ's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). An HQ purchase may add breadth; it may never remove baseline viability.`,
-        )
+        // Confirm before failing (Oct 2026). The table is ~40 one-sided 2 s.e.
+        // tests on 210 seeds, so one flags by chance more often than not —
+        // Scouts 2 read −10pt on the specials line at 210 and −0.7 ±4.1 at
+        // 600. A flagged cell is re-measured on HUB_CONFIRM_RUNS fresh seeds
+        // (after the table's), zero HQ beside it, and fails only if the drop
+        // holds there. A real regression holds; a sampling fluke does not.
+        const zeroC = hubCell(ZERO_META, POLICIES[i], difficultyRules(0), HUB_CONFIRM_RUNS, HUB_RUNS)
+        const cellC = hubCell(loadoutFor(label, upgrades), POLICIES[i], difficultyRules(0), HUB_CONFIRM_RUNS, HUB_RUNS)
+        const dC = cellC.winRate - zeroC.winRate
+        const tolC = Math.max(HUB_TOLERANCE, pairedTolerance(cellC.wins, zeroC.wins))
+        const note = `${label} on the ${POLICIES[i].id} line read ${(deltas[i] * 100).toFixed(0)}pt (±${(tol * 100).toFixed(0)}) on the table's ${HUB_RUNS} seeds; on ${HUB_CONFIRM_RUNS} fresh seeds ${dC >= 0 ? '+' : '−'}${Math.abs(dC * 100).toFixed(1)}pt (±${(tolC * 100).toFixed(1)})`
+        if (dC + tolC < 0) {
+          failures.push(
+            `HQ purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero HQ's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor), and it held on ${HUB_CONFIRM_RUNS} fresh seeds (${note}). An HQ purchase may add breadth; it may never remove baseline viability.`,
+          )
+        } else hubConfirmed.push(note)
       }
     }
     line(`| ${label} | ${cellText.join(' | ')} | ${worst === Infinity ? '—' : `${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`} |`)
   }
   line('')
+  if (hubConfirmed.length) {
+    line(`**Flagged, then cleared on confirmation** (a cell the table flags is re-measured on ${HUB_CONFIRM_RUNS} fresh seeds before it fails):`)
+    for (const n of hubConfirmed) line(`- ${n}: noise, not a defect.`)
+    line('')
+  }
   line('**The invariant.** No HQ state — any office alone, or everything the HQ sells — may')
   line('measure below zero HQ by more than the paired')
   line(`noise floor (2 s.e., minimum ${pct(HUB_TOLERANCE)}) on any of the gated routing lines`)
