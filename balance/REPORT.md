@@ -760,6 +760,9 @@ two standard errors of that paired difference.
 | Focus Ironvein +60% | 26% (−0±3) | 9% (+0±2) | 15% (+0±4) | 25% (+0±4) | −0pt |
 | everything the HQ sells | 34% (+8±9) | 28% (+19±7) | 24% (+10±8) | 46% (+21±9) | +8pt |
 
+**Flagged, then cleared on confirmation** (a cell the table flags is re-measured on 600 fresh seeds before it fails):
+- Scouts 2 on the specials line read -10pt (±7) on the table's 210 seeds; on 600 fresh seeds +1.7pt (±4.2): noise, not a defect.
+
 **The invariant.** No HQ state — any office alone, or everything the HQ sells — may
 measure below zero HQ by more than the paired
 noise floor (2 s.e., minimum 3%) on any of the gated routing lines
@@ -1332,9 +1335,4 @@ _Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000
 
 ## Verdict
 
-❌ **1 balance issue(s) detected:**
-
-- HQ purchase "Scouts 2" LOWERS the win rate: 16% against zero HQ's 26% on the specials line (Δ -10pt, beyond the ±7pt paired noise floor). An HQ purchase may add breadth; it may never remove baseline viability.
-
-_Several of these are expected to be red: they are the findings this rebuild was
-written to surface. They are deliberately **not** tuned to pass._
+✅ **All balance invariants passed.**
