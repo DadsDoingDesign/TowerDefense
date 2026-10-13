@@ -207,7 +207,9 @@ function drawStanding(ctx: CanvasRenderingContext2D, e: RtEnemy, now: number, lw
       case 'shieldAura':
         break
       case 'healPulse': {
-        // A green cross over the shaman.
+        // A green cross over the shaman — while it has pulses left (Oct 2026:
+        // they run out; a spent shaman stops promising a heal).
+        if (!(e.healLeft > 0)) break
         ctx.fillStyle = 'rgba(122, 220, 110, 0.95)'
         ctx.fillRect(x - 2, top - 6, 4, 12)
         ctx.fillRect(x - 6, top - 2, 12, 4)

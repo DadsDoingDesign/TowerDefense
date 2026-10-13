@@ -73,6 +73,15 @@ export const HEAL_PULSE: Extract<EnemyBehaviour, { kind: 'healPulse' }> = {
   radius: 110,
   heal: 0.06,
   interval: 3,
+  /**
+   * A shaman's pulses run out (Oct 2026). Unlimited, a shaman held in a pack
+   * at high Threat out-healed a lone hero for good: a held column that
+   * neither dies nor leaks, in a game with no clock — REPORT §6 caught one at
+   * depth 11 on a generated road (four goblins held 33 minutes, 3% down). Ten
+   * pulses (30s, up to 60% of each goblin's health back) keep the shaman's
+   * threat and guarantee the hold grinds through.
+   */
+  charges: 10,
 }
 
 export const BERSERK: Extract<EnemyBehaviour, { kind: 'enrage' }> = {
@@ -240,7 +249,7 @@ export function makeSpecialist(base: EnemyType, sp: Specialist): EnemyType {
  */
 export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegraph: string; counter: string }> = {
   healPulse: {
-    label: 'Heals nearby goblins',
+    label: 'Heals nearby goblins, ten times',
     telegraph: 'green ring pulses out from the shaman',
     counter: 'focus it first (Threat targeting) — every pulse it lives through undoes a volley',
   },
