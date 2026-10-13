@@ -3614,3 +3614,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   row the words still ran behind nodes, because the row gap is about 12px.
   Verified on phone and desk.
 
+- **Oct 2026 · Runs are fought on generated roads.** The designer: "the maps
+  aren't changing to the procedural ones". The generator was built and
+  galleried but not yet dealt. Now every act deals one (`run/fields`): a
+  profile (balanced, switchbacks, winding) that differs from the act
+  before's, and a road seed, each hashed from the run seed, so dealing one
+  moves no other roll.
+  - **Its id is its recipe** (`gen.<profile>.<seed>`): saves, twins,
+    challenge variants and danger ground all resolve through `mapById` /
+    `fieldFor` as for a hand-made field.
+  - **Names** come from the seed ("The Bramble Run").
+  - **Challenge ground:** flooded and burning battles get ponds and fires
+    laid on each road's best ground, by the hand-made fields' own rule.
+    Quarry and hexed deepen the seeded hazards, as everywhere.
+  - **Verified in the running game:**
+    - phone: act 1 on a portrait twin of a winding road;
+    - desk: act 2 under wildfire, with fires on the bends and the danger
+      ground over them;
+    - every road of 120 seeds × 3 acts builds;
+    - each profile lays ground for both challenges and has a twin.
+

@@ -16,8 +16,11 @@ import { BASE_INTEREST, HQ_UPGRADES, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength } from '../src/game/data/maps'
 import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
+import { FIELD_PROFILE_IDS, parseGenFieldId } from '../src/game/data/fieldGen'
+/** A dealt field's kind for a tally: a generated road's profile, else the hand-made field's id. */
+const fieldKind = (id: string): string => parseGenFieldId(id)?.profile ?? id
 import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
@@ -1189,9 +1192,11 @@ if (want(6)) {
   const mcFieldCounts = new Map<string, { n: number; won: number }>()
   for (let r = 0; r < RUNS; r++) {
     const out = monteCarloRun(r)
-    const fieldTally = mcFieldCounts.get(out.fieldId) ?? { n: 0, won: 0 }
+    // Generated roads (Oct 2026) are tallied by profile: every run's road is its own.
+    const fieldKey = fieldKind(out.fieldId)
+    const fieldTally = mcFieldCounts.get(fieldKey) ?? { n: 0, won: 0 }
     fieldTally.n++
-    mcFieldCounts.set(out.fieldId, fieldTally)
+    mcFieldCounts.set(fieldKey, fieldTally)
     if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
     if (out.finalKill) bossKills++
     mcTimeouts += out.timeouts
@@ -3257,7 +3262,8 @@ if (want(14)) {
   const dealtField = new Map<string, number>()
   for (let i = 0; i < VARIETY_RUNS; i++) {
     const rs = hashSeed(i, 'variety')
-    dealtField.set(pickBattleMap(rs).id, (dealtField.get(pickBattleMap(rs).id) ?? 0) + 1)
+    const act1 = fieldKind(actFieldId(rs, 1))
+    dealtField.set(act1, (dealtField.get(act1) ?? 0) + 1)
     const n = generateEncounter(4, 'normal', { seed: encounterSeed(rs, 4) })
     const nv = variantsFor('normal', 4).find((v) => n.label.includes(v.label) || v.id === 'patrol')
     dealtNormal.set(n.label, (dealtNormal.get(n.label) ?? 0) + 1)
@@ -3407,10 +3413,13 @@ if (want(14)) {
       `Two battle nodes in the same map layer differ by only ${pct(worstLayerMix)} body-mix distance at ${worstLayerCell} (kind:depth:width; floor ${pct(MIN_SAME_LAYER_DIFF)}). A fork between two identical fights is not a fork.`,
     )
   }
-  /** The map draw must not be degenerate. */
-  const MIN_FIELD_SHARE = 0.3
+  /**
+   * The map draw must not be degenerate: no road profile (Oct 2026; the two
+   * hand-made fields before) may land in under 60% of a fair share.
+   */
   const fieldShares = [...dealtField.values()].map((v) => v / VARIETY_RUNS)
-  if (ALL_MAPS.length > 1 && Math.min(...fieldShares) < MIN_FIELD_SHARE) {
+  const MIN_FIELD_SHARE = 0.6 / FIELD_PROFILE_IDS.length
+  if (dealtField.size < FIELD_PROFILE_IDS.length || Math.min(...fieldShares) < MIN_FIELD_SHARE) {
     failures.push(
       `Battlefield selection is lopsided: the rarest field lands in ${pct(Math.min(...fieldShares))} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_FIELD_SHARE)}).`,
     )

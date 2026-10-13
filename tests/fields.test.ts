@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
-import { ALL_MAPS, fieldFor, fieldIdOf, orientationOf, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, fieldFor, fieldIdOf, mapById, orientationOf } from '../src/game/data/maps'
+import { FIELD_PROFILE_IDS, parseGenFieldId } from '../src/game/data/fieldGen'
 import { nameCounterState } from '../src/game/data/sentinels'
 import { actFieldId, actFieldIds, groundFor, inferredFieldAct, validFieldAct } from '../src/game/run/fields'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
@@ -23,8 +24,20 @@ import { captureRun, migrateSnapshot } from '../src/state/runSnapshot'
 beforeAll(() => useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: 1 } }))
 
 describe('the act field rule (pure)', () => {
-  it('act 1 is the field the run was always dealt', () => {
-    for (let seed = 1; seed < 300; seed++) expect(actFieldId(seed, 1)).toBe(pickBattleMap(seed).id)
+  it('every act is a generated road that builds (Oct 2026)', () => {
+    for (let seed = 1; seed < 120; seed++) {
+      for (const id of actFieldIds(seed)) {
+        expect(parseGenFieldId(id), id).not.toBeNull()
+        expect(mapById(id), id).not.toBeNull()
+      }
+    }
+  })
+
+  it("never deals the act before's profile", () => {
+    for (let seed = 1; seed < 200; seed++) {
+      const a = actFieldIds(seed).map((id) => parseGenFieldId(id)!.profile)
+      for (let act = 2; act <= ACTS; act++) expect(a[act - 1]).not.toBe(a[act - 2])
+    }
   })
 
   it('is deterministic per (seed, act)', () => {
@@ -46,11 +59,17 @@ describe('the act field rule (pure)', () => {
     }
   })
 
-  it('deals every field across seeds (no act is stuck on one map)', () => {
+  it('deals every profile across seeds, and a different road every run', () => {
     for (let act = 1; act <= ACTS; act++) {
-      const seen = new Set<string>()
-      for (let seed = 1; seed < 200; seed++) seen.add(actFieldId(seed, act))
-      expect(seen.size).toBe(ALL_MAPS.length)
+      const profiles = new Set<string>()
+      const roads = new Set<string>()
+      for (let seed = 1; seed < 120; seed++) {
+        const id = actFieldId(seed, act)
+        profiles.add(parseGenFieldId(id)!.profile)
+        roads.add(id)
+      }
+      expect(profiles.size).toBe(FIELD_PROFILE_IDS.length)
+      expect(roads.size).toBe(119)
     }
   })
 

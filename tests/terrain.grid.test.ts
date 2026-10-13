@@ -401,11 +401,13 @@ describe('the store: tiles, the blocked-tap note, and challenge battles', () => 
     const snap = captureRun(st, { rngLoot: 1, rngMap: 2, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
     const raw = JSON.parse(JSON.stringify(snap)) as Record<string, unknown>
     raw.v = 9
+    // A v9 save stood on a hand-made field: generated roads came long after.
+    raw.battleMapId = 'greenline'
     delete raw.terrainRule
     raw.placements = { s3: hero.id, s4: hero.id, s9: 'x', c99r0: 'y', [tileId(1, 1)]: 5 }
     const m = migrateSnapshot(raw)!
     expect(m.terrainRule).toBeNull()
-    expect(m.placements).toEqual({ [legacyPosts(snap.battleMapId).s3]: hero.id })
+    expect(m.placements).toEqual({ [legacyPosts('greenline').s3]: hero.id })
     // A v10 payload has no circles to translate, and an unknown rule is plain ground.
     raw.v = 10
     raw.terrainRule = 'lava'

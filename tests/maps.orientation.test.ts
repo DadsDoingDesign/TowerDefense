@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
 import {
+  mapById,
   ALL_MAPS,
   chooseFieldOrientation,
   fieldFor,
@@ -17,6 +18,7 @@ import { generateEncounter } from '../src/game/data/waves'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import type { Archetype, GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
+import { actFieldId } from '../src/game/run/fields'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { STANDARD_RUN } from '../src/state/seeds'
@@ -163,8 +165,8 @@ describe('the orientation is chosen per battle and fixed for it', () => {
     const s = snap()
     expect(s.v).toBe(RUN_SNAPSHOT_VERSION)
     expect(s.fieldOrientation).toBe('portrait')
-    expect(orientationOf(pickBattleMap(777))).toBe('landscape')
-    expect(s.battleMapId).toBe(pickBattleMap(777).id)
+    expect(orientationOf(mapById(actFieldId(777, 1))!)).toBe('landscape')
+    expect(s.battleMapId).toBe(actFieldId(777, 1))
 
     // The window is now a desk: the battle in hand stays on its portrait twin.
     setLayoutOrientation(() => 'landscape')

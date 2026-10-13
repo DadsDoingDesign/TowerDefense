@@ -57,12 +57,17 @@ result. Append a short note to the review log when you're done.
   `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
   `settle.ts` (payout plan), `inventory.ts`, `map.ts`, `battle.ts`. Put a new
   rule here, not in a slice.
-- Procedural battlefields (in review, not wired into runs yet):
-  `src/game/data/fieldGen.ts` deals a road from (seed, `FieldWeights`) on a
-  lattice two tiles apart (2,220 or 2,300px, like the hand-made fields), and
-  `scoreField` measures corners, straights, choke tiles, one-tile gaps and edge
-  share against the weights' bands. Gallery through the real draw code:
-  `harness/fields.html`; tests `tests/fieldGen.test.ts`.
+- Procedural battlefields: every act of a run is fought on a generated road
+  (`run/fields.actFieldId`: a profile that is not the act before's, and a
+  road seed, each hashed from (run seed, act)). `src/game/data/fieldGen.ts`
+  deals a road from (seed, `FieldWeights`) on a lattice two tiles apart
+  (2,220 or 2,300px, like the hand-made fields); `scoreField` keeps it only
+  inside the weights' bands; `layRuleGround` lays the flooded / wildfire
+  ground on the bends' best tiles. A generated field's id is its recipe
+  (`gen.<profile>.<seed>`) and `maps.mapById` / `fieldFor` rebuild it, so a
+  save stores it like any id. The hand-made Green Line and Kiln Road stay as
+  the fallback and the balance suite's fixed benches. Gallery:
+  `harness/fields.html`; tests `tests/fieldGen.test.ts`, `tests/fields.test.ts`.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
   1–5); waves `src/game/data/waves.ts`. Armour: Plated / Warded (`ENEMY_MODS`)
   reach `ARMOUR_CAP` (65%), everything else stops at `RESIST_CAP` (55%), and

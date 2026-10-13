@@ -642,6 +642,9 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
     let cov = coverageCache.get(key)
     if (!cov) {
       cov = slotCoverage(geo, h.range)
+      // Generated roads (Oct 2026) make every run's field its own: keep the
+      // cache to the fields in play, not every field the suite has dealt.
+      if (coverageCache.size > 256) coverageCache.clear()
       coverageCache.set(key, cov)
     }
     const worth = (id: string) => cov![id] * tileDamageMult(map, id)
