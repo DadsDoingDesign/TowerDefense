@@ -31,6 +31,10 @@ export interface OfferGroup {
   className?: string
   /** A wrapper around the strip, for dressing that frames it (`shop-shelf`, the plank). */
   wrap?: string
+  /** Decorative cells after the tokens, in the same row (the shop's SOLD cubbies). */
+  trailing?: ReactNode
+  /** The row's column count when `trailing` adds cells. */
+  columns?: number
 }
 
 /** An offer's picture on its token: its mark, its rarity pips and its damage type in the corners. */
@@ -90,7 +94,7 @@ export function OfferPick({
   return (
     <div className={`pk pk-offers${className ? ` ${className}` : ''}`}>
       {groups.map((g) => {
-        if (!g.offers.length) return null
+        if (!g.offers.length && !g.columns) return null
         const strip = (
           <PickStrip
             key={g.label}
@@ -100,6 +104,8 @@ export function OfferPick({
             onFocus={onPick}
             allowNone={several}
             className={g.className}
+            trailing={g.trailing}
+            columns={g.columns}
           />
         )
         return g.wrap ? (

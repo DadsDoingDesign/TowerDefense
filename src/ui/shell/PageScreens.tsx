@@ -11,12 +11,19 @@ import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
-import { isShopService, ShopAwning, ShopShelf } from './ShopFront'
+import { isShopService, ShopShelf } from './ShopFront'
+import { StopScene } from './StopScene'
+import { isStopKind, stopLine, type StopKind } from './stopScene'
+import { shelfSize } from '../../game/run/relics'
+
 import { OfferPick } from './OfferPick'
 import { companyById } from '../../game/data/companies'
 import { VolumeSlider } from './VolumeSlider'
 import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
+
+/** Each stop's page tone: how its sign and its cards are dressed (`stops.css`). */
+const STOP_TONE: Record<StopKind, 'shop' | 'camp' | 'shrine' | 'recruit'> = { merchant: 'shop', campfire: 'camp', shrine: 'shrine', recruit: 'recruit' }
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -190,6 +197,9 @@ export function PageScreen({
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
   const shopOpen = useGameStore((s) => s.event?.kind === 'merchant' && !!s.merchant)
+  const event = useGameStore((s) => s.event)
+  // Wares bought off this shelf: a full shelf is `shelfSize`, a restock refills it.
+  const shopSold = useGameStore((s) => (s.merchant ? Math.max(0, shelfSize(s.relics) - s.merchant.items.length) : 0))
   const spoilsOpen = useGameStore((s) => !s.event && !!s.reward?.length)
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
@@ -284,7 +294,11 @@ export function PageScreen({
   // The spoils are a pick board too (Oct 2026): the same strip-and-card as the
   // level-up pick, the hero pick and the shop.
   const isSpoils = eventBoard && !isShop && spoilsOpen
-  const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
+  // A stop on the road is drawn as a place (Oct 2026, `StopScene`): its scene
+  // over the title, and what the world says there as the subtitle — the one
+  // line an event board carries again, now that it is the story, not chrome.
+  const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : null
+  const subtitle = subtitleOverride ?? (stop && event ? stopLine(stop, event.nodeId) : eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
   // page that spends one currency does not need the other. Reading the prices
@@ -371,8 +385,8 @@ export function PageScreen({
       // The hero pick is branded to the contract: the hiring company's cloth
       // over the title, your militia's flag under it (Oct 2026).
       brand={
-        isShop ? (
-          <ShopAwning color={contract?.company ? companyById(contract.company).color : undefined} />
+        stop ? (
+          <StopScene kind={stop} color={contract?.company ? companyById(contract.company).color : undefined} />
         ) : heroPick && contract ? (
           <ContractBanner
             company={contract.company}
@@ -388,7 +402,7 @@ export function PageScreen({
       // can ARM (`confirm`): there the CTA stays pinned, so arming (which adds
       // the notice and the confirm above it) moves nothing under the finger.
       compact={!selected?.action?.confirm}
-      tone={isShop ? 'shop' : ctx.board?.tone}
+      tone={stop ? STOP_TONE[stop] : ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
@@ -553,6 +567,7 @@ export function PageScreen({
           selectedId={selected?.id ?? null}
           onPick={pick}
           short={(o) => (o.cost ? shortfall(o.cost) : 0)}
+          sold={shopSold}
         >
           {detailBody && <div className="pk-detail-body">{detailBody}</div>}
         </ShopShelf>

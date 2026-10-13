@@ -3654,3 +3654,33 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - **Verified** on phone and desk: an item focused, then the relic; and the
     shop re-shot unchanged apart from the card's rarity edge.
 
+- **Oct 2026 · Every stop is a place on the road.** The designer: "do one
+  more design pass to really up the aesthetic … consider this for all the
+  special events — shrine and campfire — what's unique to them and makes it
+  lively for the story". The campfire, shrine and recruit stops were plain
+  pages under a serif title; only the merchant had become a shop.
+  - **One part, four dresses** (`StopScene`, `stops.css`):
+    - the merchant's awning in the road's colour;
+    - the campfire's starry night with a 16 × 16 pixel fire at 3×, its flame
+      flickering and its glow breathing;
+    - the shrine's stone wall and arch, with a violet glow and its mark;
+    - the recruiter's striped tent, its door open on the hire.
+  - **The sign:** the page's one title is hung under the scene on two cords,
+    in wood (charred for the campfire, cut stone with carved letters for the
+    shrine).
+  - **The line:** under the sign, what the world says there, on a paper slip
+    in the contract letters' voice. It is fixed per node, so two merchants on
+    one road differ. It brings back an event board's subtitle (cut in 3.5 as
+    chrome) as the road's story, never a rule.
+  - **Each stop's cards are dressed too:** the shrine's bargain is a stone
+    tablet with the gift in the good ink, and the campfire's choices sit in
+    its warm light.
+  - **Shop:**
+    - a bought ware's cubby stays on the shelf, stamped SOLD;
+    - the counter's tokens say what they give, "Cargo +25%" and "New wares".
+      The designer read "Repair" as item durability, which the game does not
+      have.
+  - **Motion:** flicker and glow stop under reduced motion.
+  - **Verified** on phone (all four stops) and desk, with a click-through:
+    buy (the SOLD cubby), repair and restock.
+

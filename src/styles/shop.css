@@ -10,9 +10,7 @@
 .shop-awning {
   --aw: var(--accent);
   --aw-w: 22px;
-  align-self: stretch;
   height: 30px;
-  margin: -4px 0 0;
   background:
     linear-gradient(180deg, rgba(255, 240, 210, 0.16), transparent 30%, rgba(0, 0, 0, 0.28)),
     repeating-linear-gradient(90deg, var(--aw) 0 var(--aw-w), var(--paper) var(--aw-w) calc(var(--aw-w) * 2));
@@ -21,41 +19,6 @@
     linear-gradient(#000 0 0) top / 100% 19px no-repeat,
     radial-gradient(circle at 50% 0, #000 10.5px, transparent 11px) 0 19px / var(--aw-w) 11px repeat-x;
   filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
-}
-
-/* ------------------------------------------------------------ the sign */
-.pg.tone-shop .pg-head {
-  text-align: center;
-}
-.pg.tone-shop .t-title {
-  position: relative;
-  display: inline-block;
-  margin-top: 14px;
-  padding: 2px 20px 4px;
-  border: 1px solid var(--sign-rim);
-  border-radius: 5px;
-  background:
-    linear-gradient(180deg, rgba(255, 220, 170, 0.14) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.28) calc(100% - 3px)),
-    repeating-linear-gradient(180deg, transparent 0 9px, rgba(0, 0, 0, 0.07) 9px 11px),
-    var(--sign-wood);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
-  color: var(--sign-ink);
-}
-/* Two cords from the awning to the sign. */
-.pg.tone-shop .t-title::before,
-.pg.tone-shop .t-title::after {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  width: 2px;
-  height: 15px;
-  background: var(--sign-rim);
-}
-.pg.tone-shop .t-title::before {
-  left: 18%;
-}
-.pg.tone-shop .t-title::after {
-  right: 18%;
 }
 
 /* ------------------------------------------------------------ the shelf */
@@ -153,4 +116,28 @@
   padding: 18px 8px;
   text-align: center;
   color: var(--muted);
+}
+
+/* A bought ware's cubby: it stays on the shelf, empty, stamped SOLD. */
+.shop-sold {
+  display: grid;
+  place-items: center;
+  height: 100px;
+  border: 1px dashed rgba(233, 205, 150, 0.16);
+  border-radius: var(--r-md);
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  background: rgba(10, 6, 3, 0.55);
+}
+.shop-sold-stamp {
+  padding: 2px 8px;
+  border: 2px solid var(--bad);
+  border-radius: 3px;
+  color: var(--bad);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
+  opacity: 0.85;
 }

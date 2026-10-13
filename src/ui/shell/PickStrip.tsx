@@ -63,6 +63,8 @@ export function PickStrip({
   onFocus,
   className,
   allowNone = false,
+  trailing,
+  columns,
 }: {
   label: string
   tokens: readonly PickTokenSpec[]
@@ -75,6 +77,10 @@ export function PickStrip({
    * group's tab stop. Off: the first token stands focused, as ever.
    */
   allowNone?: boolean
+  /** Decorative cells after the tokens, in the same grid (never focusable). */
+  trailing?: ReactNode
+  /** The grid's column count when `trailing` adds cells (default: one per token). */
+  columns?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const found = tokens.findIndex((t) => t.id === focused)
@@ -100,7 +106,7 @@ export function PickStrip({
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKey}
-      style={{ '--pk-n': tokens.length } as CSSProperties}
+      style={{ '--pk-n': columns ?? tokens.length } as CSSProperties}
     >
       {tokens.map((t, i) => {
         const on = allowNone ? i === found : i === at
@@ -129,6 +135,7 @@ export function PickStrip({
           </button>
         )
       })}
+      {trailing}
     </div>
   )
 }

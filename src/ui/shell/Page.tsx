@@ -95,7 +95,7 @@ export function PageLayout({
   /** A page's brand over its title (the hero pick's contract banner, Oct 2026). */
   brand?: ReactNode
   /** A distinct frame for an elite's spoils (Phase 2). */
-  tone?: 'elite' | 'shop'
+  tone?: 'elite' | 'shop' | 'camp' | 'shrine' | 'recruit'
   /**
    * Oct 2026 (3.5): a short board keeps its exits and CTA right under its
    * content, and the column's slack goes below the CTA instead of between the

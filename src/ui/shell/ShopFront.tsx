@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { OfferPick } from './OfferPick'
 import type { Offer } from './offers'
 
@@ -7,7 +7,7 @@ import type { Offer } from './offers'
  * to be more aesthetic with our UI — like a real little store on the way
  * through the journey").
  *
- *   ▔▔▔▔▔▔ awning ▔▔▔▔▔▔        ← `ShopAwning`, in the road's colour, over the
+ *   ▔▔▔▔▔▔ awning ▔▔▔▔▔▔        ← `StopScene` (merchant), in the road's colour, over the
  *        [ MERCHANT ]             page's one title, hung as a wooden sign
  *   ┌ the shelf ────────────┐   ← the wares on a plank, each with its price on
  *   │ [⚔] [▣] [✦] [▣]       │      a paper tag
@@ -23,17 +23,13 @@ import type { Offer } from './offers'
 /** The stall's services (wagon repair, restock), as opposed to its wares. */
 export const isShopService = (o: Offer): boolean => o.id.startsWith('merchant-')
 
-/** The striped canvas over the stall's sign, in the road's colour. */
-export const ShopAwning = ({ color }: { color?: string }) => (
-  <div className="shop-awning" aria-hidden="true" style={color ? ({ '--aw': color } as CSSProperties) : undefined} />
-)
-
 export function ShopShelf({
   wares,
   services,
   selectedId,
   onPick,
   short,
+  sold = 0,
   children,
 }: {
   wares: readonly Offer[]
@@ -41,14 +37,32 @@ export function ShopShelf({
   selectedId: string | null
   onPick: (id: string) => void
   short: (o: Offer) => number
+  /** Wares bought off this shelf: their cubbies stay, stamped SOLD. */
+  sold?: number
   children?: ReactNode
 }) {
   return (
     <OfferPick
       className="shop"
       groups={[
-        { label: "The merchant's wares", offers: wares, foot: () => '', className: 'shop-wares', wrap: 'shop-shelf' },
-        { label: 'At the counter', offers: services, foot: (o) => (o.id === 'merchant-repair' ? 'Repair' : 'Restock'), className: 'shop-counter' },
+        {
+          label: "The merchant's wares",
+          offers: wares,
+          foot: () => '',
+          className: 'shop-wares',
+          wrap: 'shop-shelf',
+          // A bought ware leaves an empty cubby with a stamp, not a gap: the
+          // shelf keeps its shape and the sale is seen to have happened.
+          trailing: Array.from({ length: sold }, (_, i) => (
+            <span key={`sold${i}`} className="pk-tok shop-sold" aria-hidden="true">
+              <span className="shop-sold-stamp">Sold</span>
+            </span>
+          )),
+          columns: wares.length + sold,
+        },
+        // A service says what it gives ("Cargo +25%", "New wares"), not just its
+        // verb: "Repair" read as item durability, which the game does not have.
+        { label: 'At the counter', offers: services, foot: (o) => o.sub ?? '', className: 'shop-counter' },
       ]}
       selectedId={selectedId}
       onPick={onPick}
