@@ -136,7 +136,7 @@ function buildBase(): Record<string, unknown> {
     // …and the Twinblade Harness under its pre-round-3 id, `ambidextrous`.
     relics: ['ledger', 'charter', 'warding_stone', 'ambidextrous'],
     feats: { starter: 'swing', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
-    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: classicHero('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
+    merchant: { items: [{ item: epic('oneHand'), price: 40 }], repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [classicHero('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
     // v15: a staked contract one city in, so the fuzz lands on every field of it.
     contract: {
@@ -206,7 +206,6 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   const heroes: Sentinel[] = [
     ...snap.roster,
     ...snap.recruitOptions,
-    ...(snap.merchant?.recruit ? [snap.merchant.recruit.sentinel] : []),
     ...(snap.crossroads?.recruits ?? []),
   ]
   for (const s of heroes) assertFiniteCombat(s, team, where)
@@ -678,6 +677,19 @@ describe('v10 → v11: heroes have no HP', () => {
   })
 })
 
+describe('Oct 2026: a merchant sells goods only', () => {
+  it('loads a save whose merchant still carried a hire, and drops the hire', () => {
+    const raw = buildBase() as Record<string, unknown> & { merchant: Record<string, unknown> }
+    raw.merchant = { ...raw.merchant, recruit: { sentinel: classicHero('rogue'), price: 80 } }
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.merchant).not.toBeNull()
+    expect('recruit' in snap!.merchant!).toBe(false)
+    expect(snap!.merchant!.items.length).toBeGreaterThan(0)
+    assertPlayable(snap!, 'a save with a merchant hire')
+  })
+})
+
 describe('round 3 (Q5): the off hand takes off-hand things only', () => {
   const owned = (snap: { roster: Sentinel[]; inventory: Item[] }) =>
     [...snap.inventory, ...snap.roster.flatMap((s) => [s.equipment.mainHand, s.equipment.offHand, s.equipment.body])]
@@ -790,7 +802,7 @@ function buildCharterBase(): Record<string, unknown> {
   const brand = generateItem(rng, { kind: 'Saffron Brand', rarity: 'rare' })
   useGameStore.setState({
     roster: [{ ...s.roster[0], equipment: { ...s.roster[0].equipment, mainHand: brand } }],
-    merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], recruit: null, repair: { hp: 5, price: 70 }, rerolls: 0 },
+    merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], repair: { hp: 5, price: 70 }, rerolls: 0 },
     // A charter one waypoint in: it paid nothing there, and waits on nothing.
     contract: { ...s.contract!, paid: [0], cargoAt: [90], earned: 60 },
   })

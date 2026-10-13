@@ -248,7 +248,7 @@ export interface Offer {
    * line under its name.
    */
   locked?: string
-  /** A real sprite for a row that is a hero (the merchant's recruit). */
+  /** A real sprite for a row that is a hero (a recruit). */
   rowArt?: string
   /**
    * LS3: one plain line under a row's name (the first-run hero pick's role
@@ -682,33 +682,6 @@ function merchantOffers(st: St): Offer[] {
       disabled: st.gold < e.price,
     },
   }))
-  if (m.recruit) {
-    const r = m.recruit
-    out.push({
-      id: r.sentinel.id,
-      // What they carry rides in the row's own label: a merchant row is a line
-      // of text, and "Sable" alone did not say this was a hero for hire, let
-      // alone what kind (Wave 1). There is no class: the kit is the kind.
-      title: `${r.sentinel.name} · ${kitName(r.sentinel)} for hire`,
-      sub: kitName(r.sentinel),
-      rowArt: heroLookArt(r.sentinel),
-      dim: st.gold < r.price,
-      color: heroLookVar(r.sentinel),
-      glyph: GLYPH[lookOf(r.sentinel)],
-      cost: { amount: r.price, currency: 'gold' },
-      ...heroBits(r.sentinel),
-      // A merchant hire is one of the five choices that pays the choice tax, and
-      // the merchant is a map special, so the visit step is already on the bill.
-      body: [...heroBody(r.sentinel), ...strengthNote(st, THREAT_FREE_CHOICE)],
-      action: {
-        label: 'Recruit',
-        cost: { amount: r.price, currency: 'gold' },
-        done: `${r.sentinel.name} joins your heroes`,
-        run: () => st.buyMerchantRecruit(),
-        disabled: st.gold < r.price || st.roster.length >= MAX_ROSTER,
-      },
-    })
-  }
   out.push(...merchantServiceOffers(st))
   out.push(leaveOffer(st))
   return out

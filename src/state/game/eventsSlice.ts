@@ -35,7 +35,6 @@ export interface EventActions {
   chooseHeroMutation: (heroId: string, mutationId: string) => void
   finishCrossroads: () => void
   buyMerchantItem: (itemId: string) => void
-  buyMerchantRecruit: () => void
   leaveEvent: () => void
   acceptShrine: () => void
   declineShrine: () => void
@@ -172,15 +171,6 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     })
   },
 
-  buyMerchantRecruit: () => {
-    const { merchant, gold, roster } = get()
-    if (!merchant?.recruit || gold < merchant.recruit.price || roster.length >= MAX_ROSTER) return
-    set({
-      gold: gold - merchant.recruit.price,
-      ...withRecruits(roster, [merchant.recruit.sentinel], get().inventory, get().relics),
-      merchant: { ...merchant, recruit: null },
-    })
-  },
 
   leaveEvent: () => {
     const { event } = get()

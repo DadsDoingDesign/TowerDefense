@@ -19,7 +19,7 @@ import { useMapFocus } from './mapFocus'
 
 /** What each special stop is, in one line — the preview's whole body for a non-fight. */
 const SPECIAL_BLURB: Record<string, string> = {
-  merchant: 'Items for gold, and sometimes a hero for hire.',
+  merchant: 'Items for gold, and a wagon repair.',
   shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
   recruit: 'A hero looking for work. Take one on or walk on.',
   campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,

@@ -11,6 +11,8 @@ import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
+import { isShopService, ShopAwning, ShopShelf } from './ShopFront'
+import { companyById } from '../../game/data/companies'
 import { VolumeSlider } from './VolumeSlider'
 import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
@@ -186,6 +188,7 @@ export function PageScreen({
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
+  const shopOpen = useGameStore((s) => s.event?.kind === 'merchant' && !!s.merchant)
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
@@ -273,6 +276,9 @@ export function PageScreen({
   // strip are the head, and the board's own detail says the rest. The flavour
   // line cost a row of chrome on every stop of every run.
   const eventBoard = inRunBoard && !titleOverride
+  // The merchant is a little shop on the road (Oct 2026): an awning over its
+  // sign, its wares on a shelf, its services on the counter (`ShopFront`).
+  const isShop = eventBoard && shopOpen
   const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
@@ -291,7 +297,7 @@ export function PageScreen({
   const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
   const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
   // A one-tap choice is always a row, even alone: the row IS its commit.
-  const asRows = (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+  const asRows = !isShop && (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
 
   // The selected offer's detail. On a row chooser it opens under its row.
   const detail = selected ? (
@@ -351,7 +357,9 @@ export function PageScreen({
       // The hero pick is branded to the contract: the hiring company's cloth
       // over the title, your militia's flag under it (Oct 2026).
       brand={
-        heroPick && contract ? (
+        isShop ? (
+          <ShopAwning color={contract?.company ? companyById(contract.company).color : undefined} />
+        ) : heroPick && contract ? (
           <ContractBanner
             company={contract.company}
             crates={contract.crates}
@@ -366,7 +374,7 @@ export function PageScreen({
       // can ARM (`confirm`): there the CTA stays pinned, so arming (which adds
       // the notice and the confirm above it) moves nothing under the finger.
       compact={!selected?.action?.confirm}
-      tone={ctx.board?.tone}
+      tone={isShop ? 'shop' : ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
@@ -511,7 +519,26 @@ export function PageScreen({
       {/* A row chooser opens the detail under the row it belongs to (Oct
           2026, the designer: "helper text should expand below each
           selection"); a portrait chooser keeps it under the strip. */}
-      {selected && !asHeroes && !asRows && detail}
+      {selected && !asHeroes && !asRows && !isShop && detail}
+
+      {isShop && (
+        <ShopShelf
+          wares={choices.filter((o) => !isShopService(o))}
+          services={choices.filter(isShopService)}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={(o) => (o.cost ? shortfall(o.cost) : 0)}
+        >
+          {selected && (
+            // No scroll-into-view ref: the card stands right under the counter,
+            // and bringing a long one into view slid the shelf off the top.
+            <div className="shop-detail">
+              {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+              <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+            </div>
+          )}
+        </ShopShelf>
+      )}
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle

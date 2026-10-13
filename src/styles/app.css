@@ -487,31 +487,35 @@
   background:
     repeating-linear-gradient(135deg, rgba(208, 86, 58, 0.06) 0 6px, transparent 6px 14px),
     linear-gradient(rgba(10, 6, 4, 0.34), rgba(10, 6, 4, 0.18));
-  border-bottom: 1px dashed rgba(239, 131, 104, 0.45);
+  border-bottom: 1px dashed rgba(239, 131, 104, 0.28);
 }
 .rm-zone.cleared {
   bottom: 0;
   background: linear-gradient(rgba(111, 206, 136, 0.07), rgba(111, 206, 136, 0.02));
 }
 .rm-zone-tag {
+  /* Background, not a control (the designer: "make them feel more in the bg
+     and not so cluttered with the map selections"). Was a bordered red /
+     green pill on the frontier line, which a four-node row's corner nodes sat
+     on top of. Now a caption up the map's left margin, in the muted label
+     ink and dimmer still, read bottom to top: no box, no border, no colour of
+     its own. The zone's shading says the same thing; this only names it. */
   position: absolute;
-  z-index: 1;
-  transform: translateY(-50%);
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(20, 15, 10, 0.92);
-  line-height: 1.2;
+  left: 3px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0.6;
   pointer-events: none;
 }
+/* Rising from the line into the ground ahead… */
 .rm-zone-tag.danger {
-  left: 8px;
-  color: var(--bad-text);
-  border: 1px solid rgba(239, 131, 104, 0.45);
+  translate: 0 calc(-100% - 8px);
 }
+/* …and falling from it into the ground behind. */
 .rm-zone-tag.cleared {
-  right: 8px;
-  color: var(--good);
-  border: 1px solid rgba(111, 206, 136, 0.4);
+  translate: 0 8px;
 }
 
 .map-node {

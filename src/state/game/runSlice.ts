@@ -10,7 +10,7 @@ import { restoreNameCounters } from '../../game/data/sentinels'
 import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
-import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
+import { GATE_REPAIR, merchantLuck, MAX_ROSTER, rollMerchantShelf } from '../../game/run/economy'
 import { carryPlacements, emptyPlacements, encounterNode, firstFightOf } from '../../game/run/map'
 import { groundFor } from '../../game/run/fields'
 import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run/terrain'
@@ -20,7 +20,7 @@ import { useSettingsStore } from '../settingsStore'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
-import { hubExtras, recruitSlate, scaledRecruit } from '../../game/run/recruits'
+import { hubExtras, recruitSlate } from '../../game/run/recruits'
 import { bonusItemsFor } from '../../game/run/hq'
 import { soldText, stow } from '../../game/run/inventory'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
@@ -416,12 +416,11 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
         kinds: get().itemPool,
         priceMult: priceMultOf(contract),
       })
-      const recruit =
-        roster.length < MAX_ROSTER
-          ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: routePrice(RECRUIT_PRICE, contract) }
-          : null
-      // The wagon repair is on every counter (Phase 3b): the comeback.
-      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
+      // No hire on the counter (Oct 2026, the designer: "merchant shouldn't
+      // offer people for hire"): a merchant sells goods; heroes join at a
+      // recruit stop or a fork. The wagon repair is on every counter (Phase
+      // 3b): the comeback.
+      set({ event: { kind: 'merchant', nodeId }, merchant: { items, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
       return
     }
     if (node.type === 'campfire') {

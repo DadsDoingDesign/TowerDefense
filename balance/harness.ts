@@ -1006,7 +1006,7 @@ export function freshHero(archetype: Archetype, rng: RNG): Sentinel {
  * from `src/game/run/economy.ts` (pure, no zustand), re-exported so the run
  * model charges exactly what the store charges. They used to be mirrored here.
  */
-export { ITEM_PRICE, MAX_ROSTER, RECRUIT_PRICE } from '../src/game/run/economy'
+export { ITEM_PRICE, MAX_ROSTER } from '../src/game/run/economy'
 
 /**
  * The level a hire arrives at **with no meta unlocks**: the roster's median

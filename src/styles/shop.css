@@ -1,0 +1,198 @@
+/**
+ * The merchant as a little shop on the road (`ui/shell/ShopFront.tsx`, Oct
+ * 2026). An awning in the road's colour, the page's one title hung under it
+ * as a wooden sign (the home's signpost wood), the wares on a shelf with paper
+ * price tags, the services on a counter. Built from the pick-one parts
+ * (`pick.css`): only the dressing is here.
+ */
+
+/* ------------------------------------------------------------ the awning */
+.shop-awning {
+  --aw: var(--accent);
+  --aw-w: 22px;
+  align-self: stretch;
+  height: 30px;
+  margin: -4px 0 0;
+  background:
+    linear-gradient(180deg, rgba(255, 240, 210, 0.16), transparent 30%, rgba(0, 0, 0, 0.28)),
+    repeating-linear-gradient(90deg, var(--aw) 0 var(--aw-w), var(--paper) var(--aw-w) calc(var(--aw-w) * 2));
+  /* A flat run of canvas, then one scallop per stripe hanging off its edge. */
+  mask:
+    linear-gradient(#000 0 0) top / 100% 19px no-repeat,
+    radial-gradient(circle at 50% 0, #000 10.5px, transparent 11px) 0 19px / var(--aw-w) 11px repeat-x;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+/* ------------------------------------------------------------ the sign */
+.pg.tone-shop .pg-head {
+  text-align: center;
+}
+.pg.tone-shop .t-title {
+  position: relative;
+  display: inline-block;
+  margin-top: 14px;
+  padding: 2px 20px 4px;
+  border: 1px solid var(--sign-rim);
+  border-radius: 5px;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.14) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.28) calc(100% - 3px)),
+    repeating-linear-gradient(180deg, transparent 0 9px, rgba(0, 0, 0, 0.07) 9px 11px),
+    var(--sign-wood);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  color: var(--sign-ink);
+}
+/* Two cords from the awning to the sign. */
+.pg.tone-shop .t-title::before,
+.pg.tone-shop .t-title::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  width: 2px;
+  height: 15px;
+  background: var(--sign-rim);
+}
+.pg.tone-shop .t-title::before {
+  left: 18%;
+}
+.pg.tone-shop .t-title::after {
+  right: 18%;
+}
+
+/* ------------------------------------------------------------ the shelf */
+.shop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+.shop-shelf {
+  position: relative;
+  padding: 0 4px 12px;
+}
+/* The plank the wares stand on. */
+.shop-shelf::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  border: 1px solid var(--sign-rim);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.18) 0 2px, transparent 2px, rgba(0, 0, 0, 0.3)),
+    var(--sign-wood);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+.shop .pk-tok {
+  background: rgba(10, 6, 3, 0.4);
+  border-color: rgba(233, 205, 150, 0.14);
+}
+.shop .pk-tok[aria-checked='true'] {
+  background: var(--panel-3);
+}
+/* The card is under the counter, not under the token: no caret. */
+.shop .pk-tok[aria-checked='true']::after {
+  display: none;
+}
+.shop-wares .pk-tok {
+  height: 100px;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+.shop-ware {
+  display: grid;
+  place-items: center;
+}
+/* A ware stands at 3× its sprite (48px, an integer scale) on the shelf. */
+.shop-wares .shop-ware > .fw-i {
+  --fw-i-size: var(--icon-lg);
+}
+/* Its rarity, as the rarity tag's pips, in the cubby's top-left corner
+   (anchored to the cubby, `.pk-tok`, so neither corner mark touches the art). */
+.shop-ware-pips {
+  position: absolute;
+  top: 6px;
+  left: 7px;
+}
+/* …and its damage type in the top-right one. */
+.shop-ware-mark {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  line-height: 0;
+}
+.shop-ware-mark .fw-i {
+  --fw-i-size: 16px;
+}
+/* The price: a paper tag at the ware's foot. On the shelf it carries the
+   price alone (the rarity is the token's rail and the card's kicker); on the
+   counter it names the service too. */
+.shop .pk-foot {
+  align-items: center;
+  margin: 0 -2px -1px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+.shop .pk-label {
+  color: var(--paper-ink-2);
+}
+.shop-wares .pk-foot {
+  justify-content: center;
+}
+.shop-wares .pk-label {
+  display: none;
+}
+.shop .pk-value,
+.shop .pk-tok[aria-checked='true'] .pk-value {
+  color: var(--paper-ink);
+}
+.shop .pk-value.warn,
+.shop .pk-tok[aria-checked='true'] .pk-value.warn {
+  color: var(--bad);
+}
+
+/* ------------------------------------------------------------ the counter */
+.shop-counter {
+  padding: 6px;
+  border: 1px solid var(--sign-rim);
+  border-radius: var(--r-md);
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.12) 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(0, 0, 0, 0.12) 46px 48px),
+    var(--sign-wood);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+.shop-counter .pk-tok {
+  flex-direction: row;
+  align-items: center;
+  height: 52px;
+  gap: 6px;
+}
+.shop-counter .pk-art {
+  flex: none;
+}
+.shop-counter .pk-foot {
+  flex: 1 1 auto;
+}
+
+.shop-empty {
+  margin: 0;
+  padding: 18px 8px;
+  text-align: center;
+  color: var(--muted);
+}
+.shop-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The card is the box: its specifics sit on it, not in a second one. */
+.shop-detail .pg-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}

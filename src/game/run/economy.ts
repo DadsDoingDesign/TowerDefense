@@ -13,8 +13,6 @@ export const MAX_ROSTER = 5
 
 
 export const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
-/** What a merchant charges for the hire on its shelf. */
-export const RECRUIT_PRICE = 80
 /** Gold recovered when scrapping an item, by rarity (gold is the only currency). */
 const SCRAP_GOLD: Record<ItemRarity, number> = { common: 8, rare: 18, epic: 40, legendary: 75, mythic: 130 }
 export const scrapGold = (item: Item): number => SCRAP_GOLD[item.rarity]

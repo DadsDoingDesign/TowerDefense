@@ -3577,3 +3577,40 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     notices on the home.
   - **Known:** a four-node row's tabs sit edge to edge. They don't overlap.
 
+- **Oct 2026 · The merchant is a little shop, and sells goods only.** The
+  designer: "merchant shouldn't offer people for hire and it needs to be more
+  aesthetic with our UI — like a real little store on the way through the
+  journey".
+  - **No hire:** the counter's recruit is gone (store, shell, the balance
+    sim). Heroes join at a recruit stop or a fork. A save made at a merchant
+    that still held a hire loads with it dropped (tested).
+  - **The stall** (`ui/shell/ShopFront.tsx`, `styles/shop.css`):
+    - an awning in the road's colour, scalloped;
+    - the page's one title hung under it on two cords, as a wooden sign in
+      the home signposts' wood;
+    - the wares as cubbies on a plank, each 48px (3× its sprite), with its
+      price on a paper tag, rarity pips top-left and damage mark top-right;
+    - the repair and restock on a wooden counter;
+    - the focused option in a `PickCard`, and the CTA buys it.
+
+    It is the pick-one pattern, so a tap focuses and never spends.
+  - **Fixed on the way:**
+    - the awning first rendered 0px wide (a centred flex column);
+    - the rarity word truncated on the price tags ("E…"), so pips replaced it;
+    - the card nested a second box;
+    - a tap scrolled a long card into view and slid the shelf off the top;
+    - a specificity clash drew the damage mark at 48px over the sword.
+  - **Verified** on phone (390) and desk (1280), plus a click-through: buy
+    (gold, pack and shelf all move), repair (cargo HP up, the repair leaves
+    the counter) and restock (a fresh shelf).
+
+- **Oct 2026 · The map's "Cleared" / "Not cleared yet" go to the background.**
+  The designer: "very cluttered — make them feel more in the bg". They were
+  bordered red and green pills on the frontier line, and a four-node row's
+  corner nodes sat on them. Now they are two muted `.field-k` captions
+  written up the map's left margin: one rising from the line into the ground
+  ahead, one falling into the ground behind, with no box, border or colour of
+  their own. A first try kept them on the line without boxes; in a crowded
+  row the words still ran behind nodes, because the row gap is about 12px.
+  Verified on phone and desk.
+

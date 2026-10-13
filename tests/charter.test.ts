@@ -38,7 +38,7 @@ import { STANDING_XP, standingXpFor } from '../src/game/run/standing'
 import { crateKinds, MAX_BONUS_ITEMS, rollPull } from '../src/game/run/hq'
 import { encounterNode } from '../src/game/run/map'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
-import { ITEM_PRICE, RECRUIT_PRICE } from '../src/game/run/economy'
+import { ITEM_PRICE } from '../src/game/run/economy'
 import { useGameStore } from '../src/state/gameStore'
 import { useMetaStore } from '../src/state/metaStore'
 import { devCharter } from '../src/state/devCharter'
@@ -349,7 +349,8 @@ describe('the Sovereign Route, in the store', () => {
     g().selectNode(merchant.id)
     const m = g().merchant!
     for (const e of m.items) expect(e.price).toBe(ITEM_PRICE[e.item.rarity] * CHARTER_PRICE_MULT)
-    if (m.recruit) expect(m.recruit.price).toBe(RECRUIT_PRICE * CHARTER_PRICE_MULT)
+    // A merchant sells goods only: no hire on the counter (Oct 2026).
+    expect('recruit' in m).toBe(false)
     expect(m.repair!.price).toBe(70)
     g().leaveEvent()
     // A fight: the route's own ground.
