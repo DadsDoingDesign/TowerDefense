@@ -119,7 +119,10 @@ result. Append a short note to the review log when you're done.
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
   Every offer board that commits on its CTA (the spoils, the merchant) is
-  one through `OfferPick.tsx`, not rows. The merchant is dressed as a roadside shop (`ShopFront.tsx`,
+  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place:
+  `StopScene.tsx` over the title (hung as its sign, `stops.css`) and the
+  world's line for that node (`stopScene.ts`) as the subtitle.
+  The merchant is dressed as a roadside shop (`ShopFront.tsx`,
   `styles/shop.css`: awning, hanging sign, wares on a shelf, services on a
   counter). It sells goods only, with no hire on the counter.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a
