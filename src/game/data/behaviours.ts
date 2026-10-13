@@ -175,8 +175,19 @@ export const COLOSSUS_SPLIT: Extract<EnemyBehaviour, { kind: 'bossSplit' }> = {
   radius: 24,
 }
 
-/** No resistance may pass this — the same cap the elite modifiers obey. */
+/** No resistance may pass this — a goblin's own, and a shield-bearer's aura on it. */
 export const RESIST_CAP = 0.55
+
+/**
+ * The cap an ARMOUR modifier (Plated, Warded; `enemies.ENEMY_MODS`) may take a
+ * goblin to — above `RESIST_CAP`, because an armoured fight is shown on the
+ * map and can be planned for (Oct 2026). Measured by `balance/armour-eval.ts`
+ * at 55 / 65 / 70%: at 55% a company of the wrong damage type needed only
+ * ×1.5 the damage (most of a column never reached the cap), at 65% ×1.8–2.0,
+ * at 70% ×2.0–2.3. 65% is "much harder, never unkillable" — the open type
+ * still goes straight through.
+ */
+export const ARMOUR_CAP = 0.65
 
 // ---------------------------------------------------------------- specialists
 

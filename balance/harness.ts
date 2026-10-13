@@ -571,6 +571,8 @@ export interface RunBattleOptions {
   subWaves?: boolean
   /** The Sovereign Route's muster: every goblin clan from the first fight (`waves` `muster`). */
   muster?: boolean
+  /** An ordinary fight's armour, as the node deals it (`waves.nodeArmour`). */
+  mod?: string | null
   /** What a leak steals, as a multiplier on its Gate damage (a stake's raiders steal more, `DifficultyRules.leakMult`). */
   baseDamageMul?: number
   /**
@@ -678,6 +680,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
       variantId: opts.variantId,
       subWaves: opts.subWaves,
       muster: opts.muster,
+      mod: opts.mod,
     })
   if (opts.pressure != null && opts.pressure !== 1) wave = scaleWave(wave, opts.pressure, opts.pressureModel)
   const engine = new GameEngine({

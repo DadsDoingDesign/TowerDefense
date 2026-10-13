@@ -3550,3 +3550,30 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - **Docs:** both are rows in DESIGN_SYSTEM § 8's jobs table.
   - **Verified on a phone-shaped portrait field:** posted, tapped (picked
     up, details shut), then Details (opens the hero).
+
+- **Oct 2026 · Armoured fights are on the map, and some ordinary fights wear
+  armour.** The designer: "if enemies resist a certain type, show that on
+  the map. They should be unkillable by other types, just much harder —
+  like an elite you can plan to take on."
+  - **The tab:** every fight still ahead whose goblins wear a modifier
+    carries a tab on its top edge: a "no" sign over the damage mark it shrugs
+    off, then the word (PLATED in steel, WARDED in violet; SWIFT in amber with
+    its speed mark, unstruck). The Context panel still explains it on focus,
+    and the CTA names it ("March to Plated Swarm").
+  - **First pass failed the glance test:** a 22px corner pip with a struck
+    16px mark was mud at phone size, and the corners are where a four-node
+    row's nodes touch. The named tab replaced it. A frontier-row tab then ran
+    into the "Cleared ↓" tag, so the tab sits low on the edge (top −6px,
+    above the tag's layer).
+  - **The rule behind it:** a share of ordinary fights from depth 3 now come
+    Plated or Warded (`waves.nodeArmour`), and Ironvein's road leans Plated
+    and Moonquill's Warded. Armour rose to 65% (`ARMOUR_CAP`) after
+    `balance/armour-eval.ts`; the ordinary cap stays 55%.
+  - **The road says it too:** Ironvein's and Moonquill's notices carry a
+    chip beside their ground ("Plated raiders", "Warded raiders") with the
+    tab's mark, so the lean is known when the contract is chosen.
+  - **Verified** on the running app, phone (390) and desk (1280), on the
+    Ironvein and Moonquill roads, a focused Plated node's panel, and both
+    notices on the home.
+  - **Known:** a four-node row's tabs sit edge to edge. They don't overlap.
+

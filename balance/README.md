@@ -36,6 +36,7 @@ npx tsx balance/meta-sweep.ts 240 phase3b   # the Phase 3b scoreboard: route / b
 npx tsx balance/meta-sweep.ts 300 mc        # §6's Monte Carlo alone, for fitting the Threat curve
 npx tsx balance/meta-sweep.ts 1 map         # map shape: forks, stops, forced elites
 npx tsx balance/hazard-sweep.ts mc+banner 300 0.75,1,3,3,10   # Q1 danger-ground levers vs §6 / §11 / §13
+npx tsx balance/armour-eval.ts 40               # armour fairness: matched / mixed / wrong-type companies vs Plated and Warded at 55 / 65 / 70%
 npx tsx balance/fit-curve.ts 170 2.7 1.44 0.515 200   # a candidate waves.ts curve, against §6 AND §11
 npx tsx balance/tune.ts 600 fresh carto mc             # §11 lines, §12 Cartographer and §6 at n=600, on every core
 npx tsx balance/tune.ts 600 ends fresh mc              # the contract gates' ends (zero-meta escort, veteran escort + 8 crates), §11, §6 + boss kills

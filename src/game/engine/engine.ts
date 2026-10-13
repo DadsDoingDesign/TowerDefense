@@ -213,7 +213,9 @@ export function takenMult(e: Pick<RtEnemy, 'type' | 'shield' | 'brittle'>, type:
   // The bearer HARDENS armour; it cannot create it. Only a type the body
   // already resists gets the aura, so an elite modifier's open damage type
   // (Plated's magic, Warded's steel) stays open — the modifiers' one promise.
-  const resist = e.shield > 0 && base > 0 ? Math.min(RESIST_CAP, base + e.shield) : base
+  // The aura stops at `RESIST_CAP`, but never takes armour away: an armoured
+  // goblin already past the cap (`ARMOUR_CAP`) keeps its own.
+  const resist = e.shield > 0 && base > 0 ? Math.max(base, Math.min(RESIST_CAP, base + e.shield)) : base
   return type === 'physical' && e.brittle ? (1 - resist) * BRITTLE_MULT : 1 - resist
 }
 

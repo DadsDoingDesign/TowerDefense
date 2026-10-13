@@ -49,7 +49,7 @@ import { fieldFor, mapById } from '../src/game/data/maps'
 import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
 import type { GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
-import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
+import { encounterSeed, nodeArmour, type EncounterKind } from '../src/game/data/waves'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
@@ -530,6 +530,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   // Rosethread's trade-off: every merchant price doubles on the Sovereign Route.
   const price = (n: number) => (charter && parts.prices ? routePrice(n, { company: null, charter: true }) : n)
   const muster = charter && parts.muster
+  // The road's armour lean (`charter.encounterRulesOf`): Ironvein plate, Moonquill wards.
+  const armourRules = { allElite: false, eliteDepth: 0, armourLean: !charter && k?.company ? companyById(k.company).armour : undefined }
   const cities: { pay: number; cargo: number; gold: number; earned: number }[] = []
   /** A body joining the company: a random hire from the run's kinds, named apart. */
   const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
@@ -765,6 +767,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       rules: o.rules,
       subWaves: o.subWaves,
       muster,
+      // An armoured ordinary fight, as `selectNode` deals it on this road.
+      mod: nodeArmour(node, seed, armourRules),
       // A stake's last leg (and the muster) steals more (`DifficultyRules`).
       baseDamageMul: banner.leakMult * legMult(banner, node.layer),
     })
@@ -1043,6 +1047,7 @@ function monteCarloRunOnce(
       map: fieldFor(actField.id, rule, 'landscape', hazard) ?? actField,
       autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
+      mod: nodeArmour({ ...mcNode, row: 0 }, hashSeed(r, 'mc')),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),
       baseHp,
       // A cap, not a clock (Phase 3a). This was 70s and a capped battle was a

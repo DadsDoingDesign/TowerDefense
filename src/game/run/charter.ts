@@ -201,9 +201,16 @@ export function routeOf(c: RouteRef): RouteView {
   return { name: co.name, goods: co.goods, color: co.color, towns: co.towns }
 }
 
-/** The encounter rules a contract's road fields its waves under: the muster on the Sovereign Route, else none. */
-export const encounterRulesOf = (c: RouteRef | null | undefined): NodeEncounterRules | undefined =>
-  isCharter(c) ? { allElite: false, eliteDepth: 0, muster: true } : undefined
+/**
+ * The encounter rules a contract's road fields its waves under: the muster on
+ * the Sovereign Route; on a company's road, the armour its goblins lean to
+ * (`Company.armour`); else none.
+ */
+export function encounterRulesOf(c: RouteRef | null | undefined): NodeEncounterRules | undefined {
+  if (isCharter(c)) return { allElite: false, eliteDepth: 0, muster: true }
+  const lean = c?.company ? companyById(c.company).armour : undefined
+  return lean ? { allElite: false, eliteDepth: 0, armourLean: lean } : undefined
+}
 
 /** The merchant's price multiplier on a contract's road. */
 export const priceMultOf = (c: RouteRef | null | undefined): number => (isCharter(c) ? CHARTER_PRICE_MULT : 1)

@@ -771,7 +771,7 @@ const asksFor = (label: string): string | null => {
  * always shown the roster; the shell dropped it, and with it the only way to
  * counter-pick a wave. Worse, the game's central tactical axis was never shown
  * ANYWHERE: TNT goblins resist magic and barrel goblins resist physical — with
- * `ENEMY_MODS` on top, anywhere from 5% to the 55% `RESIST_CAP` — which is the
+ * `ENEMY_MODS` on top, anywhere from 5% to the 65% `ARMOUR_CAP` — which is the
  * entire point of an elite's armour column and the entire reason a mystic and a
  * rogue are different answers, and a player could only learn it by osmosis.
  * Both are read straight off `ENEMY_TYPES`.

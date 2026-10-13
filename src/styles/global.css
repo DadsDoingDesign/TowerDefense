@@ -59,6 +59,11 @@
   --warn: #e0b23a;
   --bad: #d0563a;
   --info: #6fb0d8;
+  /* An armoured fight's ring on the run map (`.mn-armour`): Plated is cold
+     steel, Warded the ward's violet. Rings only: the struck mark inside the
+     badge carries the meaning, the colour tells the two apart at a glance. */
+  --armour-plated: #a9b9c9;
+  --armour-warded: #b28cf0;
 
   /* Danger and teal as TEXT (M27e). `--bad` is 3.66:1 on `--panel` and 3.02:1
      on the `--surface` wash — it fails AA at body size in the one place where

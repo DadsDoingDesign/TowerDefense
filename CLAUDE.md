@@ -64,7 +64,12 @@ result. Append a short note to the review log when you're done.
   share against the weights' bands. Gallery through the real draw code:
   `harness/fields.html`; tests `tests/fieldGen.test.ts`.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
-  1–5); waves `src/game/data/waves.ts`.
+  1–5); waves `src/game/data/waves.ts`. Armour: Plated / Warded (`ENEMY_MODS`)
+  reach `ARMOUR_CAP` (65%), everything else stops at `RESIST_CAP` (55%), and
+  each leaves the other damage type open. The elite columns wear one, and so
+  does a share of ordinary fights (`waves.nodeArmour`, leaning to the road's
+  `Company.armour`). The run map tabs every such node (`.mn-armour`, via
+  `encounterPreview.nodeModFor`). `balance/armour-eval.ts` measures fairness.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
