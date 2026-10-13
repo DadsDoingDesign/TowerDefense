@@ -81,7 +81,6 @@ import {
   heroDps,
   ITEM_PRICE,
   MAX_ROSTER,
-  RECRUIT_PRICE,
   runBattle,
   scaledRecruitLevel,
   PLAYER,
@@ -640,8 +639,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
 
     if (node.type === 'merchant') {
       // Four items rolled the way `selectNode` rolls them — with the roster's
-      // damage-type demand and the run's drought luck — at the store's prices,
-      // plus a hire at 80g.
+      // damage-type demand and the run's drought luck — at the store's prices.
+      // No hire: a merchant sells goods only (Oct 2026).
       const luck = merchantLuck(node.layer)
       // The counter's Gate repair, bought when the Gate is hurting (Phase 3b).
       if (baseHp <= meta.maxBaseHp * 0.65 && gold >= price(GATE_REPAIR.price)) {
@@ -665,10 +664,6 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         stock.splice(stock.indexOf(best.item), 1)
         equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
-      }
-      if (roster.length < MAX_ROSTER && gold >= price(RECRUIT_PRICE)) {
-        gold -= price(RECRUIT_PRICE)
-        hire()
       }
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
       roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))

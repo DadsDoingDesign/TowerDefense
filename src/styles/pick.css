@@ -389,3 +389,45 @@
     color: var(--accent-text);
   }
 }
+
+/* ------------------------------------------------------------ offer boards */
+/* `OfferPick` (Oct 2026): the spoils, the merchant — every offer board that
+   commits on its CTA. An offer's token carries its picture, its rarity as the
+   rarity tag's pips in the top-left corner, and its damage type in the
+   top-right one, anchored to the token so neither touches the picture. */
+.pk-ware {
+  display: grid;
+  place-items: center;
+}
+.pk-ware-pips {
+  position: absolute;
+  top: 6px;
+  left: 7px;
+}
+.pk-ware-mark {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  line-height: 0;
+}
+.pk-ware-mark .fw-i {
+  --fw-i-size: 16px;
+}
+/* Several strips share one card, which stands under the last of them: the
+   caret would point into the next strip. */
+.pk-offers .pk-tok[aria-checked='true']::after {
+  display: none;
+}
+.pk-offer-card .pk-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The card is the box: its specifics sit on it, not in a second one. */
+.pk-offer-card .pg-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+

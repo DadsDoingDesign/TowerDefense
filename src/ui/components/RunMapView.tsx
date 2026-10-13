@@ -149,12 +149,14 @@ export function RunMapView() {
           <>
             <div className="rm-zone danger" style={{ height: frontierY }} aria-hidden="true" />
             <div className="rm-zone cleared" style={{ top: frontierY }} aria-hidden="true" />
-            {/* The tags sit ON the line: halfway between two rows, where no node is. */}
+            {/* Captions, not controls: written up the map's left margin, where
+                no node stands, one rising from the line into the ground ahead,
+                one falling from it into the ground behind. */}
             <span className="rm-zone-tag danger field-k" style={{ top: frontierY }}>
-              ↑ Not cleared yet
+              Not cleared yet
             </span>
             <span className="rm-zone-tag cleared field-k" style={{ top: frontierY }}>
-              Cleared ↓
+              Cleared
             </span>
           </>
         )}

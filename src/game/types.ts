@@ -383,7 +383,7 @@ export interface EnemyType {
  */
 export type EnemyBehaviour =
   /** Torch shaman: every `interval` s, heal allies within `radius` by `heal` × their max HP. */
-  | { kind: 'healPulse'; radius: number; heal: number; interval: number }
+  | { kind: 'healPulse'; radius: number; heal: number; interval: number; charges: number }
   /** Torch berserker: below `below` of max HP, moves `speedMult`× faster. */
   | { kind: 'enrage'; below: number; speedMult: number }
   /**

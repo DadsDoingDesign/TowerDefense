@@ -80,7 +80,7 @@ export function recruitTargetLevel(roster: readonly Pick<Sentinel, 'level'>[], t
  * player, and the level-up surfaces offer it like any other.
  *
  * **Seasoned Recruits applies here too (M18).** Every mid-run body comes
- * through this one funnel (crossroads, recruit node, merchant, endless room,
+ * through this one funnel (crossroads, recruit node, endless room,
  * and the endless fallback hire), so applying the hub's stat bonus here covers
  * all five sites at once and cannot be forgotten by the next one that is added.
  */

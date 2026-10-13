@@ -21,7 +21,7 @@
  *    and previewing them moves nothing. The kit they show is the kit they
  *    get: the items are generated off that hashed generator too, under
  *    isolated ids for the preview and real ids when one is chosen.
- *  - A HIRE (recruit node, merchant, crossroads, Endless rooms, the hub's
+ *  - A HIRE (recruit node, crossroads, Endless rooms, the hub's
  *    extra heroes) is rolled off the loot stream the caller passes, as hires
  *    always were, and its skill is the hashed `recruitSkill`.
  *

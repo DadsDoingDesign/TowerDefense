@@ -249,6 +249,7 @@ export function enemyBehaviourState(key: string, reward: number) {
     leapt: false,
     leapOver: null as string | null,
     healNextAt: 0,
+    healLeft: 0,
     healReadyAt: 0,
     healed: 0,
     piece: false,
@@ -342,6 +343,8 @@ export interface RtEnemy {
   leapOver: string | null
   /** Shaman: next pulse. Everyone: earliest time a pulse may heal it again. */
   healNextAt: number
+  /** Shaman: pulses it has left (`HEAL_PULSE.charges`). */
+  healLeft: number
   healReadyAt: number
   /** HP a heal added THIS tick — the tick differ subtracts it so a heal cannot hide a hit. */
   healed: number
@@ -1015,6 +1018,7 @@ export class GameEngine {
       // First pulse half an interval in, so a shaman does something before it
       // reaches the first tower rather than exactly one interval after spawning.
       healNextAt: heal ? this.elapsed + heal.interval / 2 : 0,
+      healLeft: heal?.charges ?? 0,
     }
   }
 
@@ -1103,8 +1107,9 @@ export class GameEngine {
         if (e.hp <= 0) break
         switch (b.kind) {
           case 'healPulse':
-            if (this.elapsed >= e.healNextAt) {
+            if (e.healLeft > 0 && this.elapsed >= e.healNextAt) {
               e.healNextAt += b.interval
+              e.healLeft--
               this.healPulse(e, b.radius, b.heal, b.interval)
             }
             break

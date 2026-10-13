@@ -11,9 +11,19 @@ import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
+import { isShopService, ShopShelf } from './ShopFront'
+import { StopScene } from './StopScene'
+import { isStopKind, stopLine, type StopKind } from './stopScene'
+import { shelfSize } from '../../game/run/relics'
+
+import { OfferPick } from './OfferPick'
+import { companyById } from '../../game/data/companies'
 import { VolumeSlider } from './VolumeSlider'
 import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
+
+/** Each stop's page tone: how its sign and its cards are dressed (`stops.css`). */
+const STOP_TONE: Record<StopKind, 'shop' | 'camp' | 'shrine' | 'recruit'> = { merchant: 'shop', campfire: 'camp', shrine: 'shrine', recruit: 'recruit' }
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -186,6 +196,11 @@ export function PageScreen({
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
+  const shopOpen = useGameStore((s) => s.event?.kind === 'merchant' && !!s.merchant)
+  const event = useGameStore((s) => s.event)
+  // Wares bought off this shelf: a full shelf is `shelfSize`, a restock refills it.
+  const shopSold = useGameStore((s) => (s.merchant ? Math.max(0, shelfSize(s.relics) - s.merchant.items.length) : 0))
+  const spoilsOpen = useGameStore((s) => !s.event && !!s.reward?.length)
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
@@ -273,7 +288,17 @@ export function PageScreen({
   // strip are the head, and the board's own detail says the rest. The flavour
   // line cost a row of chrome on every stop of every run.
   const eventBoard = inRunBoard && !titleOverride
-  const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
+  // The merchant is a little shop on the road (Oct 2026): an awning over its
+  // sign, its wares on a shelf, its services on the counter (`ShopFront`).
+  const isShop = eventBoard && shopOpen
+  // The spoils are a pick board too (Oct 2026): the same strip-and-card as the
+  // level-up pick, the hero pick and the shop.
+  const isSpoils = eventBoard && !isShop && spoilsOpen
+  // A stop on the road is drawn as a place (Oct 2026, `StopScene`): its scene
+  // over the title, and what the world says there as the subtitle — the one
+  // line an event board carries again, now that it is the story, not chrome.
+  const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : null
+  const subtitle = subtitleOverride ?? (stop && event ? stopLine(stop, event.nodeId) : eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
   // page that spends one currency does not need the other. Reading the prices
@@ -291,7 +316,33 @@ export function PageScreen({
   const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
   const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
   // A one-tap choice is always a row, even alone: the row IS its commit.
-  const asRows = (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+  const asRows = !isShop && !isSpoils && (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+
+  // The selected offer's specifics: the stats, the lines, the extras. A row
+  // chooser opens them under its row with the name on top; a pick board
+  // (`OfferPick`) puts them on the focused offer's card.
+  const detailBody = selected ? (
+    <>
+      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
+      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
+      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
+      {selected.info && (
+        <p className="pg-info-line">
+          {selected.info.label}
+          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
+        </p>
+      )}
+      {selected.sliders?.length ? (
+        <div className="pg-sliders">
+          {selected.sliders.map((d) => (
+            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  ) : null
 
   // The selected offer's detail. On a row chooser it opens under its row.
   const detail = selected ? (
@@ -311,24 +362,7 @@ export function PageScreen({
           <RarityTag rarity={selected.rarity} />
         </p>
       ) : null}
-      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
-      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
-      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
-      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
-      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
-      {selected.info && (
-        <p className="pg-info-line">
-          {selected.info.label}
-          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
-        </p>
-      )}
-      {selected.sliders?.length ? (
-        <div className="pg-sliders">
-          {selected.sliders.map((d) => (
-            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
-          ))}
-        </div>
-      ) : null}
+      {detailBody}
     </div>
   ) : null
 
@@ -351,7 +385,9 @@ export function PageScreen({
       // The hero pick is branded to the contract: the hiring company's cloth
       // over the title, your militia's flag under it (Oct 2026).
       brand={
-        heroPick && contract ? (
+        stop ? (
+          <StopScene kind={stop} color={contract?.company ? companyById(contract.company).color : undefined} />
+        ) : heroPick && contract ? (
           <ContractBanner
             company={contract.company}
             crates={contract.crates}
@@ -366,7 +402,7 @@ export function PageScreen({
       // can ARM (`confirm`): there the CTA stays pinned, so arming (which adds
       // the notice and the confirm above it) moves nothing under the finger.
       compact={!selected?.action?.confirm}
-      tone={ctx.board?.tone}
+      tone={stop ? STOP_TONE[stop] : ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
@@ -511,7 +547,31 @@ export function PageScreen({
       {/* A row chooser opens the detail under the row it belongs to (Oct
           2026, the designer: "helper text should expand below each
           selection"); a portrait chooser keeps it under the strip. */}
-      {selected && !asHeroes && !asRows && detail}
+      {selected && !asHeroes && !asRows && !isShop && !isSpoils && detail}
+
+      {isSpoils && (
+        <OfferPick
+          groups={[{ label: title, offers: choices, foot: (o) => (o.sub ? o.sub.charAt(0).toUpperCase() + o.sub.slice(1) : '') }]}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={() => 0}
+        >
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
+        </OfferPick>
+      )}
+
+      {isShop && (
+        <ShopShelf
+          wares={choices.filter((o) => !isShopService(o))}
+          services={choices.filter(isShopService)}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={(o) => (o.cost ? shortfall(o.cost) : 0)}
+          sold={shopSold}
+        >
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
+        </ShopShelf>
+      )}
 
       {/* The selected thing's second action belongs with it, above the ways
           out — "Raise rarity" reading below "Leave" put the exit in the middle

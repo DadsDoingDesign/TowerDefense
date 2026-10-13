@@ -167,7 +167,6 @@ export interface RunRecap {
 
 export interface MerchantStock {
   items: { item: Item; price: number }[]
-  recruit: { sentinel: Sentinel; price: number } | null
   /** The wagon repair on this stall's counter (Phase 3b): null once bought. */
   repair?: { hp: number; price: number } | null
   /** How many times this stall's shelf has been rerolled (each costs more). */

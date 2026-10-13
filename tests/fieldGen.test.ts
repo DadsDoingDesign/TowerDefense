@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FIELD_PROFILES, generateField, scoreField, withinBands } from '../src/game/data/fieldGen'
-import { FIRST_MAP, KILN_MAP } from '../src/game/data/maps'
+import { FIELD_PROFILE_IDS, FIELD_PROFILES, generatedFieldDef, generateField, genFieldId, parseGenFieldId, scoreField, withinBands } from '../src/game/data/fieldGen'
+import { fieldFor, FIRST_MAP, KILN_MAP, mapById } from '../src/game/data/maps'
 import { CARAVAN_BOX, caravanLayout } from '../src/game/render/caravan'
 
 /*
@@ -74,3 +74,35 @@ describe('procedural battlefields', () => {
     expect(kiln.tight).toBe(0)
   })
 })
+
+describe('generated fields in runs (Oct 2026)', () => {
+  it('a generated id rebuilds the same field, named, with each challenge\'s ground', () => {
+    for (const profile of FIELD_PROFILE_IDS) {
+      for (let seed = 11; seed < 31; seed++) {
+        const id = genFieldId(profile, seed * 9973)
+        expect(parseGenFieldId(id)).toEqual({ profile, seed: seed * 9973 })
+        const def = generatedFieldDef(id)!
+        expect(def, id).not.toBeNull()
+        expect(def.name).toMatch(/^The \w+('s)? \w+$/)
+        expect(mapById(id)!.path).toEqual(def.path)
+        // Flooded and burning battles lay ground on it, off the road.
+        for (const rule of ['flooded', 'wildfire'] as const) {
+          const m = fieldFor(id, rule, 'landscape')!
+          const kind = rule === 'flooded' ? 'water' : 'fire'
+          const laid = (m.tiles ?? []).filter((t) => t.block === kind)
+          expect(laid.length, `${id} ${rule}`).toBeGreaterThanOrEqual(rule === 'flooded' ? 8 : 12)
+          expect(m.slots.length, `${id} ${rule}`).toBeGreaterThan(60)
+        }
+        // And a phone's portrait twin.
+        expect(fieldFor(id, null, 'portrait')!.orientation).toBe('portrait')
+      }
+    }
+  })
+
+  it('an id that is not a generated field resolves to nothing', () => {
+    expect(parseGenFieldId('greenline')).toBeNull()
+    expect(parseGenFieldId('gen.spiral.12')).toBeNull()
+    expect(generatedFieldDef('gen.nope.1')).toBeNull()
+  })
+})
+

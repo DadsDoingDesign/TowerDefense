@@ -386,9 +386,15 @@ agree it, then edit this section.
 | `CompanyFlag` (UI) / `companyStandard` (canvas) | A trading company's identity: on its road and notice, and over the wagon on its contract | The player's militia (that is its own flag, `Banner`) |
 | Map armour tab (`.mn-armour`) | Says, from the map and before the march, what every goblin in a fight wears: Plated / Warded with the damage type it shrugs off struck through, Swift with its speed. On every fight still ahead, so a road can be planned | Explaining the modifier (the Context panel does that on focus) or the node's kind (its picture and label) |
 | Road armour chip (`.mn-chip.is-armour`) | Says, on a company's notice, the armour its road's goblins lean to ("Plated raiders"), with the map tab's struck mark: a road fact, like its ground | Saying which fights are armoured (the map's tabs do that, per node) |
+| Offer pick (`OfferPick`, `.pk-offers`) | Every offer board that commits on its CTA (the spoils, the shop): picture tokens with rarity pips and damage mark, one card for the focused offer, the CTA takes or buys it. The same pick-one parts as the hero, skill and city picks | Committing on a tap (the campfire's one-tap rows do that, by design) |
+| Stop scene (`StopScene`, `stops.css`) | Says where on the road you have stopped: the place drawn over the page's one title (the merchant's awning, the campfire's night and fire, the shrine's stone and glow, the recruiter's tent), the title hung as its sign | Saying what the stop offers (its cards do) |
+| Stop line (the stop's subtitle, `stopScene.stopLine`) | What the world says at this stop, one line on a paper slip, fixed per node: the story of the road | Explaining a rule or an offer (never: the cards say it) |
+| Shop SOLD cubby (`.shop-sold`) | Shows a ware was bought off this shelf: the cubby stays, stamped | Anything for sale |
+| Shop shelf (`ShopShelf`, `.shop-wares`) | Shows every ware at once, with its price on a paper tag, its rarity pips and damage mark in the corners; a tap focuses one | Describing a ware (the card) or buying it (the CTA) |
+| Shop counter (`.shop-counter`) | Holds the stall's services, the wagon repair and the restock, apart from its wares | Selling goods (the shelf) |
 | `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
-| Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above) | Marking which nodes you can reach (the node states do that) |
+| Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above); two muted captions up the left margin name the two grounds, in the background | Marking which nodes you can reach (the node states do that) |
 | Decoration (rods, finials, cloth, meadow) | Sets the scene at the margins | Carrying information alone; sitting on the play field |
 
 A new part gets a row here, with its job, before it ships.

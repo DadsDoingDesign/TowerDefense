@@ -197,6 +197,55 @@ function layRocks(rng: RNG, road: Vec2[], count: number): TerrainPiece[] {
   return out
 }
 
+/**
+ * A map challenge's ground on a generated field (Oct 2026: generated fields
+ * go into runs). The hand-made fields author theirs by hand — "two ponds, each
+ * on the best ground of its part of the field", "five burning patches, one on
+ * each bend's best ground" — so this lays them by the same rule: rank the
+ * open tiles by how much road they reach, and take the best, spread apart.
+ * Route ground with no pieces of its own (quarry, hexed) deepens the seeded
+ * hazards instead, as on every field.
+ */
+function layRuleGround(rng: RNG, road: Vec2[], rocks: readonly TerrainPiece[]): FieldDef['rules'] {
+  const taken = new Set(rocks.map(([c, r]) => `${c},${r}`))
+  const centre = (c: number, r: number): Vec2 => ({ x: 20 + 40 * c, y: 20 + 40 * r })
+  // Road samples every 10px, for reach.
+  const samples: Vec2[] = []
+  for (let i = 0; i < road.length - 1; i++) {
+    const a = road[i]
+    const b = road[i + 1]
+    const n = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 10))
+    for (let k = 0; k < n; k++) samples.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n })
+  }
+  const reach = (p: Vec2) => samples.filter((q) => q.x >= 0 && q.x <= 960 && Math.hypot(q.x - p.x, q.y - p.y) <= 120).length
+  const open = (c: number, r: number) => c >= 2 && c <= 20 && r >= 2 && r <= 10 && !taken.has(`${c},${r}`) && distToRoad(centre(c, r), road) > 28
+  const ranked: { c: number; r: number; v: number }[] = []
+  for (let c = 2; c <= 20; c++) for (let r = 2; r <= 10; r++) if (open(c, r)) ranked.push({ c, r, v: reach(centre(c, r)) + rng.next() })
+  ranked.sort((a, b) => b.v - a.v)
+  const lay = (kind: 'water' | 'fire', shapes: readonly (readonly [number, number])[], count: number, apart: number): TerrainPiece[] => {
+    const out: TerrainPiece[] = []
+    const anchors: Vec2[] = []
+    const used = new Set<string>()
+    for (const { c, r } of ranked) {
+      if (anchors.length >= count) break
+      if (anchors.some((a) => Math.hypot(a.x - centre(c, r).x, a.y - centre(c, r).y) < apart)) continue
+      const [w, h] = shapes[anchors.length % shapes.length]
+      const cells = patch(c, r, kind, w, h)
+      if (!cells.every(([cc, rr]) => open(cc, rr) && !used.has(`${cc},${rr}`))) continue
+      for (const [cc, rr] of cells) used.add(`${cc},${rr}`)
+      out.push(...cells)
+      anchors.push(centre(c, r))
+    }
+    return out
+  }
+  return {
+    // Two ponds on the best ground, well apart.
+    flooded: lay('water', [[3, 2], [2, 3]], 2, 200),
+    // Five burning patches, one per stretch of good ground.
+    wildfire: lay('fire', [[2, 2], [2, 1], [2, 2], [1, 2], [2, 2]], 5, 130),
+  }
+}
+
 function distToSeg(p: Vec2, a: Vec2, b: Vec2): number {
   const dx = b.x - a.x
   const dy = b.y - a.y
@@ -299,6 +348,8 @@ export function withinBands(sc: FieldScore, w: FieldWeights): boolean {
 
 export interface GeneratedField {
   map: GameMap
+  /** The definition it was built from: road, rocks and each map challenge's pieces. */
+  def: FieldDef
   score: FieldScore
   /** The seed of the try that was kept (the deal is reproducible from it). */
   seed: number
@@ -318,13 +369,65 @@ export function generateField(seed: number, w: FieldWeights, opts: { id?: string
     const rng = new RNG(trySeed)
     const road = walkRoad(rng, w)
     if (!road) continue
-    const def: FieldDef = { id: opts.id ?? `gen${trySeed}`, name: opts.name ?? 'A new road', path: road, posts: {}, pieces: [], rules: {} }
-    const bare = mapFromDef(def)
+    const bareDef: FieldDef = { id: opts.id ?? `gen${trySeed}`, name: opts.name ?? 'A new road', path: road, posts: {}, pieces: [], rules: {} }
+    const bare = mapFromDef(bareDef)
     const score = scoreField(bare)
     if (!withinBands(score, w)) continue
     const rocks = layRocks(rng, road, rng.int(w.rocks[0], w.rocks[1]))
-    const map = rocks.length ? mapFromDef({ ...def, pieces: rocks }) : bare
-    return { map, score: rocks.length ? scoreField(map) : score, seed: trySeed, tries: i + 1 }
+    // The map challenges' ground, off its own RNG so laying it moves no road
+    // and no rock: what a flooded or burning battle lays on this field.
+    const rules = layRuleGround(new RNG((trySeed ^ 0x5bd1e995) >>> 0), road, rocks)
+    const def: FieldDef = { ...bareDef, pieces: rocks, rules }
+    const map = rocks.length ? mapFromDef(def) : bare
+    return { map, def, score: rocks.length ? scoreField(map) : score, seed: trySeed, tries: i + 1 }
   }
   return null
+}
+
+// ---------------------------------------------------------------------------
+// Generated fields in runs (Oct 2026)
+// ---------------------------------------------------------------------------
+
+/** The profiles a run deals from, in a fixed order (a hash picks among them). */
+export const FIELD_PROFILE_IDS = Object.keys(FIELD_PROFILES) as readonly string[]
+
+/**
+ * A generated field's id: `gen.<profile>.<seed>`. The id IS the recipe — the
+ * same id always rebuilds the same field — so a save stores it like any
+ * hand-made field's id, and `maps.mapById` resolves it.
+ */
+export const genFieldId = (profile: string, seed: number): string => `gen.${profile}.${seed >>> 0}`
+
+/** The profile and seed of a generated field id, or null for any other id. */
+export function parseGenFieldId(id: string): { profile: string; seed: number } | null {
+  const m = /^gen\.([a-z]+)\.(\d+)$/.exec(id)
+  if (!m || !FIELD_PROFILES[m[1]]) return null
+  const seed = Number(m[2])
+  return Number.isSafeInteger(seed) ? { profile: m[1], seed } : null
+}
+
+const NAME_A = ['Bramble', 'Ashen', 'Gravel', 'Hollow', 'Copper', 'Mossy', 'Thistle', 'Cinder', 'Willow', 'Flint', 'Heather', 'Rook', 'Barrow', 'Saltreed', 'Oxbow', 'Tanner'] as const
+const NAME_B = ['Road', 'Way', 'Track', 'Pass', 'Lane', 'Run', 'Trail', 'Crossing'] as const
+/** A generated field's name, from its seed: "The Bramble Way". */
+export const genFieldName = (seed: number): string => {
+  const r = new RNG((seed ^ 0x2c1b3c6d) >>> 0)
+  return `The ${r.pick(NAME_A)} ${r.pick(NAME_B)}`
+}
+
+/** Built definitions, most recent first — a run touches three, the balance suite thousands. */
+const GEN_CACHE = 48
+let genDefs: { id: string; def: FieldDef | null }[] = []
+
+/**
+ * The definition a generated field id stands for, or null when the id is not
+ * one, or its seed dealt no road inside the bands (`run/fields` never deals
+ * such an id: it checks first).
+ */
+export function generatedFieldDef(id: string): FieldDef | null {
+  const hit = genDefs.find((e) => e.id === id)
+  if (hit) return hit.def
+  const g = parseGenFieldId(id)
+  const def = g ? (generateField(g.seed, FIELD_PROFILES[g.profile].weights, { id, name: genFieldName(g.seed) })?.def ?? null) : null
+  genDefs = [{ id, def }, ...genDefs].slice(0, GEN_CACHE)
+  return def
 }

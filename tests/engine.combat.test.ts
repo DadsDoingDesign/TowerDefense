@@ -21,7 +21,7 @@ import { classicHero } from '../src/game/data/sentinels'
 import { generateEncounter, nodeEncounter, subWaveCount } from '../src/game/data/waves'
 import { commandsFor, HOLD, RALLY } from '../src/game/data/commands'
 import { relicById, relicCommands, relicSupported, relicTeamMods } from '../src/game/data/relics'
-import { BOMBER_LOB, COLOSSUS_SPLIT } from '../src/game/data/behaviours'
+import { BOMBER_LOB, COLOSSUS_SPLIT, HEAL_PULSE } from '../src/game/data/behaviours'
 import { GamePath } from '../src/game/core/path'
 import {
   BRITTLE_MULT,
@@ -103,6 +103,18 @@ describe('the behaviour kit (Phase 3a)', () => {
     expect(threat.behaviourStats.healPulses).toBeLessThan(first.behaviourStats.healPulses)
     expect(threat.behaviourStats.hpHealed).toBeLessThan(first.behaviourStats.hpHealed)
     expect(threat.leaks).toBeLessThanOrEqual(first.leaks)
+  })
+
+  it('a shaman runs out of pulses: a held pack cannot out-heal a hero for ever', () => {
+    // A tough shaman held by a fighter for minutes: it pulses ten times, then
+    // stops (Oct 2026 — unlimited, a held pack stalled a battle with no clock).
+    const e = engineFor([at('torch3_shaman', 0, 400)], [['fighter', P.s1]])
+    let held = 0
+    runOut(e, 60 * 240, (eng) => {
+      if (eng.enemies[0]?.blockedBy) held++
+    })
+    expect(held).toBeGreaterThan(60 * 40)
+    expect(e.behaviourStats.healPulses).toBe(HEAL_PULSE.charges)
   })
 
   it('a berserker enrages below its threshold and walks faster for it', () => {

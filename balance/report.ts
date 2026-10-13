@@ -16,8 +16,11 @@ import { BASE_INTEREST, HQ_UPGRADES, ROAD_SHARE } from '../src/game/run/hq'
 import { MIN_OBSTACLES } from '../src/game/data/hazards'
 import { hashSeed, RNG } from '../src/game/core/rng'
 import { effectiveHp, ENEMY_TYPES } from '../src/game/data/enemies'
-import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength, pickBattleMap } from '../src/game/data/maps'
+import { ALL_MAPS, FIRST_MAP, legacyPostTile, mapById, orientationOf, orientField, pathLength } from '../src/game/data/maps'
 import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
+import { FIELD_PROFILE_IDS, parseGenFieldId } from '../src/game/data/fieldGen'
+/** A dealt field's kind for a tally: a generated road's profile, else the hand-made field's id. */
+const fieldKind = (id: string): string => parseGenFieldId(id)?.profile ?? id
 import { TILE } from '../src/game/data/terrain'
 import { RARITY, RARITY_ORDER, generateItem } from '../src/game/data/items'
 import { computeCombat } from '../src/game/engine/combat'
@@ -1189,9 +1192,11 @@ if (want(6)) {
   const mcFieldCounts = new Map<string, { n: number; won: number }>()
   for (let r = 0; r < RUNS; r++) {
     const out = monteCarloRun(r)
-    const fieldTally = mcFieldCounts.get(out.fieldId) ?? { n: 0, won: 0 }
+    // Generated roads (Oct 2026) are tallied by profile: every run's road is its own.
+    const fieldKey = fieldKind(out.fieldId)
+    const fieldTally = mcFieldCounts.get(fieldKey) ?? { n: 0, won: 0 }
     fieldTally.n++
-    mcFieldCounts.set(out.fieldId, fieldTally)
+    mcFieldCounts.set(fieldKey, fieldTally)
     if (out.finalAttempt) { bossAttempts++; if (out.bossThreat !== null) mcBossThreats.push(out.bossThreat) }
     if (out.finalKill) bossKills++
     mcTimeouts += out.timeouts
@@ -2232,6 +2237,8 @@ if (want(12)) {
 
 /** How far below zero-meta a purchase may measure before it is a defect. */
 const HUB_TOLERANCE = 0.03
+/** Fresh seeds a flagged §12 cell is re-measured on before it fails (Oct 2026). */
+const HUB_CONFIRM_RUNS = Number(process.env.FW_HUB_CONFIRM_RUNS) || 600
 /**
  * The lines the hub gate is read off: **all of them**.
  *
@@ -2331,10 +2338,10 @@ function bandRead(p: number, se: number, band: [number, number]): string {
 }
 
 interface HubCell { winRate: number; wins: number[]; marks: number }
-function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS): HubCell {
+function hubCell(meta: Loadout, policy: RoutePolicy, banner = difficultyRules(0), runs = HUB_RUNS, from = 0): HubCell {
   const wins: number[] = []
   const marks: number[] = []
-  for (let i = 0; i < runs; i++) {
+  for (let i = from; i < from + runs; i++) {
     const r = simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { meta, difficulty: banner, policy })
     wins.push(r.won ? 1 : 0)
     marks.push(r.marks)
@@ -2360,6 +2367,8 @@ if (want(12)) {
   for (const p of POLICIES) hubZero[p.id] = hubCell(ZERO_META, p)
 
   const hubCells = new Map<string, HubCell[]>()
+  /** Flagged cells the confirmation run cleared (see the gate below). */
+  const hubConfirmed: string[] = []
   line(`| Hub state | ${POLICIES.map((p) => p.id).join(' | ')} | worst gated Δ |`)
   line(`|---|${'--:|'.repeat(POLICIES.length)}--:|`)
   for (const [label, upgrades] of HUB_STATES) {
@@ -2382,14 +2391,32 @@ if (want(12)) {
       worst = Math.min(worst, deltas[i])
       const tol = Math.max(HUB_TOLERANCE, pairedTolerance(cells[i].wins, hubZero[POLICIES[i].id].wins))
       if (deltas[i] + tol < 0) {
-        failures.push(
-          `HQ purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero HQ's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor). An HQ purchase may add breadth; it may never remove baseline viability.`,
-        )
+        // Confirm before failing (Oct 2026). The table is ~40 one-sided 2 s.e.
+        // tests on 210 seeds, so one flags by chance more often than not —
+        // Scouts 2 read −10pt on the specials line at 210 and −0.7 ±4.1 at
+        // 600. A flagged cell is re-measured on HUB_CONFIRM_RUNS fresh seeds
+        // (after the table's), zero HQ beside it, and fails only if the drop
+        // holds there. A real regression holds; a sampling fluke does not.
+        const zeroC = hubCell(ZERO_META, POLICIES[i], difficultyRules(0), HUB_CONFIRM_RUNS, HUB_RUNS)
+        const cellC = hubCell(loadoutFor(label, upgrades), POLICIES[i], difficultyRules(0), HUB_CONFIRM_RUNS, HUB_RUNS)
+        const dC = cellC.winRate - zeroC.winRate
+        const tolC = Math.max(HUB_TOLERANCE, pairedTolerance(cellC.wins, zeroC.wins))
+        const note = `${label} on the ${POLICIES[i].id} line read ${(deltas[i] * 100).toFixed(0)}pt (±${(tol * 100).toFixed(0)}) on the table's ${HUB_RUNS} seeds; on ${HUB_CONFIRM_RUNS} fresh seeds ${dC >= 0 ? '+' : '−'}${Math.abs(dC * 100).toFixed(1)}pt (±${(tolC * 100).toFixed(1)})`
+        if (dC + tolC < 0) {
+          failures.push(
+            `HQ purchase "${label}" LOWERS the win rate: ${pct(cells[i].winRate)} against zero HQ's ${pct(hubZero[POLICIES[i].id].winRate)} on the ${POLICIES[i].id} line (Δ ${(deltas[i] * 100).toFixed(0)}pt, beyond the ±${(tol * 100).toFixed(0)}pt paired noise floor), and it held on ${HUB_CONFIRM_RUNS} fresh seeds (${note}). An HQ purchase may add breadth; it may never remove baseline viability.`,
+          )
+        } else hubConfirmed.push(note)
       }
     }
     line(`| ${label} | ${cellText.join(' | ')} | ${worst === Infinity ? '—' : `${worst >= 0 ? '+' : '−'}${Math.abs(worst * 100).toFixed(0)}pt`} |`)
   }
   line('')
+  if (hubConfirmed.length) {
+    line(`**Flagged, then cleared on confirmation** (a cell the table flags is re-measured on ${HUB_CONFIRM_RUNS} fresh seeds before it fails):`)
+    for (const n of hubConfirmed) line(`- ${n}: noise, not a defect.`)
+    line('')
+  }
   line('**The invariant.** No HQ state — any office alone, or everything the HQ sells — may')
   line('measure below zero HQ by more than the paired')
   line(`noise floor (2 s.e., minimum ${pct(HUB_TOLERANCE)}) on any of the gated routing lines`)
@@ -3257,7 +3284,8 @@ if (want(14)) {
   const dealtField = new Map<string, number>()
   for (let i = 0; i < VARIETY_RUNS; i++) {
     const rs = hashSeed(i, 'variety')
-    dealtField.set(pickBattleMap(rs).id, (dealtField.get(pickBattleMap(rs).id) ?? 0) + 1)
+    const act1 = fieldKind(actFieldId(rs, 1))
+    dealtField.set(act1, (dealtField.get(act1) ?? 0) + 1)
     const n = generateEncounter(4, 'normal', { seed: encounterSeed(rs, 4) })
     const nv = variantsFor('normal', 4).find((v) => n.label.includes(v.label) || v.id === 'patrol')
     dealtNormal.set(n.label, (dealtNormal.get(n.label) ?? 0) + 1)
@@ -3407,10 +3435,13 @@ if (want(14)) {
       `Two battle nodes in the same map layer differ by only ${pct(worstLayerMix)} body-mix distance at ${worstLayerCell} (kind:depth:width; floor ${pct(MIN_SAME_LAYER_DIFF)}). A fork between two identical fights is not a fork.`,
     )
   }
-  /** The map draw must not be degenerate. */
-  const MIN_FIELD_SHARE = 0.3
+  /**
+   * The map draw must not be degenerate: no road profile (Oct 2026; the two
+   * hand-made fields before) may land in under 60% of a fair share.
+   */
   const fieldShares = [...dealtField.values()].map((v) => v / VARIETY_RUNS)
-  if (ALL_MAPS.length > 1 && Math.min(...fieldShares) < MIN_FIELD_SHARE) {
+  const MIN_FIELD_SHARE = 0.6 / FIELD_PROFILE_IDS.length
+  if (dealtField.size < FIELD_PROFILE_IDS.length || Math.min(...fieldShares) < MIN_FIELD_SHARE) {
     failures.push(
       `Battlefield selection is lopsided: the rarest field lands in ${pct(Math.min(...fieldShares))} of ${VARIETY_RUNS} seeds (floor ${pct(MIN_FIELD_SHARE)}).`,
     )

@@ -3577,3 +3577,110 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     notices on the home.
   - **Known:** a four-node row's tabs sit edge to edge. They don't overlap.
 
+- **Oct 2026 · The merchant is a little shop, and sells goods only.** The
+  designer: "merchant shouldn't offer people for hire and it needs to be more
+  aesthetic with our UI — like a real little store on the way through the
+  journey".
+  - **No hire:** the counter's recruit is gone (store, shell, the balance
+    sim). Heroes join at a recruit stop or a fork. A save made at a merchant
+    that still held a hire loads with it dropped (tested).
+  - **The stall** (`ui/shell/ShopFront.tsx`, `styles/shop.css`):
+    - an awning in the road's colour, scalloped;
+    - the page's one title hung under it on two cords, as a wooden sign in
+      the home signposts' wood;
+    - the wares as cubbies on a plank, each 48px (3× its sprite), with its
+      price on a paper tag, rarity pips top-left and damage mark top-right;
+    - the repair and restock on a wooden counter;
+    - the focused option in a `PickCard`, and the CTA buys it.
+
+    It is the pick-one pattern, so a tap focuses and never spends.
+  - **Fixed on the way:**
+    - the awning first rendered 0px wide (a centred flex column);
+    - the rarity word truncated on the price tags ("E…"), so pips replaced it;
+    - the card nested a second box;
+    - a tap scrolled a long card into view and slid the shelf off the top;
+    - a specificity clash drew the damage mark at 48px over the sword.
+  - **Verified** on phone (390) and desk (1280), plus a click-through: buy
+    (gold, pack and shelf all move), repair (cargo HP up, the repair leaves
+    the counter) and restock (a fresh shelf).
+
+- **Oct 2026 · The map's "Cleared" / "Not cleared yet" go to the background.**
+  The designer: "very cluttered — make them feel more in the bg". They were
+  bordered red and green pills on the frontier line, and a four-node row's
+  corner nodes sat on them. Now they are two muted `.field-k` captions
+  written up the map's left margin: one rising from the line into the ground
+  ahead, one falling into the ground behind, with no box, border or colour of
+  their own. A first try kept them on the line without boxes; in a crowded
+  row the words still ran behind nodes, because the row gap is about 12px.
+  Verified on phone and desk.
+
+- **Oct 2026 · Runs are fought on generated roads.** The designer: "the maps
+  aren't changing to the procedural ones". The generator was built and
+  galleried but not yet dealt. Now every act deals one (`run/fields`): a
+  profile (balanced, switchbacks, winding) that differs from the act
+  before's, and a road seed, each hashed from the run seed, so dealing one
+  moves no other roll.
+  - **Its id is its recipe** (`gen.<profile>.<seed>`): saves, twins,
+    challenge variants and danger ground all resolve through `mapById` /
+    `fieldFor` as for a hand-made field.
+  - **Names** come from the seed ("The Bramble Run").
+  - **Challenge ground:** flooded and burning battles get ponds and fires
+    laid on each road's best ground, by the hand-made fields' own rule.
+    Quarry and hexed deepen the seeded hazards, as everywhere.
+  - **Verified in the running game:**
+    - phone: act 1 on a portrait twin of a winding road;
+    - desk: act 2 under wildfire, with fires on the bends and the danger
+      ground over them;
+    - every road of 120 seeds × 3 acts builds;
+    - each profile lays ground for both challenges and has a twin.
+
+- **Oct 2026 · The spoils pick like every other pick.** The designer: "this
+  and upgrade selections are all the same type of interaction yet all feel so
+  different in how they are handled". The level-up skill pick, the hero pick
+  and the city payout were a strip of picture tokens over one card. The
+  spoils were rows whose detail unfolded inline, under a title that repeated
+  the row.
+  - **Now:** every offer board that commits on its CTA goes through one
+    component, `OfferPick`. Its tokens carry the picture, rarity pips and
+    damage mark, and a foot word ("To pack", "Relic"). One `PickCard` holds
+    the focused offer, edged in its rarity, and the CTA takes it.
+  - **The shop** is the same component in its stall dressing.
+  - **Fixed on the way:** a relic card said its effect twice ("Every 5th
+    shot of every hero pierces 2 more enemies" over "every 5th shot pierces
+    2 more"). A relic's line already states its whole effect, so the
+    generated lines are gone.
+  - **Left as it is:** the campfire's one-tap rows. They commit on the tap
+    by the designer's earlier call.
+  - **Verified** on phone and desk: an item focused, then the relic; and the
+    shop re-shot unchanged apart from the card's rarity edge.
+
+- **Oct 2026 · Every stop is a place on the road.** The designer: "do one
+  more design pass to really up the aesthetic … consider this for all the
+  special events — shrine and campfire — what's unique to them and makes it
+  lively for the story". The campfire, shrine and recruit stops were plain
+  pages under a serif title; only the merchant had become a shop.
+  - **One part, four dresses** (`StopScene`, `stops.css`):
+    - the merchant's awning in the road's colour;
+    - the campfire's starry night with a 16 × 16 pixel fire at 3×, its flame
+      flickering and its glow breathing;
+    - the shrine's stone wall and arch, with a violet glow and its mark;
+    - the recruiter's striped tent, its door open on the hire.
+  - **The sign:** the page's one title is hung under the scene on two cords,
+    in wood (charred for the campfire, cut stone with carved letters for the
+    shrine).
+  - **The line:** under the sign, what the world says there, on a paper slip
+    in the contract letters' voice. It is fixed per node, so two merchants on
+    one road differ. It brings back an event board's subtitle (cut in 3.5 as
+    chrome) as the road's story, never a rule.
+  - **Each stop's cards are dressed too:** the shrine's bargain is a stone
+    tablet with the gift in the good ink, and the campfire's choices sit in
+    its warm light.
+  - **Shop:**
+    - a bought ware's cubby stays on the shelf, stamped SOLD;
+    - the counter's tokens say what they give, "Cargo +25%" and "New wares".
+      The designer read "Repair" as item durability, which the game does not
+      have.
+  - **Motion:** flicker and glow stop under reduced motion.
+  - **Verified** on phone (all four stops) and desk, with a click-through:
+    buy (the SOLD cubby), repair and restock.
+

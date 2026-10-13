@@ -2,7 +2,8 @@
  * Start-of-run and leave-the-battle state: the shared reset objects every entry
  * and exit point spreads, so no two of them can drift apart.
  */
-import { pickBattleMap } from '../../game/data/maps'
+import { mapById } from '../../game/data/maps'
+import { actFieldId } from '../../game/run/fields'
 import { newRarityPity } from '../../game/data/items'
 import { addDifficultyElites, emptyPlacements, makeRun, mapOptionsFor } from '../../game/run/map'
 import { freshFeats } from '../../game/run/settle'
@@ -70,7 +71,8 @@ export function dealRunMap(rules: DifficultyRules = difficultyRules(0), runSeed 
 export function freshRunState(runSeed: number) {
   // This nulls `waveBeat` below; the timer holding it goes with it (F6).
   clearBeatTimer()
-  const battleMap = pickBattleMap(runSeed)
+  // Act 1's road, as `run/fields` deals it (a generated field, Oct 2026).
+  const battleMap = mapById(actFieldId(runSeed, 1))!
   return {
     runPhase: 'active' as RunPhase,
     runSettled: false,

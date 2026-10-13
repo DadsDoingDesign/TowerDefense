@@ -153,7 +153,6 @@ const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
-  recruit: { sentinel: Sentinel; price: number } | null
   /** v7: the wagon repair on the counter (null once bought). */
   repair?: { hp: number; price: number } | null
   /** v7: rerolls taken at this stall. */
@@ -753,8 +752,20 @@ function validRewardCard(raw: unknown): raw is RewardCard {
   return false
 }
 
-/** A merchant shelf: priced items, and either no recruit or a real one. */
-function validMerchant(raw: unknown): raw is MerchantStock {
+/**
+ * A merchant's counter as a save may hold it: a save from before Oct 2026 can
+ * carry the hire the counter used to offer. It is validated, migrated with
+ * every other hero a save holds, and then dropped on load (`dropHire`): a
+ * merchant sells goods only now.
+ */
+type SavedMerchant = MerchantStock & { recruit?: { sentinel: Sentinel; price: number } | null }
+const dropHire = (m: SavedMerchant): MerchantStock => {
+  const { recruit: _hire, ...rest } = m
+  return rest
+}
+
+/** A merchant shelf: priced items, and (an older save) either no recruit or a real one. */
+function validMerchant(raw: unknown): raw is SavedMerchant {
   if (!isObj(raw)) return false
   if (!Array.isArray(raw.items)) return false
   if (!raw.items.every((e) => isObj(e) && validItem(e.item) && isNum(e.price))) return false
@@ -1228,7 +1239,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     for (const i of inventory) legacyItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) legacyItem(e.item)
-      if ((merchant as MerchantStock).recruit) legacyStripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+      if ((merchant as SavedMerchant).recruit) legacyStripSentinels([(merchant as SavedMerchant).recruit!.sentinel])
     }
     for (const c of reward ?? []) if (c.item) legacyItem(c.item)
     if (crossroads) {
@@ -1246,7 +1257,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     for (const i of inventory) stripItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) stripItem(e.item)
-      if ((merchant as MerchantStock).recruit) stripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+      if ((merchant as SavedMerchant).recruit) stripSentinels([(merchant as SavedMerchant).recruit!.sentinel])
     }
     for (const c of reward ?? []) {
       stripItem(c.item)
@@ -1265,7 +1276,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // merchant's hire, the fork's recruits — is migrated and normalised.
   migrateSkills(roster, version)
   migrateSkills(recruitOptions, version)
-  if (merchant && isObj(merchant) && (merchant as MerchantStock).recruit) migrateSkills([(merchant as MerchantStock).recruit!.sentinel], version)
+  if (merchant && isObj(merchant) && (merchant as SavedMerchant).recruit) migrateSkills([(merchant as SavedMerchant).recruit!.sentinel], version)
   if (crossroads) migrateSkills(crossroads.recruits, version)
   const challenge = migrateChallenge(o.challenge)
   const clearedIds = arr<string>(o.clearedNodeIds)
@@ -1341,7 +1352,7 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // in the inventory), so a malformed entry is dropped rather than refusing
     // the run over a line of copy.
     lastLoot: arr<unknown>(o.lastLoot).filter(validItem),
-    merchant: merchant as MerchantStock | null,
+    merchant: merchant ? dropHire(merchant as SavedMerchant) : null,
     shrineOfferId: typeof o.shrineOfferId === 'string' ? o.shrineOfferId : null,
     recruitOptions,
     reward,
