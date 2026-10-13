@@ -96,7 +96,7 @@ export function pathLength(path: readonly Vec2[]): number {
  * tiles, and so the balance suite's fixed benches keep meaning "the tile where
  * `s3` used to be" ({@link legacyPostTile}).
  */
-interface FieldDef {
+export interface FieldDef {
   id: string
   name: string
   path: Vec2[]
@@ -269,6 +269,14 @@ function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | 
     ...(variant ? { baseId: def.id } : {}),
   }
 }
+
+/**
+ * A field built from its definition with no map challenge and no seeded
+ * hazards — what the procedural generator (`data/fieldGen.ts`) and its gallery
+ * build each candidate road into, through the same `buildField` as every
+ * shipped map.
+ */
+export const mapFromDef = (def: FieldDef): GameMap => buildField(def, null)
 
 export const FIRST_MAP: GameMap = buildField(GREEN, null)
 export const KILN_MAP: GameMap = buildField(KILN, null)

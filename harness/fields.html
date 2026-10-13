@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Sprites load from RELATIVE urls; pin the base to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Procedural fields — gallery</title>
+    <style>
+      body { margin: 0; padding: 24px; background: #201711; color: #f3e7d0; font: 13px/1.4 system-ui, sans-serif; }
+      h1 { margin: 0 0 4px; font: 700 28px Georgia, serif; }
+      h2 { margin: 28px 0 4px; font: 700 20px Georgia, serif; color: #f0c46a; }
+      .w { color: #d4c0a0; font-family: ui-monospace, monospace; font-size: 12px; margin-bottom: 10px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 480px); gap: 14px; }
+      figure { margin: 0; background: #241a11; border: 1px solid rgba(233,205,150,.15); border-radius: 8px; padding: 6px; }
+      canvas { display: block; width: 468px; height: 273px; border-radius: 4px; image-rendering: pixelated; }
+      figcaption { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: ui-monospace, monospace; font-size: 11.5px; color: #d4c0a0; }
+      figcaption b { color: #f3e7d0; }
+      .ref { color: #7dc0d2; }
+    </style>
+  </head>
+  <body>
+    <h1>Procedural battlefields</h1>
+    <p id="sub">Each field is drawn by the game's own <code>drawField</code> and <code>drawCaravan</code>. The roads come from <code>generateField(seed, weights)</code>; the scores from <code>scoreField</code>.</p>
+    <div id="out"></div>
+    <script type="module" src="/harness/fields.ts"></script>
+  </body>
+</html>

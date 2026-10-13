@@ -57,6 +57,12 @@ result. Append a short note to the review log when you're done.
   `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
   `settle.ts` (payout plan), `inventory.ts`, `map.ts`, `battle.ts`. Put a new
   rule here, not in a slice.
+- Procedural battlefields (in review, not wired into runs yet):
+  `src/game/data/fieldGen.ts` deals a road from (seed, `FieldWeights`) on a
+  lattice two tiles apart (2,220 or 2,300px, like the hand-made fields), and
+  `scoreField` measures corners, straights, choke tiles, one-tile gaps and edge
+  share against the weights' bands. Gallery through the real draw code:
+  `harness/fields.html`; tests `tests/fieldGen.test.ts`.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
   1–5); waves `src/game/data/waves.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
