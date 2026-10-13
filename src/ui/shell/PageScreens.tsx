@@ -12,6 +12,7 @@ import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { isShopService, ShopAwning, ShopShelf } from './ShopFront'
+import { OfferPick } from './OfferPick'
 import { companyById } from '../../game/data/companies'
 import { VolumeSlider } from './VolumeSlider'
 import { ContractBanner } from './contracts/parts'
@@ -189,6 +190,7 @@ export function PageScreen({
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
   const shopOpen = useGameStore((s) => s.event?.kind === 'merchant' && !!s.merchant)
+  const spoilsOpen = useGameStore((s) => !s.event && !!s.reward?.length)
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
@@ -279,6 +281,9 @@ export function PageScreen({
   // The merchant is a little shop on the road (Oct 2026): an awning over its
   // sign, its wares on a shelf, its services on the counter (`ShopFront`).
   const isShop = eventBoard && shopOpen
+  // The spoils are a pick board too (Oct 2026): the same strip-and-card as the
+  // level-up pick, the hero pick and the shop.
+  const isSpoils = eventBoard && !isShop && spoilsOpen
   const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
@@ -297,7 +302,33 @@ export function PageScreen({
   const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
   const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
   // A one-tap choice is always a row, even alone: the row IS its commit.
-  const asRows = !isShop && (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+  const asRows = !isShop && !isSpoils && (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+
+  // The selected offer's specifics: the stats, the lines, the extras. A row
+  // chooser opens them under its row with the name on top; a pick board
+  // (`OfferPick`) puts them on the focused offer's card.
+  const detailBody = selected ? (
+    <>
+      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
+      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
+      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
+      {selected.info && (
+        <p className="pg-info-line">
+          {selected.info.label}
+          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
+        </p>
+      )}
+      {selected.sliders?.length ? (
+        <div className="pg-sliders">
+          {selected.sliders.map((d) => (
+            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  ) : null
 
   // The selected offer's detail. On a row chooser it opens under its row.
   const detail = selected ? (
@@ -317,24 +348,7 @@ export function PageScreen({
           <RarityTag rarity={selected.rarity} />
         </p>
       ) : null}
-      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
-      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
-      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
-      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
-      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
-      {selected.info && (
-        <p className="pg-info-line">
-          {selected.info.label}
-          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
-        </p>
-      )}
-      {selected.sliders?.length ? (
-        <div className="pg-sliders">
-          {selected.sliders.map((d) => (
-            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
-          ))}
-        </div>
-      ) : null}
+      {detailBody}
     </div>
   ) : null
 
@@ -519,7 +533,18 @@ export function PageScreen({
       {/* A row chooser opens the detail under the row it belongs to (Oct
           2026, the designer: "helper text should expand below each
           selection"); a portrait chooser keeps it under the strip. */}
-      {selected && !asHeroes && !asRows && !isShop && detail}
+      {selected && !asHeroes && !asRows && !isShop && !isSpoils && detail}
+
+      {isSpoils && (
+        <OfferPick
+          groups={[{ label: title, offers: choices, foot: (o) => (o.sub ? o.sub.charAt(0).toUpperCase() + o.sub.slice(1) : '') }]}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={() => 0}
+        >
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
+        </OfferPick>
+      )}
 
       {isShop && (
         <ShopShelf
@@ -529,14 +554,7 @@ export function PageScreen({
           onPick={pick}
           short={(o) => (o.cost ? shortfall(o.cost) : 0)}
         >
-          {selected && (
-            // No scroll-into-view ref: the card stands right under the counter,
-            // and bringing a long one into view slid the shelf off the top.
-            <div className="shop-detail">
-              {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
-              <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
-            </div>
-          )}
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
         </ShopShelf>
       )}
 

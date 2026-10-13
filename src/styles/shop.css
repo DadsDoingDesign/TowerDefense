@@ -59,12 +59,6 @@
 }
 
 /* ------------------------------------------------------------ the shelf */
-.shop {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
 .shop-shelf {
   position: relative;
   padding: 0 4px 12px;
@@ -91,40 +85,16 @@
 .shop .pk-tok[aria-checked='true'] {
   background: var(--panel-3);
 }
-/* The card is under the counter, not under the token: no caret. */
-.shop .pk-tok[aria-checked='true']::after {
-  display: none;
-}
 .shop-wares .pk-tok {
   height: 100px;
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
 }
-.shop-ware {
-  display: grid;
-  place-items: center;
-}
 /* A ware stands at 3× its sprite (48px, an integer scale) on the shelf. */
-.shop-wares .shop-ware > .fw-i {
+.shop-wares .pk-ware > .fw-i {
   --fw-i-size: var(--icon-lg);
 }
-/* Its rarity, as the rarity tag's pips, in the cubby's top-left corner
-   (anchored to the cubby, `.pk-tok`, so neither corner mark touches the art). */
-.shop-ware-pips {
-  position: absolute;
-  top: 6px;
-  left: 7px;
-}
-/* …and its damage type in the top-right one. */
-.shop-ware-mark {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  line-height: 0;
-}
-.shop-ware-mark .fw-i {
-  --fw-i-size: 16px;
-}
+
 /* The price: a paper tag at the ware's foot. On the shelf it carries the
    price alone (the rarity is the token's rail and the card's kicker); on the
    counter it names the service too. */
@@ -183,16 +153,4 @@
   padding: 18px 8px;
   text-align: center;
   color: var(--muted);
-}
-.shop-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-/* The card is the box: its specifics sit on it, not in a second one. */
-.shop-detail .pg-card {
-  padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
 }

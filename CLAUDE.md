@@ -118,7 +118,8 @@ result. Append a short note to the review log when you're done.
   `PickStrip` of picture tokens + one `PickCard` for the focused option
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
-  The merchant is one too, dressed as a roadside shop (`ShopFront.tsx`,
+  Every offer board that commits on its CTA (the spoils, the merchant) is
+  one through `OfferPick.tsx`, not rows. The merchant is dressed as a roadside shop (`ShopFront.tsx`,
   `styles/shop.css`: awning, hanging sign, wares on a shelf, services on a
   counter). It sells goods only, with no hire on the counter.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a

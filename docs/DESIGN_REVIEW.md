@@ -3634,3 +3634,23 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     - every road of 120 seeds × 3 acts builds;
     - each profile lays ground for both challenges and has a twin.
 
+- **Oct 2026 · The spoils pick like every other pick.** The designer: "this
+  and upgrade selections are all the same type of interaction yet all feel so
+  different in how they are handled". The level-up skill pick, the hero pick
+  and the city payout were a strip of picture tokens over one card. The
+  spoils were rows whose detail unfolded inline, under a title that repeated
+  the row.
+  - **Now:** every offer board that commits on its CTA goes through one
+    component, `OfferPick`. Its tokens carry the picture, rarity pips and
+    damage mark, and a foot word ("To pack", "Relic"). One `PickCard` holds
+    the focused offer, edged in its rarity, and the CTA takes it.
+  - **The shop** is the same component in its stall dressing.
+  - **Fixed on the way:** a relic card said its effect twice ("Every 5th
+    shot of every hero pierces 2 more enemies" over "every 5th shot pierces
+    2 more"). A relic's line already states its whole effect, so the
+    generated lines are gone.
+  - **Left as it is:** the campfire's one-tap rows. They commit on the tap
+    by the designer's earlier call.
+  - **Verified** on phone and desk: an item focused, then the relic; and the
+    shop re-shot unchanged apart from the card's rarity edge.
+
