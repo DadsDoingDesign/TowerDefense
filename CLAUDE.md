@@ -57,8 +57,19 @@ result. Append a short note to the review log when you're done.
   `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
   `settle.ts` (payout plan), `inventory.ts`, `map.ts`, `battle.ts`. Put a new
   rule here, not in a slice.
+- Procedural battlefields (in review, not wired into runs yet):
+  `src/game/data/fieldGen.ts` deals a road from (seed, `FieldWeights`) on a
+  lattice two tiles apart (2,220 or 2,300px, like the hand-made fields), and
+  `scoreField` measures corners, straights, choke tiles, one-tile gaps and edge
+  share against the weights' bands. Gallery through the real draw code:
+  `harness/fields.html`; tests `tests/fieldGen.test.ts`.
 - Enemies `src/game/data/enemies.ts` (goblin factions torch/tnt/barrel, tiers
-  1–5); waves `src/game/data/waves.ts`.
+  1–5); waves `src/game/data/waves.ts`. Armour: Plated / Warded (`ENEMY_MODS`)
+  reach `ARMOUR_CAP` (65%), everything else stops at `RESIST_CAP` (55%), and
+  each leaves the other damage type open. The elite columns wear one, and so
+  does a share of ordinary fights (`waves.nodeArmour`, leaning to the road's
+  `Company.armour`). The run map tabs every such node (`.mn-armour`, via
+  `encounterPreview.nodeModFor`). `balance/armour-eval.ts` measures fairness.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
@@ -122,7 +133,10 @@ result. Append a short note to the review log when you're done.
   name on the home. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
-  dresses the builder preview's soldiers in it); the builder's wheels and carousels
+  dresses the builder preview's soldiers in it). The battle wagon flies the
+  flag of whoever the run is for: the hiring company's standard
+  (`data/companyStandard.ts`), your militia's banner only on the Sovereign
+  Route. The builder's wheels and carousels
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.

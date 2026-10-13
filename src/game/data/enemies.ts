@@ -7,7 +7,7 @@ import {
   GRUKK_WARCRY,
   KING_LOB,
   makeSpecialist,
-  RESIST_CAP,
+  ARMOUR_CAP,
   SAPPER,
   SPECIALISTS,
   SPLITTER,
@@ -139,8 +139,11 @@ export interface EnemyMod {
   magKeep: number
 }
 
-// No resistance may pass `RESIST_CAP` (0.55, `behaviours.ts`): a wall with no
-// answer is not a decision. The shield-bearer's aura obeys the same cap.
+// No armour modifier may pass `ARMOUR_CAP` (0.65, `behaviours.ts`), and every
+// one leaves the other damage type fully open: a wall with no answer is not a
+// decision. (A goblin's own resistance and the shield-bearer's aura stop at
+// `RESIST_CAP`, 0.55.) +0.30 / +0.34 under a 0.55 cap until Oct 2026 — see
+// `ARMOUR_CAP` for the eval that moved them.
 
 export const ENEMY_MODS: readonly EnemyMod[] = [
   {
@@ -152,7 +155,7 @@ export const ENEMY_MODS: readonly EnemyMod[] = [
     // was undisclosed on the card that discloses the other two.
     blurb: 'physical damage bounces; magic goes straight through — and it rolls 10% slower',
     speedMult: 0.9,
-    physResist: 0.3,
+    physResist: 0.4,
     magResist: 0,
     physKeep: 1,
     magKeep: 0,
@@ -163,7 +166,7 @@ export const ENEMY_MODS: readonly EnemyMod[] = [
     blurb: 'magic damage bounces; steel goes straight through',
     speedMult: 1,
     physResist: 0,
-    magResist: 0.34,
+    magResist: 0.44,
     physKeep: 0,
     magKeep: 1,
   },
@@ -195,8 +198,8 @@ export const modKey = (typeId: string, mod: string | null): string => (mod ? `${
 export const eliteName = (baseName: string, prefix: string): string => `${baseName} · ${prefix}`
 
 function applyMod(base: EnemyType, m: EnemyMod): EnemyType {
-  const phys = Math.min(RESIST_CAP, (base.physResist ?? 0) * m.physKeep + m.physResist)
-  const mag = Math.min(RESIST_CAP, (base.magResist ?? 0) * m.magKeep + m.magResist)
+  const phys = Math.min(ARMOUR_CAP, (base.physResist ?? 0) * m.physKeep + m.physResist)
+  const mag = Math.min(ARMOUR_CAP, (base.magResist ?? 0) * m.magKeep + m.magResist)
   return {
     ...base,
     // NOT `${base.id}_${m.id}`: the renderer resolves sprites and the tier tag

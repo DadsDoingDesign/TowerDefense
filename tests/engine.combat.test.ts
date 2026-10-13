@@ -177,8 +177,11 @@ describe('the behaviour kit (Phase 3a)', () => {
     expect(plain.shield).toBeGreaterThan(0)
     expect(bearer.shield).toBe(0)
     expect(takenMult(plain, 'physical')).toBeLessThan(takenMult({ ...plain, shield: 0 }, 'physical'))
-    // The cap: nothing is ever more than 55% resistant.
-    expect(takenMult(fake('barrel5_plated', 0.2), 'physical')).toBeCloseTo(0.45, 10)
+    // The caps: the aura takes a goblin to 55% and no further…
+    expect(takenMult(fake('barrel4', 0.4), 'physical')).toBeCloseTo(0.45, 10)
+    // …armour (Plated, Warded) stops at 65%, and the aura never takes it away.
+    expect(takenMult(fake('barrel5_plated', 0.2), 'physical')).toBeCloseTo(0.35, 10)
+    expect(takenMult(fake('barrel5_plated'), 'physical')).toBeCloseTo(0.35, 10)
     // No aura, no frost: exactly the pre-3a arithmetic.
     expect(takenMult(fake('barrel3'), 'physical')).toBe(1 - (ENEMY_TYPES.barrel3.physResist ?? 0))
   })

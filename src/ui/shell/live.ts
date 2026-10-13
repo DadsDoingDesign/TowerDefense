@@ -42,8 +42,8 @@ export function battleLayoutOf(s: Pick<GameState, 'screen' | 'runPhase' | 'battl
  * Posting is the gesture setup exists for, and its target is the field, so
  * arming a hero from the party row does NOT open the band (the selection IS
  * the armed hero). It opens for everything that is a read rather than a post:
- * the strip's Details toggle, or a posted hero tapped on the field (its
- * Upgrades tab). A post lets go of the selection (`placeOnSlot`), so the band
+ * the strip's Details toggle — the one way in during setup (a posted hero
+ * tapped on the field is picked up, like its card, not read). A post lets go of the selection (`placeOnSlot`), so the band
  * does not open under the hero that just landed. The wide layout undoes the
  * collapse in CSS, so none of this reaches a desk.
  */

@@ -51,6 +51,13 @@ export interface Company {
   /** The company's hue (`--co-<id>`). A fill and a light; names stay cream. */
   color: string
   ground: RouteGround
+  /**
+   * The armour its road's goblins lean to (Oct 2026): of the ordinary fights
+   * on its road that come armoured (`waves.nodeArmour`), most wear this. The
+   * ore road's raiders strap on plate; the scroll road's are warded. A road
+   * with none deals Plated and Warded evenly.
+   */
+  armour?: 'plated' | 'warded'
   /** Its road's three cities, in order: act 1's, act 2's, and the destination. */
   towns: readonly [string, string, string]
   /**
@@ -106,6 +113,7 @@ export const COMPANIES: readonly Company[] = [
     noun: 'ore',
     color: '#5d8be2',
     ground: { name: 'Quarry boulders', rules: ['quarry'], swatch: '#8a8a8a' },
+    armour: 'plated',
     towns: ['Slagpit', 'Cobble Rise', 'Deepforge'],
     letters: [
       '{name} will pay well for {noun} that reaches {dest} unstolen.',
@@ -134,6 +142,7 @@ export const COMPANIES: readonly Company[] = [
     noun: 'scrolls',
     color: '#e4e8f2',
     ground: { name: 'Cursed ground', rules: ['hexed'], swatch: '#f49e80' },
+    armour: 'warded',
     towns: ['Quill Hill', 'Lanternhold', 'Inkspire'],
     letters: [
       '{name} seeks wardens for sealed {noun} bound for {dest}.',

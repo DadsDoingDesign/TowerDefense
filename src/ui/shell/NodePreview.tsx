@@ -44,6 +44,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const company = useGameStore((s) => s.contract?.company ?? null)
   const charter = useGameStore((s) => !!s.contract?.charter)
+  const contract = useGameStore((s) => s.contract)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
   const focus = useMapFocus((s) => s.focus)
@@ -62,7 +63,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   if (!node) return null
 
   const meta = nodeMeta(node.type)
-  const summary = summarizeEncounter({ runSeed, runMap, muster: charter }, nodeId)
+  const summary = summarizeEncounter({ runSeed, runMap, contract }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
   const rules = contractRules({ crates, charter })
@@ -150,7 +151,7 @@ export function MarchBar() {
   const screen = useGameStore((s) => s.screen)
   const runMap = useGameStore((s) => s.runMap)
   const runSeed = useGameStore((s) => s.runSeed)
-  const charter = useGameStore((s) => !!s.contract?.charter)
+  const contract = useGameStore((s) => s.contract)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
   const selectNode = useGameStore((s) => s.selectNode)
@@ -159,7 +160,7 @@ export function MarchBar() {
   if (screen !== 'map') return null
   const node = nodeId ? runMap.nodes.find((n) => n.id === nodeId) : undefined
   const canMarch = !!node && reachable.includes(node.id) && !cleared.includes(node.id)
-  const name = node ? (summarizeEncounter({ runSeed, runMap, muster: charter }, node.id)?.variant ?? nodeMeta(node.type).label) : null
+  const name = node ? (summarizeEncounter({ runSeed, runMap, contract }, node.id)?.variant ?? nodeMeta(node.type).label) : null
   return (
     <div className="sh-marchbar">
       <button

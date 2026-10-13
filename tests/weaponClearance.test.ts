@@ -230,6 +230,35 @@ describe('the store: setup', () => {
   })
 })
 
+describe('the store: in setup a tap on a hero picks it up, wherever it is', () => {
+  it('a posted hero tapped on the field is picked up like its card, and the next tap moves it', () => {
+    setLayoutOrientation(() => 'portrait')
+    useGameStore.getState().beginCampaign(4242, STANDARD_RUN)
+    useGameStore.getState().pickStartingHero('rogue')
+    const st0 = useGameStore.getState()
+    const node = st0.runMap.nodes.find((n) => st0.reachableNodeIds.includes(n.id) && n.type === 'battle')!
+    useGameStore.setState({ screen: 'map', event: null, reachableNodeIds: [node.id], clearedNodeIds: [], currentWave: null })
+    useGameStore.getState().selectNode(node.id)
+    const m = useGameStore.getState().battleMap
+    const safe = m.slots.filter((s) => !m.tiles!.find((t) => t.id === s.id)!.danger)
+    const doyle = holding('rogue', 'Bow', 'Doyle')
+    const [a, b] = pairOf({ ...m, slots: safe })
+    useGameStore.setState({ roster: [doyle], placements: { ...emptyPlacements(m), [a]: doyle.id }, selectedSentinelId: null, shellSelection: null, detailOpen: false })
+    // The tap picks the hero up: armed, in hand — and the Details stay shut.
+    useGameStore.getState().tapTile(a)
+    let st = useGameStore.getState()
+    expect(st.selectedSentinelId).toBe(doyle.id)
+    expect(st.shellSelection).toEqual({ kind: 'hero', id: doyle.id })
+    expect(st.detailOpen).toBe(false)
+    // The next tap moves it.
+    useGameStore.getState().tapTile(b)
+    st = useGameStore.getState()
+    expect(st.placements[b]).toBe(doyle.id)
+    expect(st.placements[a]).toBeNull()
+    expect(st.selectedSentinelId).toBeNull()
+  })
+})
+
 describe('the store: a live wave answers instead of ignoring', () => {
   const start = () => {
     setLayoutOrientation(() => 'landscape')

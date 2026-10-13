@@ -10,6 +10,7 @@ import {
 } from '../../game/data/waves'
 import type { WaveDef } from '../../game/types'
 import { encounterNode } from '../../game/run/map'
+import { encounterRulesOf, type RouteRef } from '../../game/run/charter'
 import { ACT_LAYERS } from '../../game/run/threat'
 
 /**
@@ -46,12 +47,15 @@ import { ACT_LAYERS } from '../../game/run/threat'
 export interface PreviewRun {
   runSeed: number
   runMap: RunMap
-  /** The Sovereign Route's muster: every goblin clan from the first fight (`run/charter.encounterRulesOf`). */
-  muster?: boolean
+  /**
+   * The run's contract: its road decides the muster (the Sovereign Route) and
+   * the armour its ordinary fights lean to (`run/charter.encounterRulesOf`).
+   */
+  contract?: RouteRef | null
 }
 
 /** The encounter rules the run's road fields under — the store's `selectNode` passes the same. */
-const rulesOf = (run: PreviewRun) => (run.muster ? { allElite: false, eliteDepth: 0, muster: true } : undefined)
+const rulesOf = (run: PreviewRun) => encounterRulesOf(run.contract)
 
 /**
  * The encounter kind the store fields on this node: its own. (A Vow could make
@@ -62,10 +66,25 @@ export function encounterKindFor(node: Pick<MapNode, 'type'>): EncounterKind | n
   return nodeEncounterSpec(encounterNode({ type: node.type, layer: 0, row: 0 }), 0)?.kind ?? null
 }
 
-/** The variant the store's `generateEncounter` call will pick for this node. */
+/**
+ * The variant the store's `generateEncounter` call will pick for this node —
+ * wearing the node's armour when an ordinary fight is armoured (`nodeArmour`),
+ * exactly as `generateEncounter` dresses it.
+ */
 export function variantFor(run: PreviewRun, node: MapNode): WaveVariant | null {
   const spec = nodeEncounterSpec(encounterNode(node), run.runSeed, rulesOf(run))
-  return spec ? pickVariant(spec.kind, spec.depth, spec.seed, spec.sibling) : null
+  if (!spec) return null
+  const v = pickVariant(spec.kind, spec.depth, spec.seed, spec.sibling)
+  return spec.mod && !v.mod ? { ...v, mod: spec.mod } : v
+}
+
+/**
+ * The armour (or Swift) every goblin on this node wears, or null: the map's
+ * badge and the Context panel's line read the same answer.
+ */
+export function nodeModFor(run: PreviewRun, node: MapNode): EnemyMod | null {
+  const id = variantFor(run, node)?.mod
+  return id ? (ENEMY_MODS.find((m) => m.id === id) ?? null) : null
 }
 
 /**
@@ -129,7 +148,9 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const heads = wave.spawns.length
   return {
     kind,
-    variant: v.label || (kind === 'boss' ? (node.type === 'miniboss' ? `Act ${Math.ceil(node.layer / ACT_LAYERS)} Boss` : 'The Final Watch') : 'Patrol'),
+    variant:
+      (kind === 'normal' && v.mod ? `${ENEMY_MODS.find((m) => m.id === v.mod)?.prefix ?? ''} ` : '') +
+      (v.label || (kind === 'boss' ? (node.type === 'miniboss' ? `Act ${Math.ceil(node.layer / ACT_LAYERS)} Boss` : 'The Final Watch') : 'Patrol')),
     asks: v.asks,
     mod: v.mod ? (ENEMY_MODS.find((m) => m.id === v.mod) ?? null) : null,
     heads,

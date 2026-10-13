@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest'
 import { generateRunMap } from '../src/game/data/runmap'
 import { streamRng } from '../src/game/core/rng'
 import { useGameStore } from '../src/state/gameStore'
+import type { RunContract } from '../src/game/run/contracts'
 import {
   encounterKindFor,
+  nodeModFor,
   previewEncounter,
   resistHint,
   summarizeEncounter,
@@ -70,6 +72,39 @@ describe('encounter preview == spawned encounter', () => {
       }
       // Guard against a vacuous pass (no fight nodes generated at all).
       expect(checked).toBeGreaterThan(SEEDS.length * 5)
+    })
+  }
+
+  // Armoured ordinary fights (Oct 2026) roll off the contract's road: the
+  // preview must read the same road the store does, or a badge lies.
+  const ROADS = [
+    { company: 'metals', crates: 1, market: 1 },
+    { company: 'scrolls', crates: 1, market: 1 },
+    { company: null, crates: 1, market: 1, charter: true },
+  ] as const
+  for (const road of ROADS) {
+    it(`matches selectNode on the ${road.company ?? 'Sovereign'} road, armour and all`, () => {
+      let armoured = 0
+      for (const seed of SEEDS) {
+        const runMap = generateRunMap(streamRng(seed, 'map'))
+        const contract = { ...road, purse: 0, paid: [], cargoAt: [], pending: null, cashOut: 0, status: 'open', signed: true, hq: { rocks: 0 } } as unknown as RunContract
+        useGameStore.setState({ runSeed: seed, contract, runMap, runPhase: 'active', screen: 'map', event: null })
+        for (const node of fightNodes(useGameStore.getState())) {
+          const st = useGameStore.getState()
+          const preview = previewEncounter(st, node.id)
+          const mod = nodeModFor(st, node)
+          useGameStore.setState({ screen: 'map', event: null, reachableNodeIds: [node.id], clearedNodeIds: [], currentWave: null })
+          useGameStore.getState().selectNode(node.id)
+          const spawned = useGameStore.getState().currentWave!
+          expect(preview).toEqual(spawned)
+          // The badge's modifier is the one every goblin in the spawned column wears.
+          if (node.type === 'battle' && mod) {
+            armoured++
+            for (const sp of spawned.spawns) expect(sp.typeId.endsWith(`_${mod.id}`), sp.typeId).toBe(true)
+          }
+        }
+      }
+      expect(armoured).toBeGreaterThan(0)
     })
   }
 

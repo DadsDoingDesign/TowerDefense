@@ -3523,3 +3523,57 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   Sovereign Route is open. The hero pick, the home, Settings and the wagons
   all read it. Verified with such a save: the home shows no militia, and the
   hero pick shows the compact banner alone.
+
+- **Oct 2026 · The wagon flies the flag of whoever the run is for.** The
+  designer: "make sure the flag on the cart is representative of who the
+  company is for that run". The battle wagon flew your militia's banner (or
+  the default navy one) on every contract. Now, on a company's contract, it
+  flies that company's standard (`data/companyStandard.ts`): its colour,
+  edged a shade darker, with its logo and a three-pointed foot. It matches
+  the road notice's `CompanyFlag` and the crates' colour band. On your own
+  road, the Sovereign Route, your militia's banner still flies. The standard
+  is 19 × 30 cells at 2 px, so it fits the banner's box and the caravan's
+  layout does not move. Verified in battle for all five companies.
+
+- **Oct 2026 · A tap on a hero picks it up, wherever it is.** The designer:
+  "sometimes there is a details button and other times clicking my tower
+  opens the details — confusing when I need to click to place it too".
+  - **Before:** in setup, a hero's card on the bar picked it up, but the same
+    hero posted on the field opened its details (on a phone, the band slid
+    up). One gesture had two jobs, and the second was also the Details
+    button's.
+  - **Now:** a tap on a posted hero picks it up, exactly like its card. The
+    posts glow, the next tap moves it, and the Details button is the one way
+    to read a hero in setup.
+  - **Live waves are unchanged:** posts are held, so a tap can only read.
+    It says "held" and shows the hero.
+  - **Docs:** both are rows in DESIGN_SYSTEM § 8's jobs table.
+  - **Verified on a phone-shaped portrait field:** posted, tapped (picked
+    up, details shut), then Details (opens the hero).
+
+- **Oct 2026 · Armoured fights are on the map, and some ordinary fights wear
+  armour.** The designer: "if enemies resist a certain type, show that on
+  the map. They should be unkillable by other types, just much harder —
+  like an elite you can plan to take on."
+  - **The tab:** every fight still ahead whose goblins wear a modifier
+    carries a tab on its top edge: a "no" sign over the damage mark it shrugs
+    off, then the word (PLATED in steel, WARDED in violet; SWIFT in amber with
+    its speed mark, unstruck). The Context panel still explains it on focus,
+    and the CTA names it ("March to Plated Swarm").
+  - **First pass failed the glance test:** a 22px corner pip with a struck
+    16px mark was mud at phone size, and the corners are where a four-node
+    row's nodes touch. The named tab replaced it. A frontier-row tab then ran
+    into the "Cleared ↓" tag, so the tab sits low on the edge (top −6px,
+    above the tag's layer).
+  - **The rule behind it:** a share of ordinary fights from depth 3 now come
+    Plated or Warded (`waves.nodeArmour`), and Ironvein's road leans Plated
+    and Moonquill's Warded. Armour rose to 65% (`ARMOUR_CAP`) after
+    `balance/armour-eval.ts`; the ordinary cap stays 55%.
+  - **The road says it too:** Ironvein's and Moonquill's notices carry a
+    chip beside their ground ("Plated raiders", "Warded raiders") with the
+    tab's mark, so the lean is known when the contract is chosen.
+  - **Verified** on the running app, phone (390) and desk (1280), on the
+    Ironvein and Moonquill roads, a focused Plated node's panel, and both
+    notices on the home.
+  - **Known:** a four-node row's tabs sit edge to edge. They don't overlap.
+

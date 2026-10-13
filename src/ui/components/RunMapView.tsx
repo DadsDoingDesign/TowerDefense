@@ -7,8 +7,10 @@ import { cityOfLayer, contractRules } from '../../game/run/contracts'
 import { openingNodeOf } from '../../game/run/map'
 import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
+import { ArmourMark } from '../ArmourMark'
 import { Icon } from '../Icon'
 import { frontierScrollTop, MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
+import { nodeModFor } from '../shell/encounterPreview'
 
 /**
  * The Threat a fight on this node is fought at (M5, re-based in Phase 3b).
@@ -42,6 +44,8 @@ export function RunMapView() {
   const selectNode = useGameStore((s) => s.selectNode)
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const charter = useGameStore((s) => !!s.contract?.charter)
+  const contract = useGameStore((s) => s.contract)
+  const runSeed = useGameStore((s) => s.runSeed)
   const rules = contractRules({ crates, charter })
   // The act bosses are the route's cities (the mercenary company): named on the map.
   const towns = useGameStore((s) => (s.contract ? routeOf(s.contract).towns : null))
@@ -197,6 +201,9 @@ export function RunMapView() {
                 : 'locked'
           const threat = nodeThreat(n, rules)
           const isFocused = focusedId === n.id
+          // What every goblin here wears (Plated, Warded, Swift), on every
+          // fight still ahead, near or far: a road is planned from the map.
+          const mod = isCleared || isCurrent ? null : nodeModFor({ runSeed, runMap, contract }, n)
           return (
             <button
               key={n.id}
@@ -215,7 +222,7 @@ export function RunMapView() {
                  offers composes another ×1.05 on top. The chip has no room to
                  say so, but the accessible name does, and the offer itself
                  spells it out. */
-              aria-label={`${meta.label}${town ? `, ${town}` : ''}${
+              aria-label={`${meta.label}${town ? `, ${town}` : ''}${mod ? `, ${mod.prefix}: ${mod.blurb}` : ''}${
                 threat && strengthPct(threat) > 0
                   ? `, enemy strength ${strengthShort(threat)}`
                   : ''
@@ -237,6 +244,15 @@ export function RunMapView() {
               <span className="mn-glyph">
                 <Icon name={NODE_ICON[isOpening ? 'start' : n.type] ?? 'depth'} />
               </span>
+              {/* The armour tab: the modifier's name, and the damage type this
+                  fight's goblins shrug off, struck through (Swift: its speed).
+                  The Context panel says the rest when the node is focused. */}
+              {mod && (
+                <span className={`mn-armour ${mod.id}`} aria-hidden>
+                  <ArmourMark mod={mod.id} />
+                  {mod.prefix}
+                </span>
+              )}
               <span className={`mn-label${town ? ' town' : ''}`}>{town ?? meta.label}</span>
               {/* Only on nodes you can actually choose between: the cost is
                   information for the fork in front of you, not decoration on

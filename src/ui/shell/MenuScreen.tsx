@@ -13,6 +13,8 @@ import { homeCompany } from '../../state/game/contractSlice'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
+import { ArmourMark } from '../ArmourMark'
+import { ENEMY_MODS } from '../../game/data/enemies'
 import { Banner, Lock, SovereignCrest } from '../pixel'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
@@ -257,6 +259,7 @@ function ContractNotice({
   onStep?: (delta: number) => void
 }) {
   const co = companyById(company)
+  const armour = co.armour ? ENEMY_MODS.find((m) => m.id === co.armour) : undefined
   const prog = standingProgress(xp)
   const next = prog.max ? 'the highest there is' : skillsLeft ? `a skill at ${prog.standing + 1}` : `a Rare item at ${prog.standing + 1}`
   const i = COMPANY_IDS.indexOf(company)
@@ -304,6 +307,14 @@ function ContractNotice({
         <span className="mn-chip is-ground" style={{ '--gr': co.ground.swatch } as CSSProperties}>
           {co.ground.name}
         </span>
+        {/* The armour its road's goblins lean to (`Company.armour`): most of
+            its armoured fights wear it, so it is a road fact like the ground. */}
+        {armour && (
+          <span className="mn-chip is-armour" aria-label={`${armour.prefix} raiders: ${armour.blurb}`}>
+            <ArmourMark mod={armour.id} />
+            {armour.prefix} raiders
+          </span>
+        )}
         {staged ? (
           <span className="mn-chip is-rep">
             <b>Free</b> · paid at every city

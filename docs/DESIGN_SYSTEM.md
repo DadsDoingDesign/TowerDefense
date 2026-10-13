@@ -369,6 +369,8 @@ agree it, then edit this section.
 | Primary CTA (the bottom band) | Commits the screen's one action and names it | Going back; a second action |
 | Back (`.ct-back`) | Leaves without changing anything | Saving or confirming |
 | `LeaveRun` | Abandons the run, after a confirm | Anything short of abandoning |
+| A hero, tapped (its card on the bar, or posted on the field) | In setup, picks the hero up: its posts glow, and the next tap posts or moves it | Opening its details (that is the Details button). During a live wave, posts are held, so the tap reads instead |
+| Details button (battle strip) | Opens and closes the selected hero's details in setup | Selecting or arming anything |
 | `PickStrip` + `PickCard` | Chooses one of several: a token focuses it, the CTA commits it | Settings that apply on tap |
 | `MenuRow` (inline detail) | A setting or list choice that applies on tap; its detail opens under the selected row | Choices that need a CTA |
 | `FlagWheel` | The main part of a builder, with many visual options; its middle opens them all | Small sets (use a `PartCarousel`) |
@@ -381,7 +383,9 @@ agree it, then edit this section.
 | `Slip` / `SlipLine` | A receipt: what is paid, owed or earned, item by item | Prose |
 | `Gold` | An amount of gold, the only currency | Other numbers |
 | `RarityTag` | An item's rarity, in the shared rarity tokens | Any other ranking |
-| `CompanyFlag` | A trading company's identity on a road or notice | The player's militia (that is its own flag, `Banner`) |
+| `CompanyFlag` (UI) / `companyStandard` (canvas) | A trading company's identity: on its road and notice, and over the wagon on its contract | The player's militia (that is its own flag, `Banner`) |
+| Map armour tab (`.mn-armour`) | Says, from the map and before the march, what every goblin in a fight wears: Plated / Warded with the damage type it shrugs off struck through, Swift with its speed. On every fight still ahead, so a road can be planned | Explaining the modifier (the Context panel does that on focus) or the node's kind (its picture and label) |
+| Road armour chip (`.mn-chip.is-armour`) | Says, on a company's notice, the armour its road's goblins lean to ("Plated raiders"), with the map tab's struck mark: a road fact, like its ground | Saying which fights are armoured (the map's tabs do that, per node) |
 | `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
 | Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above) | Marking which nodes you can reach (the node states do that) |

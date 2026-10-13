@@ -460,6 +460,15 @@
   border-radius: 2px;
   background: var(--gr);
 }
+/* The road's armour lean (Ironvein plate, Moonquill wards): the ground
+   chip's dark plate, with the run map's struck mark. */
+.mn-chip.is-armour {
+  padding-left: 3px;
+  background: var(--paper-ink);
+  border-color: var(--paper-ink);
+  color: var(--sign-ink);
+  font-weight: 700;
+}
 .mn-chip.is-locked {
   border-style: dashed;
   font-weight: 700;

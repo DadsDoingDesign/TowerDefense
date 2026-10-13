@@ -1,6 +1,6 @@
 import { hashSeed, RNG } from '../core/rng'
 import { SPECIALISTS, specialistCount } from './behaviours'
-import { effectiveHp, ENEMY_TYPES, modKey } from './enemies'
+import { effectiveHp, ENEMY_MODS, ENEMY_TYPES, modKey } from './enemies'
 import type { SpawnEvent, WaveDef } from '../types'
 import { ACT_LAYERS, RUN_LAYERS } from '../run/threat'
 
@@ -917,6 +917,11 @@ export interface EncounterOptions {
    * arriving one at a time (`gate`). Omitted: the teaching ramp, as ever.
    */
   muster?: boolean
+  /**
+   * Armour every goblin in an ordinary fight wears ({@link nodeArmour}). A
+   * variant that already wears a modifier (the elite columns) keeps its own.
+   */
+  mod?: string | null
 }
 
 /**
@@ -947,6 +952,8 @@ export interface NodeEncounterRules {
   eliteDepth: number
   /** The Sovereign Route: every clan marches from the first fight ({@link EncounterOptions.muster}). */
   muster?: boolean
+  /** The armour this road's ordinary fights lean to ({@link nodeArmour}; `Company.armour`). */
+  armourLean?: 'plated' | 'warded'
 }
 const NO_ENCOUNTER_RULES: NodeEncounterRules = { allElite: false, eliteDepth: 0 }
 
@@ -958,6 +965,48 @@ export interface NodeEncounterSpec {
   sibling: number
   /** The Sovereign Route's muster (only ever `true`; absent on every other road). */
   muster?: true
+  /** An ordinary fight's armour ({@link nodeArmour}); absent when it has none. */
+  mod?: 'plated' | 'warded'
+}
+
+/**
+ * ---- Armoured ordinary fights (Oct 2026) -----------------------------------
+ *
+ * The elite columns were the only fights that wore armour, so steel-or-magic
+ * was a question one node in an act asked. Now a share of ORDINARY fights come
+ * Plated or Warded too — every goblin in the column wearing it (`ENEMY_MODS`,
+ * capped at `ARMOUR_CAP`) — and the map badges the node, so a company can plan
+ * its road around them: "like an elite you can plan for", in the designer's
+ * words. The wrong damage type needs about twice the damage, never infinitely
+ * more; the right one goes straight through.
+ *
+ * From {@link ARMOUR_DEPTH}: barrels march from depth 3 (`gate`), so a Plated
+ * column has plate in it, and the opening fights teach the plain game first.
+ * A company's road leans one way ({@link ARMOUR_LEAN} of its armoured fights):
+ * Ironvein's raiders strap on plate, Moonquill's are warded.
+ *
+ * Its own RNG, hashed from (run seed, layer, row) — never a draw on a run
+ * stream, so it moves no other roll.
+ */
+export const ARMOUR_DEPTH = 3
+/** The share of ordinary fights from {@link ARMOUR_DEPTH} that come armoured. */
+export const ARMOUR_CHANCE = 0.25
+/** On a road that leans ({@link NodeEncounterRules.armourLean}), the share of its armoured fights that wear the lean. */
+export const ARMOUR_LEAN = 0.75
+
+/** The armour an ordinary fight on this node wears, or null. */
+export function nodeArmour(
+  node: { type: string; layer: number; row: number },
+  runSeed: number,
+  rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
+): 'plated' | 'warded' | null {
+  if (node.type !== 'battle' || rules.allElite || node.layer < ARMOUR_DEPTH) return null
+  const r = new RNG(hashSeed(runSeed, 'armour', node.layer, node.row))
+  if (r.next() >= ARMOUR_CHANCE) return null
+  const roll = r.next()
+  const lean = rules.armourLean
+  if (!lean) return roll < 0.5 ? 'plated' : 'warded'
+  return roll < ARMOUR_LEAN ? lean : lean === 'plated' ? 'warded' : 'plated'
 }
 
 /**
@@ -981,12 +1030,14 @@ export function nodeEncounterSpec(
   else if (node.type === 'battle') kind = rules.allElite ? 'elite' : 'normal'
   else return null
   const vowElite = node.type === 'battle' && kind === 'elite'
+  const mod = nodeArmour(node, runSeed, rules)
   return {
     kind,
     depth: node.layer + (vowElite ? rules.eliteDepth : 0),
     seed: encounterSeed(runSeed, node.layer),
     sibling: node.row,
     ...(rules.muster ? { muster: true as const } : {}),
+    ...(mod ? { mod } : {}),
   }
 }
 
@@ -997,13 +1048,14 @@ export function nodeEncounter(
   rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
 ): WaveDef | null {
   const spec = nodeEncounterSpec(node, runSeed, rules)
-  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling, muster: spec.muster }) : null
+  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling, muster: spec.muster, mod: spec.mod }) : null
 }
 
 export function generateEncounter(depth: number, kind: EncounterKind, opts: EncounterOptions = {}): WaveDef {
-  const v = opts.variantId
+  const picked = opts.variantId
     ? (variantsFor(kind, depth).find((x) => x.id === opts.variantId) ?? pickVariant(kind, depth, opts.seed, opts.sibling))
     : pickVariant(kind, depth, opts.seed, opts.sibling)
+  const v = opts.mod && !picked.mod ? { ...picked, mod: opts.mod } : picked
   const budget = kindBudget(depth, kind) * v.budgetScale
   const window = spawnWindow(depth, kind)
 
@@ -1172,6 +1224,8 @@ function defaultLabel(depth: number, kind: EncounterKind, v: WaveVariant): strin
     return v.label ? `${title} — ${v.label}` : title
   }
   if (kind === 'elite') return `Elite — ${v.label}`
+  const prefix = v.mod ? ENEMY_MODS.find((m) => m.id === v.mod)?.prefix : undefined
+  if (prefix) return `Depth ${depth} — ${prefix} ${v.label}`
   return v.id === 'patrol' ? `Depth ${depth}` : `Depth ${depth} — ${v.label}`
 }
 
