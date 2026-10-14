@@ -396,6 +396,10 @@ agree it, then edit this section.
 | Shop SOLD cubby (`.shop-sold`) | Shows a ware was bought off this shelf: the cubby stays, stamped | Anything for sale |
 | Shop shelf (`ShopShelf`, `.shop-wares`) | Shows every ware at once, with its price on a paper tag, its rarity pips and damage mark in the corners; a tap focuses one | Describing a ware (the card) or buying it (the CTA) |
 | Shop counter (`.shop-counter`) | Holds the stall's services, the wagon repair and the restock, apart from its wares | Selling goods (the shelf) |
+| Ask panel (`AskTerms` / `AskReceipt`, `.ask-panel`) | What a contract's company asks of the road, one row an ask: on the terms with what each pays (+40 standing, the tip), on the receipt ✓ met or ✕ not with the count it reached | Explaining why it asks, or which pieces help (an ask says what it wants, a piece what it does) |
+| Ask track (`AskProgress`, `.ask-track`, in the route panel) | Each ask's count against its target, a bar and the number, ✓ once met; an ask judged at the end names where | Saying what an ask pays (the terms and the receipt do) |
+| Map "Asked" tab (`.mn-asked`) | Marks a stop ahead that serves an ask still open — an elite, a city, a Plated or Warded fight, a merchant, a shrine — on the node's bottom edge, with the asking company's crest | Asks every fight serves (a tally, a clean fight); the armour (its own tab, on the top edge) |
+| Ask toast (`AskToast`, `.sh-asktick`) | In a fight, says an ask's count moved: whose ask, the count, ✓ when met. A pill on the Stage's edge, no layout, no tap, gone in a beat | Anything that needs reading twice; anything but a count moving |
 | `ContractBanner` | On the hero pick: whose contract you're on, its terms, and who flies for it | Any other screen's header |
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
 | Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above); two muted captions up the left margin name the two grounds, in the background | Marking which nodes you can reach (the node states do that) |

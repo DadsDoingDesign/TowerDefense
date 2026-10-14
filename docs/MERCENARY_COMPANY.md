@@ -144,7 +144,15 @@ Rules: `src/game/run/hq.ts`. Screens: `src/ui/shell/hq/`. Every price is a place
 
 The designer, on the five "The Finals sponsors" mockups (Design canvas "Companies as sponsors — mockups"): "this is great", then "make the companies a bit of a longer grind. And then when you unlock your own company you get a mix of any and all … consider carrying this through the items and skills as well", "customize the flag for each team — as you play you get more unlocks from their flag, and when you make your own you can pick things from any one and combine", and "bring the customization back into play sooner, making it more fun". Numbers are placeholders for the tuning pass. Build order: **A** asks and **C** flags (in parallel), then **B** the track, then **D** the trade war, rivals and liaisons.
 
-### A · Company asks (each contract wants something of the run)
+### A · Company asks (each contract wants something of the run) — built 2026-10-14
+
+**Built** (`src/game/run/asks.ts`; UI `ui/shell/contracts/AskParts.tsx`, `ui/shell/AskToast.tsx`; tests `tests/asks.test.ts`). What the build decided where the spec left it open:
+- **Targets fitted** with `npx tsx balance/ask-rates.ts 400` (an escort on each company's own road, zero meta and the veteran pooled, delivered runs only). The gold and tally asks were placeholders an order of magnitude low (a delivered escort fells ~270 raiders and earns ~3,900 gold on the road). Fitted, met rate pooled: Peppercorn burning 120 (51%), clean 7 (52%), felled 260 (58%); Easel full cargo (52%), every city clean (35%), clean 7 (53%); Ironvein Plated 25 (50%), 2 elites (42%), felled 290 (41%); Rosethread 4 wares (48%), 3,500 road gold (55%), 3,900 earned (49%); Moonquill pact 1 (7%), Warded 35 (50%), 2 cities clean (75%).
+- **Out of the band, for the designer:** the city asks can only be 1–3 (2 is 75%, 3 is 35%), and the pact is a road choice the modelled player rarely makes (7%) — the map's "Asked" tag is what puts a shrine on a player's road.
+- **"Without a leak"** = no raider reached the wagons **and** the fight ended with the cargo it began with (a champion's charge the line mended before the end costs nothing). A raider stopped by Hold the Line still counts as through.
+- **A first contract (LS3) is asked nothing**: it never sees the terms that name them. A custom seed is dealt its asks but they pay nothing (no standing, no tip), like everything else it would earn.
+- Snapshot v18; an older save has no asks and settles as it was signed.
+
 - Every company contract is dealt **two asks** from that company's own list, a hash of (run seed, company) in `src/game/run/asks.ts` — **never a run-stream draw**. Picking a company is picking a way to run the road.
 - **The Sovereign Route** (your own road) deals **three asks from three different companies' lists** — "a mix of any and all". Each met ask pays standing with the company whose ask it is.
 - **What an ask pays**: each one met earns **+40 standing XP** with its company on any finish that earns standing (delivered, cashed out or fallen; never a custom seed), and a **25-gold tip** banked only when the contract is **delivered** (the destination pays it). Asks judged at the end (cargo, road gold) can only be met by a delivery.

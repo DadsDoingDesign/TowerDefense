@@ -48,6 +48,7 @@ import {
   type RunContract,
 } from '../game/run/contracts'
 import { CHARTER_PAYOUT, routeOf } from '../game/run/charter'
+import { readAsks, type RunAsk } from '../game/run/asks'
 import { BASE_RUN_HQ, FOCUS_STEP, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE, type RunHq } from '../game/run/hq'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
@@ -117,8 +118,13 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * (`charter: true`, no company, no crates, waypoints that pay nothing, a
  * destination that pays at most the charter's payout), and an item pool may
  * hold an owned Sovereign kind at its low weight. A v16 payload is neither.
+ *
+ * v18 — company asks (Draft 4 · A): a contract may carry `asks` — at most two
+ * from its company's own list (three on the Sovereign Route), each an id, the
+ * target it was dealt and its count (`run/asks.readAsks`). A v17 payload has
+ * none, and settles exactly as it was signed.
  */
-export const RUN_SNAPSHOT_VERSION = 17
+export const RUN_SNAPSHOT_VERSION = 18
 
 /** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
 type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
@@ -1083,7 +1089,14 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     // none of its purse was spent: every gold above the purse is the road's.
     earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
     hq: migrateRunHq(raw.hq),
+    ...withAsks(raw.asks, raw.company),
   }
+}
+
+/** v18: the contract's asks, validated (`run/asks.readAsks`); none is no field at all. */
+function withAsks(raw: unknown, company: CompanyId | null): { asks?: RunAsk[] } {
+  const asks = readAsks(raw, company)
+  return asks ? { asks } : {}
 }
 
 /**
@@ -1118,6 +1131,7 @@ function migrateCharter(raw: Record<string, unknown>, purseNow: number): RunCont
     signed: raw.signed === true,
     earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
     hq: { ...hq, focus: null, boost: 0 },
+    ...withAsks(raw.asks, null),
   }
 }
 

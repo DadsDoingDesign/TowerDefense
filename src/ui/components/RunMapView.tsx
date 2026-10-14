@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
@@ -6,7 +6,10 @@ import { legMult, type DifficultyRules } from '../../game/run/watch'
 import { cityOfLayer, contractRules } from '../../game/run/contracts'
 import { openingNodeOf } from '../../game/run/map'
 import { routeOf } from '../../game/run/charter'
-import { NODE_ICON, strengthPct, strengthShort } from '../channels'
+import { companyVar, NODE_ICON, strengthPct, strengthShort } from '../channels'
+import { askById, askText, nodeServesAsk } from '../../game/run/asks'
+import { companyById } from '../../game/data/companies'
+import { Crest } from '../pixel'
 import { ArmourMark } from '../ArmourMark'
 import { Icon } from '../Icon'
 import { frontierScrollTop, MARCH_SETTLE_MS, openingFocus, useMapFocus } from '../shell/mapFocus'
@@ -212,6 +215,11 @@ export function RunMapView() {
           // What every goblin here wears (Plated, Warded, Swift), on every
           // fight still ahead, near or far: a road is planned from the map.
           const mod = isCleared || isCurrent ? null : nodeModFor({ runSeed, runMap, contract }, n)
+          // A stop ahead that serves an ask still open (Draft 4 · A): an elite
+          // for an elite ask, a city for a clean city fight, a Plated fight
+          // for a Plated tally, a merchant, a shrine.
+          const asked = isCleared || isCurrent ? undefined : contract?.asks?.find((a) => a.got < a.target && nodeServesAsk(a, n, mod?.id ?? null))
+          const askedBy = asked ? askById(asked.id)?.company : undefined
           return (
             <button
               key={n.id}
@@ -230,7 +238,7 @@ export function RunMapView() {
                  offers composes another ×1.05 on top. The chip has no room to
                  say so, but the accessible name does, and the offer itself
                  spells it out. */
-              aria-label={`${meta.label}${town ? `, ${town}` : ''}${mod ? `, ${mod.prefix}: ${mod.blurb}` : ''}${
+              aria-label={`${meta.label}${town ? `, ${town}` : ''}${mod ? `, ${mod.prefix}: ${mod.blurb}` : ''}${asked && askedBy ? `, asked by ${companyById(askedBy).name}: ${askText(asked)}` : ''}${
                 threat && strengthPct(threat) > 0
                   ? `, enemy strength ${strengthShort(threat)}`
                   : ''
@@ -262,6 +270,13 @@ export function RunMapView() {
                 </span>
               )}
               <span className={`mn-label${town ? ' town' : ''}`}>{town ?? meta.label}</span>
+              {/* The "Asked" tab: this stop serves what the company asks. */}
+              {askedBy && (
+                <span className="mn-asked" style={{ '--co': companyVar(askedBy) } as CSSProperties} aria-hidden>
+                  <Crest company={askedBy} scale={1} />
+                  Asked
+                </span>
+              )}
               {/* Only on nodes you can actually choose between: the cost is
                   information for the fork in front of you, not decoration on
                   the twenty nodes behind and above it. */}

@@ -50,6 +50,7 @@ import {
 import { readMilitia, type Militia } from '../game/run/militia'
 import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
 import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
+import { askStanding, askTips, readAskResults, type AskResult } from '../game/run/asks'
 
 /**
  * The HQ (build step 3) replaced the Watchtower's list of hub purchases. Its
@@ -190,6 +191,15 @@ export interface RunProgress {
   interest: number
   /** True on a custom seed: it paid its gold, and earned nothing else. */
   unranked: boolean
+  /**
+   * What the company asked of the run (Draft 4 · A), each judged met or not —
+   * the receipt's "What Ironvein asked". Empty for a contract with no asks.
+   */
+  asks: AskResult[]
+  /** Standing XP the asks met paid (in `xp` above, or in `standingAll` on the Sovereign Route). */
+  askXp: number
+  /** The tips the asks met banked (a delivery only; in `deposit` above). */
+  askTips: number
 }
 export const lastProgress: { run: RunProgress | null } = { run: null }
 
@@ -212,6 +222,8 @@ export interface ContractSettle {
   unranked?: boolean
   /** The facts the feats are judged on. Omitted: no feat can be earned. */
   facts?: RunFacts
+  /** The company's asks, judged (`run/asks.judgeAsks`). Omitted: none were dealt. */
+  asks?: AskResult[]
 }
 
 /** The sealed crates' ledger: the save's crate seed and how many have been opened. */
@@ -658,7 +670,7 @@ export const useMetaStore = create<MetaState>()(
         if (felled) set({ codex: { ...cur, felled } })
       },
 
-      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, facts }) => {
+      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, facts, asks: askList }) => {
         const { stats, achievements } = get()
         const d = Math.max(0, num(depth, 0))
         const k = Math.max(0, num(kills, 0))
@@ -676,15 +688,23 @@ export const useMetaStore = create<MetaState>()(
         const status = contract?.status ?? 'lost'
         const paysInterest = !!contract && !unranked && earnsInterest(status)
         const interest = paysInterest ? interestFor(num(get().bank, 0)) : 0
-        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest
 
         // ---- standing with the company, and what it unlocks ----------------
         const company = contract && isCompanyId(contract.company) ? contract.company : null
         const charter = !!contract?.charter
         const ranked = !!company && !unranked
+        // The company's asks (Draft 4 · A): each met one pays its company
+        // standing on any finish that earns standing, and a tip on a
+        // delivery. A custom seed earns neither.
+        const asks = readAskResults(askList)
+        const askAll = askStanding(asks)
+        // A company's road pays only its own asks; the Sovereign Route each ask's company.
+        const askXp: Partial<Record<CompanyId, number>> = unranked ? {} : charter ? askAll : company ? { [company]: askAll[company] ?? 0 } : {}
+        const tips = !unranked && contract ? askTips(asks, status) : 0
+        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest + tips
         const standingXp = { ...freshStanding(), ...get().standing }
         const xpBefore = company ? Math.max(0, num(standingXp[company], 0)) : 0
-        const xp = ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0
+        const xp = (ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0)
         const before = standingFor(xpBefore)
         const after = standingFor(xpBefore + xp)
         const have = get().skills
@@ -692,7 +712,11 @@ export const useMetaStore = create<MetaState>()(
         // The Sovereign Route earns standing with all five companies — each
         // what an escort that ended the same way earns with its one (October
         // 2026). A custom seed earns none.
-        const gains: Partial<Record<CompanyId, number>> = charter && !unranked ? charterStandingXp({ depth: d, kills: k, delivered: won }) : company && xp ? { [company]: xp } : {}
+        const baseGains: Partial<Record<CompanyId, number>> = charter && !unranked ? charterStandingXp({ depth: d, kills: k, delivered: won }) : company && xp ? { [company]: xp } : {}
+        // On the Sovereign Route each ask pays the company whose ask it is.
+        const gains: Partial<Record<CompanyId, number>> = charter
+          ? Object.fromEntries(COMPANY_IDS.map((c) => [c, (baseGains[c] ?? 0) + (askXp[c] ?? 0)]).filter(([, n]) => (n as number) > 0))
+          : baseGains
         const nextStanding = { ...standingXp }
         // One card per standing level crossed, each at that level's floor,
         // the company's own cards first. Once the card pool is exhausted, a
@@ -735,8 +759,9 @@ export const useMetaStore = create<MetaState>()(
           company,
           charter,
           sovereign,
-          // The Sovereign Route's XP is the same with each of the five.
-          xp: charter ? (Object.values(gains)[0] ?? 0) : xp,
+          // The Sovereign Route's road XP is the same with each of the five
+          // (its asks' XP is on the companies whose asks they were).
+          xp: charter ? (Object.values(baseGains)[0] ?? 0) : xp,
           standingBefore: before,
           standingAfter: after,
           standingCards,
@@ -747,6 +772,9 @@ export const useMetaStore = create<MetaState>()(
           deposit: banked,
           interest,
           unranked: (!!company || charter) && unranked,
+          asks,
+          askXp: Object.values(askXp).reduce((a, b) => a + (b ?? 0), 0),
+          askTips: tips,
         }
 
         // The record: every finished contract at its stake, and whether it

@@ -1,12 +1,13 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { companyById } from '../../../game/data/companies'
 import { cargoPct, CITY_COUNT, cityPay, cratesLeftAfter } from '../../../game/run/contracts'
 import { ACT_LAYERS, RUN_LAYERS } from '../../../game/run/threat'
 import { useGameStore } from '../../../state/gameStore'
 import { companyVar, SOVEREIGN_VAR } from '../../channels'
 import { Crate, Crest, Lantern, SovereignCrest } from '../../pixel'
-import { CHARTER_NAME, CHARTER_PAYOUT, CHARTER_TOWNS, SOVEREIGN_COLOR } from '../../../game/run/charter'
+import { CHARTER_NAME, CHARTER_PAYOUT, CHARTER_TOWNS, routeOf, SOVEREIGN_COLOR } from '../../../game/run/charter'
 import { Gold } from './parts'
+import { AskProgress } from './AskParts'
 
 /**
  * The road on the run map (mockup `trade/r3/4-run.png`): which company's
@@ -20,8 +21,13 @@ export function RoutePanel() {
   const layer = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.layer ?? 0)
   const baseHp = useGameStore((s) => s.baseHp)
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
+  const gold = useGameStore((s) => s.gold)
   if (!c) return null
-  if (!c.company) return <CharterRoute layer={layer} paid={c.paid.length} />
+  // What the road is asked (Draft 4 · A), each ask's count so far.
+  const asks = c.asks?.length ? (
+    <AskProgress asks={c.asks} facts={{ contract: c, gold }} cargo={cargoPct(baseHp, maxBaseHp)} charter={!!c.charter} dest={routeOf(c).towns[CITY_COUNT - 1]} />
+  ) : null
+  if (!c.company) return <CharterRoute layer={layer} paid={c.paid.length} asks={asks} />
   const co = companyById(c.company)
   const last = RUN_LAYERS - 1
   const cargo = cargoPct(baseHp, maxBaseHp)
@@ -60,6 +66,7 @@ export function RoutePanel() {
           </span>
         )}
       </p>
+      {asks}
     </div>
   )
 }
@@ -90,7 +97,7 @@ function Road({ towns, color, layer, reached }: { towns: readonly string[]; colo
  * line under it says the one rule that matters on the road: the cities are
  * waypoints, the destination pays everything, a fall pays nothing.
  */
-function CharterRoute({ layer, paid }: { layer: number; paid: number }) {
+function CharterRoute({ layer, paid, asks }: { layer: number; paid: number; asks: ReactNode }) {
   const last = RUN_LAYERS - 1
   const next = paid < CITY_COUNT ? paid : null
   const stopsToNext = next != null ? Math.max(0, (next + 1) * ACT_LAYERS - layer) : 0
@@ -114,6 +121,7 @@ function CharterRoute({ layer, paid }: { layer: number; paid: number }) {
           </span>
         )}
       </p>
+      {asks}
     </div>
   )
 }

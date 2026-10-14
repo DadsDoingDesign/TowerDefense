@@ -6,6 +6,7 @@ import type { ShellContext } from './context'
 import { BossPlate } from './BossPlate'
 import { WaveCeremony } from './WaveCeremony'
 import { Coach } from './Coach'
+import { AskToast } from './AskToast'
 
 /**
  * Band 2 — the subject. Rule two of the shell: nothing ever covers this. No
@@ -83,6 +84,8 @@ export function StageBand({ ctx }: { ctx: ShellContext }) {
           <div className="sh-stage-center">
             <WaveCeremony />
           </div>
+          {/* A company ask's count moving (Draft 4 · A): a pill at the top edge. */}
+          <AskToast />
         </>
       )}
       {ctx.stage === 'map' && (

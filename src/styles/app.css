@@ -587,6 +587,33 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+/* The "Asked" tab (Draft 4 · A): a stop ahead that serves what the contract's
+   company asks — an elite, a city, a Plated or Warded fight, a merchant, a
+   shrine. On the node's bottom edge, so it never meets the armour tab on the
+   top one; the company's crest says whose ask it is. */
+.mn-asked {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 7px 0 4px;
+  border-radius: 9px;
+  background: var(--panel-3);
+  border: 1.5px solid var(--co);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+}
 .mn-armour.plated {
   border-color: var(--armour-plated);
   color: var(--armour-plated);

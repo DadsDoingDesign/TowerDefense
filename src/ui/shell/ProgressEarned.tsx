@@ -77,6 +77,8 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
   const co = companyById(p.company)
   const prog = standingProgress(xp)
   const up = p.standingAfter > p.standingBefore
+  // The asks met paid their part of it (Draft 4 · A).
+  const gained = `+${p.xp} standing XP${p.askXp ? `, ${p.askXp} from ${(p.asks ?? []).filter((a) => a.met).length === 1 ? 'its ask' : 'its asks'}` : ''}`
   return (
     <>
       <div className="ct-stand" style={{ '--co': companyVar(p.company) } as CSSProperties}>
@@ -90,13 +92,13 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
               ? 'A custom seed earns no standing.'
               : up
                 ? p.standingAfter < STAKES_OPEN_AT
-                  ? `+${p.xp} standing XP. Stakes open at Standing ${STAKES_OPEN_AT}.`
+                  ? `${gained}. Stakes open at Standing ${STAKES_OPEN_AT}.`
                   : p.standingBefore < STAKES_OPEN_AT
-                    ? `+${p.xp} standing XP. Stakes are open on its road: up to ${Math.min(8, p.standingAfter + 1)} crates.`
-                    : `+${p.xp} standing XP. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
+                    ? `${gained}. Stakes are open on its road: up to ${Math.min(8, p.standingAfter + 1)} crates.`
+                    : `${gained}. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
                 : prog.max
-                  ? `+${p.xp} standing XP. The highest standing there is.`
-                  : `+${p.xp} standing XP · ${prog.need - prog.into} to Standing ${Math.min(MAX_STANDING, prog.standing + 1)}`}
+                  ? `${gained}. The highest standing there is.`
+                  : `${gained} · ${prog.need - prog.into} to Standing ${Math.min(MAX_STANDING, prog.standing + 1)}`}
           </span>
         </span>
         <span className="ct-stand-lv" aria-label={up ? `Standing ${p.standingBefore} to ${p.standingAfter}` : `Standing ${p.standingAfter}`}>
