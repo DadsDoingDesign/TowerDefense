@@ -14,6 +14,7 @@ import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
 import { recruitSlate } from '../../game/run/recruits'
 import { contractGrant } from '../../game/run/settle'
+import { fightTally, tallyAsks } from '../../game/run/asks'
 import { cargoPct, cityOfLayer, cityPay, contractRules, earn } from '../../game/run/contracts'
 import { stow } from '../../game/run/inventory'
 import { packSale, packSlotsOf } from './purse'
@@ -403,7 +404,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       // already paid keep their pay, the purse comes home, unsold crates are lost.
       sfx('defeat')
       const depth = get().clearedNodeIds.length - 1
-      const contract = st.contract ? { ...st.contract, pending: null, status: 'lost' as const } : null
+      // The company's asks count what this last fight did too (Draft 4 · A).
+      const tally = fightTally(st.engine, { cleared: false, enemiesLeaked: result.enemiesLeaked, cargoBefore: st.baseHp, cargoAfter: 0, node })
+      const contract = st.contract ? tallyAsks({ ...st.contract, pending: null, status: 'lost' as const }, tally) : null
       const lost = { ...st, roster: rosterXp, contract, runKills: totalKills }
       const deposit = useMetaStore
         .getState()
@@ -446,7 +449,10 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // completion bonus — into the contract's ledger (banked at the settle, so
     // a later fall keeps it). Cities 1 and 2 then wait on "cash out or press on".
     const city = cityOfLayer(node.layer)
-    let contract = st.contract
+    // The company's asks (Draft 4 · A): what the fight felled, and whether it
+    // was a clean win, an elite, a city — counted before the city judges the
+    // delivery, so the destination's own fight counts.
+    let contract = tallyAsks(st.contract, fightTally(st.engine, { cleared: true, enemiesLeaked: result.enemiesLeaked, cargoBefore: st.baseHp, cargoAfter: result.baseHpLeft, node }))
     if (contract && city != null && contract.paid.length === city) {
       const cargo = cargoPct(result.baseHpLeft, st.maxBaseHp)
       const pay = cityPay(contract, city, cargo)

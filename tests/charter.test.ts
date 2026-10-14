@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RNG } from '../src/game/core/rng'
 import { COMPANY_IDS } from '../src/game/data/companies'
+import { ASK_STANDING } from '../src/game/run/asks'
 import { ENEMY_TYPES } from '../src/game/data/enemies'
 import { roadCoverage, ROUTE_HAZARDS } from '../src/game/data/hazards'
 import {
@@ -381,11 +382,15 @@ describe('the Sovereign Route, in the store', () => {
     // A charter is no stake: the stake record is untouched.
     expect(meta().record).toEqual({})
     // October 2026: it earns standing with all five companies — each a
-    // delivered escort's standing XP with its one company.
+    // delivered escort's standing XP with its one company — and each ask met
+    // (Draft 4 · A) pays the company whose ask it was on top.
     const p = g().victory!.progress!
-    const xp = Object.values(meta().standing)
-    expect(new Set(xp).size).toBe(1)
-    expect(xp[0]).toBe(p.xp)
+    expect(p.asks).toHaveLength(3)
+    expect(new Set(p.asks.map((a) => a.company)).size).toBe(3)
+    for (const c of COMPANY_IDS) {
+      const met = p.asks.filter((a) => a.company === c && a.met).length
+      expect(meta().standing[c]).toBe(p.xp + met * ASK_STANDING)
+    }
     expect(p.xp).toBeGreaterThanOrEqual(STANDING_XP.delivered)
     expect(p.standingAll).toHaveLength(COMPANY_IDS.length)
     // Every card is already unlocked (the door), so each level crossed pays a

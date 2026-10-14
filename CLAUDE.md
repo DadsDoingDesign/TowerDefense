@@ -98,6 +98,13 @@ result. Append a short note to the review log when you're done.
   the store side is `contractSlice`. A hero has no class: its role comes from
   its gear (`src/game/data/gear.ts`); `archetype` survives only as an art key and
   in old-save migration. The Daily and Endless modes were removed.
+- Company asks (Draft 4 · A): `src/game/run/asks.ts` — each company's three
+  asks, the deal (two per contract, three from three companies on the
+  Sovereign Route; a hash of run seed and company, never a draw), counting,
+  judging and the pay (standing XP, a tip on delivery, via `settle.contractGrant`).
+  Progress rides `RunContract.asks`; the engine's `burningKills` feeds one.
+  UI `ui/shell/contracts/AskParts.tsx` and `ui/shell/AskToast.tsx`; targets
+  fitted by `npx tsx balance/ask-rates.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by

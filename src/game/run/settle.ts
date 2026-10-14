@@ -17,6 +17,7 @@ import type { HeroStyle } from '../data/items'
 import { cashOutValue, CITY_COUNT, cityPay, contractBanked, type RunContract } from './contracts'
 import { homeGold, homeTotal, LOST_ROAD_SHARE, ROAD_SHARE, roadShareFor, type HomeGold } from './hq'
 import { actOf } from './threat'
+import { judgeAsks, type AskResult } from './asks'
 
 /**
  * What a run tracks for the feats (Phase 3b) — the few facts a settle cannot
@@ -165,6 +166,12 @@ export interface RunGrant {
   deposit: number
   unranked?: boolean
   facts?: RunFacts
+  /**
+   * The company's asks, judged as the contract finished (Draft 4 · A,
+   * `asks.judgeAsks`): each met one pays its company standing XP on a ranked
+   * finish, and a tip on a delivery (`metaStore.settleContract`).
+   */
+  asks?: AskResult[]
 }
 
 export type PayoutPlan =
@@ -183,6 +190,7 @@ export function contractGrant(f: SettleFacts, status: RunGrantStatus): RunGrant 
     deposit: runDeposit(f, status),
     unranked: f.challenge.kind === 'seeded',
     ...(f.facts ? { facts: f.facts } : {}),
+    ...(f.contract?.asks?.length ? { asks: judgeAsks({ contract: f.contract, gold: f.gold }, status) } : {}),
   }
 }
 

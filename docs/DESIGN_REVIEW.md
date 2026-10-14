@@ -3684,3 +3684,36 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - **Verified** on phone (all four stops) and desk, with a click-through:
     buy (the SOLD cubby), repair and restock.
 
+- **2026-10-14 · Company asks (Draft 4 · A).** Each contract wants two
+  things of the road (three on the Sovereign Route), shown in four places:
+  the terms, the route panel, a battle toast and the receipt. Rendered in the
+  running app (Playwright, phone 390 × 844 and desk 1440 × 900); final shots
+  in `docs/ui-audit-2026-10/asks/`.
+  - **Terms:** an "Ironvein asks" panel between the stake and the pay slip,
+    lit along its edge in the company's colour like the standing card, its
+    head a `.field-k`; one slip line, "Ironvein's asks if met · up to 50".
+  - **Road:** each ask is one slim row under the route panel (label, a bar
+    in the company's colour, the count; ✓ green once met). An ask judged at
+    the end names where ("Cargo at Highcharter"), since a full bar there is
+    not yet a met ask. On the Sovereign Route each row carries its company's
+    crest.
+  - **Map:** an "Asked" tab with the company's crest on a stop that serves an
+    open ask.
+  - **Battle:** a pill at the Stage's top edge when a count moves ("Ironvein ·
+    Plated felled 13/25"). It takes no tap and fades after 2.4 s; it steps
+    under the champion's plate, and to the bottom edge while the coach holds
+    the top. A big tally toasts every few kills (target ÷ 25), not on each.
+  - **Receipt:** "What Ironvein asked" with ✓ / ✕, the count each reached and
+    what a met ask paid. The standing card says how much of its XP the asks
+    paid, and the tip is a line on the banked slip.
+  - **Fixed after the first shots:**
+    - the "Asked" tab on the bottom edge covered the node's label ("ELITE");
+      it now hangs below the edge, in the gap between rows;
+    - the tip's coin at 8 px read as a dot, so it is at the slip's size;
+    - an end-judged ask showed a full bar at 100% cargo and read as met, so
+      it now names the destination;
+    - gold counts were unformatted ("0/3900").
+  - **Left as is:** the toast floats over the top of the field. On a
+    height-bound phone that is the lane's entry for 2.4 s. It follows the
+    coach pill's approved pattern (an edge, no pointer, fades), and the
+    mockup put it there.

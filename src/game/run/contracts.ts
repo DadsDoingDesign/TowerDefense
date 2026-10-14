@@ -39,6 +39,7 @@ import { ACT_LAYERS, ACTS } from './threat'
 import { difficultyRules, type DifficultyRules } from './watch'
 import { BASE_RUN_HQ, FOCUS_MAX_SHARE, type RunHq } from './hq'
 import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, MUSTER_STRENGTH, sovereignPool } from './charter'
+import type { RunAsk } from './asks'
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders the designer will tune: "to what makes it fun")
@@ -266,6 +267,13 @@ export interface RunContract extends ContractTerms {
   earned: number
   /** What the HQ gave this run, frozen when it began (`hq.runHqFor`). */
   hq: RunHq
+  /**
+   * What the company asks of the run (Draft 4 · A, `run/asks.ts`): each ask's
+   * id, the target it was dealt and its count so far. Dealt when the run
+   * begins (a hash of the run seed, never a draw); absent on an older save and
+   * on a first contract, which pay exactly what they always did.
+   */
+  asks?: RunAsk[]
 }
 
 /** A contract signed now: its terms, the company's advance as its purse, and the HQ's terms. */

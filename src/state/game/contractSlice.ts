@@ -89,6 +89,12 @@ export function homeCompany(meta: { standing: Meta['standing']; stats: { runsCom
   return market && open.includes(hot) ? hot : (open[0] ?? FIRST_COMPANY)
 }
 
+/**
+ * The run seed a company's contract on this board is signed with: the terms
+ * read it to show the asks the run will be dealt (`run/asks.dealAsks`).
+ */
+export const contractSeed = (boardSeed: number, company: CompanyId): number => hashSeed(boardSeed, 'contract', company)
+
 /** A board with its stake clamped to what this save may set. */
 function clampBoard(b: ContractBoard, meta: Pick<Meta, 'standing' | 'bank'>): ContractBoard {
   return { ...b, crates: clampCrates(b.crates, stakeCap(meta, b.company)) }
@@ -137,7 +143,7 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
     const terms = clampBoard(b, meta)
     useSettingsStore.getState().markTaught('board')
     // Each company's contract on this board deals its own seed.
-    get().beginCampaign(hashSeed(b.seed, 'contract', b.company), STANDARD_RUN, { company: terms.company, crates: terms.crates })
+    get().beginCampaign(contractSeed(b.seed, b.company), STANDARD_RUN, { company: terms.company, crates: terms.crates })
   },
 
   signCharter: () => {

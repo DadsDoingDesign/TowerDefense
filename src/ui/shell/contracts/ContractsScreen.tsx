@@ -18,7 +18,8 @@ import { difficultyEffect } from '../../../game/run/watch'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
-import { stakeCap } from '../../../state/game/contractSlice'
+import { contractSeed, stakeCap } from '../../../state/game/contractSlice'
+import { askTipMax, dealAsks } from '../../../game/run/asks'
 import { stakesShown } from '../../../state/staging'
 import { ROAD_SHARE } from '../../../game/run/hq'
 import { useReveal } from '../staging'
@@ -26,6 +27,7 @@ import { companyVar } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
 import { ContractPage, DangerPips, Gold, MarketTag, PageTip, Slip, SlipLine } from './parts'
+import { AskTerms } from './AskParts'
 
 /**
  * A company's terms (the mercenary company; mockups `trade/r3/3-stakes.png`,
@@ -45,7 +47,7 @@ import { ContractPage, DangerPips, Gold, MarketTag, PageTip, Slip, SlipLine } fr
 export function ContractsScreen() {
   const board = useGameStore((s) => s.board)
   if (!board) return null
-  return <Terms company={board.company} crates={board.crates} />
+  return <Terms company={board.company} crates={board.crates} seed={board.seed} />
 }
 
 function BankChip() {
@@ -70,7 +72,7 @@ function Back({ label }: { label: string }) {
 // The terms
 // ---------------------------------------------------------------------------
 
-function Terms({ company, crates }: { company: CompanyId; crates: number }) {
+function Terms({ company, crates, seed }: { company: CompanyId; crates: number; seed: number }) {
   const meta = useMetaStore()
   const setCrates = useGameStore((s) => s.setCrates)
   const sign = useGameStore((s) => s.signContract)
@@ -90,6 +92,9 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
   const staked = crates > 0
   const [c1, c2, dest] = co.towns
   const sold = plan.cities.map((c) => c.sold)
+  // What the company asks of the road (Draft 4 · A): the asks the contract
+  // will be dealt, read off the very seed it is signed with.
+  const asks = dealAsks(contractSeed(seed, company), company)
 
   return (
     <ContractPage
@@ -228,10 +233,23 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
       </div>
       )}
 
+      <AskTerms company={company} asks={asks} />
+
       <Slip eyebrow="What it pays · in gold" className="ct-pay">
         <SlipLine label={c1} note={staked && sold[0] ? 'stake back + fee' : 'escort fee'} value={<Gold n={plan.cities[0].total} />} />
         <SlipLine label={c2} note={sold[1] ? 'fee + cargo sales' : 'escort fee'} value={<Gold n={plan.cities[1].total} />} />
         <SlipLine label={dest} note={sold[2] ? 'cargo + bonus' : 'fee + completion bonus'} value={<Gold n={plan.cities[2].total} />} />
+        {asks.length > 0 && (
+          <SlipLine
+            label={`${co.name}’s asks`}
+            note="if met"
+            value={
+              <>
+                up to <Gold n={askTipMax(asks)} />
+              </>
+            }
+          />
+        )}
         <div className="ct-ends">
           <span>
             <Sword /> {plan.items} item chance{plan.items === 1 ? '' : 's'}

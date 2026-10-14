@@ -516,6 +516,11 @@ export class GameEngine {
    * nothing here reads it, so it cannot move a roll or a result.
    */
   readonly killsByKey = new Map<string, number>()
+  /**
+   * Kills of an enemy that was burning when it died (a company ask counts
+   * them, `run/asks.ts`). Write-only inside the sim, like `killsByKey`.
+   */
+  burningKills = 0
   status: BattleStatus = 'running'
   elapsed = 0
   /** Whole steps simulated. Player inputs are stamped with it (`inputLog`). */
@@ -1947,6 +1952,7 @@ export class GameEngine {
     this.enemies.splice(idx, 1)
     this.killCount++
     this.killsByKey.set(e.key, (this.killsByKey.get(e.key) ?? 0) + 1) // Q10
+    if (e.burnDps > 0 && this.elapsed < e.burnUntil) this.burningKills++
     this.goldEarned += e.reward
     this.onEvent?.('kill', { ...enemyTag(e.type), x: this.fieldX(e.pos.x) })
     if (srcId) {

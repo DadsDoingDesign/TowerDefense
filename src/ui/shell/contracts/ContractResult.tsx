@@ -16,6 +16,8 @@ import { Icon } from '../../Icon'
 import { StandingEarned, UnlocksEarned } from '../ProgressEarned'
 import { stakeLine } from '../offers'
 import { ContractPage, Gold, Slip, SlipLine } from './parts'
+import { AskReceipt } from './AskParts'
+import { asksMetWord } from '../../../game/run/asks'
 
 /**
  * How a contract ends (the mercenary company; mockup `trade/r3/6-complete.png`):
@@ -57,6 +59,7 @@ export function ResultScreen() {
   // home in full; of the road's gold, only a share does.
   const home = recap?.home ?? null
   const interest = recap?.interest ?? 0
+  const tips = recap?.progress?.askTips ?? 0
   const dest = route?.towns[CITY_COUNT - 1] ?? 'the end of the road'
   const town = route && c ? route.towns[Math.max(0, c.paid.length - 1)] : ''
 
@@ -150,6 +153,8 @@ export function ResultScreen() {
         <SovereignReveal kind={recap.progress.sovereign} owned={owned} of={SOVEREIGN_ITEM_KINDS.length} />
       )}
       {recap?.progress && <UnlocksEarned progress={recap.progress} crates={c?.crates ?? 0} />}
+      {/* What the company asked of the road (Draft 4 · A), met or not. */}
+      {recap?.progress && <AskReceipt company={recap.progress.company} results={recap.progress.asks ?? []} delivered={outcome === 'delivered'} unranked={recap.progress.unranked} />}
       {recap?.progress && <StandingEarned progress={recap.progress} />}
 
       {c && route && (
@@ -167,6 +172,9 @@ export function ResultScreen() {
             <SlipLine label="The advance" note={`${home.purseBack.toLocaleString('en')} repaid${co ? ` to ${co.name}` : ''}`} value={<Gold n={0} />} />
           )}
           {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road.toLocaleString('en')} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
+          {tips > 0 && (
+            <SlipLine label={co ? `${co.name}’s tip` : 'Tips'} note={asksMetWord(recap?.progress?.asks?.filter((a) => a.met).length ?? 0)} value={<Gold n={tips} />} />
+          )}
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
           <SlipLine total label="To your bank" value={`+${deposit.toLocaleString('en')} gold`} />

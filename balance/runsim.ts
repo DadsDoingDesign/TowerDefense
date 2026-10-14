@@ -68,6 +68,7 @@ import { difficultyRules, legMult, type DifficultyRules } from '../src/game/run/
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { autoEquipEmpty, type EquipRules } from '../src/game/engine/kit'
+import { fightTally, type AskTally } from '../src/game/run/asks'
 import {
   bestSkills,
   forcedSkills,
@@ -407,7 +408,7 @@ export interface SimOptions {
   /** Per-sub-wave safety cap (default 600s; counterfactuals only). */
   maxSeconds?: number
   /** Diagnostics: told about every fight the run takes (never changes the run). */
-  onFight?: (f: { layer: number; type: string; hpBefore: number; hpAfter: number; cleared: boolean; roster: number; level: number }) => void
+  onFight?: (f: { layer: number; type: string; hpBefore: number; hpAfter: number; cleared: boolean; roster: number; level: number; leaks?: number; leaked?: number }) => void
 }
 
 export interface RunOutcome {
@@ -448,6 +449,13 @@ export interface RunOutcome {
   nodes: number
   /** The leader's level after each layer it cleared, index = layer. */
   levelByLayer: number[]
+  /**
+   * What the company asks would have counted on this run (Draft 4 · A,
+   * `run/asks.ts`): kills, kills while burning, Plated and Warded kills, clean
+   * fights and clean city fights, elites won, wares bought and pacts taken.
+   * Diagnostics only — `balance/ask-rates.ts` fits the targets on it.
+   */
+  askTally?: Required<AskTally>
 }
 
 
@@ -629,6 +637,11 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     roster = [...roster, dressed.roster[0]]
   }
 
+  const askTally: Required<AskTally> = { kills: 0, burnKills: 0, platedKills: 0, wardedKills: 0, cleanFights: 0, cleanCities: 0, eliteWins: 0, wares: 0, pacts: 0 }
+  const countAsks = (t: AskTally) => {
+    for (const [k, v] of Object.entries(t) as [keyof AskTally, number][]) askTally[k] += v
+  }
+
   let cur = map.nodes.find((n) => n.type === 'start')!
   for (let guard = 0; guard < 40; guard++) {
     const nexts = map.edges.filter((e) => e.from === cur.id).map((e) => byId.get(e.to)!)
@@ -661,6 +674,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         }
         if (!best) break
         gold -= price(ITEM_PRICE[best.item.rarity])
+        askTally.wares++
         stock.splice(stock.indexOf(best.item), 1)
         equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
@@ -690,6 +704,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         baseHp = Math.max(1, baseHp + (eff.baseHpDelta ?? 0))
         gold = Math.max(0, gold + (eff.goldDelta ?? 0))
         earned += Math.max(0, eff.goldDelta ?? 0)
+        askTally.pacts++
       }
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
       roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))
@@ -767,7 +782,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       // A stake's last leg (and the muster) steals more (`DifficultyRules`).
       baseDamageMul: banner.leakMult * legMult(banner, node.layer),
     })
-    o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
+    o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level, leaks: m.leaks, leaked: m.enemiesLeaked })
+    countAsks(fightTally(m, { cleared: m.cleared && m.baseHpLeft > 0, enemiesLeaked: m.enemiesLeaked, cargoBefore: baseHp, cargoAfter: m.baseHpLeft, node }))
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) break
     clearedCount++
@@ -895,6 +911,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     fights: battles,
     nodes,
     levelByLayer,
+    askTally,
   }
 }
 

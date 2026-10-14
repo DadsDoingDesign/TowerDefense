@@ -135,6 +135,57 @@
   padding: 10px;
 }
 
+/* ------------------------------------------------------- a company ask ticks
+   Draft 4 · A (`AskToast`): when a fight moves an ask's count, a pill at the
+   Stage's top edge says whose ask and where it stands. Like the coach's pill
+   it takes no layout and no pointer and fades on its own; it steps below the
+   champion's plate, and to the bottom edge while the coach holds the top. */
+.sh-asktick {
+  --sh-pill-fade: 220ms;
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 8px;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
+  background: rgba(20, 13, 7, 0.9);
+  border: 1px solid var(--co);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  transition:
+    opacity var(--sh-pill-fade) ease,
+    top var(--sh-pill-fade) ease;
+  animation: sh-pill-down var(--sh-pill-fade) ease-out both;
+}
+.sh-asktick b {
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.sh-asktick.met b {
+  color: var(--good);
+}
+.sh-asktick.out {
+  opacity: 0;
+}
+.sh-stage:has(.sh-bossplate) .sh-asktick {
+  top: calc(var(--sh-bossplate-h) + 6px);
+}
+.sh-stage:has(.sh-coach.top) .sh-asktick {
+  top: auto;
+  bottom: 8px;
+  animation-name: sh-pill-up;
+}
+
 /* ------------------------------------------------------- champion nameplate */
 .sh-bossplate {
   display: flex;
