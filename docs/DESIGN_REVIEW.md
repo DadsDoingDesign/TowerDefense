@@ -3781,3 +3781,39 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     height-bound phone that is the lane's entry for 2.4 s. It follows the
     coach pill's approved pattern (an edge, no pointer, fades), and the
     mockup put it there.
+- **2026-10-14 · Liaisons (Draft 4 · D).** One person per company — Saffra
+  (Peppercorn), Vell (Easel House), Brannoch (Ironvein), Odile (Rosethread),
+  Wren (Moonquill) — at the company's own post, baked from the CC0 pack by
+  `scripts/stop-scenes.ts` beside the four stops. They speak in the stop
+  keepers' bubble at the home notice, at a city's head and, small, on the
+  receipt. Rendered in the running app (Playwright: phone 390 × 844, short
+  phone 375 × 667, desk 1440 × 900); final shots in
+  `docs/ui-audit-2026-10/liaisons/`. Benchmarked against the stop scenes.
+  - **Checklist:** each post reads as a place with someone in it and is told
+    apart by its silhouette (awning and brazier, tent and easel, lean-to and
+    tower, silk line and sheep, scroll rack by candlelight), each flies the
+    company's real standard, and the art stays at 1× / 2× with
+    `pixelated`. One title per screen: the city's name is the sign and the
+    "The caravan reaches…" eyebrow went (the rail says the act). The notice
+    says the company's words once: the bubble replaced the quoted letter.
+  - **Fixed after the first shots:**
+    - the notice band at the stops' 2× showed only Brannoch's helmet: the
+      notice draws the whole post at 1× (the mockup's framing), and the city
+      keeps 2×;
+    - the bubble over the head was cut by the band's top: a liaison's bubble
+      always hangs beside the head;
+    - the name plate in the corner covered the counter's wares, then the
+      bubble on a narrow phone: who speaks now heads the bubble, as it heads
+      the receipt's line;
+    - the bubble ran off the band's right edge: the notice's post sits a step
+      left (never baring the band's edge) and its bubble is a touch smaller;
+    - the city scene was pulled up under the contract page's 14px head pad
+      (the stops pad more), clipping the sky;
+    - Ironvein's post was a bare stone counter beside richer stalls: it got a
+      slate-and-blue lean-to and lit ore;
+    - the notice's pin floated over the art: a notice with a scene has none;
+    - a 375 × 667 phone lost a third of the map to the band: short phones show
+      an 82px band, the line without its name.
+  - **Left as is:** at 2× the city's figure is cropped at the belt on a phone
+    (like the recruiter's sergeant); the warrior's plume can touch the band's
+    top. Moonquill's long kicker still wraps to two lines (it did before).

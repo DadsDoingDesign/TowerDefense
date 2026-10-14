@@ -11,4 +11,9 @@ export const SCENE_ANCHORS = {
   campfire: { speaker: [258, 65], fire: [200, 122] },
   shrine: { speaker: [252, 76] },
   recruit: { speaker: [182, 55] },
+  'liaison-spice': { speaker: [180, 71] },
+  'liaison-art': { speaker: [180, 71] },
+  'liaison-metals': { speaker: [180, 70] },
+  'liaison-silk': { speaker: [180, 71] },
+  'liaison-scrolls': { speaker: [180, 71] },
 } as const

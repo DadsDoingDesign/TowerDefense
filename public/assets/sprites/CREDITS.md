@@ -28,15 +28,21 @@ required; provenance is recorded for reference, courtesy, and — for Tiny Sword
 > in. Verify, don't trust the README. `npx tsx scripts/harvest-cc0.ts --check`
 > runs the verification.
 
-## `scenes/` — the stops on the road (composed from the CC0 build)
+## `scenes/` — the stops on the road and the liaisons' posts (composed from the CC0 build)
 
-`public/assets/scenes/{merchant,campfire,shrine,recruit}.png` are composed by
+`public/assets/scenes/{merchant,campfire,shrine,recruit}.png` and the five
+companies' posts, `public/assets/scenes/liaison-{spice,art,metals,silk,scrolls}.png`
+(Draft 4 · D), are composed by
 `scripts/stop-scenes.ts` from the **old CC0 build** of Tiny Swords, read from the
 same verified upstream as `harvest-cc0.ts` (`FulAppiOS/Agent-Quest`, which ships
 the build under a real CC0 1.0 LICENSE.txt): terrain tiles, pines, the house and
 the tower, pawns (idle and carrying), warriors, the archer, the sheep, the fire,
 deco. The stall, tent, standing stones, altar, bedroll, crates, flag, pot and
-candles are drawn by the script in the pack's palette and ink; the night, dusk
+candles — and, at the liaisons' posts, the spice sacks and chilies, brazier,
+easel and canvases, canal, stone counter, ore, anvil, hung silk and bolts,
+reeds, scroll rack and ledger — are drawn by the script in the pack's palette
+and ink; each post's standard is the game's own company standard
+(`src/game/data/companyStandard.ts`); the night, dusk
 and firelight are its own. The scenes live outside the `*tinyswords` folders on
 purpose: their drawn props and lighting carry colours the palette check would
 (rightly) not find in the pack.

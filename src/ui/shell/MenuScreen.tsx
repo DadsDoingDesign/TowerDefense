@@ -1,12 +1,11 @@
 import { useMilitia } from './useMilitia'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { hashSeed } from '../../game/core/rng'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
 import { RANDOM_UNLOCK_SKILLS } from '../../game/data/skills'
-import { TERRAIN_RULES } from '../../game/data/terrain'
-import { CITY_COUNT, contractLetter, MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
+import { CITY_COUNT, MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
+import { boardLine } from '../../game/run/liaison'
 import { companyOpen, standingOf, standingProgress } from '../../game/run/standing'
 import { CHARTER_FEE, CHARTER_NAME, charterDoor } from '../../game/run/charter'
 import { useGameStore } from '../../state/gameStore'
@@ -23,6 +22,7 @@ import markUrl from '../../assets/brand/mark.svg'
 import { TradeMap } from '../attract/TradeMap'
 import { roadViews, type Rect } from '../attract/mapRules'
 import { CompanyFlag, Gold } from './contracts/parts'
+import { LiaisonScene } from './LiaisonScene'
 import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
 
@@ -43,8 +43,8 @@ export function useMenuMotion(): boolean {
  * wooden signpost — its logo, your standing ("Rep 2"), today's market as a
  * gold "×1.3", a padlock on a road not hiring yet. A tap FOCUSES that road
  * (`homeFocus` in the store) and never signs; the parchment notice under the
- * map is the focused road's: its company's wax seal, the road and its three
- * cities, the company's letter, and chips for the market, the ground and your
+ * map is the focused road's: its liaison at the company's post saying the
+ * day's line (Draft 4 · D), the company's flag, the road and its three cities, and chips for the market, the ground and your
  * standing (or what opens it). The CTA names the company and opens its terms
  * straight away; there is no separate board.
  *
@@ -247,8 +247,10 @@ const shortName = (name: string) => name.replace(/ Co\.$/, '')
  * The focused road's notice (Figma "B2 · Contract Notice"): a parchment sheet
  * pinned under the map, sealed in its company's colour with its logo. The
  * kicker names the road and its cities, the pager steps the roads the way the
- * signposts do, the letter is the company's own words (a hash of the day, so
- * it holds still while you look), and the chips are the facts that tell one
+ * signposts do. Over it the company's liaison stands at its post and says the
+ * day's line (`LiaisonScene`, `run/liaison.boardLine`: a hash of the day, so it
+ * holds still while you look) — the company's own words, said once: it
+ * replaced the notice's quoted letter. The chips are the facts that tell one
  * road from another: today's market, its ground, your standing — or, on a road
  * not hiring yet, what opens it.
  */
@@ -286,6 +288,8 @@ function ContractNotice({
   const i = COMPANY_IDS.indexOf(company)
   return (
     <section className="mn-notice" style={{ '--co': co.color } as CSSProperties} aria-label={`Notice: ${co.name}`} aria-live="polite">
+      {/* The company's liaison, at its post, saying the day's line (Draft 4 · D). */}
+      <LiaisonScene at="notice" company={company} line={boardLine(company, day, open)} />
       {/* The company's flag on the LEFT, beside its name (the designer: the
           trader's icon belongs on the left when a road is opened, as a flag). */}
       <div className="mn-notice-head">
@@ -327,7 +331,6 @@ function ContractNotice({
           </span>
         ))}
       </p>
-      <p className="mn-letter">{open ? `“${contractLetter(company, hashSeed(day, 'notice', company))}”` : `Not hiring yet. ${groundLine(company)}`}</p>
       <div className="mn-chips">
         {market > 1 && (
           <span className="mn-chip is-market">
@@ -365,9 +368,3 @@ function ContractNotice({
 
 /** The livery's mark on the notice's flag: a brush, in ink. */
 const BRUSH_MARK = { p: '#2a1e14' }
-
-/** What the company's ground does to a field, in the terrain rules' own words. */
-const groundLine = (id: CompanyId) =>
-  companyById(id)
-    .ground.rules.map((r) => TERRAIN_RULES[r].blurb)
-    .join(' ')
