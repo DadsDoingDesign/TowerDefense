@@ -1,4 +1,5 @@
 import { hashSeed } from '../../game/core/rng'
+import type { CompanyId } from '../../game/data/companies'
 
 /**
  * What the keeper says at a stop on the road (Oct 2026; the designer: "a
@@ -48,5 +49,14 @@ export const stopLine = (kind: StopKind, nodeId: string): string => {
   return lines[hashSeed(nodeId, 'stop-line') % lines.length]
 }
 
-export const isStopKind = (k: string | undefined | null): k is StopKind =>
+/**
+ * Every baked scene (`scripts/stop-scenes.ts`): the four stops, and each
+ * company's post where its liaison stands (Draft 4 · D).
+ */
+export type SceneKind = StopKind | `liaison-${CompanyId}`
+
+/** The scene a company's liaison stands in. */
+export const liaisonScene = (company: CompanyId): SceneKind => `liaison-${company}`
+
+export const isStopKind =(k: string | undefined | null): k is StopKind =>
   k === 'merchant' || k === 'campfire' || k === 'shrine' || k === 'recruit'

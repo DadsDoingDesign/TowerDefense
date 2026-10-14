@@ -18,6 +18,8 @@ import { stakeLine } from '../offers'
 import { ContractPage, Gold, Slip, SlipLine } from './parts'
 import { AskReceipt } from './AskParts'
 import { asksMetWord } from '../../../game/run/asks'
+import { endLine } from '../../../game/run/liaison'
+import { LiaisonSays } from '../LiaisonScene'
 
 /**
  * How a contract ends (the mercenary company; mockup `trade/r3/6-complete.png`):
@@ -153,6 +155,10 @@ export function ResultScreen() {
         <SovereignReveal kind={recap.progress.sovereign} owned={owned} of={SOVEREIGN_ITEM_KINDS.length} />
       )}
       {recap?.progress && <UnlocksEarned progress={recap.progress} crates={c?.crates ?? 0} />}
+      {/* The company's liaison has the last word (Draft 4 · D): one line, small. */}
+      {c?.company && !charter && recap && (
+        <LiaisonSays company={c.company} line={endLine(c.company, outcome, recap.seed, recap.progress?.asks ?? [], Math.max(0, c.paid.length - 1))} />
+      )}
       {/* What the company asked of the road (Draft 4 · A), met or not. */}
       {recap?.progress && <AskReceipt company={recap.progress.company} results={recap.progress.asks ?? []} delivered={outcome === 'delivered'} unranked={recap.progress.unranked} />}
       {recap?.progress && <StandingEarned progress={recap.progress} />}

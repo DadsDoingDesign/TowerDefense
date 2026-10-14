@@ -12,6 +12,7 @@ import {
   recordAt,
 } from '../../../game/run/contracts'
 import { cityTrade } from '../../../game/run/settle'
+import { cityLine } from '../../../game/run/liaison'
 import { ACT_LAYERS, RUN_LAYERS } from '../../../game/run/threat'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
@@ -21,6 +22,7 @@ import { NextGround } from '../NextGround'
 import { Icon } from '../../Icon'
 import { PickCard, PickStrip } from '../PickStrip'
 import { companyVar } from '../../channels'
+import { LiaisonScene } from '../LiaisonScene'
 import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } from './parts'
 
 /** The two ways on from a city: cash out here, or press on. */
@@ -28,6 +30,12 @@ type Way = 'out' | 'on'
 
 /**
  * A city — an act boss down (mockup `trade/r3/5-payout.png`).
+ *
+ * The head is the place (Draft 4 · D, mockup 5b): the company's liaison at
+ * its post (`LiaisonScene`), the city's name hung on it as its sign — the
+ * page's one title — and the liaison's line on the cargo that arrived or on
+ * one of the contract's asks (`run/liaison.cityLine`, fixed for the run and
+ * the city).
  *
  * The gold leads: what this city paid, and why ("your stake is back, plus a
  * fee"). The receipt slip itemises it, the route rail shows what is ahead, and
@@ -47,6 +55,7 @@ export function CityScreen() {
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const firstRun = useGameStore((s) => s.firstRun)
   const gold = useGameStore((s) => s.gold)
+  const runSeed = useGameStore((s) => s.runSeed)
   const layer = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.layer ?? 0)
   const pressOn = useGameStore((s) => s.pressOn)
   const cashOut = useGameStore((s) => s.cashOut)
@@ -91,17 +100,20 @@ export function CityScreen() {
     <ContractPage
       // A city with no choice to make is a short board: its one CTA sits right
       // under the receipt rather than at the foot of an empty column (3.5).
-      className={`ct-city${!choose || nothingToLose ? ' compact' : ''}`}
+      className={`ct-city has-scene${!choose || nothingToLose ? ' compact' : ''}`}
       label={`${town}: paid ${here.total} gold`}
       head={
         <>
-          <p className="ct-eyebrow">
-            {/* The arrival beat (October audit 3.11): the caravan made it, then the pay. */}
-            The caravan reaches {town} · act {city + 1}
-          </p>
-          <h1 className="ct-big" tabIndex={-1}>
-            <Coin scale={4} />+{here.total} gold
+          {/* The arrival beat (October audit 3.11): the caravan made it — the
+              city's own square, its name on the sign, the company's liaison
+              there to meet it — then the pay. The rail below says which act. */}
+          <LiaisonScene at="city" company={c.company} line={cityLine(c.company, { seed: runSeed, city, arrived, asks: c.asks, facts: { contract: c, gold } })} />
+          <h1 className="ct-sign" tabIndex={-1}>
+            {town}
           </h1>
+          <p className="ct-big">
+            <Coin scale={4} />+{here.total} gold
+          </p>
           <p className="ct-msg">{msg}</p>
         </>
       }

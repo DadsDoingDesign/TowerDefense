@@ -136,6 +136,11 @@ result. Append a short note to the review log when you're done.
   campfire's flame is the pack's fire strip. Re-run the script after
   changing a scene. The merchant's goods sit under it (`ShopFront.tsx`,
   `styles/shop.css`: wares on a shelf, services on a counter). It sells goods only, with no hire on the counter.
+  Each company's liaison (Draft 4 · D) talks the same way: words in
+  `src/game/data/liaisons.ts`, which line when (board / city / receipt, a
+  hash, never a run stream) in `src/game/run/liaison.ts`, drawn by
+  `LiaisonScene.tsx` (+ `liaisons.css`) on the company's post that the same
+  script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a
   road (`homeFocus`), the notice under the map is that company's, and its CTA
   opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes

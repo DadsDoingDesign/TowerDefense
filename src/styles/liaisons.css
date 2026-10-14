@@ -1,0 +1,208 @@
+/**
+ * The liaisons (Draft 4 · D, `ui/shell/LiaisonScene.tsx`): each company's
+ * person at its post, saying one line in the stop keepers' bubble
+ * (`stops.css` draws the scene, the stage and the bubble; this sheet only
+ * places them).
+ *
+ *  - the home notice: a short band across the parchment's top;
+ *  - a city: the page's head, the city's name hung on it as its sign;
+ *  - the receipt: one small line with the liaison's face.
+ *
+ * Loads after `stops.css`, whose phone rules it trims.
+ */
+
+/* The scene's ground before the art arrives: each post's own. */
+.stop-liaison-spice { background: #c9a861; }
+.stop-liaison-art { background: #b9a65e; }
+.stop-liaison-metals { background: #8e9468; }
+.stop-liaison-silk { background: #c3a95e; }
+.stop-liaison-scrolls { background: #1d2131; }
+
+/* Who is speaking heads the bubble, in the receipt's small bold sans: a
+   liaison's bubble is a touch wider than a keeper's to hold it. */
+.lia-scene .ss-bubble {
+  max-width: 196px;
+}
+.ss-who,
+.lia-says-who {
+  display: block;
+  margin-bottom: 2px;
+  font-family: system-ui, sans-serif;
+  font-style: normal;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--slip-ink-2);
+}
+
+/* ------------------------------------------------------------ the home notice */
+/* A band across the notice's top, edge to edge of the parchment (its
+   padding, undone): the whole post at 1×, the liaison behind the counter,
+   the bubble beside the head. */
+.lia-scene.at-notice {
+  --scene-h: 140px;
+  margin: -16px -14px 10px;
+  border-radius: 3px 3px 0 0;
+  border-bottom-width: 2px;
+}
+.lia-scene.at-notice .ss-stage {
+  top: -6px;
+  /* The post a step left (up to 22px, never baring the band's right
+     edge), so the bubble has the right-hand half. */
+  left: max(calc(100% - 400px), calc(50% - 222px));
+  translate: none;
+}
+.lia-scene.at-notice .ss-bubble {
+  padding: 6px 10px 7px;
+  font-size: 15px;
+  line-height: 1.15;
+}
+/* A desk's column has room for the whole post. */
+@media (min-width: 900px) and (min-height: 540px) {
+  .lia-scene.at-notice {
+    --scene-h: 150px;
+  }
+  .lia-scene.at-notice .ss-stage {
+    top: 0;
+  }
+}
+/* The scene is the notice's header: no pin floating over the art. */
+.mn-notice:has(> .lia-scene)::before {
+  display: none;
+}
+@media (orientation: portrait) and (max-height: 760px) {
+  /* A short phone keeps the map its room: the liaison over the counter
+     only, the line without its name (the notice's flag and title say whose). */
+  .lia-scene.at-notice {
+    --scene-h: 82px;
+    margin: -15px -12px 8px;
+  }
+  .lia-scene.at-notice .ss-stage {
+    top: -32px;
+  }
+  .lia-scene.at-notice .ss-who {
+    display: none;
+  }
+}
+/* A very short phone drops the band, as it dropped the letter it replaced:
+   the chips carry the facts. */
+@media (orientation: portrait) and (max-height: 640px) {
+  .lia-scene.at-notice {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ a city */
+/* The city's square: the page's head, edge to edge, the city's name hung on
+   its top-left as its sign — where a stop hangs its own (`stops.css`), clear
+   of the liaison's bubble. */
+.ct-city.has-scene .ct-head {
+  position: relative;
+}
+.lia-scene.at-city {
+  --scene-h: 240px;
+  /* The contract page's head pads 14px, not a stop page's band. */
+  margin-top: -14px;
+}
+.lia-scene.at-city .ss-stage {
+  top: -40px;
+}
+.ct-sign {
+  position: absolute;
+  z-index: 1;
+  top: max(14px, var(--safe-top));
+  left: var(--gutter);
+  margin: 0;
+  padding: 3px 14px 5px;
+  border: 3px solid #161c2e;
+  border-radius: var(--r-xs);
+  background: var(--sign-wood);
+  color: var(--sign-ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 var(--sign-rim);
+  box-shadow: inset 0 3px 0 var(--sign-wood-on), inset 0 -3px 0 var(--sign-rim), 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+.ct-city.has-scene .ct-big {
+  margin-top: 8px;
+}
+/* A phone: the yard from the sign's row to the counter. */
+@media (max-width: 640px) {
+  .lia-scene.at-city {
+    --scene-h: 196px;
+  }
+  .lia-scene.at-city .ss-stage {
+    top: -72px;
+  }
+}
+@media (max-width: 640px) and (max-height: 700px) {
+  .lia-scene.at-city {
+    --scene-h: 170px;
+  }
+  .lia-scene.at-city .ss-stage {
+    top: -88px;
+  }
+}
+
+/* ------------------------------------------------------------ the receipt */
+/* One line from the liaison: their face, cut from their post, beside a
+   small speech line with their name over it. */
+.lia-says {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lia-face {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-sm);
+  border: 2px solid #161c2e;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--co) 70%, transparent);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+.lia-says-line {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 10px 7px;
+  border: 2px solid #161c2e;
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--slip-ink);
+  box-shadow: inset 0 -2px 0 #d8c398;
+}
+/* The bubble's tail, pointing at the face. */
+.lia-says-line::before,
+.lia-says-line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  border-style: solid;
+  border-color: transparent;
+  translate: 0 -50%;
+}
+.lia-says-line::before {
+  left: -11px;
+  border-width: 7px 10px 7px 0;
+  border-right-color: #161c2e;
+}
+.lia-says-line::after {
+  left: -7px;
+  border-width: 5px 7px 5px 0;
+  border-right-color: var(--paper);
+}
+.lia-says-q {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: var(--fs-md);
+  line-height: 1.2;
+}

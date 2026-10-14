@@ -404,7 +404,7 @@
 .mn-route {
   display: flex;
   flex-wrap: wrap;
-  margin: 0;
+  margin: 0 0 9px;
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--paper-ink-2);
@@ -414,14 +414,6 @@
   font-style: normal;
   font-size: 9px;
   color: var(--paper-ink);
-}
-.mn-letter {
-  margin: 6px 0 9px;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--fs-sm);
-  line-height: 1.35;
-  color: var(--paper-ink-2);
 }
 .mn-chips {
   display: flex;
@@ -564,12 +556,6 @@
   .mn-notice-t {
     font-size: 20px;
   }
-  .mn-letter {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
   .mn-tile {
     min-height: 54px;
   }
@@ -579,10 +565,6 @@
   }
 }
 @media (orientation: portrait) and (max-height: 640px) {
-  /* The letter goes first: the chips carry the facts. */
-  .mn-letter {
-    display: none;
-  }
   .mn-route {
     margin-bottom: 8px;
   }
