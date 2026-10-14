@@ -571,6 +571,8 @@ export function BattleCanvas() {
           color: co,
           cargo: Math.max(0, hp) / max,
           company,
+          // Dressed as you dressed it (Draft 4 § C): the livery you keep for that company.
+          livery: company ? (useMetaStore.getState().liveries[company] ?? null) : null,
           banner: company ? null : flyingMilitia(useMetaStore.getState().militia, useMetaStore.getState()),
         })
       }

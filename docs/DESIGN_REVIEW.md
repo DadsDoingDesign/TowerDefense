@@ -3732,3 +3732,19 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     - Flame, raise and talk motion stop under reduced motion.
   - **Not changed:** the battle setup's phone panel has a mostly empty band
     beside the bench, noted for the designer rather than reworked here.
+- **Oct 2026 · Company flags (Draft 4 § C).** The designer: "customize the
+  flag for each team — as you play you get more unlocks from their flag".
+  Rendered the livery panel at standing 0, 4 and 10 (phone and desk), the
+  home notice, the battle wagon flying a dressed Ironvein standard, the
+  receipt line and the militia builder with mixed pieces
+  (`docs/ui-audit-2026-10/flags/`). First pass failed three checks:
+  - two-column parts truncated a locked row's "Chequers · Standing 1": one
+    column on a phone, two from 600px;
+  - an emblem in the darker shade of the company colour vanished on its
+    cloth: on a plain hem it is now in the logo's ink, and the Emblem row
+    shows each emblem on a patch of the cloth;
+  - the militia builder said each piece's company as text after its name,
+    truncating every row: the logo mark says it, and a screen reader hears it.
+  Also: the preview's standard at 5×, the lock at 2×, chili / brush / quill
+  redrawn so no two emblems share a silhouette, and a colour picked on a
+  plain cloth brings the kit's first pattern (a colour shows only through one).

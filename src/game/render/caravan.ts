@@ -28,7 +28,7 @@ import type { Vec2 } from '../core/vec'
 import { CRATE, cratePalette, pixelRuns, WAGON, WAGON_PALETTE, type Palette, type PixelRows } from '../data/pixelArt'
 import { BANNER_H, BANNER_W, bannerKey, bannerPalette, bannerRows, DEFAULT_BANNER, type BannerLook } from '../data/banner'
 import type { CompanyId } from '../data/companies'
-import { companyStandardPalette, companyStandardRows } from '../data/companyStandard'
+import { companyStandardPalette, companyStandardRows, standardKey, type StandardLook } from '../data/companyStandard'
 
 export interface CaravanLook {
   /** The route's company colour — the crates' band. */
@@ -40,6 +40,8 @@ export interface CaravanLook {
    * wagon (its colour, its logo). Null on your own road, the Sovereign Route.
    */
   company?: CompanyId | null
+  /** How you dressed that company's standard (`metaStore.liveries`); absent: plain. */
+  livery?: StandardLook | null
   /** Your militia's banner — flown only on your own road (no `company`); the default one until you raise your own. */
   banner?: BannerLook | null
 }
@@ -194,7 +196,7 @@ const BAKES = new Map<string, HTMLCanvasElement>()
 const BAKE_MAX = 24
 
 function bakeKey(look: CaravanLook, full: number): string {
-  const flag = look.company ? `co:${look.company}` : bannerKey(look.banner ?? DEFAULT_BANNER)
+  const flag = look.company ? `co:${look.company}:${standardKey(look.livery)}` : bannerKey(look.banner ?? DEFAULT_BANNER)
   return `${look.color}|${full}|${flag}`
 }
 
@@ -216,7 +218,7 @@ function drawPixels(ctx: CanvasRenderingContext2D, look: CaravanLook, full: numb
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.fillRect(flagX - 1, ground - 2, 6, 2)
   if (look.company) {
-    blit(ctx, companyStandardRows(look.company), companyStandardPalette(look.company), flagX, ground - FLAG_H, STANDARD_UNIT)
+    blit(ctx, companyStandardRows(look.company, look.livery), companyStandardPalette(look.company, look.livery), flagX, ground - FLAG_H, STANDARD_UNIT)
   } else {
     const b = look.banner ?? DEFAULT_BANNER
     blit(ctx, bannerRows(b), bannerPalette(b), flagX, ground - FLAG_H, BANNER_UNIT)

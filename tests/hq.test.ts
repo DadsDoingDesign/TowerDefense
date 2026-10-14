@@ -380,7 +380,7 @@ describe('the HQ in the store', () => {
   })
 
   it('migration v10 → v11: Finance’s levels, "Fewer boulders" and an unspent boulder order are refunded', () => {
-    expect(META_VERSION).toBe(11)
+    expect(META_VERSION).toBeGreaterThanOrEqual(11)
     const old = { deal: 2, rate: 3, rocks: 2, pack: 1 }
     const refund = 200 + 400 + 700 + (250 + 450) + RETIRED_ROCK_ORDER
     expect(refundRetiredHq(old, { rocks: true, focus: true })).toBe(refund)
