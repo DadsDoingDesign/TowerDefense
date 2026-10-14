@@ -17,7 +17,6 @@ import { isStopKind, stopLine, type StopKind } from './stopScene'
 import { shelfSize } from '../../game/run/relics'
 
 import { OfferPick } from './OfferPick'
-import { companyById } from '../../game/data/companies'
 import { VolumeSlider } from './VolumeSlider'
 import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
@@ -294,11 +293,13 @@ export function PageScreen({
   // The spoils are a pick board too (Oct 2026): the same strip-and-card as the
   // level-up pick, the hero pick and the shop.
   const isSpoils = eventBoard && !isShop && spoilsOpen
-  // A stop on the road is drawn as a place (Oct 2026, `StopScene`): its scene
-  // over the title, and what the world says there as the subtitle — the one
-  // line an event board carries again, now that it is the story, not chrome.
+  // A stop on the road is drawn as a place (Oct 2026, `StopScene`): a scene
+  // with the title hung on it as the place's sign, and someone there saying
+  // the stop's line.
   const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : null
-  const subtitle = subtitleOverride ?? (stop && event ? stopLine(stop, event.nodeId) : eventBoard ? undefined : ctx.board?.blurb)
+  // At a stop the keeper says the line, in a bubble on the scene: it is the
+  // page's subtitle, so the head carries no second one.
+  const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
   // page that spends one currency does not need the other. Reading the prices
@@ -385,8 +386,9 @@ export function PageScreen({
       // The hero pick is branded to the contract: the hiring company's cloth
       // over the title, your militia's flag under it (Oct 2026).
       brand={
-        stop ? (
-          <StopScene kind={stop} color={contract?.company ? companyById(contract.company).color : undefined} />
+        stop && event ? (
+          // The clerk holds up whatever ware you are looking at.
+          <StopScene kind={stop} line={stopLine(stop, event.nodeId)} held={isShop ? selected?.icon : undefined} />
         ) : heroPick && contract ? (
           <ContractBanner
             company={contract.company}

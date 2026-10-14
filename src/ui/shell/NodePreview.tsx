@@ -90,7 +90,9 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
       </div>
       <div className="sh-context-body">
         <p className="sh-line muted sh-node-kind">
-          {meta.label} · Depth {node.layer}
+          {/* The head already names a stop ("Merchant"); a fight's head is its
+              variant ("Bombard"), so only a fight says its kind again. */}
+          {summary ? `${meta.label} · ` : ''}Depth {node.layer}
           {rule ? ` · ${TERRAIN_RULES[rule].name}` : ''}
         </p>
         {ground?.fresh && (

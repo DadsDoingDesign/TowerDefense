@@ -8,7 +8,9 @@ components below, each under its own licence. This file lives in
 
 ### Tiny Swords — Pixel Frog — CC0 1.0 (old public-domain build only)
 
-Sprites, terrain, decorations, UI panels and FX under `public/assets/**/tinyswords*`.
+Sprites, terrain, decorations, UI panels and FX under `public/assets/**/tinyswords*`,
+and the stop scenes under `public/assets/scenes/` (composed from the same CC0
+build by `scripts/stop-scenes.ts`, with props and lighting drawn by this project).
 Source: the older public-domain build of *Tiny Swords* by Pixel Frog
 (<https://pixelfrog-assets.itch.io/tiny-swords>), distributed by the author as
 `TS_old version_CC0 Licensed`. CC0 1.0 Universal —

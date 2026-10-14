@@ -1,207 +1,208 @@
 /**
- * A stop on the road drawn as a place (`ui/shell/StopScene.tsx`, Oct 2026):
- * the scene over the page's one title, the title hung on cords as the place's
- * sign, and what the world says there on a paper slip. Each stop dresses the
- * three parts its own way: the merchant's awning (`shop.css`), the campfire's
- * night, the shrine's stone, the recruiter's tent.
+ * A stop on the road drawn as a place, with someone there talking to you
+ * (`ui/shell/StopScene.tsx`, Oct 2026): a baked pixel scene across the top of
+ * the page (`scripts/stop-scenes.ts`), the page's one title hung on it as the
+ * place's own sign, and the keeper's line in a speech bubble over their head.
  */
 
+/* The scene runs edge to edge under the page's top band. Its 800 × 300 stage
+   is centred: a phone sees the middle (where the scene is composed), a desk's
+   wider column the wooded wings on either side. */
 .stop-scene {
-  --aw: var(--accent);
-  align-self: stretch;
+  --scene-h: 300px;
   position: relative;
-  margin-top: -4px;
+  align-self: stretch;
+  height: var(--scene-h);
+  margin: calc(-1 * max(var(--band-pad), var(--safe-top))) calc(-1 * var(--gutter)) 0;
+  overflow: hidden;
+  border-bottom: 3px solid var(--ink-line, #161c2e);
+}
+.stop-merchant { background: #c9a861; }
+.stop-campfire { background: #1d2131; }
+.stop-shrine { background: #3c4255; }
+.stop-recruit { background: #b8a058; }
+/* The two stops that carry the most below their scene (the shop's shelf,
+   counter and card; the recruiter's hero card) take a shorter one. */
+.stop-scene.stop-merchant { --scene-h: 250px; }
+.stop-merchant .ss-stage { top: -40px; }
+.stop-scene.stop-recruit { --scene-h: 250px; }
+.stop-recruit .ss-stage { top: -30px; }
+.ss-stage {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  translate: -50% 0;
+}
+.ss-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  user-select: none;
+}
+
+/* The campfire's flame: the pack's own fire strip (`fx/tinyswords/fire.png`,
+   7 frames of 128), stepped at 2× over the baked frame. */
+.ss-fire {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  background: url('/assets/fx/tinyswords/fire.png') 0 0 / 1792px 256px no-repeat;
+  image-rendering: pixelated;
+  animation: ss-fire 0.8s steps(7) infinite;
+  pointer-events: none;
+}
+@keyframes ss-fire {
+  to { background-position: -1792px 0; }
+}
+
+/* The ware the clerk holds up: whatever you are looking at on the shelf. */
+.ss-held {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  line-height: 0;
+  isolation: isolate;
+  animation: ss-raise 2.4s ease-in-out infinite;
+}
+.ss-held .fw-i {
+  filter: drop-shadow(1px 1px 0 #161c2e) drop-shadow(-1px -1px 0 #161c2e);
+}
+/* A pale glint behind it, so a thin ware (a wand, a dagger) still reads
+   against the striped awning. */
+.ss-held::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 248, 220, 0.95), rgba(255, 236, 180, 0.55) 55%, transparent);
+}
+@keyframes ss-raise {
+  50% { translate: 0 -2px; }
 }
 
 /* ------------------------------------------------------------ the sign */
+/* The page's one title, hung on the scene's top-left as the place's sign:
+   planed wood at the shop, a charred plank at the fire, cut stone at the
+   shrine, a red pennant at the recruiter's. */
 .pg.tone-shop .pg-head,
 .pg.tone-camp .pg-head,
 .pg.tone-shrine .pg-head,
 .pg.tone-recruit .pg-head {
-  text-align: center;
+  position: relative;
 }
 .pg.tone-shop .t-title,
 .pg.tone-camp .t-title,
 .pg.tone-shrine .t-title,
 .pg.tone-recruit .t-title {
-  position: relative;
-  display: inline-block;
-  margin-top: 14px;
-  padding: 2px 20px 4px;
-  border: 1px solid var(--sign-rim);
-  border-radius: 5px;
-  background:
-    linear-gradient(180deg, rgba(255, 220, 170, 0.14) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.28) calc(100% - 3px)),
-    repeating-linear-gradient(180deg, transparent 0 9px, rgba(0, 0, 0, 0.07) 9px 11px),
-    var(--sign-wood);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
-  color: var(--sign-ink);
-}
-/* Two cords from the scene to the sign. */
-.pg.tone-shop .t-title::before,
-.pg.tone-shop .t-title::after,
-.pg.tone-camp .t-title::before,
-.pg.tone-camp .t-title::after,
-.pg.tone-shrine .t-title::before,
-.pg.tone-shrine .t-title::after,
-.pg.tone-recruit .t-title::before,
-.pg.tone-recruit .t-title::after {
-  content: '';
   position: absolute;
-  bottom: 100%;
-  width: 2px;
-  height: 15px;
-  background: var(--sign-rim);
+  z-index: 1;
+  top: calc(max(var(--band-pad), var(--safe-top)) * 0 + max(14px, var(--safe-top)));
+  left: var(--gutter);
+  margin: 0;
+  padding: 3px 14px 5px;
+  font-size: 22px;
+  line-height: 1.1;
+  border: 3px solid #161c2e;
+  border-radius: 4px;
+  background: #b07a46;
+  color: #fff3dc;
+  text-shadow: 0 2px 0 #5e3a1f;
+  box-shadow: inset 0 3px 0 #d39a5e, inset 0 -3px 0 #7a4a28, 0 3px 0 rgba(0, 0, 0, 0.4);
 }
-.pg.tone-shop .t-title::before,
-.pg.tone-camp .t-title::before,
-.pg.tone-shrine .t-title::before,
-.pg.tone-recruit .t-title::before {
-  left: 18%;
-}
-.pg.tone-shop .t-title::after,
-.pg.tone-camp .t-title::after,
-.pg.tone-shrine .t-title::after,
-.pg.tone-recruit .t-title::after {
-  right: 18%;
-}
-/* The campfire's sign: a charred plank. */
 .pg.tone-camp .t-title {
-  background:
-    linear-gradient(180deg, rgba(255, 170, 90, 0.18) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.35) calc(100% - 3px)),
-    repeating-linear-gradient(90deg, transparent 0 13px, rgba(0, 0, 0, 0.16) 13px 15px),
-    #4a2f1b;
+  background: #2b2420;
+  color: #ffbe6a;
+  text-shadow: 0 0 10px rgba(255, 140, 40, 0.8);
+  box-shadow: inset 0 2px 0 #4a3a30, 0 3px 0 rgba(0, 0, 0, 0.5);
 }
-/* The shrine's sign: cut stone, its letters carved in. */
 .pg.tone-shrine .t-title {
-  border-color: #2a2c33;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
-    radial-gradient(circle at 20% 40%, rgba(0, 0, 0, 0.12) 0 2px, transparent 3px) 0 0 / 18px 14px,
-    #5d616b;
-  color: #ece6ff;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(178, 140, 240, 0.45);
+  border-radius: 12px 12px 4px 4px;
+  background: #7d8f93;
+  color: #eef6f4;
+  text-shadow: 0 -1px 0 #3d4d55;
+  box-shadow: inset 0 3px 0 #aebfbf, inset 0 -3px 0 #4f6068, 0 3px 0 rgba(0, 0, 0, 0.45);
 }
-.pg.tone-shrine .t-title::before,
-.pg.tone-shrine .t-title::after {
-  background: #2a2c33;
+.pg.tone-recruit .t-title {
+  padding-right: 30px;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
+  background: #c44a3a;
+  color: #fff6e6;
+  text-shadow: 0 2px 0 #6e2620;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 50%, 100% 100%, 0 100%);
+  box-shadow: inset 0 3px 0 #e06a56, inset 0 -3px 0 #8e2f26;
 }
 
 /* ------------------------------------------------------------ the line */
-/* What the world says at the stop: a paper slip, the contract letters' voice. */
-.pg.tone-shop .t-sub,
-.pg.tone-camp .t-sub,
-.pg.tone-shrine .t-sub,
-.pg.tone-recruit .t-sub {
+/* What the keeper says: a paper speech bubble over their head, its tail on
+   the speaker (the anchors come from the bake). It is the stop's subtitle,
+   read in place: there is no second copy. */
+.ss-bubble {
+  position: absolute;
+  max-width: 170px;
   margin: 0;
-  max-width: 92%;
-  padding: 4px 12px 5px;
-  border-radius: 3px;
+  padding: 7px 11px 8px;
+  border: 3px solid #161c2e;
+  border-radius: 6px;
   background: var(--paper);
   color: var(--slip-ink);
   font-family: var(--font-display, serif);
+  font-weight: 600;
   font-style: italic;
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
-  transform: rotate(-0.6deg);
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: left;
+  box-shadow: inset 0 -3px 0 #d8c398, 0 3px 0 rgba(0, 0, 0, 0.35);
+  animation: ss-talk 2.6s ease-in-out infinite;
+}
+.ss-bubble::before,
+.ss-bubble::after {
+  content: '';
+  position: absolute;
+  border-style: solid;
+  border-color: transparent;
+}
+.ss-bubble::before {
+  bottom: -15px;
+  left: 10px;
+  border-width: 15px 11px 0;
+  border-top-color: #161c2e;
+}
+.ss-bubble::after {
+  bottom: -9px;
+  left: 14px;
+  border-width: 10px 7px 0;
+  border-top-color: var(--paper);
+}
+.ss-bubble.lean-left::before { left: auto; right: 10px; }
+.ss-bubble.lean-left::after { left: auto; right: 14px; }
+@keyframes ss-talk {
+  50% { translate: 0 -3px; }
 }
 
-/* ------------------------------------------------------------ the campfire */
-.stop-sky {
-  position: relative;
-  height: 72px;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background:
-    radial-gradient(1.5px 1.5px at 9% 26%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 22% 58%, #ffe9c2 99%, transparent),
-    radial-gradient(1.5px 1.5px at 37% 18%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 63% 30%, #fff 99%, transparent),
-    radial-gradient(1.5px 1.5px at 78% 14%, #ffe9c2 99%, transparent),
-    radial-gradient(1px 1px at 91% 46%, #fff 99%, transparent),
-    radial-gradient(1px 1px at 52% 10%, #fff 99%, transparent),
-    linear-gradient(180deg, #0c1322 0%, #1a2032 55%, #2c1c12 100%);
+/* A phone: a shorter scene, the same stage lifted (its top is roofs and
+   treetops), so the stop's choices still fit without a scroll. */
+@media (max-width: 640px) {
+  .stop-scene { --scene-h: 250px; }
+  .ss-stage { top: -36px; }
+  /* The shop carries the most below its scene (shelf, counter, the ware's
+     card): its scene is the stall and the clerk, no roof. */
+  .stop-scene.stop-merchant { --scene-h: 200px; }
+  .stop-merchant .ss-stage { top: -76px; }
+  /* The recruiter's page carries a whole hero card: the yard to the
+     sergeant's belt, his line beside his helm. */
+  .stop-scene.stop-recruit { --scene-h: 210px; }
+  .stop-recruit .ss-stage { top: -56px; }
 }
-.stop-sky .stop-glow {
-  position: absolute;
-  left: 50%;
-  bottom: -40px;
-  width: 200px;
-  height: 120px;
-  translate: -50% 0;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(240, 150, 70, 0.55), rgba(240, 120, 50, 0.18) 60%, transparent);
-  animation: stop-glow 2.4s ease-in-out infinite;
-}
-.stop-fire {
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  translate: -50% 0;
-}
-.stop-flame {
-  transform-origin: 50% 90%;
-  transform-box: fill-box;
-  animation: stop-flicker 0.9s steps(3, end) infinite;
-}
-@keyframes stop-flicker {
-  0% { transform: scale(1, 1); }
-  33% { transform: scale(0.94, 1.06); }
-  66% { transform: scale(1.04, 0.95); }
-  100% { transform: scale(1, 1); }
-}
-@keyframes stop-glow {
-  0%, 100% { opacity: 0.85; scale: 1; }
-  50% { opacity: 1; scale: 1.06; }
-}
-
-/* ------------------------------------------------------------ the shrine */
-.stop-arch {
-  position: relative;
-  height: 72px;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse 46px 60px at 50% 100%, #120d1c 0 98%, transparent 100%),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 2px, transparent 2px 18px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 2px, transparent 2px 34px),
-    linear-gradient(180deg, #4b4f58, #34363e);
-}
-.stop-arch .stop-glow {
-  position: absolute;
-  left: 50%;
-  bottom: -10px;
-  width: 120px;
-  height: 90px;
-  translate: -50% 0;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(178, 140, 240, 0.6), rgba(120, 90, 200, 0.2) 60%, transparent);
-  animation: stop-glow 3.2s ease-in-out infinite;
-}
-.stop-arch .stop-mark,
-.stop-tent .stop-mark {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  translate: -50% 0;
-  line-height: 0;
-}
-.stop-scene .stop-mark .fw-i {
-  --fw-i-size: var(--icon-lg);
-}
-
-/* ------------------------------------------------------------ the recruiter */
-/* A striped tent in the road's colour, its door open on the hire. */
-.stop-tent {
-  position: relative;
-  height: 72px;
-  background:
-    radial-gradient(ellipse 30px 52px at 50% 100%, #1a120b 0 98%, transparent 100%),
-    linear-gradient(180deg, rgba(255, 240, 210, 0.1), rgba(0, 0, 0, 0.3)),
-    repeating-linear-gradient(90deg, var(--aw) 0 18px, var(--paper) 18px 36px);
-  clip-path: polygon(50% 0, 100% 62%, 100% 100%, 0 100%, 0 62%);
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
+@media (max-width: 640px) and (max-height: 700px) {
+  .stop-scene,
+  .stop-scene.stop-merchant,
+  .stop-scene.stop-recruit { --scene-h: 190px; }
+  .ss-stage,
+  .stop-merchant .ss-stage { top: -86px; }
+  .stop-recruit .ss-stage { top: -60px; }
 }
 
 /* ------------------------------------------------------------ the stops' cards */
@@ -223,8 +224,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stop-flame,
-  .stop-glow {
+  .ss-fire,
+  .ss-held,
+  .ss-bubble {
     animation: none;
   }
+}
+:root[data-reduced-motion='true'] :is(.ss-fire, .ss-held, .ss-bubble) {
+  animation: none;
 }

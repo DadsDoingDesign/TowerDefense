@@ -9,7 +9,7 @@ import { routeOf } from '../../game/run/charter'
 import { NODE_ICON, strengthPct, strengthShort } from '../channels'
 import { ArmourMark } from '../ArmourMark'
 import { Icon } from '../Icon'
-import { frontierScrollTop, MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
+import { frontierScrollTop, MARCH_SETTLE_MS, openingFocus, useMapFocus } from '../shell/mapFocus'
 import { nodeModFor } from '../shell/encounterPreview'
 
 /**
@@ -61,17 +61,23 @@ export function RunMapView() {
    */
   const onNode = (id: string) => {
     const f = useMapFocus.getState()
-    if (f.nodeId === id && Date.now() - f.at >= MARCH_SETTLE_MS) {
+    if (f.nodeId === id && !f.auto && Date.now() - f.at >= MARCH_SETTLE_MS) {
       focus(null)
       selectNode(id)
       return
     }
-    if (f.nodeId !== id) focus(id)
+    // A tap on the stop the map opened on is the player's own look at it.
+    if (f.nodeId !== id || f.auto) focus(id)
   }
-  // A new map (new run, resume) starts with nothing focused.
+  // The map opens on a stop you can march to (Oct 2026 review): the Context
+  // panel says what is ahead, and the CTA names it, from the first frame. A
+  // new map, a resumed run or a cleared stop (a new row of choices) re-offers.
+  const reachKey = reachable.join(',')
   useEffect(() => {
-    focus(null)
-  }, [runMap, focus])
+    const id = openingFocus(reachable, cleared)
+    if (id) useMapFocus.getState().offer(id)
+    else focus(null)
+  }, [runMap, reachKey, focus])
 
   const innerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)

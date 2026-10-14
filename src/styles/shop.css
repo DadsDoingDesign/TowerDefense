@@ -1,25 +1,9 @@
 /**
  * The merchant as a little shop on the road (`ui/shell/ShopFront.tsx`, Oct
- * 2026). An awning in the road's colour, the page's one title hung under it
- * as a wooden sign (the home's signpost wood), the wares on a shelf with paper
- * price tags, the services on a counter. Built from the pick-one parts
+ * 2026). The stall itself is the stop's scene (`StopScene`, `stops.css`); here,
+ * the wares on a shelf with paper price tags, the services on a counter. Built from the pick-one parts
  * (`pick.css`): only the dressing is here.
  */
-
-/* ------------------------------------------------------------ the awning */
-.shop-awning {
-  --aw: var(--accent);
-  --aw-w: 22px;
-  height: 30px;
-  background:
-    linear-gradient(180deg, rgba(255, 240, 210, 0.16), transparent 30%, rgba(0, 0, 0, 0.28)),
-    repeating-linear-gradient(90deg, var(--aw) 0 var(--aw-w), var(--paper) var(--aw-w) calc(var(--aw-w) * 2));
-  /* A flat run of canvas, then one scallop per stripe hanging off its edge. */
-  mask:
-    linear-gradient(#000 0 0) top / 100% 19px no-repeat,
-    radial-gradient(circle at 50% 0, #000 10.5px, transparent 11px) 0 19px / var(--aw-w) 11px repeat-x;
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
-}
 
 /* ------------------------------------------------------------ the shelf */
 .shop-shelf {
@@ -140,4 +124,13 @@
   text-transform: uppercase;
   transform: rotate(-12deg);
   opacity: 0.85;
+}
+
+/* A service's line ("Cargo is whole", "Cargo +25%") wraps to a second line
+   rather than being cut ("Cargo is w…", Oct 2026 review). */
+.shop-counter .pk-foot,
+.shop-counter .pk-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }

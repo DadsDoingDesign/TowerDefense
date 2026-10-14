@@ -119,12 +119,16 @@ result. Append a short note to the review log when you're done.
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
   Every offer board that commits on its CTA (the spoils, the merchant) is
-  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place:
-  `StopScene.tsx` over the title (hung as its sign, `stops.css`) and the
-  world's line for that node (`stopScene.ts`) as the subtitle.
-  The merchant is dressed as a roadside shop (`ShopFront.tsx`,
-  `styles/shop.css`: awning, hanging sign, wares on a shelf, services on a
-  counter). It sells goods only, with no hire on the counter.
+  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place
+  with someone in it talking to you: `StopScene.tsx` draws a pixel scene
+  baked from the CC0 pack by `npx tsx scripts/stop-scenes.ts`
+  (`public/assets/scenes/<stop>.png` + `stopScenes.generated.ts`, the
+  anchors), the page's title hung on it as the place's sign (`stops.css`),
+  and the keeper's line for that node (`stopScene.ts`, spoken, ≤ 40 chars)
+  in a speech bubble. The clerk holds up the ware you are looking at; the
+  campfire's flame is the pack's fire strip. Re-run the script after
+  changing a scene. The merchant's goods sit under it (`ShopFront.tsx`,
+  `styles/shop.css`: wares on a shelf, services on a counter). It sells goods only, with no hire on the counter.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a
   road (`homeFocus`), the notice under the map is that company's, and its CTA
   opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes

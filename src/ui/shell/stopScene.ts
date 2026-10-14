@@ -1,32 +1,38 @@
 import { hashSeed } from '../../game/core/rng'
 
 /**
- * What the world says at a stop on the road (Oct 2026; the designer: "what's
- * unique to them and makes it lively for the story"). One line per visit,
- * picked by the node so two merchants on one road say different things. The
- * world talking, never a rule: what a stop offers is on its own cards.
+ * What the keeper says at a stop on the road (Oct 2026; the designer: "a
+ * campfire with a person that's talking to you"). One line per visit, picked
+ * by the node so two merchants on one road say different things, spoken in a
+ * bubble over the keeper's head (`StopScene`): the trader at the stall, the
+ * cook at the fire, the shrine's keeper, the recruiting sergeant. Speech,
+ * never a rule (what a stop offers is on its own cards), and short: a line
+ * fits a phone's bubble in two lines (`MAX_LINE`, tested).
  */
 export type StopKind = 'merchant' | 'campfire' | 'shrine' | 'recruit'
 
+/** The longest a line may run, quotes included: two lines of the bubble. */
+export const MAX_LINE = 40
+
 export const STOP_LINES: Readonly<Record<StopKind, readonly string[]>> = {
   merchant: [
-    '“Coin first, friend. Questions after.”',
-    '“Everything here has seen a worse road than yours.”',
-    '“Buy it now. The next stall is a long walk off.”',
-    '“Steel, mail and a wheelwright. What’ll it be?”',
-    '“Mind the goods. Mind the price more.”',
+    '“Coin first. Questions after.”',
+    '“Buy it now. The next stall’s far.”',
+    '“Steel, mail and a wheelwright.”',
+    '“Mind the goods. Mind the price.”',
+    '“It’s all seen worse roads.”',
   ],
   campfire: [
-    'The fire cracks. It won’t last till morning.',
-    'Night on the road. One thing gets done before dawn.',
-    'Someone sings off-key. The wagons creak and settle.',
-    'Embers, and a pot of something. The goblins can wait.',
+    '“Sit. Stew’s on.”',
+    '“Nothing walks into a fire this big.”',
+    '“Sleep, or sharpen up?”',
+    '“One thing before dawn. Pick.”',
   ],
   shrine: [
-    'The stone hums. It gives, and it takes.',
-    'Old words, cut deep. Something is listening.',
-    'The candles burn without wax.',
-    'A bargain is a bargain. The stone remembers.',
+    '“The stone gives, and it takes.”',
+    '“Old words. Something listens.”',
+    '“A bargain is a bargain.”',
+    '“Lay a hand on it, if you dare.”',
   ],
   recruit: [
     '“Blades for hire. Coin up front.”',

@@ -3684,3 +3684,51 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - **Verified** on phone (all four stops) and desk, with a click-through:
     buy (the SOLD cubby), repair and restock.
 
+
+- **Oct 2026 · Full app review, three rounds (stops as places with people, the
+  map opens on a stop).** The designer liked the stop-scene canvas ("this is
+  starting to look great, keep this up") and asked for a full app review and
+  three rounds of improvements. Every screen was captured on a 390 phone and
+  a 1280 desk by driving the real dev app (home, Codex, settings, hero pick,
+  battle setup / live / cleared, the reward, the run map, all four stops, run
+  lost), critiqued, fixed and recaptured, three times.
+  - **Round 1:**
+    - **The stops still wore the flat banner strips** the designer had called
+      tacky. They now use option 1 of the canvas ("scene and speech"): a pixel
+      scene baked from the CC0 pack (`scripts/stop-scenes.ts`). The scenes are
+      the trader's stall, the cook's fire with the pack's flame animating, the
+      shrine's stones and keeper, and the recruiting yard. The title hangs on
+      the scene as the place's own sign, and the keeper says the stop's line in
+      a speech bubble. The clerk holds up the ware in focus.
+    - **The run map opened on an empty panel:** "Tap a stop to see what waits
+      there" over a dead "Tap a stop to march" button (on desk, a third of the
+      screen). The map now opens focused on a stop you can march to, so the
+      panel shows the stop and the CTA says "March to Bombard". The look-first
+      rule holds: a tap on that pre-focused stop is still a look.
+    - **The counter cut its own label** ("Cargo is w…"); it now wraps.
+  - **Round 2:**
+    - **Desk:** a wide column showed flat bands beside the scene. The scenes
+      are now baked 400 px wide with wooded wings.
+    - **Phone merchant:** the 300 px scene pushed the ware's card under the
+      exits. The phone scene is shorter and lifted, and the shop's shorter
+      still; the merchant fits without a scroll again.
+    - **Speech:**
+      - the bubble hid the held ware; it now sits beside a tall speaker or a
+        raised ware;
+      - a thin ware vanished against the awning; it now has a pale glint;
+      - the lines were narration ("The candles burn without wax.") in a speech
+        bubble; every line is now spoken by the keeper and kept to 40
+        characters, which is tested.
+    - **The preview said "Merchant" twice;** only a fight repeats its kind.
+  - **Round 3:**
+    - **Phone recruiter:** the hero card hid its skill under the exits; its
+      scene is trimmed like the shop's.
+    - **Desk:** the shop's and the recruiter's cards clipped at 800 px tall;
+      both scenes are shorter on every width.
+  - **Accessibility:**
+    - The bubble is the subtitle, read in place, with no hidden duplicate (the
+      codebase keeps no visually-hidden text).
+    - The art, the flame and the held ware are decorative.
+    - Flame, raise and talk motion stop under reduced motion.
+  - **Not changed:** the battle setup's phone panel has a mostly empty band
+    beside the bench, noted for the designer rather than reworked here.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { isStopKind, STOP_LINES, stopLine, type StopKind } from '../src/ui/shell/stopScene'
+import { isStopKind, MAX_LINE, STOP_LINES, stopLine, type StopKind } from '../src/ui/shell/stopScene'
 
-describe('what the world says at a stop (Oct 2026)', () => {
+describe('what the keeper says at a stop (Oct 2026)', () => {
   const kinds: StopKind[] = ['merchant', 'campfire', 'shrine', 'recruit']
 
   it('every stop kind has lines, and a node always says the same one', () => {
@@ -16,6 +16,14 @@ describe('what the world says at a stop (Oct 2026)', () => {
       const said = new Set(Array.from({ length: 40 }, (_, i) => stopLine(k, `n${i}`)))
       expect(said.size).toBe(STOP_LINES[k].length)
     }
+  })
+
+  it('every line is speech, short enough for the bubble', () => {
+    for (const k of kinds)
+      for (const l of STOP_LINES[k]) {
+        expect(l.startsWith('“') && l.endsWith('”')).toBe(true)
+        expect(l.length).toBeLessThanOrEqual(MAX_LINE)
+      }
   })
 
   it('knows a stop from anything else', () => {

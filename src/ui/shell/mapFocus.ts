@@ -9,22 +9,36 @@ import { create } from 'zustand'
  * now focuses the node and fills the Context panel with what waits there
  * (`NodePreview`); the march is a second, deliberate action.
  *
- * View state, deliberately outside `gameStore`: it is never saved, never read
- * by the engine, and a resumed run should open on the map with nothing
- * focused. Kept tiny so it cannot grow into a second source of run truth.
+ * View state, deliberately outside `gameStore`: it is never saved and never
+ * read by the engine. The map opens on a stop you can march to (`offer`). Kept tiny so it cannot grow into a second source of run truth.
  */
 interface MapFocus {
   nodeId: string | null
   /** When the current focus landed — a same-node tap inside the settle window is not a march. */
   at: number
+  /**
+   * The map put this focus there, not the player (Oct 2026 review): the map
+   * opens on a stop you can march to, so the Context panel always says what
+   * is ahead instead of standing empty under a hint. A tap on an auto-focused
+   * node is still a LOOK — only a second tap marches.
+   */
+  auto: boolean
   focus: (id: string | null) => void
+  /** Focus a stop on the player's behalf (see `auto`). */
+  offer: (id: string) => void
 }
 
 export const useMapFocus = create<MapFocus>((set) => ({
   nodeId: null,
   at: 0,
-  focus: (id) => set({ nodeId: id, at: Date.now() }),
+  auto: false,
+  focus: (id) => set({ nodeId: id, at: Date.now(), auto: false }),
+  offer: (id) => set({ nodeId: id, at: Date.now(), auto: true }),
 }))
+
+/** The stop the map opens on: the first one you can march to. */
+export const openingFocus = (reachable: readonly string[], cleared: readonly string[]): string | null =>
+  reachable.find((id) => !cleared.includes(id)) ?? null
 
 /**
  * A second tap on the focused node marches — but not inside this window, so a
