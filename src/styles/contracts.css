@@ -916,7 +916,7 @@
   flex-direction: column;
   align-items: center;
   flex: none;
-  width: 52px;
+  width: 44px;
 }
 .co-flag-rod {
   position: relative;
@@ -943,24 +943,12 @@
 .co-flag-rod::after {
   right: -3px;
 }
+/* The cloth is the company's standard in pixels (`data/companyStandard.ts`),
+   off its pole — the wagon's flag, dressed as you dressed it. */
 .co-flag-cloth {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 52px;
+  display: block;
   margin-top: -1px;
-  padding-bottom: 8px;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.14)),
-    linear-gradient(rgba(255, 255, 255, 0.16), transparent 45%),
-    var(--co);
-  clip-path: polygon(0 0, 100% 0, 100% 82%, 83% 100%, 66.6% 82%, 50% 100%, 33.3% 82%, 16.6% 100%, 0 82%);
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
-}
-.co-flag.locked .co-flag-cloth {
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.08), transparent 45%),
-    #6c675f;
 }
 
 /* The hero pick's contract banner (Oct 2026). The designer, on the first
@@ -1185,4 +1173,23 @@
 }
 .ct-next-ground b {
   color: var(--text);
+}
+
+/* The flag pieces a settle's standing earned (Draft 4 § C): a line per
+   company under its standing — "Ironvein flag · Cobalt". */
+.ct-flag-earned {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ct-flag-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: inset 3px 0 0 var(--co);
 }

@@ -1,18 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  BANNER_SHAPES,
-  CHARGE_IDS,
   CHARGE_NAMES,
   CHARGES,
-  COLOUR_PAIRS,
   DEFAULT_BANNER,
   fullBanner,
-  METAL_IDS,
   METAL_NAMES,
   METALS,
-  pairIndex,
   PATTERN_NAMES,
-  PATTERNS,
   patternRows,
   SHAPE_NAMES,
   soldierPalette,
@@ -25,10 +19,13 @@ import {
   type Pattern,
 } from '../../game/data/banner'
 import { militiaName, randomBanner, rerollName, type Militia } from '../../game/run/militia'
+import { companyById, type CompanyId } from '../../game/data/companies'
+import { earnedBannerParts, type EarnedOption } from '../../game/run/livery'
+import { standingOf } from '../../game/run/standing'
 import { checkCompanyName, NAME_MAX } from '../../game/run/nameFilter'
 import { useMetaStore } from '../../state/metaStore'
 import { Icon } from '../Icon'
-import { Banner, Pixel } from '../pixel'
+import { Banner, Crest, Pixel } from '../pixel'
 import { ContractPage } from './contracts/parts'
 import { FlagWheel, OptionGrid, PartCarousel, type CarouselOption } from './company/FlagCarousel'
 import '../../styles/company.css'
@@ -36,10 +33,12 @@ import '../../styles/company.css'
 /** A pattern shown on its own: a mid and a light stone, so the division reads whatever your colours. */
 const PATTERN_SWATCH = { c: '#4b4238', d: '#c9bfae' }
 
-const SHAPE_OPTIONS = BANNER_SHAPES.map((id) => ({ id, name: SHAPE_NAMES[id] }))
-const CHARGE_OPTIONS = CHARGE_IDS.map((id) => ({ id, name: CHARGE_NAMES[id] }))
-const PATTERN_OPTIONS = PATTERNS.map((id) => ({ id, name: PATTERN_NAMES[id] }))
-const PAIR_OPTIONS: CarouselOption[] = COLOUR_PAIRS.map(([a, b], i) => ({ id: String(i), name: `${TINCTURE_NAMES[a]} & ${TINCTURE_NAMES[b]}` }))
+/** An option of the builder, and the company whose flag it came from (Draft 4 § C): its logo marks the option, and a screen reader hears it. */
+interface PartOption extends CarouselOption {
+  company: CompanyId | null
+}
+const fromKit = <T extends string,>(list: EarnedOption<T>[], name: (id: T) => string): PartOption[] =>
+  list.map((o) => ({ id: o.id, name: name(o.id), company: o.company, ...(o.company ? { spoken: `${name(o.id)}, from ${companyById(o.company).name}` } : {}) }))
 
 type Wheel = 'shape' | 'charge'
 
@@ -49,7 +48,6 @@ const TROOP = [
   { kind: 'spear', skin: '#e0b48a' },
   { kind: 'bow', skin: '#7a4e32' },
 ] as const
-const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
 
 /**
  * Your militia: its name and its flag (Oct 2026; the designer: "the first
@@ -78,6 +76,25 @@ const METAL_OPTIONS = METAL_IDS.map((id) => ({ id, name: METAL_NAMES[id] }))
 export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () => void; onBack?: () => void; mode?: 'create' | 'edit' }) {
   const saved = useMetaStore((s) => s.militia)
   const setMilitia = useMetaStore((s) => s.setMilitia)
+  // The base set, and every piece earned from any company's flag (Draft 4 § C).
+  const xp = useMetaStore((s) => s.standing)
+  const opts = useMemo(() => {
+    const parts = earnedBannerParts((c) => standingOf(xp, c))
+    return {
+      shape: fromKit(parts.shapes, (id) => SHAPE_NAMES[id]),
+      charge: fromKit(parts.charges, (id) => CHARGE_NAMES[id]),
+      pattern: fromKit(parts.patterns, (id) => PATTERN_NAMES[id]),
+      metal: fromKit(parts.metals, (id) => METAL_NAMES[id]),
+      pair: parts.pairs.map((o) => ({
+        id: o.id,
+        name: `${TINCTURE_NAMES[o.pair[0]]} & ${TINCTURE_NAMES[o.pair[1]]}`,
+        company: o.company,
+        pair: o.pair,
+        ...(o.company ? { spoken: `${TINCTURE_NAMES[o.pair[0]]} & ${TINCTURE_NAMES[o.pair[1]]}, from ${companyById(o.company).name}` } : {}),
+      })),
+    }
+  }, [xp])
+  const byId = <T extends PartOption,>(list: T[], id: string) => list.find((o) => o.id === id)
   // A fresh name and flag to start from: a UI roll, not a run stream.
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9))
   const [m, setM] = useState<Militia>(() => saved ?? { name: militiaName(seed), ...fullBanner(mode === 'create' ? randomBanner(seed) : DEFAULT_BANNER) })
@@ -106,16 +123,30 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
   // Each wheel shows ONLY its own part (the designer: "only show the parts
   // that are selected — it's assembled at the top"): the shape as bare cloth,
   // the emblem alone in the chosen metal.
-  const shapeArt = (id: string, big: boolean) => (
-    <Banner look={{ shape: id as BannerShape, tincture: 'slate', charge: 'none', metal: 'parchment' }} scale={big ? 4 : 3} />
-  )
-  const chargeArt = (id: string, big: boolean) =>
-    id === 'none' ? (
-      <span className={`co-none${big ? ' big' : ''}`} />
+  // A company's piece wears its logo, small, in the corner (Draft 4 § C).
+  const marked = (o: PartOption | undefined, art: ReactNode) =>
+    o?.company ? (
+      <span className="co-from">
+        {art}
+        <span className="co-from-mark">
+          <Crest company={o.company} scale={1} />
+        </span>
+      </span>
     ) : (
-      <Pixel rows={CHARGES[id as Charge]} palette={{ p: METALS[look.metal] }} scale={big ? 9 : 7} className="co-emblem" />
+      art
     )
-  const pair = pairIndex(look)
+  const shapeArt = (id: string, big: boolean) =>
+    marked(byId(opts.shape, id), <Banner look={{ shape: id as BannerShape, tincture: 'slate', charge: 'none', metal: 'parchment' }} scale={big ? 4 : 3} />)
+  const chargeArt = (id: string, big: boolean) =>
+    marked(
+      byId(opts.charge, id),
+      id === 'none' ? (
+        <span className={`co-none${big ? ' big' : ''}`} />
+      ) : (
+        <Pixel rows={CHARGES[id as Charge]} palette={{ p: METALS[look.metal] }} scale={big ? 9 : 7} className="co-emblem" />
+      ),
+    )
+  const pair = opts.pair.find((o) => o.pair[0] === look.tincture && o.pair[1] === look.tincture2)?.id ?? ''
 
   return (
     <ContractPage
@@ -177,36 +208,36 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
 
       <div className="co-cols">
         <section className="co-col" aria-label="The flag">
-          <FlagWheel label="Flag" options={SHAPE_OPTIONS} value={look.shape} onChange={(id) => set({ shape: id as BannerShape })} render={(o, big) => shapeArt(o.id, big)} onOpenAll={() => setOpen('shape')} />
+          <FlagWheel label="Flag" options={opts.shape} value={look.shape} onChange={(id) => set({ shape: id as BannerShape })} render={(o, big) => shapeArt(o.id, big)} onOpenAll={() => setOpen('shape')} />
           <PartCarousel
             label="Pattern"
-            options={PATTERN_OPTIONS}
+            options={opts.pattern}
             value={look.pattern}
             onPick={(id) => set({ pattern: id as Pattern })}
-            render={(o) => <Pixel rows={patternRows(o.id as Pattern)} palette={PATTERN_SWATCH} scale={2} className="co-pattern" />}
+            render={(o) => marked(o, <Pixel rows={patternRows(o.id as Pattern)} palette={PATTERN_SWATCH} scale={2} className="co-pattern" />)}
           />
         </section>
         <section className="co-col" aria-label="The emblem">
-          <FlagWheel label="Emblem" options={CHARGE_OPTIONS} value={look.charge} onChange={(id) => set({ charge: id as Charge })} render={(o, big) => chargeArt(o.id, big)} onOpenAll={() => setOpen('charge')} />
+          <FlagWheel label="Emblem" options={opts.charge} value={look.charge} onChange={(id) => set({ charge: id as Charge })} render={(o, big) => chargeArt(o.id, big)} onOpenAll={() => setOpen('charge')} />
           <PartCarousel
             label="Colours"
-            options={PAIR_OPTIONS}
-            value={String(pair)}
+            options={opts.pair}
+            value={pair}
             onPick={(id) => {
-              const [tincture, tincture2] = COLOUR_PAIRS[Number(id)]
-              set({ tincture, tincture2 })
+              const o = byId(opts.pair, id)
+              if (o) set({ tincture: o.pair[0], tincture2: o.pair[1] })
             }}
             render={(o) => {
-              const [a, b] = COLOUR_PAIRS[Number(o.id)]
-              return <span className="co-pair" style={{ background: `linear-gradient(135deg, ${TINCTURES[a]} 50%, ${TINCTURES[b]} 50%)`, boxShadow: `0 0 0 2px ${METALS[look.metal]}, 0 2px 0 3px rgba(0, 0, 0, 0.4)` }} />
+              const [a, b] = o.pair
+              return marked(o, <span className="co-pair" style={{ background: `linear-gradient(135deg, ${TINCTURES[a]} 50%, ${TINCTURES[b]} 50%)`, boxShadow: `0 0 0 2px ${METALS[look.metal]}, 0 2px 0 3px rgba(0, 0, 0, 0.4)` }} />)
             }}
           />
           <PartCarousel
             label="Metal"
-            options={METAL_OPTIONS}
+            options={opts.metal}
             value={look.metal}
             onPick={(id) => set({ metal: id as Metal })}
-            render={(o) => <span className="co-coin" style={{ background: METALS[o.id as Metal] }} />}
+            render={(o) => marked(o, <span className="co-coin" style={{ background: METALS[o.id as Metal] }} />)}
           />
         </section>
       </div>
@@ -215,7 +246,7 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
         <Sheet label={open === 'shape' ? 'Flag shape' : 'Emblem'} onClose={() => setOpen(null)}>
           <OptionGrid
             label={open === 'shape' ? 'Flag shape' : 'Emblem'}
-            options={(open === 'shape' ? SHAPE_OPTIONS : CHARGE_OPTIONS) as readonly CarouselOption[]}
+            options={(open === 'shape' ? opts.shape : opts.charge) as readonly CarouselOption[]}
             value={look[open]}
             render={(o) => (open === 'shape' ? shapeArt(o.id, true) : chargeArt(o.id, true))}
             onPick={(id) => (set(open === 'shape' ? { shape: id as BannerShape } : { charge: id as Charge }), setOpen(null))}

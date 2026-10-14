@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { itemKindById } from '../../game/data/itemKinds'
-import { companyById } from '../../game/data/companies'
+import { companyById, type CompanyId } from '../../game/data/companies'
+import { kitPieceLabel, kitPiecesBetween } from '../../game/data/companyKits'
 import { contractFloor, MAX_STANDING, standingProgress } from '../../game/run/standing'
 import { STAKES_OPEN_AT } from '../../game/run/contracts'
 import type { RunProgress } from '../../state/metaStore'
@@ -77,29 +78,61 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
   const prog = standingProgress(xp)
   const up = p.standingAfter > p.standingBefore
   return (
-    <div className="ct-stand" style={{ '--co': companyVar(p.company) } as CSSProperties}>
-      <Crest company={p.company} />
-      <span className="ct-stand-text">
-        <b>
-          {co.name} · Standing {p.standingAfter}
-        </b>
-        <span>
-          {p.unranked
-            ? 'A custom seed earns no standing.'
-            : up
-              ? p.standingAfter < STAKES_OPEN_AT
-                ? `+${p.xp} standing XP. Stakes open at Standing ${STAKES_OPEN_AT}.`
-                : p.standingBefore < STAKES_OPEN_AT
-                  ? `+${p.xp} standing XP. Stakes are open on its road: up to ${Math.min(8, p.standingAfter + 1)} crates.`
-                  : `+${p.xp} standing XP. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
-              : prog.max
-                ? `+${p.xp} standing XP. The highest standing there is.`
-                : `+${p.xp} standing XP · ${prog.need - prog.into} to Standing ${Math.min(MAX_STANDING, prog.standing + 1)}`}
+    <>
+      <div className="ct-stand" style={{ '--co': companyVar(p.company) } as CSSProperties}>
+        <Crest company={p.company} />
+        <span className="ct-stand-text">
+          <b>
+            {co.name} · Standing {p.standingAfter}
+          </b>
+          <span>
+            {p.unranked
+              ? 'A custom seed earns no standing.'
+              : up
+                ? p.standingAfter < STAKES_OPEN_AT
+                  ? `+${p.xp} standing XP. Stakes open at Standing ${STAKES_OPEN_AT}.`
+                  : p.standingBefore < STAKES_OPEN_AT
+                    ? `+${p.xp} standing XP. Stakes are open on its road: up to ${Math.min(8, p.standingAfter + 1)} crates.`
+                    : `+${p.xp} standing XP. Crate ${Math.min(8, p.standingAfter + 1)} can ride on its road.`
+                : prog.max
+                  ? `+${p.xp} standing XP. The highest standing there is.`
+                  : `+${p.xp} standing XP · ${prog.need - prog.into} to Standing ${Math.min(MAX_STANDING, prog.standing + 1)}`}
+          </span>
         </span>
-      </span>
-      <span className="ct-stand-lv" aria-label={up ? `Standing ${p.standingBefore} to ${p.standingAfter}` : `Standing ${p.standingAfter}`}>
-        {up ? `${p.standingBefore}→${p.standingAfter}` : p.standingAfter}
-      </span>
+        <span className="ct-stand-lv" aria-label={up ? `Standing ${p.standingBefore} to ${p.standingAfter}` : `Standing ${p.standingAfter}`}>
+          {up ? `${p.standingBefore}→${p.standingAfter}` : p.standingAfter}
+        </span>
+      </div>
+      <FlagEarned gains={[{ company: p.company, before: p.standingBefore, after: p.standingAfter }]} />
+    </>
+  )
+}
+
+/**
+ * The flag pieces a settle's standing levels earned (Draft 4 § C): one line
+ * per company, "Ironvein flag · Cobalt, Battled cut" — the piece is waiting
+ * in its livery (and, once the Sovereign Route opens, in your militia's
+ * builder). A line, never a modal.
+ */
+export function FlagEarned({ gains }: { gains: { company: CompanyId; before: number; after: number }[] }) {
+  const lines = gains.map((g) => ({ company: g.company, pieces: kitPiecesBetween(g.company, g.before, g.after) })).filter((l) => l.pieces.length > 0)
+  if (!lines.length) return null
+  return (
+    <div className="ct-flag-earned">
+      {lines.map((l) => {
+        const co = companyById(l.company)
+        const what = l.pieces.map((x) => kitPieceLabel(x.piece)).join(', ')
+        return (
+          <p key={l.company} className="ct-flag-line" style={{ '--co': companyVar(l.company) } as CSSProperties} aria-label={`${co.name} flag: ${what}`}>
+            <span className="field-k" aria-hidden="true">
+              {co.name.replace(/ Co\.$/, '')} flag
+            </span>
+            <span className="field-v" aria-hidden="true">
+              {what}
+            </span>
+          </p>
+        )
+      })}
     </div>
   )
 }
@@ -131,6 +164,7 @@ function StandingAllEarned({ progress: p }: { progress: RunProgress }) {
           )
         })}
       </div>
+      <FlagEarned gains={all} />
     </section>
   )
 }

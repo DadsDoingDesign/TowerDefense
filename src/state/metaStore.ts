@@ -48,6 +48,8 @@ import {
   standingXpFor,
 } from '../game/run/standing'
 import { readMilitia, type Militia } from '../game/run/militia'
+import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
+import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
 
 /**
  * The HQ (build step 3) replaced the Watchtower's list of hub purchases. Its
@@ -264,6 +266,12 @@ interface MetaState {
    * after the first finished contract. Validated on load (`run/militia.readMilitia`).
    */
   militia: Militia | null
+  /**
+   * How you dressed each company's standard (Draft 4 § C): the look its wagon
+   * and notice fly. Only the companies you dressed; each part validated
+   * against that company's kit at your standing with it (`run/livery`).
+   */
+  liveries: Liveries
   // actions
   /** The next level's price, or null when it is maxed or unknown. */
   upgradeCost: (id: string) => number | null
@@ -302,6 +310,8 @@ interface MetaState {
   recordMet: (ids: Iterable<IdeaId>) => void
   /** Raise (or change) the militia's name and banner. An invalid one is ignored. */
   setMilitia: (m: Militia) => void
+  /** Dress a company's standard. A part not unlocked at your standing with it falls back to the plain one. */
+  setLivery: (company: CompanyId, look: StandardLook) => void
   resetMeta: () => void
 }
 
@@ -354,8 +364,11 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  * base interest. Nothing else moves: the staggered reveal's latches are the
  * `met` list a save already holds, so a player who met the HQ or the crates
  * keeps them.
+ *
+ * v12 — company flags (Draft 4 § C): `liveries`, the standards you dressed,
+ * per company. An older save has none (every standard flies plain).
  */
-export const META_VERSION = 11
+export const META_VERSION = 12
 
 /** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -425,6 +438,7 @@ type PersistedMeta = Pick<
   | 'codex'
   | 'met'
   | 'militia'
+  | 'liveries'
 >
 
 /**
@@ -498,6 +512,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     codex: migrateCodex(o.codex),
     met: readMet(o.met),
     militia: readMilitia(o.militia),
+    // v12: none before; each part checked against the standing just read.
+    liveries: readLiveries(o.liveries, (c) => standingFor(standing[c] ?? 0)),
   }
 }
 
@@ -528,6 +544,7 @@ export const useMetaStore = create<MetaState>()(
       codex: freshCodex(),
       met: [],
       militia: null,
+      liveries: {},
 
       upgradeCost: (id) => (isHqId(id) ? hqCost(id, hqLevel(get().upgrades, id)) : null),
 
@@ -774,6 +791,13 @@ export const useMetaStore = create<MetaState>()(
         if (militia) set({ militia })
       },
 
+      setLivery: (company, look) => {
+        if (!isCompanyId(company)) return
+        const fit = readLivery(company, look, standingFor(Math.max(0, num(get().standing[company], 0))))
+        const { [company]: _old, ...rest } = get().liveries
+        set({ liveries: isDefaultStandard(fit) ? rest : { ...rest, [company]: fit } })
+      },
+
       bonuses: () => {
         const deal = dealRules(hqLevel(get().upgrades, 'deal'))
         return {
@@ -806,6 +830,7 @@ export const useMetaStore = create<MetaState>()(
           codex: freshCodex(),
           met: [],
           militia: null,
+          liveries: {},
         }),
     }),
     {
@@ -831,6 +856,7 @@ export const useMetaStore = create<MetaState>()(
         codex: s.codex,
         met: s.met,
         militia: s.militia,
+        liveries: s.liveries,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is

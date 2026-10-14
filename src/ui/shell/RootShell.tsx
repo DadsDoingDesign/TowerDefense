@@ -8,6 +8,8 @@ import { StageBand } from './StageBand'
 import { PageScreen } from './PageScreens'
 import { MenuScreen } from './MenuScreen'
 import { MilitiaScreen } from './MilitiaScreen'
+import { LiveryScreen } from './company/LiveryScreen'
+import type { CompanyId } from '../../game/data/companies'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -95,6 +97,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   codex: { title: 'Codex', subtitle: 'Every item, skill, goblin, relic and feat your militia has found.' },
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
   militia: { title: 'Your militia' },
+  livery: {},
 }
 
 export function RootShell() {
@@ -110,6 +113,8 @@ export function RootShell() {
   const items = useMetaStore((s) => s.items)
   const charterOpen = useMemo(() => charterDoor({ skills, items: items ?? [] }).open, [skills, items])
   const [metaView, setMetaView] = useState<MetaView>('menu')
+  // The company whose standard the livery panel dresses (Draft 4 § C).
+  const [liveryOf, setLiveryOf] = useState<CompanyId | null>(null)
   // The banner picker returns to where it was opened from (the menu's tip, or Settings).
   const beforeMilitia = useRef<MetaView>('menu')
   useEffect(() => {
@@ -198,7 +203,14 @@ export function RootShell() {
           ) : screen === 'hub' && metaView === 'codex' ? (
             <CodexScreen onBack={() => setMetaView('menu')} />
           ) : isMenu ? (
-            <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
+            <MenuScreen
+              offers={offers}
+              onMilitia={() => setMetaView('militia')}
+              onCharter={() => setMetaView('charter')}
+              onLivery={(c) => (setLiveryOf(c), setMetaView('livery'))}
+            />
+          ) : screen === 'hub' && metaView === 'livery' && liveryOf && !menuStaged ? (
+            <LiveryScreen company={liveryOf} onDone={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'militia' ? (
             <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
           ) : (

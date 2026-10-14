@@ -2,7 +2,8 @@ import { useMilitia } from './useMilitia'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { hashSeed } from '../../game/core/rng'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
-import { DEFAULT_BANNER } from '../../game/data/banner'
+import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
+import type { StandardLook } from '../../game/data/companyStandard'
 import { RANDOM_UNLOCK_SKILLS } from '../../game/data/skills'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CITY_COUNT, contractLetter, MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
@@ -15,7 +16,7 @@ import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { ArmourMark } from '../ArmourMark'
 import { ENEMY_MODS } from '../../game/data/enemies'
-import { Banner, Lock, SovereignCrest } from '../pixel'
+import { Banner, Lock, Pixel, SovereignCrest } from '../pixel'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import markUrl from '../../assets/brand/mark.svg'
@@ -60,7 +61,18 @@ export function useMenuMotion(): boolean {
  * fifth finished contract; a first launch (LS3) shows the one road that hires
  * and its notice, and the CTA is the free escort.
  */
-export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; onMilitia: () => void; onCharter: () => void }) {
+export function MenuScreen({
+  offers,
+  onMilitia,
+  onCharter,
+  onLivery,
+}: {
+  offers: Offer[]
+  onMilitia: () => void
+  onCharter: () => void
+  /** Open the livery panel for a company's standard (Draft 4 § C). */
+  onLivery?: (company: CompanyId) => void
+}) {
   const primary = offers.find((o) => o.id === 'run')
   const tiles = offers.filter((o) => o.id !== 'run')
   const xp = useMetaStore((s) => s.standing)
@@ -68,6 +80,7 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
   const skills = useMetaStore((s) => s.skills)
   const items = useMetaStore((s) => s.items)
   const militia = useMilitia()
+  const liveries = useMetaStore((s) => s.liveries)
   const runs = useMetaStore((s) => s.stats.runsCompleted)
   const openContracts = useGameStore((s) => s.openContracts)
   const focusRoad = useGameStore((s) => s.focusRoad)
@@ -198,6 +211,8 @@ export function MenuScreen({ offers, onMilitia, onCharter }: { offers: Offer[]; 
           xp={xp[focus] ?? 0}
           market={market?.company === focus ? market.mult : 1}
           skillsLeft={RANDOM_UNLOCK_SKILLS.some((id) => !skills.includes(id))}
+          look={liveries[focus] ?? null}
+          onLivery={!staged && open && onLivery ? () => onLivery(focus) : undefined}
           onStep={staged ? undefined : (d) => focusRoad(COMPANY_IDS[(COMPANY_IDS.indexOf(focus) + d + COMPANY_IDS.length) % COMPANY_IDS.length])}
         />
         <div className="mn-tiles">
@@ -246,6 +261,8 @@ function ContractNotice({
   xp,
   market,
   skillsLeft,
+  look,
+  onLivery,
   onStep,
 }: {
   company: CompanyId
@@ -256,6 +273,10 @@ function ContractNotice({
   xp: number
   market: number
   skillsLeft: boolean
+  /** How you dressed its standard. */
+  look: StandardLook | null
+  /** Opens its livery: the flag is the way in (Draft 4 § C). */
+  onLivery?: () => void
   onStep?: (delta: number) => void
 }) {
   const co = companyById(company)
@@ -268,7 +289,16 @@ function ContractNotice({
       {/* The company's flag on the LEFT, beside its name (the designer: the
           trader's icon belongs on the left when a road is opened, as a flag). */}
       <div className="mn-notice-head">
-        <CompanyFlag company={company} locked={!open} />
+        {onLivery ? (
+          <button type="button" className="mn-livery" onClick={onLivery} aria-label={`Dress ${co.name}’s standard`}>
+            <CompanyFlag company={company} look={look} />
+            <span className="mn-livery-mark" aria-hidden="true">
+              <Pixel rows={CHARGES.brush} palette={BRUSH_MARK} scale={2} />
+            </span>
+          </button>
+        ) : (
+          <CompanyFlag company={company} locked={!open} look={look} />
+        )}
         <span className="mn-notice-id">
           <span className="mn-kicker">
             Notice · {co.goods} road · {CITY_COUNT} cities
@@ -332,6 +362,9 @@ function ContractNotice({
     </section>
   )
 }
+
+/** The livery's mark on the notice's flag: a brush, in ink. */
+const BRUSH_MARK = { p: '#2a1e14' }
 
 /** What the company's ground does to a field, in the terrain rules' own words. */
 const groundLine = (id: CompanyId) =>

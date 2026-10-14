@@ -139,3 +139,41 @@ Rules: `src/game/run/hq.ts`. Screens: `src/ui/shell/hq/`. Every price is a place
 4. The trade-map menu (from the chosen mockup direction), and the militia name and banner.
 5. The endgame charter (built: the Sovereign Route).
 6. One tuning pass.
+
+## Draft 4 — companies as sponsors (approved 2026-10-14)
+
+The designer, on the five "The Finals sponsors" mockups (Design canvas "Companies as sponsors — mockups"): "this is great", then "make the companies a bit of a longer grind. And then when you unlock your own company you get a mix of any and all … consider carrying this through the items and skills as well", "customize the flag for each team — as you play you get more unlocks from their flag, and when you make your own you can pick things from any one and combine", and "bring the customization back into play sooner, making it more fun". Numbers are placeholders for the tuning pass. Build order: **A** asks and **C** flags (in parallel), then **B** the track, then **D** the trade war, rivals and liaisons.
+
+### A · Company asks (each contract wants something of the run)
+- Every company contract is dealt **two asks** from that company's own list, a hash of (run seed, company) in `src/game/run/asks.ts` — **never a run-stream draw**. Picking a company is picking a way to run the road.
+- **The Sovereign Route** (your own road) deals **three asks from three different companies' lists** — "a mix of any and all". Each met ask pays standing with the company whose ask it is.
+- **What an ask pays**: each one met earns **+40 standing XP** with its company on any finish that earns standing (delivered, cashed out or fallen; never a custom seed), and a **25-gold tip** banked only when the contract is **delivered** (the destination pays it). Asks judged at the end (cargo, road gold) can only be met by a delivery.
+- **The lists** (targets to be fitted with the harness so a typical delivered run meets an ask about half the time; numbers below are starting points):
+  - Peppercorn Co.: Fell 40 raiders while they burn · Win 3 fights without a leak · Fell 120 raiders
+  - Easel House: Deliver with 90% cargo · Win 2 city fights without a leak · Win 4 fights without a leak
+  - Ironvein: Fell 30 Plated raiders · Win an elite fight · Fell 150 raiders
+  - Rosethread: Buy 2 wares from merchants · Deliver with 150 road gold · Earn 200 gold on the road
+  - Moonquill: Accept a shrine pact · Fell 30 Warded raiders · Win a city fight without a leak
+- **Counters**: kills by armour come from the engine's `killsByKey` (`_plated` / `_warded` keys); a kill while burning is a new engine counter; clean fights, elites and city fights from the fight results; wares and pacts from the merchant and shrine actions. Progress lives on the run's contract (`RunContract.asks`, snapshotted and validated, fuzzed).
+- **Where they show**: the terms ("Ironvein asks", mockup 1a) and the pay ledger's "asks, if met: up to 50"; the run's route panel with progress (1b) and an "Asked" tag on a map node that serves one (an elite for "Win an elite fight"); a small battle toast when a count moves ("Ironvein · Plated felled 13/30", 1c); the receipt's "What Ironvein asked" with ✓/✕, the tip in the banked ledger (1d).
+- Items and skills carry it without a word: a company's own pieces are already dealt twice as often on its road (`contracts.weightPool`), and its asks are written to fit them (Peppercorn's burns, Ironvein's plate-breakers). **Never explain the combo** — an ask says what it wants, a piece says what it does.
+
+### B · The loyalty track (a longer grind you can see coming)
+- **Longer**: standing 10 costs about **1.75×** what it did (≈3,000 XP, ~12 deliveries with one company, asks included). An old save keeps its **level** and its fraction of the way to the next (meta migration) — nobody loses a level.
+- **Every level names its reward ahead of time** on a per-company track page (mockup 2a). The card a level unlocks is no longer a random hash: it is the company's **next locked card in catalogue order** at that level's floor, so the track can show it; the same for item kinds. The rewards, carried through the company's own items and skills:
+  - 1 its skill card · 2 stakes open · 3 an item kind of its own · 4 its skill card · 5 its **signature skill** (one per company, five new Level 2 skills, only ever from the track) · 6 an item kind · 7 its skill card · 8 an item kind · 9 its skill card, and its **Sovereign item named and shown** · 10 a **second term**.
+  - And a **flag piece at every level** (C below).
+  - A level whose card or kind is already owned pays the Rare bonus item, as today.
+- **A second term** at 10 (mockup 2c): re-sign — the track restarts as Term II, its levels paying Rare bonus items and Term II flag trims, the company's asks pay double standing, and its crest gets a gold rim. You keep everything.
+
+### C · Company flags, and your own made from any of them — built 2026-10-14
+- **Each company's standard is yours to dress.** The wagon on a company's road flies its standard (`data/companyStandard.ts`: its colour, its logo, a three-pointed foot). It gains slots — the **cut** of its foot, a **pattern** with a second colour, and its **trim** metal — and the logo always stays, so the flag still says whose road it is.
+- **Each company has a kit** of pieces in its own taste (two colours, two cuts, two patterns, two emblems, a trim), and **one piece unlocks at every standing level** with it. You dress that company's standard from your first level — customisation comes into play from the first contracts, not the end game.
+- **Your own militia's flag mixes any of them**: the builder (`MilitiaScreen`, `FlagCarousel`) offers its base set plus **every piece earned from any company**, each marked with the company it came from. Company colours on a militia flag are now allowed (the designer's call; the old "never reads as a company" rule gave way to "pick things from any one and combine").
+- When the militia is founded is unchanged (the Sovereign Route); what changed is that flags are in play from standing 1.
+- **Built 2026-10-14.** The kits are `data/companyKits.ts` (ten pieces each: two colours, two cuts, two patterns, **three** emblems — the tenth level needed a tenth piece, so each kit has a third emblem — and one trim; a pattern first, so a standing-1 standard is already dressed). The standard dresses through `companyStandard.ts` (`StandardLook`: cut, pattern + colour, an emblem under the logo that lengthens the cloth, trim; the plain look is the old standard pixel for pixel). Your liveries are `metaStore.liveries` (v12), validated per company against your standing by `run/livery.ts`. The livery panel (`ui/shell/company/LiveryScreen.tsx`) opens from the road notice's flag; the wagon and the notice fly the dressed standard; the receipt names a piece earned ("Ironvein flag · Cobalt"); the militia builder offers every earned piece marked with its company's logo. Screens: `docs/ui-audit-2026-10/flags/`.
+
+### D · The trade war, rivals, liaisons
+- **Seasons** of 7 contracts. A delivered contract moves market share to its company; the home map shows a season bar and a crown on the leader's signpost (mockups 3a/3b). The company you work for dresses the battlefield's **margins** with its banners (never the lane, 3d). At season end the leader pays a reward to its top militia (its purse, a vault pick), and the last-place company posts **desperate terms** next season: pay ×1.5, raiders +20% (3c).
+- **Rivals** (optional, 4a/4b): Ironvein ↔ Moonquill (plate against wards) and Peppercorn ↔ Rosethread (the river trade); Easel House sells to everyone and has no rival, so its exclusive costs nothing and pays +25% instead (pairs fixed in data). An **exclusive** for a season: +50% standing with the company, its rival's stake cap one lower and its notice "cold".
+- **Liaisons** (5a/5b): one person per company who speaks at the contract board and at its cities, the way the stop keepers do — a line ≤ 40 characters, spoken, in a bubble.

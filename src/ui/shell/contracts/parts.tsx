@@ -1,7 +1,8 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react'
-import { companyById, type CompanyId } from '../../../game/data/companies'
+import { useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
+import { COMPANY_LOGOS, companyById, type CompanyId } from '../../../game/data/companies'
+import { companyStandardPalette, companyStandardRows, standardPaletteFor, standardRowsFor, type StandardLook } from '../../../game/data/companyStandard'
 import { companyVar, moneyText, SOVEREIGN_VAR } from '../../channels'
-import { Banner, Coin, Crest, Lantern, SovereignCrest } from '../../pixel'
+import { Banner, Coin, Crest, Lantern, Pixel, SovereignCrest } from '../../pixel'
 import type { BannerLook } from '../../../game/data/banner'
 import { CHARTER_NAME, CHARTER_TOWNS } from '../../../game/run/charter'
 import { useMoreBelow } from '../Page'
@@ -163,19 +164,29 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
 /**
  * A trade company's small hung flag (Oct 2026; the designer: the company's
  * icon on a road's notice should be a flag, on the left). A rod with gold
- * finials, the company's cloth in its colour with its logo, the foot cut in
- * three points — the hero pick's banner, in small. A road not hiring yet
- * hangs a grey cloth with the locked mark.
+ * finials, and under it the company's standard — the same pixel rows the
+ * wagon flies (`data/companyStandard.ts`), dressed as you dressed it (Draft
+ * 4 § C, `look`). A road not hiring yet hangs a grey cloth with the locked
+ * mark.
  */
-export function CompanyFlag({ company, locked = false }: { company: CompanyId; locked?: boolean }) {
+export function CompanyFlag({ company, locked = false, look, scale = 2 }: { company: CompanyId; locked?: boolean; look?: StandardLook | null; scale?: number }) {
+  const rows = useMemo(() => hungCloth(locked ? standardRowsFor(COMPANY_LOGOS.locked, null) : companyStandardRows(company, look)), [company, locked, look])
+  const pal = locked ? standardPaletteFor(COMPANY_LOGOS.locked, LOCKED_CLOTH, null) : companyStandardPalette(company, look)
   return (
     <span className={`co-flag${locked ? ' locked' : ''}`} style={{ '--co': companyById(company).color } as CSSProperties} aria-hidden="true">
       <span className="co-flag-rod" />
-      <span className="co-flag-cloth">
-        <Crest company={company} scale={2} locked={locked} />
-      </span>
+      <Pixel rows={rows} palette={pal} scale={scale} className="co-flag-cloth" />
     </span>
   )
+}
+/** A road not hiring yet: its cloth in undyed grey. */
+const LOCKED_CLOTH = '#6c675f'
+
+/** A standard's cloth off its pole, to hang from a rod: no pole columns, no finial row, no bare rows under the foot. */
+export function hungCloth(rows: readonly string[]): string[] {
+  const cloth = rows.slice(1).map((r) => r.slice(2))
+  while (cloth.length && /^\.*$/.test(cloth[cloth.length - 1])) cloth.pop()
+  return cloth
 }
 
 /**

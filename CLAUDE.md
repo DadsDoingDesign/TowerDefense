@@ -152,6 +152,13 @@ result. Append a short note to the review log when you're done.
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.
+- Company flags (Draft 4 § C, `docs/MERCENARY_COMPANY.md`): each company's kit
+  of ten flag pieces, one per standing level, is `src/game/data/companyKits.ts`;
+  its standard dresses through `companyStandard.ts` (`StandardLook`; the default
+  is the old standard pixel for pixel). Your dressed standards are
+  `metaStore.liveries`, validated by `src/game/run/livery.ts` (which also deals
+  the militia builder its earned pieces); the panel is
+  `src/ui/shell/company/LiveryScreen.tsx`, opened from the road notice's flag.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

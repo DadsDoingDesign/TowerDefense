@@ -729,3 +729,34 @@
     margin-top: auto;
   }
 }
+
+/* The notice's flag is the way into its livery (Draft 4 § C): a button with
+   a small brush mark in its corner. */
+.mn-livery {
+  position: relative;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.mn-livery:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.mn-livery-mark {
+  position: absolute;
+  right: -6px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid #c8b48c;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
