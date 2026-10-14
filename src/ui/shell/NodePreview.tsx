@@ -44,6 +44,8 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const company = useGameStore((s) => s.contract?.company ?? null)
   const charter = useGameStore((s) => !!s.contract?.charter)
+  // Desperate terms (the trade war): its raiders are stronger from the first fight.
+  const desperate = useGameStore((s) => !!s.contract?.desperate)
   const contract = useGameStore((s) => s.contract)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
@@ -66,7 +68,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const summary = summarizeEncounter({ runSeed, runMap, contract }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
-  const rules = contractRules({ crates, charter })
+  const rules = contractRules({ crates, charter, desperate })
   const step = summary ? encounterThreat(node, rules.startThreat) * legMult(rules, node.layer) : null
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw

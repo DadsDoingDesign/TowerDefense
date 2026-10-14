@@ -30,6 +30,7 @@ export { drawField, drawTerrainDanger, drawTerrainFlames, playRect, worldOf } fr
 export { backToFront, shoulderNudge, drawEnemy, drawSentinel, heroLook, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
 export { drawCaravan, caravanSpot, type CaravanLook } from './caravan'
+export { drawMarginBanners, flagsForSpots, marginBannerSpots, type MarginFlag } from './marginBanners'
 export { baseAnchor, drawBaseFx, drawBestTile, drawBlockedFlash, drawClearance, drawClearanceLabel, drawConflictMark, drawLastStretch, drawPlacementDim, drawRange, drawSlot, drawTileGrid } from './overlays'
 export { drawProjectile, drawSwing, drawTrap } from './projectiles'
 export { blitCensus } from './blit'

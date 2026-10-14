@@ -154,6 +154,8 @@ function buildBase(): Record<string, unknown> {
       // October 2026: the purse is the company's advance (never banked).
       purse: 60,
       advance: true,
+      // The trade war (Draft 4 · D): signed on desperate terms.
+      desperate: true,
       // v18: the company's asks (Draft 4 · A), one counted, one judged at the end.
       asks: [
         { id: 'silk.wares', target: 4, got: 3 },
@@ -274,6 +276,8 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const n of c.cargoAt) if (!Number.isInteger(n) || n < 0 || n > 100) throw new Error(`${where}: cargo ${n}`)
   if (c.pending !== null && c.pending !== c.paid.length - 1) throw new Error(`${where}: pending ${c.pending}`)
   if (!Number.isFinite(runDeposit({ gold: snap.gold, contract: c }))) throw new Error(`${where}: deposit`)
+  // The trade war: desperate terms are a strict true or absent, and never on a charter.
+  if ('desperate' in c && (c.desperate !== true || c.charter)) throw new Error(`${where}: desperate ${c.desperate}`)
   // v18: the company's asks — known ids once each, from the company's own list
   // (any three on a charter), whole counts, and a judged settle that is finite.
   if (c.asks) {

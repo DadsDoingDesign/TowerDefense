@@ -107,7 +107,7 @@ export function roadExit(map: GameMap): Vec2 {
 }
 
 /** Whether the box (field px) covers only forest — no open tile, no lane, no challenge piece. */
-function onlyForest(map: GameMap, x0: number, y0: number, x1: number, y1: number): boolean {
+export function onlyForest(map: GameMap, x0: number, y0: number, x1: number, y1: number): boolean {
   const tiles = map.tiles
   if (!tiles?.length) return true
   const h = (map.tile ?? 40) / 2
@@ -118,7 +118,7 @@ function onlyForest(map: GameMap, x0: number, y0: number, x1: number, y1: number
   return true
 }
 
-function laneClear(map: GameMap, x0: number, y0: number, x1: number, y1: number): boolean {
+export function laneClear(map: GameMap, x0: number, y0: number, x1: number, y1: number): boolean {
   const p = map.path
   // The box's distance to the lane: sample its edges every 4px.
   for (let i = 0; i < p.length - 1; i++) {

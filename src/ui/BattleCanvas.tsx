@@ -55,7 +55,9 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, drawMarginBanners, flagsForSpots, marginBannerSpots, type MarginFlag } from '../game/render/renderer'
+import { seasonLeader, warOpen } from '../game/run/tradeWar'
+import { DEFAULT_BANNER } from '../game/data/banner'
 import { bestTiles, inLastStretch, lastStretch } from '../game/run/placement'
 import type { GameMap } from '../game/types'
 import {
@@ -558,6 +560,17 @@ export function BattleCanvas() {
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
       // Q1: the skulls on cursed ground — terrain too, under the hero on it.
       drawTerrainDanger(map, (x, y, v) => drawSkull(ctx, x, y, v))
+      // The trade war's banners at the field's margins (Draft 4 § D): the
+      // employer's standards, the season leader's between them; on your own
+      // road, your militia's banner. Never on the lane or a post.
+      if (st.contract) {
+        const meta = useMetaStore.getState()
+        const company = st.contract.company
+        const employer: MarginFlag = company ? { company, livery: meta.liveries[company] ?? null } : { banner: flyingMilitia(meta.militia, meta) ?? DEFAULT_BANNER }
+        const lead = warOpen(meta.stats.runsCompleted) ? seasonLeader(meta.season) : null
+        const leader: MarginFlag | null = lead && lead !== company ? { company: lead, livery: meta.liveries[lead] ?? null } : null
+        drawMarginBanners(ctx, map, flagsForSpots(marginBannerSpots(map).length, employer, leader))
+      }
       // The caravan at the road's end (the mercenary company): its crates are
       // the cargo still on board, so a leak is seen to take one away.
       {

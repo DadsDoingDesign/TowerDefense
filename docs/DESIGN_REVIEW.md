@@ -3820,3 +3820,42 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
   - **Left as is:** at 2× the city's figure is cropped at the belt on a phone
     (like the recruiter's sergeant); the warrior's plume can touch the band's
     top. Moonquill's long kicker still wraps to two lines (it did before).
+- **2026-10-14 · The trade war and rivals (Draft 4 · D).** Seasons of seven
+  contracts, five shares of the trade, the leader's champion and the last's
+  desperate terms, exclusives and cold rivals, banners at the battlefield's
+  margins. Rendered in the running app (Playwright, phone 390 × 844, a short
+  phone 375 × 667 and desk 1440 × 900); final shots in
+  `docs/ui-audit-2026-10/tradewar/`.
+  - **Home:** a slim war strip under the map ("Trade war · Season 3 · 3
+    contracts left ›" over the five-colour share bar, % inside), the coach
+    line above it once; a crown hung on the leader's signpost. A cold road's
+    notice pales to grey and wears a "Cold" tag on its corner with "Stakes
+    stop at 3"; a desperate one carries "Desperate · pays ×1.5".
+  - **Standings:** five rows ranked (crown on the leader), bar, ▲/▼ since the
+    last contract, your deliveries; a slip of what the season's end pays; the
+    CTA reads the desperate company's terms.
+  - **Season's end:** the leader's seal crowned between its two standards,
+    "Ironvein takes the season", the purse on a slip and the vault as the
+    shared PickStrip + PickCard ("Take the Warhammer"); Season 4's desperate
+    company and the closing share bar.
+  - **Terms:** the war's facts as edge-lit rows (desperate, cold, your
+    exclusive), and a dashed offer row that opens the exclusive sheet
+    (gives / its rival turns cold / when both lift; "Sign the exclusive",
+    "Not this season").
+  - **Battle:** the employer's standards (the leader's between them) in the
+    forest inside the play rect, never on the lane, a post or the caravan.
+  - **Fixed after the first shots:**
+    - the exclusive sheet sat under the terms' foot and CTA bands (a stacking
+      context); it is portalled to the body now;
+    - the "Cold" stamp covered the notice's pager, then its letter; it hangs
+      on the paper's top corner as a tag now;
+    - two of four margin banners were cropped by the phone Stage; the spots
+      are searched inside `playRect` (what every Stage shows);
+    - the crown overlapped the season page's eyebrow; the standings slip's
+      lines wrapped into three rows each (values shortened);
+    - on a short phone the strip took two rows from the map: it is one row
+      there (season, bar, what is left).
+  - **Left as is:** on a 375 × 667 phone the topmost signpost still tucks
+    under the header (the labels' placement was already tight there; the
+    strip's one row cost ~40 px). The crown is 20 px on the signpost, as
+    small as the market tag beside it.

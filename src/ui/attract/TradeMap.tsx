@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { bannerKey, type BannerLook } from '../../game/data/banner'
-import { Crest, Lock } from '../pixel'
+import { Crest, Crown, Lock } from '../pixel'
 import { useMedia } from '../pointer'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
 import { BRIGHTEN_MS, brightenEase, buildGeometry, makeTraffic, MAP_FPS, STILL_T, type MapGeometry, type Rect, type RoadView } from './mapRules'
@@ -83,6 +83,7 @@ export function TradeMap({
   motion,
   firstRun,
   focused = null,
+  leader = null,
   onPick,
 }: {
   roads: RoadView[]
@@ -96,6 +97,8 @@ export function TradeMap({
   firstRun: boolean
   /** The road whose signpost is lit: its notice is the one under the map. */
   focused?: CompanyId | null
+  /** The trade war's season leader (Draft 4 § D): a crown on its signpost. Null before the war. */
+  leader?: CompanyId | null
   /** Tap a road's signpost: focus it (the menu's notice follows). Never signs. */
   onPick?: (company: CompanyId) => void
 }) {
@@ -282,7 +285,7 @@ export function TradeMap({
         style={geo ? { width: (geo.W * k) / (size?.dpr ?? 1), height: (geo.H * k) / (size?.dpr ?? 1) } : undefined}
       />
       {geo && open && (
-        <Labels geo={geo} roads={roads} market={market} cssPerPx={cssPerPx} open={open} firstRun={firstRun} focused={focused} onPick={onPick} />
+        <Labels geo={geo} roads={roads} market={market} cssPerPx={cssPerPx} open={open} firstRun={firstRun} focused={focused} leader={leader} onPick={onPick} />
       )}
     </div>
   )
@@ -305,6 +308,7 @@ function Labels({
   open,
   firstRun,
   focused,
+  leader,
   onPick,
 }: {
   geo: MapGeometry
@@ -314,6 +318,7 @@ function Labels({
   open: Rect
   firstRun: boolean
   focused: CompanyId | null
+  leader: CompanyId | null
   onPick?: (company: CompanyId) => void
 }) {
   const ref = useRef<HTMLUListElement>(null)
@@ -365,6 +370,8 @@ function Labels({
         const hot = !firstRun && market?.company === r.company
         const on = focused === r.company
         const locked = v.state === 'uncharted'
+        // The trade war's leader wears a crown on its plate's corner (Draft 4 § D, mockup 3a).
+        const crowned = !firstRun && leader === r.company
         // Placement priority: the focused road, the market's, then by standing, the uncharted last.
         const prio = (on ? 1000 : 0) + (hot ? 100 : 0) + (locked ? 0 : 10 + v.standing)
         if (locked && firstRun) {
@@ -378,7 +385,7 @@ function Labels({
         }
         const name = locked
           ? `${co.name}: not hiring yet, opens at Standing ${co.opensAt}`
-          : `${co.name}, ${co.goods} road: standing ${v.standing}${hot ? `, ${co.goods.toLowerCase()} sells ×${market!.mult} today` : ''}`
+          : `${co.name}, ${co.goods} road: standing ${v.standing}${hot ? `, ${co.goods.toLowerCase()} sells ×${market!.mult} today` : ''}${crowned ? ', leads the trade war' : ''}`
         return (
           <li
             key={r.company}
@@ -392,6 +399,11 @@ function Labels({
               {locked ? <Lock scale={2} /> : <Crest company={r.company} scale={1} />}
               <span className="tm-lv">{locked ? '—' : `Rep ${v.standing}`}</span>
               {hot && <span className="tm-mkt">×{market!.mult}</span>}
+              {crowned && (
+                <span className="tm-crown" aria-hidden="true">
+                  <Crown scale={2} />
+                </span>
+              )}
             </button>
           </li>
         )

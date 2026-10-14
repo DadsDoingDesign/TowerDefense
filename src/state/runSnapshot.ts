@@ -1077,6 +1077,9 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     company: raw.company,
     crates: clampCrates(num(raw.crates, 0)),
     market: num(raw.market, 1) === MARKET_MULT ? MARKET_MULT : 1,
+    // The trade war's desperate terms (meta v14): a strict boolean, kept only
+    // when true — absent is ordinary terms, as every older run was signed.
+    ...(raw.desperate === true ? { desperate: true } : {}),
     purse: gold(raw.purse),
     ...(raw.advance === true ? { advance: true } : {}),
     paid,

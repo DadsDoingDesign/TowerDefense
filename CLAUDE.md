@@ -105,6 +105,20 @@ result. Append a short note to the review log when you're done.
   Progress rides `RunContract.asks`; the engine's `burningKills` feeds one.
   UI `ui/shell/contracts/AskParts.tsx` and `ui/shell/AskToast.tsx`; targets
   fitted by `npx tsx balance/ask-rates.ts`.
+- The trade war (Draft 4 § D): pure rules `src/game/run/tradeWar.ts` —
+  seasons of 7 finished contracts (counted at the settle, from the market's
+  opening), whole shares summing to 100 (`moveShares`), the season's end
+  (`endSeason`: the leader pays its champion a purse and a vault pick; the
+  last that hires you posts desperate terms, `contracts.DESPERATE_PAY` /
+  `DESPERATE_STRENGTH` via `ContractTerms.desperate` and `contractRules`),
+  rivals (`Company.rival`, `rivalOf`) and the exclusive (`seasonCrateCap`,
+  `exclusiveXpMult`). Saved as `metaStore.season` (v14, `readSeason`); the
+  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (war strip and
+  share bar on the home, the standings, the season's end, the war's facts and
+  the exclusive sheet on the terms) with `src/styles/war.css`; the crown on the
+  leader's signpost is `pixel.Crown`; the banners at a battlefield's margins
+  are `render/marginBanners.ts` (searched spots, `tests/marginBanners.test.ts`).
+  Tests `tests/tradeWar.test.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
