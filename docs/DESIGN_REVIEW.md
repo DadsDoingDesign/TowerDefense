@@ -3859,3 +3859,27 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
     under the header (the labels' placement was already tight there; the
     strip's one row cost ~40 px). The crown is 20 px on the signpost, as
     small as the market tag beside it.
+- **2026-10-14 · The loyalty track (Draft 4 · B).** One page per company
+  (mockups B1/B3): company chips, the company's card with its standard, level
+  and bar, then the ten levels as rows naming what each pays. Rendered in the
+  running app (Playwright, phone 390 × 844 and desk 1440 × 900) at standing 0,
+  4 and 10 and in Term II, with the sign view, a row's Codex card, the home
+  notice's chip, a real settle's receipt (Easel House 4 → 5, its signature
+  skill) and the Codex's Level 2; final shots in `docs/ui-audit-2026-10/track/`.
+  - **Scored:** one title ("Standing"); each fact once (the company's name on
+    its card only — the chips carry crest and level; "Term II" on the level,
+    not again in the sub-line); every reward a `.field-k` / `.field-v` pair;
+    one primary CTA (Read terms, or at 10 Sign a second term with the terms a
+    quiet second button). Benchmarked on the battle-pass tracks the mockup
+    came from: the next level is the one lit thing on the page.
+  - **Fixed after the first shots:** earned rows were two tall lines each and
+    pushed the next level below the fold — they are one dimmed line now,
+    words only; the sign view's crest ring stretched into an ellipse (the
+    page body sets every child's width); the second term's value clipped
+    ("Asks pay double, a gol…") — shortened, and values wrap; Term II said
+    itself twice on the card; two tap targets in one row overlapped.
+  - **Militia builder:** the name field's type now shrinks with the name's
+    length (a size container, `--fs-md` to 28px), so "The Ashford Company"
+    shows whole on a 390px phone (25.7px) and a 32-letter name fits at 15px.
+  - **Left as is:** an earned card or item row says only "Skill card" /
+    "Item" — what a crossed level paid is not in the save.

@@ -616,7 +616,7 @@ type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
 /** The hub's pages: the menu's rows, and the HQ and the sealed crates (their own screens). */
-export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia' | 'charter' | 'livery' | 'war'
+export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia' | 'charter' | 'livery' | 'war' | 'track'
 
 /**
  * ---------------------------------------------------------------------------
@@ -1217,7 +1217,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
   if (view === 'militia') return [back]
   // The HQ and the sealed crates are pages of their own (`hq/HqScreen.tsx`,
   // `hq/CratesScreen.tsx`); the Selector holds only the way back.
-  if (view === 'hq' || view === 'crates' || view === 'charter' || view === 'codex' || view === 'livery' || view === 'war') return [back]
+  if (view === 'hq' || view === 'crates' || view === 'charter' || view === 'codex' || view === 'livery' || view === 'war' || view === 'track') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   // The staggered reveal (October 2026): the HQ and the crates keep their

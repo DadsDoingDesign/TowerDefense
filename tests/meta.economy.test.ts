@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { RANDOM_UNLOCK_SKILLS, skillById } from '../src/game/data/skills'
+import { RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS, skillById } from '../src/game/data/skills'
 import { BASIC_ITEM_KINDS, itemKindById, UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { watchLevelFor } from '../src/game/run/watch'
-import { standingBonusKind, standingFor, standingXpFor, standingXpToReach } from '../src/game/run/standing'
+import { migrateStandingXp, standingBonusKind, standingFor, standingXpFor, standingXpToReach } from '../src/game/run/standing'
+import { TRACK_PLAN } from '../src/game/run/track'
 import { cityTrade, contractGrant, planPayout, runDeposit } from '../src/game/run/settle'
 import { LOST_ROAD_SHARE, MAX_BONUS_ITEMS, ROAD_SHARE } from '../src/game/run/hq'
 import { ADVANCE, freshContract, type ContractTerms, type RunContract } from '../src/game/run/contracts'
@@ -44,21 +45,23 @@ describe('the ledger: settleContract', () => {
   })
 
   it('a standing level past the card pool pays a Rare bonus item for the next contract, deterministically', () => {
-    // Every card a level could deal is already unlocked.
-    useMetaStore.setState({ skills: [...RANDOM_UNLOCK_SKILLS], items: ['Pavise'] })
+    // Every card and kind a level could deal is already unlocked.
+    useMetaStore.setState({ skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })
     const run = { depth: 12, kills: 400, won: true, contract: contract(0, 'delivered'), deposit: 0 }
-    useMetaStore.getState().settleContract(run)
+    useMetaStore.getState().settleContract({ ...run, kills: 6000 })
     const p = lastProgress.run!
     const levels = p.standingAfter - p.standingBefore
-    expect(levels).toBeGreaterThan(0)
+    expect(levels).toBeGreaterThan(2)
     expect(p.standingCards).toEqual([])
-    expect(p.standingBonus.map((b) => b.standing)).toEqual(Array.from({ length: levels }, (_, i) => p.standingBefore + 1 + i))
+    // Every crossed level that unlocks a card or a kind pays the bonus instead (the stakes level pays none).
+    const paying = Array.from({ length: levels }, (_, i) => p.standingBefore + 1 + i).filter((l) => ['card', 'item', 'cardSovereign'].includes(TRACK_PLAN[l - 1]))
+    expect(p.standingBonus.map((b) => b.standing)).toEqual(paying)
     for (const b of p.standingBonus) {
       expect(b.company).toBe('metals')
-      // One of the kinds you own (the basic five, or an unlocked one), never a Sovereign one.
-      expect([...BASIC_ITEM_KINDS, 'Pavise']).toContain(b.kind)
-      // A hash of its own parts: the same level of the same save pays the same kind.
-      expect(standingBonusKind(['Pavise'], 'metals', b.standing, 1)).toBe(b.kind)
+      // One of the kinds you own, never a Sovereign one.
+      expect([...BASIC_ITEM_KINDS, ...UNLOCK_ITEM_KINDS]).toContain(b.kind)
+      // A hash of its own parts (the level and the term): the track can name it ahead.
+      expect(standingBonusKind([...UNLOCK_ITEM_KINDS], 'metals', b.standing, 'track', 1)).toBe(b.kind)
     }
     expect(useMetaStore.getState().bonusItems).toEqual(p.standingBonus.map((b) => b.kind))
     // The company's own kinds come first when it has one you own.
@@ -120,7 +123,8 @@ describe('the ledger: settleContract', () => {
   it('every random card and kind is eventually unlocked once, and then nothing more', () => {
     for (let i = 0; i < 120; i++) useMetaStore.getState().settleContract({ depth: 12, kills: 900, won: true, contract: contract(8, 'delivered', COMPANY_IDS[i % 5] as 'metals'), deposit: 0 })
     const s = useMetaStore.getState()
-    expect(new Set(s.skills).size).toBe(RANDOM_UNLOCK_SKILLS.length)
+    // Every card, and each company's signature from its track's level 5.
+    expect(new Set(s.skills).size).toBe(RANDOM_UNLOCK_SKILLS.length + Object.keys(SIGNATURE_SKILLS).length)
     expect(new Set(s.items).size).toBe(UNLOCK_ITEM_KINDS.length)
   })
 })
@@ -202,7 +206,9 @@ describe('save migration v7 → v8 (the mercenary company)', () => {
 
   it('Watch XP is spread evenly over the companies, and every unlock is kept', () => {
     const m = migrateMeta({ watchXp: 1000, skills: ['charge', 'wildfire'], items: ['Axe'], topDifficulty: 3, daily: { date: '2026-10-01' } }, 7)
-    expect(Object.values(m.standing)).toEqual([200, 200, 200, 200, 200])
+    // Spread on the old curve (200 each), then moved onto the longer one at the same level and fraction (v13).
+    expect(Object.values(m.standing)).toEqual(Array(5).fill(migrateStandingXp(200)))
+    expect(standingFor(migrateStandingXp(200))).toBe(2)
     expect(m.skills).toEqual(['charge', 'wildfire'])
     expect(m.items).toEqual(['Axe'])
     expect('topDifficulty' in m).toBe(false)
@@ -223,9 +229,9 @@ describe('save migration v7 → v8 (the mercenary company)', () => {
     const m = migrateMeta({ stats }, 5)
     const xp = retroWatchXp(stats)
     expect(m.skills).toHaveLength(watchLevelFor(xp) - 1)
-    expect(Object.values(m.standing).reduce((a, b) => a + b, 0)).toBe(Math.floor(xp / 5) * 5)
+    expect(Object.values(m.standing).reduce((a, b) => a + b, 0)).toBe(migrateStandingXp(Math.floor(xp / 5)) * 5)
     expect(legacyBannerRefund(2)).toBe(550)
     expect(migrateMeta({ watchMarks: 40, sacrificeTier: 2, stats: {} }, 2).bank).toBe(590)
-    expect(standingXpToReach(1)).toBe(80)
+    expect(standingXpToReach(1)).toBe(140)
   })
 })

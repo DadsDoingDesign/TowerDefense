@@ -36,6 +36,7 @@ import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
 import { useMetaStore } from '../../state/metaStore'
 import { charterDoor } from '../../game/run/charter'
+import { useTrackLink } from './company/trackLink'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -56,6 +57,7 @@ const PAGES = {
   crates: () => import('./hq/CratesScreen'),
   charter: () => import('./charter/CharterScreen'),
   codex: () => import('./codex/CodexScreen'),
+  track: () => import('./company/TrackScreen'),
 }
 const ResultScreen = lazy(() => PAGES.result().then((m) => ({ default: m.ResultScreen })))
 const ContractsScreen = lazy(() => PAGES.contracts().then((m) => ({ default: m.ContractsScreen })))
@@ -64,6 +66,7 @@ const HqScreen = lazy(() => PAGES.hq().then((m) => ({ default: m.HqScreen })))
 const CratesScreen = lazy(() => PAGES.crates().then((m) => ({ default: m.CratesScreen })))
 const CharterScreen = lazy(() => PAGES.charter().then((m) => ({ default: m.CharterScreen })))
 const CodexScreen = lazy(() => PAGES.codex().then((m) => ({ default: m.CodexScreen })))
+const TrackScreen = lazy(() => PAGES.track().then((m) => ({ default: m.TrackScreen })))
 
 /** Warm every lazy page once, when the browser is next idle after mount. */
 function usePagePrefetch(): void {
@@ -103,6 +106,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   militia: { title: 'Your militia' },
   livery: {},
   war: {},
+  track: {},
 }
 
 export function RootShell() {
@@ -120,12 +124,23 @@ export function RootShell() {
   const [metaView, setMetaView] = useState<MetaView>('menu')
   // The company whose standard the livery panel dresses (Draft 4 § C).
   const [liveryOf, setLiveryOf] = useState<CompanyId | null>(null)
+  // The company whose loyalty track the track page shows (Draft 4 · B).
+  const [trackOf, setTrackOf] = useState<CompanyId | null>(null)
+  // The receipt's standing card asks for a track from outside the hub: open it
+  // once the run is back at the hub.
+  const wantTrack = useTrackLink((s) => s.want)
   // The banner picker returns to where it was opened from (the menu's tip, or Settings).
   const beforeMilitia = useRef<MetaView>('menu')
   useEffect(() => {
     if (metaView !== 'militia') beforeMilitia.current = metaView
   }, [metaView])
   const offers = useOffers(metaView, setMetaView)
+  useEffect(() => {
+    if (!wantTrack || screen !== 'hub' || ctx.stage === 'result') return
+    setTrackOf(wantTrack)
+    setMetaView('track')
+    useTrackLink.getState().clear()
+  }, [wantTrack, screen, ctx.stage])
   const battle = useBattleLayout()
   // G3-2: level-ups from a normal wave wait on the roster, not in a modal.
   useLevelUpTracker()
@@ -220,9 +235,12 @@ export function RootShell() {
               onCharter={() => setMetaView('charter')}
               onLivery={(c) => (setLiveryOf(c), setMetaView('livery'))}
               onWar={() => setMetaView('war')}
+              onTrack={(c) => (setTrackOf(c), setMetaView('track'))}
             />
           ) : screen === 'hub' && metaView === 'livery' && liveryOf && !menuStaged ? (
             <LiveryScreen company={liveryOf} onDone={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'track' && trackOf && !menuStaged ? (
+            <TrackScreen company={trackOf} onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'militia' ? (
             <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
           ) : (

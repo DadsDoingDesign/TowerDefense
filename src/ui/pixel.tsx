@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { useMetaStore } from '../state/metaStore'
 import { COMPANY_LOGOS, crestRows, SOVEREIGN_EMBLEM, type CompanyId } from '../game/data/companies'
 import { SOVEREIGN_COLOR } from '../game/run/charter'
 import { bannerPalette, bannerRows, type BannerLook } from '../game/data/banner'
@@ -62,7 +63,10 @@ export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className }
  */
 export function Crest({ company, scale = 2, locked = false }: { company: CompanyId; scale?: number; locked?: boolean }) {
   const logo = COMPANY_LOGOS[locked ? 'locked' : company]
-  return <Pixel rows={logo.rows} palette={logo.palette} scale={scale} className={`crest logo${locked ? ' locked' : ''}`} />
+  // A second term signed with the company (Draft 4 · B) puts a gold rim on its
+  // crest everywhere it is drawn (`.crest.rim`, app.css).
+  const rim = useMetaStore((s) => !locked && (s.terms?.[company] ?? 1) >= 2)
+  return <Pixel rows={logo.rows} palette={logo.palette} scale={scale} className={`crest logo${locked ? ' locked' : ''}${rim ? ' rim' : ''}`} />
 }
 
 /** The Sovereign Route's crest: a crown on a shield in the Sovereign cyan (the endgame charter). */

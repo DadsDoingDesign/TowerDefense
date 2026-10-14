@@ -20,8 +20,8 @@ import type { IconKey } from './iconAtlas'
  * rule, and `from` says which: the numbers are the source's, so a skill is
  * exactly as strong as the thing it replaces unless its comment says why not.
  *
- * **Shape of the library.** 40 skills: 14 at Level 1, 15 at Level 2, 11 at
- * Level 3. A hero is dealt one Level 1 skill when it is picked or hired, and is
+ * **Shape of the library.** 45 skills: 14 at Level 1, 20 at Level 2, 11 at
+ * Level 3 (five of the Level 2 are the companies' signature skills, Draft 4 · B). A hero is dealt one Level 1 skill when it is picked or hired, and is
  * offered three of a tier at levels 5, 10 and 15 (`run/skills.ts`). Level 2
  * and Level 3 skills only ever arrive as those level-up offers.
  *
@@ -39,9 +39,10 @@ import type { IconKey } from './iconAtlas'
  *
  * **Who has which.** Nine are STARTERS (three per level): every player has them
  * from the first run, so every offer at every milestone has something in it.
- * Twenty are unlocked one at a time by playing (Watch levels and wins,
- * `run/watch.ts`), and four open with a feat (`feat`) the way the
- * feat-locked specializations and perk options did.
+ * Twenty-seven are unlocked one at a time by playing (standing levels,
+ * deliveries and sealed crates), four open with a feat (`feat`) the way the
+ * feat-locked specializations and perk options did, and five — one per
+ * company — are its signature (`signature`), paid only by its loyalty track.
  *
  * Every `desc` is one plain sentence with the engine's own numbers.
  */
@@ -60,6 +61,12 @@ export interface Skill {
   starter?: boolean
   /** Achievement id that unlocks this card (it is never a random unlock). */
   feat?: string
+  /**
+   * The company's signature skill (Draft 4 · B): paid only by standing 5 on
+   * that company's loyalty track (`run/track.ts`) — never a random, contract
+   * or crate unlock, and not a starter or a feat. One per company.
+   */
+  signature?: true
   /**
    * The trade company whose pool this card belongs to (`data/companies.ts`).
    * On that company's routes the card is dealt more often
@@ -134,6 +141,18 @@ const L2: Skill[] = [
   { id: 'firebrand', name: 'Firebrand', level: 2, company: 'spice', desc: 'Its thorns set what it holds burning for 12 a second, for 3 seconds.', mods: { thornsBurn: { dps: 12, dur: 3 } }, from: 'New with the classless rework' },
   { id: 'split_shot', name: 'Split Shot', level: 2, company: 'art', desc: 'Its attacks pass through 1 more enemy.', mods: { pierce: 1 }, from: 'New with the classless rework' },
   { id: 'deadeye', name: 'Deadeye', level: 2, company: 'art', desc: 'Every 4th attack is a sure crit, and crits deal 25% more.', mods: { critEvery: 4, critMultAdd: 0.25 }, from: 'Marksman perk Deadeye (level 15)' },
+  // ---- the companies' signature skills (Draft 4 · B, the loyalty track) -----
+  // One per company, paid ONLY by standing 5 on its track (`run/track.ts`):
+  // never a random, contract or crate unlock, never a starter or a feat. Each
+  // is two of the engine's existing effects in its company's taste, sized to
+  // sit beside the Level 2 cards (two Level 1 effects, or a Level 2 one
+  // trimmed): Peppercorn burns and speed, Easel reach and crit, Ironvein hold
+  // and hit, Rosethread gold and slow, Moonquill chain and slow.
+  { id: 'pepperfire', name: 'Pepperfire', level: 2, company: 'spice', signature: true, desc: 'Every hit burns for 10 a second for 3 seconds, and it attacks 15% faster.', mods: { burn: { dps: 10, dur: 3 }, rateMult: 1.15 }, from: 'New with the loyalty track: Peppercorn Co.’s signature (Poisoned Tips and Quick Hands, met)' },
+  { id: 'gilt_frame', name: 'Gilt Frame', level: 2, company: 'art', signature: true, desc: 'Reaches 25% farther, crits 15% more often, and crits deal 25% more.', mods: { rangeMult: 1.25, critChanceAdd: 0.15, critMultAdd: 0.25 }, from: 'New with the loyalty track: Easel House’s signature (Long Reach and Keen Eye, met)' },
+  { id: 'ore_sense', name: 'Ore Sense', level: 2, company: 'metals', signature: true, desc: 'Holds 1 more enemy, and hits 20% harder.', mods: { holdAdd: 1, damageMult: 1.2 }, from: 'New with the loyalty track: Ironvein’s signature (Hold Fast and Hard Hitter, met)' },
+  { id: 'velvet_toll', name: 'Velvet Toll', level: 2, company: 'silk', signature: true, desc: 'Each kill it makes pays 4 more gold, and its hits slow by 25% for 1.5 seconds.', mods: { goldPerKill: 4, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Rosethread’s signature (Bounty and Frostbite, met)' },
+  { id: 'moonwake', name: 'Moonwake', level: 2, company: 'scrolls', signature: true, desc: 'Every hit jumps to 1 more enemy for 50% of its damage, and slows its target by 25% for 1.5 seconds.', mods: { shock: { chains: 1, dmgFrac: 0.5 }, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Moonquill’s signature (Arc Spark and Frostbite, met)' },
 ]
 
 const L3: Skill[] = [
@@ -171,8 +190,14 @@ export const isSkillId = (v: unknown): v is string => typeof v === 'string' && B
 
 /** The skills everyone has from the first run: three per level. */
 export const STARTER_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => s.starter).map((s) => s.id)
-/** The cards a Watch level or a win can unlock, at random. */
-export const RANDOM_UNLOCK_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => !s.starter && !s.feat).map((s) => s.id)
+/** The cards a standing level, a delivery or a sealed crate can unlock (never a signature skill). */
+export const RANDOM_UNLOCK_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => !s.starter && !s.feat && !s.signature).map((s) => s.id)
+/** Each company's signature skill (Draft 4 · B): standing 5 on its track pays it, and nothing else does. */
+export const SIGNATURE_SKILLS: Readonly<Record<CompanyId, string>> = Object.fromEntries(
+  ALL_SKILLS.filter((s) => s.signature).map((s) => [s.company, s.id]),
+) as Record<CompanyId, string>
+/** Whether a skill is a company's signature skill. */
+export const isSignatureSkill = (id: string): boolean => !!BY_ID.get(id)?.signature
 /** The cards a feat opens, by skill id. */
 export const FEAT_SKILLS: Readonly<Record<string, string>> = Object.fromEntries(ALL_SKILLS.filter((s) => s.feat).map((s) => [s.id, s.feat!]))
 

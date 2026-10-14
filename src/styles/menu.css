@@ -465,6 +465,20 @@
   border-style: dashed;
   font-weight: 700;
 }
+/* The standing chip opens the company's loyalty track (Draft 4 · B). */
+button.mn-chip.is-rep {
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+button.mn-chip.is-rep:hover {
+  background: rgba(58, 44, 20, 0.08);
+}
+button.mn-chip.is-rep:focus-visible {
+  outline: var(--focus-width) solid var(--paper-ink);
+  outline-offset: 2px;
+}
 
 /* The Sovereign Route, once open: a slim aqua line, never a card. */
 .mn-charter {

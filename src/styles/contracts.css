@@ -730,6 +730,31 @@
   border: 1px solid var(--line-strong);
   box-shadow: inset 3px 0 0 var(--co);
 }
+/* The receipt's standing card and the Sovereign Route's chips open the
+   company's loyalty track (Draft 4 · B). */
+.ct-stand-btn,
+button.ct-stand-chip {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ct-stand-btn:hover,
+button.ct-stand-chip:hover {
+  border-color: var(--accent);
+}
+.ct-stand-btn:focus-visible,
+button.ct-stand-chip:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.ct-stand-go {
+  flex: none;
+  font-size: var(--fs-xl);
+  line-height: 1;
+  color: var(--muted);
+}
 .ct-stand-text {
   display: flex;
   flex-direction: column;

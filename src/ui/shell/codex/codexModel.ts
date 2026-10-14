@@ -20,6 +20,7 @@ import { ITEM_KINDS, itemPoolFor, SOVEREIGN_LEVEL } from '../../../game/data/ite
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { SOVEREIGN_COLOR } from '../../../game/run/charter'
+import { SIGNATURE_LEVEL } from '../../../game/run/track'
 import { skillPoolFor } from '../../../game/run/watch'
 import type { ItemRarity, ItemSlot } from '../../../game/types'
 import type { Codex } from '../../../state/metaStore'
@@ -95,7 +96,7 @@ export interface CodexTab {
 }
 
 /** What a silhouette says: the designer's words, and how. */
-export const UNLOCK_BY_PLAYING = 'Unlock by playing — at random, as your standing with a company rises, or by delivering a contract.'
+export const UNLOCK_BY_PLAYING = 'Unlock by playing — as your standing with a company rises, or by delivering a contract.'
 /** What a Sovereign silhouette says: the one way it opens. */
 export const UNLOCK_BY_CHARTER = 'Unlock by delivering a Sovereign Route — one Sovereign item each time.'
 /** LS3: the collection opens after the first run. */
@@ -172,19 +173,64 @@ function skillsTab(v: CodexView): CodexTab {
           hue: LEVEL_HUE[l],
           icon: skillHeadline(k).icon,
           company: has ? k.company : undefined,
-          chips: has ? [LEVEL_NAME[l], ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[l]],
+          chips: has ? [LEVEL_NAME[l], ...(k.signature ? [SIGNATURE_CHIP] : []), ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[l]],
           does: has ? k.desc : '',
           how: has
             ? `${k.starter ? 'Every Watch has it from the first run.' : 'Yours.'} A hero can be dealt it, at the hero pick, a recruit or a level-up.${roadLine(k.company)}`
             : feat
               ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.`
-              : UNLOCK_BY_PLAYING,
+              : k.signature
+                ? signatureHow(k.company)
+                : UNLOCK_BY_PLAYING,
         }
       }),
       LEVEL_HUE[l],
     ),
   )
   return tab('skills', 'Skills', 'boon', sections)
+}
+
+/** A signature skill's chip (Draft 4 · B): the company's own, from its loyalty track. */
+export const SIGNATURE_CHIP = 'Signature'
+/** How a locked signature skill opens: the one way, standing 5 on its company's track. */
+export const signatureHow = (company: CompanyId): string => `Opens at Standing ${SIGNATURE_LEVEL} with ${companyById(company).name}: its signature skill.`
+
+/**
+ * A skill or item kind as the loyalty track shows it AHEAD of time (Draft 4 ·
+ * B): named and described in full — the track names what a level will pay —
+ * with `how` saying where it comes from. The Codex's own card draws it.
+ */
+export function previewEntry(kind: 'skill' | 'item', id: string, how: string): CodexEntry | null {
+  if (kind === 'skill') {
+    const k = ALL_SKILLS.find((x) => x.id === id)
+    if (!k) return null
+    return {
+      id: `skill:${k.id}`,
+      name: k.name,
+      locked: false,
+      badge: String(k.level),
+      hue: LEVEL_HUE[k.level],
+      icon: skillHeadline(k).icon,
+      company: k.company,
+      chips: [LEVEL_NAME[k.level], ...(k.signature ? [SIGNATURE_CHIP] : []), companyById(k.company).name],
+      does: k.desc,
+      how,
+    }
+  }
+  const k = ITEM_KINDS.find((x) => x.id === id)
+  if (!k) return null
+  return {
+    id: `item:${k.id}`,
+    name: k.id,
+    locked: false,
+    badge: k.level === SOVEREIGN_LEVEL ? 'S' : String(k.level),
+    hue: LEVEL_HUE[k.level],
+    icon: itemIcon({ name: k.id, slot: k.slot === 'twoHand' ? 'twoHand' : k.slot }),
+    company: k.company,
+    chips: [LEVEL_NAME[k.level], HAND[k.slot], companyById(k.company).name],
+    does: doesOf(k.does),
+    how,
+  }
 }
 
 const CLANS: { id: string; name: string; hue: string }[] = [

@@ -325,3 +325,6 @@ function Sheet({ label, onClose, children }: { label: string; onClose: () => voi
     </div>
   )
 }
+
+/** The Codex card and its sheet, reused by the loyalty track to show a reward ahead of time (Draft 4 · B). */
+export { Card as CodexCard, Sheet as CodexSheet }

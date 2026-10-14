@@ -6,7 +6,7 @@ import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achieveme
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
 import { rollItemUnlock, rollUnlock, watchLevelFor } from '../game/run/watch'
-import { RANDOM_UNLOCK_SKILLS } from '../game/data/skills'
+import { RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
 import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
@@ -39,14 +39,14 @@ import { newRunSeed } from '../game/core/rng'
 import {
   charterStandingXp,
   dealMany,
+  migrateStandingXp,
   rollContractItem,
   rollContractSkill,
-  rollStandingCard,
   spreadWatchXp,
-  standingBonusKind,
   standingFor,
   standingXpFor,
 } from '../game/run/standing'
+import { canSignTerm, payTrack, readTerm, termCap, type TrackPay, type TrackSpan } from '../game/run/track'
 import { readMilitia, type Militia } from '../game/run/militia'
 import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
 import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
@@ -112,6 +112,12 @@ function migrateStanding(raw: unknown): Record<CompanyId, number> {
   return Object.fromEntries(COMPANY_IDS.map((c) => [c, Math.max(0, Math.floor(num(o[c], 0)))])) as Record<CompanyId, number>
 }
 
+/** The term signed with each company (Draft 4 · B): 1 or 2, never past what its XP reached (`track.readTerm`). */
+function migrateTerms(raw: unknown, xp: Record<CompanyId, number>): Record<CompanyId, number> {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return Object.fromEntries(COMPANY_IDS.map((c) => [c, readTerm(o[c], xp[c])])) as Record<CompanyId, number>
+}
+
 /** The stake record: crate counts 0–8 only, each with runs ≥ delivered ≥ 0. */
 function migrateRecord(raw: unknown): Record<string, StakeRecord> {
   const out: Record<string, StakeRecord> = {}
@@ -171,8 +177,17 @@ export interface RunProgress {
   xp: number
   standingBefore: number
   standingAfter: number
-  /** Skill cards the standing levels unlocked, in order. */
+  /** Skill cards the standing levels unlocked, in order (a signature skill among them). */
   standingCards: string[]
+  /** Item kinds the standing levels unlocked, in order (Draft 4 · B: levels 3, 6 and 8). */
+  standingItems: string[]
+  /**
+   * Every track level the settle crossed, company by company, with what each
+   * paid (Draft 4 · B, `run/track.ts`): the receipt lists them per company.
+   */
+  track: TrackPay[]
+  /** How far each company's track moved, within its term (the receipt's standing). */
+  spans: TrackSpan[]
   /**
    * Standing levels crossed once the card pool was exhausted: each pays a Rare
    * bonus item of `kind` in the next contract's pack (October 2026).
@@ -292,6 +307,11 @@ interface MetaState {
    * desperate company, and the season just ended until its page is read.
    */
   season: Season
+  /**
+   * The term signed with each company (Draft 4 · B): 1, or 2 once re-signed at
+   * standing 10. Validated against its XP (`track.readTerm`).
+   */
+  terms: Record<CompanyId, number>
   // actions
   /** The next level's price, or null when it is maxed or unknown. */
   upgradeCost: (id: string) => number | null
@@ -340,6 +360,8 @@ interface MetaState {
    * contract), or nothing (`null`, when there was no pick to make).
    */
   closeSeasonEnd: (kind: string | null) => void
+  /** Sign a second term with a company at standing 10 (Draft 4 · B). False when refused. */
+  signTerm: (company: CompanyId) => boolean
   resetMeta: () => void
 }
 
@@ -355,6 +377,7 @@ const freshStats = (): MetaStats => ({
   runsWon: 0,
 })
 const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_IDS.map((c) => [c, 0])) as Record<CompanyId, number>
+const freshTerms = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_IDS.map((c) => [c, 1])) as Record<CompanyId, number>
 
 /**
  * Persisted meta schema version (M11). Bump this and add a case to
@@ -396,14 +419,21 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  * v12 — company flags (Draft 4 § C): `liveries`, the standards you dressed,
  * per company. An older save has none (every standard flies plain).
  *
- * v13 — the loyalty track (Draft 4 § B; another build step owns this one).
+ * v13 — the loyalty track (Draft 4 · B): standing costs 1.75× what it did,
+ * and each company's XP moves onto the new curve at the same level and the
+ * same fraction of the way to the next (`standing.migrateStandingXp`) — nobody
+ * loses a level, and no level is crossed by the move, so none pays. New:
+ * `terms`, every company on its first.
  *
  * v14 — the trade war (Draft 4 § D): `season`, read by
  * `tradeWar.readSeason`. An older save has none, and starts the war at
- * season 1 with even shares — nothing else moves, so the step composes with
- * v13's whatever order they land in.
+ * season 1 with even shares — nothing else moves.
+ *
+ * v15 — the two landed together: a v14 save with no `terms` came from the
+ * trade war's build alone, its standing XP still on the old curve, so it
+ * takes v13's step too.
  */
-export const META_VERSION = 14
+export const META_VERSION = 15
 
 /** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -475,6 +505,7 @@ type PersistedMeta = Pick<
   | 'militia'
   | 'liveries'
   | 'season'
+  | 'terms'
 >
 
 /**
@@ -507,8 +538,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     runsCompleted: Math.max(0, num(rawStats.runsCompleted, 0)),
     runsWon: Math.max(0, num(rawStats.runsWon, 0)),
   }
-  // Only the random cards are stored, each once, in unlock order.
-  const known = new Set(RANDOM_UNLOCK_SKILLS)
+  // Only the random cards and the signature skills are stored, each once, in unlock order.
+  const known = new Set([...RANDOM_UNLOCK_SKILLS, ...Object.values(SIGNATURE_SKILLS)])
   let skills = Array.isArray(o.skills) ? [...new Set(o.skills.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
   let watchXp = Math.max(0, Math.floor(num(o.watchXp, 0)))
   // v6: a save that played before skills is credited the Watch XP its record
@@ -527,7 +558,14 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
       ? Math.max(NEW_BANK, Math.floor(Math.max(0, num(o.watchMarks, 0)) + refund))
       : Math.max(0, Math.floor(num(o.bank, NEW_BANK)))
   const bank = Math.min(1e9, bank0 + (fold?.refund ?? 0) + retired)
-  const standing = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
+  const standing0 = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
+  // v13: the longer curve — same level, same fraction of the way (only on a
+  // real version step; `merge` calls this on every load).
+  // A v14 save with no `terms` was written by the trade war's build before
+  // the track's landed (a preview): its XP is still on the old curve (v15).
+  const oldCurve = version < 13 || (version === 14 && o.terms === undefined)
+  const standing = oldCurve ? (Object.fromEntries(COMPANY_IDS.map((c) => [c, migrateStandingXp(standing0[c])])) as Record<CompanyId, number>) : standing0
+  const terms = migrateTerms(oldCurve ? null : o.terms, standing)
   const lastInterest = o.lastInterest == null ? null : Math.max(0, Math.min(1e6, Math.floor(num(o.lastInterest, 0))))
   return {
     bank,
@@ -552,6 +590,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     liveries: readLiveries(o.liveries, (c) => standingFor(standing[c] ?? 0)),
     // v14: none before (a fresh war); validated whatever the version.
     season: readSeason(o.season),
+    terms,
   }
 }
 
@@ -584,6 +623,7 @@ export const useMetaStore = create<MetaState>()(
       militia: null,
       liveries: {},
       season: freshSeason(),
+      terms: freshTerms(),
 
       upgradeCost: (id) => (isHqId(id) ? hqCost(id, hqLevel(get().upgrades, id)) : null),
 
@@ -724,7 +764,9 @@ export const useMetaStore = create<MetaState>()(
         // standing on any finish that earns standing, and a tip on a
         // delivery. A custom seed earns neither.
         const asks = readAskResults(askList)
-        const askAll = askStanding(asks)
+        // Draft 4 · B: a company you signed a second term with pays its asks double.
+        const terms = migrateTerms(get().terms, migrateStanding(get().standing))
+        const askAll = askStanding(asks, (c) => terms[c])
         // A company's road pays only its own asks; the Sovereign Route each ask's company.
         const askXp: Partial<Record<CompanyId, number>> = unranked ? {} : charter ? askAll : company ? { [company]: askAll[company] ?? 0 } : {}
         const tips = !unranked && contract ? askTips(asks, status) : 0
@@ -734,8 +776,6 @@ export const useMetaStore = create<MetaState>()(
         // An exclusive this season (the trade war): its company's contracts pay more standing.
         const season0 = readSeason(get().season)
         const xp = Math.floor(((ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0)) * exclusiveXpMult(season0, ranked ? company : null))
-        const before = standingFor(xpBefore)
-        const after = standingFor(xpBefore + xp)
         const have = get().skills
         const haveItems = Array.isArray(get().items) ? get().items : []
         // The Sovereign Route earns standing with all five companies — each
@@ -746,28 +786,20 @@ export const useMetaStore = create<MetaState>()(
         const gains: Partial<Record<CompanyId, number>> = charter
           ? Object.fromEntries(COMPANY_IDS.map((c) => [c, (baseGains[c] ?? 0) + (askXp[c] ?? 0)]).filter(([, n]) => (n as number) > 0))
           : baseGains
-        const nextStanding = { ...standingXp }
-        // One card per standing level crossed, each at that level's floor,
-        // the company's own cards first. Once the card pool is exhausted, a
-        // level pays a Rare bonus item for the next contract instead — a hash
-        // of its own parts, never a run stream.
-        const standingCards: string[] = []
-        const standingBonus: RunProgress['standingBonus'] = []
-        const standingAll: NonNullable<RunProgress['standingAll']> = []
-        for (const c of COMPANY_IDS) {
-          const gain = gains[c] ?? 0
-          if (!gain) continue
-          const from = Math.max(0, num(standingXp[c], 0))
-          const lvBefore = standingFor(from)
-          const lvAfter = standingFor(from + gain)
-          nextStanding[c] = from + gain
-          if (charter) standingAll.push({ company: c, before: lvBefore, after: lvAfter })
-          for (let s = lvBefore + 1; s <= lvAfter; s++) {
-            const card = rollStandingCard([...have, ...standingCards], c, s, runsDone)
-            if (card) standingCards.push(card)
-            else standingBonus.push({ company: c, standing: s, kind: standingBonusKind(haveItems, c, s, runsDone) })
-          }
-        }
+        // Each company's loyalty track (Draft 4 · B, `run/track.ts`): every
+        // level crossed pays what its row named — the company's next card or
+        // kind, its signature skill, or a Rare bonus item for the next
+        // contract once nothing is left — never a roll, never a run stream.
+        const paid = payTrack({ gains, xp: standingXp, terms, skills: have, items: haveItems })
+        const nextStanding = { ...standingXp, ...paid.xp }
+        const before = standingFor(xpBefore)
+        const after = company ? standingFor(nextStanding[company]) : 0
+        const standingCards = paid.cards
+        const standingItems = paid.items
+        const standingBonus: RunProgress['standingBonus'] = paid.pays.filter((p) => p.bonus).map((p) => ({ company: p.company, standing: p.level, kind: p.bonus! }))
+        const standingAll: NonNullable<RunProgress['standingAll']> = charter
+          ? paid.spans.map((sp) => ({ company: sp.company, before: standingFor(standingXp[sp.company]), after: standingFor(nextStanding[sp.company]) }))
+          : []
         // A delivery: the contract's skill and item, a skill per milestone
         // crate and the stake's item chances — the floor rising with the stake.
         const crates = contract ? clampCrates(contract.crates) : 0
@@ -775,7 +807,7 @@ export const useMetaStore = create<MetaState>()(
         const contractCards = company
           ? dealMany([...have, ...standingCards], owed.skills, (h, i) => rollContractSkill(h, company, crates, runsDone, i))
           : []
-        const items = company ? dealMany(haveItems, owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
+        const items = company ? dealMany([...haveItems, ...standingItems], owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
 
         // The Sovereign Route (the endgame charter): a delivery unlocks one
         // Sovereign kind still locked — a hash of the charter count, never a
@@ -794,7 +826,10 @@ export const useMetaStore = create<MetaState>()(
           standingBefore: before,
           standingAfter: after,
           standingCards,
+          standingItems,
           standingBonus,
+          track: paid.pays,
+          spans: paid.spans,
           standingAll: charter ? standingAll : null,
           contractCards,
           items,
@@ -853,7 +888,7 @@ export const useMetaStore = create<MetaState>()(
             : {}),
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
-          items: items.length || warItems.length ? [...haveItems, ...items, ...warItems] : haveItems,
+          items: items.length || standingItems.length || warItems.length ? [...haveItems, ...standingItems, ...items, ...warItems] : haveItems,
           season,
           ...(charter ? { charters: { runs: charters.runs + 1, delivered: charters.delivered + (won ? 1 : 0) } } : {}),
           ...(sovereign ? { sovereign: [...owned, sovereign] } : {}),
@@ -888,6 +923,20 @@ export const useMetaStore = create<MetaState>()(
           return false
         }
         set({ season: { ...season, exclusive: company } })
+        sfx('confirm')
+        return true
+      },
+
+      signTerm: (company) => {
+        if (!isCompanyId(company)) return false
+        const xp = Math.max(0, num(get().standing[company], 0))
+        const terms = migrateTerms(get().terms, migrateStanding(get().standing))
+        if (!canSignTerm(xp, terms[company])) {
+          sfx('error')
+          return false
+        }
+        // The new term starts where the last one ended: its XP is the old cap.
+        set({ terms: { ...terms, [company]: terms[company] + 1 }, standing: { ...get().standing, [company]: Math.min(xp, termCap(terms[company])) } })
         sfx('confirm')
         return true
       },
@@ -942,6 +991,7 @@ export const useMetaStore = create<MetaState>()(
           militia: null,
           liveries: {},
           season: freshSeason(),
+          terms: freshTerms(),
         }),
     }),
     {
@@ -969,6 +1019,7 @@ export const useMetaStore = create<MetaState>()(
         militia: s.militia,
         liveries: s.liveries,
         season: s.season,
+        terms: s.terms,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is
