@@ -58,9 +58,11 @@ const pick = (lines: readonly string[], h: number): string => lines[h % lines.le
  * UTC date key the board reads its market from). A road not hiring yet gets
  * its liaison's "not yet".
  */
-export function boardLine(company: CompanyId, day: string, open = true): string {
+export function boardLine(company: CompanyId, day: string, open = true, cold = false): string {
   const l = LIAISONS[company]
-  return fillLine(company, pick(open ? l.board : l.closed, hashSeed(day, 'liaison', company)))
+  // Cold (the trade war: your exclusive is with its rival) — said instead of the day's line.
+  const lines = !open ? l.closed : cold && l.cold?.length ? l.cold : l.board
+  return fillLine(company, pick(lines, hashSeed(day, 'liaison', company)))
 }
 
 /** Everything a city's line can react to. */

@@ -710,6 +710,22 @@
   .mn-tiles {
     margin-top: auto;
   }
+  /* Nothing in the column gives way when it runs tall (the war strip and the
+     liaison's post on an 800px desk): the column scrolls instead, and the
+     CTA keeps its full height. */
+  .mn-sheet {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .mn-sheet > * {
+    flex-shrink: 0;
+  }
+  /* …but the one CTA never scrolls away: it is pinned to the column's foot. */
+  .mn-sheet > .mn-cta {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+  }
 }
 
 /* The notice's flag is the way into its livery (Draft 4 § C): a button with

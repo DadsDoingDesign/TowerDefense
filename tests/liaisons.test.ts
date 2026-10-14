@@ -13,6 +13,7 @@ const everyLine = (c: (typeof COMPANY_IDS)[number]): string[] => {
   return [
     ...l.board,
     ...l.closed,
+    ...(l.cold ?? []),
     ...l.city.good,
     ...l.city.fair,
     ...l.city.rough,
@@ -89,6 +90,15 @@ describe('the liaisons (Draft 4 · D)', () => {
       const days = new Set(Array.from({ length: 60 }, (_, i) => boardLine(c, `2026-10-${i}`)))
       expect(days.size).toBe(LIAISONS[c].board.length)
       expect(LIAISONS[c].closed.map((l) => fillLine(c, l))).toContain(boardLine(c, '2026-10-14', false))
+    }
+  })
+
+  it('cold (the trade war): a company with a rival says its cold line; Easel House has no rival and says its day', () => {
+    for (const c of COMPANY_IDS) {
+      const cold = LIAISONS[c].cold ?? []
+      expect(cold.length > 0).toBe(!!companyById(c).rival)
+      if (cold.length) expect(cold.map((l) => fillLine(c, l))).toContain(boardLine(c, '2026-10-14', true, true))
+      else expect(boardLine(c, '2026-10-14', true, true)).toBe(boardLine(c, '2026-10-14'))
     }
   })
 

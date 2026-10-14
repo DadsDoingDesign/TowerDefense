@@ -332,7 +332,7 @@ function ContractNotice({
         </span>
       )}
       {/* The company's liaison, at its post, saying the day's line (Draft 4 · D). */}
-      <LiaisonScene at="notice" company={company} line={boardLine(company, day, open)} />
+      <LiaisonScene at="notice" company={company} line={boardLine(company, day, open, !!war?.cold)} />
       {/* The company's flag on the LEFT, beside its name (the designer: the
           trader's icon belongs on the left when a road is opened, as a flag). */}
       <div className="mn-notice-head">

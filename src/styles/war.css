@@ -133,15 +133,19 @@
     var(--paper-cold);
   border-color: #a9b2b6;
 }
-.mn-notice.is-cold .co-flag {
+.mn-notice.is-cold .co-flag,
+.mn-notice.is-cold .lia-scene .ss-stage {
   filter: saturate(0.35);
 }
+/* The stamp sits on the paper's foot, right: the liaison's post fills the
+   top of the notice now (`LiaisonScene`), and the chips run on the left. */
 .mn-cold-stamp {
   position: absolute;
-  right: 10px;
-  top: -13px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
   padding: 0 9px;
-  rotate: 5deg;
+  rotate: -6deg;
   background: var(--paper-cold);
   border: 3px double var(--cold-ink);
   border-radius: 4px;
