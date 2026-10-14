@@ -148,6 +148,15 @@ result. Append a short note to the review log when you're done.
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
+- The loyalty track (Draft 4 · B): what each standing level pays is named
+  ahead of time — `src/game/run/track.ts` (`trackPlan` for the page,
+  `payTrack` for the settle: the same function, never a roll; the second
+  term, `metaStore.terms`, v13). The curve and the v13 migration are in
+  `run/standing.ts`; the five signature skills are `signature: true` in
+  `data/skills.ts` (only the track pays them). The page is
+  `ui/shell/company/TrackScreen.tsx`, opened from the notice's standing chip
+  and the receipt's standing card (`company/trackLink.ts`); a company you
+  re-signed with gets a gold rim on its `Crest`. Tests `tests/track.test.ts`.
 - Your militia (the player's band): founded when the Sovereign Route opens
   (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
   on the charter page while `metaStore.militia` is null). A new game goes

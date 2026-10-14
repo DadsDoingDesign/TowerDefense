@@ -1,0 +1,263 @@
+/**
+ * The loyalty track (Draft 4 · B; `ui/shell/company/TrackScreen.tsx`, mockups
+ * B1/B3): company chips, the company's card with its level and bar, then the
+ * ten levels as rows — earned dimmed with ✓, the next lit in gold.
+ */
+
+.tk-head .ct-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ the chips */
+.tk-chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--gap-xs);
+}
+.tk-chip {
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -3px 0 var(--co);
+  cursor: pointer;
+}
+.tk-chip.on {
+  background: var(--panel-3);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tk-chip:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* ------------------------------------------------------------ the card */
+.tk-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px var(--gap-sm);
+  padding: 12px 14px 14px;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 4px 0 0 var(--co);
+}
+.tk-card .co-flag {
+  grid-row: 1 / span 2;
+}
+.tk-card-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tk-card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  color: var(--text);
+}
+.tk-card-sub {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.tk-card-lv {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.tk-card-lv small {
+  font-family: inherit;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.tk-bar {
+  grid-column: 2 / -1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.tk-bar i {
+  display: block;
+  height: 100%;
+  background: var(--co);
+  border-radius: inherit;
+}
+
+/* ------------------------------------------------------------ the rows */
+.tk-rows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tk-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.tk-lv {
+  padding-top: 6px;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tk-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tk-part {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.tk-part .field-k {
+  min-width: 0;
+}
+.tk-part .field-v {
+  white-space: normal;
+}
+/* A part that opens a card keeps a full tap target, overlapping the row's
+   padding rather than growing the row. */
+.tk-part.is-open {
+  min-height: var(--hit-min);
+  margin: -8px 0;
+  cursor: pointer;
+}
+.tk-part.is-open .field-v {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.tk-part.is-open:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+.tk-next {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.tk-check {
+  padding-top: 5px;
+  font-weight: 800;
+  color: var(--good);
+}
+.tk-row.earned {
+  background: transparent;
+}
+.tk-row.earned .tk-parts,
+.tk-row.earned .tk-lv {
+  opacity: 0.62;
+}
+/* An earned row is one line (wrapping if it must): what it paid is behind you. */
+.tk-row.earned .tk-parts {
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 12px;
+}
+/* …and words only: the pictures belong to the levels still ahead. */
+.tk-row.earned .tk-part > .fw-i {
+  display: none;
+}
+.tk-row.earned .tk-part.is-open {
+  margin: -8px 0;
+}
+.tk-row.next {
+  background: var(--panel-3);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim);
+}
+.tk-row.next .tk-lv {
+  color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------ signing */
+.tk-sign-crest {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  align-self: center;
+  flex: none;
+  width: 128px;
+  height: 128px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, var(--panel-3), var(--bg));
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 1px var(--line-strong), 0 0 24px var(--accent-dim);
+}
+.ct .pg-body.ct-body > .tk-sign-crest {
+  width: 128px;
+}
+.tk-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+}
+.tk-list p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.tk-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--line-strong);
+  font-size: var(--fs-sm);
+  text-align: center;
+  color: var(--muted);
+}

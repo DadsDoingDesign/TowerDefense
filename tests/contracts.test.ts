@@ -47,13 +47,13 @@ import {
   MAX_STANDING,
   rollContractItem,
   rollContractSkill,
-  rollStandingCard,
   spreadWatchXp,
   standingFor,
   standingXpFor,
   standingXpToReach,
 } from '../src/game/run/standing'
 import { nodeTerrainRule } from '../src/game/run/terrain'
+import { nextTrackCard } from '../src/game/run/track'
 import { fieldFor, FIRST_MAP } from '../src/game/data/maps'
 
 const terms = (crates: number, market = 1) => ({ company: 'spice' as const, crates, market })
@@ -303,12 +303,12 @@ describe('pool affinity', () => {
 })
 
 describe('standing', () => {
-  it('starts at 0 and climbs on the Watch curve to a cap', () => {
+  it('starts at 0 and climbs a curve 1.75× the Watch’s to a cap (Draft 4 · B)', () => {
     expect(standingFor(0)).toBe(0)
-    expect(standingFor(80)).toBe(1)
-    expect(standingFor(79)).toBe(0)
+    expect(standingFor(140)).toBe(1)
+    expect(standingFor(139)).toBe(0)
     expect(standingFor(1e9)).toBe(MAX_STANDING)
-    expect(standingXpToReach(10)).toBe(1700)
+    expect(standingXpToReach(10)).toBe(2975)
   })
 
   it('a delivery earns more than the same road lost', () => {
@@ -321,17 +321,17 @@ describe('standing', () => {
   })
 
   it('a standing card comes from the company’s pool first, then any pool', () => {
-    const got = rollStandingCard([], 'metals', 1, 'x')!
+    const got = nextTrackCard([], 'metals', 1)!
     expect(skillCompany(got)).toBe('metals')
     const metalsCards = RANDOM_UNLOCK_SKILLS.filter((id) => skillCompany(id) === 'metals')
-    const next = rollStandingCard(metalsCards, 'metals', 2, 'x')!
+    const next = nextTrackCard(metalsCards, 'metals', 2)!
     expect(next).not.toBeNull()
     expect(skillCompany(next)).not.toBe('metals')
-    expect(rollStandingCard([...RANDOM_UNLOCK_SKILLS], 'metals', 3, 'x')).toBeNull()
+    expect(nextTrackCard([...RANDOM_UNLOCK_SKILLS], 'metals', 3)).toBeNull()
   })
 
   it('a high floor deals a high card while one is left', () => {
-    const got = rollStandingCard([], 'art', 7, 'y')!
+    const got = nextTrackCard([], 'art', 7)!
     expect(ALL_SKILLS.find((k) => k.id === got)!.level).toBe(3)
     const item = rollContractItem([], 'scrolls', 6, 'z')!
     expect(ITEM_KINDS.find((k) => k.id === item)!.level).toBe(3)

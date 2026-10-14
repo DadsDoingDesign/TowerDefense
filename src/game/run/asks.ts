@@ -340,10 +340,19 @@ export const askMetNow = (a: RunAsk, f: AskFacts): boolean => {
   return !!def && !def.atEnd && askGot(a, f) >= a.target
 }
 
-/** The standing XP each company earns from the asks met (only on a finish that earns standing). */
-export function askStanding(results: readonly AskResult[]): Partial<Record<CompanyId, number>> {
+/**
+ * The standing XP one ask met pays its company: {@link ASK_STANDING}, doubled
+ * once you have signed a second term with it (Draft 4 · B, `run/track.ts`).
+ */
+export const askStandingFor = (term: number): number => ASK_STANDING * (term >= 2 ? 2 : 1)
+
+/**
+ * The standing XP each company earns from the asks met (only on a finish that
+ * earns standing), each at its company's term (`termOf`; omitted: the first).
+ */
+export function askStanding(results: readonly AskResult[], termOf: (company: CompanyId) => number = () => 1): Partial<Record<CompanyId, number>> {
   const out: Partial<Record<CompanyId, number>> = {}
-  for (const r of results) if (r.met && isCompanyId(r.company)) out[r.company] = (out[r.company] ?? 0) + ASK_STANDING
+  for (const r of results) if (r.met && isCompanyId(r.company)) out[r.company] = (out[r.company] ?? 0) + askStandingFor(termOf(r.company))
   return out
 }
 

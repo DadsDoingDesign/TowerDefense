@@ -4,10 +4,10 @@ import { hashSeed } from '../../game/core/rng'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
-import { RANDOM_UNLOCK_SKILLS } from '../../game/data/skills'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CITY_COUNT, contractLetter, MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
-import { companyOpen, standingOf, standingProgress } from '../../game/run/standing'
+import { companyOpen, standingOf } from '../../game/run/standing'
+import { nextRewardWord, termName, trackLevel, trackPlan } from '../../game/run/track'
 import { CHARTER_FEE, CHARTER_NAME, charterDoor } from '../../game/run/charter'
 import { useGameStore } from '../../state/gameStore'
 import { homeCompany } from '../../state/game/contractSlice'
@@ -66,12 +66,15 @@ export function MenuScreen({
   onMilitia,
   onCharter,
   onLivery,
+  onTrack,
 }: {
   offers: Offer[]
   onMilitia: () => void
   onCharter: () => void
   /** Open the livery panel for a company's standard (Draft 4 § C). */
   onLivery?: (company: CompanyId) => void
+  /** Open a company's loyalty track (Draft 4 · B): the notice's standing chip is the way in. */
+  onTrack?: (company: CompanyId) => void
 }) {
   const primary = offers.find((o) => o.id === 'run')
   const tiles = offers.filter((o) => o.id !== 'run')
@@ -81,6 +84,7 @@ export function MenuScreen({
   const items = useMetaStore((s) => s.items)
   const militia = useMilitia()
   const liveries = useMetaStore((s) => s.liveries)
+  const terms = useMetaStore((s) => s.terms)
   const runs = useMetaStore((s) => s.stats.runsCompleted)
   const openContracts = useGameStore((s) => s.openContracts)
   const focusRoad = useGameStore((s) => s.focusRoad)
@@ -210,9 +214,12 @@ export function MenuScreen({
           standing={standing[focus]}
           xp={xp[focus] ?? 0}
           market={market?.company === focus ? market.mult : 1}
-          skillsLeft={RANDOM_UNLOCK_SKILLS.some((id) => !skills.includes(id))}
+          term={terms?.[focus] ?? 1}
+          skills={skills}
+          items={items ?? []}
           look={liveries[focus] ?? null}
           onLivery={!staged && open && onLivery ? () => onLivery(focus) : undefined}
+          onTrack={!staged && open && onTrack ? () => onTrack(focus) : undefined}
           onStep={staged ? undefined : (d) => focusRoad(COMPANY_IDS[(COMPANY_IDS.indexOf(focus) + d + COMPANY_IDS.length) % COMPANY_IDS.length])}
         />
         <div className="mn-tiles">
@@ -260,9 +267,12 @@ function ContractNotice({
   standing,
   xp,
   market,
-  skillsLeft,
+  term,
+  skills,
+  items,
   look,
   onLivery,
+  onTrack,
   onStep,
 }: {
   company: CompanyId
@@ -272,17 +282,23 @@ function ContractNotice({
   standing: number
   xp: number
   market: number
-  skillsLeft: boolean
+  /** The term signed with it, and what is unlocked: what its track's next level pays. */
+  term: number
+  skills: readonly string[]
+  items: readonly string[]
   /** How you dressed its standard. */
   look: StandardLook | null
   /** Opens its livery: the flag is the way in (Draft 4 § C). */
   onLivery?: () => void
+  /** Opens its loyalty track: the standing chip is the way in (Draft 4 · B). */
+  onTrack?: () => void
   onStep?: (delta: number) => void
 }) {
   const co = companyById(company)
   const armour = co.armour ? ENEMY_MODS.find((m) => m.id === co.armour) : undefined
-  const prog = standingProgress(xp)
-  const next = prog.max ? 'the highest there is' : skillsLeft ? `a skill at ${prog.standing + 1}` : `a Rare item at ${prog.standing + 1}`
+  // What the track's next level pays, by name (Draft 4 · B).
+  const next = nextRewardWord(trackPlan(company, { xp, term, skills, items })) ?? 'the highest there is'
+  const rep = term > 1 ? `${termName(term)} · ${trackLevel(xp, term)}` : `Rep ${standing}`
   const i = COMPANY_IDS.indexOf(company)
   return (
     <section className="mn-notice" style={{ '--co': co.color } as CSSProperties} aria-label={`Notice: ${co.name}`} aria-live="polite">
@@ -349,9 +365,13 @@ function ContractNotice({
           <span className="mn-chip is-rep">
             <b>Free</b> · paid at every city
           </span>
+        ) : open && onTrack ? (
+          <button type="button" className="mn-chip is-rep" onClick={onTrack} aria-label={`Standing ${standing} with ${co.name}: next, ${next}. Open its track`}>
+            <b>{rep}</b> · {next} <span aria-hidden="true">›</span>
+          </button>
         ) : open ? (
           <span className="mn-chip is-rep" aria-label={`Standing ${standing} with ${co.name}: next, ${next}`}>
-            <b>Rep {standing}</b> · {next}
+            <b>{rep}</b> · {next}
           </span>
         ) : (
           <span className="mn-chip is-locked">

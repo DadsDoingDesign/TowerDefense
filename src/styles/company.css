@@ -31,6 +31,18 @@
   font-size: 28px;
   font-weight: 700;
 }
+.co-title-fit {
+  display: block;
+  min-width: 0;
+  container-type: inline-size;
+}
+/* The name's size follows its length (`--len`, set by the builder): a Crimson
+   bold letter is about half an em wide, so the field holds `--len` letters at
+   100cqi / (len × 0.52), between --fs-md and the 28px display size. */
+.co-title-fit .co-title-input {
+  width: 100%;
+  font-size: clamp(var(--fs-md), calc(100cqi / (var(--len, 12) * 0.52)), 28px);
+}
 .co-title-input::placeholder {
   color: var(--dim);
 }

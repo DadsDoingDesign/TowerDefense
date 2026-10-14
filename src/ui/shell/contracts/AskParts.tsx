@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import {
-  ASK_STANDING,
+  askStandingFor,
   ASK_TIP,
   askById,
   askGot,
@@ -16,6 +16,7 @@ import {
 import { companyVar, SOVEREIGN_VAR } from '../../channels'
 import { Crest } from '../../pixel'
 import { Gold } from './parts'
+import { useMetaStore } from '../../../state/metaStore'
 
 /**
  * What a company asks of the road (Draft 4 · A, `game/run/asks.ts`), in the
@@ -25,11 +26,15 @@ import { Gold } from './parts'
  * combo it rewards.
  */
 
-/** What one ask pays when it is met: standing with its company, and the destination's tip. */
-function AskPay({ tip = true }: { tip?: boolean }) {
+/**
+ * What one ask pays when it is met: standing with its company — double once a
+ * second term is signed with it (Draft 4 · B) — and the destination's tip.
+ */
+function AskPay({ company, tip = true }: { company: CompanyId; tip?: boolean }) {
+  const standing = askStandingFor(useMetaStore((s) => s.terms?.[company] ?? 1))
   return (
-    <span className="ask-pay" aria-label={`+${ASK_STANDING} standing${tip ? `, ${ASK_TIP} gold` : ''}`}>
-      <b>+{ASK_STANDING} standing</b>
+    <span className="ask-pay" aria-label={`+${standing} standing${tip ? `, ${ASK_TIP} gold` : ''}`}>
+      <b>+{standing} standing</b>
       {tip && <Gold n={ASK_TIP} />}
     </span>
   )
@@ -60,7 +65,7 @@ export function AskTerms({ company, asks }: { company: CompanyId; asks: readonly
         {asks.map((a) => (
           <li key={a.id} className="ask-row">
             <b className="ask-text">{a.text(a.target)}</b>
-            <AskPay />
+            <AskPay company={a.company} />
           </li>
         ))}
       </ul>
@@ -131,7 +136,7 @@ export function AskReceipt({ company, results, delivered, unranked }: { company:
               </b>
               <small>{askGotText(r, r.got)}</small>
             </span>
-            {r.met && !unranked ? <AskPay tip={delivered} /> : <span className="ask-none" aria-hidden="true">—</span>}
+            {r.met && !unranked ? <AskPay company={r.company} tip={delivered} /> : <span className="ask-none" aria-hidden="true">—</span>}
           </li>
         ))}
       </ul>

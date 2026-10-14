@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   CHARGE_NAMES,
   CHARGES,
@@ -162,18 +162,23 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
               <Icon name="back" />
             </button>
           )}
-          <input
-            className="co-title-input"
-            value={typed}
-            maxLength={NAME_MAX}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="Name your militia"
-            onChange={(e) => setTyped(e.target.value)}
-            aria-label="Militia name"
-            aria-invalid={!check.ok}
-            aria-describedby={check.ok ? undefined : 'co-name-why'}
-          />
+          {/* The whole name always shows: the type shrinks with its length
+              to fit the field (`.co-title-fit`, a size container), down to a
+              floor — "The Ashford Company" no longer clips on a phone. */}
+          <span className="co-title-fit" style={{ '--len': Math.max(12, (typed || 'Name your militia').length) } as CSSProperties}>
+            <input
+              className="co-title-input"
+              value={typed}
+              maxLength={NAME_MAX}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Name your militia"
+              onChange={(e) => setTyped(e.target.value)}
+              aria-label="Militia name"
+              aria-invalid={!check.ok}
+              aria-describedby={check.ok ? undefined : 'co-name-why'}
+            />
+          </span>
           <button type="button" className="co-dice" onClick={roll} aria-label="Roll a name">
             <DiceIcon />
           </button>
