@@ -88,7 +88,7 @@ export function useAutoContinue(key: string | null, held: boolean, onFire: () =>
     const mine = () => setTouched(key)
     const onDown = (e: Event) => {
       const t = e.target as Element | null
-      if (t?.closest?.('.sh-stage, .sh-hero, .sh-mate')) mine()
+      if (t?.closest?.('.sh-stage, .sh-hero')) mine()
     }
     document.addEventListener('pointerdown', onDown, { capture: true })
     document.addEventListener('focusin', onDown)

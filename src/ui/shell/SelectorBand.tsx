@@ -10,7 +10,8 @@ import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { ARCHETYPE_GLYPH, markLabel } from '../channels'
 import { Icon } from '../Icon'
-import { type Offer } from './offers'
+import { lineMark, lineText, lineTone, type Offer } from './offers'
+import { EffectLine } from './DetailBand'
 import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
@@ -278,9 +279,13 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
     pickReward(firstId)
   }, [firstId])
 
+  // No hero strip over the hand (Oct 2026; the designer: "if this reward
+  // isn't per hero you should hide that too"): no spoils card is a hero's —
+  // an item goes to the pack, a relic and a boon to every hero — so the
+  // strip only competed with the three cards. A skill choice a hero is owed
+  // keeps its badge on the party row at the next fight.
   return (
     <section className="sh-selector sh-selector-reward" aria-label="Spoils">
-      <PartyStrip />
       <div className="sh-reward-row" role="group" aria-label="Spoils — pick one, then take it">
         {cards.map((o) => {
           const selected = selection?.kind === 'offer' && selection.id === o.id
@@ -309,6 +314,25 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
                 {o.rarity ? <RarityTag rarity={o.rarity} /> : null}
                 {o.sub && <span className="sh-reward-scope">{o.sub}</span>}
               </span>
+              {/* Its detail, written out on the card, so the three compare
+                  side by side (the Context panel no longer holds one at a
+                  time). The cost reads first, as on every offer. */}
+              <span className="sh-reward-body">
+                {o.warn && (
+                  <span className="sh-line bad">
+                    <Icon name="warn" /> {o.warn}
+                  </span>
+                )}
+                {o.body.map((l, i) =>
+                  o.bodyIcons ? (
+                    <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} inline key={i} />
+                  ) : (
+                    <span className="sh-line" key={i}>
+                      {lineText(l)}
+                    </span>
+                  ),
+                )}
+              </span>
             </button>
           )
         })}
@@ -323,39 +347,3 @@ function pickReward(id: string) {
   useGameStore.setState({ shellSelection: { kind: 'offer', id }, selectedSentinelId: null, gearSlot: null })
 }
 
-/**
- * The company in one line — portrait, name, level — while the reward hand has
- * the row. A hero with a level-up waiting glows and wears its badge; tapping
- * any hero opens it in the Context panel (its level-up, or its detail).
- */
-function PartyStrip() {
-  const roster = useGameStore((s) => s.roster)
-  const selection = useGameStore((s) => s.shellSelection)
-  const shellSelect = useGameStore((s) => s.shellSelect)
-  const flash = useFlashes()
-  return (
-    <div className="sh-partystrip" role="group" aria-label="Your heroes">
-      {roster.map((h) => {
-        const lvlUp = levelUpOpen(h)
-        const selected = selection?.kind === 'hero' && selection.id === h.id
-        return (
-          <button
-            key={h.id}
-            className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
-            style={railStyle(lookVar(h)) as CSSProperties}
-            aria-pressed={selected}
-            aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
-            onClick={() => shellSelect({ kind: 'hero', id: h.id })}
-          >
-            <span className="sh-mate-art" aria-hidden="true">
-              <img src={heroLookArt(h)} alt="" />
-            </span>
-            <span className="sh-mate-name">{h.name}</span>
-            {lvlUp ? <LevelBadge /> : <span className="sh-mate-lv">Lv {h.level}</span>}
-            {!lvlUp && <LevelFlashChip f={flash[h.id]} />}
-          </button>
-        )
-      })}
-    </div>
-  )
-}

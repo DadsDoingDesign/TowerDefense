@@ -3781,3 +3781,6 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
     height-bound phone that is the lane's entry for 2.4 s. It follows the
     coach pill's approved pattern (an edge, no pointer, fades), and the
     mockup put it there.
+
+### 2026-10-14 — the reward hand compares side by side
+The designer, on a phone shot of the wave-cleared reward: "remove my equipped stuff and just show the three items, each in its own column with its high level info written out so you can compare", "if this reward isn't per hero you should hide that too", "keep focus". Built: the reward hand's three cards each carry their detail (downside first, then each effect line with its icon), the Context panel, gear and pack leave the band (only the wave strip's "Take …" stays), and the hero strip is gone (no spoils card is a hero's). The focused card keeps its ring and lift and the CTA names it. The first-win gear tip moved to the next fight's setup, where the gear is on screen. Checked on a 390×844 phone and a 1280×800 desk (live app, Playwright): the three columns line up row for row; on desk the take sits under the cards in the side column.

@@ -41,6 +41,14 @@
        row is gone: the coach floats over the Stage, October 2026.) */
     grid-template-rows: auto auto minmax(0, 1fr);
   }
+  /* The reward hand in place: the three cards take the slack and the take
+     sits under them, sized to itself (`.sh-detail.reward-hand`). */
+  .shell:not(.shell-page):has(> .sh-detail.reward-hand) {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .shell:not(.shell-page) > .sh-selector.sh-selector-reward {
+    overflow-y: auto;
+  }
 
   /* -- band 1: one row across the whole width -------------------------------- */
   .shell:not(.shell-page) > .sh-header {
