@@ -9,6 +9,8 @@ import { PageScreen } from './PageScreens'
 import { MenuScreen } from './MenuScreen'
 import { MilitiaScreen } from './MilitiaScreen'
 import { LiveryScreen } from './company/LiveryScreen'
+import { StandingsScreen } from './war/StandingsScreen'
+import { SeasonEndScreen } from './war/SeasonEndScreen'
 import type { CompanyId } from '../../game/data/companies'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
@@ -28,6 +30,7 @@ import '../../styles/stops.css'
 import '../../styles/menu.css'
 import '../../styles/hq.css'
 import '../../styles/charter.css'
+import '../../styles/war.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
 import { useMetaStore } from '../../state/metaStore'
@@ -98,6 +101,7 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
   militia: { title: 'Your militia' },
   livery: {},
+  war: {},
 }
 
 export function RootShell() {
@@ -130,6 +134,8 @@ export function RootShell() {
   const menuStaged = useMenuStaged()
   const reveal = useReveal()
   const metaCopy = META_COPY[metaView]
+  // The trade war (Draft 4 § D): a season that just ended is read at home before anything else.
+  const seasonEnd = useMetaStore((s) => s.season.ended)
   usePagePrefetch()
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
@@ -190,6 +196,10 @@ export function RootShell() {
             <ContractsScreen />
           ) : ctx.stage === 'city' ? (
             <CityScreen />
+          ) : screen === 'hub' && seasonEnd && !menuStaged ? (
+            <SeasonEndScreen end={seasonEnd} />
+          ) : screen === 'hub' && metaView === 'war' && !menuStaged && reveal.war ? (
+            <StandingsScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'hq' && !menuStaged && reveal.hq ? (
             <HqScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'crates' && !menuStaged && reveal.crates ? (
@@ -208,6 +218,7 @@ export function RootShell() {
               onMilitia={() => setMetaView('militia')}
               onCharter={() => setMetaView('charter')}
               onLivery={(c) => (setLiveryOf(c), setMetaView('livery'))}
+              onWar={() => setMetaView('war')}
             />
           ) : screen === 'hub' && metaView === 'livery' && liveryOf && !menuStaged ? (
             <LiveryScreen company={liveryOf} onDone={() => setMetaView('menu')} />

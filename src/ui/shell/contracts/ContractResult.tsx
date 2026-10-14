@@ -60,6 +60,8 @@ export function ResultScreen() {
   const home = recap?.home ?? null
   const interest = recap?.interest ?? 0
   const tips = recap?.progress?.askTips ?? 0
+  // The trade war (Draft 4 § D): a settle that ended a season sends you home to read it first.
+  const seasonEnd = useMetaStore((s) => s.season.ended)
   const dest = route?.towns[CITY_COUNT - 1] ?? 'the end of the road'
   const town = route && c ? route.towns[Math.max(0, c.paid.length - 1)] : ''
 
@@ -125,7 +127,7 @@ export function ResultScreen() {
           )}
         </div>
       }
-      cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
+      cta={seasonEnd ? { label: `See how Season ${seasonEnd.n} ended`, run: returnToHub, heavy: true } : { label: 'Take another contract', run: runAgain, heavy: true }}
       /*
        * Oct 2026 (3.5): the exits are ONE row of two quiet buttons — the
        * mobile system's dual action footer. As two 56px picture rows they
@@ -133,16 +135,21 @@ export function ResultScreen() {
        * the head), above the one next step.
        */
       foot={
+        seasonEnd && !(outcome === 'lost' && assist === 'off') ? undefined : (
         <div className="pg-dual">
           {outcome === 'lost' && assist === 'off' && (
             <button className="pg-dual-btn" onClick={() => setAssist('steady')}>
               <Icon name="assist" /> Assist: Steady
             </button>
           )}
-          <button className="pg-dual-btn" onClick={returnToHub}>
-            <Icon name="back" /> Back to the menu
-          </button>
+          {/* With a season to read, the CTA is the way home: one button, one job. */}
+          {!seasonEnd && (
+            <button className="pg-dual-btn" onClick={returnToHub}>
+              <Icon name="back" /> Back to the menu
+            </button>
+          )}
         </div>
+        )
       }
     >
       {/* A fall names its cause first (Phase 2). */}

@@ -103,6 +103,9 @@ export const TEACH_IDS = [
   // focus each say one tip, the first time they show (from the fifth contract).
   'market',
   'focus',
+  // The trade war (Draft 4 § D) opens with the market: one tip, the first
+  // time its bar shows on the home.
+  'war',
 ] as const
 export type TeachId = (typeof TEACH_IDS)[number]
 export type TeachSeen = Record<TeachId, boolean>

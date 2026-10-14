@@ -72,6 +72,33 @@ export function SovereignCrest({ scale = 2 }: { scale?: number }) {
   return <Pixel rows={crestRows(SOVEREIGN_EMBLEM)} palette={pal} scale={scale} className="crest sovereign" />
 }
 
+/**
+ * The trade war's leader's crown (Draft 4 § D): the Sovereign crest's crown (`SOVEREIGN_EMBLEM`), in
+ * gold with a red jewel, outlined so it reads on wood and on the map.
+ */
+const CROWN_ROWS = outlined(SOVEREIGN_EMBLEM.slice(1, 7).map((r) => r.replace(/o/g, 'd')))
+const CROWN_PALETTE = { g: '#f0c46a', d: '#a8812c', p: '#e0443a', k: '#161c2e' }
+export const Crown = ({ scale = 2 }: { scale?: number }) => <Pixel rows={CROWN_ROWS} palette={CROWN_PALETTE} scale={scale} className="crown" />
+
+/** Rows with a one-pixel `k` outline grown around every filled pixel. */
+function outlined(rows: readonly string[]): string[] {
+  const h = rows.length + 2
+  const w = rows[0].length + 2
+  const at = (x: number, y: number) => rows[y - 1]?.[x - 1] ?? '.'
+  const out: string[] = []
+  for (let y = 0; y < h; y++) {
+    let line = ''
+    for (let x = 0; x < w; x++) {
+      const c = at(x, y)
+      if (c !== '.') line += c
+      else if ([[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dx, dy]) => at(x + dx, y + dy) !== '.')) line += 'k'
+      else line += '.'
+    }
+    out.push(line)
+  }
+  return out
+}
+
 /** A contract's crest: its company's, or the Sovereign Route's crown. */
 export const RouteCrest = ({ company, scale = 2 }: { company: CompanyId | null; scale?: number }) =>
   company ? <Crest company={company} scale={scale} /> : <SovereignCrest scale={scale} />

@@ -51,6 +51,8 @@ import { readMilitia, type Militia } from '../game/run/militia'
 import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
 import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
 import { askStanding, askTips, readAskResults, type AskResult } from '../game/run/asks'
+import { canSignExclusive, endSeason, exclusiveXpMult, freshSeason, readSeason, recordContract, seasonOver, warOpen, type Season } from '../game/run/tradeWar'
+import { companyOpen } from '../game/run/standing'
 
 /**
  * The HQ (build step 3) replaced the Watchtower's list of hub purchases. Its
@@ -284,6 +286,12 @@ interface MetaState {
    * against that company's kit at your standing with it (`run/livery`).
    */
   liveries: Liveries
+  /**
+   * The trade war (Draft 4 § D, `run/tradeWar.ts`): the season, each
+   * company's share, your deliveries this season, the exclusive, the
+   * desperate company, and the season just ended until its page is read.
+   */
+  season: Season
   // actions
   /** The next level's price, or null when it is maxed or unknown. */
   upgradeCost: (id: string) => number | null
@@ -324,6 +332,14 @@ interface MetaState {
   setMilitia: (m: Militia) => void
   /** Dress a company's standard. A part not unlocked at your standing with it falls back to the plain one. */
   setLivery: (company: CompanyId, look: StandardLook) => void
+  /** Sign this season's exclusive with a company (once a season, from its terms). False when refused. */
+  signExclusive: (company: CompanyId) => boolean
+  /**
+   * Close the season-end page: take `kind` from the leader's vault (a locked
+   * kind is unlocked, an owned one is a Rare bonus item for the next
+   * contract), or nothing (`null`, when there was no pick to make).
+   */
+  closeSeasonEnd: (kind: string | null) => void
   resetMeta: () => void
 }
 
@@ -379,8 +395,15 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  *
  * v12 — company flags (Draft 4 § C): `liveries`, the standards you dressed,
  * per company. An older save has none (every standard flies plain).
+ *
+ * v13 — the loyalty track (Draft 4 § B; another build step owns this one).
+ *
+ * v14 — the trade war (Draft 4 § D): `season`, read by
+ * `tradeWar.readSeason`. An older save has none, and starts the war at
+ * season 1 with even shares — nothing else moves, so the step composes with
+ * v13's whatever order they land in.
  */
-export const META_VERSION = 12
+export const META_VERSION = 14
 
 /** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -451,6 +474,7 @@ type PersistedMeta = Pick<
   | 'met'
   | 'militia'
   | 'liveries'
+  | 'season'
 >
 
 /**
@@ -526,6 +550,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     militia: readMilitia(o.militia),
     // v12: none before; each part checked against the standing just read.
     liveries: readLiveries(o.liveries, (c) => standingFor(standing[c] ?? 0)),
+    // v14: none before (a fresh war); validated whatever the version.
+    season: readSeason(o.season),
   }
 }
 
@@ -557,6 +583,7 @@ export const useMetaStore = create<MetaState>()(
       met: [],
       militia: null,
       liveries: {},
+      season: freshSeason(),
 
       upgradeCost: (id) => (isHqId(id) ? hqCost(id, hqLevel(get().upgrades, id)) : null),
 
@@ -704,7 +731,9 @@ export const useMetaStore = create<MetaState>()(
         const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest + tips
         const standingXp = { ...freshStanding(), ...get().standing }
         const xpBefore = company ? Math.max(0, num(standingXp[company], 0)) : 0
-        const xp = (ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0)
+        // An exclusive this season (the trade war): its company's contracts pay more standing.
+        const season0 = readSeason(get().season)
+        const xp = Math.floor(((ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0)) * exclusiveXpMult(season0, ranked ? company : null))
         const before = standingFor(xpBefore)
         const after = standingFor(xpBefore + xp)
         const have = get().skills
@@ -787,19 +816,45 @@ export const useMetaStore = create<MetaState>()(
         }
         const newCards = [...standingCards, ...contractCards]
 
+        // The trade war (Draft 4 § D): from the market's opening, every
+        // ranked finished contract counts toward the season and moves its
+        // company's share; the seventh ends it. The leader pays its champion
+        // (the purse banked now, the vault pick on the season's page), and
+        // the last company that hires you posts desperate terms.
+        let season = season0
+        let warGold = 0
+        let warItems: string[] = []
+        let warBonus: string[] = []
+        if (contract && !unranked && warOpen(num(stats.runsCompleted, 0))) {
+          season = recordContract(season, { company: contract.company, crates, status: contract.status, charter })
+          if (seasonOver(season)) {
+            // A page left unread when the next season ends: its pick is taken for you (the first offered).
+            const old = season.ended?.vault[0]
+            if (old) (old.unlock ? warItems : warBonus).push(old.kind)
+            const haveNow = [...haveItems, ...items, ...warItems]
+            const ended = endSeason(season, { haveItems: haveNow, open: (c) => companyOpen(c, nextStanding) })
+            season = ended.next
+            warGold = ended.end.purse
+          }
+        }
+        warItems = warItems.filter((k) => !haveItems.includes(k) && !items.includes(k))
+
         // Every read is coerced: this is `x + n` arithmetic over a persisted
         // record, and one field arriving as `undefined` would turn a stat into
         // NaN permanently (M11).
         set({
-          bank: Math.max(0, num(get().bank, 0)) + banked,
+          bank: Math.max(0, num(get().bank, 0)) + banked + warGold,
           ...(paysInterest ? { lastInterest: interest } : {}),
           standing: nextStanding,
           // A standing level past the card pool owes a Rare bonus item to the
           // next contract (`hq.bonusItemsFor`), as a sealed crate's duplicate does.
-          ...(standingBonus.length ? { bonusItems: [...get().bonusItems, ...standingBonus.map((b) => b.kind)].slice(0, MAX_BONUS_ITEMS) } : {}),
+          ...(standingBonus.length || warBonus.length
+            ? { bonusItems: [...get().bonusItems, ...standingBonus.map((b) => b.kind), ...warBonus].slice(0, MAX_BONUS_ITEMS) }
+            : {}),
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
-          items: items.length ? [...haveItems, ...items] : haveItems,
+          items: items.length || warItems.length ? [...haveItems, ...items, ...warItems] : haveItems,
+          season,
           ...(charter ? { charters: { runs: charters.runs + 1, delivered: charters.delivered + (won ? 1 : 0) } } : {}),
           ...(sovereign ? { sovereign: [...owned, sovereign] } : {}),
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
@@ -824,6 +879,33 @@ export const useMetaStore = create<MetaState>()(
         const fit = readLivery(company, look, standingFor(Math.max(0, num(get().standing[company], 0))))
         const { [company]: _old, ...rest } = get().liveries
         set({ liveries: isDefaultStandard(fit) ? rest : { ...rest, [company]: fit } })
+      },
+
+      signExclusive: (company) => {
+        const season = readSeason(get().season)
+        if (!isCompanyId(company) || !canSignExclusive(season, company)) {
+          sfx('error')
+          return false
+        }
+        set({ season: { ...season, exclusive: company } })
+        sfx('confirm')
+        return true
+      },
+
+      closeSeasonEnd: (kind) => {
+        const season = readSeason(get().season)
+        const end = season.ended
+        if (!end) return
+        const pick = kind ? end.vault.find((v) => v.kind === kind) : undefined
+        // A champion's page closes only with a pick from its vault.
+        if (end.vault.length && !pick) return
+        const items = Array.isArray(get().items) ? get().items : []
+        set({
+          season: { ...season, ended: null },
+          ...(pick && pick.unlock && !items.includes(pick.kind) ? { items: [...items, pick.kind] } : {}),
+          ...(pick && (!pick.unlock || items.includes(pick.kind)) ? { bonusItems: [...get().bonusItems, pick.kind].slice(0, MAX_BONUS_ITEMS) } : {}),
+        })
+        if (pick) sfx('coin')
       },
 
       bonuses: () => {
@@ -859,6 +941,7 @@ export const useMetaStore = create<MetaState>()(
           met: [],
           militia: null,
           liveries: {},
+          season: freshSeason(),
         }),
     }),
     {
@@ -885,6 +968,7 @@ export const useMetaStore = create<MetaState>()(
         met: s.met,
         militia: s.militia,
         liveries: s.liveries,
+        season: s.season,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is

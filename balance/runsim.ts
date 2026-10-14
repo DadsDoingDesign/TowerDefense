@@ -354,9 +354,10 @@ export interface SimOptions {
    * pay is recorded on the outcome (`RunOutcome.contract`) so a cash-out
    * policy can be priced after the fact (`contractNet`). Omitted: the open
    * road every route used to share, unweighted — exactly the run this model
-   * always played.
+   * always played. `desperate`: the trade war's desperate terms (its raiders
+   * ×`DESPERATE_STRENGTH`); no report section sets it.
    */
-  contract?: { company: CompanyId | null; crates: number; charter?: boolean }
+  contract?: { company: CompanyId | null; crates: number; charter?: boolean; desperate?: boolean }
   /**
    * The Sovereign Route's trade-offs, one switch each (all on by default on a
    * charter): its ground on every fight, the merchants' double prices, and
@@ -525,7 +526,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   const charter = !!k?.charter
   const parts = { ground: true, prices: true, muster: true, ...o.charterParts }
   // A charter's muster is its strength too (`contracts.contractRules`); §18 lifts it with the rest of the muster.
-  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter })) : (o.difficulty ?? difficultyRules(0))
+  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter, desperate: k.desperate })) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
   // A contract weights its company's pieces on its own road (`weightPool`), as
   // the store does; the Sovereign Route deals for no company and no focus, and

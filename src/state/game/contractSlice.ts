@@ -9,6 +9,7 @@ import { hashSeed, newRunSeed } from '../../game/core/rng'
 import { COMPANY_IDS, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { canCashOut, cargoPct, cashOutValue, clampCrates, CRATE_PRICE, crateCap, marketOfDay, marketOpen, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
+import { seasonCrateCap } from '../../game/run/tradeWar'
 import { CHARTER_FEE, charterDoor } from '../../game/run/charter'
 import { contractGrant } from '../../game/run/settle'
 import { sfx } from '../../audio/audio'
@@ -64,9 +65,11 @@ type Meta = ReturnType<typeof useMetaStore.getState>
  * with it (standing 2, the staggered reveal), then its standing cap and what
  * the bank can pay.
  */
-export function stakeCap(meta: Pick<Meta, 'standing' | 'bank'>, company: CompanyId): number {
+export function stakeCap(meta: Pick<Meta, 'standing' | 'bank'> & Partial<Pick<Meta, 'season'>>, company: CompanyId): number {
   if (!stakesShown(meta.standing, company, useSettingsStore.getState().showEverything)) return 0
-  return Math.min(crateCap(standingOf(meta.standing, company)), Math.floor(Math.max(0, meta.bank) / CRATE_PRICE))
+  // A cold rival (the trade war: your exclusive is with its rival) takes one crate fewer this season.
+  const cap = meta.season ? seasonCrateCap(meta.season, company, standingOf(meta.standing, company)) : crateCap(standingOf(meta.standing, company))
+  return Math.min(cap, Math.floor(Math.max(0, meta.bank) / CRATE_PRICE))
 }
 
 /** Whether this save may sponsor the Sovereign Route now: the door open, the fee in the bank, and no first contract pending. */
@@ -96,7 +99,7 @@ export function homeCompany(meta: { standing: Meta['standing']; stats: { runsCom
 export const contractSeed = (boardSeed: number, company: CompanyId): number => hashSeed(boardSeed, 'contract', company)
 
 /** A board with its stake clamped to what this save may set. */
-function clampBoard(b: ContractBoard, meta: Pick<Meta, 'standing' | 'bank'>): ContractBoard {
+function clampBoard(b: ContractBoard, meta: Pick<Meta, 'standing' | 'bank'> & Partial<Pick<Meta, 'season'>>): ContractBoard {
   return { ...b, crates: clampCrates(b.crates, stakeCap(meta, b.company)) }
 }
 

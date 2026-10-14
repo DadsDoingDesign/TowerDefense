@@ -404,6 +404,16 @@ agree it, then edit this section.
 | `Tile` (Codex, menus) | One entry: a picture and a name; opens its card | Actions |
 | Map zones (`.rm-zone`, run map) | Shows which ground is cleared (your row and below) and which is not yet (above); two muted captions up the left margin name the two grounds, in the background | Marking which nodes you can reach (the node states do that) |
 | Decoration (rods, finials, cloth, meadow) | Sets the scene at the margins | Carrying information alone; sitting on the play field |
+| War strip (`WarStrip`, `.tw-strip`) | On the home, under the map: the trade war's season, the contracts left in it and the share bar; a tap opens the standings. One slim row on a short phone | Teaching the war (the one coach tip does, once); a company's own facts (its notice) |
+| Share bar (`ShareBar`, `.tw-bar`) | Each company's share of the trade, one segment in its colour, widest first, its % inside when it fits; its accessible name reads them all | Any other proportion |
+| Signpost crown (`.tm-crown`, `pixel.Crown`) | Marks the trade war's leader on its road's signpost | A company's standing or the market (the plate's own marks) |
+| Standings (`StandingsScreen`) | The five companies ranked by share, each with its bar, how the last contract moved it (▲/▼) and your deliveries this season; this season's desperate company, your exclusive and a cold rival tagged where they sit; a slip of what the season's end pays. Its CTA reads the desperate company's terms (else the leader's) | Signing anything |
+| Season's end (`SeasonEndScreen`) | After the settle that ends a season, before the home: who took it, whether you were its top militia, its purse (banked) and its vault pick as the shared `PickStrip` + `PickCard`, the CTA naming the item; then the next season's desperate company and the leader's banners | Showing anything but the season that ended |
+| War facts on the terms (`WarTerms`, `.tw-fact`) | On a company's terms, its trade-war facts this season, once each: desperate terms (pays ×1.5, raiders stronger), your exclusive with it, or cold (whose exclusive, its stake cap) | The pay itself (the slip does, ×1.5 included) |
+| Exclusive offer row and sheet (`.tw-offer`, `ExclusiveSheet`) | The row opens the offer; the sheet says what the company gives, what its rival does and when both lift. "Sign the exclusive" commits; "Not this season" closes and changes nothing | A standing hint (the row shows only while no exclusive is signed this season) |
+| Cold notice (`.mn-notice.is-cold`, `.mn-cold-stamp`) | Says, on the home, that a company is cold to you this season (your exclusive is with its rival): the paper pales, a "Cold" tag hangs on its corner, a chip says where its stakes stop | Locking the road (it still hires) |
+| Desperate chip (`DesperateChip`, `.tw-chip.is-desperate`) | Names the company on desperate terms this season ("Desperate · pays ×1.5"), on its notice and its standings row | Saying what makes it desperate (the standings' slip) |
+| Margin banners (`render/marginBanners.ts`) | Dress a battlefield's forest margins with the employer's standards (the season leader's between them; your militia's on your own road) | Sitting on the lane, a post or the caravan; carrying information the HUD does not also give |
 
 A new part gets a row here, with its job, before it ships.
 

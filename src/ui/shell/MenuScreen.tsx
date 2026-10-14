@@ -25,6 +25,8 @@ import { roadViews, type Rect } from '../attract/mapRules'
 import { CompanyFlag, Gold } from './contracts/parts'
 import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
+import { isCold, isDesperate, seasonCrateCap, seasonLeader } from '../../game/run/tradeWar'
+import { DesperateChip, useWar, WarStrip } from './war/WarParts'
 
 /**
  * May the menu move? False under the OS setting or the in-game toggle: the
@@ -66,12 +68,15 @@ export function MenuScreen({
   onMilitia,
   onCharter,
   onLivery,
+  onWar,
 }: {
   offers: Offer[]
   onMilitia: () => void
   onCharter: () => void
   /** Open the livery panel for a company's standard (Draft 4 § C). */
   onLivery?: (company: CompanyId) => void
+  /** Open the trade war's standings (Draft 4 § D). */
+  onWar?: () => void
 }) {
   const primary = offers.find((o) => o.id === 'run')
   const tiles = offers.filter((o) => o.id !== 'run')
@@ -89,6 +94,9 @@ export function MenuScreen({
   const staged = useMenuStaged()
   const reveal = useReveal()
   const motion = useMenuMotion()
+  // The trade war (Draft 4 § D): opens with the market; a first launch never sees it.
+  const { open: warShown, season } = useWar()
+  const war = !staged && warShown ? season : null
 
   const standing = useMemo(() => Object.fromEntries(COMPANY_IDS.map((c) => [c, standingOf(xp, c)])) as Record<CompanyId, number>, [xp])
   const hiring = useMemo(() => Object.fromEntries(COMPANY_IDS.map((c) => [c, companyOpen(c, xp)])) as Record<CompanyId, boolean>, [xp])
@@ -101,10 +109,12 @@ export function MenuScreen({
   // The focused road: the one tapped, else the default the terms would open on.
   const focus: CompanyId = staged ? FIRST_COMPANY : (homeFocus ?? homeCompany({ standing: xp, stats: { runsCompleted: runs } }))
   const open = staged || hiring[focus]
-  // Reading the terms reads the board's tips: the market's, once it shows.
+  // Reading the terms reads the board's tips: the market's, once it shows,
+  // and then the trade war's (one at a time, so each is read where it shows).
   const readTerms = () => {
     if (staged) return primary?.action?.run()
     if (market) useSettingsStore.getState().markTaught('market')
+    if (war && taught.market) useSettingsStore.getState().markTaught('war')
     openContracts({ company: focus })
   }
 
@@ -140,6 +150,10 @@ export function MenuScreen({
       <p className="mn-coach" role="note">
         <b>New: the market of the day.</b> One company’s goods sell for ×{MARKET_MULT} today — its crates and its completion bonus.
       </p>
+    ) : war && !taught.war ? (
+      <p className="mn-coach" role="note">
+        <b>New: the trade war.</b> Every delivery takes share for its company. When the season ends, the leader pays its top militia.
+      </p>
     ) : null
 
   // The Sovereign Route (build step 5), once its door is open: the way to its contract.
@@ -165,6 +179,7 @@ export function MenuScreen({
           motion={motion}
           firstRun={staged}
           focused={focus}
+          leader={war ? seasonLeader(war) : null}
           onPick={staged ? undefined : focusRoad}
         />
       </div>
@@ -201,6 +216,7 @@ export function MenuScreen({
 
       <div className="mn-sheet">
         {tip}
+        {war && onWar && <WarStrip season={war} onOpen={onWar} />}
         {charterLine}
         <ContractNotice
           company={focus}
@@ -212,6 +228,15 @@ export function MenuScreen({
           market={market?.company === focus ? market.mult : 1}
           skillsLeft={RANDOM_UNLOCK_SKILLS.some((id) => !skills.includes(id))}
           look={liveries[focus] ?? null}
+          war={
+            war
+              ? {
+                  cold: isCold(war, focus) && war.exclusive ? { with: war.exclusive, cap: seasonCrateCap(war, focus, standing[focus]) } : null,
+                  desperate: isDesperate(war, focus),
+                  exclusive: war.exclusive === focus,
+                }
+              : null
+          }
           onLivery={!staged && open && onLivery ? () => onLivery(focus) : undefined}
           onStep={staged ? undefined : (d) => focusRoad(COMPANY_IDS[(COMPANY_IDS.indexOf(focus) + d + COMPANY_IDS.length) % COMPANY_IDS.length])}
         />
@@ -262,6 +287,7 @@ function ContractNotice({
   market,
   skillsLeft,
   look,
+  war,
   onLivery,
   onStep,
 }: {
@@ -275,6 +301,11 @@ function ContractNotice({
   skillsLeft: boolean
   /** How you dressed its standard. */
   look: StandardLook | null
+  /**
+   * Its place in the trade war this season (Draft 4 § D): cold while your
+   * exclusive is with its rival (mockup 4b), desperate terms, your exclusive.
+   */
+  war?: { cold: { with: CompanyId; cap: number } | null; desperate: boolean; exclusive: boolean } | null
   /** Opens its livery: the flag is the way in (Draft 4 § C). */
   onLivery?: () => void
   onStep?: (delta: number) => void
@@ -285,7 +316,19 @@ function ContractNotice({
   const next = prog.max ? 'the highest there is' : skillsLeft ? `a skill at ${prog.standing + 1}` : `a Rare item at ${prog.standing + 1}`
   const i = COMPANY_IDS.indexOf(company)
   return (
-    <section className="mn-notice" style={{ '--co': co.color } as CSSProperties} aria-label={`Notice: ${co.name}`} aria-live="polite">
+    <section
+      className={`mn-notice${war?.cold ? ' is-cold' : ''}`}
+      style={{ '--co': co.color } as CSSProperties}
+      aria-label={`Notice: ${co.name}${war?.cold ? ', cold to you this season' : ''}`}
+      aria-live="polite"
+    >
+      {/* Cold (the trade war): your exclusive is with its rival — the paper
+          pales and wears a stamp until the season ends. */}
+      {war?.cold && (
+        <span className="mn-cold-stamp" aria-hidden="true">
+          Cold
+        </span>
+      )}
       {/* The company's flag on the LEFT, beside its name (the designer: the
           trader's icon belongs on the left when a road is opened, as a flag). */}
       <div className="mn-notice-head">
@@ -329,6 +372,13 @@ function ContractNotice({
       </p>
       <p className="mn-letter">{open ? `“${contractLetter(company, hashSeed(day, 'notice', company))}”` : `Not hiring yet. ${groundLine(company)}`}</p>
       <div className="mn-chips">
+        {war?.desperate && <DesperateChip />}
+        {war?.exclusive && <span className="mn-chip is-exclusive">Your exclusive</span>}
+        {war?.cold && (
+          <span className="mn-chip is-cold" aria-label={`Your exclusive is with ${companyById(war.cold.with).name}: stakes stop at ${war.cold.cap} crates`}>
+            Stakes stop at {war.cold.cap}
+          </span>
+        )}
         {market > 1 && (
           <span className="mn-chip is-market">
             <b>×{market} today</b> {co.noun} sells high

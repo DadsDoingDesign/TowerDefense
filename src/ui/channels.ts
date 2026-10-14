@@ -1,6 +1,7 @@
 import { DUAL_WIELD_DEX, gripOf, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { interestLine, LOST_ROAD_SHARE, ROAD_SHARE } from '../game/run/hq'
-import { ADVANCE, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
+import { ADVANCE, DESPERATE_PAY, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
+import { SEASON_LENGTH } from '../game/run/tradeWar'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
@@ -628,5 +629,15 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   focus: {
     term: 'Company focus',
     line: 'One company at a time: its skills and items fill more of what you are dealt, on every road. Set at the HQ.',
+  },
+  war: {
+    term: 'The trade war',
+    line: `The companies fight over the trade, and your contracts move it: a delivery takes share for its company, a fall loses some. Every ${SEASON_LENGTH} contracts a season ends: the leader pays its top militia, and the last posts desperate terms — its contracts pay ×${DESPERATE_PAY}, its raiders are stronger.`,
+    also: [
+      {
+        term: 'An exclusive',
+        line: 'Once a season, from a company’s terms: more standing from its contracts, while its rival turns cold and takes one crate fewer.',
+      },
+    ],
   },
 }

@@ -47,9 +47,11 @@ export function RunMapView() {
   const selectNode = useGameStore((s) => s.selectNode)
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const charter = useGameStore((s) => !!s.contract?.charter)
+  // Desperate terms (the trade war): its raiders are stronger from the first fight.
+  const desperate = useGameStore((s) => !!s.contract?.desperate)
   const contract = useGameStore((s) => s.contract)
   const runSeed = useGameStore((s) => s.runSeed)
-  const rules = contractRules({ crates, charter })
+  const rules = contractRules({ crates, charter, desperate })
   // The act bosses are the route's cities (the mercenary company): named on the map.
   const towns = useGameStore((s) => (s.contract ? routeOf(s.contract).towns : null))
   const focusedId = useMapFocus((s) => s.nodeId)

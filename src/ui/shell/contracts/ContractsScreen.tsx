@@ -28,6 +28,8 @@ import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
 import { ContractPage, DangerPips, Gold, MarketTag, PageTip, Slip, SlipLine } from './parts'
 import { AskTerms } from './AskParts'
+import { WarTerms } from '../war/WarTerms'
+import { isCold, isDesperate, seasonCrateCap } from '../../../game/run/tradeWar'
 
 /**
  * A company's terms (the mercenary company; mockups `trade/r3/3-stakes.png`,
@@ -82,11 +84,14 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
   const co = companyById(company)
   const market = marketFor(company, utcDateKey(), reveal.market)
   const standing = standingOf(meta.standing, company)
-  const standingCap = crateCap(standing)
+  // The trade war (Draft 4 § D): a cold rival takes one crate fewer; desperate terms pay ×1.5.
+  const cold = reveal.war && isCold(meta.season, company)
+  const desperate = reveal.war && isDesperate(meta.season, company)
+  const standingCap = cold ? seasonCrateCap(meta.season, company, standing) : crateCap(standing)
   // Stakes open per company at standing 2 with it (the staggered reveal).
   const stakesOpen = stakesShown(meta.standing, company, showEverything)
   const cap = stakeCap(meta, company)
-  const plan = contractPlan({ company, crates, market })
+  const plan = contractPlan({ company, crates, market, ...(desperate ? { desperate } : {}) })
   const stake = crates * CRATE_PRICE
   const rec = recordAt(meta.record, crates)
   const staked = crates > 0
@@ -223,7 +228,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
               'Standard raiders.'
             )}
           </span>
-          {standingCap < MAX_CRATES && (
+          {standingCap < MAX_CRATES && !cold && (
             <span className="ct-lockline">
               Crate {standingCap + 1} opens at Standing {standingCap} with {co.name}
             </span>
@@ -232,6 +237,8 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
         </div>
       </div>
       )}
+
+      <WarTerms company={company} />
 
       <AskTerms company={company} asks={asks} />
 
