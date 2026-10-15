@@ -29,6 +29,7 @@ import { charterCta, charterSlot, charterSlotName, dockSlots, markText, SLOT_MAR
 import { CHARTER_KICKER, charterFacts, companyBadge, companyFacts, type CardBadge, type CardFact } from './homeCard'
 import { barKind, seasonPanelName } from './homeSeason'
 import { companyVar } from '../channels'
+import { ThemeFx } from '../theme/ThemeFx'
 
 /**
  * May the menu move? False under the OS setting or the in-game toggle: the
@@ -239,6 +240,8 @@ export function MenuScreen({
           focused={focus === 'charter' ? 'all' : focus}
           onPick={staged ? undefined : focusRoad}
         />
+        {/* The company's world over the map, under its signposts and labels. */}
+        <ThemeFx map />
       </div>
       <div className="mn-shade" aria-hidden="true" />
 

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { create } from 'zustand'
 import { FIRST_COMPANY } from '../../game/data/companies'
 import { flyingMilitia, militiaTheme } from '../../game/run/militia'
@@ -8,6 +8,8 @@ import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { useMenuStaged } from '../shell/staging'
 import { themeCss, themeFor, uiTheme } from './companyThemes'
+import { fx } from './fxEngine'
+import { worldArtCss } from './themeArtDom'
 
 /**
  * A theme shown over everything while it is set: the militia builder's
@@ -24,7 +26,8 @@ function installThemeCss(): void {
   if (typeof document === 'undefined' || document.getElementById('co-themes')) return
   const el = document.createElement('style')
   el.id = 'co-themes'
-  el.textContent = themeCss()
+  // The colours, then each world's pixel art as CSS variables (`themeArtDom`).
+  el.textContent = `${themeCss()}\n${worldArtCss()}`
   document.head.appendChild(el)
 }
 
@@ -57,8 +60,15 @@ export function useCompanyTheme(): ThemeId {
     militia: militiaTheme(militia),
     preview,
   })
+  // The switch-in plays when the world changes at home (a focus, the
+  // builder's try-on) — not on the way into a run, and never on the first paint.
+  const prev = useRef<string | null>(null)
   useLayoutEffect(() => {
     installThemeCss()
+    fx.install()
+    fx.setTheme(id)
+    if (prev.current && prev.current !== id && screen === 'hub') fx.switchIn(id)
+    prev.current = id
     const root = document.documentElement
     if (id === 'neutral') delete root.dataset.coTheme
     else root.dataset.coTheme = id

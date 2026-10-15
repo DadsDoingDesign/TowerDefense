@@ -7,6 +7,7 @@ import { EnemyPortrait } from '../EnemyPortrait'
 import { useMenuStaged } from '../staging'
 import { codexModel, glossaryLines, type CodexEntry, type CodexTab, type CodexTabId } from './codexModel'
 import { markCodexSeen, readCodexSeen } from './codexSeen'
+import { ThemeFx } from '../../theme/ThemeFx'
 import '../../../styles/codex.css'
 
 /**
@@ -59,6 +60,7 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <div className={`cx${desk ? ' is-desk' : ''}`}>
+      <ThemeFx />
       <div className="cx-main">
         <header className="cx-head">
           <button type="button" className="cx-iconbtn" onClick={onBack} aria-label="Back to the menu">

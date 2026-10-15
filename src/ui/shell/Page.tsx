@@ -6,6 +6,7 @@ import { effectIcon, markLabel, RARITY_INITIAL, railStyle, rarityRank, rarityVar
 import { Money } from './Money'
 import { lineMark, lineText, type Body } from './offers'
 import type { OneTapProps } from './oneTap'
+import { ThemeFx } from '../theme/ThemeFx'
 
 /**
  * The page skeleton from the Figma mobile system: a serif title block, a body
@@ -116,6 +117,7 @@ export function PageLayout({
   const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg${tone ? ` tone-${tone}` : ''}${compact ? ' compact' : ''}`}>
+      <ThemeFx />
       <div className={`pg-band pg-head${brand ? ' has-brand' : ''}`} {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
         {brand}
         {back ? (

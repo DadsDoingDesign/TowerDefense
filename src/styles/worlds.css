@@ -1,0 +1,199 @@
+/**
+ * The company worlds (Oct 2026) — what makes a theme a PLACE, not a palette.
+ *
+ * The designer: "if one is fire themed it should have fire effects … this is
+ * just ez boring crap". Each company theme (`ui/theme/companyThemes.ts` sets
+ * the colours) brings its world here, all in pixels:
+ *
+ *  1. the ambient layer (`.th-fx`, `ThemeFx`): embers, paint, sparks, petals,
+ *     stars — a pixel canvas BEHIND the page's panels (fixed, `z-index: -1`
+ *     inside the page's own stacking context), over the map on the home;
+ *  2. a frame on the panels: a pixel 9-slice drawn by `themeArt.ts`
+ *     (`--th-frame-0..2`, a flipbook), laid on as `border-image` — which paints
+ *     over the border box and never changes a box (the home's no-wiggle rule);
+ *  3. the CTA: the same frame, a strip of the world along its top (flames,
+ *     paint, sparks, a ribbon, runes — `--th-strip`, a sprite sheet stepping),
+ *     and a burst on press (`fxEngine`, the overlay `.th-fx-over`);
+ *  4. the switch-in on the home (`fxEngine.switchIn`, on the overlay);
+ *  5. the run screens' panels and the battle HUD's trims (never over the
+ *     field: the trims are on the header's foot and the detail band's head).
+ *
+ * Nothing here applies to the house look: every rule is under
+ * `:root[data-co-theme]`, which `useCompanyTheme` sets only for a company's
+ * theme. Reduced motion stops every flipbook on its first frame and hides the
+ * particle layers; the frames and the textures stay, static.
+ */
+
+/* ------------------------------------------------------- 1. ambient layers */
+.pg,
+.cx {
+  isolation: isolate;
+}
+.th-fx {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+/* The home's: over the map, under its signposts and city labels. */
+.th-fx.is-map {
+  z-index: 1;
+}
+.mn-map .tm-labels {
+  z-index: 2;
+}
+.th-fx-over {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+:root[data-reduced-motion='true'] :is(.th-fx, .th-fx-over) {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.th-fx, .th-fx-over) {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------- 2. frames */
+@keyframes th-frame {
+  0% {
+    border-image-source: var(--th-frame-0);
+  }
+  33.333% {
+    border-image-source: var(--th-frame-1);
+  }
+  66.667% {
+    border-image-source: var(--th-frame-2);
+  }
+}
+:root[data-co-theme]
+  :is(
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .pg-cta
+  ),
+:root[data-co-theme] .mn-purse-btn::after {
+  border-image-source: var(--th-frame-0);
+  border-image-slice: 3;
+  border-image-width: 6px;
+  border-image-outset: 0;
+  border-image-repeat: repeat;
+  image-rendering: pixelated;
+  animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+}
+/* The battle HUD's chrome: a trim along the header's foot and the detail
+   band's head — the world's edge, never over the field. */
+:root[data-co-theme] .sh-header {
+  border-image: var(--th-frame-0) 3 / 0 0 6px 0 / 0 repeat;
+  animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+}
+:root[data-co-theme] .sh-detail {
+  border-image: var(--th-frame-0) 3 / 6px 0 0 0 / 0 repeat;
+  animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+}
+
+/* Each world's light on its panels: a glow that belongs to the place. */
+:root[data-co-theme='spice'] {
+  --th-glow: 0 0 0 1px rgba(255, 138, 44, 0.18), 0 0 18px rgba(255, 110, 30, 0.24);
+}
+:root[data-co-theme='art'] {
+  --th-glow: 4px 4px 0 rgba(226, 170, 90, 0.35), -3px -2px 0 rgba(95, 176, 168, 0.25);
+}
+:root[data-co-theme='metals'] {
+  --th-glow: 0 0 0 1px rgba(255, 138, 44, 0.12), 0 0 14px rgba(255, 138, 44, 0.18);
+}
+:root[data-co-theme='silk'] {
+  --th-glow: 0 0 16px rgba(233, 168, 191, 0.22);
+}
+:root[data-co-theme='scrolls'] {
+  --th-glow: 0 0 0 1px rgba(143, 164, 255, 0.22), 0 0 18px rgba(143, 164, 255, 0.28);
+}
+:root[data-co-theme] :is(.mn-card, .pk-card) {
+  box-shadow:
+    var(--th-glow),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+}
+:root[data-co-theme] .pg-cta:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 1px var(--cta-edge),
+    var(--cta-lift),
+    var(--th-glow);
+}
+/* The titles catch the world's light. */
+:root[data-co-theme='spice'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 10px rgba(255, 120, 30, 0.45);
+}
+:root[data-co-theme='metals'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 1px 0 #000, 0 0 8px rgba(255, 138, 44, 0.3);
+}
+:root[data-co-theme='scrolls'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 10px rgba(143, 164, 255, 0.6);
+}
+:root[data-co-theme='silk'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 10px rgba(233, 168, 191, 0.4);
+}
+:root[data-co-theme='art'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 2px 2px 0 rgba(226, 170, 90, 0.35);
+}
+
+/* ----------------------------------------------------------------- 3. CTA */
+@keyframes th-strip {
+  to {
+    background-position-y: -48px;
+  }
+}
+:root[data-co-theme] .pg-cta {
+  position: relative;
+}
+/* The world along its top: half outside the button, half on its lip. */
+:root[data-co-theme] .pg-cta:not(:disabled)::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -6px;
+  height: 12px;
+  background-image: var(--th-strip);
+  background-size: 32px 48px;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: th-strip var(--th-strip-ms, 1s) steps(4) infinite;
+}
+/* A press is felt in the button as well as seen around it. */
+:root[data-co-theme] .pg-cta:not(:disabled):active {
+  transform: translateY(2px);
+}
+
+/* ----------------------------------------------------------- reduced motion */
+:root[data-co-theme][data-reduced-motion='true'] :is(.mn-card, .mn-slot, .mn-season, .mn-coach, .pg-row, .hq-card, .tk-card, .fc-sheet, .pk-card, .ask-panel, .ct-mode, .ct-stand-btn, .ct-route, .sh-context, .pg-cta, .sh-header, .sh-detail),
+:root[data-co-theme][data-reduced-motion='true'] .mn-purse-btn::after,
+:root[data-co-theme][data-reduced-motion='true'] .pg-cta::before {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-co-theme] :is(.mn-card, .mn-slot, .mn-season, .mn-coach, .pg-row, .hq-card, .tk-card, .fc-sheet, .pk-card, .ask-panel, .ct-mode, .ct-stand-btn, .ct-route, .sh-context, .pg-cta, .sh-header, .sh-detail),
+  :root[data-co-theme] .mn-purse-btn::after,
+  :root[data-co-theme] .pg-cta::before {
+    animation: none !important;
+  }
+}

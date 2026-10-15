@@ -6,6 +6,7 @@ import { Banner, Coin, Crest, Lantern, Pixel, SovereignCrest } from '../../pixel
 import type { BannerLook } from '../../../game/data/banner'
 import { CHARTER_NAME, CHARTER_TOWNS } from '../../../game/run/charter'
 import { useMoreBelow } from '../Page'
+import { ThemeFx } from '../../theme/ThemeFx'
 
 /**
  * The trade pages' shared parts (the mercenary company, build step 2), drawn
@@ -39,6 +40,7 @@ export function ContractPage({
   const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg ct ${className ?? ''}`} style={heat != null ? ({ '--heat': heat.toFixed(2) } as CSSProperties) : undefined} aria-label={label}>
+      <ThemeFx />
       <div className="pg-band pg-head ct-head">{head}</div>
       <div className={`pg-band pg-body ct-body${more ? ' more' : ''}`} ref={bodyRef}>
         {children}
