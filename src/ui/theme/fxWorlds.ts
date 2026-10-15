@@ -6,7 +6,7 @@
  * Each theme's world, as particles drawn in PIXELS: the engine (`fxEngine.ts`)
  * keeps a low-resolution canvas (`FX_PX` CSS px a pixel, `image-rendering:
  * pixelated`), and everything here works in those pixels — whole-pixel
- * squares, a small palette per world, alpha in quarter steps. No smooth
+ * squares, a small palette per world, alpha in eighth steps. No smooth
  * gradients: glows and washes are DITHERED (a checker of pixels).
  *
  *   - FIRE (Peppercorn): embers and sparks rising, a dithered heat glow at
@@ -82,8 +82,8 @@ export interface World {
 }
 
 const TAU = Math.PI * 2
-/** Alpha in quarter steps: pixel art fades in steps, not smoothly. */
-export const stepAlpha = (a: number): number => Math.max(0, Math.min(1, Math.round(a * 4) / 4))
+/** Alpha in eighths: pixel art fades in steps, not smoothly. */
+export const stepAlpha = (a: number): number => Math.max(0, Math.min(1, Math.round(a * 8) / 8))
 const pick = <T,>(rand: Rand, xs: readonly T[]): T => xs[Math.floor(rand() * xs.length) % xs.length]
 const p = (o: Partial<Particle> & Pick<Particle, 'kind' | 'x' | 'y'>): Particle => ({ vx: 0, vy: 0, age: 0, life: 1, size: 1, color: '#fff', phase: 0, ...o })
 
@@ -123,7 +123,7 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
 /** A dithered wash: every other pixel of a disc, so a glow stays pixel art. */
 function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alpha: number, offset = 0): void {
   pen.fillStyle = color
-  pen.globalAlpha = alpha
+  pen.globalAlpha = stepAlpha(alpha)
   const r2 = r * r
   for (let y = -r; y <= r; y++) {
     for (let x = -r; x <= r; x++) {
@@ -455,7 +455,7 @@ export const WORLDS: Readonly<Record<ThemeId, World>> = { neutral: lantern, spic
 /** Draw one particle. */
 export function drawParticle(pen: Pen, q: Particle, dim: number): void {
   const k = q.age / q.life
-  // Fade in over the first tenth, out over the last third — in quarter steps.
+  // Fade in over the first tenth, out over the last third — in eighth steps.
   const fade = Math.min(1, q.age / (q.life * 0.1 + 0.001), (1 - k) * 3)
   switch (q.kind) {
     case 'ember':
