@@ -18,10 +18,18 @@ const xp = (s: Partial<Record<CompanyId, number>>) => Object.fromEntries(COMPANY
 const war = (o: Partial<Season> = {}): Season => ({ ...freshSeason(), ...o })
 
 describe('the company dock', () => {
-  it('always five slots, in COMPANY_IDS order, whatever the save', () => {
+  it('always exactly five slots, in COMPANY_IDS order, whatever the save — Buy Company is not one of them', () => {
     for (const save of [xp({}), xp({ scrolls: 9, spice: 1 }), xp({ metals: 10, art: 4 })]) {
-      expect(dockSlots({ xp: save, war: null, market: null }).map((s) => s.company)).toEqual([...COMPANY_IDS])
+      const slots = dockSlots({ xp: save, war: null, market: null })
+      expect(slots).toHaveLength(5)
+      expect(slots.map((s) => s.company)).toEqual([...COMPANY_IDS])
     }
+  })
+
+  it('a pick never re-frames the map: the same open area gives the same geometry, whatever is focused', () => {
+    // The focus is not an input to the geometry at all; the open area depends on the viewport only (MenuScreen).
+    const open = { x: 0, y: 33, w: 195, h: 190 }
+    expect(buildGeometry(195, 422, open)).toEqual(buildGeometry(195, 422, open))
   })
 
   it('the roads fan west to east in the same order, so the dock is the map’s legend', () => {
@@ -78,7 +86,7 @@ describe('the company dock', () => {
   })
 })
 
-describe('the sixth slot: Buy Company (the Sovereign Route)', () => {
+describe('the Buy Company plaque (the Sovereign Route), on the dock’s shoulder', () => {
   const door = (skills: number, items: number) =>
     charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, skills), items: UNLOCK_ITEM_KINDS.slice(0, items) })
   const ALL_SKILLS = RANDOM_UNLOCK_SKILLS.length

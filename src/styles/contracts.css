@@ -161,21 +161,6 @@
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
-.ct-ground {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--muted);
-}
-.ct-ground::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--gr, #8a7656);
-}
 .ct-tip {
   margin: 0;
   padding: 8px 12px;

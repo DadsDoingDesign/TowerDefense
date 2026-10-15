@@ -21,7 +21,7 @@ import { companyById, type CompanyId } from '../../game/data/companies'
 import { bannerPalette, bannerRows, type BannerLook } from '../../game/data/banner'
 import { OUTLINE, pixelRuns } from '../../game/data/pixelArt'
 import { RNG } from '../../game/core/rng'
-import { glowAlpha, glowWidth, litBy, pulseIndex, type MapFocus, type MapGeometry, type Pulse, type RoadView } from './mapRules'
+import { glowAlpha, glowWidth, litBy, pulseIndex, seasonFor, type MapFocus, type MapGeometry, type MapSeason, type Pulse, type RoadView } from './mapRules'
 
 /** The night palette, dusk-lifted (`trade/NOTES.md` § Round 2). */
 const NIGHT = {
@@ -326,6 +326,71 @@ function drawHub(ctx: CanvasRenderingContext2D, geo: MapGeometry, banner: Banner
   }
 }
 
+/** A per-pixel hash in [0, 1): the speckle is the same on every bake. */
+const hash01 = (x: number, y: number, salt: number): number => {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(salt, 2246822519)) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+const MIST_NOISE = valueNoise(53)
+const SEASONED = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>()
+
+/**
+ * The map's pixels in a company's season (`mapRules.MAP_SEASONS`): the same
+ * bake — the same trees, the same shore — with a speckle on the open grass
+ * and the tree-tops, a low mist, then the season's washes. Cached per bake
+ * and season, so a focus change costs one `drawImage` after the first.
+ */
+export function seasonPixels(pixels: HTMLCanvasElement, season: MapSeason | null): HTMLCanvasElement {
+  if (!season) return pixels
+  let byName = SEASONED.get(pixels)
+  if (!byName) SEASONED.set(pixels, (byName = new Map()))
+  const hit = byName.get(season.name)
+  if (hit) return hit
+  const W = pixels.width
+  const H = pixels.height
+  const c = canvas(W, H)
+  const g = c.getContext('2d')!
+  g.drawImage(pixels, 0, 0)
+  if (season.grass || season.trees || season.mist) {
+    const img = g.getImageData(0, 0, W, H)
+    const px = new Uint32Array(img.data.buffer)
+    const grass = new Set(P.grass)
+    const top = P.forest[2]
+    const fleck = season.grass?.colors.map(packed) ?? []
+    const snow = season.trees ? packed(season.trees.color) : 0
+    const mist = season.mist ? hexRgb(season.mist.color) : null
+    const d = img.data
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x
+        const v = px[i]
+        if (season.grass && grass.has(v) && hash01(x, y, 1) < season.grass.share) px[i] = fleck[Math.floor(hash01(x, y, 2) * fleck.length)]
+        else if (season.trees && v === top && hash01(x, y, 3) < season.trees.share) px[i] = snow
+        if (mist && season.mist) {
+          const low = Math.max(0, Math.min(1, (y / H - (1 - season.mist.reach)) / season.mist.reach))
+          const a = season.mist.alpha * low * (0.35 + 0.65 * MIST_NOISE(x / 46, y / 12))
+          if (a > 0.004) {
+            const j = i * 4
+            d[j] += (mist[0] - d[j]) * a
+            d[j + 1] += (mist[1] - d[j + 1]) * a
+            d[j + 2] += (mist[2] - d[j + 2]) * a
+          }
+        }
+      }
+    }
+    g.putImageData(img, 0, 0)
+  }
+  for (const w of season.washes) {
+    g.globalCompositeOperation = w.op
+    g.fillStyle = rgba(w.color, w.alpha)
+    g.fillRect(0, 0, W, H)
+  }
+  g.globalCompositeOperation = 'source-over'
+  byName.set(season.name, c)
+  return c
+}
+
 /** How many chain pixels out of the hub a road's glow starts. */
 const HUB_CLEAR = 8
 
@@ -382,6 +447,8 @@ export function bakeBase(
   const c = canvas(geo.W * k, geo.H * k)
   const g = c.getContext('2d')!
   g.imageSmoothingEnabled = false
+  // The focused company's season, over the same bake (none for no focus or every road).
+  pixels = seasonPixels(pixels, seasonFor(focus))
   g.drawImage(pixels, 0, 0, geo.W * k, geo.H * k)
   const lit = geo.routes.filter((r) => litBy(focus, r.company))
   if (lit.length) {

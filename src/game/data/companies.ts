@@ -32,12 +32,14 @@ export const COMPANY_IDS: readonly CompanyId[] = ['spice', 'art', 'metals', 'sil
 export const isCompanyId = (v: unknown): v is CompanyId => typeof v === 'string' && (COMPANY_IDS as readonly string[]).includes(v)
 
 export interface RouteGround {
-  /** The ground's name, as the contract board shows it ("Wildfire"). */
+  /**
+   * The ground's place-name ("Wildfire"), for the balance report. A player
+   * is told what the ground DOES instead (`terrain.groundEffect`, the home
+   * card's Ground row).
+   */
   name: string
   /** The map challenges a battle on this road may carry (one is drawn per battle, as ever). */
   rules: readonly TerrainRuleId[]
-  /** The 8px swatch beside the name (a chip, never a signal on its own). */
-  swatch: string
 }
 
 export interface Company {
@@ -84,7 +86,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Spice',
     noun: 'spice',
     color: '#c6e05a',
-    ground: { name: 'Wildfire', rules: ['wildfire'], swatch: '#e0743a' },
+    ground: { name: 'Wildfire', rules: ['wildfire'] },
     towns: ['Saltmarsh', 'Cinder Ford', 'Pepperport'],
     letters: [
       '{name} seeks an escort for its {noun}, by {c1} and {c2} to {dest}.',
@@ -98,7 +100,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Art',
     noun: 'paintings',
     color: '#c6a4ff',
-    ground: { name: 'Flooded canals', rules: ['flooded'], swatch: '#4f8fc4' },
+    ground: { name: 'Flooded canals', rules: ['flooded'] },
     towns: ['Hollowmere', 'Gilt Bridge', 'Varnish'],
     letters: [
       '{name} needs its {noun} kept dry along the canal road to {dest}.',
@@ -112,7 +114,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Metals & Stones',
     noun: 'ore',
     color: '#5d8be2',
-    ground: { name: 'Quarry boulders', rules: ['quarry'], swatch: '#8a8a8a' },
+    ground: { name: 'Quarry boulders', rules: ['quarry'] },
     armour: 'plated',
     towns: ['Slagpit', 'Cobble Rise', 'Deepforge'],
     letters: [
@@ -127,7 +129,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Silk',
     noun: 'silk',
     color: '#dba5b9',
-    ground: { name: 'Fords and fires', rules: OPEN_GROUND, swatch: '#a08060' },
+    ground: { name: 'Fords and fires', rules: OPEN_GROUND },
     towns: ['Reedwick', 'Spindle', 'Loomhaven'],
     letters: [
       '{name} asks for quiet blades on the river road to {dest}.',
@@ -141,7 +143,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Scrolls & Arcana',
     noun: 'scrolls',
     color: '#e4e8f2',
-    ground: { name: 'Cursed ground', rules: ['hexed'], swatch: '#f49e80' },
+    ground: { name: 'Cursed ground', rules: ['hexed'] },
     armour: 'warded',
     towns: ['Quill Hill', 'Lanternhold', 'Inkspire'],
     letters: [

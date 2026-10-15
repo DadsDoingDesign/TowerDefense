@@ -177,16 +177,24 @@ describe('the home over the trade map', () => {
   }
 
   it('every glass layer is the glass token, and its text clears 4.5:1 on the lighter glass over pure white', () => {
-    for (const sel of ['.mn-place', '.mn-bank', '.mn-pill', '.mn-slot', '.tm-town', '.mn-militia']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass\)/)
+    for (const sel of ['.mn-purse', '.mn-season', '.mn-slot', '.tm-town', '.mn-militia']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass\)/)
     for (const sel of ['.mn-card', '.mn-coach']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass-strong\)/)
     for (const name of ['text', 'muted', 'accent-text', 'bad-text', 'teal-text']) expect(ratio(hex(token(name)), glass('glass')), `--${name} on --glass`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the dock’s marks clear 4.5:1: the market, desperate, exclusive and cold tags', () => {
+  it('the dock’s marks clear 4.5:1: the market and desperate tags', () => {
     expect(ratio(hex(token('market-ink')), hex(token('market')))).toBeGreaterThanOrEqual(4.5)
     expect(ratio(hex(token('ink-on-fill')), hex(token('bad-text'))), 'desperate tag').toBeGreaterThanOrEqual(4.5)
-    expect(ratio(hex(token('accent-text')), glass('glass-strong')), 'exclusive tag').toBeGreaterThanOrEqual(4.5)
-    expect(ratio(hex(token('cold-ink')), hex(token('paper-cold'))), 'cold tag').toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the places’ carved plates clear 4.5:1: their ink on the wood, and a locked one over pure white', () => {
+    expect(ruleBody('.mn-place::after')).toMatch(/var\(--sign-wood\)/)
+    expect(ratio(hex(token('sign-ink')), hex(token('sign-wood'))), '--sign-ink on --sign-wood').toBeGreaterThanOrEqual(4.5)
+    for (const sel of ['.mn-place.is-locked::after']) {
+      const m = ruleBody(sel).match(/background:\s*(rgba\([^)]*\))/)
+      if (!m) throw new Error(`${sel} has no rgba background`)
+      expect(ratio(hex(token('muted')), over(rgba(m[1]), WHITE)), `--muted on ${sel}`).toBeGreaterThanOrEqual(4.5)
+    }
   })
 
   it('the road signposts clear 4.5:1: a locked plate over pure white', () => {

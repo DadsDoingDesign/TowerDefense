@@ -159,16 +159,30 @@ result. Append a short note to the review log when you're done.
   script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
   The contract board is the HOME, and the home is the map (Oct 2026, the
   map-first home, `MenuScreen` + `menu.css`): the trade map fills the screen
-  and three slim glass layers float over it — the bar (seal, bank, place
-  icons), the company dock (five fixed slots in `COMPANY_IDS` order, the
-  order the map fans its roads west→east, then a sixth, **Buy Company** —
-  the Sovereign Route, locked with its progress until `charterDoor` opens;
-  the slot model is the pure `ui/shell/homeDock.ts`) and the focused card
-  with the CTA. A slot or a signpost focuses a road (`homeFocus`): the canvas
-  re-lights it (`paintMap.bakeBase` `focus`, a `mapRules.MapFocus`), names
-  its cities, and the card's CTA opens the terms (`openContracts`). Buy
-  Company is `homeFocus: 'charter'`: every road lights (`'all'`), and its
-  card's CTA opens the charter page (`onCharter`). No liaison on the home. Choosing the hero (`marchOut`) goes
+  and three slim layers float over it — the bar (the purse plaque: seal and
+  bank; one carved plate per place, its mark and name; under the purse, the
+  season panel: seven bars from `tradeWar.seasonBars`, `ui/shell/homeSeason.ts`),
+  the foot (the company dock: exactly five fixed slots in `COMPANY_IDS`
+  order, the order the map fans its roads west→east, pure model
+  `ui/shell/homeDock.ts`; the **Buy Company** slot — the Sovereign Route,
+  padlocked with its progress until `charterDoor` opens — floats over the
+  dock's right end, a slot's size) and the card: a FIXED FORM, the same four rows for
+  every company (Ground · Raiders · Today · Next, `ui/shell/homeCard.ts`; the
+  ground says its effect from `terrain.GROUND_EFFECTS`, never its
+  place-name) and the Buy Company card in the same frame. **No wiggle**: a
+  pick changes values, never boxes, so the open area the roads fan into (the
+  `.mn-window` box, between the bar and the foot; the season panel, the notes
+  and the Buy Company slot float over the map) depends on the viewport alone
+  and the terrain bakes once (`scripts/home-stability.mjs` proves it). A slot
+  or a signpost focuses a road (`homeFocus`): the canvas re-lights
+  it (`paintMap.bakeBase` `focus`, a `mapRules.MapFocus`) in the company's
+  season (`mapRules.MAP_SEASONS`, a tint over the same bake via
+  `paintMap.seasonPixels`), its cities hang beside it as annotations with
+  leader lines (pure placement in `ui/attract/labelLayout.ts`, which also
+  places the signposts — never by focus), and the card's CTA opens the terms
+  (`openContracts`). Buy Company is `homeFocus: 'charter'`: every road lights
+  (`'all'`, no season), and its card's CTA opens the charter page
+  (`onCharter`). No liaison on the home. Choosing the hero (`marchOut`) goes
   straight into the opening fight: the one battle on `OPENING_LAYER`
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the

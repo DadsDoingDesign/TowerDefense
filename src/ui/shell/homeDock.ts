@@ -9,8 +9,8 @@
  * says what those marks MEAN; the slot carries the number. Nothing here reads
  * a store: `MenuScreen` passes the save in, `tests/homeDock.test.ts` drives it.
  *
- * After them, a sixth slot that is no company's: Buy Company, the Sovereign
- * Route ({@link charterSlot}).
+ * Buy Company, the Sovereign Route, is not in the dock row: it is a slot of
+ * its own floating over the dock's right end ({@link charterSlot}).
  */
 import { COMPANY_IDS, companyById, type CompanyId } from '../../game/data/companies'
 import { companyOpen, standingOf, type StandingXp } from '../../game/run/standing'
@@ -102,15 +102,17 @@ export function slotName(s: DockSlot, marketMult: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// The sixth slot: Buy Company (the Sovereign Route)
+// The Buy Company slot (the Sovereign Route)
 // ---------------------------------------------------------------------------
 
 /**
- * The dock's sixth slot, after the five companies (October 2026; the
- * designer: "a button that looks locked and it's called 'Buy Company'"). It
- * is not a company's road: it is the Sovereign Route — your own road, every
- * company's goods. Shown from the first home after the free escort, locked
- * or open, so the endgame reads as a goal, not a secret
+ * The Buy Company slot (October 2026; the designer: "a button that looks
+ * locked and it's called 'Buy Company'" — then, of its place as the dock's
+ * sixth slot, "it's too cramped. but it can sit right above it and be
+ * locked", and "should be like one of the other company cards but locked,
+ * floating above"). It is not a company's road: it is the Sovereign Route — your own
+ * road, every company's goods. Shown from the first home after the free
+ * escort, locked or open, so the endgame reads as a goal, not a secret
  * (`docs/MERCENARY_COMPANY.md`, Overlooked § 5). Selecting it lights every
  * road, and its card says what opens it or what it costs.
  */
@@ -153,7 +155,7 @@ export function charterSlotName(s: CharterSlot): string {
 /**
  * The card's CTA (it opens the charter page): locked, it says what is missing
  * ("Unlock 14 more"); open, it is "Buy Company" with the fee on it — disabled
- * while the bank is short (the card says by how much, as a refusal line).
+ * while the bank is short (the card's Bank row says by how much).
  */
 export function charterCta(s: CharterSlot): { label: string; fee: number | null; enabled: boolean } {
   if (!s.open) return { label: `Unlock ${s.missing} more`, fee: null, enabled: false }

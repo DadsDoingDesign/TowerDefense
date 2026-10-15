@@ -87,6 +87,72 @@ export type MapFocus = CompanyId | 'all' | null
 export const litBy = (focus: MapFocus, company: CompanyId): boolean => focus === 'all' || focus === company
 
 // ---------------------------------------------------------------------------
+// A season per company (October 2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * The designer: "if the map were to re-theme for that selection slightly that
+ * would be cool, like snow or autumn". Each company in focus tints the map's
+ * season over the SAME baked terrain — never a re-scatter: a wash over the
+ * whole map (a canvas composite), and a sparse speckle on the open ground and
+ * the tree-tops (snow, leaves, blossom), seeded per pixel so it is the same
+ * every time. Subtle: the lit road and its glow are laid over it, so they
+ * stay the strongest thing on screen. No focus, and Buy Company's every road,
+ * keep the neutral night.
+ */
+export interface MapSeason {
+  name: string
+  /** Washes over the whole map, in order: a composite op, a colour, its strength. */
+  washes: readonly { op: GlobalCompositeOperation; color: string; alpha: number }[]
+  /** Speckle on open grass: its colours and the share of grass pixels it takes. */
+  grass?: { colors: readonly string[]; share: number }
+  /** Speckle on the tree-tops' lightest pixels: colour and share. */
+  trees?: { color: string; share: number }
+  /** A low mist: its colour, its strongest alpha, and how much of the map from the bottom it fills (0–1). */
+  mist?: { color: string; alpha: number; reach: number }
+}
+export const MAP_SEASONS: Record<CompanyId, MapSeason> = {
+  // Peppercorn: late summer into autumn — amber light, a few turning leaves.
+  spice: {
+    name: 'late summer',
+    washes: [{ op: 'soft-light', color: '#f0a040', alpha: 0.42 }],
+    grass: { colors: ['#6a4a1e', '#7c5a22'], share: 0.035 },
+    trees: { color: '#4e4418', share: 0.45 },
+  },
+  // Easel House: spring — fresh green, a few blossom flecks.
+  art: {
+    name: 'spring',
+    washes: [{ op: 'soft-light', color: '#7ad85a', alpha: 0.36 }],
+    grass: { colors: ['#b4809c', '#c8b4cc'], share: 0.012 },
+    trees: { color: '#9a6a88', share: 0.06 },
+  },
+  // Ironvein: overcast — the colour drained toward slate.
+  metals: {
+    name: 'overcast',
+    washes: [
+      { op: 'saturation', color: '#7a7a7a', alpha: 0.5 },
+      { op: 'soft-light', color: '#6a7a9a', alpha: 0.3 },
+    ],
+  },
+  // Rosethread: a misty morning — a pale haze lying low.
+  silk: {
+    name: 'misty morning',
+    washes: [{ op: 'soft-light', color: '#e8c8d8', alpha: 0.22 }],
+    mist: { color: '#c4b4c4', alpha: 0.3, reach: 0.85 },
+  },
+  // Moonquill: frost — a cool white light, snow on the open ground and the pines.
+  scrolls: {
+    name: 'frost',
+    washes: [{ op: 'screen', color: '#202a3c', alpha: 0.5 }],
+    grass: { colors: ['#5a6478', '#717d92'], share: 0.028 },
+    trees: { color: '#6c788a', share: 0.32 },
+  },
+}
+
+/** The season the map wears for a focus: a company's, or none (no focus, or every road). */
+export const seasonFor = (focus: MapFocus): MapSeason | null => (focus && focus !== 'all' ? MAP_SEASONS[focus] : null)
+
+// ---------------------------------------------------------------------------
 // Geometry
 // ---------------------------------------------------------------------------
 

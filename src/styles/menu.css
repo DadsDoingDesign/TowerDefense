@@ -184,8 +184,32 @@
   outline-offset: var(--focus-offset);
 }
 
-/* The focused road's cities, named beside their towns on small glass tags,
-   edged in the company's colour; the destination in bold. */
+/* The focused road's cities: annotations. Each name hangs in a line beside
+   the road, on a small glass tag edged in the company's colour on the side
+   its leader meets; a 1px leader runs to a small square on its town. The
+   destination in bold. */
+.tm-leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.tm-leaders line {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-opacity: 0.75;
+  shape-rendering: crispEdges;
+}
+.tm-leaders rect {
+  fill: var(--co);
+  stroke: var(--night);
+  stroke-width: 1;
+}
+.tm-leaders .is-hidden {
+  display: none;
+}
 .tm-towns {
   position: absolute;
   inset: 0;
@@ -206,6 +230,18 @@
   line-height: 1.2;
   white-space: nowrap;
 }
+.tm-town[data-edge='right'] {
+  border-left: 0;
+  border-right: 2px solid var(--co);
+}
+.tm-town[data-edge='top'] {
+  border-left: 0;
+  border-top: 2px solid var(--co);
+}
+.tm-town[data-edge='bottom'] {
+  border-left: 0;
+  border-bottom: 2px solid var(--co);
+}
 .tm-town.is-dest {
   font-weight: 800;
 }
@@ -214,13 +250,26 @@
 }
 
 /* ------------------------------------------------------------- the bar
-   The seal (the screen's title, spoken; written out on a desk), the bank and
-   the places, one icon each. No tagline and no instruction: the map says it. */
+   The purse (the seal — the screen's title, spoken; written out on a desk —
+   and the bank, one glass plaque), the militia's flag, and the places, one
+   carved plate each. No tagline and no instruction: the map says it. */
 .mn-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: calc(8px + var(--safe-top, 0px)) 12px 6px;
+  padding: calc(8px + var(--safe-top, 0px)) 10px 6px;
+}
+/* The purse: the seal and the bank in one small plaque. */
+.mn-purse {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 48px;
+  padding: 0 12px 0 4px;
+  border-radius: var(--r-md);
+  background: var(--glass);
+  border: 1px solid var(--line-strong);
 }
 /* The vector mark takes no shadow or glow; its floor is 40 (docs/BRAND.md). */
 .mn-mark {
@@ -238,6 +287,15 @@
   clip-path: inset(50%);
   white-space: nowrap;
   margin: 0;
+}
+.mn-bank {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--accent-text);
+  font-weight: 800;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
 }
 .mn-militia {
   display: inline-flex;
@@ -270,20 +328,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mn-bank {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  height: 36px;
-  padding: 0 11px;
-  border-radius: 999px;
-  background: var(--glass);
-  border: 1px solid var(--line-strong);
-  color: var(--accent-text);
-  font-weight: 700;
-  font-size: var(--fs-md);
-  font-variant-numeric: tabular-nums;
-}
+
+/* The places: one carved plate each — the signposts' planed wood — its mark
+   at the sheet's double and its short name under it. Locked: a charred plate,
+   the mark in shadow under a padlock, the name still there. */
 .mn-places {
   display: flex;
   gap: 4px;
@@ -291,43 +339,77 @@
 }
 .mn-place {
   position: relative;
+  isolation: isolate;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  padding: 0;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-  background: var(--glass);
-  color: var(--text);
+  gap: 1px;
+  width: 50px;
+  height: 52px;
+  padding: 3px 0 4px;
+  border: 0;
+  background: none;
+  color: var(--sign-ink);
   font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 600;
   cursor: pointer;
 }
-.mn-place .fw-i.lg {
-  /* 32 is the sheet's own double: crisp, and a thumb's mark in a 44 box. */
-  flex: none;
+.mn-place::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.16) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
+    repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.07) 7px 9px),
+    var(--sign-wood);
+  border: 1px solid var(--sign-rim);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.mn-place-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
 }
 .mn-place-name {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+.mn-place-full {
   display: none;
 }
 .mn-place.is-locked {
   color: var(--muted);
   cursor: default;
 }
-.mn-place.is-locked .fw-i {
-  filter: saturate(0.25) brightness(0.6);
+.mn-place.is-locked::after {
+  background: rgba(20, 15, 10, 0.94);
+  border: 1px dashed var(--line-strong);
+  box-shadow: none;
 }
-.mn-place > .lock {
+.mn-place.is-locked .fw-i {
+  filter: saturate(0.2) brightness(0.55);
+}
+.mn-place-lock {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
+  right: -5px;
+  bottom: -3px;
+  display: flex;
 }
 @media (hover: hover) and (pointer: fine) {
-  .mn-place:not(.is-locked):hover,
+  .mn-place:not(.is-locked):hover::after {
+    background:
+      linear-gradient(180deg, rgba(255, 230, 180, 0.22) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.22) calc(100% - 3px)),
+      repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.06) 7px 9px),
+      var(--sign-wood-on);
+  }
   .mn-militia:hover {
     border-color: color-mix(in srgb, var(--accent) 55%, transparent);
     background: var(--glass-strong);
@@ -338,33 +420,55 @@
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
-/* A narrow phone: the bank a step down so the places keep their size (a
-   veteran's five-figure bank and the militia's flag need it up to 420). */
+/* A narrow phone (a veteran's five-figure bank and the militia's flag need
+   it up to 420): the bar's gaps close up so the places keep their names. */
 @media (max-width: 419.98px) {
   .mn-bar {
     gap: 4px;
     padding-inline: 8px;
   }
-  .mn-mark {
-    width: 36px;
-    height: 36px;
+  .mn-purse {
+    gap: 4px;
+    padding-right: 9px;
   }
   .mn-bank {
-    height: 32px;
-    padding: 0 8px;
     font-size: var(--fs-sm);
+  }
+  .mn-militia {
+    min-width: 40px;
+    padding: 0 4px;
   }
   .mn-places {
     gap: 3px;
   }
+  .mn-place {
+    width: 46px;
+  }
 }
 
-/* The update notice and the coach pill hang under the bar, over the map. */
+/* Under the bar, floating OVER the map (they never push it — a panel or a
+   tip that comes and goes would re-frame the map): the season panel under
+   the purse, then the update notice and the coach pill. The map keeps its
+   labels off all of them. */
+.mn-under {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  padding: 0 10px;
+  pointer-events: none;
+}
+.mn-under > *,
+.mn-notes > * {
+  pointer-events: auto;
+}
 .mn-notes {
   display: grid;
   justify-items: center;
   gap: 6px;
-  padding: 0 12px;
+  pointer-events: none;
 }
 .mn-notes:empty {
   display: none;
@@ -389,6 +493,78 @@
   color: var(--accent-text);
 }
 
+/* The season (the trade war), under the purse: "SEASON 3", "3 left ›", and a
+   bar per contract of the season — a delivery in the colour of the company
+   it was for, a fall or a cash-out in earth, the ones to come dim. The whole
+   panel opens the standings. A fixed size: seven bars, always. */
+.mn-season {
+  justify-self: start;
+  display: grid;
+  gap: 6px;
+  min-height: var(--hit-min);
+  padding: 6px 10px 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--glass);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mn-season-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1;
+}
+.mn-season-n {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.mn-season-left {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.mn-season-left i {
+  font-style: normal;
+  color: var(--accent-text);
+}
+.mn-season-bars {
+  display: flex;
+  gap: 3px;
+}
+.mn-season-bars i {
+  width: 14px;
+  height: 7px;
+  border-radius: 2px;
+}
+.mn-season-bars .is-delivered {
+  background: var(--co);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.mn-season-bars .is-fell {
+  background: var(--ink-dim);
+}
+.mn-season-bars .is-ahead {
+  background: rgba(233, 205, 150, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.mn-season:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mn-season:hover {
+    background: var(--glass-strong);
+  }
+}
+
 /* The open area the map's roads fill. */
 .mn-window {
   flex: 1 0 0;
@@ -397,8 +573,9 @@
 }
 
 /* ------------------------------------------------------------- the foot
-   The dock's shoulder (the season), the dock, the card and its CTA: one
-   column at the foot, 560 at most. */
+   The dock (with Buy Company floating over its right end), the card and its
+   CTA: one column at the foot, 560 at most. Every part is there for every
+   pick, at the same size: a pick changes values, never boxes. */
 .mn-foot {
   display: grid;
   gap: 8px;
@@ -407,63 +584,22 @@
   margin-inline: auto;
   padding: 0 12px calc(12px + var(--safe-bottom, 0px));
 }
-.mn-shoulders {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.mn-pill {
+.mn-docked {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* Its face stays slim under the touch floor; the hit area below is 44. */
-  height: 30px;
-  min-height: 0;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--glass);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
 }
-/* The pill's hit area reaches the touch floor; its face stays slim. */
-.mn-pill::after {
-  content: '';
+/* Buy Company floats over the dock's rightmost column, a slot's size. */
+.mn-docked > .mn-own {
   position: absolute;
-  inset: -7px 0;
-}
-/* A narrow phone says "3 left"; the word comes back where there is room. */
-@media (max-width: 419.98px) {
-  .mn-pill-more {
-    display: none;
-  }
-}
-.mn-pill i {
-  font-style: normal;
-  color: var(--accent-text);
-}
-.mn-pill:focus-visible {
-  outline: var(--focus-width) solid var(--focus-ring);
-  outline-offset: var(--focus-offset);
-}
-@media (hover: hover) and (pointer: fine) {
-  .mn-pill:hover {
-    background: var(--glass-strong);
-  }
+  right: 0;
+  bottom: calc(100% + 4px);
+  width: calc((100% - 4 * 6px) / 5);
 }
 
 /* ------------------------------------------------------------- the dock
-   Five fixed slots, evenly spaced, in the map's west-to-east order, then the
-   sixth, narrower, set apart: Buy Company (the Sovereign Route). At 375 wide
-   the five are 55px and the sixth 44, the touch floor. */
+   Five fixed slots, evenly spaced, in the map's west-to-east order. */
 .mn-dock {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(var(--hit-min), 0.8fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   /* Room above for the marks hung on the slots' top edges. */
   padding-top: 8px;
@@ -476,7 +612,7 @@
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  min-height: 70px;
+  height: 76px;
   padding: 9px 2px 6px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
@@ -510,8 +646,9 @@
 }
 .mn-slot-crown {
   position: absolute;
-  top: -10px;
-  left: -15px;
+  /* Off the slot's top-left corner, clear of the marks hung centred on its top edge. */
+  top: -13px;
+  left: -10px;
   rotate: -14deg;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
 }
@@ -568,15 +705,6 @@
   background: var(--bad-text);
   color: var(--ink-on-fill);
 }
-.mn-mark-tag.is-exclusive {
-  background: var(--glass-strong);
-  border: 1px solid var(--accent-text);
-  color: var(--accent-text);
-}
-.mn-mark-tag.is-cold {
-  background: var(--paper-cold);
-  color: var(--cold-ink);
-}
 .mn-slot:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
@@ -588,8 +716,9 @@
   }
 }
 
-/* The sixth slot, Buy Company: no company's road, so not a company's frame —
-   a carved (double) rim in the Sovereign cyan. */
+/* Buy Company, the slot floating over the dock's right end: no company's
+   road, so not a company's frame — a carved (double) rim in the Sovereign
+   cyan. The same box in focus or not. */
 .mn-own {
   --co: var(--sovereign);
   border: 3px double color-mix(in srgb, var(--sovereign) 40%, var(--line-strong));
@@ -598,21 +727,16 @@
 .mn-own.is-on {
   border: 3px double var(--co);
 }
+/* It floats over the dock, not in it: no notch down to the card. */
+.mn-own.is-on::after {
+  content: none;
+}
 /* Locked: the crest in shadow under its padlock, the share unlocked and a bar. */
 .mn-own.is-locked {
   color: var(--muted);
 }
 .mn-own.is-locked .crest.sovereign {
   filter: saturate(0.25) brightness(0.6);
-}
-/* The padlock hangs on the shield's face, clear of the number under it. */
-.mn-own-lock {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  translate: -50% -35%;
-  display: flex;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
 }
 .mn-own-text {
   display: flex;
@@ -638,15 +762,16 @@
   height: 100%;
   background: var(--sovereign);
 }
-/* Open: no padlock, the crest in colour, a quiet glow — available, not advertised. */
+/* Open: no padlock, the crest in colour, a soft glow — available, not advertised. */
 .mn-own.is-open:not(.is-on) {
   border-color: color-mix(in srgb, var(--sovereign) 55%, transparent);
   box-shadow: 0 0 10px color-mix(in srgb, var(--sovereign) 14%, transparent);
 }
 
 /* ------------------------------------------------------------- the card
-   The focused company: its flag, its road's goods and its name, the chips that
-   tell its road apart, the way into its track, and the CTA. */
+   A fixed form: the focused company's flag, its road's goods and its name,
+   four one-line rows (Ground, Raiders, Today, Next) and the CTA. Every
+   company's card — and the Buy Company card — is the same boxes. */
 .mn-card {
   display: grid;
   gap: 8px;
@@ -659,9 +784,10 @@
 }
 .mn-card-head {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
+  height: 48px;
 }
 .mn-card-id {
   display: flex;
@@ -669,6 +795,9 @@
   min-width: 0;
 }
 .mn-kicker {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--fs-micro);
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -678,92 +807,106 @@
 .mn-card-name {
   min-width: 0;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-size: var(--fs-xl);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.15;
   color: var(--text);
 }
-.mn-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+/* The form: one line a row, its label in a fixed column. */
+.mn-facts {
+  display: grid;
+  gap: 3px;
 }
-.mn-chip {
+.mn-fact {
   position: relative;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 62px var(--mark-w, 34px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: 5px;
-  min-height: 26px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  font-size: var(--fs-xs);
-  font-weight: 700;
+  column-gap: 6px;
+  height: 24px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text);
+  font: inherit;
+  text-align: left;
 }
-.mn-chip b {
+.mn-fact .field-k {
+  line-height: 1;
+}
+.mn-fact-m {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.mn-fact-v {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mn-fact-v > :not(.field-v) {
+  flex: none;
+}
+/* The Buy Company card's Ground row draws four marks. */
+.mn-own-card .mn-facts {
+  --mark-w: 70px;
+}
+.mn-fact .field-v {
+  flex: 0 1 auto;
+}
+.ground-marks {
+  display: inline-flex;
+  gap: 2px;
+}
+.mn-fact .mn-armour-mark {
+  width: 16px;
+  height: 16px;
+}
+.mn-fact .mn-armour-mark.plated::after,
+.mn-fact .mn-armour-mark.warded::after {
+  width: 14px;
+}
+.mn-fact-gold {
+  font-size: var(--fs-sm);
   font-weight: 800;
-}
-.mn-chip.is-market {
-  border-color: var(--market);
   color: var(--accent-text);
 }
-.mn-chip.is-desperate {
-  border-color: var(--bad);
+/* What a value's tone says: nothing special reads quiet; a condition in its colour. */
+.mn-fact.is-quiet .field-v {
+  color: var(--muted);
+  font-weight: 700;
+}
+.mn-fact.is-bad .field-v {
   color: var(--bad-text);
 }
-.mn-chip.is-exclusive {
-  border-color: var(--accent-text);
-  color: var(--accent-text);
-}
-.mn-chip.is-cold {
-  border-color: var(--teal-text);
-  color: var(--teal-text);
-}
-.mn-chip.is-free {
-  border-color: var(--accent-text);
-  color: var(--accent-text);
-}
-.mn-chip.is-ground::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--gr);
-}
-/* The road's armour lean (Ironvein plate, Moonquill wards), with the run map's struck mark. */
-.mn-chip.is-armour {
-  padding-left: 3px;
-}
-/* The way into the company's track (Draft 4 · B): what its next level pays. */
-button.mn-chip.is-track {
-  font: inherit;
-  font-size: var(--fs-xs);
+/* The Next row opens the track: the whole row is the button. */
+.mn-fact.is-link {
   cursor: pointer;
+  border-radius: var(--r-xs);
 }
-button.mn-chip.is-track .field-k {
-  margin: 0;
-}
-button.mn-chip.is-track .field-v {
-  font-size: var(--fs-xs);
-}
-button.mn-chip.is-track > span:last-child {
+.mn-fact-go {
   color: var(--accent-text);
+  font-weight: 800;
 }
-/* The chip's hit area reaches the touch floor; its face stays a chip. */
-button.mn-chip.is-track::after {
+/* Its hit area reaches the touch floor below; its face stays a row. */
+.mn-fact.is-link::after {
   content: '';
   position: absolute;
-  inset: -9px 0;
+  inset: 0 0 -10px;
 }
 @media (hover: hover) and (pointer: fine) {
-  button.mn-chip.is-track:hover {
-    background: var(--surface-strong);
+  .mn-fact.is-link:hover {
+    background: var(--surface);
   }
 }
-button.mn-chip.is-track:focus-visible {
+.mn-fact.is-link:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -773,11 +916,12 @@ button.mn-chip.is-track:focus-visible {
 }
 
 /* The Buy Company card: the Sovereign crest (under its padlock while the
-   door is shut), one line on the road, its counts or its pay, and the CTA. */
+   door is shut), the same four rows, and the CTA. */
 .mn-own-card {
   --co: var(--sovereign);
 }
 .mn-own-crest {
+  position: relative;
   display: grid;
   place-items: center;
   width: 44px;
@@ -785,40 +929,17 @@ button.mn-chip.is-track:focus-visible {
 .mn-own-card.is-locked .crest.sovereign {
   filter: saturate(0.25) brightness(0.6);
 }
-.mn-own-body {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-.mn-own-line {
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.35;
-  color: var(--text);
-}
-.mn-own-card .mn-chip .field-v {
-  font-size: var(--fs-xs);
-}
-.mn-own-card .mn-chip .ct-gold {
-  gap: 4px;
-}
-/* The refusal: the bank is short of the fee (only while it is). */
-.mn-own-why {
-  margin: 0;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--bad-text);
+/* The padlock hangs on the shield's face. */
+.mn-own-lock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -35%;
+  display: flex;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
 }
 .mn-cta .mn-cta-fee {
   vertical-align: -3px;
-}
-
-/* Cold (the trade war): your exclusive is with its rival — the card cools. */
-.mn-card.is-cold {
-  border-top-color: var(--teal-text);
-}
-.mn-card.is-cold .co-flag {
-  filter: saturate(0.35);
 }
 
 /* The card's flag is the way into its livery (Draft 4 § C): a button with a
@@ -855,24 +976,26 @@ button.mn-chip.is-track:focus-visible {
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }
 
-/* Short phones (≤ 700 tall): the map keeps its middle — the card is its
-   name on one line, its chips, and the CTA. Every chip still shows: a chip
-   scrolled out of sight is a fact hidden. */
+/* Short phones (≤ 700 tall): the map keeps its middle — the card drops its
+   goods kicker (the crest carries the goods) and its rows close up. Every
+   row still shows: a row scrolled out of sight is a fact hidden. */
 @media (orientation: portrait) and (max-height: 700px) {
   .mn-foot {
     gap: 6px;
     padding-bottom: calc(8px + var(--safe-bottom, 0px));
   }
   .mn-slot {
-    min-height: 62px;
-    padding-top: 8px;
-    gap: 1px;
+    height: 60px;
+    padding-top: 7px;
+    gap: 0;
   }
   .mn-card {
     gap: 6px;
     padding: 8px 10px 10px;
   }
-  /* The goods ride on the crest: the name stands alone, one line. */
+  .mn-card-head {
+    height: 38px;
+  }
   .mn-kicker {
     display: none;
   }
@@ -882,23 +1005,31 @@ button.mn-chip.is-track:focus-visible {
   .mn-livery {
     min-height: 40px;
   }
-  .mn-chip {
-    min-height: 24px;
+  .mn-facts {
+    gap: 1px;
+  }
+  .mn-fact {
+    height: 20px;
   }
   .mn .mn-cta {
-    height: 50px;
+    height: 46px;
     font-size: 20px;
   }
 }
 
 /* ================================================================== desk
    Same layers, in fixed places: the bar one row across with the name and the
-   places' names, the foot a centred console — the dock, then the card as one
-   row: flag and name, chips, and its CTA at the row's end. */
+   places' names, the foot a centred console — the shoulders, the dock, then
+   the card as one row: flag and name, the form in two columns, its CTA. */
 @media (min-width: 900px) and (min-height: 540px) {
   .mn-bar {
     gap: 10px;
     padding: calc(18px + var(--safe-top, 0px)) 28px 10px;
+  }
+  .mn-purse {
+    gap: 12px;
+    height: 60px;
+    padding: 0 16px 0 6px;
   }
   .mn-mark {
     width: 48px;
@@ -915,7 +1046,11 @@ button.mn-chip.is-track:focus-visible {
     font-weight: 700;
     line-height: 1.05;
     color: var(--text);
-    text-shadow: 0 2px 0 rgba(20, 12, 6, 0.7), 0 0 18px rgba(20, 12, 6, 0.8);
+  }
+  /* The bank, set off from the name by a hairline. */
+  .mn-title + .mn-bank {
+    padding-left: 12px;
+    border-left: 1px solid var(--line-strong);
   }
   .mn-militia {
     padding: 0 12px 0 8px;
@@ -923,25 +1058,24 @@ button.mn-chip.is-track:focus-visible {
   .mn-militia-name {
     display: inline;
   }
-  .mn-bank {
-    margin-left: auto;
-  }
   .mn-places {
     gap: 6px;
   }
-  /* The bank pushes the places right; a first launch has no bank, so the places push themselves. */
-  .mn-bank ~ .mn-places {
-    margin-left: 0;
-  }
   .mn-place {
+    flex-direction: row;
+    gap: 8px;
     width: auto;
-    padding: 0 12px 0 6px;
+    height: 52px;
+    padding: 0 14px 0 8px;
   }
   .mn-place-name {
-    display: inline;
+    font-size: var(--fs-sm);
   }
-  .mn-place > .lock {
-    position: static;
+  .mn-place-short {
+    display: none;
+  }
+  .mn-place-full {
+    display: inline;
   }
   .mn-foot {
     max-width: 980px;
@@ -952,19 +1086,15 @@ button.mn-chip.is-track:focus-visible {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 2px 8px;
-    min-height: 60px;
+    height: 64px;
     padding: 10px 8px 8px;
   }
   .mn-slot-share {
     flex-basis: 100%;
     text-align: center;
   }
-  /* A desk writes the sixth slot's name out: "Buy Company", and the share
-     unlocked under it while locked ("Buy" goes: the name says it). The
-     desk has the room, so the sixth is as wide as a company's. */
-  .mn-dock {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
+  /* A desk writes the Buy Company slot's name, and the share unlocked under it
+     while locked ("Buy" goes: the name says it). */
   .mn-own {
     flex-wrap: nowrap;
   }
@@ -984,11 +1114,17 @@ button.mn-chip.is-track:focus-visible {
   .mn-own .mn-slot-rep {
     font-size: var(--fs-xs);
   }
+  .mn-under {
+    padding: 0 28px;
+  }
   .mn-card {
-    grid-template-columns: auto minmax(0, 1fr) 280px;
+    grid-template-columns: 250px minmax(0, 1fr) 260px;
     align-items: center;
-    column-gap: 18px;
+    column-gap: 20px;
     padding: 12px 14px 12px 16px;
+  }
+  .mn-facts {
+    gap: 2px;
   }
 }
 

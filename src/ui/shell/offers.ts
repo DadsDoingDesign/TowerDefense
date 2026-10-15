@@ -122,6 +122,8 @@ export type SecondaryAct = Omit<Act, 'confirm'> & { confirm?: never }
 export interface Offer {
   id: string
   title: string
+  /** A short name where room is tight: under a home place's mark on a phone ("HQ", "Crates"). */
+  short?: string
   sub?: string
   /** Accent for the card rail and the panel title. */
   color?: string
@@ -1245,6 +1247,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           {
             id: 'hq',
             title: 'Headquarters',
+            short: 'HQ',
             sub: `${moneyText(meta.bank, 'gold')} banked`,
             icon: 'base',
             immediate: true,
@@ -1255,6 +1258,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           {
             id: 'crates',
             title: 'Sealed crates',
+            short: 'Crates',
             sub: `${moneyText(PULL_PRICE, 'gold')} a crate`,
             icon: 'loot',
             immediate: true,

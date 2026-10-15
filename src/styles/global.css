@@ -123,11 +123,8 @@
      10.4:1 and 6.9:1 — the world talking, never UI chrome. */
   --slip-ink: #3a2c14;
   --slip-ink-2: #5a4526;
-  /* The trade war (Draft 4 § D). The home dock's "Cold" mark is the cold ink
-     on a pale grey wash (7.6:1); desperate terms are the bad text on the
+  /* The trade war (Draft 4 § D): desperate terms are the bad text on the
      dark (5.9:1). */
-  --paper-cold: #d8dbd9;
-  --cold-ink: #2d4a66;
   /* The night the trade pages sit in, and the lantern glow they are lit by. */
   --night: #17110c;
   --lantern: #ffe39a;

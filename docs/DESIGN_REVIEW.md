@@ -3924,6 +3924,32 @@ The designer, on a phone shot of a battle with the employer's and the season lea
   - **Left for the designer:** the name on the desk slot (three "Buy
     Company"s on a desk); the locked CTA does not open the charter page
     (nor did anything on the home before).
+- **2026-10-15 · The map home, polished.** Eight notes from the designer on
+  the map home: the map shifted (and its trees re-scattered) on every pick;
+  the city labels clustered; a season per company; Buy Company out of the
+  dock; the seal and the gold; the place icons; ground chips that meant
+  nothing ("Wildfire"); a card that wrapped and wiggled. The card is now a
+  fixed form (Ground · Raiders · Today · Next, `homeCard.ts`), the notes float,
+  every slot and the plaque are fixed sizes, and the signposts never move on
+  a pick — so the map frames and bakes once (`scripts/home-stability.mjs`:
+  every box, the geometry and the terrain hash identical across all six
+  focuses, 12/12 runs). New § 8 rule 10, "a view you click around keeps its
+  geometry". City names hang beside the road as annotations with leader lines
+  (`labelLayout.ts`, tested); each company tints the map's season over the
+  same bake; Buy Company is a slot floating over the dock's right end (the
+  designer's call after round 2, over a plaque on the dock's shoulder); the
+  season is a panel of seven bars under the purse (the designer's "option
+  2", over the pill); the seal and the bank share one plaque (picked over
+  bare: the bank's contrast is held, and the pair reads as one); the places
+  are carved plates with names; the ground row says its effect from one table
+  (`terrain.GROUND_EFFECTS`).
+  Two rounds in the running app: `docs/ui-audit-2026-10/home-map/polish/`.
+  - **Fixed across the rounds:** long and crossing leaders (the plan now
+    minimises leader length and never crosses its own road); a desk card that
+    cut every value; frost that read as static; a name on the keep; the crown
+    on a slot's tag.
+  - **Left for the designer:** Peppercorn's names take two sides on a
+    375 × 667 phone; overcast is the faintest season.
 
 ### 2026-10-15 — the trade war simplified, and its season card
 The designer on the standings' season card: "This needs some info arch and copy iterations"; then, on the war: "It doesn't really make sense to me what I'm looking at" → option 1, simplify. Cut the champion threshold, exclusives, rivals and cold (rules, store action, the exclusive sheet, the cold/exclusive tags and CSS, the glossary line). The season's end now pays your **patron** — the company you delivered the most for, leader or not (75 gold a delivery + a pick of 1 of 3 of its items; a tie on your deliveries goes to the bigger share, then a hash; no delivery, no patron). The crown goes to an outright leader only (a tie, the even start included, crowns nobody), and level shares share a place on the rows. Two rounds in the running app (390 × 844, 1280 × 800; none / ahead / tied / last contract / even, and the season's end with and without a patron): `docs/ui-audit-2026-10/tradewar/season-card/` (REVIEW.md, r1, r2).

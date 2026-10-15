@@ -255,3 +255,237 @@ slots → card → CTA.
   once the door was open — the charter page (its meter, what the road is)
   is not reachable before the door opens. The card carries the two counts;
   say if the locked page should be a tap away.
+
+---
+
+## Polish — the designer's notes on the map home (`polish/`)
+
+The designer's notes, verbatim:
+
+1. *"when I pick the different companies the map slightly shifts around and
+   maybe the bg trees change up?? it should not do that it should just change
+   the selection."*
+2. *"the city labels on the paths in the map also cluster tightly and
+   overlap, they can be tidy and use annotation lines to organise better."*
+3. *"if the map were to re-theme for that selection slightly that would be
+   cool, like snow or autumn etc."*
+4. Buy Company: *"let's move it out of that row, it's too cramped. but it can
+   sit right above it and be locked."*
+5. *"the logo and gold should be in its own little container, or no container
+   for the gold."*
+6. *"the top icons for the menu options need some work to be more clear for
+   what they are and maybe upped in quality with the rest of the game's UI
+   now."*
+7. On the card's ground chips ("Wildfire", "Quarry boulders"…): *"I don't
+   know what that means? what is it supposed to do, what is its job and how
+   could it do it better please iterate."*
+8. *"sometimes like Ironvein it says plated raiders too.. why? and this pushes
+   the other label out so then it wraps another line. can this be handled
+   differently if it's something that's not persistent — consider how we can
+   keep UI sections responsive but also not wiggling around between every
+   selection when it's intended to be clicked around too, especially on the
+   same view."*
+
+Mid-way, the lead passed on a simplification of the trade war (built
+elsewhere): exclusives, rivals and "cold" are cut, and the crown shows only
+for an outright leader. The home dropped the "Excl." / "Cold" dock marks and
+the matching Today values; `r1/` predates that and still shows them.
+
+Same method as above: the running app (Vite dev, Playwright Chromium,
+reduced motion), seeded through `window.__meta` — **mid** (6 contracts, 340
+gold, 18 of 44 unlocks: Buy Company locked at 40%, HQ locked), **vet** (31
+contracts, 12,480 gold, the door open, a militia founded, season 3 with
+Rosethread desperate and Ironvein leading), **first** (a first launch). Phones
+390 × 844 and 375 × 667 (@2x), desks 1280 × 800 and 1440 × 900; every company
+focused, and Buy Company.
+
+### What was built
+
+- **No wiggle (1, 8).** The root cause: the card's chips wrapped to a
+  different height per company (Ironvein's armour chip made two rows), so
+  the `.mn-window` box between the bar and the foot changed, the map
+  re-framed (`buildGeometry`) and its terrain — keyed by the geometry —
+  re-baked with a new tree scatter. Now every pick changes values, never
+  boxes: the card is a **fixed form** (`homeCard.ts`: Ground · Raiders ·
+  Today · Next, the same rows for every company, each one line, cut in place,
+  never wrapped; the Buy Company card is four rows in the same frame); the
+  season panel, the update notice, the coach pill and the Buy Company slot
+  float over the map instead of pushing it; the slots have fixed
+  heights and a focus ring never changes a box. The signposts are placed by
+  standing and order only, never by the focus (`labelLayout.signPrio`).
+  **Proof:** `scripts/home-stability.mjs` focuses all five companies and Buy
+  Company for a mid and a veteran save at 390 × 844, 375 × 667 and 1280 × 800,
+  with and without motion, and finds the map's geometry, a hash of its baked
+  terrain, its bake count (1), the canvas, and every box of the home (bar,
+  places, season panel, window, foot, dock, each slot, the Buy Company slot, card,
+  head, each row, CTA, each signpost) identical across the six focuses — 12 of
+  12 runs. Unit tests: `tests/homeCard.test.ts` (the form's rows are the same
+  for every company, war state, market, first launch and lock) and
+  `tests/homeDock.test.ts` (five slots; the geometry is a function of the open
+  area only). The rule is now § 8 rule 10 of `DESIGN_SYSTEM.md`.
+- **City labels as annotations (2).** `labelLayout.placeCityLabels` (pure,
+  `tests/labelLayout.test.ts` at 390 × 844, 375 × 667 and 1280 × 800, a
+  veteran and an early save, every company): the three names hang in a line
+  beside the road, all on one side — square to the road on its outer side
+  first, then the inner, then straight out to one side or above/below — at
+  the offsets that keep the leaders shortest, each slid along its line only
+  as far as it must; a 1px cream leader runs from a small square in the
+  company's colour on the town to the tag's coloured edge. Never on another
+  label, a signpost, the road (label or leader), your keep, the notes or the
+  edge; a leader never crosses another label or leader.
+- **A season per company (3).** `mapRules.MAP_SEASONS` over the same bake
+  (`paintMap.seasonPixels`, cached per bake and season): Peppercorn late
+  summer (an amber soft-light, turning leaves), Easel House spring (fresh
+  green, a few blossom flecks), Ironvein overcast (desaturated toward slate),
+  Rosethread a misty morning (a low noisy haze), Moonquill frost (a cool
+  screen wash, snow on open ground and on the pines). It is part of the
+  focused base, so it crossfades with the focus (a cut under reduced motion);
+  the focused road and its towns are laid back over it and glow on top. No
+  focus and Buy Company keep the neutral night.
+- **Buy Company out of the dock (4).** The dock is exactly five slots again.
+  Rounds 1 and 2 tried a small carved plaque on the dock's right shoulder
+  (the signposts' wood, nailed at both ends; charred and padlocked while
+  locked). The designer, on seeing it: *"should be like one of the other
+  company cards but locked, floating above. I liked the styling it had
+  before, just placement was all on that one."* So it is the sixth slot it
+  was — the double cyan rim, the Sovereign crest greyed under a padlock, "40%"
+  and a thin bar; open, the crest in colour, "Buy", a soft glow — a company
+  slot's size, floating over the dock's rightmost column, not in the row.
+  `scripts/home-stability.mjs` checks its size and place.
+- **The purse (5).** Two options, `r1/opt-purse-A-plaque-*` and
+  `r1/opt-purse-B-bare-*`. **Picked A, one small glass plaque holding the
+  seal and the bank.** Bare (B) is lighter, but the bank then floats on
+  whatever the map draws under it — legible today only because of the dusk
+  shade under the bar, and not something `tests/contrast.test.ts` can hold
+  over pure white the way it holds every other layer — and, next to the four
+  wooden plates, the bare pair read as two loose things rather than one. The
+  plaque groups them (Clash Royale's resource bar does the same) and on a desk
+  carries the name between them as one lockup ("seal · Merchant Mercenaries ·
+  12,480").
+- **The places (6).** One carved plate each, in the signposts' wood: the
+  atlas mark at 32px (HQ keep, crate, Codex book, gear) with its name under it
+  on a phone ("HQ", "Crates", "Codex", "Settings" — a new `Offer.short`) and
+  beside it on a desk ("Headquarters", "Sealed crates") — one family. Locked:
+  a charred plate, the mark in shadow, a padlock, the name still there; its
+  accessible name says "locked" and what opens it.
+- **The ground says what it does (7).** Round 1 laid out three options
+  (`r1/opt-ground-*`): **A** a Ground row with the hazard's marks and its
+  effect; **B** the old chip, saying the effect; **C** the row with the
+  place-name and the effect. **Picked A:** B brings back the wrapping and the
+  wiggle (a chip row's height depends on its chips) and still reads as a perk
+  tag; C spends half the line on a name that means nothing until you know the
+  rule, and is cut at 390. The words come from one table,
+  `terrain.GROUND_EFFECTS` (`groundEffect` for a road that deals one of two):
+  "Fires block posts", "Lakes block posts", "Extra boulders block posts",
+  "More cursed tiles · −70% dmg", "Lakes or fires block posts" — each only
+  what the rule does — with the atlas flame and curse and a drawn pond and
+  boulder. The terms page shows no ground, so there is nothing else to align;
+  the unused `GroundChip` and the dead ground swatch are gone.
+- **Raiders, Today (8).** The armour line is now a row on every card:
+  "Some plated · bring magic" / "Some warded · bring steel" with the map tab's
+  struck mark, and "Plate or wards, evenly" for the three roads without a
+  lean — honest about how many fights are armoured (a share, leaning 3:1), and
+  saying what to bring. Today is one reserved slot: desperate terms, else the
+  market of the day ("Top price for paintings ×1.3"), else a quiet "Usual
+  terms"; the first launch's "Free escort · paid at every city" lives there.
+
+- **The season panel.** Also the designer's call after round 2 (their
+  "option 2"): the season pill left the dock's shoulder (and the shoulder row
+  went with it). Under the purse, a small glass panel: "SEASON 3" (accent)
+  and "3 left ›" (muted), over seven 14 × 7 bars, one per contract of the
+  season in order — a delivery in the company's colour, a fall or a cash-out
+  in earth, the ones to come dim (`tradeWar.seasonBars`, from the new
+  `season.log`; `homeSeason.ts` names it for a screen reader). The whole
+  panel opens the standings. It floats over the map, a fixed size; hidden
+  while the war is not open and on a first launch.
+
+### Round 1 — `r1/`
+
+**Jury.** The fixed form is the change that matters: flicking through the five
+companies the card, dock and map now hold still and only the words, the lit
+road and the weather change — the Supercell tab-bar feel the home was going
+for. The seasons read without shouting (autumn and spring most, overcast as a
+mood). The plates make the bar look like the rest of the game. Issues:
+
+1. **Long, crossing leaders.** On a 375 × 667 phone Peppercorn's names were
+   strung down the right with leaders across the hub, Moonquill's "Quill Hill"
+   hung far below with a leader across its own road, and on a first launch
+   the names stepped down a staircase 90px under their towns.
+2. **The desk card cut everything.** The form in two columns gave each value
+   ~120px: "Extra b…", "Exclusi…", and the kicker "SCROLLS & ARCANA R…".
+3. **"Unlocked" overran its label column** on the Buy Company card.
+4. **Frost was noise.** Moonquill's snow speckle (7% of the grass) read as
+   static, and its wash lifted the whole map grey.
+5. The Buy Company card's road line was cut ("Your own · every company'…").
+6. The vet shots carried no militia (the seed used a colour the save refuses);
+   re-seeded for round 2 — the tightest bar (flag, five-figure bank, four
+   plates at 375) is in `r2/`.
+
+**Fixes.** The plan's cost is now the leaders' total length (not a nominal
+offset), a leader may not cross its own road, and square-to-one-side layouts
+were added for short crowded roads; the desk form is one column (every value
+whole) with a 250px head; "Have" for the counts; frost at 2.8% speckle with a
+softer wash, the mist a little stronger; the road line "Every company's
+goods". `scripts/home-stability.mjs` also checks that the bar fits and every
+place's name fits its plate.
+
+### Round 2 — `r2/`
+
+**Jury.** The labels now read as a tidy annotation column on every road —
+Ironvein and Easel House are the reference: three names stacked beside the
+road, short level leaders, the destination bold. The desk card is one clean
+row. Issues:
+
+1. **A label on the keep.** Moonquill's "Quill Hill" sat on your HQ and its
+   banner on a phone.
+2. **The leader's crown collided with the "Excl." tag** on a narrow slot.
+3. **The trade war was simplified** (the lead's note): the "Excl." / "Cold"
+   marks and their Today values had to go.
+4. **Peppercorn on the 375 × 667 phone** still had nowhere tidy to go: three
+   towns in 80px between the keep and the season row, and a name could be
+   pushed off the open area.
+
+**Fixes.** The keep and its banner are boxes no label may cover
+(`labelLayout.hubBoxes`; a leader may cross them); the crown sits off the
+slot's top-left corner; the dock's marks are desperate and the market only,
+the Today row likewise, and the crown is for an outright leader only (tested
+on a tie); labels keep 4px off the top of the open area and 6px off the foot;
+a short phone's foot gave the map 18px back (slots 60, rows 20, CTA 46).
+Peppercorn's names at 375 × 667 take two sides of the road rather than
+overlap — the one recorded exception to "one side" in the test.
+
+**Then the designer's two decisions** (the season panel, Buy Company as a
+floating slot, above) and the merge of the trade war's simplification: the
+dock's marks and the Today row lost "Excl." and "Cold" (and their tokens);
+the standings' row chip now says "This season: pays ×1.5", so it never reads
+against the season card's "Last now", which is next season's. The floating
+season panel and Buy Company slot joined the boxes the labels and signposts
+keep off; a signpost under the first-time coach pill now steps down below
+it. Re-shot: `r2/` is the state committed, and `scripts/home-stability.mjs`
+passes 12/12.
+
+**Scorecard.**
+
+| Check | |
+|---|---|
+| The map reads instantly; decoration at the margins | ✓ — the lit road is the brightest thing in every season; city names sit beside the road, never on it |
+| Each element has one job | ✓ — the floating slot is the way to Buy Company and says how far it is; the season panel says the season and opens the standings; the purse holds the brand and the bank; the plates open places |
+| A fact said once | ✓ — the dock says the mark ("×1.5"), the card's Today row what it means; the fee only on the CTA |
+| `.field-k` / `.field-v` | ✓ — every card row |
+| One primary CTA | ✓ |
+| Tokens over literals | ✓ — the plates use `--sign-wood` / `--sign-rim` / `--sign-ink`; contrast held in `tests/contrast.test.ts` |
+| 44px targets, real buttons | ✓ — plates 52px, the season panel 44+, the slots 60–76, the Next row's hit area 44 |
+| Reduced motion | ✓ — a focus change (and its season) is a cut |
+| No wiggle (rule 10) | ✓ — 12/12 identical runs |
+
+**Left for the designer.**
+
+- Peppercorn's names take two sides of its road on a 375 × 667 phone (above
+  and below), the only road and size that does.
+- The bare purse was close; if preferred, it is one CSS rule set, at the cost
+  of the bank's guaranteed contrast.
+- Today shows one condition: on a day the desperate company is also the
+  market's, the card says "Desperate" and the dock's "×1.3" carries the
+  market (the slot's name says both).
+- The season tints are deliberately faint; overcast (Ironvein) is the least
+  distinct from the neutral night.
