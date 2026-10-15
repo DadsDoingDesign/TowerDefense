@@ -354,21 +354,51 @@ function radial(g: CanvasRenderingContext2D, x: number, y: number, r: number, co
   g.fillRect(x - r, y - r, r * 2, r * 2)
 }
 
+/** How much the roads not in focus keep of their light (the home's dock lights one road, October 2026). */
+export const UNFOCUSED_LIGHT = 0.3
+/** The night laid over the map round a focused road: the others sink, it stays lit. */
+const FOCUS_DIM = 'rgba(6,8,14,0.5)'
+
 /**
  * The pixels scaled by `k` with the static light over them. `skip` leaves one
  * road's glow out (it is being brightened, and draws its own).
+ *
+ * `focus` is the road the home's dock (or a signpost) has picked: the rest of
+ * the map sinks under a night wash, the road's own pixels and towns are laid
+ * back over it undimmed, and its glow burns at least as bright as Standing 5
+ * would — a road you have never worked lights up in its colour too, so a tap
+ * always shows where it runs. The others keep {@link UNFOCUSED_LIGHT} of theirs.
  */
-export function bakeBase(pixels: HTMLCanvasElement, geo: MapGeometry, roads: readonly RoadView[], k: number, skip: CompanyId | null = null): HTMLCanvasElement {
+export function bakeBase(
+  pixels: HTMLCanvasElement,
+  geo: MapGeometry,
+  roads: readonly RoadView[],
+  k: number,
+  skip: CompanyId | null = null,
+  focus: CompanyId | null = null,
+): HTMLCanvasElement {
   const c = canvas(geo.W * k, geo.H * k)
   const g = c.getContext('2d')!
   g.imageSmoothingEnabled = false
   g.drawImage(pixels, 0, 0, geo.W * k, geo.H * k)
+  const lit = focus ? geo.routes.find((r) => r.company === focus) : undefined
+  if (lit) {
+    g.fillStyle = FOCUS_DIM
+    g.fillRect(0, 0, c.width, c.height)
+    // The focused road, its towns and their pennants, back at full strength.
+    const copy = (x: number, y: number, w: number, h: number) => g.drawImage(pixels, x, y, w, h, x * k, y * k, w * k, h * k)
+    for (const [x, y] of lit.chain) copy(x - 1, y - 1, 3, 3)
+    for (const [x, y] of lit.towns) copy(x - 5, y - 13, 10, 15)
+  }
   g.globalCompositeOperation = 'lighter'
   for (const r of geo.routes) {
     const v = roads.find((q) => q.company === r.company)!
-    if (!v.light) continue
-    if (r.company !== skip) strokeGlow(g, r.chain, colorOf(r.company), v.light, k)
-    r.towns.forEach(([x, y], i) => radial(g, x * k, (y - 3) * k, (10 + i * 4) * k, '#f5c451', 0.18 + v.light * 0.02))
+    const on = r.company === focus
+    const light = on ? Math.max(v.light, v.state === 'uncharted' ? 2 : 5) : v.light
+    if (!light) continue
+    const mul = !focus || on ? 1 : UNFOCUSED_LIGHT
+    if (r.company !== skip) strokeGlow(g, r.chain, colorOf(r.company), light, k, on ? 1.5 : mul, on ? 1.15 : 1)
+    if (v.light) r.towns.forEach(([x, y], i) => radial(g, x * k, (y - 3) * k, (10 + i * 4) * k, '#f5c451', (0.18 + v.light * 0.02) * (on ? 1.3 : mul)))
   }
   radial(g, geo.hub[0] * k, geo.hub[1] * k, 34 * k, '#f5c451', 0.22)
   g.globalCompositeOperation = 'source-over'
@@ -411,7 +441,7 @@ export function glowSprite(color: string, k: number): HTMLCanvasElement {
   return c
 }
 
-/** Draw one frame: the base, any brighten layers, then the traffic at time `t`. */
+/** Draw one frame: the base (crossfading out of the last focus's), any brighten layers, then the traffic at time `t`. */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
   base: HTMLCanvasElement,
@@ -421,10 +451,22 @@ export function drawFrame(
   k: number,
   t: number,
   brighten?: (BrightenLayers & { glowA: number; flashA: number }) | null,
+  o: {
+    /** The base a focus change is fading out of, and how much of it is left (0–1). */
+    fading?: { base: HTMLCanvasElement; a: number } | null
+    /** The focused road: the others' traffic runs dim. */
+    focus?: CompanyId | null
+  } = {},
 ): void {
+  const { fading, focus } = o
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
   ctx.drawImage(base, 0, 0)
+  if (fading && fading.a > 0.01) {
+    ctx.globalAlpha = fading.a
+    ctx.drawImage(fading.base, 0, 0)
+    ctx.globalAlpha = 1
+  }
   ctx.globalCompositeOperation = 'lighter'
   if (brighten) {
     ctx.globalAlpha = brighten.glowA
@@ -440,7 +482,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const [x, y] = ch[pulseIndex(p, ch.length, t)]
     const s = sprites.get(p.company)!
-    ctx.globalAlpha = p.faint ? 0.58 : 1
+    ctx.globalAlpha = (p.faint ? 0.58 : 1) * (focus && p.company !== focus ? UNFOCUSED_LIGHT : 1)
     ctx.drawImage(s, (x + 1) * k - s.width / 2, (y + 1) * k - s.height / 2)
   }
   ctx.globalCompositeOperation = 'source-over'
@@ -449,6 +491,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const j = pulseIndex(p, ch.length, t)
     const color = colorOf(p.company)
+    ctx.globalAlpha = focus && p.company !== focus ? 0.45 : 1
     // The tail: five pixels behind, fading in steps.
     for (let n = 1; n <= 5; n++) {
       const q = ch[j - n * p.dir]
@@ -480,4 +523,5 @@ export function drawFrame(
       px(x, y + z - 1, z, 1)
     }
   }
+  ctx.globalAlpha = 1
 }

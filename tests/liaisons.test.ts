@@ -3,7 +3,7 @@ import { COMPANY_IDS, companyById } from '../src/game/data/companies'
 import { LIAISONS } from '../src/game/data/liaisons'
 import { asksOf, freshAsks, type AskFacts, type RunAsk } from '../src/game/run/asks'
 import { CITY_COUNT } from '../src/game/run/contracts'
-import { boardLine, cityLine, cityLines, endLine, fillLine, LIAISON_MAX_LINE, liaisonPlate } from '../src/game/run/liaison'
+import { cityLine, cityLines, endLine, fillLine, LIAISON_MAX_LINE, liaisonPlate } from '../src/game/run/liaison'
 import { SCENE_ANCHORS, SCENE_SIZE } from '../src/ui/shell/stopScenes.generated'
 import { liaisonScene } from '../src/ui/shell/stopScene'
 
@@ -11,9 +11,6 @@ import { liaisonScene } from '../src/ui/shell/stopScene'
 const everyLine = (c: (typeof COMPANY_IDS)[number]): string[] => {
   const l = LIAISONS[c]
   return [
-    ...l.board,
-    ...l.closed,
-    ...(l.cold ?? []),
     ...l.city.good,
     ...l.city.fair,
     ...l.city.rough,
@@ -40,9 +37,8 @@ describe('the liaisons (Draft 4 · D)', () => {
       expect(l.company).toBe(c)
       expect(l.name).toMatch(/^[A-Z][a-z]+$/)
       expect(l.role).toMatch(/^[a-z]+$/)
-      for (const pool of [l.board, l.closed, l.city.good, l.city.fair, l.city.rough, l.delivered.all, l.delivered.some, l.delivered.none, l.delivered.plain, l.cashedOut, l.fallen])
+      for (const pool of [l.city.good, l.city.fair, l.city.rough, l.delivered.all, l.delivered.some, l.delivered.none, l.delivered.plain, l.cashedOut, l.fallen])
         expect(pool.length).toBeGreaterThan(0)
-      expect(l.board.length).toBeGreaterThanOrEqual(3)
     }
     expect(new Set(COMPANY_IDS.map((c) => LIAISONS[c].name)).size).toBe(COMPANY_IDS.length)
   })
@@ -82,24 +78,6 @@ describe('the liaisons (Draft 4 · D)', () => {
     expect(liaisonPlate('metals')).toBe('Brannoch · Ironvein’s factor')
     expect(liaisonPlate('spice')).toBe('Saffra · Peppercorn’s broker')
     for (const c of COMPANY_IDS) expect(liaisonPlate(c)).toContain(LIAISONS[c].name)
-  })
-
-  it('at the board: one line a day, the same while you look, the closed line on a road not hiring', () => {
-    for (const c of COMPANY_IDS) {
-      expect(boardLine(c, '2026-10-14')).toBe(boardLine(c, '2026-10-14'))
-      const days = new Set(Array.from({ length: 60 }, (_, i) => boardLine(c, `2026-10-${i}`)))
-      expect(days.size).toBe(LIAISONS[c].board.length)
-      expect(LIAISONS[c].closed.map((l) => fillLine(c, l))).toContain(boardLine(c, '2026-10-14', false))
-    }
-  })
-
-  it('cold (the trade war): a company with a rival says its cold line; Easel House has no rival and says its day', () => {
-    for (const c of COMPANY_IDS) {
-      const cold = LIAISONS[c].cold ?? []
-      expect(cold.length > 0).toBe(!!companyById(c).rival)
-      if (cold.length) expect(cold.map((l) => fillLine(c, l))).toContain(boardLine(c, '2026-10-14', true, true))
-      else expect(boardLine(c, '2026-10-14', true, true)).toBe(boardLine(c, '2026-10-14'))
-    }
   })
 
   it('at a city: deterministic in (seed, city), reacting to the cargo and the asks', () => {

@@ -1,13 +1,13 @@
 import { useMilitia } from './useMilitia'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
-import { CITY_COUNT, MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
-import { boardLine } from '../../game/run/liaison'
+import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
-import { nextRewardWord, termName, trackLevel, trackPlan } from '../../game/run/track'
+import { nextRewardWord, trackPlan } from '../../game/run/track'
 import { CHARTER_FEE, CHARTER_NAME, charterDoor } from '../../game/run/charter'
+import { contractsLeft, DESPERATE_STRENGTH, exclusiveXpMult, isCold, seasonCrateCap } from '../../game/run/tradeWar'
 import { useGameStore } from '../../state/gameStore'
 import { homeCompany } from '../../state/game/contractSlice'
 import { useMetaStore } from '../../state/metaStore'
@@ -15,18 +15,17 @@ import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { ArmourMark } from '../ArmourMark'
 import { ENEMY_MODS } from '../../game/data/enemies'
-import { Banner, Lock, Pixel, SovereignCrest } from '../pixel'
+import { Banner, Crest, Crown, Lock, Pixel, SovereignCrest } from '../pixel'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import markUrl from '../../assets/brand/mark.svg'
 import { TradeMap } from '../attract/TradeMap'
 import { roadViews, type Rect } from '../attract/mapRules'
 import { CompanyFlag, Gold } from './contracts/parts'
-import { LiaisonScene } from './LiaisonScene'
 import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
-import { isCold, isDesperate, seasonCrateCap, seasonLeader } from '../../game/run/tradeWar'
-import { DesperateChip, useWar, WarStrip } from './war/WarParts'
+import { useWar } from './war/WarParts'
+import { dockSlots, markText, SLOT_MARKS, slotName, type DockSlot } from './homeDock'
 
 /**
  * May the menu move? False under the OS setting or the in-game toggle: the
@@ -39,29 +38,31 @@ export function useMenuMotion(): boolean {
 }
 
 /**
- * The menu (the mercenary company, build step 4) — and, since October 2026
- * (Figma "Proposal · Home cleanup", B2), the contract board too: the TRADE MAP
- * (`ui/attract/TradeMap.tsx`) is the picker. Each company road ends at a
- * wooden signpost — its logo, your standing ("Rep 2"), today's market as a
- * gold "×1.3", a padlock on a road not hiring yet. A tap FOCUSES that road
- * (`homeFocus` in the store) and never signs; the parchment notice under the
- * map is the focused road's: its liaison at the company's post saying the
- * day's line (Draft 4 · D), the company's flag, the road and its three cities, and chips for the market, the ground and your
- * standing (or what opens it). The CTA names the company and opens its terms
- * straight away; there is no separate board.
+ * The home (October 2026, the map-first home; the designer: "the map front
+ * and center … minimize UI and overlay the map where UI is needed"). The
+ * trade map (`ui/attract/TradeMap.tsx`) fills the screen edge to edge, and
+ * the home is three slim layers over it:
  *
- * Phone: the seal and the name on one line with the militia's name under it
- * and the bank beside them, the map in the open middle, then the notice, the
- * secondary places as one row of tiles, and the CTA. Desk (the rules at the
- * foot of `menu.css`): the same blocks in a left-hand column; the map, the
- * picker, takes the rest.
+ *  - **the bar** across the top: the seal (the screen's title, spoken), the
+ *    bank, and one icon button per place — the HQ, the sealed crates, the
+ *    Codex, Settings (a locked one keeps its padlock and says what opens it)
+ *    — with your militia's banner once it is founded;
+ *  - **the company dock** at the foot: five fixed slots, one per company,
+ *    always in `COMPANY_IDS` order — the order the map fans its roads, west
+ *    to east. A slot says your standing, its share of the trade while the war
+ *    is on, and the day's marks. Picking a slot (or a signpost) FOCUSES that
+ *    road (`homeFocus` in the store): the map lights it in its colour, the
+ *    rest sinks, and its cities are named along it. Nothing signs;
+ *  - **the card** under the dock: the focused company — its flag (the way
+ *    into its livery), its name, the facts that tell its road apart, the way
+ *    into its track — and the one CTA, which opens its terms.
+ *
+ * The season and the Sovereign Route, when they show, are two small pills on
+ * the dock's shoulders. A first-timer (LS3) sees one road, its card and "Take
+ * the free escort": no dock, no bank, no war.
  *
  * The map is told where it is seen through: the `.mn-window` box, measured,
  * is the open area its roads fan out to fill.
- *
- * The staggered reveal (`state/staging.revealOf`): the market shows from the
- * fifth finished contract; a first launch (LS3) shows the one road that hires
- * and its notice, and the CTA is the free escort.
  */
 export function MenuScreen({
   offers,
@@ -78,11 +79,11 @@ export function MenuScreen({
   onLivery?: (company: CompanyId) => void
   /** Open the trade war's standings (Draft 4 § D). */
   onWar?: () => void
-  /** Open a company's loyalty track (Draft 4 · B): the notice's standing chip is the way in. */
+  /** Open a company's loyalty track (Draft 4 · B): the card's track chip is the way in. */
   onTrack?: (company: CompanyId) => void
 }) {
   const primary = offers.find((o) => o.id === 'run')
-  const tiles = offers.filter((o) => o.id !== 'run')
+  const places = offers.filter((o) => o.id !== 'run')
   const xp = useMetaStore((s) => s.standing)
   const bank = useMetaStore((s) => s.bank)
   const skills = useMetaStore((s) => s.skills)
@@ -109,11 +110,12 @@ export function MenuScreen({
   const [day] = useState(utcDateKey)
   const hot = marketOfDay(day)
   const market = staged || !reveal.market ? null : { company: hot, mult: MARKET_MULT }
+  const slots = useMemo(() => dockSlots({ xp, terms, war, market }), [xp, terms, war, market?.company]) // eslint-disable-line react-hooks/exhaustive-deps
   const charter = useMemo(() => charterDoor({ skills, items: items ?? [] }), [skills, items])
-  // The focused road: the one tapped, else the default the terms would open on.
+  // The focused road: the one picked, else the default the terms would open on.
   const focus: CompanyId = staged ? FIRST_COMPANY : (homeFocus ?? homeCompany({ standing: xp, stats: { runsCompleted: runs } }))
   const open = staged || hiring[focus]
-  // Reading the terms reads the board's tips: the market's, once it shows,
+  // Reading the terms reads the home's tips: the market's, once it shows,
   // and then the trade war's (one at a time, so each is read where it shows).
   const readTerms = () => {
     if (staged) return primary?.action?.run()
@@ -143,91 +145,123 @@ export function MenuScreen({
     return () => ro.disconnect()
   }, [])
 
-  // One coach line at a time, the most pressing first: the board, the market.
-  // (The company is founded before the menu is ever shown, so it needs no tip.)
-  const tip =
-    staged ? null : !taught.board ? (
-      <p className="mn-coach" role="note">
-        Each company pays your militia to guard its road. <Tap /> a signpost to read its notice.
-      </p>
-    ) : market && !taught.market ? (
-      <p className="mn-coach" role="note">
-        <b>New: the market of the day.</b> One company’s goods sell for ×{MARKET_MULT} today — its crates and its completion bonus.
-      </p>
-    ) : war && !taught.war ? (
-      <p className="mn-coach" role="note">
-        <b>New: the trade war.</b> Every delivery takes share for its company. When the season ends, the leader pays its top militia.
-      </p>
-    ) : null
+  // One coach pill at a time, the most pressing first: the dock, the market, the war.
+  const tip = staged ? null : !taught.board ? (
+    <>
+      Each company pays your militia to guard its road. <Tap /> one to light it up.
+    </>
+  ) : market && !taught.market ? (
+    <>
+      <b>New: the market of the day.</b> One company’s goods sell for ×{MARKET_MULT} today.
+    </>
+  ) : war && !taught.war ? (
+    <>
+      <b>New: the trade war.</b> Every delivery takes share for its company.
+    </>
+  ) : null
 
-  // The Sovereign Route (build step 5), once its door is open: the way to its contract.
-  const charterLine =
-    !staged && charter.open ? (
-      <button type="button" className="mn-charter mn-charter-btn is-open" onClick={onCharter} aria-label={`${CHARTER_NAME}: open. Charter it for ${CHARTER_FEE} gold.`}>
-        <SovereignCrest scale={1} />
-        <b aria-hidden="true">{CHARTER_NAME}</b>
-        <span className="mn-charter-v" aria-hidden="true">
-          Open · <Gold n={CHARTER_FEE} scale={1} />
-        </span>
-      </button>
-    ) : null
+  const lead = slots.find((s) => s.leads)?.company ?? null
+  const left = war ? contractsLeft(war) : 0
 
   return (
     <div className={`pg mn${staged ? ' is-first' : ''}`} ref={pageRef}>
       <div className="mn-map">
         <TradeMap
           roads={roads}
-          market={market}
           banner={militia ?? DEFAULT_BANNER}
           open={win}
           motion={motion}
           firstRun={staged}
           focused={focus}
-          leader={war ? seasonLeader(war) : null}
           onPick={staged ? undefined : focusRoad}
         />
       </div>
       <div className="mn-shade" aria-hidden="true" />
 
-      <header className="mn-head">
-        {/* The brand (Oct 2026): the Dripping Seal beside the name, the
-            militia's name under it. The name stays live text (an h1 a screen
-            reader and a translator can use); the seal is decoration. */}
-        <img className="mn-mark" src={markUrl} alt="" width={44} height={44} aria-hidden="true" />
-        <div className="mn-names">
-          <h1 className="t-title" tabIndex={-1}>
-            Merchant Mercenaries
-          </h1>
-          {/* Your militia: its flag and name, a tap from its builder. */}
-          {militia && (
-            <button type="button" className="mn-militia" onClick={onMilitia} aria-label={`${militia.name}: edit your militia`}>
-              <Banner look={militia} scale={1} />
-              <span>{militia.name}</span>
-            </button>
-          )}
-        </div>
-        {!staged && <p className="mn-pick">Pick a road — <Tap lower /> a signpost</p>}
+      <header className="mn-bar">
+        {/* The brand (Oct 2026): the Dripping Seal. The name is the screen's
+            one title, live text a screen reader and a translator can use; a
+            phone shows only the seal, a desk the seal and the name. */}
+        <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
+        <h1 className="mn-title" tabIndex={-1}>
+          Merchant Mercenaries
+        </h1>
+        {/* Your militia: its flag, a tap from its builder. */}
+        {militia && (
+          <button type="button" className="mn-militia" onClick={onMilitia} aria-label={`${militia.name}: edit your militia`} title={militia.name}>
+            <Banner look={militia} scale={1} />
+            <span className="mn-militia-name">{militia.name}</span>
+          </button>
+        )}
         {/* The bank is named after the first contract (LS3/LS4). */}
         {!staged && (
           <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
             <Gold n={bank} />
           </span>
         )}
-        <UpdateNotice />
+        <nav className="mn-places" aria-label="Places">
+          {places.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              className={`mn-place${o.locked ? ' is-locked' : ''}`}
+              aria-disabled={o.locked ? 'true' : undefined}
+              aria-label={o.locked ? `${o.title}: ${o.locked}` : o.title}
+              title={o.locked ? `${o.title} — ${o.locked}` : o.title}
+              onClick={() => (o.locked ? undefined : o.action?.run())}
+            >
+              {o.icon && <Icon name={o.icon} lg />}
+              <span className="mn-place-name" aria-hidden="true">
+                {o.title}
+              </span>
+              {o.locked && <Lock scale={1} />}
+            </button>
+          ))}
+        </nav>
       </header>
+      <div className="mn-notes">
+        <UpdateNotice />
+        {tip && (
+          <p className="mn-coach" role="note">
+            {tip}
+          </p>
+        )}
+      </div>
 
       <div className="mn-window" ref={winRef} aria-hidden="true" />
 
-      <div className="mn-sheet">
-        {tip}
-        {war && onWar && <WarStrip season={war} onOpen={onWar} />}
-        {charterLine}
-        <ContractNotice
+      <div className="mn-foot">
+        {(war || (!staged && charter.open)) && (
+          <div className="mn-shoulders">
+            {/* The season: who leads, what is left; the standings are a tap away. */}
+            {war && onWar && (
+              <button
+                type="button"
+                className="mn-pill mn-season"
+                onClick={onWar}
+                aria-label={`Trade war, season ${war.n}: ${left} contract${left === 1 ? '' : 's'} left${lead ? `, ${companyById(lead).name} leads` : ''}. Open the standings.`}
+              >
+                <span aria-hidden="true">
+                  Season {war.n} · {left} <span className="mn-pill-more">contract{left === 1 ? '' : 's'} </span>left
+                </span>
+                <i aria-hidden="true">›</i>
+              </button>
+            )}
+            {/* The Sovereign Route (build step 5), once its door is open: the way to its contract. */}
+            {!staged && charter.open && (
+              <button type="button" className="mn-pill mn-charter" onClick={onCharter} aria-label={`${CHARTER_NAME}: open. Charter it for ${CHARTER_FEE} gold.`}>
+                <SovereignCrest scale={1} />
+                <span aria-hidden="true">{CHARTER_NAME}</span>
+                <i aria-hidden="true">›</i>
+              </button>
+            )}
+          </div>
+        )}
+        {!staged && <Dock slots={slots} focus={focus} mult={market?.mult ?? MARKET_MULT} onPick={focusRoad} />}
+        <CompanyCard
           company={focus}
           open={open}
           staged={staged}
-          day={day}
-          standing={standing[focus]}
           xp={xp[focus] ?? 0}
           market={market?.company === focus ? market.mult : 1}
           term={terms?.[focus] ?? 1}
@@ -238,35 +272,19 @@ export function MenuScreen({
             war
               ? {
                   cold: isCold(war, focus) && war.exclusive ? { with: war.exclusive, cap: seasonCrateCap(war, focus, standing[focus]) } : null,
-                  desperate: isDesperate(war, focus),
-                  exclusive: war.exclusive === focus,
+                  desperate: war.desperate === focus,
+                  exclusive: war.exclusive === focus ? exclusiveXpMult(war, focus) : null,
                 }
               : null
           }
           onLivery={!staged && open && onLivery ? () => onLivery(focus) : undefined}
           onTrack={!staged && open && onTrack ? () => onTrack(focus) : undefined}
-          onStep={staged ? undefined : (d) => focusRoad(COMPANY_IDS[(COMPANY_IDS.indexOf(focus) + d + COMPANY_IDS.length) % COMPANY_IDS.length])}
-        />
-        <div className="mn-tiles">
-          {tiles.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              className={`mn-tile${o.locked ? ' is-locked' : ''}`}
-              aria-disabled={o.locked ? 'true' : undefined}
-              aria-label={o.locked ? `${o.title}: ${o.locked}` : undefined}
-              title={o.locked}
-              onClick={() => (o.locked ? undefined : o.action?.run())}
-            >
-              {o.icon && <Icon name={o.icon} lg />}
-              <span>{o.title}</span>
-              {o.locked && <Lock scale={1} />}
+          cta={
+            <button type="button" className="pg-cta mn-cta" onClick={readTerms} disabled={!open || !primary?.action}>
+              {staged ? 'Take the free escort' : open ? `Read ${shortName(companyById(focus).name)}’s terms` : `Opens at Standing ${companyById(focus).opensAt ?? 1}`}
             </button>
-          ))}
-        </div>
-        <button type="button" className="pg-cta mn-cta" onClick={readTerms} disabled={!open || !primary?.action}>
-          {staged ? 'Take the free escort' : open ? `Read ${shortName(companyById(focus).name)}’s terms` : `Opens at Standing ${companyById(focus).opensAt ?? 1}`}
-        </button>
+          }
+        />
       </div>
     </div>
   )
@@ -276,22 +294,80 @@ export function MenuScreen({
 const shortName = (name: string) => name.replace(/ Co\.$/, '')
 
 /**
- * The focused road's notice (Figma "B2 · Contract Notice"): a parchment sheet
- * pinned under the map, sealed in its company's colour with its logo. The
- * kicker names the road and its cities, the pager steps the roads the way the
- * signposts do. Over it the company's liaison stands at its post and says the
- * day's line (`LiaisonScene`, `run/liaison.boardLine`: a hash of the day, so it
- * holds still while you look) — the company's own words, said once: it
- * replaced the notice's quoted letter. The chips are the facts that tell one
- * road from another: today's market, its ground, your standing — or, on a road
- * not hiring yet, what opens it.
+ * The company dock: five fixed slots, evenly spaced, in `COMPANY_IDS` order —
+ * the order the map's roads fan west to east. A slot is its company's logo,
+ * your standing with it ("Rep 4", or "II · 3" on a second term, the crest
+ * rimmed in gold), its share of the trade while the war is on (the leader's
+ * crowned), and up to two marks on its top edge: desperate terms "×1.5", the
+ * market "×1.3", your exclusive, cold. A company not hiring yet shows its
+ * padlock and the standing that opens it. A tap focuses the road.
  */
-function ContractNotice({
+function Dock({ slots, focus, mult, onPick }: { slots: DockSlot[]; focus: CompanyId; mult: number; onPick: (c: CompanyId) => void }) {
+  return (
+    <div className="mn-dock" role="group" aria-label="Companies">
+      {slots.map((s) => {
+        const co = companyById(s.company)
+        const on = s.company === focus
+        return (
+          <button
+            key={s.company}
+            type="button"
+            className={`mn-slot${on ? ' is-on' : ''}${s.open ? '' : ' is-locked'}`}
+            style={{ '--co': co.color } as CSSProperties}
+            aria-pressed={on}
+            aria-label={slotName(s, mult)}
+            onClick={() => onPick(s.company)}
+          >
+            {s.marks.length > 0 && (
+              <span className="mn-marks" aria-hidden="true">
+                {s.marks.slice(0, SLOT_MARKS).map((m) => (
+                  <span key={m} className={`mn-mark-tag is-${m}`}>
+                    {markText(m, mult)}
+                  </span>
+                ))}
+              </span>
+            )}
+            <span className="mn-slot-crest" aria-hidden="true">
+              <Crest company={s.company} locked={!s.open} scale={2} />
+              {s.leads && (
+                <span className="mn-slot-crown">
+                  <Crown scale={2} />
+                </span>
+              )}
+            </span>
+            <span className="mn-slot-rep" aria-hidden="true">
+              {s.open ? (
+                s.rep
+              ) : (
+                `at ${s.opensAt}`
+              )}
+            </span>
+            {s.share != null && (
+              <span className="mn-slot-share" aria-hidden="true">
+                {s.share}%
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * The focused company's card, under the dock: its flag (the way into its
+ * livery), the road's goods and the company's name, then the chips that tell
+ * its road apart — what the dock's marks mean (the market's goods, desperate
+ * terms' stronger raiders, your exclusive's standing, a cold company's stake
+ * cap), its ground, the armour its raiders lean to — and the way into its
+ * track by the reward it pays next. The dock already says your standing and
+ * the share, and the map names the cities, so the card does not. The one CTA
+ * closes it.
+ */
+function CompanyCard({
   company,
   open,
   staged,
-  day,
-  standing,
   xp,
   market,
   term,
@@ -301,13 +377,11 @@ function ContractNotice({
   war,
   onLivery,
   onTrack,
-  onStep,
+  cta,
 }: {
   company: CompanyId
   open: boolean
   staged: boolean
-  day: string
-  standing: number
   xp: number
   market: number
   /** The term signed with it, and what is unlocked: what its track's next level pays. */
@@ -316,42 +390,19 @@ function ContractNotice({
   items: readonly string[]
   /** How you dressed its standard. */
   look: StandardLook | null
-  /**
-   * Its place in the trade war this season (Draft 4 § D): cold while your
-   * exclusive is with its rival (mockup 4b), desperate terms, your exclusive.
-   */
-  war?: { cold: { with: CompanyId; cap: number } | null; desperate: boolean; exclusive: boolean } | null
-  /** Opens its livery: the flag is the way in (Draft 4 § C). */
+  /** Its place in the trade war this season: cold (your exclusive is with its rival), desperate, your exclusive (its standing multiplier). */
+  war?: { cold: { with: CompanyId; cap: number } | null; desperate: boolean; exclusive: number | null } | null
   onLivery?: () => void
-  /** Opens its loyalty track: the standing chip is the way in (Draft 4 · B). */
   onTrack?: () => void
-  onStep?: (delta: number) => void
+  cta: ReactNode
 }) {
   const co = companyById(company)
   const armour = co.armour ? ENEMY_MODS.find((m) => m.id === co.armour) : undefined
   // What the track's next level pays, by name (Draft 4 · B).
-  const next = nextRewardWord(trackPlan(company, { xp, term, skills, items })) ?? 'the highest there is'
-  const rep = term > 1 ? `${termName(term)} · ${trackLevel(xp, term)}` : `Rep ${standing}`
-  const i = COMPANY_IDS.indexOf(company)
+  const next = nextRewardWord(trackPlan(company, { xp, term, skills, items }))
   return (
-    <section
-      className={`mn-notice${war?.cold ? ' is-cold' : ''}`}
-      style={{ '--co': co.color } as CSSProperties}
-      aria-label={`Notice: ${co.name}${war?.cold ? ', cold to you this season' : ''}`}
-      aria-live="polite"
-    >
-      {/* Cold (the trade war): your exclusive is with its rival — the paper
-          pales and wears a stamp until the season ends. */}
-      {war?.cold && (
-        <span className="mn-cold-stamp" aria-hidden="true">
-          Cold
-        </span>
-      )}
-      {/* The company's liaison, at its post, saying the day's line (Draft 4 · D). */}
-      <LiaisonScene at="notice" company={company} line={boardLine(company, day, open, !!war?.cold)} />
-      {/* The company's flag on the LEFT, beside its name (the designer: the
-          trader's icon belongs on the left when a road is opened, as a flag). */}
-      <div className="mn-notice-head">
+    <section className={`mn-card${war?.cold ? ' is-cold' : ''}`} style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
+      <div className="mn-card-head">
         {onLivery ? (
           <button type="button" className="mn-livery" onClick={onLivery} aria-label={`Dress ${co.name}’s standard`}>
             <CompanyFlag company={company} look={look} />
@@ -360,81 +411,51 @@ function ContractNotice({
             </span>
           </button>
         ) : (
-          <CompanyFlag company={company} locked={!open} look={look} />
-        )}
-        <span className="mn-notice-id">
-          <span className="mn-kicker">
-            Notice · {co.goods} road · {CITY_COUNT} cities
+          <span className="mn-livery is-still">
+            <CompanyFlag company={company} locked={!open} look={look} />
           </span>
-          <h2 className="mn-notice-t">{co.name}</h2>
+        )}
+        <span className="mn-card-id">
+          <span className="mn-kicker">{co.goods} road</span>
+          <h2 className="mn-card-name" id="mn-card-name">
+            {co.name}
+          </h2>
         </span>
-        {onStep && (
-          <span className="mn-pager">
-            <button type="button" className="mn-step" aria-label="Previous road" onClick={() => onStep(-1)}>
-              ‹
-            </button>
-            <span aria-label={`Road ${i + 1} of ${COMPANY_IDS.length}`}>
-              {i + 1}/{COMPANY_IDS.length}
-            </span>
-            <button type="button" className="mn-step" aria-label="Next road" onClick={() => onStep(1)}>
-              ›
-            </button>
+      </div>
+      <div className="mn-chips">
+        {staged && (
+          <span className="mn-chip is-free">
+            <b>Free</b> · paid at every city
           </span>
         )}
-      </div>
-      <p className="mn-route">
-        {co.towns.map((t, n) => (
-          <span key={t}>
-            {n > 0 && <i aria-hidden="true">◆</i>}
-            {t}
-          </span>
-        ))}
-      </p>
-      <div className="mn-chips">
-        {war?.desperate && <DesperateChip />}
-        {war?.exclusive && <span className="mn-chip is-exclusive">Your exclusive</span>}
+        {war?.desperate && <span className="mn-chip is-desperate">Desperate: raiders +{Math.round((DESPERATE_STRENGTH - 1) * 100)}%</span>}
+        {war?.exclusive != null && <span className="mn-chip is-exclusive">Exclusive: standing ×{war.exclusive}</span>}
         {war?.cold && (
-          <span className="mn-chip is-cold" aria-label={`Your exclusive is with ${companyById(war.cold.with).name}: stakes stop at ${war.cold.cap} crates`}>
+          <span className="mn-chip is-cold" aria-label={`Cold: your exclusive is with ${companyById(war.cold.with).name}, so stakes stop at ${war.cold.cap} crates`}>
             Stakes stop at {war.cold.cap}
           </span>
         )}
-        {market > 1 && (
-          <span className="mn-chip is-market">
-            <b>×{market} today</b> {co.noun} sells high
-          </span>
-        )}
+        {market > 1 && <span className="mn-chip is-market">Top price for {co.noun} today</span>}
         <span className="mn-chip is-ground" style={{ '--gr': co.ground.swatch } as CSSProperties}>
           {co.ground.name}
         </span>
-        {/* The armour its road's goblins lean to (`Company.armour`): most of
-            its armoured fights wear it, so it is a road fact like the ground. */}
+        {/* The armour its road's goblins lean to (`Company.armour`): a road fact, like its ground. */}
         {armour && (
           <span className="mn-chip is-armour" aria-label={`${armour.prefix} raiders: ${armour.blurb}`}>
             <ArmourMark mod={armour.id} />
             {armour.prefix} raiders
           </span>
         )}
-        {staged ? (
-          <span className="mn-chip is-rep">
-            <b>Free</b> · paid at every city
-          </span>
-        ) : open && onTrack ? (
-          <button type="button" className="mn-chip is-rep" onClick={onTrack} aria-label={`Standing ${standing} with ${co.name}: next, ${next}. Open its track`}>
-            <b>{rep}</b> · {next} <span aria-hidden="true">›</span>
+        {open && onTrack && (
+          <button type="button" className="mn-chip is-track" onClick={onTrack} aria-label={`${co.name}’s track: next, ${next ?? 'nothing left to earn'}. Open it`}>
+            <span className="field-k">Next</span> <span className="field-v">{next ?? 'all earned'}</span> <span aria-hidden="true">›</span>
           </button>
-        ) : open ? (
-          <span className="mn-chip is-rep" aria-label={`Standing ${standing} with ${co.name}: next, ${next}`}>
-            <b>{rep}</b> · {next}
-          </span>
-        ) : (
-          <span className="mn-chip is-locked">
-            <Lock scale={1} /> Opens at Standing {co.opensAt ?? 1}
-          </span>
         )}
       </div>
+      {cta}
     </section>
   )
 }
 
-/** The livery's mark on the notice's flag: a brush, in ink. */
+/** The livery's mark on the card's flag: a brush, in ink. */
 const BRUSH_MARK = { p: '#2a1e14' }

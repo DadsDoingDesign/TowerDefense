@@ -123,12 +123,11 @@
      10.4:1 and 6.9:1 — the world talking, never UI chrome. */
   --slip-ink: #3a2c14;
   --slip-ink-2: #5a4526;
-  /* The trade war (Draft 4 § D). A cold notice's paper pales to a grey wash
-     and wears a stamp in the cold ink (7.6:1 on it); desperate terms are
-     a red ink on paper (7.4:1) and the bad text on the dark (5.9:1). */
+  /* The trade war (Draft 4 § D). The home dock's "Cold" mark is the cold ink
+     on a pale grey wash (7.6:1); desperate terms are the bad text on the
+     dark (5.9:1). */
   --paper-cold: #d8dbd9;
   --cold-ink: #2d4a66;
-  --desperate-ink: #8e2c19;
   /* The night the trade pages sit in, and the lantern glow they are lit by. */
   --night: #17110c;
   --lantern: #ffe39a;
@@ -204,6 +203,10 @@
   /* A translucent parchment wash replaces solid panels for cards and tiles. */
   --surface: rgba(220, 205, 172, 0.08);
   --surface-strong: rgba(220, 205, 172, 0.14);
+  /* Glass over the trade map (the map-first home): near-solid night wood, so
+     every line on it clears 4.5:1 whatever the map draws under it. */
+  --glass: rgba(20, 15, 10, 0.84);
+  --glass-strong: rgba(20, 15, 10, 0.92);
   --portrait: #dccdac;
 
   /* Primary call to action. History: Wave 1 chose a deep teal (#336e7e) under

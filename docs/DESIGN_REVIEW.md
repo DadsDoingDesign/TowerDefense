@@ -3883,3 +3883,24 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
     shows whole on a 390px phone (25.7px) and a 32-letter name fits at 15px.
   - **Left as is:** an earned card or item row says only "Skill card" /
     "Item" — what a crossed level paid is not in the save.
+- **2026-10-15 · The map-first home.** The designer: no character on the
+  home, the map front and centre, minimal UI overlaid where needed, one even
+  spot per company that lights its road. The trade map is now the whole
+  screen on every size; over it a slim bar (seal, bank, place icons), a
+  five-slot company dock in `COMPANY_IDS` order (the roads now fan west→east
+  in the same order, so the dock is the map's legend) and one glass card with
+  the CTA. Focusing a road re-lights the canvas (night wash, the road laid
+  back undimmed and glowing, the others at 0.3) and names its cities. The
+  liaison, the notice, the pager, the war strip and the tiles are gone.
+  Three rounds in the running app (phone 390 × 844 and 375 × 667, desk
+  1280 × 800 and 1440 × 900, tablet 768 × 1024; veteran, mid, early and
+  first-run saves): `docs/ui-audit-2026-10/home-map/` (REVIEW.md, r1–r3).
+  - **Fixed across the rounds:** city tags on the wrong road or under each
+    other (now placed by least road covered, destination first, hidden
+    rather than overlapped); three crowns for one leader (now one, on the
+    dock, and none for a tie); the tallest crest covering its slot's
+    standing; a dead band under the desk hub; heavy pills (the coarse-pointer
+    floor — they keep a 44px hit area); a short phone's chips scrolled out
+    of sight; the desperate tag at 4.41:1 (caught by the contrast test).
+  - **Left as is:** the phone card is the tallest layer (~205px with four
+    chips); a short phone's card is two lines plus the CTA, not one.
