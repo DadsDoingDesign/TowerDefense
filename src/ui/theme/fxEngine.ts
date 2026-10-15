@@ -9,12 +9,15 @@ import { ambientCap, burstClip, drawParticle, FX_PX, step, WORLDS, type Particle
  *  - the AMBIENT layer — the page's or the home map's own `<canvas class="th-fx">`
  *    (`ThemeFx.tsx`), drawn BEHIND every panel, so an effect never sits under
  *    text without a backing. Only one is attached at a time; the battle and the
- *    run map (the four bands) attach none, so a live wave costs nothing;
+ *    run map (the four bands) attach none, so a live wave costs nothing. It is
+ *    drawn in software (`pixelPen.ts`) at 24 fps, its backdrop at 12, and put
+ *    on the canvas in one `putImageData`;
  *  - the OVERLAY — one fixed canvas over everything, used only while a press
  *    burst or a switch-in is playing (a few hundred ms). A press burst is
  *    clipped to its CTA and the margins round it (`fxWorlds.burstClip`), and
  *    the overlay is cleared under every word inside that zone — the CTA's own
- *    label included — so a burst never crosses text.
+ *    label included — so a burst never crosses text. While a switch-in
+ *    sweeps the screen, it is cleared under every word on it.
  *
  * The loop sleeps when there is nothing to draw, while the tab is hidden, and
  * entirely under reduced motion (no particles, no bursts, no switch-ins — the
@@ -150,6 +153,7 @@ class FxEngine {
     this.over.push(...world.switchIn(this.rand, o.w, o.h))
     if (this.over.length > BURST_CAP) this.over.splice(0, this.over.length - BURST_CAP)
     this.sweep = world.drawSweep ? { theme: id, age: 0, life: world.sweepLife ?? 0.5 } : null
+    this.overKeptAt = -1e9
     this.wake()
   }
 
@@ -210,9 +214,13 @@ class FxEngine {
     const zones: Zone[] = []
     for (const q of this.over) if (q.zone && !zones.includes(q.zone)) zones.push(q.zone)
     const out: [number, number, number, number][] = []
-    if (zones.length) {
+    // A switch-in plays over the whole screen: then every word on it is kept.
+    const all = !!this.sweep || this.over.some((q) => !q.zone)
+    if (zones.length || all) {
       const clips = zones.map(burstClip)
+      const vh = this.view?.h ?? window.innerHeight
       const hit = (r: DOMRect) => {
+        if (all) return r.bottom > 0 && r.top < vh
         const x0 = r.left / FX_PX
         const y0 = r.top / FX_PX
         const x1 = r.right / FX_PX
@@ -221,7 +229,7 @@ class FxEngine {
       }
       const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
       const range = document.createRange()
-      for (let n = walk.nextNode(); n && out.length < 200; n = walk.nextNode()) {
+      for (let n = walk.nextNode(); n && out.length < 400; n = walk.nextNode()) {
         if (!n.textContent?.trim()) continue
         range.selectNodeContents(n)
         for (const r of range.getClientRects()) {
@@ -364,8 +372,7 @@ class FxEngine {
       }
       if (clipped) o.pen.restore()
       o.pen.globalAlpha = 1
-      for (const [x, y, w, h] of this.overKeep) o.pen.clearRect(x, y, w, h)
-      // …then the switch-in: a sweep and its particles over the whole screen.
+      // …then the switch-in: a sweep and its particles over the whole screen…
       if (this.sweep) {
         this.sweep.age += dt
         const sw = WORLDS[this.sweep.theme]
@@ -374,6 +381,8 @@ class FxEngine {
       }
       for (const q of this.over) if (!q.zone) drawParticle(pen, q, 1)
       o.pen.globalAlpha = 1
+      // …and nothing over a word: cleared under each one the effects reach.
+      for (const [x, y, w, h] of this.overKeep) o.pen.clearRect(x, y, w, h)
     } else if (o) {
       o.pen.clearRect(0, 0, o.w, o.h)
     }

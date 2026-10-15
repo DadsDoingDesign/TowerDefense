@@ -378,7 +378,10 @@ function drawSplat(pen: Pen, q: Particle, scale: number): void {
 const paint: World = {
   density: 0.0034,
   spawn(rand, w, h, _seed, scene) {
-    const r = rand()
+    // Behind a page's panels a splat would show as stray blobs between
+    // them: there the world is its flecks and washes; the splats and drips
+    // are for the open map.
+    const r = scene && !scene.map ? 1 : rand()
     if (r < 0.2) {
       // A bold splat lands, runs, lingers and dries away — never on the
       // focused road (a second throw if the first lands on it).
@@ -393,7 +396,7 @@ const paint: World = {
       const big = w > 200 ? 1 : 0
       return p({ kind: 'splat', x, y, life: 3.5 + rand() * 3, color: pick(rand, PAINTS.slice(0, 5)), n: Math.floor(rand() * 3), size: 2 + big + (rand() < 0.35 ? 1 : 0) })
     }
-    if (r < 0.26) {
+    if (r < 0.28) {
       // A drip running down.
       return p({ kind: 'drip', x: rand() * w, y: rand() * h * 0.8, life: 2.5 + rand() * 1.5, size: 2, color: pick(rand, PAINTS.slice(0, 5)), n: 6 + Math.floor(rand() * 10) })
     }
