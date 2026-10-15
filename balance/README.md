@@ -150,7 +150,13 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
    The old ladder is still computed and printed beside the new one, so the change
    is auditable rather than a claim.
 3. **Item rarity ladder** — averages base-stat budget and enchant count over 400
-   rolls per tier; asserts the ladder is monotonic.
+   rolls per tier; asserts the ladder is monotonic. **3b (the gameplay pass)**:
+   what a run is OFFERED by act (`balance/rarity-eval.ts`, 4,000 runs on real
+   maps: every reward hand, every merchant shelf, the final spoils, with the
+   store's own luck and pity), per roll and per hand, gated on the act's
+   Epic-or-better band (act 1 3–6%, act 2 9–14%, act 3 17–24%), act 1's
+   Legendary + Mythic in (0, 1%], and at most 15% of act 1's hands showing an
+   Epic-or-better card. `npx tsx balance/rarity-eval.ts [n]` prints it alone.
 4. **Enchantment strength** — every affix equipped alone, measured by stop rate
    in three scenarios (`phys` / `magic` / `endure`) and graded on the one it is
    designed for, so an INT affix is never judged on a STR build.
@@ -196,12 +202,14 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
     a bare body, which overstated a recruit by ~5–9pt of win rate. Reported in **two models**, because the first one was a fiction:
 
     - the **strict floor** marches through every layer as a battle, refuses every
-      merchant, takes no recruits and picks a reward card at random;
+      merchant, takes no hires and picks a reward card at random;
     - the **realistic first run** — *the model the invariant gates on* — walks a
       real `generateRunMap` with no meta unlocks, routes the way a player reads a
       map (specials over battles, elites last), shops at merchant nodes at the
-      store's real prices, hires at recruit nodes and at the mid-map Crossroads
-      with `scaledRecruit`'s real level (roster median −3, not level 1), takes
+      store's real prices, hires at each city before the last (the gameplay pass:
+      there are no recruit stops) from the city's own slate
+      (`recruits.citySlate`, the candidate with the most DPS) at
+      `scaledRecruit`'s real level (roster median −3, not level 1), takes
       shrines it can pay for, and reads the reward cards instead of rolling one.
 
     Both models fight every layer at the **road's Threat** (`threatAtLayer`,
@@ -381,9 +389,10 @@ skills. Six benches measured things the game no longer has, and were re-aimed
 - **Contract delivery (§13, October audit).** The run-level gates, anchored on
   what the contract game produces:
   - a **zero-meta escort** (the 0-crate row of §13's ladder: adaptive route,
-    Rosethread's road, zero HQ) delivers **20–30%**;
-  - a **veteran's escort** delivers **35–55%**, and its **max stake (8 crates)**
-    delivers **10–20%** (§13c). The veteran is `runsim.VETERAN` — §18's
+    Rosethread's road, zero HQ) delivers **12–20%** (20–30% until the gameplay
+    pass — see below);
+  - a **veteran's escort** delivers **30–45%** (was 35–55%), and its **max
+    stake (8 crates)** delivers **8–16%** (was 10–20%) (§13c). The veteran is `runsim.VETERAN` — §18's
     late-game company: the HQ bought out, every random skill card and every
     Level 1–3 item kind — and it reads its offers (`build: 'best'`): picking at
     random from 36 cards, the same company delivered no more than a zero-meta
@@ -396,7 +405,17 @@ skills. Six benches measured things the game no longer has, and were re-aimed
     make the road easier by more than twice its paired s.e.** (§12's noise floor);
   - **every crate pays more** (contract pay on the cash-out line), on both
     ladders — the old §13 gate, kept.
-  The §11 first-timer floor (≥ 15%) and ceiling (≤ 35%) stand as they were.
+  The §11 first-timer floor and ceiling are **12% and 25%** (15% and 35% until
+  the gameplay pass).
+
+  **Why the bands moved (the gameplay pass, October 2026).** The designer:
+  "the game should be med to hard". The modelled player is weaker than a
+  competent human — it never re-posts in a breather, presses the Rally Horn by
+  rule and reads a card by DPS alone — so the bot's numbers sit below what a
+  human feels. The pass took power out of the early road (loot rarity by act,
+  §3b; hires only at cities, no recruit stops) and then refitted the Threat
+  curve and the top stakes to the lower bands; REPORT §13's "gameplay pass"
+  block has the before / after.
   Each band line prints its 1σ and says whether the reading clears it.
 - Monte Carlo deaths spread across ≥ 3 distinct depths, no single node ends more
   than 60% of lost runs, and the boss kills a nonzero share of the teams that
@@ -411,15 +430,17 @@ skills. Six benches measured things the game no longer has, and were re-aimed
   and every free layer offers a fight.
 - **Relics** (§15): every rule relic changes something a fight can see (≥ +2pt
   on its best bench), no pact is a cost for nothing, no run-rule relic lowers
-  the paired win rate, none sells plain "+x% damage", and nothing in the pool
+  the paired win rate (a flagged row is re-measured on 600 fresh seeds before
+  it fails, §12's rule — added in the gameplay pass, when the Twinblade
+  Harness read −4 ±4pt on 150 seeds and −0.3pt on 600), none sells plain "+x% damage", and nothing in the pool
   needs an engine capability that has not shipped.
 - Fresh-player difficulty is a curve, not a cliff: no single node ends more than
   40% of zero-meta runs — checked on **both** §11 models.
 - **The zero-meta baseline is winnable and still hard.** Three checks, each on
   the policy it is a question about:
-  - *winnable played well* — the **best** line in the policy set wins ≥ 15%;
-  - *still hard for a first-timer* — the **shipped heuristic** line wins ≤ 35%
-    (design target 15–25%);
+  - *winnable played well* — the **best** line in the policy set wins ≥ 12%;
+  - *still hard for a first-timer* — the **shipped heuristic** line wins ≤ 25%
+    (design target 12–20%; it was ≥ 15% / ≤ 35% / 15–25% until the gameplay pass);
   - *the campaign notices a team* — the hub's full ramp is worth ≥ 8pt of win
     rate over zero meta, measured inside one model on identical seeds (§12).
     This is the old ceiling's stated rationale — "the campaign is not noticing
@@ -437,7 +458,9 @@ skills. Six benches measured things the game no longer has, and were re-aimed
 - **Each unlock delivers the breadth its card sells**: `Cartographer's Table`
   may not change the *length* of the run and must at least halve the share of
   choiceless steps; `Standing Orders` must leave no Elite standing on a road with
-  no way around it; `Free Companies` must add a hiring stop.
+  no way around it; the Hiring Hall must add a candidate at every city and
+  train its hires to the company (it added a second recruit stop until the
+  gameplay pass removed the stops).
 - _(History — superseded by the contract-delivery gates above: the Banner
   ladder became the stake ladder, and its 3pt floor the 8% relative one.)_
   **Every Banner rung is a wager.** A rung must cost **at least 3pt** of win

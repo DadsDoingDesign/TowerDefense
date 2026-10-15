@@ -52,6 +52,22 @@ result. Append a short note to the review log when you're done.
   RNG streams, the hub flag, the wave-beat timer and session ownership live in
   `runtime.ts`; snapshot autosave in `persistence.ts`; settle-once in
   `settle.ts`. RNG draw ORDER is part of behaviour: keep it when editing.
+- Hiring (the gameplay pass, Oct 2026): there are no recruit stops on the map.
+  A hero is hired only at a city — every act boss before the last, the
+  Sovereign Route's waypoints too: the Crossroads (`screen: 'crossroads'`)
+  offers the city's candidates (`run/recruits.citySlate`, a hash of run seed
+  and city, three; four with the HQ's Hiring Hall, which also trains them to
+  the company's level), or a mutation instead, or nobody. Drawn as the
+  recruiting yard (`StopScene` 'recruit'). An old save's recruit node loads
+  as a battle (`runSnapshot.asBattle`).
+- Assisted runs (the gameplay pass): a run is `assisted` (GameData, snapshot
+  v19) once the assist dial is off `off` at any point of it — never cleared
+  mid-run. **Every leaderboard, ranking or record reads
+  `src/game/run/ranking.countsForRanking(run)` and nothing else** (an assisted
+  run or a custom seed: false). Today it keeps the best depth, best stake and
+  the stake record clean; gold, standing, unlocks, feats and the trade war
+  still pay (Hades/Celeste: mark, never punish). Marker: `AssistedTag` on the
+  HUD and the result. Tests `tests/ranking.test.ts`.
 - Pure run rules (no zustand/React/DOM, unit-tested in `tests/run.rules.test.ts`
   and read by the balance harness): `src/game/run/` — `threat.ts`,
   `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,
@@ -137,12 +153,13 @@ result. Append a short note to the review log when you're done.
   `anchors.generated.ts`; `anchors:check` in the build also fails if any gear
   piece would overhang a hero cell.
 - Pick one, then read: every choose-one surface that does not commit on the
-  tap (hero pick, recruit, city payout, skill milestone) is a
+  tap (hero pick, a city's hire, city payout, skill milestone) is a
   `PickStrip` of picture tokens + one `PickCard` for the focused option
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
   Every offer board that commits on its CTA (the spoils, the merchant) is
-  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place
+  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, and a city's
+  hiring yard) is drawn as a place
   with someone in it talking to you: `StopScene.tsx` draws a pixel scene
   baked from the CC0 pack by `npx tsx scripts/stop-scenes.ts`
   (`public/assets/scenes/<stop>.png` + `stopScenes.generated.ts`, the

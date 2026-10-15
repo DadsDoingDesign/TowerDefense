@@ -237,6 +237,13 @@ export interface ContractSettle {
   deposit: number
   /** A custom seed: pays its gold, earns no standing and unlocks nothing. */
   unranked?: boolean
+  /**
+   * The run counts for a ranking or a record (`run/ranking.countsForRanking`;
+   * default true). An assisted run (false) keeps every reward — gold,
+   * standing, unlocks, feats, the trade war — and is left out of the best
+   * depth, the best stake and the stake record.
+   */
+  rankable?: boolean
   /** The facts the feats are judged on. Omitted: no feat can be earned. */
   facts?: RunFacts
   /** The company's asks, judged (`run/asks.judgeAsks`). Omitted: none were dealt. */
@@ -742,7 +749,7 @@ export const useMetaStore = create<MetaState>()(
         if (felled) set({ codex: { ...cur, felled } })
       },
 
-      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, facts, asks: askList }) => {
+      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, rankable = true, facts, asks: askList }) => {
         const { stats, achievements } = get()
         const d = Math.max(0, num(depth, 0))
         const k = Math.max(0, num(kills, 0))
@@ -847,8 +854,9 @@ export const useMetaStore = create<MetaState>()(
 
         // The record: every finished contract at its stake, and whether it
         // arrived. A charter has its own record — it is no stake.
+        // An assisted run (or a custom seed) is no record (`run/ranking`).
         const record = { ...get().record }
-        if (contract && !charter) {
+        if (contract && !charter && rankable) {
           const key = String(crates)
           const cur = record[key] ?? { runs: 0, delivered: 0 }
           record[key] = { runs: cur.runs + 1, delivered: cur.delivered + (won ? 1 : 0) }
@@ -898,8 +906,9 @@ export const useMetaStore = create<MetaState>()(
           ...(sovereign ? { sovereign: [...owned, sovereign] } : {}),
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
-            bestDepth: Math.max(num(stats.bestDepth, 0), d),
-            bestStake: won ? Math.max(num(stats.bestStake, 0), crates) : num(stats.bestStake, 0),
+            // The bests are records: an assisted run (or a custom seed) leaves them alone.
+            bestDepth: rankable ? Math.max(num(stats.bestDepth, 0), d) : num(stats.bestDepth, 0),
+            bestStake: rankable && won ? Math.max(num(stats.bestStake, 0), crates) : num(stats.bestStake, 0),
             totalKills: num(stats.totalKills, 0) + k,
             runsCompleted: runsDone,
             runsWon: num(stats.runsWon, 0) + (won ? 1 : 0),

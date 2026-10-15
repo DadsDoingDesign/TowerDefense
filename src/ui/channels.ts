@@ -241,7 +241,6 @@ export const NODE_ICON: Record<string, IconKey> = {
   elite: 'elite',
   merchant: 'merchant',
   shrine: 'shrine',
-  recruit: 'recruit',
   // No atlas cell of their own yet (the sheet is a pipeline asset): the fire is
   // the heal mark, an act boss the boss mark, the final boss keeps the crown.
   campfire: 'auraHeal',
@@ -585,8 +584,8 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   gear: { term: 'Gear and pack', line: 'Items your heroes wear — body, main hand, off hand. New ones wait in the pack.' },
   command: { term: 'Watch Command', line: 'An order you give once per sub-wave, such as Rally Horn.' },
   strength: { term: 'Enemy strength', line: 'How much more HP every goblin has than at the start of the run. It rises at every stop.' },
-  recruit: { term: 'Recruit', line: `A stop where a hero joins you. You can lead up to ${MAX_HEROES} heroes.` },
-  merchant: { term: 'Merchant', line: 'A stop that sells gear, a hire and a wagon repair (it wins back cargo), for gold.' },
+  recruit: { term: 'Hire', line: `At each city before the last, a hero may join you: take one of the candidates, or none. You can lead up to ${MAX_HEROES} heroes.` },
+  merchant: { term: 'Merchant', line: 'A stop that sells gear and a wagon repair (it wins back cargo), for gold.' },
   shrine: { term: 'Shrine', line: 'A bargain: a boon for all your heroes, paid for with a curse.' },
   campfire: { term: 'Campfire', line: 'A stop to rest (stray cargo is rounded up) or to train a hero.' },
   elite: { term: 'Elite', line: 'A tougher fight whose spoils always include a relic.' },

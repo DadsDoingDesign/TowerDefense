@@ -6,7 +6,7 @@ import { legMult } from '../../game/run/watch'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
-import { cargoShare } from '../../game/run/contracts'
+import { cargoShare, cityOfLayer, routeTowns } from '../../game/run/contracts'
 import { contractRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
 import { fieldIdOf } from '../../game/data/maps'
@@ -21,7 +21,6 @@ import { useMapFocus } from './mapFocus'
 const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and a wagon repair.',
   shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
-  recruit: 'A hero looking for work. Take one on or walk on.',
   campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,
 }
 
@@ -79,6 +78,10 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   // A new act's first fight is on new ground (`run/fields`) — the same pure
   // rule `selectNode` deals it by — and the company starts it on the bench.
   const ground = summary ? groundFor(runSeed, { fieldId, fieldAct }, node.layer) : null
+  // The gameplay pass: an act boss before the last is a city — where a hero is
+  // hired. Said where the road is read, so the player knows where crew comes from.
+  const city = node.type === 'miniboss' ? cityOfLayer(node.layer) : null
+  const town = city != null && contract ? routeTowns(charter ? null : company)[city] : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -133,6 +136,11 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
           </>
         ) : (
           <p className="sh-line">{SPECIAL_BLURB[node.type] ?? 'Where the march began.'}</p>
+        )}
+        {town && (
+          <p className="sh-line">
+            <Icon name="recruit" /> Win it to reach <b>{town}</b>: the city pays, and a hero is for hire.
+          </p>
         )}
         {/* Enemies at their starting strength need no line (LS3/LS4). */}
         {step && strengthPct(step) > 0 && (

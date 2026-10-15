@@ -579,3 +579,35 @@ blast and reach away, which `keepsJob` now refuses.
   was reverted for this reason).
 - Tithe Box and Field Surgeon still measure ≈0 on whole-run win rate: gold
   and cargo do not convert into deliveries on the modelled line.
+
+## The gameplay pass (October 2026): loot by act, hires at cities, medium-to-hard
+
+The designer, four notes: hires only at cities; early loot too generous ("every
+run I get purples easy"); "the game should be med to hard"; assisted runs must
+not count for leaderboards. Levers, in the order they landed (each measured
+with `tune.ts` on §11/§13's seeds, adaptive line, Rosethread's road):
+
+| Step | Zero-meta escort | First-timer | Veteran escort | Veteran 8 crates | n |
+|---|--:|--:|--:|--:|--:|
+| Before | 21.5% | 19.7% | 40.3% | 11.7% | 600 |
+| + rarity by act (`items.RARITY_BY_ACT`, `ACT_LUCK`, `PITY_CAP`, `relics.RELIC_ACT_TILT`) | 11.3% | 15.5% | 27.2% | 7.7% | 600 |
+| + hires only at cities (`recruits.citySlate`; no recruit stops) | 5.8% | 5.5% | 22.7% | 4.7% | 600 |
+| + `ACT_STEPS` [1.07, 1.11, 1.28], final boss ×0.64 | 16.0% | 14.7% | 41.0% | 14.7% | 600 |
+| + `LAST_LEG` 5–8 crates steeper | 16.0% | 14.7% | 41.0% | 11.8% | 600 |
+| + `STOP_XP_SHARE` 0.7, destination crate 600, 3rd crate's leg +21% | 16.0% | 15.5% | 40.7% | 11.8% | 600 |
+
+- **Rarity** (REPORT §3b, 4,000 runs): Epic-or-better per roll 24.3 / 28.3 /
+  36.4% → ~4.8 / 11.0 / 20.7% by act; act 1 Legendary + Mythic 7.9% → 0.8%;
+  act 1 hands showing any Epic+ card (item or relic) 59.8% → 14.0%. No tier
+  is ever zero; pity is capped under a sure bump in acts 1 and 2.
+- **Map**: the recruit stop's roll weight went 5 / 3 / 2 to fights, merchants
+  and shrines, and the shrine cap 3 → 4: §9's fight share 57% → 60.7%.
+- **Bands re-gated** (REPORT §13, README): zero-meta escort 12–20%, veteran
+  30–45%, max stake 8–16%, first-timer 12–25%. The bot is weaker than a
+  competent human; these are its numbers for a medium-to-hard game.
+- **A hire stays free**: at 60 gold a zero-meta escort read 15.8% vs 16.0%
+  free (n=600) — the purse always had it, so a price was a tax, not a choice.
+- **Watch next**: the first-timer line sits at its 12% floor on §11's 240
+  seeds (15.5% at 600); the Hiring Hall reads −4pt to +2pt on §12's lines
+  (noise-level, inside the paired floor, but no longer a power purchase —
+  one more candidate and trained hires on two hires a run).

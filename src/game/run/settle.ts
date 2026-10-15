@@ -10,6 +10,7 @@
  * home in full), the cities' pay is kept even after a fall, and unsold crates
  * are lost.
  */
+import { countsForRanking } from './ranking'
 import type { RunChallenge } from '../../state/seeds'
 import type { RunFacts } from '../data/achievements'
 import type { Sentinel } from '../types'
@@ -74,6 +75,8 @@ export interface SettleFacts {
   challenge: RunChallenge
   /** The facts the feats are judged on, when the settle has them (Phase 3b). */
   facts?: RunFacts
+  /** Assist was on at some point of the run: it counts for no ranking (`ranking.countsForRanking`). */
+  assisted?: boolean
   /**
    * A run saved before contracts (an Endless run included): the Watch Marks it
    * would have paid, as gold — Marks became gold one for one. Read only when
@@ -165,6 +168,12 @@ export interface RunGrant {
   contract: { company: RunContract['company']; crates: number; status: 'delivered' | 'cashedOut' | 'lost'; charter?: boolean } | null
   deposit: number
   unranked?: boolean
+  /**
+   * Whether the run counts for a ranking or a record (`ranking.countsForRanking`:
+   * not an assisted run, not a custom seed). False keeps every reward and
+   * leaves the best depth, the best stake and the stake record alone.
+   */
+  rankable?: boolean
   facts?: RunFacts
   /**
    * The company's asks, judged as the contract finished (Draft 4 · A,
@@ -189,6 +198,7 @@ export function contractGrant(f: SettleFacts, status: RunGrantStatus): RunGrant 
     contract: f.contract ? { company: f.contract.company, crates: f.contract.crates, status, ...(f.contract.charter ? { charter: true } : {}) } : null,
     deposit: runDeposit(f, status),
     unranked: f.challenge.kind === 'seeded',
+    rankable: countsForRanking(f),
     ...(f.facts ? { facts: f.facts } : {}),
     ...(f.contract?.asks?.length ? { asks: judgeAsks({ contract: f.contract, gold: f.gold }, status) } : {}),
   }

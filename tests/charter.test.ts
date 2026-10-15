@@ -265,7 +265,6 @@ function walk(stop: () => boolean, hp = 0.01) {
     if (s.event) {
       const k = s.event.kind
       if (k === 'shrine') s.declineShrine()
-      else if (k === 'recruit') s.skipRecruit()
       else if (k === 'campfire') s.campfireRest()
       else s.leaveEvent()
       continue

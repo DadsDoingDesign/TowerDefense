@@ -6,6 +6,7 @@ import { ADVANCE, cashOutValue, cityPay, CRATE_PRICE, STAKES_OPEN_AT } from '../
 import { standingXpToReach } from '../src/game/run/standing'
 import { useSettingsStore } from '../src/state/settingsStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
+import { citySlate, SLATE_SIZE } from '../src/game/run/recruits'
 
 /** The contract in the store: signing, a city's pay, cash out, and a fall. */
 const g = () => useGameStore.getState()
@@ -23,7 +24,6 @@ function walk(stop: () => boolean, hp = 0.01) {
     if (s.event) {
       const k = s.event.kind
       if (k === 'shrine') s.declineShrine()
-      else if (k === 'recruit') s.skipRecruit()
       else if (k === 'campfire') s.campfireRest()
       else s.leaveEvent()
       continue
@@ -188,6 +188,45 @@ describe('a contract, in the store', () => {
     g().returnToHub()
     expect(useMetaStore.getState().bank).toBe(after)
     expect(g().victory).toBeNull()
+  })
+
+  it('a city offers a hire as the caravan arrives: the city’s own candidates, taken or turned down', () => {
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 0 })
+    g().pickStartingHero('pick-0')
+    useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
+    // No road stop hires: the map has no recruit node at all.
+    expect(g().runMap.nodes.some((n) => (n.type as string) === 'recruit')).toBe(false)
+    walk(() => g().contract!.pending != null)
+    expect(g().contract!.pending).toBe(0)
+    g().pressOn()
+    // The spoils, then the city's hiring yard.
+    if (g().reward) g().chooseReward(g().reward![0].id)
+    const cr = g().crossroads!
+    expect(g().screen).toBe('crossroads')
+    expect(cr.recruits).toHaveLength(SLATE_SIZE)
+    // The candidates are the city's — a hash of the run seed and the city.
+    const again = citySlate(g().runSeed, 0, g().roster, { statBonus: 0, trained: false, itemPool: g().itemPool })
+    expect(cr.recruits.map((h) => h.equipment.mainHand?.base)).toEqual(again.map((h) => h.equipment.mainHand?.base))
+    const before = g().roster.length
+    g().recruitTeammate(cr.recruits[1].id)
+    expect(g().roster).toHaveLength(before + 1)
+    expect(g().roster[before].name).toBe(cr.recruits[1].name)
+    expect(g().crossroads).toBeNull()
+    expect(g().screen).toBe('map')
+  })
+
+  it('turning the city’s hires down marches on with the heroes you have', () => {
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 0 })
+    g().pickStartingHero('pick-0')
+    useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
+    walk(() => g().contract!.pending != null)
+    g().pressOn()
+    if (g().reward) g().chooseReward(g().reward![0].id)
+    const before = g().roster.length
+    expect(g().crossroads?.recruits.length).toBeGreaterThan(0)
+    g().finishCrossroads()
+    expect(g().roster).toHaveLength(before)
+    expect(g().screen).toBe('map')
   })
 
   it('a delivery pays all three cities and deals the contract’s unlocks', () => {

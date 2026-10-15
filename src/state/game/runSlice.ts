@@ -17,10 +17,11 @@ import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
 import { useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
-import { hubExtras, recruitSlate } from '../../game/run/recruits'
+import { hubExtras } from '../../game/run/recruits'
 import { bonusItemsFor } from '../../game/run/hq'
 import { soldText, stow } from '../../game/run/inventory'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
@@ -36,7 +37,7 @@ import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds
 import { seedEditable } from '../runTerms'
 import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, dealSkill, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
+import { clearBeatTimer, dealSkill, layout, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
@@ -170,6 +171,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       runMap: stageFirstRunMap(dealt.runMap, firstRun),
       threat: rules.startThreat,
       firstRun,
+      // The gameplay pass: a run begun with assist on is assisted from the start.
+      assisted: markAssisted(false, useSettingsStore.getState().assist),
       runSeed,
       challenge,
       contract,
@@ -356,7 +359,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       tactics: snap.tactics,
       merchant: snap.merchant,
       shrineOffer: snapshotShrine(snap),
-      recruitOptions: snap.recruitOptions,
       reward: snap.reward,
       runMods: snap.runMods,
       relics: snap.relics,
@@ -380,6 +382,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       challenge: snap.challenge,
       // LS3: a run saved before staging existed has none, and plays unstaged.
       firstRun: snap.firstRun === true,
+      // Once assisted, always: a resume keeps the mark, and the dial as it is now adds to it.
+      assisted: markAssisted(snap.assisted === true, useSettingsStore.getState().assist),
       // A snapshot only ever exists for a LIVE run, so there is no recap.
       victory: null,
       selectedSentinelId: null,
@@ -409,7 +413,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // ---- a parked event is never left live behind you (F1) ---------------
     if (event) {
       if (event.nodeId === nodeId) return
-      set({ event: null, merchant: null, shrineOffer: null, recruitOptions: [] })
+      set({ event: null, merchant: null, shrineOffer: null })
     }
 
     if (node.type === 'merchant') {
@@ -420,6 +424,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       const contract = get().contract
       const items = rollMerchantShelf(streams.rng, {
         luck: merchantLuck(node.layer),
+        depth: node.layer,
         roster,
         pity: lootPity,
         size: shelfSize(relics),
@@ -427,8 +432,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
         priceMult: priceMultOf(contract),
       })
       // No hire on the counter (Oct 2026, the designer: "merchant shouldn't
-      // offer people for hire"): a merchant sells goods; heroes join at a
-      // recruit stop or a fork. The wagon repair is on every counter (Phase
+      // offer people for hire"): a merchant sells goods; heroes are hired at
+      // a city (the gameplay pass). The wagon repair is on every counter (Phase
       // 3b): the comeback.
       set({ event: { kind: 'merchant', nodeId }, merchant: { items, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
       return
@@ -439,10 +444,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     }
     if (node.type === 'shrine') {
       set({ event: { kind: 'shrine', nodeId }, shrineOffer: rollShrine(streams.rng) })
-      return
-    }
-    if (node.type === 'recruit') {
-      set({ event: { kind: 'recruit', nodeId }, recruitOptions: recruitSlate(streams.rng, roster, recruitHub(get().relics)) })
       return
     }
 

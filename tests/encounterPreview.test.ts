@@ -112,7 +112,7 @@ describe('encounter preview == spawned encounter', () => {
     const runMap = generateRunMap(streamRng(5, 'map'))
     const run = { runSeed: 5, runDifficulty: 0, runMap }
     for (const n of runMap.nodes) {
-      if (n.type === 'merchant' || n.type === 'shrine' || n.type === 'recruit' || n.type === 'start') {
+      if (n.type === 'merchant' || n.type === 'shrine' || n.type === 'campfire' || n.type === 'start') {
         expect(previewEncounter(run, n.id)).toBeNull()
         expect(encounterKindFor(n)).toBeNull()
       }

@@ -299,7 +299,11 @@ export function PageScreen({
   // A stop on the road is drawn as a place (Oct 2026, `StopScene`): a scene
   // with the title hung on it as the place's sign, and someone there saying
   // the stop's line.
-  const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : null
+  // A city's hiring (the Crossroads with hires on it) is drawn as the city's
+  // recruiting yard — the scene the old recruit stop had (the gameplay pass).
+  const hiring = useGameStore((s) => s.screen === 'crossroads' && !!s.crossroads?.recruits.length && !s.crossroads.mutationHeroId && !s.crossroads.revealed)
+  const hireNode = useGameStore((s) => s.currentNodeId)
+  const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : eventBoard && hiring ? 'recruit' : null
   // At a stop the keeper says the line, in a bubble on the scene: it is the
   // page's subtitle, so the head carries no second one.
   const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
@@ -390,9 +394,9 @@ export function PageScreen({
       // The hero pick is branded to the contract: the hiring company's cloth
       // over the title, your militia's flag under it (Oct 2026).
       brand={
-        stop && event ? (
+        stop ? (
           // The clerk holds up whatever ware you are looking at.
-          <StopScene kind={stop} line={stopLine(stop, event.nodeId)} held={isShop ? selected?.icon : undefined} />
+          <StopScene kind={stop} line={stopLine(stop, event?.nodeId ?? hireNode)} held={isShop ? selected?.icon : undefined} />
         ) : heroPick && contract ? (
           <ContractBanner
             company={contract.company}

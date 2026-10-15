@@ -197,7 +197,24 @@ export const MAX_DIFFICULTY = 10
  * AND what one who reaches the wagons steals. Index = step; a step past the
  * table repeats its last.
  */
-export const LAST_LEG: readonly number[] = [0, 0.1, 0.14, 0.27, 0.35, 0.43, 0.54, 0.64, 0.74]
+//
+// ---- the gameplay pass (Oct 2026) --------------------------------------------
+//
+// Hires only at cities and loot by act re-fitted the road (`threat.ACT_STEPS`),
+// and on the eased curve the veteran's max stake read 14.7% — easier than the
+// 11.7% it was before the pass, in a pass meant to make the game harder. A
+// steeper act 3 did not move it (`threat.ts`), so the top stakes' last leg
+// steepens from 5 crates (+43/54/64/74% → +45/58/72/86%). 600 paired runs:
+//
+//   crates      0     1     2     3     4     5     6     7     8
+//   zero meta  16.0  13.5  13.3   9.5   8.3   6.5   6.0   3.5   3.0%
+//   veteran    41.0  37.7  36.2  30.2  23.7  21.7  19.5  14.2  11.8%
+//
+// With the destination's crate at 600 (`contracts.CITY_CRATE_VALUE`, the same
+// pass), the veteran's third crate then paid LESS than its second (381 vs
+// 397 gold): its −6pt step cost more of the 600 than its city-1 sale earned.
+// The third crate's leg eases +27% → +21%.
+export const LAST_LEG: readonly number[] = [0, 0.1, 0.14, 0.21, 0.35, 0.45, 0.58, 0.72, 0.86]
 /** Battle nodes per act each step turns into elites. */
 export const ELITES_PER_STEP = 1
 

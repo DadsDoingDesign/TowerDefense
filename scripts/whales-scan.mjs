@@ -383,7 +383,7 @@ async function run(vp) {
     const lv = p.page.locator('button', { hasText: /↑/ }).first()
     if (await lv.isVisible().catch(() => false)) { await lv.click().catch(() => {}); await p.page.waitForTimeout(600); await capture(p, vp, '09b-level-up') }
     // C. events, each forced one march away (dev shortcut, logged)
-    const kinds = full ? ['merchant', 'shrine', 'campfire', 'recruit'] : ['merchant']
+    const kinds = full ? ['merchant', 'shrine', 'campfire'] : ['merchant']
     for (const kind of kinds) {
       const id = await forceNode(p, kind)
       log.push(`forced ${kind} at ${id}`)

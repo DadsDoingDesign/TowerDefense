@@ -7,7 +7,7 @@ import { classicHero } from '../src/game/data/sentinels'
 import { xpToReach } from '../src/game/engine/leveling'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
 import { firstFightOf, forkFires, makeRun, openingNodeOf } from '../src/game/run/map'
-import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
+import { citySlate, HALL_SLATE_SIZE, recruitTargetLevel, scaledRecruit, SLATE_SIZE, withRecruits } from '../src/game/run/recruits'
 import { applyRewardCard } from '../src/game/run/rewards'
 import { planPayout, runWasPlayed, type SettleFacts } from '../src/game/run/settle'
 import {
@@ -237,7 +237,7 @@ describe('merchant shelf (game/run/economy)', () => {
   const roster = [classicHero('rogue')]
   const shelfFrom = (seed: number) => {
     const ids = idCounterState()
-    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), roster, pity: newRarityPity() })
+    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), depth: 4, roster, pity: newRarityPity() })
     restoreIdCounter(ids)
     return shelf.map((e) => ({ name: e.item.name, rarity: e.item.rarity, slot: e.item.slot, price: e.price }))
   }
@@ -249,7 +249,7 @@ describe('merchant shelf (game/run/economy)', () => {
 
   it('deals four items priced by rarity, and never spends the pity counter', () => {
     const pity = { dry: 7 }
-    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, roster, pity })
+    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, depth: 6, roster, pity })
     expect(shelf).toHaveLength(4)
     for (const e of shelf) expect(e.price).toBe(ITEM_PRICE[e.item.rarity])
     expect(pity).toEqual({ dry: 7 })
@@ -321,18 +321,32 @@ describe('recruit scaling (game/run/recruits)', () => {
     expect(plain.equipment.mainHand).toBeTruthy()
   })
 
-  it('the slate is three random hires, deterministic in the stream, from the run’s kinds only', () => {
+  it('a city’s slate is three hires (four with the Hiring Hall), a hash of the seed and the city, from the run’s kinds only', () => {
     const kinds = ['Sword', 'Bow', 'Wand', 'Shield', 'Mail']
-    const deal = () => {
+    const deal = (seed: number, city: number, slate = SLATE_SIZE) => {
       // Names come off a process-wide, forward-only counter, so compare what
-      // the STREAM decides: the gear and its rolled numbers, and the stats.
-      const slate = recruitSlate(streamRng(8, 'loot'), [], { statBonus: 0, trained: false, itemPool: kinds })
-      return slate.map((s) => ({ w: s.equipment.mainHand?.name, off: s.equipment.offHand?.name ?? null, base: s.equipment.mainHand?.base, stats: s.stats }))
+      // the HASH decides: the gear and its rolled numbers, and the stats.
+      const out = citySlate(seed, city, [], { statBonus: 0, trained: false, itemPool: kinds, slate })
+      return out.map((s) => ({ w: s.equipment.mainHand?.name, off: s.equipment.offHand?.name ?? null, base: s.equipment.mainHand?.base, stats: s.stats }))
     }
-    const a = deal()
+    const a = deal(8, 0)
     expect(a).toHaveLength(3)
     for (const h of a) expect(kinds.some((k) => h.w?.includes(k))).toBe(true)
-    expect(deal()).toEqual(a)
+    // The same seed meets the same hires at the same city, whatever else the run drew.
+    expect(deal(8, 0)).toEqual(a)
+    expect(deal(8, 1)).not.toEqual(a)
+    expect(deal(9, 0)).not.toEqual(a)
+    // The Hiring Hall: one more candidate; the first three are the same three.
+    const hall = deal(8, 0, HALL_SLATE_SIZE)
+    expect(hall).toHaveLength(4)
+    expect(hall.slice(0, 3)).toEqual(a)
+  })
+
+  it('a city’s hires never draw on a run stream', () => {
+    const loot = streamRng(8, 'loot')
+    const before = loot.saveState()
+    citySlate(8, 0, [], { statBonus: 0, trained: false })
+    expect(loot.saveState()).toBe(before)
   })
 })
 
@@ -395,16 +409,15 @@ describe('skills in the run (game/run/skills, SK1)', () => {
     expect(computeCombat({ ...base, skills: ['not-a-skill'] }).dps).toBe(computeCombat(base).dps)
   })
 
-  it('a hire arrives with one Level 1 skill, dealt by hash: the loot stream is untouched', () => {
+  it('a hire arrives with one Level 1 skill, dealt by hash: the slate it rides on is untouched', () => {
     const hub = { statBonus: 0, trained: false }
     const deal = (skillFor?: (id: string) => string | null) => {
-      const rng = new RNG(31)
-      const slate = recruitSlate(rng, [], { ...hub, skillFor })
-      return { slate, next: rng.next() }
+      const slate = citySlate(31, 0, [], { ...hub, skillFor })
+      return { slate, gear: slate.map((s) => s.equipment.mainHand?.base) }
     }
     const plain = deal()
     const skilled = deal((id) => recruitSkill(7, id, STARTER_SKILLS))
-    expect(skilled.next).toBe(plain.next)
+    expect(skilled.gear).toEqual(plain.gear)
     for (const s of skilled.slate) expect(s.skills).toHaveLength(1)
     for (const s of plain.slate) expect(s.skills).toBeUndefined()
   })
@@ -461,11 +474,11 @@ describe('relics (data/relics + game/run/relics)', () => {
   it('the reward hand: a battle mixes, an elite always holds a relic, an act boss is all relics', () => {
     const roster = [classicHero('rogue')]
     for (let seed = 1; seed < 40; seed++) {
-      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, count: 3, held: [], roster })
+      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, depth: 2, count: 3, held: [], roster })
       expect(battle.some((c) => c.kind === 'item')).toBe(true)
-      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, count: 3, held: [], roster })
+      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, depth: 3, count: 3, held: [], roster })
       expect(elite.some((c) => c.kind === 'relic')).toBe(true)
-      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, count: 3, held: [], roster })
+      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, depth: 4, count: 3, held: [], roster })
       expect(boss.every((c) => c.kind === 'relic')).toBe(true)
       expect(new Set(boss.map((c) => c.relic)).size).toBe(3)
     }

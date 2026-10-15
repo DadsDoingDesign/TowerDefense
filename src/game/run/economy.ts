@@ -34,7 +34,11 @@ export interface ShelfEntry {
   price: number
 }
 
-/** A campaign merchant's luck at a map layer. */
+/**
+ * A campaign merchant's luck at a map layer. The shelf also rolls at its
+ * layer's act (`depth`), so it follows the same curve as the loot: mostly
+ * Common and Rare in act 1 (`items.RARITY_BY_ACT`).
+ */
 export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.04)
 
 /**
@@ -51,12 +55,12 @@ export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.0
  */
 export function rollMerchantShelf(
   rng: RNG,
-  opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[]; priceMult?: number },
+  opts: { luck: number; depth: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[]; priceMult?: number },
 ): ShelfEntry[] {
   // The road's price multiplier (the Sovereign Route's merchants charge double, `run/charter`).
   const mult = opts.priceMult ?? 1
   return Array.from({ length: opts.size ?? 4 }, () => {
-    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
+    const item = generateItem(rng, { luck: opts.luck, depth: opts.depth, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
     return { item, price: Math.round(ITEM_PRICE[item.rarity] * mult) }
   })
 }

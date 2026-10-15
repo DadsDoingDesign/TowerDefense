@@ -49,7 +49,6 @@ export function openingNodeOf(map: RunMap): MapNode | null {
 export function mapOptionsFor(unlocked: (id: string) => boolean): MapOptions {
   return {
     wideMap: unlocked('cartographer'),
-    extraRecruit: unlocked('freeCompanies'),
     standingOrders: unlocked('standingOrders'),
   }
 }
@@ -190,8 +189,10 @@ export const encounterNode = <T extends { type: string; layer: number; row: numb
   node.type === 'miniboss' ? { ...node, type: 'boss' } : node
 
 /**
- * The Crossroads — recruit OR mutate — fires on clearing each ACT BOSS
- * (Phase 3b): at the two act breaks, never on the final boss.
+ * The Crossroads — a city's hire OR a mutation — fires on clearing each ACT
+ * BOSS (Phase 3b): at the two cities before the last, never on the final boss.
+ * Since the gameplay pass it is the only place a hero is hired
+ * (`recruits.citySlate`).
  *
  * It used to fire once, at the map's halfway layer, and the review found both
  * halves of that wanting: a run is three acts now and an act break is the
