@@ -1,5 +1,6 @@
 import type { CoreStats, EffectMods, ItemRarity } from '../types'
 import { DUAL_WIELD_DEX } from './items'
+import type { IconKey } from './iconAtlas'
 
 /**
  * ---------------------------------------------------------------------------
@@ -231,3 +232,32 @@ export const relicCommands = (held: readonly string[]): string[] =>
     const r = RELIC_BY_ID.get(id)
     return r && relicSupported(r) ? (r.commands ?? []) : []
   })
+
+/**
+ * Each relic's own mark — the atlas cell that says what it does, so a run's
+ * relics read as a collection of different things (the Team panel's grid, the
+ * Codex, a spoils card), not a row of the same idol. Unlisted: the idol.
+ */
+const RELIC_MARKS: Record<string, IconKey> = {
+  ledger: 'orders',
+  hourglass: 'patience',
+  horn: 'haste',
+  keen: 'crit',
+  whetstone_pact: 'nocrit',
+  bloodletting: 'lifedrain',
+  exec_oath: 'execute',
+  wildfire: 'burn',
+  iron_vigil: 'thorns',
+  warding_stone: 'block',
+  hound_banner: 'pierce',
+  ambush_drum: 'wave',
+  veteran_cloak: 'seasoned',
+  charter: 'recruit',
+  surgeon: 'hp',
+  seal: 'merchant',
+  diary: 'evolve',
+  tithe: 'gold',
+  ember_urn: 'splash',
+  signal_flare: 'beacon',
+}
+export const relicMark = (id: string): IconKey => RELIC_MARKS[id] ?? 'relic'

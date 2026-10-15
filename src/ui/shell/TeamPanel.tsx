@@ -1,7 +1,10 @@
-import { FOCUS_OPTS, focusFull, itemName, rarityTextVar } from '../channels'
+import type { CSSProperties } from 'react'
+import { FOCUS_OPTS, focusFull, itemName, rarityTextVar, rarityVar } from '../channels'
 import { describeMods } from '../../game/data/describe'
 import { HERO_SLOTS } from '../../game/data/items'
-import { relicById } from '../../game/data/relics'
+import { relicById, relicMark } from '../../game/data/relics'
+import { useState } from 'react'
+import { RarityTag } from './Page'
 import { mergeMods } from '../../game/data/archetypeTree'
 import { useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
@@ -37,6 +40,8 @@ export function TeamPanel() {
   const runMods = useGameStore((s) => s.runMods)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const held = relics.map((id) => relicById(id)).filter((r) => !!r)
+  const [open, setOpen] = useState<string | null>(null)
+  const shown = held.find((r) => r!.id === open) ?? null
   const keepsakes = roster.flatMap((h) =>
     HERO_SLOTS.map((slot) => h.equipment[slot])
       .filter((i) => !!i?.keepsake)
@@ -78,15 +83,37 @@ export function TeamPanel() {
             <span className="field-k">Relics</span>
             <span className="field-v">{held.length || 'None yet'}</span>
           </p>
-          {held.map((r) => (
-            <p className="sh-line sh-team-relic" key={r!.id}>
-              <Icon name="relic" />
-              <span>
-                <b style={{ color: rarityTextVar(r!.rarity) }}>{r!.name}</b> · {r!.desc}
-              </span>
-            </p>
-          ))}
-          {held.length > 0 && <p className="sh-line note">{RELIC_NOTE}</p>}
+          {/* The run's relics as a collection (Oct 2026; the designer: "like an
+              item collection similar to codex but in theme for the run, info on
+              click to save space"): a tile each — its own mark on its rarity —
+              and the tapped one's card under the grid. */}
+          {held.length > 0 && (
+            <div className="sh-relics" role="group" aria-label="Relics this run">
+              {held.map((r) => (
+                <button
+                  key={r!.id}
+                  type="button"
+                  className={`sh-relic${open === r!.id ? ' on' : ''}`}
+                  style={{ '--lv': rarityVar(r!.rarity) } as CSSProperties}
+                  aria-pressed={open === r!.id}
+                  aria-label={`${r!.name}: ${r!.desc}`}
+                  data-sfx="toggle"
+                  onClick={() => setOpen(open === r!.id ? null : r!.id)}
+                >
+                  <Icon name={relicMark(r!.id)} lg />
+                </button>
+              ))}
+            </div>
+          )}
+          {shown && (
+            <div className="sh-relic-card" aria-live="polite">
+              <p className="sh-relic-name">
+                <b style={{ color: rarityTextVar(shown.rarity) }}>{shown.name}</b> <RarityTag rarity={shown.rarity} />
+              </p>
+              <p className="sh-line">{shown.desc}</p>
+              <p className="sh-line note">{RELIC_NOTE}</p>
+            </div>
+          )}
         </div>
         {keepsakes.length > 0 && (
           <div className="sh-team-sec">

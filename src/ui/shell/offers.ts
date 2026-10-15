@@ -22,6 +22,7 @@ import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
 import { relicLines } from './relicOffers'
+import { relicMark } from '../../game/data/relics'
 import type { Item, ItemRarity, Sentinel } from '../../game/types'
 
 export interface Price {
@@ -714,7 +715,7 @@ function rewardOffers(st: St): Offer[] {
     sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'all heroes',
     rarity: c.rarity,
     color: rarityVar(c.rarity),
-    icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? 'relic' : 'boon',
+    icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? (c.relic ? relicMark(c.relic) : 'relic') : 'boon',
     mark: c.item ? damageMark(c.item) : null,
     bodyIcons: !!c.item,
     warn: c.downside ? `Downside — ${c.downside}` : undefined,

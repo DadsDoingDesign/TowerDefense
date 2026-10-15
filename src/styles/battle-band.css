@@ -690,6 +690,50 @@
 .sh-team .sh-line.note {
   margin-top: 0;
 }
+/* The run's relics as a collection: a tile each, its own mark on its rarity
+   (`--lv`), the world's panel ink inside; the tapped one is lit and its card
+   opens under the grid. */
+.sh-relics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+.sh-relic {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 44px;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--lv) 70%, var(--line-strong));
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--lv) 32%, var(--panel)) 0, var(--panel) 75%);
+  box-shadow: 0 2px 0 var(--shade, rgba(0, 0, 0, 0.45));
+  cursor: pointer;
+}
+.sh-relic .fw-i {
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
+}
+.sh-relic.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 0 var(--shade, rgba(0, 0, 0, 0.45));
+}
+.sh-relic:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.sh-relic-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.sh-relic-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
 .sh-team .sh-context-foot .sh-btn {
   flex: 0 0 auto;
   min-width: 96px;

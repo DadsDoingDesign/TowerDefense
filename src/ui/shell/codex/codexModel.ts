@@ -14,7 +14,7 @@
 import { ACHIEVEMENTS } from '../../../game/data/achievements'
 import { ENEMY_TYPES } from '../../../game/data/enemies'
 import { knowledgeOf } from '../../../game/data/enemyKnowledge'
-import { RELICS, relicSupported } from '../../../game/data/relics'
+import { RELICS, relicMark, relicSupported } from '../../../game/data/relics'
 import { ALL_SKILLS, skillHeadline } from '../../../game/data/skills'
 import { ITEM_KINDS, itemPoolFor, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
@@ -283,7 +283,7 @@ function relicsTab(v: CodexView): CodexTab {
       locked: !held,
       badge: held ? RARITY_NAME[r.rarity][0] : '',
       hue: RARITY_HUE[r.rarity],
-      icon: 'relic',
+      icon: relicMark(r.id),
       chips: [RARITY_NAME[r.rarity]],
       does: held ? `${r.desc}${r.downside ? `. Cost: ${r.downside}.` : ''}` : '',
       how: held ? 'Taken on a run. A relic lasts the rest of the run it is taken on.' : featLocked ? `Opens with the feat ${featName(r.unlock!)}.` : 'Not taken yet.',
