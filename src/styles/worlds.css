@@ -271,6 +271,15 @@
   transform: translateY(2px);
 }
 
+/* ------------------------------------------------------- the light set
+   Effects: Light (the setting, or a device that could not keep up —
+   `game/render/fxQuality`): the frames, strips, crest and sheen hold still. */
+:root[data-co-theme][data-fx='light'] :is(.mn-card, .pk-card, .pg-cta)::after,
+:root[data-co-theme][data-fx='light'] .pg-cta::before,
+:root[data-co-theme][data-fx='light'] .mn-card::before {
+  animation: none !important;
+}
+
 /* ----------------------------------------------------------- reduced motion
    Every flipbook, strip, crest and sheen stops on its first frame: the frames
    and textures stay, static. */

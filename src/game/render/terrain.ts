@@ -25,7 +25,9 @@
  */
 import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
+import type { FieldSeason } from '../data/fieldSeasons'
 import { pixmap } from './pixmap'
+import { seasonBake, seasonOnDeco, spriteAlpha } from './season'
 import { onSpritesReady, spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
@@ -108,6 +110,18 @@ export function drawnRoad(map: GameMap): Vec2[] {
  */
 const TERRAIN_CACHE_SIZE = 2
 let terrainCache: { key: string; canvas: HTMLCanvasElement }[] = []
+
+/**
+ * The season the battlefield wears (Oct 2026, `data/fieldSeasons.ts`): the
+ * run's hiring company's, set by `BattleCanvas`; null is the plain field. It
+ * is part of the bake's key, so a change re-bakes once and costs nothing per
+ * frame after.
+ */
+let fieldSeason: FieldSeason | null = null
+export function setFieldSeason(season: FieldSeason | null): void {
+  fieldSeason = season
+}
+export const activeFieldSeason = (): FieldSeason | null => fieldSeason
 onSpritesReady(() => {
   terrainCache = []
 })
@@ -129,6 +143,10 @@ function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   const road = spriteFor('road')
   drawSpriteTerrain(ctx, map, W, grass, road, style.path.edge, style.path.fill)
   ctx.setTransform(1, 0, 0, 1, 0, 0)
+  // The season, on the ground and the scenery, before the grade (so the grade
+  // still clears the enemies' reserved channels): the road and the danger
+  // ground are kept exactly as they are.
+  if (fieldSeason) seasonBake(ctx, W.w, W.h, fieldSeason, keepMask(map, W))
   // The environment is graded AFTER the dressing goes down, so the grade
   // reaches the decoration sprites (which is where the reserved-channel
   // violation lived) and never touches a gameplay glyph. The wood darkens
@@ -145,7 +163,7 @@ function bakedWorld(map: GameMap): HTMLCanvasElement | null {
   if (!style.sprites) return null
   // The pack stamp is in the key so a re-exported sprite pack re-bakes rather
   // than leaving a terrain built from the old art on screen.
-  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}`
+  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}:${fieldSeason?.name ?? '-'}`
   let hit = terrainCache.find((e) => e.key === key)
   if (!hit) {
     const baked = bakeTerrain(map)
@@ -999,8 +1017,35 @@ function drawPathDetail(ctx: CanvasRenderingContext2D, dr: Dressing, fill: strin
   }
 }
 
+/**
+ * What a season must not touch, as a mask over the bake (1 = keep): the road
+ * and its verge, and the danger ground — water, fire and cursed tiles — which
+ * are gameplay, read by their colour.
+ */
+function keepMask(map: GameMap, W: WorldBox): Uint8Array {
+  const c = document.createElement('canvas')
+  c.width = W.w
+  c.height = W.h
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.translate(-W.x0, -W.y0)
+  g.lineJoin = 'round'
+  g.lineCap = 'round'
+  g.strokeStyle = '#fff'
+  g.lineWidth = ROAD_W + 8
+  strokePolyline(g, drawnRoad(map))
+  g.fillStyle = '#fff'
+  const T = map.tile ?? 40
+  for (const t of map.tiles ?? []) if (t.block === 'water' || t.block === 'fire' || t.danger) g.fillRect(t.pos.x - T / 2 - 2, t.pos.y - T / 2 - 2, T + 4, T + 4)
+  const data = g.getImageData(0, 0, W.w, W.h).data
+  const out = new Uint8Array(W.w * W.h)
+  for (let i = 0; i < out.length; i++) out[i] = data[i * 4 + 3] > 0 ? 1 : 0
+  return out
+}
+
 function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
   if (!getActiveStyle().sprites) return
+  const season = fieldSeason?.caps || fieldSeason?.crowns ? fieldSeason : null
+  let salt = 0
   for (const d of dr.decos) {
     const spr = spriteFor(d.name)
     if (!spr) continue
@@ -1023,6 +1068,12 @@ function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
       ctx.restore()
     } else {
       ctx.drawImage(pm.img, x, y, w, h)
+    }
+    // The season on it, right after it, so the next piece in front covers it
+    // as it covers the piece.
+    if (season) {
+      const a = spriteAlpha(pm.img, w, h)
+      if (a) seasonOnDeco(ctx, a, x, y, w, h, !!d.flip, d.name.startsWith('tree'), season, salt++)
     }
   }
 }

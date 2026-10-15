@@ -90,6 +90,8 @@ export interface Scene {
    * panels it would show as fragments, or through a translucent one.
    */
   map?: boolean
+  /** The light set (`fxQuality`): no glows or washes behind the particles. */
+  light?: boolean
 }
 
 /** The slice of a 2D context the worlds draw with. */
@@ -317,11 +319,14 @@ const fire: World = {
     const floor = floorOf(h, scene)
     // The heat: a deep red band, an orange one nearer the coals, and the
     // flames themselves licking up all along the floor.
-    glowBand(pen, w, h, floor, Math.max(16, Math.round(h * 0.2)), '#b8321e', 0.3, t)
-    glowBand(pen, w, h, floor, Math.max(8, Math.round(h * 0.08)), '#ff8a2c', 0.4, t * 1.3)
-    // The screen's own foot smoulders too (round the dock on a desk).
-    if (floor < h - 8) glowBand(pen, w, h, h - 1, 10, '#b8321e', 0.3, t)
+    if (!scene?.light) {
+      glowBand(pen, w, h, floor, Math.max(16, Math.round(h * 0.2)), '#b8321e', 0.3, t)
+      glowBand(pen, w, h, floor, Math.max(8, Math.round(h * 0.08)), '#ff8a2c', 0.4, t * 1.3)
+      // The screen's own foot smoulders too (round the dock on a desk).
+      if (floor < h - 8) glowBand(pen, w, h, h - 1, 10, '#b8321e', 0.3, t)
+    }
     flameLine(pen, w, floor + 1, t, Math.max(6, Math.min(12, h * 0.045)), 0.85)
+    if (scene?.light) return
     // Heat shimmer: broken lines that waver through the glow.
     pen.fillStyle = '#ffd35e'
     for (let i = 0; i < 5; i++) {
@@ -402,7 +407,8 @@ const paint: World = {
     }
     return p({ kind: 'fleck', x: rand() * w, y: rand() * h, vx: (rand() - 0.5) * 5, vy: 3 + rand() * 6, life: 9 + rand() * 6, size: rand() < 0.6 ? 2 : 3, color: pick(rand, PAINTS), phase: rand() * TAU })
   },
-  backdrop(pen, w, h, t) {
+  backdrop(pen, w, h, t, scene) {
+    if (scene?.light) return
     // Three watercolour washes drifting slowly, dithered.
     const washes: [number, number, string][] = [
       [0.22, 0.3, '#c6a4ff'],
@@ -505,11 +511,13 @@ const forge: World = {
   },
   backdrop(pen, w, h, t, scene) {
     const floor = floorOf(h, scene)
-    glowBand(pen, w, h, floor, Math.max(10, Math.round(h * 0.1)), '#ff8a2c', 0.28, t * 0.5)
-    if (floor < h - 8) glowBand(pen, w, h, h - 1, 8, '#c8541c', 0.24, t * 0.5)
+    if (!scene?.light) {
+      glowBand(pen, w, h, floor, Math.max(10, Math.round(h * 0.1)), '#ff8a2c', 0.28, t * 0.5)
+      if (floor < h - 8) glowBand(pen, w, h, h - 1, 8, '#c8541c', 0.24, t * 0.5)
+    }
     // Each anvil glows under its hot bar, breathing, the sparks fly off it.
     FOUNTAINS.forEach((f, i) => {
-      dither(pen, f * w, floor - 10, 13, '#ff9a3a', 0.3 + 0.12 * Math.sin(t * 3 + i * 2), i)
+      if (!scene?.light) dither(pen, f * w, floor - 10, 13, '#ff9a3a', 0.3 + 0.12 * Math.sin(t * 3 + i * 2), i)
       drawAnvil(pen, f * w, floor, t, i)
     })
   },
@@ -684,7 +692,7 @@ const arcane: World = {
     // The crescent moon, top right, and its beam slanting down, dithered.
     const mx = w - 22
     const my = Math.round(h * 0.2)
-    dither(pen, mx, my, 13, '#c9d4ff', 0.2)
+    if (!scene?.light) dither(pen, mx, my, 13, '#c9d4ff', 0.2)
     pen.fillStyle = '#eef1fb'
     pen.globalAlpha = stepAlpha(0.85)
     for (let y = -7; y <= 7; y++)
@@ -693,6 +701,7 @@ const arcane: World = {
         const inBite = (x - 3) * (x - 3) + (y + 2) * (y + 2) <= 36
         if (inMoon && !inBite) pen.fillRect(mx + x, my + y, 1, 1)
       }
+    if (scene?.light) return
     pen.fillStyle = '#c9d4ff'
     const shimmer = Math.floor(t * 2) & 1
     for (let y = my; y < h; y += 1) {

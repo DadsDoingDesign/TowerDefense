@@ -8,6 +8,7 @@ import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import { useMenuStaged } from '../shell/staging'
 import { themeCss, themeFor, uiTheme } from './companyThemes'
+import { fxLevel, onFxLevel } from '../../game/render/fxQuality'
 import { fx } from './fxEngine'
 import { worldArtCss } from './themeArtDom'
 
@@ -20,6 +21,21 @@ export const useThemePreview = create<{ preview: ThemeId | null; set: (t: ThemeI
   preview: null,
   set: (preview) => set({ preview }),
 }))
+
+/**
+ * Mirror the effects level (`fxQuality`: the setting, the automatic step
+ * down, reduced motion) onto `<html data-fx>` — `worlds.css` stills the
+ * frames, strips, crest and sheen on `light` — and start or stop the loop.
+ */
+function installFxLevel(): void {
+  if (typeof document === 'undefined' || document.documentElement.dataset.fx) return
+  const apply = (l: string) => {
+    document.documentElement.dataset.fx = l
+    fx.levelChanged()
+  }
+  apply(fxLevel())
+  onFxLevel(apply)
+}
 
 /** Put the themes' stylesheet in the document, once. */
 function installThemeCss(): void {
@@ -65,6 +81,7 @@ export function useCompanyTheme(): ThemeId {
   const prev = useRef<string | null>(null)
   useLayoutEffect(() => {
     installThemeCss()
+    installFxLevel()
     fx.install()
     fx.setTheme(id)
     if (prev.current && prev.current !== id && screen === 'hub') fx.switchIn(id)

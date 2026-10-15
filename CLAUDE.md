@@ -279,7 +279,7 @@ result. Append a short note to the review log when you're done.
   `::after` under the words). The motion is `src/ui/theme/fxWorlds.ts`
   (pure: each world's ambient particles and backdrop, its press burst, its
   switch-in) run by ONE rAF loop in `fxEngine.ts` (`fx`, dev handle
-  `window.__fx`): the ambient layer `<ThemeFx>` (`.th-fx`, behind the page's
+  `window.__worldFx`): the ambient layer `<ThemeFx>` (`.th-fx`, behind the page's
   panels; over the map on the home) is drawn in software by `pixelPen.ts`
   at 24 fps (backdrop 12), capped (`ambientCap`: 60 on a phone, 110 on a
   desk), cleared under every word and panel, and measures the scene (the
@@ -287,6 +287,23 @@ result. Append a short note to the review log when you're done.
   press bursts are zoned to their `.pg-cta` (`burstClip`) and cleared under
   its label. Sleeps when hidden; nothing moves under reduced motion; dimmed
   under high contrast. Tests `tests/themeWorlds.test.ts`.
+  How much plays is `src/game/render/fxQuality.ts`: the setting
+  `settingsStore.effects` (Settings' "Effects: Full / Light", v6), an
+  automatic step down to Light when the measured rate stays under 45 fps for
+  2 s (back over 56 fps for 6 s, doubling after each relapse), and reduced
+  motion (`off`) over both; mirrored onto `<html data-fx>` for `worlds.css`.
+  Light: half the particles at half the cadence, no glows, frames still.
+  The battlefield wears the run's world too: its SEASON
+  (`src/game/data/fieldSeasons.ts`, named as the home map's `MAP_SEASONS`;
+  the hiring company's, your militia's chosen world's on the Sovereign
+  Route) is laid into the terrain bake by `src/game/render/season.ts`
+  (`terrain.setFieldSeason`, part of the bake key: ground speckle, snow caps
+  and crown flecks on the scenery, mist, washes — before the grade, with the
+  road and the danger ground masked out), and an EDGE BAND of the world's
+  particles (`src/game/render/edgeFx.ts`, `EdgeBand`, drawn in the battle's
+  own loop under the wagon and units) lives only in a thin band at the
+  view's edges, on cells clear of the road, every slot and the wagon. Tests
+  `tests/fieldWorlds.test.ts`. Dev: `window.__fxQuality`, `__seasonOff`.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

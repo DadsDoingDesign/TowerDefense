@@ -1,4 +1,6 @@
 import type { ThemeId } from '../../game/run/militiaTheme'
+import * as fxQuality from '../../game/render/fxQuality'
+import { fxLevel, noteFxFrame } from '../../game/render/fxQuality'
 import { PixelPen } from './pixelPen'
 import { ambientCap, burstClip, drawParticle, FX_PX, step, WORLDS, type Particle, type Pen, type Scene, type Sweep, type Zone } from './fxWorlds'
 
@@ -93,6 +95,7 @@ class FxEngine {
 
   private get still(): boolean {
     if (typeof document === 'undefined') return true
+    if (fxLevel() === 'off') return true
     if (document.documentElement.dataset.reducedMotion === 'true') return true
     return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
   }
@@ -205,7 +208,7 @@ class FxEngine {
         if (Number.isFinite(x) && Number.isFinite(y)) hot.push([(box.left + x) / FX_PX, (box.top + y) / FX_PX])
       }
     }
-    this.scene = { floor, hot, map: canvas.classList.contains('is-map') }
+    this.scene = { floor, hot, map: canvas.classList.contains('is-map'), light: fxLevel() === 'light' }
   }
 
   /** The words inside the live bursts' zones (CSS px boxes → effect pixels), for the overlay. */
@@ -299,6 +302,9 @@ class FxEngine {
       this.clear()
       return
     }
+    // The frame's length feeds the automatic step down to the light set.
+    if (this.ambient) noteFxFrame(now - this.last)
+    const light = fxLevel() === 'light'
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)) * this.timeScale
     this.last = now
     this.t += dt
@@ -310,7 +316,13 @@ class FxEngine {
     if (a) {
       this.fit(a)
       if (now - this.keptAt > 300) this.measureKeepOut(a.canvas, now)
-      const cap = ambientCap(world, a.w, a.h, a.w * FX_PX)
+      // The light set: half the particles (the oldest go first), no glows.
+      const cap = Math.round(ambientCap(world, a.w, a.h, a.w * FX_PX) * (light ? 0.5 : 1))
+      if (this.parts.length > cap) this.parts.splice(0, this.parts.length - cap)
+      if (this.scene.light !== light) {
+        this.scene = { ...this.scene, light }
+        if (this.bufs) this.bufs.at = -1e9
+      }
       const sc = this.scene
       if (!this.seeded) {
         while (this.parts.length < cap) this.parts.push(world.spawn(this.rand, a.w, a.h, true, sc))
@@ -322,14 +334,15 @@ class FxEngine {
       this.fading = this.fading.filter((q) => step(q, dt, a.w, a.h))
       // Drawn at a pixel-art cadence, in software (`PixelPen`), and put on
       // the canvas in one go.
-      if (now - this.ambientAt >= AMBIENT_MS) {
+      // The light set draws at half the cadence as well.
+      if (now - this.ambientAt >= AMBIENT_MS * (light ? 2 : 1)) {
         this.ambientAt = now
         const b = this.buffers(a)
         if (world.backdrop) {
           // The backdrop (glows, washes, the flame line) is redrawn a few
           // times a second; at full strength under high contrast's dim too
           // (it is already faint). Particles are dimmed.
-          if (now - b.at >= BACKDROP_MS || b.theme !== this.theme) {
+          if (now - b.at >= BACKDROP_MS * (light ? 2 : 1) || b.theme !== this.theme) {
             b.at = now
             b.theme = this.theme
             b.backdrop.clear()
@@ -390,6 +403,12 @@ class FxEngine {
     if (a || this.over.length || this.sweep) this.raf = requestAnimationFrame(this.tick)
   }
 
+  /** The effects level changed (`fxQuality`): start or stop the loop to match. */
+  levelChanged(): void {
+    if (this.still) this.clear()
+    else this.wake()
+  }
+
   /** Wire the presses and the tab's visibility, once. */
   install(): void {
     if (typeof document === 'undefined' || (window as unknown as { __fxInstalled?: boolean }).__fxInstalled) return
@@ -424,4 +443,8 @@ class FxEngine {
 
 export const fx = new FxEngine()
 
-if (import.meta.env?.DEV && typeof window !== 'undefined') (window as unknown as { __fx: FxEngine }).__fx = fx
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  ;(window as unknown as { __worldFx: FxEngine }).__worldFx = fx
+  // The effects level, for the review's measurements (`fxQuality`).
+  ;(window as unknown as { __fxQuality: typeof fxQuality }).__fxQuality = fxQuality
+}
