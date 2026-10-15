@@ -6,7 +6,7 @@ import { CURSED_DAMAGE_PCT, GROUND_EFFECTS, groundEffect, TERRAIN_RULE_IDS } fro
 import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
 import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
-import { CHARTER_ROWS, charterFacts, COMPANY_ROWS, companyFacts } from '../src/ui/shell/homeCard'
+import { CHARTER_ROWS, charterFacts, COMPANY_ROWS, companyBadge, companyFacts } from '../src/ui/shell/homeCard'
 import { charterSlot } from '../src/ui/shell/homeDock'
 
 /*
@@ -23,7 +23,7 @@ const WARS: War[] = [
 ]
 
 describe('the company card: a fixed form', () => {
-  it('every company, in every state, has the same four rows in the same order', () => {
+  it('every company, in every state, has the same three rows in the same order', () => {
     for (const company of COMPANY_IDS)
       for (const war of WARS)
         for (const market of [1, 1.3])
@@ -35,20 +35,26 @@ describe('the company card: a fixed form', () => {
             for (const next of ['Gilt Frame at 5', null]) {
               const facts = companyFacts({ company, staged, open, war, market, next })
               expect(facts.map((f) => f.key)).toEqual([...COMPANY_ROWS])
-              expect(facts.map((f) => f.label)).toEqual(['Ground', 'Raiders', 'Today', 'Next'])
+              expect(facts.map((f) => f.label)).toEqual(['Ground', 'Raiders', 'Next'])
+              // A one-off condition is a short badge in the head, never a row.
+              const badge = companyBadge({ company, staged, open, war, market, next })
+              if (badge) expect(badge.label.length, `${company}: ${badge.label}`).toBeLessThanOrEqual(16)
               // One line each: short enough for the 375px card (it is also cut in place, never wrapped).
               for (const f of facts) expect(f.value.length, `${company} ${f.key}: ${f.value}`).toBeLessThanOrEqual(32)
             }
   })
 
-  it('Today shows one condition, by priority, and "Usual terms" when none applies', () => {
-    const at = (war: War, market = 1) => companyFacts({ company: 'silk', staged: false, open: true, war, market, next: null })[2]
-    expect(at(null).value).toBe('Usual terms')
-    expect(at(null).tone).toBe('quiet')
-    expect(at(null, 1.3).value).toBe('Top price for silk ×1.3')
+  it('the head badge shows one condition, by priority, and nothing on most days', () => {
+    const at = (war: War, market = 1) => companyBadge({ company: 'silk', staged: false, open: true, war, market, next: null })
+    expect(at(null)).toBeNull()
+    expect(at({ desperate: false })).toBeNull()
+    expect(at(null, 1.3)).toMatchObject({ label: 'Top price ×1.3', tone: 'market' })
+    expect(at(null, 1.3)?.name).toContain('silk')
     // Desperate beats the market.
-    expect(at({ desperate: true }, 1.3).value).toMatch(/^Desperate: raiders \+\d+%$/)
-    expect(companyFacts({ company: 'spice', staged: true, open: true, war: null, market: 1, next: null })[2].value).toBe('Free escort · paid at every city')
+    expect(at({ desperate: true }, 1.3)).toMatchObject({ tone: 'bad' })
+    expect(at({ desperate: true }, 1.3)?.label).toMatch(/^Desperate \+\d+%$/)
+    // A first launch's CTA says "Take the free escort": no badge to say it again.
+    expect(companyBadge({ company: 'spice', staged: true, open: true, war: null, market: 1.3, next: null })).toBeNull()
   })
 
   it('Ground says what the ground does, from the one table; Raiders says what gets through', () => {
@@ -74,15 +80,15 @@ describe('the company card: a fixed form', () => {
 
 describe('the Buy Company card: the same frame', () => {
   const door = (skills: number, items: number) => charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, skills), items: UNLOCK_ITEM_KINDS.slice(0, items) })
-  it('four rows, locked, open or short of the fee', () => {
+  it('three rows, locked, open or short of the fee', () => {
     const states = [charterSlot(door(10, 8), 340), charterSlot(door(999, 999), CHARTER_FEE + 1), charterSlot(door(999, 999), CHARTER_FEE - 1240)]
     for (const s of states) {
       const facts = charterFacts(s)
       expect(facts.map((f) => f.key)).toEqual([...CHARTER_ROWS])
       expect(facts.length).toBe(COMPANY_ROWS.length)
     }
-    expect(charterFacts(states[0])[2].value).toBe(`10/${RANDOM_UNLOCK_SKILLS.length} skills · 8/${UNLOCK_ITEM_KINDS.length} items`)
-    expect(charterFacts(states[1])[2].value).toBe('Covers the fee')
-    expect(charterFacts(states[2])[2]).toMatchObject({ value: '1,240 gold short', tone: 'bad' })
+    expect(charterFacts(states[0])[1].value).toBe(`10/${RANDOM_UNLOCK_SKILLS.length} skills · 8/${UNLOCK_ITEM_KINDS.length} items`)
+    expect(charterFacts(states[1])[1].value).toBe('Covers the fee')
+    expect(charterFacts(states[2])[1]).toMatchObject({ value: '1,240 gold short', tone: 'bad' })
   })
 })

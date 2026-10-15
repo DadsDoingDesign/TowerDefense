@@ -770,7 +770,7 @@
 
 /* ------------------------------------------------------------- the card
    A fixed form: the focused company's flag, its road's goods and its name,
-   four one-line rows (Ground, Raiders, Today, Next) and the CTA. Every
+   three one-line rows (Ground, Raiders, Next) and the CTA. Every
    company's card — and the Buy Company card — is the same boxes. */
 .mn-card {
   display: grid;
@@ -784,7 +784,7 @@
 }
 .mn-card-head {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 10px;
   height: 48px;
@@ -877,6 +877,36 @@
   font-size: var(--fs-sm);
   font-weight: 800;
   color: var(--accent-text);
+}
+/* A one-off condition (desperate terms, the market's top price) at the right
+   of the head, level with the kicker. Most cards have none; it never changes
+   the head's height. */
+.mn-badge {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  margin-top: 2px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.mn-badge .fw-i {
+  width: 14px;
+  height: 14px;
+}
+.mn-badge.is-market {
+  background: var(--market);
+  color: var(--market-ink);
+}
+.mn-badge.is-bad {
+  background: var(--bad-text);
+  color: var(--ink-on-fill);
 }
 /* What a value's tone says: nothing special reads quiet; a condition in its colour. */
 .mn-fact.is-quiet .field-v {
@@ -1125,6 +1155,24 @@
   }
   .mn-facts {
     gap: 2px;
+  }
+  /* The head is a 250px column here: the badge takes its own line under the
+     name instead of squeezing it. The line is always reserved, so a company
+     with no badge keeps its name exactly where one with a badge has it. */
+  .mn-card-head {
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-rows: auto 22px;
+    row-gap: 4px;
+    height: auto;
+  }
+  .mn-card-head > .mn-livery {
+    grid-row: 1 / span 2;
+  }
+  .mn-badge {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: 0;
   }
 }
 

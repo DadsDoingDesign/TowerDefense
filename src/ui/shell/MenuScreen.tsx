@@ -6,7 +6,7 @@ import type { StandardLook } from '../../game/data/companyStandard'
 import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
 import { nextRewardWord, trackPlan } from '../../game/run/track'
-import { CHARTER_NAME, charterDoor } from '../../game/run/charter'
+import { charterDoor } from '../../game/run/charter'
 import { contractsLeft, seasonBars, type SeasonBar } from '../../game/run/tradeWar'
 import { useGameStore, type HomeFocus } from '../../state/gameStore'
 import { homeCompany } from '../../state/game/contractSlice'
@@ -26,7 +26,7 @@ import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
 import { useWar } from './war/WarParts'
 import { charterCta, charterSlot, charterSlotName, dockSlots, markText, SLOT_MARKS, slotName, type CharterSlot, type DockSlot } from './homeDock'
-import { charterFacts, companyFacts, type CardFact } from './homeCard'
+import { CHARTER_KICKER, charterFacts, companyBadge, companyFacts, type CardBadge, type CardFact } from './homeCard'
 import { barKind, seasonPanelName } from './homeSeason'
 import { companyVar } from '../channels'
 
@@ -61,8 +61,9 @@ export function useMenuMotion(): boolean {
  *    in its colour and its season, the rest sinks, its cities are named
  *    beside it. Nothing signs;
  *  - **the card**: a fixed form (`homeCard.ts`) — the focused company's
- *    flag (the way into its livery) and name, four rows (Ground, Raiders,
- *    Today, Next) and the one CTA, which opens its terms. With Buy Company in
+ *    flag (the way into its livery) and name, a badge for a one-off
+ *    condition, three rows (Ground, Raiders, Next) and the one CTA, which
+ *    opens its terms. With Buy Company in
  *    focus it is that card, in the same frame.
  *
  * ## No wiggle
@@ -474,10 +475,20 @@ function FactRow({ fact: f, onOpen }: { fact: CardFact; onOpen?: () => void }) {
   )
 }
 
+/** A one-off condition at the right of the card's head (`homeCard.companyBadge`): there only when it applies. */
+function HeadBadge({ badge: b }: { badge: CardBadge }) {
+  return (
+    <span className={`mn-badge is-${b.tone}`} role="img" aria-label={b.name} title={b.name}>
+      <Icon name={b.icon} />
+      <span>{b.label}</span>
+    </span>
+  )
+}
+
 /**
  * The Buy Company card (its slot in focus), in the company card's frame:
  * the Sovereign crest (padlocked while locked), "Sovereign Route" over the
- * title, the same four-row form — the road, its ground, the door (how much is
+ * title, the same three-row form — its ground, the door (how much is
  * unlocked; once open, whether the bank covers the fee), what delivery pays —
  * and the CTA: locked, it says how many unlocks are missing; open, "Buy
  * Company" with the fee on it, which opens the charter page (the militia's
@@ -497,7 +508,7 @@ function CharterCard({ slot, onBuy }: { slot: CharterSlot; onBuy: () => void }) 
           )}
         </span>
         <span className="mn-card-id">
-          <span className="mn-kicker">{CHARTER_NAME}</span>
+          <span className="mn-kicker">{CHARTER_KICKER}</span>
           <h2 className="mn-card-name" id="mn-card-name">
             Buy Company
           </h2>
@@ -524,7 +535,8 @@ function CharterCard({ slot, onBuy }: { slot: CharterSlot; onBuy: () => void }) 
 /**
  * The focused company's card, under the dock: its flag (the way into its
  * livery), the road's goods and the company's name, then the fixed form —
- * Ground, Raiders, Today, Next (`homeCard.companyFacts`) — and the one CTA.
+ * Ground, Raiders, Next (`homeCard.companyFacts`), a badge for a one-off
+ * condition (`companyBadge`) — and the one CTA.
  * The dock already says your standing and the share, and the map names the
  * cities, so the card does not.
  */
@@ -563,7 +575,9 @@ function CompanyCard({
   const co = companyById(company)
   // What the track's next level pays, by name (Draft 4 · B).
   const next = nextRewardWord(trackPlan(company, { xp, term, skills, items }))
-  const facts = companyFacts({ company, staged, open, war: war ?? null, market, next })
+  const state = { company, staged, open, war: war ?? null, market, next }
+  const facts = companyFacts(state)
+  const badge = companyBadge(state)
   return (
     <section className="mn-card" style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
       <div className="mn-card-head">
@@ -585,6 +599,7 @@ function CompanyCard({
             {co.name}
           </h2>
         </span>
+        {badge && <HeadBadge badge={badge} />}
       </div>
       <div className="mn-facts">
         {facts.map((f) => (

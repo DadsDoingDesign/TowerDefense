@@ -6,19 +6,20 @@
  * row of chips, as many as the company had facts, so it wrapped and changed
  * height on every pick, and the dock and the map moved with it.
  *
- * Now every company's card is the same four rows, in the same places — only
- * the values change — and the Buy Company card is four rows in the same frame:
+ * Now every company's card is the same three rows, in the same places — only
+ * the values change — and the Buy Company card is three rows in the same frame:
  *
  *  - **Ground** — what the road's ground DOES to the field, with its marks
  *    (`terrain.GROUND_EFFECTS`), not its place-name;
  *  - **Raiders** — the armour its armoured fights lean to and the damage that
  *    goes through it, or "Plate or wards, evenly";
- *  - **Today** — ONE reserved slot for the condition that matters most now
- *    (desperate terms, the market of the day; the free escort
- *    on a first launch), and "Usual terms" when none does — the row is always
- *    there. The dock's slot marks carry the rest, and every one is in the
- *    slot's name;
  *  - **Next** — what the track pays next (the way into the track).
+ *
+ * A one-off condition — desperate terms, the market of the day — is not a row: most days no company has one, and
+ * a row that read "Usual terms" on nearly every card was a row with no job
+ * (the designer, Oct 2026: "the terms is a one off so most won't have
+ * anything"). It is a badge at the right of the card's head (`companyBadge`),
+ * there only when it applies; the head's height does not change with it.
  *
  * Each row is one line (`.field-k` / `.field-v`), shortened in place at a
  * narrow width, never wrapped. `tests/homeCard.test.ts` pins the form.
@@ -32,7 +33,7 @@ import type { IconKey } from '../channels'
 import type { CharterSlot } from './homeDock'
 
 /** How a value reads: plain, quiet (nothing special), or in a condition's colour. */
-export type FactTone = 'plain' | 'quiet' | 'market' | 'bad' | 'free'
+export type FactTone = 'plain' | 'quiet' | 'market' | 'bad'
 
 export interface CardFact {
   /** The row's key (stable: a React key and the test's handle). */
@@ -54,15 +55,27 @@ export interface CardFact {
   gold?: number
 }
 
-/** The four rows every company card has, in order. */
-export const COMPANY_ROWS = ['ground', 'raiders', 'today', 'next'] as const
-/** The Buy Company card's four rows, in the same frame. */
-export const CHARTER_ROWS = ['road', 'ground', 'door', 'pays'] as const
+/** The three rows every company card has, in order. */
+export const COMPANY_ROWS = ['ground', 'raiders', 'next'] as const
+/** The Buy Company card's three rows, in the same frame. */
+export const CHARTER_ROWS = ['ground', 'door', 'pays'] as const
+/** The Buy Company card's kicker, where a company's says its goods: what its road carries. */
+export const CHARTER_KICKER = 'Every company’s goods'
+
+/** A one-off condition, as a badge at the right of the card's head. */
+export interface CardBadge {
+  /** Short: it shares the head with the company's name. */
+  label: string
+  /** The condition in words, for its accessible name and tooltip. */
+  name: string
+  tone: Exclude<FactTone, 'plain' | 'quiet'>
+  icon: IconKey
+}
 
 /** What a damage-type mod's goblins let through: the other damage type. */
 const answer = (mod: (typeof ENEMY_MODS)[number]): string => (mod.physResist > 0 ? 'magic' : 'steel')
 
-export function companyFacts(o: {
+type CardState = {
   company: CompanyId
   /** A first launch (LS3): the free escort. */
   staged: boolean
@@ -74,7 +87,9 @@ export function companyFacts(o: {
   market: number
   /** What its track pays next, by name (`track.nextRewardWord`), or null when all is earned. */
   next: string | null
-}): CardFact[] {
+}
+
+export function companyFacts(o: CardState): CardFact[] {
   const co = companyById(o.company)
   const g = groundEffect(co.ground.rules)
   const mod = co.armour ? ENEMY_MODS.find((m) => m.id === co.armour) : undefined
@@ -97,25 +112,26 @@ export function companyFacts(o: {
   return [
     { key: 'ground', label: 'Ground', value: g.effect, name: `Ground: ${g.line}`, tone: 'plain', ground: g.marks },
     raiders,
-    todayFact(o, co.noun),
     nextFact(o),
   ]
 }
 
-/** The Today row: the one condition that matters most now, or "Usual terms". */
-function todayFact(o: Parameters<typeof companyFacts>[0], noun: string): CardFact {
-  const at = (value: string, tone: FactTone, icon: IconKey | undefined, name = value): CardFact => ({ key: 'today', label: 'Today', value, name: `Today: ${name}`, tone, icon })
-  if (o.staged) return at('Free escort · paid at every city', 'free', 'gold')
-  const w = o.war
-  if (w?.desperate) {
+/** The one condition that matters most now, by priority, or null — most days, for most companies. */
+export function companyBadge(o: CardState): CardBadge | null {
+  // A first launch's CTA already says it: "Take the free escort".
+  if (o.staged) return null
+  if (o.war?.desperate) {
     const pct = Math.round((DESPERATE_STRENGTH - 1) * 100)
-    return at(`Desperate: raiders +${pct}%`, 'bad', 'warn', `desperate terms this season: its raiders are ${pct}% stronger`)
+    return { label: `Desperate +${pct}%`, name: `Desperate terms this season: its raiders are ${pct}% stronger`, tone: 'bad', icon: 'warn' }
   }
-  if (o.market > 1) return at(`Top price for ${noun} ×${o.market}`, 'market', 'gold', `the market pays ×${o.market} for ${noun} today`)
-  return at('Usual terms', 'quiet', undefined, 'usual terms, nothing special')
+  if (o.market > 1) {
+    const noun = companyById(o.company).noun
+    return { label: `Top price ×${o.market}`, name: `The market pays ×${o.market} for ${noun} today`, tone: 'market', icon: 'gold' }
+  }
+  return null
 }
 
-function nextFact(o: Parameters<typeof companyFacts>[0]): CardFact {
+function nextFact(o: CardState): CardFact {
   if (!o.open && !o.staged) return { key: 'next', label: 'Next', value: 'Not hiring yet', name: 'Next: its track opens once it hires you', tone: 'quiet' }
   const v = o.next ?? 'All earned'
   return { key: 'next', label: 'Next', value: v, name: `Next on its track: ${v}`, tone: o.next ? 'plain' : 'quiet' }
@@ -123,7 +139,7 @@ function nextFact(o: Parameters<typeof companyFacts>[0]): CardFact {
 
 const n = (x: number) => x.toLocaleString('en')
 
-/** The Buy Company card's four rows: what the road is, its ground, the door (or the bank), what it pays. */
+/** The Buy Company card's three rows: its ground, the door (or the bank), what it pays. */
 export function charterFacts(s: CharterSlot): CardFact[] {
   const g = GROUND_EFFECTS.sovereign
   const door: CardFact = !s.open
@@ -138,7 +154,6 @@ export function charterFacts(s: CharterSlot): CardFact[] {
       ? { key: 'door', label: 'Bank', value: `${n(s.short)} gold short`, name: `Bank: ${n(s.short)} gold short of the ${n(s.fee)} fee`, tone: 'bad' }
       : { key: 'door', label: 'Bank', value: 'Covers the fee', name: `Bank: covers the ${n(s.fee)} fee`, tone: 'plain' }
   return [
-    { key: 'road', label: 'Road', value: 'Every company’s goods', name: 'Road: your own, carrying every company’s goods', tone: 'plain' },
     { key: 'ground', label: 'Ground', value: g.effect, name: `Ground: ${g.line}`, tone: 'plain', ground: g.marks },
     door,
     { key: 'pays', label: 'Pays', value: 'on delivery', name: `Pays ${n(CHARTER_PAYOUT)} gold on delivery`, tone: 'plain', gold: CHARTER_PAYOUT },
