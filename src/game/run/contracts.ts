@@ -56,8 +56,14 @@ export const CRATE_VALUE = 100
  * destination was worth 100 × the delivery chance against its 50-gold price:
  * the stakes whose next crate landed there (4 and 8) paid LESS than the stake
  * below (REPORT §13: 189 → 149 and 219 → 173). See {@link cratesSoldAt}.
+ *
+ * The destination's 400 → **600** in the gameplay pass: the road got harder
+ * (a zero-meta escort delivers ~16%, not ~22%), and a crate that rides to
+ * the destination is worth its value × the delivery chance — at 400 the
+ * second crate (the first to ride there) paid 4 gold LESS than one crate
+ * (REPORT §13: 164 → 160) against its 50-gold stake.
  */
-export const CITY_CRATE_VALUE: readonly [number, number, number] = [100, 130, 400]
+export const CITY_CRATE_VALUE: readonly [number, number, number] = [100, 130, 600]
 /** The absolute ceiling on a stake, whatever the standing. */
 export const MAX_CRATES = 8
 /**

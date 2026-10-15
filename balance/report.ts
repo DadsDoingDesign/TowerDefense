@@ -1980,7 +1980,15 @@ function applyGrant(roster: Sentinel[], g: RewardGrant, addMods: (m: EffectMods)
  * ceiling above it means the campaign does not notice whether the player brought
  * a team, which makes every unlock cosmetic.
  */
-const FRESH_WIN_BAND: [number, number] = [0.15, 0.35]
+/*
+ * Re-gated in the gameplay pass (Oct 2026): 15–35% → 12–25%. The designer
+ * wants the game medium-to-hard for a competent human, and the modelled player
+ * is weaker than one (it never re-posts in a breather, presses the Rally Horn
+ * by rule, and reads a card by DPS alone), so the bot's band sits lower than
+ * the human experience it stands for. The floor stays a floor — a first-timer
+ * can win — and the ceiling falls so the first contract stays tense.
+ */
+const FRESH_WIN_BAND: [number, number] = [0.12, 0.25]
 /**
  * The ceiling's old rationale — "the campaign is not noticing whether the player
  * brought a team" — turned into a comparison that can actually fail.
@@ -2182,7 +2190,7 @@ if (want(11)) {
     `4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
   )
   line('')
-  line(`The design *target* inside the band remains **15–25%** on the gated line. The band`)
+  line(`The design *target* inside the band is **12–20%** on the gated line since the gameplay pass (it was 15–25%: see §13's re-gate). The band`)
   line(`is wide partly because this is a Monte Carlo over ${FRESH_RUNS} runs of a *modelled* player`)
   line(`(1σ ≈ ${f1(Math.sqrt(0.25 / FRESH_RUNS) * 100)}pt), and partly for a reason that belongs in the open.`)
   line('')
@@ -2343,10 +2351,20 @@ const BANNER_RUNS = Number(process.env.FW_BANNER_RUNS) || 600
  * (1–3pt): a per-step point estimate would pass or fail on the resample.
  */
 const CRATE_MIN_REL_COST = 0.08
-/** The run-level gates on contract delivery (October audit, designer item 1). */
-const ZERO_ESCORT_BAND: [number, number] = [0.2, 0.3]
-const VETERAN_ESCORT_BAND: [number, number] = [0.35, 0.55]
-const VETERAN_MAX_STAKE_BAND: [number, number] = [0.1, 0.2]
+/**
+ * The run-level gates on contract delivery (October audit, designer item 1),
+ * re-gated in the gameplay pass (Oct 2026; the designer: "the game should be
+ * med to hard"): zero-meta escort 20–30% → 12–20%, veteran escort 35–55% →
+ * 30–45%, veteran max stake 10–20% → 8–16%. The harness's player is weaker
+ * than a competent human (see `FRESH_WIN_BAND`), so these are the bot's
+ * numbers for a game a human should find medium-to-hard: a first militia's
+ * free escort is won about one time in six by the bot — winnable, and tense —
+ * and the veteran's max stake about one in eight. REPORT §13's "gameplay
+ * pass" block has the before / after.
+ */
+const ZERO_ESCORT_BAND: [number, number] = [0.12, 0.2]
+const VETERAN_ESCORT_BAND: [number, number] = [0.3, 0.45]
+const VETERAN_MAX_STAKE_BAND: [number, number] = [0.08, 0.16]
 /** §13c's sample size a tier (the veteran's ladder). */
 const VETERAN_RUNS = Number(process.env.FW_VETERAN_RUNS) || BANNER_RUNS
 
@@ -2684,13 +2702,41 @@ if (want(13)) {
   line('   militia signs. (§11 keeps its own first-timer floor and ceiling on the shipped routing lines.)')
   line(`2. **Every crate costs at least ${pct(CRATE_MIN_REL_COST)} of the tier below's delivery rate**, read off the ladder's log-linear`)
   line('   fit, and **no crate measurably makes the road easier** (a rise beyond twice its paired s.e., §12\'s noise floor). This replaced')
-  line('   "≥ 3pt per crate", which no ladder that ends at a 10–20% max stake can meet: at 15% delivery a 3pt')
+  line('   "≥ 3pt per crate", which no ladder that ends at an 8–16% max stake can meet: at 15% delivery a 3pt')
   line('   step is a 20% cut. The fit, not each step, carries the floor because one step\'s paired s.e. at')
   line(`   ${BANNER_RUNS} runs (≈2pt) is larger than an 8% step (1–3pt).`)
   line('3. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every')
   line('   tier — a stake whose payout does not cover the difficulty it adds is a trap. (Kept as it was.)')
   line('')
   line('Gates 2 and 3 hold on this ladder and on the veteran\'s (§13c); the veteran\'s escort and max stake have bands of their own.')
+  line('')
+  line('**The gameplay pass (October 2026) — re-gated toward medium-to-hard.** The designer: *"the game should be med to hard"*.')
+  line('The modelled player is weaker than a competent human — it never re-posts in a breather, presses the Rally Horn by rule')
+  line('and reads a card by DPS alone — so a human finds the game easier than these numbers say. The pass took power out of the')
+  line('early road rather than making fights unreadable: loot rarity follows the act (§3b: Epic-or-better 24% of act 1\'s rolls → ~5%),')
+  line('and a hero is hired only at a city (no recruit stops; three candidates, four with the Hiring Hall). Then the Threat curve')
+  line('was refitted to the new bands (`threat.ACT_STEPS` [1.19, 1.2, 1.36] → [1.07, 1.11, 1.28]; the final boss ×0.48 → ×0.64, so it')
+  line('still kills ≥ 10% of §6\'s arrivals) and the top stakes\' last leg steepened (`watch.LAST_LEG`, 5–8 crates). Measured with')
+  line('`tune.ts` on these seeds, adaptive line, Rosethread\'s road:')
+  line('')
+  line('| Step | Zero-meta escort | First-timer line (§11) | Veteran escort | Veteran max stake | n |')
+  line('|---|--:|--:|--:|--:|--:|')
+  line('| Before (the shipped game) | 21.5% | 19.7% | 40.3% | 11.7% | 600 |')
+  line('| + loot rarity by act | 11.3% | 15.5% | 27.2% | 7.7% | 600 |')
+  line('| + hires only at cities | 5.8% | 5.5% | 22.7% | 4.7% | 600 |')
+  line('| + the refitted curve and stakes (this report) | see below | see §11 | see §13c | see §13c | 600 |')
+  line('')
+  line('**The bands, and why.** Zero-meta escort **20–30% → 12–20%**: a first militia\'s free contract is won about one time in six')
+  line('by the bot — winnable, the first contract still teaches (it is staged, §11), and tense for a human. Veteran escort')
+  line('**35–55% → 30–45%** and max stake **10–20% → 8–16%**: the late game stays a real wager. §11\'s first-timer line')
+  line('**15–35% → 12–25%** (its floor still a floor: the line a first-timer walks must be winnable). The per-crate cost (≥ 8%')
+  line('relative) and "every crate pays more" are unchanged.')
+  line('')
+  line('**Should a hire cost gold?** No. Priced at 60 gold from the purse (`FW_HIRE_PRICE=60`; the modelled player pays when')
+  line('it can and hires nobody when it cannot), a zero-meta escort read **15.8%** against **16.0%** free, and the veteran\'s **41.3%**')
+  line('against **41.0%** (n=600, paired; ±1.5–2pt): the purse at a city holds the road\'s gold, so the price was always paid — a')
+  line('flat tax on the next merchant, not a decision. The scarcity is the city itself (two hires a run), and the city\'s pay goes')
+  line('to the bank, not the purse. The hire stays free.')
   line('')
   {
     const z = tierRows[0].win
