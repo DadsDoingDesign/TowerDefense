@@ -112,24 +112,38 @@ moves, the ambient drawn in software at 24 fps and capped at 60 particles on
 a phone; the frame flickers only on the panels you act on; the battle HUD's
 trims are still.
 
-**On the battlefield** (the designer: "Edges only", and "Map should have
-seasonal themes tho for battles"): the field wears the run's SEASON — late
-summer (Peppercorn: amber light, fallen leaves, turning crowns), spring
-(Easel House: fresh green, blossom), overcast (Ironvein: drained to slate),
-misty morning (Rosethread: a low haze), frost (Moonquill: snow on every tree
-and rock, rime on the grass) — baked once per map on the ground and the
-scenery only; the road, the danger ground and everything over the bake (slots,
-units, shots, the wagon) keep their colours, and the environment grade still
-runs after it. The world's particles drift in a thin band at the view's
-edges (embers and leaves, paint and blossom, sparks and drizzle, petals and
-mist, snow and stars), only on ground clear of the road, the slots and the
-wagon, under the wagon and the units.
+**On the battlefield** (the designer: "Edges only", "Map should have
+seasonal themes tho for battles", then "map seasons should have more visual
+interest beyond a color filter"): the field wears the run's SEASON, and each
+season is a PLACE you can name from a still, in greyscale too:
+
+| Season | Scenery (baked) | Props (baked) | Weather (moving) |
+|---|---|---|---|
+| Late summer (Peppercorn) | larches turned amber, rust and crimson; maples in the wood; the grass gone to straw in patches; a low sun from the west, long shadows | hay bales, stooks, sunflowers, pumpkins; leaf drifts on the grass | dust motes and seed fluff, a few leaves |
+| Spring (Easel House) | fresh pines; pink and white blossom trees | flower clumps on the meadow and in the wood | petals, two butterflies |
+| Overcast (Ironvein) | dark wet pines, rocks with a wet shine, rain-dark grass | puddles with the sky in them, mud | rain (a sheet at the edges, streaks and splashes), cloud shadows, a rare far flash at the margins |
+| Misty morning (Rosethread) | pines softened by haze, a pale low light, dew | reeds and lily pads on the lakes' rims, mushrooms | fog banks drifting along the top and bottom at two speeds, dew twinkling |
+| Frost (Moonquill) | snow over the ground with the blades poking through, snow-laden pines with icicles, rocks and bushes under snow, the lakes' rims frozen | snow drifts | steady snow (a sheet at the edges, flakes over the middle) |
+
+The scenery and props are baked once per map (`render/season.ts`,
+`seasonArt.ts`; placement a hash of the field and the season); the road and
+its verge, the danger ground (water, fire, cursed) and every open tile's
+standing spot keep their own look, upright props stand only on forest tiles,
+and the environment grade still runs after it (a season's own accents keep
+their hue through its gold cut, a little less saturated than the units). The
+weather (`render/weatherFx.ts`) is drawn under the wagon and the units, faint
+over the game (a third of its strength, nothing lands there) and full on the
+clear ground at the margins; the fog and the flash never thicken over the
+road's way in or the wagon. The world's particles still drift in their thin
+band at the view's edges, at half their old share beside the weather.
 
 **Effects: Full / Light** (Settings, `fxQuality`): Light halves the particles
 and their cadence, drops the glows and stills the frames; on Full a device
 that cannot hold 45 fps steps down to Light by itself and back once it has
-headroom (with hysteresis). Reduced motion stops all of it; the season's tint
-stays.
+headroom (with hysteresis). On the battlefield Light halves the weather's
+particles and fog banks, keeps one sheet of rain or snow and drops the cloud
+shadows and the flash. Reduced motion stops all of it; the season's baked
+scenery stays.
 
 ### Parchment / wood inks
 | Token | Value | Use |
@@ -539,8 +553,10 @@ agree it, then edit this section.
 | World ambient layer (`ThemeFx`, `.th-fx`, `fxEngine` / `fxWorlds`) | Makes the screen the company's place: its particles and glows between and behind the panels, over the home's map | Sitting under a word; anything over the battlefield |
 | CTA strip and card crest (`.pg-cta::before`, `.mn-card::before`) | The world on the one primary action (flames, paint, sparks, a ribbon and stitch, runes along its lip), and Peppercorn's flames licking up from its card | A second CTA; anything over a label |
 | Press burst (`fx.burst`, the overlay `.th-fx-over`) | Answers a press of the primary CTA in the world's own effect, on the button and its margins only | Crossing the panel's text; firing on any other control |
-| Battle season (`fieldSeasons.ts`, `render/season.ts`) | Says whose road the fight is on, in the field's own weather — the hiring company's season baked into the ground and the scenery | Touching the road, the danger ground, a slot, a unit, a shot or the wagon |
-| Battle edge band (`render/edgeFx.ts`, `EdgeBand`) | The world's particles in a thin band at the battlefield's edges | Crossing the road, a slot or the wagon; drawing over a unit |
+| Battle season (`fieldSeasons.ts`, `render/season.ts`, `seasonArt.ts`) | Says whose road the fight is on by making the field a place — the hiring company's season baked into the ground and the scenery: repainted pines, broadleaf trees, a ground cover, rocks, lakes' rims, the light | Touching the road, the danger ground, a slot, a unit, a shot or the wagon |
+| Season props (`FieldSeason.props`, `terrain.seasonScenery`) | Say the season with things in it — bales and sunflowers, flowers, puddles and mud, reeds and pads, drifts — upright ones on forest tiles only, flat ones off every standing spot | Standing on an open tile (they would read as what blocks it); the road, the danger ground, the wagon |
+| Season weather (`render/weatherFx.ts`, `WeatherLayer`) | Says the season in motion — rain, snow, petals, dust, fog banks, cloud shadows, a far flash — full at the margins, faint over the game, under the wagon and the units | Drawing over a unit, a shot, an HP bar or a plaque; thickening over the road or the wagon; moving under reduced motion |
+| Battle edge band (`render/edgeFx.ts`, `EdgeBand`) | The world's particles in a thin band at the battlefield's edges | Crossing the road, a slot or the wagon; drawing over a unit; the season's weather (that is the weather layer) |
 | Effects setting (Settings' "Effects", `settingsStore.effects`) | Chooses Full or Light for the worlds' motion (Full steps down by itself on a slow device) | Replacing reduced motion, which stops it all |
 | Switch-in (`fx.switchIn`) | Marks the change of world when you focus another road at home (or try a theme on) | Playing on the way into a run, on first paint, or under reduced motion |
 | Theme swatch (`ThemeSwatch`, `.th-swatch`) | Shows a UI theme as itself — its panel, its accent across the top, its CTA along the foot — in the theme's own colours whatever the page wears; always beside the theme's name | Standing in for the name; any other colour sample |
