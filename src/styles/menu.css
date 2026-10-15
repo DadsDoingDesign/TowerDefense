@@ -297,36 +297,24 @@
   font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
-.mn-militia {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: none;
-  min-width: var(--hit-min);
-  height: var(--hit-min);
-  padding: 0 6px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-  background: var(--glass);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 600;
+/* Your company's flag in the seal's place (once one is founded): the mark's
+   box, the flag at the sheet's double, a tap from its builder. */
+.mn-flagmark {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
   cursor: pointer;
 }
-.mn-militia .banner {
-  flex: none;
-  height: 22px;
+.mn-flagmark .banner {
+  height: 40px;
   width: auto;
 }
-/* A phone shows the militia's flag; its name is the button's. */
-.mn-militia-name {
+/* A phone shows the flag; your company's name is the button's. */
+.mn-own-title {
   display: none;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* The places: one carved plate each — the signposts' planed wood — its mark
@@ -410,13 +398,12 @@
       repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.06) 7px 9px),
       var(--sign-wood-on);
   }
-  .mn-militia:hover {
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  .mn-flagmark:hover {
     background: var(--glass-strong);
   }
 }
 .mn-place:focus-visible,
-.mn-militia:focus-visible {
+.mn-flagmark:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
@@ -433,10 +420,6 @@
   }
   .mn-bank {
     font-size: var(--fs-sm);
-  }
-  .mn-militia {
-    min-width: 40px;
-    padding: 0 4px;
   }
   .mn-places {
     gap: 3px;
@@ -1078,15 +1061,34 @@
     color: var(--text);
   }
   /* The bank, set off from the name by a hairline. */
-  .mn-title + .mn-bank {
+  .mn-title + .mn-bank,
+  .mn-own-title + .mn-bank {
     padding-left: 12px;
     border-left: 1px solid var(--line-strong);
   }
-  .mn-militia {
-    padding: 0 12px 0 8px;
+  .mn-flagmark .banner {
+    height: 48px;
   }
-  .mn-militia-name {
-    display: inline;
+  /* Once you own a company, its name is the plaque's: the game's name stays
+     the page's title for a screen reader. */
+  .mn-purse.is-own .mn-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .mn-purse.is-own .mn-own-title {
+    display: block;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--text);
   }
   .mn-places {
     gap: 6px;

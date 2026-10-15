@@ -48,7 +48,8 @@ export function useMenuMotion(): boolean {
  *
  *  - **the bar** across the top: the purse — one small plaque holding the
  *    seal (the screen's title, spoken; written beside it on a desk) and the
- *    bank — your militia's banner once it is founded, and one carved plate
+ *    bank — your company's flag in the seal's place once it is founded (its
+ *    builder a tap away), and one carved plate
  *    per place — the HQ, the sealed crates, the Codex, Settings — its mark
  *    and its name (a locked one charred, with its padlock, saying what opens
  *    it); under the purse, while the trade war is on, the season panel (its
@@ -222,24 +223,30 @@ export function MenuScreen({
             reader and a translator can use; a phone shows only the seal, a
             desk the seal and the name. The bank is named after the first
             contract (LS3/LS4). */}
-        <div className="mn-purse">
-          <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
+        <div className={`mn-purse${militia ? ' is-own' : ''}`}>
+          {/* Once you own a company, its flag takes the seal's place: the
+              purse is yours, and the flag is a tap from its builder. */}
+          {militia ? (
+            <button type="button" className="mn-mark mn-flagmark" onClick={onMilitia} aria-label={`${militia.name}: edit your militia’s name and flag`} title={militia.name}>
+              <Banner look={militia} scale={2} />
+            </button>
+          ) : (
+            <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
+          )}
           <h1 className="mn-title" tabIndex={-1}>
             Merchant Mercenaries
           </h1>
+          {militia && (
+            <span className="mn-own-title" aria-hidden="true">
+              {militia.name}
+            </span>
+          )}
           {!staged && (
             <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
               <Gold n={bank} />
             </span>
           )}
         </div>
-        {/* Your militia: its flag, a tap from its builder. */}
-        {militia && (
-          <button type="button" className="mn-militia" onClick={onMilitia} aria-label={`${militia.name}: edit your militia`} title={militia.name}>
-            <Banner look={militia} scale={1} />
-            <span className="mn-militia-name">{militia.name}</span>
-          </button>
-        )}
         <nav className="mn-places" aria-label="Places">
           {places.map((o) => (
             <button
