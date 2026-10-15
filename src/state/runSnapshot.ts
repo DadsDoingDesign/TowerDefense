@@ -123,13 +123,21 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * from its company's own list (three on the Sovereign Route), each an id, the
  * target it was dealt and its count (`run/asks.readAsks`). A v17 payload has
  * none, and settles exactly as it was signed.
+ *
+ * v19 — the gameplay pass (Oct 2026): no recruit stops. A map node typed
+ * `recruit` loads as a battle (`asBattle`, every version), a recruit event is
+ * dropped (the node stays un-cleared and can be entered again) and
+ * `recruitOptions` is no longer written or read.
  */
-export const RUN_SNAPSHOT_VERSION = 18
+export const RUN_SNAPSHOT_VERSION = 19
+
+/** A recruit stop from before the gameplay pass, read as the battle it is now. */
+const asBattle = (n: MapNode): MapNode => ((n.type as string) === 'recruit' ? { ...n, type: 'battle' } : n)
 
 /** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
 type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
 type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
-type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
+type EventKind = 'merchant' | 'shrine' | 'campfire'
 
 /**
  * The mid-map fork, as stored (v4).
@@ -154,7 +162,9 @@ interface CrossroadsSnap {
 const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'battle']
 const PHASES: readonly RunPhase[] = ['active', 'won', 'lost', 'cashedOut']
 const STATUSES: readonly ContractStatus[] = ['open', 'delivered', 'cashedOut', 'lost']
-const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
+// A save parked on a recruit stop (before the gameplay pass) drops the event:
+// the stop is a battle now (`asBattle`), un-cleared, and can be entered again.
+const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'campfire']
 const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
@@ -258,7 +268,6 @@ export interface RunSnapshot {
   merchant: MerchantStock | null
   /** Shrines carry a closure; only the id survives JSON. */
   shrineOfferId: string | null
-  recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
   /** v7: relics held, by id. An id this build does not know grants nothing. */
@@ -342,7 +351,6 @@ export interface RunStateSource {
   lastLoot: Item[]
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
-  recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
   relics: string[]
@@ -401,7 +409,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     lastLoot: s.lastLoot,
     merchant: s.merchant,
     shrineOfferId: s.shrineOffer?.id ?? null,
-    recruitOptions: s.recruitOptions,
     reward: s.reward,
     runMods: s.runMods,
     relics: s.relics,
@@ -452,7 +459,7 @@ const CLASS_STYLE: Readonly<Record<Archetype, HeroStyle>> = { fighter: 'swing', 
  * `battleMapId` has always been checked against the map registry, and the
  * comment on `snapshotBattleMap` explains why: "a map this build does not have
  * is not something to silently substitute". Every OTHER structured field was a
- * bare cast — `currentWave`, `reward`, `merchant`, `recruitOptions`, `roster`,
+ * bare cast — `currentWave`, `reward`, `merchant`, `roster`,
  * `inventory` — so a payload could name anything at all and the crash landed
  * wherever the value was first dereferenced, several screens later.
  *
@@ -1197,15 +1204,15 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // malformed one means we cannot hand back the run that was saved. Refusing is
   // not discarding — `payoutFromRaw` still pays this payload its marks.
   const inventory = arr<Item>(o.inventory)
-  const recruitOptions = arr<Sentinel>(o.recruitOptions)
+  // A recruit stop's candidates (before the gameplay pass) are not read back:
+  // there are no recruit stops, and the stop itself loads as a battle.
   if (!roster.every(validSentinel)) return null
   if (!inventory.every(validItem)) return null
-  if (!recruitOptions.every(validSentinel)) return null
   const reward = Array.isArray(o.reward) ? (o.reward as RewardCard[]) : null
   if (reward && !reward.every(validRewardCard)) return null
   const merchant = o.merchant ?? null
   if (merchant !== null && !validMerchant(merchant)) return null
-  // The fork's recruit branch is `recruitOptions` under another name, and its
+  // The fork's recruit branch is a city's hires, and its
   // mutation branch was rolled from the seeded stream at fork time — both are
   // earned, neither is re-derivable, so they follow the same rule.
   const crossroads = migrateCrossroads(o.crossroads)
@@ -1252,7 +1259,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   const refund = version < 7 ? legacyUpgradeRefund(roster) : 0
   if (version < 7) {
     legacyStripRoster(roster)
-    legacyStripSentinels(recruitOptions)
     for (const i of inventory) legacyItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) legacyItem(e.item)
@@ -1270,7 +1276,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // and the run's `runDowns` counter is simply not read back (below).
   if (version < 11) {
     stripSentinels(roster)
-    stripSentinels(recruitOptions)
     for (const i of inventory) stripItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) stripItem(e.item)
@@ -1292,7 +1297,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // Every hero a save can carry — the company, the candidates on offer, a
   // merchant's hire, the fork's recruits — is migrated and normalised.
   migrateSkills(roster, version)
-  migrateSkills(recruitOptions, version)
   if (merchant && isObj(merchant) && (merchant as SavedMerchant).recruit) migrateSkills([(merchant as SavedMerchant).recruit!.sentinel], version)
   if (crossroads) migrateSkills(crossroads.recruits, version)
   const challenge = migrateChallenge(o.challenge)
@@ -1306,7 +1310,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     runSeed: num(o.runSeed, 0),
     screen: str<Screen>(o.screen, 'map', SCREENS),
     runPhase: str<RunPhase>(o.runPhase, 'active', PHASES),
-    runMap: { nodes: runMap.nodes as MapNode[], edges, layers: num(runMap.layers, 11) },
+    // A recruit stop (before the gameplay pass, v19) is a battle now: a hire
+    // is made at a city. The node keeps its id and its place, so its cleared
+    // flag, its edges and its seeded ground all still read.
+    runMap: { nodes: (runMap.nodes as MapNode[]).map(asBattle), edges, layers: num(runMap.layers, 11) },
     currentNodeId,
     clearedNodeIds: clearedIds,
     reachableNodeIds: arr<string>(o.reachableNodeIds),
@@ -1371,7 +1378,6 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     lastLoot: arr<unknown>(o.lastLoot).filter(validItem),
     merchant: merchant ? dropHire(merchant as SavedMerchant) : null,
     shrineOfferId: typeof o.shrineOfferId === 'string' ? o.shrineOfferId : null,
-    recruitOptions,
     reward,
     runMods,
     // A relic list is earned content like the rest, but an entry is only an id:
@@ -1475,7 +1481,6 @@ function coherent(snap: RunSnapshot): RunSnapshot | null {
     snap.event = null
     snap.merchant = null
     snap.shrineOfferId = null
-    snap.recruitOptions = []
   }
 
   /** Back to the map, with no fight in hand. */

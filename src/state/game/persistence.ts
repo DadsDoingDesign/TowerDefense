@@ -55,7 +55,6 @@ const SNAPSHOT_FIELDS = [
   'lastLoot',
   'merchant',
   'shrineOffer',
-  'recruitOptions',
   'reward',
   'runMods',
   'crossroads',

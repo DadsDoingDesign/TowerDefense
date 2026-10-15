@@ -1,10 +1,11 @@
 /**
  * Who joins the company, how trained they arrive, and how new bodies and new
  * items land on the roster. Pure — every random draw comes off the RNG the
- * caller passes (the run's loot stream), and every hub read arrives as an
- * argument, so the store and the balance harness price a hire identically.
+ * caller passes, or (a city's hires) a fresh generator hashed from the run
+ * seed and the city, and every hub read arrives as an argument, so the store
+ * and the balance harness price a hire identically.
  */
-import type { RNG } from '../core/rng'
+import { hashSeed, RNG } from '../core/rng'
 import { autoEquipEmpty } from '../engine/kit'
 import { applyXp, xpToReach } from '../engine/leveling'
 import { withFirstSkill } from './skills'
@@ -14,8 +15,10 @@ import type { Item, Sentinel } from '../types'
 import { equipRules, withRelicStats } from './relics'
 import { stow } from './inventory'
 
-/** Candidates on a recruit node, an Endless room or the Crossroads. */
+/** Candidates a city offers for hire. */
 export const SLATE_SIZE = 3
+/** With the HQ's Hiring Hall: one more candidate at every city. */
+export const HALL_SLATE_SIZE = 4
 
 /** The hub bonuses a starting company reads (a subset of `metaStore.MetaBonuses`). */
 export interface CompanyBonuses {
@@ -37,6 +40,8 @@ export interface RecruitHub {
   skillFor?: (heroId: string) => string | null
   /** The run's unlocked item kinds — what a hire can be rolled carrying. Absent: every kind. */
   itemPool?: readonly string[]
+  /** How many candidates a city offers ({@link SLATE_SIZE}; the Hiring Hall's {@link HALL_SLATE_SIZE}). */
+  slate?: number
 }
 
 export function applyStatBonus(s: Sentinel, n: number): Sentinel {
@@ -56,8 +61,9 @@ export function armedSentinel(rng: RNG, itemPool: readonly string[] = ALL_ITEM_K
 
 /**
  * The level a mid-run hire arrives at (M17): the roster's median, minus three
- * unless Free Companies is owned; never below 1. The balance harness models a
- * hire with this same function.
+ * unless the Hiring Hall is owned (it was Free Companies) or the Mercenary
+ * Charter held; never below 1. The balance harness models a hire with this
+ * same function.
  */
 export function recruitTargetLevel(roster: readonly Pick<Sentinel, 'level'>[], trained = false): number {
   if (!roster.length) return 1
@@ -80,9 +86,9 @@ export function recruitTargetLevel(roster: readonly Pick<Sentinel, 'level'>[], t
  * player, and the level-up surfaces offer it like any other.
  *
  * **Seasoned Recruits applies here too (M18).** Every mid-run body comes
- * through this one funnel (crossroads, recruit node, endless room,
- * and the endless fallback hire), so applying the hub's stat bonus here covers
- * all five sites at once and cannot be forgotten by the next one that is added.
+ * through this one funnel (a city's hires, `citySlate`), so applying the hub's
+ * stat bonus here covers every site and cannot be forgotten by the next one
+ * that is added.
  */
 export function scaledRecruit(rng: RNG, roster: readonly Sentinel[], hub: RecruitHub, taken: Iterable<string> = roster.map((h) => h.name)): Sentinel {
   // Armed, not dressed: the rest of their kit comes out of the pack when they
@@ -95,10 +101,28 @@ export function scaledRecruit(rng: RNG, roster: readonly Sentinel[], hub: Recrui
   return target <= 1 ? base : applyXp(base, xpToReach(target))
 }
 
-/** Three random candidates — the recruit node / room / crossroads slate. Named apart from each other and the roster. */
-export function recruitSlate(rng: RNG, roster: readonly Sentinel[], hub: RecruitHub): Sentinel[] {
+/**
+ * The hires a CITY offers (the gameplay pass, Oct 2026): `hub.slate`
+ * candidates (three; four with the Hiring Hall), each named apart from the
+ * others and the roster, trained to the company (`scaledRecruit`).
+ *
+ * The designer: "recruiting only happens after you get to a city
+ * successfully. Then it makes sense you are picking up a crew member." So
+ * there are no recruit stops on the road: every city before the last — the
+ * act bosses at the ends of acts 1 and 2, the Sovereign Route's waypoints
+ * too — offers a hire as the caravan arrives, and the player takes one or
+ * none (the Crossroads: a hire, or a mutation instead).
+ *
+ * A fresh generator hashed from (run seed, city), never a draw on a run
+ * stream: the same seed meets the same candidates at the same city however
+ * the road was walked, and dealing them moves no loot roll behind them. (The
+ * Crossroads used to draw its three on the loot stream after the spoils.)
+ */
+export function citySlate(runSeed: number, city: number, roster: readonly Sentinel[], hub: RecruitHub): Sentinel[] {
+  const rng = new RNG(hashSeed(runSeed, 'city-hire', city))
   const out: Sentinel[] = []
-  for (let i = 0; i < SLATE_SIZE; i++) out.push(scaledRecruit(rng, roster, hub, [...roster, ...out].map((h) => h.name)))
+  const n = Math.max(1, Math.floor(hub.slate ?? SLATE_SIZE))
+  for (let i = 0; i < n; i++) out.push(scaledRecruit(rng, roster, hub, [...roster, ...out].map((h) => h.name)))
   return out
 }
 

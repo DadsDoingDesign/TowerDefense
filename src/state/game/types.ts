@@ -78,7 +78,7 @@ export interface Crossroads {
  */
 export type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
 export type Speed = 1 | 2 | 3
-export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
+export type EventKind = 'merchant' | 'shrine' | 'campfire'
 
 /**
  * A company's terms while they are open (the `contracts` screen): which
@@ -292,7 +292,6 @@ export interface GameData {
   // Event payloads
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
-  recruitOptions: Sentinel[]
   /** Post-wave: three cards to choose one of (attribute buff or item). */
   reward: RewardCard[] | null
   /**

@@ -302,8 +302,8 @@ export const THREAT_FREE_CHOICE: string[] = [
   'Enemies get no stronger for taking it. Enemy strength rises with every stop you pass, whatever you take there.',
 ]
 
-/** At the Crossroads — not a map stop, so nothing about the road moves. */
-export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for taking it: the Crossroads is not a stop on the road.']
+/** At a city's hiring (the Crossroads) — not a map stop, so nothing about the road moves. */
+export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for hiring: the city is not a stop on the road.']
 
 /**
  * LS3: the enemy-strength note rides on a choice only once the player has met
@@ -420,23 +420,6 @@ function heroBits(s: Sentinel) {
   }
 }
 
-/**
- * A hero offer's body. The STR/DEX/INT line is gone from here: every hero offer
- * also carries `heroBits(s).stats`, which the page renders as the stat row right
- * above this card, so the same three numbers were printed twice, one above the
- * other (Wave 1).
- */
-function heroBody(s: Sentinel): string[] {
-  const p = computeCombat(s)
-  const line = `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`
-  // SK1: every hire arrives with a skill. One is shown as its card
-  // (`heroBits`); more are listed here, each in its one sentence.
-  const skills = oneSkill(s) ? [] : skillLines(s)
-  // LS3: with the stat row held back, the sentence that says what the hero
-  // does leads — the same one the first pick shows.
-  return stagedRun() ? [`${heroDoes(s)}.`, ...skills, line] : [`${heroDoes(s)}.`, ...skills, line]
-}
-
 /** A hero as a comparison card: what its gear does, the gear, its skill (and its numbers, after the first run). */
 export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
   const p = computeCombat(s)
@@ -509,7 +492,6 @@ const offerDeps = (s: St) => ({
   reward: s.reward,
   merchant: s.merchant,
   shrineOffer: s.shrineOffer,
-  recruitOptions: s.recruitOptions,
   roster: s.roster,
   inventory: s.inventory,
   gold: s.gold,
@@ -585,7 +567,6 @@ function contextOffers(
   const kind = st.event?.kind
   if (kind === 'merchant') return merchantOffers(st)
   if (kind === 'shrine') return shrineOffers(st)
-  if (kind === 'recruit') return recruitOffers(st)
   if (kind === 'campfire') return campfireOffers(st)
   return []
 }
@@ -710,32 +691,6 @@ function shrineOffers(st: St): Offer[] {
       secondary: { label: 'Walk away', icon: 'back', run: () => st.declineShrine() },
     },
   ]
-}
-
-function recruitOffers(st: St): Offer[] {
-  const full = st.roster.length >= MAX_ROSTER
-  const out: Offer[] = st.recruitOptions.map((s) => ({
-    id: s.id,
-    // A hire is shown as the hero pick shows a hero: one comparison card each.
-    title: s.name,
-    sub: kitName(s),
-    color: heroLookVar(s),
-    glyph: GLYPH[lookOf(s)],
-    hero: heroCard(s, stagedRun()),
-    body: [
-      ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
-      ...(full ? [] : strengthNote(st, THREAT_FREE_CHOICE)),
-    ],
-    action: {
-      // The tapped candidate's id goes to the store.
-      label: full ? 'No room for more heroes' : `Recruit ${s.name}`,
-      done: `${s.name} joins your heroes`,
-      run: () => st.acceptRecruit(s.id),
-      disabled: full,
-    },
-  }))
-  out.push({ id: 'skip', title: 'Walk on', icon: 'back', immediate: true, body: ['Turn the recruit away and march.'], action: { label: 'Walk on', run: () => st.skipRecruit() } })
-  return out
 }
 
 /**
@@ -889,41 +844,80 @@ function crossroadsOffers(st: St): Offer[] {
       }
     })
     // Aiming is reversible, so backing out of it has to be reversible too — and
-    // it must not look like it forfeits the fork.
+    // it must not look like it forfeits the fork. With hires on the table the
+    // way back is to them; aiming at another of your own is a row each.
+    for (const h of st.roster) {
+      if (h.id === aimed.id) continue
+      out.push({
+        id: `aim-${h.id}`,
+        title: `Aim at ${h.name} instead`,
+        icon: 'mutate',
+        immediate: true,
+        body: [`The same ${mutations.length} mutations, for ${h.name}.`],
+        action: { label: `Aim at ${h.name}`, run: () => st.aimHeroMutation(h.id) },
+      })
+    }
     out.push({
       id: 'unaim',
-      title: 'Pick someone else',
+      title: cr.recruits.length ? 'Back to the hires' : 'Pick someone else',
       sub: `Aiming at ${aimed.name}`,
       icon: 'back',
       immediate: true,
-      body: ['Back to the recruits and your heroes. Nothing has been spent, and the same three mutations will be waiting.'],
-      action: { label: 'Pick someone else', run: () => st.aimHeroMutation(null) },
+      body: [cr.recruits.length ? 'Back to the city\'s hires. Nothing has been spent, and the same mutations will be waiting.' : 'Back to your heroes. Nothing has been spent, and the same three mutations will be waiting.'],
+      action: { label: cr.recruits.length ? 'Back to the hires' : 'Pick someone else', run: () => st.aimHeroMutation(null) },
     })
     return out
   }
 
-  // ---- step 1: recruit, or aim ---------------------------------------------
-  const out: Offer[] = cr.recruits.map((s) => ({
-    id: s.id,
-    title: `${s.name} · ${kitName(s)}`,
-    sub: `Recruit · ${kitName(s)}`,
-    color: heroLookVar(s),
-    glyph: GLYPH[lookOf(s)],
-    ...heroBits(s),
-    // A stranger and one of your own are the same sprite in the same coloured
-    // frame; the corner mark is what tells the two halves of this fork apart
-    // before you tap one.
-    portrait: { ...heroBits(s).portrait, badge: 'recruit' },
-    // `recruitTeammate` charges the choice tax on the spot. The mutate branch
-    // does NOT charge it here any more: `aimHeroMutation` commits nothing, and
-    // the tax is paid by `chooseHeroMutation` one step later (M5).
-    //
-    // The FREE_EXIT variant, not the VISIT one: the Crossroads is a screen, not
-    // a map node — `finishCrossroads` only changes `screen` and charges no
-    // visit step — so marching on here really does cost nothing.
-    body: [...heroBody(s), ...strengthNote(st, THREAT_FREE_FORK)],
-    action: { label: 'Take the recruit', run: () => st.recruitTeammate(s.id) },
-  }))
+  // ---- step 1: the city's hires — or, with none, aim a mutation -------------
+  //
+  // The gameplay pass (Oct 2026): a hero is hired only here, as the caravan
+  // reaches a city. The candidates are a pick-one board (`HeroCards`, the
+  // hero pick's strip and card): a token focuses, the CTA hires. Hiring
+  // nobody is a row under it, and so is the fork's other branch — a mutation
+  // for one of your own instead — which aims at your strongest hero; step 2
+  // lets you aim at another.
+  const mutateRow = (): Offer | null => {
+    if (!mutations.length || !st.roster.length) return null
+    const carry = st.roster.reduce((a, b) => (computeCombat(b).dps > computeCombat(a).dps ? b : a))
+    return {
+      id: 'mutate',
+      title: 'A mutation instead',
+      sub: `${mutations.length} Mythics`,
+      icon: 'mutate',
+      immediate: true,
+      body: [`Hire nobody, and change how one of your heroes attacks, permanently.`],
+      action: { label: 'A mutation instead', run: () => st.aimHeroMutation(carry.id) },
+    }
+  }
+  if (cr.recruits.length) {
+    const full = st.roster.length >= MAX_ROSTER
+    const out: Offer[] = cr.recruits.map((s) => ({
+      id: s.id,
+      title: s.name,
+      sub: kitName(s),
+      color: heroLookVar(s),
+      glyph: GLYPH[lookOf(s)],
+      hero: heroCard(s, stagedRun()),
+      body: [
+        ...(full ? [`You already have ${MAX_ROSTER} heroes.`] : []),
+        ...(full ? [] : strengthNote(st, THREAT_FREE_FORK)),
+      ],
+      action: {
+        label: full ? 'No room for more heroes' : `Hire ${s.name}`,
+        done: `${s.name} joins your heroes`,
+        run: () => st.recruitTeammate(s.id),
+        disabled: full,
+      },
+    }))
+    const m = mutateRow()
+    if (m) out.push(m)
+    out.push({ id: 'skip', title: 'Hire nobody', icon: 'back', immediate: true, body: ['March on with the heroes you have.'], action: { label: 'Hire nobody', run: () => st.finishCrossroads() } })
+    return out
+  }
+
+  // No hires (a full company): the fork is a mutation, aimed at one of yours.
+  const out: Offer[] = []
   for (const h of st.roster) {
     const carried = h.mutations ?? []
     out.push({
@@ -943,6 +937,7 @@ function crossroadsOffers(st: St): Offer[] {
       action: { label: `Aim at ${h.name}`, run: () => st.aimHeroMutation(h.id) },
     })
   }
+  out.push({ id: 'skip', title: 'March on', icon: 'back', immediate: true, body: ['Leave the city with the heroes you have.'], action: { label: 'March on', run: () => st.finishCrossroads() } })
   return out
 }
 

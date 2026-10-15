@@ -152,8 +152,9 @@ export function fightsWon(s: Pick<StageState, 'runMap' | 'clearedNodeIds'>): num
  *  - **depth, gear, command** after the first win: the road's length, the
  *    spoils the first win pays out, and the one-per-sub-wave command;
  *  - **strength** once enemies are stronger than at the start (after a stop);
- *  - **merchant, recruit, shrine, campfire, elite** when one is in reach or
- *    being visited;
+ *  - **merchant, shrine, campfire, elite** when one is in reach or being
+ *    visited; **recruit** (a hire) at a city's Crossroads, the one place a
+ *    hero is hired (the gameplay pass);
  *  - **relic** when a relic is offered or held;
  *  - **skill** from the hero pick on: every hero there is offered with one
  *    (its coach tip is the pick's; the first milestone's tip is the choice);
@@ -176,7 +177,8 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
 
   const byId = new Map(s.runMap.nodes.map((n) => [n.id, n]))
   const here = [...s.reachableNodeIds, ...(s.activeNodeId ? [s.activeNodeId] : [])].map((id) => byId.get(id)?.type)
-  for (const kind of ['merchant', 'recruit', 'shrine', 'campfire', 'elite'] as const) {
+  if (s.screen === 'crossroads') out.add('recruit')
+  for (const kind of ['merchant', 'shrine', 'campfire', 'elite'] as const) {
     if (here.includes(kind) || s.event?.kind === kind) out.add(kind)
   }
   if (s.relics.length > 0 || s.reward?.some((c) => c.kind === 'relic')) out.add('relic')

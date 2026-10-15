@@ -176,7 +176,7 @@ function skillsTab(v: CodexView): CodexTab {
           chips: has ? [LEVEL_NAME[l], ...(k.signature ? [SIGNATURE_CHIP] : []), ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[l]],
           does: has ? k.desc : '',
           how: has
-            ? `${k.starter ? 'Every Watch has it from the first run.' : 'Yours.'} A hero can be dealt it, at the hero pick, a recruit or a level-up.${roadLine(k.company)}`
+            ? `${k.starter ? 'Every Watch has it from the first run.' : 'Yours.'} A hero can be dealt it, at the hero pick, a city's hire or a level-up.${roadLine(k.company)}`
             : feat
               ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.`
               : k.signature

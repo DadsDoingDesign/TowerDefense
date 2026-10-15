@@ -202,8 +202,8 @@ function PartyCards() {
         )
       })}
       {/* No "Open slot · recruit a hero" card (Oct 2026, the designer): it
-          looked like a button, and a hero is only ever hired at a recruit
-          stop on the map. */}
+          looked like a button, and a hero is only ever hired at a city (the
+          gameplay pass: there are no recruit stops). */}
     </>
   )
 }

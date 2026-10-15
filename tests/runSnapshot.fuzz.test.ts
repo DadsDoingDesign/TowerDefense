@@ -213,7 +213,6 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
-    ...snap.recruitOptions,
     ...(snap.crossroads?.recruits ?? []),
   ]
   for (const s of heroes) assertFiniteCombat(s, team, where)
@@ -577,7 +576,7 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
   })
 
   it('drops the class, keeps gear and skills, and hands an old Fighter with a free off hand a plain Shield', () => {
-    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; recruitOptions: Sentinel[] }
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[] }
     raw.v = 13
     delete raw.itemPool
     const h = raw.roster[0]
@@ -712,6 +711,53 @@ describe('Oct 2026: a merchant sells goods only', () => {
     expect('recruit' in snap!.merchant!).toBe(false)
     expect(snap!.merchant!.items.length).toBeGreaterThan(0)
     assertPlayable(snap!, 'a save with a merchant hire')
+  })
+})
+
+describe('v18 → v19: no recruit stops (the gameplay pass)', () => {
+  it('a mid-run save parked on a recruit stop loads, the stop a battle and the event dropped', () => {
+    const raw = buildBase() as Record<string, unknown> & {
+      runMap: { nodes: { id: string; type: string; layer: number }[] }
+      reachableNodeIds: string[]
+      clearedNodeIds: string[]
+    }
+    raw.v = 18
+    // A reachable node of the save becomes the recruit stop it would have been.
+    const id = raw.reachableNodeIds.find((n) => !raw.clearedNodeIds.includes(n))!
+    raw.runMap.nodes = raw.runMap.nodes.map((n) => (n.id === id ? { ...n, type: 'recruit' } : n))
+    Object.assign(raw, {
+      screen: 'map',
+      activeNodeId: null,
+      currentWave: null,
+      lastResult: null,
+      event: { kind: 'recruit', nodeId: id },
+      recruitOptions: [classicHero('rogue'), classicHero('mystic')],
+    })
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.runMap.nodes.find((n) => n.id === id)?.type).toBe('battle')
+    expect(snap!.runMap.nodes.some((n) => (n.type as string) === 'recruit')).toBe(false)
+    expect(snap!.event).toBeNull()
+    expect('recruitOptions' in snap!).toBe(false)
+    // Still on the road, and the old stop can be entered again — as a fight.
+    expect(snap!.reachableNodeIds).toContain(id)
+    assertPlayable(snap!, 'a save parked on a recruit stop')
+  })
+
+  it('a cleared recruit stop reads as a cleared battle', () => {
+    const raw = buildBase() as Record<string, unknown> & {
+      runMap: { nodes: { id: string; type: string; layer: number }[] }
+      reachableNodeIds: string[]
+      clearedNodeIds: string[]
+    }
+    raw.v = 18
+    const id = raw.reachableNodeIds[0]
+    raw.runMap.nodes = raw.runMap.nodes.map((n) => (n.id === id ? { ...n, type: 'recruit' } : n))
+    Object.assign(raw, { screen: 'map', activeNodeId: null, currentWave: null, lastResult: null, clearedNodeIds: [...raw.clearedNodeIds, id] })
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.runMap.nodes.find((n) => n.id === id)?.type).toBe('battle')
+    expect(snap!.clearedNodeIds).toContain(id)
   })
 })
 

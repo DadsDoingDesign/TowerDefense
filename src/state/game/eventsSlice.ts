@@ -1,6 +1,7 @@
 /**
- * Events slice: the campaign's special nodes (merchant / shrine / recruit), the
- * post-wave reward pick, and the mid-map crossroads fork.
+ * Events slice: the campaign's special nodes (merchant / shrine / campfire),
+ * the post-wave reward pick, and a city's hiring (the Crossroads: hire one, or
+ * a mutation instead).
  */
 import { creditPity } from '../../game/data/items'
 import { merchantLuck, MAX_ROSTER, repairGate, rerollCost, rollMerchantShelf } from '../../game/run/economy'
@@ -39,8 +40,6 @@ export interface EventActions {
   leaveEvent: () => void
   acceptShrine: () => void
   declineShrine: () => void
-  acceptRecruit: (sentinelId: string) => void
-  skipRecruit: () => void
   /** Campfire (Phase 3b): the Gate recovers `CAMPFIRE_REPAIR`, and the stop is spent. */
   campfireRest: () => void
   /** Campfire: one hero gains a full level, and the stop is spent. */
@@ -200,21 +199,6 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
   },
 
   declineShrine: () => {
-    const { event } = get()
-    if (event) completeNode(get, set, event.nodeId)
-  },
-
-  acceptRecruit: (sentinelId) => {
-    const { recruitOptions, roster, event } = get()
-    if (!event) return
-    const pick = recruitOptions.find((s) => s.id === sentinelId)
-    if (pick && roster.length < MAX_ROSTER) {
-      set({ ...withRecruits(roster, [pick], get().inventory, get().relics) })
-    }
-    completeNode(get, set, event.nodeId)
-  },
-
-  skipRecruit: () => {
     const { event } = get()
     if (event) completeNode(get, set, event.nodeId)
   },

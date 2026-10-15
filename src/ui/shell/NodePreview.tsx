@@ -21,7 +21,6 @@ import { useMapFocus } from './mapFocus'
 const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and a wagon repair.',
   shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
-  recruit: 'A hero looking for work. Take one on or walk on.',
   campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,
 }
 

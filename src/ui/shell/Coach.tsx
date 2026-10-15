@@ -584,7 +584,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'merchant',
         body: (
           <>
-            A <b>Merchant</b> is in reach: spend your purse on gear, a hire or a wagon repair.
+            A <b>Merchant</b> is in reach: spend your purse on gear or a wagon repair.
           </>
         ),
       }

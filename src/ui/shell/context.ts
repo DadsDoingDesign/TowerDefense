@@ -1,5 +1,7 @@
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
+import { cityOfLayer, routeTowns } from '../../game/run/contracts'
+import { MAX_ROSTER as MAX_HEROES } from '../../game/run/economy'
 
 /**
  * Which subject each band is showing. The whole app is a function of this —
@@ -69,6 +71,8 @@ export function useShellContext(): ShellContext {
   const cityPending = useGameStore((s) => s.contract?.pending != null)
   const charter = useGameStore((s) => !!s.contract?.charter)
   const crossroads = useGameStore((s) => s.crossroads)
+  // The city the Crossroads stands in: the act boss just cleared, on this road.
+  const town = useGameStore((s) => cityTown(s))
   const reward = useGameStore((s) => s.reward)
   // The node whose spoils these are — an elite's get their own frame (Phase 2).
   const clearedType = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.type)
@@ -98,7 +102,7 @@ export function useShellContext(): ShellContext {
         blurb: !gearTaught
           ? 'A hero is what it holds, plus one skill.'
           : skillTaught
-            ? 'Recruit more along the road.'
+            ? 'Hire more at each city on the road.'
             : 'Each hero comes with a skill, and learns more as it levels up.',
       },
       layout: 'page',
@@ -126,7 +130,11 @@ export function useShellContext(): ShellContext {
               title: 'Choose the mutation',
               blurb: 'Three Mythics, dealt when the fork fired. Read what each costs. The one you take is permanent.',
             }
-          : { title: 'The Crossroads', blurb: 'One choice: take a recruit, or aim a mutation at one of your own.' },
+          : crossroads.recruits.length
+            ? // The gameplay pass: a hero is hired only here, as the caravan
+              // reaches a city. The page is the city's hiring yard (`StopScene`).
+              { title: town ? `Hiring in ${town}` : 'Hiring', blurb: 'Hire one, or none. Or a mutation for one of your heroes instead.' }
+            : { title: 'A mutation', blurb: `You lead ${MAX_HEROES} heroes already. Aim a mutation at one of them, or march on.` },
       layout: 'page',
     }
   }
@@ -188,13 +196,19 @@ const LOST_BOARD = {
   blurb: 'Your heroes lost their bearings here, and this part of the run cannot be shown. Take the way on below.',
 } as const
 
+/** The town of the city the run stands in (the act boss just cleared), or null off a city. */
+export function cityTown(s: { runMap: { nodes: { id: string; layer: number }[] }; currentNodeId: string; contract: { company: Parameters<typeof routeTowns>[0] } | null }): string | null {
+  const layer = s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.layer
+  const city = layer == null ? null : cityOfLayer(layer)
+  if (city == null || !s.contract) return null
+  return routeTowns(s.contract.company)[city] ?? null
+}
+
 const CHARTER_MERCHANT = { title: 'Merchant', blurb: 'Every price here is double, on the Sovereign Route.' } as const
 
 const EVENT_BOARD = {
-  // "Three offers" over a board of four items and a hire (Wave 1).
   merchant: { title: 'Merchant', blurb: 'Spend your gold before you march.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms. Read them.' },
-  recruit: { title: 'Recruit', blurb: 'A hero looking for work.' },
   campfire: { title: 'Campfire', blurb: 'One night at the fire, and one thing done with it. Choose one.' },
 } as const
 

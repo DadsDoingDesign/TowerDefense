@@ -37,6 +37,7 @@ if (process.env.FW_HAZARDS) {
   Object.assign(HAZARD_LEVERS, { cursedDamageMult: a, dangerTiles: b, dangerPool: c, obstacles: d, obstaclePool: e })
 }
 import { classicHero } from '../src/game/data/sentinels'
+import { citySlate, HALL_SLATE_SIZE, SLATE_SIZE } from '../src/game/run/recruits'
 import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game/run/charter'
@@ -1690,7 +1691,8 @@ if (want(9)) {
   line('free layers (act bosses excluded — every route fights those). Stops still never crowd a layer')
   line('— at most two, and every free layer keeps at least one fight.')
   line('')
-  const specialTypes = ['merchant', 'shrine', 'recruit', 'campfire', 'elite']
+  // No recruit stops since the gameplay pass: a hero is hired at a city.
+  const specialTypes = ['merchant', 'shrine', 'campfire', 'elite']
   const perType: Record<string, number> = Object.fromEntries(specialTypes.map((t) => [t, 0]))
   let specialSum = 0
   let worstLayerCluster = 0
@@ -1852,11 +1854,11 @@ if (want(11)) {
   line('')
   line('**Two models, because one of them was a fiction.** The first version of this sweep')
   line('marched the hero through ten consecutive battles, refused every merchant, took no')
-  line('recruits and picked a reward card **at random**. It reported 0%. That is not the')
-  line('floor, it is a floor with the game removed: `generateRunMap` guarantees a recruit')
-  line('stop, a merchant stop and a shrine on every map; `resolveNode` fires a one-time')
-  line('Crossroads offering a free scaled body at the halfway point; and `scaledRecruit`')
-  line('hands over a hero at the roster **median level minus 3**, not a level-1 body.')
+  line('hires and picked a reward card **at random**. It reported 0%. That is not the')
+  line('floor, it is a floor with the game removed: `generateRunMap` guarantees a merchant')
+  line('stop and a shrine on every map; every city before the last offers a hire')
+  line('(`recruits.citySlate`, the gameplay pass — there are no recruit stops on the road);')
+  line('and `scaledRecruit` hands over a hero at the roster **median level minus 3**, not a level-1 body.')
   line('Both models are reported. The strict one is kept because it is a useful lower')
   line('bound on how badly a first run can be played; the graded one is the realistic one.')
   line('')
@@ -1897,7 +1899,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     const actField = mapById(ground.fieldId) ?? field
     const heroSlots = slotsOn(actField)
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
-      // A recruit node hands over a fresh level-1 body.
+      // A city's hire, modelled as a fresh level-1 body.
       const body = rollRecruitBody(rng, BASIC_ITEM_KINDS, roster.map((h) => h.name))
       roster = [...roster, withFirstSkill(body, recruitSkill(seed, body.id, STARTER_SKILL_POOL))]
     }
@@ -2089,7 +2091,9 @@ if (want(11)) {
   /** The best line the set finds, i.e. the ceiling of play on the same seeds. */
   const freshBest = freshByPolicy.reduce((a, b) => (b.winRate > a.winRate ? b : a))
   const freshSolo = summarise('Strict floor — 10 forced battles, no shops, no hires, random card', 'Strict floor', (s, a) => freshRun(s, a, []))
-  const freshRecruit = summarise('Strict floor + 2 free level-1 recruits (depths 3 and 6)', 'Strict + 2 recruits', (s, a) => freshRun(s, a, [3, 6]))
+  // The two hires land where the game deals them since the gameplay pass: at
+  // the two cities, i.e. before depths 5 and 9 (they were depths 3 and 6).
+  const freshRecruit = summarise('Strict floor + 2 free level-1 hires (the two cities: before depths 5 and 9)', 'Strict + 2 hires', (s, a) => freshRun(s, a, [5, 9]))
   const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy]
 
   line('| Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |')
@@ -2515,7 +2519,7 @@ if (want(12)) {
       for (const e of m.edges) if (outDeg.get(e.from) === 1) forcedIds.add(e.to)
       for (const n of m.nodes) {
         if (n.type === 'elite') { elites++; if (forcedIds.has(n.id)) forced++ }
-        if (['merchant', 'shrine', 'recruit', 'campfire', 'elite'].includes(n.type)) specials++
+        if (['merchant', 'shrine', 'campfire', 'elite'].includes(n.type)) specials++
         if (n.type === 'boss') continue
         const outs = m.edges.filter((e) => e.from === n.id).map((e) => byId.get(e.to)!)
         if (!outs.length) continue
@@ -2539,14 +2543,12 @@ if (want(12)) {
   const shapeBase = mapShape({})
   const shapeWide = mapShape({ wideMap: true })
   const shapeCamp = mapShape({ standingOrders: true })
-  const shapeHire = mapShape({ extraRecruit: true })
   line(`| Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |`)
   line('|---|--:|--:|--:|--:|--:|')
   for (const [label, sh] of [
     ['default (zero HQ)', shapeBase],
     ['Scouts 2 (wider roads)', shapeWide],
     ['Scouts 1 (a way round every ambush)', shapeCamp],
-    ['Hiring Hall', shapeHire],
   ] as [string, MapShape][]) {
     line(`| ${label} | ${f1(sh.layers)} | ${pct(sh.noChoice)} | ${pct(sh.mixed)} | ${pct(sh.forcedElites)} | ${f1(sh.specials)} |`)
   }
@@ -2568,8 +2570,20 @@ if (want(12)) {
       `Scouts 1 does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
     )
   }
-  if (shapeHire.specials <= shapeBase.specials) {
-    failures.push(`The Hiring Hall adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
+  // The Hiring Hall sold a second recruit stop until the gameplay pass; there
+  // are no recruit stops now (a hero is hired at a city), so it sells one more
+  // candidate at every city and hires trained to the company. Its card is
+  // checked on the store's own slate.
+  {
+    const lead = applyXp(classicHero('fighter'), xpToReach(9))
+    const hub = (hall: boolean) => ({ statBonus: 0, trained: hall, slate: hall ? HALL_SLATE_SIZE : SLATE_SIZE, itemPool: BASIC_ITEM_KINDS })
+    const plain = citySlate(4242, 0, [lead], hub(false))
+    const hall = citySlate(4242, 0, [lead], hub(true))
+    line(`**The Hiring Hall's card, checked on the store's slate** (\`recruits.citySlate\`): a city offers ${plain.length} candidates at level ${plain[0].level} to a level-9 company without it, and ${hall.length} at level ${hall[0].level} with it.`)
+    line('')
+    if (hall.length <= plain.length || hall[0].level < lead.level) {
+      failures.push(`The Hiring Hall does not deliver its card: ${plain.length} → ${hall.length} candidates, hires at level ${hall[0].level} for a level-${lead.level} company.`)
+    }
   }
   {
     const at = (label: string) => hubCells.get(label)!

@@ -120,7 +120,7 @@ describe('RNG draw order (the store)', () => {
       // The map is exactly `generateRunMap` off the run's map stream…
       const rng = streamRng(seed, 'map')
       const shape = (m: typeof st.runMap) => ({ nodes: m.nodes.map((n) => [n.type, n.layer, n.row, n.ny]), edges: m.edges.length, layers: m.layers })
-      expect(shape(st.runMap)).toEqual(shape(generateRunMap(rng, { wideMap: false, extraRecruit: false, standingOrders: false, noMerchants: false, noRecruits: false })))
+      expect(shape(st.runMap)).toEqual(shape(generateRunMap(rng, { wideMap: false, standingOrders: false, noMerchants: false })))
       // …and the stream has moved exactly as far as that one deal.
       expect(map).toBe(rng.saveState())
     }

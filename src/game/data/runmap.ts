@@ -5,8 +5,14 @@ import { ACT_LAYERS, isActBossLayer, RUN_LAYERS } from '../run/threat'
  * `campfire` (Phase 3b) is the rest stop: repair the Gate or train a hero.
  * `miniboss` is an act boss — the fight that closes acts 1 and 2 (layers 4 and
  * 8). `boss` is the final one, and clearing it is the only campaign win.
+ *
+ * There is no recruit stop (the gameplay pass, Oct 2026; the designer:
+ * "recruiting only happens after you get to a city successfully — then it
+ * makes sense you are picking up a crew member"). A hero is hired at a city:
+ * the act boss's arrival (`run/recruits.citySlate`). A save's old `recruit`
+ * node loads as a battle (`state/runSnapshot`).
  */
-export type NodeType = 'start' | 'battle' | 'elite' | 'merchant' | 'shrine' | 'recruit' | 'campfire' | 'miniboss' | 'boss'
+export type NodeType = 'start' | 'battle' | 'elite' | 'merchant' | 'shrine' | 'campfire' | 'miniboss' | 'boss'
 
 export interface MapNode {
   id: string
@@ -30,7 +36,6 @@ const NODE_META: Record<NodeType, { label: string; glyph: string; color: string 
   elite: { label: 'Elite', glyph: '☠', color: '#d0563a' },
   merchant: { label: 'Merchant', glyph: '⟡', color: '#e0ac4c' },
   shrine: { label: 'Shrine', glyph: '❖', color: '#7fb8a0' },
-  recruit: { label: 'Recruit', glyph: '＋', color: '#6fce88' },
   campfire: { label: 'Campfire', glyph: '♨', color: '#e08a4c' },
   miniboss: { label: 'Act boss', glyph: '♜', color: '#c0503a' },
   boss: { label: 'Boss', glyph: '♛', color: '#c0503a' },
@@ -43,11 +48,11 @@ export const nodeMeta = (t: NodeType) => NODE_META[t]
  *
  * This is where the horizontal unlocks land (H15): they add *choices*, not
  * power, and — since F-C1 — not length either. `Cartographer's Table` forks the
- * march harder; `Free Companies` puts a second hiring stop on it; `Standing
- * Orders` opens a road around every ambush. A Banner pulls the same dial the
- * other way: `Blood Price` deletes the recruiters, and `noMerchants` stays
- * wired for the rung that will delete the merchants once a merchant is worth
- * stopping at (see `metaStore`).
+ * march harder; `Standing Orders` opens a road around every ambush.
+ * `noMerchants` stays wired for a rung that will delete the merchants once a
+ * merchant is worth stopping at (see `metaStore`). (`Free Companies` used to
+ * put a second hiring stop on the map and `Blood Price` deleted them; there
+ * are no hiring stops now — a hire is made at a city.)
  */
 export interface MapOptions {
   /**
@@ -73,8 +78,6 @@ export interface MapOptions {
    * of edges leaving each one.
    */
   wideMap?: boolean
-  /** Free Companies: guarantee a second Recruit stop. */
-  extraRecruit?: boolean
   /**
    * Standing Orders: **no Elite ever stands on a road with no way around it**
    * (see {@link relocateForcedElites}).
@@ -100,8 +103,6 @@ export interface MapOptions {
    * and it stays implemented and tested for the rung that earns it back.
    */
   noMerchants?: boolean
-  /** Banner 3 — Blood Price: no Recruit stops anywhere. */
-  noRecruits?: boolean
 }
 
 /**
@@ -266,9 +267,12 @@ function mkNode(type: NodeType, layer: number, row: number, ny: number): MapNode
  * `balance/report.ts` §9 gates.
  *
  * Caps are per map across all three acts; `MIN_SPECIAL_GAP` keeps two stops of
- * the same kind out of adjacent layers.
+ * the same kind out of adjacent layers. The shrine's cap rose 3 → 4 when the
+ * recruit stops left the map (the gameplay pass): their roll weight is split
+ * between fights, merchants and shrines (`weightedType`), and with the old
+ * caps the free layers read 61.6% fights; 60.7% with this one (§9).
  */
-const SPECIAL_CAPS: Record<string, number> = { merchant: 4, shrine: 3, recruit: 3, elite: 3, campfire: 3 }
+const SPECIAL_CAPS: Record<string, number> = { merchant: 4, shrine: 4, elite: 3, campfire: 3 }
 const MIN_SPECIAL_GAP = 1 // same-type stops never share a layer (adjacent layers are fine)
 /** At most this many stops in one layer — and always at least one fight beside them. */
 const MAX_SPECIALS_PER_LAYER = 2
@@ -291,14 +295,10 @@ function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {})
    * repairs. The price is structural now: a wide layer keeps TWO fights (below)
    * and a road out of a stop leads back to a fight (`detourThroughFights`).
    */
-  // Free Companies guarantees a SECOND hiring stop (below) rather than raising the
-  // cap: a map already carries up to three, and a higher cap only traded fights
-  // for hiring stops the company could not fill (measured −8pt on the recruit line).
   if (opts.noMerchants) caps.merchant = 0
-  if (opts.noRecruits) caps.recruit = 0
 
-  const counts: Record<string, number> = { merchant: 0, shrine: 0, recruit: 0, elite: 0, campfire: 0 }
-  const lastLayer: Record<string, number> = { merchant: -9, shrine: -9, recruit: -9, elite: -9, campfire: -9 }
+  const counts: Record<string, number> = { merchant: 0, shrine: 0, elite: 0, campfire: 0 }
+  const lastLayer: Record<string, number> = { merchant: -9, shrine: -9, elite: -9, campfire: -9 }
 
   // Roll layer by layer. Enforce per-type caps, a minimum layer gap between
   // same-type specials, and at most MAX_SPECIALS_PER_LAYER stops a layer with at
@@ -357,11 +357,10 @@ function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {})
   // Guarantee at least one of each key type appears (only adds when absent, so
   // it never fights the caps). Elites avoid the layer before an act boss.
   const preBoss = (n: MapNode) => isActBossLayer(n.layer + 1)
-  if (!opts.noRecruits) {
-    ensureType('recruit', middle, rng, (n) => n.type === 'battle' && n.layer >= 2 && n.layer <= last - 3)
-    // Free Companies: a SECOND hiring stop, well clear of the first.
-    if (opts.extraRecruit) forceSecond('recruit', middle, rng, (n) => n.layer >= 4 && n.layer <= last - 2)
-  }
+  // (A recruit stop used to be guaranteed here, with one `rng.pick` when the
+  // roll had dealt none. It went with the stops in the gameplay pass, so a map
+  // whose rolls dealt no recruit now draws everything after this point one
+  // value earlier on the map stream — the one draw-order change it made.)
   if (!opts.noMerchants) ensureType('merchant', middle, rng, (n) => n.type === 'battle' && n.layer >= 3)
   ensureType('shrine', middle, rng, (n) => n.type === 'battle' && n.layer >= 2)
   ensureType('elite', middle, rng, (n) => n.type === 'battle' && n.layer >= 3 && !preBoss(n))
@@ -369,7 +368,6 @@ function assignTypes(nodesByLayer: MapNode[][], rng: RNG, opts: MapOptions = {})
   // A Vow's rule is absolute: a stop it forbids must not survive any of the
   // guarantee passes above.
   if (opts.noMerchants) for (const n of middle) if (n.type === 'merchant') n.type = 'battle'
-  if (opts.noRecruits) for (const n of middle) if (n.type === 'recruit') n.type = 'battle'
 }
 
 /**
@@ -407,22 +405,6 @@ function relocateForcedElites(nodesByLayer: MapNode[][], edges: { from: string; 
   for (const e of added) if (!edges.some((x) => x.from === e.from && x.to === e.to)) edges.push(e)
 }
 
-/** Free Companies: place a SECOND stop of this type, clear of the first. */
-function forceSecond(
-  type: NodeType,
-  middle: MapNode[],
-  rng: RNG,
-  eligible: (n: MapNode) => boolean,
-): void {
-  const existing = middle.filter((n) => n.type === type)
-  if (existing.length >= 2) return
-  const firstLayer = existing[0]?.layer ?? -99
-  const candidates = middle.filter(
-    (n) => n.type === 'battle' && eligible(n) && Math.abs(n.layer - firstLayer) >= MIN_SPECIAL_GAP && (type === 'elite' || notLastFight(n, middle)),
-  )
-  if (candidates.length) rng.pick(candidates).type = type
-}
-
 /** True when `n`'s layer keeps a fight even if `n` stops being one. */
 const notLastFight = (n: MapNode, middle: MapNode[]): boolean =>
   middle.some((o) => o !== n && o.layer === n.layer && isFight(o)) &&
@@ -431,12 +413,19 @@ const notLastFight = (n: MapNode, middle: MapNode[]): boolean =>
 function weightedType(layer: number, last: number, rng: RNG): NodeType {
   // Fights are still the most common road; a stop is a detour whose price is
   // the fight it replaces — not a Threat surcharge any more (Phase 3b).
+  //
+  // The recruit stop's share of the roll (10, up to three layers from the
+  // end) was split when hiring moved to the cities (the gameplay pass): half
+  // to the fights, the rest to the merchant and the shrine — all of it to the
+  // fights put §9's fight share at 62.9%, on its 63% ceiling (60.7% now, with
+  // the shrine's cap raised). Still one draw a
+  // node, so the map stream's position never moves.
+  const early = layer <= last - 3
   const w: [NodeType, number][] = [
-    ['battle', 24],
+    ['battle', 24 + (early ? 5 : 0)],
     ['elite', layer >= 3 ? 13 : 0],
-    ['merchant', 13],
-    ['shrine', 10],
-    ['recruit', layer <= last - 3 ? 10 : 0],
+    ['merchant', 13 + (early ? 3 : 0)],
+    ['shrine', 10 + (early ? 2 : 0)],
     ['campfire', layer >= 2 ? 11 : 0],
   ]
   const total = w.reduce((s, [, n]) => s + n, 0)
