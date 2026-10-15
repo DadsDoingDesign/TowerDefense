@@ -304,11 +304,11 @@ export function dualWieldShort(heroName: string, check: { dex: number; need: num
 export function handLine(item: Pick<Item, 'name' | 'slot'>): string | null {
   switch (gripOf(item)) {
     case 'either':
-      return `Either hand · off hand: ${Math.round(OFF_HAND_SHARE * 100)}% of its damage and speed`
+      return `Either hand · ${Math.round(OFF_HAND_SHARE * 100)}% in the off hand`
     case 'off':
       return 'Off hand'
     case 'main':
-      return `Main hand · off hand only with the ${TWINBLADE} and ${DUAL_WIELD_DEX} DEX`
+      return `Main hand · off hand with ${TWINBLADE}, ${DUAL_WIELD_DEX} DEX`
     case 'twoHand':
       return 'Both hands · empties the off hand'
     case 'body':

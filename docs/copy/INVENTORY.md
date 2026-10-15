@@ -2755,9 +2755,9 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L291: a sword, axe, rod or sceptre
 - L293: Twinblade Harness
 - L297: Needs {check.need} DEX — {heroName} has {Math.floor(check.dex)}
-- L307: Either hand · off hand: {Math.round(OFF_HAND_SHAR}% of its damage and speed
+- L307: Either hand · {Math.round(OFF_HAND_SHAR}% in the off hand
 - L309: Off hand
-- L311: Main hand · off hand only with the {TWINBLADE} and {DUAL_WIELD_DEX} DEX
+- L311: Main hand · off hand with {TWINBLADE}, {DUAL_WIELD_DEX} DEX
 - L313: Both hands · empties the off hand
 - L554: Heroes
 - L555: Hits whatever walks inside its ring, as its gear decides: swords and axes swing up close, bows and daggers strike from afar, wands and staffs cast at a group, shields hold enemies.
