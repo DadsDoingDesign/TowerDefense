@@ -137,3 +137,15 @@ export function chipsThatFit(w: number, n: number): number {
   }
   return 0
 }
+
+/**
+ * The width a queue of `n` kinds asks for at most — every portrait up to the
+ * three-kind default and the "+N" tail when kinds are left out. The Stage's
+ * wave preview (`WavePreview`) sizes its queue to this, so the pill is as wide
+ * as its line-up and `chipsThatFit` still has the last word on a narrow phone.
+ */
+export function queueWidth(n: number): number {
+  const k = Math.min(n, MAX_KINDS)
+  if (k <= 0) return QUEUE_CHIP
+  return k * QUEUE_CHIP + (k - 1) * GAP + (n > k ? GAP + MORE : 0)
+}

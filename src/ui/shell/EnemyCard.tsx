@@ -43,6 +43,7 @@ export function EnemyCard({
   typeId,
   countNote,
   anchor,
+  below = false,
   onPick,
   onClose,
 }: {
@@ -53,6 +54,8 @@ export function EnemyCard({
   countNote: string
   /** The strip the card sits on (its top edge) and the portrait it points at. */
   anchor: { strip: HTMLElement | null; chip: HTMLElement | null }
+  /** Hang under the anchor rather than sit on its top edge (the Stage's wave preview, at the top). */
+  below?: boolean
   onPick: (typeId: string) => void
   /** `restore`: send focus back to the opener (false when a tap elsewhere should keep it). */
   onClose: (restore: boolean) => void
@@ -104,12 +107,12 @@ export function EnemyCard({
       const vw = document.documentElement.clientWidth
       const w = card.offsetWidth
       const x = Math.max(16, Math.min(vw - 16 - w, c.left + c.width / 2 - w / 2))
-      setPos({ left: Math.round(x), bottom: Math.round(window.innerHeight - s.top + 8) })
+      setPos(below ? { left: Math.round(x), top: Math.round(s.bottom + 8) } : { left: Math.round(x), bottom: Math.round(window.innerHeight - s.top + 8) })
     }
     place()
     window.addEventListener('resize', place)
     return () => window.removeEventListener('resize', place)
-  }, [anchor.strip, anchor.chip, typeId])
+  }, [anchor.strip, anchor.chip, typeId, below])
 
   useEffect(() => {
     ref.current?.focus({ preventScroll: true })

@@ -27,11 +27,11 @@ import { PickCard, PickStrip, type PickFact, type PickTokenSpec } from './PickSt
  * the CTA names the pick. Never during a live wave: the commit waits for the
  * wave (and its sub-waves) to end.
  */
-export function LevelUpPanel({ hero }: { hero: Sentinel }) {
+export function LevelUpPanel({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) {
   const m = pendingMilestone(hero)
   // Keyed on the milestone, so a pick made for one never leaks into the next.
   if (!m) return null
-  return <SkillChoice key={`${hero.id}:${m.level}`} hero={hero} />
+  return <SkillChoice key={`${hero.id}:${m.level}`} hero={hero} onDone={onDone} />
 }
 
 /** The focused token: one of the offered skills, or the stat boost. */
@@ -49,7 +49,7 @@ function handBack() {
 const tokenId = (f: Focus) => (f.kind === 'bump' ? 'bump' : `skill:${f.id}`)
 const focusOf = (id: string): Focus => (id === 'bump' ? { kind: 'bump' } : { kind: 'skill', id: id.slice('skill:'.length) })
 
-function SkillChoice({ hero }: { hero: Sentinel }) {
+function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) {
   const m = pendingMilestone(hero)!
   const pool = useGameStore((s) => s.skillPool)
   const runSeed = useGameStore((s) => s.runSeed)
@@ -113,6 +113,8 @@ function SkillChoice({ hero }: { hero: Sentinel }) {
       if (stat) chooseStatBump(hero.id, stat)
     } else chooseSkill(hero.id, focus.id, drop)
     handBack()
+    // From the Upgrade panel: back to the hero's card, where the new skill sits in its slot.
+    onDone?.()
   }
   const refocus = (id: string) => {
     setFocus(focusOf(id))
