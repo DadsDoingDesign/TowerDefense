@@ -38,7 +38,7 @@ export interface AssistProfile {
 }
 
 const ASSIST: Record<AssistLevel, AssistProfile> = {
-  off: { baseDamageMul: 1, label: 'Off', blurb: 'The game as it was written.' },
+  off: { baseDamageMul: 1, label: 'Off', blurb: 'Off. On, raiders who reach your wagons steal less cargo.' },
   steady: { baseDamageMul: 0.6, label: 'Steady', blurb: 'Raiders who reach your wagons steal 40% less cargo.' },
   sure: { baseDamageMul: 0.3, label: 'Sure', blurb: 'Raiders who reach your wagons steal 70% less cargo.' },
 }

@@ -67,7 +67,7 @@ export function ShopShelf({
       selectedId={selectedId}
       onPick={onPick}
       short={short}
-      before={wares.length ? undefined : <p className="shop-empty">The shelf is bare. Restock it, or march on.</p>}
+      before={wares.length ? undefined : <p className="shop-empty">The shelf is bare.</p>}
     >
       {children}
     </OfferPick>

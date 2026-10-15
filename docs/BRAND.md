@@ -253,7 +253,7 @@ the words' job is to be believed.
 | Concept | Say | Never say |
 |---|---|---|
 | A unit you post on the field | **hero** | tower, Sentinel, unit, defender |
-| All your heroes together | **company** | team, roster, watch, party |
+| All your heroes together | **your heroes**; **team** in an effect line ("+5 Patience to team", the designer's word, Oct 2026: `docs/copy/COPY.md`) | company (the player's band is the militia), roster, watch, party |
 | Base HP / what enemies attack | **Gate** ("Gate 20/20", "Gate HP") | base, lives, Base integrity, keep |
 | Where a hero is posted | **circle** (in teaching), slot (in code only) | marked slot, tile, pad |
 | The HP multiplier that climbs | **Threat** | heat, difficulty, danger |
@@ -270,7 +270,7 @@ the words' job is to be believed.
 
 ## Banned terms
 
-`tower` (for a hero) · `Sentinel` (as the unit noun) · `team` · `lives` ·
+`tower` (for a hero) · `Sentinel` (as the unit noun) · `team` (outside an effect line) · `lives` ·
 `Base integrity` · `Banner` (for the difficulty ladder) · `Upgr` · `PHY/MAG` ·
 `bought with rate/reach` · `simply` · `just` · `!` · US spellings (`armor`,
 `defense`, `color`, `scepter`) · any currency glyph (`⟡ ◈ ✦`) in shell UI.

@@ -93,8 +93,8 @@ export function CityScreen() {
       ? `Your ${stake}-gold stake is back${here.sales > stake ? ` with ${here.sales - stake} more` : ''}, plus a ${here.fee}-gold fee`
       : `${here.sold} crate${here.sold === 1 ? '' : 's'} sold, and the fee`
     : arrived < 100
-      ? `The escort fee, for the ${arrived}% of the cargo that arrived`
-      : 'The escort fee, for every crate that arrived'
+      ? `The escort fee, for ${arrived}% of the cargo`
+      : 'The escort fee, for all the cargo'
 
   return (
     <ContractPage
@@ -173,17 +173,17 @@ export function CityScreen() {
       <NextGround city={city} />
 
       {!choose ? (
-        <PageTip>Every city on the road pays as the caravan reaches it. From the next city you may cash out here and head home.</PageTip>
+        <PageTip>Every city pays as you reach it. From the next, you may cash out and head home.</PageTip>
       ) : nothingToLose ? (
         <PageTip>
-          Nothing on the wagons is at risk yet, so there is nothing to weigh: press on. Once the road has paid you, a fall leaves most of that gold behind.
+          Nothing on the wagons is at risk yet: press on.
         </PageTip>
       ) : (
         <>
           <h2 className="ct-q">Head home, or press on?</h2>
           {!taught && (
             <PageTip>
-              Cash out to bank everything now. Press on for the bigger payout, but a fall loses the unsold crates and most of the road's gold.
+              Cash out to bank it all now, or press on for more and risk what is still on the road.
             </PageTip>
           )}
           <div className="pk">
@@ -220,8 +220,8 @@ export function CityScreen() {
               >
                 <p className="pk-does">
                   {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} for ${trade.sale}. ` : ''}
-                  {trade.road > 0 ? `${trade.roadIfCashed} of the road's gold comes home. ` : ''}
-                  No completion bonus, no item chances, no contract skill.
+                  {trade.road > 0 ? `${trade.roadIfCashed} road gold comes home. ` : ''}
+                  No bonus, items or skill.
                 </p>
               </PickCard>
             ) : (
@@ -244,7 +244,7 @@ export function CityScreen() {
                 </p>
                 <p className="pk-risk">
                   Fall, and you bank {trade.fall}: {left > 0 ? `the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost` : 'the bonus is lost'}
-                  {roadLost > 0 ? `, and ${roadLost} of the road's gold stays on the road` : ''}.
+                  {roadLost > 0 ? `, and ${roadLost} road gold stays behind` : ''}.
                 </p>
               </PickCard>
             )}

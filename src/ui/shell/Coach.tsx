@@ -439,7 +439,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'boon',
         body: (
           <>
-            <b>{s.owesSkill}</b> reached a <b>skill</b> level: <Tap /> the glowing hero and pick one of three. A hero holds up to three skills.
+            <b>{s.owesSkill}</b> can learn a <b>skill</b>: <Tap /> the glowing hero.
           </>
         ),
       }
@@ -453,7 +453,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'warn',
         body: (
           <>
-            <b>{DANGER_COPY.cursed.name}</b> (the skull tiles): a hero can stand there, but deals {DANGER_COPY.cursed.short}.
+            <b>{DANGER_COPY.cursed.name}</b> (skull tiles): heroes there deal {DANGER_COPY.cursed.short}.
           </>
         ),
       }
@@ -488,11 +488,11 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'relic',
         body: s.elite ? (
           <>
-            An <b>elite</b>: tougher goblins, and a <b>relic</b> in the spoils. A relic helps all your heroes for the rest of the run.
+            An <b>elite</b>: tougher goblins, and a <b>relic</b> in the spoils.
           </>
         ) : (
           <>
-            A <b>relic</b> helps all your heroes for the rest of the run.
+            Take one: an <b>item</b> for one hero, or a <b>relic</b> for the team.
           </>
         ),
       }
@@ -502,7 +502,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'orders',
         body: (
           <>
-            New: <b>{s.command?.name}</b>, once per sub-wave in the fight. {s.command?.blurb}.
+            New: <b>{s.command?.name}</b>, once per sub-wave. {s.command?.blurb}.
           </>
         ),
       }
@@ -512,7 +512,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'wave',
         body: (
           <>
-            A <b>sub-wave</b> is down and the fight is paused. Move one hero if you like, then <b>Next</b>.
+            <b>Sub-wave</b> down. Move one hero if you like, then <b>Next</b>.
           </>
         ),
       }
@@ -522,7 +522,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'haste',
         body: (
           <>
-            <b>Speed</b> fast-forwards the fight. <Tap /> it for 2× or 3×.
+            <Tap /> <b>Speed</b> for 2× or 3×.
           </>
         ),
       }
@@ -532,7 +532,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'equip',
         body: (
           <>
-            Items you win land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one — what a hero holds is what it does.
+            Won items land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one.
           </>
         ),
       }
@@ -544,7 +544,7 @@ export function pickTip(s: TipFacts): Tip | null {
           <>
             {/* Names the chip by its LABEL, the half that cannot go stale (M11),
                 and says what the number does in one plain clause. */}
-            <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP. It rises at every stop.
+            <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP, rising every stop.
           </>
         ),
       }
@@ -574,7 +574,7 @@ export function pickTip(s: TipFacts): Tip | null {
             <b>
               Depth {s.depth?.depth}/{s.depth?.last}
             </b>
-            : how far down the road you are. The boss waits at the end.
+            : how far down the road you are. The boss is at the end.
           </>
         ),
       }
@@ -584,7 +584,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'merchant',
         body: (
           <>
-            A <b>Merchant</b> is in reach: spend your purse on gear or a wagon repair.
+            A <b>Merchant</b> is in reach: gear and wagon repairs for gold.
           </>
         ),
       }

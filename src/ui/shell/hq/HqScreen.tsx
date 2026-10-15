@@ -95,7 +95,7 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
           </button>
         ))}
       </div>
-      {!taught && <PageTip>Everything here is paid from your bank and lasts for good. An order lasts one contract.</PageTip>}
+      {!taught && <PageTip>Paid from your bank. Upgrades last for good; an order, one contract.</PageTip>}
       <BankLine bank={bank} />
       <div className="hq-body" role="tabpanel" id={`hq-panel-${office}`} aria-labelledby={`hq-tab-${office}`}>
         {office === 'hr' ? <HrOffice /> : <OpsOffice />}
@@ -190,7 +190,7 @@ function HrOffice() {
         {next && <Row k={`Level ${deal.level + 1}`} v={next.line.replace(/\.$/, '')} />}
         <BuyButton label={`Upgrade to level ${deal.level + 1}`} cost={deal.cost} can={deal.can} run={deal.buy} done="The best opening deal there is." />
       </Card>
-      <Card title="Hiring Hall" line="One more hero to choose from at every city, and hires arrive trained to your heroes’ level.">
+      <Card title="Hiring Hall" line="One more candidate at every city, trained to your heroes’ level.">
         <BuyButton label="Open the Hiring Hall" cost={hiring.cost} can={hiring.can} run={hiring.buy} done="Open. Every city offers four heroes, trained." />
       </Card>
     </>
@@ -214,8 +214,8 @@ function BankLine({ bank }: { bank: number }) {
         <b>Bank interest</b> · next finished contract <b className="tone-good">+{interestFor(bank)}</b>
       </span>
       <small>
-        {ratePct(BASE_INTEREST.rate)} of the bank each finished contract, up to {BASE_INTEREST.cap}
-        {last != null ? ` · last +${last}` : ''}. Free.
+        {ratePct(BASE_INTEREST.rate)} of the bank per finished contract, up to {BASE_INTEREST.cap}
+        {last != null ? ` · last +${last}` : ''}.
       </small>
     </p>
   )
@@ -244,7 +244,7 @@ function OpsOffice() {
 
       {reveal.focus ? <FocusCard /> : <FocusLocked />}
 
-      <Card title="Scouts" line="Your scouts map the road before you march.">
+      <Card title="Scouts" line="Map the road before you march.">
         <Row k="Level 1" v={scoutNow.standingOrders ? '✓ Every ambush has a way around' : 'Every ambush has a way around'} />
         <Row k="Level 2" v={scoutNow.wideMap ? '✓ Three or four roads every layer' : 'Three or four roads every layer'} />
         <BuyButton label={`Train the scouts · level ${scouts.level + 1}`} cost={scouts.cost} can={scouts.can} run={scouts.buy} done="Fully trained." />
@@ -261,7 +261,7 @@ function FocusLocked() {
       <h2>
         <Lock scale={2} /> Company focus
       </h2>
-      <p className="hq-line">One company at a time. Its skills and items fill more of the pool, on every road.</p>
+      <p className="hq-line">One company’s skills and items come up more, on every road.</p>
       <Row k={`Opens after your ${FOCUS_FROM_RUN}th finished contract`} v={`${Math.min(runs, FOCUS_FROM_RUN)} of ${FOCUS_FROM_RUN}`} />
     </section>
   )
@@ -289,8 +289,8 @@ function FocusCard() {
   const before = focus ? Math.round(100 * poolShare(weightPool(pool, null, kindCompany), focus, kindCompany)) : 0
   const after = focus ? Math.round(100 * poolShare(weightPool(pool, null, kindCompany, { company: focus, boost }), focus, kindCompany)) : 0
   return (
-    <Card title="Company focus" line="One company at a time. Its skills and items fill more of the pool, on every road.">
-      {!taught && <PageTip>New: pick a company’s crest. Its skills and items turn up more often, on every road. Switching is free.</PageTip>}
+    <Card title="Company focus" line="One company’s skills and items come up more, on every road.">
+      {!taught && <PageTip>New: pick a crest. Switching is free.</PageTip>}
       <div className="hq-focus" role="radiogroup" aria-label="Company in focus">
         {COMPANIES.map((c) => {
           const open = companyOpen(c.id, standing)

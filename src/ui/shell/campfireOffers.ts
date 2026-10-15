@@ -9,7 +9,6 @@
  * from the rule that applies them (`run/campfire.ts`, `run/economy.ts`).
  */
 import { lookVar } from '../channels'
-import { kitName } from '../../game/data/gear'
 import { cargoPct, cargoShare } from '../../game/run/contracts'
 import { heroLookArt } from './offers'
 import { CAMPFIRE_REPAIR, canTrain, restGain, xpToNextLevel } from '../../game/run/campfire'
@@ -36,10 +35,7 @@ export function campfireOffers(st: St): Offer[] {
     title: 'Rest by the fire',
     sub: gain > 0 ? `Cargo +${gain}%` : 'Cargo is whole',
     icon: 'base',
-    body: [
-      `A night to round up stray cargo: +${cargoShare(CAMPFIRE_REPAIR, st.maxBaseHp)}%, up to all of it (${now}% now).`,
-      'Resting spends the campfire. No one trains tonight.',
-    ],
+    body: [`+${cargoShare(CAMPFIRE_REPAIR, st.maxBaseHp)}% cargo, up to all of it (${now}% now).`],
     action: { label: gain > 0 ? `Rest — cargo +${gain}%` : 'Rest anyway', run: () => st.campfireRest(), done: gain > 0 ? `Cargo +${gain}%` : undefined },
     // One tap rests (October 2026): the fire is a cheap, reversible-in-spirit
     // choice, and a hold, hover or focus reads it first (`oneTap.tsx`). Not on
@@ -58,11 +54,10 @@ export function campfireOffers(st: St): Offer[] {
       rowArt: heroLookArt(s),
       body: able
         ? [
-            `${s.name} (${kitName(s)}) gains a full level: +${xpToNextLevel(s)} XP.`,
+            `+${xpToNextLevel(s)} XP: one full level.`,
             ...(s.level + 1 === 5 || s.level + 1 === 10 || s.level + 1 === 15 ? [`Level ${s.level + 1} brings a skill choice.`] : []),
-            'Training spends the campfire. No stray cargo is rounded up.',
           ]
-        : [`${s.name} is at the level cap. Training would do nothing.`],
+        : [`${s.name} is at the level cap.`],
       action: {
         label: able ? `Train ${s.name}` : 'At the cap',
         run: () => st.campfireTrain(s.id),
@@ -79,7 +74,7 @@ export function campfireOffers(st: St): Offer[] {
     title: 'Walk on',
     icon: 'back',
     immediate: true,
-    body: ['Leave the fire unlit and march.'],
+    body: [],
     action: { label: 'Walk on', run: () => st.leaveEvent() },
   }
   // The page shows the first row's detail, so lead with the useful choice:
@@ -109,7 +104,7 @@ export function merchantServiceOffers(st: St): Offer[] {
       icon: 'base',
       cost: { amount: r.price, currency: 'gold' },
       dim: st.gold < r.price || full,
-      body: [`Timber, rope and a buyer for what was stolen: +${cargoShare(GATE_REPAIR.hp, st.maxBaseHp)}% cargo, up to all of it (${cargoPct(st.baseHp, st.maxBaseHp)}% now). One per visit.`],
+      body: [`+${cargoShare(GATE_REPAIR.hp, st.maxBaseHp)}% cargo, up to all of it (${cargoPct(st.baseHp, st.maxBaseHp)}% now). One per visit.`],
       action: {
         label: full ? 'Cargo is whole' : `Repair — cargo +${gain}%`,
         cost: { amount: r.price, currency: 'gold' },
@@ -129,7 +124,7 @@ export function merchantServiceOffers(st: St): Offer[] {
     icon: 'loot',
     cost: { amount: cost, currency: 'gold' },
     dim: st.gold < cost,
-    body: [`The merchant lays out ${shelfSize(st.relics)} new items. Each restock here costs ${REROLL_STEP * mult} gold more than the last.`],
+    body: [`${shelfSize(st.relics)} new items. Each restock here costs ${REROLL_STEP * mult} gold more.`],
     action: {
       label: 'Restock',
       cost: { amount: cost, currency: 'gold' },

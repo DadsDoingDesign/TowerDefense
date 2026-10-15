@@ -102,7 +102,7 @@ export function WaveCeremony() {
         </p>
         {result!.enemiesLeaked > 0 && (
           <p className="sh-ceremony-note">
-            {result!.enemiesLeaked} reached the Gate · Gate {result!.baseHpLeft} left
+            {result!.enemiesLeaked} reached the wagons · cargo {cargoPct(result!.baseHpLeft, maxBaseHp)}%
           </p>
         )}
       </div>
