@@ -490,6 +490,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       : rewardHand(streams.rng, {
           kind: handKind,
           luck,
+          depth: node.layer,
           count: handSize({ thinPickings: false }),
           // LS3: a first run meets relics at its first elite.
           noBattleRelics: battleRelicsWithheld(st.firstRun, st.runMap, cleared),
@@ -502,7 +503,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
-      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity, kinds: st.itemPool }))
+      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, depth: node.layer, roster: rosterXp, pity, kinds: st.itemPool }))
       : []
 
     // After each act boss, the Crossroads: recruit or mutate (Phase 3b).

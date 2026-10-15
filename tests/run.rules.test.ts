@@ -237,7 +237,7 @@ describe('merchant shelf (game/run/economy)', () => {
   const roster = [classicHero('rogue')]
   const shelfFrom = (seed: number) => {
     const ids = idCounterState()
-    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), roster, pity: newRarityPity() })
+    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), depth: 4, roster, pity: newRarityPity() })
     restoreIdCounter(ids)
     return shelf.map((e) => ({ name: e.item.name, rarity: e.item.rarity, slot: e.item.slot, price: e.price }))
   }
@@ -249,7 +249,7 @@ describe('merchant shelf (game/run/economy)', () => {
 
   it('deals four items priced by rarity, and never spends the pity counter', () => {
     const pity = { dry: 7 }
-    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, roster, pity })
+    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, depth: 6, roster, pity })
     expect(shelf).toHaveLength(4)
     for (const e of shelf) expect(e.price).toBe(ITEM_PRICE[e.item.rarity])
     expect(pity).toEqual({ dry: 7 })
@@ -461,11 +461,11 @@ describe('relics (data/relics + game/run/relics)', () => {
   it('the reward hand: a battle mixes, an elite always holds a relic, an act boss is all relics', () => {
     const roster = [classicHero('rogue')]
     for (let seed = 1; seed < 40; seed++) {
-      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, count: 3, held: [], roster })
+      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, depth: 2, count: 3, held: [], roster })
       expect(battle.some((c) => c.kind === 'item')).toBe(true)
-      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, count: 3, held: [], roster })
+      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, depth: 3, count: 3, held: [], roster })
       expect(elite.some((c) => c.kind === 'relic')).toBe(true)
-      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, count: 3, held: [], roster })
+      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, depth: 4, count: 3, held: [], roster })
       expect(boss.every((c) => c.kind === 'relic')).toBe(true)
       expect(new Set(boss.map((c) => c.relic)).size).toBe(3)
     }

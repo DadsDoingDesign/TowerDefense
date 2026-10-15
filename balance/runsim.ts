@@ -662,7 +662,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         baseHp = repairGate(baseHp, meta.maxBaseHp)
       }
       const stock = Array.from({ length: shelfSize(relics) }, () =>
-        generateItem(rng, { luck, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false, kinds: items }),
+        generateItem(rng, { luck, depth: node.layer, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false, kinds: items }),
       )
       for (let pass = 0; pass < 4; pass++) {
         let best: { item: Item; gain: number; hero: number } | null = null
@@ -820,6 +820,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     const cards = rewardHand(rng, {
       kind: handKind,
       luck: nodeClearLuck(node),
+      depth: node.layer,
       count: handSize({ thinPickings: false }),
       noBattleRelics: false,
       held: relics,

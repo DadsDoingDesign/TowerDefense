@@ -85,7 +85,7 @@ describe('horizontal services (strange growth, the wide map)', () => {
   it('an act boss lays out a hand of three relics', () => {
     expect(handSize({ thinPickings: false })).toBe(3)
     expect(handSize({ thinPickings: true })).toBe(2)
-    const hand = rewardHand(new RNG(3), { kind: 'boss', luck: 0.3, count: handSize({ thinPickings: false }), held: [] })
+    const hand = rewardHand(new RNG(3), { kind: 'boss', luck: 0.3, depth: 4, count: handSize({ thinPickings: false }), held: [] })
     expect(hand.filter((c) => c.kind === 'relic').length).toBe(3)
   })
 

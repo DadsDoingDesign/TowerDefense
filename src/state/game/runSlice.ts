@@ -420,6 +420,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       const contract = get().contract
       const items = rollMerchantShelf(streams.rng, {
         luck: merchantLuck(node.layer),
+        depth: node.layer,
         roster,
         pity: lootPity,
         size: shelfSize(relics),

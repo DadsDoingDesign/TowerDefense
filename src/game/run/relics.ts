@@ -3,7 +3,8 @@
  * numbers in, the next numbers out — the store and the balance harness both
  * call these, so a relic's card and its effect cannot drift apart.
  */
-import { generateItem, type EquipRules, type RarityPity, type RosterRef } from '../data/items'
+import { ACT_LUCK, generateItem, type EquipRules, type RarityPity, type RosterRef } from '../data/items'
+import { actOf } from './threat'
 import { hasRelicRule, relicById, relicPool, relicStatGrant } from '../data/relics'
 import { nextId, type RNG } from '../core/rng'
 import type { RewardCard } from '../data/rewards'
@@ -83,9 +84,20 @@ export function diaryXp<T extends { id: string; xpGained: number }>(awards: T[],
 
 /** Relic-card rarity weights: the old stat-card table, luck tilting it up. */
 const RARITY_WEIGHT: Record<ItemRarity, number> = { common: 40, rare: 34, epic: 18, legendary: 8, mythic: 0 }
-function pickRarity(rng: RNG, luck: number): ItemRarity {
+/**
+ * How much of an Epic or Legendary relic's weight each act deals (the gameplay
+ * pass, Oct 2026): a relic card wears the same rarity colours as an item, and a
+ * purple in the first act's hands was as common for relics (26%) as for items.
+ * The act's luck share is the items' ({@link ACT_LUCK}). Never zero — an Epic
+ * relic in act 1 stays possible (≈ 11% of relic cards), just not the norm.
+ */
+export const RELIC_ACT_TILT: readonly number[] = [0.15, 0.45, 0.8]
+function pickRarity(rng: RNG, luck: number, depth?: number): ItemRarity {
   const tiers: ItemRarity[] = ['common', 'rare', 'epic', 'legendary']
-  const weights = tiers.map((t, i) => RARITY_WEIGHT[t] * (1 + luck * i))
+  const act = depth == null ? null : actOf(depth)
+  const lk = act == null ? luck : luck * ACT_LUCK[act - 1]
+  const tilt = act == null ? 1 : RELIC_ACT_TILT[act - 1]
+  const weights = tiers.map((t, i) => RARITY_WEIGHT[t] * (1 + lk * i) * (i >= 2 ? tilt : 1))
   let roll = rng.range(0, weights.reduce((a, b) => a + b, 0))
   for (let i = 0; i < tiers.length; i++) {
     roll -= weights[i]
@@ -95,10 +107,10 @@ function pickRarity(rng: RNG, luck: number): ItemRarity {
 }
 
 /** A relic card, drawn at a rolled rarity from the pool (falling back to any tier). */
-export function relicCard(rng: RNG, luck: number, pool: ReturnType<typeof relicPool>, exclude: Set<string>): RewardCard | null {
+export function relicCard(rng: RNG, luck: number, pool: ReturnType<typeof relicPool>, exclude: Set<string>, depth?: number): RewardCard | null {
   const open = pool.filter((r) => !exclude.has(r.id))
   if (!open.length) return null
-  const rarity = pickRarity(rng, luck)
+  const rarity = pickRarity(rng, luck, depth)
   const tier = open.filter((r) => r.rarity === rarity)
   const r = rng.pick(tier.length ? tier : open)
   exclude.add(r.id)
@@ -134,6 +146,8 @@ export function rewardHand(
   opts: {
     kind: HandKind
     luck: number
+    /** The map layer the hand is dealt at: rarity follows the act (`items.RARITY_BY_ACT`). */
+    depth: number
     count: number
     held: readonly string[]
     unlocked?: (achievementId: string) => boolean
@@ -154,10 +168,10 @@ export function rewardHand(
   if (opts.kind === 'elite' && !kinds.includes('relic')) kinds[kinds.length - 1] = 'relic'
   return kinds.map((k) => {
     if (k === 'relic') {
-      const c = relicCard(rng, opts.luck, pool, used)
+      const c = relicCard(rng, opts.luck, pool, used, opts.depth)
       if (c) return c
     }
-    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: opts.pity, commitPity: false, kinds: opts.kinds })
+    const item = generateItem(rng, { luck: opts.luck, depth: opts.depth, roster: opts.roster, pity: opts.pity, commitPity: false, kinds: opts.kinds })
     return { id: nextId('rw'), kind: 'item', title: item.name, desc: '', rarity: item.rarity, item }
   })
 }

@@ -96,7 +96,7 @@ describe('relics at the first elite', () => {
 
   it('the elite’s own hand still carries its relic', () => {
     for (const seed of SEEDS.slice(0, 40)) {
-      const hand = rewardHand(new RNG(seed), { kind: 'elite', luck: 0, count: 3, held: [], noBattleRelics: true })
+      const hand = rewardHand(new RNG(seed), { kind: 'elite', luck: 0, depth: 3, count: 3, held: [], noBattleRelics: true })
       expect(hand.some((c) => c.kind === 'relic')).toBe(true)
     }
   })

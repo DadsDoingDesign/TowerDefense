@@ -55,6 +55,7 @@ import {
   type WaveVariant,
 } from '../src/game/data/waves'
 import { generateRewardCards, type RewardGrant } from '../src/game/data/rewards'
+import { rarityByAct, rarityTable } from './rarity-eval'
 import { RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { withRelicStats } from '../src/game/run/relics'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
@@ -646,6 +647,49 @@ if (want(3)) {
     const hi = rarBudget[RARITY_ORDER[i]]
     if (hi <= lo) failures.push(`Rarity budget not monotonic: ${RARITY_ORDER[i]} (${f1(hi)}) ≤ ${RARITY_ORDER[i - 1]} (${f1(lo)}).`)
   }
+
+  // ---- 3b: what a run is OFFERED, act by act (the gameplay pass, Oct 2026) ----
+  const RARITY_RUNS = 4000
+  const byAct = rarityByAct(RARITY_RUNS)
+  line('### 3b. Rarity by act — what a run is offered (gated)')
+  line('')
+  line('The designer: *"every run I get purples easy"* and *"rarity should scale with progression in run, and it\'s also')
+  line('statistical, so still possible to get early."* Every roll in a run now reads its act\'s odds (`items.RARITY_BY_ACT`),')
+  line('and the act scales an elite\'s, a boss\'s and a merchant\'s luck (`ACT_LUCK`) and caps what a drought buys (`PITY_CAP`:')
+  line('under a sure bump in acts 1 and 2, so pity makes a better roll likelier and never forces one). Relic cards wear the')
+  line('same colours and tilt the same way (`relics.RELIC_ACT_TILT`). No tier is ever zero.')
+  line('')
+  line(`${RARITY_RUNS} runs on real maps (\`balance/rarity-eval.ts\`): every reward hand after a battle or an elite, every merchant`)
+  line('shelf and the final spoils, dealt by the store\'s own functions with its own luck; the modelled player takes the rarest')
+  line('item card in every hand, the most pity a run can accrue.')
+  line('')
+  line(rarityTable(byAct, RARITY_RUNS))
+  line('')
+  line('**Before** (the flat 46 / 32 / 15 / 5 / 2 table, luck and pity unscaled; same runs):')
+  line('')
+  line('| Act | Epic+ per roll | Leg.+Myth. | Item hands showing Epic+ | Shelves showing Epic+ | Hands showing any Epic+ card |')
+  line('|---|--:|--:|--:|--:|--:|')
+  line('| 1 | 24.3% | 7.9% | 34.6% | 68.6% | 59.8% |')
+  line('| 2 | 28.3% | 10.1% | 39.6% | 73.7% | 65.1% |')
+  line('| 3 | 36.4% | 13.6% | 43.8% | 81.8% | 69.5% |')
+  line('')
+  const epicUp = (t: (typeof byAct)[number]) => (t.byRarity.epic + t.byRarity.legendary + t.byRarity.mythic) / Math.max(1, t.rolls)
+  const legUp = (t: (typeof byAct)[number]) => (t.byRarity.legendary + t.byRarity.mythic) / Math.max(1, t.rolls)
+  const anyHand = (t: (typeof byAct)[number]) => t.handsAnyEpic / Math.max(1, t.fightHands)
+  const BANDS: [number, number][] = [[0.03, 0.06], [0.09, 0.14], [0.17, 0.24]]
+  line('**The gates.** Epic-or-better per roll lands in its act\'s band — act 1 3–6%, act 2 9–14%, act 3 17–24% (the designer\'s')
+  line('targets were ≈ 3–5 / 10–12 / 18–22%; each band is a point wider for 4,000 runs\' noise and the merchant\'s luck); act 1\'s')
+  line('Legendary + Mythic stay possible and under 1%; and at most 15% of act 1\'s reward hands show an Epic-or-better card of')
+  line('either kind (the designer\'s 10–15%). The item-only hand rate is lower by arithmetic: a hand holds ~1.6 items, and at')
+  line('~5% a roll that is ~8% — a 10–15% item-hand rate needs 7–10% a roll, outside the per-roll band.')
+  line('')
+  byAct.forEach((t, i) => {
+    const [lo, hi] = BANDS[i]
+    if (epicUp(t) < lo || epicUp(t) > hi) failures.push(`Rarity: act ${i + 1} deals Epic+ on ${(100 * epicUp(t)).toFixed(1)}% of rolls (band ${lo * 100}–${hi * 100}%).`)
+  })
+  if (legUp(byAct[0]) <= 0 || legUp(byAct[0]) > 0.01) failures.push(`Rarity: act 1 Legendary+Mythic is ${(100 * legUp(byAct[0])).toFixed(2)}% of rolls (must be > 0 and ≤ 1%).`)
+  if (anyHand(byAct[0]) > 0.15) failures.push(`Rarity: ${(100 * anyHand(byAct[0])).toFixed(1)}% of act 1's reward hands show an Epic+ card (max 15%).`)
+  console.log(`§3b rarity: Epic+ per roll ${byAct.map((t) => (100 * epicUp(t)).toFixed(1) + '%').join(' / ')}; act 1 hands showing any Epic+ ${(100 * anyHand(byAct[0])).toFixed(1)}%`)
 }
 
 // -------------------------------------------------------------- Sweep 4
