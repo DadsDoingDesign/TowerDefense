@@ -51,6 +51,37 @@ All in `src/styles/global.css :root`.
 | `--line` | `rgba(233,205,150,.12)` | Hairline |
 | `--line-strong` | `rgba(233,205,150,.22)` | Emphasised border |
 
+### Company UI themes (Oct 2026)
+
+The designer: "i want allll of the ui to re-theme to the company you chose".
+Every token in `ui/theme/companyThemes.ts` `THEME_TOKENS` — the grounds,
+`--line` / `--line-strong` / `--rule`, the text ramp, `--accent` /
+`--accent-dim` / `--accent-text` / `--ink-on-fill`, `--cta` / `--cta-ink` /
+`--cta-edge`, `--surface(-strong)`, `--glass(-strong)`, `--night`, `--shade`,
+`--glow` / `--glow-2` and the bar's `--plate*` — is redefined per company
+under `:root[data-co-theme='<id>']` (generated from the table, registered with
+`@property` so a change of theme eases over 420 ms; reduced motion cuts it).
+`neutral` is the `:root` values exactly (tested). Under high contrast,
+`:root[data-co-theme][data-contrast='high']` applies the theme's lifted ramp
+(`highContrast()`), so high contrast always wins. **This supersedes BRAND.md's
+"no cool chrome" for the company themes** (Ironvein's steel and Moonquill's
+indigo are cool by request); the house look stays warm.
+
+| Token | House value | Use |
+|---|---|---|
+| `--gold` / `--gold-text` | `#e0ac4c` / `#f0c46a` | Money as a fill / as text. NEVER themed: a bank, a price, a pay figure reads gold in every theme |
+| `--rule` | `#e9cd96` | The lines' colour, opaque: a rule or wash at its own strength is `color-mix(in srgb, var(--rule) N%, transparent)` |
+| `--shade` | `#140e08` | The dark every translucent wash is mixed from (scrims, wells, floating chips, the map's vignette) |
+| `--glow` / `--glow-2` | accent at 6% / none | The page's two glows (a theme's second is its "other paint": Peppercorn's paprika, Easel House's ochre, Moonquill's indigo) |
+| `--plate` / `--plate-on` / `--plate-rim` / `--plate-ink` | the signposts' wood | The home bar's carved plates (places, your militia's purse), stained per theme. The map's signposts stay `--sign-wood`: the world, not the chrome |
+
+A theme never touches: gold, rarity, archetype hues, the company hues
+(`--co-*`), danger / good / teal, the parchment voice, the map's art, or any
+canvas. Which theme is on is `companyThemes.themeFor` (the run's hiring
+company — your militia's on the Sovereign Route; at home the focused road;
+a first launch Peppercorn's); `tests/companyThemes.test.ts` holds every theme
+to the contrast floors `tests/contrast.test.ts` holds the house look to.
+
 ### Parchment / wood inks
 | Token | Value | Use |
 |---|---|---|
@@ -352,7 +383,10 @@ agree it, then edit this section.
    and names the action ("Found the militia", "Choose Vesper"). A secondary
    action is never styled as primary.
 7. **Tokens, not literals.** Colours come from the `:root` tokens, type
-   sizes from `--fs-*`, and spacing from `--gap-*` / `--r-*`. A table
+   sizes from `--fs-*`, and spacing from `--gap-*` / `--r-*`. A translucent
+   wash is a token mixed toward transparent (`color-mix(in srgb,
+   var(--shade) 50%, transparent)`), never the house look's `rgba()` — a
+   literal is the one colour a company theme cannot reach. A table
    several surfaces must agree on lives in `src/ui/channels.ts` (CLAUDE.md).
 8. **Touch and focus.** Every control is at least 44 px on a coarse
    pointer, a real `<button>` or `<input>`, and shows a visible focus ring
@@ -427,7 +461,7 @@ agree it, then edit this section.
 | Decoration (rods, finials, cloth, meadow) | Sets the scene at the margins | Carrying information alone; sitting on the play field |
 | Home bar (`.mn-bar`, `MenuScreen`) | Across the top of the home, over the map: the purse plaque, your militia's flag once founded (opens its builder), and the places | Instructions, tips, standing (the dock) |
 | Purse (`.mn-purse`, `.mn-purse-btn`) | Holds the seal (the screen's one title, spoken on a phone, written beside it on a desk) and the bank, bare on the map over a soft halo. Once you own a company it BECOMES a button — a carved plate like the places — with your flag in the seal's place and your militia's name on a desk: the change is in the frame, not only the picture, and the plate opens your militia's builder | Anything but the mark, the name and the bank |
-| Place button (`.mn-place`) | Opens one of the home's places — the HQ, the sealed crates, the Codex, Settings: a carved plate in the signposts' wood, its mark at the sheet's double (32px) and its name (short under the mark on a phone, "HQ", "Crates"; written beside it on a desk) — one family on every size. A locked one is a charred plate, its mark in shadow under a padlock, its name still there; it does nothing and says "locked" and what opens it as its name and tooltip | Any action on a company (the dock and the card) |
+| Place button (`.mn-place`) | Opens one of the home's places — the HQ, the sealed crates, the Codex, Settings: a carved plate (`--plate`: the signposts' wood in the house look, stained in a company's theme), its mark at the sheet's double (32px) and its name (short under the mark on a phone, "HQ", "Crates"; written beside it on a desk) — one family on every size. A locked one is a charred plate, its mark in shadow under a padlock, its name still there; it does nothing and says "locked" and what opens it as its name and tooltip | Any action on a company (the dock and the card) |
 | Road signpost (`.tm-label`, `TradeMap`) | Marks where a company's road ends, by its crest (a padlock on a road not hiring yet); a tap focuses that road, like its dock slot. The focused one is lit in the company's colour. Its place depends on the layout and your standing only, never the focus (`labelLayout.placeSignposts`): a pick never moves a signpost | Standing, shares or the day's marks (the dock says those, once) |
 | City tags (`.tm-town`, `.tm-leaders`) | Name the focused road's three cities as annotations: hung in a line beside the road, all on one side of it (two only where a road has no room, Peppercorn's on a 375 × 667 phone), each joined to its town by a 1px leader to a small square in the company's colour, the destination in bold. Never on each other, a signpost, the road, the keep, the notes or the screen's edge (`labelLayout.placeCityLabels`, tested); a name with no room is left off the map (still read by a screen reader) | Any other road's cities; anything but names |
 | Company dock (`.mn-dock`, `homeDock.ts`) | The five companies as exactly five fixed, evenly spaced slots, always in `COMPANY_IDS` order — the order the map fans its roads, west to east. A slot shows the company's crest (gold-rimmed on a second term), your standing ("Rep 4", or "II · 3"), its share of the trade while the war is on, and the crown on the season's outright leader; a tap focuses its road (the map re-lights in the company's season, the card follows). A company not hiring yet shows its padlock and the standing that opens it | Signing (the CTA); explaining a mark (the card); Buy Company (its own slot, floating over the dock) |
@@ -449,6 +483,12 @@ agree it, then edit this section.
 | Season's end (`SeasonEndScreen`) | After the settle that ends a season, before the home: your patron ("Easel House pays you") with its standard, the purse (a "Banked" slip) and its vault pick as the shared `PickStrip` + `PickCard`, the CTA naming the item — or, with no delivery, "No company pays you"; then the next season: the company that finished last and its terms, the leader the shares carry over (or "No company leads") | Showing anything but the season that ended |
 | War fact on the terms (`WarTerms`, `.tw-fact`) | On the desperate company's terms, its one trade-war fact this season: desperate terms (pays ×1.5, raiders 20% stronger) | The pay itself (the slip does, ×1.5 included) |
 | Desperate chip (`DesperateChip`, `.tw-chip.is-desperate`) | Names the company on desperate terms this season ("This season: pays ×1.5" — "this season", so it never reads against the season card's "Last now", which is next season's), on its standings row (the home says it with the dock's "×1.5" mark and the card's chip) | Saying what makes it desperate (the season card's foot, the glossary) |
+
+| Company UI theme (`data-co-theme`, `ui/theme/companyThemes.ts`, `useCompanyTheme`) | Dresses the whole UI in the company the game is with: the focused road's at home and on the pages opened from it, the hiring company's from the terms to the receipt (your militia's on the Sovereign Route), Peppercorn's on a first launch. Colours only, never boxes (the home's no-wiggle proof holds across every focus) | Carrying a fact (the company's crest, name and hue still say whose road it is); recolouring money, rarity or the canvas |
+| Theme swatch (`ThemeSwatch`, `.th-swatch`) | Shows a UI theme as itself — its panel, its accent across the top, its CTA along the foot — in the theme's own colours whatever the page wears; always beside the theme's name | Standing in for the name; any other colour sample |
+| Theme carousel (the militia builder's "Theme" `PartCarousel`, `.co-theme`) | Picks the theme your own road wears: the house look ("Lantern wood") or a company's once your standing with it reaches 6. Choosing one tries it on — the whole page wears it at once; a locked one is dimmed with its lock and says "Standing 6", and the CTA will not keep it | Previewing anything but the theme |
+| Track theme part (`.tk-part` with a swatch) | On level 6 of a company's track (Term I), names the theme it opens for your militia ("Theme · Ironvein steel for your militia"), a fixed part like the flag piece | Paying anything: the standing level itself is the unlock |
+| Receipt theme card (`TrackEarned`, "Standing 6 · theme") | Says a settle crossed the level that opened a company's theme, and where to pick it | Applying it (the builder does) |
 
 A new part gets a row here, with its job, before it ships.
 

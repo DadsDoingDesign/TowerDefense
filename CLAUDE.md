@@ -227,6 +227,27 @@ result. Append a short note to the review log when you're done.
   `metaStore.liveries`, validated by `src/game/run/livery.ts` (which also deals
   the militia builder its earned pieces); the panel is
   `src/ui/shell/company/LiveryScreen.tsx`, opened from the road notice's flag.
+- Company UI themes (Oct 2026; the designer: "allll of the ui … re-theme to
+  the company you chose"): the pure table `src/ui/theme/companyThemes.ts`
+  (`UI_THEMES`: `neutral` = global.css's `:root` exactly, plus one per
+  company, built from its colour; `highContrast`; `themeCss` generates the
+  `:root[data-co-theme='<id>']` blocks and `@property` registrations;
+  `themeFor` says which is on) applied by `useCompanyTheme` (RootShell): at
+  home the focused road (`homeFocus`), Buy Company your militia's, a first
+  launch Peppercorn's; a run — terms to receipt — its `contract.company`, the
+  Sovereign Route your militia's; derived from saved state, so a reload keeps
+  it (the boot's resume prompt wears the saved run's via `useThemePreview`).
+  Themes are token overrides only: money is `--gold` / `--gold-text` (never
+  themed), washes are `color-mix` of `--shade` / `--rule` / `--accent`, the
+  bar's plates `--plate*`; never a house `rgba()` literal on chrome (DESIGN_SYSTEM
+  § 2, § 8 rule 7). The sprite theme's `applyThemeCss` writes no inline colour
+  for the default style (an inline value would pin it). Your militia's theme:
+  `militia.theme` (absent = neutral), open at standing `THEME_LEVEL` (6) with
+  its company (`src/game/run/militiaTheme.ts`; `readMilitia` drops a locked or
+  unknown one), named on the track (`TrackPay.theme`, cosmetic, pays
+  nothing), picked in the builder's Theme carousel (a try-on). Tests
+  `tests/companyThemes.test.ts` (contrast of every theme, HC, `themeFor`),
+  `tests/militia.test.ts`, `tests/track.test.ts`.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

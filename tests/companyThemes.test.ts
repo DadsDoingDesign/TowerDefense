@@ -130,6 +130,12 @@ for (const [label, read] of [
             expect(ratio(rgb(k[name]), over(k[glass], WHITE)), `${t.id} --${name} on --${glass}`).toBeGreaterThanOrEqual(4.5)
         for (const name of ['bad-text', 'teal-text', 'gold-text'])
           expect(ratio(rgb(rootToken(name)), over(k.glass, WHITE)), `${t.id} --${name} on --glass`).toBeGreaterThanOrEqual(4.5)
+        // A locked place's charred plate: the shade at 94% (menu.css).
+        const charred = parseColor(k.shade)
+        const charredOverWhite = over(`rgba(${charred.r}, ${charred.g}, ${charred.b}, 0.94)`, WHITE)
+        expect(ratio(rgb(k.muted), charredOverWhite), `${t.id} --muted on a charred plate`).toBeGreaterThanOrEqual(4.5)
+        // The bar's carved plates, at rest and lit.
+        for (const plate of ['plate', 'plate-on'] as const) expect(ratio(rgb(k['plate-ink']), rgb(k[plate])), `${t.id} --plate-ink on --${plate}`).toBeGreaterThanOrEqual(4.5)
       })
       // Danger, teal, gold and the rarity and archetype text sit on a
       // theme's grounds unchanged: each clears its bar there (4.5:1; 5:1 for

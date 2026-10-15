@@ -23,6 +23,9 @@
   --panel-3: #46331f;
   --line: rgba(233, 205, 150, 0.12);
   --line-strong: rgba(233, 205, 150, 0.22);
+  /* The lines' colour, opaque: a rule or a wash at its own strength reads
+     `color-mix(in srgb, var(--rule) N%, transparent)` (a company theme tints it). */
+  --rule: #e9cd96;
   --text: #f3e7d0;
   /* M27e — the old ramp put `--muted-2` at 3.40:1 on `--panel`, which is under
      AA for every string it carries (GEAR/PACK heads, hero tags, cell labels).
@@ -122,6 +125,13 @@
   --sign-wood-on: #7d5330;
   --sign-rim: #2e1c0e;
   --sign-ink: #f6e8cc;
+  /* The home bar's carved plates (the places, your militia's purse): the
+     signposts' wood in the house look, stained in a company's theme. The
+     map's own signposts stay `--sign-wood` — the world, not the chrome. */
+  --plate: #6b4526;
+  --plate-on: #7d5330;
+  --plate-rim: #2e1c0e;
+  --plate-ink: #f6e8cc;
   --paper: #ece0c8;
   --paper-ink: #3a2c14;
   --paper-ink-2: #5a4526;

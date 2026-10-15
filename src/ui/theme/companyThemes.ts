@@ -53,6 +53,7 @@ export const THEME_TOKENS = [
   'panel-3',
   'line',
   'line-strong',
+  'rule',
   'text',
   'muted',
   'muted-2',
@@ -72,6 +73,10 @@ export const THEME_TOKENS = [
   'shade',
   'glow',
   'glow-2',
+  'plate',
+  'plate-on',
+  'plate-rim',
+  'plate-ink',
 ] as const
 export type ThemeToken = (typeof THEME_TOKENS)[number]
 
@@ -93,6 +98,7 @@ const NEUTRAL = theme('neutral', 'Lantern wood', {
   'panel-3': '#46331f',
   line: 'rgba(233, 205, 150, 0.12)',
   'line-strong': 'rgba(233, 205, 150, 0.22)',
+  rule: '#e9cd96',
   text: '#f3e7d0',
   muted: '#d4c0a0',
   'muted-2': '#ccb694',
@@ -112,6 +118,10 @@ const NEUTRAL = theme('neutral', 'Lantern wood', {
   shade: '#140e08',
   glow: 'rgba(224, 172, 76, 0.06)',
   'glow-2': 'rgba(0, 0, 0, 0)',
+  plate: '#6b4526',
+  'plate-on': '#7d5330',
+  'plate-rim': '#2e1c0e',
+  'plate-ink': '#f6e8cc',
 })
 
 const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
@@ -124,6 +134,7 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     'panel-3': '#313923',
     line: 'rgba(214, 232, 160, 0.13)',
     'line-strong': 'rgba(214, 232, 160, 0.24)',
+    rule: '#d6e8a0',
     text: '#f0f3dc',
     muted: '#cfd7ad',
     'muted-2': '#c3cd9f',
@@ -143,6 +154,10 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     shade: '#0e1108',
     glow: 'rgba(232, 120, 58, 0.1)',
     'glow-2': 'rgba(198, 224, 90, 0.05)',
+    plate: '#4c5724',
+    'plate-on': '#5a672b',
+    'plate-rim': '#1a200a',
+    'plate-ink': '#f4f6dc',
   }),
   // Easel House: plum grounds, a lilac accent, a dab of ochre in the corner.
   art: theme('art', 'Easel violet', {
@@ -153,6 +168,7 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     'panel-3': '#3a2d4b',
     line: 'rgba(214, 196, 245, 0.13)',
     'line-strong': 'rgba(214, 196, 245, 0.24)',
+    rule: '#d6c4f5',
     text: '#f2ecfa',
     muted: '#d4c6e6',
     'muted-2': '#c8b8de',
@@ -172,6 +188,10 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     shade: '#100b16',
     glow: 'rgba(198, 164, 255, 0.09)',
     'glow-2': 'rgba(226, 170, 90, 0.07)',
+    plate: '#553d72',
+    'plate-on': '#644886',
+    'plate-rim': '#1d1129',
+    'plate-ink': '#f4eefc',
   }),
   // Ironvein: slate grounds and steel blue.
   metals: theme('metals', 'Ironvein steel', {
@@ -182,6 +202,7 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     'panel-3': '#2b3747',
     line: 'rgba(176, 202, 236, 0.13)',
     'line-strong': 'rgba(176, 202, 236, 0.24)',
+    rule: '#b0caec',
     text: '#e8eef6',
     muted: '#bfccdc',
     'muted-2': '#b2c1d4',
@@ -201,6 +222,10 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     shade: '#0b1018',
     glow: 'rgba(134, 170, 238, 0.08)',
     'glow-2': 'rgba(200, 214, 232, 0.04)',
+    plate: '#3e4e63',
+    'plate-on': '#4a5c74',
+    'plate-rim': '#131a25',
+    'plate-ink': '#eef3fa',
   }),
   // Rosethread: wine grounds, rose accent, a pale silk sheen.
   silk: theme('silk', 'Rosethread rose', {
@@ -211,6 +236,7 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     'panel-3': '#452e39',
     line: 'rgba(244, 200, 216, 0.13)',
     'line-strong': 'rgba(244, 200, 216, 0.24)',
+    rule: '#f4c8d8',
     text: '#fbecf1',
     muted: '#e3c7d1',
     'muted-2': '#d9b9c5',
@@ -230,6 +256,10 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     shade: '#160c11',
     glow: 'rgba(234, 169, 192, 0.09)',
     'glow-2': 'rgba(255, 236, 222, 0.05)',
+    plate: '#6e3a4c',
+    'plate-on': '#80455a',
+    'plate-rim': '#2a1119',
+    'plate-ink': '#fcecf2',
   }),
   // Moonquill: indigo night, moonlit silver, a periwinkle CTA.
   scrolls: theme('scrolls', 'Moonquill silver', {
@@ -240,6 +270,7 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     'panel-3': '#2d314c',
     line: 'rgba(206, 212, 240, 0.13)',
     'line-strong': 'rgba(206, 212, 240, 0.24)',
+    rule: '#ced4f0',
     text: '#eef0fa',
     muted: '#c8cce2',
     'muted-2': '#bbc0da',
@@ -259,6 +290,10 @@ const COMPANY_THEMES: Record<CompanyId, UiTheme> = {
     shade: '#0a0b18',
     glow: 'rgba(214, 222, 255, 0.08)',
     'glow-2': 'rgba(96, 84, 210, 0.1)',
+    plate: '#383f6e',
+    'plate-on': '#444b80',
+    'plate-rim': '#12142b',
+    'plate-ink': '#eff1fb',
   }),
 }
 
@@ -377,8 +412,16 @@ export interface ThemeFacts {
   firstCompany: CompanyId
   /** Your militia's chosen theme ('neutral' with no militia). */
   militia: ThemeId
-  /** A theme being tried on in the militia builder, while it is open. */
+  /**
+   * A theme shown over everything while it is set: the militia builder's
+   * try-on, or the run a boot's "Resume run" prompt offers.
+   */
   preview?: ThemeId | null
+}
+
+/** The theme a contract wears: its hiring company's, or your militia's on the Sovereign Route. */
+export function contractTheme(contract: { company: CompanyId | null; charter?: boolean }, militia: ThemeId): ThemeId {
+  return contract.charter ? militia : (contract.company ?? 'neutral')
 }
 
 /**
@@ -387,13 +430,14 @@ export interface ThemeFacts {
  *    militia's on the Sovereign Route;
  *  - the home and the pages opened from it wear the focused company's (a
  *    first launch: the first company's), and Buy Company your militia's;
- *  - the militia builder wears the theme it is trying on.
+ *  - the militia builder wears the theme it is trying on, and the boot's
+ *    "Resume run" prompt the theme of the run it offers.
  */
 export function themeFor(f: ThemeFacts): ThemeId {
   if (f.preview) return f.preview
   if (f.screen !== 'hub') {
     if (f.screen === 'contracts' && f.board) return f.board.company
-    if (f.contract) return f.contract.charter ? f.militia : (f.contract.company ?? 'neutral')
+    if (f.contract) return contractTheme(f.contract, f.militia)
     return f.board?.company ?? 'neutral'
   }
   if (f.staged) return f.firstCompany

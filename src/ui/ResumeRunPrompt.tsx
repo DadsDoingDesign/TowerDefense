@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { peekSavedRun, useGameStore } from '../state/gameStore'
 import { describeSnapshot, type RunSnapshot } from '../state/runSnapshot'
+import { flyingMilitia, militiaTheme } from '../game/run/militia'
+import { useMetaStore } from '../state/metaStore'
+import { contractTheme } from './theme/companyThemes'
+import { useThemePreview } from './theme/useCompanyTheme'
 import './overlays.css'
 
 /**
@@ -34,6 +38,16 @@ export function ResumeRunPrompt() {
     setSnap(peekSavedRun())
     setChecked(true)
   }, [])
+
+  // The prompt wears the theme of the run it offers (the whole UI does, the
+  // moment it resumes), not the home's focus behind it.
+  const showTheme = useThemePreview((s) => s.set)
+  useEffect(() => {
+    if (!snap?.contract) return
+    const meta = useMetaStore.getState()
+    showTheme(contractTheme(snap.contract, militiaTheme(flyingMilitia(meta.militia, meta))))
+    return () => showTheme(null)
+  }, [snap, showTheme])
 
   if (!checked || !snap) return null
 

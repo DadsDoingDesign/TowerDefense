@@ -33,6 +33,18 @@ const rgba = (s: string): { rgb: RGB; a: number } => {
   if (!m) throw new Error(`not an rgba(): ${s}`)
   return { rgb: [+m[1], +m[2], +m[3]], a: +m[4] }
 }
+/**
+ * A translucent wash as a rule writes it: an `rgba()`, or a token mixed toward
+ * transparent (`color-mix(in srgb, var(--shade) 94%, transparent)`, the form
+ * a company theme can re-tint) — the token read from the default `:root`.
+ */
+const wash = (body: string): { rgb: RGB; a: number } => {
+  const mix = body.match(/color-mix\(in srgb, var\(--([\w-]+)\) ([\d.]+)%, transparent\)/)
+  if (mix) return { rgb: hex(token(mix[1])), a: +mix[2] / 100 }
+  const m = body.match(/rgba\([^)]*\)/)
+  if (!m) throw new Error(`no wash in: ${body}`)
+  return rgba(m[0])
+}
 const over = (fg: { rgb: RGB; a: number }, bg: RGB): RGB =>
   fg.rgb.map((c, i) => Math.round(c * fg.a + bg[i] * (1 - fg.a))) as RGB
 const lum = ([r, g, b]: RGB) => {
@@ -183,11 +195,9 @@ describe('the home over the trade map', () => {
   })
 
   it('the bare purse clears 4.5:1 on its halo over pure white; your company’s purse is a carved plate', () => {
-    const m = ruleBody('.mn-purse:not(.is-own)::before').match(/rgba\(([^)]*)\)\s*0\s/)
-    if (!m) throw new Error('the purse has no halo')
-    const halo = over(rgba(`rgba(${m[1]})`), WHITE)
-    for (const name of ['text', 'accent-text']) expect(ratio(hex(token(name)), halo), `--${name} on the purse's halo`).toBeGreaterThanOrEqual(4.5)
-    expect(ruleBody('.mn-purse-btn::after')).toMatch(/var\(--sign-wood\)/)
+    const halo = over(wash(ruleBody('.mn-purse:not(.is-own)::before')), WHITE)
+    for (const name of ['text', 'accent-text', 'gold-text']) expect(ratio(hex(token(name)), halo), `--${name} on the purse's halo`).toBeGreaterThanOrEqual(4.5)
+    expect(ruleBody('.mn-purse-btn::after')).toMatch(/var\(--plate\)/)
   })
 
   it('the dock’s marks clear 4.5:1: the market and desperate tags', () => {
@@ -196,18 +206,15 @@ describe('the home over the trade map', () => {
   })
 
   it('the places’ carved plates clear 4.5:1: their ink on the wood, and a locked one over pure white', () => {
-    expect(ruleBody('.mn-place::after')).toMatch(/var\(--sign-wood\)/)
+    expect(ruleBody('.mn-place::after')).toMatch(/var\(--plate\)/)
+    expect(ratio(hex(token('plate-ink')), hex(token('plate'))), '--plate-ink on --plate').toBeGreaterThanOrEqual(4.5)
     expect(ratio(hex(token('sign-ink')), hex(token('sign-wood'))), '--sign-ink on --sign-wood').toBeGreaterThanOrEqual(4.5)
     for (const sel of ['.mn-place.is-locked::after']) {
-      const m = ruleBody(sel).match(/background:\s*(rgba\([^)]*\))/)
-      if (!m) throw new Error(`${sel} has no rgba background`)
-      expect(ratio(hex(token('muted')), over(rgba(m[1]), WHITE)), `--muted on ${sel}`).toBeGreaterThanOrEqual(4.5)
+      expect(ratio(hex(token('muted')), over(wash(ruleBody(sel)), WHITE)), `--muted on ${sel}`).toBeGreaterThanOrEqual(4.5)
     }
   })
 
   it('the road signposts clear 4.5:1: a locked plate over pure white', () => {
-    const m = ruleBody('.tm-label.is-pin .tm-pill::after').match(/background:\s*(rgba\([^)]*\))/)
-    if (!m) throw new Error('the locked plate has no rgba background')
-    expect(ratio(hex(token('muted')), over(rgba(m[1]), WHITE)), '--muted on a locked plate').toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('muted')), over(wash(ruleBody('.tm-label.is-pin .tm-pill::after')), WHITE)), '--muted on a locked plate').toBeGreaterThanOrEqual(4.5)
   })
 })

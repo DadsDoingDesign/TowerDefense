@@ -654,8 +654,8 @@
   white-space: nowrap;
 }
 .pg-chip.gold {
-  color: var(--accent);
-  border-color: rgba(224, 172, 76, 0.28);
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 28%, transparent);
 }
 .pg-chip.teal {
   color: var(--teal-text);
@@ -689,7 +689,7 @@
   scroll-margin-bottom: var(--gap);
 }
 .pg-detail.inline > .pg-card {
-  background: rgba(20, 14, 8, 0.35);
+  background: color-mix(in srgb, var(--shade) 35%, transparent);
 }
 
 /* When the body scrolls, fade its bottom edge so a half-cut row reads as
@@ -1517,3 +1517,31 @@
   padding: 0 4px 8px;
 }
 
+
+/* ============================================== a UI theme's swatch (Oct 2026)
+   `ui/theme/ThemeSwatch`: the theme's own panel, its accent across the top and
+   its CTA along the foot — drawn from the theme's colours, not the page's, so
+   it shows the theme whatever the page around it wears. The militia builder's
+   theme carousel and the loyalty track's theme row. */
+.th-swatch {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background:
+    linear-gradient(var(--th-accent) 0 3px, transparent 3px calc(100% - 5px), var(--th-cta) calc(100% - 5px)),
+    var(--th-panel);
+  box-shadow:
+    inset 0 0 0 1px var(--th-line),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  vertical-align: -3px;
+}
+.th-swatch.lg {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  background:
+    linear-gradient(var(--th-accent) 0 5px, transparent 5px calc(100% - 8px), var(--th-cta) calc(100% - 8px)),
+    var(--th-panel);
+}

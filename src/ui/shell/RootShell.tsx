@@ -37,6 +37,7 @@ import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
 import { useMetaStore } from '../../state/metaStore'
 import { charterDoor } from '../../game/run/charter'
 import { useTrackLink } from './company/trackLink'
+import { useCompanyTheme } from '../theme/useCompanyTheme'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -111,6 +112,9 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
 
 export function RootShell() {
   const ctx = useShellContext()
+  // The whole UI wears the company the game is with (Oct 2026): the focused
+  // road at home, the hiring company through a run (`ui/theme`).
+  useCompanyTheme()
   const screen = useGameStore((s) => s.screen)
   const shellSelect = useGameStore((s) => s.shellSelect)
   // Your militia is founded when the Sovereign Route opens — the full run,

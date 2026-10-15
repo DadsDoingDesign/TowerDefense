@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------ the page */
 .pg.ct {
   background:
-    radial-gradient(440px 260px at 50% 22%, rgba(224, 172, 76, var(--heat, 0.1)), transparent 70%),
+    radial-gradient(440px 260px at 50% 22%, color-mix(in srgb, var(--accent) calc(var(--heat, 0.1) * 100%), transparent), transparent 70%),
     var(--night);
 }
 .ct .pg-head.ct-head {
@@ -44,7 +44,7 @@
   box-shadow:
     inset 0 0 0 1px var(--cta-edge),
     var(--cta-lift),
-    0 8px 28px rgba(87, 162, 182, 0.28);
+    0 8px 28px color-mix(in srgb, var(--cta) 28%, transparent);
 }
 .ct-cta-cost {
   font-family: system-ui, sans-serif;
@@ -72,7 +72,7 @@
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: rgba(47, 36, 24, 0.9);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
   border: 1px solid var(--line-strong);
   color: var(--text);
   cursor: pointer;
@@ -124,7 +124,7 @@
   height: 36px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(32, 23, 17, 0.9);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
   border: 1px solid var(--line-strong);
   color: var(--accent-text);
   font-weight: 700;
@@ -218,8 +218,8 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  border: 1.5px dashed rgba(233, 205, 150, 0.45);
-  background: rgba(20, 14, 8, 0.5);
+  border: 1.5px dashed color-mix(in srgb, var(--rule) 45%, transparent);
+  background: color-mix(in srgb, var(--shade) 50%, transparent);
 }
 .ct-next-stone b {
   position: absolute;
@@ -251,7 +251,7 @@
   color: var(--rarity-rare-text);
   font-weight: 700;
   font-size: var(--fs-xs);
-  background: rgba(20, 14, 8, 0.6);
+  background: color-mix(in srgb, var(--shade) 60%, transparent);
 }
 
 /* ------------------------------------------------------------ the terms */
@@ -268,7 +268,7 @@
   padding: 10px 12px;
   min-height: 76px;
   border-radius: 12px;
-  background: rgba(47, 36, 24, 0.92);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
   border: 1.5px solid var(--line-strong);
   color: var(--text);
   cursor: pointer;
@@ -292,15 +292,15 @@
 }
 .ct-mode.free {
   border-color: rgba(111, 206, 136, 0.55);
-  background: linear-gradient(rgba(111, 206, 136, 0.1), rgba(47, 36, 24, 0.92));
+  background: linear-gradient(rgba(111, 206, 136, 0.1), color-mix(in srgb, var(--panel) 92%, transparent));
 }
 .ct-mode.free .ct-mode-k {
   color: var(--good);
 }
 .ct-mode.on {
   border-color: var(--accent);
-  background: #3a2c1c;
-  box-shadow: 0 0 0 3px rgba(224, 172, 76, 0.18);
+  background: var(--panel-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .ct-mode.free.on {
   border-color: var(--good);
@@ -311,7 +311,7 @@
 .ct-mode.locked {
   cursor: default;
   border-style: dashed;
-  background: rgba(47, 36, 24, 0.6);
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
 }
 .ct-mode.locked .ct-mode-k {
   display: inline-flex;
@@ -460,7 +460,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(233, 205, 150, 0.16);
+  background: color-mix(in srgb, var(--rule) 16%, transparent);
   transform: rotate(45deg);
 }
 .ct-danger-pips i.on {
@@ -602,7 +602,7 @@
   top: 14px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(233, 205, 150, 0.14);
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
 }
 .ct-rail-lit {
   position: absolute;
@@ -837,7 +837,7 @@ button.ct-stand-chip:focus-visible {
   font-weight: 700;
 }
 .ct-route-next .ct-gold {
-  color: var(--accent-text);
+  color: var(--gold-text);
   font-weight: 700;
   vertical-align: -1px;
 }
@@ -850,7 +850,7 @@ button.ct-stand-chip:focus-visible {
   border-radius: 999px;
   font-size: var(--fs-xs);
   font-weight: 700;
-  background: rgba(20, 14, 8, 0.6);
+  background: color-mix(in srgb, var(--shade) 60%, transparent);
   border: 1px solid var(--line-strong);
   color: var(--text);
 }
@@ -884,7 +884,7 @@ button.ct-stand-chip:focus-visible {
 }
 .ct-road-track {
   right: 0;
-  background: rgba(233, 205, 150, 0.14);
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
 }
 .ct-road-lit {
   background: var(--co);
@@ -1320,7 +1320,7 @@ button.ct-stand-chip:focus-visible {
   min-width: 24px;
   height: 5px;
   border-radius: 3px;
-  background: rgba(233, 205, 150, 0.14);
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
   overflow: hidden;
 }
 .ask-bar i {

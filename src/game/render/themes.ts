@@ -199,10 +199,21 @@ export function withStyle(style: ThemeStyle, fn: () => void): void {
 export function applyThemeCss(style: ThemeStyle): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  root.style.setProperty('--accent', style.css.accent)
-  root.style.setProperty('--accent-dim', style.css.accentDim)
   root.style.setProperty('--radius', style.css.radius)
-  root.style.setProperty('--bg', style.css.bg)
-  if (style.css.panel) root.style.setProperty('--panel', style.css.panel)
+  // The colours go inline ONLY for a style that differs from the house look
+  // (global.css's `:root`). An inline value outranks every stylesheet rule,
+  // so the default writing its (identical) colours here pinned them against
+  // the company UI themes (`ui/theme/companyThemes.ts`, Oct 2026).
+  const house = THEMES[DEFAULT_THEME].css
+  const colours: [string, string | undefined, string | undefined][] = [
+    ['--accent', style.css.accent, house.accent],
+    ['--accent-dim', style.css.accentDim, house.accentDim],
+    ['--bg', style.css.bg, house.bg],
+    ['--panel', style.css.panel, house.panel],
+  ]
+  for (const [name, v, base] of colours) {
+    if (v && v !== base) root.style.setProperty(name, v)
+    else root.style.removeProperty(name)
+  }
   document.body.style.fontFamily = style.css.font ?? ''
 }

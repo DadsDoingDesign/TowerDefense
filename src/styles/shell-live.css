@@ -153,7 +153,7 @@
   max-width: calc(100% - 16px);
   padding: 5px 12px 5px 8px;
   border-radius: 999px;
-  background: rgba(20, 13, 7, 0.9);
+  background: color-mix(in srgb, var(--shade) 90%, transparent);
   border: 1px solid var(--co);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   font-size: var(--fs-xs);
@@ -193,7 +193,7 @@
   gap: 4px;
   padding: 5px 9px 7px;
   border-radius: var(--r-sm);
-  background: rgba(20, 12, 6, 0.82);
+  background: color-mix(in srgb, var(--shade) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--bad-text) 55%, var(--line-strong));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
@@ -272,7 +272,7 @@
   gap: 8px;
   padding: 7px 18px;
   border-radius: 999px;
-  background: rgba(20, 12, 6, 0.86);
+  background: color-mix(in srgb, var(--shade) 86%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
   color: var(--accent);
   font-family: var(--font-display);
@@ -290,7 +290,7 @@
   background: linear-gradient(180deg, #3a2610, #1e1208);
   border-width: 2px;
   box-shadow:
-    0 0 0 3px rgba(224, 172, 76, 0.18),
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent),
     0 4px 18px rgba(0, 0, 0, 0.5);
 }
 .sh-ceremony-card {
@@ -300,7 +300,7 @@
   gap: 6px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: rgba(24, 15, 8, 0.88);
+  background: color-mix(in srgb, var(--shade) 88%, transparent);
   border: 1px solid var(--line-strong);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
   animation: sh-cer-up 240ms ease-out;
@@ -560,7 +560,7 @@
   border-left: 1px solid var(--line);
   font-size: var(--fs-md);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
   white-space: nowrap;
 }
 .pg-strip-tile.fresh,
@@ -610,7 +610,7 @@
 
 /* ------------------------------------------------------ elite spoils frame */
 .pg.tone-elite .pg-head {
-  background: linear-gradient(180deg, rgba(224, 172, 76, 0.16), transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .pg.tone-elite .t-title {
@@ -714,7 +714,7 @@
   padding: 0 5px;
   border-radius: 999px;
   background: var(--accent);
-  color: #1b1409;
+  color: var(--ink-on-fill);
   font-size: var(--fs-micro);
   font-weight: 800;
   text-transform: uppercase;

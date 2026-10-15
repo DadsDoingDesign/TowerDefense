@@ -69,9 +69,9 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(10, 8, 6, 0.6), rgba(10, 8, 6, 0) 96px),
-    linear-gradient(0deg, rgba(10, 8, 6, 0.72), rgba(10, 8, 6, 0) 46%),
-    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(8, 6, 4, 0.5) 100%);
+    linear-gradient(color-mix(in srgb, var(--shade) 60%, transparent), color-mix(in srgb, var(--shade) 0%, transparent) 96px),
+    linear-gradient(0deg, color-mix(in srgb, var(--shade) 72%, transparent), color-mix(in srgb, var(--shade) 0%, transparent) 46%),
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, color-mix(in srgb, var(--shade) 50%, transparent) 100%);
 }
 
 /* The roads' signposts (Figma "B2 · Road Signpost"): crisp HTML over the
@@ -160,7 +160,7 @@
   color: var(--muted);
 }
 .tm-label.is-pin .tm-pill::after {
-  background: rgba(20, 15, 10, 0.94);
+  background: color-mix(in srgb, var(--shade) 94%, transparent);
   border: 1px dashed var(--line-strong);
 }
 .tm-label.is-pin.is-on .tm-pill::after {
@@ -286,7 +286,7 @@
   inset: -10px -18px;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(farthest-side, rgba(10, 8, 6, 0.75) 0 62%, rgba(10, 8, 6, 0) 100%);
+  background: radial-gradient(farthest-side, color-mix(in srgb, var(--shade) 75%, transparent) 0 62%, color-mix(in srgb, var(--shade) 0%, transparent) 100%);
 }
 .mn-purse.is-own {
   padding: 0;
@@ -303,7 +303,7 @@
   padding: 0 12px 0 6px;
   border: 0;
   background: none;
-  color: var(--sign-ink);
+  color: var(--plate-ink);
   font: inherit;
   cursor: pointer;
 }
@@ -316,12 +316,12 @@
   background:
     linear-gradient(180deg, rgba(255, 220, 170, 0.16) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
     repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.07) 7px 9px),
-    var(--sign-wood);
-  border: 1px solid var(--sign-rim);
+    var(--plate);
+  border: 1px solid var(--plate-rim);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 .mn-purse-btn .mn-bank {
-  color: var(--sign-ink);
+  color: var(--plate-ink);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 .mn-purse-btn:active {
@@ -356,7 +356,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
-  color: var(--accent-text);
+  color: var(--gold-text);
   font-weight: 800;
   font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
@@ -397,7 +397,7 @@
   padding: 3px 0 4px;
   border: 0;
   background: none;
-  color: var(--sign-ink);
+  color: var(--plate-ink);
   font: inherit;
   cursor: pointer;
 }
@@ -410,8 +410,8 @@
   background:
     linear-gradient(180deg, rgba(255, 220, 170, 0.16) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
     repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.07) 7px 9px),
-    var(--sign-wood);
-  border: 1px solid var(--sign-rim);
+    var(--plate);
+  border: 1px solid var(--plate-rim);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 .mn-place-mark {
@@ -437,7 +437,7 @@
   cursor: default;
 }
 .mn-place.is-locked::after {
-  background: rgba(20, 15, 10, 0.94);
+  background: color-mix(in srgb, var(--shade) 94%, transparent);
   border: 1px dashed var(--line-strong);
   box-shadow: none;
 }
@@ -455,12 +455,12 @@
     background:
       linear-gradient(180deg, rgba(255, 230, 180, 0.22) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.22) calc(100% - 3px)),
       repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.06) 7px 9px),
-      var(--sign-wood-on);
+      var(--plate-on);
   }
   .mn-purse-btn:hover::after {
     background:
       linear-gradient(180deg, rgba(255, 220, 170, 0.2) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
-      var(--sign-wood-on);
+      var(--plate-on);
   }
 }
 .mn-place:focus-visible {
@@ -595,7 +595,7 @@
   background: var(--ink-dim);
 }
 .mn-season-bars .is-ahead {
-  background: rgba(233, 205, 150, 0.08);
+  background: color-mix(in srgb, var(--rule) 8%, transparent);
   box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 .mn-season:focus-visible {
@@ -919,7 +919,7 @@
 .mn-fact-gold {
   font-size: var(--fs-sm);
   font-weight: 800;
-  color: var(--accent-text);
+  color: var(--gold-text);
 }
 /* A one-off condition (desperate terms, the market's top price) at the right
    of the head, level with the kicker. Most cards have none; it never changes
@@ -1131,7 +1131,7 @@
     color: var(--text);
   }
   .mn-own-title {
-    color: var(--sign-ink);
+    color: var(--plate-ink);
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
   }
   /* The bank, set off from the name by a hairline. */
@@ -1264,7 +1264,7 @@
   z-index: 1;
   padding: 4px 10px;
   border-radius: 6px;
-  background: rgba(20, 15, 10, 0.92);
+  background: color-mix(in srgb, var(--shade) 92%, transparent);
   color: var(--text);
   font-size: var(--fs-sm);
   font-weight: 700;

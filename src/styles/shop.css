@@ -26,8 +26,8 @@
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
 }
 .shop .pk-tok {
-  background: rgba(10, 6, 3, 0.4);
-  border-color: rgba(233, 205, 150, 0.14);
+  background: color-mix(in srgb, var(--shade) 40%, transparent);
+  border-color: color-mix(in srgb, var(--rule) 14%, transparent);
 }
 .shop .pk-tok[aria-checked='true'] {
   background: var(--panel-3);
@@ -107,11 +107,11 @@
   display: grid;
   place-items: center;
   height: 100px;
-  border: 1px dashed rgba(233, 205, 150, 0.16);
+  border: 1px dashed color-mix(in srgb, var(--rule) 16%, transparent);
   border-radius: var(--r-md);
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
-  background: rgba(10, 6, 3, 0.55);
+  background: color-mix(in srgb, var(--shade) 55%, transparent);
 }
 .shop-sold-stamp {
   padding: 2px 8px;

@@ -235,8 +235,8 @@
   white-space: nowrap;
 }
 .sh-chip.gold {
-  color: var(--accent);
-  border-color: rgba(224, 172, 76, 0.28);
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 28%, transparent);
 }
 .sh-chip.teal {
   color: var(--teal);
@@ -503,7 +503,7 @@
 .sh-offer-cost {
   font-size: var(--fs-micro);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
 }
 
 
@@ -671,7 +671,7 @@
 }
 .sh-tab.active {
   background: var(--accent);
-  color: #1b1409;
+  color: var(--ink-on-fill);
 }
 
 /* `minmax(0, 1fr)`, not `1fr`: grid items floor at min-content, so the longest
@@ -1598,8 +1598,8 @@
   gap: 8px;
   padding: 8px 12px 8px 10px;
   border-radius: 14px;
-  background: rgba(20, 13, 7, 0.9);
-  border: 1px solid rgba(224, 172, 76, 0.42);
+  background: color-mix(in srgb, var(--shade) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   opacity: 1;
@@ -2293,14 +2293,14 @@
 }
 .sh-selector::before {
   left: 0;
-  background: linear-gradient(90deg, var(--bg-2) 20%, rgba(42, 31, 22, 0));
+  background: linear-gradient(90deg, var(--bg-2) 20%, transparent);
 }
 .sh-selector::after {
   right: 0;
   background:
     no-repeat center / 10px 16px
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16'%3E%3Cpath d='M2 2l6 6-6 6' fill='none' stroke='%23e0ac4c' stroke-width='2.5'/%3E%3C/svg%3E"),
-    linear-gradient(270deg, var(--bg-2) 30%, rgba(42, 31, 22, 0));
+    linear-gradient(270deg, var(--bg-2) 30%, transparent);
 }
 .sh-selector[data-more-left='1']::before,
 .sh-selector[data-more-right='1']::after {
@@ -2536,7 +2536,7 @@
   background: var(--panel-3);
   box-shadow:
     0 0 0 3px var(--accent),
-    0 0 14px rgba(224, 172, 76, 0.45);
+    0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
   animation: none;
   z-index: 2;
 }

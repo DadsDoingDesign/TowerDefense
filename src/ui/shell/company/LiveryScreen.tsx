@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { CHARGES, METALS, patternRows, TINCTURES, type BannerShape, type Charge, type Metal, type Pattern, type Tincture } from '../../../game/data/banner'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { COMPANY_KITS, KIT_KIND_NAMES, kitLevelOf, kitPieceAt, kitPieceName, type KitKind } from '../../../game/data/companyKits'
@@ -6,6 +6,7 @@ import { companyStandardPalette, companyStandardRows, DEFAULT_STANDARD, emblemCo
 import { CRATE, cratePalette, shade, WAGON, WAGON_PALETTE } from '../../../game/data/pixelArt'
 import { liveryOf, lockedParts, ownsPiece } from '../../../game/run/livery'
 import { standingOf } from '../../../game/run/standing'
+import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { Icon } from '../../Icon'
 import { Lock, Pixel } from '../../pixel'
@@ -36,6 +37,9 @@ export function LiveryScreen({ company, onDone }: { company: CompanyId; onDone: 
   const xp = useMetaStore((s) => s.standing)
   const saved = useMetaStore((s) => liveryOf(s.liveries, company))
   const setLivery = useMetaStore((s) => s.setLivery)
+  // The page wears its company's theme: its road is the one in focus.
+  const focusRoad = useGameStore((s) => s.focusRoad)
+  useEffect(() => focusRoad(company), [company, focusRoad])
   const standing = standingOf(xp, company)
   // Before standing 1, open on what standing 1 unlocks, tried on.
   const [look, setLook] = useState<StandardLook>(() => (standing >= 1 ? saved : withPiece(DEFAULT_STANDARD, company, 1)))
