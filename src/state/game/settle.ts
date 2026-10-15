@@ -16,6 +16,7 @@ export const settleFactsFromState = (s: GameData, won = false): SettleFacts => (
   gold: s.gold,
   contract: s.contract,
   challenge: s.challenge,
+  assisted: s.assisted,
   facts: runFactsFromState(s, won),
 })
 

@@ -37,6 +37,7 @@ if (process.env.FW_HAZARDS) {
   Object.assign(HAZARD_LEVERS, { cursedDamageMult: a, dangerTiles: b, dangerPool: c, obstacles: d, obstaclePool: e })
 }
 import { classicHero } from '../src/game/data/sentinels'
+import { citySlate, HALL_SLATE_SIZE, SLATE_SIZE } from '../src/game/run/recruits'
 import { chosenHero, rollRecruitBody } from '../src/game/run/heroes'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game/run/charter'
@@ -55,6 +56,7 @@ import {
   type WaveVariant,
 } from '../src/game/data/waves'
 import { generateRewardCards, type RewardGrant } from '../src/game/data/rewards'
+import { rarityByAct, rarityTable } from './rarity-eval'
 import { RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { withRelicStats } from '../src/game/run/relics'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
@@ -646,6 +648,49 @@ if (want(3)) {
     const hi = rarBudget[RARITY_ORDER[i]]
     if (hi <= lo) failures.push(`Rarity budget not monotonic: ${RARITY_ORDER[i]} (${f1(hi)}) ≤ ${RARITY_ORDER[i - 1]} (${f1(lo)}).`)
   }
+
+  // ---- 3b: what a run is OFFERED, act by act (the gameplay pass, Oct 2026) ----
+  const RARITY_RUNS = 4000
+  const byAct = rarityByAct(RARITY_RUNS)
+  line('### 3b. Rarity by act — what a run is offered (gated)')
+  line('')
+  line('The designer: *"every run I get purples easy"* and *"rarity should scale with progression in run, and it\'s also')
+  line('statistical, so still possible to get early."* Every roll in a run now reads its act\'s odds (`items.RARITY_BY_ACT`),')
+  line('and the act scales an elite\'s, a boss\'s and a merchant\'s luck (`ACT_LUCK`) and caps what a drought buys (`PITY_CAP`:')
+  line('under a sure bump in acts 1 and 2, so pity makes a better roll likelier and never forces one). Relic cards wear the')
+  line('same colours and tilt the same way (`relics.RELIC_ACT_TILT`). No tier is ever zero.')
+  line('')
+  line(`${RARITY_RUNS} runs on real maps (\`balance/rarity-eval.ts\`): every reward hand after a battle or an elite, every merchant`)
+  line('shelf and the final spoils, dealt by the store\'s own functions with its own luck; the modelled player takes the rarest')
+  line('item card in every hand, the most pity a run can accrue.')
+  line('')
+  line(rarityTable(byAct, RARITY_RUNS))
+  line('')
+  line('**Before** (the flat 46 / 32 / 15 / 5 / 2 table, luck and pity unscaled; same runs):')
+  line('')
+  line('| Act | Epic+ per roll | Leg.+Myth. | Item hands showing Epic+ | Shelves showing Epic+ | Hands showing any Epic+ card |')
+  line('|---|--:|--:|--:|--:|--:|')
+  line('| 1 | 24.3% | 7.9% | 34.6% | 68.6% | 59.8% |')
+  line('| 2 | 28.3% | 10.1% | 39.6% | 73.7% | 65.1% |')
+  line('| 3 | 36.4% | 13.6% | 43.8% | 81.8% | 69.5% |')
+  line('')
+  const epicUp = (t: (typeof byAct)[number]) => (t.byRarity.epic + t.byRarity.legendary + t.byRarity.mythic) / Math.max(1, t.rolls)
+  const legUp = (t: (typeof byAct)[number]) => (t.byRarity.legendary + t.byRarity.mythic) / Math.max(1, t.rolls)
+  const anyHand = (t: (typeof byAct)[number]) => t.handsAnyEpic / Math.max(1, t.fightHands)
+  const BANDS: [number, number][] = [[0.03, 0.06], [0.09, 0.14], [0.17, 0.24]]
+  line('**The gates.** Epic-or-better per roll lands in its act\'s band — act 1 3–6%, act 2 9–14%, act 3 17–24% (the designer\'s')
+  line('targets were ≈ 3–5 / 10–12 / 18–22%; each band is a point wider for 4,000 runs\' noise and the merchant\'s luck); act 1\'s')
+  line('Legendary + Mythic stay possible and under 1%; and at most 15% of act 1\'s reward hands show an Epic-or-better card of')
+  line('either kind (the designer\'s 10–15%). The item-only hand rate is lower by arithmetic: a hand holds ~1.6 items, and at')
+  line('~5% a roll that is ~8% — a 10–15% item-hand rate needs 7–10% a roll, outside the per-roll band.')
+  line('')
+  byAct.forEach((t, i) => {
+    const [lo, hi] = BANDS[i]
+    if (epicUp(t) < lo || epicUp(t) > hi) failures.push(`Rarity: act ${i + 1} deals Epic+ on ${(100 * epicUp(t)).toFixed(1)}% of rolls (band ${lo * 100}–${hi * 100}%).`)
+  })
+  if (legUp(byAct[0]) <= 0 || legUp(byAct[0]) > 0.01) failures.push(`Rarity: act 1 Legendary+Mythic is ${(100 * legUp(byAct[0])).toFixed(2)}% of rolls (must be > 0 and ≤ 1%).`)
+  if (anyHand(byAct[0]) > 0.15) failures.push(`Rarity: ${(100 * anyHand(byAct[0])).toFixed(1)}% of act 1's reward hands show an Epic+ card (max 15%).`)
+  console.log(`§3b rarity: Epic+ per roll ${byAct.map((t) => (100 * epicUp(t)).toFixed(1) + '%').join(' / ')}; act 1 hands showing any Epic+ ${(100 * anyHand(byAct[0])).toFixed(1)}%`)
 }
 
 // -------------------------------------------------------------- Sweep 4
@@ -1646,7 +1691,8 @@ if (want(9)) {
   line('free layers (act bosses excluded — every route fights those). Stops still never crowd a layer')
   line('— at most two, and every free layer keeps at least one fight.')
   line('')
-  const specialTypes = ['merchant', 'shrine', 'recruit', 'campfire', 'elite']
+  // No recruit stops since the gameplay pass: a hero is hired at a city.
+  const specialTypes = ['merchant', 'shrine', 'campfire', 'elite']
   const perType: Record<string, number> = Object.fromEntries(specialTypes.map((t) => [t, 0]))
   let specialSum = 0
   let worstLayerCluster = 0
@@ -1808,11 +1854,11 @@ if (want(11)) {
   line('')
   line('**Two models, because one of them was a fiction.** The first version of this sweep')
   line('marched the hero through ten consecutive battles, refused every merchant, took no')
-  line('recruits and picked a reward card **at random**. It reported 0%. That is not the')
-  line('floor, it is a floor with the game removed: `generateRunMap` guarantees a recruit')
-  line('stop, a merchant stop and a shrine on every map; `resolveNode` fires a one-time')
-  line('Crossroads offering a free scaled body at the halfway point; and `scaledRecruit`')
-  line('hands over a hero at the roster **median level minus 3**, not a level-1 body.')
+  line('hires and picked a reward card **at random**. It reported 0%. That is not the')
+  line('floor, it is a floor with the game removed: `generateRunMap` guarantees a merchant')
+  line('stop and a shrine on every map; every city before the last offers a hire')
+  line('(`recruits.citySlate`, the gameplay pass — there are no recruit stops on the road);')
+  line('and `scaledRecruit` hands over a hero at the roster **median level minus 3**, not a level-1 body.')
   line('Both models are reported. The strict one is kept because it is a useful lower')
   line('bound on how badly a first run can be played; the graded one is the realistic one.')
   line('')
@@ -1853,7 +1899,7 @@ function freshRun(seed: number, archetype: Archetype, recruitDepths: number[]): 
     const actField = mapById(ground.fieldId) ?? field
     const heroSlots = slotsOn(actField)
     if (recruitDepths.includes(depth) && roster.length < MAX_ROSTER) {
-      // A recruit node hands over a fresh level-1 body.
+      // A city's hire, modelled as a fresh level-1 body.
       const body = rollRecruitBody(rng, BASIC_ITEM_KINDS, roster.map((h) => h.name))
       roster = [...roster, withFirstSkill(body, recruitSkill(seed, body.id, STARTER_SKILL_POOL))]
     }
@@ -1934,7 +1980,15 @@ function applyGrant(roster: Sentinel[], g: RewardGrant, addMods: (m: EffectMods)
  * ceiling above it means the campaign does not notice whether the player brought
  * a team, which makes every unlock cosmetic.
  */
-const FRESH_WIN_BAND: [number, number] = [0.15, 0.35]
+/*
+ * Re-gated in the gameplay pass (Oct 2026): 15–35% → 12–25%. The designer
+ * wants the game medium-to-hard for a competent human, and the modelled player
+ * is weaker than one (it never re-posts in a breather, presses the Rally Horn
+ * by rule, and reads a card by DPS alone), so the bot's band sits lower than
+ * the human experience it stands for. The floor stays a floor — a first-timer
+ * can win — and the ceiling falls so the first contract stays tense.
+ */
+const FRESH_WIN_BAND: [number, number] = [0.12, 0.25]
 /**
  * The ceiling's old rationale — "the campaign is not noticing whether the player
  * brought a team" — turned into a comparison that can actually fail.
@@ -2045,7 +2099,9 @@ if (want(11)) {
   /** The best line the set finds, i.e. the ceiling of play on the same seeds. */
   const freshBest = freshByPolicy.reduce((a, b) => (b.winRate > a.winRate ? b : a))
   const freshSolo = summarise('Strict floor — 10 forced battles, no shops, no hires, random card', 'Strict floor', (s, a) => freshRun(s, a, []))
-  const freshRecruit = summarise('Strict floor + 2 free level-1 recruits (depths 3 and 6)', 'Strict + 2 recruits', (s, a) => freshRun(s, a, [3, 6]))
+  // The two hires land where the game deals them since the gameplay pass: at
+  // the two cities, i.e. before depths 5 and 9 (they were depths 3 and 6).
+  const freshRecruit = summarise('Strict floor + 2 free level-1 hires (the two cities: before depths 5 and 9)', 'Strict + 2 hires', (s, a) => freshRun(s, a, [5, 9]))
   const FRESH_ROWS = [freshSolo, freshRecruit, ...freshByPolicy]
 
   line('| Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |')
@@ -2134,7 +2190,7 @@ if (want(11)) {
     `4. **The campaign must notice a team** — the old ceiling's stated rationale, which was never actually tested. It is measured in §12 rather than here, against a hub-equipped run on the same seeds, because §6 differs from §11 in *structure* as much as in team strength: for the record, §6 wins ${pct(winRate)} against this sweep's best line at ${pct(freshBest.winRate)}, and §12 puts the same comparison on a like-for-like footing.`,
   )
   line('')
-  line(`The design *target* inside the band remains **15–25%** on the gated line. The band`)
+  line(`The design *target* inside the band is **12–20%** on the gated line since the gameplay pass (it was 15–25%: see §13's re-gate). The band`)
   line(`is wide partly because this is a Monte Carlo over ${FRESH_RUNS} runs of a *modelled* player`)
   line(`(1σ ≈ ${f1(Math.sqrt(0.25 / FRESH_RUNS) * 100)}pt), and partly for a reason that belongs in the open.`)
   line('')
@@ -2295,10 +2351,20 @@ const BANNER_RUNS = Number(process.env.FW_BANNER_RUNS) || 600
  * (1–3pt): a per-step point estimate would pass or fail on the resample.
  */
 const CRATE_MIN_REL_COST = 0.08
-/** The run-level gates on contract delivery (October audit, designer item 1). */
-const ZERO_ESCORT_BAND: [number, number] = [0.2, 0.3]
-const VETERAN_ESCORT_BAND: [number, number] = [0.35, 0.55]
-const VETERAN_MAX_STAKE_BAND: [number, number] = [0.1, 0.2]
+/**
+ * The run-level gates on contract delivery (October audit, designer item 1),
+ * re-gated in the gameplay pass (Oct 2026; the designer: "the game should be
+ * med to hard"): zero-meta escort 20–30% → 12–20%, veteran escort 35–55% →
+ * 30–45%, veteran max stake 10–20% → 8–16%. The harness's player is weaker
+ * than a competent human (see `FRESH_WIN_BAND`), so these are the bot's
+ * numbers for a game a human should find medium-to-hard: a first militia's
+ * free escort is won about one time in six by the bot — winnable, and tense —
+ * and the veteran's max stake about one in eight. REPORT §13's "gameplay
+ * pass" block has the before / after.
+ */
+const ZERO_ESCORT_BAND: [number, number] = [0.12, 0.2]
+const VETERAN_ESCORT_BAND: [number, number] = [0.3, 0.45]
+const VETERAN_MAX_STAKE_BAND: [number, number] = [0.08, 0.16]
 /** §13c's sample size a tier (the veteran's ladder). */
 const VETERAN_RUNS = Number(process.env.FW_VETERAN_RUNS) || BANNER_RUNS
 
@@ -2471,7 +2537,7 @@ if (want(12)) {
       for (const e of m.edges) if (outDeg.get(e.from) === 1) forcedIds.add(e.to)
       for (const n of m.nodes) {
         if (n.type === 'elite') { elites++; if (forcedIds.has(n.id)) forced++ }
-        if (['merchant', 'shrine', 'recruit', 'campfire', 'elite'].includes(n.type)) specials++
+        if (['merchant', 'shrine', 'campfire', 'elite'].includes(n.type)) specials++
         if (n.type === 'boss') continue
         const outs = m.edges.filter((e) => e.from === n.id).map((e) => byId.get(e.to)!)
         if (!outs.length) continue
@@ -2495,14 +2561,12 @@ if (want(12)) {
   const shapeBase = mapShape({})
   const shapeWide = mapShape({ wideMap: true })
   const shapeCamp = mapShape({ standingOrders: true })
-  const shapeHire = mapShape({ extraRecruit: true })
   line(`| Map | Layers | Steps with no choice | Forks offering different node types | Elites with no way around | Specials / map |`)
   line('|---|--:|--:|--:|--:|--:|')
   for (const [label, sh] of [
     ['default (zero HQ)', shapeBase],
     ['Scouts 2 (wider roads)', shapeWide],
     ['Scouts 1 (a way round every ambush)', shapeCamp],
-    ['Hiring Hall', shapeHire],
   ] as [string, MapShape][]) {
     line(`| ${label} | ${f1(sh.layers)} | ${pct(sh.noChoice)} | ${pct(sh.mixed)} | ${pct(sh.forcedElites)} | ${f1(sh.specials)} |`)
   }
@@ -2524,8 +2588,20 @@ if (want(12)) {
       `Scouts 1 does not deliver what its card sells: ${pct(shapeCamp.forcedElites)} of Elites still stand on a road with no way around them.`,
     )
   }
-  if (shapeHire.specials <= shapeBase.specials) {
-    failures.push(`The Hiring Hall adds no stop to the map (${f1(shapeBase.specials)} → ${f1(shapeHire.specials)} specials).`)
+  // The Hiring Hall sold a second recruit stop until the gameplay pass; there
+  // are no recruit stops now (a hero is hired at a city), so it sells one more
+  // candidate at every city and hires trained to the company. Its card is
+  // checked on the store's own slate.
+  {
+    const lead = applyXp(classicHero('fighter'), xpToReach(9))
+    const hub = (hall: boolean) => ({ statBonus: 0, trained: hall, slate: hall ? HALL_SLATE_SIZE : SLATE_SIZE, itemPool: BASIC_ITEM_KINDS })
+    const plain = citySlate(4242, 0, [lead], hub(false))
+    const hall = citySlate(4242, 0, [lead], hub(true))
+    line(`**The Hiring Hall's card, checked on the store's slate** (\`recruits.citySlate\`): a city offers ${plain.length} candidates at level ${plain[0].level} to a level-9 company without it, and ${hall.length} at level ${hall[0].level} with it.`)
+    line('')
+    if (hall.length <= plain.length || hall[0].level < lead.level) {
+      failures.push(`The Hiring Hall does not deliver its card: ${plain.length} → ${hall.length} candidates, hires at level ${hall[0].level} for a level-${lead.level} company.`)
+    }
   }
   {
     const at = (label: string) => hubCells.get(label)!
@@ -2626,13 +2702,41 @@ if (want(13)) {
   line('   militia signs. (§11 keeps its own first-timer floor and ceiling on the shipped routing lines.)')
   line(`2. **Every crate costs at least ${pct(CRATE_MIN_REL_COST)} of the tier below's delivery rate**, read off the ladder's log-linear`)
   line('   fit, and **no crate measurably makes the road easier** (a rise beyond twice its paired s.e., §12\'s noise floor). This replaced')
-  line('   "≥ 3pt per crate", which no ladder that ends at a 10–20% max stake can meet: at 15% delivery a 3pt')
+  line('   "≥ 3pt per crate", which no ladder that ends at an 8–16% max stake can meet: at 15% delivery a 3pt')
   line('   step is a 20% cut. The fit, not each step, carries the floor because one step\'s paired s.e. at')
   line(`   ${BANNER_RUNS} runs (≈2pt) is larger than an 8% step (1–3pt).`)
   line('3. **Every crate pays more.** Expected contract pay, on the cash-out line, must rise at every')
   line('   tier — a stake whose payout does not cover the difficulty it adds is a trap. (Kept as it was.)')
   line('')
   line('Gates 2 and 3 hold on this ladder and on the veteran\'s (§13c); the veteran\'s escort and max stake have bands of their own.')
+  line('')
+  line('**The gameplay pass (October 2026) — re-gated toward medium-to-hard.** The designer: *"the game should be med to hard"*.')
+  line('The modelled player is weaker than a competent human — it never re-posts in a breather, presses the Rally Horn by rule')
+  line('and reads a card by DPS alone — so a human finds the game easier than these numbers say. The pass took power out of the')
+  line('early road rather than making fights unreadable: loot rarity follows the act (§3b: Epic-or-better 24% of act 1\'s rolls → ~5%),')
+  line('and a hero is hired only at a city (no recruit stops; three candidates, four with the Hiring Hall). Then the Threat curve')
+  line('was refitted to the new bands (`threat.ACT_STEPS` [1.19, 1.2, 1.36] → [1.07, 1.11, 1.28]; the final boss ×0.48 → ×0.64, so it')
+  line('still kills ≥ 10% of §6\'s arrivals) and the top stakes\' last leg steepened (`watch.LAST_LEG`, 5–8 crates). Measured with')
+  line('`tune.ts` on these seeds, adaptive line, Rosethread\'s road:')
+  line('')
+  line('| Step | Zero-meta escort | First-timer line (§11) | Veteran escort | Veteran max stake | n |')
+  line('|---|--:|--:|--:|--:|--:|')
+  line('| Before (the shipped game) | 21.5% | 19.7% | 40.3% | 11.7% | 600 |')
+  line('| + loot rarity by act | 11.3% | 15.5% | 27.2% | 7.7% | 600 |')
+  line('| + hires only at cities | 5.8% | 5.5% | 22.7% | 4.7% | 600 |')
+  line('| + the refitted curve and stakes (this report) | see below | see §11 | see §13c | see §13c | 600 |')
+  line('')
+  line('**The bands, and why.** Zero-meta escort **20–30% → 12–20%**: a first militia\'s free contract is won about one time in six')
+  line('by the bot — winnable, the first contract still teaches (it is staged, §11), and tense for a human. Veteran escort')
+  line('**35–55% → 30–45%** and max stake **10–20% → 8–16%**: the late game stays a real wager. §11\'s first-timer line')
+  line('**15–35% → 12–25%** (its floor still a floor: the line a first-timer walks must be winnable). The per-crate cost (≥ 8%')
+  line('relative) and "every crate pays more" are unchanged.')
+  line('')
+  line('**Should a hire cost gold?** No. Priced at 60 gold from the purse (`FW_HIRE_PRICE=60`; the modelled player pays when')
+  line('it can and hires nobody when it cannot), a zero-meta escort read **15.8%** against **16.0%** free, and the veteran\'s **41.3%**')
+  line('against **41.0%** (n=600, paired; ±1.5–2pt): the purse at a city holds the road\'s gold, so the price was always paid — a')
+  line('flat tax on the next merchant, not a decision. The scarcity is the city itself (two hires a run), and the city\'s pay goes')
+  line('to the bank, not the purse. The hire stays free.')
   line('')
   {
     const z = tierRows[0].win
@@ -3589,16 +3693,37 @@ if (want(15)) {
   line('')
   line('| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |')
   line('|---|---|---|--:|--:|')
+  /** Flagged rows the confirmation run cleared (§12's rule, the gameplay pass). */
+  const relicConfirmed: string[] = []
+  const relicRuns = (from: number, runs: number, start: string[]) =>
+    Array.from({ length: runs }, (_, j) => from + j).map((i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: start }).won ? 1 : 0))
   for (const relic of RUN_RULE_RELICS) {
     const wins = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: [relic.id] }).won ? 1 : 0))
     const dlt = mean(wins) - mean(relicZero)
     const tol = Math.max(HUB_TOLERANCE, pairedTolerance(wins, relicZero))
     line(`| ${relic.name} | ${RARITY[relic.rarity].label} | ${relic.desc} | ${pct(mean(wins))} | ${dlt >= 0 ? '+' : '−'}${Math.abs(dlt * 100).toFixed(0)}±${(tol * 100).toFixed(0)}pt |`)
     if (dlt + tol < 0) {
-      failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor). A relic is a reward.`)
+      // Confirm before failing, as §12 does (the gameplay pass): six one-sided
+      // 2 s.e. tests on 150 seeds flag by chance — the Twinblade Harness read
+      // −4 ±4pt on the table's seeds and −0.3pt on the first 600. A flagged row
+      // is re-measured on HUB_CONFIRM_RUNS fresh seeds (after the table's),
+      // without the relic beside it, and fails only if the drop holds there.
+      const zeroC = relicRuns(RELIC_RUNS, HUB_CONFIRM_RUNS, [])
+      const cellC = relicRuns(RELIC_RUNS, HUB_CONFIRM_RUNS, [relic.id])
+      const dC = mean(cellC) - mean(zeroC)
+      const tolC = Math.max(HUB_TOLERANCE, pairedTolerance(cellC, zeroC))
+      const note = `${relic.name} read ${(dlt * 100).toFixed(0)}pt (±${(tol * 100).toFixed(0)}) on the table's ${RELIC_RUNS} seeds; on ${HUB_CONFIRM_RUNS} fresh seeds ${dC >= 0 ? '+' : '−'}${Math.abs(dC * 100).toFixed(1)}pt (±${(tolC * 100).toFixed(1)})`
+      if (dC + tolC < 0) {
+        failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor), and it held on ${HUB_CONFIRM_RUNS} fresh seeds (${note}). A relic is a reward.`)
+      } else relicConfirmed.push(note)
     }
   }
   line('')
+  if (relicConfirmed.length) {
+    line(`**Flagged, then cleared on confirmation** (a row the table flags is re-measured on ${HUB_CONFIRM_RUNS} fresh seeds before it fails, §12's rule):`)
+    for (const n of relicConfirmed) line(`- ${n}: noise, not a defect.`)
+    line('')
+  }
   const awaiting = RELICS.filter((r) => !relicSupported(r))
   line(`**Declared, not dealt.** ${awaiting.length ? awaiting.map((r) => `${r.name} (\`${r.requires}\`)`).join(', ') : 'none'} — relics whose rule belongs to the combat lane's engine. \`ENGINE_CAPABILITIES\` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.`)
   line('')

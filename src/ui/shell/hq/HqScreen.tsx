@@ -190,8 +190,8 @@ function HrOffice() {
         {next && <Row k={`Level ${deal.level + 1}`} v={next.line.replace(/\.$/, '')} />}
         <BuyButton label={`Upgrade to level ${deal.level + 1}`} cost={deal.cost} can={deal.can} run={deal.buy} done="The best opening deal there is." />
       </Card>
-      <Card title="Hiring Hall" line="A second Recruit stop on every map, and hires arrive trained for the depth you hire them at.">
-        <BuyButton label="Open the Hiring Hall" cost={hiring.cost} can={hiring.can} run={hiring.buy} done="Open. Every map has a second Recruit stop." />
+      <Card title="Hiring Hall" line="One more hero to choose from at every city, and hires arrive trained to your heroes’ level.">
+        <BuyButton label="Open the Hiring Hall" cost={hiring.cost} can={hiring.can} run={hiring.buy} done="Open. Every city offers four heroes, trained." />
       </Card>
     </>
   )

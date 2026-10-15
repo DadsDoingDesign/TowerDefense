@@ -98,7 +98,7 @@ enemyIds.forEach((id, i) => {
 // ---- map nodes ----
 const nodeY = eRowY + 90
 sectionHeader(nodeY, 'MAP NODES', 'run-map encounter types')
-const nodeTypes: NodeType[] = ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'boss']
+const nodeTypes: NodeType[] = ['start', 'battle', 'elite', 'merchant', 'shrine', 'campfire', 'boss']
 const nStep = (W - 48) / nodeTypes.length
 const nRowY = nodeY + 52
 nodeTypes.forEach((t, i) => {

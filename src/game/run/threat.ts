@@ -196,7 +196,37 @@ export const isActBossLayer = (layer: number): boolean => layer > 0 && layer % A
  * curves tried; +0.66 on the shipped one. §11's strict floor ends 33% of its
  * runs at depth 6 here (gate 40%; 40.4% on the merge).
  */
-export const ACT_STEPS: readonly [number, number, number] = [1.19, 1.2, 1.36]
+/*
+ * ---- refitted in the gameplay pass (Oct 2026: hires at cities, loot by act) --
+ *
+ * Two power sources left the early road — the recruit stops (a hire is made
+ * only at a city, `recruits.citySlate`) and the early purples (rarity by act,
+ * `items.RARITY_BY_ACT`) — and on the shipped curve a zero-meta escort fell
+ * 21.5% → 11.3% (loot alone) → 5.8% (and the hires), the veteran's 40.3% →
+ * 22.7%. A solo hero still clears act 1; the deaths moved to acts 2 and 3,
+ * where a company used to field three or four. The re-gate (REPORT §13: a
+ * zero-meta escort 12–20%, the veteran's 30–45%, its max stake 8–16%; §11's
+ * first-timer 12–25%) is met by easing acts 1 and 2 and making the final boss
+ * the run's real last fight again (§6: it must kill ≥ 10% of arrivals — an
+ * easier road alone took that to 6.5%). Measured with `tune.ts` (§6 n=300):
+ *
+ *   steps                boss   §6 MC  boss kills  zero esc  first-timer  veteran  vet 8c   n
+ *   [1.19, 1.2,  1.36]   0.48     —       —          5.8%      5.5%       22.7%    4.7%    600
+ *   [1.12, 1.15, 1.32]   0.48     —       —         10.5%     11.0%       33.5%   11.3%    400
+ *   [1.08, 1.12, 1.30]   0.48   72.0%    6.5%       15.8%     15.8%       38.0%   13.0%    400
+ *   [1.08, 1.12, 1.34]   0.48   69.3%    8.8%       14.0%     14.0%       35.0%   12.3%    400
+ *   [1.04, 1.10, 1.28]   0.48     —       —         21.0%     20.5%       48.3%   19.8%    400
+ *   [1.08, 1.12, 1.30]   0.58   68.0%   11.7%       13.8%     13.8%       37.0%   11.8%    400
+ *   [1.07, 1.11, 1.27]   0.62   73.0%   10.2%       17.0%     14.5%       40.3%   14.0%    400
+ *   [1.06, 1.10, 1.33]   0.60   70.7%   10.9%       13.8%     14.8%       40.0%   16.8%    500
+ *   [1.05, 1.09, 1.36]   0.58   71.0%   12.0%       14.4%     14.0%       39.8%   15.4%    500
+ *   [1.07, 1.11, 1.28]   0.64   71.0%   12.3%       16.0%     14.7%       41.0%   14.7%    600   ← shipped
+ *
+ * A steeper act 3 did not move the veteran's max stake (it fields three
+ * heroes by then, four with the Opening deal), so the stake's own last leg
+ * steepens instead (`watch.LAST_LEG`, 5–8 crates).
+ */
+export const ACT_STEPS: readonly [number, number, number] = [1.07, 1.11, 1.28]
 export const ACT_JUMP = 1
 /** Act 1's step, for copy that quotes "about ×N a layer". */
 export const THREAT_STEP = ACT_STEPS[0]
@@ -226,7 +256,7 @@ export function threatAtLayer(layer: number, start = 1): number {
  *    first-run hero's deaths onto the depth-6 elite: 43% of §11's strict-floor
  *    runs ended there (gate 40%), 41% at ×1.05, 37.5% at ×1. Its better purse
  *    and card luck are paid for by the composition alone now;
- *  - the **final boss** fights at ×0.48 of its layer (×0.55 before the tuning pass, ×0.44 before the merged one): it fields all three
+ *  - the **final boss** fights at ×0.64 of its layer (×0.48 before the gameplay pass, ×0.55 before the tuning pass, ×0.44 before the merged one): it fields all three
  *    champions, and a Colossus Keg leak (22) ends any Gate, so the Threat
  *    multiplier is not where its difficulty lives. Measured on §6, at ×1 it
  *    ended 82–86% of all lost runs by itself — one node doing the whole
@@ -239,7 +269,9 @@ export const nodeThreatMult = (type: MapNode['type'] | undefined): number =>
   // ×0.55 → ×0.44 with the steeper act 3 (the tuning pass, see ACT_STEPS): the
   // final boss's Threat is ×4.9 where it was ×4.4, not ×6.2. ×0.44 → ×0.48 in
   // the merged tuning pass (its kills of arrivals 7.9% → 12.5%; see ACT_STEPS).
-  type === 'boss' ? 0.48 : 1
+  // ×0.48 → ×0.64 in the gameplay pass: an easier road (see ACT_STEPS) left
+  // the final boss killing 6.5% of the §6 teams that reached it (gate ≥ 10%).
+  type === 'boss' ? 0.64 : 1
 
 /** The Threat a fight on this node is actually fought at. */
 export const encounterThreat = (node: Pick<MapNode, 'type' | 'layer'>, start = 1): number =>

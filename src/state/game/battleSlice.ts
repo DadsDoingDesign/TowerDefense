@@ -12,7 +12,7 @@ import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutation
 import { applyBattleXp, combatSeed, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
-import { recruitSlate } from '../../game/run/recruits'
+import { citySlate } from '../../game/run/recruits'
 import { contractGrant } from '../../game/run/settle'
 import { fightTally, tallyAsks } from '../../game/run/asks'
 import { cargoPct, cityOfLayer, cityPay, contractRules, earn } from '../../game/run/contracts'
@@ -28,6 +28,7 @@ import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
@@ -237,6 +238,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     set({
       engine,
       battlePhase: 'battle',
+      // The dial this wave is fought under marks the run (`run/ranking`).
+      assisted: markAssisted(st.assisted, useSettingsStore.getState().assist),
       selectedSentinelId: null,
       breatherPick: null,
       // Gear locks for the round: an armed gear slot would offer an equip the
@@ -490,6 +493,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       : rewardHand(streams.rng, {
           kind: handKind,
           luck,
+          depth: node.layer,
           count: handSize({ thinPickings: false }),
           // LS3: a first run meets relics at its first elite.
           noBattleRelics: battleRelicsWithheld(st.firstRun, st.runMap, cleared),
@@ -502,14 +506,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
-      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity, kinds: st.itemPool }))
+      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, depth: node.layer, roster: rosterXp, pity, kinds: st.itemPool }))
       : []
 
-    // After each act boss, the Crossroads: recruit or mutate (Phase 3b).
+    // After each act boss — a city reached — the Crossroads: hire one of the
+    // city's candidates, or a mutation instead (Phase 3b; the gameplay pass
+    // made the city the only place a hero is hired). The candidates are a
+    // hash of (run seed, city), never a loot-stream draw.
     const fireFork = !wonRun && forkFires(node)
     const crossroads: Crossroads | null = fireFork
       ? {
-          recruits: rosterXp.length < MAX_ROSTER ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
+          recruits: rosterXp.length < MAX_ROSTER ? citySlate(st.runSeed, city ?? node.layer, rosterXp, recruitHub(st.relics)) : [],
           mutations: rollMutationChoices(
             streams.rng,
             [...new Set(rosterXp.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))],

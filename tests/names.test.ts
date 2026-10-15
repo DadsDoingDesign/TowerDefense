@@ -70,7 +70,7 @@ describe('copy', () => {
 
 describe('icon coverage', () => {
   it('every map node type has its own atlas cell', () => {
-    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'campfire', 'miniboss', 'boss']) {
+    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'campfire', 'miniboss', 'boss']) {
       expect(ICON_ORDER).toContain(NODE_ICON[t])
     }
   })

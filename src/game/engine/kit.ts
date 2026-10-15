@@ -30,7 +30,7 @@ export interface KitPiece {
  */
 export function startingKit(rng: RNG, opts: { extra?: number; roster?: readonly RosterRef[]; kinds?: readonly string[] } = {}): Item[] {
   const items: Item[] = []
-  for (let i = 0; i < (opts.extra ?? 0); i++) items.push(generateItem(rng, { luck: 0.1, roster: opts.roster, kinds: opts.kinds }))
+  for (let i = 0; i < (opts.extra ?? 0); i++) items.push(generateItem(rng, { luck: 0.1, depth: 1, roster: opts.roster, kinds: opts.kinds }))
   return items
 }
 

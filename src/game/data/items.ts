@@ -1,4 +1,5 @@
 import { nextId, RNG } from '../core/rng'
+import { actOf, ACTS } from '../run/threat'
 import type { Enchantment, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
 
 export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic']
@@ -247,8 +248,10 @@ export function heroSlotsFor(
 }
 
 /**
- * `dropWeight` is the share of an unforced roll (loot, a merchant's shelf) at
- * each rarity before luck bumps it. 56 / 28 / 11 / 4 / 1 → 46 / 32 / 15 / 5 / 2
+ * `dropWeight` is the share of an unforced roll with NO depth (a bench, a
+ * tool) at each rarity before luck bumps it. Every roll in a run passes its
+ * map layer and reads {@link RARITY_BY_ACT} instead (the gameplay pass, Oct
+ * 2026). History: 56 / 28 / 11 / 4 / 1 → 46 / 32 / 15 / 5 / 2
  * (the tuning pass): a run that fights its way through gets dressed from what it
  * finds — §11's fight-first lines read 11.7 → 20.4% (battles) and 21.7 → 28.3%
  * (adaptive), the first-timer line 17.9 → 20.0%, n=240 — while the §6 Monte
@@ -673,14 +676,74 @@ function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType, 
   }
 }
 
-const pickRarity = (rng: RNG): ItemRarity => {
-  const total = RARITY_ORDER.reduce((s, r) => s + RARITY[r].dropWeight, 0)
+/**
+ * ---------------------------------------------------------------------------
+ * Rarity follows the run (the gameplay pass, October 2026)
+ * ---------------------------------------------------------------------------
+ *
+ * The designer: "every run I get purples easy", and "rarity should scale with
+ * progression in run. And it's also statistical so still possible to get
+ * early." The flat table (`RARITY.dropWeight`, 46 / 32 / 15 / 5 / 2) dealt an
+ * Epic-or-better on 22% of rolls from the first fight — 24% of act 1's rolls
+ * and 35% of its reward hands after luck (`balance/rarity-eval.ts`) — so a
+ * purple was a weekly event, not a moment.
+ *
+ * Now a roll that knows its map layer (`GenerateOpts.depth`; every roll in a
+ * run passes it) reads its ACT's row, and the act scales the two things that
+ * push a roll up on top of it:
+ *
+ *  - **the odds** — act 1 deals mostly Common and Rare, Epic is a find and
+ *    Legendary / Mythic stay possible (never zero) but well under 1%;
+ *  - **luck** (an elite's or a boss's richer hand, the merchant's layer) is
+ *    worth {@link ACT_LUCK} of itself — a coin that bumps a roll one tier;
+ *  - **pity** buys at most {@link PITY_CAP} luck — under 1 in acts 1 and 2,
+ *    so a drought there makes a better roll likelier and never guarantees
+ *    one; only act 3's pity can reach the old sure bump.
+ *
+ * Fitted with `balance/rarity-eval.ts` (REPORT §3b) to Epic-or-better per
+ * roll ≈ 5% in act 1, ≈ 11% in act 2, ≈ 20% in act 3. Same single draw as
+ * before: the weights change, the stream position never does.
+ */
+export const RARITY_BY_ACT: readonly Readonly<Record<ItemRarity, number>>[] = [
+  { common: 74, rare: 21.6, epic: 3.6, legendary: 0.6, mythic: 0.2 },
+  { common: 56, rare: 36.5, epic: 6, legendary: 1.2, mythic: 0.3 },
+  { common: 50, rare: 41, epic: 7, legendary: 1.5, mythic: 0.5 },
+]
+/** How much of a roll's luck (elite, boss, merchant) each act honours. */
+export const ACT_LUCK: readonly number[] = [0.5, 0.5, 0.6]
+/** The most luck a drought can buy in each act: under 1 means never a sure bump. */
+export const PITY_CAP: readonly number[] = [0.35, 0.7, 1]
+
+/** The act a roll at map layer `depth` reads (1-based; absent → none). */
+const rollAct = (depth: number | undefined): number | null =>
+  depth == null || !Number.isFinite(depth) ? null : Math.min(ACTS, Math.max(1, actOf(depth)))
+
+/** The rarity weights a roll at `depth` reads: its act's row, or the flat table without one. */
+export function rarityWeights(depth?: number): Readonly<Record<ItemRarity, number>> {
+  const act = rollAct(depth)
+  if (act == null) return Object.fromEntries(RARITY_ORDER.map((r) => [r, RARITY[r].dropWeight])) as Record<ItemRarity, number>
+  return RARITY_BY_ACT[act - 1]
+}
+
+const pickRarity = (rng: RNG, depth?: number): ItemRarity => {
+  const w = rarityWeights(depth)
+  const total = RARITY_ORDER.reduce((s, r) => s + w[r], 0)
   let roll = rng.range(0, total)
   for (const r of RARITY_ORDER) {
-    roll -= RARITY[r].dropWeight
+    roll -= w[r]
     if (roll <= 0) return r
   }
   return 'common'
+}
+
+/**
+ * The luck a roll actually gets: its own luck at its act's share, plus what a
+ * drought has bought, capped by the act (`depth` absent: the old uncapped sum).
+ */
+export function effectiveLuck(luck: number, pity: RarityPity | undefined, depth?: number): number {
+  const act = rollAct(depth)
+  if (act == null) return luck + pityLuck(pity)
+  return Math.max(0, luck) * ACT_LUCK[act - 1] + Math.min(PITY_CAP[act - 1], pityLuck(pity))
 }
 
 // ---------------------------------------------------------------------------
@@ -805,7 +868,10 @@ export const newRarityPity = (): RarityPity => ({ dry: 0 })
 const PITY_GRACE = 6
 /** Extra luck per dry roll past the grace period. */
 const PITY_STEP = 0.12
-/** At 1.0 the tier bump stops being a coin flip and becomes a guarantee. */
+/**
+ * At 1.0 the tier bump stops being a coin flip and becomes a guarantee — a
+ * roll with a depth is capped lower in acts 1 and 2 ({@link PITY_CAP}).
+ */
 const PITY_MAX = 1
 /** What ends a drought. */
 const PITY_TIER: ItemRarity = 'epic'
@@ -820,6 +886,12 @@ export interface GenerateOpts {
   keepsakeChance?: number
   /** Shift rarity odds upward, e.g. elite/boss loot. 0 = normal. */
   luck?: number
+  /**
+   * The map layer this roll is dealt at (the gameplay pass): the odds, the
+   * luck and the pity cap follow its act ({@link RARITY_BY_ACT}). Every roll
+   * in a run passes it; absent, the roll reads the flat table (benches, tools).
+   */
+  depth?: number
   /**
    * Who the drop is for (M9). Optional, and omitting it reproduces the previous
    * roster-blind table exactly — including the RNG stream position, so no
@@ -883,13 +955,13 @@ export function creditPity(pity: RarityPity, rarity: ItemRarity): void {
 
 /** Generate a random item. */
 export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
-  let rarity = opts.rarity ?? pickRarity(rng)
+  let rarity = opts.rarity ?? pickRarity(rng, opts.depth)
   // Luck: chance to bump rarity up a tier. Whole units of luck (only reachable
   // through pity) are guaranteed bumps; the fraction is the same single coin
   // flip this has always been, taken only when there is a tier left to win —
   // preserving both the result and the stream position for every luck < 1.
   if (opts.rarity === undefined) {
-    const luck = (opts.luck ?? 0) + pityLuck(opts.pity)
+    const luck = effectiveLuck(opts.luck ?? 0, opts.pity, opts.depth)
     if (luck > 0) {
       let bumps = Math.floor(luck)
       if (RARITY_ORDER.indexOf(rarity) < RARITY_ORDER.length - 1 && rng.chance(luck - bumps)) bumps++

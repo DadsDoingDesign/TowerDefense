@@ -20,6 +20,7 @@ import { AskReceipt } from './AskParts'
 import { asksMetWord } from '../../../game/run/asks'
 import { endLine } from '../../../game/run/liaison'
 import { LiaisonSays } from '../LiaisonScene'
+import { AssistedTag } from '../AssistedTag'
 
 /**
  * How a contract ends (the mercenary company; mockup `trade/r3/6-complete.png`):
@@ -99,6 +100,9 @@ export function ResultScreen() {
       head={
         <div className="ct-result-head" role="status" aria-live="polite">
           <p className="ct-eyebrow">{eyebrow}</p>
+          {/* The gameplay pass: assist was on at some point — every reward
+              stands, and the run counts for no leaderboard (`run/ranking`). */}
+          {recap?.assisted && <AssistedTag where="result" />}
           <h1 className="ct-title lg" tabIndex={-1}>
             {title}
           </h1>

@@ -78,7 +78,7 @@ export interface Crossroads {
  */
 export type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
 export type Speed = 1 | 2 | 3
-export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
+export type EventKind = 'merchant' | 'shrine' | 'campfire'
 
 /**
  * A company's terms while they are open (the `contracts` screen): which
@@ -142,6 +142,8 @@ export interface RunRecap {
    * mid-march is reported at the setting it finished under.
    */
   assist: AssistLevel
+  /** Assist was on at some point of the run: the receipt's "Assisted" tag, and no record counted it. */
+  assisted: boolean
   depth: number
   kills: number
   goldLeft: number
@@ -226,6 +228,14 @@ export interface GameData {
    */
   firstRun: boolean
   /**
+   * Assist was on at some point of this run (the gameplay pass,
+   * `game/run/ranking`): set when the run begins or a wave starts with the dial
+   * off `off`, or the moment the dial is turned on mid-run, and never cleared
+   * until the run ends. An assisted run keeps every reward and counts for no
+   * ranking or record (`countsForRanking`). Snapshotted.
+   */
+  assisted: boolean
+  /**
    * The recap a finished campaign leaves behind (H23) — what the win screen
    * reads, and what a defeat screen gets too, so the receipt is real.
    */
@@ -292,7 +302,6 @@ export interface GameData {
   // Event payloads
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
-  recruitOptions: Sentinel[]
   /** Post-wave: three cards to choose one of (attribute buff or item). */
   reward: RewardCard[] | null
   /**
