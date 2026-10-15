@@ -512,6 +512,9 @@ export function slotsOn(m: GameMap): string[] {
  * read 23.2% and 25.3% delivered on the same rules, a run apart. Now a run is
  * a pure function of its seed and options, wherever it is played.
  */
+/** `FW_HIRE_PRICE`: an exploration knob for pricing a city's hire (default 0, what the game charges). */
+const HIRE_PRICE = Number(process.env.FW_HIRE_PRICE ?? 0) || 0
+
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   return withOwnIds({ n: 0 }, () => simulateRunOnce(seed, archetype, o))
 }
@@ -632,6 +635,14 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
    * from the pack with the store's empty-slot rule (`withRecruits`).
    */
   const hire = (city: number) => {
+    // `FW_HIRE_PRICE` (exploration only, Node-side): what a hire would cost
+    // from the purse, if the game charged one. The modelled player pays it
+    // when it can and hires nobody when it cannot. The game charges nothing
+    // (REPORT §11 — the price measured as a pure cost on the first contract).
+    if (HIRE_PRICE > 0) {
+      if (gold < HIRE_PRICE) return
+      gold -= HIRE_PRICE
+    }
     const slate = citySlate(seed, city, roster, {
       statBonus: 0,
       trained: hiresTrained(meta.hiringHall, relics),

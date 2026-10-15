@@ -133,7 +133,7 @@ export function useShellContext(): ShellContext {
           : crossroads.recruits.length
             ? // The gameplay pass: a hero is hired only here, as the caravan
               // reaches a city. The page is the city's hiring yard (`StopScene`).
-              { title: town ? `Hiring in ${town}` : 'Hiring', blurb: 'Hire one, or none. Or a mutation for one of your heroes instead.' }
+              { title: town ?? 'Hiring', blurb: 'Hire one, or none. Or a mutation for one of your heroes instead.' }
             : { title: 'A mutation', blurb: `You lead ${MAX_HEROES} heroes already. Aim a mutation at one of them, or march on.` },
       layout: 'page',
     }

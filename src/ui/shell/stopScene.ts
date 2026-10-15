@@ -36,7 +36,7 @@ export const STOP_LINES: Readonly<Record<StopKind, readonly string[]>> = {
     '“Lay a hand on it, if you dare.”',
   ],
   recruit: [
-    '“Blades for hire. Coin up front.”',
+    '“Blades for hire. Room on your wagons?”',
     '“We’ve walked worse roads than yours.”',
     '“Feed us, pay us, point us at goblins.”',
     '“Looking for a banner to stand under.”',

@@ -2716,6 +2716,23 @@
 .assisted-tag.hud {
   border-color: var(--teal-dim);
 }
+/* On a phone the tag, depth and strength leave the cargo bar no room: the row
+   wraps: the chips, then the cargo and the purse on the second row. Chosen by
+   which chips the run has, never by a number's width, so it cannot flip
+   mid-battle. */
+@media (max-width: 699.98px) {
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) > .sh-base {
+    order: 1;
+    flex: 1 1 55%;
+  }
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) > .sh-res {
+    order: 2;
+  }
+}
 .assisted-tag.result {
   align-self: center;
   margin: 2px auto 0;
