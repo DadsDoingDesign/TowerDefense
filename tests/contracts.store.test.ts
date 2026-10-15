@@ -113,6 +113,21 @@ describe('a contract, in the store', () => {
     expect(g().board!.company).toBe('art')
   })
 
+  it('the dock’s Buy Company slot is a focus too; the terms then open on the default road', () => {
+    useMetaStore.setState({ standing: { spice: standingXpToReach(1), art: 0, metals: 0, silk: 0, scrolls: 0 } })
+    useGameStore.setState({ screen: 'hub', board: null, homeFocus: null })
+    g().focusRoad('charter')
+    expect(g().homeFocus).toBe('charter')
+    expect(g().screen).toBe('hub')
+    // Nothing else is a focus.
+    g().focusRoad('nowhere' as never)
+    expect(g().homeFocus).toBe('charter')
+    g().openContracts()
+    expect(g().board!.company).toBe('spice')
+    g().boardBack()
+    expect(g().homeFocus).toBe('spice')
+  })
+
   it('choosing the hero marches straight into the first layer’s middle fight', () => {
     g().openContracts({ company: 'art' })
     g().signContract()

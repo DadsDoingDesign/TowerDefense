@@ -76,6 +76,16 @@ export function roadViews(o: {
   })
 }
 
+/**
+ * What the home's map lights: one company's road (its dock slot or its
+ * signpost), `'all'` — every road at once, for the dock's Buy Company slot
+ * (the Sovereign Route carries every company's goods) — or nothing.
+ */
+export type MapFocus = CompanyId | 'all' | null
+
+/** Is this company's road one the focus lights? */
+export const litBy = (focus: MapFocus, company: CompanyId): boolean => focus === 'all' || focus === company
+
 // ---------------------------------------------------------------------------
 // Geometry
 // ---------------------------------------------------------------------------

@@ -426,9 +426,10 @@ byte-for-byte the phone layout.
   shadow). The **home** is the trade map, full-bleed
   (`ui/attract/TradeMap.tsx`), with its layers in fixed places: the bar one
   row across the top (seal and name, militia, bank, the places with their
-  names), and a centred console at the foot (≤ 980px): the season and
-  Sovereign pills on its shoulders, the five-slot company dock, then the
-  focused company's card as one row with its CTA at the end. Nothing
+  names), and a centred console at the foot (≤ 980px): the season pill on
+  its shoulder, the company dock (five company slots and the Buy Company
+  slot, six even columns on a desk), then the focused card as one row with
+  its CTA at the end. Nothing
   scrolls (CSS in `menu.css`; shots in `docs/ui-audit-2026-10/home-map/`).
 
 **Pointer and keyboard** (any width):

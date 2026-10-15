@@ -17,6 +17,9 @@ import type { RunProgress } from '../metaStore'
 import type { RunFeats } from '../../game/run/settle'
 import type { RunContract } from '../../game/run/contracts'
 import type { CompanyId } from '../../game/data/companies'
+
+/** What the home's dock has focused: a company's road, or `'charter'` — the Buy Company slot (the Sovereign Route). */
+export type HomeFocus = CompanyId | 'charter'
 import type { RunActions } from './runSlice'
 import type { BattleActions } from './battleSlice'
 import type { RosterActions } from './rosterSlice'
@@ -206,10 +209,12 @@ export interface GameData {
   board: ContractBoard | null
   /**
    * The road focused on the menu's map (presentation, not snapshotted): its
-   * signpost is lit and the notice under the map is its company's. Null: the
-   * default (`contractSlice.homeCompany`). Any company, a locked one too.
+   * signpost is lit and the card under the dock is its company's. Null: the
+   * default (`contractSlice.homeCompany`). Any company, a locked one too, or
+   * `'charter'` — the dock's Buy Company slot (every road lit, the Sovereign
+   * Route's card).
    */
-  homeFocus: CompanyId | null
+  homeFocus: HomeFocus | null
   /** A typed seed or the board's (Phase 1) — see `state/seeds.ts`. */
   challenge: RunChallenge
   /**

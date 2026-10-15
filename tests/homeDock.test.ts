@@ -3,8 +3,11 @@ import { COMPANY_IDS, type CompanyId } from '../src/game/data/companies'
 import { standingXpToReach } from '../src/game/run/standing'
 import { TERM_XP } from '../src/game/run/track'
 import { DESPERATE_PAY, freshSeason, type Season } from '../src/game/run/tradeWar'
-import { buildGeometry, FAN_ANGLES } from '../src/ui/attract/mapRules'
-import { dockSlots, markText, SLOT_MARKS, slotName } from '../src/ui/shell/homeDock'
+import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
+import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
+import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { buildGeometry, FAN_ANGLES, litBy } from '../src/ui/attract/mapRules'
+import { charterCta, charterSlot, charterSlotName, dockSlots, markText, SLOT_MARKS, slotName } from '../src/ui/shell/homeDock'
 
 /*
  * The home's company dock (October 2026, the map-first home): five fixed
@@ -71,5 +74,50 @@ describe('the company dock', () => {
   it('an even season crowns nobody', () => {
     const slots = dockSlots({ xp: xp({ spice: 2 }), war: freshSeason(), market: null })
     expect(slots.some((s) => s.leads)).toBe(false)
+  })
+})
+
+describe('the sixth slot: Buy Company (the Sovereign Route)', () => {
+  const door = (skills: number, items: number) =>
+    charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, skills), items: UNLOCK_ITEM_KINDS.slice(0, items) })
+  const ALL_SKILLS = RANDOM_UNLOCK_SKILLS.length
+  const ALL_ITEMS = UNLOCK_ITEM_KINDS.length
+
+  it('locked: the progress toward the door, and the CTA says what is missing', () => {
+    const s = charterSlot(door(10, 8), 50_000)
+    expect(s.open).toBe(false)
+    expect(s.missing).toBe(ALL_SKILLS - 10 + ALL_ITEMS - 8)
+    expect(s.pct).toBe(Math.floor((18 / (ALL_SKILLS + ALL_ITEMS)) * 100))
+    expect(s.skills).toEqual({ have: 10, need: ALL_SKILLS })
+    expect(s.items).toEqual({ have: 8, need: ALL_ITEMS })
+    expect(charterCta(s)).toEqual({ label: `Unlock ${s.missing} more`, fee: null, enabled: false })
+    expect(charterSlotName(s)).toMatch(/^Buy Company: locked, \d+% unlocked/)
+  })
+
+  it('one unlock short never reads 100%', () => {
+    const s = charterSlot(door(ALL_SKILLS, ALL_ITEMS - 1), 0)
+    expect(s.open).toBe(false)
+    expect(s.pct).toBeLessThan(100)
+    expect(charterCta(s).label).toBe('Unlock 1 more')
+  })
+
+  it('open: "Buy Company" with the fee, disabled while the bank is short', () => {
+    const rich = charterSlot(door(ALL_SKILLS, ALL_ITEMS), CHARTER_FEE + 1)
+    expect(rich).toMatchObject({ open: true, pct: 100, missing: 0, short: 0 })
+    expect(charterCta(rich)).toEqual({ label: 'Buy Company', fee: CHARTER_FEE, enabled: true })
+    expect(charterSlotName(rich)).toBe(`Buy Company: open, ${CHARTER_FEE.toLocaleString('en')} gold`)
+
+    const poor = charterSlot(door(ALL_SKILLS, ALL_ITEMS), CHARTER_FEE - 1240)
+    expect(poor.short).toBe(1240)
+    expect(charterCta(poor)).toEqual({ label: 'Buy Company', fee: CHARTER_FEE, enabled: false })
+    expect(charterSlotName(poor)).toContain('Your bank is 1,240 short')
+  })
+
+  it('selecting it lights every road; a company’s slot lights its own', () => {
+    for (const c of COMPANY_IDS) {
+      expect(litBy('all', c)).toBe(true)
+      expect(litBy('metals', c)).toBe(c === 'metals')
+      expect(litBy(null, c)).toBe(false)
+    }
   })
 })
