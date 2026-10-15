@@ -204,7 +204,10 @@ export function PageScreen({
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
   const choices = offers.filter((o) => !o.immediate)
-  const navs = offers.filter((o) => o.immediate)
+  // A hub submenu's way home is the back button at the top left, where every
+  // other page keeps it (the Codex, the HQ) — not a row at the foot.
+  const backNav = titleOverride ? offers.find((o) => o.immediate && o.id === 'back') : undefined
+  const navs = offers.filter((o) => o.immediate && o !== backNav)
 
   /*
    * After a purchase the page selects NOTHING (Wave 1).
@@ -371,6 +374,7 @@ export function PageScreen({
     <PageLayout
       title={title}
       subtitle={subtitle}
+      back={backNav?.action ? { label: 'Back to the menu', run: backNav.action.run } : undefined}
       // Announced only where the board is an outcome — today, the Crossroads
       // reveal. `titleOverride` is a Watchtower submenu, which is navigation.
       live={!titleOverride && ctx.board?.live}
