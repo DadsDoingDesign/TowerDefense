@@ -177,9 +177,17 @@ describe('the home over the trade map', () => {
   }
 
   it('every glass layer is the glass token, and its text clears 4.5:1 on the lighter glass over pure white', () => {
-    for (const sel of ['.mn-purse', '.mn-season', '.mn-slot', '.tm-town']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass\)/)
+    for (const sel of ['.mn-season', '.mn-slot', '.tm-town']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass\)/)
     for (const sel of ['.mn-card', '.mn-coach']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass-strong\)/)
     for (const name of ['text', 'muted', 'accent-text', 'bad-text', 'teal-text']) expect(ratio(hex(token(name)), glass('glass')), `--${name} on --glass`).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the bare purse clears 4.5:1 on its halo over pure white; your company’s purse is a carved plate', () => {
+    const m = ruleBody('.mn-purse:not(.is-own)::before').match(/rgba\(([^)]*)\)\s*0\s/)
+    if (!m) throw new Error('the purse has no halo')
+    const halo = over(rgba(`rgba(${m[1]})`), WHITE)
+    for (const name of ['text', 'accent-text']) expect(ratio(hex(token(name)), halo), `--${name} on the purse's halo`).toBeGreaterThanOrEqual(4.5)
+    expect(ruleBody('.mn-purse-btn::after')).toMatch(/var\(--sign-wood\)/)
   })
 
   it('the dock’s marks clear 4.5:1: the market and desperate tags', () => {

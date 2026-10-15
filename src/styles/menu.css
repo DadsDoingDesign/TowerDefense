@@ -259,17 +259,81 @@
   gap: 6px;
   padding: calc(8px + var(--safe-top, 0px)) 10px 6px;
 }
-/* The purse: the seal and the bank in one small plaque. */
+/* The purse: the seal and the bank, bare on the map — no plaque, so the one
+   plaque it ever wears means something: once you own a company it becomes a
+   button (`.mn-purse-btn`, below). A shadow under the words keeps them clear
+   of the map. */
 .mn-purse {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: none;
   height: 48px;
-  padding: 0 12px 0 4px;
-  border-radius: var(--r-md);
-  background: var(--glass);
-  border: 1px solid var(--line-strong);
+  padding: 0 4px;
+  text-shadow:
+    0 1px 0 #000,
+    0 0 6px rgba(0, 0, 0, 0.85);
+}
+/* A soft dark halo, no edge: on any map, a snowy season's included, the
+   seal and the gold keep their contrast without a plaque around them. */
+.mn-purse:not(.is-own) {
+  position: relative;
+  isolation: isolate;
+}
+.mn-purse:not(.is-own)::before {
+  content: '';
+  position: absolute;
+  inset: -10px -18px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(farthest-side, rgba(10, 8, 6, 0.75) 0 62%, rgba(10, 8, 6, 0) 100%);
+}
+.mn-purse.is-own {
+  padding: 0;
+  text-shadow: none;
+}
+/* Your company's purse: a carved plate, the places' button, raised. */
+.mn-purse-btn {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  background: none;
+  color: var(--sign-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.mn-purse-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 170, 0.16) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
+    repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.07) 7px 9px),
+    var(--sign-wood);
+  border: 1px solid var(--sign-rim);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.mn-purse-btn .mn-bank {
+  color: var(--sign-ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.mn-purse-btn:active {
+  transform: translateY(1px);
+}
+.mn-purse-btn:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+/* A phone shows the seal; the desk names it (`.mn-seal-title`). */
+.mn-seal-title {
+  display: none;
 }
 /* The vector mark takes no shadow or glow; its floor is 40 (docs/BRAND.md). */
 .mn-mark {
@@ -297,16 +361,11 @@
   font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
-/* Your company's flag in the seal's place (once one is founded): the mark's
-   box, the flag at the sheet's double, a tap from its builder. */
+/* Your company's flag in the seal's place, inside the purse's button. */
 .mn-flagmark {
   display: grid;
   place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  cursor: pointer;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
 }
 .mn-flagmark .banner {
   height: 40px;
@@ -398,12 +457,13 @@
       repeating-linear-gradient(180deg, transparent 0 7px, rgba(0, 0, 0, 0.06) 7px 9px),
       var(--sign-wood-on);
   }
-  .mn-flagmark:hover {
-    background: var(--glass-strong);
+  .mn-purse-btn:hover::after {
+    background:
+      linear-gradient(180deg, rgba(255, 220, 170, 0.2) 0 2px, transparent 2px calc(100% - 3px), rgba(0, 0, 0, 0.3) calc(100% - 3px)),
+      var(--sign-wood-on);
   }
 }
-.mn-place:focus-visible,
-.mn-flagmark:focus-visible {
+.mn-place:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
@@ -1042,45 +1102,25 @@
   .mn-purse {
     gap: 12px;
     height: 60px;
-    padding: 0 16px 0 6px;
+  }
+  .mn-purse-btn {
+    gap: 12px;
+    height: 60px;
+    padding: 0 16px 0 8px;
   }
   .mn-mark {
     width: 48px;
     height: 48px;
   }
-  .mn-title {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-    font-family: var(--font-display);
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1.05;
-    color: var(--text);
-  }
-  /* The bank, set off from the name by a hairline. */
-  .mn-title + .mn-bank,
-  .mn-own-title + .mn-bank {
-    padding-left: 12px;
-    border-left: 1px solid var(--line-strong);
-  }
   .mn-flagmark .banner {
     height: 48px;
   }
-  /* Once you own a company, its name is the plaque's: the game's name stays
-     the page's title for a screen reader. */
-  .mn-purse.is-own .mn-title {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-  .mn-purse.is-own .mn-own-title {
+  /* The name beside the mark: the game's, or your militia's once you own a
+     company (the game's name stays the page's h1 for a screen reader). */
+  .mn-seal-title,
+  .mn-own-title {
     display: block;
-    max-width: 260px;
+    max-width: 280px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1089,6 +1129,19 @@
     font-weight: 700;
     line-height: 1.05;
     color: var(--text);
+  }
+  .mn-own-title {
+    color: var(--sign-ink);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  }
+  /* The bank, set off from the name by a hairline. */
+  .mn-seal-title + .mn-bank,
+  .mn-own-title + .mn-bank {
+    padding-left: 12px;
+    border-left: 1px solid var(--line-strong);
+  }
+  .mn-own-title + .mn-bank {
+    border-left-color: rgba(0, 0, 0, 0.35);
   }
   .mn-places {
     gap: 6px;

@@ -207,9 +207,10 @@ result. Append a short note to the review log when you're done.
   (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
   on the charter page while `metaStore.militia` is null). A new game goes
   straight into the loop, and a militia an older save founded stays hidden
-  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, its flag takes the seal's place in the
-  home's purse (`.mn-flagmark`; a desk names it there too), and a tap on it — or
-  Settings — edits it. The flag
+  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, the home's purse (bare seal and gold
+  until then) becomes a carved-plate button, `.mn-purse-btn`, with its flag in
+  the seal's place (a desk names it there too); a tap on it — or Settings —
+  edits it. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
   dresses the builder preview's soldiers in it). The battle wagon flies the
