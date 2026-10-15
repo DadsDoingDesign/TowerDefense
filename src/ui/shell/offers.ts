@@ -1097,6 +1097,8 @@ function settingsOffers(s: Settings): Offer[] {
         'Softens how much cargo a raider steals when one reaches your wagons.',
         assistProfile(s.assist).blurb,
         'Nothing else moves: same waves, same loot, same pay. Change it whenever you like, mid-run included.',
+        // The gameplay pass: said plainly, where the dial is set (`run/ranking`).
+        'A run played with assist on, even for one wave, is marked Assisted and does not count for leaderboards. It keeps every reward.',
       ],
       action: {
         label: `Set to ${assistProfile(nextAssist(s.assist)).label}`,

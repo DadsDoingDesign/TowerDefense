@@ -60,6 +60,7 @@ export function buildRecap(
     challenge: st.challenge,
     // The seed alone does not reproduce the run; the pair does (F6).
     assist: useSettingsStore.getState().assist,
+    assisted: st.assisted,
     depth: info.depth,
     kills: info.kills,
     goldLeft: st.gold,

@@ -60,6 +60,14 @@ result. Append a short note to the review log when you're done.
   the company's level), or a mutation instead, or nobody. Drawn as the
   recruiting yard (`StopScene` 'recruit'). An old save's recruit node loads
   as a battle (`runSnapshot.asBattle`).
+- Assisted runs (the gameplay pass): a run is `assisted` (GameData, snapshot
+  v19) once the assist dial is off `off` at any point of it — never cleared
+  mid-run. **Every leaderboard, ranking or record reads
+  `src/game/run/ranking.countsForRanking(run)` and nothing else** (an assisted
+  run or a custom seed: false). Today it keeps the best depth, best stake and
+  the stake record clean; gold, standing, unlocks, feats and the trade war
+  still pay (Hades/Celeste: mark, never punish). Marker: `AssistedTag` on the
+  HUD and the result. Tests `tests/ranking.test.ts`.
 - Pure run rules (no zustand/React/DOM, unit-tested in `tests/run.rules.test.ts`
   and read by the balance harness): `src/game/run/` — `threat.ts`,
   `economy.ts` (prices, merchant shelf), `recruits.ts`, `rewards.ts`,

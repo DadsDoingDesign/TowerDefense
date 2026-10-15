@@ -89,6 +89,8 @@ function buildBase(): Record<string, unknown> {
   setLayoutOrientation(null)
   useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: runs } })
   useGameStore.setState({ firstRun: true })
+  // The gameplay pass (v19): the base run is assisted, so mutations land on `assisted` too.
+  useGameStore.setState({ assisted: true })
   // v10 (G1-2): the battle is fought under a map challenge with the hero posted
   // on a tile, so mutations land on `terrainRule` and a tile-keyed placement.
   // Q1: `withTerrainRule` keeps the node's danger ground, so they land on

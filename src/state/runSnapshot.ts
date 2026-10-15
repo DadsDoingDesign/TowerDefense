@@ -127,7 +127,10 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * v19 — the gameplay pass (Oct 2026): no recruit stops. A map node typed
  * `recruit` loads as a battle (`asBattle`, every version), a recruit event is
  * dropped (the node stays un-cleared and can be entered again) and
- * `recruitOptions` is no longer written or read.
+ * `recruitOptions` is no longer written or read. The run may carry
+ * `assisted` (assist was on at some point of it; it counts for no ranking or
+ * record, `run/ranking.countsForRanking`): only a literal `true` reads as
+ * assisted, and a v18 payload loads unmarked.
  */
 export const RUN_SNAPSHOT_VERSION = 19
 
@@ -249,6 +252,8 @@ export interface RunSnapshot {
    * unstaged, which is what a returning player should get.
    */
   firstRun?: boolean
+  /** The gameplay pass (v19): assist was on at some point of the run — it counts for no ranking (`run/ranking`). */
+  assisted?: boolean
   inventory: Item[]
   runKills: number
 
@@ -342,6 +347,8 @@ export interface RunStateSource {
   challenge: RunChallenge
   /** LS3 — optional so a source that predates staging still satisfies it. */
   firstRun?: boolean
+  /** The gameplay pass (v19): assist was on at some point of the run — it counts for no ranking (`run/ranking`). */
+  assisted?: boolean
   inventory: Item[]
   runKills: number
   activeNodeId: string | null
@@ -400,6 +407,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     itemPool: s.itemPool,
     challenge: s.challenge,
     firstRun: s.firstRun === true,
+    assisted: s.assisted === true,
     inventory: s.inventory,
     runKills: s.runKills,
     activeNodeId: s.activeNodeId,
@@ -1354,6 +1362,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.
     firstRun: o.firstRun === true,
+    // v19: only a literal `true` marks a run assisted. Anything else — absent
+    // (a v18 save), a string, a number — loads unmarked; the store then adds
+    // the dial as it stands at the resume (`runSlice.resumeRun`).
+    assisted: o.assisted === true,
     // v5 → v6: the campaign kit used to be dealt into the pack at `newRun`,
     // before the hero was picked. It is dealt at the pick now, so a v5 payload
     // parked on hero-pick drops the old roster-blind kit instead of carrying
@@ -1617,6 +1629,8 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     kills: Math.max(0, num(o.runKills, 0)),
     gold: Math.max(0, Math.floor(num(o.gold, 0))),
     contract,
+    // A settle from storage keeps the run's mark: it counts for no ranking.
+    assisted: o.assisted === true,
     ...(legacy ? { legacyGold: legacyGold(o, depth) } : {}),
   }
 }

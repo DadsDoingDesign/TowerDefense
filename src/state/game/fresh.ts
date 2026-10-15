@@ -80,6 +80,7 @@ export function freshRunState(runSeed: number) {
     board: null,
     challenge: STANDARD_RUN,
     firstRun: false,
+    assisted: false,
     victory: null,
     ...dealRunMap(),
     event: null,

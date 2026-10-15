@@ -28,6 +28,7 @@ import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
@@ -237,6 +238,8 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     set({
       engine,
       battlePhase: 'battle',
+      // The dial this wave is fought under marks the run (`run/ranking`).
+      assisted: markAssisted(st.assisted, useSettingsStore.getState().assist),
       selectedSentinelId: null,
       breatherPick: null,
       // Gear locks for the round: an armed gear slot would offer an equip the

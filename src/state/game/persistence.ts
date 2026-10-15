@@ -21,6 +21,7 @@ const SNAPSHOT_FIELDS = [
   'challenge',
   'contract',
   'firstRun',
+  'assisted',
   'runSeed',
   'screen',
   'runPhase',

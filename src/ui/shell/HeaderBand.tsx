@@ -9,6 +9,7 @@ import { Money } from './Money'
 import { strengthPct, strengthShort, strengthText } from '../channels'
 import { useShown } from './staging'
 import { LeaveRun } from './LeaveRun'
+import { AssistedTag } from './AssistedTag'
 
 /**
  * Band 1 — run state, and nothing else. It never holds a control that changes
@@ -48,6 +49,8 @@ export function HeaderBand() {
   // LS3: a first battle's header carries two numbers, the Gate and gold. The
   // road's length arrives with the first win (`state/staging.ts`).
   const depthShown = useShown('depth')
+  // The gameplay pass: assist was on at some point of this run (`run/ranking`).
+  const assisted = useGameStore((s) => s.assisted)
 
   const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore
@@ -102,6 +105,7 @@ export function HeaderBand() {
             </span>
           </span>
         )}
+        {assisted && <AssistedTag where="hud" />}
         {threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the
              coach pill says it out loud once (WS9 — `Coach`, tip `threat`). */

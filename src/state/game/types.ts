@@ -142,6 +142,8 @@ export interface RunRecap {
    * mid-march is reported at the setting it finished under.
    */
   assist: AssistLevel
+  /** Assist was on at some point of the run: the receipt's "Assisted" tag, and no record counted it. */
+  assisted: boolean
   depth: number
   kills: number
   goldLeft: number
@@ -225,6 +227,14 @@ export interface GameData {
    * run keeps what it began with.
    */
   firstRun: boolean
+  /**
+   * Assist was on at some point of this run (the gameplay pass,
+   * `game/run/ranking`): set when the run begins or a wave starts with the dial
+   * off `off`, or the moment the dial is turned on mid-run, and never cleared
+   * until the run ends. An assisted run keeps every reward and counts for no
+   * ranking or record (`countsForRanking`). Snapshotted.
+   */
+  assisted: boolean
   /**
    * The recap a finished campaign leaves behind (H23) — what the win screen
    * reads, and what a defeat screen gets too, so the receipt is real.

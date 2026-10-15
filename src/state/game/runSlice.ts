@@ -17,6 +17,7 @@ import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
 import { useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
@@ -170,6 +171,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       runMap: stageFirstRunMap(dealt.runMap, firstRun),
       threat: rules.startThreat,
       firstRun,
+      // The gameplay pass: a run begun with assist on is assisted from the start.
+      assisted: markAssisted(false, useSettingsStore.getState().assist),
       runSeed,
       challenge,
       contract,
@@ -379,6 +382,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       challenge: snap.challenge,
       // LS3: a run saved before staging existed has none, and plays unstaged.
       firstRun: snap.firstRun === true,
+      // Once assisted, always: a resume keeps the mark, and the dial as it is now adds to it.
+      assisted: markAssisted(snap.assisted === true, useSettingsStore.getState().assist),
       // A snapshot only ever exists for a LIVE run, so there is no recap.
       victory: null,
       selectedSentinelId: null,
