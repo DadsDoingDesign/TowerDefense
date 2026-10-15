@@ -430,7 +430,9 @@ skills. Six benches measured things the game no longer has, and were re-aimed
   and every free layer offers a fight.
 - **Relics** (§15): every rule relic changes something a fight can see (≥ +2pt
   on its best bench), no pact is a cost for nothing, no run-rule relic lowers
-  the paired win rate, none sells plain "+x% damage", and nothing in the pool
+  the paired win rate (a flagged row is re-measured on 600 fresh seeds before
+  it fails, §12's rule — added in the gameplay pass, when the Twinblade
+  Harness read −4 ±4pt on 150 seeds and −0.3pt on 600), none sells plain "+x% damage", and nothing in the pool
   needs an engine capability that has not shipped.
 - Fresh-player difficulty is a curve, not a cliff: no single node ends more than
   40% of zero-meta runs — checked on **both** §11 models.

@@ -3693,16 +3693,37 @@ if (want(15)) {
   line('')
   line('| Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |')
   line('|---|---|---|--:|--:|')
+  /** Flagged rows the confirmation run cleared (§12's rule, the gameplay pass). */
+  const relicConfirmed: string[] = []
+  const relicRuns = (from: number, runs: number, start: string[]) =>
+    Array.from({ length: runs }, (_, j) => from + j).map((i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: start }).won ? 1 : 0))
   for (const relic of RUN_RULE_RELICS) {
     const wins = Array.from({ length: RELIC_RUNS }, (_, i) => (simulateRun(9001 + i * 17, FRESH_ARCHES[i % 3], { policy: relicPolicy, startRelics: [relic.id] }).won ? 1 : 0))
     const dlt = mean(wins) - mean(relicZero)
     const tol = Math.max(HUB_TOLERANCE, pairedTolerance(wins, relicZero))
     line(`| ${relic.name} | ${RARITY[relic.rarity].label} | ${relic.desc} | ${pct(mean(wins))} | ${dlt >= 0 ? '+' : '−'}${Math.abs(dlt * 100).toFixed(0)}±${(tol * 100).toFixed(0)}pt |`)
     if (dlt + tol < 0) {
-      failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor). A relic is a reward.`)
+      // Confirm before failing, as §12 does (the gameplay pass): six one-sided
+      // 2 s.e. tests on 150 seeds flag by chance — the Twinblade Harness read
+      // −4 ±4pt on the table's seeds and −0.3pt on the first 600. A flagged row
+      // is re-measured on HUB_CONFIRM_RUNS fresh seeds (after the table's),
+      // without the relic beside it, and fails only if the drop holds there.
+      const zeroC = relicRuns(RELIC_RUNS, HUB_CONFIRM_RUNS, [])
+      const cellC = relicRuns(RELIC_RUNS, HUB_CONFIRM_RUNS, [relic.id])
+      const dC = mean(cellC) - mean(zeroC)
+      const tolC = Math.max(HUB_TOLERANCE, pairedTolerance(cellC, zeroC))
+      const note = `${relic.name} read ${(dlt * 100).toFixed(0)}pt (±${(tol * 100).toFixed(0)}) on the table's ${RELIC_RUNS} seeds; on ${HUB_CONFIRM_RUNS} fresh seeds ${dC >= 0 ? '+' : '−'}${Math.abs(dC * 100).toFixed(1)}pt (±${(tolC * 100).toFixed(1)})`
+      if (dC + tolC < 0) {
+        failures.push(`Run-rule relic "${relic.name}" LOWERS the win rate by ${(dlt * 100).toFixed(0)}pt (beyond the ±${(tol * 100).toFixed(0)}pt paired floor), and it held on ${HUB_CONFIRM_RUNS} fresh seeds (${note}). A relic is a reward.`)
+      } else relicConfirmed.push(note)
     }
   }
   line('')
+  if (relicConfirmed.length) {
+    line(`**Flagged, then cleared on confirmation** (a row the table flags is re-measured on ${HUB_CONFIRM_RUNS} fresh seeds before it fails, §12's rule):`)
+    for (const n of relicConfirmed) line(`- ${n}: noise, not a defect.`)
+    line('')
+  }
   const awaiting = RELICS.filter((r) => !relicSupported(r))
   line(`**Declared, not dealt.** ${awaiting.length ? awaiting.map((r) => `${r.name} (\`${r.requires}\`)`).join(', ') : 'none'} — relics whose rule belongs to the combat lane's engine. \`ENGINE_CAPABILITIES\` gates them out of every hand until that capability lands, so no card sells a rule this build cannot keep; the invariant below checks it.`)
   line('')
