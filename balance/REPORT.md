@@ -404,6 +404,11 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Sword & Shield | Firebrand | +45.7pt | +13.8pt | +19.9pt | **+26.5pt** | +1.5pt | +49.2pt | 91.3 |
 | L2 · Sword & Shield | Split Shot | +41.4pt | +27.6pt | +22.9pt | **+30.7pt** | +8.5pt | +54.1pt | 91.3 |
 | L2 · Sword & Shield | Deadeye | +0.0pt | +13.4pt | +4.0pt | **+5.8pt** | +0.5pt | +11.9pt | 94.0 |
+| L2 · Sword & Shield | Pepperfire | +8.6pt | +13.4pt | +6.5pt | **+9.5pt** | +1.0pt | +20.1pt | 105.0 |
+| L2 · Sword & Shield | Gilt Frame | +11.4pt | +0.0pt | +5.0pt | **+5.5pt** | +1.0pt | +11.7pt | 103.7 |
+| L2 · Sword & Shield | Ore Sense | +7.1pt | +20.7pt | +20.9pt | **+16.3pt** | +5.5pt | +56.0pt | 109.6 |
+| L2 · Sword & Shield | Velvet Toll | +0.0pt | +9.8pt | +5.5pt | **+5.1pt** | +0.0pt | +65.3pt | 91.3 |
+| L2 · Sword & Shield | Moonwake | +41.4pt | +14.2pt | +19.4pt | **+25.0pt** | +2.5pt | +47.5pt | 91.3 |
 | L2 · Dagger | Heavy Blows | +3.3pt | +6.5pt | +1.0pt | **+3.6pt** | +3.5pt | +0.9pt | 179.3 |
 | L2 · Dagger | Long Shot | +34.8pt | +48.8pt | +45.8pt | **+43.1pt** | +18.4pt | +107.0pt | 130.4 |
 | L2 · Dagger | Finisher | +14.3pt | +7.3pt | +5.5pt | **+9.0pt** | +2.5pt | +10.7pt | 153.5 |
@@ -419,6 +424,11 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Dagger | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 130.4 |
 | L2 · Dagger | Split Shot | +34.8pt | +43.9pt | +25.4pt | **+34.7pt** | +12.9pt | +58.7pt | 130.4 |
 | L2 · Dagger | Deadeye | +17.1pt | +7.3pt | +10.4pt | **+11.6pt** | +2.5pt | +21.5pt | 140.2 |
+| L2 · Dagger | Pepperfire | +34.8pt | +11.4pt | +16.9pt | **+21.0pt** | +7.5pt | +38.8pt | 150.0 |
+| L2 · Dagger | Gilt Frame | +22.9pt | +21.5pt | +13.9pt | **+19.4pt** | +6.0pt | +32.9pt | 157.3 |
+| L2 · Dagger | Ore Sense | +5.2pt | +9.3pt | +7.0pt | **+7.2pt** | +5.0pt | +15.6pt | 156.5 |
+| L2 · Dagger | Velvet Toll | +0.0pt | +0.8pt | +1.5pt | **+0.8pt** | +1.5pt | +56.9pt | 130.4 |
+| L2 · Dagger | Moonwake | +32.9pt | +19.5pt | +20.4pt | **+24.3pt** | +8.5pt | +47.8pt | 130.4 |
 | L2 · Wand | Heavy Blows | +0.0pt | +55.3pt | +43.8pt | **+33.0pt** | +2.0pt | +160.4pt | 65.0 |
 | L2 · Wand | Long Shot | +1.4pt | +45.5pt | +0.5pt | **+15.8pt** | −1.0pt | +7.0pt | 47.3 |
 | L2 · Wand | Finisher | +0.0pt | +28.5pt | +33.3pt | **+20.6pt** | +0.0pt | +130.5pt | 54.5 |
@@ -434,6 +444,11 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Wand | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 47.3 |
 | L2 · Wand | Split Shot | +1.4pt | +1.2pt | +1.5pt | **+1.4pt** | +0.0pt | +4.3pt | 47.3 |
 | L2 · Wand | Deadeye | +0.0pt | +50.4pt | +9.0pt | **+19.8pt** | +2.0pt | +33.8pt | 48.6 |
+| L2 · Wand | Pepperfire | +0.0pt | +56.5pt | +50.2pt | **+35.6pt** | +0.0pt | +176.2pt | 54.4 |
+| L2 · Wand | Gilt Frame | +1.4pt | +37.0pt | +15.9pt | **+18.1pt** | +0.0pt | +54.0pt | 53.7 |
+| L2 · Wand | Ore Sense | +1.4pt | +61.4pt | +51.7pt | **+38.2pt** | +9.5pt | +182.6pt | 56.7 |
+| L2 · Wand | Velvet Toll | +0.0pt | +27.6pt | +16.4pt | **+14.7pt** | −4.0pt | +132.0pt | 47.3 |
+| L2 · Wand | Moonwake | +1.4pt | +58.1pt | +48.8pt | **+36.1pt** | +3.5pt | +174.4pt | 47.3 |
 | L3 · Sword & Shield | Berserk | +27.5pt | +16.8pt | +7.8pt | **+17.4pt** | +4.3pt | +27.8pt | 200.4 |
 | L3 · Sword & Shield | Weaponmaster | +5.0pt | +11.8pt | +7.0pt | **+7.9pt** | +3.5pt | +23.4pt | 176.8 |
 | L3 · Sword & Shield | Volley | +24.2pt | +17.5pt | +24.8pt | **+22.2pt** | +12.4pt | +79.6pt | 114.5 |
@@ -473,9 +488,9 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L1 · Sword & Shield | 14 | +19.3pt | Quick Hands | Cleave |
 | L1 · Dagger | 14 | +2.4pt | Keen Eye | Arc Spark |
 | L1 · Wand | 14 | +16.5pt | Quick Hands | Hold Fast |
-| L2 · Sword & Shield | 15 | +19.1pt | Siphon | Wildfire |
-| L2 · Dagger | 15 | +8.4pt | Siphon | Long Shot |
-| L2 · Wand | 15 | +0.0pt | Siphon | Shield Wall |
+| L2 · Sword & Shield | 20 | +19.1pt | Siphon | Wildfire |
+| L2 · Dagger | 20 | +8.4pt | Siphon | Long Shot |
+| L2 · Wand | 20 | +0.0pt | Siphon | Shield Wall |
 | L3 · Sword & Shield | 11 | +15.4pt | Berserk | Warden of Ash |
 | L3 · Dagger | 11 | +16.2pt | Berserk | Stormcaller |
 | L3 · Wand | 11 | +0.0pt | Berserk | Bulwark |
@@ -645,7 +660,7 @@ Survival curve — share of fresh runs that clear each node:
 | Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor | 100% | 100% | 99% | 95% | 68% | 30% | 5% | 3% | 0% | 0% | 0% | 0% |
-| Strict + 2 recruits | 100% | 100% | 100% | 100% | 97% | 88% | 49% | 47% | 10% | 1% | 0% | 0% |
+| Strict + 2 recruits | 100% | 100% | 100% | 100% | 97% | 88% | 49% | 47% | 11% | 2% | 0% | 0% |
 | specials | 100% | 100% | 100% | 100% | 99% | 93% | 87% | 81% | 71% | 50% | 39% | 24% |
 | battles | 100% | 100% | 100% | 99% | 97% | 88% | 72% | 68% | 40% | 23% | 13% | 8% |
 | recruits | 100% | 100% | 100% | 99% | 99% | 94% | 82% | 80% | 56% | 35% | 23% | 15% |
@@ -866,19 +881,19 @@ stake elite stands where the map leaves a way round it: what a crate costs the v
 
 | Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |
 |--:|--:|--:|--:|--:|
-| 0 | 38% | 2.0pt | 179.1 | 543.4 |
-| 1 | 31% | 1.9pt | 223.2 | 556.6 |
-| 2 | 34% | 1.9pt | 302.3 | 657.4 |
-| 3 | 28% | 1.8pt | 324.6 | 648.2 |
-| 4 | 23% | 1.7pt | 369.0 | 667.7 |
-| 5 | 20% | 1.6pt | 404.4 | 686.3 |
-| 6 | 17% | 1.5pt | 460.6 | 727.9 |
-| 7 | 15% | 1.5pt | 501.3 | 757.1 |
-| 8 | 14% | 1.4pt | 561.8 | 808.9 |
+| 0 | 40% | 2.0pt | 184.3 | 564.4 |
+| 1 | 34% | 1.9pt | 227.6 | 582.9 |
+| 2 | 33% | 1.9pt | 294.8 | 648.0 |
+| 3 | 29% | 1.8pt | 332.4 | 662.0 |
+| 4 | 22% | 1.7pt | 363.2 | 661.5 |
+| 5 | 19% | 1.6pt | 394.5 | 675.7 |
+| 6 | 17% | 1.5pt | 457.7 | 727.9 |
+| 7 | 15% | 1.5pt | 499.0 | 756.8 |
+| 8 | 12% | 1.3pt | 544.4 | 782.2 |
 
-**Veteran escort: 38%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 14%** against 10%–20% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +16.3pt: what the meta layer and the player's read are worth.
+**Veteran escort: 40%** against 35%–55% — inside the band by more than 1σ. **Max stake (8 crates): 12%** against 10%–20% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +18.8pt: what the meta layer and the player's read are worth.
 
-**Veteran's ladder: each crate costs 12% of the tier below's delivery** on the fit (±0.9pt, 1σ; floor 8%). Step by step: 1c +7.2pt ±1.7 · 2c −3.5pt ±1.8 · 3c +6.5pt ±1.7 · 4c +4.7pt ±1.4 · 5c +3.3pt ±1.2 · 6c +2.5pt ±1.0 · 7c +2.0pt ±0.8 · 8c +1.3pt ±0.8 (a cost per crate, paired 1σ).
+**Veteran's ladder: each crate costs 14% of the tier below's delivery** on the fit (±0.8pt, 1σ; floor 8%). Step by step: 1c +6.3pt ±1.9 · 2c +1.0pt ±1.8 · 3c +4.2pt ±1.6 · 4c +6.7pt ±1.4 · 5c +3.5pt ±1.0 · 6c +1.3pt ±0.9 · 7c +2.0pt ±0.9 · 8c +3.7pt ±0.9 (a cost per crate, paired 1σ).
 
 ### 13b. The routes — each company's ground, as an escort
 
@@ -1311,27 +1326,27 @@ company sets a condition at once:
 - **Moonquill: More cursed ground.** 2 more cursed patches on every field.
 - And every goblin clan marches from the first fight, 7% stronger and stealing 7% more (the muster).
 
-**The company.** A strong late-game militia: every skill card a contract can unlock (36, feat cards aside), every Level 1–3
+**The company.** A strong late-game militia: every skill card a contract can unlock (41, feat cards aside), every Level 1–3
 item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3, the scouts) — the save that
 opens the door — §13c's **veteran**, who reads its skill offers (`build: 'best'`). The adaptive route, 210 runs a row on the paired seeds of §12–§13.
 
 | Road | Delivered | Bank net a run (gold) |
 |---|--:|--:|
-| Escort on Rosethread's road (for scale) | 32% | 515 |
+| Escort on Rosethread's road (for scale) | 40% | 571 |
 | 4 crates on Rosethread's road (a good run, for scale) | 18% | 614 |
-| **Sovereign Route** · no Sovereign item owned | 28% | 1716 |
-| **Sovereign Route** · all five Sovereign items owned | 37% | 4468 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 29% | 1858 |
-| Sovereign Route without Rosethread's double prices | 30% | 2177 |
-| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 32% | 3023 |
+| **Sovereign Route** · no Sovereign item owned | 30% | 2146 |
+| **Sovereign Route** · all five Sovereign items owned | 37% | 4320 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 30% | 2148 |
+| Sovereign Route without Rosethread's double prices | 31% | 2611 |
+| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 35% | 3747 |
 
-**The charter's delivery rate for this company: 28%** (37% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+1716 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 30%** (37% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+2146 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 515 gold net from an escort and 614 from a 4-crate contract (cash-out line), so the 7,000 fee is about **11.4 good runs** of savings.
+**The fee against savings.** The same company banks 571 gold net from an escort and 614 from a 4-crate contract (cash-out line), so the 7,000 fee is about **11.4 good runs** of savings.
 
-**Each condition, lifted one at a time** (delivery against the full charter's 28%): without the ground 29% (+0.5pt), without the double prices 30% (+1.4pt), without the muster 32% (+4.3pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+**Each condition, lifted one at a time** (delivery against the full charter's 30%): without the ground 30% (+0.0pt), without the double prices 31% (+1.4pt), without the muster 35% (+5.2pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
-_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+1716 against +515: 3.3×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
+_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+2146 against +571: 3.8×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
 
 ## Verdict
 
