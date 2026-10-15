@@ -23,6 +23,23 @@
   align-items: center;
   text-align: center;
 }
+/* A hub submenu's head: the back button at the top left, the title centred
+   between it and a matching empty column — the Codex's head. */
+.pg-titlebar {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.pg-titlebar .t-title {
+  margin: 0;
+}
+/* The button sits as high as the Codex's: the head's 32px rhythm is for a
+   title alone (and `:has` out-ranks the viewport tiers' plain `.pg-head`). */
+.pg-head:has(> .pg-titlebar) {
+  padding-top: max(12px, var(--safe-top));
+}
 .pg-body {
   flex: 1 0 0;
   min-height: 0;

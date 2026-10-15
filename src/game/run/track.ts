@@ -345,27 +345,29 @@ export function deliveriesWord(n: number): string {
 /** A short name for a company in a row ("Peppercorn", "Easel House"). */
 export const shortCompany = (company: CompanyId): string => companyById(company).name.replace(/ Co\.$/, '')
 
-/**
- * The next level's reward in a word or two, for the road notice's standing
- * chip ("Rep 3 · Gilt Frame at 4"): the card's, signature's or kind's own
- * name, "stakes", "a Rare Axe", "a second term" — null at the end of the last
- * term.
- */
-export function nextRewardWord(rows: readonly TrackRow[]): string | null {
+/** What a company's track pays next, as the home card's Unlocks row names it. */
+export interface NextReward {
+  /** A skill card or the signature skill; an item kind; the Rare bonus item; stakes; the second term. */
+  kind: 'skill' | 'item' | 'bonus' | 'stakes' | 'term'
+  /** The skill's or the item kind's id (null for stakes and the term). */
+  id: string | null
+  /** Its name: the skill's, the item kind's. */
+  name: string
+  /** The standing level that pays it. */
+  level: number
+}
+
+/** The next level's headline reward, or null when the track is all earned (its flag piece is the livery's). */
+export function nextReward(rows: readonly TrackRow[]): NextReward | null {
   const next = rows.find((r) => r.next)
   if (!next) return null
   const p = next.pay
   const skill = p.signature ?? p.card
-  const what = skill
-    ? (SKILL.get(skill)?.name ?? 'a skill')
-    : p.item
-      ? p.item
-      : p.bonus
-        ? `a Rare ${p.bonus}`
-        : p.stakes
-          ? 'stakes'
-          : p.secondTerm
-            ? 'a second term'
-            : null
-  return what ? `${what} at ${p.level}` : null
+  const at = (kind: NextReward['kind'], id: string | null, name: string): NextReward => ({ kind, id, name, level: p.level })
+  if (skill) return at('skill', skill, SKILL.get(skill)?.name ?? 'a skill')
+  if (p.item) return at('item', p.item, p.item)
+  if (p.bonus) return at('bonus', p.bonus, p.bonus)
+  if (p.stakes) return at('stakes', null, 'Stakes')
+  if (p.secondTerm) return at('term', null, 'A second term')
+  return null
 }

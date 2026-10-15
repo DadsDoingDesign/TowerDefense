@@ -51,7 +51,7 @@ import { readMilitia, type Militia } from '../game/run/militia'
 import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
 import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
 import { askStanding, askTips, readAskResults, type AskResult } from '../game/run/asks'
-import { canSignExclusive, endSeason, exclusiveXpMult, freshSeason, readSeason, recordContract, seasonOver, warOpen, type Season } from '../game/run/tradeWar'
+import { endSeason, freshSeason, readSeason, recordContract, seasonOver, warOpen, type Season } from '../game/run/tradeWar'
 import { companyOpen } from '../game/run/standing'
 
 /**
@@ -303,8 +303,8 @@ interface MetaState {
   liveries: Liveries
   /**
    * The trade war (Draft 4 § D, `run/tradeWar.ts`): the season, each
-   * company's share, your deliveries this season, the exclusive, the
-   * desperate company, and the season just ended until its page is read.
+   * company's share, your deliveries this season, the desperate company,
+   * and the season just ended until its page is read.
    */
   season: Season
   /**
@@ -352,10 +352,8 @@ interface MetaState {
   setMilitia: (m: Militia) => void
   /** Dress a company's standard. A part not unlocked at your standing with it falls back to the plain one. */
   setLivery: (company: CompanyId, look: StandardLook) => void
-  /** Sign this season's exclusive with a company (once a season, from its terms). False when refused. */
-  signExclusive: (company: CompanyId) => boolean
   /**
-   * Close the season-end page: take `kind` from the leader's vault (a locked
+   * Close the season-end page: take `kind` from your patron's vault (a locked
    * kind is unlocked, an owned one is a Rare bonus item for the next
    * contract), or nothing (`null`, when there was no pick to make).
    */
@@ -432,8 +430,14 @@ const freshTerms = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_I
  * v15 — the two landed together: a v14 save with no `terms` came from the
  * trade war's build alone, its standing XP still on the old curve, so it
  * takes v13's step too.
+ *
+ * v16 — the trade war simplified (October 2026): exclusives, rivals and cold
+ * are cut, and the season's end pays your patron's purse instead of the
+ * leader's champion's. `season.exclusive` is read past and dropped, and a
+ * pending season's end reads its old leader as your patron when it paid you
+ * (`tradeWar.readSeason`, which runs on every load) — nothing to migrate here.
  */
-export const META_VERSION = 15
+export const META_VERSION = 16
 
 /** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -773,9 +777,8 @@ export const useMetaStore = create<MetaState>()(
         const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest + tips
         const standingXp = { ...freshStanding(), ...get().standing }
         const xpBefore = company ? Math.max(0, num(standingXp[company], 0)) : 0
-        // An exclusive this season (the trade war): its company's contracts pay more standing.
         const season0 = readSeason(get().season)
-        const xp = Math.floor(((ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0)) * exclusiveXpMult(season0, ranked ? company : null))
+        const xp = Math.floor((ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0))
         const have = get().skills
         const haveItems = Array.isArray(get().items) ? get().items : []
         // The Sovereign Route earns standing with all five companies — each
@@ -853,8 +856,8 @@ export const useMetaStore = create<MetaState>()(
 
         // The trade war (Draft 4 § D): from the market's opening, every
         // ranked finished contract counts toward the season and moves its
-        // company's share; the seventh ends it. The leader pays its champion
-        // (the purse banked now, the vault pick on the season's page), and
+        // company's share; the seventh ends it. Your patron pays you (the
+        // purse banked now, the vault pick on the season's page), and
         // the last company that hires you posts desperate terms.
         let season = season0
         let warGold = 0
@@ -916,17 +919,6 @@ export const useMetaStore = create<MetaState>()(
         set({ liveries: isDefaultStandard(fit) ? rest : { ...rest, [company]: fit } })
       },
 
-      signExclusive: (company) => {
-        const season = readSeason(get().season)
-        if (!isCompanyId(company) || !canSignExclusive(season, company)) {
-          sfx('error')
-          return false
-        }
-        set({ season: { ...season, exclusive: company } })
-        sfx('confirm')
-        return true
-      },
-
       signTerm: (company) => {
         if (!isCompanyId(company)) return false
         const xp = Math.max(0, num(get().standing[company], 0))
@@ -946,7 +938,7 @@ export const useMetaStore = create<MetaState>()(
         const end = season.ended
         if (!end) return
         const pick = kind ? end.vault.find((v) => v.kind === kind) : undefined
-        // A champion's page closes only with a pick from its vault.
+        // A patron's page closes only with a pick from its vault.
         if (end.vault.length && !pick) return
         const items = Array.isArray(get().items) ? get().items : []
         set({

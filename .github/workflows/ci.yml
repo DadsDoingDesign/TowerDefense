@@ -37,9 +37,11 @@ jobs:
 
   balance:
     name: Balance invariants
-    # 17–24 minutes on the hosted runner. Only when the simulation or its data can have moved.
+    # Only when the simulation or its data can have moved. It grew past 40
+    # minutes on the hosted runner in October 2026 (about 35 on a local
+    # machine), so every run was cancelled before it could report.
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v5
         with:

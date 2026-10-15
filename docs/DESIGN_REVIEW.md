@@ -3924,3 +3924,59 @@ The designer, on a phone shot of a battle with the employer's and the season lea
   - **Left for the designer:** the name on the desk slot (three "Buy
     Company"s on a desk); the locked CTA does not open the charter page
     (nor did anything on the home before).
+- **2026-10-15 · The map home, polished.** Eight notes from the designer on
+  the map home: the map shifted (and its trees re-scattered) on every pick;
+  the city labels clustered; a season per company; Buy Company out of the
+  dock; the seal and the gold; the place icons; ground chips that meant
+  nothing ("Wildfire"); a card that wrapped and wiggled. The card is now a
+  fixed form (Ground · Raiders · Today · Next, `homeCard.ts`), the notes float,
+  every slot and the plaque are fixed sizes, and the signposts never move on
+  a pick — so the map frames and bakes once (`scripts/home-stability.mjs`:
+  every box, the geometry and the terrain hash identical across all six
+  focuses, 12/12 runs). New § 8 rule 10, "a view you click around keeps its
+  geometry". City names hang beside the road as annotations with leader lines
+  (`labelLayout.ts`, tested); each company tints the map's season over the
+  same bake; Buy Company is a slot floating over the dock's right end (the
+  designer's call after round 2, over a plaque on the dock's shoulder); the
+  season is a panel of seven bars under the purse (the designer's "option
+  2", over the pill); the seal and the bank share one plaque (picked over
+  bare: the bank's contrast is held, and the pair reads as one); the places
+  are carved plates with names; the ground row says its effect from one table
+  (`terrain.GROUND_EFFECTS`).
+  Two rounds in the running app: `docs/ui-audit-2026-10/home-map/polish/`.
+  - **Fixed across the rounds:** long and crossing leaders (the plan now
+    minimises leader length and never crosses its own road); a desk card that
+    cut every value; frost that read as static; a name on the keep; the crown
+    on a slot's tag.
+  - **Left for the designer:** Peppercorn's names take two sides on a
+    375 × 667 phone; overcast is the faintest season.
+
+### 2026-10-15 — the trade war simplified, and its season card
+The designer on the standings' season card: "This needs some info arch and copy iterations"; then, on the war: "It doesn't really make sense to me what I'm looking at" → option 1, simplify. Cut the champion threshold, exclusives, rivals and cold (rules, store action, the exclusive sheet, the cold/exclusive tags and CSS, the glossary line). The season's end now pays your **patron** — the company you delivered the most for, leader or not (75 gold a delivery + a pick of 1 of 3 of its items; a tie on your deliveries goes to the bigger share, then a hash; no delivery, no patron). The crown goes to an outright leader only (a tie, the even start included, crowns nobody), and level shares share a place on the rows. Two rounds in the running app (390 × 844, 1280 × 800; none / ahead / tied / last contract / even, and the season's end with and without a patron): `docs/ui-audit-2026-10/tradewar/season-card/` (REVIEW.md, r1, r2).
+- **Round 1:** A, one ledger slip under the rows; B, the status above the rows (three boxes, the pips saying "contracts left" twice); C, two sentences (the numbers buried). Picked A, with B's running amount moved onto its status line.
+- **Round 2:** the eyebrow says when the season ends (the header's "Contract N of 7" went, so it is said once); the status line names the patron (or "No patron yet" / "X and Y are level" and what breaks the tie) with "150 so far"; two pay rows; the foot "Last now: Rosethread · Next season it pays ×1.5, and its raiders are 20% stronger" in slip ink. Fixed: an eyebrow and a pay label that wrapped on a phone, "patron" and "next season" each said twice, the red terms line on paper.
+- **Left as is:** on a 1280 × 800 desk the card starts below the fold under the five rows, as before.
+
+### 2026-10-15 — Settings' back button, top left
+The designer: "Back button on setting is in a weird spot let's keep it top left always like in codex". Settings was the last hub page whose way home was a pinned "Back" row above the CTA; the Codex, the HQ, the crates, the standings, the track, the livery, the charter and the militia builder all put a 44px `ct-back` icon button at the top left. `PageLayout` takes a `back` now and draws it in a `pg-titlebar` (button · centred title · matching empty column, the Codex's head); `PageScreen` lifts a hub submenu's `back` offer into it instead of the foot. The head starts 12px down when it carries the button, so it sits exactly where the Codex's does (390 × 844 and 1280 × 800 checked in the running app). In-run boards keep their exit rows ("March on", "Leave") as before.
+
+### 2026-10-15 — the card's Today row becomes a head badge
+The designer, circling "Today · Usual terms" on the home card: "The terms is a one off so most won't have anything. Let's remove this item and it shows as a badge too right of the header". The row read "Usual terms" on nearly every card — a row with no job. `homeCard.companyFacts` is three rows now (Ground, Raiders, Next), and `companyBadge` gives the one condition that applies, by priority — desperate terms ("Desperate +20%", red), then the market's top price ("Top price ×1.3", market gold) — or nothing, drawn as `.mn-badge` at the right of the head, level with the kicker. The Buy Company card drops its Road row to keep the same three-row frame; its kicker says what the Road row did ("Every company's goods"). Checked in the running app at 390 × 844, 375 × 667 and 1280 × 800 (`scripts/home-stability.mjs`: every pick keeps the home's geometry), with these fixes:
+- **Desk:** the head is a 250px column there, and the badge squeezed "Rosethread" to "Rose…". On a desk the badge takes its own line under the name, and that line is always reserved, so a company without a badge keeps its name in the same place.
+- **First launch:** a "Free escort" badge repeated the CTA ("Take the free escort"), so a first launch shows no badge.
+- The card is a row shorter, which gives the map that room.
+
+### 2026-10-15 — "Next what?" and "how do ×1.5 and +20% add up?"
+The designer on the card: "And next? Is next what.. next reward next item next skill idk", then on Rosethread: "how does x1.5 and +25% add up? are they the same info". Both were facts said without what they are.
+- **The track row:** "NEXT · a Rare Robe at 3" → "REP 3 · [robe] Rare item · Robe". The label is the level that pays it (the dock says the level you are at), the value names the kind (Skill · / Item · / Rare item · / Stakes open / A second term), and the reward's own mark sits in the mark column. `track.nextReward` replaces the string `nextRewardWord`; `skillIcon` / `itemKindIcon` moved to `channels` (the track page and the card share them).
+- **Desperate terms:** the two halves of one deal sat apart, unlinked: the dock's "×1.5" (it pays more) and the badge's "+20%" (its raiders are stronger). The badge now carries the dock mark's own number, "Desperate · pays ×1.5", and the +20% moves to the Raiders row, in red ("+20% · Plate or wards, evenly"). The market's badge says "Market · pays ×1.3" to match its dock mark.
+Checked at 390 × 844, 375 × 667 and 1280 × 800; `scripts/home-stability.mjs` passes.
+
+### 2026-10-15 — your flag in the seal's place
+The designer: "is the flag icon for customising your flag??? for when you buy a company? lets have it replace the logo when you buy a company … then it wont take up new space and like adds more personalization". Once a militia is founded, the purse's seal becomes its flag (`.mn-flagmark`, the banner at the sheet's double, 40px on a phone and 48 on a desk), a tap from its builder; a desk names it beside the flag where the game's name was (the game's name stays the page's `h1` for a screen reader). The separate flag button in the bar is gone. Checked at 390 × 844, 375 × 667 and 1280 × 800; `home-stability` passes.
+
+### 2026-10-15 — the purse: bare, then a button
+The designer: "how bout the coin area with logo has no bg, but when you buy a company it turns into a button styled component. this way it pulls more weight as a button and shows a change in the ui other than the image since someone could miss it". Until you own a company, the seal and the gold sit bare on the map over a soft, edgeless dark halo (`.mn-purse:not(.is-own)::before`; `tests/contrast.test.ts` proves the text and the gold clear 4.5:1 on it over pure white, so a snowy season cannot wash them out). Once you own one, the whole purse is a button (`.mn-purse-btn`) in the places' carved-plate look — your flag, your militia's name on a desk, the bank in sign ink — and it opens the militia's builder. Checked at 390 × 844, 375 × 667 and 1280 × 800, with and without a militia; `home-stability` passes. (The dev server had to be restarted with `--force`: its dependency cache was rebuilt mid-session and served two copies of React.)
+
+### 2026-10-15 — the purse and the season panel, one width
+The designer: "lets make the button and the seasons buttons be the same width. so they take the larger width of the two." The purse sits in the bar and the season panel floats over the map under it (so it never pushes the map), so CSS cannot tie them: `MenuScreen` measures both natural widths (bank, militia name, season and font changes, and a resize) and sets `--lead-w` on the bar; both take it as their min-width. The seven season bars now share the panel's width (a 7-column grid) instead of bunching at its left on a desk, and on a narrow phone the panel's inset matches the bar's 8px so the two share a left edge. Measured in the running app: same left and width at 390 × 844, 375 × 667 and 1280 × 800, with and without a militia; `home-stability` passes.

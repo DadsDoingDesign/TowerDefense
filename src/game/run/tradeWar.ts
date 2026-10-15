@@ -1,6 +1,6 @@
 /**
  * ---------------------------------------------------------------------------
- * The trade war — seasons, market share, rivals (Draft 4 § D)
+ * The trade war — seasons, market share, your patron (Draft 4 § D, simplified)
  * ---------------------------------------------------------------------------
  *
  * The five companies fight over the trade, and the militia's contracts move
@@ -17,24 +17,28 @@
  *    {@link SHARE_FLOOR} — every company stays on the bar. **The Sovereign
  *    Route** is your own road: it counts toward the season but moves no
  *    share. A custom seed counts for nothing, as it earns nothing else.
+ *  - **The leader** ({@link seasonLeader}) is the company with the biggest
+ *    share — only when it leads outright: a tie (a fresh season's even start
+ *    included) crowns nobody. It wears the crown; it pays nothing.
+ *  - **Your patron** ({@link seasonPatron}) is the company you delivered the
+ *    most contracts for this season — any company, leader or not. A tie on
+ *    your deliveries goes to the bigger share, then a hash. No delivery this
+ *    season, no patron.
  *  - **The season ends** at the settle of its seventh contract
- *    ({@link endSeason}). The **leader** (the biggest share) pays its
- *    **champion**: if you delivered at least {@link CHAMPION_MIN} of its
- *    contracts this season you are its top militia, and it pays
- *    {@link CHAMPION_PURSE} gold per delivery (banked at once) and a **pick
- *    from its vault** ({@link vaultPicks}: three of its own item kinds, the
- *    ones still locked first — a locked kind is unlocked, an owned one comes
- *    as a Rare bonus item for the next contract). The **last** company that
- *    hires you posts **desperate terms** for the next season: its contracts
- *    pay ×{@link DESPERATE_PAY}, its raiders are ×{@link DESPERATE_STRENGTH}
- *    (`contracts.contractRules`). Then the shares **regress halfway to even**
- *    ({@link regressShares}): a season's lead carries over, but not all of it.
- *  - **Rivals and exclusives** ({@link rivalOf}): once a season, from a
- *    company's terms, you may sign an **exclusive** with it. Its contracts pay
- *    ×{@link EXCLUSIVE_XP} standing XP this season (Easel House, which has no
- *    rival: ×{@link EXCLUSIVE_XP_UNRIVALLED}, and it costs nothing); its
- *    rival's stake cap is one crate lower ({@link seasonCrateCap}) and its
- *    notice on the home turns **cold**. It lasts until the season ends.
+ *    ({@link endSeason}). Your patron pays you {@link PATRON_PURSE} gold for
+ *    each of its contracts you delivered (banked at once) and a **pick from
+ *    its vault** ({@link vaultPicks}: three of its own item kinds, the ones
+ *    still locked first — a locked kind is unlocked, an owned one comes as a
+ *    Rare bonus item for the next contract). The **last** company that hires
+ *    you ({@link seasonLast}) posts **desperate terms** for the next season:
+ *    its contracts pay ×{@link DESPERATE_PAY}, its raiders are
+ *    ×{@link DESPERATE_STRENGTH} (`contracts.contractRules`). Then the shares
+ *    **regress halfway to even** ({@link regressShares}): a season's lead
+ *    carries over, but not all of it.
+ *
+ * October 2026 the designer cut the rest ("It doesn't really make sense to
+ * me what I'm looking at"): the champion threshold, exclusives, rivals and
+ * cold rivals are gone (`docs/MERCENARY_COMPANY.md`, Draft 4 § D).
  *
  * Staged with the market of the day (`contracts.MARKET_FROM_RUN`): before
  * the fifth finished contract no contract counts, and nothing shows.
@@ -45,11 +49,11 @@
  * read these rules, so none of them can drift.
  */
 import { hashSeed } from '../core/rng'
-import { COMPANY_IDS, isCompanyId, rivalOf, type CompanyId } from '../data/companies'
+import { COMPANY_IDS, isCompanyId, type CompanyId } from '../data/companies'
 import { BASIC_ITEM_KINDS, ITEM_KINDS, isItemKind } from '../data/itemKinds'
-import { crateCap, DESPERATE_PAY, DESPERATE_STRENGTH, marketOpen, MAX_CRATES, type ContractStatus } from './contracts'
+import { DESPERATE_PAY, DESPERATE_STRENGTH, marketOpen, MAX_CRATES, type ContractStatus } from './contracts'
 
-export { rivalOf, DESPERATE_PAY, DESPERATE_STRENGTH }
+export { DESPERATE_PAY, DESPERATE_STRENGTH }
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders for the tuning pass)
@@ -69,18 +73,10 @@ export const CRATES_PER_EXTRA_SHARE = 2
 export const CASHED_OUT_SHARE = 2
 /** Points a fallen contract costs its company (handed to the others). */
 export const LOST_SHARE = 2
-/** Deliveries for the leader this season that make you its top militia. */
-export const CHAMPION_MIN = 2
-/** What the leader pays its champion, per delivery for it this season. */
-export const CHAMPION_PURSE = 75
-/** Item kinds the leader's vault offers its champion to pick one from. */
+/** What your patron pays you at the season's end, per contract of its you delivered this season. */
+export const PATRON_PURSE = 75
+/** Item kinds your patron's vault offers you to pick one from. */
 export const VAULT_PICKS = 3
-/** An exclusive's standing XP multiplier on its company's contracts. */
-export const EXCLUSIVE_XP = 1.5
-/** …for a company with no rival (Easel House): smaller, and it costs nothing. */
-export const EXCLUSIVE_XP_UNRIVALLED = 1.25
-/** How many crates lower a cold rival's stake cap is. */
-export const COLD_CRATES = 1
 
 // ---------------------------------------------------------------------------
 // The state
@@ -99,19 +95,17 @@ export interface VaultPick {
 export interface SeasonEnd {
   /** The season that ended. */
   n: number
-  /** The company that took it. */
-  leader: CompanyId
-  /** Its share at the end. */
-  share: number
+  /** The company that led it outright, or null (a tie at the top crowns nobody). */
+  leader: CompanyId | null
+  /** Your patron: the company you delivered the most for, which paid you; null when you delivered none. */
+  patron: CompanyId | null
   /** Your deliveries for it this season. */
   delivered: number
-  /** You were its top militia: it paid you. */
-  champion: boolean
   /** Gold it paid you (banked at the settle that ended the season). */
   purse: number
-  /** Its vault, to pick one from (empty unless champion). */
+  /** Its vault, to pick one from (empty without a patron). */
   vault: VaultPick[]
-  /** The company posting desperate terms next season (null: none hires you). */
+  /** The company posting desperate terms next season (null: no company is last). */
   desperate: CompanyId | null
   /** The shares as the season closed (before the regression). */
   shares: Shares
@@ -128,8 +122,12 @@ export interface Season {
   before: Shares
   /** Your deliveries this season, per company. */
   deliveries: Record<CompanyId, number>
-  /** The company you signed an exclusive with this season, or null. */
-  exclusive: CompanyId | null
+  /**
+   * This season's finished contracts, in order: the company when it was
+   * delivered, null for a cash-out, a fall or the Sovereign Route. Always as
+   * long as {@link Season.contracts}; its companies tally to `deliveries`.
+   */
+  log: (CompanyId | null)[]
   /** The company on desperate terms this season (last place last season), or null. */
   desperate: CompanyId | null
   /** The season that just ended, until its page is read. */
@@ -142,7 +140,7 @@ const zeros = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_IDS.ma
 /** The war before its first contract: season 1, even shares. */
 export function freshSeason(): Season {
   const shares = evenShares()
-  return { n: 1, contracts: 0, shares, before: { ...shares }, deliveries: zeros(), exclusive: null, desperate: null, ended: null }
+  return { n: 1, contracts: 0, shares, before: { ...shares }, deliveries: zeros(), log: [], desperate: null, ended: null }
 }
 
 /** Whether the trade war is on: from the market of the day's opening (`contracts.MARKET_FROM_RUN` finished contracts). */
@@ -222,24 +220,93 @@ export function shareMove(status: Exclude<ContractStatus, 'open'>, crates: numbe
   return -LOST_SHARE
 }
 
-/** The shares ranked, biggest first. A tie goes to your deliveries this season, then a hash of the season. */
+/**
+ * The shares ranked, biggest first — the standings' row order. A tie on share
+ * goes to your deliveries this season, then a hash of the season; the order
+ * is only an order: a tie at the top still crowns nobody ({@link seasonLeader}).
+ */
 export function ranked(s: Pick<Season, 'n' | 'shares' | 'deliveries'>): CompanyId[] {
   return [...COMPANY_IDS].sort(
     (a, b) => s.shares[b] - s.shares[a] || (s.deliveries[b] ?? 0) - (s.deliveries[a] ?? 0) || tieOrder(s.n, 'rank', a) - tieOrder(s.n, 'rank', b),
   )
 }
 
-/** The company leading the season now. */
-export const seasonLeader = (s: Pick<Season, 'n' | 'shares' | 'deliveries'>): CompanyId => ranked(s)[0]
+/** A company's place by share: 1 + the companies with a bigger one, so level shares share a place. */
+export const placeOf = (s: Pick<Season, 'shares'>, c: CompanyId): number => 1 + COMPANY_IDS.filter((o) => s.shares[o] > s.shares[c]).length
+
+/** The company leading the season outright (the biggest share, alone), or null: a tie at the top — a fresh season's even start too — crowns nobody. */
+export function seasonLeader(s: Pick<Season, 'shares'>): CompanyId | null {
+  const top = Math.max(...COMPANY_IDS.map((c) => s.shares[c]))
+  const at = COMPANY_IDS.filter((c) => s.shares[c] === top)
+  return at.length === 1 ? at[0] : null
+}
 
 /**
  * The company in last place among those that hire you (`open`) — the one
- * that will post desperate terms. Never the leader; null when no other hires you.
+ * that will post desperate terms next season. Never the leader. A tie for
+ * last goes to the one you delivered fewer for, then a hash of the season.
+ * Null when there is no last place: no other company hires you, or every
+ * company that does holds the same share.
  */
 export function seasonLast(s: Pick<Season, 'n' | 'shares' | 'deliveries'>, open: (c: CompanyId) => boolean = () => true): CompanyId | null {
-  const order = ranked(s)
-  const lead = order[0]
-  return [...order].reverse().find((c) => c !== lead && open(c)) ?? null
+  const lead = seasonLeader(s)
+  const hiring = COMPANY_IDS.filter(open)
+  if (hiring.every((c) => s.shares[c] === s.shares[hiring[0]])) return null
+  return [...ranked(s)].reverse().find((c) => c !== lead && open(c)) ?? null
+}
+
+/**
+ * Your patron this season: the company you delivered the most contracts for
+ * — any company, leading or not. A tie on your deliveries goes to the bigger
+ * share, then a hash of the season. Null when you delivered none.
+ */
+export function seasonPatron(s: Pick<Season, 'n' | 'shares' | 'deliveries'>): CompanyId | null {
+  const got = (c: CompanyId) => s.deliveries[c] ?? 0
+  const best = [...COMPANY_IDS].sort((a, b) => got(b) - got(a) || s.shares[b] - s.shares[a] || tieOrder(s.n, 'patron', a) - tieOrder(s.n, 'patron', b))[0]
+  return got(best) > 0 ? best : null
+}
+
+/**
+ * Where you stand with your patron this season, for the standings' card:
+ * who it is (or none yet), what it would pay if the season ended now, the
+ * companies level with it on your deliveries (a tie, decided by share), and
+ * how many contracts are left — the last one said as such.
+ */
+export interface PatronStatus {
+  /** 'none': no delivery yet · 'ahead': one company leads your deliveries · 'tied': two or more are level. */
+  state: 'none' | 'ahead' | 'tied'
+  patron: CompanyId | null
+  /** Your deliveries for it this season. */
+  delivered: number
+  /** What it pays if the season ended now: {@link PATRON_PURSE} × delivered. */
+  purse: number
+  /** On a tie: every company level with it on your deliveries, the patron first (the tie-break's order). Else empty. */
+  level: CompanyId[]
+  /** On a tie: what breaks it now — the bigger share, or (shares level too) the season's hash. */
+  breaksBy: 'share' | 'hash' | null
+  /** Contracts left in the season, this one included. */
+  left: number
+  /** The contract you sign next is the season's last. */
+  lastContract: boolean
+}
+
+export function patronStatus(s: Pick<Season, 'n' | 'contracts' | 'shares' | 'deliveries'>): PatronStatus {
+  const patron = seasonPatron(s)
+  const left = contractsLeft(s)
+  const base = { left, lastContract: left === 1 }
+  if (!patron) return { state: 'none', patron: null, delivered: 0, purse: 0, level: [], breaksBy: null, ...base }
+  const delivered = s.deliveries[patron] ?? 0
+  const level = COMPANY_IDS.filter((c) => (s.deliveries[c] ?? 0) === delivered)
+  const tied = level.length > 1
+  return {
+    state: tied ? 'tied' : 'ahead',
+    patron,
+    delivered,
+    purse: PATRON_PURSE * delivered,
+    level: tied ? [patron, ...level.filter((c) => c !== patron).sort((a, b) => s.shares[b] - s.shares[a])] : [],
+    breaksBy: !tied ? null : level.some((c) => c !== patron && s.shares[c] === s.shares[patron]) ? 'hash' : 'share',
+    ...base,
+  }
 }
 
 /** The shares regressed halfway to even (whole points, summing to 100): a season's lead carries over, but not all of it. */
@@ -250,7 +317,7 @@ export const regressShares = (shares: Shares): Shares => fitShares(Object.fromEn
 // ---------------------------------------------------------------------------
 
 /**
- * The leader's vault, for its champion: {@link VAULT_PICKS} of its own item
+ * A company's vault, for you as its patron: {@link VAULT_PICKS} of its own item
  * kinds (Levels 1–3, never Sovereign), the ones you have not unlocked first,
  * each group in a hash order of (season, company). Taking a locked kind
  * unlocks it; an owned one is a Rare bonus item for the next contract.
@@ -286,59 +353,48 @@ export function recordContract(s: Season, c: WarContract): Season {
   const company = !c.charter && isCompanyId(c.company) ? c.company : null
   const shares = company ? moveShares(s.shares, company, shareMove(c.status, c.crates)) : { ...s.shares }
   const deliveries = { ...s.deliveries }
-  if (company && c.status === 'delivered') deliveries[company] = (deliveries[company] ?? 0) + 1
-  return { ...s, contracts: s.contracts + 1, before: { ...s.shares }, shares, deliveries }
+  const delivered = company && c.status === 'delivered' ? company : null
+  if (delivered) deliveries[delivered] = (deliveries[delivered] ?? 0) + 1
+  return { ...s, contracts: s.contracts + 1, before: { ...s.shares }, shares, deliveries, log: [...(s.log ?? []), delivered] }
 }
 
 /** Whether the season has run its {@link SEASON_LENGTH} contracts. */
 export const seasonOver = (s: Pick<Season, 'contracts'>): boolean => s.contracts >= SEASON_LENGTH
 
 /**
- * Close a season: the leader, whether you were its champion (and what it
- * pays), the next season's desperate company (last of those that hire you),
- * and the next season — its shares regressed halfway to even, its tallies,
- * its exclusive cleared.
+ * Close a season: the leader (outright, else none), your patron and what it
+ * pays (a purse per delivery for it and a pick from its vault — nothing
+ * without a delivery), the next season's desperate company (last of those
+ * that hire you), and the next season — its shares regressed halfway to
+ * even, its tallies cleared.
  */
 export function endSeason(s: Season, opts: { haveItems: readonly string[]; open?: (c: CompanyId) => boolean }): { next: Season; end: SeasonEnd } {
-  const leader = seasonLeader(s)
-  const delivered = s.deliveries[leader] ?? 0
-  const champion = delivered >= CHAMPION_MIN
+  const patron = seasonPatron(s)
+  const delivered = patron ? (s.deliveries[patron] ?? 0) : 0
   const desperate = seasonLast(s, opts.open)
   const end: SeasonEnd = {
     n: s.n,
-    leader,
-    share: s.shares[leader],
+    leader: seasonLeader(s),
+    patron,
     delivered,
-    champion,
-    purse: champion ? CHAMPION_PURSE * delivered : 0,
-    vault: champion ? vaultPicks(leader, opts.haveItems, s.n) : [],
+    purse: PATRON_PURSE * delivered,
+    vault: patron ? vaultPicks(patron, opts.haveItems, s.n) : [],
     desperate,
     shares: { ...s.shares },
   }
   const shares = regressShares(s.shares)
   return {
     end,
-    next: { n: s.n + 1, contracts: 0, shares, before: { ...shares }, deliveries: zeros(), exclusive: null, desperate, ended: end },
+    next: { n: s.n + 1, contracts: 0, shares, before: { ...shares }, deliveries: zeros(), log: [], desperate, ended: end },
   }
 }
 
-// ---------------------------------------------------------------------------
-// Exclusives, cold rivals, desperate terms
-// ---------------------------------------------------------------------------
+/** One of the season's seven bars: the company a finished contract was delivered for, `'miss'` (cashed out, fallen, or your own road), or null (not played yet). */
+export type SeasonBar = CompanyId | 'miss' | null
 
-/** Whether an exclusive may be signed with `company` now: once a season. */
-export const canSignExclusive = (s: Pick<Season, 'exclusive'>, company: CompanyId): boolean => s.exclusive == null && isCompanyId(company)
-
-/** The standing XP multiplier an exclusive gives its company's contracts (1 for every other). */
-export const exclusiveXpMult = (s: Pick<Season, 'exclusive'>, company: CompanyId | null): number =>
-  company && s.exclusive === company ? (rivalOf(company) ? EXCLUSIVE_XP : EXCLUSIVE_XP_UNRIVALLED) : 1
-
-/** Whether `company`'s notice is cold this season: its rival holds your exclusive. */
-export const isCold = (s: Pick<Season, 'exclusive'>, company: CompanyId): boolean => !!s.exclusive && rivalOf(s.exclusive) === company
-
-/** The most crates `company` takes at `standing`, this season: one fewer while it is cold (never below one). */
-export const seasonCrateCap = (s: Pick<Season, 'exclusive'>, company: CompanyId, standing: number): number =>
-  isCold(s, company) ? Math.max(1, crateCap(standing) - COLD_CRATES) : crateCap(standing)
+/** The season's {@link SEASON_LENGTH} contracts as bars, in order — for the home's season widget. */
+export const seasonBars = (s: Pick<Season, 'contracts' | 'log'>): SeasonBar[] =>
+  Array.from({ length: SEASON_LENGTH }, (_, i) => (i < s.contracts ? (s.log[i] ?? 'miss') : null))
 
 /** Whether a contract with `company` signed now is on desperate terms. */
 export const isDesperate = (s: Pick<Season, 'desperate'>, company: CompanyId | null): boolean => !!company && s.desperate === company
@@ -361,36 +417,60 @@ function readTally(raw: unknown): Record<CompanyId, number> {
 }
 
 function readEnd(raw: unknown): SeasonEnd | null {
-  if (!isObj(raw) || !isCompanyId(raw.leader)) return null
-  const champion = raw.champion === true
-  const delivered = whole(raw.delivered, SEASON_LENGTH)
-  const vault = champion && Array.isArray(raw.vault)
+  if (!isObj(raw)) return null
+  // Before the October 2026 simplification an end named the leader and
+  // whether you were its champion. A champion's leader paid you: it reads as
+  // your patron. An end that paid nothing reads as no page at all (its
+  // "you delivered none" would not be true; the standings say the rest).
+  const old = !('patron' in raw)
+  if (old && !(raw.champion === true && isCompanyId(raw.leader))) return null
+  const patron = old ? (raw.leader as CompanyId) : isCompanyId(raw.patron) ? raw.patron : null
+  const leader = isCompanyId(raw.leader) ? raw.leader : null
+  // A patron is one you delivered for: at least once.
+  const delivered = patron ? Math.max(1, whole(raw.delivered, SEASON_LENGTH)) : 0
+  const own = (kind: string) => ITEM_KINDS.find((k) => k.id === kind)!
+  const vault = patron && Array.isArray(raw.vault)
     ? raw.vault
-        .filter((v): v is { kind: string; unlock?: unknown } => isObj(v) && isItemKind(v.kind) && ITEM_KINDS.find((k) => k.id === v.kind)!.company === raw.leader && ITEM_KINDS.find((k) => k.id === v.kind)!.level <= 3)
+        .filter((v): v is { kind: string; unlock?: unknown } => isObj(v) && isItemKind(v.kind) && own(v.kind).company === patron && own(v.kind).level <= 3)
         .slice(0, VAULT_PICKS)
         .map((v) => ({ kind: v.kind, unlock: v.unlock === true }))
     : []
   const shares = readShares(raw.shares)
   return {
     n: Math.max(1, whole(raw.n, 1e6)),
-    leader: raw.leader,
-    share: shares[raw.leader],
+    // The crown is the shares' to give: an outright leader only.
+    leader: leader && seasonLeader({ shares }) === leader ? leader : null,
+    patron,
     delivered,
-    champion,
     // Never more than the rule pays for the deliveries it claims.
-    purse: champion ? Math.min(whole(raw.purse, 1e6), CHAMPION_PURSE * delivered) : 0,
+    purse: patron ? Math.min(whole(raw.purse, 1e6), PATRON_PURSE * delivered) : 0,
     vault: vault.filter((v, i) => vault.findIndex((w) => w.kind === v.kind) === i),
-    desperate: isCompanyId(raw.desperate) && raw.desperate !== raw.leader ? raw.desperate : null,
+    desperate: isCompanyId(raw.desperate) && raw.desperate !== leader ? raw.desperate : null,
     shares,
   }
 }
 
 /**
+ * The season's log, validated: unknown ids read as null, clipped to the
+ * contracts finished, and its companies tallying to `deliveries` — else (an
+ * older save has none) rebuilt from the tallies as best it can be: the
+ * deliveries first, in catalogue order, then the misses.
+ */
+function readLog(raw: unknown, contracts: number, deliveries: Record<CompanyId, number>): (CompanyId | null)[] {
+  const log = Array.isArray(raw) ? raw.slice(0, contracts).map((c) => (isCompanyId(c) ? c : null)) : []
+  if (log.length === contracts && COMPANY_IDS.every((c) => log.filter((x) => x === c).length === deliveries[c])) return log
+  const rebuilt: (CompanyId | null)[] = COMPANY_IDS.flatMap((c) => Array.from({ length: deliveries[c] }, () => c))
+  return [...rebuilt, ...Array.from({ length: contracts - rebuilt.length }, () => null)]
+}
+
+/**
  * The persisted season, validated (meta v14): every share whole and summing to
  * 100 (else refitted), the count inside a season, the tallies whole and at
- * most a season's, the exclusive and desperate known companies or null, and a
- * pending end only as the rules could have written it. Anything else — and an
- * older save, which has none — is a fresh war.
+ * most a season's, the log of them in order (`readLog`), the desperate
+ * company a known one or null, and a pending
+ * end only as the rules could have written it. Anything else — and an older
+ * save, which has none — is a fresh war. A save from before the October 2026
+ * simplification held an `exclusive`: it is read past and dropped.
  */
 export function readSeason(raw: unknown): Season {
   if (!isObj(raw)) return freshSeason()
@@ -412,7 +492,7 @@ export function readSeason(raw: unknown): Season {
     shares,
     before,
     deliveries,
-    exclusive: isCompanyId(raw.exclusive) ? raw.exclusive : null,
+    log: readLog(raw.log, contracts, deliveries),
     desperate: isCompanyId(raw.desperate) ? raw.desperate : null,
     ended: readEnd(raw.ended),
   }

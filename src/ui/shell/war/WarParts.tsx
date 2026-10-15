@@ -22,8 +22,7 @@ export function useWar(): { open: boolean; season: Season } {
   return { open: reveal.war, season }
 }
 
-/** "Peppercorn Co." → "Peppercorn", where a line names the company twice or is short of room. */
-export const shortName = (id: CompanyId): string => companyById(id).name.replace(/ Co\.$/, '')
+export { shortName } from './seasonCardCopy'
 
 /**
  * The five shares as one bar: a segment per company in its colour, widest
@@ -45,9 +44,14 @@ export function ShareBar({ season, className }: { season: Pick<Season, 'n' | 'sh
 
 const shareWords = (shares: Shares, order: readonly CompanyId[]) => `Share of the trade: ${order.map((c) => `${companyById(c).name} ${shares[c]}%`).join(', ')}`
 
-/** "Desperate · pays ×1.5" — a company on desperate terms this season. */
+/**
+ * "This season: pays ×1.5" — the company on desperate terms THIS season, on
+ * its standings row. It says "this season" because the season card under the
+ * rows names the company last now, whose terms are NEXT season's: the two
+ * must never read as one fact contradicting the other.
+ */
 export const DesperateChip = () => (
   <span className="tw-chip is-desperate" title={desperateLine()}>
-    Desperate · pays ×{DESPERATE_PAY}
+    This season: pays ×{DESPERATE_PAY}
   </span>
 )

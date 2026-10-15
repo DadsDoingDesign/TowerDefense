@@ -105,20 +105,22 @@ result. Append a short note to the review log when you're done.
   Progress rides `RunContract.asks`; the engine's `burningKills` feeds one.
   UI `ui/shell/contracts/AskParts.tsx` and `ui/shell/AskToast.tsx`; targets
   fitted by `npx tsx balance/ask-rates.ts`.
-- The trade war (Draft 4 § D): pure rules `src/game/run/tradeWar.ts` —
-  seasons of 7 finished contracts (counted at the settle, from the market's
-  opening), whole shares summing to 100 (`moveShares`), the season's end
-  (`endSeason`: the leader pays its champion a purse and a vault pick; the
-  last that hires you posts desperate terms, `contracts.DESPERATE_PAY` /
-  `DESPERATE_STRENGTH` via `ContractTerms.desperate` and `contractRules`),
-  rivals (`Company.rival`, `rivalOf`) and the exclusive (`seasonCrateCap`,
-  `exclusiveXpMult`). Saved as `metaStore.season` (v14, `readSeason`); the
-  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (the share bar,
-  the standings, the season's end, the war's facts and the exclusive sheet on
-  the terms) with `src/styles/war.css`; on the home the shares ride the company
-  dock and the season pill opens the standings. The battlefield flies only the
-  wagon's flag (the margin banners were cut, Oct 2026). Tests
-  `tests/tradeWar.test.ts`.
+- The trade war (Draft 4 § D, simplified Oct 2026): pure rules
+  `src/game/run/tradeWar.ts` — seasons of 7 finished contracts (counted at
+  the settle, from the market's opening; `log` keeps them in order for the
+  home's bars, `seasonBars`), whole shares summing to 100 (`moveShares`), the
+  crown on an outright leader only (`seasonLeader`: a tie crowns nobody), and
+  the season's end (`endSeason`): your **patron** — the company you delivered
+  the most for (`seasonPatron`; a tie goes to the bigger share, then a hash)
+  — pays 75 gold a delivery and a vault pick; the last that hires you posts
+  desperate terms (`contracts.DESPERATE_PAY` / `DESPERATE_STRENGTH` via
+  `ContractTerms.desperate` and `contractRules`). No exclusives, rivals or
+  cold (cut: `docs/MERCENARY_COMPANY.md` § D). Saved as `metaStore.season`
+  (`readSeason`); the settle is `metaStore.settleContract`. UI
+  `src/ui/shell/war/` (the standings and their season card —
+  `seasonCardCopy.ts` is its words — the season's end, the desperate fact on
+  the terms) with `src/styles/war.css`; the crown is `pixel.Crown`. Tests
+  `tests/tradeWar.test.ts`, `tests/seasonCardCopy.test.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
@@ -157,16 +159,32 @@ result. Append a short note to the review log when you're done.
   script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
   The contract board is the HOME, and the home is the map (Oct 2026, the
   map-first home, `MenuScreen` + `menu.css`): the trade map fills the screen
-  and three slim glass layers float over it — the bar (seal, bank, place
-  icons), the company dock (five fixed slots in `COMPANY_IDS` order, the
-  order the map fans its roads west→east, then a sixth, **Buy Company** —
-  the Sovereign Route, locked with its progress until `charterDoor` opens;
-  the slot model is the pure `ui/shell/homeDock.ts`) and the focused card
-  with the CTA. A slot or a signpost focuses a road (`homeFocus`): the canvas
-  re-lights it (`paintMap.bakeBase` `focus`, a `mapRules.MapFocus`), names
-  its cities, and the card's CTA opens the terms (`openContracts`). Buy
-  Company is `homeFocus: 'charter'`: every road lights (`'all'`), and its
-  card's CTA opens the charter page (`onCharter`). No liaison on the home. Choosing the hero (`marchOut`) goes
+  and three slim layers float over it — the bar (the purse plaque: seal and
+  bank; one carved plate per place, its mark and name; under the purse, the
+  season panel: seven bars from `tradeWar.seasonBars`, `ui/shell/homeSeason.ts`),
+  the foot (the company dock: exactly five fixed slots in `COMPANY_IDS`
+  order, the order the map fans its roads west→east, pure model
+  `ui/shell/homeDock.ts`; the **Buy Company** slot — the Sovereign Route,
+  padlocked with its progress until `charterDoor` opens — floats over the
+  dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for
+  every company (Ground · Raiders · Rep N — the track's next reward by kind, `track.nextReward` — `ui/shell/homeCard.ts`; the
+  ground says its effect from `terrain.GROUND_EFFECTS`, never its
+  place-name; a one-off condition — desperate terms, the market's top price
+  — is a badge at the head's right, `companyBadge`, only when it applies)
+  and the Buy Company card in the same frame. **No wiggle**: a
+  pick changes values, never boxes, so the open area the roads fan into (the
+  `.mn-window` box, between the bar and the foot; the season panel, the notes
+  and the Buy Company slot float over the map) depends on the viewport alone
+  and the terrain bakes once (`scripts/home-stability.mjs` proves it). A slot
+  or a signpost focuses a road (`homeFocus`): the canvas re-lights
+  it (`paintMap.bakeBase` `focus`, a `mapRules.MapFocus`) in the company's
+  season (`mapRules.MAP_SEASONS`, a tint over the same bake via
+  `paintMap.seasonPixels`), its cities hang beside it as annotations with
+  leader lines (pure placement in `ui/attract/labelLayout.ts`, which also
+  places the signposts — never by focus), and the card's CTA opens the terms
+  (`openContracts`). Buy Company is `homeFocus: 'charter'`: every road lights
+  (`'all'`, no season), and its card's CTA opens the charter page
+  (`onCharter`). No liaison on the home. Choosing the hero (`marchOut`) goes
   straight into the opening fight: the one battle on `OPENING_LAYER`
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the
@@ -189,8 +207,10 @@ result. Append a short note to the review log when you're done.
   (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
   on the charter page while `metaStore.militia` is null). A new game goes
   straight into the loop, and a militia an older save founded stays hidden
-  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, edit it from Settings or by tapping its
-  name on the home. The flag
+  until the road opens (`flyingMilitia`, `ui/shell/useMilitia.ts`). Once founded, the home's purse (bare seal and gold
+  until then) becomes a carved-plate button, `.mn-purse-btn`, with its flag in
+  the seal's place (a desk names it there too); a tap on it — or Settings —
+  edits it. The flag
   is `src/game/data/banner.ts` (shape, field, pattern + its colour, emblem,
   metal — one `bannerRows(look)` for SVG and both canvases; `soldierRows(look)`
   dresses the builder preview's soldiers in it). The battle wagon flies the

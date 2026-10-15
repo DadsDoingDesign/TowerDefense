@@ -5,6 +5,7 @@ import { Crest, Lock } from '../pixel'
 import { useMedia } from '../pointer'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
 import { BRIGHTEN_MS, brightenEase, buildGeometry, FOCUS_FADE_MS, litBy, makeTraffic, MAP_FPS, STILL_T, type MapFocus, type MapGeometry, type Rect, type RoadView } from './mapRules'
+import { boxOf, hubBoxes, placeCityLabels, placeSignposts, signPrio } from './labelLayout'
 
 /**
  * The home's map, and since October 2026 the whole of the home: the trade map
@@ -81,10 +82,13 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   }
 }
 
+const NO_RECTS: readonly Rect[] = []
+
 export function TradeMap({
   roads,
   banner,
   open,
+  avoid = NO_RECTS,
   motion,
   firstRun,
   focused = null,
@@ -92,8 +96,15 @@ export function TradeMap({
 }: {
   roads: RoadView[]
   banner: BannerLook
-  /** The part of the map the home's overlays leave open, CSS px from the map's top-left. */
+  /**
+   * The part of the map the home's bar and foot leave open, CSS px from the
+   * map's top-left: the roads fan out to fill it. It must depend on the
+   * viewport only — never on the focus — or a pick re-frames the map and
+   * re-bakes its terrain (October 2026).
+   */
   open: Rect | null
+  /** Overlays floating on the open area (the update notice, a coach pill): labels keep off them. */
+  avoid?: readonly Rect[]
   /** False under reduced motion: one still frame. */
   motion: boolean
   firstRun: boolean
@@ -201,6 +212,18 @@ export function TradeMap({
       live = false
     }
   }, [geo])
+  // Dev builds only: what the map is framed to and the terrain it baked, so a
+  // harness can prove a pick never re-frames or re-bakes it (`window.__tradeMapFrame()`).
+  useEffect(() => {
+    if (!import.meta.env.DEV || !geo || !terrain) return
+    const w = window as Window & { __tradeMapFrame?: () => unknown }
+    w.__tradeMapFrame = () => {
+      const data = terrain.canvas.getContext('2d')!.getImageData(0, 0, terrain.canvas.width, terrain.canvas.height).data
+      let h = 2166136261
+      for (let i = 0; i < data.length; i += 4) h = Math.imul(h ^ (data[i] | (data[i + 1] << 8) | (data[i + 2] << 16)), 16777619)
+      return { W: geo.W, H: geo.H, hub: geo.hub, towns: geo.routes.map((r) => r.towns), terrain: h >>> 0, canvas: terrain.canvas === cachedTerrain(geo) }
+    }
+  }, [geo, terrain])
   const flagKey = bannerKey(banner)
   const pixels = useMemo(
     () => (geo && terrain?.geo === geo ? bakePixels(geo, terrain.canvas, roads, banner) : null),
@@ -304,38 +327,32 @@ export function TradeMap({
         aria-hidden="true"
         style={geo ? { width: (geo.W * k) / (size?.dpr ?? 1), height: (geo.H * k) / (size?.dpr ?? 1) } : undefined}
       />
-      {geo && open && <Labels geo={geo} roads={roads} cssPerPx={cssPerPx} open={open} firstRun={firstRun} focused={focused} onPick={onPick} />}
+      {geo && open && <Labels geo={geo} roads={roads} cssPerPx={cssPerPx} open={open} avoid={avoid} firstRun={firstRun} focused={focused} onPick={onPick} />}
     </div>
   )
 }
 
-/** A label's visible box, CSS px. */
-interface Box {
-  l: number
-  r: number
-  t: number
-  b: number
-}
-const clear = (q: Box, placed: readonly Box[], gap = 4) => placed.every((p) => q.r + gap <= p.l || q.l - gap >= p.r || q.b + 2 <= p.t || q.t - 2 >= p.b)
-const inside = (q: Box, o: Rect) => q.l >= o.x + 4 && q.r <= o.x + o.w - 4 && q.t >= o.y + 2 && q.b <= o.y + o.h - 2
-
 /**
  * The roads' signposts (Figma "B2 · Road Signpost"), and the focused road's
- * cities, as crisp HTML over the canvas.
+ * cities, as crisp HTML over the canvas. Where each goes is
+ * `labelLayout.ts`'s (pure, tested); this measures and places.
  *
  * A signpost is a wooden plate at a road's end with its company's logo (a
  * padlock on a road not hiring yet): a tap focuses that road, and never
  * signs. The plate says nothing else — the dock under the map carries the
- * standing, the share, the war's leader and the day's marks, once.
- * The focused road's plate is lit, and its three cities hang beside their
- * towns, off the road, the destination's in bold. A first launch's uncharted
- * roads are bare pins: there is only the one road to take.
+ * standing, the share, the war's leader and the day's marks, once. The
+ * focused road's plate is lit; the plates never MOVE on a pick (their places
+ * do not depend on the focus). The focused road's three cities hang in a line
+ * beside the road, each joined to its town by a thin leader line, the
+ * destination's in bold. A first launch's uncharted roads are bare pins:
+ * there is only the one road to take.
  */
 function Labels({
   geo,
   roads,
   cssPerPx,
   open,
+  avoid,
   firstRun,
   focused,
   onPick,
@@ -344,104 +361,69 @@ function Labels({
   roads: RoadView[]
   cssPerPx: number
   open: Rect
+  avoid: readonly Rect[]
   firstRun: boolean
   focused: MapFocus
   onPick?: (company: CompanyId) => void
 }) {
   const ref = useRef<HTMLUListElement>(null)
   const townsRef = useRef<HTMLOListElement>(null)
-  // Keep every label inside the open area and off every other: measure, then
-  // place the signposts focused road first, each nudged sideways (then up or
-  // down) to the nearest free spot, then the cities beside their towns. A
-  // signpost's box is its visible face (the 44px hit area is 6px taller top
-  // and bottom).
+  const leadersRef = useRef<SVGSVGElement>(null)
   useLayoutEffect(() => {
     const ul = ref.current
     if (!ul) return
-    const lis = (Array.from(ul.children) as HTMLElement[]).sort((a, b) => Number(b.dataset.p) - Number(a.dataset.p))
-    const placed: Box[] = []
-    for (const li of lis) {
-      const x0 = Number(li.dataset.x)
-      const y0 = Number(li.dataset.y)
-      const w = li.offsetWidth
-      const h = Math.max(20, li.offsetHeight - 12)
-      const lo = open.x + 6 + w / 2
-      const hi = open.x + open.w - 6 - w / 2
-      const clampX = (x: number) => (hi < lo ? open.x + open.w / 2 : Math.max(lo, Math.min(hi, x)))
-      const clampY = (y: number) => Math.max(open.y + 6 + h, y)
-      const box = (x: number, y: number): Box => ({ l: x - w / 2, r: x + w / 2, t: y - 6 - h, b: y - 6 })
-      let at = { x: clampX(x0), y: clampY(y0) }
-      search: for (const dy of [0, -(h + 4), h + 4]) {
-        for (let d = 0; d <= 240; d += 8) {
-          for (const s of d ? [1, -1] : [1]) {
-            const x = clampX(x0 + s * d)
-            const y = clampY(y0 + dy)
-            if (clear(box(x, y), placed)) {
-              at = { x, y }
-              break search
-            }
-          }
-        }
-      }
-      placed.push(box(at.x, at.y))
-      li.style.left = `${Math.round(at.x)}px`
-      li.style.top = `${Math.round(at.y)}px`
-    }
-    // The cities: beside each town, on whichever side covers the least road
-    // (its own or another's), never over a signpost or another city.
+    const blocked = avoid.map(boxOf)
+    // The signposts: a signpost's box is its visible face (the 44px hit area is 6px taller top and bottom).
+    const lis = Array.from(ul.children) as HTMLElement[]
+    const signs = placeSignposts(
+      lis.map((li, i) => ({ id: String(i), x: Number(li.dataset.x), y: Number(li.dataset.y), w: li.offsetWidth, h: Math.max(20, li.offsetHeight - 12), prio: Number(li.dataset.p) })),
+      open,
+      blocked,
+    )
+    signs.forEach((s, i) => {
+      lis[i].style.left = `${Math.round(s.x)}px`
+      lis[i].style.top = `${Math.round(s.y)}px`
+    })
     const ol = townsRef.current
-    if (!ol) return
-    const CELL = 6
-    const road = new Set<number>()
-    for (const r of geo.routes) for (const [x, y] of r.chain) road.add(Math.floor((x * cssPerPx) / CELL) * 4096 + Math.floor((y * cssPerPx) / CELL))
-    const onRoad = (q: Box) => {
-      let n = 0
-      for (let cx = Math.floor(q.l / CELL); cx <= Math.floor(q.r / CELL); cx++) for (let cy = Math.floor(q.t / CELL); cy <= Math.floor(q.b / CELL); cy++) if (road.has(cx * 4096 + cy)) n++
-      return n
-    }
-    // The destination first (its name matters most), then the road back to the hub.
-    for (const li of (Array.from(ol.children) as HTMLElement[]).reverse()) {
-      const x = Number(li.dataset.x)
-      const y = Number(li.dataset.y)
-      const w = li.offsetWidth
-      const h = li.offsetHeight
-      const g = 9
-      const at = (l: number, t: number): Box => ({ l, r: l + w, t, b: t + h })
-      const tries = [
-        at(x + g, y - h / 2),
-        at(x - g - w, y - h / 2),
-        at(x - w / 2, y + g),
-        at(x - w / 2, y - g - 8 - h),
-        at(x + g, y - h - 4),
-        at(x + g, y + 4),
-        at(x - g - w, y - h - 4),
-        at(x - g - w, y + 4),
-        // Further out, for a crowded road (a short phone's).
-        at(x + g + 16, y - h - 10),
-        at(x - g - 16 - w, y - h - 10),
-        at(x + g + 16, y + 10),
-        at(x - g - 16 - w, y + 10),
-        at(x - w / 2, y + g + h + 4),
-      ]
-      // The first free spot with the least road under it (the order breaks ties: beside, then under, then over).
-      let spot: Box | null = null
-      let bestScore = Infinity
-      for (let i = 0; i < tries.length; i++) {
-        const q = tries[i]
-        if (!inside(q, open) || !clear(q, placed, 2)) continue
-        const score = onRoad(q) * 10 + i
-        if (score < bestScore) {
-          spot = q
-          bestScore = score
-        }
+    const svg = leadersRef.current
+    if (!ol || !svg) return
+    const lit = geo.routes.find((r) => r.company === focused)
+    if (!lit) return
+    const px = (p: readonly [number, number]) => [p[0] * cssPerPx, p[1] * cssPerPx] as [number, number]
+    const items = Array.from(ol.children) as HTMLElement[]
+    const placed = placeCityLabels({
+      towns: items.map((li) => ({ x: Number(li.dataset.x), y: Number(li.dataset.y), w: li.offsetWidth, h: li.offsetHeight })),
+      hub: px(geo.hub),
+      own: lit.chain.map(px),
+      others: geo.routes.filter((r) => r !== lit).map((r) => r.chain.map(px)),
+      blocked: [...signs.map((s) => s.box), ...blocked],
+      keep: hubBoxes(geo.hub, cssPerPx),
+      bounds: open,
+      midX: geo.hub[0] * cssPerPx,
+    })
+    const lines = Array.from(svg.querySelectorAll('g')) as SVGGElement[]
+    placed.forEach((c, i) => {
+      const li = items[i]
+      // No room: the name stays in the list for a screen reader, off the map, rather than over another.
+      li.classList.toggle('is-hidden', !c)
+      lines[i]?.classList.toggle('is-hidden', !c)
+      if (!c) return
+      li.style.left = `${Math.round(c.box.l)}px`
+      li.style.top = `${Math.round(c.box.t)}px`
+      li.dataset.edge = c.edge
+      const line = lines[i]?.querySelector('line')
+      const dot = lines[i]?.querySelector('rect')
+      if (line) {
+        line.setAttribute('x1', c.line.x1.toFixed(1))
+        line.setAttribute('y1', c.line.y1.toFixed(1))
+        line.setAttribute('x2', c.line.x2.toFixed(1))
+        line.setAttribute('y2', c.line.y2.toFixed(1))
       }
-      // No free spot: the name stays in the list for a screen reader, off the map, rather than over another.
-      li.classList.toggle('is-hidden', !spot)
-      if (!spot) continue
-      placed.push(spot)
-      li.style.left = `${Math.round(spot.l)}px`
-      li.style.top = `${Math.round(spot.t)}px`
-    }
+      if (dot) {
+        dot.setAttribute('x', String(Math.round(Number(li.dataset.x)) - 2))
+        dot.setAttribute('y', String(Math.round(Number(li.dataset.y)) - 2))
+      }
+    })
   })
   // The cities are named for one road at a time: every road lit names none.
   const lit = focused && focused !== 'all' ? geo.routes.find((r) => r.company === focused) : undefined
@@ -449,7 +431,7 @@ function Labels({
   return (
     <>
       <ul className="tm-labels" ref={ref} aria-label="Company roads">
-        {geo.routes.map((r) => {
+        {geo.routes.map((r, i) => {
           const v = roads.find((q) => q.company === r.company)!
           const co = companyById(r.company)
           const [x, y] = r.towns[2]
@@ -458,8 +440,8 @@ function Labels({
           const style = { left, top, '--co': co.color } as CSSProperties
           const on = litBy(focused, r.company)
           const locked = v.state === 'uncharted'
-          // Placement priority: the focused road, then by standing, the uncharted last.
-          const prio = (on ? 1000 : 0) + (locked ? 0 : 10 + v.standing)
+          // Placement order: by standing, the uncharted last, then west to east — never the focus.
+          const prio = signPrio(v, i)
           if (locked && firstRun) {
             return (
               <li key={r.company} className="tm-label is-pin is-bare" data-x={left} data-y={top} data-p={prio} style={style}>
@@ -487,13 +469,23 @@ function Labels({
         })}
       </ul>
       {lit && litCo && (
-        <ol className="tm-towns" ref={townsRef} aria-label={`${litCo.name}’s road`} style={{ '--co': litCo.color } as CSSProperties}>
-          {lit.towns.map(([x, y], i) => (
-            <li key={litCo.towns[i]} className={`tm-town${i === 2 ? ' is-dest' : ''}`} data-x={x * cssPerPx} data-y={(y - 3) * cssPerPx}>
-              {litCo.towns[i]}
-            </li>
-          ))}
-        </ol>
+        <>
+          <svg className="tm-leaders" ref={leadersRef} aria-hidden="true" style={{ '--co': litCo.color } as CSSProperties}>
+            {lit.towns.map((_, i) => (
+              <g key={`${litCo.id}-${i}`}>
+                <line />
+                <rect width={4} height={4} />
+              </g>
+            ))}
+          </svg>
+          <ol className="tm-towns" ref={townsRef} aria-label={`${litCo.name}’s road`} style={{ '--co': litCo.color } as CSSProperties}>
+            {lit.towns.map(([x, y], i) => (
+              <li key={litCo.towns[i]} className={`tm-town${i === 2 ? ' is-dest' : ''}`} data-x={x * cssPerPx} data-y={(y - 3) * cssPerPx}>
+                {litCo.towns[i]}
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </>
   )

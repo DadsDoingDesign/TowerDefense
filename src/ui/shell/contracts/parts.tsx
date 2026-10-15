@@ -75,16 +75,6 @@ export const MarketTag = ({ mult }: { mult: number }) => (
   </span>
 )
 
-/** The route's ground: a swatch chip beside its name (never a signal on its own). */
-export const GroundChip = ({ company }: { company: CompanyId }) => {
-  const g = companyById(company).ground
-  return (
-    <span className="ct-ground" style={{ '--gr': g.swatch } as CSSProperties}>
-      {g.name}
-    </span>
-  )
-}
-
 /** Danger as 1–5 pips, numbered — never an invented probability. */
 export function DangerPips({ n }: { n: number }) {
   return (

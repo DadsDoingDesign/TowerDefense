@@ -1,13 +1,15 @@
 import { DUAL_WIELD_DEX, gripOf, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { interestLine, LOST_ROAD_SHARE, ROAD_SHARE } from '../game/run/hq'
 import { ADVANCE, DESPERATE_PAY, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
-import { SEASON_LENGTH } from '../game/run/tradeWar'
+import { DESPERATE_STRENGTH, PATRON_PURSE, SEASON_LENGTH } from '../game/run/tradeWar'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 import { MAX_ROSTER as MAX_HEROES } from '../game/run/economy'
 import type { CompanyId } from '../game/data/companies'
 import type { IdeaId } from '../state/staging'
+import { skillById, skillHeadline } from '../game/data/skills'
+import { itemKindById } from '../game/data/itemKinds'
 
 /**
  * The UI's shared vocabulary: non-colour channels, the tokens that carry the
@@ -214,7 +216,18 @@ export const focusFull = (f: FocusMode): string => FOCUS_OPTS.find((o) => o.id =
 // sheet (`game/` must not import `ui/`); re-exported so every UI caller keeps
 // importing them from here.
 export { ICON_ORDER, ICON_COLS, ICON_ROWS, iconCell, itemIcon, type IconKey } from '../game/data/iconAtlas'
-import type { IconKey } from '../game/data/iconAtlas'
+import { itemIcon as atlasItemIcon, type IconKey } from '../game/data/iconAtlas'
+
+/** A skill's mark: its headline's icon (the track's rows and the home card's Unlocks row). */
+export const skillIcon = (id: string): IconKey => {
+  const k = skillById(id)
+  return k ? skillHeadline(k).icon : 'boon'
+}
+/** An item kind's mark: the atlas cell its noun draws. */
+export const itemKindIcon = (id: string): IconKey => {
+  const k = itemKindById(id)
+  return k ? atlasItemIcon({ name: k.id, slot: k.slot }) : 'loot'
+}
 
 /**
  * The run map's node marks (Wave 1). These were `⚔ ◆ ☠ ♛ ⟡ ❖ ＋` from
@@ -632,11 +645,15 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   },
   war: {
     term: 'The trade war',
-    line: `The companies fight over the trade, and your contracts move it: a delivery takes share for its company, a fall loses some. Every ${SEASON_LENGTH} contracts a season ends: the leader pays its top militia, and the last posts desperate terms — its contracts pay ×${DESPERATE_PAY}, its raiders are stronger.`,
+    line: `The companies fight over the trade, and your contracts move it: a delivery takes share for its company, a fall loses some. The biggest share wears the crown. Every ${SEASON_LENGTH} contracts a season ends: your patron pays you, and the last company that hires you posts desperate terms for the next.`,
     also: [
       {
-        term: 'An exclusive',
-        line: 'Once a season, from a company’s terms: more standing from its contracts, while its rival turns cold and takes one crate fewer.',
+        term: 'Your patron',
+        line: `Whichever company you delivered the most contracts for this season. When the season ends it pays you ${PATRON_PURSE} gold for each of them and a pick of one of its items. A tie goes to the bigger share. No delivery, no patron.`,
+      },
+      {
+        term: 'Desperate terms',
+        line: `Posted for a season by whichever company came last in the one before, of those that hire you: its contracts pay ×${DESPERATE_PAY}, and its raiders are ${Math.round((DESPERATE_STRENGTH - 1) * 100)}% stronger.`,
       },
     ],
   },

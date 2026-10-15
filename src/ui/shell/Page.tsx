@@ -30,6 +30,7 @@ export function PageLayout({
   brand,
   tone,
   compact = false,
+  back,
 }: {
   title: string
   subtitle?: string
@@ -104,6 +105,12 @@ export function PageLayout({
    * sits at the bottom. Off wherever the CTA can arm (see `PageScreen`).
    */
   compact?: boolean
+  /**
+   * The way back to the menu, drawn as an icon button at the head's top left —
+   * the same place and the same button as every other page (the Codex, the HQ).
+   * `label` names it for a screen reader.
+   */
+  back?: { label: string; run: () => void }
 }) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const more = useMoreBelow(bodyRef)
@@ -111,9 +118,20 @@ export function PageLayout({
     <div className={`pg${tone ? ` tone-${tone}` : ''}${compact ? ' compact' : ''}`}>
       <div className={`pg-band pg-head${brand ? ' has-brand' : ''}`} {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
         {brand}
-        <h1 className="t-title" tabIndex={-1}>
-          {title}
-        </h1>
+        {back ? (
+          <div className="pg-titlebar">
+            <button type="button" className="ct-back" onClick={() => back.run()} aria-label={back.label}>
+              <Icon name="back" />
+            </button>
+            <h1 className="t-title" tabIndex={-1}>
+              {title}
+            </h1>
+          </div>
+        ) : (
+          <h1 className="t-title" tabIndex={-1}>
+            {title}
+          </h1>
+        )}
         {subtitle && <p className="t-sub">{subtitle}</p>}
         {resources && <div className="pg-res">{resources}</div>}
         {strip}

@@ -1,20 +1,20 @@
 import { useMilitia } from './useMilitia'
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
 import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
-import { nextRewardWord, trackPlan } from '../../game/run/track'
-import { CHARTER_NAME, CHARTER_PAYOUT, charterDoor } from '../../game/run/charter'
-import { contractsLeft, DESPERATE_STRENGTH, exclusiveXpMult, isCold, seasonCrateCap } from '../../game/run/tradeWar'
+import { nextReward, trackPlan } from '../../game/run/track'
+import { charterDoor } from '../../game/run/charter'
+import { contractsLeft, seasonBars, type SeasonBar } from '../../game/run/tradeWar'
 import { useGameStore, type HomeFocus } from '../../state/gameStore'
 import { homeCompany } from '../../state/game/contractSlice'
 import { useMetaStore } from '../../state/metaStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { ArmourMark } from '../ArmourMark'
-import { ENEMY_MODS } from '../../game/data/enemies'
+import { GroundMarks } from '../GroundMark'
 import { Banner, Crest, Crown, Lock, Pixel, SovereignCrest } from '../pixel'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
@@ -26,6 +26,9 @@ import { useMenuStaged, useReveal } from './staging'
 import type { Offer } from './offers'
 import { useWar } from './war/WarParts'
 import { charterCta, charterSlot, charterSlotName, dockSlots, markText, SLOT_MARKS, slotName, type CharterSlot, type DockSlot } from './homeDock'
+import { CHARTER_KICKER, charterFacts, companyBadge, companyFacts, type CardBadge, type CardFact } from './homeCard'
+import { barKind, seasonPanelName } from './homeSeason'
+import { companyVar } from '../channels'
 
 /**
  * May the menu move? False under the OS setting or the in-game toggle: the
@@ -43,31 +46,41 @@ export function useMenuMotion(): boolean {
  * trade map (`ui/attract/TradeMap.tsx`) fills the screen edge to edge, and
  * the home is three slim layers over it:
  *
- *  - **the bar** across the top: the seal (the screen's title, spoken), the
- *    bank, and one icon button per place — the HQ, the sealed crates, the
- *    Codex, Settings (a locked one keeps its padlock and says what opens it)
- *    — with your militia's banner once it is founded;
- *  - **the company dock** at the foot: five fixed slots, one per company,
- *    always in `COMPANY_IDS` order — the order the map fans its roads, west
- *    to east. A slot says your standing, its share of the trade while the war
- *    is on, and the day's marks. Picking a slot (or a signpost) FOCUSES that
- *    road (`homeFocus` in the store): the map lights it in its colour, the
- *    rest sinks, and its cities are named along it. Nothing signs. After the
- *    five, a sixth slot that is no company's: **Buy Company**, the Sovereign
- *    Route — locked (its padlock and the share of the catalogue unlocked)
- *    until every skill and item is, then open. Picking it lights every road;
- *  - **the card** under the dock: the focused company — its flag (the way
- *    into its livery), its name, the facts that tell its road apart, the way
- *    into its track — and the one CTA, which opens its terms. With Buy
- *    Company in focus it is that card instead: what the road is, what opens
- *    it or what it pays, and the CTA that opens the charter.
+ *  - **the bar** across the top: the purse — one small plaque holding the
+ *    seal (the screen's title, spoken; written beside it on a desk) and the
+ *    bank — your company's flag in the seal's place once it is founded (its
+ *    builder a tap away), and one carved plate
+ *    per place — the HQ, the sealed crates, the Codex, Settings — its mark
+ *    and its name (a locked one charred, with its padlock, saying what opens
+ *    it); under the purse, while the trade war is on, the season panel (its
+ *    seven bars; it opens the standings);
+ *  - **the foot**: the company dock — five fixed slots, one per company,
+ *    always in `COMPANY_IDS` order, the order the map fans its roads west to
+ *    east — with Buy Company floating over its right end, a slot's size,
+ *    locked until every skill and item is; and the card. Picking a slot (or
+ *    a signpost) FOCUSES a road (`homeFocus` in the store): the map lights it
+ *    in its colour and its season, the rest sinks, its cities are named
+ *    beside it. Nothing signs;
+ *  - **the card**: a fixed form (`homeCard.ts`) — the focused company's
+ *    flag (the way into its livery) and name, a badge for a one-off
+ *    condition, three rows (Ground, Raiders, Next) and the one CTA, which
+ *    opens its terms. With Buy Company in
+ *    focus it is that card, in the same frame.
  *
- * The season, while the war is on, is a small pill on the dock's shoulder. A
- * first-timer (LS3) sees one road, its card and "Take the free escort": no
+ * ## No wiggle
+ *
+ * A view you click around keeps its geometry (`DESIGN_SYSTEM.md` § 8): every
+ * pick changes values, never boxes. The card is the same rows whatever the
+ * company; the season panel, the notes (the update notice, a coach pill) and
+ * the Buy Company slot float over the map instead of pushing it (the map
+ * keeps its labels off them).
+ * `scripts/home-stability.mjs` proves it in the running app.
+ * So the open area between the bar and the foot — what the map's roads fan
+ * out to fill — depends on the viewport alone, and a pick never re-frames
+ * the map or re-bakes its terrain.
+ *
+ * A first-timer (LS3) sees one road, its card and "Take the free escort": no
  * dock, no bank, no war.
- *
- * The map is told where it is seen through: the `.mn-window` box, measured,
- * is the open area its roads fan out to fill.
  */
 export function MenuScreen({
   offers,
@@ -84,7 +97,7 @@ export function MenuScreen({
   onLivery?: (company: CompanyId) => void
   /** Open the trade war's standings (Draft 4 § D). */
   onWar?: () => void
-  /** Open a company's loyalty track (Draft 4 · B): the card's track chip is the way in. */
+  /** Open a company's loyalty track (Draft 4 · B): the card's Next row is the way in. */
   onTrack?: (company: CompanyId) => void
 }) {
   const primary = offers.find((o) => o.id === 'run')
@@ -118,7 +131,7 @@ export function MenuScreen({
   const slots = useMemo(() => dockSlots({ xp, terms, war, market }), [xp, terms, war, market?.company]) // eslint-disable-line react-hooks/exhaustive-deps
   const own = useMemo(() => charterSlot(charterDoor({ skills, items: items ?? [] }), bank), [skills, items, bank])
   // The focused road: the one picked, else the default the terms would open on.
-  // `'charter'` is the dock's Buy Company slot: every road lit, its own card.
+  // `'charter'` is the Buy Company slot: every road lit, its own card.
   const focus: HomeFocus = staged ? FIRST_COMPANY : (homeFocus ?? homeCompany({ standing: xp, stats: { runsCompleted: runs } }))
   const company = focus === 'charter' ? null : focus
   const open = staged || (company != null && hiring[company])
@@ -131,24 +144,41 @@ export function MenuScreen({
     if (company) openContracts({ company })
   }
 
-  // The open area the map's roads fill: the `.mn-window` box, in the map's coordinates.
+  // The open area the map's roads fill: the `.mn-window` box between the bar
+  // and the foot, in the map's coordinates. Neither moves on a pick (see
+  // "No wiggle" above); the notes float, so the map only keeps its labels off them.
   const pageRef = useRef<HTMLDivElement>(null)
   const winRef = useRef<HTMLDivElement>(null)
+  const underRef = useRef<HTMLDivElement>(null)
+  const footRef = useRef<HTMLDivElement>(null)
   const [win, setWin] = useState<Rect | null>(null)
+  const [floats, setFloats] = useState<Rect[]>([])
   useEffect(() => {
     const page = pageRef.current
     const w = winRef.current
-    if (!page || !w) return
+    const n = underRef.current
+    const f = footRef.current
+    if (!page || !w || !n || !f) return
+    const near = (a: Rect, b: Rect) => Math.abs(a.x - b.x) < 1 && Math.abs(a.y - b.y) < 1 && Math.abs(a.w - b.w) < 1 && Math.abs(a.h - b.h) < 1
     const measure = () => {
       const p = page.getBoundingClientRect()
-      const r = w.getBoundingClientRect()
-      const next = { x: r.left - p.left, y: r.top - p.top, w: r.width, h: r.height }
-      setWin((o) => (o && Math.abs(o.x - next.x) < 1 && Math.abs(o.y - next.y) < 1 && Math.abs(o.w - next.w) < 1 && Math.abs(o.h - next.h) < 1 ? o : next))
+      const rect = (el: Element): Rect => {
+        const r = el.getBoundingClientRect()
+        return { x: r.left - p.left, y: r.top - p.top, w: r.width, h: r.height }
+      }
+      const next = rect(w)
+      setWin((o) => (o && near(o, next) ? o : next))
+      // What floats over the map: the season panel, the notes, and the Buy Company slot.
+      const floating = [...n.querySelectorAll(':scope > .mn-season, :scope > .mn-notes > *'), ...f.querySelectorAll('.mn-own')]
+      const boxes = floating.map(rect).filter((r) => r.w > 0 && r.h > 0)
+      setFloats((o) => (o.length === boxes.length && o.every((r, i) => near(r, boxes[i])) ? o : boxes))
     }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(page)
     ro.observe(w)
+    ro.observe(n)
+    ro.observe(f)
     return () => ro.disconnect()
   }, [])
 
@@ -170,6 +200,32 @@ export function MenuScreen({
   const lead = slots.find((s) => s.leads)?.company ?? null
   const left = war ? contractsLeft(war) : 0
 
+  // The purse and the season panel under it are one column: both take the
+  // wider one's width (the designer, Oct 2026). They sit in different layers —
+  // the panel floats over the map so it never pushes it — so it is measured:
+  // each one's natural width (its min-width lifted), then the larger on both.
+  const barRef = useRef<HTMLElement>(null)
+  const seasonKey = war ? `${war.n}:${left}` : ''
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    if (!bar) return
+    const fit = () => {
+      const parts = [bar.querySelector<HTMLElement>('.mn-purse-btn') ?? bar.querySelector<HTMLElement>('.mn-purse'), bar.querySelector<HTMLElement>('.mn-season')].filter(
+        (e): e is HTMLElement => !!e,
+      )
+      bar.style.removeProperty('--lead-w')
+      if (parts.length < 2) return
+      const w = Math.ceil(Math.max(...parts.map((e) => e.getBoundingClientRect().width)))
+      bar.style.setProperty('--lead-w', `${w}px`)
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    void document.fonts?.ready.then(fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [bank, militia?.name, staged, seasonKey])
+
+  const bars = war ? seasonBars(war) : []
+
   return (
     <div className={`pg mn${staged ? ' is-first' : ''}`} ref={pageRef}>
       <div className="mn-map">
@@ -177,6 +233,7 @@ export function MenuScreen({
           roads={roads}
           banner={militia ?? DEFAULT_BANNER}
           open={win}
+          avoid={floats}
           motion={motion}
           firstRun={staged}
           focused={focus === 'charter' ? 'all' : focus}
@@ -185,27 +242,54 @@ export function MenuScreen({
       </div>
       <div className="mn-shade" aria-hidden="true" />
 
-      <header className="mn-bar">
-        {/* The brand (Oct 2026): the Dripping Seal. The name is the screen's
-            one title, live text a screen reader and a translator can use; a
-            phone shows only the seal, a desk the seal and the name. */}
-        <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
-        <h1 className="mn-title" tabIndex={-1}>
-          Merchant Mercenaries
-        </h1>
-        {/* Your militia: its flag, a tap from its builder. */}
-        {militia && (
-          <button type="button" className="mn-militia" onClick={onMilitia} aria-label={`${militia.name}: edit your militia`} title={militia.name}>
-            <Banner look={militia} scale={1} />
-            <span className="mn-militia-name">{militia.name}</span>
-          </button>
-        )}
-        {/* The bank is named after the first contract (LS3/LS4). */}
-        {!staged && (
-          <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
-            <Gold n={bank} />
-          </span>
-        )}
+      <header className="mn-bar" ref={barRef}>
+        {/* The purse: the brand (the Dripping Seal) and the bank, bare on
+            the map. The name is the screen's one title, live text a screen
+            reader and a translator can use; a phone shows only the seal, a
+            desk the seal and the name. The bank is named after the first
+            contract (LS3/LS4).
+            Once you own a company the purse BECOMES a button — a carved
+            plate like the places — with your flag in the seal's place and
+            your militia's name on a desk: the change is in the frame, not
+            only the picture, and the whole plate is the way to its builder. */}
+        <div className={`mn-purse${militia ? ' is-own' : ''}`}>
+          <h1 className="mn-title" tabIndex={-1}>
+            Merchant Mercenaries
+          </h1>
+          {militia ? (
+            <button
+              type="button"
+              className="mn-purse-btn"
+              onClick={onMilitia}
+              aria-label={`${militia.name}${staged ? '' : `, ${bank} gold in the bank`}: edit your militia’s name and flag`}
+              title={militia.name}
+            >
+              <span className="mn-mark mn-flagmark" aria-hidden="true">
+                <Banner look={militia} scale={2} />
+              </span>
+              <span className="mn-own-title" aria-hidden="true">
+                {militia.name}
+              </span>
+              {!staged && (
+                <span className="mn-bank" aria-hidden="true">
+                  <Gold n={bank} />
+                </span>
+              )}
+            </button>
+          ) : (
+            <>
+              <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
+              <span className="mn-seal-title" aria-hidden="true">
+                Merchant Mercenaries
+              </span>
+              {!staged && (
+                <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
+                  <Gold n={bank} />
+                </span>
+              )}
+            </>
+          )}
+        </div>
         <nav className="mn-places" aria-label="Places">
           {places.map((o) => (
             <button
@@ -213,48 +297,64 @@ export function MenuScreen({
               type="button"
               className={`mn-place${o.locked ? ' is-locked' : ''}`}
               aria-disabled={o.locked ? 'true' : undefined}
-              aria-label={o.locked ? `${o.title}: ${o.locked}` : o.title}
+              aria-label={o.locked ? `${o.title}: locked. ${o.locked}` : o.title}
               title={o.locked ? `${o.title} — ${o.locked}` : o.title}
               onClick={() => (o.locked ? undefined : o.action?.run())}
             >
-              {o.icon && <Icon name={o.icon} lg />}
-              <span className="mn-place-name" aria-hidden="true">
-                {o.title}
+              <span className="mn-place-mark" aria-hidden="true">
+                {o.icon && <Icon name={o.icon} lg />}
+                {o.locked && (
+                  <span className="mn-place-lock">
+                    <Lock scale={1} />
+                  </span>
+                )}
               </span>
-              {o.locked && <Lock scale={1} />}
+              <span className="mn-place-name" aria-hidden="true">
+                <span className="mn-place-short">{o.short ?? o.title}</span>
+                <span className="mn-place-full">{o.title}</span>
+              </span>
             </button>
           ))}
         </nav>
+        {/* Under the bar, floating over the map (they never push it): the
+            season panel under the purse, then the notes. */}
+        <div className="mn-under" ref={underRef}>
+          {war && onWar && (
+            <button type="button" className="mn-season" onClick={onWar} aria-label={seasonPanelName(war.n, left, lead, bars)}>
+              <span className="mn-season-head" aria-hidden="true">
+                <span className="mn-season-n">Season {war.n}</span>
+                <span className="mn-season-left">
+                  {left} left <i>›</i>
+                </span>
+              </span>
+              <span className="mn-season-bars" aria-hidden="true">
+                {bars.map((b: SeasonBar, i) => (
+                  <i key={i} className={`is-${barKind(b)}`} style={b && b !== 'miss' ? ({ '--co': companyVar(b) } as CSSProperties) : undefined} />
+                ))}
+              </span>
+            </button>
+          )}
+          <div className="mn-notes">
+            <UpdateNotice />
+            {tip && (
+              <p className="mn-coach" role="note">
+                {tip}
+              </p>
+            )}
+          </div>
+        </div>
       </header>
-      <div className="mn-notes">
-        <UpdateNotice />
-        {tip && (
-          <p className="mn-coach" role="note">
-            {tip}
-          </p>
-        )}
-      </div>
 
       <div className="mn-window" ref={winRef} aria-hidden="true" />
 
-      <div className="mn-foot">
-        {/* The season: who leads, what is left; the standings are a tap away. */}
-        {war && onWar && (
-          <div className="mn-shoulders">
-            <button
-              type="button"
-              className="mn-pill mn-season"
-              onClick={onWar}
-              aria-label={`Trade war, season ${war.n}: ${left} contract${left === 1 ? '' : 's'} left${lead ? `, ${companyById(lead).name} leads` : ''}. Open the standings.`}
-            >
-              <span aria-hidden="true">
-                Season {war.n} · {left} <span className="mn-pill-more">contract{left === 1 ? '' : 's'} </span>left
-              </span>
-              <i aria-hidden="true">›</i>
-            </button>
+      <div className="mn-foot" ref={footRef}>
+        {/* The dock, with Buy Company floating over its right end. */}
+        {!staged && (
+          <div className="mn-docked">
+            <BuySlot slot={own} on={focus === 'charter'} onPick={() => focusRoad('charter')} />
+            <Dock slots={slots} focus={focus} mult={market?.mult ?? MARKET_MULT} onPick={focusRoad} />
           </div>
         )}
-        {!staged && <Dock slots={slots} own={own} focus={focus} mult={market?.mult ?? MARKET_MULT} onPick={focusRoad} />}
         {company == null ? (
           <CharterCard slot={own} onBuy={onCharter} />
         ) : (
@@ -268,15 +368,7 @@ export function MenuScreen({
             skills={skills}
             items={items ?? []}
             look={liveries[company] ?? null}
-            war={
-              war
-                ? {
-                    cold: isCold(war, company) && war.exclusive ? { with: war.exclusive, cap: seasonCrateCap(war, company, standing[company]) } : null,
-                    desperate: war.desperate === company,
-                    exclusive: war.exclusive === company ? exclusiveXpMult(war, company) : null,
-                  }
-                : null
-            }
+            war={war ? { desperate: war.desperate === company } : null}
             onLivery={!staged && open && onLivery ? () => onLivery(company) : undefined}
             onTrack={!staged && open && onTrack ? () => onTrack(company) : undefined}
             cta={
@@ -300,28 +392,10 @@ const shortName = (name: string) => name.replace(/ Co\.$/, '')
  * your standing with it ("Rep 4", or "II · 3" on a second term, the crest
  * rimmed in gold), its share of the trade while the war is on (the leader's
  * crowned), and up to two marks on its top edge: desperate terms "×1.5", the
- * market "×1.3", your exclusive, cold. A company not hiring yet shows its
+ * market "×1.3". A company not hiring yet shows its
  * padlock and the standing that opens it. A tap focuses the road.
- *
- * After the five, set apart in a carved frame, the sixth slot: Buy Company
- * (the Sovereign Route), the Sovereign crest. Locked, a padlock over it and
- * the share of the catalogue unlocked, with a small bar; open, no padlock and
- * a quiet glow. A tap focuses it like a road: every road lights.
  */
-function Dock({
-  slots,
-  own,
-  focus,
-  mult,
-  onPick,
-}: {
-  slots: DockSlot[]
-  own: CharterSlot
-  focus: HomeFocus
-  mult: number
-  onPick: (f: HomeFocus) => void
-}) {
-  const ownOn = focus === 'charter'
+function Dock({ slots, focus, mult, onPick }: { slots: DockSlot[]; focus: HomeFocus; mult: number; onPick: (f: HomeFocus) => void }) {
   return (
     <div className="mn-dock" role="group" aria-label="Companies">
       {slots.map((s) => {
@@ -355,11 +429,7 @@ function Dock({
               )}
             </span>
             <span className="mn-slot-rep" aria-hidden="true">
-              {s.open ? (
-                s.rep
-              ) : (
-                `at ${s.opensAt}`
-              )}
+              {s.open ? s.rep : `at ${s.opensAt}`}
             </span>
             {s.share != null && (
               <span className="mn-slot-share" aria-hidden="true">
@@ -369,47 +439,110 @@ function Dock({
           </button>
         )
       })}
-      <button
-        type="button"
-        className={`mn-slot mn-own${ownOn ? ' is-on' : ''}${own.open ? ' is-open' : ' is-locked'}`}
-        aria-pressed={ownOn}
-        aria-label={charterSlotName(own)}
-        onClick={() => onPick('charter')}
-      >
-        <span className="mn-slot-crest" aria-hidden="true">
-          <SovereignCrest scale={2} />
-          {!own.open && (
-            <span className="mn-own-lock">
-              <Lock scale={2} />
-            </span>
-          )}
-        </span>
-        <span className="mn-own-text" aria-hidden="true">
-          <span className="mn-own-name">Buy Company</span>
-          {own.open ? (
-            <span className="mn-slot-rep mn-own-buy">Buy</span>
-          ) : (
-            <>
-              <span className="mn-slot-rep">{own.pct}%</span>
-              <span className="mn-own-bar">
-                <i style={{ width: `${Math.max(4, own.pct)}%` }} />
-              </span>
-            </>
-          )}
-        </span>
-      </button>
     </div>
   )
 }
 
 /**
- * The Buy Company card (the dock's sixth slot in focus): the Sovereign crest
- * and the name, one line on what the road is, then — locked — the two counts
- * the door waits on and a CTA that says how many unlocks are missing; open,
- * what a delivered road pays and the CTA "Buy Company" with the fee on it,
- * which opens the charter page (and, before a militia is founded, its
- * founding first). A bank short of the fee says by how much, and the CTA
- * waits.
+ * Buy Company (the Sovereign Route): a slot like a company's, floating over
+ * the dock's right end, in its rightmost column (October 2026; the designer:
+ * "should be like one of the other company cards but locked, floating
+ * above"). It is no company's road, so it wears no company's frame: a carved
+ * (double) cyan rim and the Sovereign crest. Locked: the crest in shadow
+ * under a padlock, the share of the catalogue unlocked ("40%") and a thin
+ * bar. Open: the crest in colour, "Buy", a soft glow. A desk writes its name.
+ * A tap focuses it like a road: every road lights, and the card turns into
+ * Buy Company.
+ */
+function BuySlot({ slot, on, onPick }: { slot: CharterSlot; on: boolean; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`mn-slot mn-own${on ? ' is-on' : ''}${slot.open ? ' is-open' : ' is-locked'}`}
+      aria-pressed={on}
+      aria-label={charterSlotName(slot)}
+      onClick={onPick}
+    >
+      <span className="mn-slot-crest" aria-hidden="true">
+        <SovereignCrest scale={2} />
+        {!slot.open && (
+          <span className="mn-own-lock">
+            <Lock scale={2} />
+          </span>
+        )}
+      </span>
+      <span className="mn-own-text" aria-hidden="true">
+        <span className="mn-own-name">Buy Company</span>
+        {slot.open ? (
+          <span className="mn-slot-rep mn-own-buy">Buy</span>
+        ) : (
+          <>
+            <span className="mn-slot-rep">{slot.pct}%</span>
+            <span className="mn-own-bar">
+              <i style={{ width: `${Math.max(4, slot.pct)}%` }} />
+            </span>
+          </>
+        )}
+      </span>
+    </button>
+  )
+}
+
+/**
+ * One row of the card's fixed form: its `.field-k` label, its mark and its
+ * `.field-v` value on one line, shortened in place (never wrapped). The whole
+ * fact, in words, is its accessible name and its tooltip. The Next row is the
+ * way into the track when there is one.
+ */
+function FactRow({ fact: f, onOpen }: { fact: CardFact; onOpen?: () => void }) {
+  const body = (
+    <>
+      <span className="field-k">{f.label}</span>
+      {/* The marks sit in their own column, so every row's value starts at one edge. */}
+      <span className="mn-fact-m">
+        {f.ground && <GroundMarks marks={f.ground} />}
+        {f.armour && <ArmourMark mod={f.armour} />}
+        {f.icon && <Icon name={f.icon} />}
+      </span>
+      <span className="mn-fact-v">
+        {f.gold != null && <Gold n={f.gold} className="mn-fact-gold" />}
+        <span className="field-v">{f.value}</span>
+      </span>
+    </>
+  )
+  const cls = `mn-fact is-${f.key} is-${f.tone}`
+  return onOpen ? (
+    <button type="button" className={`${cls} is-link`} onClick={onOpen} aria-label={`${f.name}. Open its track`} title={f.name}>
+      {body}
+      <span className="mn-fact-go" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  ) : (
+    <div className={cls} role="img" aria-label={f.name} title={f.name}>
+      {body}
+    </div>
+  )
+}
+
+/** A one-off condition at the right of the card's head (`homeCard.companyBadge`): there only when it applies. */
+function HeadBadge({ badge: b }: { badge: CardBadge }) {
+  return (
+    <span className={`mn-badge is-${b.tone}`} role="img" aria-label={b.name} title={b.name}>
+      <Icon name={b.icon} />
+      <span>{b.label}</span>
+    </span>
+  )
+}
+
+/**
+ * The Buy Company card (its slot in focus), in the company card's frame:
+ * the Sovereign crest (padlocked while locked), "Sovereign Route" over the
+ * title, the same three-row form — its ground, the door (how much is
+ * unlocked; once open, whether the bank covers the fee), what delivery pays —
+ * and the CTA: locked, it says how many unlocks are missing; open, "Buy
+ * Company" with the fee on it, which opens the charter page (the militia's
+ * founding first, if none), waiting while the bank is short.
  */
 function CharterCard({ slot, onBuy }: { slot: CharterSlot; onBuy: () => void }) {
   const cta = charterCta(slot)
@@ -425,40 +558,16 @@ function CharterCard({ slot, onBuy }: { slot: CharterSlot; onBuy: () => void }) 
           )}
         </span>
         <span className="mn-card-id">
-          <span className="mn-kicker">{CHARTER_NAME}</span>
+          <span className="mn-kicker">{CHARTER_KICKER}</span>
           <h2 className="mn-card-name" id="mn-card-name">
             Buy Company
           </h2>
         </span>
       </div>
-      <div className="mn-own-body">
-        <p className="mn-own-line">
-          Your own road: every company’s goods and troubles at once, for the top tier of items.
-          {!slot.open && ' Opens once every skill and item is unlocked.'}
-        </p>
-        <div className="mn-chips">
-          {slot.open ? (
-            <span className="mn-chip">
-              <span className="field-k">Delivered pays</span> <Gold n={CHARTER_PAYOUT} className="field-v" />
-            </span>
-          ) : (
-            <>
-              <span className="mn-chip">
-                <span className="field-k">Skills</span>{' '}
-                <span className="field-v">
-                  {slot.skills.have} of {slot.skills.need}
-                </span>
-              </span>
-              <span className="mn-chip">
-                <span className="field-k">Items</span>{' '}
-                <span className="field-v">
-                  {slot.items.have} of {slot.items.need}
-                </span>
-              </span>
-            </>
-          )}
-        </div>
-        {slot.open && slot.short > 0 && <p className="mn-own-why">Your bank is {slot.short.toLocaleString('en')} gold short.</p>}
+      <div className="mn-facts">
+        {charterFacts(slot).map((f) => (
+          <FactRow key={f.key} fact={f} />
+        ))}
       </div>
       <button type="button" className="pg-cta mn-cta" onClick={onBuy} disabled={!cta.enabled}>
         {cta.label}
@@ -475,13 +584,11 @@ function CharterCard({ slot, onBuy }: { slot: CharterSlot; onBuy: () => void }) 
 
 /**
  * The focused company's card, under the dock: its flag (the way into its
- * livery), the road's goods and the company's name, then the chips that tell
- * its road apart — what the dock's marks mean (the market's goods, desperate
- * terms' stronger raiders, your exclusive's standing, a cold company's stake
- * cap), its ground, the armour its raiders lean to — and the way into its
- * track by the reward it pays next. The dock already says your standing and
- * the share, and the map names the cities, so the card does not. The one CTA
- * closes it.
+ * livery), the road's goods and the company's name, then the fixed form —
+ * Ground, Raiders, Next (`homeCard.companyFacts`), a badge for a one-off
+ * condition (`companyBadge`) — and the one CTA.
+ * The dock already says your standing and the share, and the map names the
+ * cities, so the card does not.
  */
 function CompanyCard({
   company,
@@ -509,18 +616,20 @@ function CompanyCard({
   items: readonly string[]
   /** How you dressed its standard. */
   look: StandardLook | null
-  /** Its place in the trade war this season: cold (your exclusive is with its rival), desperate, your exclusive (its standing multiplier). */
-  war?: { cold: { with: CompanyId; cap: number } | null; desperate: boolean; exclusive: number | null } | null
+  /** Its place in the trade war this season: on desperate terms or not. */
+  war?: { desperate: boolean } | null
   onLivery?: () => void
   onTrack?: () => void
   cta: ReactNode
 }) {
   const co = companyById(company)
-  const armour = co.armour ? ENEMY_MODS.find((m) => m.id === co.armour) : undefined
   // What the track's next level pays, by name (Draft 4 · B).
-  const next = nextRewardWord(trackPlan(company, { xp, term, skills, items }))
+  const next = nextReward(trackPlan(company, { xp, term, skills, items }))
+  const state = { company, staged, open, war: war ?? null, market, next }
+  const facts = companyFacts(state)
+  const badge = companyBadge(state)
   return (
-    <section className={`mn-card${war?.cold ? ' is-cold' : ''}`} style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
+    <section className="mn-card" style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
       <div className="mn-card-head">
         {onLivery ? (
           <button type="button" className="mn-livery" onClick={onLivery} aria-label={`Dress ${co.name}’s standard`}>
@@ -540,36 +649,12 @@ function CompanyCard({
             {co.name}
           </h2>
         </span>
+        {badge && <HeadBadge badge={badge} />}
       </div>
-      <div className="mn-chips">
-        {staged && (
-          <span className="mn-chip is-free">
-            <b>Free</b> · paid at every city
-          </span>
-        )}
-        {war?.desperate && <span className="mn-chip is-desperate">Desperate: raiders +{Math.round((DESPERATE_STRENGTH - 1) * 100)}%</span>}
-        {war?.exclusive != null && <span className="mn-chip is-exclusive">Exclusive: standing ×{war.exclusive}</span>}
-        {war?.cold && (
-          <span className="mn-chip is-cold" aria-label={`Cold: your exclusive is with ${companyById(war.cold.with).name}, so stakes stop at ${war.cold.cap} crates`}>
-            Stakes stop at {war.cold.cap}
-          </span>
-        )}
-        {market > 1 && <span className="mn-chip is-market">Top price for {co.noun} today</span>}
-        <span className="mn-chip is-ground" style={{ '--gr': co.ground.swatch } as CSSProperties}>
-          {co.ground.name}
-        </span>
-        {/* The armour its road's goblins lean to (`Company.armour`): a road fact, like its ground. */}
-        {armour && (
-          <span className="mn-chip is-armour" aria-label={`${armour.prefix} raiders: ${armour.blurb}`}>
-            <ArmourMark mod={armour.id} />
-            {armour.prefix} raiders
-          </span>
-        )}
-        {open && onTrack && (
-          <button type="button" className="mn-chip is-track" onClick={onTrack} aria-label={`${co.name}’s track: next, ${next ?? 'nothing left to earn'}. Open it`}>
-            <span className="field-k">Next</span> <span className="field-v">{next ?? 'all earned'}</span> <span aria-hidden="true">›</span>
-          </button>
-        )}
+      <div className="mn-facts">
+        {facts.map((f) => (
+          <FactRow key={f.key} fact={f} onOpen={f.key === 'next' ? onTrack : undefined} />
+        ))}
       </div>
       {cta}
     </section>

@@ -5,22 +5,22 @@
  * order the trade map fans its roads, west to east), each saying what tells
  * one company from another at a glance: your standing with it, its share of
  * the trade while the war is on, and the day's marks — desperate terms, the
- * market of the day, your exclusive, cold to you. The focused company's card
+ * market of the day. The focused company's card
  * says what those marks MEAN; the slot carries the number. Nothing here reads
  * a store: `MenuScreen` passes the save in, `tests/homeDock.test.ts` drives it.
  *
- * After them, a sixth slot that is no company's: Buy Company, the Sovereign
- * Route ({@link charterSlot}).
+ * Buy Company, the Sovereign Route, is not in the dock row: it is a slot of
+ * its own floating over the dock's right end ({@link charterSlot}).
  */
 import { COMPANY_IDS, companyById, type CompanyId } from '../../game/data/companies'
 import { companyOpen, standingOf, type StandingXp } from '../../game/run/standing'
 import { termName, trackLevel } from '../../game/run/track'
-import { DESPERATE_PAY, isCold, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
+import { DESPERATE_PAY, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
 import { CHARTER_FEE, type CharterDoor } from '../../game/run/charter'
 
 /** A day's mark on a slot, in the order they are shown. */
-export type SlotMark = 'desperate' | 'market' | 'exclusive' | 'cold'
-const MARK_ORDER: readonly SlotMark[] = ['desperate', 'market', 'exclusive', 'cold']
+export type SlotMark = 'desperate' | 'market'
+const MARK_ORDER: readonly SlotMark[] = ['desperate', 'market']
 /** At most this many marks hang on a slot (all of them are in its name, and on its card). */
 export const SLOT_MARKS = 2
 
@@ -47,16 +47,12 @@ export interface DockSlot {
 /** A mark's face on the slot: the number where there is one. */
 export function markText(mark: SlotMark, marketMult: number): string {
   if (mark === 'desperate') return `×${DESPERATE_PAY}`
-  if (mark === 'market') return `×${marketMult}`
-  if (mark === 'exclusive') return 'Excl.'
-  return 'Cold'
+  return `×${marketMult}`
 }
 
 const MARK_WORDS: Record<SlotMark, (mult: number) => string> = {
   desperate: () => `desperate, pays ×${DESPERATE_PAY}`,
   market: (m) => `its goods sell ×${m} today`,
-  exclusive: () => 'your exclusive this season',
-  cold: () => 'cold to you this season',
 }
 
 const roman = (term: number) => termName(term).replace(/^Term /, '')
@@ -65,13 +61,12 @@ export function dockSlots(o: {
   xp: StandingXp
   terms?: Partial<Record<CompanyId, number>> | null
   /** The trade war's season, once it shows; else null. */
-  war: Pick<Season, 'n' | 'shares' | 'deliveries' | 'exclusive' | 'desperate'> | null
+  war: Pick<Season, 'n' | 'shares' | 'deliveries' | 'desperate'> | null
   /** Today's market, once it shows; else null. */
   market: { company: CompanyId; mult: number } | null
 }): DockSlot[] {
   // The crown goes to a leader, not to a tie: an even season (a fresh one) crowns nobody.
-  const top = o.war ? Math.max(...COMPANY_IDS.map((c) => o.war!.shares[c])) : 0
-  const leader = o.war && COMPANY_IDS.filter((c) => o.war!.shares[c] === top).length === 1 ? seasonLeader(o.war) : null
+  const leader = o.war ? seasonLeader(o.war) : null
   return COMPANY_IDS.map((company) => {
     const term = Math.max(1, o.terms?.[company] ?? 1)
     const standing = standingOf(o.xp, company)
@@ -80,8 +75,6 @@ export function dockSlots(o: {
     const has: Record<SlotMark, boolean> = {
       desperate: !!o.war && isDesperate(o.war, company),
       market: o.market?.company === company,
-      exclusive: o.war?.exclusive === company,
-      cold: !!o.war && isCold(o.war, company),
     }
     return {
       company,
@@ -109,15 +102,17 @@ export function slotName(s: DockSlot, marketMult: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// The sixth slot: Buy Company (the Sovereign Route)
+// The Buy Company slot (the Sovereign Route)
 // ---------------------------------------------------------------------------
 
 /**
- * The dock's sixth slot, after the five companies (October 2026; the
- * designer: "a button that looks locked and it's called 'Buy Company'"). It
- * is not a company's road: it is the Sovereign Route — your own road, every
- * company's goods. Shown from the first home after the free escort, locked
- * or open, so the endgame reads as a goal, not a secret
+ * The Buy Company slot (October 2026; the designer: "a button that looks
+ * locked and it's called 'Buy Company'" — then, of its place as the dock's
+ * sixth slot, "it's too cramped. but it can sit right above it and be
+ * locked", and "should be like one of the other company cards but locked,
+ * floating above"). It is not a company's road: it is the Sovereign Route — your own
+ * road, every company's goods. Shown from the first home after the free
+ * escort, locked or open, so the endgame reads as a goal, not a secret
  * (`docs/MERCENARY_COMPANY.md`, Overlooked § 5). Selecting it lights every
  * road, and its card says what opens it or what it costs.
  */
@@ -160,7 +155,7 @@ export function charterSlotName(s: CharterSlot): string {
 /**
  * The card's CTA (it opens the charter page): locked, it says what is missing
  * ("Unlock 14 more"); open, it is "Buy Company" with the fee on it — disabled
- * while the bank is short (the card says by how much, as a refusal line).
+ * while the bank is short (the card's Bank row says by how much).
  */
 export function charterCta(s: CharterSlot): { label: string; fee: number | null; enabled: boolean } {
   if (!s.open) return { label: `Unlock ${s.missing} more`, fee: null, enabled: false }
