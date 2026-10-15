@@ -1,0 +1,889 @@
+/**
+ * The battle band (Oct 2026) — loaded after shell.css, shell-live.css,
+ * shell-wide.css and shell-reward.css, so its band budget wins at every tier.
+ *
+ * The designer's mark-up of the battle setup, and what it became:
+ *
+ *  - "the bottom wave preview should overlay the map instead" — the wave's
+ *    name and line-up hang from the Stage's top edge (`.sh-wavepre`), and the
+ *    setup bar is actions only (`.sh-actbar`).
+ *  - "the gear and pack should be tabs and merge" — ONE kit column, "Gear |
+ *    Pack" (`.sh-kit`), so the Detail band is two columns, not three.
+ *  - "the current player details is unusable and unstructured" — the hero
+ *    card (`.sh-hcard`): head, a field grid, skill slots, "All stats".
+ *  - "the team wide control … should be on the hud" — the header's Team
+ *    button (`.sh-team-btn`) and its panel (`.sh-team`).
+ *  - "maybe upgrade is another button that appears in the bottom" — the
+ *    focused hero's Upgrade (`.sh-upgrade`), secondary beside Start Wave.
+ *
+ * And (round 0's option B): while the band is open on a phone, the party row
+ * steps down to picture tokens — the card above it says the name, the level
+ * and the DPS, so the row only has to say who — and the field keeps ~60px.
+ *
+ * Every size here is a token or a measured px; washes are mixes of the theme
+ * tokens (DESIGN_SYSTEM § 8 rule 7), so the company worlds reach all of it.
+ */
+
+/* ------------------------------------------------------------- the budget
+   The Detail band is the card beside the kit: 256 at the 390×844 baseline
+   (254 for three columns before; the party row gives back 60 while it is
+   read), a little lower on the shortest phones. */
+.shell {
+  --sh-detail-h: 256px;
+  /* The kit: two 56px pack tiles or the 90px doll, plus the column's padding. */
+  --sh-kit-w: 128px;
+  /* The party row while a hero is read (phones): picture tokens. */
+  --sh-selector-read-h: 66px;
+  /* The wave preview's own height (its 32px portraits, padding and edge). */
+  --sh-wavepre-h: 42px;
+}
+@media (orientation: portrait) and (max-height: 800px) {
+  .shell {
+    --sh-detail-h: 256px;
+  }
+}
+@media (orientation: portrait) and (max-height: 700px) {
+  .shell {
+    --sh-detail-h: 250px;
+    --sh-selector-read-h: 62px;
+  }
+}
+@media (orientation: portrait) and (max-height: 600px) {
+  .shell {
+    --sh-detail-h: 200px;
+    --sh-selector-read-h: 58px;
+  }
+}
+
+/* Two columns at every phone width: the card takes the slack. (These restate
+   shell.css's three-column tiers at the same specificity, later.) */
+.sh-detail,
+:root[data-scale='large'] .sh-detail {
+  grid-template-columns: minmax(0, 1fr) var(--sh-kit-w);
+}
+@media (min-width: 360px) and (max-width: 389px) {
+  .sh-detail,
+  :root[data-scale='large'] .sh-detail {
+    grid-template-columns: minmax(0, 1fr) var(--sh-kit-w);
+  }
+}
+@media (max-width: 359px) {
+  .sh-detail,
+  :root[data-scale='large'] .sh-detail {
+    grid-template-columns: minmax(0, 1fr) var(--sh-kit-w);
+  }
+}
+/* Large UI: 48px tiles and slots. */
+:root[data-scale='large'] .shell {
+  --sh-kit-w: 136px;
+}
+.sh-detail.no-gear {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.sh-hero-lvc {
+  display: none;
+}
+
+/* ---------------------------------------------- compact party while reading
+   Phones only: the wide layout never collapses, and its rail has the room. */
+@media (max-width: 699.98px) {
+  .shell.is-peek {
+    --sh-selector-h: var(--sh-selector-read-h);
+  }
+  .shell.is-peek .sh-selector-row {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+  .shell.is-peek .sh-hero {
+    width: 56px;
+    padding: 4px 2px 2px;
+    gap: 1px;
+    justify-content: center;
+  }
+  .shell.is-peek .sh-hero :is(.sh-hero-name, .sh-hero-sub, .sh-hero-xp, .sh-hero-tag) {
+    display: none;
+  }
+  /* The level stays — the one number the token keeps — under the picture. */
+  .shell.is-peek .sh-hero-lvc {
+    display: block;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .shell.is-peek .sh-hero-glyph {
+    width: 32px;
+    height: 32px;
+  }
+  /* The level-up badge sits inside the short token's top edge. */
+  .shell.is-peek .sh-hero .sh-lvup {
+    top: -6px;
+    padding: 0 4px;
+  }
+}
+
+/* ----------------------------------------------------------- the kit column */
+.sh-kit {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+:root[data-contrast='high'] .sh-kit {
+  border-color: var(--text);
+}
+.sh-kit-tabs {
+  flex: none;
+  display: flex;
+  border-bottom: 1px solid var(--line-strong);
+}
+.sh-kit-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.sh-kit-tab.active {
+  color: var(--text);
+  box-shadow: inset 0 -3px 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.sh-kit-tab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring, var(--accent));
+}
+.sh-kit-n {
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  color: var(--text);
+  font-size: var(--fs-micro);
+  line-height: 16px;
+  letter-spacing: 0;
+}
+/* While a gear slot waits, the Pack tab wears the armed accent. */
+.sh-kit:has(.sh-pack.filtering) .sh-kit-tab[aria-selected='true'] {
+  color: var(--accent-text);
+}
+.sh-kit-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sh-kit-panel[hidden] {
+  display: none;
+}
+/* Inside the kit the gear and the pack are panels of ONE box: no frame of
+   their own. */
+.sh-kit .sh-gear,
+.sh-kit .sh-pack {
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 4px;
+}
+.sh-kit .sh-gear {
+  overflow-y: auto;
+}
+.sh-kit .sh-gear-head {
+  padding: 0 2px;
+  margin-bottom: 2px;
+}
+.sh-gear-who {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The doll keeps its phone size in the kit (the 124px container step is for
+   the desk rail; see below). */
+.sh-kit .sh-doll {
+  margin-top: 2px;
+}
+/* The pack: two 56px tiles to a row on a phone; the head is the sort, or what
+   a waiting slot is choosing and the way back. */
+.sh-kit .sh-pack .sh-col-head {
+  grid-template-columns: minmax(0, 1fr) var(--hit-min);
+  min-height: 0;
+  margin-bottom: 4px;
+}
+.sh-kit .sh-pack .sh-col-head > .sh-col-count {
+  grid-row: 1;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.2;
+}
+.sh-kit .sh-pack.filtering .sh-col-count {
+  color: var(--accent-text);
+}
+.sh-kit .sh-pack .sh-col-btn {
+  grid-row: 1;
+  height: 32px;
+  min-height: 32px;
+  position: relative;
+}
+/* Its 44px target, round a 32px face. */
+.sh-kit .sh-pack .sh-col-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+.sh-kit .sh-pack-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 2px;
+}
+@media (max-width: 359px) {
+  .sh-kit .sh-pack-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sh-kit .sh-pack .sh-col-head {
+    grid-template-columns: minmax(0, 1fr) var(--hit-min);
+  }
+  .sh-kit .sh-col-btn {
+    grid-column: 2;
+    grid-row: 1;
+    width: var(--hit-min);
+  }
+}
+
+/* --------------------------------------------------------------- hero card */
+.sh-hcard {
+  container: hcard / inline-size;
+  gap: 0;
+}
+.sh-hcard-head {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sh-hcard-face {
+  display: grid;
+  place-items: end center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.sh-hcard-face img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.sh-hcard-id {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sh-hcard-id strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-hcard-lv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sh-hcard-lvbar {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* A fact about the post, beside the level: cursed ground, or it swings. */
+.sh-hcard-tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sh-hcard-tag.bad {
+  color: var(--bad-text);
+}
+.sh-hcard-tag .fw-i {
+  --fw-i-size: 14px;
+}
+.sh-hcard-lvn {
+  flex: none;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sh-hcard-xp {
+  flex: 1 1 auto;
+  max-width: 96px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.sh-hcard-xp > span {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+}
+/* The headline number. */
+.sh-hcard-dps {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+.sh-hcard-dps b {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.sh-hcard-dps small {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.sh-hcard-dps.bad b {
+  color: var(--bad-text);
+}
+.sh-hcard-body {
+  gap: 6px;
+}
+.sh-hcard-body > .sh-line.note {
+  margin: 0;
+}
+.sh-line.note.bad {
+  color: var(--bad-text);
+}
+.sh-line.note .fw-i {
+  vertical-align: -3px;
+}
+/* The fields: one grid, `.field-k` over `.field-v`, the same four boxes for
+   every hero — two by two in a narrow card, four across in a wide one. */
+.sh-hcard-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0;
+}
+@container hcard (min-width: 236px) {
+  .sh-hcard-fields:not(.sh-hcard-sheetgrid) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.sh-hcard-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.sh-hcard-field dt,
+.sh-hcard-field dd {
+  margin: 0;
+}
+.sh-hcard-field .field-v {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.sh-hcard-field .field-v .fw-i {
+  flex: none;
+}
+.sh-hcard-sheetgrid .sh-hcard-field {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+}
+/* The skills: three slots, the same boxes for every hero. */
+.sh-hcard-skills {
+  display: flex;
+  gap: 6px;
+}
+.sh-sk {
+  position: relative;
+  flex: none;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.sh-sk[aria-expanded='true'] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.sh-sk-lv {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--ink-on-fill, var(--cta-ink));
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+}
+/* Owed now: the level-up gold, the way into the Upgrade panel. */
+.sh-sk.owed {
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+.sh-sk.later {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+}
+.sh-hcard-more {
+  margin-left: auto;
+  border-color: var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--muted);
+}
+.sh-hcard-more[aria-expanded='true'] {
+  color: var(--accent-text);
+  box-shadow: none;
+  border-color: var(--accent);
+}
+.sh-sk-at {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.sh-hcard-skillread {
+  margin: 0;
+}
+.sh-hcard-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.sh-hcard-foot {
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+.sh-hcard-foot .sh-btn.small {
+  flex: 0 1 auto;
+  min-height: var(--hit-min);
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  background: transparent;
+}
+.sh-hcard-off {
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- the action bar
+   Setup: Details (portrait) · Upgrade · Start Wave. Start Wave takes the
+   slack, so it is the biggest thing in the bar and never moves when Upgrade
+   comes and goes. */
+.sh-actbar {
+  gap: 8px;
+}
+.sh-actbar .sh-btn.primary {
+  flex: 1 1 auto;
+  min-width: 128px;
+  white-space: nowrap;
+}
+.sh-actbar .sh-detail-toggle,
+.sh-actbar .sh-upgrade {
+  flex: 0 0 auto;
+}
+.sh-actbar .sh-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+}
+.sh-chev {
+  font-size: 10px;
+  color: var(--muted);
+}
+.sh-detail-toggle.icon-only .sh-detail-word {
+  display: none;
+}
+.sh-detail-toggle.icon-only {
+  min-width: var(--hit-min);
+  justify-content: center;
+}
+/* The conflict's reason takes the bar's middle while it stands. */
+.sh-actbar .sh-wq-mid {
+  flex: 1 1 auto;
+}
+.sh-actbar:has(.sh-wq-mid) .sh-btn.primary {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+/* Upgrade: secondary — the panel's face, a word, and a badge when a choice waits. */
+.sh-upgrade {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 6px;
+}
+.sh-upgrade[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.sh-upgrade-face {
+  display: grid;
+  place-items: end center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-xs, 4px);
+  overflow: hidden;
+}
+.sh-upgrade-face img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.sh-upgrade-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.sh-upgrade.waiting {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line-strong));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sh-upgrade.waiting .sh-upgrade-badge {
+    animation: sh-upg-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes sh-upg-pulse {
+  50% {
+    box-shadow: 0 0 0 2px var(--panel), 0 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+}
+/* Narrow phones: the face steps aside so the three controls keep 44px. */
+@media (max-width: 374.98px) {
+  .sh-upgrade-face {
+    display: none;
+  }
+  .sh-upgrade {
+    padding: 0 10px;
+  }
+  .sh-actbar .sh-detail-toggle {
+    padding: 0 9px;
+  }
+}
+
+/* -------------------------------------------------------- the upgrade panel */
+.sh-upg-panel .sh-context-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The panel's commit: a plain button lit in the accent — never the teal
+   primary, which is Start Wave's (one primary per screen). */
+.sh-btn.sh-commit-2 {
+  flex: 1 1 auto;
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-2));
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.sh-btn.sh-commit-2:disabled {
+  border-color: var(--line-strong);
+  background: var(--panel-3);
+  color: var(--dim);
+}
+.sh-upg-panel .sh-lvl-foot .sh-btn:first-child {
+  flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------------ the team panel */
+.sh-team .sh-context-body {
+  gap: 10px;
+}
+/* The team panel has the band's width: the five orders in one row. */
+.sh-team .sh-seg {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.sh-team .sh-seg-btn:nth-child(5):last-child {
+  grid-column: auto;
+}
+.sh-team-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sh-team-k {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+}
+.sh-team-relic {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  margin: 0;
+}
+.sh-team-relic .fw-i {
+  margin-top: 1px;
+}
+.sh-team .sh-line.note {
+  margin-top: 0;
+}
+.sh-team .sh-context-foot .sh-btn {
+  flex: 0 0 auto;
+  min-width: 96px;
+}
+
+/* The HUD's Team button: a header chip's face inside a 44px target. */
+.sh-team-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: var(--hit-min);
+  height: var(--hit-min);
+  /* The 44px target reaches into the header's padding, so the row keeps its
+     one-row height (the face is a chip's 30px). */
+  margin: -8px -6px -8px 0;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.sh-team-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+}
+.sh-team-btn.on .sh-team-face {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sh-team-n {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+}
+/* The word only where the row has room for it (a desk, a tablet). */
+.sh-team-word {
+  display: none;
+}
+@media (min-width: 700px) {
+  .sh-team-word {
+    display: inline;
+  }
+}
+
+/* -------------------------------------------------------- the wave preview
+   Hung from the Stage's top edge, centred; `BattleCanvas` fits the play below
+   it (`frame.previewRoom`). The wash and the edge are the coach pill's, so the
+   two floating things on the Stage read as one family. */
+.sh-stage-top:has(.sh-wavepre) {
+  padding-top: 4px;
+}
+.sh-wavepre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  height: var(--sh-wavepre-h);
+  margin: 0 auto;
+  padding: 0 10px 0 2px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--shade) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rule) 24%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 50%, transparent);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 240ms ease;
+  animation: sh-pill-down 220ms ease-out both;
+}
+.sh-wavepre.out {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-wavepre {
+    transition: none;
+    animation: none;
+  }
+}
+.sh-wavepre-cap {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 150px;
+  min-height: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 4px 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.sh-wavepre-cap::before {
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
+}
+.sh-wavepre-name {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh-wavepre-now {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.sh-wavepre-now.do {
+  color: var(--accent-text);
+}
+.sh-wavepre-more {
+  color: var(--muted);
+  font-weight: 700;
+}
+.sh-wavepre .sh-wq {
+  /* Its width is its line-up's (`enemyQueue.queueWidth`, inline); it gives
+     ground on a narrow phone and `chipsThatFit` drops a portrait for "+N". */
+  flex-shrink: 1;
+  min-width: 32px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-wavepre-cap:hover {
+    background: color-mix(in srgb, var(--rule) 10%, transparent);
+  }
+}
+/* The coach's top pill steps down under the preview while it is up. */
+.sh-stage:has(.sh-wavepre:not(.out)) .sh-coach.top {
+  top: calc(var(--sh-wavepre-h) + 12px);
+}
+
+/* ============================================================== wide layout
+   The right rail: the card beside a wider kit, the doll at its desk size and
+   the pack three across. */
+@media (min-width: 700px) {
+  .shell:not(.shell-page) > .sh-detail,
+  :root[data-scale='large'] .shell:not(.shell-page) > .sh-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 42%);
+  }
+  .sh-kit .sh-pack-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------- the worlds' frames
+   A company world edges the card and the kit in an 8px pixel frame
+   (worlds.css, `border-image` over the padding box): the words keep clear of
+   it. */
+:root[data-co-theme] .sh-detail > .sh-context,
+:root[data-co-theme] .sh-kit {
+  padding: 8px 9px;
+}
+:root[data-co-theme] .sh-kit {
+  padding: 6px;
+}
+
+/* The raise's price and the purse after it, under its before → after. */
+.sh-upg-cost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  font-weight: 700;
+}
+.sh-upg-cost.bad {
+  color: var(--bad-text);
+}

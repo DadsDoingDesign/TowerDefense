@@ -107,7 +107,7 @@ every other surface becomes a state of those bands rather than a place you go.
 | **Header** | 44 (was 76) | Run state in ONE row — depth, enemy strength, cargo, gold. No wordmark (October 2026) |
 | **Stage** | 388 | The subject: battlefield · map · board · result · title |
 | **Selector** | 126 | The row of choosable things — party, offers, rooms, menu |
-| **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 |
+| **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 — since the battle band (Oct 2026): the hero card beside ONE "Gear \| Pack" kit column (128), see § The battle band |
 
 ### The four rules
 
@@ -342,8 +342,9 @@ landscape field).
 - **Setup collapses too on a portrait field** (`setupCollapsible`, `live.ts`).
   A portrait field in the four-band setup Stage would be smaller than the
   landscape one was (0.30 at 390, 0.12 at 320), so setup takes the live layout:
-  the Detail band is the wave strip — a caption (*Post a hero*, then *12
-  enemies*) over the wave's line-up, a **Details** toggle and Start Wave. Arming a hero from the party
+  the Detail band is the action bar — **Details**, the hero's **Upgrade** and
+  Start Wave — and the wave's name and line-up hang from the Stage's top edge
+  (§ The battle band). Arming a hero from the party
   row keeps it collapsed (the field is the target); a post lets go of the
   selection; Details, or tapping a posted hero on the field, opens the band.
   Setup field at 390×844: 341×528 (was 390×228); at 320×568: 184×285 (was
@@ -361,7 +362,7 @@ ONE `role="img"` whose name lists every kind and count.
 
 | Moment | Caption | Queue | Actions |
 | --- | --- | --- | --- |
-| Setup | *Depth 1 · Post a hero* → *Depth 1 · 12 enemies* | the whole wave | (Details) · Start Wave |
+| Setup | — (on the Stage's top edge since the battle band: *Depth 1 · Post a hero* → *8 enemies*) | — (the same queue, in the preview) | (Details) · (Upgrade) · Start Wave |
 | Live | *Depth 1 · 8 left* | everything not yet spawned (*All on the field* when empty) | Watch Command · Speed |
 | Held sub-wave | *Held · Move one hero* → *Held · Moved* (accent edge on the strip) | the NEXT sub-wave only | Next ▶ · Speed |
 | Cleared | *Depth 1 · Wave cleared* | gold earned | Continue |
@@ -371,6 +372,33 @@ caption carries the instruction, `Announcer` speaks it, and the open posts
 still light up on the field. Where the middle is under 140px (portrait setup
 beside Details on a phone, and every moment at 320 wide) the name steps aside whole and the moment keeps the
 line; the header's Depth chip names the wave right above.
+
+### The battle band (October 2026)
+
+The designer's mark-up of the setup screen: "the bottom wave preview should
+overlay the map instead · the gear and pack should be tabs and merge · the
+current player details is unusable and unstructured · the team wide control
+shouldn't even be on characters, it should be on the hud · maybe upgrade is
+another button that appears in the bottom". Three layouts were drawn first
+(`docs/ui-audit-2026-10/battle-band/round0/`); B shipped — the side card with
+the party row stepping down to tokens while a hero is read.
+
+| Where | What | File |
+| --- | --- | --- |
+| Stage, top edge | **Wave preview**: the wave's name, *Post a hero* / *8 enemies* (a tap: the wave's make-up in the Context panel), the line-up (a tap: the enemy's card, hung under it). Setup only — it fades at Start Wave and the live strip's queue takes over. `BattleCanvas` fits the play below it when the woodland above the first row of posts is not room enough (`frame.firstRowTop` / `previewRoom` / `stageViewClear`), so it never covers a post, the lane's middle or the wagon; on the portrait twins it needs a pixel or two at most. The coach's top pill steps down under it. | `WavePreview.tsx`, `live.wavePreviewShown` |
+| Header, right | **Team** button → the Team panel: targeting (five across), relics, keepsakes, older team bonuses. Every hero's, so it takes the band's width. | `HeaderBand.tsx`, `TeamPanel.tsx` |
+| Selector | Full party cards while posting; while a hero is read on a phone (`.is-peek`) the row steps down to picture-and-level tokens (126 → 66), and the field keeps the height. | `SelectorBand.tsx`, `battle-band.css` |
+| Detail, left | **Hero card**: face, name, level + XP, DPS; Reach · Targets · Damage · Speed (`.field-k` / `.field-v`); three skill slots + "All stats"; Undeploy (small, foot, posted in setup). No tabs. Or the hero's **Upgrade panel**, an item, the team, the wave. | `HeroCard.tsx`, `heroCard.ts`, `UpgradePanel.tsx` |
+| Detail, right | **Kit**: "Gear \| Pack" tabs over one column (128 on a phone). An empty doll slot opens the Pack filtered to what fits; an equip lands back on Gear. | `DetailBand.tsx` (`KitColumn`) |
+| Action bar | Setup: Details (portrait) · **Upgrade** (the focused hero's, only when it can spend; a badge while a skill choice waits) · Start Wave (the one primary). Live, held, cleared: as before. | `DetailBand.tsx` (`WaveBar`, `UpgradeButton`) |
+
+The band at each phone tier (`battle-band.css`): Detail 256 (390×844 and
+360×740), 250 (375×667), 200 (320×568). Stage while a hero is read, before →
+after (measured): 390×844 364 → 417; 375×667 253 → 252, now with the whole
+card on screen (the old stat block was cut at the fold); 320×568 182 → 209,
+where the card's body scrolls ~50px when the hero is posted. Collapsed setup
+is unchanged (601 at 390×844: the bar keeps its 56 + 12). Desk: the card
+beside a kit of `minmax(150px, 42%)` in the right rail.
 
 **Where things go — for the COMBAT and RUN/META lanes:**
 

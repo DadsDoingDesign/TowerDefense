@@ -41,11 +41,19 @@ export type BattlePhase = 'setup' | 'battle'
  * of thing you can tap — heroes, items, offers — so the interaction is learned
  * once. See docs/FIGMA.md § The Root Shell.
  */
-export type HeroTab = 'stats' | 'upgrades' | 'tactics'
+/**
+ * What a selected hero shows in the Context panel (the battle band, Oct 2026):
+ * its card, or its Upgrade panel (opened by the action bar's Upgrade button).
+ * The Stats / Skills / Team tabs are gone — the card is structured instead, and
+ * the team's orders and relics are the HUD's Team panel (`kind: 'team'`).
+ */
+export type HeroTab = 'card' | 'upgrade'
 export type ShellSelection =
   | { kind: 'hero'; id: string }
   | { kind: 'item'; id: string }
   | { kind: 'offer'; id: string }
+  /** The team panel, from the HUD's Team button: targeting and relics, for every hero. */
+  | { kind: 'team'; id: 'team' }
   | null
 
 /**

@@ -19,7 +19,7 @@ export const DEFAULT_TACTICS: Tactics = { focus: 'first' }
 /** Cleared whenever the shell changes subject, so nothing leaks between contexts. */
 export const CLEAR_SHELL = {
   shellSelection: null as ShellSelection,
-  heroTab: 'stats' as HeroTab,
+  heroTab: 'card' as HeroTab,
   gearSlot: null,
   detailOpen: false,
   fieldNote: null as GameData['fieldNote'],

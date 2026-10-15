@@ -1106,12 +1106,18 @@ export function reforgeItem(item: Item, rng: RNG): Item {
   return { ...item, enchantments: [...ench, ...edge], name: renameFor(item, ench) }
 }
 
-/** Upgrade an item's rarity one tier: more base budget + an extra enchant slot. */
-export function upgradeRarity(item: Item, rng: RNG): Item {
+/**
+ * The certain half of a one-tier raise, with no roll: the next rarity and the
+ * base scaled to its budget, every enchantment kept as it is. `upgradeRarity`
+ * builds on exactly this and then rolls the new enchantment slot(s); the
+ * battle band's Upgrade panel reads it to show the before → after without
+ * touching an RNG (the roll stays a surprise, and the run streams never move
+ * for a preview). How many enchantments the raise adds is `raiseAdds`.
+ */
+export function raisedBase(item: Item): Item {
   if (!canUpgrade(item)) return item
   const next = RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1]
-  const cfg = RARITY[next]
-  const scale = cfg.budget / RARITY[item.rarity].budget
+  const scale = RARITY[next].budget / RARITY[item.rarity].budget
   const floatKeys = new Set(['attackSpeed', 'critChance', 'rangeMult', 'damagePct'])
   const base: Item['base'] = { ...item.base }
   for (const k of Object.keys(base) as (keyof Item['base'])[]) {
@@ -1121,6 +1127,22 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
     if (base[k]! < 0) continue
     base[k] = floatKeys.has(k) ? base[k]! * scale : Math.round(base[k]! * scale)
   }
+  return { ...item, rarity: next, base }
+}
+
+/** How many enchantments a one-tier raise rolls onto `item` (0 at the top tier). */
+export function raiseAdds(item: Item): number {
+  if (!canUpgrade(item)) return 0
+  const cfg = RARITY[RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1]]
+  const target = item.keepsake ? Math.max(1, cfg.enchants) : cfg.enchants
+  return Math.max(0, target - item.enchantments.length)
+}
+
+/** Upgrade an item's rarity one tier: more base budget + an extra enchant slot. */
+export function upgradeRarity(item: Item, rng: RNG): Item {
+  if (!canUpgrade(item)) return item
+  const { rarity: next, base } = raisedBase(item)
+  const cfg = RARITY[next]
   // Keep existing enchantments, add new ones to reach the higher slot count.
   const pool = item.keepsake ? KEEPSAKE_ENCHANTS : ENCHANTS
   const target = item.keepsake ? Math.max(1, cfg.enchants) : cfg.enchants
