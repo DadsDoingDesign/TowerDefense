@@ -16,6 +16,10 @@ import { Icon } from '../../Icon'
 import { StandingEarned, UnlocksEarned } from '../ProgressEarned'
 import { stakeLine } from '../offers'
 import { ContractPage, Gold, Slip, SlipLine } from './parts'
+import { AskReceipt } from './AskParts'
+import { asksMetWord } from '../../../game/run/asks'
+import { endLine } from '../../../game/run/liaison'
+import { LiaisonSays } from '../LiaisonScene'
 
 /**
  * How a contract ends (the mercenary company; mockup `trade/r3/6-complete.png`):
@@ -57,6 +61,9 @@ export function ResultScreen() {
   // home in full; of the road's gold, only a share does.
   const home = recap?.home ?? null
   const interest = recap?.interest ?? 0
+  const tips = recap?.progress?.askTips ?? 0
+  // The trade war (Draft 4 § D): a settle that ended a season sends you home to read it first.
+  const seasonEnd = useMetaStore((s) => s.season.ended)
   const dest = route?.towns[CITY_COUNT - 1] ?? 'the end of the road'
   const town = route && c ? route.towns[Math.max(0, c.paid.length - 1)] : ''
 
@@ -122,7 +129,7 @@ export function ResultScreen() {
           )}
         </div>
       }
-      cta={{ label: 'Take another contract', run: runAgain, heavy: true }}
+      cta={seasonEnd ? { label: `See how Season ${seasonEnd.n} ended`, run: returnToHub, heavy: true } : { label: 'Take another contract', run: runAgain, heavy: true }}
       /*
        * Oct 2026 (3.5): the exits are ONE row of two quiet buttons — the
        * mobile system's dual action footer. As two 56px picture rows they
@@ -130,16 +137,21 @@ export function ResultScreen() {
        * the head), above the one next step.
        */
       foot={
+        seasonEnd && !(outcome === 'lost' && assist === 'off') ? undefined : (
         <div className="pg-dual">
           {outcome === 'lost' && assist === 'off' && (
             <button className="pg-dual-btn" onClick={() => setAssist('steady')}>
               <Icon name="assist" /> Assist: Steady
             </button>
           )}
-          <button className="pg-dual-btn" onClick={returnToHub}>
-            <Icon name="back" /> Back to the menu
-          </button>
+          {/* With a season to read, the CTA is the way home: one button, one job. */}
+          {!seasonEnd && (
+            <button className="pg-dual-btn" onClick={returnToHub}>
+              <Icon name="back" /> Back to the menu
+            </button>
+          )}
         </div>
+        )
       }
     >
       {/* A fall names its cause first (Phase 2). */}
@@ -150,6 +162,12 @@ export function ResultScreen() {
         <SovereignReveal kind={recap.progress.sovereign} owned={owned} of={SOVEREIGN_ITEM_KINDS.length} />
       )}
       {recap?.progress && <UnlocksEarned progress={recap.progress} crates={c?.crates ?? 0} />}
+      {/* The company's liaison has the last word (Draft 4 · D): one line, small. */}
+      {c?.company && !charter && recap && (
+        <LiaisonSays company={c.company} line={endLine(c.company, outcome, recap.seed, recap.progress?.asks ?? [], Math.max(0, c.paid.length - 1))} />
+      )}
+      {/* What the company asked of the road (Draft 4 · A), met or not. */}
+      {recap?.progress && <AskReceipt company={recap.progress.company} results={recap.progress.asks ?? []} delivered={outcome === 'delivered'} unranked={recap.progress.unranked} />}
       {recap?.progress && <StandingEarned progress={recap.progress} />}
 
       {c && route && (
@@ -167,6 +185,9 @@ export function ResultScreen() {
             <SlipLine label="The advance" note={`${home.purseBack.toLocaleString('en')} repaid${co ? ` to ${co.name}` : ''}`} value={<Gold n={0} />} />
           )}
           {home && home.road > 0 && <SlipLine label="Road gold" note={`${home.road.toLocaleString('en')} → ${home.pct}% banked`} value={<Gold n={home.roadBanked} />} />}
+          {tips > 0 && (
+            <SlipLine label={co ? `${co.name}’s tip` : 'Tips'} note={asksMetWord(recap?.progress?.asks?.filter((a) => a.met).length ?? 0)} value={<Gold n={tips} />} />
+          )}
           {interest > 0 && <SlipLine label="Interest on your bank" value={<Gold n={interest} />} />}
           {lost > 0 && <SlipLine label="Unsold crates, lost" value={`${lost} crate${lost === 1 ? '' : 's'}`} />}
           <SlipLine total label="To your bank" value={`+${deposit.toLocaleString('en')} gold`} />

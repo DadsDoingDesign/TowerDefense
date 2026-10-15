@@ -3684,3 +3684,202 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   - **Verified** on phone (all four stops) and desk, with a click-through:
     buy (the SOLD cubby), repair and restock.
 
+
+- **Oct 2026 · Full app review, three rounds (stops as places with people, the
+  map opens on a stop).** The designer liked the stop-scene canvas ("this is
+  starting to look great, keep this up") and asked for a full app review and
+  three rounds of improvements. Every screen was captured on a 390 phone and
+  a 1280 desk by driving the real dev app (home, Codex, settings, hero pick,
+  battle setup / live / cleared, the reward, the run map, all four stops, run
+  lost), critiqued, fixed and recaptured, three times.
+  - **Round 1:**
+    - **The stops still wore the flat banner strips** the designer had called
+      tacky. They now use option 1 of the canvas ("scene and speech"): a pixel
+      scene baked from the CC0 pack (`scripts/stop-scenes.ts`). The scenes are
+      the trader's stall, the cook's fire with the pack's flame animating, the
+      shrine's stones and keeper, and the recruiting yard. The title hangs on
+      the scene as the place's own sign, and the keeper says the stop's line in
+      a speech bubble. The clerk holds up the ware in focus.
+    - **The run map opened on an empty panel:** "Tap a stop to see what waits
+      there" over a dead "Tap a stop to march" button (on desk, a third of the
+      screen). The map now opens focused on a stop you can march to, so the
+      panel shows the stop and the CTA says "March to Bombard". The look-first
+      rule holds: a tap on that pre-focused stop is still a look.
+    - **The counter cut its own label** ("Cargo is w…"); it now wraps.
+  - **Round 2:**
+    - **Desk:** a wide column showed flat bands beside the scene. The scenes
+      are now baked 400 px wide with wooded wings.
+    - **Phone merchant:** the 300 px scene pushed the ware's card under the
+      exits. The phone scene is shorter and lifted, and the shop's shorter
+      still; the merchant fits without a scroll again.
+    - **Speech:**
+      - the bubble hid the held ware; it now sits beside a tall speaker or a
+        raised ware;
+      - a thin ware vanished against the awning; it now has a pale glint;
+      - the lines were narration ("The candles burn without wax.") in a speech
+        bubble; every line is now spoken by the keeper and kept to 40
+        characters, which is tested.
+    - **The preview said "Merchant" twice;** only a fight repeats its kind.
+  - **Round 3:**
+    - **Phone recruiter:** the hero card hid its skill under the exits; its
+      scene is trimmed like the shop's.
+    - **Desk:** the shop's and the recruiter's cards clipped at 800 px tall;
+      both scenes are shorter on every width.
+  - **Accessibility:**
+    - The bubble is the subtitle, read in place, with no hidden duplicate (the
+      codebase keeps no visually-hidden text).
+    - The art, the flame and the held ware are decorative.
+    - Flame, raise and talk motion stop under reduced motion.
+  - **Not changed:** the battle setup's phone panel has a mostly empty band
+    beside the bench, noted for the designer rather than reworked here.
+- **Oct 2026 · Company flags (Draft 4 § C).** The designer: "customize the
+  flag for each team — as you play you get more unlocks from their flag".
+  Rendered the livery panel at standing 0, 4 and 10 (phone and desk), the
+  home notice, the battle wagon flying a dressed Ironvein standard, the
+  receipt line and the militia builder with mixed pieces
+  (`docs/ui-audit-2026-10/flags/`). First pass failed three checks:
+  - two-column parts truncated a locked row's "Chequers · Standing 1": one
+    column on a phone, two from 600px;
+  - an emblem in the darker shade of the company colour vanished on its
+    cloth: on a plain hem it is now in the logo's ink, and the Emblem row
+    shows each emblem on a patch of the cloth;
+  - the militia builder said each piece's company as text after its name,
+    truncating every row: the logo mark says it, and a screen reader hears it.
+  Also: the preview's standard at 5×, the lock at 2×, chili / brush / quill
+  redrawn so no two emblems share a silhouette, and a colour picked on a
+  plain cloth brings the kit's first pattern (a colour shows only through one).
+- **2026-10-14 · Company asks (Draft 4 · A).** Each contract wants two
+  things of the road (three on the Sovereign Route), shown in four places:
+  the terms, the route panel, a battle toast and the receipt. Rendered in the
+  running app (Playwright, phone 390 × 844 and desk 1440 × 900); final shots
+  in `docs/ui-audit-2026-10/asks/`.
+  - **Terms:** an "Ironvein asks" panel between the stake and the pay slip,
+    lit along its edge in the company's colour like the standing card, its
+    head a `.field-k`; one slip line, "Ironvein's asks if met · up to 50".
+  - **Road:** each ask is one slim row under the route panel (label, a bar
+    in the company's colour, the count; ✓ green once met). An ask judged at
+    the end names where ("Cargo at Highcharter"), since a full bar there is
+    not yet a met ask. On the Sovereign Route each row carries its company's
+    crest.
+  - **Map:** an "Asked" tab with the company's crest on a stop that serves an
+    open ask.
+  - **Battle:** a pill at the Stage's top edge when a count moves ("Ironvein ·
+    Plated felled 13/25"). It takes no tap and fades after 2.4 s; it steps
+    under the champion's plate, and to the bottom edge while the coach holds
+    the top. A big tally toasts every few kills (target ÷ 25), not on each.
+  - **Receipt:** "What Ironvein asked" with ✓ / ✕, the count each reached and
+    what a met ask paid. The standing card says how much of its XP the asks
+    paid, and the tip is a line on the banked slip.
+  - **Fixed after the first shots:**
+    - the "Asked" tab on the bottom edge covered the node's label ("ELITE");
+      it now hangs below the edge, in the gap between rows;
+    - the tip's coin at 8 px read as a dot, so it is at the slip's size;
+    - an end-judged ask showed a full bar at 100% cargo and read as met, so
+      it now names the destination;
+    - gold counts were unformatted ("0/3900").
+  - **Left as is:** the toast floats over the top of the field. On a
+    height-bound phone that is the lane's entry for 2.4 s. It follows the
+    coach pill's approved pattern (an edge, no pointer, fades), and the
+    mockup put it there.
+
+### 2026-10-14 — the reward hand compares side by side
+The designer, on a phone shot of the wave-cleared reward: "remove my equipped stuff and just show the three items, each in its own column with its high level info written out so you can compare", "if this reward isn't per hero you should hide that too", "keep focus". Built: the reward hand's three cards each carry their detail (downside first, then each effect line with its icon), the Context panel, gear and pack leave the band (only the wave strip's "Take …" stays), and the hero strip is gone (no spoils card is a hero's). The focused card keeps its ring and lift and the CTA names it. The first-win gear tip moved to the next fight's setup, where the gear is on screen. Checked on a 390×844 phone and a 1280×800 desk (live app, Playwright): the three columns line up row for row; on desk the take sits under the cards in the side column.
+- **2026-10-14 · Liaisons (Draft 4 · D).** One person per company — Saffra
+  (Peppercorn), Vell (Easel House), Brannoch (Ironvein), Odile (Rosethread),
+  Wren (Moonquill) — at the company's own post, baked from the CC0 pack by
+  `scripts/stop-scenes.ts` beside the four stops. They speak in the stop
+  keepers' bubble at the home notice, at a city's head and, small, on the
+  receipt. Rendered in the running app (Playwright: phone 390 × 844, short
+  phone 375 × 667, desk 1440 × 900); final shots in
+  `docs/ui-audit-2026-10/liaisons/`. Benchmarked against the stop scenes.
+  - **Checklist:** each post reads as a place with someone in it and is told
+    apart by its silhouette (awning and brazier, tent and easel, lean-to and
+    tower, silk line and sheep, scroll rack by candlelight), each flies the
+    company's real standard, and the art stays at 1× / 2× with
+    `pixelated`. One title per screen: the city's name is the sign and the
+    "The caravan reaches…" eyebrow went (the rail says the act). The notice
+    says the company's words once: the bubble replaced the quoted letter.
+  - **Fixed after the first shots:**
+    - the notice band at the stops' 2× showed only Brannoch's helmet: the
+      notice draws the whole post at 1× (the mockup's framing), and the city
+      keeps 2×;
+    - the bubble over the head was cut by the band's top: a liaison's bubble
+      always hangs beside the head;
+    - the name plate in the corner covered the counter's wares, then the
+      bubble on a narrow phone: who speaks now heads the bubble, as it heads
+      the receipt's line;
+    - the bubble ran off the band's right edge: the notice's post sits a step
+      left (never baring the band's edge) and its bubble is a touch smaller;
+    - the city scene was pulled up under the contract page's 14px head pad
+      (the stops pad more), clipping the sky;
+    - Ironvein's post was a bare stone counter beside richer stalls: it got a
+      slate-and-blue lean-to and lit ore;
+    - the notice's pin floated over the art: a notice with a scene has none;
+    - a 375 × 667 phone lost a third of the map to the band: short phones show
+      an 82px band, the line without its name.
+  - **Left as is:** at 2× the city's figure is cropped at the belt on a phone
+    (like the recruiter's sergeant); the warrior's plume can touch the band's
+    top. Moonquill's long kicker still wraps to two lines (it did before).
+- **2026-10-14 · The trade war and rivals (Draft 4 · D).** Seasons of seven
+  contracts, five shares of the trade, the leader's champion and the last's
+  desperate terms, exclusives and cold rivals, banners at the battlefield's
+  margins. Rendered in the running app (Playwright, phone 390 × 844, a short
+  phone 375 × 667 and desk 1440 × 900); final shots in
+  `docs/ui-audit-2026-10/tradewar/`.
+  - **Home:** a slim war strip under the map ("Trade war · Season 3 · 3
+    contracts left ›" over the five-colour share bar, % inside), the coach
+    line above it once; a crown hung on the leader's signpost. A cold road's
+    notice pales to grey and wears a "Cold" tag on its corner with "Stakes
+    stop at 3"; a desperate one carries "Desperate · pays ×1.5".
+  - **Standings:** five rows ranked (crown on the leader), bar, ▲/▼ since the
+    last contract, your deliveries; a slip of what the season's end pays; the
+    CTA reads the desperate company's terms.
+  - **Season's end:** the leader's seal crowned between its two standards,
+    "Ironvein takes the season", the purse on a slip and the vault as the
+    shared PickStrip + PickCard ("Take the Warhammer"); Season 4's desperate
+    company and the closing share bar.
+  - **Terms:** the war's facts as edge-lit rows (desperate, cold, your
+    exclusive), and a dashed offer row that opens the exclusive sheet
+    (gives / its rival turns cold / when both lift; "Sign the exclusive",
+    "Not this season").
+  - **Battle:** the employer's standards (the leader's between them) in the
+    forest inside the play rect, never on the lane, a post or the caravan.
+  - **Fixed after the first shots:**
+    - the exclusive sheet sat under the terms' foot and CTA bands (a stacking
+      context); it is portalled to the body now;
+    - the "Cold" stamp covered the notice's pager, then its letter; it hangs
+      on the paper's top corner as a tag now;
+    - two of four margin banners were cropped by the phone Stage; the spots
+      are searched inside `playRect` (what every Stage shows);
+    - the crown overlapped the season page's eyebrow; the standings slip's
+      lines wrapped into three rows each (values shortened);
+    - on a short phone the strip took two rows from the map: it is one row
+      there (season, bar, what is left).
+  - **Left as is:** on a 375 × 667 phone the topmost signpost still tucks
+    under the header (the labels' placement was already tight there; the
+    strip's one row cost ~40 px). The crown is 20 px on the signpost, as
+    small as the market tag beside it.
+- **2026-10-14 · The loyalty track (Draft 4 · B).** One page per company
+  (mockups B1/B3): company chips, the company's card with its standard, level
+  and bar, then the ten levels as rows naming what each pays. Rendered in the
+  running app (Playwright, phone 390 × 844 and desk 1440 × 900) at standing 0,
+  4 and 10 and in Term II, with the sign view, a row's Codex card, the home
+  notice's chip, a real settle's receipt (Easel House 4 → 5, its signature
+  skill) and the Codex's Level 2; final shots in `docs/ui-audit-2026-10/track/`.
+  - **Scored:** one title ("Standing"); each fact once (the company's name on
+    its card only — the chips carry crest and level; "Term II" on the level,
+    not again in the sub-line); every reward a `.field-k` / `.field-v` pair;
+    one primary CTA (Read terms, or at 10 Sign a second term with the terms a
+    quiet second button). Benchmarked on the battle-pass tracks the mockup
+    came from: the next level is the one lit thing on the page.
+  - **Fixed after the first shots:** earned rows were two tall lines each and
+    pushed the next level below the fold — they are one dimmed line now,
+    words only; the sign view's crest ring stretched into an ellipse (the
+    page body sets every child's width); the second term's value clipped
+    ("Asks pay double, a gol…") — shortened, and values wrap; Term II said
+    itself twice on the card; two tap targets in one row overlapped.
+  - **Militia builder:** the name field's type now shrinks with the name's
+    length (a size container, `--fs-md` to 28px), so "The Ashford Company"
+    shows whole on a 390px phone (25.7px) and a 32-letter name fits at 15px.
+  - **Left as is:** an earned card or item row says only "Skill card" /
+    "Item" — what a crossed level paid is not in the save.

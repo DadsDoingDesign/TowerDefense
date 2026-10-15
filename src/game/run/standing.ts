@@ -5,10 +5,10 @@
  *
  * Standing replaces the single Watch level, one track per company. Playing a
  * company's contracts earns standing XP with THAT company (the Watch XP
- * formula: depth reached, enemies felled, delivery). Each standing level
- * unlocks one random skill card — from that company's pool first, then from
- * any pool once its own is exhausted — and the card's level floor rises with
- * the standing ({@link cardFloor}). Standing also caps the stake
+ * formula: depth reached, enemies felled, delivery). What each standing level
+ * pays is the company's loyalty track (`run/track.ts`, Draft 4 · B): named
+ * ahead of time, never a random roll — a skill card's level floor still rises
+ * with the standing ({@link cardFloor}). Standing also caps the stake
  * (`contracts.crateCap`: standing + 1 crates).
  *
  * Items unlock from contracts instead: a delivered contract opens one skill
@@ -19,6 +19,10 @@
  * could deal is unlocked, the level pays a **Rare bonus item** for the next
  * contract instead ({@link standingBonusKind}) — the sealed crate's duplicate
  * mechanism (`hq.bonusItemsFor`), so a level is never paid with nothing.
+ *
+ * **A longer grind** (Draft 4 · B): the curve costs 1.75× what it did
+ * ({@link standingCost}); the v13 meta migration keeps every save's level
+ * and its fraction of the way to the next ({@link migrateStandingXp}).
  *
  * **The Sovereign Route** earns standing with all five companies at once
  * ({@link charterStandingXp}).
@@ -60,12 +64,37 @@ export function charterStandingXp(r: { depth: number; kills: number; delivered: 
 }
 
 /**
- * XP from standing `s` to `s + 1`: 80, then 20 more a level (the Watch
- * level's curve, so a player who sticks to one company levels as fast as the
- * Watch did). Standing 10 costs 1,700 XP with one company: about seven
- * deliveries.
+ * XP from standing `s` to `s + 1`: 140, then 35 more a level (Draft 4 · B,
+ * "make the companies a bit of a longer grind"): 1.75× the Watch level's curve
+ * it used to share (80, then 20 more). Standing 10 costs 2,975 XP with one
+ * company — about ten deliveries with their asks, where it was about seven.
  */
-export const standingCost = (s: number): number => watchLevelCost(Math.max(0, Math.floor(s)) + 1)
+export const standingCost = (s: number): number => STANDING_CURVE.base + STANDING_CURVE.step * Math.max(0, Math.floor(s))
+/** The curve's numbers: the first level's cost, and what each level adds. */
+export const STANDING_CURVE = { base: 140, step: 35 } as const
+
+/**
+ * The curve before Draft 4 · B (80, then 20 more a level: standing 10 at
+ * 1,700 XP), kept ONLY for the v13 meta migration ({@link migrateStandingXp}).
+ */
+export const legacyStandingCost = (s: number): number => watchLevelCost(Math.max(0, Math.floor(s)) + 1)
+
+/**
+ * A company's stored XP from the old curve onto the new one (meta v13): the
+ * same standing, and the same fraction of the way to the next. Nobody loses a
+ * level, and no level is crossed by the move (a level pays only when play
+ * crosses it). At standing 10 the XP is the new curve's top: anything past
+ * the old top was worth nothing, and the track caps a term at its end.
+ */
+export function migrateStandingXp(oldXp: number): number {
+  const xp = Math.max(0, Math.floor(oldXp || 0))
+  let level = 0
+  let reach = 0
+  while (level < MAX_STANDING && xp >= reach + legacyStandingCost(level)) reach += legacyStandingCost(level++)
+  if (level >= MAX_STANDING) return standingXpToReach(MAX_STANDING)
+  const frac = (xp - reach) / legacyStandingCost(level)
+  return standingXpToReach(level) + Math.floor(frac * standingCost(level))
+}
 
 /** Cumulative XP to reach standing `s` (standing 0 = 0 XP: a company you have never worked for). */
 export function standingXpToReach(s: number): number {
@@ -155,22 +184,9 @@ function rollCompanyPiece(o: {
   return null
 }
 
-/** The skill card a standing level unlocks (reaching `standing` with `company`). */
-export function rollStandingCard(have: readonly string[], company: CompanyId, standing: number, ...salt: (string | number)[]): string | null {
-  return rollCompanyPiece({
-    pool: RANDOM_UNLOCK_SKILLS,
-    have,
-    company,
-    levelOf: skillLevel,
-    companyOf: skillCo,
-    floor: cardFloor(standing),
-    salt: ['standing-card', company, standing, ...salt],
-  })
-}
-
 /**
  * The kind of the Rare bonus item a standing level pays once the card pool is
- * exhausted (`rollStandingCard` returned null): one of the kinds you own — the
+ * exhausted (`track.trackPay` found no card or kind left): one of the kinds you own — the
  * company's own first, then any, then the basic five — a hash of its own
  * parts, never a run stream. The bonus item itself is dealt into the next
  * contract's pack (`hq.bonusItemsFor`), as a sealed crate's duplicate is.

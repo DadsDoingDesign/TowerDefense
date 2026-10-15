@@ -4,13 +4,15 @@
  * After a cleared NORMAL campaign wave (`rewardInPlace`, `ui/shell/levelUps.ts`):
  *  - the Stage dims and says the result in one line; the field stays visible
  *    around it (the Stage is sacred: nothing hides it, the fight is just over);
- *  - the Selector holds the company as a compact strip over the reward hand;
- *  - a tap on a card selects it: its detail fills the Context panel and the
- *    wave strip's CTA names it ("Take Cruel Bow"); only the CTA takes it.
- *    The panel otherwise holds the first card's detail, or a levelled
- *    hero's choice (`LevelUpPanel`).
- * A hero with a level-up waiting glows and wears a "Lv 5 ↑" badge on every
- * roster surface (the strip here, the party row on the map and in setup).
+ *  - the Selector holds the reward hand alone: three columns, each card with
+ *    its detail written out so the three compare side by side (Oct 2026; the
+ *    designer: "remove my equipped stuff and just show the three items").
+ *    No hero strip — no spoils card is a hero's — and no gear or pack: the
+ *    Detail band keeps only the take (`.sh-detail.reward-hand`);
+ *  - a tap on a card focuses it (ring, lift) and the wave strip's CTA names
+ *    it ("Take Cruel Bow"); only the CTA takes it.
+ * A hero with a level-up waiting wears a "Lv 5 ↑" badge on the party row in
+ * setup; the choice waits there.
  */
 
 /* ------------------------------------------------------------ the Stage */
@@ -59,72 +61,14 @@
   gap: 8px;
   padding: 8px 14px 10px;
 }
-.sh-partystrip,
 .sh-reward-row {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
-.sh-partystrip::-webkit-scrollbar,
 .sh-reward-row::-webkit-scrollbar {
   display: none;
-}
-/* Room above the strip for a badge that rides on a chip's top edge. */
-.sh-partystrip {
-  padding-top: 6px;
-  margin-top: -6px;
-}
-
-/* A hero, compact: portrait, name, level. 44px — the touch floor. */
-.sh-mate {
-  position: relative;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: var(--hit-min);
-  padding: 5px 10px 5px 5px;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--rail, var(--line-strong));
-  color: var(--text);
-  cursor: pointer;
-}
-.sh-mate.selected {
-  background: var(--panel-2);
-  border-color: var(--accent);
-  border-left-color: var(--rail, var(--accent));
-  box-shadow: 0 0 0 1px var(--accent);
-}
-.sh-mate-art {
-  position: relative;
-  flex: 0 0 auto;
-  width: var(--icon-md);
-  height: var(--icon-md);
-  overflow: hidden;
-  border-radius: var(--r-xs);
-  background: var(--rail, var(--panel-3));
-}
-.sh-mate-art img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 22%;
-  image-rendering: pixelated;
-}
-.sh-mate-name {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  white-space: nowrap;
-}
-.sh-mate-lv {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  white-space: nowrap;
 }
 
 /* The reward hand: three cards that share the row. */
@@ -136,8 +80,12 @@
   flex: 1 1 0;
   min-width: 96px;
   width: auto;
+  /* A column: its head (icon, name, rarity) on top, its detail under it,
+     read top-down so the three line up row for row. */
+  justify-content: flex-start;
+  align-items: stretch;
   gap: 4px;
-  padding: 8px 6px;
+  padding: 8px 6px 10px;
   /* 3.9 (Oct 2026): the alternatives are equal weight — a neutral top edge.
      Three different rarity rails competed with the selected card's ring;
      rarity still reads on every card from its pips and word. */
@@ -175,8 +123,31 @@
   bottom: -4px;
 }
 .sh-offer.sh-reward .sh-offer-name {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
+  text-align: center;
   -webkit-line-clamp: 2;
+}
+/* The card's detail, written out: the downside first, then what it does. */
+.sh-reward-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line-strong);
+  text-align: left;
+}
+.sh-reward-body .sh-line {
+  display: block;
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.sh-reward-body .sh-line .icon {
+  vertical-align: -2px;
+  margin-right: 3px;
 }
 .sh-reward-sub {
   display: flex;
@@ -220,16 +191,12 @@
 }
 /* The glow: an accent ring and a soft halo, breathing slowly. The ring is the
    signal; the halo is the flourish, and reduced motion keeps it still. */
-.sh-hero.levelled,
-.sh-mate.levelled {
+.sh-hero.levelled {
   border-color: var(--accent);
   box-shadow:
     0 0 0 1px var(--accent),
     0 0 14px 1px rgba(224, 172, 76, 0.45);
   animation: sh-lvup-glow 1.8s ease-in-out infinite;
-}
-.sh-mate.levelled {
-  border-left-color: var(--rail, var(--accent));
 }
 /* Room for the card badge: the party row clips vertically. */
 .sh-selector-row:has(.sh-hero.levelled) {
@@ -244,7 +211,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sh-hero.levelled,
-  .sh-mate.levelled,
   .sh-stage-center:has(> .sh-ceremony.compact) {
     animation: none;
   }
@@ -324,11 +290,6 @@
   transform: translateX(-50%);
   z-index: 2;
 }
-.sh-mate .sh-lvflash {
-  position: absolute;
-  top: -7px;
-  right: 4px;
-}
 @keyframes sh-lvflash {
   0%,
   70% {
@@ -362,4 +323,19 @@
   .shell:has(.sh-detail.choosing) .sh-reward-row {
     display: none;
   }
+}
+
+/* ------------------------------------------- the take, alone (Oct 2026)
+   With the hand in place the Detail band holds only the wave strip and its
+   "Take …": no context panel, gear or pack (`DetailBand`, `hand`). The band
+   sizes to the strip and the hand's columns get the room. */
+.sh-detail.reward-hand,
+.sh-detail.reward-hand:has(> .sh-wavebar) {
+  height: auto;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto;
+}
+.sh-selector.sh-selector-reward .sh-reward-row {
+  align-items: stretch;
 }

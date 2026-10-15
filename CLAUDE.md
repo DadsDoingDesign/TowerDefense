@@ -98,6 +98,27 @@ result. Append a short note to the review log when you're done.
   the store side is `contractSlice`. A hero has no class: its role comes from
   its gear (`src/game/data/gear.ts`); `archetype` survives only as an art key and
   in old-save migration. The Daily and Endless modes were removed.
+- Company asks (Draft 4 · A): `src/game/run/asks.ts` — each company's three
+  asks, the deal (two per contract, three from three companies on the
+  Sovereign Route; a hash of run seed and company, never a draw), counting,
+  judging and the pay (standing XP, a tip on delivery, via `settle.contractGrant`).
+  Progress rides `RunContract.asks`; the engine's `burningKills` feeds one.
+  UI `ui/shell/contracts/AskParts.tsx` and `ui/shell/AskToast.tsx`; targets
+  fitted by `npx tsx balance/ask-rates.ts`.
+- The trade war (Draft 4 § D): pure rules `src/game/run/tradeWar.ts` —
+  seasons of 7 finished contracts (counted at the settle, from the market's
+  opening), whole shares summing to 100 (`moveShares`), the season's end
+  (`endSeason`: the leader pays its champion a purse and a vault pick; the
+  last that hires you posts desperate terms, `contracts.DESPERATE_PAY` /
+  `DESPERATE_STRENGTH` via `ContractTerms.desperate` and `contractRules`),
+  rivals (`Company.rival`, `rivalOf`) and the exclusive (`seasonCrateCap`,
+  `exclusiveXpMult`). Saved as `metaStore.season` (v14, `readSeason`); the
+  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (war strip and
+  share bar on the home, the standings, the season's end, the war's facts and
+  the exclusive sheet on the terms) with `src/styles/war.css`; the crown on the
+  leader's signpost is `pixel.Crown`; the banners at a battlefield's margins
+  are `render/marginBanners.ts` (searched spots, `tests/marginBanners.test.ts`).
+  Tests `tests/tradeWar.test.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by
@@ -119,12 +140,21 @@ result. Append a short note to the review log when you're done.
   (`src/ui/shell/PickStrip.tsx`, `src/styles/pick.css`; a rail on desk). Reuse
   it for a new one; a token focuses, the CTA names the choice and commits.
   Every offer board that commits on its CTA (the spoils, the merchant) is
-  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place:
-  `StopScene.tsx` over the title (hung as its sign, `stops.css`) and the
-  world's line for that node (`stopScene.ts`) as the subtitle.
-  The merchant is dressed as a roadside shop (`ShopFront.tsx`,
-  `styles/shop.css`: awning, hanging sign, wares on a shelf, services on a
-  counter). It sells goods only, with no hire on the counter.
+  one through `OfferPick.tsx`, not rows. Every stop (merchant, campfire, shrine, recruit) is drawn as a place
+  with someone in it talking to you: `StopScene.tsx` draws a pixel scene
+  baked from the CC0 pack by `npx tsx scripts/stop-scenes.ts`
+  (`public/assets/scenes/<stop>.png` + `stopScenes.generated.ts`, the
+  anchors), the page's title hung on it as the place's sign (`stops.css`),
+  and the keeper's line for that node (`stopScene.ts`, spoken, ≤ 40 chars)
+  in a speech bubble. The clerk holds up the ware you are looking at; the
+  campfire's flame is the pack's fire strip. Re-run the script after
+  changing a scene. The merchant's goods sit under it (`ShopFront.tsx`,
+  `styles/shop.css`: wares on a shelf, services on a counter). It sells goods only, with no hire on the counter.
+  Each company's liaison (Draft 4 · D) talks the same way: words in
+  `src/game/data/liaisons.ts`, which line when (board / city / receipt, a
+  hash, never a run stream) in `src/game/run/liaison.ts`, drawn by
+  `LiaisonScene.tsx` (+ `liaisons.css`) on the company's post that the same
+  script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
   The contract board is the HOME (Figma B2): the trade map's signposts focus a
   road (`homeFocus`), the notice under the map is that company's, and its CTA
   opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes
@@ -137,6 +167,15 @@ result. Append a short note to the review log when you're done.
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
+- The loyalty track (Draft 4 · B): what each standing level pays is named
+  ahead of time — `src/game/run/track.ts` (`trackPlan` for the page,
+  `payTrack` for the settle: the same function, never a roll; the second
+  term, `metaStore.terms`, v13). The curve and the v13 migration are in
+  `run/standing.ts`; the five signature skills are `signature: true` in
+  `data/skills.ts` (only the track pays them). The page is
+  `ui/shell/company/TrackScreen.tsx`, opened from the notice's standing chip
+  and the receipt's standing card (`company/trackLink.ts`); a company you
+  re-signed with gets a gold rim on its `Crest`. Tests `tests/track.test.ts`.
 - Your militia (the player's band): founded when the Sovereign Route opens
   (the full run, your own road: `RootShell` shows `MilitiaScreen mode="create"`
   on the charter page while `metaStore.militia` is null). A new game goes
@@ -152,6 +191,13 @@ result. Append a short note to the review log when you're done.
   are `src/ui/shell/company/FlagCarousel.tsx`. A typed name goes through
   `src/game/run/nameFilter.ts` (profanity filter); `readMilitia` validates the
   save and fills an older flag's missing parts.
+- Company flags (Draft 4 § C, `docs/MERCENARY_COMPANY.md`): each company's kit
+  of ten flag pieces, one per standing level, is `src/game/data/companyKits.ts`;
+  its standard dresses through `companyStandard.ts` (`StandardLook`; the default
+  is the old standard pixel for pixel). Your dressed standards are
+  `metaStore.liveries`, validated by `src/game/run/livery.ts` (which also deals
+  the militia builder its earned pieces); the panel is
+  `src/ui/shell/company/LiveryScreen.tsx`, opened from the road notice's flag.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

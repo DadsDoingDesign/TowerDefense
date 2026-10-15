@@ -90,10 +90,15 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
   // The run map (Oct 2026, the designer's mark-up): the stop's card and its
   // CTA, nothing else — gear and the pack are tended at the next fight's setup.
   const onMap = useGameStore((s) => s.screen === 'map')
-  const gear = shown && !choosing && !onMap
+  // The reward hand in place (Oct 2026; the designer: "remove my equipped
+  // stuff and just show the three items, each in its own column with its high
+  // level info written out so you can compare"): the three cards in the
+  // Selector carry their own detail, so this band keeps only the take.
+  const hand = useGameStore(rewardInPlace) && !choosing
+  const gear = shown && !choosing && !onMap && !hand
   return (
-    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}`} id="sh-detail-panels">
-      <ContextPanel offers={offers} />
+    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}${hand ? ' reward-hand' : ''}`} id="sh-detail-panels">
+      {!hand && <ContextPanel offers={offers} />}
       {gear && <GearColumn />}
       {gear && <PackColumn />}
       {/* The battle's action bar is a SIBLING of the context panel, not one of
@@ -1207,13 +1212,15 @@ function Cell({
  * are curses; a hardcoded list of them would be the same defect this pass spent
  * its day on.
  */
-function EffectLine({ text, tone, bullet, mark }: { text: string; tone?: string; bullet?: boolean; mark?: IconKey }) {
+export function EffectLine({ text, tone, bullet, mark, inline }: { text: string; tone?: string; bullet?: boolean; mark?: IconKey; inline?: boolean }) {
   const icon = mark ?? effectIcon(text)
+  // `inline`: a span, for a line inside a button (a reward card), where a <p> is not allowed.
+  const Tag = inline ? 'span' : 'p'
   return (
-    <p className={`sh-line ${tone ?? ''} ${icon ? 'iconed' : ''}`}>
+    <Tag className={`sh-line ${tone ?? ''} ${icon ? 'iconed' : ''}`}>
       {icon ? <Icon name={icon} /> : bullet ? '· ' : null}
       {text}
-    </p>
+    </Tag>
   )
 }
 

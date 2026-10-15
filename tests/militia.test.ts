@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ALL_BANNER_SHAPES,
+  ALL_CHARGE_IDS,
+  ALL_PATTERNS,
   BANNER_H,
-  BANNER_SHAPES,
   BANNER_W,
   bannerRows,
-  CHARGE_IDS,
+  BASE_TINCTURE_IDS,
   CHARGES,
   COLOUR_PAIRS,
   METAL_IDS,
   pairIndex,
-  PATTERNS,
   SOLDIER_H,
   SOLDIER_KINDS,
   SOLDIER_W,
@@ -60,9 +61,9 @@ describe('the militia’s name', () => {
 })
 
 describe('the banner', () => {
-  it('every shape, pattern, emblem and metal draws on a 13 × 20 pole', () => {
-    for (const shape of BANNER_SHAPES) {
-      for (const charge of CHARGE_IDS) {
+  it('every shape, pattern, emblem and metal draws on a 13 × 20 pole — the companies’ pieces too', () => {
+    for (const shape of ALL_BANNER_SHAPES) {
+      for (const charge of ALL_CHARGE_IDS) {
         const rows = bannerRows({ shape, charge, tincture: 'navy' })
         expect(rows).toHaveLength(BANNER_H)
         expect(rows.every((r) => r.length === BANNER_W)).toBe(true)
@@ -73,10 +74,10 @@ describe('the banner', () => {
       }
     }
     // Every pattern but plain puts its colour on the cloth of every shape.
-    for (const shape of BANNER_SHAPES)
-      for (const pattern of PATTERNS) expect(bannerRows({ shape, pattern, tincture: 'navy', charge: 'none' }).join('').includes('d'), `${shape}/${pattern}`).toBe(pattern !== 'plain')
+    for (const shape of ALL_BANNER_SHAPES)
+      for (const pattern of ALL_PATTERNS) expect(bannerRows({ shape, pattern, tincture: 'navy', charge: 'none' }).join('').includes('d'), `${shape}/${pattern}`).toBe(pattern !== 'plain')
     // The shapes are all different cloth.
-    expect(new Set(BANNER_SHAPES.map((shape) => bannerRows({ shape, tincture: 'navy', charge: 'none' }).join(''))).size).toBe(BANNER_SHAPES.length)
+    expect(new Set(ALL_BANNER_SHAPES.map((shape) => bannerRows({ shape, tincture: 'navy', charge: 'none' }).join(''))).size).toBe(ALL_BANNER_SHAPES.length)
     expect(METAL_IDS.length).toBeGreaterThanOrEqual(3)
   })
 
@@ -90,9 +91,9 @@ describe('the banner', () => {
     }
   })
 
-  it('every emblem lands whole on every shape — none is cut off by the cloth', () => {
-    for (const shape of BANNER_SHAPES) {
-      for (const charge of CHARGE_IDS) {
+  it('every emblem lands whole on every shape — none is cut off by the cloth (the companies’ too)', () => {
+    for (const shape of ALL_BANNER_SHAPES) {
+      for (const charge of ALL_CHARGE_IDS) {
         const want = CHARGES[charge].join('').split('p').length - 1
         const got = bannerRows({ shape, tincture: 'navy', charge }).join('').split('p').length - 1
         expect(got, `${charge} on ${shape}`).toBe(want)
@@ -123,16 +124,19 @@ describe('the banner', () => {
       const all = plain.join('')
       expect(all).toContain('c')
       expect(all).not.toContain('p')
-      for (const pattern of PATTERNS.filter((p) => p !== 'plain')) {
+      for (const pattern of ALL_PATTERNS.filter((p) => p !== 'plain')) {
         expect(soldierRows({ ...look, pattern }, kind).join(''), `${kind} ${pattern}`).toContain('d')
       }
-      for (const charge of CHARGE_IDS.filter((c) => c !== 'none')) {
+      for (const charge of ALL_CHARGE_IDS.filter((c) => c !== 'none')) {
         expect(soldierRows({ ...look, charge }, kind).join(''), `${kind} ${charge}`).toContain('p')
       }
     }
   })
 
-  it('the field colours are dark and far from every company colour (CIELAB ΔE ≥ 26)', () => {
+  // The BASE colours only: a company's own colours (Draft 4 § C) are in its
+  // hue family on purpose — the designer's call, "pick things from any one
+  // and combine".
+  it('the base field colours are dark and far from every company colour (CIELAB ΔE ≥ 26)', () => {
     const lab = (h: string) => {
       const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
       const xyz = [(0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, 0.2126 * r + 0.7152 * g + 0.0722 * b, (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883]
@@ -140,7 +144,7 @@ describe('the banner', () => {
       return [116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])]
     }
     const dE = (a: string, b: string) => Math.hypot(...lab(a).map((v, i) => v - lab(b)[i]))
-    for (const t of Object.values(TINCTURES)) {
+    for (const t of BASE_TINCTURE_IDS.map((id) => TINCTURES[id])) {
       expect(lab(t)[0], t).toBeLessThan(45)
       for (const c of COMPANIES) expect(dE(t, c.color), `${t} vs ${c.id}`).toBeGreaterThanOrEqual(26)
     }

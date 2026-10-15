@@ -404,7 +404,7 @@
 .mn-route {
   display: flex;
   flex-wrap: wrap;
-  margin: 0;
+  margin: 0 0 9px;
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--paper-ink-2);
@@ -414,14 +414,6 @@
   font-style: normal;
   font-size: 9px;
   color: var(--paper-ink);
-}
-.mn-letter {
-  margin: 6px 0 9px;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--fs-sm);
-  line-height: 1.35;
-  color: var(--paper-ink-2);
 }
 .mn-chips {
   display: flex;
@@ -472,6 +464,20 @@
 .mn-chip.is-locked {
   border-style: dashed;
   font-weight: 700;
+}
+/* The standing chip opens the company's loyalty track (Draft 4 · B). */
+button.mn-chip.is-rep {
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+button.mn-chip.is-rep:hover {
+  background: rgba(58, 44, 20, 0.08);
+}
+button.mn-chip.is-rep:focus-visible {
+  outline: var(--focus-width) solid var(--paper-ink);
+  outline-offset: 2px;
 }
 
 /* The Sovereign Route, once open: a slim aqua line, never a card. */
@@ -564,12 +570,6 @@
   .mn-notice-t {
     font-size: 20px;
   }
-  .mn-letter {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
   .mn-tile {
     min-height: 54px;
   }
@@ -579,10 +579,6 @@
   }
 }
 @media (orientation: portrait) and (max-height: 640px) {
-  /* The letter goes first: the chips carry the facts. */
-  .mn-letter {
-    display: none;
-  }
   .mn-route {
     margin-bottom: 8px;
   }
@@ -728,4 +724,51 @@
   .mn-tiles {
     margin-top: auto;
   }
+  /* Nothing in the column gives way when it runs tall (the war strip and the
+     liaison's post on an 800px desk): the column scrolls instead, and the
+     CTA keeps its full height. */
+  .mn-sheet {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .mn-sheet > * {
+    flex-shrink: 0;
+  }
+  /* …but the one CTA never scrolls away: it is pinned to the column's foot. */
+  .mn-sheet > .mn-cta {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+  }
+}
+
+/* The notice's flag is the way into its livery (Draft 4 § C): a button with
+   a small brush mark in its corner. */
+.mn-livery {
+  position: relative;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.mn-livery:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.mn-livery-mark {
+  position: absolute;
+  right: -6px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid #c8b48c;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }

@@ -31,6 +31,18 @@
   font-size: 28px;
   font-weight: 700;
 }
+.co-title-fit {
+  display: block;
+  min-width: 0;
+  container-type: inline-size;
+}
+/* The name's size follows its length (`--len`, set by the builder): a Crimson
+   bold letter is about half an em wide, so the field holds `--len` letters at
+   100cqi / (len × 0.52), between --fs-md and the 28px display size. */
+.co-title-fit .co-title-input {
+  width: 100%;
+  font-size: clamp(var(--fs-md), calc(100cqi / (var(--len, 12) * 0.52)), 28px);
+}
 .co-title-input::placeholder {
   color: var(--dim);
 }
@@ -414,4 +426,107 @@
 .co-none.big {
   width: 50px;
   height: 50px;
+}
+
+/* ------------------------------------------------------------ a company's livery
+   (Draft 4 § C, `company/LiveryScreen.tsx`): the company's standard on its
+   wagon, large, over one small carousel per part. A piece not unlocked yet is
+   dimmed with its lock, and its row says the standing that unlocks it. */
+.lv-head .lv-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.lv-standing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+}
+.mi-preview.lv-preview {
+  flex: none;
+  height: 220px;
+}
+.lv-preview .mi-preview-road {
+  bottom: 18px;
+  height: 30px;
+}
+.lv-wagon {
+  position: absolute;
+  right: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lv-crates {
+  display: flex;
+  gap: 3px;
+  margin-bottom: -6px;
+  margin-left: 18px;
+}
+.lv-flag {
+  position: absolute;
+  left: calc(50% + 4px);
+  bottom: 24px;
+}
+.lv-flag .banner {
+  transform-origin: 0 50%;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3));
+}
+.lv-parts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 10px;
+  padding: 2px 10px 10px;
+  border-radius: 12px;
+  background: #241a11;
+  border: 1px solid var(--line);
+}
+/* Two columns where there is room for "Chequers · Standing 1" in each; the
+   trim, alone on the last row, across both. */
+@media (min-width: 600px) {
+  .lv-parts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lv-parts > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.lv-opt {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.fw-chip.is-locked .lv-opt > :first-child {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+.lv-lock {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: grid;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+}
+.fw-part.is-locked .field-v {
+  color: var(--muted);
+}
+.lv-cut {
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+}
+
+/* A company's piece in the militia builder (Draft 4 § C): its logo, small, in
+   the option's corner — where the piece came from. */
+.co-from {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.co-from-mark {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  display: grid;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.8));
 }

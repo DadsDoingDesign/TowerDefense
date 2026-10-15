@@ -16,17 +16,31 @@ import { OUTLINE, type Palette, type PixelRows } from './pixelArt'
  *  - an EMBLEM (a 5 × 5 charge — or none);
  *  - the emblem's METAL, which also edges the cloth.
  *
- * The tinctures stay dark ON PURPOSE (`trade/NOTES.md` § Palette): each sits
- * at ΔE2000 ≥ 26 from every company colour, so a flag never reads as a
+ * The BASE tinctures stay dark ON PURPOSE (`trade/NOTES.md` § Palette): each
+ * sits at ΔE2000 ≥ 26 from every company colour, so a flag never reads as a
  * company or a rarity; the metal (parchment, gold, silver) is what carries it
  * on the dark map and the green field alike.
+ *
+ * **Company pieces** (Draft 4 § C, Oct 2026; the designer: "as you play you
+ * get more unlocks from their flag, and when you make your own you can pick
+ * things from any one and combine"): every trading company has a kit of
+ * pieces in its own taste (`data/companyKits.ts`) — colours in its hue
+ * family, foot cuts, patterns, emblems and a trim metal — earned one per
+ * standing level. They live here beside the base set so a militia flag can
+ * fly any of them, and the "never reads as a company" rule gave way for them
+ * (the designer's call). The base lists (`BANNER_SHAPES`, `PATTERNS`,
+ * `CHARGE_IDS`, `METAL_IDS`, `COLOUR_PAIRS`) are what everyone has; the
+ * `ALL_*` lists add the company pieces.
  *
  * Pure data: the UI draws the rows as SVG (`ui/pixel.tsx`) and the canvases
  * (the battle's wagon, the menu's trade map) draw the same rows. An older
  * save's flag (shape, tincture, charge) is a plain flag in parchment.
  */
 export const BANNER_SHAPES = ['swallow', 'square', 'pennant', 'tri', 'gonfalon', 'shield', 'notch', 'wave', 'tall'] as const
-export type BannerShape = (typeof BANNER_SHAPES)[number]
+/** The cuts only a company's kit gives (Draft 4 § C): a militia flies them once earned. */
+export const KIT_SHAPES = ['flame', 'scallop', 'battled', 'fringe', 'crescent'] as const
+export const ALL_BANNER_SHAPES = [...BANNER_SHAPES, ...KIT_SHAPES] as const
+export type BannerShape = (typeof ALL_BANNER_SHAPES)[number]
 
 export const TINCTURES = {
   sable: '#26242c',
@@ -43,9 +57,23 @@ export const TINCTURES = {
   wine: '#5a1f3a',
   plum: '#4e2c4c',
   ash: '#6c675f',
+  // The companies' colours (Draft 4 § C), each in its company's hue family:
+  // the pattern's colour on its standard, a pair on a militia's flag.
+  saffron: '#d39a1c',
+  chili: '#8e2418',
+  lilac: '#7454b8',
+  canvas: '#d8ccb0',
+  cobalt: '#2b4aa0',
+  iron: '#5b6068',
+  rose: '#a84468',
+  ivory: '#efe4cf',
+  ink: '#1b2040',
+  moonsilver: '#a8b3c9',
 } as const
 export type Tincture = keyof typeof TINCTURES
 export const TINCTURE_IDS = Object.keys(TINCTURES) as Tincture[]
+/** The tinctures everyone has: dark, and far from every company colour. */
+export const BASE_TINCTURE_IDS: readonly Tincture[] = ['sable', 'navy', 'indigo', 'slate', 'teal', 'forest', 'moss', 'ochre', 'umber', 'rust', 'crimson', 'wine', 'plum', 'ash']
 
 /** What the builder calls each choice. */
 export const SHAPE_NAMES: Record<BannerShape, string> = {
@@ -58,6 +86,11 @@ export const SHAPE_NAMES: Record<BannerShape, string> = {
   notch: 'Notched',
   wave: 'Tattered',
   tall: 'Standard',
+  flame: 'Flame',
+  scallop: 'Scalloped',
+  battled: 'Battled',
+  fringe: 'Fringed',
+  crescent: 'Crescent',
 }
 export const TINCTURE_NAMES: Record<Tincture, string> = {
   sable: 'Sable',
@@ -74,6 +107,16 @@ export const TINCTURE_NAMES: Record<Tincture, string> = {
   wine: 'Wine',
   plum: 'Plum',
   ash: 'Ash',
+  saffron: 'Saffron',
+  chili: 'Chili',
+  lilac: 'Lilac',
+  canvas: 'Canvas',
+  cobalt: 'Cobalt',
+  iron: 'Iron',
+  rose: 'Rose',
+  ivory: 'Ivory',
+  ink: 'Ink',
+  moonsilver: 'Moonsilver',
 }
 
 /**
@@ -105,7 +148,10 @@ export const pairIndex = (look: BannerLook): number => {
 
 /** The patterns that divide the field: where the pattern's colour lies. */
 export const PATTERNS = ['plain', 'pale', 'fess', 'quarterly', 'bend', 'chevron', 'barry', 'paly', 'cross', 'saltire', 'chief', 'pall'] as const
-export type Pattern = (typeof PATTERNS)[number]
+/** The patterns only a company's kit gives: Easel House's chequers, Rosethread's border. */
+export const KIT_PATTERNS = ['checky', 'bordure'] as const
+export const ALL_PATTERNS = [...PATTERNS, ...KIT_PATTERNS] as const
+export type Pattern = (typeof ALL_PATTERNS)[number]
 export const PATTERN_NAMES: Record<Pattern, string> = {
   plain: 'Plain',
   pale: 'Halves',
@@ -119,6 +165,8 @@ export const PATTERN_NAMES: Record<Pattern, string> = {
   saltire: 'Saltire',
   chief: 'Chief',
   pall: 'Pall',
+  checky: 'Chequers',
+  bordure: 'Border',
 }
 
 /** The emblems, 5 × 5 marks set on the cloth in its metal. */
@@ -139,9 +187,28 @@ export const CHARGES = {
   anchor: ['..p..', '.ppp.', '..p..', 'p.p.p', '.ppp.'],
   bird: ['p...p', 'pp.pp', '.ppp.', '..p..', '.....'],
   wheat: ['p.p.p', '.ppp.', 'p.p.p', '.ppp.', '..p..'],
+  // The companies' emblems (Draft 4 § C), three each, earned by standing.
+  chili: ['....p', '...p.', '.ppp.', 'ppp..', 'pp...'],
+  flame: ['..p..', '.pp..', '.ppp.', 'ppppp', '.ppp.'],
+  sack: ['.p.p.', '..p..', '.ppp.', 'ppppp', 'ppppp'],
+  brush: ['...p.', '...p.', '..p..', '.ppp.', '.ppp.'],
+  frame: ['ppppp', 'p...p', 'p.p.p', 'p...p', 'ppppp'],
+  palette: ['.ppp.', 'p.p.p', 'ppppp', 'pp.pp', '.ppp.'],
+  pick: ['.ppp.', 'p.p.p', '..p..', '..p..', '..p..'],
+  anvil: ['pppp.', '.pppp', '..p..', '.ppp.', 'ppppp'],
+  gem: ['.ppp.', 'p.p.p', 'ppppp', '.ppp.', '..p..'],
+  spool: ['ppppp', '.ppp.', '.p.p.', '.ppp.', 'ppppp'],
+  rose: ['.ppp.', 'pp.pp', '.ppp.', '..p..', '.pp..'],
+  moth: ['pp.pp', 'ppppp', '..p..', 'ppppp', 'pp.pp'],
+  quill: ['..ppp', '.ppp.', '.pp..', '.p...', 'p....'],
+  candle: ['..p..', '.....', '.ppp.', '.ppp.', 'ppppp'],
+  eye: ['.....', '.ppp.', 'pp.pp', '.ppp.', '.....'],
 } as const
 export type Charge = keyof typeof CHARGES
-export const CHARGE_IDS = Object.keys(CHARGES) as Charge[]
+/** The emblems everyone has. */
+export const CHARGE_IDS: readonly Charge[] = ['none', 'keep', 'sword', 'sun', 'star', 'crown', 'moon', 'axe', 'tree', 'heart', 'key', 'skull', 'coin', 'anchor', 'bird', 'wheat']
+/** Every emblem, the companies' with them. */
+export const ALL_CHARGE_IDS = Object.keys(CHARGES) as Charge[]
 export const CHARGE_NAMES: Record<Charge, string> = {
   none: 'None',
   keep: 'Keep',
@@ -159,13 +226,49 @@ export const CHARGE_NAMES: Record<Charge, string> = {
   anchor: 'Anchor',
   bird: 'Hawk',
   wheat: 'Wheat',
+  chili: 'Chili',
+  flame: 'Flame',
+  sack: 'Spice sack',
+  brush: 'Brush',
+  frame: 'Frame',
+  palette: 'Palette',
+  pick: 'Pick',
+  anvil: 'Anvil',
+  gem: 'Gem',
+  spool: 'Spool',
+  rose: 'Rose',
+  moth: 'Moth',
+  quill: 'Quill',
+  candle: 'Candle',
+  eye: 'Eye',
 }
 
 /** The metals: the emblem's colour and the cloth's edge. */
-export const METALS = { parchment: '#ece0c8', gold: '#e0ac4c', silver: '#c3cad2' } as const
+export const METALS = {
+  parchment: '#ece0c8',
+  gold: '#e0ac4c',
+  silver: '#c3cad2',
+  // One trim per company (Draft 4 § C).
+  copper: '#c8642a',
+  verdigris: '#4f9a8c',
+  bronze: '#9c7a3c',
+  rosegold: '#c97a64',
+  electrum: '#c9a94a',
+} as const
 export type Metal = keyof typeof METALS
-export const METAL_IDS = Object.keys(METALS) as Metal[]
-export const METAL_NAMES: Record<Metal, string> = { parchment: 'Parchment', gold: 'Gold', silver: 'Silver' }
+/** The metals everyone has. */
+export const METAL_IDS: readonly Metal[] = ['parchment', 'gold', 'silver']
+export const ALL_METAL_IDS = Object.keys(METALS) as Metal[]
+export const METAL_NAMES: Record<Metal, string> = {
+  parchment: 'Parchment',
+  gold: 'Gold',
+  silver: 'Silver',
+  copper: 'Copper',
+  verdigris: 'Verdigris',
+  bronze: 'Bronze',
+  rosegold: 'Rose gold',
+  electrum: 'Electrum',
+}
 
 export interface BannerLook {
   shape: BannerShape
@@ -182,10 +285,10 @@ export interface BannerLook {
 /** The flag a company flies before it has made one: navy swallowtail, a keep. */
 export const DEFAULT_BANNER: BannerLook = { shape: 'swallow', tincture: 'navy', charge: 'keep', pattern: 'plain', tincture2: 'sable', metal: 'parchment' }
 
-export const isBannerShape = (v: unknown): v is BannerShape => typeof v === 'string' && (BANNER_SHAPES as readonly string[]).includes(v)
+export const isBannerShape = (v: unknown): v is BannerShape => typeof v === 'string' && (ALL_BANNER_SHAPES as readonly string[]).includes(v)
 export const isTincture = (v: unknown): v is Tincture => typeof v === 'string' && Object.prototype.hasOwnProperty.call(TINCTURES, v)
 export const isCharge = (v: unknown): v is Charge => typeof v === 'string' && Object.prototype.hasOwnProperty.call(CHARGES, v)
-export const isPattern = (v: unknown): v is Pattern => typeof v === 'string' && (PATTERNS as readonly string[]).includes(v)
+export const isPattern = (v: unknown): v is Pattern => typeof v === 'string' && (ALL_PATTERNS as readonly string[]).includes(v)
 export const isMetal = (v: unknown): v is Metal => typeof v === 'string' && Object.prototype.hasOwnProperty.call(METALS, v)
 
 /** A flag with every optional part filled in. */
@@ -221,10 +324,39 @@ function inCloth(shape: BannerShape, x: number, y: number, clothH: number): bool
     case 'wave':
       // A ragged foot and fly, as a flag that has seen the road.
       return y <= clothH - 2 - ((x * 7) % 3 === 0 ? 1 : 0) && !(x === W - 1 && y % 4 === 1)
+    case 'flame': {
+      // Four tongues of flame along the foot, long and short (Peppercorn Co.).
+      const t = y - (clothH - 4)
+      if (t <= 0) return true
+      return FLAME_TONGUES.some(([fx, len]) => t <= len && Math.abs(x - fx) <= (len - t + 1) * 0.45 + 0.1)
+    }
+    case 'scallop': {
+      // Three round lobes along the foot (Easel House).
+      const t = y - (clothH - 3)
+      if (t <= 0) return true
+      return [3.5, 7.5, 11.5].some((c) => (x - c) ** 2 / 4.4 + (t - 0.5) ** 2 / 4 <= 1)
+    }
+    case 'battled':
+      // A crenellated foot, like a wall's top turned over (Ironvein).
+      return y <= clothH - 2 || Math.floor((x - 2) / 2) % 2 === 0
+    case 'fringe':
+      // A fringed foot, every other thread hanging loose (Rosethread).
+      return y <= clothH - 3 || x % 2 === 0
+    case 'crescent':
+      // A foot cut in a hollow curve, its two horns at the sides (Moonquill).
+      return y <= clothH - 4 + 4 * ((x - 7) / 5.5) ** 2
     default:
       return true
   }
 }
+
+/** The flame cut's tongues: (x, length). */
+const FLAME_TONGUES: readonly (readonly [number, number])[] = [
+  [3, 3],
+  [6, 4],
+  [9, 3],
+  [12, 4],
+]
 
 /** Whether `(x, y)` takes the pattern's colour. The cloth is x 2…12, y 1…clothH. */
 function inPattern(pattern: Pattern, x: number, y: number, clothH: number): boolean {
@@ -253,9 +385,27 @@ function inPattern(pattern: Pattern, x: number, y: number, clothH: number): bool
       return y <= 4
     case 'pall':
       return (v < 0.5 && (Math.abs(u - v) < 0.12 || Math.abs(1 - u - v) < 0.12)) || (v >= 0.5 && Math.abs(u - 0.5) < 0.12)
+    case 'checky':
+      return (Math.floor((x - 2) / 3) + Math.floor((y - 1) / 3)) % 2 === 1
+    case 'bordure':
+      // A band inside the edge (on a cloth, `bannerRows` follows the cut instead).
+      return x <= 3 || x >= BANNER_W - 2 || y <= 2 || y >= clothH - 1
     default:
       return false
   }
+}
+
+/**
+ * Whether a cloth cell sits within `d` steps of the cloth's outside — a
+ * border that follows the cut. The pole side (x < `poleX`) is not outside.
+ */
+export function nearEdge(inCloth: (x: number, y: number) => boolean, x: number, y: number, d: number, poleX: number): boolean {
+  for (let dy = -d; dy <= d; dy++)
+    for (let dx = -d; dx <= d; dx++) {
+      if (Math.abs(dx) + Math.abs(dy) > d || x + dx < poleX) continue
+      if (!inCloth(x + dx, y + dy)) return true
+    }
+  return false
 }
 
 /**
@@ -277,6 +427,11 @@ const CHARGE_AT: Record<BannerShape, readonly [number, number]> = {
   notch: [3, 6],
   wave: [5, 4],
   tall: [5, 7],
+  flame: [5, 4],
+  scallop: [5, 4],
+  battled: [5, 4],
+  fringe: [5, 4],
+  crescent: [5, 4],
 }
 
 /**
@@ -303,7 +458,7 @@ export function bannerRows(look: BannerLook): PixelRows {
     for (let x = 2; x < W; x++) {
       if (!cloth(y, x)) continue
       if (!cloth(y - 1, x) || !cloth(y + 1, x) || !cloth(y, x + 1) || (x > 2 && !cloth(y, x - 1))) out[y][x] = 'r'
-      else if (inPattern(pattern, x, y, clothH)) out[y][x] = 'd'
+      else if (pattern === 'bordure' ? nearEdge((cx, cy) => cloth(cy, cx), x, y, 2, 2) : inPattern(pattern, x, y, clothH)) out[y][x] = 'd'
     }
   }
   const [ox, oy] = CHARGE_AT[shape]

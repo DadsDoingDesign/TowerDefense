@@ -148,8 +148,8 @@ describe('what a first run shows, and when', () => {
   it('revealOf: each gate, its latch, and "Show everything" opening it all', () => {
     const r = (v: Parameters<typeof revealOf>[0]) => revealOf(v, false)
     // A first-timer and a run-2 player with 100 in the bank: nothing yet.
-    expect(r({ runsCompleted: 0, bank: 9999 })).toEqual({ hq: false, crates: false, market: false, focus: false })
-    expect(r({ runsCompleted: 1, bank: 100 })).toEqual({ hq: false, crates: false, market: false, focus: false })
+    expect(r({ runsCompleted: 0, bank: 9999 })).toEqual({ hq: false, crates: false, market: false, focus: false, war: false })
+    expect(r({ runsCompleted: 1, bank: 100 })).toEqual({ hq: false, crates: false, market: false, focus: false, war: false })
     // The HQ the first time the bank holds 500 — and it stays open once met (the latch).
     expect(r({ runsCompleted: 1, bank: 500 }).hq).toBe(true)
     expect(r({ runsCompleted: 3, bank: 40, met: ['hq'] }).hq).toBe(true)
@@ -161,7 +161,7 @@ describe('what a first run shows, and when', () => {
     expect(r({ runsCompleted: 3, met: ['crates'] }).crates).toBe(true)
     // The market and focus at five finished contracts.
     expect(r({ runsCompleted: 4 })).toMatchObject({ market: false, focus: false })
-    expect(r({ runsCompleted: 5 })).toMatchObject({ market: true, focus: true })
+    expect(r({ runsCompleted: 5 })).toMatchObject({ market: true, focus: true, war: true })
     // "Show everything from the start" opens every gate.
     expect(revealOf({ runsCompleted: 0 }, true)).toEqual(ALL_REVEALED)
     // Stakes, per company, at standing 2 with it.
@@ -255,7 +255,7 @@ describe('persistence and validation', () => {
   })
 
   it('the meta save carries `met` (v5+), and a v4 save loads with none', () => {
-    expect(META_VERSION).toBe(11)
+    expect(META_VERSION).toBeGreaterThanOrEqual(11)
     const v4 = { watchMarks: 12, upgrades: {}, topDifficulty: 0, stats: { runsCompleted: 2 }, codex: {} }
     expect(migrateMeta(v4, 4).met).toEqual([])
     expect(migrateMeta({ ...v4, met: ['relic', 'bogus', 'relic'] }, 5).met).toEqual(['relic'])

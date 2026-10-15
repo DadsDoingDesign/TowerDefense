@@ -214,7 +214,9 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     command: inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
     subwave: screen === 'battle' && battlePhase === 'battle' && breather && subwaveShown,
     speed: screen === 'battle' && battlePhase === 'battle' && breather && speedShown,
-    gear: gearShown && (inPlace || inSetup),
+    // In setup, where the gear and the pack are on screen — the reward hand
+    // in place shows neither (the three cards have the band).
+    gear: gearShown && inSetup,
     depth: depthShown && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
     merchant: onMap && reachable.some((id) => node(id)?.type === 'merchant'),
   })

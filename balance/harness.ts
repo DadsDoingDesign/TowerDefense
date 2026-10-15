@@ -382,6 +382,11 @@ export interface BattleMetrics {
   stats: BehaviourStats
   /** Ticks (at the harness `dt`) at which each Watch Command fired. */
   commandTicks: number[]
+  /** How many enemies reached the line (a head count, `BattleResult.enemiesLeaked`). */
+  enemiesLeaked: number
+  /** What a company ask counts off the fight (`run/asks.engineTally`): kills by key and kills while burning. */
+  killsByKey: Map<string, number>
+  burningKills: number
 }
 
 /**
@@ -744,6 +749,9 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     })),
     stats: { ...engine.behaviourStats },
     commandTicks,
+    enemiesLeaked: res.enemiesLeaked,
+    killsByKey: new Map(engine.killsByKey),
+    burningKills: engine.burningKills,
   }
 }
 

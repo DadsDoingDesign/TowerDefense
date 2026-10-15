@@ -8,6 +8,7 @@ import {
   COMBO_SKILLS,
   skillById,
   skillHeadline,
+  SIGNATURE_SKILLS,
   STARTER_SKILLS,
 } from '../src/game/data/skills'
 import { ICON_ORDER } from '../src/game/data/iconAtlas'
@@ -34,9 +35,9 @@ const ALL_POOL = ALL_SKILLS.map((k) => k.id)
 const at = (a: Archetype, level: number, extra: Partial<Sentinel> = {}): Sentinel => ({ ...applyXp(classicHero(a), xpToReach(level)), ...extra })
 
 describe('the skill library (SK1)', () => {
-  it('is 14 / 15 / 11 across the three levels, every id unique', () => {
+  it('is 14 / 20 / 11 across the three levels, every id unique', () => {
     const by = (l: number) => ALL_SKILLS.filter((k) => k.level === l).length
-    expect([by(1), by(2), by(3)]).toEqual([14, 15, 11])
+    expect([by(1), by(2), by(3)]).toEqual([14, 20, 11])
     expect(new Set(ALL_SKILLS.map((k) => k.id)).size).toBe(ALL_SKILLS.length)
   })
 
@@ -49,7 +50,7 @@ describe('the skill library (SK1)', () => {
   })
 
   it('splits the rest into random cards and feat cards, with no overlap', () => {
-    expect(RANDOM_UNLOCK_SKILLS.length + Object.keys(FEAT_SKILLS).length + STARTER_SKILLS.length).toBe(ALL_SKILLS.length)
+    expect(RANDOM_UNLOCK_SKILLS.length + Object.keys(FEAT_SKILLS).length + STARTER_SKILLS.length + Object.keys(SIGNATURE_SKILLS).length).toBe(ALL_SKILLS.length)
     for (const id of RANDOM_UNLOCK_SKILLS) expect(FEAT_SKILLS[id]).toBeUndefined()
   })
 

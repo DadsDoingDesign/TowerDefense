@@ -27,6 +27,8 @@ import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { encounterRulesOf, priceMultOf, routePrice } from '../../game/run/charter'
+import { freshAsks } from '../../game/run/asks'
+import { isDesperate } from '../../game/run/tradeWar'
 import { contractRules, earn, freshContract, marketFor, marketOpen, signingCost, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
@@ -134,12 +136,20 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const charter = !!order.charter
     // The market of the day pays from the fifth finished contract (the
     // staggered reveal); before that every contract signs at 1.
-    const market = !charter && (marketOpen(useMetaStore.getState().stats.runsCompleted) || useSettingsStore.getState().showEverything) ? marketFor(order.company, utcDateKey()) : 1
-    const contract = freshContract(
-      { company: charter ? null : order.company, crates: order.crates, market, ...(charter ? { charter } : {}) },
+    const marketOn = marketOpen(useMetaStore.getState().stats.runsCompleted) || useSettingsStore.getState().showEverything
+    const market = !charter && marketOn ? marketFor(order.company, utcDateKey()) : 1
+    // The trade war (Draft 4 § D) opens with the market: a contract for the
+    // company that finished last season last is signed on its desperate terms.
+    const desperate = !charter && marketOn && isDesperate(useMetaStore.getState().season, order.company)
+    const signed = freshContract(
+      { company: charter ? null : order.company, crates: order.crates, market, ...(charter ? { charter } : {}), ...(desperate ? { desperate } : {}) },
       // The Sovereign Route deals for no company: no HQ focus either.
       charter ? { ...hq, focus: null, boost: 0 } : hq,
     )
+    // What the company asks of the road (Draft 4 · A): a hash of the run seed
+    // and the company, never a draw. A first contract (LS3) is asked nothing —
+    // it never saw the terms that name them.
+    const contract: RunContract = firstRun ? signed : { ...signed, asks: freshAsks(runSeed, signed.company) }
     // The stake is the run's difficulty step: re-deal the map from the same
     // seed with its elites (a hash of the seed, never a draw — the map stream
     // is rewound, so an escort deals exactly the map an unstaked run did).

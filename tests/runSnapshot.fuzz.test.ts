@@ -54,6 +54,7 @@ import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
 import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/run/contracts'
+import { askById, judgeAsks } from '../src/game/run/asks'
 import { CHARTER_PAYOUT, SOVEREIGN_DILUTION } from '../src/game/run/charter'
 import { ROUTE_HAZARDS } from '../src/game/data/hazards'
 import { devCharter } from '../src/state/devCharter'
@@ -153,6 +154,13 @@ function buildBase(): Record<string, unknown> {
       // October 2026: the purse is the company's advance (never banked).
       purse: 60,
       advance: true,
+      // The trade war (Draft 4 · D): signed on desperate terms.
+      desperate: true,
+      // v18: the company's asks (Draft 4 · A), one counted, one judged at the end.
+      asks: [
+        { id: 'silk.wares', target: 4, got: 3 },
+        { id: 'silk.roadGold', target: 3500, got: 0 },
+      ],
     },
   })
   const snap = captureRun(useGameStore.getState(), {
@@ -268,6 +276,23 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const n of c.cargoAt) if (!Number.isInteger(n) || n < 0 || n > 100) throw new Error(`${where}: cargo ${n}`)
   if (c.pending !== null && c.pending !== c.paid.length - 1) throw new Error(`${where}: pending ${c.pending}`)
   if (!Number.isFinite(runDeposit({ gold: snap.gold, contract: c }))) throw new Error(`${where}: deposit`)
+  // The trade war: desperate terms are a strict true or absent, and never on a charter.
+  if ('desperate' in c && (c.desperate !== true || c.charter)) throw new Error(`${where}: desperate ${c.desperate}`)
+  // v18: the company's asks — known ids once each, from the company's own list
+  // (any three on a charter), whole counts, and a judged settle that is finite.
+  if (c.asks) {
+    if (!Array.isArray(c.asks) || c.asks.length === 0 || c.asks.length > (c.charter ? 3 : 2)) throw new Error(`${where}: asks ${JSON.stringify(c.asks)}`)
+    if (new Set(c.asks.map((a) => a.id)).size !== c.asks.length) throw new Error(`${where}: an ask twice`)
+    for (const a of c.asks) {
+      const def = askById(a.id)
+      if (!def) throw new Error(`${where}: ask ${a.id}`)
+      if (!c.charter && def.company !== c.company) throw new Error(`${where}: ask ${a.id} on ${c.company}'s road`)
+      if (!Number.isInteger(a.target) || a.target < 1 || a.target > 1e6) throw new Error(`${where}: ask target ${a.target}`)
+      if (!Number.isInteger(a.got) || a.got < 0 || a.got > 1e6) throw new Error(`${where}: ask count ${a.got}`)
+    }
+    const judged = judgeAsks({ contract: c, gold: snap.gold }, 'delivered')
+    if (judged.some((r) => !Number.isFinite(r.got))) throw new Error(`${where}: ask judged ${JSON.stringify(judged)}`)
+  }
   // v16: the road's gold and the HQ's terms, each within what the HQ sells.
   if (!Number.isInteger(c.earned) || c.earned < 0 || c.earned > 1e6) throw new Error(`${where}: earned ${c.earned}`)
   const hq = c.hq
@@ -804,7 +829,18 @@ function buildCharterBase(): Record<string, unknown> {
     roster: [{ ...s.roster[0], equipment: { ...s.roster[0].equipment, mainHand: brand } }],
     merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], repair: { hp: 5, price: 70 }, rerolls: 0 },
     // A charter one waypoint in: it paid nothing there, and waits on nothing.
-    contract: { ...s.contract!, paid: [0], cargoAt: [90], earned: 60 },
+    contract: {
+      ...s.contract!,
+      paid: [0],
+      cargoAt: [90],
+      earned: 60,
+      // v18: three asks from three companies' lists, one already met.
+      asks: [
+        { id: 'spice.burning', target: 120, got: 130 },
+        { id: 'metals.plated', target: 25, got: 4 },
+        { id: 'scrolls.pact', target: 1, got: 0 },
+      ],
+    },
   })
   const snap = captureRun(useGameStore.getState(), { rngLoot: 3, rngMap: 5, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
   useMetaStore.setState({ skills: keep.skills, items: keep.items, bank: keep.bank, stats: keep.stats, sovereign: keep.sovereign })
@@ -960,5 +996,51 @@ describe('October 2026: the company’s advance (no version step)', () => {
       const snap = migrateSnapshot(structuredClone(raw))!
       expect(snap.contract.advance).toBeUndefined()
     }
+  })
+})
+
+describe('v17 → v18: company asks (Draft 4 · A)', () => {
+  let base: Record<string, unknown> & { contract: Record<string, unknown> }
+  beforeAll(() => {
+    base = buildBase() as typeof base
+  })
+
+  it('carries the asks through a save, and a v17 payload with none loads and settles as it was signed', () => {
+    const snap = migrateSnapshot(structuredClone(base))!
+    expect(snap.contract.asks).toEqual([
+      { id: 'silk.wares', target: 4, got: 3 },
+      { id: 'silk.roadGold', target: 3500, got: 0 },
+    ])
+    const old = structuredClone(base)
+    delete old.contract.asks
+    old.v = 17
+    const back = migrateSnapshot(old)!
+    expect(back).not.toBeNull()
+    assertPlayable(back, 'v17')
+    expect('asks' in back.contract).toBe(false)
+    const pay = payoutFromRaw(old)!
+    expect(pay.contract && 'asks' in pay.contract).toBe(false)
+  })
+
+  it('drops what the catalogue and the road do not allow, and cleans every number', () => {
+    const raw = structuredClone(base)
+    raw.contract.asks = [
+      { id: 'nope', target: 3, got: 1 },
+      { id: 'metals.plated', target: 25, got: 30 }, // another company's ask on Rosethread's road
+      { id: 'silk.wares', target: 4.7, got: -3 },
+      { id: 'silk.wares', target: 2, got: 2 }, // the same ask twice
+      { id: 'silk.earned', target: 0, got: 1e12 },
+      { id: 'silk.roadGold', target: 3500, got: 0 }, // a third on a company's road
+    ]
+    const snap = migrateSnapshot(raw)!
+    expect(snap.contract.asks).toEqual([
+      { id: 'silk.wares', target: 4, got: 0 },
+      { id: 'silk.earned', target: 1, got: 1e6 },
+    ])
+    raw.contract.asks = 'everything'
+    expect('asks' in migrateSnapshot(raw)!.contract).toBe(false)
+    raw.contract.asks = [{ id: 'art.cargo', target: 900, got: 0 }]
+    raw.contract.company = 'art'
+    expect(migrateSnapshot(raw)!.contract.asks).toEqual([{ id: 'art.cargo', target: 100, got: 0 }])
   })
 })

@@ -19,7 +19,19 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode
 export interface CarouselOption {
   id: string
   name: string
+  /**
+   * Said after the name while this option is the chosen one — on a locked
+   * piece, what unlocks it ("Standing 6", Draft 4 § C).
+   */
+  note?: string
+  /** Not yours yet: drawn dimmed with a lock (it can still be tried on). */
+  locked?: boolean
+  /** What a screen reader hears for it, when the picture carries more than the name (a company's mark). */
+  spoken?: string
 }
+
+/** The neighbours in view: three, or fewer without repeating one when the set is that small. */
+const inView = (at: number, n: number): number[] => (n >= 3 ? [-1, 0, 1] : [-1, 0, 1].filter((off) => at + off >= 0 && at + off < n))
 
 const SLOT = 60 // px between neighbours on the wheel
 
@@ -88,14 +100,14 @@ export function FlagWheel<T extends CarouselOption>({
     <div className="fw">
       <div className="fw-head">
         <span className="field-k">{label}</span>
-        <span className="field-v">{cur.name}</span>
+        <span className="field-v">{cur.note ? `${cur.name} · ${cur.note}` : cur.name}</span>
       </div>
       <div className="fw-body">
         <div
           className={`fw-strip${dy ? ' is-dragging' : ''}`}
           role="button"
           tabIndex={0}
-          aria-label={`${label}: ${cur.name}, ${at + 1} of ${n}. Swipe or use the arrow keys to change; press to see all.`}
+          aria-label={`${label}: ${cur.spoken ?? cur.name}, ${at + 1} of ${n}. Swipe or use the arrow keys to change; press to see all.`}
           aria-haspopup="dialog"
           onPointerDown={onDown}
           onPointerMove={onMove}
@@ -191,12 +203,14 @@ export function PartCarousel<T extends CarouselOption>({
     else return
     e.preventDefault()
   }
-  const shown = [-1, 0, 1].map((off) => ({ off, o: options[(((at + off) % n) + n) % n] }))
+  const shown = inView(at, n).map((off) => ({ off, o: options[(((at + off) % n) + n) % n] }))
+  const cur = options[at]
+  const said = found < 0 ? 'Your own' : cur.note ? `${cur.name} · ${cur.note}` : cur.name
   return (
-    <div className="fw-part">
+    <div className={`fw-part${found >= 0 && cur.locked ? ' is-locked' : ''}`}>
       <div className="fw-head">
         <span className="field-k">{label}</span>
-        <span className="field-v">{found < 0 ? 'Your own' : options[at].name}</span>
+        <span className="field-v">{said}</span>
       </div>
       <div className="fw-track">
         <button type="button" className="fw-nudge" onClick={() => step(-1)} aria-label={`Previous ${label.toLowerCase()}`}>
@@ -210,7 +224,7 @@ export function PartCarousel<T extends CarouselOption>({
           aria-valuemin={1}
           aria-valuemax={n}
           aria-valuenow={at + 1}
-          aria-valuetext={found < 0 ? 'Your own' : options[at].name}
+          aria-valuetext={found < 0 ? said : (cur.spoken ?? said)}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
@@ -220,7 +234,7 @@ export function PartCarousel<T extends CarouselOption>({
           {shown.map(({ off, o }) => (
             <span
               key={`${o.id}:${off}`}
-              className={`fw-chip${off === 0 && found >= 0 ? ' on' : ''}`}
+              className={`fw-chip${off === 0 && found >= 0 ? ' on' : ''}${o.locked ? ' is-locked' : ''}`}
               style={{ transform: `translate(calc(-50% + ${off * PART_SLOT + dx}px), -50%) scale(${off === 0 ? 1 : 0.78})`, opacity: off === 0 ? 1 : 0.55 }}
               aria-hidden="true"
             >

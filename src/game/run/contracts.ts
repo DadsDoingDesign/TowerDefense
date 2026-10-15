@@ -39,6 +39,7 @@ import { ACT_LAYERS, ACTS } from './threat'
 import { difficultyRules, type DifficultyRules } from './watch'
 import { BASE_RUN_HQ, FOCUS_MAX_SHARE, type RunHq } from './hq'
 import { CHARTER_FEE, CHARTER_PAYOUT, CHARTER_TOWNS, MUSTER_STRENGTH, sovereignPool } from './charter'
+import type { RunAsk } from './asks'
 
 // ---------------------------------------------------------------------------
 // The numbers (placeholders the designer will tune: "to what makes it fun")
@@ -80,6 +81,15 @@ export const BONUS_PER_CRATE = 20
 export const CASH_OUT_RATE = 1
 /** Today's good sells for this much more (crate sales and the completion bonus). */
 export const MARKET_MULT = 1.3
+/**
+ * **Desperate terms** (Draft 4 § D, the trade war, `run/tradeWar.ts`): the
+ * company that finished a season last posts them for the next. Everything its
+ * contracts pay — every city's fee, sales and completion bonus, and a
+ * cash-out — is ×this, on top of the market of the day.
+ */
+export const DESPERATE_PAY = 1.5
+/** …and its raiders are this much stronger (the run's starting Threat, carried through every fight). */
+export const DESPERATE_STRENGTH = 1.2
 /** The crates that are milestones: each one reached adds one more skill on delivery. */
 export const MILESTONE_CRATES: readonly number[] = [2, 5, 8]
 /** How much more often a company's own skills and items are dealt on its routes. */
@@ -114,8 +124,16 @@ export const stakeRules = (crates: number): DifficultyRules => difficultyRules(c
  * Every caller that starts or previews a run's Threat reads this, so a
  * charter's raiders are as strong on the map preview as in the fight.
  */
-export const contractRules = (c: Pick<ContractTerms, 'crates' | 'charter'> | null | undefined): DifficultyRules =>
-  c?.charter ? { ...difficultyRules(0), startThreat: MUSTER_STRENGTH, leakMult: MUSTER_STRENGTH } : stakeRules(c?.crates ?? 0)
+export const contractRules = (c: Pick<ContractTerms, 'crates' | 'charter' | 'desperate'> | null | undefined): DifficultyRules =>
+  c?.charter
+    ? { ...difficultyRules(0), startThreat: MUSTER_STRENGTH, leakMult: MUSTER_STRENGTH }
+    : c?.desperate
+      ? // Desperate terms (the trade war): the stake's step, its raiders stronger from the first fight.
+        { ...stakeRules(c.crates ?? 0), startThreat: DESPERATE_STRENGTH }
+      : stakeRules(c?.crates ?? 0)
+
+/** What a contract's pay is multiplied by beyond its market: {@link DESPERATE_PAY} on desperate terms, else 1. */
+export const payMult = (t: Pick<ContractTerms, 'desperate' | 'charter'>): number => (t.desperate && !t.charter ? DESPERATE_PAY : 1)
 
 /** Danger, as 1–5 pips — how hard the road is at this load. Never a probability. */
 export const dangerPips = (crates: number): number => Math.min(5, 1 + Math.ceil(clampCrates(crates) / 2))
@@ -188,6 +206,13 @@ export interface ContractTerms {
    * destination.
    */
   charter?: boolean
+  /**
+   * Desperate terms (the trade war, `run/tradeWar.ts`): signed with the
+   * company that finished last season last. Pays ×{@link DESPERATE_PAY}, its
+   * raiders ×{@link DESPERATE_STRENGTH}. Absent: ordinary terms (and always
+   * on the Sovereign Route).
+   */
+  desperate?: boolean
 }
 
 export interface CityPay {
@@ -224,7 +249,7 @@ export function cityPay(t: ContractTerms, city: number, cargo = 100): CityPay {
     const bonus = city === CITY_COUNT - 1 ? CHARTER_PAYOUT : 0
     return { sold: 0, sales: 0, fee: 0, bonus, total: bonus }
   }
-  const share = Math.max(0, Math.min(100, cargo)) / 100
+  const share = (Math.max(0, Math.min(100, cargo)) / 100) * payMult(t)
   const sold = cratesSoldAt(t.crates, city)
   const sales = Math.round(sold * CITY_CRATE_VALUE[city] * t.market * share)
   const fee = Math.round(ESCORT_FEE * share)
@@ -266,6 +291,13 @@ export interface RunContract extends ContractTerms {
   earned: number
   /** What the HQ gave this run, frozen when it began (`hq.runHqFor`). */
   hq: RunHq
+  /**
+   * What the company asks of the run (Draft 4 · A, `run/asks.ts`): each ask's
+   * id, the target it was dealt and its count so far. Dealt when the run
+   * begins (a hash of the run seed, never a draw); absent on an older save and
+   * on a first contract, which pay exactly what they always did.
+   */
+  asks?: RunAsk[]
 }
 
 /** A contract signed now: its terms, the company's advance as its purse, and the HQ's terms. */
@@ -274,6 +306,7 @@ export const freshContract = (t: ContractTerms, hq: RunHq = BASE_RUN_HQ): RunCon
   company: t.charter ? null : t.company,
   crates: t.charter ? 0 : clampCrates(t.crates),
   market: t.charter ? 1 : t.market,
+  ...(t.desperate && !t.charter ? { desperate: true } : {}),
   purse: ADVANCE,
   advance: true,
   paid: [],
@@ -324,7 +357,7 @@ export const FIRST_RUN_CASH_OUT_CITY = 1
 /** What cashing out sells the crates still on the wagons for, at `cargo` percent. */
 export function cashOutValue(t: ContractTerms, citiesPaid: number, cargo = 100): number {
   if (t.charter) return 0
-  const share = Math.max(0, Math.min(100, cargo)) / 100
+  const share = (Math.max(0, Math.min(100, cargo)) / 100) * payMult(t)
   return Math.round(cratesLeftAfter(t.crates, citiesPaid) * CRATE_VALUE * t.market * CASH_OUT_RATE * share)
 }
 

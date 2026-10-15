@@ -31,8 +31,8 @@
  * `hq.HQ_OPENS_AT` gold (latched in `met`, so it stays open); the sealed
  * crates after the first DELIVERED contract (latched too); stakes per company
  * at `contracts.STAKES_OPEN_AT` standing with it (`stakesShown`); the market
- * of the day and company focus from the `contracts.MARKET_FROM_RUN`th
- * finished contract. A save that met the HQ or the crates before the stagger
+ * of the day, company focus and the trade war from the
+ * `contracts.MARKET_FROM_RUN`th finished contract. A save that met the HQ or the crates before the stagger
  * keeps them (the latch is the same `met` entry).
  */
 import type { MapNode, RunMap } from '../game/data/runmap'
@@ -77,6 +77,7 @@ export const IDEAS = [
   'sovereign',
   'market',
   'focus',
+  'war',
 ] as const
 export type IdeaId = (typeof IDEAS)[number]
 
@@ -207,9 +208,11 @@ export interface Reveal {
   market: boolean
   /** Company focus (the HQ's Operations): from the `hq.FOCUS_FROM_RUN`th finished contract. */
   focus: boolean
+  /** The trade war (Draft 4 § D, `run/tradeWar.ts`): with the market of the day — its seasons count from then. */
+  war: boolean
 }
 
-export const ALL_REVEALED: Reveal = { hq: true, crates: true, market: true, focus: true }
+export const ALL_REVEALED: Reveal = { hq: true, crates: true, market: true, focus: true, war: true }
 
 /** The staggered reveal. "Show everything from the start" opens it all. */
 export function revealOf(v: RevealFacts, showEverything: boolean): Reveal {
@@ -221,6 +224,7 @@ export function revealOf(v: RevealFacts, showEverything: boolean): Reveal {
     crates: met.includes('crates') || cratesOpenFor(v.runsWon ?? 0),
     market: marketOpen(runs),
     focus: runs >= FOCUS_FROM_RUN,
+    war: marketOpen(runs),
   }
 }
 
@@ -245,6 +249,7 @@ export function metaIdeas(v: RevealFacts): IdeaId[] {
   if (v.standing && COMPANY_IDS.some((c) => stakesOpen(standingOf(v.standing!, c)))) out.push('stake')
   if (r.market) out.push('market')
   if (r.focus) out.push('focus')
+  if (r.war) out.push('war')
   return out
 }
 

@@ -9,6 +9,7 @@ import { receiveItems, withRecruits } from '../../game/run/recruits'
 import { applyRewardCard } from '../../game/run/rewards'
 import { restockFree, shelfSize } from '../../game/run/relics'
 import { priceMultOf } from '../../game/run/charter'
+import { tallyAsks } from '../../game/run/asks'
 import { sfx, sfxRarity, sfxReward } from '../../audio/audio'
 import { CLEAR_SHELL } from './fresh'
 import { useMetaStore } from '../metaStore'
@@ -160,7 +161,8 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     sfx('coin')
     sfxRarity(entry.item.rarity)
     const got = receiveItems(roster, inventory, [entry.item], get().relics, packSlotsOf(get()))
-    const paid = { gold: gold - entry.price, contract: get().contract }
+    // A ware bought is one more for an ask that wants wares (Draft 4 · A).
+    const paid = { gold: gold - entry.price, contract: tallyAsks(get().contract, { wares: 1 }) }
     set({
       ...paid,
       roster: got.roster,
@@ -186,11 +188,13 @@ export const createEventsSlice: Slice<EventActions> = (set, get) => ({
     // something else, and that something has its own voice.
     if ((eff.goldDelta ?? 0) > 0) sfx('coin')
     const delta = eff.goldDelta ?? 0
+    // A pact accepted is one for an ask that wants one (Draft 4 · A).
+    const purse = { gold, contract: tallyAsks(get().contract, { pacts: 1 }) }
     set({
       roster: eff.roster ?? roster,
       baseHp: newBaseHp,
       // A shrine's gift is road gold; its price is spending.
-      ...(delta > 0 ? roadPays(get(), delta) : { gold: Math.max(0, gold + delta) }),
+      ...(delta > 0 ? roadPays(purse, delta) : { gold: Math.max(0, gold + delta), contract: purse.contract }),
     })
     completeNode(get, set, event.nodeId)
   },

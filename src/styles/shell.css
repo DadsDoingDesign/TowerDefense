@@ -2688,3 +2688,12 @@
   cursor: default;
   opacity: 0.55;
 }
+
+/*
+ * A second term (Draft 4 · B): the company's crest wears a gold rim wherever
+ * it is drawn — a one-pixel ring of the accent gold that follows the logo's
+ * own outline (four hard drop-shadows; no blur, so it stays pixel art).
+ */
+.crest.rim {
+  filter: drop-shadow(1px 0 0 var(--accent)) drop-shadow(-1px 0 0 var(--accent)) drop-shadow(0 1px 0 var(--accent)) drop-shadow(0 -1px 0 var(--accent));
+}
