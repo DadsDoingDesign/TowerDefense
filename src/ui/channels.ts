@@ -1,7 +1,7 @@
 import { DUAL_WIELD_DEX, gripOf, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { interestLine, LOST_ROAD_SHARE, ROAD_SHARE } from '../game/run/hq'
 import { ADVANCE, DESPERATE_PAY, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
-import { SEASON_LENGTH } from '../game/run/tradeWar'
+import { DESPERATE_STRENGTH, PATRON_PURSE, SEASON_LENGTH } from '../game/run/tradeWar'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
@@ -632,11 +632,15 @@ export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { ter
   },
   war: {
     term: 'The trade war',
-    line: `The companies fight over the trade, and your contracts move it: a delivery takes share for its company, a fall loses some. Every ${SEASON_LENGTH} contracts a season ends: the leader pays its top militia, and the last posts desperate terms — its contracts pay ×${DESPERATE_PAY}, its raiders are stronger.`,
+    line: `The companies fight over the trade, and your contracts move it: a delivery takes share for its company, a fall loses some. The biggest share wears the crown. Every ${SEASON_LENGTH} contracts a season ends: your patron pays you, and the last company that hires you posts desperate terms for the next.`,
     also: [
       {
-        term: 'An exclusive',
-        line: 'Once a season, from a company’s terms: more standing from its contracts, while its rival turns cold and takes one crate fewer.',
+        term: 'Your patron',
+        line: `Whichever company you delivered the most contracts for this season. When the season ends it pays you ${PATRON_PURSE} gold for each of them and a pick of one of its items. A tie goes to the bigger share. No delivery, no patron.`,
+      },
+      {
+        term: 'Desperate terms',
+        line: `Posted for a season by whichever company came last in the one before, of those that hire you: its contracts pay ×${DESPERATE_PAY}, and its raiders are ${Math.round((DESPERATE_STRENGTH - 1) * 100)}% stronger.`,
       },
     ],
   },

@@ -22,8 +22,7 @@ export function useWar(): { open: boolean; season: Season } {
   return { open: reveal.war, season }
 }
 
-/** "Peppercorn Co." → "Peppercorn", where a line names the company twice or is short of room. */
-export const shortName = (id: CompanyId): string => companyById(id).name.replace(/ Co\.$/, '')
+export { shortName } from './seasonCardCopy'
 
 /**
  * The five shares as one bar: a segment per company in its colour, widest

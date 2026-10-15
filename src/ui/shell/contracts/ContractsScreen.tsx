@@ -29,7 +29,7 @@ import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
 import { ContractPage, DangerPips, Gold, MarketTag, PageTip, Slip, SlipLine } from './parts'
 import { AskTerms } from './AskParts'
 import { WarTerms } from '../war/WarTerms'
-import { isCold, isDesperate, seasonCrateCap } from '../../../game/run/tradeWar'
+import { isDesperate } from '../../../game/run/tradeWar'
 
 /**
  * A company's terms (the mercenary company; mockups `trade/r3/3-stakes.png`,
@@ -84,10 +84,9 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
   const co = companyById(company)
   const market = marketFor(company, utcDateKey(), reveal.market)
   const standing = standingOf(meta.standing, company)
-  // The trade war (Draft 4 § D): a cold rival takes one crate fewer; desperate terms pay ×1.5.
-  const cold = reveal.war && isCold(meta.season, company)
+  // The trade war (Draft 4 § D): desperate terms pay ×1.5.
   const desperate = reveal.war && isDesperate(meta.season, company)
-  const standingCap = cold ? seasonCrateCap(meta.season, company, standing) : crateCap(standing)
+  const standingCap = crateCap(standing)
   // Stakes open per company at standing 2 with it (the staggered reveal).
   const stakesOpen = stakesShown(meta.standing, company, showEverything)
   const cap = stakeCap(meta, company)
@@ -228,7 +227,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
               'Standard raiders.'
             )}
           </span>
-          {standingCap < MAX_CRATES && !cold && (
+          {standingCap < MAX_CRATES && (
             <span className="ct-lockline">
               Crate {standingCap + 1} opens at Standing {standingCap} with {co.name}
             </span>

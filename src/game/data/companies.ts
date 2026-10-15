@@ -72,13 +72,6 @@ export interface Company {
   emblem: readonly string[]
   /** A company that opens later: it hires once you hold this standing with ANY company. */
   opensAt?: number
-  /**
-   * Its rival in the trade war (Draft 4 § D): an exclusive with this company
-   * turns the rival cold for the season (`run/tradeWar.ts`). The pairs are
-   * fixed and mutual: Ironvein ↔ Moonquill (plate against wards), Peppercorn
-   * ↔ Rosethread (the river trade). Easel House sells to everyone and has none.
-   */
-  rival?: CompanyId
 }
 
 /** The ground every route used to share, and a battle with no contract still deals. */
@@ -92,7 +85,6 @@ export const COMPANIES: readonly Company[] = [
     noun: 'spice',
     color: '#c6e05a',
     ground: { name: 'Wildfire', rules: ['wildfire'], swatch: '#e0743a' },
-    rival: 'silk',
     towns: ['Saltmarsh', 'Cinder Ford', 'Pepperport'],
     letters: [
       '{name} seeks an escort for its {noun}, by {c1} and {c2} to {dest}.',
@@ -122,7 +114,6 @@ export const COMPANIES: readonly Company[] = [
     color: '#5d8be2',
     ground: { name: 'Quarry boulders', rules: ['quarry'], swatch: '#8a8a8a' },
     armour: 'plated',
-    rival: 'scrolls',
     towns: ['Slagpit', 'Cobble Rise', 'Deepforge'],
     letters: [
       '{name} will pay well for {noun} that reaches {dest} unstolen.',
@@ -137,7 +128,6 @@ export const COMPANIES: readonly Company[] = [
     noun: 'silk',
     color: '#dba5b9',
     ground: { name: 'Fords and fires', rules: OPEN_GROUND, swatch: '#a08060' },
-    rival: 'spice',
     towns: ['Reedwick', 'Spindle', 'Loomhaven'],
     letters: [
       '{name} asks for quiet blades on the river road to {dest}.',
@@ -153,7 +143,6 @@ export const COMPANIES: readonly Company[] = [
     color: '#e4e8f2',
     ground: { name: 'Cursed ground', rules: ['hexed'], swatch: '#f49e80' },
     armour: 'warded',
-    rival: 'metals',
     towns: ['Quill Hill', 'Lanternhold', 'Inkspire'],
     letters: [
       '{name} seeks wardens for sealed {noun} bound for {dest}.',
@@ -166,9 +155,6 @@ export const COMPANIES: readonly Company[] = [
 
 const BY_ID = new Map(COMPANIES.map((c) => [c.id, c]))
 export const companyById = (id: CompanyId): Company => BY_ID.get(id)!
-
-/** A company's rival in the trade war, or null (Easel House has none). */
-export const rivalOf = (id: CompanyId): CompanyId | null => BY_ID.get(id)?.rival ?? null
 
 /** The company a first-timer's one free escort is for. */
 export const FIRST_COMPANY: CompanyId = 'spice'
