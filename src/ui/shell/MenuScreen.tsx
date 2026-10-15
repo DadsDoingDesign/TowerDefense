@@ -5,7 +5,7 @@ import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
 import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
-import { nextRewardWord, trackPlan } from '../../game/run/track'
+import { nextReward, trackPlan } from '../../game/run/track'
 import { charterDoor } from '../../game/run/charter'
 import { contractsLeft, seasonBars, type SeasonBar } from '../../game/run/tradeWar'
 import { useGameStore, type HomeFocus } from '../../state/gameStore'
@@ -574,7 +574,7 @@ function CompanyCard({
 }) {
   const co = companyById(company)
   // What the track's next level pays, by name (Draft 4 · B).
-  const next = nextRewardWord(trackPlan(company, { xp, term, skills, items }))
+  const next = nextReward(trackPlan(company, { xp, term, skills, items }))
   const state = { company, staged, open, war: war ?? null, market, next }
   const facts = companyFacts(state)
   const badge = companyBadge(state)

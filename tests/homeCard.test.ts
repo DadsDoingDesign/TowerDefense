@@ -4,6 +4,8 @@ import { ENEMY_MODS } from '../src/game/data/enemies'
 import { CURSED_DAMAGE_MULT } from '../src/game/data/hazards'
 import { CURSED_DAMAGE_PCT, GROUND_EFFECTS, groundEffect, TERRAIN_RULE_IDS } from '../src/game/data/terrain'
 import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
+import { DESPERATE_PAY } from '../src/game/run/contracts'
+import { DESPERATE_STRENGTH } from '../src/game/run/tradeWar'
 import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { CHARTER_ROWS, charterFacts, COMPANY_ROWS, companyBadge, companyFacts } from '../src/ui/shell/homeCard'
@@ -16,6 +18,13 @@ import { charterSlot } from '../src/ui/shell/homeDock'
  */
 
 type War = Parameters<typeof companyFacts>[0]['war']
+type Next = Parameters<typeof companyFacts>[0]['next']
+const NEXTS: Next[] = [
+  { kind: 'skill', id: 'gilt-frame', name: 'Gilt Frame', level: 5 },
+  { kind: 'bonus', id: 'Warhammer', name: 'Warhammer', level: 10 },
+  { kind: 'term', id: null, name: 'A second term', level: 10 },
+  null,
+]
 const WARS: War[] = [
   null,
   { desperate: false },
@@ -32,29 +41,46 @@ describe('the company card: a fixed form', () => {
             [false, false],
             [true, true],
           ] as const)
-            for (const next of ['Gilt Frame at 5', null]) {
+            for (const next of NEXTS) {
               const facts = companyFacts({ company, staged, open, war, market, next })
               expect(facts.map((f) => f.key)).toEqual([...COMPANY_ROWS])
-              expect(facts.map((f) => f.label)).toEqual(['Ground', 'Raiders', 'Next'])
+              expect(facts.map((f) => f.label).slice(0, 2)).toEqual(['Ground', 'Raiders'])
+              // The third row's label is the level that pays it, or "Track" when nothing is ahead.
+              expect(facts[2].label).toBe(next && (open || staged) ? `Rep ${next.level}` : 'Track')
               // A one-off condition is a short badge in the head, never a row.
               const badge = companyBadge({ company, staged, open, war, market, next })
-              if (badge) expect(badge.label.length, `${company}: ${badge.label}`).toBeLessThanOrEqual(16)
+              if (badge) expect(badge.label.length, `${company}: ${badge.label}`).toBeLessThanOrEqual(22)
               // One line each: short enough for the 375px card (it is also cut in place, never wrapped).
               for (const f of facts) expect(f.value.length, `${company} ${f.key}: ${f.value}`).toBeLessThanOrEqual(32)
             }
   })
 
-  it('the head badge shows one condition, by priority, and nothing on most days', () => {
+  it('the head badge shows one condition, by priority, with the dock mark\'s own number, and nothing on most days', () => {
     const at = (war: War, market = 1) => companyBadge({ company: 'silk', staged: false, open: true, war, market, next: null })
     expect(at(null)).toBeNull()
     expect(at({ desperate: false })).toBeNull()
-    expect(at(null, 1.3)).toMatchObject({ label: 'Top price ×1.3', tone: 'market' })
+    expect(at(null, 1.3)).toMatchObject({ label: `Market · pays ×1.3`, tone: 'market' })
     expect(at(null, 1.3)?.name).toContain('silk')
-    // Desperate beats the market.
-    expect(at({ desperate: true }, 1.3)).toMatchObject({ tone: 'bad' })
-    expect(at({ desperate: true }, 1.3)?.label).toMatch(/^Desperate \+\d+%$/)
+    // Desperate beats the market, and says the dock's ×1.5.
+    expect(at({ desperate: true }, 1.3)).toMatchObject({ label: `Desperate · pays ×${DESPERATE_PAY}`, tone: 'bad' })
     // A first launch's CTA says "Take the free escort": no badge to say it again.
     expect(companyBadge({ company: 'spice', staged: true, open: true, war: null, market: 1.3, next: null })).toBeNull()
+  })
+
+  it('desperate terms put their raider strength on the Raiders row, the pay on the badge', () => {
+    const pct = Math.round((DESPERATE_STRENGTH - 1) * 100)
+    const raiders = (desperate: boolean) => companyFacts({ company: 'silk', staged: false, open: true, war: { desperate }, market: 1, next: null })[1]
+    expect(raiders(true)).toMatchObject({ value: `+${pct}% · Plate or wards, evenly`, tone: 'bad' })
+    expect(raiders(false).value).toBe('Plate or wards, evenly')
+  })
+
+  it('the Rep row names what the track pays next, by kind', () => {
+    const row = (next: Next) => companyFacts({ company: 'art', staged: false, open: true, war: null, market: 1, next })[2]
+    expect(row(NEXTS[0])).toMatchObject({ label: 'Rep 5', value: 'Skill · Gilt Frame' })
+    expect(row({ kind: 'item', id: 'Axe', name: 'Axe', level: 3 })).toMatchObject({ label: 'Rep 3', value: 'Item · Axe' })
+    expect(row(NEXTS[1])).toMatchObject({ label: 'Rep 10', value: 'Rare item · Warhammer' })
+    expect(row({ kind: 'stakes', id: null, name: 'Stakes', level: 2 }).value).toBe('Stakes open')
+    expect(row(null)).toMatchObject({ label: 'Track', value: 'All earned' })
   })
 
   it('Ground says what the ground does, from the one table; Raiders says what gets through', () => {

@@ -3965,3 +3965,9 @@ The designer, circling "Today · Usual terms" on the home card: "The terms is a 
 - **Desk:** the head is a 250px column there, and the badge squeezed "Rosethread" to "Rose…". On a desk the badge takes its own line under the name, and that line is always reserved, so a company without a badge keeps its name in the same place.
 - **First launch:** a "Free escort" badge repeated the CTA ("Take the free escort"), so a first launch shows no badge.
 - The card is a row shorter, which gives the map that room.
+
+### 2026-10-15 — "Next what?" and "how do ×1.5 and +20% add up?"
+The designer on the card: "And next? Is next what.. next reward next item next skill idk", then on Rosethread: "how does x1.5 and +25% add up? are they the same info". Both were facts said without what they are.
+- **The track row:** "NEXT · a Rare Robe at 3" → "REP 3 · [robe] Rare item · Robe". The label is the level that pays it (the dock says the level you are at), the value names the kind (Skill · / Item · / Rare item · / Stakes open / A second term), and the reward's own mark sits in the mark column. `track.nextReward` replaces the string `nextRewardWord`; `skillIcon` / `itemKindIcon` moved to `channels` (the track page and the card share them).
+- **Desperate terms:** the two halves of one deal sat apart, unlinked: the dock's "×1.5" (it pays more) and the badge's "+20%" (its raiders are stronger). The badge now carries the dock mark's own number, "Desperate · pays ×1.5", and the +20% moves to the Raiders row, in red ("+20% · Plate or wards, evenly"). The market's badge says "Market · pays ×1.3" to match its dock mark.
+Checked at 390 × 844, 375 × 667 and 1280 × 800; `scripts/home-stability.mjs` passes.

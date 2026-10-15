@@ -167,7 +167,7 @@ result. Append a short note to the review log when you're done.
   `ui/shell/homeDock.ts`; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
   dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for
-  every company (Ground · Raiders · Next, `ui/shell/homeCard.ts`; the
+  every company (Ground · Raiders · Rep N — the track's next reward by kind, `track.nextReward` — `ui/shell/homeCard.ts`; the
   ground says its effect from `terrain.GROUND_EFFECTS`, never its
   place-name; a one-off condition — desperate terms, the market's top price
   — is a badge at the head's right, `companyBadge`, only when it applies)

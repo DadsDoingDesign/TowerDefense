@@ -1,9 +1,8 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { COMPANY_IDS, companyById, type CompanyId } from '../../../game/data/companies'
 import { kitPieceLabel } from '../../../game/data/companyKits'
-import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
-import { itemKindById } from '../../../game/data/itemKinds'
-import { SIGNATURE_SKILLS, skillById, skillHeadline } from '../../../game/data/skills'
+import type { IconKey } from '../../../game/data/iconAtlas'
+import { SIGNATURE_SKILLS, skillById } from '../../../game/data/skills'
 import { askStandingFor } from '../../../game/run/asks'
 import { crateCap } from '../../../game/run/contracts'
 import { companyOpen } from '../../../game/run/standing'
@@ -25,7 +24,7 @@ import {
 import { MAX_STANDING } from '../../../game/run/standing'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
-import { companyVar } from '../../channels'
+import { companyVar, itemKindIcon, skillIcon } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crest, Lock } from '../../pixel'
 import { CodexCard, CodexSheet } from '../codex/CodexScreen'
@@ -229,14 +228,6 @@ function Row({ row, open, xp, owned, onOpen }: { row: TrackRow; open: boolean; x
   )
 }
 
-const skillIcon = (id: string): IconKey => {
-  const k = skillById(id)
-  return k ? skillHeadline(k).icon : 'boon'
-}
-const kindIcon = (id: string): IconKey => {
-  const k = itemKindById(id)
-  return k ? itemIcon({ name: k.id, slot: k.slot }) : 'loot'
-}
 
 /**
  * What a row says. A level still ahead names exactly what it will pay; an
@@ -260,15 +251,15 @@ function partsOf(pay: TrackPay, earned: boolean, owned: readonly string[]): Part
   } else {
     if (pay.card) out.push({ icon: skillIcon(pay.card), k: 'Skill card', v: skillById(pay.card)?.name, open: skill(pay.card) })
     if (pay.signature) out.push({ icon: skillIcon(pay.signature), k: 'Signature skill', v: skillById(pay.signature)?.name, open: skill(pay.signature) })
-    if (pay.item) out.push({ icon: kindIcon(pay.item), k: 'Item', v: pay.item, open: previewEntry('item', pay.item, `${at} unlocks it.`) })
+    if (pay.item) out.push({ icon: itemKindIcon(pay.item), k: 'Item', v: pay.item, open: previewEntry('item', pay.item, `${at} unlocks it.`) })
     if (pay.bonus)
-      out.push({ icon: kindIcon(pay.bonus), k: 'Rare bonus item', v: pay.bonus, open: previewEntry('item', pay.bonus, `${at} pays a Rare one for the next contract.`) })
+      out.push({ icon: itemKindIcon(pay.bonus), k: 'Rare bonus item', v: pay.bonus, open: previewEntry('item', pay.bonus, `${at} pays a Rare one for the next contract.`) })
   }
   if (pay.stakes) out.push({ icon: 'coffer', k: 'Stakes', v: 'Open on its road' })
   if (pay.secondTerm) out.push({ icon: 'crown', k: 'Second term', v: 'Asks pay double' })
   if (pay.named)
     out.push({
-      icon: kindIcon(pay.named),
+      icon: itemKindIcon(pay.named),
       k: 'Sovereign item',
       v: pay.named,
       open: previewEntry('item', pay.named, `Named at ${at}. A delivered Sovereign Route unlocks it.`),

@@ -13,7 +13,8 @@
  *    (`terrain.GROUND_EFFECTS`), not its place-name;
  *  - **Raiders** — the armour its armoured fights lean to and the damage that
  *    goes through it, or "Plate or wards, evenly";
- *  - **Next** — what the track pays next (the way into the track).
+ *  - **Rep N** — what the loyalty track pays at the next level, by kind
+ *    ("Skill · Gilt Frame"), with its mark (the way into the track).
  *
  * A one-off condition — desperate terms, the market of the day — is not a row: most days no company has one, and
  * a row that read "Usual terms" on nearly every card was a row with no job
@@ -28,8 +29,10 @@ import { companyById, type CompanyId } from '../../game/data/companies'
 import { ENEMY_MODS } from '../../game/data/enemies'
 import { GROUND_EFFECTS, groundEffect, type GroundMark } from '../../game/data/terrain'
 import { CHARTER_PAYOUT } from '../../game/run/charter'
+import { DESPERATE_PAY } from '../../game/run/contracts'
+import type { NextReward } from '../../game/run/track'
 import { DESPERATE_STRENGTH } from '../../game/run/tradeWar'
-import type { IconKey } from '../channels'
+import { itemKindIcon, skillIcon, type IconKey } from '../channels'
 import type { CharterSlot } from './homeDock'
 
 /** How a value reads: plain, quiet (nothing special), or in a condition's colour. */
@@ -85,8 +88,8 @@ type CardState = {
   war: { desperate: boolean } | null
   /** The market's multiplier on its goods today (1: not its day, or the market is not shown). */
   market: number
-  /** What its track pays next, by name (`track.nextRewardWord`), or null when all is earned. */
-  next: string | null
+  /** What its track pays next (`track.nextReward`), or null when all is earned. */
+  next: NextReward | null
 }
 
 export function companyFacts(o: CardState): CardFact[] {
@@ -109,6 +112,14 @@ export function companyFacts(o: CardState): CardFact[] {
         name: 'Raiders: its armoured fights are Plated or Warded, evenly',
         tone: 'quiet',
       }
+  // Desperate terms make its raiders stronger: said on the Raiders row, where
+  // raiders are, and the pay half (the dock's ×1.5) on the head's badge.
+  if (o.war?.desperate && !o.staged) {
+    const pct = Math.round((DESPERATE_STRENGTH - 1) * 100)
+    raiders.value = `+${pct}% · ${raiders.value}`
+    raiders.name = `${raiders.name}. Desperate terms: its raiders are ${pct}% stronger`
+    raiders.tone = 'bad'
+  }
   return [
     { key: 'ground', label: 'Ground', value: g.effect, name: `Ground: ${g.line}`, tone: 'plain', ground: g.marks },
     raiders,
@@ -120,21 +131,39 @@ export function companyFacts(o: CardState): CardFact[] {
 export function companyBadge(o: CardState): CardBadge | null {
   // A first launch's CTA already says it: "Take the free escort".
   if (o.staged) return null
+  // The badge carries the dock mark's own number, so the two read as one fact.
   if (o.war?.desperate) {
     const pct = Math.round((DESPERATE_STRENGTH - 1) * 100)
-    return { label: `Desperate +${pct}%`, name: `Desperate terms this season: its raiders are ${pct}% stronger`, tone: 'bad', icon: 'warn' }
+    return { label: `Desperate · pays ×${DESPERATE_PAY}`, name: `Desperate terms this season: it pays ×${DESPERATE_PAY}, and its raiders are ${pct}% stronger`, tone: 'bad', icon: 'warn' }
   }
   if (o.market > 1) {
     const noun = companyById(o.company).noun
-    return { label: `Top price ×${o.market}`, name: `The market pays ×${o.market} for ${noun} today`, tone: 'market', icon: 'gold' }
+    return { label: `Market · pays ×${o.market}`, name: `Market day: ${noun} sells for ×${o.market} today`, tone: 'market', icon: 'gold' }
   }
   return null
 }
 
+/**
+ * What its loyalty track pays at the next standing level, named by kind —
+ * "Rep 5 · Skill · Gilt Frame" — with the reward's own mark. The label is the
+ * level (the dock says the level you are at), so the row reads as "at Rep 5
+ * you get this"; the row opens the track.
+ */
 function nextFact(o: CardState): CardFact {
-  if (!o.open && !o.staged) return { key: 'next', label: 'Next', value: 'Not hiring yet', name: 'Next: its track opens once it hires you', tone: 'quiet' }
-  const v = o.next ?? 'All earned'
-  return { key: 'next', label: 'Next', value: v, name: `Next on its track: ${v}`, tone: o.next ? 'plain' : 'quiet' }
+  if (!o.open && !o.staged) return { key: 'next', label: 'Track', value: 'Opens once it hires you', name: 'Its loyalty track opens once it hires you', tone: 'quiet' }
+  const r = o.next
+  if (!r) return { key: 'next', label: 'Track', value: 'All earned', name: 'Its loyalty track: every level earned', tone: 'quiet' }
+  const [value, icon]: [string, IconKey] =
+    r.kind === 'skill'
+      ? [`Skill · ${r.name}`, skillIcon(r.id!)]
+      : r.kind === 'item'
+        ? [`Item · ${r.name}`, itemKindIcon(r.id!)]
+        : r.kind === 'bonus'
+          ? [`Rare item · ${r.name}`, itemKindIcon(r.id!)]
+          : r.kind === 'stakes'
+            ? ['Stakes open', 'coffer']
+            : ['A second term', 'crown']
+  return { key: 'next', label: `Rep ${r.level}`, value, name: `At Rep ${r.level}, its loyalty track pays: ${value}`, tone: 'plain', icon }
 }
 
 const n = (x: number) => x.toLocaleString('en')
