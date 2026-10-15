@@ -5,7 +5,7 @@
  * order the trade map fans its roads, west to east), each saying what tells
  * one company from another at a glance: your standing with it, its share of
  * the trade while the war is on, and the day's marks — desperate terms, the
- * market of the day, your exclusive, cold to you. The focused company's card
+ * market of the day. The focused company's card
  * says what those marks MEAN; the slot carries the number. Nothing here reads
  * a store: `MenuScreen` passes the save in, `tests/homeDock.test.ts` drives it.
  *
@@ -15,12 +15,12 @@
 import { COMPANY_IDS, companyById, type CompanyId } from '../../game/data/companies'
 import { companyOpen, standingOf, type StandingXp } from '../../game/run/standing'
 import { termName, trackLevel } from '../../game/run/track'
-import { DESPERATE_PAY, isCold, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
+import { DESPERATE_PAY, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
 import { CHARTER_FEE, type CharterDoor } from '../../game/run/charter'
 
 /** A day's mark on a slot, in the order they are shown. */
-export type SlotMark = 'desperate' | 'market' | 'exclusive' | 'cold'
-const MARK_ORDER: readonly SlotMark[] = ['desperate', 'market', 'exclusive', 'cold']
+export type SlotMark = 'desperate' | 'market'
+const MARK_ORDER: readonly SlotMark[] = ['desperate', 'market']
 /** At most this many marks hang on a slot (all of them are in its name, and on its card). */
 export const SLOT_MARKS = 2
 
@@ -47,16 +47,12 @@ export interface DockSlot {
 /** A mark's face on the slot: the number where there is one. */
 export function markText(mark: SlotMark, marketMult: number): string {
   if (mark === 'desperate') return `×${DESPERATE_PAY}`
-  if (mark === 'market') return `×${marketMult}`
-  if (mark === 'exclusive') return 'Excl.'
-  return 'Cold'
+  return `×${marketMult}`
 }
 
 const MARK_WORDS: Record<SlotMark, (mult: number) => string> = {
   desperate: () => `desperate, pays ×${DESPERATE_PAY}`,
   market: (m) => `its goods sell ×${m} today`,
-  exclusive: () => 'your exclusive this season',
-  cold: () => 'cold to you this season',
 }
 
 const roman = (term: number) => termName(term).replace(/^Term /, '')
@@ -65,13 +61,12 @@ export function dockSlots(o: {
   xp: StandingXp
   terms?: Partial<Record<CompanyId, number>> | null
   /** The trade war's season, once it shows; else null. */
-  war: Pick<Season, 'n' | 'shares' | 'deliveries' | 'exclusive' | 'desperate'> | null
+  war: Pick<Season, 'n' | 'shares' | 'deliveries' | 'desperate'> | null
   /** Today's market, once it shows; else null. */
   market: { company: CompanyId; mult: number } | null
 }): DockSlot[] {
   // The crown goes to a leader, not to a tie: an even season (a fresh one) crowns nobody.
-  const top = o.war ? Math.max(...COMPANY_IDS.map((c) => o.war!.shares[c])) : 0
-  const leader = o.war && COMPANY_IDS.filter((c) => o.war!.shares[c] === top).length === 1 ? seasonLeader(o.war) : null
+  const leader = o.war ? seasonLeader(o.war) : null
   return COMPANY_IDS.map((company) => {
     const term = Math.max(1, o.terms?.[company] ?? 1)
     const standing = standingOf(o.xp, company)
@@ -80,8 +75,6 @@ export function dockSlots(o: {
     const has: Record<SlotMark, boolean> = {
       desperate: !!o.war && isDesperate(o.war, company),
       market: o.market?.company === company,
-      exclusive: o.war?.exclusive === company,
-      cold: !!o.war && isCold(o.war, company),
     }
     return {
       company,

@@ -105,20 +105,22 @@ result. Append a short note to the review log when you're done.
   Progress rides `RunContract.asks`; the engine's `burningKills` feeds one.
   UI `ui/shell/contracts/AskParts.tsx` and `ui/shell/AskToast.tsx`; targets
   fitted by `npx tsx balance/ask-rates.ts`.
-- The trade war (Draft 4 § D): pure rules `src/game/run/tradeWar.ts` —
-  seasons of 7 finished contracts (counted at the settle, from the market's
-  opening), whole shares summing to 100 (`moveShares`), the season's end
-  (`endSeason`: the leader pays its champion a purse and a vault pick; the
-  last that hires you posts desperate terms, `contracts.DESPERATE_PAY` /
-  `DESPERATE_STRENGTH` via `ContractTerms.desperate` and `contractRules`),
-  rivals (`Company.rival`, `rivalOf`) and the exclusive (`seasonCrateCap`,
-  `exclusiveXpMult`). Saved as `metaStore.season` (v14, `readSeason`); the
-  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (the share bar,
-  the standings, the season's end, the war's facts and the exclusive sheet on
-  the terms) with `src/styles/war.css`; on the home the shares ride the company
-  dock and the season pill opens the standings. The battlefield flies only the
-  wagon's flag (the margin banners were cut, Oct 2026). Tests
-  `tests/tradeWar.test.ts`.
+- The trade war (Draft 4 § D, simplified Oct 2026): pure rules
+  `src/game/run/tradeWar.ts` — seasons of 7 finished contracts (counted at
+  the settle, from the market's opening; `log` keeps them in order for the
+  home's bars, `seasonBars`), whole shares summing to 100 (`moveShares`), the
+  crown on an outright leader only (`seasonLeader`: a tie crowns nobody), and
+  the season's end (`endSeason`): your **patron** — the company you delivered
+  the most for (`seasonPatron`; a tie goes to the bigger share, then a hash)
+  — pays 75 gold a delivery and a vault pick; the last that hires you posts
+  desperate terms (`contracts.DESPERATE_PAY` / `DESPERATE_STRENGTH` via
+  `ContractTerms.desperate` and `contractRules`). No exclusives, rivals or
+  cold (cut: `docs/MERCENARY_COMPANY.md` § D). Saved as `metaStore.season`
+  (`readSeason`); the settle is `metaStore.settleContract`. UI
+  `src/ui/shell/war/` (the standings and their season card —
+  `seasonCardCopy.ts` is its words — the season's end, the desperate fact on
+  the terms) with `src/styles/war.css`; the crown is `pixel.Crown`. Tests
+  `tests/tradeWar.test.ts`, `tests/seasonCardCopy.test.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by

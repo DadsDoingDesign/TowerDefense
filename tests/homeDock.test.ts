@@ -55,14 +55,13 @@ describe('the company dock', () => {
     const quiet = dockSlots({ xp: xp({ spice: 2 }), war: null, market: null })
     expect(quiet.every((s) => s.share == null && s.marks.length === 0 && !s.leads)).toBe(true)
 
-    const season = war({ shares: { spice: 27, art: 14, metals: 32, silk: 11, scrolls: 16 }, exclusive: 'metals', desperate: 'silk' })
+    const season = war({ shares: { spice: 27, art: 14, metals: 32, silk: 11, scrolls: 16 }, desperate: 'silk' })
     const slots = dockSlots({ xp: xp({ spice: 7, art: 4, metals: 3, silk: 2, scrolls: 5 }), war: season, market: { company: 'silk', mult: 1.3 } })
     const by = (c: CompanyId) => slots.find((s) => s.company === c)!
     expect(slots.map((s) => s.share)).toEqual([27, 14, 32, 11, 16])
     expect(slots.filter((s) => s.leads).map((s) => s.company)).toEqual(['metals'])
-    expect(by('metals').marks).toEqual(['exclusive'])
-    // Ironvein's rival is Moonquill: cold while the exclusive is Ironvein's.
-    expect(by('scrolls').marks).toEqual(['cold'])
+    expect(by('metals').marks).toEqual([])
+    expect(by('scrolls').marks).toEqual([])
     expect(by('silk').marks).toEqual(['desperate', 'market'])
     expect(by('silk').marks.length).toBeLessThanOrEqual(SLOT_MARKS)
     expect(markText('desperate', 1.3)).toBe(`×${DESPERATE_PAY}`)
@@ -71,9 +70,11 @@ describe('the company dock', () => {
     expect(slotName(by('metals'), 1.3)).toContain('leads the trade war')
   })
 
-  it('an even season crowns nobody', () => {
+  it('an even season crowns nobody, and nor does a tie at the top', () => {
     const slots = dockSlots({ xp: xp({ spice: 2 }), war: freshSeason(), market: null })
     expect(slots.some((s) => s.leads)).toBe(false)
+    const tie = dockSlots({ xp: xp({ spice: 2 }), war: war({ shares: { spice: 30, art: 10, metals: 30, silk: 14, scrolls: 16 } }), market: null })
+    expect(tie.some((s) => s.leads)).toBe(false)
   })
 })
 

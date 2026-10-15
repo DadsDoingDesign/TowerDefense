@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { COMPANIES, COMPANY_IDS, rivalOf, type CompanyId } from '../src/game/data/companies'
+import { COMPANY_IDS, type CompanyId } from '../src/game/data/companies'
 import { BASIC_ITEM_KINDS, itemKindById, ITEM_KINDS } from '../src/game/data/itemKinds'
 import {
   cashOutValue,
   cityPay,
   contractRules,
-  crateCap,
   DESPERATE_PAY,
   DESPERATE_STRENGTH,
   freshContract,
@@ -13,26 +12,24 @@ import {
   stakeRules,
 } from '../src/game/run/contracts'
 import {
-  CHAMPION_MIN,
-  CHAMPION_PURSE,
   contractsLeft,
   DELIVERED_SHARE,
   endSeason,
-  EXCLUSIVE_XP,
-  EXCLUSIVE_XP_UNRIVALLED,
-  exclusiveXpMult,
   fitShares,
   freshSeason,
-  isCold,
   isDesperate,
   LOST_SHARE,
   moveShares,
+  patronStatus,
+  PATRON_PURSE,
+  placeOf,
   readSeason,
   recordContract,
   regressShares,
-  seasonCrateCap,
   seasonLast,
   seasonLeader,
+  seasonBars,
+  seasonPatron,
   SEASON_LENGTH,
   seasonOver,
   SHARE_FLOOR,
@@ -50,8 +47,8 @@ import { hashSeed, RNG } from '../src/game/core/rng'
 
 /*
  * The trade war (Draft 4 § D): seasons of seven contracts, market share that
- * moves and always sums to 100, the season's end (the champion's purse and
- * vault, desperate terms for the last), rivals and exclusives, and the save.
+ * moves and always sums to 100, the leader (outright only), your patron and
+ * what it pays at the season's end, desperate terms for the last, and the save.
  */
 const sum = (s: Record<string, number>) => Object.values(s).reduce((a, b) => a + b, 0)
 const deliver = (company: CompanyId, crates = 0): WarContract => ({ company, crates, status: 'delivered' })
@@ -61,7 +58,7 @@ describe('market share', () => {
   it('starts even: 20 each, summing to 100', () => {
     const s = freshSeason()
     expect(COMPANY_IDS.map((c) => s.shares[c])).toEqual([20, 20, 20, 20, 20])
-    expect(s).toMatchObject({ n: 1, contracts: 0, exclusive: null, desperate: null, ended: null })
+    expect(s).toMatchObject({ n: 1, contracts: 0, desperate: null, ended: null })
   })
 
   it('a delivery takes points for its company, evenly from the others; a bigger stake takes more', () => {
@@ -104,6 +101,7 @@ describe('market share', () => {
   it('remembers the shares before the last contract (the standings’ trend) and tallies deliveries', () => {
     const s = play(freshSeason(), [deliver('art'), { company: 'art', crates: 0, status: 'lost' }, deliver('art', 2)])
     expect(s.deliveries.art).toBe(2)
+    expect(s.log).toEqual(['art', null, 'art'])
     expect(s.shares.art - s.before.art).toBe(DELIVERED_SHARE + 1)
     expect(contractsLeft(s)).toBe(SEASON_LENGTH - 3)
   })
@@ -115,7 +113,7 @@ describe('market share', () => {
     expect(sum(r)).toBe(100)
     expect(r.spice).toBe(32)
     // The order holds: the leader still leads.
-    expect(seasonLeader({ n: 1, shares: r, deliveries: freshSeason().deliveries })).toBe('spice')
+    expect(seasonLeader({ shares: r })).toBe('spice')
   })
 })
 
@@ -130,32 +128,52 @@ describe('the season’s end', () => {
     expect(seasonOver({ contracts: SEASON_LENGTH - 1 })).toBe(false)
   })
 
-  it('the leader pays its champion: a purse per delivery and a pick of three from its vault', () => {
-    const s = seven('metals', 3)
-    expect(seasonLeader(s)).toBe('metals')
+  it('your patron is the company you delivered the most for — leader or not — and pays a purse per delivery and a pick of three from its vault', () => {
+    // Three Moonquill deliveries and four Peppercorn cash-outs: you delivered most for Moonquill.
+    const s = play(freshSeason(), [deliver('scrolls'), deliver('scrolls'), deliver('scrolls'), ...Array.from({ length: 4 }, () => ({ company: 'spice' as const, crates: 0, status: 'cashedOut' as const }))])
+    expect(seasonPatron(s)).toBe('scrolls')
     const { end, next } = endSeason(s, { haveItems: [] })
-    expect(end).toMatchObject({ n: 1, leader: 'metals', delivered: 3, champion: true, purse: 3 * CHAMPION_PURSE })
+    expect(end).toMatchObject({ n: 1, patron: 'scrolls', delivered: 3, purse: 3 * PATRON_PURSE })
     expect(end.vault).toHaveLength(VAULT_PICKS)
     for (const v of end.vault) {
-      expect(itemKindById(v.kind)!.company).toBe('metals')
+      expect(itemKindById(v.kind)!.company).toBe('scrolls')
       expect(itemKindById(v.kind)!.level).toBeLessThanOrEqual(3)
     }
     // The locked kinds come first; the basics are owned, so never a fresh unlock.
     expect(end.vault.every((v) => v.unlock)).toBe(true)
     expect(end.vault.some((v) => BASIC_ITEM_KINDS.includes(v.kind))).toBe(false)
     // The next season: number, tallies cleared, shares regressed, the page waiting.
-    expect(next).toMatchObject({ n: 2, contracts: 0, exclusive: null, ended: end })
+    expect(next).toMatchObject({ n: 2, contracts: 0, ended: end })
     expect(sum(next.deliveries)).toBe(0)
     expect(sum(next.shares)).toBe(100)
   })
 
-  it('a militia with fewer than two deliveries for the leader is not its champion: nothing is paid', () => {
+  it('a patron need not lead: one delivery is enough, and the leader pays nothing', () => {
     const s = play(freshSeason(), [deliver('silk', 8), ...Array.from({ length: 6 }, () => ({ company: 'spice' as const, crates: 0, status: 'cashedOut' as const }))])
     // Peppercorn's six cash-outs (+12) outrun Rosethread's one big delivery (+8).
     expect(seasonLeader(s)).toBe('spice')
-    expect(s.deliveries.spice).toBeLessThan(CHAMPION_MIN)
     const { end } = endSeason(s, { haveItems: [] })
-    expect(end).toMatchObject({ leader: 'spice', champion: false, purse: 0, vault: [] })
+    expect(end).toMatchObject({ leader: 'spice', patron: 'silk', delivered: 1, purse: PATRON_PURSE })
+    expect(end.vault.every((v) => itemKindById(v.kind)!.company === 'silk')).toBe(true)
+  })
+
+  it('no delivery this season, no patron: nothing is paid', () => {
+    const s = play(freshSeason(), Array.from({ length: SEASON_LENGTH }, () => ({ company: 'art' as const, crates: 0, status: 'cashedOut' as const })))
+    expect(seasonPatron(s)).toBeNull()
+    const { end } = endSeason(s, { haveItems: [] })
+    expect(end).toMatchObject({ patron: null, delivered: 0, purse: 0, vault: [] })
+  })
+
+  it('a tie on your deliveries goes to the bigger share, then a hash of the season', () => {
+    // Two each for Ironvein and Easel House; Ironvein's bigger stakes took more share.
+    const s = play(freshSeason(), [deliver('metals', 4), deliver('art'), deliver('metals', 4), deliver('art')])
+    expect(s.shares.metals).toBeGreaterThan(s.shares.art)
+    expect(seasonPatron(s)).toBe('metals')
+    // Level on share too: a hash of the season, the same every time.
+    const flat = { ...freshSeason(), deliveries: { ...freshSeason().deliveries, metals: 1, art: 1 } }
+    const pick = seasonPatron(flat)
+    expect(['metals', 'art']).toContain(pick)
+    expect(seasonPatron({ ...flat })).toBe(pick)
   })
 
   it('the vault offers owned kinds as Rare bonus items once every kind of its own is unlocked', () => {
@@ -179,6 +197,88 @@ describe('the season’s end', () => {
     // The art road fell five times this season: it is last.
     const fell = play(freshSeason(), [deliver('metals'), deliver('metals'), ...Array.from({ length: 5 }, () => ({ company: 'art' as const, crates: 0, status: 'lost' as const }))])
     expect(seasonLast(fell)).toBe('art')
+  })
+
+  it('no last place when every company that hires you is level', () => {
+    expect(seasonLast(freshSeason())).toBeNull()
+    // Only Peppercorn hires you: no other company can be last.
+    const s = seven('spice', 3)
+    expect(seasonLast(s, (c) => c === 'spice')).toBeNull()
+  })
+})
+
+describe('the season’s log and its seven bars', () => {
+  it('logs each finished contract in order: the company delivered for, else null (a cash-out, a fall, your own road)', () => {
+    const s = play(freshSeason(), [
+      deliver('metals'),
+      { company: 'spice', crates: 0, status: 'cashedOut' },
+      { company: null, crates: 0, status: 'delivered', charter: true },
+      deliver('silk'),
+      { company: 'art', crates: 0, status: 'lost' },
+    ])
+    expect(s.log).toEqual(['metals', null, null, 'silk', null])
+    expect(s.log).toHaveLength(s.contracts)
+    expect(seasonBars(s)).toEqual(['metals', 'miss', 'miss', 'silk', 'miss', null, null])
+    expect(seasonBars(freshSeason())).toEqual(Array(SEASON_LENGTH).fill(null))
+  })
+
+  it('a new season starts its log empty', () => {
+    const s = play(freshSeason(), Array.from({ length: SEASON_LENGTH }, () => deliver('metals')))
+    expect(s.log).toHaveLength(SEASON_LENGTH)
+    expect(endSeason(s, { haveItems: [] }).next.log).toEqual([])
+  })
+
+  it('an older save, with no log, has one rebuilt from its deliveries: deliveries first, in catalogue order, then misses', () => {
+    const r = readSeason({ n: 2, contracts: 5, deliveries: { metals: 2, spice: 1 } })
+    expect(r.log).toEqual(['spice', 'metals', 'metals', null, null])
+    // A log that does not tally to the deliveries is rebuilt; unknown ids read as misses; it is clipped to the contracts.
+    expect(readSeason({ contracts: 3, deliveries: { art: 1 }, log: ['nope', 'art', null, 'art'] }).log).toEqual([null, 'art', null])
+    expect(readSeason({ contracts: 2, deliveries: { art: 1 }, log: ['metals', 'art'] }).log).toEqual(['art', null])
+  })
+})
+
+describe('the leader', () => {
+  it('leads outright or not at all: a tie at the top — the even start too — crowns nobody', () => {
+    expect(seasonLeader(freshSeason())).toBeNull()
+    const tie = { spice: 30, art: 10, metals: 30, silk: 14, scrolls: 16 }
+    expect(seasonLeader({ shares: tie })).toBeNull()
+    expect(seasonLeader({ shares: { ...tie, metals: 31, art: 9 } })).toBe('metals')
+    // A season that ends level: no leader on its page, and the patron still pays.
+    const s = { ...play(freshSeason(), Array.from({ length: SEASON_LENGTH - 1 }, () => ({ company: null, crates: 0, status: 'delivered' as const, charter: true }))), deliveries: freshSeason().deliveries }
+    const ended = endSeason(recordContract(s, { company: null, crates: 0, status: 'delivered', charter: true }), { haveItems: [] })
+    expect(ended.end.leader).toBeNull()
+  })
+
+  it('level shares share a place', () => {
+    const s = { shares: { spice: 30, art: 10, metals: 30, silk: 14, scrolls: 16 } }
+    expect(COMPANY_IDS.map((c) => placeOf(s, c))).toEqual([1, 5, 1, 4, 3])
+    expect(COMPANY_IDS.every((c) => placeOf(freshSeason(), c) === 1)).toBe(true)
+  })
+})
+
+describe('the standings card: where you stand with your patron', () => {
+  it('no delivery yet', () => {
+    const st = patronStatus(freshSeason())
+    expect(st).toMatchObject({ state: 'none', patron: null, delivered: 0, purse: 0, level: [], left: SEASON_LENGTH, lastContract: false })
+  })
+
+  it('one company ahead in your deliveries: what it would pay now', () => {
+    const s = play(freshSeason(), [deliver('metals'), deliver('silk'), deliver('metals')])
+    expect(patronStatus(s)).toMatchObject({ state: 'ahead', patron: 'metals', delivered: 2, purse: 2 * PATRON_PURSE, level: [], breaksBy: null, left: SEASON_LENGTH - 3 })
+  })
+
+  it('tied in your deliveries: the bigger share takes it, said as such; level shares fall to the hash', () => {
+    const s = play(freshSeason(), [deliver('metals', 8), deliver('art')])
+    expect(s.shares.metals).toBeGreaterThan(s.shares.art)
+    expect(patronStatus(s)).toMatchObject({ state: 'tied', patron: 'metals', delivered: 1, purse: PATRON_PURSE, level: ['metals', 'art'], breaksBy: 'share' })
+    const flat = { ...freshSeason(), contracts: 2, deliveries: { ...freshSeason().deliveries, metals: 1, art: 1 } }
+    expect(patronStatus(flat)).toMatchObject({ state: 'tied', breaksBy: 'hash' })
+  })
+
+  it('the season’s last contract', () => {
+    const s = play(freshSeason(), Array.from({ length: SEASON_LENGTH - 1 }, () => deliver('spice')))
+    expect(patronStatus(s)).toMatchObject({ state: 'ahead', left: 1, lastContract: true })
+    expect(patronStatus({ ...freshSeason(), contracts: SEASON_LENGTH - 1 })).toMatchObject({ state: 'none', lastContract: true })
   })
 })
 
@@ -222,40 +322,6 @@ describe('desperate terms', () => {
   })
 })
 
-describe('rivals and exclusives', () => {
-  it('the rival pairs are fixed and mutual; Easel House has none', () => {
-    expect(rivalOf('metals')).toBe('scrolls')
-    expect(rivalOf('scrolls')).toBe('metals')
-    expect(rivalOf('spice')).toBe('silk')
-    expect(rivalOf('silk')).toBe('spice')
-    expect(rivalOf('art')).toBeNull()
-    for (const c of COMPANIES) if (c.rival) expect(rivalOf(c.rival)).toBe(c.id)
-  })
-
-  it('an exclusive pays more standing on its company’s contracts, and turns its rival cold: one crate fewer', () => {
-    const s = { ...freshSeason(), exclusive: 'metals' as const }
-    expect(exclusiveXpMult(s, 'metals')).toBe(EXCLUSIVE_XP)
-    expect(exclusiveXpMult(s, 'scrolls')).toBe(1)
-    expect(exclusiveXpMult(s, null)).toBe(1)
-    expect(isCold(s, 'scrolls')).toBe(true)
-    expect(isCold(s, 'art')).toBe(false)
-    expect(seasonCrateCap(s, 'scrolls', 5)).toBe(crateCap(5) - 1)
-    expect(seasonCrateCap(s, 'scrolls', 0)).toBe(1)
-    expect(seasonCrateCap(s, 'metals', 5)).toBe(crateCap(5))
-  })
-
-  it('Easel House’s exclusive costs nothing and pays a little less', () => {
-    const s = { ...freshSeason(), exclusive: 'art' as const }
-    expect(exclusiveXpMult(s, 'art')).toBe(EXCLUSIVE_XP_UNRIVALLED)
-    for (const c of COMPANY_IDS) expect(isCold(s, c)).toBe(false)
-  })
-
-  it('lasts until the season ends', () => {
-    const s = play({ ...freshSeason(), exclusive: 'metals' }, Array.from({ length: SEASON_LENGTH }, () => deliver('metals')))
-    expect(endSeason(s, { haveItems: [] }).next.exclusive).toBeNull()
-  })
-})
-
 describe('the save (meta v14)', () => {
   it('an older save starts the war at season 1, even', () => {
     expect(META_VERSION).toBeGreaterThanOrEqual(14)
@@ -270,28 +336,46 @@ describe('the save (meta v14)', () => {
       contracts: 99,
       shares: { spice: 90, art: 90, metals: 'x' },
       deliveries: { spice: 50, art: 2, nope: 4 },
-      exclusive: 'nope',
+      exclusive: 'metals',
       desperate: 'art',
-      ended: { leader: 'metals', champion: true, delivered: 2, purse: 99999, vault: [{ kind: 'Pavise', unlock: true }, { kind: 'Bow', unlock: true }, { kind: 'nope' }], shares: {} },
+      ended: { leader: 'metals', patron: 'metals', delivered: 2, purse: 99999, vault: [{ kind: 'Pavise', unlock: true }, { kind: 'Bow', unlock: true }, { kind: 'nope' }], shares: {} },
     })
     expect(r.n).toBe(1)
     expect(r.contracts).toBe(SEASON_LENGTH - 1)
     expect(sharesValid(r.shares)).toBe(true)
     expect(sum(r.deliveries)).toBeLessThanOrEqual(r.contracts)
-    expect(r.exclusive).toBeNull()
+    // An exclusive (cut in October 2026) is read past and dropped.
+    expect('exclusive' in r).toBe(false)
     expect(r.desperate).toBe('art')
-    // The end as the rules could have written it: its purse capped, its vault the leader's own kinds.
-    expect(r.ended!.purse).toBe(2 * CHAMPION_PURSE)
+    // The end as the rules could have written it: its purse capped, its vault the patron's own kinds,
+    // and no crown on even shares.
+    expect(r.ended!.purse).toBe(2 * PATRON_PURSE)
     expect(r.ended!.vault.map((v) => v.kind)).toEqual(['Pavise'])
+    expect(r.ended!.leader).toBeNull()
+  })
+
+  it('a season’s end from before the simplification: a champion’s leader reads as your patron; one that paid nothing is no page', () => {
+    const shares = { spice: 16, art: 16, metals: 36, silk: 16, scrolls: 16 }
+    const paid = readSeason({ ended: { n: 3, leader: 'metals', share: 36, delivered: 3, champion: true, purse: 225, vault: [{ kind: 'Pavise', unlock: true }], desperate: 'silk', shares } }).ended
+    expect(paid).toMatchObject({ n: 3, leader: 'metals', patron: 'metals', delivered: 3, purse: 225, desperate: 'silk' })
+    expect(paid!.vault.map((v) => v.kind)).toEqual(['Pavise'])
+    expect(readSeason({ ended: { n: 3, leader: 'metals', delivered: 1, champion: false, purse: 0, vault: [], desperate: 'silk', shares } }).ended).toBeNull()
+    // The v15 save as it was: an exclusive signed mid-season.
+    const v15 = migrateMeta({ bank: 400, season: { n: 2, contracts: 3, shares, before: shares, deliveries: { metals: 2 }, exclusive: 'metals', desperate: null, ended: null } }, 15)
+    expect('exclusive' in v15.season).toBe(false)
+    expect(v15.season).toMatchObject({ n: 2, contracts: 3, desperate: null })
+    expect(v15.season.deliveries.metals).toBe(2)
   })
 
   it('survives random garbage', () => {
     const rng = new RNG(hashSeed('season-fuzz'))
-    const base = endSeason(play(freshSeason(), Array.from({ length: SEASON_LENGTH }, () => deliver('metals', 3))), { haveItems: [] }).next
+    // Mid-season, with the last season's page still waiting: every field filled.
+    const ended = endSeason(play(freshSeason(), Array.from({ length: SEASON_LENGTH }, () => deliver('metals', 3))), { haveItems: [] }).next
+    const base = play(ended, [deliver('art'), { company: 'silk', crates: 0, status: 'lost' }, deliver('silk', 2), deliver('art')])
     const junk = [null, undefined, -1, 1e12, NaN, 'x', {}, [], true, 3.7, 'metals']
     for (let i = 0; i < 3000; i++) {
       const raw = JSON.parse(JSON.stringify(base)) as Record<string, unknown>
-      const keys = ['n', 'contracts', 'shares', 'before', 'deliveries', 'exclusive', 'desperate', 'ended']
+      const keys = ['n', 'contracts', 'shares', 'before', 'deliveries', 'log', 'exclusive', 'desperate', 'ended']
       const k = keys[Math.floor(rng.next() * keys.length)]
       const v = junk[Math.floor(rng.next() * junk.length)]
       if (rng.next() < 0.5 && raw[k] && typeof raw[k] === 'object') {
@@ -306,9 +390,16 @@ describe('the save (meta v14)', () => {
       expect(s.contracts).toBeGreaterThanOrEqual(0)
       expect(s.contracts).toBeLessThan(SEASON_LENGTH)
       for (const c of COMPANY_IDS) expect(Number.isInteger(s.deliveries[c])).toBe(true)
+      expect('exclusive' in s).toBe(false)
+      expect(s.log).toHaveLength(s.contracts)
+      for (const c of COMPANY_IDS) expect(s.log.filter((x) => x === c).length).toBe(s.deliveries[c])
+      expect(seasonBars(s)).toHaveLength(SEASON_LENGTH)
       if (s.ended) {
         expect(Number.isFinite(s.ended.purse)).toBe(true)
-        expect(s.ended.purse).toBeLessThanOrEqual(CHAMPION_PURSE * SEASON_LENGTH)
+        expect(s.ended.purse).toBeLessThanOrEqual(PATRON_PURSE * SEASON_LENGTH)
+        expect(s.ended.purse).toBeLessThanOrEqual(PATRON_PURSE * s.ended.delivered)
+        if (!s.ended.patron) expect(s.ended.vault).toEqual([])
+        if (s.ended.leader) expect(seasonLeader({ shares: s.ended.shares })).toBe(s.ended.leader)
       }
     }
   })
@@ -334,16 +425,16 @@ describe('the store: settles count, pay and close a season', () => {
     expect(s.shares.metals).toBe(20 + DELIVERED_SHARE)
   })
 
-  it('the seventh contract ends the season: the champion’s purse banked, the vault pick waiting, desperate terms posted', () => {
+  it('the seventh contract ends the season: your patron’s purse banked, the vault pick waiting, desperate terms posted', () => {
     veteran()
     const bank0 = useMetaStore.getState().bank
-    // Each settle's own deposit (its interest) is returned; the champion's purse comes on top.
+    // Each settle's own deposit (its interest) is returned; the patron's purse comes on top.
     let banked = 0
     for (let i = 0; i < SEASON_LENGTH; i++) banked += settle('metals')
     const m = useMetaStore.getState()
     expect(m.season.n).toBe(2)
-    expect(m.season.ended).toMatchObject({ leader: 'metals', champion: true, delivered: SEASON_LENGTH, purse: SEASON_LENGTH * CHAMPION_PURSE })
-    expect(m.bank).toBe(bank0 + banked + SEASON_LENGTH * CHAMPION_PURSE)
+    expect(m.season.ended).toMatchObject({ leader: 'metals', patron: 'metals', delivered: SEASON_LENGTH, purse: SEASON_LENGTH * PATRON_PURSE })
+    expect(m.bank).toBe(bank0 + banked + SEASON_LENGTH * PATRON_PURSE)
     expect(m.season.desperate).not.toBeNull()
     expect(m.season.desperate).not.toBe('metals')
     // The page closes only with a pick from the vault; a locked kind is unlocked.
@@ -356,16 +447,10 @@ describe('the store: settles count, pay and close a season', () => {
     else expect(useMetaStore.getState().bonusItems).toContain(pick.kind)
   })
 
-  it('an exclusive is signed once a season, and pays its company ×1.5 standing', () => {
+  it('a contract pays its company the same standing whatever the season holds', () => {
     veteran()
-    expect(useMetaStore.getState().signExclusive('metals')).toBe(true)
-    expect(useMetaStore.getState().signExclusive('art')).toBe(false)
-    expect(useMetaStore.getState().season.exclusive).toBe('metals')
     settle('metals')
-    expect(useMetaStore.getState().standing.metals).toBe(Math.floor(standingXpFor({ depth: 12, kills: 200, delivered: true }) * EXCLUSIVE_XP))
-    // Another company's contract pays as ever.
-    settle('art')
-    expect(useMetaStore.getState().standing.art).toBe(standingXpFor({ depth: 12, kills: 200, delivered: true }))
+    expect(useMetaStore.getState().standing.metals).toBe(standingXpFor({ depth: 12, kills: 200, delivered: true }))
   })
 
   it('the Sovereign Route counts and moves nothing', () => {

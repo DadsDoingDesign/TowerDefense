@@ -1,8 +1,8 @@
 /* ==========================================================================
    The trade war (Draft 4 § D): the share bar, the leader's crown, the
-   standings, the season's end, and the war's facts and
-   exclusive sheet on the terms. (On the home, the war is the dock's shares,
-   marks and season pill: `menu.css`.)
+   standings and their season card, the season's end, and the war's fact on
+   the terms. (On the home, the war is the dock's shares, marks and season
+   pill: `menu.css`.)
    ========================================================================== */
 
 /* ------------------------------------------------------------ the share bar
@@ -54,12 +54,6 @@
 }
 .tw-chip.is-desperate {
   color: var(--bad-text);
-}
-.tw-chip.is-exclusive {
-  color: var(--accent-text);
-}
-.tw-chip.is-cold {
-  color: var(--teal-text);
 }
 /* ------------------------------------------------------------ the standings */
 .tw-cols {
@@ -164,11 +158,88 @@
   justify-content: flex-end;
   gap: 6px;
 }
-.tw-row.is-cold .tw-co {
-  filter: saturate(0.3);
-}
 .tw-pays {
   margin-top: 4px;
+}
+
+/* ------------------------------------------------------------ the season card
+   One paper ledger under the rows (`SeasonCard`): when the season ends, your
+   patron and its running sum, what it pays, and who is last now. */
+.tw-card {
+  margin-top: 4px;
+}
+.tw-pat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--slip-ink) 22%, transparent);
+}
+.tw-pat-art {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.tw-pat-art.is-empty {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--slip-ink-2) 55%, transparent);
+}
+.tw-pat-crest + .tw-pat-crest {
+  margin-left: -6px;
+}
+.tw-pat-who {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.tw-pat-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: 1.1;
+}
+.tw-pat-sub {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-md);
+  line-height: 1.25;
+  color: var(--slip-ink-2);
+}
+.tw-pat-sum {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  flex: none;
+}
+.tw-pat-sum .ct-gold {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+}
+.tw-pat-sum .field-k {
+  color: var(--slip-ink-2);
+}
+.tw-card-next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--slip-ink) 22%, transparent);
+}
+.tw-card-next > span {
+  display: grid;
+  gap: 1px;
+}
+.tw-card-next b {
+  font-size: var(--fs-md);
+}
+.tw-card-next b + span {
+  font-size: var(--fs-sm);
+  color: var(--slip-ink-2);
 }
 
 /* ------------------------------------------------------------ the season's end */
@@ -200,12 +271,6 @@
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--co) 30%, var(--panel-2)), var(--panel));
   border: 3px solid var(--accent);
   box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-.tw-end-crown {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  translate: -50% 0;
 }
 .tw-end-head .ct-sub {
   margin: 0;
@@ -276,154 +341,4 @@
 }
 .tw-fact.is-desperate .tw-fact-v {
   color: var(--bad-text);
-}
-.tw-fact.is-exclusive {
-  border-left-color: var(--accent);
-}
-.tw-fact.is-cold {
-  border-left-color: var(--teal);
-}
-.tw-offer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'k left'
-    'b left';
-  align-items: center;
-  column-gap: 10px;
-  row-gap: 2px;
-  min-height: 56px;
-  padding: 8px 12px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  border: 1px dashed color-mix(in srgb, var(--co) 60%, transparent);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.tw-offer .field-k {
-  grid-area: k;
-}
-.tw-offer b {
-  grid-area: b;
-  font-size: var(--fs-md);
-}
-.tw-offer > span:last-child {
-  grid-area: left;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.tw-offer i {
-  font-style: normal;
-  color: var(--accent-text);
-}
-.tw-offer:focus-visible {
-  outline: var(--focus-width) solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* ------------------------------------------------------------ the exclusive sheet
-   A bottom sheet on a phone, a centred card on a desk (mockup 4a). */
-.tw-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  align-items: end;
-  justify-items: center;
-  background: rgba(8, 5, 3, 0.74);
-}
-.tw-sheet {
-  width: 100%;
-  max-width: 520px;
-  max-height: 100%;
-  overflow: auto;
-  display: grid;
-  gap: 10px;
-  padding: 18px 16px calc(16px + var(--safe-bottom, 0px));
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
-  border: 1px solid var(--line-strong);
-  border-bottom: 0;
-  background: var(--bg-2);
-  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.55);
-}
-.tw-sheet::before {
-  content: '';
-  justify-self: center;
-  width: 40px;
-  height: 4px;
-  margin: -8px 0 2px;
-  border-radius: 999px;
-  background: var(--line-strong);
-}
-@media (min-width: 900px) {
-  .tw-scrim {
-    align-items: center;
-  }
-  .tw-sheet {
-    border-radius: var(--r-lg);
-    border-bottom: 1px solid var(--line-strong);
-    padding-bottom: 16px;
-  }
-}
-.tw-sheet-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.tw-sheet-head > span {
-  display: grid;
-  gap: 1px;
-}
-.tw-sheet-head h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 26px;
-  line-height: 1.05;
-  color: var(--text);
-}
-.tw-sheet-sub {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.tw-box {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-}
-.tw-box p {
-  margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text);
-}
-.tw-box.is-gives {
-  border-color: color-mix(in srgb, var(--good) 45%, transparent);
-}
-.tw-box.is-gives .field-k {
-  color: var(--good);
-}
-.tw-box.is-rival {
-  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
-}
-.tw-box.is-rival .field-k {
-  color: var(--bad-text);
-}
-.tw-sheet-note {
-  margin: 0;
-  text-align: center;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.tw-sheet-acts {
-  display: grid;
-  gap: 8px;
-}
-.tw-sheet-acts .pg-cta {
-  width: 100%;
 }

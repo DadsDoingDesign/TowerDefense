@@ -7,7 +7,7 @@ import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
 import { nextRewardWord, trackPlan } from '../../game/run/track'
 import { CHARTER_NAME, CHARTER_PAYOUT, charterDoor } from '../../game/run/charter'
-import { contractsLeft, DESPERATE_STRENGTH, exclusiveXpMult, isCold, seasonCrateCap } from '../../game/run/tradeWar'
+import { contractsLeft, DESPERATE_STRENGTH } from '../../game/run/tradeWar'
 import { useGameStore, type HomeFocus } from '../../state/gameStore'
 import { homeCompany } from '../../state/game/contractSlice'
 import { useMetaStore } from '../../state/metaStore'
@@ -271,9 +271,7 @@ export function MenuScreen({
             war={
               war
                 ? {
-                    cold: isCold(war, company) && war.exclusive ? { with: war.exclusive, cap: seasonCrateCap(war, company, standing[company]) } : null,
                     desperate: war.desperate === company,
-                    exclusive: war.exclusive === company ? exclusiveXpMult(war, company) : null,
                   }
                 : null
             }
@@ -509,8 +507,8 @@ function CompanyCard({
   items: readonly string[]
   /** How you dressed its standard. */
   look: StandardLook | null
-  /** Its place in the trade war this season: cold (your exclusive is with its rival), desperate, your exclusive (its standing multiplier). */
-  war?: { cold: { with: CompanyId; cap: number } | null; desperate: boolean; exclusive: number | null } | null
+  /** Its place in the trade war this season: desperate. */
+  war?: { desperate: boolean } | null
   onLivery?: () => void
   onTrack?: () => void
   cta: ReactNode
@@ -520,7 +518,7 @@ function CompanyCard({
   // What the track's next level pays, by name (Draft 4 · B).
   const next = nextRewardWord(trackPlan(company, { xp, term, skills, items }))
   return (
-    <section className={`mn-card${war?.cold ? ' is-cold' : ''}`} style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
+    <section className="mn-card" style={{ '--co': co.color } as CSSProperties} aria-labelledby="mn-card-name" aria-live="polite">
       <div className="mn-card-head">
         {onLivery ? (
           <button type="button" className="mn-livery" onClick={onLivery} aria-label={`Dress ${co.name}’s standard`}>
@@ -548,12 +546,6 @@ function CompanyCard({
           </span>
         )}
         {war?.desperate && <span className="mn-chip is-desperate">Desperate: raiders +{Math.round((DESPERATE_STRENGTH - 1) * 100)}%</span>}
-        {war?.exclusive != null && <span className="mn-chip is-exclusive">Exclusive: standing ×{war.exclusive}</span>}
-        {war?.cold && (
-          <span className="mn-chip is-cold" aria-label={`Cold: your exclusive is with ${companyById(war.cold.with).name}, so stakes stop at ${war.cold.cap} crates`}>
-            Stakes stop at {war.cold.cap}
-          </span>
-        )}
         {market > 1 && <span className="mn-chip is-market">Top price for {co.noun} today</span>}
         <span className="mn-chip is-ground" style={{ '--gr': co.ground.swatch } as CSSProperties}>
           {co.ground.name}
