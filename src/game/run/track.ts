@@ -16,7 +16,9 @@
  *   card · 5 its signature skill · 6 an item kind · 7 its skill card · 8 an
  *   item kind · 9 its skill card, and its Sovereign item named · 10 a second
  *   term — and the flag piece its kit gives at every level
- *   (`data/companyKits.kitPieceAt`).
+ *   (`data/companyKits.kitPieceAt`). Level {@link THEME_LEVEL} (6) also names
+ *   the company's UI theme for your militia (`run/militiaTheme.ts`): cosmetic,
+ *   unlocked by the standing itself, so the settle pays nothing for it.
  *
  * **Never a roll.** The card a level pays is the company's NEXT locked card in
  * catalogue order at the level's floor (`standing.cardFloor`), falling back
@@ -46,6 +48,7 @@ import { kitPieceAt, type KitPiece } from '../data/companyKits'
 import { ITEM_KINDS, SOVEREIGN_LEVEL } from '../data/itemKinds'
 import { ALL_SKILLS, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../data/skills'
 import { ASK_STANDING } from './asks'
+import { THEME_LEVEL } from './militiaTheme'
 import { cardFloor, MAX_STANDING, standingBonusKind, standingFor, standingProgress, standingXpFor, standingXpToReach } from './standing'
 import { RUN_LAYERS } from './threat'
 
@@ -114,6 +117,11 @@ export interface TrackPay {
   secondTerm: boolean
   /** The flag piece of the company's kit (Term I only: Term II's kit is already whole). */
   flag: KitPiece | null
+  /**
+   * The company's UI theme opens for your militia (Term I's level
+   * {@link THEME_LEVEL} only). Named, never paid: the standing level is the unlock.
+   */
+  theme: boolean
 }
 
 /** What is unlocked now: the cards and the kinds (the basic five and the starters are everyone's). */
@@ -186,6 +194,7 @@ export function trackPay(company: CompanyId, term: number, level: number, have: 
     stakes: false,
     secondTerm: false,
     flag: t === 1 ? kitPieceAt(company, level) : null,
+    theme: t === 1 && level === THEME_LEVEL,
   }
   const bonus = () => standingBonusKind(have.items, company, level, 'track', t)
   const signature = SIGNATURE_SKILLS[company]

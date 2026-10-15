@@ -53,6 +53,12 @@
      held-sub-wave instruction and the reward/affix lines sit. This step is
      5.03:1 on that wash and 8.2:1 on `--panel-2`. */
   --accent-text: #f0c46a;
+  /* Gold — the one currency — as a FILL and as TEXT. The house accent's two
+     values, named apart (Oct 2026) because a company theme re-colours the
+     accent (`ui/theme/companyThemes.ts`) and money must read gold in every
+     one. A bank, a price, a pay figure reads these, never `--accent`. */
+  --gold: #e0ac4c;
+  --gold-text: #f0c46a;
   --teal: #57a2b6;
   --teal-dim: rgba(87, 162, 182, 0.18);
   --good: #6fce88;
@@ -128,6 +134,12 @@
   /* The night the trade pages sit in, and the lantern glow they are lit by. */
   --night: #17110c;
   --lantern: #ffe39a;
+  /* The dark the shell's translucent washes are mixed from (scrims, wells,
+     floating chips: `color-mix(in srgb, var(--shade) 50%, transparent)`), and
+     the page's glows — named so a company theme tints them too. */
+  --shade: #140e08;
+  --glow: rgba(224, 172, 76, 0.06);
+  --glow-2: rgba(0, 0, 0, 0);
 
   --radius: 10px;
   --radius-sm: 6px;
@@ -265,7 +277,8 @@ body {
     Roboto,
     sans-serif;
   background:
-    radial-gradient(1200px 620px at 50% -10%, rgba(224, 172, 76, 0.06), transparent 60%),
+    radial-gradient(1200px 620px at 50% -10%, var(--glow), transparent 60%),
+    radial-gradient(700px 520px at 100% 100%, var(--glow-2), transparent 70%),
     radial-gradient(900px 700px at 50% 120%, rgba(0, 0, 0, 0.35), transparent 55%),
     var(--bg);
   background-attachment: fixed;
@@ -332,7 +345,7 @@ button:disabled {
   outline-offset: var(--focus-offset);
   /* Some shell controls are clipped by a scrolling parent; a matching shadow
      means the ring is still readable when the outline is cropped. */
-  box-shadow: 0 0 0 4px rgba(224, 172, 76, 0.25);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-ring) 25%, transparent);
 }
 /* On a solid gold surface the gold ring disappears into it — invert. */
 .sh-tab.active:focus-visible,

@@ -589,7 +589,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     achievements: migrateAchievements(o.achievements),
     codex: migrateCodex(o.codex),
     met: readMet(o.met),
-    militia: readMilitia(o.militia),
+    // Its UI theme checked against the standing just read (locked → neutral).
+    militia: readMilitia(o.militia, (c) => standingFor(standing[c] ?? 0)),
     // v12: none before; each part checked against the standing just read.
     liveries: readLiveries(o.liveries, (c) => standingFor(standing[c] ?? 0)),
     // v14: none before (a fresh war); validated whatever the version.
@@ -908,7 +909,8 @@ export const useMetaStore = create<MetaState>()(
       },
 
       setMilitia: (m) => {
-        const militia = readMilitia(m)
+        const xp = get().standing
+        const militia = readMilitia(m, (c) => standingFor(Math.max(0, num(xp[c], 0))))
         if (militia) set({ militia })
       },
 
