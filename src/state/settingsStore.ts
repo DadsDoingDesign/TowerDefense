@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { setAudioOptions, setAudioVolumes } from '../audio/audio'
 import { applyThemeCss, DEFAULT_THEME, setActiveTheme } from '../game/render/themes'
+import { setFxSettings, type EffectsSetting } from '../game/render/fxQuality'
 import { bool, clampNum, onStorageKeyChange, readRaw, safePersistStorage, str } from './storage'
 
 export type UiScale = 'normal' | 'large'
@@ -193,6 +194,13 @@ interface SettingsState {
    * playing at night, for anyone the fight music is too much for.
    */
   calmAudio: boolean
+  /**
+   * Oct 2026: how much of the company worlds' motion plays (`fxQuality`).
+   * Full by default — and a device that cannot hold the rate drops to Light
+   * by itself; Light is the reduced set, always. Reduced motion wins.
+   */
+  effects: EffectsSetting
+  setEffects: (v: EffectsSetting) => void
   /** Fold the mix to mono (one earbud, one speaker, a hearing difference). */
   monoAudio: boolean
   setCalmAudio: (v: boolean) => void
@@ -223,13 +231,15 @@ const prefersReducedMotion =
 /**
  * Persisted settings schema version (M11). 2: `audio.musicLevel`. 3: `calmAudio`,
  * `monoAudio`. 4: `showEverything`, and the LS3 tips (see {@link LS3_TEACH_IDS}).
- * 5: `autoContinue` (a missing key reads as on).
+ * 5: `autoContinue` (a missing key reads as on). 6: `effects` (a missing key reads
+ * as Full).
  */
-export const SETTINGS_VERSION = 5
+export const SETTINGS_VERSION = 6
 
 const UI_SCALES = ['normal', 'large'] as const
 const VISION_MODES = ['default', 'deuter', 'protan', 'tritan'] as const
 const ASSIST_LEVELS = ['off', 'steady', 'sure'] as const
+const EFFECTS_LEVELS = ['full', 'light'] as const
 
 type PersistedSettings = Pick<
   SettingsState,
@@ -244,6 +254,7 @@ type PersistedSettings = Pick<
   | 'monoAudio'
   | 'showEverything'
   | 'autoContinue'
+  | 'effects'
 >
 
 /**
@@ -292,6 +303,8 @@ export function migrateSettings(persisted: unknown, version: number, metaRaw: ()
     showEverything: bool(o.showEverything, false),
     // v4 and earlier never had it: held waves continue themselves by default.
     autoContinue: bool(o.autoContinue, true),
+    // v5 and earlier never had it: the worlds play in full (auto steps down).
+    effects: str<EffectsSetting>(o.effects, 'full', EFFECTS_LEVELS),
   }
 }
 
@@ -327,7 +340,9 @@ function applyAccessibility(s: {
   highContrast: boolean
   uiScale: UiScale
   vision: VisionMode
+  effects?: EffectsSetting
 }): void {
+  setFxSettings(s.effects ?? 'full', s.reducedMotion)
   if (typeof document === 'undefined') return
   const root = document.documentElement
   root.dataset.reducedMotion = s.reducedMotion ? 'true' : 'false'
@@ -349,6 +364,11 @@ export const useSettingsStore = create<SettingsState>()(
       calmAudio: false,
       monoAudio: false,
       showEverything: false,
+      effects: 'full',
+      setEffects: (v) => {
+        set({ effects: v })
+        applyAccessibility(get())
+      },
 
       setShowEverything: (v) => set({ showEverything: v }),
       autoContinue: true,
@@ -447,6 +467,7 @@ export const useSettingsStore = create<SettingsState>()(
         monoAudio: s.monoAudio,
         showEverything: s.showEverything,
         autoContinue: s.autoContinue,
+        effects: s.effects,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

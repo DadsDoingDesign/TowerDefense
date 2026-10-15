@@ -31,7 +31,9 @@ import {
   PATTERNS,
   type BannerLook,
 } from '../data/banner'
+import type { CompanyId } from '../data/companies'
 import { charterDoor } from './charter'
+import { readTheme, type ThemeId } from './militiaTheme'
 import { checkCompanyName } from './nameFilter'
 
 const STEMS = [
@@ -46,7 +48,16 @@ const COMPANIES = ['Company', 'Lances', 'Blades', 'Watch', 'Guard', 'Wardens', '
 export interface Militia extends BannerLook {
   /** The militia's name, from {@link militiaName}: "The Ashford Company". */
   name: string
+  /**
+   * The UI theme your own road wears (the Sovereign Route; `run/militiaTheme.ts`).
+   * Absent: neutral — every save from before themes, and any theme not (or no
+   * longer) unlocked.
+   */
+  theme?: ThemeId
 }
+
+/** A militia's theme: its saved one, or neutral. */
+export const militiaTheme = (m: Pick<Militia, 'theme'> | null | undefined): ThemeId => m?.theme ?? 'neutral'
 
 /** One name, from a seed: the same seed is always the same name. */
 export function militiaName(seed: number): string {
@@ -86,8 +97,12 @@ export function isMilitiaName(name: unknown): name is string {
  * flag's newer parts (pattern, its colour, the metal) are optional: an older
  * save's flag loads as a plain one in parchment, and an unknown value is
  * dropped to that default rather than losing the company.
+ *
+ * The UI theme is checked against `levelOf` (your standing level with each
+ * company): an unknown or locked one — or any company's, when no standing is
+ * given — is dropped to neutral, which is stored as no `theme` at all.
  */
-export function readMilitia(raw: unknown): Militia | null {
+export function readMilitia(raw: unknown, levelOf: (c: CompanyId) => number = () => 0): Militia | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
   if (!isBannerShape(o.shape) || !isTincture(o.tincture) || !isCharge(o.charge)) return null
@@ -104,8 +119,11 @@ export function readMilitia(raw: unknown): Militia | null {
     pattern: isPattern(o.pattern) ? o.pattern : 'plain',
     tincture2: isTincture(o.tincture2) ? o.tincture2 : 'sable',
     metal: isMetal(o.metal) ? o.metal : 'parchment',
+    ...withTheme(readTheme(o.theme, levelOf)),
   }
 }
+
+const withTheme = (theme: ThemeId): Pick<Militia, 'theme'> => (theme === 'neutral' ? {} : { theme })
 
 /** A whole random flag, from a seed (the builder's "Surprise me"). Its pattern colour is never its field. */
 export function randomBanner(seed: number): BannerLook {

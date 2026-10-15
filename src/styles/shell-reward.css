@@ -19,7 +19,7 @@
 .sh-stage-center:has(> .sh-ceremony.compact) {
   /* Dim, not hide: ~50% over the field, and the line sits at the top so the
      middle of the field — where the heroes stood — stays readable. */
-  background: rgba(20, 12, 6, 0.5);
+  background: color-mix(in srgb, var(--shade) 50%, transparent);
   place-items: start center;
   padding-top: 14px;
   animation: sh-rw-dim 260ms ease-out;
@@ -34,7 +34,7 @@
   margin: 0;
   padding: 6px 16px;
   border-radius: 999px;
-  background: rgba(24, 15, 8, 0.88);
+  background: color-mix(in srgb, var(--shade) 88%, transparent);
   border: 1px solid var(--line-strong);
   font-size: var(--fs-lg);
   font-weight: 700;
@@ -45,11 +45,11 @@
 .sh-ceremony.compact .sh-ceremony-note {
   padding: 2px 10px;
   border-radius: 999px;
-  background: rgba(24, 15, 8, 0.88);
+  background: color-mix(in srgb, var(--shade) 88%, transparent);
 }
 @keyframes sh-rw-dim {
   from {
-    background: rgba(20, 12, 6, 0);
+    background: color-mix(in srgb, var(--shade) 0%, transparent);
   }
 }
 
@@ -195,7 +195,7 @@
   border-color: var(--accent);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 14px 1px rgba(224, 172, 76, 0.45);
+    0 0 14px 1px color-mix(in srgb, var(--accent) 45%, transparent);
   animation: sh-lvup-glow 1.8s ease-in-out infinite;
 }
 /* Room for the card badge: the party row clips vertically. */
@@ -206,7 +206,7 @@
   50% {
     box-shadow:
       0 0 0 1px var(--accent),
-      0 0 20px 3px rgba(224, 172, 76, 0.6);
+      0 0 20px 3px color-mix(in srgb, var(--accent) 60%, transparent);
   }
 }
 @media (prefers-reduced-motion: reduce) {

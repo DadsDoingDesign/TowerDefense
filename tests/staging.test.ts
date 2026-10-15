@@ -276,7 +276,7 @@ describe('persistence and validation', () => {
   })
 
   it('settings v4+: "Show everything" is a boolean that defaults off', () => {
-    expect(SETTINGS_VERSION).toBe(5)
+    expect(SETTINGS_VERSION).toBe(6) // 6: `effects` (the company worlds, Full / Light)
     const none = () => null
     expect(migrateSettings({}, 4, none).showEverything).toBe(false)
     expect(migrateSettings({ showEverything: true }, 4, none).showEverything).toBe(true)

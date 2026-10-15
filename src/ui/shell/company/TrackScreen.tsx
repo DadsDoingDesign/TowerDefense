@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { COMPANY_IDS, companyById, type CompanyId } from '../../../game/data/companies'
 import { kitPieceLabel } from '../../../game/data/companyKits'
 import type { IconKey } from '../../../game/data/iconAtlas'
@@ -30,6 +30,8 @@ import { Crest, Lock } from '../../pixel'
 import { CodexCard, CodexSheet } from '../codex/CodexScreen'
 import { previewEntry, type CodexEntry } from '../codex/codexModel'
 import { CompanyFlag, ContractPage } from '../contracts/parts'
+import { uiTheme } from '../../theme/companyThemes'
+import { ThemeSwatch } from '../../theme/ThemeSwatch'
 import '../../../styles/track.css'
 
 /**
@@ -60,6 +62,8 @@ export function TrackScreen({ company: first, onBack }: { company: CompanyId; on
   const look = useMetaStore((s) => s.liveries[company] ?? null)
   const signTerm = useMetaStore((s) => s.signTerm)
   const openContracts = useGameStore((s) => s.openContracts)
+  const focusRoad = useGameStore((s) => s.focusRoad)
+  useEffect(() => focusRoad(first), [first, focusRoad])
 
   const co = companyById(company)
   const xp = standing[company] ?? 0
@@ -137,7 +141,8 @@ export function TrackScreen({ company: first, onBack }: { company: CompanyId; on
               style={{ '--co': companyVar(c) } as CSSProperties}
               aria-pressed={c === company}
               aria-label={`${companyById(c).name}: ${cOpen ? `${t > 1 ? `${termName(t)}, level` : 'standing'} ${lv}` : 'not hiring yet'}`}
-              onClick={() => (setCompany(c), setDetail(null))}
+              // The page wears the company it shows: switching focuses its road (and theme).
+              onClick={() => (setCompany(c), setDetail(null), focusRoad(c))}
             >
               <Crest company={c} scale={1} locked={!cOpen} />
               <b aria-hidden="true">{cOpen ? lv : <Lock scale={1} />}</b>
@@ -179,6 +184,8 @@ export function TrackScreen({ company: first, onBack }: { company: CompanyId; on
 /** One part of a row: what it is (`.field-k`) and its name (`.field-v`), a tap from its card when it has one. */
 interface Part {
   icon: IconKey
+  /** Drawn as this UI theme's swatch instead of the icon (the theme level). */
+  swatch?: CompanyId
   k: string
   v?: string
   open?: CodexEntry | null
@@ -201,13 +208,13 @@ function Row({ row, open, xp, owned, onOpen }: { row: TrackRow; open: boolean; x
         {parts.map((p) =>
           p.open ? (
             <button key={p.k} type="button" className="tk-part is-open" onClick={() => onOpen(p.open!)} aria-label={`${p.k}: ${p.v}. Open its card`}>
-              <Icon name={p.icon} />
+              {p.swatch ? <ThemeSwatch theme={p.swatch} /> : <Icon name={p.icon} />}
               <span className="field-k">{p.k}</span>
               {p.v && <span className="field-v">{p.v}</span>}
             </button>
           ) : (
             <span key={p.k} className="tk-part" aria-hidden="true">
-              <Icon name={p.icon} />
+              {p.swatch ? <ThemeSwatch theme={p.swatch} /> : <Icon name={p.icon} />}
               <span className="field-k">{p.k}</span>
               {p.v && <span className="field-v">{p.v}</span>}
             </span>
@@ -265,6 +272,8 @@ function partsOf(pay: TrackPay, earned: boolean, owned: readonly string[]): Part
       open: previewEntry('item', pay.named, `Named at ${at}. A delivered Sovereign Route unlocks it.`),
     })
   if (pay.flag) out.push({ icon: 'banner', k: 'Flag', v: kitPieceLabel(pay.flag) })
+  // A fixed part, like the flag piece: the company's UI theme for your militia's own road.
+  if (pay.theme) out.push({ icon: 'banner', swatch: pay.company, k: 'Theme', v: `${uiTheme(pay.company).name} for your militia` })
   return out
 }
 

@@ -17,12 +17,14 @@ import {
   soldierRows,
   TINCTURES,
 } from '../src/game/data/banner'
-import { COMPANIES } from '../src/game/data/companies'
-import { flyingMilitia, isMilitiaName, militiaName, militiaTagline, randomBanner, readMilitia, rerollName } from '../src/game/run/militia'
+import { COMPANIES, COMPANY_IDS, type CompanyId } from '../src/game/data/companies'
+import { flyingMilitia, isMilitiaName, militiaName, militiaTagline, militiaTheme, randomBanner, readMilitia, rerollName, type Militia } from '../src/game/run/militia'
+import { THEME_IDS, THEME_LEVEL, themeOpen } from '../src/game/run/militiaTheme'
+import { standingXpToReach } from '../src/game/run/standing'
 import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { checkCompanyName, isProfane } from '../src/game/run/nameFilter'
-import { migrateMeta, META_VERSION } from '../src/state/metaStore'
+import { migrateMeta, META_VERSION, useMetaStore } from '../src/state/metaStore'
 
 /* Your militia's name and banner (build step 4). */
 describe('the militia’s name', () => {
@@ -206,5 +208,47 @@ describe('the militia flies with the Sovereign Route', () => {
     expect(flyingMilitia(m, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS].slice(1) })).toBeNull()
     expect(flyingMilitia(m, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })).toBe(m)
     expect(flyingMilitia(null, { skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })).toBeNull()
+  })
+})
+
+/*
+ * Your militia's UI theme (Oct 2026): the house look, or a company's once your
+ * standing with it reaches THEME_LEVEL. Stored only when it is not neutral, so
+ * every save from before themes loads unchanged; an unknown or locked one
+ * loads as neutral.
+ */
+describe('the militia’s UI theme', () => {
+  const m = { name: 'The Ashford Company', shape: 'swallow', tincture: 'navy', charge: 'keep', pattern: 'plain', tincture2: 'sable', metal: 'parchment' }
+  const levels = (o: Partial<Record<CompanyId, number>>) => (c: CompanyId) => o[c] ?? 0
+  it('opens at standing THEME_LEVEL (6) with its company; neutral is always open', () => {
+    expect(THEME_LEVEL).toBe(6)
+    expect(themeOpen('neutral', levels({}))).toBe(true)
+    expect(themeOpen('metals', levels({ metals: 5 }))).toBe(false)
+    expect(themeOpen('metals', levels({ metals: 6 }))).toBe(true)
+    expect(themeOpen('metals', levels({ spice: 10 }))).toBe(false)
+    expect(THEME_IDS).toEqual(['neutral', ...COMPANY_IDS])
+  })
+  it('an unlocked theme survives a load; neutral is stored as no theme at all', () => {
+    expect(readMilitia({ ...m, theme: 'silk' }, levels({ silk: 7 }))).toEqual({ ...m, theme: 'silk' })
+    expect(readMilitia({ ...m, theme: 'neutral' }, levels({}))).toEqual(m)
+    expect(militiaTheme(readMilitia(m, levels({})))).toBe('neutral')
+  })
+  it('a locked, unknown or malformed theme loads as neutral — the militia itself is kept', () => {
+    for (const theme of ['silk', 'teal', 7, null, { id: 'art' }]) expect(readMilitia({ ...m, theme }, levels({ silk: 5 }))).toEqual(m)
+    // No standing given: every company theme is locked.
+    expect(readMilitia({ ...m, theme: 'art' })).toEqual(m)
+  })
+  it('the meta save checks it against the standing it just read', () => {
+    const at = (lv: number) => migrateMeta({ militia: { ...m, theme: 'scrolls' }, standing: { scrolls: standingXpToReach(lv) }, terms: {} }, META_VERSION).militia
+    expect(at(6)?.theme).toBe('scrolls')
+    expect(at(5)?.theme).toBeUndefined()
+    expect(at(5)?.name).toBe(m.name)
+  })
+  it('setMilitia keeps a theme only once it is open', () => {
+    useMetaStore.setState({ standing: { spice: 0, art: standingXpToReach(6), metals: 0, silk: 0, scrolls: 0 } })
+    useMetaStore.getState().setMilitia({ ...(m as Militia), theme: 'art' })
+    expect(useMetaStore.getState().militia?.theme).toBe('art')
+    useMetaStore.getState().setMilitia({ ...(m as Militia), theme: 'metals' })
+    expect(useMetaStore.getState().militia?.theme).toBeUndefined()
   })
 })

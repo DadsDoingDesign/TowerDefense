@@ -5,6 +5,7 @@ import { itemKindById, SOVEREIGN_LEVEL, UNLOCK_ITEM_KINDS } from '../src/game/da
 import { ALL_SKILLS, FEAT_SKILLS, isSignatureSkill, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS, skillById, STARTER_SKILLS } from '../src/game/data/skills'
 import { ASK_STANDING, askStanding, askStandingFor } from '../src/game/run/asks'
 import { charterDoor } from '../src/game/run/charter'
+import { THEME_LEVEL } from '../src/game/run/militiaTheme'
 import { STAKES_OPEN_AT } from '../src/game/run/contracts'
 import {
   legacyStandingCost,
@@ -343,5 +344,28 @@ describe('a second term', () => {
     expect(p.track.every((t) => t.term === 2 && !!t.bonus)).toBe(true)
     expect(useMetaStore.getState().bonusItems).toEqual(p.track.map((t) => t.bonus))
     expect(p.spans[0]).toMatchObject({ company: 'scrolls', term: 2, before: 0 })
+  })
+})
+
+/*
+ * The theme level (Oct 2026): Term I's level THEME_LEVEL names the company's
+ * UI theme for your militia, every company, every plan — and nothing else
+ * about the level moves (it is cosmetic; the standing itself is the unlock).
+ */
+describe('the track names the theme at THEME_LEVEL', () => {
+  it('only Term I’s level 6 carries it, for every company', () => {
+    for (const c of COMPANY_IDS) {
+      const rows = trackPlan(c, { xp: 0, term: 1, skills: [], items: [] })
+      expect(rows.filter((r) => r.pay.theme).map((r) => r.pay.level)).toEqual([THEME_LEVEL])
+      const t2 = trackPlan(c, { xp: TERM_XP, term: 2, skills: [], items: [] })
+      expect(t2.some((r) => r.pay.theme)).toBe(false)
+    }
+  })
+  it('it pays nothing: the level’s card, item and bonus are as they were', () => {
+    const rows = trackPlan('metals', { xp: 0, term: 1, skills: [], items: [] })
+    const six = rows[THEME_LEVEL - 1].pay
+    expect(TRACK_PLAN[THEME_LEVEL - 1]).toBe('item')
+    expect(six.item).not.toBeNull()
+    expect(six.card).toBeNull()
   })
 })

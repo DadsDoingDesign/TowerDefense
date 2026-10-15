@@ -1032,6 +1032,23 @@ function settingsOffers(s: Settings): Offer[] {
       action: { label: s.reducedMotion ? 'Turn off' : 'Turn on', run: () => s.setReducedMotion(!s.reducedMotion), quiet: true },
     },
     {
+      // Oct 2026: the company worlds' motion (`game/render/fxQuality`).
+      id: 'effects',
+      title: 'Effects',
+      sub: s.reducedMotion ? 'Off (reduced motion)' : s.effects === 'light' ? 'Light' : 'Full',
+      icon: 'evolve',
+      body: [
+        'How much of each company’s world plays round the panels and the battlefield’s edges: embers, sparks, petals, paint, stars.',
+        'Light keeps the frames still, halves the particles and drops the glows. On Full, a device that cannot keep up switches to Light by itself, and back when it can.',
+        'Reduced motion stops them all.',
+      ],
+      action: {
+        label: s.effects === 'light' ? 'Set to Full' : 'Set to Light',
+        run: () => s.setEffects(s.effects === 'light' ? 'full' : 'light'),
+        quiet: true,
+      },
+    },
+    {
       id: 'contrast',
       title: 'High contrast',
       sub: onOff(s.highContrast),

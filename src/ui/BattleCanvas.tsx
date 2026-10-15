@@ -55,7 +55,11 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setFieldSeason } from '../game/render/renderer'
+import { fieldSeasonFor } from '../game/data/fieldSeasons'
+import { fxLevel, noteFxFrame } from '../game/render/fxQuality'
+import { militiaTheme } from '../game/run/militia'
+import { contractTheme } from './theme/companyThemes'
 import { bestTiles, inLastStretch, lastStretch } from '../game/run/placement'
 import type { GameMap } from '../game/types'
 import {
@@ -407,9 +411,13 @@ export function BattleCanvas() {
      * here used to freeze the battle silently forever, because rAF callbacks
      * are outside React and nothing was catching them (H21).
      */
+    /** The company world at the field's edges (Oct 2026; `render/edgeFx`). */
+    const edge = new EdgeBand()
     const step = (now: number) => {
       let dt = (now - last) / 1000
       last = now
+      // The frame's length feeds the effects' automatic step down (`fxQuality`).
+      noteFxFrame(dt * 1000)
       // A tab-out can hand us an enormous delta; cap the real time we bank.
       if (dt > 0.25) dt = 0.25
 
@@ -547,6 +555,15 @@ export function BattleCanvas() {
        * grows a black edge as it kicks. It costs one extra blit, on shake
        * frames only.
        */
+      // The battlefield wears the run's season (Oct 2026): its hiring
+      // company's, your militia's chosen world's on the Sovereign Route — a
+      // re-bake on a change, nothing per frame (`render/season`).
+      const meta = useMetaStore.getState()
+      const runTheme = st.contract ? contractTheme(st.contract, militiaTheme(flyingMilitia(meta.militia, meta))) : null
+      // Dev only: `window.__seasonOff` shows the plain field, for a before / after.
+      const season = import.meta.env.DEV && (window as unknown as { __seasonOff?: boolean }).__seasonOff ? null : fieldSeasonFor(runTheme)
+      setFieldSeason(season)
+
       const sh = fxShake()
       if (sh.on) {
         drawField(ctx, map, sv)
@@ -558,6 +575,9 @@ export function BattleCanvas() {
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
       // Q1: the skulls on cursed ground — terrain too, under the hero on it.
       drawTerrainDanger(map, (x, y, v) => drawSkull(ctx, x, y, v))
+      // The world at the field's edges: clear of the road, the slots and the
+      // wagon, and under the wagon and the units in any case.
+      edge.frame(ctx, map, sv, shown.scale, season, fxLevel(), dt * 1000)
       // The caravan at the road's end (the mercenary company): its crates are
       // the cargo still on board, so a leak is seen to take one away.
       {

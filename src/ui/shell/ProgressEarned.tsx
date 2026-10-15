@@ -13,6 +13,7 @@ import { useMetaStore } from '../../state/metaStore'
 import { companyVar } from '../channels'
 import { Crest } from '../pixel'
 import { SkillCard } from './SkillCards'
+import { uiTheme } from '../theme/companyThemes'
 
 /**
  * What a finished contract did for the long game, on its receipt: every skill
@@ -38,7 +39,7 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
     .filter((x) => !!x.k)
   const kinds = p.items.map((id, i) => ({ id, kicker: i === 0 ? 'Contract' : 'Item chance', k: itemKindById(id) })).filter((x) => !!x.k)
   // Draft 4 · B: what each track level crossed paid, company by company.
-  const track = (p.track ?? []).filter((t) => t.card || t.signature || t.item || t.bonus || t.named)
+  const track = (p.track ?? []).filter((t) => t.card || t.signature || t.item || t.bonus || t.named || t.theme)
   const n = skills.length + kinds.length
   if (!n && !track.length) return null
   const floor = contractFloor(crates)
@@ -77,6 +78,7 @@ const trackNames = (t: TrackPay): string[] =>
     t.item,
     t.bonus && `a Rare ${t.bonus} for your next contract`,
     t.named && `${t.named} named`,
+    t.theme && `the ${uiTheme(t.company).name} theme`,
   ].filter((x): x is string => !!x)
 
 /**
@@ -121,6 +123,15 @@ function TrackEarned({ company, pays }: { company: CompanyId; pays: TrackPay[] }
               key={`${t.level}-named`}
               kicker={`${kicker} · named`}
               skill={{ name: named.id, level: `${SLOT_WORD[named.slot]} · Sovereign`, text: `${named.does} A delivered Sovereign Route unlocks it.` }}
+            />,
+          )
+        // The company's UI theme for your militia's own road (`run/militiaTheme.ts`).
+        if (t.theme)
+          out.push(
+            <SkillCard
+              key={`${t.level}-theme`}
+              kicker={`${kicker} · theme`}
+              skill={{ name: uiTheme(company).name, level: 'UI theme', text: `${co.name}’s colours, for your militia’s own road. Pick it where you dress your militia’s flag.` }}
             />,
           )
         return out

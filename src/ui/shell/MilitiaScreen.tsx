@@ -18,15 +18,19 @@ import {
   type Metal,
   type Pattern,
 } from '../../game/data/banner'
-import { militiaName, randomBanner, rerollName, type Militia } from '../../game/run/militia'
+import { militiaName, militiaTheme, randomBanner, rerollName, type Militia } from '../../game/run/militia'
+import { THEME_IDS, THEME_LEVEL, themeOpen, type ThemeId } from '../../game/run/militiaTheme'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { earnedBannerParts, type EarnedOption } from '../../game/run/livery'
 import { standingOf } from '../../game/run/standing'
 import { checkCompanyName, NAME_MAX } from '../../game/run/nameFilter'
 import { useMetaStore } from '../../state/metaStore'
 import { Icon } from '../Icon'
-import { Banner, Crest, Pixel } from '../pixel'
+import { Banner, Crest, Lock, Pixel } from '../pixel'
 import { ContractPage } from './contracts/parts'
+import { uiTheme } from '../theme/companyThemes'
+import { ThemeSwatch } from '../theme/ThemeSwatch'
+import { useThemePreview } from '../theme/useCompanyTheme'
 import { FlagWheel, OptionGrid, PartCarousel, type CarouselOption } from './company/FlagCarousel'
 import '../../styles/company.css'
 
@@ -103,6 +107,32 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
   const look = fullBanner(m)
   const check = checkCompanyName(typed)
 
+  // The UI theme your own road wears (Oct 2026): the house look, or a
+  // company's once your standing with it reaches THEME_LEVEL. A locked one can
+  // be tried on — the whole page wears it while it is chosen — but not kept.
+  const theme = militiaTheme(m)
+  const themes = useMemo(
+    () =>
+      THEME_IDS.map((id): CarouselOption & { theme: ThemeId } => {
+        const mine = themeOpen(id, (c) => standingOf(xp, c))
+        const co = id === 'neutral' ? null : companyById(id)
+        return {
+          id,
+          theme: id,
+          name: uiTheme(id).name,
+          ...(mine || !co ? {} : { locked: true, note: `Standing ${THEME_LEVEL}` }),
+          ...(co ? { spoken: `${uiTheme(id).name}, ${co.name}’s colours${mine ? '' : `: unlocks at standing ${THEME_LEVEL} with ${co.name}`}` } : {}),
+        }
+      }),
+    [xp],
+  )
+  const themeLocked = themes.find((o) => o.id === theme)?.locked ?? false
+  const tryOn = useThemePreview((s) => s.set)
+  useEffect(() => {
+    tryOn(theme)
+  }, [theme, tryOn])
+  useEffect(() => () => tryOn(null), [tryOn])
+
   const roll = () => {
     const next = rerollName(seed + 1, m.name)
     setSeed(next.seed)
@@ -115,7 +145,7 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
   }
   const set = (patch: Partial<Militia>) => setM((cur) => ({ ...cur, ...patch }))
   const done = () => {
-    if (!check.ok) return
+    if (!check.ok || themeLocked) return
     setMilitia({ ...m, name: check.name })
     onDone()
   }
@@ -193,7 +223,8 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
         label: mode === 'create' ? 'Found the militia' : saved ? 'Raise the new flag' : 'Raise the flag',
         run: done,
         heavy: true,
-        disabled: !check.ok,
+        disabled: !check.ok || themeLocked,
+        name: themeLocked ? `${mode === 'create' ? 'Found the militia' : 'Raise the flag'}: the ${uiTheme(theme).name} theme is not unlocked yet` : undefined,
       }}
     >
       <div className="mi-preview co-preview">
@@ -246,6 +277,25 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
           />
         </section>
       </div>
+
+      <section className="co-col co-theme" aria-label="Your road’s colours">
+        <PartCarousel
+          label="Theme"
+          options={themes}
+          value={theme}
+          onPick={(id) => set({ theme: id as ThemeId })}
+          render={(o) => (
+            <span className="lv-opt">
+              <ThemeSwatch theme={o.theme} size="lg" />
+              {o.locked && (
+                <span className="lv-lock">
+                  <Lock scale={2} />
+                </span>
+              )}
+            </span>
+          )}
+        />
+      </section>
 
       {open && (
         <Sheet label={open === 'shape' ? 'Flag shape' : 'Emblem'} onClose={() => setOpen(null)}>
