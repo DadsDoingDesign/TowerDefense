@@ -5,8 +5,8 @@ import type { CompanyId } from './companies'
  * The liaisons (Draft 4 · D — companies as sponsors, "someone to talk to")
  * ---------------------------------------------------------------------------
  *
- * One person per company who speaks for it: at the contract board (the home
- * notice), at each city on its road, and on the receipt. They talk the way the
+ * One person per company who speaks for it: at each city on its road, and on
+ * the receipt. (The home's board line went with the map-first home, Oct 2026.) They talk the way the
  * stop keepers do (`ui/shell/stopScene.ts`): one short spoken line in a bubble
  * over their head, in their own voice — never a rule. What a contract pays,
  * asks and risks is said by the terms, the route panel and the receipt; a
@@ -18,7 +18,7 @@ import type { CompanyId } from './companies'
  * pack by `scripts/stop-scenes.ts` (`public/assets/scenes/liaison-<company>.png`).
  *
  * Pure data. Which line is said is a rule (`run/liaison.ts`): a hash of the
- * day, the run seed and the city — never a draw on a run stream.
+ * run seed and the city — never a draw on a run stream.
  *
  * Lines are written without their quotes; `run/liaison.ts` adds them and fills
  * `{c1}` `{c2}` `{dest}` (the road's three cities), `{here}` (the city the
@@ -40,15 +40,6 @@ export interface Liaison {
   name: string
   /** What they are to the company, lower case: "factor" ("Brannoch · Ironvein’s factor"). */
   role: string
-  /** At the contract board, on a road that hires: the road's trouble, or what the company wants of it. */
-  board: readonly string[]
-  /** At the contract board, on a road not hiring yet. */
-  closed: readonly string[]
-  /**
-   * At the contract board while it is cold to you (the trade war: your
-   * exclusive this season is with its rival). Easel House has no rival.
-   */
-  cold?: readonly string[]
   /** At a city, by the cargo that arrived: 90% or more, 60% or more, less. */
   city: { readonly good: readonly string[]; readonly fair: readonly string[]; readonly rough: readonly string[] }
   /** At a city, of one of the contract's asks (keyed by ask id, `run/asks.ts`). */
@@ -67,9 +58,6 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     company: 'spice',
     name: 'Saffra',
     role: 'broker',
-    board: ['Fire on the road again. Keep moving.', 'Spice won’t wait. Nor will {dest}.', 'The price turns soon. Get it there.', 'They torch the fields. Burn them back.'],
-    closed: ['Not hiring yet. Earn a name first.'],
-    cold: ['Rosethread’s blade now? Then go.'],
     city: {
       good: ['Smells like profit. On to {next}.', 'Not a sack singed. Lovely.'],
       fair: ['Some sacks singed. Still sells.'],
@@ -95,8 +83,6 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     company: 'art',
     name: 'Vell',
     role: 'curator',
-    board: ['Keep the frames dry. Bone dry.', 'The canals are up. Mind the paint.', 'Every frame to {dest}. Every one.', 'Raiders don’t know art. Teach them.'],
-    closed: ['The House hires the proven only.'],
     city: {
       good: ['Not a scratch. Exquisite.', 'Spotless. On to {next}, gently.'],
       fair: ['A frame or two chipped. Tolerable.'],
@@ -122,9 +108,6 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     company: 'metals',
     name: 'Brannoch',
     role: 'factor',
-    board: ['{c1}’s hit again. Bring magic.', 'Plate on every goblin. Bring magic.', 'Ore to {dest}. Don’t lose a cart.', 'Boulders on the road. Mind them.'],
-    closed: ['Ironvein hires the proven only.'],
-    cold: ['Moonquill’s, are you? Then walk on.'],
     city: {
       good: ['Good haul. On to {next}.', 'Every cart whole. That’s the job.'],
       fair: ['A few carts short. It’ll do.'],
@@ -150,9 +133,6 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     company: 'silk',
     name: 'Odile',
     role: 'mercer',
-    board: ['Quiet blades, please. Silk spooks.', 'The fords are up, the fields burn.', 'Bolts to {dest}. Shop as you go.', 'Coin moves on the river. Guard it.'],
-    closed: ['Rosethread hires the proven only.'],
-    cold: ['Signed with the pepper lot, I hear.'],
     city: {
       good: ['Not a thread pulled. Lovely.', 'Soft as you found it. On to {next}.'],
       fair: ['Some bolts snagged. Nobody’ll mind.'],
@@ -178,9 +158,6 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     company: 'scrolls',
     name: 'Wren',
     role: 'archivist',
-    board: ['Wards on them all. Bring steel.', 'The ground is cursed. Step lightly.', 'Sealed scrolls to {dest}. Unread.', 'Something follows the scrolls.'],
-    closed: ['Moonquill hires the proven only.'],
-    cold: ['Ironvein’s blade now. It is noted.'],
     city: {
       good: ['The seals hold. On to {next}.', 'Every seal whole. As foretold.'],
       fair: ['A few seals cracked. It will do.'],

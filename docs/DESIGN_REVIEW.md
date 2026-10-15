@@ -3883,3 +3883,44 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
     shows whole on a 390px phone (25.7px) and a 32-letter name fits at 15px.
   - **Left as is:** an earned card or item row says only "Skill card" /
     "Item" — what a crossed level paid is not in the save.
+- **2026-10-15 · The map-first home.** The designer: no character on the
+  home, the map front and centre, minimal UI overlaid where needed, one even
+  spot per company that lights its road. The trade map is now the whole
+  screen on every size; over it a slim bar (seal, bank, place icons), a
+  five-slot company dock in `COMPANY_IDS` order (the roads now fan west→east
+  in the same order, so the dock is the map's legend) and one glass card with
+  the CTA. Focusing a road re-lights the canvas (night wash, the road laid
+  back undimmed and glowing, the others at 0.3) and names its cities. The
+  liaison, the notice, the pager, the war strip and the tiles are gone.
+  Three rounds in the running app (phone 390 × 844 and 375 × 667, desk
+  1280 × 800 and 1440 × 900, tablet 768 × 1024; veteran, mid, early and
+  first-run saves): `docs/ui-audit-2026-10/home-map/` (REVIEW.md, r1–r3).
+  - **Fixed across the rounds:** city tags on the wrong road or under each
+    other (now placed by least road covered, destination first, hidden
+    rather than overlapped); three crowns for one leader (now one, on the
+    dock, and none for a tie); the tallest crest covering its slot's
+    standing; a dead band under the desk hub; heavy pills (the coarse-pointer
+    floor — they keep a 44px hit area); a short phone's chips scrolled out
+    of sight; the desperate tag at 4.41:1 (caught by the contrast test).
+  - **Left as is:** the phone card is the tallest layer (~205px with four
+    chips); a short phone's card is two lines plus the CTA, not one.
+
+### 2026-10-15 — the margin banners cut
+The designer, on a phone shot of a battle with the employer's and the season leader's banners in its forest: "Why are these flags randomly around the map in addition to the cargo one?" — then "Keep only wagon flags." Cut `render/marginBanners.ts` and its test; the wagon flies the run's standard as before. The season-end page's "<Leader>'s banners line every road" (no longer true) now says "<Leader> starts Season N ahead · half its lead carries over" (`tradeWar.regressShares`).
+- **2026-10-15 · Buy Company.** The designer: the "Sovereign Route ›" pill
+  "looks like a marketing chip" — make it a button that looks locked, called
+  "Buy Company". The pill is gone; the company dock has a sixth slot after
+  the five (a carved cyan rim, the Sovereign crest; locked: a padlock and the
+  share unlocked with a bar; open: a quiet glow), shown from the first
+  non-staged home. Selecting it lights all five roads and turns the card
+  into Buy Company (locked: the Skills / Items counts, "Unlock 26 more";
+  open: what delivery pays, "Buy Company · 7,000" to the charter page). One
+  round plus fixes in the running app (390 × 844, 375 × 667, 1280 × 800; mid,
+  veteran and short-of-gold saves): `docs/ui-audit-2026-10/home-map/buy-company/`.
+  - **Fixed:** the padlock covering "40%" on a short phone; the desk dock
+    growing 23px when the slot wrapped; an open slot that shouted in cyan;
+    the bar clipping Settings at 390 with a five-figure bank (now the narrow
+    bar up to 420).
+  - **Left for the designer:** the name on the desk slot (three "Buy
+    Company"s on a desk); the locked CTA does not open the charter page
+    (nor did anything on the home before).

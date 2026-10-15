@@ -118,8 +118,8 @@ export function SeasonEndScreen({ end }: { end: SeasonEnd }) {
         <div className="tw-next-row is-lead">
           <Crest company={end.leader} scale={2} />
           <span>
-            <b>{shortName(end.leader)}’s banners line every road</b>
-            <span className="tw-next-sub">while it leads the trade</span>
+            <b>{shortName(end.leader)} starts Season {next} ahead</b>
+            <span className="tw-next-sub">half its lead carries over</span>
           </span>
         </div>
         <ShareBar season={{ n: end.n, shares: end.shares, deliveries: {} as SeasonEnd['shares'] }} />

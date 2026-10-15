@@ -4,7 +4,6 @@
  * (`stops.css` draws the scene, the stage and the bubble; this sheet only
  * places them).
  *
- *  - the home notice: a short band across the parchment's top;
  *  - a city: the page's head, the city's name hung on it as its sign;
  *  - the receipt: one small line with the liaison's face.
  *
@@ -34,73 +33,6 @@
   line-height: 1.2;
   white-space: nowrap;
   color: var(--slip-ink-2);
-}
-
-/* ------------------------------------------------------------ the home notice */
-/* A band across the notice's top, edge to edge of the parchment (its
-   padding, undone): the whole post at 1×, the liaison behind the counter,
-   the bubble beside the head. */
-.lia-scene.at-notice {
-  --scene-h: 140px;
-  margin: -16px -14px 10px;
-  border-radius: 3px 3px 0 0;
-  border-bottom-width: 2px;
-}
-.lia-scene.at-notice .ss-stage {
-  top: -6px;
-  /* The post a step left (up to 22px, never baring the band's right
-     edge), so the bubble has the right-hand half. */
-  left: max(calc(100% - 400px), calc(50% - 222px));
-  translate: none;
-}
-.lia-scene.at-notice .ss-bubble {
-  padding: 6px 10px 7px;
-  font-size: 15px;
-  line-height: 1.15;
-}
-/* A desk's column has room for the whole post. */
-@media (min-width: 900px) and (min-height: 540px) {
-  .lia-scene.at-notice {
-    --scene-h: 150px;
-  }
-  .lia-scene.at-notice .ss-stage {
-    top: 0;
-  }
-}
-/* A shorter desk (≤ 860px tall) keeps the column's places and CTA in view:
-   the post a little shorter, the bubble beside the head as ever. */
-@media (min-width: 900px) and (min-height: 540px) and (max-height: 860px) {
-  .lia-scene.at-notice {
-    --scene-h: 112px;
-  }
-  .lia-scene.at-notice .ss-stage {
-    top: -20px;
-  }
-}
-/* The scene is the notice's header: no pin floating over the art. */
-.mn-notice:has(> .lia-scene)::before {
-  display: none;
-}
-@media (orientation: portrait) and (max-height: 760px) {
-  /* A short phone keeps the map its room: the liaison over the counter
-     only, the line without its name (the notice's flag and title say whose). */
-  .lia-scene.at-notice {
-    --scene-h: 82px;
-    margin: -15px -12px 8px;
-  }
-  .lia-scene.at-notice .ss-stage {
-    top: -32px;
-  }
-  .lia-scene.at-notice .ss-who {
-    display: none;
-  }
-}
-/* A very short phone drops the band, as it dropped the letter it replaced:
-   the chips carry the facts. */
-@media (orientation: portrait) and (max-height: 640px) {
-  .lia-scene.at-notice {
-    display: none;
-  }
 }
 
 /* ------------------------------------------------------------ a city */

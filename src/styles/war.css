@@ -1,7 +1,8 @@
 /* ==========================================================================
-   The trade war (Draft 4 § D): the home's war strip and share bar, the
-   leader's crown on its signpost, the cold notice, the standings, the
-   season's end, and the war's facts and exclusive sheet on the terms.
+   The trade war (Draft 4 § D): the share bar, the leader's crown, the
+   standings, the season's end, and the war's facts and
+   exclusive sheet on the terms. (On the home, the war is the dock's shares,
+   marks and season pill: `menu.css`.)
    ========================================================================== */
 
 /* ------------------------------------------------------------ the share bar
@@ -34,140 +35,9 @@
   box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.45);
 }
 
-/* ------------------------------------------------------------ the home strip */
-.tw-strip {
-  display: grid;
-  gap: 6px;
-  width: 100%;
-  min-height: var(--hit-min);
-  padding: 8px 10px 9px;
-  border-radius: var(--r-md);
-  background: rgba(20, 15, 10, 0.94);
-  border: 1px solid var(--line-strong);
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.tw-strip-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.tw-strip-ex {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  color: var(--accent-text);
-  white-space: nowrap;
-}
-.tw-left {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.tw-left i {
-  font-style: normal;
-  margin-left: 2px;
-  color: var(--accent-text);
-}
-.tw-strip:focus-visible {
-  outline: var(--focus-width) solid var(--focus-ring);
-  outline-offset: 2px;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tw-strip:hover {
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-}
-
-/* Short phones: the strip is one row — the season, the bar, what is left —
-   so the map keeps its open middle. */
-@media (orientation: portrait) and (max-height: 760px) {
-  .tw-strip {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-  }
-  .tw-strip-head {
-    display: contents;
-  }
-  .tw-strip .tw-bar {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .tw-strip-ex {
-    display: none;
-  }
-  .tw-war-word {
-    display: none;
-  }
-}
-
-/* ------------------------------------------------------------ the crown
-   On the leader's signpost: hung on the plate's top-left corner. */
-.tm-crown {
-  position: absolute;
-  left: -9px;
-  top: -3px;
-  rotate: -14deg;
-  pointer-events: none;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
-}
+/* The leader's crown (on its dock slot, the standings, the season's end). */
 .crown {
   display: block;
-}
-
-/* ------------------------------------------------------------ the notice, cold
-   Your exclusive is with this company's rival: the paper pales and wears a
-   stamp until the season ends (mockup 4b). The facts stay readable. */
-.mn-notice.is-cold {
-  background:
-    radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(60, 80, 100, 0.16) 100%),
-    var(--paper-cold);
-  border-color: #a9b2b6;
-}
-.mn-notice.is-cold .co-flag,
-.mn-notice.is-cold .lia-scene .ss-stage {
-  filter: saturate(0.35);
-}
-/* The stamp sits on the paper's foot, right: the liaison's post fills the
-   top of the notice now (`LiaisonScene`), and the chips run on the left. */
-.mn-cold-stamp {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 2;
-  padding: 0 9px;
-  rotate: -6deg;
-  background: var(--paper-cold);
-  border: 3px double var(--cold-ink);
-  border-radius: 4px;
-  color: var(--cold-ink);
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-}
-.mn-chip.is-cold {
-  border-color: var(--cold-ink);
-  color: var(--cold-ink);
-  font-weight: 700;
-}
-.mn-chip.is-exclusive {
-  background: var(--paper-ink);
-  border-color: var(--paper-ink);
-  color: var(--sign-ink);
-  font-weight: 800;
 }
 
 /* ------------------------------------------------------------ chips */
@@ -191,15 +61,6 @@
 .tw-chip.is-cold {
   color: var(--teal-text);
 }
-/* On the parchment notice, the desperate chip is the notice's chip in red ink. */
-.mn-chips .tw-chip.is-desperate {
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 4px;
-  font-size: var(--fs-xs);
-  color: var(--desperate-ink);
-}
-
 /* ------------------------------------------------------------ the standings */
 .tw-cols {
   display: flex;

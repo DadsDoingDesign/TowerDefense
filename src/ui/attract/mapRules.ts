@@ -26,6 +26,8 @@ export const PULSE_SECONDS: readonly [number, number] = [8, 14]
 export const WAGON_STANDING = 7
 /** A road brightens over this long when your standing with its company rises. */
 export const BRIGHTEN_MS = 600
+/** A focus change (a dock slot or a signpost picked another road) crossfades the map's light over this long. */
+export const FOCUS_FADE_MS = 220
 /** Share of the pulses that run outbound (hub → destination). */
 export const OUTBOUND = 0.7
 /** The time the still frame (reduced motion, screenshots) is drawn at. */
@@ -74,6 +76,16 @@ export function roadViews(o: {
   })
 }
 
+/**
+ * What the home's map lights: one company's road (its dock slot or its
+ * signpost), `'all'` — every road at once, for the dock's Buy Company slot
+ * (the Sovereign Route carries every company's goods) — or nothing.
+ */
+export type MapFocus = CompanyId | 'all' | null
+
+/** Is this company's road one the focus lights? */
+export const litBy = (focus: MapFocus, company: CompanyId): boolean => focus === 'all' || focus === company
+
 // ---------------------------------------------------------------------------
 // Geometry
 // ---------------------------------------------------------------------------
@@ -85,10 +97,17 @@ export interface Rect {
   h: number
 }
 
-/** Each road's heading out of the hub, in degrees (0 = east, −90 = north). */
-const ANGLE: Record<CompanyId, number> = { spice: -52, art: -122, metals: -158, silk: -16, scrolls: -88 }
-/** How far each destination lies, as a share of the fan's radius: a little variety in the skyline of labels. */
-const REACH: Record<CompanyId, number> = { spice: 0.84, art: 0.9, metals: 0.86, silk: 0.6, scrolls: 1 }
+/**
+ * Each road's heading out of the hub, in degrees (0 = east, −90 = north), by
+ * its place in {@link COMPANY_IDS}: the roads fan from west to east in the
+ * same order as the home's company dock (October 2026, the map-first home),
+ * so the dock reads as the map's legend — its first slot is the leftmost road.
+ */
+export const FAN_ANGLES: readonly number[] = [-158, -122, -88, -52, -20]
+/** How far each destination lies, as a share of the fan's radius, by place: a little variety in the skyline of signposts. */
+const FAN_REACH: readonly number[] = [0.84, 0.92, 1, 0.9, 0.78]
+const ANGLE = Object.fromEntries(COMPANY_IDS.map((c, i) => [c, FAN_ANGLES[i]])) as Record<CompanyId, number>
+const REACH = Object.fromEntries(COMPANY_IDS.map((c, i) => [c, FAN_REACH[i]])) as Record<CompanyId, number>
 
 export interface Route {
   company: CompanyId
@@ -117,11 +136,11 @@ export interface MapGeometry {
  */
 export function buildGeometry(W: number, H: number, open: Rect): MapGeometry {
   const wide = open.w >= open.h
-  const hx = Math.round(open.x + open.w * (wide ? 0.52 : 0.5))
-  const hy = Math.round(open.y + open.h * (wide ? 0.68 : 0.86))
+  const hx = Math.round(open.x + open.w * 0.5)
+  const hy = Math.round(open.y + open.h * (wide ? 0.86 : 0.88))
   // Room for a label (about 17 map px) above the highest destination.
   const ry = Math.max(24, hy - (open.y + (wide ? Math.max(30, open.h * 0.1) : 26)))
-  const rx = Math.max(30, open.w * (wide ? 0.42 : 0.4))
+  const rx = Math.max(30, open.w * (wide ? 0.4 : 0.46))
   const R = new RNG(7)
   const routes = COMPANY_IDS.map((company): Route => {
     const a = (ANGLE[company] * Math.PI) / 180

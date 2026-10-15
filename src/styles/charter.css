@@ -454,36 +454,6 @@
   color: var(--text);
 }
 
-/* ------------------------------------------------------------ the menu line */
-.mn-charter-btn {
-  width: 100%;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.mn-charter-btn:focus-visible {
-  outline: 2px solid var(--sovereign);
-  outline-offset: 2px;
-}
-.mn-charter.is-open {
-  grid-template-columns: auto 1fr auto;
-  border: 1px solid rgba(56, 242, 232, 0.7);
-  background:
-    linear-gradient(90deg, rgba(56, 242, 232, 0.14), transparent 70%),
-    rgba(20, 14, 8, 0.92);
-  box-shadow: 0 0 16px rgba(56, 242, 232, 0.18);
-}
-.mn-charter.is-open .mn-charter-v {
-  color: var(--text);
-}
-.mn-charter-why {
-  grid-column: 2 / -1;
-  margin: -6px 0 6px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--muted);
-}
-
 /* ------------------------------------------------------------ the header's marker */
 .sh-chip.sov {
   display: inline-flex;
