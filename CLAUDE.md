@@ -248,6 +248,28 @@ result. Append a short note to the review log when you're done.
   nothing), picked in the builder's Theme carousel (a try-on). Tests
   `tests/companyThemes.test.ts` (contrast of every theme, HC, `themeFor`),
   `tests/militia.test.ts`, `tests/track.test.ts`.
+- Company worlds (Oct 2026; the designer: "if one is fire themed it should
+  have fire effects"): each company theme is a PLACE, in pixels, all under
+  `:root[data-co-theme]` (the neutral house look has none). The art is pixel
+  rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame
+  flipbook with its own edge and corner — Peppercorn charred with ember
+  cracks, Easel House a scalloped paint stroke, Ironvein riveted plates and
+  a molten seam, Rosethread satin and a running stitch, Moonquill a rune
+  band — a CTA strip, and Peppercorn's flame crest on the card), rasterised
+  once into CSS variables by `themeArtDom.ts` and laid on by
+  `src/styles/worlds.css` (`border-image`: changes pixels, never boxes; the
+  frame flickers only on the card, the pick card and the CTA, on a promoted
+  `::after` under the words). The motion is `src/ui/theme/fxWorlds.ts`
+  (pure: each world's ambient particles and backdrop, its press burst, its
+  switch-in) run by ONE rAF loop in `fxEngine.ts` (`fx`, dev handle
+  `window.__fx`): the ambient layer `<ThemeFx>` (`.th-fx`, behind the page's
+  panels; over the map on the home) is drawn in software by `pixelPen.ts`
+  at 24 fps (backdrop 12), capped (`ambientCap`: 60 on a phone, 110 on a
+  desk), cleared under every word and panel, and measures the scene (the
+  dock's top as the floor; the focused road from `.tm-leaders[data-road]`);
+  press bursts are zoned to their `.pg-cta` (`burstClip`) and cleared under
+  its label. Sleeps when hidden; nothing moves under reduced motion; dimmed
+  under high contrast. Tests `tests/themeWorlds.test.ts`.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

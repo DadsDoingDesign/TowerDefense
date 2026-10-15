@@ -82,6 +82,36 @@ company — your militia's on the Sovereign Route; at home the focused road;
 a first launch Peppercorn's); `tests/companyThemes.test.ts` holds every theme
 to the contrast floors `tests/contrast.test.ts` holds the house look to.
 
+### Company worlds (Oct 2026)
+
+The designer: "if one is fire themed it should have fire effects … this is
+just ez boring crap". A company theme is a place, not a palette: on top of
+its tokens each company brings a WORLD, all in pixels (crisp squares, a few
+colours, alpha in eighths, dithered glows), all procedural.
+
+| World | Frame (`themeArt.ts`, 4 px at the sheet's double, its own corner) | Ambient (`fxWorlds.ts`) | Press burst (on the CTA) | Switch-in |
+|---|---|---|---|---|
+| Peppercorn — fire | Charred, burnt-through edge split by flickering ember cracks; a live coal at each corner; flame tongues licking up from the card's top (its crest) | Fat embers (2–3 px, white-hot heart, red halo) rising with a sway, crowded round the focused road and at the foot; flame tongues all along the dock's top out of a dithered heat glow | Flames flare up the CTA's face from its foot; embers off its ends | A wall of flame up the screen |
+| Easel House — paint | A scalloped brush stroke in three paints, a wet lip, a drip, a paint blob at each corner | Bold splats that land, run and dry (never on the focused road), drips, flecks, watercolour washes | A bold inked splat at the CTA's nearer end, another paint at the far end, drips and droplets | A brush wipe |
+| Ironvein — forge | A bevelled iron band, a rivet every eight pixels, a bolt at each corner, a molten seam that breathes | Three anvils along the dock's top throwing sparks in gravity arcs (white-yellow cores, orange tails), a little ash, the forge glow | A white-hot flash running out along both CTA seams; sparks in low arcs off it | A hammer-strike flash and a ring of sparks |
+| Rosethread — silk | Satin with a sliding sheen, an embroidered running stitch, a rose at each corner; a satin sheen sweeps the card and the CTA | Rose petals tumbling down; two ribbons flowing across, a stitch and a sheen running along them | A running stitch sews itself along the CTA; petals off its ends | A ribbon sweep |
+| Moonquill — arcane night | A silver line over a band of runes passing their light along, a star at each corner | A crescent moon and its dithered beam, twinkling stars, runes drifting up, quill strokes | Sparkle rings and an inked rune at each end of the CTA | A moonlit shimmer sweeping down |
+
+Rules the worlds keep: **every world reads in one still, at a glance, in
+greyscale** (each has its own shape — a flame line, blotches, anvils, a
+ribbon, a moon); **effects never cross text** — the ambient layer sits behind
+the panels and is cleared under every word and panel, and a press burst is
+clipped to its CTA and its margins (`burstClip`: barely above, never into the
+panel's rows) and cleared under the label; **no wiggle** — frames are
+`border-image`, the crest and strips are pseudo-elements, the particles a
+canvas: pixels change, boxes never; **reduced motion** stops every particle,
+burst, switch-in, flipbook, strip, crest and sheen (the frames stay, still);
+**high contrast** dims the particles, the theme's lifted ramp wins;
+**performance** — one rAF loop, asleep when the tab is hidden or nothing
+moves, the ambient drawn in software at 24 fps and capped at 60 particles on
+a phone; the frame flickers only on the panels you act on; the battle HUD's
+trims are still. The battlefield itself is never touched.
+
 ### Parchment / wood inks
 | Token | Value | Use |
 |---|---|---|
@@ -485,6 +515,11 @@ agree it, then edit this section.
 | Desperate chip (`DesperateChip`, `.tw-chip.is-desperate`) | Names the company on desperate terms this season ("This season: pays ×1.5" — "this season", so it never reads against the season card's "Last now", which is next season's), on its standings row (the home says it with the dock's "×1.5" mark and the card's chip) | Saying what makes it desperate (the season card's foot, the glossary) |
 
 | Company UI theme (`data-co-theme`, `ui/theme/companyThemes.ts`, `useCompanyTheme`) | Dresses the whole UI in the company the game is with: the focused road's at home and on the pages opened from it, the hiring company's from the terms to the receipt (your militia's on the Sovereign Route), Peppercorn's on a first launch. Colours only, never boxes (the home's no-wiggle proof holds across every focus) | Carrying a fact (the company's crest, name and hue still say whose road it is); recolouring money, rarity or the canvas |
+| World frame (`border-image` from `themeArt.ts` / `worlds.css`) | Edges a panel in its company's world — charred, painted, riveted, stitched, inscribed — on the card, the dock's slots, the purse, the season panel, the run's panels, the CTA and the sheets; still everywhere but the card, the pick card and the CTA, where it flickers | Carrying a fact or a state (the focused slot is still lit by its own colour) |
+| World ambient layer (`ThemeFx`, `.th-fx`, `fxEngine` / `fxWorlds`) | Makes the screen the company's place: its particles and glows between and behind the panels, over the home's map | Sitting under a word; anything over the battlefield |
+| CTA strip and card crest (`.pg-cta::before`, `.mn-card::before`) | The world on the one primary action (flames, paint, sparks, a ribbon and stitch, runes along its lip), and Peppercorn's flames licking up from its card | A second CTA; anything over a label |
+| Press burst (`fx.burst`, the overlay `.th-fx-over`) | Answers a press of the primary CTA in the world's own effect, on the button and its margins only | Crossing the panel's text; firing on any other control |
+| Switch-in (`fx.switchIn`) | Marks the change of world when you focus another road at home (or try a theme on) | Playing on the way into a run, on first paint, or under reduced motion |
 | Theme swatch (`ThemeSwatch`, `.th-swatch`) | Shows a UI theme as itself — its panel, its accent across the top, its CTA along the foot — in the theme's own colours whatever the page wears; always beside the theme's name | Standing in for the name; any other colour sample |
 | Theme carousel (the militia builder's "Theme" `PartCarousel`, `.co-theme`) | Picks the theme your own road wears: the house look ("Lantern wood") or a company's once your standing with it reaches 6. Choosing one tries it on — the whole page wears it at once; a locked one is dimmed with its lock and says "Standing 6", and the CTA will not keep it | Previewing anything but the theme |
 | Track theme part (`.tk-part` with a swatch) | On level 6 of a company's track (Term I), names the theme it opens for your militia ("Theme · Ironvein steel for your militia"), a fixed part like the flag piece | Paying anything: the standing level itself is the unlock |

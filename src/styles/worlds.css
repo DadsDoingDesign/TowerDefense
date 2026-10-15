@@ -89,26 +89,61 @@
     .ct-stand-btn,
     .ct-route,
     .sh-context,
-    .pg-cta
+    .pg-cta,
+    .fc-sheet,
+    .cx-card-in,
+    .fw-resume-card
   ),
 :root[data-co-theme] .mn-purse-btn::after {
   border-image-source: var(--th-frame-0);
-  border-image-slice: 3;
-  border-image-width: 6px;
+  border-image-slice: 4;
+  border-image-width: 8px;
   border-image-outset: 0;
   border-image-repeat: repeat;
   image-rendering: pixelated;
+}
+/* The frame LIVES (its embers flicker, its seam breathes, its sheen slides)
+   only on the panels you act on — the card, the pick card and the CTA — on a
+   layer of its own over the static frame: an `::after` under the words
+   (`z-index: -1` in the panel's own stacking context), promoted, so each step
+   repaints that thin layer, never the panel and its text. Every other panel
+   wears the frame still: a flipbook on each of twenty panels cost a phone a
+   third of its frames. */
+:root[data-co-theme] :is(.mn-card, .pk-card, .pg-cta) {
+  position: relative;
+  isolation: isolate;
+}
+:root[data-co-theme] :is(.mn-card, .pk-card, .pg-cta)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 0 solid transparent;
+  border-image-source: var(--th-frame-0);
+  border-image-slice: 4;
+  border-image-width: 8px;
+  border-image-repeat: repeat;
+  image-rendering: pixelated;
+  will-change: transform;
   animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+}
+/* A dock slot's share figure sits 4px off its foot: the frame's foot there is
+   drawn at half height and hung 2px below the slot, so it never runs under
+   the figure. */
+:root[data-co-theme] .mn-slot {
+  border-image-width: 8px 8px 4px;
+  border-image-outset: 0 0 2px;
 }
 /* The battle HUD's chrome: a trim along the header's foot and the detail
-   band's head — the world's edge, never over the field. */
+   band's head — the world's edge, never over the field, and still (a live
+   wave needs every frame). */
 :root[data-co-theme] .sh-header {
-  border-image: var(--th-frame-0) 3 / 0 0 6px 0 / 0 repeat;
-  animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+  border-image: var(--th-frame-0) 4 / 0 0 8px 0 / 0 repeat;
 }
 :root[data-co-theme] .sh-detail {
-  border-image: var(--th-frame-0) 3 / 6px 0 0 0 / 0 repeat;
-  animation: th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite;
+  border-image: var(--th-frame-0) 4 / 8px 0 0 0 / 0 repeat;
 }
 
 /* Each world's light on its panels: a glow that belongs to the place. */
@@ -155,6 +190,58 @@
   text-shadow: 2px 2px 0 rgba(226, 170, 90, 0.35);
 }
 
+
+/* Peppercorn's crest: flame tongues licking up from the card's top edge, into
+   the gap above it (never as high as the dock's words). */
+@keyframes th-crest {
+  to {
+    background-position-y: -80px;
+  }
+}
+:root[data-co-theme='spice'] .mn-card::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -10px;
+  height: 20px;
+  background-image: var(--th-crest);
+  background-size: 32px 80px;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: th-crest 520ms steps(4) infinite;
+}
+
+/* Rosethread's satin sheen: a pale band that sweeps across the card, the pick
+   card and the CTA every few seconds, in steps, on their live frame layer —
+   under the words (it lightens the panel by under a tenth; the text keeps
+   4.5:1). */
+@keyframes th-sheen {
+  0%,
+  55% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -30% 0;
+  }
+}
+:root[data-co-theme='silk'] :is(.mn-card, .pk-card, .pg-cta)::after {
+  background-image: linear-gradient(
+    105deg,
+    transparent 0 42%,
+    rgba(255, 230, 238, 0.05) 42% 46%,
+    rgba(255, 240, 245, 0.1) 46% 49%,
+    rgba(255, 230, 238, 0.05) 49% 53%,
+    transparent 53% 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation:
+    th-frame var(--th-frame-ms, 1.5s) steps(1, end) infinite,
+    th-sheen 4.2s steps(28, end) infinite;
+}
+
 /* ----------------------------------------------------------------- 3. CTA */
 @keyframes th-strip {
   to {
@@ -184,16 +271,18 @@
   transform: translateY(2px);
 }
 
-/* ----------------------------------------------------------- reduced motion */
-:root[data-co-theme][data-reduced-motion='true'] :is(.mn-card, .mn-slot, .mn-season, .mn-coach, .pg-row, .hq-card, .tk-card, .fc-sheet, .pk-card, .ask-panel, .ct-mode, .ct-stand-btn, .ct-route, .sh-context, .pg-cta, .sh-header, .sh-detail),
-:root[data-co-theme][data-reduced-motion='true'] .mn-purse-btn::after,
-:root[data-co-theme][data-reduced-motion='true'] .pg-cta::before {
+/* ----------------------------------------------------------- reduced motion
+   Every flipbook, strip, crest and sheen stops on its first frame: the frames
+   and textures stay, static. */
+:root[data-co-theme][data-reduced-motion='true'] :is(.mn-card, .pk-card, .pg-cta)::after,
+:root[data-co-theme][data-reduced-motion='true'] .pg-cta::before,
+:root[data-co-theme][data-reduced-motion='true'] .mn-card::before {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root[data-co-theme] :is(.mn-card, .mn-slot, .mn-season, .mn-coach, .pg-row, .hq-card, .tk-card, .fc-sheet, .pk-card, .ask-panel, .ct-mode, .ct-stand-btn, .ct-route, .sh-context, .pg-cta, .sh-header, .sh-detail),
-  :root[data-co-theme] .mn-purse-btn::after,
-  :root[data-co-theme] .pg-cta::before {
+  :root[data-co-theme] :is(.mn-card, .pk-card, .pg-cta)::after,
+  :root[data-co-theme] .pg-cta::before,
+  :root[data-co-theme] .mn-card::before {
     animation: none !important;
   }
 }

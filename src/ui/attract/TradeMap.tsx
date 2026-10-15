@@ -401,6 +401,12 @@ function Labels({
       bounds: open,
       midX: geo.hub[0] * cssPerPx,
     })
+    // The road itself, for the company world's ambient layer (`fxEngine`): its
+    // embers and sparks crowd round the focused road. CSS px in the svg's box.
+    svg.dataset.road = lit.chain
+      .filter((_, i) => i % 6 === 0)
+      .map((p) => px(p).map(Math.round).join(','))
+      .join(' ')
     const lines = Array.from(svg.querySelectorAll('g')) as SVGGElement[]
     placed.forEach((c, i) => {
       const li = items[i]

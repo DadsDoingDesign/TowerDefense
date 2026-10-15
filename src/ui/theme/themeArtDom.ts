@@ -5,7 +5,8 @@ import { STRIP_H, STRIP_W, worldArt, type Palette, type Rows } from './themeArt'
  * Rasterise the company worlds' pixel art (`themeArt.ts`) into CSS variables,
  * once, when the theme stylesheet is installed: per company, its frame's three
  * flipbook images (`--th-frame-0..2`, a 9-slice for `border-image`) and its CTA
- * strip's sprite sheet (`--th-strip`, four frames stacked), plus their timings.
+ * strip's sprite sheet (`--th-strip`, four frames stacked), the card's crest
+ * where a world has one (`--th-crest`, four frames stacked), plus their timings.
  * Each image is a few hundred bytes of PNG data URL. Browser only.
  */
 function toUrl(rows: Rows, palette: Palette): string {
@@ -37,6 +38,7 @@ export function worldArtCss(): string {
     const decls = [
       ...frames.map((f, i) => `--th-frame-${i}:${toUrl(f, a.palette)};`),
       `--th-strip:${toUrl(sheet, a.palette)};`,
+      ...(a.crest ? [`--th-crest:${toUrl([0, 1, 2, 3].flatMap((i) => a.crest![i % a.crest!.length]), a.palette)};`] : []),
       `--th-frame-ms:${a.frameMs}ms;`,
       `--th-strip-ms:${a.stripMs}ms;`,
     ].join('')
