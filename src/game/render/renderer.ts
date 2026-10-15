@@ -28,6 +28,7 @@ import { backToFront, drawEnemy, drawSentinel, sentinelFromRt, shoulderNudge } f
 export { entrySide, fitView, setPresentationTime, setViewScale, stageView, type StageView, type View } from './frame'
 export { activeFieldSeason, drawField, drawTerrainDanger, drawTerrainFlames, playRect, setFieldSeason, worldOf } from './terrain'
 export { EdgeBand } from './edgeFx'
+export { WeatherLayer } from './weatherFx'
 export { backToFront, shoulderNudge, drawEnemy, drawSentinel, heroLook, sentinelFromRt, type DrawSentinel } from './units'
 export { eliteMark, eliteMarkAudit, enemyTier, tierTagGeometry, type EliteMark } from './plaques'
 export { drawCaravan, caravanSpot, type CaravanLook } from './caravan'

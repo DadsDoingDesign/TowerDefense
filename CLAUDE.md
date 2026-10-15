@@ -296,14 +296,37 @@ result. Append a short note to the review log when you're done.
   The battlefield wears the run's world too: its SEASON
   (`src/game/data/fieldSeasons.ts`, named as the home map's `MAP_SEASONS`;
   the hiring company's, your militia's chosen world's on the Sovereign
-  Route) is laid into the terrain bake by `src/game/render/season.ts`
-  (`terrain.setFieldSeason`, part of the bake key: ground speckle, snow caps
-  and crown flecks on the scenery, mist, washes — before the grade, with the
-  road and the danger ground masked out), and an EDGE BAND of the world's
-  particles (`src/game/render/edgeFx.ts`, `EdgeBand`, drawn in the battle's
-  own loop under the wagon and units) lives only in a thin band at the
-  view's edges, on cells clear of the road, every slot and the wagon. Tests
-  `tests/fieldWorlds.test.ts`. Dev: `window.__fxQuality`, `__seasonOff`.
+  Route) is a PLACE, not a tint (the designer: "more visual interest beyond
+  a color filter"). STATIC, in the terrain bake (`terrain.setFieldSeason`,
+  part of the bake key; nothing per frame): `src/game/render/season.ts`
+  runs twice — `seasonGround` on the bare ground (a ground cover in patches:
+  straw, snow with blades through, wet grass; speckle; dew) and
+  `seasonFinish` over everything (frozen lake rims, mist, washes, a low
+  side-light) — with the road, its verge and the danger ground kept
+  (`keepMask`); between them `drawDecos` repaints the pines / bushes / rocks
+  by palette swap and stands broadleaf trees in for some pines
+  (`src/game/render/seasonArt.ts`, procedural pixel art in the pack's look),
+  and `terrain.seasonScenery` places the season's PROPS by a hash of the
+  field id and season (never an RNG stream; `buildDressing` untouched):
+  upright ones (bales, stooks, sunflowers, pumpkins, reeds, mushrooms,
+  drifts) only on forest tiles, flat ones (flowers, puddles, mud, leaves,
+  lily pads) off every open tile's standing spot. Pumpkins and mushrooms are
+  the old-CC0 Tiny Swords scatter (`public/assets/deco/tinyswords/`, already
+  in `CC0-MANIFEST.md`; named literally so the precache finds them). A
+  season's `accent` pixels keep their hue through the grade's gold cut
+  (`gradeEnvironment`'s `accent` mask, `ACCENT_SAT`). MOVING:
+  `src/game/render/weatherFx.ts` (`WeatherLayer`, one per battle, drawn in
+  the battle's loop right after the terrain — under the wagon, units, shots,
+  HP bars, plaques): particles (≤ 40 on a phone), a rain / snow SHEET at the
+  view's edges, fog banks and cloud shadows (`Veil`: a low-res layer through
+  a margin mask, blitted in bands), a rare flash at the margins; faint over
+  the game (`edgeFx.clearGrid`), Light halves it and drops the clouds and
+  the flash, reduced motion draws none. Particles of both layers are
+  batched (`pixelBatch.ts`). The world's EDGE BAND of particles
+  (`src/game/render/edgeFx.ts`, `EdgeBand`) still lives only in a thin band
+  at the view's edges, on cells clear of the road, every slot and the wagon
+  (half its old cap beside the weather). Tests `tests/fieldWorlds.test.ts`.
+  Dev: `window.__fxQuality`, `__seasonOff`, `__weather` (live counts).
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the

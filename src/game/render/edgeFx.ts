@@ -1,6 +1,7 @@
 import type { EdgeKind, FieldSeason } from '../data/fieldSeasons'
 import type { GameMap } from '../types'
 import type { FxLevel } from './fxQuality'
+import { PixelBatch } from './pixelBatch'
 import { drawnRoad, worldOf } from './terrain'
 
 /**
@@ -47,53 +48,69 @@ const COLORS: Record<EdgeKind, readonly string[]> = {
   star: ['#ffffff', '#d4daf2'],
 }
 
+/** Which cells of a map are clear of the road (and its verge), every slot and the wagon (`CELL` px). */
+export interface ClearGrid {
+  key: string
+  ok: Uint8Array
+  x0: number
+  y0: number
+  cols: number
+  rows: number
+}
+const GRIDS = new WeakMap<GameMap, ClearGrid>()
+
+/** The clear-of-the-game grid for `map` (cached per map; shared by the edge band and the weather). */
+export function clearGrid(map: GameMap): ClearGrid {
+  const key = `${map.id}:${map.width}x${map.height}:${map.slots.length}`
+  const hit = GRIDS.get(map)
+  if (hit?.key === key) return hit
+  const W = worldOf(map)
+  const cols = Math.ceil(W.w / CELL)
+  const rows = Math.ceil(W.h / CELL)
+  const ok = new Uint8Array(cols * rows).fill(1)
+  const T = map.tile ?? 40
+  const block = (cx: number, cy: number, r: number) => {
+    const c0 = Math.max(0, Math.floor((cx - r - W.x0) / CELL))
+    const c1 = Math.min(cols - 1, Math.floor((cx + r - W.x0) / CELL))
+    const r0 = Math.max(0, Math.floor((cy - r - W.y0) / CELL))
+    const r1 = Math.min(rows - 1, Math.floor((cy + r - W.y0) / CELL))
+    for (let j = r0; j <= r1; j++)
+      for (let i = c0; i <= c1; i++) {
+        const x = W.x0 + (i + 0.5) * CELL
+        const y = W.y0 + (j + 0.5) * CELL
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) ok[j * cols + i] = 0
+      }
+  }
+  // The road and its verge, sampled along every segment.
+  const road = drawnRoad(map)
+  for (let k = 1; k < road.length; k++) {
+    const a = road[k - 1]
+    const b = road[k]
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    const n = Math.max(1, Math.ceil(len / (CELL * 2)))
+    for (let s = 0; s <= n; s++) block(a.x + ((b.x - a.x) * s) / n, a.y + ((b.y - a.y) * s) / n, 20 + 22)
+  }
+  for (const sl of map.slots) block(sl.pos.x, sl.pos.y, T * 0.85)
+  block(map.base.x, map.base.y, 96)
+  const g = { key, ok, x0: W.x0, y0: W.y0, cols, rows }
+  GRIDS.set(map, g)
+  return g
+}
+
+/** Is (x, y) on a clear cell? */
+export function isClear(g: ClearGrid, x: number, y: number): boolean {
+  const i = Math.floor((x - g.x0) / CELL)
+  const j = Math.floor((y - g.y0) / CELL)
+  return i >= 0 && j >= 0 && i < g.cols && j < g.rows && g.ok[j * g.cols + i] === 1
+}
+
 export class EdgeBand {
   private parts: P[] = []
-  private grid: { key: string; ok: Uint8Array; x0: number; y0: number; cols: number; rows: number } | null = null
+  private batch = new PixelBatch()
   /** Particles alive (the review's numbers). */
   count = 0
-
-  /** Which cells are clear of the road, the slots and the wagon (per map). */
-  private clearOf(map: GameMap): NonNullable<EdgeBand['grid']> {
-    const key = `${map.id}:${map.width}x${map.height}:${map.slots.length}`
-    if (this.grid?.key === key) return this.grid
-    const W = worldOf(map)
-    const cols = Math.ceil(W.w / CELL)
-    const rows = Math.ceil(W.h / CELL)
-    const ok = new Uint8Array(cols * rows).fill(1)
-    const T = map.tile ?? 40
-    const block = (cx: number, cy: number, r: number) => {
-      const c0 = Math.max(0, Math.floor((cx - r - W.x0) / CELL))
-      const c1 = Math.min(cols - 1, Math.floor((cx + r - W.x0) / CELL))
-      const r0 = Math.max(0, Math.floor((cy - r - W.y0) / CELL))
-      const r1 = Math.min(rows - 1, Math.floor((cy + r - W.y0) / CELL))
-      for (let j = r0; j <= r1; j++)
-        for (let i = c0; i <= c1; i++) {
-          const x = W.x0 + (i + 0.5) * CELL
-          const y = W.y0 + (j + 0.5) * CELL
-          if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) ok[j * cols + i] = 0
-        }
-    }
-    // The road and its verge, sampled along every segment.
-    const road = drawnRoad(map)
-    for (let k = 1; k < road.length; k++) {
-      const a = road[k - 1]
-      const b = road[k]
-      const len = Math.hypot(b.x - a.x, b.y - a.y)
-      const n = Math.max(1, Math.ceil(len / (CELL * 2)))
-      for (let s = 0; s <= n; s++) block(a.x + ((b.x - a.x) * s) / n, a.y + ((b.y - a.y) * s) / n, 20 + 22)
-    }
-    for (const sl of map.slots) block(sl.pos.x, sl.pos.y, T * 0.85)
-    block(map.base.x, map.base.y, 96)
-    this.grid = { key, ok, x0: W.x0, y0: W.y0, cols, rows }
-    return this.grid
-  }
-
-  private clear(g: NonNullable<EdgeBand['grid']>, x: number, y: number): boolean {
-    const i = Math.floor((x - g.x0) / CELL)
-    const j = Math.floor((y - g.y0) / CELL)
-    return i >= 0 && j >= 0 && i < g.cols && j < g.rows && g.ok[j * g.cols + i] === 1
-  }
+  /** The most it keeps alive on a phone and a desk at Full (a season with weather keeps fewer). */
+  caps = { phone: 24, desk: 40 }
 
   /**
    * One frame: step, spawn and draw, in field px, on a context set up for the
@@ -115,12 +132,12 @@ export class EdgeBand {
       this.count = 0
       return
     }
-    const g = this.clearOf(map)
+    const g = clearGrid(map)
     const dt = Math.min(0.05, Math.max(0, dtMs / 1000))
     const u = Math.max(1, Math.round(2 / Math.max(0.1, cssPerField)))
     const band = Math.max(10, Math.round(26 / Math.max(0.1, cssPerField)))
     const phone = view.w * cssPerField < 700
-    const cap = Math.round((phone ? 24 : 40) * (level === 'light' ? 0.5 : 1))
+    const cap = Math.round((phone ? this.caps.phone : this.caps.desk) * (level === 'light' ? 0.5 : 1))
     const inBand = (x: number, y: number, slack: number) => {
       const b = band * slack
       return x < view.x0 + b || x > view.x0 + view.w - b || y < view.y0 + b || y > view.y0 + view.h - b
@@ -145,7 +162,7 @@ export class EdgeBand {
       }
       q.x += q.vx * dt
       q.y += q.vy * dt
-      return inView(q.x, q.y) && inBand(q.x, q.y, 1.4) && this.clear(g, q.x, q.y)
+      return inView(q.x, q.y) && inBand(q.x, q.y, 1.4) && isClear(g, q.x, q.y)
     })
     if (this.parts.length > cap) this.parts.splice(0, this.parts.length - cap)
     // Spawn: up to two a frame, each on a clear cell inside the band.
@@ -156,7 +173,7 @@ export class EdgeBand {
         const d = Math.random() * band
         const x = side === 0 ? view.x0 + d : side === 1 ? view.x0 + view.w - d : view.x0 + t * view.w
         const y = side === 2 ? view.y0 + d : side === 3 ? view.y0 + view.h - d : view.y0 + t * view.h
-        if (!this.clear(g, x, y)) continue
+        if (!isClear(g, x, y)) continue
         this.parts.push(this.spawn(season.edge[Math.floor(Math.random() * season.edge.length)], x, y, u))
         break
       }
@@ -164,68 +181,68 @@ export class EdgeBand {
     this.count = this.parts.length
 
     // Draw, in whole field px.
-    const a0 = ctx.globalAlpha
+    const B = this.batch
     for (const q of this.parts) {
       const k = q.age / q.life
       const fade = Math.min(1, q.age / 0.3, (1 - k) * 3)
       const x = Math.round(q.x)
       const y = Math.round(q.y)
       const s = q.size
-      ctx.fillStyle = q.color
+      B.color = q.color
       switch (q.kind) {
         case 'ember':
-          ctx.globalAlpha = fade * 0.45
-          ctx.fillStyle = '#e0521f'
-          ctx.fillRect(x - u, y - u, s + 2 * u, s + 2 * u)
-          ctx.globalAlpha = fade
-          ctx.fillStyle = k < 0.4 ? '#ffd35e' : '#ff8a2c'
-          ctx.fillRect(x, y, s, s)
+          B.alpha = fade * 0.45
+          B.color = '#e0521f'
+          B.rect(x - u, y - u, s + 2 * u, s + 2 * u)
+          B.alpha = fade
+          B.color = k < 0.4 ? '#ffd35e' : '#ff8a2c'
+          B.rect(x, y, s, s)
           break
         case 'spark':
-          ctx.globalAlpha = fade * 0.6
-          ctx.fillStyle = '#ff8a2c'
-          ctx.fillRect(Math.round(x - q.vx * 0.03), Math.round(y - q.vy * 0.03), u, u)
-          ctx.globalAlpha = fade
-          ctx.fillStyle = q.color
-          ctx.fillRect(x, y, s, s)
+          B.alpha = fade * 0.6
+          B.color = '#ff8a2c'
+          B.rect(Math.round(x - q.vx * 0.03), Math.round(y - q.vy * 0.03), u, u)
+          B.alpha = fade
+          B.color = q.color
+          B.rect(x, y, s, s)
           break
         case 'drizzle':
-          ctx.globalAlpha = fade * 0.55
-          ctx.fillRect(x, y, u, 4 * u)
+          B.alpha = fade * 0.55
+          B.rect(x, y, u, 4 * u)
           break
         case 'leaf': {
           const turn = Math.sin(q.age * 4 + q.phase) > 0
-          ctx.globalAlpha = fade
-          ctx.fillRect(x, y, turn ? 2 * u : u, turn ? u : 2 * u)
+          B.alpha = fade
+          B.rect(x, y, turn ? 2 * u : u, turn ? u : 2 * u)
           break
         }
         case 'petal':
-          ctx.globalAlpha = fade * 0.9
-          ctx.fillRect(x, y, s, Math.round(s * 1.5))
+          B.alpha = fade * 0.9
+          B.rect(x, y, s, Math.round(s * 1.5))
           break
         case 'mote':
-          ctx.globalAlpha = fade * 0.35
-          ctx.fillRect(x, y, s, s)
+          B.alpha = fade * 0.35
+          B.rect(x, y, s, s)
           break
         case 'star': {
           const tw = 0.5 + 0.5 * Math.sin(q.age * 2.6 + q.phase)
-          ctx.globalAlpha = fade * (0.35 + 0.65 * tw)
-          ctx.fillRect(x, y, u, u)
+          B.alpha = fade * (0.35 + 0.65 * tw)
+          B.rect(x, y, u, u)
           if (tw > 0.75) {
-            ctx.globalAlpha = fade * 0.5
-            ctx.fillRect(x - u, y, u, u)
-            ctx.fillRect(x + u, y, u, u)
-            ctx.fillRect(x, y - u, u, u)
-            ctx.fillRect(x, y + u, u, u)
+            B.alpha = fade * 0.5
+            B.rect(x - u, y, u, u)
+            B.rect(x + u, y, u, u)
+            B.rect(x, y - u, u, u)
+            B.rect(x, y + u, u, u)
           }
           break
         }
         default:
-          ctx.globalAlpha = fade * (q.kind === 'ash' ? 0.6 : 0.9)
-          ctx.fillRect(x, y, s, s)
+          B.alpha = fade * (q.kind === 'ash' ? 0.6 : 0.9)
+          B.rect(x, y, s, s)
       }
     }
-    ctx.globalAlpha = a0
+    B.flush(ctx)
   }
 
   private spawn(kind: EdgeKind, x: number, y: number, u: number): P {

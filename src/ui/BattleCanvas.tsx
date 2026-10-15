@@ -55,7 +55,7 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setFieldSeason } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setFieldSeason, WeatherLayer } from '../game/render/renderer'
 import { fieldSeasonFor } from '../game/data/fieldSeasons'
 import { fxLevel, noteFxFrame } from '../game/render/fxQuality'
 import { militiaTheme } from '../game/run/militia'
@@ -413,6 +413,13 @@ export function BattleCanvas() {
      */
     /** The company world at the field's edges (Oct 2026; `render/edgeFx`). */
     const edge = new EdgeBand()
+    // The season's weather (Oct 2026; `render/weatherFx`): rain, snow, petals,
+    // fog banks, cloud shadows — under the wagon and the units. The edge band
+    // keeps half its share beside it, so the two stay near one cap.
+    const weather = new WeatherLayer()
+    edge.caps = { phone: 12, desk: 20 }
+    // Dev only: the live counts, for the review's numbers.
+    if (import.meta.env.DEV) (window as unknown as { __weather?: { weather: WeatherLayer; edge: EdgeBand } }).__weather = { weather, edge }
     const step = (now: number) => {
       let dt = (now - last) / 1000
       last = now
@@ -578,6 +585,7 @@ export function BattleCanvas() {
       // The world at the field's edges: clear of the road, the slots and the
       // wagon, and under the wagon and the units in any case.
       edge.frame(ctx, map, sv, shown.scale, season, fxLevel(), dt * 1000)
+      weather.frame(ctx, map, sv, shown.scale, season, fxLevel(), dt * 1000)
       // The caravan at the road's end (the mercenary company): its crates are
       // the cargo still on board, so a leak is seen to take one away.
       {
