@@ -218,33 +218,51 @@ export function MenuScreen({
       <div className="mn-shade" aria-hidden="true" />
 
       <header className="mn-bar">
-        {/* The purse: the brand (the Dripping Seal) and the bank, one small
-            plaque. The name is the screen's one title, live text a screen
+        {/* The purse: the brand (the Dripping Seal) and the bank, bare on
+            the map. The name is the screen's one title, live text a screen
             reader and a translator can use; a phone shows only the seal, a
             desk the seal and the name. The bank is named after the first
-            contract (LS3/LS4). */}
+            contract (LS3/LS4).
+            Once you own a company the purse BECOMES a button — a carved
+            plate like the places — with your flag in the seal's place and
+            your militia's name on a desk: the change is in the frame, not
+            only the picture, and the whole plate is the way to its builder. */}
         <div className={`mn-purse${militia ? ' is-own' : ''}`}>
-          {/* Once you own a company, its flag takes the seal's place: the
-              purse is yours, and the flag is a tap from its builder. */}
-          {militia ? (
-            <button type="button" className="mn-mark mn-flagmark" onClick={onMilitia} aria-label={`${militia.name}: edit your militia’s name and flag`} title={militia.name}>
-              <Banner look={militia} scale={2} />
-            </button>
-          ) : (
-            <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
-          )}
           <h1 className="mn-title" tabIndex={-1}>
             Merchant Mercenaries
           </h1>
-          {militia && (
-            <span className="mn-own-title" aria-hidden="true">
-              {militia.name}
-            </span>
-          )}
-          {!staged && (
-            <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
-              <Gold n={bank} />
-            </span>
+          {militia ? (
+            <button
+              type="button"
+              className="mn-purse-btn"
+              onClick={onMilitia}
+              aria-label={`${militia.name}${staged ? '' : `, ${bank} gold in the bank`}: edit your militia’s name and flag`}
+              title={militia.name}
+            >
+              <span className="mn-mark mn-flagmark" aria-hidden="true">
+                <Banner look={militia} scale={2} />
+              </span>
+              <span className="mn-own-title" aria-hidden="true">
+                {militia.name}
+              </span>
+              {!staged && (
+                <span className="mn-bank" aria-hidden="true">
+                  <Gold n={bank} />
+                </span>
+              )}
+            </button>
+          ) : (
+            <>
+              <img className="mn-mark" src={markUrl} alt="" width={40} height={40} aria-hidden="true" />
+              <span className="mn-seal-title" aria-hidden="true">
+                Merchant Mercenaries
+              </span>
+              {!staged && (
+                <span className="mn-bank" role="img" aria-label={`${bank} gold in the bank`}>
+                  <Gold n={bank} />
+                </span>
+              )}
+            </>
           )}
         </div>
         <nav className="mn-places" aria-label="Places">
