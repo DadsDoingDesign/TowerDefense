@@ -1,5 +1,5 @@
 import { useMilitia } from './useMilitia'
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
 import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
@@ -199,6 +199,31 @@ export function MenuScreen({
 
   const lead = slots.find((s) => s.leads)?.company ?? null
   const left = war ? contractsLeft(war) : 0
+
+  // The purse and the season panel under it are one column: both take the
+  // wider one's width (the designer, Oct 2026). They sit in different layers —
+  // the panel floats over the map so it never pushes it — so it is measured:
+  // each one's natural width (its min-width lifted), then the larger on both.
+  const barRef = useRef<HTMLElement>(null)
+  const seasonKey = war ? `${war.n}:${left}` : ''
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    if (!bar) return
+    const fit = () => {
+      const parts = [bar.querySelector<HTMLElement>('.mn-purse-btn') ?? bar.querySelector<HTMLElement>('.mn-purse'), bar.querySelector<HTMLElement>('.mn-season')].filter(
+        (e): e is HTMLElement => !!e,
+      )
+      bar.style.removeProperty('--lead-w')
+      if (parts.length < 2) return
+      const w = Math.ceil(Math.max(...parts.map((e) => e.getBoundingClientRect().width)))
+      bar.style.setProperty('--lead-w', `${w}px`)
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    void document.fonts?.ready.then(fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [bank, militia?.name, staged, seasonKey])
+
   const bars = war ? seasonBars(war) : []
 
   return (
@@ -217,7 +242,7 @@ export function MenuScreen({
       </div>
       <div className="mn-shade" aria-hidden="true" />
 
-      <header className="mn-bar">
+      <header className="mn-bar" ref={barRef}>
         {/* The purse: the brand (the Dripping Seal) and the bank, bare on
             the map. The name is the screen's one title, live text a screen
             reader and a translator can use; a phone shows only the seal, a

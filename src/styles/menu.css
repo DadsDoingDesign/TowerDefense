@@ -474,6 +474,10 @@
     gap: 4px;
     padding-inline: 8px;
   }
+  /* The season panel lines up under the purse (this sits before the base rule). */
+  .mn-bar > .mn-under {
+    padding-inline: 8px;
+  }
   .mn-purse {
     gap: 4px;
     padding-right: 9px;
@@ -540,6 +544,13 @@
    bar per contract of the season — a delivery in the colour of the company
    it was for, a fall or a cash-out in earth, the ones to come dim. The whole
    panel opens the standings. A fixed size: seven bars, always. */
+/* The purse (bare, or your company's button) and the season panel share the
+   wider one's width: `--lead-w`, measured by `MenuScreen`. */
+.mn-season,
+.mn-bar > .mn-purse:not(.is-own),
+.mn-purse-btn {
+  min-width: var(--lead-w, auto);
+}
 .mn-season {
   justify-self: start;
   display: grid;
@@ -578,12 +589,13 @@
   font-style: normal;
   color: var(--accent-text);
 }
+/* Seven bars that share the panel's width (it can be widened to the purse's). */
 .mn-season-bars {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(14px, 1fr));
   gap: 3px;
 }
 .mn-season-bars i {
-  width: 14px;
   height: 7px;
   border-radius: 2px;
 }
