@@ -275,14 +275,14 @@ const paint: World = {
 const FORGE_C = ['#ffe08a', '#ffb347', '#ff8a2c', '#c8541c']
 const ASH = ['#8a939e', '#b3bcc6', '#6b7480']
 const forge: World = {
-  density: 0.0045,
+  density: 0.007,
   spawn(rand, w, h, seed) {
     if (rand() < 0.4) {
-      return p({ kind: 'ash', x: rand() * w, y: seed ? rand() * h : rand() * h * 0.6, vx: (rand() - 0.5) * 4, vy: 4 + rand() * 5, life: 10 + rand() * 6, color: pick(rand, ASH), phase: rand() * TAU })
+      return p({ kind: 'ash', x: rand() * w, y: seed ? rand() * h : rand() * h * 0.6, vx: (rand() - 0.5) * 4, vy: 4 + rand() * 5, life: 10 + rand() * 6, size: rand() < 0.3 ? 2 : 1, color: pick(rand, ASH), phase: rand() * TAU })
     }
     const a = -Math.PI / 2 + (rand() - 0.5) * 1.2
     const v = 45 + rand() * 45
-    return p({ kind: 'spark', x: rand() * w, y: h * (0.35 + rand() * 0.7), vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.2 + rand() * 1.2, n: 0 })
+    return p({ kind: 'spark', x: rand() * w, y: h * (0.35 + rand() * 0.7), vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.4 + rand() * 1.4, size: rand() < 0.35 ? 2 : 1, n: 0 })
   },
   backdrop(pen, w, h, t) {
     footGlow(pen, w, h, '#ff8a2c', Math.max(8, Math.round(h * 0.1)), t * 0.5)

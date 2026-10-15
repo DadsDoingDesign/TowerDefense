@@ -27,6 +27,14 @@ interface Layer {
 
 const BURST_CAP = 240
 
+/** The panels the ambient layer keeps out of (the framed ones and their kin). */
+const PANELS = [
+  '.mn-card', '.mn-slot', '.mn-season', '.mn-coach', '.mn-own', '.pg-strip', '.shop-wares', '.shop-counter',
+  '.pg-row', '.pg-chip', '.pg-notice', '.hq-card', '.tk-card', '.tk-row', '.tk-chip',
+  '.fc-sheet', '.co-col', '.pk-card', '.pk-tok', '.ask-panel', '.ct-mode', '.ct-stand-btn',
+  '.ct-route', '.ct-slip', '.ct-banner', '.sh-context', '.cx-tile', '.cx-card', '.cx-tab',
+].join(', ')
+
 class FxEngine {
   theme: ThemeId = 'neutral'
   private ambient: Layer | null = null
@@ -43,6 +51,8 @@ class FxEngine {
   private bornAt = typeof performance === 'undefined' ? 0 : performance.now()
   private rand = Math.random
 
+  /** Slow motion for a capture (the review strips); 1 in play. */
+  timeScale = 1
   /** Frames drawn, for the dev handle's smoothness check. */
   frames = 0
   /** The page's text, in effect pixels: the ambient layer is cleared under it. */
@@ -133,6 +143,9 @@ class FxEngine {
         for (const r of range.getClientRects()) push(r)
       }
       for (const el of root.querySelectorAll('input, select, textarea, [role="slider"]')) push(el.getBoundingClientRect())
+      // And every panel: the world moves between the panels, never inside one
+      // (many are translucent washes).
+      for (const el of root.querySelectorAll(PANELS)) push(el.getBoundingClientRect())
     }
     this.keep = out
   }
@@ -181,7 +194,7 @@ class FxEngine {
       this.clear()
       return
     }
-    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000))
+    const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000)) * this.timeScale
     this.last = now
     this.t += dt
     this.frames++
