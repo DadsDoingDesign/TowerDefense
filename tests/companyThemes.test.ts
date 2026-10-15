@@ -123,6 +123,8 @@ for (const [label, read] of [
         expect(ratio(rgb(k['cta-ink']), rgb(k.cta))).toBeGreaterThanOrEqual(4.5)
         for (const gn of ['bg', 'bg-2', 'panel', 'panel-2']) expect(ratio(rgb(k.cta), g[gn]), `--cta on ${gn}`).toBeGreaterThanOrEqual(4.5)
         expect(ratio(rgb(k['ink-on-fill']), rgb(k.accent)), 'ink on a solid accent').toBeGreaterThanOrEqual(4.5)
+        // The home card's desperate badge: the theme's fill ink on the danger text colour.
+        expect(ratio(rgb(k['ink-on-fill']), rgb(rootToken('bad-text'))), 'ink on the desperate badge').toBeGreaterThanOrEqual(4.5)
       })
       it(`${t.id}: the home's glass over pure white still carries its text`, () => {
         for (const glass of ['glass', 'glass-strong'] as const)
