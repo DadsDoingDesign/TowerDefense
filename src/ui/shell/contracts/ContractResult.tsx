@@ -44,7 +44,6 @@ export function ResultScreen() {
   const runPhase = useGameStore((s) => s.runPhase)
   const returnToHub = useGameStore((s) => s.returnToHub)
   const runAgain = useGameStore((s) => s.runAgain)
-  const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
   const assist = useSettingsStore((s) => s.assist)
   const setAssist = useSettingsStore((s) => s.setAssist)
   const outcome = recap?.outcome ?? (runPhase === 'won' ? 'delivered' : runPhase === 'cashedOut' ? 'cashedOut' : 'lost')
@@ -53,7 +52,6 @@ export function ResultScreen() {
   const co = c?.company ? companyById(c.company) : null
   const route = c ? routeOf(c) : null
   const owned = useMetaStore((s) => s.sovereign.length)
-  const depth = recap?.depth ?? Math.max(0, clearedNodeIds.length - 1)
   const deposit = recap?.deposit ?? 0
   const paidAll = c ? c.paid.reduce((a, b) => a + b, 0) : 0
   const stake = c ? contractStake(c) : 0
@@ -84,14 +82,16 @@ export function ResultScreen() {
   const sub = charter
     ? outcome === 'delivered'
       ? `The ${CHARTER_NAME} paid ${paidAll.toLocaleString('en')} gold · ${(paidAll - CHARTER_FEE).toLocaleString('en')} after its ${CHARTER_FEE.toLocaleString('en')} fee.`
-      : `Raiders took the last of the cargo after ${depth} stop${depth === 1 ? '' : 's'}. The cities on this road pay nothing.`
+      : 'Raiders took the last of the cargo. This road’s cities pay nothing.'
     : outcome === 'delivered'
       ? stake > 0
-        ? `This contract paid ${paidAll} gold in all · ${paidAll - stake} profit after your stake.`
-        : `This contract paid ${paidAll} gold in all.`
+        ? `${paidAll} gold in all · ${paidAll - stake} profit after your stake.`
+        : `${paidAll} gold in all.`
       : outcome === 'cashedOut'
-        ? `${town} bought what was left. ${deposit} gold went to your bank.`
-        : `Raiders took the last of the cargo after ${depth} stop${depth === 1 ? '' : 's'}. What the cities paid is yours.`
+        ? `${town} bought what was left.`
+        : paidAll > 0
+          ? 'Raiders took the last of the cargo. City pay is yours.'
+          : 'Raiders took the last of the cargo.'
 
   return (
     <ContractPage
@@ -241,7 +241,8 @@ export function ResultScreen() {
           lines={[
             `${recap.kills} felled · ${recap.enemiesLeaked} reached the wagons in the last wave · cargo ${recap.cargo}%`,
             `${c ? stakeLine(c.crates, charter) : ''} ${strengthText(recap.threat)} at the end`.trim(),
-            `Run seed ${recap.seed}${recap.challenge.kind === 'seeded' ? ' · custom seed' : ''} — the same seed deals the same map, loot and rolls.`,
+            `Run seed ${recap.seed}${recap.challenge.kind === 'seeded' ? ' · custom seed' : ''}`,
+            { text: 'Same seed, same map, loot and rolls.', tone: 'note' },
           ]}
         />
       )}
@@ -259,9 +260,9 @@ function AssistCard({ assist }: { assist: AssistLevel }) {
     return (
       <InfoCard
         lines={[
-          `Assist is on — ${assistProfile(assist).label}.`,
+          `Assist: ${assistProfile(assist).label}`,
           assistProfile(assist).blurb,
-          'Change it or turn it off whenever you like, in Settings or mid-run.',
+          'Change it any time in Settings.',
         ]}
       />
     )
@@ -269,9 +270,9 @@ function AssistCard({ assist }: { assist: AssistLevel }) {
   return (
     <InfoCard
       lines={[
-        'Assist is there if you want it.',
-        `${steady.label} — ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
-        'Nothing else moves: same waves, same loot, same pay. Change it whenever you like, mid-run included.',
+        'Assist, if you want it',
+        `${steady.label}: ${steady.blurb.charAt(0).toLowerCase()}${steady.blurb.slice(1)}`,
+        'Waves, loot and pay stay the same. Change it any time.',
       ]}
     />
   )

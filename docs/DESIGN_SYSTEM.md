@@ -468,6 +468,13 @@ agree it, then edit this section.
     five companies and Buy Company (`docs/ui-audit-2026-10/home-map/REVIEW.md`,
     "Polish").
 
+11. **Copy has a job too.** Every line a player reads names its one job and
+    is cut to the fewest words that do it: an effect is the number and what
+    it touches ("+5 Patience to team"), context is one quiet italic note, and
+    a fact appears once per screen. The jobs, the patterns and the voice are
+    in [`docs/copy/COPY.md`](copy/COPY.md) (the copy pass, Oct 2026, at the
+    designer's request); `tests/copy.brevity.test.ts` holds its caps.
+
 ### Parts and their jobs
 
 | Part | Its one job | Not for |
@@ -487,6 +494,7 @@ agree it, then edit this section.
 | Dice | Rolls the thing it sits on or beside (the name; the whole flag) | Any other shortcut |
 | Refusal line (`.co-why`) | Says why an input is refused, only while it is | Hints, tips |
 | `PageTip` / `Coach` | Teaches once, the first time it matters | A standing hint; an error |
+| Note (`BodyLine` `tone: 'note'`: `.sh-line.note`, `.pg-card-body.note`) | Context the player needs to choose, said once, quietly in italics, under the effect it qualifies ("Relics affect new team members and stack for the rest of your run.") | An effect or a number; a standing hint; a second note on the same card |
 | `Slip` / `SlipLine` | A receipt: what is paid, owed or earned, item by item | Prose |
 | `Gold` | An amount of gold, the only currency | Other numbers |
 | `RarityTag` | An item's rarity, in the shared rarity tokens | Any other ranking |

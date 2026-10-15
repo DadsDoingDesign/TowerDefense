@@ -63,7 +63,7 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
       {companies.map((c) => (
         <TrackEarned key={c} company={c} pays={track.filter((t) => t.company === c)} />
       ))}
-      {(n > 0 || track.some((t) => t.card || t.signature || t.item)) && <p className="pg-unlocks-note">Your next heroes, loot and offers can deal them.</p>}
+      {(n > 0 || track.some((t) => t.card || t.signature || t.item)) && <p className="pg-unlocks-note">Your next heroes, loot and offers can include them.</p>}
     </section>
   )
 }
@@ -122,7 +122,7 @@ function TrackEarned({ company, pays }: { company: CompanyId; pays: TrackPay[] }
             <SkillCard
               key={`${t.level}-named`}
               kicker={`${kicker} · named`}
-              skill={{ name: named.id, level: `${SLOT_WORD[named.slot]} · Sovereign`, text: `${named.does} A delivered Sovereign Route unlocks it.` }}
+              skill={{ name: named.id, level: `${SLOT_WORD[named.slot]} · Sovereign`, text: `${named.does} Unlocks with a delivered Sovereign Route.` }}
             />,
           )
         // The company's UI theme for your militia's own road (`run/militiaTheme.ts`).
@@ -131,7 +131,7 @@ function TrackEarned({ company, pays }: { company: CompanyId; pays: TrackPay[] }
             <SkillCard
               key={`${t.level}-theme`}
               kicker={`${kicker} · theme`}
-              skill={{ name: uiTheme(company).name, level: 'UI theme', text: `${co.name}’s colours, for your militia’s own road. Pick it where you dress your militia’s flag.` }}
+              skill={{ name: uiTheme(company).name, level: 'UI theme', text: `${co.name}’s colours for your militia’s road. Pick it in the flag builder.` }}
             />,
           )
         return out

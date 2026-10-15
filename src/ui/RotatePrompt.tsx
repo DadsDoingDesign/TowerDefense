@@ -26,8 +26,7 @@ export function RotatePrompt() {
         </div>
         <h1 className="fw-rotate-title">Turn your phone upright</h1>
         <p className="fw-rotate-body">
-          Merchant Mercenaries is built for one tall screen — the field, your heroes and the
-          detail panel all read at once. Landscape has nowhere to put them.
+          The field, your heroes and their details need a tall screen.
         </p>
       </div>
     </div>

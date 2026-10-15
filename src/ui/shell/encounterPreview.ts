@@ -171,8 +171,8 @@ export function resistHint(s: EncounterSummary): string | null {
   const pct = (v: number) => `${Math.round(v * 100)}%`
   const p = s.physShare >= 0.34 && s.physMax >= 0.2
   const m = s.magShare >= 0.34 && s.magMax >= 0.2
-  if (p && m) return `Both damage types bounce off some of them (steel up to ${pct(s.physMax)}, magic up to ${pct(s.magMax)}).`
-  if (p) return `Steel bounces: up to ${pct(s.physMax)} of physical damage is shrugged off. Bring magic.`
-  if (m) return `Magic bounces: up to ${pct(s.magMax)} of magic damage is shrugged off. Bring steel.`
+  if (p && m) return `Steel and magic both bounce off some (up to ${pct(s.physMax)} and ${pct(s.magMax)}).`
+  if (p) return `Steel bounces: up to ${pct(s.physMax)} of physical damage. Bring magic.`
+  if (m) return `Magic bounces: up to ${pct(s.magMax)} of magic damage. Bring steel.`
   return null
 }

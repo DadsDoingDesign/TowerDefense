@@ -62,8 +62,8 @@ export function LeaveRun() {
             </h2>
             <p className="fw-resume-body">
               {charter
-                ? `The Sovereign Route ends here and its fee is lost. You keep ${kept}; your heroes, the map and the pack are gone.`
-                : `The contract ends here, as if the wagons fell. You keep what its cities paid and ${kept}; unsold crates, your heroes, the map and the pack are gone.`}
+                ? `Its fee is lost. You keep ${kept}; your heroes, map and pack are gone.`
+                : `It ends as a fall. You keep city pay and ${kept}; unsold crates, heroes, map and pack are gone.`}
             </p>
             <div className="fw-resume-actions">
               <button ref={stay} type="button" className="fw-resume-btn primary" data-sfx="confirm" onClick={close}>

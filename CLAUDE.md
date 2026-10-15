@@ -353,6 +353,12 @@ result. Append a short note to the review log when you're done.
   an element that cannot goes, and no two elements do the same job. Each
   shared part's job is in `docs/DESIGN_SYSTEM.md` § 8, "Parts and their
   jobs", and a new part gets its row there before it ships.
+- **Copy: `docs/copy/COPY.md`.** Every line a player reads has one job and
+  the fewest words that do it: an effect is the number and what it touches
+  ("+5 Patience to team"), context is one quiet italic note (`tone: 'note'`),
+  a fact is said once per screen, and there is no scope boilerplate.
+  `tests/copy.brevity.test.ts` holds the caps; `npx tsx scripts/copy-inventory.ts`
+  regenerates `docs/copy/INVENTORY.md`.
 - **Design system usage rules: `docs/DESIGN_SYSTEM.md` § 8.** They cover one
   title, saying a fact once, no standing hints, `.field-k` / `.field-v` for
   every label and value, the shared choose-one parts, one primary CTA, and

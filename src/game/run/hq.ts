@@ -250,7 +250,7 @@ export const earnsInterest = (status: 'delivered' | 'cashedOut' | 'lost' | 'open
 
 /** The bank's rule, in one line, wherever the bank is shown. */
 export const interestLine = (): string =>
-  `Your bank earns ${ratePct(BASE_INTEREST.rate)} each time you finish a contract, up to ${BASE_INTEREST.cap} gold. A lost contract earns none.`
+  `${ratePct(BASE_INTEREST.rate)} of the bank per finished contract, up to ${BASE_INTEREST.cap} gold. A lost contract earns none.`
 
 // ---------------------------------------------------------------------------
 // The staggered reveal (October 2026): when the HQ and company focus open

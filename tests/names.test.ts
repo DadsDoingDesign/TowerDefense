@@ -59,7 +59,8 @@ describe('copy', () => {
   it('reward cards state their scope and never say "bought with"', () => {
     for (const c of allStatCards()) {
       expect(c.desc).not.toMatch(/bought with|the team|tower/i)
-      expect(c.desc).toMatch(/to team/)
+      // The scope, said once: "… to team", or a line that opens on it ("Team’s hits burn …").
+      expect(c.desc).toMatch(/to team|^Team’s /)
     }
   })
   it('money reads in words', () => {

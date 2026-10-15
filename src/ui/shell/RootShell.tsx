@@ -104,8 +104,9 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   hq: {},
   crates: {},
   charter: {},
-  codex: { title: 'Codex', subtitle: 'Every item, skill, goblin, relic and feat your militia has found.' },
-  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
+  // No subtitles: the rows under each title say what is there (Oct 2026, the copy pass).
+  codex: { title: 'Codex' },
+  settings: { title: 'Settings' },
   militia: { title: 'Your militia' },
   livery: {},
   war: {},

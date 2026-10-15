@@ -711,7 +711,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
         <div className="sh-context-body">
           <WaveComposition />
           <p className="sh-line muted">
-            Post heroes on any glowing tile. Each reaches only what walks inside its ring.
+            Post heroes on glowing tiles. Each hits only inside its ring.
           </p>
         </div>
       </div>
@@ -758,9 +758,9 @@ function GearSlotPanel() {
       : null
   const warn =
     gearSlot.slot === 'mainHand' && offHand
-      ? `A two-handed weapon needs both hands — it would put ${offHand.name} back in the pack. A one-hander leaves it where it is.`
+      ? `A two-hander would send ${offHand.name} back to the pack; a one-hander keeps it.`
       : gearSlot.slot === 'offHand' && mainHand?.slot === 'twoHand'
-        ? `${hero.name} is holding ${mainHand.name} with both hands — filling this slot puts it back in the pack.`
+        ? `${hero.name} holds ${mainHand.name} in both hands: filling this slot sends it to the pack.`
         : null
 
   return (
@@ -999,7 +999,7 @@ function StrandedPanel() {
       </div>
       <div className="sh-context-body">
         <p className="sh-line muted">
-          This ground is already settled. There is no wave here to take. March on and pick the next stop.
+          This ground is settled. March on and pick the next stop.
         </p>
       </div>
     </div>
@@ -1387,7 +1387,7 @@ function OfferPanel({ offer }: { offer: Offer }) {
             happens to be looking. */}
         {offer.body.map((l, i) =>
           offer.bodyIcons ? <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} key={i} /> : (
-            <p className="sh-line" key={i}>
+            <p className={`sh-line${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
               {lineText(l)}
             </p>
           ),

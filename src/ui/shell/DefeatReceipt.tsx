@@ -1,6 +1,7 @@
 import { useGameStore } from '../../state/gameStore'
 import { leakRows, useBattleLedger } from '../battleLedger'
 import { Icon } from '../Icon'
+import { cargoShare } from '../../game/run/contracts'
 
 /**
  * "What broke the line" — the cause of a defeat, named (Phase 2, finding 3).
@@ -20,6 +21,8 @@ export function DefeatReceipt() {
   const runSeed = useGameStore((s) => s.runSeed)
   const waveLabel = useGameStore((s) => s.currentWave?.label ?? null)
   const clearedNodeIds = useGameStore((s) => s.clearedNodeIds)
+  // Damage is said in the HUD's unit, the cargo's percent — never "Gate" (the retired name).
+  const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const ledger = useBattleLedger()
   const ours = ledger.runSeed === runSeed
   const rows = ours ? leakRows(ledger.run).slice(0, 4) : []
@@ -37,7 +40,7 @@ export function DefeatReceipt() {
             <li key={r.name}>
               <span className="pg-cause-name">{r.name}</span>
               <span className="pg-cause-num">
-                ×{r.heads} · {r.damage} Gate
+                ×{r.heads} · −{cargoShare(r.damage, maxBaseHp)}% cargo
               </span>
             </li>
           ))}
@@ -49,7 +52,7 @@ export function DefeatReceipt() {
       )}
       {ours && ledger.worst && (
         <p className="pg-cause-line">
-          Hardest hit: {ledger.worst.name}, {ledger.worst.damage} Gate in one.
+          Hardest hit: {ledger.worst.name}, −{cargoShare(ledger.worst.damage, maxBaseHp)}% cargo in one.
         </p>
       )}
       <p className="pg-cause-line muted">

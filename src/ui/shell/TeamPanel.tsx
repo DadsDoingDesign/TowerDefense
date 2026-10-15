@@ -96,7 +96,7 @@ export function TeamPanel() {
                   className={`sh-relic${open === r!.id ? ' on' : ''}`}
                   style={{ '--lv': rarityVar(r!.rarity) } as CSSProperties}
                   aria-pressed={open === r!.id}
-                  aria-label={`${r!.name}: ${r!.desc}`}
+                  aria-label={`${r!.name}: ${r!.desc}${r!.downside ? `; downside ${r!.downside}` : ''}`}
                   data-sfx="toggle"
                   onClick={() => setOpen(open === r!.id ? null : r!.id)}
                 >
@@ -110,6 +110,12 @@ export function TeamPanel() {
               <p className="sh-relic-name">
                 <b style={{ color: rarityTextVar(shown.rarity) }}>{shown.name}</b> <RarityTag rarity={shown.rarity} />
               </p>
+              {/* A pact's cost on its own warning line, as on its spoils card. */}
+              {shown.downside && (
+                <p className="sh-line bad">
+                  <Icon name="warn" /> Downside — {shown.downside}
+                </p>
+              )}
               <p className="sh-line">{shown.desc}</p>
               <p className="sh-line note">{RELIC_NOTE}</p>
             </div>

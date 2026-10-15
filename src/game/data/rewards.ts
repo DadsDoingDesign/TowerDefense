@@ -124,7 +124,7 @@ const STAT_CARDS: StatTemplate[] = [
     // Priced down to +18% and the range charged harder, so the pact still reads
     // as one and stops out-earning both legendaries.
     title: 'Close Quarters',
-    desc: '+18% damage, −18% range to team',
+    desc: '+18% damage to team',
     rarity: 'epic',
     downside: '−18% range to team',
     grant: { mods: { damageMult: 1.18, rangeMult: 0.82 } },
@@ -135,7 +135,7 @@ const STAT_CARDS: StatTemplate[] = [
     // upside now includes **Patience**, which §4 grades on the one bench where
     // time-in-fight is the binding axis, and the rate bill is lighter.
     title: 'Long Watch',
-    desc: '+25% range, +30% projectile speed, +8 Patience, −8% attack rate to team',
+    desc: '+25% range, +30% projectile speed, +8 Patience to team',
     rarity: 'epic',
     downside: '−8% attack rate to team',
     grant: { patience: 8, mods: { rangeMult: 1.25, projSpeedMult: 1.3, rateMult: 0.92 } },
@@ -158,16 +158,16 @@ const STAT_CARDS: StatTemplate[] = [
     // §15 measures +22.9pt on a low-crit splash mystic against −3.9pt on the
     // depth-8 line and a crit carrier's whole burst.
     title: 'Whetstone Pact',
-    desc: '+32% attack rate, no crits to team. Ground so fine there is no edge left.',
+    desc: '+32% attack rate to team',
     rarity: 'epic',
-    downside: 'your heroes never crit',
+    downside: 'team never crits',
     grant: { mods: { rateMult: 1.32, critChanceAdd: -1 } },
   },
   {
     // Legacy card (saves only). Heroes have no HP now, so its HP bill became
     // the relic's attack-speed bill (`data/relics.ts`).
     title: 'Bloodletting',
-    desc: '+70% damage, +8 Thorns, −34% attack speed to team',
+    desc: '+70% damage, +8 Thorns to team',
     rarity: 'epic',
     downside: '−34% attack speed to team',
     grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } },
@@ -179,7 +179,7 @@ const STAT_CARDS: StatTemplate[] = [
     // net −4.4pt; the Mythic Executioner mutation carries 38% on ONE hero, and a
     // legendary team card that does a third of that is not a legendary.
     title: 'Executioner’s Oath',
-    desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack rate to team',
+    desc: 'Executes enemies below 45% HP, +12% crit chance to team',
     rarity: 'legendary',
     downside: '−12% attack rate to team',
     grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } },
@@ -192,14 +192,14 @@ const STAT_CARDS: StatTemplate[] = [
     // a splash line applies it to a crowd (+49.4pt on §15's magic bench) and
     // least on 90 runts that die to the first hit (+0.0pt).
     title: 'Wildfire Pact',
-    desc: 'Every hit burns for 80/s over 3s, −35% damage per hit to team',
+    desc: 'Team’s hits burn 80/s for 3s',
     rarity: 'legendary',
     downside: '−35% damage per hit to team',
     grant: { mods: { burn: { dps: 80, dur: 3 }, damageMult: 0.65 } },
   },
   {
     title: 'Iron Vigil',
-    desc: '+16 Thorns and Thorns ×2, +6 Patience, −12% damage to team',
+    desc: '+16 Thorns, Thorns ×2, +6 Patience to team',
     rarity: 'legendary',
     downside: '−12% damage to team',
     grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.88 } },

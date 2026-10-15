@@ -87,11 +87,11 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
           <h1 className="ct-title" tabIndex={-1}>
             Sealed crates
           </h1>
-          <p>A side bet: one random item, yours for good. Contracts are the surer way to unlock gear.</p>
+          <p>One random item kind, yours for good.</p>
         </span>
       </div>
 
-      {!taught && <PageTip>A crate is a gamble. Delivering a contract always unlocks an item.</PageTip>}
+      {!taught && <PageTip>A gamble: a delivered contract always unlocks an item.</PageTip>}
 
       {last && k && (
         <div className={`hq-pulled${last.duplicate ? ' dup' : ''}`} role="status" aria-live="polite">
@@ -128,7 +128,7 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
         ))}
         <p className="hq-note">
           {lift > 0
-            ? `Your standing with the companies moves ${lift} point${lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.`
+            ? `Your standing moves ${lift} point${lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.`
             : 'Standing with any company moves the odds toward Levels 2 and 3.'}{' '}
           {fresh > 0 ? (
             <>
@@ -155,7 +155,7 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
 
       <Slip className="hq-dup">
         <p className="hq-dup-k">Already own it?</p>
-        <p className="hq-dup-t">You get it as a bonus Rare item in your next contract, in your pack.</p>
+        <p className="hq-dup-t">It comes as a Rare item in your pack next contract.</p>
         {bonus.length > 0 && <p className="hq-dup-t">Waiting for your next contract: {bonus.join(', ')}.</p>}
       </Slip>
     </ContractPage>

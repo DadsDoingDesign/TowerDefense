@@ -54,7 +54,7 @@ export const WATCH_COMMANDS: Record<CommandId, WatchCommand> = {
   flare: {
     id: 'flare',
     name: 'Flare',
-    blurb: `Slows every goblin near the front of the column by ${Math.round(FLARE.slow * 100)}% for ${FLARE.dur}s`,
+    blurb: `Slows the column’s front by ${Math.round(FLARE.slow * 100)}% for ${FLARE.dur}s`,
   },
   hold: {
     id: 'hold',

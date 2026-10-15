@@ -303,7 +303,7 @@ export function layTiles(path: readonly Vec2[], pieces: readonly TerrainPiece[])
 
 /** What each blocking kind is called, and the coach line a tap on it gets. */
 export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
-  lane: { name: 'Road', line: 'Road — the horde marches here. Post heroes beside it.' },
+  lane: { name: 'Road', line: 'Road — the horde marches here. Post beside it.' },
   forest: { name: 'Forest', line: 'Forest — too thick to stand in.' },
   rock: { name: 'Rock', line: 'Rock — nothing can stand here.' },
   water: { name: 'Lake', line: 'Lake — heroes can’t stand in water.' },
@@ -318,7 +318,7 @@ export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
  */
 export const ROOM_COPY = {
   name: 'Too close',
-  line: 'Too close — a hero with a sword, axe or hammer swings all round it, so keep the tiles next to it clear.',
+  line: 'Too close — a hero with a sword, axe or hammer needs the tiles beside it clear.',
 }
 
 /**
@@ -349,17 +349,17 @@ export const TERRAIN_RULES: Record<TerrainRuleId, TerrainRule> = {
   flooded: {
     id: 'flooded',
     name: 'Flooded meadow',
-    blurb: 'Lakes have spread over the grass. Fewer tiles to post on near the bends.',
+    blurb: 'Lakes cover tiles near the bends.',
   },
   wildfire: {
     id: 'wildfire',
     name: 'Wildfire',
-    blurb: 'Patches of the field are burning. No hero can stand in the flames.',
+    blurb: 'Fires burn on the field. No hero can stand in them.',
   },
   quarry: {
     id: 'quarry',
     name: 'Quarry boulders',
-    blurb: 'Boulders from the quarry lie across the field. Fewer tiles to post on.',
+    blurb: 'Quarry boulders block more tiles.',
   },
   hexed: {
     id: 'hexed',

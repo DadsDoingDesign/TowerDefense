@@ -251,17 +251,17 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
   healPulse: {
     label: 'Heals nearby goblins, ten times',
     telegraph: 'green ring pulses out from the shaman',
-    counter: 'focus it first (Threat targeting) — every pulse it lives through undoes a volley',
+    counter: 'focus it first (Threat targeting): every pulse undoes a volley',
   },
   enrage: {
     label: 'Enrages when wounded',
     telegraph: 'red flame over it below 40% health',
-    counter: 'burst it through the threshold, or chill it — slows still apply to the enraged pace',
+    counter: 'burst it past the threshold, or chill it: slows still work',
   },
   sapper: {
     label: 'Blows up at your wagons, stealing extra cargo',
     telegraph: 'lit fuse over it; blast ring where it goes off',
-    counter: 'kill it on the approach, or hold it with a blocker: a held sapper goes off harmlessly and counts as the blocker\'s kill',
+    counter: 'kill it on the approach, or hold it: a held sapper goes off harmlessly',
   },
   lob: {
     label: 'Lobs a charge at your wagons when it gets close',
@@ -271,7 +271,7 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
   split: {
     label: 'Breaks apart when destroyed',
     telegraph: 'crack mark on it; burst when it breaks',
-    counter: 'splash — the pieces spawn together and die together (and guns further down the lane for any that do not)',
+    counter: 'splash: the pieces spawn together and die together',
   },
   shieldAura: {
     label: 'Shields goblins around it',
@@ -286,7 +286,7 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
   warCry: {
     label: 'War-cry at two-thirds and one-third health',
     telegraph: 'expanding red ring during the wind-up',
-    counter: 'Flare or chill the column after the cry; save Rally Horn for the burst through a threshold',
+    counter: 'Flare or chill after the cry; save Rally Horn to burst a threshold',
   },
   kingLob: {
     label: 'Lobs TNT at your wagons every few seconds, faster once wounded',

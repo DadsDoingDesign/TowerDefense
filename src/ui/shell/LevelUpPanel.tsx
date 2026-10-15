@@ -158,7 +158,7 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
         </p>
         {live && (
           <p className="sh-line muted">
-            <Icon name="warn" /> Choices are made between rounds — this one opens when the wave is over.
+            <Icon name="warn" /> Opens when the wave is over.
           </p>
         )}
         {focus && (
