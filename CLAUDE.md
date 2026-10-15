@@ -159,11 +159,14 @@ result. Append a short note to the review log when you're done.
   map-first home, `MenuScreen` + `menu.css`): the trade map fills the screen
   and three slim glass layers float over it — the bar (seal, bank, place
   icons), the company dock (five fixed slots in `COMPANY_IDS` order, the
-  order the map fans its roads west→east; the slot model is the pure
-  `ui/shell/homeDock.ts`) and the focused company's card with the CTA. A slot
-  or a signpost focuses a road (`homeFocus`): the canvas re-lights it
-  (`paintMap.bakeBase` `focus`), names its cities, and the card's CTA opens
-  the terms (`openContracts`). No liaison on the home. Choosing the hero (`marchOut`) goes
+  order the map fans its roads west→east, then a sixth, **Buy Company** —
+  the Sovereign Route, locked with its progress until `charterDoor` opens;
+  the slot model is the pure `ui/shell/homeDock.ts`) and the focused card
+  with the CTA. A slot or a signpost focuses a road (`homeFocus`): the canvas
+  re-lights it (`paintMap.bakeBase` `focus`, a `mapRules.MapFocus`), names
+  its cities, and the card's CTA opens the terms (`openContracts`). Buy
+  Company is `homeFocus: 'charter'`: every road lights (`'all'`), and its
+  card's CTA opens the charter page (`onCharter`). No liaison on the home. Choosing the hero (`marchOut`) goes
   straight into the opening fight: the one battle on `OPENING_LAYER`
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the

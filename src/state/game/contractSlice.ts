@@ -20,7 +20,7 @@ import { STANDARD_RUN } from '../seeds'
 import { buildRecap } from './recap'
 import { settleFactsFromState } from './settle'
 import type { ContractOrder } from './runSlice'
-import type { ContractBoard, Slice } from './types'
+import type { ContractBoard, HomeFocus, Slice } from './types'
 
 export interface ContractActions {
   /**
@@ -33,8 +33,12 @@ export interface ContractActions {
    * `terms.crates` pre-sets the stake (the end screen's "another contract").
    */
   openContracts: (terms?: Partial<ContractOrder>) => void
-  /** Focus a road on the menu's map: its signpost lights, its notice shows. Never signs. */
-  focusRoad: (company: CompanyId) => void
+  /**
+   * Focus a road on the menu's map: its signpost lights, its card shows. Never
+   * signs. `'charter'` focuses the dock's Buy Company slot: every road lights,
+   * and the card is the Sovereign Route's.
+   */
+  focusRoad: (focus: HomeFocus) => void
   /** From the terms back to the menu, the road still focused. */
   boardBack: () => void
   /** Set the stake (0: the free escort), clamped to the standing cap and the bank. */
@@ -112,16 +116,17 @@ export const createContractSlice: Slice<ContractActions> = (set, get) => ({
       get().beginCampaign(newRunSeed(), STANDARD_RUN, { company: FIRST_COMPANY, crates: 0 })
       return
     }
-    const company = homeCompany(meta, terms?.company, get().homeFocus)
+    const focus = get().homeFocus
+    const company = homeCompany(meta, terms?.company, focus === 'charter' ? null : focus)
     const board = clampBoard({ seed: newRunSeed(), company, crates: terms?.crates ?? 0 }, meta)
     set({ screen: 'contracts', board, homeFocus: company, shellSelection: null })
     // The board's one tip ("each company pays your militia…") has been read.
     useSettingsStore.getState().markTaught('board')
   },
 
-  focusRoad: (company) => {
-    if (!COMPANY_IDS.includes(company) || get().homeFocus === company) return
-    set({ homeFocus: company })
+  focusRoad: (focus) => {
+    if ((focus !== 'charter' && !COMPANY_IDS.includes(focus)) || get().homeFocus === focus) return
+    set({ homeFocus: focus })
   },
 
   boardBack: () => {

@@ -3904,3 +3904,20 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
     of sight; the desperate tag at 4.41:1 (caught by the contrast test).
   - **Left as is:** the phone card is the tallest layer (~205px with four
     chips); a short phone's card is two lines plus the CTA, not one.
+- **2026-10-15 · Buy Company.** The designer: the "Sovereign Route ›" pill
+  "looks like a marketing chip" — make it a button that looks locked, called
+  "Buy Company". The pill is gone; the company dock has a sixth slot after
+  the five (a carved cyan rim, the Sovereign crest; locked: a padlock and the
+  share unlocked with a bar; open: a quiet glow), shown from the first
+  non-staged home. Selecting it lights all five roads and turns the card
+  into Buy Company (locked: the Skills / Items counts, "Unlock 26 more";
+  open: what delivery pays, "Buy Company · 7,000" to the charter page). One
+  round plus fixes in the running app (390 × 844, 375 × 667, 1280 × 800; mid,
+  veteran and short-of-gold saves): `docs/ui-audit-2026-10/home-map/buy-company/`.
+  - **Fixed:** the padlock covering "40%" on a short phone; the desk dock
+    growing 23px when the slot wrapped; an open slot that shouted in cyan;
+    the bar clipping Settings at 390 with a five-figure bank (now the narrow
+    bar up to 420).
+  - **Left for the designer:** the name on the desk slot (three "Buy
+    Company"s on a desk); the locked CTA does not open the charter page
+    (nor did anything on the home before).

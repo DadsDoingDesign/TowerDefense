@@ -185,3 +185,73 @@ crown is drawn at 2×.
 - The roads now fan in the dock's order, so each company's road points a new
   way (Peppercorn west, Moonquill east). The first launch's free road runs
   west.
+
+---
+
+## Buy Company — the dock's sixth slot (`buy-company/`)
+
+The designer, on the "Sovereign Route ›" pill: *"let's not show it that way,
+it looks like a marketing chip. Maybe there is a button that looks locked
+and it's called 'Buy Company' or something that just makes a bit more sense
+intuitively."*
+
+**What was built.** The pill is gone. The dock gains a sixth slot after the
+five companies — narrower on a phone (44px at 375 wide, the touch floor; the
+five keep 55), as wide on a desk, where it writes its name. It is no
+company's road, so it wears no company's frame: a carved (double) cyan rim
+and the Sovereign crest. Locked: the crest in shadow under a padlock, the
+share of the catalogue unlocked ("40%") and a thin bar. Open: the crest in
+colour, "Buy", a quiet glow. It shows from the first home after the free
+escort — the endgame as a goal, not a secret. Selecting it lights all five
+roads at once (`MapFocus 'all'`: the night wash, every road laid back at
+Standing-5 glow or better, no city tags — fifteen names would bury the map)
+and turns the card into Buy Company: "Sovereign Route" over the title, one
+line on the road. Locked: Skills and Items counts and a disabled "Unlock 26
+more". Open: "Delivered pays 30,000" and the CTA "Buy Company · 7,000", which
+opens the charter page (the militia's founding first, if none). A short bank
+gets one red line, "Your bank is 1,240 gold short.", and the CTA waits.
+
+States: **mid** (6 contracts, 340 gold, 18 of 44 unlocks — 40%), **vet**
+(31 contracts, 12,480 gold, door open, militia founded, season 3 with an
+exclusive, a desperate and a cold company), **short** (the vet's door, 5,760
+gold, no militia). 390×844 and 375×667 phones (touch, @2x), 1280×800 desk;
+the slot in focus, and a company in focus to check the dock.
+
+**Round 1 (`buy-company/r1/`) — jury.** The idea lands: the sixth slot reads
+as "the one you are working toward" next to five you work for, and lighting
+every road says what the route is without a word. Issues:
+
+1. **The padlock sat on "40%".** On a short phone the slot's rows close up,
+   and the padlock, hung under the crest, covered the number.
+2. **The desk dock grew.** At 128px the slot could not fit the crest beside
+   "Buy Company", so it wrapped and the whole row went from 72 to 95px tall.
+3. **The open slot shouted.** Cyan crest, cyan "Buy" and a glow: the badge
+   the designer asked to lose, in a new place.
+4. **The bar clipped at 390.** A five-figure bank (and opening this road
+   needs 7,000) plus the militia's flag pushed Settings off the edge — the
+   narrow-bar rule stopped at 380.
+5. A hairline divider before the slot was invisible over the glass: cut.
+
+**Fixes (`buy-company/`).** The padlock hangs on the shield's face; the
+desk dock is six even columns, the slot unwrapped (all six 65px tall);
+"Buy" is plain text and the glow is softer (14%); the narrow bar applies up
+to 420px; the divider is gone; the card's line is a few words shorter.
+Checked in Playwright: the pill is gone, the slot focuses (`homeFocus:
+'charter'`), five signposts lit and no city tags, the CTA opens the
+militia's founding when there is none, and Tab runs the bar → season → six
+slots → card → CTA.
+
+**For the designer.**
+
+- On a desk "Buy Company" is written three times (the slot, the card's
+  title, the CTA) where a company slot shows only its logo. The desk has the
+  room and the slot is "the button called Buy Company"; on a phone it says
+  "Buy".
+- The fee is said once, on the CTA (the store pattern, and the charter
+  page's "Charter the road · 7,000"); the card's fact is the payout. A short
+  bank keeps the price on the disabled CTA and says the shortfall in a
+  refusal line, rather than replacing the label.
+- While locked the CTA is disabled, so — as with the pill, which showed only
+  once the door was open — the charter page (its meter, what the road is)
+  is not reachable before the door opens. The card carries the two counts;
+  say if the locked page should be a tap away.

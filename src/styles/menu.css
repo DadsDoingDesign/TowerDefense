@@ -338,8 +338,9 @@
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
-/* A narrow phone: the bank a step down so the places keep their size. */
-@media (max-width: 379.98px) {
+/* A narrow phone: the bank a step down so the places keep their size (a
+   veteran's five-figure bank and the militia's flag need it up to 420). */
+@media (max-width: 419.98px) {
   .mn-bar {
     gap: 4px;
     padding-inline: 8px;
@@ -396,8 +397,8 @@
 }
 
 /* ------------------------------------------------------------- the foot
-   The dock's shoulders (the season, the Sovereign Route), the dock, the card
-   and its CTA: one column at the foot, 560 at most. */
+   The dock's shoulder (the season), the dock, the card and its CTA: one
+   column at the foot, 560 at most. */
 .mn-foot {
   display: grid;
   gap: 8px;
@@ -446,15 +447,6 @@
   font-style: normal;
   color: var(--accent-text);
 }
-.mn-charter {
-  margin-left: auto;
-  padding-left: 6px;
-  border-color: color-mix(in srgb, var(--sovereign) 60%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--sovereign) 18%, transparent);
-}
-.mn-charter i {
-  color: var(--sovereign);
-}
 .mn-pill:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
@@ -466,10 +458,12 @@
 }
 
 /* ------------------------------------------------------------- the dock
-   Five fixed slots, evenly spaced, in the map's west-to-east order. */
+   Five fixed slots, evenly spaced, in the map's west-to-east order, then the
+   sixth, narrower, set apart: Buy Company (the Sovereign Route). At 375 wide
+   the five are 55px and the sixth 44, the touch floor. */
 .mn-dock {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(var(--hit-min), 0.8fr);
   gap: 6px;
   /* Room above for the marks hung on the slots' top edges. */
   padding-top: 8px;
@@ -592,6 +586,62 @@
     border-color: color-mix(in srgb, var(--co) 70%, transparent);
     background: var(--glass-strong);
   }
+}
+
+/* The sixth slot, Buy Company: no company's road, so not a company's frame —
+   a carved (double) rim in the Sovereign cyan. */
+.mn-own {
+  --co: var(--sovereign);
+  border: 3px double color-mix(in srgb, var(--sovereign) 40%, var(--line-strong));
+  padding-inline: 1px;
+}
+.mn-own.is-on {
+  border: 3px double var(--co);
+}
+/* Locked: the crest in shadow under its padlock, the share unlocked and a bar. */
+.mn-own.is-locked {
+  color: var(--muted);
+}
+.mn-own.is-locked .crest.sovereign {
+  filter: saturate(0.25) brightness(0.6);
+}
+/* The padlock hangs on the shield's face, clear of the number under it. */
+.mn-own-lock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -35%;
+  display: flex;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+}
+.mn-own-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+/* A phone has room for "Buy" or the share; the name is the slot's, and the card's title. */
+.mn-own-name {
+  display: none;
+}
+.mn-own-bar {
+  display: block;
+  width: 30px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.mn-own-bar i {
+  display: block;
+  height: 100%;
+  background: var(--sovereign);
+}
+/* Open: no padlock, the crest in colour, a quiet glow — available, not advertised. */
+.mn-own.is-open:not(.is-on) {
+  border-color: color-mix(in srgb, var(--sovereign) 55%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sovereign) 14%, transparent);
 }
 
 /* ------------------------------------------------------------- the card
@@ -720,6 +770,47 @@ button.mn-chip.is-track:focus-visible {
 .mn .mn-cta {
   height: 56px;
   font-size: 22px;
+}
+
+/* The Buy Company card: the Sovereign crest (under its padlock while the
+   door is shut), one line on the road, its counts or its pay, and the CTA. */
+.mn-own-card {
+  --co: var(--sovereign);
+}
+.mn-own-crest {
+  display: grid;
+  place-items: center;
+  width: 44px;
+}
+.mn-own-card.is-locked .crest.sovereign {
+  filter: saturate(0.25) brightness(0.6);
+}
+.mn-own-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.mn-own-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--text);
+}
+.mn-own-card .mn-chip .field-v {
+  font-size: var(--fs-xs);
+}
+.mn-own-card .mn-chip .ct-gold {
+  gap: 4px;
+}
+/* The refusal: the bank is short of the fee (only while it is). */
+.mn-own-why {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bad-text);
+}
+.mn-cta .mn-cta-fee {
+  vertical-align: -3px;
 }
 
 /* Cold (the trade war): your exclusive is with its rival — the card cools. */
@@ -867,6 +958,31 @@ button.mn-chip.is-track:focus-visible {
   .mn-slot-share {
     flex-basis: 100%;
     text-align: center;
+  }
+  /* A desk writes the sixth slot's name out: "Buy Company", and the share
+     unlocked under it while locked ("Buy" goes: the name says it). The
+     desk has the room, so the sixth is as wide as a company's. */
+  .mn-dock {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .mn-own {
+    flex-wrap: nowrap;
+  }
+  .mn-own-text {
+    align-items: flex-start;
+  }
+  .mn-own-name {
+    display: inline;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .mn-own-buy {
+    display: none;
+  }
+  .mn-own .mn-slot-rep {
+    font-size: var(--fs-xs);
   }
   .mn-card {
     grid-template-columns: auto minmax(0, 1fr) 280px;

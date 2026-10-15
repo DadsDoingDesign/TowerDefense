@@ -4,7 +4,7 @@ import { bannerKey, type BannerLook } from '../../game/data/banner'
 import { Crest, Lock } from '../pixel'
 import { useMedia } from '../pointer'
 import { bakeBase, bakePixels, bakeTerrain, brightenLayers, cachedTerrain, drawFrame, glowSprite, type BrightenLayers } from './paintMap'
-import { BRIGHTEN_MS, brightenEase, buildGeometry, FOCUS_FADE_MS, makeTraffic, MAP_FPS, STILL_T, type MapGeometry, type Rect, type RoadView } from './mapRules'
+import { BRIGHTEN_MS, brightenEase, buildGeometry, FOCUS_FADE_MS, litBy, makeTraffic, MAP_FPS, STILL_T, type MapFocus, type MapGeometry, type Rect, type RoadView } from './mapRules'
 
 /**
  * The home's map, and since October 2026 the whole of the home: the trade map
@@ -97,8 +97,12 @@ export function TradeMap({
   /** False under reduced motion: one still frame. */
   motion: boolean
   firstRun: boolean
-  /** The road in focus: it burns in its colour, its signpost is lit and its cities are named. */
-  focused?: CompanyId | null
+  /**
+   * The road in focus: it burns in its colour, its signpost is lit and its
+   * cities are named. `'all'` (the Buy Company slot) lights every road and
+   * every signpost, and names no cities.
+   */
+  focused?: MapFocus
   /** Tap a road's signpost: focus it (the dock and the card follow). Never signs. */
   onPick?: (company: CompanyId) => void
 }) {
@@ -341,7 +345,7 @@ function Labels({
   cssPerPx: number
   open: Rect
   firstRun: boolean
-  focused: CompanyId | null
+  focused: MapFocus
   onPick?: (company: CompanyId) => void
 }) {
   const ref = useRef<HTMLUListElement>(null)
@@ -439,7 +443,8 @@ function Labels({
       li.style.top = `${Math.round(spot.t)}px`
     }
   })
-  const lit = focused ? geo.routes.find((r) => r.company === focused) : undefined
+  // The cities are named for one road at a time: every road lit names none.
+  const lit = focused && focused !== 'all' ? geo.routes.find((r) => r.company === focused) : undefined
   const litCo = lit ? companyById(lit.company) : null
   return (
     <>
@@ -451,7 +456,7 @@ function Labels({
           const left = x * cssPerPx
           const top = (y - 8) * cssPerPx
           const style = { left, top, '--co': co.color } as CSSProperties
-          const on = focused === r.company
+          const on = litBy(focused, r.company)
           const locked = v.state === 'uncharted'
           // Placement priority: the focused road, then by standing, the uncharted last.
           const prio = (on ? 1000 : 0) + (locked ? 0 : 10 + v.standing)

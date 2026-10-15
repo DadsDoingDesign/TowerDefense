@@ -8,11 +8,15 @@
  * market of the day, your exclusive, cold to you. The focused company's card
  * says what those marks MEAN; the slot carries the number. Nothing here reads
  * a store: `MenuScreen` passes the save in, `tests/homeDock.test.ts` drives it.
+ *
+ * After them, a sixth slot that is no company's: Buy Company, the Sovereign
+ * Route ({@link charterSlot}).
  */
 import { COMPANY_IDS, companyById, type CompanyId } from '../../game/data/companies'
 import { companyOpen, standingOf, type StandingXp } from '../../game/run/standing'
 import { termName, trackLevel } from '../../game/run/track'
 import { DESPERATE_PAY, isCold, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
+import { CHARTER_FEE, type CharterDoor } from '../../game/run/charter'
 
 /** A day's mark on a slot, in the order they are shown. */
 export type SlotMark = 'desperate' | 'market' | 'exclusive' | 'cold'
@@ -102,4 +106,63 @@ export function slotName(s: DockSlot, marketMult: number): string {
   const share = s.share != null ? `, ${s.share}% of the trade${s.leads ? ', leads the trade war' : ''}` : ''
   const marks = s.marks.map((m) => `, ${MARK_WORDS[m](marketMult)}`).join('')
   return `${co.name}: ${rep}${share}${marks}`
+}
+
+// ---------------------------------------------------------------------------
+// The sixth slot: Buy Company (the Sovereign Route)
+// ---------------------------------------------------------------------------
+
+/**
+ * The dock's sixth slot, after the five companies (October 2026; the
+ * designer: "a button that looks locked and it's called 'Buy Company'"). It
+ * is not a company's road: it is the Sovereign Route — your own road, every
+ * company's goods. Shown from the first home after the free escort, locked
+ * or open, so the endgame reads as a goal, not a secret
+ * (`docs/MERCENARY_COMPANY.md`, Overlooked § 5). Selecting it lights every
+ * road, and its card says what opens it or what it costs.
+ */
+export interface CharterSlot {
+  /** The door is open: every skill card and item kind of Levels 1–3 unlocked. */
+  open: boolean
+  /** The share of that catalogue held, as a whole percent — 100 only once it is open. */
+  pct: number
+  /** Unlocks still to get, skills and items together. */
+  missing: number
+  skills: { have: number; need: number }
+  items: { have: number; need: number }
+  /** The fee, and the gold the bank lacks for it (0 when it covers it). */
+  fee: number
+  short: number
+}
+
+export function charterSlot(door: CharterDoor, bank: number, fee = CHARTER_FEE): CharterSlot {
+  const have = door.skills.have + door.items.have
+  const need = door.skills.need + door.items.need
+  return {
+    open: door.open,
+    pct: door.open ? 100 : Math.min(99, Math.floor(door.progress * 100)),
+    missing: Math.max(0, need - have),
+    skills: door.skills,
+    items: door.items,
+    fee,
+    short: Math.max(0, fee - Math.max(0, Math.floor(bank))),
+  }
+}
+
+const n = (x: number) => x.toLocaleString('en')
+
+/** The slot's accessible name: what it is, and what stands between you and it. */
+export function charterSlotName(s: CharterSlot): string {
+  if (!s.open) return `Buy Company: locked, ${s.pct}% unlocked. Opens when every skill and item is unlocked`
+  return s.short ? `Buy Company: open, ${n(s.fee)} gold. Your bank is ${n(s.short)} short` : `Buy Company: open, ${n(s.fee)} gold`
+}
+
+/**
+ * The card's CTA (it opens the charter page): locked, it says what is missing
+ * ("Unlock 14 more"); open, it is "Buy Company" with the fee on it — disabled
+ * while the bank is short (the card says by how much, as a refusal line).
+ */
+export function charterCta(s: CharterSlot): { label: string; fee: number | null; enabled: boolean } {
+  if (!s.open) return { label: `Unlock ${s.missing} more`, fee: null, enabled: false }
+  return { label: 'Buy Company', fee: s.fee, enabled: !s.short }
 }

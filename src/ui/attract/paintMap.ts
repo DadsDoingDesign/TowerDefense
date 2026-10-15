@@ -21,7 +21,7 @@ import { companyById, type CompanyId } from '../../game/data/companies'
 import { bannerPalette, bannerRows, type BannerLook } from '../../game/data/banner'
 import { OUTLINE, pixelRuns } from '../../game/data/pixelArt'
 import { RNG } from '../../game/core/rng'
-import { glowAlpha, glowWidth, pulseIndex, type MapGeometry, type Pulse, type RoadView } from './mapRules'
+import { glowAlpha, glowWidth, litBy, pulseIndex, type MapFocus, type MapGeometry, type Pulse, type RoadView } from './mapRules'
 
 /** The night palette, dusk-lifted (`trade/NOTES.md` § Round 2). */
 const NIGHT = {
@@ -356,7 +356,7 @@ function radial(g: CanvasRenderingContext2D, x: number, y: number, r: number, co
 
 /** How much the roads not in focus keep of their light (the home's dock lights one road, October 2026). */
 export const UNFOCUSED_LIGHT = 0.3
-/** The night laid over the map round a focused road: the others sink, it stays lit. */
+/** The night laid over the map round a focused road (or every road): the rest sinks, the roads stay lit. */
 const FOCUS_DIM = 'rgba(6,8,14,0.5)'
 
 /**
@@ -368,6 +368,8 @@ const FOCUS_DIM = 'rgba(6,8,14,0.5)'
  * back over it undimmed, and its glow burns at least as bright as Standing 5
  * would — a road you have never worked lights up in its colour too, so a tap
  * always shows where it runs. The others keep {@link UNFOCUSED_LIGHT} of theirs.
+ * `'all'` (the dock's Buy Company slot: the Sovereign Route carries every
+ * good) lights every road so, none dimmed, and only the land between sinks.
  */
 export function bakeBase(
   pixels: HTMLCanvasElement,
@@ -375,25 +377,25 @@ export function bakeBase(
   roads: readonly RoadView[],
   k: number,
   skip: CompanyId | null = null,
-  focus: CompanyId | null = null,
+  focus: MapFocus = null,
 ): HTMLCanvasElement {
   const c = canvas(geo.W * k, geo.H * k)
   const g = c.getContext('2d')!
   g.imageSmoothingEnabled = false
   g.drawImage(pixels, 0, 0, geo.W * k, geo.H * k)
-  const lit = focus ? geo.routes.find((r) => r.company === focus) : undefined
-  if (lit) {
+  const lit = geo.routes.filter((r) => litBy(focus, r.company))
+  if (lit.length) {
     g.fillStyle = FOCUS_DIM
     g.fillRect(0, 0, c.width, c.height)
-    // The focused road, its towns and their pennants, back at full strength.
+    // The focused roads, their towns and their pennants, back at full strength.
     const copy = (x: number, y: number, w: number, h: number) => g.drawImage(pixels, x, y, w, h, x * k, y * k, w * k, h * k)
-    for (const [x, y] of lit.chain) copy(x - 1, y - 1, 3, 3)
-    for (const [x, y] of lit.towns) copy(x - 5, y - 13, 10, 15)
+    for (const r of lit) for (const [x, y] of r.chain) copy(x - 1, y - 1, 3, 3)
+    for (const r of lit) for (const [x, y] of r.towns) copy(x - 5, y - 13, 10, 15)
   }
   g.globalCompositeOperation = 'lighter'
   for (const r of geo.routes) {
     const v = roads.find((q) => q.company === r.company)!
-    const on = r.company === focus
+    const on = litBy(focus, r.company)
     const light = on ? Math.max(v.light, v.state === 'uncharted' ? 2 : 5) : v.light
     if (!light) continue
     const mul = !focus || on ? 1 : UNFOCUSED_LIGHT
@@ -454,11 +456,12 @@ export function drawFrame(
   o: {
     /** The base a focus change is fading out of, and how much of it is left (0–1). */
     fading?: { base: HTMLCanvasElement; a: number } | null
-    /** The focused road: the others' traffic runs dim. */
-    focus?: CompanyId | null
+    /** The focused road (or every road): the others' traffic runs dim. */
+    focus?: MapFocus
   } = {},
 ): void {
-  const { fading, focus } = o
+  const { fading, focus = null } = o
+  const dim = (c: CompanyId) => !!focus && !litBy(focus, c)
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
   ctx.drawImage(base, 0, 0)
@@ -482,7 +485,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const [x, y] = ch[pulseIndex(p, ch.length, t)]
     const s = sprites.get(p.company)!
-    ctx.globalAlpha = (p.faint ? 0.58 : 1) * (focus && p.company !== focus ? UNFOCUSED_LIGHT : 1)
+    ctx.globalAlpha = (p.faint ? 0.58 : 1) * (dim(p.company) ? UNFOCUSED_LIGHT : 1)
     ctx.drawImage(s, (x + 1) * k - s.width / 2, (y + 1) * k - s.height / 2)
   }
   ctx.globalCompositeOperation = 'source-over'
@@ -491,7 +494,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const j = pulseIndex(p, ch.length, t)
     const color = colorOf(p.company)
-    ctx.globalAlpha = focus && p.company !== focus ? 0.45 : 1
+    ctx.globalAlpha = dim(p.company) ? 0.45 : 1
     // The tail: five pixels behind, fading in steps.
     for (let n = 1; n <= 5; n++) {
       const q = ch[j - n * p.dir]
