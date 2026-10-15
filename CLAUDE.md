@@ -155,9 +155,15 @@ result. Append a short note to the review log when you're done.
   hash, never a run stream) in `src/game/run/liaison.ts`, drawn by
   `LiaisonScene.tsx` (+ `liaisons.css`) on the company's post that the same
   script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
-  The contract board is the HOME (Figma B2): the trade map's signposts focus a
-  road (`homeFocus`), the notice under the map is that company's, and its CTA
-  opens the terms (`openContracts`). Choosing the hero (`marchOut`) goes
+  The contract board is the HOME, and the home is the map (Oct 2026, the
+  map-first home, `MenuScreen` + `menu.css`): the trade map fills the screen
+  and three slim glass layers float over it — the bar (seal, bank, place
+  icons), the company dock (five fixed slots in `COMPANY_IDS` order, the
+  order the map fans its roads west→east; the slot model is the pure
+  `ui/shell/homeDock.ts`) and the focused company's card with the CTA. A slot
+  or a signpost focuses a road (`homeFocus`): the canvas re-lights it
+  (`paintMap.bakeBase` `focus`), names its cities, and the card's CTA opens
+  the terms (`openContracts`). No liaison on the home. Choosing the hero (`marchOut`) goes
   straight into the opening fight: the one battle on `OPENING_LAYER`
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the

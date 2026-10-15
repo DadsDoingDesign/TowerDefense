@@ -4,13 +4,11 @@
  * ---------------------------------------------------------------------------
  *
  * The liaisons' words are data (`data/liaisons.ts`); this is which line is
- * said, when. Every choice is a hash — of the day at the board, of the run
- * seed and the city on the road, of the run seed at the end — **never a draw
- * on a run stream** (RNG draw order is behaviour), so a line holds still while
- * you look at it and a reload says the same thing.
+ * said, when. Every choice is a hash — of the run seed and the city on the
+ * road, of the run seed at the end — **never a draw on a run stream** (RNG
+ * draw order is behaviour), so a line holds still while you look at it and a
+ * reload says the same thing.
  *
- *  - **At the board** (the home notice): the road's trouble or what the
- *    company wants of it, fixed for the day like the notice it replaced.
  *  - **At a city**: a reaction to the cargo that arrived, or to one of the
  *    contract's asks — still open, or already met. A rough arrival (under
  *    60%) is always what they talk about.
@@ -52,18 +50,6 @@ export function fillLine(company: CompanyId, line: string, city = 0): string {
 }
 
 const pick = (lines: readonly string[], h: number): string => lines[h % lines.length]
-
-/**
- * At the contract board: the road's greeting, fixed for the day (`day` is the
- * UTC date key the board reads its market from). A road not hiring yet gets
- * its liaison's "not yet".
- */
-export function boardLine(company: CompanyId, day: string, open = true, cold = false): string {
-  const l = LIAISONS[company]
-  // Cold (the trade war: your exclusive is with its rival) — said instead of the day's line.
-  const lines = !open ? l.closed : cold && l.cold?.length ? l.cold : l.board
-  return fillLine(company, pick(lines, hashSeed(day, 'liaison', company)))
-}
 
 /** Everything a city's line can react to. */
 export interface CityMoment {

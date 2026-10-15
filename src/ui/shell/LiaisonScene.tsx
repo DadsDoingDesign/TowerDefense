@@ -13,20 +13,19 @@ import { SCENE_ANCHORS, SCENE_SIZE } from './stopScenes.generated'
  * (`StopScene`) — the bubble headed with who speaks ("Brannoch ·
  * Ironvein’s factor"), as the receipt's line is.
  *
- *  - **`notice`**: a short band at the top of the home's road notice, the
- *    whole post at 1× (as the mockup framed it). The bubble is the notice's
- *    letter now (the company talking), so the notice says it once.
- *  - **`city`**: the head of a city's page at the stops' 2×, the page's one
- *    title hung on it as the city's sign (`liaisons.css`).
+ * It heads a city's page at the stops' 2×, the page's one title hung on it as
+ * the city's sign (`liaisons.css`). (The home no longer shows a liaison: the
+ * October 2026 map-first home keeps people to the road — cities and the
+ * receipt.)
  *
- * The bubble always hangs beside the liaison's head: both bands are shorter
- * than a stop's, and the sign takes the sky.
+ * The bubble always hangs beside the liaison's head: the band is shorter than
+ * a stop's, and the sign takes the sky.
  *
  * The art is decoration; the bubble — who, then the line — is read in place.
  */
-export function LiaisonScene({ company, line, at, children }: { company: CompanyId; line: string; at: 'notice' | 'city'; children?: ReactNode }) {
+export function LiaisonScene({ company, line, children }: { company: CompanyId; line: string; children?: ReactNode }) {
   return (
-    <StopScene kind={liaisonScene(company)} line={line} who={liaisonPlate(company)} beside scale={at === 'notice' ? 1 : 2} className={`lia-scene at-${at}`}>
+    <StopScene kind={liaisonScene(company)} line={line} who={liaisonPlate(company)} beside scale={2} className="lia-scene at-city">
       {children}
     </StopScene>
   )
@@ -39,7 +38,7 @@ export function LiaisonScene({ company, line, at, children }: { company: Company
 export function LiaisonSays({ company, line }: { company: CompanyId; line: string }) {
   const kind = liaisonScene(company)
   const [sx, sy] = SCENE_ANCHORS[kind].speaker
-  // The cameo: the post at 1×, as the notice draws it, framed on the liaison over the counter.
+  // The cameo: the post at 1×, framed on the liaison over the counter.
   const face: CSSProperties = {
     backgroundImage: `url(assets/scenes/${kind}.png)`,
     backgroundSize: `${SCENE_SIZE.w}px ${SCENE_SIZE.h}px`,

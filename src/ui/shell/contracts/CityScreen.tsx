@@ -107,7 +107,7 @@ export function CityScreen() {
           {/* The arrival beat (October audit 3.11): the caravan made it — the
               city's own square, its name on the sign, the company's liaison
               there to meet it — then the pay. The rail below says which act. */}
-          <LiaisonScene at="city" company={c.company} line={cityLine(c.company, { seed: runSeed, city, arrived, asks: c.asks, facts: { contract: c, gold } })} />
+          <LiaisonScene company={c.company} line={cityLine(c.company, { seed: runSeed, city, arrived, asks: c.asks, facts: { contract: c, gold } })} />
           <h1 className="ct-sign" tabIndex={-1}>
             {town}
           </h1>

@@ -1,16 +1,17 @@
 import type { CSSProperties } from 'react'
 import { companyById, type CompanyId } from '../../../game/data/companies'
-import { contractsLeft, DESPERATE_PAY, desperateLine, ranked, seasonLeader, type Season, type Shares } from '../../../game/run/tradeWar'
+import { DESPERATE_PAY, desperateLine, ranked, type Season, type Shares } from '../../../game/run/tradeWar'
 import { useMetaStore } from '../../../state/metaStore'
 import { companyVar } from '../../channels'
-import { Crest, Crown } from '../../pixel'
+import { Crown } from '../../pixel'
 
 export { Crown }
 import { useReveal } from '../staging'
 
 /**
  * The trade war's shared parts (Draft 4 § D): the five-colour share bar, the
- * home's slim war strip, the leader's crown and the desperate chip. The rules
+ * leader's crown and the desperate chip. (On the home, the war is the dock's
+ * shares and the season pill: `MenuScreen`.) The rules
  * are `game/run/tradeWar.ts`; these only draw them.
  */
 
@@ -43,39 +44,6 @@ export function ShareBar({ season, className }: { season: Pick<Season, 'n' | 'sh
 }
 
 const shareWords = (shares: Shares, order: readonly CompanyId[]) => `Share of the trade: ${order.map((c) => `${companyById(c).name} ${shares[c]}%`).join(', ')}`
-
-/**
- * The home's war strip (mockup 3a): "Trade war · Season 3", the contracts
- * left, and the share bar. One tap opens the standings.
- */
-export function WarStrip({ season, onOpen }: { season: Season; onOpen: () => void }) {
-  const left = contractsLeft(season)
-  const lead = seasonLeader(season)
-  return (
-    <button
-      type="button"
-      className="tw-strip"
-      onClick={onOpen}
-      aria-label={`Trade war, season ${season.n}: ${left} contract${left === 1 ? '' : 's'} left. ${companyById(lead).name} leads with ${season.shares[lead]}%.${season.exclusive ? ` Your exclusive is with ${companyById(season.exclusive).name}.` : ''} Open the standings.`}
-    >
-      <span className="tw-strip-head" aria-hidden="true">
-        <span className="field-k">
-          <span className="tw-war-word">Trade war · </span>Season {season.n}
-        </span>
-        {/* Your exclusive this season, if signed: its logo, said once (mockup 4b). */}
-        {season.exclusive && (
-          <span className="tw-strip-ex">
-            <Crest company={season.exclusive} scale={1} /> Exclusive
-          </span>
-        )}
-        <span className="tw-left">
-          {left} {season.exclusive ? '' : <span className="tw-war-word">{`contract${left === 1 ? '' : 's'} `}</span>}left <i>›</i>
-        </span>
-      </span>
-      <ShareBar season={season} />
-    </button>
-  )
-}
 
 /** "Desperate · pays ×1.5" — a company on desperate terms this season. */
 export const DesperateChip = () => (
