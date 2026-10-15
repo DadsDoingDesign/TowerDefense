@@ -113,12 +113,12 @@ result. Append a short note to the review log when you're done.
   `DESPERATE_STRENGTH` via `ContractTerms.desperate` and `contractRules`),
   rivals (`Company.rival`, `rivalOf`) and the exclusive (`seasonCrateCap`,
   `exclusiveXpMult`). Saved as `metaStore.season` (v14, `readSeason`); the
-  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (war strip and
-  share bar on the home, the standings, the season's end, the war's facts and
-  the exclusive sheet on the terms) with `src/styles/war.css`; the crown on the
-  leader's signpost is `pixel.Crown`; the banners at a battlefield's margins
-  are `render/marginBanners.ts` (searched spots, `tests/marginBanners.test.ts`).
-  Tests `tests/tradeWar.test.ts`.
+  settle is `metaStore.settleContract`. UI `src/ui/shell/war/` (the share bar,
+  the standings, the season's end, the war's facts and the exclusive sheet on
+  the terms) with `src/styles/war.css`; on the home the shares ride the company
+  dock and the season pill opens the standings. The battlefield flies only the
+  wagon's flag (the margin banners were cut, Oct 2026). Tests
+  `tests/tradeWar.test.ts`.
 - Service worker: generated after every build by `build/pwa.ts` from the
   template `src/sw/sw.template.js`; registration and the "update ready" signal
   (`isUpdateReady` / `applyUpdate`) live in `src/pwa.ts`, surfaced at the hub by

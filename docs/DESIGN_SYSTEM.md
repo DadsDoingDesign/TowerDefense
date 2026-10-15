@@ -434,7 +434,6 @@ agree it, then edit this section.
 | Exclusive offer row and sheet (`.tw-offer`, `ExclusiveSheet`) | The row opens the offer; the sheet says what the company gives, what its rival does and when both lift. "Sign the exclusive" commits; "Not this season" closes and changes nothing | A standing hint (the row shows only while no exclusive is signed this season) |
 | Cold card (`.mn-card.is-cold`) | Says, on the home, that a company is cold to you this season (your exclusive is with its rival): its slot wears "Cold", its card's edge cools and its flag pales, and a chip says where its stakes stop | Locking the road (it still hires) |
 | Desperate chip (`DesperateChip`, `.tw-chip.is-desperate`) | Names the company on desperate terms this season ("Desperate · pays ×1.5"), on its standings row (the home says it with the dock's "×1.5" mark and the card's chip) | Saying what makes it desperate (the standings' slip) |
-| Margin banners (`render/marginBanners.ts`) | Dress a battlefield's forest margins with the employer's standards (the season leader's between them; your militia's on your own road) | Sitting on the lane, a post or the caravan; carrying information the HUD does not also give |
 
 A new part gets a row here, with its job, before it ships.
 

@@ -3904,3 +3904,6 @@ The designer, on a phone shot of the wave-cleared reward: "remove my equipped st
     of sight; the desperate tag at 4.41:1 (caught by the contrast test).
   - **Left as is:** the phone card is the tallest layer (~205px with four
     chips); a short phone's card is two lines plus the CTA, not one.
+
+### 2026-10-15 — the margin banners cut
+The designer, on a phone shot of a battle with the employer's and the season leader's banners in its forest: "Why are these flags randomly around the map in addition to the cargo one?" — then "Keep only wagon flags." Cut `render/marginBanners.ts` and its test; the wagon flies the run's standard as before. The season-end page's "<Leader>'s banners line every road" (no longer true) now says "<Leader> starts Season N ahead · half its lead carries over" (`tradeWar.regressShares`).
