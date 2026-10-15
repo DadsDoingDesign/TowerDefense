@@ -327,7 +327,7 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
                   o.bodyIcons ? (
                     <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} inline key={i} />
                   ) : (
-                    <span className="sh-line" key={i}>
+                    <span className={`sh-line${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
                       {lineText(l)}
                     </span>
                   ),

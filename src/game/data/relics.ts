@@ -111,11 +111,11 @@ export interface Relic {
 
 export const RELICS: readonly Relic[] = [
   // ---- stat relics: the old stat cards and keepsakes, merged -------------
-  { id: 'ledger', name: "Drillmaster's Ledger", rarity: 'common', kind: 'stat', desc: '+3 STR, +3 DEX, +3 INT · every hero, hires included', grant: { stats: { str: 3, dex: 3, int: 3 } } },
-  { id: 'hourglass', name: 'Watch Hourglass', rarity: 'common', kind: 'stat', desc: '+5 Patience · every hero, hires included', grant: { patience: 5 } },
-  { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed · all your heroes', grant: { mods: { rateMult: 1.07 } } },
-  { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage · all your heroes', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
-  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+36% attack speed, no crits · all your heroes', downside: 'your heroes never crit', grant: { mods: { rateMult: 1.36, critChanceAdd: -1 } } },
+  { id: 'ledger', name: "Drillmaster's Ledger", rarity: 'common', kind: 'stat', desc: '+3 STR, +3 DEX, +3 INT to team', grant: { stats: { str: 3, dex: 3, int: 3 } } },
+  { id: 'hourglass', name: 'Watch Hourglass', rarity: 'common', kind: 'stat', desc: '+5 Patience to team', grant: { patience: 5 } },
+  { id: 'horn', name: 'Hunting Horn', rarity: 'rare', kind: 'stat', desc: '+7% attack speed to team', grant: { mods: { rateMult: 1.07 } } },
+  { id: 'keen', name: 'Keen Whetstone', rarity: 'rare', kind: 'stat', desc: '+6% crit chance, +25% crit damage to team', grant: { mods: { critChanceAdd: 0.06, critMultAdd: 0.25 } } },
+  { id: 'whetstone_pact', name: 'Whetstone Pact', rarity: 'epic', kind: 'stat', desc: '+36% attack speed, no crits to team', downside: 'your heroes never crit', grant: { mods: { rateMult: 1.36, critChanceAdd: -1 } } },
   // Bloodletting and Iron Vigil sold hero HP (−22% / +60%), which went with hero
   // HP; each now pays in a number §15 can see. Close Quarters (−18% range) and
   // Last Rampart (below 35% HP) were cut: the range bill measured +0.0pt on every
@@ -127,22 +127,22 @@ export const RELICS: readonly Relic[] = [
   // Epic (+6.6pt) sat ABOVE Legendary (+4.5pt) — the ladder inverted the other
   // way. At +70% / −34% Bloodletting reads +1.1pt and the stat ladder is
   // +1.6 / +2.6 / +3.7 / +4.5pt (Epic still above Rare, via Whetstone's +36%).
-  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed · all your heroes', downside: '−34% attack speed · all your heroes', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
-  { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed · all your heroes', downside: '−12% attack speed · all your heroes', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
+  { id: 'bloodletting', name: 'Bloodletting', rarity: 'epic', kind: 'stat', desc: '+70% damage, +8 Thorns, −34% attack speed to team', downside: '−34% attack speed to team', grant: { thorns: 8, mods: { damageMult: 1.7, rateMult: 0.66 } } },
+  { id: 'exec_oath', name: 'Executioner’s Oath', rarity: 'legendary', kind: 'stat', desc: 'Executes anything below 45% HP, +12% crit chance, −12% attack speed to team', downside: '−12% attack speed to team', grant: { mods: { execute: 0.45, critChanceAdd: 0.12, rateMult: 0.88 } } },
   // 80/s, −35% → 50/s, −40% (the tuning pass): on §15's benches the pact cost
   // nothing anywhere (worst +0.0pt) — 80/s of burn dwarfed the stat-less bench
   // heroes' own hits, so the bill never came due. Now −5.6pt on the armour
   // column and +17.3pt on the splash wand: a pact for a line that spreads it.
-  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 50/s over 3s, −40% damage per hit · all your heroes', downside: '−40% damage per hit · all your heroes', grant: { mods: { burn: { dps: 50, dur: 3 }, damageMult: 0.6 } } },
+  { id: 'wildfire', name: 'Wildfire Pact', rarity: 'legendary', kind: 'stat', desc: 'Every hit burns for 50/s over 3s, −40% damage per hit to team', downside: '−40% damage per hit to team', grant: { mods: { burn: { dps: 50, dur: 3 }, damageMult: 0.6 } } },
   // −12% → −20% damage (the tuning pass): its worst bench read −1.7pt, under
   // the 2pt a pact's bill must cost somewhere. Now −7.7pt on the splash wand
   // (nothing it holds pays a caster back) and +27.8pt on the swarm.
-  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −20% damage · all your heroes', downside: '−20% damage · all your heroes', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.8 } } },
+  { id: 'iron_vigil', name: 'Iron Vigil', rarity: 'legendary', kind: 'stat', desc: '+16 Thorns and Thorns ×2, +6 Patience, −20% damage to team', downside: '−20% damage to team', grant: { thorns: 16, patience: 6, mods: { thornsMult: 2, damageMult: 0.8 } } },
 
   // ---- rule relics: change how the fight or the run works ---------------
   { id: 'warding_stone', name: 'Warding Stone', rarity: 'rare', kind: 'rule', desc: 'The first 2 raiders to reach your wagons each wave steal nothing.', requires: 'leakWard', grant: { mods: { leakWard: 2 } } },
   { id: 'hound_banner', name: 'Bloodhound Banner', rarity: 'rare', kind: 'rule', desc: 'Every 5th shot of every hero pierces 2 more enemies.', requires: 'volley', grant: { mods: { volley: { every: 5, pierce: 2 } } } },
-  { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, all your heroes attack 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
+  { id: 'ambush_drum', name: 'Ambush Drum', rarity: 'rare', kind: 'rule', desc: 'For the first 20s of every wave, the team attacks 35% faster.', requires: 'openingRush', grant: { mods: { openingRush: { rate: 0.35, dur: 20 } } } },
   { id: 'veteran_cloak', name: "Veteran's Cloak", rarity: 'epic', kind: 'rule', desc: 'A kill makes that hero attack 25% faster for 1.5s.', requires: 'killRush', grant: { mods: { killRush: { rate: 0.25, dur: 1.5 } } }, unlock: 'act_two' },
   { id: 'charter', name: 'Mercenary Charter', rarity: 'rare', kind: 'rule', desc: 'Recruits arrive at your heroes’ median level instead of three behind it.', rule: 'mercenaryCharter', unlock: 'full_company' },
   { id: 'surgeon', name: "Field Surgeon's Kit", rarity: 'common', kind: 'rule', desc: 'After every fight you win, 20% of the cargo is rounded up.', rule: 'fieldSurgeon' },

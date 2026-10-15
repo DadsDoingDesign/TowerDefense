@@ -52,8 +52,8 @@ export interface BodyLine {
   text: string
   /** Overrides `effectIcon` where the producer knows what the sentence cannot say. */
   mark?: IconKey
-  /** The Context panel's accent treatment. The page card renders every line alike. */
-  tone?: 'accent' | 'muted'
+  /** The Context panel's accent treatment. The page card renders every line alike. `note`: a quiet italic aside (a relic's rule of thumb). */
+  tone?: 'accent' | 'muted' | 'note'
 }
 export type Body = (string | BodyLine)[]
 

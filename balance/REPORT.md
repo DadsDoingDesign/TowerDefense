@@ -1249,10 +1249,10 @@ paired seeds, against the same runs without it.
 | Hunting Horn | stat | Rare | +4.4pt | +1.4pt | +1.2pt | +1.6pt | **+2.2pt** | +1.2pt | — |
 | Keen Whetstone | stat | Rare | +0.0pt | +5.6pt | +2.3pt | +2.9pt | **+2.7pt** | +0.0pt | — |
 | Whetstone Pact | stat | Epic | +12.2pt | −5.6pt | −0.4pt | +12.1pt | **+4.6pt** | −5.6pt | your heroes never crit |
-| Bloodletting | stat | Epic | −8.9pt | +4.2pt | +1.0pt | +8.0pt | **+1.1pt** | −8.9pt | −34% attack speed · all your heroes |
-| Executioner’s Oath | stat | Legendary | −3.3pt | +18.1pt | +1.6pt | −2.0pt | **+3.6pt** | −3.3pt | −12% attack speed · all your heroes |
-| Wildfire Pact | stat | Legendary | +0.0pt | −5.6pt | −0.6pt | +20.0pt | **+3.5pt** | −5.6pt | −40% damage per hit · all your heroes |
-| Iron Vigil | stat | Legendary | +27.8pt | +4.2pt | +2.1pt | −6.2pt | **+7.0pt** | −6.2pt | −20% damage · all your heroes |
+| Bloodletting | stat | Epic | −8.9pt | +4.2pt | +1.0pt | +8.0pt | **+1.1pt** | −8.9pt | −34% attack speed to team |
+| Executioner’s Oath | stat | Legendary | −3.3pt | +18.1pt | +1.6pt | −2.0pt | **+3.6pt** | −3.3pt | −12% attack speed to team |
+| Wildfire Pact | stat | Legendary | +0.0pt | −5.6pt | −0.6pt | +20.0pt | **+3.5pt** | −5.6pt | −40% damage per hit to team |
+| Iron Vigil | stat | Legendary | +27.8pt | +4.2pt | +2.1pt | −6.2pt | **+7.0pt** | −6.2pt | −20% damage to team |
 | Warding Stone | rule | Rare | +2.2pt | +16.7pt | +2.3pt | +1.5pt | **+5.7pt** | +1.5pt | — |
 | Bloodhound Banner | rule | Rare | +13.3pt | +8.3pt | +1.9pt | +0.0pt | **+5.9pt** | +0.0pt | — |
 | Ambush Drum | rule | Rare | +7.8pt | +2.8pt | +2.3pt | +10.7pt | **+5.9pt** | +2.3pt | — |
