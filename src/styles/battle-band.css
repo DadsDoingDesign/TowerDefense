@@ -50,7 +50,7 @@
 }
 @media (orientation: portrait) and (max-height: 600px) {
   .shell {
-    --sh-detail-h: 222px;
+    --sh-detail-h: 200px;
     --sh-selector-read-h: 58px;
   }
 }
@@ -703,7 +703,9 @@
   gap: 6px;
   min-width: var(--hit-min);
   height: var(--hit-min);
-  margin: -6px -6px -6px 0;
+  /* The 44px target reaches into the header's padding, so the row keeps its
+     one-row height (the face is a chip's 30px). */
+  margin: -8px -6px -8px 0;
   padding: 0 8px;
   border: 0;
   background: none;
