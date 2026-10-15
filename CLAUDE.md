@@ -166,10 +166,12 @@ result. Append a short note to the review log when you're done.
   order, the order the map fans its roads west→east, pure model
   `ui/shell/homeDock.ts`; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
-  dock's right end, a slot's size) and the card: a FIXED FORM, the same four rows for
-  every company (Ground · Raiders · Today · Next, `ui/shell/homeCard.ts`; the
+  dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for
+  every company (Ground · Raiders · Next, `ui/shell/homeCard.ts`; the
   ground says its effect from `terrain.GROUND_EFFECTS`, never its
-  place-name) and the Buy Company card in the same frame. **No wiggle**: a
+  place-name; a one-off condition — desperate terms, the market's top price
+  — is a badge at the head's right, `companyBadge`, only when it applies)
+  and the Buy Company card in the same frame. **No wiggle**: a
   pick changes values, never boxes, so the open area the roads fan into (the
   `.mn-window` box, between the bar and the foot; the season panel, the notes
   and the Buy Company slot float over the map) depends on the viewport alone
