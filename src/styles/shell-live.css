@@ -1279,9 +1279,10 @@
   padding-bottom: 6px;
 }
 .sh-wavebar.commit .sh-btn.sh-commit {
-  flex: 0 1 auto;
+  /* The strip's only control (job critique, Oct 2026): the result and the
+     gold are the Stage's ceremony, so the take spans the strip. */
+  flex: 1 1 auto;
   min-width: 168px;
-  max-width: 62%;
   min-height: var(--cta-h);
   padding: 0 20px;
   font-size: 22px;

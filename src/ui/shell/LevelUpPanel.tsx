@@ -218,7 +218,7 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
         >
           Later
         </button>
-        <button className="sh-btn primary" disabled={!ready || live} aria-label={name} onClick={commit}>
+        <button className="sh-btn sh-commit-2" disabled={!ready || live} aria-label={name} onClick={commit}>
           {label}
         </button>
       </div>
