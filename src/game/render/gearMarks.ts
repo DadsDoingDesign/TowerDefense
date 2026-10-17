@@ -178,6 +178,8 @@ const GRIP: Partial<Record<IconKey, Pt>> = {
   wand: { x: 3, y: 12 },
   sceptre: { x: 3, y: 12 },
   greatblade: { x: 2, y: 13 },
+  brand: { x: 3, y: 12 },
+  rod: { x: 2, y: 12 },
   hammer: { x: 7, y: 12 },
   bow: { x: 3, y: 8 },
   staff: { x: 3, y: 12 },

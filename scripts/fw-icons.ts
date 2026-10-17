@@ -1,5 +1,5 @@
 /**
- * The Fieldwatch icon atlas — one PNG, 96 icons, drawn in the Tiny Swords hand.
+ * The Fieldwatch icon atlas — one PNG, 108 icons, drawn in the Tiny Swords hand.
  *
  * Run with `npm run fw-icons` to REWRITE the committed
  * `public/assets/ui/fw-icons.png`; `npm run fw-icons:check` re-encodes into
@@ -45,7 +45,7 @@
  * Each icon is 16 rows × 16 columns of palette characters and holds only the
  * **interior**. `outline()` walks the grid afterwards and paints `#161C2E` into
  * every transparent pixel that touches a filled one, which is what makes the
- * silhouette ring uniform across 78 hand-drawn shapes instead of 78 separate
+ * silhouette ring uniform across 108 hand-drawn shapes instead of 108 separate
  * attempts at the same 1px border. Art must therefore stay inside rows/cols
  * 1..14 so the ring has somewhere to go; `assert` below enforces it.
  *
@@ -2247,6 +2247,259 @@ icon('mono', [
   '................',
 ])
 
+/* ------------------------------------------- rows 12–13 · item kinds (Oct 2026)
+
+   Twelve item kinds used to borrow another kind's cell (`iconAtlas.NOUN_ICON`):
+   a Buckler and a Pavise were the heater shield, Mail and an Aegis were plate,
+   a Tome was the violet grimoire. The designer asked for every item to look
+   like itself, and the battlefield figure carries the same cell in its fist
+   (`render/gearMarks.ts`), so one cell fixes the tile and the hero together.
+   Each stays the SAME KIND OF OBJECT as the cell it borrowed — a buckler is
+   still a shield, smaller and round; mail is still a torso — and differs from
+   it in silhouette first and colour second, so the pair parts at 16 px.
+   Original pixel art, drawn here (drafted on the Figma page "Item assets",
+   `docs/FIGMA.md`), in the same palette and outline as every other cell. */
+
+/** Saffron Brand — the Sovereign sword: a gilded blade, flames licking up its back. */
+icon('brand', [
+  '................',
+  '.........R..GG..',
+  '........RR.GWG..',
+  '.........RGWGg..',
+  '.......R.GWGg...',
+  '......RRGWGg....',
+  '.......GWGg.....',
+  '.....RGWGg......',
+  '....RGWGg.......',
+  '.....GGg........',
+  '....rGg.........',
+  '...rrrrrr.......',
+  '...ll.rr........',
+  '..lll.r.........',
+  '..ll............',
+  '................',
+])
+
+/** Rod — a long steel rod corner to corner, two gold bands and a red gem: reach, not a twig. */
+icon('rod', [
+  '................',
+  '...........RR...',
+  '..........RWRR..',
+  '..........RRRn..',
+  '.........gRRn...',
+  '........gGg.....',
+  '.......SSs......',
+  '......SSs.......',
+  '.....gGg........',
+  '....SSs.........',
+  '...SSs..........',
+  '..gGg...........',
+  '..Ss............',
+  '..o.............',
+  '................',
+  '................',
+])
+
+/** Tome — a small brown book, three-quarter view, page edges showing and a red ribbon. */
+icon('tome', [
+  '................',
+  '................',
+  '................',
+  '....LLLLLLLL....',
+  '...LLLLLLLLlP...',
+  '...lLLqqqLLlP...',
+  '...lLLLLLLLlP...',
+  '...lLLqqqLLlP...',
+  '...lLLLLLLLlP...',
+  '...lLLLLLLLlP...',
+  '...llllllllpP...',
+  '....PPPPPPPPp...',
+  '.....r..........',
+  '.....rr.........',
+  '................',
+  '................',
+])
+
+/** Moonquill Codex — a night-teal codex with a cream crescent, a quill standing out of it. */
+icon('codex', [
+  '................',
+  '.............W..',
+  '............WP..',
+  '...........WP...',
+  '..uuuuuuuuWPu...',
+  '..utttWWttPtu...',
+  '..uttWWtttttu...',
+  '..utWWWtttTtu...',
+  '..utWWWtttttu...',
+  '..uttWWtttttu...',
+  '..utttWWttttu...',
+  '..uuuuuuuuuuu...',
+  '..PPPPPPPPPPp...',
+  '...hhhhhhhhh....',
+  '................',
+  '................',
+])
+
+/** Buckler — the shield, smaller and ROUND: a wooden disc, steel rim, steel boss. */
+icon('buckler', [
+  '................',
+  '................',
+  '................',
+  '................',
+  '......sssss.....',
+  '.....SLLLLls....',
+  '....SLLLLLLls...',
+  '....SLLSSSlls...',
+  '....SLLSWdlls...',
+  '....SLLSddlls...',
+  '....sLlllllls...',
+  '.....sllllls....',
+  '......sssss.....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Pavise — the shield, TALL: a full-height wooden wall-shield, steel rim, a ridge and two feet. */
+icon('pavise', [
+  '................',
+  '......sSSs......',
+  '.....sRSWRs.....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sPPSSPps....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSrrs....',
+  '....srrSdrrs....',
+  '....ssssssss....',
+  '....s......s....',
+  '................',
+  '................',
+])
+
+/** Gilded Easel — the Sovereign off-hand: a gold frame round a painted canvas, on easel legs. */
+icon('easel', [
+  '................',
+  '.......gg.......',
+  '...gggggggggg...',
+  '...gGGGGGGGGg...',
+  '...gGTTTTWWGg...',
+  '...gGTTTTWWGg...',
+  '...gGTTEETTGg...',
+  '...gGTEEEETGg...',
+  '...gGeeeeeeGg...',
+  '...gGGGGGGGGg...',
+  '...gggggggggg...',
+  '....l..l...l....',
+  '...l...l....l...',
+  '..l....l.....l..',
+  '................',
+  '................',
+])
+
+/** Mail — a chain shirt: a T of rings, short sleeves, a belt and a ragged hem. */
+icon('mail', [
+  '................',
+  '................',
+  '.....ss..ss.....',
+  '..sSsSsSSsSsSs..',
+  '..SsSsSsSsSsSs..',
+  '..sSsSsSsSsSsS..',
+  '..SsssSsSsssSs..',
+  '.....SsSsSs.....',
+  '.....sSsSsS.....',
+  '.....lLLLLl.....',
+  '.....SsSsSs.....',
+  '.....sSsSsS.....',
+  '.....S.s.S.s....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Aegis — a rounded steel cuirass, shoulders up, gold rim and a gold sun boss. */
+icon('aegis', [
+  '................',
+  '................',
+  '...ggg....ggg...',
+  '..gSSSggggSSSg..',
+  '..gSWSSSSSSSdg..',
+  '..gSSSSGGSSSdg..',
+  '..gSSSGWGGSSdg..',
+  '..gSSSGGGGSSdg..',
+  '..gSSSSGGSSSdg..',
+  '...gSSSSSSSdg...',
+  '....gSSSSSdg....',
+  '.....gggggg.....',
+  '................',
+  '................',
+  '................',
+  '................',
+])
+
+/** Ironheart Plate — the Sovereign body: dark iron plate with a red heart at its centre. */
+icon('ironheart', [
+  '................',
+  '................',
+  '...dd.ddd.dd....',
+  '..ddddddddddd...',
+  '..dssssssssdd...',
+  '..dsRR.RRssdd...',
+  '..dsRWRRRssdd...',
+  '..dsRRRRnssdd...',
+  '..dssRRnsssdd...',
+  '..dsssnssssdd...',
+  '...dssssssdd....',
+  '...dd.ddd.dd....',
+  '...dd.ddd.dd....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Cloak — a green hooded cloak with a gold clasp, flaring at the hem. */
+icon('cloak', [
+  '................',
+  '................',
+  '......EEEE......',
+  '.....EEEEEe.....',
+  '....EEE..eee....',
+  '..EEEEE..eeeee..',
+  '..EEEEeGGeeeee..',
+  '..EEEEerreeeee..',
+  '..EEEEerreeeee..',
+  '..EEEerrrreeee..',
+  '..EEEerrrreeee..',
+  '.EEEEerrrreeeee.',
+  '.EEEerrrrrreeee.',
+  '.ffffnnnnnnffff.',
+  '................',
+  '................',
+])
+
+/** Silkwind Cloak — the Sovereign cloak: violet silk, hood and clasp, its hem blown sideways by the wind. */
+icon('silkwind', [
+  '................',
+  '................',
+  '.....VVVV..WWW..',
+  '....VVVVVv......',
+  '...VVV..vvv.WW..',
+  '.VVVVV..vvvvv...',
+  '.VVVVvGGvvvvvv..',
+  '.VVVVvggvvvvvvv.',
+  '..VVVvggVvvvvvv.',
+  '..VVVgggvVvvvvv.',
+  '...VVgggvvVvvv..',
+  '...VVggggvvVvv..',
+  '....nnnnnnnnn...',
+  '................',
+  '................',
+  '................',
+])
+
 /* ========================================================================= */
 
 const assert = () => {
@@ -2277,7 +2530,7 @@ const hex = (h: string): [number, number, number] => [
 
 /**
  * The style tell, applied uniformly: every transparent pixel 4-adjacent to a
- * filled one becomes an opaque `#161C2E`. Hand-drawing this 78 times would have
+ * filled one becomes an opaque `#161C2E`. Hand-drawing this 108 times would have
  * produced 78 slightly different borders.
  */
 const outline = (art: Art): string[][] => {
