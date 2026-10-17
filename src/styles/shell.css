@@ -2144,7 +2144,10 @@
      item with `height: 100%` it still measured 30x31, because the grid row is
      sized by its tallest item, not by the badge. `position: absolute; inset: 0`
      takes exactly the badge, and `cover` fills it by CROPPING — which on a
-     standing figure means losing the feet, the right thing to lose. */
+     standing figure means losing the feet, the right thing to lose.
+     Oct 2026: the portrait is a square bust cut from the hero's own figure in
+     its kit (`render/heroPortrait`) — the feet are already gone, and in the
+     square badge `cover` crops nothing. */
   position: absolute;
   inset: 0;
   width: 100%;

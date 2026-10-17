@@ -126,9 +126,9 @@ describe('the effect palette', () => {
 describe('gear on the figure', () => {
   it('carries the real weapon and off-hand, and the weapon wears its own enchantment', () => {
     const g = heroGear(hero(item('Flaming Axe', 'oneHand', { burn: { dps: 12, dur: 3 } }), item('Shield', 'offHand')).equipment)
-    expect(g).toEqual({ main: 'axe', off: 'shield', glint: 'burn' })
-    expect(heroGear(hero(item('Frost Wand', 'oneHand', { chill: { slow: 0.2, dur: 1 } }), item('Tome', 'offHand')).equipment)).toEqual({ main: 'wand', off: 'tome', glint: 'chill' })
-    expect(heroGear(hero(null).equipment)).toEqual({ main: null, off: null, glint: null })
+    expect(g).toEqual({ main: 'axe', off: 'shield', body: null, glint: 'burn' })
+    expect(heroGear(hero(item('Frost Wand', 'oneHand', { chill: { slow: 0.2, dur: 1 } }), item('Tome', 'offHand')).equipment)).toEqual({ main: 'wand', off: 'tome', body: null, glint: 'chill' })
+    expect(heroGear(hero(null).equipment)).toEqual({ main: null, off: null, body: null, glint: null })
   })
 
   it("cuts the art's painted weapon out exactly when the hero holds something else", () => {

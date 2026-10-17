@@ -13,6 +13,8 @@ import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
 import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, unpaintsOff, type HeroGear } from './gearMarks'
+import { dressedStrip } from './bodyLayer'
+import type { Pixmap } from './pixmap'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
 import { pixmap, quarterTurns } from './pixmap'
 import { artFor, getSprite } from './sprites'
@@ -274,8 +276,6 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   // family (still, idle, attack) comes from one pack, at that pack's density.
   const art = artFor(s.archetype)
   const pack = art?.pack
-  const idle = pack ? getSprite(pack, `${s.archetype}_idle`) : undefined
-  const atk = pack ? getSprite(pack, `${s.archetype}_atk`) : undefined
   const staticSpr = pack ? getSprite(pack, s.archetype) : undefined
 
   const groundRing = () => {
@@ -290,38 +290,18 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     ctx.stroke()
   }
 
-  // What the hero really carries (`gearMarks`). When the art paints a weapon the
-  // hero is NOT holding, the idle strip is drawn with it cut out and the real
-  // item goes in the fist — and the attack strip, which swings the painted
-  // weapon, is not played: the item itself makes the move (`reach` below).
-  const rig = rigFor(art?.pack, s.archetype)
+  // The figure in its real kit (`heroFigure`, shared with the portraits).
+  const fig = art ? heroFigure(art.pack, art.spriteScale, s.archetype, s.gear, s.fireFlash > 0.05, s.loadout) : null
+  const rig = fig?.rig ?? rigFor(art?.pack, s.archetype)
   const gear = s.gear
-  const cut = !!gear && unpaints(rig, gear)
-  // ...and the painted shield, whenever the off hand holds anything else or
-  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it back.
-  const cutOff = !!gear && unpaintsOff(rig, gear)
-  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
-
-  const towerPm = (() => {
-    if (!art) return null
-    const firing = s.fireFlash > 0.05 && !!atk && ownArt
-    const anim = firing ? 'atk' : 'idle'
-    const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
-    // heroStrip returns the bare body when nothing is equipped, so the
-    // un-geared path is exactly what it was before the compositor existed.
-    const body =
-      heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
-      ((firing ? atk : idle) ?? idle ?? atk)
-    if (!body) return null
-    const cutMain = cut && anim === 'idle'
-    const strip = cutMain || cutOff ? unpaintedStrip(body, rig, frames, { main: cutMain, off: cutOff }) : body
-    const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
-    if (!pm) return null
-    const frame = firing
-      ? Math.min(frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * frames))
-      : loopFrame(animNow(), frames, 6, s.pos.x * 0.05)
-    return { pm, frame }
-  })()
+  const towerPm = fig
+    ? {
+        pm: fig.pm,
+        frame: fig.firing
+          ? Math.min(fig.frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * fig.frames))
+          : loopFrame(animNow(), fig.frames, 6, s.pos.x * 0.05),
+      }
+    : null
 
   // A swing reaches: the weapon (and only the weapon) lunges along the aim
   // while the blow is out. Everything else carries its weapon at rest.
@@ -343,10 +323,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     // Anchored at the FEET (bottom edge at y = 8), so the taller attack frames
     // grow upward — a raised sword — instead of sinking the character.
     blitPixmap(ctx, towerPm.pm, towerPm.frame, 0, 8)
-    if (gear) {
-      drawOffHand(ctx, rig, gear)
-      drawMainHand(ctx, rig, gear, Math.round(Math.cos(s.aimAngle) * reach), Math.round(Math.sin(s.aimAngle) * reach), animNow(), still, ownArt && s.fireFlash > 0.05 && !!atk)
-    }
+    if (gear) drawHeldGear(ctx, rig, gear, Math.round(Math.cos(s.aimAngle) * reach), Math.round(Math.sin(s.aimAngle) * reach), animNow(), still, !!fig?.firing)
   } else if (staticSpr) {
     groundRing()
     const pm = pixmap(staticSpr, { scale: unitPixmapScale(art!.spriteScale), ring: true })
@@ -428,6 +405,87 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   }
 
   ctx.restore()
+}
+
+/** One hero figure in its real kit, baked: what {@link drawSentinel} blits and every portrait crops. */
+export interface HeroFigure {
+  pm: Pixmap
+  frames: number
+  /** The art's own attack strip is the one baked (it swings the painted weapon). */
+  firing: boolean
+  /** The art paints what the hero holds (or nothing is measured): its own strips play. */
+  ownArt: boolean
+  rig: ReturnType<typeof rigFor>
+}
+
+/**
+ * The figure a hero of this look is drawn as, in this kit — the ONE
+ * composition the field and the portraits share (`heroPortrait.ts`), so a
+ * portrait can never drift from the figure:
+ *
+ *  1. the strip (idle, or the attack strip while firing when the art's own
+ *     weapon is the hero's — `gearMarks`), through the paper doll when a
+ *     `loadout` is given;
+ *  2. the painted weapon and/or off-hand piece cut (`unpaintedStrip`);
+ *  3. the body piece worn (`bodyLayer.dressedStrip`);
+ *  4. baked once by `pixmap()` with one contour ring.
+ *
+ * Every step returns a kept object for a kept input, so after the first call
+ * for a (look, kit) this is three map lookups. The held marks are drawn on top
+ * by {@link drawHeldGear}.
+ */
+export function heroFigure(
+  pack: string,
+  spriteScale: 0.5 | 1,
+  archetype: Archetype,
+  gear: HeroGear | undefined,
+  wantFire: boolean,
+  loadout?: Loadout,
+): HeroFigure | null {
+  const idle = getSprite(pack, `${archetype}_idle`)
+  const atk = getSprite(pack, `${archetype}_atk`)
+  // What the hero really carries (`gearMarks`). When the art paints a weapon the
+  // hero is NOT holding, the idle strip is drawn with it cut out and the real
+  // item goes in the fist — and the attack strip, which swings the painted
+  // weapon, is not played: the item itself makes the move (`reach` in drawSentinel).
+  const rig = rigFor(pack, archetype)
+  const cut = !!gear && unpaints(rig, gear)
+  // ...and the painted shield, whenever the off hand holds anything else or
+  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it back.
+  const cutOff = !!gear && unpaintsOff(rig, gear)
+  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
+  const firing = wantFire && !!atk && ownArt
+  const anim = firing ? 'atk' : 'idle'
+  const frames = ANIM_FRAMES[`${archetype}_${anim}`] ?? 1
+  // heroStrip returns the bare body when nothing is equipped, so the
+  // un-geared path is exactly what it was before the compositor existed.
+  const body = heroStrip(pack, archetype, anim, frames, loadout) ?? ((firing ? atk : idle) ?? idle ?? atk)
+  if (!body) return null
+  const cutMain = cut && anim === 'idle'
+  const strip = cutMain || cutOff ? unpaintedStrip(body, rig, frames, { main: cutMain, off: cutOff }) : body
+  // The body piece, worn over what is left (an empty slot returns `strip` itself).
+  const worn = dressedStrip(strip, pack, `${archetype}_${anim}`, frames, gear?.body ?? null)
+  const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
+  return pm ? { pm, frames, firing, ownArt, rig } : null
+}
+
+/**
+ * The held marks over a figure: the off-hand piece in the left fist, then the
+ * weapon in the right, `lunge` px toward the aim (`gearMarks`). The context is
+ * at the hero's origin (feet at y = +8).
+ */
+export function drawHeldGear(
+  ctx: CanvasRenderingContext2D,
+  rig: ReturnType<typeof rigFor>,
+  gear: HeroGear,
+  lungeX: number,
+  lungeY: number,
+  now: number,
+  still: boolean,
+  attacking: boolean,
+): void {
+  drawOffHand(ctx, rig, gear)
+  drawMainHand(ctx, rig, gear, lungeX, lungeY, now, still, attacking)
 }
 
 /**

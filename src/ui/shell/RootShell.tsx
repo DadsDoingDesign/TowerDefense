@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { assertRarityTokensMatch } from '../channels'
 import { DetailBand } from './DetailBand'
@@ -40,6 +40,7 @@ import { useMetaStore } from '../../state/metaStore'
 import { charterDoor } from '../../game/run/charter'
 import { useTrackLink } from './company/trackLink'
 import { useCompanyTheme } from '../theme/useCompanyTheme'
+import { onPortraitChange, portraitVersion } from '../../game/render/heroPortrait'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -118,6 +119,9 @@ export function RootShell() {
   // The whole UI wears the company the game is with (Oct 2026): the focused
   // road at home, the hiring company through a run (`ui/theme`).
   useCompanyTheme()
+  // Hero portraits are cut from the battlefield figure once its art has
+  // decoded (`render/heroPortrait`); re-render then, so no box keeps the still.
+  useSyncExternalStore(onPortraitChange, portraitVersion)
   const screen = useGameStore((s) => s.screen)
   const shellSelect = useGameStore((s) => s.shellSelect)
   // Your militia is founded when the Sovereign Route opens — the full run,

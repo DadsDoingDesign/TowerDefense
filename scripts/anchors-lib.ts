@@ -4,6 +4,7 @@
  * on synthetic buffers without the script's filesystem walk running on import.
  */
 import { poseIndexFor } from '../src/game/render/anchors'
+import { BODY_KEYS, dressPixels, TUNIC_DARK, TUNIC_MID, type Torso } from '../src/game/render/bodyLayer'
 
 export interface Anchor { mx: number; my: number; ox: number; oy: number; tx: number; ty: number }
 
@@ -172,5 +173,153 @@ export function render(packs: Record<string, Record<string, Anchor[]>>): string 
 import type { AnchorPacks } from './anchors'
 
 export const ANCHORS: AnchorPacks = ${body}
+`
+}
+
+/* ---- the body layer: each frame's tunic, measured off the art ------------- */
+
+/**
+ * The hero strips whose tunic is measured, per pack: the packs whose figures
+ * wear the tunic inks (`bodyLayer.TUNIC_MID` / `TUNIC_DARK`). Only Tiny Swords.
+ */
+export const TORSO_PACKS: Readonly<Record<string, readonly string[]>> = {
+  tinyswords: ['fighter_idle', 'fighter_atk', 'rogue_idle', 'rogue_atk', 'mystic_idle', 'mystic_atk'],
+}
+
+/**
+ * Find the tunic in every frame of a hero strip.
+ *
+ * The tunic's two inks also paint the knight's plume and shield, the archer's
+ * plume and bow and the sword's grip wrap, so the tunic is told apart by what
+ * it is: per frame, the 4-connected patches of those two inks that are big
+ * (≥ 60 px) and a third or more of the dark ink (the plume, the shield's
+ * stripes and the bow are mostly the mid ink), and of those the BOTTOM-most —
+ * the body is the patch nearest the feet. `feet` is the lowest opaque row in
+ * the tunic's columns (the ground shadow is translucent, so never counted).
+ */
+export function measureTorsos(data: Uint8Array, w: number, h: number, frames: number): { torsos: Torso[]; errors: string[] } {
+  const cw = Math.round(w / frames)
+  const torsos: Torso[] = []
+  const errors: string[] = []
+  const tunic = (p: number) => {
+    const o = p * 4
+    if (data[o + 3] < 128) return 0
+    const c = (data[o] << 16) | (data[o + 1] << 8) | data[o + 2]
+    return c === TUNIC_MID ? 1 : c === TUNIC_DARK ? 2 : 0
+  }
+  for (let f = 0; f < frames; f++) {
+    const fx = f * cw
+    const seen = new Uint8Array(w * h)
+    let best: { px: number[]; y1: number } | null = null
+    for (let y = 0; y < h; y++)
+      for (let x = fx; x < fx + cw; x++) {
+        const p = y * w + x
+        if (seen[p] || !tunic(p)) continue
+        const px: number[] = []
+        let dark = 0
+        let y1 = 0
+        const stack = [p]
+        seen[p] = 1
+        while (stack.length) {
+          const q = stack.pop()!
+          px.push(q)
+          if (tunic(q) === 2) dark++
+          const qx = q % w
+          const qy = (q - qx) / w
+          y1 = Math.max(y1, qy)
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const X = qx + dx
+            const Y = qy + dy
+            if (X < fx || X >= fx + cw || Y < 0 || Y >= h) continue
+            const r = Y * w + X
+            if (seen[r] || !tunic(r)) continue
+            seen[r] = 1
+            stack.push(r)
+          }
+        }
+        if (px.length < 60 || dark / px.length < 0.3) continue
+        if (!best || y1 > best.y1 || (y1 === best.y1 && px.length > best.px.length)) best = { px, y1 }
+      }
+    if (!best) {
+      errors.push(`no tunic in frame ${f}`)
+      torsos.push({ x0: 0, y0: 0, x1: 0, y1: 0, feet: 0, spans: [] })
+      continue
+    }
+    const rows = new Map<number, number[]>()
+    let x0 = Infinity
+    let y0 = Infinity
+    let x1 = -1
+    let y1 = -1
+    for (const q of best.px) {
+      const x = (q % w) - fx
+      const y = Math.floor(q / w)
+      if (!rows.has(y)) rows.set(y, [])
+      rows.get(y)!.push(x)
+      x0 = Math.min(x0, x)
+      x1 = Math.max(x1, x)
+      y0 = Math.min(y0, y)
+      y1 = Math.max(y1, y)
+    }
+    const spans: number[] = []
+    for (const y of [...rows.keys()].sort((a, b) => a - b)) {
+      const xs = rows.get(y)!.sort((a, b) => a - b)
+      let a = xs[0]
+      for (let i = 1; i <= xs.length; i++)
+        if (i === xs.length || xs[i] !== xs[i - 1] + 1) {
+          spans.push(y, a, xs[i - 1])
+          a = xs[i]
+        }
+    }
+    let feet = y1
+    for (let y = h - 1; y > y1 && feet === y1; y--)
+      for (let x = x0; x <= x1; x++)
+        if (data[(y * w + fx + x) * 4 + 3] >= 128) {
+          feet = y
+          break
+        }
+    torsos.push({ x0, y0, x1, y1, feet, spans })
+  }
+  return { torsos, errors }
+}
+
+/**
+ * Every piece whose dressing of this strip would paint outside a frame's cell
+ * (or paint nothing) — the body layer's twin of {@link gearFitProblems}. It
+ * dresses a copy of the real strip in every piece and asks the dresser what it
+ * had to clip.
+ */
+export function bodyFitProblems(name: string, data: Uint8Array, w: number, h: number, torsos: readonly Torso[]): string[] {
+  const problems: string[] = []
+  for (const key of BODY_KEYS) {
+    const { changed, overflow } = dressPixels(new Uint8Array(data), w, h, torsos, key)
+    if (overflow) problems.push(`body ${key} on ${name}: ${overflow} px outside the hero cell`)
+    if (!changed) problems.push(`body ${key} on ${name}: draws nothing`)
+  }
+  return problems
+}
+
+/** The generated torso module, keyed by pack. */
+export function renderTorsos(packs: Record<string, Record<string, Torso[]>>): string {
+  const frame = (t: Torso) => `      { x0: ${t.x0}, y0: ${t.y0}, x1: ${t.x1}, y1: ${t.y1}, feet: ${t.feet}, spans: [${t.spans.join(', ')}] },`
+  const table = (t: Record<string, Torso[]>) =>
+    `{\n${Object.keys(t)
+      .sort()
+      .map((k) => `    ${JSON.stringify(k)}: [\n${t[k].map(frame).join('\n')}\n    ],`)
+      .join('\n')}\n  }`
+  const names = Object.keys(packs).sort()
+  const body = names.length === 0 ? '{}' : `{\n${names.map((p) => `  ${JSON.stringify(p)}: ${table(packs[p])},`).join('\n')}\n}`
+  return `/**
+ * GENERATED — do not edit by hand.
+ *
+ * Written by \`npm run anchors\` (\`scripts/anchors-lib.measureTorsos\`): the
+ * tunic of every frame of every measured hero strip, as row spans
+ * \`[y, xa, xb, …]\` in the strip cell's own px — what the body layer
+ * (\`bodyLayer.ts\`) re-inks and dresses. \`npm run anchors:check\` fails the
+ * build if this file and the PNGs disagree, or if any body piece on any frame
+ * would paint outside its hero cell.
+ */
+import type { TorsoPacks } from './bodyLayer'
+
+export const BODY_TORSOS: TorsoPacks = ${body}
 `
 }

@@ -149,9 +149,12 @@
   border: 1px solid var(--line);
   overflow: hidden;
 }
+/* The box's own size: a hero's portrait is a square bust cut from its figure
+   (`render/heroPortrait`), so there are no feet to crop any more, and an
+   oversized image would only cut off what the hero holds. */
 .pk-head-art > img {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   image-rendering: pixelated;
 }
