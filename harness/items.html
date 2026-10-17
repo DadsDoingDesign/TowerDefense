@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Sprite and atlas urls are relative to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Item Assets Harness</title>
+    <style>
+      body { margin: 0; padding: 16px; background: var(--bg, #1b1612); color: var(--text, #eee); }
+      h2 { font-size: 16px; margin: 24px 0 8px; }
+      .ia-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+      .ia-row > b { width: 140px; font-size: 12px; }
+      canvas { image-rendering: pixelated; }
+      .ia-box { width: 84px; height: 84px; display: grid; place-items: center; background: var(--bg); }
+      .ia-box .sh-tile { width: 60px; }
+      .ia-kit { display: flex; gap: 6px; padding: 6px; background: var(--bg); }
+      .ia-kit .sh-tile { width: 52px; }
+    </style>
+  </head>
+  <body>
+    <h1>Item assets — rendered through the real draw code</h1>
+    <main id="out">Loading…</main>
+    <script type="module" src="/harness/items.ts"></script>
+  </body>
+</html>

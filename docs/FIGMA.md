@@ -34,6 +34,28 @@ the audit captured. `03 · Root Shell` and `04 · Contexts` are a **proposal**:
 one four-band screen that absorbs those forty screens. Where the two halves
 disagree, the shipped app is right and the shell is the argument.
 
+## Page: Item assets — `?node-id=2276-2083`
+
+**Built October 2026.** Every item base the game deals, drawn by the real code. Use it to see which items share a picture and what each one looks like when a hero carries it.
+<https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite?node-id=2276-2083>
+
+| Section | What's in it |
+| --- | --- |
+| Header | The page's purpose, how to read a set, and the counts: 27 kinds, 9 with their own icon cell, 18 sharing one. |
+| One-handed · Two-handed · Off hand · Body | One card per kind (`ITEM_KINDS`). Each card shows: its tier (basic / unlock / Sovereign), its hand rule, its icon cell, what the figure draws, its doll strip, and either "Shares the X icon with …" (warn) or "Own icon cell" (muted). Under that sits **one component set per item**: `Rarity` (Common … Mythic) × `View`. `Icon` is the pack tile at that rarity. `Equipped (figure)` is the battlefield hero carrying it, via `gearMarks` on the neutral Pawn rig. `Equipped (doll)` is the `loadout.heroStrip` paper doll in the `fieldwatch` pack. Every variant is an image fill of a real render. |
+| Full loadouts | Six mixed kits. Each shows the neutral figure, the paper doll, the figure as the game draws it today (the look picked by the weapon, `gear.lookOf`) and the kit's tiles. A note explains what changes between them. |
+| Needs a unique asset | The six shared cells (blade, wand, grimoire, shield, plate, cloth). The owner keeps the cell, and each of the 12 borrowers gets an **editable 16 × 16 pixel-art draft** (8 px rectangles, pack palette, `#161C2E` outline), marked `PROPOSED · DRAFT` in a dashed warn frame. The drafts are proposals, not shipped art; their source is `DRAFTS` in `scripts/item-assets-lib.ts`. A closing note lists the other gaps: the 7 body pieces draw nothing on the figure; 19 kinds have no doll strip; only the icon shows rarity, and the figure changes only by the enchantment glint. |
+
+**Regenerate.** `npx tsx scripts/item-assets.ts` prints the inventory and writes `docs/item-assets/inventory.json`. Add `--render` to start vite on :5217, run `harness/items.html` in Playwright and write the renders to `docs/item-assets/` (palette-compressed PNGs, about 2 MB). `docs/item-assets/figma/` holds screenshots of the page.
+
+**Getting images in.** `upload_assets` and plain HTTPS to the Figma hosts are refused by this sandbox's egress proxy. Each render goes in as base64 inside a `use_figma` script, using `figma.createImage(figma.base64Decode(b))`, and fills the rectangle named `img:<sha1-10>`. To survive transcription, the scripts:
+
+- fold runs of repeated characters;
+- checksum every string;
+- report any that fail, so they can be resent.
+
+Figures go in at 1×, because Figma scales small images up with nearest-neighbour, so they stay crisp. From a machine with Figma network access, `upload_assets` onto the same `img:` rectangles is simpler.
+
 ## Page: FieldWatch — `?node-id=2001-30`
 
 | Section | What's in it |

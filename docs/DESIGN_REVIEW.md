@@ -4067,3 +4067,23 @@ The designer: "Do a few passes of critiques — see if things are doing their jo
 - **Round 3.** Every screen re-scored: no major left; the chosen slot and mode read at a glance in all five worlds and the neutral one; the bar fits at 320; `home-stability.mjs` passes at all four sizes, both saves, with and without motion.
 - **Left, with a recommendation.** (1) Peppercorn's embers crowd the focused road on the home by design (`themeWorlds.test`): they never sit under a word, but they are square and node-sized, so they briefly read like road stops; I would spawn them beside the road, not on it — a taste call for the designer. (2) The charter page's CTA says "Charter the road" where the home's slot and card say "Buy Company": one act, two verbs; the kicker now ties them, the verb is the designer's to pick. (3) An item kind's line starts with its slot ("Body. Reach and a wider blast.") beside a Slot field on the vault card and the Codex: game data shared with the run, left for the copy owner. (4) The receipt's standing card says "Standing 0" and a big "0": minor. (5) The militia editor's CTA reads "Raise the new flag" before anything changed: minor.
 - Benchmark: Clash Royale's selected deck slot (a lit ring outside the frame, not a recoloured frame); Slay the Spire's run-end (one number, then the itemised lines); Into the Breach's settings (plain rows, no chrome per row).
+### 2026-10-17 — the item assets page in Figma
+New Figma page **Item assets** (`?node-id=2276-2083`; `docs/FIGMA.md` § Page: Item assets). It holds every dealt item base, drawn by the real code: `harness/items.html` calls the shell tile markup, `drawSentinel` with `gearMarks` on the neutral Pawn, and `loadout.heroStrip` in the `fieldwatch` pack. The renders are made by `npx tsx scripts/item-assets.ts --render` into `docs/item-assets/`. Docs and tooling only; no game code changed.
+- **Inventory.** 27 kinds. 9 have their own icon cell: Axe, Dagger, Sceptre, Bow, Greatsword, Warhammer, Staff, Quiver, Focus. 18 share one of six cells:
+  - blade: Sword, Saffron Brand;
+  - wand: Wand, Rod;
+  - grimoire: Grimoire, Tome, Moonquill Codex;
+  - shield: Shield, Buckler, Pavise, Gilded Easel;
+  - plate: Mail, Plate, Aegis, Ironheart Plate;
+  - cloth: Robe, Cloak, Silkwind Cloak.
+
+  The figure carries the same atlas cell as the icon, so a borrower also looks like its owner on the field.
+- **Other gaps.** The 7 body pieces draw nothing on the figure. 19 kinds have no doll strip. Only the icon shows rarity; the figure changes only by the enchantment glint. The game's own look (picked by the weapon) keeps the knight's painted shield even with a two-hander.
+- **Checked with get_screenshot** (`docs/item-assets/figma/`):
+  - all 441 image slots are filled;
+  - no overlaps;
+  - cards that share nothing now say "Own icon cell", so the cards in a row match in height;
+  - all 12 drafts read at 16 px, as the atlas does.
+- **Left for the designer.**
+  - Approve, redraw or drop the 12 draft icons (Rod, Saffron Brand, Tome, Moonquill Codex, Buckler, Pavise, Gilded Easel, Mail, Aegis, Ironheart Plate, Cloak, Silkwind Cloak). They are proposals, not shipped art.
+  - Decide whether body pieces should show on the battlefield figure.
