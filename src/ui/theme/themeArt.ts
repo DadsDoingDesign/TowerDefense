@@ -216,7 +216,7 @@ function paintFrame(f: number): Rows {
       if (d === thick - 1) return 'q' // the stroke's wet inner lip
       const band = (Math.floor(along / 8) + s) % 3
       // A wet glint that travels the stroke frame to frame.
-      if (d === 1 && (along + f * 5) % 16 === 3) return 'w'
+      if (d === 1 && (along + f * 3) % 8 === 3) return 'w'
       return band === 0 ? 'p' : band === 1 ? 'o' : 't'
     },
     // A blob of paint in each corner, a different paint across the diagonal.
@@ -231,8 +231,9 @@ function paintStrip(f: number): Rows {
     const h = 2 + (hash(x, 3) < 0.4 ? 1 : 0)
     for (let i = 0; i < h; i++) g[STRIP_H - 1 - i][x] = i === h - 1 && hash(x, 8) < 0.5 ? 'q' : 'p'
   }
-  // Two flecks of other paint that hop above it.
-  for (let k = 0; k < 2; k++) {
+  // Flecks of other paint that hop above it (four: with two the strip all
+  // but stood still next to the other worlds' — the motion audit, Oct 2026).
+  for (let k = 0; k < 4; k++) {
     const x = Math.floor(hash(k, f, 21) * STRIP_W)
     const y = Math.floor(hash(k, f, 22) * 3)
     g[y][x] = paints[(k + f) % paints.length]
@@ -374,10 +375,15 @@ const WORLDS: Record<CompanyId, WorldArt> = {
     strip: Array.from({ length: STRIP_FRAMES }, (_, f) => fireStrip(f)),
     crest: Array.from({ length: STRIP_FRAMES }, (_, f) => fireCrest(f)),
     palette: FIRE,
-    frameMs: 600,
+    // The motion audit (Oct 2026): the card's frame stepped every 200 ms, the
+    // fastest loop beside any words on the home; 250 ms still flickers as fire.
+    frameMs: 750,
     stripMs: 480,
   },
-  art: { frames: [0, 1, 2].map(paintFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => paintStrip(f)), palette: PAINT, frameMs: 1800, stripMs: 1600 },
+  // …and Easel House's frame and strip barely moved (a hundredth of the
+  // others' motion on the card and the CTA): the paint glint travels and the
+  // flecks hop a little sooner.
+  art: { frames: [0, 1, 2].map(paintFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => paintStrip(f)), palette: PAINT, frameMs: 1200, stripMs: 1000 },
   metals: { frames: [0, 1, 2].map(forgeFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => forgeStrip(f)), palette: FORGE, frameMs: 1500, stripMs: 560 },
   silk: { frames: [0, 1, 2].map(silkFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => silkStrip(f)), palette: SILK, frameMs: 1800, stripMs: 1200 },
   scrolls: { frames: [0, 1, 2].map(arcaneFrame), strip: Array.from({ length: 3 }, (_, f) => arcaneStrip(f)), palette: ARCANE, frameMs: 2400, stripMs: 1500 },

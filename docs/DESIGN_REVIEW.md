@@ -4144,3 +4144,63 @@ The designer: "a similar expansion of enemy types unique to each map with unique
 - **Left:**
   - the plain goblins are now only the bake's input;
   - a clan's keg has only a small cap part, so the kegs part from each other mostly by hoop colour and cap.
+## 2026-10-17 — The dock's "%" becomes a bar to the next Rep
+
+- **Ask (designer, with a shot of the dock):** "What are the % for? If it's leveling up maybe show an xp bar instead to simplify."
+- **Finding:** the % under each slot was the company's share of the trade war, which the five add up to 100. Nothing labelled it, and it sat directly under "Rep N", so it read as progress. It failed the slot's job, which is you and this company.
+- **Change:** the share is gone from the slot. A thin bar in the company's colour now shows how far you are to the next level on that company's track (`homeDock.DockSlot.progress`, via `track.trackProgress`; it is full at the top level). The crown still marks the trade war's leader, and the shares live on the standings. The slot's accessible name says "N% to the next" or "top level". On a short phone the bar rides the slot's bottom edge, so the slot keeps its 60px.
+- **Checked:** real shots at 390×844, 320×568 and 1280×800. `scripts/home-stability.mjs` passes: the bar changes pixels, never boxes. `tests/homeDock.test.ts` covers the progress and the name.
+### 2026-10-17 — the kit look: body armour on the figure, portraits from the real kit
+The designer: a hero's look must "always reflect what they have equipped, not set classes". The two gaps the icon pass left are closed. Presentation only: no rule, number, stat, name or RNG draw changed, so `balance/REPORT.md` does not move.
+- **The body piece is worn** (`render/bodyLayer.ts`). Tiny Swords ships no gear strips, so the layer is derived from the sprite. `npm run anchors` measures the tunic of every frame of the six hero strips (the bottom-most big patch of the tunic's two inks; `bodyAnchors.generated.ts`), and `anchors:check` fails on a stale table or on any piece that would paint outside its cell. The tunic is re-inked in the piece's own icon colours (tested against the atlas cells), keeping every outline pixel, and each piece adds its silhouette with the pack's 2 px `#161C2E` outline. Mail: a 2 px ring checker, a belt and a ragged hem. Plate: steel, a shine, pauldrons and a tasset. Ironheart: dark iron, the same shapes, a red heart. Aegis: a gold rim, a sun boss and gold caps. Robe: a skirt to the ground with folds. Cloak: a green cape behind with a red lining, painted only into empty pixels, so it shows beside and between the legs. Silkwind: the same in violet, wider, billowing by frame. Every frame has its own torso, so the piece follows the idle bob and the attack strips. No rarity colour: the weapon's glint still says rarity. An empty body slot returns the strip itself, so its bake is unchanged.
+- **One composition** (`units.heroFigure`: strip → cuts → body → bake). The field draws it; the portraits crop it.
+- **Portraits from the kit** (`render/heroPortrait.ts`). The party bar, the hero card, the Upgrade button, the Pack strip, the hero pick, a city's hire and the campfire rows all read `offers.heroLookArt`, which is now the figure's idle frame 0 in its kit (cuts, body, held marks, glint at rest), cut to a square bust and cached as a data URL per (look, kit). The painted still stays only as the fallback until the art decodes; `RootShell` re-renders when it lands. Equipping from the Pack changes the portrait. Boxes are unchanged; the pick card's image now matches its 52 px box, since the square bust has no feet to crop and the old 64 px cut off what the hero holds. `tests/heroPortrait.test.ts` keeps every hero image on the one function (the HQ's hiring-deal silhouettes are not heroes and keep the stills).
+- **Checked.** `harness/kit.html` draws the looks × pieces, every frame, and the portraits at 22–72 px. `scripts/kit-look.mjs` captures the running app at 390 × 844, 320 × 568 and 1280 × 800, in neutral and Ironvein, plus Rosethread with high contrast and reduced motion, and the city hire via `run-shots.mjs`. Two rounds:
+  - Round 1: Ironheart read as no body (its fill was the tunic's own blue), so it became dark iron with dark pauldrons. The capes hid behind the arms and the knight's shield, so the cape now hangs on both sides of the legs. The portrait showed only a sliver of the body, so it keeps 6 rows under the hem.
+  - Round 2: the pick card's bust lost the bow to its oversize image, which is fixed. All seven pieces were read on the live field (setup, and a 25-goblin wave with the Pack's pieces equipped) and in the portraits.
+  - Benchmark: Kingdom Rush and Legends of Kingdom Rush let gear read on small units through one saturated torso block and a silhouette change (barracks tiers, hero sets), not texture. That is the rule here: colour block first, silhouette second, detail last.
+  - Left: at 320 px, Mail and Plate are both silver and are told apart only by the pauldrons. The head still dominates the chibi bust.
+- **Cost.** Each (strip, piece) is dressed once, on first draw: 12.9 ms mean at 4× CPU, against the existing bake's 22 ms. A cache hit is 0.02 ms, and the canvas identity is kept, so `pixmap()` never re-bakes it. `drawSentinel` × 6 kitted heroes per frame at 4× CPU: 1.07 ms best and 1.29 / 1.54 ms median before; 1.07 ms best and 1.72 / 1.89 ms median after. The median spread is machine noise from other sessions; the best runs are equal. The whole-frame rAF probe in a 25-enemy wave (4× CPU, three alternating runs each) gave a median mean of 13.2 ms before and 14.6 ms after at 390, and 15.2 ms before and 18.5 ms after at 1280, with ±5 ms between runs of the same tree. That is within noise, and the steady-state per-frame work is one more WeakMap lookup.
+- **Shots:** `docs/ui-audit-2026-10/kit-look/`. Item assets were regenerated: the body pieces' "Equipped (figure)" and the loadouts' figures now wear their body. Figma page `2276:2083` was refreshed: 35 body variants, 12 loadout figures and the notes that said body pieces draw nothing.
+### 2026-10-17 — the motion audit: every motion, per company world
+The designer: "Consider an audit of the motion design and animations throughout. Is the effects on home too much or ok etc and do it for each company."
+
+**Method.** A new script, `scripts/motion-audit.mjs`, captures true 24 fps sequences in slow motion (the CSS clock through CDP, and every JS clock patched to run ×0.25). From those it builds a motion-energy heatmap and the change rate per region: words, card, CTA, the focused road, the dock, the battlefield's edge. It also records the frame rate and the worlds' loop time at a 4× CPU throttle. Three rounds at 390 × 844: the home for each world (ambient, switch-in, press), the terms, the hero pick, the HQ, the Codex, Settings and the charter, a 19-raider wave per world, the battle band's setup and its wave end, Light, reduced motion and high contrast. The scorecard is `docs/ui-audit-2026-10/motion/AUDIT.md`, with seven heatmap sheets beside it.
+
+**Verdict on the home.** Measured ambient motion, before → after:
+
+| World | Before (Hz) | After (Hz) |
+|---|---|---|
+| Peppercorn | 0.87 | 0.29 |
+| Ironvein | 0.39 | 0.28 |
+| Rosethread | 0.18 | 0.18 |
+| Easel House | 0.16 | 0.12 |
+| Moonquill | 0.12 | 0.08 |
+| House look (baseline) | 0.06 | 0.06 |
+
+- **Peppercorn was too much.** Its focused road was the busiest band on any home (2.6 Hz; the road's own traffic is 0.9), because the embers newly placed beside the road crowded it. The heat glow along the dock crawled as well. It is now level with the forge, and still the richest world.
+- **Every company world moves in its own kind of motion,** and they now sit within 4× of each other, against 7× before.
+
+**Fixed.**
+- **Switch-ins.** They no longer cross the card and the dock: they are cleared under every panel as well as every word. Ironvein's switch-in flashed the whole screen white; its strike now flashes round the anvil.
+- **Peppercorn's embers.** 40 on a phone instead of 60. They are shorter-lived, and the ones beside the road are smaller and further off its line. The coal now flickers by its halo instead of blinking out.
+- **Heat glows (fire and forge).** They breathe instead of crawling. This also took the pages' foot from 0.73 to 0.10 Hz on Peppercorn's HQ.
+- **Whole-shape dither flips.** Easel House's washes are anchored to the screen. Moonquill's beam holds still, with a slow ripple.
+- **Easel House's frame and strip** move a little sooner. They were nearly still.
+- **One pulse at a time.** While the Upgrade badge pulses for an owed skill, the levelled hero's halo holds still.
+- **Ironvein's battle rain.** Its band is narrower and fainter. It had 4× the other worlds' motion at the battlefield's edges.
+
+**Checks.**
+- `home-stability` passes 16/16, so a pick still changes pixels, never boxes.
+- Reduced motion measures 0 Hz on every home and page capture.
+- Light measures 0.12 Hz on Peppercorn (it was 0.20 before the glow fix).
+
+**Cost.** At a 4× throttle the home held 60 fps before and after, with the loop at about 1.2 ms a frame (p95 about 5–6 ms). A battle runs 18–39 fps at 4×, and switching the weather and the edge band off does not change that beyond the wave-to-wave noise.
+
+**Benchmarks.** Clash Royale's slow arena behind punchy taps, Hades' ambience at the edges, Slay the Spire's one pulsing node, and Kingdom Rush's still margins around a moving lane.
+
+**Left for the designer.**
+- Easel House's card and CTA are still the quietest of the five. A drip down its strip would be new art.
+- Moonquill is the calmest world, which is calm by nature.
+- Rosethread's ribbons are the one wide moving shape on a home.
+- The battle's own draw is the remaining cost on a slow phone.

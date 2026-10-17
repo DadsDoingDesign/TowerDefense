@@ -393,8 +393,8 @@ const shortName = (name: string) => name.replace(/ Co\.$/, '')
  * The company dock: five fixed slots, evenly spaced, in `COMPANY_IDS` order —
  * the order the map's roads fan west to east. A slot is its company's logo,
  * your standing with it ("Rep 4", or "II · 3" on a second term, the crest
- * rimmed in gold), its share of the trade while the war is on (the leader's
- * crowned), and up to two marks on its top edge: desperate terms "×1.5", the
+ * rimmed in gold) over a bar of how far to the next (the trade war's leader
+ * wears the crown; its shares are on the standings), and up to two marks on its top edge: desperate terms "×1.5", the
  * market "×1.3". A company not hiring yet shows its
  * padlock and the standing that opens it. A tap focuses the road.
  */
@@ -434,9 +434,9 @@ function Dock({ slots, focus, mult, onPick }: { slots: DockSlot[]; focus: HomeFo
             <span className="mn-slot-rep" aria-hidden="true">
               {s.open ? s.rep : `at ${s.opensAt}`}
             </span>
-            {s.share != null && (
-              <span className="mn-slot-share" aria-hidden="true">
-                {s.share}%
+            {s.open && (
+              <span className="mn-slot-xp" aria-hidden="true">
+                <i style={{ width: `${Math.round(s.progress * 100)}%` }} />
               </span>
             )}
           </button>

@@ -56,7 +56,7 @@ function printInventory(): void {
   console.log(`${pad('kind', 17)}${pad('slot', 9)}${pad('hands', 18)}${pad('tier', 10)}${pad('icon', 11)}${pad('figure', 12)}doll`)
   for (const r of rows)
     console.log(
-      `${pad(r.kind, 17)}${pad(r.slot, 9)}${pad(r.handRule, 18)}${pad(r.tier, 10)}${pad(r.icon, 11)}${pad(r.figureMark ?? '— (body)', 12)}${r.dollArt ? r.dollRole : `— (${r.dollRole} not shipped)`}`,
+      `${pad(r.kind, 17)}${pad(r.slot, 9)}${pad(r.handRule, 18)}${pad(r.tier, 10)}${pad(r.icon, 11)}${pad(r.slot === 'body' ? `${r.figureMark} worn` : (r.figureMark ?? '—'), 12)}${r.dollArt ? r.dollRole : `— (${r.dollRole} not shipped)`}`,
     )
   console.log(`\nLegacy bases (not dealt): ${LEGACY_BASES.map((b) => `${b.kind} (${b.why})`).join('; ')}`)
   console.log('\nShared assets — two or more different items, one picture:')

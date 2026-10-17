@@ -41,7 +41,17 @@ result. Append a short note to the review log when you're done.
   on-hit effect palette); the hero's real weapon/off-hand on the figure is
   `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
   cut when the hero holds something else, and the knight's painted shield is
-  flood-cut by `cutOffHand` unless the off hand holds a Shield). The atlas
+  flood-cut by `cutOffHand` unless the off hand holds a Shield); the body
+  piece is WORN, `bodyLayer.ts`: the tunic of every frame is measured off the
+  strips by `npm run anchors` into `bodyAnchors.generated.ts` (`anchors:check`
+  fails if stale or if a piece paints outside its cell), re-inked in the
+  piece's icon colours and given its silhouette (pauldrons, skirt, hem, a cape
+  behind), after the cuts and before the bake, one canvas per (strip, piece).
+  `units.heroFigure` is that ONE composition; every hero portrait in the shell
+  is cut from it (`heroPortrait.ts`, a bust data URL per (look, kit), read only
+  through `offers.heroLookArt`; `RootShell` re-renders when the art lands;
+  `tests/heroPortrait.test.ts`). Review harness `harness/kit.html`, app shots
+  and the frame-time probe `scripts/kit-look.mjs`. The atlas
   order and item-noun → icon table live in `src/game/data/iconAtlas.ts`
   (re-exported by `channels`); every item kind has its own cell
   (`scripts/item-assets.ts` reports 0 shared).
@@ -94,6 +104,24 @@ result. Append a short note to the review log when you're done.
   does a share of ordinary fights (`waves.nodeArmour`, leaning to the road's
   `Company.armour`). The run map tabs every such node (`.mn-armour`, via
   `encounterPreview.nodeModFor`). `balance/armour-eval.ts` measures fairness.
+  Goblin clans (Oct 2026): every goblin a player sees wears its road's clan,
+  one per company (`src/game/data/clans.ts`: cinder, smudge, delve, silkcut,
+  hexmoon; `DEFAULT_CLAN` cinder when there is no run). A clan is a LOOK and
+  a NAME only: the engine keeps its ids, stats and RNG order
+  (`tests/fixtures/enemyStats.snapshot.json`). Which clan: the run's company
+  (`run/clans.runClan` / `roadClan`, the hand-made benches too); the Sovereign
+  Route mixes them by a hash of (run seed, act) (`sovereignClan`, never a run
+  stream). Names: `clans.enemyName(type, clan)` and nothing else (card,
+  preview, boss plate, announcer, ledger, Codex). Art: the strips
+  `<clan>_<faction><tier>[_walk]` are BAKED by `npx tsx scripts/enemy-clans.ts`
+  (parts in `scripts/enemy-clans-art.ts`, anchors per frame, pack palette;
+  `CLAN_ART` in `render/enemyClans.generated.ts` places the HP bar;
+  `enemy-clans:check` runs in `build:checks`) from the plain CC0 goblins, which
+  no drawing path may read. Every draw goes through `render/clanArt.clanArtFor`
+  (`setEnemyClan` per battle); only cinder is precached, the rest are lazy
+  roles. The Codex goblins tab is by clan (`Codex.clans`). Inventory and
+  renders: `scripts/enemy-assets.ts` (`--render`), `harness/enemies.html`,
+  `docs/enemy-assets/`; Figma page "Enemy assets". Tests `tests/clans.test.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only
@@ -288,8 +316,13 @@ result. Append a short note to the review log when you're done.
   desk), cleared under every word and panel, and measures the scene (the
   dock's top as the floor; the focused road from `.tm-leaders[data-road]`);
   press bursts are zoned to their `.pg-cta` (`burstClip`) and cleared under
-  its label. Sleeps when hidden; nothing moves under reduced motion; dimmed
-  under high contrast. Tests `tests/themeWorlds.test.ts`.
+  its label; a switch-in plays over the map, cleared under every word and
+  panel. Glows breathe, never crawl, and dither is anchored to the screen's
+  pixels (a moving checker flips a whole shape). Sleeps when hidden; nothing
+  moves under reduced motion; dimmed under high contrast. Tests
+  `tests/themeWorlds.test.ts`; the motion budget per world, measured in the
+  running app, is `scripts/motion-audit.mjs` →
+  `docs/ui-audit-2026-10/motion/AUDIT.md`.
   How much plays is `src/game/render/fxQuality.ts`: the setting
   `settingsStore.effects` (Settings' "Effects: Full / Light", v6), an
   automatic step down to Light when the measured rate stays under 45 fps for

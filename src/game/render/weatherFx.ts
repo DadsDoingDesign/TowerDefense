@@ -435,11 +435,14 @@ export class WeatherLayer {
 
     // The falling sheet, at the view's edges only: a wide band, and on Full a
     // narrower one with drops of its own (the particles carry the middle).
+    // The rain's band is narrower and fainter than the snow's (the motion
+    // audit, Oct 2026: at 540 px/s every pixel of a 22% band changed every
+    // frame, four times the next world's motion at the battlefield's edges).
     const B = this.batch
     if (this.sheets && w.sheet === 'rain') {
       const vy = 540 * k
-      this.sheets[0].fill(B, edgeRects(view, 0.22), k, u, this.t, -0.22 * vy, vy, 0, 0.5)
-      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.11), k, u, this.t + 0.37, -0.22 * vy * 1.15, vy * 1.15, 0, 0.5)
+      this.sheets[0].fill(B, edgeRects(view, 0.15), k, u, this.t, -0.22 * vy, vy, 0, 0.42)
+      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.075), k, u, this.t + 0.37, -0.22 * vy * 1.15, vy * 1.15, 0, 0.42)
       this.shapes += light ? 1 : 2
     } else if (this.sheets && w.sheet === 'snow') {
       this.sheets[0].fill(B, edgeRects(view, 0.22), k, u, this.t, -5 * k, 20 * k, 6 * k, 0.6)

@@ -3,9 +3,11 @@
  *
  * Five fixed slots, one per company, always in {@link COMPANY_IDS} order (the
  * order the trade map fans its roads, west to east), each saying what tells
- * one company from another at a glance: your standing with it, its share of
- * the trade while the war is on, and the day's marks — desperate terms, the
- * market of the day. The focused company's card
+ * one company from another at a glance: your standing with it and how far
+ * you are to the next (a bar — Oct 2026, the designer: "What are the % for?
+ * If it's leveling up maybe show an xp bar instead"; the trade's shares live
+ * on the standings, the crown alone says who leads), and the day's marks —
+ * desperate terms, the market of the day. The focused company's card
  * says what those marks MEAN; the slot carries the number. Nothing here reads
  * a store: `MenuScreen` passes the save in, `tests/homeDock.test.ts` drives it.
  *
@@ -14,7 +16,7 @@
  */
 import { COMPANY_IDS, companyById, type CompanyId } from '../../game/data/companies'
 import { companyOpen, standingOf, type StandingXp } from '../../game/run/standing'
-import { termName, trackLevel } from '../../game/run/track'
+import { termName, trackLevel, trackProgress } from '../../game/run/track'
 import { DESPERATE_PAY, isDesperate, seasonLeader, type Season } from '../../game/run/tradeWar'
 import { CHARTER_FEE, type CharterDoor } from '../../game/run/charter'
 
@@ -34,8 +36,8 @@ export interface DockSlot {
   level: number
   /** The slot's number: "Rep 4", or "II · 3" on a second term (its crest wears the gold rim). */
   rep: string
-  /** Its share of the trade (%), while the war shows; else null. */
-  share: number | null
+  /** How far to the next level on this term's track, 0–1 (1 at the top). */
+  progress: number
   /** It leads the trade war this season, alone (a tie crowns nobody). */
   leads: boolean
   /** Every mark it carries today, in {@link MARK_ORDER}. */
@@ -71,6 +73,7 @@ export function dockSlots(o: {
     const term = Math.max(1, o.terms?.[company] ?? 1)
     const standing = standingOf(o.xp, company)
     const level = trackLevel(o.xp[company] ?? 0, term)
+    const p = trackProgress(o.xp[company] ?? 0, term)
     const open = companyOpen(company, o.xp)
     const has: Record<SlotMark, boolean> = {
       desperate: !!o.war && isDesperate(o.war, company),
@@ -83,7 +86,7 @@ export function dockSlots(o: {
       term,
       level,
       rep: term > 1 ? `${roman(term)} · ${level}` : `Rep ${standing}`,
-      share: o.war ? o.war.shares[company] : null,
+      progress: p.max ? 1 : p.need > 0 ? Math.min(1, p.into / p.need) : 0,
       leads: leader === company,
       marks: MARK_ORDER.filter((m) => has[m]),
       opensAt: open ? null : (companyById(company).opensAt ?? 1),
@@ -96,9 +99,10 @@ export function slotName(s: DockSlot, marketMult: number): string {
   const co = companyById(s.company)
   if (!s.open) return `${co.name}: not hiring yet, opens at Standing ${s.opensAt}`
   const rep = s.term > 1 ? `${termName(s.term)}, level ${s.level}` : `standing ${s.standing}`
-  const share = s.share != null ? `, ${s.share}% of the trade${s.leads ? ', leads the trade war' : ''}` : ''
+  const next = s.progress >= 1 ? ', top level' : `, ${Math.floor(s.progress * 100)}% to the next`
+  const lead = s.leads ? ', leads the trade war' : ''
   const marks = s.marks.map((m) => `, ${MARK_WORDS[m](marketMult)}`).join('')
-  return `${co.name}: ${rep}${share}${marks}`
+  return `${co.name}: ${rep}${next}${lead}${marks}`
 }
 
 // ---------------------------------------------------------------------------
