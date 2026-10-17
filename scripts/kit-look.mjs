@@ -16,7 +16,8 @@
  * mean and p95 script ms per frame and the frame rate over 6 s.
  *
  * views: p390,p320,d1280 (default all); themes: neutral,metals,… (default
- * neutral). Env: KIT_BASE (default http://localhost:5223/), PW_CHROMIUM.
+ * neutral). Env: KIT_BASE (default http://localhost:5223/), KIT_A11Y=1 (high
+ * contrast + reduced motion), PW_CHROMIUM.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -26,6 +27,8 @@ const MODE = process.argv[3] ?? 'both'
 const VIEW_ARG = process.argv[4] && process.argv[4] !== 'all' ? process.argv[4].split(',') : null
 const THEMES = process.argv[5] ? process.argv[5].split(',') : ['neutral']
 const BASE = process.env.KIT_BASE ?? 'http://localhost:5223/'
+/** KIT_A11Y=1: high contrast and reduced motion on (the shots' names say `-a11y`). */
+const A11Y = !!process.env.KIT_A11Y
 const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
 const { chromium } = await import(process.env.PW_MODULE ?? '/opt/node22/lib/node_modules/playwright/index.mjs')
 
@@ -73,13 +76,13 @@ async function open(view, theme, probe) {
   await page.waitForFunction(() => !!window.__game)
   const company = theme === 'neutral' ? 'spice' : theme
   const r = await page.evaluate(
-    async ({ company, KITS, PACK, neutral }) => {
+    async ({ company, KITS, PACK, neutral, a11y }) => {
       const items = await import('/src/game/data/items.ts')
       const heroes = await import('/src/game/run/heroes.ts')
       const seeds = await import('/src/state/seeds.ts')
       const { RNG } = await import('/src/game/core/rng.ts')
       const g = window.__game
-      window.__settings.setState({ autoContinue: false, showEverything: true })
+      window.__settings.setState({ autoContinue: false, showEverything: true, ...(a11y ? { highContrast: true, reducedMotion: true } : {}) })
       window.__meta.setState({ bank: 5000, stats: { ...window.__meta.getState().stats, runsCompleted: 12, runsWon: 4, bestDepth: 9 } })
       g.getState().beginCampaign(424242, seeds.STANDARD_RUN, { company, crates: 0 })
       g.getState().marchOut('pick-0')
@@ -127,18 +130,38 @@ async function open(view, theme, probe) {
       }
       return { ok: true, posted: pick.length }
     },
-    { company, KITS, PACK, neutral: theme === 'neutral' },
+    { company, KITS, PACK, neutral: theme === 'neutral', a11y: A11Y },
   )
   if (!r.ok) throw new Error(JSON.stringify(r))
   await page.waitForTimeout(900)
   return { ctx, page }
 }
 
+/** The hero pick: three dealt heroes, each token and the card cut from its own figure. */
+async function pickShot(view, theme) {
+  const ctx = await browser.newContext({ ...VIEWS[view] })
+  const page = await ctx.newPage()
+  await page.goto(BASE, { waitUntil: 'networkidle' })
+  await page.evaluate(() => localStorage.clear())
+  await page.goto(BASE, { waitUntil: 'networkidle' })
+  await page.waitForFunction(() => !!window.__game)
+  await page.evaluate(async (company) => {
+    const seeds = await import('/src/state/seeds.ts')
+    window.__settings.setState({ showEverything: true })
+    window.__meta.setState({ stats: { ...window.__meta.getState().stats, runsCompleted: 12, runsWon: 4, bestDepth: 9 } })
+    window.__game.getState().beginCampaign(424242, seeds.STANDARD_RUN, { company, crates: 0 })
+  }, theme === 'neutral' ? 'spice' : theme)
+  await page.waitForTimeout(1200)
+  await page.screenshot({ path: path.join(OUT, `0-pick-${view}-${theme}.png`) })
+  await ctx.close()
+}
+
 async function shots(view, theme) {
+  await pickShot(view, theme)
   const { ctx, page } = await open(view, theme, false)
   const shot = async (name) => {
     await page.waitForTimeout(400)
-    await page.screenshot({ path: path.join(OUT, `${name}-${view}-${theme}.png`) })
+    await page.screenshot({ path: path.join(OUT, `${name}-${view}-${theme}${A11Y ? '-a11y' : ''}.png`) })
   }
   await shot('1-setup')
   await page.locator('canvas').first().screenshot({ path: path.join(OUT, `1-field-${view}-${theme}.png`) })
@@ -160,6 +183,14 @@ async function shots(view, theme) {
     if (aegis) s.equipItem(s.roster[0].id, 'body', aegis.id)
   })
   await shot('4-pack-equipped')
+  // The rest of the Pack goes on for the wave, so all seven pieces are seen on the field.
+  await page.evaluate(() => {
+    const g = window.__game
+    const s = g.getState()
+    const by = (re) => s.inventory.find((i) => re.test(i.name))
+    if (by(/Mail/)) s.equipItem(s.roster[2].id, 'body', by(/Mail/).id)
+    if (by(/Cloak/) && !/Silkwind/.test(by(/Cloak/).name)) g.getState().equipItem(s.roster[3].id, 'body', by(/Cloak/).id)
+  })
   await page.evaluate(() => {
     const g = window.__game
     if (g.getState().detailOpen && innerWidth < 700) g.getState().toggleDetail()

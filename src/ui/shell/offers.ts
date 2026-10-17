@@ -25,6 +25,7 @@ import { cargoShare } from '../../game/run/contracts'
 import { relicLines } from './relicOffers'
 import { relicMark } from '../../game/data/relics'
 import type { Item, ItemRarity, Sentinel } from '../../game/types'
+import { heroPortraitUrl } from '../../game/render/heroPortrait'
 
 export interface Price {
   amount: number
@@ -325,8 +326,14 @@ function strengthNote(st: St, lines: BodyLine[]): BodyLine[] {
  * the whole of a battle were the least illustrated thing in the game.
  */
 export const heroArt = (look: string) => `assets/sprites/tinyswords/${look}.png`
-/** A hero's sprite and hue: picked by what it holds (there is no class). */
-export const heroLookArt = (h: Pick<Sentinel, 'equipment'>): string => heroArt(lookOf(h))
+/**
+ * A hero's portrait: its battlefield figure in the kit it wears now — weapon,
+ * off hand and body piece — cropped to a bust (`render/heroPortrait`). Every
+ * hero portrait in the shell reads this one function, so none can show the
+ * look's painted still once the art has loaded; until then (and in a theme
+ * without sprites) it is that still. `RootShell` re-renders when it lands.
+ */
+export const heroLookArt = (h: Pick<Sentinel, 'equipment'>): string => heroPortraitUrl(h) ?? heroArt(lookOf(h))
 export const heroLookVar = (h: Pick<Sentinel, 'equipment'>): string => archetypeVar(lookOf(h))
 
 /**
