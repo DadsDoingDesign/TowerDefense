@@ -15,7 +15,10 @@ import {
   STEEL_INK,
   type Delivery,
 } from '../src/game/render/attackLook'
-import { heroGear, rigFor, unpaints } from '../src/game/render/gearMarks'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import sharp from 'sharp'
+import { cutOffHand, heroGear, rigFor, unpaints, unpaintsOff } from '../src/game/render/gearMarks'
 import { drawProjectile, swingSide, swingSpan } from '../src/game/render/projectiles'
 import { drawShots } from '../src/game/render/renderer'
 import { isMelee } from '../src/game/engine/melee'
@@ -140,6 +143,51 @@ describe('gear on the figure', () => {
     // The robed look paints no weapon; an unmeasured pack is never cut.
     expect(unpaints(rigFor('tinyswords', 'mystic'), heroGear(hero(item('Wand', 'oneHand')).equipment))).toBe(false)
     expect(unpaints(rigFor('fieldwatch', 'fighter'), heroGear(hero(item('Axe', 'oneHand')).equipment))).toBe(false)
+  })
+
+  it("cuts the art's painted shield whenever the off hand holds anything else, or nothing", () => {
+    const fighter = rigFor('tinyswords', 'fighter')
+    const off = (main: Item | null, offHand?: Item) => unpaintsOff(fighter, heroGear(hero(main, offHand).equipment))
+    // A real shield: the painted one IS the picture.
+    expect(off(item('Sword', 'oneHand'), item('Shield', 'offHand'))).toBe(false)
+    // A two-hander, an empty off hand, another off-hand piece, a second blade: no painted shield.
+    expect(off(item('Greatsword', 'twoHand'))).toBe(true)
+    expect(off(item('Sword', 'oneHand'))).toBe(true)
+    expect(off(item('Sword', 'oneHand'), item('Buckler', 'offHand'))).toBe(true)
+    expect(off(item('Sword', 'oneHand'), item('Gilded Easel', 'offHand'))).toBe(true)
+    expect(off(item('Dagger', 'oneHand'), item('Dagger', 'oneHand'))).toBe(true)
+    // Only the armoured look paints an off-hand piece; an unmeasured pack is never cut.
+    expect(unpaintsOff(rigFor('tinyswords', 'rogue'), heroGear(hero(item('Greatsword', 'twoHand')).equipment))).toBe(false)
+    expect(unpaintsOff(rigFor('fieldwatch', 'fighter'), heroGear(hero(item('Greatsword', 'twoHand')).equipment))).toBe(false)
+  })
+
+  it('cuts exactly the shield — with its outline, not the body — from every frame of both knight strips', async () => {
+    for (const [role, frames] of [['fighter_idle', 6], ['fighter_atk', 6]] as const) {
+      const file = join(__dirname, '..', 'public/assets/sprites/tinyswords', `${role}.png`)
+      const { data, info } = await sharp(readFileSync(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+      const px = new Uint8Array(data)
+      const before = new Uint8Array(px)
+      const cw = info.width / frames
+      for (let f = 0; f < frames; f++) {
+        const cleared = cutOffHand(px, info.width, info.height, f * cw, cw)
+        // 536 px of painted shield plus its ink ring, in every frame.
+        expect(cleared, `${role} frame ${f}`).toBeGreaterThan(780)
+        expect(cleared, `${role} frame ${f}`).toBeLessThan(880)
+      }
+      // Nothing outside the shield's own columns is touched: the body, the sword, the shadow.
+      const firstCol = (f: number) => {
+        for (let x = 0; x < cw; x++) for (let y = 0; y < info.height; y++) if (before[(y * info.width + f * cw + x) * 4 + 3] >= 128) return x
+        return 0
+      }
+      let touched = 0
+      for (let f = 0; f < frames; f++)
+        for (let y = 0; y < info.height; y++)
+          for (let x = firstCol(f) + 30; x < cw; x++) {
+            const o = (y * info.width + f * cw + x) * 4 + 3
+            if (px[o] !== before[o]) touched++
+          }
+      expect(touched, role).toBe(0)
+    }
   })
 })
 

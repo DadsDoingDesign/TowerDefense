@@ -12,7 +12,7 @@ import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
-import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, type HeroGear } from './gearMarks'
+import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, unpaintsOff, type HeroGear } from './gearMarks'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
 import { pixmap, quarterTurns } from './pixmap'
 import { artFor, getSprite } from './sprites'
@@ -297,6 +297,9 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   const rig = rigFor(art?.pack, s.archetype)
   const gear = s.gear
   const cut = !!gear && unpaints(rig, gear)
+  // ...and the painted shield, whenever the off hand holds anything else or
+  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it back.
+  const cutOff = !!gear && unpaintsOff(rig, gear)
   const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
 
   const towerPm = (() => {
@@ -310,7 +313,8 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
       heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
       ((firing ? atk : idle) ?? idle ?? atk)
     if (!body) return null
-    const strip = cut && anim === 'idle' ? unpaintedStrip(body, rig, frames) : body
+    const cutMain = cut && anim === 'idle'
+    const strip = cutMain || cutOff ? unpaintedStrip(body, rig, frames, { main: cutMain, off: cutOff }) : body
     const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
     if (!pm) return null
     const frame = firing
