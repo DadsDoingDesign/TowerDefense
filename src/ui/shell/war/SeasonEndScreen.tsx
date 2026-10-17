@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { companyById } from '../../../game/data/companies'
-import { itemKindById } from '../../../game/data/itemKinds'
+import { itemKindById, kindEffect, kindSlot } from '../../../game/data/itemKinds'
 import { ITEM_BASES } from '../../../game/data/items'
 import { desperateLine, PATRON_PURSE, type SeasonEnd } from '../../../game/run/tradeWar'
 import { useMetaStore } from '../../../state/metaStore'
@@ -11,7 +11,6 @@ import { PickCard, PickStrip, stepId } from '../PickStrip'
 import { CompanyFlag, ContractPage, Gold, Slip, SlipLine } from '../contracts/parts'
 import { Crown, ShareBar, shortName } from './WarParts'
 
-const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 const kindIcon = (kind: string) => itemIcon({ name: kind, slot: ITEM_BASES[kind]?.slot ?? 'oneHand' })
 
 /**
@@ -90,12 +89,12 @@ export function SeasonEndScreen({ end }: { end: SeasonEnd }) {
             onStep={(d) => setFocus(stepId(end.vault.map((v) => ({ id: v.kind })), focus, d))}
             noun="item"
             facts={[
-              { label: 'Slot', value: SLOT_WORD[kind.slot] },
+              { label: 'Slot', value: kindSlot(kind) },
               { label: 'Level', value: kind.level },
               { label: 'Yours', value: pick.unlock ? 'for good' : 'next contract', tone: 'accent' },
             ]}
           >
-            <p className="pk-does">{kind.does}</p>
+            <p className="pk-does">{kindEffect(kind)}</p>
           </PickCard>
         </div>
       )}

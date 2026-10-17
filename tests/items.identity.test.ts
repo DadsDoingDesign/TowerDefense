@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RNG } from '../src/game/core/rng'
 import { describeBase, generateItem, gripOf, itemStyle, shieldHold, type HeroStyle } from '../src/game/data/items'
-import { ITEM_KINDS, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ITEM_KINDS, kindEffect, kindSlot, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { computeCombat } from '../src/game/engine/combat'
 import { classicHero } from '../src/game/data/sentinels'
 import type { Item, ItemSlot } from '../src/game/types'
@@ -136,6 +136,17 @@ describe('item kinds: one identity each', () => {
       const lines = KINDS.filter((k) => k.slot === slot).map((k) => k.does)
       expect(new Set(lines).size).toBe(lines.length)
     }
+  })
+
+  it('a card with a slot field says the slot once: kindSlot names it, kindEffect is the rest', () => {
+    const SLOT = { oneHand: /^(One hand|Either hand)$/, twoHand: /^Both hands$/, offHand: /^Off hand$/, body: /^Body$/ }
+    for (const k of [...ITEM_KINDS]) {
+      expect(kindSlot(k), k.id).toMatch(SLOT[k.slot])
+      expect(kindEffect(k), k.id).not.toMatch(/^(One hand|Both hands|Off hand|Body|Either hand|Or)\b/i)
+      expect(kindEffect(k).length, k.id).toBeGreaterThan(4)
+    }
+    expect(kindSlot({ does: 'One hand, or the off hand. Casts.' })).toBe('Either hand')
+    expect(kindEffect({ does: 'Body. Reach and a wider blast.' })).toBe('Reach and a wider blast.')
   })
 
   it('an item saved before identities keeps the numbers it was rolled with', () => {

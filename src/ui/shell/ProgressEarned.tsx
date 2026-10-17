@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
-import { itemKindById } from '../../game/data/itemKinds'
+import { itemKindById, kindEffect, kindSlot } from '../../game/data/itemKinds'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { kitPieceLabel, kitPiecesBetween } from '../../game/data/companyKits'
 import { contractFloor, MAX_STANDING } from '../../game/run/standing'
@@ -30,7 +30,6 @@ import { uiTheme } from '../theme/companyThemes'
  * Sovereign item named, listed under the company's name (one block per
  * company on the Sovereign Route). The standing card opens that track.
  */
-const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 
 export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; crates: number }) {
   const skills = p.contractCards
@@ -49,7 +48,7 @@ export function UnlocksEarned({ progress: p, crates }: { progress: RunProgress; 
     <section className="pg-unlocks" aria-label={`${names.length} new unlock${names.length === 1 ? '' : 's'}: ${names.join(', ')}`}>
       {kinds.length > 0 && <p className="ct-eyebrow left">{kinds.length === 1 ? 'New item unlocked' : `${kinds.length} items unlocked`}</p>}
       {kinds.map((x) => (
-        <SkillCard key={x.id} kicker={x.kicker} skill={{ name: x.id, level: `${SLOT_WORD[x.k!.slot]} · Level ${x.k!.level}`, text: x.k!.does }} />
+        <SkillCard key={x.id} kicker={x.kicker} skill={{ name: x.id, level: `${kindSlot(x.k!)} · Level ${x.k!.level}`, text: kindEffect(x.k!) }} />
       ))}
       {kinds.length > 0 && floor > 1 && (
         <p className="pg-unlocks-note">
@@ -106,14 +105,14 @@ function TrackEarned({ company, pays }: { company: CompanyId; pays: TrackPay[] }
             )
         }
         const kind = t.item ? itemKindById(t.item) : undefined
-        if (kind) out.push(<SkillCard key={`${t.level}-${kind.id}`} kicker={kicker} skill={{ name: kind.id, level: `${SLOT_WORD[kind.slot]} · Level ${kind.level}`, text: kind.does }} />)
+        if (kind) out.push(<SkillCard key={`${t.level}-${kind.id}`} kicker={kicker} skill={{ name: kind.id, level: `${kindSlot(kind)} · Level ${kind.level}`, text: kindEffect(kind) }} />)
         const bonus = t.bonus ? itemKindById(t.bonus) : undefined
         if (bonus)
           out.push(
             <SkillCard
               key={`${t.level}-bonus`}
               kicker={kicker}
-              skill={{ name: `Rare ${bonus.id}`, level: `${SLOT_WORD[bonus.slot]} · Rare bonus item`, text: `A Rare ${bonus.id} rides with your next contract.` }}
+              skill={{ name: `Rare ${bonus.id}`, level: `${kindSlot(bonus)} · Rare bonus item`, text: `A Rare ${bonus.id} rides with your next contract.` }}
             />,
           )
         const named = t.named ? itemKindById(t.named) : undefined
@@ -122,7 +121,7 @@ function TrackEarned({ company, pays }: { company: CompanyId; pays: TrackPay[] }
             <SkillCard
               key={`${t.level}-named`}
               kicker={`${kicker} · named`}
-              skill={{ name: named.id, level: `${SLOT_WORD[named.slot]} · Sovereign`, text: `${named.does} Unlocks with a delivered Sovereign Route.` }}
+              skill={{ name: named.id, level: `${kindSlot(named)} · Sovereign`, text: `${kindEffect(named)} Unlocks with a delivered Sovereign Route.` }}
             />,
           )
         // The company's UI theme for your militia's own road (`run/militiaTheme.ts`).

@@ -81,6 +81,23 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   { id: 'Moonquill Codex', slot: 'twoHand', level: 4, company: 'scrolls', does: 'Both hands. Casts a much harder burst at a group that jumps to 2 more.' },
 ]
 
+/**
+ * A kind's `does` in two halves, for a card that names the slot in a field of
+ * its own (job critique leftovers, Oct 2026: "Body. Reach and a wider blast."
+ * beside "Slot · Body" said the slot twice). `kindSlot` is the lead (which
+ * hand, or Body) as the card's slot, "Either hand" for one hand or the off
+ * hand; `kindEffect` is the rest, what it makes its holder do. Every card
+ * that shows a kind's slot and its line reads both, so neither can drift.
+ */
+export function kindSlot(k: Pick<ItemKind, 'does'>): string {
+  const lead = k.does.split('. ')[0]
+  return lead === 'One hand, or the off hand' ? 'Either hand' : lead
+}
+export function kindEffect(k: Pick<ItemKind, 'does'>): string {
+  const i = k.does.indexOf('. ')
+  return i < 0 ? k.does : k.does.slice(i + 2)
+}
+
 const BY_ID = new Map(ITEM_KINDS.map((k) => [k.id, k]))
 export const itemKindById = (id: string): ItemKind | undefined => BY_ID.get(id)
 export const isItemKind = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)

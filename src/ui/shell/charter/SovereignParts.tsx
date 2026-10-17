@@ -1,4 +1,4 @@
-import { itemKindById } from '../../../game/data/itemKinds'
+import { itemKindById, kindEffect, kindSlot } from '../../../game/data/itemKinds'
 import { ITEM_BASES } from '../../../game/data/items'
 import { SOVEREIGN_INITIAL, SOVEREIGN_TIER } from '../../../game/run/charter'
 import { itemIcon } from '../../channels'
@@ -11,7 +11,6 @@ import { Icon } from '../../Icon'
  * card its tier's name.
  */
 
-const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 
 /** The tier's initial on a cyan chip — the "S" that survives with colour off. */
 export const SovereignMark = ({ title = `${SOVEREIGN_TIER} tier` }: { title?: string }) => (
@@ -52,9 +51,9 @@ export function SovereignReveal({ kind, owned, of }: { kind: string | null; owne
         <span className="sov-reveal-k">Sovereign item unlocked</span>
         <b>{kind}</b>
         <small>
-          {SLOT_WORD[k.slot]} · {SOVEREIGN_TIER} · {owned} of {of} yours
+          {kindSlot(k)} · {SOVEREIGN_TIER} · {owned} of {of} yours
         </small>
-        <span className="sov-reveal-does">{k.does}</span>
+        <span className="sov-reveal-does">{kindEffect(k)}</span>
       </span>
     </div>
   )
