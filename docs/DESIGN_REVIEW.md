@@ -4120,3 +4120,10 @@ The 12 draft icons from the Item assets page are now real atlas cells (`scripts/
   - The figures still read first on the field.
 - **Figma.** The page's "Needs a unique asset" section is marked shipped, with the final pixels. All 107 stale renders on the item cards and loadouts were replaced and verified, and the cards' "Shares the … icon" lines now read "Own icon cell". `docs/item-assets/` is regenerated (2.3 MB, palette PNGs; `drafts/` became `cells/`).
 - **Left.** The party bar's and the hero card's portrait is still the look's painted bust (a knight with a shield), whatever the hero holds. The 7 body pieces still draw nothing on the figure.
+
+## 2026-10-17 — The dock's "%" becomes a bar to the next Rep
+
+- **Ask (designer, with a shot of the dock):** "What are the % for? If it's leveling up maybe show an xp bar instead to simplify."
+- **Finding:** the % under each slot was the company's share of the trade war, which the five add up to 100. Nothing labelled it, and it sat directly under "Rep N", so it read as progress. It failed the slot's job, which is you and this company.
+- **Change:** the share is gone from the slot. A thin bar in the company's colour now shows how far you are to the next level on that company's track (`homeDock.DockSlot.progress`, via `track.trackProgress`; it is full at the top level). The crown still marks the trade war's leader, and the shares live on the standings. The slot's accessible name says "N% to the next" or "top level". On a short phone the bar rides the slot's bottom edge, so the slot keeps its 60px.
+- **Checked:** real shots at 390×844, 320×568 and 1280×800. `scripts/home-stability.mjs` passes: the bar changes pixels, never boxes. `tests/homeDock.test.ts` covers the progress and the name.

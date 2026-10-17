@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { COMPANY_IDS, type CompanyId } from '../src/game/data/companies'
-import { standingXpToReach } from '../src/game/run/standing'
+import { MAX_STANDING, standingXpToReach } from '../src/game/run/standing'
 import { TERM_XP } from '../src/game/run/track'
 import { DESPERATE_PAY, freshSeason, type Season } from '../src/game/run/tradeWar'
 import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
@@ -59,14 +59,13 @@ describe('the company dock', () => {
     expect(dockSlots({ xp: xp({ spice: 3 }), war: null, market: null }).find((s) => s.company === 'scrolls')!.open).toBe(true)
   })
 
-  it('the share and the day’s marks only once they show; the number on the slot, all of them in its name', () => {
+  it('the day’s marks only once they show; the number on the slot, all of them in its name', () => {
     const quiet = dockSlots({ xp: xp({ spice: 2 }), war: null, market: null })
-    expect(quiet.every((s) => s.share == null && s.marks.length === 0 && !s.leads)).toBe(true)
+    expect(quiet.every((s) => s.marks.length === 0 && !s.leads)).toBe(true)
 
     const season = war({ shares: { spice: 27, art: 14, metals: 32, silk: 11, scrolls: 16 }, desperate: 'silk' })
     const slots = dockSlots({ xp: xp({ spice: 7, art: 4, metals: 3, silk: 2, scrolls: 5 }), war: season, market: { company: 'silk', mult: 1.3 } })
     const by = (c: CompanyId) => slots.find((s) => s.company === c)!
-    expect(slots.map((s) => s.share)).toEqual([27, 14, 32, 11, 16])
     expect(slots.filter((s) => s.leads).map((s) => s.company)).toEqual(['metals'])
     expect(by('metals').marks).toEqual([])
     expect(by('scrolls').marks).toEqual([])
@@ -74,8 +73,20 @@ describe('the company dock', () => {
     expect(by('silk').marks.length).toBeLessThanOrEqual(SLOT_MARKS)
     expect(markText('desperate', 1.3)).toBe(`×${DESPERATE_PAY}`)
     expect(markText('market', 1.3)).toBe('×1.3')
-    expect(slotName(by('silk'), 1.3)).toBe('Rosethread: standing 2, 11% of the trade, desperate, pays ×1.5, its goods sell ×1.3 today')
+    expect(slotName(by('silk'), 1.3)).toBe(`Rosethread: standing 2, ${Math.floor(by('silk').progress * 100)}% to the next, desperate, pays ×1.5, its goods sell ×1.3 today`)
     expect(slotName(by('metals'), 1.3)).toContain('leads the trade war')
+  })
+
+  it('the bar says how far to the next Rep, not the trade’s share (the designer: "show an xp bar instead")', () => {
+    const at = (n: number) => dockSlots({ xp: { spice: n }, war: null, market: null }).find((s) => s.company === 'spice')!
+    const reach1 = standingXpToReach(1)
+    expect(at(0).progress).toBe(0)
+    expect(at(Math.floor(reach1 / 2)).progress).toBeCloseTo(Math.floor(reach1 / 2) / reach1, 5)
+    expect(at(reach1).standing).toBe(1)
+    expect(at(reach1).progress).toBe(0)
+    expect(at(standingXpToReach(MAX_STANDING)).progress).toBe(1)
+    expect(slotName(at(standingXpToReach(MAX_STANDING)), 1)).toContain('top level')
+    expect(slotName(at(Math.floor(reach1 / 2)), 1)).toMatch(/\d+% to the next/)
   })
 
   it('an even season crowns nobody, and nor does a tie at the top', () => {

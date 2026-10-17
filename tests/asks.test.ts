@@ -321,6 +321,10 @@ describe('in the store', () => {
 
   it('counts a fight\'s kills, a ware bought and a pact taken', () => {
     g().openContracts()
+    // A fixed road: the board's seed is random, and on about one road in 25
+    // (board seed 4, say) the post this test picks never sees a goblin, so
+    // the fight counted nothing and the test failed by chance.
+    useGameStore.setState({ board: { ...g().board!, seed: 1 } })
     g().signContract()
     g().pickStartingHero('pick-0')
     useGameStore.setState({

@@ -753,12 +753,19 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.mn-slot-share {
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  line-height: 1;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+/* How far to the next Rep: a thin bar under the number, the company's colour on the rule. */
+.mn-slot-xp {
+  display: block;
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.mn-slot-xp i {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--co, var(--accent)) 70%, var(--text));
 }
 .mn-slot.is-locked {
   border-style: dashed;
@@ -1108,8 +1115,17 @@
   }
   .mn-slot {
     height: 60px;
-    padding-top: 7px;
+    padding-top: 0;
     gap: 0;
+  }
+  /* A short phone's slot has no row to spare: the bar rides its bottom edge. */
+  .mn-slot-xp {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    width: 30px;
+    height: 3px;
+    translate: -50% 0;
   }
   .mn-card {
     gap: 6px;
@@ -1223,9 +1239,10 @@
     height: 64px;
     padding: 10px 8px 8px;
   }
-  .mn-slot-share {
+  .mn-slot-xp {
     flex-basis: 100%;
-    text-align: center;
+    max-width: 48px;
+    margin: 0 auto;
   }
   /* A desk writes the Buy Company slot's name, and the share unlocked under it
      while locked ("Buy" goes: the name says it). */
