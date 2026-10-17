@@ -134,28 +134,34 @@ export function CityScreen() {
             }
       }
     >
-      <Slip>
-        {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
-        <SlipLine label="Escort fee" value={<Gold n={here.fee} />} />
-        {arrived < 100 && <SlipLine label="Cargo that arrived" value={`${arrived}%`} />}
-        {staked && (
-          <SlipLine
-            label="Unsold, still on the wagons"
-            value={
-              left > 0 ? (
-                <>
-                  {Array.from({ length: Math.min(4, left) }, (_, i) => (
-                    <Crate key={i} color={co.color} scale={1} />
-                  ))}{' '}
-                  {left} crate{left === 1 ? '' : 's'}
-                </>
-              ) : (
-                'none'
-              )
-            }
-          />
-        )}
-      </Slip>
+      {/* The slip itemises the pay. When the fee is all there is, the big
+          number and its line above have said it — a one-line slip was the
+          same 60 a third time, and pushed the choice's card under the CTA
+          (job critique, Oct 2026). */}
+      {(here.sold > 0 || arrived < 100 || staked) && (
+        <Slip>
+          {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
+          <SlipLine label="Escort fee" value={<Gold n={here.fee} />} />
+          {arrived < 100 && <SlipLine label="Cargo that arrived" value={`${arrived}%`} />}
+          {staked && (
+            <SlipLine
+              label="Unsold, still on the wagons"
+              value={
+                left > 0 ? (
+                  <>
+                    {Array.from({ length: Math.min(4, left) }, (_, i) => (
+                      <Crate key={i} color={co.color} scale={1} />
+                    ))}{' '}
+                    {left} crate{left === 1 ? '' : 's'}
+                  </>
+                ) : (
+                  'none'
+                )
+              }
+            />
+          )}
+        </Slip>
+      )}
 
       <RouteRail
         company={c.company}
@@ -190,11 +196,11 @@ export function CityScreen() {
             <PickStrip
               label="Head home, or press on"
               tokens={[
-                { id: 'out', art: <Icon name="gold" lg />, label: 'Bank', value: trade.now, name: `Cash out: bank ${trade.now} gold now` },
+                { id: 'out', art: <Icon name="gold" lg />, label: 'Cash out', value: trade.now, name: `Cash out: bank ${trade.now} gold now` },
                 {
                   id: 'on',
                   art: <Crate color={co.color} scale={3} />,
-                  label: 'Bank',
+                  label: 'Press on',
                   value: `${trade.deliver}+`,
                   name: `Press on: deliver, and bank ${trade.deliver} gold or more`,
                   rail: companyVar(c.company),
