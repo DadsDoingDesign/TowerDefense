@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Sprite urls are relative to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Enemy Assets Harness</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #1b1612; color: #eee; font: 13px system-ui, sans-serif; }
+      h2 { font-size: 16px; margin: 24px 0 8px; }
+      .ea-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+      .ea-row > b { width: 220px; font-size: 12px; font-weight: 500; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <h1>Enemy assets — rendered through the real draw code</h1>
+    <main id="out">Loading…</main>
+    <script type="module" src="/harness/enemies.ts"></script>
+  </body>
+</html>

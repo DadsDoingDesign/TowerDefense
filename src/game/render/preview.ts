@@ -3,6 +3,8 @@ import type { Vec2 } from '../core/vec'
 import { ARCHETYPES } from '../data/sentinels'
 import type { Archetype } from '../types'
 import { pixmap } from './pixmap'
+import { ANIM_FRAMES } from './anim'
+import { clanArtFor } from './clanArt'
 import { spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, radialFill, shapePath, strokePolyline } from './paint'
@@ -79,7 +81,10 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
     const es = style.enemy
     ctx.save()
     ctx.translate(e.x, e.y)
-    const eart = style.sprites ? spriteFor(e.id) : undefined
+    // Through the one goblin-art helper (`clanArt`): the clan's strip, its first frame.
+    const role = clanArtFor(e.id)
+    const eart = style.sprites ? (spriteFor(role) ?? spriteFor(`${role}_walk`)) : undefined
+    const eframes = eart && !spriteFor(role) ? (ANIM_FRAMES[`${role}_walk`] ?? 1) : 1
     const espr = eart?.img
     if (espr) {
       /**
@@ -94,7 +99,7 @@ export function drawThemePreview(ctx: CanvasRenderingContext2D, w: number, h: nu
        * silently on the day a theme picker landed, in the one screen whose job
        * is to show the player what the art looks like.
        */
-      const pm = pixmap(espr, { scale: eart!.spriteScale, ring: true })
+      const pm = pixmap(espr, { scale: eart!.spriteScale, ring: true, frames: eframes })
       if (pm) blitPixmap(ctx, pm, 0, 0, e.r * 0.55)
       ctx.restore()
       continue

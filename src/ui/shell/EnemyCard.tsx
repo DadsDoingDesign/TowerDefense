@@ -12,6 +12,8 @@ import { Icon } from '../Icon'
 import { strengthShort } from '../channels'
 import { enemyCardData, learnLine } from './enemyFacts'
 import { EnemyPortrait } from './EnemyPortrait'
+import { useRunClan } from './useRunClan'
+import { clanArtId } from '../../game/data/clans'
 
 /**
  * Q10 — the enemy info card: tap a portrait in the wave strip and a small card
@@ -69,6 +71,7 @@ export function EnemyCard({
   const engine = useGameStore((s) => s.engine)
   // Re-render as the wave runs, so a kill mid-wave counts on an open card.
   const hud = useGameStore((s) => s.hud)
+  const clan = useRunClan()
 
   // The live wave's own kills of this kind: the meta tally is only written
   // when the wave settles (and the engine is dropped in the same breath).
@@ -88,11 +91,12 @@ export function EnemyCard({
     hpMult,
     laneLength: battleMap ? pathLength(battleMap.path) : 0,
     knowledge,
+    clan,
   })
 
   const idx = entries.findIndex((e) => e.typeId === typeId)
   const entry = idx >= 0 ? entries[idx] : null
-  const art = entry?.art ?? ENEMY_TYPES[typeId]?.id ?? typeId
+  const art = entry?.art ?? clanArtId(clan, ENEMY_TYPES[typeId]?.id ?? typeId)
 
   // Placement: on the strip's top edge, centred on the portrait, kept 16px
   // inside the viewport. Measured, then re-measured on resize.

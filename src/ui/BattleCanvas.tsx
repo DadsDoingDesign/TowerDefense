@@ -57,7 +57,8 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setFieldSeason, WeatherLayer } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setEnemyClan, setFieldSeason, WeatherLayer } from '../game/render/renderer'
+import { runClan } from '../game/run/clans'
 import { fieldSeasonFor } from '../game/data/fieldSeasons'
 import { fxLevel, noteFxFrame } from '../game/render/fxQuality'
 import { militiaTheme } from '../game/run/militia'
@@ -589,6 +590,10 @@ export function BattleCanvas() {
       // Dev only: `window.__seasonOff` shows the plain field, for a before / after.
       const season = import.meta.env.DEV && (window as unknown as { __seasonOff?: boolean }).__seasonOff ? null : fieldSeasonFor(runTheme)
       setFieldSeason(season)
+      // …and its goblins wear the road's clan (Oct 2026, `data/clans.ts`): a
+      // look only — the engine never sees it. Dev only: `window.__clanOff`
+      // shows the plain goblins, for a before / after.
+      setEnemyClan(import.meta.env.DEV && (window as unknown as { __clanOff?: boolean }).__clanOff ? null : runClan(st))
 
       const sh = fxShake()
       if (sh.on) {

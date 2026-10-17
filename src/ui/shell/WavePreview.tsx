@@ -4,6 +4,7 @@ import { placementsCount } from './heroCard'
 import { lineUp, queueFor, queueWidth } from './enemyQueue'
 import { wavePreviewShown } from './live'
 import { WaveQueue } from './WaveQueue'
+import { useRunClan } from './useRunClan'
 
 /** How long the preview takes to fade once the wave starts (matches `.sh-wavepre` in battle-band.css). */
 const FADE_MS = 240
@@ -38,6 +39,7 @@ export function WavePreview() {
   const hud = useGameStore((s) => s.hud)
   const deployed = useGameStore(placementsCount)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  const clan = useRunClan()
   // Kept for one fade after the wave starts, then gone.
   const [mounted, setMounted] = useState(shown)
   useEffect(() => {
@@ -48,7 +50,7 @@ export function WavePreview() {
   if (!mounted || !wave) return null
 
   const n = wave.spawns.length
-  const entries = lineUp(queueFor(wave, 'setup', hud))
+  const entries = lineUp(queueFor(wave, 'setup', hud), clan)
   const readWave = () => {
     // Nothing selected is the Context panel's wave read-out (`EmptyPanel`).
     if (useGameStore.getState().shellSelection) shellSelect(null)

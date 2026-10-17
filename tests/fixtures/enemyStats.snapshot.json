@@ -1,0 +1,1406 @@
+{
+ "types": {
+  "barrel1": {
+   "id": "barrel1",
+   "name": "Barrel Imp",
+   "baseHp": 72,
+   "speed": 74,
+   "reward": 6,
+   "leak": 2,
+   "radius": 13,
+   "color": "#b5793a",
+   "physResist": 0.15
+  },
+  "barrel1_plated": {
+   "id": "barrel1",
+   "name": "Barrel Imp · Plated",
+   "baseHp": 72,
+   "speed": 67,
+   "reward": 6,
+   "leak": 2,
+   "radius": 13,
+   "color": "#b5793a",
+   "physResist": 0.55
+  },
+  "barrel1_swift": {
+   "id": "barrel1",
+   "name": "Barrel Imp · Swift",
+   "baseHp": 72,
+   "speed": 104,
+   "reward": 6,
+   "leak": 2,
+   "radius": 13,
+   "color": "#b5793a",
+   "physResist": 0.08
+  },
+  "barrel1_warded": {
+   "id": "barrel1",
+   "name": "Barrel Imp · Warded",
+   "baseHp": 72,
+   "speed": 74,
+   "reward": 6,
+   "leak": 2,
+   "radius": 13,
+   "color": "#b5793a",
+   "magResist": 0.44
+  },
+  "barrel2": {
+   "id": "barrel2",
+   "name": "Barrel Roller",
+   "baseHp": 134,
+   "speed": 70,
+   "reward": 9,
+   "leak": 2,
+   "radius": 15,
+   "color": "#4a86c0",
+   "physResist": 0.2,
+   "behaviours": [
+    {
+     "kind": "leap",
+     "distance": 110
+    }
+   ]
+  },
+  "barrel2_plated": {
+   "id": "barrel2",
+   "name": "Barrel Roller · Plated",
+   "baseHp": 134,
+   "speed": 63,
+   "reward": 9,
+   "leak": 2,
+   "radius": 15,
+   "color": "#4a86c0",
+   "physResist": 0.6,
+   "behaviours": [
+    {
+     "kind": "leap",
+     "distance": 110
+    }
+   ]
+  },
+  "barrel2_swift": {
+   "id": "barrel2",
+   "name": "Barrel Roller · Swift",
+   "baseHp": 134,
+   "speed": 98,
+   "reward": 9,
+   "leak": 2,
+   "radius": 15,
+   "color": "#4a86c0",
+   "physResist": 0.1,
+   "behaviours": [
+    {
+     "kind": "leap",
+     "distance": 110
+    }
+   ]
+  },
+  "barrel2_warded": {
+   "id": "barrel2",
+   "name": "Barrel Roller · Warded",
+   "baseHp": 134,
+   "speed": 70,
+   "reward": 9,
+   "leak": 2,
+   "radius": 15,
+   "color": "#4a86c0",
+   "behaviours": [
+    {
+     "kind": "leap",
+     "distance": 110
+    }
+   ],
+   "magResist": 0.44
+  },
+  "barrel3": {
+   "id": "barrel3",
+   "name": "Ironbarrel",
+   "baseHp": 248,
+   "speed": 65,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.25
+  },
+  "barrel3_bearer": {
+   "id": "barrel3",
+   "name": "Shieldbearer",
+   "baseHp": 248,
+   "speed": 65,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.25,
+   "behaviours": [
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel3_bearer_plated": {
+   "id": "barrel3",
+   "name": "Shieldbearer · Plated",
+   "baseHp": 248,
+   "speed": 59,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.65,
+   "behaviours": [
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel3_bearer_swift": {
+   "id": "barrel3",
+   "name": "Shieldbearer · Swift",
+   "baseHp": 248,
+   "speed": 91,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.13,
+   "behaviours": [
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel3_bearer_warded": {
+   "id": "barrel3",
+   "name": "Shieldbearer · Warded",
+   "baseHp": 248,
+   "speed": 65,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ],
+   "magResist": 0.44
+  },
+  "barrel3_plated": {
+   "id": "barrel3",
+   "name": "Ironbarrel · Plated",
+   "baseHp": 248,
+   "speed": 59,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.65
+  },
+  "barrel3_swift": {
+   "id": "barrel3",
+   "name": "Ironbarrel · Swift",
+   "baseHp": 248,
+   "speed": 91,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "physResist": 0.13
+  },
+  "barrel3_warded": {
+   "id": "barrel3",
+   "name": "Ironbarrel · Warded",
+   "baseHp": 248,
+   "speed": 65,
+   "reward": 14,
+   "leak": 3,
+   "radius": 18,
+   "color": "#8a5ec0",
+   "magResist": 0.44
+  },
+  "barrel4": {
+   "id": "barrel4",
+   "name": "Siege Barrel",
+   "baseHp": 430,
+   "speed": 60,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.3,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    }
+   ]
+  },
+  "barrel4_bearer": {
+   "id": "barrel4",
+   "name": "Shieldbearer",
+   "baseHp": 430,
+   "speed": 60,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.3,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    },
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel4_bearer_plated": {
+   "id": "barrel4",
+   "name": "Shieldbearer · Plated",
+   "baseHp": 430,
+   "speed": 54,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.65,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    },
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel4_bearer_swift": {
+   "id": "barrel4",
+   "name": "Shieldbearer · Swift",
+   "baseHp": 430,
+   "speed": 84,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.15,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    },
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ]
+  },
+  "barrel4_bearer_warded": {
+   "id": "barrel4",
+   "name": "Shieldbearer · Warded",
+   "baseHp": 430,
+   "speed": 60,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    },
+    {
+     "kind": "shieldAura",
+     "radius": 95,
+     "resist": 0.2
+    }
+   ],
+   "magResist": 0.44
+  },
+  "barrel4_plated": {
+   "id": "barrel4",
+   "name": "Siege Barrel · Plated",
+   "baseHp": 430,
+   "speed": 54,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.65,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    }
+   ]
+  },
+  "barrel4_swift": {
+   "id": "barrel4",
+   "name": "Siege Barrel · Swift",
+   "baseHp": 430,
+   "speed": 84,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "physResist": 0.15,
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    }
+   ]
+  },
+  "barrel4_warded": {
+   "id": "barrel4",
+   "name": "Siege Barrel · Warded",
+   "baseHp": 430,
+   "speed": 60,
+   "reward": 21,
+   "leak": 4,
+   "radius": 21,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "split",
+     "into": "barrel1",
+     "count": 2,
+     "hpFrac": 0.25
+    }
+   ],
+   "magResist": 0.44
+  },
+  "barrel5": {
+   "id": "barrel5",
+   "name": "The Colossus Keg",
+   "baseHp": 2600,
+   "speed": 65,
+   "reward": 220,
+   "leak": 22,
+   "radius": 33,
+   "color": "#6a4a8f",
+   "physResist": 0.35,
+   "magResist": 0.15,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "bossSplit",
+     "at": 0.5,
+     "count": 2,
+     "hpShare": 0.75,
+     "speedMult": 1.15,
+     "radius": 24
+    }
+   ]
+  },
+  "barrel5_plated": {
+   "id": "barrel5",
+   "name": "The Colossus Keg · Plated",
+   "baseHp": 2600,
+   "speed": 59,
+   "reward": 220,
+   "leak": 22,
+   "radius": 33,
+   "color": "#6a4a8f",
+   "physResist": 0.65,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "bossSplit",
+     "at": 0.5,
+     "count": 2,
+     "hpShare": 0.75,
+     "speedMult": 1.15,
+     "radius": 24
+    }
+   ]
+  },
+  "barrel5_swift": {
+   "id": "barrel5",
+   "name": "The Colossus Keg · Swift",
+   "baseHp": 2600,
+   "speed": 91,
+   "reward": 220,
+   "leak": 22,
+   "radius": 33,
+   "color": "#6a4a8f",
+   "physResist": 0.18,
+   "magResist": 0.08,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "bossSplit",
+     "at": 0.5,
+     "count": 2,
+     "hpShare": 0.75,
+     "speedMult": 1.15,
+     "radius": 24
+    }
+   ]
+  },
+  "barrel5_warded": {
+   "id": "barrel5",
+   "name": "The Colossus Keg · Warded",
+   "baseHp": 2600,
+   "speed": 65,
+   "reward": 220,
+   "leak": 22,
+   "radius": 33,
+   "color": "#6a4a8f",
+   "magResist": 0.59,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "bossSplit",
+     "at": 0.5,
+     "count": 2,
+     "hpShare": 0.75,
+     "speedMult": 1.15,
+     "radius": 24
+    }
+   ]
+  },
+  "tnt1": {
+   "id": "tnt1",
+   "name": "Fuse Whelp",
+   "baseHp": 34,
+   "speed": 103,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#c0563a",
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 80,
+     "gateDamage": 1
+    }
+   ]
+  },
+  "tnt1_plated": {
+   "id": "tnt1",
+   "name": "Fuse Whelp · Plated",
+   "baseHp": 34,
+   "speed": 93,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#c0563a",
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 80,
+     "gateDamage": 1
+    }
+   ],
+   "physResist": 0.4
+  },
+  "tnt1_swift": {
+   "id": "tnt1",
+   "name": "Fuse Whelp · Swift",
+   "baseHp": 34,
+   "speed": 144,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#c0563a",
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 80,
+     "gateDamage": 1
+    }
+   ]
+  },
+  "tnt1_warded": {
+   "id": "tnt1",
+   "name": "Fuse Whelp · Warded",
+   "baseHp": 34,
+   "speed": 103,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#c0563a",
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 80,
+     "gateDamage": 1
+    }
+   ],
+   "magResist": 0.44
+  },
+  "tnt2": {
+   "id": "tnt2",
+   "name": "Bomber",
+   "baseHp": 60,
+   "speed": 98,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#4a86c0",
+   "magResist": 0.15,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 450,
+     "radius": 55,
+     "gateDamage": 1,
+     "windup": 1.6,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt2_plated": {
+   "id": "tnt2",
+   "name": "Bomber · Plated",
+   "baseHp": 60,
+   "speed": 88,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#4a86c0",
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 450,
+     "radius": 55,
+     "gateDamage": 1,
+     "windup": 1.6,
+     "charges": 1
+    }
+   ],
+   "physResist": 0.4
+  },
+  "tnt2_swift": {
+   "id": "tnt2",
+   "name": "Bomber · Swift",
+   "baseHp": 60,
+   "speed": 137,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#4a86c0",
+   "magResist": 0.08,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 450,
+     "radius": 55,
+     "gateDamage": 1,
+     "windup": 1.6,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt2_warded": {
+   "id": "tnt2",
+   "name": "Bomber · Warded",
+   "baseHp": 60,
+   "speed": 98,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#4a86c0",
+   "magResist": 0.59,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 450,
+     "radius": 55,
+     "gateDamage": 1,
+     "windup": 1.6,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt3": {
+   "id": "tnt3",
+   "name": "Demolisher",
+   "baseHp": 100,
+   "speed": 94,
+   "reward": 9,
+   "leak": 2,
+   "radius": 14,
+   "color": "#8a5ec0",
+   "magResist": 0.2,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 500,
+     "radius": 60,
+     "gateDamage": 1,
+     "windup": 1.4,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt3_plated": {
+   "id": "tnt3",
+   "name": "Demolisher · Plated",
+   "baseHp": 100,
+   "speed": 85,
+   "reward": 9,
+   "leak": 2,
+   "radius": 14,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 500,
+     "radius": 60,
+     "gateDamage": 1,
+     "windup": 1.4,
+     "charges": 1
+    }
+   ],
+   "physResist": 0.4
+  },
+  "tnt3_swift": {
+   "id": "tnt3",
+   "name": "Demolisher · Swift",
+   "baseHp": 100,
+   "speed": 132,
+   "reward": 9,
+   "leak": 2,
+   "radius": 14,
+   "color": "#8a5ec0",
+   "magResist": 0.1,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 500,
+     "radius": 60,
+     "gateDamage": 1,
+     "windup": 1.4,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt3_warded": {
+   "id": "tnt3",
+   "name": "Demolisher · Warded",
+   "baseHp": 100,
+   "speed": 94,
+   "reward": 9,
+   "leak": 2,
+   "radius": 14,
+   "color": "#8a5ec0",
+   "magResist": 0.64,
+   "behaviours": [
+    {
+     "kind": "lob",
+     "range": 500,
+     "radius": 60,
+     "gateDamage": 1,
+     "windup": 1.4,
+     "charges": 1
+    }
+   ]
+  },
+  "tnt4": {
+   "id": "tnt4",
+   "name": "Sapper",
+   "baseHp": 172,
+   "speed": 89,
+   "reward": 14,
+   "leak": 1,
+   "radius": 16,
+   "color": "#d4b24a",
+   "magResist": 0.25,
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 90,
+     "gateDamage": 2
+    }
+   ]
+  },
+  "tnt4_plated": {
+   "id": "tnt4",
+   "name": "Sapper · Plated",
+   "baseHp": 172,
+   "speed": 80,
+   "reward": 14,
+   "leak": 1,
+   "radius": 16,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 90,
+     "gateDamage": 2
+    }
+   ],
+   "physResist": 0.4
+  },
+  "tnt4_swift": {
+   "id": "tnt4",
+   "name": "Sapper · Swift",
+   "baseHp": 172,
+   "speed": 125,
+   "reward": 14,
+   "leak": 1,
+   "radius": 16,
+   "color": "#d4b24a",
+   "magResist": 0.13,
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 90,
+     "gateDamage": 2
+    }
+   ]
+  },
+  "tnt4_warded": {
+   "id": "tnt4",
+   "name": "Sapper · Warded",
+   "baseHp": 172,
+   "speed": 89,
+   "reward": 14,
+   "leak": 1,
+   "radius": 16,
+   "color": "#d4b24a",
+   "magResist": 0.65,
+   "behaviours": [
+    {
+     "kind": "sapper",
+     "radius": 90,
+     "gateDamage": 2
+    }
+   ]
+  },
+  "tnt5": {
+   "id": "tnt5",
+   "name": "Powderkeg King",
+   "baseHp": 1350,
+   "speed": 74,
+   "reward": 150,
+   "leak": 15,
+   "radius": 28,
+   "color": "#802a2a",
+   "magResist": 0.25,
+   "physResist": 0.1,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "kingLob",
+     "interval": 8,
+     "first": 3,
+     "windup": 1.5,
+     "radius": 60,
+     "gateDamage": 1,
+     "rageAt": 0.5,
+     "rageInterval": 4
+    }
+   ]
+  },
+  "tnt5_plated": {
+   "id": "tnt5",
+   "name": "Powderkeg King · Plated",
+   "baseHp": 1350,
+   "speed": 67,
+   "reward": 150,
+   "leak": 15,
+   "radius": 28,
+   "color": "#802a2a",
+   "physResist": 0.5,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "kingLob",
+     "interval": 8,
+     "first": 3,
+     "windup": 1.5,
+     "radius": 60,
+     "gateDamage": 1,
+     "rageAt": 0.5,
+     "rageInterval": 4
+    }
+   ]
+  },
+  "tnt5_swift": {
+   "id": "tnt5",
+   "name": "Powderkeg King · Swift",
+   "baseHp": 1350,
+   "speed": 104,
+   "reward": 150,
+   "leak": 15,
+   "radius": 28,
+   "color": "#802a2a",
+   "magResist": 0.13,
+   "physResist": 0.05,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "kingLob",
+     "interval": 8,
+     "first": 3,
+     "windup": 1.5,
+     "radius": 60,
+     "gateDamage": 1,
+     "rageAt": 0.5,
+     "rageInterval": 4
+    }
+   ]
+  },
+  "tnt5_warded": {
+   "id": "tnt5",
+   "name": "Powderkeg King · Warded",
+   "baseHp": 1350,
+   "speed": 74,
+   "reward": 150,
+   "leak": 15,
+   "radius": 28,
+   "color": "#802a2a",
+   "magResist": 0.65,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "kingLob",
+     "interval": 8,
+     "first": 3,
+     "windup": 1.5,
+     "radius": 60,
+     "gateDamage": 1,
+     "rageAt": 0.5,
+     "rageInterval": 4
+    }
+   ]
+  },
+  "torch1": {
+   "id": "torch1",
+   "name": "Torch Runt",
+   "baseHp": 24,
+   "speed": 146,
+   "reward": 4,
+   "leak": 1,
+   "radius": 11,
+   "color": "#d0563a"
+  },
+  "torch1_plated": {
+   "id": "torch1",
+   "name": "Torch Runt · Plated",
+   "baseHp": 24,
+   "speed": 131,
+   "reward": 4,
+   "leak": 1,
+   "radius": 11,
+   "color": "#d0563a",
+   "physResist": 0.4
+  },
+  "torch1_swift": {
+   "id": "torch1",
+   "name": "Torch Runt · Swift",
+   "baseHp": 24,
+   "speed": 204,
+   "reward": 4,
+   "leak": 1,
+   "radius": 11,
+   "color": "#d0563a"
+  },
+  "torch1_warded": {
+   "id": "torch1",
+   "name": "Torch Runt · Warded",
+   "baseHp": 24,
+   "speed": 146,
+   "reward": 4,
+   "leak": 1,
+   "radius": 11,
+   "color": "#d0563a",
+   "magResist": 0.44
+  },
+  "torch2": {
+   "id": "torch2",
+   "name": "Torch Goblin",
+   "baseHp": 42,
+   "speed": 134,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#4a86c0"
+  },
+  "torch2_plated": {
+   "id": "torch2",
+   "name": "Torch Goblin · Plated",
+   "baseHp": 42,
+   "speed": 121,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#4a86c0",
+   "physResist": 0.4
+  },
+  "torch2_swift": {
+   "id": "torch2",
+   "name": "Torch Goblin · Swift",
+   "baseHp": 42,
+   "speed": 188,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#4a86c0"
+  },
+  "torch2_warded": {
+   "id": "torch2",
+   "name": "Torch Goblin · Warded",
+   "baseHp": 42,
+   "speed": 134,
+   "reward": 5,
+   "leak": 1,
+   "radius": 12,
+   "color": "#4a86c0",
+   "magResist": 0.44
+  },
+  "torch3": {
+   "id": "torch3",
+   "name": "Torch Raider",
+   "baseHp": 76,
+   "speed": 125,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0"
+  },
+  "torch3_plated": {
+   "id": "torch3",
+   "name": "Torch Raider · Plated",
+   "baseHp": 76,
+   "speed": 113,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "physResist": 0.4
+  },
+  "torch3_shaman": {
+   "id": "torch3",
+   "name": "Torch Shaman",
+   "baseHp": 68,
+   "speed": 125,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ]
+  },
+  "torch3_shaman_plated": {
+   "id": "torch3",
+   "name": "Torch Shaman · Plated",
+   "baseHp": 68,
+   "speed": 113,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ],
+   "physResist": 0.4
+  },
+  "torch3_shaman_swift": {
+   "id": "torch3",
+   "name": "Torch Shaman · Swift",
+   "baseHp": 68,
+   "speed": 175,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ]
+  },
+  "torch3_shaman_warded": {
+   "id": "torch3",
+   "name": "Torch Shaman · Warded",
+   "baseHp": 68,
+   "speed": 125,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "behaviours": [
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ],
+   "magResist": 0.44
+  },
+  "torch3_swift": {
+   "id": "torch3",
+   "name": "Torch Raider · Swift",
+   "baseHp": 76,
+   "speed": 175,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0"
+  },
+  "torch3_warded": {
+   "id": "torch3",
+   "name": "Torch Raider · Warded",
+   "baseHp": 76,
+   "speed": 125,
+   "reward": 7,
+   "leak": 1,
+   "radius": 13,
+   "color": "#8a5ec0",
+   "magResist": 0.44
+  },
+  "torch4": {
+   "id": "torch4",
+   "name": "Torch Berserker",
+   "baseHp": 128,
+   "speed": 118,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    }
+   ]
+  },
+  "torch4_plated": {
+   "id": "torch4",
+   "name": "Torch Berserker · Plated",
+   "baseHp": 128,
+   "speed": 106,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    }
+   ],
+   "physResist": 0.4
+  },
+  "torch4_shaman": {
+   "id": "torch4",
+   "name": "Torch Shaman",
+   "baseHp": 115,
+   "speed": 118,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    },
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ]
+  },
+  "torch4_shaman_plated": {
+   "id": "torch4",
+   "name": "Torch Shaman · Plated",
+   "baseHp": 115,
+   "speed": 106,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    },
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ],
+   "physResist": 0.4
+  },
+  "torch4_shaman_swift": {
+   "id": "torch4",
+   "name": "Torch Shaman · Swift",
+   "baseHp": 115,
+   "speed": 165,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    },
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ]
+  },
+  "torch4_shaman_warded": {
+   "id": "torch4",
+   "name": "Torch Shaman · Warded",
+   "baseHp": 115,
+   "speed": 118,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    },
+    {
+     "kind": "healPulse",
+     "radius": 110,
+     "heal": 0.06,
+     "interval": 3,
+     "charges": 10
+    }
+   ],
+   "magResist": 0.44
+  },
+  "torch4_swift": {
+   "id": "torch4",
+   "name": "Torch Berserker · Swift",
+   "baseHp": 128,
+   "speed": 165,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    }
+   ]
+  },
+  "torch4_warded": {
+   "id": "torch4",
+   "name": "Torch Berserker · Warded",
+   "baseHp": 128,
+   "speed": 118,
+   "reward": 11,
+   "leak": 2,
+   "radius": 15,
+   "color": "#d4b24a",
+   "behaviours": [
+    {
+     "kind": "enrage",
+     "below": 0.4,
+     "speedMult": 1.5
+    }
+   ],
+   "magResist": 0.44
+  },
+  "torch5": {
+   "id": "torch5",
+   "name": "Warlord Grukk",
+   "baseHp": 950,
+   "speed": 89,
+   "reward": 110,
+   "leak": 11,
+   "radius": 26,
+   "color": "#b0301f",
+   "physResist": 0.15,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "warCry",
+     "at": [
+      0.66,
+      0.33
+     ],
+     "windup": 0.8,
+     "radius": 260,
+     "speedMult": 1.4,
+     "dur": 4
+    }
+   ]
+  },
+  "torch5_plated": {
+   "id": "torch5",
+   "name": "Warlord Grukk · Plated",
+   "baseHp": 950,
+   "speed": 80,
+   "reward": 110,
+   "leak": 11,
+   "radius": 26,
+   "color": "#b0301f",
+   "physResist": 0.55,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "warCry",
+     "at": [
+      0.66,
+      0.33
+     ],
+     "windup": 0.8,
+     "radius": 260,
+     "speedMult": 1.4,
+     "dur": 4
+    }
+   ]
+  },
+  "torch5_swift": {
+   "id": "torch5",
+   "name": "Warlord Grukk · Swift",
+   "baseHp": 950,
+   "speed": 125,
+   "reward": 110,
+   "leak": 11,
+   "radius": 26,
+   "color": "#b0301f",
+   "physResist": 0.08,
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "warCry",
+     "at": [
+      0.66,
+      0.33
+     ],
+     "windup": 0.8,
+     "radius": 260,
+     "speedMult": 1.4,
+     "dur": 4
+    }
+   ]
+  },
+  "torch5_warded": {
+   "id": "torch5",
+   "name": "Warlord Grukk · Warded",
+   "baseHp": 950,
+   "speed": 89,
+   "reward": 110,
+   "leak": 11,
+   "radius": 26,
+   "color": "#b0301f",
+   "isBoss": true,
+   "behaviours": [
+    {
+     "kind": "warCry",
+     "at": [
+      0.66,
+      0.33
+     ],
+     "windup": 0.8,
+     "radius": 260,
+     "speedMult": 1.4,
+     "dur": 4
+    }
+   ],
+   "magResist": 0.44
+  }
+ },
+ "mods": [
+  {
+   "id": "plated",
+   "prefix": "Plated",
+   "blurb": "physical damage bounces; magic goes straight through — and it rolls 10% slower",
+   "speedMult": 0.9,
+   "physResist": 0.4,
+   "magResist": 0,
+   "physKeep": 1,
+   "magKeep": 0
+  },
+  {
+   "id": "warded",
+   "prefix": "Warded",
+   "blurb": "magic damage bounces; steel goes straight through",
+   "speedMult": 1,
+   "physResist": 0,
+   "magResist": 0.44,
+   "physKeep": 0,
+   "magKeep": 1
+  },
+  {
+   "id": "swift",
+   "prefix": "Swift",
+   "blurb": "lightly armoured and 40% faster — coverage, not damage type",
+   "speedMult": 1.4,
+   "physResist": 0,
+   "magResist": 0,
+   "physKeep": 0.5,
+   "magKeep": 0.5
+  }
+ ]
+}

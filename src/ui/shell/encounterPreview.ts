@@ -11,6 +11,9 @@ import {
 import type { WaveDef } from '../../game/types'
 import { encounterNode } from '../../game/run/map'
 import { encounterRulesOf, type RouteRef } from '../../game/run/charter'
+import { enemyName } from '../../game/data/clans'
+import { roadClan } from '../../game/run/clans'
+import { actOf } from '../../game/run/threat'
 
 /**
  * ---------------------------------------------------------------------------
@@ -126,6 +129,8 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const v = variantFor(run, node)
   if (!kind || !wave || !v) return null
 
+  // The road's clan in the node's act (`run/clans`): the preview names its champions as the fight will.
+  const clan = roadClan(run.contract, run.runSeed, actOf(node.layer))
   let phys = 0
   let mag = 0
   let physMax = 0
@@ -142,7 +147,7 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
       mag += count
       magMax = Math.max(magMax, t.magResist)
     }
-    if (t.isBoss) champions.push(t.name)
+    if (t.isBoss) champions.push(enemyName(t, clan))
   }
   const heads = wave.spawns.length
   return {

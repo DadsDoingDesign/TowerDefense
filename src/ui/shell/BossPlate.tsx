@@ -3,6 +3,8 @@ import { useGameStore } from '../../state/gameStore'
 import { useBattleLedger } from '../battleLedger'
 import { Icon } from '../Icon'
 import { bossPhaseInfo } from '../../game/data/behaviours'
+import { enemyName } from '../../game/data/clans'
+import { runClanNow } from './useRunClan'
 
 interface Plate {
   id: string
@@ -65,7 +67,7 @@ export function BossPlate() {
         else if (now - t.at > 450 || t.frac - frac > 0.3) t.frac = Math.max(frac, t.frac - 0.05)
       }
       setTrailFrac(trail.current.frac)
-      setPlate({ id: lead.id, name: lead.type.name, hp: lead.hp, maxHp: lead.maxHp, more: alive.length - 1, phase: bossPhaseInfo(lead.type, lead.phase) })
+      setPlate({ id: lead.id, name: enemyName(lead.type, runClanNow()), hp: lead.hp, maxHp: lead.maxHp, more: alive.length - 1, phase: bossPhaseInfo(lead.type, lead.phase) })
     }
     tick()
     const iv = window.setInterval(tick, 100)

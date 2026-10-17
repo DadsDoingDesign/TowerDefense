@@ -1,0 +1,3899 @@
+{
+ "generatedBy": "npx tsx scripts/enemy-assets.ts",
+ "clans": [
+  {
+   "id": "cinder",
+   "company": "spice",
+   "name": "Cinder Clan",
+   "tell": "Flame crests and soot iron; the torch burns on, the kegs grow a chilli stem.",
+   "specialists": {
+    "shaman": "Ember Shaman",
+    "bearer": "Hearth Bearer"
+   }
+  },
+  {
+   "id": "smudge",
+   "company": "art",
+   "name": "Smudge Gang",
+   "tell": "Paint buckets for helmets, brushes for weapons, paint dripping off everything.",
+   "specialists": {
+    "shaman": "Smear Shaman",
+    "bearer": "Canvas Bearer"
+   }
+  },
+  {
+   "id": "delve",
+   "company": "metals",
+   "name": "Deepdelve",
+   "tell": "Riveted iron: lamp helmets, picks for torches, ore baskets on their backs.",
+   "specialists": {
+    "shaman": "Lamp Shaman",
+    "bearer": "Rivet Bearer"
+   }
+  },
+  {
+   "id": "silkcut",
+   "company": "silk",
+   "name": "Silkcut Gang",
+   "tell": "Wide brims and roses, needle blades, spools on their backs; the barrel is a reel.",
+   "specialists": {
+    "shaman": "Silk Shaman",
+    "bearer": "Veil Bearer"
+   }
+  },
+  {
+   "id": "hexmoon",
+   "company": "scrolls",
+   "name": "Hexmoon Coven",
+   "tell": "Crescent horns and moon masks, quill staves, scroll cases; kegs become rune urns.",
+   "specialists": {
+    "shaman": "Moon Shaman",
+    "bearer": "Ward Bearer"
+   }
+  }
+ ],
+ "forms": [
+  {
+   "form": "base",
+   "title": "Base"
+  },
+  {
+   "form": "swift",
+   "title": "Elite (Swift)"
+  },
+  {
+   "form": "plated",
+   "title": "Plated"
+  },
+  {
+   "form": "warded",
+   "title": "Warded"
+  }
+ ],
+ "looks": [
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "torch",
+   "tier": 1,
+   "key": "torch1",
+   "lookId": "cinder.torch1",
+   "role": "cinder_torch1",
+   "name": "Ember Runt",
+   "engineName": "Torch Runt",
+   "boss": false,
+   "look": "flame crest, torch",
+   "parts": [
+    "crest-flames",
+    "soot-band"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch1",
+     "name": "Ember Runt"
+    },
+    {
+     "form": "swift",
+     "key": "torch1_swift",
+     "name": "Ember Runt · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch1_plated",
+     "name": "Ember Runt · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch1_warded",
+     "name": "Ember Runt · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/torch1.png",
+    "swift": "cinder/torch1-swift.png",
+    "plated": "cinder/torch1-plated.png",
+    "warded": "cinder/torch1-warded.png"
+   },
+   "walk": "cinder/walk-torch1.png",
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "torch",
+   "tier": 2,
+   "key": "torch2",
+   "lookId": "cinder.torch2",
+   "role": "cinder_torch2",
+   "name": "Cinder Goblin",
+   "engineName": "Torch Goblin",
+   "boss": false,
+   "look": "+ soot pauldron",
+   "parts": [
+    "crest-flames",
+    "soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch2",
+     "name": "Cinder Goblin"
+    },
+    {
+     "form": "swift",
+     "key": "torch2_swift",
+     "name": "Cinder Goblin · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch2_plated",
+     "name": "Cinder Goblin · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch2_warded",
+     "name": "Cinder Goblin · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/torch2.png",
+    "swift": "cinder/torch2-swift.png",
+    "plated": "cinder/torch2-plated.png",
+    "warded": "cinder/torch2-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "torch",
+   "tier": 3,
+   "key": "torch3",
+   "lookId": "cinder.torch3",
+   "role": "cinder_torch3",
+   "name": "Pepper Raider",
+   "engineName": "Torch Raider",
+   "boss": false,
+   "look": "+ chilli banner",
+   "parts": [
+    "chilli-banner",
+    "crest-flames",
+    "soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch3",
+     "name": "Pepper Raider"
+    },
+    {
+     "form": "swift",
+     "key": "torch3_swift",
+     "name": "Pepper Raider · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch3_plated",
+     "name": "Pepper Raider · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch3_warded",
+     "name": "Pepper Raider · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/torch3.png",
+    "swift": "cinder/torch3-swift.png",
+    "plated": "cinder/torch3-plated.png",
+    "warded": "cinder/torch3-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "torch",
+   "tier": 4,
+   "key": "torch4",
+   "lookId": "cinder.torch4",
+   "role": "cinder_torch4",
+   "name": "Blaze Berserker",
+   "engineName": "Torch Berserker",
+   "boss": false,
+   "look": "tall triple crest",
+   "parts": [
+    "chilli-banner",
+    "tall-crest-flames",
+    "soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch4",
+     "name": "Blaze Berserker"
+    },
+    {
+     "form": "swift",
+     "key": "torch4_swift",
+     "name": "Blaze Berserker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch4_plated",
+     "name": "Blaze Berserker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch4_warded",
+     "name": "Blaze Berserker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/torch4.png",
+    "swift": "cinder/torch4-swift.png",
+    "plated": "cinder/torch4-plated.png",
+    "warded": "cinder/torch4-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "torch",
+   "tier": 5,
+   "key": "torch5",
+   "lookId": "cinder.torch5",
+   "role": "cinder_torch5",
+   "name": "Chief Scorchgut",
+   "engineName": "Warlord Grukk",
+   "boss": true,
+   "look": "horned fire crown, ember mantle",
+   "parts": [
+    "ember-mantle",
+    "chilli-banner",
+    "iron-horns",
+    "crown-flames",
+    "crown-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch5",
+     "name": "Chief Scorchgut"
+    },
+    {
+     "form": "swift",
+     "key": "torch5_swift",
+     "name": "Chief Scorchgut · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch5_plated",
+     "name": "Chief Scorchgut · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch5_warded",
+     "name": "Chief Scorchgut · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/torch5.png",
+    "swift": "cinder/torch5-swift.png",
+    "plated": "cinder/torch5-plated.png",
+    "warded": "cinder/torch5-warded.png"
+   },
+   "walk": "cinder/walk-torch5.png",
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "tnt",
+   "tier": 1,
+   "key": "tnt1",
+   "lookId": "cinder.tnt1",
+   "role": "cinder_tnt1",
+   "name": "Spark Whelp",
+   "engineName": "Fuse Whelp",
+   "boss": false,
+   "look": "flame crest, firepot pack, firepot",
+   "parts": [
+    "firepots",
+    "firepot-flames",
+    "firepot",
+    "firepot-flame",
+    "tnt-crest-flames",
+    "tnt-soot-band"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt1",
+     "name": "Spark Whelp"
+    },
+    {
+     "form": "swift",
+     "key": "tnt1_swift",
+     "name": "Spark Whelp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt1_plated",
+     "name": "Spark Whelp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt1_warded",
+     "name": "Spark Whelp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/tnt1.png",
+    "swift": "cinder/tnt1-swift.png",
+    "plated": "cinder/tnt1-plated.png",
+    "warded": "cinder/tnt1-warded.png"
+   },
+   "walk": "cinder/walk-tnt1.png",
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "tnt",
+   "tier": 2,
+   "key": "tnt2",
+   "lookId": "cinder.tnt2",
+   "role": "cinder_tnt2",
+   "name": "Firepot Bomber",
+   "engineName": "Bomber",
+   "boss": false,
+   "look": "+ soot pauldron",
+   "parts": [
+    "firepots",
+    "firepot-flames",
+    "firepot",
+    "firepot-flame",
+    "tnt-crest-flames",
+    "tnt-soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt2",
+     "name": "Firepot Bomber"
+    },
+    {
+     "form": "swift",
+     "key": "tnt2_swift",
+     "name": "Firepot Bomber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt2_plated",
+     "name": "Firepot Bomber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt2_warded",
+     "name": "Firepot Bomber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/tnt2.png",
+    "swift": "cinder/tnt2-swift.png",
+    "plated": "cinder/tnt2-plated.png",
+    "warded": "cinder/tnt2-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "tnt",
+   "tier": 3,
+   "key": "tnt3",
+   "lookId": "cinder.tnt3",
+   "role": "cinder_tnt3",
+   "name": "Kiln Smasher",
+   "engineName": "Demolisher",
+   "boss": false,
+   "look": "+ chilli banner",
+   "parts": [
+    "chilli-banner",
+    "firepots",
+    "firepot-flames",
+    "firepot",
+    "firepot-flame",
+    "tnt-crest-flames",
+    "tnt-soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt3",
+     "name": "Kiln Smasher"
+    },
+    {
+     "form": "swift",
+     "key": "tnt3_swift",
+     "name": "Kiln Smasher · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt3_plated",
+     "name": "Kiln Smasher · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt3_warded",
+     "name": "Kiln Smasher · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/tnt3.png",
+    "swift": "cinder/tnt3-swift.png",
+    "plated": "cinder/tnt3-plated.png",
+    "warded": "cinder/tnt3-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "tnt",
+   "tier": 4,
+   "key": "tnt4",
+   "lookId": "cinder.tnt4",
+   "role": "cinder_tnt4",
+   "name": "Ash Sapper",
+   "engineName": "Sapper",
+   "boss": false,
+   "look": "tall triple crest",
+   "parts": [
+    "chilli-banner",
+    "firepots",
+    "firepot-flames",
+    "firepot",
+    "firepot-flame",
+    "tnt-tall-crest-flames",
+    "tnt-soot-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt4",
+     "name": "Ash Sapper"
+    },
+    {
+     "form": "swift",
+     "key": "tnt4_swift",
+     "name": "Ash Sapper · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt4_plated",
+     "name": "Ash Sapper · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt4_warded",
+     "name": "Ash Sapper · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/tnt4.png",
+    "swift": "cinder/tnt4-swift.png",
+    "plated": "cinder/tnt4-plated.png",
+    "warded": "cinder/tnt4-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "tnt",
+   "tier": 5,
+   "key": "tnt5",
+   "lookId": "cinder.tnt5",
+   "role": "cinder_tnt5",
+   "name": "The Cayenne King",
+   "engineName": "Powderkeg King",
+   "boss": true,
+   "look": "horned fire crown, ember standard",
+   "parts": [
+    "ember-standard",
+    "firepots",
+    "firepot-flames",
+    "firepot",
+    "firepot-flame",
+    "tnt-iron-horns",
+    "tnt-crown-flames",
+    "tnt-crown-band",
+    "soot-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt5",
+     "name": "The Cayenne King"
+    },
+    {
+     "form": "swift",
+     "key": "tnt5_swift",
+     "name": "The Cayenne King · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt5_plated",
+     "name": "The Cayenne King · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt5_warded",
+     "name": "The Cayenne King · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/tnt5.png",
+    "swift": "cinder/tnt5-swift.png",
+    "plated": "cinder/tnt5-plated.png",
+    "warded": "cinder/tnt5-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "barrel",
+   "tier": 1,
+   "key": "barrel1",
+   "lookId": "cinder.barrel1",
+   "role": "cinder_barrel1",
+   "name": "Spice Keg",
+   "engineName": "Barrel Imp",
+   "boss": false,
+   "look": "chilli stem, flame mark",
+   "parts": [
+    "flame-mark",
+    "chilli-stem"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel1",
+     "name": "Spice Keg"
+    },
+    {
+     "form": "swift",
+     "key": "barrel1_swift",
+     "name": "Spice Keg · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel1_plated",
+     "name": "Spice Keg · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel1_warded",
+     "name": "Spice Keg · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/barrel1.png",
+    "swift": "cinder/barrel1-swift.png",
+    "plated": "cinder/barrel1-plated.png",
+    "warded": "cinder/barrel1-warded.png"
+   },
+   "walk": "cinder/walk-barrel1.png",
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "barrel",
+   "tier": 2,
+   "key": "barrel2",
+   "lookId": "cinder.barrel2",
+   "role": "cinder_barrel2",
+   "name": "Pepper Roller",
+   "engineName": "Barrel Roller",
+   "boss": false,
+   "look": "+ soot hoops",
+   "parts": [
+    "flame-mark",
+    "ember-studs",
+    "chilli-stem"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel2",
+     "name": "Pepper Roller"
+    },
+    {
+     "form": "swift",
+     "key": "barrel2_swift",
+     "name": "Pepper Roller · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel2_plated",
+     "name": "Pepper Roller · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel2_warded",
+     "name": "Pepper Roller · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/barrel2.png",
+    "swift": "cinder/barrel2-swift.png",
+    "plated": "cinder/barrel2-plated.png",
+    "warded": "cinder/barrel2-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "barrel",
+   "tier": 3,
+   "key": "barrel3",
+   "lookId": "cinder.barrel3",
+   "role": "cinder_barrel3",
+   "name": "Charred Keg",
+   "engineName": "Ironbarrel",
+   "boss": false,
+   "look": "+ iron flame fins",
+   "parts": [
+    "flame-fins",
+    "flame-mark",
+    "ember-studs",
+    "chilli-stem"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel3",
+     "name": "Charred Keg"
+    },
+    {
+     "form": "swift",
+     "key": "barrel3_swift",
+     "name": "Charred Keg · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel3_plated",
+     "name": "Charred Keg · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel3_warded",
+     "name": "Charred Keg · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/barrel3.png",
+    "swift": "cinder/barrel3-swift.png",
+    "plated": "cinder/barrel3-plated.png",
+    "warded": "cinder/barrel3-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "barrel",
+   "tier": 4,
+   "key": "barrel4",
+   "lookId": "cinder.barrel4",
+   "role": "cinder_barrel4",
+   "name": "Furnace Barrel",
+   "engineName": "Siege Barrel",
+   "boss": false,
+   "look": "+ taller stem",
+   "parts": [
+    "flame-fins",
+    "flame-mark",
+    "ember-studs",
+    "chilli-stem-tall",
+    "stem-flame"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel4",
+     "name": "Furnace Barrel"
+    },
+    {
+     "form": "swift",
+     "key": "barrel4_swift",
+     "name": "Furnace Barrel · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel4_plated",
+     "name": "Furnace Barrel · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel4_warded",
+     "name": "Furnace Barrel · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/barrel4.png",
+    "swift": "cinder/barrel4-swift.png",
+    "plated": "cinder/barrel4-plated.png",
+    "warded": "cinder/barrel4-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "cinder",
+   "clanName": "Cinder Clan",
+   "company": "spice",
+   "faction": "barrel",
+   "tier": 5,
+   "key": "barrel5",
+   "lookId": "cinder.barrel5",
+   "role": "cinder_barrel5",
+   "name": "The Brimstone Vat",
+   "engineName": "The Colossus Keg",
+   "boss": true,
+   "look": "brimstone crown, flame fins",
+   "parts": [
+    "flame-fins",
+    "flame-mark",
+    "ember-studs",
+    "brimstone-crown",
+    "brimstone-flames"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel5",
+     "name": "The Brimstone Vat"
+    },
+    {
+     "form": "swift",
+     "key": "barrel5_swift",
+     "name": "The Brimstone Vat · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel5_plated",
+     "name": "The Brimstone Vat · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel5_warded",
+     "name": "The Brimstone Vat · Warded"
+    }
+   ],
+   "renders": {
+    "base": "cinder/barrel5.png",
+    "swift": "cinder/barrel5-swift.png",
+    "plated": "cinder/barrel5-plated.png",
+    "warded": "cinder/barrel5-warded.png"
+   },
+   "sheet": "sheets/cinder.png",
+   "road": "cinder"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "torch",
+   "tier": 1,
+   "key": "torch1",
+   "lookId": "smudge.torch1",
+   "role": "smudge_torch1",
+   "name": "Smudge Runt",
+   "engineName": "Torch Runt",
+   "boss": false,
+   "look": "paint bucket helm, brush",
+   "parts": [
+    "paintbrush",
+    "bucket-helm",
+    "bucket-drips",
+    "bucket-bail"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch1",
+     "name": "Smudge Runt"
+    },
+    {
+     "form": "swift",
+     "key": "torch1_swift",
+     "name": "Smudge Runt · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch1_plated",
+     "name": "Smudge Runt · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch1_warded",
+     "name": "Smudge Runt · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/torch1.png",
+    "swift": "smudge/torch1-swift.png",
+    "plated": "smudge/torch1-plated.png",
+    "warded": "smudge/torch1-warded.png"
+   },
+   "walk": "smudge/walk-torch1.png",
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "torch",
+   "tier": 2,
+   "key": "torch2",
+   "lookId": "smudge.torch2",
+   "role": "smudge_torch2",
+   "name": "Dauber",
+   "engineName": "Torch Goblin",
+   "boss": false,
+   "look": "+ palette pauldron",
+   "parts": [
+    "paintbrush",
+    "bucket-helm",
+    "bucket-drips",
+    "bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch2",
+     "name": "Dauber"
+    },
+    {
+     "form": "swift",
+     "key": "torch2_swift",
+     "name": "Dauber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch2_plated",
+     "name": "Dauber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch2_warded",
+     "name": "Dauber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/torch2.png",
+    "swift": "smudge/torch2-swift.png",
+    "plated": "smudge/torch2-plated.png",
+    "warded": "smudge/torch2-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "torch",
+   "tier": 3,
+   "key": "torch3",
+   "lookId": "smudge.torch3",
+   "role": "smudge_torch3",
+   "name": "Splatter Raider",
+   "engineName": "Torch Raider",
+   "boss": false,
+   "look": "+ canvas flag",
+   "parts": [
+    "canvas-flag",
+    "paintbrush",
+    "bucket-helm",
+    "bucket-drips",
+    "bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch3",
+     "name": "Splatter Raider"
+    },
+    {
+     "form": "swift",
+     "key": "torch3_swift",
+     "name": "Splatter Raider · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch3_plated",
+     "name": "Splatter Raider · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch3_warded",
+     "name": "Splatter Raider · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/torch3.png",
+    "swift": "smudge/torch3-swift.png",
+    "plated": "smudge/torch3-plated.png",
+    "warded": "smudge/torch3-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "torch",
+   "tier": 4,
+   "key": "torch4",
+   "lookId": "smudge.torch4",
+   "role": "smudge_torch4",
+   "name": "Brush Berserker",
+   "engineName": "Torch Berserker",
+   "boss": false,
+   "look": "stacked bucket helm",
+   "parts": [
+    "canvas-flag",
+    "paintbrush",
+    "top-bucket",
+    "bucket-helm",
+    "bucket-drips",
+    "bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch4",
+     "name": "Brush Berserker"
+    },
+    {
+     "form": "swift",
+     "key": "torch4_swift",
+     "name": "Brush Berserker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch4_plated",
+     "name": "Brush Berserker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch4_warded",
+     "name": "Brush Berserker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/torch4.png",
+    "swift": "smudge/torch4-swift.png",
+    "plated": "smudge/torch4-plated.png",
+    "warded": "smudge/torch4-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "torch",
+   "tier": 5,
+   "key": "torch5",
+   "lookId": "smudge.torch5",
+   "role": "smudge_torch5",
+   "name": "Old Gesso",
+   "engineName": "Warlord Grukk",
+   "boss": true,
+   "look": "brush crown, splattered smock",
+   "parts": [
+    "splattered-smock",
+    "canvas-flag",
+    "paintbrush",
+    "brush-crown",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch5",
+     "name": "Old Gesso"
+    },
+    {
+     "form": "swift",
+     "key": "torch5_swift",
+     "name": "Old Gesso · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch5_plated",
+     "name": "Old Gesso · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch5_warded",
+     "name": "Old Gesso · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/torch5.png",
+    "swift": "smudge/torch5-swift.png",
+    "plated": "smudge/torch5-plated.png",
+    "warded": "smudge/torch5-warded.png"
+   },
+   "walk": "smudge/walk-torch5.png",
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "tnt",
+   "tier": 1,
+   "key": "tnt1",
+   "lookId": "smudge.tnt1",
+   "role": "smudge_tnt1",
+   "name": "Pigment Whelp",
+   "engineName": "Fuse Whelp",
+   "boss": false,
+   "look": "paint bucket helm, tube pack, paint bomb",
+   "parts": [
+    "paint-tubes",
+    "paint-bomb",
+    "tnt-bucket-helm",
+    "tnt-bucket-drips",
+    "tnt-bucket-bail"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt1",
+     "name": "Pigment Whelp"
+    },
+    {
+     "form": "swift",
+     "key": "tnt1_swift",
+     "name": "Pigment Whelp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt1_plated",
+     "name": "Pigment Whelp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt1_warded",
+     "name": "Pigment Whelp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/tnt1.png",
+    "swift": "smudge/tnt1-swift.png",
+    "plated": "smudge/tnt1-plated.png",
+    "warded": "smudge/tnt1-warded.png"
+   },
+   "walk": "smudge/walk-tnt1.png",
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "tnt",
+   "tier": 2,
+   "key": "tnt2",
+   "lookId": "smudge.tnt2",
+   "role": "smudge_tnt2",
+   "name": "Paint Bomber",
+   "engineName": "Bomber",
+   "boss": false,
+   "look": "+ palette pauldron",
+   "parts": [
+    "paint-tubes",
+    "paint-bomb",
+    "tnt-bucket-helm",
+    "tnt-bucket-drips",
+    "tnt-bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt2",
+     "name": "Paint Bomber"
+    },
+    {
+     "form": "swift",
+     "key": "tnt2_swift",
+     "name": "Paint Bomber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt2_plated",
+     "name": "Paint Bomber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt2_warded",
+     "name": "Paint Bomber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/tnt2.png",
+    "swift": "smudge/tnt2-swift.png",
+    "plated": "smudge/tnt2-plated.png",
+    "warded": "smudge/tnt2-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "tnt",
+   "tier": 3,
+   "key": "tnt3",
+   "lookId": "smudge.tnt3",
+   "role": "smudge_tnt3",
+   "name": "Varnish Wrecker",
+   "engineName": "Demolisher",
+   "boss": false,
+   "look": "+ canvas flag",
+   "parts": [
+    "canvas-flag",
+    "paint-tubes",
+    "paint-bomb",
+    "tnt-bucket-helm",
+    "tnt-bucket-drips",
+    "tnt-bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt3",
+     "name": "Varnish Wrecker"
+    },
+    {
+     "form": "swift",
+     "key": "tnt3_swift",
+     "name": "Varnish Wrecker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt3_plated",
+     "name": "Varnish Wrecker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt3_warded",
+     "name": "Varnish Wrecker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/tnt3.png",
+    "swift": "smudge/tnt3-swift.png",
+    "plated": "smudge/tnt3-plated.png",
+    "warded": "smudge/tnt3-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "tnt",
+   "tier": 4,
+   "key": "tnt4",
+   "lookId": "smudge.tnt4",
+   "role": "smudge_tnt4",
+   "name": "Turps Sapper",
+   "engineName": "Sapper",
+   "boss": false,
+   "look": "stacked bucket helm",
+   "parts": [
+    "canvas-flag",
+    "paint-tubes",
+    "paint-bomb",
+    "tnt-top-bucket",
+    "tnt-bucket-helm",
+    "tnt-bucket-drips",
+    "tnt-bucket-bail",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt4",
+     "name": "Turps Sapper"
+    },
+    {
+     "form": "swift",
+     "key": "tnt4_swift",
+     "name": "Turps Sapper · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt4_plated",
+     "name": "Turps Sapper · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt4_warded",
+     "name": "Turps Sapper · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/tnt4.png",
+    "swift": "smudge/tnt4-swift.png",
+    "plated": "smudge/tnt4-plated.png",
+    "warded": "smudge/tnt4-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "tnt",
+   "tier": 5,
+   "key": "tnt5",
+   "lookId": "smudge.tnt5",
+   "role": "smudge_tnt5",
+   "name": "The Lacquer King",
+   "engineName": "Powderkeg King",
+   "boss": true,
+   "look": "brush crown, easel standard",
+   "parts": [
+    "easel-standard",
+    "paint-tubes",
+    "paint-bomb",
+    "tnt-brush-crown",
+    "palette-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt5",
+     "name": "The Lacquer King"
+    },
+    {
+     "form": "swift",
+     "key": "tnt5_swift",
+     "name": "The Lacquer King · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt5_plated",
+     "name": "The Lacquer King · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt5_warded",
+     "name": "The Lacquer King · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/tnt5.png",
+    "swift": "smudge/tnt5-swift.png",
+    "plated": "smudge/tnt5-plated.png",
+    "warded": "smudge/tnt5-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "barrel",
+   "tier": 1,
+   "key": "barrel1",
+   "lookId": "smudge.barrel1",
+   "role": "smudge_barrel1",
+   "name": "Paint Pot",
+   "engineName": "Barrel Imp",
+   "boss": false,
+   "look": "bucket handle, drip mark",
+   "parts": [
+    "paint-splotch",
+    "wire-bail",
+    "tin-lid-knob"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel1",
+     "name": "Paint Pot"
+    },
+    {
+     "form": "swift",
+     "key": "barrel1_swift",
+     "name": "Paint Pot · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel1_plated",
+     "name": "Paint Pot · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel1_warded",
+     "name": "Paint Pot · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/barrel1.png",
+    "swift": "smudge/barrel1-swift.png",
+    "plated": "smudge/barrel1-plated.png",
+    "warded": "smudge/barrel1-warded.png"
+   },
+   "walk": "smudge/walk-barrel1.png",
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "barrel",
+   "tier": 2,
+   "key": "barrel2",
+   "lookId": "smudge.barrel2",
+   "role": "smudge_barrel2",
+   "name": "Bucket Roller",
+   "engineName": "Barrel Roller",
+   "boss": false,
+   "look": "+ paint drips",
+   "parts": [
+    "paint-splotch",
+    "paint-drips",
+    "wire-bail",
+    "tin-lid-knob"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel2",
+     "name": "Bucket Roller"
+    },
+    {
+     "form": "swift",
+     "key": "barrel2_swift",
+     "name": "Bucket Roller · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel2_plated",
+     "name": "Bucket Roller · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel2_warded",
+     "name": "Bucket Roller · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/barrel2.png",
+    "swift": "smudge/barrel2-swift.png",
+    "plated": "smudge/barrel2-plated.png",
+    "warded": "smudge/barrel2-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "barrel",
+   "tier": 3,
+   "key": "barrel3",
+   "lookId": "smudge.barrel3",
+   "role": "smudge_barrel3",
+   "name": "Tin Drum",
+   "engineName": "Ironbarrel",
+   "boss": false,
+   "look": "+ brush handles",
+   "parts": [
+    "brush-handles",
+    "paint-splotch",
+    "paint-drips",
+    "wire-bail",
+    "tin-lid-knob"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel3",
+     "name": "Tin Drum"
+    },
+    {
+     "form": "swift",
+     "key": "barrel3_swift",
+     "name": "Tin Drum · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel3_plated",
+     "name": "Tin Drum · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel3_warded",
+     "name": "Tin Drum · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/barrel3.png",
+    "swift": "smudge/barrel3-swift.png",
+    "plated": "smudge/barrel3-plated.png",
+    "warded": "smudge/barrel3-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "barrel",
+   "tier": 4,
+   "key": "barrel4",
+   "lookId": "smudge.barrel4",
+   "role": "smudge_barrel4",
+   "name": "Siege Vat",
+   "engineName": "Siege Barrel",
+   "boss": false,
+   "look": "+ second handle",
+   "parts": [
+    "brush-handles",
+    "paint-splotch",
+    "paint-drips",
+    "wire-bail",
+    "brush-in-tin"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel4",
+     "name": "Siege Vat"
+    },
+    {
+     "form": "swift",
+     "key": "barrel4_swift",
+     "name": "Siege Vat · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel4_plated",
+     "name": "Siege Vat · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel4_warded",
+     "name": "Siege Vat · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/barrel4.png",
+    "swift": "smudge/barrel4-swift.png",
+    "plated": "smudge/barrel4-plated.png",
+    "warded": "smudge/barrel4-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "smudge",
+   "clanName": "Smudge Gang",
+   "company": "art",
+   "faction": "barrel",
+   "tier": 5,
+   "key": "barrel5",
+   "lookId": "smudge.barrel5",
+   "role": "smudge_barrel5",
+   "name": "The Big Tin",
+   "engineName": "The Colossus Keg",
+   "boss": true,
+   "look": "brush crown, drips",
+   "parts": [
+    "brush-handles",
+    "paint-splotch",
+    "paint-drips",
+    "wire-bail",
+    "brush-crown"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel5",
+     "name": "The Big Tin"
+    },
+    {
+     "form": "swift",
+     "key": "barrel5_swift",
+     "name": "The Big Tin · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel5_plated",
+     "name": "The Big Tin · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel5_warded",
+     "name": "The Big Tin · Warded"
+    }
+   ],
+   "renders": {
+    "base": "smudge/barrel5.png",
+    "swift": "smudge/barrel5-swift.png",
+    "plated": "smudge/barrel5-plated.png",
+    "warded": "smudge/barrel5-warded.png"
+   },
+   "sheet": "sheets/smudge.png",
+   "road": "smudge"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "torch",
+   "tier": 1,
+   "key": "torch1",
+   "lookId": "delve.torch1",
+   "role": "delve_torch1",
+   "name": "Pit Runt",
+   "engineName": "Torch Runt",
+   "boss": false,
+   "look": "lamp helmet, pick",
+   "parts": [
+    "pick",
+    "lamp-helm"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch1",
+     "name": "Pit Runt"
+    },
+    {
+     "form": "swift",
+     "key": "torch1_swift",
+     "name": "Pit Runt · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch1_plated",
+     "name": "Pit Runt · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch1_warded",
+     "name": "Pit Runt · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/torch1.png",
+    "swift": "delve/torch1-swift.png",
+    "plated": "delve/torch1-plated.png",
+    "warded": "delve/torch1-warded.png"
+   },
+   "walk": "delve/walk-torch1.png",
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "torch",
+   "tier": 2,
+   "key": "torch2",
+   "lookId": "delve.torch2",
+   "role": "delve_torch2",
+   "name": "Pick Goblin",
+   "engineName": "Torch Goblin",
+   "boss": false,
+   "look": "+ riveted pauldron",
+   "parts": [
+    "pick",
+    "lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch2",
+     "name": "Pick Goblin"
+    },
+    {
+     "form": "swift",
+     "key": "torch2_swift",
+     "name": "Pick Goblin · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch2_plated",
+     "name": "Pick Goblin · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch2_warded",
+     "name": "Pick Goblin · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/torch2.png",
+    "swift": "delve/torch2-swift.png",
+    "plated": "delve/torch2-plated.png",
+    "warded": "delve/torch2-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "torch",
+   "tier": 3,
+   "key": "torch3",
+   "lookId": "delve.torch3",
+   "role": "delve_torch3",
+   "name": "Tunnel Raider",
+   "engineName": "Torch Raider",
+   "boss": false,
+   "look": "+ mine lantern pole",
+   "parts": [
+    "lantern-pole",
+    "pick",
+    "lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch3",
+     "name": "Tunnel Raider"
+    },
+    {
+     "form": "swift",
+     "key": "torch3_swift",
+     "name": "Tunnel Raider · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch3_plated",
+     "name": "Tunnel Raider · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch3_warded",
+     "name": "Tunnel Raider · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/torch3.png",
+    "swift": "delve/torch3-swift.png",
+    "plated": "delve/torch3-plated.png",
+    "warded": "delve/torch3-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "torch",
+   "tier": 4,
+   "key": "torch4",
+   "lookId": "delve.torch4",
+   "role": "delve_torch4",
+   "name": "Drill Berserker",
+   "engineName": "Torch Berserker",
+   "boss": false,
+   "look": "twin-lamp helmet",
+   "parts": [
+    "lantern-pole",
+    "pick",
+    "twin-lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch4",
+     "name": "Drill Berserker"
+    },
+    {
+     "form": "swift",
+     "key": "torch4_swift",
+     "name": "Drill Berserker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch4_plated",
+     "name": "Drill Berserker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch4_warded",
+     "name": "Drill Berserker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/torch4.png",
+    "swift": "delve/torch4-swift.png",
+    "plated": "delve/torch4-plated.png",
+    "warded": "delve/torch4-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "torch",
+   "tier": 5,
+   "key": "torch5",
+   "lookId": "delve.torch5",
+   "role": "delve_torch5",
+   "name": "Overseer Krag",
+   "engineName": "Warlord Grukk",
+   "boss": true,
+   "look": "great helm, iron mantle",
+   "parts": [
+    "mail-mantle",
+    "lantern-pole",
+    "pick",
+    "great-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch5",
+     "name": "Overseer Krag"
+    },
+    {
+     "form": "swift",
+     "key": "torch5_swift",
+     "name": "Overseer Krag · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch5_plated",
+     "name": "Overseer Krag · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch5_warded",
+     "name": "Overseer Krag · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/torch5.png",
+    "swift": "delve/torch5-swift.png",
+    "plated": "delve/torch5-plated.png",
+    "warded": "delve/torch5-warded.png"
+   },
+   "walk": "delve/walk-torch5.png",
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "tnt",
+   "tier": 1,
+   "key": "tnt1",
+   "lookId": "delve.tnt1",
+   "role": "delve_tnt1",
+   "name": "Blast Whelp",
+   "engineName": "Fuse Whelp",
+   "boss": false,
+   "look": "lamp helmet, ore basket, charge",
+   "parts": [
+    "ore-heap",
+    "blast-charge",
+    "charge-spark",
+    "tnt-lamp-helm"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt1",
+     "name": "Blast Whelp"
+    },
+    {
+     "form": "swift",
+     "key": "tnt1_swift",
+     "name": "Blast Whelp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt1_plated",
+     "name": "Blast Whelp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt1_warded",
+     "name": "Blast Whelp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/tnt1.png",
+    "swift": "delve/tnt1-swift.png",
+    "plated": "delve/tnt1-plated.png",
+    "warded": "delve/tnt1-warded.png"
+   },
+   "walk": "delve/walk-tnt1.png",
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "tnt",
+   "tier": 2,
+   "key": "tnt2",
+   "lookId": "delve.tnt2",
+   "role": "delve_tnt2",
+   "name": "Charge Bomber",
+   "engineName": "Bomber",
+   "boss": false,
+   "look": "+ riveted pauldron",
+   "parts": [
+    "ore-heap",
+    "blast-charge",
+    "charge-spark",
+    "tnt-lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt2",
+     "name": "Charge Bomber"
+    },
+    {
+     "form": "swift",
+     "key": "tnt2_swift",
+     "name": "Charge Bomber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt2_plated",
+     "name": "Charge Bomber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt2_warded",
+     "name": "Charge Bomber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/tnt2.png",
+    "swift": "delve/tnt2-swift.png",
+    "plated": "delve/tnt2-plated.png",
+    "warded": "delve/tnt2-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "tnt",
+   "tier": 3,
+   "key": "tnt3",
+   "lookId": "delve.tnt3",
+   "role": "delve_tnt3",
+   "name": "Rockbreaker",
+   "engineName": "Demolisher",
+   "boss": false,
+   "look": "+ mine lantern pole",
+   "parts": [
+    "lantern-pole",
+    "ore-heap",
+    "blast-charge",
+    "charge-spark",
+    "tnt-lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt3",
+     "name": "Rockbreaker"
+    },
+    {
+     "form": "swift",
+     "key": "tnt3_swift",
+     "name": "Rockbreaker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt3_plated",
+     "name": "Rockbreaker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt3_warded",
+     "name": "Rockbreaker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/tnt3.png",
+    "swift": "delve/tnt3-swift.png",
+    "plated": "delve/tnt3-plated.png",
+    "warded": "delve/tnt3-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "tnt",
+   "tier": 4,
+   "key": "tnt4",
+   "lookId": "delve.tnt4",
+   "role": "delve_tnt4",
+   "name": "Tunnel Sapper",
+   "engineName": "Sapper",
+   "boss": false,
+   "look": "twin-lamp helmet",
+   "parts": [
+    "lantern-pole",
+    "ore-heap",
+    "blast-charge",
+    "charge-spark",
+    "tnt-twin-lamp-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt4",
+     "name": "Tunnel Sapper"
+    },
+    {
+     "form": "swift",
+     "key": "tnt4_swift",
+     "name": "Tunnel Sapper · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt4_plated",
+     "name": "Tunnel Sapper · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt4_warded",
+     "name": "Tunnel Sapper · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/tnt4.png",
+    "swift": "delve/tnt4-swift.png",
+    "plated": "delve/tnt4-plated.png",
+    "warded": "delve/tnt4-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "tnt",
+   "tier": 5,
+   "key": "tnt5",
+   "lookId": "delve.tnt5",
+   "role": "delve_tnt5",
+   "name": "The Blasting King",
+   "engineName": "Powderkeg King",
+   "boss": true,
+   "look": "great helm, iron standard",
+   "parts": [
+    "iron-standard",
+    "ore-heap",
+    "blast-charge",
+    "charge-spark",
+    "tnt-great-helm",
+    "riveted-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt5",
+     "name": "The Blasting King"
+    },
+    {
+     "form": "swift",
+     "key": "tnt5_swift",
+     "name": "The Blasting King · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt5_plated",
+     "name": "The Blasting King · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt5_warded",
+     "name": "The Blasting King · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/tnt5.png",
+    "swift": "delve/tnt5-swift.png",
+    "plated": "delve/tnt5-plated.png",
+    "warded": "delve/tnt5-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "barrel",
+   "tier": 1,
+   "key": "barrel1",
+   "lookId": "delve.barrel1",
+   "role": "delve_barrel1",
+   "name": "Ore Tub",
+   "engineName": "Barrel Imp",
+   "boss": false,
+   "look": "rivet cap, rivet plate",
+   "parts": [
+    "rivet-plate",
+    "valve-wheel"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel1",
+     "name": "Ore Tub"
+    },
+    {
+     "form": "swift",
+     "key": "barrel1_swift",
+     "name": "Ore Tub · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel1_plated",
+     "name": "Ore Tub · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel1_warded",
+     "name": "Ore Tub · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/barrel1.png",
+    "swift": "delve/barrel1-swift.png",
+    "plated": "delve/barrel1-plated.png",
+    "warded": "delve/barrel1-warded.png"
+   },
+   "walk": "delve/walk-barrel1.png",
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "barrel",
+   "tier": 2,
+   "key": "barrel2",
+   "lookId": "delve.barrel2",
+   "role": "delve_barrel2",
+   "name": "Cart Roller",
+   "engineName": "Barrel Roller",
+   "boss": false,
+   "look": "+ studded hoops",
+   "parts": [
+    "rivet-plate",
+    "rivets",
+    "valve-wheel"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel2",
+     "name": "Cart Roller"
+    },
+    {
+     "form": "swift",
+     "key": "barrel2_swift",
+     "name": "Cart Roller · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel2_plated",
+     "name": "Cart Roller · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel2_warded",
+     "name": "Cart Roller · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/barrel2.png",
+    "swift": "delve/barrel2-swift.png",
+    "plated": "delve/barrel2-plated.png",
+    "warded": "delve/barrel2-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "barrel",
+   "tier": 3,
+   "key": "barrel3",
+   "lookId": "delve.barrel3",
+   "role": "delve_barrel3",
+   "name": "Rivet Keg",
+   "engineName": "Ironbarrel",
+   "boss": false,
+   "look": "+ iron side plates",
+   "parts": [
+    "side-plates",
+    "rivet-plate",
+    "rivets",
+    "valve-wheel"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel3",
+     "name": "Rivet Keg"
+    },
+    {
+     "form": "swift",
+     "key": "barrel3_swift",
+     "name": "Rivet Keg · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel3_plated",
+     "name": "Rivet Keg · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel3_warded",
+     "name": "Rivet Keg · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/barrel3.png",
+    "swift": "delve/barrel3-swift.png",
+    "plated": "delve/barrel3-plated.png",
+    "warded": "delve/barrel3-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "barrel",
+   "tier": 4,
+   "key": "barrel4",
+   "lookId": "delve.barrel4",
+   "role": "delve_barrel4",
+   "name": "Siege Boiler",
+   "engineName": "Siege Barrel",
+   "boss": false,
+   "look": "+ lamp on the cap",
+   "parts": [
+    "side-plates",
+    "rivet-plate",
+    "rivets",
+    "valve-wheel",
+    "cap-lamp"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel4",
+     "name": "Siege Boiler"
+    },
+    {
+     "form": "swift",
+     "key": "barrel4_swift",
+     "name": "Siege Boiler · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel4_plated",
+     "name": "Siege Boiler · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel4_warded",
+     "name": "Siege Boiler · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/barrel4.png",
+    "swift": "delve/barrel4-swift.png",
+    "plated": "delve/barrel4-plated.png",
+    "warded": "delve/barrel4-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "delve",
+   "clanName": "Deepdelve",
+   "company": "metals",
+   "faction": "barrel",
+   "tier": 5,
+   "key": "barrel5",
+   "lookId": "delve.barrel5",
+   "role": "delve_barrel5",
+   "name": "The Iron Crucible",
+   "engineName": "The Colossus Keg",
+   "boss": true,
+   "look": "crucible crown, side plates",
+   "parts": [
+    "side-plates",
+    "rivet-plate",
+    "rivets",
+    "crucible-crown"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel5",
+     "name": "The Iron Crucible"
+    },
+    {
+     "form": "swift",
+     "key": "barrel5_swift",
+     "name": "The Iron Crucible · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel5_plated",
+     "name": "The Iron Crucible · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel5_warded",
+     "name": "The Iron Crucible · Warded"
+    }
+   ],
+   "renders": {
+    "base": "delve/barrel5.png",
+    "swift": "delve/barrel5-swift.png",
+    "plated": "delve/barrel5-plated.png",
+    "warded": "delve/barrel5-warded.png"
+   },
+   "sheet": "sheets/delve.png",
+   "road": "delve"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "torch",
+   "tier": 1,
+   "key": "torch1",
+   "lookId": "silkcut.torch1",
+   "role": "silkcut_torch1",
+   "name": "Snip Runt",
+   "engineName": "Torch Runt",
+   "boss": false,
+   "look": "brimmed hat, rose, needle",
+   "parts": [
+    "needle-blade",
+    "wide-brim"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch1",
+     "name": "Snip Runt"
+    },
+    {
+     "form": "swift",
+     "key": "torch1_swift",
+     "name": "Snip Runt · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch1_plated",
+     "name": "Snip Runt · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch1_warded",
+     "name": "Snip Runt · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/torch1.png",
+    "swift": "silkcut/torch1-swift.png",
+    "plated": "silkcut/torch1-plated.png",
+    "warded": "silkcut/torch1-warded.png"
+   },
+   "walk": "silkcut/walk-torch1.png",
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "torch",
+   "tier": 2,
+   "key": "torch2",
+   "lookId": "silkcut.torch2",
+   "role": "silkcut_torch2",
+   "name": "Needle Goblin",
+   "engineName": "Torch Goblin",
+   "boss": false,
+   "look": "+ ribbon pauldron",
+   "parts": [
+    "needle-blade",
+    "wide-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch2",
+     "name": "Needle Goblin"
+    },
+    {
+     "form": "swift",
+     "key": "torch2_swift",
+     "name": "Needle Goblin · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch2_plated",
+     "name": "Needle Goblin · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch2_warded",
+     "name": "Needle Goblin · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/torch2.png",
+    "swift": "silkcut/torch2-swift.png",
+    "plated": "silkcut/torch2-plated.png",
+    "warded": "silkcut/torch2-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "torch",
+   "tier": 3,
+   "key": "torch3",
+   "lookId": "silkcut.torch3",
+   "role": "silkcut_torch3",
+   "name": "Thread Raider",
+   "engineName": "Torch Raider",
+   "boss": false,
+   "look": "+ pennant",
+   "parts": [
+    "swallowtail-pennant",
+    "needle-blade",
+    "wide-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch3",
+     "name": "Thread Raider"
+    },
+    {
+     "form": "swift",
+     "key": "torch3_swift",
+     "name": "Thread Raider · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch3_plated",
+     "name": "Thread Raider · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch3_warded",
+     "name": "Thread Raider · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/torch3.png",
+    "swift": "silkcut/torch3-swift.png",
+    "plated": "silkcut/torch3-plated.png",
+    "warded": "silkcut/torch3-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "torch",
+   "tier": 4,
+   "key": "torch4",
+   "lookId": "silkcut.torch4",
+   "role": "silkcut_torch4",
+   "name": "Shear Berserker",
+   "engineName": "Torch Berserker",
+   "boss": false,
+   "look": "plumed hat",
+   "parts": [
+    "swallowtail-pennant",
+    "needle-blade",
+    "plumed-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch4",
+     "name": "Shear Berserker"
+    },
+    {
+     "form": "swift",
+     "key": "torch4_swift",
+     "name": "Shear Berserker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch4_plated",
+     "name": "Shear Berserker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch4_warded",
+     "name": "Shear Berserker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/torch4.png",
+    "swift": "silkcut/torch4-swift.png",
+    "plated": "silkcut/torch4-plated.png",
+    "warded": "silkcut/torch4-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "torch",
+   "tier": 5,
+   "key": "torch5",
+   "lookId": "silkcut.torch5",
+   "role": "silkcut_torch5",
+   "name": "Madam Briar",
+   "engineName": "Warlord Grukk",
+   "boss": true,
+   "look": "rose crown, silk train",
+   "parts": [
+    "silk-train",
+    "swallowtail-pennant",
+    "needle-blade",
+    "rose-crown",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch5",
+     "name": "Madam Briar"
+    },
+    {
+     "form": "swift",
+     "key": "torch5_swift",
+     "name": "Madam Briar · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch5_plated",
+     "name": "Madam Briar · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch5_warded",
+     "name": "Madam Briar · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/torch5.png",
+    "swift": "silkcut/torch5-swift.png",
+    "plated": "silkcut/torch5-plated.png",
+    "warded": "silkcut/torch5-warded.png"
+   },
+   "walk": "silkcut/walk-torch5.png",
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "tnt",
+   "tier": 1,
+   "key": "tnt1",
+   "lookId": "silkcut.tnt1",
+   "role": "silkcut_tnt1",
+   "name": "Tangle Whelp",
+   "engineName": "Fuse Whelp",
+   "boss": false,
+   "look": "brimmed hat, spool pack, thread bomb",
+   "parts": [
+    "spools",
+    "thread-ball",
+    "ball-needle",
+    "tnt-wide-brim"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt1",
+     "name": "Tangle Whelp"
+    },
+    {
+     "form": "swift",
+     "key": "tnt1_swift",
+     "name": "Tangle Whelp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt1_plated",
+     "name": "Tangle Whelp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt1_warded",
+     "name": "Tangle Whelp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/tnt1.png",
+    "swift": "silkcut/tnt1-swift.png",
+    "plated": "silkcut/tnt1-plated.png",
+    "warded": "silkcut/tnt1-warded.png"
+   },
+   "walk": "silkcut/walk-tnt1.png",
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "tnt",
+   "tier": 2,
+   "key": "tnt2",
+   "lookId": "silkcut.tnt2",
+   "role": "silkcut_tnt2",
+   "name": "Bobbin Bomber",
+   "engineName": "Bomber",
+   "boss": false,
+   "look": "+ ribbon pauldron",
+   "parts": [
+    "spools",
+    "thread-ball",
+    "ball-needle",
+    "tnt-wide-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt2",
+     "name": "Bobbin Bomber"
+    },
+    {
+     "form": "swift",
+     "key": "tnt2_swift",
+     "name": "Bobbin Bomber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt2_plated",
+     "name": "Bobbin Bomber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt2_warded",
+     "name": "Bobbin Bomber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/tnt2.png",
+    "swift": "silkcut/tnt2-swift.png",
+    "plated": "silkcut/tnt2-plated.png",
+    "warded": "silkcut/tnt2-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "tnt",
+   "tier": 3,
+   "key": "tnt3",
+   "lookId": "silkcut.tnt3",
+   "role": "silkcut_tnt3",
+   "name": "Loom Wrecker",
+   "engineName": "Demolisher",
+   "boss": false,
+   "look": "+ pennant",
+   "parts": [
+    "swallowtail-pennant",
+    "spools",
+    "thread-ball",
+    "ball-needle",
+    "tnt-wide-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt3",
+     "name": "Loom Wrecker"
+    },
+    {
+     "form": "swift",
+     "key": "tnt3_swift",
+     "name": "Loom Wrecker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt3_plated",
+     "name": "Loom Wrecker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt3_warded",
+     "name": "Loom Wrecker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/tnt3.png",
+    "swift": "silkcut/tnt3-swift.png",
+    "plated": "silkcut/tnt3-plated.png",
+    "warded": "silkcut/tnt3-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "tnt",
+   "tier": 4,
+   "key": "tnt4",
+   "lookId": "silkcut.tnt4",
+   "role": "silkcut_tnt4",
+   "name": "Snare Sapper",
+   "engineName": "Sapper",
+   "boss": false,
+   "look": "plumed hat",
+   "parts": [
+    "swallowtail-pennant",
+    "spools",
+    "thread-ball",
+    "ball-needle",
+    "tnt-plumed-brim",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt4",
+     "name": "Snare Sapper"
+    },
+    {
+     "form": "swift",
+     "key": "tnt4_swift",
+     "name": "Snare Sapper · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt4_plated",
+     "name": "Snare Sapper · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt4_warded",
+     "name": "Snare Sapper · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/tnt4.png",
+    "swift": "silkcut/tnt4-swift.png",
+    "plated": "silkcut/tnt4-plated.png",
+    "warded": "silkcut/tnt4-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "tnt",
+   "tier": 5,
+   "key": "tnt5",
+   "lookId": "silkcut.tnt5",
+   "role": "silkcut_tnt5",
+   "name": "The Spindle Queen",
+   "engineName": "Powderkeg King",
+   "boss": true,
+   "look": "rose crown, silk standard",
+   "parts": [
+    "silk-standard",
+    "spools",
+    "thread-ball",
+    "ball-needle",
+    "tnt-rose-crown",
+    "ribbon-bow"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt5",
+     "name": "The Spindle Queen"
+    },
+    {
+     "form": "swift",
+     "key": "tnt5_swift",
+     "name": "The Spindle Queen · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt5_plated",
+     "name": "The Spindle Queen · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt5_warded",
+     "name": "The Spindle Queen · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/tnt5.png",
+    "swift": "silkcut/tnt5-swift.png",
+    "plated": "silkcut/tnt5-plated.png",
+    "warded": "silkcut/tnt5-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "barrel",
+   "tier": 1,
+   "key": "barrel1",
+   "lookId": "silkcut.barrel1",
+   "role": "silkcut_barrel1",
+   "name": "Spool Imp",
+   "engineName": "Barrel Imp",
+   "boss": false,
+   "look": "spool flanges, thread band",
+   "parts": [
+    "thread-band",
+    "top-flange",
+    "spindle-peg"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel1",
+     "name": "Spool Imp"
+    },
+    {
+     "form": "swift",
+     "key": "barrel1_swift",
+     "name": "Spool Imp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel1_plated",
+     "name": "Spool Imp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel1_warded",
+     "name": "Spool Imp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/barrel1.png",
+    "swift": "silkcut/barrel1-swift.png",
+    "plated": "silkcut/barrel1-plated.png",
+    "warded": "silkcut/barrel1-warded.png"
+   },
+   "walk": "silkcut/walk-barrel1.png",
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "barrel",
+   "tier": 2,
+   "key": "barrel2",
+   "lookId": "silkcut.barrel2",
+   "role": "silkcut_barrel2",
+   "name": "Bobbin Roller",
+   "engineName": "Barrel Roller",
+   "boss": false,
+   "look": "+ needle",
+   "parts": [
+    "thread-band",
+    "needle-through",
+    "top-flange",
+    "spindle-peg"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel2",
+     "name": "Bobbin Roller"
+    },
+    {
+     "form": "swift",
+     "key": "barrel2_swift",
+     "name": "Bobbin Roller · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel2_plated",
+     "name": "Bobbin Roller · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel2_warded",
+     "name": "Bobbin Roller · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/barrel2.png",
+    "swift": "silkcut/barrel2-swift.png",
+    "plated": "silkcut/barrel2-plated.png",
+    "warded": "silkcut/barrel2-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "barrel",
+   "tier": 3,
+   "key": "barrel3",
+   "lookId": "silkcut.barrel3",
+   "role": "silkcut_barrel3",
+   "name": "Iron Spool",
+   "engineName": "Ironbarrel",
+   "boss": false,
+   "look": "+ wider flanges",
+   "parts": [
+    "bottom-flange",
+    "thread-band",
+    "needle-through",
+    "top-flange",
+    "spindle-peg"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel3",
+     "name": "Iron Spool"
+    },
+    {
+     "form": "swift",
+     "key": "barrel3_swift",
+     "name": "Iron Spool · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel3_plated",
+     "name": "Iron Spool · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel3_warded",
+     "name": "Iron Spool · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/barrel3.png",
+    "swift": "silkcut/barrel3-swift.png",
+    "plated": "silkcut/barrel3-plated.png",
+    "warded": "silkcut/barrel3-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "barrel",
+   "tier": 4,
+   "key": "barrel4",
+   "lookId": "silkcut.barrel4",
+   "role": "silkcut_barrel4",
+   "name": "Siege Spindle",
+   "engineName": "Siege Barrel",
+   "boss": false,
+   "look": "+ rose on top",
+   "parts": [
+    "bottom-flange",
+    "thread-band",
+    "needle-through",
+    "top-flange",
+    "rose-peg"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel4",
+     "name": "Siege Spindle"
+    },
+    {
+     "form": "swift",
+     "key": "barrel4_swift",
+     "name": "Siege Spindle · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel4_plated",
+     "name": "Siege Spindle · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel4_warded",
+     "name": "Siege Spindle · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/barrel4.png",
+    "swift": "silkcut/barrel4-swift.png",
+    "plated": "silkcut/barrel4-plated.png",
+    "warded": "silkcut/barrel4-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "silkcut",
+   "clanName": "Silkcut Gang",
+   "company": "silk",
+   "faction": "barrel",
+   "tier": 5,
+   "key": "barrel5",
+   "lookId": "silkcut.barrel5",
+   "role": "silkcut_barrel5",
+   "name": "The Great Reel",
+   "engineName": "The Colossus Keg",
+   "boss": true,
+   "look": "rose crown, flanges",
+   "parts": [
+    "bottom-flange",
+    "thread-band",
+    "needle-through",
+    "top-flange",
+    "rose-crown"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel5",
+     "name": "The Great Reel"
+    },
+    {
+     "form": "swift",
+     "key": "barrel5_swift",
+     "name": "The Great Reel · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel5_plated",
+     "name": "The Great Reel · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel5_warded",
+     "name": "The Great Reel · Warded"
+    }
+   ],
+   "renders": {
+    "base": "silkcut/barrel5.png",
+    "swift": "silkcut/barrel5-swift.png",
+    "plated": "silkcut/barrel5-plated.png",
+    "warded": "silkcut/barrel5-warded.png"
+   },
+   "sheet": "sheets/silkcut.png",
+   "road": "silkcut"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "torch",
+   "tier": 1,
+   "key": "torch1",
+   "lookId": "hexmoon.torch1",
+   "role": "hexmoon_torch1",
+   "name": "Hex Runt",
+   "engineName": "Torch Runt",
+   "boss": false,
+   "look": "crescent horns, moon mask, quill staff",
+   "parts": [
+    "quill-staff",
+    "moon-mask",
+    "crescent-horns"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch1",
+     "name": "Hex Runt"
+    },
+    {
+     "form": "swift",
+     "key": "torch1_swift",
+     "name": "Hex Runt · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch1_plated",
+     "name": "Hex Runt · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch1_warded",
+     "name": "Hex Runt · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/torch1.png",
+    "swift": "hexmoon/torch1-swift.png",
+    "plated": "hexmoon/torch1-plated.png",
+    "warded": "hexmoon/torch1-warded.png"
+   },
+   "walk": "hexmoon/walk-torch1.png",
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "torch",
+   "tier": 2,
+   "key": "torch2",
+   "lookId": "hexmoon.torch2",
+   "role": "hexmoon_torch2",
+   "name": "Moon Goblin",
+   "engineName": "Torch Goblin",
+   "boss": false,
+   "look": "+ rune pauldron",
+   "parts": [
+    "quill-staff",
+    "moon-mask",
+    "crescent-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch2",
+     "name": "Moon Goblin"
+    },
+    {
+     "form": "swift",
+     "key": "torch2_swift",
+     "name": "Moon Goblin · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch2_plated",
+     "name": "Moon Goblin · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch2_warded",
+     "name": "Moon Goblin · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/torch2.png",
+    "swift": "hexmoon/torch2-swift.png",
+    "plated": "hexmoon/torch2-plated.png",
+    "warded": "hexmoon/torch2-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "torch",
+   "tier": 3,
+   "key": "torch3",
+   "lookId": "hexmoon.torch3",
+   "role": "hexmoon_torch3",
+   "name": "Rune Raider",
+   "engineName": "Torch Raider",
+   "boss": false,
+   "look": "+ scroll pole",
+   "parts": [
+    "scroll-pole",
+    "quill-staff",
+    "moon-mask",
+    "crescent-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch3",
+     "name": "Rune Raider"
+    },
+    {
+     "form": "swift",
+     "key": "torch3_swift",
+     "name": "Rune Raider · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch3_plated",
+     "name": "Rune Raider · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch3_warded",
+     "name": "Rune Raider · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/torch3.png",
+    "swift": "hexmoon/torch3-swift.png",
+    "plated": "hexmoon/torch3-plated.png",
+    "warded": "hexmoon/torch3-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "torch",
+   "tier": 4,
+   "key": "torch4",
+   "lookId": "hexmoon.torch4",
+   "role": "hexmoon_torch4",
+   "name": "Lunar Berserker",
+   "engineName": "Torch Berserker",
+   "boss": false,
+   "look": "full-moon horns",
+   "parts": [
+    "scroll-pole",
+    "quill-staff",
+    "moon-mask",
+    "full-moon-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch4",
+     "name": "Lunar Berserker"
+    },
+    {
+     "form": "swift",
+     "key": "torch4_swift",
+     "name": "Lunar Berserker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch4_plated",
+     "name": "Lunar Berserker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch4_warded",
+     "name": "Lunar Berserker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/torch4.png",
+    "swift": "hexmoon/torch4-swift.png",
+    "plated": "hexmoon/torch4-plated.png",
+    "warded": "hexmoon/torch4-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "torch",
+   "tier": 5,
+   "key": "torch5",
+   "lookId": "hexmoon.torch5",
+   "role": "hexmoon_torch5",
+   "name": "The Pale Seer",
+   "engineName": "Warlord Grukk",
+   "boss": true,
+   "look": "moon halo crown, star mantle",
+   "parts": [
+    "star-mantle",
+    "scroll-pole",
+    "quill-staff",
+    "moon-mask",
+    "moon-halo",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "torch5",
+     "name": "The Pale Seer"
+    },
+    {
+     "form": "swift",
+     "key": "torch5_swift",
+     "name": "The Pale Seer · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "torch5_plated",
+     "name": "The Pale Seer · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "torch5_warded",
+     "name": "The Pale Seer · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/torch5.png",
+    "swift": "hexmoon/torch5-swift.png",
+    "plated": "hexmoon/torch5-plated.png",
+    "warded": "hexmoon/torch5-warded.png"
+   },
+   "walk": "hexmoon/walk-torch5.png",
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "tnt",
+   "tier": 1,
+   "key": "tnt1",
+   "lookId": "hexmoon.tnt1",
+   "role": "hexmoon_tnt1",
+   "name": "Glyph Whelp",
+   "engineName": "Fuse Whelp",
+   "boss": false,
+   "look": "crescent horns, scroll case, hex vial",
+   "parts": [
+    "scroll-case",
+    "hex-vial",
+    "moon-mask",
+    "tnt-crescent-horns"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt1",
+     "name": "Glyph Whelp"
+    },
+    {
+     "form": "swift",
+     "key": "tnt1_swift",
+     "name": "Glyph Whelp · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt1_plated",
+     "name": "Glyph Whelp · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt1_warded",
+     "name": "Glyph Whelp · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/tnt1.png",
+    "swift": "hexmoon/tnt1-swift.png",
+    "plated": "hexmoon/tnt1-plated.png",
+    "warded": "hexmoon/tnt1-warded.png"
+   },
+   "walk": "hexmoon/walk-tnt1.png",
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "tnt",
+   "tier": 2,
+   "key": "tnt2",
+   "lookId": "hexmoon.tnt2",
+   "role": "hexmoon_tnt2",
+   "name": "Hex Bomber",
+   "engineName": "Bomber",
+   "boss": false,
+   "look": "+ rune pauldron",
+   "parts": [
+    "scroll-case",
+    "hex-vial",
+    "moon-mask",
+    "tnt-crescent-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt2",
+     "name": "Hex Bomber"
+    },
+    {
+     "form": "swift",
+     "key": "tnt2_swift",
+     "name": "Hex Bomber · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt2_plated",
+     "name": "Hex Bomber · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt2_warded",
+     "name": "Hex Bomber · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/tnt2.png",
+    "swift": "hexmoon/tnt2-swift.png",
+    "plated": "hexmoon/tnt2-plated.png",
+    "warded": "hexmoon/tnt2-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "tnt",
+   "tier": 3,
+   "key": "tnt3",
+   "lookId": "hexmoon.tnt3",
+   "role": "hexmoon_tnt3",
+   "name": "Rune Breaker",
+   "engineName": "Demolisher",
+   "boss": false,
+   "look": "+ scroll pole",
+   "parts": [
+    "scroll-pole",
+    "scroll-case",
+    "hex-vial",
+    "moon-mask",
+    "tnt-crescent-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt3",
+     "name": "Rune Breaker"
+    },
+    {
+     "form": "swift",
+     "key": "tnt3_swift",
+     "name": "Rune Breaker · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt3_plated",
+     "name": "Rune Breaker · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt3_warded",
+     "name": "Rune Breaker · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/tnt3.png",
+    "swift": "hexmoon/tnt3-swift.png",
+    "plated": "hexmoon/tnt3-plated.png",
+    "warded": "hexmoon/tnt3-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "tnt",
+   "tier": 4,
+   "key": "tnt4",
+   "lookId": "hexmoon.tnt4",
+   "role": "hexmoon_tnt4",
+   "name": "Curse Sapper",
+   "engineName": "Sapper",
+   "boss": false,
+   "look": "full-moon horns",
+   "parts": [
+    "scroll-pole",
+    "scroll-case",
+    "hex-vial",
+    "moon-mask",
+    "tnt-full-moon-horns",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt4",
+     "name": "Curse Sapper"
+    },
+    {
+     "form": "swift",
+     "key": "tnt4_swift",
+     "name": "Curse Sapper · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt4_plated",
+     "name": "Curse Sapper · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt4_warded",
+     "name": "Curse Sapper · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/tnt4.png",
+    "swift": "hexmoon/tnt4-swift.png",
+    "plated": "hexmoon/tnt4-plated.png",
+    "warded": "hexmoon/tnt4-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "tnt",
+   "tier": 5,
+   "key": "tnt5",
+   "lookId": "hexmoon.tnt5",
+   "role": "hexmoon_tnt5",
+   "name": "The Eclipse King",
+   "engineName": "Powderkeg King",
+   "boss": true,
+   "look": "moon halo crown, star standard",
+   "parts": [
+    "star-standard",
+    "scroll-case",
+    "hex-vial",
+    "moon-mask",
+    "tnt-moon-halo",
+    "rune-pauldron"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "tnt5",
+     "name": "The Eclipse King"
+    },
+    {
+     "form": "swift",
+     "key": "tnt5_swift",
+     "name": "The Eclipse King · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "tnt5_plated",
+     "name": "The Eclipse King · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "tnt5_warded",
+     "name": "The Eclipse King · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/tnt5.png",
+    "swift": "hexmoon/tnt5-swift.png",
+    "plated": "hexmoon/tnt5-plated.png",
+    "warded": "hexmoon/tnt5-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "barrel",
+   "tier": 1,
+   "key": "barrel1",
+   "lookId": "hexmoon.barrel1",
+   "role": "hexmoon_barrel1",
+   "name": "Rune Urn",
+   "engineName": "Barrel Imp",
+   "boss": false,
+   "look": "crescent lid, rune mark",
+   "parts": [
+    "rune-mark",
+    "crescent-lid"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel1",
+     "name": "Rune Urn"
+    },
+    {
+     "form": "swift",
+     "key": "barrel1_swift",
+     "name": "Rune Urn · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel1_plated",
+     "name": "Rune Urn · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel1_warded",
+     "name": "Rune Urn · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/barrel1.png",
+    "swift": "hexmoon/barrel1-swift.png",
+    "plated": "hexmoon/barrel1-plated.png",
+    "warded": "hexmoon/barrel1-warded.png"
+   },
+   "walk": "hexmoon/walk-barrel1.png",
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "barrel",
+   "tier": 2,
+   "key": "barrel2",
+   "lookId": "hexmoon.barrel2",
+   "role": "hexmoon_barrel2",
+   "name": "Star Roller",
+   "engineName": "Barrel Roller",
+   "boss": false,
+   "look": "+ star studs",
+   "parts": [
+    "rune-mark",
+    "star-studs",
+    "crescent-lid"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel2",
+     "name": "Star Roller"
+    },
+    {
+     "form": "swift",
+     "key": "barrel2_swift",
+     "name": "Star Roller · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel2_plated",
+     "name": "Star Roller · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel2_warded",
+     "name": "Star Roller · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/barrel2.png",
+    "swift": "hexmoon/barrel2-swift.png",
+    "plated": "hexmoon/barrel2-plated.png",
+    "warded": "hexmoon/barrel2-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "barrel",
+   "tier": 3,
+   "key": "barrel3",
+   "lookId": "hexmoon.barrel3",
+   "role": "hexmoon_barrel3",
+   "name": "Moon Keg",
+   "engineName": "Ironbarrel",
+   "boss": false,
+   "look": "+ rune stones",
+   "parts": [
+    "rune-stones",
+    "rune-mark",
+    "star-studs",
+    "crescent-lid"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel3",
+     "name": "Moon Keg"
+    },
+    {
+     "form": "swift",
+     "key": "barrel3_swift",
+     "name": "Moon Keg · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel3_plated",
+     "name": "Moon Keg · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel3_warded",
+     "name": "Moon Keg · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/barrel3.png",
+    "swift": "hexmoon/barrel3-swift.png",
+    "plated": "hexmoon/barrel3-plated.png",
+    "warded": "hexmoon/barrel3-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "barrel",
+   "tier": 4,
+   "key": "barrel4",
+   "lookId": "hexmoon.barrel4",
+   "role": "hexmoon_barrel4",
+   "name": "Siege Orrery",
+   "engineName": "Siege Barrel",
+   "boss": false,
+   "look": "+ taller crescent",
+   "parts": [
+    "rune-stones",
+    "rune-mark",
+    "star-studs",
+    "crescent-lid",
+    "lid-star"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel4",
+     "name": "Siege Orrery"
+    },
+    {
+     "form": "swift",
+     "key": "barrel4_swift",
+     "name": "Siege Orrery · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel4_plated",
+     "name": "Siege Orrery · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel4_warded",
+     "name": "Siege Orrery · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/barrel4.png",
+    "swift": "hexmoon/barrel4-swift.png",
+    "plated": "hexmoon/barrel4-plated.png",
+    "warded": "hexmoon/barrel4-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  },
+  {
+   "clan": "hexmoon",
+   "clanName": "Hexmoon Coven",
+   "company": "scrolls",
+   "faction": "barrel",
+   "tier": 5,
+   "key": "barrel5",
+   "lookId": "hexmoon.barrel5",
+   "role": "hexmoon_barrel5",
+   "name": "The Lunar Vault",
+   "engineName": "The Colossus Keg",
+   "boss": true,
+   "look": "full-moon crown, rune stones",
+   "parts": [
+    "rune-stones",
+    "rune-mark",
+    "star-studs",
+    "full-moon-crown"
+   ],
+   "forms": [
+    {
+     "form": "base",
+     "key": "barrel5",
+     "name": "The Lunar Vault"
+    },
+    {
+     "form": "swift",
+     "key": "barrel5_swift",
+     "name": "The Lunar Vault · Swift"
+    },
+    {
+     "form": "plated",
+     "key": "barrel5_plated",
+     "name": "The Lunar Vault · Plated"
+    },
+    {
+     "form": "warded",
+     "key": "barrel5_warded",
+     "name": "The Lunar Vault · Warded"
+    }
+   ],
+   "renders": {
+    "base": "hexmoon/barrel5.png",
+    "swift": "hexmoon/barrel5-swift.png",
+    "plated": "hexmoon/barrel5-plated.png",
+    "warded": "hexmoon/barrel5-warded.png"
+   },
+   "sheet": "sheets/hexmoon.png",
+   "road": "hexmoon"
+  }
+ ]
+}

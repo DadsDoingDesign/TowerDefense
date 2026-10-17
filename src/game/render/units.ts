@@ -23,6 +23,7 @@ import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
 import { blitPixmap } from './blit'
 import { eliteMark, enemyTier, type EliteMark } from './plaques'
+import { clanArtFor, clanArtTop } from './clanArt'
 import { drawEnemyBar, enemyBarTop } from './hpbar'
 
 /** A minimal, uniform description of a tower to draw (works for setup + battle). */
@@ -534,11 +535,16 @@ export function drawEnemy(
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const art = artFor(type.id)
+  // The road's clan (Oct 2026, `clanArt.ts`): the same goblin, re-dressed —
+  // its baked strip when it has decoded, the plain art until then.
+  const role = clanArtFor(type.id)
+  const art = artFor(role)
   const pack = art?.pack
-  const walkFrames = pack ? ANIM_FRAMES[`${type.id}_walk`] : undefined
-  const walk = pack && walkFrames ? getSprite(pack, `${type.id}_walk`) : undefined
-  const staticSpr = pack ? getSprite(pack, type.id) : undefined
+  const walkFrames = pack ? ANIM_FRAMES[`${role}_walk`] : undefined
+  const walk = pack && walkFrames ? getSprite(pack, `${role}_walk`) : undefined
+  const staticSpr = pack ? getSprite(pack, role) : undefined
+  /** A clan strip's own art top (its crest, hat or horns), as a fraction of the cell. */
+  const clanTop = role === type.id ? undefined : clanArtTop(role)
   /**
    * TWO render buckets, and only two (see `pixmap.ts`): rank and file at half
    * density, the tier-5 champion at the pack's native density — so a champion
@@ -609,7 +615,7 @@ export function drawEnemy(
     // 0.9 rather than 1.0: the top tenth of a Tiny Swords frame is transparent
     // headroom, and anchoring to the frame rather than to the character left
     // the tag visibly detached — 9 logical px of nothing over a champion.
-    artTop = Math.round(feet - walkPm.fh) + walkPm.fh * 0.1
+    artTop = Math.round(feet - walkPm.fh) + walkPm.fh * (clanTop ?? 0.1)
     overlays(walkPm.fh / 2 + 2)
   } else if (staticPm) {
     enemyShadow()

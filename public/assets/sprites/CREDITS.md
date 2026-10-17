@@ -114,3 +114,17 @@ tints the procedural fallback token, not the sprite.
 
 Distinct champion art is an open art task. Until it exists, do not describe
 these as recoloured.
+
+### The goblin clans (`tinyswords/<clan>_*.png`, Oct 2026)
+
+The 75 clan strips — `cinder_`, `smudge_`, `delve_`, `silkcut_`, `hexmoon_`
+× `torch1..5_walk`, `tnt1..5_walk`, `barrel1..5` — are **derived** files, baked
+by `scripts/enemy-clans.ts` from the plain old-CC0 goblins above. The bake cuts
+the parts a clan replaces (the torch's flame, the bomber's dynamite, the keg's
+fuse and stencil) and lays on ORIGINAL pixel parts drawn in this repository
+(`scripts/enemy-clans-art.ts`: crests, helmets, hats, horns, weapons, packs,
+caps, mantles), snapped to colours the pack already ships — so they pass the
+CC0 palette test (`harvest-cc0.ts --check`; offline twin in
+`tests/clans.test.ts`). Nothing comes from the current Tiny Swords download.
+Each clan's champion (tier 5) now carries its own boss look: the open art task
+above is answered per clan, while the plain bench champions stay as noted.

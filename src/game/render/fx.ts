@@ -42,6 +42,7 @@
 import { ANIM_FRAMES } from './anim'
 import { pixmap, type Pixmap } from './pixmap'
 import { artFor, getSprite } from './sprites'
+import { clanArtFor } from './clanArt'
 import { unitPixmapScale } from './frame'
 import { inkOf, type Delivery, type EffectInk, type HitEffect } from './attackLook'
 import { drawSlashArc, SWING_LIFT } from './projectiles'
@@ -1227,17 +1228,19 @@ function sheetBurst(x: number, y: number, sheet: number, n: number, spread: numb
  * than none: it fails Berbece's first test, clarity.
  */
 function corpseArt(typeId: string, boss: boolean): { pm: Pixmap; frame: number; feet: number } | null {
-  const art = artFor(typeId)
+  // The road's clan falls as it ran: its own strip, crest and all (`clanArt.ts`).
+  const role = clanArtFor(typeId)
+  const art = artFor(role)
   if (!art) return null
   const pack = art.pack
   const sc = unitPixmapScale(art.spriteScale, boss)
-  const frames = ANIM_FRAMES[`${typeId}_walk`]
-  const walk = frames ? getSprite(pack, `${typeId}_walk`) : undefined
+  const frames = ANIM_FRAMES[`${role}_walk`]
+  const walk = frames ? getSprite(pack, `${role}_walk`) : undefined
   if (walk && frames) {
     const pm = pixmap(walk, { scale: sc, frames, ring: true })
     if (pm) return { pm, frame: (Math.random() * frames) | 0, feet: 0 }
   }
-  const still = getSprite(pack, typeId)
+  const still = getSprite(pack, role)
   if (still) {
     const pm = pixmap(still, { scale: sc, ring: true })
     if (pm) return { pm, frame: 0, feet: 0 }
