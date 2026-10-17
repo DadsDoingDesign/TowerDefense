@@ -68,10 +68,10 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
           ? {
               label: (
                 <>
-                  Charter the road <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
+                  Buy the company <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
                 </>
               ),
-              name: `Charter the road, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
+              name: `Buy the company, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
               run: signCharter,
               disabled: !can,
               heavy: true,
@@ -129,7 +129,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
         <>
           <div className="ch-terms">
             <div>
-              <span>Charter</span>
+              <span>Price</span>
               <b>
                 <Gold n={CHARTER_FEE} />
               </b>
@@ -214,7 +214,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
 
           {!can && (
             <p className="ch-note short">
-              Your bank holds {bank.toLocaleString('en')} gold; the charter is {CHARTER_FEE.toLocaleString('en')}.
+              Your bank holds {bank.toLocaleString('en')} gold; the company costs {CHARTER_FEE.toLocaleString('en')}.
             </p>
           )}
         </>
