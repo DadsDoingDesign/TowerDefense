@@ -144,8 +144,19 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
     setM({ ...m, ...randomBanner(s) })
   }
   const set = (patch: Partial<Militia>) => setM((cur) => ({ ...cur, ...patch }))
+  // Editing a saved militia, the CTA waits until something differs from it —
+  // the name, a part of the flag, or the theme (job critique leftovers, Oct
+  // 2026: "Raise the new flag" read as live before anything had changed).
+  const lookKey = (x: Militia) => {
+    const f = fullBanner(x) as unknown as Record<string, unknown>
+    return Object.keys(f)
+      .sort()
+      .map((k) => `${k}:${String(f[k])}`)
+      .join('|')
+  }
+  const unchanged = mode === 'edit' && !!saved && check.ok && check.name === saved.name && militiaTheme(saved) === theme && lookKey(saved) === lookKey(m)
   const done = () => {
-    if (!check.ok || themeLocked) return
+    if (!check.ok || themeLocked || unchanged) return
     setMilitia({ ...m, name: check.name })
     onDone()
   }
@@ -223,8 +234,12 @@ export function MilitiaScreen({ onDone, onBack, mode = 'edit' }: { onDone: () =>
         label: mode === 'create' ? 'Found the militia' : saved ? 'Raise the new flag' : 'Raise the flag',
         run: done,
         heavy: true,
-        disabled: !check.ok || themeLocked,
-        name: themeLocked ? `${mode === 'create' ? 'Found the militia' : 'Raise the flag'}: the ${uiTheme(theme).name} theme is not unlocked yet` : undefined,
+        disabled: !check.ok || themeLocked || unchanged,
+        name: themeLocked
+          ? `${mode === 'create' ? 'Found the militia' : 'Raise the flag'}: the ${uiTheme(theme).name} theme is not unlocked yet`
+          : unchanged
+            ? 'Raise the new flag: change the flag or the name first'
+            : undefined,
       }}
     >
       <div className="mi-preview co-preview">
