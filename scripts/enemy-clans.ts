@@ -313,11 +313,13 @@ function mend(im: Img, fw: number, f: number, box: readonly [number, number, num
 }
 
 /** Lay one part with its top-left at frame-local (px, py), inked, `under` filling only empty pixels. */
-function lay(im: Img, fw: number, f: number, part: Part, px: number, py: number, pal: readonly RGB[], halo: boolean): void {
+/** Returns the topmost row it painted (fill or ink), or Infinity. */
+function lay(im: Img, fw: number, f: number, part: Part, px: number, py: number, pal: readonly RGB[], halo: boolean): number {
   const ox = f * fw
   const mask = new Set<number>()
   const rows = part.flip ? part.grid.map((r) => [...r].reverse().join('')) : part.grid
   const under = part.layer === 'under'
+  let top = Infinity
   rows.forEach((row, j) => {
     for (let i = 0; i < row.length; i++) {
       const ch = row[i]
@@ -330,9 +332,10 @@ function lay(im: Img, fw: number, f: number, part: Part, px: number, py: number,
       if (!hexc) throw new Error(`[enemy-clans] part '${part.name}': no colour for '${ch}'`)
       put(im, ox + x, y, nearest(pal, hex(hexc)))
       mask.add(y * fw + x)
+      top = Math.min(top, y)
     }
   })
-  if (part.ink === false) return
+  if (part.ink === false) return top
   // Ink: every 4-neighbour of the part that is not the part (and, for an
   // under part, not the body), so the part reads as its own shape.
   const ink: [number, number][] = []
@@ -348,8 +351,11 @@ function lay(im: Img, fw: number, f: number, part: Part, px: number, py: number,
       ink.push([nx, ny])
     }
   }
-  for (const [x, y] of ink) put(im, ox + x, y, INK_RGB)
-  if (!halo) return
+  for (const [x, y] of ink) {
+    put(im, ox + x, y, INK_RGB)
+    top = Math.min(top, y)
+  }
+  if (!halo) return top
   for (const [x, y] of ink)
     for (let j = -1; j <= 1; j++)
       for (let i = -1; i <= 1; i++) {
@@ -357,6 +363,7 @@ function lay(im: Img, fw: number, f: number, part: Part, px: number, py: number,
         if (nx < 0 || nx >= fw) continue
         if (alpha(im, ox + nx, y + j) === 0) put(im, ox + nx, y + j, INK_RGB, HALO_A)
       }
+  return top
 }
 
 // ── the bake ────────────────────────────────────────────────────────────────
@@ -383,7 +390,11 @@ const HEAD_BOX: Readonly<Record<'torch' | 'tnt', readonly [number, number, numbe
 export interface Baked {
   role: string
   png: Buffer
-  /** The tallest frame's first opaque row, as a fraction of the cell height. */
+  /**
+   * The head's top in its tallest frame — the body's and every part laid OVER
+   * it (headgear, weapon), not the thin poles and cloths behind it — as a
+   * fraction of the cell height: where the HP bar hangs.
+   */
   top: number
   fw: number
   fh: number
@@ -406,6 +417,7 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
     const hand = faction === 'tnt' ? centreOf(im, fw, f, STICK_BODY, shift([63, 10, 89, 52], head.dx, head.dy + T)) : null
     return { head, tip, hand }
   })
+  let top = im.h
   for (let f = 0; f < frames; f++) {
     const { head, tip, hand } = anchors[f]
     if (faction === 'torch' && recipe.cuts.includes('flame')) cut(im, fw, f, FLAME, [0, 0, 50, 30 + T])
@@ -418,6 +430,15 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
       // The stencilled TNT goes too, under the clan's mark.
       cut(im, fw, f, set('#ffffff'), [S + 10, T + 46, S + 41, T + 58])
       mend(im, fw, f, [S + 10, T + 46, S + 41, T + 58])
+    }
+    // The body's own top, once the cuts are made (the plain flame is gone).
+    for (let y = 0; y < Math.min(top, im.h); y++) {
+      let row = false
+      for (let x = 0; x < fw && !row; x++) row = solid(im, f * fw + x, y)
+      if (row) {
+        top = y
+        break
+      }
     }
     if (recipe.bands) {
       // The hoops' cream, in the clan's metal (or wood): the keg's colour
@@ -447,14 +468,13 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
         px = S + part.x + head.dx
         py = T + part.y + head.dy
       }
-      lay(im, fw, f, part, px, py, pal, still)
+      const t = lay(im, fw, f, part, px, py, pal, still)
+      if (part.layer !== 'under') top = Math.min(top, t)
     }
     // The rope lay ON the lid: mend the lid where it was, from the staves
     // round it (the box starts under the lid's rim, so its top is sealed).
     if (faction === 'barrel' && recipe.cuts.includes('fuse')) mend(im, fw, f, [S + 16, T + 18, S + 36, T + 30], true)
   }
-  let top = im.h
-  for (let y = 0; y < im.h && top === im.h; y++) for (let x = 0; x < im.w; x++) if (solid(im, x, y)) { top = y; break }
   return { role: `${clan}_${srcName}`, png: await encode(im), top: +(top / im.h).toFixed(4), fw, fh: im.h }
 }
 const shift = (b: readonly [number, number, number, number], dx: number, dy: number) => [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy] as const

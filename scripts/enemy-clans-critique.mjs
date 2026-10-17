@@ -123,7 +123,7 @@ async function setup(page, road) {
 /** The canvas, greyscale (luma), written beside the colour shot. */
 async function grey(page, file) {
   const data = await page.evaluate(() => {
-    const c = document.querySelector('canvas')
+    const c = document.querySelector('canvas.battle-canvas')
     const o = document.createElement('canvas')
     o.width = c.width
     o.height = c.height
@@ -151,7 +151,22 @@ for (const vpKey of which === 'all' ? ['phone', 'desk'] : [which]) {
     const r = await setup(page, road)
     if (!r.ok) { console.error(road, vp.id, r); continue }
     await page.waitForTimeout(600)
-    if (EXTRAS.has('ui')) await page.screenshot({ path: `${OUT}/${road}-${vp.id}-preview.png` })
+    if (EXTRAS.has('ui')) {
+      // The wave preview (setup), once the hire toasts have gone, and the
+      // enemy card off its first portrait.
+      await page.evaluate(() => window.__game.setState({ toasts: [] }))
+      await page.waitForTimeout(3200)
+      await page.screenshot({ path: `${OUT}/${road}-${vp.id}-preview.png` })
+      const chip = page.locator('.sh-wavepre .sh-wq-chip, .sh-wq-chip').first()
+      if (await chip.count()) {
+        await chip.click().catch(() => {})
+        await page.waitForTimeout(500)
+        await page.screenshot({ path: `${OUT}/${road}-${vp.id}-card.png` })
+        await page.keyboard.press('Escape').catch(() => {})
+        await page.waitForTimeout(200)
+      } else console.error('  ! no queue chip', road, vp.id)
+    }
+    if (process.env.CLAN_OFF) await page.evaluate(() => { window.__clanOff = true })
     await page.evaluate(() => { window.__game.getState().setSpeed?.(1); window.__game.getState().startWave() })
     await page.waitForTimeout(WAIT - 4000)
     await page.evaluate(() => { window.__frameMs.length = 0 })
@@ -159,31 +174,35 @@ for (const vpKey of which === 'all' ? ['phone', 'desk'] : [which]) {
     const ms = await page.evaluate(() => window.__frameMs.slice())
     const enemies = await page.evaluate(() => window.__game.getState().engine?.enemies.length ?? 0)
     await page.screenshot({ path: `${OUT}/${road}-${vp.id}-wave.png` })
-    await page.locator('canvas').first().screenshot({ path: `${OUT}/${road}-${vp.id}-canvas.png` })
+    await page.locator('canvas.battle-canvas').first().screenshot({ path: `${OUT}/${road}-${vp.id}-canvas.png` })
     await grey(page, `${OUT}/${road}-${vp.id}-grey.png`)
     const row = { road, vp: vp.id, map: r.map, enemies, frame: stat(ms) }
     report.push(row)
     console.log(road.padEnd(7), vp.id, JSON.stringify(row.frame), 'enemies', enemies, r.map)
-    if (EXTRAS.has('ui')) {
-      // The enemy card: the first live goblin's portrait in the strip, tapped.
-      const chip = page.locator('.sh-wq-chip, .sh-wq button').first()
-      if (await chip.count()) {
-        await chip.click().catch(() => {})
-        await page.waitForTimeout(400)
-        await page.screenshot({ path: `${OUT}/${road}-${vp.id}-card.png` })
-        await page.keyboard.press('Escape').catch(() => {})
-      }
-    }
   }
   if (EXTRAS.has('ui')) {
-    await page.evaluate(() => {
+    // The Codex's goblins tab, every clan met and every unit of it seen (no
+    // run on the books, so no resume prompt over the home).
+    const fresh = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 2 })
+    const cpage = await fresh.newPage()
+    await cpage.goto(BASE, { waitUntil: 'networkidle' })
+    await cpage.waitForFunction(() => !!window.__meta)
+    await cpage.evaluate(() => {
       const m = window.__meta.getState()
       const enemies = ['torch1', 'torch2', 'torch3', 'torch4', 'torch5', 'tnt1', 'tnt2', 'tnt3', 'tnt4', 'tnt5', 'barrel1', 'barrel2', 'barrel3', 'barrel4', 'barrel5']
-      window.__meta.setState({ codex: { ...m.codex, enemies, clans: ['ember', 'smudge', 'rivet', 'thread', 'hex'] } })
-      window.__game.getState().openCodex?.('goblins')
+      window.__meta.setState({ codex: { ...m.codex, enemies, clans: ['cinder', 'smudge', 'delve', 'silkcut', 'hexmoon'] }, stats: { ...m.stats, runsCompleted: 3 } })
     })
-    await page.waitForTimeout(600)
-    await page.screenshot({ path: `${OUT}/codex-${vp.id}.png`, fullPage: true })
+    await cpage.waitForTimeout(300)
+    const codex = cpage.getByRole('button', { name: /Codex/ }).first()
+    if (await codex.count()) {
+      await codex.click()
+      await cpage.waitForTimeout(500)
+      await cpage.getByRole('tab', { name: /Goblins/ }).first().click().catch(() => {})
+      await cpage.waitForTimeout(900)
+      await cpage.screenshot({ path: `${OUT}/codex-${vp.id}.png` })
+      await cpage.locator('.cx-body').first().screenshot({ path: `${OUT}/codex-${vp.id}-grid.png` }).catch(() => {})
+    } else console.error('  ! no Codex button')
+    await fresh.close()
   }
   await ctx.close()
 }
