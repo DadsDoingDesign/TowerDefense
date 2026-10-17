@@ -13,7 +13,7 @@
  *    (`terrain.GROUND_EFFECTS`), not its place-name;
  *  - **Raiders** — the armour its armoured fights lean to and the damage that
  *    goes through it, or "Plate or wards, evenly";
- *  - **Rep N** — what the loyalty track pays at the next level, by kind
+ *  - **At Rep N** — what the loyalty track pays at the next level, by kind
  *    ("Skill · Gilt Frame"), with its mark (the way into the track).
  *
  * A one-off condition — desperate terms, the market of the day — is not a row: most days no company has one, and
@@ -145,9 +145,10 @@ export function companyBadge(o: CardState): CardBadge | null {
 
 /**
  * What its loyalty track pays at the next standing level, named by kind —
- * "Rep 5 · Skill · Gilt Frame" — with the reward's own mark. The label is the
- * level (the dock says the level you are at), so the row reads as "at Rep 5
- * you get this"; the row opens the track.
+ * "At Rep 5 · Skill · Gilt Frame" — with the reward's own mark. The label is
+ * the level it pays at, said as "At Rep 5" (the job critique, Oct 2026): a
+ * bare "Rep 5" under the dock's "Rep 4" read as a second, contradicting
+ * standing. The row opens the track.
  */
 function nextFact(o: CardState): CardFact {
   if (!o.open && !o.staged) return { key: 'next', label: 'Track', value: 'Opens once it hires you', name: 'Its loyalty track opens once it hires you', tone: 'quiet' }
@@ -163,7 +164,7 @@ function nextFact(o: CardState): CardFact {
           : r.kind === 'stakes'
             ? ['Stakes open', 'coffer']
             : ['A second term', 'crown']
-  return { key: 'next', label: `Rep ${r.level}`, value, name: `At Rep ${r.level}, its loyalty track pays: ${value}`, tone: 'plain', icon }
+  return { key: 'next', label: `At Rep ${r.level}`, value, name: `At Rep ${r.level}, its loyalty track pays: ${value}`, tone: 'plain', icon }
 }
 
 const n = (x: number) => x.toLocaleString('en')

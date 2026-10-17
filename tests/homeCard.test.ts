@@ -46,7 +46,7 @@ describe('the company card: a fixed form', () => {
               expect(facts.map((f) => f.key)).toEqual([...COMPANY_ROWS])
               expect(facts.map((f) => f.label).slice(0, 2)).toEqual(['Ground', 'Raiders'])
               // The third row's label is the level that pays it, or "Track" when nothing is ahead.
-              expect(facts[2].label).toBe(next && (open || staged) ? `Rep ${next.level}` : 'Track')
+              expect(facts[2].label).toBe(next && (open || staged) ? `At Rep ${next.level}` : 'Track')
               // A one-off condition is a short badge in the head, never a row.
               const badge = companyBadge({ company, staged, open, war, market, next })
               if (badge) expect(badge.label.length, `${company}: ${badge.label}`).toBeLessThanOrEqual(22)
@@ -76,9 +76,9 @@ describe('the company card: a fixed form', () => {
 
   it('the Rep row names what the track pays next, by kind', () => {
     const row = (next: Next) => companyFacts({ company: 'art', staged: false, open: true, war: null, market: 1, next })[2]
-    expect(row(NEXTS[0])).toMatchObject({ label: 'Rep 5', value: 'Skill · Gilt Frame' })
-    expect(row({ kind: 'item', id: 'Axe', name: 'Axe', level: 3 })).toMatchObject({ label: 'Rep 3', value: 'Item · Axe' })
-    expect(row(NEXTS[1])).toMatchObject({ label: 'Rep 10', value: 'Rare item · Warhammer' })
+    expect(row(NEXTS[0])).toMatchObject({ label: 'At Rep 5', value: 'Skill · Gilt Frame' })
+    expect(row({ kind: 'item', id: 'Axe', name: 'Axe', level: 3 })).toMatchObject({ label: 'At Rep 3', value: 'Item · Axe' })
+    expect(row(NEXTS[1])).toMatchObject({ label: 'At Rep 10', value: 'Rare item · Warhammer' })
     expect(row({ kind: 'stakes', id: null, name: 'Stakes', level: 2 }).value).toBe('Stakes open')
     expect(row(null)).toMatchObject({ label: 'Track', value: 'All earned' })
   })

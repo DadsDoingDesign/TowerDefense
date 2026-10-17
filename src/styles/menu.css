@@ -492,6 +492,28 @@
     width: 46px;
   }
 }
+/* A 320px phone (the job critique, Oct 2026): with your militia's plate the
+   bar ran 17px past the screen and cut "Settings" in half. The places step
+   down to the 44px floor and the plate tightens, so all of it fits. */
+@media (max-width: 359.98px) {
+  .mn-bar {
+    gap: 3px;
+    padding-inline: 6px;
+  }
+  .mn-places {
+    gap: 2px;
+  }
+  .mn-place {
+    width: 44px;
+  }
+  .mn-purse-btn {
+    gap: 4px;
+    padding: 0 7px 0 4px;
+  }
+  .mn-flagmark .banner {
+    height: 34px;
+  }
+}
 
 /* Under the bar, floating OVER the map (they never push it — a panel or a
    tip that comes and goes would re-frame the map): the season panel under
@@ -613,6 +635,20 @@
 .mn-season:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: var(--focus-offset);
+}
+/* A 320px phone: the season panel sets the purse's width (`--lead-w`), so
+   its seven bars step down with the bar's places, or the purse is held wide. */
+@media (max-width: 359.98px) {
+  .mn-season {
+    padding-inline: 8px;
+  }
+  .mn-season-head {
+    gap: 8px;
+  }
+  .mn-season-bars {
+    grid-template-columns: repeat(7, minmax(11px, 1fr));
+    gap: 2px;
+  }
 }
 @media (hover: hover) and (pointer: fine) {
   .mn-season:hover {
@@ -894,6 +930,7 @@
 }
 .mn-fact .field-k {
   line-height: 1;
+  white-space: nowrap;
 }
 .mn-fact-m {
   display: flex;

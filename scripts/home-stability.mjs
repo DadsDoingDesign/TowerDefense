@@ -7,7 +7,7 @@
  * chips wrapped to a different height per company, so the open area the map
  * fans its roads into moved, the map re-framed and its terrain re-baked.
  *
- * For a mid save and a veteran save, at 390×844 and 375×667 (phones, @2x)
+ * For a mid save and a veteran save, at 390×844, 375×667 and 320×568 (phones, @2x)
  * and 1280×800 (desk), with reduced motion and without, this focuses each of
  * the five companies and Buy Company in turn and records:
  *
@@ -29,13 +29,14 @@
  * Usage (playwright is not a project dependency; see `ui-audit.mjs`):
  *   npx vite --port 5199 --strictPort &
  *   PW_CHROMIUM=<chrome binary, for playwright-core> node scripts/home-stability.mjs
- * Env: HOME_BASE (default http://localhost:5199/).
+ * Env: HOME_BASE (default http://localhost:5199/), HOME_VIEWS (a comma list
+ * of the views to check, default all).
  */
 const BASE = process.env.HOME_BASE ?? 'http://localhost:5199/'
 const EXEC = process.env.PW_CHROMIUM
 
 const loadChromium = async () => {
-  for (const pkg of ['playwright', 'playwright-core']) {
+  for (const pkg of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
     try {
       return (await import(pkg)).chromium
     } catch {
@@ -49,6 +50,8 @@ const loadChromium = async () => {
 const VIEWS = {
   '390x844': { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   '375x667': { viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // The smallest phone the shell supports (the job critique, Oct 2026: the bar overflowed here).
+  '320x568': { viewport: { width: 320, height: 568 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   '1280x800': { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 },
 }
 const FOCI = ['spice', 'art', 'metals', 'silk', 'scrolls', 'charter']
@@ -190,7 +193,7 @@ const chromium = await loadChromium()
 const browser = await chromium.launch(EXEC ? { executablePath: EXEC } : {})
 let failed = 0
 for (const save of Object.keys(SAVES)) {
-  for (const view of Object.keys(VIEWS)) {
+  for (const view of Object.keys(VIEWS).filter((v) => !process.env.HOME_VIEWS || process.env.HOME_VIEWS.split(',').includes(v))) {
     for (const motion of [false, true]) {
       const { ctx, page, errs } = await openHome(browser, view, SAVES[save], motion)
       const runs = []
