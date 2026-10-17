@@ -248,7 +248,7 @@
   background-repeat: repeat-x;
   image-rendering: pixelated;
   pointer-events: none;
-  animation: th-crest 520ms steps(4) infinite;
+  animation: th-crest 680ms steps(4) infinite;
 }
 
 /* Rosethread's satin sheen: a pale band that sweeps across the card, the pick
