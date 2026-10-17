@@ -37,19 +37,65 @@
  * reach outside that frame's cell — see `gearFitProblems`.
  *
  * Usage:
+ * ## The body layer's torsos
+ *
+ * The same run measures the tunic of every frame of the hero strips in
+ * `TORSO_PACKS` (Tiny Swords: no marker layers, so the art itself is read —
+ * `measureTorsos`) into `bodyAnchors.generated.ts`, and fails when any body
+ * piece, dressed on any frame, would paint outside its hero cell
+ * (`bodyFitProblems`).
+ *
+ * Usage:
  *   npm run anchors          rewrite src/game/render/anchors.generated.ts
- *   npm run anchors:check    exit 1 if that file is stale (build guard)
+ *                            and src/game/render/bodyAnchors.generated.ts
+ *   npm run anchors:check    exit 1 if either file is stale (build guard)
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { ANIM_FRAMES } from '../src/game/render/anim'
 import { GEAR_POSE_CELLS } from '../src/game/render/anchors'
-import { gearFitProblems, opaqueBounds, render, scan, type Anchor, type GearInfo, type HeroStripInfo } from './anchors-lib'
+import type { Torso } from '../src/game/render/bodyLayer'
+import {
+  bodyFitProblems,
+  gearFitProblems,
+  measureTorsos,
+  opaqueBounds,
+  render,
+  renderTorsos,
+  scan,
+  TORSO_PACKS,
+  type Anchor,
+  type GearInfo,
+  type HeroStripInfo,
+} from './anchors-lib'
 
 const CHECK = process.argv.includes('--check')
 const ROOT = join('public', 'assets', 'sprites')
 const OUT = join('src', 'game', 'render', 'anchors.generated.ts')
+const BODY_OUT = join('src', 'game', 'render', 'bodyAnchors.generated.ts')
+
+/** Measure every torso strip of every pack in `TORSO_PACKS`; appends to `problems`. */
+async function scanTorsos(problems: string[]): Promise<Record<string, Record<string, Torso[]>>> {
+  const out: Record<string, Record<string, Torso[]>> = {}
+  for (const [pack, strips] of Object.entries(TORSO_PACKS)) {
+    out[pack] = {}
+    for (const strip of strips) {
+      const frames = ANIM_FRAMES[strip]
+      const file = join(ROOT, pack, `${strip}.png`)
+      if (!frames || !existsSync(file)) {
+        problems.push(`${pack}/${strip}: no strip or frame count`)
+        continue
+      }
+      const art = await raw(file)
+      const { torsos, errors } = measureTorsos(art.data, art.w, art.h, frames)
+      for (const e of errors) problems.push(`${pack}/${strip}: ${e}`)
+      for (const p of bodyFitProblems(`${pack}/${strip}`, art.data, art.w, art.h, torsos)) problems.push(p)
+      out[pack][strip] = torsos
+    }
+  }
+  return out
+}
 
 const isGear = (strip: string): boolean => strip.startsWith('gear_') || strip.startsWith('body_')
 
@@ -109,6 +155,7 @@ async function main(): Promise<void> {
     if (!readdirSync(join(ROOT, pack)).some((f) => f.endsWith('_anchors.png'))) continue
     packs[pack] = await scanPack(pack, problems)
   }
+  const torsos = await scanTorsos(problems)
 
   if (problems.length) {
     console.error('anchors: problems found\n  ' + problems.join('\n  '))
@@ -116,22 +163,26 @@ async function main(): Promise<void> {
   }
 
   const count = Object.values(packs).reduce((n, t) => n + Object.keys(t).length, 0)
+  const bodyCount = Object.values(torsos).reduce((n, t) => n + Object.keys(t).length, 0)
   const next = render(packs)
+  const nextBody = renderTorsos(torsos)
   if (CHECK) {
-    const current = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
-    if (current.trim() !== next.trim()) {
-      console.error(
-        `anchors: ${OUT} is stale — ${count} strip(s) on disk disagree with it.\n` +
-          'Run `npm run anchors` and commit the result.',
-      )
-      process.exit(1)
+    for (const [file, want, n] of [[OUT, next, count], [BODY_OUT, nextBody, bodyCount]] as const) {
+      const current = existsSync(file) ? readFileSync(file, 'utf8') : ''
+      if (current.trim() !== want.trim()) {
+        console.error(`anchors: ${file} is stale — ${n} strip(s) on disk disagree with it.\n` + 'Run `npm run anchors` and commit the result.')
+        process.exit(1)
+      }
     }
-    console.log(`anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s)); all gear fits its cells.`)
+    console.log(
+      `anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s), ${bodyCount} torso strip(s)); all gear and every body piece fits its cells.`,
+    )
     return
   }
 
   writeFileSync(OUT, next)
-  console.log(`anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}.`)
+  writeFileSync(BODY_OUT, nextBody)
+  console.log(`anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}, and ${bodyCount} torso strip(s) to ${BODY_OUT}.`)
 }
 
 main().catch((e) => {

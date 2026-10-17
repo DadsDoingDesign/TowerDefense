@@ -14,7 +14,9 @@
  *    gear slot, the reward card and every row that names it, framed by the
  *    rarity tile (`.sh-tile`: hue, letter, pips, ornament count).
  *  - **Figure** — the battlefield hero (`render/gearMarks.ts`): the SAME atlas
- *    cell, pixel-doubled, in the fist. A body piece is not drawn there.
+ *    cell, pixel-doubled, in the fist; a body piece is WORN instead — the
+ *    figure's own tunic re-inked in the cell's colours, plus its silhouette
+ *    (`render/bodyLayer.ts`).
  *  - **Doll** — the paper-doll compositor (`render/loadout.ts`): a `gear_<noun>`
  *    or `body_<noun>` strip, which only the from-scratch `fieldwatch` pack ships
  *    and only for a few nouns.
@@ -60,7 +62,7 @@ export interface ItemAssetRow {
   company: string
   /** The atlas cell — the icon everywhere in the UI. */
   icon: IconKey
-  /** The mark on the battlefield figure: the same cell in the fist, or null (a body piece is not drawn). */
+  /** The mark on the battlefield figure: the same cell in the fist, or worn on the body (`bodyLayer`). */
   figureMark: IconKey | null
   /** The doll strip the compositor asks for, and whether the doll pack ships it. */
   dollRole: string
@@ -87,7 +89,7 @@ export function itemAssetRows(): ItemAssetRow[] {
         level: k.level,
         company: k.company,
         icon,
-        figureMark: k.slot === 'body' ? null : icon,
+        figureMark: icon,
         dollRole,
         dollArt: shipped.has(dollRole),
       } satisfies ItemAssetRow
@@ -120,7 +122,7 @@ export function sharedAssets(rows: readonly ItemAssetRow[] = itemAssetRows()): S
     for (const [asset, kinds] of by) if (kinds.length > 1) out.push({ channel, asset, kinds })
   }
   group('icon', (r) => r.icon)
-  group('figure', (r) => (r.figureMark ? `${r.figureMark} in the fist` : 'nothing drawn (body)'))
+  group('figure', (r) => (r.slot === 'body' ? `${r.figureMark} worn` : r.figureMark ? `${r.figureMark} in the fist` : 'nothing drawn'))
   group('doll', (r) => (r.dollArt ? r.dollRole : 'no doll art (bare figure)'))
   return out
 }

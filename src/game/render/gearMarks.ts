@@ -37,8 +37,10 @@
  *    and shape — embers off a flaming blade, a frost star on a cold one, a
  *    spark on a shocking one — so the effect is on the hero before it is ever
  *    on a goblin;
- *  - **the body piece** is not drawn: armour has no silhouette on these chibi
- *    figures and a third picture would bury the one that matters.
+ *  - **the body piece** is not a third picture in a fist: it is WORN, a layer
+ *    derived from the figure's own tunic, frame by frame (`bodyLayer.ts`).
+ *    `HeroGear.body` names it; `units.drawSentinel` dresses the strip after
+ *    the cuts and before the bake.
  *
  * Module-level caches only (the atlas image and the baked cells) — pure memo of
  * static art, not battle state.
@@ -47,11 +49,14 @@ import { iconCell, itemIcon, type IconKey } from '../data/iconAtlas'
 import type { Archetype, Equipment, Sentinel } from '../types'
 import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
+import { isBodyKey, type BodyKey } from './bodyLayer'
 
 /** What a hero carries, as atlas cells, plus the glint its weapon wears. */
 export interface HeroGear {
   main: IconKey | null
   off: IconKey | null
+  /** The body piece it wears (`bodyLayer.ts`), by its icon cell; null for an empty slot. */
+  body: BodyKey | null
   /** The lead on-hit effect the WEAPON's own enchantments carry, or null. */
   glint: HitEffect | null
 }
@@ -62,12 +67,14 @@ export interface HeroGear {
  * the swing already wear it (`attackLook.hitEffects` on the projectile's mods).
  */
 export function heroGear(equipment: Equipment): HeroGear {
-  const { mainHand, offHand } = equipment
+  const { mainHand, offHand, body } = equipment
   const weapon = mainHand ?? (offHand && offHand.slot === 'oneHand' ? offHand : null)
   const mods = weapon ? mergeMods(weapon.enchantments.map((e) => e.mods)) : null
+  const worn = body ? itemIcon(body) : null
   return {
     main: mainHand ? itemIcon(mainHand) : null,
     off: offHand ? itemIcon(offHand) : null,
+    body: isBodyKey(worn) ? worn : null,
     glint: mods ? leadEffect(mods) : null,
   }
 }
@@ -370,14 +377,27 @@ export function cutOffHand(d: { [i: number]: number; length: number }, w: number
 
 let atlas: HTMLImageElement | null = null
 const baked = new Map<IconKey, HTMLCanvasElement | null>()
+const atlasWaiters: (() => void)[] = []
 
 function atlasImage(): HTMLImageElement | null {
   if (typeof document === 'undefined') return null
   if (!atlas) {
     atlas = new Image()
+    atlas.onload = () => atlasWaiters.splice(0).forEach((cb) => cb())
     atlas.src = 'assets/ui/fw-icons.png'
   }
   return atlas.complete && atlas.naturalWidth > 0 ? atlas : null
+}
+
+/**
+ * Whether the held marks can be drawn yet (the atlas has decoded). Starts the
+ * load; `then` runs once when it lands. A portrait waits on it rather than
+ * caching a hero with empty fists (`heroPortrait.ts`).
+ */
+export function gearAtlasReady(then?: () => void): boolean {
+  const ok = atlasImage() !== null
+  if (!ok && then && typeof document !== 'undefined') atlasWaiters.push(then)
+  return ok
 }
 
 /** One atlas cell, pixel-doubled once into its own canvas. Null until the sheet decodes. */

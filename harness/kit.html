@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Sprite and atlas urls are relative to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Kit Look Harness</title>
+    <style>
+      body { margin: 0; padding: 12px; background: #1b1612; color: #eee; font: 12px system-ui, sans-serif; }
+      h2 { font-size: 14px; margin: 14px 0 6px; }
+      .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; margin-bottom: 6px; }
+      figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+      canvas { image-rendering: pixelated; display: block; }
+      .pt { flex-direction: row; align-items: flex-end; gap: 4px; padding: 4px; background: #2a231d; }
+      .pt figcaption { writing-mode: vertical-rl; }
+      .pt-box { display: grid; place-items: end center; overflow: hidden; border-radius: 4px; background: #6b5a8a; }
+      .pt-box img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <main id="out">Loading…</main>
+    <script type="module" src="/harness/kit.ts"></script>
+  </body>
+</html>
