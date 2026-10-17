@@ -259,9 +259,13 @@ function besideRoad(rand: Rand, scene?: Scene): [number, number] | null {
       px = ax + (bx - ax) * t
       py = ay + (by - ay) * t
       const len = Math.hypot(bx - ax, by - ay) || 1
-      const side = rand() < 0.5 ? -1 : 1
-      nx = (-(by - ay) / len) * side
-      ny = ((bx - ax) / len) * side
+      nx = -(by - ay) / len
+      ny = (bx - ax) / len
+      // An ember rises: set it on the road's upper side, so its climb takes
+      // it away from the line rather than across it (a steep run: either side).
+      const side = Math.abs(ny) < 0.25 ? (rand() < 0.5 ? -1 : 1) : ny > 0 ? -1 : 1
+      nx *= side
+      ny *= side
     }
     const d = ROAD_CLEAR + 1 + rand() * (ROAD_BESIDE - ROAD_CLEAR - 1)
     const x = px + nx * d
