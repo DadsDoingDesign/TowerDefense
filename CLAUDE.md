@@ -40,8 +40,11 @@ result. Append a short note to the review log when you're done.
   melee hero's hit is a blade arc, never a drawn projectile — and the one
   on-hit effect palette); the hero's real weapon/off-hand on the figure is
   `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
-  cut when the hero holds something else). The atlas order and item-noun →
-  icon table live in `src/game/data/iconAtlas.ts` (re-exported by `channels`).
+  cut when the hero holds something else, and the knight's painted shield is
+  flood-cut by `cutOffHand` unless the off hand holds a Shield). The atlas
+  order and item-noun → icon table live in `src/game/data/iconAtlas.ts`
+  (re-exported by `channels`); every item kind has its own cell
+  (`scripts/item-assets.ts` reports 0 shared).
 - FX: `src/game/render/fx.ts` draws effects; `fxDiff.ts` derives them from the
   engine tick by tick — one `FxDiffer` per battle, created by `BattleCanvas`,
   no module-level state. `tests/fxDiff.test.ts` drives it on synthetic ticks.

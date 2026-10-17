@@ -20,8 +20,8 @@
  *                          on ONE neutral hero for every item;
  *  - `doll-<rarity>.png`   the paper doll (`loadout.heroStrip`) on the doll
  *                          pack's one figure.
- * plus `loadouts/` (complete kits) and `drafts/` (the proposed unique icons
- * beside the cell each one borrows today).
+ * plus `loadouts/` (complete kits) and `cells/` (each of the twelve kinds that
+ * borrowed a cell: the one it borrowed, beside its own).
  *
  * The docs folder is not served and nothing in it is a game asset.
  */
@@ -30,7 +30,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
-import { CELL_OWNER, DRAFTS, draftPixels, itemAssetRows, LEGACY_BASES, LOADOUTS, PALETTE, sharedAssets, slug } from './item-assets-lib'
+import { itemAssetRows, LEGACY_BASES, LOADOUTS, sharedAssets, SHIPPED_CELLS, slug } from './item-assets-lib'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'docs', 'item-assets')
@@ -43,12 +43,11 @@ const shared = sharedAssets(rows)
 const iconShared = shared.filter((s) => s.channel === 'icon')
 const sharing = new Set(iconShared.flatMap((s) => s.kinds))
 
-/** A draft must be 16 × 16, in the palette, and leave the edge free for its outline (the atlas's rule). */
-for (const d of DRAFTS) {
-  const ok =
-    d.art.length === 16 &&
-    d.art.every((r, y) => r.length === 16 && [...r].every((c, x) => c === '.' || (c in PALETTE && x > 0 && x < 15 && y > 0 && y < 15)))
-  if (!ok) throw new Error(`[item-assets] draft '${d.kind}' is not a 16 × 16 palette interior inside rows/cols 1..14`)
+/** Each kind that borrowed a cell must now be drawn on its own (`iconAtlas.NOUN_ICON`). */
+for (const s of SHIPPED_CELLS) {
+  const row = rows.find((r) => r.kind === s.kind)
+  if (!row) throw new Error(`[item-assets] '${s.kind}' is not an item kind the game deals`)
+  if (row.icon !== s.cell) throw new Error(`[item-assets] '${s.kind}' draws the '${row.icon}' cell, not its own '${s.cell}'`)
 }
 
 function printInventory(): void {
@@ -62,8 +61,8 @@ function printInventory(): void {
   console.log(`\nLegacy bases (not dealt): ${LEGACY_BASES.map((b) => `${b.kind} (${b.why})`).join('; ')}`)
   console.log('\nShared assets — two or more different items, one picture:')
   for (const s of shared) console.log(`  ${pad(s.channel, 7)}${pad(s.asset, 30)}${s.kinds.join(', ')}`)
-  console.log(`\nIcon: ${rows.length - sharing.size} unique, ${sharing.size} sharing one (${[...sharing].join(', ')})`)
-  console.log(`Drafted unique icons for the borrowers: ${DRAFTS.map((d) => d.kind).join(', ')}`)
+  console.log(`\nIcon: ${rows.length - sharing.size} unique, ${sharing.size} sharing one${sharing.size ? ` (${[...sharing].join(', ')})` : ''}`)
+  console.log(`Own cells shipped for the old borrowers: ${SHIPPED_CELLS.map((s) => `${s.kind} (${s.cell}, was ${s.borrowed})`).join(', ')}`)
 }
 
 async function writeInventory(): Promise<void> {
@@ -73,8 +72,7 @@ async function writeInventory(): Promise<void> {
     items: rows.map((r) => ({ ...r, slug: slug(r.kind), sharesIcon: sharing.has(r.kind) })),
     legacy: LEGACY_BASES,
     shared,
-    cellOwner: CELL_OWNER,
-    drafts: DRAFTS.map((d) => ({ kind: d.kind, slug: slug(d.kind), borrows: d.borrows, idea: d.idea, pixels: draftPixels(d) })),
+    shippedCells: SHIPPED_CELLS.map((s) => ({ ...s, slug: slug(s.kind) })),
     loadouts: LOADOUTS,
   }
   await writeFile(join(OUT, 'inventory.json'), JSON.stringify(json, null, 1) + '\n')

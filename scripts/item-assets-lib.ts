@@ -19,11 +19,8 @@
  *    or `body_<noun>` strip, which only the from-scratch `fieldwatch` pack ships
  *    and only for a few nouns.
  *
- * `DRAFTS` holds the PROPOSED unique icons for the items that borrow another
- * item's cell — 16 × 16 interiors in `scripts/fw-icons.ts`'s own format and
- * palette (the outline ring is added by {@link outlined}, the same walk the
- * atlas uses). They are proposals for the designer, not shipped art: nothing
- * in the game reads them.
+ * Every kind the game deals has its own icon cell (`SHIPPED_CELLS`: the twelve
+ * that borrowed one until Oct 2026), so the icon channel shares nothing.
  */
 import { gripOf, RARITY_ORDER } from '../src/game/data/items'
 import { itemIcon, type IconKey } from '../src/game/data/iconAtlas'
@@ -128,358 +125,39 @@ export function sharedAssets(rows: readonly ItemAssetRow[] = itemAssetRows()): S
   return out
 }
 
-/**
- * Who keeps a shared cell: the kind the cell was drawn FOR (the basic or
- * first-listed one). Every other kind on that cell borrows it and gets a draft.
- */
-export const CELL_OWNER: Readonly<Partial<Record<IconKey, string>>> = {
-  blade: 'Sword',
-  wand: 'Wand',
-  grimoire: 'Grimoire',
-  shield: 'Shield',
-  plate: 'Plate',
-  cloth: 'Robe',
-}
-
-/* ----------------------------------------------------------------- drafts */
-
-/** `scripts/fw-icons.ts`'s palette, character for character (every hue from the CC0 harvest). */
-export const PALETTE: Readonly<Record<string, string>> = {
-  K: '#161c2e',
-  W: '#fffce7',
-  S: '#bac1c8',
-  s: '#737f8e',
-  d: '#4a6982',
-  P: '#e1d4bd',
-  p: '#ccb88d',
-  q: '#9e8776',
-  G: '#ffed44',
-  g: '#d08c41',
-  h: '#a38250',
-  T: '#8cc3c4',
-  t: '#47aba9',
-  u: '#27716f',
-  R: '#f76666',
-  r: '#b65555',
-  n: '#87465a',
-  L: '#b48355',
-  l: '#866353',
-  o: '#6f5a48',
-  E: '#95d562',
-  e: '#38b251',
-  f: '#276740',
-  V: '#a8719a',
-  v: '#775396',
-}
-
+/** The pixel size of an atlas cell (the harness draws cells at ×16). */
 export const CELL = 16
 
-export interface Draft {
+/**
+ * The twelve kinds that used to BORROW another kind's atlas cell, and the cell
+ * each has now (Oct 2026). The art is drawn in `scripts/fw-icons.ts` (rows
+ * 12–13) like every other cell; this table is what the inventory and the
+ * harness say about it — the cell it borrowed, shown beside its own.
+ * `item-assets.ts` refuses to run if `itemIcon` does not give each kind its cell.
+ */
+export interface ShippedCell {
   kind: string
-  borrows: IconKey
+  /** Its own cell, in `iconAtlas.ICON_ORDER`. */
+  cell: IconKey
+  /** The cell it borrowed until it had one. */
+  borrowed: IconKey
   /** What makes it its own object at 16 px, in one line. */
   idea: string
-  /** 16 rows × 16 palette characters, interior only, inside rows/cols 1..14. */
-  art: readonly string[]
 }
 
-/** The atlas's outline walk (`fw-icons.ts` `outline`): `K` into every empty pixel 4-touching a filled one. */
-export function outlined(art: readonly string[]): string[][] {
-  const g = art.map((r) => [...r])
-  const out = g.map((r) => [...r])
-  for (let y = 0; y < CELL; y++)
-    for (let x = 0; x < CELL; x++) {
-      if (g[y][x] !== '.') continue
-      const near =
-        (y > 0 && g[y - 1][x] !== '.') ||
-        (y < CELL - 1 && g[y + 1][x] !== '.') ||
-        (x > 0 && g[y][x - 1] !== '.') ||
-        (x < CELL - 1 && g[y][x + 1] !== '.')
-      if (near) out[y][x] = 'K'
-    }
-  return out
-}
-
-/** A draft as hex pixels (null = clear), outline included — what the harness and Figma draw. */
-export const draftPixels = (d: Draft): (string | null)[][] => outlined(d.art).map((r) => r.map((c) => (c === '.' ? null : PALETTE[c])))
-
-export const DRAFTS: readonly Draft[] = [
-  {
-    kind: 'Rod',
-    borrows: 'wand',
-    idea: 'A long steel rod, corner to corner, gold bands and a red gem: reach, not a twig.',
-    art: [
-      '................',
-      '................',
-      '...........RR...',
-      '..........RWRR..',
-      '..........RRRR..',
-      '.........GgRR...',
-      '........sSg.....',
-      '.......sSs......',
-      '......gGs.......',
-      '.....sSs........',
-      '....sSs.........',
-      '...gGs..........',
-      '..sSs...........',
-      '..ss............',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Saffron Brand',
-    borrows: 'blade',
-    idea: 'The sword, gilded saffron, with a flame running up its edge.',
-    art: [
-      '................',
-      '............R...',
-      '...........RGR..',
-      '..........RGWG..',
-      '.........RGWGg..',
-      '........RGWGg...',
-      '.......RGWGg....',
-      '......RGWGg.....',
-      '.......GWGg.....',
-      '.....GWGg.......',
-      '....rGGg........',
-      '...rrrrrr.......',
-      '...ll.rr........',
-      '..lll.r.........',
-      '..ll............',
-      '................',
-    ],
-  },
-  {
-    kind: 'Tome',
-    borrows: 'grimoire',
-    idea: 'A small brown book, three-quarter view, pages showing and a red ribbon.',
-    art: [
-      '................',
-      '................',
-      '................',
-      '.....LLLLLLL....',
-      '....LLLLLLLl....',
-      '...LLLqqLLLlP...',
-      '...LLLLLLLLlP...',
-      '...LLLqqqLLlP...',
-      '...LLLLLLLLlP...',
-      '...LLLLLLLLlP...',
-      '...lllllllllP...',
-      '...PPPPPPPPPP...',
-      '.....r..........',
-      '.....r..........',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Moonquill Codex',
-    borrows: 'grimoire',
-    idea: 'A night-teal codex with a cream crescent, and a quill standing out of it.',
-    art: [
-      '................',
-      '............W...',
-      '...........WP...',
-      '..........WP....',
-      '..uuuuuuuuPuu...',
-      '..uttttttPtuu...',
-      '..utttWWtttuu...',
-      '..uttWtttttuu...',
-      '..uttWtttttuu...',
-      '..utttWWtttuu...',
-      '..uttttttttuu...',
-      '..uuuuuuuuuuu...',
-      '..PPPPPPPPPPP...',
-      '...hhhhhhhhh....',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Buckler',
-    borrows: 'shield',
-    idea: 'A small ROUND shield with a steel boss: smaller and rounder than the heater.',
-    art: [
-      '................',
-      '................',
-      '................',
-      '................',
-      '......llll......',
-      '.....lLLLLl.....',
-      '....lLLSSLLl....',
-      '....lLSWSSLl....',
-      '....lLSSSSLl....',
-      '....lLLSSLLl....',
-      '.....lLLLLl.....',
-      '......llll......',
-      '................',
-      '................',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Pavise',
-    borrows: 'shield',
-    idea: 'A tall wooden wall-shield, full height, steel rim and a centre ridge.',
-    art: [
-      '................',
-      '....ssssssss....',
-      '....sLLLLLLs....',
-      '....sLLLLLLs....',
-      '....sLLSSLLs....',
-      '....sLLSSLLs....',
-      '....sLLSSLLs....',
-      '....sLLSSLLs....',
-      '....sLLSSLLs....',
-      '....sLLSSLLs....',
-      '....sLLLLLLs....',
-      '....sLLLLLLs....',
-      '....sLLLLLLs....',
-      '....ssssssss....',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Gilded Easel',
-    borrows: 'shield',
-    idea: 'A gold frame holding a painted canvas, on easel legs.',
-    art: [
-      '................',
-      '.......gg.......',
-      '...gggggggggg...',
-      '...gGGGGGGGGg...',
-      '...gGTTTTTTGg...',
-      '...gGTTTWTTGg...',
-      '...gGTEETTTGg...',
-      '...gGEEEETTGg...',
-      '...gGeeeeeeGg...',
-      '...gGGGGGGGGg...',
-      '...gggggggggg...',
-      '....l..l...l....',
-      '...l...l....l...',
-      '...l...l....l...',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Mail',
-    borrows: 'plate',
-    idea: 'A chain shirt: checkered rings, short sleeves, a ragged hem.',
-    art: [
-      '................',
-      '................',
-      '.....ss..ss.....',
-      '..sSsSsSsSsSs...',
-      '..SsSsSsSsSsS...',
-      '..sSsSsSsSsSs...',
-      '...sSsSsSsSs....',
-      '...SsSsSsSsS....',
-      '...sSsSsSsSs....',
-      '...SsSsSsSsS....',
-      '...sSsSsSsSs....',
-      '...S.s.S.s.S....',
-      '................',
-      '................',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Aegis',
-    borrows: 'plate',
-    idea: 'A rounded steel cuirass, shoulders up, gold rim and a gold sun boss.',
-    art: [
-      '................',
-      '................',
-      '...ggg....ggg...',
-      '..gSSSggggSSSg..',
-      '..gSSSSSSSSSSg..',
-      '..gSSSSGGSSSSg..',
-      '..gSSSGWGGSSSg..',
-      '..gSSSGGGGSSSg..',
-      '..gSSSSGGSSSSg..',
-      '..gSSSSSSSSSSg..',
-      '...gSSSSSSSSg...',
-      '....gggggggg....',
-      '................',
-      '................',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Ironheart Plate',
-    borrows: 'plate',
-    idea: 'Dark iron plate with a red heart at its centre.',
-    art: [
-      '................',
-      '................',
-      '...dd.ddd.dd....',
-      '..ddddddddddd...',
-      '..dssssssssdd...',
-      '..dsRR.RRssdd...',
-      '..dsRRRRRssdd...',
-      '..dsRWRRRssdd...',
-      '..dssRRRsssdd...',
-      '..dsssRssssdd...',
-      '...dssssssdd....',
-      '...dd.ddd.dd....',
-      '...dd.ddd.dd....',
-      '................',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Cloak',
-    borrows: 'cloth',
-    idea: 'A green hooded cloak with a gold clasp, flaring at the hem.',
-    art: [
-      '................',
-      '................',
-      '......ffff......',
-      '.....fEEEEf.....',
-      '.....fEooEf.....',
-      '.....fEooEf.....',
-      '......fGGf......',
-      '.....fEeeEf.....',
-      '....fEeeeeEf....',
-      '....fEeeeeEf....',
-      '...fEeeeeeeEf...',
-      '...fEeeeeeeEf...',
-      '..fEeeeeeeeeEf..',
-      '..ffffffffffff..',
-      '................',
-      '................',
-    ],
-  },
-  {
-    kind: 'Silkwind Cloak',
-    borrows: 'cloth',
-    idea: 'A violet silk cloak, hood and gold clasp, its hem blown sideways past cream wind streaks.',
-    art: [
-      '................',
-      '................',
-      '.....vvvv.......',
-      '....vVVVVv..WWW.',
-      '....vVooVv......',
-      '.....vGGv...WW..',
-      '....vVVVVvv.....',
-      '...vVVVVVVVv....',
-      '...vVVWVVVVVv...',
-      '...vVVVWVVVVVv..',
-      '....vVVVWVVVVVv.',
-      '.....vVVVVVVVVv.',
-      '......vvvvvvvvv.',
-      '................',
-      '................',
-      '................',
-    ],
-  },
+export const SHIPPED_CELLS: readonly ShippedCell[] = [
+  { kind: 'Saffron Brand', cell: 'brand', borrowed: 'blade', idea: 'The sword gilded saffron, flames licking up its back, a red guard.' },
+  { kind: 'Rod', cell: 'rod', borrowed: 'wand', idea: 'A long steel rod corner to corner, two gold bands and a red gem: reach, not a twig.' },
+  { kind: 'Tome', cell: 'tome', borrowed: 'grimoire', idea: 'A small brown book, three-quarter view, page edges showing and a red ribbon.' },
+  { kind: 'Moonquill Codex', cell: 'codex', borrowed: 'grimoire', idea: 'A night-teal codex with a cream crescent moon, a quill standing out of it.' },
+  { kind: 'Buckler', cell: 'buckler', borrowed: 'shield', idea: 'The shield, smaller and round: a wooden disc, steel rim and boss.' },
+  { kind: 'Pavise', cell: 'pavise', borrowed: 'shield', idea: 'The shield, tall: a painted wall-shield, arched top, steel ridge and two feet.' },
+  { kind: 'Gilded Easel', cell: 'easel', borrowed: 'shield', idea: 'A gold frame round a painted canvas, on easel legs.' },
+  { kind: 'Mail', cell: 'mail', borrowed: 'plate', idea: 'A chain shirt: a T of rings, short sleeves, a belt, a ragged hem.' },
+  { kind: 'Aegis', cell: 'aegis', borrowed: 'plate', idea: 'A rounded steel cuirass, gold rim and a gold sun boss.' },
+  { kind: 'Ironheart Plate', cell: 'ironheart', borrowed: 'plate', idea: 'Dark iron plate with a red heart at its centre.' },
+  { kind: 'Cloak', cell: 'cloak', borrowed: 'cloth', idea: 'A green hooded cloak, gold clasp, open down the front on a red lining.' },
+  { kind: 'Silkwind Cloak', cell: 'silkwind', borrowed: 'cloth', idea: 'A violet silk cloak on a gold lining, its hem blown sideways past wind streaks.' },
 ]
 
 /* --------------------------------------------------------------- loadouts */
