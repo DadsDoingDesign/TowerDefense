@@ -271,7 +271,7 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 /* "Later" is the quiet way out; the commit keeps the room. */
-.sh-lvl-foot > .sh-btn:not(.primary) {
+.sh-lvl-foot > .sh-btn:not(.primary):not(.sh-commit-2) {
   flex: 0 0 auto;
 }
 

@@ -196,13 +196,19 @@ function WaveBar({ offers }: { offers: Offer[] }) {
         {/* No live region here any more (Phase 2): `Announcer` owns the one
             polite voice for the whole battle — wave start, Gate hits, the
             clear, level-ups — so two regions can never read over each other. */}
-        {/* G2-2 — cleared: the same three slots, holding the gold and Continue. */}
-        <div className="sh-wq-mid">
-          <StripCaption name={waveName} now={lastResult.status === 'cleared' ? 'Wave cleared' : 'Wave lost'} />
-          <p className="sh-wq sh-wq-gold">
-            <Money amount={lastResult.goldEarned} c="gold" /> earned
-          </p>
-        </div>
+        {/* G2-2 — settled: the strip names the wave and holds the commit. The
+            result and the gold are the Stage's ceremony ("Wave cleared",
+            "16 gold"); said here too they were the same facts twice, and the
+            caption cut the wave's name to "ACT 1 BOSS…" to fit them. With
+            the hand in place the take has the whole strip: full width, so a
+            card's name fits on one line. */}
+        {!inPlace && (
+          <div className="sh-wq-mid">
+            <p className="sh-wq-cap sh-wq-settled">
+              <span className="sh-wq-name">{waveName}</span>
+            </p>
+          </div>
+        )}
         {inPlace ? (
           <button
             className="sh-btn primary sh-commit"
@@ -404,8 +410,12 @@ function UpgradeButton() {
   const gearTargetId = useGearTarget((s) => s.heroId)
   // LS3: gear (and so raising it) arrives with the first win's spoils.
   const gearShown = useShown('gear')
+  // The hero being read; else one whose skill choice waits (the badge's
+  // news, so it never hides behind the first hero's affordable raise); else
+  // the kit's hero, else the first.
   const hero =
     (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ??
+    roster.find((h) => upgradeWaiting(heroUpgrades(h, gold))) ??
     roster.find((h) => h.id === gearTargetId) ??
     roster[0]
   if (!hero) return null
@@ -1315,8 +1325,9 @@ function ItemPanel({ item }: { item: Item }) {
         {locked && (target || wearer) ? (
           <GearLockNote />
         ) : target && plan ? (
+          // The panel's commit, never the band's primary: Start Wave is the one.
           <button
-            className="sh-btn primary"
+            className="sh-btn sh-commit-2"
             onClick={() => {
               equipItem(target.id, plan.slot, item.id)
               clearGearSlot()
@@ -1400,7 +1411,7 @@ function OfferPanel({ offer }: { offer: Offer }) {
       </div>
       <div className="sh-context-foot">
         {primary && offer.action && (
-          <button className="sh-btn primary" disabled={offer.action.disabled} onClick={confirm.fire}>
+          <button className="sh-btn sh-commit-2" disabled={offer.action.disabled} onClick={confirm.fire}>
             {confirm.label}
             {offer.action.cost && !confirm.armed ? (
               <>

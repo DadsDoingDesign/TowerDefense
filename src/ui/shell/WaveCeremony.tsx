@@ -113,7 +113,9 @@ export function WaveCeremony() {
     <div className={`sh-ceremony ${won ? 'won' : 'lost'} ${elite ? 'elite' : ''} ${settled ? 'settled' : 'beat'}`}>
       <div className="sh-ceremony-banner">
         <Icon name={won ? (elite ? 'crown' : 'wave') : 'warn'} />
-        <span>{won ? (elite ? 'Elite wave cleared' : 'Wave cleared') : 'The wagons fell'}</span>
+        {/* A boss is a boss: it read "Elite wave cleared" while the strip
+            under it named the act's boss. */}
+        <span>{won ? (isBossWave ? 'Boss defeated' : elite ? 'Elite wave cleared' : 'Wave cleared') : 'The wagons fell'}</span>
       </div>
       {settled && (
         <div className="sh-ceremony-card">

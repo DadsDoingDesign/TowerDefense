@@ -28,8 +28,11 @@ import { nodeModFor } from '../shell/encounterPreview'
  */
 const FIGHT_NODES = new Set(['battle', 'elite', 'miniboss', 'boss'])
 
+// Unrounded: `strengthShort` rounds to a whole percent, as the stop's card
+// does. Rounding the multiplier to a tenth first made a ×1.07 fight read
+// "+10%" on its node and "+7%" on its card (job critique, Oct 2026).
 const nodeThreat = (n: { type: MapNode['type']; layer: number }, rules: DifficultyRules): number | null =>
-  FIGHT_NODES.has(n.type) ? Math.round(encounterThreat(n, rules.startThreat) * legMult(rules, n.layer) * 10) / 10 : null
+  FIGHT_NODES.has(n.type) ? encounterThreat(n, rules.startThreat) * legMult(rules, n.layer) : null
 
 const GAP = 104 // vertical px between layers
 const PAD_X = 44

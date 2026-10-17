@@ -164,12 +164,42 @@
     display: none;
   }
 }
+/* Tighter still — strength, the purse and the HUD's Team button beside it on
+   a phone: the crate steps aside too, so the bar and its percentage keep
+   their room. They were drawn under the purse at 390 wide ("10" for 100%,
+   job critique Oct 2026); the accessible name still says "Cargo 100%". */
+@container sh-cargo (max-width: 96px) {
+  .sh-base .sh-base-glyph {
+    display: none;
+  }
+}
 /* A phone's row: a little less air between the pieces, and slimmer chips
    below 390, so depth, strength, cargo and a four-digit purse share one row
    down to 360 wide. */
 @media (max-width: 699.98px) {
   .sh-header-row {
     gap: 6px;
+  }
+}
+/* A phone in battle carries the Team button too (the battle band): the row's
+   air and the chips' padding give it its room, so the cargo bar keeps a
+   readable length and its percentage is never under the purse. */
+@media (max-width: 429.98px) {
+  .sh-header:has(.sh-team-btn) {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .sh-header-row:has(> .sh-team-btn) {
+    gap: 4px;
+  }
+  .sh-header-row:has(> .sh-team-btn) > .sh-chip,
+  .sh-header-row:has(> .sh-team-btn) .sh-chip.gold {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  .sh-header-row > .sh-team-btn {
+    padding: 0 7px;
+    margin-right: -8px;
   }
 }
 @media (max-width: 389.98px) {
@@ -213,6 +243,33 @@
   .sh-header-row:has(> .sh-chip.sov) > .sh-base {
     order: 1;
     flex-basis: 100%;
+  }
+}
+/* In a two-row header the Team button rides the cargo's row, at its end: it
+   wrapped alone onto a row of its own at 320 and pushed the cargo to a third
+   (job critique, Oct 2026). */
+@media (max-width: 359.98px) {
+  .sh-header-row:has(> .sh-chip ~ .sh-chip):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-team-btn {
+    order: 2;
+  }
+}
+@media (max-width: 429.98px) {
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-team-btn {
+    order: 2;
+  }
+}
+@media (max-width: 699.98px) {
+  .sh-header-row:has(> .sh-chip.sov):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  .sh-header-row:has(> .sh-chip.sov) > .sh-team-btn {
+    order: 2;
   }
 }
 /* The bands' heading: a real, focusable h1 with an aria-label and no visible
