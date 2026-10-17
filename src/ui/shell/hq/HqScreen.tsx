@@ -64,11 +64,11 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
             <span className="hq-keep" aria-hidden="true">
               <Icon name="base" lg />
             </span>
+            {/* No subtitle: "Your militia · 2 offices" restated the tabs under it. */}
             <span className="ct-who-text">
               <h1 className="ct-title" tabIndex={-1}>
                 Headquarters
               </h1>
-              <span>Your militia · 2 offices</span>
             </span>
           </div>
           <span className="ct-chip" title="Your bank">
@@ -95,7 +95,7 @@ export function HqScreen({ onBack, initial = 'hr' }: { onBack: () => void; initi
           </button>
         ))}
       </div>
-      {!taught && <PageTip>Paid from your bank. Upgrades last for good; an order, one contract.</PageTip>}
+      {!taught && <PageTip>Paid from your bank. Upgrades are for good; an order lasts one contract.</PageTip>}
       <BankLine bank={bank} />
       <div className="hq-body" role="tabpanel" id={`hq-panel-${office}`} aria-labelledby={`hq-tab-${office}`}>
         {office === 'hr' ? <HrOffice /> : <OpsOffice />}

@@ -46,6 +46,14 @@
     var(--cta-lift),
     0 8px 28px color-mix(in srgb, var(--cta) 28%, transparent);
 }
+/* A 320px phone: "Read Peppercorn's terms" ran into the frame's edges. */
+@media (max-width: 359.98px) {
+  .ct .pg-cta.ct-heavy {
+    height: 60px;
+    padding-inline: 12px;
+    font-size: 22px;
+  }
+}
 .ct-cta-cost {
   font-family: system-ui, sans-serif;
   font-size: var(--fs-md);
@@ -291,8 +299,8 @@
   color: var(--accent-text);
 }
 .ct-mode.free {
-  border-color: rgba(111, 206, 136, 0.55);
-  background: linear-gradient(rgba(111, 206, 136, 0.1), color-mix(in srgb, var(--panel) 92%, transparent));
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background: linear-gradient(color-mix(in srgb, var(--good) 10%, transparent), color-mix(in srgb, var(--panel) 92%, transparent));
 }
 .ct-mode.free .ct-mode-k {
   color: var(--good);
@@ -304,7 +312,7 @@
 }
 .ct-mode.free.on {
   border-color: var(--good);
-  box-shadow: 0 0 0 3px rgba(111, 206, 136, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 20%, transparent);
 }
 /* Stakes not open with this company yet (the staggered reveal): the card
    stays where the player looks for it and says when it opens. */

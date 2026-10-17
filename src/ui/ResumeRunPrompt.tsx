@@ -59,13 +59,14 @@ export function ResumeRunPrompt() {
         <h1 className="fw-resume-title" id="fw-resume-title">
           Run in progress
         </h1>
+        {/* The title says a run was saved; the body is which run, and, if a
+            wave was cut off, what restarts (the job critique, Oct 2026). */}
         <p className="fw-resume-body">
-          A run was interrupted and saved: <strong>{describeSnapshot(snap)}</strong>.
+          <strong>{describeSnapshot(snap)}</strong>
         </p>
         {wasMidBattle && (
           <p className="fw-resume-body">
-            You were mid-wave: it restarts at{' '}
-            <strong>{snap.currentWave?.label ?? 'that wave'}</strong>, with your heroes to post again.
+            The wave at <strong>{snap.currentWave?.label ?? 'that fight'}</strong> restarts: post your heroes again.
           </p>
         )}
         <div className="fw-resume-actions">

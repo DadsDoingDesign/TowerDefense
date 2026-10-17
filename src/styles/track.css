@@ -213,6 +213,8 @@
   background: var(--panel-3);
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-dim);
+  /* Brought into view on open (`TrackScreen`): clear of the CTA band's fade. */
+  scroll-margin-block: 12px 40px;
 }
 .tk-row.next .tk-lv {
   color: var(--accent-text);
