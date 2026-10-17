@@ -830,17 +830,18 @@ function GearSlotPanel() {
  * "physical bounces off it — bring magic", "lightly armoured and 40% faster — a
  * coverage problem, not a damage one" — and it was rendered nowhere in the
  * game. The variant is not on `WaveDef`; what survives generation is the label,
- * and `defaultLabel` composes it by appending `variant.label` (so "Depth 4 —
- * Bombard", "Elite — Swift Raid", "Wave 15 — Elite · Plated Column"). Every
- * variant label across the three pools is distinct, so matching the tail of the
- * wave's label recovers the variant exactly, without reaching into the data
- * layer to add a field. `variantsFor(kind, LATE)` returns whole pools because
+ * and `waves.fightName` ends it with `variant.label` (so "Bombard", "Plated
+ * Patrol", "Swift Raid"). Every variant label across the three pools is
+ * distinct, so matching the tail of the wave's label — the longest tail first,
+ * so "Plated Column" is never read as "Column" — recovers the variant exactly,
+ * without reaching into the data layer to add a field. `variantsFor(kind, LATE)` returns whole pools because
  * the only filter is `minDepth`.
  */
 const VARIANT_ASKS: Map<string, string> = new Map(
   (['normal', 'elite', 'boss'] as const)
     .flatMap((k) => [...variantsFor(k, 999)])
     .filter((v) => v.label)
+    .sort((a, b) => b.label.length - a.label.length)
     .map((v) => [v.label, v.asks]),
 )
 

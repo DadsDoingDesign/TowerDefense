@@ -1204,7 +1204,7 @@ function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, 
  * The node's name, with the variant in it.
  *
  * The variant is named rather than hidden because the whole point of input
- * randomness is that the player gets to *solve* the setup: "Elite — Warded
+ * randomness is that the player gets to *solve* the setup: "Warded
  * Host" plus a preview listing `Warded Bomber ×14 — shrugs off magic 49%` is a
  * counter-pick problem. The same fight with a generic name is a surprise, which
  * is the other kind of randomness.
@@ -1216,17 +1216,27 @@ function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, 
  * does, just aimed at the next maintainer instead of the player.)
  */
 function defaultLabel(depth: number, kind: EncounterKind, v: WaveVariant): string {
+  return fightName(depth, kind, v)
+}
+
+/**
+ * A fight's one name — the run map's (the node's head, "March to …") and the
+ * wave's own label (the preview on the Stage, the announcer, the ceremony, a
+ * fall's "Last wave"), so the two can never drift (Oct 2026: the preview said
+ * "Depth 2" — which the HUD header already says — where the map said
+ * "Patrol"). The depth is the header's to say, the kind is the map's node:
+ * the name is the shape you are handed. An ordinary fight in armour wears its
+ * prefix ("Plated Patrol"); an elite is its column ("Warded Host"); a boss
+ * is its court, or its act's title when the court has no name.
+ */
+export function fightName(depth: number, kind: EncounterKind, v: Pick<WaveVariant, 'label' | 'mod'>): string {
   if (kind === 'boss') {
-    // The three-act road (Phase 3b) fields a boss at the close of every act; only
-    // the last one is the Final Watch. Acts I and II used to be announced as
-    // "The Final Watch" at depth 4 and 8.
-    const title = depth >= RUN_LAYERS - 1 ? 'The Final Watch' : `Act ${Math.ceil(depth / ACT_LAYERS)} Boss`
-    return v.label ? `${title} — ${v.label}` : title
+    // The three-act road (Phase 3b) fields a boss at the close of every act;
+    // only the last one is the Final Watch.
+    return v.label || (depth >= RUN_LAYERS - 1 ? 'The Final Watch' : `Act ${Math.ceil(depth / ACT_LAYERS)} Boss`)
   }
-  if (kind === 'elite') return `Elite — ${v.label}`
-  const prefix = v.mod ? ENEMY_MODS.find((m) => m.id === v.mod)?.prefix : undefined
-  if (prefix) return `Depth ${depth} — ${prefix} ${v.label}`
-  return v.id === 'patrol' ? `Depth ${depth}` : `Depth ${depth} — ${v.label}`
+  const prefix = kind === 'normal' && v.mod ? ENEMY_MODS.find((m) => m.id === v.mod)?.prefix : undefined
+  return prefix ? `${prefix} ${v.label}` : v.label
 }
 
 /** Human-readable composition summary for the pre-wave preview. */
