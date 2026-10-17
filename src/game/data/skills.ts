@@ -84,19 +84,19 @@ const L1: Skill[] = [
   // crit) it read +0.0pt on every bench — the only starter that was nothing on
   // a starting kit. Sword & Shield +0.0 → +2.8pt mean (armour +8.3), Dagger
   // +7.3 → +12.5, Wand +0.9 → +1.2.
-  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crits 10% more often, and crits deal 50% more.', mods: { critChanceAdd: 0.1, critMultAdd: 0.5 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
+  { id: 'keen_eye', name: 'Keen Eye', level: 1, company: 'art', starter: true, desc: 'Crit chance +10%, crit damage +50%.', mods: { critChanceAdd: 0.1, critMultAdd: 0.5 }, from: 'The old Precision path (+14% a level); the Executioner mutation' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'hold_fast', name: 'Hold Fast', level: 1, company: 'metals', desc: 'Holds 1 more enemy.', mods: { holdAdd: 1 }, from: 'Fighter perk Hold Fast (level 5)' },
-  { id: 'charge', name: 'Charge', level: 1, company: 'spice', desc: 'Attacks 60% faster for the first 15 seconds of each wave.', mods: { openingRush: { rate: 0.6, dur: 15 } }, from: 'Fighter perk Charge; Rogue perk Ambush; the Opening Salvo mutation' },
-  { id: 'bloodrush', name: 'Bloodrush', level: 1, company: 'spice', desc: 'Each kill makes it attack 25% faster for 1.5 seconds.', mods: { killRush: { rate: 0.25, dur: 1.5 } }, from: 'Rogue perk Bloodrush; the Blood Frenzy mutation' },
-  { id: 'poison_tips', name: 'Poisoned Tips', level: 1, company: 'spice', desc: 'Every hit poisons for 10 damage a second, for 3 seconds.', mods: { burn: { dps: 10, dur: 3 } }, from: 'Rogue perk Poisoned Tips; Mystic perk Ember Veil' },
+  { id: 'charge', name: 'Charge', level: 1, company: 'spice', desc: 'Attacks 60% faster for the first 15s of each wave.', mods: { openingRush: { rate: 0.6, dur: 15 } }, from: 'Fighter perk Charge; Rogue perk Ambush; the Opening Salvo mutation' },
+  { id: 'bloodrush', name: 'Bloodrush', level: 1, company: 'spice', desc: 'Each kill makes it attack 25% faster for 1.5s.', mods: { killRush: { rate: 0.25, dur: 1.5 } }, from: 'Rogue perk Bloodrush; the Blood Frenzy mutation' },
+  { id: 'poison_tips', name: 'Poisoned Tips', level: 1, company: 'spice', desc: 'Every hit poisons 10/s for 3s.', mods: { burn: { dps: 10, dur: 3 } }, from: 'Rogue perk Poisoned Tips; Mystic perk Ember Veil' },
   { id: 'arc_spark', name: 'Arc Spark', level: 1, company: 'scrolls', desc: 'Every hit jumps to 1 more enemy for 45% of its damage.', mods: { shock: { chains: 1, dmgFrac: 0.45 } }, from: 'Mystic perk Arc Spark (level 5)' },
-  { id: 'frostbite', name: 'Frostbite', level: 1, company: 'scrolls', desc: 'Every hit slows its target by 25% for 1.5 seconds.', mods: { chill: { slow: 0.25, dur: 1.5 } }, from: 'Mystic perk Frostbite; the Hoarfrost mutation' },
+  { id: 'frostbite', name: 'Frostbite', level: 1, company: 'scrolls', desc: 'Every hit slows 25% for 1.5s.', mods: { chill: { slow: 0.25, dur: 1.5 } }, from: 'Mystic perk Frostbite; the Hoarfrost mutation' },
   { id: 'long_reach', name: 'Long Reach', level: 1, company: 'art', desc: 'Reaches 20% farther.', mods: { rangeMult: 1.2 }, from: 'The Marksman evolution’s reach (×1.5 there)' },
   { id: 'cleave', name: 'Cleave', level: 1, company: 'metals', desc: 'Every hit also strikes enemies within 14 of its target.', mods: { splashAdd: 14 }, from: 'Warrior perk Cleave (+14 splash); the Blasting Powder mutation' },
   // ---- the classless rework: self-contained effects that meet in play -------
-  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill it makes pays 3 more gold.', mods: { goldPerKill: 3 }, from: 'New with the classless rework' },
-  { id: 'pin_down', name: 'Pin Down', level: 1, company: 'art', desc: 'Its hits deal 30% more to enemies that are being held.', mods: { vsHeld: 0.3 }, from: 'New with the classless rework' },
+  { id: 'bounty', name: 'Bounty', level: 1, company: 'silk', desc: 'Each kill pays 3 more gold.', mods: { goldPerKill: 3 }, from: 'New with the classless rework' },
+  { id: 'pin_down', name: 'Pin Down', level: 1, company: 'art', desc: 'Hits 30% harder on held enemies.', mods: { vsHeld: 0.3 }, from: 'New with the classless rework' },
   { id: 'riposte', name: 'Riposte', level: 1, company: 'metals', feat: 'lone_wolf', desc: 'Enemies it holds take 80% more thorn damage.', mods: { thornsMult: 1.8 }, from: 'Fighter perk Riposte (was behind the same feat)' },
 ]
 
@@ -107,19 +107,19 @@ const L2: Skill[] = [
   // + hits 10% harder (the tuning pass): a Level 2 starter that read +0.5pt on
   // a sword-and-shield hero and +1.3pt on a wand. Sword & Shield +0.5 → +2.5pt
   // mean, Dagger +4.3 → +9.6, Wand +1.3 → +20.6.
-  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Instantly kills enemies under 15% health, crits 10% more often, and hits 10% harder.', mods: { execute: 0.15, critChanceAdd: 0.1, damageMult: 1.1 }, from: 'The Assassin evolution (level 10)' },
+  { id: 'finisher', name: 'Finisher', level: 2, company: 'silk', starter: true, desc: 'Kills enemies under 15% health outright; +10% crit chance, +10% damage.', mods: { execute: 0.15, critChanceAdd: 0.1, damageMult: 1.1 }, from: 'The Assassin evolution (level 10)' },
   // ---- unlocked by playing ---------------------------------------------------
   { id: 'shield_wall', name: 'Shield Wall', level: 2, company: 'metals', desc: 'Holds 2 more enemies, in a wider circle.', mods: { holdAdd: 2, holdRadius: 90 }, from: 'Knight perk Shield Wall; the Juggernaut specialization' },
   // Thorns ×1.5 → ×3 (the tuning pass): on a sword-and-shield hero Wildfire led
   // this level by +20.3pt (§7, ceiling 20) and nothing a holder holds paid like
   // it; Anchor is the holder's own answer. Sword & Shield Anchor +15.4 → +29.4pt,
   // the level’s lead 20.3 → 17.4pt (Dagger +5.0 → +7.4, Wand unchanged).
-  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits by 30% for 1.4 seconds, and its thorns hit 3 times as hard.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 3 }, from: 'The Guard evolution (level 10)' },
+  { id: 'anchor', name: 'Anchor', level: 2, company: 'silk', desc: 'Holds 1 more enemy, slows what it hits 30% for 1.4s, and thorns ×3.', mods: { holdAdd: 1, holdRadius: 85, chill: { slow: 0.3, dur: 1.4 }, thornsMult: 3 }, from: 'The Guard evolution (level 10)' },
   // The Knight also held 3; that half of it lives in Hold Fast now, and the
   // hold is a Fighter's (see the header), so this one hits 10% harder instead.
-  { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7 seconds, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
-  { id: 'snare', name: 'Snare', level: 2, company: 'silk', desc: 'Buries a snare by the path that burns 14 a second and slows 30%, and its own hits slow 20%.', mods: { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }, from: 'The Trickster evolution (level 10); the Saboteur' },
-  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns for 12 a second for 3 seconds, and splashes 15 wider.', mods: { burn: { dps: 12, dur: 3 }, splashAdd: 15 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
+  { id: 'stunning_bash', name: 'Stunning Bash', level: 2, company: 'metals', desc: 'Every hit has an 18% chance to stun for 0.7s, and hits 10% harder.', mods: { stunChance: 0.18, stunDur: 0.7, damageMult: 1.1 }, from: 'The Knight evolution (level 10); the Vanguard and Order specializations' },
+  { id: 'snare', name: 'Snare', level: 2, company: 'silk', desc: 'Lays a snare on the path that burns 14/s and slows 30%; its hits slow 20%.', mods: { trap: { dps: 14, slow: 0.3 }, chill: { slow: 0.2, dur: 1 } }, from: 'The Trickster evolution (level 10); the Saboteur' },
+  { id: 'wildfire', name: 'Wildfire', level: 2, company: 'spice', desc: 'Every hit burns 12/s for 3s and splashes 15 wider.', mods: { burn: { dps: 12, dur: 3 }, splashAdd: 15 }, from: 'The Elementalist evolution (level 10); Pyromancer' },
   // 15% → 25% (the tuning pass). §2 grades an aura skill against the same hero
   // holding its level's damage skill: at 15% a sword-and-shield hero's Blessing
   // held ×21.65 against Heavy Blows' ×19.72 (+9.8%, gate +10%), and at 20% the
@@ -135,12 +135,12 @@ const L2: Skill[] = [
   // 35/45% +15 / +5 / +39 / +26%; 40/50% +15 / +32 / +45 / +45% (kept: every
   // neighbour from 38/48 to 44/54 passes); 45/55% +15 / +21 / +39 / +45%.
   { id: 'blessing', name: 'Blessing', level: 2, company: 'scrolls', desc: 'Heroes near it hit 40% harder.', mods: { buffAura: { damageMult: 1.4, radius: 130 } }, from: 'The Cleric evolution (level 10); Cleric perk Blessing' },
-  { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder, and every 100 damage it deals wins back 2% of the cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
-  { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2 seconds.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },
-  { id: 'cold_snap', name: 'Cold Snap', level: 2, company: 'silk', desc: 'Its hits deal 25% more to slowed enemies.', mods: { vsSlowed: 0.25 }, from: 'New with the classless rework' },
-  { id: 'firebrand', name: 'Firebrand', level: 2, company: 'spice', desc: 'Its thorns set what it holds burning for 12 a second, for 3 seconds.', mods: { thornsBurn: { dps: 12, dur: 3 } }, from: 'New with the classless rework' },
+  { id: 'gate_siphon', name: 'Siphon', level: 2, company: 'scrolls', desc: 'Hits 50% harder; every 100 damage wins back 2% cargo.', mods: { lifedrain: 0.2, damageMult: 1.5 }, from: 'The Warlock evolution (level 10); the Siphon mutation' },
+  { id: 'killing_spree', name: 'Killing Spree', level: 2, company: 'spice', desc: 'Each kill makes it attack 45% faster for 2s.', mods: { killRush: { rate: 0.45, dur: 2 } }, from: 'Assassin perk Killing Spree; Warrior perk Frenzy' },
+  { id: 'cold_snap', name: 'Cold Snap', level: 2, company: 'silk', desc: 'Hits 25% harder on slowed enemies.', mods: { vsSlowed: 0.25 }, from: 'New with the classless rework' },
+  { id: 'firebrand', name: 'Firebrand', level: 2, company: 'spice', desc: 'Its thorns burn what it holds 12/s for 3s.', mods: { thornsBurn: { dps: 12, dur: 3 } }, from: 'New with the classless rework' },
   { id: 'split_shot', name: 'Split Shot', level: 2, company: 'art', desc: 'Its attacks pass through 1 more enemy.', mods: { pierce: 1 }, from: 'New with the classless rework' },
-  { id: 'deadeye', name: 'Deadeye', level: 2, company: 'art', desc: 'Every 4th attack is a sure crit, and crits deal 25% more.', mods: { critEvery: 4, critMultAdd: 0.25 }, from: 'Marksman perk Deadeye (level 15)' },
+  { id: 'deadeye', name: 'Deadeye', level: 2, company: 'art', desc: 'Every 4th attack crits; +25% crit damage.', mods: { critEvery: 4, critMultAdd: 0.25 }, from: 'Marksman perk Deadeye (level 15)' },
   // ---- the companies' signature skills (Draft 4 · B, the loyalty track) -----
   // One per company, paid ONLY by standing 5 on its track (`run/track.ts`):
   // never a random, contract or crate unlock, never a starter or a feat. Each
@@ -148,30 +148,30 @@ const L2: Skill[] = [
   // sit beside the Level 2 cards (two Level 1 effects, or a Level 2 one
   // trimmed): Peppercorn burns and speed, Easel reach and crit, Ironvein hold
   // and hit, Rosethread gold and slow, Moonquill chain and slow.
-  { id: 'pepperfire', name: 'Pepperfire', level: 2, company: 'spice', signature: true, desc: 'Every hit burns for 10 a second for 3 seconds, and it attacks 15% faster.', mods: { burn: { dps: 10, dur: 3 }, rateMult: 1.15 }, from: 'New with the loyalty track: Peppercorn Co.’s signature (Poisoned Tips and Quick Hands, met)' },
-  { id: 'gilt_frame', name: 'Gilt Frame', level: 2, company: 'art', signature: true, desc: 'Reaches 25% farther, crits 15% more often, and crits deal 25% more.', mods: { rangeMult: 1.25, critChanceAdd: 0.15, critMultAdd: 0.25 }, from: 'New with the loyalty track: Easel House’s signature (Long Reach and Keen Eye, met)' },
+  { id: 'pepperfire', name: 'Pepperfire', level: 2, company: 'spice', signature: true, desc: 'Every hit burns 10/s for 3s, and it attacks 15% faster.', mods: { burn: { dps: 10, dur: 3 }, rateMult: 1.15 }, from: 'New with the loyalty track: Peppercorn Co.’s signature (Poisoned Tips and Quick Hands, met)' },
+  { id: 'gilt_frame', name: 'Gilt Frame', level: 2, company: 'art', signature: true, desc: 'Reaches 25% farther; +15% crit chance, +25% crit damage.', mods: { rangeMult: 1.25, critChanceAdd: 0.15, critMultAdd: 0.25 }, from: 'New with the loyalty track: Easel House’s signature (Long Reach and Keen Eye, met)' },
   { id: 'ore_sense', name: 'Ore Sense', level: 2, company: 'metals', signature: true, desc: 'Holds 1 more enemy, and hits 20% harder.', mods: { holdAdd: 1, damageMult: 1.2 }, from: 'New with the loyalty track: Ironvein’s signature (Hold Fast and Hard Hitter, met)' },
-  { id: 'velvet_toll', name: 'Velvet Toll', level: 2, company: 'silk', signature: true, desc: 'Each kill it makes pays 4 more gold, and its hits slow by 25% for 1.5 seconds.', mods: { goldPerKill: 4, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Rosethread’s signature (Bounty and Frostbite, met)' },
-  { id: 'moonwake', name: 'Moonwake', level: 2, company: 'scrolls', signature: true, desc: 'Every hit jumps to 1 more enemy for 50% of its damage, and slows its target by 25% for 1.5 seconds.', mods: { shock: { chains: 1, dmgFrac: 0.5 }, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Moonquill’s signature (Arc Spark and Frostbite, met)' },
+  { id: 'velvet_toll', name: 'Velvet Toll', level: 2, company: 'silk', signature: true, desc: 'Each kill pays 4 more gold, and its hits slow 25% for 1.5s.', mods: { goldPerKill: 4, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Rosethread’s signature (Bounty and Frostbite, met)' },
+  { id: 'moonwake', name: 'Moonwake', level: 2, company: 'scrolls', signature: true, desc: 'Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.', mods: { shock: { chains: 1, dmgFrac: 0.5 }, chill: { slow: 0.25, dur: 1.5 } }, from: 'New with the loyalty track: Moonquill’s signature (Arc Spark and Frostbite, met)' },
 ]
 
 const L3: Skill[] = [
   // ---- starters ------------------------------------------------------------
   { id: 'berserk', name: 'Berserk', level: 3, company: 'spice', starter: true, desc: 'Hits 40% harder and attacks 25% faster.', mods: { damageMult: 1.4, rateMult: 1.25 }, from: 'The Berserker specialization (level 20)' },
-  { id: 'weaponmaster', name: 'Weaponmaster', level: 3, company: 'scrolls', starter: true, desc: 'Hits 20% harder, crits 20% more often, and crits deal 60% more.', mods: { damageMult: 1.2, critChanceAdd: 0.2, critMultAdd: 0.6 }, from: 'The Weaponmaster specialization (level 20)' },
-  { id: 'volley', name: 'Volley', level: 3, company: 'art', starter: true, desc: 'Every 2nd attack pierces every enemy in its path, and it reaches 15% farther.', mods: { volley: { every: 2, pierce: 99 }, rangeMult: 1.15 }, from: 'Marksman perk Volley; the Ricochet mutation; the Ranger' },
+  { id: 'weaponmaster', name: 'Weaponmaster', level: 3, company: 'scrolls', starter: true, desc: 'Hits 20% harder; +20% crit chance, +60% crit damage.', mods: { damageMult: 1.2, critChanceAdd: 0.2, critMultAdd: 0.6 }, from: 'The Weaponmaster specialization (level 20)' },
+  { id: 'volley', name: 'Volley', level: 3, company: 'art', starter: true, desc: 'Every 2nd attack pierces its whole path; reaches 15% farther.', mods: { volley: { every: 2, pierce: 99 }, rangeMult: 1.15 }, from: 'Marksman perk Volley; the Ricochet mutation; the Ranger' },
   // ---- unlocked by playing ---------------------------------------------------
-  { id: 'bulwark', name: 'Bulwark', level: 3, company: 'metals', desc: 'Holds 3 more enemies and slows what it hits by 45% for 2 seconds.', mods: { holdAdd: 3, holdRadius: 95, chill: { slow: 0.45, dur: 2 } }, from: 'The Bulwark and Aegis specializations; Guard perk Frozen Ground' },
-  { id: 'reaper', name: 'Reaper', level: 3, company: 'scrolls', desc: 'Instantly kills enemies under 28% health, and hits 20% harder.', mods: { execute: 0.28, damageMult: 1.2 }, from: 'The Reaper specialization; Deathdealer and Nightblade' },
+  { id: 'bulwark', name: 'Bulwark', level: 3, company: 'metals', desc: 'Holds 3 more enemies and slows what it hits 45% for 2s.', mods: { holdAdd: 3, holdRadius: 95, chill: { slow: 0.45, dur: 2 } }, from: 'The Bulwark and Aegis specializations; Guard perk Frozen Ground' },
+  { id: 'reaper', name: 'Reaper', level: 3, company: 'scrolls', desc: 'Kills enemies under 28% health outright, and hits 20% harder.', mods: { execute: 0.28, damageMult: 1.2 }, from: 'The Reaper specialization; Deathdealer and Nightblade' },
   // 35% → 50% (the merged tuning pass; see Blessing): at 35% the wand's Rally
   // read +5% against the same hero holding Berserk (gate +10%); at 50% +32%,
   // the sword and shield's +45%.
   { id: 'rally', name: 'Rally', level: 3, company: 'art', desc: 'Heroes near it hit 50% harder.', mods: { buffAura: { damageMult: 1.5, radius: 150 } }, from: 'The Templar specialization; Radiant and Oracle' },
-  { id: 'momentum', name: 'Momentum', level: 3, company: 'spice', desc: 'Attacks 15% faster for each enemy it is holding.', mods: { rushPerHeld: 0.15 }, from: 'New with the classless rework' },
-  { id: 'last_rites', name: 'Last Rites', level: 3, company: 'silk', desc: 'Every 5th kill it makes wins back 5% of the cargo.', mods: { killMend: { every: 5, hp: 1 } }, from: 'New with the classless rework' },
+  { id: 'momentum', name: 'Momentum', level: 3, company: 'spice', desc: 'Attacks 15% faster per enemy it holds.', mods: { rushPerHeld: 0.15 }, from: 'New with the classless rework' },
+  { id: 'last_rites', name: 'Last Rites', level: 3, company: 'silk', desc: 'Every 5th kill wins back 5% cargo.', mods: { killMend: { every: 5, hp: 1 } }, from: 'New with the classless rework' },
   // ---- opened by a feat (the specializations that used to be) ----------------
-  { id: 'warden_of_ash', name: 'Warden of Ash', level: 3, company: 'metals', feat: 'win_fighter', desc: 'Holds 2 more enemies, its thorns hit 3 times as hard, and its hits and thorns set enemies burning for 26 a second.', mods: { holdAdd: 2, holdRadius: 90, thornsMult: 3, burn: { dps: 26, dur: 3 }, thornsIgnite: true }, from: 'The Warden of Ash specialization (was behind the same feat)' },
-  { id: 'hexblade', name: 'Hexblade', level: 3, company: 'silk', feat: 'win_rogue', desc: 'Every hit has a 20% chance to stun for 0.7 seconds, and slows its target by 45% for 1.6 seconds.', mods: { stunChance: 0.2, stunDur: 0.7, chill: { slow: 0.45, dur: 1.6 } }, from: 'The Hexblade specialization (was behind the same feat)' },
+  { id: 'warden_of_ash', name: 'Warden of Ash', level: 3, company: 'metals', feat: 'win_fighter', desc: 'Holds 2 more enemies, thorns ×3, and its hits and thorns burn 26/s.', mods: { holdAdd: 2, holdRadius: 90, thornsMult: 3, burn: { dps: 26, dur: 3 }, thornsIgnite: true }, from: 'The Warden of Ash specialization (was behind the same feat)' },
+  { id: 'hexblade', name: 'Hexblade', level: 3, company: 'silk', feat: 'win_rogue', desc: 'Every hit has a 20% chance to stun for 0.7s, and slows 45% for 1.6s.', mods: { stunChance: 0.2, stunDur: 0.7, chill: { slow: 0.45, dur: 1.6 } }, from: 'The Hexblade specialization (was behind the same feat)' },
   // 3 jumps at 60% → 2 at 45% (the merged tuning pass). Once §7's Level 3
   // bench could rank (fitted on a hero holding Berserk), Stormcaller solved
   // the Dagger point: +65.7pt against Warden of Ash's +40.3 (lead +25.5,
@@ -179,7 +179,7 @@ const L3: Skill[] = [
   // 0.4pt): the chains are. 2 at 50% read +18.2 / +13.4 (Dagger / Sword &
   // Shield, where Warden of Ash leads), 2 at 40% +12.4 / +17.0, 2 at 45%
   // +15.7 / +16.0 — neither point solved, and it still tops the Dagger point.
-  { id: 'stormcaller', name: 'Stormcaller', level: 3, company: 'scrolls', feat: 'win_mystic', desc: 'Every hit jumps to 2 more enemies for 45% of its damage, and hits 35% harder.', mods: { shock: { chains: 2, dmgFrac: 0.45 }, damageMult: 1.35 }, from: 'The Stormcaller specialization; Elementalist perk Static Field (behind the feat that opened Doomcaller)' },
+  { id: 'stormcaller', name: 'Stormcaller', level: 3, company: 'scrolls', feat: 'win_mystic', desc: 'Every hit jumps to 2 more enemies for 45%, and hits 35% harder.', mods: { shock: { chains: 2, dmgFrac: 0.45 }, damageMult: 1.35 }, from: 'The Stormcaller specialization; Elementalist perk Static Field (behind the feat that opened Doomcaller)' },
 ]
 
 export const ALL_SKILLS: readonly Skill[] = [...L1, ...L2, ...L3]

@@ -2,6 +2,7 @@ import { useGameStore } from '../../state/gameStore'
 import type { GameState } from '../../state/game/types'
 import { orientationOf } from '../../game/data/maps'
 import { useShallow } from 'zustand/react/shallow'
+import { canStartWave } from '../../state/game/selectors'
 
 /**
  * Which part of a battle the shell is in, for LAYOUT (Phase 2).
@@ -27,6 +28,18 @@ export function battleLayoutOf(s: Pick<GameState, 'screen' | 'runPhase' | 'battl
   if (s.battlePhase === 'battle' && s.engine) return 'live'
   if (s.lastResult) return 'settled'
   return 'setup'
+}
+
+/**
+ * The wave preview over the Stage's top edge (the battle band, Oct 2026; the
+ * designer: "the bottom wave preview should overlay the map instead"): shown
+ * while the coming wave can be started — setup, with a wave to fight — and
+ * gone the moment it starts (the live strip's queue carries who is left from
+ * then on). `BattleCanvas` reads the same predicate to keep the play clear of
+ * it (`WavePreview`).
+ */
+export function wavePreviewShown(s: Parameters<typeof canStartWave>[0] & Pick<GameState, 'waveBeat'>): boolean {
+  return !s.waveBeat && canStartWave(s)
 }
 
 /**

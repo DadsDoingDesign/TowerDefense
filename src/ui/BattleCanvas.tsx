@@ -22,10 +22,11 @@ import {
   drawTerrainFlames,
   drawTileGrid,
   entrySide,
+  firstRowTop,
   playRect,
   setPresentationTime,
   setViewScale,
-  stageView,
+  stageViewClear,
   worldOf,
   type DrawSentinel,
   type StageView,
@@ -48,6 +49,7 @@ import { dist } from '../game/core/vec'
 import { clearanceOverlay, COARSE, distToPolyline, LANE_HALF } from '../game/data/terrain'
 import { isMelee } from '../game/engine/melee'
 import { fieldConflicts } from '../state/game/selectors'
+import { wavePreviewShown } from './shell/live'
 import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
@@ -327,17 +329,26 @@ export function BattleCanvas() {
       // The wide layout (shell-wide.css) sets `--field-snap: 1`: crisp scales
       // there (see `stageView`). Phones never set it — their field is fit
       // exactly and must keep the full width.
-      sv = stageView({
-        wrapW: rect.width,
-        wrapH: rect.height,
-        padT,
-        padB,
-        dpr: lastDpr,
-        crisp: cs.getPropertyValue('--field-snap').trim() === '1',
-        play: playRect(map),
-        world: worldOf(map),
-        entry: entrySide(map),
-      })
+      // The battle band (Oct 2026): in setup the coming wave hangs from the
+      // Stage's top edge (`WavePreview`). The play is fit below it when the
+      // woodland and the road's way in above the first row of posts are not
+      // room enough (`frame.previewRoom`) — never over a post or the lane.
+      const need = wavePreviewShown(useGameStore.getState()) ? (parseFloat(cs.getPropertyValue('--sh-wavepre-h')) || 0) + 8 : 0
+      sv = stageViewClear(
+        {
+          wrapW: rect.width,
+          wrapH: rect.height,
+          padT,
+          padB,
+          dpr: lastDpr,
+          crisp: cs.getPropertyValue('--field-snap').trim() === '1',
+          play: playRect(map),
+          world: worldOf(map),
+          entry: entrySide(map),
+        },
+        firstRowTop(map),
+        need,
+      )
       svMap = map
       const bw = sv.w * sv.density
       const bh = sv.h * sv.density
@@ -370,6 +381,14 @@ export function BattleCanvas() {
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(wrap)
+    // The preview comes and goes without the wrap changing size: re-fit then.
+    let preview = wavePreviewShown(useGameStore.getState())
+    const unsubPreview = useGameStore.subscribe((s) => {
+      const p = wavePreviewShown(s)
+      if (p === preview) return
+      preview = p
+      resize()
+    })
 
     // MUST stay byte-identical to the rotate-prompt query in overlays.css and
     // shell.css. Dropping a clause here does not just desync the prompt — it
@@ -976,6 +995,7 @@ export function BattleCanvas() {
       wrap.removeEventListener('focusin', onFocusIn)
       cancelAnimationFrame(raf)
       ro.disconnect()
+      unsubPreview()
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerdown', onPointerDown)
       canvas.removeEventListener('pointerup', onPointerUp)

@@ -186,7 +186,7 @@ export function MenuScreen({
   // One coach pill at a time, the most pressing first: the dock, the market, the war.
   const tip = staged ? null : !taught.board ? (
     <>
-      Each company pays your militia to guard its road. <Tap /> one to light it up.
+      Each company pays you to guard its road. <Tap /> one to light it up.
     </>
   ) : market && !taught.market ? (
     <>

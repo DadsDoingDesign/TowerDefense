@@ -327,6 +327,20 @@ result. Append a short note to the review log when you're done.
   at the view's edges, on cells clear of the road, every slot and the wagon
   (half its old cap beside the weather). Tests `tests/fieldWorlds.test.ts`.
   Dev: `window.__fxQuality`, `__seasonOff`, `__weather` (live counts).
+- The battle band (Oct 2026, `docs/FIGMA.md` § The battle band): in setup
+  the wave's name and line-up hang from the Stage's top edge (`WavePreview`,
+  `live.wavePreviewShown`; `BattleCanvas` fits the play below it only when
+  the woodland above the first row of posts is not room enough —
+  `frame.firstRowTop` / `stageViewClear`); the Detail band is the focused
+  hero's card (`HeroCard.tsx`, pure data in `heroCard.ts`: fields, skill
+  slots, what it can upgrade) beside ONE "Gear | Pack" kit column
+  (`KitColumn` in `DetailBand.tsx`, real tabs); the team's targeting and
+  relics are the HUD's Team button and panel (`TeamPanel.tsx`; selection
+  `{ kind: 'team' }`); the setup bar is Details · Upgrade · Start Wave, and
+  Upgrade opens `UpgradePanel.tsx` (the owed skill choice first, then each
+  worn piece's raise with its before → after — `items.raisedBase` is the raise
+  without its roll, so a preview never draws on a run stream). Styles in
+  `src/styles/battle-band.css`; tests `tests/heroCard.test.ts`.
 - Anything several UI surfaces must agree on — archetype glyphs, currency marks, the
   rarity tokens, the targeting-order labels — lives in `src/ui/channels.ts`.
   Import it. Every local copy of one of those has gone stale so far. A table the
@@ -339,6 +353,12 @@ result. Append a short note to the review log when you're done.
   an element that cannot goes, and no two elements do the same job. Each
   shared part's job is in `docs/DESIGN_SYSTEM.md` § 8, "Parts and their
   jobs", and a new part gets its row there before it ships.
+- **Copy: `docs/copy/COPY.md`.** Every line a player reads has one job and
+  the fewest words that do it: an effect is the number and what it touches
+  ("+5 Patience to team"), context is one quiet italic note (`tone: 'note'`),
+  a fact is said once per screen, and there is no scope boilerplate.
+  `tests/copy.brevity.test.ts` holds the caps; `npx tsx scripts/copy-inventory.ts`
+  regenerates `docs/copy/INVENTORY.md`.
 - **Design system usage rules: `docs/DESIGN_SYSTEM.md` § 8.** They cover one
   title, saying a fact once, no standing hints, `.field-k` / `.field-v` for
   every label and value, the shared choose-one parts, one primary CTA, and

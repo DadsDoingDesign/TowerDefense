@@ -187,13 +187,13 @@ describe('the classless rework’s combo skills', () => {
 
   it('say exactly what they do', () => {
     const desc = (id: string) => skillById(id)!.desc
-    expect(desc('bounty')).toBe('Each kill it makes pays 3 more gold.')
-    expect(desc('pin_down')).toBe('Its hits deal 30% more to enemies that are being held.')
-    expect(desc('cold_snap')).toBe('Its hits deal 25% more to slowed enemies.')
-    expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
+    expect(desc('bounty')).toBe('Each kill pays 3 more gold.')
+    expect(desc('pin_down')).toBe('Hits 30% harder on held enemies.')
+    expect(desc('cold_snap')).toBe('Hits 25% harder on slowed enemies.')
+    expect(desc('firebrand')).toBe('Its thorns burn what it holds 12/s for 3s.')
     expect(desc('split_shot')).toBe('Its attacks pass through 1 more enemy.')
-    expect(desc('momentum')).toBe('Attacks 15% faster for each enemy it is holding.')
-    expect(desc('last_rites')).toBe('Every 5th kill it makes wins back 5% of the cargo.')
+    expect(desc('momentum')).toBe('Attacks 15% faster per enemy it holds.')
+    expect(desc('last_rites')).toBe('Every 5th kill wins back 5% cargo.')
   })
 
   it('reach the combat profile exactly by their mods', () => {

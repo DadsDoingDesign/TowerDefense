@@ -25,7 +25,7 @@ import type { RtProjectile, RtSentinel } from '../engine/engine'
 import { drawTelegraphs } from './telegraphs'
 import { backToFront, drawEnemy, drawSentinel, sentinelFromRt, shoulderNudge } from './units'
 
-export { entrySide, fitView, setPresentationTime, setViewScale, stageView, type StageView, type View } from './frame'
+export { entrySide, firstRowTop, fitView, setPresentationTime, setViewScale, stageView, stageViewClear, type StageView, type View } from './frame'
 export { activeFieldSeason, drawField, drawTerrainDanger, drawTerrainFlames, playRect, setFieldSeason, worldOf } from './terrain'
 export { EdgeBand } from './edgeFx'
 export { WeatherLayer } from './weatherFx'

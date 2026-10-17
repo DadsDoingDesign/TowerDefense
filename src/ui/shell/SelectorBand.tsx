@@ -11,7 +11,7 @@ import { useGameStore } from '../../state/gameStore'
 import { ARCHETYPE_GLYPH, markLabel } from '../channels'
 import { Icon } from '../Icon'
 import { lineMark, lineText, lineTone, type Offer } from './offers'
-import { EffectLine } from './DetailBand'
+import { EffectLine } from './EffectLine'
 import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
@@ -116,6 +116,8 @@ function PartyCards() {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const flash = useFlashes()
   const battleMap = useGameStore((s) => s.battleMap)
+  // Armed for posting — a hero READ (its Upgrade panel) is selected, not armed.
+  const armedId = useGameStore((s) => s.selectedSentinelId)
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
@@ -140,7 +142,7 @@ function PartyCards() {
         const dps = Math.round(profile.dps * ground)
         const hue = lookVar(s)
         const clash = swingers.has(s.id) ? 'swing' : tooClose.has(s.id) ? 'close' : null
-        const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
+        const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : armedId === s.id && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         // "Swings — needs clearance", in words, for whoever swings (what it holds or a skill).
         const swings = isMelee(s) ? `, ${MELEE_LINE.toLowerCase()}` : ''
         const clashWords = clash === 'swing' ? ', others too close — make space' : clash === 'close' ? ', too close to a hero that swings — move it' : ''
@@ -185,6 +187,10 @@ function PartyCards() {
               <span className="sh-hero-arch">{ARCHETYPE_GLYPH[lookOf(s)]}</span>
             </span>
             <span className="sh-hero-name">{s.name}</span>
+            {/* The compact token's one line while a hero is read (battle-band.css). */}
+            <span className="sh-hero-lvc" aria-hidden="true">
+              Lv {s.level}
+            </span>
             <span className="sh-hero-sub">
               {/* The weapon it really holds — the picture it carries on the
                   field too (`render/gearMarks`), since the portrait's painted
@@ -195,8 +201,8 @@ function PartyCards() {
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
             </span>
-            <span className={`sh-hero-tag ${clash ? 'on clash' : placed ? (cursed ? 'on cursed' : 'on') : selected && canPlace ? 'arm' : ''}`}>
-              {clash === 'swing' ? 'Make space' : clash === 'close' ? 'Too close' : placed ? (cursed ? 'Cursed' : 'Deployed') : selected && canPlace ? 'Place it' : `${dps} DPS`}
+            <span className={`sh-hero-tag ${clash ? 'on clash' : placed ? (cursed ? 'on cursed' : 'on') : armedId === s.id && canPlace ? 'arm' : ''}`}>
+              {clash === 'swing' ? 'Make space' : clash === 'close' ? 'Too close' : placed ? (cursed ? 'Cursed' : 'Deployed') : armedId === s.id && canPlace ? 'Place it' : `${dps} DPS`}
             </span>
           </button>
         )

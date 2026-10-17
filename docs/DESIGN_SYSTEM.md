@@ -468,6 +468,13 @@ agree it, then edit this section.
     five companies and Buy Company (`docs/ui-audit-2026-10/home-map/REVIEW.md`,
     "Polish").
 
+11. **Copy has a job too.** Every line a player reads names its one job and
+    is cut to the fewest words that do it: an effect is the number and what
+    it touches ("+5 Patience to team"), context is one quiet italic note, and
+    a fact appears once per screen. The jobs, the patterns and the voice are
+    in [`docs/copy/COPY.md`](copy/COPY.md) (the copy pass, Oct 2026, at the
+    designer's request); `tests/copy.brevity.test.ts` holds its caps.
+
 ### Parts and their jobs
 
 | Part | Its one job | Not for |
@@ -477,7 +484,7 @@ agree it, then edit this section.
 | Back (`.ct-back`) | Leaves without changing anything | Saving or confirming |
 | `LeaveRun` | Abandons the run, after a confirm | Anything short of abandoning |
 | A hero, tapped (its card on the bar, or posted on the field) | In setup, picks the hero up: its posts glow, and the next tap posts or moves it | Opening its details (that is the Details button). During a live wave, posts are held, so the tap reads instead |
-| Details button (battle strip) | Opens and closes the selected hero's details in setup | Selecting or arming anything |
+| Details button (battle strip) | On a portrait field, opens and closes the Detail band in setup ("▴ Details" / "▾ Details", its state in `aria-expanded`); closing lets go of whatever is being read, an armed hero stays armed | Selecting or arming anything |
 | `PickStrip` + `PickCard` | Chooses one of several: a token focuses it, the CTA commits it | Settings that apply on tap |
 | `MenuRow` (inline detail) | A setting or list choice that applies on tap; its detail opens under the selected row | Choices that need a CTA |
 | `FlagWheel` | The main part of a builder, with many visual options; its middle opens them all | Small sets (use a `PartCarousel`) |
@@ -487,6 +494,7 @@ agree it, then edit this section.
 | Dice | Rolls the thing it sits on or beside (the name; the whole flag) | Any other shortcut |
 | Refusal line (`.co-why`) | Says why an input is refused, only while it is | Hints, tips |
 | `PageTip` / `Coach` | Teaches once, the first time it matters | A standing hint; an error |
+| Note (`BodyLine` `tone: 'note'`: `.sh-line.note`, `.pg-card-body.note`) | Context the player needs to choose, said once, quietly in italics, under the effect it qualifies ("Relics affect new team members and stack for the rest of your run.") | An effect or a number; a standing hint; a second note on the same card |
 | `Slip` / `SlipLine` | A receipt: what is paid, owed or earned, item by item | Prose |
 | `Gold` | An amount of gold, the only currency | Other numbers |
 | `RarityTag` | An item's rarity, in the shared rarity tokens | Any other ranking |
@@ -563,6 +571,17 @@ agree it, then edit this section.
 | Theme carousel (the militia builder's "Theme" `PartCarousel`, `.co-theme`) | Picks the theme your own road wears: the house look ("Lantern wood") or a company's once your standing with it reaches 6. Choosing one tries it on — the whole page wears it at once; a locked one is dimmed with its lock and says "Standing 6", and the CTA will not keep it | Previewing anything but the theme |
 | Track theme part (`.tk-part` with a swatch) | On level 6 of a company's track (Term I), names the theme it opens for your militia ("Theme · Ironvein steel for your militia"), a fixed part like the flag piece | Paying anything: the standing level itself is the unlock |
 | Receipt theme card (`TrackEarned`, "Standing 6 · theme") | Says a settle crossed the level that opened a company's theme, and where to pick it | Applying it (the builder does) |
+| Wave preview (`WavePreview`, `.sh-wavepre`, battle-band.css) | In setup, says what the coming wave is — its name, "Post a hero" / "8 enemies", and who comes in spawn order (the strip's `WaveQueue`) — hung from the Stage's top edge over the road's way in. `BattleCanvas` fits the play below it when the woodland there is not room enough (`frame.previewRoom`). A portrait opens the enemy's card under it; the name opens the wave's make-up in the Context panel. Fades at Start Wave | Covering a post, the lane's middle or the wagon; showing during a live wave (the strip's queue does then); holding an action |
+| Action bar, setup (`.sh-actbar`) | Holds the setup's actions only: Details (portrait), the focused hero's Upgrade, and Start Wave — the one primary, which takes the slack. A clearance conflict's reason takes the bar's middle while it stands | Saying what the wave is (the preview does) |
+| Upgrade button (`.sh-upgrade`) | Opens the focused hero's Upgrade panel; shown only when the hero has something to spend (`heroCard.canSpend`: a skill choice owed, or a worn piece the purse can raise), with the hero's face and a gold badge while a choice WAITS (the skill). Secondary in weight; pressed while its panel is open | Starting anything; appearing when nothing can be bought |
+| Upgrade panel (`UpgradePanel`) | Everything the hero can grow by, as one `PickStrip` + `PickCard`: the skill choice owed (it IS the panel until made or put off — `LevelUpPanel`), and each worn piece's one-tier raise with its before → after (DPS first, the tier, the price and the purse after it; the rolled enchantment is named, never previewed). Its commit is a plain accent button, never the teal primary | Reforging (a reroll: the item's own panel); showing a roll it has not made |
+| Hero card (`HeroCard`, `.sh-hcard`) | The focused hero, always the same boxes: face, name, level and XP bar, DPS (the cursed figure when posted on curse); a post fact beside the level ("Swings", "Cursed"); four fields — Reach, Targets, Damage, Speed — as `.field-k` / `.field-v`; three skill slots and the "All stats" ⓘ; Undeploy, small, in the foot while posted in setup | Team-wide orders (the Team panel); upgrading (the Upgrade panel) |
+| Skill slot (`.sh-sk`) | One of a hero's three skill places: a skill held (its mark and "L1–3"; a tap reads it in a line under the row), the choice owed now (gold; a tap opens the Upgrade panel), or empty with the level the next choice comes at | Choosing a skill in place (the Upgrade panel does) |
+| "All stats" (`.sh-hcard-more`) | Opens the hero's full sheet in the card (STR / DEX / INT, Patience, crit, Hold, every ability and mutation) and closes it | Anything the four fields already say |
+| Kit tabs (`.sh-kit`, "Gear \| Pack") | One column for the focused hero's gear (the paper doll) and the pack, as real tabs (← → move and select). An empty slot arms it and shows the Pack filtered to what fits ("Off Hand · 2 of 5 fit", × to stop); an equip lands back on Gear; the Pack tab carries the count | Reading an item (the Context panel); the team |
+| Team button (`.sh-team-btn`, the HUD) | Opens the Team panel; its banner wears the relic count. Arrives with the targeting order (the Watch Command) or the first relic | Run state (the rest of the header) |
+| Team panel (`TeamPanel`) | What applies to every hero at once: the targeting order (five across, its current choice as `.field-v`), the relics held with their effect "to team" and the relic note, keepsakes worn and by whom, and an older save's team bonuses. Takes the band's width; Done or the button again closes it | Anything about one hero |
+| Compact party token (`.shell.is-peek .sh-hero`) | While a hero is read on a phone, the party row steps down to its pictures and levels, so the field keeps the height; a tap still selects | Saying the name, weapon or DPS (the card above it does) |
 
 A new part gets a row here, with its job, before it ships.
 

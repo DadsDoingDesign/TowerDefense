@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Battle band · round 0</title>
+<!-- Round 0 of the battle-band redesign: three layouts of the new lower band
+     at 390 × 844, drawn with the game's own tokens (served by vite from
+     src/styles/global.css) over a real capture of the setup Stage. A sketch to
+     pick a direction, not the build. -->
+<link rel="stylesheet" href="/src/styles/global.css" />
+<style>
+  body { margin: 0; padding: 16px; background: #111; display: flex; gap: 24px; font-family: system-ui, sans-serif; color: var(--text); }
+  .frame { width: 390px; height: 844px; display: grid; grid-template-rows: 44px 1fr auto auto auto; background: var(--bg); overflow: hidden; position: relative; }
+  .cap { position: absolute; top: -2px; left: 0; }
+  .hud { display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; }
+  .chip { border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 10px; background: var(--panel-2); }
+  .hud .team { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .stage { background: url(stage.png) center top / 390px auto no-repeat; position: relative; min-height: 0; }
+  .pre { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--line-strong); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  .pre i { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--panel-3); border: 1px solid var(--line-strong); font-style: normal; font-size: 10px; position: relative; }
+  .pre i b { position: absolute; right: -3px; bottom: -3px; background: var(--bg); border-radius: 4px; padding: 0 2px; font-size: 10px; }
+  .party { display: flex; gap: 8px; padding: 8px 10px; background: var(--bg-2); border-top: 1px solid var(--line); }
+  .card { width: 92px; height: 108px; border-radius: 10px; border: 2px solid var(--fighter); background: var(--panel); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .card.c2 { border-color: var(--mystic); } .card.c3 { border-color: var(--rogue); }
+  .party.compact .card { width: 56px; height: 52px; font-size: 10px; }
+  .band { background: var(--panel); padding: 8px 10px; display: grid; gap: 8px; }
+  .row2 { grid-template-columns: minmax(0, 1fr) 150px; }
+  .box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-width: 0; }
+  .hh { display: grid; grid-template-columns: 36px 1fr auto; gap: 8px; align-items: center; }
+  .pt { width: 36px; height: 36px; border-radius: 8px; background: var(--fighter); }
+  .nm { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--fighter-text); line-height: 1; }
+  .xp { height: 4px; border-radius: 2px; background: var(--panel-3); margin-top: 4px; } .xp span { display: block; height: 100%; width: 40%; background: var(--accent); border-radius: 2px; }
+  .lv { font-size: 11px; color: var(--muted); }
+  .dps { text-align: right; } .dps b { font-size: 22px; display: block; line-height: 1; } .dps small { font-size: 10px; color: var(--muted); letter-spacing: .1em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 8px; }
+  .grid.g4 { grid-template-columns: repeat(4, 1fr); }
+  .grid div { display: flex; flex-direction: column; }
+  .skills { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .sk { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--accent); background: var(--panel-3); display: grid; place-items: center; font-size: 10px; position: relative; }
+  .sk.empty { border-style: dashed; border-color: var(--line-strong); color: var(--dim); }
+  .sk b { position: absolute; right: -4px; top: -6px; font-size: 9px; background: var(--accent); color: var(--bg); border-radius: 4px; padding: 0 3px; }
+  .more { margin-left: auto; font-size: 11px; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 8px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line-strong); margin: -8px -8px 8px; }
+  .tabs span { flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .tabs span.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+  .doll { height: 120px; display: grid; place-items: center; color: var(--dim); font-size: 11px; position: relative; }
+  .doll .s { position: absolute; width: 40px; height: 40px; border-radius: 8px; border: 2px solid var(--line-strong); background: var(--panel-3); }
+  .bar { display: flex; gap: 8px; padding: 6px 10px 10px; background: var(--panel); border-top: 1px solid var(--line); }
+  .btn { height: 44px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text); font-weight: 800; font-size: 14px; display: grid; place-items: center; padding: 0 12px; position: relative; }
+  .btn.pri { flex: 1; background: var(--cta, #2f8a8a); color: var(--cta-ink, #fff); font-family: var(--font-display); font-size: 20px; }
+  .badge { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel); }
+  .k { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .v { font-size: 13px; font-weight: 800; color: var(--accent-text); }
+  h2 { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; }
+  .label { font-size: 13px; color: #ddd; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+  <!-- A — the side card: party row as today; the band is the hero card beside one Gear | Pack column. -->
+  <div>
+    <p class="label">A · side card (party row unchanged)</p>
+    <div class="frame" id="a">
+      <div class="hud"><span class="chip">Depth 1/12</span><span class="chip">Cargo 100%</span><span class="chip">60</span><span class="chip team">⚑ Team</span></div>
+      <div class="stage"><div class="pre">Act 1 boss · 8 <i>T<b>×4</b></i><i>B<b>×1</b></i><i>R<b>×1</b></i><i>+2</i></div></div>
+      <div class="party"><div class="card">Rook</div><div class="card c2">Vesper</div></div>
+      <div class="band row2">
+        <div class="box">
+          <div class="hh"><span class="pt"></span><span><span class="nm">Rook</span><div class="lv">Lv 6 · 40%</div><div class="xp"><span></span></div></span><span class="dps"><b>70</b><small>DPS</small></span></div>
+          <div class="grid"><div><span class="k">Reach</span><span class="v">120</span></div><div><span class="k">Targets</span><span class="v">1 · melee</span></div><div><span class="k">Damage</span><span class="v">Physical</span></div><div><span class="k">Speed</span><span class="v">1.4/s</span></div></div>
+          <div class="skills"><span class="sk">Cleave<b>L1</b></span><span class="sk empty">Lv10</span><span class="sk empty">Lv15</span><span class="more">ⓘ</span></div>
+        </div>
+        <div class="box"><div class="tabs"><span class="on">Gear</span><span>Pack 1</span></div><div class="doll"><span class="s" style="top:8px;left:50px"></span><span class="s" style="top:60px;left:8px"></span><span class="s" style="top:60px;right:8px"></span></div></div>
+      </div>
+      <div class="bar"><span class="btn">▾ Details</span><span class="btn">Upgrade<span class="badge"></span></span><span class="btn pri">Start Wave ▶</span></div>
+    </div>
+  </div>
+  <!-- B — compact party: while a hero is read the party row shrinks to picture tokens, so the field keeps more height. -->
+  <div>
+    <p class="label">B · compact party while reading</p>
+    <div class="frame" id="b">
+      <div class="hud"><span class="chip">Depth 1/12</span><span class="chip">Cargo 100%</span><span class="chip">60</span><span class="chip team">⚑ Team</span></div>
+      <div class="stage"><div class="pre">Act 1 boss · 8 <i>T<b>×4</b></i><i>B<b>×1</b></i><i>R<b>×1</b></i><i>+2</i></div></div>
+      <div class="party compact"><div class="card">Rook</div><div class="card c2">Vesper</div></div>
+      <div class="band row2">
+        <div class="box">
+          <div class="hh"><span class="pt"></span><span><span class="nm">Rook</span><div class="lv">Lv 6 · 40%</div><div class="xp"><span></span></div></span><span class="dps"><b>70</b><small>DPS</small></span></div>
+          <div class="grid"><div><span class="k">Reach</span><span class="v">120</span></div><div><span class="k">Targets</span><span class="v">1 · melee</span></div><div><span class="k">Damage</span><span class="v">Physical</span></div><div><span class="k">Speed</span><span class="v">1.4/s</span></div></div>
+          <div class="skills"><span class="sk">Cleave<b>L1</b></span><span class="sk empty">Lv10</span><span class="sk empty">Lv15</span><span class="more">ⓘ</span></div>
+        </div>
+        <div class="box"><div class="tabs"><span class="on">Gear</span><span>Pack 1</span></div><div class="doll"><span class="s" style="top:8px;left:50px"></span><span class="s" style="top:60px;left:8px"></span><span class="s" style="top:60px;right:8px"></span></div></div>
+      </div>
+      <div class="bar"><span class="btn">▾ Details</span><span class="btn">Upgrade<span class="badge"></span></span><span class="btn pri">Start Wave ▶</span></div>
+    </div>
+  </div>
+  <!-- C — stacked: the hero card across the band, Gear | Pack as a strip under it. -->
+  <div>
+    <p class="label">C · stacked card over a Gear | Pack strip</p>
+    <div class="frame" id="c">
+      <div class="hud"><span class="chip">Depth 1/12</span><span class="chip">Cargo 100%</span><span class="chip">60</span><span class="chip team">⚑ Team</span></div>
+      <div class="stage"><div class="pre">Act 1 boss · 8 <i>T<b>×4</b></i><i>B<b>×1</b></i><i>R<b>×1</b></i><i>+2</i></div></div>
+      <div class="party"><div class="card">Rook</div><div class="card c2">Vesper</div></div>
+      <div class="band">
+        <div class="box">
+          <div class="hh"><span class="pt"></span><span><span class="nm">Rook</span><div class="lv">Lv 6 · 40%</div><div class="xp"><span></span></div></span><span class="dps"><b>70</b><small>DPS</small></span></div>
+          <div class="grid g4"><div><span class="k">Reach</span><span class="v">120</span></div><div><span class="k">Targets</span><span class="v">1</span></div><div><span class="k">Damage</span><span class="v">Phys</span></div><div><span class="k">Speed</span><span class="v">1.4/s</span></div></div>
+          <div class="skills"><span class="sk">Cleave<b>L1</b></span><span class="sk empty">Lv10</span><span class="sk empty">Lv15</span><span class="more">ⓘ More</span></div>
+        </div>
+        <div class="box" style="height:76px"><div class="tabs"><span class="on">Gear</span><span>Pack 1</span></div><div style="display:flex;gap:8px"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div></div>
+      </div>
+      <div class="bar"><span class="btn">▾ Details</span><span class="btn">Upgrade<span class="badge"></span></span><span class="btn pri">Start Wave ▶</span></div>
+    </div>
+  </div>
+</body>
+</html>

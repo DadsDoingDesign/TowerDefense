@@ -14,7 +14,8 @@
 import { ACHIEVEMENTS } from '../../../game/data/achievements'
 import { ENEMY_TYPES } from '../../../game/data/enemies'
 import { knowledgeOf } from '../../../game/data/enemyKnowledge'
-import { RELICS, relicSupported } from '../../../game/data/relics'
+import { RELICS, relicMark, relicSupported } from '../../../game/data/relics'
+import { RELIC_NOTE } from '../relicOffers'
 import { ALL_SKILLS, skillHeadline } from '../../../game/data/skills'
 import { ITEM_KINDS, itemPoolFor, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
@@ -96,9 +97,9 @@ export interface CodexTab {
 }
 
 /** What a silhouette says: the designer's words, and how. */
-export const UNLOCK_BY_PLAYING = 'Unlock by playing — as your standing with a company rises, or by delivering a contract.'
+export const UNLOCK_BY_PLAYING = 'Unlocks as your standing rises, or for a delivered contract.'
 /** What a Sovereign silhouette says: the one way it opens. */
-export const UNLOCK_BY_CHARTER = 'Unlock by delivering a Sovereign Route — one Sovereign item each time.'
+export const UNLOCK_BY_CHARTER = 'Unlocks with a delivered Sovereign Route, one each time.'
 /** LS3: the collection opens after the first run. */
 export const LIBRARY_LOCKED = 'Opens after your first run'
 
@@ -118,7 +119,7 @@ const SLOT_GROUP: Record<ItemSlot, string> = { oneHand: 'Weapons', twoHand: 'Wea
 const HAND: Record<ItemSlot, string> = { oneHand: 'One hand', twoHand: 'Both hands', offHand: 'Off hand', body: 'Body' }
 const featName = (id: string) => ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id
 const roadLine = (company: CompanyId | undefined) =>
-  company ? ` On ${companyById(company).name}’s road it turns up more often.` : ''
+  company ? ` More often on ${companyById(company).name}’s road.` : ''
 
 /** "One hand. Swings at…" → "Swings at…": the hand is a chip on the card. */
 const doesOf = (does: string) => does.replace(/^(One hand|Both hands|Off hand|Body|One hand, or the off hand)\.\s*/, '')
@@ -143,7 +144,7 @@ function itemsTab(v: CodexView): CodexTab {
       chips: has ? [LEVEL_NAME[k.level], HAND[k.slot], ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[k.level]],
       does: has ? doesOf(k.does) : '',
       how: has
-        ? `${k.basic ? 'Every Watch has it from the first run.' : 'Yours.'} Heroes and loot can be dealt it on any road.${roadLine(k.company)}`
+        ? `${k.basic ? 'Yours from the first run.' : 'Yours.'} Dealt on any road.${roadLine(k.company)}`
         : sov
           ? UNLOCK_BY_CHARTER
           : UNLOCK_BY_PLAYING,
@@ -176,7 +177,7 @@ function skillsTab(v: CodexView): CodexTab {
           chips: has ? [LEVEL_NAME[l], ...(k.signature ? [SIGNATURE_CHIP] : []), ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[l]],
           does: has ? k.desc : '',
           how: has
-            ? `${k.starter ? 'Every Watch has it from the first run.' : 'Yours.'} A hero can be dealt it, at the hero pick, a city's hire or a level-up.${roadLine(k.company)}`
+            ? `${k.starter ? 'Yours from the first run.' : 'Yours.'} Dealt at the hero pick, a city’s hire or a level-up.${roadLine(k.company)}`
             : feat
               ? `Opens with the feat ${feat.name}: ${feat.feat.replace(/\.$/, '').toLowerCase()}.`
               : k.signature
@@ -193,7 +194,7 @@ function skillsTab(v: CodexView): CodexTab {
 /** A signature skill's chip (Draft 4 · B): the company's own, from its loyalty track. */
 export const SIGNATURE_CHIP = 'Signature'
 /** How a locked signature skill opens: the one way, standing 5 on its company's track. */
-export const signatureHow = (company: CompanyId): string => `Opens at Standing ${SIGNATURE_LEVEL} with ${companyById(company).name}: its signature skill.`
+export const signatureHow = (company: CompanyId): string => `${companyById(company).name}’s signature: opens at Standing ${SIGNATURE_LEVEL}.`
 
 /**
  * A skill or item kind as the loyalty track shows it AHEAD of time (Draft 4 ·
@@ -263,8 +264,8 @@ function goblinsTab(v: CodexView): CodexTab {
           how: met
             ? knowledge.level === 'known'
               ? `Studied: ${knowledge.felled} felled.`
-              : `Felled ${knowledge.felled}. Fell ${knowledge.need - knowledge.felled} more to learn its tricks.`
-            : 'Not met yet. Every goblin you face is recorded here.',
+              : `Felled ${knowledge.felled}. ${knowledge.need - knowledge.felled} more to learn its tricks.`
+            : 'Not met yet.',
         }
       }),
       clan.hue,
@@ -283,10 +284,10 @@ function relicsTab(v: CodexView): CodexTab {
       locked: !held,
       badge: held ? RARITY_NAME[r.rarity][0] : '',
       hue: RARITY_HUE[r.rarity],
-      icon: 'relic',
+      icon: relicMark(r.id),
       chips: [RARITY_NAME[r.rarity]],
-      does: held ? `${r.desc}${r.downside ? `. Cost: ${r.downside}.` : ''}` : '',
-      how: held ? 'Taken on a run. A relic lasts the rest of the run it is taken on.' : featLocked ? `Opens with the feat ${featName(r.unlock!)}.` : 'Not taken yet.',
+      does: held ? `${r.desc}${r.downside ? `. Cost: ${r.downside}` : ''}` : '',
+      how: held ? RELIC_NOTE : featLocked ? `Opens with the feat ${featName(r.unlock!)}.` : 'Not taken yet.',
     }
   })
   return tab('relics', 'Relics', 'relic', [section('Relics', entries)])

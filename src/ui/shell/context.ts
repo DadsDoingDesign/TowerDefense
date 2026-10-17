@@ -100,10 +100,10 @@ export function useShellContext(): ShellContext {
         // plain line it replaces. What a hero does comes from its gear (the
         // classless rework) — there are no classes to learn.
         blurb: !gearTaught
-          ? 'A hero is what it holds, plus one skill.'
+          ? 'A hero is its gear, plus one skill.'
           : skillTaught
             ? 'Hire more at each city on the road.'
-            : 'Each hero comes with a skill, and learns more as it levels up.',
+            : 'Heroes learn more skills as they level up.',
       },
       layout: 'page',
     }
@@ -119,7 +119,7 @@ export function useShellContext(): ShellContext {
       board: crossroads.revealed
         ? {
             title: 'Mutated',
-            blurb: `${crossroads.revealed.heroName} fights differently from here on.`,
+            blurb: `${crossroads.revealed.heroName} fights differently now.`,
             // The one board that arrives as a result rather than as a place:
             // the permanent Mythic has just landed, and until now nothing said
             // so to anyone who could not see the screen change (F9).
@@ -128,13 +128,13 @@ export function useShellContext(): ShellContext {
         : crossroads.mutationHeroId
           ? {
               title: 'Choose the mutation',
-              blurb: 'Three Mythics, dealt when the fork fired. Read what each costs. The one you take is permanent.',
+              blurb: 'Take one for good. There is no reroll.',
             }
           : crossroads.recruits.length
             ? // The gameplay pass: a hero is hired only here, as the caravan
               // reaches a city. The page is the city's hiring yard (`StopScene`).
-              { title: town ?? 'Hiring', blurb: 'Hire one, or none. Or a mutation for one of your heroes instead.' }
-            : { title: 'A mutation', blurb: `You lead ${MAX_HEROES} heroes already. Aim a mutation at one of them, or march on.` },
+              { title: town ?? 'Hiring', blurb: 'Hire one, or take a mutation instead.' }
+            : { title: 'A mutation', blurb: `You lead ${MAX_HEROES} heroes, the most. Mutate one, or march on.` },
       layout: 'page',
     }
   }
@@ -159,10 +159,10 @@ export function useShellContext(): ShellContext {
           clearedType === 'elite'
             ? {
                 title: 'Elite spoils',
-                blurb: 'An elite pays richer: 25 gold banked and luckier cards. Take one.',
+                blurb: 'Elite pay: +25 gold and luckier cards. Take one.',
                 tone: 'elite',
               }
-            : { title: 'Spoils', blurb: 'Take one. Each card says where it goes.' },
+            : { title: 'Spoils', blurb: 'Take one.' },
         layout: 'page',
       }
     }
@@ -193,7 +193,7 @@ export function useShellContext(): ShellContext {
 /** Copy for the unrecognised-screen fallback above. It says so plainly. */
 const LOST_BOARD = {
   title: 'Off the Path',
-  blurb: 'Your heroes lost their bearings here, and this part of the run cannot be shown. Take the way on below.',
+  blurb: 'This part of the run can’t be shown. Take the way on below.',
 } as const
 
 /** The town of the city the run stands in (the act boss just cleared), or null off a city. */
@@ -204,11 +204,11 @@ export function cityTown(s: { runMap: { nodes: { id: string; layer: number }[] }
   return routeTowns(s.contract.company)[city] ?? null
 }
 
-const CHARTER_MERCHANT = { title: 'Merchant', blurb: 'Every price here is double, on the Sovereign Route.' } as const
+const CHARTER_MERCHANT = { title: 'Merchant', blurb: 'Prices are double on the Sovereign Route.' } as const
 
 const EVENT_BOARD = {
   merchant: { title: 'Merchant', blurb: 'Spend your gold before you march.' },
   shrine: { title: 'Shrine', blurb: 'A bargain with terms. Read them.' },
-  campfire: { title: 'Campfire', blurb: 'One night at the fire, and one thing done with it. Choose one.' },
+  campfire: { title: 'Campfire', blurb: 'One night, one thing done. Choose.' },
 } as const
 

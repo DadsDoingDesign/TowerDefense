@@ -4,7 +4,7 @@ import { RARITY } from '../../game/data/items'
 import { Icon } from '../Icon'
 import { effectIcon, markLabel, RARITY_INITIAL, railStyle, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
 import { Money } from './Money'
-import { lineMark, lineText, type Body } from './offers'
+import { lineMark, lineText, lineTone, type Body } from './offers'
 import type { OneTapProps } from './oneTap'
 import { ThemeFx } from '../theme/ThemeFx'
 
@@ -569,7 +569,7 @@ export function InfoCard({
         // panel, which almost nobody reaches first, had the override.
         const mark = icons ? (lineMark(l) ?? effectIcon(lineText(l))) : null
         return (
-          <p className={`pg-card-body ${mark ? 'iconed' : ''}`} key={i}>
+          <p className={`pg-card-body ${mark ? 'iconed' : ''}${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
             {mark && <Icon name={mark} />}
             {lineText(l)}
           </p>

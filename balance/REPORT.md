@@ -1248,7 +1248,7 @@ paired seeds, against the same runs without it.
 | Watch Hourglass | stat | Common | +1.1pt | +2.8pt | +1.4pt | +0.4pt | **+1.4pt** | +0.4pt | — |
 | Hunting Horn | stat | Rare | +4.4pt | +1.4pt | +1.2pt | +1.6pt | **+2.2pt** | +1.2pt | — |
 | Keen Whetstone | stat | Rare | +0.0pt | +5.6pt | +2.3pt | +2.9pt | **+2.7pt** | +0.0pt | — |
-| Whetstone Pact | stat | Epic | +12.2pt | −5.6pt | −0.4pt | +12.1pt | **+4.6pt** | −5.6pt | your heroes never crit |
+| Whetstone Pact | stat | Epic | +12.2pt | −5.6pt | −0.4pt | +12.1pt | **+4.6pt** | −5.6pt | team never crits |
 | Bloodletting | stat | Epic | −8.9pt | +4.2pt | +1.0pt | +8.0pt | **+1.1pt** | −8.9pt | −34% attack speed to team |
 | Executioner’s Oath | stat | Legendary | −3.3pt | +18.1pt | +1.6pt | −2.0pt | **+3.6pt** | −3.3pt | −12% attack speed to team |
 | Wildfire Pact | stat | Legendary | +0.0pt | −5.6pt | −0.6pt | +20.0pt | **+3.5pt** | −5.6pt | −40% damage per hit to team |
@@ -1269,12 +1269,12 @@ paired seeds, against the same runs without it.
 
 | Relic | Rarity | Rule | Win rate | Δ (± 2 s.e.) |
 |---|---|---|--:|--:|
-| Mercenary Charter | Rare | Recruits arrive at your heroes’ median level instead of three behind it. | 15% | −3±8pt |
-| Field Surgeon's Kit | Common | After every fight you win, 20% of the cargo is rounded up. | 19% | +1±3pt |
-| Quartermaster's Seal | Rare | Merchants lay out a fifth item, and your first restock at each one is free. | 17% | −1±6pt |
-| War Diary | Epic | After every fight, the lowest-level hero on the field gains 50% more XP. | 12% | −6±6pt |
-| Tithe Box | Common | +25 gold for every fight you win. | 20% | +2±3pt |
-| Twinblade Harness | Rare | A hero with 14 DEX of their own (gear not counted) can carry a sword, axe, rod or sceptre in the off hand — at full strength. | 14% | −4±4pt |
+| Mercenary Charter | Rare | Hires arrive at your heroes’ median level, not three behind | 15% | −3±8pt |
+| Field Surgeon's Kit | Common | +20% cargo after every fight you win | 19% | +1±3pt |
+| Quartermaster's Seal | Rare | Merchants lay out a 5th item; your first restock at each is free | 17% | −1±6pt |
+| War Diary | Epic | Your lowest-level hero on the field gets +50% XP per fight | 12% | −6±6pt |
+| Tithe Box | Common | +25 gold per win | 20% | +2±3pt |
+| Twinblade Harness | Rare | Heroes with 14 DEX of their own can hold a sword, axe, rod or sceptre off-hand, at full strength | 14% | −4±4pt |
 
 **Flagged, then cleared on confirmation** (a row the table flags is re-measured on 600 fresh seeds before it fails, §12's rule):
 - Twinblade Harness read -4pt (±4) on the table's 150 seeds; on 600 fresh seeds +1.2pt (±3.0): noise, not a defect.

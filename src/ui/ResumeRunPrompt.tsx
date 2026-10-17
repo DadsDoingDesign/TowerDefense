@@ -64,9 +64,8 @@ export function ResumeRunPrompt() {
         </p>
         {wasMidBattle && (
           <p className="fw-resume-body">
-            You were mid-wave. It picks back up at the start of{' '}
-            <strong>{snap.currentWave?.label ?? 'that wave'}</strong>, with your heroes to post
-            again. A half-fought wave is not a save point.
+            You were mid-wave: it restarts at{' '}
+            <strong>{snap.currentWave?.label ?? 'that wave'}</strong>, with your heroes to post again.
           </p>
         )}
         <div className="fw-resume-actions">
@@ -85,8 +84,8 @@ export function ResumeRunPrompt() {
             <p className="fw-resume-body fw-resume-warn" role="alert">
               {/* The company's advance never comes home; an older save's purse does. */}
               {snap.contract.charter
-                ? `The charter ends here, and its fee is lost. You keep ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; your heroes, the map and the pack are gone.`
-                : `The contract ends here. You keep what its cities paid and ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; unsold crates, your heroes, the map and the pack are gone.`}
+                ? `Its fee is lost. You keep ${snap.contract.advance ? 'a share of the road gold' : 'the rest of your purse'}; your heroes, map and pack are gone.`
+                : `You keep city pay and ${snap.contract.advance ? 'a share of the road gold' : 'the rest of your purse'}; unsold crates, heroes, map and pack are gone.`}
             </p>
           )}
           {armed && (

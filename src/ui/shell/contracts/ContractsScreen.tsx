@@ -127,7 +127,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
           <BankChip />
         </div>
       }
-      foot={<p className="ct-risk">{staked ? 'Fall, and you keep what the cities paid. Unsold cargo is lost.' : 'You keep every fee you have earned, even if you fall.'}</p>}
+      foot={<p className="ct-risk">{staked ? 'Fall, and you keep city pay; unsold cargo is lost.' : 'Fees earned are yours, even if you fall.'}</p>}
       cta={{
         label: staked ? (
           <>
@@ -172,7 +172,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
         )}
       </div>
 
-      {stakesOpen && !taught.stakes && <PageTip>Each crate costs {CRATE_PRICE} gold and makes the road harder. Delivered, every crate pays more.</PageTip>}
+      {stakesOpen && !taught.stakes && <PageTip>Each crate makes the road harder, and pays more if delivered.</PageTip>}
 
       {stakesOpen && (
       <div className="ct-ladder" style={{ '--co': companyVar(company) } as CSSProperties}>
@@ -265,7 +265,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
           </span>
         </div>
         <SlipLine total label={staked ? 'Profit if delivered' : 'Pay if delivered'} value={`+${plan.profit} gold`} />
-        <p className="ct-slip-note">Each city pays for the share of cargo that arrives.</p>
+        <p className="ct-slip-note">Cities pay for the cargo that arrives.</p>
       </Slip>
 
       <div className="ct-advance">
@@ -273,7 +273,7 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
           <b>
             {co.name} advances {ADVANCE} gold for the road
           </b>
-          <small>Not from your bank, and repaid at the end. {Math.round(ROAD_SHARE * 100)}% of the road’s gold comes home.</small>
+          <small>Not from your bank; repaid at the end. {Math.round(ROAD_SHARE * 100)}% of road gold comes home.</small>
         </span>
         <span className="ct-advance-v">
           <Gold n={ADVANCE} />

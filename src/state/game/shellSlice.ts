@@ -48,14 +48,14 @@ export interface ShellActions {
 }
 
 export const createShellSlice: Slice<ShellActions> = (set, get) => ({
-  // Tapping a placed tower DURING A LIVE WAVE puts that hero in the Context
-  // panel on its Upgrades tab: posts are held then, so the tap can only read.
+  // Tapping a placed tower DURING A LIVE WAVE puts that hero's card in the
+  // Context panel: posts are held then, so the tap can only read.
   // Deliberately leaves `selectedSentinelId` alone. (In setup a tap on a
   // posted hero picks it up instead — `battleSlice.tapTile`.)
   focusTower: (sentinelId) =>
     set({
       shellSelection: { kind: 'hero', id: sentinelId },
-      heroTab: 'upgrades',
+      heroTab: 'card',
       gearSlot: null,
     }),
 
@@ -67,7 +67,7 @@ export const createShellSlice: Slice<ShellActions> = (set, get) => ({
     const next = same ? null : sel
     set({
       shellSelection: next,
-      heroTab: next?.kind === 'hero' && prev?.kind === 'hero' && prev.id === next.id ? get().heroTab : 'stats',
+      heroTab: next?.kind === 'hero' && prev?.kind === 'hero' && prev.id === next.id ? get().heroTab : 'card',
       gearSlot: null,
       selectedSentinelId: next?.kind === 'hero' ? next.id : null,
     })

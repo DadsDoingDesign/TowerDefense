@@ -20,8 +20,8 @@ import { useMapFocus } from './mapFocus'
 /** What each special stop is, in one line — the preview's whole body for a non-fight. */
 const SPECIAL_BLURB: Record<string, string> = {
   merchant: 'Items for gold, and a wagon repair.',
-  shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
-  campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,
+  shrine: 'A bargain: a boon for your heroes, paid with a curse.',
+  campfire: `Rest (+${cargoShare(CAMPFIRE_REPAIR)}% cargo) or train one hero a level. Not both.`,
 }
 
 /**
@@ -139,16 +139,16 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         )}
         {town && (
           <p className="sh-line">
-            <Icon name="recruit" /> Win it to reach <b>{town}</b>: the city pays, and a hero is for hire.
+            <Icon name="recruit" /> Win to reach <b>{town}</b>: city pay, and a hero for hire.
           </p>
         )}
         {/* Enemies at their starting strength need no line (LS3/LS4). */}
         {step && strengthPct(step) > 0 && (
           <p className="sh-line muted">
-            <Icon name="threat" /> {strengthText(step)}: every enemy has {strengthPct(step)}% more HP.
+            <Icon name="threat" /> {strengthText(step)}: enemies have {strengthPct(step)}% more HP.
           </p>
         )}
-        {!canMarch && <p className="sh-line muted">Out of reach from where you stand.</p>}
+        {!canMarch && <p className="sh-line muted">Out of reach from here.</p>}
       </div>
     </div>
   )

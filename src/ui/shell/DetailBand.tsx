@@ -1,6 +1,6 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { create } from 'zustand'
 import { lookVar, railStyle, railText } from '../channels'
-import { heroDoes } from '../../game/data/gear'
 import {
   canUpgrade,
   dualWieldCheck,
@@ -17,22 +17,14 @@ import {
 // panel renders `itemBody` (offers.ts), which is the ONE producer of an item's
 // lines for all four surfaces (M4). Rebuilding them locally is what let the
 // curse mark reach exactly one of them.
-import { describeMods, STACKING_RULES } from '../../game/data/describe'
-import { mutationName } from '../../game/data/mutations'
-import { skillById } from '../../game/data/skills'
 import { ENEMY_MODS, ENEMY_TYPES } from '../../game/data/enemies'
 import { variantsFor, waveComposition } from '../../game/data/waves'
-import { computeCombat, totalStats } from '../../game/engine/combat'
-import { MAX_LEVEL } from '../../game/engine/leveling'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import { equipRules } from '../../game/run/relics'
-import { canStartWave, scrapGold, useGameStore, type HeroTab } from '../../state/gameStore'
+import { canStartWave, scrapGold, useGameStore } from '../../state/gameStore'
 import {
   damageMark,
   dualWieldShort,
-  effectIcon,
-  FOCUS_OPTS,
-  focusFull,
   GRIP_NAME,
   itemIcon,
   itemName,
@@ -45,39 +37,47 @@ import {
   rarityVar,
   TWINBLADE,
   TWINBLADE_TAKES,
-  type IconKey,
   strengthPct,
   strengthText,
 } from '../channels'
 import { Icon } from '../Icon'
 import { Money } from './Money'
-import { SkillPanel } from './SkillPanel'
 import { MarchBar, NodePreviewPanel } from './NodePreview'
 import { useMapFocus } from './mapFocus'
-import { itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
+import { heroLookArt, itemBody, lineMark, lineText, lineTone, type Offer } from './offers'
 import { RarityTag } from './Page'
 import { useArmedAction } from './PageScreens'
 import { CommandSlot } from './CommandSlot'
 // G2-2 — the wave strip's enemy queue.
 import { WaveQueue } from './WaveQueue'
 import { lineUp, queueFor } from './enemyQueue'
-import { InfoToggle } from './InfoToggle'
 import { equipTarget, gearDeltas, newAffixes, planEquip, useGearTarget } from './gearPlan'
 import { Tap, tapWord } from '../pointer'
 import { fieldTitle, orientationOf } from '../../game/data/maps'
-import { CURSED_DAMAGE_MULT, DANGER_COPY, dangerAt } from '../../game/data/hazards'
-import { LevelUpPanel } from './LevelUpPanel'
 import { levelUpOpen, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { useShown } from './staging'
+import { setupCollapsible } from './live'
 import { conflictCopy, equipWarning } from '../../game/run/clearance'
-import { isMelee, MELEE_LINE, meleeSource, weaponWord } from '../../game/engine/melee'
+import { isMelee } from '../../game/engine/melee'
+import { EffectLine } from './EffectLine'
+import { HeroCard } from './HeroCard'
+import { TeamPanel } from './TeamPanel'
+import { openUpgrade, UpgradePanel } from './UpgradePanel'
+import { canSpend, heroUpgrades, placementsCount, upgradeButtonName, upgradeWaiting } from './heroCard'
 import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/selectors'
 
 /**
- * Band 4 — context panel, the selected hero's gear, and the pack. The pack is
- * on screen in battle and at the merchant, so buying an item means watching it
- * land. The run map (Oct 2026) is the stop's card and its full-width CTA
- * (`MarchBar`) alone: no gear, no pack, and no party row above.
+ * Band 4 — the Context panel and the kit (the battle band, Oct 2026).
+ *
+ * The Context panel reads whatever is selected: a hero's card (`HeroCard`)
+ * or its Upgrade panel, an item, an offer, the team (`TeamPanel`, from the
+ * HUD), or — with nothing selected in setup — the wave's make-up. Beside it,
+ * ONE column holds the gear and the pack as two tabs, "Gear | Pack" (the
+ * designer: "the gear and pack should be tabs and merge to give room for
+ * themselves and others"), so the card has the width it needs. The pack is
+ * still on screen in battle, one tab away, and an equip still lands where you
+ * can see it. The run map (Oct 2026) is the stop's card and its full-width
+ * CTA (`MarchBar`) alone: no gear, no pack, and no party row above.
  */
 export function DetailBand({ offers }: { offers: Offer[] }) {
   // LS3: gear and the pack arrive with the first win's spoils. Until then the
@@ -87,6 +87,8 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
   // a stat bump do not fit a third of a phone, and gear is not what is being
   // decided. The gear and pack return the moment the choice is made or put off.
   const choosing = useSkillChoiceOpen()
+  // The team panel is every hero's, not one hero's gear: it takes the band.
+  const team = useGameStore((s) => s.shellSelection?.kind === 'team')
   // The run map (Oct 2026, the designer's mark-up): the stop's card and its
   // CTA, nothing else — gear and the pack are tended at the next fight's setup.
   const onMap = useGameStore((s) => s.screen === 'map')
@@ -95,12 +97,14 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
   // level info written out so you can compare"): the three cards in the
   // Selector carry their own detail, so this band keeps only the take.
   const hand = useGameStore(rewardInPlace) && !choosing
-  const gear = shown && !choosing && !onMap && !hand
+  // A hero's Upgrade panel is a decision about that hero, like a skill choice: it
+  // takes the band (its cards and before → after need the width).
+  const upgrading = useGameStore((s) => s.shellSelection?.kind === 'hero' && s.heroTab === 'upgrade')
+  const gear = shown && !choosing && !onMap && !hand && !team && !upgrading
   return (
-    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing ? ' choosing' : ''}${hand ? ' reward-hand' : ''}`} id="sh-detail-panels">
+    <section className={`sh-detail${gear ? '' : ' no-gear'}${choosing || upgrading || team ? ' choosing' : ''}${hand ? ' reward-hand' : ''}`} id="sh-detail-panels">
       {!hand && <ContextPanel offers={offers} />}
-      {gear && <GearColumn />}
-      {gear && <PackColumn />}
+      {gear && <KitColumn />}
       {/* The battle's action bar is a SIBLING of the context panel, not one of
           its states, and it spans the whole band — see `.sh-wavebar` in
           shell.css for what that fixes and what it costs. */}
@@ -148,7 +152,8 @@ function WaveBar({ offers }: { offers: Offer[] }) {
   const waveBeat = useGameStore((s) => s.waveBeat)
   const shellSelect = useGameStore((s) => s.shellSelect)
   const portrait = useGameStore((s) => orientationOf(s.battleMap) === 'portrait')
-  const detailOpen = useGameStore((s) => s.detailOpen)
+  // The band is open on a portrait field: the Details toggle says so and closes it.
+  const bandOpen = useGameStore((s) => setupCollapsible(s).peek)
   const toggleDetail = useGameStore((s) => s.toggleDetail)
   const inPlace = useGameStore(rewardInPlace)
   // The reward card being read — the strip's CTA takes it (below).
@@ -309,40 +314,50 @@ function WaveBar({ offers }: { offers: Offer[] }) {
     )
   }
 
-  const deployed = roster.filter((h) => Object.values(placements).includes(h.id)).length
+  const deployed = placementsCount({ roster, placements })
   const space = conflicts.length ? conflictCopy(conflicts, { moveLeft: true, breather: false }) : null
+  /*
+   * The battle band (Oct 2026): setup's bar is ACTIONS only. The wave's name,
+   * "Post a hero" / "8 enemies" and the line-up moved onto the Stage's top
+   * edge (`WavePreview`; the designer: "the bottom wave preview should overlay
+   * the map instead"), and the room they left holds the focused hero's
+   * Upgrade button (`UpgradeButton`) beside the one primary, Start Wave.
+   * A clearance conflict still says why the wave waits, here, beside the
+   * button it holds.
+   */
   return (
-    <div className={`sh-wavebar sh-wq-bar${space ? ' conflict' : ''}`}>
-      {/* G2-2 — setup: the wave's name and what to do, then the whole line-up
-          in spawn order, then Start Wave. It was a sentence ("Tap your hero,
-          then a glowing circle…") and a bare "8 enemies"; the sentence is in
-          the composition panel above on a landscape field and the glowing
-          posts say it on the field itself, so the strip keeps the verb and
-          spends the room on WHO is coming. */}
-      <div className="sh-wq-mid" id={space ? 'sh-make-space' : undefined}>
-        {space ? (
+    <div className={`sh-wavebar sh-actbar${space ? ' conflict' : ''}`}>
+      {space && (
+        <div className="sh-wq-mid" id="sh-make-space">
           <MakeSpace head={space.head} fix={space.fix} />
-        ) : (
-          <>
-            <StripCaption
-              name={waveName}
-              now={deployed ? `${currentWave?.spawns.length ?? 0} enemies` : 'Post a hero'}
-              tone={deployed ? undefined : 'do'}
-            />
-            <WaveQueue entries={lineUp(queueFor(currentWave, 'setup', hud))} lead="This wave" emptyText="No enemies" countNote="in this wave" />
-          </>
-        )}
-      </div>
+        </div>
+      )}
+      {/* A portrait field runs setup collapsed: this opens and closes the band
+          (the hero's card, its gear and pack). One word, the chevron says
+          which way; the state is `aria-expanded`. */}
       {portrait && (
         <button
-          className="sh-btn sh-detail-toggle"
-          aria-expanded={detailOpen}
+          className={`sh-btn sh-detail-toggle${space ? ' icon-only' : ''}`}
+          aria-expanded={bandOpen}
           aria-controls="sh-detail-panels"
-          onClick={toggleDetail}
+          aria-label={space ? (bandOpen ? 'Close the details' : 'Details') : undefined}
+          data-sfx="toggle"
+          onClick={() => {
+            if (!bandOpen) return toggleDetail()
+            // Closing lets go of whatever is being read; an armed hero stays armed.
+            const st = useGameStore.getState()
+            const armed = st.shellSelection?.kind === 'hero' && st.selectedSentinelId === st.shellSelection.id
+            if (st.shellSelection && !armed) shellSelect(null)
+            useGameStore.setState({ detailOpen: false })
+          }}
         >
-          {detailOpen ? 'Hide' : 'Details'}
+          <span className="sh-chev" aria-hidden="true">
+            {bandOpen ? '▾' : '▴'}
+          </span>
+          <span className="sh-detail-word">Details</span>
         </button>
       )}
+      <UpgradeButton />
       <button
         className="sh-btn primary"
         disabled={deployed === 0 || !!space}
@@ -364,6 +379,56 @@ function WaveBar({ offers }: { offers: Offer[] }) {
         Start Wave ▶
       </button>
     </div>
+  )
+}
+
+/**
+ * The focused hero's Upgrade (the battle band, Oct 2026; the designer: "maybe
+ * upgrade is another button that appears in the bottom now that there's space
+ * without the wave preview").
+ *
+ * Secondary in weight beside Start Wave, and there only when the hero has
+ * something to spend (`heroCard.canSpend`): a skill choice owed, or a worn
+ * piece the purse can raise. A choice WAITING — the skill, which is free —
+ * wears a badge, the same gold as the party card's "Skill ↑". The hero is the
+ * one being read (or armed), else the one whose gear the kit shows; its face
+ * rides in the button so it is never a guess whose upgrade it is. A tap opens
+ * its Upgrade panel in the Context panel (`UpgradePanel`); a second tap goes
+ * back to its card.
+ */
+function UpgradeButton() {
+  const roster = useGameStore((s) => s.roster)
+  const selection = useGameStore((s) => s.shellSelection)
+  const heroTab = useGameStore((s) => s.heroTab)
+  const gold = useGameStore((s) => s.gold)
+  const gearTargetId = useGearTarget((s) => s.heroId)
+  // LS3: gear (and so raising it) arrives with the first win's spoils.
+  const gearShown = useShown('gear')
+  const hero =
+    (selection?.kind === 'hero' ? roster.find((h) => h.id === selection.id) : undefined) ??
+    roster.find((h) => h.id === gearTargetId) ??
+    roster[0]
+  if (!hero) return null
+  const ups = heroUpgrades(hero, gold).filter((u) => gearShown || u.kind === 'skill')
+  if (!canSpend(ups)) return null
+  const open = selection?.kind === 'hero' && selection.id === hero.id && heroTab === 'upgrade'
+  const waiting = upgradeWaiting(ups)
+  return (
+    <button
+      className={`sh-btn sh-upgrade${waiting ? ' waiting' : ''}`}
+      aria-pressed={open}
+      aria-label={upgradeButtonName(hero.name, ups)}
+      data-sfx="toggle"
+      onClick={() => (open ? useGameStore.setState({ heroTab: 'card' }) : openUpgrade(hero.id))}
+    >
+      <span className="sh-upgrade-face" style={{ background: lookVar(hero) }} aria-hidden="true">
+        <img src={heroLookArt(hero)} alt="" />
+      </span>
+      <span className="sh-upgrade-word" aria-hidden="true">
+        Upgrade
+      </span>
+      {waiting && <span className="sh-upgrade-badge" aria-hidden="true" />}
+    </button>
   )
 }
 
@@ -489,7 +554,10 @@ function useSkillChoiceOpen(): boolean {
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
   const stranded = useGameStore(strandedInBattle)
-  if (stranded || (screen === 'map' && focusedNode) || selection?.kind !== 'hero' || !hero) return false
+  // The battle band: the choice opens from the hero's Upgrade (the action
+  // bar's button, or the owed slot on its card), not on every tap of the hero.
+  const upgrade = useGameStore((s) => s.heroTab === 'upgrade')
+  if (stranded || (screen === 'map' && focusedNode) || selection?.kind !== 'hero' || !hero || !upgrade) return false
   return levelUpOpen(hero) && !live && !later[hero.id]
 }
 
@@ -501,8 +569,7 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const stranded = useGameStore(strandedInBattle)
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
-  const later = useLevelUps((s) => s.later)
-  const live = useGameStore(waveLive)
+  const heroTab = useGameStore((s) => s.heroTab)
 
   if (stranded) return <StrandedPanel />
   // A focused map node takes the panel whatever else is selected: it is the
@@ -516,12 +583,15 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   if (gearSlot && !selection) return <GearSlotPanel />
   if (selection?.kind === 'hero') {
     const hero = roster.find((h) => h.id === selection.id)
-    // SK1: a hero wearing the roster's skill badge opens its choice here —
-    // between rounds, unless the player put it off ("Later"). During a live
-    // wave the hero's own panel opens, and its Skills tab says the choice waits.
-    if (hero && levelUpOpen(hero) && !live && !later[hero.id]) return <LevelUpPanel hero={hero} />
-    if (hero) return <HeroPanel hero={hero} />
+    // The battle band (Oct 2026): a hero tapped is read on its card; its
+    // Upgrade panel (the bar's Upgrade button) holds the skill choice it is
+    // owed — first, between rounds, unless put off ("Later") — and the gear
+    // it can raise. Keyed on the hero, so the card's open sheet and skill
+    // read-out never carry over to the next hero.
+    if (hero && heroTab === 'upgrade') return <UpgradePanel hero={hero} key={hero.id} />
+    if (hero) return <HeroCard hero={hero} key={hero.id} />
   }
+  if (selection?.kind === 'team') return <TeamPanel />
   if (selection?.kind === 'item') {
     const item = findItem(inventory, roster, selection.id)
     if (item) return <ItemPanel item={item} />
@@ -641,7 +711,7 @@ function EmptyPanel({ hasOffers }: { hasOffers: boolean }) {
         <div className="sh-context-body">
           <WaveComposition />
           <p className="sh-line muted">
-            Post heroes on any glowing tile. Each reaches only what walks inside its ring.
+            Post heroes on glowing tiles. Each hits only inside its ring.
           </p>
         </div>
       </div>
@@ -688,9 +758,9 @@ function GearSlotPanel() {
       : null
   const warn =
     gearSlot.slot === 'mainHand' && offHand
-      ? `A two-handed weapon needs both hands — it would put ${offHand.name} back in the pack. A one-hander leaves it where it is.`
+      ? `A two-hander would send ${offHand.name} back to the pack; a one-hander keeps it.`
       : gearSlot.slot === 'offHand' && mainHand?.slot === 'twoHand'
-        ? `${hero.name} is holding ${mainHand.name} with both hands — filling this slot puts it back in the pack.`
+        ? `${hero.name} holds ${mainHand.name} in both hands: filling this slot sends it to the pack.`
         : null
 
   return (
@@ -929,356 +999,17 @@ function StrandedPanel() {
       </div>
       <div className="sh-context-body">
         <p className="sh-line muted">
-          This ground is already settled. There is no wave here to take. March on and pick the next stop.
+          This ground is settled. March on and pick the next stop.
         </p>
       </div>
     </div>
   )
 }
 
-function HeroPanel({ hero }: { hero: Sentinel }) {
-  const tab = useGameStore((s) => s.heroTab)
-  const setHeroTab = useGameStore((s) => s.setHeroTab)
-  const placements = useGameStore((s) => s.placements)
-  const battlePhase = useGameStore((s) => s.battlePhase)
-  const clearSlot = useGameStore((s) => s.clearSlot)
-  const shellSelect = useGameStore((s) => s.shellSelect)
-  const battleMap = useGameStore((s) => s.battleMap)
-  const engine = useGameStore((s) => s.engine)
-  // Re-read where the hero stands after a breather move (the hud changes then).
-  useGameStore((s) => s.hud.breather)
-  const profile = computeCombat(hero)
-
-  // Undeploy lived on the old upgrade modal's footer; without it here a placed
-  // hero can be moved but never taken off the field.
-  const slotId = Object.keys(placements).find((id) => placements[id] === hero.id)
-  const canUndeploy = !!slotId && battlePhase === 'setup'
-  // Q1: the ground it stands on RIGHT NOW — the live post during a wave (a
-  // breather move changes it), the setup post otherwise.
-  const standing = (engine && battlePhase === 'battle' ? engine.sentinels.find((x) => x.id === hero.id)?.slotId : undefined) ?? slotId
-  const danger = standing ? dangerAt(battleMap, standing) : null
-  const groundMult = danger === 'cursed' ? CURSED_DAMAGE_MULT : 1
-  const swing = meleeSource(hero)
-
-  // LS3: Skills arrive with the hero pick (every hero has one), Team (the
-  // targeting order) with the Watch Command — the other order the whole
-  // watch shares.
-  const skillsShown = useShown('skill')
-  const ordersShown = useShown('command')
-  const TABS: { id: HeroTab; label: string }[] = [
-    { id: 'stats', label: 'Stats' },
-    // "Upgr" was an abbreviation nobody could read aloud. These are the
-    // hero's bought skill paths (Wave 1).
-    ...(skillsShown ? [{ id: 'upgrades' as const, label: 'Skills' }] : []),
-    // "Tune" said nothing about scope; these are the whole watch's orders, not
-    // this hero's (M20).
-    ...(ordersShown ? [{ id: 'tactics' as const, label: 'Team' }] : []),
-  ]
-  // A tab that is not offered cannot be the open one.
-  const open: HeroTab = TABS.some((t) => t.id === tab) ? tab : 'stats'
-
-  return (
-    <div className="sh-context">
-      <div className="sh-context-head">
-        {/* The hue comes from a token, not from `hero.color`'s raw hex, so the
-            colour-vision modes in global.css can move it (M34). */}
-        <strong style={{ color: railText(lookVar(hero)) }}>{hero.name}</strong>
-        <span className={`sh-context-sub ${danger ? 'sh-cursed' : ''}`}>DPS {Math.round(profile.dps * groundMult)}</span>
-      </div>
-      {danger && (
-        <p className="sh-line sh-cursed-line">
-          <Icon name="warn" /> <b>{DANGER_COPY[danger].name}</b>: {DANGER_COPY[danger].short} here ({Math.round(profile.dps)} DPS elsewhere).
-        </p>
-      )}
-      {/* Weapon clearance: whether this hero swings, in plain words — what
-          it holds decides it (or a skill), not its class. */}
-      {swing && (
-        <p className="sh-line muted sh-swing-line" title={swing.kind === 'weapon' ? `Holding ${weaponWord(swing.item)}` : 'A skill'}>
-          <Icon name="blade" /> {MELEE_LINE}
-        </p>
-      )}
-      {/* One tab is not a choice: the tab row waits until there are two. */}
-      {TABS.length > 1 && (
-        <div className="sh-tabs" role="tablist">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={open === t.id}
-              className={`sh-tab ${open === t.id ? 'active' : ''}`}
-              data-sfx="toggle"
-              onClick={() => setHeroTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="sh-context-body">
-        {open === 'stats' && <HeroStats hero={hero} />}
-        {open === 'upgrades' && <HeroUpgrades hero={hero} />}
-        {open === 'tactics' && <HeroTactics />}
-      </div>
-      {canUndeploy && (
-        <div className="sh-context-foot">
-          <button
-            className="sh-btn"
-            // The store plays the undeploy sound itself; the generic click on
-            // top of it doubled the feedback.
-            data-sfx="none"
-            onClick={() => {
-              clearSlot(slotId)
-              shellSelect(null)
-            }}
-          >
-            Undeploy
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Patience, in the engine's own numbers (`engine.ts`): every 3 s of a wave a
- * hero gains a stack worth +4% to its STR, DEX and INT, up to
- * `3 + floor(patience / 5)` stacks. The stat itself only raises the CAP.
- */
-const PATIENCE_INTERVAL_S = 3
-const PATIENCE_PER_STACK = 0.04
-const patienceCap = (patience: number) => 3 + Math.floor(patience / 5)
-
-function HeroStats({ hero }: { hero: Sentinel }) {
-  const p = computeCombat(hero)
-  const t = totalStats(hero)
-  // `describeMods` — the one function that turns a merged `EffectMods` into
-  // sentences. Everything a hero has merged into it (its class, its skills,
-  // every enchantment on its gear, mutations, team keepsakes) lands in `p.mods`.
-  const abilities = describeMods(p.mods)
-  const skills = (hero.skills ?? []).map((id) => skillById(id)?.name).filter((n) => !!n)
-  const owed = levelUpOpen(hero)
-  const live = useGameStore(waveLive)
-  /*
-   * Heroes have no HP and are never hit. Thorns grind what a hero HOLDS, so
-   * the row only means something on a blocker. `p.mods` is the fully merged
-   * build (gear and mutations included), so a rogue handed a block by some
-   * future affix grows the row back automatically.
-   */
-  const blocks = !!p.mods.block
-  const cap = patienceCap(p.patience)
-  const skillsShown = useShown('skill')
-
-  return (
-    <>
-      {/* No class: the hero's job, said by what it holds (the classless rework). */}
-      <p className="sh-line">{heroDoes(hero)}.</p>
-      <p className="sh-line muted">Level {hero.level}/{MAX_LEVEL}</p>
-      {/*
-       * One naming for the three stats everywhere: STR / DEX / INT, the words
-       * the hero cards, recruit offers and shrine terms already use. This panel
-       * said PHY/MAG for the same two numbers.
-       *
-       * DEX sits under Attack now. It drives attack rate (+2% a point) and crit
-       * chance (+0.4% a point) and nothing defensive — it was filed under
-       * "Defense", which sent players to it for survivability.
-       */}
-      <div className="sh-statgrid">
-        <Cell
-          label="Attack"
-          wide
-          values={[
-            { head: 'STR', full: 'Strength', v: Math.round(t.str) },
-            { head: 'DEX', full: 'Dexterity', v: Math.round(t.dex) },
-            { head: 'INT', full: 'Intelligence', v: Math.round(t.int) },
-          ]}
-        />
-        <Cell label="Reach" values={[{ head: 'RNG', full: 'Range', v: Math.round(p.range) }]} />
-        <Cell
-          label="Patience"
-          values={[{ head: 'PAT', full: 'Patience', v: Math.round(p.patience) }]}
-          info={`Every ${PATIENCE_INTERVAL_S} s of a wave: +${Math.round(PATIENCE_PER_STACK * 100)}% STR, DEX and INT, up to ${cap} times (+${Math.round(cap * PATIENCE_PER_STACK * 100)}%). Every 5 Patience adds one more.`}
-        />
-        {blocks && (
-          <Cell
-            label="Hold"
-            wide
-            values={[
-              { head: 'HLD', full: 'Enemies held', v: p.mods.block!.count },
-              { head: 'THN', full: 'Thorns', v: Math.round(p.thorns) },
-            ]}
-          />
-        )}
-      </div>
-      <Meter label="Speed" value={`${p.rate.toFixed(1)}/s`} frac={Math.min(1, p.rate / 3)} />
-      <Meter label="Crit mult" value={`×${p.critMult.toFixed(1)}`} frac={Math.min(1, (p.critMult - 1) / 2)} />
-      <Meter label="Crit chance" value={`${Math.round(p.critChance * 100)}%`} frac={p.critChance} />
-
-      {abilities.length > 0 && (
-        <>
-          <p className="sh-line muted head">
-            Abilities
-            {/* The stacking rule is reference, not reading: it answers "does a
-                second Burn do anything?" for the player who asks, and it was
-                three always-on lines pushing the abilities themselves out of a
-                176px column. Behind an ⓘ now (Wave 1). */}
-            <InfoToggle label="How effects stack" lines={STACKING_RULES} />
-          </p>
-          {abilities.map((a) => (
-            <EffectLine text={a} bullet key={a} />
-          ))}
-        </>
-      )}
-
-      {/* SK1: what the hero holds, by name — the Skills tab has the rest. */}
-      {skillsShown && skills.length > 0 && (
-        <p className="sh-line accent">
-          <Icon name="boon" /> Skills: {skills.join(' · ')}
-        </p>
-      )}
-      {/* SK1: a milestone reached mid-wave wears its badge; the choice itself
-          opens between rounds. Said here too, so a tap on the badge answers. */}
-      {owed && (
-        <p className="sh-line muted">
-          <Icon name="boon" /> {live ? 'A skill to choose when this wave is over.' : 'A skill to choose.'}
-        </p>
-      )}
-
-      {(hero.mutations ?? []).map((m) => (
-        <p key={m.key} className="sh-line accent">
-          <Icon name="mutate" /> {mutationName(m.key, m.name)} — {m.desc}
-        </p>
-      ))}
-    </>
-  )
-}
-
-/**
- * A labelled stat cell. The label is one short word and each number carries
- * its own three-letter head UNDER it, so no cell label wraps — "ATTACK ·
- * PHY/MAG" broke over two lines in a 77px cell and pushed the bottom row of the
- * grid under the panel's pinned foot, where its numbers were clipped (Wave 1).
- * The unabbreviated name is each number's accessible name.
- */
-function Cell({
-  label,
-  values,
-  wide,
-  info,
-}: {
-  label: string
-  values: { head: string; full: string; v: number }[]
-  wide?: boolean
-  /** A one-line explanation behind an ⓘ — `title` does not exist on touch. */
-  info?: string
-}) {
-  return (
-    <div className={`sh-cell ${wide ? 'wide' : ''}`}>
-      <span className="sh-cell-label">{label}</span>
-      {/* The ⓘ sits with the numbers, not the label: in a 77px cell the label
-          plus the disc wrapped onto two lines. */}
-      <span className="sh-cell-vals">
-        {values.map((x) => (
-          <span className="sh-cell-val" key={x.head} role="img" aria-label={`${x.full} ${x.v}`}>
-            <b aria-hidden="true">{x.v}</b>
-            <small aria-hidden="true">{x.head}</small>
-          </span>
-        ))}
-        {info && <InfoToggle label={`What ${label} does`} lines={[info]} />}
-      </span>
-    </div>
-  )
-}
-
-/**
- * One line of generated effect text, with its own mark.
- *
- * `describeMods` / `describeBase` / `describeEnchant` produce every effect
- * sentence in the game and they are read on the hero panel, in item details, on
- * 39 tree nodes, on 11 mutations, on 9 upgrade levels, on 16 reward cards and
- * on 6 shrines. Classifying the OUTPUT (see `effectIcon`) lights all of that
- * with one table and leaves `src/game/data/` untouched.
- *
- * A line the table does not recognise — a pure stat grant, an authored blurb —
- * renders exactly as it did before, with the `·` bullet. There is deliberately
- * no "unknown" icon: a wrong picture is worse than no picture, and the sentence
- * was always the real channel anyway.
- *
- * `mark` overrides the classification where the CALLER knows something the
- * sentence cannot say. There is one such caller: a cursed enchantment. `Reckless
- * — +85% damage, −45% attack speed` classifies to `damage`, which is right for
- * the sentence and misses the point of the item — the fact that decides the
- * purchase is that it is a curse, and no substring of the text carries that.
- * The caller reads `e.id`, so nothing here has to keep a copy of which labels
- * are curses; a hardcoded list of them would be the same defect this pass spent
- * its day on.
- */
-export function EffectLine({ text, tone, bullet, mark, inline }: { text: string; tone?: string; bullet?: boolean; mark?: IconKey; inline?: boolean }) {
-  const icon = mark ?? effectIcon(text)
-  // `inline`: a span, for a line inside a button (a reward card), where a <p> is not allowed.
-  const Tag = inline ? 'span' : 'p'
-  return (
-    <Tag className={`sh-line ${tone ?? ''} ${icon ? 'iconed' : ''}`}>
-      {icon ? <Icon name={icon} /> : bullet ? '· ' : null}
-      {text}
-    </Tag>
-  )
-}
-
-function Meter({ label, value, frac }: { label: string; value: string; frac: number }) {
-  return (
-    <div className="sh-meter">
-      <span className="sh-meter-label">{label}</span>
-      <span className="sh-meter-track">
-        <span className="sh-meter-fill" style={{ width: `${Math.max(0, Math.min(1, frac)) * 100}%` }} />
-      </span>
-      <span className="sh-meter-val">{value}</span>
-    </div>
-  )
-}
-
-/** The Skills tab (SK1): the hero's skills, and its next choice (`SkillPanel`). */
-function HeroUpgrades({ hero }: { hero: Sentinel }) {
-  return <SkillPanel hero={hero} />
-}
-
-/**
- * Team orders — and the panel says so now (M20).
- *
- * `tactics` is ONE object on the store, read once by the engine and applied to
- * every Sentinel on the field. Drawing it inside a hero's "Tune" tab, under
- * that hero's name, said the opposite: that you were setting this hero's
- * targeting. Every player who set "Low HP" on their rogue expecting their
- * fighter to keep blocking was misled by the layout.
- *
- * There used to be a "Hold the near half" toggle here as well. It was cut: the
- * balance harness measured it costing 10–50pt of stop rate in 7 of the 8
- * team × map × placement cells it was tried in, i.e. a trap option whose only
- * reliable effect was to lose waves. Targeting is the one order that ships.
- */
-function HeroTactics() {
-  const tactics = useGameStore((s) => s.tactics)
-  const setTactics = useGameStore((s) => s.setTactics)
-  return (
-    <>
-      <p className="sh-line muted head">Orders — the whole watch</p>
-      <p className="sh-line muted">Targeting. One rule, followed by every hero on the field.</p>
-      <div className="sh-seg" role="group" aria-label="Targeting order for the whole watch">
-        {FOCUS_OPTS.map((f) => (
-          <button
-            key={f.id}
-            className={`sh-seg-btn ${tactics.focus === f.id ? 'active' : ''}`}
-            data-sfx="toggle"
-            aria-pressed={tactics.focus === f.id}
-            aria-label={`${focusFull(f.id)} — for the whole watch`}
-            onClick={() => setTactics({ focus: f.id })}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-    </>
-  )
-}
+/* The hero's card (`HeroCard.tsx`) replaced the tabbed hero panel; the team's
+ * orders and relics are the HUD's Team panel (`TeamPanel.tsx`); a hero's
+ * upgrades are `UpgradePanel.tsx`; `EffectLine` is its own file. (The battle
+ * band, Oct 2026.) */
 
 function ItemPanel({ item }: { item: Item }) {
   const gearSlot = useGameStore((s) => s.gearSlot)
@@ -1590,6 +1321,9 @@ function ItemPanel({ item }: { item: Item }) {
               equipItem(target.id, plan.slot, item.id)
               clearGearSlot()
               useGearTarget.setState({ heroId: target.id })
+              // Watch it land: the kit shows the doll it went onto (the swapped
+              // piece is back in the pack, one tab over, and the line above said so).
+              useKitTab.setState({ tab: 'gear' })
               shellSelect(null)
             }}
             aria-label={`Equip ${itemName(item)} on ${target.name}, ${plan.slotLabel}${ejection ? `. ${ejection}` : ''}${clash ? `. ${clash.text}` : ''}`}
@@ -1653,7 +1387,7 @@ function OfferPanel({ offer }: { offer: Offer }) {
             happens to be looking. */}
         {offer.body.map((l, i) =>
           offer.bodyIcons ? <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} key={i} /> : (
-            <p className="sh-line" key={i}>
+            <p className={`sh-line${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
               {lineText(l)}
             </p>
           ),
@@ -1729,6 +1463,81 @@ function GearLockNote({ compact = false }: { compact?: boolean }) {
       <span className="sh-lock-glyph" aria-hidden="true" />
       {GEAR_LOCK_LINE}
     </p>
+  )
+}
+
+/**
+ * Which tab of the kit is open — presentation only, never snapshotted. An
+ * armed gear slot shows the Pack (it filters to what fits) whatever this says,
+ * and an equip lands back on the Gear, where it can be seen.
+ */
+export const useKitTab = create<{ tab: 'gear' | 'pack' }>(() => ({ tab: 'gear' }))
+
+/**
+ * The kit: the gear and the pack as ONE column with two tabs, "Gear | Pack"
+ * (the battle band, Oct 2026; the designer: "the gear and pack should be tabs
+ * and merge to give room for themselves and others").
+ *
+ * Real tabs (WAI-ARIA tabs: a `tablist` of `tab`s, each with its `tabpanel`;
+ * ← → and Home / End move between them and select). The interaction is the
+ * shell's, unchanged: on Gear, an empty slot arms it and the Pack opens on
+ * what fits — a tap there puts it on, and the column goes back to the Gear to
+ * show it worn; a worn slot opens its item (Unequip, Swap). On Pack, a tap
+ * reads an item beside its comparison on the focused hero, and "Equip →"
+ * puts it on with the swap said first. A tile dragged onto a hero (its card
+ * on the party row, the Context panel's card, or the Gear tab) equips it in
+ * one gesture (`usePackDrag`).
+ */
+function KitColumn() {
+  const tab = useKitTab((s) => s.tab)
+  const gearSlot = useGameStore((s) => s.gearSlot)
+  const clearGearSlot = useGameStore((s) => s.clearGearSlot)
+  const count = useGameStore((s) => s.inventory.length)
+  const open: 'gear' | 'pack' = gearSlot ? 'pack' : tab
+  const pick = (t: 'gear' | 'pack') => {
+    if (t === 'gear' && gearSlot) clearGearSlot()
+    useKitTab.setState({ tab: t })
+  }
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const to = ({ ArrowLeft: 'gear', ArrowRight: 'pack', Home: 'gear', End: 'pack' } as Record<string, 'gear' | 'pack'>)[e.key]
+    if (!to) return
+    e.preventDefault()
+    pick(to)
+    e.currentTarget.querySelector<HTMLButtonElement>(`#sh-kit-t-${to}`)?.focus()
+  }
+  return (
+    <div className="sh-kit">
+      <div className="sh-kit-tabs" role="tablist" aria-label="Gear and pack" onKeyDown={onKey}>
+        {(['gear', 'pack'] as const).map((t) => (
+          <button
+            key={t}
+            id={`sh-kit-t-${t}`}
+            role="tab"
+            className={`sh-kit-tab${open === t ? ' active' : ''}`}
+            aria-selected={open === t}
+            aria-controls={`sh-kit-p-${t}`}
+            tabIndex={open === t ? 0 : -1}
+            data-sfx="toggle"
+            data-drop={t === 'gear' ? 'gear' : undefined}
+            aria-label={t === 'pack' ? `Pack, ${count ? `${count} item${count === 1 ? '' : 's'}` : 'empty'}` : undefined}
+            onClick={() => pick(t)}
+          >
+            {t === 'gear' ? 'Gear' : 'Pack'}
+            {t === 'pack' && count > 0 && (
+              <span className="sh-kit-n" aria-hidden="true">
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div className="sh-kit-panel" role="tabpanel" id="sh-kit-p-gear" aria-labelledby="sh-kit-t-gear" hidden={open !== 'gear'}>
+        {open === 'gear' && <GearColumn />}
+      </div>
+      <div className="sh-kit-panel" role="tabpanel" id="sh-kit-p-pack" aria-labelledby="sh-kit-t-pack" hidden={open !== 'pack'}>
+        {open === 'pack' && <PackColumn />}
+      </div>
+    </div>
   )
 }
 
@@ -1809,10 +1618,13 @@ function GearColumn() {
 
   return (
     <div className="sh-gear" role="group" aria-label={hero ? `${hero.name}'s gear` : 'Gear'}>
-      <div className="sh-col-head sh-gear-head">
-        <span>GEAR</span>
-        {hero && <span className="sh-gear-who">{hero.name}</span>}
-      </div>
+      {/* The tab says "Gear"; whose it is is said here only when the Context
+          panel beside it is not already that hero's card (an item, the wave). */}
+      {hero && !(selection?.kind === 'hero' && selection.id === hero.id) && (
+        <div className="sh-col-head sh-gear-head">
+          <span className="sh-gear-who">{hero.name}</span>
+        </div>
+      )}
       {hero ? (
         <div className={`sh-gear-slots sh-doll${ambi ? ' ambi' : ''}`} style={{ '--doll-hue': lookVar(hero) } as CSSProperties}>
           {/* The body model: decoration under the slots, never a target. */}
@@ -1942,20 +1754,26 @@ function PackColumn() {
 
   return (
     <div className={`sh-pack ${gearSlot ? 'filtering' : ''}`}>
+      {/* The tab carries the count ("Pack 3"); the head holds the sort, or —
+          while a gear slot waits — what the pack is showing and the way back. */}
       <div className="sh-col-head">
-        <span>PACK</span>
-        {/* "0/0" was shown/owned with no words on either number (Wave 1).
-            It says what it counts now, and the filter case says so. */}
-        <span className="sh-col-count">
-          {inventory.length === 0
-            ? 'empty'
-            : gearSlot
-              ? `${shown.length} of ${inventory.length} fit`
-              : `${inventory.length} item${inventory.length === 1 ? '' : 's'}`}
-        </span>
-        <button className="sh-col-btn" onClick={sortInventory} aria-label="Sort the pack by rarity, then kind">
-          ⇅
-        </button>
+        {gearSlot ? (
+          <>
+            <span className="sh-col-count">
+              {HERO_SLOT_LABEL[gearSlot.slot]} · {shown.length} of {inventory.length} fit
+            </span>
+            <button className="sh-col-btn" data-sfx="toggle" onClick={clearGearSlot} aria-label="Stop choosing, back to the gear">
+              ×
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="sh-col-count">{inventory.length === 0 ? 'Empty' : ''}</span>
+            <button className="sh-col-btn" onClick={sortInventory} aria-label="Sort the pack by rarity, then kind" disabled={inventory.length < 2}>
+              ⇅
+            </button>
+          </>
+        )}
       </div>
       <div className="sh-pack-grid">
         {shown.map((i) => (
