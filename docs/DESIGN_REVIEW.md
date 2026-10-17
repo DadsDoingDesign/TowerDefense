@@ -4087,3 +4087,25 @@ New Figma page **Item assets** (`?node-id=2276-2083`; `docs/FIGMA.md` § Page: I
 - **Left for the designer.**
   - Approve, redraw or drop the 12 draft icons (Rod, Saffron Brand, Tome, Moonquill Codex, Buckler, Pavise, Gilded Easel, Mail, Aegis, Ironheart Plate, Cloak, Silkwind Cloak). They are proposals, not shipped art.
   - Decide whether body pieces should show on the battlefield figure.
+
+### 2026-10-17 — the twelve item icons ship, and the knight drops its painted shield
+The 12 draft icons from the Item assets page are now real atlas cells (`scripts/fw-icons.ts`, rows 12–13; 108 cells, 8 × 14), and `iconAtlas.NOUN_ICON` gives every dealt noun its own cell: the inventory shows 27 kinds, 0 sharing. The figure carries the same cell in its fist, so it changed too. Art and mapping only: no rule, number, stat, name or RNG draw changed, and no string `balance/REPORT.md` quotes changed.
+- **Polished from the drafts, judged at 1×, 2× and 8× on the tile, grass and parchment grounds.** Rod, Saffron Brand, Tome, Gilded Easel, Mail, Aegis and Ironheart Plate shipped close to their drafts. Four needed rework:
+  - The Codex's crescent read as a letter "C", so it is now a fat-middled moon.
+  - The Buckler was a muddy brown dot at 1×, so it got a steel rim with a lit edge and a boss that catches light. It stays smaller than the heater shield, and round.
+  - The Pavise read as a door (plain wood with red "hinges"), then as candy stripes. It is now a red-field wall-shield: arched top, cream cross-bar, steel ridge and two feet.
+  - Both cloaks went through four passes: a flask, a tent, a hill, an aubergine. What reads as a cloak is a hood with a true hole (the outline pass inks it, like the Robe's) over a shoulder line, open down the front on a contrasting lining. The Cloak is green on red; Silkwind is violet on gold, swept right past wind streaks.
+  - Every new cell is the same kind of object as the cell it borrowed. Each differs from it first in silhouette, then in colour. A pass over the whole sheet found no new look-alikes. The nearest is the green cloak beside the teal `company` tent, which has a flag and appears in another context.
+- **The bug: the painted shield.** `gearMarks` now cuts the armoured look's shield whenever the off hand holds anything else or nothing (`unpaintsOff`), from the idle strip and the attack strip alike, so a swing never brings it back. Rectangles can't cut it: it overlaps the body on a diagonal and moves through the swing. `cutOffHand` instead floods the frame's leftmost painted piece up to the outline ink. It takes in the rim's last sliver and peels away only the ink that belongs to the shield. Measured: 536 px of shield in all 12 frames, and none of the body (`tests/attackLook.test.ts` reads the real strips). A hero holding a real Shield keeps the painted one.
+- **Checked in the running app** (Playwright, 390 × 844 at 2× and 1280 × 800; `docs/ui-audit-2026-10/item-icons/`):
+  - the Codex items tab;
+  - the Gear | Pack column;
+  - a spoils hand of Pavise / Moonquill Codex / Aegis;
+  - eight kits on one post: Greatsword (no shield), Sword + Shield (the painted pair), Sword + Buckler, Saffron Brand + Gilded Easel, Sword + Pavise, Rod + Tome, Wand + Codex, and a lone Sword (no shield).
+
+  Against the checklist:
+  - Every icon is crisp at its whole-pixel sizes.
+  - Nothing is clipped. Each held piece sits in the fist, where the cut shield was.
+  - The figures still read first on the field.
+- **Figma.** The page's "Needs a unique asset" section is marked shipped, with the final pixels. All 107 stale renders on the item cards and loadouts were replaced and verified, and the cards' "Shares the … icon" lines now read "Own icon cell". `docs/item-assets/` is regenerated (2.3 MB, palette PNGs; `drafts/` became `cells/`).
+- **Left.** The party bar's and the hero card's portrait is still the look's painted bust (a knight with a shield), whatever the hero holds. The 7 body pieces still draw nothing on the figure.
