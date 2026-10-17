@@ -437,7 +437,7 @@ button:disabled {
 }
 
 /* ================================================== the icon atlas (P3) ----
-   78 cells of `public/assets/ui/fw-icons.png`, addressed by `--ix` / `--iy`
+   108 cells of `public/assets/ui/fw-icons.png`, addressed by `--ix` / `--iy`
    from `src/ui/Icon.tsx`. One sprite sheet, one request, one precache entry.
 
    `--fw-i-cols` / `--fw-i-rows` are the SHEET's grid, and they are declared
@@ -473,7 +473,7 @@ button:disabled {
   --fw-i-size: 16px;
   /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */
   --fw-i-cols: 8;
-  --fw-i-rows: 12;
+  --fw-i-rows: 14;
   display: inline-block;
   flex: 0 0 auto;
   width: var(--fw-i-size);

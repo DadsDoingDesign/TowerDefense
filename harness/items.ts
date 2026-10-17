@@ -34,7 +34,7 @@ import { lookHue } from '../src/game/data/sentinels'
 import { RNG } from '../src/game/core/rng'
 import { damageMark, RARITY_INITIAL, rarityRank, rarityVar, railStyle } from '../src/ui/channels'
 import type { Archetype, Equipment, Item, ItemRarity } from '../src/game/types'
-import { CELL, DRAFTS, draftPixels, itemAssetRows, LOADOUTS, seedFor, slug, type LoadoutSpec } from '../scripts/item-assets-lib'
+import { CELL, itemAssetRows, LOADOUTS, seedFor, SHIPPED_CELLS, slug, type LoadoutSpec } from '../scripts/item-assets-lib'
 
 const out = document.getElementById('out')!
 
@@ -154,24 +154,7 @@ function tileBox(path: string, item: Item): HTMLElement {
   return box
 }
 
-/** A draft or an atlas cell, pixel for pixel at ×16 (256 px). */
-function pixelCanvas(path: string, px: (string | null)[][]): HTMLCanvasElement {
-  const k = 16
-  const c = el('canvas')
-  c.width = c.height = CELL * k
-  c.style.width = '128px'
-  c.dataset.out = path
-  const ctx = c.getContext('2d')!
-  px.forEach((row, y) =>
-    row.forEach((hex, x) => {
-      if (!hex) return
-      ctx.fillStyle = hex
-      ctx.fillRect(x * k, y * k, k, k)
-    }),
-  )
-  return c
-}
-
+/** An atlas cell, pixel for pixel at ×16 (256 px). */
 function atlasCellCanvas(path: string, key: IconKey, atlas: HTMLImageElement): HTMLCanvasElement {
   const k = 16
   const c = el('canvas')
@@ -223,11 +206,11 @@ function build(atlas: HTMLImageElement): void {
     out.append(r)
   })
 
-  out.append(el('h2', undefined, 'Needs a unique asset — PROPOSED drafts beside the cell each borrows today'))
-  for (const d of DRAFTS) {
+  out.append(el('h2', undefined, 'Shipped — each kind that borrowed a cell, beside its own'))
+  for (const s of SHIPPED_CELLS) {
     const r = el('div', 'ia-row')
-    r.append(el('b', undefined, `${d.kind} (borrows ${d.borrows})`))
-    r.append(atlasCellCanvas(`drafts/${slug(d.kind)}-current.png`, d.borrows, atlas), pixelCanvas(`drafts/${slug(d.kind)}-proposed.png`, draftPixels(d)))
+    r.append(el('b', undefined, `${s.kind} (was ${s.borrowed}, now ${s.cell})`))
+    r.append(atlasCellCanvas(`cells/${slug(s.kind)}-borrowed.png`, s.borrowed, atlas), atlasCellCanvas(`cells/${slug(s.kind)}-own.png`, s.cell, atlas))
     out.append(r)
   }
 }

@@ -22,6 +22,12 @@
  *    strip before the bake, and its own item in the fist — and its attack
  *    strip (which swings the painted weapon) is not played; the item lunges
  *    at the target instead (`units.drawSentinel`);
+ *  - **and the same for the off hand**: the armoured look paints a shield on
+ *    its left arm. A hero whose off hand holds anything else — a buckler, a
+ *    tome, a second blade — or nothing at all (a two-hander, an empty hand)
+ *    has that shield cut from BOTH its strips ({@link cutOffHand}), and holds
+ *    its own piece, if any, in the left fist. A knight with a greatsword is
+ *    not still carrying the shield the art came with;
  *  - **pixel-doubled once, never scaled at draw time**: each cell is baked to a
  *    32 × 32 canvas by nearest-neighbour and blitted at a whole logical px with
  *    no transform, the 1:1 invariant every field sprite keeps (`blit.ts`).
@@ -118,6 +124,15 @@ interface Rig {
   paintedOff: IconKey | null
   tip: Pt | null
   unpaint: readonly Rect[]
+  /**
+   * The painted off-hand piece (`paintedOff`) is the LEFTMOST painted object in
+   * every frame of both strips, ringed by the outline colour, so it is cut by
+   * flood rather than by rectangles ({@link cutOffHand}). Rectangles cannot do
+   * it here: the shield overlaps the body on a diagonal, and it moves across
+   * the attack strip. Measured: 536 px of shield in each of the twelve frames
+   * (idle and attack), and nothing of the body in the fill.
+   */
+  offCut: boolean
 }
 
 const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
@@ -133,6 +148,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
       { x: 57, y: 0, w: 27, h: 54 },
       { x: 61, y: 54, w: 23, h: 9 },
     ],
+    offCut: true,
   },
   // rogue_idle: 6 × 71×79 — a bow held upright at the right side.
   rogue: {
@@ -147,6 +163,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
       { x: 54, y: 30, w: 17, h: 18 },
       { x: 50, y: 48, w: 21, h: 31 },
     ],
+    offCut: false,
   },
   // mystic_idle: 6 × 64×63 — bare fists either side.
   mystic: {
@@ -157,11 +174,12 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     paintedOff: null,
     tip: null,
     unpaint: [],
+    offCut: false,
   },
 }
 
 /** A pack with no measured rig: the marks at a generic hand height, nothing unpainted. */
-const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedOff: null, tip: null, unpaint: [] }
+const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedOff: null, tip: null, unpaint: [], offCut: false }
 
 /** The rig for a pack's look. Only Tiny Swords (the default theme) is measured. */
 export const rigFor = (pack: string | undefined, look: Archetype): Rig => (pack === 'tinyswords' ? TINY_SWORDS[look] : GENERIC)
@@ -178,6 +196,8 @@ const GRIP: Partial<Record<IconKey, Pt>> = {
   wand: { x: 3, y: 12 },
   sceptre: { x: 3, y: 12 },
   greatblade: { x: 2, y: 13 },
+  brand: { x: 3, y: 12 },
+  rod: { x: 2, y: 12 },
   hammer: { x: 7, y: 12 },
   bow: { x: 3, y: 8 },
   staff: { x: 3, y: 12 },
@@ -189,16 +209,36 @@ export function unpaints(rig: Rig, gear: HeroGear): boolean {
   return rig.unpaint.length > 0 && rig.paintedMain !== null && gear.main !== rig.paintedMain
 }
 
-const unpainted = new WeakMap<object, HTMLCanvasElement>()
+/**
+ * Does this hero's off hand hide the art's painted off-hand piece? Yes
+ * whenever it holds anything but that piece — including nothing (a two-hander,
+ * or an empty off hand). The knight's shield is the only one painted.
+ */
+export function unpaintsOff(rig: Rig, gear: HeroGear): boolean {
+  return rig.offCut && rig.paintedOff !== null && gear.off !== rig.paintedOff
+}
+
+/** What to cut from a strip: the painted weapon (idle strip only), the painted off-hand piece. */
+export interface Cut {
+  main: boolean
+  off: boolean
+}
+
+const unpainted = new WeakMap<object, Map<string, HTMLCanvasElement>>()
 
 /**
- * The idle strip with the painted weapon cut out (see {@link Rig.unpaint}).
- * One canvas per source strip, kept: `pixmap()` caches its bake by source
- * IDENTITY, so a stable canvas is baked once and never again.
+ * A strip with the painted weapon and/or off-hand piece cut out (see
+ * {@link Rig.unpaint}, {@link Rig.offCut}). One canvas per source strip and
+ * cut, kept: `pixmap()` caches its bake by source IDENTITY, so a stable canvas
+ * is baked once and never again.
  */
-export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: Rig, frames: number): HTMLImageElement | HTMLCanvasElement {
-  if (typeof document === 'undefined' || !rig.unpaint.length) return src
-  const hit = unpainted.get(src)
+export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: Rig, frames: number, cut: Cut): HTMLImageElement | HTMLCanvasElement {
+  const main = cut.main && rig.unpaint.length > 0
+  const off = cut.off && rig.offCut
+  if (typeof document === 'undefined' || (!main && !off)) return src
+  const key = `${main ? 'm' : ''}${off ? 'o' : ''}`
+  let byCut = unpainted.get(src)
+  const hit = byCut?.get(key)
   if (hit) return hit
   const w = src instanceof HTMLImageElement ? src.naturalWidth : src.width
   const h = src instanceof HTMLImageElement ? src.naturalHeight : src.height
@@ -206,13 +246,126 @@ export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: R
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
-  const g = c.getContext('2d')
+  const g = c.getContext('2d', { willReadFrequently: off })
   if (!g) return src
   g.drawImage(src, 0, 0)
   const cw = Math.round(w / frames)
-  for (let f = 0; f < frames; f++) for (const r of rig.unpaint) g.clearRect(f * cw + r.x, r.y, Math.min(r.w, cw - r.x), r.h)
-  unpainted.set(src, c)
+  if (main) for (let f = 0; f < frames; f++) for (const r of rig.unpaint) g.clearRect(f * cw + r.x, r.y, Math.min(r.w, cw - r.x), r.h)
+  if (off) {
+    const img = g.getImageData(0, 0, w, h)
+    for (let f = 0; f < frames; f++) cutOffHand(img.data, w, h, f * cw, Math.min(cw, w - f * cw))
+    g.putImageData(img, 0, 0)
+  }
+  if (!byCut) unpainted.set(src, (byCut = new Map()))
+  byCut.set(key, c)
   return c
+}
+
+/** The pack's outline ink (`#161C2E`), within a step of rounding. */
+const isInk = (d: ArrayLike<number>, o: number): boolean =>
+  d[o + 3] >= 128 && Math.abs(d[o] - 22) <= 2 && Math.abs(d[o + 1] - 28) <= 2 && Math.abs(d[o + 2] - 46) <= 2
+
+/**
+ * Cut the leftmost painted piece out of one frame (columns `x0 .. x0+cw`) of
+ * RGBA pixels, in place — with its outline, and without the body it overlaps.
+ * Returns how many pixels it cleared.
+ *
+ *  1. Seed on the frame's leftmost opaque pixel that is not outline ink (the
+ *     shield's rim, in every frame), and flood the 8-connected NON-ink pixels:
+ *     the ink ring stops the flood at the body.
+ *  2. Take in the slivers the ring cut off from it — non-ink islands of ≤ 24 px
+ *     inside its bounds (the rim's last highlight, under the ink).
+ *  3. Peel its ink ring, three px deep: ink touching the cut that does not also
+ *     touch an untouched painted pixel goes; ink that does is the BODY's
+ *     outline and stays. The contour bake rings whatever is left.
+ *
+ * The ground shadow is translucent, so it is never ink and never cut.
+ */
+export function cutOffHand(d: { [i: number]: number; length: number }, w: number, h: number, x0: number, cw: number): number {
+  const at = (x: number, y: number) => (y * w + x) * 4
+  const inFrame = (x: number, y: number) => x >= x0 && x < x0 + cw && y >= 0 && y < h
+  const paint = (x: number, y: number) => d[at(x, y) + 3] >= 128 && !isInk(d, at(x, y))
+  /** Each 8-neighbour of pixel index `p` inside the frame. */
+  const around = (p: number, visit: (x: number, y: number, q: number) => boolean | void): boolean => {
+    const px = p % w
+    const py = (p - px) / w
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = px + dx
+        const y = py + dy
+        if ((dx || dy) && inFrame(x, y) && visit(x, y, y * w + x) === true) return true
+      }
+    return false
+  }
+  const flood = (start: number, into: Set<number>, ok: (x: number, y: number, q: number) => boolean) => {
+    into.add(start)
+    const stack = [start]
+    while (stack.length)
+      around(stack.pop()!, (x, y, q) => {
+        if (!into.has(q) && ok(x, y, q)) {
+          into.add(q)
+          stack.push(q)
+        }
+      })
+  }
+
+  let seed = -1
+  for (let x = x0; x < x0 + cw && seed < 0; x++)
+    for (let y = 0; y < h; y++)
+      if (paint(x, y)) {
+        seed = y * w + x
+        break
+      }
+  if (seed < 0) return 0
+  const fill = new Set<number>()
+  flood(seed, fill, (x, y) => paint(x, y))
+
+  // 2 · the slivers, inside the piece's bounds (+3 px).
+  let bx0 = Infinity
+  let bx1 = -Infinity
+  let by0 = Infinity
+  let by1 = -Infinity
+  for (const p of fill) {
+    const x = p % w
+    const y = (p - x) / w
+    bx0 = Math.min(bx0, x - 3)
+    bx1 = Math.max(bx1, x + 3)
+    by0 = Math.min(by0, y - 3)
+    by1 = Math.max(by1, y + 3)
+  }
+  const inBox = (p: number) => {
+    const x = p % w
+    const y = (p - x) / w
+    return x >= bx0 && x <= bx1 && y >= by0 && y <= by1
+  }
+  const seen = new Set<number>()
+  for (let y = Math.max(0, by0); y <= Math.min(h - 1, by1); y++)
+    for (let x = Math.max(x0, bx0); x <= Math.min(x0 + cw - 1, bx1); x++) {
+      const p = y * w + x
+      if (fill.has(p) || seen.has(p) || !paint(x, y)) continue
+      const island = new Set<number>()
+      flood(p, island, (qx, qy, q) => !fill.has(q) && paint(qx, qy))
+      for (const q of island) seen.add(q)
+      if (island.size <= 24 && [...island].every(inBox)) for (const q of island) fill.add(q)
+    }
+
+  // 3 · peel the ink ring.
+  const inkAround = (from: Iterable<number>): Set<number> => {
+    const ring = new Set<number>()
+    for (const p of from)
+      around(p, (x, y, q) => {
+        if (!fill.has(q) && isInk(d, at(x, y))) ring.add(q)
+      })
+    return ring
+  }
+  let ring = inkAround(fill)
+  for (let pass = 0; pass < 3 && ring.size; pass++) {
+    const peeled = [...ring].filter((p) => !around(p, (x, y, q) => !fill.has(q) && paint(x, y)))
+    for (const p of peeled) fill.add(p)
+    ring = inkAround(peeled)
+  }
+  for (const p of fill) d[p * 4 + 3] = 0
+  return fill.size
 }
 
 let atlas: HTMLImageElement | null = null
