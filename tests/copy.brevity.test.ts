@@ -7,6 +7,7 @@ import { allStatCards } from '../src/game/data/rewards'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { allMutations } from '../src/game/data/mutations'
 import { RELIC_NOTE } from '../src/ui/shell/relicOffers'
+import { CLANS, FACTIONS } from '../src/game/data/clans'
 
 /**
  * The copy pass (Oct 2026, `docs/copy/COPY.md`). The designer, on a relic
@@ -30,10 +31,28 @@ export const CAPS = {
   skill: 80,
   /** A mutation's upside (its bill is the `downside`). */
   mutation: 60,
+  /** A goblin's name (the clans, Oct 2026): it rides a 32px chip's label and the boss plate, with " · Plated" after it. */
+  enemyName: 18,
+  /** A clan's name: a Codex section title and a chip. */
+  clanName: 14,
 } as const
 
 /** The scope boilerplate the relic card retired; the note says it once. */
 const BOILERPLATE = [/every hero, hires included/i, /·\s*all your heroes/i, /held for the rest of the run/i, /\byour company\b/i]
+
+describe('the goblin clans are named, not described', () => {
+  it('every clan and every one of its units keeps a name a chip can carry', () => {
+    for (const c of CLANS) {
+      expect(c.name.length, c.name).toBeLessThanOrEqual(CAPS.clanName)
+      const names = [...FACTIONS.flatMap((f) => c.units[f]), ...Object.values(c.specialists)]
+      for (const n of names) {
+        expect(n.length, `${c.name}: ${n}`).toBeLessThanOrEqual(CAPS.enemyName)
+        // A name, not a sentence: no full stop, no clause.
+        expect(n, n).toMatch(/^[A-Z][A-Za-z' ]+$/)
+      }
+    }
+  })
+})
 
 describe('effect lines stay effect lines', () => {
   it('stat relics and boons: at most 60 characters, scope said once ("to team")', () => {

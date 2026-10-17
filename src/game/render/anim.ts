@@ -1,3 +1,5 @@
+import { CLAN_WALK_ROLES } from '../data/clans'
+
 /**
  * Animation strips for the Tiny Swords pack. Each strip is a horizontal
  * N-frame PNG (enemies: a run cycle; towers: idle + attack). Frame counts are
@@ -11,6 +13,8 @@ export const ANIM_FRAMES: Record<string, number> = {
   fighter_idle: 6, fighter_atk: 6,
   rogue_idle: 6, rogue_atk: 8,
   mystic_idle: 6, mystic_atk: 6,
+  // the goblin clans' run cycles (`scripts/enemy-clans.ts`): the plain cycle, re-dressed frame by frame
+  ...Object.fromEntries(CLAN_WALK_ROLES.map((r) => [r, 6])),
 }
 export const ANIM_ROLES = Object.keys(ANIM_FRAMES)
 
