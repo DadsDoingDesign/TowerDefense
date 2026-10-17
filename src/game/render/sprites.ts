@@ -17,7 +17,7 @@
  * under `assets/sprites/`, so a shadowed or inactive file costs no install
  * request.
  */
-import { CLAN_STILL_ROLES, isClanRole } from '../data/clans'
+import { CLAN_STILL_ROLES, DEFAULT_CLAN, isClanRole } from '../data/clans'
 import { ANIM_ROLES } from './anim'
 import { getActiveStyle, onThemeChange, packDensity, type ThemeStyle } from './themes'
 
@@ -28,11 +28,9 @@ import { getActiveStyle, onThemeChange, packDensity, type ThemeStyle } from './t
 const ROLE_NAMES = [
   // towers
   'fighter', 'rogue', 'mystic',
-  // enemies — 3 goblin factions × 5 tiers (Tiny Swords)
-  'torch1', 'torch2', 'torch3', 'torch4', 'torch5',
-  'tnt1', 'tnt2', 'tnt3', 'tnt4', 'tnt5',
-  'barrel1', 'barrel2', 'barrel3', 'barrel4', 'barrel5',
-  // the goblin clans' kegs (their run cycles are `anim.ts` roles) — LAZY: see `isLazyRole`
+  // enemies — the goblin clans' kegs (their run cycles are `anim.ts` roles):
+  // 5 clans × 3 factions × 5 tiers, baked from the plain Tiny Swords goblins,
+  // which are the bake's INPUT and no runtime role (`data/clans.ts`).
   ...CLAN_STILL_ROLES,
   // terrain
   'grass', 'road',
@@ -85,9 +83,10 @@ const PACK_ROLES: Record<string, readonly string[]> = {
   tinyswords: [...ROLE_NAMES.filter((n) => n !== 'road'), ...ANIM_ROLES],
   // The from-scratch pack, as far as it has been authored (placeholder
   // blocking today — `npm run placeholder-pack`).
+  // (Its blocking-pass `torch1` strips are not declared: every goblin drawn
+  // is a clan's, `data/clans.ts`.)
   fieldwatch: [
     'fighter', 'fighter_idle', 'fighter_atk',
-    'torch1', 'torch1_walk',
     'grass',
     'tree1',
     'gear_sword', 'gear_dagger', 'gear_greatsword', 'gear_staff', 'gear_shield', 'gear_buckler',
@@ -97,12 +96,13 @@ const PACK_ROLES: Record<string, readonly string[]> = {
 
 /**
  * Roles a pack ships but neither the boot preload nor the precache fetches:
- * the goblin clans' strips (`data/clans.ts`, 75 files). A run meets one clan
- * per act, so `render/clanArt.preloadClan` asks for that clan's fifteen when
- * the battle opens, and the service worker caches them on that first use
- * (its runtime handler) — the offline install stays the plain pack.
+ * every goblin clan's strips but the default clan's (`data/clans.ts`, 60 of
+ * the 75 files). A run meets one clan per act, so `render/clanArt.preloadClan`
+ * asks for that clan's fifteen when the battle opens, and the service worker
+ * caches them on that first use (its runtime handler). The default clan ships
+ * with the boot and the offline install, so a goblin is never missing.
  */
-export const isLazyRole = (role: string): boolean => isClanRole(role)
+export const isLazyRole = (role: string): boolean => isClanRole(role) && !role.startsWith(`${DEFAULT_CLAN}_`)
 
 /** The roles a pack declares (empty for an unknown pack). */
 export const packRoles = (pack: string): readonly string[] => PACK_ROLES[pack] ?? []

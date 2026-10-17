@@ -5,9 +5,9 @@ import { useGameStore } from '../../state/gameStore'
 /**
  * The goblin clan raiding the run's road now (`run/clans.runClan`), for every
  * surface that names or pictures an enemy: pass it to `clans.enemyName` and
- * `clans.clanArtId`. Null off a run and on a hand-made bench field.
+ * `clans.clanArtId`. Off a run: `DEFAULT_CLAN`.
  */
-export const useRunClan = (): ClanId | null => useGameStore((s) => runClan(s))
+export const useRunClan = (): ClanId => useGameStore((s) => runClan(s))
 
 /** The same, read once (outside React: the battle ledger, the announcer). */
-export const runClanNow = (): ClanId | null => runClan(useGameStore.getState())
+export const runClanNow = (): ClanId => runClan(useGameStore.getState())

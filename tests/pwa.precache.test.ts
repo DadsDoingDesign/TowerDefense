@@ -182,10 +182,11 @@ describe('the per-role fallback chain (HANDOFF §6.4)', () => {
     expect(themeArtPacks(THEMES[DEFAULT_THEME])).toEqual([DEFAULT_THEME])
   })
 
-  it('never preloads or precaches a goblin clan: its strips load per run, on first use', () => {
+  it('precaches the default goblin clan only: every other clan loads per run, on first use', () => {
     const lazy = packRoles(DEFAULT_THEME).filter(isLazyRole)
-    // 5 clans × (torch + tnt run cycles, the keg's still) × 5 tiers.
-    expect(lazy).toHaveLength(75)
+    // 4 clans × (torch + tnt run cycles, the keg's still) × 5 tiers; the
+    // default clan's 15 ship with the boot (`sprites.isLazyRole`).
+    expect(lazy).toHaveLength(60)
     expect(lazy.every((r) => isClanRole(r))).toBe(true)
     const files = themeAssetPaths(THEMES[DEFAULT_THEME])
     for (const r of lazy) expect(files).not.toContain(`assets/sprites/${DEFAULT_THEME}/${r}.png`)
@@ -194,10 +195,10 @@ describe('the per-role fallback chain (HANDOFF §6.4)', () => {
   })
 
   it('draws each role from the first pack in the chain that ships its family', () => {
-    for (const role of ['fighter', 'fighter_idle', 'fighter_atk', 'torch1', 'torch1_walk', 'grass', 'tree1', 'gear_sword']) {
+    for (const role of ['fighter', 'fighter_idle', 'fighter_atk', 'grass', 'tree1', 'gear_sword']) {
       expect(plan.get(role), role).toBe('fieldwatch')
     }
-    for (const role of ['rogue', 'rogue_idle', 'mystic_atk', 'torch2_walk', 'tnt5', 'barrel3', 'tree2', 'rock1', 'bush2']) {
+    for (const role of ['rogue', 'rogue_idle', 'mystic_atk', 'cinder_torch2_walk', 'cinder_tnt5_walk', 'cinder_barrel3', 'tree2', 'rock1', 'bush2']) {
       expect(plan.get(role), role).toBe('tinyswords')
     }
     // Nobody ships a road: it stays procedural, under either theme.
@@ -215,7 +216,7 @@ describe('the per-role fallback chain (HANDOFF §6.4)', () => {
     const files = themeAssetPaths(fw)
     expect(new Set(files).size).toBe(files.length)
     expect(new Set(files.map((f) => f.slice(f.lastIndexOf('/') + 1))).size).toBe(files.length)
-    for (const shadowed of ['fighter', 'fighter_idle', 'fighter_atk', 'torch1', 'torch1_walk', 'grass', 'tree1']) {
+    for (const shadowed of ['fighter', 'fighter_idle', 'fighter_atk', 'grass', 'tree1']) {
       expect(files).not.toContain(`assets/sprites/tinyswords/${shadowed}.png`)
       expect(files).toContain(`assets/sprites/fieldwatch/${shadowed}.png`)
     }

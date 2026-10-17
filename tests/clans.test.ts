@@ -14,6 +14,8 @@ import {
   CLAN_OF_COMPANY,
   CLAN_STILL_ROLES,
   CLAN_WALK_ROLES,
+  DEFAULT_CLAN,
+  PLAIN_GOBLIN_ROLES,
   clanArtId,
   clanById,
   clanLookId,
@@ -27,12 +29,11 @@ import {
 } from '../src/game/data/clans'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { ENEMY_MODS, ENEMY_TYPES } from '../src/game/data/enemies'
-import { isBenchField, roadClan, runClan, sovereignClan } from '../src/game/run/clans'
+import { roadClan, runClan, sovereignClan } from '../src/game/run/clans'
 import { CLAN_ART } from '../src/game/render/enemyClans.generated'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
-const GEN = 'gen.balanced.1744362757'
 
 describe('one clan per company road, each dressed and named apart', () => {
   it('maps every company to its own clan', () => {
@@ -96,9 +97,10 @@ describe('every surface names through enemyName', () => {
     const { lineUp } = await import('../src/ui/shell/enemyQueue')
     const { enemyCardData } = await import('../src/ui/shell/enemyFacts')
     const q = [{ typeId: 'tnt2_warded', group: 0 }, { typeId: 'torch5', group: 0 }]
+    // No clan given: the default clan's — never the plain goblin's name or art.
     expect(lineUp(q).map((e) => [e.name, e.art])).toEqual([
-      ['Bomber · Warded', 'tnt2'],
-      ['Warlord Grukk', 'torch5'],
+      ['Firepot Bomber · Warded', 'cinder_tnt2'],
+      ['Chief Scorchgut', 'cinder_torch5'],
     ])
     expect(lineUp(q, 'smudge').map((e) => [e.name, e.art])).toEqual([
       ['Paint Bomber · Warded', 'smudge_tnt2'],
@@ -106,7 +108,7 @@ describe('every surface names through enemyName', () => {
     ])
     const knowledge = { kind: 'barrel3', level: 'met', felled: 1, need: 5 } as const
     expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge, clan: 'silkcut' })!.name).toBe('Veil Bearer')
-    expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge })!.name).toBe('Shieldbearer')
+    expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge })!.name).toBe('Hearth Bearer')
   })
 
   it('an older save meets the clans of the roads it has ridden; a new one records the clan it fights', async () => {
@@ -117,14 +119,10 @@ describe('every surface names through enemyName', () => {
 })
 
 describe('which clan raids a road: a pure rule', () => {
-  it('a company road deals its company’s clan in every act; a bench deals none', () => {
-    for (const company of COMPANY_IDS)
-      for (let act = 1; act <= 4; act++) expect(roadClan({ company }, 12345, act, `${GEN}~h1-tall`)).toBe(CLAN_OF_COMPANY[company])
-    expect(roadClan({ company: 'spice' }, 1, 1, 'greenline')).toBeNull()
-    expect(roadClan({ company: 'spice' }, 1, 1, 'kilnroad-tall')).toBeNull()
-    expect(roadClan(null, 1, 1, GEN)).toBeNull()
-    expect(isBenchField('greenline')).toBe(true)
-    expect(isBenchField(GEN)).toBe(false)
+  it('the clan follows the run: a company’s clan in every act, on any field; no run deals the default clan', () => {
+    for (const company of COMPANY_IDS) for (let act = 1; act <= 4; act++) expect(roadClan({ company }, 12345, act)).toBe(CLAN_OF_COMPANY[company])
+    expect(roadClan(null, 1, 1)).toBe(DEFAULT_CLAN)
+    expect(DEFAULT_CLAN).toBe(CLAN_OF_COMPANY.spice)
   })
 
   it('the Sovereign Route mixes clans by act: a hash of (seed, act), never the act before’s', () => {
@@ -135,7 +133,7 @@ describe('which clan raids a road: a pure rule', () => {
         const c = sovereignClan(seed * 7919, act)
         // Pure: the same inputs, the same clan — and the road helper agrees.
         expect(sovereignClan(seed * 7919, act)).toBe(c)
-        expect(roadClan({ company: null, charter: true }, seed * 7919, act, GEN)).toBe(c)
+        expect(roadClan({ company: null, charter: true }, seed * 7919, act)).toBe(c)
         expect(c).not.toBe(prev)
         prev = c
         seen.add(c)
@@ -145,10 +143,10 @@ describe('which clan raids a road: a pure rule', () => {
   })
 
   it('reads the run’s act and field, nothing else (no run stream is touched)', () => {
-    const st = { contract: { company: null, charter: true }, runSeed: 99, fieldAct: 3, battleMap: { id: GEN } }
+    const st = { contract: { company: null, charter: true }, runSeed: 99, fieldAct: 3 }
     expect(runClan(st)).toBe(sovereignClan(99, 3))
     expect(runClan({ ...st, contract: { company: 'metals' } })).toBe('delve')
-    expect(runClan({ ...st, battleMap: { id: 'greenline' } })).toBeNull()
+    expect(runClan({ ...st, contract: null })).toBe(DEFAULT_CLAN)
   })
 })
 
@@ -179,7 +177,8 @@ describe('the baked clan strips', () => {
     }
     for (const c of CLAN_IDS) expect(clanRolesOf(c)).toHaveLength(15)
     expect(clanArtId('cinder', 'torch3')).toBe('cinder_torch3')
-    expect(clanArtId(null, 'torch3')).toBe('torch3')
+    expect(clanArtId(null, 'torch3')).toBe(`${DEFAULT_CLAN}_torch3`)
+    expect(clanArtId('delve', 'smudge_torch3')).toBe('smudge_torch3')
     expect(clanArtId('cinder', 'fighter')).toBe('fighter')
   })
 
@@ -210,5 +209,67 @@ describe('the baked clan strips', () => {
       const alien = [...(await opaque(join(PACK, `${r}.png`)))].filter((c) => !pack.has(c))
       expect(alien.map((c) => '#' + c.toString(16).padStart(6, '0')), r).toEqual([])
     }
+  })
+})
+
+describe('no drawing path reaches a plain goblin strip', () => {
+  const SRC = join(ROOT, 'src')
+  const files = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : /\.(tsx?|css|html)$/.test(e.name) ? [join(dir, e.name)] : []))
+
+  it('ships no plain goblin as a runtime role, so nothing can fetch, precache or draw one', async () => {
+    const { ALL_ROLES, packRoles, themeAssetPaths } = await import('../src/game/render/sprites')
+    const { ANIM_FRAMES } = await import('../src/game/render/anim')
+    const { THEMES, DEFAULT_THEME } = await import('../src/game/render/themes')
+    for (const r of PLAIN_GOBLIN_ROLES) {
+      expect(ALL_ROLES, r).not.toContain(r)
+      expect(ANIM_FRAMES[r], r).toBeUndefined()
+      for (const pack of ['tinyswords', 'fieldwatch']) expect(packRoles(pack), `${pack}/${r}`).not.toContain(r)
+      for (const t of Object.values(THEMES)) expect(themeAssetPaths(t).some((f) => f.endsWith(`/${r}.png`)), `${t.id}: ${r}`).toBe(false)
+    }
+    // The default clan ships with the boot (and the offline install); the rest load per run.
+    const boot = themeAssetPaths(THEMES[DEFAULT_THEME])
+    for (const r of clanRolesOf(DEFAULT_CLAN)) expect(boot, r).toContain(`assets/sprites/tinyswords/${r}.png`)
+    for (const c of CLAN_IDS.filter((c) => c !== DEFAULT_CLAN)) for (const r of clanRolesOf(c)) expect(boot, r).not.toContain(`assets/sprites/tinyswords/${r}.png`)
+  })
+
+  it('turns every goblin art id into a clan role (the one helper, clanArt.clanArtFor)', async () => {
+    const { clanArtFor } = await import('../src/game/render/clanArt')
+    for (const key of Object.keys(ENEMY_TYPES)) {
+      const id = ENEMY_TYPES[key].id
+      for (const clan of [null, ...CLAN_IDS]) {
+        const role = clanArtFor(id, clan)
+        expect(isClanRole(role), `${key} under ${clan}: ${role}`).toBe(true)
+        expect(PLAIN_GOBLIN_ROLES, role).not.toContain(role)
+      }
+    }
+  })
+
+  it('names no plain goblin file and asks for no plain goblin role anywhere in the app', () => {
+    const plain = new RegExp(`(?:sprites/tinyswords/|['"\`])(?:${PLAIN_GOBLIN_ROLES.join('|')})(?:\\.png)?['"\`]`)
+    const offenders: string[] = []
+    for (const f of files(SRC)) {
+      const text = readFileSync(f, 'utf8')
+      // Drawing calls with a literal goblin role.
+      for (const m of text.matchAll(/(?:getSprite|spriteFor|artFor)\(([^)]*)\)/g)) if (plain.test(m[1])) offenders.push(`${f}: ${m[0]}`)
+      if (/assets\/sprites\/tinyswords\/(?:torch|tnt|barrel)\d/.test(text)) offenders.push(`${f}: a plain goblin file path`)
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('reads the plain goblin files only to bake them (and to harvest them from the CC0 build)', () => {
+    const SCRIPTS = join(ROOT, 'scripts')
+    const readers = readdirSync(SCRIPTS)
+      .filter((f) => /\.(ts|mjs)$/.test(f))
+      .filter((f) => {
+        const text = readFileSync(join(SCRIPTS, f), 'utf8')
+        // A plain goblin file named literally, or a goblin role read straight off the pack folder.
+        return /(?<![a-z]_)\b(?:torch|tnt|barrel)[1-5](?:_walk)?\.png|\$\{(?:SPR|PACK)\}\/(?:torch|tnt|barrel)|join\(PACK, `\$\{srcName\}\.png`\)/.test(text)
+      })
+    // (gen-placeholder-pack.ts WRITES the fieldwatch blocking pass's torch1, which no role declares.)
+    for (const f of readers) expect(['enemy-clans.ts', 'harvest-cc0.ts', 'gen-placeholder-pack.ts'], f).toContain(f)
+    expect(readers).toContain('enemy-clans.ts')
+    // The brand scene's goblin column is a clan's (`brand.ts` `SCENE_CLAN`).
+    expect(readFileSync(join(SCRIPTS, 'brand.ts'), 'utf8')).toMatch(/\$\{SPR\}\/\$\{SCENE_CLAN\}_\$\{id\}_walk\.png/)
   })
 })

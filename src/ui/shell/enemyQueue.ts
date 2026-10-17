@@ -1,4 +1,4 @@
-import { clanArtId, enemyName, type ClanId } from '../../game/data/clans'
+import { clanArtId, DEFAULT_CLAN, enemyName, type ClanId } from '../../game/data/clans'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import type { WaveDef } from '../../game/types'
 
@@ -57,7 +57,7 @@ export interface LineUpEntry {
  * always the next body through the gate, and a kind drops off the front once
  * its last body has spawned.
  */
-export function lineUp(queue: readonly QueuedSpawn[], clan: ClanId | null = null): LineUpEntry[] {
+export function lineUp(queue: readonly QueuedSpawn[], clan: ClanId = DEFAULT_CLAN): LineUpEntry[] {
   const out = new Map<string, LineUpEntry>()
   for (const { typeId } of queue) {
     const hit = out.get(typeId)

@@ -19,8 +19,8 @@ export type Form = (typeof FORMS)[number]
 /** What each form is called on the asset page: Swift is the plain elite (no armour), Plated / Warded the armoured ones. */
 export const FORM_TITLE: Readonly<Record<Form, string>> = { base: 'Base', swift: 'Elite (Swift)', plated: 'Plated', warded: 'Warded' }
 
-/** The roads, in the companies' order, after the plain goblins of the hand-made benches. */
-export const ROADS: readonly (ClanId | null)[] = [null, ...CLAN_IDS]
+/** The roads' clans, in the companies' order (every goblin drawn is a clan's: the plain CC0 goblins are the bake's input only). */
+export const ROADS: readonly (ClanId | null)[] = CLAN_IDS
 export const roadSlug = (clan: ClanId | null): string => clan ?? 'plain'
 export const roadTitle = (clan: ClanId | null): string => (clan ? CLANS.find((c) => c.id === clan)!.name : 'Plain goblins (benches)')
 

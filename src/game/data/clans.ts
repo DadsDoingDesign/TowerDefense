@@ -21,11 +21,16 @@
  * `waves.ts`): the engine never sees a clan. The renderer draws the clan's
  * baked strips (`scripts/enemy-clans.ts` → `tinyswords/<clan>_<id>…png`) and
  * every surface that names an enemy asks {@link enemyName}, so no two
- * surfaces can drift. A hand-made bench field (the Green Line, the Kiln Road)
- * keeps the plain goblins and their names: clan `null`.
+ * surfaces can drift.
  *
- * Which clan a road deals is `run/clans.ts` (the Sovereign Route mixes them by
- * act, a hash of the run seed — never a draw on a run stream).
+ * **Every goblin a player sees is a clan's** (the designer: "we should update
+ * everything … art should also update"). The plain CC0 goblins are the bake's
+ * INPUT only — no runtime role, never fetched, never drawn. The clan follows
+ * the RUN (`run/clans.ts`): the run's company's clan on any field, the
+ * hand-made benches too; the Sovereign Route mixes them by act (a hash of the
+ * run seed — never a draw on a run stream); and a surface with no run (the
+ * home, a harness, the balance suite) draws {@link DEFAULT_CLAN}. Only the
+ * engine — and so the balance report — keeps the faction's own names.
  */
 import { SPECIALISTS } from './behaviours'
 import { COMPANY_IDS, type CompanyId } from './companies'
@@ -40,6 +45,8 @@ export type ClanId = 'cinder' | 'smudge' | 'delve' | 'silkcut' | 'hexmoon'
 /** In `COMPANY_IDS` order: the clan of each company's road. */
 export const CLAN_IDS: readonly ClanId[] = ['cinder', 'smudge', 'delve', 'silkcut', 'hexmoon']
 export const isClanId = (v: unknown): v is ClanId => typeof v === 'string' && (CLAN_IDS as readonly string[]).includes(v)
+/** The clan drawn where no run says otherwise: the first company's (Peppercorn — the first launch's road). */
+export const DEFAULT_CLAN: ClanId = 'cinder'
 
 type Five = readonly [string, string, string, string, string]
 
@@ -59,7 +66,7 @@ export interface Clan {
   looks: Readonly<Record<Faction, Five>>
 }
 
-/** What a plain (bench) goblin of each faction × tier looks like — today's art. */
+/** What the plain CC0 goblin each clan is baked from looks like (the bake's input, never drawn). */
 export const PLAIN_LOOKS: Readonly<Record<Faction, Five>> = {
   torch: ['hood, torch', 'hood, torch', 'hood, torch', 'hood, torch', 'hood, torch, champion scale'],
   tnt: ['goggles, dynamite pack, lit stick', 'goggles, dynamite pack, lit stick', 'goggles, dynamite pack, lit stick', 'goggles, dynamite pack, lit stick', 'goggles, dynamite pack, champion scale'],
@@ -80,7 +87,7 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Ember Shaman', bearer: 'Hearth Bearer' },
     looks: {
       torch: ['flame crest, torch', '+ soot pauldron', '+ chilli banner', 'tall triple crest', 'horned fire crown, ember mantle'],
-      tnt: ['flame crest, firepot pack, firepot', '+ soot pauldron', '+ chilli banner', 'tall triple crest', 'horned fire crown, ember mantle'],
+      tnt: ['flame crest, firepot pack, firepot', '+ soot pauldron', '+ chilli banner', 'tall triple crest', 'horned fire crown, ember standard'],
       barrel: ['chilli stem, flame mark', '+ soot hoops', '+ iron flame fins', '+ taller stem', 'brimstone crown, flame fins'],
     },
   },
@@ -97,7 +104,7 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Smear Shaman', bearer: 'Canvas Bearer' },
     looks: {
       torch: ['paint bucket helm, brush', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, splattered smock'],
-      tnt: ['paint bucket helm, tube pack, paint bomb', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, splattered smock'],
+      tnt: ['paint bucket helm, tube pack, paint bomb', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, easel standard'],
       barrel: ['bucket handle, drip mark', '+ paint drips', '+ brush handles', '+ second handle', 'brush crown, drips'],
     },
   },
@@ -114,7 +121,7 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Lamp Shaman', bearer: 'Rivet Bearer' },
     looks: {
       torch: ['lamp helmet, pick', '+ riveted pauldron', '+ mine lantern pole', 'twin-lamp helmet', 'great helm, iron mantle'],
-      tnt: ['lamp helmet, ore basket, charge', '+ riveted pauldron', '+ mine lantern pole', 'twin-lamp helmet', 'great helm, iron mantle'],
+      tnt: ['lamp helmet, ore basket, charge', '+ riveted pauldron', '+ mine lantern pole', 'twin-lamp helmet', 'great helm, iron standard'],
       barrel: ['rivet cap, rivet plate', '+ studded hoops', '+ iron side plates', '+ lamp on the cap', 'crucible crown, side plates'],
     },
   },
@@ -131,7 +138,7 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Silk Shaman', bearer: 'Veil Bearer' },
     looks: {
       torch: ['brimmed hat, rose, needle', '+ ribbon pauldron', '+ pennant', 'plumed hat', 'rose crown, silk train'],
-      tnt: ['brimmed hat, spool pack, thread bomb', '+ ribbon pauldron', '+ pennant', 'plumed hat', 'rose crown, silk train'],
+      tnt: ['brimmed hat, spool pack, thread bomb', '+ ribbon pauldron', '+ pennant', 'plumed hat', 'rose crown, silk standard'],
       barrel: ['spool flanges, thread band', '+ needle', '+ wider flanges', '+ rose on top', 'rose crown, flanges'],
     },
   },
@@ -148,7 +155,7 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Moon Shaman', bearer: 'Ward Bearer' },
     looks: {
       torch: ['crescent horns, moon mask, quill staff', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star mantle'],
-      tnt: ['crescent horns, scroll case, hex vial', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star mantle'],
+      tnt: ['crescent horns, scroll case, hex vial', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star standard'],
       barrel: ['crescent lid, rune mark', '+ star studs', '+ rune stones', '+ taller crescent', 'full-moon crown, rune stones'],
     },
   },
@@ -178,16 +185,24 @@ export const clanUnitName = (clan: ClanId, faction: Faction, tier: Tier): string
  */
 export const clanLookId = (clan: ClanId | null, faction: Faction, tier: Tier): string => `${clan ?? 'plain'}.${faction}${tier}`
 
-/** The sprite role a clan draws an art id with (`cinder_torch3`), or the art id itself. */
-export const clanArtId = (clan: ClanId | null, artId: string): string => (clan && baseOf(artId) ? `${clan}_${artId}` : artId)
+/**
+ * The sprite role a goblin art id is drawn with (`cinder_torch3`): its clan's
+ * strip — {@link DEFAULT_CLAN}'s with no clan given, since no plain goblin is
+ * ever drawn. A non-goblin id comes back as it is.
+ */
+export const clanArtId = (clan: ClanId | null | undefined, artId: string): string => (baseOf(artId) && !isClanRole(artId) ? `${clan ?? DEFAULT_CLAN}_${artId}` : artId)
+/** The plain goblin strips' roles (`torch3_walk`, `barrel2`): bake inputs only, never a runtime role. */
+export const PLAIN_GOBLIN_ROLES: readonly string[] = (['torch', 'tnt', 'barrel'] as const).flatMap((f) => [1, 2, 3, 4, 5].flatMap((t) => (f === 'barrel' ? [`${f}${t}`] : [`${f}${t}`, `${f}${t}_walk`])))
 
 /** Every baked clan role: a run cycle for torch and tnt, the still for a barrel. */
 export const CLAN_WALK_ROLES: readonly string[] = CLAN_IDS.flatMap((c) =>
   (['torch', 'tnt'] as const).flatMap((f) => TIERS.map((t) => `${c}_${f}${t}_walk`)),
 )
 export const CLAN_STILL_ROLES: readonly string[] = CLAN_IDS.flatMap((c) => TIERS.map((t) => `${c}_barrel${t}`))
-/** A role is a clan's when it starts with a clan id: loaded per run, never at boot. */
-export const isClanRole = (role: string): boolean => CLAN_IDS.some((c) => role.startsWith(`${c}_`))
+/** A role is a clan's when it starts with a clan id. */
+export function isClanRole(role: string): boolean {
+  return CLAN_IDS.some((c) => role.startsWith(`${c}_`))
+}
 export const clanRolesOf = (clan: ClanId): string[] => [...CLAN_WALK_ROLES, ...CLAN_STILL_ROLES].filter((r) => r.startsWith(`${clan}_`))
 
 const HALF = ' (half)'

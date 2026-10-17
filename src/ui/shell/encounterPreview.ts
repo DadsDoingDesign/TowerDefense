@@ -54,12 +54,6 @@ export interface PreviewRun {
    * the armour its ordinary fights lean to (`run/charter.encounterRulesOf`).
    */
   contract?: RouteRef | null
-  /**
-   * The field the run stands on (`battleMap.id`): with the contract and the
-   * node's act it decides the road's goblin clan, whose names the preview
-   * uses (`run/clans.roadClan`). Absent: a bench — the plain names.
-   */
-  fieldId?: string
 }
 
 /** The encounter rules the run's road fields under — the store's `selectNode` passes the same. */
@@ -135,7 +129,8 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const v = variantFor(run, node)
   if (!kind || !wave || !v) return null
 
-  const clan = roadClan(run.contract, run.runSeed, actOf(node.layer), run.fieldId)
+  // The road's clan in the node's act (`run/clans`): the preview names its champions as the fight will.
+  const clan = roadClan(run.contract, run.runSeed, actOf(node.layer))
   let phys = 0
   let mag = 0
   let physMax = 0

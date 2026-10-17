@@ -128,12 +128,12 @@ function compare(grey: boolean): HTMLCanvasElement {
   const keys = ['torch3', 'tnt3', 'barrel3', 'torch5']
   const cws = [64, 56, 48, 136]
   const group = cws.reduce((a, b) => a + b, 0) + 12
-  const ch = 150
+  const ch = 176
   const { c, ctx } = canvas(grey ? 'compare-grey.png' : 'compare.png', group * ROADS.length, ch)
   ROADS.forEach((clan, n) =>
     keys.forEach((key, i) => {
       const x = n * group + 6 + cws.slice(0, i).reduce((a, b) => a + b, 0) + cws[i] / 2
-      drawOne(ctx, clan, key, x, key === 'torch5' ? 136 : 128)
+      drawOne(ctx, clan, key, x, key === 'torch5' ? 166 : 154)
     }),
   )
   if (grey) {

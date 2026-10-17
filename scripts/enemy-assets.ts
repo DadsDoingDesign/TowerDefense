@@ -48,7 +48,7 @@ function check(): void {
 
 function printInventory(): void {
   const pad = (s: string, n: number) => s.padEnd(n)
-  console.log(`${rows.length} looks: ${CLANS.length} clans + the plain bench goblins × 3 factions × 5 tiers, each in ${FORMS.length} forms (${FORMS.map((f) => FORM_TITLE[f]).join(', ')})\n`)
+  console.log(`${rows.length} looks: ${CLANS.length} clans × 3 factions × 5 tiers, each in ${FORMS.length} forms (${FORMS.map((f) => FORM_TITLE[f]).join(', ')})\n`)
   console.log(`${pad('look', 16)}${pad('name', 20)}${pad('engine name', 18)}look`)
   for (const r of rows) console.log(`${pad(r.lookId, 16)}${pad(r.name, 20)}${pad(r.engineName, 18)}${r.look}${r.boss ? '  [boss]' : ''}`)
   for (const c of CLANS) console.log(`\n${c.name} (${c.company}): ${c.tell}`)
