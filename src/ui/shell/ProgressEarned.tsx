@@ -154,6 +154,9 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
   const prog = trackProgress(xp, term)
   const up = after > before
   const lv = term > 1 ? `${termName(term)} · ${after}` : `Standing ${after}`
+  // The level is said once, by the big number (which also shows a move,
+  // "2→3"): the head names what it counts.
+  const counts = term > 1 ? termName(term) : 'Standing'
   // The asks met paid their part of it (Draft 4 · A).
   const gained = `+${p.xp} standing XP${p.askXp ? `, ${p.askXp} from ${(p.asks ?? []).filter((a) => a.met).length === 1 ? 'its ask' : 'its asks'}` : ''}`
   const line = p.unranked
@@ -177,7 +180,7 @@ export function StandingEarned({ progress: p }: { progress: RunProgress }) {
         <Crest company={company} />
         <span className="ct-stand-text" aria-hidden="true">
           <b>
-            {co.name} · {lv}
+            {co.name} · {counts}
           </b>
           <span>{line}</span>
         </span>
