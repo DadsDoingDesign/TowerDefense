@@ -30,8 +30,8 @@ const out = document.getElementById('out')!
 /** The field's grass (`themes.tinyswords.field.top`). */
 const GRASS = '#5a9b43'
 /** A line goblin's box and a champion's, in logical px, feet at `oy`. */
-const BOX = { w: 76, h: 76, oy: 60 }
-const BOSS = { w: 132, h: 140, oy: 118 }
+const BOX = { w: 84, h: 116, oy: 100 }
+const BOSS = { w: 140, h: 200, oy: 180 }
 const SCALE = 3
 
 const el = <K extends keyof HTMLElementTagNameMap>(t: K, cls?: string, text?: string) => {
@@ -94,7 +94,16 @@ function drawOne(ctx: CanvasRenderingContext2D, clan: ClanId | null, key: string
   ctx.restore()
 }
 
-const boxOf = (key: string) => (ENEMY_TYPES[key].isBoss ? BOSS : BOX)
+/**
+ * A keg is drawn round its centre (it rolls), not on its feet like a goblin,
+ * so its box puts the centre half a keg above the box's floor.
+ */
+const KEG = { w: BOX.w, h: BOX.h, oy: 72 }
+const KEG_BOSS = { w: BOSS.w, h: BOSS.h, oy: 118 }
+const boxOf = (key: string) => {
+  const keg = key.startsWith('barrel')
+  return ENEMY_TYPES[key].isBoss ? (keg ? KEG_BOSS : BOSS) : keg ? KEG : BOX
+}
 
 function render(clan: ClanId | null, key: string, form: Form): HTMLCanvasElement {
   const k = form === 'base' ? key : `${key}_${form}`
@@ -119,7 +128,7 @@ function sheet(clan: ClanId | null, grey = false): HTMLCanvasElement {
   const hOf = (boss: boolean) => (boss ? BOSS.h : BOX.h)
   const tops = rows.map((_, j) => rows.slice(0, j).reduce((a, r) => a + hOf(r.boss), 0))
   const { c, ctx } = canvas(grey ? null : sheetPath(clan), cw * FORMS.length, tops[rows.length - 1] + hOf(rows[rows.length - 1].boss), 2)
-  rows.forEach((r, j) => FORMS.forEach((form, i) => drawOne(ctx, clan, form === 'base' ? r.key : `${r.key}_${form}`, cw * i + cw / 2, tops[j] + (r.boss ? BOSS.oy : BOX.oy))))
+  rows.forEach((r, j) => FORMS.forEach((form, i) => drawOne(ctx, clan, form === 'base' ? r.key : `${r.key}_${form}`, cw * i + cw / 2, tops[j] + boxOf(r.key).oy)))
   return c
 }
 
@@ -133,7 +142,7 @@ function compare(grey: boolean): HTMLCanvasElement {
   ROADS.forEach((clan, n) =>
     keys.forEach((key, i) => {
       const x = n * group + 6 + cws.slice(0, i).reduce((a, b) => a + b, 0) + cws[i] / 2
-      drawOne(ctx, clan, key, x, key === 'torch5' ? 166 : 154)
+      drawOne(ctx, clan, key, x, key === 'torch5' ? 166 : key === 'barrel3' ? 132 : 154)
     }),
   )
   if (grey) {

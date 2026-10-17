@@ -4120,3 +4120,27 @@ The 12 draft icons from the Item assets page are now real atlas cells (`scripts/
   - The figures still read first on the field.
 - **Figma.** The page's "Needs a unique asset" section is marked shipped, with the final pixels. All 107 stale renders on the item cards and loadouts were replaced and verified, and the cards' "Shares the … icon" lines now read "Own icon cell". `docs/item-assets/` is regenerated (2.3 MB, palette PNGs; `drafts/` became `cells/`).
 - **Left.** The party bar's and the hero card's portrait is still the look's painted bust (a knight with a shield), whatever the hero holds. The 7 body pieces still draw nothing on the figure.
+
+### 2026-10-17 — goblin clans: one per company road
+The designer: "a similar expansion of enemy types unique to each map with unique visual looks beyond just color. Like items and stuff." Each company's road now has its own goblin clan: Cinder Clan (Peppercorn), Smudge Gang (Easel House), Deepdelve (Ironvein), Silkcut Gang (Rosethread) and Hexmoon Coven (Moonquill). The Sovereign Route mixes them by act. A clan is a look and a name only: stats, abilities, waves and every RNG draw are the faction's own (`tests/clans.test.ts` holds the stats to a snapshot taken before the change), and `balance/REPORT.md` quotes only engine names, so it is unchanged.
+- **The art.** `scripts/enemy-clans.ts` bakes 75 strips (5 clans × torch / powder run cycles and the keg still × 5 tiers) from the old CC0 goblins plus original pixel parts (`scripts/enemy-clans-art.ts`), snapped to the pack palette. The parts ride every walk frame on anchors tracked frame by frame. Each tier adds one ornament: T1 headgear and weapon, T2 a pauldron, T3 a back piece, T4 the big headgear, T5 the clan's crown with a mantle or standard. The tier hue (red, blue, purple, gold) is the old one. Only the default clan (Cinder) is precached; the others load on first use.
+- **Every picture of a goblin is a clan's**, through one helper (`clanArt.clanArtFor`): the battlefield, corpses, the enemy card and portrait, the wave preview and queue, the boss plate, the Codex and the brand scene. The clan follows the run, the hand-made benches included; with no run the Cinder Clan is drawn. A test fails if any drawing path can reach a plain goblin strip.
+- **Names** come from `clans.enemyName` (the card, the preview, the boss plate, the announcer, the ledger and the Codex) and sit under `copy.brevity`'s 18-character cap.
+- **Round 1** (r1, 1280 × 800): the clans read only by colour. The crests were small and gold-like, against the tier gold. Tall back poles made a "pole forest" over a crowded wave, and the Silkcut needle disappeared at 1×.
+- **Round 2:** parts enlarged and outlined, back poles shortened, the needle thickened, the keg hoops recoloured per clan. The HP bar sits on the body's top, not the pole's, so it no longer floats.
+- **Round 3** (the clan follows the run): passes the checklist on every road at 390 × 844 and 1280 × 800.
+  - Tiers read in order.
+  - Elite, Plated and Warded read on the head stack, the same in every clan.
+  - Every boss has its own champion look.
+  - No HP bar is hidden by a part.
+  - The greyscale shots part the clans by headgear silhouette alone (`docs/enemy-assets/compare-grey.png`).
+- **The benchmarks** are Kingdom Rush's and BTD6's per-world enemy dress. As there, the faction's shape stays the same and the costume carries the world. The lane still reads first.
+- **Frame time.** Crowded wave (26–27 bodies), mean ms of JS per frame:
+  - Before the change: phone 2.1–3.0, desk 1.9–4.1.
+  - After: phone 1.96–2.39, desk 2.13–2.89.
+  - The isolated draw bench (27 bodies, `window.__benchDraw`) is flat: plain 0.194 ms, clans 0.182–0.217 ms.
+- **Shots:** `docs/ui-audit-2026-10/enemy-clans/` (a Deepdelve and a Cinder crowded wave, the Hexmoon wave in greyscale, the Silkcut wave preview, the Smudge enemy card and the Codex goblins tab).
+- **Figma:** the page "Enemy assets", one component set per clan plus the comparison row. The harness drew kegs on their feet, which cut the bottom off; it now draws them round their centre, and the 25 keg renders were redone.
+- **Left:**
+  - the plain goblins are now only the bake's input;
+  - a clan's keg has only a small cap part, so the kegs part from each other mostly by hoop colour and cap.

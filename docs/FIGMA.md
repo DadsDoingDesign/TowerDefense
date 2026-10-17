@@ -56,6 +56,20 @@ disagree, the shipped app is right and the shell is the argument.
 
 Figures go in at 1×, because Figma scales small images up with nearest-neighbour, so they stay crisp. From a machine with Figma network access, `upload_assets` onto the same `img:` rectangles is simpler.
 
+## Page: Enemy assets — `?node-id=2333-2083`
+
+**Built October 2026.** Every goblin the game fields, clan by clan, drawn by the real code. Use it to see what each clan's units look like at every tier and form, and to check that the clans part from each other.
+<https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite?node-id=2333-2083>
+
+| Section | What's in it |
+| --- | --- |
+| Header | The page's purpose and how to read a set: the five clans, one per company's road (the clan follows the run; the Sovereign Route mixes them by act; with no run the Cinder Clan is drawn), what Faction, Tier and Form mean, how tiers read (the tier hue, plus one more ornament per tier), and where the names come from (`clans.enemyName`). Under it, the **clan comparison**: each clan's tier-3 torch, powder and keg and its torch champion, side by side, as instances of the sets below. |
+| One section per clan | Cinder Clan (Peppercorn), Smudge Gang (Easel House), Deepdelve (Ironvein), Silkcut Gang (Rosethread), Hexmoon Coven (Moonquill). Each is **one component set** `<Clan> · goblins` with 18 variants: `Faction` (Torch, Powder, Barrel) × `Tier` (1–5) at `Form=Base` (tier 5 is `Form=Boss`, the clan's champion), plus the tier-3 torch as `Elite` (Swift), `Plated` and `Warded`. Each variant shows the render, the unit's name, its look (what was added at that tier) and its look id and engine name (`delve.torch3 · engine Torch Raider`). |
+
+**Regenerate.** `npx tsx scripts/enemy-assets.ts` prints the inventory and writes `docs/enemy-assets/inventory.json`. Add `--render` to start vite on :5225 (or use one already there, `ENEMY_ASSETS_BASE=http://localhost:5225`), run `harness/enemies.html` in Playwright and write the renders to `docs/enemy-assets/` (palette-compressed PNGs, about 1.8 MB): one per clan × faction × tier × form, each clan's run cycle and keg roll frame by frame, a sheet per clan, and `compare.png` / `compare-grey.png`. The art itself is baked by `npx tsx scripts/enemy-clans.ts`.
+
+**Getting images in.** As on Item assets: the egress proxy refuses `upload_assets` and the Figma hosts, so each render goes in as base64 inside a `use_figma` script (`figma.createImage(figma.base64Decode(b))`) and fills the rectangle named `Render · units.drawEnemy` in the variant's `Render` frame, at 1× drawn at 2×. Each string carries an FNV-1a checksum and the script reports the ones that fail. Strings much over 2 KB fail often, so send five to eight renders a call; replacing the PNG boilerplate every render shares (the `tRNS` / `pHYs` run) with a token that the script expands, and sending a long render as 100-character rows, both cut the failures. A failed string can report its 100-character chunk checksums so the bad chunk can be found and resent.
+
 ## Page: FieldWatch — `?node-id=2001-30`
 
 | Section | What's in it |
