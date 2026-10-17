@@ -64,6 +64,22 @@ export function TrackScreen({ company: first, onBack }: { company: CompanyId; on
   const openContracts = useGameStore((s) => s.openContracts)
   const focusRoad = useGameStore((s) => s.focusRoad)
   useEffect(() => focusRoad(first), [first, focusRoad])
+  // The page's question is "what is next, and how far": on a short phone the
+  // earned levels filled the screen and the next one sat under the fold
+  // (the job critique, Oct 2026). Bring it into view, without animation.
+  useEffect(() => {
+    if (signing) return
+    const row = document.querySelector<HTMLElement>('.tk-row.next')
+    let box = row?.parentElement ?? null
+    while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement
+    if (!row || !box) return
+    // Only when it is not already in full view: the page keeps its head otherwise.
+    const r = row.getBoundingClientRect()
+    const b = box.getBoundingClientRect()
+    // The least scroll that shows it (`scroll-margin` keeps it clear of the
+    // band's fade), so as much of the chips and the card stays as can.
+    if (r.top < b.top || r.bottom > b.bottom - 24) row.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }, [company, signing])
 
   const co = companyById(company)
   const xp = standing[company] ?? 0
@@ -215,8 +231,17 @@ function Row({ row, open, xp, owned, onOpen }: { row: TrackRow; open: boolean; x
           ) : (
             <span key={p.k} className="tk-part" aria-hidden="true">
               {p.swatch ? <ThemeSwatch theme={p.swatch} /> : <Icon name={p.icon} />}
-              <span className="field-k">{p.k}</span>
-              {p.v && <span className="field-v">{p.v}</span>}
+              {/* A part with no name (an earned card: what it paid is not kept)
+                  is said as the thing itself, not as a label with nothing
+                  after it — "SKILL CARD FLAG Saffron" ran two labels together. */}
+              {p.v ? (
+                <>
+                  <span className="field-k">{p.k}</span>
+                  <span className="field-v">{p.v}</span>
+                </>
+              ) : (
+                <span className="field-v">{p.k}</span>
+              )}
             </span>
           ),
         )}

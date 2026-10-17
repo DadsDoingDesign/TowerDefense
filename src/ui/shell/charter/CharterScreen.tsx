@@ -80,7 +80,8 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
       }
     >
       <div className="ch-hero">
-        <p className="ch-kick">The endgame charter</p>
+        {/* The home's name for it, so the page is plainly where its slot led. */}
+        <p className="ch-kick">Buy Company</p>
         <h1 className="ct-title" tabIndex={-1}>
           {CHARTER_NAME}
         </h1>
@@ -150,7 +151,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <p className="ch-standing">
-            <b>Standing with all five companies</b>, win or lose: each earns what an escort that ended the same way earns with its one.
+            <b>Standing with all five companies</b>, win or lose: as much with each as an escort for it would earn.
           </p>
 
           <section className="ch-offs" aria-label="Every company sets a condition">
@@ -160,10 +161,10 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
               return (
                 <div key={t.company} className="ch-off" style={{ '--co': companyVar(t.company) } as CSSProperties}>
                   <Crest company={t.company} scale={2} />
+                  {/* The company, then what it does to the road, once: its rule's
+                      name ("Merchants charge double") said the line again. */}
                   <span>
-                    <b>
-                      {co.name}: {t.rule}
-                    </b>
+                    <b>{co.name}</b>
                     <span>{t.line}</span>
                   </span>
                 </div>
