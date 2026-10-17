@@ -68,10 +68,10 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
           ? {
               label: (
                 <>
-                  Buy the company <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
+                  Buy Company <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
                 </>
               ),
-              name: `Buy the company, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
+              name: `Buy Company, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
               run: signCharter,
               disabled: !can,
               heavy: true,
@@ -80,8 +80,9 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
       }
     >
       <div className="ch-hero">
-        {/* The home's name for it, so the page is plainly where its slot led. */}
-        <p className="ch-kick">Buy Company</p>
+        {/* The home's name for it, so the page is plainly where its slot led —
+            while it is locked; once open, the CTA says it ("Buy Company"). */}
+        {!door.open && <p className="ch-kick">Buy Company</p>}
         <h1 className="ct-title" tabIndex={-1}>
           {CHARTER_NAME}
         </h1>
@@ -214,7 +215,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
 
           {!can && (
             <p className="ch-note short">
-              Your bank holds {bank.toLocaleString('en')} gold; the company costs {CHARTER_FEE.toLocaleString('en')}.
+              Your bank holds {bank.toLocaleString('en')} gold of the {CHARTER_FEE.toLocaleString('en')} it costs.
             </p>
           )}
         </>
