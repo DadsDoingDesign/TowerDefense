@@ -34,6 +34,7 @@ import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
 import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
+import { runClan } from '../../game/run/clans'
 import { battleHpMult, battleTheftMult, canStartWave, fieldConflicts } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
@@ -233,7 +234,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // enemy info card (see `waveFirsts`).
     const seenBefore = new Set(useMetaStore.getState().codex.enemies.map(enemyKind))
     waveFirsts.kinds = new Set(currentWave.spawns.map((sp) => enemyKind(sp.typeId)).filter((k) => !seenBefore.has(k)))
-    useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))] })
+    // …and the clan that fielded them (Oct 2026): the Codex's goblins tab is by clan.
+    const clan = runClan(st)
+    useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))], ...(clan ? { clans: [clan] } : {}) })
     const fielded = engine.sentinels.length
     set({
       engine,

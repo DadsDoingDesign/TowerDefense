@@ -1170,7 +1170,7 @@ function settingsOffers(s: Settings): Offer[] {
 /** "4 crates · Raiders 32% stronger · 4 more elites an act" — the stake, for receipts. */
 export const stakeLine = (crates: number, charter = false): string =>
   charter
-    ? `Sovereign Route · every goblin clan from the first fight, ${MUSTER_PCT}% stronger.`
+    ? `Sovereign Route · every kind of goblin from the first fight, ${MUSTER_PCT}% stronger.`
     : crates <= 0
       ? 'Escort · standard raiders.'
       : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`

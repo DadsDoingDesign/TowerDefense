@@ -64,7 +64,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   if (!node) return null
 
   const meta = nodeMeta(node.type)
-  const summary = summarizeEncounter({ runSeed, runMap, contract }, nodeId)
+  const summary = summarizeEncounter({ runSeed, runMap, contract, fieldId }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
   const rules = contractRules({ crates, charter, desperate })

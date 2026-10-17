@@ -91,6 +91,31 @@ describe('enemyName: the one name helper every surface uses', () => {
   })
 })
 
+describe('every surface names through enemyName', () => {
+  it('the wave preview line-up and the enemy card name and dress a goblin as the road does', async () => {
+    const { lineUp } = await import('../src/ui/shell/enemyQueue')
+    const { enemyCardData } = await import('../src/ui/shell/enemyFacts')
+    const q = [{ typeId: 'tnt2_warded', group: 0 }, { typeId: 'torch5', group: 0 }]
+    expect(lineUp(q).map((e) => [e.name, e.art])).toEqual([
+      ['Bomber · Warded', 'tnt2'],
+      ['Warlord Grukk', 'torch5'],
+    ])
+    expect(lineUp(q, 'smudge').map((e) => [e.name, e.art])).toEqual([
+      ['Paint Bomber · Warded', 'smudge_tnt2'],
+      ['Old Gesso', 'smudge_torch5'],
+    ])
+    const knowledge = { kind: 'barrel3', level: 'met', felled: 1, need: 5 } as const
+    expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge, clan: 'silkcut' })!.name).toBe('Veil Bearer')
+    expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge })!.name).toBe('Shieldbearer')
+  })
+
+  it('an older save meets the clans of the roads it has ridden; a new one records the clan it fights', async () => {
+    const { migrateMeta } = await import('../src/state/metaStore')
+    expect(migrateMeta({ standing: { spice: 40, art: 0, metals: 9, silk: 0, scrolls: 0 }, codex: { enemies: ['torch1'] } }, 20).codex.clans).toEqual(['cinder', 'delve'])
+    expect(migrateMeta({ codex: { enemies: [], clans: ['hexmoon', 'bogus', 'hexmoon'] } }, 20).codex.clans).toEqual(['hexmoon'])
+  })
+})
+
 describe('which clan raids a road: a pure rule', () => {
   it('a company road deals its company’s clan in every act; a bench deals none', () => {
     for (const company of COMPANY_IDS)

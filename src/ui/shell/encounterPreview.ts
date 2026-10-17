@@ -11,6 +11,9 @@ import {
 import type { WaveDef } from '../../game/types'
 import { encounterNode } from '../../game/run/map'
 import { encounterRulesOf, type RouteRef } from '../../game/run/charter'
+import { enemyName } from '../../game/data/clans'
+import { roadClan } from '../../game/run/clans'
+import { actOf } from '../../game/run/threat'
 
 /**
  * ---------------------------------------------------------------------------
@@ -51,6 +54,12 @@ export interface PreviewRun {
    * the armour its ordinary fights lean to (`run/charter.encounterRulesOf`).
    */
   contract?: RouteRef | null
+  /**
+   * The field the run stands on (`battleMap.id`): with the contract and the
+   * node's act it decides the road's goblin clan, whose names the preview
+   * uses (`run/clans.roadClan`). Absent: a bench — the plain names.
+   */
+  fieldId?: string
 }
 
 /** The encounter rules the run's road fields under — the store's `selectNode` passes the same. */
@@ -126,6 +135,7 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const v = variantFor(run, node)
   if (!kind || !wave || !v) return null
 
+  const clan = roadClan(run.contract, run.runSeed, actOf(node.layer), run.fieldId)
   let phys = 0
   let mag = 0
   let physMax = 0
@@ -142,7 +152,7 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
       mag += count
       magMax = Math.max(magMax, t.magResist)
     }
-    if (t.isBoss) champions.push(t.name)
+    if (t.isBoss) champions.push(enemyName(t, clan))
   }
   const heads = wave.spawns.length
   return {

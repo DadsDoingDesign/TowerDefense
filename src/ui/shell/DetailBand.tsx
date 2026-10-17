@@ -65,6 +65,8 @@ import { TeamPanel } from './TeamPanel'
 import { openUpgrade, UpgradePanel } from './UpgradePanel'
 import { canSpend, heroUpgrades, placementsCount, upgradeButtonName, upgradeWaiting } from './heroCard'
 import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/selectors'
+import { useRunClan } from './useRunClan'
+import { enemyName } from '../../game/data/clans'
 
 /**
  * Band 4 — the Context panel and the kit (the battle band, Oct 2026).
@@ -159,6 +161,7 @@ function WaveBar({ offers }: { offers: Offer[] }) {
   // The reward card being read — the strip's CTA takes it (below).
   const pickedReward = useGameStore((s) => (s.shellSelection?.kind === 'offer' ? s.shellSelection.id : null))
   const battleMap = useGameStore((s) => s.battleMap)
+  const clan = useRunClan()
   // Weapon clearance: a hero swinging beside another holds the next wave
   // (`run/clearance`). Read off the same inputs the strip already follows —
   // the posts, the roster's gear, and the held engine (re-read on `hud`).
@@ -234,7 +237,7 @@ function WaveBar({ offers }: { offers: Offer[] }) {
     // paint over the top of the field, and the queue shows the NEXT sub-wave.
     const held = hud.breather && !!engine?.breather
     const moved = held && !!engine?.subWaveState().moved
-    const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud))
+    const queue = lineUp(queueFor(currentWave, held ? 'held' : 'live', hud), clan)
     const space = held && conflicts.length ? conflictCopy(conflicts, { moveLeft: !moved, breather: true }) : null
     return (
       <div className={`sh-wavebar sh-wq-bar${held ? ' held' : ''}`}>
@@ -867,6 +870,7 @@ const asksFor = (label: string): string | null => {
  */
 function WaveComposition() {
   const wave = useGameStore((s) => s.currentWave)
+  const clan = useRunClan()
   const threat = useGameStore((s) => s.threat)
   const battleMap = useGameStore((s) => s.battleMap)
   if (!wave) return null
@@ -943,7 +947,7 @@ function WaveComposition() {
                     Boss
                   </span>
                 )}
-                {t.name}
+                {enemyName(t, clan)}
                 {/* The label used to end "…of the damage it takes", which is a
                     universal claim the engine does not honour: `execute`
                     returns before `damageEnemy` and bypasses resistance

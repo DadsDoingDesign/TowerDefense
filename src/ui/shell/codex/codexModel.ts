@@ -28,6 +28,7 @@ import type { Codex } from '../../../state/metaStore'
 import { CORE_IDEAS, IDEAS } from '../../../state/staging'
 import { GLOSSARY } from '../../channels'
 import { enemyCardData } from '../enemyFacts'
+import { baseOf, CLAN_IDS, clanArtId, clanById, enemyName, FACTIONS, TIERS, type Faction } from '../../../game/data/clans'
 
 export interface CodexView {
   achievements: Record<string, number>
@@ -232,41 +233,52 @@ export function previewEntry(kind: 'skill' | 'item', id: string, how: string): C
   }
 }
 
-const CLANS: { id: string; name: string; hue: string }[] = [
-  { id: 'torch', name: 'Torch clan', hue: '#e07a3a' },
-  { id: 'tnt', name: 'Powder clan', hue: '#d0563a' },
-  { id: 'barrel', name: 'Barrel clan', hue: '#b08a4a' },
-]
+/** The faction, as a chip: what kind of goblin a tile is in every clan. */
+const FACTION_CHIP: Record<Faction, string> = { torch: 'Torch', tnt: 'Powder', barrel: 'Barrel' }
 
+/**
+ * The goblins, by CLAN (Oct 2026, `data/clans.ts`): one section per company's
+ * road, each the clan's fifteen units (three factions × five tiers) in its own
+ * dress and under its own names. A clan's tiles open once it has fielded a
+ * wave against you (`codex.clans`) AND you have met that unit; what is learned
+ * of a unit (`knowledgeOf`) is shared by every clan, because the fight is.
+ */
 function goblinsTab(v: CodexView): CodexTab {
-  const sections = CLANS.map((clan) => {
-    const keys = Object.keys(ENEMY_TYPES).filter((k) => !k.includes('_') && k.replace(/\d+$/, '') === clan.id)
+  const keys = FACTIONS.flatMap((f) => TIERS.map((t) => `${f}${t}`))
+  const met = new Set(v.codex.clans ?? [])
+  const sections = CLAN_IDS.map((clan) => {
+    const c = clanById(clan)
+    const company = companyById(c.company)
+    const clanMet = met.has(clan)
     return section(
-      clan.name,
+      c.name,
       keys.map((key): CodexEntry => {
         const t = ENEMY_TYPES[key]
-        const tier = Number(key.match(/\d+$/)?.[0] ?? 1)
+        const { faction, tier } = baseOf(key)!
         const knowledge = knowledgeOf(key, v.codex)
-        const met = knowledge.level !== 'new'
-        const d = enemyCardData(key, { wave: null, hpMult: 1, laneLength: 0, knowledge })
+        const open = clanMet && knowledge.level !== 'new'
+        const d = enemyCardData(key, { wave: null, hpMult: 1, laneLength: 0, knowledge, clan })
         const tricks = d?.tricks?.length ? ` ${d.tricks.map((x) => `${x.label}: ${x.counter}`).join(' ')}` : ''
         return {
-          id: `goblin:${key}`,
-          name: met ? t.name : '???',
-          locked: !met,
-          badge: met ? (t.isBoss ? '★' : `T${tier}`) : '',
+          id: `goblin:${clan}:${key}`,
+          name: open ? enemyName(t, clan) : '???',
+          locked: !open,
+          badge: open ? (t.isBoss ? '★' : `T${tier}`) : '',
           hue: t.isBoss ? LEVEL_HUE[3] : tier >= 3 ? LEVEL_HUE[2] : LEVEL_HUE[1],
-          enemy: key,
-          chips: met ? [t.isBoss ? 'Clan boss' : `Tier ${tier}`, clan.name, ...(d?.pace ? [d.pace.word] : []), ...(d?.armour ?? [])] : [clan.name],
-          does: met ? `${t.baseHp} HP at full strength.${tricks}` : '',
-          how: met
+          enemy: clanArtId(clan, key),
+          company: c.company,
+          chips: open ? [t.isBoss ? 'Clan boss' : `Tier ${tier}`, FACTION_CHIP[faction], ...(d?.pace ? [d.pace.word] : []), ...(d?.armour ?? [])] : [c.name],
+          does: open ? `${t.baseHp} HP at full strength.${tricks}` : '',
+          how: open
             ? knowledge.level === 'known'
               ? `Studied: ${knowledge.felled} felled.`
               : `Felled ${knowledge.felled}. ${knowledge.need - knowledge.felled} more to learn its tricks.`
-            : 'Not met yet.',
+            : clanMet
+              ? 'Not met yet.'
+              : `Raids ${company.name}’s road.`,
         }
       }),
-      clan.hue,
+      company.color,
     )
   })
   return tab('goblins', 'Goblins', 'wave', sections)

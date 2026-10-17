@@ -1,4 +1,5 @@
 import { BEHAVIOUR_INFO } from '../../game/data/behaviours'
+import { enemyName, type ClanId } from '../../game/data/clans'
 import { ENEMY_MODS, ENEMY_TYPES, leakCeiling } from '../../game/data/enemies'
 import type { Knowledge } from '../../game/data/enemyKnowledge'
 import type { WaveDef } from '../../game/types'
@@ -42,7 +43,14 @@ export interface EnemyCardData {
 
 export function enemyCardData(
   key: string,
-  ctx: { wave: WaveDef | null | undefined; hpMult: number; laneLength: number; knowledge: Knowledge },
+  ctx: {
+    wave: WaveDef | null | undefined
+    hpMult: number
+    laneLength: number
+    knowledge: Knowledge
+    /** The road's clan (`useRunClan`): the card names the goblin as this road calls it. */
+    clan?: ClanId | null
+  },
 ): EnemyCardData | null {
   const t = ENEMY_TYPES[key]
   if (!t) return null
@@ -64,7 +72,7 @@ export function enemyCardData(
   const mod = ENEMY_MODS.find((m) => key.endsWith(`_${m.id}`))
 
   return {
-    name: t.name,
+    name: enemyName(t, ctx.clan),
     boss: !!t.isBoss,
     level: k.level,
     felled: k.felled,

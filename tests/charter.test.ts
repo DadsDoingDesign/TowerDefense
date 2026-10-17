@@ -225,7 +225,7 @@ describe('the contract', () => {
     expect(contractRules(null)).toEqual(stakeRules(0))
   })
 
-  it('musters every goblin clan from the first fight, and its road fields every goblin kind', () => {
+  it('musters every kind of goblin from the first fight, and its road fields every goblin kind', () => {
     const rules = encounterRulesOf(t)!
     const first = nodeEncounter({ type: 'battle', layer: 1, row: 0 }, 1234, rules)!
     const clans = new Set(first.spawns.map((s) => s.typeId.replace(/\d.*$/, '')))
