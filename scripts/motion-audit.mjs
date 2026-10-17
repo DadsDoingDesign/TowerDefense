@@ -6,7 +6,8 @@
  *   node scripts/motion-audit.mjs <outDir> [what] [worlds]
  *
  * what:   comma list of home, homemodes (Light and reduced motion only), pages,
- *         battle, fps (default all but homemodes, which home includes)
+ *         battle, battleui (the battle band's DOM: setup, the wave's end), fps, battlecost (the battle's world layers on and off, at
+ *         the throttle; the first world named) (default home,pages,battle,fps)
  * worlds: comma list of spice, art, metals, silk, scrolls, neutral (default all)
  *
  * For each capture it records a frame sequence, then builds:
@@ -380,6 +381,19 @@ async function analyse(name) {
 async function frameRate(p, ms = 5000) {
   await p.cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
   await sleep(1200)
+  // The worlds' loop's own time a frame (its `tick`, wrapped).
+  await p.page.evaluate(() => {
+    const e = window.__worldFx
+    window.__loopMs = []
+    if (!e || e.__wrapped) return
+    e.__wrapped = true
+    const tick = e.tick
+    e.tick = (now) => {
+      const a = performance.now()
+      tick(now)
+      window.__loopMs.push(performance.now() - a)
+    }
+  })
   const d = await p.page.evaluate(
     (ms) =>
       new Promise((res) => {
@@ -397,10 +411,14 @@ async function frameRate(p, ms = 5000) {
     ms,
   )
   const level = await p.page.evaluate(() => document.documentElement.dataset.fx)
+  const loop = await p.page.evaluate(() => {
+    const l = [...(window.__loopMs ?? [])].sort((a, b) => a - b)
+    return l.length ? { mean: +(l.reduce((a, b) => a + b, 0) / l.length).toFixed(2), p95: +l[Math.floor(l.length * 0.95)].toFixed(2) } : null
+  })
   await p.cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
   const total = d.reduce((a, b) => a + b, 0)
   const sorted = [...d].sort((a, b) => a - b)
-  return { fps: +((d.length / total) * 1000).toFixed(1), long: d.filter((x) => x > 50).length, p95: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1), level }
+  return { fps: +((d.length / total) * 1000).toFixed(1), long: d.filter((x) => x > 50).length, p95: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1), level, loop }
 }
 
 // ---------------------------------------------------------------- the run
@@ -580,6 +598,51 @@ if (WHAT.has('battle')) {
   }
 }
 
+if (WHAT.has('battleui')) {
+  // The battle band's DOM motion: the setup (wave preview, the Upgrade badge,
+  // a levelled hero owed a skill), then the wave's end (the ceremony and the
+  // spoils hand). The hero is raised to level 5 to owe a skill (a named
+  // shortcut, as run-shots does).
+  for (const w of WORLDS) {
+    const p = await open()
+    try {
+      await focus(p.page, w === 'neutral' ? 'spice' : w)
+      await p.page.waitForTimeout(600)
+      for (const wait of [1500, 1500, 2500]) {
+        await p.page.locator('.pg-cta:visible, .mn-cta:visible').first().click({ timeout: 8000 })
+        await p.page.waitForTimeout(wait)
+      }
+      if (w === 'neutral') await holdNeutral(p.page)
+      await p.page.evaluate(() => {
+        const g = window.__game
+        const s = g.getState()
+        const hero = s.roster[0]
+        g.setState({ roster: s.roster.map((h, k) => (k === 0 ? { ...h, level: 5, skillPicks: [] } : h)), selectedSentinelId: hero.id })
+        g.getState().placeOnSlot(s.battleMap.slots[Math.floor(s.battleMap.slots.length / 3)].id)
+        g.getState().shellSelect({ kind: 'hero', id: hero.id })
+      })
+      await p.page.waitForTimeout(800)
+      await slow(p, SLOW)
+      await capture(p, `battleui-${w}-setup`, 48)
+      await p.page.getByRole('button', { name: /Start Wave/ }).first().click({ timeout: 5000 })
+      await sleep(1500 / SLOW)
+      await p.page.evaluate(() => {
+        const e = window.__game.getState().engine
+        if (!e) return
+        e.spawnIndex = e.spawnQueue.length
+        e.enemies = []
+        e.projectiles = []
+        e.pendingSpawns = []
+        e.breather = null
+      })
+      await capture(p, `battleui-${w}-cleared`, 48)
+    } catch (e) {
+      console.log(`battleui-${w}: ${e.message.split('\n')[0]}`)
+    }
+    await p.ctx.close()
+  }
+}
+
 if (WHAT.has('fps')) {
   const fps = (results.fps = {})
   for (const [tag, opts] of [['full', { fx: 'full' }], ['light', { fx: 'light' }]]) {
@@ -612,7 +675,8 @@ if (WHAT.has('fps')) {
     console.log(`fps page-${w}-terms-full`, fps[`page-${w}-terms-full`])
     await p.ctx.close()
   }
-  for (const [tag, opts] of [['full', {}], ['light', { fx: 'light' }], ['reduced', { motion: false }]]) {
+  // (AUDIT_NOBATTLE=1: the home and the pages only.)
+  for (const [tag, opts] of process.env.AUDIT_NOBATTLE ? [] : [['full', {}], ['light', { fx: 'light' }], ['reduced', { motion: false }]]) {
     for (const w of tag === 'full' ? ['spice', 'scrolls', 'neutral'] : ['scrolls']) {
       const p = await open(opts)
       try {
@@ -626,6 +690,37 @@ if (WHAT.has('fps')) {
     }
   }
   metrics.__fps = { ...(metrics.__fps ?? {}), ...fps }
+  saveMetrics()
+}
+
+if (WHAT.has('battlecost')) {
+  // What the battle's world layers cost a throttled phone: the same fight with
+  // the weather, the edge band, both, or the baked season switched off (dev
+  // handles), twice each.
+  const fps = {}
+  const PATCH = {
+    full: null,
+    noweather: () => (window.__weather.weather.frame = () => {}),
+    noedge: () => (window.__weather.edge.frame = () => {}),
+    neither: () => {
+      window.__weather.weather.frame = () => {}
+      window.__weather.edge.frame = () => {}
+    },
+  }
+  for (const rep of [1, 2])
+    for (const [tag, fn] of Object.entries(PATCH)) {
+      const p = await open()
+      try {
+        await toBattle(p, WORLDS[0])
+        if (fn) await p.page.evaluate(fn)
+        fps[`battle-${WORLDS[0]}-${tag}-${rep}`] = await frameRate(p)
+        console.log(`fps battle-${WORLDS[0]}-${tag}-${rep}`, fps[`battle-${WORLDS[0]}-${tag}-${rep}`])
+      } catch (e) {
+        console.log(`fps battle-${tag}: ${e.message.split('\n')[0]}`)
+      }
+      await p.ctx.close()
+    }
+  metrics.__battlecost = { ...(metrics.__battlecost ?? {}), ...fps }
   saveMetrics()
 }
 
