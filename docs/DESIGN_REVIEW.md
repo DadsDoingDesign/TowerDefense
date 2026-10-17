@@ -4139,3 +4139,45 @@ The designer: a hero's look must "always reflect what they have equipped, not se
   - Left: at 320 px, Mail and Plate are both silver and are told apart only by the pauldrons. The head still dominates the chibi bust.
 - **Cost.** Each (strip, piece) is dressed once, on first draw: 12.9 ms mean at 4× CPU, against the existing bake's 22 ms. A cache hit is 0.02 ms, and the canvas identity is kept, so `pixmap()` never re-bakes it. `drawSentinel` × 6 kitted heroes per frame at 4× CPU: 1.07 ms best and 1.29 / 1.54 ms median before; 1.07 ms best and 1.72 / 1.89 ms median after. The median spread is machine noise from other sessions; the best runs are equal. The whole-frame rAF probe in a 25-enemy wave (4× CPU, three alternating runs each) gave a median mean of 13.2 ms before and 14.6 ms after at 390, and 15.2 ms before and 18.5 ms after at 1280, with ±5 ms between runs of the same tree. That is within noise, and the steady-state per-frame work is one more WeakMap lookup.
 - **Shots:** `docs/ui-audit-2026-10/kit-look/`. Item assets were regenerated: the body pieces' "Equipped (figure)" and the loadouts' figures now wear their body. Figma page `2276:2083` was refreshed: 35 body variants, 12 loadout figures and the notes that said body pieces draw nothing.
+### 2026-10-17 — the motion audit: every motion, per company world
+The designer: "Consider an audit of the motion design and animations throughout. Is the effects on home too much or ok etc and do it for each company."
+
+**Method.** A new script, `scripts/motion-audit.mjs`, captures true 24 fps sequences in slow motion (the CSS clock through CDP, and every JS clock patched to run ×0.25). From those it builds a motion-energy heatmap and the change rate per region: words, card, CTA, the focused road, the dock, the battlefield's edge. It also records the frame rate and the worlds' loop time at a 4× CPU throttle. Three rounds at 390 × 844: the home for each world (ambient, switch-in, press), the terms, the hero pick, the HQ, the Codex, Settings and the charter, a 19-raider wave per world, the battle band's setup and its wave end, Light, reduced motion and high contrast. The scorecard is `docs/ui-audit-2026-10/motion/AUDIT.md`, with seven heatmap sheets beside it.
+
+**Verdict on the home.** Measured ambient motion, before → after:
+
+| World | Before (Hz) | After (Hz) |
+|---|---|---|
+| Peppercorn | 0.87 | 0.29 |
+| Ironvein | 0.39 | 0.28 |
+| Rosethread | 0.18 | 0.18 |
+| Easel House | 0.16 | 0.12 |
+| Moonquill | 0.12 | 0.08 |
+| House look (baseline) | 0.06 | 0.06 |
+
+- **Peppercorn was too much.** Its focused road was the busiest band on any home (2.6 Hz; the road's own traffic is 0.9), because the embers newly placed beside the road crowded it. The heat glow along the dock crawled as well. It is now level with the forge, and still the richest world.
+- **Every company world moves in its own kind of motion,** and they now sit within 4× of each other, against 7× before.
+
+**Fixed.**
+- **Switch-ins.** They no longer cross the card and the dock: they are cleared under every panel as well as every word. Ironvein's switch-in flashed the whole screen white; its strike now flashes round the anvil.
+- **Peppercorn's embers.** 40 on a phone instead of 60. They are shorter-lived, and the ones beside the road are smaller and further off its line. The coal now flickers by its halo instead of blinking out.
+- **Heat glows (fire and forge).** They breathe instead of crawling. This also took the pages' foot from 0.73 to 0.10 Hz on Peppercorn's HQ.
+- **Whole-shape dither flips.** Easel House's washes are anchored to the screen. Moonquill's beam holds still, with a slow ripple.
+- **Easel House's frame and strip** move a little sooner. They were nearly still.
+- **One pulse at a time.** While the Upgrade badge pulses for an owed skill, the levelled hero's halo holds still.
+- **Ironvein's battle rain.** Its band is narrower and fainter. It had 4× the other worlds' motion at the battlefield's edges.
+
+**Checks.**
+- `home-stability` passes 16/16, so a pick still changes pixels, never boxes.
+- Reduced motion measures 0 Hz on every home and page capture.
+- Light measures 0.12 Hz on Peppercorn (it was 0.20 before the glow fix).
+
+**Cost.** At a 4× throttle the home held 60 fps before and after, with the loop at about 1.2 ms a frame (p95 about 5–6 ms). A battle runs 18–39 fps at 4×, and switching the weather and the edge band off does not change that beyond the wave-to-wave noise.
+
+**Benchmarks.** Clash Royale's slow arena behind punchy taps, Hades' ambience at the edges, Slay the Spire's one pulsing node, and Kingdom Rush's still margins around a moving lane.
+
+**Left for the designer.**
+- Easel House's card and CTA are still the quietest of the five. A drip down its strip would be new art.
+- Moonquill is the calmest world, which is calm by nature.
+- Rosethread's ribbons are the one wide moving shape on a home.
+- The battle's own draw is the remaining cost on a slow phone.

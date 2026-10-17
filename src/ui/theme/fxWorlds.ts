@@ -174,33 +174,47 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
   return q.x > -12 && q.x < w + 12 && q.y > -16 && q.y < h + 16
 }
 
-/** A dithered wash: every other pixel of a disc, so a glow stays pixel art. */
+/**
+ * A dithered wash: every other pixel of a disc, so a glow stays pixel art.
+ * The checker is anchored to the SCREEN's pixels, not the disc's centre (the
+ * motion audit, Oct 2026): a wash that drifts a pixel then moves only its rim,
+ * where a checker tied to its centre flipped every pixel of the disc at once —
+ * a whole-blob flash, several a second, on Easel House's map.
+ */
 function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alpha: number, offset = 0): void {
   pen.fillStyle = color
   pen.globalAlpha = stepAlpha(alpha)
   const r2 = r * r
+  const x0 = Math.round(cx)
+  const y0 = Math.round(cy)
   for (let y = -r; y <= r; y++) {
     for (let x = -r; x <= r; x++) {
-      if ((x + y + offset) & 1) continue
+      if ((x0 + x + y0 + y + offset) & 1) continue
       if (x * x + y * y > r2) continue
-      pen.fillRect(Math.round(cx + x), Math.round(cy + y), 1, 1)
+      pen.fillRect(x0 + x, y0 + y, 1, 1)
     }
   }
 }
 
 /**
  * A dithered glow rising from `base` (a row) for `rows` rows, thinning as it
- * rises (and for a few rows below it, so it has no hard foot).
+ * rises (and for a few rows below it, so it has no hard foot). It BREATHES —
+ * its strength swells and ebbs over a few seconds — and its dither stays put:
+ * the motion audit (Oct 2026) found the old crawling dither (the pattern
+ * stepped sideways six times a second) changed every pixel of the band all the
+ * time, the most motion on the home, along the dock you pick from. The flames
+ * and the embers are the fire's motion; the heat only glows.
  */
 function glowBand(pen: Pen, w: number, h: number, base: number, rows: number, color: string, peak: number, t: number): void {
   pen.fillStyle = color
   const b = Math.min(h - 1, Math.round(base))
+  const breath = 0.85 + 0.15 * Math.sin(t * 0.9)
   for (let y = Math.min(h - 1, b + 4); y > b - rows; y--) {
     const i = Math.max(0, b - y)
     const keep = (1 - i / rows) * (y > b ? 1 - (y - b) / 5 : 1) // how much of the row is lit
-    pen.globalAlpha = stepAlpha(peak * keep + 0.04)
+    pen.globalAlpha = stepAlpha(peak * keep * breath + 0.04)
     const stride = keep > 0.66 ? 2 : keep > 0.33 ? 3 : 5
-    const shift = (i + Math.floor(t * 6)) % stride
+    const shift = i % stride
     for (let x = shift; x < w; x += stride) pen.fillRect(x, y, 1, 1)
   }
 }
@@ -210,9 +224,9 @@ const floorOf = (h: number, scene?: Scene) => Math.max(h * 0.3, Math.min(h, scen
 const aboveFloor = (rand: Rand, w: number, floor: number): [number, number] => [rand() * w, floor * (0.4 + rand() * 0.6)]
 
 /** How far a road's ember keeps off the road's line, in effect pixels (one is 3 CSS px). */
-export const ROAD_CLEAR = 4
+export const ROAD_CLEAR = 6
 /** …and how far out beside it one may land. */
-export const ROAD_BESIDE = 11
+export const ROAD_BESIDE = 14
 
 /** Distance from (x, y) to the focused road's line (its points joined), in effect pixels. */
 export function roadDistance(hot: Scene['hot'], x: number, y: number): number {
@@ -348,7 +362,10 @@ function flameLine(pen: Pen, w: number, base: number, t: number, maxH: number, a
 }
 
 const fire: World = {
-  density: 0.006,
+  // Forty on a phone (the cap is sixty): an ember with its halo is the biggest
+  // particle of any world, and sixty of them rising over the whole map made the
+  // home's fire four times the next world's motion (the motion audit, Oct 2026).
+  density: 0.0011,
   spawn(rand, w, h, seed, scene) {
     const floor = floorOf(h, scene)
     const r = rand()
@@ -361,21 +378,24 @@ const fire: World = {
       const v = 40 + rand() * 30
       return p({ kind: 'spark', x: rand() * w, y: floor - rand() * 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + rand() * 0.6, n: 1 })
     }
-    // An ember: beside the focused road a third of the time (never on its
+    // An ember: beside the focused road a quarter of the time (never on its
     // line), else biased to the foot.
     const foot = (): [number, number] => [rand() * w, seed ? floor - floor * Math.pow(rand(), 1.8) : floor - rand() * floor * 0.3]
-    let [x, y] = r < 0.5 ? (besideRoad(rand, scene) ?? (scene?.hot.length ? foot() : aboveFloor(rand, w, floor))) : foot()
+    let [x, y] = r < 0.46 ? (besideRoad(rand, scene) ?? (scene?.hot.length ? foot() : aboveFloor(rand, w, floor))) : foot()
     // One thrown at the foot that lands on the road's line is thrown again,
     // then set beside the road.
     const hot = scene?.hot ?? []
     for (let k = 0; k < 6 && roadDistance(hot, x, y) < ROAD_CLEAR; k++) [x, y] = k < 3 ? foot() : (besideRoad(rand, scene) ?? [x, y])
+    // They rise a little way and die: the fire stays a horizon at the foot,
+    // not a blizzard over the whole map. Beside the road they are the small
+    // ones, so the road's own stops stay the biggest squares on it.
     return p({
       kind: 'ember',
       x,
       y,
-      vy: -9 - rand() * 14,
-      life: 2.5 + rand() * 3,
-      size: rand() < 0.35 ? 3 : 2,
+      vy: -7 - rand() * 11,
+      life: 1.8 + rand() * 2.2,
+      size: r < 0.46 || rand() >= 0.35 ? 2 : 3,
       phase: rand() * TAU,
       n: 1,
     })
@@ -394,10 +414,10 @@ const fire: World = {
     if (scene?.light) return
     // Heat shimmer: broken lines that waver through the glow.
     pen.fillStyle = '#ffd35e'
-    for (let i = 0; i < 5; i++) {
-      const y = Math.round(floor - 3 - i * 6 + Math.sin(t * 2.2 + i * 1.7) * 1.5)
+    for (let i = 0; i < 3; i++) {
+      const y = Math.round(floor - 3 - i * 6 + Math.sin(t * 1.4 + i * 1.7) * 1.5)
       pen.globalAlpha = stepAlpha(0.3 - i * 0.05)
-      const shift = Math.floor(t * 9 + i * 13) % 11
+      const shift = Math.floor(t * 3 + i * 13) % 11
       for (let x = shift - 11; x < w; x += 11) pen.fillRect(x, y, 5, 1)
     }
   },
@@ -618,11 +638,15 @@ const forge: World = {
   },
   sweepLife: 0.6,
   drawSweep(pen, w, h, s) {
-    // The strike: a white-hot flash, then a ring going out from the anvil.
+    // The strike: a white-hot flash round the anvil, then a ring going out
+    // from it. (The flash was the whole screen, panels and all, on every
+    // focus: the motion audit, Oct 2026. Now a dithered burst of light round
+    // the strike, growing as it fades.)
     const k = s.age / s.life
-    pen.fillStyle = '#ffe9c2'
-    pen.globalAlpha = stepAlpha(0.3 * (1 - k) * (1 - k))
-    if (pen.globalAlpha > 0) pen.fillRect(0, 0, w, h)
+    const cx0 = w / 2
+    const cy0 = h * 0.7
+    const glow = stepAlpha(0.45 * (1 - k) * (1 - k))
+    if (glow > 0) dither(pen, cx0, cy0, Math.round(10 + k * Math.min(w, h) * 0.3), '#ffe9c2', glow)
     const r = Math.round(6 + k * Math.max(w, h) * 0.5)
     pen.fillStyle = '#ffb347'
     pen.globalAlpha = stepAlpha(0.5 * (1 - k))
@@ -675,7 +699,7 @@ const silk: World = {
     RIBBONS.forEach(([fy, light, dark], r) => {
       const base = h * fy + Math.sin(t * 0.2 + r * 2) * 8
       for (let x = 0; x < w; x++) {
-        const y = Math.round(base + Math.sin(x * 0.05 + t * (0.6 + r * 0.2) + r) * 8)
+        const y = Math.round(base + Math.sin(x * 0.05 + t * (0.4 + r * 0.15) + r) * 8)
         pen.globalAlpha = stepAlpha(0.45)
         pen.fillStyle = light
         pen.fillRect(x, y, 1, 2)
@@ -767,13 +791,17 @@ const arcane: World = {
         if (inMoon && !inBite) pen.fillRect(mx + x, my + y, 1, 1)
       }
     if (scene?.light) return
+    // The beam holds still (it flickered as a whole twice a second: the
+    // motion audit, Oct 2026), and a ripple of brighter light runs slowly
+    // down it — a few rows at a time, the moonlight moving on the water.
     pen.fillStyle = '#c9d4ff'
-    const shimmer = Math.floor(t * 2) & 1
+    const ripple = my + ((t * 14) % (h - my + 24)) - 12
     for (let y = my; y < h; y += 1) {
       const cx = mx - (y - my) * 0.55
       const half = 6 + (y - my) * 0.12
-      pen.globalAlpha = stepAlpha(0.16 * (1 - (y - my) / h) + 0.02)
-      for (let x = Math.round(cx - half); x < cx + half; x++) if (((x + y + shimmer) & 3) === 0) pen.fillRect(x, y, 1, 1)
+      const lit = Math.abs(y - ripple) < 4 ? 0.12 : 0
+      pen.globalAlpha = stepAlpha(0.16 * (1 - (y - my) / h) + 0.02 + lit)
+      for (let x = Math.round(cx - half); x < cx + half; x++) if (((x + y) & 3) === 0) pen.fillRect(x, y, 1, 1)
     }
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
@@ -833,13 +861,15 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
   const y = Math.round(q.y)
   switch (q.kind) {
     case 'ember': {
-      if (Math.sin(q.age * 23 + q.phase) > 0.9) return // flicker
       const s = q.size
       // A glowing ember: a red halo, its body cooling white → yellow → orange → red, a white-hot heart.
-      pen.fillStyle = k < 0.5 ? '#ff8a2c' : '#b8321e'
-      pen.globalAlpha = stepAlpha(fade * dim * 0.5)
-      pen.fillRect(x - 1, y, s + 2, s)
-      pen.fillRect(x, y - 1, s, s + 2)
+      // It flickers by its halo guttering, not by the whole coal blinking out.
+      if (Math.sin(q.age * 11 + q.phase) <= 0.8) {
+        pen.fillStyle = k < 0.5 ? '#ff8a2c' : '#b8321e'
+        pen.globalAlpha = stepAlpha(fade * dim * 0.5)
+        pen.fillRect(x - 1, y, s + 2, s)
+        pen.fillRect(x, y - 1, s, s + 2)
+      }
       pen.fillStyle = fireColor(Math.min(0.99, k * 0.7 + 0.2))
       pen.globalAlpha = stepAlpha(fade * dim)
       pen.fillRect(x, y, s, s)

@@ -19,7 +19,7 @@ import { ambientCap, burstClip, drawParticle, FX_PX, step, WORLDS, type Particle
  *    clipped to its CTA and the margins round it (`fxWorlds.burstClip`), and
  *    the overlay is cleared under every word inside that zone — the CTA's own
  *    label included — so a burst never crosses text. While a switch-in
- *    sweeps the screen, it is cleared under every word on it.
+ *    sweeps the screen, it is cleared under every word and every panel on it.
  *
  * The loop sleeps when there is nothing to draw, while the tab is hidden, and
  * entirely under reduced motion (no particles, no bursts, no switch-ins — the
@@ -242,6 +242,17 @@ class FxEngine {
           out.push([x, y, Math.ceil(r.right / FX_PX) + 1 - x, Math.ceil(r.bottom / FX_PX) + 1 - y])
         }
       }
+      // A switch-in plays over the map and the margins, never inside a panel
+      // (the motion audit, Oct 2026: its sweep crossed the card and the dock
+      // just as the card's new words landed). The panels are measured once.
+      if (all)
+        for (const el of document.querySelectorAll(PANELS)) {
+          const r = el.getBoundingClientRect()
+          if (r.width <= 0 || r.height <= 0 || r.bottom < 0 || r.top > vh) continue
+          const x = Math.floor(r.left / FX_PX)
+          const y = Math.floor(r.top / FX_PX)
+          out.push([x, y, Math.ceil(r.right / FX_PX) - x, Math.ceil(r.bottom / FX_PX) - y])
+        }
     }
     this.overKeep = out
   }

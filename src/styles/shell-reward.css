@@ -218,6 +218,12 @@
       0 0 20px 3px color-mix(in srgb, var(--accent) 60%, transparent);
   }
 }
+/* One pulse at a time (the motion audit, Oct 2026): while the Upgrade
+   button's badge pulses for the skill owed, the levelled hero's halo holds
+   still — its ring still names who; the badge is where to act. */
+body:has(.sh-upgrade.waiting) .sh-hero.levelled {
+  animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .sh-hero.levelled,
   .sh-stage-center:has(> .sh-ceremony.compact) {
