@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { THEME_IDS } from '../src/game/run/militiaTheme'
-import { ambientCap, burstClip, drawParticle, step, stepAlpha, WORLDS, type Pen, type Zone } from '../src/ui/theme/fxWorlds'
+import { ambientCap, burstClip, drawParticle, ROAD_BESIDE, ROAD_CLEAR, roadDistance, step, stepAlpha, WORLDS, type Pen, type Zone } from '../src/ui/theme/fxWorlds'
 import { PixelPen } from '../src/ui/theme/pixelPen'
 import { CREST_H, CREST_W, FRAME_SIZE, FRAME_T, RUNES_5, STRIP_H, STRIP_W, worldArt } from '../src/ui/theme/themeArt'
 
@@ -152,11 +152,16 @@ describe('each world’s motion', () => {
       const near = lit.filter((r) => r.y > 200 - 40 && r.y < 200 + 6).length
       expect(near / lit.length, id).toBeGreaterThan(0.6)
     }
-    // The fire crowds embers round the focused road.
-    const rand = seeded(9)
-    const embers = Array.from({ length: 400 }, () => WORLDS.spice.spawn(rand, 130, 282, true, scene)).filter((q) => q.kind === 'ember')
-    const close = embers.filter((q) => Math.abs(q.x - 60) < 8 && Math.abs(q.y - 120) < 6).length
-    expect(close / embers.length).toBeGreaterThan(0.2)
+    // The fire crowds embers BESIDE the focused road, never on its line: a
+    // square ember on the road read like one of its stops.
+    const road = { floor: 200, hot: [[10, 170], [40, 140], [60, 120], [90, 110], [120, 80]] as const }
+    for (const r of [road, scene]) {
+      const rand = seeded(9)
+      const embers = Array.from({ length: 400 }, () => WORLDS.spice.spawn(rand, 130, 282, true, r)).filter((q) => q.kind === 'ember')
+      const dist = embers.map((q) => roadDistance(r.hot, q.x, q.y))
+      expect(dist.filter((d) => d <= ROAD_BESIDE).length / embers.length).toBeGreaterThan(0.2)
+      expect(Math.min(...dist)).toBeGreaterThanOrEqual(ROAD_CLEAR)
+    }
   })
   it('every company world switches in with a sweep across the screen', () => {
     for (const c of COMPANY_IDS) {

@@ -416,7 +416,8 @@ class FxEngine {
     document.addEventListener('visibilitychange', () => this.wake())
     window.addEventListener('resize', () => (this.view = null), { passive: true })
     const isCta = (el: EventTarget | null): HTMLElement | null => {
-      const b = (el as HTMLElement | null)?.closest?.('.pg-cta') as HTMLButtonElement | null
+      // A quiet pinned control (a setting's toggle) is not the primary: no burst.
+      const b = (el as HTMLElement | null)?.closest?.('.pg-cta:not(.quiet)') as HTMLButtonElement | null
       return b && !b.disabled ? b : null
     }
     document.addEventListener(

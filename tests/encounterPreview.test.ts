@@ -119,6 +119,19 @@ describe('encounter preview == spawned encounter', () => {
     }
   })
 
+  it('one name for a fight: the map says what the wave is labelled, never its depth', () => {
+    for (const seed of [3, 42, 1337]) {
+      const runMap = generateRunMap(streamRng(seed, 'map'))
+      const run = { runSeed: seed, runMap }
+      for (const n of fightNodes({ runMap } as ReturnType<typeof useGameStore.getState>)) {
+        const label = previewEncounter(run, n.id)!.label
+        expect(summarizeEncounter(run, n.id)!.variant).toBe(label)
+        expect(label).not.toMatch(/Depth|—/)
+        expect(label.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
   it('a node fields its own kind: a battle is normal, an elite elite, a boss a boss', () => {
     expect(encounterKindFor({ type: 'battle' })).toBe('normal')
     expect(encounterKindFor({ type: 'elite' })).toBe('elite')

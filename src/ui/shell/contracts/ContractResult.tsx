@@ -25,8 +25,8 @@ import { AssistedTag } from '../AssistedTag'
 /**
  * How a contract ends (the mercenary company; mockup `trade/r3/6-complete.png`):
  *
- *  - **Delivered** — the destination's gold leads, then what the contract paid
- *    in all, then every unlock as its card (labelled by what paid for it: the
+ *  - **Delivered** — what reached your bank leads (the slip itemises it),
+ *    then the profit after a stake, then every unlock as its card (labelled by what paid for it: the
  *    contract, a stake milestone, a standing level), then the standing card.
  *  - **Cashed out** — the gold banked, the cities' receipt, the standing kept.
  *  - **The wagons fell** — the cause first (`DefeatReceipt`), then what was
@@ -78,15 +78,19 @@ export function ResultScreen() {
           ? `${co.name} · contract lost`
           : 'Contract lost'
   const title = outcome === 'delivered' ? 'Delivered' : outcome === 'cashedOut' ? 'Cashed out' : 'The wagons fell'
-  const lead = outcome === 'delivered' ? (c?.paid[CITY_COUNT - 1] ?? deposit) : deposit
+  // The head's one number is what reached your bank, whatever the outcome (the
+  // job critique, Oct 2026): a delivery used to lead with the destination's
+  // pay, then say "375 gold in all", and neither was what the bank got — the
+  // slip below itemises it, city by city.
+  const lead = deposit
   const sub = charter
     ? outcome === 'delivered'
       ? `The ${CHARTER_NAME} paid ${paidAll.toLocaleString('en')} gold · ${(paidAll - CHARTER_FEE).toLocaleString('en')} after its ${CHARTER_FEE.toLocaleString('en')} fee.`
       : 'Raiders took the last of the cargo. This road’s cities pay nothing.'
     : outcome === 'delivered'
       ? stake > 0
-        ? `${paidAll} gold in all · ${paidAll - stake} profit after your stake.`
-        : `${paidAll} gold in all.`
+        ? `${(paidAll - stake).toLocaleString('en')} profit after your ${stake.toLocaleString('en')} stake.`
+        : ''
       : outcome === 'cashedOut'
         ? `${town} bought what was left.`
         : paidAll > 0
@@ -108,11 +112,11 @@ export function ResultScreen() {
           </h1>
           {charter && outcome === 'lost' && <p className="ct-fee-lost">The {CHARTER_FEE.toLocaleString('en')} gold fee is lost</p>}
           {(outcome !== 'lost' || (deposit > 0 && !charter)) && (
-            <p className="ct-big" aria-label={`${outcome === 'delivered' ? '' : 'banked '}${lead} gold`}>
+            <p className="ct-big" aria-label={`banked ${lead} gold`}>
               <Coin scale={4} />+{lead.toLocaleString('en')} gold
             </p>
           )}
-          <p className="ct-sub">{sub}</p>
+          {sub && <p className="ct-sub">{sub}</p>}
           {home && ((home.purseBack > 0 && !home.advance) || home.road > 0) && (
             <p className="ct-sub ct-home">
               {/* Oct 2026: the road part only when the road paid, and a fall says
@@ -230,7 +234,7 @@ export function ResultScreen() {
       {recap && recap.spoils.length > 0 && (
         <InfoCard
           lines={[
-            `The last stand left ${recap.spoils.length} thing${recap.spoils.length === 1 ? '' : 's'} behind`,
+            `The ${outcome === 'delivered' ? 'last fight' : 'last stand'} left ${recap.spoils.length} thing${recap.spoils.length === 1 ? '' : 's'} behind`,
             ...recap.spoils.map((i) => `${itemName(i)} · ${RARITY[i.rarity].label}`),
           ]}
         />

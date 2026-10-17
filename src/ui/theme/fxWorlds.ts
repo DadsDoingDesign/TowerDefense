@@ -13,8 +13,8 @@
  * glance, on a phone, even in greyscale. So each has a shape of its own:
  *
  *   - FIRE (Peppercorn): fat embers (2–3 px, white-hot at the core, a red
- *     halo) rising with a sway, crowded at the foot of the screen and round
- *     the focused road; flame tongues licking up from the floor (the dock's
+ *     halo) rising with a sway, crowded at the foot of the screen and beside
+ *     the focused road (never on its line); flame tongues licking up from the floor (the dock's
  *     top on the home) out of a dithered heat glow; press: flames flaring up
  *     the CTA's face, embers thrown off its ends; switch-in: a wall of flame.
  *   - FORGE (Ironvein): three spark fountains at the floor, sparks with
@@ -79,7 +79,7 @@ export interface Particle {
  * Where things are on the screen, measured by the engine a few times a
  * second: the FLOOR (the top of the home's dock, else the screen's foot),
  * which the fire and the forge burn along, and the focused road's points,
- * which the fire crowds its embers round.
+ * which the fire crowds its embers beside.
  */
 export interface Scene {
   floor: number
@@ -206,14 +206,73 @@ function glowBand(pen: Pen, w: number, h: number, base: number, rows: number, co
 }
 
 const floorOf = (h: number, scene?: Scene) => Math.max(h * 0.3, Math.min(h, scene?.floor ?? h))
-/** A point near the focused road (none: anywhere above the floor). */
-function nearRoad(rand: Rand, w: number, floor: number, scene?: Scene): [number, number] {
-  const hot = scene?.hot
-  if (hot?.length) {
-    const [x, y] = hot[Math.floor(rand() * hot.length) % hot.length]
-    return [x + (rand() - 0.5) * 12, y + (rand() - 0.5) * 8]
+/** Anywhere above the floor, where no road is focused. */
+const aboveFloor = (rand: Rand, w: number, floor: number): [number, number] => [rand() * w, floor * (0.4 + rand() * 0.6)]
+
+/** How far a road's ember keeps off the road's line, in effect pixels (one is 3 CSS px). */
+export const ROAD_CLEAR = 4
+/** …and how far out beside it one may land. */
+export const ROAD_BESIDE = 11
+
+/** Distance from (x, y) to the focused road's line (its points joined), in effect pixels. */
+export function roadDistance(hot: Scene['hot'], x: number, y: number): number {
+  if (!hot.length) return Infinity
+  if (hot.length === 1) return Math.hypot(x - hot[0][0], y - hot[0][1])
+  let best = Infinity
+  for (let i = 1; i < hot.length; i++) {
+    const [ax, ay] = hot[i - 1]
+    const [bx, by] = hot[i]
+    const dx = bx - ax
+    const dy = by - ay
+    const len2 = dx * dx + dy * dy
+    const t = len2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2)) : 0
+    best = Math.min(best, Math.hypot(x - (ax + t * dx), y - (ay + t * dy)))
   }
-  return [rand() * w, floor * (0.4 + rand() * 0.6)]
+  return best
+}
+
+/**
+ * A point BESIDE the focused road, never on its line (job critique leftovers,
+ * Oct 2026): square, node-sized embers spawned on the road read like its
+ * stops and crowded it. A point along the road, stepped out to one side,
+ * kept only if it clears the whole line by `ROAD_CLEAR` (a bend can fold the
+ * road back over it); null when no throw lands clear.
+ */
+function besideRoad(rand: Rand, scene?: Scene): [number, number] | null {
+  const hot = scene?.hot
+  if (!hot?.length) return null
+  for (let tries = 0; tries < 4; tries++) {
+    let px: number
+    let py: number
+    let nx: number
+    let ny: number
+    if (hot.length === 1) {
+      ;[px, py] = hot[0]
+      const a = rand() * TAU
+      nx = Math.cos(a)
+      ny = Math.sin(a)
+    } else {
+      const i = 1 + (Math.floor(rand() * (hot.length - 1)) % (hot.length - 1))
+      const [ax, ay] = hot[i - 1]
+      const [bx, by] = hot[i]
+      const t = rand()
+      px = ax + (bx - ax) * t
+      py = ay + (by - ay) * t
+      const len = Math.hypot(bx - ax, by - ay) || 1
+      nx = -(by - ay) / len
+      ny = (bx - ax) / len
+      // An ember rises: set it on the road's upper side, so its climb takes
+      // it away from the line rather than across it (a steep run: either side).
+      const side = Math.abs(ny) < 0.25 ? (rand() < 0.5 ? -1 : 1) : ny > 0 ? -1 : 1
+      nx *= side
+      ny *= side
+    }
+    const d = ROAD_CLEAR + 1 + rand() * (ROAD_BESIDE - ROAD_CLEAR - 1)
+    const x = px + nx * d
+    const y = py + ny * d
+    if (roadDistance(hot, x, y) >= ROAD_CLEAR) return [x, y]
+  }
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -302,8 +361,14 @@ const fire: World = {
       const v = 40 + rand() * 30
       return p({ kind: 'spark', x: rand() * w, y: floor - rand() * 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + rand() * 0.6, n: 1 })
     }
-    // An ember: round the focused road a third of the time, else biased to the foot.
-    const [x, y] = r < 0.5 ? nearRoad(rand, w, floor, scene) : [rand() * w, seed ? floor - floor * Math.pow(rand(), 1.8) : floor - rand() * floor * 0.3]
+    // An ember: beside the focused road a third of the time (never on its
+    // line), else biased to the foot.
+    const foot = (): [number, number] => [rand() * w, seed ? floor - floor * Math.pow(rand(), 1.8) : floor - rand() * floor * 0.3]
+    let [x, y] = r < 0.5 ? (besideRoad(rand, scene) ?? (scene?.hot.length ? foot() : aboveFloor(rand, w, floor))) : foot()
+    // One thrown at the foot that lands on the road's line is thrown again,
+    // then set beside the road.
+    const hot = scene?.hot ?? []
+    for (let k = 0; k < 6 && roadDistance(hot, x, y) < ROAD_CLEAR; k++) [x, y] = k < 3 ? foot() : (besideRoad(rand, scene) ?? [x, y])
     return p({
       kind: 'ember',
       x,

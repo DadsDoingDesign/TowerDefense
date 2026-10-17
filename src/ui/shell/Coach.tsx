@@ -14,6 +14,7 @@ import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
 import { rewardInPlace, waveLive } from './levelUps'
 import { useShown } from './staging'
+import { useToastUp } from './toastUp'
 import {
   noteWhere,
   pickPill,
@@ -117,6 +118,7 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
   const markTaught = useSettingsStore((s) => s.markTaught)
 
   const screen = useGameStore((s) => s.screen)
+  const toastUp = useToastUp((s) => s.up)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const roster = useGameStore((s) => s.roster)
   const placements = useGameStore((s) => s.placements)
@@ -330,6 +332,12 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     const low = inPlay && wagonsLow(battleMap.path[battleMap.path.length - 1]?.y, battleMap.height)
     item = { key: `tip:${id}`, icon: tipLive.icon, where: tipWhere(id, { wagonsLow: low, onMap }), body: tipLive.body, done: () => markTaught(id) }
   }
+
+  // A top-edge pill waits for the receipt toast to clear: the toast holds the
+  // band under the header, and a pill stepped under it lay over the field's
+  // first row (job critique leftovers, Oct 2026). Nothing is spent while it
+  // waits — the tip, the note or the new ground speaks once the toast is gone.
+  if (item?.where === 'top' && toastUp) item = null
 
   /*
    * A pill whose subject went away (the lesson performed, the setup over)

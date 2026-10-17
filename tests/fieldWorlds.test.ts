@@ -6,7 +6,8 @@ import type { GameMap } from '../src/game/types'
 import { clearGrid, EdgeBand, isClear } from '../src/game/render/edgeFx'
 import { WeatherLayer } from '../src/game/render/weatherFx'
 import { AUTO_DOWN_MS, AUTO_UP_MS, fxAutoLight, fxLevel, noteFxFrame, onFxLevel, resetFxQuality, setFxSettings } from '../src/game/render/fxQuality'
-import { drawnRoad, seasonPropsFor } from '../src/game/render/terrain'
+import { drawnRoad, gradeEnvironment, seasonPropsFor } from '../src/game/render/terrain'
+import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT } from '../src/game/render/season'
 import { migrateSettings } from '../src/state/settingsStore'
 import { MAP_SEASONS } from '../src/ui/attract/mapRules'
 
@@ -311,5 +312,68 @@ describe('the season’s props', () => {
     const { flat, upright } = seasonPropsFor(flooded, FIELD_SEASONS.silk)
     expect(upright.some((p) => p.kind === 'reeds')).toBe(true)
     expect(flat.some((p) => p.kind === 'lily')).toBe(true)
+  })
+})
+
+describe('a season keeps no tier hue near the play (Oct 2026 job critique)', () => {
+  const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
+  const hsl = (r: number, g: number, b: number) => {
+    const R = r / 255, G = g / 255, B = b / 255
+    const mx = Math.max(R, G, B), mn = Math.min(R, G, B)
+    const l = (mx + mn) / 2, ch = mx - mn
+    const s = ch === 0 ? 0 : ch / (1 - Math.abs(2 * l - 1))
+    let h = 0
+    if (ch > 0) h = mx === R ? 60 * (((G - B) / ch) % 6) : mx === G ? 60 * ((B - R) / ch + 2) : 60 * ((R - G) / ch + 4)
+    return { h: h < 0 ? h + 360 : h, s, l }
+  }
+  /** One row of pixels, each with its accent mark, through the real grade. */
+  const grade = (px: [string, number][]) => {
+    const data = new Uint8ClampedArray(px.length * 4)
+    px.forEach(([c], i) => data.set([...hex(c), 255], i * 4))
+    const ctx = { getImageData: () => ({ data }), putImageData: () => undefined } as unknown as CanvasRenderingContext2D
+    gradeEnvironment(ctx, px.length, 1, undefined, Uint8Array.from(px.map(([, m]) => m)))
+    return px.map((_, i) => hsl(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]))
+  }
+
+  it('cuts the gold and the red of the paint near the play, and keeps them on the margins’ set pieces', () => {
+    const [goldNear, goldKept, rustNear, rustKept] = grade([
+      ['#c6ae56', ACCENT_PAINT],
+      ['#c6ae56', ACCENT_KEEP],
+      ['#b4561e', ACCENT_PAINT],
+      ['#b4561e', ACCENT_KEEP],
+    ])
+    expect(goldNear.s).toBeLessThan(goldKept.s * 0.6)
+    expect(rustNear.s).toBeLessThan(rustKept.s * 0.6)
+    // Tier 4's gold is 61 % saturated: nothing near the play comes close.
+    expect(goldNear.s).toBeLessThan(0.25)
+    expect(rustNear.s).toBeLessThan(0.25)
+  })
+  it('turns a near tree’s reds and golds to ochre and olive, saturation kept', () => {
+    const [rustNear, rustKept, amberNear, amberKept, pine] = grade([
+      ['#b4561e', ACCENT_SHIFT],
+      ['#b4561e', ACCENT_KEEP],
+      ['#dca238', ACCENT_SHIFT],
+      ['#dca238', ACCENT_KEEP],
+      ['#2a8656', ACCENT_SHIFT],
+    ])
+    for (const [near, kept] of [[rustNear, rustKept], [amberNear, amberKept]]) {
+      expect(near.h).toBeGreaterThanOrEqual(70)
+      expect(near.h).toBeLessThanOrEqual(95)
+      expect(near.s).toBeGreaterThan(kept.s * 0.85)
+    }
+    // A green outside the tiers' arc keeps its hue.
+    expect(pine.h).toBeGreaterThan(130)
+  })
+  it('keeps the snow’s cool white near the play (no tier wears it)', () => {
+    const [snow] = grade([['#e0e9f6', ACCENT_PAINT]])
+    expect(snow.h).toBeGreaterThan(180)
+    expect(snow.h).toBeLessThan(250)
+  })
+  it('lays the harvest’s straw outside tier 4’s gold', () => {
+    for (const c of FIELD_SEASONS.spice.cover!.colors) {
+      const { h } = hsl(...hex(c))
+      expect(h).toBeGreaterThan(68)
+      expect(h).toBeLessThan(90)
+    }
   })
 })

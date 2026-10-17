@@ -27,9 +27,10 @@ export { hash01 } from './seasonHash'
  *     put back.
  *
  * `accent` (one byte a pixel) marks what the season painted in its own
- * colour, so the grade keeps its hue (harvest gold, snow's cool white)
- * rather than cutting it as it cuts the rest of the environment's
- * (`terrain.gradeEnvironment`).
+ * colour, so the grade can keep its hue rather than cutting it as it cuts
+ * the rest of the environment's (`terrain.gradeEnvironment`) — at the
+ * margins always, near the play only where the hue is no tier's
+ * ({@link ACCENT_PAINT}, {@link ACCENT_KEEP}).
  */
 
 const rgb = (hex: string): [number, number, number] => {
@@ -107,7 +108,7 @@ export function seasonGround(ctx: CanvasRenderingContext2D, w: number, h: number
           d[j] = c[0]
           d[j + 1] = c[1]
           d[j + 2] = c[2]
-          accent[i] = 1
+          accent[i] = ACCENT_PAINT
           continue
         }
       }
@@ -174,7 +175,7 @@ export function seasonFinish(ctx: CanvasRenderingContext2D, w: number, h: number
       d[j] = c[0]
       d[j + 1] = c[1]
       d[j + 2] = c[2]
-      accent[i] = 1
+      accent[i] = ACCENT_PAINT
     }
   }
   const mist = season.mist ? rgb(season.mist.color) : null
@@ -313,8 +314,29 @@ export function seasonOnDeco(
   }
 }
 
+/**
+ * The accent mask's two marks (`terrain.gradeEnvironment` reads them):
+ *
+ *  - {@link ACCENT_PAINT}: the season's paint on the ground near the play —
+ *    the ground cover, frozen rims, flat props. It keeps its hue only where that
+ *    hue is not one the enemies' tiers wear (red 0–30°, gold 30–60°): the
+ *    snow's cool white keeps it, the harvest's straw and rust do not.
+ *  - {@link ACCENT_KEEP}: the season's set pieces at the margins — the
+ *    upright props (on forest tiles only) and the trees beyond reach of the
+ *    play. They keep their hue whatever it is: the place is told there.
+ */
+export const ACCENT_PAINT = 1
+export const ACCENT_KEEP = 2
+/**
+ * The season's trees within reach of the play: their reds and golds are
+ * turned to the season's ochre and olive (75–90°), saturation kept,
+ * so they still read as autumn wood beside the road without wearing tier 1's
+ * or tier 4's hue — the move the harvest's straw makes in its ramp.
+ */
+export const ACCENT_SHIFT = 3
+
 /** Mark a drawn sprite's pixels in the accent mask (bake px; `ox`, `oy` the bake's origin). */
-export function markAccent(accent: Uint8Array, bw: number, bh: number, alpha: Uint8Array, x: number, y: number, w: number, h: number, flip: boolean): void {
+export function markAccent(accent: Uint8Array, bw: number, bh: number, alpha: Uint8Array, x: number, y: number, w: number, h: number, flip: boolean, mark = ACCENT_PAINT): void {
   for (let cy = 0; cy < h; cy++) {
     const by = y + cy
     if (by < 0 || by >= bh) continue
@@ -322,7 +344,7 @@ export function markAccent(accent: Uint8Array, bw: number, bh: number, alpha: Ui
       if (!alpha[cy * w + cx]) continue
       const bx = flip ? x + (w - 1 - cx) : x + cx
       if (bx < 0 || bx >= bw) continue
-      accent[by * bw + bx] = 1
+      accent[by * bw + bx] = mark
     }
   }
 }

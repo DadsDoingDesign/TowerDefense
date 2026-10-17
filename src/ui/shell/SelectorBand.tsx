@@ -277,11 +277,16 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
   const selection = useGameStore((s) => s.shellSelection)
   const cards = offers.filter((o) => reward?.some((c) => c.id === o.id))
   const firstId = cards[0]?.id ?? null
-  // Show the first card's detail once per hand. Nothing selected yet is the
-  // only case: a hero or a level-up the player opened is theirs to leave.
+  // Focus the first card once per hand, so the strip's CTA names a take from
+  // the start. A card already read, or a skill choice the player opened (it
+  // takes the band over the hand), is theirs to leave; a hero read during the
+  // fight is not — nothing shows it under the hand, and keeping it left the
+  // CTA a dead "Pick a reward" (job critique, Oct 2026).
   useEffect(() => {
     if (!firstId) return
-    if (useGameStore.getState().shellSelection) return
+    const s = useGameStore.getState()
+    const sel = s.shellSelection
+    if (sel?.kind === 'offer' || (sel?.kind === 'hero' && s.heroTab === 'upgrade')) return
     pickReward(firstId)
   }, [firstId])
 

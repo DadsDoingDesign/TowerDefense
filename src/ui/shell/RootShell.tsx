@@ -209,7 +209,7 @@ export function RootShell() {
   if (ctx.layout === 'page') {
     const isMenu = screen === 'hub' && metaView === 'menu'
     return (
-      <div className="shell shell-page">
+      <div className={`shell shell-page${screen === 'hub' ? ' is-hub' : ''}`}>
         {/* While a page chunk is still on its way, the page frame stays up and
             empty — no spinner to flash, nothing to shift when it lands. */}
         <Suspense fallback={null}>

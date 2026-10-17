@@ -229,7 +229,8 @@ function Terms({ company, crates, seed }: { company: CompanyId; crates: number; 
           </span>
           {standingCap < MAX_CRATES && (
             <span className="ct-lockline">
-              Crate {standingCap + 1} opens at Standing {standingCap} with {co.name}
+              {/* The page's head names the company: said once. */}
+              Crate {standingCap + 1} opens at Standing {standingCap}
             </span>
           )}
           {cap < standingCap && <span className="ct-lockline">Your bank covers {cap} crate{cap === 1 ? '' : 's'}.</span>}

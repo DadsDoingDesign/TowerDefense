@@ -1,17 +1,14 @@
 import { useState } from 'react'
-import { itemKindById } from '../../../game/data/itemKinds'
+import { itemKindById, kindEffect, kindSlot } from '../../../game/data/itemKinds'
 import { ITEM_BASES } from '../../../game/data/items'
 import { crateKinds, PULL_BASE, PULL_PRICE, pullLift, pullNewChance, pullOdds, type PullResult } from '../../../game/run/hq'
-import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { itemIcon, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate } from '../../pixel'
-import { MenuRow } from '../Page'
 import { ContractPage, Gold, PageTip, Slip } from '../contracts/parts'
 
-const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 
 /** An item kind's icon, by its noun. */
 const kindIcon = (kind: string) => itemIcon({ name: kind, slot: ITEM_BASES[kind]?.slot ?? 'oneHand' })
@@ -22,7 +19,9 @@ const kindIcon = (kind: string) => itemIcon({ name: kind, slot: ITEM_BASES[kind]
  * The framing leads (a side bet; contracts are the surer way), then the odds
  * in plain whole percent — the base and yours, with what your standing moved —
  * then some of what is inside, the duplicate rule on its own slip, and the
- * crate's price on the button. A crate is a hash of the save's crate seed and
+ * crate's price on the button. No "Take a contract instead" row (the job
+ * critique, Oct 2026): it did Back's job — the home IS the contract board —
+ * in a framed row that competed with the one CTA. A crate is a hash of the save's crate seed and
  * its number (`hq.rollPull`), never a run stream.
  */
 export function CratesScreen({ onBack }: { onBack: () => void }) {
@@ -32,7 +31,6 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
   const bonus = useMetaStore((s) => s.bonusItems)
   const openCrate = useMetaStore((s) => s.openCrate)
   const taught = useSettingsStore((s) => s.taught.crates)
-  const openContracts = useGameStore((s) => s.openContracts)
   const [last, setLast] = useState<PullResult | null>(null)
   const lift = pullLift(standing)
   const odds = pullOdds(lift)
@@ -60,11 +58,6 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
           <span className="ct-chip" title="Your bank">
             <Gold n={bank} />
           </span>
-        </div>
-      }
-      foot={
-        <div className="pg-rows">
-          <MenuRow label="Take a contract instead" icon="depth" big onClick={() => openContracts()} />
         </div>
       }
       cta={{
@@ -102,9 +95,9 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
             <span className="hq-pulled-k">{last.duplicate ? 'Already yours — a bonus item next contract' : 'New item unlocked'}</span>
             <b>{last.kind}</b>
             <small>
-              {SLOT_WORD[k.slot]} · Level {k.level}
+              {kindSlot(k)} · Level {k.level}
             </small>
-            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : k.does}</span>
+            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : kindEffect(k)}</span>
           </span>
         </div>
       )}
