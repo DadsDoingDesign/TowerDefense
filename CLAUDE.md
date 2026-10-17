@@ -298,8 +298,13 @@ result. Append a short note to the review log when you're done.
   desk), cleared under every word and panel, and measures the scene (the
   dock's top as the floor; the focused road from `.tm-leaders[data-road]`);
   press bursts are zoned to their `.pg-cta` (`burstClip`) and cleared under
-  its label. Sleeps when hidden; nothing moves under reduced motion; dimmed
-  under high contrast. Tests `tests/themeWorlds.test.ts`.
+  its label; a switch-in plays over the map, cleared under every word and
+  panel. Glows breathe, never crawl, and dither is anchored to the screen's
+  pixels (a moving checker flips a whole shape). Sleeps when hidden; nothing
+  moves under reduced motion; dimmed under high contrast. Tests
+  `tests/themeWorlds.test.ts`; the motion budget per world, measured in the
+  running app, is `scripts/motion-audit.mjs` →
+  `docs/ui-audit-2026-10/motion/AUDIT.md`.
   How much plays is `src/game/render/fxQuality.ts`: the setting
   `settingsStore.effects` (Settings' "Effects: Full / Light", v6), an
   automatic step down to Light when the measured rate stays under 45 fps for
