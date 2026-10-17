@@ -87,6 +87,23 @@ export function barGeometry(minWidth: number) {
   return { px, fillH, edge, w, h: fillH + edge * 2, cssFill: fillH * vs }
 }
 
+/** The elite badge's radius over a bar of geometry `G`. */
+const badgeR = (G: ReturnType<typeof barGeometry>): number => Math.max(5, 4.2 * G.px)
+
+/**
+ * The top of what {@link drawEnemyBar} draws for these arguments, without
+ * drawing it: a battle draws every bar in one pass over all the bodies
+ * (`renderer.drawBattleEntities`), but the behaviour marks need each head's
+ * top as the enemy is drawn.
+ */
+export function enemyBarTop(elite: EliteMark, champion: boolean, bottom: number): number {
+  const G = barGeometry(champion ? 44 : 26)
+  const y = Math.round(bottom - G.h)
+  if (!elite) return y
+  const r = badgeR(G)
+  return Math.round(y - r - G.px) - r
+}
+
 /**
  * An enemy's bar, its tier ticks and its elite badge, centred on x = 0 with
  * its BOTTOM at `bottom` (token space). Returns the top of what it drew so a
@@ -144,7 +161,7 @@ export function drawEnemyBar(
 
   if (elite) {
     // A dark disc with the modifier mark, sitting on the bar's centre.
-    const r = Math.max(5, 4.2 * G.px)
+    const r = badgeR(G)
     const cy = Math.round(top - r - G.px)
     ctx.beginPath()
     ctx.arc(0, cy, r, 0, Math.PI * 2)

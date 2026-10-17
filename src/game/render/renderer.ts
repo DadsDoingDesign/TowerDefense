@@ -23,7 +23,7 @@ import { deliveryOfRt } from './attackLook'
 import { fxReducedMotion } from './fx'
 import type { RtProjectile, RtSentinel } from '../engine/engine'
 import { drawTelegraphs } from './telegraphs'
-import { backToFront, drawEnemy, drawSentinel, sentinelFromRt, shoulderNudge } from './units'
+import { backToFront, drawEnemy, drawEnemyBars, drawSentinel, sentinelFromRt, shoulderNudge } from './units'
 
 export { entrySide, firstRowTop, fitView, setPresentationTime, setViewScale, stageView, stageViewClear, type StageView, type View } from './frame'
 export { activeFieldSeason, drawField, drawTerrainDanger, drawTerrainFlames, playRect, setFieldSeason, worldOf } from './terrain'
@@ -99,9 +99,14 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   // Grid-fit: the road runs on past the Gate now, so a goblin that reaches it
   // is drawn going IN through it — clipped at the palisade — rather than
   // walking on down the road to vanish where the path ends.
+  //
+  // Back to front by their feet, as the heroes stand (Oct 2026 job
+  // critique): drawn in spawn order, a goblin behind in a column that runs
+  // down the screen was painted over the head of the one ahead of it.
+  // Their bars wait for one pass over everything below.
   ctx.save()
   clipBeforeGate(ctx, engine.map)
-  for (const e of engine.enemies) drawEnemy(ctx, e, now, simNow)
+  for (const e of backToFront(engine.enemies, (x) => x.pos)) drawEnemy(ctx, e, now, simNow, true)
   ctx.restore()
   drawTelegraphs(ctx, engine) // Phase 3a: behaviour marks (render/telegraphs.ts)
   for (const e of engine.enemies) if (targeted.has(e.id)) drawReticle(ctx, e.pos, e.type.radius)
@@ -119,6 +124,13 @@ export function drawBattleEntities(ctx: CanvasRenderingContext2D, engine: GameEn
   drawFxParticles(ctx)
   // The base's own reaction, over the units standing near it.
   drawBaseFx(ctx, engine.map)
+  // Every enemy's bar, tier ticks and elite badge, over the bodies, the shots
+  // and the hits' smoke: how close to death is never under anything but the
+  // numbers. Clipped at the Gate like the bodies they belong to.
+  ctx.save()
+  clipBeforeGate(ctx, engine.map)
+  drawEnemyBars(ctx)
+  ctx.restore()
   // Numbers last: they are the only layer that is pure information.
   drawFxFloaters(ctx)
 }

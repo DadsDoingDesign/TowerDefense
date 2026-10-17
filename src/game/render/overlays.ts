@@ -147,6 +147,12 @@ export function drawTileGrid(
       ? 'rgba(255, 243, 196, 0.34)'
       : `rgba(255, 236, 170, ${(0.08 + 0.06 * pulse) * k})`
     ctx.fill()
+    // A dark keyline under the gold edge (Oct 2026 job critique): on the
+    // frost's snow and the harvest's straw a pale gold edge alone sank into
+    // the ground, and an open tile stopped reading as a place to stand.
+    ctx.lineWidth = (hover ? lw * 1.6 : lw) + 2 * lw
+    ctx.strokeStyle = `rgba(20, 12, 6, ${0.3 * k})`
+    ctx.stroke()
     ctx.lineWidth = hover ? lw * 1.6 : lw
     ctx.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
     ctx.stroke()

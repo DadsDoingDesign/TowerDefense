@@ -27,7 +27,7 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import type { FieldSeason, PropKind, PropRule, PropWhere } from '../data/fieldSeasons'
 import { pixmap } from './pixmap'
-import { markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
+import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT, markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
 import { broadleaf, propArt, repaintFoliage, repaintRock, seasonArtStamp } from './seasonArt'
 import { hash01, hashStr } from './seasonHash'
 import { onSpritesReady, spriteFor } from './sprites'
@@ -143,7 +143,9 @@ function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   ctx.imageSmoothingEnabled = false
   // The season's working state for this bake (`render/season.ts`): what it
   // must not touch, and what it painted in its own colour.
-  bakeSeason = fieldSeason ? { season: fieldSeason, W, keep: keepMask(map, W), accent: new Uint8Array(W.w * W.h), salt: hashStr(`${map.id}|${fieldSeason.name}`) } : null
+  bakeSeason = fieldSeason
+    ? { season: fieldSeason, W, keep: keepMask(map, W), accent: new Uint8Array(W.w * W.h), salt: hashStr(`${map.id}|${fieldSeason.name}`), near: nearPlay(map) }
+    : null
   ctx.translate(-W.x0, -W.y0)
   const road = spriteFor('road')
   drawSpriteTerrain(ctx, map, W, grass, road, style.path.edge, style.path.fill)
@@ -171,6 +173,8 @@ interface BakeSeason {
   keep: { mask: Uint8Array; canvas: HTMLCanvasElement }
   accent: Uint8Array
   salt: number
+  /** Is this field point within reach of the play (`nearPlay`)? */
+  near: (x: number, y: number) => boolean
 }
 let bakeSeason: BakeSeason | null = null
 
@@ -1188,6 +1192,28 @@ function seasonScenery(map: GameMap, dr: Dressing, season: FieldSeason, salt: nu
   return out
 }
 
+/**
+ * Within reach of the play: where a goblin's art and bar can stand in front
+ * of it (Oct 2026 job critique) — a tile and a half of the road's centre
+ * line (its half-width and a goblin's height) — or a hero's (on an open
+ * tile). A season's tree here keeps no tier's hue (`season.ACCENT_SHIFT`);
+ * past it, at the margins, it keeps its own. (The ground's paint is
+ * `ACCENT_PAINT` wherever it lies.)
+ */
+const NEAR_ROAD_TILES = 1.5
+const NEAR_SLOT_TILES = 0.75
+function nearPlay(map: GameMap): (x: number, y: number) => boolean {
+  const T = map.tile ?? 40
+  const road = drawnRoad(map)
+  const rr = NEAR_ROAD_TILES * T
+  const sr2 = (NEAR_SLOT_TILES * T) ** 2
+  const slots = map.slots.map((s) => s.pos)
+  return (x, y) => {
+    for (const p of slots) if ((p.x - x) ** 2 + (p.y - y) ** 2 <= sr2) return true
+    return distToPath(x, y, road) <= rr
+  }
+}
+
 /** The props that lie flat on the ground (drawn before the scenery; never in the depth order). */
 const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves'])
 
@@ -1207,7 +1233,10 @@ function drawProp(ctx: CanvasRenderingContext2D, p: PlacedProp, bs: BakeSeason):
   blit(ctx, art.img, x, y, art.w, art.h, flip, p.x)
   if (bs.season.accent || p.kind === 'puddle') {
     const a = spriteAlpha(art.img, art.w, art.h)
-    if (a && bs.season.accent) markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, art.w, art.h, flip)
+    // An upright prop stands only on a forest tile, at the margins: the
+    // season's set piece keeps its own colour. A flat one lies on the open
+    // ground, near the play, and keeps no tier's hue.
+    if (a && bs.season.accent) markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, art.w, art.h, flip, art.upright ? ACCENT_KEEP : ACCENT_PAINT)
     // A puddle holds the sky's own blue: the overcast's washes pass it by (it is graded with the rest).
     if (a && p.kind === 'puddle') markAccent(bs.keep.mask, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, art.w, art.h, flip)
   }
@@ -1341,7 +1370,12 @@ function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery
       const a = spriteAlpha(img, iw, ih)
       if (a) {
         if (season.caps || season.icicles) seasonOnDeco(ctx, a, x, y, iw, ih, d.flip, tree && iw === w, season, salt++)
-        if (season.accent && img !== pm.img) markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, iw, ih, d.flip)
+        // A season's tree keeps its colour at the margins; within reach of
+        // the play (by its foot or its crown) its reds and golds turn olive.
+        if (season.accent && img !== pm.img) {
+          const near = bs.near(d.x, d.y) || bs.near(d.x, d.y - ih / 2)
+          markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, iw, ih, d.flip, near ? ACCENT_SHIFT : ACCENT_KEEP)
+        }
       }
     }
   }
@@ -1442,6 +1476,41 @@ const WARM_MEAN = (ENV_WARM_R + ENV_WARM_G + ENV_WARM_B) / 3
 const SHADE_MAX = 0.5
 const SHADE_REACH = 420
 
+/**
+ * Tier 1's red window (0–30°, feathered 340–350° and 24–30°), cut only on a
+ * season's paint near the play (`season.ACCENT_PAINT`): the plain field has
+ * no red to cut, and the danger ground (fire) is never season paint.
+ */
+function redWeight(hue: number): number {
+  if (hue <= 24 || hue >= 350) return 1
+  if (hue < 30) return (30 - hue) / 6
+  if (hue > 340) return (hue - 340) / 10
+  return 0
+}
+
+/**
+ * A near tree's hue (`season.ACCENT_SHIFT`): the tiers' warm arc, 340° round
+ * to 68°, laid in order onto 75–90° (rust to ochre, amber to olive) — the
+ * green side of yellow, short of the pines' and the meadow's green; -1 for a
+ * hue outside it, which is kept.
+ */
+const SHIFT_LO = 75
+const SHIFT_HI = 90
+function shiftedHue(hue: number): number {
+  const h = hue >= 340 ? hue - 360 : hue
+  if (h < -20 || h > GOLD_HI) return -1
+  return SHIFT_LO + ((h + 20) / (GOLD_HI + 20)) * (SHIFT_HI - SHIFT_LO)
+}
+
+/** An RGB with this max and min channel (so value and chroma) at `hue`. */
+function hueRgb(hue: number, mx: number, mn: number): [number, number, number] {
+  const c = mx - mn
+  const hp = hue / 60
+  const x = c * (1 - Math.abs((hp % 2) - 1))
+  const [r, g, b] = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x] : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x]
+  return [r + mn, g + mn, b + mn]
+}
+
 /** 0 outside the feathered reserved window, 1 across its core. */
 function goldWeight(hue: number): number {
   if (hue <= GOLD_LO || hue >= GOLD_HI) return 0
@@ -1465,20 +1534,43 @@ export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: nu
   for (let y = 0; y < h; y++) {
     const ry = rowOut[y]
     for (let x = 0; x < w; x++, i += 4) {
-      const r = d[i], g = d[i + 1], b = d[i + 2]
-      const yl = 0.299 * r + 0.587 * g + 0.114 * b
+      let r = d[i], g = d[i + 1], b = d[i + 2]
+      let yl = 0.299 * r + 0.587 * g + 0.114 * b
       // Hue, by the standard six-sector formula — no trig, one divide.
       const mx = r > g ? (r > b ? r : b) : g > b ? g : b
       const mn = r < g ? (r < b ? r : b) : g < b ? g : b
       const dl = mx - mn
       let gw = 0
       // A season's own accent (`render/season.ts`) keeps its hue through the
-      // gold window and takes the warm push as value only: the harvest's gold
-      // and the snow's cool white. It is still desaturated like the rest.
-      const acc = accent !== undefined && accent[i >> 2] === 1
+      // gold window and takes the warm push as value only: the harvest's
+      // props and far trees, the snow's cool white. It is still desaturated
+      // like the rest. Its paint near the play (`ACCENT_PAINT`) keeps its hue
+      // only where no tier wears it: in the red or the gold window it is cut
+      // like the environment's own — red too, which the plain field never
+      // carries but the harvest's rust would.
+      const mark = accent === undefined ? 0 : accent[i >> 2]
+      let acc = mark === ACCENT_KEEP || mark === ACCENT_SHIFT || (mark === ACCENT_PAINT && dl === 0)
+      if (mark === ACCENT_SHIFT && dl > 0) {
+        const raw = 60 * (mx === r ? (g - b) / dl : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4)
+        const to = shiftedHue(raw < 0 ? raw + 360 : raw)
+        if (to >= 0) {
+          // Same max, same min (value and chroma kept), the new hue.
+          const [sr, sg, sb] = hueRgb(to, mx, mn)
+          r = sr
+          g = sg
+          b = sb
+          yl = 0.299 * r + 0.587 * g + 0.114 * b
+        }
+      }
       if (dl > 0 && !acc) {
         const raw = 60 * (mx === r ? (g - b) / dl : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4)
-        gw = goldWeight(raw < 0 ? raw + 360 : raw)
+        const hue = raw < 0 ? raw + 360 : raw
+        gw = goldWeight(hue)
+        if (mark === ACCENT_PAINT) {
+          const wt = Math.max(gw, redWeight(hue))
+          if (wt > 0) gw = wt
+          else acc = true
+        }
       }
       const sat = acc ? ENV_SAT * ACCENT_SAT : gw > 0 ? ENV_SAT * (1 - (1 - GOLD_KEEP) * gw) : ENV_SAT
       const wk = acc ? 1 : gw

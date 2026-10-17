@@ -20,8 +20,8 @@ import { getActiveStyle } from './themes'
 import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
 import { blitPixmap } from './blit'
-import { eliteMark, enemyTier } from './plaques'
-import { drawEnemyBar } from './hpbar'
+import { eliteMark, enemyTier, type EliteMark } from './plaques'
+import { drawEnemyBar, enemyBarTop } from './hpbar'
 
 /** A minimal, uniform description of a tower to draw (works for setup + battle). */
 export interface DrawSentinel {
@@ -442,6 +442,8 @@ export function drawEnemy(
   e: RtEnemy,
   now: number,
   simNow: number = now,
+  /** Queue the head stack for {@link drawEnemyBars} instead of drawing it now (a battle's crowd). */
+  deferBar = false,
 ): void {
   const { pos, type } = e
   const burning = simNow < e.burnUntil
@@ -683,11 +685,42 @@ export function drawEnemy(
   // HP bar, tier ticks and elite badge — one stack over the head (Phase 2,
   // `hpbar.ts`). The tier plaque it replaces stacked into a white ribbon down
   // a crowded lane; the count now lives inside the bar.
-  const barTop = drawEnemyBar(ctx, e.id, e.hp, e.maxHp, enemyTier(type.id), eliteMark(type), !!type.isBoss, Math.round(artTop) - 1)
+  const tier = enemyTier(type.id)
+  const elite = eliteMark(type)
+  const bottom = Math.round(artTop) - 1
+  const ox = Math.round(pos.x + kick.x)
+  const oy = Math.round(pos.y + kick.y)
+  let barTop: number
+  if (deferBar) {
+    barQueue.push({ x: ox, y: oy, id: e.id, hp: e.hp, maxHp: e.maxHp, tier, elite, champion: !!type.isBoss, bottom })
+    barTop = enemyBarTop(elite, !!type.isBoss, bottom)
+  } else {
+    barTop = drawEnemyBar(ctx, e.id, e.hp, e.maxHp, tier, elite, !!type.isBoss, bottom)
+  }
   // Phase 3a: where this enemy's head-stack ends, in field space, so the
   // behaviour marks (`telegraphs.ts`) sit above the bar instead of on the art.
-  headTops.set(e.id, Math.round(pos.y + kick.y) + barTop)
+  headTops.set(e.id, oy + barTop)
   ctx.restore()
+}
+
+/** Head stacks queued by `drawEnemy(…, deferBar)`, drawn by {@link drawEnemyBars}. */
+const barQueue: { x: number; y: number; id: string; hp: number; maxHp: number; tier: number; elite: EliteMark; champion: boolean; bottom: number }[] = []
+
+/**
+ * Every queued enemy's HP bar, tier ticks and elite badge, over all the
+ * bodies, shots and hits (Oct 2026 job critique). Drawn with its body, a bar
+ * was covered by the next goblin in a column and by a hit's smoke — the
+ * one layer that says how close to death went first in a crowd. Back to
+ * front, so where two bars overlap the nearer one's reads whole.
+ */
+export function drawEnemyBars(ctx: CanvasRenderingContext2D): void {
+  for (const b of barQueue) {
+    ctx.save()
+    ctx.translate(b.x, b.y)
+    drawEnemyBar(ctx, b.id, b.hp, b.maxHp, b.tier, b.elite, b.champion, b.bottom)
+    ctx.restore()
+  }
+  barQueue.length = 0
 }
 
 /** Top of each drawn enemy's bar stack this frame (field px), keyed by id. */

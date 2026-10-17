@@ -151,7 +151,10 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     name: 'late summer',
     washes: [{ op: 'soft-light', color: '#f0a040', alpha: 0.3 }],
     ground: { colors: ['#8a4a1e', '#a85a24', '#6e3c18'], share: 0.02 },
-    cover: { colors: ['#8a7a3a', '#a89444', '#c6ae56', '#dcc66e'], share: 0.42, grain: 1 },
+    // The straw leans to the green side of yellow (~70°), past tier 4's gold
+    // (30–60°), so it goes through the grade as straw rather than as a cut
+    // grey (Oct 2026 job critique: the ground cover keeps no tier's hue).
+    cover: { colors: ['#748745', '#8fa752', '#a9c06d', '#c1d788'], share: 0.42, grain: 1 },
     foliage: { ramps: [AMBER, RUST, AMBER, CRIMSON, null], bush: RUST },
     broadleaf: { share: 0.3, ramps: [MAPLE, RUST, CRIMSON] },
     light: { from: 'w', lift: 0.1, dim: 0.12, shadow: 2.4 },
