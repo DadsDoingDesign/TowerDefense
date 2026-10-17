@@ -4042,3 +4042,24 @@ The designer, after the relic card: "Take this copy feedback and apply to all co
 - **Round 1** (`docs/ui-audit-2026-10/copy-pass/r1/`, against `before/`): the boon card said every number three times (the pact's desc, a `describeGrant` line and one `describeMods` line each, under a Downside line that said the bill a fourth time) — it is now the bill, then one effect line, and a pact's effect line no longer carries its bill; the spoils coach repeated the relic card's note ("A relic helps all your heroes…") and now teaches the choice instead; the shrine's curse said "The base takes 3 damage" (Gate HP, a retired unit) and now says "−15% cargo now", computed from the rule; the defeat receipt still counted "Gate" damage; the Codex said "Every Watch has it" (a retired name); the terms page said "50 gold a crate" twice; Settings carried a subtitle restating its rows and settings bodies explaining their own history ("It used to promise 'bigger type'…").
 - **Round 2** (`r2/`): an item's hand line ran four lines on a phone card ("Main hand · off hand only with the Twinblade Harness and 14 DEX") and is now "Main hand · off hand with Twinblade Harness, 14 DEX"; the hire card said "holds 2 enemies with its shield" beside a "Holds 2 enemies" tile — with the numbers showing, the line keeps only the weapon; the campfire's train row said the hero's name and kit again under its own row ("+44 XP: one full level."); a lost contract with nothing paid read "City pay is yours" over "No city was reached" — the line now says it only when a city paid; Assist "Off" led with a non-sentence and now says what turning it on does. Scored: every line on the thirteen screens names its job; no fact repeats on a screen we found; nothing a decision needs was cut (permanence, what a shrine reaches, what a stake risks and pays stay, each once). `scripts/home-stability.mjs` passes; no line wraps worse than before at 390 or 1280.
 - **Left for the designer:** (1) "team" — BRAND.md banned it; the designer's own line uses it, so effect lines say "to team" and prose keeps "your heroes" (BRAND's glossary row now says so). (2) A shrine's stat boon says "to current heroes", because a shrine, unlike a relic, does not reach later hires — is that the rule you want, or should shrines reach hires too? (3) The campfire's "Tap to choose · hold to look" line is a standing hint by § 8 rule 3; it stayed, because the one-tap commit is not self-evident. (4) The HQ head's "Your militia · 2 offices" restates the tabs; it stayed (a header change, not copy). (5) The keepers' and liaisons' spoken lines are untouched (all within 40 characters already).
+
+### 2026-10-17 — the item assets page in Figma
+New Figma page **Item assets** (`?node-id=2276-2083`; `docs/FIGMA.md` § Page: Item assets). It holds every dealt item base, drawn by the real code: `harness/items.html` calls the shell tile markup, `drawSentinel` with `gearMarks` on the neutral Pawn, and `loadout.heroStrip` in the `fieldwatch` pack. The renders are made by `npx tsx scripts/item-assets.ts --render` into `docs/item-assets/`. Docs and tooling only; no game code changed.
+- **Inventory.** 27 kinds. 9 have their own icon cell: Axe, Dagger, Sceptre, Bow, Greatsword, Warhammer, Staff, Quiver, Focus. 18 share one of six cells:
+  - blade: Sword, Saffron Brand;
+  - wand: Wand, Rod;
+  - grimoire: Grimoire, Tome, Moonquill Codex;
+  - shield: Shield, Buckler, Pavise, Gilded Easel;
+  - plate: Mail, Plate, Aegis, Ironheart Plate;
+  - cloth: Robe, Cloak, Silkwind Cloak.
+
+  The figure carries the same atlas cell as the icon, so a borrower also looks like its owner on the field.
+- **Other gaps.** The 7 body pieces draw nothing on the figure. 19 kinds have no doll strip. Only the icon shows rarity; the figure changes only by the enchantment glint. The game's own look (picked by the weapon) keeps the knight's painted shield even with a two-hander.
+- **Checked with get_screenshot** (`docs/item-assets/figma/`):
+  - all 441 image slots are filled;
+  - no overlaps;
+  - cards that share nothing now say "Own icon cell", so the cards in a row match in height;
+  - all 12 drafts read at 16 px, as the atlas does.
+- **Left for the designer.**
+  - Approve, redraw or drop the 12 draft icons (Rod, Saffron Brand, Tome, Moonquill Codex, Buckler, Pavise, Gilded Easel, Mail, Aegis, Ironheart Plate, Cloak, Silkwind Cloak). They are proposals, not shipped art.
+  - Decide whether body pieces should show on the battlefield figure.
