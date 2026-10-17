@@ -27,6 +27,7 @@ import { backToFront, drawEnemy, drawEnemyBars, drawSentinel, sentinelFromRt, sh
 
 export { entrySide, firstRowTop, fitView, setPresentationTime, setViewScale, stageView, stageViewClear, type StageView, type View } from './frame'
 export { activeFieldSeason, drawField, drawTerrainDanger, drawTerrainFlames, playRect, setFieldSeason, worldOf } from './terrain'
+export { activeEnemyClan, clanArtFor, preloadClan, setEnemyClan } from './clanArt'
 export { EdgeBand } from './edgeFx'
 export { WeatherLayer } from './weatherFx'
 export { backToFront, shoulderNudge, drawEnemy, drawSentinel, heroLook, sentinelFromRt, type DrawSentinel } from './units'

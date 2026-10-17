@@ -10,7 +10,9 @@
  *  - `PIXEL_MARK` below — the 16×16 reduction, drawn on the grid, for every
  *    size at which the vector turns to mud (favicons, in-game)
  *  - `scene()` below — the dusk diorama, composed from the game's own CC0
- *    Tiny Swords sprites (old public-domain build, already in the repo)
+ *    Tiny Swords sprites (old public-domain build, already in the repo); its
+ *    goblin column is the Cinder Clan's baked strips (`scripts/enemy-clans.ts`
+ *    — every goblin a player sees is a clan's, `src/game/data/clans.ts`)
  *
  * Outputs (all committed, so the build generates no images and `sharp` stays a
  * dev dependency — the same contract as `scripts/icons.ts`, which now defers
@@ -387,20 +389,50 @@ function iconSvg(markSvg: string, size: number, inset: number, shape: 'square' |
 interface Sprites {
   fighter: Raster; rogue: Raster; mystic: Raster
   torch: Raster[]; tnt: Raster
+  /** Where each torch goblin's flame burns, from its feet (flipped, as the column faces the company). */
+  torchGlow: [number, number][]
   tree: Raster[]; treeFar: Raster[]; bush: Raster[]; rock: Raster[]
   mushroom: Raster; pumpkin: Raster; grass: Raster
 }
 
+/** The scene's clan: Peppercorn's Cinder Clan, the first road's (`clans.DEFAULT_CLAN`) — its torches still burn. */
+const SCENE_CLAN = 'cinder'
+
+/**
+ * A clan goblin standing for the scene: frame 0 of its baked run cycle,
+ * trimmed to its art, and where its torch flame is (at the scene's half
+ * density, from its feet, the sprite flipped to face the company).
+ */
+async function clanStill(id: string, fw: number): Promise<{ png: Buffer; glow: [number, number] }> {
+  const file = `${SPR}/${SCENE_CLAN}_${id}_walk.png`
+  const meta = await sharp(file).metadata()
+  const cell = await sharp(file).extract({ left: 0, top: 0, width: fw, height: meta.height! }).png().toBuffer()
+  const png = await sharp(cell).trim({ threshold: 0 }).png().toBuffer()
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  let sx = 0, sy = 0, n = 0
+  for (let y = 0; y < info.height; y++)
+    for (let x = 0; x < info.width; x++) {
+      const i = (y * info.width + x) * 4
+      // The flame's yellow core (`#ffed44`), left of the body.
+      if (data[i + 3] > 200 && data[i] === 0xff && data[i + 1] === 0xed && data[i + 2] === 0x44 && x < info.width * 0.5) (sx += x, sy += y, n++)
+    }
+  const w = Math.ceil(info.width / 2), h = Math.ceil(info.height / 2)
+  const fx = n ? sx / n / 2 : 3, fy = n ? sy / n / 2 : 6
+  return { png, glow: [Math.round(w - 1 - fx - Math.floor(w / 2)), Math.round(fy - h + 2)] }
+}
+
 async function loadSprites(): Promise<Sprites> {
   const L = (f: string | Buffer) => Raster.load(f)
-  const H = async (f: string) => halve(await L(f))
+  const H = async (f: string | Buffer) => halve(await L(f))
   const trees = await Promise.all(['tree1', 'tree2', 'tree3'].map((t) => L(`${SPR}/${t}.png`)))
+  const torches = await Promise.all(['torch1', 'torch2', 'torch4'].map((t) => clanStill(t, 115)))
   return {
     fighter: await H(`${SPR}/fighter.png`),
     rogue: await H(`${SPR}/rogue.png`),
     mystic: await H(`${SPR}/mystic.png`),
-    torch: await Promise.all(['torch1', 'torch2', 'torch4'].map((t) => H(`${SPR}/${t}.png`))),
-    tnt: await H(`${SPR}/tnt1.png`),
+    torch: await Promise.all(torches.map((t) => H(t.png))),
+    torchGlow: torches.map((t) => t.glow),
+    tnt: await H((await clanStill('tnt1', 90)).png),
     tree: trees.map(halve),
     // Distant pines are flat silhouettes: ¼ density is invisible once a sprite
     // has no interior detail, and it is what makes them read as far away.
@@ -574,9 +606,9 @@ function scene(S: Sprites, o: SceneOpts): Raster {
   const Gf = (s: Raster) => dusk(s, [0.86, 0.78, 0.72], 0.8)
   const actors: Actor[] = [
     // the goblin column on the road, leader nearest; torches glow
-    { spr: Gf(S.torch[1]), x: cx + 132, y: hy + 37, flip: true, shadow: 9, torch: [16, -35] },
+    { spr: Gf(S.torch[1]), x: cx + 132, y: hy + 37, flip: true, shadow: 9, torch: S.torchGlow[1] },
     { spr: Gf(S.tnt), x: cx + 94, y: hy + 53, flip: true, shadow: 10 },
-    { spr: Gf(S.torch[0]), x: cx + 54, y: hy + 71, flip: true, shadow: 10, torch: [16, -35] },
+    { spr: Gf(S.torch[0]), x: cx + 54, y: hy + 71, flip: true, shadow: 10, torch: S.torchGlow[0] },
     // the company at their circles, facing the column
     { spr: G(S.fighter), x: cx - 30, y: hy + 64, shadow: 12, post: true },
     { spr: G(S.rogue), x: cx - 100, y: hy + 96, shadow: 11, post: true },

@@ -321,12 +321,20 @@ describe('the Codex collection (items and skills)', () => {
 
   it('records a goblin once met, and never names one that has not been', async () => {
     const { codexModel } = await import('../src/ui/shell/codex/codexModel')
-    const tabs = codexModel({ achievements: {}, codex: { enemies: ['torch1_plated'], relics: [], felled: { torch2: 7 } }, staged: false })
+    const tabs = codexModel({ achievements: {}, codex: { enemies: ['torch1_plated'], relics: [], felled: { torch2: 7 }, clans: ['delve'] }, staged: false })
     const goblins = tabs[2].sections.flatMap((s) => s.entries)
-    expect(goblins).toHaveLength(15)
-    expect(goblins.filter((g) => !g.locked).map((g) => g.id)).toEqual(['goblin:torch1', 'goblin:torch2'])
-    expect(goblins.find((g) => g.id === 'goblin:torch2')!.how).toMatch(/^Studied/)
+    // One section per clan (the companies' roads), each its fifteen units.
+    expect(tabs[2].sections.map((s) => s.title)).toEqual(['Cinder Clan', 'Smudge Gang', 'Deepdelve', 'Silkcut Gang', 'Hexmoon Coven'])
+    expect(goblins).toHaveLength(75)
+    // A unit opens in a clan that has fielded a wave against you, under that clan's name and dress.
+    expect(goblins.filter((g) => !g.locked).map((g) => g.id)).toEqual(['goblin:delve:torch1', 'goblin:delve:torch2'])
+    const pick = goblins.find((g) => g.id === 'goblin:delve:torch2')!
+    expect(pick.name).toBe('Pick Goblin')
+    expect(pick.enemy).toBe('delve_torch2')
+    expect(pick.how).toMatch(/^Studied/)
     for (const g of goblins.filter((g) => g.locked)) expect(g.name).toBe('???')
+    // A clan not met yet says whose road it raids, and nothing else.
+    expect(goblins.find((g) => g.id === 'goblin:cinder:torch1')!.how).toBe('Raids Peppercorn Co.’s road.')
   })
 })
 

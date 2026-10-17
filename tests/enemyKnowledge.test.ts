@@ -175,7 +175,7 @@ describe('the card’s contents (Q10)', () => {
 
   it('a new enemy shows only its name, armour and modifier; the rest is unknown', () => {
     const d = enemyCardData('barrel3_plated', ctx('new'))!
-    expect(d.name).toBe('Ironbarrel · Plated')
+    expect(d.name).toBe('Charred Keg · Plated')
     expect(d.hp).toBeNull()
     expect(d.pace).toBeNull()
     expect(d.tricks).toBeNull()

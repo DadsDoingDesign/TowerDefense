@@ -104,6 +104,24 @@ result. Append a short note to the review log when you're done.
   does a share of ordinary fights (`waves.nodeArmour`, leaning to the road's
   `Company.armour`). The run map tabs every such node (`.mn-armour`, via
   `encounterPreview.nodeModFor`). `balance/armour-eval.ts` measures fairness.
+  Goblin clans (Oct 2026): every goblin a player sees wears its road's clan,
+  one per company (`src/game/data/clans.ts`: cinder, smudge, delve, silkcut,
+  hexmoon; `DEFAULT_CLAN` cinder when there is no run). A clan is a LOOK and
+  a NAME only: the engine keeps its ids, stats and RNG order
+  (`tests/fixtures/enemyStats.snapshot.json`). Which clan: the run's company
+  (`run/clans.runClan` / `roadClan`, the hand-made benches too); the Sovereign
+  Route mixes them by a hash of (run seed, act) (`sovereignClan`, never a run
+  stream). Names: `clans.enemyName(type, clan)` and nothing else (card,
+  preview, boss plate, announcer, ledger, Codex). Art: the strips
+  `<clan>_<faction><tier>[_walk]` are BAKED by `npx tsx scripts/enemy-clans.ts`
+  (parts in `scripts/enemy-clans-art.ts`, anchors per frame, pack palette;
+  `CLAN_ART` in `render/enemyClans.generated.ts` places the HP bar;
+  `enemy-clans:check` runs in `build:checks`) from the plain CC0 goblins, which
+  no drawing path may read. Every draw goes through `render/clanArt.clanArtFor`
+  (`setEnemyClan` per battle); only cinder is precached, the rest are lazy
+  roles. The Codex goblins tab is by clan (`Codex.clans`). Inventory and
+  renders: `scripts/enemy-assets.ts` (`--render`), `harness/enemies.html`,
+  `docs/enemy-assets/`; Figma page "Enemy assets". Tests `tests/clans.test.ts`.
 - Towers/archetypes `src/game/data/archetypeTree.ts` + `sentinels.ts`.
 - UI in `src/ui/`; design tokens in `src/styles/global.css`.
 - **Root Shell** — `src/ui/shell/` is **the UI the game loads**, and the only

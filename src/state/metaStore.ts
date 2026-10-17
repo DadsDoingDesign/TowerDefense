@@ -10,6 +10,7 @@ import { RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
 import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
+import { CLAN_OF_COMPANY, isClanId } from '../game/data/clans'
 import { clampCrates, deliveryUnlocks, type StakeRecord } from '../game/run/contracts'
 import {
   dealRules,
@@ -88,13 +89,24 @@ export interface Codex {
   relics: string[]
   /** Q10 — enemies felled, by KIND (the key without its elite modifier). */
   felled: Record<string, number>
+  /**
+   * The goblin clans met (`data/clans.ts`, Oct 2026): a clan's Codex tiles open
+   * once it has fielded a wave against you. Absent on a save from before the
+   * clans: read as the clans of the roads you have earned standing on.
+   */
+  clans?: string[]
 }
-const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {} })
+const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {}, clans: [] })
 const strList = (raw: unknown): string[] =>
   Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
-function migrateCodex(raw: unknown): Codex {
+function migrateCodex(raw: unknown, standing?: Record<CompanyId, number>): Codex {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled) }
+  // Before the clans every road fielded the same goblins: the clans of the
+  // roads already ridden (standing earned) are the ones met.
+  const clans = Array.isArray(o.clans)
+    ? strList(o.clans).filter(isClanId)
+    : COMPANY_IDS.filter((c) => (standing?.[c] ?? 0) > 0).map((c) => CLAN_OF_COMPANY[c])
+  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -594,7 +606,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     charters: migrateCharters(o.charters),
     stats,
     achievements: migrateAchievements(o.achievements),
-    codex: migrateCodex(o.codex),
+    codex: migrateCodex(o.codex, standing),
     met: readMet(o.met),
     // Its UI theme checked against the standing just read (locked → neutral).
     militia: readMilitia(o.militia, (c) => standingFor(standing[c] ?? 0)),
@@ -733,8 +745,10 @@ export const useMetaStore = create<MetaState>()(
       recordCodex: (seen) => {
         const cur = get().codex
         const merge = (a: string[], b?: string[]) => (b && b.some((x) => !a.includes(x)) ? [...a, ...b.filter((x, i) => !a.includes(x) && b.indexOf(x) === i)] : a)
-        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled }
-        if (next.enemies !== cur.enemies || next.relics !== cur.relics) set({ codex: next })
+        const prevClans = cur.clans ?? []
+        const clans = merge(prevClans, seen.clans)
+        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled, clans }
+        if (next.enemies !== cur.enemies || next.relics !== cur.relics || clans !== prevClans) set({ codex: next })
       },
 
       recordMet: (ids) => {

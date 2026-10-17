@@ -3,6 +3,7 @@ import { ANIM_FRAMES } from '../../game/render/anim'
 import { pixmap } from '../../game/render/pixmap'
 import { artFor, getSprite, onSpritesReady } from '../../game/render/sprites'
 import { barrelCell } from '../../game/render/units'
+import { clanArtFor, clanArtTop } from '../../game/render/clanArt'
 import { QUEUE_CHIP } from './enemyQueue'
 
 // Moved out of `WaveQueue.tsx` (Q10) so the enemy info card can draw the same
@@ -12,7 +13,7 @@ const CHIP = QUEUE_CHIP
 
 /**
  * One enemy, drawn the way the field draws it: the theme's own sprite for the
- * type's art id, baked by `pixmap` with the same contour-and-rim ring.
+ * type's art id (a clan's strip for a clan's art id, `clans.clanArtId`), baked by `pixmap` with the same contour-and-rim ring.
  *
  * Integer scale only. Tiny Swords is authored at twice the field's density
  * (`spriteScale: 0.5`, a line goblin ~76px), so a 32px chip takes the
@@ -36,14 +37,17 @@ export function EnemyPortrait({ art, className }: { art: string; className?: str
       const ctx = c?.getContext('2d')
       if (!live || !c || !ctx) return
       ctx.clearRect(0, 0, c.width, c.height)
-      const src = artFor(art)
+      // Through the one goblin-art helper: a clan role stays itself, a plain
+      // art id draws in the field's clan — never the plain goblin.
+      const role = clanArtFor(art)
+      const src = artFor(role)
       if (!src) return
-      let img = getSprite(src.pack, art)
+      let img = getSprite(src.pack, role)
       let frames = 1
       if (!img) {
         // A pack that ships only the run cycle: its first frame.
-        const f = ANIM_FRAMES[`${art}_walk`]
-        const walk = f ? getSprite(src.pack, `${art}_walk`) : undefined
+        const f = ANIM_FRAMES[`${role}_walk`]
+        const walk = f ? getSprite(src.pack, `${role}_walk`) : undefined
         if (walk) {
           img = walk
           frames = f
@@ -54,12 +58,14 @@ export function EnemyPortrait({ art, className }: { art: string; className?: str
         scale: src.spriteScale === 0.5 ? 0.5 : 1,
         frames,
         ring: true,
-        cell: frames === 1 ? barrelCell(art, img) : undefined,
+        cell: frames === 1 ? barrelCell(role, img) : undefined,
       })
       if (!pm) return
       const dx = Math.round((CHIP - pm.fw) / 2)
-      // Taller than the chip: keep the head, lose the feet.
-      const dy = pm.fh > CHIP ? 0 : Math.round((CHIP - pm.fh) / 2)
+      // Taller than the chip: keep the head, lose the feet. A clan's strip
+      // carries headroom for its crest or hat (`clanArt`): start at its art.
+      const top = clanArtTop(role)
+      const dy = pm.fh > CHIP ? (top ? -Math.max(0, Math.min(pm.fh - CHIP, Math.round(pm.fh * top) - 1)) : 0) : Math.round((CHIP - pm.fh) / 2)
       ctx.imageSmoothingEnabled = false
       if (pm.ring) ctx.drawImage(pm.ring, 0, 0, pm.fw, pm.fh, dx, dy, pm.fw, pm.fh)
       ctx.drawImage(pm.img, 0, 0, pm.fw, pm.fh, dx, dy, pm.fw, pm.fh)

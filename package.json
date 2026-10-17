@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:checks && tsc -b && vite build",
-    "build:checks": "npm run fw-icons:check && npm run anchors:check",
+    "build:checks": "npm run fw-icons:check && npm run anchors:check && npm run enemy-clans:check",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "balance": "tsx balance/report.ts",
@@ -19,6 +19,8 @@
     "ui-audit": "node scripts/ui-audit.mjs && node scripts/ui-audit-compress.mjs && node scripts/ui-audit-index.mjs",
     "anchors": "tsx scripts/anchors.ts",
     "anchors:check": "tsx scripts/anchors.ts --check",
+    "enemy-clans": "tsx scripts/enemy-clans.ts",
+    "enemy-clans:check": "tsx scripts/enemy-clans.ts --check",
     "placeholder-pack": "tsx scripts/gen-placeholder-pack.ts",
     "slice:shot": "node scripts/slice-shot.mjs",
     "test": "vitest run"

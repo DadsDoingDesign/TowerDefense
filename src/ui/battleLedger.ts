@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { GameEngine } from '../game/engine/engine'
+import { enemyName, type ClanId } from '../game/data/clans'
+import { runClanNow } from './shell/useRunClan'
 
 /**
  * Who got through, and what it cost — kept by the UI, from the engine's own
@@ -69,6 +71,8 @@ export function ledgerBeginWave(runSeed: number, roster: readonly { id: string; 
 export class LedgerWatch {
   private ids: string[] = []
   private names: string[] = []
+  /** The road's clan, read each tick: the receipt and the announcer name a goblin as the road does. */
+  private clan: ClanId | null = null
   private dist: number[] = []
   private leakValue: number[] = []
   /** Throwers mid-wind-up at the top of the tick (a bomber, the King): their charge may land this tick. */
@@ -88,11 +92,12 @@ export class LedgerWatch {
     this.baseHp = engine.baseHp
     const es = engine.enemies
     this.n = es.length
+    this.clan = runClanNow()
     this.throwers.length = 0
     for (let i = 0; i < es.length; i++) {
       const e = es[i]
       this.ids[i] = e.id
-      this.names[i] = e.type.name
+      this.names[i] = enemyName(e.type, this.clan)
       this.dist[i] = e.distance
       this.leakValue[i] = e.type.leak
       if (e.lobUntil > 0 || e.kingUntil > 0) this.throwers.push(e.id)
@@ -128,7 +133,7 @@ export class LedgerWatch {
       if (e.type.isBoss && !this.seen.has(e.id) && !e.type.name.endsWith('(half)')) {
         this.seen.add(e.id)
         const st = useBattleLedger.getState()
-        useBattleLedger.setState({ champions: [...st.champions, { id: e.id, name: e.type.name }] })
+        useBattleLedger.setState({ champions: [...st.champions, { id: e.id, name: enemyName(e.type, this.clan) }] })
       }
     }
     const heads = engine.leakCount - this.leakCount
