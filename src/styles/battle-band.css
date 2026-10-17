@@ -909,11 +909,7 @@
   opacity: 0;
   pointer-events: none;
 }
-/* Both at once (rare: a hire's toast as a tip arrives): the toast keeps the
-   band and the pill steps under it, as everywhere else on the bands. */
-.shell:has(.pg-toast) .sh-stage:has(.sh-wavepre:not(.out)) .sh-coach.top {
-  top: 52px;
-}
+/* Never both at once: a top pill waits for the toast to clear (`Coach`). */
 
 /* ============================================================== wide layout
    The right rail: the card beside a wider kit, the doll at its desk size and

@@ -599,12 +599,14 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: #1f3a2a;
-  border: 1px solid rgba(111, 206, 136, 0.55);
+  /* Tokens (DESIGN_SYSTEM § 2, § 8 rule 7): a receipt is good news — the
+     good hue over the theme's own shade, so it sits in every world. */
+  background: color-mix(in srgb, var(--good) 22%, var(--shade));
+  border: 1px solid color-mix(in srgb, var(--good) 55%, transparent);
   color: var(--text);
   font-size: var(--fs-sm, 14px);
   font-weight: 700;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--shade) 60%, transparent);
   animation: sh-cer-up 220ms ease-out;
 }
 

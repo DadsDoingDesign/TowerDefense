@@ -7,6 +7,7 @@ import { itemIcon, itemName, RARITY_INITIAL, railStyle, rarityVar } from '../cha
 import { Icon } from '../Icon'
 import { Money } from './Money'
 import { NOTE_FRESH_MS, useCombatNotes } from '../../state/combatNotes'
+import { useToastUp } from './toastUp'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -190,6 +191,11 @@ export function ReceiptToast() {
       if (parts.length) post({ text: parts.join(' · '), key: Date.now() })
     })
   }, [])
+  // The Coach's top pill waits while this is up (`toastUp`).
+  useEffect(() => {
+    useToastUp.setState({ up: !!msg })
+  }, [msg])
+  useEffect(() => () => useToastUp.setState({ up: false }), [])
   useEffect(() => {
     if (!msg) return
     const t = setTimeout(() => {
