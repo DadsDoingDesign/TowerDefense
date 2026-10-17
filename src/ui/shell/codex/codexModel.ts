@@ -17,7 +17,7 @@ import { knowledgeOf } from '../../../game/data/enemyKnowledge'
 import { RELICS, relicMark, relicSupported } from '../../../game/data/relics'
 import { RELIC_NOTE } from '../relicOffers'
 import { ALL_SKILLS, skillHeadline } from '../../../game/data/skills'
-import { ITEM_KINDS, itemPoolFor, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
+import { ITEM_KINDS, itemPoolFor, kindEffect, kindSlot, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import { SOVEREIGN_COLOR } from '../../../game/run/charter'
@@ -116,13 +116,10 @@ const RARITY_HUE: Record<ItemRarity, string> = {
 const RARITY_NAME: Record<ItemRarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' }
 
 const SLOT_GROUP: Record<ItemSlot, string> = { oneHand: 'Weapons', twoHand: 'Weapons', offHand: 'Off hand', body: 'Body' }
-const HAND: Record<ItemSlot, string> = { oneHand: 'One hand', twoHand: 'Both hands', offHand: 'Off hand', body: 'Body' }
 const featName = (id: string) => ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id
 const roadLine = (company: CompanyId | undefined) =>
   company ? ` More often on ${companyById(company).name}’s road.` : ''
 
-/** "One hand. Swings at…" → "Swings at…": the hand is a chip on the card. */
-const doesOf = (does: string) => does.replace(/^(One hand|Both hands|Off hand|Body|One hand, or the off hand)\.\s*/, '')
 
 function section(title: string, entries: CodexEntry[], hue?: string): CodexSection {
   return { title, hue, entries, have: entries.filter((e) => !e.locked).length }
@@ -141,8 +138,9 @@ function itemsTab(v: CodexView): CodexTab {
       hue: LEVEL_HUE[k.level],
       icon: itemIcon({ name: k.id, slot: k.slot === 'twoHand' ? 'twoHand' : k.slot }),
       company: has ? k.company : undefined,
-      chips: has ? [LEVEL_NAME[k.level], HAND[k.slot], ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[k.level]],
-      does: has ? doesOf(k.does) : '',
+      chips: has ? [LEVEL_NAME[k.level], kindSlot(k), ...(k.company ? [companyById(k.company).name] : [])] : [LEVEL_NAME[k.level]],
+      // The hand is a chip on the card (`kindSlot`); the line is what it does.
+      does: has ? kindEffect(k) : '',
       how: has
         ? `${k.basic ? 'Yours from the first run.' : 'Yours.'} Dealt on any road.${roadLine(k.company)}`
         : sov
@@ -228,8 +226,8 @@ export function previewEntry(kind: 'skill' | 'item', id: string, how: string): C
     hue: LEVEL_HUE[k.level],
     icon: itemIcon({ name: k.id, slot: k.slot === 'twoHand' ? 'twoHand' : k.slot }),
     company: k.company,
-    chips: [LEVEL_NAME[k.level], HAND[k.slot], companyById(k.company).name],
-    does: doesOf(k.does),
+    chips: [LEVEL_NAME[k.level], kindSlot(k), companyById(k.company).name],
+    does: kindEffect(k),
     how,
   }
 }

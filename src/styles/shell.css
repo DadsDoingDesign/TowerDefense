@@ -1685,10 +1685,8 @@
 .sh-stage:has(.place-zoom-hint) .sh-coach.top {
   top: 40px;
 }
-/* …and of the receipt toast, which drops in just under the header. */
-.shell:has(.pg-toast) .sh-coach.top {
-  top: 52px;
-}
+/* The receipt toast drops in just under the header: a top pill waits for it
+   to clear (`Coach`, `toastUp`), so the two never share the band. */
 @keyframes sh-pill-down {
   from {
     opacity: 0;

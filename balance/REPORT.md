@@ -1182,8 +1182,8 @@ distribution the game deals: 400 run seeds, the shape each one hands to depth 4 
 to its elites, and what the node standing beside it gets.
 
 - Battlefield over 400 seeds: switchbacks 36% · balanced 35% · winding 30%
-- Depth-4 node: Depth 4 28% · Depth 4 — Bombard 25% · Depth 4 — Swarm 25% · Depth 4 — Column 23%
-- Depth-8 elite: Elite — Warded Host 38% · Elite — Plated Column 35% · Elite — Swift Raid 27%
+- Depth-4 node: Patrol 28% · Bombard 25% · Swarm 25% · Column 23%
+- Depth-8 elite: Warded Host 38% · Plated Column 35% · Swift Raid 27%
 
 **Two battle nodes standing in one layer.** `runmap.ts` puts 2–4 nodes in a
 layer (3–4 on a wide map) and rotates each row through the depth's variant pool.

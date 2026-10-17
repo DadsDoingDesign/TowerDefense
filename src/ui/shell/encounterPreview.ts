@@ -11,7 +11,6 @@ import {
 import type { WaveDef } from '../../game/types'
 import { encounterNode } from '../../game/run/map'
 import { encounterRulesOf, type RouteRef } from '../../game/run/charter'
-import { ACT_LAYERS } from '../../game/run/threat'
 
 /**
  * ---------------------------------------------------------------------------
@@ -148,9 +147,9 @@ export function summarizeEncounter(run: PreviewRun, nodeId: string): EncounterSu
   const heads = wave.spawns.length
   return {
     kind,
-    variant:
-      (kind === 'normal' && v.mod ? `${ENEMY_MODS.find((m) => m.id === v.mod)?.prefix ?? ''} ` : '') +
-      (v.label || (kind === 'boss' ? (node.type === 'miniboss' ? `Act ${Math.ceil(node.layer / ACT_LAYERS)} Boss` : 'The Final Watch') : 'Patrol')),
+    // The exact wave's own label (`waves.fightName`): the map and the
+    // Stage's preview say one name for one fight.
+    variant: wave.label,
     asks: v.asks,
     mod: v.mod ? (ENEMY_MODS.find((m) => m.id === v.mod) ?? null) : null,
     heads,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { itemKindById } from '../../../game/data/itemKinds'
+import { itemKindById, kindEffect, kindSlot } from '../../../game/data/itemKinds'
 import { ITEM_BASES } from '../../../game/data/items'
 import { crateKinds, PULL_BASE, PULL_PRICE, pullLift, pullNewChance, pullOdds, type PullResult } from '../../../game/run/hq'
 import { useMetaStore } from '../../../state/metaStore'
@@ -9,7 +9,6 @@ import { Icon } from '../../Icon'
 import { Crate } from '../../pixel'
 import { ContractPage, Gold, PageTip, Slip } from '../contracts/parts'
 
-const SLOT_WORD: Record<string, string> = { oneHand: 'Weapon', twoHand: 'Weapon', offHand: 'Off hand', body: 'Body' }
 
 /** An item kind's icon, by its noun. */
 const kindIcon = (kind: string) => itemIcon({ name: kind, slot: ITEM_BASES[kind]?.slot ?? 'oneHand' })
@@ -96,9 +95,9 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
             <span className="hq-pulled-k">{last.duplicate ? 'Already yours — a bonus item next contract' : 'New item unlocked'}</span>
             <b>{last.kind}</b>
             <small>
-              {SLOT_WORD[k.slot]} · Level {k.level}
+              {kindSlot(k)} · Level {k.level}
             </small>
-            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : k.does}</span>
+            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : kindEffect(k)}</span>
           </span>
         </div>
       )}

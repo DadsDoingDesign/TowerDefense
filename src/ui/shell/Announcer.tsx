@@ -25,7 +25,7 @@ let spokenNote = 0
  * arriving, not who levelled. Everything in a battle that the eye learns from
  * the field or a sting is said here, briefly:
  *
- *   "Depth 2 — Bombard. 14 enemies."   "Warlord Grukk has arrived."
+ *   "Bombard begins. 14 enemies."      "Warlord Grukk has arrived."
  *   "Gate hit — 17 of 20."             "Wave cleared. 42 gold."
  *   "Doyle reached level 5."
  *

@@ -10,25 +10,25 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Relics | Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note). | 27 | 41 |
 | Boons and pacts (stat cards) | Say the gain and, for a pact, its bill: numbers and what they touch. | 39 | 18 |
 | Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 118 | 26 |
-| Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 194 | 27 |
+| Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 195 | 27 |
 | Mutations | Say how a mutation changes one hero's attack, and its cost. | 27 | 31 |
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
 | Ground and hazards | Say what a tile does to a hero posted on it, in a few words. | 36 | 37 |
 | Shrines | Say the bargain: what you get, what it costs. | 18 | 18 |
 | Companies, contracts and asks | Say what a contract pays, risks and asks, in numbers, before you sign. | 259 | 26 |
 | Loyalty track and liveries | Say what each standing level pays, by name. | 88 | 20 |
-| Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 66 | 26 |
+| Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 73 | 25 |
-| Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 258 | 15 |
-| HQ and crates | Say what a building does and costs, and what a crate holds. | 102 | 29 |
-| Codex | Name every entry and say what it does; a locked one says how it opens. | 72 | 19 |
+| Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 256 | 15 |
+| HQ and crates | Say what a building does and costs, and what a crate holds. | 98 | 30 |
+| Codex | Name every entry and say what it does; a locked one says how it opens. | 68 | 19 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
 | Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 33 |
-| Run map and node preview | Say what a stop is and what it risks or pays, so a road can be chosen. | 38 | 23 |
-| Battle HUD | Say the state of the fight and the one action now; nothing to read twice mid-wave. | 75 | 30 |
-| Result and receipt | Say how the run ended and what it paid, item by item. | 80 | 29 |
+| Run map and node preview | Say what a stop is and what it risks or pays, so a road can be chosen. | 34 | 23 |
+| Battle HUD | Say the state of the fight and the one action now; nothing to read twice mid-wave. | 76 | 30 |
+| Result and receipt | Say how the run ended and what it paid, item by item. | 77 | 30 |
 | Offers (spoils, pick cards) | Say what each offer gives, in the fewest words that let you pick. | 202 | 24 |
-| Hero detail (Context panel) | Say what the selected hero, item or tile does now, in numbers. | 138 | 25 |
+| Hero detail (Context panel) | Say what the selected hero, item or tile does now, in numbers. | 136 | 25 |
 | Pages and their headers | Name the page; the CTA names the action. | 25 | 25 |
 | Coach and tips | Teach one thing, once, the first time it matters, in one sentence. | 47 | 17 |
 | Glossary and shared labels | One name and one short meaning per term, shared by every surface. | 108 | 46 |
@@ -355,6 +355,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L79: Body. Reach, a wider blast, +15% damage.
 - L80: Body. Reach, a wider blast, +15% attack speed.
 - L81: Both hands. Casts a much harder burst at a group that jumps to 2 more.
+- L94: Either hand
 
 ### `src/game/data/items.ts`
 
@@ -455,13 +456,13 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/PackStrip.tsx`
 
-- L32: Pack: {inventory.length} {inventory.length === 1 ?}. Heroes: {roster.map((h) => h.name}.
-- L34: Pack
-- L43: {itemName(i)} · {RARITY[i.rarity].label}
-- L186: {itemName(o.item)} added — {o.wearer} wears it
-- L186: {itemName(o.item)} added to your pack
-- L187: {items.length} items added
-- L188: {h.name} joins your heroes
+- L33: Pack: {inventory.length} {inventory.length === 1 ?}. Heroes: {roster.map((h) => h.name}.
+- L35: Pack
+- L44: {itemName(i)} · {RARITY[i.rarity].label}
+- L187: {itemName(o.item)} added — {o.wearer} wears it
+- L187: {itemName(o.item)} added to your pack
+- L188: {items.length} items added
+- L189: {h.name} joins your heroes
 
 ### `src/ui/shell/gearPlan.ts`
 
@@ -817,40 +818,40 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L124: Press on to {co.towns[city + 1]}
 - L128: Sell & head home
 - L128: Head home
-- L139: Escort fee
-- L140: Cargo that arrived
-- L143: Unsold, still on the wagons
-- L167: paid {c.paid[i] ?? 0}
-- L167: +{ahead[ahead.length - 1]?} gold + loot
-- L167: +{ahead[i - city - 1]?.tot} gold
-- L171: Still ahead:
-- L176: Every city pays as you reach it. From the next, you may cash out and head home.
-- L179: Nothing on the wagons is at risk yet: press on.
-- L183: Head home, or press on?
-- L186: Cash out to bank it all now, or press on for more and risk what is still on the road.
-- L191: Head home, or press on
-- L193: Bank
-- L197: Bank
-- L209: Sure thing
-- L216: You bank
-- L216: {trade.now} gold
-- L217: Loot
-- L218: Risk
-- L222: {town} buys the last {left} crate{left === 1 ? '' : 's'} for {trade.sale}.
-- L223: {trade.roadIfCashed} road gold comes home.
-- L224: No bonus, items or skill.
-- L230: Bigger payout
-- L237: Delivered
-- L237: {trade.deliver}+ gold
-- L238: Loot
-- L238: {unlocks.items} item{unlocks.items === 1 ? ''}, {unlocks.skills} skill{unlocks.skills === 1 ? '}
-- L239: Danger
-- L243: Cargo
-- L243: · you’ve delivered {rec.delivered} of {rec.runs} like this
-- L246: Fall, and you bank
-- L246: the {left} unsold crate{left === 1 ? ' is' : 's } lost
-- L246: the bonus is lost
-- L247: , and {roadLost} road gold stays behind
+- L144: Escort fee
+- L145: Cargo that arrived
+- L148: Unsold, still on the wagons
+- L173: paid {c.paid[i] ?? 0}
+- L173: +{ahead[ahead.length - 1]?} gold + loot
+- L173: +{ahead[i - city - 1]?.tot} gold
+- L177: Still ahead:
+- L182: Every city pays as you reach it. From the next, you may cash out and head home.
+- L185: Nothing on the wagons is at risk yet: press on.
+- L189: Head home, or press on?
+- L192: Cash out to bank it all now, or press on for more and risk what is still on the road.
+- L197: Head home, or press on
+- L199: Cash out
+- L203: Press on
+- L215: Sure thing
+- L222: You bank
+- L222: {trade.now} gold
+- L223: Loot
+- L224: Risk
+- L228: {town} buys the last {left} crate{left === 1 ? '' : 's'} for {trade.sale}.
+- L229: {trade.roadIfCashed} road gold comes home.
+- L230: No bonus, items or skill.
+- L236: Bigger payout
+- L243: Delivered
+- L243: {trade.deliver}+ gold
+- L244: Loot
+- L244: {unlocks.items} item{unlocks.items === 1 ? ''}, {unlocks.skills} skill{unlocks.skills === 1 ? '}
+- L245: Danger
+- L249: Cargo
+- L249: · you’ve delivered {rec.delivered} of {rec.runs} like this
+- L252: Fall, and you bank
+- L252: the {left} unsold crate{left === 1 ? ' is' : 's } lost
+- L252: the bonus is lost
+- L253: , and {roadLost} road gold stays behind
 
 ### `src/ui/shell/contracts/ContractResult.tsx`
 
@@ -1114,37 +1115,33 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/war/SeasonEndScreen.tsx`
 
-- L14: Weapon
-- L14: Weapon
-- L14: Off hand
-- L14: Body
-- L35: {shortName(patron)} pays you
-- L35: No company pays you
-- L43: Season
-- L56: Your patron: you delivered the most for it this season.
-- L56: You delivered no contracts this season.
-- L60: Take the {pick.kind}
-- L60: On to Season {next}
-- L66: Banked
-- L67: For your {end.delivered} {end.delivered === 1 ? 'd}
-- L67: {PATRON_PURSE} each
-- L74: Pick one of {shortName(patron)}’s items
-- L78: New
-- L78: Rare
-- L86: Unlocks it
-- L86: Rare bonus item
-- L93: Slot
-- L94: Level
-- L95: Yours
-- L95: for good
-- L95: next contract
-- L103: Season {next}
-- L104: Season
-- L109: finished last
-- L120: leads into Season
-- L121: half its lead carries over
-- L127: No company leads
-- L128: the biggest shares ended level
+- L34: {shortName(patron)} pays you
+- L34: No company pays you
+- L42: Season
+- L55: Your patron: you delivered the most for it this season.
+- L55: You delivered no contracts this season.
+- L59: Take the {pick.kind}
+- L59: On to Season {next}
+- L65: Banked
+- L66: For your {end.delivered} {end.delivered === 1 ? 'd}
+- L66: {PATRON_PURSE} each
+- L73: Pick one of {shortName(patron)}’s items
+- L77: New
+- L77: Rare
+- L85: Unlocks it
+- L85: Rare bonus item
+- L92: Slot
+- L93: Level
+- L94: Yours
+- L94: for good
+- L94: next contract
+- L102: Season {next}
+- L103: Season
+- L108: finished last
+- L119: leads into Season
+- L120: half its lead carries over
+- L126: No company leads
+- L127: the biggest shares ended level
 
 ### `src/ui/shell/war/StandingsScreen.tsx`
 
@@ -1463,89 +1460,87 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L45: {name(o.id)}, from {companyById(o.company).n}
 - L97: {TINCTURE_NAMES[o.pair[0]} & {TINCTURE_NAMES[o.pair[1]}, from {companyById(o.company).n}
 - L123: Standing {THEME_LEVEL}
-- L184: Your militia
-- L191: Back, without changing anything
-- L198: Name your militia
-- L205: Name your militia
-- L207: Militia name
-- L212: Roll a name
-- L223: Found the militia
-- L223: Raise the new flag
-- L223: Raise the flag
-- L227: {mode === 'create' ? 'Fou}: the {uiTheme(theme).name} theme is not unlocked yet
-- L231: Surprise me: a whole new flag
-- L246: The flag
-- L247: Flag
-- L249: Pattern
-- L256: The emblem
-- L257: Emblem
-- L259: Colours
-- L268: linear-gradient(135deg, {TINCTURES[a]} 50%, {TINCTURES[b]} 50%)
-- L268: 0 0 0 2px {METALS[look.metal]}, 0 2px 0 3px rgba(0, 0, 0, 0.4)
-- L272: Metal
-- L281: Your road’s colours
-- L283: Theme
-- L301: Flag shape
-- L301: Emblem
-- L303: Flag shape
-- L303: Emblem
+- L195: Your militia
+- L202: Back, without changing anything
+- L209: Name your militia
+- L216: Name your militia
+- L218: Militia name
+- L223: Roll a name
+- L234: Found the militia
+- L234: Raise the new flag
+- L234: Raise the flag
+- L239: {mode === 'create' ? 'Fou}: the {uiTheme(theme).name} theme is not unlocked yet
+- L241: Raise the new flag: change the flag or the name first
+- L246: Surprise me: a whole new flag
+- L261: The flag
+- L262: Flag
+- L264: Pattern
+- L271: The emblem
+- L272: Emblem
+- L274: Colours
+- L283: linear-gradient(135deg, {TINCTURES[a]} 50%, {TINCTURES[b]} 50%)
+- L283: 0 0 0 2px {METALS[look.metal]}, 0 2px 0 3px rgba(0, 0, 0, 0.4)
+- L287: Metal
+- L296: Your road’s colours
+- L298: Theme
+- L316: Flag shape
+- L316: Emblem
+- L318: Flag shape
+- L318: Emblem
 
 ### `src/ui/shell/charter/CharterScreen.tsx`
 
 - L52: Back to the menu
 - L55: Your bank
-- L71: Charter the road
+- L71: Buy Company
 - L79: Opens at 100%
-- L84: Buy Company
-- L88: Sponsor your own road. Every good, every raider.
-- L96: {pct}% unlocked. It opens when every skill and item is unlocked.
-- L98: Opens when every skill and item is unlocked
-- L102: {Math.max(1, pct)}%
-- L104: Skills unlocked
-- L105: Items unlocked
-- L111: All or nothing.
-- L111: No crates, no city pay. One huge payout.
-- L117: The only source of Sovereign items
-- L117: , the top tier.
-- L123: To get there:
-- L123: every delivered contract unlocks a skill and an item; standing and sealed crates unlock more.
-- L132: Charter
-- L138: If you finish
-- L144: + a
-- L149: If you fall
-- L150: No gold
-- L154: Standing with all five companies
-- L154: , win or lose: as much with each as an escort for it would earn.
-- L157: Every company sets a condition
+- L85: Buy Company
+- L89: Sponsor your own road. Every good, every raider.
+- L97: {pct}% unlocked. It opens when every skill and item is unlocked.
+- L99: Opens when every skill and item is unlocked
+- L103: {Math.max(1, pct)}%
+- L105: Skills unlocked
+- L106: Items unlocked
+- L112: All or nothing.
+- L112: No crates, no city pay. One huge payout.
+- L118: The only source of Sovereign items
+- L118: , the top tier.
+- L124: To get there:
+- L124: every delivered contract unlocks a skill and an item; standing and sealed crates unlock more.
+- L133: Price
+- L139: If you finish
+- L145: + a
+- L150: If you fall
+- L151: No gold
+- L155: Standing with all five companies
+- L155: , win or lose: as much with each as an escort for it would earn.
 - L158: Every company sets a condition
-- L175: The Sovereign unlock
-- L177: The Sovereign unlock
-- L181: Deliver it and one Sovereign item is yours: {left.length} of {SOVEREIGN_ITEM_KINDS.len} still to win.
-- L182: Every Sovereign item is yours. The payout is the whole of it now.
-- L188: {k} · yours
-- L188: Still to win
-- L190: Locked
-- L197: Your record:
-- L202: The road
+- L159: Every company sets a condition
+- L176: The Sovereign unlock
+- L178: The Sovereign unlock
+- L182: Deliver it and one Sovereign item is yours: {left.length} of {SOVEREIGN_ITEM_KINDS.len} still to win.
+- L183: Every Sovereign item is yours. The payout is the whole of it now.
+- L189: {k} · yours
+- L189: Still to win
+- L191: Locked
+- L198: Your record:
 - L203: The road
-- L209: By
-- L209: , with the
-- L209: advance every contract carries.
-- L217: Your bank holds
-- L217: gold; the charter is
-- L232: {need ? (100 * have) / ne}%
+- L204: The road
+- L210: By
+- L210: , with the
+- L210: advance every contract carries.
+- L218: Your bank holds
+- L218: gold of the
+- L218: it costs.
+- L233: {need ? (100 * have) / ne}%
 
 ### `src/ui/shell/charter/SovereignParts.tsx`
 
-- L14: Weapon
-- L14: Weapon
-- L14: Off hand
-- L14: Body
-- L17: {SOVEREIGN_TIER} tier
-- L38: Sovereign items
-- L39: Every one is yours already
-- L40: The payout is the whole of it this time.
-- L52: Sovereign item unlocked
+- L16: {SOVEREIGN_TIER} tier
+- L37: Sovereign items
+- L38: Every one is yours already
+- L39: The payout is the whole of it this time.
+- L51: Sovereign item unlocked
 
 ### `src/ui/shell/company/FlagCarousel.tsx`
 
@@ -1585,39 +1580,35 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/hq/CratesScreen.tsx`
 
-- L12: Weapon
-- L12: Weapon
-- L12: Off hand
-- L12: Body
-- L53: Sealed crates
-- L56: Back to the menu
-- L59: Your bank
-- L67: Open a crate
-- L82: Sealed crates
-- L84: One random item kind, yours for good.
-- L88: A gamble: a delivered contract always unlocks an item.
-- L96: Already yours — a bonus item next contract
-- L96: New item unlocked
-- L99: · Level
-- L101: A Rare {last.kind} lands in your pack when you sign your next contract.
-- L106: The odds, per crate
-- L108: Inside each crate
-- L109: Base
-- L110: Yours
-- L113: Level {i + 1}: {p} percent (base {PULL_BASE[i]})
-- L115: Level
-- L125: Your standing moves {lift} point{lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.
-- L126: Standing with any company moves the odds toward Levels 2 and 3.
-- L129: A kind you don’t have yet:
-- L132: You own every kind: each crate is a bonus item.
-- L135: Your bank holds
-- L135: gold; a crate is
-- L138: Some of what is in the crates
-- L139: Some of what’s inside
-- L142: {kind} · Level {itemKindById(kind)?.leve}{have.includes(kind) ? ' }
-- L151: Already own it?
-- L152: It comes as a Rare item in your pack next contract.
-- L153: Waiting for your next contract:
+- L52: Sealed crates
+- L55: Back to the menu
+- L58: Your bank
+- L66: Open a crate
+- L81: Sealed crates
+- L83: One random item kind, yours for good.
+- L87: A gamble: a delivered contract always unlocks an item.
+- L95: Already yours — a bonus item next contract
+- L95: New item unlocked
+- L98: · Level
+- L100: A Rare {last.kind} lands in your pack when you sign your next contract.
+- L105: The odds, per crate
+- L107: Inside each crate
+- L108: Base
+- L109: Yours
+- L112: Level {i + 1}: {p} percent (base {PULL_BASE[i]})
+- L114: Level
+- L124: Your standing moves {lift} point{lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.
+- L125: Standing with any company moves the odds toward Levels 2 and 3.
+- L128: A kind you don’t have yet:
+- L131: You own every kind: each crate is a bonus item.
+- L134: Your bank holds
+- L134: gold; a crate is
+- L137: Some of what is in the crates
+- L138: Some of what’s inside
+- L141: {kind} · Level {itemKindById(kind)?.leve}{have.includes(kind) ? ' }
+- L150: Already own it?
+- L151: It comes as a Rare item in your pack next contract.
+- L152: Waiting for your next contract:
 
 ### `src/ui/shell/hq/HqScreen.tsx`
 
@@ -1731,36 +1722,32 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L118: Weapons
 - L118: Off hand
 - L118: Body
-- L119: One hand
-- L119: Both hands
-- L119: Off hand
-- L119: Body
-- L122: More often on {companyById(company).nam}’s road.
-- L147: {k.basic ? 'Yours from th} Dealt on any road.{roadLine(k.company)}
-- L153: Weapons
-- L153: Off hand
-- L153: Body
-- L156: Sovereign
-- L158: Items
-- L180: {k.starter ? 'Yours from } Dealt at the hero pick, a city’s hire or a level-up.{roadLine(k.company)}
-- L182: Opens with the feat {feat.name}: {feat.feat.replace(/\.$/,}.
-- L191: Skills
-- L195: Signature
-- L197: {companyById(company).nam}’s signature: opens at Standing {SIGNATURE_LEVEL}.
-- L254: {d.tricks.map((x) => `${x}
-- L259: T{tier}
-- L262: Clan boss
-- L262: Tier {tier}
-- L263: {t.baseHp} HP at full strength.{tricks}
-- L266: Studied: {knowledge.felled} felled.
-- L267: Felled {knowledge.felled}. {knowledge.need - knowled} more to learn its tricks.
-- L268: Not met yet.
-- L274: Goblins
-- L290: Opens with the feat {featName(r.unlock!)}.
-- L290: Not taken yet.
-- L293: Relics
-- L293: Relics
-- L298: Feats
+- L121: More often on {companyById(company).nam}’s road.
+- L145: {k.basic ? 'Yours from th} Dealt on any road.{roadLine(k.company)}
+- L151: Weapons
+- L151: Off hand
+- L151: Body
+- L154: Sovereign
+- L156: Items
+- L178: {k.starter ? 'Yours from } Dealt at the hero pick, a city’s hire or a level-up.{roadLine(k.company)}
+- L180: Opens with the feat {feat.name}: {feat.feat.replace(/\.$/,}.
+- L189: Skills
+- L193: Signature
+- L195: {companyById(company).nam}’s signature: opens at Standing {SIGNATURE_LEVEL}.
+- L252: {d.tricks.map((x) => `${x}
+- L257: T{tier}
+- L260: Clan boss
+- L260: Tier {tier}
+- L261: {t.baseHp} HP at full strength.{tricks}
+- L264: Studied: {knowledge.felled} felled.
+- L265: Felled {knowledge.felled}. {knowledge.need - knowled} more to learn its tricks.
+- L266: Not met yet.
+- L272: Goblins
+- L288: Opens with the feat {featName(r.unlock!)}.
+- L288: Not taken yet.
+- L291: Relics
+- L291: Relics
+- L296: Feats
 
 ## Stops (merchant, campfire, shrine)
 
@@ -1945,9 +1932,9 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/components/RunMapView.tsx`
 
-- L167: Not cleared yet
-- L170: Cleared
-- L279: Asked
+- L170: Not cleared yet
+- L173: Cleared
+- L282: Asked
 
 ### `src/ui/shell/NodePreview.tsx`
 
@@ -1973,14 +1960,10 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/encounterPreview.ts`
 
-- L152: {ENEMY_MODS.find((m) => m}
-- L153: Act {Math.ceil(node.layer / A} Boss
-- L153: The Final Watch
-- L153: Patrol
-- L171: {Math.round(v * 100)}%
-- L174: Steel and magic both bounce off some (up to {pct(s.physMax)} and {pct(s.magMax)}).
-- L175: Steel bounces: up to {pct(s.physMax)} of physical damage. Bring magic.
-- L176: Magic bounces: up to {pct(s.magMax)} of magic damage. Bring steel.
+- L170: {Math.round(v * 100)}%
+- L173: Steel and magic both bounce off some (up to {pct(s.physMax)} and {pct(s.magMax)}).
+- L174: Steel bounces: up to {pct(s.physMax)} of physical damage. Bring magic.
+- L175: Magic bounces: up to {pct(s.magMax)} of magic damage. Bring steel.
 
 ## Battle HUD
 
@@ -2083,17 +2066,18 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/WaveCeremony.tsx`
 
-- L90: Wave cleared
-- L105: reached the wagons · cargo
-- L116: Elite wave cleared
-- L116: Wave cleared
-- L116: The wagons fell
-- L133: reached the wagons · cargo
-- L140: → Lv
-- L151: Hero
-- L153: kills ·
-- L162: Found:
-- L162: {itemName(i)} ({RARITY[i.rarity].label})
+- L97: Wave cleared
+- L112: reached the wagons · cargo
+- L125: Boss defeated
+- L125: Elite wave cleared
+- L125: Wave cleared
+- L125: The wagons fell
+- L142: reached the wagons · cargo
+- L149: → Lv
+- L160: Hero
+- L162: kills ·
+- L171: Found:
+- L171: {itemName(i)} ({RARITY[i.rarity].label})
 
 ## Result and receipt
 
@@ -2146,51 +2130,48 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/ProgressEarned.tsx`
 
-- L33: Weapon
-- L33: Weapon
-- L33: Off hand
-- L33: Body
-- L37: Contract
-- L37: Stake milestone
-- L40: Contract
-- L40: Item chance
-- L50: New item unlocked
-- L50: {kinds.length} items unlocked
-- L52: {SLOT_WORD[x.k!.slot]} · Level {x.k!.level}
-- L56: Your
-- L56: crates raised the floor: Level
-- L56: and up, while any are left.
-- L59: New skill unlocked
-- L59: {skills.length} skills unlocked
-- L66: Your next heroes, loot and offers can include them.
-- L72: {termName(t.term)} · {t.level}
-- L72: Standing {t.level}
-- L79: a Rare {t.bonus} for your next contract
-- L80: {t.named} named
-- L81: the {uiTheme(t.company).name} theme
-- L96: ’s track
-- L105: {kicker} · signature
-- L109: {SLOT_WORD[kind.slot]} · Level {kind.level}
-- L116: {SLOT_WORD[bonus.slot]} · Rare bonus item
-- L116: A Rare {bonus.id} rides with your next contract.
-- L124: {kicker} · named
-- L125: {SLOT_WORD[named.slot]} · Sovereign
-- L125: {named.does} Unlocks with a delivered Sovereign Route.
-- L133: {kicker} · theme
-- L134: UI theme
-- L134: {co.name}’s colours for your militia’s road. Pick it in the flag builder.
-- L157: {termName(term)} · {after}
-- L157: Standing {after}
-- L159: +{p.xp} standing XP{p.askXp ? `, ${p.askXp} }
-- L161: A custom seed earns no standing.
-- L164: {gained}. Standing 10: a second term is offered.
-- L165: {gained}. {termName(term)} is complete.
-- L167: {gained}. Stakes open at Standing {STAKES_OPEN_AT}.
-- L169: {gained}. Stakes are open on its road: up to {crateCap(after)} crates.
-- L177: {co.name} · {lv}. {line} Open its track
-- L238: +{p.xp} standing XP with all five companies
-- L239: standing XP with all five companies
-- L251: {up ? `${co.name}: Standi}. Open its track
+- L36: Contract
+- L36: Stake milestone
+- L39: Contract
+- L39: Item chance
+- L49: New item unlocked
+- L49: {kinds.length} items unlocked
+- L51: {kindSlot(x.k!)} · Level {x.k!.level}
+- L55: Your
+- L55: crates raised the floor: Level
+- L55: and up, while any are left.
+- L58: New skill unlocked
+- L58: {skills.length} skills unlocked
+- L65: Your next heroes, loot and offers can include them.
+- L71: {termName(t.term)} · {t.level}
+- L71: Standing {t.level}
+- L78: a Rare {t.bonus} for your next contract
+- L79: {t.named} named
+- L80: the {uiTheme(t.company).name} theme
+- L95: ’s track
+- L104: {kicker} · signature
+- L108: {kindSlot(kind)} · Level {kind.level}
+- L115: {kindSlot(bonus)} · Rare bonus item
+- L115: A Rare {bonus.id} rides with your next contract.
+- L123: {kicker} · named
+- L124: {kindSlot(named)} · Sovereign
+- L124: {kindEffect(named)} Unlocks with a delivered Sovereign Route.
+- L132: {kicker} · theme
+- L133: UI theme
+- L133: {co.name}’s colours for your militia’s road. Pick it in the flag builder.
+- L156: {termName(term)} · {after}
+- L156: Standing {after}
+- L159: Standing
+- L161: +{p.xp} standing XP{p.askXp ? `, ${p.askXp} }
+- L163: A custom seed earns no standing.
+- L166: {gained}. Standing 10: a second term is offered.
+- L167: {gained}. {termName(term)} is complete.
+- L169: {gained}. Stakes open at Standing {STAKES_OPEN_AT}.
+- L171: {gained}. Stakes are open on its road: up to {crateCap(after)} crates.
+- L179: {co.name} · {lv}. {line} Open its track
+- L240: +{p.xp} standing XP with all five companies
+- L241: standing XP with all five companies
+- L253: {up ? `${co.name}: Standi}. Open its track
 
 ## Offers (spoils, pick cards)
 
@@ -2225,8 +2206,8 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L205: {dps} DPS
 - L221: level {hero.level}, a skill to choose
 - L228: Skill
-- L294: Spoils
-- L295: Spoils — pick one, then take it
+- L299: Spoils
+- L300: Spoils — pick one, then take it
 
 ### `src/ui/shell/offers.ts`
 
@@ -2422,117 +2403,115 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 ### `src/ui/shell/DetailBand.tsx`
 
 - L181: Wave
-- L201: Wave cleared
-- L201: Wave lost
-- L213: Pick a reward
-- L217: Continue
-- L258: Move made
-- L258: Move one hero
-- L272: Sub-wave {hud.subWave + 1} of {hud.subWaveCount}, next
-- L272: Still to come
-- L273: All on the field
-- L274: in the next sub-wave
-- L274: still to come
-- L290: Battle speed {speed}× — {tapWord(false)} to change
-- L292: Speed
-- L311: March on
-- L343: Close the details
-- L343: Details
-- L357: Details
-- L369: Space Enter
-- L379: Start Wave ▶
-- L428: Upgrade
-- L450: Make space
-- L522: Wave cleared
-- L522: The line broke
-- L525: Collect
-- L525: Go on
-- L642: Wave cleared
-- L642: Wave lost
-- L647: earned ·
-- L658: reached the Gate · Gate
-- L666: Found:
-- L667: {itemName(i)} ({RARITY[i.rarity].label})
-- L691: Wave
-- L696: a hero for its detail.
-- L708: Encounter
-- L714: Post heroes on glowing tiles. Each hits only inside its ring.
-- L724: an offer to see what it does.
-- L724: a stop on the map to see what waits there.
-- L724: a hero to see its detail.
-- L757: a sword
-- L761: A two-hander would send {offHand.name} back to the pack; a one-hander keeps it.
-- L763: {hero.name} holds {mainHand.name} in both hands: filling this slot sends it to the pack.
-- L774: The pack is showing only what fits.
-- L774: one to put it on.
-- L786: {TWINBLADE}: {TWINBLADE_TAKES} fits here too, at full strength.
-- L787: {TWINBLADE}: a sword here needs {dual.need} DEX — {hero.name} has {Math.floor(dual.dex)}.
-- L791: Small things only. A knife or wand hits at
-- L791: % here.
-- L802: A sword, axe or hammer here makes
-- L802: melee —
-- L802: es are
-- L803: too close.
-- L809: Never mind
-- L887: : every enemy below has
-- L887: % more HP.
-- L898: physical {Math.round(t.physResist }%
-- L899: magic {Math.round(t.magResist *}%
-- L932: Boss
-- L974: Hero
-- L976: kills · +
-- L998: Nothing to fight
-- L1002: This ground is settled. March on and pick the next stop.
-- L1039: Scrap
-- L1045: Yes — scrap it
-- L1046: {itemName(item)} is destroyed for {moneyText(scrapGold(item}. There is no undo.
-- L1089: {plan.displaced.map((d) =} {plan.displaced.length > } back to the pack.
-- L1098: {target.name} will swing — needs clearance.
-- L1100: {target.name} stops swinging — no clearance needed.
-- L1145: On {target.name}, {plan.slotLabel}
-- L1151: Equip on which hero
-- L1166: No change to
-- L1166: &rsquo;s numbers.
-- L1181: New
-- L1218: {TWINBLADE}: {twin.hero.name} can carry it in the off hand too, at full strength.
-- L1219: {TWINBLADE}: {twin.hero.name} has {Math.floor(twin.check.de} DEX of {twin.check.need} — not in the off hand yet.
-- L1224: Worn by
-- L1239: Reforge {itemName(item)} — reroll its enchantments for {moneyText(craft.reforgeC}
-- L1241: Reforge
-- L1249: Raise {itemName(item)} one rarity tier for {moneyText(craft.upgradeC}
-- L1250: {itemName(item)} is already at the top rarity
-- L1255: Raise
-- L1258: Max rarity
-- L1282: Never mind — keep it
-- L1283: Scrap {itemName(item)} for {moneyText(scrapGold(item} — it is destroyed
-- L1287: Keep it
-- L1290: Scrap
-- L1329: Equip {itemName(item)} on {target.name}, {plan.slotLabel}{ejection ? `. ${ejection}{clash ? `. ${clash.text}}
-- L1331: Equip →
-- L1342: Unequip
-- L1353: Swap
-- L1459: Gear locks during a wave
-- L1510: Gear and pack
-- L1522: Pack, {count ? `${count} item${}
-- L1525: Gear
-- L1525: Pack
-- L1582: MAIN
-- L1582: OFF
-- L1582: BODY
-- L1614: takes {OFF_HAND_TAKES}
-- L1616: {TWINBLADE}: takes {TWINBLADE_TAKES} too, at full strength
-- L1620: {hero.name}'s gear
-- L1620: Gear
-- L1640: {HERO_SLOT_LABEL[hs]} ({offRule})
-- L1664: {slotName}: choosing — pick something from the pack
-- L1665: {slotName}: empty
-- L1705: Twinblade
-- L1706: DEX {Math.floor(twin.dex)}/{twin.need}
-- L1765: Stop choosing, back to the gear
-- L1771: Empty
-- L1772: Sort the pack by rarity, then kind
-- L1836: Nothing fits
-- L1836: Nothing yet. Spoils and the merchant fill it.
+- L219: Pick a reward
+- L223: Continue
+- L264: Move made
+- L264: Move one hero
+- L278: Sub-wave {hud.subWave + 1} of {hud.subWaveCount}, next
+- L278: Still to come
+- L279: All on the field
+- L280: in the next sub-wave
+- L280: still to come
+- L296: Battle speed {speed}× — {tapWord(false)} to change
+- L298: Speed
+- L317: March on
+- L349: Close the details
+- L349: Details
+- L363: Details
+- L375: Space Enter
+- L385: Start Wave ▶
+- L438: Upgrade
+- L460: Make space
+- L532: Wave cleared
+- L532: The line broke
+- L535: Collect
+- L535: Go on
+- L652: Wave cleared
+- L652: Wave lost
+- L657: earned ·
+- L668: reached the Gate · Gate
+- L676: Found:
+- L677: {itemName(i)} ({RARITY[i.rarity].label})
+- L701: Wave
+- L706: a hero for its detail.
+- L718: Encounter
+- L724: Post heroes on glowing tiles. Each hits only inside its ring.
+- L734: an offer to see what it does.
+- L734: a stop on the map to see what waits there.
+- L734: a hero to see its detail.
+- L767: a sword
+- L771: A two-hander would send {offHand.name} back to the pack; a one-hander keeps it.
+- L773: {hero.name} holds {mainHand.name} in both hands: filling this slot sends it to the pack.
+- L784: The pack is showing only what fits.
+- L784: one to put it on.
+- L796: {TWINBLADE}: {TWINBLADE_TAKES} fits here too, at full strength.
+- L797: {TWINBLADE}: a sword here needs {dual.need} DEX — {hero.name} has {Math.floor(dual.dex)}.
+- L801: Small things only. A knife or wand hits at
+- L801: % here.
+- L812: A sword, axe or hammer here makes
+- L812: melee —
+- L812: es are
+- L813: too close.
+- L819: Never mind
+- L898: : every enemy below has
+- L898: % more HP.
+- L909: physical {Math.round(t.physResist }%
+- L910: magic {Math.round(t.magResist *}%
+- L943: Boss
+- L985: Hero
+- L987: kills · +
+- L1009: Nothing to fight
+- L1013: This ground is settled. March on and pick the next stop.
+- L1050: Scrap
+- L1056: Yes — scrap it
+- L1057: {itemName(item)} is destroyed for {moneyText(scrapGold(item}. There is no undo.
+- L1100: {plan.displaced.map((d) =} {plan.displaced.length > } back to the pack.
+- L1109: {target.name} will swing — needs clearance.
+- L1111: {target.name} stops swinging — no clearance needed.
+- L1156: On {target.name}, {plan.slotLabel}
+- L1162: Equip on which hero
+- L1177: No change to
+- L1177: &rsquo;s numbers.
+- L1192: New
+- L1229: {TWINBLADE}: {twin.hero.name} can carry it in the off hand too, at full strength.
+- L1230: {TWINBLADE}: {twin.hero.name} has {Math.floor(twin.check.de} DEX of {twin.check.need} — not in the off hand yet.
+- L1235: Worn by
+- L1250: Reforge {itemName(item)} — reroll its enchantments for {moneyText(craft.reforgeC}
+- L1252: Reforge
+- L1260: Raise {itemName(item)} one rarity tier for {moneyText(craft.upgradeC}
+- L1261: {itemName(item)} is already at the top rarity
+- L1266: Raise
+- L1269: Max rarity
+- L1293: Never mind — keep it
+- L1294: Scrap {itemName(item)} for {moneyText(scrapGold(item} — it is destroyed
+- L1298: Keep it
+- L1301: Scrap
+- L1341: Equip {itemName(item)} on {target.name}, {plan.slotLabel}{ejection ? `. ${ejection}{clash ? `. ${clash.text}}
+- L1343: Equip →
+- L1354: Unequip
+- L1365: Swap
+- L1471: Gear locks during a wave
+- L1522: Gear and pack
+- L1534: Pack, {count ? `${count} item${}
+- L1537: Gear
+- L1537: Pack
+- L1594: MAIN
+- L1594: OFF
+- L1594: BODY
+- L1626: takes {OFF_HAND_TAKES}
+- L1628: {TWINBLADE}: takes {TWINBLADE_TAKES} too, at full strength
+- L1632: {hero.name}'s gear
+- L1632: Gear
+- L1652: {HERO_SLOT_LABEL[hs]} ({offRule})
+- L1676: {slotName}: choosing — pick something from the pack
+- L1677: {slotName}: empty
+- L1717: Twinblade
+- L1718: DEX {Math.floor(twin.dex)}/{twin.need}
+- L1777: Stop choosing, back to the gear
+- L1783: Empty
+- L1784: Sort the pack by rarity, then kind
+- L1848: Nothing fits
+- L1848: Nothing yet. Spoils and the merchant fill it.
 
 ### `src/ui/shell/context.ts`
 
@@ -2612,39 +2591,39 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/Coach.tsx`
 
-- L321: New ground:
-- L321: — post your heroes.
-- L442: can learn a
-- L442: the glowing hero.
-- L456: (skull tiles): heroes there deal
-- L481: your hero, then a
-- L481: glowing tile
-- L481: on the field.
-- L491: An
-- L491: : tougher goblins, and a
-- L491: in the spoils.
-- L495: Take one: an
-- L495: for one hero, or a
-- L495: for the team.
-- L505: New:
-- L505: , once per sub-wave.
-- L515: Sub-wave
-- L515: down. Move one hero if you like, then
-- L515: Next
-- L525: Speed
-- L525: for 2× or 3×.
-- L535: Won items land in your
-- L535: a slot under
-- L535: Gear
-- L535: to wear one.
-- L547: : enemies have
-- L547: % more HP, rising every stop.
-- L564: to equip.
-- L564: under Gear.
-- L575: Depth
-- L577: : how far down the road you are. The boss is at the end.
-- L587: Merchant
-- L587: is in reach: gear and wagon repairs for gold.
+- L323: New ground:
+- L323: — post your heroes.
+- L450: can learn a
+- L450: the glowing hero.
+- L464: (skull tiles): heroes there deal
+- L489: your hero, then a
+- L489: glowing tile
+- L489: on the field.
+- L499: An
+- L499: : tougher goblins, and a
+- L499: in the spoils.
+- L503: Take one: an
+- L503: for one hero, or a
+- L503: for the team.
+- L513: New:
+- L513: , once per sub-wave.
+- L523: Sub-wave
+- L523: down. Move one hero if you like, then
+- L523: Next
+- L533: Speed
+- L533: for 2× or 3×.
+- L543: Won items land in your
+- L543: a slot under
+- L543: Gear
+- L543: to wear one.
+- L555: : enemies have
+- L555: % more HP, rising every stop.
+- L572: to equip.
+- L572: under Gear.
+- L583: Depth
+- L585: : how far down the road you are. The boss is at the end.
+- L595: Merchant
+- L595: is in reach: gear and wagon repairs for gold.
 
 ### `src/ui/shell/Shortcuts.tsx`
 
