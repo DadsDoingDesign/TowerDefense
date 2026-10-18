@@ -169,6 +169,47 @@ describe('hero builder: every part fits every people', () => {
   })
 })
 
+/**
+ * The mouth zone: the lower FRONT of the face (its front half), from the eyes down to the chin
+ * and past the face's front (12 px for a company face, which carries props; 6
+ * for a fighter, whose weapon rides up beside the face as the CC0 knight's
+ * does). Nothing a hand holds, no hand and no FX may paint there (an object at
+ * a mouth reads as something coming out of it).
+ */
+function mouthIntruders(f: HeroFrame, ahead = 12): number {
+  const P = f.pose
+  const b = P.body
+  const x0 = Math.round(P.head.x + b.headRx * 0.15), x1 = Math.round(P.head.x + b.headRx + ahead)
+  const y0 = Math.round(P.head.y + b.headRy * 0.2), y1 = Math.round(P.head.y + b.headRy - 2)
+  const bad = new Set(['mainArm', 'offArm', 'mainItem', 'offItem', 'fx'].map((l) => layerIndex(l as LayerId)))
+  let n = 0
+  for (let y = Math.max(0, y0); y <= Math.min(CELL - 1, y1); y++)
+    for (let x = Math.max(0, x0); x <= Math.min(CELL - 1, x1); x++) if (bad.has(f.owner[y * CELL + x])) n++
+  return n
+}
+
+describe('hero builder: nothing at the mouth', () => {
+  it('no hand, held thing or effect at a company face’s mouth, on any frame', () => {
+    for (const fc of FACES)
+      for (const a of ['idle', 'walk', 'tic', 'react', 'hit', 'cheer'] as AnimId[])
+        for (let fr = 0; fr < framesFor(a, fc.id); fr++) expect(mouthIntruders(composeFrame(fc.look, a, fr)), `${fc.name} ${a}#${fr}`).toBe(0)
+  })
+
+  it('no hand or held thing at any people’s mouth while it idles, walks, flinches or cheers', () => {
+    const kits: HeroLook['gear'][] = [
+      { main: 'Sword', off: 'Kite Shield', body: 'Mail' },
+      { main: 'Bow', off: 'Quiver', body: 'Cloak' },
+      { main: 'Wand', off: 'Flask', body: 'Robe' },
+      { main: 'Meat Hook', off: 'Buckler', body: 'Leather' },
+      { main: 'Twin Knives' },
+    ]
+    for (const race of RACES)
+      for (const gear of kits)
+        for (const a of ['idle', 'walk', 'hit', 'cheer'] as AnimId[])
+          for (let fr = 0; fr < framesFor(a); fr++) expect(mouthIntruders(composeFrame({ race, gear }, a, fr), 6), `${race} ${JSON.stringify(gear)} ${a}#${fr}`).toBe(0)
+  })
+})
+
 describe('hero builder: the draw order holds', () => {
   it('where two layers overlap, the later one is on top (bar a fist over its own grip)', () => {
     for (const race of RACES) {

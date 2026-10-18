@@ -196,6 +196,7 @@ export const PROPS: readonly ItemSpec[] = [
   I('Salt Sack', 'offHand', 'saltSack'),
   I('Glow Vial', 'offHand', 'flask', { glow: 'venom', variant: 'glow' }),
   I("Broker's Sash", 'body', 'vest', { variant: 'wrap', cloth: 'red' }),
+  I("Herbalist's Coat", 'body', 'robe', { variant: 'coat', cloth: 'moss' }),
 ]
 
 const BY_NAME = new Map([...ITEMS, ...PROPS].map((i) => [i.name.toLowerCase(), i]))
