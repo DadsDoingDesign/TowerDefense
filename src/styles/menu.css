@@ -703,7 +703,8 @@
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  height: 76px;
+  /* 92: the company's face is 48 px of art over its Rep line (the crest's slot was 76). */
+  height: 92px;
   padding: 9px 2px 6px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
@@ -728,12 +729,22 @@
   border-top-color: var(--co);
   border-bottom: 0;
 }
-/* The logos are not all one height (Ironvein's pick is the tallest): the row is the tallest's. */
+/* The picture's row: the company's face (48 px, `DockFace`), or Buy Company's crest, centred in it. */
 .mn-slot-crest {
   position: relative;
   display: grid;
   place-items: center;
-  height: 32px;
+  height: 48px;
+}
+/* The face's cell is 28 art px (56 at 2×) with a blank row over the head and
+   under the shadow: its margins fit it to the 48 px row, the art (52 px)
+   rising 3 px over the row's top, clear of the marks, and its shadow resting
+   1 px over the Rep line's gap. */
+.dock-face {
+  display: block;
+  margin: -5px 0 -3px;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 .mn-slot-crown {
   position: absolute;
@@ -1114,14 +1125,19 @@
     padding-bottom: calc(8px + var(--safe-bottom, 0px));
   }
   .mn-slot {
-    height: 60px;
-    padding-top: 0;
+    height: 76px;
+    padding-top: 3px;
+    padding-bottom: 6px;
     gap: 0;
+  }
+  /* The face's row gives 2 px: its faint shadow rests in the Rep line's leading. */
+  .mn-slot-crest {
+    height: 46px;
   }
   /* A short phone's slot has no row to spare: the bar rides its bottom edge. */
   .mn-slot-xp {
     position: absolute;
-    bottom: 4px;
+    bottom: 3px;
     left: 50%;
     width: 30px;
     height: 3px;
@@ -1236,7 +1252,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     gap: 2px 8px;
-    height: 64px;
+    height: 80px;
     padding: 10px 8px 8px;
   }
   .mn-slot-xp {

@@ -233,7 +233,14 @@ result. Append a short note to the review log when you're done.
   season panel: seven bars from `tradeWar.seasonBars`, `ui/shell/homeSeason.ts`),
   the foot (the company dock: exactly five fixed slots in `COMPANY_IDS`
   order, the order the map fans its roads west→east, pure model
-  `ui/shell/homeDock.ts`; the **Buy Company** slot — the Sovereign Route,
+  `ui/shell/homeDock.ts`; each slot shows its company's FACE, not its crest —
+  the liaison's hand-drawn 24 × 28 dock figure (`render/hero/mini.ts`) at 2×,
+  drawn by `ui/shell/DockFace.tsx` on ONE shared rAF (idle and tic on the
+  desynced clock, the reaction when its slot is focused, a still shadow while
+  the company is not hiring; still under reduced motion, the tic half as
+  often on Light, asleep when hidden); who stands where is the one table
+  `ui/shell/dockFace.ts` `DOCK_FACE` (Hask in Easel House's slot and Wren in
+  Moonquill's lead the rename); crests stay everywhere else; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
   dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for
   every company (Ground · Raiders · At Rep N — the track's next reward by kind, `track.nextReward` — `ui/shell/homeCard.ts`; the

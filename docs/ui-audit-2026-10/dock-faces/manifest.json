@@ -1,0 +1,66 @@
+[
+  {
+    "id": "home-spice",
+    "group": "Dock live",
+    "people": "Saffra",
+    "title": "Peppercorn: Saffra",
+    "caption": "The real home at 390 wide with Peppercorn focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.",
+    "file": "home-spice.png"
+  },
+  {
+    "id": "home-art",
+    "group": "Dock live",
+    "people": "Hask",
+    "title": "Easel House: Hask",
+    "caption": "The real home at 390 wide with Easel House focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.",
+    "file": "home-art.png"
+  },
+  {
+    "id": "home-metals",
+    "group": "Dock live",
+    "people": "Brannoch",
+    "title": "Ironvein: Brannoch",
+    "caption": "The real home at 390 wide with Ironvein focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.",
+    "file": "home-metals.png"
+  },
+  {
+    "id": "home-silk",
+    "group": "Dock live",
+    "people": "Odile",
+    "title": "Rosethread: Odile",
+    "caption": "The real home at 390 wide with Rosethread focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.",
+    "file": "home-silk.png"
+  },
+  {
+    "id": "home-scrolls",
+    "group": "Dock live",
+    "people": "Wren",
+    "title": "Moonquill: Wren",
+    "caption": "The real home at 390 wide with Moonquill focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.",
+    "file": "home-scrolls.png"
+  },
+  {
+    "id": "home-locked",
+    "group": "Dock live",
+    "people": "Wren",
+    "title": "Not hiring yet: a shadow",
+    "caption": "An early save, Moonquill focused but not hiring: the face is a still shadow and the slot says “at 3”; judge it reads as locked.",
+    "file": "home-locked.png"
+  },
+  {
+    "id": "desk",
+    "group": "Dock live",
+    "people": "all",
+    "title": "The desk, 1280 × 800",
+    "caption": "The desk home with Ironvein focused, and its dock at its own pixels; judge the faces sit square in the wider slots.",
+    "file": "desk.png"
+  },
+  {
+    "id": "dock-live",
+    "group": "Dock live",
+    "people": "all",
+    "title": "The dock, live",
+    "caption": "Four seconds of the real dock: five idles out of step, a tic now and then, Odile’s half-bow when Rosethread is picked; judge it stays calm.",
+    "file": "dock-live.webp"
+  }
+]

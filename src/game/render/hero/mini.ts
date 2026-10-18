@@ -13,6 +13,8 @@
  * own tic on its own interval with a hashed phase (they never sync), and its
  * own reaction when its slot is picked; `locked` turns it to a shadow.
  * {@link miniAt} says which frame plays at a time — the dock's one clock.
+ * Shipped in the home dock (October 2026): `ui/shell/DockFace.tsx` draws
+ * these in place of the crests.
  *
  * Pure: no DOM.
  */
@@ -305,6 +307,13 @@ function frameAt(ms: readonly number[], into: number): number {
   return -1
 }
 
+/** How a face's clock runs: picked at `pickedAt` (ms), held `still` (reduced motion), the tic played only every `ticEach`th time (Light: 2). */
+export interface ClockOpts {
+  pickedAt?: number
+  still?: boolean
+  ticEach?: number
+}
+
 /**
  * The one clock every company face moves by, at any size: the idle loop at
  * the face's own period; the tic on its own interval and hashed phase; the
@@ -313,7 +322,7 @@ function frameAt(ms: readonly number[], into: number): number {
  * (`period`, `ticEvery`, the phase) is the dock face's, so a face at two
  * sizes moves in step with itself and out of step with the other four.
  */
-export function spriteAt(id: PersonaId, face: MiniFace, t: number, o: { pickedAt?: number; still?: boolean } = {}): { anim: MiniAnim; frame: number } {
+export function spriteAt(id: PersonaId, face: MiniFace, t: number, o: ClockOpts = {}): { anim: MiniAnim; frame: number } {
   if (o.still) return { anim: 'idle', frame: 0 }
   const clock = MINI_FACES[id]
   if (o.pickedAt != null && t >= o.pickedAt) {
@@ -321,8 +330,12 @@ export function spriteAt(id: PersonaId, face: MiniFace, t: number, o: { pickedAt
     if (i >= 0) return { anim: 'react', frame: i }
   }
   const ticLen = face.ticMs.reduce((a, b) => a + b, 0)
-  const into = (((t + ticPhase(id)) % clock.ticEvery) + clock.ticEvery) % clock.ticEvery
-  if (into < ticLen) return { anim: 'tic', frame: frameAt(face.ticMs, into) }
+  const shifted = t + ticPhase(id)
+  const into = ((shifted % clock.ticEvery) + clock.ticEvery) % clock.ticEvery
+  // `ticEach` n: only every nth tic plays (Light: 2, half as often), on the same phase, so the five stay out of step
+  const each = Math.max(1, Math.round(o.ticEach ?? 1))
+  const nth = Math.floor(shifted / clock.ticEvery)
+  if (into < ticLen && ((nth % each) + each) % each === 0) return { anim: 'tic', frame: frameAt(face.ticMs, into) }
   const per = clock.period / face.idle.length
   return { anim: 'idle', frame: Math.floor((((t % clock.period) + clock.period) % clock.period) / per) }
 }
@@ -332,7 +345,7 @@ export function spriteAt(id: PersonaId, face: MiniFace, t: number, o: { pickedAt
  * the tic on its own interval and phase; the reaction for its length once the
  * slot is picked at `pickedAt`. Under reduced motion only the still pose.
  */
-export function miniAt(id: PersonaId, t: number, o: { pickedAt?: number; still?: boolean } = {}): { anim: MiniAnim; frame: number } {
+export function miniAt(id: PersonaId, t: number, o: ClockOpts = {}): { anim: MiniAnim; frame: number } {
   return spriteAt(id, MINI_FACES[id], t, o)
 }
 
