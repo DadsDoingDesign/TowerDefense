@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1344" />
+    <!-- Sprite urls are relative to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Hero Builder</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #120e0b; }
+      body { width: 1344px; color: #efe6d6; font: 16px system-ui, sans-serif; }
+      h2 { font: 700 22px/1.2 Georgia, serif; margin: 24px 16px 8px; color: #e3b64f; }
+      canvas { display: block; image-rendering: pixelated; margin: 0 0 16px; }
+      .cards { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 8px; }
+      .cards canvas { width: 300px; height: auto; margin: 0; }
+      #log { white-space: pre; font: 13px/1.4 ui-monospace, monospace; padding: 8px 16px; color: #c9bba4; }
+    </style>
+  </head>
+  <body>
+    <div id="log">Loading…</div>
+    <main id="out"></main>
+    <script type="module" src="/harness/heroes.ts"></script>
+  </body>
+</html>
