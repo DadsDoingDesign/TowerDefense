@@ -198,12 +198,12 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     // The marsh's wet sedge in drifts through the meadow: a cooler, deeper green.
     cover: { colors: ['#3e6e4e', '#4c805a', '#5c9264', '#70a46e'], share: 0.3, grain: 1.5 },
     foliage: { ramps: [FRESH], bush: FRESH },
-    broadleaf: { share: 0.22, ramps: [BLOSSOM, BLOSSOM, FRESH], blossom: ['#fff4f8', '#f6c8da'] },
+    broadleaf: { share: 0.18, ramps: [BLOSSOM, FRESH, FRESH], blossom: ['#fff4f8', '#f6c8da'] },
     accent: true,
     props: [
       { kind: 'flowers', where: 'open', share: 0.1 },
-      { kind: 'reeds', where: 'forest', share: 0.3 },
-      { kind: 'pool', where: 'forest', share: 0.16 },
+      { kind: 'reeds', where: 'forest', share: 0.4 },
+      { kind: 'pool', where: 'forest', share: 0.2 },
       { kind: 'flowers', where: 'forest', share: 0.16 },
       { kind: 'reeds', where: 'water', share: 0.8 },
       { kind: 'lily', where: 'water', share: 0.6 },

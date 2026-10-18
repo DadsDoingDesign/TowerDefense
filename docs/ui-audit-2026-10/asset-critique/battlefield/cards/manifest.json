@@ -1,0 +1,106 @@
+[
+ {
+  "id": "bf-01-peppercorn-late-summer",
+  "group": "Battlefield",
+  "people": "Humans",
+  "title": "Peppercorn · late summer",
+  "caption": "Props stand in harvested clumps with pepper plants among them; near trees turn yellow, not green.",
+  "file": "bf-01-peppercorn-late-summer.png"
+ },
+ {
+  "id": "bf-02-butcherblock-spring-marsh",
+  "group": "Battlefield",
+  "people": "Reptilians",
+  "title": "Art slot · spring on the marsh",
+  "caption": "Reed beds, pools and wet sedge for the salt marsh; blossom thinned and given a dark step.",
+  "file": "bf-02-butcherblock-spring-marsh.png"
+ },
+ {
+  "id": "bf-03-ironvein-overcast",
+  "group": "Battlefield",
+  "people": "Dwarves",
+  "title": "Ironvein · overcast",
+  "caption": "Cut quarry stone in the wood; puddles fewer and lying in the ground, not floating.",
+  "file": "bf-03-ironvein-overcast.png"
+ },
+ {
+  "id": "bf-04-rosethread-misty-morning",
+  "group": "Battlefield",
+  "people": "Elves",
+  "title": "Rosethread · misty morning",
+  "caption": "Less haze over the pines, willows along the river forest, reeds at the fords, less dew speckle.",
+  "file": "bf-04-rosethread-misty-morning.png"
+ },
+ {
+  "id": "bf-05-greenvial-frost",
+  "group": "Battlefield",
+  "people": "Gnomes",
+  "title": "Scrolls slot · frost",
+  "caption": "No green ring round the road, softer snow, green pines under snow, mushroom hollows in the wood.",
+  "file": "bf-05-greenvial-frost.png"
+ },
+ {
+  "id": "bf-06-danger-wildfire",
+  "group": "Battlefield",
+  "people": "",
+  "title": "Danger ground · wildfire",
+  "caption": "The burn has a ragged rim, an ember edge and a rounder shape; the light square halo is gone.",
+  "file": "bf-06-danger-wildfire.png"
+ },
+ {
+  "id": "bf-07-danger-lakes",
+  "group": "Battlefield",
+  "people": "",
+  "title": "Danger ground · lakes",
+  "caption": "The water sits below the grass: a bank shadow, a deeper middle, and reeds at the rim.",
+  "file": "bf-07-danger-lakes.png"
+ },
+ {
+  "id": "bf-08-danger-cursed",
+  "group": "Battlefield",
+  "people": "",
+  "title": "Danger ground · cursed",
+  "caption": "The blight now sits a little below the meadow. Its cracks and skulls are unchanged.",
+  "file": "bf-08-danger-cursed.png"
+ },
+ {
+  "id": "bf-09-road",
+  "group": "Battlefield",
+  "people": "",
+  "title": "The road",
+  "caption": "A sunken dirt lane with broken wheel tracks and a few pebbles.",
+  "file": "bf-09-road.png"
+ },
+ {
+  "id": "bf-10-wagon",
+  "group": "Battlefield",
+  "people": "",
+  "title": "The battle wagon",
+  "caption": "Round spoked wheels, and a clearing in the wood to stand in.",
+  "file": "bf-10-wagon.png"
+ },
+ {
+  "id": "bf-11-gate",
+  "group": "Battlefield",
+  "people": "",
+  "title": "The gate",
+  "caption": "A standing palisade of sharpened stakes across the road, where the planks used to lie flat.",
+  "file": "bf-11-gate.png"
+ },
+ {
+  "id": "bf-12-slots-and-overlays",
+  "group": "Battlefield",
+  "people": "",
+  "title": "Slots and overlays",
+  "caption": "Kept as they are: the lit grid, the cursed tiles, the star, clearance and rings.",
+  "file": "bf-12-slots-and-overlays.png"
+ },
+ {
+  "id": "bf-13-shots-and-hits",
+  "group": "Battlefield",
+  "people": "",
+  "title": "Shots and hits",
+  "caption": "Kept as they are: outlined shots in the hero’s ink, and a hit mark at the point of contact.",
+  "file": "bf-13-shots-and-hits.png"
+ }
+]

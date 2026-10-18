@@ -271,6 +271,8 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap, view?: { 
 const WATER = '#47aba9'
 const FOAM = '#c6f0db'
 const FOAM_EDGE = '#458597'
+/** A burn's corner radius (Oct 2026 asset critique: 12, a tray; now nearer a round scorch). */
+const FIRE_R = 15
 /** The bank's shadow on the water, and the lake's deeper middle (the pack's water, a step and a half step down). */
 const WATER_SHADE = '#357f86'
 const WATER_DEEP = '#40a0a1'
@@ -456,9 +458,9 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
     // rim's edge eaten into by char, so the burn is ragged where it meets
     // the grass.
     ctx.fillStyle = 'rgba(62, 36, 16, 0.3)'
-    fillShape(ctx, pieceShape(map, fire, 0, 14), 14)
+    fillShape(ctx, pieceShape(map, fire, 0, 17), 17)
     ctx.fillStyle = '#6b3a1c'
-    fillShape(ctx, pieceShape(map, fire, 3, 12), 12)
+    fillShape(ctx, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
     for (const t of tiles) {
       if (!fire(t)) continue
       const x0 = Math.round(t.pos.x - T / 2)
@@ -473,20 +475,23 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
           ctx.fillRect(x0 + x, y0 + y, 1, 1)
         }
     }
+    // The line where the grass is still burning: a thin ember ring round the char.
+    ctx.fillStyle = '#b04a20'
+    fillShape(ctx, pieceShape(map, fire, 5, FIRE_R - 2), FIRE_R - 2)
     ctx.fillStyle = '#2b1d17'
-    fillShape(ctx, pieceShape(map, fire, 6, 9), 9)
+    fillShape(ctx, pieceShape(map, fire, 6, FIRE_R - 3), FIRE_R - 3)
     {
       // The char lit from the upper left: a soot shadow under the far rim,
       // pale ash drifted against the near one, and ash flecks across it.
-      const char = pieceShape(map, fire, 6, 9)
+      const char = pieceShape(map, fire, 6, FIRE_R - 3)
       ctx.save()
-      shapePath(ctx, char, 9)
+      shapePath(ctx, char, FIRE_R - 3)
       ctx.clip()
       ctx.fillStyle = '#17100c'
-      fillShape(ctx, char, 9)
+      fillShape(ctx, char, FIRE_R - 3)
       ctx.translate(2, 2)
       ctx.fillStyle = '#2b1d17'
-      fillShape(ctx, char, 9)
+      fillShape(ctx, char, FIRE_R - 3)
       ctx.translate(-2, -2)
       for (const t of tiles) {
         if (!fire(t)) continue
@@ -1259,7 +1264,7 @@ function keepMask(map: GameMap, W: WorldBox): { mask: Uint8Array; canvas: HTMLCa
   const fire = (t: Tile) => t.block === 'fire'
   const rW = Math.max(6, Math.round(23 * k * 1.4))
   fillShape(g, pieceShape(map, water, 2, rW), rW)
-  fillShape(g, pieceShape(map, fire, 3, 12), 12)
+  fillShape(g, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
   fillShape(g, pieceShape(map, cursedOf, 2, 12), 12)
   const data = g.getImageData(0, 0, W.w, W.h).data
   const out = new Uint8Array(W.w * W.h)
@@ -1691,14 +1696,14 @@ function redWeight(hue: number): number {
 
 /**
  * A near tree's hue (`season.ACCENT_SHIFT`): the tiers' warm arc, 340° round
- * to 68°, laid in order onto 72–82° (rust to ochre, amber to a yellowing olive) — the
+ * to 68°, laid in order onto 70–78° (rust to ochre, amber to a yellowing olive) — the
  * green side of yellow, short of the pines' and the meadow's green; -1 for a
  * hue outside it, which is kept.
  */
-// 72–82° (Oct 2026 asset critique; it was 75–90°): the near maples read as
+// 70–78° (Oct 2026 asset critique; it was 75–90°): the near maples read as
 // yellowing birch, not as summer trees standing in an autumn wood.
-const SHIFT_LO = 72
-const SHIFT_HI = 82
+const SHIFT_LO = 70
+const SHIFT_HI = 78
 function shiftedHue(hue: number): number {
   const h = hue >= 340 ? hue - 360 : hue
   if (h < -20 || h > GOLD_HI) return -1

@@ -80,7 +80,9 @@ for (const c of spec) {
   await page.setContent(html)
   await page.evaluate(() => Promise.all([...document.images].map((i) => i.decode())))
   const file = `${c.id}.png`
-  await page.locator('.card').screenshot({ path: `${outDir}/${file}` })
+  // Lean on disk: a palette PNG (pixel art and flat chrome quantise cleanly).
+  const shot = await page.locator('.card').screenshot()
+  await sharp(shot).png({ palette: true, colors: 192, effort: 10 }).toFile(`${outDir}/${file}`)
   manifest.push({ id: c.id, group: 'Battlefield', people: c.people ?? '', title: c.title, caption: c.caption, file })
   console.log('card', file)
 }
