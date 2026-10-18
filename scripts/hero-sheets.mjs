@@ -55,7 +55,7 @@ console.log(`sheets ${(total / 1024 / 1024).toFixed(2)} MB`)
 
 const cardDir = path.join(ROOT, 'docs/characters/cards')
 fs.mkdirSync(cardDir, { recursive: true })
-if (!ONLY) for (const f of fs.readdirSync(cardDir)) fs.rmSync(path.join(cardDir, f))
+if (!ONLY) for (const f of fs.readdirSync(cardDir)) if (fs.statSync(path.join(cardDir, f)).isFile()) fs.rmSync(path.join(cardDir, f)) // a round's own folder (e.g. skeleton-r4/) stays
 let cardTotal = 0
 const manifest = []
 for (const c of data.cards) {

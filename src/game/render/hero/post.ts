@@ -69,7 +69,8 @@ function rasterise(part: Part, j: Partial<Record<JointId, [number, number]>>, ke
   if (part.kind === 'rows') {
     const at = j[part.at]
     if (!at) return null
-    const x0 = Math.round(at[0]) + part.off[0], y0 = Math.round(at[1]) + part.off[1]
+    const nd = key.nudge?.[part.id] ?? [0, 0]
+    const x0 = Math.round(at[0]) + part.off[0] + nd[0], y0 = Math.round(at[1]) + part.off[1] + nd[1]
     const rows = key.swap?.[part.id] ?? part.rows
     rows.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch !== '.') set(x0 + rx, y0 + ry, ch) }))
     return { px, band: part.band ?? [1, 1], far: false }
@@ -188,8 +189,15 @@ export function postFrame(id: PersonaId, anim: MiniAnim, frame: number, lockedOr
       const hx = Math.round(hj[0]), hy = Math.round(hj[1])
       const mode = key.eyes ?? 'open'
       const skin = colour(face.skin, 1)
-      for (const e of face.eyes) eye((x, y, c) => { if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, c) }, hx + e.dx, hy + e.dy, e, mode, !!face.slit, skin)
-      for (const [ex, ey, ch] of key.extra ?? []) { const x = hx + ex, y = hy + ey; if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, colour(ch, 1)) }
+      const plot = (x: number, y: number, c: readonly number[]) => { if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, c) }
+      const [lx, ly] = key.look ?? [0, 0]
+      face.eyes.forEach((e, i) => {
+        // a glance: the eye's own place is skin, the eye drawn where it looks
+        if (lx || ly) for (let yy = 0; yy < e.h; yy++) for (let xx = 0; xx < e.w; xx++) plot(hx + e.dx + xx, hy + e.dy + yy, skin)
+        const m: EyeMode = mode === 'wink' ? (i === 0 ? 'closed' : 'open') : mode
+        eye(plot, hx + e.dx + lx, hy + e.dy + ly, e, m, !!face.slit, skin)
+      })
+      for (const [ex, ey, ch] of key.extra ?? []) { const x = hx + ex, y = hy + ey; if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, colour(ch, typeof face.inks[ch]?.[1] === 'number' ? (face.inks[ch][1] as Tone) : 1)) }
     }
   }
   return { w: W, h: H, rgba }
@@ -219,8 +227,12 @@ export const postFrames = (id: PersonaId, anim: MiniAnim): number => keysOf(POST
 /** Per-frame hold times (ms) at this size, by the dock's clock for the idle. */
 export function postMs(id: PersonaId, anim: MiniAnim): number[] {
   const f = POST_FACES[id]
-  if (anim === 'idle') return f.idle.map(() => MINI_FACES[id].period / f.idle.length)
-  return [...(anim === 'tic' ? f.ticMs : f.reactMs)]
+  const clock = MINI_FACES[id]
+  const sum = (ms: readonly number[]) => ms.reduce((a, b) => a + b, 0)
+  // this size's own holds, scaled to the dock's lengths (the clock plays them so)
+  const fit = (own: readonly number[], len: number) => own.map((m) => (m * len) / sum(own))
+  if (anim === 'idle') return fit(f.idleMs ?? f.idle.map(() => 1), clock.period)
+  return anim === 'tic' ? fit(f.ticMs, sum(clock.ticMs)) : fit(f.reactMs, sum(clock.reactMs))
 }
 
 /** Where a face stands in its cell: the middle of its feet (its shadow's centre) and the ground row. */
@@ -239,7 +251,7 @@ export const nearerHand = (id: PersonaId, anim: MiniAnim, frame: number): 'N' | 
 /** The clock's view of this size's frames (counts and holds), for {@link spriteAt}. */
 function clockFace(id: PersonaId): MiniFace {
   const f = POST_FACES[id]
-  return { ...MINI_FACES[id], idle: f.idle.map(() => ({})), tic: f.tic.map(() => ({})), ticMs: f.ticMs, react: f.react.map(() => ({})), reactMs: f.reactMs }
+  return { ...MINI_FACES[id], idle: f.idle.map(() => ({})), idleMs: f.idleMs, tic: f.tic.map(() => ({})), ticMs: f.ticMs, react: f.react.map(() => ({})), reactMs: f.reactMs }
 }
 
 /** What the figure shows at time `t` (ms): the dock's clock, this size's frames. */

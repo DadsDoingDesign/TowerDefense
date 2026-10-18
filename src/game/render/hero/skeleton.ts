@@ -175,7 +175,7 @@ const SKELETONS: Readonly<Record<PersonaId, Skeleton>> = {
     root: [34, 57],
     joints: {
       head: [0, 37.5, 5], neck: [0, 31, 1.5], chest: [0, 28, -0.5], pelvis: [0, 17.5, -3.5],
-      shoulderN: [5.5, 27, -0.5], elbowN: [6.5, 21.4, 2.6], wristN: [5.9, 17.8, 7.4],
+      shoulderN: [5.5, 27, -0.5], elbowN: [6.5, 21.4, 2.6], wristN: [6.14, 15.83, 4.9],
       shoulderF: [-5.5, 27, -0.5], elbowF: [-6.1, 21, 1.6], wristF: [-5.5, 17, 6],
       hipN: [3.6, 17, -3.5], kneeN: [3.6, 12.6, 1.9], hockN: [3.6, 6.4, -0.1], ankleN: [3.6, 1.5, 2.5],
       hipF: [-3.6, 17, -3.5], kneeF: [-3.6, 12.6, 1.9], hockF: [-3.6, 6.4, -0.1], ankleF: [-3.6, 1.5, 2.5],

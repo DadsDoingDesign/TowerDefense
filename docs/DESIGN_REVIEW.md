@@ -4851,3 +4851,133 @@ tall, so there is no room for 3×; 2× there matches the phone.
   easel crest in a purple world, until the rename lands.
 - The second-term gold rim lived on the dock's crest. In the dock it is now
   said only by the Rep line ("II · 3"); the rim stays on every crest.
+
+### 2026-10-18 — the dock faces, round 4: branded motion
+
+The designer, on the "dock in motion" card: "not that the movement isn't
+random, but it's not unique movement in a branded way for that character".
+Out of step was not enough. Each face now moves in its own KIND of way, so
+the motion alone says who it is (`render/hero/mini.ts`; the briefs sit above
+`MINI_FACES`):
+- **Saffra:** brisk, light, impatient. A quick double toe-tap with the
+  bandana tails bouncing, then a short wait (2.1 s). Her tic flips the pepper
+  sack off her palm, catches the weight, and she gives a sly look. Picked:
+  "Deal!", a point and a wink with a little hop. Her tic comes most often
+  (4.3 s).
+- **Odile:** fluid and never still. Even beats: her head leans, her arm
+  follows, and a wave runs down the cloak's back edge to its hem (3.3 s).
+  Her tic strokes the silk along its bolt with her eyes shut. Picked: a slow
+  half-bow, her arm swept low.
+- **Brannoch:** planted. One slow breath with a slow blink at the top, then
+  2.9 s of stillness (4.7 s). His tic lifts the slate, chalks a cart and
+  strikes the total. Picked: one gruff nod. His tic comes least often
+  (7.9 s).
+- **Hask:** coiled. He holds stone still, then his tail's tip lashes or
+  twitches, and his eye never shuts (3.9 s). His tic lifts the hook, a glint
+  runs to its point, then a snap and a lash. Picked: he snaps forward and
+  cocks his head snout-down, staring.
+- **Wren:** odd and ominous. His body never moves, and only the vial's
+  light swells and ebbs (5.3 s, the longest loop). His tic: a spore drifts up
+  and his eyes follow it. Picked: the brim sinks over his eyes, then tips
+  back for a slow look up.
+
+The engine gained per-frame idle holds (`idleMs`), a one-part `nudge`, the
+eyes' `look`, and `wink` / `hidden` eyes. `spriteAt` now takes WHEN from the
+dock face and WHICH frame from each size's own holds, scaled to fit.
+
+- **Round 1 (the stills at 8–10×):** the toe-tap was a two-pixel boot swap
+  nobody could see, so the near boot now lifts whole. Wren's "look up" hid
+  his eyes under the brim; now the brim tips back.
+- **Round 2 (side by side; px changed per 20 ms over 16 s as a signal):**
+  Saffra's settle bob was the biggest repeated change in the dock, so it is
+  now the bandana tails. Hask's tongue flicked in both the idle and the tic,
+  and was the brightest moving thing. Odile's sweep, at chest height, read as
+  Saffra's point, so it now sweeps low. Odile's silk end read as a leg under
+  the bolt and was cut. The tics overlapped too much, so they are shorter,
+  and the salt was re-searched (`TIC_SALT` 16744: never three ticking at
+  once in the first 12 s).
+- **Round 3 (the real dock on a fake clock, the blob card, the tests):** a
+  new "brand" test found Odile and Wren with the same signal (both changing
+  about every 0.4 s). Wren's idle is now a long dark, then a slow swell.
+  A new dock mouth test found Hask's raised shoulder inking his jaw (now the
+  forearm alone lifts) and his cocked jaw drawn under his shoulder (now the
+  arm is drawn first). The tongue flick went entirely: the designer's
+  round-2 rule ("nothing at the mouth"; the forked tongue was cut then) beats
+  the direction to add one. The dock test now covers loose pixels and
+  shown-on-demand parts too. Saffra's toss now peaks below her chin.
+- **Calm:** each idle is 1 px moves with held poses. Tics come every
+  4.3–7.9 s and Light halves them. Reduced motion, locked and hidden are
+  unchanged.
+- **Cards:** `docs/characters/cards/motion-r4/` (`npx tsx
+  scripts/dock-motion-cards.ts [--live]`).
+
+**Still weakest.**
+- Hask's tic is a 1 px lift and a 1 px glint. At the slot's 2× it is the
+  quietest tic and may not read as "turning the hook".
+- Wren's idle is a colour change only: as a flat shape he does not move
+  until his tic.
+- The post figures (`hero/post.ts`) run on the dock clock, so they now get
+  these periods and tic lengths, with their own frames stretched to fit.
+  Their motion still needs a branded port to match.
+
+### 2026-10-18 — the company faces, round 4: skeleton first, the pack's density, posts built from the pack
+
+The designer, on the field line-up: "make like a body skeleton frame and
+then consider their shape and look in 3d space and then design for the 2d
+angle from there". On Saffra's post: "the stands look really rough, can you
+make this feel more like the rest of the game". Before this round the 72 ×
+72 post figures shipped nowhere: only the harness, the cards and
+`stop-scenes.ts --faces`. The shipped posts stood CC0 pawns behind a
+code-drawn counter.
+
+- **Skeleton first** (`hero/skeleton.ts`): a 3D joint table per face, with
+  its people's proportions, posed by two-bone IK and projected once into the
+  3/4 view. The limbs are drawn along the bones, and the rows are pinned to
+  joints (`hero/post.ts` painter, `hero/postArt.ts` parts). There is an
+  overlay of the bones and masses, and tests that every limb keeps its
+  length on every frame, that the 3/4 view holds, that a hand is on every
+  wrist, and that the proportions are each people's own.
+- **Density:** the size was right (round 3 already stood at the pawn's
+  53 px), but the density was twice the pack's. The new figures stand
+  42–57 px in a 64 cell, with a 2 px outer line, 1 px between parts,
+  nothing under 2 px, and every limb auto-lit in three tones.
+- **Posts:** each is the company's house (Ironvein: the mine) with a counter
+  of the pack's bridge planks and stumps, and the liaison stands in front on
+  the pack's shadow. They ship for Saffra, Odile and Brannoch. Easel House
+  and Moonquill keep the pawn, and Hask and Wren are in the proposals.
+- **Motion:** ported to the dock's round-4 briefs, using the dock clock's
+  `idleMs` and stretched holds.
+
+**Round 1 (stills at 1×, 3× and 8× beside the knight, archer and pawn):**
+the first pass was thin "realistic" people beside the pack's round ones, so
+I made them chunkier, at 2–2.7 heads. Then, per face:
+- Saffra's sack sat at her chin, so it moved down to the waist.
+- Odile's bolt read as a loaf, so it became a roll with its end showing.
+- Brannoch's beard was a brown mask over his face. It is now a moustache
+  and a forked beard under a visible nose.
+- Hask's ridge floated off his tail and his crest read as ears (the wolf
+  risk). The ridge now rides the tail and the crest is cut.
+- Wren's beard read as a face mask, so it now hangs from under his nose.
+
+**Round 2 (the frames, the app):**
+- Saffra's "Deal!" point read as a hand at her belly. It now reaches
+  forward on a straight arm.
+- Hask's oxblood apron read as a wound, so it is leather now.
+- In the app, the bubble beside the head covered the counter and its wares.
+  The counter now stands level with the liaison, and the bubble points at
+  the top of the head (rows 84–87), which keeps it clear of the long
+  "Hollowmere" sign.
+
+**Round 3:**
+- Saffra's bandana dome read as a helmet, so it got fold lines.
+- Hask's near forearm across his belly cluttered him, so it hangs at his
+  side (same forearm length, re-solved).
+
+**Weakest:** the figures carry less mass than the pack's people (the pawn
+is 58 wide, Saffra about 26). They are peers in height and line, not in
+bulk. The wares on the counters are small and only half clear of the bubble
+on a phone. Hask's apron is still mostly hidden behind his arms.
+
+Cards: `docs/characters/cards/skeleton-r4/` (`npx tsx
+scripts/skeleton-cards.ts <shots> <proposals>`; the post cards are the
+running app via `scripts/places-shots.mjs`).

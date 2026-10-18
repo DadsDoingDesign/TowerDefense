@@ -25,7 +25,7 @@ import {
   type AnimId, type HeroFrame, type HeroLook, type LayerId, type PersonaId, type RaceId,
 } from '../src/game/render/hero'
 import { MINI_FACES, MINI_FEET, MINI_H, MINI_W, miniAt, miniFrame, ticPhase, type MiniAnim } from '../src/game/render/hero/mini'
-import { POST_FACES, POST_H, POST_W, postAt, postFeetOf, postFrame, postFrames } from '../src/game/render/hero/post'
+import { POST_H, POST_W, postAt, postFeetOf, postFrame, postFrames, postMs } from '../src/game/render/hero/post'
 import { torsoOutline } from '../src/game/render/hero/parts'
 
 const out = document.getElementById('out')!
@@ -839,7 +839,7 @@ function pawnAt(g: CanvasRenderingContext2D, x: number, y: number, k: number): v
   const p = REFS.pawn
   g.drawImage(p, Math.round(x - (p.width / 2) * k), Math.round(y - (p.height - 3) * k), p.width * k, p.height * k)
 }
-/** Each face's post: the shipped scene's layout with the face at the counter (`stop-scenes.ts --faces`). */
+/** Each face's post: the shipped scene, the face standing in front of its stall (`stop-scenes.ts --faces`; the two proposals too). */
 const POST_SCENE: Readonly<Record<PersonaId, string>> = { saffra: 'liaison-spice', odile: 'liaison-silk', brannoch: 'liaison-metals', hask: 'proposal-butcherblock', wren: 'proposal-greenvial' }
 
 function faces(): void {
@@ -882,8 +882,8 @@ function faces(): void {
   for (const fc of FACES) {
     const id = fc.id
     const people = fc.look.race
-    // the post: the scene at the page's 2× (the 260 px a phone sees), the face at the counter
-    card(`face-${id}`, 'Company faces', `${fc.name} — at the ${fc.companyName} post`, `The post as a phone shows it: the scene at 2×, the face hand-drawn at the pack’s scale behind its counter${fc.proposal ? ' (a proposed post)' : ''}. Judge the people, trade and temperament without this caption.`, (gg, b) => {
+    // the post: the scene at the page's 2× (the 260 px a phone sees), the face in front of its stall
+    card(`face-${id}`, 'Company faces', `${fc.name} — at the ${fc.companyName} post`, `The post as a phone shows it: the scene at 2×, the face built on its skeleton at the pack’s scale, standing in front of its stall${fc.proposal ? ' (a proposed post)' : ''}. Judge the people, trade and temperament without this caption.`, (gg, b) => {
       const sc = POST_IMG[id]
       gg.fillStyle = '#16120f'
       gg.fillRect(b.x, b.y, b.w, b.h)
@@ -927,11 +927,10 @@ function faces(): void {
       }
     }, CARD, CARD, people)
     // the moves, at the post size: 4× on the ground, 1× in the corner, at the dock's clock
-    const face = POST_FACES[id]
     const clock = MINI_FACES[id]
     for (const a of ['idle', 'tic', 'react'] as MiniAnim[]) {
       const n = postFrames(id, a)
-      const ms = a === 'idle' ? face.idle.map(() => clock.period / face.idle.length) : [...(a === 'tic' ? face.ticMs : face.reactMs)]
+      const ms = postMs(id, a)
       animCard(`${id}-${a}`, `${fc.name} — ${a === 'react' ? 'reaction (slot picked)' : a}`, `Hand-drawn at the post size: ${n} frames, ${a === 'tic' ? `every ${(clock.ticEvery / 1000).toFixed(1)} s` : a === 'idle' ? `a ${(clock.period / 1000).toFixed(2)} s loop` : 'once, when picked'}; 4× and 1× (corner). Judge the timing and that it says the temperament.`, n, ms, (gg, b, i) => {
         groundIn(gg, b, 4, -12)
         postAtXY(gg, id, b.x + b.w / 2, b.y + b.h - 30, 4, a, i)
@@ -1052,7 +1051,7 @@ function faces(): void {
   // proof that they never move in step: ten seconds of each face's clock
   card('motion-desync', 'Dock', 'Ten seconds: no two in step', 'Each row is one face over 10 s: the line is how far its head moves (its own shape and period), the blocks its tics (its own interval and phase). Judge that no two line up.', (gg, b) => {
     const x0 = b.x + 150, w = b.w - 162, T = 10000
-    const SHAPE: Record<PersonaId, string> = { saffra: 'quick bob', odile: 'slow breath', brannoch: 'weight shift', hask: 'sway + tail', wren: 'bob + sprout' }
+    const SHAPE: Record<PersonaId, string> = { saffra: 'toe-tap', odile: 'sway + cloak wave', brannoch: 'one slow breath', hask: 'still, tail lash', wren: 'vial glow' }
     gg.fillStyle = '#231c17'
     gg.fillRect(b.x, b.y, b.w, b.h)
     for (let sec = 0; sec <= 10; sec++) {

@@ -899,13 +899,13 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
   // its log stumps, the trade's wares on it, and the liaison standing IN FRONT, full length, at the pack's people's
   // scale, on the ground with the pack's shadow. Every post keeps one layout, so a city's band crops them alike: the
   // liaison's feet at (LX, FEET), the counter behind to the right, the room for the bubble right of the head.
-  const LX = 104
+  const LX = 108
   const FEET = 128
   const bridge = await load(P.bridge)
   /** A counter `w` wide from the pack's bridge: its planks stood up as the front, a deck board on top, a stump each end. */
   const packCounter = (w: number): Cv => {
-    const c = new Cv(w + 20, 34)
-    const front = crop(bridge, 40, 28, Math.min(w, 116), 27)
+    const c = new Cv(w + 20, 27)
+    const front = crop(bridge, 40, 35, Math.min(w, 116), 20)
     for (let x = 0; x < w; x += front.w) c.draw(crop(front, 0, 0, Math.min(front.w, w - x), front.h), 10 + x, 7)
     const top = crop(bridge, 5, 103, 53, 8)
     for (let x = 0; x < w + 4; x += top.w - 1) c.draw(crop(top, 0, 0, Math.min(top.w, w + 4 - x), top.h), 8 + x, 1)
@@ -932,15 +932,17 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
     await draw(c)
     standFig(c, fig)
     if (lit) lit(c)
-    // the bubble's tail points at the face: the head's middle
-    if (dir === OUT) out[name] = { speaker: [OX + Math.round(LX - fig.fx + fig.head[0]), Math.round(FEET - fig.fy + fig.head[1])] }
+    // the bubble's tail points at the top of the head, so the bubble (beside it) rides above the counter and its wares;
+    // between rows 84 (higher, a long city name's sign would meet it on a phone) and 87 (lower, it hides the wares)
+    const crown = bbox(fig.cv).y0
+    if (dir === OUT) out[name] = { speaker: [OX + Math.round(LX - fig.fx + fig.head[0]), Math.min(87, Math.max(84, Math.round(FEET - fig.fy + crown + 6)))] }
     await write(name, c, dir)
   }
   const flagAt = (c: Cv, company: CompanyId, x = 60) => stand(c, standard(company, 30), x, FEET - 6, 10)
-  /** The counter behind the liaison's far side, its feet at y `by`; returns its top (where the wares sit) and x span. */
-  const counterAt = (c: Cv, w = 78, by = FEET - 10): { top: number; x0: number; x1: number } => {
+  /** The counter at the liaison's far side, its feet at y `by` (level with the liaison's, so its wares sit under the bubble); returns its top (where the wares sit) and x span. */
+  const counterAt = (c: Cv, w = 64, by = FEET + 1): { top: number; x0: number; x1: number } => {
     const k = packCounter(w)
-    const x0 = LX - 14
+    const x0 = LX + 9
     c.put(shadow(k.w + 4, 6, 60), x0 + k.w / 2, by + 3)
     c.draw(k, x0, by - k.h)
     return { top: by - k.h + 2, x0: x0 + 10, x1: x0 + 10 + w }
@@ -964,19 +966,19 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
         c.put(await house('Red'), LX + 52, FEET - 16)
         flagAt(c, 'spice')
         const k = counterAt(c)
-        c.put(sack([214, 72, 44]), k.x0 + 30, k.top + 1)
-        c.put(sack([236, 160, 52]), k.x0 + 48, k.top + 1)
-        c.put(sack([132, 92, 52]), k.x0 + 66, k.top + 1)
-        stand(c, sack([226, 196, 70], 18), 206, 140)
-        stand(c, sack([214, 72, 44], 18), 222, 146)
-        stand(c, brazier(), 228, 126, 16)
-        c.put(half(fireFrame), 228, 104)
+        c.put(sack([214, 72, 44]), k.x0 + 12, k.top + 1)
+        c.put(sack([236, 160, 52]), k.x0 + 30, k.top + 1)
+        c.put(sack([132, 92, 52]), k.x0 + 48, k.top + 1)
+        stand(c, sack([226, 196, 70], 18), 226, 140)
+        stand(c, sack([214, 72, 44], 18), 242, 146)
+        stand(c, brazier(), 252, 126, 16)
+        c.put(half(fireFrame), 252, 104)
         c.put(await deco(12), 64, 140)
         c.put(await deco(10), 18, 148)
       },
       (c) => {
         multiply(c, [255, 236, 212])
-        light(c, OX + 228, 100, 46, [255, 150, 60], 1.1)
+        light(c, OX + 252, 100, 46, [255, 150, 60], 1.1)
       },
     )
   }
@@ -994,10 +996,10 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
       c.put(await house('Yellow'), LX + 52, FEET - 16)
       flagAt(c, 'art')
       const k = counterAt(c)
-      c.put(painting(16, 14, 0), k.x0 + 34, k.top + 1)
-      c.put(painting(12, 16, 1), k.x0 + 60, k.top + 1)
-      stand(c, easel(), 206, 134, 18)
-      stand(c, painting(18, 14, 2), 230, 138)
+      c.put(painting(16, 14, 0), k.x0 + 18, k.top + 1)
+      c.put(painting(12, 16, 1), k.x0 + 44, k.top + 1)
+      stand(c, easel(), 226, 134, 18)
+      stand(c, painting(18, 14, 2), 248, 138)
       c.draw(canal(), -OX, 138)
     })
   }
@@ -1021,10 +1023,10 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
         stand(c, oreCart(), 234, 116, 24)
         flagAt(c, 'metals')
         const k = counterAt(c)
-        c.put(oreHeap(22, 10, [120, 176, 255]), k.x0 + 36, k.top + 1)
-        c.put(oreHeap(18, 9, [246, 206, 96]), k.x0 + 62, k.top + 1)
+        c.put(oreHeap(22, 10, [120, 176, 255]), k.x0 + 18, k.top + 1)
+        c.put(oreHeap(18, 9, [246, 206, 96]), k.x0 + 44, k.top + 1)
         stand(c, forge(), 30, 146, 24)
-        stand(c, anvil(), 214, 146, 26)
+        stand(c, anvil(), 232, 146, 26)
         stand(c, oreHeap(30, 14, [96, 150, 236]), 240, 150)
         c.put(await deco(9), 252, 150)
       },
@@ -1051,9 +1053,9 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
       flagAt(c, 'silk')
       const rose = hex(companyById('silk').color)
       const k = counterAt(c)
-      c.put(bolts([rose, CREAM, GOLD]), k.x0 + 36, k.top + 1)
-      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), k.x0 + 62, k.top + 1)
-      stand(c, loom(rose), 214, 140, 30)
+      c.put(bolts([rose, CREAM, GOLD]), k.x0 + 18, k.top + 1)
+      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), k.x0 + 44, k.top + 1)
+      stand(c, loom(rose), 234, 140, 30)
       c.put(await deco(10), 22, 148)
     })
   }
@@ -1073,19 +1075,19 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
         c.put(await house('Blue'), LX + 52, FEET - 16)
         flagAt(c, 'scrolls')
         const k = counterAt(c)
-        c.put(ledger(), k.x0 + 40, k.top + 1)
-        c.put(candle(7), k.x0 + 60, k.top + 1)
-        c.put(candle(5), k.x0 + 66, k.top + 1)
-        stand(c, monolith(20, 40, true), 214, 140, 18)
-        c.put(candle(5), 196, 146)
-        c.put(candle(7), 234, 146)
+        c.put(ledger(), k.x0 + 22, k.top + 1)
+        c.put(candle(7), k.x0 + 42, k.top + 1)
+        c.put(candle(5), k.x0 + 48, k.top + 1)
+        stand(c, monolith(20, 40, true), 234, 140, 18)
+        c.put(candle(5), 216, 146)
+        c.put(candle(7), 250, 146)
         c.put(await deco(1), 246, 148)
         c.put(await deco(11), 30, 150)
       },
       (c) => {
         multiply(c, [96, 104, 168])
         light(c, OX + LX + 40, 92, 70, [255, 180, 90], 1.2, 0.8)
-        light(c, OX + 214, 112, 40, [120, 230, 240], 0.9)
+        light(c, OX + 234, 112, 40, [120, 230, 240], 0.9)
         vignette(c, 0.45)
       },
     )
@@ -1112,12 +1114,12 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
         stand(c, pennant([118, 84, 60], [214, 196, 152], 'cleaver'), 60, FEET - 4, 10)
         const k = counterAt(c)
         const meat = trim(await load('Resources/Resources/M_Idle.png'))
-        c.put(half(meat), k.x0 + 36, k.top + 1)
-        c.put(cleaver(), k.x0 + 52, k.top + 1)
-        c.put(sack([244, 240, 228], 14), k.x0 + 66, k.top + 1)
-        stand(c, sack([244, 240, 228], 18), 218, 142)
-        stand(c, sack([236, 232, 220], 18), 234, 148)
-        c.put(await deco(14), 200, 146)
+        c.put(half(meat), k.x0 + 16, k.top + 1)
+        c.put(cleaver(), k.x0 + 32, k.top + 1)
+        c.put(sack([244, 240, 228], 14), k.x0 + 48, k.top + 1)
+        stand(c, sack([244, 240, 228], 18), 232, 142)
+        stand(c, sack([236, 232, 220], 18), 248, 148)
+        c.put(await deco(14), 214, 148)
         c.put(await deco(15), 30, 148)
       },
       (c) => {
@@ -1140,8 +1142,8 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
         stand(c, glasshouse(), LX + 58, FEET - 14, 80)
         stand(c, pennant([96, 150, 92], [236, 226, 170], 'vial'), 60, FEET - 4, 10)
         const k = counterAt(c)
-        for (const [x, kk] of [[30, 0], [40, 1], [50, 2], [62, 1], [72, 0]] as const) c.put(vial(kk), k.x0 + x, k.top + 1)
-        for (const [x, y, n] of [[200, 146, 2], [214, 148, 1], [232, 142, 3], [252, 146, 2], [30, 148, 2], [44, 150, 1]] as const) c.put(await deco(n), x, y)
+        for (const [x, kk] of [[10, 0], [20, 1], [30, 2], [42, 1], [52, 0]] as const) c.put(vial(kk), k.x0 + x, k.top + 1)
+        for (const [x, y, n] of [[212, 148, 2], [228, 148, 1], [240, 142, 3], [252, 146, 2], [30, 148, 2], [44, 150, 1]] as const) c.put(await deco(n), x, y)
       },
       (c) => {
         multiply(c, [176, 196, 176])

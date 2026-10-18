@@ -59,13 +59,18 @@ export interface FistPart extends Base {
 }
 export type Part = RowsPart | LimbPart | FistPart
 
-export type EyeMode = 'open' | 'closed' | 'happy' | 'smug'
+/** 'wink': the near eye (the first) shut, the far one open. */
+export type EyeMode = 'open' | 'closed' | 'happy' | 'smug' | 'wink'
 /** An eye, its top-left from the head joint (rounded): `w` × `h` of ink. */
 export interface Eye { dx: number; dy: number; w: number; h: number }
 
 export interface Key {
   pose?: Pose
   eyes?: EyeMode
+  /** Where the eyes look: shifted this many px inside the face (a glance up). */
+  look?: readonly [number, number]
+  /** One hand-drawn part moved this many px (a hat's brim, a cloak's hem) without moving its joint. */
+  nudge?: Readonly<Record<string, readonly [number, number]>>
   show?: readonly string[]
   hide?: readonly string[]
   swap?: Readonly<Record<string, readonly string[]>>
@@ -87,6 +92,8 @@ export interface PostFace {
   /** The lower face where a mouth would be (dx0, dy0, dx1, dy1 from the head joint): no arm, hand or prop ever enters it. */
   mouth: readonly [number, number, number, number]
   idle: readonly Key[]
+  /** The idle's own holds (relative weights; the dock's clock scales them to its period). Absent: even. */
+  idleMs?: readonly number[]
   tic: readonly Key[]
   ticMs: readonly number[]
   react: readonly Key[]
@@ -119,11 +126,11 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
     parts: [
       // the bandana's knot and its two tails, behind the head
       R('knot', 'head', 'head', [-15, -4], ['..DC', '.DCC', 'DDCc', 'DCc.', 'DCc.', 'Cc..', 'c...']),
-      L('farLeg', 'body', ['hipF', 'kneeF', 'ankleF'], [2.6, 2.4, 2.2], ['n', 'n'], true),
+      L('farLeg', 'body', ['hipF', 'kneeF', 'ankleF'], [2.6, 2.4, 1.6], ['n', 'n'], true),
       R('farBoot', 'body', 'ankleF', [-3, -1], ['bBBBB.', 'bBBBBB', 'bbbbbb']),
       // the far arm: the upper arm hangs, the forearm comes forward, palm up
       L('farArm', 'armF', ['shoulderF', 'elbowF', 'wristF'], [2.3, 2, 1.8], ['o', 't'], true),
-      L('nearLeg', 'body', ['hipN', 'kneeN', 'ankleN'], [2.6, 2.4, 2.2], ['n', 'n']),
+      L('nearLeg', 'body', ['hipN', 'kneeN', 'ankleN'], [2.6, 2.4, 1.6], ['n', 'n']),
       R('nearBoot', 'body', 'ankleN', [-3, -1], ['jjBBB.', 'jBBBBB', 'bbbbbb']),
       R('neck', 'body', 'neck', [-3, -3], ['.ls..', 'lsss.', 'lsss.', '.ls..']),
       R('torso', 'body', 'chest', [-8, -1], [
@@ -145,12 +152,12 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       R('head', 'head', 'head', [-12, -12], [
         '.......DDDDDDCC.........',
         '.....DDDEEDDDDCCC.......',
-        '....DDDEEDDDDCCCCCc.....',
-        '...DDDDDDDDDCCCCCCCc....',
-        '..DDDDDDDDDCCCCCCCCcc...',
-        '.DDDDDDDDDCCCCCCCCCCcc..',
-        '.DDDDDDDDCCCCCCCCCCCCcc.',
-        'DDDDDDDDCCCCCCCCCCCCCccc',
+        '....DDDEEDDDDCCCcCc.....',
+        '...DDDDDDDDDCCCcCCCc....',
+        '..DDDDDDDDDCCCcCCCCcc...',
+        '.DDDDDDDDDCCcCCCCCCCcc..',
+        '.DDDDDDcDCCcCCCCCCCCCcc.',
+        'DDDDDDcDCCCCCCCCCCCCCccc',
         'GGGGGGGGGGGGGGGGGGGGGGGG',
         'qHHHhhhhSSSSSSSSSSSSSSSs',
         'qHHhhhhhSSSSSSSSSSSSSSSs',
@@ -174,18 +181,35 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       F('farFist', 'armF', 'wristF', 'elbowF', 2, 't', true, 0.6),
     ],
     eyes: [{ dx: 4, dy: 0, w: 2, h: 3 }, { dx: 9, dy: 0, w: 1, h: 3 }],
-    idle: [{}, { pose: { chest: [0, -1, 0] } }, { pose: { chest: [0, -1, 0] } }, {}],
-    tic: [
-      { pose: { reachF: [-6.4, 16.4, 7.5] } },
-      { pose: { reachF: [-6.4, 15.6, 7.5] } },
-      { pose: { reachF: [-6.4, 16.4, 7.5] }, eyes: 'happy' },
-      { eyes: 'happy' },
-      { pose: { reachF: [-6.4, 16.4, 7.5] }, eyes: 'happy' },
+    // brisk: a double toe-tap of the near boot, then a short wait
+    idle: [
+      {},
+      { swap: { nearBoot: ['jjBBBB', 'jBBBBb', 'bbbb..'] } },
+      {},
+      { swap: { nearBoot: ['jjBBBB', 'jBBBBb', 'bbbb..'] } },
+      { pose: { chest: [0, -0.6, 0] } },
       {},
     ],
-    ticMs: [160, 200, 220, 320, 300, 200],
-    react: [{ pose: { all: [0, 1, 0] }, eyes: 'smug' }, { pose: { all: [0, 3, 0] }, eyes: 'happy' }, { pose: { all: [0, 1, 0] }, eyes: 'happy' }, { eyes: 'smug' }],
-    reactMs: [80, 120, 100, 160],
+    idleMs: [1150, 110, 110, 110, 160, 471],
+    // she flips the pepper sack off her palm, catches it, and grins at its weight
+    tic: [
+      { pose: { reachF: [-6.8, 12.6, 6.5] } },
+      { nudge: { sack: [0, -1] }, swap: { sack: ['........', '..wUUV..', '.wUUUUVz', 'wuUUUUUe', 'wuUzUUUU', 'wuUUUUUU', '.wuuUUu.', '..wwuu..'] } },
+      { nudge: { sack: [1, -2] }, swap: { sack: ['........', '........', '.wwuuu..', 'wuUUUUUV', 'wuUUzUUU', 'wuUUUUUU', 'zuUUUUUu', '.ewuuuu.'] } },
+      { nudge: { sack: [0, -1] } },
+      { pose: { reachF: [-6.8, 12.6, 6.5] } },
+      { eyes: 'happy' },
+      { eyes: 'happy' },
+    ],
+    ticMs: [120, 110, 130, 90, 140, 300, 320],
+    // "Deal!": the near hand comes off her hip to point at you, and she winks
+    react: [
+      { pose: { reachN: [7, 18, 7] } },
+      { pose: { reachN: [4, 19, 12.5] }, eyes: 'wink' },
+      { pose: { reachN: [4, 19, 12.5] }, eyes: 'wink' },
+      { eyes: 'happy' },
+    ],
+    reactMs: [80, 100, 460, 200],
   },
   // ── Odile, Rosethread's mercer. A tall slender elf, upright and still: a long neck, narrow shoulders, long shins. A raven
   //    topknot; the near ear long, out behind over the hair; a rose tunic to mid-thigh with a plum collar and sash, a plum
@@ -203,7 +227,7 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
     },
     skin: 's',
     shadowRx: 9,
-    mouth: [-2, 2, 11, 10],
+    mouth: [-2, 2, 11, 8],
     parts: [
       // the cloak, hanging behind from the shoulders to the calves
       R('cloak', 'back', 'chest', [-9, 0], [
@@ -305,20 +329,36 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       F('nearFist', 'armN', 'wristN', 'elbowN', 1.9, 't'),
     ],
     eyes: [{ dx: 3, dy: 0, w: 2, h: 2 }, { dx: 7, dy: 0, w: 1, h: 2 }],
-    idle: [{}, {}, { pose: { chest: [0, 1, 0] } }, { pose: { chest: [0, 1, 0] } }, { pose: { chest: [0, 1, 0] } }, {}, {}],
-    // she smooths the silk at her waist, eyes half shut
+    // a fluid lean forward and back, the cloak following a beat behind
+    idle: [
+      {},
+      { pose: { chest: [0, 0, 0.6] } },
+      { pose: { chest: [0, 0, 1.2] }, nudge: { cloak: [1, 0] } },
+      { pose: { chest: [0, 0, 1.2] }, nudge: { cloak: [1, 0] } },
+      { pose: { chest: [0, 0, 0.6] } },
+      {},
+      { nudge: { cloak: [-1, 0] } },
+      { nudge: { cloak: [-1, 0] } },
+    ],
+    // she strokes the silk on her arm, eyes half shut
     tic: [
-      { pose: { reachN: [4.5, 17, 4] } },
-      { pose: { reachN: [3.5, 17.5, 6] }, eyes: 'closed' },
-      { pose: { reachN: [2.5, 17.5, 7.5] }, eyes: 'closed' },
-      { pose: { reachN: [3.5, 17.5, 6] }, eyes: 'closed' },
-      { pose: { reachN: [4.5, 17, 4] } },
+      { pose: { reachN: [3, 19, 5] } },
+      { pose: { reachN: [1, 21, 7] } },
+      { pose: { reachN: [-1, 21.5, 7.5] }, eyes: 'closed' },
+      { pose: { reachN: [-2.5, 21.5, 7.8] }, eyes: 'closed' },
+      { pose: { reachN: [-1, 21.5, 7.5] }, eyes: 'closed' },
+      { pose: { reachN: [2, 19, 5] } },
+    ],
+    ticMs: [240, 260, 340, 280, 340, 260],
+    // a low, sweeping half-bow
+    react: [
+      { pose: { chest: [0, -1, 1] } },
+      { pose: { chest: [0, -2, 2.5], head: [0, -1, 1] }, eyes: 'closed' },
+      { pose: { chest: [0, -2, 2.5], head: [0, -1, 1] }, eyes: 'closed' },
+      { pose: { chest: [0, -1, 1] }, eyes: 'closed' },
       {},
     ],
-    ticMs: [200, 260, 300, 260, 220, 200],
-    // a half-bow, eyes shut
-    react: [{ pose: { chest: [0, -1, 1] }, eyes: 'closed' }, { pose: { chest: [0, -2, 2], head: [0, -1, 1] }, eyes: 'closed' }, { pose: { chest: [0, -1, 1] }, eyes: 'closed' }, {}],
-    reactMs: [140, 260, 160, 160],
+    reactMs: [200, 240, 480, 260, 280],
   },
   // ── Brannoch, Ironvein's factor. A squat broad dwarf, planted: a bald dome, heavy ginger brows, a big nose, a forked
   //    ginger beard with gold beads down over a barrel chest in an iron-blue shirt under a leather apron; the slate up in
@@ -337,10 +377,10 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
     shadowRx: 13,
     mouth: [-1, 2, 13, 8],
     parts: [
-      L('farLeg', 'body', ['hipF', 'kneeF', 'ankleF'], [2.8, 2.6, 2.4], ['i', 'i'], true),
+      L('farLeg', 'body', ['hipF', 'kneeF', 'ankleF'], [2.8, 2.6, 1.7], ['i', 'i'], true),
       R('farBoot', 'body', 'ankleF', [-3, -1], ['bBBBB.', 'bBBBBB', 'bbbbbb']),
       L('farArm', 'armF', ['shoulderF', 'elbowF', 'wristF'], [2.7, 2.5, 2.3], ['v', 't'], true),
-      L('nearLeg', 'body', ['hipN', 'kneeN', 'ankleN'], [2.8, 2.6, 2.4], ['i', 'i']),
+      L('nearLeg', 'body', ['hipN', 'kneeN', 'ankleN'], [2.8, 2.6, 1.7], ['i', 'i']),
       R('nearBoot', 'body', 'ankleN', [-3, -1], ['jBBBB.', 'BBBBBB', 'bbbbbb']),
       R('torso', 'body', 'chest', [-10, -1], [
         '....MMNNNNNNNNN.....',
@@ -406,20 +446,21 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       F('farFist', 'armF', 'wristF', 'elbowF', 2.2, 't', true, 0.6),
     ],
     eyes: [{ dx: 2, dy: 0, w: 2, h: 2 }, { dx: 6, dy: 0, w: 1, h: 2 }],
-    // a slow weight shift from foot to foot
-    idle: [{}, {}, { pose: { lift: [1.74, 0, 0] } }, { pose: { lift: [1.74, 0, 0] } }, { pose: { lift: [1.74, 0, 0] } }, {}, {}, { pose: { lift: [-1.74, 0, 0] } }, { pose: { lift: [-1.74, 0, 0] } }, { pose: { lift: [-1.74, 0, 0] } }, {}],
+    // one slow breath, then a long stillness
+    idle: [{}, { pose: { chest: [0, 1, 0] } }, { pose: { chest: [0, 1, 0] } }, {}],
+    idleMs: [2903, 700, 200, 900],
     // he lifts the slate and chalks a cart home
     tic: [
-      { pose: { reachF: [-5.6, 14.6, 5.4] } },
-      { pose: { reachF: [-5.6, 14.6, 5.4], reachN: [2, 14.4, 6.5] } },
-      { pose: { reachF: [-5.6, 14.6, 5.4], reachN: [1, 13.6, 6.5] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXzw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] } },
-      { pose: { reachF: [-5.6, 14.6, 5.4], reachN: [2, 14.4, 6.5] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXXw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] }, eyes: 'smug' },
-      { pose: { reachF: [-5.6, 14.6, 5.4] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXXw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] }, eyes: 'smug' },
+      { pose: { reachF: [-5.6, 13.9, 5.4] } },
+      { pose: { reachF: [-5.6, 13.9, 5.4], reachN: [2, 14.4, 6.5] } },
+      { pose: { reachF: [-5.6, 13.9, 5.4], reachN: [1, 13.6, 6.5] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXzw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] } },
+      { pose: { reachF: [-5.6, 13.9, 5.4], reachN: [2, 14.4, 6.5] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXXw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] }, eyes: 'smug' },
+      { pose: { reachF: [-5.6, 13.9, 5.4] }, swap: { slate: ['wWWWWWWWw', 'WzZZZZZZw', 'WzXzXzXXw', 'WzXzXzXXw', 'WzZZZZZZw', 'wwwwwwwww'] }, eyes: 'smug' },
       {},
     ],
     ticMs: [200, 220, 300, 320, 240, 200],
     // one curt nod
-    react: [{ pose: { head: [0, -1, 0.5] }, eyes: 'closed' }, { pose: { head: [0, -2, 1] }, eyes: 'closed' }, { pose: { head: [0, -1, 0.5] } }, {}],
+    react: [{ pose: { head: [0, -0.6, 0.5] }, eyes: 'closed' }, { pose: { head: [0, -1.2, 1] }, eyes: 'closed' }, { pose: { head: [0, -0.6, 0.5] } }, {}],
     reactMs: [90, 160, 120, 160],
   },
   // ── Hask, the Butcherblock salter (a proposal). An upright reptilian: the body leans forward over digitigrade legs, a
@@ -429,8 +470,8 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
     inks: {
       ...BOOTS,
       s: ['scaleTeal', 0], S: ['scaleTeal', 1], L: ['scaleTeal', 2], T: ['scaleTeal', 3], c: ['scaleTeal', 'a'],
-      x: ['oxblood', 0], X: ['oxblood', 1], O: ['oxblood', 2], o: ['oxblood', 'a'],
-      J: ['bone', 1], K: ['bone', 2], g: ['steel', 0], G: ['steel', 2], w: ['wood', 1],
+      x: ['oxblood', 0], X: ['leather', 1], O: ['leather', 2], o: ['oxblood', 'a'],
+      J: ['bone', 1], K: ['bone', 2], g: ['steel', 0], G: ['steel', 2], w: ['wood', 1], W: ['white', 2],
     },
     skin: 'S',
     slit: true,
@@ -494,18 +535,22 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       F('farFist', 'armF', 'wristF', 'elbowF', 1.8, 'c', true, 0.4),
     ],
     eyes: [{ dx: -3, dy: -3, w: 3, h: 2 }],
-    idle: [{}, { pose: { tail: [0, 0, -1] } }, { pose: { chest: [0, -0.4, 0], tail: [0, 1, -1.5] } }, { pose: { chest: [0, -0.4, 0], tail: [0, 1, -1] } }, { pose: { tail: [0, 0.5, 0] } }, {}, { pose: { tail: [0, 0, 1] } }, {}],
-    // a slow blink of the slit eye, the tail swishing
-    tic: [{ pose: { tail: [0, 1, -2] } }, { pose: { tail: [0, 2, -3] }, eyes: 'closed' }, { pose: { tail: [0, 2, -3] }, eyes: 'closed' }, { pose: { tail: [0, 1, -2] } }, { pose: { tail: [0, 0, 1] } }, {}],
-    ticMs: [200, 300, 300, 200, 240, 200],
-    // he twirls the hook
-    react: [
-      { swap: { hook: ['.w..', '.w..', '.w..', '.w..', '.g..', '.GGG', '...G', '..G.', '....'] } },
-      { swap: { hook: ['.w..', '.w..', '.w..', '.w..', '.g..', 'GGG.', 'G...', '.G..', '....'] } },
-      { swap: { hook: ['.w..', '.w..', '.w..', '.w..', '.g..', '.GGG', '...G', '..G.', '....'] }, eyes: 'smug' },
-      { eyes: 'smug' },
+    // stone still, then the tail lashes, and is still again
+    idle: [{}, { pose: { tail: [5, 1, 0] } }, { pose: { tail: [-3, 0.5, 0] } }, {}, { pose: { tail: [2.5, 0.5, 0] } }, {}],
+    idleMs: [1500, 110, 100, 1450, 90, 657],
+    // a glint runs down the hook
+    tic: [
+      { extra: [[5, 21, 'W']] },
+      { extra: [[5, 22, 'W']] },
+      { extra: [[5, 23, 'W']] },
+      { extra: [[5, 24, 'W']] },
+      { extra: [[6, 25, 'W']] },
+      { extra: [[7, 24, 'W']] },
     ],
-    reactMs: [120, 120, 120, 200],
+    ticMs: [200, 120, 160, 440, 100, 130],
+    // a sudden cock of the head
+    react: [{ pose: { head: [0, -1, -1] } }, { pose: { head: [0, -1.5, -1.5] } }, { pose: { head: [0, -1.5, -1.5] }, eyes: 'smug' }, {}],
+    reactMs: [70, 110, 560, 260],
   },
   // ── Wren, the Greenvial herbalist (a proposal). A tiny gnome: a big head under a huge pointed hat with a sprout at its
   //    tip, a big round nose, a rosy cheek, a white beard over a round little moss-green coat; a glowing vial hanging from
@@ -522,7 +567,7 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
     },
     skin: 's',
     shadowRx: 9,
-    mouth: [-3, 1, 9, 6],
+    mouth: [-3, 1, 9, 5],
     parts: [
       L('farLeg', 'body', ['hipF', 'kneeF', 'ankleF'], [2, 1.8, 1.7], ['n', 'n'], true),
       R('farBoot', 'body', 'ankleF', [-2, -1], ['bBBB.', 'bBBBB', 'bbbbb']),
@@ -599,19 +644,34 @@ export const POST_FACES: Readonly<Record<PersonaId, PostFace>> = {
       F('farFist', 'armF', 'wristF', 'elbowF', 1.7, 't', true, 0.4),
     ],
     eyes: [{ dx: 0, dy: 0, w: 2, h: 2 }, { dx: 3, dy: 0, w: 1, h: 2 }],
-    idle: [{}, { pose: { chest: [0, -1, 0] } }, { pose: { chest: [0, -1, 0] } }, {}, {}, {}],
-    // he holds the vial out to the side, in the light, and smiles at it
-    tic: [
-      { pose: { reachF: [-7.2, 10, 6] } },
-      { pose: { reachF: [-7.5, 11.5, 6.5] } },
-      { pose: { reachF: [-7.5, 11.5, 6.5] }, eyes: 'happy' },
-      { pose: { reachF: [-7.5, 11.5, 6.5] }, eyes: 'happy' },
-      { pose: { reachF: [-7.2, 10, 6] }, eyes: 'happy' },
+    // the body never moves: only the vial's light swells and ebbs
+    idle: [
+      {},
+      { swap: { vial: ['.aa.', '.aa.', 'aEEa', 'aEEA', 'aEea', '.aa.'] } },
+      { swap: { vial: ['.aA.', '.aa.', 'AEEa', 'aEEA', 'aEEa', '.aa.'] }, extra: [[5, 16, 'E'], [10, 18, 'E']] },
+      { swap: { vial: ['.aa.', '.aa.', 'aEEa', 'aEEA', 'aEea', '.aa.'] } },
       {},
     ],
-    ticMs: [200, 220, 300, 320, 240, 200],
-    // a dip, then the vial lifted
-    react: [{ pose: { lift: [0, -1, 0] }, eyes: 'happy' }, { pose: { reachF: [-7.5, 11.5, 6.5] }, eyes: 'happy' }, { pose: { lift: [0, -1, 0] }, eyes: 'happy' }, {}],
-    reactMs: [120, 200, 120, 160],
+    idleMs: [2700, 300, 900, 300, 1103],
+    // a spore drifts up off the vial and his eyes follow it
+    tic: [
+      { extra: [[9, 10, 'E']] },
+      { extra: [[10, 7, 'E']], look: [1, 0] },
+      { extra: [[11, 4, 'E']], look: [1, 0] },
+      { extra: [[11, 1, 'E']], look: [1, -1] },
+      { extra: [[12, -2, 'E']], look: [1, -1] },
+      { extra: [[13, -5, 'e']], look: [1, -1] },
+      {},
+    ],
+    ticMs: [260, 300, 340, 340, 360, 340, 240],
+    // the hat's brim sinks over his eyes, then tips back
+    react: [
+      { nudge: { hat: [0, 1] }, eyes: 'closed' },
+      { nudge: { hat: [0, 2] }, eyes: 'closed' },
+      { nudge: { hat: [0, -1] }, eyes: 'happy' },
+      { nudge: { hat: [0, -1] }, eyes: 'happy' },
+      {},
+    ],
+    reactMs: [420, 300, 640, 420, 300],
   },
 }
