@@ -1,0 +1,122 @@
+[
+  {
+    "id": "places-merchant",
+    "group": "Places",
+    "people": "",
+    "title": "The merchant’s stall",
+    "caption": "The merchant’s stall: does it read as a road trader selling arms, with the ware held up?",
+    "file": "places-merchant.png"
+  },
+  {
+    "id": "places-campfire",
+    "group": "Places",
+    "people": "",
+    "title": "The campfire",
+    "caption": "The campfire: is the hearth a place you would sit, with nothing hidden behind people?",
+    "file": "places-campfire.png"
+  },
+  {
+    "id": "places-shrine",
+    "group": "Places",
+    "people": "",
+    "title": "The shrine",
+    "caption": "The shrine: do the stones sit on worn ground now, the keeper beside them?",
+    "file": "places-shrine.png"
+  },
+  {
+    "id": "places-hiring-yard",
+    "group": "Places",
+    "people": "",
+    "title": "A city’s hiring yard",
+    "caption": "The hiring yard: does it read as a drill yard, and does the sergeant’s line stay inside the scene?",
+    "file": "places-hiring-yard.png"
+  },
+  {
+    "id": "places-post-spice",
+    "group": "Places",
+    "people": "Peppercorn Co.",
+    "title": "Peppercorn’s post",
+    "caption": "Peppercorn’s post: farmland and spice that burns, at a glance?",
+    "file": "places-post-spice.png"
+  },
+  {
+    "id": "places-post-metals",
+    "group": "Places",
+    "people": "Ironvein",
+    "title": "Ironvein’s post",
+    "caption": "Ironvein’s post: a mountain quarry and a forge, at a glance?",
+    "file": "places-post-metals.png"
+  },
+  {
+    "id": "places-post-silk",
+    "group": "Places",
+    "people": "Rosethread",
+    "title": "Rosethread’s post",
+    "caption": "Rosethread’s post: a river forest and a loom, at a glance?",
+    "file": "places-post-silk.png"
+  },
+  {
+    "id": "places-post-art",
+    "group": "Places",
+    "people": "Butcherblock",
+    "title": "Easel House’s post (as is)",
+    "caption": "The art slot’s post as shipped: tidied, but still a painter’s; the smokehouse proposal is its own card.",
+    "file": "places-post-art.png"
+  },
+  {
+    "id": "places-post-scrolls",
+    "group": "Places",
+    "people": "Greenvial",
+    "title": "Moonquill’s post (as is)",
+    "caption": "The scrolls slot’s post as shipped: tidied, but still a scriptorium; the glasshouse proposal is its own card.",
+    "file": "places-post-scrolls.png"
+  },
+  {
+    "id": "places-signs",
+    "group": "Places",
+    "people": "",
+    "title": "The place signs",
+    "caption": "The signs: one wooden sign for shop and city, three materials for fire, shrine and yard?",
+    "file": "places-signs.png"
+  },
+  {
+    "id": "places-bubble",
+    "group": "Places",
+    "people": "",
+    "title": "The speech bubble",
+    "caption": "The keeper’s bubble: three lines of the sergeant’s, inside the scene and clear of the sign?",
+    "file": "places-bubble.png"
+  },
+  {
+    "id": "places-shopfront",
+    "group": "Places",
+    "people": "",
+    "title": "The shop front",
+    "caption": "The shelf and counter: can you read “Cargo is whole” now?",
+    "file": "places-shopfront.png"
+  },
+  {
+    "id": "places-cameo",
+    "group": "Places",
+    "people": "",
+    "title": "The receipt cameo",
+    "caption": "The receipt’s liaison cameo: the land behind each face; the faces are the character agent’s.",
+    "file": "places-cameo.png"
+  },
+  {
+    "id": "places-proposal-butcherblock",
+    "group": "Places",
+    "people": "Butcherblock",
+    "title": "Proposal: Butcherblock’s smokehouse",
+    "caption": "Proposal, not shipped: is this Butcherblock’s salt-marsh smokehouse? The dashed boxes are the sign and the bubble.",
+    "file": "places-proposal-butcherblock.png"
+  },
+  {
+    "id": "places-proposal-greenvial",
+    "group": "Places",
+    "people": "Greenvial",
+    "title": "Proposal: Greenvial’s glasshouse",
+    "caption": "Proposal, not shipped: is this Greenvial’s glasshouse garden? The dashed boxes are the sign and the bubble.",
+    "file": "places-proposal-greenvial.png"
+  }
+]
