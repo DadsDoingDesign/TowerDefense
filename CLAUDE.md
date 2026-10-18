@@ -39,8 +39,13 @@ result. Append a short note to the review log when you're done.
   What a hit LOOKS like is `attackLook.ts` (pure: delivery by weapon — a
   melee hero's hit is a blade arc, never a drawn projectile — and the one
   on-hit effect palette); the hero's real weapon/off-hand on the figure is
-  `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
-  cut when the hero holds something else, and the knight's painted shield is
+  `gearMarks.ts`. What the figure draws now (Oct 2026, the designer's bar:
+  "as if Pixel Frog drew it"): the painted weapon wherever a swap would not
+  read — the knight's painted sword for EVERY melee weapon and an empty hand
+  (`Rig.paintedFor` / `paintedBare`, `paintsMain`), the archer's bow for the
+  bow; any other weapon cuts the painted one and draws its atlas cell in the
+  fist only where it reads (`Rig.markMain`: the robed look's bare fists yes,
+  the hooded look none — a dagger there would float). The knight's painted shield is
   flood-cut by `cutOffHand` unless the off hand holds a Shield, and the hole
   it leaves is FILLED, per frame, never by mirroring: the back of the helmet
   continues its painted contour in one rounded arc into the chin (never
@@ -54,7 +59,10 @@ result. Append a short note to the review log when you're done.
   off-hand piece is drawn per frame at `StripFill.grips`: `holdOf` 'cover'
   (shields, books, quiver, Focus: over the painted shield's footprint,
   against the body) or 'hand' (a second weapon));
-  the body piece is WORN, `bodyLayer.ts`: the tunic of every frame (the
+  NO body piece is drawn on the figure: `bodyLayer.BODY_ON_FIGURE` is off
+  (Mail, Plate, Robe and Cloak read as pasted-on overlays); the piece shows
+  in the UI only. The body layer stays for the character builder — when on,
+  the piece is WORN, `bodyLayer.ts`: the tunic of every frame (the
   rebuilt strips' too, as `<strip>_bare`) is measured off the
   strips by `npm run anchors` into `bodyAnchors.generated.ts` (`anchors:check`
   fails if stale or if a piece paints outside its cell), re-inked in the
@@ -63,7 +71,7 @@ result. Append a short note to the review log when you're done.
   `units.heroFigure` is that ONE composition; every hero portrait in the shell
   is cut from it (`heroPortrait.ts`, a bust data URL per (look, kit), read only
   through `offers.heroLookArt`; `RootShell` re-renders when the art lands;
-  `tests/heroPortrait.test.ts`). Review harness `harness/kit.html` (`?shield=1`: every off hand over the rebuilt body), app shots
+  `tests/heroPortrait.test.ts`). Review harness `harness/kit.html` (`?shipped=1`: the knight as it ships; `?shield=1`: every off hand over the rebuilt body; `?weapons=1`: every weapon on its look), app shots
   and the frame-time probe `scripts/kit-look.mjs`. The atlas
   order and item-noun → icon table live in `src/game/data/iconAtlas.ts`
   (re-exported by `channels`); every item kind has its own cell

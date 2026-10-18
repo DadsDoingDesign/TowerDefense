@@ -4312,3 +4312,13 @@ The designer's notes: "the helmet looks bulbous now and the arm looks awkward"; 
 **Shots**: `docs/ui-audit-2026-10/shield-fill/round2/` holds six phone cards, 654–772 px wide: idle, swing, grip close-up, every combo, option A vs B and the helmet proof, plus `manifest.json`. The Peoples & Trades sheets (9 of 10) and 139 of the 150 review cards were regenerated.
 
 **Weakest**: in a single frame the bare knight passes for Pixel Frog's at 1× and 3×. At 8× the tunic's back is plainer than the painted front. The windup frames' big tunic still has a flat dark left half.
+
+### 2026-10-18 — the knight ships as option (b): only what passes the bar
+The coordinator chose (b) after round 2.
+- **No body piece on the figure.** `bodyLayer.BODY_ON_FIGURE` is off, so Mail, Plate, Robe and Cloak no longer dress the field figure or the busts cut from it, and the piece shows in the UI only. The dresser and `bodyAnchors.generated.ts` stay for the character builder, and `anchors:check` still fits them.
+- **The knight keeps the painted sword** for every melee weapon (Sword, Axe, Greatsword, Warhammer, Saffron Brand) and for an empty weapon hand. Cutting it left the arm kinked round a missing hilt, and the atlas cell read as a small blade on a brown block. The enchantment glint stays on the painted tip, and the art's own swing plays.
+- **The other looks**, checked in `harness/kit.html?weapons=1` at 3× and 4×:
+  - The archer's Dagger floated beside a body whose fist had gone with the bow, so it now draws no cell (`Rig.markMain`).
+  - The caster's wand, rod, sceptre, staff and books sit in its bare fists and read, so they are unchanged.
+- **Checked** at 1×, 2×, 3× and 8× in `?shipped=1`, and in the app at 390 × 844: the field, the busts and a crowded wave. Every knight cell now reads like the painted art, apart from the off-hand piece, which stands where the shield stood. `round2/shipped-look.png` shows every off hand × the shipped weapon cases at 2×, plus a 1× battle crop.
+- **Regenerated:** 8 Peoples sheets and 90 cards. The body-piece cards now show the bare knight, and the kept melee weapons show the painted sword. Draft weapons, which enter through the review seam `HeroGear.art`, still show their draft picture.

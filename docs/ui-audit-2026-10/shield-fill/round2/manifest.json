@@ -46,5 +46,13 @@
     "title": "Helmet contour vs the painted head",
     "caption": "Does the rebuilt back of the head sit on the painted curve, not past it?",
     "file": "helmet-proof.png"
+  },
+  {
+    "id": "shipped-look",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "The knight as it ships",
+    "caption": "Every off hand \u00d7 the shipped weapon cases at 2\u00d7, and 1\u00d7 in a battle. Is each cell Pixel Frog-native?",
+    "file": "shipped-look.png"
   }
 ]
