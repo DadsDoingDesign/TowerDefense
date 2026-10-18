@@ -383,14 +383,14 @@ export const hair: PartFn = (c) => {
     // a headscarf knotted at the back, its tail hanging; a lock of hair at the temple
     const f = P.frame % 6
     const tail = headPen(c)
-    tail.poly([[-rx - 1, -ry * 0.05], [-rx - 4 - (f % 3), ry * 0.7], [-rx - 1 - (f % 3), ry * 1.05], [-rx + 3, ry * 0.4]], 'cloth', { shade: 'round' })
+    tail.poly([[-rx - 1, -ry * 0.05], [-rx - 4 - (f % 3), ry * 0.7], [-rx - 1 - (f % 3), ry * 1.05], [-rx + 3, ry * 0.4]], 'cloth', { shade: 'round', strands: true })
     const pen = headPen(c)
-    pen.ellipse(-1.5, -ry * 0.22, rx + 2, ry * 0.86, 'cloth')
-    pen.ellipse(-rx * 0.45, ry * 0.12, rx * 0.6, ry * 0.62, 'cloth')
+    pen.ellipse(-1.5, -ry * 0.22, rx + 2, ry * 0.86, 'cloth', { strands: true })
+    pen.ellipse(-rx * 0.45, ry * 0.12, rx * 0.6, ry * 0.62, 'cloth', { strands: true })
     pen.cutEllipse(rx * 0.56, ry * 0.5, rx * 0.8, ry * 0.68)
     pen.texture((_x, y) => {
       const ly = y - P.head.y
-      return ly > -ry * 0.62 && ly < -ry * 0.46 ? TONE_LIGHT : null
+      return ly > -ry * 0.62 && ly < -ry * 0.46 ? (ly < -ry * 0.56 ? TONE_MID : TONE_SHADE) : null
     }, 'trim')
     headPen(c, { ring: 1 }).circle(-rx * 0.95, -ry * 0.12, 4, 'cloth', { shade: 'round' })
     headPen(c, { ring: 1 }).ellipse(-rx * 0.06, -ry * 0.06, 2.6, 4, 'hair', { shade: 'round' })
@@ -451,39 +451,64 @@ export const hair: PartFn = (c) => {
 
 const OFF_HIDES_HAND = new Set(['shieldRound', 'shieldKite', 'shieldHeater', 'buckler', 'pavise'])
 
+/**
+ * The elbow of a two-bone arm from the shoulder `s` to the wrist `w`, each bone
+ * `l` long: it bends back and down (a hanging arm's forearm comes forward, a
+ * thrust's elbow drops), and a reach past both bones straightens the arm.
+ */
+export function elbowOf(s: { x: number; y: number }, w: { x: number; y: number }, l: number): { x: number; y: number } {
+  const dx = w.x - s.x, dy = w.y - s.y
+  const d = Math.hypot(dx, dy) || 1e-6
+  const mx = (s.x + w.x) / 2, my = (s.y + w.y) / 2
+  if (d >= 2 * l - 0.01) return { x: mx, y: my }
+  const h = Math.sqrt(l * l - (d / 2) ** 2)
+  let nx = -dy / d, ny = dx / d
+  if (nx * -0.6 + ny * 0.8 < 0) { nx = -nx; ny = -ny }
+  return { x: mx + nx * h, y: my + ny * h }
+}
+
+/** One bone's length: the arm is two of them, so a resting reach (about 1 × `armLen`) bends at the elbow. */
+export const boneOf = (armLen: number): number => armLen * 0.57
+
+/**
+ * An arm: shoulder, upper arm, elbow, forearm, fist. The near (main) arm is
+ * in front, full size; the far arm sits behind the body, slimmer and a step
+ * darker (the 3/4 view). Both bones are one piece, so the bend has no seam.
+ */
 function arm(c: DrawCtx, side: 'main' | 'off'): void {
   const { P, R } = c
   const b = P.body
-  const sh = side === 'main' ? P.shoulderMain : P.shoulderOff
-  const h = side === 'main' ? P.mainHand : P.offHand
+  const near = side === 'main'
+  const sh = near ? P.shoulderMain : P.shoulderOff
+  const h = near ? P.mainHand : P.offHand
   const plate = R.body?.family === 'plate'
   const robe = R.body?.family === 'robe'
   const mail = R.body?.family === 'mail'
   const sleeveMat = plate ? 'metal' : mail ? 'blade' : robe ? 'robeSleeve' : 'cloth'
-  const dx = h.x - sh.x, dy = h.y - sh.y
-  const d = Math.hypot(dx, dy) || 1
-  const wrist = { x: h.x - (dx / d) * b.handR * 0.6, y: h.y - (dy / d) * b.handR * 0.6 }
+  const r = near ? b.armR : b.armR * 0.85
+  const hr = near ? b.handR : b.handR * 0.88
+  const bias = near ? 0 : -1
+  // the elbow first (shoulder to fist), then the wrist on the FOREARM's line, so the fist sits on its sleeve
+  const elbow = elbowOf(sh, h, boneOf(b.armLen))
+  const fx = h.x - elbow.x, fy = h.y - elbow.y
+  const fd = Math.hypot(fx, fy) || 1
+  const wrist = { x: h.x - (fx / fd) * hr * 0.7, y: h.y - (fy / fd) * hr * 0.7 }
   const sleeve = c.piece({ mats: R.body ? itemMats(c, R.body, 'body') : undefined })
-  // the front arm is drawn over the head: where it hangs below the head, it starts clear of the
-  // chin (it comes out from the torso's side, never from under the jaw)
-  let s0 = { x: sh.x, y: sh.y }
-  const clear = P.head.y + b.headRy + b.armR + 3.5
-  if (side === 'main' && sh.y < clear && wrist.y > clear + 2) {
-    const t = Math.min(0.4, (clear - sh.y) / (wrist.y - sh.y))
-    s0 = { x: sh.x + (wrist.x - sh.x) * t, y: clear }
-  }
-  sleeve.capsule(s0.x, s0.y, wrist.x, wrist.y, b.armR, sleeveMat)
+  sleeve.capsule(sh.x, sh.y, elbow.x, elbow.y, r, sleeveMat, { bias })
+  sleeve.capsule(elbow.x, elbow.y, wrist.x, wrist.y, r * 0.9, sleeveMat, { bias })
+  // the cuff: the sleeve's end a step darker, where the fist comes out
+  sleeve.ellipse(wrist.x, wrist.y, r * 0.9, r * 0.9, sleeveMat, { shade: TONE_SHADE, flags: F_ONLYON })
   // does this fist close over something?
   let front = false
-  if (side === 'main') front = !!R.main
+  if (near) front = !!R.main
   else if (P.grip === 'two') front = true
   else if (P.grip === 'twin') front = true
   else if (P.grip === 'bow') front = false
   else if (R.off) front = !OFF_HIDES_HAND.has(R.off.family) && R.off.family !== 'quiver' && R.off.family !== 'javelins'
   const fist = c.piece({ front, mats: R.body ? itemMats(c, R.body, 'body') : undefined })
-  fist.circle(h.x, h.y, b.handR, plate ? 'metal' : 'skin', { gloss: plate })
+  fist.circle(h.x, h.y, hr, plate ? 'metal' : 'skin', { gloss: plate, bias })
   // a knuckle line
-  fist.line(h.x - b.handR * 0.3, h.y - b.handR * 0.2, h.x + b.handR * 0.4, h.y - b.handR * 0.2, plate ? 'metal' : 'skin', TONE_SHADE, F_ONLYON)
+  fist.line(h.x - hr * 0.3, h.y - hr * 0.2, h.x + hr * 0.4, h.y - hr * 0.2, plate ? 'metal' : 'skin', TONE_SHADE, F_ONLYON)
 }
 export const mainArm: PartFn = (c) => arm(c, 'main')
 export const offArm: PartFn = (c) => arm(c, 'off')
@@ -544,7 +569,7 @@ type ItemFn = (c: DrawCtx, it: ItemPart, slot: HandSlot) => void
 function handPen(c: DrawCtx, it: ItemPart, slot: HandSlot, o: PieceOpts = {}, reach = 0): Pen {
   const h0 = slot === 'off' ? c.P.offHand : c.P.mainHand
   // a hook hangs from the fist, point down, whenever it is not swinging (never up by the face)
-  const h = it.family === 'hook' && c.P.anim !== 'attack' && c.P.anim !== 'react' ? { ...h0, angle: 165 } : h0
+  const h = it.family === 'hook' && c.P.anim !== 'attack' && c.P.anim !== 'react' ? { ...h0, angle: 130 } : h0
   return c.piece({ ...o, mats: itemMats(c, it, slot) }).at(h.x, h.y, groundedAngle(h, reach), false, ITEM_SCALE)
 }
 
@@ -629,7 +654,7 @@ const hafted: ItemFn = (c, it, slot) => {
   const two = fam === 'greataxe' || fam === 'maul'
   // a heavy two-hander is choked up into the blow: the hands slide up the haft at impact
   const slide = two && c.P.anim === 'attack' ? [0, 0, 6, 12, 10, 2][c.P.frame % 6] : 0
-  const top = (two ? -32 : -21) * s + slide
+  const top = (two ? -32 : fam === 'hook' ? -12 : -21) * s + slide
   const butt = two ? (slide ? 10 + slide : groundLen(c.P, slot === 'off' ? c.P.offHand : c.P.mainHand, 14)) : 6
   const reach = -top + (two ? 9 : 6) * s + 4
   const hp = handPen(c, it, slot, {}, reach)
@@ -947,12 +972,14 @@ const heldSmall: ItemFn = (c, it, slot) => {
     p.rect(-5.5, -1, 3, 2.4, 'itemTrim', { shade: TONE_LIGHT, flags: F_ONLYON })
     emblem(p, it.p?.emblem, 0, -1)
   } else if (fam === 'pouch') {
+    // held by its tied neck: the knot under the fist, the pouch hanging below it
     const p = at()
-    p.ellipse(0, 1, 5.5, 5, 'leather', { shade: 'round' })
-    p.rect(-4, -4, 8, 2, 'itemTrim', { shade: TONE_MID })
+    p.poly([[-1.8, 1], [1.8, 1], [2.8, 3.5], [-2.8, 3.5]], 'leather', { shade: 'cyl' })
+    p.ellipse(0, 7, 4.8, 4.2, 'leather', { shade: 'round' })
+    p.rect(-2.4, 2.8, 4.8, 1.4, 'itemTrim', { shade: TONE_MID })
     const lf = at({ ring: 1 })
-    if (it.p?.variant === 'spice') lf.ellipse(0, -5, 4.2, 2.4, 'red', { shade: 'round', gloss: true }).px(-1, -7, 'ember', TONE_LIGHT).px(2, -6, 'ember', TONE_LIGHT)
-    else lf.ellipse(-2, -6, 1.6, 3.2, 'leaf').ellipse(2, -6.5, 1.6, 3, 'leaf')
+    if (it.p?.variant === 'spice') chili(p, 0.5, 7)
+    else lf.ellipse(-1.6, 8, 1.4, 2.6, 'leaf').ellipse(1.6, 8.5, 1.4, 2.4, 'leaf')
   } else if (fam === 'flask') {
     if (it.p?.variant === 'rack') {
       const r = at()
@@ -987,15 +1014,15 @@ const balance: ItemFn = (c, it, slot) => {
   const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
   const tilt = c.P.fx.weigh ? 1.8 : c.P.anim === 'idle' ? [0, 0.5, 0.5, 0, -0.5][c.P.frame % 5] : 0
   const beam = at()
-  beam.rect(-1, 2, 2, 4, 'itemTrim', { shade: 'cyl' })
-  beam.poly([[-9, 6 + tilt], [9, 6 - tilt], [9, 7.6 - tilt], [-9, 7.6 + tilt]], 'itemTrim', { shade: 'top', gloss: true })
-  beam.circle(0, 6.6, 1.6, 'itemTrim', { gloss: true })
+  beam.rect(-1, 2, 2, 3, 'itemTrim', { shade: 'cyl' })
+  beam.poly([[-8, 5 + tilt], [8, 5 - tilt], [8, 6.6 - tilt], [-8, 6.6 + tilt]], 'itemTrim', { shade: 'top', gloss: true })
+  beam.circle(0, 5.6, 1.6, 'itemTrim', { gloss: true })
   const str = at({ ring: 0 })
-  str.line(-8.5, 7.5 + tilt, -10, 13 + tilt, 'linen', TONE_LIGHT, F_NOINK).line(-8.5, 7.5 + tilt, -6, 13 + tilt, 'linen', TONE_LIGHT, F_NOINK)
-  str.line(8.5, 7.5 - tilt, 6, 13 - tilt, 'linen', TONE_LIGHT, F_NOINK).line(8.5, 7.5 - tilt, 11, 13 - tilt, 'linen', TONE_LIGHT, F_NOINK)
+  str.line(-7.5, 6.5 + tilt, -9, 10.5 + tilt, 'linen', TONE_LIGHT, F_NOINK).line(-7.5, 6.5 + tilt, -5, 10.5 + tilt, 'linen', TONE_LIGHT, F_NOINK)
+  str.line(7.5, 6.5 - tilt, 5, 10.5 - tilt, 'linen', TONE_LIGHT, F_NOINK).line(7.5, 6.5 - tilt, 10, 10.5 - tilt, 'linen', TONE_LIGHT, F_NOINK)
   const pans = at({ ring: 1 })
-  pans.ellipse(-8, 14 + tilt, 4, 1.6, 'itemTrim', { gloss: true }).ellipse(8.5, 14 - tilt, 4, 1.6, 'itemTrim', { gloss: true })
-  pans.ellipse(-8, 12.6 + tilt, 2.6, 1.6, 'red', { shade: 'round' })
+  pans.ellipse(-7, 11.5 + tilt, 3.6, 1.5, 'itemTrim', { gloss: true }).ellipse(7.5, 11.5 - tilt, 3.6, 1.5, 'itemTrim', { gloss: true })
+  pans.ellipse(-7, 10.2 + tilt, 2.4, 1.5, 'red', { shade: 'round' })
 }
 
 /** A bolt of silk lying along the off forearm, a length of it trailing. */
@@ -1005,13 +1032,12 @@ const silkBolt: ItemFn = (c, it, slot) => {
   const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
   const f = c.P.frame % 6
   const tail = at()
-  tail.poly([[-7, -1], [-4, -1], [-6 - (f % 3) * 0.5, 9], [-10 - (f % 3) * 0.5, 12], [-9, 4]], 'field', { shade: 'round' })
+  tail.poly([[-6, 0], [-3, 0], [-5 - (f % 3) * 0.5, 9], [-8.5 - (f % 3) * 0.5, 11], [-8, 3]], 'field', { shade: 'round' })
+  // one roll, lit along its top; its end a lighter oval (no inner ink, so it never reads as teeth)
   const roll = at()
-  roll.capsule(-8, -2, 7, -6, 4.6, 'field', { gloss: true })
-  roll.line(-6, -5, 6, -8.5, 'field', TONE_SPEC, F_ONLYON)
-  const end = at({ ring: 1 })
-  end.ellipse(7.5, -6, 2.6, 4.4, 'field', { shade: TONE_LIGHT })
-  end.px(7.5, -6, 'field', TONE_SHADE).px(8, -7, 'field', TONE_SHADE)
+  roll.poly([[-8, -1.5], [6, -5.5], [7.5, 2.5], [-6.5, 6]], 'field', { shade: 'cyl' }, { cx: -0.5, cy: 0.4, rx: 7.5, ry: 4.5 })
+  roll.ellipse(6.8, -1.5, 2.2, 4, 'field', { shade: TONE_LIGHT })
+  roll.line(-6.5, 4.5, 6, 1, 'field', TONE_SHADE, F_ONLYON)
 }
 
 /** A chalked tally slate in a wooden frame, held before the chest. */
@@ -1032,13 +1058,11 @@ const saltSack: ItemFn = (c, it, slot) => {
   const h = slot === 'off' ? c.P.offHand : c.P.mainHand
   const m = itemMats(c, it, slot)
   const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
+  // held by its gathered neck, the sack hanging below the fist
   const sack = at()
-  sack.ellipse(0, 3, 6.5, 6, 'bone', { shade: 'round' })
-  sack.rect(-3.5, -3, 7, 3, 'bone', { shade: TONE_MID })
-  sack.line(-3.5, -1, 3.5, -1, 'leather', TONE_SHADE, F_ONLYON)
-  const salt = at({ ring: 1 })
-  salt.ellipse(0, -3.5, 3.6, 2, 'white', { shade: 'round', gloss: true })
-  salt.px(4, -5, 'white', TONE_SPEC).px(-4, -6, 'white', TONE_SPEC)
+  sack.poly([[-2, 1], [2, 1], [3.2, 4], [-3.2, 4]], 'bone', { shade: 'cyl' })
+  sack.ellipse(0, 8, 5.4, 5, 'bone', { shade: 'round' })
+  sack.line(-3, 3.5, 3, 3.5, 'leather', TONE_SHADE, F_ONLYON)
 }
 
 // ── body pieces (armour layer) ─────────────────────────────────────────────
@@ -1311,6 +1335,8 @@ function smear(c: DrawCtx, which: 1 | 2): void {
       if (d < r0 || d > r1) continue
       const a = (Math.atan2(dy, dx) * 180) / Math.PI
       if (a < a0 || a > a1) continue
+      // the arc goes round the head, never across the face
+      if (((x + 0.5 - P.head.x) / (P.body.headRx + 13)) ** 2 + ((y + 0.5 - P.head.y) / (P.body.headRy + 1.5)) ** 2 < 1) continue
       // the trailing end thins: only the outer band survives
       const t = (a - a0) / (a1 - a0)
       const inner = r1 - (r1 - r0) * Math.min(1, t * 1.3)

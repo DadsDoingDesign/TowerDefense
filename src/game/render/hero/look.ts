@@ -194,7 +194,7 @@ export const PROPS: readonly ItemSpec[] = [
   I('Silk Bolt', 'offHand', 'silkBolt', { cloth: 'linen' }),
   I('Tally Slate', 'offHand', 'ledger'),
   I('Salt Sack', 'offHand', 'saltSack'),
-  I('Glow Vial', 'offHand', 'flask', { glow: 'venom', variant: 'glow' }),
+  I('Glow Vial', 'offHand', 'flask', { glow: 'venom', variant: 'glow', size: 0.8 }),
   I("Broker's Sash", 'body', 'vest', { variant: 'wrap', cloth: 'red' }),
   I("Herbalist's Coat", 'body', 'robe', { variant: 'coat', cloth: 'moss' }),
 ]

@@ -202,11 +202,29 @@ describe('hero builder: nothing at the mouth', () => {
       { main: 'Wand', off: 'Flask', body: 'Robe' },
       { main: 'Meat Hook', off: 'Buckler', body: 'Leather' },
       { main: 'Twin Knives' },
+      { main: 'Greataxe', body: 'Plate' },
+      { main: 'Spear', off: 'Buckler' },
+      { main: 'Staff', off: 'Tome' },
     ]
     for (const race of RACES)
       for (const gear of kits)
         for (const a of ['idle', 'walk', 'hit', 'cheer'] as AnimId[])
           for (let fr = 0; fr < framesFor(a); fr++) expect(mouthIntruders(composeFrame({ race, gear }, a, fr), 6), `${race} ${JSON.stringify(gear)} ${a}#${fr}`).toBe(0)
+  })
+
+  it('a wind-up passes the near arm and its weapon BEHIND the head (nothing over the face)', () => {
+    for (const race of RACES)
+      for (const main of ['Sword', 'Greataxe', 'Wand'])
+        for (const fr of [0, 1]) {
+          const f = composeFrame({ race, gear: { main } }, 'attack', fr)
+          expect(f.pose.behind, `${race} ${main} #${fr}`).toBe(true)
+          const P = f.pose, b = P.body
+          const arm = new Set([layerIndex('mainArm'), layerIndex('mainItem')])
+          let over = 0
+          for (let y = Math.round(P.head.y - b.headRy * 0.6); y <= Math.round(P.head.y + b.headRy * 0.6); y++)
+            for (let x = Math.round(P.head.x - b.headRx * 0.6); x <= Math.round(P.head.x + b.headRx * 0.6); x++) if (arm.has(f.owner[y * CELL + x])) over++
+          expect(over, `${race} ${main} #${fr}: arm or weapon over the face`).toBe(0)
+        }
   })
 })
 

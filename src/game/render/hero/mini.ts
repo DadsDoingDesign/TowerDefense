@@ -78,7 +78,7 @@ export const MINI_FACES: Readonly<Record<PersonaId, MiniFace>> = {
   saffra: {
     inks: {
       s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], ...BOOTS,
-      c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], T: ['gold', 2], t: ['gold', 1],
+      c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], T: ['gold', 1], t: ['gold', 0], g: ['gold', 1], G: ['gold', 0],
       r: ['red', 0], R: ['red', 1], Q: ['red', 2], n: ['navy', 0], N: ['navy', 1],
       u: ['wood', 1], U: ['wood', 2], V: ['wood', 3], e: ['red', 0], E: ['red', 2],
     },
@@ -88,7 +88,7 @@ export const MINI_FACES: Readonly<Record<PersonaId, MiniFace>> = {
       { id: 'offArm', group: 'off', x: 4, y: 15, rows: ['..cC', '.cC.', '.cC.', '.LS.', '.sS.'] },
       { id: 'body', group: 'body', x: 6, y: 14, rows: ['..cCCCCD..', '.rRRRRRRQ.', '.rRtRRRRQ.', '.rRRtRRRQ.', '.rRRRtRRQ.', '.cCCCCtCD.', '.cCCCCCCD.', '..nN..nN..'] },
       { id: 'boots', group: 'body', x: 7, y: 22, rows: ['bBB.bBB', 'bBBBbBBB'] },
-      { id: 'head', group: 'head', x: 6, y: 5, rows: ['....cCCCCD..', '..cCCCCCCCD.', '.cCCCCCCCCCD', '.rRRRRRRRRRQ', 'cCCCLLLLLLL.', 'cCCLLLLLLLL.', 'cCCSLLLLLLL.', '.cCSSLLLLLL.', '..cSSSLLLL..'] },
+      { id: 'head', group: 'head', x: 6, y: 5, rows: ['....cCCCCD..', '..cCCCCCCCD.', '.cCCCCCCCCCD', '.gGGGGGGGGGG', 'cCCCLLLLLLL.', 'cCCLLLLLLLL.', 'cCCSLLLLLLL.', '.cCSSLLLLLL.', '..cSSSLLLL..'] },
       { id: 'mainArm', group: 'main', x: 14, y: 15, rows: ['Cc.', 'CCc', '.CC', '.LS'] },
       { id: 'sack', group: 'main', x: 14, y: 19, rows: ['.eE..', 'uUUV.', 'uUEUV', 'uUUUV', '.uUU.'] },
     ],
