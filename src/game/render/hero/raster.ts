@@ -6,15 +6,16 @@
  * MATERIAL slot and a SHADING model through a {@link Pen}. The pen writes
  * into its layer's {@link LayerBuf}: per pixel a ramp, a tone (1 shade …
  * 4 specular, 0 ink) and flags. Shading is solved per pixel from the shape's
- * form and one light (the pack's: from the top, a little toward the facing
- * side), quantised to the pack's three tones plus specular, with a faint
- * horizontal streak so the bands read hand-laid rather than computed.
+ * form and one light (from the upper left, as the pack lights its helmets and
+ * hair), quantised to the pack's three tones plus specular in clean bands.
+ * At stamp time every form gets the pack's hand-laid edge: its upper-left rim
+ * catches the light, its lower-right rim drops into shade.
  *
  * {@link composite} then stacks the layers in draw order the Tiny Swords way:
  * every layer is inked by its OWN 2 px ring before its fills land, so a part
  * on top is outlined against whatever is under it (the shield over the body,
- * the head over the tunic), and the whole silhouette gets one more px of ink
- * outside (the pack's outer line is 2–3 px, its inner lines 2).
+ * the head over the tunic). The pack's outer line is 2 px (measured: its most
+ * common run), the same as its inner lines, so nothing is added outside.
  */
 import { INK, RAMPS, RAMP_IDS, SHADOW_ALPHA, rgbOf, type RampId } from './palette'
 
@@ -96,9 +97,9 @@ export class LayerBuf {
 
 // ── shading ────────────────────────────────────────────────────────────────
 
-/** The pack's light: from above, a little toward the facing (+x) side, a little in front. */
+/** The pack's light: from the upper left, a little in front. */
 const LIGHT = (() => {
-  const v = [0.3, -0.6, 0.74]
+  const v = [-0.42, -0.6, 0.68]
   const n = Math.hypot(v[0], v[1], v[2])
   return [v[0] / n, v[1] / n, v[2] / n] as const
 })()
@@ -141,6 +142,14 @@ export interface ShapeOpts {
   flags?: number
   /** Streak strength (0 = clean bands). */
   streak?: number
+  /** Tone steps added after shading (−1: a step darker, the far side of the body). */
+  bias?: number
+  /**
+   * Hand-laid strands (hair, a scarf, a hat): short vertical light dashes in
+   * the lit and mid bands, the way the pack draws its pawns' hair. On by
+   * default for the `hair` material.
+   */
+  strands?: boolean
 }
 
 /** Resolves a part's material slot (`'cloth'`, `'metal'` …) or a ramp id to a ramp. */
@@ -237,7 +246,7 @@ export class Pen {
     const ramp = RAMP_INDEX.get(this.mat(mat))!
     const shade = o.shade ?? 'round'
     const flags = o.flags ?? 0
-    const streak = o.streak ?? 0.07
+    const streak = o.streak ?? 0
     const [x0, y0, x1, y1] = this.worldBox(localBounds, 1)
     for (let y = y0; y <= y1; y++)
       for (let x = x0; x <= x1; x++) {
@@ -268,6 +277,12 @@ export class Pen {
           const wx = wx0 / sc, wy = wy0 / sc
           const d = wx * LIGHT[0] + wy * LIGHT[1] + nz * LIGHT[2]
           tone = toneOf(d, !!o.gloss, x, y, streak)
+        }
+        if (o.bias && tone !== TONE_INK) tone = Math.max(TONE_SHADE, Math.min(TONE_LIGHT, tone + o.bias))
+        if ((o.strands ?? mat === 'hair') && (tone === TONE_MID || tone === TONE_LIGHT)) {
+          // a dash 3 px long, offset per column so the dashes never line up in rows
+          const k = hash2(x, Math.floor((y + (x % 3) * 2) / 3))
+          if (k > (tone === TONE_LIGHT ? 0.72 : 0.84)) tone += 1
         }
         this.buf.ramp[i] = ramp
         this.buf.tone[i] = tone
@@ -496,7 +511,7 @@ export function colourOf(buf: LayerBuf, i: number): string {
  * Stamp one layer (or the part of it `pick` accepts): its own ink ring, then
  * its fills. `ring` 0 skips the ring (light, glows).
  */
-export function stamp(out: Composite, buf: LayerBuf, owner: number, pick?: (i: number) => boolean, ring = 2): void {
+export function stamp(out: Composite, buf: LayerBuf, owner: number, pick?: (i: number) => boolean, ring = 2, rim = ring >= 2): void {
   if (buf.bx1 < buf.bx0) return
   const inked = new Uint8Array(CELL * CELL)
   const sel = (i: number) => buf.ramp[i] !== 0 && (!pick || pick(i))
@@ -517,13 +532,32 @@ export function stamp(out: Composite, buf: LayerBuf, owner: number, pick?: (i: n
         }
       }
   }
+  const inside = (xx: number, yy: number) => xx >= 0 && yy >= 0 && xx < CELL && yy < CELL && sel(yy * CELL + xx)
   for (let y = Y0; y <= Y1; y++)
     for (let x = X0; x <= X1; x++) {
       const i = y * CELL + x
       if (!sel(i)) continue
       const a = buf.flag[i] & F_SOFT ? 150 : 255
-      put(out, i, buf.tone[i] === TONE_INK ? INK_RGB : rgbC(colourOf(buf, i)), a, owner)
+      let t = buf.tone[i]
+      if (rim && t !== TONE_INK && !(buf.flag[i] & F_NOINK)) t = rimTone(t, inside(x - 1, y), inside(x, y - 1), inside(x + 1, y), inside(x, y + 1), inside(x + 1, y + 1))
+      put(out, i, t === TONE_INK ? INK_RGB : rgbC(colourAt(buf, i, t)), a, owner)
     }
+}
+
+/**
+ * The pack's hand-laid edge on one pixel of a form: the rim facing the light
+ * (upper left) lifts a step, the rim away from it (lower right) drops a step,
+ * never past the ramp's ends. A specular pixel stays specular.
+ */
+function rimTone(t: number, l: boolean, u: boolean, r: boolean, d: boolean, dr: boolean): number {
+  if (t === TONE_SPEC) return t
+  if (!l || !u) return Math.min(TONE_LIGHT, t + 1)
+  if (!d || !r || !dr) return Math.max(TONE_SHADE, t - 1)
+  return t
+}
+
+function colourAt(buf: LayerBuf, i: number, t: number): string {
+  return RAMPS[RAMP_BY_INDEX[buf.ramp[i]]!][t - 1]
 }
 
 export function newComposite(): Composite {
