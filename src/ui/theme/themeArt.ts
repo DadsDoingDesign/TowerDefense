@@ -8,21 +8,22 @@
  * crap". So each company theme is a WORLD, drawn in the game's pixel
  * language — crisp pixels, a small palette, nothing smooth:
  *
- *   - Peppercorn Co. — FIRE: a charred, burnt-through edge split by ember
- *     cracks, a live coal at each corner; flames on its CTA and
- *     flame tongues licking up from the card's top edge (its crest).
- *   - Easel House — PAINT: a scalloped brush stroke in three paints with a
- *     wet lip and a drip, a paint blob at each corner; wet paint on its CTA.
- *   - Ironvein — FORGE: riveted iron plates (a joint and a rivet every eight
- *     pixels), a bolt at each corner, a molten seam on the inside that glows.
- *   - Rosethread — SILK: satin with a sheen on it, an embroidered
- *     running stitch, a rose worked at each corner; a ribbon on its CTA.
- *   - Moonquill — ARCANE NIGHT: a silver line over a band of runes, one lit,
- *     a star at each corner; glowing runes on its CTA.
+ *   - Peppercorn Co. — FIRE: a charred line, burnt through in places, an
+ *     ember crack a tile, a coal at each corner; low flames on its CTA and
+ *     low flame tongues rising from the card's top edge (its crest).
+ *   - Easel House — PAINT: a thin stroke in three paints swelling into small
+ *     scallops, a drip now and then, a dab at each corner; paint on its CTA.
+ *   - Ironvein — FORGE: an iron line jointed into plates, a rivet on each,
+ *     one joint a tile lit by the forge, a bolt at each corner.
+ *   - Rosethread — SILK: a satin line with a sheen pixel, an embroidered
+ *     running stitch inside it, a rose bud at each corner; a ribbon on its CTA.
+ *   - Moonquill — ARCANE NIGHT: a silver line, one faint rune a tile, a star
+ *     at each corner; runes on its CTA.
  *
- * The frames are 4 px thick (8 CSS px) and each has its own corner piece and
- * its own SHAPE — ragged, scalloped, riveted, stitched, inscribed — so a
- * glance tells them apart even in greyscale.
+ * The frames' slice is 4 px (8 CSS px), but what is drawn in it is QUIET (the
+ * frames pass, Oct 2026): one dim line and sparse detail, each world with its
+ * own corner and its own SHAPE — ragged, scalloped, riveted, stitched,
+ * inscribed — so a glance tells them apart even in greyscale.
  *
  * Everything here is PIXEL ROWS (one character a pixel, `.` clear) and a
  * palette: the frame (a 9-slice for `border-image`), the CTA's top strip, the
@@ -105,11 +106,6 @@ function frame(
   return rows(g)
 }
 
-/** A 4 × 4 corner piece from rows (outermost pixel first on each axis). */
-const piece = (art: Rows) => (cx: number, cy: number): string | null => {
-  const ch = art[cy]?.[cx] ?? '.'
-  return ch === '.' ? null : ch
-}
 
 /**
  * The world of each company: its frame, CTA strip and effect palette — each
@@ -130,62 +126,96 @@ export interface WorldArt {
 
 const sideN = (s: Side) => (s === 'top' ? 1 : s === 'right' ? 2 : s === 'bottom' ? 3 : 4)
 
+/**
+ * The quiet corner every world turns: its line runs round the outside, the
+ * very corner pixel clear (so the panel's rounded corner shows through, never
+ * a square pixel tooth), and the world's own mark (`mark`) sits one pixel in.
+ */
+const quietCorner =
+  (line: string, mark: (cx: number, cy: number) => string | null) =>
+  (cx: number, cy: number): string | null => {
+    if (cx === 0 && cy === 0) return null
+    if (cx === 0 || cy === 0) return line
+    return mark(cx, cy)
+  }
+
 // ---------------------------------------------------------------------------
-// FIRE — Peppercorn Co.: charred, scorched edges split by glowing ember cracks
+// FIRE — Peppercorn Co.: a charred line, burnt through in places, a few
+// embers glowing in its cracks
 // ---------------------------------------------------------------------------
-const FIRE: Palette = { k: '#140a05', c: '#3a2010', b: '#5e3016', r: '#b8321e', o: '#ff8a2c', y: '#ffd35e', w: '#fff3c0' }
-function fireFrame(f: number): Rows {
-  const hot = (h: number) => (h < 0.2 ? 'y' : h < 0.3 ? 'w' : h < 0.78 ? 'o' : 'r')
+/*
+ * The frames pass (Oct 2026; the designer: "the border on the ui can be too
+ * intense, especially when it's doubled up at the bottom"): every world's
+ * frame is one dominant line, one source pixel (2 CSS px), a shade or two off
+ * its panel, with sparse 1 px detail inside it — the old solid 4 px bands of
+ * char, paint, iron, satin and runes, with their white-hot embers, molten
+ * seams and lit runes, were the loudest thing on the card. Each keeps its
+ * shape at a glance: charred and embered, scalloped, riveted, stitched,
+ * inscribed. The palettes are dim: the line under 0.42 luma, an accent pixel
+ * under 0.6 (a label is over 0.8).
+ */
+const FIRE: Palette = {
+  // The char line, and the darker scorch beside it.
+  k: '#4a2c19',
+  c: '#2c190e',
+  // Embers, dim: a cooling red and an orange (only the crest burns brighter).
+  e: '#8e3a1c',
+  o: '#c2642a',
+  // The crest's flame: root, body, tip.
+  h: '#c88440',
+  f: '#b0582a',
+  t: '#7e3418',
+}
+function fireFrame(_f: number): Rows {
   return frame(
     (d, along, side) => {
       const s = sideN(side)
-      // An ember crack zig-zags through the char, glowing and flickering.
-      const crackAt = [1, 2, 3, 2][along % 4]
-      if (d === crackAt && hash(Math.floor(along / 5), s, 2) < 0.7) return hot(hash(along, s, f, 3))
-      if (d === 0) return hash(along, s, 7) < 0.22 ? null : 'k' // burnt through in places
-      if (d === 1) return 'c'
-      if (d === 2) return hash(along, s, 5) < 0.5 ? 'b' : 'c'
-      // Scorch fading inward, dithered.
-      return (along + s) & 1 ? 'c' : null
+      // Burnt through once a tile: a two-pixel break, never beside the crack,
+      // so every run of the line is long (no lone pixel between breaks).
+      const at = 2 + Math.floor(hash(s, 41) * 5)
+      const gap = (at + 8) % FRAME_SPAN
+      if (d === 0) return along === gap || along === gap + 1 ? null : 'k'
+      if (d === 1) {
+        // An ember crack under the line, once a tile: a cooling end, a glowing heart.
+        if (along === at) return 'e'
+        if (along === at + 1) return 'o'
+        if (along === at + 2) return 'e'
+        return null
+      }
+      return null
     },
-    // A live coal in each corner.
-    (cx, cy) => {
-      if (cx === 0 || cy === 0) return 'k'
-      if (cx === 2 && cy === 2) return f % 3 === 1 ? 'w' : 'y'
-      if (cx + cy === 3 || (cx === 3 && cy === 2) || (cx === 2 && cy === 3)) return 'o'
-      if (cx === 3 && cy === 3) return 'r'
-      return 'c'
-    },
+    // A coal one pixel in from each corner.
+    quietCorner('k', (cx, cy) => (cx === 1 && cy === 1 ? 'e' : null)),
   )
 }
-function fireStrip(f: number): Rows {
+function fireStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  for (let x = 0; x < STRIP_W; x++) {
-    // A tongue per column, its height flickering with the frame.
-    const base = 1 + Math.round(2.4 * (0.5 + 0.5 * Math.sin((x / STRIP_W) * Math.PI * 4 + f * 1.7)))
-    const h = Math.min(STRIP_H, base + (hash(x, f, 5) < 0.3 ? 1 : 0))
-    for (let i = 0; i < h; i++) {
-      const y = STRIP_H - 1 - i
-      g[y][x] = i === h - 1 ? (h > 3 ? 'y' : 'o') : i < 1 ? 'r' : i < 3 ? 'o' : 'y'
-    }
-    if (h < STRIP_H - 1 && hash(x, f, 9) < 0.12) g[STRIP_H - 1 - h - 1][x] = 'y' // a spark above
+  // An ember line along the button's lip, two low tongues a tile rising
+  // off it — clean 45° flanks, one taller than the other.
+  for (let x = 0; x < STRIP_W; x++) g[STRIP_H - 1][x] = 'e'
+  for (const [cx, h] of [
+    [3, 3],
+    [11, 2],
+  ] as const) {
+    for (let i = 1; i < h; i++) for (let dx = -(h - 1 - i); dx <= h - 1 - i; dx++) g[STRIP_H - 1 - i][cx + dx] = i === h - 1 ? 'e' : 'o'
+    for (let dx = -(h - 1); dx <= h - 1; dx++) g[STRIP_H - 1][cx + dx] = 'o'
   }
   return rows(g)
 }
 /**
- * Flame tongues licking up from the card's top edge: three to a tile, each a
- * pointed tongue that leans and flickers frame to frame — white-yellow at the
- * root, orange, red at the tip, a dark char rim so they read on any ground.
+ * Flame tongues rising from the card's top edge: three to a tile, each a low
+ * pointed tongue — warm at the root, orange, a dull red at the tip. Lower and
+ * duller since the frames pass (no white heart), still read at a glance.
  */
 function fireCrest(f: number): Rows {
   const g = grid(CREST_W, CREST_H)
   const tongues = [
-    { x: 2, w: 5 },
-    { x: 7, w: 4 },
-    { x: 12, w: 5 },
+    { x: 2, w: 4 },
+    { x: 7, w: 3 },
+    { x: 12, w: 4 },
   ]
   tongues.forEach((t, i) => {
-    const h = 4 + Math.round(5 * hash(i, f, 4))
+    const h = 3 + Math.round(3 * hash(i, f, 4))
     const lean = Math.round((hash(i, f, 6) - 0.5) * 2)
     for (let r = 0; r < h; r++) {
       const k = r / h
@@ -195,140 +225,116 @@ function fireCrest(f: number): Rows {
         const x = (cx + dx + CREST_W) % CREST_W
         const y = CREST_H - 1 - r
         const edge = Math.abs(dx) === half
-        g[y][x] = edge && r > 1 ? 'r' : k < 0.25 ? 'w' : k < 0.5 ? 'y' : k < 0.8 ? 'o' : 'r'
+        g[y][x] = edge && r > 0 ? 't' : k < 0.34 ? 'h' : k < 0.7 ? 'f' : 't'
       }
     }
-    // A spark off the tip.
-    if (hash(i, f, 11) < 0.5 && h + 2 < CREST_H) g[CREST_H - 2 - h][(t.x + 1) % CREST_W] = 'y'
   })
+  // Rooted on the edge: a low ember line under the tongues.
+  for (let x = 0; x < CREST_W; x++) if (g[CREST_H - 1][x] === '.') g[CREST_H - 1][x] = 't'
   return rows(g)
 }
 
 // ---------------------------------------------------------------------------
-// PAINT — Easel House: a painted, scalloped edge in three paints
+// PAINT — Easel House: a thin brush stroke in three paints that swells into
+// scallops, a drip now and then
 // ---------------------------------------------------------------------------
-const PAINT: Palette = { p: '#c6a4ff', q: '#6c4bb0', o: '#e2aa5a', t: '#5fb0a8', s: '#e58fb0', w: '#f6efff', d: '#2a1d3c' }
-function paintFrame(f: number): Rows {
+const PAINT: Palette = { p: '#6e5a96', q: '#46326e', o: '#84663e', t: '#40726c', s: '#8a5a72', d: '#2a1d3c' }
+function paintFrame(_f: number): Rows {
   return frame(
     (d, along, side) => {
       const s = sideN(side)
-      // Scallops: the stroke swells 2 → 4 px and back every eight pixels.
-      const thick = 2 + Math.round(2 * Math.abs(Math.sin((along * Math.PI) / 8)))
-      if (d >= thick) return side === 'bottom' && d === thick && hash(along, 13) < 0.25 ? 'q' : null // a drip
-      if (d === thick - 1) return 'q' // the stroke's wet inner lip
+      // Scallops: the stroke swells 1 → 2 px and back in the middle of each
+      // eight-pixel dab, every dab its own paint.
+      const a = along % 8
       const band = (Math.floor(along / 8) + s) % 3
-      // A wet glint that travels the stroke frame to frame.
-      if (d === 1 && (along + f * 3) % 8 === 3) return 'w'
-      return band === 0 ? 'p' : band === 1 ? 'o' : 't'
+      const paint = band === 0 ? 'p' : band === 1 ? 'o' : 't'
+      if (d === 0) return paint
+      if (d === 1 && a >= 3 && a <= 5) return paint
+      // A drip off the foot, once in a while.
+      if (side === 'bottom' && d === 1 && hash(along, 13) < 0.12) return 'q'
+      return null
     },
-    // A blob of paint in each corner, a different paint across the diagonal.
-    (cx, cy, which) => piece(['.mm.', 'mmwm', 'mmmm', '.mm.'])(cx, cy)?.replace('m', which === 0 || which === 3 ? 'o' : 's') ?? null,
+    // A dab of paint one pixel in, a different paint across the diagonal.
+    (cx, cy, which) => quietCorner(which === 0 || which === 3 ? 'o' : 's', (x, y) => (x === 1 && y === 1 ? (which === 0 || which === 3 ? 's' : 'o') : null))(cx, cy),
   )
 }
 function paintStrip(f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
   const paints = ['p', 'o', 't', 's']
+  // The bristles' line on the button's lip, a tuft of two or three on it.
   for (let x = 0; x < STRIP_W; x++) {
-    // The bristles' ragged top edge, wet paint on the button's lip.
-    const h = 2 + (hash(x, 3) < 0.4 ? 1 : 0)
-    for (let i = 0; i < h; i++) g[STRIP_H - 1 - i][x] = i === h - 1 && hash(x, 8) < 0.5 ? 'q' : 'p'
+    g[STRIP_H - 1][x] = 'p'
+    if (x === 1 || x === 2 || (x >= 9 && x <= 11)) g[STRIP_H - 2][x] = 'q'
   }
-  // Flecks of other paint that hop above it (four: with two the strip all
-  // but stood still next to the other worlds' — the motion audit, Oct 2026).
-  for (let k = 0; k < 4; k++) {
-    const x = Math.floor(hash(k, f, 21) * STRIP_W)
-    const y = Math.floor(hash(k, f, 22) * 3)
-    g[y][x] = paints[(k + f) % paints.length]
+  // Two dabs of other paint sitting on it (on the bristles, never floating).
+  for (let k = 0; k < 2; k++) {
+    const x = 3 + k * 8 + Math.floor(hash(k, f, 21) * 3)
+    g[STRIP_H - 1][x] = g[STRIP_H - 1][x + 1] = paints[(k + 1) % paints.length]
   }
   return rows(g)
 }
 
 // ---------------------------------------------------------------------------
-// FORGE — Ironvein: riveted iron plates, a bolt at each corner, a molten seam
+// FORGE — Ironvein: an iron line jointed into plates, a rivet on each, the
+// forge's glow in one joint a tile
 // ---------------------------------------------------------------------------
-const FORGE: Palette = { k: '#0d1219', i: '#46536a', l: '#8796ab', d: '#2a3341', r: '#e2e9f2', R: '#9aa8ba', m: '#c8541c', M: '#ff9a3a', H: '#ffe08a' }
-function forgeFrame(f: number): Rows {
-  const seam = (along: number) => {
-    const phase = (along + f * 4) % 12
-    return phase < 2 ? 'H' : phase < 6 ? 'M' : 'm'
-  }
-  return frame(
-    (d, along, side) => {
-      if (d === 0) return 'k'
-      // The molten seam: it breathes — dim, lit, white-hot — along its length.
-      if (d === 3) return seam(along)
-      // A solid bevelled iron band, a round rivet every eight pixels (lit
-      // top-left, its shadow bottom-right).
-      const a = along % 8
-      if (a === 3 && d === 1) return 'r'
-      if ((a === 4 && d === 1) || (a === 3 && d === 2)) return 'R'
-      if (a === 4 && d === 2) return 'k'
-      if (d === 1) return side === 'top' || side === 'left' ? 'l' : 'i'
-      return side === 'top' || side === 'left' ? 'i' : 'd'
-    },
-    // A bolt head in each corner, the seam turning round it.
-    (cx, cy) => {
-      if (cx === 0 || cy === 0) return 'k'
-      if (cx === 3 || cy === 3) return f % 3 === 0 ? 'H' : 'M'
-      return cx === 1 && cy === 1 ? 'r' : cx === 2 && cy === 2 ? 'd' : 'R'
-    },
-  )
-}
-function forgeStrip(f: number): Rows {
-  const g = grid(STRIP_W, STRIP_H)
-  for (let x = 0; x < STRIP_W; x++) g[STRIP_H - 1][x] = (x + f * 3) % 8 < 3 ? 'M' : 'm'
-  // Sparks thrown up off the plate, in arcs that move frame to frame.
-  for (let k = 0; k < 3; k++) {
-    const x0 = Math.floor(hash(k, 31) * STRIP_W)
-    const t = (f + k) % 4
-    const x = (x0 + t * (k % 2 ? 1 : -1) + STRIP_W) % STRIP_W
-    const y = STRIP_H - 2 - [0, 2, 3, 2][t]
-    if (y >= 0) g[y][x] = t === 0 ? 'H' : t === 3 ? 'm' : 'M'
-  }
-  return rows(g)
-}
-
-// ---------------------------------------------------------------------------
-// SILK — Rosethread: satin with a sliding sheen, an embroidered running
-// stitch, a rose worked in each corner
-// ---------------------------------------------------------------------------
-const SILK: Palette = { k: '#3a1626', s: '#7a2f4a', t: '#f6d2de', w: '#ffffff', r: '#e9a8bf', n: '#c4627f' }
-function silkFrame(f: number): Rows {
+const FORGE: Palette = { i: '#46526a', l: '#7f8ca2', d: '#222a36', m: '#8a4422', M: '#b4602c' }
+function forgeFrame(_f: number): Rows {
   return frame(
     (d, along) => {
-      if (d === 0) return 'k'
+      const a = along % 8
+      if (d === 0) return a === 7 ? 'd' : 'i' // a plate joint every eight pixels
       if (d === 1) {
-        // The satin, and its sheen: a white glint sliding along it.
-        const p = (along + f * 6) % 16
-        return p === 0 ? 'w' : p < 3 ? 'r' : 'n'
+        // The forge's glow in one joint a tile, just inside the line.
+        if (along === 15) return 'm'
+        // A rivet head on each plate, a bump on the line: lit, then its body.
+        return a === 3 ? 'l' : a === 4 ? 'i' : null
       }
-      // The running stitch, two on, two off, on the satin's shade.
-      if (d === 2) return along % 4 < 2 ? 't' : 's'
-      return 's'
+      return null
     },
-    piece(['kkkk', 'knrn', 'krwr', 'knrs']),
+    // A bolt one pixel in from each corner.
+    quietCorner('i', (cx, cy) => (cx === 1 && cy === 1 ? 'l' : null)),
   )
 }
-function silkStrip(f: number): Rows {
+function forgeStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  for (let x = 0; x < STRIP_W; x++) {
-    // A ribbon that waves across the button's lip.
-    const y = Math.round(2 + 1.6 * Math.sin(((x + f * 4) / STRIP_W) * Math.PI * 2))
-    g[y][x] = 'r'
-    if (y + 1 < STRIP_H) g[y + 1][x] = 'n'
-    if ((x + f * 4) % STRIP_W === 5) g[Math.max(0, y - 1)][x] = 'w'
-  }
-  // The stitch along the button's lip.
+  // A dim seam along the lip, one pixel, warmer for three at one joint a tile.
+  for (let x = 0; x < STRIP_W; x++) g[STRIP_H - 1][x] = x >= 10 && x <= 12 ? 'M' : 'm'
+  return rows(g)
+}
+
+// ---------------------------------------------------------------------------
+// SILK — Rosethread: a satin line with a sheen on it, an embroidered running
+// stitch inside, a rose bud in each corner
+// ---------------------------------------------------------------------------
+const SILK: Palette = { n: '#74384e', r: '#9c5a72', t: '#9a6c7e', s: '#4e2232' }
+function silkFrame(_f: number): Rows {
+  return frame(
+    (d, along) => {
+      // The satin, and its sheen: one lighter pixel a tile.
+      if (d === 0) return along === 5 ? 'r' : 'n'
+      // The running stitch, two on, two off, a pixel in from the satin.
+      if (d === 2) return along % 4 < 2 ? 't' : null
+      return null
+    },
+    quietCorner('n', (cx, cy) => (cx === 1 && cy === 1 ? 'r' : (cx === 2 && cy === 1) || (cx === 1 && cy === 2) ? 's' : null)),
+  )
+}
+function silkStrip(_f: number): Rows {
+  const g = grid(STRIP_W, STRIP_H)
+  // A ribbon waving gently across the button's lip, one pixel.
+  for (let x = 0; x < STRIP_W; x++) g[Math.round(3 + 1 * Math.sin((x / STRIP_W) * Math.PI * 2))][x] = 'r'
+  // The stitch along the lip.
   for (let x = 0; x < STRIP_W; x++) if (x % 4 < 2) g[STRIP_H - 1][x] = 't'
   return rows(g)
 }
 
 // ---------------------------------------------------------------------------
-// ARCANE NIGHT — Moonquill: a silver line over a band of runes that pass
-// their light along, a star at each corner
+// ARCANE NIGHT — Moonquill: a silver line, one faint rune a tile inscribed
+// under it, a star in each corner
 // ---------------------------------------------------------------------------
-const ARCANE: Palette = { k: '#0b0d22', s: '#d4daf2', g: '#8fa4ff', G: '#c9d4ff', w: '#ffffff', i: '#3b3f8a' }
-/** Five little runes, 3 × 3, for the frame's band and the CTA strip. */
+const ARCANE: Palette = { s: '#5e6898', g: '#434d86', G: '#7a86bc' }
+/** Five little runes, 3 × 3, for the frame and the CTA strip. */
 const RUNES_3: Rows[] = [
   ['s.s', '.s.', 's.s'],
   ['ss.', '.s.', '.ss'],
@@ -336,35 +342,28 @@ const RUNES_3: Rows[] = [
   ['s..', 'ss.', 's.s'],
   ['sss', 's..', '.s.'],
 ]
-function arcaneFrame(f: number): Rows {
+function arcaneFrame(_f: number): Rows {
   return frame(
     (d, along, side) => {
       if (d === 0) return 's'
-      // Three runes a tile (at 1, 6 and 11), one lit at a time.
-      for (let k = 0; k < 3; k++) {
-        const x = along - (1 + k * 5)
-        if (x < 0 || x > 2) continue
-        const rune = RUNES_3[(k + sideN(side)) % RUNES_3.length]
-        if (rune[d - 1][x] === 's') return f % 3 === k ? 'w' : 'g'
-        return 'k'
+      // One rune a tile (at 7), a pixel in from the line, dim.
+      const x = along - 7
+      if (d >= 1 && x >= 0 && x <= 2) {
+        const rune = RUNES_3[sideN(side) % RUNES_3.length]
+        return rune[d - 1][x] === 's' ? 'g' : null
       }
-      return d === 2 && along % 5 === 0 ? 'i' : 'k'
+      return null
     },
-    (cx, cy) => {
-      if (cx === 0 || cy === 0) return 's'
-      if (cx === 2 && cy === 2) return f % 3 === 0 ? 'w' : 'G'
-      return (cx === 2) !== (cy === 2) ? 'G' : 'k'
-    },
+    // A star one pixel in, its two short rays along the line.
+    quietCorner('s', (cx, cy) => (cx === 1 && cy === 1 ? 'G' : (cx === 2 && cy === 1) || (cx === 1 && cy === 2) ? 'g' : null)),
   )
 }
-function arcaneStrip(f: number): Rows {
+function arcaneStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  // Three runes in a row, one glowing at a time, passing the light along.
+  // Three runes in a row on the button's lip, the middle one lit.
   for (let k = 0; k < 3; k++) {
     const rune = RUNES_3[(k + 2) % RUNES_3.length]
-    const on = f % 3 === k
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (rune[y][x] === 's') g[2 + y][1 + k * 5 + x] = on ? 'w' : 'g'
-    if (on) g[1][2 + k * 5] = 'G'
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (rune[y][x] === 's') g[3 + y][1 + k * 5 + x] = k === 1 ? 'G' : 'g'
   }
   return rows(g)
 }

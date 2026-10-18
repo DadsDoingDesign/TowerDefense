@@ -4629,3 +4629,31 @@ The designer: the company effects are "a bit overwhelming now that I'm playing m
 **Left.** Ironvein's rain is still the busiest battle margin, at 0.45 Hz against 0.1–0.2, though it is faint. Rosethread's fog changes the most pixels, though at low contrast. The still anvils and the moon are the highest-contrast world art left, and they do not move.
 
 **Cards** for the designer's phone: `docs/ui-audit-2026-10/motion-calm/`. There are ten animated WebPs (home and battle per company, BEFORE over AFTER, 3.5 s) and a `manifest.json`. Rebuild them with `node scripts/motion-cards.mjs <before audit> <after audit> <out>`.
+
+### 2026-10-18 — the world frames, quiet and one deep
+
+The designer, on the home card: "the border on the ui can be too intense, especially when it's doubled up at the bottom". The card's frame and the CTA's own frame and strip stacked two loud borders at its foot. On the hero pick, the card, the Back row and the CTA made three. The goal: a world frame is a quiet edge that says "this company", and a frame is never doubled. No gameplay, number or RNG draw changed.
+
+**What changed.**
+- **One deep** (`worlds.css`). A framed part inside a framed panel wears no frame, and neither does a part under the battle detail band's trim. A CTA never wears the 9-slice. A standalone CTA keeps only its strip, now standing on its lip. A CTA inside a framed panel (the home card, Buy Company) is a plain button: fill, 1 px edge, lift and shimmer, with no strip or glow. The page's exits row (`.pg-foot .pg-row`: Back, Never mind) is unframed.
+- **Quiet frames** (`themeArt.ts`). Each frame is one dim line a source pixel thick (2 CSS px, under 0.42 luma) with sparse 1 px detail (accents under 0.6). Each corner's outer pixel is clear.
+  - Peppercorn: a charred line, burnt through in places, with one ember crack a tile.
+  - Easel House: a thin three-paint stroke with small scallops.
+  - Ironvein: an iron line with plate joints, a rivet on each plate and one ember joint a tile.
+  - Rosethread: a satin line with a running stitch.
+  - Moonquill: a silver line with one faint rune a tile.
+- **Strips and crest.** The strips are low and dim. Peppercorn's crest is lower and duller, with no white heart.
+- **Tests.** `tests/themeWorlds.test.ts` checks the line, the detail density, the palette and the corner, and holds the one-deep CSS lists to the frames' list.
+
+**Rounds.**
+1. Quiet art, and no frame on a nested part. The card read calm. The standalone CTA's frame then laid dark pixels on its light fill and squared its corners.
+2. The 9-slice came off every CTA. The strip moved up to stand on the lip. Back in the foot was unframed. Ironvein's rivets were detached from the line (they had read as ruler ticks). A frame sweep of the battle found the detail band's trim over framed panels on desk and phone, so the band now counts as a frame.
+3. Easel House's scallops swell in paint, not a dark lip that vanished. The paint stroke and Moonquill's star were dimmed, and the crest a little more. A sweep of the home, terms, pick, battle (setup, hero, team), HQ, Codex and Buy Company, phone and desk, finds no framed element inside another. `scripts/home-stability.mjs` passes.
+
+4. Held to the board's notes ("rough edges", "kinda tacky"; "make sure they vary"). The pixels were dumped and cleaned. The fire's breaks are now one two-pixel gap a tile, which left a lone line pixel before. The random scorch dots are gone. The rivets are bumps on the line, not floating dots. The fire strip is two tongues with clean 45° flanks, in place of a one-pixel comb. The paint strip's floating flecks became dabs on the bristles, and the forge strip's dotted seam and lone spark became one seam. Motion was probed in the running app: every screen (home, terms, pick, battle, HQ, Codex, Buy Company; phone and desk) runs at most one CTA shimmer and no other CSS animation, so nothing pulses in step.
+
+**Benchmark.** In Slay the Spire's and Hades' menus the frame sits at the edge of attention, and the button and the words are what you read. The card now works like that: the CTA is the brightest thing on it, and the frame is a dim line you notice only when you look.
+
+**Left.** Peppercorn's crest is still the brightest world art on the home. It is the card's mark, and it is low and dull now. The Buy Company slot keeps its carved cyan rim. The dock's five framed slots sit in a row above the framed card. They are adjacent, not nested, and each is a single dim line.
+
+**Cards** for the designer's phone: `docs/ui-audit-2026-10/frames-calm/`, five home cards and the hero pick (BEFORE over AFTER, with a 3× crop of the card's foot and the CTA), and a `manifest.json`.

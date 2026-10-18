@@ -320,13 +320,24 @@ result. Append a short note to the review log when you're done.
 - Company worlds (Oct 2026; the designer: "if one is fire themed it should
   have fire effects"): each company theme is a PLACE, in pixels, all under
   `:root[data-co-theme]` (the neutral house look has none). The art is pixel
-  rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame with
-  its own edge and corner — Peppercorn charred with ember cracks, Easel
-  House a scalloped paint stroke, Ironvein riveted plates and a molten seam,
-  Rosethread satin and a running stitch, Moonquill a rune band — a CTA
-  strip, and Peppercorn's flame crest on the card; each ONE still image),
-  rasterised once into CSS variables by `themeArtDom.ts` and laid on by
-  `src/styles/worlds.css` (`border-image`: changes pixels, never boxes).
+  rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame that
+  is QUIET — one dim line a pixel thick, a shade or two off the panel, with
+  sparse 1 px detail and a corner whose outer pixel is clear: Peppercorn a
+  charred line with a few embers, Easel House a thin three-paint stroke
+  with small scallops, Ironvein an iron line with rivets and one ember
+  joint a tile, Rosethread satin with a running stitch, Moonquill a silver
+  line with one faint rune a tile — a low CTA strip, and Peppercorn's flame
+  crest on the card; each ONE still image), rasterised once into CSS
+  variables by `themeArtDom.ts` and laid on by `src/styles/worlds.css`
+  (`border-image`: changes pixels, never boxes). The frames pass (Oct 2026;
+  the designer: "the border on the ui can be too intense, especially when
+  it's doubled up at the bottom"): frames are ONE DEEP — a framed part inside
+  a framed panel (or under the battle detail band's trim) wears no frame, a
+  CTA wears no 9-slice anywhere: a standalone CTA keeps only its strip on
+  its lip, and a CTA inside a framed panel (the home card, Buy Company) keeps
+  its plain button look, with no strip or glow. The page's exits row
+  (`.pg-foot .pg-row`) is unframed. `tests/themeWorlds.test.ts` checks the
+  CSS lists and the frames' weight. Cards: `docs/ui-audit-2026-10/frames-calm/`.
   The frames, strips and crest are STATIC: the only CSS loop the worlds keep
   is the CTA's faint shimmer (`th-shimmer`, one pale band every 9 s, on a
   promoted `::after` under the words; none on Light or reduced motion).
