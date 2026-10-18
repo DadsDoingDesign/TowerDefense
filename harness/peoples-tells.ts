@@ -26,7 +26,9 @@ const PIPS: Record<PipShape, string[]> = {
   skull: ['.111.', '12121', '11111', '.1.1.', '.....'],
   fang: ['11111', '.121.', '.121.', '..1..', '..1..'],
   spark: ['..1..', '..1..', '11211', '..1..', '..1..'],
-  flake: ['1...1', '.111.', '.121.', '.111.', '1...1'],
+  // A diamond, not an X: an X's four corner pixels touch only diagonally, so
+  // each got its own outline ring and the pip read as a checker (Oct 2026).
+  flake: ['..1..', '.111.', '11211', '.111.', '..1..'],
   arrow: ['...11', '..111', '.121.', '1.1..', '1....'],
   rune: ['1111.', '1..1.', '1111.', '1.1..', '1..1.'],
   gear: ['.1.1.', '11111', '.121.', '11111', '.1.1.'],
@@ -78,11 +80,17 @@ function pixLine(ctx: Ctx, pts: readonly [number, number][], ink: string): void 
       cells.push([x0, y0])
       if (x0 === x1 && y0 === y1) break
       const e2 = 2 * err
-      if (e2 >= dy) {
+      const stepX = e2 >= dy
+      const stepY = e2 <= dx
+      // A diagonal step gets a corner cell, so the line is 4-connected: a
+      // line that steps diagonally is ringed cell by cell by the outline
+      // below and reads as a checker at the hero's scale (Oct 2026).
+      if (stepX && stepY) cells.push([x0 + sx, y0])
+      if (stepX) {
         err += dy
         x0 += sx
       }
-      if (e2 <= dx) {
+      if (stepY) {
         err += dx
         y0 += sy
       }
@@ -167,7 +175,11 @@ export function drawTellOver(ctx: Ctx, t: Tell, fist: { x: number; y: number }, 
       pixLine(ctx, [[-14, -14], [-14, -62]], '#866353')
       const rows = t.tail ? ['1111111', '1211111', '111111.', '11111..', '111111.', '1111111'] : ['1111111', '1211111', '1111111', '111111.', '11111..']
       pixelSprite(ctx, rows, -28, -62, t.ink)
-      if (t.emblem) pixelSprite(ctx, ['1.', '.1', '1.'], -24, -58, t.emblem, 2)
+      // A solid cross, unoutlined: the old zigzag, ringed pixel by pixel, was a checker.
+      if (t.emblem) {
+        px(ctx, -22, -60, 1, 3, t.emblem)
+        px(ctx, -24, -58, 3, 1, t.emblem)
+      }
       return
     }
     case 'shields':
