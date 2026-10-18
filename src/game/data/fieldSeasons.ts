@@ -53,6 +53,7 @@ export type PropKind =
   | 'pepper' // a pepper plant hung with red pods (Peppercorn's spice)
   | 'blocks' // cut quarry stone, stacked (Ironvein's quarries)
   | 'pool' // a brackish marsh pool (flat; Butcherblock's salt marsh)
+  | 'glowcap' // a ring of small glowing mushrooms (Greenvial's hollows)
 
 /**
  * Where a prop may stand: `forest` — a forest tile's floor (upright props
@@ -194,6 +195,8 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     name: 'spring',
     washes: [{ op: 'soft-light', color: '#7ad85a', alpha: 0.26 }],
     ground: { colors: ['#f0c8d8', '#fbeef2', '#e8a8c4'], share: 0.004 },
+    // The marsh's wet sedge in drifts through the meadow: a cooler, deeper green.
+    cover: { colors: ['#3e6e4e', '#4c805a', '#5c9264', '#70a46e'], share: 0.3, grain: 1.5 },
     foliage: { ramps: [FRESH], bush: FRESH },
     broadleaf: { share: 0.22, ramps: [BLOSSOM, BLOSSOM, FRESH], blossom: ['#fff4f8', '#f6c8da'] },
     accent: true,
@@ -278,9 +281,11 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     accent: true,
     // The scrolls slot's hollows (Greenvial's in the world bible): mushrooms in the wood under the drifts.
     props: [
-      { kind: 'drift', where: 'forest', share: 0.26 },
+      { kind: 'drift', where: 'forest', share: 0.34 },
       { kind: 'mushroom', where: 'forest', share: 0.16 },
+      { kind: 'glowcap', where: 'forest', share: 0.14 },
     ],
+    clump: 160,
     edge: ['star', 'star', 'snow'],
     weather: { kinds: ['snow'], count: 40, sheet: 'snow' },
   },

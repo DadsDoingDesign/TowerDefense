@@ -27,6 +27,7 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import type { FieldSeason, PropKind, PropRule, PropWhere } from '../data/fieldSeasons'
 import { pixmap } from './pixmap'
+import { CARAVAN_BOX, caravanLayout } from './caravan'
 import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT, markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
 import { broadleaf, propArt, repaintFoliage, repaintRock, seasonArtStamp } from './seasonArt'
 import { hash01, hashStr, valueNoise } from './seasonHash'
@@ -551,6 +552,20 @@ function drawCursedGround(ctx: CanvasRenderingContext2D, map: GameMap): void {
   fillShape(ctx, pieceShape(map, cursedOf, 2, 12), 12)
   ctx.fillStyle = CURSE_SOIL
   fillShape(ctx, pieceShape(map, cursedOf, 5, 9), 9)
+  {
+    // Sunken (Oct 2026 asset critique): the blight lies a little below the
+    // meadow, a shade under its far and lit-side rims.
+    const soil = pieceShape(map, cursedOf, 5, 9)
+    ctx.save()
+    shapePath(ctx, soil, 9)
+    ctx.clip()
+    ctx.fillStyle = '#2a261e'
+    fillShape(ctx, soil, 9)
+    ctx.translate(2, 2)
+    ctx.fillStyle = CURSE_SOIL
+    fillShape(ctx, soil, 9)
+    ctx.restore()
+  }
   for (const group of clusters(map, cursedOf)) {
     const core = boundsOf(group, T, 5)
     const seed = mulberry32((group[0].col * 3571 + group[0].row * 7919 + 17) >>> 0)
@@ -757,12 +772,23 @@ function drawSpriteTerrain(
     ctx.lineWidth = DIRT_W
     strokePolyline(ctx, pts)
   } else {
-    ctx.strokeStyle = fillColor
+    // A sunken lane (Oct 2026 asset critique: it was one flat stroke): the
+    // dirt a step darker, then the dirt again a little narrower and nudged
+    // down-right, so its far and lit-side banks hold a shade, as a trodden
+    // track lies a little below the meadow under a light from the upper left.
+    ctx.strokeStyle = darken(fillColor, 0.2)
     ctx.lineWidth = DIRT_W
+    strokePolyline(ctx, pts)
+    ctx.save()
+    ctx.translate(1, 1.5)
+    ctx.strokeStyle = fillColor
+    ctx.lineWidth = DIRT_W - 3
     strokePolyline(ctx, pts)
     ctx.strokeStyle = lighten(fillColor, 0.1)
     ctx.lineWidth = DIRT_W / 2
     strokePolyline(ctx, pts)
+    ctx.restore()
+    drawCartTracks(ctx, pts, fillColor)
   }
   drawPathDetail(ctx, dr, fillColor, green)
 
@@ -776,9 +802,78 @@ function drawSpriteTerrain(
     seasonGround(ctx, W.w, W.h, bs.season, bs.keep.mask, bs.accent, bs.salt)
     ctx.setTransform(m)
   }
+  drawWagonClearing(ctx, map)
   const scenery = bs ? seasonScenery(map, dr, bs.season, bs.salt) : null
   if (bs && scenery) for (const p of scenery.flat) drawProp(ctx, p, bs)
-  drawDecos(ctx, dr, scenery)
+  drawDecos(ctx, dr, scenery, wagonBox(map))
+}
+
+/**
+ * The wagon's clearing (Oct 2026 asset critique): the caravan stood in the
+ * forest margin over the baked treetops, a cart pasted on canopies with a
+ * brown wash under it. Now nothing of the scenery is drawn inside its box,
+ * and the bake lays a trodden clearing there for it to stand in.
+ */
+function wagonBox(map: GameMap): Rect {
+  const at = caravanLayout(map)
+  const pad = 4
+  return { x0: at.x + CARAVAN_BOX.left - pad, y0: at.y + CARAVAN_BOX.top - pad, x1: at.x + CARAVAN_BOX.right + pad, y1: at.y + CARAVAN_BOX.bottom + pad }
+}
+function drawWagonClearing(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const b = wagonBox(map)
+  const cx = (b.x0 + b.x1) / 2
+  const cy = b.y1 - 12
+  const rx = (b.x1 - b.x0) * 0.62
+  const ry = 22
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 1)
+  g.addColorStop(0, 'rgba(96, 74, 44, 0.62)')
+  g.addColorStop(0.72, 'rgba(96, 74, 44, 0.5)')
+  g.addColorStop(1, 'rgba(96, 74, 44, 0)')
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(rx, ry)
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(0, 0, 1, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+  // Wheel ruts into it from the road side, and a few tufts trodden flat.
+  ctx.fillStyle = 'rgba(58, 42, 24, 0.4)'
+  for (let x = b.x0 + 6; x < b.x1 - 6; x += 3) {
+    if (hash01(Math.round(x), Math.round(cy), 57) < 0.3) continue
+    ctx.fillRect(Math.round(x), Math.round(cy + 2), 2, 1)
+    ctx.fillRect(Math.round(x), Math.round(cy + 8), 2, 1)
+  }
+}
+const inBox = (b: Rect, x0: number, y0: number, x1: number, y1: number): boolean => x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1
+
+/**
+ * The caravans' wheel tracks down the lane (a merchant road), broken where
+ * the dirt has filled them, and a few pebbles, lit on top. Placed by a hash of
+ * position along the drawn road — the dressing's own stream is untouched.
+ */
+function drawCartTracks(ctx: CanvasRenderingContext2D, pts: Vec2[], fill: string): void {
+  const track = withAlpha(darken(fill, 0.24), 0.3)
+  let k = 0
+  for (const s of samplePath(pts, 2, () => true)) {
+    k++
+    const run = hash01(k >> 4, 0, 61) < 0.8
+    if (run) {
+      ctx.fillStyle = track
+      for (const o of [-7, 7]) ctx.fillRect(Math.round(s.x + s.nx * o - 1), Math.round(s.y + s.ny * o - 1), 2, 2)
+    }
+    if (hash01(k, 1, 62) < 0.024) {
+      const o = (hash01(k, 2, 63) - 0.5) * 22
+      const x = Math.round(s.x + s.nx * o)
+      const y = Math.round(s.y + s.ny * o)
+      ctx.fillStyle = withAlpha(darken(fill, 0.35), 0.8)
+      ctx.fillRect(x, y + 1, 3, 1)
+      ctx.fillStyle = lighten(fill, 0.22)
+      ctx.fillRect(x, y - 1, 3, 2)
+      ctx.fillStyle = lighten(fill, 0.4)
+      ctx.fillRect(x, y - 1, 1, 1)
+    }
+  }
 }
 
 /** Where the lattice's lines fall: the grid's top-left corner, field px. */
@@ -1397,19 +1492,26 @@ function drawLongShadows(ctx: CanvasRenderingContext2D, bs: BakeSeason, items: {
   ctx.globalAlpha = a0
 }
 
-function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery | null = null): void {
+function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery | null = null, clear: Rect | null = null): void {
   if (!getActiveStyle().sprites) return
   const bs = bakeSeason
   const season = bs?.season ?? null
   // The season's upright props stand in the scenery's depth order; the
-  // shrubs they stand in for are gone.
+  // shrubs they stand in for are gone. Nothing stands in the wagon's clearing.
   type Item = { y: number; deco?: Deco; prop?: PlacedProp }
   const items: Item[] = []
   dr.decos.forEach((d, idx) => {
-    if (!scenery?.swapped.has(idx)) items.push({ y: d.y, deco: d })
+    if (scenery?.swapped.has(idx)) return
+    const sz = clear ? decoSize(d) : null
+    if (clear && sz && inBox(clear, d.x - sz.w / 2, d.y - sz.h, d.x + sz.w / 2, d.y)) return
+    items.push({ y: d.y, deco: d })
   })
   if (scenery) {
-    for (const p of scenery.upright) items.push({ y: p.y, prop: p })
+    for (const p of scenery.upright) {
+      const art = clear ? propArt(p.kind, p.v) : null
+      if (clear && art && inBox(clear, p.x - art.w / 2, p.y - art.h, p.x + art.w / 2, p.y)) continue
+      items.push({ y: p.y, prop: p })
+    }
     items.sort((a, b) => a.y - b.y)
   }
   if (bs) drawLongShadows(ctx, bs, items)

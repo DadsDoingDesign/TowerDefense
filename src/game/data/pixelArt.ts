@@ -84,17 +84,19 @@ export const WAGON: PixelRows = [
   '......owwwwwwwwwwwwwwwwwwwwwwo',
   'ooooooobbbbbbbbbbbbbbbbbbbbbbo',
   '......oooooooooooooooooooooooo',
-  '.........ooooo........ooooo...',
-  '........otttttto.....otttttto.',
-  '........ottoootto....ottoootto',
-  '........otoaaaoto....otoaaaoto',
-  '........ottoootto....ottoootto',
-  '........otttttto.....otttttto.',
-  '.........ooooo........ooooo...',
+  // Round, spoked wheels lit from the upper left (Oct 2026 asset critique:
+  // the old ones were flat ovals, a lozenge under each end of the bed).
+  '..........ooo..........ooo....',
+  '.........owwto........owwto...',
+  '........owgtgto......owgtgto..',
+  '........ottatto......ottatto..',
+  '........otgtgto......otgtgto..',
+  '.........ottto........ottto...',
+  '..........ooo..........ooo....',
   '..............................',
   '..............................',
 ]
-export const WAGON_PALETTE: Palette = { o: OUTLINE, w: '#a8703a', b: '#6b4526', t: '#7d5230', a: '#c9b48c' }
+export const WAGON_PALETTE: Palette = { o: OUTLINE, w: '#a8703a', b: '#6b4526', t: '#7d5230', a: '#c9b48c', g: '#3a2414' }
 
 /** Each filled cell of `rows`, merged into horizontal runs (for SVG or a canvas). */
 export function pixelRuns(rows: PixelRows, pal: Palette): { x: number; y: number; w: number; fill: string }[] {

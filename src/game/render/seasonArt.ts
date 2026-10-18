@@ -487,6 +487,33 @@ function pepper(s: number): Px {
 }
 
 /**
+ * A ring of small glowing mushrooms (the scrolls slot's hollows — Greenvial's
+ * in the world bible): three to five pale caps with a lit rim and a soft
+ * glow round each, on short stems, so a hollow in the snow-dark wood reads
+ * as tended, a little magic.
+ */
+function glowcap(s: number): Px {
+  const W = 21
+  const H = 13
+  const p = new Px(W, H)
+  const n = 3 + (s % 3)
+  const caps: [number, number][] = []
+  for (let k = 0; k < n; k++) caps.push([3 + Math.floor((k / n) * 14 + hash01(k, s, 96) * 3), 4 + Math.floor(hash01(k, s, 97) * 4)])
+  for (const [x, y] of caps) {
+    // A short pale stem, then a domed cap: a lit top, a mid body, a dark rim.
+    for (let yy = y + 1; yy < Math.min(H - 1, y + 4); yy++) p.set(x, yy, '#e6dcc4')
+    for (let dx = -2; dx <= 2; dx++) p.set(x + dx, y, Math.abs(dx) === 2 ? '#1f7a74' : '#3fc2b0')
+    for (let dx = -1; dx <= 1; dx++) p.set(x + dx, y - 1, dx < 1 ? '#bff8ea' : '#3fc2b0')
+  }
+  p.outline('#1c2a30')
+  // The glow, round them where nothing is drawn: a soft halo of spores.
+  for (const [x, y] of caps)
+    for (let dy = -3; dy <= 2; dy++)
+      for (let dx = -3; dx <= 3; dx++) if (Math.abs(dx) + Math.abs(dy) <= 4 && !p.on(x + dx, y + dy)) p.set(x + dx, y + dy, '#7fe8d6', 64)
+  return p
+}
+
+/**
  * Cut quarry stone (Ironvein): two or three dressed blocks stacked, each with
  * a lit top, a mid face and a dark side (light from the upper left), chisel
  * marks on the faces, in the pack's rock ramp (repainted as the season's).
@@ -527,15 +554,30 @@ function mud(s: number): Px {
   return p
 }
 
+/**
+ * A reed bed (Oct 2026 asset critique: the old tuft, 11 x 16 in two greens,
+ * read as a dark smudge at a phone's scale): blades in three greens lit on
+ * their left, leaning out from the clump, and bulrush heads on some stems.
+ */
 function reeds(s: number): Px {
-  const p = new Px(11, 16)
-  const n = 5 + (s % 3)
+  const W = 15
+  const H = 22
+  const p = new Px(W, H)
+  const n = 7 + (s % 3)
   for (let k = 0; k < n; k++) {
-    const x0 = 1 + Math.floor(hash01(k, s, 82) * 9)
-    const hgt = 7 + Math.floor(hash01(k, s, 83) * 8)
-    const lean = hash01(k, s, 84) < 0.5 ? -1 : 1
-    for (let i = 0; i < hgt; i++) p.set(x0 + (i > hgt * 0.6 ? lean : 0), 15 - i, i % 3 === 0 ? '#7a9a4a' : '#5a7a36')
-    if (hash01(k, s, 85) < 0.45) for (let i = 0; i < 3; i++) p.set(x0 + lean, 15 - hgt + i, i === 0 ? '#7a5434' : '#5a3a22')
+    const x0 = 3 + Math.floor(hash01(k, s, 82) * 9)
+    const hgt = 9 + Math.floor(hash01(k, s, 83) * 11)
+    const lean = (hash01(k, s, 84) - 0.5) * 0.5 + (x0 - W / 2) * 0.05
+    const lit = hash01(k, s, 98) < 0.4
+    for (let i = 0; i < hgt; i++) {
+      const x = x0 + Math.round(lean * i)
+      p.set(x, H - 1 - i, i < 3 ? '#3e5a2a' : lit ? (i > hgt - 4 ? '#a6c46a' : '#86a852') : i % 4 === 0 ? '#6a8a40' : '#557434')
+    }
+    if (hash01(k, s, 85) < 0.4 && hgt > 12) {
+      const x = x0 + Math.round(lean * (hgt - 3))
+      for (let i = 0; i < 4; i++) p.set(x, H - hgt + i, i === 0 ? '#9a6a3e' : '#6a4426')
+      p.set(x, H - hgt - 1, '#86a852')
+    }
   }
   p.outline(OUTLINE, false)
   return p
@@ -641,6 +683,9 @@ export function propArt(kind: PropKind, seed: number): PropArt | null {
       break
     case 'blocks':
       p = blocks(v)
+      break
+    case 'glowcap':
+      p = glowcap(v)
       break
     case 'lily':
       p = lily(v)

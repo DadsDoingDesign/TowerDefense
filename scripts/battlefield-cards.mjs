@@ -75,7 +75,7 @@ for (const c of spec) {
     <p class="cap">${esc(c.caption)}</p>
     <div class="scores">${score('Aesthetics', c.scores.a)}${score('Brand', c.scores.b)}${score('Job', c.scores.j)}</div>
     <div class="row"><figure><figcaption>BEFORE</figcaption><img src="${dataUrl(bView)}"></figure><figure><figcaption>AFTER</figcaption><img src="${dataUrl(aView)}"></figure></div>
-    <div class="row"><figure><img src="${dataUrl(bCrop)}"><p class="z">BEFORE · ${zoom}×</p></figure><figure><img src="${dataUrl(aCrop)}"><p class="z">AFTER · ${zoom}×</p></figure></div>
+    <div class="row"><figure><img src="${dataUrl(bCrop)}"><p class="z">BEFORE · ${c.zoomLabel ?? `${zoom}×`}</p></figure><figure><img src="${dataUrl(aCrop)}"><p class="z">AFTER · ${c.zoomLabel ?? `${zoom}×`}</p></figure></div>
   </div>`
   await page.setContent(html)
   await page.evaluate(() => Promise.all([...document.images].map((i) => i.decode())))
