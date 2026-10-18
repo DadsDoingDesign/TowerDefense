@@ -13,9 +13,13 @@
  *     border box and never changes a box (the home's no-wiggle rule). STILL:
  *     the calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
  *     playing more") stopped the flipbook that flickered on the card, the pick
- *     card and the CTA;
- *  3. the CTA: the same frame, a still strip of the world along its top
- *     (flames, paint, sparks, a ribbon, runes — `--th-strip`), one slow faint
+ *     card and the CTA. QUIET and ONE DEEP: the frames pass (Oct 2026; "the
+ *     border on the ui can be too intense, especially when it's doubled up at
+ *     the bottom") made each frame one dim line with sparse detail, and a
+ *     framed part inside a framed panel wears none;
+ *  3. the CTA: no frame; a still strip of the world standing on its lip
+ *     (flames, paint, a seam, a ribbon, runes — `--th-strip`) where it stands
+ *     alone, none inside a framed panel; one slow faint
  *     shimmer (`th-shimmer`, the only loop the worlds keep in CSS), and a
  *     burst on press (`fxEngine`, the overlay `.th-fx-over`);
  *  4. the switch-in on the home (`fxEngine.switchIn`, on the overlay);
@@ -83,8 +87,6 @@
     .ct-route,
     .sh-context,
     .sh-kit,
-    .pg-cta,
-    .fc-sheet,
     .cx-card-in,
     .fw-resume-card
   ),
@@ -99,6 +101,66 @@
 :root[data-co-theme] :is(.mn-card, .pk-card, .pg-cta) {
   position: relative;
   isolation: isolate;
+}
+/* One frame deep (the frames pass, Oct 2026; the designer: "the border on
+   the ui can be too intense, especially when it's doubled up at the bottom").
+   A framed part inside a framed panel — the CTA on the home card and the Buy
+   Company card, the panels under the battle's detail-band trim, anything in a
+   sheet — wears no world frame of its own: the outer edge already says whose
+   world it is. A CTA there loses its strip and its glow too (`--th-strip-on`,
+   `--th-glow`) and keeps its plain button look: its fill, its 1 px edge, its
+   lift, the shimmer. Both lists are the frames' list above (the first adds
+   the detail band, whose trim is a frame; the second the CTA, whose strip is
+   one); `tests/themeWorlds.test.ts` holds them to it. */
+:root[data-co-theme]
+  :is(
+    .sh-detail,
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .sh-kit,
+    .cx-card-in,
+    .fw-resume-card
+  )
+  :is(
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .sh-kit,
+    .pg-cta,
+    .cx-card-in,
+    .fw-resume-card
+  ) {
+  border-image: none;
+  --th-strip-on: none;
+  --th-glow: 0 0 0 transparent;
+}
+/* The page's exits row (Back, Never mind) sits on the CTA and under the
+   body's last panel: a secondary control, so it wears none of the world. */
+:root[data-co-theme] .pg-foot .pg-row {
+  border-image: none;
 }
 /* A dock slot's share figure sits 4px off its foot: the frame's foot there is
    drawn at half height and hung 2px below the slot, so it never runs under
@@ -141,7 +203,7 @@
   border-image: none;
 }
 /* A quiet pinned control (a setting's toggle: Mute) is not the screen's
-   primary action, so it wears none of the CTA's world: no frame, strip or glow. */
+   primary action, so it wears none of the CTA's world: no strip or glow. */
 :root[data-co-theme] .pg-cta.quiet,
 :root[data-co-theme] .pg-cta.quiet:not(:disabled) {
   border-image: none;
@@ -224,13 +286,16 @@
 :root[data-co-theme] .pg-cta {
   position: relative;
 }
-/* The world along its top: half outside the button, half on its lip. Still. */
+/* The world along its top, standing on its lip (its foot row on the button's
+   top 2 px, the rest on the ground above): the CTA's one world mark — a
+   button wears no frame (a 9-slice squared its corners and laid dark pixels
+   on its light fill), and inside a framed panel not even this. Still. */
 :root[data-co-theme] .pg-cta:not(:disabled)::before {
-  content: '';
+  content: var(--th-strip-on, '');
   position: absolute;
   left: 8px;
   right: 8px;
-  top: -6px;
+  top: -10px;
   height: 12px;
   background-image: var(--th-strip);
   background-size: 32px 12px;

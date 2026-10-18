@@ -1,0 +1,50 @@
+[
+  {
+    "id": "home-spice",
+    "group": "Frames",
+    "people": "Peppercorn Co.",
+    "title": "Peppercorn Co. · Home card",
+    "caption": "A dim charred line, a few embers, a low crest; the CTA keeps its plain button look, no frame or flames inside the card",
+    "file": "home-spice.png"
+  },
+  {
+    "id": "home-art",
+    "group": "Frames",
+    "people": "Easel House",
+    "title": "Easel House · Home card",
+    "caption": "A thin three-paint stroke with small scallops; the CTA inside the card wears no frame or paint strip",
+    "file": "home-art.png"
+  },
+  {
+    "id": "home-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Home card",
+    "caption": "One iron line, a rivet on each plate, one ember joint a tile; no molten seam, and no frame on the CTA",
+    "file": "home-metals.png"
+  },
+  {
+    "id": "home-silk",
+    "group": "Frames",
+    "people": "Rosethread",
+    "title": "Rosethread · Home card",
+    "caption": "A satin line with a running stitch inside; no ribbon or frame on the CTA inside the card",
+    "file": "home-silk.png"
+  },
+  {
+    "id": "home-scrolls",
+    "group": "Frames",
+    "people": "Moonquill",
+    "title": "Moonquill · Home card",
+    "caption": "A silver line with one faint rune a tile and a star at each corner; no rune band or frame on the CTA",
+    "file": "home-scrolls.png"
+  },
+  {
+    "id": "pick-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Hero pick",
+    "caption": "Only the pick card is framed; Back wears no frame and the CTA keeps just a low strip on its lip",
+    "file": "pick-metals.png"
+  }
+]

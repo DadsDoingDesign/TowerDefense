@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { THEME_IDS } from '../src/game/run/militiaTheme'
 import { AMBIENT_CAP_DESK, AMBIENT_CAP_PHONE, ambientCap, BREATH_S, burstClip, drawParticle, ROAD_BESIDE, ROAD_CLEAR, roadDistance, step, stepAlpha, SWITCH_S, WORLDS, type Pen, type Zone } from '../src/ui/theme/fxWorlds'
 import { PixelPen } from '../src/ui/theme/pixelPen'
-import { CREST_H, CREST_W, FRAME_SIZE, FRAME_T, RUNES_5, STRIP_H, STRIP_W, worldArt } from '../src/ui/theme/themeArt'
+import { CREST_H, CREST_W, FRAME_SIZE, FRAME_SPAN, FRAME_T, RUNES_5, STRIP_H, STRIP_W, worldArt } from '../src/ui/theme/themeArt'
 
 /*
  * The company worlds (Oct 2026): each theme's pixel art and motion. The art
@@ -82,6 +84,65 @@ describe('each company world’s pixel art', () => {
       expect(r.length).toBe(5)
       for (const row of r) expect(row.length).toBe(5)
     }
+  })
+})
+
+describe('the frames: quiet, and one deep (the frames pass, Oct 2026)', () => {
+  const lum = (hex: string) => {
+    const v = parseInt(hex.slice(1), 16)
+    return (0.2126 * (v >> 16) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255
+  }
+  for (const c of COMPANY_IDS) {
+    const f = worldArt(c).frame
+    const pal = worldArt(c).palette
+    const edge = f.slice(0, FRAME_T).map((r) => r.slice(FRAME_T, FRAME_SIZE - FRAME_T))
+    it(`${c}: one dominant line, sparse detail inside it, nothing bright`, () => {
+      const lit = (d: number) => [...edge[d]].filter((ch) => ch !== '.').length / FRAME_SPAN
+      // The line runs (nearly) the whole edge; inside it, at most a third of the pixels.
+      expect(lit(0), c).toBeGreaterThanOrEqual(0.75)
+      for (let d = 1; d < FRAME_T; d++) expect(lit(d), `${c} depth ${d}`).toBeLessThanOrEqual(0.5)
+      const inner = edge.slice(1).join('').replace(/\./g, '').length / (FRAME_SPAN * (FRAME_T - 1))
+      expect(inner, c).toBeLessThanOrEqual(1 / 3)
+      // A dim palette: the line a shade or two off the panel, no accent pixel as bright as a label.
+      for (const ch of edge[0]) if (ch !== '.') expect(lum(pal[ch]), `${c} line '${ch}'`).toBeLessThanOrEqual(0.42)
+      for (const row of f) for (const ch of row) if (ch !== '.') expect(lum(pal[ch]), `${c} '${ch}'`).toBeLessThanOrEqual(0.6)
+    })
+    it(`${c}: a quiet corner, its outermost pixel clear`, () => {
+      expect(f[0][0]).toBe('.')
+      expect(f[0][FRAME_SIZE - 1]).toBe('.')
+      expect(f[FRAME_SIZE - 1][0]).toBe('.')
+      expect(f[FRAME_SIZE - 1][FRAME_SIZE - 1]).toBe('.')
+    })
+  }
+
+  const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'worlds.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].replace(/\s+/g, ' ').trim(), body: m[2] }))
+  const frameRule = rules.find((r) => r.body.includes('border-image-source: var(--th-frame-0)'))!
+  const framed = list(/:is\(([^)]*)\)/.exec(frameRule.sel)![1])
+
+  it('a CTA wears no frame (its world is the strip on its lip)', () => {
+    expect(framed).toContain('.mn-card')
+    expect(framed).toContain('.pk-card')
+    expect(framed).not.toContain('.pg-cta')
+    expect(rules.some((r) => /\.pg-cta[^,]*$/.test(r.sel) && /border-image(-source)?:\s*var/.test(r.body))).toBe(false)
+  })
+  it('no world frame on a framed part inside a framed panel, and no strip or glow on a CTA there', () => {
+    const deep = rules.find((r) => /^:root\[data-co-theme\] :is\([^)]*\) :is\([^)]*\)$/.test(r.sel) && /border-image:\s*none/.test(r.body))
+    expect(deep, 'the one-deep rule').toBeDefined()
+    const [, outer, inner] = /:is\(([^)]*)\) :is\(([^)]*)\)/.exec(deep!.sel)!
+    // Every framed panel is an outer frame, and so is the battle's detail band (its trim).
+    expect(new Set(list(outer))).toEqual(new Set([...framed, '.sh-detail']))
+    // Every framed part loses its frame inside one, and so does a CTA's strip.
+    expect(new Set(list(inner))).toEqual(new Set([...framed, '.pg-cta']))
+    expect(deep!.body).toMatch(/--th-strip-on:\s*none/)
+    expect(deep!.body).toMatch(/--th-glow:/)
+    // The strip reads that switch.
+    const strip = rules.find((r) => r.sel.endsWith('.pg-cta:not(:disabled)::before') && r.body.includes('var(--th-strip)'))!
+    expect(strip.body).toMatch(/content:\s*var\(--th-strip-on/)
+  })
+  it('the page’s exits row wears none of the world', () => {
+    expect(rules.some((r) => r.sel === ':root[data-co-theme] .pg-foot .pg-row' && /border-image:\s*none/.test(r.body))).toBe(true)
   })
 })
 
