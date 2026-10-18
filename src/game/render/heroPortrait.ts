@@ -92,7 +92,7 @@ export function heroPortraitCanvas(look: Archetype, gear: HeroGear): HTMLCanvasE
   g.imageSmoothingEnabled = false
   g.translate(BOX.ox, BOX.oy)
   blitPixmap(g, fig.pm, 0, 0, 8)
-  drawHeldGear(g, fig.rig, gear, 0, 0, 0, true, false)
+  drawHeldGear(g, fig.rig, gear, 0, 0, 0, true, false, fig.grips?.[0])
   g.setTransform(1, 0, 0, 1, 0, 0)
 
   // The bust: from the top of whatever is drawn down to just under the tunic.

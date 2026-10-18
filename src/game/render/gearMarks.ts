@@ -75,12 +75,16 @@ export interface HeroGear {
   art?: { main?: HeldArt; off?: HeldArt }
   /** A draft body piece as data (`bodyLayer.BodyStyle`), worn instead of `body`. Never set by {@link heroGear}. */
   bodyStyle?: BodyStyle
+  /** How the off hand holds its piece instead of the table's way ({@link holdOf}): a review seam. Never set by {@link heroGear}. */
+  hold?: Hold
 }
 
 /** A held picture that is not an atlas cell: its 16 × 16 pixels and where it is gripped. */
 export interface HeldArt {
   cell: HTMLCanvasElement
   grip: Pt
+  /** How the off hand holds it ({@link holdOf}); default `cover`. */
+  hold?: Hold
 }
 
 /**
@@ -268,6 +272,14 @@ export interface StripFill {
   h: number
   /** Packed `0xRRGGBBAA`. */
   palette: readonly number[]
+  /**
+   * Per frame, where the off-hand piece is held on the rebuilt knight, in
+   * logical px from the hero's origin: `[handX, handY, coverX, coverY]` — the
+   * near hand, hidden behind the body at the tunic's side ({@link Hold}
+   * `hand`), and the painted shield's edge against the body — its right
+   * edge, at its middle height (`cover`).
+   */
+  grips: readonly (readonly [number, number, number, number])[]
   frames: readonly (readonly (number | string)[])[]
 }
 export type ShieldFills = Readonly<Record<string, Readonly<Record<string, StripFill>>>>
@@ -563,14 +575,66 @@ function hold(ctx: CanvasRenderingContext2D, key: IconKey | null, gx: number, gy
  * front — unless the art already paints that very thing there (the armoured
  * look's shield). The context is at the hero's origin.
  */
-export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear): void {
+export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear, grip?: StripFill['grips'][number]): void {
   const art = gear.art?.off
-  if (art) {
-    hold(ctx, null, rig.fistL.x, rig.fistL.y, art)
+  const key = art ? null : gear.off
+  if (!art && (!key || key === rig.paintedOff)) return
+  if (!grip) {
+    hold(ctx, key, rig.fistL.x, rig.fistL.y, art)
     return
   }
-  if (!gear.off || gear.off === rig.paintedOff) return
-  hold(ctx, gear.off, rig.fistL.x, rig.fistL.y)
+  if (holdOf(key, gear) === 'hand') {
+    hold(ctx, key, grip[0], grip[1], art)
+    return
+  }
+  // Where the painted shield stood: against the body as the shield's edge was,
+  // at its middle height — the hand behind it, as the art's is.
+  const c = art ? artCanvas(art) : cellCanvas(key!)
+  if (!c) return
+  const b = opaqueBox(c)
+  ctx.drawImage(c, Math.round(grip[2] - b.x1), Math.round(grip[3] - (b.y0 + b.y1) / 2))
+}
+
+const boxes = new WeakMap<HTMLCanvasElement, { x0: number; x1: number; y0: number; y1: number }>()
+/** The painted box of a held picture's canvas (memo per canvas). */
+function opaqueBox(c: HTMLCanvasElement): { x0: number; x1: number; y0: number; y1: number } {
+  const hit = boxes.get(c)
+  if (hit) return hit
+  let box = { x0: 0, x1: c.width - 1, y0: 0, y1: c.height - 1 }
+  const d = c.getContext('2d')?.getImageData(0, 0, c.width, c.height).data
+  if (d) {
+    let x0 = Infinity
+    let x1 = -1
+    let y0 = Infinity
+    let y1 = -1
+    for (let y = 0; y < c.height; y++)
+      for (let x = 0; x < c.width; x++)
+        if (d[(y * c.width + x) * 4 + 3] >= 128) {
+          x0 = Math.min(x0, x)
+          x1 = Math.max(x1, x)
+          y0 = Math.min(y0, y)
+          y1 = Math.max(y1, y)
+        }
+    if (x1 >= 0) box = { x0, x1, y0, y1 }
+  }
+  boxes.set(c, box)
+  return box
+}
+
+/**
+ * How the rebuilt knight holds an off-hand piece (`StripFill.grips`):
+ *  - `cover`: where the painted shield stood, over the same footprint, so the
+ *    piece takes the shield's place and the hand is behind it, as the art's
+ *    is — the shields, the books, the quiver, the banner, every board;
+ *  - `hand`: gripped at its own grip by the near hand, at the tunic's side —
+ *    a second weapon (every key with a {@link GRIP}).
+ */
+export type Hold = 'hand' | 'cover'
+const HAND_HELD = new Set<IconKey>(Object.keys(GRIP) as IconKey[])
+export function holdOf(key: IconKey | null, gear: Pick<HeroGear, 'hold' | 'art'>): Hold {
+  if (gear.hold) return gear.hold
+  if (gear.art?.off) return gear.art.off.hold ?? 'cover'
+  return key && HAND_HELD.has(key) ? 'hand' : 'cover'
 }
 
 /**

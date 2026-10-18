@@ -9,7 +9,7 @@
  */
 import '../src/styles/global.css'
 import { drawSentinel, setPresentationTime, type DrawSentinel } from '../src/game/render/renderer'
-import { heroGear } from '../src/game/render/gearMarks'
+import { heroGear, type HeroGear, type Hold } from '../src/game/render/gearMarks'
 import { heroPortraitCanvas } from '../src/game/render/heroPortrait'
 import { BODY_KEYS } from '../src/game/render/bodyLayer'
 import { onSpritesReady, preloadPack } from '../src/game/render/sprites'
@@ -51,6 +51,10 @@ function eq(main: string | null, off: string | null, body: string | null): Equip
   return { mainHand: main ? plain(main) : null, offHand: off ? plain(off) : null, body: body ? plain(body) : null }
 }
 
+/** `&hold=hand|cover` forces how the off hand holds its piece (`gearMarks.holdOf`), to compare the two. */
+const HOLD = q.get('hold') as Hold | null
+const kitGear = (e: Equipment): HeroGear => (HOLD ? { ...heroGear(e), hold: HOLD } : heroGear(e))
+
 function sentinel(look: Archetype, e: Equipment, fire = 0): DrawSentinel {
   return {
     id: 'kit',
@@ -63,7 +67,7 @@ function sentinel(look: Archetype, e: Equipment, fire = 0): DrawSentinel {
     procFlash: 0,
     patienceStacks: 0,
     blocking: false,
-    gear: heroGear(e),
+    gear: kitGear(e),
   }
 }
 
@@ -89,7 +93,7 @@ function fig(e: Equipment, label: string, fire = 0, t = 0): HTMLElement {
 function portrait(e: Equipment, label: string): HTMLElement {
   const wrap = document.createElement('figure')
   wrap.className = 'pt'
-  const c = heroPortraitCanvas(lookOf({ equipment: e }), heroGear(e))
+  const c = heroPortraitCanvas(lookOf({ equipment: e }), kitGear(e))
   const img = document.createElement('img')
   if (c) img.src = c.toDataURL()
   const sizes = [22, 30, 36, 72]
