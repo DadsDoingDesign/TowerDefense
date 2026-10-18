@@ -4285,3 +4285,30 @@ The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/people
 - **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
 - **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
 - **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
+
+### 2026-10-18 — the knight's filled body, round 2 (the designer marked all three round-1 shots FIX)
+
+The designer's notes: "the helmet looks bulbous now and the arm looks awkward"; held pieces "float above it"; "still rough edges where filled in"; "kinda tacky looking still". The coordinator's close critique was the pass/fail test, nine points: (1) the head bulges into a lopsided egg; (2) the near hand is a tan blob, a growth; (3) the off-hand pieces are pinned at one spot over the cheek; (4–7) Mail, Plate, Robe and Cloak look pasted on; (8) the Greatsword is a tiny blade on a brown block, and the arm kinks where the painted sword was cut; (9) the bar is the untouched Shield row. No rule, number or RNG draw changed.
+
+**What changed** (`scripts/shield-fill-lib.ts`; nothing is mirrored across the figure any more, because it is in 3/4 view):
+- **Helmet**: it goes on from its widest painted row above the shield in one rounded arc (a squircle quarter) into the chin. It is never wider than the painted head, and `anchors:check` now fails on a "swollen head". The shade band is the painted side's width and thins into the chin. The ink is redrawn at the art's 3 px across a side and 2 px along the chin.
+- **Tunic**: its back is narrow. It runs straight down from under the chin to a hem that stands as far past the near leg as the art's hem stands past the far one. The shoulder and the hem corner are rounded. It has a shadow-ink rim with the row's own ink inside, and it sits behind the helmet.
+- **Near hand**: none. That arm hangs behind the body. Round 2 first tried the pawn's own fist, tucked at the side. On the sheet it still read as a growth, so it was cut.
+- **Off-hand piece** (option B, shape fit, picked for every off-hand piece): it is drawn per frame where the painted shield stood, its right edge on the shield's edge against the body, at the shield's mid-height. It follows the body through the swing, with the hand behind it as the art's is. Option A, the piece gripped at the hidden hand by the tunic, sat lower and over the body, and read as pasted on the hip. A second weapon in the off hand is still gripped (`holdOf` 'hand'). The anchors are generated with the patch (`StripFill.grips`) and checked by the tests.
+- **New checks** in `fillProblems`: a fat contour (more than 5 px deep), lone px, and a head wider than the painted one.
+
+**Rounds**
+- **Round 2a**: the arc was a Hermite curve leaving the visor-slit row at a slant, so idle frame 3 started too far in. It now leaves the widest row, upright. The attack frames' tunic was a hard box with a dark block, so the shoulder and hem corner were rounded and the row's ink carried in.
+- **Round 2b**: the helmet's contour dilated into the gap between helmet and sword arm and shut a pocket (attack frame 0). The contour is now drawn only from the new part, and writes stay within 12 px of the hole. The fist's ring brought the pawn's tunic outline with it, so its contour is drawn in place. Notches of 1 px are inked shut.
+- **Round 2c**: the fist was cut (above). The tunic's top contour doubled the chin's, so it is not drawn under the chin.
+
+**Against the nine points**
+- (1) Pass: no swelling. `helmet-proof.png` overlays the rebuilt contour on the shield-on art, and it runs on or inside the shield's edge.
+- (2) Pass: no blob.
+- (3) Pass, in that the piece now stands where the shield stood, every frame. As with the painted shield, no arm shows. The Focus orb on its stand still reads a little odd at the side.
+- (4–7) Fail, unchanged: the body pieces are the separate body-layer overlays, and this round did not redraw them.
+- (8) Fail, unchanged: the main-hand swap is outside this fix.
+
+**Shots**: `docs/ui-audit-2026-10/shield-fill/round2/` holds six phone cards, 654–772 px wide: idle, swing, grip close-up, every combo, option A vs B and the helmet proof, plus `manifest.json`. The Peoples & Trades sheets (9 of 10) and 139 of the 150 review cards were regenerated.
+
+**Weakest**: in a single frame the bare knight passes for Pixel Frog's at 1× and 3×. At 8× the tunic's back is plainer than the painted front. The windup frames' big tunic still has a flat dark left half.

@@ -42,12 +42,18 @@ result. Append a short note to the review log when you're done.
   `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
   cut when the hero holds something else, and the knight's painted shield is
   flood-cut by `cutOffHand` unless the off hand holds a Shield, and the hole
-  it leaves is FILLED: the helmet, tunic, near hand, leg and shadow it hid
-  are rebuilt per frame by mirroring the knight's own pixels, baked by
-  `npm run anchors` (`scripts/shield-fill-lib.ts`) into
-  `shieldFill.generated.ts` and written by `gearMarks.cutAndFill`;
-  `anchors:check` fails if stale or if a rebuilt frame has a hole, an open
-  outline, a stray island or a write over the art; `offHandPlan` says when);
+  it leaves is FILLED, per frame, never by mirroring: the back of the helmet
+  continues its painted contour in one rounded arc into the chin (never
+  wider than the painted head), the tunic's back runs narrow down to the
+  hem, the near leg and the shadow close; no near hand is drawn (that arm
+  is behind the body in this 3/4 view). Baked by `npm run anchors`
+  (`scripts/shield-fill-lib.ts`) into `shieldFill.generated.ts`, written by
+  `gearMarks.cutAndFill`; `anchors:check` fails if stale or if a rebuilt
+  frame has a hole, an open or fat outline, a lone px, a stray island, a
+  swollen head or a write over the art; `offHandPlan` says when. The
+  off-hand piece is drawn per frame at `StripFill.grips`: `holdOf` 'cover'
+  (shields, books, quiver, Focus: over the painted shield's footprint,
+  against the body) or 'hand' (a second weapon));
   the body piece is WORN, `bodyLayer.ts`: the tunic of every frame (the
   rebuilt strips' too, as `<strip>_bare`) is measured off the
   strips by `npm run anchors` into `bodyAnchors.generated.ts` (`anchors:check`
