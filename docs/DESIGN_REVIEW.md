@@ -4390,3 +4390,62 @@ They cover:
 - A shield-bearer's cape tier barely shows.
 - The human's hair cap still reads a little like a helmet.
 - The dock figures had two 8× rounds (round 1: Brannoch's dome split in two tones, Odile's white hair; both fixed). Their hands are 2 px mittens with no arms, the pack's own convention at that size; the designer has not seen them yet.
+
+### 2026-10-18 — the icon family: three rounds of critique (aesthetics, brand, job)
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the icons: 30 atlas item cells, 21 skill marks, 125 Peoples & Trades draft icons, 50 draft tells, and 10 places the shell shows them at real size. That is 236 assets, each scored 1–5 for aesthetics, brand and job, with a one-line reason. The scorecard is `docs/ui-audit-2026-10/asset-critique/icons/SCORECARD.md`. No rule, number, stat, name or RNG draw changed.
+
+**How each round was judged.**
+- The atlas came from the generator, the drafts from `artRGBA` and `harness/peoples.html` (the real `drawSentinel`), and the figure from `harness/kit.html`.
+- The running app was shot through Playwright (vite :5251) at 390 × 844 (DPR 2) and 1280 × 800: the Codex items and skills tabs, the Pack grid, Gear, the hero card, the merchant shelf, the spoils hand and the upgrade panel.
+- Every icon was viewed at 1×, 2×, 3×, 6× and 8× on wood and on parchment, beside the CC0 pickups and system icons.
+
+**Round 1: what misread.**
+- Atlas: the Robe was a ghost, the Plate a tooth, the Grimoire a framed gem, the Banner an archery target, and the Shield flat. They are now a robe with sleeves and a belt, a cuirass, a violet book in the Tome's family, a hanging swallowtail banner, and a three-step steel ramp.
+- Haste pointed left (rewind) on every Speed and Rush skill. It now points forward, and Slow mirrors it.
+- `skillHeadline` read the multipliers first, so 18 skills drew a mark their own first words contradict (Heavy Blows "Hits 25% harder" showed the speed chevrons; Snare and Anchor showed the chill flake; Finisher and Reaper the slashes). The named effects now come first, damage before speed. `tests/skills.test.ts` pins 15 of them. This one change fixes the Codex skill tiles, the hero card's slots, the pick strip's tokens, the track and the home card.
+- The hero card's "Swings" sword was drawn at 14 px, which dropped two rows and columns. It is 16 px now.
+- Fifteen drafts were redrawn: a spider (Overgrowth), the range reticle (Cold Snap), a lollipop (Snare), a bird (Quick Hands), the chill flake (Starweave), a bone (Rally), loose chevrons (Banner Bearer), a spring (Bounty), a robot head (Hard Hitter), a tangle (Javelin Sling), a TV (Smokehouse Apron), a ring (Shortbow), a creature (Barbed Quiver), a jellyfish (Moonsilk Mantle) and a bush (Mossweave Robe).
+- Three tell marks made checkers. The flake pip's corners touched only diagonally. Starweave's white stars sat on white. The pennant's emblem was ringed pixel by pixel. `pixLine` is now 4-connected, so roots and chains are solid lines.
+- The Cloak first became a cape with folds, which read as a melon. It ended the round as a hooded figure.
+
+**Round 2: noise and flat ramps.**
+- Dithered body pieces and shields became drawn textures:
+  - Chainshirt: steel bands with a belt;
+  - Stoneskin Mail: stone slabs in a brick bond;
+  - Deepforge Plate: a molten seam;
+  - Round Shield: two-pixel planks;
+  - Woven Vest: rows and lacing;
+  - Scale Hide: staggered scales.
+- The Warhammer got a ramp.
+- Execute had become a guillotine frame in round 1, which read as a picture at 48 px. It is now the blade falling on a nearly empty HP bar.
+- Relic is a locket. Berserk, Venom Spit, Herb Pouch, Thornweave Hood, Thornrod and Worldroot Staff were redrawn, and the ties on Smokehouse Apron were cut.
+
+**Round 3: re-score everything, then fix what still scored under 4.**
+- Silkwind had read as a bird twice. It is now the Cloak's figure in violet, with its hem kicked right.
+- The Gator Buckler had read as an urchin. It is now a rimmed buckler with a bony ridge.
+- The Spiced Blade had the Sword's outline. It now has a wavy red edge and a flame at the tip.
+- The Moonsilk Mantle became a capelet with a silver hem.
+
+**Scores, before → after (236 assets).**
+
+| Axis | Before | After |
+|---|---|---|
+| Aesthetics | 7 at 2, 41 at 3 | 3 at 3 |
+| Brand | 2 at 3 | unchanged |
+| Job | 23 at 2, 32 at 3 | 21 at 3 |
+
+Assets with any axis under 4: 68 → 26.
+
+**Checks.** `tests/bodyLayer.test.ts` passes: every redrawn body cell still holds its `BODY_INK` colours, so the tile and the figure agree. `tests/peoplesArt.test.ts` passes: the 150 draft icons are still at least 24 px apart, and the closest pair is the Sword and the Spiced Blade at 38. Weapon grips did not move.
+
+**Left (the scorecard's "still weakest" list).**
+- The four casting sticks differ by their tips alone.
+- Skill marks are effect marks: five Rush skills share one chevron in the Codex.
+- The Moonsilk Mantle is still a dome at 1×.
+- The Mail is a checker, and the Saffron Brand is busier than its row.
+- The Codex and Easel cells are the retired houses' marks.
+- Berserk and Venom Spit read as a monster and a fish.
+- `docs/item-assets/` and `docs/peoples/` still show the old cells. The main session re-renders them after the merge.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/icons/cards/` holds 47 cards (880 KB) and `manifest.json`.

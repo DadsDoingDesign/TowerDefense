@@ -327,7 +327,14 @@ export const EVOLUTION_TO_SKILL: Readonly<Record<string, string>> = {
  * A skill's lead effect as a picture and a word or two — the pick-one strip's
  * token (`ui/shell/PickStrip.tsx`), which carries no name: "Speed +15%",
  * "Burn", "Hold". Read off the mods in a fixed order, so a skill with several
- * leads with the one its sentence leads with. A number rides only where the
+ * leads with the one its sentence leads with: the named effects first (an
+ * execute, a snare, a stun, chains, a hold, a volley, burn, gold), then the
+ * plain multipliers, damage before speed. (It was multipliers first, and 18
+ * skills' marks contradicted their own first words — Heavy Blows "Hits 25%
+ * harder" drew the speed chevrons, Snare and Anchor the chill flake, Finisher
+ * and Reaper the damage slashes; `tests/skills.test.ts` pins them.) It is the
+ * skill's icon everywhere a skill is pictured (`channels.skillIcon`, the Codex
+ * tile, the hero card's slots). A number rides only where the
  * mod IS the number (the three plain multipliers); everything else is the word,
  * and the card under the strip says the rest.
  */
@@ -340,28 +347,29 @@ export interface SkillHeadline {
 const pct = (mult: number) => `+${Math.round((mult - 1) * 100)}%`
 
 const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][] = [
-  ['rateMult', (m) => ({ icon: 'haste', label: 'Speed', value: pct(m.rateMult!) })],
+  ['execute', () => ({ icon: 'execute', label: 'Execute' })],
+  ['trap', () => ({ icon: 'trap', label: 'Trap' })],
+  ['stunChance', () => ({ icon: 'stun', label: 'Stun' })],
+  ['shock', () => ({ icon: 'shock', label: 'Shock' })],
+  ['block', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdAdd', () => ({ icon: 'block', label: 'Hold' })],
+  ['holdRadius', () => ({ icon: 'block', label: 'Hold' })],
+  ['volley', () => ({ icon: 'projectile', label: 'Volley' })],
+  ['burn', () => ({ icon: 'burn', label: 'Burn' })],
+  ['goldPerKill', () => ({ icon: 'gold', label: 'Bounty' })],
   ['damageMult', (m) => ({ icon: 'damage', label: 'Dmg', value: pct(m.damageMult!) })],
+  ['rateMult', (m) => ({ icon: 'haste', label: 'Speed', value: pct(m.rateMult!) })],
   ['rangeMult', (m) => ({ icon: 'range', label: 'Reach', value: pct(m.rangeMult!) })],
   ['critChanceAdd', () => ({ icon: 'crit', label: 'Crit' })],
   ['critMultAdd', () => ({ icon: 'crit', label: 'Crit' })],
   ['critEvery', () => ({ icon: 'crit', label: 'Crit' })],
-  ['burn', () => ({ icon: 'burn', label: 'Burn' })],
   ['chill', () => ({ icon: 'chill', label: 'Chill' })],
-  ['shock', () => ({ icon: 'shock', label: 'Shock' })],
-  ['stunChance', () => ({ icon: 'stun', label: 'Stun' })],
-  ['execute', () => ({ icon: 'execute', label: 'Execute' })],
   ['lifedrain', () => ({ icon: 'lifedrain', label: 'Drain' })],
   ['splashAdd', () => ({ icon: 'splash', label: 'Splash' })],
   ['pierce', () => ({ icon: 'pierce', label: 'Pierce' })],
-  ['volley', () => ({ icon: 'projectile', label: 'Volley' })],
   ['projSpeedMult', () => ({ icon: 'projectile', label: 'Shots' })],
-  ['block', () => ({ icon: 'block', label: 'Hold' })],
-  ['holdAdd', () => ({ icon: 'block', label: 'Hold' })],
-  ['holdRadius', () => ({ icon: 'block', label: 'Hold' })],
   ['thornsMult', () => ({ icon: 'thorns', label: 'Thorns' })],
   ['thornsIgnite', () => ({ icon: 'thorns', label: 'Thorns' })],
-  ['trap', () => ({ icon: 'trap', label: 'Trap' })],
   ['buffAura', () => ({ icon: 'auraBuff', label: 'Aura' })],
   ['killRush', () => ({ icon: 'haste', label: 'Rush' })],
   ['openingRush', () => ({ icon: 'haste', label: 'Rush' })],
@@ -371,7 +379,6 @@ const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][]
   ['thornsBurn', () => ({ icon: 'thorns', label: 'Thorns' })],
   ['rushPerHeld', () => ({ icon: 'haste', label: 'Rush' })],
   ['killMend', () => ({ icon: 'hp', label: 'Mend' })],
-  ['goldPerKill', () => ({ icon: 'gold', label: 'Bounty' })],
 ]
 
 export function skillHeadline(skill: Pick<Skill, 'mods'>): SkillHeadline {
