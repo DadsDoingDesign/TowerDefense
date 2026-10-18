@@ -26,7 +26,7 @@ import { glowAlpha, glowWidth, litBy, pulseIndex, seasonFor, type MapFocus, type
 /** The night palette, dusk-lifted (`trade/NOTES.md` § Round 2). */
 const NIGHT = {
   grass: ['#1d2a1f', '#212f22', '#253425', '#2a3a29'],
-  forest: ['#0f1912', '#172719', '#223823'],
+  forest: ['#0e170f', '#1a2d1b', '#2a4428'],
   trunk: '#2a1c12',
   water: ['#122230', '#152837'],
   foam: '#2d5266',
@@ -37,11 +37,34 @@ const NIGHT = {
   roadEdge: '#16100a',
   unlit: '#6a5638',
   keep: { wall: '#7a6648', roof: '#3a2614', flag: '#e0ac4c' },
+  // A town's roof: warm thatch-and-tile at night, so a house reads by its roof first.
+  townRoof: '#7a3f24',
   pulseCore: '#fff3c4',
   window: '#f5c451',
 } as const
 
-const PINE = ['..1..', '.121.', '.121.', '12221', '.010.', '00100', '..t..']
+/**
+ * A pine, 5 × 7: three tiers lit from the upper left (`2` the lit side, `0`
+ * the shade). The marks critique (Oct 2026): the old one was lit in the
+ * middle and darker than the grass at its foot, so a wood read as black
+ * blots; this one is still dim — it frames the roads — but reads as trees.
+ */
+const PINE = ['..2..', '.221.', '.211.', '22110', '.210.', '21100', '..t..']
+
+/**
+ * A peak on the ore road, 13 × 7 (`2` snow, `1` the lit west face, `0` the
+ * shade): a summit with a shoulder and a ragged snowline. It was a 45° wedge
+ * with a flat cap, which read as a tent (the marks critique).
+ */
+const PEAK = ['.....2.......', '....220......', '...2120..2...', '...11000220..', '..1110000100.', '.111100000000', '1111000000000']
+
+/**
+ * The towns, by their foot's middle: a house with a pitched roof (`r`), its
+ * walls (`w`) and a lit window (`y`); the destination is wider, with two. They
+ * were flat boxes, which read as crates beside the road (the marks critique).
+ */
+const TOWN = ['...o...', '..oro..', '.orrro.', 'orrrrro', 'owwwwwo', 'owwywwo', 'ooooooo']
+const CITY = ['....o....', '...oro...', '..orrro..', '.orrrrro.', 'orrrrrrro', 'owwwwwwwo', 'owywwwywo', 'ooooooooo']
 
 const hexRgb = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
 const rgba = (h: string, a: number): string => `rgba(${hexRgb(h).join(',')},${Math.max(0, Math.min(1, a))})`
@@ -227,9 +250,11 @@ function* terrainSteps(geo: MapGeometry): Generator<void, HTMLCanvasElement, voi
     if (!free(x, y)) continue
     const nearPeaks = Math.hypot(x - metals[0], y - metals[1]) < Math.min(W, H) * 0.3
     if (nearPeaks && R.next() > 0.25) {
-      for (let j = 0; j < 6; j++) {
-        for (let i = -j; i <= j; i++) {
-          if (free(x + i, y + j)) set(x + i, y + j, j < 2 ? P.rock[2] : i < 0 ? P.rock[1] : P.rock[0])
+      for (let j = 0; j < PEAK.length; j++) {
+        const row = PEAK[j]
+        for (let i = 0; i < row.length; i++) {
+          const ch = row[i]
+          if (ch !== '.' && free(x + i - 5, y + j)) set(x + i - 5, y + j, P.rock[+ch])
         }
       }
     } else if (n3(x / 14, y / 14) > 0.45) {
@@ -279,26 +304,31 @@ function drawTowns(ctx: CanvasRenderingContext2D, geo: MapGeometry, roads: reado
   for (const r of geo.routes) {
     const v = roads.find((q) => q.company === r.company)!
     const lit = v.light > 0
+    const ink: Record<string, string> = {
+      o: OUTLINE,
+      r: lit ? NIGHT.townRoof : mix(NIGHT.unlit, '#000000', 0.3),
+      w: lit ? NIGHT.keep.wall : NIGHT.unlit,
+      y: lit ? NIGHT.window : NIGHT.unlit,
+    }
     r.towns.forEach(([x, y], k) => {
       const big = k === 2
-      const w = big ? 7 : 5
-      const h = big ? 6 : 4
-      const left = x - Math.ceil(w / 2)
-      ctx.fillStyle = OUTLINE
-      ctx.fillRect(left - 1, y - h - 1, w + 2, h + 2)
-      ctx.fillStyle = lit ? NIGHT.keep.wall : NIGHT.unlit
-      ctx.fillRect(left, y - h, w, h)
-      ctx.fillStyle = lit ? NIGHT.keep.roof : mix(NIGHT.unlit, '#000000', 0.3)
-      ctx.fillRect(left, y - h, w, 2)
+      const art = big ? CITY : TOWN
+      const left = x - Math.floor(art[0].length / 2)
+      const top = y - art.length + 1
+      art.forEach((row, j) => {
+        for (let i = 0; i < row.length; i++) {
+          const fill = ink[row[i]]
+          if (!fill) continue
+          ctx.fillStyle = fill
+          ctx.fillRect(left + i, top + j, 1, 1)
+        }
+      })
       if (!lit) return
-      ctx.fillStyle = NIGHT.window
-      ctx.fillRect(x - 1, y - 2, 1, 1)
-      if (big) ctx.fillRect(x + 1, y - 2, 1, 1)
-      // The company's pennant over a town on a road you have worked.
+      // The company's pennant over a town on a road you have worked, on its roof's peak.
       ctx.fillStyle = OUTLINE
-      ctx.fillRect(x, y - h - 6, 1, 5)
+      ctx.fillRect(x, top - 4, 1, 4)
       ctx.fillStyle = colorOf(r.company)
-      ctx.fillRect(x + 1, y - h - 6, 3, 2)
+      ctx.fillRect(x + 1, top - 4, 3, 2)
     })
   }
 }
