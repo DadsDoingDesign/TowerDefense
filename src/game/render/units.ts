@@ -465,7 +465,7 @@ export function heroFigure(
   const cutMain = cut && anim === 'idle'
   const strip = cutMain || cutOff ? unpaintedStrip(body, rig, frames, { main: cutMain, off: cutOff }) : body
   // The body piece, worn over what is left (an empty slot returns `strip` itself).
-  const worn = dressedStrip(strip, pack, `${archetype}_${anim}`, frames, gear?.body ?? null)
+  const worn = dressedStrip(strip, pack, `${archetype}_${anim}`, frames, gear?.bodyStyle ?? gear?.body ?? null)
   const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
   return pm ? { pm, frames, firing, ownArt, rig } : null
 }

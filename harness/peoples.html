@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1344" />
+    <!-- Sprite and atlas urls are relative to the site root (see harness/index.html). -->
+    <base href="/" />
+    <title>Peoples Sheets</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #120e0b; }
+      body { width: 1344px; color: #efe6d6; font: 16px system-ui, sans-serif; }
+      .sheet { width: 1344px; box-sizing: border-box; padding: 22px 20px 18px; background: #1d1713; margin: 0 0 24px; }
+      .sheet header { display: flex; align-items: baseline; gap: 18px; margin: 0 0 16px; padding: 0 4px; }
+      .sheet h1 { margin: 0; font: 700 40px/1.1 'Crimson Text', Georgia, serif; letter-spacing: 0.01em; }
+      .sheet .sub { font-size: 22px; color: #c9bba4; flex: 1; }
+      .sheet .draft { font-size: 17px; font-weight: 700; letter-spacing: 0.08em; color: #1d1713; background: #e3b64f; padding: 4px 10px; border-radius: 4px; }
+      .grid { display: grid; grid-template-columns: repeat(5, 252px); gap: 12px 10px; justify-content: space-between; }
+      .cell { margin: 0; display: flex; flex-direction: column; background: #2a221c; border: 2px solid #3b3029; border-radius: 8px; overflow: hidden; }
+      .cell.lv4 { border-color: #a37c3a; }
+      .head { display: flex; align-items: flex-end; gap: 10px; padding: 10px 10px 0; }
+      .ic { display: block; image-rendering: pixelated; background: #3a2f27; border-radius: 4px; }
+      .tags { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+      .tags span { font-size: 17px; font-weight: 800; line-height: 1; padding: 5px 8px; border-radius: 4px; letter-spacing: 0.03em; }
+      .lv { background: #4a3d33; color: #f2e8d8; }
+      .lv.lv4 { background: #e3b64f; color: #1d1713; }
+      .new { background: #3f8f5a; color: #f4fff2; font-size: 14px !important; }
+      .ren { background: #4b6fa3; color: #f2f6ff; font-size: 14px !important; }
+      .sig { background: #b8463f; color: #fff2ec; font-size: 14px !important; }
+      .name { font: 700 25px/1.1 'Crimson Text', Georgia, serif; padding: 8px 10px 4px; min-height: 28px; }
+      .was { font-size: 15px; color: #b3a48c; padding: 0 10px 2px; font-style: italic; }
+      canvas.hero { display: block; image-rendering: pixelated; margin-top: auto; }
+      footer { margin: 14px 4px 0; font-size: 17px; color: #a8987f; }
+    </style>
+  </head>
+  <body>
+    <main id="out">Loading…</main>
+    <script type="module" src="/harness/peoples.ts"></script>
+  </body>
+</html>

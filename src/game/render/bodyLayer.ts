@@ -79,6 +79,52 @@ export const BODY_INK = {
   silkwind: { fill: '#775396', shade: '#87465a', shine: '#a8719a', clasp: '#ffed44', claspShade: '#d08c41' },
 } as const satisfies Record<BodyKey, Record<string, string>>
 
+/**
+ * A body piece described as DATA rather than as a case of the switch below:
+ * the same re-ink and the same silhouette parts the shipped pieces are built
+ * from (pauldron domes, a tasset under the hem, a skirt, a cape behind), plus
+ * a few more (a pattern over the tunic, a rim, a belt, a sash, a chest
+ * emblem, a collar, an apron, pouches, a hood behind the head), each optional.
+ *
+ * No shipped item uses one: every shipped piece is a {@link BodyKey} and draws
+ * exactly as it did. A style is how a DRAFT piece is tried on the real figure
+ * (the Peoples & Trades proposal, `scripts/peoples-art.ts`, drawn by
+ * `harness/peoples.ts`) through the same dresser, cache and bake, so a piece
+ * that ships later can move into the table without being redrawn. All inks
+ * are `#rrggbb` (the atlas palette, `fw-icons.ts`).
+ */
+export interface BodyStyle {
+  /** Unique per style: the dressed-strip cache key. */
+  id: string
+  fill: string
+  shade: string
+  shine?: string
+  /** A pattern over the tunic: `a` on it, `b` (when named) off it; off-pattern pixels otherwise keep the re-ink. */
+  pattern?: { kind: 'checker' | 'scales' | 'quilt' | 'rivets' | 'weave' | 'hstripes' | 'speckle' | 'vstripe'; a: string; b?: string }
+  /** A trim on the tunic's edge. */
+  rim?: string
+  /** A belt `dy` rows above the hem (default 3), with a buckle. */
+  belt?: { ink: string; shade: string; buckle?: string; dy?: number }
+  /** A band across the chest, from the front shoulder down to the back hip. */
+  sash?: { ink: string; shade?: string }
+  /** A small picture centred on the chest: rows of letters keyed into `ink`. */
+  emblem?: { rows: readonly string[]; ink: Readonly<Record<string, string>>; dy?: number }
+  pauldrons?: { rx: number; ry: number; lift: number; fill: string; shine: string; shade: string; spike?: string }
+  tasset?: { rows: number; cut: 'lames' | 'ragged' | 'strips' | 'fringe'; fill: string; shade: string }
+  skirt?: { fill: string; shade: string; shine: string; flare: number; fold: number; hem?: string }
+  cape?: { top: number; flare: number; billow: number; fill: string; shade: string; shine: string; lining?: string; tatter?: boolean }
+  /** A front panel from the chest to near the feet. */
+  apron?: { fill: string; shade: string; half: number; pocket?: string; top?: number }
+  /** A band over the shoulders, wider than them; `spikes` points up from it. */
+  collar?: { fill: string; shade: string; spikes?: string; fur?: boolean }
+  /** Little pouches or vials hanging from the belt line. */
+  pouches?: { fill: string; shade: string; top?: string; n: number }
+  /** A hood hung BEHIND the head, `depth` px proud of its outline. */
+  hood?: { fill: string; shade: string; depth: number; sprig?: string }
+}
+
+export const isBodyStyle = (k: unknown): k is BodyStyle => typeof k === 'object' && k !== null && 'id' in k && 'fill' in k
+
 const rgb = (hex: string): number => parseInt(hex.slice(1), 16)
 
 /** RGBA pixels, writable — an `ImageData.data` or a test's raw buffer. */
@@ -94,7 +140,7 @@ export interface DressResult {
  * Dress ONE frame (columns `fx .. fx+cw` of a strip `w` wide) in `key`, in
  * place. `f` / `frames` phase the silk cape's billow. Pure: no DOM.
  */
-export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: number, t: Torso, key: BodyKey, f = 0, frames = 1): DressResult {
+export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: number, t: Torso, key: BodyKey | BodyStyle, f = 0, frames = 1): DressResult {
   const res: DressResult = { changed: 0, overflow: 0 }
   const at = (x: number, y: number) => (y * w + fx + x) * 4
   const inCell = (x: number, y: number) => x >= 0 && x < cw && y >= 0 && y < h
@@ -146,7 +192,8 @@ export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: numb
   const cy = Math.round((t.y0 + t.y1) / 2)
   const inMask = (x: number, y: number) => inCell(x, y) && mask.has(id(x, y))
 
-  const ink = BODY_INK[key] as Record<string, string>
+  const style = isBodyStyle(key) ? key : null
+  const ink = (style ?? BODY_INK[key as BodyKey]) as unknown as Record<string, string>
   const fill = rgb(ink.fill)
   const shade = rgb(ink.shade)
 
@@ -251,6 +298,205 @@ export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: numb
       ? { fill: rgb(BODY_INK.ironheart.shade), shine: rgb(BODY_INK.ironheart.fill), shade: INK }
       : { fill: rgb(BODY_INK[k].fill), shine: rgb(BODY_INK[k].shine), shade: rgb(BODY_INK[k].shade) }
 
+  if (style) {
+    dressStyle(style)
+    return res
+  }
+
+  /** A {@link BodyStyle}, part by part, after the re-ink (the shipped pieces never come here). */
+  function dressStyle(st: BodyStyle): void {
+    const C = (hex: string | undefined, or: number) => (hex ? rgb(hex) : or)
+    const free = (x: number, y: number) => inMask(x, y) && colourAt(x, y) !== INK
+    const each = (fn: (x: number, y: number) => void) => {
+      for (const p of mask) {
+        const x = p % cw
+        fn(x, (p - x) / cw)
+      }
+    }
+    if (st.pattern) {
+      const a = rgb(st.pattern.a)
+      const b = C(st.pattern.b, shade)
+      const hash = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0
+      each((x, y) => {
+        if (!free(x, y)) return
+        const k = st.pattern!.kind
+        const dy = y - t.y0
+        let on: boolean | null = null
+        if (k === 'checker') on = (((x >> 1) + (y >> 1)) & 1) === 1
+        else if (k === 'scales') on = dy % 3 === 2 || (dy % 3 === 0 && (x + ((dy / 3) & 1) * 2) % 4 === 0)
+        else if (k === 'quilt') on = (x + y) % 4 === 0 || (x - y + 64) % 4 === 0
+        else if (k === 'rivets') on = (x - t.x0) % 4 === 1 && dy % 4 === 1 ? true : null
+        else if (k === 'weave') on = (x + y) % 2 === 0
+        else if (k === 'hstripes') on = ((dy >> 1) & 1) === 1
+        else if (k === 'speckle') on = hash(x, y) % 5 === 0 ? true : null
+        else if (k === 'vstripe') on = Math.abs(x - cx) <= 1 ? true : null
+        // Off-pattern pixels keep the re-ink unless a second ink is named.
+        if (on === null || (!on && !st.pattern!.b)) return
+        put(x, y, on ? a : b)
+      })
+    }
+    if (st.rim) {
+      const rim = rgb(st.rim)
+      each((x, y) => {
+        if (!free(x, y)) return
+        const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !inMask(x + dx, y + dy) || colourAt(x + dx, y + dy) === INK)
+        if (edge) put(x, y, rim)
+      })
+    }
+    if (st.sash) {
+      const s1 = rgb(st.sash.ink)
+      const s2 = C(st.sash.shade, s1)
+      // From the front (right) shoulder down to the back (left) hip, 3 px wide.
+      each((x, y) => {
+        if (!free(x, y)) return
+        const k = (x - t.x1) + (y - t.y0) * ((t.x1 - t.x0) / Math.max(1, t.y1 - t.y0))
+        if (k >= -1 && k <= 1) put(x, y, k > 0 ? s2 : s1)
+      })
+    }
+    if (st.belt) {
+      const y = t.y1 - (st.belt.dy ?? 3)
+      for (const [dy, c] of [[0, rgb(st.belt.ink)], [1, rgb(st.belt.shade)]] as const)
+        for (let x = t.x0; x <= t.x1; x++) if (free(x, y + dy)) put(x, y + dy, c)
+      if (st.belt.buckle) for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (inMask(cx + dx, y + dy)) put(cx + dx, y + dy, rgb(st.belt.buckle))
+    }
+    if (st.emblem) {
+      const rows = st.emblem.rows
+      const ex = cx - (rows[0].length >> 1)
+      const ey = cy - (rows.length >> 1) + (st.emblem.dy ?? 0)
+      rows.forEach((row, j) => [...row].forEach((ch, i) => st.emblem!.ink[ch] && put(ex + i, ey + j, rgb(st.emblem!.ink[ch]))))
+    }
+    if (st.apron) {
+      const ap = st.apron
+      const a1 = rgb(ap.fill)
+      const a2 = rgb(ap.shade)
+      function* panel() {
+        for (let y = t.y0 + (ap.top ?? 2); y <= t.feet - 3; y++)
+          for (let x = cx - ap.half; x <= cx + ap.half; x++) yield [x, y, x === cx + ap.half || y === t.feet - 3 ? a2 : a1] as [number, number, number]
+      }
+      shape(panel(), false)
+      if (ap.pocket) {
+        const pk = rgb(ap.pocket)
+        for (let dy = 0; dy < 2; dy++) for (let dx = -1; dx <= 1; dx++) put(cx + dx, t.y1 + 1 + dy, pk)
+      }
+    }
+    if (st.tasset) {
+      const ts = st.tasset
+      const t1 = rgb(ts.fill)
+      const t2 = rgb(ts.shade)
+      shape(
+        tasset(ts.rows, (x, _y, k) => {
+          if (ts.cut === 'lames') return k % 2 === 0 ? t2 : t1
+          if (ts.cut === 'ragged') return k <= (((x - hem.lo) >> 1) & 1 ? ts.rows : ts.rows - 1) ? (((x >> 1) + k) & 1 ? t2 : t1) : null
+          if (ts.cut === 'strips') return (x - hem.lo) % 3 === 0 ? null : k === ts.rows ? t2 : t1
+          return k <= 1 + ((x * 7 + 3) % ts.rows) ? (x & 1 ? t2 : t1) : null
+        }),
+        false,
+      )
+    }
+    if (st.skirt) {
+      const sk = st.skirt
+      const s1 = rgb(sk.fill)
+      const s2 = rgb(sk.shade)
+      const s3 = rgb(sk.shine)
+      const s4 = C(sk.hem, s2)
+      const bottom = t.feet - 2
+      function* skirt() {
+        for (let y = t.y1 + 1; y <= bottom; y++) {
+          const k = y - t.y1
+          const lo = hem.lo - Math.min(sk.flare, k >> 1)
+          const hi = hem.hi + Math.min(sk.flare, k >> 1)
+          for (let x = lo; x <= hi; x++) {
+            const fold = sk.fold > 0 && (x - lo) % sk.fold === sk.fold >> 1
+            yield [x, y, y >= bottom - 1 ? s4 : fold ? s2 : x <= lo + 1 ? s3 : s1] as [number, number, number]
+          }
+        }
+      }
+      shape(skirt(), false)
+    }
+    if (st.pauldrons) {
+      const pd = st.pauldrons
+      const c = { fill: rgb(pd.fill), shine: rgb(pd.shine), shade: rgb(pd.shade) }
+      shape(dome(shoulders.lo, t.y0 - pd.lift, pd.rx, pd.ry, c), false)
+      shape(dome(shoulders.hi, t.y0 - pd.lift, pd.rx, pd.ry, c), false)
+      if (pd.spike) {
+        const sp = rgb(pd.spike)
+        const spikes: [number, number, number][] = []
+        for (const sx of [shoulders.lo, shoulders.hi]) for (let k = 1; k <= 3; k++) spikes.push([sx, t.y0 - pd.lift - k, sp])
+        shape(spikes, false)
+      }
+    }
+    if (st.collar) {
+      const co = st.collar
+      const c1 = rgb(co.fill)
+      const c2 = rgb(co.shade)
+      const px: [number, number, number][] = []
+      for (let y = t.y0 - 2; y <= t.y0 + 1; y++)
+        for (let x = shoulders.lo - 3; x <= shoulders.hi + 3; x++) {
+          const fur = co.fur && y === t.y0 - 2 && (x & 1) === 1
+          if (fur) continue
+          px.push([x, y, y === t.y0 + 1 ? c2 : c1])
+        }
+      if (co.spikes) for (let x = shoulders.lo - 2; x <= shoulders.hi + 2; x += 3) px.push([x, t.y0 - 3, rgb(co.spikes)], [x, t.y0 - 4, rgb(co.spikes)])
+      shape(px, false)
+    }
+    if (st.pouches) {
+      const po = st.pouches
+      const p1 = rgb(po.fill)
+      const p2 = rgb(po.shade)
+      const px: [number, number, number][] = []
+      const span = hem.hi - hem.lo
+      for (let i = 0; i < po.n; i++) {
+        const x0 = hem.lo + Math.round(((i + 0.5) * span) / po.n) - 1
+        for (let dy = 0; dy < 4; dy++)
+          for (let dx = 0; dx < 3; dx++) px.push([x0 + dx, t.y1 - 1 + dy, dy === 0 && po.top ? rgb(po.top) : dx === 2 || dy === 3 ? p2 : p1])
+      }
+      shape(px, false)
+    }
+    if (st.cape) {
+      const cp = st.cape
+      const c = { fill: rgb(cp.fill), shade: rgb(cp.shade), shine: rgb(cp.shine), lining: cp.lining ? rgb(cp.lining) : undefined }
+      const px = [...cape(t.y0 - cp.top, cp.flare, cp.billow, c)]
+      // A tattered hem: every third column of the last rows torn away.
+      const kept = cp.tatter ? px.filter(([x, y]) => !(y >= t.feet - 4 && (x * 5 + y) % 3 === 0)) : px
+      shape(kept, true)
+    }
+    if (st.hood) {
+      const hd = st.hood
+      const h1 = rgb(hd.fill)
+      const h2 = rgb(hd.shade)
+      // The head: every solid pixel above the shoulders. The hood is the ring
+      // `depth` px round it, painted only into empty pixels (behind).
+      const px: [number, number, number][] = []
+      const top = Math.max(0, t.y0 - 40)
+      for (let y = top; y <= t.y0 + 1; y++)
+        for (let x = 0; x < cw; x++) {
+          if (solid(x, y)) continue
+          let near = Infinity
+          for (let dy = -hd.depth; dy <= hd.depth; dy++)
+            for (let dx = -hd.depth; dx <= hd.depth; dx++) {
+              const X = x + dx
+              const Y = y + dy
+              if (Y < t.y0 - 1 && solid(X, Y)) near = Math.min(near, Math.max(Math.abs(dx), Math.abs(dy)))
+            }
+          if (near <= hd.depth) px.push([x, y, near === hd.depth || x < cx - 6 ? h2 : h1])
+        }
+      shape(px, true)
+      if (hd.sprig) {
+        const sg = rgb(hd.sprig)
+        let ty = -1
+        let tx = -1
+        for (let y = top; y < t.y0 && ty < 0; y++)
+          for (let x = 0; x < cw; x++)
+            if (solid(x, y)) {
+              ty = y
+              tx = x
+              break
+            }
+        if (ty >= 0) shape([[tx - 3, ty - 1, sg], [tx - 4, ty - 2, sg], [tx - 2, ty - 2, sg], [tx - 3, ty - 3, sg]], true)
+      }
+    }
+  }
+
   switch (key) {
     case 'mail': {
       // Rings: a 2 px checker of the two steels over the whole shirt.
@@ -351,7 +597,7 @@ export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: numb
 }
 
 /** Dress every frame of a strip's RGBA pixels in place. */
-export function dressPixels(d: Pixels, w: number, h: number, torsos: readonly Torso[], key: BodyKey): DressResult {
+export function dressPixels(d: Pixels, w: number, h: number, torsos: readonly Torso[], key: BodyKey | BodyStyle): DressResult {
   const frames = torsos.length
   const cw = Math.round(w / frames)
   const out: DressResult = { changed: 0, overflow: 0 }
@@ -363,7 +609,7 @@ export function dressPixels(d: Pixels, w: number, h: number, torsos: readonly To
   return out
 }
 
-const dressed = new WeakMap<object, Map<BodyKey, HTMLCanvasElement>>()
+const dressed = new WeakMap<object, Map<string, HTMLCanvasElement>>()
 
 /**
  * The strip with the body piece on, or the strip itself when there is none to
@@ -376,13 +622,15 @@ export function dressedStrip(
   pack: string | undefined,
   strip: string,
   frames: number,
-  key: BodyKey | null,
+  /** A shipped piece by its key, or a draft {@link BodyStyle} (cached by its `id`). */
+  key: BodyKey | BodyStyle | null,
 ): HTMLImageElement | HTMLCanvasElement {
   if (!key || typeof document === 'undefined') return src
   const torsos = torsosFor(pack, strip)
   if (!torsos || torsos.length !== frames) return src
+  const memo = isBodyStyle(key) ? `style:${key.id}` : key
   let byKey = dressed.get(src)
-  const hit = byKey?.get(key)
+  const hit = byKey?.get(memo)
   if (hit) return hit
   const w = 'naturalWidth' in src ? src.naturalWidth : src.width
   const h = 'naturalHeight' in src ? src.naturalHeight : src.height
@@ -397,6 +645,6 @@ export function dressedStrip(
   dressPixels(img.data, w, h, torsos, key)
   g.putImageData(img, 0, 0)
   if (!byKey) dressed.set(src, (byKey = new Map()))
-  byKey.set(key, c)
+  byKey.set(memo, c)
   return c
 }

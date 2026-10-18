@@ -49,7 +49,7 @@ import { iconCell, itemIcon, type IconKey } from '../data/iconAtlas'
 import type { Archetype, Equipment, Sentinel } from '../types'
 import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
-import { isBodyKey, type BodyKey } from './bodyLayer'
+import { isBodyKey, type BodyKey, type BodyStyle } from './bodyLayer'
 
 /** What a hero carries, as atlas cells, plus the glint its weapon wears. */
 export interface HeroGear {
@@ -59,6 +59,21 @@ export interface HeroGear {
   body: BodyKey | null
   /** The lead on-hit effect the WEAPON's own enchantments carry, or null. */
   glint: HitEffect | null
+  /**
+   * A picture held INSTEAD of an atlas cell, per hand — a 16 × 16 cell and
+   * its grip. Never set by {@link heroGear}: it is how a draft item (the
+   * Peoples & Trades proposal, `harness/peoples.ts`) is tried in the real
+   * fists. A hand with `art` and a null key still cuts the painted piece.
+   */
+  art?: { main?: HeldArt; off?: HeldArt }
+  /** A draft body piece as data (`bodyLayer.BodyStyle`), worn instead of `body`. Never set by {@link heroGear}. */
+  bodyStyle?: BodyStyle
+}
+
+/** A held picture that is not an atlas cell: its 16 × 16 pixels and where it is gripped. */
+export interface HeldArt {
+  cell: HTMLCanvasElement
+  grip: Pt
 }
 
 /**
@@ -421,11 +436,27 @@ function cellCanvas(key: IconKey): HTMLCanvasElement | null {
   return c
 }
 
+const bakedArt = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>()
+/** A held picture's cell, pixel-doubled once like an atlas cell. */
+function artCanvas(art: HeldArt): HTMLCanvasElement | null {
+  const hit = bakedArt.get(art.cell)
+  if (hit) return hit
+  const c = document.createElement('canvas')
+  c.width = SIDE
+  c.height = SIDE
+  const g = c.getContext('2d')
+  if (!g) return null
+  g.imageSmoothingEnabled = false
+  g.drawImage(art.cell, 0, 0, CELL, CELL, 0, 0, SIDE, SIDE)
+  bakedArt.set(art.cell, c)
+  return c
+}
+
 /** Blit one mark with its grip on (gx, gy), at a whole logical px. */
-function hold(ctx: CanvasRenderingContext2D, key: IconKey, gx: number, gy: number): { x: number; y: number } | null {
-  const c = cellCanvas(key)
+function hold(ctx: CanvasRenderingContext2D, key: IconKey | null, gx: number, gy: number, art?: HeldArt): { x: number; y: number } | null {
+  const c = art ? artCanvas(art) : key ? cellCanvas(key) : null
   if (!c) return null
-  const g = gripOf(key)
+  const g = art ? art.grip : gripOf(key!)
   const x = Math.round(gx - g.x * GEAR_SCALE)
   const y = Math.round(gy - g.y * GEAR_SCALE)
   ctx.drawImage(c, x, y)
@@ -438,6 +469,11 @@ function hold(ctx: CanvasRenderingContext2D, key: IconKey, gx: number, gy: numbe
  * look's shield). The context is at the hero's origin.
  */
 export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear): void {
+  const art = gear.art?.off
+  if (art) {
+    hold(ctx, null, rig.fistL.x, rig.fistL.y, art)
+    return
+  }
   if (!gear.off || gear.off === rig.paintedOff) return
   hold(ctx, gear.off, rig.fistL.x, rig.fistL.y)
 }
@@ -459,12 +495,13 @@ export function drawMainHand(
   /** The art's own attack strip is playing: its painted weapon is mid-swing, away from `tip`. */
   attacking = false,
 ): void {
-  if (!gear.main) return
-  if (gear.main === rig.paintedMain) {
+  const art = gear.art?.main
+  if (!gear.main && !art) return
+  if (!art && gear.main === rig.paintedMain) {
     if (gear.glint && rig.tip && !attacking) drawGlint(ctx, gear.glint, rig.tip.x, rig.tip.y, now, still)
     return
   }
-  const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY)
+  const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY, art)
   if (at && gear.glint) drawGlint(ctx, gear.glint, at.x + SIDE - 6, at.y + 6, now, still)
 }
 
