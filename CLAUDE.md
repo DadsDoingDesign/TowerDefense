@@ -321,13 +321,17 @@ result. Append a short note to the review log when you're done.
   have fire effects"): each company theme is a PLACE, in pixels, all under
   `:root[data-co-theme]` (the neutral house look has none). The art is pixel
   rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame that
-  is QUIET — one dim line a pixel thick, a shade or two off the panel, with
-  sparse 1 px detail and a corner whose outer pixel is clear: Peppercorn a
-  charred line with a few embers, Easel House a thin three-paint stroke
-  with small scallops, Ironvein an iron line with rivets and one ember
-  joint a tile, Rosethread satin with a running stitch, Moonquill a silver
-  line with one faint rune a tile — a low CTA strip, and Peppercorn's flame
-  crest on the card; each ONE still image), rasterised once into CSS
+  is QUIET but present — a dim line at most two pixels deep, a shade or two
+  off the panel, with a sparse rhythm of its own and a corner whose outer
+  pixel is clear: Peppercorn a charred line with a few embers, Easel House
+  a two-pixel brush stroke (each dab its paint over its bristle shade, a
+  drip), Ironvein a two-tone iron band lit on top with rivet heads,
+  riveted corner plates and a forge glow in each joint, Rosethread satin
+  with a running stitch, Moonquill a silver line with two runes a tile and
+  a four-pointed star at each corner — a low CTA strip (Ironvein's an iron
+  bar with domed rivets), and Peppercorn's flame crest on the card; each
+  ONE still image; the board approved Peppercorn's and Rosethread's as the
+  bar the others match), rasterised once into CSS
   variables by `themeArtDom.ts` and laid on by `src/styles/worlds.css`
   (`border-image`: changes pixels, never boxes). The frames pass (Oct 2026;
   the designer: "the border on the ui can be too intense, especially when

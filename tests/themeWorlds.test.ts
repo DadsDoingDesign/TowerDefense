@@ -96,13 +96,16 @@ describe('the frames: quiet, and one deep (the frames pass, Oct 2026)', () => {
     const f = worldArt(c).frame
     const pal = worldArt(c).palette
     const edge = f.slice(0, FRAME_T).map((r) => r.slice(FRAME_T, FRAME_SIZE - FRAME_T))
-    it(`${c}: one dominant line, sparse detail inside it, nothing bright`, () => {
+    it(`${c}: one dominant line, at most two pixels deep, sparse detail inside it, nothing bright`, () => {
       const lit = (d: number) => [...edge[d]].filter((ch) => ch !== '.').length / FRAME_SPAN
-      // The line runs (nearly) the whole edge; inside it, at most a third of the pixels.
+      // The line runs (nearly) the whole edge. Its second pixel may be a band
+      // of its own (Ironvein's two-tone iron, Easel House's bristle shade:
+      // the second frames pass, Oct 2026), but the inner half stays sparse,
+      // and inside the line at most half the pixels are set.
       expect(lit(0), c).toBeGreaterThanOrEqual(0.75)
-      for (let d = 1; d < FRAME_T; d++) expect(lit(d), `${c} depth ${d}`).toBeLessThanOrEqual(0.5)
+      for (let d = 2; d < FRAME_T; d++) expect(lit(d), `${c} depth ${d}`).toBeLessThanOrEqual(0.5)
       const inner = edge.slice(1).join('').replace(/\./g, '').length / (FRAME_SPAN * (FRAME_T - 1))
-      expect(inner, c).toBeLessThanOrEqual(1 / 3)
+      expect(inner, c).toBeLessThanOrEqual(1 / 2)
       // A dim palette: the line a shade or two off the panel, no accent pixel as bright as a label.
       for (const ch of edge[0]) if (ch !== '.') expect(lum(pal[ch]), `${c} line '${ch}'`).toBeLessThanOrEqual(0.42)
       for (const row of f) for (const ch of row) if (ch !== '.') expect(lum(pal[ch]), `${c} '${ch}'`).toBeLessThanOrEqual(0.6)

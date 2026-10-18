@@ -12,7 +12,7 @@
     "group": "Frames",
     "people": "Easel House",
     "title": "Easel House · Home card",
-    "caption": "A thin three-paint stroke with small scallops; the CTA inside the card wears no frame or paint strip",
+    "caption": "A two-pixel brush stroke: each dab its paint over its bristle shade, parted between dabs, a drip",
     "file": "home-art.png"
   },
   {
@@ -20,7 +20,7 @@
     "group": "Frames",
     "people": "Ironvein",
     "title": "Ironvein · Home card",
-    "caption": "One iron line, a rivet on each plate, one ember joint a tile; no molten seam, and no frame on the CTA",
+    "caption": "A two-tone iron band lit on top, a rivet every 16 px, riveted corner plates, a forge glow in each joint",
     "file": "home-metals.png"
   },
   {
@@ -36,7 +36,7 @@
     "group": "Frames",
     "people": "Moonquill",
     "title": "Moonquill · Home card",
-    "caption": "A silver line with one faint rune a tile and a star at each corner; no rune band or frame on the CTA",
+    "caption": "Two clearer runes a tile under the silver line, and a four-pointed star at each corner",
     "file": "home-scrolls.png"
   },
   {
@@ -44,7 +44,15 @@
     "group": "Frames",
     "people": "Ironvein",
     "title": "Ironvein · Hero pick",
-    "caption": "Only the pick card is framed; Back wears no frame and the CTA keeps just a low strip on its lip",
+    "caption": "The pick card wears the riveted iron band; the lone CTA stands on an iron bar with two domed rivets",
     "file": "pick-metals.png"
+  },
+  {
+    "id": "terms-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Terms",
+    "caption": "Every framed panel on the terms in riveted iron, one deep; the CTA keeps only its iron bar",
+    "file": "terms-metals.png"
   }
 ]
