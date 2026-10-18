@@ -206,7 +206,7 @@ export function drawTellOver(ctx: Ctx, t: Tell, fist: { x: number; y: number }, 
     case 'orbit':
       for (let i = 0; i < t.n; i++) {
         const a = (i / t.n) * Math.PI * 2 + 0.6
-        pixelSprite(ctx, PIPS[t.shape], Math.cos(a) * 24 - 5, -14 + Math.sin(a) * 8 - 5, t.ink)
+        pixelSprite(ctx, PIPS[t.shape], Math.cos(a) * 17 - 9, -14 + Math.sin(a) * 7 - 5, t.ink)
       }
       return
     default:
@@ -257,6 +257,13 @@ export function drawMark(ctx: Ctx, mark: string, ink?: string): void {
       return
     case 'star':
       pixelSprite(ctx, PIPS.star, -22, -28, '#ffed44')
+      return
+    case 'pin':
+      // Two arrows stuck in it, fletched.
+      for (const [x, y] of [[-14, -22], [-8, -10]] as const) {
+        pixLine(ctx, [[x - 10, y - 4], [x, y]], '#e1d4bd')
+        px(ctx, x - 12, y - 6, 2, 1, '#95d562')
+      }
       return
     default:
       return

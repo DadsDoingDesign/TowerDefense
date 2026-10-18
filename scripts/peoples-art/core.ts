@@ -115,7 +115,7 @@ export interface Hit {
   /** The goblin's own drawn states (real `drawEnemy`). */
   status?: readonly ('burn' | 'chill' | 'stun')[]
   /** Drafted marks where the game has none. */
-  mark?: readonly ('poison' | 'bleed' | 'roots' | 'coin' | 'thorns' | 'crack' | 'brew' | 'skull' | 'snare' | 'star')[]
+  mark?: readonly ('poison' | 'bleed' | 'roots' | 'coin' | 'thorns' | 'crack' | 'brew' | 'skull' | 'star' | 'pin')[]
   /** A real floater over the goblin. */
   floater?: { text: string; ink: string; crit?: boolean }
   /** The real snare (`projectiles.drawTrap`) on the road under it. */
