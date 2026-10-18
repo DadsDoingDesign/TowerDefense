@@ -97,8 +97,8 @@ const headPen = (c: DrawCtx, o?: PieceOpts) => c.piece(o).at(c.P.head.x, c.P.hea
 /** Where the race's ear sits on the head (head-local), and how big a window the hair must leave. */
 export function earOf(race: RaceId, rx: number, ry: number, variant: string): { pts: Pt[]; window: Pt[] } | { x: number; y: number; r: number } {
   if (race === 'elf') {
-    const tip: Pt = variant === 'swept' ? [-rx - 12, -ry * 0.05] : [-rx - 9, -ry * 0.62]
-    const pts: Pt[] = [[-rx * 0.42, -ry * 0.12], [-rx * 0.3, ry * 0.32], [-rx * 0.62, ry * 0.3], tip]
+    const tip: Pt = variant === 'swept' ? [-rx - 15, ry * 0.02] : [-rx - 14, -ry * 0.36]
+    const pts: Pt[] = [[-rx * 0.4, -ry * 0.16], [-rx * 0.3, ry * 0.34], [-rx * 0.66, ry * 0.3], tip]
     const window: Pt[] = [[-rx * 0.36, -ry * 0.24], [-rx * 0.22, ry * 0.44], [-rx * 0.7, ry * 0.42], [tip[0] - 2, tip[1] - 1], [tip[0] - 1, tip[1] - 3]]
     return { pts, window }
   }
@@ -137,12 +137,13 @@ function tail(c: DrawCtx): void {
   const b = P.body
   const pen = c.piece()
   const x0 = P.torso.x - b.torsoRx * 0.4
+  const sw = P.fx.tail ?? 0
   const pts: [number, number, number][] = [
-    [x0, P.hips.y - 4, 5.2],
-    [x0 - 7, P.hips.y + 1, 4.6],
-    [x0 - 13, FEET - 4 - P.lift * 0.5, 3.6],
-    [x0 - 19, FEET - 6 - P.lift * 0.3, 2.6],
-    [x0 - 24, FEET - 11, 1.4],
+    [x0, P.hips.y - 4, 6.4],
+    [x0 - 7, P.hips.y + 1, 5.6],
+    [x0 - 13, FEET - 4 - P.lift * 0.5, 4.4],
+    [x0 - 19, FEET - 6 - P.lift * 0.3 - sw * 0.5, 3],
+    [x0 - 24 - Math.abs(sw) * 0.3, FEET - 11 - sw, 1.6],
   ]
   for (let i = 0; i < pts.length - 1; i++) {
     const [ax, ay, ar] = pts[i]
@@ -211,12 +212,6 @@ function eyes(pen: Pen, e: { x: number; y: number }[], expr: string, size: 2 | 3
   }
 }
 
-function mouth(pen: Pen, x: number, y: number, expr: string): void {
-  const X = Math.round(x), Y = Math.round(y)
-  if (expr === 'smug') pen.px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
-  else if (expr === 'happy' || expr === 'wink') pen.px(X - 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
-  else if (expr === 'hurt') pen.px(X, Y, 'ink', TONE_INK).px(X + 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK)
-}
 
 const exprOf = (c: DrawCtx): string => (c.R.status.has('stunned') ? 'stun' : c.P.expression)
 
@@ -234,9 +229,10 @@ function bandage(pen: Pen, x: number, y: number): void {
 function skull(pen: Pen, race: RaceId, rx: number, ry: number): void {
   const form = { cx: 0, cy: 0, rx, ry }
   pen.ellipse(-1.2, -0.8, rx, ry - 0.6, 'skin')
-  if (race === 'elf') pen.poly([[-rx * 0.5, ry * 0.45], [rx * 0.86, ry * 0.36], [rx * 0.34, ry + 2.4]], 'skin', {}, form)
-  else if (race !== 'reptilian') pen.ellipse(rx * 0.36, ry * 0.36, rx * 0.6, ry * 0.56, 'skin', {}, form)
-  if (race === 'human' || race === 'elf') pen.ellipse(rx * 0.97, ry * 0.3, 1.8, 2, 'skin', {}, form)
+  // the front of the face: a cheek (an elf's finer, to a soft point); never a bump at mouth height
+  if (race === 'elf') pen.poly([[-rx * 0.5, ry * 0.42], [rx * 0.82, ry * 0.3], [rx * 0.3, ry + 1.4]], 'skin', {}, form)
+  else if (race === 'reptilian') pen.ellipse(-rx * 0.1, -ry * 0.05, rx * 0.95, ry * 0.92, 'skin', {}, form)
+  else pen.ellipse(rx * 0.36, ry * 0.36, rx * 0.6, ry * 0.56, 'skin', {}, form)
 }
 
 export const head: PartFn = (c) => {
@@ -282,7 +278,6 @@ export const head: PartFn = (c) => {
   if (R.race === 'human' || R.race === 'elf') {
     const ey = R.race === 'elf' ? ry * 0.14 : ry * 0.18
     eyes(h, [{ x: rx * 0.3, y: ey }, { x: rx * 0.72, y: ey - 0.6 }], expr, 3)
-    mouth(h, rx * 0.5, ry * 0.62, expr)
     if (R.wounded) bandage(headPen(c, { ring: 1 }), rx * 0.45, ry * 0.5)
   } else if (R.race === 'dwarf') {
     const beard = headPen(c)
@@ -304,41 +299,41 @@ export const head: PartFn = (c) => {
     headPen(c, { ring: 1 }).ellipse(rx * 0.8, ry * 0.2, 3.4, 3.2, 'skin', { gloss: true })
     if (R.wounded) bandage(headPen(c, { ring: 1 }), -rx * 0.05, -ry * 0.5)
   } else if (R.race === 'reptilian') {
-    const long = R.head !== 'frill'
+    const blunt = R.head === 'frill'
+    // a flat, wide snout: a long slab out of the front of the skull, flat on top, rounded at the tip
     const sn = headPen(c)
-    sn.ellipse(rx * 0.62, ry * 0.3, long ? 10.5 : 8, long ? 6.4 : 6, 'skin', { gloss: true })
-    sn.texture((_x, y) => (y - P.head.y > ry * 0.48 ? TONE_LIGHT : null))
-    sn.line(rx * 0.12, ry * 0.58, rx * 0.62 + (long ? 9 : 6.5), ry * 0.44, 'ink', TONE_INK, F_ONLYON)
-    sn.px(rx * 0.62 + (long ? 7.5 : 5), ry * 0.05, 'ink', TONE_INK).px(rx * 0.62 + (long ? 8.5 : 6), ry * 0.05, 'ink', TONE_INK)
-    if (!long) headPen(c, { ring: 1 }).poly([[rx * 0.62 + 2, ry * 0.0], [rx * 0.62 + 6, ry * 0.02], [rx * 0.62 + 5, -ry * 0.5]], 'bone', { shade: 'round' })
+    const top = -ry * 0.2, bot = ry * 0.66, x0 = rx * 0.05, x1 = rx + (blunt ? 6 : 11)
+    sn.poly([[x0, top], [x1 - 4, top + 0.5], [x1 - 1, top + 2], [x1, top + 4.5], [x1, bot - 3], [x1 - 2.5, bot], [x0, bot + 1]], 'skin', { gloss: true }, { cx: (x0 + x1) / 2, cy: (top + bot) / 2 - 3, rx: (x1 - x0) / 2 + 2, ry: (bot - top) / 2 + 3 })
+    // the pale underside of the jaw, and scale rows along the top
+    sn.texture((x, y) => (y - P.head.y > ry * 0.4 ? TONE_LIGHT : (y - P.head.y < ry * 0.05 && (x + y) % 4 === 0 ? TONE_SHADE : null)))
+    // a wide, lipless mouth line, back under the eye; a nostril dot at the tip
+    sn.line(rx * 0.0, ry * 0.4, x1 - 2, ry * 0.36, 'ink', TONE_INK, F_ONLYON)
+    sn.px(x1 - 3, top + 2.5, 'ink', TONE_INK)
+    // the eye: gold with a slit pupil, under a heavy brow ridge
     const ey = headPen(c, { ring: 1 })
-    if (expr === 'stun' || expr === 'hurt' || expr === 'happy') {
-      ey.ellipse(rx * 0.18, -ry * 0.12, 3.2, 2.8, 'skin')
-      eyes(ey, [{ x: rx * 0.18 - 0.5, y: -ry * 0.12 }], expr)
+    const ex = rx * 0.16, eyy = -ry * 0.22
+    if (expr === 'closed' || expr === 'hurt' || expr === 'stun') {
+      ey.ellipse(ex, eyy, 3.2, 2.4, 'skin')
+      ey.line(ex - 2, eyy + 0.5, ex + 2, eyy + 0.5, 'ink', TONE_INK, F_ONLYON)
     } else {
-      ey.ellipse(rx * 0.18, -ry * 0.12, 3.4, expr === 'focus' ? 2.2 : 3, 'gold', { gloss: true })
-      ey.line(rx * 0.18 + 0.5, -ry * 0.12 - 2, rx * 0.18 + 0.5, -ry * 0.12 + 2, 'ink', TONE_INK, F_ONLYON)
+      ey.ellipse(ex, eyy, 3.4, expr === 'focus' || expr === 'smug' ? 2.2 : 3, 'gold', { gloss: true })
+      ey.line(ex + 0.5, eyy - 2, ex + 0.5, eyy + 2, 'ink', TONE_INK, F_ONLYON)
     }
-    h.line(rx * 0.18 - 4, -ry * 0.12 - 4, rx * 0.18 + 4, -ry * 0.12 - 5, 'ink', TONE_INK, F_ONLYON)
-    if (P.fx.tongue) {
-      // a forked tongue tasting the air, out of the mouth's corner at the snout tip
-      const tx = rx * 0.62 + (long ? 9.5 : 7), ty = ry * 0.45
-      const len = P.fx.tongue === 2 ? 8 : 4
-      const tg = headPen(c, { ring: 1 })
-      tg.line(tx, ty, tx + len, ty + 1, 'red', TONE_LIGHT).line(tx, ty + 1, tx + len, ty + 2, 'red', TONE_MID)
-      if (P.fx.tongue === 2) tg.line(tx + len, ty + 1, tx + len + 2, ty - 1, 'red', TONE_LIGHT).line(tx + len, ty + 2, tx + len + 2, ty + 4, 'red', TONE_MID)
-    }
-    if (R.wounded) bandage(headPen(c, { ring: 1 }), -rx * 0.25, ry * 0.2)
+    const brow = headPen(c, { ring: 1 })
+    brow.ellipse(ex + 0.5, eyy - 3.4, 5, 2.2, 'skin', { shade: 'round' })
+    if (R.wounded) bandage(headPen(c, { ring: 1 }), -rx * 0.35, ry * 0.15)
   } else {
     // gnome: small high eyes, a rosy cheek, a white mustache, the big nose over it
-    eyes(h, [{ x: rx * 0.12, y: -ry * 0.12 }, { x: rx * 0.44, y: -ry * 0.16 }], expr, 2)
-    h.px(rx * 0.12 - 1, ry * 0.2, 'rose', TONE_LIGHT).px(rx * 0.12, ry * 0.2, 'rose', TONE_LIGHT)
-    const mo = headPen(c, { ring: 1 })
-    mo.ellipse(rx * 0.5, ry * 0.55, 4.6, 2.6, 'hair').ellipse(rx * 0.92, ry * 0.52, 3.8, 2.4, 'hair')
+    eyes(h, [{ x: rx * 0.1, y: -ry * 0.14 }, { x: rx * 0.42, y: -ry * 0.18 }], expr, 2)
+    // rosy cheeks
+    h.ellipse(rx * 0.08, ry * 0.18, 2.4, 1.4, 'rose', { shade: TONE_LIGHT, flags: F_ONLYON })
+    // a little white beard on the chin, under the face
+    const bd = headPen(c, { ring: 1 })
+    bd.ellipse(rx * 0.32, ry * 0.86, rx * 0.42, ry * 0.3, 'hair', { shade: 'round' })
+    bd.poly([[rx * 0.0, ry * 0.9], [rx * 0.6, ry * 0.92], [rx * 0.28, ry + 6]], 'hair', { shade: 'round' })
     const nose = headPen(c, { ring: 1 })
-    if (R.head === 'long') nose.poly([[rx * 0.52, ry * 0.0], [rx * 0.66, ry * 0.42], [rx + 7, ry * 0.34]], 'skin', { gloss: true }, { cx: rx * 0.72, cy: ry * 0.2, rx: 6, ry: 4 })
-    else nose.ellipse(rx * 0.8, ry * 0.24, 4.2, 4, 'skin', { gloss: true })
-    mouth(h, rx * 0.5, ry * 0.76, expr)
+    if (R.head === 'long') nose.poly([[rx * 0.5, -ry * 0.08], [rx * 0.62, ry * 0.36], [rx + 8, ry * 0.26]], 'skin', { gloss: true }, { cx: rx * 0.72, cy: ry * 0.12, rx: 7, ry: 4 })
+    else nose.ellipse(rx * 0.72, ry * 0.16, 5.8, 5.4, 'skin', { gloss: true })
     if (R.wounded) bandage(headPen(c, { ring: 1 }), -rx * 0.15, -ry * 0.5)
   }
 }
@@ -358,18 +353,14 @@ export const hair: PartFn = (c) => {
   const v = R.hair
   if (R.race === 'reptilian') {
     const pen = headPen(c)
-    if (v === 'spines') {
-      for (let k = 0; k < 4; k++) {
-        const a = (-150 + k * 22) * (Math.PI / 180)
-        const bx = Math.cos(a) * rx * 0.92, by = Math.sin(a) * ry * 0.92
-        pen.poly([[bx - 2.4, by + 1], [bx + 2.4, by + 1.5], [bx + Math.cos(a) * 6 - 1, by + Math.sin(a) * 6]], 'hair', { shade: 'round' })
-      }
-    } else {
-      for (let k = 0; k < 3; k++) {
-        const x = -rx * 0.55 + k * rx * 0.42
-        const y = -ry * 0.82 + Math.abs(k - 0.6) * 1.5
-        pen.poly([[x - 3.5, y + 4], [x + 3.5, y + 3], [x - 1.5 - k * 0.5, y - 7 + k]], 'hair', { shade: 'round' }, { cx: -rx * 0.1, cy: -ry, rx: rx * 0.8, ry: 6 })
-      }
+    // a low ridge of scutes down the back of the head and the neck: small, rounded, two-tone
+    const n = v === 'spines' ? 6 : 5
+    const size = v === 'spines' ? 2.2 : 3
+    for (let k = 0; k < n; k++) {
+      const a = (-118 - k * (90 / (n - 1))) * (Math.PI / 180)
+      const bx = Math.cos(a) * rx * 0.86, by = Math.sin(a) * ry * 0.86
+      const ox = Math.cos(a) * size, oy = Math.sin(a) * size
+      pen.ellipse(bx + ox * 0.6, by + oy * 0.6, size, size * 0.85, 'hair', { shade: k % 2 ? TONE_SHADE : TONE_MID })
     }
     return
   }
@@ -473,7 +464,15 @@ function arm(c: DrawCtx, side: 'main' | 'off'): void {
   const d = Math.hypot(dx, dy) || 1
   const wrist = { x: h.x - (dx / d) * b.handR * 0.6, y: h.y - (dy / d) * b.handR * 0.6 }
   const sleeve = c.piece({ mats: R.body ? itemMats(c, R.body, 'body') : undefined })
-  sleeve.capsule(sh.x, sh.y, wrist.x, wrist.y, b.armR, sleeveMat)
+  // the front arm is drawn over the head: where it hangs below the head, it starts clear of the
+  // chin (it comes out from the torso's side, never from under the jaw)
+  let s0 = { x: sh.x, y: sh.y }
+  const clear = P.head.y + b.headRy + b.armR + 3.5
+  if (side === 'main' && sh.y < clear && wrist.y > clear + 2) {
+    const t = Math.min(0.4, (clear - sh.y) / (wrist.y - sh.y))
+    s0 = { x: sh.x + (wrist.x - sh.x) * t, y: clear }
+  }
+  sleeve.capsule(s0.x, s0.y, wrist.x, wrist.y, b.armR, sleeveMat)
   // does this fist close over something?
   let front = false
   if (side === 'main') front = !!R.main
@@ -543,7 +542,9 @@ type ItemFn = (c: DrawCtx, it: ItemPart, slot: HandSlot) => void
  * tip below the feet is held at the angle where it meets them instead.
  */
 function handPen(c: DrawCtx, it: ItemPart, slot: HandSlot, o: PieceOpts = {}, reach = 0): Pen {
-  const h = slot === 'off' ? c.P.offHand : c.P.mainHand
+  const h0 = slot === 'off' ? c.P.offHand : c.P.mainHand
+  // a hook hangs from the fist, point down, whenever it is not swinging (never up by the face)
+  const h = it.family === 'hook' && c.P.anim !== 'attack' && c.P.anim !== 'react' ? { ...h0, angle: 165 } : h0
   return c.piece({ ...o, mats: itemMats(c, it, slot) }).at(h.x, h.y, groundedAngle(h, reach), false, ITEM_SCALE)
 }
 
@@ -963,14 +964,15 @@ const heldSmall: ItemFn = (c, it, slot) => {
         v.rect(dx - 1.2, -12, 2.4, 2, 'wood', { shade: TONE_MID })
       }
     } else {
-      if (it.p?.variant === 'glow') at({ ring: 0 }).circle(0, -2 - 5 * s, 9, 'glowInk', { shade: TONE_LIGHT, flags: F_NOINK | F_SOFT })
+      if (it.p?.variant === 'glow') at({ ring: 0 }).circle(0, 3 + 5 * s, 9, 'glowInk', { shade: TONE_LIGHT, flags: F_NOINK | F_SOFT })
       const v = at()
+      // held by the neck: the cork above the fist, the bottle hanging below it
       const r = 5 * s
-      v.circle(0, -2 - r, r, 'glass', { gloss: true })
-      v.rect(-1.6, -2 - r * 2 - 4, 3.2, 5, 'glass', { shade: 'cyl' })
-      v.ellipse(0, -2 - r * 0.6, r * 0.95, r * 0.6, it.p?.glow ?? 'venom', { shade: 'round', flags: F_ONLYON })
-      v.rect(-1.8, -2 - r * 2 - 6, 3.6, 2.6, 'wood', { shade: TONE_MID })
-      if (it.p?.trim === 'gold') v.rect(-2.2, -2 - r * 2 - 1, 4.4, 1.6, 'gold', { shade: TONE_LIGHT })
+      v.rect(-1.6, -3, 3.2, 7, 'glass', { shade: 'cyl' })
+      v.circle(0, 3 + r, r, 'glass', { gloss: true })
+      v.ellipse(0, 3 + r * 1.4, r * 0.95, r * 0.6, it.p?.glow ?? 'venom', { shade: 'round', flags: F_ONLYON })
+      v.rect(-1.8, -6, 3.6, 2.6, 'wood', { shade: TONE_MID })
+      if (it.p?.trim === 'gold') v.rect(-2.2, 2, 4.4, 1.6, 'gold', { shade: TONE_LIGHT })
     }
   }
   if (gemmed(c, slot) && fam !== 'orb') at({ ring: 1 }).circle(4, -3, 1.3, 'gem', { gloss: true })
@@ -983,7 +985,7 @@ const balance: ItemFn = (c, it, slot) => {
   const h = slot === 'off' ? c.P.offHand : c.P.mainHand
   const m = itemMats(c, it, slot)
   const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
-  const tilt = [0, 1, 1, 0, -1, -1][c.P.frame % 6] * 0.8
+  const tilt = c.P.fx.weigh ? 1.8 : c.P.anim === 'idle' ? [0, 0.5, 0.5, 0, -0.5][c.P.frame % 5] : 0
   const beam = at()
   beam.rect(-1, 2, 2, 4, 'itemTrim', { shade: 'cyl' })
   beam.poly([[-9, 6 + tilt], [9, 6 - tilt], [9, 7.6 - tilt], [-9, 7.6 + tilt]], 'itemTrim', { shade: 'top', gloss: true })
@@ -1016,12 +1018,13 @@ const silkBolt: ItemFn = (c, it, slot) => {
 const ledger: ItemFn = (c, it, slot) => {
   const h = slot === 'off' ? c.P.offHand : c.P.mainHand
   const m = itemMats(c, it, slot)
-  const pen = c.piece({ mats: m }).at(h.x + 1, h.y - 6, -10, false, ITEM_SCALE)
-  pen.rect(-7, -8, 14, 16, 'wood', { shade: 'top' })
-  pen.rect(-5, -6, 10, 12, 'soot', { shade: TONE_MID, flags: F_ONLYON })
-  for (const x of [-3.5, -1.5, 0.5, 2.5]) pen.line(x, -4, x, 1, 'white', TONE_LIGHT, F_ONLYON)
-  pen.line(-4.5, 0, 3.5, -3.5, 'white', TONE_LIGHT, F_ONLYON)
-  pen.line(-3.5, 3, 1, 3, 'white', TONE_MID, F_ONLYON)
+  const pen = c.piece({ mats: m }).at(h.x + 2, h.y + 1, -8, false, ITEM_SCALE)
+  pen.rect(-7, -8, 14, 15, 'wood', { shade: 'top' })
+  pen.rect(-5, -6, 10, 11, 'soot', { shade: TONE_MID, flags: F_ONLYON })
+  const marks = 3 + (c.P.fx.tally ?? 0)
+  for (let k = 0; k < Math.min(4, marks); k++) pen.line(-3.5 + k * 2, -4, -3.5 + k * 2, 0, 'white', TONE_LIGHT, F_ONLYON)
+  if (marks >= 5) pen.line(-4.5, -0.5, 3.5, -3.5, 'white', TONE_LIGHT, F_ONLYON)
+  pen.line(-3.5, 2.5, 1, 2.5, 'white', TONE_MID, F_ONLYON)
 }
 
 /** A small sack of marsh salt, its mouth open. */
@@ -1055,7 +1058,8 @@ const bodyPiece: ItemFn = (c, it, slot) => {
     pen.texture((_x, y) => (y >= FEET - 6 - P.lift && y <= FEET - 5 - P.lift ? TONE_LIGHT : null), 'fieldTrim')
     pen.rect(cx - b.torsoRx - 4, P.hips.y - 4, (b.torsoRx + 4) * 2, 2.4, 'fieldTrim', { shade: TONE_MID, flags: F_ONLYON })
     if (v === 'coat') {
-      pen.poly([[cx + 1, P.torsoTop], [cx + 4, P.torsoTop], [cx + 6, FEET - 4], [cx + 2, FEET - 4]], 'linen', { shade: 'cyl', flags: F_ONLYON })
+      pen.poly([[cx + 1, P.torsoTop], [cx + 4, P.torsoTop], [cx + 4.5, P.hips.y - 4], [cx + 1.5, P.hips.y - 4]], 'linen', { shade: 'cyl', flags: F_ONLYON })
+      for (const y of [P.torsoTop + 4, P.torsoTop + 9]) pen.px(cx + 5.5, y, 'fieldTrim', TONE_LIGHT, F_ONLYON)
       pen.rect(cx - b.torsoRx * 0.7, P.hips.y + 1, 5, 4, 'field', { shade: TONE_SHADE, flags: F_ONLYON })
     }
     return
@@ -1139,8 +1143,9 @@ const bodyPiece: ItemFn = (c, it, slot) => {
       const big = v === 'heavy' ? 1.25 : 1
       for (const sh of [P.shoulderOff, P.shoulderMain]) {
         const pp = c.piece({ mats: m })
-        pp.ellipse(sh.x + (sh === P.shoulderOff ? -1 : 1), sh.y - 0.5, 6 * big, 4.5 * big, 'blade', { gloss: true })
-        pp.line(sh.x - 5 * big, sh.y + 2 * big, sh.x + 5 * big, sh.y + 2 * big, 'fieldTrim', TONE_LIGHT, F_ONLYON)
+        const py = P.torsoTop + 3
+        pp.ellipse(sh.x + (sh === P.shoulderOff ? -1 : 1), py, 6 * big, 4.5 * big, 'blade', { gloss: true })
+        pp.line(sh.x - 5 * big, py + 2 * big, sh.x + 5 * big, py + 2 * big, 'fieldTrim', TONE_LIGHT, F_ONLYON)
       }
     }
   }
@@ -1358,11 +1363,18 @@ export const fx: PartFn = (c) => {
     for (const [dx, dy] of [[9, -4], [11, 2], [7, 6]] as const) sparkle(pen, tip[0] + dx, tip[1] + dy, magic)
   }
 
+  // a pinch of spice falling from the off hand onto the scale's pan
+  if (P.fx.pinch) {
+    const pen = c.piece({ ring: 0 })
+    const fx0 = P.offHand.x + 1, fy0 = P.offHand.y + 4
+    for (const [dx, dy, t] of [[0, 1, TONE_LIGHT], [1, 3, TONE_MID], [-1, 5, TONE_LIGHT], [0, 7, TONE_MID]] as const) pen.px(fx0 + dx, fy0 + dy + (P.frame % 2), 'red', t, F_NOINK)
+  }
+
   // a vial held up to the light
   if (P.fx.glint && R.off) {
     const pen = c.piece({ ring: 0 })
-    sparkle(pen, P.offHand.x + 4, P.offHand.y - 13, 'white', true)
-    sparkle(pen, P.offHand.x - 5, P.offHand.y - 8, 'venom')
+    sparkle(pen, P.offHand.x + 5, P.offHand.y + 6, 'white', true)
+    sparkle(pen, P.offHand.x - 6, P.offHand.y + 11, 'venom')
   }
 
   // skill tells on the weapon

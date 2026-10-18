@@ -143,11 +143,33 @@ and Brannoch are the liaisons `src/game/data/liaisons.ts` already voices.
 | Who | Came up selling pepper off a cart in the farm towns whose fields burn every summer; buys the smoke-singed sacks cheap | Buys bolts at the river-forest looms, sells them at the fords for twice the weight in coin | Counts the ore carts out of the quarry halls and back in, and has named every one | Works the smokehouses on the salt marsh's reed channels, weighing hides and salting the catch | Tends the glasshouses in the mushroom hollows and bottles whatever glows there |
 | Want / worry | The price before it turns / a wagon gone to smoke | Every coin the road can pay / a pulled thread | Every cart home whole / a cart in the ditch | The meat delivered fresh / rot, and the salt running out | The rare cuttings home whole / a cracked vial, and what spills |
 | Temperament | brisk, hot-tempered, generous | smooth, warm, calculating | gruff, terse, secretly sentimental | patient, cold-eyed, oddly courteous | quiet, patient, unsettlingly cheerful |
-| Tic | sniffs her spice pouch, eyes shut | smooths the silk on her arm | taps the tally slate twice | tastes the air with a forked tongue | holds a vial up to the light |
-| Silhouette | lean + angular | tall + tapering | squat + square | low + hooked | round + tufted |
-| Prop | brass spice scale, pouch of pepper | bolt of cream satin | chalked tally slate | meat hook, sack of marsh salt | glowing green vial |
-| Posture / tempo | leans in; brisk 6-frame idle | rocks back; slow 8-frame breath | planted; still | hunched; slow sway | still |
-| Reaction (slot picked) | points and winks | a half-bow | one curt nod | touches the hook to his brow, tastes the air | lifts the vial |
+| Tic (field) | weighs a pinch of pepper on her scale, grins when it tips | smooths the silk at her waist, eyes half shut | lifts the slate and chalks a cart home | a slow blink of his slit eyes, a tail swish | holds a vial out to the side, in the light |
+| Tic (dock) | weighs her pepper sack in her hand (it sinks, never rises) | the same smoothing | chalks a tally | the blink and swish | the vial out to the side |
+| Silhouette | lean + angular | tall + tapering, a long ear out sideways | squat + square | low + long: flat snout, thick tail | round + tall: a huge sprouting hat |
+| Prop | brass spice scale (dock: a burlap pepper sack) | bolt of cream silk | chalked tally slate | meat hook (a J) | glowing green vial, hung low |
+| Idle (shape, period) | quick bob, 0.83 s | slow breath, 1.57 s | weight shift side to side, 2.21 s | sway + tail swish, 1.93 s | bob, the hat's sprout lagging, 1.31 s |
+| Reaction (slot picked) | a hop and a wink | a half-bow, eyes shut | one curt nod | twirls the hook | dips, then lifts the vial |
+
+**Round 2 rules for every face** (the designer's notes, applied to all five and
+the builder):
+
+- **Nothing at the mouth, ever.** No mouths are drawn; the shoulders sit below
+  the chin and the near sleeve is clipped there; a resting hand is held clear
+  of the face; a bow rests low; the hook hangs; the flask is held by its neck
+  below the hand. `tests/heroBuilder.test.ts` "nothing at the mouth" checks a
+  zone from the eyes to the chin and past the face's front on every frame of
+  every face (idle, walk, tic, react, hit, cheer) and of every people × five
+  kits (idle, walk, hit, cheer). The pouch-sniff and the forked tongue are
+  gone.
+- **The people read at 1×.** Reptilian: a flat wide snout, nostril, heavy brow
+  over a gold slit eye, a two-tone ridge, a lipless mouth line, a thick tail,
+  teal scales. Gnome: a big round nose, a white beard, a rosy cheek (field),
+  a small round body. Elf: a long ear out sideways, over the hair.
+- **Motion varies.** Five idle shapes at five prime periods (829, 1571, 2213,
+  1933, 1307 ms); tics every 5.3 / 7.1 / 6.7 / 5.9 / 7.7 s at a hashed phase
+  (`ticPhase`), so in the first twelve seconds no two tics start within 0.6 s
+  and nobody is mid-tic when the home opens. Tested; the card is
+  `motion-desync`.
 
 **Why the two proposals.** Vell, Easel House's fussy curator, does not fit
 hides and salt, so Butcherblock gets a new face. Wren, Moonquill's quiet and
@@ -160,9 +182,15 @@ Greenvial keeps the name with a new trade.
 pixel parts in a 24 × 28 cell, shown at 2× (the crests' own pixel scale), so
 the 1 px ring reads as the field figures' 2 px.
 
-- **Idle:** 4 frames at 320 ms, a 1 px breath.
-- **Tic:** 4–6 frames, every 5–8 s per face, never constant.
-- **Reaction:** 4 frames when the slot is picked.
+- **Idle:** each face's own shape and period (the table above), from 4
+  frames (Saffra) to 11 (Brannoch).
+- **Tic:** 6 frames, on the face's own interval and hashed phase.
+- **Reaction:** 4 frames when the slot is picked, each in its own style.
+- **The clock:** `miniAt(id, t, { pickedAt, still })` says which frame shows
+  at time `t`; the dock would run one clock for all five.
+- **Drawn for the slot:** the company colour is the biggest mass (Odile's
+  tunic is rose, her cloak plum behind); one prop each, low and away from the
+  face; hands attached to their sleeves.
 - **Locked:** the figure as a navy shadow inside its ink. A shape change, not
   only a colour (the slot's padlock and label still say it).
 - **Motion budget:** atmosphere, not a show. Under reduced motion only the

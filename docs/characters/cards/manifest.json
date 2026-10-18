@@ -808,12 +808,12 @@
     "file": "rig-parts-hair-gnome-sproutcap.png"
   },
   {
-    "id": "silhouettes",
+    "id": "race-silhouettes",
     "group": "Rig/Parts",
     "people": "all",
     "title": "Silhouettes: the five peoples",
     "caption": "Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.",
-    "file": "rig-parts-silhouettes.png"
+    "file": "rig-parts-race-silhouettes.png"
   },
   {
     "id": "item-sword",
@@ -1684,7 +1684,7 @@
     "group": "Animation",
     "people": "human",
     "title": "Saffra — idle",
-    "caption": "6 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "5 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-saffra-idle.gif"
   },
   {
@@ -1692,7 +1692,7 @@
     "group": "Animation",
     "people": "human",
     "title": "Saffra — tic",
-    "caption": "6 frames, plays every ~5 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "6 frames, plays every ~5.3 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-saffra-tic.gif"
   },
   {
@@ -1708,7 +1708,7 @@
     "group": "Animation",
     "people": "human",
     "title": "Saffra — a few seconds of life",
-    "caption": "The idle loop with the tic dropped in, at the game’s timing (~3.1 s). Judge that it is calm and says who they are.",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~3.6 s). Judge that it is calm and says who they are.",
     "file": "animation-saffra-life.gif"
   },
   {
@@ -1716,7 +1716,7 @@
     "group": "Dock",
     "people": "human",
     "title": "Saffra at dock size",
-    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "caption": "Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.",
     "file": "dock-dock-saffra.png"
   },
   {
@@ -1748,7 +1748,7 @@
     "group": "Animation",
     "people": "elf",
     "title": "Odile — tic",
-    "caption": "6 frames, plays every ~7 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "6 frames, plays every ~7.1 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-odile-tic.gif"
   },
   {
@@ -1764,7 +1764,7 @@
     "group": "Animation",
     "people": "elf",
     "title": "Odile — a few seconds of life",
-    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.7 s). Judge that it is calm and says who they are.",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.8 s). Judge that it is calm and says who they are.",
     "file": "animation-odile-life.gif"
   },
   {
@@ -1772,7 +1772,7 @@
     "group": "Dock",
     "people": "elf",
     "title": "Odile at dock size",
-    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "caption": "Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.",
     "file": "dock-dock-odile.png"
   },
   {
@@ -1796,7 +1796,7 @@
     "group": "Animation",
     "people": "dwarf",
     "title": "Brannoch — idle",
-    "caption": "6 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "11 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-brannoch-idle.gif"
   },
   {
@@ -1804,7 +1804,7 @@
     "group": "Animation",
     "people": "dwarf",
     "title": "Brannoch — tic",
-    "caption": "6 frames, plays every ~6 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "6 frames, plays every ~6.7 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-brannoch-tic.gif"
   },
   {
@@ -1820,7 +1820,7 @@
     "group": "Animation",
     "people": "dwarf",
     "title": "Brannoch — a few seconds of life",
-    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.1 s). Judge that it is calm and says who they are.",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~7.7 s). Judge that it is calm and says who they are.",
     "file": "animation-brannoch-life.gif"
   },
   {
@@ -1828,7 +1828,7 @@
     "group": "Dock",
     "people": "dwarf",
     "title": "Brannoch at dock size",
-    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "caption": "Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.",
     "file": "dock-dock-brannoch.png"
   },
   {
@@ -1852,7 +1852,7 @@
     "group": "Animation",
     "people": "reptilian",
     "title": "Hask — idle",
-    "caption": "8 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "10 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-hask-idle.gif"
   },
   {
@@ -1860,7 +1860,7 @@
     "group": "Animation",
     "people": "reptilian",
     "title": "Hask — tic",
-    "caption": "5 frames, plays every ~6 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "6 frames, plays every ~5.9 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-hask-tic.gif"
   },
   {
@@ -1876,7 +1876,7 @@
     "group": "Animation",
     "people": "reptilian",
     "title": "Hask — a few seconds of life",
-    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.0 s). Judge that it is calm and says who they are.",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~6.9 s). Judge that it is calm and says who they are.",
     "file": "animation-hask-life.gif"
   },
   {
@@ -1884,7 +1884,7 @@
     "group": "Dock",
     "people": "reptilian",
     "title": "Hask at dock size",
-    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "caption": "Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.",
     "file": "dock-dock-hask.png"
   },
   {
@@ -1916,7 +1916,7 @@
     "group": "Animation",
     "people": "gnome",
     "title": "Wren — tic",
-    "caption": "6 frames, plays every ~8 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "caption": "6 frames, plays every ~7.7 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
     "file": "animation-wren-tic.gif"
   },
   {
@@ -1932,7 +1932,7 @@
     "group": "Animation",
     "people": "gnome",
     "title": "Wren — a few seconds of life",
-    "caption": "The idle loop with the tic dropped in, at the game’s timing (~4.7 s). Judge that it is calm and says who they are.",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.0 s). Judge that it is calm and says who they are.",
     "file": "animation-wren-life.gif"
   },
   {
@@ -1940,16 +1940,32 @@
     "group": "Dock",
     "people": "gnome",
     "title": "Wren at dock size",
-    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "caption": "Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.",
     "file": "dock-dock-wren.png"
+  },
+  {
+    "id": "silhouettes",
+    "group": "Company faces",
+    "people": "all",
+    "title": "Silhouettes: field and dock",
+    "caption": "The five faces filled flat, at the sizes the game shows them (field 1×, dock 2×) and the dock figure at 4×. Judge that each is known by its shape alone.",
+    "file": "company-faces-silhouettes.png"
   },
   {
     "id": "dock-motion",
     "group": "Dock",
     "people": "all",
     "title": "The dock in motion (2× slot size)",
-    "caption": "Five figures idling, each tic on its own beat, the third slot picked; the fifth locked. Judge it stays calm next to the map (atmosphere, not a show).",
+    "caption": "The dock’s own clock: each face idles in its own shape and period, tics on its own beat, the third slot picked; the fifth locked. Judge that no two move together.",
     "file": "dock-dock-motion.gif"
+  },
+  {
+    "id": "motion-desync",
+    "group": "Dock",
+    "people": "all",
+    "title": "Ten seconds: no two in step",
+    "caption": "Each row is one face over 10 s: the line is how far its head moves (its own shape and period), the blocks its tics (its own interval and phase). Judge that no two line up.",
+    "file": "dock-motion-desync.png"
   },
   {
     "id": "zoom-4x",

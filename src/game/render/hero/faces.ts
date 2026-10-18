@@ -41,7 +41,7 @@ export interface CompanyFace {
   proposal: false | string
   brief: FaceBrief
   look: HeroLook
-  /** The tic plays about this often (s), never constantly. */
+  /** The tic plays about this often (s), never constantly; the five intervals all differ. */
   ticEvery: number
 }
 
@@ -57,7 +57,7 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Saffra, human, Peppercorn’s spice broker. Came up selling pepper off a cart in the farm towns whose fields burn every summer; she buys the smoke-singed sacks cheap.',
       want: 'Wants the price before it turns. Fears a wagon of spice gone to smoke.',
       temperament: 'Brisk, hot-tempered, generous (she tips the moment it sells).',
-      tic: 'Sniffs her spice pouch, eyes shut, to price it.',
+      tic: 'Weighs a pinch of pepper on her scale, and grins when it tips.',
       silhouette: 'Lean + angular: a forward lean, the knotted scarf’s tail.',
       prop: 'A brass spice scale; a pouch of red pepper.',
     },
@@ -65,7 +65,7 @@ export const FACES: readonly CompanyFace[] = [
       race: 'human', persona: 'saffra', posture: 'lean', company: 'Peppercorn', hair: 'scarf', hairInk: 'hairGinger', skin: 'skinTan', palette: { cloth: 'ochre' },
       gear: { main: 'Spice Scale', off: 'Spice Pouch', body: "Broker's Sash" },
     },
-    ticEvery: 5,
+    ticEvery: 5.3,
   },
   {
     id: 'odile',
@@ -78,7 +78,7 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Odile, elf, Rosethread’s mercer. Buys bolts at the river-forest looms and sells them at the fords for twice the weight in coin.',
       want: 'Wants every coin the road can pay. Fears a pulled thread: torn silk sells for rags.',
       temperament: 'Smooth, warm, calculating (the warmth has a price).',
-      tic: 'Smooths the bolt of silk on her arm, then admires it.',
+      tic: 'Smooths the bolt of silk on her arm, at the waist, eyes half shut.',
       silhouette: 'Tall + tapering: topknot to trailing cloak.',
       prop: 'A bolt of rose silk on the arm.',
     },
@@ -86,7 +86,7 @@ export const FACES: readonly CompanyFace[] = [
       race: 'elf', persona: 'odile', posture: 'rock', company: 'Rosethread', hair: 'topknot', hairInk: 'hairBlack', palette: { cloth: 'plum' },
       gear: { off: 'Silk Bolt', body: 'Silkwind Cloak' },
     },
-    ticEvery: 7,
+    ticEvery: 7.1,
   },
   {
     id: 'brannoch',
@@ -99,7 +99,7 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Brannoch, dwarf, Ironvein’s factor. Counts the ore carts out of the quarry halls and back in, and has named every one of them.',
       want: 'Wants every cart home whole. Fears a cart in the ditch.',
       temperament: 'Gruff, terse, secretly sentimental (about his carts).',
-      tic: 'Taps the tally slate twice, counting.',
+      tic: 'Lifts his slate and chalks another cart home.',
       silhouette: 'Squat + square: planted, the beard a block.',
       prop: 'A chalked tally slate.',
     },
@@ -107,7 +107,7 @@ export const FACES: readonly CompanyFace[] = [
       race: 'dwarf', persona: 'brannoch', posture: 'planted', company: 'Ironvein', head: 'forked', hair: 'bald', hairInk: 'hairGinger',
       gear: { off: 'Tally Slate', body: 'Forge Apron' },
     },
-    ticEvery: 6,
+    ticEvery: 6.7,
   },
   {
     id: 'hask',
@@ -120,15 +120,15 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Hask, reptilian, Butcherblock’s salter. Works the smokehouses along the salt marsh’s reed channels, weighing hides and salting the catch.',
       want: 'Wants the meat delivered fresh. Fears rot, and the salt running out.',
       temperament: 'Patient, cold-eyed, oddly courteous (a butcher with manners).',
-      tic: 'Tastes the air with a forked tongue.',
-      silhouette: 'Low + hooked: hunched, a tail, the hook.',
+      tic: 'A slow blink of his slit eyes, and a swish of the tail.',
+      silhouette: 'Low + long: hunched, a flat snout ahead and a thick tail behind.',
       prop: 'A meat hook; a sack of marsh salt.',
     },
     look: {
-      race: 'reptilian', persona: 'hask', posture: 'hunch', company: 'Butcherblock', head: 'snout', hair: 'spines', skin: 'scaleOchre', hairInk: 'oxblood',
+      race: 'reptilian', persona: 'hask', posture: 'hunch', company: 'Butcherblock', head: 'snout', hair: 'crest', skin: 'scaleTeal', hairInk: 'oxblood',
       gear: { main: 'Meat Hook', off: 'Salt Sack', body: 'Smokehouse Apron' },
     },
-    ticEvery: 6,
+    ticEvery: 5.9,
   },
   {
     id: 'wren',
@@ -141,15 +141,15 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Wren, gnome, Greenvial’s herbalist. Tends the glasshouses in the mushroom hollows and bottles whatever glows there.',
       want: 'Wants the rare cuttings brought home whole. Fears a cracked vial, and what spills out of it.',
       temperament: 'Quiet, patient, unsettlingly cheerful.',
-      tic: 'Holds a vial up to the light and watches it glow.',
-      silhouette: 'Round + tufted, under a huge sprouting hat.',
+      tic: 'Holds a vial out to the side, in the light, and watches it glow.',
+      silhouette: 'Round + tall: a small round body under a huge sprouting hat.',
       prop: 'A glowing green vial.',
     },
     look: {
       race: 'gnome', persona: 'wren', posture: 'still', company: 'Greenvial', hair: 'sproutcap',
-      gear: { off: 'Glow Vial', body: "Alchemist's Coat" },
+      gear: { off: 'Glow Vial', body: "Herbalist's Coat" },
     },
-    ticEvery: 8,
+    ticEvery: 7.7,
   },
 ]
 
