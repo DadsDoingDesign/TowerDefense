@@ -8,9 +8,9 @@ compositor draws the frames.
 
 **The rig is not in the shipped game yet.** It lives in
 `src/game/render/hero/` and is drawn only by `harness/heroes.html`. The
-company faces' DOCK figures (`mini.ts`) ship in the home dock's
+company faces' DOCK figures (`mini.ts`) ship: they stand in the home dock's
 slots in place of the crests (October 2026, `ui/shell/DockFace.tsx`; see
-"The dock figures"), and their FIELD / POST figures (`post.ts`) stand in Peppercorn's, Rosethread's and Ironvein's liaison posts (round 4).
+"The dock figures").
 
 | Sheet | What it shows |
 |---|---|
@@ -153,62 +153,22 @@ people with no gear swaps, so they do not need the rig to look right:
 
 | Size | Where it shows | Cell | Module |
 |---|---|---|---|
-| field / post | the liaison posts (shipped for Saffra, Odile and Brannoch since round 4; Hask and Wren in the proposed posts), at the pack's unit scale and native size (the page draws the scene at 2×) | 64 × 64, soles on row 57 | `post.ts` (painter), `postArt.ts` (parts), `skeleton.ts` (bodies) |
+| field / post | the battlefield and the liaison post, both at the pack's unit scale (the post stands the person where the CC0 pawn stands, at native size; the page draws the scene at 2×) | 72 × 72, feet on row 57 | `post.ts` |
 | dock | the home dock's slot (drawn at 2×) | 24 × 28 | `mini.ts` |
 
-**Field / post size, round 4: skeleton first** (the designer: "make like a
-body skeleton frame and then consider their shape and look in 3d space and
-then design for the 2d angle from there"). Each face is a body before it is
-pixels: `skeleton.ts` holds a joint table per face in 3D body space (head,
-neck, chest, pelvis, shoulders, elbows, wrists, hips, knees, ankles; the
-reptile's hocks and four tail joints), with its people's proportions:
+Both are pixel rows in the pack's inks, named parts, each ringed in 1 px of
+ink; the field / post size adds one more px round the whole figure (the
+pack's 2 px outer line) and the pack's small dark eyes (2 × 3, never a white
+disc). Both run on one clock (`spriteAt`): a face moves in step with itself at
+both sizes, out of step with the other four. The heroes' portrait bust
+(`heroPortrait.ts`) is a crop of a hero's figure, not of a liaison, so there
+is no third size for the faces today. The rig stays for the heroes, whose
+gear swaps; it is only ever meant to be drawn 1:1, and its cards say they are
+magnified for critique.
 
-| | Height | Heads tall | Build |
-|---|---|---|---|
-| Saffra (human) | 49 | 2.2 | normal; leans in |
-| Odile (elf) | 56 | 2.7 | narrow shoulders and hips, long neck, shins and forearms |
-| Brannoch (dwarf) | 42 | 2.3 | shoulders 17 px across, legs 7 px |
-| Hask (reptilian) | 46 | — | spine leaning forward over digitigrade legs (knee forward, hock back), a tail longer than his body as the counterweight |
-| Wren (gnome) | 43 | 1.6 with the hat | limbs half a human's |
-
-A frame is a POSE (where a hand or foot goes, how the body lifts), solved by
-two-bone IK so no bone stretches; one projection (yaw 55°, a slight top-down
-tilt) turns it into the 3/4 view facing right, so the near shoulder, arm, hip
-and leg come out to the left, a pixel lower and in front, and the far ones
-to the right, higher and behind. The painter draws the arms and legs ALONG
-the projected bones, pins the hand-drawn head, torso, boots and props to
-their joints, and closes each fist over its grip. `skeletonOverlay` draws the
-bones and the 3D masses over the art (cards `cards/skeleton-r4/`).
-`tests/heroBuilder.test.ts` checks every frame: no limb bone changes length,
-near and far sides read in 3/4, a hand on every wrist, each people's
-proportions, nothing at the mouth (a per-face box over the lower face).
-
-**The density, measured.** The CC0 pawn stands 53 px (58 wide), the archer
-62, the knight 70; the pack's line is 2–3 px outside and about 2 inside, its
-smallest shape 2 px, its materials three tones and a white dash, 7–9
-colours a figure. Round 3's figures were the pawn's height but twice the
-pack's density (1 px rings round every part, 1 px hair strands, 13–17
-colours, a head two thirds of the figure), so they read rough. Round 4 keeps
-the height, draws 2 px outside and 1 px between parts, nothing under 2 px but
-an eye, three tones a material auto-lit from the upper left on every limb, in
-a 64 cell.
-
-Both sizes run on one clock (`spriteAt`): WHEN is the dock face's, WHICH frame
-is each size's own holds (`idleMs` / `ticMs` / `reactMs`, scaled to fit), so a
-face moves in step with itself at both sizes and out of step with the other
-four. The heroes' portrait bust (`heroPortrait.ts`) is a crop of a hero's
-figure, not of a liaison. The rig stays for the heroes, whose gear swaps.
-
-**The posts** (`scripts/stop-scenes.ts`, round 4; the designer: "the stands
-look really rough"): built from the pack. The company's house (Ironvein: the
-pack's mine) behind, a counter of the pack's bridge planks and log stumps
-beside the liaison with the trade's wares on it, and the liaison standing in
-front, full length, on the ground with the pack's shadow. The bubble's tail
-points at the top of the head (rows 84–87), so the bubble rides above the
-wares and clear of a long city name's sign on a phone. Easel House's and
-Moonquill's posts keep the CC0 pawn (their liaisons, Vell and the archivist
-Wren, are still the voiced ones); `--proposals <dir>` bakes Hask's and the
-gnome Wren's posts for review, `--faces <dir>` all the posts into <dir> only.
+The posts in the cards are the shipped posts' layouts with the face at the
+counter: `npx tsx scripts/stop-scenes.ts --faces <dir>` (only into <dir>;
+nothing shipped changes).
 
 | | Saffra | Odile | Brannoch | Hask (proposal) | Wren (proposal) |
 |---|---|---|---|---|---|

@@ -1,260 +1,899 @@
 /**
- * The company faces at FIELD / POST size (round 4, Oct 2026): the pack's own
- * unit scale and its DENSITY. Measured off the old CC0 build: the pawn stands
- * 53 px (58 wide) in its 192 cell, the archer 62 without its plume, the
- * knight 70; their outline is 2–3 px outside and 2 px inside, the smallest
- * shape is 2 px, each material is three tones plus a white dash, and a
- * figure has 7–9 colours. Round 3's 72 cells stood their people at the same
- * height, but drew them at twice the pack's density (1 px rings between
- * every part, 1 px hair strands, 13–17 colours) round a head two thirds of
- * the figure — so they read rough and chunky beside the knight.
+ * The company faces at FIELD / POST size — the pack's own unit scale (the CC0
+ * pawn stands about 58 × 59 px in its 192 cell; the liaison posts stand the
+ * person at the same native size, drawn at 2× on the page). HAND-DRAWN pixel
+ * rows, never the procedural rig magnified (the designer: the small, hand-made
+ * figures read; the magnified rig does not).
  *
- * So: a 64 cell, the sole on row {@link POST_FEET}; people 42 (the dwarf)
- * to 57 px (the elf) tall; one px of ink between parts and two round the
- * whole figure; nothing under 2 px but an eye; three tones a material, lit
- * from the upper left.
+ * The dock figures' language at a bigger size, more detail rather than bigger
+ * pixels: named parts in the pack's inks, each ringed in 1 px of ink, plus one
+ * more px round the whole figure (the pack's 2 px outer line); small dark eyes
+ * like the pack's goblins', never white discs; a collar under the chin; arms
+ * bent at the elbow with the fist on the forearm; ramps of 2–3 steps lit from
+ * the upper left. They move by the dock's clock ({@link spriteAt}): the same
+ * idle period, tic interval and hashed phase as the face's dock figure, so the
+ * five never move in step.
  *
- * Every figure is BUILT ON ITS SKELETON (`skeleton.ts`): the arms and legs
- * are drawn along the projected bones each frame (so an elbow is where the
- * elbow is, and a forearm is always as long as the other forearm), the head,
- * the torso, the boots and the props are hand-drawn pixel rows PINNED to
- * their joints, and a held thing's grip sits on its wrist with the fist
- * drawn over it. A frame is a pose (where the hands go, how the body
- * lifts), solved by IK so no bone stretches.
- *
- * They move by the dock's clock ({@link spriteAt}): the same idle period, tic
- * interval and hashed phase as the face's dock figure, so the five never
- * move in step. Pure: no DOM.
+ * The rows below are the source: a pixel fix is an edit to a row, by hand.
+ * Pure: no DOM.
  */
-import { INK, RAMPS, SHADOW_ALPHA, rgbOf } from './palette'
 import type { PersonaId } from './rig'
-import { MINI_FACES, spriteAt, type MiniAnim, type MiniFace, type MiniFrame } from './mini'
-import { depthOf, poseJoints2, poseJoints3, skeletonOf, type JointId, type Pose } from './skeleton'
-import { POST_FACES, type Eye, type EyeMode, type Key, type Part, type PostFace, type Tone } from './postArt'
+import { paintSprite, spriteAt, type MiniAnim, type MiniFace, type MiniFrame, type SpriteSize } from './mini'
 
-export { POST_FACES, type PostFace } from './postArt'
-
-export const POST_W = 64
-export const POST_H = 64
-/** The row the soles stand on (the shadow is the rows round it). */
+export const POST_W = 72
+export const POST_H = 72
+/** The row the boots stand on. */
 export const POST_FEET = 57
 
-// ── the painter ──────────────────────────────────────────────────────────────
-
-const INK_RGB = rgbOf(INK)
-
-const keysOf = (face: PostFace, anim: MiniAnim): readonly Key[] => (anim === 'idle' ? face.idle : anim === 'tic' ? face.tic : face.react)
-const keyOf = (face: PostFace, anim: MiniAnim, frame: number): Key => {
-  const ks = keysOf(face, anim)
-  return ks[((frame % ks.length) + ks.length) % ks.length] ?? {}
+export const POST_FACES: Readonly<Record<PersonaId, MiniFace>> = {
+  // ── Saffra: a saffron bandana with a gold band over ginger hair, its knot behind; a red vest with a gold sash over a saffron tunic; a burlap pepper sack in the near hand at the waist.
+  saffra: {
+    inks: { c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], E: ['ochre', 3], g: ['gold', 0], G: ['gold', 2], s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], q: ['hairGinger', 0], h: ['hairGinger', 1], H: ['hairGinger', 2], x: ['hairGinger', 3], Q: ['red', 2], R: ['red', 1], r: ['red', 0], t: ['gold', 2], l: ['leather', 0], m: ['leather', 1], Y: ['brass', 2], U: ['wood', 1], V: ['wood', 2], W: ['wood', 3], n: ['navy', 0], N: ['navy', 1], b: ['leather', 0], B: ['leather', 1], e: ['red', 1], z: ['red', 2] },
+    skin: 'L',
+    parts: [
+      { id: 'knot', group: 'head', x: 11, y: 25, rows: [
+        '...DDDDC.',
+        '..DEDDDCC',
+        '.DDECCCCc',
+        '.DCCCCCCc',
+        '.DCCCCCcc',
+        '..ccccc..',
+        '..DCCc...',
+        '.DCCc....',
+        '.DCCc....',
+        'DCCc.....',
+        'DCCc.....',
+        'DCC......',
+        'DCc......',
+        '.Cc......',
+        '.cc......',
+      ] },
+      { id: 'farArm', group: 'off', x: 23, y: 40, rows: [
+        '..CCc',
+        '.CCCc',
+        '.CCCc',
+        'CCCc.',
+        'CCCc.',
+        'cccc.',
+        'LSSSs',
+        'SSSSs',
+        '.sss.',
+      ] },
+      { id: 'legs', group: 'body', x: 29, y: 50, rows: [
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+      ] },
+      { id: 'boots', group: 'body', x: 28, y: 55, rows: [
+        'Bbbbbb..Bbbbbb.',
+        'Bbbbbb..Bbbbbbb',
+        'bbbbbb..bbbbbbb',
+      ] },
+      { id: 'torso', group: 'body', x: 27, y: 37, rows: [
+        '...RRRRRRRRRRRRRR...',
+        '..QQRRRRRRRRRRRRrr..',
+        '.QQQRRRRRRRRRRRRrrr.',
+        '.QQQttRRRRRRRRRrrrr.',
+        'QQQQRttRRRRRRRRRrrrr',
+        'QQQQRRRttRRRRRRRrrrr',
+        'QQQQRRRRRttRRRRRrrrr',
+        'QQQQRRRRRRRttRRRrrrr',
+        'QQQQRRRRRRRRRttRrrrr',
+        'QQQQRRRRRRRRRRRtrrrr',
+        'QQQQRRRRRRRRRRRRrrrr',
+        'lmmmmmmmmmmmYYYmmmml',
+        'DDDCCCCCCCCCCCCCcccc',
+        'DDDCCCCCCCCCCCCCcccc',
+        '.DDDCCCCCCCCCCCcccc.',
+      ] },
+      { id: 'nearArm', group: 'main', x: 43, y: 40, rows: [
+        'DDCCc......',
+        'DDCCc......',
+        'DCCCc......',
+        'DCCCc......',
+        'DCCCc..LLL.',
+        'DCCCCcLLSSs',
+        'CCCCCcLSSSs',
+        'ccccccSSSss',
+        '.cccc..sss.',
+      ] },
+      { id: 'head', group: 'head', x: 16, y: 5, rows: [
+        '.............EEEDDDDDDCCC..............',
+        '..........DDEEEDDDDDDCCCCCcc...........',
+        '........DDEEDEEDDDDDCCCCCCCccc.........',
+        '.......DDEDDEDDDDCCCCCCCCCCcccc........',
+        '......DDEDDDDEDDCCCCCCCCCCCccccc.......',
+        '.....DDEEDDDDDECCCCCCCCCCCCcccccc......',
+        '....DEEDDDDEDDCCCCCCCCCCCCCCcccccc.....',
+        '...DDEDDDEDDDCCCCCCCCCCCCCCCccccccc....',
+        '..DDDDDDEDDDCCCCCCCCCCCCCCCCcccccccc...',
+        '..DDDDDDDCCCCCCCCCCCCCCCCCcccccccccc...',
+        '.GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG..',
+        '.gggggggggggggggggggggggggggggggggggg..',
+        'HHHhhhhHhhhhhhHhhhhhhhhhhhhhhhhhhqqqqq.',
+        'HHhhHhhHhhhhhhHhhqxxSSSSSSSSSSSSSSSSqq.',
+        'HHhhHhHhhhhHhhhhqxxSSSLLLLLLLLLLLLLLSq.',
+        'HHhHhhHhhhhHhhhqxxSLLLLLLLLLLLLLLLSSSq.',
+        'HHhhhhhhhhHhhhhqxxLLLLLLLLLLLLLLLSSSSs.',
+        'HHhhhhhhhhhhhhqxxLLLLLLLLLLLLLLLSSSSSs.',
+        'HHhhhHhhhhhhHhqxqLLLLLLLLLLLLLLSSSSSSs.',
+        'HHhhhHhhhHhhHhqqxLLLLLLLLLLLLLLSSSSSSss',
+        'HHhhHhhhhHhhHhqqqLLLLLLLLLLLLLLSSSSSSss',
+        'HHhhHhhhHhhHhhqqqLLLLLLLLLLLLLSSSSSSSss',
+        'HHhhhhhhhhhhhhqqqLLLLLLLLLLLLSSSSSSSSss',
+        'HHhhhhhhhhhhhhqqqLLLLLLLLLLLSSSSSSSSSss',
+        'HHhhhhhHhhhhhhHqqqLLLLLLLLLLSSSSSSSSSss',
+        '.HHhhhHhhhhHhhhqqqLLLLLLLLLSSSSSSSSSss.',
+        '.HHhhhHhhhhHhhhhqqqLLLLLLLLSSSSSSSSSss.',
+        '..HHhhhhhhHhhhhhqqqLLLLLLLSSSSSSSSsss..',
+        '...HHhhhhhhhhqhhhqqqLLLLLLSSSSSSSSsss..',
+        '....HhhhHhhhhqhhhqqqLLLLLSSSSSSSSsss...',
+        '.....HhhHhhhhhhhhqqqqLLLLSSSSSSSsss....',
+        '......hhhhhhhhhhhqqqqqLLLSSSSSSsss.....',
+        '........qqhhhhhhhhqqqqqLLSSSSSsss......',
+        '..........qqhhhhhhhqqqqqLSSSSsss.......',
+        '.............qqqhhhhqqqqqSSsss.........',
+        '.........................ssss..........',
+      ] },
+      { id: 'sack', group: 'main', x: 47, y: 49, rows: [
+        '...eze...',
+        '...VVV...',
+        '..WVVVU..',
+        '.WWVVVUU.',
+        'WVVzzVVUU',
+        'WVVzVVVUU',
+        'VVVVVVUUU',
+        '.VVVVVUU.',
+        '..UUUUU..',
+      ] },
+    ],
+    eyes: [[41, 24], [47, 24]],
+    idle: [{}, { move: {'head': [0, 1], 'main': [0, 1], 'off': [0, 1]} }, { move: {'head': [0, 1]} }, {}],
+    period: 0,
+    tic: [{ move: {'main': [0, 1]} }, {}, { move: {'main': [0, 1]}, eyes: 'happy' }, { eyes: 'happy' }, { move: {'main': [0, 1]}, eyes: 'happy' }, {}],
+    ticMs: [160, 200, 220, 320, 300, 200],
+    ticEvery: 0,
+    react: [{ all: [0, -1], eyes: 'smug' }, { all: [0, -2], eyes: 'happy' }, { all: [0, -1], eyes: 'happy' }, { eyes: 'happy' }],
+    reactMs: [80, 120, 100, 160],
+  },
+  // ── Odile: tall and tapering; a raven topknot; a long ear out sideways over the hair; a rose tunic with a plum collar, a plum cloak trailing behind; a cream bolt of silk on the far arm.
+  odile: {
+    inks: { o: ['hairBlack', 0], O: ['hairBlack', 1], P: ['hairBlack', 2], X: ['hairBlack', 3], s: ['skinRose', 0], S: ['skinRose', 1], L: ['skinRose', 2], r: ['rose', 0], R: ['rose', 1], Q: ['rose', 2], m: ['plum', 0], M: ['plum', 1], N: ['navy', 1], g: ['gold', 2], w: ['linen', 0], W: ['linen', 1], V: ['linen', 2], n: ['navy', 0], b: ['leather', 0], B: ['leather', 1] },
+    skin: 'L',
+    parts: [
+      { id: 'cloak', group: 'back', x: 11, y: 33, rows: [
+        '...............NNNNNNNNNNNNNNNNN..',
+        '..............NNNNNNNNNNNNNNNNNm..',
+        '.............NNMMMMMMMMMMMMMMMmmN.',
+        '............NNMMMMMMMMMMMMMMMMmmm.',
+        '...........NNMMMMMMMMMMMMMMMMMmmm.',
+        '..........NNMMMMMMMMMMMMMMMMMMmmm.',
+        '..........NNMMMMMMMMMMMMMMMMMMMmmN',
+        '.........NNMMMMMMMMMMMMMMMMMMMMmmm',
+        '.........NNMMMMMMMMMMMMMMMMMMMMmmm',
+        '........NNMMMMMMMMMMMMMMMMMMMMmmm.',
+        '.......NNMMMMMMMMMMMMMMMMMMMMMmmm.',
+        '.......NNMMMMMMMMMMMMMMMMMMMMMmmm.',
+        '......NNMMMMMMMMMMMMMMMMMMMMMmmm..',
+        '......NNMMMMMMMMMMMMMMMMMMMMMmmm..',
+        '.....NNMMMMMMMMMMMMMMMMMMMMMMmmm..',
+        '....NNMMMMMMMMMMMMMMMMMMMMMMmmm...',
+        '....NNMMMMMMMMMMMMMMMMMMMMMMmmm...',
+        '...NNMMMMMMMMMMMMMMMMMMMMMMmmmm...',
+        '...NNMMMmMMMMMMMMMMMMMMMmmmmmm....',
+        '..NNMMMmMMMMMMMMMMMMMMmmmmmmm.....',
+        '.NNMMMMMMMMMMMmMMMMmmmmmmmm.......',
+        '.NNmmmmmmmmmmmmmmmmmmmmm..........',
+        'NNmmmmmmmmmmmmmmmmmmmm............',
+        '.Nmmmmmmmmmmmmmmmmmm..............',
+      ] },
+      { id: 'farArm', group: 'off', x: 23, y: 35, rows: [
+        '....RRRR',
+        '....RRmm',
+        '...RRRmm',
+        '...RRRmm',
+        '...RRRmm',
+        '...RRRmm',
+        '..RRRmm.',
+        '..RmRmm.',
+        '..Rmmmm.',
+        '.SSSRm..',
+        'SSSSS...',
+        'SSSSs...',
+        'SSSSs...',
+        '.Sss....',
+      ] },
+      { id: 'legs', group: 'body', x: 30, y: 49, rows: [
+        'NNNN...NNNN',
+        'Nnnn...Nnnn',
+        'Nnnn...Nnnn',
+        'Nnnn...Nnnn',
+        'Nnnn...Nnnn',
+        'Nnnn...Nnnn',
+        'Nnnn...Nnnn',
+      ] },
+      { id: 'boots', group: 'body', x: 29, y: 55, rows: [
+        'BBBBBB.BBBBBBB',
+        'Bbbbbb.Bbbbbbb',
+        'Bbbbbb.Bbbbbbb',
+      ] },
+      { id: 'torso', group: 'body', x: 27, y: 33, rows: [
+        '.QQQQQQQQQQQQQQQ...',
+        '.QQQQQQQQQQQQQQr...',
+        '.QQQQQQQQQQQQQrr...',
+        '.QQQRRRRRRRRRQrr...',
+        '.QQQRRRRRRRRRRrrQ..',
+        '.QQQRRRRRRRRRQrrr..',
+        '.QQQRRRRRRRRRRrrr..',
+        '.QQQRRRRRRRRRQrrr..',
+        '.QQQRRRRRRRRRRrrr..',
+        '.QQQRRRRRRRRRQrrr..',
+        '.QQQRRRRRRRRRRrrr..',
+        'mmmmmmmmmmmmmmmmmmm',
+        'MMMMMMMMMggMMMMMMMM',
+        'QQQRRRRRRRRRRRRrrr.',
+        'QQQrrrrrrrrrrrQrrr.',
+        'QQrrrrrrrrrrrrrrrr.',
+        'QrrrrrrrrrrrrrQrrr.',
+      ] },
+      { id: 'collar', group: 'body', x: 28, y: 33, rows: [
+        '......NNNNN......',
+        '..NNNNNNNNNNNNN..',
+        'NNNNNNMMMMMNNNNNN',
+        'Nmmmmmmmmmmmmmmmm',
+        '..Nmmmmmmmmmmmm..',
+        '......Nmmmm......',
+      ] },
+      { id: 'nearArm', group: 'main', x: 42, y: 36, rows: [
+        'QQQQ....',
+        'QQQr....',
+        'QQQrQ...',
+        '.QQrr...',
+        '.QQrr...',
+        '.QQrr...',
+        '.QQrr...',
+        '..QQrQ..',
+        '..QQrr..',
+        '..QQrr..',
+        '...Qrr..',
+        '...LLLL.',
+        '...LLLLL',
+        '..LLLLss',
+        '..LLssss',
+        '...Lsss.',
+      ] },
+      { id: 'smooth', group: 'main', x: 37, y: 36, hidden: true, rows: [
+        '....QQQQQ.',
+        '....QQQQr.',
+        '....QQQrr.',
+        '....QQQrrQ',
+        '....QQQrrr',
+        '....QQQrrr',
+        '.LLLLQQrr.',
+        '.LLLLLQ...',
+        'LLLLss....',
+        'LLssss....',
+        '.Lsss.....',
+      ] },
+      { id: 'topknot', group: 'head', x: 28, y: 3, rows: [
+        '....PPP....',
+        '..PPPPPPP..',
+        '.PPXPOOPPP.',
+        'PPPOOOOOoPP',
+        'PPOOOOOOooo',
+        'PPoOOOOOooo',
+        '.PPooooooo.',
+        '.Poooooooo.',
+        '...Poooo...',
+      ] },
+      { id: 'head', group: 'head', x: 19, y: 6, rows: [
+        '..........PPPPPPPPPPPP...........',
+        '........PPPPPPPPPPPPPPPP.........',
+        '......PPPPXOOOOOOOOOOOPPPP.......',
+        '.....PXPPOOOPOOOOOOOOOOOPPP......',
+        '....PPOOOOOOOPOOOOooooooooPP.....',
+        '...PPOOOOOOOOOOOoooooooooooPP....',
+        '..PPOOOOOOOOOOOoooooooooooooPP...',
+        '..PPOOPOOOOOOOooooLLLLLLLSSPPo...',
+        '.PPOOPOOOOOOoooSSSSSLLLLLLSSPoP..',
+        '.PPOOOOOOOOoooSLLLLLLLLLLLLLSSP..',
+        '.PPOOOOOOOOoooLLLLLLLLLLLLLLSSP..',
+        'PPOOOOOOOOOOooLLLLLLLLLLLLLLLSSP.',
+        'PPOOOOOOOOooOLLLLLLLLLLLLLLLLLSS.',
+        'PPOOOOOOOOoooLLLLLLLLLLLLLLLLLSS.',
+        'PPOOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        'PPOOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        'PPOOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        'PPOOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        '.PPOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        '.PPOOOOOOoooLLLLLLLLLLLLLLLLLLLSS',
+        '.PPOOOOOOoooSLLLLLLLLLLLLLLLLLLSS',
+        '..PPoOOOOoooSLLLLLLLLLLLLLLLLLSS.',
+        '..PPoOOOOOooPSLLLLLLLLLLLLLLLLSS.',
+        '...PPoOoOOoooSSLLLLLLLLLLLLLLLSS.',
+        '....PoooOOOooPSSLLLLLLLLLLLLLSS..',
+        '.....PPoooOOoPPSSLLLLLLLLLLLSS...',
+        '......PoooooooPPSSSLLLLLLLLSS....',
+        '........PooooooPPSSLLLLLLLSS.s...',
+        '..........PooooooPPSSLLLSSSss....',
+        '...................SSSSSSS.......',
+        '.....................sssss.......',
+        '.......................ss........',
+      ] },
+      { id: 'ear', group: 'head', x: 9, y: 18, rows: [
+        'LLLL................',
+        '.LLLLLL.............',
+        '..LsLsLLLL..........',
+        '....LssLsLLLLLLLLLLL',
+        '......LssLLLLLLLLLLs',
+        '........LLssLLLLLLss',
+        '.........LsssSsSsSss',
+        '...........Lssssssss',
+        '.............Lssssss',
+      ] },
+      { id: 'bolt', group: 'off', x: 16, y: 42, rows: [
+        '...VVVVVVVVVVV',
+        '.VVVVVVVVRrVVw',
+        '.VVVVWVVWRrWww',
+        'VVVWVVVVVRrWww',
+        'VVVVWVWVVRrWww',
+        'VVVWVVWVVRrWww',
+        '.VVVVWVVWRrWww',
+        '.VWVWWVVwRrwww',
+        '...VVVwwwRrwww',
+      ] },
+    ],
+    eyes: [[40, 22], [46, 22]],
+    idle: [{}, {}, { move: {'head': [0, 1]} }, { move: {'head': [0, 1], 'main': [0, 1]} }, { move: {'head': [0, 1], 'main': [0, 1]} }, { move: {'head': [0, 1]} }, {}, {}],
+    period: 0,
+    tic: [{ eyes: 'smug' }, { eyes: 'smug', show: ['smooth'], hide: ['nearArm'] }, { move: {'off': [0, -1]}, eyes: 'smug', show: ['smooth'], hide: ['nearArm'] }, { eyes: 'closed', show: ['smooth'], hide: ['nearArm'] }, { move: {'off': [0, -1]}, eyes: 'closed', show: ['smooth'], hide: ['nearArm'] }, { eyes: 'smug' }],
+    ticMs: [240, 260, 300, 320, 320, 260],
+    ticEvery: 0,
+    react: [{ move: {'head': [1, 1]}, eyes: 'closed' }, { move: {'head': [1, 2], 'body': [0, 1]}, eyes: 'closed' }, { move: {'head': [1, 1]}, eyes: 'happy' }, { eyes: 'smug' }],
+    reactMs: [180, 260, 200, 200],
+  },
+  // ── Brannoch: squat and square; a bald dome, heavy brows, a big nose over a ginger forked beard with gold beads; a navy shirt under a leather apron; the tally slate in his far hand.
+  brannoch: {
+    inks: { s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], X: ['skinTan', 3], q: ['hairGinger', 0], h: ['hairGinger', 1], H: ['hairGinger', 2], n: ['navy', 0], N: ['navy', 1], O: ['navy', 2], l: ['leather', 0], u: ['leather', 1], U: ['leather', 2], y: ['gold', 1], Y: ['gold', 2], w: ['wood', 0], v: ['wood', 1], V: ['wood', 2], z: ['soot', 1], c: ['white', 1], b: ['leather', 0], B: ['leather', 1] },
+    skin: 'L',
+    parts: [
+      { id: 'farArm', group: 'off', x: 20, y: 37, rows: [
+        '...NNNNN',
+        '...NNNnn',
+        '..NNNNnn',
+        '..NNNNnn',
+        '..NNNNnn',
+        '..NnNNnn',
+        '..NnnNnn',
+        '.SSSNnn.',
+        'SSSSSN..',
+        'SSSSs...',
+        'SSSSs...',
+        'SSSSs...',
+        '.Sss....',
+      ] },
+      { id: 'slate', group: 'off', x: 12, y: 39, rows: [
+        'VVVVVVVVVVVVV',
+        'Vvwwwwwwwwwvw',
+        'VwzzzzzzzzzVw',
+        'VwzzczczczzVw',
+        'VwzzczczczzVw',
+        'VwzzczczczzVw',
+        'VwzzzzzzzzzVw',
+        'VwzzzzzzzzzVw',
+        'VwzzccczzzzVw',
+        'VwzzzzzzzzzVw',
+        'VwzzzzzzzzzVw',
+        'VvVVVVVVVVVvw',
+        'Vwwwwwwwwwwww',
+      ] },
+      { id: 'legs', group: 'body', x: 27, y: 50, rows: [
+        'NNNNN......NNNNN',
+        'Nnnnn......Nnnnn',
+        'Nnnnn......Nnnnn',
+        'Nnnnn......Nnnnn',
+        'Nnnnn......Nnnnn',
+      ] },
+      { id: 'boots', group: 'body', x: 25, y: 54, rows: [
+        'BBBBBBBB....BBBBBBBBB',
+        'Bbbbbbbb....Bbbbbbbbb',
+        'Bbbbbbbb....Bbbbbbbbb',
+        'Bbbbbbbb....Bbbbbbbbb',
+      ] },
+      { id: 'torso', group: 'body', x: 21, y: 35, rows: [
+        '..OOOOOOOOOOOOOOOOOOOOOOOOO..',
+        '..OOOOOOOOOOOOOOOOOOOOOOOOn..',
+        '..OONNNNNNnnnnnnnnnnnnnnnnnO.',
+        '.OONNNNNNNnnnnnnnnnnnnnnnnnn.',
+        '.OONNNNNNNnnnnnnnnnnnnnnnnnn.',
+        '.OONNNNnnnUUUUUUUUUUUUUUUOOn.',
+        '.OONNNNnnnUUUUUUUUUUUUUUlOOn.',
+        '.OONNNNnnnUUuuuuuuuuuuullOOnO',
+        '.OONNNNnnnUUuuuuuuuuuuullOOnn',
+        'OONNNNNnnnUUuuuuuuuuuuullOOnn',
+        'OONNNNNnnnUUuuuuuuuuuuullOOnn',
+        'OONNNNNnnnUUuuuuuuuuuuullOOnn',
+        'OONNNNNnnlllllllyyylllllllOnn',
+        'OOnnnnnnnnUUuuuuuuuuuuullOOnn',
+        'OOnnnnnnnnUUuuuuuuuuuuullOOnn',
+        'OnnnnnnnnnUUlllllllllllllOnnn',
+        '..........Ullllllllllllll....',
+      ] },
+      { id: 'nearArm', group: 'main', x: 45, y: 36, rows: [
+        'OOOOO....',
+        'OOOOn....',
+        '.OOnnO...',
+        '.OOnnn...',
+        '.OOnnn...',
+        '..OOnn...',
+        '..OOnnO..',
+        '...OOnn..',
+        '...OOnn..',
+        '...Onnn..',
+        '....LLLL.',
+        '...LLLLLL',
+        '...LLLLss',
+        '...LLLSss',
+        '....LLss.',
+        '.....Ls..',
+      ] },
+      { id: 'ear', group: 'head', x: 22, y: 21, rows: [
+        '...S...',
+        '.SSSSS.',
+        '.SSSSs.',
+        'SSSSSSS',
+        'SSSsSSs',
+        'SSSsSSs',
+        '.SSSSs.',
+        '.SsSss.',
+        '...S...',
+      ] },
+      { id: 'head', group: 'head', x: 20, y: 7, rows: [
+        '...........LLLLLLLLLLL...........',
+        '.........LLLLLLLLLLLLLLL.........',
+        '......XXXXXLLLLLLLLLLLLLLL.......',
+        '.....LLLLLLSSSSSSSSSSSLLLLLL.....',
+        '....LLLLLSSSSSSSSSSSSSSSLLLLL....',
+        '...LLLLSSSSSSSSSSSSSSSSSSSLLLL...',
+        '..LLLSSSSSSSSSSSSSSSSSSSSSSSLLL..',
+        '..LLLSSSSSSSSSSSSSSSSSSSSSSSSss..',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSSSSsL.',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSSSSss.',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSsL',
+        'LLLSSSSSSSSSSSSqhhhhqSqhhhhqSSSss',
+        'LLLSSSSSSSSSSSSqqqqqqSqqqqqqSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSSSSss.',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSSSSss.',
+        '..LLLSSSSSSSSSSSSSSSSSSSSSSSSss..',
+        '..LLLSSSSSSSSSSSSSSSSSSSSSSSSss..',
+        '...LLLSSSSSSSSSSSSSSSSSSSSSSss...',
+        '....LLsSSSSSSSSSSSSSSSSSSSsss....',
+        '.....LsssSSSSSSSSSSSSSSSssss.....',
+        '.......LsssSSSSSSSSSSSssss.......',
+        '.........Lssssssssssssss.........',
+        '...........Lssssssssss...........',
+      ] },
+      { id: 'beard', group: 'head', x: 27, y: 28, rows: [
+        '........HHHHHHHHHH........',
+        '.....HHHHHHHHHHHHHHHH.....',
+        '...HHHHHhhhhhhhhhhHHHHH...',
+        '..HHHhhhhhhhhhhhhhhhhHHH..',
+        '.HHhhhhHhhhhhhhhhhhhhhhHH.',
+        'HHhhHhhhHhhhhhhhhhhHhhhhHH',
+        'HHhhHhhhHhhhhhhHhhhhHhhhqq',
+        'HHhhhhhhhhhhHhhhhhhhhhhhqq',
+        'HHhhhhhhhhhHhhhhhhhhhhhhqq',
+        'HHhhhhhhhhhhhhhhhhhhhhhhqq',
+        '.HHhhhhhhhhhhhhhhhhhhhhqq.',
+        '.HqqhhhhhhHhhhhhhhhhhhhqq.',
+        '...HHhhhhhHhhhhhhhhhqqq...',
+        '....HHqhhhqqqqhhhqhhhqq...',
+        '....HHhhhqqqqqqhhhhhqq....',
+        '....HHhhqq....HHhhhhqq....',
+        '.....HHqqq.....HHhqhqq....',
+        '.....HHhqq.....HHhhhqq....',
+        '.....HHhqq.....HHhhqq.....',
+        '.....HHqq.......HHqqq.....',
+        '.....yYqq.......HHyYq.....',
+        '........H.......Hqqq......',
+      ] },
+      { id: 'nose', group: 'head', x: 46, y: 23, rows: [
+        '..LLL..',
+        '.LLLLL.',
+        'LLSSSLL',
+        'LLSSSSs',
+        'LLSSSSs',
+        'LsSSSss',
+        '..Lss..',
+      ] },
+    ],
+    eyes: [[37, 21], [44, 21]],
+    idle: [{}, { move: {'head': [-1, 0], 'off': [-1, 0], 'main': [-1, 0]} }, { move: {'head': [-1, 0], 'off': [-1, 0], 'main': [-1, 0]} }, { move: {'head': [-1, 0], 'off': [-1, 0], 'main': [-1, 0]} }, {}, {}, { move: {'head': [1, 0], 'off': [1, 0], 'main': [1, 0]} }, { move: {'head': [1, 0], 'off': [1, 0], 'main': [1, 0]} }, { move: {'head': [1, 0], 'off': [1, 0], 'main': [1, 0]} }, {}, {}],
+    period: 0,
+    tic: [{ move: {'off': [0, -1]} }, { move: {'off': [0, -2]}, eyes: 'smug' }, { move: {'off': [0, -2]}, eyes: 'smug', extra: [[17, 49, 'c'], [18, 49, 'c'], [19, 49, 'c']] }, { move: {'off': [0, -2]}, eyes: 'smug', extra: [[17, 49, 'c'], [18, 49, 'c'], [19, 49, 'c'], [20, 49, 'c']] }, { move: {'off': [0, -1]} }, {}],
+    ticMs: [200, 220, 260, 300, 260, 200],
+    ticEvery: 0,
+    react: [{ move: {'head': [0, 1]} }, { move: {'head': [0, 2]} }, { move: {'head': [0, 1]} }, {}],
+    reactMs: [120, 220, 140, 160],
+  },
+  // ── Hask: low and long; teal scales, a flat wide snout with a pale jaw, a lipless line and a nostril, a gold slit eye under a heavy brow; an oxblood ridge; an oxblood apron; a thick tail; a butcher’s J hook.
+  hask: {
+    inks: { t: ['scaleTeal', 0], T: ['scaleTeal', 1], U: ['scaleTeal', 2], j: ['bone', 1], J: ['bone', 2], o: ['oxblood', 0], O: ['oxblood', 1], P: ['oxblood', 2], w: ['wood', 0], v: ['wood', 1], V: ['wood', 2], g: ['steel', 0], G: ['steel', 2], X: ['steel', 3] },
+    skin: 'T',
+    slit: true,
+    parts: [
+      { id: 'tail', group: 'back', x: 4, y: 42, rows: [
+        '...................UUU',
+        '.................UUUUt',
+        '................UUUtt.',
+        '...............UUTttt.',
+        '...............UUTttt.',
+        '..............UUTTttt.',
+        '.............UUUTttt..',
+        '.............UUttttt..',
+        '............UUttttt...',
+        '.........UUUUtttt.....',
+        '.....UUUUUUUttt.......',
+        'UUUUUUUUUtttt.........',
+        '.Uttttttttt...........',
+      ] },
+      { id: 'farArm', group: 'off', x: 19, y: 35, rows: [
+        '....TTTT',
+        '....TTtt',
+        '...TTTtt',
+        '...TTTtt',
+        '...TTTtt',
+        '...TTTtt',
+        '..TTTTtt',
+        '..TttTtt',
+        '...Tttt.',
+        '.TTTTT..',
+        'TTTTTT..',
+        'TTTTTt..',
+        'TTTTTt..',
+        '.Tttt...',
+      ] },
+      { id: 'legs', group: 'body', x: 27, y: 49, rows: [
+        'TTTTTT....TTTTTT',
+        'Tttttt....Tttttt',
+        'Tttttt....Tttttt',
+        'Tttttt....Tttttt',
+        'Tttttt....Tttttt',
+        'Tttttt....Tttttt',
+      ] },
+      { id: 'feet', group: 'body', x: 25, y: 54, rows: [
+        'TTTTTTTTT..TTTTTTTTT',
+        'Ttttttttt..Ttttttttt',
+        'Ttttttttt..Ttttttttt',
+        'Ttttttttj..Ttttttttj',
+      ] },
+      { id: 'torso', group: 'body', x: 22, y: 33, rows: [
+        '.UUUUUUUUoUUUUUUUUUUoU..',
+        '.UUUUUUUUoUUUUUUUUUUot..',
+        '.UUTTTTttottttttttttot..',
+        '.UUTTTTttottttttttttotU.',
+        'UUTTtttPPPPPPPPPPPPPPPP.',
+        'UUTTtttPPPPPPPPPPPPPPPo.',
+        'UUTTtttPPOPPOOOOOOOOOoo.',
+        'UUTTtttPPOOOOOOOOOOOOoo.',
+        'UUTTtttPPOOOOOOOOOOOOooU',
+        'UUTTtttPPOOOooOOOOOOOooU',
+        'UUTTtttPPOOOOoOOOOOOOooU',
+        'UUTtttPPOOOOOOOOOOOOOOoP',
+        'UUTtttPPOOOOOOOOOOOOOOoo',
+        'UUTtttPPOOOOOOOOOOooOOoo',
+        'UUTtttPPOOOOOOOOOOOOOOoo',
+        'UUttttPPOOOOOOOOOOOOOOoo',
+        'UUttttPPoooooooooooooooo',
+        'UtttttPPPPPPPPPPPPPPPPPP',
+        '.......ooooooooooooooooo',
+      ] },
+      { id: 'nearArm', group: 'main', x: 42, y: 34, rows: [
+        'UUUUU....',
+        'UUUUt....',
+        '.UUtt....',
+        '.UUtt....',
+        '.UUttU...',
+        '..UUtt...',
+        '..UUtt...',
+        '...UUt...',
+        '...UUtU..',
+        '...Uttt..',
+        '....UUUU.',
+        '...UUUUUU',
+        '...UUTttt',
+        '...UUtttt',
+        '....UUttt',
+        '.....Ut..',
+      ] },
+      { id: 'ridge', group: 'head', x: 13, y: 9, rows: [
+        '......PPP..',
+        '.....PPPPP.',
+        '....PPOOOPP',
+        '.....PPooo.',
+        '......Poo..',
+        '..PPPPo....',
+        '..PPPPo....',
+        '..PPooo....',
+        '..PPOoo....',
+        '...PPo.....',
+        '..PPo......',
+        '.PPOoP.....',
+        'PPOPOPP....',
+        '.PPOoo.....',
+        '..PPo......',
+        '...Po......',
+        '..PPOPP....',
+        '.PPOoPo....',
+        '..PPooo....',
+        '..Pooo.....',
+        '.....PPP...',
+        '....PPPPP..',
+        '....PPPoo..',
+        '....PPooo..',
+        '.....Poo...',
+      ] },
+      { id: 'head', group: 'head', x: 17, y: 10, rows: [
+        '.........UUUUUUUUUU......................',
+        '.......UUUUUUUUUUUUUU....................',
+        '.....UUUUTtTTTTTTTTUUUU..................',
+        '....UUUTTTTTTTTTTTTTTUUU.................',
+        '...UUTTtTTTTTTTTTTTTTTtUU................',
+        '..UUTTTTTTTTTTTTTTTTTTTtUU...............',
+        '..UUTTTTTTTTTTTTTTTTTTTTTUUUUUUUUUUUUU...',
+        '.UUTTTTTTTTTTTTTTTTTTTTTTTUUUUUUUUUUUUU..',
+        '.UUTTtTTTtTTTTTTTTTTTTTTTTTTTTTTTTTTTTUkU',
+        'UUTTTTTTTTTTTTTTTTTTTTTTTTTtTTTtTTTTTTtUt',
+        'UUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtTTttt',
+        'UUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTttt',
+        'UUTTTTTTTTTTTTTTTTTTttttttttttttttttttttt',
+        'UUTTTTTTTTTTTTTTTTTTttttttttttttttttttttt',
+        'UUTTTTTTTTTTTTTTTTTTttttttttttttttttttttt',
+        'UUTTTTTTTTTTTTTTTtttJkkkkkkkkkkkkkkkkkkkU',
+        '.UUTTTTTTTTTTTTTTtttJJJJJJJJJJJJJJJJJJJjU',
+        '.UUTTTTTTTTTTTTTTtttJJJJJJJJJJJJJJJJJJJj.',
+        '..UUTTTTTTTTTTTTTtttJJJJJJJJJJJJJJJJJJjU.',
+        '..UUtTTTTTTTTTTTTtttJJJJJJJJJjjjjjjjjjj..',
+        '...UUttTTTTTTTTTTtttJjjjjjjjj............',
+        '....UUtttTTTTTTTTTTtUUUU.................',
+        '.....UttttttttttttttUtt..................',
+        '.......Uttttttttttttt....................',
+        '.........Uttttttttt......................',
+      ] },
+      { id: 'brow', group: 'head', x: 32, y: 13, rows: [
+        '...UUUUU...',
+        '.UUTTTTTUU.',
+        'UTTTTTTTTTU',
+        '.UTTTTTTTt.',
+        '..Utttttt..',
+      ] },
+      { id: 'hook', group: 'main', x: 47, y: 49, rows: [
+        'VV.......',
+        'Vv.......',
+        'Vv.......',
+        'Vv.......',
+        'XX......X',
+        'XGX.....X',
+        'XGg.....X',
+        'XGGX....X',
+        'XgGGXXXXg',
+        '..XGGGGGg',
+        '...Xgggg.',
+      ] },
+    ],
+    eyes: [[38, 18]],
+    idle: [{}, { move: {'head': [1, 0]} }, { move: {'head': [1, 0]}, swap: {} }, { move: {'head': [1, 0]} }, {}, {}, { move: {'head': [-1, 0]} }, { move: {'head': [-1, 0]} }, { move: {'head': [-1, 0]} }, {}],
+    period: 0,
+    tic: [{}, { move: {'back': [0, -1]}, eyes: 'smug' }, { move: {'back': [0, -2]}, eyes: 'closed' }, { move: {'back': [0, -1]}, eyes: 'closed' }, { eyes: 'smug' }, {}],
+    ticMs: [200, 220, 320, 260, 220, 200],
+    ticEvery: 0,
+    react: [{ move: {'main': [0, -1]} }, { move: {'main': [1, -1]} }, { move: {'main': [0, -1]} }, {}],
+    reactMs: [110, 110, 110, 160],
+  },
+  // ── Wren: a small round body under a huge green hat with a sprout; a big round nose at eye level, a white beard under it; a moss coat; a glowing vial carried at his side.
+  wren: {
+    inks: { s: ['skinRose', 0], S: ['skinRose', 1], L: ['skinRose', 2], g: ['leaf', 0], G: ['leaf', 2], H: ['leaf', 3], a: ['aqua', 0], A: ['aqua', 1], Z: ['aqua', 2], w: ['hairWhite', 1], W: ['hairWhite', 2], X: ['hairWhite', 3], m: ['moss', 0], M: ['moss', 1], Q: ['moss', 2], y: ['gold', 2], v: ['glass', 0], i: ['glass', 1], I: ['glass', 2], e: ['venom', 1], E: ['venom', 2], f: ['venom', 3], K: ['wood', 1], n: ['navy', 0], N: ['navy', 1], b: ['leather', 0], B: ['leather', 1] },
+    skin: 'L',
+    parts: [
+      { id: 'farArm', group: 'off', x: 20, y: 39, rows: [
+        '.......MMMM',
+        '......MMmm.',
+        '.....MMMmm.',
+        '.SSSSMMMmm.',
+        '.SSSSSMmm..',
+        'SSSSSsMm...',
+        '.SSSSs.....',
+        '..Sss......',
+      ] },
+      { id: 'vial', group: 'off', x: 20, y: 45, rows: [
+        '..KKK..',
+        '..KKK..',
+        '..III..',
+        '..Iiv..',
+        '.IiiiI.',
+        'IivvvvI',
+        'IvffffI',
+        'IfEEEeI',
+        'IfEEEeI',
+        '.feEee.',
+        '..IfI..',
+      ] },
+      { id: 'legs', group: 'body', x: 31, y: 50, rows: [
+        'NNNN....NNNN',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+        'Nnnn....Nnnn',
+      ] },
+      { id: 'boots', group: 'body', x: 29, y: 54, rows: [
+        'BBBBBBB..BBBBBBB',
+        'Bbbbbbb..Bbbbbbb',
+        'Bbbbbbb..Bbbbbbb',
+        'Bbbbbbb..Bbbbbbb',
+      ] },
+      { id: 'torso', group: 'body', x: 27, y: 37, rows: [
+        '........QQQQQ........',
+        '.....QQQQQQQQQQQ.....',
+        '...QQQQQMMMMMQQQQQ...',
+        '..QQQMMMMMMMMMMMQQQ..',
+        '.QQMMMMMMMMMMMMMMmQQ.',
+        '.QQMMMMMMMMMMMMMMmmm.',
+        'QQMMMMMMMMMMMMMMMMmmQ',
+        'QQMMMMMMMMMMMMMMMMmmm',
+        'QQMMMMMMMMMMMMMMMMmmm',
+        'QQMMMMMMMMMMMMMMMMmmm',
+        '.aaaaaaaayyyaaaaaaaaa',
+        '.QQmmMMMMMMMMMMMmmmm.',
+        '..QQmmmmMMMMMmmmmmm..',
+        '...Qmmmmmmmmmmmmmm...',
+        '.....Qmmmmmmmmmm.....',
+        '........Qmmmm........',
+      ] },
+      { id: 'nearArm', group: 'main', x: 43, y: 40, rows: [
+        'QQQQQ..',
+        '.QQQm..',
+        '.QQmm..',
+        '..QQmQ.',
+        '..QQmm.',
+        '..QQmm.',
+        '..Qmmm.',
+        '..QLLL.',
+        '..LLLLL',
+        '..LLLss',
+        '..LLsss',
+        '..Lsss.',
+      ] },
+      { id: 'ear', group: 'head', x: 16, y: 28, rows: [
+        'LLLLLLLLLL',
+        '.LsLLLLLLs',
+        '...LLsLLss',
+        '....Lsssss',
+        '......Lsss',
+        '.........L',
+      ] },
+      { id: 'head', group: 'head', x: 23, y: 21, rows: [
+        '..........LLLLLLLLLL..........',
+        '.......LLLLLLLLLLLLLLLL.......',
+        '.....LLLLLLLLLLLLLLLLLLLL.....',
+        '....LLLLLLSSSSSSSSSSLLLLLL....',
+        '...LLLLSSSSSSSSSSSSSSSSLLLL...',
+        '..LLLSSSSSSSSSSSSSSSSSSSSLLL..',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSLLL.',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSss.',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSsL',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        'LLLSSSSSSSSSSSSSSSSSSSSSSSSSss',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSss.',
+        '.LLLSSSSSSSSSSSSSSSSSSSSSSSss.',
+        '..LLLSSSSSSSSSSSSSSSSSSSSSss..',
+        '...LLLSSSSSSSSSSSSSSSSSSSss...',
+        '....LLsSSSSSSSSSSSSSSSSsss....',
+        '.....LssssSSSSSSSSSSsssss.....',
+        '.......Lsssssssssssssss.......',
+        '..........Lsssssssss..........',
+      ] },
+      { id: 'beard', group: 'head', x: 33, y: 32, rows: [
+        '.......XXXXX.......',
+        '....XXXXXXXXXXX....',
+        '..XXXXXWWWWWXXXXX..',
+        '.XXXWWWWWWWWWWWXXX.',
+        '.XXWWWWWWWWWWWWWww.',
+        'XXWWWWWWWWWWWWWWWwX',
+        'XXWWWWWWWWWWWWWWWww',
+        'XXWWWXWWWWWWWWWWWww',
+        'XXWWWWWWWWWWWwWWWww',
+        '.XXWWWWXWWWWWWWWww.',
+        '..XXwWWWWWWWWWwww..',
+        '...XwwwWWWwWwwww...',
+        '.....XwwWWWWww.....',
+        '.......XXWww.......',
+        '........wXww.......',
+        '.........Xw........',
+      ] },
+      { id: 'nose', group: 'head', x: 46, y: 27, rows: [
+        '..LLLLL..',
+        '.LLLLLLL.',
+        'LLSSSSSLL',
+        'LLSSSSSSs',
+        'LLSSSSSSs',
+        'LLSSSSSSs',
+        '.LLSSSSs.',
+        '..Lssss..',
+      ] },
+      { id: 'hat', group: 'head', x: 15, y: 5, rows: [
+        '..........HHHHHHH.........................',
+        '...........HHHHHHH........................',
+        '............HHGGGHHH......................',
+        '.............HHGGGHHHH....................',
+        '..............HHGGGGHHH...................',
+        '..............HHGGGGGGHHH.................',
+        '...............HHGGGGGGHHHH...............',
+        '...............HHGHGGGGGGHHH..............',
+        '...............HHGGGGGGGGGgHH.............',
+        '................HHGGHGGGGGGgHH............',
+        '................HHGGGGGGGGGGgHH...........',
+        '...............HHGGGGGGGGGGGGgHH..........',
+        '..............HHGGGGGGGGGGGGGGgHH.........',
+        '............HHHGGGGGGGGGGGGGGGGgHH........',
+        '...........HHHgggggggggggggggggggHHH......',
+        '.........HHHggggggggggggggggggggggHHH.....',
+        '........HggggggggggggggggggggggggggggH....',
+        'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ',
+        'ZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa',
+        'ZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa',
+        'Zaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ] },
+      { id: 'sprout', group: 'head', x: 19, y: 3, rows: [
+        '........HH',
+        '.HHH..gHHH',
+        'HHHgg.gH..',
+        '....gg....',
+        '.....g....',
+      ] },
+    ],
+    eyes: [[39, 29], [45, 29]],
+    idle: [{}, { move: {'head': [0, 1], 'off': [0, 1], 'main': [0, 1]} }, { move: {'head': [0, 1]} }, {}, {}, {}],
+    period: 0,
+    tic: [{ move: {'off': [-1, -1]} }, { move: {'off': [-2, -3]} }, { move: {'off': [-2, -4]} }, { move: {'off': [-2, -4]}, eyes: 'happy' }, { move: {'off': [-1, -2]}, eyes: 'happy' }, {}],
+    ticMs: [200, 220, 300, 320, 240, 200],
+    ticEvery: 0,
+    react: [{ move: {'head': [0, 1], 'off': [-1, -2]}, eyes: 'happy' }, { move: {'off': [-2, -4]}, eyes: 'happy' }, { move: {'head': [0, 1], 'off': [-1, -2]}, eyes: 'happy' }, {}],
+    reactMs: [120, 200, 120, 160],
+  },
 }
 
-/** The pose a frame shows (the skeleton's input). */
-export const postPose = (id: PersonaId, anim: MiniAnim, frame: number): Pose => keyOf(POST_FACES[id], anim, frame).pose ?? {}
+/** Each face's ground shadow at this size (under its feet, not the cell's middle). */
+const SHADOW: Readonly<Record<PersonaId, { cx: number; rx: number }>> = { saffra:  { cx:  37,  rx:  16 },  odile:  { cx:  34,  rx:  17 },  brannoch:  { cx:  34,  rx:  19 },  hask:  { cx:  32,  rx:  20 },  wren:  { cx:  37,  rx:  15 } }
 
-/** Distance from a point to a segment. */
-function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): [number, number] {
-  const dx = bx - ax, dy = by - ay
-  const l2 = dx * dx + dy * dy
-  const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0
-  return [Math.hypot(px - (ax + t * dx), py - (ay + t * dy)), t]
-}
+/** How this size is painted for a face: the 72 cell, its shadow, the outer px, the pack's eyes. */
+export const postSize = (id: PersonaId): SpriteSize => ({ w: POST_W, h: POST_H, shadow: { cx: SHADOW[id].cx, cy: POST_FEET + 1.4, rx: SHADOW[id].rx, ry: 2.4 }, outer: true, eyes: 'pack' })
 
-interface Drawn { px: Map<number, string>; band: readonly [number, number]; far: boolean }
-
-/** A part's pixels this frame: cell index → ink letter. */
-function rasterise(part: Part, j: Partial<Record<JointId, [number, number]>>, key: Key): Drawn | null {
-  const px = new Map<number, string>()
-  const set = (x: number, y: number, ch: string) => { if (x >= 0 && y >= 0 && x < POST_W && y < POST_H) px.set(y * POST_W + x, ch) }
-  if (part.kind === 'rows') {
-    const at = j[part.at]
-    if (!at) return null
-    const nd = key.nudge?.[part.id] ?? [0, 0]
-    const x0 = Math.round(at[0]) + part.off[0] + nd[0], y0 = Math.round(at[1]) + part.off[1] + nd[1]
-    const rows = key.swap?.[part.id] ?? part.rows
-    rows.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch !== '.') set(x0 + rx, y0 + ry, ch) }))
-    return { px, band: part.band ?? [1, 1], far: false }
-  }
-  if (part.kind === 'limb') {
-    const pts = part.chain.map((c) => j[c])
-    if (pts.some((p) => !p)) return null
-    const sh = part.shift ?? [0, 0]
-    const ps = (pts as [number, number][]).map(([x, y]) => [x + sh[0], y + sh[1]] as [number, number])
-    let x0 = 99, y0 = 99, x1 = -1, y1 = -1
-    for (const [x, y] of ps) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y) }
-    const rMax = Math.max(...part.r)
-    for (let y = Math.floor(y0 - rMax - 1); y <= Math.ceil(y1 + rMax + 1); y++)
-      for (let x = Math.floor(x0 - rMax - 1); x <= Math.ceil(x1 + rMax + 1); x++) {
-        let best = Infinity, bestSeg = -1
-        for (let s = 0; s + 1 < ps.length; s++) {
-          const [d, t] = segDist(x, y, ps[s][0], ps[s][1], ps[s + 1][0], ps[s + 1][1])
-          const r = part.r[s] + (part.r[s + 1] - part.r[s]) * t
-          const m = d - r
-          if (m < best) { best = m; bestSeg = s }
-        }
-        if (best <= 0.05) set(x, y, part.inks[Math.min(bestSeg, part.inks.length - 1)])
-      }
-    return { px, band: [1, 1], far: !!part.far }
-  }
-  const w = j[part.at], e = j[part.from]
-  if (!w || !e) return null
-  const dx = w[0] - e[0], dy = w[1] - e[1]
-  const l = Math.hypot(dx, dy) || 1
-  const cx = w[0] + (dx / l) * (part.reach ?? 1.2), cy = w[1] + (dy / l) * (part.reach ?? 1.2)
-  for (let y = Math.floor(cy - part.r - 1); y <= Math.ceil(cy + part.r + 1); y++)
-    for (let x = Math.floor(cx - part.r - 1); x <= Math.ceil(cx + part.r + 1); x++)
-      if (Math.hypot(x - cx, y - cy) <= part.r + 0.05) set(x, y, part.ink)
-  return { px, band: [1, 1], far: !!part.far }
-}
-
-export interface PostOpts {
-  locked?: boolean
-  /** Leave out the arms and what they hold (the mouth test's reference). */
-  bare?: boolean
-}
-
-/** One frame at field / post size. `locked`: the figure as a shadow (the company not open yet). */
-export function postFrame(id: PersonaId, anim: MiniAnim, frame: number, lockedOrOpts: boolean | PostOpts = false): MiniFrame {
-  const o: PostOpts = typeof lockedOrOpts === 'boolean' ? { locked: lockedOrOpts } : lockedOrOpts
-  const face = POST_FACES[id]
-  const key = keyOf(face, anim, frame)
-  const pose = key.pose ?? {}
-  const j = poseJoints2(id, pose)
-  const W = POST_W, H = POST_H
-  const rgba = new Uint8ClampedArray(W * H * 4)
-  const sk = skeletonOf(id)
-  // the ground shadow: on the ground under the feet (a hop shrinks it a little)
-  const lift = Math.max(0, (pose.all?.[1] ?? 0))
-  const scx = sk.root[0] + 0.5, scy = POST_FEET + 0.6
-  const rx = face.shadowRx - lift * 0.5, ry = 2.2
-  for (let y = POST_FEET - 2; y <= POST_FEET + 3; y++)
-    for (let x = Math.floor(scx - rx - 1); x <= Math.ceil(scx + rx + 1); x++)
-      if (((x + 0.5 - scx) / rx) ** 2 + ((y + 0.5 - scy) / ry) ** 2 <= 1 && x >= 0 && x < W) rgba.set([...INK_RGB, SHADOW_ALPHA], (y * W + x) * 4)
-  const colour = (ch: string, tone: Tone): [number, number, number] => {
-    const ink = face.inks[ch]
-    if (!ink) return INK_RGB
-    if (o.locked) return rgbOf(RAMPS.navy[tone >= 2 ? 1 : 0])
-    return rgbOf(RAMPS[ink[0]][tone])
-  }
-  const put = (i: number, rgb: readonly number[]) => rgba.set([rgb[0], rgb[1], rgb[2], 255], i * 4)
-  const isInk = (i: number) => rgba[i * 4 + 3] === 255 && rgba[i * 4] === INK_RGB[0] && rgba[i * 4 + 1] === INK_RGB[1] && rgba[i * 4 + 2] === INK_RGB[2]
-  for (const part of face.parts) {
-    if (o.bare && (part.group === 'armN' || part.group === 'armF' || part.group === 'prop')) continue
-    const shown = part.hidden ? key.show?.includes(part.id) : !key.hide?.includes(part.id)
-    if (!shown) continue
-    const d = rasterise(part, j, key)
-    if (!d) continue
-    const own = d.px
-    if (part.ring !== 0)
-      for (const i of own.keys()) {
-        const x = i % W, y = (i / W) | 0
-        for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-          const xx = x + ox, yy = y + oy
-          if (xx < 0 || yy < 0 || xx >= W || yy >= H || own.has(yy * W + xx)) continue
-          put(yy * W + xx, INK_RGB)
-        }
-      }
-    const run = (i: number, dx: number, dy: number, max: number) => {
-      let n = 0, x = i % W, y = (i / W) | 0
-      while (n < max) { x += dx; y += dy; if (x < 0 || y < 0 || x >= W || y >= H || !own.has(y * W + x)) break; n++ }
-      return n
-    }
-    for (const [i, ch] of own) {
-      const ink = face.inks[ch]
-      let tone: Tone
-      if (!ink || ink[1] !== 'a') tone = (ink?.[1] as Tone) ?? 1
-      else {
-        const lt = Math.min(run(i, -1, 0, 4), run(i, 0, -1, 4))
-        const sh = Math.min(run(i, 1, 0, 4), run(i, 0, 1, 4))
-        tone = sh < d.band[1] ? 0 : lt < d.band[0] ? 2 : 1
-      }
-      if (d.far) tone = Math.max(0, tone - 1) as Tone
-      put(i, ch === 'k' ? INK_RGB : colour(ch, tone))
-    }
-  }
-  // the pack's outer line: one more px of ink round the whole figure, so it is 2 px outside and 1 px between parts
-  const add: number[] = []
-  for (let i = 0; i < W * H; i++) {
-    if (rgba[i * 4 + 3] === 255) continue
-    const x = i % W, y = (i / W) | 0
-    for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const xx = x + ox, yy = y + oy
-      if (xx >= 0 && yy >= 0 && xx < W && yy < H && isInk(yy * W + xx)) { add.push(i); break }
-    }
-  }
-  for (const i of add) put(i, INK_RGB)
-  if (!o.locked) {
-    const hj = j.head
-    if (hj) {
-      const hx = Math.round(hj[0]), hy = Math.round(hj[1])
-      const mode = key.eyes ?? 'open'
-      const skin = colour(face.skin, 1)
-      const plot = (x: number, y: number, c: readonly number[]) => { if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, c) }
-      const [lx, ly] = key.look ?? [0, 0]
-      face.eyes.forEach((e, i) => {
-        // a glance: the eye's own place is skin, the eye drawn where it looks
-        if (lx || ly) for (let yy = 0; yy < e.h; yy++) for (let xx = 0; xx < e.w; xx++) plot(hx + e.dx + xx, hy + e.dy + yy, skin)
-        const m: EyeMode = mode === 'wink' ? (i === 0 ? 'closed' : 'open') : mode
-        eye(plot, hx + e.dx + lx, hy + e.dy + ly, e, m, !!face.slit, skin)
-      })
-      for (const [ex, ey, ch] of key.extra ?? []) { const x = hx + ex, y = hy + ey; if (x >= 0 && y >= 0 && x < W && y < H) put(y * W + x, colour(ch, typeof face.inks[ch]?.[1] === 'number' ? (face.inks[ch][1] as Tone) : 1)) }
-    }
-  }
-  return { w: W, h: H, rgba }
-}
-
-/** An eye by expression: open, a w × h ink mark; shut, its lower lid; happy, an arc up; smug, a lid over a low pupil. A reptile's is gold with a slit. */
-function eye(put: (x: number, y: number, rgb: readonly number[]) => void, x: number, y: number, e: Eye, mode: EyeMode, slit: boolean, skin: readonly number[]): void {
-  const box = (rgb: readonly number[], x0: number, y0: number, w: number, h: number) => { for (let yy = y0; yy < y0 + h; yy++) for (let xx = x0; xx < x0 + w; xx++) put(xx, yy, rgb) }
-  box(skin, x, y, e.w, e.h)
-  if (slit) {
-    if (mode === 'closed' || mode === 'happy') { box(INK_RGB, x, y + e.h - 1, e.w, 1); return }
-    box(rgbOf(RAMPS.gold[2]), x, y, e.w, e.h)
-    box(INK_RGB, x + (e.w >> 1), y, 1, e.h)
-    if (mode === 'smug') box(INK_RGB, x, y, e.w, 1)
-    return
-  }
-  if (mode === 'open') return box(INK_RGB, x, y, e.w, e.h)
-  if (mode === 'closed') return box(INK_RGB, x, y + e.h - 1, e.w, 1)
-  if (mode === 'happy') { box(INK_RGB, x, y, e.w, 1); if (e.w === 1) put(x, y, INK_RGB); return }
-  // smug: the lid, then the pupil low
-  box(INK_RGB, x, y, e.w, 1)
-  box(INK_RGB, x, y + e.h - 1, Math.max(1, e.w - 1), 1)
-}
-
-export const postFrames = (id: PersonaId, anim: MiniAnim): number => keysOf(POST_FACES[id], anim).length
-
-/** Per-frame hold times (ms) at this size, by the dock's clock for the idle. */
-export function postMs(id: PersonaId, anim: MiniAnim): number[] {
+export const postFrames = (id: PersonaId, anim: MiniAnim): number => {
   const f = POST_FACES[id]
-  const clock = MINI_FACES[id]
-  const sum = (ms: readonly number[]) => ms.reduce((a, b) => a + b, 0)
-  // this size's own holds, scaled to the dock's lengths (the clock plays them so)
-  const fit = (own: readonly number[], len: number) => own.map((m) => (m * len) / sum(own))
-  if (anim === 'idle') return fit(f.idleMs ?? f.idle.map(() => 1), clock.period)
-  return anim === 'tic' ? fit(f.ticMs, sum(clock.ticMs)) : fit(f.reactMs, sum(clock.reactMs))
+  return anim === 'idle' ? f.idle.length : anim === 'tic' ? f.tic.length : f.react.length
+}
+
+/** One frame at field / post size. `locked`: the figure as a shadow. */
+export function postFrame(id: PersonaId, anim: MiniAnim, frame: number, locked = false): MiniFrame {
+  return paintSprite(POST_FACES[id], anim, frame, locked, postSize(id))
 }
 
 /** Where a face stands in its cell: the middle of its feet (its shadow's centre) and the ground row. */
-export const postFeetOf = (id: PersonaId): { x: number; y: number } => ({ x: skeletonOf(id).root[0] + 0.5, y: POST_FEET + 1 })
-
-/** The 3D joints of a frame (for the skeleton's checks). */
-export const postJoints3 = (id: PersonaId, anim: MiniAnim, frame: number) => poseJoints3(id, postPose(id, anim, frame))
-/** The cell joints of a frame. */
-export const postJoints2 = (id: PersonaId, anim: MiniAnim, frame: number) => poseJoints2(id, postPose(id, anim, frame))
-/** Which of a frame's arms is in front of the body (the near one, unless a pose swings the far hand forward of the chest). */
-export const nearerHand = (id: PersonaId, anim: MiniAnim, frame: number): 'N' | 'F' => {
-  const j = postJoints3(id, anim, frame)
-  return depthOf(j.wristN ?? [0, 0, 0]) >= depthOf(j.wristF ?? [0, 0, 0]) ? 'N' : 'F'
-}
-
-/** The clock's view of this size's frames (counts and holds), for {@link spriteAt}. */
-function clockFace(id: PersonaId): MiniFace {
-  const f = POST_FACES[id]
-  return { ...MINI_FACES[id], idle: f.idle.map(() => ({})), idleMs: f.idleMs, tic: f.tic.map(() => ({})), ticMs: f.ticMs, react: f.react.map(() => ({})), reactMs: f.reactMs }
-}
+export const postFeetOf = (id: PersonaId): { x: number; y: number } => ({ x: SHADOW[id].cx, y: POST_FEET + 1 })
 
 /** What the figure shows at time `t` (ms): the dock's clock, this size's frames. */
 export function postAt(id: PersonaId, t: number, o: { pickedAt?: number; still?: boolean } = {}): { anim: MiniAnim; frame: number } {
-  return spriteAt(id, clockFace(id), t, o)
+  return spriteAt(id, POST_FACES[id], t, o)
 }
