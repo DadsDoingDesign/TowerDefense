@@ -6,9 +6,11 @@
  * a white specular dash, so a ramp is the whole vocabulary of a material.
  *
  * Added on purpose (the pack has no bare faces but the goblins'): the skin
- * ramps are built from pack colours too — `#d9945f` / `#ffcfb4` are the TNT
+ * ramps are built from pack colours too — `#c5836e` / `#ffcfb4` are the TNT
  * goblin's, `#e3c18c` / `#f5efa9` the house's plaster — only their grouping
- * into a ramp is ours. Nothing here is from the current (non-CC0) download.
+ * into a ramp is ours, plus ONE new tone, the tan skin's mid `#eaa98a` (the
+ * pack's orange `#d9945f` read as a beard on a jaw). Nothing here is from the
+ * current (non-CC0) download.
  *
  * Pure data: no DOM.
  */
@@ -51,7 +53,7 @@ export const RAMPS = {
   hide: ['#685757', '#977b6b', '#c5836e', '#ffcfb4'],
   soot: ['#2a3e5d', '#394243', '#4f5e65', '#737f8e'],
   // ── skins (pack colours, grouped by us) ───────────────────────────────
-  skinTan: ['#9e7466', '#d9945f', '#ffcfb4', '#fffce7'],
+  skinTan: ['#c5836e', '#eaa98a', '#ffcfb4', '#fffce7'],
   skinUmber: ['#5a4646', '#866353', '#b48355', '#dab570'],
   skinRose: ['#c5836e', '#f69e7d', '#ffcfb4', '#fffce7'],
   skinPale: ['#af8c79', '#e3c18c', '#f5efa9', '#ffffff'],

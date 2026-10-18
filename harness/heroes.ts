@@ -212,15 +212,15 @@ function paintCard(g: CanvasRenderingContext2D, w: number, h: number, title: str
 }
 
 /** An animated card: every frame painted as its own full card, stacked (the script makes a GIF). */
-function animCard(id: string, title: string, caption: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void, people = 'all'): void {
+function animCard(id: string, title: string, caption: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void, people = 'all', group: Group = 'Animation'): void {
   const [c, g] = canvas(CARD, CARD * n)
   for (let i = 0; i < n; i++) {
     g.save()
     g.translate(0, i * CARD)
-    paintCard(g, CARD, CARD, title, caption, 'Animation', (gg, b) => draw(gg, b, i))
+    paintCard(g, CARD, CARD, title, caption, group, (gg, b) => draw(gg, b, i))
     g.restore()
   }
-  CARDS.push({ id, group: 'Animation', people, title, caption, file: `animation-${id}.gif`, canvas: c, frames: n, delays })
+  CARDS.push({ id, group, people, title, caption, file: `${slugG(group)}-${id}.gif`, canvas: c, frames: n, delays })
 }
 
 /** Fill a card's art box with real ground. */
@@ -740,20 +740,20 @@ function gripCards(): void {
   const bodies = ['(none)', 'Mail', 'Gambeson', 'Leather', 'Brigandine', 'Plate', "Sergeant's Cuirass", 'Robe', 'Forge Apron', 'Cloak', 'Woven Vest', 'Thornweave Hood', 'Scale Hide', 'Brew Belt']
   const k = 1
   const cw = 70, ch = 84
-  const W = 150 + bodies.length * cw + 20
-  const H = 66 + 92 + 40 + offs.length * ch + 30
+  const W = 150 + bodies.length * cw + 60
+  const H = 66 + 92 + 70 + offs.length * ch + 30
   card('offhand-x-body', 'Rig/Parts', 'Every off hand × every body (1×)', 'Rows: off-hand pieces; columns: body pieces; a human with a Sword, at game density. Judge that no pairing clashes, floats or pastes on. Zoom in.', (gg, b) => {
     bodies.forEach((bd, j) => {
       gg.save()
-      gg.translate(b.x + 150 + j * cw + cw / 2, b.y + 30)
+      gg.translate(b.x + 150 + j * cw + 14, b.y + 58)
       gg.rotate(-0.5)
       text(gg, bd, 0, 0, 12, '#efe6d6', 700)
       gg.restore()
     })
     offs.forEach((of, i) => {
-      text(gg, of, b.x + 8, b.y + 40 + i * ch + ch * 0.62, 13, '#efe6d6', 700)
+      text(gg, of, b.x + 8, b.y + 70 + i * ch + ch * 0.62, 13, '#efe6d6', 700)
       bodies.forEach((bd, j) => {
-        const x = b.x + 150 + j * cw, y = b.y + 40 + i * ch
+        const x = b.x + 150 + j * cw, y = b.y + 70 + i * ch
         gg.fillStyle = (i + j) % 2 ? '#5b8c54' : '#55844f'
         gg.fillRect(x, y, cw, ch)
         const f = F({ race: 'human', company: 'Peppercorn', gear: { main: 'Sword', off: of.startsWith('(') ? null : of, body: bd.startsWith('(') ? null : bd } })
@@ -866,6 +866,22 @@ function faces(): void {
         hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
       }, people)
     }
+    // a life loop: the idle twice, the tic once, the idle again (~4 s, as it would play)
+    {
+      const seq: [AnimId, number][] = []
+      const idleN = framesFor('idle', fc.id), ticN = framesFor('tic', fc.id)
+      for (let r = 0; r < 2; r++) for (let i = 0; i < idleN; i++) seq.push(['idle', i])
+      for (let i = 0; i < ticN; i++) seq.push(['tic', i])
+      for (let i = 0; i < idleN; i++) seq.push(['idle', i])
+      const im = frameMsFor('idle', fc.id), tm = frameMsFor('tic', fc.id)
+      const delays = seq.map(([a, i]) => (a === 'idle' ? im[i] : tm[i]))
+      animCard(`${fc.id}-life`, `${fc.name} — a few seconds of life`, `The idle loop with the tic dropped in, at the game’s timing (~${(delays.reduce((x, y) => x + y, 0) / 1000).toFixed(1)} s). Judge that it is calm and says who they are.`, seq.length, delays, (gg, b, i) => {
+        groundIn(gg, b, 4, -12)
+        const f = F(fc.look, seq[i][0], seq[i][1])
+        hero(gg, f, b.x + b.w / 2, b.y + b.h - 36, 4)
+        hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
+      }, people)
+    }
     // the dock figure
     card(`dock-${fc.id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.', (gg, b) => {
       const k = 6
@@ -906,6 +922,59 @@ function faces(): void {
       gg.drawImage(miniCanvas(id, a, f, locked), x + (sw - MINI_W * 3) / 2, y0 + 14, MINI_W * 3, MINI_H * 3)
       text(gg, locked ? 'locked' : `Rep ${[4, 2, 6, 3, 0][s]}`, x + sw / 2, y0 + 140, 16, locked ? DIM : '#f2e8d8', 800, 'center')
     })
+  }, 'all', 'Dock')
+}
+
+// ── 8 · zoomed beside the pack (the 8× critique) ───────────────────────────
+
+/** A region of a CC0 strip frame, at k. */
+function refCrop(g: CanvasRenderingContext2D, im: HTMLImageElement, n: number, i: number, sx: number, sy: number, w: number, h: number, x: number, y: number, k: number): void {
+  const fw = im.width / n
+  g.drawImage(im, fw * i + sx, sy, w, h, x, y, w * k, h * k)
+}
+
+function zoom(): void {
+  // the pack's knight and torch goblin beside our human and gnome, 8×, same region size
+  card('zoom-4x', 'Rig/Parts', '4× beside the pack', 'Top: the CC0 knight and torch goblin. Bottom: our human and Wren, same crop size at the same 4×. Judge the outline weight, the three-tone shading and the edges.', (gg, b) => {
+    const k = 4
+    const w = 64, h = 46
+    gg.fillStyle = '#5b8c54'
+    gg.fillRect(b.x, b.y, b.w, b.h)
+    refCrop(gg, REFS.knight, 6, 0, 8, 10, w, h, b.x + 8, b.y + 6, k)
+    refCrop(gg, REFS.torch, 6, 0, 30, 8, w, h, b.x + 8 + w * k + 8, b.y + 6, k)
+    const hf = F(BASE_KIT.human), wf = F(FACES[4].look)
+    const crop2 = (f: HeroFrame, x: number) => {
+      const P = f.pose
+      gg.drawImage(frameCanvas(f), Math.round(P.head.x - w / 2 + 6), Math.round(P.head.y - 22), w, h, x, b.y + 6 + h * k + 10, w * k, h * k)
+    }
+    crop2(hf, b.x + 8)
+    crop2(wf, b.x + 8 + w * k + 8)
+  })
+  card('zoom-8x', 'Rig/Parts', '8×: a face and a fist', 'Left: the CC0 knight’s visor and sword fist. Right: our human’s face and sword fist. 8×, same crop. Judge single pixels: ink runs, tone steps, no strays.', (gg, b) => {
+    const k = 8
+    const w = 32, h = 22
+    const f = F(BASE_KIT.human)
+    const P = f.pose
+    const panels: [CanvasImageSource, number, number][] = [
+      [REFS.knight, 24, 30],
+      [frameCanvas(f), Math.round(P.head.x - 6), Math.round(P.head.y - 6)],
+      [REFS.knight, 44, 52],
+      [frameCanvas(f), Math.round(P.mainHand.x - 14), Math.round(P.mainHand.y - 12)],
+    ]
+    panels.forEach(([src, sx, sy], i) => {
+      const x = b.x + 6 + (i % 2) * (w * k + 10), y = b.y + 6 + Math.floor(i / 2) * (h * k + 8)
+      gg.fillStyle = '#5b8c54'
+      gg.fillRect(x, y, w * k, h * k)
+      gg.drawImage(src, sx, sy, w, h, x, y, w * k, h * k)
+    })
+  })
+  card('scale-1x', 'Rig/Parts', 'Game scale: 1× on the field', 'The five peoples and the five faces at the density the battle draws them, with the CC0 goblins and knight. Judge what reads at a glance.', (gg, b) => {
+    const [gc, g2] = ground(b.w, b.h, 1, postOf(), -20)
+    refFrame(g2, REFS.torch, 6, 0, 40, 120)
+    RACES.forEach((r, i) => hero(g2, F(BASE_KIT[r]), 110 + i * 82, 110, 1))
+    FACES.forEach((fc, i) => hero(g2, F(fc.look), 110 + i * 82, 236, 1))
+    refFrame(g2, REFS.knight, 6, 0, 40, 246)
+    gg.drawImage(gc, b.x, b.y)
   })
 }
 
@@ -951,6 +1020,7 @@ async function build(): Promise<void> {
   run('items', itemCards)
   run('grips', gripCards)
   run('faces', faces)
+  run('zoom', zoom)
   if (!only || only.includes('cards')) {
     const wrapC = el('div', 'cards')
     for (const cd of CARDS) wrapC.append(cd.canvas)

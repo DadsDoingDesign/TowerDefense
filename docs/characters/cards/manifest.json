@@ -1,0 +1,1994 @@
+[
+  {
+    "id": "race-human",
+    "group": "Rig/Parts",
+    "people": "human",
+    "title": "Humans — the base",
+    "caption": "Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head \"plain\", hair \"crop\".",
+    "file": "rig-parts-race-human.png"
+  },
+  {
+    "id": "race-elf",
+    "group": "Rig/Parts",
+    "people": "elf",
+    "title": "Elves — the base",
+    "caption": "Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head \"long\", hair \"long\".",
+    "file": "rig-parts-race-elf.png"
+  },
+  {
+    "id": "race-dwarf",
+    "group": "Rig/Parts",
+    "people": "dwarf",
+    "title": "Dwarves — the base",
+    "caption": "Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head \"full\", hair \"crop\".",
+    "file": "rig-parts-race-dwarf.png"
+  },
+  {
+    "id": "race-reptilian",
+    "group": "Rig/Parts",
+    "people": "reptilian",
+    "title": "Reptilians — the base",
+    "caption": "Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head \"snout\", hair \"crest\".",
+    "file": "rig-parts-race-reptilian.png"
+  },
+  {
+    "id": "race-gnome",
+    "group": "Rig/Parts",
+    "people": "gnome",
+    "title": "Gnomes — the base",
+    "caption": "Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head \"round\", hair \"cap\".",
+    "file": "rig-parts-race-gnome.png"
+  },
+  {
+    "id": "rig-anchors",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "The rig: anchors",
+    "caption": "Every part hangs from these anchors; the peoples differ only in the body numbers between them. Judge whether each anchor sits where a part would attach.",
+    "file": "rig-parts-rig-anchors.png"
+  },
+  {
+    "id": "layer-back",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 1 back",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-back.png"
+  },
+  {
+    "id": "layer-offArm",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 2 off-hand arm",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-offArm.png"
+  },
+  {
+    "id": "layer-legs",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 3 legs & boots",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-legs.png"
+  },
+  {
+    "id": "layer-body",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 4 body (race)",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-body.png"
+  },
+  {
+    "id": "layer-armour",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 5 body armour",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-armour.png"
+  },
+  {
+    "id": "layer-head",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 6 head (race face)",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-head.png"
+  },
+  {
+    "id": "layer-hair",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 7 hair / headgear",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-hair.png"
+  },
+  {
+    "id": "layer-mainArm",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 8 main-hand arm",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-mainArm.png"
+  },
+  {
+    "id": "layer-mainItem",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 9 main-hand item",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-mainItem.png"
+  },
+  {
+    "id": "layer-offItem",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 10 off-hand item",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-offItem.png"
+  },
+  {
+    "id": "layer-fx",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Layer 11 FX tells",
+    "caption": "What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.",
+    "file": "rig-parts-layer-fx.png"
+  },
+  {
+    "id": "kit-0",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Bare",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-0.png"
+  },
+  {
+    "id": "kit-1",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Sword · Shield · Mail",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-1.png"
+  },
+  {
+    "id": "kit-2",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Greatsword · Plate",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-2.png"
+  },
+  {
+    "id": "kit-3",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Bow · Quiver · Cloak",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-3.png"
+  },
+  {
+    "id": "kit-4",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Axe · Round Shield · Chainshirt",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-4.png"
+  },
+  {
+    "id": "kit-5",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Spear · Leather",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-5.png"
+  },
+  {
+    "id": "kit-6",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Staff · Robe",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-6.png"
+  },
+  {
+    "id": "kit-7",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Twin Knives · Silk Wrap",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-7.png"
+  },
+  {
+    "id": "kit-8",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Banner Pole · Brigandine",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-8.png"
+  },
+  {
+    "id": "kit-9",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Cleaver · Buckler · Apron",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-9.png"
+  },
+  {
+    "id": "kit-10",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Maul · Forge Apron",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-10.png"
+  },
+  {
+    "id": "kit-11",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Wand · Tome · Hood",
+    "caption": "One human (Peppercorn) in this kit, 4×; bare in the corner. Judge that every piece is held or worn, not pasted on.",
+    "file": "swaps-kit-11.png"
+  },
+  {
+    "id": "onekit-human",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Humans in the same kit",
+    "caption": "Arming Sword · Kite Shield · Plate, made once, worn by a human. Judge the fit to this body, 4× (the human in the corner for comparison).",
+    "file": "swaps-onekit-human.png"
+  },
+  {
+    "id": "onekit-elf",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Elves in the same kit",
+    "caption": "Arming Sword · Kite Shield · Plate, made once, worn by a elf. Judge the fit to this body, 4× (the human in the corner for comparison).",
+    "file": "swaps-onekit-elf.png"
+  },
+  {
+    "id": "onekit-dwarf",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Dwarves in the same kit",
+    "caption": "Arming Sword · Kite Shield · Plate, made once, worn by a dwarf. Judge the fit to this body, 4× (the human in the corner for comparison).",
+    "file": "swaps-onekit-dwarf.png"
+  },
+  {
+    "id": "onekit-reptilian",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Reptilians in the same kit",
+    "caption": "Arming Sword · Kite Shield · Plate, made once, worn by a reptilian. Judge the fit to this body, 4× (the human in the corner for comparison).",
+    "file": "swaps-onekit-reptilian.png"
+  },
+  {
+    "id": "onekit-gnome",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Gnomes in the same kit",
+    "caption": "Arming Sword · Kite Shield · Plate, made once, worn by a gnome. Judge the fit to this body, 4× (the human in the corner for comparison).",
+    "file": "swaps-onekit-gnome.png"
+  },
+  {
+    "id": "livery-neutral",
+    "group": "Swaps",
+    "people": "all",
+    "title": "neutral livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-neutral.png"
+  },
+  {
+    "id": "livery-peppercorn",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Peppercorn livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-peppercorn.png"
+  },
+  {
+    "id": "livery-rosethread",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Rosethread livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-rosethread.png"
+  },
+  {
+    "id": "livery-ironvein",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Ironvein livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-ironvein.png"
+  },
+  {
+    "id": "livery-butcherblock",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Butcherblock livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-butcherblock.png"
+  },
+  {
+    "id": "livery-greenvial",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Greenvial livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-greenvial.png"
+  },
+  {
+    "id": "livery-easel-house",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Easel House livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-easel-house.png"
+  },
+  {
+    "id": "livery-moonquill",
+    "group": "Swaps",
+    "people": "all",
+    "title": "Moonquill livery",
+    "caption": "The same dwarf hire with the company’s cloth and trim swapped in; nothing else changes. Judge it reads as this company at 1× (corner).",
+    "file": "swaps-livery-moonquill.png"
+  },
+  {
+    "id": "rarity-common",
+    "group": "States",
+    "people": "all",
+    "title": "Common",
+    "caption": "Before (left, 2×) and after (4×): the common trim on the sword and the shield. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-rarity-common.png"
+  },
+  {
+    "id": "rarity-rare",
+    "group": "States",
+    "people": "all",
+    "title": "Rare",
+    "caption": "Before (left, 2×) and after (4×): the rare trim on the sword and the shield. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-rarity-rare.png"
+  },
+  {
+    "id": "rarity-epic",
+    "group": "States",
+    "people": "all",
+    "title": "Epic",
+    "caption": "Before (left, 2×) and after (4×): the epic trim on the sword and the shield. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-rarity-epic.png"
+  },
+  {
+    "id": "rarity-legendary",
+    "group": "States",
+    "people": "all",
+    "title": "Legendary",
+    "caption": "Before (left, 2×) and after (4×): the legendary trim on the sword and the shield. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-rarity-legendary.png"
+  },
+  {
+    "id": "rarity-mythic",
+    "group": "States",
+    "people": "all",
+    "title": "Mythic",
+    "caption": "Before (left, 2×) and after (4×): the mythic trim on the sword and the shield. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-rarity-mythic.png"
+  },
+  {
+    "id": "level-1",
+    "group": "States",
+    "people": "all",
+    "title": "Level 1",
+    "caption": "Before (left, 2×) and after (4×): the cape at level 1. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-level-1.png"
+  },
+  {
+    "id": "level-3",
+    "group": "States",
+    "people": "all",
+    "title": "Level 3",
+    "caption": "Before (left, 2×) and after (4×): the cape at level 3. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-level-3.png"
+  },
+  {
+    "id": "level-5",
+    "group": "States",
+    "people": "all",
+    "title": "Level 5",
+    "caption": "Before (left, 2×) and after (4×): the cape at level 5. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-level-5.png"
+  },
+  {
+    "id": "level-8",
+    "group": "States",
+    "people": "all",
+    "title": "Level 8",
+    "caption": "Before (left, 2×) and after (4×): the cape at level 8. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-level-8.png"
+  },
+  {
+    "id": "tell-banner",
+    "group": "States",
+    "people": "all",
+    "title": "Banner",
+    "caption": "Before (left, 2×) and after (4×): the banner tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-banner.png"
+  },
+  {
+    "id": "tell-burn",
+    "group": "States",
+    "people": "all",
+    "title": "Burn",
+    "caption": "Before (left, 2×) and after (4×): the burn tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-burn.png"
+  },
+  {
+    "id": "tell-frost",
+    "group": "States",
+    "people": "all",
+    "title": "Frost",
+    "caption": "Before (left, 2×) and after (4×): the frost tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-frost.png"
+  },
+  {
+    "id": "tell-venom",
+    "group": "States",
+    "people": "all",
+    "title": "Venom",
+    "caption": "Before (left, 2×) and after (4×): the venom tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-venom.png"
+  },
+  {
+    "id": "tell-spark",
+    "group": "States",
+    "people": "all",
+    "title": "Spark",
+    "caption": "Before (left, 2×) and after (4×): the spark tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-spark.png"
+  },
+  {
+    "id": "tell-rage",
+    "group": "States",
+    "people": "all",
+    "title": "Rage",
+    "caption": "Before (left, 2×) and after (4×): the rage tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-rage.png"
+  },
+  {
+    "id": "tell-keen",
+    "group": "States",
+    "people": "all",
+    "title": "Keen",
+    "caption": "Before (left, 2×) and after (4×): the keen tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-keen.png"
+  },
+  {
+    "id": "tell-bloom",
+    "group": "States",
+    "people": "all",
+    "title": "Bloom",
+    "caption": "Before (left, 2×) and after (4×): the bloom tell. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-tell-bloom.png"
+  },
+  {
+    "id": "status-hasted",
+    "group": "States",
+    "people": "all",
+    "title": "Hasted",
+    "caption": "Before (left, 2×) and after (4×): the hasted status. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-status-hasted.png"
+  },
+  {
+    "id": "status-slowed",
+    "group": "States",
+    "people": "all",
+    "title": "Slowed",
+    "caption": "Before (left, 2×) and after (4×): the slowed status. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-status-slowed.png"
+  },
+  {
+    "id": "status-stunned",
+    "group": "States",
+    "people": "all",
+    "title": "Stunned",
+    "caption": "Before (left, 2×) and after (4×): the stunned status. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-status-stunned.png"
+  },
+  {
+    "id": "status-buffed",
+    "group": "States",
+    "people": "all",
+    "title": "Buffed",
+    "caption": "Before (left, 2×) and after (4×): the buffed status. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-status-buffed.png"
+  },
+  {
+    "id": "status-wounded",
+    "group": "States",
+    "people": "all",
+    "title": "Wounded",
+    "caption": "Before (left, 2×) and after (4×): a wound. Judge that only that changes, and that it reads at 1× (corner).",
+    "file": "states-status-wounded.png"
+  },
+  {
+    "id": "human-idle",
+    "group": "Animation",
+    "people": "all",
+    "title": "Humans — idle",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-human-idle.gif"
+  },
+  {
+    "id": "human-walk",
+    "group": "Animation",
+    "people": "all",
+    "title": "Humans — walk",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-human-walk.gif"
+  },
+  {
+    "id": "human-attack",
+    "group": "Animation",
+    "people": "all",
+    "title": "Humans — attack",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-human-attack.gif"
+  },
+  {
+    "id": "elf-idle",
+    "group": "Animation",
+    "people": "all",
+    "title": "Elves — idle",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-elf-idle.gif"
+  },
+  {
+    "id": "elf-walk",
+    "group": "Animation",
+    "people": "all",
+    "title": "Elves — walk",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-elf-walk.gif"
+  },
+  {
+    "id": "elf-attack",
+    "group": "Animation",
+    "people": "all",
+    "title": "Elves — attack",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-elf-attack.gif"
+  },
+  {
+    "id": "dwarf-idle",
+    "group": "Animation",
+    "people": "all",
+    "title": "Dwarves — idle",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-dwarf-idle.gif"
+  },
+  {
+    "id": "dwarf-walk",
+    "group": "Animation",
+    "people": "all",
+    "title": "Dwarves — walk",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-dwarf-walk.gif"
+  },
+  {
+    "id": "dwarf-attack",
+    "group": "Animation",
+    "people": "all",
+    "title": "Dwarves — attack",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-dwarf-attack.gif"
+  },
+  {
+    "id": "reptilian-idle",
+    "group": "Animation",
+    "people": "all",
+    "title": "Reptilians — idle",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-reptilian-idle.gif"
+  },
+  {
+    "id": "reptilian-walk",
+    "group": "Animation",
+    "people": "all",
+    "title": "Reptilians — walk",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-reptilian-walk.gif"
+  },
+  {
+    "id": "reptilian-attack",
+    "group": "Animation",
+    "people": "all",
+    "title": "Reptilians — attack",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-reptilian-attack.gif"
+  },
+  {
+    "id": "gnome-idle",
+    "group": "Animation",
+    "people": "all",
+    "title": "Gnomes — idle",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-gnome-idle.gif"
+  },
+  {
+    "id": "gnome-walk",
+    "group": "Animation",
+    "people": "all",
+    "title": "Gnomes — walk",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-gnome-walk.gif"
+  },
+  {
+    "id": "gnome-attack",
+    "group": "Animation",
+    "people": "all",
+    "title": "Gnomes — attack",
+    "caption": "6 frames at the game’s timing, 4×, with the 1× figure in the corner. Judge the motion reads and the held item stays in the hand.",
+    "file": "animation-gnome-attack.gif"
+  },
+  {
+    "id": "head-human-plain",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Humans — head “plain”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as human and the features don’t merge.",
+    "file": "rig-parts-head-human-plain.png"
+  },
+  {
+    "id": "head-human-stubble",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Humans — head “stubble”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as human and the features don’t merge.",
+    "file": "rig-parts-head-human-stubble.png"
+  },
+  {
+    "id": "hair-human-crop",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Humans — hair “crop”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-human-crop.png"
+  },
+  {
+    "id": "hair-human-tail",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Humans — hair “tail”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-human-tail.png"
+  },
+  {
+    "id": "hair-human-scarf",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Humans — hair “scarf”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-human-scarf.png"
+  },
+  {
+    "id": "head-elf-long",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Elves — head “long”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as elf and the features don’t merge.",
+    "file": "rig-parts-head-elf-long.png"
+  },
+  {
+    "id": "head-elf-swept",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Elves — head “swept”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as elf and the features don’t merge.",
+    "file": "rig-parts-head-elf-swept.png"
+  },
+  {
+    "id": "hair-elf-long",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Elves — hair “long”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-elf-long.png"
+  },
+  {
+    "id": "hair-elf-topknot",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Elves — hair “topknot”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-elf-topknot.png"
+  },
+  {
+    "id": "head-dwarf-full",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Dwarves — head “full”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as dwarf and the features don’t merge.",
+    "file": "rig-parts-head-dwarf-full.png"
+  },
+  {
+    "id": "head-dwarf-forked",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Dwarves — head “forked”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as dwarf and the features don’t merge.",
+    "file": "rig-parts-head-dwarf-forked.png"
+  },
+  {
+    "id": "hair-dwarf-crop",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Dwarves — hair “crop”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-dwarf-crop.png"
+  },
+  {
+    "id": "hair-dwarf-bald",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Dwarves — hair “bald”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-dwarf-bald.png"
+  },
+  {
+    "id": "head-reptilian-snout",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Reptilians — head “snout”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as reptilian and the features don’t merge.",
+    "file": "rig-parts-head-reptilian-snout.png"
+  },
+  {
+    "id": "head-reptilian-frill",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Reptilians — head “frill”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as reptilian and the features don’t merge.",
+    "file": "rig-parts-head-reptilian-frill.png"
+  },
+  {
+    "id": "hair-reptilian-crest",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Reptilians — hair “crest”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-reptilian-crest.png"
+  },
+  {
+    "id": "hair-reptilian-spines",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Reptilians — hair “spines”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-reptilian-spines.png"
+  },
+  {
+    "id": "head-gnome-round",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gnomes — head “round”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as gnome and the features don’t merge.",
+    "file": "rig-parts-head-gnome-round.png"
+  },
+  {
+    "id": "head-gnome-long",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gnomes — head “long”",
+    "caption": "The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as gnome and the features don’t merge.",
+    "file": "rig-parts-head-gnome-long.png"
+  },
+  {
+    "id": "hair-gnome-cap",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gnomes — hair “cap”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-gnome-cap.png"
+  },
+  {
+    "id": "hair-gnome-tufts",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gnomes — hair “tufts”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-gnome-tufts.png"
+  },
+  {
+    "id": "hair-gnome-sproutcap",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gnomes — hair “sproutcap”",
+    "caption": "The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.",
+    "file": "rig-parts-hair-gnome-sproutcap.png"
+  },
+  {
+    "id": "silhouettes",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Silhouettes: the five peoples",
+    "caption": "Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.",
+    "file": "rig-parts-silhouettes.png"
+  },
+  {
+    "id": "item-sword",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Sword",
+    "caption": "Humans · oneHand · sword family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-sword.png"
+  },
+  {
+    "id": "item-arming-sword",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Arming Sword",
+    "caption": "Humans · oneHand · sword family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-arming-sword.png"
+  },
+  {
+    "id": "item-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Shield",
+    "caption": "Humans · offHand · shieldHeater family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-shield.png"
+  },
+  {
+    "id": "item-kite-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Kite Shield",
+    "caption": "Humans · offHand · shieldKite family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-kite-shield.png"
+  },
+  {
+    "id": "item-mail",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Mail",
+    "caption": "Humans · body · mail family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-mail.png"
+  },
+  {
+    "id": "item-gambeson",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gambeson",
+    "caption": "Humans · body · padded family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-gambeson.png"
+  },
+  {
+    "id": "item-falchion",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Falchion",
+    "caption": "Humans · oneHand · falchion family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-falchion.png"
+  },
+  {
+    "id": "item-spiced-blade",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Spiced Blade",
+    "caption": "Humans · oneHand · sword family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-spiced-blade.png"
+  },
+  {
+    "id": "item-halberd",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Halberd",
+    "caption": "Humans · twoHand · halberd family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-halberd.png"
+  },
+  {
+    "id": "item-banner-pole",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Banner Pole",
+    "caption": "Humans · twoHand · banner family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-banner-pole.png"
+  },
+  {
+    "id": "item-heater-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Heater Shield",
+    "caption": "Humans · offHand · shieldHeater family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-heater-shield.png"
+  },
+  {
+    "id": "item-brigandine",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Brigandine",
+    "caption": "Humans · body · brigandine family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-brigandine.png"
+  },
+  {
+    "id": "item-greatsword",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Greatsword",
+    "caption": "Humans · twoHand · greatsword family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-greatsword.png"
+  },
+  {
+    "id": "item-pepperport-sabre",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Pepperport Sabre",
+    "caption": "Humans · oneHand · sabre family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-pepperport-sabre.png"
+  },
+  {
+    "id": "item-captain-s-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Captain's Shield",
+    "caption": "Humans · offHand · shieldHeater family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-captain-s-shield.png"
+  },
+  {
+    "id": "item-aegis",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Aegis",
+    "caption": "Humans · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-aegis.png"
+  },
+  {
+    "id": "item-sergeant-s-cuirass",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Sergeant's Cuirass",
+    "caption": "Humans · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-sergeant-s-cuirass.png"
+  },
+  {
+    "id": "item-saffron-brand",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Saffron Brand",
+    "caption": "Humans · oneHand · sword family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-saffron-brand.png"
+  },
+  {
+    "id": "item-pepperport-standard",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Pepperport Standard",
+    "caption": "Humans · twoHand · banner family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-pepperport-standard.png"
+  },
+  {
+    "id": "item-saltmarsh-warplate",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Saltmarsh Warplate",
+    "caption": "Humans · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-saltmarsh-warplate.png"
+  },
+  {
+    "id": "item-bow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Bow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-bow.png"
+  },
+  {
+    "id": "item-shortbow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Shortbow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-shortbow.png"
+  },
+  {
+    "id": "item-dagger",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Dagger",
+    "caption": "Elves · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-dagger.png"
+  },
+  {
+    "id": "item-quiver",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Quiver",
+    "caption": "Elves · offHand · quiver family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-quiver.png"
+  },
+  {
+    "id": "item-cloak",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Cloak",
+    "caption": "Elves · body · cloak family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-cloak.png"
+  },
+  {
+    "id": "item-silk-wrap",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Silk Wrap",
+    "caption": "Elves · body · vest family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-silk-wrap.png"
+  },
+  {
+    "id": "item-longbow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Longbow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-longbow.png"
+  },
+  {
+    "id": "item-twin-knives",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Twin Knives",
+    "caption": "Elves · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-twin-knives.png"
+  },
+  {
+    "id": "item-focus",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Focus",
+    "caption": "Elves · offHand · orb family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-focus.png"
+  },
+  {
+    "id": "item-barbed-quiver",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Barbed Quiver",
+    "caption": "Elves · offHand · quiver family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-barbed-quiver.png"
+  },
+  {
+    "id": "item-woven-vest",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Woven Vest",
+    "caption": "Elves · body · vest family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-woven-vest.png"
+  },
+  {
+    "id": "item-thornweave-hood",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Thornweave Hood",
+    "caption": "Elves · body · hood family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-thornweave-hood.png"
+  },
+  {
+    "id": "item-recurve-bow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Recurve Bow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-recurve-bow.png"
+  },
+  {
+    "id": "item-loomwarden-bow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Loomwarden Bow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-loomwarden-bow.png"
+  },
+  {
+    "id": "item-ranger-s-dirk",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Ranger's Dirk",
+    "caption": "Elves · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-ranger-s-dirk.png"
+  },
+  {
+    "id": "item-starfeather-quiver",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Starfeather Quiver",
+    "caption": "Elves · offHand · quiver family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-starfeather-quiver.png"
+  },
+  {
+    "id": "item-moonsilk-mantle",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Moonsilk Mantle",
+    "caption": "Elves · body · cloak family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-moonsilk-mantle.png"
+  },
+  {
+    "id": "item-silkwind-cloak",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Silkwind Cloak",
+    "caption": "Elves · body · cloak family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-silkwind-cloak.png"
+  },
+  {
+    "id": "item-starstring-longbow",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Starstring Longbow",
+    "caption": "Elves · twoHand · bow family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-starstring-longbow.png"
+  },
+  {
+    "id": "item-whisperfang",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Whisperfang",
+    "caption": "Elves · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-whisperfang.png"
+  },
+  {
+    "id": "item-axe",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Axe",
+    "caption": "Dwarves · oneHand · axe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-axe.png"
+  },
+  {
+    "id": "item-hand-hammer",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Hand Hammer",
+    "caption": "Dwarves · oneHand · hammer family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-hand-hammer.png"
+  },
+  {
+    "id": "item-miner-s-pick",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Miner's Pick",
+    "caption": "Dwarves · oneHand · pick family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-miner-s-pick.png"
+  },
+  {
+    "id": "item-round-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Round Shield",
+    "caption": "Dwarves · offHand · shieldRound family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-round-shield.png"
+  },
+  {
+    "id": "item-chainshirt",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Chainshirt",
+    "caption": "Dwarves · body · mail family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-chainshirt.png"
+  },
+  {
+    "id": "item-forge-apron",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Forge Apron",
+    "caption": "Dwarves · body · apron family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-forge-apron.png"
+  },
+  {
+    "id": "item-bearded-axe",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Bearded Axe",
+    "caption": "Dwarves · oneHand · axe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-bearded-axe.png"
+  },
+  {
+    "id": "item-maul",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Maul",
+    "caption": "Dwarves · twoHand · maul family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-maul.png"
+  },
+  {
+    "id": "item-pavise",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Pavise",
+    "caption": "Dwarves · offHand · pavise family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-pavise.png"
+  },
+  {
+    "id": "item-rune-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Rune Shield",
+    "caption": "Dwarves · offHand · shieldRound family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-rune-shield.png"
+  },
+  {
+    "id": "item-plate",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Plate",
+    "caption": "Dwarves · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-plate.png"
+  },
+  {
+    "id": "item-stoneskin-mail",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Stoneskin Mail",
+    "caption": "Dwarves · body · mail family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-stoneskin-mail.png"
+  },
+  {
+    "id": "item-warhammer",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Warhammer",
+    "caption": "Dwarves · twoHand · maul family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-warhammer.png"
+  },
+  {
+    "id": "item-greataxe",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Greataxe",
+    "caption": "Dwarves · twoHand · greataxe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-greataxe.png"
+  },
+  {
+    "id": "item-quarry-breaker",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Quarry Breaker",
+    "caption": "Dwarves · twoHand · maul family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-quarry-breaker.png"
+  },
+  {
+    "id": "item-anvil-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Anvil Shield",
+    "caption": "Dwarves · offHand · shieldRound family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-anvil-shield.png"
+  },
+  {
+    "id": "item-deepforge-plate",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Deepforge Plate",
+    "caption": "Dwarves · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-deepforge-plate.png"
+  },
+  {
+    "id": "item-ironheart-plate",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Ironheart Plate",
+    "caption": "Dwarves · body · plate family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-ironheart-plate.png"
+  },
+  {
+    "id": "item-mountainbreaker",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Mountainbreaker",
+    "caption": "Dwarves · twoHand · maul family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-mountainbreaker.png"
+  },
+  {
+    "id": "item-thane-s-bulwark",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Thane's Bulwark",
+    "caption": "Dwarves · offHand · pavise family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-thane-s-bulwark.png"
+  },
+  {
+    "id": "item-spear",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Spear",
+    "caption": "Reptilians · twoHand · spear family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-spear.png"
+  },
+  {
+    "id": "item-fang-knife",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Fang Knife",
+    "caption": "Reptilians · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-fang-knife.png"
+  },
+  {
+    "id": "item-bone-club",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Bone Club",
+    "caption": "Reptilians · oneHand · club family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-bone-club.png"
+  },
+  {
+    "id": "item-buckler",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Buckler",
+    "caption": "Reptilians · offHand · buckler family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-buckler.png"
+  },
+  {
+    "id": "item-leather",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Leather",
+    "caption": "Reptilians · body · leather family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-leather.png"
+  },
+  {
+    "id": "item-hide-wrap",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Hide Wrap",
+    "caption": "Reptilians · body · padded family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-hide-wrap.png"
+  },
+  {
+    "id": "item-cleaver",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Cleaver",
+    "caption": "Reptilians · oneHand · cleaver family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-cleaver.png"
+  },
+  {
+    "id": "item-meat-hook",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Meat Hook",
+    "caption": "Reptilians · oneHand · hook family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-meat-hook.png"
+  },
+  {
+    "id": "item-harpoon",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Harpoon",
+    "caption": "Reptilians · twoHand · harpoon family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-harpoon.png"
+  },
+  {
+    "id": "item-gator-buckler",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Gator Buckler",
+    "caption": "Reptilians · offHand · buckler family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-gator-buckler.png"
+  },
+  {
+    "id": "item-javelin-sling",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Javelin Sling",
+    "caption": "Reptilians · offHand · javelins family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-javelin-sling.png"
+  },
+  {
+    "id": "item-scale-hide",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Scale Hide",
+    "caption": "Reptilians · body · scale family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-scale-hide.png"
+  },
+  {
+    "id": "item-glaive",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Glaive",
+    "caption": "Reptilians · twoHand · glaive family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-glaive.png"
+  },
+  {
+    "id": "item-bonecrusher",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Bonecrusher",
+    "caption": "Reptilians · twoHand · maul family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-bonecrusher.png"
+  },
+  {
+    "id": "item-venom-fang",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Venom Fang",
+    "caption": "Reptilians · either · dagger family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-venom-fang.png"
+  },
+  {
+    "id": "item-stalker-leathers",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Stalker Leathers",
+    "caption": "Reptilians · body · leather family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-stalker-leathers.png"
+  },
+  {
+    "id": "item-smokehouse-apron",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Smokehouse Apron",
+    "caption": "Reptilians · body · apron family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-smokehouse-apron.png"
+  },
+  {
+    "id": "item-kingscale-shield",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Kingscale Shield",
+    "caption": "Reptilians · offHand · shieldRound family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-kingscale-shield.png"
+  },
+  {
+    "id": "item-wyrmtooth-spear",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Wyrmtooth Spear",
+    "caption": "Reptilians · twoHand · spear family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-wyrmtooth-spear.png"
+  },
+  {
+    "id": "item-butcher-king-s-cleaver",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Butcher-King's Cleaver",
+    "caption": "Reptilians · oneHand · cleaver family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-butcher-king-s-cleaver.png"
+  },
+  {
+    "id": "item-wand",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Wand",
+    "caption": "Gnomes · either · wand family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-wand.png"
+  },
+  {
+    "id": "item-rod",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Rod",
+    "caption": "Gnomes · oneHand · wand family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-rod.png"
+  },
+  {
+    "id": "item-sprout-wand",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Sprout Wand",
+    "caption": "Gnomes · oneHand · wand family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-sprout-wand.png"
+  },
+  {
+    "id": "item-tome",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Tome",
+    "caption": "Gnomes · offHand · tome family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-tome.png"
+  },
+  {
+    "id": "item-herb-pouch",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Herb Pouch",
+    "caption": "Gnomes · offHand · pouch family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-herb-pouch.png"
+  },
+  {
+    "id": "item-robe",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Robe",
+    "caption": "Gnomes · body · robe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-robe.png"
+  },
+  {
+    "id": "item-sceptre",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Sceptre",
+    "caption": "Gnomes · oneHand · sceptre family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-sceptre.png"
+  },
+  {
+    "id": "item-thornrod",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Thornrod",
+    "caption": "Gnomes · oneHand · wand family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-thornrod.png"
+  },
+  {
+    "id": "item-spark-coil",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Spark Coil",
+    "caption": "Gnomes · either · wand family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-spark-coil.png"
+  },
+  {
+    "id": "item-flask",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Flask",
+    "caption": "Gnomes · offHand · flask family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-flask.png"
+  },
+  {
+    "id": "item-mossweave-robe",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Mossweave Robe",
+    "caption": "Gnomes · body · robe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-mossweave-robe.png"
+  },
+  {
+    "id": "item-brew-belt",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Brew Belt",
+    "caption": "Gnomes · body · belt family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-brew-belt.png"
+  },
+  {
+    "id": "item-staff",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Staff",
+    "caption": "Gnomes · twoHand · staff family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-staff.png"
+  },
+  {
+    "id": "item-grimoire",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Grimoire",
+    "caption": "Gnomes · twoHand · grimoire family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-grimoire.png"
+  },
+  {
+    "id": "item-bloomstaff",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Bloomstaff",
+    "caption": "Gnomes · twoHand · staff family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-bloomstaff.png"
+  },
+  {
+    "id": "item-philter-rack",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Philter Rack",
+    "caption": "Gnomes · offHand · flask family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-philter-rack.png"
+  },
+  {
+    "id": "item-alchemist-s-coat",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Alchemist's Coat",
+    "caption": "Gnomes · body · robe family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-alchemist-s-coat.png"
+  },
+  {
+    "id": "item-greenvial-herbal",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Greenvial Herbal",
+    "caption": "Gnomes · twoHand · grimoire family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-greenvial-herbal.png"
+  },
+  {
+    "id": "item-worldroot-staff",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Worldroot Staff",
+    "caption": "Gnomes · twoHand · staff family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-worldroot-staff.png"
+  },
+  {
+    "id": "item-elixir-of-plenty",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Elixir of Plenty",
+    "caption": "Gnomes · offHand · flask family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.",
+    "file": "rig-parts-item-elixir-of-plenty.png"
+  },
+  {
+    "id": "fallback-mystery-blade",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Fallback: “Mystery Blade”",
+    "caption": "Gear with no part of its own: a keyword family (blade → sword). Judge that the slot is never empty.",
+    "file": "rig-parts-fallback-mystery-blade.png"
+  },
+  {
+    "id": "fallback-odd-trinket",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Fallback: “Odd Trinket”",
+    "caption": "Gear with no part of its own: the slot’s generic part. Judge that the slot is never empty.",
+    "file": "rig-parts-fallback-odd-trinket.png"
+  },
+  {
+    "id": "fallback-strange-garb",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Fallback: “Strange Garb”",
+    "caption": "Gear with no part of its own: the slot’s generic part. Judge that the slot is never empty.",
+    "file": "rig-parts-fallback-strange-garb.png"
+  },
+  {
+    "id": "fallback-unnamed-thing",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Fallback: “Unnamed Thing”",
+    "caption": "Gear with no part of its own: the slot’s generic part. Judge that the slot is never empty.",
+    "file": "rig-parts-fallback-unnamed-thing.png"
+  },
+  {
+    "id": "grip-closeup",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Grips: fingers over the handle",
+    "caption": "The fist is re-stamped over its grip, so the handle runs under the fingers; nothing floats, and no second fist shows. 8×, around each hand.",
+    "file": "rig-parts-grip-closeup.png"
+  },
+  {
+    "id": "offhand-x-body",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Every off hand × every body (1×)",
+    "caption": "Rows: off-hand pieces; columns: body pieces; a human with a Sword, at game density. Judge that no pairing clashes, floats or pastes on. Zoom in.",
+    "file": "rig-parts-offhand-x-body.png"
+  },
+  {
+    "id": "face-saffra",
+    "group": "Company faces",
+    "people": "human",
+    "title": "Saffra — Peppercorn Co. broker",
+    "caption": "Brisk, hot-tempered, generous (she tips the moment it sells). Judge that the people, the trade and the temperament read at 1× (corner) without this caption.",
+    "file": "company-faces-face-saffra.png"
+  },
+  {
+    "id": "brief-saffra",
+    "group": "Company faces",
+    "people": "human",
+    "title": "Saffra: the brief",
+    "caption": "The person behind the design: who, want and worry, temperament, tic, shape, prop.",
+    "file": "company-faces-brief-saffra.png"
+  },
+  {
+    "id": "saffra-idle",
+    "group": "Animation",
+    "people": "human",
+    "title": "Saffra — idle",
+    "caption": "6 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-saffra-idle.gif"
+  },
+  {
+    "id": "saffra-tic",
+    "group": "Animation",
+    "people": "human",
+    "title": "Saffra — tic",
+    "caption": "6 frames, plays every ~5 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-saffra-tic.gif"
+  },
+  {
+    "id": "saffra-react",
+    "group": "Animation",
+    "people": "human",
+    "title": "Saffra — reaction (slot picked)",
+    "caption": "4 frames, once, on focus; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-saffra-react.gif"
+  },
+  {
+    "id": "saffra-life",
+    "group": "Animation",
+    "people": "human",
+    "title": "Saffra — a few seconds of life",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~3.1 s). Judge that it is calm and says who they are.",
+    "file": "animation-saffra-life.gif"
+  },
+  {
+    "id": "dock-saffra",
+    "group": "Dock",
+    "people": "human",
+    "title": "Saffra at dock size",
+    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "file": "dock-dock-saffra.png"
+  },
+  {
+    "id": "face-odile",
+    "group": "Company faces",
+    "people": "elf",
+    "title": "Odile — Rosethread mercer",
+    "caption": "Smooth, warm, calculating (the warmth has a price). Judge that the people, the trade and the temperament read at 1× (corner) without this caption.",
+    "file": "company-faces-face-odile.png"
+  },
+  {
+    "id": "brief-odile",
+    "group": "Company faces",
+    "people": "elf",
+    "title": "Odile: the brief",
+    "caption": "The person behind the design: who, want and worry, temperament, tic, shape, prop.",
+    "file": "company-faces-brief-odile.png"
+  },
+  {
+    "id": "odile-idle",
+    "group": "Animation",
+    "people": "elf",
+    "title": "Odile — idle",
+    "caption": "8 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-odile-idle.gif"
+  },
+  {
+    "id": "odile-tic",
+    "group": "Animation",
+    "people": "elf",
+    "title": "Odile — tic",
+    "caption": "6 frames, plays every ~7 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-odile-tic.gif"
+  },
+  {
+    "id": "odile-react",
+    "group": "Animation",
+    "people": "elf",
+    "title": "Odile — reaction (slot picked)",
+    "caption": "4 frames, once, on focus; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-odile-react.gif"
+  },
+  {
+    "id": "odile-life",
+    "group": "Animation",
+    "people": "elf",
+    "title": "Odile — a few seconds of life",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.7 s). Judge that it is calm and says who they are.",
+    "file": "animation-odile-life.gif"
+  },
+  {
+    "id": "dock-odile",
+    "group": "Dock",
+    "people": "elf",
+    "title": "Odile at dock size",
+    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "file": "dock-dock-odile.png"
+  },
+  {
+    "id": "face-brannoch",
+    "group": "Company faces",
+    "people": "dwarf",
+    "title": "Brannoch — Ironvein factor",
+    "caption": "Gruff, terse, secretly sentimental (about his carts). Judge that the people, the trade and the temperament read at 1× (corner) without this caption.",
+    "file": "company-faces-face-brannoch.png"
+  },
+  {
+    "id": "brief-brannoch",
+    "group": "Company faces",
+    "people": "dwarf",
+    "title": "Brannoch: the brief",
+    "caption": "The person behind the design: who, want and worry, temperament, tic, shape, prop.",
+    "file": "company-faces-brief-brannoch.png"
+  },
+  {
+    "id": "brannoch-idle",
+    "group": "Animation",
+    "people": "dwarf",
+    "title": "Brannoch — idle",
+    "caption": "6 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-brannoch-idle.gif"
+  },
+  {
+    "id": "brannoch-tic",
+    "group": "Animation",
+    "people": "dwarf",
+    "title": "Brannoch — tic",
+    "caption": "6 frames, plays every ~6 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-brannoch-tic.gif"
+  },
+  {
+    "id": "brannoch-react",
+    "group": "Animation",
+    "people": "dwarf",
+    "title": "Brannoch — reaction (slot picked)",
+    "caption": "3 frames, once, on focus; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-brannoch-react.gif"
+  },
+  {
+    "id": "brannoch-life",
+    "group": "Animation",
+    "people": "dwarf",
+    "title": "Brannoch — a few seconds of life",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.1 s). Judge that it is calm and says who they are.",
+    "file": "animation-brannoch-life.gif"
+  },
+  {
+    "id": "dock-brannoch",
+    "group": "Dock",
+    "people": "dwarf",
+    "title": "Brannoch at dock size",
+    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "file": "dock-dock-brannoch.png"
+  },
+  {
+    "id": "face-hask",
+    "group": "Company faces",
+    "people": "reptilian",
+    "title": "Hask — Butcherblock salter",
+    "caption": "Patient, cold-eyed, oddly courteous (a butcher with manners). Judge that the people, the trade and the temperament read at 1× (corner) without this caption.",
+    "file": "company-faces-face-hask.png"
+  },
+  {
+    "id": "brief-hask",
+    "group": "Company faces",
+    "people": "reptilian",
+    "title": "Hask: the brief",
+    "caption": "PROPOSAL — New face for the art slot (was Easel House’s Vell): a fussy curator does not fit hides and salt.",
+    "file": "company-faces-brief-hask.png"
+  },
+  {
+    "id": "hask-idle",
+    "group": "Animation",
+    "people": "reptilian",
+    "title": "Hask — idle",
+    "caption": "8 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-hask-idle.gif"
+  },
+  {
+    "id": "hask-tic",
+    "group": "Animation",
+    "people": "reptilian",
+    "title": "Hask — tic",
+    "caption": "5 frames, plays every ~6 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-hask-tic.gif"
+  },
+  {
+    "id": "hask-react",
+    "group": "Animation",
+    "people": "reptilian",
+    "title": "Hask — reaction (slot picked)",
+    "caption": "4 frames, once, on focus; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-hask-react.gif"
+  },
+  {
+    "id": "hask-life",
+    "group": "Animation",
+    "people": "reptilian",
+    "title": "Hask — a few seconds of life",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~5.0 s). Judge that it is calm and says who they are.",
+    "file": "animation-hask-life.gif"
+  },
+  {
+    "id": "dock-hask",
+    "group": "Dock",
+    "people": "reptilian",
+    "title": "Hask at dock size",
+    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "file": "dock-dock-hask.png"
+  },
+  {
+    "id": "face-wren",
+    "group": "Company faces",
+    "people": "gnome",
+    "title": "Wren — Greenvial herbalist",
+    "caption": "Quiet, patient, unsettlingly cheerful. Judge that the people, the trade and the temperament read at 1× (corner) without this caption.",
+    "file": "company-faces-face-wren.png"
+  },
+  {
+    "id": "brief-wren",
+    "group": "Company faces",
+    "people": "gnome",
+    "title": "Wren: the brief",
+    "caption": "PROPOSAL — Keeps the scrolls slot’s name (Moonquill’s Wren): quiet and a little ominous suits a herbalist who knows every poison. A new trade, a new body.",
+    "file": "company-faces-brief-wren.png"
+  },
+  {
+    "id": "wren-idle",
+    "group": "Animation",
+    "people": "gnome",
+    "title": "Wren — idle",
+    "caption": "6 frames, the loop; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-wren-idle.gif"
+  },
+  {
+    "id": "wren-tic",
+    "group": "Animation",
+    "people": "gnome",
+    "title": "Wren — tic",
+    "caption": "6 frames, plays every ~8 s; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-wren-tic.gif"
+  },
+  {
+    "id": "wren-react",
+    "group": "Animation",
+    "people": "gnome",
+    "title": "Wren — reaction (slot picked)",
+    "caption": "4 frames, once, on focus; 4× and 1× (corner). Judge the timing and that it says the temperament.",
+    "file": "animation-wren-react.gif"
+  },
+  {
+    "id": "wren-life",
+    "group": "Animation",
+    "people": "gnome",
+    "title": "Wren — a few seconds of life",
+    "caption": "The idle loop with the tic dropped in, at the game’s timing (~4.7 s). Judge that it is calm and says who they are.",
+    "file": "animation-wren-life.gif"
+  },
+  {
+    "id": "dock-wren",
+    "group": "Dock",
+    "people": "gnome",
+    "title": "Wren at dock size",
+    "caption": "Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.",
+    "file": "dock-dock-wren.png"
+  },
+  {
+    "id": "dock-motion",
+    "group": "Dock",
+    "people": "all",
+    "title": "The dock in motion (2× slot size)",
+    "caption": "Five figures idling, each tic on its own beat, the third slot picked; the fifth locked. Judge it stays calm next to the map (atmosphere, not a show).",
+    "file": "dock-dock-motion.gif"
+  },
+  {
+    "id": "zoom-4x",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "4× beside the pack",
+    "caption": "Top: the CC0 knight and torch goblin. Bottom: our human and Wren, same crop size at the same 4×. Judge the outline weight, the three-tone shading and the edges.",
+    "file": "rig-parts-zoom-4x.png"
+  },
+  {
+    "id": "zoom-8x",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "8×: a face and a fist",
+    "caption": "Left: the CC0 knight’s visor and sword fist. Right: our human’s face and sword fist. 8×, same crop. Judge single pixels: ink runs, tone steps, no strays.",
+    "file": "rig-parts-zoom-8x.png"
+  },
+  {
+    "id": "scale-1x",
+    "group": "Rig/Parts",
+    "people": "all",
+    "title": "Game scale: 1× on the field",
+    "caption": "The five peoples and the five faces at the density the battle draws them, with the CC0 goblins and knight. Judge what reads at a glance.",
+    "file": "rig-parts-scale-1x.png"
+  },
+  {
+    "id": "home-mock",
+    "group": "Dock",
+    "people": "all",
+    "title": "The home dock, with the faces",
+    "caption": "The real home at phone size with the five figures in the dock; judge it stays calm next to the map.",
+    "file": "dock-home-mock.png"
+  },
+  {
+    "id": "before-after",
+    "group": "Dock",
+    "people": "all",
+    "title": "Crests → faces",
+    "caption": "The dock strip before and after; judge each slot still reads as its company.",
+    "file": "dock-before-after.png"
+  }
+]

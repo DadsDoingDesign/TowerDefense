@@ -237,7 +237,7 @@ export class Pen {
     const ramp = RAMP_INDEX.get(this.mat(mat))!
     const shade = o.shade ?? 'round'
     const flags = o.flags ?? 0
-    const streak = o.streak ?? 0.12
+    const streak = o.streak ?? 0.07
     const [x0, y0, x1, y1] = this.worldBox(localBounds, 1)
     for (let y = y0; y <= y1; y++)
       for (let x = x0; x <= x1; x++) {

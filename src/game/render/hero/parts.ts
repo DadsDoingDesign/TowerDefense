@@ -1113,7 +1113,8 @@ const bodyPiece: ItemFn = (c, it, slot) => {
     if (cy === 1 && (cx === 0 || cx === 3)) return darker
     return null
   })
-  if (fam === 'padded') pen.texture((x, y) => ((y - Math.round(P.torsoTop)) % 4 === 0 || (v !== 'hide' && (x - Math.round(cx)) % 5 === 0 && y % 2 === 0) ? TONE_SHADE : null))
+  // quilted rows (a padded coat), never a check
+  if (fam === 'padded') pen.texture((_x, y, t) => ((((y - Math.round(P.torsoTop)) % 4) + 4) % 4 === 0 ? (t >= TONE_LIGHT ? TONE_MID : TONE_SHADE) : null))
   if (fam === 'scale') pen.texture((x, y) => ((x + (Math.floor(y / 3) % 2) * 2) % 4 === 0 && y % 3 === 0 ? TONE_SHADE : (x + (Math.floor(y / 3) % 2) * 2) % 4 === 1 && y % 3 === 1 ? TONE_LIGHT : null))
   if (fam === 'brigandine') {
     pen.texture((_x, _y, t) => (t >= TONE_LIGHT ? TONE_MID : TONE_SHADE), 'field')

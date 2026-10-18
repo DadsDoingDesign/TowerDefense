@@ -4285,3 +4285,72 @@ The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/people
 - **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
 - **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
 - **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
+
+### 2026-10-18 — Our own characters: the hero builder and the company faces (prototype)
+
+The designer asked for our own characters in place of the cut-up CC0 knight, built like a component: swappable by gear, editable by status. A further ask was a face for each company, to stand in the home dock. It is a prototype and nothing ships. It lives in `src/game/render/hero/` (rig, parts, compositor, the faces, the dock figures), with the harness `harness/heroes.html`, the sheets and cards in `docs/characters/`, and the spec in `docs/characters/README.md`.
+
+**Measured first.** The CC0 build sets the targets:
+- outline `#161c2e` at 2 px between parts and 2–3 px outside;
+- three tones plus white specular per material;
+- a chibi head roughly equal to the body;
+- mitten fists;
+- an ink shadow at alpha 80;
+- idle 6 frames, attack 6.
+
+The pack's knights are lit from the top on the side they face. The skill's "upper left" was not followed; this is noted in the README.
+
+**Round 1 (1× and 3×, on the Green Line beside the CC0 tower, goblins and knight).**
+- **Too small.** The heroes were 63 px against the knight's 95 and a goblin's 80. Bodies went ×1.2, items through a scaled pen.
+- **Muddy faces.** The light sat faces in shade; the light and thresholds were tuned to the pack's large lit areas.
+- **Features merged.** A 2 px ring on every feature merged the gnome's eye into its nose. Faces now use 1 px rings and separate placement.
+- **Heads.** Heads became asymmetric 3/4 skulls, never balloons.
+- **Gnome.** It read as a bald egg; the hat is now its default.
+- **Dwarf.** It was one ginger blob; it is now brown-bearded on tan.
+- **Mail.** It read as a checker (dither), then as bricks; it is now staggered rings, with mail sleeves and a belt worn over it.
+
+**Round 2 (3×; the faces, swaps and states sheets).**
+- **Monochrome faces.** Saffra was red on red, and Odile's bolt vanished into her cloak. Both were re-inked.
+- **Odile's hair.** Her silver hair read as a chef's hat; she has raven hair now.
+- **Crop bug.** Every sheet crop was stale after the cell grew, which cut off the feet.
+- **Level tier invisible.** The cape hid behind the shield and body. It is now wider, sweeps past the shield and rides the shoulders. On a kite-shield hero it still mostly hides; this is noted as a risk.
+- **Rarity didn't read.** Rarity now climbs iron → steel → gold, with a gem from rare up and a thin glow on mythic. A mythic-glow bug that filled the cell was caught here.
+- **Brigandine.** It read as polka dots; it is now dark cloth with sparse rivets.
+- **Keen Eye.** It was invisible; it is now a lens.
+
+**Round 3 (4× and 8× crops beside the CC0 knight and goblin).**
+- **Outline weight and grip.** Both now match the pack.
+- **Skin read as a beard.** The tan skin's mid (`#d9945f`) read as a beard on the jaw. One new tone, `#eaa98a`, was added.
+- **Noisy hair.** The streak jitter was noisier than the pack's clean bands, so it was reduced.
+- **Gambeson.** Its quilting read as a check; it is now quilted rows.
+- **Wind-up.** The swing's wind-up crossed the face; it now rides over the head.
+- **Dock overlap.** The mock in the real app showed the 48 px dock figure sitting on its slot's Rep line. The proposal is +16 px per slot.
+
+**Checks** (`tests/heroBuilder.test.ts`, 35 tests). The tests caught six fit failures before any render did. All were fixed in the rig, not by loosening checks:
+- smears and spear thrusts past the cell;
+- a dwarf's two-hander driving into the ground (swings now stop at the ground);
+- hafted two-handers and polearms overreaching (the hands now slide along the shaft);
+- Wren's hat at the dock cell's edge.
+
+They cover:
+- every roster item and prop on every people at its widest frames, and every frame of every animation for five kits;
+- no clipping, one connected figure, the item in its hand, the body piece on the body;
+- the draw order holds;
+- each state touches only its `STATE_LAYERS`;
+- liveries swap inks, never shapes;
+- unknown gear falls back;
+- every solid pixel is a declared ink;
+- the races' silhouettes stay apart (IoU < 0.86; worst human–reptilian 0.83);
+- the faces and the dock figures.
+
+**Benchmarks.**
+- **Tiny Swords:** the 1× field card is the test, and they sit with the knight and goblins as one set.
+- **Kingdom Rush heroes:** ours are as big as the creeps and read by silhouette first; KR's are painted larger and richer.
+- **Legends of Kingdom Rush paper-dolls:** the same idea (gear swaps the part), and ours keeps the outline closed round each piece, which LoKR's doesn't need at its size.
+
+**Still not on par.**
+- The shading is flatter than the pack's. It has fewer specular dashes, and its bands are computed, not hand-laid; at 8× it shows.
+- The skill tells (spark, rage, bloom) are small at 1×.
+- A shield-bearer's cape tier barely shows.
+- The human's hair cap still reads a little like a helmet.
+- The dock figures had two 8× rounds (round 1: Brannoch's dome split in two tones, Odile's white hair; both fixed). Their hands are 2 px mittens with no arms, the pack's own convention at that size; the designer has not seen them yet.

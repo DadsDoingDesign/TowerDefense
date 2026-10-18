@@ -62,6 +62,10 @@ if (BEFORE) {
 
 const info = await page.evaluate(async () => {
   const mini = await import('/src/game/render/hero/mini.ts')
+  // the proposal: the slot grows 16 px so the 48 px figure stands clear of its Rep line (the crest box was 32)
+  const st = document.createElement('style')
+  st.textContent = '.mn-dock .mn-slot{height:92px}.mn-dock .mn-slot-crest{height:48px}'
+  document.head.append(st)
   // dock order (COMPANY_IDS): spice, art, metals, silk, scrolls
   const faces = ['saffra', 'hask', 'brannoch', 'odile', 'wren']
   const slots = [...document.querySelectorAll('.mn-dock > .mn-slot')]
@@ -78,7 +82,7 @@ const info = await page.evaluate(async () => {
     c.height = fr.h
     c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(fr.rgba), fr.w, fr.h), 0, 0)
     // shown at 2× (the crest's own pixel scale), centred in the crest's box
-    c.style.cssText = `width:${fr.w * 2}px;height:${fr.h * 2}px;image-rendering:pixelated;display:block;margin-top:-12px`
+    c.style.cssText = `width:${fr.w * 2}px;height:${fr.h * 2}px;image-rendering:pixelated;display:block;margin-top:-6px`
     const crest = slot.querySelector('.mn-slot-crest')
     const old = crest.querySelector('svg, img, canvas, .crest, span:not(.mn-slot-crown)')
     if (old) old.replaceWith(c)
@@ -91,6 +95,46 @@ console.log('slots', JSON.stringify(info))
 await page.waitForTimeout(300)
 const shot = await page.screenshot({ type: 'png' })
 fs.mkdirSync(path.dirname(OUT), { recursive: true })
-fs.writeFileSync(OUT, await sharp(shot).png({ palette: true, colours: 256, dither: 0, compressionLevel: 9 }).toBuffer())
+const png = (b) => sharp(b).png({ palette: true, colours: 256, dither: 0, compressionLevel: 9 }).toBuffer()
+fs.writeFileSync(OUT, await png(shot))
 console.log('wrote', OUT)
+
+// the phone cards: the whole home with the figures in, and the dock before / after (in the card), ~600 px wide
+const CARDS = path.join(path.dirname(OUT), 'cards')
+if (fs.existsSync(path.join(CARDS, 'manifest.json'))) {
+  const beforeShot = BEFORE ? fs.readFileSync(BEFORE) : null
+  const dock = await page.evaluate(() => {
+    const r = document.querySelector('.mn-dock').getBoundingClientRect()
+    return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+  })
+  const label = (title, caption, w, h) =>
+    Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="#1d1713"/>
+      <text x="18" y="26" fill="#e3b64f" font-family="sans-serif" font-weight="700" font-size="14">DOCK</text>
+      <text x="18" y="54" fill="#f2e8d8" font-family="Georgia, serif" font-weight="700" font-size="26">${title}</text>
+      <text x="18" y="${h - 40}" fill="#b3a48c" font-family="sans-serif" font-size="17">${caption[0]}</text>
+      <text x="18" y="${h - 16}" fill="#b3a48c" font-family="sans-serif" font-size="17">${caption[1]}</text></svg>`)
+  // 1 · the home at phone size (the 2× shot, halved to the phone's own 390 px: CSS px, pixel art at its 2×)
+  const home = await sharp(shot).resize(390, 844, { kernel: 'nearest' }).png().toBuffer()
+  const c1 = await sharp(label('The home dock, with the faces', ['Real home, 390 × 844: crests swapped for the figures, slots 16 px taller', '(the picked slot reacts; the fifth shown locked). Judge it stays calm.'], 600, 66 + 844 + 92))
+    .composite([{ input: home, left: 105, top: 66 }]).png().toBuffer()
+  fs.writeFileSync(path.join(CARDS, 'dock-home-mock.png'), await png(c1))
+  // 2 · the dock strip, before and after, at the phone's 2× pixels
+  const cropW = Math.min(564, dock.w * 2), cropH = dock.h * 2 + 24
+  const cut = (b) => sharp(b).extract({ left: Math.max(0, dock.x * 2 - 4), top: Math.max(0, dock.y * 2 - 24), width: cropW, height: cropH }).png().toBuffer()
+  const after = await cut(shot)
+  const parts = [{ input: after, left: 18, top: 66 + cropH + 40 }]
+  if (beforeShot) parts.push({ input: await cut(beforeShot), left: 18, top: 66 + 20 })
+  const h2 = 66 + 2 * cropH + 60 + 92
+  const lab = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="${h2}"><text x="18" y="${66 + 14}" fill="#efe6d6" font-family="sans-serif" font-weight="700" font-size="15">Today: the crests</text><text x="18" y="${66 + cropH + 34}" fill="#efe6d6" font-family="sans-serif" font-weight="700" font-size="15">Proposed: the company faces</text></svg>`)
+  const c2 = await sharp(label('Crests → faces', ['Before / after at the phone’s own pixels; the slot grows 16 px for', 'the figure. Judge each slot still reads as its company at a glance.'], 600, h2)).composite([...parts, { input: lab, left: 0, top: 0 }]).png().toBuffer()
+  fs.writeFileSync(path.join(CARDS, 'dock-before-after.png'), await png(c2))
+  const mf = path.join(CARDS, 'manifest.json')
+  const m = JSON.parse(fs.readFileSync(mf, 'utf8')).filter((e) => e.id !== 'home-mock' && e.id !== 'before-after')
+  m.push(
+    { id: 'home-mock', group: 'Dock', people: 'all', title: 'The home dock, with the faces', caption: 'The real home at phone size with the five figures in the dock; judge it stays calm next to the map.', file: 'dock-home-mock.png' },
+    { id: 'before-after', group: 'Dock', people: 'all', title: 'Crests → faces', caption: 'The dock strip before and after; judge each slot still reads as its company.', file: 'dock-before-after.png' },
+  )
+  fs.writeFileSync(mf, JSON.stringify(m, null, 2) + '\n')
+  console.log('cards: dock-home-mock.png, dock-before-after.png (+ manifest)')
+}
 await browser.close()
