@@ -263,7 +263,7 @@ export const PERSONA_IDLE: Readonly<Record<PersonaId, readonly Key[]>> = {
   wren: [{}, { bob: 1 }, { bob: 1, headDy: 1 }, { headDy: 1 }, {}, {}],
 }
 /** Each face's idle period (ms): co-prime in 10 ms units (83, 157, 221, 193, 131). */
-export const PERSONA_IDLE_PERIOD: Readonly<Record<PersonaId, number>> = { saffra: 830, odile: 1570, brannoch: 2210, hask: 1930, wren: 1310 }
+export const PERSONA_IDLE_PERIOD: Readonly<Record<PersonaId, number>> = { saffra: 829, odile: 1571, brannoch: 2213, hask: 1933, wren: 1307 }
 /** Per-frame hold of a face's idle (ms; the period spread over its frames). */
 export const PERSONA_IDLE_MS: Readonly<Record<PersonaId, number>> = Object.fromEntries(
   (Object.keys(PERSONA_IDLE_PERIOD) as PersonaId[]).map((id) => [id, PERSONA_IDLE_PERIOD[id] / PERSONA_IDLE[id].length]),

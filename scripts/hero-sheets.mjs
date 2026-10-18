@@ -66,7 +66,7 @@ for (const c of data.cards) {
       .raw()
       .toBuffer({ resolveWithObject: true })
       .then(({ data: px, info }) => sharp(px, { raw: { width: info.width, height: info.height, channels: 4, pageHeight: h } })
-        .gif({ delay: c.delays, loop: 0, colours: 96, effort: 10, dither: 0, interFrameMaxError: 0 })
+        .gif({ delay: c.delays.map((d) => Math.round(d)), loop: 0, colours: 96, effort: 10, dither: 0, interFrameMaxError: 0 })
         .toBuffer())
   } else b = await png(raw, 128)
   fs.writeFileSync(path.join(cardDir, c.file), b)

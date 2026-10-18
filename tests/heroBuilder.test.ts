@@ -14,8 +14,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   ANIMS, CELL, FACES, FEET, ITEMS, LAYERS, LIVERIES, MINI_FACES, MINI_H, MINI_W, PERSONAS, PROPS, RACES, RACE_BODY, RACE_DEFAULTS, RACE_LIMITS,
-  STATE_LAYERS, builderColours, composeFrame, composeStrip, framesFor, layerIndex, miniFrame, miniFrames, resolveItem, resolveLook, rgbOf,
-  type AnimId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
+  STATE_LAYERS, builderColours, composeFrame, composeStrip, framesFor, layerIndex, miniAt, miniFrame, miniFrames, resolveItem, resolveLook, rgbOf,
+  type AnimId, type PersonaId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
 } from '../src/game/render/hero'
 import { OWN_OUTLINE } from '../src/game/render/hero/raster'
 
@@ -400,5 +400,55 @@ describe('hero builder: the dock figures', () => {
       expect(Buffer.from(miniFrame(id, 'tic', 2).rgba).equals(Buffer.from(open.rgba)), `${id} tic`).toBe(false)
       expect(Buffer.from(miniFrame(id, 'react', 1).rgba).equals(Buffer.from(open.rgba)), `${id} react`).toBe(false)
     }
+  })
+
+  it('each idles at its own period and tics on its own beat (no two in step)', () => {
+    const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
+    const ps = PERSONAS.map((id) => MINI_FACES[id].period)
+    const tics = PERSONAS.map((id) => MINI_FACES[id].ticEvery)
+    expect(new Set(ps).size).toBe(PERSONAS.length)
+    expect(new Set(tics).size).toBe(PERSONAS.length)
+    expect(new Set(PERSONAS.map((id) => MINI_FACES[id].idle.length)).size, 'idle shapes differ in length').toBeGreaterThanOrEqual(4)
+    for (let i = 0; i < ps.length; i++)
+      for (let j = i + 1; j < ps.length; j++) {
+        expect(gcd(ps[i], ps[j]), `${PERSONAS[i]}/${PERSONAS[j]} periods co-prime`).toBe(1)
+        // no pair beats together: the periods are at least 10% apart
+        expect(Math.abs(ps[i] - ps[j]) / Math.max(ps[i], ps[j])).toBeGreaterThan(0.1)
+      }
+    // over ten seconds: nobody is mid-tic when the dock opens, no two tics start within half a second,
+    // and no two idle loops restart together more than once
+    const STEP = 10
+    const starts: number[] = []
+    for (const id of PERSONAS) {
+      expect(miniAt(id, 0).anim, `${id} at 0`).toBe('idle')
+      for (let t = STEP; t < 10000; t += STEP) if (miniAt(id, t).anim === 'tic' && miniAt(id, t - STEP).anim !== 'tic') starts.push(t)
+    }
+    starts.sort((a, b) => a - b)
+    expect(starts.length).toBeGreaterThanOrEqual(PERSONAS.length)
+    for (let i = 1; i < starts.length; i++) expect(starts[i] - starts[i - 1], `tics at ${starts[i - 1]} and ${starts[i]}`).toBeGreaterThanOrEqual(500)
+    for (let i = 0; i < PERSONAS.length; i++)
+      for (let j = i + 1; j < PERSONAS.length; j++) {
+        let restarts = 0
+        for (let t = STEP; t < 10000; t += STEP) if (t % ps[i] < STEP && t % ps[j] < STEP) restarts++
+        expect(restarts, `${PERSONAS[i]} + ${PERSONAS[j]} restart together`).toBeLessThanOrEqual(1)
+      }
+    // a pick plays the reaction, a lock holds still
+    expect(miniAt('saffra', 1650, { pickedAt: 1600 }).anim).toBe('react')
+    expect(miniAt('odile', 5000, { still: true })).toEqual({ anim: 'idle', frame: 0 })
+  })
+
+  it('each is known by its silhouette alone', () => {
+    const mask = (id: PersonaId): boolean[] => {
+      const fr = miniFrame(id, 'idle', 0)
+      // the figure only (the shadow is the same for all)
+      return Array.from({ length: MINI_W * MINI_H }, (_, i) => fr.rgba[i * 4 + 3] === 255)
+    }
+    const ms = PERSONAS.map(mask)
+    for (let i = 0; i < ms.length; i++)
+      for (let j = i + 1; j < ms.length; j++) {
+        let and = 0, or = 0
+        for (let p = 0; p < ms[i].length; p++) { if (ms[i][p] && ms[j][p]) and++; if (ms[i][p] || ms[j][p]) or++ }
+        expect(and / or, `${PERSONAS[i]} vs ${PERSONAS[j]}`).toBeLessThan(0.8)
+      }
   })
 })
