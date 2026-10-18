@@ -4285,3 +4285,53 @@ The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/people
 - **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
 - **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
 - **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
+
+### 2026-10-18 — the places, three rounds of critique (stops, posts, shop front, signs, bubble)
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This entry covers the places family: 13 assets and 2 proposals. Each was scored 1–5 for aesthetics (would Pixel Frog build it from the pack?), brand (warm storybook, and the company's own land) and job (on a 390 phone: where you are, who speaks, room for the sign, the bubble and the goods). The people standing in the posts are the character rig's, so they were kept, and every post leaves them the same room. No rule, number or RNG draw changed.
+
+The scorecard, round by round, is `docs/ui-audit-2026-10/asset-critique/places/SCORECARD.md`. Every round was rendered in the running app with `scripts/places-shots.mjs` (390 × 844 and 1280 × 800). That script also measures each bubble against its sign and its scene. The scene PNGs were checked at 1×, 2× and 4×.
+
+**Round 0 failed in four ways, everywhere.**
+- The yards were the pack's lemon beach sand, laid as rectangles.
+- No drawn prop had a shadow.
+- The props were too small beside 59 px pawns: a tent shorter than a person, a 14 px crate.
+- The meadow's 64 px tile repeated.
+
+The worst single failures:
+- On a phone, the hiring sergeant's three-line lines ran off the scene's top.
+- The merchant's counter was empty, and the ware floated over the clerk's hat.
+- Three of the campfire's props were hidden behind people.
+- Four posts were one stall in one pine wood. Ironvein had no quarry, Rosethread had no river or loom, and Peppercorn had no fields.
+
+**What changed.**
+- **The ground and the props.**
+  - The ground is trodden earth: the sand tile re-inked pixel for pixel, laid in ellipses with noisy, grass-nicked rims.
+  - The meadow has patches in its own greens.
+  - Every drawn prop is at the people's scale and stands on a shadow.
+- **The stops.**
+  - The merchant is a kit stall (a rack of blades, a helm, a shield), its ware in the raised hands.
+  - The campfire stands on a stone hearth, its pot on a spit.
+  - The shrine stands on worn flagstones.
+  - The hiring yard is a drill yard (a rack of arms, a straw man, a hire at practice). Its flag went: the sign is its pennant.
+- **The posts.**
+  - Peppercorn's stall is at the edge of its chili fields, with the burn's strip.
+  - Ironvein's stands at its quarry: the pack's cliff, an adit, an ore cart, a forge.
+  - Rosethread's stands by its ford: the river, its stones, reeds, a loom.
+- **The bubble.** Anchors are at faces, and the bake marks a tall speaker `beside`, so the bubble stays inside the scene.
+- **The signs.** The shop's sign uses the city's sign tokens.
+- **The shop front.**
+  - "Cargo is whole" reads on its tag: it was cream on cream.
+  - The shelf's and the counter's washes are tokens.
+
+**The proposals.** Butcherblock's salt-marsh smokehouse and Greenvial's glasshouse garden come from `npx tsx scripts/stop-scenes.ts --proposals <dir>`. They are never written to `public/` or the anchors.
+
+**Benchmark.** Kingdom Rush's shops and camps are a place with one figure. Each one's silhouette says its trade before any word, and its ground has worn paths and shadows. The posts now differ by land (field, quarry, ford), not only by colour. The stops sit on the same dirt as the battle road.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/places/cards/` holds 15 cards, 620 KB. Each shows before over after on a phone, a 2× crop and the scores, with a `manifest.json`. They are made by `scripts/places-cards.mjs`.
+
+**Still weakest.**
+- The Easel House and Moonquill posts score brand 2 until the proposals are picked.
+- At 52 px, the receipt cameo is a hat. That is the character rig's.
+- On a phone, the bubble covers each post's back-right.
+- The fire's, the shrine's and the yard's signs are literal materials. That is a § 8 rule 7 break, older than this pass, which needs the designer's yes for the exceptions table.

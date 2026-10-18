@@ -65,7 +65,7 @@ export function StopScene({
   // Over the speaker's head where there is sky for it; BESIDE the head for a
   // tall speaker or a clerk holding a ware up, so the bubble never leaves the
   // phone's shorter scene (whose stage is lifted ~36px) or hides the ware.
-  const beside = besideHead || showHeld || sy * z < 120
+  const beside = besideHead || showHeld || ('beside' in a && a.beside) || sy * z < 120
   const bubble: CSSProperties = beside
     ? leftLean
       ? { right: stageW - sx * z + 18, bottom: stageH - sy * z - 22 }

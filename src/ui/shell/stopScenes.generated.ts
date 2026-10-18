@@ -7,10 +7,10 @@ export const SCENE_SIZE = { w: 400, h: 150 } as const
 export const FIRE_CELL = { cx: 64, by: 105 } as const
 
 export const SCENE_ANCHORS = {
-  merchant: { speaker: [200, 76], held: [200, 74] },
-  campfire: { speaker: [258, 65], fire: [200, 122] },
-  shrine: { speaker: [252, 76] },
-  recruit: { speaker: [182, 55] },
+  merchant: { speaker: [200, 74], held: [200, 81] },
+  campfire: { speaker: [268, 75], fire: [190, 126] },
+  shrine: { speaker: [262, 80] },
+  recruit: { speaker: [170, 75], beside: true },
   'liaison-spice': { speaker: [180, 71] },
   'liaison-art': { speaker: [180, 71] },
   'liaison-metals': { speaker: [180, 70] },
