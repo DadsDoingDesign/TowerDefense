@@ -48,8 +48,13 @@ const SKILL_POST = tileAt(16, 6)
 /** On the road a step down from the hero, so the hero, its blow and the goblin's HP bar all fit a 252 px column at 3×. */
 const FOE = { x: SKILL_POST.x + 40, y: SKILL_POST.y + 34 }
 const FOE2 = { x: SKILL_POST.x + 41, y: SKILL_POST.y + 74 }
-/** Logical px; the hero's art is 84 × 95 at native density, feet at +8. */
+/**
+ * Logical px; the hero's art is 84 × 95 at native density, feet at +8. A
+ * weapon reaches right of the fist, an off-hand piece left of the other, so
+ * each is framed toward its own side.
+ */
 const ITEM_BOX = { w: 84, h: 112, hx: 42, hy: 92 }
+const WEAPON_BOX = { ...ITEM_BOX, hx: 38 }
 const SKILL_BOX = { w: 84, h: 184, hx: 30, hy: 92 }
 
 function tileAt(col: number, row: number): Vec2 {
@@ -181,7 +186,8 @@ function fieldCanvas(box: { w: number; h: number; hx: number; hy: number }, at: 
 }
 
 function itemHero(it: DraftItem, k = HERO_X): HTMLCanvasElement {
-  const { c, g } = fieldCanvas(ITEM_BOX, ITEM_POST, k)
+  const weapon = it.slot !== 'offHand' && it.slot !== 'body'
+  const { c, g } = fieldCanvas(weapon ? WEAPON_BOX : ITEM_BOX, ITEM_POST, k)
   setPresentationTime(0.01)
   fxReset()
   drawSentinel(g, sentinel('item', ITEM_POST, gearFor(it)))
@@ -260,7 +266,7 @@ function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells'
   if (sk.hit.chain) fxArc(foe.x, foe.y - 10, FOE2.x, FOE2.y - 10)
   if (sk.hit.chain && sk.hit.chain > 1) fxArc(FOE2.x, FOE2.y - 10, FOE2.x + 34, FOE2.y + 20)
   if (sk.hit.proc) fxProc('hero', sk.hit.proc, hero.x, hero.y)
-  if (sk.hit.floater) fxFloater(foe.x + 2, foe.y - 50, sk.hit.floater.text, sk.hit.floater.ink, sk.hit.floater.crit ? FLOAT_CRIT : FLOAT_NUM)
+  if (sk.hit.floater) fxFloater(foe.x - 4, foe.y + 2, sk.hit.floater.text, sk.hit.floater.ink, sk.hit.floater.crit ? FLOAT_CRIT : FLOAT_NUM)
   for (let i = 0; i < 3; i++) fxAdvance(1 / 60)
 
   const held = sk.hit.held || sk.tell.some((t) => t.kind === 'held')

@@ -412,7 +412,7 @@ export const GNOMES: People = {
       level: 1,
       does: 'Hits jump to 1 more for 45%',
       status: 'kept',
-      tell: [{ kind: 'glint', effect: 'shock' }],
+      tell: [{ kind: 'glint', effect: 'shock' }, { kind: 'motes', ink: c('g'), at: 'main', shape: 'spark' }],
       hit: { effect: 'shock', chain: 1, second: true },
       icon: [
         '................',
@@ -464,7 +464,7 @@ export const GNOMES: People = {
       level: 2,
       does: 'Heroes near it hit 40% harder',
       status: 'kept',
-      tell: [{ kind: 'aura', ink: '#95d562', r: 26 }],
+      tell: [{ kind: 'aura', ink: '#95d562', r: 21 }],
       hit: { floater: { text: '27', ink: '#d4b8ff' } },
       icon: [
         '................',

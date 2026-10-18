@@ -447,8 +447,8 @@ export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: numb
       const span = hem.hi - hem.lo
       for (let i = 0; i < po.n; i++) {
         const x0 = hem.lo + Math.round(((i + 0.5) * span) / po.n) - 1
-        for (let dy = 0; dy < 4; dy++)
-          for (let dx = 0; dx < 3; dx++) px.push([x0 + dx, t.y1 - 1 + dy, dy === 0 && po.top ? rgb(po.top) : dx === 2 || dy === 3 ? p2 : p1])
+        for (let dy = 0; dy < 5; dy++)
+          for (let dx = 0; dx < 4; dx++) px.push([x0 + dx, t.y1 - 1 + dy, dy === 0 && po.top ? rgb(po.top) : dx === 3 || dy === 4 ? p2 : p1])
       }
       shape(px, false)
     }
