@@ -33,8 +33,17 @@
  * for Full (the automatic step down held off), Full with the step down,
  * Light and reduced motion.
  *
+ * Each capture also records `movPct`, the share of the frame that moves (frame
+ * to frame, averaged); each ambient home and each battle a CONTRAST sample
+ * (`fxContrast`: the world held still, shot with and without its effect
+ * layers — the luma the effects add or take, its 99th percentile `peak`,
+ * `max` and `cover`); the home its ambient particle count, the battle its
+ * weather and edge counts.
+ *
  * Keep the frames out of the repo (a scratch folder); commit only a few
- * heatmaps, palette-compressed. Env: AUDIT_BASE (default
+ * heatmaps, palette-compressed. Env: AUDIT_VIEW=desk (1280 × 800; every
+ * capture named `…-desk`), AUDIT_CARDS=1 (a 3.5 s `card-home-<world>` capture
+ * each, for `scripts/motion-cards.mjs`), AUDIT_SEED (a fixed contract seed for the battles), AUDIT_BASE (default
  * http://localhost:5227/), PW_CHROMIUM, AUDIT_EVAL (code run in each page once it
  * is up — an experiment, e.g. one world's layer switched off), AUDIT_TAG (a
  * suffix on every capture's name).
@@ -53,7 +62,17 @@ const BASE = process.env.AUDIT_BASE ?? 'http://localhost:5227/'
 const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
 const { chromium } = await import('/opt/node22/lib/node_modules/playwright/index.mjs').catch(() => import('playwright'))
 
-const VIEW = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+// AUDIT_VIEW=desk: a 1280 × 800 desk (every capture's name gets `-desk`).
+const VIEWS = {
+  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true },
+  desk: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
+}
+const VIEW_NAME = process.env.AUDIT_VIEW === 'desk' ? 'desk' : 'phone'
+const VIEW = VIEWS[VIEW_NAME]
+const TAG = (VIEW_NAME === 'desk' ? '-desk' : '') + (process.env.AUDIT_TAG ?? '')
+// AUDIT_CARDS=1: one more 3.5 s home capture per world (the switch-in, the
+// ambient, a press), for the before/after review cards.
+const CARDS = !!process.env.AUDIT_CARDS
 const SLOW = 0.25
 const FPS = 24
 const THRESH = 24
@@ -220,9 +239,18 @@ async function slow(p, rate) {
   await p.page.evaluate((r) => {
     if (window.__slowed) return
     window.__slowed = r
+    // `window.__clock(rate)` changes the rate later (0 holds the world still
+    // for a contrast sample, `fxContrast`).
+    let rate = r
     const perf = performance.now.bind(performance)
-    const p0 = perf()
-    const now = () => p0 + (perf() - p0) * r
+    let real = perf()
+    let virt = real
+    const now = () => {
+      const t = perf()
+      virt += (t - real) * rate
+      real = t
+      return virt
+    }
     performance.now = now
     const raf = window.requestAnimationFrame.bind(window)
     // The frame's own timestamp is not used: under a capture's screenshots a
@@ -231,11 +259,16 @@ async function slow(p, rate) {
     window.requestAnimationFrame = (cb) => raf(() => cb(now()))
     const date = Date.now
     const d0 = date()
-    Date.now = () => d0 + (date() - d0) * r
+    const p0 = virt
+    Date.now = () => d0 + (now() - p0)
     const st = window.setTimeout.bind(window)
-    window.setTimeout = (fn, ms, ...a) => st(fn, (ms ?? 0) / r, ...a)
+    window.setTimeout = (fn, ms, ...a) => st(fn, (ms ?? 0) / Math.max(0.05, rate), ...a)
     const si = window.setInterval.bind(window)
-    window.setInterval = (fn, ms, ...a) => si(fn, (ms ?? 0) / r, ...a)
+    window.setInterval = (fn, ms, ...a) => si(fn, (ms ?? 0) / Math.max(0.05, rate), ...a)
+    window.__clock = (x) => {
+      now()
+      rate = x
+    }
   }, rate)
 }
 
@@ -244,7 +277,7 @@ async function slow(p, rate) {
  * 1 / (fps · rate) s of real time apart. `during(i)` runs before frame i.
  */
 async function capture(p, name, n, { rate = SLOW, fps = FPS, during } = {}) {
-  name += process.env.AUDIT_TAG ?? ''
+  name += TAG
   const dir = path.join(OUT, 'frames', name)
   fs.rmSync(dir, { recursive: true, force: true })
   fs.mkdirSync(dir, { recursive: true })
@@ -283,6 +316,65 @@ async function captureLive(p, name, ms) {
   return analyse(name)
 }
 
+/**
+ * The worlds' own contrast, in still frames: the world held still
+ * (`__clock(0)`), a shot with its effect layers, a shot without them (the
+ * home's `.th-fx` / `.th-fx-over` hidden; the battle's weather and edge band
+ * switched off), and the luma difference between the two, per pixel (Rec. 709
+ * Y′, 0–255). `peak`: the 99th percentile over the pixels the effects touch
+ * (ΔY ≥ 2) — how bright the brightest effect pixels stand off their ground;
+ * `max`: the single brightest; `cover`: the share of the screen they lift or
+ * darken by 8 or more (%). Three samples, 0.6 s of world time apart; the worst
+ * of each is kept.
+ */
+async function fxContrast(p, name, kind) {
+  name += TAG
+  const res = { peak: 0, max: 0, cover: 0 }
+  for (let k = 0; k < 3; k++) {
+    await p.page.evaluate(() => window.__clock?.(0))
+    await sleep(150)
+    const a = await raw(await p.page.screenshot())
+    await p.page.evaluate((kind) => {
+      if (kind === 'home') {
+        for (const c of document.querySelectorAll('.th-fx, .th-fx-over')) c.style.visibility = 'hidden'
+      } else if (window.__weather) {
+        window.__weather.weather.frame = () => {}
+        window.__weather.edge.frame = () => {}
+      }
+    }, kind)
+    await sleep(200)
+    const b = await raw(await p.page.screenshot())
+    await p.page.evaluate((kind) => {
+      if (kind === 'home') {
+        for (const c of document.querySelectorAll('.th-fx, .th-fx-over')) c.style.visibility = ''
+      } else if (window.__weather) {
+        delete window.__weather.weather.frame
+        delete window.__weather.edge.frame
+      }
+    }, kind)
+    await p.page.evaluate((r) => window.__clock?.(r), SLOW)
+    const ds = []
+    let cover = 0
+    for (let q = 0; q < a.data.length; q += 4) {
+      const ya = 0.2126 * a.data[q] + 0.7152 * a.data[q + 1] + 0.0722 * a.data[q + 2]
+      const yb = 0.2126 * b.data[q] + 0.7152 * b.data[q + 1] + 0.0722 * b.data[q + 2]
+      const d = Math.abs(ya - yb)
+      if (d >= 2) ds.push(d)
+      if (d >= 8) cover++
+    }
+    ds.sort((x, y) => x - y)
+    const peak = ds.length ? ds[Math.floor(ds.length * 0.99)] : 0
+    res.peak = Math.max(res.peak, Math.round(peak))
+    res.max = Math.max(res.max, Math.round(ds[ds.length - 1] ?? 0))
+    res.cover = Math.max(res.cover, +((cover / (a.w * a.h)) * 100).toFixed(2))
+    await sleep(600 / SLOW)
+  }
+  metrics[name] = { ...(metrics[name] ?? {}), contrast: res }
+  saveMetrics()
+  console.log(`  ${name}: ΔY peak ${res.peak} · max ${res.max} · cover ${res.cover}%`)
+  return res
+}
+
 // ---------------------------------------------------------------- analysis
 async function raw(file) {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
@@ -317,12 +409,20 @@ async function analyse(name) {
   const { w, h } = first
   const count = new Float32Array(w * h)
   let prev = first.data
+  // The share of the frame that moves: frame to frame, the share of the
+  // screen's pixels that changed, averaged over the capture (%).
+  let moved = 0
   for (let i = 1; i < files.length; i++) {
     const cur = (await raw(path.join(dir, files[i]))).data
+    let n = 0
     for (let p = 0, q = 0; p < w * h; p++, q += 4) {
       const d = Math.max(Math.abs(cur[q] - prev[q]), Math.abs(cur[q + 1] - prev[q + 1]), Math.abs(cur[q + 2] - prev[q + 2]))
-      if (d >= THRESH) count[p]++
+      if (d >= THRESH) {
+        count[p]++
+        n++
+      }
     }
+    moved += n / (w * h)
     prev = cur
   }
   const secs = (meta.times[meta.times.length - 1] - meta.times[0]) / 1000
@@ -341,7 +441,7 @@ async function analyse(name) {
     edge: maskOf(w, h, R.edge),
     detail: maskOf(w, h, R.detail),
   }
-  const out = { frames: files.length, secs: +secs.toFixed(2), fps: +((files.length - 1) / secs).toFixed(1), regions: {} }
+  const out = { frames: files.length, secs: +secs.toFixed(2), fps: +((files.length - 1) / secs).toFixed(1), movPct: +((moved / (files.length - 1)) * 100).toFixed(2), regions: {} }
   for (const [k, m] of Object.entries(masks)) {
     let area = 0
     let sum = 0
@@ -373,7 +473,7 @@ async function analyse(name) {
   saveMetrics()
   const r = out.regions
   const f = (k) => (r[k] ? `${k} ${r[k].hz}` : '')
-  console.log(`${name}: ${out.frames} frames, ${out.fps} fps | ${['screen', 'text', 'card', 'cta', 'road', 'dock', 'bar', 'signs', 'stage', 'edge', 'detail'].map(f).filter(Boolean).join(' · ')}`)
+  console.log(`${name}: ${out.frames} frames, ${out.fps} fps, moving ${out.movPct}% | ${['screen', 'text', 'card', 'cta', 'road', 'dock', 'bar', 'signs', 'stage', 'edge', 'detail'].map(f).filter(Boolean).join(' · ')}`)
   return out
 }
 
@@ -430,6 +530,13 @@ async function toBattle(p, world) {
     await p.page.waitForTimeout(wait)
   }
   await cta(1500) // home → terms
+  // AUDIT_SEED: the same contract seed (so the same road and waves) in every run.
+  if (process.env.AUDIT_SEED)
+    await p.page.evaluate((seed) => {
+      const g = window.__game
+      const b = g.getState().board
+      if (b) g.setState({ board: { ...b, seed } })
+    }, Number(process.env.AUDIT_SEED))
   await cta(1500) // sign → pick
   await cta(2500) // march → the opening fight
   if (world === 'neutral') await holdNeutral(p.page)
@@ -504,8 +611,9 @@ if (WHAT.has('home')) {
     await capture(p, `home-${w}-switch`, 30, { during: (i) => (i === 1 ? focus(p.page, homeFocusOf(w)) : null) })
     await sleep(800 / SLOW)
     await capture(p, `home-${w}`, 72)
-    const tag = `home-${w}${process.env.AUDIT_TAG ?? ''}`
+    const tag = `home-${w}${TAG}`
     metrics[tag].particles = await p.page.evaluate(() => window.__worldFx.count().ambient)
+    await fxContrast(p, `home-${w}`, 'home')
     if (process.env.AUDIT_DEBUG) console.log(await p.page.evaluate(process.env.AUDIT_DEBUG))
     saveMetrics()
     console.log(`  ${tag}: ${metrics[tag].particles} ambient particles`)
@@ -518,6 +626,22 @@ if (WHAT.has('home')) {
             })
           : null,
     })
+    if (CARDS) {
+      // The review card's 3.5 s: the switch-in at once, the ambient, a press at 2.3 s.
+      await focus(p.page, w === 'spice' ? 'art' : 'spice')
+      await sleep(2500 / SLOW)
+      await capture(p, `card-home-${w}`, 84, {
+        during: (i) =>
+          i === 2
+            ? focus(p.page, homeFocusOf(w))
+            : i === 56
+              ? p.page.evaluate(() => {
+                  const b = document.querySelector('.mn-cta').getBoundingClientRect()
+                  window.__worldFx.burst(b.left + b.width * 0.7, b.top + b.height / 2, b)
+                })
+              : null,
+      })
+    }
   }
   await p.ctx.close()
 }
@@ -576,10 +700,12 @@ if (WHAT.has('battle')) {
     try {
       await toBattle(p, w)
       await slow(p, SLOW)
-      await capture(p, `battle-${w}`, 72)
-      const live = await p.page.evaluate(() => ({ enemies: window.__game.getState().engine?.enemies?.length, weather: window.__weather ? { w: window.__weather.weather.count, e: window.__weather.edge.parts?.length ?? window.__weather.edge.count } : null }))
-      metrics[`battle-${w}`].live = live
+      await capture(p, `battle-${w}`, 84)
+      const live = await p.page.evaluate(() => ({ enemies: window.__game.getState().engine?.enemies?.length, weather: window.__weather ? { w: window.__weather.weather.count, e: window.__weather.edge.parts?.length ?? window.__weather.edge.count, shapes: window.__weather.weather.shapes } : null }))
+      metrics[`battle-${w}${TAG}`].live = live
       saveMetrics()
+      console.log(`  battle-${w}${TAG}: weather ${live.weather?.w} · edge ${live.weather?.e} · shapes ${live.weather?.shapes}`)
+      await fxContrast(p, `battle-${w}`, 'battle')
     } catch (e) {
       console.log(`battle-${w}: ${e.message.split('\n')[0]}`)
     }

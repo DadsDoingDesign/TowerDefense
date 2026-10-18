@@ -435,9 +435,10 @@ export function BattleCanvas() {
     const edge = new EdgeBand()
     // The season's weather (Oct 2026; `render/weatherFx`): rain, snow, petals,
     // fog banks, cloud shadows — under the wagon and the units. The edge band
-    // keeps half its share beside it, so the two stay near one cap.
+    // keeps half its share beside it, so the two stay near one cap (12 and
+    // 20 before the calm pass, Oct 2026).
     const weather = new WeatherLayer()
-    edge.caps = { phone: 12, desk: 20 }
+    edge.caps = { phone: 6, desk: 9 }
     // Dev only: the live counts, for the review's numbers.
     if (import.meta.env.DEV) (window as unknown as { __weather?: { weather: WeatherLayer; edge: EdgeBand } }).__weather = { weather, edge }
     const step = (now: number) => {

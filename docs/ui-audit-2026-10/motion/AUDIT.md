@@ -11,6 +11,163 @@ npx vite --port 5227 --strictPort &
 node scripts/motion-audit.mjs <scratch dir> home,pages,battle,battleui,fps
 ```
 
+## The calm pass (18 Oct 2026): before → after
+
+The designer, after playing more: the company effects are "a bit overwhelming now that I'm
+playing more", so tone them down for each company. The goal: **the worlds are felt, not
+watched.** The map, the roads and the words are the show. The effects are atmosphere at the
+edge of attention. The benchmark is Slay the Spire's map screen, Hades' menus and Into the
+Breach: slow, sparse, low-contrast motion you notice only when you look for it.
+
+Full was retuned for every company, and Light follows from it (half of Full's particles at
+half the cadence, no glows, no shimmer). Reduced motion still moves nothing, and high
+contrast still dims. No gameplay, number or RNG draw changed: the worlds draw on
+`Math.random`, never a run stream.
+
+### What changed, per company
+
+| | home | battle |
+|---|---|---|
+| **Peppercorn** (loudest before) | Embers 40 → 11 on a phone (110 → 34 on a desk): one pixel, never white-hot, rising half as fast, and the old 2–3 px coals with halos are gone. The flame line along the dock is lower, half as strong, and flickers at a sixth of the old rate. The heat glow is a third as strong, and the heat-shimmer lines are gone. The press is a few low flames on the CTA's face (from 36 flames and 18 embers flying off its ends). | Dust, fluff and leaves at 14 (from 30) on a phone, at 65% strength, and slower. Edge embers are smaller and slower. |
+| **Ironvein** (loudest before) | Sparks 60 → 18: one pixel, in low slow arcs (gravity 70, from 150; launch 24–44 px/s, from 50–100). The anvils' hot bars breathe over 8 s; they used to flash white-hot five times a second. The glow is a third as strong. The press is one seam running a third of the way along the foot, plus 8 sparks (from both seams the full length and 54 sparks). | Rain 40 → 16, falling at 420 px/s (from 540). The sheet's bands are 10% / 5% of the view (from 15% / 7.5%), with 4 drops a tile (from 7) at 0.3 strength (from 0.42), and none over the road's way in or the wagon. Cloud shadows 0.16 → 0.09. The flash is 45–90 s apart (from 14–44) at half the brightness. |
+| **Easel House** | Bold 14–28 px splats with runs and gloss (a fifth of the particles) became a few small splats that dry where they land (7–14 px). Mostly flecks. The washes are a sparse dither drifting at a third of the speed. The press is one inked splat, one drip and 5 droplets (from 26 pieces). | Petals 30 → 14. |
+| **Rosethread** | Petals 60 → 24, falling at half the speed with a slower tumble. The ribbons are an eighth strong (a quarter at the shaded edge), their stitch is still, their wave runs at a third of the speed, and the sheen at a fifth. The press is one running stitch and 6 petals (from both stitches and 30 petals). | Dew 18 → 8. Fog in 4 banks (from 6) at about half the strength (0.85 → 0.45). |
+| **Moonquill** | Stars and runes 60 → 24. Stars twinkle over 7 s (from under 3), and only the big ones get arms. Runes rise at half the speed. The beam holds still (its ripple is gone), and the moon is fainter (0.85 → 0.625). | Snow 40 → 18. The sheet's bands are 15% / 7% (from 22% / 11%), with 5 flakes a tile (from 9) at half the strength. |
+| every world | **Frames still:** the card's, the pick card's and the CTA's flipbooks are gone, and so are the CTA strip's steps, Peppercorn's crest flicker and Rosethread's satin sheen. The CTA alone keeps one faint pale band every 9 s (`th-shimmer`, 7% of its world's colour). **Switch-in:** a 350 ms crossfade (it was a 0.6–0.9 s sweep, plus up to 120 particles). The old world's particles and backdrop fade out where they are while the new world's fade in, under a faint, still wash of the world. **Peaks:** every ambient particle is drawn at its world's `peak` (0.5 for fire and forge, 0.6 for paint, silk and night, 0.7 for the house look). No ambient pixel is brighter than the words. Panel glows and title glows are about half as strong. | The edge band's caps are 11 / 18 (from 24 / 40), and 6 / 9 beside the weather (from 12 / 20), at 70% strength and slower. A weather particle over the game is drawn at 0.18 of its strength (from 0.34), and only 12% of the throws there spawn (from 30%). |
+
+### The numbers (390 × 844 phone, headless Chromium)
+
+Re-run with `AUDIT_CARDS=1 AUDIT_SEED=424242 node scripts/motion-audit.mjs <dir> home,battle`
+(`AUDIT_VIEW=desk` for the desk), against the commit before the pass and after it.
+
+What each number means:
+
+- **Particles:** how many are alive on screen.
+- **Moving:** the share of the frame's pixels that change from one frame to the next,
+  averaged.
+- **Hz:** changes per pixel per second, as before.
+- **Peak ΔY:** the world's own contrast. The world is held still and shot with and without
+  its effect layers. Peak ΔY is the 99th-percentile luma the effects add or take (0–255),
+  over the pixels they touch. **Cover** is the share of the screen they change by 8 or
+  more.
+
+The battles use a fixed contract seed, so before and after fight on the same road.
+
+**Home**
+
+| | Peppercorn | Ironvein | Easel House | Rosethread | Moonquill | house look |
+|---|---|---|---|---|---|---|
+| ambient particles | **40 → 11** | **60 → 18** | 60 → 24 | 59 → 24 | 60 → 24 | 33 → 15 |
+| moving, % of frame | **1.23 → 0.20** | **1.20 → 0.22** | 0.41 → 0.20 | 0.68 → 0.27 | 0.29 → 0.17 | 0.29 → 0.27 |
+| ambient, screen Hz | **0.30 → 0.05** | **0.29 → 0.05** | 0.10 → 0.05 | 0.16 → 0.07 | 0.07 → 0.04 | 0.07 → 0.07 |
+| peak ΔY | 186 → 71 | 217 → 133 | 149 → 72 | 186 → 84 | 190 → 136 | 107 → 74 |
+| effect cover, % | 6.4 → 1.4 | 5.8 → 2.9 | 4.2 → 0.8 | 1.8 → 1.4 | 3.8 → 2.3 | 0.04 → 0.01 |
+| card Hz | 0.22 → 0 | 0.13 → 0 | 0.03 → 0 | 0.08 → 0 | 0.05 → 0 | 0 |
+| CTA Hz | 0.36 → 0 | 0.29 → 0 | 0.02 → 0 | 0.13 → 0 | 0.09 → 0 | 0 |
+| dock Hz | 0.12 → 0.02 | 0.01 → 0 | 0 | 0.01 → 0 | 0.01 → 0 | 0 |
+| switch-in, screen Hz | 1.23 → 0.41 | 0.66 → 0.28 | 1.44 → 0.53 | 0.52 → 0.33 | 0.77 → 0.41 | 0.35 → 0.27 |
+| switch-in, card Hz | 0.84 → 0.64 | 0.73 → 0.50 | 0.80 → 0.64 | 0.59 → 0.48 | 0.73 → 0.69 | 0.43 → 0.42 |
+| press, CTA Hz | **2.26 → 0.32** | **2.69 → 0.51** | 0.44 → 0.20 | 0.55 → 0.05 | 1.23 → 0.33 | 0.04 → 0.01 |
+| press, screen Hz | 0.44 → 0.07 | 0.48 → 0.08 | 0.12 → 0.06 | 0.22 → 0.07 | 0.18 → 0.06 | 0.07 → 0.06 |
+
+- **Every world's ambient is now at the house look's floor.** At 0.04–0.07 Hz it matches the
+  roads' own traffic, which is what moves on the house look. On the heatmap
+  (`calm-home-heat.png`), the roads are the show and the card and the CTA are still. Before
+  the pass, Peppercorn and Ironvein ran 4× the house look.
+- **The CTA shimmer measures 0 Hz.** It is a 7% band, under the 24-level change threshold,
+  so you see it only when you look for it.
+- **Switch-in card Hz (0.5–0.7)** is the card's own new words and its colour ease. The house
+  look, which has no world, measures 0.42.
+- **What the peak ΔY that remains is:** Ironvein's 133 and Moonquill's 136 are the still
+  anvils' iron and the still moon. They are drawn art, and they do not move.
+
+**Desk (1280 × 800)**
+
+| | Peppercorn | Ironvein | Easel House | Rosethread | Moonquill | house look |
+|---|---|---|---|---|---|---|
+| ambient particles | 110 → 34 | 110 → 40 | 110 → 40 | 110 → 40 | 110 → 40 | 103 → 40 |
+| moving, % of frame | 1.22 → 0.13 | 0.65 → 0.11 | 0.39 → 0.10 | 1.15 → 0.20 | 0.32 → 0.09 | 0.23 → 0.14 |
+| ambient, screen Hz | 0.27 → 0.03 | 0.14 → 0.03 | 0.09 → 0.03 | 0.17 → 0.05 | 0.04 → 0.02 | 0.04 → 0.03 |
+| peak ΔY | 176 → 58 | 175 → 105 | 111 → 72 | 187 → 91 | 189 → 136 | 107 → 80 |
+| effect cover, % | 5.9 → 1.6 | 4.3 → 2.3 | 7.1 → 1.9 | 4.7 → 1.8 | 1.6 → 0.9 | 0.06 → 0.02 |
+| card / CTA Hz | 0.31 / 0.36 → 0 / 0 | 0.11 / 0.28 → 0 / 0 | 0.03 / 0.02 → 0 / 0 | 0.06 / 0.12 → 0 / 0 | 0.05 / 0.09 → 0 / 0 | 0 |
+| switch-in, screen Hz | 0.97 → 0.22 | 0.35 → 0.21 | 1.20 → 0.47 | 0.24 → 0.16 | 0.23 → 0.27 | 0.17 → 0.14 |
+| press, CTA Hz | 1.69 → 0.28 | 1.60 → 0.56 | 0.21 → 0.07 | 0.30 → 0.05 | 0.45 → 0.10 | 0.04 → 0 |
+
+- **The desk's before frames were taken more slowly.** The before run shared the machine,
+  so some captures ran at 10–20 fps against 24 after. A slower capture misses fast changes,
+  so the before Hz there are, if anything, too low, and the cut is at least this big.
+- The particle counts, peak ΔY and cover do not depend on the frame rate.
+- Moonquill's switch-in on the desk measured 0.23 → 0.27, within the noise: its old moonlit
+  sheet was already faint on a wide screen.
+
+**Battle (a 19-raider wave, the same road before and after)**
+
+| | Peppercorn | Ironvein | Easel House | Rosethread | Moonquill |
+|---|---|---|---|---|---|
+| weather particles, phone | 30 → 14 | **40 → 16** | 30 → 14 | 18 → 8 | 40 → 18 |
+| weather particles, desk | 51 → 24 | 68 → 27 | 51 → 24 | 31 → 14 | 68 → 31 |
+| edge-band particles (phone / desk) | 12 / 20 → 6 / 9 | same | same | same | same |
+| edge band Hz, phone | 0.21 → 0.17 | **0.80 → 0.45** | 0.14 → 0.14 | 0.10 → 0.09 | 0.40 → 0.19 |
+| edge band Hz, desk | 0.14 → 0.11 | 0.50 → 0.20 | 0.07 → 0.05 | 0.05 → 0.02 | 0.27 → 0.08 |
+| peak ΔY, phone | 142 → 115 | **99 → 28** | 174 → 136 | 80 → 41 | 163 → 122 |
+| effect cover, phone, % | 0.15 → 0.07 | **5.65 → 0.50** | 0.11 → 0.04 | 9.6 → 5.7 | 0.83 → 0.19 |
+| stage Hz, phone (the lane) | 0.81 → 0.83 | 0.78 → 0.87 | 0.63 → 0.74 | 0.52 → 0.65 | 1.26 → 1.28 |
+
+- **The stage's motion is the lane** (units, shots, HP bars), and the pass leaves it alone.
+  The stage Hz are within a wave's noise; the before run lost frames under load, which
+  undercounts them.
+- **On the weather:** Ironvein's rain sheet covered 5.7% of the stage, and now covers 0.5%.
+  Peppercorn's and Easel House's peak ΔY (115–136) are single dust motes and petals,
+  one or two pixels each.
+- The house look's battle wears Peppercorn's season, because its contract is Peppercorn's.
+
+**Modes.**
+
+- **Light**, Peppercorn's home: 0.14 → 0.05 Hz. Ironvein's: 0.12 → 0.05 Hz.
+- **Reduced motion:** 0 Hz on every home, before and after. On the battlefield the weather
+  and the edge band are gone; the lane still moves.
+- **High contrast:** the particles are still dimmed ×0.6.
+
+### Critique rounds (real frames, phone and desk)
+
+1. **Round 1** (the first retune).
+   - The home stills read calm. But a fresh screen of embers faded in together and later
+     guttered out together, so the first fill is now staggered through its lives.
+   - Easel House's map had lost its paint: there were almost no splats left, so a few more
+     small ones came back.
+   - Ironvein's press still flashed both seams the full length of the button, which was the
+     loudest thing left on the home. It is now one seam, a third of the way.
+2. **Round 2** (`AUDIT_SEED`, so the battles fight on the same road).
+   - Rosethread's ribbon, at a quarter's strength, still crossed the focused road as a clear
+     line, so it is an eighth now.
+   - Ironvein's rain had all but vanished on the frames, so the sheet went back up to 0.3, enough
+     to read as rain at the edges.
+   - The rain and snow sheets used to fall over the road's way in and the wagon where the
+     band met them. They now skip every cell of the game.
+   - A slightly taller flame line keeps Peppercorn reading as fire in a still frame.
+3. **Round 3** (re-measured Easel House and Ironvein with the final code).
+   - Each world still reads as itself in a still: a flame horizon and a crest, anvils, small
+     splats and a scalloped frame, petals and a ribbon, the moon.
+   - Nothing pulls the eye off the map or the card. The card and the CTA measure 0 Hz, and
+     the brightest moving pixel is now the caravans on the roads.
+
+**Still the loudest, honestly.**
+
+- **Ironvein's rain** is still the busiest margin in a battle: 0.45 Hz, against 0.1–0.2
+  for the others. Rain is fast by nature. It is faint now (ΔY 28) and never over the game.
+- **Rosethread's fog** still changes the most pixels, 5.7% of the stage, but at a low
+  contrast (ΔY 41).
+- **Rosethread's ribbon** is still the one wide shape on a home that moves.
+- **The switch-in's wash** is now as quiet as the map's own focus re-light.
+
+Cards for the designer's phone: `docs/ui-audit-2026-10/motion-calm/` (ten animated WebPs,
+listed in `manifest.json`). Heatmaps: `calm-home-heat.png`, `calm-battle-heat.png`.
+
+---
+
+*What follows is the first motion audit (earlier in Oct 2026), kept as it was.*
+
 ## How it is measured
 
 - **Frame sequences in slow motion.** The CSS clock is slowed through CDP

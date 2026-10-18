@@ -4601,3 +4601,31 @@ The designer: "do 3 rounds of critiques to improve every asset along a rubric of
 **Cards.** `docs/ui-audit-2026-10/asset-critique/battlefield/cards/` holds 13 cards and `manifest.json`, built by `scripts/battlefield-cards.mjs`.
 
 **Checks.** The typecheck, `npm test` (1258 tests, including `fieldWorlds`, `fieldGen`, `fields` and `caravan`) and `build:checks` are green. `scripts/harvest-cc0.ts --check` could not reach the GitHub API from this sandbox. No asset file was added: every new prop is procedural.
+### 2026-10-18 — the company worlds, calmed
+
+The designer: the company effects are "a bit overwhelming now that I'm playing more". The goal was **felt, not watched**: the map, the roads and the words are the show, and the worlds are atmosphere at the edge of attention, like Slay the Spire's map, Hades' menus and Into the Breach. Full was retuned for every company, and Light follows from it. No gameplay, number or RNG draw changed.
+
+**What changed.**
+- **Ambient particles.** The cap is 24 on a phone and 40 on a desk, down from 60 and 110. Peppercorn has 11 embers (from 40) and Ironvein 18 sparks (from 60). Drift is slower, and each world draws its particles at a `peak` of 0.5–0.7 with no white-hot pixels.
+- **Glows** breathe over 8 s, at a third of their old strength.
+- **Frames, strips and crest** are still. The CTA alone keeps a 7% shimmer every 9 s.
+- **Switch-in:** a 350 ms crossfade under a faint, still wash of the world.
+- **Press bursts** stay on the CTA's face, at 20 particles or fewer.
+- **Battle:** the weather is at 40–50% of its old count. The sheets are narrower, sparser and fainter, and they skip the game's cells. Fog and clouds are fainter, and the flash comes 45–90 s apart, on Full only. The edge band is at 45% of its old count and 70% of its strength.
+
+**Measured** (`scripts/motion-audit.mjs`, phone, before → after; the full tables are in `docs/ui-audit-2026-10/motion/AUDIT.md`):
+- Home ambient: Peppercorn 0.30 → 0.05 Hz and Ironvein 0.29 → 0.05 Hz. Every world now sits at the house look's 0.04–0.07 Hz, which is the roads' own traffic.
+- The card and the CTA: from 0.03–0.36 Hz to 0 Hz.
+- The press on the CTA: Peppercorn 2.26 → 0.32 Hz and Ironvein 2.69 → 0.51 Hz.
+- Ironvein's battle edge: 0.80 → 0.45 Hz, and the rain's cover of the stage 5.7% → 0.5%.
+
+**Rounds.**
+1. The first fill is staggered through its lives, because a screen of embers fading in and out together pulsed. Easel House got a few small splats back. Ironvein's press is one seam, a third of the way, where it was both seams for the full length.
+2. The battles are seeded, so before and after fight on the same road. Rosethread's ribbon dropped to an eighth's strength, because it pulled the eye where it crossed the focused road. The rain went back up to 0.3, enough to be felt. The sheets skip the road's way in and the wagon. The flame line is a little taller.
+3. Easel House and Ironvein were re-measured with the final code. Each world still reads as itself in a still frame: a flame horizon and a crest, anvils, splats, petals and a ribbon, the moon.
+
+**Benchmark.** Like Slay the Spire's map, the home's one moving thing is now the roads' traffic. The world sits at the edges, as in Hades' hub. Into the Breach keeps its weather at its margins, and so does Ironvein now: rain at the edges, the lane untouched.
+
+**Left.** Ironvein's rain is still the busiest battle margin, at 0.45 Hz against 0.1–0.2, though it is faint. Rosethread's fog changes the most pixels, though at low contrast. The still anvils and the moon are the highest-contrast world art left, and they do not move.
+
+**Cards** for the designer's phone: `docs/ui-audit-2026-10/motion-calm/`. There are ten animated WebPs (home and battle per company, BEFORE over AFTER, 3.5 s) and a `manifest.json`. Rebuild them with `node scripts/motion-cards.mjs <before audit> <after audit> <out>`.

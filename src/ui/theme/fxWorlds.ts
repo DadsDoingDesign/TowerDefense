@@ -12,30 +12,35 @@
  * The designer's bar: every world reads as its theme in ONE still frame, at a
  * glance, on a phone, even in greyscale. So each has a shape of its own:
  *
- *   - FIRE (Peppercorn): fat embers (2–3 px, white-hot at the core, a red
- *     halo) rising with a sway, crowded at the foot of the screen and beside
- *     the focused road (never on its line); flame tongues licking up from the floor (the dock's
- *     top on the home) out of a dithered heat glow; press: flames flaring up
- *     the CTA's face, embers thrown off its ends; switch-in: a wall of flame.
- *   - FORGE (Ironvein): three spark fountains at the floor, sparks with
- *     white-yellow cores and orange tails thrown in gravity arcs, ash drifting
- *     down; press: a molten flash along the CTA's seams and a spark shower in
- *     arcs off it; switch-in: a hammer-strike flash and a ring of sparks.
- *   - PAINT (Easel House): bold splats that land, drip and dry, flecks of
- *     paint drifting, watercolour washes; press: a bold splat at the CTA's
- *     end with drips and droplets; switch-in: a brush wipe.
- *   - SILK (Rosethread): rose petals tumbling down, ribbons flowing across
- *     with a stitch along them and a sheen running; press: a running stitch
- *     along the CTA and petals off its ends; switch-in: a ribbon sweep.
- *   - ARCANE NIGHT (Moonquill): a crescent moon and its dithered beam,
- *     twinkling stars, runes drifting up, quill strokes writing themselves;
- *     press: a ring of sparkles along the CTA and runes at its ends;
- *     switch-in: a moonlit shimmer sweeping down.
+ *   - FIRE (Peppercorn): small embers rising slowly from the foot of the
+ *     screen and beside the focused road (never on its line), a low burning
+ *     horizon along the floor (the dock's top on the home) over a faint heat
+ *     glow; press: a few flames up the CTA's face.
+ *   - FORGE (Ironvein): three anvils on the floor, a few sparks thrown off
+ *     them in slow arcs, ash drifting down; press: a molten flash along the
+ *     CTA's seams and a handful of sparks.
+ *   - PAINT (Easel House): flecks of paint drifting, now and then a small
+ *     splat that lands and dries, faint watercolour washes; press: a splat
+ *     on the CTA's end.
+ *   - SILK (Rosethread): rose petals tumbling down, two faint ribbons across
+ *     the map with a slow sheen; press: a running stitch along the CTA.
+ *   - ARCANE NIGHT (Moonquill): a crescent moon and its faint beam, stars
+ *     twinkling slowly, runes drifting up; press: sparkles along the CTA.
  *   - The house look (your militia's neutral): a few lantern motes.
  *
- * A press burst is ZONED to its CTA: it plays on the button's face and in its
- * margins (`zone`, the engine clips to it, and clears under the label), and
- * never flies over the panel's text above it.
+ * The calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
+ * playing more"): the worlds are FELT, not watched. The map, the roads and
+ * the words are the show; the worlds are atmosphere at the edge of attention
+ * (Slay the Spire's map, Hades' menus, Into the Breach). So: a third to a half
+ * of the old particles (`ambientCap`: 24 on a phone, 40 on a desk), slow
+ * drift, every ambient particle drawn at its world's `peak` at most (no pixel
+ * brighter than the words near it), glows that breathe over eight seconds, a
+ * switch-in that is a {@link SWITCH_S} crossfade with a faint, still wash of
+ * the world, and a press that stays on its CTA's face.
+ *
+ * A press burst is ZONED to its CTA: it plays on the button's face only
+ * (`zone`, the engine clips to it, and clears under the label), and never
+ * flies over the panel's text round it.
  *
  * Pure: no DOM (a canvas context is passed in). Random draws come from the
  * `rand` the engine passes, so a test can drive a world deterministically.
@@ -112,6 +117,11 @@ export interface Sweep {
 export interface World {
   /** How many ambient particles a screen of `w` × `h` effect pixels holds (before the engine's cap). */
   density: number
+  /**
+   * The ambient particles' strength, 0–1: the engine draws them at this (× the
+   * high-contrast dim). Bursts are drawn at full strength: they are feedback.
+   */
+  peak: number
   /** A new ambient particle (`seed`: true while the screen is first filled — spawn anywhere). */
   spawn(rand: Rand, w: number, h: number, seed: boolean, scene?: Scene): Particle
   /** Behind the particles each frame: glows, washes, beams, ribbons, stars. */
@@ -125,17 +135,22 @@ export interface World {
 }
 
 const TAU = Math.PI * 2
+/** A glow's breath, in seconds: slow enough to be felt, never watched. */
+export const BREATH_S = 8
 /** Alpha in eighths: pixel art fades in steps, not smoothly. */
 export const stepAlpha = (a: number): number => Math.max(0, Math.min(1, Math.round(a * 8) / 8))
 const pick = <T,>(rand: Rand, xs: readonly T[]): T => xs[Math.floor(rand() * xs.length) % xs.length]
 const p = (o: Partial<Particle> & Pick<Particle, 'kind' | 'x' | 'y'>): Particle => ({ vx: 0, vy: 0, age: 0, life: 1, size: 1, color: '#fff', phase: 0, ...o })
 
+/** How long a switch-in plays (s): the old world crossfades into the new over it. */
+export const SWITCH_S = 0.35
+
 /**
- * Where a burst may draw: its CTA and the margins round it — a little to each
- * side and below, barely above (the panel's words sit there).
+ * Where a burst may draw: its CTA's own face (the calm pass, Oct 2026: it
+ * used to fly out into the margins round it).
  */
 export function burstClip(z: Zone): Zone {
-  return { l: z.l - 10, t: z.t - 2, r: z.r + 10, b: z.b + 10 }
+  return { l: z.l, t: z.t, r: z.r, b: z.b }
 }
 /** A CTA-sized zone round a point, when a burst has none (a test, a key press). */
 const zoneAt = (x: number, y: number): Zone => ({ l: x - 40, t: y - 9, r: x + 40, b: y + 9 })
@@ -146,8 +161,8 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
   if (q.age >= q.life) return false
   switch (q.kind) {
     case 'ember':
-      // Rising with a sway, the way a coal's spark rides the heat.
-      q.vx = Math.sin(q.age * 2.1 + q.phase) * 6
+      // Rising with a slow sway, the way a coal's spark rides the heat.
+      q.vx = Math.sin(q.age * 1.1 + q.phase) * 3
       break
     case 'spark':
     case 'drop':
@@ -161,7 +176,7 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
       q.vx *= 1 - 1.5 * dt
       break
     case 'petal':
-      q.vx = Math.sin(q.age * 1.6 + q.phase) * 8
+      q.vx = Math.sin(q.age * 0.9 + q.phase) * 4
       break
     case 'ash':
     case 'mote':
@@ -181,15 +196,19 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
  * where a checker tied to its centre flipped every pixel of the disc at once —
  * a whole-blob flash, several a second, on Easel House's map.
  */
-function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alpha: number, offset = 0): void {
+function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alpha: number, offset = 0, sparse = false): void {
   pen.fillStyle = color
   pen.globalAlpha = stepAlpha(alpha)
   const r2 = r * r
   const x0 = Math.round(cx)
   const y0 = Math.round(cy)
+  // `sparse`: one pixel in four (alpha steps in eighths, so a fainter wash
+  // than an eighth is a thinner checker).
+  const mask = sparse ? 3 : 1
   for (let y = -r; y <= r; y++) {
     for (let x = -r; x <= r; x++) {
-      if ((x0 + x + y0 + y + offset) & 1) continue
+      if ((x0 + x + y0 + y + offset) & mask) continue
+      if (sparse && (y0 + y) & 1) continue
       if (x * x + y * y > r2) continue
       pen.fillRect(x0 + x, y0 + y, 1, 1)
     }
@@ -203,12 +222,13 @@ function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alph
  * the motion audit (Oct 2026) found the old crawling dither (the pattern
  * stepped sideways six times a second) changed every pixel of the band all the
  * time, the most motion on the home, along the dock you pick from. The flames
- * and the embers are the fire's motion; the heat only glows.
+ * and the embers are the fire's motion; the heat only glows. (The calm pass:
+ * one breath every {@link BREATH_S} seconds, a tenth of its strength.)
  */
 function glowBand(pen: Pen, w: number, h: number, base: number, rows: number, color: string, peak: number, t: number): void {
   pen.fillStyle = color
   const b = Math.min(h - 1, Math.round(base))
-  const breath = 0.85 + 0.15 * Math.sin(t * 0.9)
+  const breath = 0.9 + 0.1 * Math.sin((t * TAU) / BREATH_S)
   for (let y = Math.min(h - 1, b + 4); y > b - rows; y--) {
     const i = Math.max(0, b - y)
     const keep = (1 - i / rows) * (y > b ? 1 - (y - b) / 5 : 1) // how much of the row is lit
@@ -292,21 +312,22 @@ function besideRoad(rand: Rand, scene?: Scene): [number, number] | null {
 // ---------------------------------------------------------------------------
 // FIRE — Peppercorn
 // ---------------------------------------------------------------------------
-const FIRE_C = ['#fff3c0', '#ffd35e', '#ff8a2c', '#e0521f', '#b8321e']
+/** The fire's colours, cooling: no white-hot pixel in the ambient (the calm pass). */
+const FIRE_C = ['#ffd35e', '#ff8a2c', '#e0521f', '#b8321e']
 const fireColor = (k: number) => FIRE_C[Math.min(FIRE_C.length - 1, Math.floor(k * FIRE_C.length))]
 
-/** A flame tongue: `n` px at its tallest, growing and dying over its life, white at the root. */
+/** A flame tongue: `n` px at its tallest, growing and dying over its life, yellow at the root. */
 function drawFlame(pen: Pen, q: Particle, dim: number): void {
   const k = q.age / q.life
-  const flick = 0.75 + 0.25 * Math.sin(q.age * 19 + q.phase)
-  const h = Math.max(1, Math.round((q.n ?? 6) * Math.sin(Math.PI * Math.min(1, k * 1.15)) * flick))
+  const flick = 0.8 + 0.2 * Math.sin(q.age * 6 + q.phase)
+  const h = Math.max(1, Math.round((q.n ?? 4) * Math.sin(Math.PI * Math.min(1, k * 1.15)) * flick))
   const x = Math.round(q.x)
   const y = Math.round(q.y)
   const wpx = q.size
   for (let i = 0; i < h; i++) {
     const f = i / h
     // The tongue narrows to a point, leaning with its sway.
-    const lean = Math.round(Math.sin(q.age * 6 + q.phase + i * 0.5) * f * 1.4)
+    const lean = Math.round(Math.sin(q.age * 2.5 + q.phase + i * 0.5) * f)
     const ww = f > 0.7 ? 1 : wpx
     const x0 = x + lean + Math.floor((wpx - ww) / 2)
     if (q.zone) {
@@ -315,7 +336,7 @@ function drawFlame(pen: Pen, q: Particle, dim: number): void {
       pen.globalAlpha = stepAlpha(dim * 0.9)
       pen.fillRect(x0 - 1, y - i, ww + 2, 1)
     }
-    pen.fillStyle = f < 0.2 ? '#fff3c0' : f < 0.45 ? '#ffd35e' : f < 0.8 ? '#ff8a2c' : '#b8321e'
+    pen.fillStyle = f < 0.4 ? '#ffd35e' : f < 0.8 ? '#ff8a2c' : '#b8321e'
     pen.globalAlpha = stepAlpha(dim * (f < 0.8 ? 1 : 0.75))
     pen.fillRect(x0, y - i, ww, 1)
   }
@@ -326,26 +347,25 @@ function drawFlame(pen: Pen, q: Particle, dim: number): void {
 }
 
 /**
- * A burning horizon: flame tongues all along a row (`base`), each four pixels
- * wide, their heights a sum of waves that flicker — white at the roots, red at
+ * A burning horizon: low flame tongues all along a row (`base`), each four
+ * pixels wide, their heights a sum of slow waves — yellow at the roots, red at
  * the tips. Drawn behind the particles; it is what makes the world FIRE at a
- * glance, even in greyscale.
+ * glance, even in greyscale. (The calm pass: half as tall and half as strong,
+ * its fastest wave a sixth of the old flicker, no white roots.)
  */
 function flameLine(pen: Pen, w: number, base: number, t: number, maxH: number, alpha: number): void {
   const SHAPE = [0.55, 0.95, 1, 0.6]
   const heights: number[] = []
   for (let x0 = 0; x0 < w; x0 += 4) {
     const i = x0 / 4
-    const n = 0.42 + 0.28 * Math.sin(i * 1.7 + t * 4.3) + 0.18 * Math.sin(i * 0.53 - t * 2.1) + 0.12 * Math.sin(i * 3.1 + t * 11)
+    const n = 0.42 + 0.28 * Math.sin(i * 1.7 + t * 1.1) + 0.18 * Math.sin(i * 0.53 - t * 0.6) + 0.12 * Math.sin(i * 3.1 + t * 1.9)
     const tall = Math.max(1, n * maxH)
     for (let c = 0; c < 4; c++) heights.push(Math.round(tall * SHAPE[c]))
   }
-  // One colour at a time, a vertical run per column: white roots, yellow,
-  // orange, red tips.
+  // One colour at a time, a vertical run per column: yellow roots, orange, red tips.
   const BANDS: [number, number, string, number][] = [
-    [0, 0.22, '#fff3c0', 1],
-    [0.22, 0.48, '#ffd35e', 1],
-    [0.48, 0.8, '#ff8a2c', 1],
+    [0, 0.45, '#ffd35e', 0.75],
+    [0.45, 0.8, '#ff8a2c', 1],
     [0.8, 1, '#b8321e', 0.75],
   ]
   const b = Math.round(base)
@@ -362,90 +382,64 @@ function flameLine(pen: Pen, w: number, base: number, t: number, maxH: number, a
 }
 
 const fire: World = {
-  // Forty on a phone (the cap is sixty): an ember with its halo is the biggest
-  // particle of any world, and sixty of them rising over the whole map made the
-  // home's fire four times the next world's motion (the motion audit, Oct 2026).
-  density: 0.0011,
+  // The loudest world before the calm pass (Oct 2026): a quarter of its old
+  // embers (11 on a phone, 34 on a desk), one pixel and slow, never white-hot.
+  density: 0.0003,
+  peak: 0.5,
   spawn(rand, w, h, seed, scene) {
     const floor = floorOf(h, scene)
     const r = rand()
-    if (r < 0.16) {
-      // A flame licking up from the floor.
-      return p({ kind: 'flame', x: rand() * w, y: floor + 1, life: 0.7 + rand() * 0.7, size: rand() < 0.5 ? 3 : 2, n: 5 + Math.floor(rand() * 7), phase: rand() * TAU })
+    if (r < 0.06) {
+      // A low flame licking up from the floor.
+      return p({ kind: 'flame', x: rand() * w, y: floor + 1, life: 1.2 + rand() * 1.2, size: 2, n: 3 + Math.floor(rand() * 4), phase: rand() * TAU })
     }
-    if (r < 0.28) {
+    if (r < 0.1) {
       const a = -Math.PI / 2 + (rand() - 0.5) * 0.9
-      const v = 40 + rand() * 30
-      return p({ kind: 'spark', x: rand() * w, y: floor - rand() * 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + rand() * 0.6, n: 1 })
+      const v = 22 + rand() * 14
+      return p({ kind: 'spark', x: rand() * w, y: floor - rand() * 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9 + rand() * 0.6, n: 1 })
     }
     // An ember: beside the focused road a quarter of the time (never on its
     // line), else biased to the foot.
     const foot = (): [number, number] => [rand() * w, seed ? floor - floor * Math.pow(rand(), 1.8) : floor - rand() * floor * 0.3]
-    let [x, y] = r < 0.46 ? (besideRoad(rand, scene) ?? (scene?.hot.length ? foot() : aboveFloor(rand, w, floor))) : foot()
+    const beside = r < 0.33
+    let [x, y] = beside ? (besideRoad(rand, scene) ?? (scene?.hot.length ? foot() : aboveFloor(rand, w, floor))) : foot()
     // One thrown at the foot that lands on the road's line is thrown again,
     // then set beside the road.
     const hot = scene?.hot ?? []
     for (let k = 0; k < 6 && roadDistance(hot, x, y) < ROAD_CLEAR; k++) [x, y] = k < 3 ? foot() : (besideRoad(rand, scene) ?? [x, y])
     // They rise a little way and die: the fire stays a horizon at the foot,
-    // not a blizzard over the whole map. Beside the road they are the small
-    // ones, so the road's own stops stay the biggest squares on it.
-    return p({
-      kind: 'ember',
-      x,
-      y,
-      vy: -7 - rand() * 11,
-      life: 1.8 + rand() * 2.2,
-      size: r < 0.46 || rand() >= 0.35 ? 2 : 3,
-      phase: rand() * TAU,
-      n: 1,
-    })
+    // not a blizzard over the map. Beside the road they are all one pixel,
+    // so the road's own stops stay the biggest squares on it.
+    return p({ kind: 'ember', x, y, vy: -4 - rand() * 5, life: 2.5 + rand() * 2.5, size: !beside && rand() < 0.25 ? 2 : 1, phase: rand() * TAU, n: 1 })
   },
   backdrop(pen, w, h, t, scene) {
     const floor = floorOf(h, scene)
-    // The heat: a deep red band, an orange one nearer the coals, and the
-    // flames themselves licking up all along the floor.
+    // The heat: a faint red band, an orange one nearer the coals, and the
+    // flames themselves low along the floor.
     if (!scene?.light) {
-      glowBand(pen, w, h, floor, Math.max(16, Math.round(h * 0.2)), '#b8321e', 0.3, t)
-      glowBand(pen, w, h, floor, Math.max(8, Math.round(h * 0.08)), '#ff8a2c', 0.4, t * 1.3)
+      glowBand(pen, w, h, floor, Math.max(12, Math.round(h * 0.12)), '#b8321e', 0.12, t)
+      glowBand(pen, w, h, floor, Math.max(5, Math.round(h * 0.04)), '#ff8a2c', 0.14, t + BREATH_S * 0.3)
       // The screen's own foot smoulders too (round the dock on a desk).
-      if (floor < h - 8) glowBand(pen, w, h, h - 1, 10, '#b8321e', 0.3, t)
+      if (floor < h - 8) glowBand(pen, w, h, h - 1, 8, '#b8321e', 0.12, t)
     }
-    flameLine(pen, w, floor + 1, t, Math.max(6, Math.min(12, h * 0.045)), 0.85)
-    if (scene?.light) return
-    // Heat shimmer: broken lines that waver through the glow.
-    pen.fillStyle = '#ffd35e'
-    for (let i = 0; i < 3; i++) {
-      const y = Math.round(floor - 3 - i * 6 + Math.sin(t * 1.4 + i * 1.7) * 1.5)
-      pen.globalAlpha = stepAlpha(0.3 - i * 0.05)
-      const shift = Math.floor(t * 3 + i * 13) % 11
-      for (let x = shift - 11; x < w; x += 11) pen.fillRect(x, y, 5, 1)
-    }
+    flameLine(pen, w, floor + 1, t, Math.max(4, Math.min(7, h * 0.026)), 0.45)
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
     const out: Particle[] = []
-    // Flames flare up the CTA's face from its foot, tallest where it was pressed.
-    for (let fx = zone.l + 1; fx < zone.r - 1; fx += 3) {
+    // A few flames up the CTA's face from its foot, tallest where it was pressed.
+    for (let fx = zone.l + 3; fx < zone.r - 3; fx += 7) {
       const near = 1 - Math.min(1, Math.abs(fx - x) / ((zone.r - zone.l) * 0.5))
-      out.push(p({ kind: 'flame', x: fx, y: zone.b - 1, life: 0.5 + rand() * 0.35, size: 3, n: Math.round(5 + near * (zone.b - zone.t) * 0.9 + rand() * 3), phase: rand() * TAU, zone }))
+      out.push(p({ kind: 'flame', x: fx, y: zone.b - 1, life: 0.45 + rand() * 0.25, size: 2, n: Math.round(3 + near * (zone.b - zone.t) * 0.5 + rand() * 2), phase: rand() * TAU, zone }))
     }
-    // Embers thrown off its two ends, out to the sides.
-    for (let i = 0; i < 18; i++) {
-      const right = i % 2 === 1
-      const v = 25 + rand() * 45
-      out.push(p({ kind: 'ember', x: right ? zone.r - 2 : zone.l + 2, y: zone.t + rand() * (zone.b - zone.t), vx: (right ? 1 : -1) * v, vy: -10 - rand() * 20, life: 0.6 + rand() * 0.6, size: rand() < 0.5 ? 3 : 2, phase: rand() * TAU, n: 1, zone }))
-    }
+    // A few embers rising off the press, on the face.
+    for (let i = 0; i < 4; i++) out.push(p({ kind: 'ember', x: x + (rand() - 0.5) * 10, y: zone.b - 2 - rand() * 3, vy: -8 - rand() * 8, life: 0.5 + rand() * 0.3, size: 1, phase: rand() * TAU, n: 1, zone }))
     return out
   },
-  switchIn(rand, w, h) {
-    // A wall of flame: tongues all along the foot, flaring up the screen.
-    return Array.from({ length: Math.round(w * 0.9) }, () =>
-      p({ kind: 'ember', x: rand() * w, y: h + rand() * 6, vx: (rand() - 0.5) * 6, vy: -(h * 0.75) * (0.6 + rand() * 0.6), life: 0.8 + rand() * 0.5, size: rand() < 0.5 ? 2 : 3, phase: rand() * TAU, n: 1 }),
-    )
-  },
-  sweepLife: 0.85,
+  switchIn: () => [],
+  sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    const k = 1 - s.age / s.life
-    glowBand(pen, w, h, h - 1, Math.round(h * 0.6 * k + 6), '#ffb347', 0.36, s.age)
+    // A faint warmth off the floor as the world comes in, fading where it lies.
+    glowBand(pen, w, h, h - 1, Math.round(h * 0.25), '#ffb347', 0.16 * (1 - s.age / s.life), 0)
   },
 }
 
@@ -466,15 +460,18 @@ function drawSplat(pen: Pen, q: Particle, scale: number): void {
 }
 
 const paint: World = {
-  density: 0.0034,
+  // Flecks drifting, and now and then a small splat (they were bold blobs
+  // up to 28 px a side, a fifth of the particles: the calm pass, Oct 2026).
+  density: 0.00066,
+  peak: 0.6,
   spawn(rand, w, h, _seed, scene) {
     // Behind a page's panels a splat would show as stray blobs between
     // them: there the world is its flecks and washes; the splats and drips
     // are for the open map.
     const r = scene && !scene.map ? 1 : rand()
-    if (r < 0.2) {
-      // A bold splat lands, runs, lingers and dries away — never on the
-      // focused road (a second throw if the first lands on it).
+    if (r < 0.15) {
+      // A small splat lands, lingers and dries away — never on the focused
+      // road (a second throw if the first lands on it).
       let x = rand() * w
       let y = rand() * h * 0.85
       const onRoad = () => scene?.hot.some(([hx, hy]) => Math.abs(hx - x) < 14 && Math.abs(hy - y) < 12) ?? false
@@ -482,73 +479,58 @@ const paint: World = {
         x = rand() * w
         y = rand() * h * 0.85
       }
-      // Bigger on a wide screen; a phone's are a size smaller.
-      const big = w > 200 ? 1 : 0
-      return p({ kind: 'splat', x, y, life: 3.5 + rand() * 3, color: pick(rand, PAINTS.slice(0, 5)), n: Math.floor(rand() * 3), size: 2 + big + (rand() < 0.35 ? 1 : 0) })
+      // A size bigger on a wide screen.
+      return p({ kind: 'splat', x, y, life: 4 + rand() * 3, color: pick(rand, PAINTS.slice(0, 5)), n: Math.floor(rand() * 3), size: 1 + (w > 200 ? 1 : 0) })
     }
-    if (r < 0.28) {
-      // A drip running down.
-      return p({ kind: 'drip', x: rand() * w, y: rand() * h * 0.8, life: 2.5 + rand() * 1.5, size: 2, color: pick(rand, PAINTS.slice(0, 5)), n: 6 + Math.floor(rand() * 10) })
+    if (r < 0.19) {
+      // A thin drip running down.
+      return p({ kind: 'drip', x: rand() * w, y: rand() * h * 0.8, life: 3 + rand() * 1.5, size: 1, color: pick(rand, PAINTS.slice(0, 5)), n: 4 + Math.floor(rand() * 6) })
     }
-    return p({ kind: 'fleck', x: rand() * w, y: rand() * h, vx: (rand() - 0.5) * 5, vy: 3 + rand() * 6, life: 9 + rand() * 6, size: rand() < 0.6 ? 2 : 3, color: pick(rand, PAINTS), phase: rand() * TAU })
+    return p({ kind: 'fleck', x: rand() * w, y: rand() * h, vx: (rand() - 0.5) * 3, vy: 2 + rand() * 3, life: 10 + rand() * 6, size: rand() < 0.5 ? 1 : 2, color: pick(rand, PAINTS), phase: rand() * TAU })
   },
   backdrop(pen, w, h, t, scene) {
     if (scene?.light) return
-    // Three watercolour washes drifting slowly, dithered.
+    // Three faint watercolour washes drifting very slowly, a sparse dither.
     const washes: [number, number, string][] = [
       [0.22, 0.3, '#c6a4ff'],
       [0.78, 0.55, '#e2aa5a'],
       [0.35, 0.82, '#5fb0a8'],
     ]
-    washes.forEach(([fx, fy, c], i) => dither(pen, fx * w + Math.sin(t * 0.15 + i) * 6, fy * h + Math.cos(t * 0.12 + i) * 5, Math.round(Math.min(w, h) * 0.18), c, 0.18, i))
+    washes.forEach(([fx, fy, c], i) => dither(pen, fx * w + Math.sin(t * 0.06 + i) * 4, fy * h + Math.cos(t * 0.05 + i) * 3, Math.round(Math.min(w, h) * 0.18), c, 0.125, i, true))
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    // A bold splat at the end of the CTA nearest the press (the label stays
-    // clear), a smaller one of another paint at the other end, drips and
-    // droplets flung out sideways and down.
+    // A splat at the end of the CTA nearest the press (the label stays
+    // clear), inked so it reads on the face, a drip and a few droplets.
     const mid = (zone.t + zone.b) / 2
     const left = x < (zone.l + zone.r) / 2
-    const a = left ? zone.l + 9 : zone.r - 9
-    const b = left ? zone.r - 6 : zone.l + 6
+    const a = left ? zone.l + 8 : zone.r - 8
     const c1 = pick(rand, ['#e2aa5a', '#5fb0a8', '#e58fb0'])
-    const c2 = c1 === '#e2aa5a' ? '#5fb0a8' : '#e2aa5a'
     const out = [
-      p({ kind: 'splat', x: a, y: mid, life: 1.4, color: '#2a1d3c', n: Math.floor(rand() * 3), size: 3, zone, phase: 1 }),
-      p({ kind: 'splat', x: a, y: mid, life: 1.4, color: c1, n: 0, size: 3, zone }),
-      p({ kind: 'splat', x: b, y: mid, life: 1.2, color: c2, n: 2, size: 2, zone }),
+      p({ kind: 'splat', x: a, y: mid, life: 1.1, color: '#2a1d3c', n: Math.floor(rand() * 3), size: 2, zone, phase: 1 }),
+      p({ kind: 'splat', x: a, y: mid, life: 1.1, color: c1, n: 0, size: 2, zone }),
     ]
     out[1].n = out[0].n
-    for (let i = 0; i < 3; i++) out.push(p({ kind: 'drip', x: a - 4 + i * 4, y: mid + 4, life: 1.3, size: 2, color: c1, n: 6 + Math.floor(rand() * 8), zone }))
-    for (let i = 0; i < 20; i++) {
-      const ang = (left ? Math.PI : 0) + (rand() - 0.5) * 2.2
-      const v = 30 + rand() * 45
-      out.push(p({ kind: 'drop', x: a, y: mid, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v * 0.5 + 10, life: 0.8 + rand() * 0.5, size: rand() < 0.6 ? 2 : 3, color: rand() < 0.7 ? c1 : c2, zone }))
+    out.push(p({ kind: 'drip', x: a, y: mid + 4, life: 1, size: 2, color: c1, n: 3 + Math.floor(rand() * 3), zone }))
+    for (let i = 0; i < 5; i++) {
+      const ang = (left ? Math.PI : 0) + (rand() - 0.5) * 1.6
+      const v = 15 + rand() * 20
+      out.push(p({ kind: 'drop', x: a, y: mid, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v * 0.5 + 6, life: 0.5 + rand() * 0.3, size: 1, color: c1, zone }))
     }
     return out
   },
-  switchIn(rand, w, h) {
-    return Array.from({ length: 24 }, () => p({ kind: 'drop', x: rand() * w * 0.3, y: h * (0.3 + rand() * 0.4), vx: 60 + rand() * 80, vy: -10 + rand() * 20, life: 0.5 + rand() * 0.4, size: 2, color: pick(rand, PAINTS) }))
-  },
-  sweepLife: 0.85,
+  switchIn: () => [],
+  sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // A brush wipe: a broad, ragged stroke whose head crosses the screen.
-    const head = (s.age / s.life) * (w + 40)
-    const y0 = h * 0.28
-    const y1 = h * 0.72
-    for (let x = 0; x < Math.min(w, head); x++) {
-      const behind = head - x
-      const a = stepAlpha(0.42 - behind / (w * 1.4))
-      if (a <= 0) continue
-      pen.globalAlpha = a
-      pen.fillStyle = PAINTS[Math.floor(x / 9) % 2]
+    // A faint stroke of lilac across the middle as the world comes in, drying where it lies.
+    pen.globalAlpha = stepAlpha(0.2 * (1 - s.age / s.life))
+    if (!pen.globalAlpha) return
+    pen.fillStyle = PAINTS[0]
+    const y0 = h * 0.3
+    const y1 = h * 0.7
+    for (let x = 0; x < w; x++) {
       const top = Math.round(y0 + Math.sin(x * 0.31) * 3 + Math.sin(x * 0.07) * 6)
       const bot = Math.round(y1 + Math.sin(x * 0.23 + 1) * 3 - Math.sin(x * 0.05) * 6)
-      pen.fillRect(x, top, 1, bot - top)
-      // Bristle streaks.
-      if (x % 3 === 0) {
-        pen.fillStyle = '#f6efff'
-        pen.fillRect(x, top + 3 + ((x * 7) % (bot - top - 6)), 1, 1)
-      }
+      for (let y = top + (x & 1); y < bot; y += 2) pen.fillRect(x, y, 1, 1)
     }
   },
 }
@@ -566,96 +548,74 @@ function drawAnvil(pen: Pen, cx: number, floor: number, t: number, i: number): v
   const S = 2
   const x0 = Math.round(cx) - 11
   const y0 = Math.round(floor) - ANVIL.length * S
-  const hot = 0.75 + 0.25 * Math.sin(t * 5 + i * 2)
+  // The bar glows and dims over a slow breath (it flashed white-hot five times a second).
+  const hot = 0.6 + 0.1 * Math.sin((t * TAU) / BREATH_S + i * 2)
   for (let y = 0; y < ANVIL.length; y++)
     for (let x = 0; x < 11; x++) {
       const ch = ANVIL[y][x]
       if (ch === '.') continue
-      pen.fillStyle = ch === 'k' ? '#2a3341' : ch === 'l' ? '#9aa8ba' : hot > 0.9 ? '#fff6d8' : '#ffb347'
+      pen.fillStyle = ch === 'k' ? '#2a3341' : ch === 'l' ? '#9aa8ba' : '#ffb347'
       pen.globalAlpha = stepAlpha(ch === 'M' ? hot : 1)
       pen.fillRect(x0 + x * S, y0 + y * S, S, S)
     }
 }
 const forge: World = {
-  density: 0.007,
+  // The forge's sparks were the most motion on a home after the fire's (the
+  // calm pass, Oct 2026): a third of them, thrown lower and slower, one pixel.
+  density: 0.0005,
+  peak: 0.5,
   spawn(rand, w, h, seed, scene) {
     const floor = floorOf(h, scene)
-    // Ash is a few in the air at once (it lives long; the sparks are many and quick).
-    if (rand() < 0.07) {
-      return p({ kind: 'ash', x: rand() * w, y: seed ? rand() * h : rand() * h * 0.6, vx: (rand() - 0.5) * 4, vy: 5 + rand() * 5, life: 5 + rand() * 3, size: rand() < 0.4 ? 2 : 1, color: pick(rand, ASH), phase: rand() * TAU })
+    // Ash drifting down: the calm part of the forge, a third of what is in the air.
+    if (rand() < 0.3) {
+      return p({ kind: 'ash', x: rand() * w, y: seed ? rand() * h : rand() * h * 0.6, vx: (rand() - 0.5) * 2.5, vy: 3 + rand() * 3, life: 7 + rand() * 4, size: 1, color: pick(rand, ASH), phase: rand() * TAU })
     }
-    // A spark thrown from one of the fountains, in an arc that falls.
-    const fx = pick(rand, FOUNTAINS) * w + (rand() - 0.5) * 8
-    const a = -Math.PI / 2 + (rand() - 0.5) * 1.5
-    const v = 50 + rand() * 50
+    // A spark thrown from one of the anvils, in a low arc that falls back.
+    const fx = pick(rand, FOUNTAINS) * w + (rand() - 0.5) * 6
+    const a = -Math.PI / 2 + (rand() - 0.5) * 1.1
+    const v = 24 + rand() * 20
     // It lives until it falls back to the floor.
     const vy = Math.sin(a) * v
-    const s = p({ kind: 'heavy', x: fx, y: floor - 13, vx: Math.cos(a) * v, vy, life: Math.max(0.5, (-2 * vy) / 150 + 0.15), size: rand() < 0.6 ? 2 : 1, n: 0 })
+    const s = p({ kind: 'spark', x: fx, y: floor - 13, vx: Math.cos(a) * v, vy, life: Math.max(0.5, (-2 * vy) / 70 + 0.1), size: 1, n: 0 })
     if (seed) s.age = rand() * s.life * 0.8
     return s
   },
   backdrop(pen, w, h, t, scene) {
     const floor = floorOf(h, scene)
     if (!scene?.light) {
-      glowBand(pen, w, h, floor, Math.max(10, Math.round(h * 0.1)), '#ff8a2c', 0.28, t * 0.5)
-      if (floor < h - 8) glowBand(pen, w, h, h - 1, 8, '#c8541c', 0.24, t * 0.5)
+      glowBand(pen, w, h, floor, Math.max(8, Math.round(h * 0.07)), '#ff8a2c', 0.1, t)
+      if (floor < h - 8) glowBand(pen, w, h, h - 1, 6, '#c8541c', 0.1, t)
     }
-    // Each anvil glows under its hot bar, breathing, the sparks fly off it.
+    // Each anvil glows faintly under its hot bar; the sparks fly off it.
     FOUNTAINS.forEach((f, i) => {
-      if (!scene?.light) dither(pen, f * w, floor - 10, 13, '#ff9a3a', 0.3 + 0.12 * Math.sin(t * 3 + i * 2), i)
+      if (!scene?.light) dither(pen, f * w, floor - 10, 11, '#ff9a3a', 0.125, i, true)
       drawAnvil(pen, f * w, floor, t, i)
     })
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    // A molten flash runs out along the CTA's two seams from the press…
+    // A molten flash runs a little way out along the CTA's foot seam from the press…
     const out: Particle[] = [
-      p({ kind: 'seam', x: zone.l, y: zone.t, n: zone.r - zone.l, phase: x - zone.l, life: 0.55, zone }),
-      p({ kind: 'seam', x: zone.l, y: zone.b - 2, n: zone.r - zone.l, phase: x - zone.l, life: 0.55, zone }),
+      p({ kind: 'seam', x: zone.l, y: zone.b - 2, n: zone.r - zone.l, phase: x - zone.l, life: 0.5, zone }),
     ]
-    // …and sparks shower off the press in low arcs along the face (never
-    // higher than the button), falling off its foot and out of its ends:
-    // white-yellow cores, orange tails, an ink rim on the bright face.
+    // …and a handful of sparks hop off the press in low arcs along the face
+    // (never higher than half the button), an ink rim on the bright face.
     const hgt = Math.max(6, zone.b - zone.t)
-    const vyMax = Math.sqrt(2 * 150 * hgt * 0.8)
-    for (let i = 0; i < 54; i++) {
+    const vyMax = Math.sqrt(2 * 150 * hgt * 0.5)
+    for (let i = 0; i < 8; i++) {
       const right = rand() < 0.5
-      // Half from the press, half off the two ends (the label hides the middle).
-      const sx = i % 2 ? x + (rand() - 0.5) * 6 : right ? zone.r - 4 : zone.l + 4
-      const vx = (right ? 1 : -1) * (30 + rand() * 90)
+      const vx = (right ? 1 : -1) * (15 + rand() * 40)
       const vy = -vyMax * (0.35 + rand() * 0.65)
-      out.push(p({ kind: 'heavy', x: sx, y: zone.b - 3, vx, vy, life: 0.7 + rand() * 0.6, size: rand() < 0.55 ? 2 : rand() < 0.5 ? 3 : 1, n: 0, zone, ink: '#3a1406' }))
+      out.push(p({ kind: 'heavy', x: x + (rand() - 0.5) * 6, y: zone.b - 3, vx, vy, life: 0.5 + rand() * 0.4, size: rand() < 0.4 ? 2 : 1, n: 0, zone, ink: '#3a1406' }))
     }
     return out
   },
-  switchIn(rand, w, h) {
-    const cx = w / 2
-    const cy = h * 0.7
-    return Array.from({ length: 50 }, () => {
-      const a = rand() * TAU
-      const v = 50 + rand() * 90
-      return p({ kind: 'heavy', x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: 0.8 + rand() * 0.6, size: rand() < 0.3 ? 2 : 1, n: 0 })
-    })
-  },
-  sweepLife: 0.6,
+  switchIn: () => [],
+  sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // The strike: a white-hot flash round the anvil, then a ring going out
-    // from it. (The flash was the whole screen, panels and all, on every
-    // focus: the motion audit, Oct 2026. Now a dithered burst of light round
-    // the strike, growing as it fades.)
-    const k = s.age / s.life
-    const cx0 = w / 2
-    const cy0 = h * 0.7
-    const glow = stepAlpha(0.45 * (1 - k) * (1 - k))
-    if (glow > 0) dither(pen, cx0, cy0, Math.round(10 + k * Math.min(w, h) * 0.3), '#ffe9c2', glow)
-    const r = Math.round(6 + k * Math.max(w, h) * 0.5)
-    pen.fillStyle = '#ffb347'
-    pen.globalAlpha = stepAlpha(0.5 * (1 - k))
-    const cx = w / 2
-    const cy = h * 0.7
-    for (let i = 0; i < 64; i++) {
-      const a = (i / 64) * TAU
-      pen.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), 1, 1)
-    }
+    // A faint warm glow round the strike as the world comes in, fading where
+    // it lies (it was a flash, a ring and fifty sparks).
+    const glow = stepAlpha(0.2 * (1 - s.age / s.life))
+    if (glow > 0) dither(pen, w / 2, h * 0.7, Math.round(Math.min(w, h) * 0.22), '#ffb347', glow)
   },
 }
 
@@ -665,7 +625,7 @@ const forge: World = {
 const PETAL_C = ['#e9a8bf', '#f0b8cc', '#f6d2de', '#d98aa6']
 /** A rose petal, tumbling: it turns edge-on and back as it falls. */
 function drawPetal(pen: Pen, q: Particle, alpha: number): void {
-  const flip = Math.abs(Math.sin(q.age * 2.4 + q.phase))
+  const flip = Math.abs(Math.sin(q.age * 1.3 + q.phase))
   const wpx = flip < 0.3 ? 1 : flip < 0.65 ? 2 : 3
   const x = Math.round(q.x)
   const y = Math.round(q.y)
@@ -689,31 +649,37 @@ const RIBBONS: [number, string, string][] = [
   [0.66, '#c4627f', '#8c3a57'],
 ]
 const silk: World = {
-  density: 0.0036,
+  // Petals falling at half the old speed, two in five of the old count.
+  density: 0.00066,
+  peak: 0.6,
   spawn(rand, w, h, seed) {
-    return p({ kind: 'petal', x: rand() * w, y: seed ? rand() * h : -4 - rand() * h * 0.2, vy: 8 + rand() * 8, life: 40, color: pick(rand, PETAL_C), phase: rand() * TAU })
+    return p({ kind: 'petal', x: rand() * w, y: seed ? rand() * h : -4 - rand() * h * 0.2, vy: 4 + rand() * 4, life: 30 + rand() * 8, color: pick(rand, PETAL_C), phase: rand() * TAU })
   },
   backdrop(pen, w, h, t, scene) {
     if (scene && !scene.map) return
-    // Two ribbons flowing across, a stitch running along each, a sheen sliding.
+    // Two faint ribbons across the map, a still stitch along each, a slow
+    // sheen sliding (the wave a third as fast as before, the sheen a fifth).
     RIBBONS.forEach(([fy, light, dark], r) => {
-      const base = h * fy + Math.sin(t * 0.2 + r * 2) * 8
+      const base = h * fy + Math.sin(t * 0.08 + r * 2) * 6
       for (let x = 0; x < w; x++) {
-        const y = Math.round(base + Math.sin(x * 0.05 + t * (0.4 + r * 0.15) + r) * 8)
-        pen.globalAlpha = stepAlpha(0.45)
+        const y = Math.round(base + Math.sin(x * 0.05 + t * (0.12 + r * 0.05) + r) * 8)
+        // A satin wash an eighth strong, its shaded edge and stitch a quarter
+        // (round two of the calm pass: at a quarter all through, the ribbon
+        // crossing the focused road pulled the eye off it).
+        pen.globalAlpha = stepAlpha(0.125)
         pen.fillStyle = light
         pen.fillRect(x, y, 1, 2)
+        pen.globalAlpha = stepAlpha(0.25)
         pen.fillStyle = dark
-        pen.fillRect(x, y + 2, 1, 2)
+        pen.fillRect(x, y + 2, 1, 1)
         // The stitch along its middle.
-        if ((x + Math.floor(t * 4)) % 4 < 2) {
-          pen.globalAlpha = stepAlpha(0.5)
+        if (x % 4 < 2) {
           pen.fillStyle = '#fff3f7'
-          pen.fillRect(x, y + 2, 1, 1)
+          pen.fillRect(x, y + 1, 1, 1)
         }
-        // The sheen: a bright run sliding along.
-        if ((x - Math.floor(t * 30) + r * 40) % 70 < 6) {
-          pen.globalAlpha = stepAlpha(0.75)
+        // The sheen: a short bright run sliding slowly along.
+        if (!scene?.light && (x - Math.floor(t * 6) + r * 40) % 90 < 4) {
+          pen.globalAlpha = stepAlpha(0.25)
           pen.fillStyle = '#ffffff'
           pen.fillRect(x, y, 1, 1)
         }
@@ -721,39 +687,27 @@ const silk: World = {
     })
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    // A running stitch sews itself along the CTA's foot, out from the press…
-    const out: Particle[] = [
-      p({ kind: 'stitch', x: zone.l + 4, y: zone.t + 4, n: zone.r - zone.l - 8, phase: x - zone.l - 4, life: 1, zone, ink: '#5a1830' }),
-      p({ kind: 'stitch', x: zone.l + 4, y: zone.b - 5, n: zone.r - zone.l - 8, phase: x - zone.l - 4, life: 1, zone, ink: '#5a1830' }),
-    ]
-    // …and petals burst from both its ends, out across the margins and down.
-    for (let i = 0; i < 30; i++) {
-      const right = i % 2 === 1
-      const v = 20 + rand() * 45
-      out.push(p({ kind: 'pburst', x: (right ? zone.r - 6 : zone.l + 6) + (rand() - 0.5) * 6, y: zone.t + (zone.b - zone.t) * (0.3 + rand() * 0.4), vx: (right ? 1 : -1) * v, vy: -14 - rand() * 14, life: 1 + rand() * 0.6, color: pick(rand, ['#ffffff', '#f6d2de', '#c4627f', '#e9a8bf']), phase: rand() * TAU, zone, ink: '#5a1830' }))
+    // A running stitch sews itself along the CTA's foot, out from the press,
+    // and a few petals lift off the press.
+    const out: Particle[] = [p({ kind: 'stitch', x: zone.l + 4, y: zone.b - 5, n: zone.r - zone.l - 8, phase: x - zone.l - 4, life: 0.9, zone, ink: '#5a1830' })]
+    for (let i = 0; i < 6; i++) {
+      out.push(p({ kind: 'pburst', x: x + (rand() - 0.5) * 16, y: zone.t + (zone.b - zone.t) * (0.3 + rand() * 0.4), vx: (rand() - 0.5) * 20, vy: -6 - rand() * 6, life: 0.7 + rand() * 0.4, color: pick(rand, ['#f6d2de', '#c4627f', '#e9a8bf']), phase: rand() * TAU, zone, ink: '#5a1830' }))
     }
     return out
   },
-  switchIn(rand, w, h) {
-    return Array.from({ length: 30 }, () => p({ kind: 'petal', x: -4 - rand() * w * 0.4, y: rand() * h, vx: 70 + rand() * 50, vy: 6, life: 1.4 + rand() * 0.6, color: pick(rand, PETAL_C), phase: rand() * TAU }))
-  },
-  sweepLife: 0.9,
+  switchIn: () => [],
+  sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // A ribbon sweeps across the screen, its head leading, its tail fading.
-    const head = (s.age / s.life) * (w + 60)
-    for (let x = 0; x < Math.min(w, head); x++) {
-      const a = stepAlpha(0.7 - (head - x) / (w * 1.2))
-      if (a <= 0) continue
-      pen.globalAlpha = a
+    // A faint ribbon across the middle as the world comes in, fading where it lies.
+    const a = stepAlpha(0.3 * (1 - s.age / s.life))
+    if (!a) return
+    pen.globalAlpha = a
+    for (let x = 0; x < w; x++) {
       const y = Math.round(h * 0.5 + Math.sin(x * 0.045) * h * 0.18 + Math.sin(x * 0.17) * 4)
       pen.fillStyle = '#e9a8bf'
-      pen.fillRect(x, y - 3, 1, 4)
+      pen.fillRect(x, y - 2, 1, 2)
       pen.fillStyle = '#c4627f'
-      pen.fillRect(x, y + 1, 1, 3)
-      if (x % 4 < 2) {
-        pen.fillStyle = '#fff3f7'
-        pen.fillRect(x, y, 1, 1)
-      }
+      pen.fillRect(x, y, 1, 2)
     }
   },
 }
@@ -769,21 +723,23 @@ function drawRune(pen: Pen, q: Particle): void {
   for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) if (g[y][x] === 's') pen.fillRect(x0 + x, y0 + y, 1, 1)
 }
 const arcane: World = {
-  density: 0.0045,
+  // Stars twinkling slowly, runes rising at half the old speed.
+  density: 0.00066,
+  peak: 0.6,
   spawn(rand, w, h) {
     const r = rand()
-    if (r < 0.2) return p({ kind: 'rune', x: rand() * w, y: rand() * h, vy: -2 - rand() * 2.5, vx: (rand() - 0.5) * 1.5, life: 12 + rand() * 6, color: rand() < 0.3 ? '#c9d4ff' : '#8fa4ff', n: Math.floor(rand() * RUNES_5.length) })
-    if (r < 0.27) return p({ kind: 'quill', x: rand() * w, y: rand() * h, life: 2.4, color: '#c9d4ff', phase: rand() * TAU, n: Math.floor(rand() * 4) })
-    return p({ kind: 'star', x: rand() * w, y: rand() * h, life: 6 + rand() * 10, size: rand() < 0.3 ? 2 : 1, color: pick(rand, STAR_C), phase: rand() * TAU })
+    if (r < 0.18) return p({ kind: 'rune', x: rand() * w, y: rand() * h, vy: -1 - rand() * 1.2, vx: (rand() - 0.5) * 0.8, life: 14 + rand() * 6, color: rand() < 0.3 ? '#c9d4ff' : '#8fa4ff', n: Math.floor(rand() * RUNES_5.length) })
+    if (r < 0.22) return p({ kind: 'quill', x: rand() * w, y: rand() * h, life: 3.2, color: '#c9d4ff', phase: rand() * TAU, n: Math.floor(rand() * 4) })
+    return p({ kind: 'star', x: rand() * w, y: rand() * h, life: 8 + rand() * 10, size: rand() < 0.2 ? 2 : 1, color: pick(rand, STAR_C), phase: rand() * TAU })
   },
-  backdrop(pen, w, h, t, scene) {
+  backdrop(pen, w, h, _t, scene) {
     if (scene && !scene.map) return
-    // The crescent moon, top right, and its beam slanting down, dithered.
+    // The crescent moon, top right, and its faint beam slanting down, both still.
     const mx = w - 22
     const my = Math.round(h * 0.2)
-    if (!scene?.light) dither(pen, mx, my, 13, '#c9d4ff', 0.2)
+    if (!scene?.light) dither(pen, mx, my, 13, '#c9d4ff', 0.125, 0, true)
     pen.fillStyle = '#eef1fb'
-    pen.globalAlpha = stepAlpha(0.85)
+    pen.globalAlpha = stepAlpha(0.625)
     for (let y = -7; y <= 7; y++)
       for (let x = -7; x <= 7; x++) {
         const inMoon = x * x + y * y <= 49
@@ -791,44 +747,40 @@ const arcane: World = {
         if (inMoon && !inBite) pen.fillRect(mx + x, my + y, 1, 1)
       }
     if (scene?.light) return
-    // The beam holds still (it flickered as a whole twice a second: the
-    // motion audit, Oct 2026), and a ripple of brighter light runs slowly
-    // down it — a few rows at a time, the moonlight moving on the water.
+    // The beam holds still (a ripple ran down it: the calm pass, Oct 2026).
     pen.fillStyle = '#c9d4ff'
-    const ripple = my + ((t * 14) % (h - my + 24)) - 12
     for (let y = my; y < h; y += 1) {
       const cx = mx - (y - my) * 0.55
       const half = 6 + (y - my) * 0.12
-      const lit = Math.abs(y - ripple) < 4 ? 0.12 : 0
-      pen.globalAlpha = stepAlpha(0.16 * (1 - (y - my) / h) + 0.02 + lit)
+      pen.globalAlpha = stepAlpha(0.1 * (1 - (y - my) / h) + 0.02)
       for (let x = Math.round(cx - half); x < cx + half; x++) if (((x + y) & 3) === 0) pen.fillRect(x, y, 1, 1)
     }
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
     const mid = (zone.t + zone.b) / 2
+    // A ring of sparkles from the end of the CTA nearest the press, a rune
+    // lighting there, a few stars on the face.
+    const ex = x < (zone.l + zone.r) / 2 ? zone.l + 7 : zone.r - 7
     return [
-      // A ring of sparkles going out from each end of the CTA.
-      ...Array.from({ length: 24 }, (_, i) => {
-        const a = ((i >> 1) / 12) * TAU
-        const ex = i % 2 ? zone.r - 7 : zone.l + 7
-        return p({ kind: 'spark-still', x: ex, y: mid, vx: Math.cos(a) * 40, vy: Math.sin(a) * 22, life: 0.7, size: i % 3 ? 2 : 3, color: i % 4 < 2 ? '#ffffff' : '#eef1fb', zone, ink: '#0e1030' })
+      ...Array.from({ length: 8 }, (_, i) => {
+        const a = (i / 8) * TAU
+        return p({ kind: 'spark-still', x: ex, y: mid, vx: Math.cos(a) * 18, vy: Math.sin(a) * 8, life: 0.55, size: 1 + (i % 2), color: i % 2 ? '#ffffff' : '#eef1fb', zone, ink: '#0e1030' })
       }),
-      // A rune lights at each end.
-      p({ kind: 'rune', x: zone.l + 4, y: mid - 2, vy: -3, life: 1, color: '#0e1030', n: Math.floor(rand() * RUNES_5.length), zone }),
-      p({ kind: 'rune', x: zone.r - 9, y: mid - 2, vy: -3, life: 1, color: '#0e1030', n: Math.floor(rand() * RUNES_5.length), zone }),
-      ...Array.from({ length: 14 }, () => p({ kind: 'star', x: zone.l + rand() * (zone.r - zone.l), y: zone.t + rand() * (zone.b - zone.t + 6), life: 0.8 + rand() * 0.5, size: 2, color: '#ffffff', phase: rand() * 2, zone })),
+      p({ kind: 'rune', x: ex - 2, y: mid - 2, vy: -3, life: 0.9, color: '#0e1030', n: Math.floor(rand() * RUNES_5.length), zone }),
+      ...Array.from({ length: 3 }, () => p({ kind: 'star', x: zone.l + rand() * (zone.r - zone.l), y: zone.t + rand() * (zone.b - zone.t), life: 0.7 + rand() * 0.4, size: 2, color: '#ffffff', phase: rand() * 2, zone })),
     ]
   },
-  switchIn(rand, w, h) {
-    return Array.from({ length: 40 }, () => p({ kind: 'star', x: rand() * w, y: rand() * h * 0.2, vy: h * 0.9, life: 0.9 + rand() * 0.4, color: pick(rand, STAR_C), phase: rand() * TAU }))
-  },
-  sweepLife: 0.9,
+  switchIn: () => [],
+  sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // A moonlit shimmer: a silver sheet of dithered light sweeping down.
-    const head = (s.age / s.life) * (h + 30)
+    // A faint silver sheet over the sky as the night comes in, fading where it lies.
+    const a = stepAlpha(0.2 * (1 - s.age / s.life))
+    if (!a) return
     pen.fillStyle = '#e4e8f6'
-    for (let y = Math.max(0, Math.round(head - 30)); y < Math.min(h, head); y++) {
-      pen.globalAlpha = stepAlpha(0.35 * (1 - (head - y) / 30))
+    pen.globalAlpha = a
+    const sky = Math.round(h * 0.4)
+    for (let y = 0; y < sky; y++) {
+      if (y > sky / 2 && y & 1) continue
       for (let x = (y & 1) * 2; x < w; x += 4) pen.fillRect(x, y, 1, 1)
     }
   },
@@ -836,15 +788,16 @@ const arcane: World = {
 
 // ---------------------------------------------------------------------------
 const lantern: World = {
-  density: 0.0009,
+  density: 0.0004,
+  peak: 0.7,
   spawn(rand, w, h) {
-    return p({ kind: 'mote', x: rand() * w, y: rand() * h, vy: -3 - rand() * 4, vx: (rand() - 0.5) * 2, life: 9 + rand() * 6, color: rand() < 0.5 ? '#f0c46a' : '#ffe39a', phase: rand() * TAU })
+    return p({ kind: 'mote', x: rand() * w, y: rand() * h, vy: -2 - rand() * 2.5, vx: (rand() - 0.5) * 1.5, life: 10 + rand() * 6, color: rand() < 0.5 ? '#f0c46a' : '#ffe39a', phase: rand() * TAU })
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    return Array.from({ length: 12 }, () => {
+    return Array.from({ length: 5 }, () => {
       const a = -Math.PI / 2 + (rand() - 0.5) * 2.4
-      const v = 25 + rand() * 30
-      return p({ kind: 'drop', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + rand() * 0.4, color: rand() < 0.5 ? '#f0c46a' : '#ffe39a', zone })
+      const v = 12 + rand() * 12
+      return p({ kind: 'drop', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5 + rand() * 0.3, color: rand() < 0.5 ? '#f0c46a' : '#ffe39a', zone })
     })
   },
   switchIn: () => [],
@@ -862,21 +815,17 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
   switch (q.kind) {
     case 'ember': {
       const s = q.size
-      // A glowing ember: a red halo, its body cooling white → yellow → orange → red, a white-hot heart.
-      // It flickers by its halo guttering, not by the whole coal blinking out.
-      if (Math.sin(q.age * 11 + q.phase) <= 0.8) {
+      // A glowing ember, cooling yellow → orange → red. A 2 px one has a faint
+      // halo that gutters slowly; none has a white-hot heart (the calm pass).
+      if (s > 1 && Math.sin(q.age * 3 + q.phase) <= 0.6) {
         pen.fillStyle = k < 0.5 ? '#ff8a2c' : '#b8321e'
-        pen.globalAlpha = stepAlpha(fade * dim * 0.5)
+        pen.globalAlpha = stepAlpha(fade * dim * 0.4)
         pen.fillRect(x - 1, y, s + 2, s)
         pen.fillRect(x, y - 1, s, s + 2)
       }
-      pen.fillStyle = fireColor(Math.min(0.99, k * 0.7 + 0.2))
+      pen.fillStyle = fireColor(Math.min(0.99, k * 0.8 + 0.05))
       pen.globalAlpha = stepAlpha(fade * dim)
       pen.fillRect(x, y, s, s)
-      if (k < 0.6) {
-        pen.fillStyle = '#fff3c0'
-        pen.fillRect(x + (s > 2 ? 1 : 0), y + (s > 2 ? 1 : 0), 1, 1)
-      }
       return
     }
     case 'spark':
@@ -903,17 +852,18 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
       drawFlame(pen, q, fade * dim)
       return
     case 'seam': {
-      // A molten flash running out along a seam from the press: white-hot at
-      // its fronts, orange behind, cooling to red.
+      // A molten flash running a little way out along a seam from the press
+      // (a third of the button at most: the calm pass), hot at its fronts,
+      // orange behind, cooling to red.
       const len = q.n ?? 0
-      const spread = (k * 2.2 + 0.1) * len
+      const spread = Math.min(1, k * 2.5 + 0.1) * len * 0.3
       const press = q.phase
       for (let i = 0; i < len; i++) {
         const d = Math.abs(i - press)
         if (d > spread) continue
         const front = spread - d < 4
-        pen.fillStyle = front ? '#ffffff' : k < 0.35 ? '#fff6d8' : k < 0.65 ? '#ffd35e' : '#ff8a2c'
-        pen.globalAlpha = stepAlpha(dim * (front ? 1 : Math.min(1, (1 - k) * 1.6)))
+        pen.fillStyle = front ? '#ffe08a' : k < 0.35 ? '#ffd35e' : k < 0.65 ? '#ffb347' : '#ff8a2c'
+        pen.globalAlpha = stepAlpha(dim * (front ? 0.85 : Math.min(0.75, (1 - k) * 1.4)))
         pen.fillRect(x + i, y, 1, 2)
         // A heat haze either side of the seam, dithered.
         if ((i & 1) === 0 && k < 0.6) {
@@ -981,7 +931,7 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
       return
     case 'rune':
       pen.fillStyle = q.color
-      pen.globalAlpha = stepAlpha((q.zone ? 1 : 0.6) * fade * dim * (0.75 + 0.25 * Math.sin(q.age * 1.5)))
+      pen.globalAlpha = stepAlpha((q.zone ? 1 : 0.6) * fade * dim * (0.75 + 0.25 * Math.sin(q.age * 0.6)))
       drawRune(pen, q)
       return
     case 'quill': {
@@ -989,21 +939,22 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
       pen.fillStyle = q.color
       const len = Math.floor(Math.min(1, k * 2) * 22)
       for (let i = 0; i < len; i++) {
-        pen.globalAlpha = stepAlpha(0.55 * dim * (k > 0.5 ? (1 - k) * 2 : 1))
+        pen.globalAlpha = stepAlpha(0.45 * dim * (k > 0.5 ? (1 - k) * 2 : 1))
         const a = i * 0.28 + q.phase
         pen.fillRect(Math.round(q.x + i * 0.9 + Math.cos(a) * 2), Math.round(q.y + Math.sin(a) * 3 - i * 0.2), 1, 1)
       }
       return
     }
     case 'star': {
-      const tw = 0.5 + 0.5 * Math.sin(q.age * 2.2 + q.phase)
+      // A slow twinkle: one swell every seven seconds (it was under three).
+      const tw = 0.5 + 0.5 * Math.sin(q.age * 0.9 + q.phase)
       const lvl = tw < 0.33 ? 0.25 : tw < 0.75 ? 0.5 : 1
       pen.fillStyle = q.color
       pen.globalAlpha = stepAlpha(lvl * fade * dim)
       pen.fillRect(x, y, 1, 1)
-      if (lvl === 1 || q.size > 1) {
-        // A four-point twinkle; a big star's arms are two long.
-        const arm = q.size > 1 && lvl === 1 ? 2 : 1
+      if ((lvl === 1 && q.size > 1) || q.zone) {
+        // A four-point twinkle, on the big stars only.
+        const arm = 1
         pen.globalAlpha = stepAlpha(0.5 * fade * dim * (lvl === 1 ? 1 : 0.5))
         pen.fillRect(x - arm, y, arm, 1)
         pen.fillRect(x + 1, y, arm, 1)
@@ -1024,8 +975,13 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
   }
 }
 
-/** The most ambient particles a screen holds: the brief's cap, 60 on a phone. */
+/** The most ambient particles a phone screen holds (60 before the calm pass, Oct 2026). */
+export const AMBIENT_CAP_PHONE = 24
+/** …and a desk's (110 before). */
+export const AMBIENT_CAP_DESK = 40
+
+/** The most ambient particles a screen holds: {@link AMBIENT_CAP_PHONE} on a phone, {@link AMBIENT_CAP_DESK} on a desk. */
 export function ambientCap(world: World, w: number, h: number, cssWidth: number): number {
-  const cap = cssWidth < 700 ? 60 : 110
+  const cap = cssWidth < 700 ? AMBIENT_CAP_PHONE : AMBIENT_CAP_DESK
   return Math.min(cap, Math.round(world.density * w * h))
 }

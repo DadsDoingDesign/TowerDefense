@@ -2,7 +2,7 @@ import type { ThemeId } from '../../game/run/militiaTheme'
 import * as fxQuality from '../../game/render/fxQuality'
 import { fxLevel, noteFxFrame } from '../../game/render/fxQuality'
 import { PixelPen } from './pixelPen'
-import { ambientCap, burstClip, drawParticle, FX_PX, step, WORLDS, type Particle, type Pen, type Scene, type Sweep, type Zone } from './fxWorlds'
+import { ambientCap, burstClip, drawParticle, FX_PX, step, SWITCH_S, WORLDS, type Particle, type Pen, type Scene, type Sweep, type Zone } from './fxWorlds'
 
 /**
  * The company worlds' one effect loop (Oct 2026).
@@ -23,9 +23,11 @@ import { ambientCap, burstClip, drawParticle, FX_PX, step, WORLDS, type Particle
  *
  * The loop sleeps when there is nothing to draw, while the tab is hidden, and
  * entirely under reduced motion (no particles, no bursts, no switch-ins — the
- * frames and textures stay, static). Ambient particles are capped (60 on a
- * phone, 110 on a desk; `fxWorlds.ambientCap`); under high contrast they are
- * dimmed, never brightened.
+ * frames and textures stay, static). Ambient particles are capped (24 on a
+ * phone, 40 on a desk; `fxWorlds.ambientCap`) and drawn at their world's
+ * `peak`; under high contrast they are dimmed, never brightened. A change of
+ * world is a crossfade (`fxWorlds.SWITCH_S`): the old particles and backdrop
+ * fade out where they are while the new ones fade in.
  */
 interface Layer {
   canvas: HTMLCanvasElement
@@ -39,6 +41,8 @@ interface Buffers {
   h: number
   frame: PixelPen
   backdrop: PixelPen
+  /** The last world's backdrop, crossfading out after a switch. */
+  prev: PixelPen
   image: ImageData
   /** When the backdrop was last drawn, and for which world. */
   at: number
@@ -69,6 +73,9 @@ class FxEngine {
   private parts: Particle[] = []
   /** The last world's particles, fading out where they are after a switch. */
   private fading: Particle[] = []
+  private fadingTheme: ThemeId = 'neutral'
+  /** When (this.t) the theme last changed: the crossfade runs `SWITCH_S` from it. */
+  private switchedAt = -1e9
   private over: Particle[] = []
   private sweep: (Sweep & { theme: ThemeId }) | null = null
   private raf = 0
@@ -105,12 +112,18 @@ class FxEngine {
 
   setTheme(id: ThemeId): void {
     if (id === this.theme) return
+    // A crossfade over `SWITCH_S`: the old world's particles and backdrop
+    // fade out where they are while the new one fades in.
+    this.fadingTheme = this.theme
     this.theme = id
-    // The old world's particles fade out where they are; the new one fills in.
-    for (const q of this.parts) q.life = Math.min(q.life, q.age + 0.5)
     this.fading = this.parts
     this.parts = []
     this.seeded = false
+    this.switchedAt = this.t
+    if (this.bufs) {
+      this.bufs.prev.data.set(this.bufs.backdrop.data)
+      this.bufs.at = -1e9
+    }
     this.wake()
   }
 
@@ -261,7 +274,7 @@ class FxEngine {
     if (this.bufs && this.bufs.w === a.w && this.bufs.h === a.h) return this.bufs
     const frame = new PixelPen(a.w, a.h)
     const image = new ImageData(frame.data as Uint8ClampedArray<ArrayBuffer>, a.w, a.h)
-    this.bufs = { w: a.w, h: a.h, frame, backdrop: new PixelPen(a.w, a.h), image, at: -1e9, theme: null }
+    this.bufs = { w: a.w, h: a.h, frame, backdrop: new PixelPen(a.w, a.h), prev: new PixelPen(a.w, a.h), image, at: -1e9, theme: null }
     return this.bufs
   }
 
@@ -336,33 +349,45 @@ class FxEngine {
       }
       const sc = this.scene
       if (!this.seeded) {
-        while (this.parts.length < cap) this.parts.push(world.spawn(this.rand, a.w, a.h, true, sc))
+        // The first fill is staggered through its lives, so the world does
+        // not fade in, and later die out, all at once (a whole screen of
+        // embers guttering together read as a pulse).
+        while (this.parts.length < cap) {
+          const q = world.spawn(this.rand, a.w, a.h, true, sc)
+          q.age = Math.max(q.age, this.rand() * q.life * 0.7)
+          this.parts.push(q)
+        }
         this.seeded = true
       }
       // Keep the screen full: a couple of new particles a frame, never past the cap.
       for (let i = 0; i < 2 && this.parts.length < cap; i++) this.parts.push(world.spawn(this.rand, a.w, a.h, false, sc))
       this.parts = this.parts.filter((q) => step(q, dt, a.w, a.h))
-      this.fading = this.fading.filter((q) => step(q, dt, a.w, a.h))
+      // The crossfade after a switch: 0 → 1 over `SWITCH_S`.
+      const mix = Math.min(1, Math.max(0, (this.t - this.switchedAt) / SWITCH_S))
+      this.fading = mix < 1 ? this.fading.filter((q) => step(q, dt, a.w, a.h)) : []
       // Drawn at a pixel-art cadence, in software (`PixelPen`), and put on
       // the canvas in one go.
       // The light set draws at half the cadence as well.
       if (now - this.ambientAt >= AMBIENT_MS * (light ? 2 : 1)) {
         this.ambientAt = now
         const b = this.buffers(a)
-        if (world.backdrop) {
-          // The backdrop (glows, washes, the flame line) is redrawn a few
-          // times a second; at full strength under high contrast's dim too
-          // (it is already faint). Particles are dimmed.
-          if (now - b.at >= BACKDROP_MS * (light ? 2 : 1) || b.theme !== this.theme) {
-            b.at = now
-            b.theme = this.theme
-            b.backdrop.clear()
-            world.backdrop(b.backdrop, a.w, a.h, this.t, sc)
-          }
-          b.frame.data.set(b.backdrop.data)
-        } else b.frame.clear()
-        for (const q of this.fading) drawParticle(b.frame, q, dim)
-        for (const q of this.parts) drawParticle(b.frame, q, dim)
+        // The backdrop (glows, washes, the flame line) is redrawn a few
+        // times a second; at full strength under high contrast's dim too
+        // (it is already faint). Particles are dimmed.
+        if (now - b.at >= BACKDROP_MS * (light ? 2 : 1) || b.theme !== this.theme) {
+          b.at = now
+          b.theme = this.theme
+          b.backdrop.clear()
+          world.backdrop?.(b.backdrop, a.w, a.h, this.t, sc)
+        }
+        if (mix < 1) b.frame.crossfade(b.prev.data, b.backdrop.data, mix)
+        else b.frame.data.set(b.backdrop.data)
+        // Each world's particles at its own strength (`World.peak`), the old
+        // world's fading out as the new one's fade in.
+        const oldDim = dim * WORLDS[this.fadingTheme].peak * (1 - mix)
+        for (const q of this.fading) drawParticle(b.frame, q, oldDim)
+        const newDim = dim * world.peak * mix
+        for (const q of this.parts) drawParticle(b.frame, q, newDim)
         // Nothing under text: clear the layer under every line of the page's text.
         for (const [x, y, w, h] of this.keep) b.frame.clearRect(x, y, w, h)
         a.pen.putImageData(b.image, 0, 0)
