@@ -34,7 +34,7 @@ export interface DockSlot {
   standing: number
   term: number
   level: number
-  /** The slot's number: "Rep 4", or "II · 3" on a second term (its crest wears the gold rim). */
+  /** The slot's number: "Rep 4", or "II · 3" on a second term (the crest wears the gold rim wherever it is drawn; the dock shows the face). */
   rep: string
   /** How far to the next level on this term's track, 0–1 (1 at the top). */
   progress: number

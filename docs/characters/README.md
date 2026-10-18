@@ -6,8 +6,11 @@ and a working prototype: **our own modular hero**, built like a component. A
 hero is data (`HeroLook`); gear maps to parts; state edits the parts; one pure
 compositor draws the frames.
 
-**Nothing in the shipped game uses it yet.** It lives in
-`src/game/render/hero/` and is drawn only by `harness/heroes.html`.
+**The rig is not in the shipped game yet.** It lives in
+`src/game/render/hero/` and is drawn only by `harness/heroes.html`. The
+company faces' DOCK figures (`mini.ts`) ship: they stand in the home dock's
+slots in place of the crests (October 2026, `ui/shell/DockFace.tsx`; see
+"The dock figures").
 
 | Sheet | What it shows |
 |---|---|
@@ -215,27 +218,35 @@ the 1 px ring reads as the field figures' 2 px.
   frames (Saffra) to 11 (Brannoch).
 - **Tic:** 6 frames, on the face's own interval and hashed phase.
 - **Reaction:** 4 frames when the slot is picked, each in its own style.
-- **The clock:** `miniAt(id, t, { pickedAt, still })` says which frame shows
-  at time `t`; the dock would run one clock for all five.
+- **The clock:** `miniAt(id, t, { pickedAt, still, ticEach })` says which
+  frame shows at time `t`; the dock runs one rAF for all five
+  (`DockFace.tsx`), its `t` counted from the moment the dock appears.
 - **Drawn for the slot:** the company colour is the biggest mass (Odile's
   tunic is rose, her cloak plum behind); one prop each, low and away from the
   face; hands attached to their sleeves.
 - **Locked:** the figure as a navy shadow inside its ink. A shape change, not
   only a colour (the slot's padlock and label still say it).
-- **Motion budget:** atmosphere, not a show. Under reduced motion only the
-  still pose plays; on Light the tic plays half as often (to wire with
-  `fxQuality`).
+- **Motion budget:** atmosphere, not a show. Under reduced motion
+  (`fxQuality` 'off') only the still pose shows and no loop runs; on Light
+  the tic plays half as often (`ticEach: 2`, every other one on the same
+  phase); the loop sleeps while the page is hidden. A locked figure is
+  still and never reacts.
 
 **The figure is decorative.** It sits in the slot's `aria-hidden` crest span;
 the slot's accessible name (`slotName`) still carries the company and its
 standing. The reaction plays on `aria-pressed` turning true, so it follows
 the same state the focus ring does.
 
-**Needed for the dock: +16 px per slot.** The figure is 48 px tall, the crest
-box 32. The mock grows `.mn-slot` from 76 to 92 px and `.mn-slot-crest` from
-32 to 48 px. The map window loses 16 px, but its height still depends on the
-viewport alone (the home's "no wiggle" rule holds). This is the designer's
-call.
+**Shipped (October 2026), +16 px per slot.** The designer approved the mock
+("The home dock, with the faces", "Crests → faces", "The dock in motion").
+`.mn-slot` grows from 76 to 92 px on a phone (60 → 76 on a short phone,
+64 → 80 on a desk) and its picture row from 32 to 48 px; the figure is drawn
+at 2× everywhere (a desk's 80 px slot has no room for 3×). The map window
+loses 16 px, and its height still depends on the viewport alone
+(`scripts/home-stability.mjs`). Which face stands in which slot is one table,
+`ui/shell/dockFace.ts` `DOCK_FACE`: Hask in Easel House's slot and Wren in
+Moonquill's lead the companies' rename. Cards:
+`docs/ui-audit-2026-10/dock-faces/` (`node scripts/dock-faces.mjs`).
 
 ## Migrating the shipped knight to the builder
 

@@ -4801,3 +4801,53 @@ The 5× crop of a rig figure is gone. The builder's own cards now say they are m
 - The faces are plain: two dark eyes and no other feature. That is the pack's own restraint (its pawn shows no face at all), but at the post's 2× the face is a large flat area.
 - Saffra's hair strands are a little dense, like fur.
 - The rig's heroes keep their round-3 bodies, but it is still a procedural drawing. At 1× it sits with the pack; it is not hand-laid, and it is not shown larger.
+
+### 2026-10-18 — the company faces ship in the home dock (3 rounds)
+
+The designer approved the mock ("The home dock, with the faces", "Crests →
+faces", "The dock in motion") and asked: "Should the newest version have
+characters instead of logos?" Each dock slot now shows its company's liaison
+(`ui/shell/DockFace.tsx`, the `mini.ts` dock figure at 2×) in place of the
+crest; who stands where is one table (`ui/shell/dockFace.ts` `DOCK_FACE`).
+Hask (Easel House's slot) and Wren (Moonquill's) lead the companies' rename.
+Shot in the running app at 390 × 844, 375 × 667, 320 × 568 and 1280 × 800,
+at 1× and 3× (`node scripts/dock-faces.mjs` → `docs/ui-audit-2026-10/dock-faces/`).
+
+**Round 1 (against the mock).** The figures, the Rep line and the bar land
+where the mock put them, and the 3× crops are crisp: the backing store is the
+art at an integer number of device px per art px (6 at DPR 3), with no
+smoothing. Two faults:
+- With the mock's `margin-top: -6px`, Wren's hat tip ran 2 px under a
+  hung "×1.3" mark.
+- On a short phone (≤ 700 tall, 60 → 76 px slot), every head touched the
+  slot's top frame.
+
+**Round 2.** The canvas's margins now fit it to the 48 px row (`-5px 0 -3px`):
+the art rises 3 px over the row, clear of the marks on a 390 phone, and its
+faint shadow sits 1 px into the Rep line's gap. A short phone's slot takes
+3 px over the face, its picture row is 46 px with the shadow resting in the
+Rep line's leading, and its bar rides 3 px off the bottom edge. The heads now
+clear the frame. On the desk the slot is a row (face, Rep, bar). It is 80 px
+tall, so there is no room for 3×; 2× there matches the phone.
+
+**Round 3 (motion and states, in the app).**
+- **Canvas frames over 8 s:** reduced motion holds every face still (1 frame
+  each, no loop). Light shows 3–6 frames a face (the tic every other time).
+  Full shows 6–8.
+- **The live loop** (`dock-live.webp`, the real dock on a fake clock): the
+  five idles stay out of step, Brannoch chalks his slate, and Odile
+  half-bows when Rosethread is picked.
+- **Locked:** a still navy shadow that never reacts; the slot says "at 3".
+- **Buy Company** keeps its own crest, padlock and share in a slot of the
+  same height.
+- **No wiggle:** `scripts/home-stability.mjs` passes for all 16 runs. The
+  `.mn-window` box loses exactly 16 px at every view: 450 → 434 (390 × 844),
+  339 → 323 (375 × 667), 240 → 224 (320 × 568), 502 → 486 (1280 × 800).
+
+**Still weakest.**
+- On a short phone, a mark hung on Moonquill's slot still covers Wren's
+  hat tip by about 2 px. The 76 px slot has no more room.
+- Easel House's slot shows Hask, a reptile salter with a hook, against an
+  easel crest in a purple world, until the rename lands.
+- The second-term gold rim lived on the dock's crest. In the dock it is now
+  said only by the Rep line ("II · 3"); the rim stays on every crest.

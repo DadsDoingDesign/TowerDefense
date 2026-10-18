@@ -15,7 +15,8 @@ import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
 import { ArmourMark } from '../ArmourMark'
 import { GroundMarks } from '../GroundMark'
-import { Banner, Crest, Crown, Lock, Pixel, SovereignCrest } from '../pixel'
+import { Banner, Crown, Lock, Pixel, SovereignCrest } from '../pixel'
+import { DockFace } from './DockFace'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import markUrl from '../../assets/brand/mark.svg'
@@ -57,8 +58,9 @@ export function useMenuMotion(): boolean {
  *    seven bars; it opens the standings);
  *  - **the foot**: the company dock — five fixed slots, one per company,
  *    always in `COMPANY_IDS` order, the order the map fans its roads west to
- *    east — with Buy Company floating over its right end, a slot's size,
- *    locked until every skill and item is; and the card. Picking a slot (or
+ *    east, each showing its company's face (`DockFace`) — with Buy Company
+ *    floating over its right end, a slot's size, locked until every skill
+ *    and item is; and the card. Picking a slot (or
  *    a signpost) FOCUSES a road (`homeFocus` in the store): the map lights it
  *    in its colour and its season, the rest sinks, its cities are named
  *    beside it. Nothing signs;
@@ -391,9 +393,10 @@ const shortName = (name: string) => name.replace(/ Co\.$/, '')
 
 /**
  * The company dock: five fixed slots, evenly spaced, in `COMPANY_IDS` order —
- * the order the map's roads fan west to east. A slot is its company's logo,
- * your standing with it ("Rep 4", or "II · 3" on a second term, the crest
- * rimmed in gold) over a bar of how far to the next (the trade war's leader
+ * the order the map's roads fan west to east. A slot is its company's face
+ * (its liaison, `DockFace`: idle, a tic now and then, a reaction when the
+ * slot is picked, a shadow while the company is not hiring), your standing
+ * with it ("Rep 4", or "II · 3" on a second term) over a bar of how far to the next (the trade war's leader
  * wears the crown; its shares are on the standings), and up to two marks on its top edge: desperate terms "×1.5", the
  * market "×1.3". A company not hiring yet shows its
  * padlock and the standing that opens it. A tap focuses the road.
@@ -423,8 +426,8 @@ function Dock({ slots, focus, mult, onPick }: { slots: DockSlot[]; focus: HomeFo
                 ))}
               </span>
             )}
-            <span className="mn-slot-crest" aria-hidden="true">
-              <Crest company={s.company} locked={!s.open} scale={2} />
+            <span className="mn-slot-crest is-face" aria-hidden="true">
+              <DockFace company={s.company} locked={!s.open} on={on} />
               {s.leads && (
                 <span className="mn-slot-crown">
                   <Crown scale={2} />
